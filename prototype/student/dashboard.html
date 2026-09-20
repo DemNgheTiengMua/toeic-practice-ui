@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trang chủ — TOEIC Practice</title>
+  <link rel="stylesheet" href="../assets/css/tokens.css">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+</head>
+<body data-states="loading,empty,error,success">
+  <div class="app-shell app-shell--with-sidebar">
+    <header class="app-topbar">
+      <strong>TOEIC Practice</strong>
+      <div class="row">
+        <span class="badge badge--info">Còn 3 lượt thi</span>
+        <a class="btn btn--sm" href="../payment/pricing.html">Mua thêm lượt</a>
+        <a class="btn btn--ghost btn--sm" href="profile.html">Nguyễn Văn A</a>
+      </div>
+    </header>
+    <div class="app-body">
+      <aside class="app-sidebar">
+        <nav class="nav-list" aria-label="Điều hướng chính">
+          <a class="nav-list__item is-active" href="dashboard.html">Trang chủ</a>
+          <div class="nav-list__group">Thi thử</div>
+          <a class="nav-list__item" href="exam-list.html">Danh sách đề</a>
+          <a class="nav-list__item" href="exam-history.html">Lịch sử thi</a>
+          <div class="nav-list__group">Luyện tập</div>
+          <a class="nav-list__item" href="practice-select.html">Luyện theo part</a>
+          <div class="nav-list__group">Tài khoản</div>
+          <a class="nav-list__item" href="../payment/wallet.html">Ví lượt thi</a>
+          <a class="nav-list__item" href="profile.html">Hồ sơ</a>
+        </nav>
+      </aside>
+      <main class="app-main">
+        <div class="container stack">
+          <!-- ===== loading ===== -->
+          <div class="only-loading stack">
+            <div class="skeleton skeleton--title"></div>
+            <div class="grid-3">
+              <div class="skeleton skeleton--block"></div>
+              <div class="skeleton skeleton--block"></div>
+              <div class="skeleton skeleton--block"></div>
+            </div>
+            <div class="skeleton skeleton--block" style="height: 200px"></div>
+          </div>
+
+          <!-- ===== error ===== -->
+          <div class="only-error">
+            <div class="card"><div class="card__body">
+              <div class="state-block">
+                <div class="state-block__icon" aria-hidden="true">!</div>
+                <div class="state-block__title">Không tải được dữ liệu</div>
+                <p class="state-block__desc">Kiểm tra kết nối rồi thử lại.</p>
+                <button class="btn btn--primary">Thử lại</button>
+              </div>
+            </div></div>
+          </div>
+
+          <!-- ===== empty: chưa thi lần nào ===== -->
+          <div class="only-empty stack">
+            <h1>Xin chào, Nguyễn Văn A</h1>
+            <div class="card"><div class="card__body">
+              <div class="state-block">
+                <div class="state-block__icon" aria-hidden="true">□</div>
+                <div class="state-block__title">Bạn chưa làm bài thi nào</div>
+                <p class="state-block__desc">
+                  Làm một đề đầy đủ để biết trình độ hiện tại, hoặc luyện riêng từng part trước.
+                </p>
+                <div class="row" style="justify-content: center">
+                  <a class="btn btn--primary btn--lg" href="exam-list.html">Bắt đầu thi thử</a>
+                  <a class="btn btn--lg" href="practice-select.html">Luyện theo part</a>
+                </div>
+              </div>
+            </div></div>
+          </div>
+
+          <!-- ===== success ===== -->
+          <div class="only-success stack">
+            <div class="row row--between">
+              <h1 style="margin: 0">Xin chào, Nguyễn Văn A</h1>
+              <a class="btn btn--primary" href="exam-list.html">Thi thử ngay</a>
+            </div>
+
+            <div class="grid-3">
+              <div class="stat">
+                <div class="stat__label">Điểm gần nhất</div>
+                <div class="stat__value">720</div>
+                <div class="stat__hint">L 385 · R 335 — 18/09/2026</div>
+              </div>
+              <div class="stat">
+                <div class="stat__label">Điểm cao nhất</div>
+                <div class="stat__value">745</div>
+                <div class="stat__hint">Đạt ngày 02/09/2026</div>
+              </div>
+              <div class="stat">
+                <div class="stat__label">Đã hoàn thành</div>
+                <div class="stat__value">6</div>
+                <div class="stat__hint">bài thi đầy đủ · 24 phiên luyện</div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card__header"><strong>Độ chính xác theo part</strong></div>
+              <div class="card__body stack">
+                <div>
+                  <div class="row row--between text-sm">
+                    <span>Part 1 — Ảnh</span><span class="text-muted">83%</span>
+                  </div>
+                  <div class="progress"><div class="progress__bar" style="width: 83%"></div></div>
+                </div>
+                <div>
+                  <div class="row row--between text-sm">
+                    <span>Part 2 — Hỏi đáp</span><span class="text-muted">76%</span>
+                  </div>
+                  <div class="progress"><div class="progress__bar" style="width: 76%"></div></div>
+                </div>
+                <div>
+                  <div class="row row--between text-sm">
+                    <span>Part 5 — Câu đơn</span><span class="text-muted">71%</span>
+                  </div>
+                  <div class="progress"><div class="progress__bar" style="width: 71%"></div></div>
+                </div>
+                <div>
+                  <div class="row row--between text-sm">
+                    <span>Part 7 — Đoạn văn</span><span class="text-muted">58%</span>
+                  </div>
+                  <div class="progress"><div class="progress__bar" style="width: 58%"></div></div>
+                </div>
+                <p class="text-sm text-muted" style="margin: 0">
+                  Part 7 đang là điểm yếu. <a href="practice-select.html">Luyện Part 7</a>
+                </p>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card__header"><strong>Bài thi gần đây</strong></div>
+              <div class="card__body">
+                <table class="table table--striped">
+                  <thead>
+                    <tr><th>Đề</th><th>Ngày</th><th>Listening</th><th>Reading</th><th>Tổng</th><th></th></tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>ETS 2024 — Test 3</td><td>18/09/2026</td>
+                      <td>385</td><td>335</td><td><strong>720</strong></td>
+                      <td><a href="exam-review.html">Xem lại</a></td>
+                    </tr>
+                    <tr>
+                      <td>ETS 2024 — Test 2</td><td>10/09/2026</td>
+                      <td>370</td><td>320</td><td><strong>690</strong></td>
+                      <td><a href="exam-review.html">Xem lại</a></td>
+                    </tr>
+                    <tr>
+                      <td>ETS 2024 — Test 1</td><td>02/09/2026</td>
+                      <td>395</td><td>350</td><td><strong>745</strong></td>
+                      <td><a href="exam-review.html">Xem lại</a></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="card__footer">
+                <a class="btn btn--sm" href="exam-history.html">Xem tất cả</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <script src="../assets/js/state-switch.js"></script>
+</body>
+</html>
