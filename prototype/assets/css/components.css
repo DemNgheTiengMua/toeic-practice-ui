@@ -423,3 +423,38 @@
   font-size: var(--text-sm);
 }
 .price-card__list li + li { margin-top: var(--space-2); }
+
+/* ===== Thanh công cụ danh sách ===== */
+.toolbar {
+  display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: flex-end;
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+.toolbar__grow { flex: 1 1 220px; }
+.toolbar .field { margin: 0; }
+
+/* ===== Phân trang ===== */
+.pagination { display: flex; gap: var(--space-2); align-items: center; }
+.pagination__info {
+  margin-right: auto;
+  font-size: var(--text-sm); color: var(--color-text-muted);
+}
+.pagination__page {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 34px; height: 34px; padding: 0 var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--text-sm); text-decoration: none;
+}
+.pagination__page.is-current {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-primary-text); font-weight: 600;
+}
+.pagination__page[aria-disabled="true"] {
+  color: var(--color-text-muted); pointer-events: none; opacity: .6;
+}
