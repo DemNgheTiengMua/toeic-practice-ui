@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gói lượt thi — Quản trị TOEIC Practice</title>
+  <link rel="stylesheet" href="../assets/css/tokens.css">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+</head>
+<body data-states="loading,error,success,edit" data-state="success">
+  <div class="app-shell app-shell--with-sidebar">
+    <header class="app-topbar">
+      <strong>TOEIC Practice — Khu vực quản trị</strong>
+      <div class="row">
+        <span class="badge badge--warning">Admin</span>
+        <span class="text-sm">admin@toeic.local</span>
+        <a class="btn btn--sm btn--ghost" href="../auth/login.html">Đăng xuất</a>
+      </div>
+    </header>
+    <div class="app-body">
+      <aside class="app-sidebar">
+        <nav class="nav-list" aria-label="Điều hướng quản trị">
+          <div class="nav-list__group">Tổng quan</div>
+          <a class="nav-list__item" href="dashboard.html">Bảng điều khiển</a>
+          <div class="nav-list__group">Nội dung</div>
+          <a class="nav-list__item" href="exam-list.html">Đề thi</a>
+          <a class="nav-list__item" href="score-conversion.html">Bảng quy đổi điểm</a>
+          <div class="nav-list__group">Người dùng &amp; doanh thu</div>
+          <a class="nav-list__item" href="users.html">Học viên</a>
+          <a class="nav-list__item is-active" href="packages.html">Gói lượt thi</a>
+          <a class="nav-list__item" href="orders.html">Đơn hàng</a>
+          <div class="nav-list__group">Khác</div>
+          <a class="nav-list__item" href="../index.html">Mục lục prototype</a>
+        </nav>
+      </aside>
+      <main class="app-main">
+        <div class="container stack">
+          <div class="row row--between">
+            <h1>Gói lượt thi</h1>
+            <a class="btn btn--primary multi-state" data-show="success" href="packages.html?state=edit">Tạo gói mới</a>
+          </div>
+
+          <div class="alert alert--info multi-state" data-show="success edit">
+            Sửa giá chỉ ảnh hưởng đơn hàng mới. Đơn đã thanh toán giữ nguyên giá cũ.
+          </div>
+
+          <div class="grid-3 multi-state" data-show="success edit">
+            <div class="price-card">
+              <div class="row row--between">
+                <div class="price-card__name">Gói Lẻ</div>
+                <span class="badge badge--success">Đang bán</span>
+              </div>
+              <div class="price-card__amount">49.000 ₫</div>
+              <div class="price-card__unit">1 lượt — 49.000 ₫/lượt</div>
+              <ul class="price-card__list">
+                <li>Đã bán: 412 đơn</li>
+                <li>Doanh thu: 20,2 tr ₫</li>
+              </ul>
+              <a class="btn" href="packages.html?state=edit">Sửa gói</a>
+            </div>
+
+            <div class="price-card price-card--featured">
+              <div class="row row--between">
+                <div class="price-card__name">Gói Ôn Thi</div>
+                <span class="badge badge--primary">Nổi bật</span>
+              </div>
+              <div class="price-card__amount">199.000 ₫</div>
+              <div class="price-card__unit">5 lượt — 39.800 ₫/lượt</div>
+              <ul class="price-card__list">
+                <li>Đã bán: 286 đơn</li>
+                <li>Doanh thu: 56,9 tr ₫</li>
+              </ul>
+              <a class="btn" href="packages.html?state=edit">Sửa gói</a>
+            </div>
+
+            <div class="price-card">
+              <div class="row row--between">
+                <div class="price-card__name">Gói Cấp Tốc</div>
+                <span class="badge">Đã ẩn</span>
+              </div>
+              <div class="price-card__amount">349.000 ₫</div>
+              <div class="price-card__unit">10 lượt — 34.900 ₫/lượt</div>
+              <ul class="price-card__list">
+                <li>Đã bán: 94 đơn</li>
+                <li>Doanh thu: 32,8 tr ₫</li>
+              </ul>
+              <a class="btn" href="packages.html?state=edit">Sửa gói</a>
+            </div>
+          </div>
+          <div class="card only-loading">
+            <div class="card__body stack">
+              <div class="skeleton skeleton--title"></div>
+              <div class="skeleton skeleton--block"></div>
+            </div>
+          </div>
+
+          <div class="card only-error">
+            <div class="card__body">
+              <div class="state-block">
+                <div class="state-block__icon" aria-hidden="true">!</div>
+                <h2 class="state-block__title">Không tải được danh sách gói</h2>
+                <button class="btn">Tải lại</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-overlay only-edit" role="dialog" aria-modal="true" aria-labelledby="pkg-title">
+            <div class="modal">
+              <div class="modal__header">
+                <h2 id="pkg-title">Sửa gói — Gói Ôn Thi</h2>
+              </div>
+              <div class="modal__body stack">
+                <div class="field">
+                  <label class="field__label" for="pkg-name">Tên gói</label>
+                  <input class="field__input" id="pkg-name" value="Gói Ôn Thi">
+                </div>
+                <div class="grid-2">
+                  <div class="field">
+                    <label class="field__label" for="pkg-credits">Số lượt thi</label>
+                    <input class="field__input" id="pkg-credits" type="number" value="5" min="1">
+                  </div>
+                  <div class="field">
+                    <label class="field__label" for="pkg-price">Giá (₫)</label>
+                    <input class="field__input" id="pkg-price" type="number" value="199000" step="1000">
+                    <span class="field__hint">Đơn giá: 39.800 ₫/lượt</span>
+                  </div>
+                </div>
+                <div class="field">
+                  <label class="field__label" for="pkg-status">Trạng thái</label>
+                  <select class="field__input" id="pkg-status">
+                    <option selected>Đang bán</option>
+                    <option>Đã ẩn</option>
+                  </select>
+                </div>
+                <label class="text-sm"><input type="checkbox" checked> Đánh dấu là gói nổi bật trên bảng giá</label>
+              </div>
+              <div class="modal__footer row row--between">
+                <a class="btn btn--ghost" href="packages.html?state=success">Huỷ</a>
+                <a class="btn btn--primary" href="packages.html?state=success">Lưu gói</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <script src="../assets/js/state-switch.js"></script>
+</body>
+</html>
