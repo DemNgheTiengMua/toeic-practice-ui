@@ -6,6 +6,7 @@
   <title>Sandbox — thử nền</title>
   <link rel="stylesheet" href="assets/css/tokens.css">
   <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/components.css">
 </head>
 <body data-states="loading,empty,error,success">
   <div class="app-shell">
@@ -24,6 +25,183 @@
           <div style="background: var(--color-primary); color: var(--color-primary-text); padding: var(--space-4); border-radius: var(--radius-md);">primary</div>
           <div style="background: var(--color-success); color: var(--color-primary-text); padding: var(--space-4); border-radius: var(--radius-md);">success</div>
           <div style="background: var(--color-danger); color: var(--color-primary-text); padding: var(--space-4); border-radius: var(--radius-md);">danger</div>
+        </div>
+
+        <h2>Component</h2>
+
+        <div class="card">
+          <div class="card__header"><strong>Button &amp; badge</strong></div>
+          <div class="card__body stack">
+            <div class="row">
+              <button class="btn btn--primary">Primary</button>
+              <button class="btn">Default</button>
+              <button class="btn btn--ghost">Ghost</button>
+              <button class="btn btn--danger">Danger</button>
+              <button class="btn btn--primary" disabled>Disabled</button>
+            </div>
+            <div class="row">
+              <button class="btn btn--primary btn--lg">Lớn</button>
+              <button class="btn btn--sm">Nhỏ</button>
+            </div>
+            <div class="row">
+              <span class="badge badge--success">Đã chấm</span>
+              <span class="badge badge--warning">Đang xử lý</span>
+              <span class="badge badge--danger">Thất bại</span>
+              <span class="badge badge--info">Mới</span>
+              <span class="badge badge--muted">Nháp</span>
+            </div>
+          </div>
+          <div class="card__footer text-muted text-sm">card__footer</div>
+        </div>
+
+        <div class="card">
+          <div class="card__header"><strong>Form</strong></div>
+          <div class="card__body grid-2">
+            <div class="field">
+              <label class="field__label" for="sb-email">Email</label>
+              <input class="field__input" id="sb-email" type="email" value="hocvien@example.com">
+              <p class="field__hint">Dùng email đã đăng ký.</p>
+            </div>
+            <div class="field field--invalid">
+              <label class="field__label" for="sb-pass">Mật khẩu</label>
+              <input class="field__input" id="sb-pass" type="password" value="123">
+              <p class="field__error">Mật khẩu phải có ít nhất 8 ký tự.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card__header"><strong>Đáp án — 3 option (Part 2) và 4 option</strong></div>
+          <div class="card__body grid-2">
+            <div class="option-list" role="radiogroup" aria-label="Câu 8 (Part 2)">
+              <label class="option option--selected" role="radio" aria-checked="true">
+                <input class="option__input" type="radio" name="sb-q8" checked>
+                <span class="option__marker" aria-hidden="true">A</span>
+                <span class="option__text">At the front desk.</span>
+              </label>
+              <label class="option" role="radio" aria-checked="false">
+                <input class="option__input" type="radio" name="sb-q8">
+                <span class="option__marker" aria-hidden="true">B</span>
+                <span class="option__text">Around nine o'clock.</span>
+              </label>
+              <label class="option" role="radio" aria-checked="false">
+                <input class="option__input" type="radio" name="sb-q8">
+                <span class="option__marker" aria-hidden="true">C</span>
+                <span class="option__text">Yes, I already did.</span>
+              </label>
+            </div>
+            <div class="option-list" role="radiogroup" aria-label="Câu 101 (Part 5)">
+              <label class="option option--correct" role="radio" aria-checked="false">
+                <input class="option__input" type="radio" name="sb-q101">
+                <span class="option__marker" aria-hidden="true">A</span>
+                <span class="option__text">announced</span>
+              </label>
+              <label class="option option--wrong" role="radio" aria-checked="true">
+                <input class="option__input" type="radio" name="sb-q101" checked>
+                <span class="option__marker" aria-hidden="true">B</span>
+                <span class="option__text">announcing</span>
+              </label>
+              <label class="option" role="radio" aria-checked="false">
+                <input class="option__input" type="radio" name="sb-q101">
+                <span class="option__marker" aria-hidden="true">C</span>
+                <span class="option__text">announcement</span>
+              </label>
+              <label class="option" role="radio" aria-checked="false">
+                <input class="option__input" type="radio" name="sb-q101">
+                <span class="option__marker" aria-hidden="true">D</span>
+                <span class="option__text">to announce</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card__header"><strong>Timer, progress, navigator</strong></div>
+          <div class="card__body stack">
+            <div class="row">
+              <span class="timer"><span class="timer__value">01:58:20</span></span>
+              <span class="timer timer--warning"><span class="timer__value">00:09:44</span></span>
+              <span class="timer timer--critical"><span class="timer__value">00:01:07</span></span>
+            </div>
+            <div class="progress"><div class="progress__bar" style="width: 64%"></div></div>
+            <div class="navigator__grid" style="max-width: 320px">
+              <span class="navigator__cell is-answered">1</span>
+              <span class="navigator__cell is-answered">2</span>
+              <span class="navigator__cell is-marked">3</span>
+              <span class="navigator__cell is-current is-unanswered">4</span>
+              <span class="navigator__cell is-unanswered">5</span>
+              <span class="navigator__cell is-unanswered">6</span>
+              <span class="navigator__cell is-answered">7</span>
+              <span class="navigator__cell is-unanswered">8</span>
+              <span class="navigator__cell is-marked">9</span>
+              <span class="navigator__cell is-answered">10</span>
+            </div>
+            <div class="exam-audio">
+              <button class="btn btn--sm" disabled>▶</button>
+              <span class="exam-audio__status">Audio phát một lần, không tua lại.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card__header"><strong>Alert, skeleton, state block, stepper</strong></div>
+          <div class="card__body stack">
+            <div class="alert alert--info">Bài thi sẽ tự nộp khi hết thời gian.</div>
+            <div class="alert alert--success">Đã lưu đáp án.</div>
+            <div class="alert alert--warning">Bạn còn 12 câu chưa trả lời.</div>
+            <div class="alert alert--danger">Không lưu được đáp án. Đang thử lại…</div>
+            <div>
+              <div class="skeleton skeleton--title"></div>
+              <div class="skeleton skeleton--text"></div>
+              <div class="skeleton skeleton--text" style="width: 78%"></div>
+            </div>
+            <div class="skeleton skeleton--block"></div>
+            <div class="state-block">
+              <div class="state-block__icon" aria-hidden="true">□</div>
+              <div class="state-block__title">Chưa có bài thi nào</div>
+              <p class="state-block__desc">Hoàn thành bài thi đầu tiên để xem tiến độ.</p>
+              <button class="btn btn--primary">Bắt đầu thi</button>
+            </div>
+            <div class="stepper">
+              <span class="stepper__item is-done">1. Thông tin đề</span>
+              <span class="stepper__item is-current">2. Upload audio</span>
+              <span class="stepper__item">3. Nhập câu hỏi</span>
+              <span class="stepper__item">4. Xem lại</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card__header"><strong>Table</strong></div>
+          <div class="card__body">
+            <table class="table table--striped">
+              <caption class="text-muted text-sm">Lịch sử bài thi</caption>
+              <thead>
+                <tr><th scope="col">Đề</th><th scope="col">Ngày</th><th scope="col">Điểm</th><th scope="col">Trạng thái</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>ETS 2024 Test 1</td><td>12/09/2026</td><td>780</td><td><span class="badge badge--success">Đã chấm</span></td></tr>
+                <tr><td>ETS 2024 Test 2</td><td>15/09/2026</td><td>745</td><td><span class="badge badge--success">Đã chấm</span></td></tr>
+                <tr><td>ETS 2024 Test 3</td><td>19/09/2026</td><td>—</td><td><span class="badge badge--warning">Đang xử lý</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card__header"><strong>Modal (dựng tĩnh, không overlay toàn trang)</strong></div>
+          <div class="card__body">
+            <div class="modal" role="dialog" aria-label="Xác nhận nộp bài" aria-modal="false">
+              <div class="modal__header"><strong>Nộp bài thi?</strong></div>
+              <div class="modal__body">
+                <p>Bạn còn <strong>12 câu</strong> chưa trả lời. Sau khi nộp sẽ không sửa được.</p>
+              </div>
+              <div class="modal__footer">
+                <button class="btn">Quay lại</button>
+                <button class="btn btn--primary">Nộp bài</button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </main>

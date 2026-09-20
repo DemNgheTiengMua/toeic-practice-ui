@@ -17,6 +17,21 @@
   --color-danger: #c62828;
   --color-info: #0d6e8c;
 
+  /* nền nhạt + viền nhạt cho badge, option, navigator */
+  --color-primary-soft: #eef4fe;
+  --color-success-soft: #e6f4ec;
+  --color-success-soft-border: #bfe0cc;
+  --color-warning-soft: #fdf3e2;
+  --color-warning-soft-border: #f0dbb4;
+  --color-danger-soft: #fdeaea;
+  --color-danger-soft-border: #f2c4c4;
+  --color-info-soft: #e5f2f6;
+  --color-info-soft-border: #bcdbe4;
+
+  /* nền rãnh cho skeleton & progress, lớp phủ modal */
+  --color-track: #e9ecf0;
+  --color-overlay: rgba(16, 24, 40, .45);
+
   /* spacing, thang 4px */
   --space-1: 4px;  --space-2: 8px;  --space-3: 12px; --space-4: 16px;
   --space-5: 24px; --space-6: 32px; --space-7: 48px; --space-8: 64px;
