@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hướng dẫn trước khi thi — TOEIC Practice</title>
+  <link rel="stylesheet" href="../assets/css/tokens.css">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+</head>
+<body data-states="success,paywall,submitting">
+  <div class="app-shell">
+    <header class="app-topbar">
+      <strong>ETS 2024 — Test 5</strong>
+      <a class="btn btn--ghost btn--sm" href="exam-list.html">Thoát</a>
+    </header>
+    <main class="app-main">
+      <div class="container" style="max-width: 760px">
+
+        <!-- ===== paywall ===== -->
+        <div class="only-paywall">
+          <div class="card"><div class="card__body">
+            <div class="state-block">
+              <div class="state-block__icon" aria-hidden="true">🔒</div>
+              <div class="state-block__title">Bạn đã hết lượt thi</div>
+              <p class="state-block__desc">
+                Mỗi bài thi đầy đủ dùng 1 lượt. Mua thêm để tiếp tục.
+              </p>
+              <div class="row" style="justify-content: center">
+                <a class="btn btn--primary btn--lg" href="../payment/pricing.html">Xem bảng giá</a>
+                <a class="btn btn--lg" href="practice-select.html">Luyện miễn phí</a>
+              </div>
+            </div>
+          </div></div>
+        </div>
+
+        <!-- ===== success ===== -->
+        <div class="only-success stack">
+          <h1>Trước khi bắt đầu</h1>
+
+          <div class="card">
+            <div class="card__header"><strong>Cấu trúc bài thi</strong></div>
+            <div class="card__body">
+              <table class="table">
+                <thead>
+                  <tr><th>Phần</th><th>Part</th><th>Số câu</th><th>Thời gian</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td rowspan="4">Listening</td><td>Part 1 — Ảnh</td><td>6</td><td rowspan="4">45 phút</td></tr>
+                  <tr><td>Part 2 — Hỏi đáp</td><td>25</td></tr>
+                  <tr><td>Part 3 — Hội thoại</td><td>39</td></tr>
+                  <tr><td>Part 4 — Bài nói</td><td>30</td></tr>
+                  <tr><td rowspan="3">Reading</td><td>Part 5 — Câu đơn</td><td>30</td><td rowspan="3">75 phút</td></tr>
+                  <tr><td>Part 6 — Điền đoạn</td><td>16</td></tr>
+                  <tr><td>Part 7 — Đọc hiểu</td><td>54</td></tr>
+                </tbody>
+                <tfoot>
+                  <tr><th>Tổng</th><th></th><th>200</th><th>120 phút</th></tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+
+          <div class="alert alert--warning">
+            <strong>Phần Listening chỉ phát audio một lần.</strong>
+            Không tua lại, không tạm dừng, và không quay lại Listening sau khi đã sang Reading.
+          </div>
+
+          <div class="card">
+            <div class="card__header"><strong>Lưu ý</strong></div>
+            <div class="card__body">
+              <ul class="stack" style="margin: 0; padding-left: var(--space-5)">
+                <li>Đáp án được lưu tự động sau mỗi lần chọn. Đóng tab vẫn tiếp tục được.</li>
+                <li>Hết giờ, bài tự nộp và chấm trên những câu đã làm.</li>
+                <li>Bài thi này dùng <strong>1 lượt</strong>. Bạn còn 3 lượt.</li>
+                <li>Chuẩn bị tai nghe và kiểm tra âm lượng trước khi bắt đầu.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card__body row" style="gap: var(--space-4)">
+              <button class="btn" type="button">Phát audio thử</button>
+              <span class="text-sm text-muted">Nghe được đoạn mẫu nghĩa là thiết bị đã sẵn sàng.</span>
+            </div>
+          </div>
+
+          <label class="row">
+            <input type="checkbox" id="confirm-ready">
+            <span class="text-sm">Tôi đã đọc hướng dẫn và sẵn sàng bắt đầu</span>
+          </label>
+
+          <div class="row">
+            <a class="btn btn--primary btn--lg" href="exam-listening.html">Bắt đầu thi — dùng 1 lượt</a>
+            <a class="btn btn--lg" href="exam-list.html">Để sau</a>
+          </div>
+        </div>
+
+        <div class="only-submitting">
+          <div class="card"><div class="card__body">
+            <div class="state-block">
+              <div class="state-block__icon" aria-hidden="true">⏳</div>
+              <div class="state-block__title">Đang khởi tạo bài thi…</div>
+              <p class="state-block__desc">Đang trừ 1 lượt và tải đề. Đừng tắt trang.</p>
+            </div>
+          </div></div>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script src="../assets/js/state-switch.js"></script>
+</body>
+</html>

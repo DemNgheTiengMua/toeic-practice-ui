@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Danh sách đề thi — TOEIC Practice</title>
+  <link rel="stylesheet" href="../assets/css/tokens.css">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+</head>
+<body data-states="loading,empty,error,success,paywall">
+  <div class="app-shell app-shell--with-sidebar">
+    <header class="app-topbar">
+      <strong>TOEIC Practice</strong>
+      <div class="row">
+        <span class="badge badge--info">Còn 3 lượt thi</span>
+        <a class="btn btn--sm" href="../payment/pricing.html">Mua thêm lượt</a>
+        <a class="btn btn--ghost btn--sm" href="profile.html">Nguyễn Văn A</a>
+      </div>
+    </header>
+    <div class="app-body">
+      <aside class="app-sidebar">
+        <nav class="nav-list" aria-label="Điều hướng chính">
+          <a class="nav-list__item" href="dashboard.html">Trang chủ</a>
+          <div class="nav-list__group">Thi thử</div>
+          <a class="nav-list__item is-active" href="exam-list.html">Danh sách đề</a>
+          <a class="nav-list__item" href="exam-history.html">Lịch sử thi</a>
+          <div class="nav-list__group">Luyện tập</div>
+          <a class="nav-list__item" href="practice-select.html">Luyện theo part</a>
+          <div class="nav-list__group">Tài khoản</div>
+          <a class="nav-list__item" href="../payment/wallet.html">Ví lượt thi</a>
+          <a class="nav-list__item" href="profile.html">Hồ sơ</a>
+        </nav>
+      </aside>
+      <main class="app-main">
+        <div class="container stack">
+          <!-- ===== loading ===== -->
+          <div class="only-loading stack">
+            <div class="skeleton skeleton--title"></div>
+            <div class="grid-2">
+              <div class="skeleton skeleton--block" style="height: 150px"></div>
+              <div class="skeleton skeleton--block" style="height: 150px"></div>
+              <div class="skeleton skeleton--block" style="height: 150px"></div>
+              <div class="skeleton skeleton--block" style="height: 150px"></div>
+            </div>
+          </div>
+
+          <!-- ===== error ===== -->
+          <div class="only-error">
+            <div class="card"><div class="card__body">
+              <div class="state-block">
+                <div class="state-block__icon" aria-hidden="true">!</div>
+                <div class="state-block__title">Không tải được danh sách đề</div>
+                <p class="state-block__desc">Kiểm tra kết nối rồi thử lại.</p>
+                <button class="btn btn--primary">Thử lại</button>
+              </div>
+            </div></div>
+          </div>
+
+          <!-- ===== empty ===== -->
+          <div class="only-empty stack">
+            <h1>Danh sách đề thi</h1>
+            <div class="card"><div class="card__body">
+              <div class="state-block">
+                <div class="state-block__icon" aria-hidden="true">□</div>
+                <div class="state-block__title">Chưa có đề thi nào</div>
+                <p class="state-block__desc">Đề mới sẽ xuất hiện ở đây khi được phát hành.</p>
+                <a class="btn" href="practice-select.html">Luyện theo part</a>
+              </div>
+            </div></div>
+          </div>
+
+          <!-- ===== paywall: hết lượt ===== -->
+          <div class="only-paywall stack">
+            <h1>Danh sách đề thi</h1>
+            <div class="alert alert--warning">
+              <strong>Bạn đã hết lượt thi.</strong>
+              Mua thêm lượt để làm đề đầy đủ. Luyện theo part vẫn miễn phí.
+              <div class="row" style="margin-top: var(--space-3)">
+                <a class="btn btn--primary btn--sm" href="../payment/pricing.html">Xem bảng giá</a>
+                <a class="btn btn--sm" href="practice-select.html">Luyện miễn phí</a>
+              </div>
+            </div>
+            <div class="grid-2">
+              <div class="card">
+                <div class="card__body stack">
+                  <div class="row row--between">
+                    <strong>ETS 2024 — Test 4</strong>
+                    <span class="badge badge--muted">Cần 1 lượt</span>
+                  </div>
+                  <p class="text-sm text-muted" style="margin: 0">
+                    200 câu · 120 phút · 7 parts
+                  </p>
+                  <button class="btn btn--primary" disabled>Bắt đầu thi</button>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card__body stack">
+                  <div class="row row--between">
+                    <strong>ETS 2024 — Test 5</strong>
+                    <span class="badge badge--muted">Cần 1 lượt</span>
+                  </div>
+                  <p class="text-sm text-muted" style="margin: 0">
+                    200 câu · 120 phút · 7 parts
+                  </p>
+                  <button class="btn btn--primary" disabled>Bắt đầu thi</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ===== success ===== -->
+          <div class="only-success stack">
+            <div class="row row--between">
+              <h1 style="margin: 0">Danh sách đề thi</h1>
+              <span class="badge badge--info">Còn 3 lượt thi</span>
+            </div>
+
+            <div class="card">
+              <div class="card__body row" style="gap: var(--space-4); flex-wrap: wrap">
+                <div class="field" style="flex: 1 1 220px">
+                  <label class="field__label" for="filter-keyword">Tìm đề</label>
+                  <input class="field__input" id="filter-keyword" type="search"
+                         placeholder="Tên đề, bộ đề…">
+                </div>
+                <div class="field" style="flex: 0 0 180px">
+                  <label class="field__label" for="filter-status">Trạng thái</label>
+                  <select class="field__input" id="filter-status">
+                    <option>Tất cả</option>
+                    <option>Chưa làm</option>
+                    <option>Đã làm</option>
+                    <option>Đang làm dở</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div class="grid-2">
+              <!-- đề đang làm dở -->
+              <div class="card">
+                <div class="card__body stack">
+                  <div class="row row--between">
+                    <strong>ETS 2024 — Test 4</strong>
+                    <span class="badge badge--warning">Đang làm dở</span>
+                  </div>
+                  <p class="text-sm text-muted" style="margin: 0">
+                    200 câu · 120 phút · còn 47 phút · đã làm 128/200
+                  </p>
+                  <div class="progress"><div class="progress__bar" style="width: 64%"></div></div>
+                  <div class="row">
+                    <a class="btn btn--primary" href="exam-reading.html?state=resumed">Tiếp tục</a>
+                    <button class="btn btn--ghost btn--sm">Huỷ bài</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- đề chưa làm -->
+              <div class="card">
+                <div class="card__body stack">
+                  <div class="row row--between">
+                    <strong>ETS 2024 — Test 5</strong>
+                    <span class="badge badge--muted">Chưa làm</span>
+                  </div>
+                  <p class="text-sm text-muted" style="margin: 0">
+                    200 câu · 120 phút · 7 parts
+                  </p>
+                  <a class="btn btn--primary" href="exam-instructions.html">Bắt đầu thi</a>
+                </div>
+              </div>
+
+              <!-- đề đã làm -->
+              <div class="card">
+                <div class="card__body stack">
+                  <div class="row row--between">
+                    <strong>ETS 2024 — Test 3</strong>
+                    <span class="badge badge--success">Đã làm · 720</span>
+                  </div>
+                  <p class="text-sm text-muted" style="margin: 0">
+                    Hoàn thành 18/09/2026 · L 385 · R 335
+                  </p>
+                  <div class="row">
+                    <a class="btn" href="exam-review.html">Xem lại</a>
+                    <a class="btn btn--primary" href="exam-instructions.html">Làm lại</a>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="card__body stack">
+                  <div class="row row--between">
+                    <strong>ETS 2024 — Test 2</strong>
+                    <span class="badge badge--success">Đã làm · 690</span>
+                  </div>
+                  <p class="text-sm text-muted" style="margin: 0">
+                    Hoàn thành 10/09/2026 · L 370 · R 320
+                  </p>
+                  <div class="row">
+                    <a class="btn" href="exam-review.html">Xem lại</a>
+                    <a class="btn btn--primary" href="exam-instructions.html">Làm lại</a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <script src="../assets/js/state-switch.js"></script>
+</body>
+</html>
