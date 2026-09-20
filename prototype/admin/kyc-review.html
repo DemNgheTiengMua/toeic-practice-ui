@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Duyệt xác thực CCCD — Quản trị TOEIC Practice</title>
+  <link rel="stylesheet" href="../assets/css/tokens.css">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+</head>
+<body data-states="loading,empty,error,success,adjust" data-state="success">
+  <div class="app-shell app-shell--with-sidebar">
+    <header class="app-topbar">
+      <strong>TOEIC Practice — Khu vực quản trị</strong>
+      <div class="row">
+        <span class="badge badge--warning">Admin</span>
+        <span class="text-sm">admin@toeic.local</span>
+        <a class="btn btn--sm btn--ghost" href="../auth/login.html">Đăng xuất</a>
+      </div>
+    </header>
+    <div class="app-body">
+      <aside class="app-sidebar">
+        <nav class="nav-list" aria-label="Điều hướng quản trị">
+          <div class="nav-list__group">Tổng quan</div>
+          <a class="nav-list__item" href="dashboard.html">Bảng điều khiển</a>
+          <div class="nav-list__group">Nội dung</div>
+          <a class="nav-list__item" href="exam-list.html">Đề thi</a>
+          <a class="nav-list__item" href="score-conversion.html">Bảng quy đổi điểm</a>
+          <div class="nav-list__group">Người dùng &amp; doanh thu</div>
+          <a class="nav-list__item" href="users.html">Học viên</a>
+          <a class="nav-list__item is-active" href="kyc-review.html">Duyệt CCCD <span class="badge badge--danger">3</span></a>
+          <a class="nav-list__item" href="packages.html">Gói lượt thi</a>
+          <a class="nav-list__item" href="orders.html">Đơn hàng</a>
+          <div class="nav-list__group">Khác</div>
+          <a class="nav-list__item" href="../index.html">Mục lục prototype</a>
+        </nav>
+      </aside>
+      <main class="app-main">
+        <div class="container stack">
+          <div class="row row--between">
+            <div>
+              <h1 style="margin: 0 0 var(--space-1)">Duyệt xác thực CCCD</h1>
+              <p class="text-muted" style="margin: 0">
+                Đối chiếu ảnh CCCD với thông tin học viên khai. Học viên chỉ thi thật được sau khi hồ sơ được duyệt.
+              </p>
+            </div>
+            <span class="badge badge--danger">3 hồ sơ chờ duyệt</span>
+          </div>
+
+          <!-- ===== loading ===== -->
+          <div class="only-loading stack">
+            <div class="skeleton skeleton--block" style="height: 120px"></div>
+            <div class="skeleton skeleton--block" style="height: 320px"></div>
+          </div>
+
+          <!-- ===== empty: không còn hồ sơ chờ ===== -->
+          <div class="only-empty">
+            <div class="card"><div class="card__body">
+              <div class="state-block">
+                <div class="state-block__icon" aria-hidden="true">□</div>
+                <div class="state-block__title">Không còn hồ sơ chờ duyệt</div>
+                <p class="state-block__desc">
+                  Hàng đợi đã sạch. Hồ sơ mới sẽ xuất hiện ở đây ngay khi học viên gửi.
+                </p>
+                <a class="btn" href="users.html">Danh sách học viên</a>
+              </div>
+            </div></div>
+          </div>
+
+          <!-- ===== error ===== -->
+          <div class="only-error">
+            <div class="card"><div class="card__body">
+              <div class="state-block">
+                <div class="state-block__icon" aria-hidden="true">!</div>
+                <div class="state-block__title">Không tải được hàng đợi</div>
+                <p class="state-block__desc">Kiểm tra kết nối rồi thử lại.</p>
+                <button class="btn btn--primary">Thử lại</button>
+              </div>
+            </div></div>
+          </div>
+
+          <!-- ===== success: hàng đợi ===== -->
+          <div class="only-success stack">
+            <div class="card">
+              <div class="card__body row" style="gap: var(--space-4); flex-wrap: wrap">
+                <div class="field" style="flex: 1 1 220px">
+                  <label class="field__label" for="kyc-search">Tìm học viên</label>
+                  <input class="field__input" id="kyc-search" type="search" placeholder="Tên hoặc email…">
+                </div>
+                <div class="field" style="flex: 0 0 180px">
+                  <label class="field__label" for="kyc-since">Gửi từ</label>
+                  <select class="field__input" id="kyc-since">
+                    <option>Hôm nay</option>
+                    <option selected>7 ngày qua</option>
+                    <option>Tất cả</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card__header"><strong>Hàng đợi chờ duyệt</strong></div>
+              <div class="card__body">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Học viên</th>
+                      <th scope="col">Tên trên CCCD</th>
+                      <th scope="col">Số CCCD</th>
+                      <th scope="col">Gửi lúc</th>
+                      <th scope="col">Chờ</th>
+                      <th scope="col"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>
+                        <div>Nguyễn Văn A</div>
+                        <div class="text-xs text-muted">nguyenvana@example.com</div>
+                      </td>
+                      <td>NGUYỄN VĂN A</td>
+                      <td>•••• •••• 1234</td>
+                      <td>20/09/2026 11:24</td>
+                      <td><span class="badge badge--warning">2 giờ</span></td>
+                      <td>
+                        <button class="btn btn--sm btn--primary"
+                                data-kyc-open="Nguyễn Văn A">Xem và duyệt</button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <div>Trần Thị B</div>
+                        <div class="text-xs text-muted">tranthib@example.com</div>
+                      </td>
+                      <td>TRẦN THỊ B</td>
+                      <td>•••• •••• 5678</td>
+                      <td>20/09/2026 09:10</td>
+                      <td><span class="badge badge--warning">5 giờ</span></td>
+                      <td>
+                        <button class="btn btn--sm btn--primary"
+                                data-kyc-open="Trần Thị B">Xem và duyệt</button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <div>Lê Văn C</div>
+                        <div class="text-xs text-muted">levanc@example.com</div>
+                      </td>
+                      <td>LÊ VĂN C</td>
+                      <td>•••• •••• 9012</td>
+                      <td>19/09/2026 16:48</td>
+                      <td><span class="badge badge--danger">20 giờ</span></td>
+                      <td>
+                        <button class="btn btn--sm btn--primary"
+                                data-kyc-open="Lê Văn C">Xem và duyệt</button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- ===== adjust: hộp duyệt chi tiết =====
+       Ba thứ admin cần cùng lúc trên một màn: ảnh CCCD, thông tin học
+       viên khai, và tài khoản gửi. Tách sang trang riêng thì phải nhớ
+       thông tin giữa hai lần mở. -->
+  <div class="modal-overlay only-adjust" role="dialog" aria-modal="true"
+       aria-labelledby="kyc-review-title">
+    <div class="modal" style="max-width: 900px">
+      <div class="modal__header">
+        <h2 id="kyc-review-title" style="margin: 0">Duyệt hồ sơ — Nguyễn Văn A</h2>
+      </div>
+      <div class="modal__body stack">
+        <div class="grid-2">
+          <div class="stack">
+            <span class="field__label">Ảnh mặt trước CCCD</span>
+            <div class="kyc-photo">cccd-truoc.jpg — 1.8 MB</div>
+            <span class="field__label">Ảnh mặt sau CCCD</span>
+            <div class="kyc-photo">cccd-sau.jpg — 1.6 MB</div>
+          </div>
+          <div class="stack">
+            <span class="field__label">Ảnh chân dung</span>
+            <div class="kyc-photo kyc-photo--portrait">selfie.jpg — 2.1 MB</div>
+            <div class="alert alert--info" style="margin: 0">
+              Đối chiếu khuôn mặt trên ảnh chân dung với ảnh trên CCCD.
+              Nếu không khớp, từ chối và ghi rõ lý do.
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card__header"><strong>Thông tin đối chiếu</strong></div>
+          <div class="card__body stack">
+            <div class="row row--between">
+              <span class="text-muted">Học viên khai</span>
+              <span><strong>NGUYỄN VĂN A</strong> · 01/01/1990</span>
+            </div>
+            <div class="row row--between">
+              <span class="text-muted">Tài khoản</span>
+              <span>nguyenvana@example.com · tạo 12/09/2026</span>
+            </div>
+            <div class="row row--between">
+              <span class="text-muted">Số CCCD (4 số cuối)</span>
+              <span>1234</span>
+            </div>
+            <div class="row row--between">
+              <span class="text-muted">Lượt thi hiện có</span>
+              <span>3 lượt</span>
+            </div>
+            <div class="alert alert--success" style="margin: 0">
+              Số CCCD <strong>chưa từng</strong> gắn với tài khoản nào khác.
+              Hệ thống chặn một CCCD dùng cho nhiều tài khoản, nên bước này
+              đã được kiểm tra tự động.
+            </div>
+          </div>
+        </div>
+
+        <div class="field" id="kyc-reason-field">
+          <label class="field__label" for="kyc-reason">Lý do (bắt buộc khi từ chối)</label>
+          <textarea class="field__input" id="kyc-reason" rows="3"
+                    placeholder="Ví dụ: Ảnh mặt trước bị loá, không đọc được số CCCD."></textarea>
+          <span class="field__hint">
+            Học viên thấy nguyên văn lý do này ở màn trạng thái, nên ghi cụ thể
+            chỗ cần sửa — không viết "ảnh không hợp lệ".
+          </span>
+          <p class="field__error" id="kyc-reason-error" hidden>
+            Phải ghi lý do trước khi từ chối. Học viên cần biết chính xác chỗ nào
+            sai để sửa và gửi lại.
+          </p>
+        </div>
+      </div>
+      <div class="modal__footer">
+        <a class="btn" href="?state=success">Để sau</a>
+        <button class="btn btn--danger" id="kyc-reject">Từ chối</button>
+        <button class="btn btn--primary" id="kyc-approve">Duyệt hồ sơ</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../assets/js/state-switch.js"></script>
+  <script>
+    // Mở hộp duyệt: gắn tên học viên vào tiêu đề rồi chuyển state.
+    // Chỉ là prototype nên không có logic nghiệp vụ thật.
+    document.querySelectorAll("[data-kyc-open]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        document.getElementById("kyc-review-title").textContent =
+          "Duyệt hồ sơ — " + btn.dataset.kycOpen;
+        document.body.dataset.state = "adjust";
+        document.querySelectorAll(".state-switcher__item").forEach(function (a) {
+          a.removeAttribute("aria-current");
+          if (a.textContent === "adjust") a.setAttribute("aria-current", "true");
+        });
+      });
+    });
+
+    // Ràng buộc CK_Kyc_RejectReason: từ chối thì bắt buộc có lý do.
+    // Server chặn bằng CHECK constraint; ở đây minh hoạ đúng ràng buộc đó
+    // để luồng admin không trông như thể từ chối suông là hợp lệ.
+    var reason = document.getElementById("kyc-reason");
+    var reasonField = document.getElementById("kyc-reason-field");
+    var reasonError = document.getElementById("kyc-reason-error");
+
+    function clearReasonError() {
+      reasonField.classList.remove("field--invalid");
+      reasonError.hidden = true;
+    }
+
+    reason.addEventListener("input", function () {
+      if (reason.value.trim()) clearReasonError();
+    });
+
+    document.getElementById("kyc-reject").addEventListener("click", function () {
+      if (!reason.value.trim()) {
+        reasonField.classList.add("field--invalid");
+        reasonError.hidden = false;
+        reason.focus();
+        return; // không rời màn, đúng như server sẽ trả lỗi
+      }
+      window.location.search = "?state=success";
+    });
+
+    document.getElementById("kyc-approve").addEventListener("click", function () {
+      window.location.search = "?state=success";
+    });
+  </script>
+</body>
+</html>

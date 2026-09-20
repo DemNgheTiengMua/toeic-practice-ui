@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
 </head>
-<body data-states="success,paywall,submitting">
+<body data-states="success,kyc-required,kyc-pending,rejected,paywall,submitting">
   <div class="app-shell">
     <header class="app-topbar">
       <strong>ETS 2024 — Test 5</strong>
@@ -29,6 +29,60 @@
               <div class="row" style="justify-content: center">
                 <a class="btn btn--primary btn--lg" href="../payment/pricing.html">Xem bảng giá</a>
                 <a class="btn btn--lg" href="practice-select.html">Luyện miễn phí</a>
+              </div>
+            </div>
+          </div></div>
+        </div>
+
+        <!-- ===== kyc-required =====
+             Chặn ở đây, TRƯỚC nút "Bắt đầu thi — dùng 1 lượt". Chặn sau
+             nút đó là đã trừ lượt rồi mới báo thiếu điều kiện. -->
+        <div class="only-kyc-required">
+          <div class="card"><div class="card__body">
+            <div class="state-block">
+              <div class="state-block__icon" aria-hidden="true">🪪</div>
+              <div class="state-block__title">Cần xác thực CCCD trước khi thi</div>
+              <p class="state-block__desc">
+                Thủ tục một lần, miễn phí, không trừ lượt thi.
+                Lượt của bạn vẫn còn nguyên.
+              </p>
+              <div class="row" style="justify-content: center">
+                <a class="btn btn--primary btn--lg" href="kyc-submit.html">Xác thực CCCD</a>
+                <a class="btn btn--lg" href="practice-select.html">Luyện miễn phí</a>
+              </div>
+            </div>
+          </div></div>
+        </div>
+
+        <!-- ===== kyc-pending ===== -->
+        <div class="only-kyc-pending">
+          <div class="card"><div class="card__body">
+            <div class="state-block">
+              <div class="state-block__icon" aria-hidden="true">⏳</div>
+              <div class="state-block__title">Hồ sơ xác thực đang chờ duyệt</div>
+              <p class="state-block__desc">
+                Thường trong vòng 1 ngày làm việc. Thi thật sẽ mở ngay khi hồ sơ được duyệt.
+              </p>
+              <div class="row" style="justify-content: center">
+                <a class="btn btn--primary btn--lg" href="kyc-pending.html">Xem hồ sơ</a>
+                <a class="btn btn--lg" href="practice-select.html">Luyện miễn phí</a>
+              </div>
+            </div>
+          </div></div>
+        </div>
+
+        <!-- ===== rejected ===== -->
+        <div class="only-rejected">
+          <div class="card"><div class="card__body">
+            <div class="state-block">
+              <div class="state-block__icon" aria-hidden="true">✕</div>
+              <div class="state-block__title">Hồ sơ xác thực bị từ chối</div>
+              <p class="state-block__desc">
+                Ảnh mặt trước CCCD bị loá. Sửa và gửi lại để mở phần thi thật.
+              </p>
+              <div class="row" style="justify-content: center">
+                <a class="btn btn--primary btn--lg" href="kyc-submit.html">Sửa và gửi lại</a>
+                <a class="btn btn--lg" href="kyc-pending.html">Xem lý do</a>
               </div>
             </div>
           </div></div>

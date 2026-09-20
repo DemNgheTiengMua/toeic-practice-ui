@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
 </head>
-<body data-states="loading,empty,error,success,paywall">
+<body data-states="loading,empty,error,success,kyc-required,kyc-pending,paywall,cancelled">
   <div class="app-shell app-shell--with-sidebar">
     <header class="app-topbar">
       <strong>TOEIC Practice</strong>
@@ -101,6 +101,90 @@
                   <div class="row row--between">
                     <strong>ETS 2024 — Test 5</strong>
                     <span class="badge badge--muted">Cần 1 lượt</span>
+                  </div>
+                  <p class="text-sm text-muted" style="margin: 0">
+                    200 câu · 120 phút · 7 parts
+                  </p>
+                  <button class="btn btn--primary" disabled>Bắt đầu thi</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ===== kyc-required: chưa xác thực CCCD =====
+               Gate này đứng TRƯỚC paywall và trước khi trừ credit.
+               Thứ tự quan trọng: chặn sau khi trừ lượt thì học viên mất
+               lượt rồi mới biết mình chưa đủ điều kiện thi. -->
+          <div class="only-kyc-required stack">
+            <h1>Danh sách đề thi</h1>
+            <div class="alert alert--warning">
+              <strong>Cần xác thực CCCD trước khi thi thật.</strong>
+              Đây là thủ tục một lần, miễn phí và không trừ lượt thi.
+              Luyện theo part vẫn dùng được ngay.
+              <div class="row" style="margin-top: var(--space-3)">
+                <a class="btn btn--primary btn--sm" href="kyc-submit.html">Xác thực CCCD</a>
+                <a class="btn btn--sm" href="practice-select.html">Luyện miễn phí</a>
+              </div>
+            </div>
+            <div class="grid-2">
+              <div class="card">
+                <div class="card__body stack">
+                  <div class="row row--between">
+                    <strong>ETS 2024 — Test 4</strong>
+                    <span class="badge badge--muted">Cần xác thực</span>
+                  </div>
+                  <p class="text-sm text-muted" style="margin: 0">
+                    200 câu · 120 phút · 7 parts
+                  </p>
+                  <a class="btn btn--primary" href="kyc-submit.html">Xác thực để thi</a>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card__body stack">
+                  <div class="row row--between">
+                    <strong>ETS 2024 — Test 5</strong>
+                    <span class="badge badge--muted">Cần xác thực</span>
+                  </div>
+                  <p class="text-sm text-muted" style="margin: 0">
+                    200 câu · 120 phút · 7 parts
+                  </p>
+                  <a class="btn btn--primary" href="kyc-submit.html">Xác thực để thi</a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ===== kyc-pending: đã gửi, đang chờ duyệt =====
+               Khác kyc-required ở chỗ học viên không còn gì để làm —
+               nên không có CTA hành động, chỉ có đường lui về luyện tập. -->
+          <div class="only-kyc-pending stack">
+            <h1>Danh sách đề thi</h1>
+            <div class="alert alert--info">
+              <strong>Hồ sơ xác thực đang chờ duyệt.</strong>
+              Thường trong vòng 1 ngày làm việc. Thi thật sẽ mở ngay khi hồ sơ được duyệt.
+              <div class="row" style="margin-top: var(--space-3)">
+                <a class="btn btn--sm" href="kyc-pending.html">Xem hồ sơ đã gửi</a>
+                <a class="btn btn--sm" href="practice-select.html">Luyện miễn phí</a>
+              </div>
+            </div>
+            <div class="grid-2">
+              <div class="card">
+                <div class="card__body stack">
+                  <div class="row row--between">
+                    <strong>ETS 2024 — Test 4</strong>
+                    <span class="badge badge--warning">Chờ duyệt hồ sơ</span>
+                  </div>
+                  <p class="text-sm text-muted" style="margin: 0">
+                    200 câu · 120 phút · 7 parts
+                  </p>
+                  <button class="btn btn--primary" disabled>Bắt đầu thi</button>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card__body stack">
+                  <div class="row row--between">
+                    <strong>ETS 2024 — Test 5</strong>
+                    <span class="badge badge--warning">Chờ duyệt hồ sơ</span>
                   </div>
                   <p class="text-sm text-muted" style="margin: 0">
                     200 câu · 120 phút · 7 parts

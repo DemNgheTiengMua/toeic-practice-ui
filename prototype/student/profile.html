@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
 </head>
-<body data-states="success,submitting,error">
+<body data-states="loading,success,submitting,error,kyc-required,kyc-pending,rejected">
   <div class="app-shell app-shell--with-sidebar">
     <header class="app-topbar">
       <strong>TOEIC Practice</strong>
@@ -27,13 +27,24 @@
           <a class="nav-list__item" href="exam-history.html">Lịch sử thi</a>
           <div class="nav-list__group">Luyện tập</div>
           <a class="nav-list__item" href="practice-select.html">Luyện theo part</a>
+          <a class="nav-list__item" href="weakness-analysis.html">Phân tích điểm yếu</a>
           <div class="nav-list__group">Tài khoản</div>
           <a class="nav-list__item" href="../payment/wallet.html">Ví lượt thi</a>
+          <a class="nav-list__item" href="kyc-pending.html">Xác thực CCCD</a>
           <a class="nav-list__item is-active" href="profile.html">Hồ sơ</a>
         </nav>
       </aside>
       <main class="app-main">
         <div class="container stack">
+          <!-- ===== loading ===== -->
+          <div class="only-loading stack">
+            <div class="skeleton skeleton--title"></div>
+            <div class="grid-2">
+              <div class="skeleton skeleton--block" style="height: 240px"></div>
+              <div class="skeleton skeleton--block" style="height: 240px"></div>
+            </div>
+          </div>
+
           <!-- ===== error ===== -->
           <div class="only-error">
             <div class="alert alert--danger">
@@ -41,7 +52,8 @@
             </div>
           </div>
 
-          <div class="multi-state stack" data-show="success submitting">
+          <div class="multi-state stack"
+               data-show="success submitting kyc-required kyc-pending rejected">
             <h1>Hồ sơ của tôi</h1>
 
             <div class="grid-2">
@@ -76,6 +88,79 @@
                 </div>
               </div>
               <div class="stack">
+                <!-- Thẻ xác thực CCCD đổi theo trạng thái hồ sơ. Trạng thái
+                     này độc lập với state tải trang nên dùng multi-state
+                     thay vì .only-* trên cả trang. -->
+                <div class="card">
+                  <div class="card__header">Xác thực CCCD</div>
+
+                  <!-- chưa gửi -->
+                  <div class="card__body stack multi-state" data-show="kyc-required">
+                    <div class="row row--between">
+                      <span class="text-muted">Trạng thái</span>
+                      <span class="badge badge--warning">Chưa xác thực</span>
+                    </div>
+                    <p class="text-sm text-muted" style="margin: 0">
+                      Cần xác thực CCCD trước khi đăng ký thi thật.
+                      Miễn phí và không trừ lượt thi.
+                    </p>
+                    <a class="btn btn--primary" href="kyc-submit.html">Xác thực ngay</a>
+                  </div>
+
+                  <!-- đang chờ duyệt -->
+                  <div class="card__body stack multi-state" data-show="kyc-pending">
+                    <div class="row row--between">
+                      <span class="text-muted">Trạng thái</span>
+                      <span class="badge badge--warning">Chờ duyệt</span>
+                    </div>
+                    <div class="row row--between">
+                      <span class="text-muted">Số CCCD</span>
+                      <span>•••• •••• 1234</span>
+                    </div>
+                    <p class="text-sm text-muted" style="margin: 0">
+                      Gửi lúc 20/09/2026 11:24 · thường duyệt trong 1 ngày làm việc.
+                    </p>
+                    <a class="btn" href="kyc-pending.html">Xem hồ sơ đã gửi</a>
+                  </div>
+
+                  <!-- bị từ chối -->
+                  <div class="card__body stack multi-state" data-show="rejected">
+                    <div class="row row--between">
+                      <span class="text-muted">Trạng thái</span>
+                      <span class="badge badge--danger">Bị từ chối</span>
+                    </div>
+                    <div class="row row--between">
+                      <span class="text-muted">Số CCCD</span>
+                      <span>•••• •••• 1234</span>
+                    </div>
+                    <div class="alert alert--danger">
+                      <strong>Lý do:</strong> Ảnh mặt trước CCCD bị loá, không đọc được
+                      số CCCD và ngày hết hạn.
+                    </div>
+                    <a class="btn btn--primary" href="kyc-submit.html">Sửa và gửi lại</a>
+                  </div>
+
+                  <!-- đã xác thực -->
+                  <div class="card__body stack multi-state" data-show="success">
+                    <div class="row row--between">
+                      <span class="text-muted">Trạng thái</span>
+                      <span class="badge badge--success">Đã xác thực</span>
+                    </div>
+                    <div class="row row--between">
+                      <span class="text-muted">Số CCCD</span>
+                      <span>•••• •••• 1234</span>
+                    </div>
+                    <div class="row row--between">
+                      <span class="text-muted">Duyệt lúc</span>
+                      <span>20/09/2026 14:05</span>
+                    </div>
+                    <p class="text-sm text-muted" style="margin: 0">
+                      Hồ sơ đã duyệt không sửa được. Nếu thông tin có sai sót,
+                      liên hệ hỗ trợ để được cập nhật.
+                    </p>
+                  </div>
+                </div>
+
                 <div class="card">
                   <div class="card__header">Ví lượt thi</div>
                   <div class="card__body stack">

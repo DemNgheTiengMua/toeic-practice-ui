@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trạng thái xác thực CCCD — TOEIC Practice</title>
+  <link rel="stylesheet" href="../assets/css/tokens.css">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+</head>
+<body data-states="loading,pending,approved,rejected,error">
+  <div class="app-shell app-shell--with-sidebar">
+    <header class="app-topbar">
+      <strong>TOEIC Practice</strong>
+      <div class="row">
+        <span class="badge badge--info">Còn 3 lượt thi</span>
+        <a class="btn btn--sm" href="../payment/pricing.html">Mua thêm lượt</a>
+        <a class="btn btn--ghost btn--sm" href="profile.html">Nguyễn Văn A</a>
+      </div>
+    </header>
+    <div class="app-body">
+      <aside class="app-sidebar">
+        <nav class="nav-list" aria-label="Điều hướng chính">
+          <a class="nav-list__item" href="dashboard.html">Trang chủ</a>
+          <div class="nav-list__group">Thi thử</div>
+          <a class="nav-list__item" href="exam-list.html">Danh sách đề</a>
+          <a class="nav-list__item" href="exam-history.html">Lịch sử thi</a>
+          <div class="nav-list__group">Luyện tập</div>
+          <a class="nav-list__item" href="practice-select.html">Luyện theo part</a>
+          <a class="nav-list__item" href="weakness-analysis.html">Phân tích điểm yếu</a>
+          <div class="nav-list__group">Tài khoản</div>
+          <a class="nav-list__item" href="../payment/wallet.html">Ví lượt thi</a>
+          <a class="nav-list__item is-active" href="kyc-pending.html">Xác thực CCCD</a>
+          <a class="nav-list__item" href="profile.html">Hồ sơ</a>
+        </nav>
+      </aside>
+      <main class="app-main">
+        <div class="container stack">
+          <!-- ===== loading ===== -->
+          <div class="only-loading stack">
+            <div class="skeleton skeleton--title"></div>
+            <div class="skeleton skeleton--block" style="height: 200px"></div>
+          </div>
+
+          <!-- ===== error ===== -->
+          <div class="only-error">
+            <div class="card"><div class="card__body">
+              <div class="state-block">
+                <div class="state-block__icon" aria-hidden="true">!</div>
+                <div class="state-block__title">Không tải được trạng thái hồ sơ</div>
+                <p class="state-block__desc">Kiểm tra kết nối rồi thử lại.</p>
+                <button class="btn btn--primary">Thử lại</button>
+              </div>
+            </div></div>
+          </div>
+
+          <!-- ===== pending: đang chờ duyệt =====
+               Đây là state mà học viên sẽ ở lâu nhất, nên phải nói rõ
+               (a) không phải làm gì thêm, (b) luyện tập vẫn dùng được. -->
+          <div class="only-pending stack">
+            <h1 style="margin: 0">Xác thực CCCD</h1>
+            <div class="card"><div class="card__body">
+              <div class="state-block">
+                <div class="state-block__icon" aria-hidden="true">⏳</div>
+                <div class="state-block__title">Hồ sơ đang chờ duyệt</div>
+                <p class="state-block__desc">
+                  Gửi lúc 20/09/2026 11:24. Quản trị viên duyệt trong vòng
+                  <strong>1 ngày làm việc</strong>. Bạn không cần làm gì thêm.
+                </p>
+              </div>
+              <div class="alert alert--info">
+                Trong lúc chờ, bạn vẫn <strong>luyện theo part miễn phí</strong> bình thường.
+                Chỉ phần thi thật cần xác thực xong.
+              </div>
+            </div></div>
+
+            <div class="card">
+              <div class="card__header"><strong>Hồ sơ đã gửi</strong></div>
+              <div class="card__body stack">
+                <div class="row row--between"><span class="text-muted">Họ và tên</span><span>NGUYỄN VĂN A</span></div>
+                <div class="row row--between"><span class="text-muted">Ngày sinh</span><span>01/01/1990</span></div>
+                <div class="row row--between"><span class="text-muted">Số CCCD</span><span>•••• •••• 1234</span></div>
+                <div class="row row--between"><span class="text-muted">Ảnh đã gửi</span><span>3 ảnh</span></div>
+                <div class="row row--between">
+                  <span class="text-muted">Trạng thái</span>
+                  <span class="badge badge--warning">Chờ duyệt</span>
+                </div>
+              </div>
+              <div class="card__footer row">
+                <a class="btn" href="practice-select.html">Luyện tập trong lúc chờ</a>
+                <a class="btn btn--ghost" href="dashboard.html">Về trang chủ</a>
+              </div>
+            </div>
+          </div>
+
+          <!-- ===== approved: đã duyệt =====
+               Không có state này thì học viên chỉ nhận ra mình đã được duyệt
+               khi cổng chặn ở exam-list.html tự biến mất — một tín hiệu im lặng.
+               Duyệt là mở cổng, KHÔNG phải trừ lượt: lượt chỉ trừ khi bắt đầu
+               bài thi thật, nên phải nói rõ để học viên không tưởng mất lượt. -->
+          <div class="only-approved stack">
+            <h1 style="margin: 0">Xác thực CCCD</h1>
+            <div class="card"><div class="card__body">
+              <div class="state-block">
+                <div class="state-block__icon" aria-hidden="true">✓</div>
+                <div class="state-block__title">Hồ sơ đã được duyệt</div>
+                <p class="state-block__desc">
+                  Duyệt lúc 20/09/2026 14:05. Bạn đã đủ điều kiện đăng ký thi thật.
+                </p>
+              </div>
+              <div class="alert alert--success">
+                Xác thực <strong>không trừ lượt thi</strong> nào. Lượt chỉ bị trừ khi
+                bạn bắt đầu một bài thi thật.
+              </div>
+            </div></div>
+
+            <div class="card">
+              <div class="card__header"><strong>Hồ sơ đã duyệt</strong></div>
+              <div class="card__body stack">
+                <div class="row row--between"><span class="text-muted">Họ và tên</span><span>NGUYỄN VĂN A</span></div>
+                <div class="row row--between"><span class="text-muted">Ngày sinh</span><span>01/01/1990</span></div>
+                <div class="row row--between"><span class="text-muted">Số CCCD</span><span>•••• •••• 1234</span></div>
+                <div class="row row--between">
+                  <span class="text-muted">Trạng thái</span>
+                  <span class="badge badge--success">Đã xác thực</span>
+                </div>
+              </div>
+              <div class="card__footer row">
+                <a class="btn btn--primary" href="exam-list.html">Vào thi thật</a>
+                <a class="btn btn--ghost" href="practice-select.html">Luyện tập trước</a>
+              </div>
+            </div>
+          </div>
+
+          <!-- ===== rejected: bị từ chối =====
+               Lý do từ chối là bắt buộc (ràng buộc CK_Kyc_RejectReason
+               trong schema) — không có lý do thì học viên không biết
+               sửa gì và sẽ gửi lại y hệt. -->
+          <div class="only-rejected stack">
+            <h1 style="margin: 0">Xác thực CCCD</h1>
+            <div class="card"><div class="card__body">
+              <div class="state-block">
+                <div class="state-block__icon" aria-hidden="true">✕</div>
+                <div class="state-block__title">Hồ sơ bị từ chối</div>
+                <p class="state-block__desc">
+                  Duyệt lúc 20/09/2026 14:05 bởi quản trị viên.
+                  Bạn có thể sửa và gửi lại, không giới hạn số lần.
+                </p>
+              </div>
+              <div class="alert alert--danger">
+                <strong>Lý do:</strong> Ảnh mặt trước CCCD bị loá, không đọc được
+                số CCCD và ngày hết hạn. Vui lòng chụp lại ở nơi đủ sáng, không dùng đèn flash.
+              </div>
+              <div class="alert alert--warning">
+                Bạn <strong>không bị mất lượt thi</strong> nào. Lượt chỉ bị trừ khi bắt đầu
+                một bài thi thật, và bạn chưa vào bài nào.
+              </div>
+            </div></div>
+
+            <div class="card">
+              <div class="card__header"><strong>Hồ sơ đã gửi</strong></div>
+              <div class="card__body stack">
+                <div class="row row--between"><span class="text-muted">Họ và tên</span><span>NGUYỄN VĂN A</span></div>
+                <div class="row row--between"><span class="text-muted">Ngày sinh</span><span>01/01/1990</span></div>
+                <div class="row row--between"><span class="text-muted">Số CCCD</span><span>•••• •••• 1234</span></div>
+                <div class="row row--between">
+                  <span class="text-muted">Trạng thái</span>
+                  <span class="badge badge--danger">Bị từ chối</span>
+                </div>
+              </div>
+              <div class="card__footer row">
+                <a class="btn btn--primary" href="kyc-submit.html">Sửa và gửi lại</a>
+                <a class="btn btn--ghost" href="practice-select.html">Luyện tập trước</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <script src="../assets/js/state-switch.js"></script>
+</body>
+</html>

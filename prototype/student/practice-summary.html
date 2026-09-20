@@ -27,13 +27,40 @@
           <a class="nav-list__item" href="exam-history.html">Lịch sử thi</a>
           <div class="nav-list__group">Luyện tập</div>
           <a class="nav-list__item is-active" href="practice-select.html">Luyện theo part</a>
+          <a class="nav-list__item" href="weakness-analysis.html">Phân tích điểm yếu</a>
           <div class="nav-list__group">Tài khoản</div>
           <a class="nav-list__item" href="../payment/wallet.html">Ví lượt thi</a>
+          <a class="nav-list__item" href="kyc-pending.html">Xác thực CCCD</a>
           <a class="nav-list__item" href="profile.html">Hồ sơ</a>
         </nav>
       </aside>
       <main class="app-main">
         <div class="container stack">
+          <!-- ===== loading ===== -->
+          <div class="only-loading stack">
+            <div class="skeleton skeleton--title"></div>
+            <div class="skeleton skeleton--block" style="height: 120px"></div>
+            <div class="skeleton skeleton--block" style="height: 260px"></div>
+          </div>
+
+          <!-- ===== error ===== -->
+          <div class="only-error">
+            <div class="card"><div class="card__body">
+              <div class="state-block">
+                <div class="state-block__icon" aria-hidden="true">!</div>
+                <div class="state-block__title">Không tải được tổng kết</div>
+                <p class="state-block__desc">
+                  Kết quả phiên luyện của bạn đã được lưu. Thử tải lại để xem.
+                </p>
+                <div class="row" style="justify-content: center">
+                  <button class="btn btn--primary">Thử lại</button>
+                  <a class="btn" href="practice-select.html">Về chọn part</a>
+                </div>
+              </div>
+            </div></div>
+          </div>
+
+          <!-- ===== success ===== -->
           <div class="only-success stack">
             <div class="row row--between">
               <div>

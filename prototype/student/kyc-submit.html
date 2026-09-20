@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Xác thực CCCD — TOEIC Practice</title>
+  <link rel="stylesheet" href="../assets/css/tokens.css">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+</head>
+<body data-states="loading,success,submitting,error">
+  <div class="app-shell app-shell--with-sidebar">
+    <header class="app-topbar">
+      <strong>TOEIC Practice</strong>
+      <div class="row">
+        <span class="badge badge--info">Còn 3 lượt thi</span>
+        <a class="btn btn--sm" href="../payment/pricing.html">Mua thêm lượt</a>
+        <a class="btn btn--ghost btn--sm" href="profile.html">Nguyễn Văn A</a>
+      </div>
+    </header>
+    <div class="app-body">
+      <aside class="app-sidebar">
+        <nav class="nav-list" aria-label="Điều hướng chính">
+          <a class="nav-list__item" href="dashboard.html">Trang chủ</a>
+          <div class="nav-list__group">Thi thử</div>
+          <a class="nav-list__item" href="exam-list.html">Danh sách đề</a>
+          <a class="nav-list__item" href="exam-history.html">Lịch sử thi</a>
+          <div class="nav-list__group">Luyện tập</div>
+          <a class="nav-list__item" href="practice-select.html">Luyện theo part</a>
+          <a class="nav-list__item" href="weakness-analysis.html">Phân tích điểm yếu</a>
+          <div class="nav-list__group">Tài khoản</div>
+          <a class="nav-list__item" href="../payment/wallet.html">Ví lượt thi</a>
+          <!-- Mục KYC là một mục duy nhất, trỏ về trang trạng thái (gốc của
+               nhóm) và được đánh dấu active ở cả trang điền form — cùng quy ước
+               với exam-result/exam-review (active = exam-history). -->
+          <a class="nav-list__item is-active" href="kyc-pending.html">Xác thực CCCD</a>
+          <a class="nav-list__item" href="profile.html">Hồ sơ</a>
+        </nav>
+      </aside>
+      <main class="app-main">
+        <div class="container stack">
+          <!-- ===== loading ===== -->
+          <div class="only-loading stack">
+            <div class="skeleton skeleton--title"></div>
+            <div class="skeleton skeleton--block" style="height: 180px"></div>
+            <div class="skeleton skeleton--block" style="height: 220px"></div>
+          </div>
+
+          <!-- ===== error ===== -->
+          <div class="only-error">
+            <div class="card"><div class="card__body">
+              <div class="state-block">
+                <div class="state-block__icon" aria-hidden="true">!</div>
+                <div class="state-block__title">Không tải được hồ sơ xác thực</div>
+                <p class="state-block__desc">
+                  Ảnh bạn đã gửi vẫn được giữ. Kiểm tra kết nối rồi thử lại.
+                </p>
+                <div class="row" style="justify-content: center">
+                  <button class="btn btn--primary">Thử lại</button>
+                  <a class="btn" href="profile.html">Về hồ sơ</a>
+                </div>
+              </div>
+            </div></div>
+          </div>
+
+          <!-- ===== submitting ===== -->
+          <div class="only-submitting stack">
+            <h1 style="margin: 0">Xác thực CCCD</h1>
+            <div class="card"><div class="card__body">
+              <div class="state-block">
+                <div class="state-block__icon" aria-hidden="true">⏳</div>
+                <div class="state-block__title">Đang gửi hồ sơ…</div>
+                <p class="state-block__desc">
+                  Không đóng tab trong lúc đang tải ảnh lên.
+                </p>
+                <div class="progress"><div class="progress__bar" style="width: 65%"></div></div>
+              </div>
+            </div></div>
+          </div>
+
+          <!-- ===== success ===== -->
+          <div class="only-success stack">
+            <div>
+              <h1 style="margin: 0 0 var(--space-1)">Xác thực CCCD</h1>
+              <p class="text-muted" style="margin: 0">
+                Cần xác thực trước khi đăng ký thi thật. <strong>Miễn phí và không trừ lượt thi.</strong>
+              </p>
+            </div>
+
+            <div class="alert alert--info">
+              Hồ sơ do quản trị viên duyệt trong vòng 1 ngày làm việc. Luyện theo part
+              vẫn dùng được bình thường trong lúc chờ.
+            </div>
+
+            <div class="card">
+              <div class="card__header"><strong>Thông tin trên CCCD</strong></div>
+              <div class="card__body stack">
+                <p class="text-sm text-muted" style="margin: 0">
+                  Ghi đúng như trên thẻ. Quản trị viên sẽ đối chiếu với ảnh.
+                </p>
+                <div class="grid-2">
+                  <div class="field">
+                    <label class="field__label" for="kyc-name">Họ và tên</label>
+                    <input class="field__input" id="kyc-name" value="NGUYỄN VĂN A">
+                  </div>
+                  <div class="field">
+                    <label class="field__label" for="kyc-dob">Ngày sinh</label>
+                    <input class="field__input" id="kyc-dob" type="date" value="1990-01-01">
+                  </div>
+                </div>
+                <div class="field">
+                  <label class="field__label" for="kyc-id">Số CCCD</label>
+                  <input class="field__input" id="kyc-id" inputmode="numeric" value="001199001234">
+                  <span class="field__hint">
+                    Số CCCD được lưu dạng mã hoá một chiều, chỉ dùng để đối chiếu
+                    trùng lặp. Hệ thống không đọc lại được số này.
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card__header"><strong>Ảnh chụp</strong></div>
+              <div class="card__body stack">
+                <p class="text-sm text-muted" style="margin: 0">
+                  Chụp rõ, không loá, không che thông tin. Định dạng JPG/PNG, tối đa 5MB mỗi ảnh.
+                </p>
+                <div class="grid-3">
+                  <div class="upload">
+                    <span class="field__label">Mặt trước CCCD</span>
+                    <div class="upload__zone">
+                      <span>Kéo ảnh vào đây hoặc</span>
+                      <button class="btn btn--sm">Chọn ảnh</button>
+                    </div>
+                    <div class="upload__file">
+                      <span>cccd-truoc.jpg — 1.8 MB</span>
+                      <button class="btn btn--sm btn--ghost">Thay</button>
+                    </div>
+                  </div>
+                  <div class="upload">
+                    <span class="field__label">Mặt sau CCCD</span>
+                    <div class="upload__zone">
+                      <span>Kéo ảnh vào đây hoặc</span>
+                      <button class="btn btn--sm">Chọn ảnh</button>
+                    </div>
+                    <div class="upload__file">
+                      <span>cccd-sau.jpg — 1.6 MB</span>
+                      <button class="btn btn--sm btn--ghost">Thay</button>
+                    </div>
+                  </div>
+                  <div class="upload">
+                    <span class="field__label">Ảnh chân dung</span>
+                    <div class="upload__zone">
+                      <span>Kéo ảnh vào đây hoặc</span>
+                      <button class="btn btn--sm">Chọn ảnh</button>
+                    </div>
+                    <div class="upload__file upload__file--missing">
+                      <span>Chưa có ảnh — bắt buộc</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card__body stack">
+                <label class="option">
+                  <input type="checkbox" checked>
+                  <span class="option__text">
+                    Tôi xác nhận thông tin trên là đúng và là CCCD của chính tôi.
+                    Tôi hiểu rằng dùng giấy tờ của người khác để thi sẽ bị khoá tài khoản.
+                  </span>
+                </label>
+                <div class="row row--between">
+                  <a class="btn btn--ghost" href="exam-list.html">Để sau</a>
+                  <button class="btn btn--primary btn--lg">Gửi hồ sơ xác thực</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <script src="../assets/js/state-switch.js"></script>
+</body>
+</html>

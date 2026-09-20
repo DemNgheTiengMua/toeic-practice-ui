@@ -27,13 +27,40 @@
           <a class="nav-list__item" href="../student/exam-history.html">Lịch sử thi</a>
           <div class="nav-list__group">Luyện tập</div>
           <a class="nav-list__item" href="../student/practice-select.html">Luyện theo part</a>
+          <a class="nav-list__item" href="../student/weakness-analysis.html">Phân tích điểm yếu</a>
           <div class="nav-list__group">Tài khoản</div>
           <a class="nav-list__item is-active" href="wallet.html">Ví lượt thi</a>
+          <a class="nav-list__item" href="../student/kyc-pending.html">Xác thực CCCD</a>
           <a class="nav-list__item" href="../student/profile.html">Hồ sơ</a>
         </nav>
       </aside>
       <main class="app-main">
         <div class="container stack">
+          <!-- ===== pending: đã có đơn chưa xong =====
+               Người dùng bấm back từ cổng thanh toán về đây trong khi đơn cũ
+               còn `pending` là luồng rất thường. Cho tạo đơn thứ hai thì dễ
+               trừ tiền hai lần, nên chặn bằng chính màn này. -->
+          <div class="card only-pending">
+            <div class="card__body">
+              <div class="state-block">
+                <div class="state-block__icon" aria-hidden="true">⏳</div>
+                <h1 class="state-block__title">Bạn đang có một đơn chưa hoàn tất</h1>
+                <p class="state-block__desc">
+                  Đơn TOEIC-20260920-4417 · gói Ôn thi · 199.000 ₫ · tạo lúc 11:02.
+                  Đơn này còn hiệu lực nên chưa tạo đơn mới được.
+                </p>
+              </div>
+              <div class="alert alert--warning">
+                Nếu bạn đã trả tiền cho đơn cũ, đừng thanh toán lại —
+                lượt thi sẽ được cộng sau khi đối soát xong.
+              </div>
+            </div>
+            <div class="card__footer row">
+              <a class="btn btn--primary" href="payment-result.html?state=pending">Kiểm tra đơn cũ</a>
+              <a class="btn btn--ghost" href="wallet.html">Xem ví lượt thi</a>
+            </div>
+          </div>
+
           <div class="multi-state stack" data-show="success submitting error">
             <h1>Xác nhận đơn hàng</h1>
 

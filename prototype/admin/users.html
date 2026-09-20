@@ -52,6 +52,16 @@
                 <option>Đã khoá</option>
               </select>
             </div>
+            <div class="field">
+              <label class="field__label" for="u-kyc">CCCD</label>
+              <select class="field__input" id="u-kyc">
+                <option>Tất cả</option>
+                <option>Đã xác thực</option>
+                <option>Chờ duyệt</option>
+                <option>Bị từ chối</option>
+                <option>Chưa gửi</option>
+              </select>
+            </div>
             <button class="btn">Lọc</button>
           </div>
 
@@ -62,13 +72,14 @@
                   <tr>
                     <th scope="col">Học viên</th><th scope="col">Email</th>
                     <th scope="col">Lượt còn</th><th scope="col">Đề đã làm</th>
-                    <th scope="col">Điểm cao nhất</th><th scope="col">Đăng nhập gần nhất</th>
+                    <th scope="col">Điểm cao nhất</th><th scope="col">CCCD</th><th scope="col">Đăng nhập gần nhất</th>
                     <th scope="col">Trạng thái</th><th scope="col">Thao tác</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr>
                     <td>Nguyễn Văn An</td><td>an.nguyen@gmail.com</td><td>3</td><td>6</td><td>745</td>
+                    <td><span class="badge badge--success">Đã xác thực</span></td>
                     <td>20/09/2026 13:10</td>
                     <td><span class="badge badge--success">Hoạt động</span></td>
                     <td class="row">
@@ -78,6 +89,7 @@
                   </tr>
                   <tr>
                     <td>Trần Thị Bình</td><td>binh.tran@gmail.com</td><td>0</td><td>12</td><td>820</td>
+                    <td><a href="kyc-review.html"><span class="badge badge--warning">Chờ duyệt</span></a></td>
                     <td>19/09/2026 21:44</td>
                     <td><span class="badge badge--success">Hoạt động</span></td>
                     <td class="row">

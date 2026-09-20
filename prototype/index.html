@@ -210,16 +210,62 @@
             <a class="catalog__state" href="payment/payment-result.html?state=success">success</a>
             <a class="catalog__state" href="payment/payment-result.html?state=failed">failed</a>
             <a class="catalog__state" href="payment/payment-result.html?state=pending">pending</a>
+            <a class="catalog__state" href="payment/payment-result.html?state=expired">expired</a>
             <a class="catalog__state" href="payment/payment-result.html?state=error">error</a>
           </div>
         </div>
         <div class="catalog__row">
           <span class="catalog__name">Ví lượt thi</span>
           <div class="catalog__states">
-            <a class="catalog__state" href="payment/wallet.html?state=paid">paid</a>
+            <a class="catalog__state" href="payment/wallet.html?state=success">success</a>
             <a class="catalog__state" href="payment/wallet.html?state=loading">loading</a>
             <a class="catalog__state" href="payment/wallet.html?state=empty">empty</a>
             <a class="catalog__state" href="payment/wallet.html?state=error">error</a>
+          </div>
+        </div>
+      </div>
+      <div class="catalog__group">
+        <h2>Xác thực CCCD (gate trước khi thi thật)</h2>
+        <div class="catalog__row">
+          <span class="catalog__name">Gửi hồ sơ xác thực</span>
+          <div class="catalog__states">
+            <a class="catalog__state" href="student/kyc-submit.html?state=success">success</a>
+            <a class="catalog__state" href="student/kyc-submit.html?state=loading">loading</a>
+            <a class="catalog__state" href="student/kyc-submit.html?state=submitting">submitting</a>
+            <a class="catalog__state" href="student/kyc-submit.html?state=error">error</a>
+          </div>
+        </div>
+        <div class="catalog__row">
+          <span class="catalog__name">Trạng thái hồ sơ</span>
+          <div class="catalog__states">
+            <a class="catalog__state" href="student/kyc-pending.html?state=pending">pending</a>
+            <a class="catalog__state" href="student/kyc-pending.html?state=approved">approved</a>
+            <a class="catalog__state" href="student/kyc-pending.html?state=rejected">rejected</a>
+            <a class="catalog__state" href="student/kyc-pending.html?state=loading">loading</a>
+            <a class="catalog__state" href="student/kyc-pending.html?state=error">error</a>
+          </div>
+        </div>
+        <div class="catalog__row">
+          <span class="catalog__name">Danh sách đề — chặn bởi KYC</span>
+          <div class="catalog__states">
+            <a class="catalog__state" href="student/exam-list.html?state=kyc-required">kyc-required</a>
+            <a class="catalog__state" href="student/exam-list.html?state=kyc-pending">kyc-pending</a>
+          </div>
+        </div>
+        <div class="catalog__row">
+          <span class="catalog__name">Hướng dẫn trước thi — chặn bởi KYC</span>
+          <div class="catalog__states">
+            <a class="catalog__state" href="student/exam-instructions.html?state=kyc-required">kyc-required</a>
+            <a class="catalog__state" href="student/exam-instructions.html?state=kyc-pending">kyc-pending</a>
+            <a class="catalog__state" href="student/exam-instructions.html?state=rejected">rejected</a>
+          </div>
+        </div>
+        <div class="catalog__row">
+          <span class="catalog__name">Hồ sơ — trạng thái CCCD</span>
+          <div class="catalog__states">
+            <a class="catalog__state" href="student/profile.html?state=kyc-required">kyc-required</a>
+            <a class="catalog__state" href="student/profile.html?state=kyc-pending">kyc-pending</a>
+            <a class="catalog__state" href="student/profile.html?state=rejected">rejected</a>
           </div>
         </div>
       </div>
@@ -268,6 +314,16 @@
             <a class="catalog__state" href="admin/users.html?state=loading">loading</a>
             <a class="catalog__state" href="admin/users.html?state=empty">empty</a>
             <a class="catalog__state" href="admin/users.html?state=error">error</a>
+          </div>
+        </div>
+        <div class="catalog__row">
+          <span class="catalog__name">Duyệt xác thực CCCD</span>
+          <div class="catalog__states">
+            <a class="catalog__state" href="admin/kyc-review.html?state=success">success</a>
+            <a class="catalog__state" href="admin/kyc-review.html?state=adjust">adjust</a>
+            <a class="catalog__state" href="admin/kyc-review.html?state=loading">loading</a>
+            <a class="catalog__state" href="admin/kyc-review.html?state=empty">empty</a>
+            <a class="catalog__state" href="admin/kyc-review.html?state=error">error</a>
           </div>
         </div>
         <div class="catalog__row">
