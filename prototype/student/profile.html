@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hồ sơ cá nhân — TOEIC Practice</title>
+  <link rel="stylesheet" href="../assets/css/tokens.css">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+</head>
+<body data-states="success,submitting,error">
+  <div class="app-shell app-shell--with-sidebar">
+    <header class="app-topbar">
+      <strong>TOEIC Practice</strong>
+      <div class="row">
+        <span class="badge badge--info">Còn 3 lượt thi</span>
+        <a class="btn btn--sm" href="../payment/pricing.html">Mua thêm lượt</a>
+        <a class="btn btn--ghost btn--sm" href="profile.html">Nguyễn Văn A</a>
+      </div>
+    </header>
+    <div class="app-body">
+      <aside class="app-sidebar">
+        <nav class="nav-list" aria-label="Điều hướng chính">
+          <a class="nav-list__item" href="dashboard.html">Trang chủ</a>
+          <div class="nav-list__group">Thi thử</div>
+          <a class="nav-list__item" href="exam-list.html">Danh sách đề</a>
+          <a class="nav-list__item" href="exam-history.html">Lịch sử thi</a>
+          <div class="nav-list__group">Luyện tập</div>
+          <a class="nav-list__item" href="practice-select.html">Luyện theo part</a>
+          <div class="nav-list__group">Tài khoản</div>
+          <a class="nav-list__item" href="../payment/wallet.html">Ví lượt thi</a>
+          <a class="nav-list__item is-active" href="profile.html">Hồ sơ</a>
+        </nav>
+      </aside>
+      <main class="app-main">
+        <div class="container stack">
+          <!-- ===== error ===== -->
+          <div class="only-error">
+            <div class="alert alert--danger">
+              Không lưu được thay đổi. Vui lòng thử lại.
+            </div>
+          </div>
+
+          <div class="multi-state stack" data-show="success submitting">
+            <h1>Hồ sơ của tôi</h1>
+
+            <div class="grid-2">
+              <div class="card">
+                <div class="card__header">Thông tin cơ bản</div>
+                <div class="card__body stack">
+                  <div class="field">
+                    <label class="field__label" for="p-name">Họ và tên</label>
+                    <input class="input" id="p-name" type="text" value="Nguyễn Văn A">
+                  </div>
+                  <div class="field">
+                    <label class="field__label" for="p-email">Email</label>
+                    <input class="input" id="p-email" type="email" value="nguyenvana@example.com" disabled>
+                    <div class="field__hint">Email dùng để đăng nhập, không thể thay đổi.</div>
+                  </div>
+                  <div class="field">
+                    <label class="field__label" for="p-phone">Số điện thoại</label>
+                    <input class="input" id="p-phone" type="tel" value="0901 234 567">
+                  </div>
+                  <div class="field">
+                    <label class="field__label" for="p-target">Điểm mục tiêu</label>
+                    <select class="input" id="p-target">
+                      <option>600</option>
+                      <option selected>800</option>
+                      <option>900</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="card__footer">
+                  <button class="btn btn--primary only-success">Lưu thay đổi</button>
+                  <button class="btn btn--primary only-submitting" disabled>Đang lưu…</button>
+                </div>
+              </div>
+              <div class="stack">
+                <div class="card">
+                  <div class="card__header">Ví lượt thi</div>
+                  <div class="card__body stack">
+                    <div class="stat">
+                      <div class="stat__label">Lượt thi còn lại</div>
+                      <div class="stat__value">3</div>
+                    </div>
+                    <p style="margin: 0; color: var(--color-text-muted); font-size: var(--text-sm)">
+                      Mỗi lần vào thi thử sẽ trừ 1 lượt. Lượt thi không hết hạn.
+                    </p>
+                  </div>
+                  <div class="card__footer">
+                    <a class="btn btn--primary" href="../payment/pricing.html">Mua thêm lượt</a>
+                    <a class="btn btn--ghost" href="../payment/wallet.html">Xem lịch sử ví</a>
+                  </div>
+                </div>
+
+                <div class="card">
+                  <div class="card__header">Đổi mật khẩu</div>
+                  <div class="card__body stack">
+                    <div class="field">
+                      <label class="field__label" for="p-old">Mật khẩu hiện tại</label>
+                      <input class="input" id="p-old" type="password" placeholder="••••••••">
+                    </div>
+                    <div class="field">
+                      <label class="field__label" for="p-new">Mật khẩu mới</label>
+                      <input class="input" id="p-new" type="password" placeholder="••••••••">
+                      <div class="field__hint">Tối thiểu 8 ký tự, có chữ và số.</div>
+                    </div>
+                    <div class="field">
+                      <label class="field__label" for="p-new2">Nhập lại mật khẩu mới</label>
+                      <input class="input" id="p-new2" type="password" placeholder="••••••••">
+                    </div>
+                  </div>
+                  <div class="card__footer">
+                    <button class="btn">Đổi mật khẩu</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <script src="../assets/js/state-switch.js"></script>
+</body>
+</html>

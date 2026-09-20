@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lịch sử thi — TOEIC Practice</title>
+  <link rel="stylesheet" href="../assets/css/tokens.css">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+</head>
+<body data-states="loading,empty,error,success">
+  <div class="app-shell app-shell--with-sidebar">
+    <header class="app-topbar">
+      <strong>TOEIC Practice</strong>
+      <div class="row">
+        <span class="badge badge--info">Còn 3 lượt thi</span>
+        <a class="btn btn--sm" href="../payment/pricing.html">Mua thêm lượt</a>
+        <a class="btn btn--ghost btn--sm" href="profile.html">Nguyễn Văn A</a>
+      </div>
+    </header>
+    <div class="app-body">
+      <aside class="app-sidebar">
+        <nav class="nav-list" aria-label="Điều hướng chính">
+          <a class="nav-list__item" href="dashboard.html">Trang chủ</a>
+          <div class="nav-list__group">Thi thử</div>
+          <a class="nav-list__item" href="exam-list.html">Danh sách đề</a>
+          <a class="nav-list__item is-active" href="exam-history.html">Lịch sử thi</a>
+          <div class="nav-list__group">Luyện tập</div>
+          <a class="nav-list__item" href="practice-select.html">Luyện theo part</a>
+          <div class="nav-list__group">Tài khoản</div>
+          <a class="nav-list__item" href="../payment/wallet.html">Ví lượt thi</a>
+          <a class="nav-list__item" href="profile.html">Hồ sơ</a>
+        </nav>
+      </aside>
+      <main class="app-main">
+        <div class="container stack">
+          <!-- ===== loading ===== -->
+          <div class="only-loading stack">
+            <div class="skeleton skeleton--title"></div>
+            <div class="skeleton skeleton--block" style="height: 120px"></div>
+            <div class="skeleton skeleton--block" style="height: 240px"></div>
+          </div>
+
+          <!-- ===== error ===== -->
+          <div class="only-error">
+            <div class="card"><div class="card__body">
+              <div class="state-block">
+                <div class="state-block__icon" aria-hidden="true">!</div>
+                <div class="state-block__title">Không tải được lịch sử</div>
+                <p class="state-block__desc">Kiểm tra kết nối rồi thử lại.</p>
+                <button class="btn btn--primary">Thử lại</button>
+              </div>
+            </div></div>
+          </div>
+
+          <!-- ===== empty ===== -->
+          <div class="only-empty stack">
+            <h1>Lịch sử thi</h1>
+            <div class="card"><div class="card__body">
+              <div class="state-block">
+                <div class="state-block__icon" aria-hidden="true">□</div>
+                <div class="state-block__title">Chưa có bài thi nào</div>
+                <p class="state-block__desc">
+                  Làm bài thi đầu tiên để bắt đầu theo dõi tiến độ.
+                </p>
+                <a class="btn btn--primary" href="exam-list.html">Bắt đầu thi</a>
+              </div>
+            </div></div>
+          </div>
+          <!-- ===== success ===== -->
+          <div class="only-success stack">
+            <h1>Lịch sử thi</h1>
+
+            <div class="grid-3">
+              <div class="stat">
+                <div class="stat__label">Số bài đã thi</div>
+                <div class="stat__value">5</div>
+              </div>
+              <div class="stat">
+                <div class="stat__label">Điểm cao nhất</div>
+                <div class="stat__value">760</div>
+              </div>
+              <div class="stat">
+                <div class="stat__label">Điểm trung bình</div>
+                <div class="stat__value">705</div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card__header">Tiến độ điểm số</div>
+              <div class="card__body">
+                <div class="row" style="align-items: flex-end; gap: var(--space-5); height: 180px">
+                  <div style="flex: 1; text-align: center">
+                    <div style="height: 104px; background: var(--color-track); border-radius: var(--radius-sm) var(--radius-sm) 0 0"></div>
+                    <div style="font-size: var(--text-sm); margin-top: var(--space-2)">620</div>
+                  </div>
+                  <div style="flex: 1; text-align: center">
+                    <div style="height: 116px; background: var(--color-track); border-radius: var(--radius-sm) var(--radius-sm) 0 0"></div>
+                    <div style="font-size: var(--text-sm); margin-top: var(--space-2)">680</div>
+                  </div>
+                  <div style="flex: 1; text-align: center">
+                    <div style="height: 122px; background: var(--color-track); border-radius: var(--radius-sm) var(--radius-sm) 0 0"></div>
+                    <div style="font-size: var(--text-sm); margin-top: var(--space-2)">715</div>
+                  </div>
+                  <div style="flex: 1; text-align: center">
+                    <div style="height: 130px; background: var(--color-success); border-radius: var(--radius-sm) var(--radius-sm) 0 0"></div>
+                    <div style="font-size: var(--text-sm); margin-top: var(--space-2)"><strong>760</strong></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card__header">Các lần thi</div>
+              <div class="card__body">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>Ngày thi</th>
+                      <th>Đề thi</th>
+                      <th>Listening</th>
+                      <th>Reading</th>
+                      <th>Tổng điểm</th>
+                      <th>Trạng thái</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>18/09/2026</td>
+                      <td>ETS 2024 — Test 3</td>
+                      <td>400</td>
+                      <td>360</td>
+                      <td><strong>760</strong></td>
+                      <td><span class="badge badge--success">Hoàn thành</span></td>
+                      <td><a href="exam-review.html">Xem lại</a></td>
+                    </tr>
+                    <tr>
+                      <td>10/09/2026</td>
+                      <td>ETS 2024 — Test 2</td>
+                      <td>375</td>
+                      <td>340</td>
+                      <td><strong>715</strong></td>
+                      <td><span class="badge badge--success">Hoàn thành</span></td>
+                      <td><a href="exam-review.html">Xem lại</a></td>
+                    </tr>
+                    <tr>
+                      <td>02/09/2026</td>
+                      <td>ETS 2024 — Test 1</td>
+                      <td>355</td>
+                      <td>325</td>
+                      <td><strong>680</strong></td>
+                      <td><span class="badge badge--success">Hoàn thành</span></td>
+                      <td><a href="exam-review.html">Xem lại</a></td>
+                    </tr>
+                    <tr>
+                      <td>25/08/2026</td>
+                      <td>Economy Vol.1 — Test 4</td>
+                      <td>330</td>
+                      <td>290</td>
+                      <td><strong>620</strong></td>
+                      <td><span class="badge badge--success">Hoàn thành</span></td>
+                      <td><a href="exam-review.html">Xem lại</a></td>
+                    </tr>
+                    <tr>
+                      <td>20/08/2026</td>
+                      <td>Economy Vol.1 — Test 3</td>
+                      <td>—</td>
+                      <td>—</td>
+                      <td>—</td>
+                      <td><span class="badge badge--danger">Đã huỷ</span></td>
+                      <td></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <script src="../assets/js/state-switch.js"></script>
+</body>
+</html>
