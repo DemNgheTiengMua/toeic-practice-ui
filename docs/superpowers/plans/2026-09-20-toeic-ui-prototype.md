@@ -423,10 +423,10 @@ Mọi màn sau chỉ lắp component từ đây. Task này không tạo màn ngh
   background: var(--color-bg);
   border: 1px solid var(--color-border);
 }
-.badge--success { background: #e6f4ec; border-color: #bfe0cc; color: var(--color-success); }
-.badge--warning { background: #fdf3e2; border-color: #f0dbb4; color: var(--color-warning); }
-.badge--danger  { background: #fdeaea; border-color: #f2c4c4; color: var(--color-danger); }
-.badge--info    { background: #e5f2f6; border-color: #bcdbe4; color: var(--color-info); }
+.badge--success { background: var(--color-success-soft); border-color: var(--color-success-soft-border); color: var(--color-success); }
+.badge--warning { background: var(--color-warning-soft); border-color: var(--color-warning-soft-border); color: var(--color-warning); }
+.badge--danger  { background: var(--color-danger-soft); border-color: var(--color-danger-soft-border); color: var(--color-danger); }
+.badge--info    { background: var(--color-info-soft); border-color: var(--color-info-soft-border); color: var(--color-info); }
 .badge--muted   { color: var(--color-text-muted); }
 
 /* ===== Form ===== */
@@ -476,7 +476,7 @@ Mọi màn sau chỉ lắp component từ đây. Task này không tạo màn ngh
 .option__text { flex: 1 1 auto; }
 .option--selected {
   border-color: var(--color-primary);
-  background: #eef4fe;
+  background: var(--color-primary-soft);
 }
 .option--selected .option__marker {
   background: var(--color-primary);
@@ -484,9 +484,9 @@ Mọi màn sau chỉ lắp component từ đây. Task này không tạo màn ngh
   color: var(--color-primary-text);
 }
 /* chỉ dùng ở màn review + luyện tập */
-.option--correct { border-color: var(--color-success); background: #e9f6ee; }
+.option--correct { border-color: var(--color-success); background: var(--color-success-soft); }
 .option--correct .option__marker { background: var(--color-success); border-color: var(--color-success); color: var(--color-primary-text); }
-.option--wrong { border-color: var(--color-danger); background: #fdecec; }
+.option--wrong { border-color: var(--color-danger); background: var(--color-danger-soft); }
 .option--wrong .option__marker { background: var(--color-danger); border-color: var(--color-danger); color: var(--color-primary-text); }
 
 /* ===== Timer ===== */
@@ -522,7 +522,7 @@ Mọi màn sau chỉ lắp component từ đây. Task này không tạo màn ngh
   background: var(--color-primary); border-color: var(--color-primary); color: var(--color-primary-text);
 }
 .navigator__cell.is-marked {
-  background: #fdf3e2; border-color: var(--color-warning); color: var(--color-warning); font-weight: 700;
+  background: var(--color-warning-soft); border-color: var(--color-warning); color: var(--color-warning); font-weight: 700;
 }
 .navigator__cell.is-current { outline: 2px solid var(--color-text); outline-offset: 1px; }
 ```
@@ -533,7 +533,7 @@ Mọi màn sau chỉ lắp component từ đây. Task này không tạo màn ngh
 /* ===== Skeleton ===== */
 @keyframes skeleton-pulse { 0%, 100% { opacity: 1 } 50% { opacity: .55 } }
 .skeleton {
-  background: #e9ecf0;
+  background: var(--color-track);
   border-radius: var(--radius-sm);
   animation: skeleton-pulse 1.4s ease-in-out infinite;
 }
@@ -570,7 +570,7 @@ Mọi màn sau chỉ lắp component từ đây. Task này không tạo màn ngh
   position: fixed; inset: 0;
   display: grid; place-items: center;
   padding: var(--space-5);
-  background: rgba(16, 24, 40, .45);
+  background: var(--color-overlay);
   z-index: var(--z-modal);
 }
 .modal {
@@ -610,7 +610,7 @@ Mọi màn sau chỉ lắp component từ đây. Task này không tạo màn ngh
 .stepper__item.is-current { border-color: var(--color-primary); color: var(--color-primary); font-weight: 600; }
 
 /* ===== Progress ===== */
-.progress { height: 8px; background: #e9ecf0; border-radius: 999px; overflow: hidden; }
+.progress { height: 8px; background: var(--color-track); border-radius: 999px; overflow: hidden; }
 .progress__bar { height: 100%; background: var(--color-primary); }
 
 /* ===== Audio (màn thi Listening) ===== */
@@ -998,7 +998,7 @@ State: `loading` (skeleton), `empty` (chưa thi lần nào), `error`, `success`.
 }
 .nav-list__item:hover { background: var(--color-bg); }
 .nav-list__item.is-active {
-  background: #eef4fe;
+  background: var(--color-primary-soft);
   color: var(--color-primary);
   font-weight: 600;
 }
@@ -2549,13 +2549,20 @@ State `profile.html`: `success`, `submitting`, `error`.
 
 - [ ] **Step 1: Thêm `.explain` vào `components.css`**
 
+Trước khi viết `.explain`, thêm 1 token vào `tokens.css` (append vào `:root`, không sửa token cũ). Task 2 đã tạo bộ `-soft` / `-soft-border` cho success/warning/danger/info nhưng thiếu cặp border của primary:
+
+```css
+  /* viền nhạt primary — dùng cho .explain (Task 9) và .badge--primary (Task 11) */
+  --color-primary-soft-border: #cfe0fb;
+```
+
 ```css
 /* ===== Giải thích đáp án (chỉ màn review + luyện tập) ===== */
 .explain {
   margin-top: var(--space-4);
   padding: var(--space-4);
-  background: #f2f7ff;
-  border: 1px solid #cfe0fb;
+  background: var(--color-primary-soft);
+  border: 1px solid var(--color-primary-soft-border);
   border-left: 4px solid var(--color-primary);
   border-radius: var(--radius-md);
   font-size: var(--text-sm);
@@ -2567,7 +2574,7 @@ State `profile.html`: `success`, `submitting`, `error`.
 .explain__transcript {
   margin-top: var(--space-3);
   padding-top: var(--space-3);
-  border-top: 1px dashed #cfe0fb;
+  border-top: 1px dashed var(--color-primary-soft-border);
   font-style: italic;
   color: var(--color-text-muted);
 }
@@ -3584,10 +3591,12 @@ Lưu ý điều hướng: các trang trong `payment/` trỏ về student bằng 
 
 - [ ] **Step 1: Thêm `.price-card` vào `components.css`**
 
+Hai token dùng ở đây đã có sẵn, KHÔNG định nghĩa lại: `--color-primary-soft` do Task 2 tạo, `--color-primary-soft-border` do Task 9 thêm vào `tokens.css`.
+
 ```css
 /* ===== Badge nhấn (bổ sung cho nhóm badge ở Task 2) ===== */
 .badge--primary {
-  background: #e7f0fd; border-color: #c3d9f8; color: var(--color-primary);
+  background: var(--color-primary-soft); border-color: var(--color-primary-soft-border); color: var(--color-primary);
   font-weight: 600;
 }
 
