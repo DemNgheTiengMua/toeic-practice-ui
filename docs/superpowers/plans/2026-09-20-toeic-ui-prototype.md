@@ -301,8 +301,8 @@ body[data-state="paywall"]    .only-paywall { display: revert; }
         <p class="only-success">Tải xong.</p>
         <div class="grid-3">
           <div style="background: var(--color-primary); color: var(--color-primary-text); padding: var(--space-4); border-radius: var(--radius-md);">primary</div>
-          <div style="background: var(--color-success); color: #fff; padding: var(--space-4); border-radius: var(--radius-md);">success</div>
-          <div style="background: var(--color-danger); color: #fff; padding: var(--space-4); border-radius: var(--radius-md);">danger</div>
+          <div style="background: var(--color-success); color: var(--color-primary-text); padding: var(--space-4); border-radius: var(--radius-md);">success</div>
+          <div style="background: var(--color-danger); color: var(--color-primary-text); padding: var(--space-4); border-radius: var(--radius-md);">danger</div>
         </div>
       </div>
     </main>
@@ -390,7 +390,7 @@ Mọi màn sau chỉ lắp component từ đây. Task này không tạo màn ngh
 .btn--ghost { background: transparent; border-color: transparent; }
 .btn--ghost:hover { background: var(--color-bg); }
 .btn--danger {
-  background: var(--color-danger); border-color: var(--color-danger); color: #fff;
+  background: var(--color-danger); border-color: var(--color-danger); color: var(--color-primary-text);
 }
 .btn--lg { padding: var(--space-3) var(--space-5); font-size: var(--text-base); }
 .btn--sm { padding: var(--space-1) var(--space-3); font-size: var(--text-xs); }
@@ -485,9 +485,9 @@ Mọi màn sau chỉ lắp component từ đây. Task này không tạo màn ngh
 }
 /* chỉ dùng ở màn review + luyện tập */
 .option--correct { border-color: var(--color-success); background: #e9f6ee; }
-.option--correct .option__marker { background: var(--color-success); border-color: var(--color-success); color: #fff; }
+.option--correct .option__marker { background: var(--color-success); border-color: var(--color-success); color: var(--color-primary-text); }
 .option--wrong { border-color: var(--color-danger); background: #fdecec; }
-.option--wrong .option__marker { background: var(--color-danger); border-color: var(--color-danger); color: #fff; }
+.option--wrong .option__marker { background: var(--color-danger); border-color: var(--color-danger); color: var(--color-primary-text); }
 
 /* ===== Timer ===== */
 .timer {
@@ -4089,7 +4089,7 @@ State `exam-list.html`: `loading`, `empty`, `error`, `success`.
 .pagination__page.is-current {
   background: var(--color-primary);
   border-color: var(--color-primary);
-  color: #fff; font-weight: 600;
+  color: var(--color-primary-text); font-weight: 600;
 }
 .pagination__page[aria-disabled="true"] {
   color: var(--color-text-muted); pointer-events: none; opacity: .6;
