@@ -62,6 +62,7 @@ a { color: var(--color-primary); }
 .only-resumed.only-resumed, .only-expired.only-expired,
 .only-submitting.only-submitting, .only-offline.only-offline,
 .only-pending.only-pending, .only-failed.only-failed, .only-paid.only-paid,
+.only-step2.only-step2, .only-step3.only-step3,
 .only-paywall.only-paywall, .only-sent.only-sent,
 .only-complete.only-complete,
 .only-answering.only-answering, .only-revealed-correct.only-revealed-correct,
@@ -77,6 +78,8 @@ body[data-state="offline"]    .only-offline,
 body[data-state="pending"]    .only-pending,
 body[data-state="failed"]     .only-failed,
 body[data-state="paid"]       .only-paid,
+body[data-state="step2"]      .only-step2,
+body[data-state="step3"]      .only-step3,
 body[data-state="paywall"]    .only-paywall,
 body[data-state="sent"]       .only-sent,
 body[data-state="complete"]   .only-complete,
@@ -104,7 +107,9 @@ body[data-state="failed"]           .multi-state[data-show~="failed"],
 body[data-state="loading"]          .multi-state[data-show~="loading"],
 body[data-state="empty"]            .multi-state[data-show~="empty"],
 body[data-state="error"]            .multi-state[data-show~="error"],
-body[data-state="paid"]             .multi-state[data-show~="paid"] { display: revert; }
+body[data-state="paid"]             .multi-state[data-show~="paid"],
+body[data-state="step2"]            .multi-state[data-show~="step2"],
+body[data-state="step3"]            .multi-state[data-show~="step3"] { display: revert; }
 
 .state-switcher {
   position: fixed; right: var(--space-4); bottom: var(--space-4);

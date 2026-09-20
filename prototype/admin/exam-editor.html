@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tạo đề thi mới — Quản trị TOEIC Practice</title>
+  <link rel="stylesheet" href="../assets/css/tokens.css">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+</head>
+<body data-states="success,step2,step3,submitting,error" data-state="success">
+  <div class="app-shell app-shell--with-sidebar">
+    <header class="app-topbar">
+      <strong>TOEIC Practice — Khu vực quản trị</strong>
+      <div class="row">
+        <span class="badge badge--warning">Admin</span>
+        <span class="text-sm">admin@toeic.local</span>
+        <a class="btn btn--sm btn--ghost" href="../auth/login.html">Đăng xuất</a>
+      </div>
+    </header>
+    <div class="app-body">
+      <aside class="app-sidebar">
+        <nav class="nav-list" aria-label="Điều hướng quản trị">
+          <div class="nav-list__group">Tổng quan</div>
+          <a class="nav-list__item" href="dashboard.html">Bảng điều khiển</a>
+          <div class="nav-list__group">Nội dung</div>
+          <a class="nav-list__item is-active" href="exam-list.html">Đề thi</a>
+          <a class="nav-list__item" href="score-conversion.html">Bảng quy đổi điểm</a>
+          <div class="nav-list__group">Người dùng &amp; doanh thu</div>
+          <a class="nav-list__item" href="users.html">Học viên</a>
+          <a class="nav-list__item" href="packages.html">Gói lượt thi</a>
+          <a class="nav-list__item" href="orders.html">Đơn hàng</a>
+          <div class="nav-list__group">Khác</div>
+          <a class="nav-list__item" href="../index.html">Mục lục prototype</a>
+        </nav>
+      </aside>
+      <main class="app-main">
+        <div class="container stack">
+          <h1>Tạo đề thi mới</h1>
+
+          <div class="stepper only-success">
+            <div class="stepper__item is-current">1. Thông tin đề</div>
+            <div class="stepper__item">2. Tải audio Listening</div>
+            <div class="stepper__item">3. Nhập câu hỏi</div>
+          </div>
+
+          <div class="alert alert--danger only-error">
+            Không lưu được đề. Tên đề đã tồn tại trong hệ thống.
+          </div>
+
+          <!-- ===== Bước 1 ===== -->
+          <div class="card only-success">
+            <div class="card__header"><strong>Thông tin đề</strong></div>
+            <div class="card__body stack">
+              <div class="field">
+                <label class="field__label" for="e-name">Tên đề</label>
+                <input class="field__input" id="e-name" value="ETS 2024 — Test 4">
+                <span class="field__hint">Tên hiển thị cho học viên trong danh sách đề.</span>
+              </div>
+              <div class="grid-2">
+                <div class="field">
+                  <label class="field__label" for="e-source">Bộ đề / nguồn</label>
+                  <input class="field__input" id="e-source" value="ETS 2024">
+                </div>
+                <div class="field">
+                  <label class="field__label" for="e-status">Trạng thái</label>
+                  <select class="field__input" id="e-status">
+                    <option selected>Nháp</option>
+                    <option>Đã phát hành</option>
+                    <option>Đã ẩn</option>
+                  </select>
+                </div>
+              </div>
+              <div class="field">
+                <label class="field__label" for="e-note">Ghi chú nội bộ</label>
+                <textarea class="field__input" id="e-note" rows="3">Đề dùng cho đợt ôn tháng 10.</textarea>
+              </div>
+              <div class="alert alert--info">
+                Cấu trúc đề cố định: 200 câu, Listening 45 phút, Reading 75 phút.
+                Không sửa được số câu từng part.
+              </div>
+            </div>
+            <div class="card__footer row row--between">
+              <a class="btn btn--ghost" href="exam-list.html">Huỷ</a>
+              <a class="btn btn--primary" href="exam-editor.html?state=step2">Tiếp tục: tải audio</a>
+            </div>
+          </div>
+          <!-- ===== Bước 2 ===== -->
+          <div class="stepper only-step2">
+            <div class="stepper__item is-done">1. Thông tin đề</div>
+            <div class="stepper__item is-current">2. Tải audio Listening</div>
+            <div class="stepper__item">3. Nhập câu hỏi</div>
+          </div>
+
+          <div class="card only-step2">
+            <div class="card__header"><strong>Audio cho 4 part Listening</strong></div>
+            <div class="card__body stack">
+              <div class="alert alert--warning">
+                Học viên chỉ được nghe <strong>một lần</strong>, không tua lại.
+                File phải đúng thứ tự câu, chèn sẵn khoảng lặng giữa các câu.
+              </div>
+
+              <div class="upload">
+                <span class="field__label">Part 1 — 6 câu (hình ảnh)</span>
+                <div class="upload__file">
+                  <span>part1.mp3 — 3:12 — 2.9 MB</span>
+                  <button class="btn btn--sm btn--ghost">Thay file</button>
+                </div>
+              </div>
+
+              <div class="upload">
+                <span class="field__label">Part 2 — 25 câu (hỏi đáp, 3 đáp án)</span>
+                <div class="upload__file">
+                  <span>part2.mp3 — 9:48 — 8.7 MB</span>
+                  <button class="btn btn--sm btn--ghost">Thay file</button>
+                </div>
+              </div>
+
+              <div class="upload">
+                <span class="field__label">Part 3 — 39 câu (13 hội thoại)</span>
+                <div class="upload__file upload__file--missing">
+                  <span>Chưa có file</span>
+                  <button class="btn btn--sm">Chọn file</button>
+                </div>
+                <div class="upload__zone">
+                  <strong>Kéo file .mp3 vào đây</strong>
+                  <span>Tối đa 60 MB. Chỉ nhận .mp3 hoặc .m4a.</span>
+                  <button class="btn btn--sm">Chọn từ máy</button>
+                </div>
+              </div>
+
+              <div class="upload">
+                <span class="field__label">Part 4 — 30 câu (10 bài nói)</span>
+                <div class="upload__file">
+                  <span>part4.mp3 — 14:05 — 12.4 MB</span>
+                  <button class="btn btn--sm btn--ghost">Thay file</button>
+                </div>
+              </div>
+
+              <div>
+                <div class="row row--between text-sm">
+                  <span>Đã tải 3 / 4 file</span><span>75%</span>
+                </div>
+                <div class="progress"><div class="progress__bar" style="width: 75%"></div></div>
+              </div>
+            </div>
+            <div class="card__footer row row--between">
+              <a class="btn btn--ghost" href="exam-editor.html?state=success">Quay lại</a>
+              <a class="btn btn--primary" href="exam-editor.html?state=step3">Tiếp tục: nhập câu hỏi</a>
+            </div>
+          </div>
+          <!-- ===== Bước 3 ===== -->
+          <div class="stepper only-step3">
+            <div class="stepper__item is-done">1. Thông tin đề</div>
+            <div class="stepper__item is-done">2. Tải audio Listening</div>
+            <div class="stepper__item is-current">3. Nhập câu hỏi</div>
+          </div>
+
+          <div class="card only-step3">
+            <div class="card__header"><strong>Tiến độ nhập câu hỏi</strong></div>
+            <div class="card__body">
+              <table class="table table--striped">
+                <thead>
+                  <tr>
+                    <th scope="col">Part</th><th scope="col">Dạng</th><th scope="col">Số đáp án</th>
+                    <th scope="col">Tiến độ</th><th scope="col">Trạng thái</th><th scope="col">Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Part 1</td><td>Mô tả hình ảnh</td><td>4</td><td>6 / 6</td>
+                    <td><span class="badge badge--success">Đủ</span></td>
+                    <td><a class="btn btn--sm" href="question-editor.html">Sửa</a></td>
+                  </tr>
+                  <tr>
+                    <td>Part 2</td><td>Hỏi đáp</td><td><strong>3</strong></td><td>25 / 25</td>
+                    <td><span class="badge badge--success">Đủ</span></td>
+                    <td><a class="btn btn--sm" href="question-editor.html">Sửa</a></td>
+                  </tr>
+                  <tr>
+                    <td>Part 3</td><td>Hội thoại (13 bài)</td><td>4</td><td>25 / 39</td>
+                    <td><span class="badge badge--warning">Thiếu 14 câu</span></td>
+                    <td><a class="btn btn--sm" href="question-editor.html">Nhập tiếp</a></td>
+                  </tr>
+                  <tr>
+                    <td>Part 4</td><td>Bài nói (10 bài)</td><td>4</td><td>30 / 30</td>
+                    <td><span class="badge badge--success">Đủ</span></td>
+                    <td><a class="btn btn--sm" href="question-editor.html">Sửa</a></td>
+                  </tr>
+                  <tr>
+                    <td>Part 5</td><td>Điền câu</td><td>4</td><td>30 / 30</td>
+                    <td><span class="badge badge--success">Đủ</span></td>
+                    <td><a class="btn btn--sm" href="question-editor.html">Sửa</a></td>
+                  </tr>
+                  <tr>
+                    <td>Part 6</td><td>Điền đoạn (4 đoạn)</td><td>4</td><td>16 / 16</td>
+                    <td><span class="badge badge--success">Đủ</span></td>
+                    <td><a class="btn btn--sm" href="question-editor.html">Sửa</a></td>
+                  </tr>
+                  <tr>
+                    <td>Part 7</td><td>Đọc hiểu</td><td>4</td><td>54 / 54</td>
+                    <td><span class="badge badge--success">Đủ</span></td>
+                    <td><a class="btn btn--sm" href="question-editor.html">Sửa</a></td>
+                  </tr>
+                </tbody>
+              </table>
+              <div class="alert alert--warning">
+                Còn thiếu 14 câu Part 3 và 1 file audio. Chưa thể phát hành đề.
+              </div>
+            </div>
+            <div class="card__footer row row--between">
+              <a class="btn btn--ghost" href="exam-editor.html?state=step2">Quay lại</a>
+              <div class="row">
+                <a class="btn" href="exam-list.html">Lưu nháp</a>
+                <button class="btn btn--primary" disabled>Phát hành đề</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card only-submitting">
+            <div class="card__body">
+              <div class="state-block">
+                <div class="state-block__icon" aria-hidden="true">⏳</div>
+                <h2 class="state-block__title">Đang lưu đề…</h2>
+                <p class="state-block__desc">Không đóng tab trong lúc tải audio lên.</p>
+              </div>
+              <div class="progress"><div class="progress__bar" style="width: 60%"></div></div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <script src="../assets/js/state-switch.js"></script>
+</body>
+</html>
