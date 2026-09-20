@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Đăng nhập — TOEIC Practice</title>
+  <link rel="stylesheet" href="../assets/css/tokens.css">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+</head>
+<body data-states="success,error,submitting">
+  <div class="app-shell">
+    <header class="app-topbar">
+      <strong>TOEIC Practice</strong>
+      <a class="btn btn--ghost btn--sm" href="../index.html">Mục lục prototype</a>
+    </header>
+    <main class="app-main">
+      <div class="container container--narrow stack">
+        <h1>Đăng nhập</h1>
+
+        <div class="alert alert--danger only-error" role="alert">
+          Email hoặc mật khẩu không đúng.
+        </div>
+
+        <div class="card">
+          <div class="card__body stack">
+            <div class="field">
+              <label class="field__label" for="login-email">Email</label>
+              <input class="field__input" id="login-email" type="email"
+                     autocomplete="email" placeholder="ban@example.com">
+            </div>
+
+            <div class="field">
+              <label class="field__label" for="login-password">Mật khẩu</label>
+              <input class="field__input" id="login-password" type="password"
+                     autocomplete="current-password">
+              <p class="field__hint">
+                <a href="forgot-password.html">Quên mật khẩu?</a>
+              </p>
+            </div>
+
+            <label class="row">
+              <input type="checkbox" id="login-remember">
+              <span class="text-sm">Ghi nhớ đăng nhập</span>
+            </label>
+          </div>
+          <div class="card__footer stack">
+            <button class="btn btn--primary btn--lg only-success" style="width: 100%">
+              Đăng nhập
+            </button>
+            <button class="btn btn--primary btn--lg only-error" style="width: 100%">
+              Đăng nhập
+            </button>
+            <button class="btn btn--primary btn--lg only-submitting" style="width: 100%" disabled>
+              Đang đăng nhập…
+            </button>
+            <p class="text-sm text-muted" style="margin: 0; text-align: center">
+              Chưa có tài khoản? <a href="register.html">Đăng ký</a>
+            </p>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script src="../assets/js/state-switch.js"></script>
+</body>
+</html>

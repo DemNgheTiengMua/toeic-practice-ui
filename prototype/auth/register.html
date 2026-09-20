@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Đăng ký — TOEIC Practice</title>
+  <link rel="stylesheet" href="../assets/css/tokens.css">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+</head>
+<body data-states="success,error,submitting">
+  <div class="app-shell">
+    <header class="app-topbar">
+      <strong>TOEIC Practice</strong>
+      <a class="btn btn--ghost btn--sm" href="../index.html">Mục lục prototype</a>
+    </header>
+    <main class="app-main">
+      <div class="container container--narrow stack">
+        <h1>Đăng ký</h1>
+
+        <div class="alert alert--danger only-error" role="alert">
+          Không tạo được tài khoản. Kiểm tra lại thông tin bên dưới.
+        </div>
+
+        <div class="card">
+          <div class="card__body stack">
+            <div class="field">
+              <label class="field__label" for="reg-name">Họ và tên</label>
+              <input class="field__input" id="reg-name" type="text" autocomplete="name">
+            </div>
+
+            <div class="field">
+              <label class="field__label" for="reg-email">Email</label>
+              <input class="field__input" id="reg-email" type="email" autocomplete="email">
+            </div>
+
+            <!-- state error: minh hoạ field không hợp lệ -->
+            <div class="field only-error field--invalid">
+              <label class="field__label" for="reg-email-bad">Email</label>
+              <input class="field__input" id="reg-email-bad" type="email" value="ban@example">
+              <p class="field__error">Email này đã được dùng.</p>
+            </div>
+
+            <div class="field">
+              <label class="field__label" for="reg-password">Mật khẩu</label>
+              <input class="field__input" id="reg-password" type="password"
+                     autocomplete="new-password">
+              <p class="field__hint">Tối thiểu 8 ký tự, có chữ và số.</p>
+            </div>
+
+            <div class="field">
+              <label class="field__label" for="reg-confirm">Nhập lại mật khẩu</label>
+              <input class="field__input" id="reg-confirm" type="password"
+                     autocomplete="new-password">
+            </div>
+
+            <label class="row">
+              <input type="checkbox" id="reg-terms">
+              <span class="text-sm">Tôi đồng ý với điều khoản sử dụng</span>
+            </label>
+          </div>
+          <div class="card__footer stack">
+            <button class="btn btn--primary btn--lg only-success" style="width: 100%">Tạo tài khoản</button>
+            <button class="btn btn--primary btn--lg only-error" style="width: 100%">Tạo tài khoản</button>
+            <button class="btn btn--primary btn--lg only-submitting" style="width: 100%" disabled>Đang tạo tài khoản…</button>
+            <p class="text-sm text-muted" style="margin: 0; text-align: center">
+              Đã có tài khoản? <a href="login.html">Đăng nhập</a>
+            </p>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script src="../assets/js/state-switch.js"></script>
+</body>
+</html>

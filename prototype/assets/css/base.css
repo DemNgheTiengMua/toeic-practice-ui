@@ -46,9 +46,15 @@ a { color: var(--color-primary); }
 .text-sm { font-size: var(--text-sm); }
 
 /* hiển thị theo state */
-.only-loading, .only-empty, .only-error, .only-success,
-.only-resumed, .only-expired, .only-submitting, .only-offline,
-.only-pending, .only-failed, .only-paywall { display: none; }
+/* Class lặp hai lần để tăng specificity lên (0,2,0): phải thắng display của
+   component (.btn đặt inline-flex trong components.css, load sau base.css).
+   Rule hiện bên dưới là (0,2,1) nên vẫn thắng rule ẩn này. */
+.only-loading.only-loading, .only-empty.only-empty,
+.only-error.only-error, .only-success.only-success,
+.only-resumed.only-resumed, .only-expired.only-expired,
+.only-submitting.only-submitting, .only-offline.only-offline,
+.only-pending.only-pending, .only-failed.only-failed,
+.only-paywall.only-paywall, .only-sent.only-sent { display: none; }
 body[data-state="loading"]    .only-loading,
 body[data-state="empty"]      .only-empty,
 body[data-state="error"]      .only-error,
@@ -59,7 +65,8 @@ body[data-state="submitting"] .only-submitting,
 body[data-state="offline"]    .only-offline,
 body[data-state="pending"]    .only-pending,
 body[data-state="failed"]     .only-failed,
-body[data-state="paywall"]    .only-paywall { display: revert; }
+body[data-state="paywall"]    .only-paywall,
+body[data-state="sent"]       .only-sent { display: revert; }
 
 .state-switcher {
   position: fixed; right: var(--space-4); bottom: var(--space-4);
