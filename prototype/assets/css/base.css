@@ -62,7 +62,8 @@ a { color: var(--color-primary); }
 .only-resumed.only-resumed, .only-expired.only-expired,
 .only-submitting.only-submitting, .only-offline.only-offline,
 .only-pending.only-pending, .only-failed.only-failed,
-.only-paywall.only-paywall, .only-sent.only-sent { display: none; }
+.only-paywall.only-paywall, .only-sent.only-sent,
+.only-complete.only-complete { display: none; }
 body[data-state="loading"]    .only-loading,
 body[data-state="empty"]      .only-empty,
 body[data-state="error"]      .only-error,
@@ -74,7 +75,8 @@ body[data-state="offline"]    .only-offline,
 body[data-state="pending"]    .only-pending,
 body[data-state="failed"]     .only-failed,
 body[data-state="paywall"]    .only-paywall,
-body[data-state="sent"]       .only-sent { display: revert; }
+body[data-state="sent"]       .only-sent,
+body[data-state="complete"]   .only-complete { display: revert; }
 
 /* element hiện ở nhiều state: đặt .multi-state rồi liệt kê trong data-show.
    Class lặp hai lần vì lý do specificity giống nhóm .only-* */

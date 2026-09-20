@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Xác nhận nộp bài — ETS 2024 Test 5</title>
+  <link rel="stylesheet" href="../assets/css/tokens.css">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+</head>
+<body data-states="success,complete,submitting">
+  <div class="app-shell">
+    <header class="app-topbar">
+      <div class="exam-topbar-group">
+        <strong>ETS 2024 — Test 5</strong>
+        <span class="badge badge--info">Reading · Part 7</span>
+      </div>
+      <span class="timer timer--warning">
+        <span class="text-sm">Còn lại</span>
+        <span class="timer__value">00:06:31</span>
+      </span>
+    </header>
+    <main class="app-main">
+      <div class="container">
+        <p class="text-muted">Nền phía sau là màn thi Reading đang mở.</p>
+        <div class="skeleton skeleton--title"></div>
+        <div class="skeleton skeleton--text"></div>
+        <div class="skeleton skeleton--text" style="width: 64%"></div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ===== còn câu chưa làm ===== -->
+  <div class="modal-overlay only-success" role="dialog" aria-modal="true"
+       aria-labelledby="submit-title-1">
+    <div class="modal">
+      <div class="modal__header"><h2 id="submit-title-1" style="margin: 0">Nộp bài?</h2></div>
+      <div class="modal__body stack">
+        <div class="alert alert--warning">
+          <strong>Bạn còn 19 câu chưa trả lời.</strong>
+          Câu chưa trả lời được tính là sai.
+        </div>
+        <div class="grid-3">
+          <div class="stat">
+            <div class="stat__label">Đã trả lời</div>
+            <div class="stat__value" style="font-size: var(--text-2xl)">181</div>
+          </div>
+          <div class="stat">
+            <div class="stat__label">Đánh dấu</div>
+            <div class="stat__value" style="font-size: var(--text-2xl)">7</div>
+          </div>
+          <div class="stat">
+            <div class="stat__label">Chưa làm</div>
+            <div class="stat__value" style="font-size: var(--text-2xl); color: var(--color-danger)">19</div>
+          </div>
+        </div>
+        <p class="text-sm text-muted" style="margin: 0">
+          Còn 6 phút 31 giây. Bạn vẫn có thể quay lại làm tiếp.
+        </p>
+      </div>
+      <div class="modal__footer">
+        <a class="btn" href="exam-reading.html">Quay lại làm tiếp</a>
+        <a class="btn btn--danger" href="exam-result.html">Nộp bài luôn</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== đã làm hết ===== -->
+  <div class="modal-overlay only-complete" role="dialog" aria-modal="true"
+       aria-labelledby="submit-title-2">
+    <div class="modal">
+      <div class="modal__header"><h2 id="submit-title-2" style="margin: 0">Nộp bài?</h2></div>
+      <div class="modal__body stack">
+        <div class="alert alert--success">
+          <strong>Bạn đã trả lời cả 200 câu.</strong>
+          Sau khi nộp không sửa được đáp án.
+        </div>
+        <p class="text-sm text-muted" style="margin: 0">
+          Còn 6 phút 31 giây. Muốn kiểm tra lại 7 câu đã đánh dấu trước khi nộp?
+        </p>
+      </div>
+      <div class="modal__footer">
+        <a class="btn" href="exam-reading.html">Xem 7 câu đã đánh dấu</a>
+        <a class="btn btn--primary" href="exam-result.html">Nộp bài</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== submitting ===== -->
+  <div class="modal-overlay only-submitting" role="dialog" aria-modal="true"
+       aria-labelledby="submit-title-3">
+    <div class="modal">
+      <div class="modal__body">
+        <div class="state-block">
+          <div class="state-block__icon" aria-hidden="true">⏳</div>
+          <div class="state-block__title" id="submit-title-3">Đang nộp bài…</div>
+          <p class="state-block__desc">Đừng tắt trang.</p>
+          <div class="progress" style="max-width: 240px; margin: 0 auto">
+            <div class="progress__bar" style="width: 45%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="../assets/js/state-switch.js"></script>
+</body>
+</html>

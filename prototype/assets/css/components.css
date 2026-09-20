@@ -350,3 +350,22 @@
   font-size: var(--text-sm);
   max-height: 460px; overflow-y: auto;
 }
+
+/* ===== Khối điểm lớn ===== */
+.score-hero {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+.score-hero__total { text-align: center; }
+.score-hero__total-value {
+  font-size: 56px; font-weight: 800; line-height: 1;
+  color: var(--color-primary);
+}
+.score-hero__total-label { font-size: var(--text-sm); color: var(--color-text-muted); }
+.score-hero__section { text-align: center; align-self: center; }
+.score-hero__section-value { font-size: var(--text-3xl); font-weight: 700; line-height: 1.1; }
