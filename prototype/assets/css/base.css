@@ -63,7 +63,9 @@ a { color: var(--color-primary); }
 .only-submitting.only-submitting, .only-offline.only-offline,
 .only-pending.only-pending, .only-failed.only-failed,
 .only-paywall.only-paywall, .only-sent.only-sent,
-.only-complete.only-complete { display: none; }
+.only-complete.only-complete,
+.only-answering.only-answering, .only-revealed-correct.only-revealed-correct,
+.only-revealed-wrong.only-revealed-wrong, .only-finished.only-finished { display: none; }
 body[data-state="loading"]    .only-loading,
 body[data-state="empty"]      .only-empty,
 body[data-state="error"]      .only-error,
@@ -76,7 +78,11 @@ body[data-state="pending"]    .only-pending,
 body[data-state="failed"]     .only-failed,
 body[data-state="paywall"]    .only-paywall,
 body[data-state="sent"]       .only-sent,
-body[data-state="complete"]   .only-complete { display: revert; }
+body[data-state="complete"]   .only-complete,
+body[data-state="answering"]        .only-answering,
+body[data-state="revealed-correct"] .only-revealed-correct,
+body[data-state="revealed-wrong"]   .only-revealed-wrong,
+body[data-state="finished"]         .only-finished { display: revert; }
 
 /* element hiện ở nhiều state: đặt .multi-state rồi liệt kê trong data-show.
    Class lặp hai lần vì lý do specificity giống nhóm .only-* */
@@ -86,6 +92,17 @@ body[data-state="submitting"] .multi-state[data-show~="submitting"] { display: r
 body[data-state="resumed"]    .multi-state[data-show~="resumed"],
 body[data-state="offline"]    .multi-state[data-show~="offline"],
 body[data-state="expired"]    .multi-state[data-show~="expired"] { display: revert; }
+body[data-state="answering"]        .multi-state[data-show~="answering"],
+body[data-state="revealed-correct"] .multi-state[data-show~="revealed-correct"],
+body[data-state="revealed-wrong"]   .multi-state[data-show~="revealed-wrong"],
+body[data-state="finished"]         .multi-state[data-show~="finished"],
+body[data-state="complete"]         .multi-state[data-show~="complete"],
+body[data-state="paywall"]          .multi-state[data-show~="paywall"],
+body[data-state="pending"]          .multi-state[data-show~="pending"],
+body[data-state="failed"]           .multi-state[data-show~="failed"],
+body[data-state="loading"]          .multi-state[data-show~="loading"],
+body[data-state="empty"]            .multi-state[data-show~="empty"],
+body[data-state="error"]            .multi-state[data-show~="error"] { display: revert; }
 
 .state-switcher {
   position: fixed; right: var(--space-4); bottom: var(--space-4);

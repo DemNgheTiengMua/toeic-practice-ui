@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tổng kết phiên luyện — TOEIC Practice</title>
+  <link rel="stylesheet" href="../assets/css/tokens.css">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+</head>
+<body data-states="success">
+  <div class="app-shell app-shell--with-sidebar">
+    <header class="app-topbar">
+      <strong>TOEIC Practice</strong>
+      <div class="row">
+        <span class="badge badge--info">Còn 3 lượt thi</span>
+        <a class="btn btn--sm" href="../payment/pricing.html">Mua thêm lượt</a>
+        <a class="btn btn--ghost btn--sm" href="profile.html">Nguyễn Văn A</a>
+      </div>
+    </header>
+    <div class="app-body">
+      <aside class="app-sidebar">
+        <nav class="nav-list" aria-label="Điều hướng chính">
+          <a class="nav-list__item" href="dashboard.html">Trang chủ</a>
+          <div class="nav-list__group">Thi thử</div>
+          <a class="nav-list__item" href="exam-list.html">Danh sách đề</a>
+          <a class="nav-list__item" href="exam-history.html">Lịch sử thi</a>
+          <div class="nav-list__group">Luyện tập</div>
+          <a class="nav-list__item is-active" href="practice-select.html">Luyện theo part</a>
+          <div class="nav-list__group">Tài khoản</div>
+          <a class="nav-list__item" href="../payment/wallet.html">Ví lượt thi</a>
+          <a class="nav-list__item" href="profile.html">Hồ sơ</a>
+        </nav>
+      </aside>
+      <main class="app-main">
+        <div class="container stack">
+          <div class="only-success stack">
+            <div class="row row--between">
+              <div>
+                <h1 style="margin: 0 0 var(--space-1)">Tổng kết phiên luyện</h1>
+                <p class="text-sm text-muted" style="margin: 0">
+                  Part 5 — Câu đơn · 20 câu · 14 phút 32 giây · 20/09/2026
+                </p>
+              </div>
+              <div class="row">
+                <a class="btn" href="practice-select.html">Chọn part khác</a>
+                <a class="btn btn--primary" href="practice-take.html">Luyện tiếp 20 câu</a>
+              </div>
+            </div>
+
+            <div class="grid-3">
+              <div class="stat">
+                <div class="stat__label">Đúng</div>
+                <div class="stat__value" style="color: var(--color-success)">15</div>
+                <div class="stat__hint">trên 20 câu · 75%</div>
+              </div>
+              <div class="stat">
+                <div class="stat__label">Sai</div>
+                <div class="stat__value" style="color: var(--color-danger)">4</div>
+                <div class="stat__hint">đã lưu vào kho câu sai</div>
+              </div>
+              <div class="stat">
+                <div class="stat__label">Bỏ qua</div>
+                <div class="stat__value">1</div>
+                <div class="stat__hint">không tính vào tỷ lệ</div>
+              </div>
+            </div>
+
+            <div class="alert alert--success">
+              Độ chính xác Part 5 của bạn tăng từ <strong>71%</strong> lên
+              <strong>72%</strong> sau phiên này.
+            </div>
+            <div class="card">
+              <div class="card__header">
+                <div class="row row--between">
+                  <strong>Các câu cần xem lại</strong>
+                  <span class="text-sm text-muted">4 câu sai · 1 câu bỏ qua</span>
+                </div>
+              </div>
+              <div class="card__body">
+                <table class="table table--striped">
+                  <thead>
+                    <tr><th>Câu</th><th>Dạng ngữ pháp</th><th>Bạn chọn</th><th>Đáp án</th><th></th></tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>7</td><td>Thì của động từ</td>
+                      <td><span class="badge badge--danger">B — reviewing</span></td>
+                      <td><span class="badge badge--success">C — will review</span></td>
+                      <td><a href="practice-take.html?state=revealed-wrong">Xem giải thích</a></td>
+                    </tr>
+                    <tr>
+                      <td>11</td><td>Giới từ</td>
+                      <td><span class="badge badge--danger">A — in</span></td>
+                      <td><span class="badge badge--success">D — within</span></td>
+                      <td><a href="practice-take.html?state=revealed-wrong">Xem giải thích</a></td>
+                    </tr>
+                    <tr>
+                      <td>14</td><td>Từ loại</td>
+                      <td><span class="badge badge--danger">C — competitively</span></td>
+                      <td><span class="badge badge--success">B — competitive</span></td>
+                      <td><a href="practice-take.html?state=revealed-wrong">Xem giải thích</a></td>
+                    </tr>
+                    <tr>
+                      <td>18</td><td>Đại từ quan hệ</td>
+                      <td><span class="badge badge--danger">A — which</span></td>
+                      <td><span class="badge badge--success">C — whose</span></td>
+                      <td><a href="practice-take.html?state=revealed-wrong">Xem giải thích</a></td>
+                    </tr>
+                    <tr>
+                      <td>20</td><td>Liên từ</td>
+                      <td><span class="badge badge--muted">Bỏ qua</span></td>
+                      <td><span class="badge badge--success">B — although</span></td>
+                      <td><a href="practice-take.html?state=revealed-wrong">Xem giải thích</a></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card__header"><strong>Lỗi theo dạng ngữ pháp</strong></div>
+              <div class="card__body stack">
+                <div>
+                  <div class="row row--between text-sm">
+                    <span>Thì của động từ</span><span class="text-muted">1 sai / 5 câu</span>
+                  </div>
+                  <div class="progress"><div class="progress__bar" style="width: 80%"></div></div>
+                </div>
+                <div>
+                  <div class="row row--between text-sm">
+                    <span>Từ loại</span><span class="text-muted">1 sai / 6 câu</span>
+                  </div>
+                  <div class="progress"><div class="progress__bar" style="width: 83%"></div></div>
+                </div>
+                <div>
+                  <div class="row row--between text-sm">
+                    <span>Giới từ</span><span class="text-muted">1 sai / 3 câu</span>
+                  </div>
+                  <div class="progress"><div class="progress__bar" style="width: 67%"></div></div>
+                </div>
+                <div>
+                  <div class="row row--between text-sm">
+                    <span>Đại từ quan hệ</span><span class="text-muted">1 sai / 2 câu</span>
+                  </div>
+                  <div class="progress"><div class="progress__bar" style="width: 50%"></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <script src="../assets/js/state-switch.js"></script>
+</body>
+</html>

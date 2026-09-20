@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Luyện theo part — TOEIC Practice</title>
+  <link rel="stylesheet" href="../assets/css/tokens.css">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+</head>
+<body data-states="loading,error,success">
+  <div class="app-shell app-shell--with-sidebar">
+    <header class="app-topbar">
+      <strong>TOEIC Practice</strong>
+      <div class="row">
+        <span class="badge badge--info">Còn 3 lượt thi</span>
+        <a class="btn btn--sm" href="../payment/pricing.html">Mua thêm lượt</a>
+        <a class="btn btn--ghost btn--sm" href="profile.html">Nguyễn Văn A</a>
+      </div>
+    </header>
+    <div class="app-body">
+      <aside class="app-sidebar">
+        <nav class="nav-list" aria-label="Điều hướng chính">
+          <a class="nav-list__item" href="dashboard.html">Trang chủ</a>
+          <div class="nav-list__group">Thi thử</div>
+          <a class="nav-list__item" href="exam-list.html">Danh sách đề</a>
+          <a class="nav-list__item" href="exam-history.html">Lịch sử thi</a>
+          <div class="nav-list__group">Luyện tập</div>
+          <a class="nav-list__item is-active" href="practice-select.html">Luyện theo part</a>
+          <div class="nav-list__group">Tài khoản</div>
+          <a class="nav-list__item" href="../payment/wallet.html">Ví lượt thi</a>
+          <a class="nav-list__item" href="profile.html">Hồ sơ</a>
+        </nav>
+      </aside>
+      <main class="app-main">
+        <div class="container stack">
+          <!-- ===== loading ===== -->
+          <div class="only-loading stack">
+            <div class="skeleton skeleton--title"></div>
+            <div class="grid-2">
+              <div class="skeleton skeleton--block" style="height: 130px"></div>
+              <div class="skeleton skeleton--block" style="height: 130px"></div>
+              <div class="skeleton skeleton--block" style="height: 130px"></div>
+              <div class="skeleton skeleton--block" style="height: 130px"></div>
+            </div>
+          </div>
+
+          <!-- ===== error ===== -->
+          <div class="only-error">
+            <div class="card"><div class="card__body">
+              <div class="state-block">
+                <div class="state-block__icon" aria-hidden="true">!</div>
+                <div class="state-block__title">Không tải được dữ liệu luyện tập</div>
+                <p class="state-block__desc">Kiểm tra kết nối rồi thử lại.</p>
+                <button class="btn btn--primary">Thử lại</button>
+              </div>
+            </div></div>
+          </div>
+
+          <!-- ===== success ===== -->
+          <div class="only-success stack">
+            <div>
+              <h1 style="margin: 0 0 var(--space-1)">Luyện theo part</h1>
+              <p class="text-muted" style="margin: 0">
+                Không giới hạn thời gian, xem đáp án và giải thích ngay sau mỗi câu.
+                <strong>Miễn phí, không trừ lượt thi.</strong>
+              </p>
+            </div>
+            <div class="card">
+              <div class="card__body row" style="gap: var(--space-4); flex-wrap: wrap">
+                <div class="field" style="flex: 0 0 200px">
+                  <label class="field__label" for="pr-count">Số câu mỗi phiên</label>
+                  <select class="field__input" id="pr-count">
+                    <option>10 câu</option>
+                    <option selected>20 câu</option>
+                    <option>40 câu</option>
+                    <option>Toàn bộ part</option>
+                  </select>
+                </div>
+                <div class="field" style="flex: 0 0 220px">
+                  <label class="field__label" for="pr-source">Nguồn câu hỏi</label>
+                  <select class="field__input" id="pr-source">
+                    <option selected>Tất cả đề</option>
+                    <option>Chỉ câu tôi từng làm sai</option>
+                    <option>Chỉ câu chưa từng làm</option>
+                  </select>
+                </div>
+                <div class="field" style="flex: 0 0 200px">
+                  <label class="field__label" for="pr-mode">Kiểu feedback</label>
+                  <select class="field__input" id="pr-mode">
+                    <option selected>Hiện đáp án ngay sau mỗi câu</option>
+                    <option>Chỉ hiện ở cuối phiên</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <h2>Listening</h2>
+            <div class="grid-2">
+              <div class="card">
+                <div class="card__body stack">
+                  <div class="row row--between">
+                    <strong>Part 1 — Ảnh</strong>
+                    <span class="badge badge--success">83%</span>
+                  </div>
+                  <p class="text-sm text-muted" style="margin: 0">
+                    6 câu mỗi đề · đã luyện 48 câu · 1 240 câu trong kho
+                  </p>
+                  <div class="progress"><div class="progress__bar" style="width: 83%"></div></div>
+                  <a class="btn btn--primary" href="practice-take.html">Luyện Part 1</a>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card__body stack">
+                  <div class="row row--between">
+                    <strong>Part 2 — Hỏi đáp</strong>
+                    <span class="badge badge--success">76%</span>
+                  </div>
+                  <p class="text-sm text-muted" style="margin: 0">
+                    25 câu mỗi đề · đã luyện 150 câu · 3 100 câu trong kho
+                  </p>
+                  <div class="progress"><div class="progress__bar" style="width: 76%"></div></div>
+                  <a class="btn btn--primary" href="practice-take.html">Luyện Part 2</a>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card__body stack">
+                  <div class="row row--between">
+                    <strong>Part 3 — Hội thoại</strong>
+                    <span class="badge badge--success">85%</span>
+                  </div>
+                  <p class="text-sm text-muted" style="margin: 0">
+                    39 câu mỗi đề · đã luyện 78 câu · 4 800 câu trong kho
+                  </p>
+                  <div class="progress"><div class="progress__bar" style="width: 85%"></div></div>
+                  <a class="btn btn--primary" href="practice-take.html">Luyện Part 3</a>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card__body stack">
+                  <div class="row row--between">
+                    <strong>Part 4 — Bài nói</strong>
+                    <span class="badge badge--warning">77%</span>
+                  </div>
+                  <p class="text-sm text-muted" style="margin: 0">
+                    30 câu mỗi đề · đã luyện 30 câu · 3 700 câu trong kho
+                  </p>
+                  <div class="progress"><div class="progress__bar" style="width: 77%"></div></div>
+                  <a class="btn btn--primary" href="practice-take.html">Luyện Part 4</a>
+                </div>
+              </div>
+            </div>
+            <h2>Reading</h2>
+            <div class="grid-2">
+              <div class="card">
+                <div class="card__body stack">
+                  <div class="row row--between">
+                    <strong>Part 5 — Câu đơn</strong>
+                    <span class="badge badge--warning">71%</span>
+                  </div>
+                  <p class="text-sm text-muted" style="margin: 0">
+                    30 câu mỗi đề · đã luyện 210 câu · 3 700 câu trong kho
+                  </p>
+                  <div class="progress"><div class="progress__bar" style="width: 71%"></div></div>
+                  <a class="btn btn--primary" href="practice-take.html">Luyện Part 5</a>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card__body stack">
+                  <div class="row row--between">
+                    <strong>Part 6 — Điền đoạn</strong>
+                    <span class="badge badge--warning">75%</span>
+                  </div>
+                  <p class="text-sm text-muted" style="margin: 0">
+                    16 câu mỗi đề · đã luyện 32 câu · 1 980 câu trong kho
+                  </p>
+                  <div class="progress"><div class="progress__bar" style="width: 75%"></div></div>
+                  <a class="btn btn--primary" href="practice-take.html">Luyện Part 6</a>
+                </div>
+              </div>
+              <div class="card" style="border-color: var(--color-warning)">
+                <div class="card__body stack">
+                  <div class="row row--between">
+                    <strong>Part 7 — Đọc hiểu</strong>
+                    <span class="badge badge--danger">58%</span>
+                  </div>
+                  <p class="text-sm text-muted" style="margin: 0">
+                    54 câu mỗi đề · đã luyện 54 câu · 6 700 câu trong kho
+                  </p>
+                  <div class="progress"><div class="progress__bar" style="width: 58%"></div></div>
+                  <div class="alert alert--warning text-sm" style="padding: var(--space-2) var(--space-3)">
+                    Part yếu nhất của bạn. Nên luyện phần này trước.
+                  </div>
+                  <a class="btn btn--primary" href="practice-take.html">Luyện Part 7</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <script src="../assets/js/state-switch.js"></script>
+</body>
+</html>
