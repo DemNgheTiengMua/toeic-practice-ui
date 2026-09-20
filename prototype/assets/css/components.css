@@ -102,11 +102,15 @@
   font-size: var(--text-sm); font-weight: 600;
 }
 .option__text { flex: 1 1 auto; }
-.option--selected {
+/* .option--selected cho trang tĩnh, :checked cho tương tác bàn phím thật.
+   Loại trừ correct/wrong để màn review vẫn giữ màu xanh/đỏ khi input đang checked. */
+.option--selected,
+.option:has(.option__input:checked):not(.option--correct):not(.option--wrong) {
   border-color: var(--color-primary);
   background: var(--color-primary-soft);
 }
-.option--selected .option__marker {
+.option--selected .option__marker,
+.option:has(.option__input:checked):not(.option--correct):not(.option--wrong) .option__marker {
   background: var(--color-primary);
   border-color: var(--color-primary);
   color: var(--color-primary-text);
@@ -126,6 +130,10 @@
   clip-path: inset(50%);
   white-space: nowrap;
   border: 0;
+}
+/* fallback khi không có :has() — ring nằm trên marker vì input bị clip 1px */
+.option__input:focus-visible + .option__marker {
+  outline: 2px solid var(--color-primary);
 }
 .option:has(.option__input:focus-visible) {
   outline: 2px solid var(--color-primary);
@@ -148,11 +156,12 @@
 .navigator { display: flex; flex-direction: column; gap: var(--space-3); }
 .navigator__grid {
   display: grid;
-  grid-template-columns: repeat(10, 1fr);
+  grid-template-columns: repeat(10, minmax(0, 1fr));
   gap: var(--space-1);
 }
 .navigator__cell {
   aspect-ratio: 1;
+  min-width: 20px;
   display: grid; place-items: center;
   font-size: var(--text-xs);
   border: 1px solid var(--color-border);
