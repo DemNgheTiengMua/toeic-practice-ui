@@ -81,6 +81,9 @@ body[data-state="sent"]       .only-sent { display: revert; }
 .multi-state.multi-state { display: none; }
 body[data-state="success"]    .multi-state[data-show~="success"],
 body[data-state="submitting"] .multi-state[data-show~="submitting"] { display: revert; }
+body[data-state="resumed"]    .multi-state[data-show~="resumed"],
+body[data-state="offline"]    .multi-state[data-show~="offline"],
+body[data-state="expired"]    .multi-state[data-show~="expired"] { display: revert; }
 
 .state-switcher {
   position: fixed; right: var(--space-4); bottom: var(--space-4);

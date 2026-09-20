@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Listening — ETS 2024 Test 5</title>
+  <link rel="stylesheet" href="../assets/css/tokens.css">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+</head>
+<body data-states="loading,success,resumed,expired,submitting,offline">
+  <div class="app-shell">
+    <header class="app-topbar">
+      <div class="exam-topbar-group">
+        <strong>ETS 2024 — Test 5</strong>
+        <span class="badge badge--info">Listening · Part 2</span>
+      </div>
+      <div class="exam-topbar-group">
+        <span class="save-status save-status--saved only-success">Đã lưu</span>
+        <span class="save-status save-status--error only-offline">Mất kết nối — đang thử lại…</span>
+        <span class="timer only-success">
+          <span class="text-sm text-muted">Còn lại</span>
+          <span class="timer__value">00:38:12</span>
+        </span>
+        <span class="timer timer--warning only-resumed">
+          <span class="text-sm">Còn lại</span>
+          <span class="timer__value">00:09:44</span>
+        </span>
+        <span class="timer timer--critical only-expired">
+          <span class="text-sm">Hết giờ</span>
+          <span class="timer__value">00:00:00</span>
+        </span>
+      </div>
+    </header>
+    <main class="app-main">
+
+      <!-- ===== loading ===== -->
+      <div class="container only-loading">
+        <div class="exam-layout">
+          <div class="stack">
+            <div class="skeleton skeleton--block" style="height: 90px"></div>
+            <div class="skeleton skeleton--title"></div>
+            <div class="skeleton skeleton--text"></div>
+            <div class="skeleton skeleton--text" style="width: 70%"></div>
+            <div class="skeleton skeleton--block" style="height: 200px"></div>
+          </div>
+          <div class="skeleton skeleton--block" style="height: 320px"></div>
+        </div>
+      </div>
+
+      <!-- ===== expired: hết giờ, đang tự nộp ===== -->
+      <div class="container only-expired" style="max-width: 560px">
+        <div class="card"><div class="card__body">
+          <div class="state-block">
+            <div class="state-block__icon" aria-hidden="true">⏱</div>
+            <div class="state-block__title">Đã hết thời gian</div>
+            <p class="state-block__desc">
+              Bài thi đang được nộp tự động và chấm trên những câu bạn đã làm.
+              Không cần làm gì thêm.
+            </p>
+            <div class="progress" style="max-width: 280px; margin: 0 auto">
+              <div class="progress__bar" style="width: 70%"></div>
+            </div>
+          </div>
+        </div></div>
+      </div>
+
+      <!-- ===== submitting ===== -->
+      <div class="container only-submitting" style="max-width: 560px">
+        <div class="card"><div class="card__body">
+          <div class="state-block">
+            <div class="state-block__icon" aria-hidden="true">⏳</div>
+            <div class="state-block__title">Đang nộp bài…</div>
+            <p class="state-block__desc">Đừng tắt trang. Việc này mất vài giây.</p>
+          </div>
+        </div></div>
+      </div>
+
+      <!-- banner riêng cho resumed / offline -->
+      <div class="container only-resumed" style="margin-bottom: var(--space-4)">
+        <div class="alert alert--info">
+          <strong>Đã khôi phục bài đang làm.</strong>
+          Bạn quay lại đúng câu 8, thời gian còn lại được tính từ lúc bắt đầu.
+        </div>
+      </div>
+      <div class="container only-offline" style="margin-bottom: var(--space-4)">
+        <div class="alert alert--danger" role="alert">
+          <strong>Mất kết nối.</strong>
+          Đáp án đang được giữ tạm trên máy và sẽ tự gửi lại khi có mạng.
+          Đừng đóng tab.
+        </div>
+      </div>
+
+      <div class="container exam-body multi-state" data-show="success resumed offline">
+        <div class="exam-layout">
+
+          <!-- cột nội dung -->
+          <div class="stack">
+            <!-- audio: không tua, không pause -->
+            <div class="exam-audio">
+              <span aria-hidden="true">▶</span>
+              <div style="flex: 1 1 auto">
+                <div class="progress"><div class="progress__bar" style="width: 42%"></div></div>
+                <p class="exam-audio__status" style="margin: var(--space-2) 0 0">
+                  Đang phát Part 2 — 03:18 / 07:50 ·
+                  <strong>không tua lại, không tạm dừng</strong>
+                </p>
+              </div>
+              <div class="row">
+                <label class="text-sm text-muted" for="volume">Âm lượng</label>
+                <input id="volume" type="range" min="0" max="100" value="70">
+              </div>
+            </div>
+
+            <!-- câu Part 2: chỉ 3 option, không có đề bài in -->
+            <div class="question">
+              <div class="question__meta">
+                <span class="question__number">Câu 8</span>
+                <span class="badge badge--muted">Part 2 — Hỏi đáp</span>
+                <span>Nghe câu hỏi và chọn câu trả lời phù hợp nhất.</span>
+              </div>
+              <p class="question__stem text-muted">
+                <em>Part 2 không in đề bài. Chỉ chọn A, B hoặc C sau khi nghe.</em>
+              </p>
+              <div class="option-list" role="radiogroup" aria-label="Đáp án câu 8">
+                <label class="option option--selected">
+                  <span class="option__marker">A</span>
+                  <span class="option__text">Lựa chọn A</span>
+                  <input type="radio" name="q8" checked class="only-loading">
+                </label>
+                <label class="option">
+                  <span class="option__marker">B</span>
+                  <span class="option__text">Lựa chọn B</span>
+                </label>
+                <label class="option">
+                  <span class="option__marker">C</span>
+                  <span class="option__text">Lựa chọn C</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- câu Part 1 để minh hoạ dạng có ảnh + 4 option -->
+            <div class="question">
+              <div class="question__meta">
+                <span class="question__number">Câu 3</span>
+                <span class="badge badge--muted">Part 1 — Ảnh</span>
+                <span>Chọn câu miêu tả ảnh đúng nhất.</span>
+              </div>
+              <img class="question__image" src="../assets/img/part1-sample.svg"
+                   alt="Ảnh minh hoạ câu 3: người đứng cạnh máy in trong văn phòng">
+              <div class="option-list" role="radiogroup" aria-label="Đáp án câu 3">
+                <label class="option">
+                  <span class="option__marker">A</span>
+                  <span class="option__text">Lựa chọn A</span>
+                </label>
+                <label class="option">
+                  <span class="option__marker">B</span>
+                  <span class="option__text">Lựa chọn B</span>
+                </label>
+                <label class="option">
+                  <span class="option__marker">C</span>
+                  <span class="option__text">Lựa chọn C</span>
+                </label>
+                <label class="option">
+                  <span class="option__marker">D</span>
+                  <span class="option__text">Lựa chọn D</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="row row--between">
+              <button class="btn" disabled
+                      title="Listening không cho quay lại part trước">
+                ← Part trước
+              </button>
+              <div class="row">
+                <button class="btn btn--ghost">Đánh dấu xem lại</button>
+                <button class="btn btn--primary">Câu tiếp →</button>
+              </div>
+            </div>
+            <p class="text-xs text-muted" style="margin: 0">
+              Part đã qua sẽ bị khoá. Audio mỗi part chỉ phát một lần.
+            </p>
+          </div>
+
+          <!-- cột điều hướng -->
+          <aside class="exam-sidebar stack">
+            <div class="card">
+              <div class="card__header">
+                <div class="row row--between">
+                  <strong class="text-sm">Listening</strong>
+                  <span class="text-xs text-muted">31/100 câu</span>
+                </div>
+              </div>
+              <div class="card__body stack">
+                <div class="progress"><div class="progress__bar" style="width: 31%"></div></div>
+                <div class="stepper" style="flex-direction: column">
+                  <span class="stepper__item is-done">Part 1 — 6 câu · đã khoá</span>
+                  <span class="stepper__item is-current">Part 2 — 25 câu · đang làm</span>
+                  <span class="stepper__item">Part 3 — 39 câu</span>
+                  <span class="stepper__item">Part 4 — 30 câu</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card__header"><strong class="text-sm">Câu 1–31</strong></div>
+              <div class="card__body stack">
+                <div class="navigator__grid">
+                  <span class="navigator__cell is-answered">1</span>
+                  <span class="navigator__cell is-answered">2</span>
+                  <span class="navigator__cell is-answered">3</span>
+                  <span class="navigator__cell is-marked">4</span>
+                  <span class="navigator__cell is-answered">5</span>
+                  <span class="navigator__cell is-answered">6</span>
+                  <span class="navigator__cell is-answered">7</span>
+                  <span class="navigator__cell is-current is-answered">8</span>
+                  <span class="navigator__cell is-unanswered">9</span>
+                  <span class="navigator__cell is-unanswered">10</span>
+                </div>
+                <p class="text-xs text-muted" style="margin: 0">
+                  Panel đầy đủ 200 câu xem ở
+                  <a href="question-navigator.html">question-navigator.html</a>
+                </p>
+                <div class="text-xs stack" style="gap: var(--space-1)">
+                  <div class="row"><span class="navigator__cell is-answered" style="width: 18px">1</span> đã trả lời</div>
+                  <div class="row"><span class="navigator__cell is-marked" style="width: 18px">2</span> đánh dấu xem lại</div>
+                  <div class="row"><span class="navigator__cell is-unanswered" style="width: 18px">3</span> chưa trả lời</div>
+                </div>
+              </div>
+            </div>
+            <a class="btn btn--danger" href="exam-confirm-submit.html">Nộp bài sớm</a>
+          </aside>
+        </div>
+      </div>
+
+    </main>
+  </div>
+  <script src="../assets/js/state-switch.js"></script>
+</body>
+</html>

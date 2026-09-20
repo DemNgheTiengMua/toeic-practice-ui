@@ -303,3 +303,50 @@
 .stat__label { font-size: var(--text-sm); color: var(--color-text-muted); }
 .stat__value { font-size: var(--text-3xl); font-weight: 700; line-height: 1.1; margin: var(--space-1) 0; }
 .stat__hint { font-size: var(--text-xs); color: var(--color-text-muted); }
+
+/* ===== Layout màn thi ===== */
+.exam-layout {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: var(--space-5);
+  align-items: start;
+}
+.exam-sidebar { position: sticky; top: var(--space-4); }
+.exam-topbar-group { display: flex; align-items: center; gap: var(--space-4); }
+
+/* ===== Chỉ báo lưu đáp án ===== */
+.save-status { font-size: var(--text-xs); color: var(--color-text-muted); }
+.save-status--saving { color: var(--color-text-muted); }
+.save-status--saved  { color: var(--color-success); }
+.save-status--error  { color: var(--color-danger); font-weight: 600; }
+
+/* ===== Khối câu hỏi ===== */
+.question {
+  padding: var(--space-5);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+.question__meta {
+  display: flex; align-items: center; gap: var(--space-3);
+  margin-bottom: var(--space-3);
+  font-size: var(--text-sm); color: var(--color-text-muted);
+}
+.question__number {
+  font-weight: 700; font-size: var(--text-lg); color: var(--color-text);
+}
+.question__stem { margin-bottom: var(--space-4); }
+.question__image {
+  display: block; width: 100%; max-width: 560px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-4);
+}
+.passage {
+  padding: var(--space-4);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  max-height: 460px; overflow-y: auto;
+}
