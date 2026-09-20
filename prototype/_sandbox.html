@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sandbox — thử nền</title>
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/base.css">
+</head>
+<body data-states="loading,empty,error,success">
+  <div class="app-shell">
+    <header class="app-topbar">
+      <strong>Sandbox</strong>
+      <span class="text-muted text-sm">thử token + state switcher</span>
+    </header>
+    <main class="app-main">
+      <div class="container stack">
+        <h1>Thử nền</h1>
+        <p class="only-loading">Đang tải…</p>
+        <p class="only-empty">Chưa có dữ liệu.</p>
+        <p class="only-error">Đã xảy ra lỗi.</p>
+        <p class="only-success">Tải xong.</p>
+        <div class="grid-3">
+          <div style="background: var(--color-primary); color: var(--color-primary-text); padding: var(--space-4); border-radius: var(--radius-md);">primary</div>
+          <div style="background: var(--color-success); color: #fff; padding: var(--space-4); border-radius: var(--radius-md);">success</div>
+          <div style="background: var(--color-danger); color: #fff; padding: var(--space-4); border-radius: var(--radius-md);">danger</div>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script src="assets/js/state-switch.js"></script>
+</body>
+</html>
