@@ -61,7 +61,7 @@ a { color: var(--color-primary); }
 .only-error.only-error, .only-success.only-success,
 .only-resumed.only-resumed, .only-expired.only-expired,
 .only-submitting.only-submitting, .only-offline.only-offline,
-.only-pending.only-pending, .only-failed.only-failed,
+.only-pending.only-pending, .only-failed.only-failed, .only-paid.only-paid,
 .only-paywall.only-paywall, .only-sent.only-sent,
 .only-complete.only-complete,
 .only-answering.only-answering, .only-revealed-correct.only-revealed-correct,
@@ -76,6 +76,7 @@ body[data-state="submitting"] .only-submitting,
 body[data-state="offline"]    .only-offline,
 body[data-state="pending"]    .only-pending,
 body[data-state="failed"]     .only-failed,
+body[data-state="paid"]       .only-paid,
 body[data-state="paywall"]    .only-paywall,
 body[data-state="sent"]       .only-sent,
 body[data-state="complete"]   .only-complete,
@@ -102,7 +103,8 @@ body[data-state="pending"]          .multi-state[data-show~="pending"],
 body[data-state="failed"]           .multi-state[data-show~="failed"],
 body[data-state="loading"]          .multi-state[data-show~="loading"],
 body[data-state="empty"]            .multi-state[data-show~="empty"],
-body[data-state="error"]            .multi-state[data-show~="error"] { display: revert; }
+body[data-state="error"]            .multi-state[data-show~="error"],
+body[data-state="paid"]             .multi-state[data-show~="paid"] { display: revert; }
 
 .state-switcher {
   position: fixed; right: var(--space-4); bottom: var(--space-4);

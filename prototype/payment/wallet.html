@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ví lượt thi — TOEIC Practice</title>
+  <link rel="stylesheet" href="../assets/css/tokens.css">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+</head>
+<body data-states="loading,empty,error,paid">
+  <div class="app-shell app-shell--with-sidebar">
+    <header class="app-topbar">
+      <strong>TOEIC Practice</strong>
+      <div class="row">
+        <span class="badge badge--info">Còn 3 lượt thi</span>
+        <a class="btn btn--sm" href="pricing.html">Mua thêm lượt</a>
+        <a class="btn btn--ghost btn--sm" href="../student/profile.html">Nguyễn Văn A</a>
+      </div>
+    </header>
+    <div class="app-body">
+      <aside class="app-sidebar">
+        <nav class="nav-list" aria-label="Điều hướng chính">
+          <a class="nav-list__item" href="../student/dashboard.html">Trang chủ</a>
+          <div class="nav-list__group">Thi thử</div>
+          <a class="nav-list__item" href="../student/exam-list.html">Danh sách đề</a>
+          <a class="nav-list__item" href="../student/exam-history.html">Lịch sử thi</a>
+          <div class="nav-list__group">Luyện tập</div>
+          <a class="nav-list__item" href="../student/practice-select.html">Luyện theo part</a>
+          <div class="nav-list__group">Tài khoản</div>
+          <a class="nav-list__item is-active" href="wallet.html">Ví lượt thi</a>
+          <a class="nav-list__item" href="../student/profile.html">Hồ sơ</a>
+        </nav>
+      </aside>
+      <main class="app-main">
+        <div class="container stack">
+          <div class="row row--between">
+            <h1>Ví lượt thi</h1>
+            <a class="btn btn--primary" href="pricing.html">Nạp thêm lượt</a>
+          </div>
+
+          <div class="grid-3 only-paid">
+            <div class="stat">
+              <div class="stat__label">Lượt thi còn lại</div>
+              <div class="stat__value">3</div>
+              <div class="stat__hint">Không có ngày hết hạn</div>
+            </div>
+            <div class="stat">
+              <div class="stat__label">Đã dùng</div>
+              <div class="stat__value">6</div>
+              <div class="stat__hint">6 đề full test</div>
+            </div>
+            <div class="stat">
+              <div class="stat__label">Tổng đã nạp</div>
+              <div class="stat__value">548.000 ₫</div>
+              <div class="stat__hint">3 đơn hàng</div>
+            </div>
+          </div>
+          <!-- ===== paid: có lịch sử giao dịch ===== -->
+          <div class="card only-paid">
+            <div class="card__header"><strong>Lịch sử giao dịch</strong></div>
+            <div class="card__body">
+              <table class="table table--striped">
+                <thead>
+                  <tr>
+                    <th scope="col">Mã đơn</th>
+                    <th scope="col">Gói</th>
+                    <th scope="col">Số tiền</th>
+                    <th scope="col">Phương thức</th>
+                    <th scope="col">Thời gian</th>
+                    <th scope="col">Trạng thái</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>DH-20260920-0148</td><td>Gói Ôn Thi (5 lượt)</td><td>199.000 ₫</td>
+                    <td>VNPay</td><td>20/09/2026 14:32</td>
+                    <td><span class="badge badge--success">Đã thanh toán</span></td>
+                  </tr>
+                  <tr>
+                    <td>DH-20260915-0092</td><td>Gói Lẻ (1 lượt)</td><td>49.000 ₫</td>
+                    <td>MoMo</td><td>15/09/2026 09:10</td>
+                    <td><span class="badge badge--warning">Đang đối soát</span></td>
+                  </tr>
+                  <tr>
+                    <td>DH-20260903-0031</td><td>Gói Cấp Tốc (10 lượt)</td><td>349.000 ₫</td>
+                    <td>VNPay</td><td>03/09/2026 20:44</td>
+                    <td><span class="badge badge--success">Đã thanh toán</span></td>
+                  </tr>
+                  <tr>
+                    <td>DH-20260901-0007</td><td>Gói Lẻ (1 lượt)</td><td>49.000 ₫</td>
+                    <td>VNPay</td><td>01/09/2026 11:02</td>
+                    <td><span class="badge badge--danger">Thất bại</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <!-- ===== empty ===== -->
+          <div class="card only-empty">
+            <div class="card__body">
+              <div class="state-block">
+                <div class="state-block__icon" aria-hidden="true">₫</div>
+                <h2 class="state-block__title">Chưa có giao dịch nào</h2>
+                <p class="state-block__desc">
+                  Nạp lượt thi để làm đề full test. Luyện tập theo part vẫn miễn phí.
+                </p>
+                <a class="btn btn--primary" href="pricing.html">Xem bảng giá</a>
+              </div>
+            </div>
+          </div>
+
+          <!-- ===== loading ===== -->
+          <div class="card only-loading">
+            <div class="card__body stack">
+              <div class="skeleton skeleton--title"></div>
+              <div class="skeleton skeleton--text"></div>
+              <div class="skeleton skeleton--text"></div>
+              <div class="skeleton skeleton--block"></div>
+            </div>
+          </div>
+
+          <!-- ===== error ===== -->
+          <div class="card only-error">
+            <div class="card__body">
+              <div class="state-block">
+                <div class="state-block__icon" aria-hidden="true">!</div>
+                <h2 class="state-block__title">Không tải được ví lượt thi</h2>
+                <p class="state-block__desc">
+                  Số lượt thi hiển thị có thể không chính xác. Thử tải lại trang.
+                </p>
+                <button class="btn">Tải lại</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <script src="../assets/js/state-switch.js"></script>
+</body>
+</html>
