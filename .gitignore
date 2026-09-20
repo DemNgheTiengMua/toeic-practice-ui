@@ -1,0 +1,9 @@
+# Scratch artifacts from local prototype verification — not part of the deliverable.
+# These are throwaway scripts/servers/screenshots created while checking the
+# prototype; they should never be committed.
+_*.js
+_*.json
+_*.patch
+_*.diff
+.playwright-mcp/
+shot-*.png
