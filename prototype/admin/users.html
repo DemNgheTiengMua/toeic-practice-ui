@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Học viên — Quản trị TOEIC Practice</title>
+  <link rel="stylesheet" href="../assets/css/tokens.css">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+</head>
+<body data-states="loading,empty,error,success,adjust" data-state="success">
+  <div class="app-shell app-shell--with-sidebar">
+    <header class="app-topbar">
+      <strong>TOEIC Practice — Khu vực quản trị</strong>
+      <div class="row">
+        <span class="badge badge--warning">Admin</span>
+        <span class="text-sm">admin@toeic.local</span>
+        <a class="btn btn--sm btn--ghost" href="../auth/login.html">Đăng xuất</a>
+      </div>
+    </header>
+    <div class="app-body">
+      <aside class="app-sidebar">
+        <nav class="nav-list" aria-label="Điều hướng quản trị">
+          <div class="nav-list__group">Tổng quan</div>
+          <a class="nav-list__item" href="dashboard.html">Bảng điều khiển</a>
+          <div class="nav-list__group">Nội dung</div>
+          <a class="nav-list__item" href="exam-list.html">Đề thi</a>
+          <a class="nav-list__item" href="score-conversion.html">Bảng quy đổi điểm</a>
+          <div class="nav-list__group">Người dùng &amp; doanh thu</div>
+          <a class="nav-list__item is-active" href="users.html">Học viên</a>
+          <a class="nav-list__item" href="packages.html">Gói lượt thi</a>
+          <a class="nav-list__item" href="orders.html">Đơn hàng</a>
+          <div class="nav-list__group">Khác</div>
+          <a class="nav-list__item" href="../index.html">Mục lục prototype</a>
+        </nav>
+      </aside>
+      <main class="app-main">
+        <div class="container stack">
+          <h1>Học viên</h1>
+
+          <div class="toolbar multi-state" data-show="success adjust">
+            <div class="field toolbar__grow">
+              <label class="field__label" for="u-q">Tìm theo email hoặc tên</label>
+              <input class="field__input" id="u-q" type="search" placeholder="an.nguyen@…">
+            </div>
+            <div class="field">
+              <label class="field__label" for="u-status">Trạng thái</label>
+              <select class="field__input" id="u-status">
+                <option>Tất cả</option>
+                <option>Đang hoạt động</option>
+                <option>Đã khoá</option>
+              </select>
+            </div>
+            <button class="btn">Lọc</button>
+          </div>
+
+          <div class="card multi-state" data-show="success adjust">
+            <div class="card__body">
+              <table class="table table--striped">
+                <thead>
+                  <tr>
+                    <th scope="col">Học viên</th><th scope="col">Email</th>
+                    <th scope="col">Lượt còn</th><th scope="col">Đề đã làm</th>
+                    <th scope="col">Điểm cao nhất</th><th scope="col">Đăng nhập gần nhất</th>
+                    <th scope="col">Trạng thái</th><th scope="col">Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Nguyễn Văn An</td><td>an.nguyen@gmail.com</td><td>3</td><td>6</td><td>745</td>
+                    <td>20/09/2026 13:10</td>
+                    <td><span class="badge badge--success">Hoạt động</span></td>
+                    <td class="row">
+                      <a class="btn btn--sm" href="users.html?state=adjust">Sửa lượt</a>
+                      <button class="btn btn--sm btn--ghost">Khoá</button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Trần Thị Bình</td><td>binh.tran@gmail.com</td><td>0</td><td>12</td><td>820</td>
+                    <td>19/09/2026 21:44</td>
+                    <td><span class="badge badge--success">Hoạt động</span></td>
+                    <td class="row">
+                      <a class="btn btn--sm" href="users.html?state=adjust">Sửa lượt</a>
+                      <button class="btn btn--sm btn--ghost">Khoá</button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Lê Minh Cường</td><td>cuong.le@gmail.com</td><td>8</td><td>1</td><td>460</td>
+                    <td>05/09/2026 08:02</td>
+                    <td><span class="badge badge--danger">Đã khoá</span></td>
+                    <td class="row">
+                      <a class="btn btn--sm" href="users.html?state=adjust">Sửa lượt</a>
+                      <button class="btn btn--sm btn--ghost">Mở khoá</button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Phạm Thu Hà</td><td>ha.pham@gmail.com</td><td>1</td><td>0</td><td>—</td>
+                    <td>Chưa đăng nhập</td>
+                    <td><span class="badge badge--warning">Chưa kích hoạt</span></td>
+                    <td class="row">
+                      <a class="btn btn--sm" href="users.html?state=adjust">Sửa lượt</a>
+                      <button class="btn btn--sm btn--ghost">Gửi lại email</button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="card__footer">
+              <div class="pagination">
+                <span class="pagination__info">Hiển thị 1–4 trong 1.284 học viên</span>
+                <a class="pagination__page" href="#" aria-disabled="true">Trước</a>
+                <a class="pagination__page is-current" href="#" aria-current="page">1</a>
+                <a class="pagination__page" href="#">2</a>
+                <a class="pagination__page" href="#">3</a>
+                <a class="pagination__page" href="#">Sau</a>
+              </div>
+            </div>
+          </div>
+          <div class="card only-empty">
+            <div class="card__body">
+              <div class="state-block">
+                <div class="state-block__icon" aria-hidden="true">?</div>
+                <h2 class="state-block__title">Không tìm thấy học viên nào</h2>
+                <p class="state-block__desc">Thử bỏ bộ lọc hoặc nhập từ khoá khác.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="card only-loading">
+            <div class="card__body stack">
+              <div class="skeleton skeleton--title"></div>
+              <div class="skeleton skeleton--text"></div>
+              <div class="skeleton skeleton--block"></div>
+            </div>
+          </div>
+
+          <div class="card only-error">
+            <div class="card__body">
+              <div class="state-block">
+                <div class="state-block__icon" aria-hidden="true">!</div>
+                <h2 class="state-block__title">Không tải được danh sách học viên</h2>
+                <button class="btn">Tải lại</button>
+              </div>
+            </div>
+          </div>
+          <div class="modal-overlay only-adjust" role="dialog" aria-modal="true" aria-labelledby="adj-title">
+            <div class="modal">
+              <div class="modal__header">
+                <h2 id="adj-title">Điều chỉnh lượt thi</h2>
+                <p class="text-muted">Nguyễn Văn An — an.nguyen@gmail.com — đang có <strong>3 lượt</strong>.</p>
+              </div>
+              <div class="modal__body stack">
+                <div class="field">
+                  <label class="field__label" for="adj-amount">Số lượt cộng thêm</label>
+                  <input class="field__input" id="adj-amount" type="number" value="1">
+                  <span class="field__hint">Nhập số âm để trừ lượt. Sau điều chỉnh: 4 lượt.</span>
+                </div>
+                <div class="field">
+                  <label class="field__label" for="adj-reason">Lý do (bắt buộc)</label>
+                  <input class="field__input" id="adj-reason" value="Đền bù lỗi audio Part 3 ngày 18/09">
+                </div>
+                <div class="alert alert--warning">Mọi điều chỉnh đều được ghi log kèm tên admin thực hiện.</div>
+              </div>
+              <div class="modal__footer row row--between">
+                <a class="btn btn--ghost" href="users.html?state=success">Huỷ</a>
+                <a class="btn btn--primary" href="users.html?state=success">Xác nhận điều chỉnh</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <script src="../assets/js/state-switch.js"></script>
+</body>
+</html>

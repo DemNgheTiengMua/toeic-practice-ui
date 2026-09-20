@@ -63,6 +63,7 @@ a { color: var(--color-primary); }
 .only-submitting.only-submitting, .only-offline.only-offline,
 .only-pending.only-pending, .only-failed.only-failed, .only-paid.only-paid,
 .only-step2.only-step2, .only-step3.only-step3,
+.only-adjust.only-adjust,
 .only-paywall.only-paywall, .only-sent.only-sent,
 .only-complete.only-complete,
 .only-answering.only-answering, .only-revealed-correct.only-revealed-correct,
@@ -83,6 +84,7 @@ body[data-state="step3"]      .only-step3,
 body[data-state="paywall"]    .only-paywall,
 body[data-state="sent"]       .only-sent,
 body[data-state="complete"]   .only-complete,
+body[data-state="adjust"]     .only-adjust,
 body[data-state="answering"]        .only-answering,
 body[data-state="revealed-correct"] .only-revealed-correct,
 body[data-state="revealed-wrong"]   .only-revealed-wrong,
@@ -109,7 +111,16 @@ body[data-state="empty"]            .multi-state[data-show~="empty"],
 body[data-state="error"]            .multi-state[data-show~="error"],
 body[data-state="paid"]             .multi-state[data-show~="paid"],
 body[data-state="step2"]            .multi-state[data-show~="step2"],
-body[data-state="step3"]            .multi-state[data-show~="step3"] { display: revert; }
+body[data-state="step3"]            .multi-state[data-show~="step3"],
+body[data-state="adjust"]           .multi-state[data-show~="adjust"] { display: revert; }
+
+/* .modal-overlay canh giữa bằng display: grid, nhưng `revert` ở hai nhóm rule
+   trên trả về `block` của user-agent nên modal dính góc trên-trái. Ghi đè đúng
+   component này cho các state đang có modal, không sửa rộng hơn. */
+body[data-state="success"]    .modal-overlay.only-success,
+body[data-state="complete"]   .modal-overlay.only-complete,
+body[data-state="submitting"] .modal-overlay.only-submitting,
+body[data-state="adjust"]     .modal-overlay.only-adjust { display: grid; }
 
 .state-switcher {
   position: fixed; right: var(--space-4); bottom: var(--space-4);

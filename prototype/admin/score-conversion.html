@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bảng quy đổi điểm — Quản trị TOEIC Practice</title>
+  <link rel="stylesheet" href="../assets/css/tokens.css">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+</head>
+<body data-states="loading,error,success,submitting" data-state="success">
+  <div class="app-shell app-shell--with-sidebar">
+    <header class="app-topbar">
+      <strong>TOEIC Practice — Khu vực quản trị</strong>
+      <div class="row">
+        <span class="badge badge--warning">Admin</span>
+        <span class="text-sm">admin@toeic.local</span>
+        <a class="btn btn--sm btn--ghost" href="../auth/login.html">Đăng xuất</a>
+      </div>
+    </header>
+    <div class="app-body">
+      <aside class="app-sidebar">
+        <nav class="nav-list" aria-label="Điều hướng quản trị">
+          <div class="nav-list__group">Tổng quan</div>
+          <a class="nav-list__item" href="dashboard.html">Bảng điều khiển</a>
+          <div class="nav-list__group">Nội dung</div>
+          <a class="nav-list__item" href="exam-list.html">Đề thi</a>
+          <a class="nav-list__item is-active" href="score-conversion.html">Bảng quy đổi điểm</a>
+          <div class="nav-list__group">Người dùng &amp; doanh thu</div>
+          <a class="nav-list__item" href="users.html">Học viên</a>
+          <a class="nav-list__item" href="packages.html">Gói lượt thi</a>
+          <a class="nav-list__item" href="orders.html">Đơn hàng</a>
+          <div class="nav-list__group">Khác</div>
+          <a class="nav-list__item" href="../index.html">Mục lục prototype</a>
+        </nav>
+      </aside>
+      <main class="app-main">
+        <div class="container stack">
+          <div class="row row--between">
+            <div>
+              <h1>Bảng quy đổi điểm</h1>
+              <p class="text-muted">Số câu đúng đổi sang thang điểm 5–495 cho từng kỹ năng.</p>
+            </div>
+            <button class="btn btn--primary only-success">Lưu bảng</button>
+          </div>
+
+          <div class="alert alert--warning only-success">
+            Điểm TOEIC <strong>không tuyến tính</strong> — không tự tính bằng công thức. Sửa sai bảng này làm lệch điểm của mọi bài thi sau đó.
+          </div>
+
+          <div class="grid-2 only-success">
+            <div class="card">
+              <div class="card__header"><strong>Listening</strong></div>
+              <div class="card__body">
+                <table class="table table--striped">
+                  <thead><tr><th scope="col">Số câu đúng</th><th scope="col">Điểm</th></tr></thead>
+                  <tbody>
+                    <tr><td>100</td><td><input class="field__input" value="495" aria-label="Điểm Listening cho 100 câu đúng"></td></tr>
+                    <tr><td>95</td><td><input class="field__input" value="475" aria-label="Điểm Listening cho 95 câu đúng"></td></tr>
+                    <tr><td>90</td><td><input class="field__input" value="450" aria-label="Điểm Listening cho 90 câu đúng"></td></tr>
+                    <tr><td>80</td><td><input class="field__input" value="400" aria-label="Điểm Listening cho 80 câu đúng"></td></tr>
+                    <tr><td>70</td><td><input class="field__input" value="340" aria-label="Điểm Listening cho 70 câu đúng"></td></tr>
+                    <tr><td>60</td><td><input class="field__input" value="285" aria-label="Điểm Listening cho 60 câu đúng"></td></tr>
+                    <tr><td>50</td><td><input class="field__input" value="230" aria-label="Điểm Listening cho 50 câu đúng"></td></tr>
+                    <tr><td>40</td><td><input class="field__input" value="175" aria-label="Điểm Listening cho 40 câu đúng"></td></tr>
+                    <tr><td>20</td><td><input class="field__input" value="75" aria-label="Điểm Listening cho 20 câu đúng"></td></tr>
+                    <tr><td>0</td><td><input class="field__input" value="5" aria-label="Điểm Listening cho 0 câu đúng"></td></tr>
+                  </tbody>
+                </table>
+                <p class="text-sm text-muted">Bản rút gọn 10 mốc. Bảng thật có đủ 101 dòng từ 0 đến 100.</p>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card__header"><strong>Reading</strong></div>
+              <div class="card__body">
+                <table class="table table--striped">
+                  <thead><tr><th scope="col">Số câu đúng</th><th scope="col">Điểm</th></tr></thead>
+                  <tbody>
+                    <tr><td>100</td><td><input class="field__input" value="495" aria-label="Điểm Reading cho 100 câu đúng"></td></tr>
+                    <tr><td>95</td><td><input class="field__input" value="460" aria-label="Điểm Reading cho 95 câu đúng"></td></tr>
+                    <tr><td>90</td><td><input class="field__input" value="440" aria-label="Điểm Reading cho 90 câu đúng"></td></tr>
+                    <tr><td>80</td><td><input class="field__input" value="385" aria-label="Điểm Reading cho 80 câu đúng"></td></tr>
+                    <tr><td>70</td><td><input class="field__input" value="325" aria-label="Điểm Reading cho 70 câu đúng"></td></tr>
+                    <tr><td>60</td><td><input class="field__input" value="270" aria-label="Điểm Reading cho 60 câu đúng"></td></tr>
+                    <tr><td>50</td><td><input class="field__input" value="215" aria-label="Điểm Reading cho 50 câu đúng"></td></tr>
+                    <tr><td>40</td><td><input class="field__input" value="160" aria-label="Điểm Reading cho 40 câu đúng"></td></tr>
+                    <tr><td>20</td><td><input class="field__input" value="60" aria-label="Điểm Reading cho 20 câu đúng"></td></tr>
+                    <tr><td>0</td><td><input class="field__input" value="5" aria-label="Điểm Reading cho 0 câu đúng"></td></tr>
+                  </tbody>
+                </table>
+                <p class="text-sm text-muted">Bản rút gọn 10 mốc. Bảng thật có đủ 101 dòng từ 0 đến 100.</p>
+              </div>
+            </div>
+          </div>
+          <div class="card only-submitting">
+            <div class="card__body">
+              <div class="state-block">
+                <div class="state-block__icon" aria-hidden="true">⏳</div>
+                <h2 class="state-block__title">Đang lưu bảng quy đổi…</h2>
+              </div>
+            </div>
+          </div>
+
+          <div class="card only-loading">
+            <div class="card__body stack">
+              <div class="skeleton skeleton--title"></div>
+              <div class="skeleton skeleton--block"></div>
+            </div>
+          </div>
+
+          <div class="card only-error">
+            <div class="card__body">
+              <div class="state-block">
+                <div class="state-block__icon" aria-hidden="true">!</div>
+                <h2 class="state-block__title">Không tải được bảng quy đổi</h2>
+                <p class="state-block__desc">Không sửa bảng khi chưa tải được dữ liệu hiện tại.</p>
+                <button class="btn">Tải lại</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <script src="../assets/js/state-switch.js"></script>
+</body>
+</html>
