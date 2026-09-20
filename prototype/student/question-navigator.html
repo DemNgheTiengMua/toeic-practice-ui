@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Panel điều hướng 200 câu — component</title>
+  <link rel="stylesheet" href="../assets/css/tokens.css">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+</head>
+<body data-states="success">
+  <div class="app-shell">
+    <header class="app-topbar">
+      <strong>Panel điều hướng câu</strong>
+      <a class="btn btn--ghost btn--sm" href="../index.html">Mục lục prototype</a>
+    </header>
+    <main class="app-main">
+      <div class="container stack">
+        <h1>Panel điều hướng 200 câu</h1>
+        <p class="text-muted">
+          Component dùng chung ở màn thi Listening, Reading và màn xác nhận nộp bài.
+          Ba trạng thái câu phân biệt bằng cả màu và hình dạng, không chỉ màu.
+        </p>
+
+        <div class="card">
+          <div class="card__header">
+            <div class="row row--between">
+              <strong>Toàn bài — 200 câu</strong>
+              <span class="text-sm text-muted">
+                Đã trả lời <strong>181</strong> · Đánh dấu <strong>7</strong> · Chưa làm <strong>19</strong>
+              </span>
+            </div>
+          </div>
+          <div class="card__body stack" id="navigator-root">
+            <!-- JS chèn các part vào đây -->
+          </div>
+          <div class="card__footer">
+            <div class="row text-xs">
+              <span class="row"><span class="navigator__cell is-answered" style="width: 20px">1</span> đã trả lời</span>
+              <span class="row"><span class="navigator__cell is-marked" style="width: 20px">2</span> đánh dấu xem lại</span>
+              <span class="row"><span class="navigator__cell is-unanswered" style="width: 20px">3</span> chưa trả lời</span>
+              <span class="row"><span class="navigator__cell is-current is-answered" style="width: 20px">4</span> câu hiện tại</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script>
+    /* Sinh 200 ô theo cấu trúc TOEIC L&R để review component.
+       Dữ liệu trạng thái là giả, cố định theo công thức để không nhảy mỗi lần load. */
+    (function () {
+      "use strict";
+      var parts = [
+        { name: "Part 1 — Ảnh",        from: 1,   to: 6   },
+        { name: "Part 2 — Hỏi đáp",     from: 7,   to: 31  },
+        { name: "Part 3 — Hội thoại",   from: 32,  to: 70  },
+        { name: "Part 4 — Bài nói",     from: 71,  to: 100 },
+        { name: "Part 5 — Câu đơn",     from: 101, to: 130 },
+        { name: "Part 6 — Điền đoạn",   from: 131, to: 146 },
+        { name: "Part 7 — Đọc hiểu",    from: 147, to: 200 }
+      ];
+      var CURRENT = 153;
+      var root = document.getElementById("navigator-root");
+
+      parts.forEach(function (part) {
+        var wrap = document.createElement("div");
+
+        var head = document.createElement("div");
+        head.className = "row row--between text-sm";
+        head.style.marginBottom = "var(--space-2)";
+        head.innerHTML = "<span>" + part.name + "</span>" +
+          "<span class='text-muted'>câu " + part.from + "–" + part.to + "</span>";
+        wrap.appendChild(head);
+
+        var grid = document.createElement("div");
+        grid.className = "navigator__grid";
+
+        for (var n = part.from; n <= part.to; n++) {
+          var cell = document.createElement("a");
+          cell.className = "navigator__cell";
+          cell.href = "#";
+          cell.textContent = String(n);
+          cell.setAttribute("aria-label", "Câu " + n);
+
+          if (n % 17 === 0)      { cell.classList.add("is-marked"); }
+          else if (n % 11 === 0) { cell.classList.add("is-unanswered"); }
+          else                   { cell.classList.add("is-answered"); }
+
+          if (n === CURRENT) {
+            cell.classList.add("is-current");
+            cell.setAttribute("aria-current", "true");
+          }
+          grid.appendChild(cell);
+        }
+        wrap.appendChild(grid);
+        root.appendChild(wrap);
+      });
+    })();
+  </script>
+  <script src="../assets/js/state-switch.js"></script>
+</body>
+</html>

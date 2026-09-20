@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reading — ETS 2024 Test 5</title>
+  <link rel="stylesheet" href="../assets/css/tokens.css">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+</head>
+<body data-states="loading,success,resumed,expired,submitting,offline">
+  <div class="app-shell">
+    <header class="app-topbar">
+      <div class="exam-topbar-group">
+        <strong>ETS 2024 — Test 5</strong>
+        <span class="badge badge--info">Reading · Part 7</span>
+      </div>
+      <div class="exam-topbar-group">
+        <span class="save-status save-status--saved only-success">Đã lưu</span>
+        <span class="save-status save-status--error only-offline">Mất kết nối — đang thử lại…</span>
+        <span class="timer only-success">
+          <span class="text-sm text-muted">Còn lại</span>
+          <span class="timer__value">01:02:47</span>
+        </span>
+        <span class="timer timer--warning only-resumed">
+          <span class="text-sm">Còn lại</span>
+          <span class="timer__value">00:09:44</span>
+        </span>
+        <span class="timer timer--critical only-expired">
+          <span class="text-sm">Hết giờ</span>
+          <span class="timer__value">00:00:00</span>
+        </span>
+      </div>
+    </header>
+    <main class="app-main">
+
+      <!-- ===== loading ===== -->
+      <div class="container only-loading">
+        <div class="exam-layout">
+          <div class="stack">
+            <div class="skeleton skeleton--block" style="height: 90px"></div>
+            <div class="skeleton skeleton--title"></div>
+            <div class="skeleton skeleton--text"></div>
+            <div class="skeleton skeleton--text" style="width: 70%"></div>
+            <div class="skeleton skeleton--block" style="height: 200px"></div>
+          </div>
+          <div class="skeleton skeleton--block" style="height: 320px"></div>
+        </div>
+      </div>
+
+      <!-- ===== expired: hết giờ, đang tự nộp ===== -->
+      <div class="container only-expired" style="max-width: 560px">
+        <div class="card"><div class="card__body">
+          <div class="state-block">
+            <div class="state-block__icon" aria-hidden="true">⏱</div>
+            <div class="state-block__title">Đã hết thời gian</div>
+            <p class="state-block__desc">
+              Bài thi đang được nộp tự động và chấm trên những câu bạn đã làm.
+              Không cần làm gì thêm.
+            </p>
+            <div class="progress" style="max-width: 280px; margin: 0 auto">
+              <div class="progress__bar" style="width: 70%"></div>
+            </div>
+          </div>
+        </div></div>
+      </div>
+
+      <!-- ===== submitting ===== -->
+      <div class="container only-submitting" style="max-width: 560px">
+        <div class="card"><div class="card__body">
+          <div class="state-block">
+            <div class="state-block__icon" aria-hidden="true">⏳</div>
+            <div class="state-block__title">Đang nộp bài…</div>
+            <p class="state-block__desc">Đừng tắt trang. Việc này mất vài giây.</p>
+          </div>
+        </div></div>
+      </div>
+
+      <!-- banner riêng cho resumed / offline -->
+      <div class="container only-resumed" style="margin-bottom: var(--space-4)">
+        <div class="alert alert--info">
+          <strong>Đã khôi phục bài đang làm.</strong>
+          Bạn quay lại đúng câu 153, thời gian còn lại được tính từ lúc bắt đầu.
+        </div>
+      </div>
+      <div class="container only-offline" style="margin-bottom: var(--space-4)">
+        <div class="alert alert--danger" role="alert">
+          <strong>Mất kết nối.</strong>
+          Đáp án đang được giữ tạm trên máy và sẽ tự gửi lại khi có mạng.
+          Đừng đóng tab.
+        </div>
+      </div>
+
+      <div class="container exam-body multi-state" data-show="success resumed offline">
+        <div class="exam-layout">
+
+          <div class="stack">
+            <!-- Part 7: đoạn văn + câu hỏi cạnh nhau -->
+            <div class="question">
+              <div class="question__meta">
+                <span class="badge badge--muted">Part 7 — Đọc hiểu</span>
+                <span>Đọc email sau và trả lời câu 153–155.</span>
+              </div>
+
+              <div class="passage">
+                <p><strong>From:</strong> m.torres@brightpath.com<br>
+                   <strong>To:</strong> all-staff@brightpath.com<br>
+                   <strong>Date:</strong> October 4<br>
+                   <strong>Subject:</strong> Office relocation schedule</p>
+                <p>Dear colleagues,</p>
+                <p>As announced last month, our headquarters will move to the
+                   Fairview Business Centre on November 15. Packing materials will be
+                   delivered to each floor on November 11. Please label every box with
+                   your department code before leaving on November 14.</p>
+                <p>The IT team will disconnect all workstations at 5 P.M. on November 14
+                   and reconnect them by 8 A.M. on November 17. If you need access to
+                   your computer during that period, please contact the help desk before
+                   November 10 so that a temporary laptop can be arranged.</p>
+                <p>Thank you for your cooperation,<br>Marisol Torres, Operations Manager</p>
+              </div>
+            </div>
+
+            <div class="question">
+              <div class="question__meta">
+                <span class="question__number">Câu 153</span>
+                <span class="badge badge--muted">Part 7</span>
+              </div>
+              <p class="question__stem">What is the purpose of the email?</p>
+              <div class="option-list" role="radiogroup" aria-label="Đáp án câu 153">
+                <label class="option option--selected">
+                  <span class="option__marker">A</span>
+                  <span class="option__text">To explain the steps of an office move</span>
+                </label>
+                <label class="option">
+                  <span class="option__marker">B</span>
+                  <span class="option__text">To announce a new operations manager</span>
+                </label>
+                <label class="option">
+                  <span class="option__marker">C</span>
+                  <span class="option__text">To request feedback on a floor plan</span>
+                </label>
+                <label class="option">
+                  <span class="option__marker">D</span>
+                  <span class="option__text">To confirm a delivery of new computers</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="question">
+              <div class="question__meta">
+                <span class="question__number">Câu 154</span>
+                <span class="badge badge--muted">Part 7</span>
+                <span class="badge badge--warning">Đã đánh dấu</span>
+              </div>
+              <p class="question__stem">By when should employees label their boxes?</p>
+              <div class="option-list" role="radiogroup" aria-label="Đáp án câu 154">
+                <label class="option">
+                  <span class="option__marker">A</span>
+                  <span class="option__text">November 10</span>
+                </label>
+                <label class="option">
+                  <span class="option__marker">B</span>
+                  <span class="option__text">November 11</span>
+                </label>
+                <label class="option">
+                  <span class="option__marker">C</span>
+                  <span class="option__text">November 14</span>
+                </label>
+                <label class="option">
+                  <span class="option__marker">D</span>
+                  <span class="option__text">November 17</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Reading: điều hướng tự do cả hai chiều -->
+            <div class="row row--between">
+              <button class="btn">← Câu trước</button>
+              <div class="row">
+                <button class="btn btn--ghost">Bỏ đánh dấu</button>
+                <button class="btn btn--primary">Câu tiếp →</button>
+              </div>
+            </div>
+            <p class="text-xs text-muted" style="margin: 0">
+              Phần Reading cho phép quay lại sửa đáp án bất kỳ câu nào trong 75 phút.
+            </p>
+          </div>
+
+          <aside class="exam-sidebar stack">
+            <div class="card">
+              <div class="card__header">
+                <div class="row row--between">
+                  <strong class="text-sm">Reading</strong>
+                  <span class="text-xs text-muted">53/100 câu</span>
+                </div>
+              </div>
+              <div class="card__body stack">
+                <div class="progress"><div class="progress__bar" style="width: 53%"></div></div>
+                <div class="stepper" style="flex-direction: column">
+                  <span class="stepper__item is-done">Part 5 — 30 câu · xong</span>
+                  <span class="stepper__item is-done">Part 6 — 16 câu · xong</span>
+                  <span class="stepper__item is-current">Part 7 — 54 câu · đang làm</span>
+                </div>
+                <p class="text-xs text-muted" style="margin: 0">
+                  Listening đã khoá — không quay lại được.
+                </p>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card__header"><strong class="text-sm">Câu 101–110</strong></div>
+              <div class="card__body stack">
+                <div class="navigator__grid">
+                  <span class="navigator__cell is-answered">101</span>
+                  <span class="navigator__cell is-answered">102</span>
+                  <span class="navigator__cell is-marked">103</span>
+                  <span class="navigator__cell is-answered">104</span>
+                  <span class="navigator__cell is-answered">105</span>
+                  <span class="navigator__cell is-unanswered">106</span>
+                  <span class="navigator__cell is-answered">107</span>
+                  <span class="navigator__cell is-answered">108</span>
+                  <span class="navigator__cell is-unanswered">109</span>
+                  <span class="navigator__cell is-answered">110</span>
+                </div>
+                <a class="btn btn--sm" href="question-navigator.html">Xem toàn bộ 200 câu</a>
+              </div>
+            </div>
+
+            <a class="btn btn--primary" href="exam-confirm-submit.html">Nộp bài</a>
+          </aside>
+        </div>
+      </div>
+
+    </main>
+  </div>
+  <script src="../assets/js/state-switch.js"></script>
+</body>
+</html>
