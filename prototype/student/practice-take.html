@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
 </head>
-<body data-states="answering,revealed-correct,revealed-wrong,finished">
+<body data-states="answering,revealed-correct,revealed-wrong,finished,loading,error">
   <div class="app-shell">
     <header class="app-topbar">
       <div class="exam-topbar-group">
@@ -27,6 +27,33 @@
     </header>
     <main class="app-main">
       <div class="container" style="max-width: 820px">
+        <!-- ===== loading ===== -->
+        <div class="only-loading stack">
+          <div class="skeleton skeleton--title"></div>
+          <div class="skeleton skeleton--block" style="height: 90px"></div>
+          <div class="skeleton skeleton--block" style="height: 200px"></div>
+        </div>
+
+        <!-- ===== error: không tải/không lưu được =====
+             Luyện tập cũng lưu tiến độ, nên lỗi mạng phải nói rõ là chưa lưu
+             thay vì im lặng bỏ qua câu trả lời. -->
+        <div class="only-error">
+          <div class="card"><div class="card__body">
+            <div class="state-block">
+              <div class="state-block__icon" aria-hidden="true">!</div>
+              <div class="state-block__title">Không tải được câu hỏi</div>
+              <p class="state-block__desc">
+                Câu trả lời gần nhất của bạn có thể chưa được lưu.
+                Kiểm tra kết nối rồi thử lại.
+              </p>
+              <div class="row" style="justify-content: center">
+                <button class="btn btn--primary">Thử lại</button>
+                <a class="btn" href="practice-select.html">Thoát phiên luyện</a>
+              </div>
+            </div>
+          </div></div>
+        </div>
+
         <!-- ===== đang trả lời: chưa có feedback ===== -->
         <div class="only-answering stack">
           <div class="question">

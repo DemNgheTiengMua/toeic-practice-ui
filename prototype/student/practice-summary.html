@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
 </head>
-<body data-states="success">
+<body data-states="loading,error,success">
   <div class="app-shell app-shell--with-sidebar">
     <header class="app-topbar">
       <strong>TOEIC Practice</strong>
@@ -70,6 +70,7 @@
                 </p>
               </div>
               <div class="row">
+                <a class="btn" href="weakness-analysis.html">Phân tích điểm yếu</a>
                 <a class="btn" href="practice-select.html">Chọn part khác</a>
                 <a class="btn btn--primary" href="practice-take.html">Luyện tiếp 20 câu</a>
               </div>
@@ -114,31 +115,91 @@
                       <td>7</td><td>Thì của động từ</td>
                       <td><span class="badge badge--danger">B — reviewing</span></td>
                       <td><span class="badge badge--success">C — will review</span></td>
-                      <td><a href="practice-take.html?state=revealed-wrong">Xem giải thích</a></td>
+                      <td>
+                        <details>
+                          <summary>Xem giải thích</summary>
+                          <div class="explain">
+                            <div class="explain__title">Vì sao C đúng</div>
+                            <p style="margin: 0">
+                              "before the board meeting" chỉ mốc thời gian trong tương lai
+                              nên cần thì tương lai đơn <strong>will review</strong>.
+                              "reviewing" là V-ing, không đứng một mình làm động từ chính.
+                            </p>
+                          </div>
+                        </details>
+                      </td>
                     </tr>
                     <tr>
                       <td>11</td><td>Giới từ</td>
                       <td><span class="badge badge--danger">A — in</span></td>
                       <td><span class="badge badge--success">D — within</span></td>
-                      <td><a href="practice-take.html?state=revealed-wrong">Xem giải thích</a></td>
+                      <td>
+                        <details>
+                          <summary>Xem giải thích</summary>
+                          <div class="explain">
+                            <div class="explain__title">Vì sao D đúng</div>
+                            <p style="margin: 0">
+                              <strong>within</strong> + khoảng thời gian nghĩa là "trong vòng,
+                              không muộn hơn". "in" chỉ thời điểm kết thúc, không diễn tả
+                              được giới hạn hạn chót của câu này.
+                            </p>
+                          </div>
+                        </details>
+                      </td>
                     </tr>
                     <tr>
                       <td>14</td><td>Từ loại</td>
                       <td><span class="badge badge--danger">C — competitively</span></td>
                       <td><span class="badge badge--success">B — competitive</span></td>
-                      <td><a href="practice-take.html?state=revealed-wrong">Xem giải thích</a></td>
+                      <td>
+                        <details>
+                          <summary>Xem giải thích</summary>
+                          <div class="explain">
+                            <div class="explain__title">Vì sao B đúng</div>
+                            <p style="margin: 0">
+                              Vị trí này bổ nghĩa cho danh từ nên cần tính từ
+                              <strong>competitive</strong>. "competitively" là trạng từ,
+                              chỉ bổ nghĩa cho động từ hoặc tính từ khác.
+                            </p>
+                          </div>
+                        </details>
+                      </td>
                     </tr>
                     <tr>
                       <td>18</td><td>Đại từ quan hệ</td>
                       <td><span class="badge badge--danger">A — which</span></td>
                       <td><span class="badge badge--success">C — whose</span></td>
-                      <td><a href="practice-take.html?state=revealed-wrong">Xem giải thích</a></td>
+                      <td>
+                        <details>
+                          <summary>Xem giải thích</summary>
+                          <div class="explain">
+                            <div class="explain__title">Vì sao C đúng</div>
+                            <p style="margin: 0">
+                              Sau chỗ trống là một danh từ không có mạo từ, tức là quan hệ
+                              sở hữu nên dùng <strong>whose</strong>. "which" làm chủ ngữ
+                              hoặc tân ngữ của mệnh đề, không đứng trước danh từ trần.
+                            </p>
+                          </div>
+                        </details>
+                      </td>
                     </tr>
                     <tr>
                       <td>20</td><td>Liên từ</td>
                       <td><span class="badge badge--muted">Bỏ qua</span></td>
                       <td><span class="badge badge--success">B — although</span></td>
-                      <td><a href="practice-take.html?state=revealed-wrong">Xem giải thích</a></td>
+                      <td>
+                        <details>
+                          <summary>Xem giải thích</summary>
+                          <div class="explain">
+                            <div class="explain__title">Vì sao B đúng</div>
+                            <p style="margin: 0">
+                              Hai mệnh đề mang nghĩa trái ngược nên cần liên từ nhượng bộ
+                              <strong>although</strong>. Câu này bạn bỏ qua — câu bỏ trống
+                              tính là sai.
+                            </p>
+                          </div>
+                        </details>
+                      </td>
                     </tr>
                   </tbody>
                 </table>

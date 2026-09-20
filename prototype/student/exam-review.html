@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
 </head>
-<body data-states="loading,error,success">
+<body data-states="loading,empty,error,success">
   <div class="app-shell app-shell--with-sidebar">
     <header class="app-topbar">
       <strong>TOEIC Practice</strong>
@@ -51,6 +51,27 @@
                 <div class="state-block__title">Không tải được bài làm</div>
                 <p class="state-block__desc">Kiểm tra kết nối rồi thử lại.</p>
                 <button class="btn btn--primary">Thử lại</button>
+              </div>
+            </div></div>
+          </div>
+
+          <!-- ===== empty: bài trắng =====
+               Hết giờ mà chưa trả lời câu nào, hoặc thoát ngay sau khi vào.
+               Vẫn phải xem lại được đề + đáp án đúng, chỉ là không có lựa
+               chọn nào của học viên để đối chiếu. -->
+          <div class="only-empty">
+            <div class="card"><div class="card__body">
+              <div class="state-block">
+                <div class="state-block__icon" aria-hidden="true">□</div>
+                <div class="state-block__title">Bài này bạn chưa trả lời câu nào</div>
+                <p class="state-block__desc">
+                  Cả 200 câu để trống nên không có gì để đối chiếu.
+                  Bạn vẫn xem được đề và đáp án đúng, hoặc luyện lại từng part.
+                </p>
+                <div class="row" style="justify-content: center">
+                  <a class="btn btn--primary" href="practice-select.html">Luyện theo part</a>
+                  <a class="btn" href="exam-history.html">Về lịch sử thi</a>
+                </div>
               </div>
             </div></div>
           </div>

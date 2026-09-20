@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
 </head>
-<body data-states="success,complete,submitting">
+<body data-states="success,complete,submitting,expired">
   <div class="app-shell">
     <header class="app-topbar">
       <div class="exam-topbar-group">
@@ -61,6 +61,29 @@
       <div class="modal__footer">
         <a class="btn" href="exam-reading.html">Quay lại làm tiếp</a>
         <a class="btn btn--danger" href="exam-result.html">Nộp bài luôn</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== hết giờ ngay lúc modal đang mở =====
+       Không phải lỗi: server chốt hết giờ thì huỷ lựa chọn của modal và
+       auto-submit. Bỏ state này thì người dùng bấm "Quay lại làm tiếp"
+       vào một phiên đã đóng. -->
+  <div class="modal-overlay only-expired" role="dialog" aria-modal="true"
+       aria-labelledby="submit-title-3">
+    <div class="modal">
+      <div class="modal__header"><h2 id="submit-title-3" style="margin: 0">Đã hết giờ</h2></div>
+      <div class="modal__body stack">
+        <div class="alert alert--warning" role="status">
+          <strong>Hết 120 phút trong lúc bạn đang xác nhận.</strong>
+          Bài đang được nộp tự động với 181 câu đã trả lời.
+        </div>
+        <p class="text-sm text-muted" style="margin: 0">
+          19 câu chưa trả lời tính là sai. Không cần làm gì thêm.
+        </p>
+      </div>
+      <div class="modal__footer">
+        <a class="btn btn--primary" href="exam-result.html">Xem kết quả</a>
       </div>
     </div>
   </div>

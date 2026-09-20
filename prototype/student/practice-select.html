@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
 </head>
-<body data-states="loading,error,success">
+<body data-states="loading,empty,error,success">
   <div class="app-shell app-shell--with-sidebar">
     <header class="app-topbar">
       <strong>TOEIC Practice</strong>
@@ -55,6 +55,25 @@
                 <div class="state-block__title">Không tải được dữ liệu luyện tập</div>
                 <p class="state-block__desc">Kiểm tra kết nối rồi thử lại.</p>
                 <button class="btn btn--primary">Thử lại</button>
+              </div>
+            </div></div>
+          </div>
+
+          <!-- ===== empty: chưa có câu hỏi nào để luyện =====
+               Xảy ra khi admin chưa nhập đề, hoặc lọc ra 0 câu. -->
+          <div class="only-empty">
+            <div class="card"><div class="card__body">
+              <div class="state-block">
+                <div class="state-block__icon" aria-hidden="true">□</div>
+                <div class="state-block__title">Chưa có câu hỏi để luyện</div>
+                <p class="state-block__desc">
+                  Kho câu hỏi luyện tập đang được cập nhật. Bạn vẫn có thể làm
+                  một đề đầy đủ, hoặc quay lại sau.
+                </p>
+                <div class="row" style="justify-content: center">
+                  <a class="btn btn--primary" href="exam-list.html">Xem danh sách đề</a>
+                  <a class="btn" href="dashboard.html">Về trang chủ</a>
+                </div>
               </div>
             </div></div>
           </div>

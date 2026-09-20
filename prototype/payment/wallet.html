@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
 </head>
-<body data-states="loading,empty,error,paid">
+<body data-states="loading,empty,error,success">
   <div class="app-shell app-shell--with-sidebar">
     <header class="app-topbar">
       <strong>TOEIC Practice</strong>
@@ -41,7 +41,7 @@
             <a class="btn btn--primary" href="pricing.html">Nạp thêm lượt</a>
           </div>
 
-          <div class="grid-3 only-paid">
+          <div class="grid-3 only-success">
             <div class="stat">
               <div class="stat__label">Lượt thi còn lại</div>
               <div class="stat__value">3</div>
@@ -58,8 +58,8 @@
               <div class="stat__hint">3 đơn hàng</div>
             </div>
           </div>
-          <!-- ===== paid: có lịch sử giao dịch ===== -->
-          <div class="card only-paid">
+          <!-- ===== success: có lịch sử giao dịch ===== -->
+          <div class="card only-success">
             <div class="card__header"><strong>Lịch sử giao dịch</strong></div>
             <div class="card__body">
               <table class="table table--striped">

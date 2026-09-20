@@ -235,7 +235,7 @@
                   <div class="progress"><div class="progress__bar" style="width: 64%"></div></div>
                   <div class="row">
                     <a class="btn btn--primary" href="exam-reading.html?state=resumed">Tiếp tục</a>
-                    <button class="btn btn--ghost btn--sm">Huỷ bài</button>
+                    <a class="btn btn--ghost btn--sm" href="?state=cancelled">Huỷ bài</a>
                   </div>
                 </div>
               </div>
@@ -265,7 +265,7 @@
                     Hoàn thành 18/09/2026 · L 385 · R 335
                   </p>
                   <div class="row">
-                    <a class="btn" href="exam-review.html">Xem lại</a>
+                    <a class="btn" href="exam-review.html?attempt=1171">Xem lại</a>
                     <a class="btn btn--primary" href="exam-instructions.html">Làm lại</a>
                   </div>
                 </div>
@@ -281,7 +281,7 @@
                     Hoàn thành 10/09/2026 · L 370 · R 320
                   </p>
                   <div class="row">
-                    <a class="btn" href="exam-review.html">Xem lại</a>
+                    <a class="btn" href="exam-review.html?attempt=1172">Xem lại</a>
                     <a class="btn btn--primary" href="exam-instructions.html">Làm lại</a>
                   </div>
                 </div>
@@ -292,6 +292,29 @@
       </main>
     </div>
   </div>
+  <!-- ===== xác nhận huỷ bài đang làm dở =====
+       Credit đã bị trừ khi bắt đầu, nên phải nói rõ huỷ là mất lượt. -->
+  <div class="modal-overlay only-cancelled" role="dialog" aria-modal="true"
+       aria-labelledby="cancel-title">
+    <div class="modal">
+      <div class="modal__header"><h2 id="cancel-title" style="margin: 0">Huỷ bài đang làm?</h2></div>
+      <div class="modal__body stack">
+        <div class="alert alert--danger">
+          <strong>Huỷ là mất lượt thi đã trừ.</strong>
+          1 lượt đã bị trừ khi bạn bắt đầu đề này và không được hoàn lại.
+        </div>
+        <p class="text-sm text-muted" style="margin: 0">
+          ETS 2024 — Test 4 · đã làm 128/200 câu · còn 47 phút.
+          Bài sẽ không được chấm và không xuất hiện trong lịch sử thi.
+        </p>
+      </div>
+      <div class="modal__footer">
+        <a class="btn" href="exam-reading.html?state=resumed">Quay lại làm tiếp</a>
+        <a class="btn btn--danger" href="?state=success">Huỷ bài, mất 1 lượt</a>
+      </div>
+    </div>
+  </div>
+
   <script src="../assets/js/state-switch.js"></script>
 </body>
 </html>

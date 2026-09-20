@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
 </head>
-<body data-states="success,failed,pending,error">
+<body data-states="success,failed,pending,expired,error">
   <div class="app-shell app-shell--with-sidebar">
     <header class="app-topbar">
       <strong>TOEIC Practice</strong>
@@ -87,6 +87,31 @@
             <div class="card__footer row">
               <a class="btn btn--primary" href="checkout.html">Thử thanh toán lại</a>
               <a class="btn btn--ghost" href="pricing.html">Chọn gói khác</a>
+            </div>
+          </div>
+
+          <!-- ===== expired =====
+               Đơn quá hạn là nhánh bình thường của vòng đời đơn
+               (pending → paid | failed | expired), không phải lỗi hệ thống.
+               Gộp vào `error` thì người dùng tưởng web lỗi và thanh toán lại. -->
+          <div class="card only-expired">
+            <div class="card__body">
+              <div class="state-block">
+                <div class="state-block__icon" aria-hidden="true">⌛</div>
+                <h1 class="state-block__title">Đơn đã quá hạn</h1>
+                <p class="state-block__desc">
+                  Đơn hàng hết hiệu lực sau 15 phút không hoàn tất.
+                  Bạn <strong>chưa bị trừ tiền</strong> và chưa được cộng lượt.
+                </p>
+              </div>
+              <div class="alert alert--info">
+                Mã đơn: TOEIC-20260920-4417 · tạo 11:02 · quá hạn 11:17.
+                Đơn này đã đóng, tạo đơn mới để thanh toán lại.
+              </div>
+            </div>
+            <div class="card__footer row">
+              <a class="btn btn--primary" href="pricing.html">Tạo đơn mới</a>
+              <a class="btn btn--ghost" href="wallet.html">Xem ví lượt thi</a>
             </div>
           </div>
 
