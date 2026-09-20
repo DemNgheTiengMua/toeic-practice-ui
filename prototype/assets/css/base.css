@@ -46,6 +46,14 @@ a { color: var(--color-primary); }
 .text-sm { font-size: var(--text-sm); }
 
 /* hiển thị theo state */
+/* Bẫy đã biết của `display: revert` ở hai nhóm rule hiện bên dưới: revert trả
+   về giá trị mặc định của user-agent cho chính element đó, KHÔNG trả về display
+   mà component khai báo. Ví dụ: <button> revert thành inline-block, còn .btn
+   đặt inline-flex. Nên một .btn.only-* có icon bên trong sẽ âm thầm mất flex
+   `gap` và `align-items`: không có lỗi, không có dấu hiệu gì trên giao diện.
+   Hiện chưa trang nào gặp (các .btn ở trang auth chỉ có text nên revert là
+   no-op). Khi task đầu tiên cần tới, cách sửa là dùng `revert-layer` hoặc thu
+   hẹp rule hiện cho đúng component — không sửa rộng hơn thế. */
 /* Class lặp hai lần để tăng specificity lên (0,2,0): phải thắng display của
    component (.btn đặt inline-flex trong components.css, load sau base.css).
    Rule hiện bên dưới là (0,2,1) nên vẫn thắng rule ẩn này. */
@@ -67,6 +75,12 @@ body[data-state="pending"]    .only-pending,
 body[data-state="failed"]     .only-failed,
 body[data-state="paywall"]    .only-paywall,
 body[data-state="sent"]       .only-sent { display: revert; }
+
+/* element hiện ở nhiều state: đặt .multi-state rồi liệt kê trong data-show.
+   Class lặp hai lần vì lý do specificity giống nhóm .only-* */
+.multi-state.multi-state { display: none; }
+body[data-state="success"]    .multi-state[data-show~="success"],
+body[data-state="submitting"] .multi-state[data-show~="submitting"] { display: revert; }
 
 .state-switcher {
   position: fixed; right: var(--space-4); bottom: var(--space-4);
