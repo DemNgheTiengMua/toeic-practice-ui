@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Xác nhận đơn hàng — TOEIC Practice</title>
+  <link rel="stylesheet" href="../assets/css/tokens.css">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+</head>
+<body data-states="success,submitting,error">
+  <div class="app-shell app-shell--with-sidebar">
+    <header class="app-topbar">
+      <strong>TOEIC Practice</strong>
+      <div class="row">
+        <span class="badge badge--info">Còn 3 lượt thi</span>
+        <a class="btn btn--sm" href="pricing.html">Mua thêm lượt</a>
+        <a class="btn btn--ghost btn--sm" href="../student/profile.html">Nguyễn Văn A</a>
+      </div>
+    </header>
+    <div class="app-body">
+      <aside class="app-sidebar">
+        <nav class="nav-list" aria-label="Điều hướng chính">
+          <a class="nav-list__item" href="../student/dashboard.html">Trang chủ</a>
+          <div class="nav-list__group">Thi thử</div>
+          <a class="nav-list__item" href="../student/exam-list.html">Danh sách đề</a>
+          <a class="nav-list__item" href="../student/exam-history.html">Lịch sử thi</a>
+          <div class="nav-list__group">Luyện tập</div>
+          <a class="nav-list__item" href="../student/practice-select.html">Luyện theo part</a>
+          <div class="nav-list__group">Tài khoản</div>
+          <a class="nav-list__item is-active" href="wallet.html">Ví lượt thi</a>
+          <a class="nav-list__item" href="../student/profile.html">Hồ sơ</a>
+        </nav>
+      </aside>
+      <main class="app-main">
+        <div class="container stack">
+          <div class="multi-state stack" data-show="success submitting error">
+            <h1>Xác nhận đơn hàng</h1>
+
+            <div class="stepper">
+              <div class="stepper__item is-done">1. Chọn gói</div>
+              <div class="stepper__item is-current">2. Xác nhận</div>
+              <div class="stepper__item">3. Thanh toán</div>
+              <div class="stepper__item">4. Hoàn tất</div>
+            </div>
+
+            <div class="alert alert--danger only-error">
+              Không tạo được đơn hàng. Mã lỗi: ORDER_CREATE_FAILED. Vui lòng thử lại.
+            </div>
+
+            <div class="grid-2">
+              <div class="card">
+                <div class="card__header"><strong>Phương thức thanh toán</strong></div>
+                <div class="card__body">
+                  <div class="option-list" role="radiogroup" aria-label="Phương thức thanh toán">
+                    <label class="option option--selected">
+                      <input type="radio" name="method" value="vnpay" checked>
+                      <span class="option__marker">1</span>
+                      <span class="option__text">VNPay — thẻ ATM, Internet Banking, QR</span>
+                    </label>
+                    <label class="option">
+                      <input type="radio" name="method" value="momo">
+                      <span class="option__marker">2</span>
+                      <span class="option__text">MoMo — ví điện tử</span>
+                    </label>
+                  </div>
+                  <p class="text-muted text-sm">
+                    Bạn sẽ được chuyển sang trang của cổng thanh toán để hoàn tất.
+                  </p>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card__header"><strong>Đơn hàng</strong></div>
+                <div class="card__body stack">
+                  <div class="row row--between"><span>Gói Ôn Thi</span><strong>199.000 ₫</strong></div>
+                  <div class="row row--between"><span class="text-muted">Số lượt thi</span><span>5 lượt</span></div>
+                  <div class="row row--between"><span class="text-muted">Mã đơn</span><span>DH-20260920-0148</span></div>
+                  <hr>
+                  <div class="row row--between"><strong>Tổng thanh toán</strong><strong>199.000 ₫</strong></div>
+                </div>
+                <div class="card__footer">
+                  <a class="btn btn--primary btn--lg only-success" href="gateway-mock.html">Thanh toán 199.000 ₫</a>
+                  <button class="btn btn--primary btn--lg only-submitting" disabled>Đang tạo đơn hàng…</button>
+                  <a class="btn btn--ghost" href="pricing.html">Chọn gói khác</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <script src="../assets/js/state-switch.js"></script>
+</body>
+</html>

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VNPay (mô phỏng) — Cổng thanh toán</title>
+  <link rel="stylesheet" href="../assets/css/tokens.css">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+</head>
+<body data-states="success" data-state="success">
+  <div class="container container--narrow" style="padding-top: var(--space-6)">
+    <div class="stack">
+      <div class="alert alert--warning">
+        Trang mô phỏng cổng thanh toán. Đây <strong>không phải</strong> VNPay thật,
+        không nhập thông tin thẻ thật.
+      </div>
+
+      <div class="card">
+        <div class="card__header"><strong>VNPay (mô phỏng)</strong></div>
+        <div class="card__body stack">
+          <div class="row row--between"><span class="text-muted">Nhà bán</span><span>TOEIC Practice</span></div>
+          <div class="row row--between"><span class="text-muted">Mã đơn</span><span>DH-20260920-0148</span></div>
+          <div class="row row--between"><strong>Số tiền</strong><strong>199.000 ₫</strong></div>
+          <hr>
+          <div class="field">
+            <label class="field__label" for="card-number">Số thẻ</label>
+            <input class="field__input" id="card-number" value="9704 xxxx xxxx 1234" disabled>
+            <span class="field__hint">Ô nhập bị khoá trong bản prototype.</span>
+          </div>
+        </div>
+        <div class="card__footer stack">
+          <p class="text-sm text-muted" style="margin: 0">Chọn kết quả muốn xem:</p>
+          <div class="row">
+            <a class="btn btn--primary" href="payment-result.html?state=success">Thanh toán thành công</a>
+            <a class="btn btn--danger" href="payment-result.html?state=failed">Thanh toán thất bại</a>
+            <a class="btn btn--ghost" href="payment-result.html?state=pending">Cổng phản hồi chậm</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="../assets/js/state-switch.js"></script>
+</body>
+</html>

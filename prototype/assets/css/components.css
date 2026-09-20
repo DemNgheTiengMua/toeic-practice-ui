@@ -391,3 +391,35 @@
   font-style: italic;
   color: var(--color-text-muted);
 }
+
+/* ===== Badge nhấn (bổ sung cho nhóm badge ở Task 2) ===== */
+.badge--primary {
+  background: var(--color-primary-soft); border-color: var(--color-primary-soft-border); color: var(--color-primary);
+  font-weight: 600;
+}
+
+/* ===== Thẻ gói giá ===== */
+.price-card {
+  display: flex; flex-direction: column;
+  padding: var(--space-5);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+.price-card--featured {
+  border-color: var(--color-primary);
+  border-width: 2px;
+  box-shadow: var(--shadow-md);
+}
+.price-card__name { font-weight: 700; font-size: var(--text-lg); }
+.price-card__amount {
+  font-size: var(--text-3xl); font-weight: 800; line-height: 1.1;
+  margin: var(--space-3) 0 var(--space-1);
+}
+.price-card__unit { font-size: var(--text-sm); color: var(--color-text-muted); }
+.price-card__list {
+  flex: 1 1 auto;
+  margin: var(--space-4) 0; padding-left: var(--space-5);
+  font-size: var(--text-sm);
+}
+.price-card__list li + li { margin-top: var(--space-2); }
