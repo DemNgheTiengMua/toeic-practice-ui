@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Prototype UI — Ôn và thi TOEIC</title>
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/components.css">
+</head>
+<body>
+<div class="container">
+  <div class="stack">
+    <div>
+      <h1>Prototype UI — Ôn và thi chứng chỉ TOEIC</h1>
+      <p class="text-muted">
+        Bản vẽ giao diện tĩnh, không có backend. Mỗi màn hình có nhiều state,
+        bấm trực tiếp vào tên state để xem. Thiết kế cho desktop 1440×900.
+      </p>
+    </div>
+
+    <div class="alert alert--info">
+      Số liệu, tên đề và nội dung câu hỏi trong prototype đều là dữ liệu mẫu.
+      Trang "Cổng thanh toán" là bản mô phỏng, không kết nối VNPay/MoMo thật.
+    </div>
+
+    <div class="catalog">
+      <div class="catalog__group">
+        <h2>Xác thực</h2>
+        <div class="catalog__row">
+          <span class="catalog__name">Đăng nhập</span>
+          <div class="catalog__states">
+            <a class="catalog__state" href="auth/login.html?state=success">success</a>
+            <a class="catalog__state" href="auth/login.html?state=submitting">submitting</a>
+            <a class="catalog__state" href="auth/login.html?state=error">error</a>
+          </div>
+        </div>
+        <div class="catalog__row">
+          <span class="catalog__name">Đăng ký</span>
+          <div class="catalog__states">
+            <a class="catalog__state" href="auth/register.html?state=success">success</a>
+            <a class="catalog__state" href="auth/register.html?state=submitting">submitting</a>
+            <a class="catalog__state" href="auth/register.html?state=error">error</a>
+          </div>
+        </div>
+        <div class="catalog__row">
+          <span class="catalog__name">Quên mật khẩu</span>
+          <div class="catalog__states">
+            <a class="catalog__state" href="auth/forgot-password.html?state=success">success</a>
+            <a class="catalog__state" href="auth/forgot-password.html?state=sent">sent</a>
+            <a class="catalog__state" href="auth/forgot-password.html?state=error">error</a>
+          </div>
+        </div>
+      </div>
+      <div class="catalog__group">
+        <h2>Học viên</h2>
+        <div class="catalog__row">
+          <span class="catalog__name">Bảng điều khiển</span>
+          <div class="catalog__states">
+            <a class="catalog__state" href="student/dashboard.html?state=success">success</a>
+            <a class="catalog__state" href="student/dashboard.html?state=loading">loading</a>
+            <a class="catalog__state" href="student/dashboard.html?state=empty">empty</a>
+            <a class="catalog__state" href="student/dashboard.html?state=error">error</a>
+          </div>
+        </div>
+        <div class="catalog__row">
+          <span class="catalog__name">Danh sách đề thi</span>
+          <div class="catalog__states">
+            <a class="catalog__state" href="student/exam-list.html?state=success">success</a>
+            <a class="catalog__state" href="student/exam-list.html?state=paywall">paywall</a>
+            <a class="catalog__state" href="student/exam-list.html?state=loading">loading</a>
+            <a class="catalog__state" href="student/exam-list.html?state=empty">empty</a>
+            <a class="catalog__state" href="student/exam-list.html?state=error">error</a>
+          </div>
+        </div>
+        <div class="catalog__row">
+          <span class="catalog__name">Lịch sử thi</span>
+          <div class="catalog__states">
+            <a class="catalog__state" href="student/exam-history.html?state=success">success</a>
+            <a class="catalog__state" href="student/exam-history.html?state=loading">loading</a>
+            <a class="catalog__state" href="student/exam-history.html?state=empty">empty</a>
+            <a class="catalog__state" href="student/exam-history.html?state=error">error</a>
+          </div>
+        </div>
+        <div class="catalog__row">
+          <span class="catalog__name">Thông tin cá nhân</span>
+          <div class="catalog__states">
+            <a class="catalog__state" href="student/profile.html?state=success">success</a>
+            <a class="catalog__state" href="student/profile.html?state=submitting">submitting</a>
+            <a class="catalog__state" href="student/profile.html?state=error">error</a>
+          </div>
+        </div>
+      </div>
+      <div class="catalog__group">
+        <h2>Làm bài thi</h2>
+        <div class="catalog__row">
+          <span class="catalog__name">Hướng dẫn trước khi thi</span>
+          <div class="catalog__states">
+            <a class="catalog__state" href="student/exam-instructions.html?state=success">success</a>
+            <a class="catalog__state" href="student/exam-instructions.html?state=paywall">paywall</a>
+            <a class="catalog__state" href="student/exam-instructions.html?state=submitting">submitting</a>
+          </div>
+        </div>
+        <div class="catalog__row">
+          <span class="catalog__name">Thi Listening</span>
+          <div class="catalog__states">
+            <a class="catalog__state" href="student/exam-listening.html?state=success">success</a>
+            <a class="catalog__state" href="student/exam-listening.html?state=resumed">resumed</a>
+            <a class="catalog__state" href="student/exam-listening.html?state=offline">offline</a>
+            <a class="catalog__state" href="student/exam-listening.html?state=expired">expired</a>
+            <a class="catalog__state" href="student/exam-listening.html?state=submitting">submitting</a>
+          </div>
+        </div>
+        <div class="catalog__row">
+          <span class="catalog__name">Thi Reading</span>
+          <div class="catalog__states">
+            <a class="catalog__state" href="student/exam-reading.html?state=success">success</a>
+            <a class="catalog__state" href="student/exam-reading.html?state=resumed">resumed</a>
+            <a class="catalog__state" href="student/exam-reading.html?state=offline">offline</a>
+            <a class="catalog__state" href="student/exam-reading.html?state=expired">expired</a>
+            <a class="catalog__state" href="student/exam-reading.html?state=submitting">submitting</a>
+          </div>
+        </div>
+        <div class="catalog__row">
+          <span class="catalog__name">Panel điều hướng 200 câu <span class="badge badge--info">component</span></span>
+          <div class="catalog__states">
+            <a class="catalog__state" href="student/question-navigator.html">xem</a>
+          </div>
+        </div>
+        <div class="catalog__row">
+          <span class="catalog__name">Xác nhận nộp bài</span>
+          <div class="catalog__states">
+            <a class="catalog__state" href="student/exam-confirm-submit.html?state=success">success</a>
+            <a class="catalog__state" href="student/exam-confirm-submit.html?state=complete">complete</a>
+            <a class="catalog__state" href="student/exam-confirm-submit.html?state=submitting">submitting</a>
+          </div>
+        </div>
+        <div class="catalog__row">
+          <span class="catalog__name">Kết quả thi</span>
+          <div class="catalog__states">
+            <a class="catalog__state" href="student/exam-result.html?state=success">success</a>
+            <a class="catalog__state" href="student/exam-result.html?state=loading">loading</a>
+            <a class="catalog__state" href="student/exam-result.html?state=error">error</a>
+          </div>
+        </div>
+        <div class="catalog__row">
+          <span class="catalog__name">Xem lại đáp án</span>
+          <div class="catalog__states">
+            <a class="catalog__state" href="student/exam-review.html?state=success">success</a>
+            <a class="catalog__state" href="student/exam-review.html?state=loading">loading</a>
+            <a class="catalog__state" href="student/exam-review.html?state=error">error</a>
+          </div>
+        </div>
+      </div>
+      <div class="catalog__group">
+        <h2>Luyện tập theo part</h2>
+        <div class="catalog__row">
+          <span class="catalog__name">Chọn part luyện tập</span>
+          <div class="catalog__states">
+            <a class="catalog__state" href="student/practice-select.html?state=success">success</a>
+            <a class="catalog__state" href="student/practice-select.html?state=loading">loading</a>
+            <a class="catalog__state" href="student/practice-select.html?state=error">error</a>
+          </div>
+        </div>
+        <div class="catalog__row">
+          <span class="catalog__name">Làm bài luyện tập</span>
+          <div class="catalog__states">
+            <a class="catalog__state" href="student/practice-take.html?state=answering">answering</a>
+            <a class="catalog__state" href="student/practice-take.html?state=revealed-correct">revealed-correct</a>
+            <a class="catalog__state" href="student/practice-take.html?state=revealed-wrong">revealed-wrong</a>
+            <a class="catalog__state" href="student/practice-take.html?state=finished">finished</a>
+          </div>
+        </div>
+        <div class="catalog__row">
+          <span class="catalog__name">Tổng kết luyện tập</span>
+          <div class="catalog__states">
+            <a class="catalog__state" href="student/practice-summary.html?state=success">success</a>
+            <a class="catalog__state" href="student/practice-summary.html?state=loading">loading</a>
+            <a class="catalog__state" href="student/practice-summary.html?state=error">error</a>
+          </div>
+        </div>
+      </div>
+      <div class="catalog__group">
+        <h2>Nạp lượt thi &amp; thanh toán</h2>
+        <div class="catalog__row">
+          <span class="catalog__name">Bảng giá</span>
+          <div class="catalog__states">
+            <a class="catalog__state" href="payment/pricing.html?state=success">success</a>
+            <a class="catalog__state" href="payment/pricing.html?state=loading">loading</a>
+            <a class="catalog__state" href="payment/pricing.html?state=error">error</a>
+          </div>
+        </div>
+        <div class="catalog__row">
+          <span class="catalog__name">Xác nhận đơn hàng</span>
+          <div class="catalog__states">
+            <a class="catalog__state" href="payment/checkout.html?state=success">success</a>
+            <a class="catalog__state" href="payment/checkout.html?state=submitting">submitting</a>
+            <a class="catalog__state" href="payment/checkout.html?state=error">error</a>
+          </div>
+        </div>
+        <div class="catalog__row">
+          <span class="catalog__name">Cổng thanh toán <span class="badge badge--warning">mô phỏng</span></span>
+          <div class="catalog__states">
+            <a class="catalog__state" href="payment/gateway-mock.html">xem</a>
+          </div>
+        </div>
+        <div class="catalog__row">
+          <span class="catalog__name">Kết quả thanh toán</span>
+          <div class="catalog__states">
+            <a class="catalog__state" href="payment/payment-result.html?state=success">success</a>
+            <a class="catalog__state" href="payment/payment-result.html?state=failed">failed</a>
+            <a class="catalog__state" href="payment/payment-result.html?state=pending">pending</a>
+            <a class="catalog__state" href="payment/payment-result.html?state=error">error</a>
+          </div>
+        </div>
+        <div class="catalog__row">
+          <span class="catalog__name">Ví lượt thi</span>
+          <div class="catalog__states">
+            <a class="catalog__state" href="payment/wallet.html?state=paid">paid</a>
+            <a class="catalog__state" href="payment/wallet.html?state=loading">loading</a>
+            <a class="catalog__state" href="payment/wallet.html?state=empty">empty</a>
+            <a class="catalog__state" href="payment/wallet.html?state=error">error</a>
+          </div>
+        </div>
+      </div>
+      <div class="catalog__group">
+        <h2>Quản trị</h2>
+        <div class="catalog__row">
+          <span class="catalog__name">Bảng điều khiển</span>
+          <div class="catalog__states">
+            <a class="catalog__state" href="admin/dashboard.html?state=success">success</a>
+            <a class="catalog__state" href="admin/dashboard.html?state=loading">loading</a>
+            <a class="catalog__state" href="admin/dashboard.html?state=error">error</a>
+          </div>
+        </div>
+        <div class="catalog__row">
+          <span class="catalog__name">Danh sách đề thi</span>
+          <div class="catalog__states">
+            <a class="catalog__state" href="admin/exam-list.html?state=success">success</a>
+            <a class="catalog__state" href="admin/exam-list.html?state=loading">loading</a>
+            <a class="catalog__state" href="admin/exam-list.html?state=empty">empty</a>
+            <a class="catalog__state" href="admin/exam-list.html?state=error">error</a>
+          </div>
+        </div>
+        <div class="catalog__row">
+          <span class="catalog__name">Wizard tạo đề</span>
+          <div class="catalog__states">
+            <a class="catalog__state" href="admin/exam-editor.html?state=success">step 1</a>
+            <a class="catalog__state" href="admin/exam-editor.html?state=step2">step 2</a>
+            <a class="catalog__state" href="admin/exam-editor.html?state=step3">step 3</a>
+            <a class="catalog__state" href="admin/exam-editor.html?state=submitting">submitting</a>
+            <a class="catalog__state" href="admin/exam-editor.html?state=error">error</a>
+          </div>
+        </div>
+        <div class="catalog__row">
+          <span class="catalog__name">Soạn câu hỏi</span>
+          <div class="catalog__states">
+            <a class="catalog__state" href="admin/question-editor.html?state=success">success</a>
+            <a class="catalog__state" href="admin/question-editor.html?state=submitting">submitting</a>
+            <a class="catalog__state" href="admin/question-editor.html?state=error">error</a>
+          </div>
+        </div>
+        <div class="catalog__row">
+          <span class="catalog__name">Học viên</span>
+          <div class="catalog__states">
+            <a class="catalog__state" href="admin/users.html?state=success">success</a>
+            <a class="catalog__state" href="admin/users.html?state=adjust">adjust</a>
+            <a class="catalog__state" href="admin/users.html?state=loading">loading</a>
+            <a class="catalog__state" href="admin/users.html?state=empty">empty</a>
+            <a class="catalog__state" href="admin/users.html?state=error">error</a>
+          </div>
+        </div>
+        <div class="catalog__row">
+          <span class="catalog__name">Bảng quy đổi điểm</span>
+          <div class="catalog__states">
+            <a class="catalog__state" href="admin/score-conversion.html?state=success">success</a>
+            <a class="catalog__state" href="admin/score-conversion.html?state=submitting">submitting</a>
+            <a class="catalog__state" href="admin/score-conversion.html?state=loading">loading</a>
+            <a class="catalog__state" href="admin/score-conversion.html?state=error">error</a>
+          </div>
+        </div>
+        <div class="catalog__row">
+          <span class="catalog__name">Gói lượt thi</span>
+          <div class="catalog__states">
+            <a class="catalog__state" href="admin/packages.html?state=success">success</a>
+            <a class="catalog__state" href="admin/packages.html?state=edit">edit</a>
+            <a class="catalog__state" href="admin/packages.html?state=loading">loading</a>
+            <a class="catalog__state" href="admin/packages.html?state=error">error</a>
+          </div>
+        </div>
+        <div class="catalog__row">
+          <span class="catalog__name">Đơn hàng</span>
+          <div class="catalog__states">
+            <a class="catalog__state" href="admin/orders.html?state=success">success</a>
+            <a class="catalog__state" href="admin/orders.html?state=loading">loading</a>
+            <a class="catalog__state" href="admin/orders.html?state=empty">empty</a>
+            <a class="catalog__state" href="admin/orders.html?state=error">error</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

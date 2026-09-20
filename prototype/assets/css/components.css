@@ -482,3 +482,24 @@
   border-color: var(--color-danger);
   color: var(--color-danger);
 }
+
+/* ===== Mục lục prototype ===== */
+.catalog__group { margin-top: var(--space-6); }
+.catalog__row {
+  display: grid; grid-template-columns: 240px 1fr; gap: var(--space-3);
+  align-items: baseline;
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+.catalog__name { font-weight: 600; }
+.catalog__states { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.catalog__state {
+  padding: 2px var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-primary);
+  font-family: var(--font-mono); font-size: var(--text-xs);
+  text-decoration: none;
+}
+.catalog__state:hover { background: var(--color-bg); }
