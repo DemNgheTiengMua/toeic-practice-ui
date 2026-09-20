@@ -221,19 +221,25 @@
   padding: var(--space-5);
   background: var(--color-overlay);
   z-index: var(--z-modal);
+  overflow-y: auto;
 }
+/* Hộp thoại cao hơn màn hình (vd: duyệt hồ sơ KYC) phải cuộn được phần thân,
+   nếu không thì header/footer bị cắt và nút bấm không tới được. */
 .modal {
   width: 100%; max-width: 480px;
+  max-height: calc(100vh - 2 * var(--space-5));
+  display: flex; flex-direction: column;
   background: var(--color-surface);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
 }
-.modal__header { padding: var(--space-4) var(--space-5); border-bottom: 1px solid var(--color-border); }
-.modal__body { padding: var(--space-5); }
+.modal__header { padding: var(--space-4) var(--space-5); border-bottom: 1px solid var(--color-border); flex-shrink: 0; }
+.modal__body { padding: var(--space-5); overflow-y: auto; }
 .modal__footer {
   display: flex; justify-content: flex-end; gap: var(--space-2);
   padding: var(--space-4) var(--space-5);
   border-top: 1px solid var(--color-border);
+  flex-shrink: 0;
 }
 
 /* ===== Table ===== */
@@ -261,6 +267,12 @@
 /* ===== Progress ===== */
 .progress { height: 8px; background: var(--color-track); border-radius: 999px; overflow: hidden; }
 .progress__bar { height: 100%; background: var(--color-primary); }
+/* Màu theo mức độ, dùng ở màn phân tích điểm yếu: đỏ = yếu, vàng = trung
+   bình, xanh = khá. Màu là lớp thông tin thứ hai — luôn kèm con số % bên
+   cạnh, không để màu là cách duy nhất truyền đạt mức độ. */
+.progress__bar--danger  { background: var(--color-danger); }
+.progress__bar--warning { background: var(--color-warning); }
+.progress__bar--success { background: var(--color-success); }
 
 /* ===== Audio (màn thi Listening) ===== */
 .exam-audio {
@@ -369,6 +381,66 @@
 .score-hero__total-label { font-size: var(--text-sm); color: var(--color-text-muted); }
 .score-hero__section { text-align: center; align-self: center; }
 .score-hero__section-value { font-size: var(--text-3xl); font-weight: 700; line-height: 1.1; }
+
+/* ===== Thanh trình độ CEFR =====
+   Ngưỡng CEFR cố định theo chuẩn, không phải số admin sửa được:
+   A1 120 · A2 225 · B1 550 · B2 785 · C1 945 (thang tổng 10–990).
+   Sáu band theo đúng thứ tự: <A1 · A1 · A2 · B1 · B2 · C1.
+   Band đầu là "dưới A1" (10–119), KHÔNG phải A1 — đếm lệch một bậc là
+   sai trình độ của học viên.
+   Bề rộng mỗi band tỷ lệ với khoảng điểm thật nên vị trí marker đọc được. */
+.cefr { display: block; }
+.cefr__head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: var(--space-3); margin-bottom: var(--space-2);
+}
+.cefr__current { font-size: var(--text-xl); font-weight: 700; }
+.cefr__track {
+  position: relative;
+  display: grid;
+  /* 10-120 / 120-225 / 225-550 / 550-785 / 785-945 / 945-990 */
+  grid-template-columns: 110fr 105fr 325fr 235fr 160fr 45fr;
+  height: 34px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--color-track);
+}
+.cefr__band {
+  display: flex; align-items: center; justify-content: center;
+  font-size: var(--text-xs); font-weight: 700;
+  color: var(--color-text-muted);
+  border-right: 1px solid var(--color-border);
+}
+.cefr__band:last-child { border-right: 0; }
+.cefr__band.is-reached { background: var(--color-primary-soft); color: var(--color-primary); }
+.cefr__band.is-current {
+  background: var(--color-primary); color: var(--color-primary-text);
+}
+.cefr__scale {
+  display: grid;
+  grid-template-columns: 110fr 105fr 325fr 235fr 160fr 45fr;
+  margin-top: var(--space-1);
+  font-family: var(--font-mono); font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+.cefr__tick { text-align: right; padding-right: 2px; }
+.cefr__note { margin: var(--space-2) 0 0; font-size: var(--text-sm); color: var(--color-text-muted); }
+
+/* ===== Ảnh CCCD (màn duyệt của admin) =====
+   Prototype không có ảnh CCCD thật, nên vẽ khung giữ chỗ đúng tỷ lệ
+   thẻ để admin thấy bố cục thật của màn duyệt. */
+.kyc-photo {
+  display: grid; place-items: center;
+  aspect-ratio: 1.586;              /* tỷ lệ thẻ CCCD gắn chip */
+  padding: var(--space-4);
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm); text-align: center;
+}
+.kyc-photo--portrait { aspect-ratio: 3 / 4; }
 
 /* ===== Giải thích đáp án (chỉ màn review + luyện tập) ===== */
 .explain {

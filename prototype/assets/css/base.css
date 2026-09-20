@@ -67,7 +67,11 @@ a { color: var(--color-primary); }
 .only-paywall.only-paywall, .only-sent.only-sent,
 .only-complete.only-complete,
 .only-answering.only-answering, .only-revealed-correct.only-revealed-correct,
-.only-revealed-wrong.only-revealed-wrong, .only-finished.only-finished { display: none; }
+.only-revealed-wrong.only-revealed-wrong, .only-finished.only-finished,
+.only-inprogress.only-inprogress, .only-cancelled.only-cancelled,
+.only-rejected.only-rejected, .only-kyc-required.only-kyc-required,
+.only-kyc-pending.only-kyc-pending,
+.only-approved.only-approved { display: none; }
 body[data-state="loading"]    .only-loading,
 body[data-state="empty"]      .only-empty,
 body[data-state="error"]      .only-error,
@@ -89,7 +93,13 @@ body[data-state="edit"]       .only-edit,
 body[data-state="answering"]        .only-answering,
 body[data-state="revealed-correct"] .only-revealed-correct,
 body[data-state="revealed-wrong"]   .only-revealed-wrong,
-body[data-state="finished"]         .only-finished { display: revert; }
+body[data-state="finished"]         .only-finished,
+body[data-state="inprogress"]       .only-inprogress,
+body[data-state="cancelled"]        .only-cancelled,
+body[data-state="rejected"]         .only-rejected,
+body[data-state="kyc-required"]     .only-kyc-required,
+body[data-state="kyc-pending"]      .only-kyc-pending,
+body[data-state="approved"]         .only-approved { display: revert; }
 
 /* element hiện ở nhiều state: đặt .multi-state rồi liệt kê trong data-show.
    Class lặp hai lần vì lý do specificity giống nhóm .only-* */
@@ -114,7 +124,12 @@ body[data-state="paid"]             .multi-state[data-show~="paid"],
 body[data-state="step2"]            .multi-state[data-show~="step2"],
 body[data-state="step3"]            .multi-state[data-show~="step3"],
 body[data-state="adjust"]           .multi-state[data-show~="adjust"],
-body[data-state="edit"]             .multi-state[data-show~="edit"] { display: revert; }
+body[data-state="edit"]             .multi-state[data-show~="edit"],
+body[data-state="inprogress"]       .multi-state[data-show~="inprogress"],
+body[data-state="cancelled"]        .multi-state[data-show~="cancelled"],
+body[data-state="kyc-required"]     .multi-state[data-show~="kyc-required"],
+body[data-state="kyc-pending"]      .multi-state[data-show~="kyc-pending"],
+body[data-state="rejected"]         .multi-state[data-show~="rejected"] { display: revert; }
 
 /* .modal-overlay canh giữa bằng display: grid, nhưng `revert` ở hai nhóm rule
    trên trả về `block` của user-agent nên modal dính góc trên-trái. Ghi đè đúng
@@ -123,7 +138,9 @@ body[data-state="success"]    .modal-overlay.only-success,
 body[data-state="complete"]   .modal-overlay.only-complete,
 body[data-state="submitting"] .modal-overlay.only-submitting,
 body[data-state="edit"]       .modal-overlay.only-edit,
-body[data-state="adjust"]     .modal-overlay.only-adjust { display: grid; }
+body[data-state="adjust"]     .modal-overlay.only-adjust,
+body[data-state="expired"]    .modal-overlay.only-expired,
+body[data-state="cancelled"]  .modal-overlay.only-cancelled { display: grid; }
 
 .state-switcher {
   position: fixed; right: var(--space-4); bottom: var(--space-4);
