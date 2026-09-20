@@ -131,9 +131,12 @@
   white-space: nowrap;
   border: 0;
 }
-/* fallback khi không có :has() — ring nằm trên marker vì input bị clip 1px */
-.option__input:focus-visible + .option__marker {
-  outline: 2px solid var(--color-primary);
+/* fallback khi không có :has() — ring nằm trên marker vì input bị clip 1px.
+   Gate bằng @supports để không vẽ 2 ring cùng lúc trên browser hiện đại. */
+@supports not (selector(:has(*))) {
+  .option__input:focus-visible + .option__marker {
+    outline: 2px solid var(--color-primary);
+  }
 }
 .option:has(.option__input:focus-visible) {
   outline: 2px solid var(--color-primary);
