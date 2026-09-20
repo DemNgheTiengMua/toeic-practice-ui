@@ -857,12 +857,15 @@ Cùng khung với `login.html` (đổi `<title>`, `<h1>` thành "Đăng ký"). K
               <input class="field__input" id="reg-name" type="text" autocomplete="name">
             </div>
 
-            <div class="field">
+            <!-- field email bình thường: hiện ở success + submitting, ẨN ở error -->
+            <div class="field multi-state" data-show="success submitting">
               <label class="field__label" for="reg-email">Email</label>
               <input class="field__input" id="reg-email" type="email" autocomplete="email">
             </div>
 
-            <!-- state error: minh hoạ field không hợp lệ -->
+            <!-- state error: minh hoạ field không hợp lệ. Chỉ một trong hai block
+                 field email được hiện cùng lúc — nếu cả hai hiện thì màn error có
+                 hai input cùng label "Email", screen reader đọc hai lần. -->
             <div class="field only-error field--invalid">
               <label class="field__label" for="reg-email-bad">Email</label>
               <input class="field__input" id="reg-email-bad" type="email" value="ban@example">
@@ -1731,16 +1734,24 @@ Tạo `prototype/assets/img/part1-sample.svg`:
 
 Ba state này dùng chung thân màn, khác nhau ở banner phía trên. Viết một block `.exam-body` hiện ở cả ba, cộng hai banner riêng.
 
-Cơ chế `.only-<state>` của Task 1 chỉ cho một state mỗi element, nên trước khi viết markup hãy thêm vào cuối `base.css` một cơ chế cho element hiện ở **nhiều** state:
+Cơ chế `.only-<state>` chỉ cho một state mỗi element, nên element hiện ở **nhiều** state phải dùng `.multi-state` + `data-show`.
+
+**Cơ chế này đã có trong `base.css` từ Task 3** (kéo lên sớm để sửa lỗi hai field Email cùng hiện ở màn register). KHÔNG định nghĩa lại. Dạng đã ship:
 
 ```css
-/* element hiện ở nhiều state: đặt .multi-state rồi liệt kê trong data-show */
-.multi-state { display: none; }
+/* element hiện ở nhiều state: đặt .multi-state rồi liệt kê trong data-show.
+   Class lặp hai lần vì lý do specificity giống nhóm .only-* */
+.multi-state.multi-state { display: none; }
 body[data-state="success"]    .multi-state[data-show~="success"],
+body[data-state="submitting"] .multi-state[data-show~="submitting"] { display: revert; }
+```
+
+Task 6 chỉ **mở rộng** danh sách state hiện, thêm ba dòng vào nhóm `display: revert` đã có:
+
+```css
 body[data-state="resumed"]    .multi-state[data-show~="resumed"],
 body[data-state="offline"]    .multi-state[data-show~="offline"],
-body[data-state="expired"]    .multi-state[data-show~="expired"],
-body[data-state="submitting"] .multi-state[data-show~="submitting"] { display: revert; }
+body[data-state="expired"]    .multi-state[data-show~="expired"] { display: revert; }
 ```
 
 ```html
