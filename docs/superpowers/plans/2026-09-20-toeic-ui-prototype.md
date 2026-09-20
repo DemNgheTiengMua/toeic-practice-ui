@@ -2,7 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Dựng prototype HTML/CSS tĩnh gồm 30 màn hình và mọi state của hệ thống "Ôn và thi chứng chỉ TOEIC", để chốt luồng nghiệp vụ trước khi viết code thật.
+**Goal:** Dựng prototype HTML/CSS tĩnh gồm **34** màn hình và mọi state của hệ thống "Ôn và thi chứng chỉ TOEIC", để chốt luồng nghiệp vụ trước khi viết code thật.
+
+> Kế hoạch gốc có 17 task và 30 màn. Task 18–19 được thêm sau, khi bổ sung
+> hai yêu cầu: **thi thật phải xác thực CCCD trước** và **phân tích điểm yếu
+> phải miễn phí** (làm phễu cho phần trả tiền).
 
 **Architecture:** Trang HTML tĩnh rời, không build step, không framework. Mọi trang dùng chung `tokens.css` + `base.css` + `components.css`. State hiển thị đổi bằng query param (`?state=loading`) do `state-switch.js` xử lý — nó chỉ bật/tắt class trên `<body>`, không mô phỏng nghiệp vụ. `index.html` là mục lục dẫn tới từng màn và từng state.
 
@@ -34,10 +38,10 @@ Mọi đường dẫn tương đối từ `prototype/`.
 
 | File | Trách nhiệm |
 |---|---|
-| `index.html` | Mục lục 30 màn + link tới từng state |
+| `index.html` | Mục lục 34 màn + link tới từng state |
 | `assets/css/tokens.css` | Custom property: màu, spacing, font, radius, shadow, z-index |
-| `assets/css/base.css` | Reset, typography, layout shell (topbar, sidebar, container), utility |
-| `assets/css/components.css` | Button, card, badge, input, option-list, timer, navigator, skeleton, alert, modal, table, stepper |
+| `assets/css/base.css` | Reset, typography, layout shell (topbar, sidebar, container), utility, **đăng ký state** (4 nhóm luật mỗi state) |
+| `assets/css/components.css` | Button, card, badge, field, option, option-list, alert, modal, table, stepper, skeleton, progress, navigator, timer, save-status, score-hero, **cefr**, **kyc-photo**, **upload**, passage, question, explain, price-card, stat, state-block, catalog, toolbar, exam-layout |
 | `assets/js/state-switch.js` | Đọc `?state=`, gắn `data-state` lên `<body>`, render thanh chọn state |
 | `assets/img/` | Ảnh Part 1, avatar, logo — dùng SVG placeholder tự vẽ |
 | `auth/login.html` `auth/register.html` `auth/forgot-password.html` | 3 màn auth |
@@ -55,19 +59,23 @@ Mọi đường dẫn tương đối từ `prototype/`.
 | `student/practice-select.html` | Chọn part để luyện |
 | `student/practice-take.html` | Màn luyện tập |
 | `student/practice-summary.html` | Tổng kết phiên luyện |
+| `student/weakness-analysis.html` | Phân tích điểm yếu (Task 19) |
+| `student/kyc-submit.html` | Gửi hồ sơ KYC: khai thông tin + 3 ảnh + cam kết (Task 18) |
+| `student/kyc-pending.html` | Trạng thái hồ sơ KYC: `pending` / `approved` / `rejected` (Task 18) |
 | `payment/pricing.html` | Bảng giá & chọn gói |
 | `payment/checkout.html` | Checkout |
 | `payment/gateway-mock.html` | Trang cổng thanh toán vẽ giả |
-| `payment/payment-result.html` | Kết quả thanh toán (3 nhánh) |
+| `payment/payment-result.html` | Kết quả thanh toán (4 nhánh: thành công / thất bại / đang xử lý / hết hạn) |
 | `payment/wallet.html` | Ví lượt thi + lịch sử giao dịch |
 | `admin/dashboard.html` | Thống kê |
 | `admin/exam-list.html` | Danh sách đề |
 | `admin/exam-editor.html` | Wizard soạn đề |
 | `admin/question-editor.html` | Soạn câu hỏi theo part |
 | `admin/users.html` | Quản lý người dùng |
-| `admin/score-conversion.html` | Bảng quy đổi điểm |
+| `admin/score-conversion.html` | Bảng quy đổi điểm (raw → scaled sửa được, CEFR chỉ đọc) |
 | `admin/packages.html` | Quản lý gói & giá |
 | `admin/orders.html` | Quản lý đơn hàng |
+| `admin/kyc-review.html` | Hàng đợi duyệt KYC + hộp thoại đối chiếu ảnh (Task 18) |
 
 CSS chia 3 file theo trách nhiệm chứ không theo trang: token (giá trị thô) → base (khung) → components (thành phần tái dùng). Trang không có CSS riêng; nếu một trang cần style đặc thù, style đó thuộc `components.css` dưới một class có tiền tố rõ ràng (VD `.exam-audio`).
 
@@ -5759,7 +5767,8 @@ File này chỉ dùng để dựng và soi component ở Task 1–2. Giữ lại
 
 Chạy `python -m http.server 8080` trong `prototype/`, mở `http://localhost:8080/`:
 - Bấm **hết** link state trong mục lục. Không link nào 404, không trang nào trắng.
-- Đếm lại: mục lục phải có 30 màn hình chia 6 nhóm (Xác thực 3, Học viên 4, Làm bài thi 7, Luyện tập 3, Thanh toán 5, Quản trị 8 — tổng 30).
+- Đếm lại: mục lục phải có **37 dòng, phủ 34 màn hình** chia 7 nhóm (Xác thực 3, Học viên 4, Làm bài thi 7, Luyện tập 4, Thanh toán 5, Xác thực CCCD 5, Quản trị 9). Ba màn `exam-list` / `exam-instructions` / `profile` xuất hiện **hai lần** — một lần ở nhóm gốc, một lần ở nhóm "Xác thực CCCD" với `?state=kyc-pending` — nên 37 dòng ≠ 34 màn. Con số 34 này đổi từ 30 lên sau Task 18–19; đếm ra 30 là mục lục thiếu màn mới.
+- Hai màn một-state là `student/question-navigator.html` và `payment/gateway-mock.html` **không có** `?state=` trong link mục lục (chúng chỉ khai một state, `state-switch.js` tự chọn state đầu). Thiếu `?state=` ở đây là đúng, không phải lỗi.
 - Mở `student/exam-listening.html` và `student/exam-reading.html`, xem source: không có `option--correct`, không có chữ "Đáp án đúng", không có chữ "giải thích".
 - Xác nhận `prototype/_sandbox.html` trả 404.
 - Không có lỗi console ở bất kỳ trang nào.
@@ -5775,6 +5784,298 @@ git commit -m "feat: add prototype catalog index and remove sandbox"
 
 ---
 
-## Sau khi xong 17 task
+### Task 18: Xác thực CCCD (KYC) — 2 màn học viên + 1 màn admin + cổng chặn
+
+**Files:**
+- Create: `prototype/student/kyc-submit.html`
+- Create: `prototype/student/kyc-pending.html`
+- Create: `prototype/admin/kyc-review.html`
+- Modify: `prototype/assets/css/components.css` (thêm `.kyc-photo`, `.upload`, `.state-block`)
+- Modify: `prototype/assets/css/base.css` (đăng ký state KYC)
+- Modify: `prototype/student/exam-list.html`, `prototype/student/exam-instructions.html` (thêm khối chặn KYC)
+- Modify: `prototype/student/profile.html` (thẻ KYC `.multi-state`)
+
+**Interfaces:**
+- Consumes: `.card` `.badge` `.field` `.alert` `.modal-overlay` `.table` (Task 2), `.upload` (Task 2)
+- Produces: state `kyc-required` / `kyc-pending` / `approved` / `rejected` dùng lại ở `exam-list.html`, `exam-instructions.html`, `profile.html`
+
+Task này ra đời sau 17 task đầu, khi bổ sung yêu cầu: **thi thật phải xác
+thực CCCD trước**. Ràng buộc quan trọng nhất không nằm ở hình thức mà ở
+**thứ tự**: chặn KYC phải đứng trước khi trừ lượt.
+
+- [ ] **Step 1: Khối chặn trong `exam-list.html` và `exam-instructions.html`**
+
+Đặt khối `kyc-required` / `kyc-pending` / `rejected` **trước** khối `paywall`
+trong DOM. Mọi khối chặn phải ghi rõ **"không trừ lượt"** và kèm lối thoát
+"Luyện miễn phí".
+
+```html
+<div class="only-kyc-required stack">
+  <div class="alert alert--warning">
+    Cần xác thực CCCD trước khi đăng ký thi thật.
+    Xác thực <strong>miễn phí và không trừ lượt thi</strong>.
+  </div>
+  <a class="btn btn--primary" href="kyc-submit.html">Xác thực ngay</a>
+  <a class="btn btn--ghost" href="practice-select.html">Luyện miễn phí trước</a>
+</div>
+```
+
+- [ ] **Step 2: `kyc-submit.html` — form + 3 ảnh + cam kết**
+
+Ba ảnh bắt buộc: mặt trước CCCD, mặt sau CCCD, ảnh chân dung. Dùng `.upload`
+với `.upload__file` (đã có ảnh) và `.upload__file--missing` (chưa có) để thấy
+được trạng thái chặn thiếu ảnh.
+
+```html
+<div class="upload">
+  <span class="field__label">Ảnh chân dung</span>
+  <div class="upload__zone">
+    <span>Kéo ảnh vào đây hoặc</span>
+    <button class="btn btn--sm">Chọn ảnh</button>
+  </div>
+  <div class="upload__file upload__file--missing">
+    <span>Chưa có ảnh — bắt buộc</span>
+  </div>
+</div>
+```
+
+Cam kết là một `.option` chứa `checkbox`, nội dung nói rõ **dùng giấy tờ của
+người khác sẽ bị khoá tài khoản**. Có nút **"Để sau"** vì chưa xác thực thì
+vẫn luyện tập được — không nhốt người dùng vào form.
+
+- [ ] **Step 3: `kyc-pending.html` — 5 state**
+
+`data-states="loading,pending,approved,rejected,error"`.
+
+State `approved` **không** phải trang trí. Nếu thiếu nó, tín hiệu duy nhất học
+viên nhận được là cổng chặn ở `exam-list.html` tự biến mất — một tín hiệu im
+lặng, dễ bị bỏ qua hoặc hiểu nhầm thành lỗi. Khối `approved` phải nói rõ
+**duyệt là mở cổng, không trừ lượt**:
+
+```html
+<div class="only-approved stack">
+  <div class="state-block">
+    <div class="state-block__icon" aria-hidden="true">✓</div>
+    <div class="state-block__title">Hồ sơ đã được duyệt</div>
+  </div>
+  <div class="alert alert--success">
+    Xác thực <strong>không trừ lượt thi</strong> nào. Lượt chỉ bị trừ khi
+    bạn bắt đầu một bài thi thật.
+  </div>
+  <a class="btn btn--primary" href="exam-list.html">Vào thi thật</a>
+  <a class="btn btn--ghost" href="practice-select.html">Luyện tập trước</a>
+</div>
+```
+
+Khối `rejected` hiện **nguyên văn** lý do admin ghi, và nói rõ không mất lượt.
+
+- [ ] **Step 4: Đăng ký state trong `base.css` — đủ 4 nhóm luật**
+
+`approved` chỉ cần nhóm 1 và 2 (không có `.multi-state`, không có modal dùng
+state này):
+
+```css
+.only-approved.only-approved { display: none; }
+body[data-state="approved"] .only-approved { display: revert; }
+```
+
+`kyc-required` / `kyc-pending` / `rejected` **còn cần nhóm 3** vì thẻ KYC ở
+`profile.html` là `.multi-state`:
+
+```css
+body[data-state="kyc-pending"] .multi-state[data-show~="kyc-pending"] { display: revert; }
+```
+
+Thiếu nhóm 3 thì thẻ KYC ở `profile.html` biến mất ở mọi state — kể cả
+`success`.
+
+- [ ] **Step 5: Thẻ KYC ở `profile.html` là `.multi-state`**
+
+Trạng thái KYC độc lập với state tải trang, nên thẻ dùng `data-show` chứ
+không dùng `.only-*`. Bốn biến thể: `kyc-required` / `kyc-pending` /
+`rejected` / `success` (biến thể `success` chính là hồ sơ đã duyệt).
+
+- [ ] **Step 6: `admin/kyc-review.html` — hàng đợi + hộp thoại duyệt**
+
+`data-states="loading,empty,error,success,adjust"`. Hàng đợi hiện học viên,
+tên trên CCCD, số CCCD **đã che**, thời điểm gửi và **thời gian chờ** để hồ
+sơ cũ nổi lên trước.
+
+Từ chối **bắt buộc ghi lý do** — ép ở UI và ghi rõ ràng buộc DB tương ứng:
+
+```html
+<label class="field__label" for="kyc-reason">Lý do (bắt buộc khi từ chối)</label>
+<!-- Ràng buộc CK_Kyc_RejectReason: từ chối thì bắt buộc có lý do. -->
+```
+
+Hộp thoại `adjust` là `.modal-overlay.only-adjust` — **nhóm 4 bắt buộc**, vì
+`revert` trả về `block` của UA chứ không phải `grid` của overlay:
+
+```css
+body[data-state="adjust"] .modal-overlay.only-adjust { display: grid; }
+```
+
+- [ ] **Step 7: Thêm mục nav "Duyệt CCCD" cho cả 8 trang admin**
+
+Mục nav này phải có mặt ở **mọi** trang admin, kèm badge số hồ sơ chờ duyệt
+khớp với con số ở chính `kyc-review.html`. Thiếu ở một trang là nav nhảy.
+
+---
+
+### Task 19: Phân tích điểm yếu
+
+**Files:**
+- Create: `prototype/student/weakness-analysis.html`
+- Modify: `prototype/assets/css/components.css` (thêm `.progress` nếu chưa có)
+
+**Interfaces:**
+- Consumes: `.card` `.badge` `.progress` (Task 2), `.skeleton` (Task 2)
+- Produces: không có gì cho task sau
+
+Màn này là **phễu bán hàng**, không phải tính năng phụ: nó chỉ ra chỗ yếu để
+học viên thấy cần thi thật. Vì vậy nó **miễn phí** và phải nói rõ điều đó.
+
+`data-states="loading,empty,error,success"`.
+
+- [ ] **Step 1: Nói rõ đây là công cụ học tập, không phải kết quả thi**
+
+Dữ liệu gộp từ **cả** phiên luyện **và** bài thi đã chấm, nên màn này vẫn hữu
+ích cho người chưa từng thi thật:
+
+```html
+<span class="badge badge--success">Miễn phí</span>
+<p class="text-sm text-muted">
+  Đây là công cụ học tập, không phải kết quả thi. Số liệu lấy từ mọi câu bạn
+  đã trả lời, kể cả trong phiên luyện.
+</p>
+```
+
+- [ ] **Step 2: Độ chính xác từng part — xếp yếu nhất trước**
+
+Không xếp theo số part. Học viên cần thấy chỗ yếu trước tiên, và cột "số câu"
+phải ghi rõ là gộp cả thi và luyện.
+
+```
+Part 7 — Đọc hiểu   Yếu nhất   58% · 45/78 câu
+Part 4 — Bài nói               64% · 19/30 câu
+...
+Part 1 — Ảnh        Mạnh nhất  92% · 33/36 câu
+```
+
+- [ ] **Step 3: Ba khối kết luận**
+
+1. **Nên luyện gì trước** — chọn part vừa yếu vừa chiếm nhiều câu, kèm hai
+   nút: "Luyện Part 7 ngay" và "Xem câu sai Part 7".
+2. **Dạng câu hay sai** — sai ở *dạng câu hỏi* nào, không chỉ part nào.
+3. **Tiến bộ theo thời gian** — độ chính xác của part yếu nhất qua 4 tuần.
+
+Khối dạng câu hỏi phải ghi chú thẳng rằng số liệu này cần **dữ liệu gắn nhãn
+dạng câu ở tầng nội dung** — tức phụ thuộc vào chất lượng ngân hàng câu hỏi,
+không phải thứ suy ra được từ log trả lời.
+
+---
+
+### Task 20: Quy đổi điểm sang bậc CEFR
+
+**Files:**
+- Modify: `prototype/assets/css/components.css` (thêm `.cefr`)
+- Modify: `prototype/student/dashboard.html`, `prototype/student/exam-history.html`, `prototype/student/exam-result.html` (thêm thanh CEFR)
+- Modify: `prototype/admin/score-conversion.html` (khối CEFR **chỉ đọc**)
+
+**Interfaces:**
+- Consumes: `.card` `.badge` (Task 2)
+- Produces: không có gì cho task sau
+
+Task này cũng ra đời sau, từ một yêu cầu rõ ràng: **điểm phải quy ra bậc
+CEFR, admin không được sửa bậc đó, và học viên phải thấy một thanh trình độ.**
+
+- [ ] **Step 1: Phân biệt hai bảng — đây là điểm mấu chốt**
+
+Đường đi của điểm: **raw → scaled → bậc CEFR**. Hai chặng có bản chất khác
+nhau, và đó là lý do một cái sửa được còn một cái không:
+
+| Chặng | Khác nhau giữa các đề? | Ai sửa |
+|---|---|---|
+| raw → scaled | **Có** — đề khó dễ khác nhau | Admin, theo từng đề |
+| scaled → CEFR | **Không** — hằng số theo chuẩn | Không ai |
+
+Cho admin sửa bảng CEFR là sai: ngưỡng CEFR là dữ liệu chuẩn, không phải
+cấu hình. Sửa được thì hai học viên cùng điểm có thể ra hai bậc khác nhau.
+
+- [ ] **Step 2: Ngưỡng CEFR — dữ liệu cố định**
+
+Trên thang tổng 10–990:
+
+| Tổng điểm | Bậc |
+|---|---|
+| 10–119 | Dưới A1 |
+| 120–224 | A1 |
+| 225–549 | A2 |
+| 550–784 | B1 |
+| 785–944 | B2 |
+| 945–990 | C1 |
+
+**Band đầu là "dưới A1" (10–119), KHÔNG phải A1.** Đếm lệch một bậc là báo
+sai trình độ của học viên.
+
+- [ ] **Step 3: `.cefr` — thanh trình độ**
+
+Sáu band, bề rộng **tỷ lệ với khoảng điểm thật** để vị trí marker đọc được:
+
+```css
+.cefr__track {
+  display: grid;
+  /* 10-120 / 120-225 / 225-550 / 550-785 / 785-945 / 945-990 */
+  grid-template-columns: 110fr 105fr 325fr 235fr 160fr 45fr;
+  height: 34px;
+}
+.cefr__band.is-reached { background: var(--color-primary-soft); color: var(--color-primary); }
+.cefr__band.is-current { background: var(--color-primary); color: var(--color-primary-text); }
+```
+
+Chia đều sáu cột là sai: band A2 trải 325 điểm còn C1 chỉ 45 điểm, nên chia
+đều sẽ vẽ sai vị trí người học.
+
+- [ ] **Step 4: Thanh phải đọc được bằng screen reader**
+
+`.cefr__track` là `role="img"` kèm `aria-label` mô tả bậc hiện tại và điểm;
+`.cefr__scale` (các mốc 120/225/550/785/945/990) là `aria-hidden="true"` vì
+đó là chi tiết thị giác, không phải nội dung:
+
+```html
+<div class="cefr__track" role="img"
+     aria-label="Trình độ CEFR hiện tại: B1, với 760 trên thang 10 đến 990">
+```
+
+- [ ] **Step 5: Hiện thanh ở đúng ba màn — và nói rõ nó không phải kết quả chính**
+
+`dashboard.html`, `exam-history.html`, `exam-result.html`. Cả ba đều có
+`cefr__head` nói còn cách bậc kế tiếp bao xa ("760 điểm · cần 785 để lên B2"),
+vì con số 785 không tự nói lên điều đó.
+
+`cefr__note` phải ghi rõ **điểm số mới là kết quả chính thức**, CEFR chỉ để
+tham chiếu trình độ — để học viên không tưởng bậc CEFR là điểm thi.
+
+`practice-summary.html` **không** có thanh này: màn đó chỉ hiện độ chính xác
+từng part, không có tổng điểm 10–990 nên không có gì để quy ra bậc.
+
+- [ ] **Step 6: `admin/score-conversion.html` — CEFR chỉ đọc**
+
+Khối CEFR là bảng `<td>` trơn, **không có `<input>`** — khác hẳn bảng
+raw→scaled ở trên vốn dùng `<input class="field__input">`. Kèm câu giải thích
+để admin không đi tìm chỗ sửa:
+
+```html
+<div class="card__header"><strong>Quy chiếu CEFR — cố định, không sửa được</strong></div>
+<p class="text-sm text-muted">
+  Ngưỡng CEFR là hằng số theo chuẩn, suy ra từ tổng điểm nên không có gì để
+  cấu hình. Admin chỉ sửa bảng raw→scaled ở trên, vì bảng đó khác nhau giữa
+  các đề.
+</p>
+```
+
+---
+
+## Sau khi xong 20 task
 
 Prototype đứng độc lập trong `prototype/`, mở bằng bất kỳ static server nào. Đây là đầu vào cho giai đoạn sau: dựng ASP.NET Core Web API + MVC client, lúc đó markup ở đây được chuyển thành Razor view và dữ liệu mẫu được thay bằng dữ liệu thật qua jQuery Ajax.
