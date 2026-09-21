@@ -1,0 +1,664 @@
+<mxfile host="app.diagrams.net" type="device">
+  <diagram name="TOEIC-LR-Schema" id="toeic-schema-1">
+    <mxGraphModel dx="1600" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2400" pageHeight="1700" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="T_AttemptAnswers" value="AttemptAnswers" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="1120" y="455" width="300" height="204" as="geometry" />
+        </mxCell>
+        <mxCell id="T_AttemptAnswers.c_AttemptAnswerId" value="&lt;b&gt;AttemptAnswerId&lt;/b&gt;&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;bigint&lt;/font&gt;&lt;/i&gt; &lt;b&gt;&lt;font color=&quot;#b85450&quot;&gt;PK&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_AttemptAnswers">
+          <mxGeometry y="28" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_AttemptAnswers.c_AttemptId" value="AttemptId&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;bigint&lt;/font&gt;&lt;/i&gt; &lt;b&gt;&lt;font color=&quot;#6c8ebf&quot;&gt;FK&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_AttemptAnswers">
+          <mxGeometry y="50" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_AttemptAnswers.c_QuestionId" value="QuestionId&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;bigint&lt;/font&gt;&lt;/i&gt; &lt;b&gt;&lt;font color=&quot;#6c8ebf&quot;&gt;FK&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_AttemptAnswers">
+          <mxGeometry y="72" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_AttemptAnswers.c_SelectedOptionId" value="SelectedOptionId&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;bigint&lt;/font&gt;&lt;/i&gt; &lt;b&gt;&lt;font color=&quot;#6c8ebf&quot;&gt;FK&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_AttemptAnswers">
+          <mxGeometry y="94" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_AttemptAnswers.c_IsMarkedForReview" value="IsMarkedForReview&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;bit&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_AttemptAnswers">
+          <mxGeometry y="116" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_AttemptAnswers.c_IsCorrect" value="IsCorrect&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;bit&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_AttemptAnswers">
+          <mxGeometry y="138" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_AttemptAnswers.c_AnsweredAt" value="AnsweredAt&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;datetimeoffset&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_AttemptAnswers">
+          <mxGeometry y="160" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_AttemptAnswers.c_UpdatedAt" value="UpdatedAt&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;datetimeoffset&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_AttemptAnswers">
+          <mxGeometry y="182" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_CefrBands" value="CefrBands" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="1480" y="235" width="300" height="116" as="geometry" />
+        </mxCell>
+        <mxCell id="T_CefrBands.c_CefrBandId" value="&lt;b&gt;CefrBandId&lt;/b&gt;&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;tinyint&lt;/font&gt;&lt;/i&gt; &lt;b&gt;&lt;font color=&quot;#b85450&quot;&gt;PK&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_CefrBands">
+          <mxGeometry y="28" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_CefrBands.c_Level" value="Level&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;varchar(10)&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_CefrBands">
+          <mxGeometry y="50" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_CefrBands.c_MinTotalScore" value="MinTotalScore&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;smallint&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_CefrBands">
+          <mxGeometry y="72" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_CefrBands.c_MaxTotalScore" value="MaxTotalScore&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;smallint&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_CefrBands">
+          <mxGeometry y="94" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_CreditTransactions" value="CreditTransactions" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="760" y="730" width="300" height="226" as="geometry" />
+        </mxCell>
+        <mxCell id="T_CreditTransactions.c_TransactionId" value="&lt;b&gt;TransactionId&lt;/b&gt;&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;bigint&lt;/font&gt;&lt;/i&gt; &lt;b&gt;&lt;font color=&quot;#b85450&quot;&gt;PK&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_CreditTransactions">
+          <mxGeometry y="28" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_CreditTransactions.c_UserId" value="UserId&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;bigint&lt;/font&gt;&lt;/i&gt; &lt;b&gt;&lt;font color=&quot;#6c8ebf&quot;&gt;FK&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_CreditTransactions">
+          <mxGeometry y="50" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_CreditTransactions.c_Delta" value="Delta&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;smallint&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_CreditTransactions">
+          <mxGeometry y="72" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_CreditTransactions.c_Reason" value="Reason&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;varchar(30)&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_CreditTransactions">
+          <mxGeometry y="94" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_CreditTransactions.c_OrderId" value="OrderId&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;bigint&lt;/font&gt;&lt;/i&gt; &lt;b&gt;&lt;font color=&quot;#6c8ebf&quot;&gt;FK&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_CreditTransactions">
+          <mxGeometry y="116" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_CreditTransactions.c_AttemptId" value="AttemptId&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;bigint&lt;/font&gt;&lt;/i&gt; &lt;b&gt;&lt;font color=&quot;#6c8ebf&quot;&gt;FK&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_CreditTransactions">
+          <mxGeometry y="138" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_CreditTransactions.c_Note" value="Note&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;nvarchar(300)&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_CreditTransactions">
+          <mxGeometry y="160" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_CreditTransactions.c_CreatedByUserId" value="CreatedByUserId&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;bigint&lt;/font&gt;&lt;/i&gt; &lt;b&gt;&lt;font color=&quot;#6c8ebf&quot;&gt;FK&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_CreditTransactions">
+          <mxGeometry y="182" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_CreditTransactions.c_CreatedAt" value="CreatedAt&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;datetimeoffset&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_CreditTransactions">
+          <mxGeometry y="204" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_ExamAttempts" value="ExamAttempts" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="1120" y="40" width="300" height="358" as="geometry" />
+        </mxCell>
+        <mxCell id="T_ExamAttempts.c_AttemptId" value="&lt;b&gt;AttemptId&lt;/b&gt;&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;bigint&lt;/font&gt;&lt;/i&gt; &lt;b&gt;&lt;font color=&quot;#b85450&quot;&gt;PK&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_ExamAttempts">
+          <mxGeometry y="28" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_ExamAttempts.c_UserId" value="UserId&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;bigint&lt;/font&gt;&lt;/i&gt; &lt;b&gt;&lt;font color=&quot;#6c8ebf&quot;&gt;FK&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_ExamAttempts">
+          <mxGeometry y="50" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_ExamAttempts.c_ExamId" value="ExamId&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;bigint&lt;/font&gt;&lt;/i&gt; &lt;b&gt;&lt;font color=&quot;#6c8ebf&quot;&gt;FK&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_ExamAttempts">
+          <mxGeometry y="72" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_ExamAttempts.c_Status" value="Status&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;varchar(20)&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_ExamAttempts">
+          <mxGeometry y="94" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_ExamAttempts.c_StartedAt" value="StartedAt&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;datetimeoffset&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_ExamAttempts">
+          <mxGeometry y="116" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_ExamAttempts.c_ExpiresAt" value="ExpiresAt&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;datetimeoffset&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_ExamAttempts">
+          <mxGeometry y="138" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_ExamAttempts.c_SubmittedAt" value="SubmittedAt&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;datetimeoffset&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_ExamAttempts">
+          <mxGeometry y="160" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_ExamAttempts.c_GradedAt" value="GradedAt&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;datetimeoffset&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_ExamAttempts">
+          <mxGeometry y="182" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_ExamAttempts.c_IsAutoSubmitted" value="IsAutoSubmitted&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;bit&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_ExamAttempts">
+          <mxGeometry y="204" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_ExamAttempts.c_ListeningRaw" value="ListeningRaw&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;smallint&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_ExamAttempts">
+          <mxGeometry y="226" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_ExamAttempts.c_ReadingRaw" value="ReadingRaw&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;smallint&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_ExamAttempts">
+          <mxGeometry y="248" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_ExamAttempts.c_ListeningScore" value="ListeningScore&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;smallint&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_ExamAttempts">
+          <mxGeometry y="270" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_ExamAttempts.c_ReadingScore" value="ReadingScore&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;smallint&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_ExamAttempts">
+          <mxGeometry y="292" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_ExamAttempts.c_TotalScore" value="TotalScore&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;smallint&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_ExamAttempts">
+          <mxGeometry y="314" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_ExamAttempts.c_CefrLevel" value="CefrLevel&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;varchar(10)&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_ExamAttempts">
+          <mxGeometry y="336" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Exams" value="Exams" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="400" y="355" width="300" height="248" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Exams.c_ExamId" value="&lt;b&gt;ExamId&lt;/b&gt;&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;bigint&lt;/font&gt;&lt;/i&gt; &lt;b&gt;&lt;font color=&quot;#b85450&quot;&gt;PK&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Exams">
+          <mxGeometry y="28" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Exams.c_Title" value="Title&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;nvarchar(200)&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Exams">
+          <mxGeometry y="50" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Exams.c_Description" value="Description&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;nvarchar(1000)&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Exams">
+          <mxGeometry y="72" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Exams.c_DurationMinutes" value="DurationMinutes&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;smallint&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Exams">
+          <mxGeometry y="94" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Exams.c_Status" value="Status&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;varchar(20)&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Exams">
+          <mxGeometry y="116" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Exams.c_CreatedByUserId" value="CreatedByUserId&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;bigint&lt;/font&gt;&lt;/i&gt; &lt;b&gt;&lt;font color=&quot;#6c8ebf&quot;&gt;FK&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Exams">
+          <mxGeometry y="138" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Exams.c_PublishedAt" value="PublishedAt&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;datetimeoffset&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Exams">
+          <mxGeometry y="160" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Exams.c_IsDeleted" value="IsDeleted&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;bit&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Exams">
+          <mxGeometry y="182" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Exams.c_CreatedAt" value="CreatedAt&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;datetimeoffset&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Exams">
+          <mxGeometry y="204" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Exams.c_UpdatedAt" value="UpdatedAt&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;datetimeoffset&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Exams">
+          <mxGeometry y="226" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_KycVerifications" value="KycVerifications" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="40" y="740" width="300" height="336" as="geometry" />
+        </mxCell>
+        <mxCell id="T_KycVerifications.c_KycId" value="&lt;b&gt;KycId&lt;/b&gt;&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;bigint&lt;/font&gt;&lt;/i&gt; &lt;b&gt;&lt;font color=&quot;#b85450&quot;&gt;PK&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_KycVerifications">
+          <mxGeometry y="28" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_KycVerifications.c_UserId" value="UserId&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;bigint&lt;/font&gt;&lt;/i&gt; &lt;b&gt;&lt;font color=&quot;#6c8ebf&quot;&gt;FK&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_KycVerifications">
+          <mxGeometry y="50" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_KycVerifications.c_DeclaredName" value="DeclaredName&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;nvarchar(150)&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_KycVerifications">
+          <mxGeometry y="72" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_KycVerifications.c_DeclaredDob" value="DeclaredDob&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;date&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_KycVerifications">
+          <mxGeometry y="94" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_KycVerifications.c_NationalIdHash" value="NationalIdHash&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;varbinary(64)&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_KycVerifications">
+          <mxGeometry y="116" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_KycVerifications.c_NationalIdLast4" value="NationalIdLast4&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;char(4)&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_KycVerifications">
+          <mxGeometry y="138" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_KycVerifications.c_FrontImagePath" value="FrontImagePath&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;nvarchar(400)&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_KycVerifications">
+          <mxGeometry y="160" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_KycVerifications.c_BackImagePath" value="BackImagePath&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;nvarchar(400)&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_KycVerifications">
+          <mxGeometry y="182" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_KycVerifications.c_SelfieImagePath" value="SelfieImagePath&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;nvarchar(400)&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_KycVerifications">
+          <mxGeometry y="204" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_KycVerifications.c_Status" value="Status&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;varchar(20)&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_KycVerifications">
+          <mxGeometry y="226" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_KycVerifications.c_RejectReason" value="RejectReason&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;nvarchar(500)&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_KycVerifications">
+          <mxGeometry y="248" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_KycVerifications.c_SubmittedAt" value="SubmittedAt&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;datetimeoffset&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_KycVerifications">
+          <mxGeometry y="270" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_KycVerifications.c_ReviewedAt" value="ReviewedAt&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;datetimeoffset&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_KycVerifications">
+          <mxGeometry y="292" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_KycVerifications.c_ReviewedByUserId" value="ReviewedByUserId&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;bigint&lt;/font&gt;&lt;/i&gt; &lt;b&gt;&lt;font color=&quot;#6c8ebf&quot;&gt;FK&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_KycVerifications">
+          <mxGeometry y="314" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Orders" value="Orders" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="760" y="340" width="300" height="336" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Orders.c_OrderId" value="&lt;b&gt;OrderId&lt;/b&gt;&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;bigint&lt;/font&gt;&lt;/i&gt; &lt;b&gt;&lt;font color=&quot;#b85450&quot;&gt;PK&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Orders">
+          <mxGeometry y="28" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Orders.c_OrderCode" value="OrderCode&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;varchar(40)&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Orders">
+          <mxGeometry y="50" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Orders.c_UserId" value="UserId&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;bigint&lt;/font&gt;&lt;/i&gt; &lt;b&gt;&lt;font color=&quot;#6c8ebf&quot;&gt;FK&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Orders">
+          <mxGeometry y="72" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Orders.c_PackageId" value="PackageId&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;int&lt;/font&gt;&lt;/i&gt; &lt;b&gt;&lt;font color=&quot;#6c8ebf&quot;&gt;FK&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Orders">
+          <mxGeometry y="94" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Orders.c_UnitPrice" value="UnitPrice&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;decimal(12,0)&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Orders">
+          <mxGeometry y="116" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Orders.c_CreditAmount" value="CreditAmount&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;smallint&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Orders">
+          <mxGeometry y="138" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Orders.c_PaymentMethod" value="PaymentMethod&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;varchar(20)&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Orders">
+          <mxGeometry y="160" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Orders.c_Status" value="Status&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;varchar(20)&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Orders">
+          <mxGeometry y="182" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Orders.c_GatewayCode" value="GatewayCode&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;varchar(50)&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Orders">
+          <mxGeometry y="204" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Orders.c_GatewayMessage" value="GatewayMessage&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;nvarchar(500)&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Orders">
+          <mxGeometry y="226" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Orders.c_GatewayTxnRef" value="GatewayTxnRef&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;varchar(100)&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Orders">
+          <mxGeometry y="248" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Orders.c_CreatedAt" value="CreatedAt&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;datetimeoffset&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Orders">
+          <mxGeometry y="270" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Orders.c_ExpiresAt" value="ExpiresAt&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;datetimeoffset&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Orders">
+          <mxGeometry y="292" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Orders.c_PaidAt" value="PaidAt&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;datetimeoffset&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Orders">
+          <mxGeometry y="314" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Packages" value="Packages" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="760" y="40" width="300" height="248" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Packages.c_PackageId" value="&lt;b&gt;PackageId&lt;/b&gt;&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;int&lt;/font&gt;&lt;/i&gt; &lt;b&gt;&lt;font color=&quot;#b85450&quot;&gt;PK&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Packages">
+          <mxGeometry y="28" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Packages.c_Code" value="Code&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;varchar(30)&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Packages">
+          <mxGeometry y="50" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Packages.c_Name" value="Name&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;nvarchar(100)&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Packages">
+          <mxGeometry y="72" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Packages.c_CreditAmount" value="CreditAmount&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;smallint&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Packages">
+          <mxGeometry y="94" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Packages.c_Price" value="Price&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;decimal(12,0)&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Packages">
+          <mxGeometry y="116" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Packages.c_Description" value="Description&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;nvarchar(500)&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Packages">
+          <mxGeometry y="138" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Packages.c_IsActive" value="IsActive&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;bit&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Packages">
+          <mxGeometry y="160" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Packages.c_DisplayOrder" value="DisplayOrder&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;smallint&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Packages">
+          <mxGeometry y="182" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Packages.c_CreatedAt" value="CreatedAt&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;datetimeoffset&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Packages">
+          <mxGeometry y="204" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Packages.c_UpdatedAt" value="UpdatedAt&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;datetimeoffset&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Packages">
+          <mxGeometry y="226" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_PartOptionLabels" value="PartOptionLabels" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="400" y="230" width="300" height="72" as="geometry" />
+        </mxCell>
+        <mxCell id="T_PartOptionLabels.c_PartNumber" value="&lt;b&gt;PartNumber&lt;/b&gt;&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;tinyint&lt;/font&gt;&lt;/i&gt; &lt;b&gt;&lt;font color=&quot;#b85450&quot;&gt;PK&lt;/font&gt;&lt;/b&gt; &lt;b&gt;&lt;font color=&quot;#6c8ebf&quot;&gt;FK&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_PartOptionLabels">
+          <mxGeometry y="28" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_PartOptionLabels.c_OptionLabel" value="&lt;b&gt;OptionLabel&lt;/b&gt;&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;char(1)&lt;/font&gt;&lt;/i&gt; &lt;b&gt;&lt;font color=&quot;#b85450&quot;&gt;PK&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_PartOptionLabels">
+          <mxGeometry y="50" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Parts" value="Parts" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="400" y="40" width="300" height="138" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Parts.c_PartNumber" value="&lt;b&gt;PartNumber&lt;/b&gt;&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;tinyint&lt;/font&gt;&lt;/i&gt; &lt;b&gt;&lt;font color=&quot;#b85450&quot;&gt;PK&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Parts">
+          <mxGeometry y="28" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Parts.c_Section" value="Section&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;varchar(10)&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Parts">
+          <mxGeometry y="50" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Parts.c_Name" value="Name&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;nvarchar(50)&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Parts">
+          <mxGeometry y="72" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Parts.c_QuestionCount" value="QuestionCount&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;smallint&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Parts">
+          <mxGeometry y="94" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Parts.c_OptionCount" value="OptionCount&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;tinyint&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Parts">
+          <mxGeometry y="116" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_PasswordResetTokens" value="PasswordResetTokens" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="40" y="530" width="300" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="T_PasswordResetTokens.c_TokenId" value="&lt;b&gt;TokenId&lt;/b&gt;&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;bigint&lt;/font&gt;&lt;/i&gt; &lt;b&gt;&lt;font color=&quot;#b85450&quot;&gt;PK&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_PasswordResetTokens">
+          <mxGeometry y="28" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_PasswordResetTokens.c_UserId" value="UserId&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;bigint&lt;/font&gt;&lt;/i&gt; &lt;b&gt;&lt;font color=&quot;#6c8ebf&quot;&gt;FK&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_PasswordResetTokens">
+          <mxGeometry y="50" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_PasswordResetTokens.c_TokenHash" value="TokenHash&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;varbinary(64)&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_PasswordResetTokens">
+          <mxGeometry y="72" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_PasswordResetTokens.c_ExpiresAt" value="ExpiresAt&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;datetimeoffset&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_PasswordResetTokens">
+          <mxGeometry y="94" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_PasswordResetTokens.c_UsedAt" value="UsedAt&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;datetimeoffset&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_PasswordResetTokens">
+          <mxGeometry y="116" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_PasswordResetTokens.c_CreatedAt" value="CreatedAt&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;datetimeoffset&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_PasswordResetTokens">
+          <mxGeometry y="138" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_PracticeAnswers" value="PracticeAnswers" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="1120" y="955" width="300" height="182" as="geometry" />
+        </mxCell>
+        <mxCell id="T_PracticeAnswers.c_PracticeAnswerId" value="&lt;b&gt;PracticeAnswerId&lt;/b&gt;&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;bigint&lt;/font&gt;&lt;/i&gt; &lt;b&gt;&lt;font color=&quot;#b85450&quot;&gt;PK&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_PracticeAnswers">
+          <mxGeometry y="28" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_PracticeAnswers.c_SessionId" value="SessionId&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;bigint&lt;/font&gt;&lt;/i&gt; &lt;b&gt;&lt;font color=&quot;#6c8ebf&quot;&gt;FK&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_PracticeAnswers">
+          <mxGeometry y="50" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_PracticeAnswers.c_QuestionId" value="QuestionId&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;bigint&lt;/font&gt;&lt;/i&gt; &lt;b&gt;&lt;font color=&quot;#6c8ebf&quot;&gt;FK&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_PracticeAnswers">
+          <mxGeometry y="72" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_PracticeAnswers.c_SelectedOptionId" value="SelectedOptionId&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;bigint&lt;/font&gt;&lt;/i&gt; &lt;b&gt;&lt;font color=&quot;#6c8ebf&quot;&gt;FK&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_PracticeAnswers">
+          <mxGeometry y="94" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_PracticeAnswers.c_IsCorrect" value="IsCorrect&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;bit&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_PracticeAnswers">
+          <mxGeometry y="116" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_PracticeAnswers.c_DisplayOrder" value="DisplayOrder&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;smallint&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_PracticeAnswers">
+          <mxGeometry y="138" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_PracticeAnswers.c_AnsweredAt" value="AnsweredAt&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;datetimeoffset&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_PracticeAnswers">
+          <mxGeometry y="160" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_PracticeSessions" value="PracticeSessions" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="1120" y="705" width="300" height="204" as="geometry" />
+        </mxCell>
+        <mxCell id="T_PracticeSessions.c_SessionId" value="&lt;b&gt;SessionId&lt;/b&gt;&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;bigint&lt;/font&gt;&lt;/i&gt; &lt;b&gt;&lt;font color=&quot;#b85450&quot;&gt;PK&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_PracticeSessions">
+          <mxGeometry y="28" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_PracticeSessions.c_UserId" value="UserId&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;bigint&lt;/font&gt;&lt;/i&gt; &lt;b&gt;&lt;font color=&quot;#6c8ebf&quot;&gt;FK&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_PracticeSessions">
+          <mxGeometry y="50" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_PracticeSessions.c_PartNumber" value="PartNumber&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;tinyint&lt;/font&gt;&lt;/i&gt; &lt;b&gt;&lt;font color=&quot;#6c8ebf&quot;&gt;FK&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_PracticeSessions">
+          <mxGeometry y="72" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_PracticeSessions.c_QuestionCount" value="QuestionCount&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;smallint&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_PracticeSessions">
+          <mxGeometry y="94" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_PracticeSessions.c_Status" value="Status&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;varchar(20)&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_PracticeSessions">
+          <mxGeometry y="116" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_PracticeSessions.c_CorrectCount" value="CorrectCount&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;smallint&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_PracticeSessions">
+          <mxGeometry y="138" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_PracticeSessions.c_StartedAt" value="StartedAt&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;datetimeoffset&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_PracticeSessions">
+          <mxGeometry y="160" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_PracticeSessions.c_FinishedAt" value="FinishedAt&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;datetimeoffset&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_PracticeSessions">
+          <mxGeometry y="182" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_QuestionGroups" value="QuestionGroups" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="400" y="655" width="300" height="182" as="geometry" />
+        </mxCell>
+        <mxCell id="T_QuestionGroups.c_GroupId" value="&lt;b&gt;GroupId&lt;/b&gt;&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;bigint&lt;/font&gt;&lt;/i&gt; &lt;b&gt;&lt;font color=&quot;#b85450&quot;&gt;PK&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_QuestionGroups">
+          <mxGeometry y="28" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_QuestionGroups.c_ExamId" value="ExamId&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;bigint&lt;/font&gt;&lt;/i&gt; &lt;b&gt;&lt;font color=&quot;#6c8ebf&quot;&gt;FK&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_QuestionGroups">
+          <mxGeometry y="50" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_QuestionGroups.c_PartNumber" value="PartNumber&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;tinyint&lt;/font&gt;&lt;/i&gt; &lt;b&gt;&lt;font color=&quot;#6c8ebf&quot;&gt;FK&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_QuestionGroups">
+          <mxGeometry y="72" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_QuestionGroups.c_PassageText" value="PassageText&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;nvarchar(MAX)&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_QuestionGroups">
+          <mxGeometry y="94" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_QuestionGroups.c_AudioPath" value="AudioPath&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;nvarchar(400)&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_QuestionGroups">
+          <mxGeometry y="116" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_QuestionGroups.c_ImagePath" value="ImagePath&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;nvarchar(400)&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_QuestionGroups">
+          <mxGeometry y="138" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_QuestionGroups.c_DisplayOrder" value="DisplayOrder&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;smallint&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_QuestionGroups">
+          <mxGeometry y="160" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_QuestionOptions" value="QuestionOptions" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="400" y="1215" width="300" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="T_QuestionOptions.c_OptionId" value="&lt;b&gt;OptionId&lt;/b&gt;&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;bigint&lt;/font&gt;&lt;/i&gt; &lt;b&gt;&lt;font color=&quot;#b85450&quot;&gt;PK&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_QuestionOptions">
+          <mxGeometry y="28" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_QuestionOptions.c_QuestionId" value="QuestionId&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;bigint&lt;/font&gt;&lt;/i&gt; &lt;b&gt;&lt;font color=&quot;#6c8ebf&quot;&gt;FK&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_QuestionOptions">
+          <mxGeometry y="50" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_QuestionOptions.c_PartNumber" value="PartNumber&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;tinyint&lt;/font&gt;&lt;/i&gt; &lt;b&gt;&lt;font color=&quot;#6c8ebf&quot;&gt;FK&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_QuestionOptions">
+          <mxGeometry y="72" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_QuestionOptions.c_OptionLabel" value="OptionLabel&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;char(1)&lt;/font&gt;&lt;/i&gt; &lt;b&gt;&lt;font color=&quot;#6c8ebf&quot;&gt;FK&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_QuestionOptions">
+          <mxGeometry y="94" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_QuestionOptions.c_OptionText" value="OptionText&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;nvarchar(1000)&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_QuestionOptions">
+          <mxGeometry y="116" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_QuestionOptions.c_IsCorrect" value="IsCorrect&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;bit&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_QuestionOptions">
+          <mxGeometry y="138" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Questions" value="Questions" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="400" y="890" width="300" height="270" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Questions.c_QuestionId" value="&lt;b&gt;QuestionId&lt;/b&gt;&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;bigint&lt;/font&gt;&lt;/i&gt; &lt;b&gt;&lt;font color=&quot;#b85450&quot;&gt;PK&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Questions">
+          <mxGeometry y="28" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Questions.c_ExamId" value="ExamId&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;bigint&lt;/font&gt;&lt;/i&gt; &lt;b&gt;&lt;font color=&quot;#6c8ebf&quot;&gt;FK&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Questions">
+          <mxGeometry y="50" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Questions.c_PartNumber" value="PartNumber&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;tinyint&lt;/font&gt;&lt;/i&gt; &lt;b&gt;&lt;font color=&quot;#6c8ebf&quot;&gt;FK&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Questions">
+          <mxGeometry y="72" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Questions.c_GroupId" value="GroupId&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;bigint&lt;/font&gt;&lt;/i&gt; &lt;b&gt;&lt;font color=&quot;#6c8ebf&quot;&gt;FK&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Questions">
+          <mxGeometry y="94" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Questions.c_QuestionNumber" value="QuestionNumber&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;smallint&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Questions">
+          <mxGeometry y="116" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Questions.c_StemText" value="StemText&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;nvarchar(MAX)&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Questions">
+          <mxGeometry y="138" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Questions.c_ImagePath" value="ImagePath&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;nvarchar(400)&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Questions">
+          <mxGeometry y="160" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Questions.c_AudioPath" value="AudioPath&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;nvarchar(400)&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Questions">
+          <mxGeometry y="182" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Questions.c_Explanation" value="Explanation&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;nvarchar(MAX)&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Questions">
+          <mxGeometry y="204" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Questions.c_TranscriptText" value="TranscriptText&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;nvarchar(MAX)&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Questions">
+          <mxGeometry y="226" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Questions.c_IsDeleted" value="IsDeleted&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;bit&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Questions">
+          <mxGeometry y="248" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Roles" value="Roles" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="40" y="40" width="300" height="94" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Roles.c_RoleId" value="&lt;b&gt;RoleId&lt;/b&gt;&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;tinyint&lt;/font&gt;&lt;/i&gt; &lt;b&gt;&lt;font color=&quot;#b85450&quot;&gt;PK&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Roles">
+          <mxGeometry y="28" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Roles.c_Code" value="Code&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;varchar(20)&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Roles">
+          <mxGeometry y="50" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Roles.c_Name" value="Name&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;nvarchar(50)&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Roles">
+          <mxGeometry y="72" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_ScoreConversions" value="ScoreConversions" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="1480" y="40" width="300" height="138" as="geometry" />
+        </mxCell>
+        <mxCell id="T_ScoreConversions.c_ConversionId" value="&lt;b&gt;ConversionId&lt;/b&gt;&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;bigint&lt;/font&gt;&lt;/i&gt; &lt;b&gt;&lt;font color=&quot;#b85450&quot;&gt;PK&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_ScoreConversions">
+          <mxGeometry y="28" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_ScoreConversions.c_ExamId" value="ExamId&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;bigint&lt;/font&gt;&lt;/i&gt; &lt;b&gt;&lt;font color=&quot;#6c8ebf&quot;&gt;FK&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_ScoreConversions">
+          <mxGeometry y="50" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_ScoreConversions.c_Section" value="Section&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;varchar(10)&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_ScoreConversions">
+          <mxGeometry y="72" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_ScoreConversions.c_RawScore" value="RawScore&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;smallint&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_ScoreConversions">
+          <mxGeometry y="94" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_ScoreConversions.c_ScaledScore" value="ScaledScore&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;smallint&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_ScoreConversions">
+          <mxGeometry y="116" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Users" value="Users" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="40" y="190" width="300" height="292" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Users.c_UserId" value="&lt;b&gt;UserId&lt;/b&gt;&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;bigint&lt;/font&gt;&lt;/i&gt; &lt;b&gt;&lt;font color=&quot;#b85450&quot;&gt;PK&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Users">
+          <mxGeometry y="28" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Users.c_Email" value="Email&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;nvarchar(256)&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Users">
+          <mxGeometry y="50" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Users.c_PasswordHash" value="PasswordHash&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;nvarchar(500)&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Users">
+          <mxGeometry y="72" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Users.c_FullName" value="FullName&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;nvarchar(150)&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Users">
+          <mxGeometry y="94" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Users.c_PhoneNumber" value="PhoneNumber&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;varchar(20)&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Users">
+          <mxGeometry y="116" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Users.c_DateOfBirth" value="DateOfBirth&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;date&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Users">
+          <mxGeometry y="138" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Users.c_RoleId" value="RoleId&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;tinyint&lt;/font&gt;&lt;/i&gt; &lt;b&gt;&lt;font color=&quot;#6c8ebf&quot;&gt;FK&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Users">
+          <mxGeometry y="160" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Users.c_IsEmailConfirmed" value="IsEmailConfirmed&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;bit&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Users">
+          <mxGeometry y="182" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Users.c_IsLocked" value="IsLocked&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;bit&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Users">
+          <mxGeometry y="204" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Users.c_IsDeleted" value="IsDeleted&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;bit&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Users">
+          <mxGeometry y="226" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Users.c_CreatedAt" value="CreatedAt&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;datetimeoffset&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Users">
+          <mxGeometry y="248" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="T_Users.c_UpdatedAt" value="UpdatedAt&#160;&#160;&lt;i&gt;&lt;font color=&quot;#555555&quot;&gt;datetimeoffset&lt;/font&gt;&lt;/i&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;spacingRight=6;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;" vertex="1" parent="T_Users">
+          <mxGeometry y="270" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="E0" style="edgeStyle=entityRelationEdgeStyle;fontSize=10;html=1;rounded=0;startArrow=ERmany;startFill=0;endArrow=ERone;endFill=0;strokeColor=#666666;strokeWidth=1;" edge="1" parent="1" source="T_AttemptAnswers.c_AttemptId" target="T_ExamAttempts.c_AttemptId">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="E1" style="edgeStyle=entityRelationEdgeStyle;fontSize=10;html=1;rounded=0;startArrow=ERmany;startFill=0;endArrow=ERone;endFill=0;strokeColor=#666666;strokeWidth=1;" edge="1" parent="1" source="T_AttemptAnswers.c_QuestionId" target="T_Questions.c_QuestionId">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="E2" style="edgeStyle=entityRelationEdgeStyle;fontSize=10;html=1;rounded=0;startArrow=ERmany;startFill=0;endArrow=ERone;endFill=0;strokeColor=#d79b00;strokeWidth=2;dashed=1;" edge="1" parent="1" source="T_AttemptAnswers.c_QuestionId" target="T_QuestionOptions.c_QuestionId">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="E3" style="edgeStyle=entityRelationEdgeStyle;fontSize=10;html=1;rounded=0;startArrow=ERmany;startFill=0;endArrow=ERone;endFill=0;strokeColor=#666666;strokeWidth=1;" edge="1" parent="1" source="T_CreditTransactions.c_UserId" target="T_Users.c_UserId">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="E4" style="edgeStyle=entityRelationEdgeStyle;fontSize=10;html=1;rounded=0;startArrow=ERmany;startFill=0;endArrow=ERone;endFill=0;strokeColor=#666666;strokeWidth=1;" edge="1" parent="1" source="T_CreditTransactions.c_OrderId" target="T_Orders.c_OrderId">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="E5" style="edgeStyle=entityRelationEdgeStyle;fontSize=10;html=1;rounded=0;startArrow=ERmany;startFill=0;endArrow=ERone;endFill=0;strokeColor=#666666;strokeWidth=1;" edge="1" parent="1" source="T_CreditTransactions.c_CreatedByUserId" target="T_Users.c_UserId">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="E6" style="edgeStyle=entityRelationEdgeStyle;fontSize=10;html=1;rounded=0;startArrow=ERmany;startFill=0;endArrow=ERone;endFill=0;strokeColor=#666666;strokeWidth=1;" edge="1" parent="1" source="T_CreditTransactions.c_AttemptId" target="T_ExamAttempts.c_AttemptId">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="E7" style="edgeStyle=entityRelationEdgeStyle;fontSize=10;html=1;rounded=0;startArrow=ERmany;startFill=0;endArrow=ERone;endFill=0;strokeColor=#666666;strokeWidth=1;" edge="1" parent="1" source="T_ExamAttempts.c_UserId" target="T_Users.c_UserId">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="E8" style="edgeStyle=entityRelationEdgeStyle;fontSize=10;html=1;rounded=0;startArrow=ERmany;startFill=0;endArrow=ERone;endFill=0;strokeColor=#666666;strokeWidth=1;" edge="1" parent="1" source="T_ExamAttempts.c_ExamId" target="T_Exams.c_ExamId">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="E9" style="edgeStyle=entityRelationEdgeStyle;fontSize=10;html=1;rounded=0;startArrow=ERmany;startFill=0;endArrow=ERone;endFill=0;strokeColor=#666666;strokeWidth=1;" edge="1" parent="1" source="T_Exams.c_CreatedByUserId" target="T_Users.c_UserId">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="E10" style="edgeStyle=entityRelationEdgeStyle;fontSize=10;html=1;rounded=0;startArrow=ERmany;startFill=0;endArrow=ERone;endFill=0;strokeColor=#666666;strokeWidth=1;" edge="1" parent="1" source="T_KycVerifications.c_UserId" target="T_Users.c_UserId">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="E11" style="edgeStyle=entityRelationEdgeStyle;fontSize=10;html=1;rounded=0;startArrow=ERmany;startFill=0;endArrow=ERone;endFill=0;strokeColor=#666666;strokeWidth=1;" edge="1" parent="1" source="T_KycVerifications.c_ReviewedByUserId" target="T_Users.c_UserId">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="E12" style="edgeStyle=entityRelationEdgeStyle;fontSize=10;html=1;rounded=0;startArrow=ERmany;startFill=0;endArrow=ERone;endFill=0;strokeColor=#666666;strokeWidth=1;" edge="1" parent="1" source="T_Orders.c_UserId" target="T_Users.c_UserId">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="E13" style="edgeStyle=entityRelationEdgeStyle;fontSize=10;html=1;rounded=0;startArrow=ERmany;startFill=0;endArrow=ERone;endFill=0;strokeColor=#666666;strokeWidth=1;" edge="1" parent="1" source="T_Orders.c_PackageId" target="T_Packages.c_PackageId">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="E14" style="edgeStyle=entityRelationEdgeStyle;fontSize=10;html=1;rounded=0;startArrow=ERmany;startFill=0;endArrow=ERone;endFill=0;strokeColor=#666666;strokeWidth=1;" edge="1" parent="1" source="T_PartOptionLabels.c_PartNumber" target="T_Parts.c_PartNumber">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="E15" style="edgeStyle=entityRelationEdgeStyle;fontSize=10;html=1;rounded=0;startArrow=ERmany;startFill=0;endArrow=ERone;endFill=0;strokeColor=#666666;strokeWidth=1;" edge="1" parent="1" source="T_PasswordResetTokens.c_UserId" target="T_Users.c_UserId">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="E16" style="edgeStyle=entityRelationEdgeStyle;fontSize=10;html=1;rounded=0;startArrow=ERmany;startFill=0;endArrow=ERone;endFill=0;strokeColor=#666666;strokeWidth=1;" edge="1" parent="1" source="T_PracticeAnswers.c_SessionId" target="T_PracticeSessions.c_SessionId">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="E17" style="edgeStyle=entityRelationEdgeStyle;fontSize=10;html=1;rounded=0;startArrow=ERmany;startFill=0;endArrow=ERone;endFill=0;strokeColor=#666666;strokeWidth=1;" edge="1" parent="1" source="T_PracticeAnswers.c_QuestionId" target="T_Questions.c_QuestionId">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="E18" style="edgeStyle=entityRelationEdgeStyle;fontSize=10;html=1;rounded=0;startArrow=ERmany;startFill=0;endArrow=ERone;endFill=0;strokeColor=#d79b00;strokeWidth=2;dashed=1;" edge="1" parent="1" source="T_PracticeAnswers.c_QuestionId" target="T_QuestionOptions.c_QuestionId">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="E19" style="edgeStyle=entityRelationEdgeStyle;fontSize=10;html=1;rounded=0;startArrow=ERmany;startFill=0;endArrow=ERone;endFill=0;strokeColor=#666666;strokeWidth=1;" edge="1" parent="1" source="T_PracticeSessions.c_UserId" target="T_Users.c_UserId">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="E20" style="edgeStyle=entityRelationEdgeStyle;fontSize=10;html=1;rounded=0;startArrow=ERmany;startFill=0;endArrow=ERone;endFill=0;strokeColor=#666666;strokeWidth=1;" edge="1" parent="1" source="T_PracticeSessions.c_PartNumber" target="T_Parts.c_PartNumber">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="E21" style="edgeStyle=entityRelationEdgeStyle;fontSize=10;html=1;rounded=0;startArrow=ERmany;startFill=0;endArrow=ERone;endFill=0;strokeColor=#666666;strokeWidth=1;" edge="1" parent="1" source="T_QuestionGroups.c_ExamId" target="T_Exams.c_ExamId">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="E22" style="edgeStyle=entityRelationEdgeStyle;fontSize=10;html=1;rounded=0;startArrow=ERmany;startFill=0;endArrow=ERone;endFill=0;strokeColor=#666666;strokeWidth=1;" edge="1" parent="1" source="T_QuestionGroups.c_PartNumber" target="T_Parts.c_PartNumber">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="E23" style="edgeStyle=entityRelationEdgeStyle;fontSize=10;html=1;rounded=0;startArrow=ERmany;startFill=0;endArrow=ERone;endFill=0;strokeColor=#d79b00;strokeWidth=2;dashed=1;" edge="1" parent="1" source="T_QuestionOptions.c_QuestionId" target="T_Questions.c_QuestionId">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="E24" style="edgeStyle=entityRelationEdgeStyle;fontSize=10;html=1;rounded=0;startArrow=ERmany;startFill=0;endArrow=ERone;endFill=0;strokeColor=#d79b00;strokeWidth=2;dashed=1;" edge="1" parent="1" source="T_QuestionOptions.c_PartNumber" target="T_PartOptionLabels.c_PartNumber">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="E25" style="edgeStyle=entityRelationEdgeStyle;fontSize=10;html=1;rounded=0;startArrow=ERmany;startFill=0;endArrow=ERone;endFill=0;strokeColor=#666666;strokeWidth=1;" edge="1" parent="1" source="T_Questions.c_ExamId" target="T_Exams.c_ExamId">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="E26" style="edgeStyle=entityRelationEdgeStyle;fontSize=10;html=1;rounded=0;startArrow=ERmany;startFill=0;endArrow=ERone;endFill=0;strokeColor=#666666;strokeWidth=1;" edge="1" parent="1" source="T_Questions.c_PartNumber" target="T_Parts.c_PartNumber">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="E27" style="edgeStyle=entityRelationEdgeStyle;fontSize=10;html=1;rounded=0;startArrow=ERmany;startFill=0;endArrow=ERone;endFill=0;strokeColor=#d79b00;strokeWidth=2;dashed=1;" edge="1" parent="1" source="T_Questions.c_GroupId" target="T_QuestionGroups.c_GroupId">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="E28" style="edgeStyle=entityRelationEdgeStyle;fontSize=10;html=1;rounded=0;startArrow=ERmany;startFill=0;endArrow=ERone;endFill=0;strokeColor=#666666;strokeWidth=1;" edge="1" parent="1" source="T_ScoreConversions.c_ExamId" target="T_Exams.c_ExamId">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="E29" style="edgeStyle=entityRelationEdgeStyle;fontSize=10;html=1;rounded=0;startArrow=ERmany;startFill=0;endArrow=ERone;endFill=0;strokeColor=#666666;strokeWidth=1;" edge="1" parent="1" source="T_Users.c_RoleId" target="T_Roles.c_RoleId">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="title" value="TOEIC L&amp;R - Database Schema (ERD)" style="text;html=1;align=left;verticalAlign=middle;fontSize=20;fontStyle=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="40" y="8" width="700" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="legend" value="&lt;b&gt;Notation&lt;/b&gt;&lt;br&gt;&lt;b&gt;&lt;font color=&quot;#b85450&quot;&gt;PK&lt;/font&gt;&lt;/b&gt; primary key&#160;&#160;|&#160;&#160;&lt;b&gt;&lt;font color=&quot;#6c8ebf&quot;&gt;FK&lt;/font&gt;&lt;/b&gt; foreign key&lt;br&gt;Crow&#8217;s foot: one-to-many.&lt;br&gt;&lt;br&gt;&lt;b&gt;Colours&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#6c8ebf&quot;&gt;&#9632;&lt;/font&gt; Identity&#160;&#160;&lt;font color=&quot;#82b366&quot;&gt;&#9632;&lt;/font&gt; Content&#160;&#160;&lt;font color=&quot;#d79b00&quot;&gt;&#9632;&lt;/font&gt; Payment&lt;br&gt;&lt;font color=&quot;#b85450&quot;&gt;&#9632;&lt;/font&gt; Taking&#160;&#160;&lt;font color=&quot;#9673a6&quot;&gt;&#9632;&lt;/font&gt; Practice&#160;&#160;&lt;font color=&quot;#666666&quot;&gt;&#9632;&lt;/font&gt; Reference&lt;br&gt;&lt;br&gt;&lt;b&gt;&lt;font color=&quot;#d79b00&quot;&gt;Dashed orange edge = composite FK.&lt;/font&gt;&lt;/b&gt;&lt;br&gt;It enforces more than a plain FK: the selected option must&lt;br&gt;belong to that same question, and a group to the same exam.&lt;br&gt;&lt;br&gt;&lt;b&gt;&lt;font color=&quot;#b85450&quot;&gt;NOT shown here&lt;/font&gt;&lt;/b&gt; (see the .sql file):&lt;br&gt;37 CHECK constraints, 25 unique indexes (18 filtered),&lt;br&gt;2 triggers, 1 procedure (usp_ExpireStalePendingOrders),&lt;br&gt;and all DEFAULT constraints. An ERD shows structure,&lt;br&gt;not enforcement." style="text;html=1;align=left;verticalAlign=top;fontSize=11;strokeColor=#999999;fillColor=#fafafa;spacingLeft=8;spacingTop=8;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="1480" y="420" width="360" height="290" as="geometry" />
+        </mxCell>
+        <mxCell id="V_vw_UserCreditBalance" value="VIEW: vw_UserCreditBalance" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;html=1;fillColor=#ffffff;strokeColor=#999999;dashed=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1480" y="790" width="300" height="72" as="geometry" />
+        </mxCell>
+        <mxCell id="V_vw_UserCreditBalance.r0" value="UserId  BIGINT" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;overflow=hidden;rotatable=0;fontSize=11;" vertex="1" parent="V_vw_UserCreditBalance">
+          <mxGeometry y="28" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="V_vw_UserCreditBalance.r1" value="CreditBalance  INT" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;overflow=hidden;rotatable=0;fontSize=11;" vertex="1" parent="V_vw_UserCreditBalance">
+          <mxGeometry y="50" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="V_vw_UserPartAccuracy" value="VIEW: vw_UserPartAccuracy" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;html=1;fillColor=#ffffff;strokeColor=#999999;dashed=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1480" y="900" width="300" height="182" as="geometry" />
+        </mxCell>
+        <mxCell id="V_vw_UserPartAccuracy.r0" value="UserId  BIGINT" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;overflow=hidden;rotatable=0;fontSize=11;" vertex="1" parent="V_vw_UserPartAccuracy">
+          <mxGeometry y="28" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="V_vw_UserPartAccuracy.r1" value="PartNumber  TINYINT" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;overflow=hidden;rotatable=0;fontSize=11;" vertex="1" parent="V_vw_UserPartAccuracy">
+          <mxGeometry y="50" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="V_vw_UserPartAccuracy.r2" value="PartName  NVARCHAR(50)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;overflow=hidden;rotatable=0;fontSize=11;" vertex="1" parent="V_vw_UserPartAccuracy">
+          <mxGeometry y="72" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="V_vw_UserPartAccuracy.r3" value="Section  VARCHAR(10)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;overflow=hidden;rotatable=0;fontSize=11;" vertex="1" parent="V_vw_UserPartAccuracy">
+          <mxGeometry y="94" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="V_vw_UserPartAccuracy.r4" value="DeliveredCount  INT" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;overflow=hidden;rotatable=0;fontSize=11;" vertex="1" parent="V_vw_UserPartAccuracy">
+          <mxGeometry y="116" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="V_vw_UserPartAccuracy.r5" value="CorrectCount  INT" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;overflow=hidden;rotatable=0;fontSize=11;" vertex="1" parent="V_vw_UserPartAccuracy">
+          <mxGeometry y="138" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="V_vw_UserPartAccuracy.r6" value="AccuracyPercent  DECIMAL(5,2)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;overflow=hidden;rotatable=0;fontSize=11;" vertex="1" parent="V_vw_UserPartAccuracy">
+          <mxGeometry y="160" width="300" height="22" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
