@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Luyện Part 5 — TOEIC Practice</title>
+  <title>Practice Part 5 — TOEIC Practice</title>
+  <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../assets/css/tokens.css">
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
@@ -12,20 +13,21 @@
   <div class="app-shell">
     <header class="app-topbar">
       <div class="exam-topbar-group">
-        <strong>Luyện Part 5 — Câu đơn</strong>
-        <span class="badge badge--muted">Không giới hạn thời gian</span>
+        <strong>Practice Part 5 — Incomplete Sentences</strong>
+        <span class="badge badge--muted">No time limit</span>
       </div>
       <div class="exam-topbar-group">
         <span class="text-sm text-muted multi-state"
-              data-show="answering revealed-correct revealed-wrong">Câu 7 / 20</span>
+              data-show="answering revealed-correct revealed-wrong">Question 7 / 20</span>
         <div class="progress multi-state" data-show="answering revealed-correct revealed-wrong"
              style="width: 160px">
           <div class="progress__bar" style="width: 35%"></div>
         </div>
-        <a class="btn btn--ghost btn--sm" href="practice-select.html">Thoát</a>
+        <a class="btn btn--ghost btn--sm" href="practice-select.html">Exit</a>
       </div>
     </header>
     <main class="app-main">
+      <h1 class="visually-hidden">Practice Part 5 — Incomplete Sentences</h1>
       <div class="container" style="max-width: 820px">
         <!-- ===== loading ===== -->
         <div class="only-loading stack">
@@ -41,14 +43,13 @@
           <div class="card"><div class="card__body">
             <div class="state-block">
               <div class="state-block__icon" aria-hidden="true">!</div>
-              <div class="state-block__title">Không tải được câu hỏi</div>
+              <div class="state-block__title">Could not load questions</div>
               <p class="state-block__desc">
-                Câu trả lời gần nhất của bạn có thể chưa được lưu.
-                Kiểm tra kết nối rồi thử lại.
+                Your most recent answer may not have been saved. Check your connection and try again.
               </p>
               <div class="row" style="justify-content: center">
-                <button class="btn btn--primary">Thử lại</button>
-                <a class="btn" href="practice-select.html">Thoát phiên luyện</a>
+                <button class="btn btn--primary">Try again</button>
+                <a class="btn" href="practice-select.html">Exit practice session</a>
               </div>
             </div>
           </div></div>
@@ -58,48 +59,52 @@
         <div class="only-answering stack">
           <div class="question">
             <div class="question__meta">
-              <span class="question__number">Câu 7</span>
-              <span class="badge badge--muted">Part 5 — Câu đơn</span>
+              <span class="question__number">Question 7</span>
+              <span class="badge badge--muted">Part 5 — Incomplete Sentences</span>
             </div>
             <p class="question__stem">
               The regional manager ------- the quarterly figures before the board meeting.
             </p>
-            <div class="option-list" role="radiogroup" aria-label="Đáp án câu 7">
+            <div class="option-list" role="radiogroup" aria-label="Answer for question 7">
               <label class="option">
+                <input class="option__input" type="radio" name="q7" value="A">
                 <span class="option__marker">A</span>
                 <span class="option__text">review</span>
               </label>
               <label class="option">
+                <input class="option__input" type="radio" name="q7" value="B">
                 <span class="option__marker">B</span>
                 <span class="option__text">reviewing</span>
               </label>
               <label class="option">
+                <input class="option__input" type="radio" name="q7" value="C">
                 <span class="option__marker">C</span>
                 <span class="option__text">will review</span>
               </label>
               <label class="option">
+                <input class="option__input" type="radio" name="q7" value="D">
                 <span class="option__marker">D</span>
                 <span class="option__text">to review</span>
               </label>
             </div>
           </div>
           <div class="row row--between">
-            <button class="btn btn--ghost">Bỏ qua câu này</button>
-            <button class="btn btn--primary btn--lg">Kiểm tra đáp án</button>
+            <button class="btn btn--ghost">Skip this question</button>
+            <button class="btn btn--primary btn--lg">Check answers</button>
           </div>
         </div>
         <!-- ===== trả lời đúng ===== -->
         <div class="only-revealed-correct stack">
           <div class="question">
             <div class="question__meta">
-              <span class="question__number">Câu 7</span>
-              <span class="badge badge--muted">Part 5 — Câu đơn</span>
-              <span class="badge badge--success">Chính xác</span>
+              <span class="question__number">Question 7</span>
+              <span class="badge badge--muted">Part 5 — Incomplete Sentences</span>
+              <span class="badge badge--success">Accuracy</span>
             </div>
             <p class="question__stem">
               The regional manager ------- the quarterly figures before the board meeting.
             </p>
-            <div class="option-list" aria-label="Đáp án câu 7">
+            <div class="option-list" aria-label="Answer for question 7">
               <div class="option"><span class="option__marker">A</span>
                 <span class="option__text">review</span></div>
               <div class="option"><span class="option__marker">B</span>
@@ -107,69 +112,64 @@
               <div class="option option--correct">
                 <span class="option__marker">C</span>
                 <span class="option__text">will review</span>
-                <span class="badge badge--success">Bạn chọn · đúng</span>
+                <span class="badge badge--success">Your answer · correct</span>
               </div>
               <div class="option"><span class="option__marker">D</span>
                 <span class="option__text">to review</span></div>
             </div>
             <div class="explain">
-              <div class="explain__title"><span aria-hidden="true">💡</span> Giải thích</div>
+              <div class="explain__title">Explanation</div>
               <p style="margin: 0">
-                Câu thiếu động từ chính, nên loại <em>reviewing</em> và <em>to review</em>.
-                Mốc thời gian "before the board meeting" chỉ việc chưa xảy ra, nên chọn
-                thì tương lai <strong>will review</strong>. Dạng <em>review</em> không chia
-                đúng với chủ ngữ số ít.
+                The sentence lacks a main verb, so eliminate it <em>reviewing</em> and <em>to review</em>. The time marker "before the board meeting" refers to something that has not happened yet, so choose the future tense <strong>will review</strong>. Type <em>review</em> does not agree with the singular subject.
               </p>
             </div>
           </div>
           <div class="row row--between">
-            <button class="btn btn--ghost">Lưu câu này để xem lại</button>
-            <button class="btn btn--primary btn--lg">Câu tiếp →</button>
+            <button class="btn btn--ghost">Save this question for review</button>
+            <button class="btn btn--primary btn--lg">Next question →</button>
           </div>
         </div>
         <!-- ===== trả lời sai ===== -->
         <div class="only-revealed-wrong stack">
           <div class="question">
             <div class="question__meta">
-              <span class="question__number">Câu 7</span>
-              <span class="badge badge--muted">Part 5 — Câu đơn</span>
-              <span class="badge badge--danger">Chưa đúng</span>
+              <span class="question__number">Question 7</span>
+              <span class="badge badge--muted">Part 5 — Incomplete Sentences</span>
+              <span class="badge badge--danger">Incorrect</span>
             </div>
             <p class="question__stem">
               The regional manager ------- the quarterly figures before the board meeting.
             </p>
-            <div class="option-list" aria-label="Đáp án câu 7">
+            <div class="option-list" aria-label="Answer for question 7">
               <div class="option"><span class="option__marker">A</span>
                 <span class="option__text">review</span></div>
               <div class="option option--wrong">
                 <span class="option__marker">B</span>
                 <span class="option__text">reviewing</span>
-                <span class="badge badge--danger">Bạn chọn</span>
+                <span class="badge badge--danger">Your answer</span>
               </div>
               <div class="option option--correct">
                 <span class="option__marker">C</span>
                 <span class="option__text">will review</span>
-                <span class="badge badge--success">Đáp án đúng</span>
+                <span class="badge badge--success">Correct answer</span>
               </div>
               <div class="option"><span class="option__marker">D</span>
                 <span class="option__text">to review</span></div>
             </div>
             <div class="explain">
-              <div class="explain__title"><span aria-hidden="true">💡</span> Giải thích</div>
+              <div class="explain__title">Explanation</div>
               <p style="margin: 0">
-                <em>reviewing</em> là V-ing, không thể đứng một mình làm động từ chính —
-                câu sẽ thiếu vị ngữ. Chỗ trống cần một động từ đã chia, và "before the
-                board meeting" cho biết hành động chưa diễn ra, nên đáp án là
+                <em>reviewing</em> is a V-ing form and cannot stand alone as the main verb — the sentence would have no predicate. The blank needs a conjugated verb, and "before the board meeting" shows the action has not happened yet, so the answer is
                 <strong>will review</strong>.
               </p>
               <div class="explain__transcript">
-                Dạng bẫy hay gặp ở Part 5: đưa V-ing vào vị trí động từ chính.
+                A common trap in Part 5: putting a V-ing form in the main verb position.
               </div>
             </div>
           </div>
           <div class="row row--between">
-            <button class="btn btn--ghost">Lưu câu này để xem lại</button>
-            <button class="btn btn--primary btn--lg">Câu tiếp →</button>
+            <button class="btn btn--ghost">Save this question for review</button>
+            <button class="btn btn--primary btn--lg">Next question →</button>
           </div>
         </div>
 
@@ -177,10 +177,10 @@
         <div class="only-finished">
           <div class="card"><div class="card__body">
             <div class="state-block">
-              <div class="state-block__icon" aria-hidden="true">✓</div>
-              <div class="state-block__title">Xong 20 câu</div>
-              <p class="state-block__desc">Xem lại kết quả phiên luyện này.</p>
-              <a class="btn btn--primary btn--lg" href="practice-summary.html">Xem tổng kết</a>
+              <div class="state-block__icon" aria-hidden="true">DONE</div>
+              <div class="state-block__title">20 questions done</div>
+              <p class="state-block__desc">Review the results of this practice session.</p>
+              <a class="btn btn--primary btn--lg" href="practice-summary.html">View summary</a>
             </div>
           </div></div>
         </div>

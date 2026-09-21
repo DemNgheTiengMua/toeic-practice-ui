@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Hướng dẫn trước khi thi — TOEIC Practice</title>
+  <title>Exam instructions — TOEIC Practice</title>
+  <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../assets/css/tokens.css">
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
@@ -12,7 +13,7 @@
   <div class="app-shell">
     <header class="app-topbar">
       <strong>ETS 2024 — Test 5</strong>
-      <a class="btn btn--ghost btn--sm" href="exam-list.html">Thoát</a>
+      <a class="btn btn--ghost btn--sm" href="exam-list.html">Exit</a>
     </header>
     <main class="app-main">
       <div class="container" style="max-width: 760px">
@@ -21,34 +22,33 @@
         <div class="only-paywall">
           <div class="card"><div class="card__body">
             <div class="state-block">
-              <div class="state-block__icon" aria-hidden="true">🔒</div>
-              <div class="state-block__title">Bạn đã hết lượt thi</div>
+              <div class="state-block__icon" aria-hidden="true">LOCKED</div>
+              <div class="state-block__title">You are out of credits</div>
               <p class="state-block__desc">
-                Mỗi bài thi đầy đủ dùng 1 lượt. Mua thêm để tiếp tục.
+                Each full exam uses 1 credit. Buy more to continue.
               </p>
               <div class="row" style="justify-content: center">
-                <a class="btn btn--primary btn--lg" href="../payment/pricing.html">Xem bảng giá</a>
-                <a class="btn btn--lg" href="practice-select.html">Luyện miễn phí</a>
+                <a class="btn btn--primary btn--lg" href="../payment/pricing.html">View pricing</a>
+                <a class="btn btn--lg" href="practice-select.html">Practice free</a>
               </div>
             </div>
           </div></div>
         </div>
 
         <!-- ===== kyc-required =====
-             Chặn ở đây, TRƯỚC nút "Bắt đầu thi — dùng 1 lượt". Chặn sau
+             Chặn ở đây, TRƯỚC nút "Bắt đầu thi — dùng 1 credit". Chặn sau
              nút đó là đã trừ lượt rồi mới báo thiếu điều kiện. -->
         <div class="only-kyc-required">
           <div class="card"><div class="card__body">
             <div class="state-block">
-              <div class="state-block__icon" aria-hidden="true">🪪</div>
-              <div class="state-block__title">Cần xác thực CCCD trước khi thi</div>
+              <div class="state-block__icon" aria-hidden="true">CCCD</div>
+              <div class="state-block__title">ID verification required before the exam</div>
               <p class="state-block__desc">
-                Thủ tục một lần, miễn phí, không trừ lượt thi.
-                Lượt của bạn vẫn còn nguyên.
+                A one-time procedure, free, with no credit deducted. Your credits stay untouched.
               </p>
               <div class="row" style="justify-content: center">
-                <a class="btn btn--primary btn--lg" href="kyc-submit.html">Xác thực CCCD</a>
-                <a class="btn btn--lg" href="practice-select.html">Luyện miễn phí</a>
+                <a class="btn btn--primary btn--lg" href="kyc-submit.html">ID verification</a>
+                <a class="btn btn--lg" href="practice-select.html">Practice free</a>
               </div>
             </div>
           </div></div>
@@ -58,14 +58,14 @@
         <div class="only-kyc-pending">
           <div class="card"><div class="card__body">
             <div class="state-block">
-              <div class="state-block__icon" aria-hidden="true">⏳</div>
-              <div class="state-block__title">Hồ sơ xác thực đang chờ duyệt</div>
+              <div class="state-block__icon" aria-hidden="true">PENDING</div>
+              <div class="state-block__title">Verification application pending review</div>
               <p class="state-block__desc">
-                Thường trong vòng 1 ngày làm việc. Thi thật sẽ mở ngay khi hồ sơ được duyệt.
+                Usually within 1 business day. The real exam unlocks as soon as your application is approved.
               </p>
               <div class="row" style="justify-content: center">
-                <a class="btn btn--primary btn--lg" href="kyc-pending.html">Xem hồ sơ</a>
-                <a class="btn btn--lg" href="practice-select.html">Luyện miễn phí</a>
+                <a class="btn btn--primary btn--lg" href="kyc-pending.html">View profile</a>
+                <a class="btn btn--lg" href="practice-select.html">Practice free</a>
               </div>
             </div>
           </div></div>
@@ -75,14 +75,14 @@
         <div class="only-rejected">
           <div class="card"><div class="card__body">
             <div class="state-block">
-              <div class="state-block__icon" aria-hidden="true">✕</div>
-              <div class="state-block__title">Hồ sơ xác thực bị từ chối</div>
+              <div class="state-block__icon" aria-hidden="true">ERROR</div>
+              <div class="state-block__title">Verification application rejected</div>
               <p class="state-block__desc">
-                Ảnh mặt trước CCCD bị loá. Sửa và gửi lại để mở phần thi thật.
+                The front-of-ID-card photo has glare. Fix it and resubmit to unlock the real exam.
               </p>
               <div class="row" style="justify-content: center">
-                <a class="btn btn--primary btn--lg" href="kyc-submit.html">Sửa và gửi lại</a>
-                <a class="btn btn--lg" href="kyc-pending.html">Xem lý do</a>
+                <a class="btn btn--primary btn--lg" href="kyc-submit.html">Edit and resubmit</a>
+                <a class="btn btn--lg" href="kyc-pending.html">View reason</a>
               </div>
             </div>
           </div></div>
@@ -90,72 +90,72 @@
 
         <!-- ===== success ===== -->
         <div class="only-success stack">
-          <h1>Trước khi bắt đầu</h1>
+          <h1>Before you begin</h1>
 
           <div class="card">
-            <div class="card__header"><strong>Cấu trúc bài thi</strong></div>
+            <div class="card__header"><strong>Exam structure</strong></div>
             <div class="card__body">
               <table class="table">
                 <thead>
-                  <tr><th>Phần</th><th>Part</th><th>Số câu</th><th>Thời gian</th></tr>
+                  <tr><th>Part</th><th>Part</th><th>Questions</th><th>Time</th></tr>
                 </thead>
                 <tbody>
-                  <tr><td rowspan="4">Listening</td><td>Part 1 — Ảnh</td><td>6</td><td rowspan="4">45 phút</td></tr>
-                  <tr><td>Part 2 — Hỏi đáp</td><td>25</td></tr>
-                  <tr><td>Part 3 — Hội thoại</td><td>39</td></tr>
-                  <tr><td>Part 4 — Bài nói</td><td>30</td></tr>
-                  <tr><td rowspan="3">Reading</td><td>Part 5 — Câu đơn</td><td>30</td><td rowspan="3">75 phút</td></tr>
-                  <tr><td>Part 6 — Điền đoạn</td><td>16</td></tr>
-                  <tr><td>Part 7 — Đọc hiểu</td><td>54</td></tr>
+                  <tr><td rowspan="4">Listening</td><td>Part 1 — Photos</td><td>6</td><td rowspan="4">45 minutes</td></tr>
+                  <tr><td>Part 2 — Question-Response</td><td>25</td></tr>
+                  <tr><td>Part 3 — Conversations</td><td>39</td></tr>
+                  <tr><td>Part 4 — Talks</td><td>30</td></tr>
+                  <tr><td rowspan="3">Reading</td><td>Part 5 — Incomplete Sentences</td><td>30</td><td rowspan="3">75 minutes</td></tr>
+                  <tr><td>Part 6 — Text Completion</td><td>16</td></tr>
+                  <tr><td>Part 7 — Reading Comprehension</td><td>54</td></tr>
                 </tbody>
                 <tfoot>
-                  <tr><th>Tổng</th><th></th><th>200</th><th>120 phút</th></tr>
+                  <tr><th>Total</th><th></th><th>200</th><th>120 minutes</th></tr>
                 </tfoot>
               </table>
             </div>
           </div>
 
           <div class="alert alert--warning">
-            <strong>Phần Listening chỉ phát audio một lần.</strong>
-            Không tua lại, không tạm dừng, và không quay lại Listening sau khi đã sang Reading.
+            <strong>The Listening section plays its audio only once.</strong>
+            No rewinding, no pausing, and no returning to Listening once you have moved on to Reading.
           </div>
 
           <div class="card">
-            <div class="card__header"><strong>Lưu ý</strong></div>
+            <div class="card__header"><strong>Note</strong></div>
             <div class="card__body">
               <ul class="stack" style="margin: 0; padding-left: var(--space-5)">
-                <li>Đáp án được lưu tự động sau mỗi lần chọn. Đóng tab vẫn tiếp tục được.</li>
-                <li>Hết giờ, bài tự nộp và chấm trên những câu đã làm.</li>
-                <li>Bài thi này dùng <strong>1 lượt</strong>. Bạn còn 3 lượt.</li>
-                <li>Chuẩn bị tai nghe và kiểm tra âm lượng trước khi bắt đầu.</li>
+                <li>Answers are saved automatically after each selection. You can close the tab and pick up later.</li>
+                <li>Time is up. The exam was submitted automatically and graded on the questions you answered.</li>
+                <li>This exam uses <strong>1 credit</strong>. You have 3 credits left.</li>
+                <li>Put on your headphones and check the volume before you begin.</li>
               </ul>
             </div>
           </div>
 
           <div class="card">
             <div class="card__body row" style="gap: var(--space-4)">
-              <button class="btn" type="button">Phát audio thử</button>
-              <span class="text-sm text-muted">Nghe được đoạn mẫu nghĩa là thiết bị đã sẵn sàng.</span>
+              <button class="btn" type="button">Play test audio</button>
+              <span class="text-sm text-muted">If you can hear the sample, your device is ready.</span>
             </div>
           </div>
 
           <label class="row">
             <input type="checkbox" id="confirm-ready">
-            <span class="text-sm">Tôi đã đọc hướng dẫn và sẵn sàng bắt đầu</span>
+            <span class="text-sm">I have read the instructions and am ready to begin</span>
           </label>
 
           <div class="row">
-            <a class="btn btn--primary btn--lg" href="exam-listening.html">Bắt đầu thi — dùng 1 lượt</a>
-            <a class="btn btn--lg" href="exam-list.html">Để sau</a>
+            <a class="btn btn--primary btn--lg" href="exam-listening.html">Start test — uses 1 credit</a>
+            <a class="btn btn--lg" href="exam-list.html">Later</a>
           </div>
         </div>
 
         <div class="only-submitting">
           <div class="card"><div class="card__body">
             <div class="state-block">
-              <div class="state-block__icon" aria-hidden="true">⏳</div>
-              <div class="state-block__title">Đang khởi tạo bài thi…</div>
-              <p class="state-block__desc">Đang trừ 1 lượt và tải đề. Đừng tắt trang.</p>
+              <div class="state-block__icon" aria-hidden="true">RUNNING</div>
+              <div class="state-block__title">Initialising the exam…</div>
+              <p class="state-block__desc">Deducting 1 credit and loading the test. Do not close the page.</p>
             </div>
           </div></div>
         </div>

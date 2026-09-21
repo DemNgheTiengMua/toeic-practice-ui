@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Hồ sơ cá nhân — TOEIC Practice</title>
+  <title>Profile — TOEIC Practice</title>
+  <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../assets/css/tokens.css">
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
@@ -13,25 +14,25 @@
     <header class="app-topbar">
       <strong>TOEIC Practice</strong>
       <div class="row">
-        <span class="badge badge--info">Còn 3 lượt thi</span>
-        <a class="btn btn--sm" href="../payment/pricing.html">Mua thêm lượt</a>
+        <span class="badge badge--info">3 credits left</span>
+        <a class="btn btn--sm" href="../payment/pricing.html">Buy credits</a>
         <a class="btn btn--ghost btn--sm" href="profile.html">Nguyễn Văn A</a>
       </div>
     </header>
     <div class="app-body">
       <aside class="app-sidebar">
-        <nav class="nav-list" aria-label="Điều hướng chính">
-          <a class="nav-list__item" href="dashboard.html">Trang chủ</a>
-          <div class="nav-list__group">Thi thử</div>
-          <a class="nav-list__item" href="exam-list.html">Danh sách đề</a>
-          <a class="nav-list__item" href="exam-history.html">Lịch sử thi</a>
-          <div class="nav-list__group">Luyện tập</div>
-          <a class="nav-list__item" href="practice-select.html">Luyện theo part</a>
-          <a class="nav-list__item" href="weakness-analysis.html">Phân tích điểm yếu</a>
-          <div class="nav-list__group">Tài khoản</div>
-          <a class="nav-list__item" href="../payment/wallet.html">Ví lượt thi</a>
-          <a class="nav-list__item" href="kyc-pending.html">Xác thực CCCD</a>
-          <a class="nav-list__item is-active" href="profile.html">Hồ sơ</a>
+        <nav class="nav-list" aria-label="Main navigation">
+          <a class="nav-list__item" href="dashboard.html">Home</a>
+          <div class="nav-list__group">Mock exams</div>
+          <a class="nav-list__item" href="exam-list.html">Test list</a>
+          <a class="nav-list__item" href="exam-history.html">Exam history</a>
+          <div class="nav-list__group">Practice</div>
+          <a class="nav-list__item" href="practice-select.html">Practice by part</a>
+          <a class="nav-list__item" href="weakness-analysis.html">Weakness analysis</a>
+          <div class="nav-list__group">Account</div>
+          <a class="nav-list__item" href="../payment/wallet.html">Credit wallet</a>
+          <a class="nav-list__item" href="kyc-pending.html">ID verification</a>
+          <a class="nav-list__item is-active" href="profile.html">Profile</a>
         </nav>
       </aside>
       <main class="app-main">
@@ -48,33 +49,33 @@
           <!-- ===== error ===== -->
           <div class="only-error">
             <div class="alert alert--danger">
-              Không lưu được thay đổi. Vui lòng thử lại.
+              Could not save your changes. Please try again.
             </div>
           </div>
 
           <div class="multi-state stack"
                data-show="success submitting kyc-required kyc-pending rejected">
-            <h1>Hồ sơ của tôi</h1>
+            <h1>My profile</h1>
 
             <div class="grid-2">
               <div class="card">
-                <div class="card__header">Thông tin cơ bản</div>
+                <div class="card__header">Basic information</div>
                 <div class="card__body stack">
                   <div class="field">
-                    <label class="field__label" for="p-name">Họ và tên</label>
+                    <label class="field__label" for="p-name">Full name</label>
                     <input class="field__input" id="p-name" type="text" value="Nguyễn Văn A">
                   </div>
                   <div class="field">
                     <label class="field__label" for="p-email">Email</label>
                     <input class="field__input" id="p-email" type="email" value="nguyenvana@example.com" disabled>
-                    <div class="field__hint">Email dùng để đăng nhập, không thể thay đổi.</div>
+                    <div class="field__hint">The email used to sign in cannot be changed.</div>
                   </div>
                   <div class="field">
-                    <label class="field__label" for="p-phone">Số điện thoại</label>
+                    <label class="field__label" for="p-phone">Phone number</label>
                     <input class="field__input" id="p-phone" type="tel" value="0901 234 567">
                   </div>
                   <div class="field">
-                    <label class="field__label" for="p-target">Điểm mục tiêu</label>
+                    <label class="field__label" for="p-target">Target score</label>
                     <select class="field__input" id="p-target">
                       <option>600</option>
                       <option selected>800</option>
@@ -83,8 +84,8 @@
                   </div>
                 </div>
                 <div class="card__footer">
-                  <button class="btn btn--primary only-success">Lưu thay đổi</button>
-                  <button class="btn btn--primary only-submitting" disabled>Đang lưu…</button>
+                  <button class="btn btn--primary only-success">Save changes</button>
+                  <button class="btn btn--primary only-submitting" disabled>Saving…</button>
                 </div>
               </div>
               <div class="stack">
@@ -92,111 +93,108 @@
                      này độc lập với state tải trang nên dùng multi-state
                      thay vì .only-* trên cả trang. -->
                 <div class="card">
-                  <div class="card__header">Xác thực CCCD</div>
+                  <div class="card__header">ID verification</div>
 
                   <!-- chưa gửi -->
                   <div class="card__body stack multi-state" data-show="kyc-required">
                     <div class="row row--between">
-                      <span class="text-muted">Trạng thái</span>
-                      <span class="badge badge--warning">Chưa xác thực</span>
+                      <span class="text-muted">Status</span>
+                      <span class="badge badge--warning">Not verified</span>
                     </div>
                     <p class="text-sm text-muted" style="margin: 0">
-                      Cần xác thực CCCD trước khi đăng ký thi thật.
-                      Miễn phí và không trừ lượt thi.
+                      ID verification is required before you register for the real exam. It is free and does not use a credit.
                     </p>
-                    <a class="btn btn--primary" href="kyc-submit.html">Xác thực ngay</a>
+                    <a class="btn btn--primary" href="kyc-submit.html">Verify now</a>
                   </div>
 
                   <!-- đang chờ duyệt -->
                   <div class="card__body stack multi-state" data-show="kyc-pending">
                     <div class="row row--between">
-                      <span class="text-muted">Trạng thái</span>
-                      <span class="badge badge--warning">Chờ duyệt</span>
+                      <span class="text-muted">Status</span>
+                      <span class="badge badge--warning">Pending</span>
                     </div>
                     <div class="row row--between">
-                      <span class="text-muted">Số CCCD</span>
+                      <span class="text-muted">ID number</span>
                       <span>•••• •••• 1234</span>
                     </div>
                     <p class="text-sm text-muted" style="margin: 0">
-                      Gửi lúc 20/09/2026 11:24 · thường duyệt trong 1 ngày làm việc.
+                      Submitted on 20 Sep 2026 11:24 · usually reviewed within 1 business day.
                     </p>
-                    <a class="btn" href="kyc-pending.html">Xem hồ sơ đã gửi</a>
+                    <a class="btn" href="kyc-pending.html">View submitted application</a>
                   </div>
 
                   <!-- bị từ chối -->
                   <div class="card__body stack multi-state" data-show="rejected">
                     <div class="row row--between">
-                      <span class="text-muted">Trạng thái</span>
-                      <span class="badge badge--danger">Bị từ chối</span>
+                      <span class="text-muted">Status</span>
+                      <span class="badge badge--danger">Rejected</span>
                     </div>
                     <div class="row row--between">
-                      <span class="text-muted">Số CCCD</span>
+                      <span class="text-muted">ID number</span>
                       <span>•••• •••• 1234</span>
                     </div>
                     <div class="alert alert--danger">
-                      <strong>Lý do:</strong> Ảnh mặt trước CCCD bị loá, không đọc được
-                      số CCCD và ngày hết hạn.
+                      <strong>Reason:</strong> The front-of-ID-card photo has glare, so the ID number and expiry date cannot be read.
                     </div>
-                    <a class="btn btn--primary" href="kyc-submit.html">Sửa và gửi lại</a>
+                    <a class="btn btn--primary" href="kyc-submit.html">Edit and resubmit</a>
                   </div>
 
                   <!-- đã xác thực -->
                   <div class="card__body stack multi-state" data-show="success">
                     <div class="row row--between">
-                      <span class="text-muted">Trạng thái</span>
-                      <span class="badge badge--success">Đã xác thực</span>
+                      <span class="text-muted">Status</span>
+                      <span class="badge badge--success">Verified</span>
                     </div>
                     <div class="row row--between">
-                      <span class="text-muted">Số CCCD</span>
+                      <span class="text-muted">ID number</span>
                       <span>•••• •••• 1234</span>
                     </div>
                     <div class="row row--between">
-                      <span class="text-muted">Duyệt lúc</span>
-                      <span>20/09/2026 14:05</span>
+                      <span class="text-muted">Reviewed at</span>
+                      <span>20 Sep 2026 14:05</span>
                     </div>
                     <p class="text-sm text-muted" style="margin: 0">
-                      Hồ sơ đã duyệt không sửa được. Nếu thông tin có sai sót,
-                      liên hệ hỗ trợ để được cập nhật.
+                      An approved application cannot be edited. If any information is incorrect, contact support to have it updated.
                     </p>
                   </div>
                 </div>
 
                 <div class="card">
-                  <div class="card__header">Ví lượt thi</div>
+                  <div class="card__header">Credit wallet</div>
                   <div class="card__body stack">
                     <div class="stat">
-                      <div class="stat__label">Lượt thi còn lại</div>
+                      <div class="stat__label">Credits remaining</div>
                       <div class="stat__value">3</div>
                     </div>
                     <p style="margin: 0; color: var(--color-text-muted); font-size: var(--text-sm)">
-                      Mỗi lần vào thi thử sẽ trừ 1 lượt. Lượt thi không hết hạn.
+                      Each mock exam attempt deducts 1 credit. Credits do not expire.
                     </p>
                   </div>
                   <div class="card__footer">
-                    <a class="btn btn--primary" href="../payment/pricing.html">Mua thêm lượt</a>
-                    <a class="btn btn--ghost" href="../payment/wallet.html">Xem lịch sử ví</a>
+                    <a class="btn btn--primary" href="../payment/pricing.html">Buy credits</a>
+                    <a class="btn btn--ghost" href="../payment/wallet.html">View wallet history</a>
                   </div>
                 </div>
 
                 <div class="card">
-                  <div class="card__header">Đổi mật khẩu</div>
+                  <div class="card__header">Change password</div>
                   <div class="card__body stack">
                     <div class="field">
-                      <label class="field__label" for="p-old">Mật khẩu hiện tại</label>
+                      <label class="field__label" for="p-old">Current password</label>
                       <input class="field__input" id="p-old" type="password" placeholder="••••••••">
                     </div>
                     <div class="field">
-                      <label class="field__label" for="p-new">Mật khẩu mới</label>
+                      <label class="field__label" for="p-new">New password</label>
                       <input class="field__input" id="p-new" type="password" placeholder="••••••••">
-                      <div class="field__hint">Tối thiểu 8 ký tự, có chữ và số.</div>
+                      <div class="field__hint">At least 8 characters, with letters and numbers.</div>
                     </div>
                     <div class="field">
-                      <label class="field__label" for="p-new2">Nhập lại mật khẩu mới</label>
+                      <label class="field__label" for="p-new2">Re-enter new password</label>
                       <input class="field__input" id="p-new2" type="password" placeholder="••••••••">
                     </div>
                   </div>
                   <div class="card__footer">
-                    <button class="btn">Đổi mật khẩu</button>
+                    <button class="btn">Change password</button>
                   </div>
                 </div>
               </div>

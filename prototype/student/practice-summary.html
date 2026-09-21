@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Tổng kết phiên luyện — TOEIC Practice</title>
+  <title>Practice session summary — TOEIC Practice</title>
+  <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../assets/css/tokens.css">
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
@@ -13,25 +14,25 @@
     <header class="app-topbar">
       <strong>TOEIC Practice</strong>
       <div class="row">
-        <span class="badge badge--info">Còn 3 lượt thi</span>
-        <a class="btn btn--sm" href="../payment/pricing.html">Mua thêm lượt</a>
+        <span class="badge badge--info">3 credits left</span>
+        <a class="btn btn--sm" href="../payment/pricing.html">Buy credits</a>
         <a class="btn btn--ghost btn--sm" href="profile.html">Nguyễn Văn A</a>
       </div>
     </header>
     <div class="app-body">
       <aside class="app-sidebar">
-        <nav class="nav-list" aria-label="Điều hướng chính">
-          <a class="nav-list__item" href="dashboard.html">Trang chủ</a>
-          <div class="nav-list__group">Thi thử</div>
-          <a class="nav-list__item" href="exam-list.html">Danh sách đề</a>
-          <a class="nav-list__item" href="exam-history.html">Lịch sử thi</a>
-          <div class="nav-list__group">Luyện tập</div>
-          <a class="nav-list__item is-active" href="practice-select.html">Luyện theo part</a>
-          <a class="nav-list__item" href="weakness-analysis.html">Phân tích điểm yếu</a>
-          <div class="nav-list__group">Tài khoản</div>
-          <a class="nav-list__item" href="../payment/wallet.html">Ví lượt thi</a>
-          <a class="nav-list__item" href="kyc-pending.html">Xác thực CCCD</a>
-          <a class="nav-list__item" href="profile.html">Hồ sơ</a>
+        <nav class="nav-list" aria-label="Main navigation">
+          <a class="nav-list__item" href="dashboard.html">Home</a>
+          <div class="nav-list__group">Mock exams</div>
+          <a class="nav-list__item" href="exam-list.html">Test list</a>
+          <a class="nav-list__item" href="exam-history.html">Exam history</a>
+          <div class="nav-list__group">Practice</div>
+          <a class="nav-list__item is-active" href="practice-select.html">Practice by part</a>
+          <a class="nav-list__item" href="weakness-analysis.html">Weakness analysis</a>
+          <div class="nav-list__group">Account</div>
+          <a class="nav-list__item" href="../payment/wallet.html">Credit wallet</a>
+          <a class="nav-list__item" href="kyc-pending.html">ID verification</a>
+          <a class="nav-list__item" href="profile.html">Profile</a>
         </nav>
       </aside>
       <main class="app-main">
@@ -48,13 +49,13 @@
             <div class="card"><div class="card__body">
               <div class="state-block">
                 <div class="state-block__icon" aria-hidden="true">!</div>
-                <div class="state-block__title">Không tải được tổng kết</div>
+                <div class="state-block__title">Could not load the summary</div>
                 <p class="state-block__desc">
-                  Kết quả phiên luyện của bạn đã được lưu. Thử tải lại để xem.
+                  Your practice session results have been saved. Reload to see them.
                 </p>
                 <div class="row" style="justify-content: center">
-                  <button class="btn btn--primary">Thử lại</button>
-                  <a class="btn" href="practice-select.html">Về chọn part</a>
+                  <button class="btn btn--primary">Try again</button>
+                  <a class="btn" href="practice-select.html">Back to Part selection</a>
                 </div>
               </div>
             </div></div>
@@ -64,138 +65,130 @@
           <div class="only-success stack">
             <div class="row row--between">
               <div>
-                <h1 style="margin: 0 0 var(--space-1)">Tổng kết phiên luyện</h1>
+                <h1 style="margin: 0 0 var(--space-1)">Practice session summary</h1>
                 <p class="text-sm text-muted" style="margin: 0">
-                  Part 5 — Câu đơn · 20 câu · 14 phút 32 giây · 20/09/2026
+                  Part 5 — Incomplete Sentences · 20 questions · 14 minutes 32 seconds · 20 Sep 2026
                 </p>
               </div>
               <div class="row">
-                <a class="btn" href="weakness-analysis.html">Phân tích điểm yếu</a>
-                <a class="btn" href="practice-select.html">Chọn part khác</a>
-                <a class="btn btn--primary" href="practice-take.html">Luyện tiếp 20 câu</a>
+                <a class="btn" href="weakness-analysis.html">Weakness analysis</a>
+                <a class="btn" href="practice-select.html">Choose another Part</a>
+                <a class="btn btn--primary" href="practice-take.html">Practice 20 more questions</a>
               </div>
             </div>
 
             <div class="grid-3">
               <div class="stat">
-                <div class="stat__label">Đúng</div>
+                <div class="stat__label">Correct</div>
                 <div class="stat__value" style="color: var(--color-success)">15</div>
-                <div class="stat__hint">trên 20 câu · 75%</div>
+                <div class="stat__hint">out of 20 questions · 75%</div>
               </div>
               <div class="stat">
                 <div class="stat__label">Sai</div>
                 <div class="stat__value" style="color: var(--color-danger)">4</div>
-                <div class="stat__hint">đã lưu vào kho câu sai</div>
+                <div class="stat__hint">saved to your incorrect-answer bank</div>
               </div>
               <div class="stat">
-                <div class="stat__label">Bỏ qua</div>
+                <div class="stat__label">Skip</div>
                 <div class="stat__value">1</div>
-                <div class="stat__hint">không tính vào tỷ lệ</div>
+                <div class="stat__hint">not counted in the rate</div>
               </div>
             </div>
 
             <div class="alert alert--success">
-              Độ chính xác Part 5 của bạn tăng từ <strong>71%</strong> lên
-              <strong>72%</strong> sau phiên này.
+              Your Part 5 accuracy increased from <strong>71%</strong> move up to
+              <strong>72%</strong> after this session.
             </div>
             <div class="card">
               <div class="card__header">
                 <div class="row row--between">
-                  <strong>Các câu cần xem lại</strong>
-                  <span class="text-sm text-muted">4 câu sai · 1 câu bỏ qua</span>
+                  <strong>Questions to review</strong>
+                  <span class="text-sm text-muted">4 incorrect answers · 1 skipped</span>
                 </div>
               </div>
               <div class="card__body">
                 <table class="table table--striped">
                   <thead>
-                    <tr><th>Câu</th><th>Dạng ngữ pháp</th><th>Bạn chọn</th><th>Đáp án</th><th></th></tr>
+                    <tr><th>Question</th><th>Grammar type</th><th>Your answer</th><th>Answer</th><th></th></tr>
                   </thead>
                   <tbody>
                     <tr>
-                      <td>7</td><td>Thì của động từ</td>
+                      <td>7</td><td>Verb tense</td>
                       <td><span class="badge badge--danger">B — reviewing</span></td>
                       <td><span class="badge badge--success">C — will review</span></td>
                       <td>
                         <details>
-                          <summary>Xem giải thích</summary>
+                          <summary>View explanation</summary>
                           <div class="explain">
-                            <div class="explain__title">Vì sao C đúng</div>
+                            <div class="explain__title">Why C is correct</div>
                             <p style="margin: 0">
-                              "before the board meeting" chỉ mốc thời gian trong tương lai
-                              nên cần thì tương lai đơn <strong>will review</strong>.
-                              "reviewing" là V-ing, không đứng một mình làm động từ chính.
+                              "before the board meeting" marks a future point in time, so the future simple is needed <strong>will review</strong>. "reviewing" is a V-ing form and cannot stand alone as the main verb.
                             </p>
                           </div>
                         </details>
                       </td>
                     </tr>
                     <tr>
-                      <td>11</td><td>Giới từ</td>
+                      <td>11</td><td>Preposition</td>
                       <td><span class="badge badge--danger">A — in</span></td>
                       <td><span class="badge badge--success">D — within</span></td>
                       <td>
                         <details>
-                          <summary>Xem giải thích</summary>
+                          <summary>View explanation</summary>
                           <div class="explain">
-                            <div class="explain__title">Vì sao D đúng</div>
+                            <div class="explain__title">Why D is correct</div>
                             <p style="margin: 0">
-                              <strong>within</strong> + khoảng thời gian nghĩa là "trong vòng,
-                              không muộn hơn". "in" chỉ thời điểm kết thúc, không diễn tả
-                              được giới hạn hạn chót của câu này.
+                              <strong>within</strong> + a time span means "within, no later than". "in" marks only the end point and cannot express the deadline in this sentence.
                             </p>
                           </div>
                         </details>
                       </td>
                     </tr>
                     <tr>
-                      <td>14</td><td>Từ loại</td>
+                      <td>14</td><td>Part of speech</td>
                       <td><span class="badge badge--danger">C — competitively</span></td>
                       <td><span class="badge badge--success">B — competitive</span></td>
                       <td>
                         <details>
-                          <summary>Xem giải thích</summary>
+                          <summary>View explanation</summary>
                           <div class="explain">
-                            <div class="explain__title">Vì sao B đúng</div>
+                            <div class="explain__title">Why B is correct</div>
                             <p style="margin: 0">
-                              Vị trí này bổ nghĩa cho danh từ nên cần tính từ
-                              <strong>competitive</strong>. "competitively" là trạng từ,
-                              chỉ bổ nghĩa cho động từ hoặc tính từ khác.
+                              This position modifies a noun, so an adjective is needed
+                              <strong>competitive</strong>. "competitively" is an adverb and only modifies a verb or another adjective.
                             </p>
                           </div>
                         </details>
                       </td>
                     </tr>
                     <tr>
-                      <td>18</td><td>Đại từ quan hệ</td>
+                      <td>18</td><td>Relative pronoun</td>
                       <td><span class="badge badge--danger">A — which</span></td>
                       <td><span class="badge badge--success">C — whose</span></td>
                       <td>
                         <details>
-                          <summary>Xem giải thích</summary>
+                          <summary>View explanation</summary>
                           <div class="explain">
-                            <div class="explain__title">Vì sao C đúng</div>
+                            <div class="explain__title">Why C is correct</div>
                             <p style="margin: 0">
-                              Sau chỗ trống là một danh từ không có mạo từ, tức là quan hệ
-                              sở hữu nên dùng <strong>whose</strong>. "which" làm chủ ngữ
-                              hoặc tân ngữ của mệnh đề, không đứng trước danh từ trần.
+                              The blank is followed by a noun with no article, indicating possession, so use <strong>whose</strong>. "which" acts as the subject or object of a clause and does not stand before a bare noun.
                             </p>
                           </div>
                         </details>
                       </td>
                     </tr>
                     <tr>
-                      <td>20</td><td>Liên từ</td>
-                      <td><span class="badge badge--muted">Bỏ qua</span></td>
+                      <td>20</td><td>Conjunction</td>
+                      <td><span class="badge badge--muted">Skip</span></td>
                       <td><span class="badge badge--success">B — although</span></td>
                       <td>
                         <details>
-                          <summary>Xem giải thích</summary>
+                          <summary>View explanation</summary>
                           <div class="explain">
-                            <div class="explain__title">Vì sao B đúng</div>
+                            <div class="explain__title">Why B is correct</div>
                             <p style="margin: 0">
-                              Hai mệnh đề mang nghĩa trái ngược nên cần liên từ nhượng bộ
-                              <strong>although</strong>. Câu này bạn bỏ qua — câu bỏ trống
-                              tính là sai.
+                              The two clauses contrast, so a concessive conjunction is needed
+                              <strong>although</strong>. You skipped this question — questions left blank count as incorrect.
                             </p>
                           </div>
                         </details>
@@ -206,29 +199,29 @@
               </div>
             </div>
             <div class="card">
-              <div class="card__header"><strong>Lỗi theo dạng ngữ pháp</strong></div>
+              <div class="card__header"><strong>Errors by grammar type</strong></div>
               <div class="card__body stack">
                 <div>
                   <div class="row row--between text-sm">
-                    <span>Thì của động từ</span><span class="text-muted">1 sai / 5 câu</span>
+                    <span>Verb tense</span><span class="text-muted">1 incorrect / 5 questions</span>
                   </div>
                   <div class="progress"><div class="progress__bar" style="width: 80%"></div></div>
                 </div>
                 <div>
                   <div class="row row--between text-sm">
-                    <span>Từ loại</span><span class="text-muted">1 sai / 6 câu</span>
+                    <span>Part of speech</span><span class="text-muted">1 incorrect / 6 questions</span>
                   </div>
                   <div class="progress"><div class="progress__bar" style="width: 83%"></div></div>
                 </div>
                 <div>
                   <div class="row row--between text-sm">
-                    <span>Giới từ</span><span class="text-muted">1 sai / 3 câu</span>
+                    <span>Preposition</span><span class="text-muted">1 incorrect / 3 questions</span>
                   </div>
                   <div class="progress"><div class="progress__bar" style="width: 67%"></div></div>
                 </div>
                 <div>
                   <div class="row row--between text-sm">
-                    <span>Đại từ quan hệ</span><span class="text-muted">1 sai / 2 câu</span>
+                    <span>Relative pronoun</span><span class="text-muted">1 incorrect / 2 questions</span>
                   </div>
                   <div class="progress"><div class="progress__bar" style="width: 50%"></div></div>
                 </div>

@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Xem lại bài làm — TOEIC Practice</title>
+  <title>Review your exam — TOEIC Practice</title>
+  <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../assets/css/tokens.css">
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
@@ -13,25 +14,25 @@
     <header class="app-topbar">
       <strong>TOEIC Practice</strong>
       <div class="row">
-        <span class="badge badge--info">Còn 3 lượt thi</span>
-        <a class="btn btn--sm" href="../payment/pricing.html">Mua thêm lượt</a>
+        <span class="badge badge--info">3 credits left</span>
+        <a class="btn btn--sm" href="../payment/pricing.html">Buy credits</a>
         <a class="btn btn--ghost btn--sm" href="profile.html">Nguyễn Văn A</a>
       </div>
     </header>
     <div class="app-body">
       <aside class="app-sidebar">
-        <nav class="nav-list" aria-label="Điều hướng chính">
-          <a class="nav-list__item" href="dashboard.html">Trang chủ</a>
-          <div class="nav-list__group">Thi thử</div>
-          <a class="nav-list__item" href="exam-list.html">Danh sách đề</a>
-          <a class="nav-list__item is-active" href="exam-history.html">Lịch sử thi</a>
-          <div class="nav-list__group">Luyện tập</div>
-          <a class="nav-list__item" href="practice-select.html">Luyện theo part</a>
-          <a class="nav-list__item" href="weakness-analysis.html">Phân tích điểm yếu</a>
-          <div class="nav-list__group">Tài khoản</div>
-          <a class="nav-list__item" href="../payment/wallet.html">Ví lượt thi</a>
-          <a class="nav-list__item" href="kyc-pending.html">Xác thực CCCD</a>
-          <a class="nav-list__item" href="profile.html">Hồ sơ</a>
+        <nav class="nav-list" aria-label="Main navigation">
+          <a class="nav-list__item" href="dashboard.html">Home</a>
+          <div class="nav-list__group">Mock exams</div>
+          <a class="nav-list__item" href="exam-list.html">Test list</a>
+          <a class="nav-list__item is-active" href="exam-history.html">Exam history</a>
+          <div class="nav-list__group">Practice</div>
+          <a class="nav-list__item" href="practice-select.html">Practice by part</a>
+          <a class="nav-list__item" href="weakness-analysis.html">Weakness analysis</a>
+          <div class="nav-list__group">Account</div>
+          <a class="nav-list__item" href="../payment/wallet.html">Credit wallet</a>
+          <a class="nav-list__item" href="kyc-pending.html">ID verification</a>
+          <a class="nav-list__item" href="profile.html">Profile</a>
         </nav>
       </aside>
       <main class="app-main">
@@ -48,9 +49,9 @@
             <div class="card"><div class="card__body">
               <div class="state-block">
                 <div class="state-block__icon" aria-hidden="true">!</div>
-                <div class="state-block__title">Không tải được bài làm</div>
-                <p class="state-block__desc">Kiểm tra kết nối rồi thử lại.</p>
-                <button class="btn btn--primary">Thử lại</button>
+                <div class="state-block__title">Could not load your exam</div>
+                <p class="state-block__desc">Check your connection and try again.</p>
+                <button class="btn btn--primary">Try again</button>
               </div>
             </div></div>
           </div>
@@ -62,15 +63,14 @@
           <div class="only-empty">
             <div class="card"><div class="card__body">
               <div class="state-block">
-                <div class="state-block__icon" aria-hidden="true">□</div>
-                <div class="state-block__title">Bài này bạn chưa trả lời câu nào</div>
+                <div class="state-block__icon" aria-hidden="true">EMPTY</div>
+                <div class="state-block__title">You have not answered any question in this exam</div>
                 <p class="state-block__desc">
-                  Cả 200 câu để trống nên không có gì để đối chiếu.
-                  Bạn vẫn xem được đề và đáp án đúng, hoặc luyện lại từng part.
+                  All 200 questions were left blank, so there is nothing to compare. You can still view the test and the correct answers, or practice each Part again.
                 </p>
                 <div class="row" style="justify-content: center">
-                  <a class="btn btn--primary" href="practice-select.html">Luyện theo part</a>
-                  <a class="btn" href="exam-history.html">Về lịch sử thi</a>
+                  <a class="btn btn--primary" href="practice-select.html">Practice by part</a>
+                  <a class="btn" href="exam-history.html">Back to exam history</a>
                 </div>
               </div>
             </div></div>
@@ -80,12 +80,12 @@
           <div class="only-success stack">
             <div class="row row--between">
               <div>
-                <h1 style="margin: 0 0 var(--space-1)">Xem lại — ETS 2024 Test 5</h1>
+                <h1 style="margin: 0 0 var(--space-1)">Review — ETS 2024 Test 5</h1>
                 <p class="text-sm text-muted" style="margin: 0">
-                  760 điểm · L 400 · R 360 · làm ngày 20/09/2026
+                  760 points · L 400 · R 360 · taken on 20 Sep 2026
                 </p>
               </div>
-              <a class="btn" href="exam-result.html">Về trang kết quả</a>
+              <a class="btn" href="exam-result.html">Back to results</a>
             </div>
 
             <div class="card">
@@ -93,28 +93,28 @@
                 <div class="field" style="flex: 0 0 200px">
                   <label class="field__label" for="review-part">Part</label>
                   <select class="field__input" id="review-part">
-                    <option>Tất cả 200 câu</option>
-                    <option>Part 1 — Ảnh</option>
-                    <option>Part 2 — Hỏi đáp</option>
-                    <option>Part 3 — Hội thoại</option>
-                    <option>Part 4 — Bài nói</option>
-                    <option>Part 5 — Câu đơn</option>
-                    <option selected>Part 7 — Đọc hiểu</option>
+                    <option>All 200 questions</option>
+                    <option>Part 1 — Photos</option>
+                    <option>Part 2 — Question-Response</option>
+                    <option>Part 3 — Conversations</option>
+                    <option>Part 4 — Talks</option>
+                    <option>Part 5 — Incomplete Sentences</option>
+                    <option selected>Part 7 — Reading Comprehension</option>
                   </select>
                 </div>
                 <div class="field" style="flex: 0 0 200px">
-                  <label class="field__label" for="review-filter">Lọc</label>
+                  <label class="field__label" for="review-filter">Filter</label>
                   <select class="field__input" id="review-filter">
-                    <option>Tất cả</option>
-                    <option selected>Chỉ câu sai</option>
-                    <option>Chỉ câu bỏ trống</option>
-                    <option>Chỉ câu đã đánh dấu</option>
+                    <option>All</option>
+                    <option selected>Only incorrect questions</option>
+                    <option>Only questions left blank</option>
+                    <option>Only flagged questions</option>
                   </select>
                 </div>
                 <div class="row" style="align-self: flex-end">
-                  <span class="badge badge--success">156 đúng</span>
+                  <span class="badge badge--success">156 correct</span>
                   <span class="badge badge--danger">25 sai</span>
-                  <span class="badge badge--muted">19 bỏ trống</span>
+                  <span class="badge badge--muted">19 left blank</span>
                 </div>
               </div>
             </div>
@@ -122,12 +122,12 @@
             <!-- câu sai -->
             <div class="question">
               <div class="question__meta">
-                <span class="question__number">Câu 154</span>
+                <span class="question__number">Question 154</span>
                 <span class="badge badge--muted">Part 7</span>
-                <span class="badge badge--danger">Bạn chọn sai</span>
+                <span class="badge badge--danger">Your answer is incorrect</span>
               </div>
               <p class="question__stem">By when should employees label their boxes?</p>
-              <div class="option-list" aria-label="Đáp án câu 154">
+              <div class="option-list" aria-label="Answer for question 154">
                 <div class="option">
                   <span class="option__marker">A</span>
                   <span class="option__text">November 10</span>
@@ -135,12 +135,12 @@
                 <div class="option option--wrong">
                   <span class="option__marker">B</span>
                   <span class="option__text">November 11</span>
-                  <span class="badge badge--danger">Bạn chọn</span>
+                  <span class="badge badge--danger">Your answer</span>
                 </div>
                 <div class="option option--correct">
                   <span class="option__marker">C</span>
                   <span class="option__text">November 14</span>
-                  <span class="badge badge--success">Đáp án đúng</span>
+                  <span class="badge badge--success">Correct answer</span>
                 </div>
                 <div class="option">
                   <span class="option__marker">D</span>
@@ -149,13 +149,12 @@
               </div>
               <div class="explain">
                 <div class="explain__title">
-                  <span aria-hidden="true">💡</span> Giải thích
+                  Explanation
                 </div>
                 <p style="margin: 0">
-                  Email viết "label every box with your department code
-                  <strong>before leaving on November 14</strong>". Ngày 11/11 là ngày
-                  <em>giao vật liệu đóng gói</em>, không phải hạn dán nhãn — đây là bẫy
-                  thường gặp ở Part 7: chọn đúng ngày nhưng sai sự việc.
+                  The email says "label every box with your department code
+                  <strong>before leaving on November 14</strong>". 11 Nov is the day
+                  <em>hand over packaging materials</em>, not the labelling deadline — this is a common Part 7 trap: choosing the right date but the wrong event.
                 </p>
               </div>
             </div>
@@ -163,14 +162,14 @@
             <!-- câu bỏ trống -->
             <div class="question">
               <div class="question__meta">
-                <span class="question__number">Câu 155</span>
+                <span class="question__number">Question 155</span>
                 <span class="badge badge--muted">Part 7</span>
-                <span class="badge badge--warning">Bỏ trống</span>
+                <span class="badge badge--warning">Blank</span>
               </div>
               <p class="question__stem">
                 What should employees do if they need a computer on November 15?
               </p>
-              <div class="option-list" aria-label="Đáp án câu 155">
+              <div class="option-list" aria-label="Answer for question 155">
                 <div class="option">
                   <span class="option__marker">A</span>
                   <span class="option__text">Visit the Fairview Business Centre</span>
@@ -178,7 +177,7 @@
                 <div class="option option--correct">
                   <span class="option__marker">B</span>
                   <span class="option__text">Contact the help desk before November 10</span>
-                  <span class="badge badge--success">Đáp án đúng</span>
+                  <span class="badge badge--success">Correct answer</span>
                 </div>
                 <div class="option">
                   <span class="option__marker">C</span>
@@ -191,11 +190,10 @@
               </div>
               <div class="explain">
                 <div class="explain__title">
-                  <span aria-hidden="true">💡</span> Giải thích
+                  Explanation
                 </div>
                 <p style="margin: 0">
-                  Đoạn 3: "please contact the help desk before November 10 so that a
-                  temporary laptop can be arranged".
+                  Passage 3: "please contact the help desk before November 10 so that a temporary laptop can be arranged".
                 </p>
               </div>
             </div>
@@ -203,24 +201,24 @@
             <!-- câu Listening: có transcript -->
             <div class="question">
               <div class="question__meta">
-                <span class="question__number">Câu 8</span>
+                <span class="question__number">Question 8</span>
                 <span class="badge badge--muted">Part 2</span>
-                <span class="badge badge--danger">Bạn chọn sai</span>
+                <span class="badge badge--danger">Your answer is incorrect</span>
               </div>
               <div class="row" style="margin-bottom: var(--space-3)">
-                <button class="btn btn--sm">▶ Nghe lại câu này</button>
-                <span class="text-xs text-muted">Sau khi thi, audio được phép nghe lại</span>
+                <button class="btn btn--sm">Replay this question</button>
+                <span class="text-xs text-muted">After the exam, the audio can be replayed</span>
               </div>
-              <div class="option-list" aria-label="Đáp án câu 8">
+              <div class="option-list" aria-label="Answer for question 8">
                 <div class="option option--wrong">
                   <span class="option__marker">A</span>
                   <span class="option__text">At the front desk.</span>
-                  <span class="badge badge--danger">Bạn chọn</span>
+                  <span class="badge badge--danger">Your answer</span>
                 </div>
                 <div class="option option--correct">
                   <span class="option__marker">B</span>
                   <span class="option__text">Around nine o'clock.</span>
-                  <span class="badge badge--success">Đáp án đúng</span>
+                  <span class="badge badge--success">Correct answer</span>
                 </div>
                 <div class="option">
                   <span class="option__marker">C</span>
@@ -229,11 +227,10 @@
               </div>
               <div class="explain">
                 <div class="explain__title">
-                  <span aria-hidden="true">💡</span> Giải thích
+                  Explanation
                 </div>
                 <p style="margin: 0">
-                  Câu hỏi bắt đầu bằng <strong>When</strong> nên cần đáp án chỉ thời gian.
-                  Đáp án A trả lời cho <em>Where</em> — bẫy sai loại câu hỏi.
+                  The question begins with <strong>When</strong> so the answer must refer to time. Option A answers <em>Where</em> — a wrong question type trap.
                 </p>
                 <div class="explain__transcript">
                   <strong>Transcript:</strong> "When does the training session start?"
@@ -242,7 +239,7 @@
             </div>
 
             <div class="row" style="justify-content: center">
-              <button class="btn">Xem thêm 22 câu sai</button>
+              <button class="btn">View 22 more incorrect answers</button>
             </div>
           </div>
         </div>

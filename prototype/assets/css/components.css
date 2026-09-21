@@ -1,126 +1,182 @@
+/* ============================================================================
+   Component vocabulary — painted signage.
+
+   Two rules hold everywhere below:
+   1. A sign is flat and square. Fields are one flat colour, bounded by a painted
+      keyline. No gradient, no shadow, no rounded corner.
+   2. Active state INVERTS, it does not tint. A chosen option, the current step
+      and the active nav item become solid ink blocks with white caps, because
+      that is how a sign says "this one" — not with a pale wash.
+   ============================================================================ */
+
 /* ===== Button ===== */
+/* Signage controls are square caps plates. */
 .btn {
   display: inline-flex; align-items: center; justify-content: center;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-4);
-  font: inherit; font-size: var(--text-sm);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  font-family: var(--font-sign);
+  font-size: var(--text-sm); font-weight: 700;
+  text-transform: uppercase; letter-spacing: var(--tracking-sign);
+  border: var(--keyline) solid var(--ink);
+  border-radius: 0;
   background: var(--color-surface);
-  color: var(--color-text);
+  color: var(--ink);
   cursor: pointer;
   text-decoration: none;
 }
-.btn:hover { background: var(--color-bg); }
+.btn:hover { background: var(--ink); color: #ffffff; }
 .btn[disabled], .btn[aria-disabled="true"] {
-  opacity: .55; cursor: not-allowed; pointer-events: none;
+  opacity: .45; cursor: not-allowed; pointer-events: none;
 }
 .btn--primary {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
-  color: var(--color-primary-text);
+  background: var(--sign-blue);
+  border-color: var(--sign-blue);
+  color: #ffffff;
 }
-.btn--primary:hover { background: var(--color-primary-hover); }
-.btn--ghost { background: transparent; border-color: transparent; }
-.btn--ghost:hover { background: var(--color-bg); }
+.btn--primary:hover { background: #093d80; border-color: #093d80; color: #ffffff; }
+.btn--ghost {
+  background: transparent; border-color: transparent; color: var(--ink);
+}
+.btn--ghost:hover { background: transparent; border-color: var(--ink); color: var(--ink); }
+/* The danger button is the door sign. Its hover must darken its own field — the
+   generic .btn:hover would flip it to ink-on-white and the white label would
+   vanish (1.1:1). This override is the fix for that defect. */
 .btn--danger {
-  background: var(--color-danger); border-color: var(--color-danger); color: var(--color-primary-text);
+  background: var(--sign-red); border-color: var(--sign-red); color: #ffffff;
 }
+.btn--danger:hover { background: #8c0e12; border-color: #8c0e12; color: #ffffff; }
 .btn--lg { padding: var(--space-3) var(--space-5); font-size: var(--text-base); }
 .btn--sm { padding: var(--space-1) var(--space-3); font-size: var(--text-xs); }
 
-/* ===== Card ===== */
+/* ===== Panel (was Card) ===== */
+/* Not a floating rounded box: a painted panel with a keyline frame. The frame
+   carries the structure, so no shadow is needed to lift it off the wall. */
 .card {
   background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
+  border: var(--keyline) solid var(--ink);
+  border-radius: 0;
 }
 .card__header {
-  padding: var(--space-4) var(--space-5);
-  border-bottom: 1px solid var(--color-border);
+  padding: var(--space-3) var(--space-5);
+  border-bottom: var(--keyline) solid var(--ink);
+  background: var(--color-surface);
+}
+.card__header strong {
+  font-family: var(--font-sign); font-weight: 700;
+  text-transform: uppercase; letter-spacing: var(--tracking-sign);
+  font-size: var(--text-sm);
 }
 .card__body { padding: var(--space-5); }
 .card__footer {
   padding: var(--space-4) var(--space-5);
-  border-top: 1px solid var(--color-border);
+  border-top: var(--keyline-soft) solid var(--color-border);
   background: var(--color-bg);
-  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
 }
+
 /* ===== Badge ===== */
+/* A badge is a small painted plate, not a pale chip: solid field, caps. */
 .badge {
   display: inline-block;
   padding: 2px var(--space-2);
-  border-radius: 999px;
-  font-size: var(--text-xs);
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
+  border-radius: 0;
+  font-family: var(--font-sign);
+  font-size: var(--text-xs); font-weight: 700;
+  text-transform: uppercase; letter-spacing: .04em;
+  font-variant-numeric: tabular-nums;
+  background: var(--color-surface);
+  border: 1px solid var(--ink);
+  color: var(--ink);
 }
-.badge--success { background: var(--color-success-soft); border-color: var(--color-success-soft-border); color: var(--color-success); }
-.badge--warning { background: var(--color-warning-soft); border-color: var(--color-warning-soft-border); color: var(--color-warning); }
-.badge--danger  { background: var(--color-danger-soft);  border-color: var(--color-danger-soft-border);  color: var(--color-danger); }
-.badge--info    { background: var(--color-info-soft);    border-color: var(--color-info-soft-border);    color: var(--color-info); }
-.badge--muted   { color: var(--color-text-muted); }
+.badge--success { background: var(--sign-green); border-color: var(--sign-green); color: #ffffff; }
+.badge--warning { background: var(--sign-gold);  border-color: var(--sign-gold);  color: var(--ink); }
+.badge--danger  { background: var(--sign-red);   border-color: var(--sign-red);   color: #ffffff; }
+.badge--info    { background: var(--sign-blue);  border-color: var(--sign-blue);  color: #ffffff; }
+.badge--primary { background: var(--sign-blue);  border-color: var(--sign-blue);  color: #ffffff; }
+/* Muted stays a quiet plate — it carries facts, not judgments. */
+.badge--muted {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  color: var(--color-text-muted);
+}
 
 /* ===== Form ===== */
 .field { display: block; }
 .field__label {
   display: block; margin-bottom: var(--space-1);
-  font-size: var(--text-sm); font-weight: 600;
+  font-family: var(--font-sign); font-size: var(--text-xs); font-weight: 700;
+  text-transform: uppercase; letter-spacing: var(--tracking-sign);
+  color: var(--ink);
+}
+/* A label can carry a descriptor after the name — "Part 2 — 25 questions
+   (question-response, 3 answers)" is 52 characters, too long to set in uppercase.
+   The descriptor drops back to sentence case, lighter and muted, so it reads as a
+   continuation of the label instead of a second shouted label. */
+.field__label .label-note {
+  text-transform: none; letter-spacing: 0;
+  font-weight: 400; color: var(--color-text-muted);
 }
 .field__input {
   width: 100%;
   padding: var(--space-2) var(--space-3);
   font: inherit;
-  color: var(--color-text);
+  color: var(--ink);
   background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border: var(--keyline) solid var(--ink);
+  border-radius: 0;
 }
-.field__input:focus-visible { border-color: var(--color-primary); }
+.field__input:focus-visible { border-color: var(--sign-blue); }
 .field__hint { margin-top: var(--space-1); font-size: var(--text-xs); color: var(--color-text-muted); }
-.field__error { margin-top: var(--space-1); font-size: var(--text-xs); color: var(--color-danger); }
-.field--invalid .field__input { border-color: var(--color-danger); }
-/* ===== Đáp án ===== */
-/* Số option động: Part 2 chỉ A/B/C, part khác A/B/C/D. Không giả định 4. */
+.field__error {
+  margin-top: var(--space-1); font-size: var(--text-xs);
+  color: var(--color-danger); font-weight: 600;
+}
+.field--invalid .field__input { border-color: var(--sign-red); }
+
+/* ===== Answer options ===== */
+/* The option count is dynamic: Part 2 has only A/B/C, other parts A/B/C/D.
+   Never assume four. */
 .option-list { display: flex; flex-direction: column; gap: var(--space-2); }
 .option {
   display: flex; align-items: flex-start; gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
   background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border: var(--keyline-soft) solid var(--color-border);
+  border-radius: 0;
   cursor: pointer;
 }
-.option:hover { border-color: var(--color-primary); }
+.option:hover { border-color: var(--ink); }
+/* Square marker: a sign has corners. */
 .option__marker {
   flex: 0 0 auto;
   width: 26px; height: 26px;
   display: grid; place-items: center;
-  border: 1px solid var(--color-border);
-  border-radius: 50%;
-  font-size: var(--text-sm); font-weight: 600;
+  border: var(--keyline-soft) solid var(--ink);
+  border-radius: 0;
+  font-family: var(--font-sign);
+  font-size: var(--text-sm); font-weight: 700;
 }
 .option__text { flex: 1 1 auto; }
-/* .option--selected cho trang tĩnh, :checked cho tương tác bàn phím thật.
-   Loại trừ correct/wrong để màn review vẫn giữ màu xanh/đỏ khi input đang checked. */
+/* The chosen answer INVERTS its marker to solid ink. Correct/wrong are excluded
+   so the review screen keeps its green/red while the input is checked. */
 .option--selected,
 .option:has(.option__input:checked):not(.option--correct):not(.option--wrong) {
-  border-color: var(--color-primary);
-  background: var(--color-primary-soft);
+  border-color: var(--ink);
+  border-width: var(--keyline);
+  background: var(--color-surface);
 }
 .option--selected .option__marker,
 .option:has(.option__input:checked):not(.option--correct):not(.option--wrong) .option__marker {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
-  color: var(--color-primary-text);
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #ffffff;
 }
-/* chỉ dùng ở màn review + luyện tập */
-.option--correct { border-color: var(--color-success); background: var(--color-success-soft); }
-.option--correct .option__marker { background: var(--color-success); border-color: var(--color-success); color: var(--color-primary-text); }
-.option--wrong { border-color: var(--color-danger); background: var(--color-danger-soft); }
-.option--wrong .option__marker { background: var(--color-danger); border-color: var(--color-danger); color: var(--color-primary-text); }
-/* input radio thật, ẩn mắt nhưng vẫn focus được bằng bàn phím */
+/* used only on the review and practice screens */
+.option--correct { border: var(--keyline) solid var(--sign-green); background: var(--color-surface); }
+.option--correct .option__marker { background: var(--sign-green); border-color: var(--sign-green); color: #ffffff; }
+.option--wrong { border: var(--keyline) solid var(--sign-red); background: var(--color-surface); }
+.option--wrong .option__marker { background: var(--sign-red); border-color: var(--sign-red); color: #ffffff; }
+/* a real radio input, hidden from sight but still keyboard-focusable */
 .option__input {
   position: absolute;
   width: 1px; height: 1px;
@@ -131,60 +187,105 @@
   white-space: nowrap;
   border: 0;
 }
-/* fallback khi không có :has() — ring nằm trên marker vì input bị clip 1px.
-   Gate bằng @supports để không vẽ 2 ring cùng lúc trên browser hiện đại. */
+/* fallback when :has() is unavailable — the ring goes on the marker, because
+   the input itself is clipped to 1px. Gated with @supports so modern browsers,
+   which match the rule below, never draw two rings at once. */
 @supports not (selector(:has(*))) {
   .option__input:focus-visible + .option__marker {
-    outline: 2px solid var(--color-primary);
+    outline: 3px solid var(--sign-blue);
   }
 }
 .option:has(.option__input:focus-visible) {
-  outline: 2px solid var(--color-primary);
+  outline: 3px solid var(--sign-blue);
   outline-offset: 2px;
 }
 
 /* ===== Timer ===== */
+/* A departure-board clock: mono, tabular, on its own plate. */
 .timer {
   display: inline-flex; align-items: center; gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border: var(--keyline) solid var(--ink);
+  border-radius: 0;
   background: var(--color-surface);
 }
-.timer__value { font-family: var(--font-mono); font-size: var(--text-lg); font-variant-numeric: tabular-nums; }
-.timer--warning  { border-color: var(--color-warning); color: var(--color-warning); }
-.timer--critical { border-color: var(--color-danger);  color: var(--color-danger); }
+.timer__value {
+  font-family: var(--font-mono); font-size: var(--text-lg);
+  font-variant-numeric: tabular-nums; letter-spacing: -.01em;
+}
+.timer--warning { border-color: var(--sign-gold); background: var(--sign-gold); color: var(--ink); }
+.timer--critical { border-color: var(--sign-red); background: var(--sign-red); color: #ffffff; }
 
-/* ===== Navigator 200 câu ===== */
+/* ===== Question navigator (200 questions) ===== */
+/* The answer grid is a painted matrix: answered cells are solid ink blocks,
+   flagged cells take the gold field, the current cell is ringed. */
 .navigator { display: flex; flex-direction: column; gap: var(--space-3); }
+/* A part is a labelled block. Seven of them stacked with no rule between read as
+   one 200-cell field, which is the thing the grid already fails at. A single 1px
+   keyline per part is the whole cost of making the boundaries visible — no card,
+   no tint, nothing inside the grid itself. */
+.navigator__part + .navigator__part {
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: var(--keyline-soft) solid var(--color-border);
+}
+.navigator__part-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+  font-family: var(--font-sign);
+  font-size: var(--text-xs); font-weight: 700;
+  text-transform: uppercase; letter-spacing: var(--tracking-sign);
+  color: var(--ink);
+}
+.navigator__range {
+  font-weight: 400; text-transform: none; letter-spacing: 0;
+  color: var(--color-text-muted);
+}
+/* The section rule is the strongest line in the panel, because it is the only
+   boundary on this screen a student is not allowed to cross back over. */
+.navigator__section {
+  margin: var(--space-4) 0 var(--space-3);
+  padding-bottom: var(--space-1);
+  border-bottom: var(--keyline) solid var(--ink);
+  font-size: var(--text-sm);
+}
+.navigator__section:first-child { margin-top: 0; }
 .navigator__grid {
   display: grid;
   grid-template-columns: repeat(10, minmax(0, 1fr));
-  gap: var(--space-1);
+  gap: 3px;
 }
 .navigator__cell {
   aspect-ratio: 1;
   min-width: 20px;
   display: grid; place-items: center;
+  font-family: var(--font-mono);
   font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: 0;
   background: var(--color-surface);
+  color: var(--color-text-muted);
   cursor: pointer;
 }
 .navigator__cell.is-unanswered { color: var(--color-text-muted); }
 .navigator__cell.is-answered {
-  background: var(--color-primary); border-color: var(--color-primary); color: var(--color-primary-text);
+  background: var(--ink); border-color: var(--ink); color: #ffffff;
 }
 .navigator__cell.is-marked {
-  background: var(--color-warning-soft); border-color: var(--color-warning); color: var(--color-warning); font-weight: 700;
+  background: var(--sign-gold); border-color: var(--sign-gold); color: var(--ink); font-weight: 700;
 }
-.navigator__cell.is-current { outline: 2px solid var(--color-text); outline-offset: 1px; }
+.navigator__cell.is-current {
+  outline: var(--keyline) solid var(--sign-blue); outline-offset: 1px;
+  border-color: var(--sign-blue);
+}
+
 /* ===== Skeleton ===== */
 @keyframes skeleton-pulse { 0%, 100% { opacity: 1 } 50% { opacity: .55 } }
 .skeleton {
   background: var(--color-track);
-  border-radius: var(--radius-sm);
+  border-radius: 0;
   animation: skeleton-pulse 1.4s ease-in-out infinite;
 }
 .skeleton--text  { height: 12px; margin-bottom: var(--space-2); }
@@ -192,18 +293,29 @@
 .skeleton--block { height: 120px; }
 @media (prefers-reduced-motion: reduce) { .skeleton { animation: none } }
 
-/* ===== Alert ===== */
+/* ===== Alert =====
+   A notice placard. It was a 4px coloured left bar, which is the category's
+   most recognisable tell; it is now a full painted keyline with a soft wash,
+   so the colour reads as the sign's frame rather than as a side tab. */
 .alert {
   padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--color-border);
-  border-left-width: 4px;
-  border-radius: var(--radius-md);
+  border: var(--keyline) solid var(--ink);
+  border-radius: 0;
   background: var(--color-surface);
+  animation: placard-flip .34s cubic-bezier(.16, 1, .3, 1) both;
 }
-.alert--info    { border-left-color: var(--color-info); }
-.alert--success { border-left-color: var(--color-success); }
-.alert--warning { border-left-color: var(--color-warning); }
-.alert--danger  { border-left-color: var(--color-danger); }
+.alert--info    { border-color: var(--sign-blue);  background: var(--color-info-soft);    color: #08407f; }
+.alert--success { border-color: var(--sign-green); background: var(--color-success-soft); color: #08562f; }
+.alert--warning { border-color: #8a5a00;           background: var(--color-warning-soft); color: #6f4800; }
+.alert--danger  { border-color: var(--sign-red);   background: var(--color-danger-soft);  color: #8c0e12; }
+
+/* The one authored motion: a placard flips into view when a condition appears.
+   Used only where the product states a condition or a judgment, never as a
+   generic entrance on every section. */
+@keyframes placard-flip {
+  from { transform: perspective(900px) rotateX(-9deg); opacity: 0; }
+  to   { transform: perspective(900px) rotateX(0deg);  opacity: 1; }
+}
 
 /* ===== Empty / Error ===== */
 .state-block {
@@ -211,9 +323,38 @@
   text-align: center;
   color: var(--color-text-muted);
 }
-.state-block__icon { font-size: var(--text-3xl); line-height: 1; margin-bottom: var(--space-3); }
-.state-block__title { font-size: var(--text-lg); font-weight: 600; color: var(--color-text); margin-bottom: var(--space-2); }
-.state-block__desc { margin-bottom: var(--space-4); }
+/* The mark above an empty or failed state is a small painted stamp, not a
+   pictograph. The world has no icon set — a sign says the word. */
+.state-block__icon {
+  display: inline-block;
+  margin-bottom: var(--space-3);
+  padding: 2px var(--space-3);
+  background: var(--ink);
+  border: var(--keyline) solid var(--ink);
+  color: #ffffff;
+  font-family: var(--font-sign);
+  font-size: var(--text-xs); font-weight: 700;
+  line-height: var(--leading-body);
+  text-transform: uppercase; letter-spacing: var(--tracking-sign);
+}
+/* Sentence case, not uppercase. This title carries a whole sentence — "You have
+   not answered any question in this exam" is 47 characters — and uppercase at
+   18px measurably slows reading on exactly the screens where the reader is
+   already stuck: empty, error and blocked states. The signage voice survives in
+   the condensed bold face; uppercase stays on the labels, badges and buttons,
+   where the strings are short enough to be scanned as shapes. */
+/* `text-transform` and `letter-spacing` both have to be reset, not merely
+   dropped: 19 of these titles are h1 or h2 elements, and base.css tracks and
+   uppercases those. Removing the declaration only stops this class from
+   overriding — the element rule still wins, which would leave sentence-case text
+   wearing uppercase tracking. */
+.state-block__title {
+  font-family: var(--font-sign); font-size: var(--text-lg); font-weight: 700;
+  text-transform: none; letter-spacing: normal;
+  color: var(--ink); margin-bottom: var(--space-2);
+}
+.state-block__desc { margin-bottom: var(--space-4); max-width: var(--measure); margin-inline: auto; }
+
 /* ===== Modal ===== */
 .modal-overlay {
   position: fixed; inset: 0;
@@ -223,121 +364,233 @@
   z-index: var(--z-modal);
   overflow-y: auto;
 }
-/* Hộp thoại cao hơn màn hình (vd: duyệt hồ sơ KYC) phải cuộn được phần thân,
-   nếu không thì header/footer bị cắt và nút bấm không tới được. */
+/* A dialog taller than the viewport (the ID review modal, for instance) has to
+   scroll its body, or the header and footer get cut off and the buttons become
+   unreachable. */
 .modal {
   width: 100%; max-width: 480px;
   max-height: calc(100vh - 2 * var(--space-5));
   display: flex; flex-direction: column;
   background: var(--color-surface);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
+  border: var(--keyline) solid var(--ink);
+  border-radius: 0;
 }
-.modal__header { padding: var(--space-4) var(--space-5); border-bottom: 1px solid var(--color-border); flex-shrink: 0; }
+.modal__header {
+  padding: var(--space-3) var(--space-5);
+  border-bottom: var(--keyline) solid var(--ink);
+  background: var(--ink); color: #ffffff;
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
+}
+.modal__header strong, .modal__header h2, .modal__header h3 {
+  font-family: var(--font-sign); font-weight: 700;
+  text-transform: uppercase; letter-spacing: var(--tracking-sign);
+  font-size: var(--text-sm); color: #ffffff; margin: 0;
+}
+/* The header is an ink band, so the paper-tuned muted grey lands at 3.0:1 on
+   it. Restated here for the same reason the h2 is: this band letters its own
+   contents. */
+.modal__header .text-muted { color: var(--color-on-ink-muted); }
+/* A dialog needs a way out that is not a decision. The footer buttons are
+   answers to the question the dialog asks; this one just leaves.
+   It letters the word instead of drawing a mark. The world has no icon set —
+   the rule this build states for its own empty states — and a bare ✕ in the
+   corner was the one place it reached for one anyway. The frame is the sign. */
+.modal__close {
+  flex: 0 0 auto;
+  display: grid; place-items: center;
+  padding: var(--space-1) var(--space-3);
+  background: transparent;
+  border: 1px solid #ffffff;
+  border-radius: 0;
+  color: #ffffff;
+  font-family: var(--font-sign); font-size: var(--text-xs); font-weight: 700;
+  text-transform: uppercase; letter-spacing: var(--tracking-sign);
+  line-height: 1;
+  cursor: pointer;
+}
+.modal__close:hover { background: #ffffff; color: var(--ink); }
 .modal__body { padding: var(--space-5); overflow-y: auto; }
 .modal__footer {
   display: flex; justify-content: flex-end; gap: var(--space-2);
   padding: var(--space-4) var(--space-5);
-  border-top: 1px solid var(--color-border);
+  border-top: var(--keyline-soft) solid var(--color-border);
   flex-shrink: 0;
 }
 
 /* ===== Table ===== */
-.table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
+/* The ledger: ink header band, hard rules, tabular numerals throughout. */
+.table {
+  width: 100%; border-collapse: collapse; font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
 .table th, .table td {
   padding: var(--space-3);
   text-align: left;
   border-bottom: 1px solid var(--color-border);
 }
-.table th { font-weight: 600; background: var(--color-bg); }
-.table--striped tbody tr:nth-child(even) { background: var(--color-bg); }
+.table th {
+  font-family: var(--font-sign); font-weight: 700;
+  text-transform: uppercase; letter-spacing: .04em; font-size: var(--text-xs);
+  background: var(--ink); color: #ffffff;
+  border-bottom: 0;
+}
+.table--striped tbody tr:nth-child(even) { background: #f5f6f7; }
 
 /* ===== Stepper ===== */
 .stepper { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+/* Sentence case for the same reason as `.state-block__title`: these steps read
+   "Part 2 — 25 questions · in progress", which is a phrase, not a label, and at
+   12px uppercase is the least legible combination on the site. */
 .stepper__item {
   padding: var(--space-2) var(--space-3);
-  font-size: var(--text-sm);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  font-family: var(--font-sign); font-size: var(--text-xs); font-weight: 700;
+  border: var(--keyline-soft) solid var(--color-border);
+  border-radius: 0;
   color: var(--color-text-muted);
 }
-.stepper__item.is-done { border-color: var(--color-success); color: var(--color-success); }
-.stepper__item.is-current { border-color: var(--color-primary); color: var(--color-primary); font-weight: 600; }
+.stepper__item.is-done {
+  border-color: var(--sign-green); background: var(--sign-green); color: #ffffff;
+}
+.stepper__item.is-current {
+  border-color: var(--ink); background: var(--ink); color: #ffffff;
+}
 
 /* ===== Progress ===== */
-.progress { height: 8px; background: var(--color-track); border-radius: 999px; overflow: hidden; }
-.progress__bar { height: 100%; background: var(--color-primary); }
-/* Màu theo mức độ, dùng ở màn phân tích điểm yếu: đỏ = yếu, vàng = trung
-   bình, xanh = khá. Màu là lớp thông tin thứ hai — luôn kèm con số % bên
-   cạnh, không để màu là cách duy nhất truyền đạt mức độ. */
-.progress__bar--danger  { background: var(--color-danger); }
-.progress__bar--warning { background: var(--color-warning); }
-.progress__bar--success { background: var(--color-success); }
+.progress { height: 8px; background: var(--color-track); border-radius: 0; overflow: hidden; }
+.progress__bar { height: 100%; background: var(--sign-blue); }
+/* Severity colours, used on the weakness analysis screen: red = weak, gold =
+   average, green = strong. Colour is the second layer of information — it is
+   always paired with the percentage beside it, never the only way a level is
+   conveyed. */
+.progress__bar--danger  { background: var(--sign-red); }
+.progress__bar--warning { background: var(--sign-gold); }
+.progress__bar--success { background: var(--sign-green); }
 
-/* ===== Audio (màn thi Listening) ===== */
+/* ===== Audio (Listening exam screen) ===== */
 .exam-audio {
   display: flex; align-items: center; gap: var(--space-4);
   padding: var(--space-4);
   background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border: var(--keyline) solid var(--ink);
+  border-radius: 0;
 }
 .exam-audio__status { font-size: var(--text-sm); color: var(--color-text-muted); }
 
 /* ===== Sidebar nav ===== */
-.nav-list { display: flex; flex-direction: column; gap: var(--space-1); }
+/* Painted tabs. The active tab is a solid ink block with white caps — inverted,
+   not washed, because that is how a sign marks the current one. */
+.nav-list { display: flex; flex-direction: column; gap: 2px; }
 .nav-list__item {
   padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
+  border-radius: 0;
   color: var(--color-text);
   text-decoration: none;
-  font-size: var(--text-sm);
+  font-family: var(--font-sign); font-size: var(--text-sm); font-weight: 700;
+  text-transform: uppercase; letter-spacing: .03em;
+  border: var(--keyline-soft) solid transparent;
 }
-.nav-list__item:hover { background: var(--color-bg); }
+.nav-list__item:hover { background: var(--color-bg); border-color: var(--color-border); }
 .nav-list__item.is-active {
-  background: var(--color-primary-soft);
-  color: var(--color-primary);
-  font-weight: 600;
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #ffffff;
 }
 .nav-list__group {
   margin-top: var(--space-4); margin-bottom: var(--space-1);
-  font-size: var(--text-xs); text-transform: uppercase;
-  letter-spacing: .04em; color: var(--color-text-muted);
+  font-family: var(--font-sign); font-size: var(--text-xs); font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em; color: var(--color-text-muted);
 }
 
-/* ===== Ô số liệu ===== */
+/* ===== Stat readout ===== */
+/* Not a hero-metric tile: a ruled readout. The rule above the cell is the
+   structure, the value is set in tabular mono so a column of them aligns. */
 .stat {
-  padding: var(--space-4);
+  padding: var(--space-3) var(--space-4) var(--space-4);
   background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border: 0;
+  border-top: var(--keyline) solid var(--ink);
+  border-radius: 0;
 }
-.stat__label { font-size: var(--text-sm); color: var(--color-text-muted); }
-.stat__value { font-size: var(--text-3xl); font-weight: 700; line-height: 1.1; margin: var(--space-1) 0; }
+.stat__label {
+  font-family: var(--font-sign); font-size: var(--text-xs); font-weight: 700;
+  text-transform: uppercase; letter-spacing: .06em;
+  color: var(--color-text-muted);
+}
+.stat__value {
+  font-family: var(--font-mono); font-size: var(--text-3xl); font-weight: 700;
+  line-height: 1.1; margin: var(--space-1) 0;
+  font-variant-numeric: tabular-nums; letter-spacing: -.02em;
+}
 .stat__hint { font-size: var(--text-xs); color: var(--color-text-muted); }
 
-/* ===== Layout màn thi ===== */
+/* ===== Column chart =====
+   A ruled column chart, not a soft rounded bar set: columns are painted plates
+   with a hard keyline rising off a baseline rule, and the value is lettered
+   underneath in the mono so a column of them aligns. */
+.chart {
+  display: flex; align-items: flex-end; gap: var(--space-5);
+  height: 180px;
+  border-bottom: var(--keyline) solid var(--ink);
+}
+.chart--short { height: 140px; }
+.chart__col {
+  flex: 1 1 0; min-width: 0;
+  display: flex; flex-direction: column; justify-content: flex-end;
+  height: 100%; text-align: center;
+}
+.chart__bar {
+  background: var(--color-track);
+  border: var(--keyline-soft) solid var(--ink);
+  border-bottom: 0;
+}
+/* The one column the chart is about — the latest, the best, the flagged. */
+.chart__bar--marked { background: var(--sign-gold); }
+.chart__value {
+  margin-top: var(--space-2); padding-bottom: var(--space-1);
+  font-family: var(--font-mono); font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ===== Exam layout ===== */
 .exam-layout {
   display: grid;
-  grid-template-columns: 1fr 300px;
+  grid-template-columns: minmax(0, 1fr) 300px;
   gap: var(--space-5);
   align-items: start;
 }
 .exam-sidebar { position: sticky; top: var(--space-4); }
-.exam-topbar-group { display: flex; align-items: center; gap: var(--space-4); }
 
-/* ===== Chỉ báo lưu đáp án ===== */
-.save-status { font-size: var(--text-xs); color: var(--color-text-muted); }
+/* The collapse is declared here, beside the rule it overrides, and not in
+   base.css where the other breakpoints live. base.css loads first, so an
+   identical-specificity `@media` rule there loses to the unconditional
+   `grid-template-columns` above at every viewport — which is exactly what
+   happened: the exam layout kept its 300px sidebar down to 390px and pushed the
+   question column off the screen, while base.css carried a breakpoint that read
+   as if it worked. A media query does not raise specificity; only load order
+   and the selector's own weight decide. */
+@media (max-width: 1024px) {
+  .exam-layout { grid-template-columns: minmax(0, 1fr); }
+  .exam-sidebar { position: static; }
+}
+.exam-topbar-group { display: flex; align-items: center; gap: var(--space-4); flex-wrap: wrap; }
+
+/* ===== Answer save indicator ===== */
+.save-status {
+  font-family: var(--font-mono); font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
 .save-status--saving { color: var(--color-text-muted); }
-.save-status--saved  { color: var(--color-success); }
-.save-status--error  { color: var(--color-danger); font-weight: 600; }
+.save-status--saved  { color: var(--sign-green); font-weight: 700; }
+.save-status--error  { color: var(--sign-red); font-weight: 700; }
 
-/* ===== Khối câu hỏi ===== */
+/* ===== Question block ===== */
 .question {
   padding: var(--space-5);
   background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border: var(--keyline) solid var(--ink);
+  border-radius: 0;
 }
 .question__meta {
   display: flex; align-items: center; gap: var(--space-3);
@@ -345,116 +598,176 @@
   font-size: var(--text-sm); color: var(--color-text-muted);
 }
 .question__number {
-  font-weight: 700; font-size: var(--text-lg); color: var(--color-text);
+  font-family: var(--font-sign); font-weight: 700; font-size: var(--text-lg);
+  color: var(--ink);
+  text-transform: uppercase; letter-spacing: var(--tracking-sign);
 }
-.question__stem { margin-bottom: var(--space-4); }
+/* The question stem is English exam content: the reading voice, at a real
+   measure, not sign lettering. Leading is the read value rather than the body
+   value — this line is scanned back and forth between the passage and the
+   options, and a tighter leading makes that return sweep miss. */
+.question__stem {
+  margin-bottom: var(--space-4);
+  font-size: var(--text-lg);
+  line-height: var(--leading-read);
+  max-width: var(--measure);
+}
 .question__image {
   display: block; width: 100%; max-width: 560px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border: var(--keyline) solid var(--ink);
+  border-radius: 0;
   margin-bottom: var(--space-4);
 }
 .passage {
   padding: var(--space-4);
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  border: var(--keyline-soft) solid var(--color-border);
+  border-top: var(--keyline) solid var(--ink);
+  border-radius: 0;
   font-size: var(--text-sm);
+  line-height: var(--leading-read);   /* the passage is the one long read here */
   max-height: 460px; overflow-y: auto;
 }
 
-/* ===== Khối điểm lớn ===== */
+/* ===== Score placard =====
+   A scoreboard, not the hero-metric template: the total sits on its own painted
+   field like a placard, and the two section splits are ruled readouts beside
+   it — one big number with two labelled stats is the shape being refused. */
 .score-hero {
   display: grid;
-  grid-template-columns: 1.2fr 1fr 1fr;
-  gap: var(--space-4);
-  padding: var(--space-5);
+  grid-template-columns: minmax(200px, 1fr) minmax(0, 2fr);
+  grid-template-rows: auto auto;
+  gap: 0;
+  padding: 0;
   background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border: var(--keyline) solid var(--ink);
+  border-radius: 0;
 }
-.score-hero__total { text-align: center; }
+.score-hero__total {
+  grid-row: 1 / -1;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: var(--space-1);
+  padding: var(--space-5) var(--space-4);
+  background: var(--sign-blue);
+  color: #ffffff;
+  border-right: var(--keyline) solid var(--ink);
+  text-align: center;
+}
 .score-hero__total-value {
-  font-size: 56px; font-weight: 800; line-height: 1;
-  color: var(--color-primary);
+  font-family: var(--font-mono); font-size: 56px; font-weight: 700; line-height: 1;
+  font-variant-numeric: tabular-nums; letter-spacing: -.03em;
+  color: #ffffff;
+  min-width: 3.2em;
 }
-.score-hero__total-label { font-size: var(--text-sm); color: var(--color-text-muted); }
-.score-hero__section { text-align: center; align-self: center; }
-.score-hero__section-value { font-size: var(--text-3xl); font-weight: 700; line-height: 1.1; }
+.score-hero__total-label {
+  font-family: var(--font-sign); font-size: var(--text-xs); font-weight: 700;
+  text-transform: uppercase; letter-spacing: .06em;
+  color: #cfe0fb;
+}
+.score-hero__section {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+}
+.score-hero__section:last-child { border-bottom: 0; }
+.score-hero__section-value {
+  font-family: var(--font-mono); font-size: var(--text-3xl); font-weight: 700;
+  line-height: 1.1; font-variant-numeric: tabular-nums;
+  color: var(--ink); min-width: 3em; text-align: right;
+}
 
-/* ===== Thanh trình độ CEFR =====
-   Ngưỡng CEFR cố định theo chuẩn, không phải số admin sửa được:
-   A1 120 · A2 225 · B1 550 · B2 785 · C1 945 (thang tổng 10–990).
-   Sáu band theo đúng thứ tự: <A1 · A1 · A2 · B1 · B2 · C1.
-   Band đầu là "dưới A1" (10–119), KHÔNG phải A1 — đếm lệch một bậc là
-   sai trình độ của học viên.
-   Bề rộng mỗi band tỷ lệ với khoảng điểm thật nên vị trí marker đọc được. */
+/* ===== CEFR level bar =====
+   The CEFR thresholds are fixed by the standard, not numbers an admin can edit:
+   A1 120 · A2 225 · B1 550 · B2 785 · C1 945 (on the 10–990 total scale).
+   Six bands in exact order: <A1 · A1 · A2 · B1 · B2 · C1.
+   The first band is "below A1" (10–119), NOT A1 — off by one band and the
+   student is shown the wrong level.
+   Each band's width is proportional to its real score range, so the marker
+   position is readable. */
 .cefr { display: block; }
 .cefr__head {
   display: flex; align-items: baseline; justify-content: space-between;
-  gap: var(--space-3); margin-bottom: var(--space-2);
+  gap: var(--space-3); margin-bottom: var(--space-2); flex-wrap: wrap;
 }
-.cefr__current { font-size: var(--text-xl); font-weight: 700; }
+.cefr__current {
+  font-family: var(--font-sign); font-size: var(--text-xl); font-weight: 700;
+  text-transform: uppercase; letter-spacing: var(--tracking-sign);
+}
 .cefr__track {
   position: relative;
   display: grid;
   /* 10-120 / 120-225 / 225-550 / 550-785 / 785-945 / 945-990 */
   grid-template-columns: 110fr 105fr 325fr 235fr 160fr 45fr;
   height: 34px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border: var(--keyline) solid var(--ink);
+  border-radius: 0;
   overflow: hidden;
   background: var(--color-track);
+  min-width: 280px;
 }
 .cefr__band {
   display: flex; align-items: center; justify-content: center;
-  font-size: var(--text-xs); font-weight: 700;
+  font-family: var(--font-sign); font-size: var(--text-xs); font-weight: 700;
+  letter-spacing: .04em;
   color: var(--color-text-muted);
-  border-right: 1px solid var(--color-border);
+  border-right: 1px solid var(--ink);
 }
 .cefr__band:last-child { border-right: 0; }
-.cefr__band.is-reached { background: var(--color-primary-soft); color: var(--color-primary); }
-.cefr__band.is-current {
-  background: var(--color-primary); color: var(--color-primary-text);
-}
+.cefr__band.is-reached { background: var(--color-primary-soft); color: #08407f; }
+.cefr__band.is-current { background: var(--ink); color: #ffffff; }
 .cefr__scale {
   display: grid;
   grid-template-columns: 110fr 105fr 325fr 235fr 160fr 45fr;
   margin-top: var(--space-1);
   font-family: var(--font-mono); font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
   color: var(--color-text-muted);
+  min-width: 280px;
 }
 .cefr__tick { text-align: right; padding-right: 2px; }
-.cefr__note { margin: var(--space-2) 0 0; font-size: var(--text-sm); color: var(--color-text-muted); }
+.cefr__note {
+  margin: var(--space-2) 0 0; font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  max-width: var(--measure);
+}
 
-/* ===== Ảnh CCCD (màn duyệt của admin) =====
-   Prototype không có ảnh CCCD thật, nên vẽ khung giữ chỗ đúng tỷ lệ
-   thẻ để admin thấy bố cục thật của màn duyệt. */
+/* ===== ID card images (admin review screen) =====
+   The prototype has no real ID card photos, so this draws a placeholder frame
+   at the true card ratio, letting the admin see the real layout of the review
+   screen. */
 .kyc-photo {
   display: grid; place-items: center;
-  aspect-ratio: 1.586;              /* tỷ lệ thẻ CCCD gắn chip */
+  aspect-ratio: 1.586;              /* ratio of a chip ID card */
   padding: var(--space-4);
-  border: 2px dashed var(--color-border);
-  border-radius: var(--radius-md);
+  border: var(--keyline) dashed var(--ink);
+  border-radius: 0;
   background: var(--color-bg);
   color: var(--color-text-muted);
-  font-size: var(--text-sm); text-align: center;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs); text-align: center;
 }
 .kyc-photo--portrait { aspect-ratio: 3 / 4; }
 
-/* ===== Giải thích đáp án (chỉ màn review + luyện tập) ===== */
+/* ===== Answer explanation (review and practice screens only) =====
+   The strongest content in the prototype — a wrong answer taught as a lesson.
+   The block keeps its place; only the borrowed 4px accent bar is gone. */
 .explain {
   margin-top: var(--space-4);
   padding: var(--space-4);
-  background: var(--color-primary-soft);
-  border: 1px solid var(--color-primary-soft-border);
-  border-left: 4px solid var(--color-primary);
-  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  border: var(--keyline) solid var(--sign-blue);
+  border-radius: 0;
   font-size: var(--text-sm);
+  max-width: var(--measure);
 }
 .explain__title {
-  font-weight: 700; margin-bottom: var(--space-2);
+  font-family: var(--font-sign); font-weight: 700;
+  text-transform: uppercase; letter-spacing: .04em;
+  margin-bottom: var(--space-2);
   display: flex; align-items: center; gap: var(--space-2);
+  color: #08407f;
 }
 .explain__transcript {
   margin-top: var(--space-3);
@@ -464,29 +777,27 @@
   color: var(--color-text-muted);
 }
 
-/* ===== Badge nhấn (bổ sung cho nhóm badge ở Task 2) ===== */
-.badge--primary {
-  background: var(--color-primary-soft); border-color: var(--color-primary-soft-border); color: var(--color-primary);
-  font-weight: 600;
-}
-
-/* ===== Thẻ gói giá ===== */
+/* ===== Pricing package card ===== */
 .price-card {
   display: flex; flex-direction: column;
   padding: var(--space-5);
   background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border: var(--keyline) solid var(--ink);
+  border-radius: 0;
 }
 .price-card--featured {
-  border-color: var(--color-primary);
-  border-width: 2px;
-  box-shadow: var(--shadow-md);
+  border-color: var(--sign-blue);
+  border-width: var(--keyline);
+  background: #f4f7fc;
 }
-.price-card__name { font-weight: 700; font-size: var(--text-lg); }
+.price-card__name {
+  font-family: var(--font-sign); font-weight: 700; font-size: var(--text-lg);
+  text-transform: uppercase; letter-spacing: var(--tracking-sign);
+}
 .price-card__amount {
-  font-size: var(--text-3xl); font-weight: 800; line-height: 1.1;
-  margin: var(--space-3) 0 var(--space-1);
+  font-family: var(--font-mono); font-size: var(--text-3xl); font-weight: 700;
+  line-height: 1.1; margin: var(--space-3) 0 var(--space-1);
+  font-variant-numeric: tabular-nums; letter-spacing: -.02em;
 }
 .price-card__unit { font-size: var(--text-sm); color: var(--color-text-muted); }
 .price-card__list {
@@ -496,19 +807,19 @@
 }
 .price-card__list li + li { margin-top: var(--space-2); }
 
-/* ===== Thanh công cụ danh sách ===== */
+/* ===== List toolbar ===== */
 .toolbar {
   display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: flex-end;
   padding: var(--space-4);
   background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border: var(--keyline) solid var(--ink);
+  border-radius: 0;
 }
 .toolbar__grow { flex: 1 1 220px; }
 .toolbar .field { margin: 0; }
 
-/* ===== Phân trang ===== */
-.pagination { display: flex; gap: var(--space-2); align-items: center; }
+/* ===== Pagination ===== */
+.pagination { display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; }
 .pagination__info {
   margin-right: auto;
   font-size: var(--text-sm); color: var(--color-text-muted);
@@ -516,28 +827,30 @@
 .pagination__page {
   display: inline-flex; align-items: center; justify-content: center;
   min-width: 34px; height: 34px; padding: 0 var(--space-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border: var(--keyline-soft) solid var(--ink);
+  border-radius: 0;
   background: var(--color-surface);
-  color: var(--color-text);
+  color: var(--ink);
+  font-family: var(--font-mono);
   font-size: var(--text-sm); text-decoration: none;
+  font-variant-numeric: tabular-nums;
 }
 .pagination__page.is-current {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
-  color: var(--color-primary-text); font-weight: 600;
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #ffffff; font-weight: 700;
 }
 .pagination__page[aria-disabled="true"] {
-  color: var(--color-text-muted); pointer-events: none; opacity: .6;
+  color: var(--color-text-muted); pointer-events: none; opacity: .55;
 }
 
-/* ===== Vùng tải file ===== */
+/* ===== File upload ===== */
 .upload { display: flex; flex-direction: column; gap: var(--space-2); }
 .upload__zone {
   display: flex; flex-direction: column; align-items: center; gap: var(--space-2);
   padding: var(--space-6);
-  border: 2px dashed var(--color-border);
-  border-radius: var(--radius-md);
+  border: var(--keyline) dashed var(--ink);
+  border-radius: 0;
   background: var(--color-bg);
   color: var(--color-text-muted);
   font-size: var(--text-sm); text-align: center;
@@ -546,32 +859,77 @@
   display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: 0;
   background: var(--color-surface);
   font-size: var(--text-sm);
 }
 .upload__file--missing {
-  border-color: var(--color-danger);
+  border-color: var(--sign-red);
   color: var(--color-danger);
 }
 
-/* ===== Mục lục prototype ===== */
+/* ===== Prototype catalog ===== */
 .catalog__group { margin-top: var(--space-6); }
 .catalog__row {
-  display: grid; grid-template-columns: 240px 1fr; gap: var(--space-3);
+  display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: var(--space-3);
   align-items: baseline;
   padding: var(--space-3) 0;
   border-bottom: 1px solid var(--color-border);
 }
-.catalog__name { font-weight: 600; }
+/* Sentence case: catalog names run to 46 characters ("Exam instructions —
+   blocked by ID verification"), which is a description, not a label. */
+.catalog__name {
+  font-family: var(--font-sign); font-weight: 700;
+  font-size: var(--text-sm);
+}
 .catalog__states { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .catalog__state {
   padding: 2px var(--space-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--ink);
+  border-radius: 0;
   background: var(--color-surface);
-  color: var(--color-primary);
+  color: var(--ink);
   font-family: var(--font-mono); font-size: var(--text-xs);
   text-decoration: none;
 }
-.catalog__state:hover { background: var(--color-bg); }
+.catalog__state:hover { background: var(--ink); color: #ffffff; }
+
+/* ===== responsive ===== */
+@media (max-width: 640px) {
+  .score-hero { grid-template-columns: minmax(0, 1fr); }
+  .score-hero__total { grid-row: auto; border-right: 0; border-bottom: var(--keyline) solid var(--ink); }
+  .score-hero__section { flex-direction: column; align-items: flex-start; gap: var(--space-1); }
+  .score-hero__section-value { text-align: left; }
+  .catalog__row { grid-template-columns: minmax(0, 1fr); }
+  /* The track divides by real score range, so C1 (945-990) gets 45/980 of the
+     width — 12px on a 360px phone, which cannot hold a two-character label. The
+     labels used to be shrunk to 10px to compensate: below the 11px floor, and C1
+     still clipped. At this width the bands go equal instead, so every label has
+     room at its normal size. The proportional reading is not lost — the head line
+     above the track names the score and the next threshold in words, and
+     `.is-current` still marks the band. The tick row follows the same grid; it
+     has to, or the numbers stop lining up with the band edges they mark. */
+  .cefr__track, .cefr__scale {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    min-width: 0;
+  }
+
+  /* A ledger's intrinsic width is set by its uppercase tracked headers plus
+     three-deep cell padding: six columns of it comes to ~700px, and `width:
+     100%` cannot shrink a table below its min-content width. So the table was
+     dragging the whole document sideways — 661px of overflow on Orders at 390,
+     567 on Users, and one more on each of nine other screens. It scrolls inside
+     itself instead: the page keeps a single scroll axis, and the table keeps
+     its column alignment, which stacking each row into a card would throw away.
+     `display: block` is what makes the scroll possible at all — a table box
+     cannot carry `overflow`. Alignment survives because consecutive
+     table-internal children share one anonymous table wrapper. */
+  .table { display: block; overflow-x: auto; }
+
+  /* Rows holding two controls rather than a label and a value. `.row` is a
+     plain flex line, so the second control simply ran off the edge — practice
+     summary's "Practice 20 more questions" ended at 512px on a 390px screen,
+     and the gateway's result links at 504. Wrapping costs nothing for the rows
+     that already fit: a flex line only breaks when it has to. */
+  .row { flex-wrap: wrap; }
+}

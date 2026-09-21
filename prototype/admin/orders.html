@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Đơn hàng — Quản trị TOEIC Practice</title>
+  <title>Orders — TOEIC Practice Admin</title>
+  <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../assets/css/tokens.css">
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
@@ -11,126 +12,126 @@
 <body data-states="loading,empty,error,success" data-state="success">
   <div class="app-shell app-shell--with-sidebar">
     <header class="app-topbar">
-      <strong>TOEIC Practice — Khu vực quản trị</strong>
+      <strong>TOEIC Practice — Admin area</strong>
       <div class="row">
         <span class="badge badge--warning">Admin</span>
         <span class="text-sm">admin@toeic.local</span>
-        <a class="btn btn--sm btn--ghost" href="../auth/login.html">Đăng xuất</a>
+        <a class="btn btn--sm btn--ghost" href="../auth/login.html">Sign out</a>
       </div>
     </header>
     <div class="app-body">
       <aside class="app-sidebar">
-        <nav class="nav-list" aria-label="Điều hướng quản trị">
-          <div class="nav-list__group">Tổng quan</div>
-          <a class="nav-list__item" href="dashboard.html">Bảng điều khiển</a>
-          <div class="nav-list__group">Nội dung</div>
-          <a class="nav-list__item" href="exam-list.html">Đề thi</a>
-          <a class="nav-list__item" href="score-conversion.html">Bảng quy đổi điểm</a>
-          <div class="nav-list__group">Người dùng &amp; doanh thu</div>
-          <a class="nav-list__item" href="users.html">Học viên</a>
-          <a class="nav-list__item" href="kyc-review.html">Duyệt CCCD <span class="badge badge--danger">3</span></a>
-          <a class="nav-list__item" href="packages.html">Gói lượt thi</a>
-          <a class="nav-list__item is-active" href="orders.html">Đơn hàng</a>
-          <div class="nav-list__group">Khác</div>
-          <a class="nav-list__item" href="../index.html">Mục lục prototype</a>
+        <nav class="nav-list" aria-label="Admin navigation">
+          <div class="nav-list__group">Overview</div>
+          <a class="nav-list__item" href="dashboard.html">Dashboard</a>
+          <div class="nav-list__group">Content</div>
+          <a class="nav-list__item" href="exam-list.html">Test</a>
+          <a class="nav-list__item" href="score-conversion.html">Score conversion</a>
+          <div class="nav-list__group">Users &amp; revenue</div>
+          <a class="nav-list__item" href="users.html">Students</a>
+          <a class="nav-list__item" href="kyc-review.html">ID review <span class="badge badge--danger">3</span></a>
+          <a class="nav-list__item" href="packages.html">Credit packages</a>
+          <a class="nav-list__item is-active" href="orders.html">Orders</a>
+          <div class="nav-list__group">Other</div>
+          <a class="nav-list__item" href="../index.html">Prototype catalog</a>
         </nav>
       </aside>
       <main class="app-main">
         <div class="container stack">
-          <h1>Đơn hàng</h1>
+          <h1>Orders</h1>
 
           <div class="grid-3 only-success">
             <div class="stat">
-              <div class="stat__label">Đã thanh toán (tháng này)</div>
+              <div class="stat__label">Paid (this month)</div>
               <div class="stat__value">328</div>
-              <div class="stat__hint">64,7 tr ₫</div>
+              <div class="stat__hint">64.7M ₫</div>
             </div>
             <div class="stat">
-              <div class="stat__label">Đang đối soát</div>
+              <div class="stat__label">Reconciling</div>
               <div class="stat__value">5</div>
-              <div class="stat__hint">2 đơn quá 30 phút</div>
+              <div class="stat__hint">2 orders over 30 minutes</div>
             </div>
             <div class="stat">
-              <div class="stat__label">Thất bại / hết hạn</div>
+              <div class="stat__label">Failed / expired</div>
               <div class="stat__value">41</div>
-              <div class="stat__hint">Chủ yếu do khách huỷ</div>
+              <div class="stat__hint">Mostly cancelled by customers</div>
             </div>
           </div>
 
           <div class="toolbar only-success">
             <div class="field toolbar__grow">
-              <label class="field__label" for="o-q">Tìm theo mã đơn hoặc email</label>
+              <label class="field__label" for="o-q">Search by order code or email</label>
               <input class="field__input" id="o-q" type="search" placeholder="DH-20260920-…">
             </div>
             <div class="field">
-              <label class="field__label" for="o-status">Trạng thái</label>
+              <label class="field__label" for="o-status">Status</label>
               <select class="field__input" id="o-status">
-                <option>Tất cả</option>
-                <option>Đã thanh toán</option>
-                <option>Đang đối soát</option>
-                <option>Thất bại</option>
-                <option>Hết hạn</option>
+                <option>All</option>
+                <option>Paid</option>
+                <option>Reconciling</option>
+                <option>Failed</option>
+                <option>Expired</option>
               </select>
             </div>
             <div class="field">
-              <label class="field__label" for="o-method">Cổng</label>
+              <label class="field__label" for="o-method">Gateway</label>
               <select class="field__input" id="o-method">
-                <option>Tất cả</option>
+                <option>All</option>
                 <option>VNPay</option>
                 <option>MoMo</option>
               </select>
             </div>
-            <button class="btn">Lọc</button>
+            <button class="btn">Filter</button>
           </div>
           <div class="card only-success">
             <div class="card__body">
               <table class="table table--striped">
                 <thead>
                   <tr>
-                    <th scope="col">Mã đơn</th><th scope="col">Học viên</th><th scope="col">Gói</th>
-                    <th scope="col">Số tiền</th><th scope="col">Cổng</th><th scope="col">Mã giao dịch</th>
-                    <th scope="col">Thời gian</th><th scope="col">Trạng thái</th><th scope="col">Thao tác</th>
+                    <th scope="col">Order code</th><th scope="col">Students</th><th scope="col">Package</th>
+                    <th scope="col">Amount</th><th scope="col">Gateway</th><th scope="col">Transaction code</th>
+                    <th scope="col">Time</th><th scope="col">Status</th><th scope="col">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr>
-                    <td>DH-20260920-0148</td><td>an.nguyen@gmail.com</td><td>Gói Ôn Thi</td>
-                    <td>199.000 ₫</td><td>VNPay</td><td>14320988</td><td>20/09/2026 14:32</td>
-                    <td><span class="badge badge--success">Đã thanh toán</span></td>
-                    <td><button class="btn btn--sm btn--ghost">Chi tiết</button></td>
+                    <td>DH-20260920-0148</td><td>an.nguyen@gmail.com</td><td>Exam Prep</td>
+                    <td>199,000 ₫</td><td>VNPay</td><td>14320988</td><td>20 Sep 2026 14:32</td>
+                    <td><span class="badge badge--success">Paid</span></td>
+                    <td><button class="btn btn--sm btn--ghost">Details</button></td>
                   </tr>
                   <tr>
-                    <td>DH-20260920-0147</td><td>binh.tran@gmail.com</td><td>Gói Lẻ</td>
-                    <td>49.000 ₫</td><td>MoMo</td><td>—</td><td>20/09/2026 14:05</td>
-                    <td><span class="badge badge--warning">Đang đối soát</span></td>
+                    <td>DH-20260920-0147</td><td>binh.tran@gmail.com</td><td>Pay as you go</td>
+                    <td>49,000 ₫</td><td>MoMo</td><td>—</td><td>20 Sep 2026 14:05</td>
+                    <td><span class="badge badge--warning">Reconciling</span></td>
                     <td class="row">
-                      <button class="btn btn--sm">Đối soát lại</button>
-                      <button class="btn btn--sm btn--ghost">Chi tiết</button>
+                      <button class="btn btn--sm">Reconcile again</button>
+                      <button class="btn btn--sm btn--ghost">Details</button>
                     </td>
                   </tr>
                   <tr>
-                    <td>DH-20260920-0141</td><td>cuong.le@gmail.com</td><td>Gói Cấp Tốc</td>
-                    <td>349.000 ₫</td><td>VNPay</td><td>14319022</td><td>20/09/2026 11:18</td>
-                    <td><span class="badge badge--danger">Thất bại</span></td>
-                    <td><button class="btn btn--sm btn--ghost">Chi tiết</button></td>
+                    <td>DH-20260920-0141</td><td>cuong.le@gmail.com</td><td>Intensive</td>
+                    <td>349,000 ₫</td><td>VNPay</td><td>14319022</td><td>20 Sep 2026 11:18</td>
+                    <td><span class="badge badge--danger">Failed</span></td>
+                    <td><button class="btn btn--sm btn--ghost">Details</button></td>
                   </tr>
                   <tr>
-                    <td>DH-20260919-0122</td><td>ha.pham@gmail.com</td><td>Gói Lẻ</td>
-                    <td>49.000 ₫</td><td>VNPay</td><td>—</td><td>19/09/2026 22:51</td>
-                    <td><span class="badge">Hết hạn</span></td>
-                    <td><button class="btn btn--sm btn--ghost">Chi tiết</button></td>
+                    <td>DH-20260919-0122</td><td>ha.pham@gmail.com</td><td>Pay as you go</td>
+                    <td>49,000 ₫</td><td>VNPay</td><td>—</td><td>19 Sep 2026 22:51</td>
+                    <td><span class="badge">Expired</span></td>
+                    <td><button class="btn btn--sm btn--ghost">Details</button></td>
                   </tr>
                 </tbody>
               </table>
             </div>
             <div class="card__footer">
               <div class="pagination">
-                <span class="pagination__info">Hiển thị 1–4 trong 374 đơn</span>
-                <a class="pagination__page" href="#" aria-disabled="true">Trước</a>
+                <span class="pagination__info">Showing 1–4 of 374 orders</span>
+                <a class="pagination__page" href="#" aria-disabled="true">Previous</a>
                 <a class="pagination__page is-current" href="#" aria-current="page">1</a>
                 <a class="pagination__page" href="#">2</a>
                 <a class="pagination__page" href="#">3</a>
-                <a class="pagination__page" href="#">Sau</a>
+                <a class="pagination__page" href="#">Next</a>
               </div>
             </div>
           </div>
@@ -138,8 +139,8 @@
             <div class="card__body">
               <div class="state-block">
                 <div class="state-block__icon" aria-hidden="true">?</div>
-                <h2 class="state-block__title">Không có đơn hàng nào khớp bộ lọc</h2>
-                <p class="state-block__desc">Thử mở rộng khoảng thời gian hoặc bỏ lọc trạng thái.</p>
+                <h2 class="state-block__title">No orders match the filter</h2>
+                <p class="state-block__desc">Try widening the time range or removing the status filter.</p>
               </div>
             </div>
           </div>
@@ -156,8 +157,8 @@
             <div class="card__body">
               <div class="state-block">
                 <div class="state-block__icon" aria-hidden="true">!</div>
-                <h2 class="state-block__title">Không tải được danh sách đơn hàng</h2>
-                <button class="btn">Tải lại</button>
+                <h2 class="state-block__title">Could not load the order list</h2>
+                <button class="btn">Reload</button>
               </div>
             </div>
           </div>

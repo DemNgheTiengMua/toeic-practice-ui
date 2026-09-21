@@ -1,7 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="560" height="360" viewBox="0 0 560 360" role="img" aria-label="Anh minh hoa Part 1">
+<svg xmlns="http://www.w3.org/2000/svg" width="560" height="360" viewBox="0 0 560 360" role="img" aria-label="Placeholder illustration standing in for a Part 1 photo">
   <rect width="560" height="360" fill="#e9ecf0"/>
   <rect x="40" y="220" width="480" height="100" fill="#cfd5dc"/>
   <circle cx="160" cy="150" r="52" fill="#b9c1ca"/>
   <rect x="300" y="98" width="180" height="104" fill="#b9c1ca"/>
-  <text x="280" y="348" font-family="sans-serif" font-size="14" fill="#6b7480" text-anchor="middle">Anh Part 1 (placeholder)</text>
+  <text x="280" y="348" font-family="sans-serif" font-size="14" fill="#6b7480" text-anchor="middle">Part 1 photo (placeholder)</text>
 </svg>

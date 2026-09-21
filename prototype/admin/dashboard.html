@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Bảng điều khiển — Quản trị TOEIC Practice</title>
+  <title>Dashboard — TOEIC Practice Admin</title>
+  <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../assets/css/tokens.css">
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
@@ -11,58 +12,58 @@
 <body data-states="loading,error,success" data-state="success">
   <div class="app-shell app-shell--with-sidebar">
     <header class="app-topbar">
-      <strong>TOEIC Practice — Khu vực quản trị</strong>
+      <strong>TOEIC Practice — Admin area</strong>
       <div class="row">
         <span class="badge badge--warning">Admin</span>
         <span class="text-sm">admin@toeic.local</span>
-        <a class="btn btn--sm btn--ghost" href="../auth/login.html">Đăng xuất</a>
+        <a class="btn btn--sm btn--ghost" href="../auth/login.html">Sign out</a>
       </div>
     </header>
     <div class="app-body">
       <aside class="app-sidebar">
-        <nav class="nav-list" aria-label="Điều hướng quản trị">
-          <div class="nav-list__group">Tổng quan</div>
-          <a class="nav-list__item is-active" href="dashboard.html">Bảng điều khiển</a>
-          <div class="nav-list__group">Nội dung</div>
-          <a class="nav-list__item" href="exam-list.html">Đề thi</a>
-          <a class="nav-list__item" href="score-conversion.html">Bảng quy đổi điểm</a>
-          <div class="nav-list__group">Người dùng &amp; doanh thu</div>
-          <a class="nav-list__item" href="users.html">Học viên</a>
-          <a class="nav-list__item" href="kyc-review.html">Duyệt CCCD <span class="badge badge--danger">3</span></a>
-          <a class="nav-list__item" href="packages.html">Gói lượt thi</a>
-          <a class="nav-list__item" href="orders.html">Đơn hàng</a>
-          <div class="nav-list__group">Khác</div>
-          <a class="nav-list__item" href="../index.html">Mục lục prototype</a>
+        <nav class="nav-list" aria-label="Admin navigation">
+          <div class="nav-list__group">Overview</div>
+          <a class="nav-list__item is-active" href="dashboard.html">Dashboard</a>
+          <div class="nav-list__group">Content</div>
+          <a class="nav-list__item" href="exam-list.html">Test</a>
+          <a class="nav-list__item" href="score-conversion.html">Score conversion</a>
+          <div class="nav-list__group">Users &amp; revenue</div>
+          <a class="nav-list__item" href="users.html">Students</a>
+          <a class="nav-list__item" href="kyc-review.html">ID review <span class="badge badge--danger">3</span></a>
+          <a class="nav-list__item" href="packages.html">Credit packages</a>
+          <a class="nav-list__item" href="orders.html">Orders</a>
+          <div class="nav-list__group">Other</div>
+          <a class="nav-list__item" href="../index.html">Prototype catalog</a>
         </nav>
       </aside>
       <main class="app-main">
         <div class="container stack">
-          <h1>Bảng điều khiển</h1>
+          <h1>Dashboard</h1>
 
           <div class="grid-3 only-success">
             <div class="stat">
-              <div class="stat__label">Học viên đang hoạt động</div>
+              <div class="stat__label">Active students</div>
               <div class="stat__value">1.284</div>
-              <div class="stat__hint">+47 trong 7 ngày</div>
+              <div class="stat__hint">+47 in 7 days</div>
             </div>
             <div class="stat">
-              <div class="stat__label">Lượt thi đã dùng (tháng này)</div>
+              <div class="stat__label">Credits used (this month)</div>
               <div class="stat__value">3.912</div>
-              <div class="stat__hint">Trung bình 130 lượt/ngày</div>
+              <div class="stat__hint">Average 130 credits/day</div>
             </div>
             <div class="stat">
-              <div class="stat__label">Doanh thu tháng này</div>
-              <div class="stat__value">64.7 tr ₫</div>
-              <div class="stat__hint">328 đơn đã thanh toán</div>
+              <div class="stat__label">Revenue this month</div>
+              <div class="stat__value">64.7M ₫</div>
+              <div class="stat__hint">328 paid orders</div>
             </div>
           </div>
           <div class="grid-2 only-success">
             <div class="card">
-              <div class="card__header"><strong>Đề thi được làm nhiều nhất</strong></div>
+              <div class="card__header"><strong>Most attempted test</strong></div>
               <div class="card__body">
                 <table class="table table--striped">
                   <thead>
-                    <tr><th scope="col">Đề</th><th scope="col">Lượt làm</th><th scope="col">Điểm TB</th></tr>
+                    <tr><th scope="col">Test</th><th scope="col">Attempts</th><th scope="col">Avg. score</th></tr>
                   </thead>
                   <tbody>
                     <tr><td>ETS 2024 — Test 1</td><td>612</td><td>705</td></tr>
@@ -75,15 +76,15 @@
             </div>
 
             <div class="card">
-              <div class="card__header"><strong>Cần xử lý</strong></div>
+              <div class="card__header"><strong>Needs attention</strong></div>
               <div class="card__body stack">
-                <div class="alert alert--warning">2 đề đang ở trạng thái nháp, thiếu file audio Part 3.</div>
-                <div class="alert alert--info">5 đơn hàng đang chờ đối soát quá 30 phút.</div>
-                <div class="alert alert--info">1 học viên báo lỗi câu 137 của ETS 2024 — Test 2.</div>
+                <div class="alert alert--warning">2 tests are in draft status, missing the Part 3 audio file.</div>
+                <div class="alert alert--info">5 orders have been waiting for reconciliation for over 30 minutes.</div>
+                <div class="alert alert--info">1 student reported an error in question 137 of ETS 2024 — Test 2.</div>
               </div>
               <div class="card__footer row">
-                <a class="btn" href="exam-list.html">Mở danh sách đề</a>
-                <a class="btn btn--ghost" href="orders.html">Mở đơn hàng</a>
+                <a class="btn" href="exam-list.html">Open test list</a>
+                <a class="btn btn--ghost" href="orders.html">Open order</a>
               </div>
             </div>
           </div>
@@ -100,9 +101,9 @@
             <div class="card__body">
               <div class="state-block">
                 <div class="state-block__icon" aria-hidden="true">!</div>
-                <h2 class="state-block__title">Không tải được số liệu</h2>
-                <p class="state-block__desc">Các số liệu tổng quan tạm thời không khả dụng.</p>
-                <button class="btn">Tải lại</button>
+                <h2 class="state-block__title">Could not load the metrics</h2>
+                <p class="state-block__desc">Overview metrics are temporarily unavailable.</p>
+                <button class="btn">Reload</button>
               </div>
             </div>
           </div>

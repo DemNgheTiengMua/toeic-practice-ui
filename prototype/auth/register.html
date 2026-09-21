@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Đăng ký — TOEIC Practice</title>
+  <title>Sign up — TOEIC Practice</title>
+  <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../assets/css/tokens.css">
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
@@ -12,20 +13,20 @@
   <div class="app-shell">
     <header class="app-topbar">
       <strong>TOEIC Practice</strong>
-      <a class="btn btn--ghost btn--sm" href="../index.html">Mục lục prototype</a>
+      <a class="btn btn--ghost btn--sm" href="../index.html">Prototype catalog</a>
     </header>
     <main class="app-main">
       <div class="container container--narrow stack">
-        <h1>Đăng ký</h1>
+        <h1>Sign up</h1>
 
         <div class="alert alert--danger only-error" role="alert">
-          Không tạo được tài khoản. Kiểm tra lại thông tin bên dưới.
+          Could not create your account. Check the details below.
         </div>
 
         <div class="card">
           <div class="card__body stack">
             <div class="field">
-              <label class="field__label" for="reg-name">Họ và tên</label>
+              <label class="field__label" for="reg-name">Full name</label>
               <input class="field__input" id="reg-name" type="text" autocomplete="name">
             </div>
 
@@ -38,33 +39,33 @@
             <div class="field only-error field--invalid">
               <label class="field__label" for="reg-email-bad">Email</label>
               <input class="field__input" id="reg-email-bad" type="email" value="ban@example">
-              <p class="field__error">Email này đã được dùng.</p>
+              <p class="field__error">That email is already in use.</p>
             </div>
 
             <div class="field">
-              <label class="field__label" for="reg-password">Mật khẩu</label>
+              <label class="field__label" for="reg-password">Password</label>
               <input class="field__input" id="reg-password" type="password"
                      autocomplete="new-password">
-              <p class="field__hint">Tối thiểu 8 ký tự, có chữ và số.</p>
+              <p class="field__hint">At least 8 characters, with letters and numbers.</p>
             </div>
 
             <div class="field">
-              <label class="field__label" for="reg-confirm">Nhập lại mật khẩu</label>
+              <label class="field__label" for="reg-confirm">Confirm password</label>
               <input class="field__input" id="reg-confirm" type="password"
                      autocomplete="new-password">
             </div>
 
             <label class="row">
               <input type="checkbox" id="reg-terms">
-              <span class="text-sm">Tôi đồng ý với điều khoản sử dụng</span>
+              <span class="text-sm">I agree to the terms of use</span>
             </label>
           </div>
           <div class="card__footer stack">
-            <button class="btn btn--primary btn--lg only-success" style="width: 100%">Tạo tài khoản</button>
-            <button class="btn btn--primary btn--lg only-error" style="width: 100%">Tạo tài khoản</button>
-            <button class="btn btn--primary btn--lg only-submitting" style="width: 100%" disabled>Đang tạo tài khoản…</button>
+            <button class="btn btn--primary btn--lg only-success" style="width: 100%">Create account</button>
+            <button class="btn btn--primary btn--lg only-error" style="width: 100%">Create account</button>
+            <button class="btn btn--primary btn--lg only-submitting" style="width: 100%" disabled>Creating your account…</button>
             <p class="text-sm text-muted" style="margin: 0; text-align: center">
-              Đã có tài khoản? <a href="login.html">Đăng nhập</a>
+              Already have an account? <a href="login.html">Sign in</a>
             </p>
           </div>
         </div>

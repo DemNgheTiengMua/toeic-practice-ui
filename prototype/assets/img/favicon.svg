@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="TOEIC Practice">
+  <rect width="64" height="64" fill="#0b4ea2"/>
+  <rect x="4" y="4" width="56" height="56" fill="none" stroke="#14181d" stroke-width="4"/>
+  <rect x="4" y="46" width="56" height="8" fill="#f2b705"/>
+  <text x="32" y="38" font-family="Bahnschrift, 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif"
+        font-size="30" font-weight="700" fill="#ffffff" text-anchor="middle">T</text>
+</svg>

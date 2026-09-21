@@ -5,70 +5,154 @@ body {
   font-size: var(--text-base);
   color: var(--color-text);
   background: var(--color-bg);
-  line-height: 1.5;
+  line-height: var(--leading-body);
+  caret-color: var(--sign-blue);
 }
-h1, h2, h3 { margin: 0 0 var(--space-3); line-height: 1.25; }
-h1 { font-size: var(--text-2xl); }
-h2 { font-size: var(--text-xl); }
-h3 { font-size: var(--text-lg); }
-p { margin: 0 0 var(--space-3); }
-a { color: var(--color-primary); }
-:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 
-/* shell */
+/* Sign lettering: bold condensed caps. h1 and h2 are placard lines; h3 is a
+   panel heading, which stays sentence case so dense content remains readable. */
+h1, h2, h3 { margin: 0 0 var(--space-3); line-height: var(--leading-tight); font-family: var(--font-sign); }
+h1 {
+  font-size: var(--text-2xl); font-weight: 700;
+  text-transform: uppercase; letter-spacing: var(--tracking-sign);
+}
+h2 {
+  font-size: var(--text-xl); font-weight: 700;
+  text-transform: uppercase; letter-spacing: var(--tracking-sign);
+}
+h3 { font-size: var(--text-lg); font-weight: 700; }
+p { margin: 0 0 var(--space-3); }
+a { color: var(--color-primary); text-underline-offset: 3px; }
+:focus-visible { outline: 3px solid var(--sign-blue); outline-offset: 2px; }
+
+/* Browser surfaces carry the world too — the cheapest signal that a page was
+   built rather than assembled. Selection is the highlighter over the page;
+   the scrollbar is a painted rail, not the platform default. */
+::selection { background: var(--sign-gold); color: var(--ink); }
+* { scrollbar-width: thin; scrollbar-color: #3d454e var(--wall); }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--wall); }
+::-webkit-scrollbar-thumb { background: #3d454e; border: 2px solid var(--wall); }
+
+/* Announced to assistive technology, invisible on screen. Used for the exam
+   surfaces' missing headings, which the critique flagged. */
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px;
+  margin: -1px; padding: 0; overflow: hidden;
+  clip: rect(0 0 0 0); clip-path: inset(50%);
+  white-space: nowrap; border: 0;
+}
+
+/* ===== shell ============================================================= */
 .app-shell { display: grid; grid-template-rows: auto 1fr; min-height: 100vh; }
 .app-shell--with-sidebar .app-body {
-  display: grid; grid-template-columns: 240px 1fr; min-height: 0;
+  display: grid; grid-template-columns: 240px minmax(0, 1fr); min-height: 0;
 }
+
+/* The topbar is the painted band: sign-blue field, white caps lettering. */
 .app-topbar {
   display: flex; align-items: center; justify-content: space-between;
   gap: var(--space-4);
   padding: var(--space-3) var(--space-5);
-  background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
+  background: var(--sign-blue);
+  color: #ffffff;
+  border-bottom: var(--keyline) solid var(--ink);
 }
+.app-topbar a { color: #ffffff; }
+.app-topbar .text-muted { color: var(--color-on-band-muted); }
+
+/* The band inverts the page: its own lettering is white, so a component that
+   expects a paper background has to be re-stated for it. `.app-topbar a`
+   outranks `.btn`, which turned the button's ink label white and left it at
+   1.0:1 on its own white field — an invisible label on every screen that
+   carries the band. These rules give the band's button and chip their own
+   fields. The button stays a paper chip (that IS the house button); the chip
+   becomes an outlined one, because a sign-blue chip on a sign-blue band has no
+   frame at all and reads as loose text. */
+.app-topbar .btn {
+  background: var(--color-surface);
+  border-color: var(--ink);
+  color: var(--ink);
+}
+.app-topbar .btn:hover { background: var(--ink); color: #ffffff; }
+.app-topbar .btn--ghost {
+  background: transparent; border-color: transparent; color: #ffffff;
+}
+/* White keyline on hover, not ink: an ink frame on the blue band is 2.2:1. */
+.app-topbar .btn--ghost:hover {
+  background: transparent; border-color: #ffffff; color: #ffffff;
+}
+/* Only the blue chips need this — a blue chip on the blue band has no frame.
+   Gold, green and red chips keep their own fields, which read fine on blue and
+   carry meaning the band should not erase. */
+.app-topbar .badge--info,
+.app-topbar .badge--primary {
+  background: transparent; border-color: #ffffff; color: #ffffff;
+}
+
+/* The exam clock is a paper plate sitting on the band, so its lettering is ink,
+   not the white it would otherwise inherit — inherited white on its own white
+   field left the timer at 1.0:1, i.e. invisible on the one screen where it is
+   the most important number. The gold and red plates carry their own lettering
+   already; they are restated so the plate rule above cannot flatten them. */
+.app-topbar .timer { color: var(--ink); }
+.app-topbar .timer .text-muted { color: var(--color-text-muted); }
+.app-topbar .timer--warning { color: var(--ink); }
+.app-topbar .timer--critical { color: #ffffff; }
+
+/* The autosave status sits directly on the band, so it needs the light
+   renditions of the status inks; the paper ones are ~1.2:1 on sign-blue. */
+.app-topbar .save-status--saved { color: var(--color-on-band-success); }
+.app-topbar .save-status--error { color: var(--color-on-band-danger); }
+
+/* The rail is a painted panel with a hard ink keyline on its inner edge. */
 .app-sidebar {
   padding: var(--space-4);
   background: var(--color-surface);
-  border-right: 1px solid var(--color-border);
+  border-right: var(--keyline) solid var(--ink);
 }
 .app-main { padding: var(--space-5); min-width: 0; }
 .container { width: 100%; max-width: 1180px; margin: 0 auto; }
 .container--narrow { max-width: 460px; }
 
-/* layout helper */
+/* ===== layout helper ===================================================== */
 .stack > * + * { margin-top: var(--space-4); }
 .row { display: flex; align-items: center; gap: var(--space-3); }
 .row--between { justify-content: space-between; }
-.grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-4); }
-.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4); }
+/* minmax(0,1fr) stops the columns blowing past the container; the breakpoints
+   below stop them collapsing into unreadable slivers, which is what the old
+   repeat(3,1fr) did at 390px. */
+.grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+.grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4); }
 .text-muted { color: var(--color-text-muted); }
 .text-sm { font-size: var(--text-sm); }
+.text-xs { font-size: var(--text-xs); }
 
-/* hiển thị theo state */
-/* Bẫy đã biết của `display: revert` ở hai nhóm rule hiện bên dưới: revert trả
-   về giá trị mặc định của user-agent cho chính element đó, KHÔNG trả về display
-   mà component khai báo. Ví dụ: <button> revert thành inline-block, còn .btn
-   đặt inline-flex. Nên một .btn.only-* có icon bên trong sẽ âm thầm mất flex
-   `gap` và `align-items`: không có lỗi, không có dấu hiệu gì trên giao diện.
-   Hiện chưa trang nào gặp (các .btn ở trang auth chỉ có text nên revert là
-   no-op). Khi task đầu tiên cần tới, cách sửa là dùng `revert-layer` hoặc thu
-   hẹp rule hiện cho đúng component — không sửa rộng hơn thế. */
-/* Class lặp hai lần để tăng specificity lên (0,2,0): phải thắng display của
-   component (.btn đặt inline-flex trong components.css, load sau base.css).
-   Rule hiện bên dưới là (0,2,1) nên vẫn thắng rule ẩn này. */
+/* ===== state visibility ==================================================
+   This rule group is the prototype's testable spec — do not change it. */
+/* The known `display: revert` trap in the two groups below: revert restores the
+   user-agent default for that element, NOT the display the component declares.
+   A <button> reverts to inline-block, while .btn sets inline-flex. So a
+   .btn.only-* with an icon inside silently loses its flex `gap` and
+   `align-items`: no error, no visible sign on the page. Nothing hits this today
+   (the auth pages' .btn elements are text-only, so revert is a no-op). When a
+   task first needs it, fix it with `revert-layer`, or narrow the rule to the
+   exact component — do not widen the change beyond that. */
+/* The class is doubled to raise specificity to (0,2,0): it has to beat the
+   component's display (.btn sets inline-flex in components.css, which loads
+   after base.css). The rule below is (0,2,1), so it still beats this hide. */
 .only-loading.only-loading, .only-empty.only-empty,
 .only-error.only-error, .only-success.only-success,
 .only-resumed.only-resumed, .only-expired.only-expired,
 .only-submitting.only-submitting, .only-offline.only-offline,
-.only-pending.only-pending, .only-failed.only-failed, .only-paid.only-paid,
+.only-pending.only-pending, .only-failed.only-failed,
 .only-step2.only-step2, .only-step3.only-step3,
 .only-adjust.only-adjust, .only-edit.only-edit,
 .only-paywall.only-paywall, .only-sent.only-sent,
 .only-complete.only-complete,
 .only-answering.only-answering, .only-revealed-correct.only-revealed-correct,
 .only-revealed-wrong.only-revealed-wrong, .only-finished.only-finished,
-.only-inprogress.only-inprogress, .only-cancelled.only-cancelled,
+.only-cancelled.only-cancelled,
 .only-rejected.only-rejected, .only-kyc-required.only-kyc-required,
 .only-kyc-pending.only-kyc-pending,
 .only-approved.only-approved { display: none; }
@@ -82,7 +166,6 @@ body[data-state="submitting"] .only-submitting,
 body[data-state="offline"]    .only-offline,
 body[data-state="pending"]    .only-pending,
 body[data-state="failed"]     .only-failed,
-body[data-state="paid"]       .only-paid,
 body[data-state="step2"]      .only-step2,
 body[data-state="step3"]      .only-step3,
 body[data-state="paywall"]    .only-paywall,
@@ -94,15 +177,14 @@ body[data-state="answering"]        .only-answering,
 body[data-state="revealed-correct"] .only-revealed-correct,
 body[data-state="revealed-wrong"]   .only-revealed-wrong,
 body[data-state="finished"]         .only-finished,
-body[data-state="inprogress"]       .only-inprogress,
 body[data-state="cancelled"]        .only-cancelled,
 body[data-state="rejected"]         .only-rejected,
 body[data-state="kyc-required"]     .only-kyc-required,
 body[data-state="kyc-pending"]      .only-kyc-pending,
 body[data-state="approved"]         .only-approved { display: revert; }
 
-/* element hiện ở nhiều state: đặt .multi-state rồi liệt kê trong data-show.
-   Class lặp hai lần vì lý do specificity giống nhóm .only-* */
+/* Elements that appear in several states: add .multi-state and list the states
+   in data-show. The class is doubled for the same specificity reason as .only-* */
 .multi-state.multi-state { display: none; }
 body[data-state="success"]    .multi-state[data-show~="success"],
 body[data-state="submitting"] .multi-state[data-show~="submitting"] { display: revert; }
@@ -120,20 +202,19 @@ body[data-state="failed"]           .multi-state[data-show~="failed"],
 body[data-state="loading"]          .multi-state[data-show~="loading"],
 body[data-state="empty"]            .multi-state[data-show~="empty"],
 body[data-state="error"]            .multi-state[data-show~="error"],
-body[data-state="paid"]             .multi-state[data-show~="paid"],
 body[data-state="step2"]            .multi-state[data-show~="step2"],
 body[data-state="step3"]            .multi-state[data-show~="step3"],
 body[data-state="adjust"]           .multi-state[data-show~="adjust"],
 body[data-state="edit"]             .multi-state[data-show~="edit"],
-body[data-state="inprogress"]       .multi-state[data-show~="inprogress"],
 body[data-state="cancelled"]        .multi-state[data-show~="cancelled"],
 body[data-state="kyc-required"]     .multi-state[data-show~="kyc-required"],
 body[data-state="kyc-pending"]      .multi-state[data-show~="kyc-pending"],
 body[data-state="rejected"]         .multi-state[data-show~="rejected"] { display: revert; }
 
-/* .modal-overlay canh giữa bằng display: grid, nhưng `revert` ở hai nhóm rule
-   trên trả về `block` của user-agent nên modal dính góc trên-trái. Ghi đè đúng
-   component này cho các state đang có modal, không sửa rộng hơn. */
+/* .modal-overlay centres itself with display: grid, but `revert` in the two
+   groups above restores the user-agent's `block`, which pins the modal to the
+   top-left corner. Override exactly this component for the states that have a
+   modal — do not widen the change. */
 body[data-state="success"]    .modal-overlay.only-success,
 body[data-state="complete"]   .modal-overlay.only-complete,
 body[data-state="submitting"] .modal-overlay.only-submitting,
@@ -142,25 +223,78 @@ body[data-state="adjust"]     .modal-overlay.only-adjust,
 body[data-state="expired"]    .modal-overlay.only-expired,
 body[data-state="cancelled"]  .modal-overlay.only-cancelled { display: grid; }
 
+/* ===== state switcher (dev artifact, painted as a small plate) =========== */
 .state-switcher {
   position: fixed; right: var(--space-4); bottom: var(--space-4);
   display: flex; align-items: center; gap: var(--space-2);
   flex-wrap: wrap; max-width: 60vw;
   padding: var(--space-2) var(--space-3);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
+  background: var(--ink);
+  color: #ffffff;
+  border: var(--keyline) solid var(--ink);
+  font-family: var(--font-mono);
   font-size: var(--text-xs);
   z-index: var(--z-modal);
 }
-.state-switcher__label { color: var(--color-text-muted); }
+.state-switcher__label { color: #b9c0c7; }
 .state-switcher__item {
   padding: 2px var(--space-2);
-  border-radius: var(--radius-sm);
+  color: #ffffff;
   text-decoration: none;
 }
+.state-switcher__item:hover { background: #3d454e; }
 .state-switcher__item[aria-current="true"] {
-  background: var(--color-primary);
-  color: var(--color-primary-text);
+  background: var(--sign-gold);
+  color: var(--ink);
+  font-weight: 700;
+}
+/* An unrecognised ?state= falls back to the first state, and the fallback has to
+   be legible as a fallback. Gold marks what you asked for and did not get; ink
+   marks what is actually on screen. Without this the page just looks like the
+   state you typed. */
+.state-switcher--unknown {
+  border-color: var(--sign-red);
+  box-shadow: inset 0 0 0 var(--keyline) var(--sign-red);
+}
+.state-switcher__warn {
+  flex: 1 0 100%;
+  margin-top: var(--space-1);
+  padding-top: var(--space-1);
+  border-top: 1px solid #3d454e;
+  color: #ffb4b6;
+}
+.state-switcher__fallback {
+  background: var(--sign-red);
+  color: #ffffff;
+  font-weight: 700;
+  cursor: help;
+}
+
+/* ===== responsive ======================================================= */
+/* Desktop-first is a recorded trade-off; content collapsing into 23px columns
+   is not. Two breakpoints, placed where the layouts actually break. */
+@media (max-width: 1024px) {
+  .app-shell--with-sidebar .app-body { grid-template-columns: minmax(0, 1fr); }
+  .app-sidebar {
+    border-right: 0;
+    border-bottom: var(--keyline) solid var(--ink);
+  }
+  .grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  /* The exam layout's collapse is NOT here, and must not be put back: this file
+     loads before components.css, which declares `.exam-layout`'s columns
+     unconditionally. An equal-specificity rule in this block loses to it at
+     every viewport, so the pair that used to sit here was dead code that read
+     like a working breakpoint. It lives beside the rule it overrides, in
+     components.css. */
+}
+@media (max-width: 640px) {
+  .app-main { padding: var(--space-4); }
+  .app-topbar { flex-wrap: wrap; row-gap: var(--space-2); }
+  .grid-2, .grid-3 { grid-template-columns: minmax(0, 1fr); }
+  .container--narrow { max-width: 100%; }
+  .state-switcher { max-width: calc(100vw - 2 * var(--space-4)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
 }

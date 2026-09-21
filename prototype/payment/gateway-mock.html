@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>VNPay (mô phỏng) — Cổng thanh toán</title>
+  <title>VNPay (simulated) — Payment gateway</title>
+  <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../assets/css/tokens.css">
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
@@ -11,35 +12,36 @@
 <body data-states="success" data-state="success">
   <div class="container container--narrow" style="padding-top: var(--space-6)">
     <div class="stack">
+      <h1>Pay via the VNPay gateway</h1>
+
       <div class="alert alert--warning">
-        Trang mô phỏng cổng thanh toán. Đây <strong>không phải</strong> VNPay thật,
-        không nhập thông tin thẻ thật.
+        A simulated payment gateway page. This is <strong>not</strong> the real VNPay — do not enter real card details.
       </div>
 
       <div class="card">
-        <div class="card__header"><strong>VNPay (mô phỏng)</strong></div>
+        <div class="card__header"><strong>VNPay (simulated)</strong></div>
         <div class="card__body stack">
-          <div class="row row--between"><span class="text-muted">Nhà bán</span><span>TOEIC Practice</span></div>
-          <div class="row row--between"><span class="text-muted">Mã đơn</span><span>DH-20260920-0148</span></div>
-          <div class="row row--between"><strong>Số tiền</strong><strong>199.000 ₫</strong></div>
+          <div class="row row--between"><span class="text-muted">Seller</span><span>TOEIC Practice</span></div>
+          <div class="row row--between"><span class="text-muted">Order code</span><span>DH-20260920-0148</span></div>
+          <div class="row row--between"><strong>Amount</strong><strong>199,000 ₫</strong></div>
           <hr>
           <div class="field">
-            <label class="field__label" for="card-number">Số thẻ</label>
+            <label class="field__label" for="card-number">Card number</label>
             <input class="field__input" id="card-number" value="9704 xxxx xxxx 1234" disabled>
-            <span class="field__hint">Ô nhập bị khoá trong bản prototype.</span>
+            <span class="field__hint">This field is locked in the prototype.</span>
           </div>
         </div>
         <div class="card__footer stack">
-          <p class="text-sm text-muted" style="margin: 0">Chọn kết quả muốn xem:</p>
+          <p class="text-sm text-muted" style="margin: 0">Choose a result to view:</p>
           <div class="row">
-            <a class="btn btn--primary" href="payment-result.html?state=success">Thanh toán thành công</a>
-            <a class="btn btn--danger" href="payment-result.html?state=failed">Thanh toán thất bại</a>
-            <a class="btn btn--ghost" href="payment-result.html?state=pending">Cổng phản hồi chậm</a>
-            <a class="btn btn--ghost" href="payment-result.html?state=expired">Đơn quá hạn</a>
+            <a class="btn btn--primary" href="payment-result.html?state=success">Payment successful</a>
+            <a class="btn btn--danger" href="payment-result.html?state=failed">Payment failed</a>
+            <a class="btn btn--ghost" href="payment-result.html?state=pending">The gateway is responding slowly</a>
+            <a class="btn btn--ghost" href="payment-result.html?state=expired">Order expired</a>
           </div>
           <p class="text-sm text-muted" style="margin: 0">
-            Bấm back từ đây về checkout khi đơn còn hiệu lực:
-            <a href="checkout.html?state=pending">checkout ở state pending</a>.
+            Use your browser's back button to return to checkout while the order is still valid:
+            <a href="checkout.html?state=pending">checkout in the pending state</a>.
           </p>
         </div>
       </div>

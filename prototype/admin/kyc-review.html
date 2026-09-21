@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Duyệt xác thực CCCD — Quản trị TOEIC Practice</title>
+  <title>ID verification review — TOEIC Practice Admin</title>
+  <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../assets/css/tokens.css">
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
@@ -11,41 +12,48 @@
 <body data-states="loading,empty,error,success,adjust" data-state="success">
   <div class="app-shell app-shell--with-sidebar">
     <header class="app-topbar">
-      <strong>TOEIC Practice — Khu vực quản trị</strong>
+      <strong>TOEIC Practice — Admin area</strong>
       <div class="row">
         <span class="badge badge--warning">Admin</span>
         <span class="text-sm">admin@toeic.local</span>
-        <a class="btn btn--sm btn--ghost" href="../auth/login.html">Đăng xuất</a>
+        <a class="btn btn--sm btn--ghost" href="../auth/login.html">Sign out</a>
       </div>
     </header>
     <div class="app-body">
       <aside class="app-sidebar">
-        <nav class="nav-list" aria-label="Điều hướng quản trị">
-          <div class="nav-list__group">Tổng quan</div>
-          <a class="nav-list__item" href="dashboard.html">Bảng điều khiển</a>
-          <div class="nav-list__group">Nội dung</div>
-          <a class="nav-list__item" href="exam-list.html">Đề thi</a>
-          <a class="nav-list__item" href="score-conversion.html">Bảng quy đổi điểm</a>
-          <div class="nav-list__group">Người dùng &amp; doanh thu</div>
-          <a class="nav-list__item" href="users.html">Học viên</a>
-          <a class="nav-list__item is-active" href="kyc-review.html">Duyệt CCCD <span class="badge badge--danger">3</span></a>
-          <a class="nav-list__item" href="packages.html">Gói lượt thi</a>
-          <a class="nav-list__item" href="orders.html">Đơn hàng</a>
-          <div class="nav-list__group">Khác</div>
-          <a class="nav-list__item" href="../index.html">Mục lục prototype</a>
+        <nav class="nav-list" aria-label="Admin navigation">
+          <div class="nav-list__group">Overview</div>
+          <a class="nav-list__item" href="dashboard.html">Dashboard</a>
+          <div class="nav-list__group">Content</div>
+          <a class="nav-list__item" href="exam-list.html">Test</a>
+          <a class="nav-list__item" href="score-conversion.html">Score conversion</a>
+          <div class="nav-list__group">Users &amp; revenue</div>
+          <a class="nav-list__item" href="users.html">Students</a>
+          <a class="nav-list__item is-active" href="kyc-review.html">ID review <span class="badge badge--danger" data-kyc-count>3</span></a>
+          <a class="nav-list__item" href="packages.html">Credit packages</a>
+          <a class="nav-list__item" href="orders.html">Orders</a>
+          <div class="nav-list__group">Other</div>
+          <a class="nav-list__item" href="../index.html">Prototype catalog</a>
         </nav>
       </aside>
       <main class="app-main">
         <div class="container stack">
           <div class="row row--between">
             <div>
-              <h1 style="margin: 0 0 var(--space-1)">Duyệt xác thực CCCD</h1>
+              <h1 style="margin: 0 0 var(--space-1)">ID verification review</h1>
               <p class="text-muted" style="margin: 0">
-                Đối chiếu ảnh CCCD với thông tin học viên khai. Học viên chỉ thi thật được sau khi hồ sơ được duyệt.
+                Compare the ID card photo with the information the student declared. Students can only take a real exam after their application is approved.
               </p>
             </div>
-            <span class="badge badge--danger">3 hồ sơ chờ duyệt</span>
+            <span class="badge badge--danger" data-kyc-count-label>3 applications pending review</span>
           </div>
+
+          <!-- Kết quả của lần duyệt vừa rồi. Duyệt xong mà hàng đợi im lặng
+               đổi thì admin không biết thao tác của mình đã ăn hay chưa.
+               Cố ý không gắn .only-success: duyệt hồ sơ cuối cùng sẽ đẩy
+               màn sang state empty, và thông báo không được biến mất theo. -->
+          <div class="alert alert--success" id="kyc-result"
+               role="status" aria-live="polite" hidden></div>
 
           <!-- ===== loading ===== -->
           <div class="only-loading stack">
@@ -57,12 +65,12 @@
           <div class="only-empty">
             <div class="card"><div class="card__body">
               <div class="state-block">
-                <div class="state-block__icon" aria-hidden="true">□</div>
-                <div class="state-block__title">Không còn hồ sơ chờ duyệt</div>
+                <div class="state-block__icon" aria-hidden="true">EMPTY</div>
+                <div class="state-block__title">No applications pending review</div>
                 <p class="state-block__desc">
-                  Hàng đợi đã sạch. Hồ sơ mới sẽ xuất hiện ở đây ngay khi học viên gửi.
+                  The queue is empty. New applications will appear here as soon as students submit them.
                 </p>
-                <a class="btn" href="users.html">Danh sách học viên</a>
+                <a class="btn" href="users.html">Student list</a>
               </div>
             </div></div>
           </div>
@@ -72,9 +80,9 @@
             <div class="card"><div class="card__body">
               <div class="state-block">
                 <div class="state-block__icon" aria-hidden="true">!</div>
-                <div class="state-block__title">Không tải được hàng đợi</div>
-                <p class="state-block__desc">Kiểm tra kết nối rồi thử lại.</p>
-                <button class="btn btn--primary">Thử lại</button>
+                <div class="state-block__title">Could not load the queue</div>
+                <p class="state-block__desc">Check your connection and try again.</p>
+                <button class="btn btn--primary">Try again</button>
               </div>
             </div></div>
           </div>
@@ -84,31 +92,31 @@
             <div class="card">
               <div class="card__body row" style="gap: var(--space-4); flex-wrap: wrap">
                 <div class="field" style="flex: 1 1 220px">
-                  <label class="field__label" for="kyc-search">Tìm học viên</label>
-                  <input class="field__input" id="kyc-search" type="search" placeholder="Tên hoặc email…">
+                  <label class="field__label" for="kyc-search">Search students</label>
+                  <input class="field__input" id="kyc-search" type="search" placeholder="Name or email…">
                 </div>
                 <div class="field" style="flex: 0 0 180px">
-                  <label class="field__label" for="kyc-since">Gửi từ</label>
+                  <label class="field__label" for="kyc-since">Sent from</label>
                   <select class="field__input" id="kyc-since">
-                    <option>Hôm nay</option>
-                    <option selected>7 ngày qua</option>
-                    <option>Tất cả</option>
+                    <option>Today</option>
+                    <option selected>Last 7 days</option>
+                    <option>All</option>
                   </select>
                 </div>
               </div>
             </div>
 
             <div class="card">
-              <div class="card__header"><strong>Hàng đợi chờ duyệt</strong></div>
+              <div class="card__header"><strong>Pending review queue</strong></div>
               <div class="card__body">
                 <table class="table">
                   <thead>
                     <tr>
-                      <th scope="col">Học viên</th>
-                      <th scope="col">Tên trên CCCD</th>
-                      <th scope="col">Số CCCD</th>
-                      <th scope="col">Gửi lúc</th>
-                      <th scope="col">Chờ</th>
+                      <th scope="col">Students</th>
+                      <th scope="col">Name on ID card</th>
+                      <th scope="col">ID number</th>
+                      <th scope="col">Sent at</th>
+                      <th scope="col">Waiting</th>
                       <th scope="col"></th>
                     </tr>
                   </thead>
@@ -120,11 +128,11 @@
                       </td>
                       <td>NGUYỄN VĂN A</td>
                       <td>•••• •••• 1234</td>
-                      <td>20/09/2026 11:24</td>
-                      <td><span class="badge badge--warning">2 giờ</span></td>
+                      <td>20 Sep 2026 11:24</td>
+                      <td><span class="badge badge--warning">2 hours</span></td>
                       <td>
                         <button class="btn btn--sm btn--primary"
-                                data-kyc-open="Nguyễn Văn A">Xem và duyệt</button>
+                                data-kyc-open="Nguyễn Văn A">Review and approve</button>
                       </td>
                     </tr>
                     <tr>
@@ -134,11 +142,11 @@
                       </td>
                       <td>TRẦN THỊ B</td>
                       <td>•••• •••• 5678</td>
-                      <td>20/09/2026 09:10</td>
-                      <td><span class="badge badge--warning">5 giờ</span></td>
+                      <td>20 Sep 2026 09:10</td>
+                      <td><span class="badge badge--warning">5 hours</span></td>
                       <td>
                         <button class="btn btn--sm btn--primary"
-                                data-kyc-open="Trần Thị B">Xem và duyệt</button>
+                                data-kyc-open="Trần Thị B">Review and approve</button>
                       </td>
                     </tr>
                     <tr>
@@ -148,11 +156,11 @@
                       </td>
                       <td>LÊ VĂN C</td>
                       <td>•••• •••• 9012</td>
-                      <td>19/09/2026 16:48</td>
-                      <td><span class="badge badge--danger">20 giờ</span></td>
+                      <td>19 Sep 2026 16:48</td>
+                      <td><span class="badge badge--danger">20 hours</span></td>
                       <td>
                         <button class="btn btn--sm btn--primary"
-                                data-kyc-open="Lê Văn C">Xem và duyệt</button>
+                                data-kyc-open="Lê Văn C">Review and approve</button>
                       </td>
                     </tr>
                   </tbody>
@@ -171,122 +179,223 @@
        thông tin giữa hai lần mở. -->
   <div class="modal-overlay only-adjust" role="dialog" aria-modal="true"
        aria-labelledby="kyc-review-title">
-    <div class="modal" style="max-width: 900px">
+    <div class="modal" style="max-width: 900px" tabindex="-1">
       <div class="modal__header">
-        <h2 id="kyc-review-title" style="margin: 0">Duyệt hồ sơ — Nguyễn Văn A</h2>
+        <h2 id="kyc-review-title" style="margin: 0">Application review — Nguyễn Văn A</h2>
+        <button class="modal__close" id="kyc-close" aria-label="Close review dialog">Close</button>
       </div>
       <div class="modal__body stack">
         <div class="grid-2">
           <div class="stack">
-            <span class="field__label">Ảnh mặt trước CCCD</span>
+            <span class="field__label">Front of ID card</span>
             <div class="kyc-photo">cccd-truoc.jpg — 1.8 MB</div>
-            <span class="field__label">Ảnh mặt sau CCCD</span>
+            <span class="field__label">Back of ID card</span>
             <div class="kyc-photo">cccd-sau.jpg — 1.6 MB</div>
           </div>
           <div class="stack">
-            <span class="field__label">Ảnh chân dung</span>
+            <span class="field__label">Portrait photo</span>
             <div class="kyc-photo kyc-photo--portrait">selfie.jpg — 2.1 MB</div>
             <div class="alert alert--info" style="margin: 0">
-              Đối chiếu khuôn mặt trên ảnh chân dung với ảnh trên CCCD.
-              Nếu không khớp, từ chối và ghi rõ lý do.
+              Compare the face in the portrait photo with the photo on the ID card. If they do not match, reject and state the reason clearly.
             </div>
           </div>
         </div>
 
         <div class="card">
-          <div class="card__header"><strong>Thông tin đối chiếu</strong></div>
+          <div class="card__header"><strong>Cross-check information</strong></div>
           <div class="card__body stack">
             <div class="row row--between">
-              <span class="text-muted">Học viên khai</span>
-              <span><strong>NGUYỄN VĂN A</strong> · 01/01/1990</span>
+              <span class="text-muted">Declared by the student</span>
+              <span><strong>NGUYỄN VĂN A</strong> · 1 Jan 1990</span>
             </div>
             <div class="row row--between">
-              <span class="text-muted">Tài khoản</span>
-              <span>nguyenvana@example.com · tạo 12/09/2026</span>
+              <span class="text-muted">Account</span>
+              <span>nguyenvana@example.com · created 12 Sep 2026</span>
             </div>
             <div class="row row--between">
-              <span class="text-muted">Số CCCD (4 số cuối)</span>
+              <span class="text-muted">ID number (last 4 digits)</span>
               <span>1234</span>
             </div>
             <div class="row row--between">
-              <span class="text-muted">Lượt thi hiện có</span>
-              <span>3 lượt</span>
+              <span class="text-muted">Credits available</span>
+              <span>3 credits</span>
             </div>
             <div class="alert alert--success" style="margin: 0">
-              Số CCCD <strong>chưa từng</strong> gắn với tài khoản nào khác.
-              Hệ thống chặn một CCCD dùng cho nhiều tài khoản, nên bước này
-              đã được kiểm tra tự động.
+              ID number <strong>has never</strong>  been linked to any other account. The system blocks one ID card from being used for multiple accounts, so this step has been checked automatically.
             </div>
           </div>
         </div>
 
         <div class="field" id="kyc-reason-field">
-          <label class="field__label" for="kyc-reason">Lý do (bắt buộc khi từ chối)</label>
+          <label class="field__label" for="kyc-reason">Reason <span class="label-note">required when rejecting</span></label>
           <textarea class="field__input" id="kyc-reason" rows="3"
-                    placeholder="Ví dụ: Ảnh mặt trước bị loá, không đọc được số CCCD."></textarea>
+                    placeholder="Example: The front photo is blurred by glare and the ID number cannot be read."></textarea>
           <span class="field__hint">
-            Học viên thấy nguyên văn lý do này ở màn trạng thái, nên ghi cụ thể
-            chỗ cần sửa — không viết "ảnh không hợp lệ".
+            Students see this reason verbatim on the status screen, so state exactly what needs fixing — do not write "invalid image".
           </span>
           <p class="field__error" id="kyc-reason-error" hidden>
-            Phải ghi lý do trước khi từ chối. Học viên cần biết chính xác chỗ nào
-            sai để sửa và gửi lại.
+            A reason must be recorded before rejecting. The student needs to know exactly what is wrong so they can fix it and resubmit.
           </p>
         </div>
       </div>
       <div class="modal__footer">
-        <a class="btn" href="?state=success">Để sau</a>
-        <button class="btn btn--danger" id="kyc-reject">Từ chối</button>
-        <button class="btn btn--primary" id="kyc-approve">Duyệt hồ sơ</button>
+        <a class="btn" href="?state=success">Later</a>
+        <button class="btn btn--danger" id="kyc-reject">Reject</button>
+        <button class="btn btn--primary" id="kyc-approve">Application review</button>
       </div>
     </div>
   </div>
 
   <script src="../assets/js/state-switch.js"></script>
   <script>
-    // Mở hộp duyệt: gắn tên học viên vào tiêu đề rồi chuyển state.
-    // Chỉ là prototype nên không có logic nghiệp vụ thật.
-    document.querySelectorAll("[data-kyc-open]").forEach(function (btn) {
-      btn.addEventListener("click", function () {
-        document.getElementById("kyc-review-title").textContent =
-          "Duyệt hồ sơ — " + btn.dataset.kycOpen;
-        document.body.dataset.state = "adjust";
+    // Review dialog: open, close, and record the outcome.
+    // This is a prototype, so there is no real business logic — but a review
+    // action has to leave a trace, otherwise the admin has no idea what they
+    // just did.
+    (function () {
+      "use strict";
+
+      var overlay = document.querySelector(".modal-overlay.only-adjust");
+      var dialog = overlay.querySelector(".modal");
+      var title = document.getElementById("kyc-review-title");
+      var reason = document.getElementById("kyc-reason");
+      var reasonField = document.getElementById("kyc-reason-field");
+      var reasonError = document.getElementById("kyc-reason-error");
+      var result = document.getElementById("kyc-result");
+      var lastFocus = null;
+      var currentRow = null;
+
+      // Keep the prototype's state switcher in sync with the open state.
+      function setState(name) {
+        document.body.dataset.state = name;
         document.querySelectorAll(".state-switcher__item").forEach(function (a) {
           a.removeAttribute("aria-current");
-          if (a.textContent === "adjust") a.setAttribute("aria-current", "true");
+          if (a.textContent === name) a.setAttribute("aria-current", "true");
         });
-      });
-    });
-
-    // Ràng buộc CK_Kyc_RejectReason: từ chối thì bắt buộc có lý do.
-    // Server chặn bằng CHECK constraint; ở đây minh hoạ đúng ràng buộc đó
-    // để luồng admin không trông như thể từ chối suông là hợp lệ.
-    var reason = document.getElementById("kyc-reason");
-    var reasonField = document.getElementById("kyc-reason-field");
-    var reasonError = document.getElementById("kyc-reason-error");
-
-    function clearReasonError() {
-      reasonField.classList.remove("field--invalid");
-      reasonError.hidden = true;
-    }
-
-    reason.addEventListener("input", function () {
-      if (reason.value.trim()) clearReasonError();
-    });
-
-    document.getElementById("kyc-reject").addEventListener("click", function () {
-      if (!reason.value.trim()) {
-        reasonField.classList.add("field--invalid");
-        reasonError.hidden = false;
-        reason.focus();
-        return; // không rời màn, đúng như server sẽ trả lỗi
+        var url = new URL(location.href);
+        url.searchParams.set("state", name);
+        history.replaceState(null, "", url);
       }
-      window.location.search = "?state=success";
-    });
 
-    document.getElementById("kyc-approve").addEventListener("click", function () {
-      window.location.search = "?state=success";
-    });
+      function focusable() {
+        return Array.prototype.filter.call(
+          dialog.querySelectorAll(
+            "a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex='-1'])"
+          ),
+          function (el) { return el.offsetParent !== null; }
+        );
+      }
+
+      function clearReasonError() {
+        reasonField.classList.remove("field--invalid");
+        reasonError.hidden = true;
+      }
+
+      // Constraint CK_Kyc_RejectReason: a rejection must carry a reason.
+      // The server enforces this with a CHECK constraint; this mirrors that
+      // rule so the admin flow does not look like a bare rejection is valid.
+      reason.addEventListener("input", function () {
+        if (reason.value.trim()) clearReasonError();
+      });
+
+      function open(btn) {
+        var name = btn.dataset.kycOpen;
+        lastFocus = btn;
+        currentRow = btn.closest("tr");
+        title.textContent = "Review application — " + name;
+        reason.value = "";
+        clearReasonError();
+        result.hidden = true;
+        setState("adjust");
+        // Move focus into the dialog; otherwise Tab keeps cycling through the
+        // page behind it, as if the dialog did not exist.
+        (focusable()[0] || dialog).focus();
+      }
+
+      function close() {
+        setState("success");
+        if (lastFocus) lastFocus.focus();
+      }
+
+      function settle(name, message) {
+        if (currentRow) {
+          currentRow.remove();
+          currentRow = null;
+        }
+        var rows = document.querySelectorAll(".card__body tbody tr").length;
+        var count = document.querySelector("[data-kyc-count]");
+        var label = document.querySelector("[data-kyc-count-label]");
+        if (count) count.textContent = String(rows);
+        if (label) {
+          label.textContent = rows === 0
+            ? "No applications pending review"
+            : rows + (rows === 1 ? " application pending review"
+                                 : " applications pending review");
+        }
+
+        result.innerHTML = "";
+        var strong = document.createElement("strong");
+        strong.textContent = message;
+        result.appendChild(strong);
+        result.hidden = false;
+
+        if (rows === 0) {
+          setState("empty");            // an empty queue must say so
+        } else {
+          setState("success");
+        }
+        if (lastFocus) lastFocus.focus();
+        lastFocus = null;
+      }
+
+      document.querySelectorAll("[data-kyc-open]").forEach(function (btn) {
+        btn.addEventListener("click", function () { open(btn); });
+      });
+
+      document.getElementById("kyc-close").addEventListener("click", close);
+
+      // Clicking outside the dialog is a familiar way out too.
+      overlay.addEventListener("click", function (e) {
+        if (e.target === overlay) close();
+      });
+
+      document.addEventListener("keydown", function (e) {
+        if (document.body.dataset.state !== "adjust") return;
+        if (e.key === "Escape") { close(); return; }
+        if (e.key !== "Tab") return;
+        // Keep Tab inside the dialog: it is modal, so the rest of the page
+        // must not be reachable by keyboard.
+        var items = focusable();
+        if (!items.length) return;
+        var first = items[0];
+        var last = items[items.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault(); last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault(); first.focus();
+        }
+      });
+
+      function studentName() {
+        return title.textContent.replace("Review application — ", "");
+      }
+
+      document.getElementById("kyc-reject").addEventListener("click", function () {
+        if (!reason.value.trim()) {
+          reasonField.classList.add("field--invalid");
+          reasonError.hidden = false;
+          reason.focus();
+          return; // stay on screen, exactly as the server would return an error
+        }
+        settle(studentName() +
+               "'s application was rejected. The reason was sent to the student.");
+      });
+
+      document.getElementById("kyc-approve").addEventListener("click", function () {
+        settle(studentName(),
+               "'s application was approved. The student can take real exams now.");
+      });
+    })();
   </script>
 </body>
 </html>

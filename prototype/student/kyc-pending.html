@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Trạng thái xác thực CCCD — TOEIC Practice</title>
+  <title>ID verification status — TOEIC Practice</title>
+  <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../assets/css/tokens.css">
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
@@ -13,25 +14,25 @@
     <header class="app-topbar">
       <strong>TOEIC Practice</strong>
       <div class="row">
-        <span class="badge badge--info">Còn 3 lượt thi</span>
-        <a class="btn btn--sm" href="../payment/pricing.html">Mua thêm lượt</a>
+        <span class="badge badge--info">3 credits left</span>
+        <a class="btn btn--sm" href="../payment/pricing.html">Buy credits</a>
         <a class="btn btn--ghost btn--sm" href="profile.html">Nguyễn Văn A</a>
       </div>
     </header>
     <div class="app-body">
       <aside class="app-sidebar">
-        <nav class="nav-list" aria-label="Điều hướng chính">
-          <a class="nav-list__item" href="dashboard.html">Trang chủ</a>
-          <div class="nav-list__group">Thi thử</div>
-          <a class="nav-list__item" href="exam-list.html">Danh sách đề</a>
-          <a class="nav-list__item" href="exam-history.html">Lịch sử thi</a>
-          <div class="nav-list__group">Luyện tập</div>
-          <a class="nav-list__item" href="practice-select.html">Luyện theo part</a>
-          <a class="nav-list__item" href="weakness-analysis.html">Phân tích điểm yếu</a>
-          <div class="nav-list__group">Tài khoản</div>
-          <a class="nav-list__item" href="../payment/wallet.html">Ví lượt thi</a>
-          <a class="nav-list__item is-active" href="kyc-pending.html">Xác thực CCCD</a>
-          <a class="nav-list__item" href="profile.html">Hồ sơ</a>
+        <nav class="nav-list" aria-label="Main navigation">
+          <a class="nav-list__item" href="dashboard.html">Home</a>
+          <div class="nav-list__group">Mock exams</div>
+          <a class="nav-list__item" href="exam-list.html">Test list</a>
+          <a class="nav-list__item" href="exam-history.html">Exam history</a>
+          <div class="nav-list__group">Practice</div>
+          <a class="nav-list__item" href="practice-select.html">Practice by part</a>
+          <a class="nav-list__item" href="weakness-analysis.html">Weakness analysis</a>
+          <div class="nav-list__group">Account</div>
+          <a class="nav-list__item" href="../payment/wallet.html">Credit wallet</a>
+          <a class="nav-list__item is-active" href="kyc-pending.html">ID verification</a>
+          <a class="nav-list__item" href="profile.html">Profile</a>
         </nav>
       </aside>
       <main class="app-main">
@@ -47,9 +48,9 @@
             <div class="card"><div class="card__body">
               <div class="state-block">
                 <div class="state-block__icon" aria-hidden="true">!</div>
-                <div class="state-block__title">Không tải được trạng thái hồ sơ</div>
-                <p class="state-block__desc">Kiểm tra kết nối rồi thử lại.</p>
-                <button class="btn btn--primary">Thử lại</button>
+                <div class="state-block__title">Could not load the application status</div>
+                <p class="state-block__desc">Check your connection and try again.</p>
+                <button class="btn btn--primary">Try again</button>
               </div>
             </div></div>
           </div>
@@ -58,37 +59,36 @@
                Đây là state mà học viên sẽ ở lâu nhất, nên phải nói rõ
                (a) không phải làm gì thêm, (b) luyện tập vẫn dùng được. -->
           <div class="only-pending stack">
-            <h1 style="margin: 0">Xác thực CCCD</h1>
+            <h1 style="margin: 0">ID verification</h1>
             <div class="card"><div class="card__body">
               <div class="state-block">
-                <div class="state-block__icon" aria-hidden="true">⏳</div>
-                <div class="state-block__title">Hồ sơ đang chờ duyệt</div>
+                <div class="state-block__icon" aria-hidden="true">PENDING</div>
+                <div class="state-block__title">Application pending review</div>
                 <p class="state-block__desc">
-                  Gửi lúc 20/09/2026 11:24. Quản trị viên duyệt trong vòng
-                  <strong>1 ngày làm việc</strong>. Bạn không cần làm gì thêm.
+                  Submitted on 20 Sep 2026 11:24. An administrator reviews within
+                  <strong>1 business day</strong>. You do not need to do anything else.
                 </p>
               </div>
               <div class="alert alert--info">
-                Trong lúc chờ, bạn vẫn <strong>luyện theo part miễn phí</strong> bình thường.
-                Chỉ phần thi thật cần xác thực xong.
+                While you wait, you can still <strong>practice by Part is free</strong> as usual. Only the real exam requires completed verification.
               </div>
             </div></div>
 
             <div class="card">
-              <div class="card__header"><strong>Hồ sơ đã gửi</strong></div>
+              <div class="card__header"><strong>Application submitted</strong></div>
               <div class="card__body stack">
-                <div class="row row--between"><span class="text-muted">Họ và tên</span><span>NGUYỄN VĂN A</span></div>
-                <div class="row row--between"><span class="text-muted">Ngày sinh</span><span>01/01/1990</span></div>
-                <div class="row row--between"><span class="text-muted">Số CCCD</span><span>•••• •••• 1234</span></div>
-                <div class="row row--between"><span class="text-muted">Ảnh đã gửi</span><span>3 ảnh</span></div>
+                <div class="row row--between"><span class="text-muted">Full name</span><span>NGUYỄN VĂN A</span></div>
+                <div class="row row--between"><span class="text-muted">Date of birth</span><span>1 Jan 1990</span></div>
+                <div class="row row--between"><span class="text-muted">ID number</span><span>•••• •••• 1234</span></div>
+                <div class="row row--between"><span class="text-muted">Submitted photos</span><span>3 photos</span></div>
                 <div class="row row--between">
-                  <span class="text-muted">Trạng thái</span>
-                  <span class="badge badge--warning">Chờ duyệt</span>
+                  <span class="text-muted">Status</span>
+                  <span class="badge badge--warning">Pending</span>
                 </div>
               </div>
               <div class="card__footer row">
-                <a class="btn" href="practice-select.html">Luyện tập trong lúc chờ</a>
-                <a class="btn btn--ghost" href="dashboard.html">Về trang chủ</a>
+                <a class="btn" href="practice-select.html">Practice while you wait</a>
+                <a class="btn btn--ghost" href="dashboard.html">Back to home</a>
               </div>
             </div>
           </div>
@@ -99,35 +99,34 @@
                Duyệt là mở cổng, KHÔNG phải trừ lượt: lượt chỉ trừ khi bắt đầu
                bài thi thật, nên phải nói rõ để học viên không tưởng mất lượt. -->
           <div class="only-approved stack">
-            <h1 style="margin: 0">Xác thực CCCD</h1>
+            <h1 style="margin: 0">ID verification</h1>
             <div class="card"><div class="card__body">
               <div class="state-block">
-                <div class="state-block__icon" aria-hidden="true">✓</div>
-                <div class="state-block__title">Hồ sơ đã được duyệt</div>
+                <div class="state-block__icon" aria-hidden="true">DONE</div>
+                <div class="state-block__title">Application approved</div>
                 <p class="state-block__desc">
-                  Duyệt lúc 20/09/2026 14:05. Bạn đã đủ điều kiện đăng ký thi thật.
+                  Reviewed on 20 Sep 2026 14:05. You are eligible to register for the real exam.
                 </p>
               </div>
               <div class="alert alert--success">
-                Xác thực <strong>không trừ lượt thi</strong> nào. Lượt chỉ bị trừ khi
-                bạn bắt đầu một bài thi thật.
+                Verified <strong>no credit deducted</strong> yet. A credit is only deducted when you start a real exam.
               </div>
             </div></div>
 
             <div class="card">
-              <div class="card__header"><strong>Hồ sơ đã duyệt</strong></div>
+              <div class="card__header"><strong>Application approved</strong></div>
               <div class="card__body stack">
-                <div class="row row--between"><span class="text-muted">Họ và tên</span><span>NGUYỄN VĂN A</span></div>
-                <div class="row row--between"><span class="text-muted">Ngày sinh</span><span>01/01/1990</span></div>
-                <div class="row row--between"><span class="text-muted">Số CCCD</span><span>•••• •••• 1234</span></div>
+                <div class="row row--between"><span class="text-muted">Full name</span><span>NGUYỄN VĂN A</span></div>
+                <div class="row row--between"><span class="text-muted">Date of birth</span><span>1 Jan 1990</span></div>
+                <div class="row row--between"><span class="text-muted">ID number</span><span>•••• •••• 1234</span></div>
                 <div class="row row--between">
-                  <span class="text-muted">Trạng thái</span>
-                  <span class="badge badge--success">Đã xác thực</span>
+                  <span class="text-muted">Status</span>
+                  <span class="badge badge--success">Verified</span>
                 </div>
               </div>
               <div class="card__footer row">
-                <a class="btn btn--primary" href="exam-list.html">Vào thi thật</a>
-                <a class="btn btn--ghost" href="practice-select.html">Luyện tập trước</a>
+                <a class="btn btn--primary" href="exam-list.html">Take the real exam</a>
+                <a class="btn btn--ghost" href="practice-select.html">Practice first</a>
               </div>
             </div>
           </div>
@@ -137,40 +136,37 @@
                trong schema) — không có lý do thì học viên không biết
                sửa gì và sẽ gửi lại y hệt. -->
           <div class="only-rejected stack">
-            <h1 style="margin: 0">Xác thực CCCD</h1>
+            <h1 style="margin: 0">ID verification</h1>
             <div class="card"><div class="card__body">
               <div class="state-block">
-                <div class="state-block__icon" aria-hidden="true">✕</div>
-                <div class="state-block__title">Hồ sơ bị từ chối</div>
+                <div class="state-block__icon" aria-hidden="true">ERROR</div>
+                <div class="state-block__title">Application rejected</div>
                 <p class="state-block__desc">
-                  Duyệt lúc 20/09/2026 14:05 bởi quản trị viên.
-                  Bạn có thể sửa và gửi lại, không giới hạn số lần.
+                  Reviewed on 20 Sep 2026 14:05 by an administrator. You can edit and resubmit as many times as you need.
                 </p>
               </div>
               <div class="alert alert--danger">
-                <strong>Lý do:</strong> Ảnh mặt trước CCCD bị loá, không đọc được
-                số CCCD và ngày hết hạn. Vui lòng chụp lại ở nơi đủ sáng, không dùng đèn flash.
+                <strong>Reason:</strong> The front-of-ID-card photo has glare, so the ID number and expiry date cannot be read. Please retake it in a well-lit place without using the flash.
               </div>
               <div class="alert alert--warning">
-                Bạn <strong>không bị mất lượt thi</strong> nào. Lượt chỉ bị trừ khi bắt đầu
-                một bài thi thật, và bạn chưa vào bài nào.
+                You <strong>have not lost a credit</strong> yet. A credit is only deducted when you start a real exam, and you have not started any.
               </div>
             </div></div>
 
             <div class="card">
-              <div class="card__header"><strong>Hồ sơ đã gửi</strong></div>
+              <div class="card__header"><strong>Application submitted</strong></div>
               <div class="card__body stack">
-                <div class="row row--between"><span class="text-muted">Họ và tên</span><span>NGUYỄN VĂN A</span></div>
-                <div class="row row--between"><span class="text-muted">Ngày sinh</span><span>01/01/1990</span></div>
-                <div class="row row--between"><span class="text-muted">Số CCCD</span><span>•••• •••• 1234</span></div>
+                <div class="row row--between"><span class="text-muted">Full name</span><span>NGUYỄN VĂN A</span></div>
+                <div class="row row--between"><span class="text-muted">Date of birth</span><span>1 Jan 1990</span></div>
+                <div class="row row--between"><span class="text-muted">ID number</span><span>•••• •••• 1234</span></div>
                 <div class="row row--between">
-                  <span class="text-muted">Trạng thái</span>
-                  <span class="badge badge--danger">Bị từ chối</span>
+                  <span class="text-muted">Status</span>
+                  <span class="badge badge--danger">Rejected</span>
                 </div>
               </div>
               <div class="card__footer row">
-                <a class="btn btn--primary" href="kyc-submit.html">Sửa và gửi lại</a>
-                <a class="btn btn--ghost" href="practice-select.html">Luyện tập trước</a>
+                <a class="btn btn--primary" href="kyc-submit.html">Edit and resubmit</a>
+                <a class="btn btn--ghost" href="practice-select.html">Practice first</a>
               </div>
             </div>
           </div>

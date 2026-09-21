@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Nạp lượt thi — TOEIC Practice</title>
+  <title>Buy credits — TOEIC Practice</title>
+  <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../assets/css/tokens.css">
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
@@ -13,25 +14,25 @@
     <header class="app-topbar">
       <strong>TOEIC Practice</strong>
       <div class="row">
-        <span class="badge badge--info">Còn 3 lượt thi</span>
-        <a class="btn btn--sm" href="wallet.html">Ví lượt thi</a>
+        <span class="badge badge--info">3 credits left</span>
+        <a class="btn btn--sm" href="wallet.html">Credit wallet</a>
         <a class="btn btn--ghost btn--sm" href="../student/profile.html">Nguyễn Văn A</a>
       </div>
     </header>
     <div class="app-body">
       <aside class="app-sidebar">
-        <nav class="nav-list" aria-label="Điều hướng chính">
-          <a class="nav-list__item" href="../student/dashboard.html">Trang chủ</a>
-          <div class="nav-list__group">Thi thử</div>
-          <a class="nav-list__item" href="../student/exam-list.html">Danh sách đề</a>
-          <a class="nav-list__item" href="../student/exam-history.html">Lịch sử thi</a>
-          <div class="nav-list__group">Luyện tập</div>
-          <a class="nav-list__item" href="../student/practice-select.html">Luyện theo part</a>
-          <a class="nav-list__item" href="../student/weakness-analysis.html">Phân tích điểm yếu</a>
-          <div class="nav-list__group">Tài khoản</div>
-          <a class="nav-list__item is-active" href="wallet.html">Ví lượt thi</a>
-          <a class="nav-list__item" href="../student/kyc-pending.html">Xác thực CCCD</a>
-          <a class="nav-list__item" href="../student/profile.html">Hồ sơ</a>
+        <nav class="nav-list" aria-label="Main navigation">
+          <a class="nav-list__item" href="../student/dashboard.html">Home</a>
+          <div class="nav-list__group">Mock exams</div>
+          <a class="nav-list__item" href="../student/exam-list.html">Test list</a>
+          <a class="nav-list__item" href="../student/exam-history.html">Exam history</a>
+          <div class="nav-list__group">Practice</div>
+          <a class="nav-list__item" href="../student/practice-select.html">Practice by part</a>
+          <a class="nav-list__item" href="../student/weakness-analysis.html">Weakness analysis</a>
+          <div class="nav-list__group">Account</div>
+          <a class="nav-list__item is-active" href="wallet.html">Credit wallet</a>
+          <a class="nav-list__item" href="../student/kyc-pending.html">ID verification</a>
+          <a class="nav-list__item" href="../student/profile.html">Profile</a>
         </nav>
       </aside>
       <main class="app-main">
@@ -63,9 +64,9 @@
             <div class="card"><div class="card__body">
               <div class="state-block">
                 <div class="state-block__icon" aria-hidden="true">!</div>
-                <div class="state-block__title">Không tải được bảng giá</div>
-                <p class="state-block__desc">Vui lòng thử lại sau ít phút.</p>
-                <button class="btn btn--primary">Thử lại</button>
+                <div class="state-block__title">Could not load pricing</div>
+                <p class="state-block__desc">Please try again in a few minutes.</p>
+                <button class="btn btn--primary">Try again</button>
               </div>
             </div></div>
           </div>
@@ -73,53 +74,53 @@
           <!-- ===== success ===== -->
           <div class="only-success stack">
             <div>
-              <h1 style="margin: 0 0 var(--space-1)">Nạp lượt thi</h1>
+              <h1 style="margin: 0 0 var(--space-1)">Buy credits</h1>
               <p class="text-muted" style="margin: 0">
-                Mỗi lượt dùng cho một đề thi full 200 câu. Luyện tập theo part luôn miễn phí.
+                Each credit covers one full 200-question test. Practice by part is always free.
               </p>
             </div>
 
             <div class="alert alert--info">
-              Bạn đang còn <strong>3 lượt thi</strong>. Lượt thi không có ngày hết hạn.
+              You have <strong>3 credits</strong>. Exam credits do not expire.
             </div>
             <div class="grid-3">
               <div class="price-card">
-                <div class="price-card__name">Gói Lẻ</div>
-                <div class="price-card__amount">49.000 ₫</div>
-                <div class="price-card__unit">1 lượt thi — 49.000 ₫/lượt</div>
+                <div class="price-card__name">Pay as you go</div>
+                <div class="price-card__amount">49,000 ₫</div>
+                <div class="price-card__unit">1 credit — 49,000 ₫/credit</div>
                 <ul class="price-card__list">
-                  <li>1 lượt thi full test</li>
-                  <li>Xem lại đáp án và giải thích</li>
-                  <li>Không hết hạn</li>
+                  <li>1 full-test credit</li>
+                  <li>Review answers and explanations</li>
+                  <li>Never expires</li>
                 </ul>
-                <a class="btn" href="checkout.html?package=le">Chọn gói này</a>
+                <a class="btn" href="checkout.html?package=le">Choose this package</a>
               </div>
 
               <div class="price-card price-card--featured">
                 <div class="row row--between">
-                  <div class="price-card__name">Gói Ôn Thi</div>
-                  <span class="badge badge--primary">Phổ biến</span>
+                  <div class="price-card__name">Exam Prep</div>
+                  <span class="badge badge--primary">Popular</span>
                 </div>
-                <div class="price-card__amount">199.000 ₫</div>
-                <div class="price-card__unit">5 lượt thi — 39.800 ₫/lượt</div>
+                <div class="price-card__amount">199,000 ₫</div>
+                <div class="price-card__unit">5 credits — 39,800 ₫/credit</div>
                 <ul class="price-card__list">
-                  <li>5 lượt thi full test</li>
-                  <li>Thống kê điểm mạnh yếu theo part</li>
-                  <li>Không hết hạn</li>
+                  <li>5 full-test credits</li>
+                  <li>Strengths and weaknesses by part</li>
+                  <li>Never expires</li>
                 </ul>
-                <a class="btn btn--primary" href="checkout.html?package=onthi">Chọn gói này</a>
+                <a class="btn btn--primary" href="checkout.html?package=onthi">Choose this package</a>
               </div>
 
               <div class="price-card">
-                <div class="price-card__name">Gói Cấp Tốc</div>
-                <div class="price-card__amount">349.000 ₫</div>
-                <div class="price-card__unit">10 lượt thi — 34.900 ₫/lượt</div>
+                <div class="price-card__name">Intensive</div>
+                <div class="price-card__amount">349,000 ₫</div>
+                <div class="price-card__unit">10 credits — 34,900 ₫/credit</div>
                 <ul class="price-card__list">
-                  <li>10 lượt thi full test</li>
-                  <li>Thống kê điểm mạnh yếu theo part</li>
-                  <li>Không hết hạn</li>
+                  <li>10 full-test credits</li>
+                  <li>Strengths and weaknesses by part</li>
+                  <li>Never expires</li>
                 </ul>
-                <a class="btn" href="checkout.html?package=captoc">Chọn gói này</a>
+                <a class="btn" href="checkout.html?package=captoc">Choose this package</a>
               </div>
             </div>
           </div>

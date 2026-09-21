@@ -1,0 +1,849 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-21T07:20:24.000Z",
+  "title": "Design System: TOEIC Practice",
+  "extensions": {
+    "colorMeta": {
+      "sign-red": {
+        "role": "danger",
+        "displayName": "Sign Red",
+        "purpose": "The door, the gate, the refusal. Danger buttons, the critical timer plate, a wrong answer, an invalid field, the unknown-state fallback.",
+        "canonical": "#b31217",
+        "oklch": "oklch(48.8% 0.190 27.3)",
+        "tonalRamp": [
+          "#1e0101",
+          "#4b0305",
+          "#7f080c",
+          "#b51519",
+          "#dd453d",
+          "#fd7569",
+          "#ffb3a9",
+          "#ffe9e6"
+        ]
+      },
+      "sign-blue": {
+        "role": "primary",
+        "displayName": "Sign Blue",
+        "purpose": "The learner's own act. Every primary button, every link, the topbar band, the score placard, the current question's ring.",
+        "canonical": "#0b4ea2",
+        "oklch": "oklch(43.8% 0.150 257.5)",
+        "tonalRamp": [
+          "#000a21",
+          "#022350",
+          "#053e86",
+          "#205fb4",
+          "#4382da",
+          "#6aa6fc",
+          "#a8cbfe",
+          "#e5efff"
+        ]
+      },
+      "sign-gold": {
+        "role": "secondary",
+        "displayName": "Sign Gold",
+        "purpose": "Attention and the mark. The flagged question, the warning timer, the marked chart column, the average severity bar, text selection.",
+        "canonical": "#f2b705",
+        "oklch": "oklch(81.1% 0.166 85.0)",
+        "tonalRamp": [
+          "#110a00",
+          "#302302",
+          "#543e06",
+          "#7b5c00",
+          "#a47b0c",
+          "#cf9c09",
+          "#fabf1f",
+          "#feedc8"
+        ]
+      },
+      "sign-green": {
+        "role": "tertiary",
+        "displayName": "Sign Green",
+        "purpose": "Open; the condition is met. A correct answer, an approved application, a paid order, the saved autosave status, a completed step.",
+        "canonical": "#0a6b3c",
+        "oklch": "oklch(46.5% 0.112 154.7)",
+        "tonalRamp": [
+          "#000f05",
+          "#012e16",
+          "#02502b",
+          "#197344",
+          "#439664",
+          "#67ba86",
+          "#8cdfa9",
+          "#c6ffd8"
+        ]
+      },
+      "sign-blue-deep": {
+        "role": "primary",
+        "displayName": "Sign Blue Deep",
+        "purpose": "The primary button under the hand. A painted field darkens on hover; it never lightens.",
+        "canonical": "#093d80",
+        "oklch": "oklch(37.1% 0.125 257.6)",
+        "tonalRamp": [
+          "#000a21",
+          "#022350",
+          "#0c3f82",
+          "#2f60a7",
+          "#5083cc",
+          "#72a6f2",
+          "#a8cbfe",
+          "#e5efff"
+        ]
+      },
+      "sign-red-deep": {
+        "role": "danger",
+        "displayName": "Sign Red Deep",
+        "purpose": "The danger button under the hand.",
+        "canonical": "#8c0e12",
+        "oklch": "oklch(40.9% 0.158 26.9)",
+        "tonalRamp": [
+          "#1e0101",
+          "#4b0405",
+          "#7f080e",
+          "#a8302b",
+          "#d0554c",
+          "#f8796e",
+          "#ffb3aa",
+          "#ffe9e6"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "purpose": "All lettering on paper, every structural keyline, the active nav block, table and modal header bands. Also a field: \"this one\" is a solid ink block with white caps.",
+        "canonical": "#14181d",
+        "oklch": "oklch(20.7% 0.012 254.1)",
+        "tonalRamp": [
+          "#080b10",
+          "#21252b",
+          "#3e4248",
+          "#5d6268",
+          "#7e8389",
+          "#a0a6ac",
+          "#c4cad1",
+          "#e9eff6"
+        ]
+      },
+      "wall": {
+        "role": "neutral",
+        "displayName": "Wall",
+        "purpose": "The ground everything is mounted on. Page background and panel footers.",
+        "canonical": "#eef0f1",
+        "oklch": "oklch(95.4% 0.003 228.8)",
+        "tonalRamp": [
+          "#0a0b0c",
+          "#242526",
+          "#414243",
+          "#606162",
+          "#818383",
+          "#a3a5a6",
+          "#c7c9ca",
+          "#edeff0"
+        ]
+      },
+      "painted": {
+        "role": "neutral",
+        "displayName": "Painted",
+        "purpose": "A painted panel; content is lettered onto this. Cards, questions, inputs, the default button plate.",
+        "canonical": "#ffffff",
+        "oklch": "oklch(100.0% 0.000 89.9)",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "line-soft": {
+        "role": "neutral",
+        "displayName": "Line Soft",
+        "purpose": "The 1px interior rule. Dividers inside a panel, never a panel frame.",
+        "canonical": "#ccd2d6",
+        "oklch": "oklch(86.0% 0.009 236.6)",
+        "tonalRamp": [
+          "#080c0e",
+          "#212629",
+          "#3e4346",
+          "#5d6266",
+          "#7e8387",
+          "#a0a6aa",
+          "#c4cace",
+          "#e9eff4"
+        ]
+      },
+      "ink-muted": {
+        "role": "neutral",
+        "displayName": "Ink Muted",
+        "purpose": "Secondary text: hints, timestamps, table captions, chart values. 6.0:1 on white, 5.4:1 on the wall.",
+        "canonical": "#5c6570",
+        "oklch": "oklch(50.3% 0.021 253.5)",
+        "tonalRamp": [
+          "#060c14",
+          "#1e262f",
+          "#3a434d",
+          "#59626d",
+          "#7a838f",
+          "#9ca6b2",
+          "#c0cad7",
+          "#e5f0fd"
+        ]
+      },
+      "warning-field": {
+        "role": "secondary",
+        "displayName": "Warning Field",
+        "purpose": "The darkened gold used as a keyline and as lettering. Gold at full strength is a field colour only.",
+        "canonical": "#8a5a00",
+        "oklch": "oklch(50.8% 0.108 73.3)",
+        "tonalRamp": [
+          "#130900",
+          "#352001",
+          "#5b3a02",
+          "#835709",
+          "#a9772e",
+          "#ce9a53",
+          "#f4be77",
+          "#feebd3"
+        ]
+      },
+      "info-ink": {
+        "role": "primary",
+        "displayName": "Info Ink",
+        "purpose": "The darkened blue used as lettering on a primary-soft wash: the answer explanation, an info alert.",
+        "canonical": "#08407f",
+        "oklch": "oklch(37.7% 0.120 255.7)",
+        "tonalRamp": [
+          "#000a20",
+          "#01244e",
+          "#09407f",
+          "#2e61a3",
+          "#4f84c9",
+          "#71a7ef",
+          "#a6ccff",
+          "#e4f0ff"
+        ]
+      },
+      "success-ink": {
+        "role": "tertiary",
+        "displayName": "Success Ink",
+        "purpose": "The darkened green used as lettering on a success-soft wash.",
+        "canonical": "#08562f",
+        "oklch": "oklch(39.9% 0.096 154.5)",
+        "tonalRamp": [
+          "#001005",
+          "#002e16",
+          "#084f2b",
+          "#2c7148",
+          "#509368",
+          "#73b78a",
+          "#97dcad",
+          "#c5ffd7"
+        ]
+      },
+      "warning-ink": {
+        "role": "secondary",
+        "displayName": "Warning Ink",
+        "purpose": "The darkened gold used as lettering on a warning-soft wash.",
+        "canonical": "#6f4800",
+        "oklch": "oklch(43.5% 0.092 73.8)",
+        "tonalRamp": [
+          "#130900",
+          "#342002",
+          "#5a3b06",
+          "#80581a",
+          "#a37a3f",
+          "#c89c61",
+          "#eec085",
+          "#ffebd3"
+        ]
+      },
+      "primary-soft": {
+        "role": "primary",
+        "displayName": "Primary Soft",
+        "purpose": "A pale blue wash, bounded by a blue keyline. Survives only where a full painted field would shout.",
+        "canonical": "#e8eef7",
+        "oklch": "oklch(94.7% 0.014 258.3)",
+        "tonalRamp": [
+          "#080b11",
+          "#21252c",
+          "#3e4249",
+          "#5c6269",
+          "#7d838b",
+          "#a0a5ae",
+          "#c4cad2",
+          "#e9eff8"
+        ]
+      },
+      "primary-soft-border": {
+        "role": "primary",
+        "displayName": "Primary Soft Border",
+        "purpose": "The keyline that bounds the primary-soft wash.",
+        "canonical": "#b9cbe6",
+        "oklch": "oklch(83.7% 0.043 258.4)",
+        "tonalRamp": [
+          "#020b1d",
+          "#18253a",
+          "#344359",
+          "#52627a",
+          "#73839c",
+          "#95a6c0",
+          "#b9cbe6",
+          "#e5effe"
+        ]
+      },
+      "success-soft": {
+        "role": "tertiary",
+        "displayName": "Success Soft",
+        "purpose": "A pale green wash for the success alert.",
+        "canonical": "#e6f1ea",
+        "oklch": "oklch(94.8% 0.015 158.2)",
+        "tonalRamp": [
+          "#060d09",
+          "#1f2722",
+          "#3c453f",
+          "#5a645e",
+          "#7b857f",
+          "#9ea8a1",
+          "#c2ccc5",
+          "#e7f2eb"
+        ]
+      },
+      "success-soft-border": {
+        "role": "tertiary",
+        "displayName": "Success Soft Border",
+        "purpose": "The keyline that bounds the success-soft wash.",
+        "canonical": "#b4d4c2",
+        "oklch": "oklch(84.1% 0.042 160.7)",
+        "tonalRamp": [
+          "#000f07",
+          "#102b1e",
+          "#2d493b",
+          "#4c6959",
+          "#6d8b7a",
+          "#8fae9c",
+          "#b2d2c0",
+          "#d7f8e5"
+        ]
+      },
+      "warning-soft": {
+        "role": "secondary",
+        "displayName": "Warning Soft",
+        "purpose": "A pale gold wash for the warning alert.",
+        "canonical": "#fdf3d9",
+        "oklch": "oklch(96.5% 0.036 89.4)",
+        "tonalRamp": [
+          "#100a00",
+          "#2c2410",
+          "#49412c",
+          "#69614a",
+          "#8b826a",
+          "#aea48c",
+          "#d2c9af",
+          "#f8eed4"
+        ]
+      },
+      "warning-soft-border": {
+        "role": "secondary",
+        "displayName": "Warning Soft Border",
+        "purpose": "The keyline that bounds the warning-soft wash.",
+        "canonical": "#e8cf8f",
+        "oklch": "oklch(86.1% 0.087 89.1)",
+        "tonalRamp": [
+          "#100a00",
+          "#2f2301",
+          "#523f02",
+          "#755e1d",
+          "#978041",
+          "#bba364",
+          "#e0c787",
+          "#ffedc1"
+        ]
+      },
+      "danger-soft": {
+        "role": "danger",
+        "displayName": "Danger Soft",
+        "purpose": "A pale red wash for the danger alert and the invalid row.",
+        "canonical": "#fbe9e9",
+        "oklch": "oklch(94.8% 0.020 17.5)",
+        "tonalRamp": [
+          "#130808",
+          "#2e2121",
+          "#4c3e3e",
+          "#6c5d5d",
+          "#8e7e7e",
+          "#b1a0a0",
+          "#d6c4c4",
+          "#fceaea"
+        ]
+      },
+      "danger-soft-border": {
+        "role": "danger",
+        "displayName": "Danger Soft Border",
+        "purpose": "The keyline that bounds the danger-soft wash.",
+        "canonical": "#e5b6b6",
+        "oklch": "oklch(81.8% 0.055 18.3)",
+        "tonalRamp": [
+          "#1d0104",
+          "#3b191b",
+          "#5c3637",
+          "#7d5555",
+          "#a17576",
+          "#c59898",
+          "#ebbcbc",
+          "#ffe8e8"
+        ]
+      },
+      "track": {
+        "role": "neutral",
+        "displayName": "Track",
+        "purpose": "The unfilled portion of a progress bar; the background of the CEFR band track.",
+        "canonical": "#dfe3e6",
+        "oklch": "oklch(91.4% 0.006 239.8)",
+        "tonalRamp": [
+          "#090c0d",
+          "#232528",
+          "#3f4245",
+          "#5e6264",
+          "#7f8386",
+          "#a2a6a8",
+          "#c6cacd",
+          "#ebeff2"
+        ]
+      },
+      "overlay": {
+        "role": "neutral",
+        "displayName": "Overlay",
+        "purpose": "The scrim under a modal. The only translucent value in the system.",
+        "canonical": "rgba(20, 24, 29, .58)",
+        "oklch": "oklch(20.7% 0.012 254.1)",
+        "tonalRamp": [
+          "#080b10",
+          "#21252b",
+          "#3e4248",
+          "#5d6268",
+          "#7e8389",
+          "#a0a6ac",
+          "#c4cad1",
+          "#e9eff6"
+        ]
+      },
+      "on-sign-blue-muted": {
+        "role": "primary",
+        "displayName": "On Sign Blue Muted",
+        "purpose": "The caption inside the score placard, on its sign-blue field.",
+        "canonical": "#cfe0fb",
+        "oklch": "oklch(90.2% 0.041 259.6)",
+        "tonalRamp": [
+          "#030b1c",
+          "#192539",
+          "#354358",
+          "#536279",
+          "#74839c",
+          "#96a6c0",
+          "#bacae5",
+          "#e5efff"
+        ]
+      },
+      "on-band-muted": {
+        "role": "primary",
+        "displayName": "On Band Muted",
+        "purpose": "Muted lettering for the sign-blue topbar band. The paper grey falls to 1.5:1 there.",
+        "canonical": "#c8d8ef",
+        "oklch": "oklch(87.7% 0.036 257.4)",
+        "tonalRamp": [
+          "#030b1a",
+          "#1a2637",
+          "#364355",
+          "#546276",
+          "#758398",
+          "#97a6bc",
+          "#bbcae1",
+          "#e5efff"
+        ]
+      },
+      "on-band-success": {
+        "role": "primary",
+        "displayName": "On Band Success",
+        "purpose": "The saved status lettered directly on the sign-blue band.",
+        "canonical": "#9fe8bd",
+        "oklch": "oklch(87.1% 0.094 157.9)",
+        "tonalRamp": [
+          "#000f06",
+          "#012e19",
+          "#00502f",
+          "#28714c",
+          "#4c936c",
+          "#70b78e",
+          "#94dcb2",
+          "#c6fedc"
+        ]
+      },
+      "on-band-danger": {
+        "role": "primary",
+        "displayName": "On Band Danger",
+        "purpose": "The save-failed status lettered directly on the sign-blue band.",
+        "canonical": "#ffc2c4",
+        "oklch": "oklch(86.9% 0.070 16.4)",
+        "tonalRamp": [
+          "#1e0004",
+          "#411419",
+          "#623135",
+          "#845053",
+          "#a87174",
+          "#cd9396",
+          "#f4b7b9",
+          "#ffe8e9"
+        ]
+      },
+      "on-ink-muted": {
+        "role": "neutral",
+        "displayName": "On Ink Muted",
+        "purpose": "Muted lettering for the ink modal header band. 6.1:1 on ink.",
+        "canonical": "#8f98a3",
+        "oklch": "oklch(67.6% 0.019 253.4)",
+        "tonalRamp": [
+          "#060c13",
+          "#1f262e",
+          "#3b434c",
+          "#5a626c",
+          "#7a838e",
+          "#9da6b1",
+          "#c1cad6",
+          "#e6f0fc"
+        ]
+      },
+      "scroll-rail": {
+        "role": "neutral",
+        "displayName": "Scroll Rail",
+        "purpose": "The painted scrollbar thumb and the state switcher hover fill.",
+        "canonical": "#3d454e",
+        "oklch": "oklch(38.7% 0.019 251.4)",
+        "tonalRamp": [
+          "#060c13",
+          "#1e262e",
+          "#3b434c",
+          "#5a626c",
+          "#7a838d",
+          "#9da6b1",
+          "#c1cad5",
+          "#e6f0fb"
+        ]
+      },
+      "striped-row": {
+        "role": "neutral",
+        "displayName": "Striped Row",
+        "purpose": "The even-row wash in a striped table.",
+        "canonical": "#f5f6f7",
+        "oklch": "oklch(97.3% 0.002 247.8)",
+        "tonalRamp": [
+          "#0b0b0c",
+          "#242526",
+          "#414243",
+          "#606162",
+          "#818283",
+          "#a4a5a6",
+          "#c8c9ca",
+          "#edeeef"
+        ]
+      },
+      "featured-panel": {
+        "role": "primary",
+        "displayName": "Featured Panel",
+        "purpose": "The wash behind the featured pricing package.",
+        "canonical": "#f4f7fc",
+        "oklch": "oklch(97.5% 0.007 260.7)",
+        "tonalRamp": [
+          "#090b0e",
+          "#232529",
+          "#404246",
+          "#5f6166",
+          "#808287",
+          "#a2a5aa",
+          "#c6c9ce",
+          "#eceff4"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display — the total score",
+        "purpose": "The total score on the result placard. One instance per screen, on its own sign-blue field, and the largest thing in the product."
+      },
+      "headline": {
+        "displayName": "Headline — a placard line",
+        "purpose": "h1. Screen titles and section heads, in uppercase condensed caps."
+      },
+      "title": {
+        "displayName": "Title — a second placard line",
+        "purpose": "h2, one step down from the headline."
+      },
+      "body": {
+        "displayName": "Body — the default reading voice",
+        "purpose": "Panel copy, table cells, option text, field values."
+      },
+      "read": {
+        "displayName": "Read — exam prose",
+        "purpose": "The question stem at the full 68ch measure, and the Part 7 passage at 14px. Looser leading than body: this line is scanned back and forth between the passage and the options."
+      },
+      "label": {
+        "displayName": "Label — signage caps",
+        "purpose": "Buttons, badges, field labels, nav items, table headers, stat labels. Short strings, scanned as shapes."
+      },
+      "data": {
+        "displayName": "Data — figures that cannot lie about their width",
+        "purpose": "The clock, the answer navigator, save status, page numbers, chart values, prices. Always tabular."
+      }
+    },
+    "shadows": [
+      {
+        "name": "none",
+        "value": "none",
+        "purpose": "The system has no shadows. --shadow-sm and --shadow-md are both none, and no rule emits a box-shadow outside the state switcher’s inset fallback ring. Depth is the keyline hierarchy."
+      },
+      {
+        "name": "keyline-frame",
+        "value": "border: 2px solid var(--ink)",
+        "purpose": "A sign’s own painted frame. Every panel, button, badge, alert, input, modal and readout carries one."
+      },
+      {
+        "name": "keyline-interior",
+        "value": "border: 1px solid var(--color-border)",
+        "purpose": "A rule drawn inside a panel: a divider between rows, a panel footer’s top edge."
+      },
+      {
+        "name": "scrim",
+        "value": "background: rgba(20, 24, 29, .58)",
+        "purpose": "The modal overlay. The only translucent value in the system; it replaces the elevation a shadow would carry."
+      },
+      {
+        "name": "focus-ring",
+        "value": "outline: 3px solid var(--sign-blue); outline-offset: 2px",
+        "purpose": "The global :focus-visible treatment. Never removed, never replaced by a colour change."
+      }
+    ],
+    "motion": [
+      {
+        "name": "placard-flip",
+        "value": "placard-flip .34s cubic-bezier(.16, 1, .3, 1) both",
+        "purpose": "The one authored animation. A placard flips into view when the product states a condition or a judgment. Confined to alerts and condition blocks; never a generic entrance on every section."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "animation-duration: .001ms !important; transition-duration: .001ms !important",
+        "purpose": "The prefers-reduced-motion override applied to every element and pseudo-element."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "desktop-first",
+        "value": "1440px",
+        "purpose": "The reference viewport. Desktop-first is a recorded trade-off: sitting TOEIC on a phone is not the primary flow."
+      },
+      {
+        "name": "lg",
+        "value": "1024px",
+        "purpose": "The sidebar collapses to a full-width row under the topbar (its right keyline becomes a bottom one); three-column grids become two; the exam layout drops its 300px navigator column and unsticks it."
+      },
+      {
+        "name": "sm",
+        "value": "640px",
+        "purpose": "Everything goes to one column. The topbar wraps, the table scrolls inside itself, flex rows holding two controls wrap, the score placard stacks, and the CEFR bands go equal width."
+      },
+      {
+        "name": "narrow-container",
+        "value": "460px",
+        "purpose": "The container width for the auth and gate screens."
+      },
+      {
+        "name": "container",
+        "value": "1180px",
+        "purpose": "The default content container."
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The learner’s own act. Every primary action in the product is this blue plate. Hover deepens the field rather than lightening it.",
+      "html": "<button class=\"ds-btn-primary\" type=\"button\">Start exam</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2, 8px); padding: var(--space-2, 8px) var(--space-4, 16px); font-family: var(--font-sign, \"IBM Plex Sans Condensed\", sans-serif); font-size: var(--text-sm, 14px); font-weight: 700; text-transform: uppercase; letter-spacing: var(--tracking-sign, .055em); border-radius: 0; cursor: pointer; text-decoration: none; border: var(--keyline, 2px) solid var(--sign-blue, #0b4ea2); background: var(--sign-blue, #0b4ea2); color: #ffffff; } .ds-btn-primary:hover { background: #093d80; border-color: #093d80; } .ds-btn-primary:focus-visible { outline: 3px solid var(--sign-blue, #0b4ea2); outline-offset: 2px; } .ds-btn-primary[disabled] { opacity: .45; cursor: not-allowed; pointer-events: none; }"
+    },
+    {
+      "name": "Plate Button",
+      "kind": "button",
+      "refersTo": "button-plate",
+      "description": "The house default: a white plate with an ink keyline. On hover the plate inverts to solid ink with a white label — the button is the sign, and hovering flips it.",
+      "html": "<button class=\"ds-btn-plate\" type=\"button\">Save changes</button>",
+      "css": ".ds-btn-plate { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2, 8px); padding: var(--space-2, 8px) var(--space-4, 16px); font-family: var(--font-sign, \"IBM Plex Sans Condensed\", sans-serif); font-size: var(--text-sm, 14px); font-weight: 700; text-transform: uppercase; letter-spacing: var(--tracking-sign, .055em); border-radius: 0; cursor: pointer; text-decoration: none; border: var(--keyline, 2px) solid var(--ink, #14181d); background: var(--color-surface, #ffffff); color: var(--ink, #14181d); } .ds-btn-plate:hover { background: var(--ink, #14181d); color: #ffffff; } .ds-btn-plate:focus-visible { outline: 3px solid var(--sign-blue, #0b4ea2); outline-offset: 2px; } .ds-btn-plate[disabled] { opacity: .45; cursor: not-allowed; pointer-events: none; }"
+    },
+    {
+      "name": "Danger Button",
+      "kind": "button",
+      "refersTo": "button-danger",
+      "description": "The door sign. Carries its own hover because the generic plate hover would flip it to ink-on-white and the white label would vanish at 1.1:1.",
+      "html": "<button class=\"ds-btn-danger\" type=\"button\">Submit exam</button>",
+      "css": ".ds-btn-danger { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2, 8px); padding: var(--space-2, 8px) var(--space-4, 16px); font-family: var(--font-sign, \"IBM Plex Sans Condensed\", sans-serif); font-size: var(--text-sm, 14px); font-weight: 700; text-transform: uppercase; letter-spacing: var(--tracking-sign, .055em); border-radius: 0; cursor: pointer; text-decoration: none; border: var(--keyline, 2px) solid var(--sign-red, #b31217); background: var(--sign-red, #b31217); color: #ffffff; } .ds-btn-danger:hover { background: #8c0e12; border-color: #8c0e12; } .ds-btn-danger:focus-visible { outline: 3px solid var(--sign-blue, #0b4ea2); outline-offset: 2px; }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "field-input",
+      "description": "A white field with a 2px ink keyline and a signage caps label above it. Focus turns the keyline blue and draws the global focus ring — never colour alone.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-field__label\">Email</span><input class=\"ds-field__input\" type=\"email\" placeholder=\"an.nguyen@gmail.com\"></label>",
+      "css": ".ds-field { display: block; } .ds-field__label { display: block; margin-bottom: var(--space-1, 4px); font-family: var(--font-sign, \"IBM Plex Sans Condensed\", sans-serif); font-size: var(--text-xs, 12px); font-weight: 700; text-transform: uppercase; letter-spacing: var(--tracking-sign, .055em); color: var(--ink, #14181d); } .ds-field__input { width: 100%; padding: var(--space-2, 8px) var(--space-3, 12px); font-family: var(--font-sans, \"IBM Plex Sans\", system-ui, sans-serif); font-size: var(--text-base, 16px); color: var(--ink, #14181d); background: var(--color-surface, #ffffff); border: var(--keyline, 2px) solid var(--ink, #14181d); border-radius: 0; } .ds-field__input:focus-visible { outline: 3px solid var(--sign-blue, #0b4ea2); outline-offset: 2px; border-color: var(--sign-blue, #0b4ea2); } .ds-field__input[aria-invalid=\"true\"] { border-color: var(--sign-red, #b31217); }"
+    },
+    {
+      "name": "Sidebar Nav Item",
+      "kind": "nav",
+      "refersTo": "nav-item",
+      "description": "A painted tab. The active one inverts to a solid ink block with white caps — the world marks the current item by inversion, never by a pale wash.",
+      "html": "<nav class=\"ds-nav\"><a class=\"ds-nav__item\" href=\"#\">Dashboard</a><a class=\"ds-nav__item is-active\" href=\"#\" aria-current=\"page\">Exams</a><a class=\"ds-nav__item\" href=\"#\">Wallet</a></nav>",
+      "css": ".ds-nav { display: flex; flex-direction: column; gap: 2px; } .ds-nav__item { padding: var(--space-2, 8px) var(--space-3, 12px); font-family: var(--font-sign, \"IBM Plex Sans Condensed\", sans-serif); font-size: var(--text-sm, 14px); font-weight: 700; text-transform: uppercase; letter-spacing: .03em; color: var(--ink, #14181d); text-decoration: none; border: 1px solid transparent; border-radius: 0; } .ds-nav__item:hover { background: var(--color-bg, #eef0f1); border-color: var(--color-border, #ccd2d6); } .ds-nav__item:focus-visible { outline: 3px solid var(--sign-blue, #0b4ea2); outline-offset: 2px; } .ds-nav__item.is-active { background: var(--ink, #14181d); border-color: var(--ink, #14181d); color: #ffffff; }"
+    },
+    {
+      "name": "Panel",
+      "kind": "card",
+      "refersTo": "panel",
+      "description": "Not a floating rounded box: a painted panel with a keyline frame. The frame carries the structure, so no shadow is needed to lift it off the wall.",
+      "html": "<section class=\"ds-panel\"><header class=\"ds-panel__header\"><strong>Recent attempts</strong></header><div class=\"ds-panel__body\"><p>Two graded attempts this week.</p></div><footer class=\"ds-panel__footer\"><a href=\"#\">View all</a></footer></section>",
+      "css": ".ds-panel { background: var(--color-surface, #ffffff); border: var(--keyline, 2px) solid var(--ink, #14181d); border-radius: 0; } .ds-panel__header { padding: var(--space-3, 12px) var(--space-5, 24px); background: var(--color-surface, #ffffff); border-bottom: var(--keyline, 2px) solid var(--ink, #14181d); } .ds-panel__header strong { font-family: var(--font-sign, \"IBM Plex Sans Condensed\", sans-serif); font-size: var(--text-sm, 14px); font-weight: 700; text-transform: uppercase; letter-spacing: var(--tracking-sign, .055em); } .ds-panel__body { padding: var(--space-5, 24px); } .ds-panel__footer { padding: var(--space-4, 16px) var(--space-5, 24px); background: var(--color-bg, #eef0f1); border-top: 1px solid var(--color-border, #ccd2d6); }"
+    },
+    {
+      "name": "Badge",
+      "kind": "chip",
+      "refersTo": "badge",
+      "description": "A small painted plate, not a pale chip: solid field, ink keyline, 12px caps, tabular numerals. Warning takes ink lettering because white on gold is 2.1:1.",
+      "html": "<p><span class=\"ds-badge\">Draft</span> <span class=\"ds-badge ds-badge--success\">Paid</span> <span class=\"ds-badge ds-badge--warning\">Flagged</span> <span class=\"ds-badge ds-badge--danger\">Failed</span> <span class=\"ds-badge ds-badge--info\">New</span></p>",
+      "css": ".ds-badge { display: inline-block; padding: 2px var(--space-2, 8px); font-family: var(--font-sign, \"IBM Plex Sans Condensed\", sans-serif); font-size: var(--text-xs, 12px); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; font-variant-numeric: tabular-nums; background: var(--color-surface, #ffffff); border: 1px solid var(--ink, #14181d); border-radius: 0; color: var(--ink, #14181d); } .ds-badge--success { background: var(--sign-green, #0a6b3c); border-color: var(--sign-green, #0a6b3c); color: #ffffff; } .ds-badge--warning { background: var(--sign-gold, #f2b705); border-color: var(--sign-gold, #f2b705); color: var(--ink, #14181d); } .ds-badge--danger { background: var(--sign-red, #b31217); border-color: var(--sign-red, #b31217); color: #ffffff; } .ds-badge--info { background: var(--sign-blue, #0b4ea2); border-color: var(--sign-blue, #0b4ea2); color: #ffffff; }"
+    },
+    {
+      "name": "Alert",
+      "kind": "custom",
+      "refersTo": "alert-info",
+      "description": "A notice placard, not a callout: a full painted keyline on all four sides around a pale wash. It was a 4px coloured left bar — the category’s most recognisable tell.",
+      "html": "<div class=\"ds-alert ds-alert--info\" role=\"status\"><strong>Nothing was deducted.</strong> Verify your ID first, then buy a credit. Verification is free.</div>",
+      "css": ".ds-alert { padding: var(--space-3, 12px) var(--space-4, 16px); background: var(--color-surface, #ffffff); border: var(--keyline, 2px) solid var(--ink, #14181d); border-radius: 0; font-size: var(--text-sm, 14px); animation: ds-placard-flip .34s cubic-bezier(.16, 1, .3, 1) both; } .ds-alert--info { border-color: var(--sign-blue, #0b4ea2); background: var(--color-info-soft, #e8eef7); color: #08407f; } .ds-alert--success { border-color: var(--sign-green, #0a6b3c); background: var(--color-success-soft, #e6f1ea); color: #08562f; } .ds-alert--warning { border-color: #8a5a00; background: var(--color-warning-soft, #fdf3d9); color: #6f4800; } .ds-alert--danger { border-color: var(--sign-red, #b31217); background: var(--color-danger-soft, #fbe9e9); color: #8c0e12; } @keyframes ds-placard-flip { from { transform: perspective(900px) rotateX(-9deg); opacity: 0; } to { transform: perspective(900px) rotateX(0deg); opacity: 1; } } @media (prefers-reduced-motion: reduce) { .ds-alert { animation-duration: .001ms; } }"
+    },
+    {
+      "name": "State Block",
+      "kind": "custom",
+      "refersTo": "state-block-stamp",
+      "description": "The signature empty / error / blocked screen. A word in a painted ink box, not a pictograph — the world has no icon set. The title is sentence case because these are the screens where the reader is already stuck.",
+      "html": "<div class=\"ds-state-block\"><span class=\"ds-state-block__stamp\">Empty</span><h2 class=\"ds-state-block__title\">You have not answered any question in this exam</h2><p class=\"ds-state-block__desc\">Submit now and the attempt is scored as it stands. Nothing is deducted for unanswered questions.</p><button class=\"ds-btn-plate\" type=\"button\">Submit anyway</button></div>",
+      "css": ".ds-state-block { padding: var(--space-7, 48px) var(--space-5, 24px); text-align: center; color: var(--color-text-muted, #5c6570); } .ds-state-block__stamp { display: inline-block; margin-bottom: var(--space-3, 12px); padding: 2px var(--space-3, 12px); background: var(--ink, #14181d); border: var(--keyline, 2px) solid var(--ink, #14181d); color: #ffffff; font-family: var(--font-sign, \"IBM Plex Sans Condensed\", sans-serif); font-size: var(--text-xs, 12px); font-weight: 700; text-transform: uppercase; letter-spacing: var(--tracking-sign, .055em); } .ds-state-block__title { margin: 0 0 var(--space-2, 8px); font-family: var(--font-sign, \"IBM Plex Sans Condensed\", sans-serif); font-size: var(--text-lg, 18px); font-weight: 700; text-transform: none; letter-spacing: normal; color: var(--ink, #14181d); } .ds-state-block__desc { margin: 0 auto var(--space-4, 16px); max-width: 68ch; } .ds-btn-plate { display: inline-flex; align-items: center; justify-content: center; padding: var(--space-2, 8px) var(--space-4, 16px); font-family: var(--font-sign, \"IBM Plex Sans Condensed\", sans-serif); font-size: var(--text-sm, 14px); font-weight: 700; text-transform: uppercase; letter-spacing: var(--tracking-sign, .055em); background: var(--color-surface, #ffffff); border: var(--keyline, 2px) solid var(--ink, #14181d); border-radius: 0; color: var(--ink, #14181d); cursor: pointer; } .ds-btn-plate:hover { background: var(--ink, #14181d); color: #ffffff; } .ds-btn-plate:focus-visible { outline: 3px solid var(--sign-blue, #0b4ea2); outline-offset: 2px; }"
+    },
+    {
+      "name": "CEFR Band Bar",
+      "kind": "custom",
+      "refersTo": "cefr-band",
+      "description": "Six bands in the order the standard fixes them, each width proportional to its real score range on the 10–990 scale. The first band is below A1, not A1. The mono tick row shares the grid so numbers line up with band edges.",
+      "html": "<div class=\"ds-cefr\"><div class=\"ds-cefr__head\"><span class=\"ds-cefr__current\">B1</span><span>620 · next band at 785</span></div><div class=\"ds-cefr__track\" role=\"img\" aria-label=\"Current band B1, score 620 out of 990\"><span class=\"ds-cefr__band is-reached\">&lt;A1</span><span class=\"ds-cefr__band is-reached\">A1</span><span class=\"ds-cefr__band is-reached\">A2</span><span class=\"ds-cefr__band is-current\">B1</span><span class=\"ds-cefr__band\">B2</span><span class=\"ds-cefr__band\">C1</span></div><div class=\"ds-cefr__scale\" aria-hidden=\"true\"><span>10</span><span class=\"ds-cefr__tick\">120</span><span class=\"ds-cefr__tick\">225</span><span class=\"ds-cefr__tick\">550</span><span class=\"ds-cefr__tick\">785</span><span class=\"ds-cefr__tick\">945</span></div></div>",
+      "css": ".ds-cefr__head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3, 12px); margin-bottom: var(--space-2, 8px); flex-wrap: wrap; } .ds-cefr__current { font-family: var(--font-sign, \"IBM Plex Sans Condensed\", sans-serif); font-size: var(--text-xl, 22px); font-weight: 700; text-transform: uppercase; letter-spacing: var(--tracking-sign, .055em); } .ds-cefr__track { display: grid; grid-template-columns: 110fr 105fr 325fr 235fr 160fr 45fr; height: 34px; background: var(--color-track, #dfe3e6); border: var(--keyline, 2px) solid var(--ink, #14181d); border-radius: 0; overflow: hidden; min-width: 280px; } .ds-cefr__band { display: flex; align-items: center; justify-content: center; font-family: var(--font-sign, \"IBM Plex Sans Condensed\", sans-serif); font-size: var(--text-xs, 12px); font-weight: 700; letter-spacing: .04em; color: var(--color-text-muted, #5c6570); border-right: 1px solid var(--ink, #14181d); } .ds-cefr__band:last-child { border-right: 0; } .ds-cefr__band.is-reached { background: var(--color-primary-soft, #e8eef7); color: #08407f; } .ds-cefr__band.is-current { background: var(--ink, #14181d); color: #ffffff; } .ds-cefr__scale { display: grid; grid-template-columns: 110fr 105fr 325fr 235fr 160fr 45fr; margin-top: var(--space-1, 4px); font-family: var(--font-mono, \"IBM Plex Mono\", monospace); font-size: var(--text-xs, 12px); font-variant-numeric: tabular-nums; color: var(--color-text-muted, #5c6570); min-width: 280px; } .ds-cefr__tick { text-align: right; padding-right: 2px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Bảng hiệu phòng thi — the exam-room signage",
+    "overview": "This interface is the signage of an examination hall. Everything it has to say, it says the way a building says it: a flat painted placard, a hard painted frame around it, bold condensed capitals, and a door sign that reads open or shut. There is no gradient anywhere in the system, no shadow, no rounded corner, and no blur. A sign is one flat field of colour bounded by a keyline, and that is the whole of its depth model.\n\nThe world is Vietnamese and it is not neutral about it. Đỏ #b31217 is the door, the gate and the refusal; xanh #0b4ea2 is the learner’s own act and carries every primary button in the product; vàng #f2b705 is attention, the flagged item, the mark; xanh lá #0a6b3c is an open condition. They are painted on a wall grey and lettered onto white panels in ink. The composition is a stack of panels and bands hung on that wall, each one framed rather than lifted, each one lettered rather than decorated.\n\nThe system is deliberately refusing the pale-blue SaaS card grid that this category ships by default: soft-shadowed white cards, tinted chips, a hero metric, an accent bar down the left edge of every callout. Where the incumbent pattern reaches for a wash, this system inverts; where it reaches for a shadow, this system draws a 2px ink keyline; where it reaches for an icon, this system letters the word. The result is a screen that looks like it was printed and mounted rather than assembled.\n\nDensity is high and unapologetic. This is a 200-question exam under a 120-minute clock, and a learner needs the answer grid, the passage, the clock and the save status on one screen at once. Desktop-first at 1440×900 is a recorded trade-off, not an oversight.",
+    "keyCharacteristics": [
+      "Flat painted fields, hard painted keylines, zero radius, zero shadow, zero gradient.",
+      "Three type voices split by job: a reading face, a signage face, and a monospace that cannot lie about its width.",
+      "Active state inverts to a solid ink block; it never tints.",
+      "Colour is a second layer of information, always paired with a word or a number.",
+      "Depth is the keyline hierarchy — 2px ink frame, 1px soft interior rule — plus one dark scrim under dialogs.",
+      "The world has no icon set. A sign says the word."
+    ],
+    "rules": [
+      {
+        "name": "The One Flat Field Rule",
+        "body": "A sign’s field is one flat colour bounded by a painted keyline. No gradient, no tint, no second colour inside the frame, no blur beneath it. If a surface needs to separate itself from what is behind it, it gets a heavier keyline, not a lighter shadow.",
+        "section": "colors"
+      },
+      {
+        "name": "The Field-Is-Not-Lettering Rule",
+        "body": "The four sign colours at full strength are field colours only; they carry white or ink lettering on top. When the colour itself has to be the lettering — a status word, an error message, a link on paper — use the darkened rendition (#8a5a00 for gold, #08407f for blue, #08562f for green, #8c0e12 for red). Gold at #f2b705 is never text.",
+        "section": "colors"
+      },
+      {
+        "name": "The Inversion Rule",
+        "body": "Active state inverts; it does not tint. A selected option, the current step, the active nav item, the current page number and the focused table row become solid ink blocks with white lettering. A pale blue wash means \"related to\", never \"currently selected\".",
+        "section": "colors"
+      },
+      {
+        "name": "The Width-Is-Meaning Rule",
+        "body": "Anything a learner checks, counts or compares is set in the face that cannot lie about its width. A countdown whose digits change width jitters every second it runs; a grid of question numbers only reads as a grid if every cell is the same width. The clock, the score, the answer navigator, the pagination and the chart values are all IBM Plex Mono with font-variant-numeric: tabular-nums.",
+        "section": "typography"
+      },
+      {
+        "name": "The Caps-On-A-Ground Rule",
+        "body": "Uppercase belongs on a ground — a label, a badge, a button, a nav item, a table header — where the string is short enough to be scanned as a shape. It does not belong on a sentence. Any element carrying a full phrase drops to sentence case in the condensed bold face: the state block’s title, the stepper’s step text, the catalog’s screen names, and the descriptor after a field label. The signage voice survives in the condensed face; only the shouting stops.",
+        "section": "typography"
+      },
+      {
+        "name": "The Load-Order Rule",
+        "body": "A media query does not raise specificity; only load order and the selector’s own weight decide. A breakpoint that overrides a rule belongs beside that rule, in the same file and after it — never in an earlier stylesheet where an equal-specificity rule loses at every viewport and the breakpoint reads as if it worked. The exam layout’s collapse lives in components.css next to the grid it overrides, not in base.css with the others.",
+        "section": "layout"
+      },
+      {
+        "name": "The State Group Rule",
+        "body": "State visibility is a testable spec, not a style. Each state declares four rule groups: hide every .only-* by doubling the class to reach (0,2,0) — enough to beat a component’s own display — show the matching one with display: revert, show the shared .multi-state[data-show~=\"x\"] elements the same way, and re-state display: grid for .modal-overlay.only-*, because revert restores the user agent’s block and pins the dialog to the top-left corner. Do not add a state without all four.",
+        "section": "layout"
+      },
+      {
+        "name": "The Keyline-Not-Blur Rule",
+        "body": "Separation is drawn, never blurred. 2px ink for a sign’s own frame, 1px soft for a rule inside it. Never a shadow, never a blur, never a translucent panel.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Band-Letters-Its-Own-Contents Rule",
+        "body": "A coloured band — the sign-blue topbar, the ink modal header — inverts the page, so any component that expects a paper background must be re-stated for it. An .app-topbar a selector outranks .btn and will turn a button’s ink label white on its own white field at 1.0:1, i.e. an invisible label on every screen that carries the band. Restate the button, the chip, the timer plate and the status inks for each band, and give the band its own light renditions of the muted and status colours.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Square-Corner Rule",
+        "body": "Radius is zero, everywhere, including inputs, badges, modals and the progress bar. A rounded corner is the single fastest way to break this world.",
+        "section": "shapes"
+      },
+      {
+        "name": "The Dashed-Means-Unfilled Rule",
+        "body": "A dashed keyline appears only where content is missing — an upload target, a photo placeholder. It never appears on a real surface.",
+        "section": "shapes"
+      },
+      {
+        "name": "The Band-Order Rule",
+        "body": "The first band is below A1 (10–119), not A1. Off by one band and the learner is shown the wrong level.",
+        "section": "components"
+      },
+      {
+        "name": "The Count-Is-Dynamic Rule",
+        "body": "Part 2 has three options; every other part has four. Never assume four. The same applies to the option list and to any per-part count in a heading.",
+        "section": "components"
+      }
+    ],
+    "dos": [
+      "Do give every surface a 2px ink keyline for its own frame and a 1px soft rule for divisions inside it, and never mix the two weights on one edge.",
+      "Do invert to a solid ink block with white lettering for the selected, current or active item.",
+      "Do set every figure a learner might compare — clock, score, navigator cell, page number, chart value, price — in IBM Plex Mono with font-variant-numeric: tabular-nums.",
+      "Do pair every colour-coded signal with a word or a number. Progress bars carry their percentage; severity bars carry their label; correct and wrong answers carry their own words.",
+      "Do drop to sentence case in the condensed bold face for any string longer than a few words — state titles, stepper text, catalog names, label descriptors.",
+      "Do keep the topbar’s and the modal header’s components restated for their own band, with the light renditions of the muted and status colours.",
+      "Do keep the four state-visibility rule groups together when adding a state, including the display: grid restatement for .modal-overlay.only-*.",
+      "Do keep a breakpoint beside the rule it overrides."
+    ],
+    "donts": [
+      "Don’t use a gradient, a box-shadow, a backdrop-filter, or a non-zero border-radius anywhere. The tokens for radius and shadow are zeroed precisely so this cannot happen by accident.",
+      "Don’t put a coloured border-left or border-right above 1px on a card, alert, list item or callout. The alert used to be a 4px left bar; it is the category’s most recognisable tell.",
+      "Don’t use a coloured field as lettering at full strength. Gold #f2b705 is never text; use #8a5a00. Blue, green and red follow the same rule.",
+      "Don’t use a Unicode glyph or an emoji as an icon. The world has no icon set — a sign says the word. The modal close is the word \"Close\", not a ✕.",
+      "Don’t set a full sentence in uppercase, and don’t put uppercase tracking on sentence-case text: text-transform and letter-spacing both have to be explicitly reset, or the element-level rule in base.css wins.",
+      "Don’t introduce a pale wash to mean \"selected\". A wash means \"related to\" or \"reached\"; selection inverts.",
+      "Don’t use a system display face as the display voice. IBM Plex is self-hosted so this cannot drift.",
+      "Don’t put a kicker or eyebrow line above a heading, number a section unless the sequence carries information, or reach for a modal for a task that needs neither interruption nor protected focus.",
+      "Don’t stand a soft-shadowed rounded rectangle in for content — a sparkline, a progress ring, or a decorative stat tile. Readouts are ruled and figures are mono.",
+      "Don’t treat the credit balance, the clock, or the correct answer as the client’s own state. The server owns time, answers and balance; the UI displays them."
+    ]
+  }
+}

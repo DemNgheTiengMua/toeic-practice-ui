@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Xác nhận nộp bài — ETS 2024 Test 5</title>
+  <title>Confirm submission — ETS 2024 Test 5</title>
+  <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../assets/css/tokens.css">
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
@@ -15,14 +16,15 @@
         <strong>ETS 2024 — Test 5</strong>
         <span class="badge badge--info">Reading · Part 7</span>
       </div>
-      <span class="timer timer--warning">
-        <span class="text-sm">Còn lại</span>
+      <span role="timer" aria-label="Time remaining" class="timer timer--warning">
+        <span class="text-sm">Time remaining</span>
         <span class="timer__value">00:06:31</span>
       </span>
     </header>
     <main class="app-main">
+      <h1 class="visually-hidden">Confirm submission — ETS 2024 Test 5</h1>
       <div class="container">
-        <p class="text-muted">Nền phía sau là màn thi Reading đang mở.</p>
+        <p class="text-muted">The background is the Reading exam screen, still open.</p>
         <div class="skeleton skeleton--title"></div>
         <div class="skeleton skeleton--text"></div>
         <div class="skeleton skeleton--text" style="width: 64%"></div>
@@ -34,33 +36,33 @@
   <div class="modal-overlay only-success" role="dialog" aria-modal="true"
        aria-labelledby="submit-title-1">
     <div class="modal">
-      <div class="modal__header"><h2 id="submit-title-1" style="margin: 0">Nộp bài?</h2></div>
+      <div class="modal__header"><h2 id="submit-title-1" style="margin: 0">Submit?</h2></div>
       <div class="modal__body stack">
         <div class="alert alert--warning">
-          <strong>Bạn còn 19 câu chưa trả lời.</strong>
-          Câu chưa trả lời được tính là sai.
+          <strong>You have 19 unanswered questions.</strong>
+          Unanswered questions count as incorrect.
         </div>
         <div class="grid-3">
           <div class="stat">
-            <div class="stat__label">Đã trả lời</div>
+            <div class="stat__label">Answered</div>
             <div class="stat__value" style="font-size: var(--text-2xl)">181</div>
           </div>
           <div class="stat">
-            <div class="stat__label">Đánh dấu</div>
+            <div class="stat__label">Flag</div>
             <div class="stat__value" style="font-size: var(--text-2xl)">7</div>
           </div>
           <div class="stat">
-            <div class="stat__label">Chưa làm</div>
+            <div class="stat__label">Not done</div>
             <div class="stat__value" style="font-size: var(--text-2xl); color: var(--color-danger)">19</div>
           </div>
         </div>
         <p class="text-sm text-muted" style="margin: 0">
-          Còn 6 phút 31 giây. Bạn vẫn có thể quay lại làm tiếp.
+          6 minutes 31 seconds left. You can still come back and continue.
         </p>
       </div>
       <div class="modal__footer">
-        <a class="btn" href="exam-reading.html">Quay lại làm tiếp</a>
-        <a class="btn btn--danger" href="exam-result.html">Nộp bài luôn</a>
+        <a class="btn" href="exam-reading.html">Go back and continue</a>
+        <a class="btn btn--danger" href="exam-result.html">Submit now</a>
       </div>
     </div>
   </div>
@@ -72,18 +74,18 @@
   <div class="modal-overlay only-expired" role="dialog" aria-modal="true"
        aria-labelledby="submit-title-3">
     <div class="modal">
-      <div class="modal__header"><h2 id="submit-title-3" style="margin: 0">Đã hết giờ</h2></div>
+      <div class="modal__header"><h2 id="submit-title-3" style="margin: 0">Time is up</h2></div>
       <div class="modal__body stack">
         <div class="alert alert--warning" role="status">
-          <strong>Hết 120 phút trong lúc bạn đang xác nhận.</strong>
-          Bài đang được nộp tự động với 181 câu đã trả lời.
+          <strong>The 120 minutes ran out while you were confirming.</strong>
+          The exam is being submitted automatically with 181 answered questions.
         </div>
         <p class="text-sm text-muted" style="margin: 0">
-          19 câu chưa trả lời tính là sai. Không cần làm gì thêm.
+          19 unanswered questions count as incorrect. No further action is needed.
         </p>
       </div>
       <div class="modal__footer">
-        <a class="btn btn--primary" href="exam-result.html">Xem kết quả</a>
+        <a class="btn btn--primary" href="exam-result.html">View results</a>
       </div>
     </div>
   </div>
@@ -92,19 +94,19 @@
   <div class="modal-overlay only-complete" role="dialog" aria-modal="true"
        aria-labelledby="submit-title-2">
     <div class="modal">
-      <div class="modal__header"><h2 id="submit-title-2" style="margin: 0">Nộp bài?</h2></div>
+      <div class="modal__header"><h2 id="submit-title-2" style="margin: 0">Submit?</h2></div>
       <div class="modal__body stack">
         <div class="alert alert--success">
-          <strong>Bạn đã trả lời cả 200 câu.</strong>
-          Sau khi nộp không sửa được đáp án.
+          <strong>You have answered all 200 questions.</strong>
+          Answers cannot be changed after you submit.
         </div>
         <p class="text-sm text-muted" style="margin: 0">
-          Còn 6 phút 31 giây. Muốn kiểm tra lại 7 câu đã đánh dấu trước khi nộp?
+          6 minutes 31 seconds left. Do you want to review the 7 flagged questions before submitting?
         </p>
       </div>
       <div class="modal__footer">
-        <a class="btn" href="exam-reading.html">Xem 7 câu đã đánh dấu</a>
-        <a class="btn btn--primary" href="exam-result.html">Nộp bài</a>
+        <a class="btn" href="exam-reading.html">View 7 flagged questions</a>
+        <a class="btn btn--primary" href="exam-result.html">Submit</a>
       </div>
     </div>
   </div>
@@ -115,9 +117,9 @@
     <div class="modal">
       <div class="modal__body">
         <div class="state-block">
-          <div class="state-block__icon" aria-hidden="true">⏳</div>
-          <div class="state-block__title" id="submit-title-3">Đang nộp bài…</div>
-          <p class="state-block__desc">Đừng tắt trang.</p>
+          <div class="state-block__icon" aria-hidden="true">RUNNING</div>
+          <div class="state-block__title" id="submit-title-3">Submitting…</div>
+          <p class="state-block__desc">Do not close the page.</p>
           <div class="progress" style="max-width: 240px; margin: 0 auto">
             <div class="progress__bar" style="width: 45%"></div>
           </div>

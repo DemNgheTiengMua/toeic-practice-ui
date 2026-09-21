@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Prototype UI — Ôn và thi TOEIC</title>
+  <title>Prototype UI — TOEIC study and exams</title>
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="assets/css/tokens.css">
   <link rel="stylesheet" href="assets/css/base.css">
   <link rel="stylesheet" href="assets/css/components.css">
@@ -12,23 +13,21 @@
 <div class="container">
   <div class="stack">
     <div>
-      <h1>Prototype UI — Ôn và thi chứng chỉ TOEIC</h1>
+      <h1>Prototype UI — TOEIC preparation and certification</h1>
       <p class="text-muted">
-        Bản vẽ giao diện tĩnh, không có backend. Mỗi màn hình có nhiều state,
-        bấm trực tiếp vào tên state để xem. Thiết kế cho desktop 1440×900.
+        A static UI mockup with no backend. Each screen has several states — click a state name to view it. Designed for desktop at 1440×900.
       </p>
     </div>
 
     <div class="alert alert--info">
-      Số liệu, tên đề và nội dung câu hỏi trong prototype đều là dữ liệu mẫu.
-      Trang "Cổng thanh toán" là bản mô phỏng, không kết nối VNPay/MoMo thật.
+      All figures, test names, and question content in this prototype are sample data. The "Payment gateway" page is a simulation and is not connected to the real VNPay or MoMo.
     </div>
 
     <div class="catalog">
       <div class="catalog__group">
-        <h2>Xác thực</h2>
+        <h2>Verified</h2>
         <div class="catalog__row">
-          <span class="catalog__name">Đăng nhập</span>
+          <span class="catalog__name">Sign in</span>
           <div class="catalog__states">
             <a class="catalog__state" href="auth/login.html?state=success">success</a>
             <a class="catalog__state" href="auth/login.html?state=submitting">submitting</a>
@@ -36,7 +35,7 @@
           </div>
         </div>
         <div class="catalog__row">
-          <span class="catalog__name">Đăng ký</span>
+          <span class="catalog__name">Sign up</span>
           <div class="catalog__states">
             <a class="catalog__state" href="auth/register.html?state=success">success</a>
             <a class="catalog__state" href="auth/register.html?state=submitting">submitting</a>
@@ -44,7 +43,7 @@
           </div>
         </div>
         <div class="catalog__row">
-          <span class="catalog__name">Quên mật khẩu</span>
+          <span class="catalog__name">Forgot password</span>
           <div class="catalog__states">
             <a class="catalog__state" href="auth/forgot-password.html?state=success">success</a>
             <a class="catalog__state" href="auth/forgot-password.html?state=sent">sent</a>
@@ -54,9 +53,9 @@
         </div>
       </div>
       <div class="catalog__group">
-        <h2>Học viên</h2>
+        <h2>Students</h2>
         <div class="catalog__row">
-          <span class="catalog__name">Bảng điều khiển</span>
+          <span class="catalog__name">Dashboard</span>
           <div class="catalog__states">
             <a class="catalog__state" href="student/dashboard.html?state=success">success</a>
             <a class="catalog__state" href="student/dashboard.html?state=loading">loading</a>
@@ -65,7 +64,7 @@
           </div>
         </div>
         <div class="catalog__row">
-          <span class="catalog__name">Danh sách đề thi</span>
+          <span class="catalog__name">Test list</span>
           <div class="catalog__states">
             <a class="catalog__state" href="student/exam-list.html?state=success">success</a>
             <a class="catalog__state" href="student/exam-list.html?state=paywall">paywall</a>
@@ -76,7 +75,7 @@
           </div>
         </div>
         <div class="catalog__row">
-          <span class="catalog__name">Lịch sử thi</span>
+          <span class="catalog__name">Exam history</span>
           <div class="catalog__states">
             <a class="catalog__state" href="student/exam-history.html?state=success">success</a>
             <a class="catalog__state" href="student/exam-history.html?state=loading">loading</a>
@@ -85,7 +84,7 @@
           </div>
         </div>
         <div class="catalog__row">
-          <span class="catalog__name">Thông tin cá nhân</span>
+          <span class="catalog__name">Personal details</span>
           <div class="catalog__states">
             <a class="catalog__state" href="student/profile.html?state=success">success</a>
             <a class="catalog__state" href="student/profile.html?state=submitting">submitting</a>
@@ -95,9 +94,9 @@
         </div>
       </div>
       <div class="catalog__group">
-        <h2>Làm bài thi</h2>
+        <h2>Take an exam</h2>
         <div class="catalog__row">
-          <span class="catalog__name">Hướng dẫn trước khi thi</span>
+          <span class="catalog__name">Exam instructions</span>
           <div class="catalog__states">
             <a class="catalog__state" href="student/exam-instructions.html?state=success">success</a>
             <a class="catalog__state" href="student/exam-instructions.html?state=paywall">paywall</a>
@@ -105,7 +104,7 @@
           </div>
         </div>
         <div class="catalog__row">
-          <span class="catalog__name">Thi Listening</span>
+          <span class="catalog__name">Listening exam</span>
           <div class="catalog__states">
             <a class="catalog__state" href="student/exam-listening.html?state=success">success</a>
             <a class="catalog__state" href="student/exam-listening.html?state=loading">loading</a>
@@ -116,7 +115,7 @@
           </div>
         </div>
         <div class="catalog__row">
-          <span class="catalog__name">Thi Reading</span>
+          <span class="catalog__name">Reading exam</span>
           <div class="catalog__states">
             <a class="catalog__state" href="student/exam-reading.html?state=success">success</a>
             <a class="catalog__state" href="student/exam-reading.html?state=loading">loading</a>
@@ -127,13 +126,13 @@
           </div>
         </div>
         <div class="catalog__row">
-          <span class="catalog__name">Panel điều hướng 200 câu <span class="badge badge--info">component</span></span>
+          <span class="catalog__name">Question navigator (200 questions) <span class="badge badge--info">component</span></span>
           <div class="catalog__states">
-            <a class="catalog__state" href="student/question-navigator.html">xem</a>
+            <a class="catalog__state" href="student/question-navigator.html">view</a>
           </div>
         </div>
         <div class="catalog__row">
-          <span class="catalog__name">Xác nhận nộp bài</span>
+          <span class="catalog__name">Confirm submission</span>
           <div class="catalog__states">
             <a class="catalog__state" href="student/exam-confirm-submit.html?state=success">success</a>
             <a class="catalog__state" href="student/exam-confirm-submit.html?state=complete">complete</a>
@@ -142,7 +141,7 @@
           </div>
         </div>
         <div class="catalog__row">
-          <span class="catalog__name">Kết quả thi</span>
+          <span class="catalog__name">Exam result</span>
           <div class="catalog__states">
             <a class="catalog__state" href="student/exam-result.html?state=success">success</a>
             <a class="catalog__state" href="student/exam-result.html?state=loading">loading</a>
@@ -150,7 +149,7 @@
           </div>
         </div>
         <div class="catalog__row">
-          <span class="catalog__name">Xem lại đáp án</span>
+          <span class="catalog__name">Review answers</span>
           <div class="catalog__states">
             <a class="catalog__state" href="student/exam-review.html?state=success">success</a>
             <a class="catalog__state" href="student/exam-review.html?state=loading">loading</a>
@@ -160,9 +159,9 @@
         </div>
       </div>
       <div class="catalog__group">
-        <h2>Luyện tập theo part</h2>
+        <h2>Practice by part</h2>
         <div class="catalog__row">
-          <span class="catalog__name">Chọn part luyện tập</span>
+          <span class="catalog__name">Choose a part to practice</span>
           <div class="catalog__states">
             <a class="catalog__state" href="student/practice-select.html?state=success">success</a>
             <a class="catalog__state" href="student/practice-select.html?state=loading">loading</a>
@@ -171,7 +170,7 @@
           </div>
         </div>
         <div class="catalog__row">
-          <span class="catalog__name">Làm bài luyện tập</span>
+          <span class="catalog__name">Start practice</span>
           <div class="catalog__states">
             <a class="catalog__state" href="student/practice-take.html?state=answering">answering</a>
             <a class="catalog__state" href="student/practice-take.html?state=revealed-correct">revealed-correct</a>
@@ -182,7 +181,7 @@
           </div>
         </div>
         <div class="catalog__row">
-          <span class="catalog__name">Phân tích điểm yếu (miễn phí)</span>
+          <span class="catalog__name">Weakness analysis (free)</span>
           <div class="catalog__states">
             <a class="catalog__state" href="student/weakness-analysis.html?state=success">success</a>
             <a class="catalog__state" href="student/weakness-analysis.html?state=loading">loading</a>
@@ -191,7 +190,7 @@
           </div>
         </div>
         <div class="catalog__row">
-          <span class="catalog__name">Tổng kết luyện tập</span>
+          <span class="catalog__name">Practice summary</span>
           <div class="catalog__states">
             <a class="catalog__state" href="student/practice-summary.html?state=success">success</a>
             <a class="catalog__state" href="student/practice-summary.html?state=loading">loading</a>
@@ -200,9 +199,9 @@
         </div>
       </div>
       <div class="catalog__group">
-        <h2>Nạp lượt thi &amp; thanh toán</h2>
+        <h2>Buy credits &amp; payment</h2>
         <div class="catalog__row">
-          <span class="catalog__name">Bảng giá</span>
+          <span class="catalog__name">Pricing</span>
           <div class="catalog__states">
             <a class="catalog__state" href="payment/pricing.html?state=success">success</a>
             <a class="catalog__state" href="payment/pricing.html?state=loading">loading</a>
@@ -210,7 +209,7 @@
           </div>
         </div>
         <div class="catalog__row">
-          <span class="catalog__name">Xác nhận đơn hàng</span>
+          <span class="catalog__name">Confirm order</span>
           <div class="catalog__states">
             <a class="catalog__state" href="payment/checkout.html?state=success">success</a>
             <a class="catalog__state" href="payment/checkout.html?state=submitting">submitting</a>
@@ -219,13 +218,13 @@
           </div>
         </div>
         <div class="catalog__row">
-          <span class="catalog__name">Cổng thanh toán <span class="badge badge--warning">mô phỏng</span></span>
+          <span class="catalog__name">Payment gateway <span class="badge badge--warning">simulated</span></span>
           <div class="catalog__states">
-            <a class="catalog__state" href="payment/gateway-mock.html">xem</a>
+            <a class="catalog__state" href="payment/gateway-mock.html">view</a>
           </div>
         </div>
         <div class="catalog__row">
-          <span class="catalog__name">Kết quả thanh toán</span>
+          <span class="catalog__name">Payment result</span>
           <div class="catalog__states">
             <a class="catalog__state" href="payment/payment-result.html?state=success">success</a>
             <a class="catalog__state" href="payment/payment-result.html?state=failed">failed</a>
@@ -235,7 +234,7 @@
           </div>
         </div>
         <div class="catalog__row">
-          <span class="catalog__name">Ví lượt thi</span>
+          <span class="catalog__name">Credit wallet</span>
           <div class="catalog__states">
             <a class="catalog__state" href="payment/wallet.html?state=success">success</a>
             <a class="catalog__state" href="payment/wallet.html?state=loading">loading</a>
@@ -245,9 +244,9 @@
         </div>
       </div>
       <div class="catalog__group">
-        <h2>Xác thực CCCD (gate trước khi thi thật)</h2>
+        <h2>ID verification (gate before the real exam)</h2>
         <div class="catalog__row">
-          <span class="catalog__name">Gửi hồ sơ xác thực</span>
+          <span class="catalog__name">Submit for verification</span>
           <div class="catalog__states">
             <a class="catalog__state" href="student/kyc-submit.html?state=success">success</a>
             <a class="catalog__state" href="student/kyc-submit.html?state=loading">loading</a>
@@ -256,7 +255,7 @@
           </div>
         </div>
         <div class="catalog__row">
-          <span class="catalog__name">Trạng thái hồ sơ</span>
+          <span class="catalog__name">Application status</span>
           <div class="catalog__states">
             <a class="catalog__state" href="student/kyc-pending.html?state=pending">pending</a>
             <a class="catalog__state" href="student/kyc-pending.html?state=approved">approved</a>
@@ -266,14 +265,14 @@
           </div>
         </div>
         <div class="catalog__row">
-          <span class="catalog__name">Danh sách đề — chặn bởi KYC</span>
+          <span class="catalog__name">Test list — blocked by ID verification</span>
           <div class="catalog__states">
             <a class="catalog__state" href="student/exam-list.html?state=kyc-required">kyc-required</a>
             <a class="catalog__state" href="student/exam-list.html?state=kyc-pending">kyc-pending</a>
           </div>
         </div>
         <div class="catalog__row">
-          <span class="catalog__name">Hướng dẫn trước thi — chặn bởi KYC</span>
+          <span class="catalog__name">Exam instructions — blocked by ID verification</span>
           <div class="catalog__states">
             <a class="catalog__state" href="student/exam-instructions.html?state=kyc-required">kyc-required</a>
             <a class="catalog__state" href="student/exam-instructions.html?state=kyc-pending">kyc-pending</a>
@@ -281,7 +280,7 @@
           </div>
         </div>
         <div class="catalog__row">
-          <span class="catalog__name">Hồ sơ — trạng thái CCCD</span>
+          <span class="catalog__name">Profile — ID status</span>
           <div class="catalog__states">
             <a class="catalog__state" href="student/profile.html?state=kyc-required">kyc-required</a>
             <a class="catalog__state" href="student/profile.html?state=kyc-pending">kyc-pending</a>
@@ -290,9 +289,9 @@
         </div>
       </div>
       <div class="catalog__group">
-        <h2>Quản trị</h2>
+        <h2>Admin</h2>
         <div class="catalog__row">
-          <span class="catalog__name">Bảng điều khiển</span>
+          <span class="catalog__name">Dashboard</span>
           <div class="catalog__states">
             <a class="catalog__state" href="admin/dashboard.html?state=success">success</a>
             <a class="catalog__state" href="admin/dashboard.html?state=loading">loading</a>
@@ -300,7 +299,7 @@
           </div>
         </div>
         <div class="catalog__row">
-          <span class="catalog__name">Danh sách đề thi</span>
+          <span class="catalog__name">Test list</span>
           <div class="catalog__states">
             <a class="catalog__state" href="admin/exam-list.html?state=success">success</a>
             <a class="catalog__state" href="admin/exam-list.html?state=loading">loading</a>
@@ -309,7 +308,7 @@
           </div>
         </div>
         <div class="catalog__row">
-          <span class="catalog__name">Wizard tạo đề</span>
+          <span class="catalog__name">Test creation wizard</span>
           <div class="catalog__states">
             <a class="catalog__state" href="admin/exam-editor.html?state=success">step 1</a>
             <a class="catalog__state" href="admin/exam-editor.html?state=step2">step 2</a>
@@ -319,7 +318,7 @@
           </div>
         </div>
         <div class="catalog__row">
-          <span class="catalog__name">Soạn câu hỏi</span>
+          <span class="catalog__name">Write question</span>
           <div class="catalog__states">
             <a class="catalog__state" href="admin/question-editor.html?state=success">success</a>
             <a class="catalog__state" href="admin/question-editor.html?state=submitting">submitting</a>
@@ -327,7 +326,7 @@
           </div>
         </div>
         <div class="catalog__row">
-          <span class="catalog__name">Học viên</span>
+          <span class="catalog__name">Students</span>
           <div class="catalog__states">
             <a class="catalog__state" href="admin/users.html?state=success">success</a>
             <a class="catalog__state" href="admin/users.html?state=adjust">adjust</a>
@@ -337,7 +336,7 @@
           </div>
         </div>
         <div class="catalog__row">
-          <span class="catalog__name">Duyệt xác thực CCCD</span>
+          <span class="catalog__name">ID verification review</span>
           <div class="catalog__states">
             <a class="catalog__state" href="admin/kyc-review.html?state=success">success</a>
             <a class="catalog__state" href="admin/kyc-review.html?state=adjust">adjust</a>
@@ -347,7 +346,7 @@
           </div>
         </div>
         <div class="catalog__row">
-          <span class="catalog__name">Bảng quy đổi điểm</span>
+          <span class="catalog__name">Score conversion</span>
           <div class="catalog__states">
             <a class="catalog__state" href="admin/score-conversion.html?state=success">success</a>
             <a class="catalog__state" href="admin/score-conversion.html?state=submitting">submitting</a>
@@ -356,7 +355,7 @@
           </div>
         </div>
         <div class="catalog__row">
-          <span class="catalog__name">Gói lượt thi</span>
+          <span class="catalog__name">Credit packages</span>
           <div class="catalog__states">
             <a class="catalog__state" href="admin/packages.html?state=success">success</a>
             <a class="catalog__state" href="admin/packages.html?state=edit">edit</a>
@@ -365,7 +364,7 @@
           </div>
         </div>
         <div class="catalog__row">
-          <span class="catalog__name">Đơn hàng</span>
+          <span class="catalog__name">Orders</span>
           <div class="catalog__states">
             <a class="catalog__state" href="admin/orders.html?state=success">success</a>
             <a class="catalog__state" href="admin/orders.html?state=loading">loading</a>

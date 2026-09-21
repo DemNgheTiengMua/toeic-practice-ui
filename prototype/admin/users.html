@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Học viên — Quản trị TOEIC Practice</title>
+  <title>Students — TOEIC Practice Admin</title>
+  <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../assets/css/tokens.css">
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
@@ -11,58 +12,58 @@
 <body data-states="loading,empty,error,success,adjust" data-state="success">
   <div class="app-shell app-shell--with-sidebar">
     <header class="app-topbar">
-      <strong>TOEIC Practice — Khu vực quản trị</strong>
+      <strong>TOEIC Practice — Admin area</strong>
       <div class="row">
         <span class="badge badge--warning">Admin</span>
         <span class="text-sm">admin@toeic.local</span>
-        <a class="btn btn--sm btn--ghost" href="../auth/login.html">Đăng xuất</a>
+        <a class="btn btn--sm btn--ghost" href="../auth/login.html">Sign out</a>
       </div>
     </header>
     <div class="app-body">
       <aside class="app-sidebar">
-        <nav class="nav-list" aria-label="Điều hướng quản trị">
-          <div class="nav-list__group">Tổng quan</div>
-          <a class="nav-list__item" href="dashboard.html">Bảng điều khiển</a>
-          <div class="nav-list__group">Nội dung</div>
-          <a class="nav-list__item" href="exam-list.html">Đề thi</a>
-          <a class="nav-list__item" href="score-conversion.html">Bảng quy đổi điểm</a>
-          <div class="nav-list__group">Người dùng &amp; doanh thu</div>
-          <a class="nav-list__item is-active" href="users.html">Học viên</a>
-          <a class="nav-list__item" href="kyc-review.html">Duyệt CCCD <span class="badge badge--danger">3</span></a>
-          <a class="nav-list__item" href="packages.html">Gói lượt thi</a>
-          <a class="nav-list__item" href="orders.html">Đơn hàng</a>
-          <div class="nav-list__group">Khác</div>
-          <a class="nav-list__item" href="../index.html">Mục lục prototype</a>
+        <nav class="nav-list" aria-label="Admin navigation">
+          <div class="nav-list__group">Overview</div>
+          <a class="nav-list__item" href="dashboard.html">Dashboard</a>
+          <div class="nav-list__group">Content</div>
+          <a class="nav-list__item" href="exam-list.html">Test</a>
+          <a class="nav-list__item" href="score-conversion.html">Score conversion</a>
+          <div class="nav-list__group">Users &amp; revenue</div>
+          <a class="nav-list__item is-active" href="users.html">Students</a>
+          <a class="nav-list__item" href="kyc-review.html">ID review <span class="badge badge--danger">3</span></a>
+          <a class="nav-list__item" href="packages.html">Credit packages</a>
+          <a class="nav-list__item" href="orders.html">Orders</a>
+          <div class="nav-list__group">Other</div>
+          <a class="nav-list__item" href="../index.html">Prototype catalog</a>
         </nav>
       </aside>
       <main class="app-main">
         <div class="container stack">
-          <h1>Học viên</h1>
+          <h1>Students</h1>
 
           <div class="toolbar multi-state" data-show="success adjust">
             <div class="field toolbar__grow">
-              <label class="field__label" for="u-q">Tìm theo email hoặc tên</label>
+              <label class="field__label" for="u-q">Search by email or name</label>
               <input class="field__input" id="u-q" type="search" placeholder="an.nguyen@…">
             </div>
             <div class="field">
-              <label class="field__label" for="u-status">Trạng thái</label>
+              <label class="field__label" for="u-status">Status</label>
               <select class="field__input" id="u-status">
-                <option>Tất cả</option>
-                <option>Đang hoạt động</option>
-                <option>Đã khoá</option>
+                <option>All</option>
+                <option>Active</option>
+                <option>Locked</option>
               </select>
             </div>
             <div class="field">
               <label class="field__label" for="u-kyc">CCCD</label>
               <select class="field__input" id="u-kyc">
-                <option>Tất cả</option>
-                <option>Đã xác thực</option>
-                <option>Chờ duyệt</option>
-                <option>Bị từ chối</option>
-                <option>Chưa gửi</option>
+                <option>All</option>
+                <option>Verified</option>
+                <option>Pending</option>
+                <option>Rejected</option>
+                <option>Not sent</option>
               </select>
             </div>
-            <button class="btn">Lọc</button>
+            <button class="btn">Filter</button>
           </div>
 
           <div class="card multi-state" data-show="success adjust">
@@ -70,51 +71,51 @@
               <table class="table table--striped">
                 <thead>
                   <tr>
-                    <th scope="col">Học viên</th><th scope="col">Email</th>
-                    <th scope="col">Lượt còn</th><th scope="col">Đề đã làm</th>
-                    <th scope="col">Điểm cao nhất</th><th scope="col">CCCD</th><th scope="col">Đăng nhập gần nhất</th>
-                    <th scope="col">Trạng thái</th><th scope="col">Thao tác</th>
+                    <th scope="col">Students</th><th scope="col">Email</th>
+                    <th scope="col">Credits left</th><th scope="col">Tests taken</th>
+                    <th scope="col">Best score</th><th scope="col">CCCD</th><th scope="col">Last sign-in</th>
+                    <th scope="col">Status</th><th scope="col">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr>
                     <td>Nguyễn Văn An</td><td>an.nguyen@gmail.com</td><td>3</td><td>6</td><td>745</td>
-                    <td><span class="badge badge--success">Đã xác thực</span></td>
-                    <td>20/09/2026 13:10</td>
-                    <td><span class="badge badge--success">Hoạt động</span></td>
+                    <td><span class="badge badge--success">Verified</span></td>
+                    <td>20 Sep 2026 13:10</td>
+                    <td><span class="badge badge--success">Activity</span></td>
                     <td class="row">
-                      <a class="btn btn--sm" href="users.html?state=adjust">Sửa lượt</a>
-                      <button class="btn btn--sm btn--ghost">Khoá</button>
+                      <a class="btn btn--sm" href="users.html?state=adjust">Edit credits</a>
+                      <button class="btn btn--sm btn--ghost">Lock</button>
                     </td>
                   </tr>
                   <tr>
                     <td>Trần Thị Bình</td><td>binh.tran@gmail.com</td><td>0</td><td>12</td><td>820</td>
-                    <td><a href="kyc-review.html"><span class="badge badge--warning">Chờ duyệt</span></a></td>
-                    <td>19/09/2026 21:44</td>
-                    <td><span class="badge badge--success">Hoạt động</span></td>
+                    <td><a href="kyc-review.html"><span class="badge badge--warning">Pending</span></a></td>
+                    <td>19 Sep 2026 21:44</td>
+                    <td><span class="badge badge--success">Activity</span></td>
                     <td class="row">
-                      <a class="btn btn--sm" href="users.html?state=adjust">Sửa lượt</a>
-                      <button class="btn btn--sm btn--ghost">Khoá</button>
+                      <a class="btn btn--sm" href="users.html?state=adjust">Edit credits</a>
+                      <button class="btn btn--sm btn--ghost">Lock</button>
                     </td>
                   </tr>
                   <tr>
                     <td>Lê Minh Cường</td><td>cuong.le@gmail.com</td><td>8</td><td>1</td><td>460</td>
-                    <td><span class="badge badge--danger">Bị từ chối</span></td>
-                    <td>05/09/2026 08:02</td>
-                    <td><span class="badge badge--danger">Đã khoá</span></td>
+                    <td><span class="badge badge--danger">Rejected</span></td>
+                    <td>5 Sep 2026 08:02</td>
+                    <td><span class="badge badge--danger">Locked</span></td>
                     <td class="row">
-                      <a class="btn btn--sm" href="users.html?state=adjust">Sửa lượt</a>
-                      <button class="btn btn--sm btn--ghost">Mở khoá</button>
+                      <a class="btn btn--sm" href="users.html?state=adjust">Edit credits</a>
+                      <button class="btn btn--sm btn--ghost">Unlock</button>
                     </td>
                   </tr>
                   <tr>
                     <td>Phạm Thu Hà</td><td>ha.pham@gmail.com</td><td>1</td><td>0</td><td>—</td>
-                    <td><span class="badge badge--muted">Chưa gửi</span></td>
-                    <td>Chưa đăng nhập</td>
-                    <td><span class="badge badge--warning">Chưa kích hoạt</span></td>
+                    <td><span class="badge badge--muted">Not sent</span></td>
+                    <td>Never signed in</td>
+                    <td><span class="badge badge--warning">Not activated</span></td>
                     <td class="row">
-                      <a class="btn btn--sm" href="users.html?state=adjust">Sửa lượt</a>
-                      <button class="btn btn--sm btn--ghost">Gửi lại email</button>
+                      <a class="btn btn--sm" href="users.html?state=adjust">Edit credits</a>
+                      <button class="btn btn--sm btn--ghost">Resend email</button>
                     </td>
                   </tr>
                 </tbody>
@@ -122,12 +123,12 @@
             </div>
             <div class="card__footer">
               <div class="pagination">
-                <span class="pagination__info">Hiển thị 1–4 trong 1.284 học viên</span>
-                <a class="pagination__page" href="#" aria-disabled="true">Trước</a>
+                <span class="pagination__info">Showing 1–4 of 1,284 students</span>
+                <a class="pagination__page" href="#" aria-disabled="true">Previous</a>
                 <a class="pagination__page is-current" href="#" aria-current="page">1</a>
                 <a class="pagination__page" href="#">2</a>
                 <a class="pagination__page" href="#">3</a>
-                <a class="pagination__page" href="#">Sau</a>
+                <a class="pagination__page" href="#">Next</a>
               </div>
             </div>
           </div>
@@ -135,8 +136,8 @@
             <div class="card__body">
               <div class="state-block">
                 <div class="state-block__icon" aria-hidden="true">?</div>
-                <h2 class="state-block__title">Không tìm thấy học viên nào</h2>
-                <p class="state-block__desc">Thử bỏ bộ lọc hoặc nhập từ khoá khác.</p>
+                <h2 class="state-block__title">No students found</h2>
+                <p class="state-block__desc">Try removing the filter or entering a different keyword.</p>
               </div>
             </div>
           </div>
@@ -153,32 +154,32 @@
             <div class="card__body">
               <div class="state-block">
                 <div class="state-block__icon" aria-hidden="true">!</div>
-                <h2 class="state-block__title">Không tải được danh sách học viên</h2>
-                <button class="btn">Tải lại</button>
+                <h2 class="state-block__title">Could not load the student list</h2>
+                <button class="btn">Reload</button>
               </div>
             </div>
           </div>
           <div class="modal-overlay only-adjust" role="dialog" aria-modal="true" aria-labelledby="adj-title">
             <div class="modal">
               <div class="modal__header">
-                <h2 id="adj-title">Điều chỉnh lượt thi</h2>
-                <p class="text-muted">Nguyễn Văn An — an.nguyen@gmail.com — đang có <strong>3 lượt</strong>.</p>
+                <h2 id="adj-title">Adjust credits</h2>
+                <p class="text-muted">Nguyễn Văn An — an.nguyen@gmail.com — currently has <strong>3 credits</strong>.</p>
               </div>
               <div class="modal__body stack">
                 <div class="field">
-                  <label class="field__label" for="adj-amount">Số lượt cộng thêm</label>
+                  <label class="field__label" for="adj-amount">Credits to add</label>
                   <input class="field__input" id="adj-amount" type="number" value="1">
-                  <span class="field__hint">Nhập số âm để trừ lượt. Sau điều chỉnh: 4 lượt.</span>
+                  <span class="field__hint">Enter a negative number to deduct credits. After adjustment: 4 credits.</span>
                 </div>
                 <div class="field">
-                  <label class="field__label" for="adj-reason">Lý do (bắt buộc)</label>
-                  <input class="field__input" id="adj-reason" value="Đền bù lỗi audio Part 3 ngày 18/09">
+                  <label class="field__label" for="adj-reason">Reason (required)</label>
+                  <input class="field__input" id="adj-reason" value="Compensation for the Part 3 audio issue on 18 Sep">
                 </div>
-                <div class="alert alert--warning">Mọi điều chỉnh đều được ghi log kèm tên admin thực hiện.</div>
+                <div class="alert alert--warning">Every adjustment is logged together with the name of the admin who made it.</div>
               </div>
               <div class="modal__footer row row--between">
-                <a class="btn btn--ghost" href="users.html?state=success">Huỷ</a>
-                <a class="btn btn--primary" href="users.html?state=success">Xác nhận điều chỉnh</a>
+                <a class="btn btn--ghost" href="users.html?state=success">Cancel</a>
+                <a class="btn btn--primary" href="users.html?state=success">Confirm adjustment</a>
               </div>
             </div>
           </div>

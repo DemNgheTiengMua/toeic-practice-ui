@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Danh sách đề thi — TOEIC Practice</title>
+  <title>Test list — TOEIC Practice</title>
+  <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../assets/css/tokens.css">
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
@@ -13,25 +14,25 @@
     <header class="app-topbar">
       <strong>TOEIC Practice</strong>
       <div class="row">
-        <span class="badge badge--info">Còn 3 lượt thi</span>
-        <a class="btn btn--sm" href="../payment/pricing.html">Mua thêm lượt</a>
+        <span class="badge badge--info">3 credits left</span>
+        <a class="btn btn--sm" href="../payment/pricing.html">Buy credits</a>
         <a class="btn btn--ghost btn--sm" href="profile.html">Nguyễn Văn A</a>
       </div>
     </header>
     <div class="app-body">
       <aside class="app-sidebar">
-        <nav class="nav-list" aria-label="Điều hướng chính">
-          <a class="nav-list__item" href="dashboard.html">Trang chủ</a>
-          <div class="nav-list__group">Thi thử</div>
-          <a class="nav-list__item is-active" href="exam-list.html">Danh sách đề</a>
-          <a class="nav-list__item" href="exam-history.html">Lịch sử thi</a>
-          <div class="nav-list__group">Luyện tập</div>
-          <a class="nav-list__item" href="practice-select.html">Luyện theo part</a>
-          <a class="nav-list__item" href="weakness-analysis.html">Phân tích điểm yếu</a>
-          <div class="nav-list__group">Tài khoản</div>
-          <a class="nav-list__item" href="../payment/wallet.html">Ví lượt thi</a>
-          <a class="nav-list__item" href="kyc-pending.html">Xác thực CCCD</a>
-          <a class="nav-list__item" href="profile.html">Hồ sơ</a>
+        <nav class="nav-list" aria-label="Main navigation">
+          <a class="nav-list__item" href="dashboard.html">Home</a>
+          <div class="nav-list__group">Mock exams</div>
+          <a class="nav-list__item is-active" href="exam-list.html">Test list</a>
+          <a class="nav-list__item" href="exam-history.html">Exam history</a>
+          <div class="nav-list__group">Practice</div>
+          <a class="nav-list__item" href="practice-select.html">Practice by part</a>
+          <a class="nav-list__item" href="weakness-analysis.html">Weakness analysis</a>
+          <div class="nav-list__group">Account</div>
+          <a class="nav-list__item" href="../payment/wallet.html">Credit wallet</a>
+          <a class="nav-list__item" href="kyc-pending.html">ID verification</a>
+          <a class="nav-list__item" href="profile.html">Profile</a>
         </nav>
       </aside>
       <main class="app-main">
@@ -52,35 +53,35 @@
             <div class="card"><div class="card__body">
               <div class="state-block">
                 <div class="state-block__icon" aria-hidden="true">!</div>
-                <div class="state-block__title">Không tải được danh sách đề</div>
-                <p class="state-block__desc">Kiểm tra kết nối rồi thử lại.</p>
-                <button class="btn btn--primary">Thử lại</button>
+                <div class="state-block__title">Could not load the test list</div>
+                <p class="state-block__desc">Check your connection and try again.</p>
+                <button class="btn btn--primary">Try again</button>
               </div>
             </div></div>
           </div>
 
           <!-- ===== empty ===== -->
           <div class="only-empty stack">
-            <h1>Danh sách đề thi</h1>
+            <h1>Test list</h1>
             <div class="card"><div class="card__body">
               <div class="state-block">
-                <div class="state-block__icon" aria-hidden="true">□</div>
-                <div class="state-block__title">Chưa có đề thi nào</div>
-                <p class="state-block__desc">Đề mới sẽ xuất hiện ở đây khi được phát hành.</p>
-                <a class="btn" href="practice-select.html">Luyện theo part</a>
+                <div class="state-block__icon" aria-hidden="true">EMPTY</div>
+                <div class="state-block__title">No tests yet</div>
+                <p class="state-block__desc">New tests will appear here once they are published.</p>
+                <a class="btn" href="practice-select.html">Practice by part</a>
               </div>
             </div></div>
           </div>
 
           <!-- ===== paywall: hết lượt ===== -->
           <div class="only-paywall stack">
-            <h1>Danh sách đề thi</h1>
+            <h1>Test list</h1>
             <div class="alert alert--warning">
-              <strong>Bạn đã hết lượt thi.</strong>
-              Mua thêm lượt để làm đề đầy đủ. Luyện theo part vẫn miễn phí.
+              <strong>You are out of credits.</strong>
+              Buy credits to take full tests. Practice by Part is still free.
               <div class="row" style="margin-top: var(--space-3)">
-                <a class="btn btn--primary btn--sm" href="../payment/pricing.html">Xem bảng giá</a>
-                <a class="btn btn--sm" href="practice-select.html">Luyện miễn phí</a>
+                <a class="btn btn--primary btn--sm" href="../payment/pricing.html">View pricing</a>
+                <a class="btn btn--sm" href="practice-select.html">Practice free</a>
               </div>
             </div>
             <div class="grid-2">
@@ -88,24 +89,24 @@
                 <div class="card__body stack">
                   <div class="row row--between">
                     <strong>ETS 2024 — Test 4</strong>
-                    <span class="badge badge--muted">Cần 1 lượt</span>
+                    <span class="badge badge--muted">1 credit required</span>
                   </div>
                   <p class="text-sm text-muted" style="margin: 0">
-                    200 câu · 120 phút · 7 parts
+                    200 questions · 120 minutes · 7 parts
                   </p>
-                  <button class="btn btn--primary" disabled>Bắt đầu thi</button>
+                  <button class="btn btn--primary" disabled>Start test</button>
                 </div>
               </div>
               <div class="card">
                 <div class="card__body stack">
                   <div class="row row--between">
                     <strong>ETS 2024 — Test 5</strong>
-                    <span class="badge badge--muted">Cần 1 lượt</span>
+                    <span class="badge badge--muted">1 credit required</span>
                   </div>
                   <p class="text-sm text-muted" style="margin: 0">
-                    200 câu · 120 phút · 7 parts
+                    200 questions · 120 minutes · 7 parts
                   </p>
-                  <button class="btn btn--primary" disabled>Bắt đầu thi</button>
+                  <button class="btn btn--primary" disabled>Start test</button>
                 </div>
               </div>
             </div>
@@ -116,14 +117,13 @@
                Thứ tự quan trọng: chặn sau khi trừ lượt thì học viên mất
                lượt rồi mới biết mình chưa đủ điều kiện thi. -->
           <div class="only-kyc-required stack">
-            <h1>Danh sách đề thi</h1>
+            <h1>Test list</h1>
             <div class="alert alert--warning">
-              <strong>Cần xác thực CCCD trước khi thi thật.</strong>
-              Đây là thủ tục một lần, miễn phí và không trừ lượt thi.
-              Luyện theo part vẫn dùng được ngay.
+              <strong>ID verification is required before the real exam.</strong>
+              This is a one-time procedure, free, with no credit deducted. Practice by Part works right away.
               <div class="row" style="margin-top: var(--space-3)">
-                <a class="btn btn--primary btn--sm" href="kyc-submit.html">Xác thực CCCD</a>
-                <a class="btn btn--sm" href="practice-select.html">Luyện miễn phí</a>
+                <a class="btn btn--primary btn--sm" href="kyc-submit.html">ID verification</a>
+                <a class="btn btn--sm" href="practice-select.html">Practice free</a>
               </div>
             </div>
             <div class="grid-2">
@@ -131,24 +131,24 @@
                 <div class="card__body stack">
                   <div class="row row--between">
                     <strong>ETS 2024 — Test 4</strong>
-                    <span class="badge badge--muted">Cần xác thực</span>
+                    <span class="badge badge--muted">Verification required</span>
                   </div>
                   <p class="text-sm text-muted" style="margin: 0">
-                    200 câu · 120 phút · 7 parts
+                    200 questions · 120 minutes · 7 parts
                   </p>
-                  <a class="btn btn--primary" href="kyc-submit.html">Xác thực để thi</a>
+                  <a class="btn btn--primary" href="kyc-submit.html">Verify to take a test</a>
                 </div>
               </div>
               <div class="card">
                 <div class="card__body stack">
                   <div class="row row--between">
                     <strong>ETS 2024 — Test 5</strong>
-                    <span class="badge badge--muted">Cần xác thực</span>
+                    <span class="badge badge--muted">Verification required</span>
                   </div>
                   <p class="text-sm text-muted" style="margin: 0">
-                    200 câu · 120 phút · 7 parts
+                    200 questions · 120 minutes · 7 parts
                   </p>
-                  <a class="btn btn--primary" href="kyc-submit.html">Xác thực để thi</a>
+                  <a class="btn btn--primary" href="kyc-submit.html">Verify to take a test</a>
                 </div>
               </div>
             </div>
@@ -158,13 +158,13 @@
                Khác kyc-required ở chỗ học viên không còn gì để làm —
                nên không có CTA hành động, chỉ có đường lui về luyện tập. -->
           <div class="only-kyc-pending stack">
-            <h1>Danh sách đề thi</h1>
+            <h1>Test list</h1>
             <div class="alert alert--info">
-              <strong>Hồ sơ xác thực đang chờ duyệt.</strong>
-              Thường trong vòng 1 ngày làm việc. Thi thật sẽ mở ngay khi hồ sơ được duyệt.
+              <strong>Verification application pending review.</strong>
+              Usually within 1 business day. The real exam unlocks as soon as your application is approved.
               <div class="row" style="margin-top: var(--space-3)">
-                <a class="btn btn--sm" href="kyc-pending.html">Xem hồ sơ đã gửi</a>
-                <a class="btn btn--sm" href="practice-select.html">Luyện miễn phí</a>
+                <a class="btn btn--sm" href="kyc-pending.html">View submitted application</a>
+                <a class="btn btn--sm" href="practice-select.html">Practice free</a>
               </div>
             </div>
             <div class="grid-2">
@@ -172,50 +172,54 @@
                 <div class="card__body stack">
                   <div class="row row--between">
                     <strong>ETS 2024 — Test 4</strong>
-                    <span class="badge badge--warning">Chờ duyệt hồ sơ</span>
+                    <span class="badge badge--warning">Application pending review</span>
                   </div>
                   <p class="text-sm text-muted" style="margin: 0">
-                    200 câu · 120 phút · 7 parts
+                    200 questions · 120 minutes · 7 parts
                   </p>
-                  <button class="btn btn--primary" disabled>Bắt đầu thi</button>
+                  <button class="btn btn--primary" disabled>Start test</button>
                 </div>
               </div>
               <div class="card">
                 <div class="card__body stack">
                   <div class="row row--between">
                     <strong>ETS 2024 — Test 5</strong>
-                    <span class="badge badge--warning">Chờ duyệt hồ sơ</span>
+                    <span class="badge badge--warning">Application pending review</span>
                   </div>
                   <p class="text-sm text-muted" style="margin: 0">
-                    200 câu · 120 phút · 7 parts
+                    200 questions · 120 minutes · 7 parts
                   </p>
-                  <button class="btn btn--primary" disabled>Bắt đầu thi</button>
+                  <button class="btn btn--primary" disabled>Start test</button>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- ===== success ===== -->
-          <div class="only-success stack">
+          <!-- ===== success =====
+               Also the backdrop for `cancelled`: the confirmation modal asks
+               about the test that is in progress, so the list has to be on
+               screen behind it. Without this the modal paints over an empty
+               page. -->
+          <div class="multi-state stack" data-show="success cancelled">
             <div class="row row--between">
-              <h1 style="margin: 0">Danh sách đề thi</h1>
-              <span class="badge badge--info">Còn 3 lượt thi</span>
+              <h1 style="margin: 0">Test list</h1>
+              <span class="badge badge--info">3 credits left</span>
             </div>
 
             <div class="card">
               <div class="card__body row" style="gap: var(--space-4); flex-wrap: wrap">
                 <div class="field" style="flex: 1 1 220px">
-                  <label class="field__label" for="filter-keyword">Tìm đề</label>
+                  <label class="field__label" for="filter-keyword">Find a test</label>
                   <input class="field__input" id="filter-keyword" type="search"
-                         placeholder="Tên đề, bộ đề…">
+                         placeholder="Test name, test set…">
                 </div>
                 <div class="field" style="flex: 0 0 180px">
-                  <label class="field__label" for="filter-status">Trạng thái</label>
+                  <label class="field__label" for="filter-status">Status</label>
                   <select class="field__input" id="filter-status">
-                    <option>Tất cả</option>
-                    <option>Chưa làm</option>
-                    <option>Đã làm</option>
-                    <option>Đang làm dở</option>
+                    <option>All</option>
+                    <option>Not done</option>
+                    <option>Done</option>
+                    <option>In progress</option>
                   </select>
                 </div>
               </div>
@@ -227,15 +231,15 @@
                 <div class="card__body stack">
                   <div class="row row--between">
                     <strong>ETS 2024 — Test 4</strong>
-                    <span class="badge badge--warning">Đang làm dở</span>
+                    <span class="badge badge--warning">In progress</span>
                   </div>
                   <p class="text-sm text-muted" style="margin: 0">
-                    200 câu · 120 phút · còn 47 phút · đã làm 128/200
+                    200 questions · 120 minutes · 47 minutes left · 128/200 answered
                   </p>
                   <div class="progress"><div class="progress__bar" style="width: 64%"></div></div>
                   <div class="row">
-                    <a class="btn btn--primary" href="exam-reading.html?state=resumed">Tiếp tục</a>
-                    <a class="btn btn--ghost btn--sm" href="?state=cancelled">Huỷ bài</a>
+                    <a class="btn btn--primary" href="exam-reading.html?state=resumed">Continue</a>
+                    <a class="btn btn--ghost btn--sm" href="?state=cancelled">Cancel exam</a>
                   </div>
                 </div>
               </div>
@@ -245,12 +249,12 @@
                 <div class="card__body stack">
                   <div class="row row--between">
                     <strong>ETS 2024 — Test 5</strong>
-                    <span class="badge badge--muted">Chưa làm</span>
+                    <span class="badge badge--muted">Not done</span>
                   </div>
                   <p class="text-sm text-muted" style="margin: 0">
-                    200 câu · 120 phút · 7 parts
+                    200 questions · 120 minutes · 7 parts
                   </p>
-                  <a class="btn btn--primary" href="exam-instructions.html">Bắt đầu thi</a>
+                  <a class="btn btn--primary" href="exam-instructions.html">Start test</a>
                 </div>
               </div>
 
@@ -259,14 +263,14 @@
                 <div class="card__body stack">
                   <div class="row row--between">
                     <strong>ETS 2024 — Test 3</strong>
-                    <span class="badge badge--success">Đã làm · 720</span>
+                    <span class="badge badge--success">Done · 720</span>
                   </div>
                   <p class="text-sm text-muted" style="margin: 0">
-                    Hoàn thành 18/09/2026 · L 385 · R 335
+                    Completed 18 Sep 2026 · L 385 · R 335
                   </p>
                   <div class="row">
-                    <a class="btn" href="exam-review.html?attempt=1171">Xem lại</a>
-                    <a class="btn btn--primary" href="exam-instructions.html">Làm lại</a>
+                    <a class="btn" href="exam-review.html?attempt=1171">Review</a>
+                    <a class="btn btn--primary" href="exam-instructions.html">Retake</a>
                   </div>
                 </div>
               </div>
@@ -275,14 +279,14 @@
                 <div class="card__body stack">
                   <div class="row row--between">
                     <strong>ETS 2024 — Test 2</strong>
-                    <span class="badge badge--success">Đã làm · 690</span>
+                    <span class="badge badge--success">Done · 690</span>
                   </div>
                   <p class="text-sm text-muted" style="margin: 0">
-                    Hoàn thành 10/09/2026 · L 370 · R 320
+                    Completed 10 Sep 2026 · L 370 · R 320
                   </p>
                   <div class="row">
-                    <a class="btn" href="exam-review.html?attempt=1172">Xem lại</a>
-                    <a class="btn btn--primary" href="exam-instructions.html">Làm lại</a>
+                    <a class="btn" href="exam-review.html?attempt=1172">Review</a>
+                    <a class="btn btn--primary" href="exam-instructions.html">Retake</a>
                   </div>
                 </div>
               </div>
@@ -297,20 +301,19 @@
   <div class="modal-overlay only-cancelled" role="dialog" aria-modal="true"
        aria-labelledby="cancel-title">
     <div class="modal">
-      <div class="modal__header"><h2 id="cancel-title" style="margin: 0">Huỷ bài đang làm?</h2></div>
+      <div class="modal__header"><h2 id="cancel-title" style="margin: 0">Cancel the exam in progress?</h2></div>
       <div class="modal__body stack">
         <div class="alert alert--danger">
-          <strong>Huỷ là mất lượt thi đã trừ.</strong>
-          1 lượt đã bị trừ khi bạn bắt đầu đề này và không được hoàn lại.
+          <strong>Cancelling means losing the credit already deducted.</strong>
+          1 credit was deducted when you started this test and is not refunded.
         </div>
         <p class="text-sm text-muted" style="margin: 0">
-          ETS 2024 — Test 4 · đã làm 128/200 câu · còn 47 phút.
-          Bài sẽ không được chấm và không xuất hiện trong lịch sử thi.
+          ETS 2024 — Test 4 · 128/200 answered · 47 minutes left. The exam will not be graded and will not appear in your exam history.
         </p>
       </div>
       <div class="modal__footer">
-        <a class="btn" href="exam-reading.html?state=resumed">Quay lại làm tiếp</a>
-        <a class="btn btn--danger" href="?state=success">Huỷ bài, mất 1 lượt</a>
+        <a class="btn" href="exam-reading.html?state=resumed">Go back and continue</a>
+        <a class="btn btn--danger" href="?state=success">Cancel exam, lose 1 credit</a>
       </div>
     </div>
   </div>

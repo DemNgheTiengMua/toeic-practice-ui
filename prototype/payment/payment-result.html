@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Kết quả thanh toán — TOEIC Practice</title>
+  <title>Payment result — TOEIC Practice</title>
+  <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../assets/css/tokens.css">
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
@@ -13,80 +14,79 @@
     <header class="app-topbar">
       <strong>TOEIC Practice</strong>
       <div class="row">
-        <span class="badge badge--info">Còn 3 lượt thi</span>
-        <a class="btn btn--sm" href="pricing.html">Mua thêm lượt</a>
+        <span class="badge badge--info">3 credits left</span>
+        <a class="btn btn--sm" href="pricing.html">Buy credits</a>
         <a class="btn btn--ghost btn--sm" href="../student/profile.html">Nguyễn Văn A</a>
       </div>
     </header>
     <div class="app-body">
       <aside class="app-sidebar">
-        <nav class="nav-list" aria-label="Điều hướng chính">
-          <a class="nav-list__item" href="../student/dashboard.html">Trang chủ</a>
-          <div class="nav-list__group">Thi thử</div>
-          <a class="nav-list__item" href="../student/exam-list.html">Danh sách đề</a>
-          <a class="nav-list__item" href="../student/exam-history.html">Lịch sử thi</a>
-          <div class="nav-list__group">Luyện tập</div>
-          <a class="nav-list__item" href="../student/practice-select.html">Luyện theo part</a>
-          <a class="nav-list__item" href="../student/weakness-analysis.html">Phân tích điểm yếu</a>
-          <div class="nav-list__group">Tài khoản</div>
-          <a class="nav-list__item is-active" href="wallet.html">Ví lượt thi</a>
-          <a class="nav-list__item" href="../student/kyc-pending.html">Xác thực CCCD</a>
-          <a class="nav-list__item" href="../student/profile.html">Hồ sơ</a>
+        <nav class="nav-list" aria-label="Main navigation">
+          <a class="nav-list__item" href="../student/dashboard.html">Home</a>
+          <div class="nav-list__group">Mock exams</div>
+          <a class="nav-list__item" href="../student/exam-list.html">Test list</a>
+          <a class="nav-list__item" href="../student/exam-history.html">Exam history</a>
+          <div class="nav-list__group">Practice</div>
+          <a class="nav-list__item" href="../student/practice-select.html">Practice by part</a>
+          <a class="nav-list__item" href="../student/weakness-analysis.html">Weakness analysis</a>
+          <div class="nav-list__group">Account</div>
+          <a class="nav-list__item is-active" href="wallet.html">Credit wallet</a>
+          <a class="nav-list__item" href="../student/kyc-pending.html">ID verification</a>
+          <a class="nav-list__item" href="../student/profile.html">Profile</a>
         </nav>
       </aside>
       <main class="app-main">
         <div class="container stack">
           <div class="stepper">
-            <div class="stepper__item is-done">1. Chọn gói</div>
-            <div class="stepper__item is-done">2. Xác nhận</div>
-            <div class="stepper__item is-done">3. Thanh toán</div>
-            <div class="stepper__item is-current">4. Hoàn tất</div>
+            <div class="stepper__item is-done">1. Choose a package</div>
+            <div class="stepper__item is-done">2. Confirm</div>
+            <div class="stepper__item is-done">3. Payment</div>
+            <div class="stepper__item is-current">4. Done</div>
           </div>
 
           <!-- ===== success ===== -->
           <div class="card only-success">
             <div class="card__body">
               <div class="state-block">
-                <div class="state-block__icon" aria-hidden="true">✓</div>
-                <h1 class="state-block__title">Thanh toán thành công</h1>
+                <div class="state-block__icon" aria-hidden="true">DONE</div>
+                <h2 class="state-block__title">Payment successful</h2>
                 <p class="state-block__desc">
-                  Đã cộng <strong>5 lượt thi</strong> vào tài khoản.
-                  Bạn đang có <strong>8 lượt</strong>.
+                  Added <strong>5 credits</strong> to your account. You currently have <strong>8 credits</strong>.
                 </p>
               </div>
               <table class="table">
                 <tbody>
-                  <tr><th scope="row">Mã đơn</th><td>DH-20260920-0148</td></tr>
-                  <tr><th scope="row">Gói</th><td>Gói Ôn Thi — 5 lượt</td></tr>
-                  <tr><th scope="row">Số tiền</th><td>199.000 ₫</td></tr>
-                  <tr><th scope="row">Phương thức</th><td>VNPay</td></tr>
-                  <tr><th scope="row">Thời gian</th><td>20/09/2026 14:32</td></tr>
+                  <tr><th scope="row">Order code</th><td>DH-20260920-0148</td></tr>
+                  <tr><th scope="row">Package</th><td>Exam Prep — 5 credits</td></tr>
+                  <tr><th scope="row">Amount</th><td>199,000 ₫</td></tr>
+                  <tr><th scope="row">Method</th><td>VNPay</td></tr>
+                  <tr><th scope="row">Time</th><td>20 Sep 2026 14:32</td></tr>
                 </tbody>
               </table>
             </div>
             <div class="card__footer row">
-              <a class="btn btn--primary" href="../student/exam-list.html">Vào thi ngay</a>
-              <a class="btn btn--ghost" href="wallet.html">Xem ví lượt thi</a>
+              <a class="btn btn--primary" href="../student/exam-list.html">Start the exam</a>
+              <a class="btn btn--ghost" href="wallet.html">View credit wallet</a>
             </div>
           </div>
           <!-- ===== failed ===== -->
           <div class="card only-failed">
             <div class="card__body">
               <div class="state-block">
-                <div class="state-block__icon" aria-hidden="true">✕</div>
-                <h1 class="state-block__title">Thanh toán thất bại</h1>
+                <div class="state-block__icon" aria-hidden="true">ERROR</div>
+                <h2 class="state-block__title">Payment failed</h2>
                 <p class="state-block__desc">
-                  Cổng thanh toán báo giao dịch bị huỷ. Bạn <strong>chưa bị trừ tiền</strong>
-                  và chưa được cộng lượt.
+                  The payment gateway reported the transaction as cancelled. You <strong>have not been charged</strong>
+                  and your credits have not been added yet.
                 </p>
               </div>
               <div class="alert alert--warning">
-                Mã lỗi từ cổng: 24 — Khách hàng huỷ giao dịch.
+                Gateway error code: 24 — the customer cancelled the transaction.
               </div>
             </div>
             <div class="card__footer row">
-              <a class="btn btn--primary" href="checkout.html">Thử thanh toán lại</a>
-              <a class="btn btn--ghost" href="pricing.html">Chọn gói khác</a>
+              <a class="btn btn--primary" href="checkout.html">Try paying again</a>
+              <a class="btn btn--ghost" href="pricing.html">Choose another package</a>
             </div>
           </div>
 
@@ -97,21 +97,19 @@
           <div class="card only-expired">
             <div class="card__body">
               <div class="state-block">
-                <div class="state-block__icon" aria-hidden="true">⌛</div>
-                <h1 class="state-block__title">Đơn đã quá hạn</h1>
+                <div class="state-block__icon" aria-hidden="true">TIME'S UP</div>
+                <h2 class="state-block__title">This order has expired</h2>
                 <p class="state-block__desc">
-                  Đơn hàng hết hiệu lực sau 15 phút không hoàn tất.
-                  Bạn <strong>chưa bị trừ tiền</strong> và chưa được cộng lượt.
+                  Orders expire after 15 minutes if not completed. You <strong>have not been charged</strong> and your credits have not been added yet.
                 </p>
               </div>
               <div class="alert alert--info">
-                Mã đơn: TOEIC-20260920-4417 · tạo 11:02 · quá hạn 11:17.
-                Đơn này đã đóng, tạo đơn mới để thanh toán lại.
+                Order code: TOEIC-20260920-4417 · created 11:02 · expired 11:17. This order is closed — create a new one to pay again.
               </div>
             </div>
             <div class="card__footer row">
-              <a class="btn btn--primary" href="pricing.html">Tạo đơn mới</a>
-              <a class="btn btn--ghost" href="wallet.html">Xem ví lượt thi</a>
+              <a class="btn btn--primary" href="pricing.html">Create a new order</a>
+              <a class="btn btn--ghost" href="wallet.html">View credit wallet</a>
             </div>
           </div>
 
@@ -119,22 +117,25 @@
           <div class="card only-pending">
             <div class="card__body">
               <div class="state-block">
-                <div class="state-block__icon" aria-hidden="true">⏳</div>
-                <h1 class="state-block__title">Đang đối soát giao dịch</h1>
+                <div class="state-block__icon" aria-hidden="true">RUNNING</div>
+                <h2 class="state-block__title">Reconciling transaction</h2>
                 <p class="state-block__desc">
-                  Cổng thanh toán chưa trả kết quả cuối. Trang sẽ tự kiểm tra lại sau
-                  <strong>5 giây</strong>.
+                  The payment gateway has not returned a final result yet. This page will check again in
+                  <strong>5 seconds</strong>.
                 </p>
               </div>
               <div class="alert alert--info">
-                Nếu đã bị trừ tiền, lượt thi sẽ được cộng tự động trong vài phút.
-                Không thanh toán lại để tránh trừ tiền hai lần.
+                If you were charged, your credits will be added automatically within a few minutes. Do not pay again, or you may be charged twice.
               </div>
-              <div class="progress"><div class="progress__bar" style="width: 40%"></div></div>
+              <!-- Không có thanh tiến trình ở đây. Đây là vòng hỏi lại cổng
+                   thanh toán, không phải một tác vụ đang chạy: chưa có tỉ lệ nào
+                   để vẽ, nên thanh 40% chỉ là con số bịa đặt cạnh câu "5 giây
+                   nữa kiểm tra lại" — và nó đứng yên mãi mãi. Trạng thái đã nói
+                   đủ: con dấu RUNNING, câu chữ, và nút kiểm tra lại. -->
             </div>
             <div class="card__footer row">
-              <a class="btn" href="payment-result.html?state=pending">Kiểm tra lại ngay</a>
-              <a class="btn btn--ghost" href="wallet.html">Xem ví lượt thi</a>
+              <a class="btn" href="payment-result.html?state=pending">Check again now</a>
+              <a class="btn btn--ghost" href="wallet.html">View credit wallet</a>
             </div>
           </div>
 
@@ -143,15 +144,14 @@
             <div class="card__body">
               <div class="state-block">
                 <div class="state-block__icon" aria-hidden="true">!</div>
-                <h1 class="state-block__title">Không đọc được trạng thái đơn hàng</h1>
+                <h2 class="state-block__title">Could not read the order status</h2>
                 <p class="state-block__desc">
-                  Đơn DH-20260920-0148 vẫn tồn tại. Hãy mở ví lượt thi để xem
-                  trạng thái mới nhất.
+                  Order DH-20260920-0148 still exists. Open your credit wallet to see its latest status.
                 </p>
               </div>
             </div>
             <div class="card__footer row">
-              <a class="btn btn--primary" href="wallet.html">Mở ví lượt thi</a>
+              <a class="btn btn--primary" href="wallet.html">Open credit wallet</a>
             </div>
           </div>
         </div>

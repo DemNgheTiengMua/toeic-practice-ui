@@ -7,3 +7,13 @@ _*.patch
 _*.diff
 .playwright-mcp/
 shot-*.png
+
+# Agent scratch. .claude/ also holds a nested git worktree, so committing it
+# would nest a duplicate of the repo inside itself.
+.claude/
+
+# The impeccable skill's working directory. The text record — the surface
+# brief, the design sidecar, the critique and the finish review — is tracked
+# deliberately; the capture PNGs are throwaway evidence, like shot-*.png.
+.impeccable/*.png
+.impeccable/review/*.png

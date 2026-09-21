@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Trang chủ — TOEIC Practice</title>
+  <title>Home — TOEIC Practice</title>
+  <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../assets/css/tokens.css">
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
@@ -13,25 +14,25 @@
     <header class="app-topbar">
       <strong>TOEIC Practice</strong>
       <div class="row">
-        <span class="badge badge--info">Còn 3 lượt thi</span>
-        <a class="btn btn--sm" href="../payment/pricing.html">Mua thêm lượt</a>
+        <span class="badge badge--info">3 credits left</span>
+        <a class="btn btn--sm" href="../payment/pricing.html">Buy credits</a>
         <a class="btn btn--ghost btn--sm" href="profile.html">Nguyễn Văn A</a>
       </div>
     </header>
     <div class="app-body">
       <aside class="app-sidebar">
-        <nav class="nav-list" aria-label="Điều hướng chính">
-          <a class="nav-list__item is-active" href="dashboard.html">Trang chủ</a>
-          <div class="nav-list__group">Thi thử</div>
-          <a class="nav-list__item" href="exam-list.html">Danh sách đề</a>
-          <a class="nav-list__item" href="exam-history.html">Lịch sử thi</a>
-          <div class="nav-list__group">Luyện tập</div>
-          <a class="nav-list__item" href="practice-select.html">Luyện theo part</a>
-          <a class="nav-list__item" href="weakness-analysis.html">Phân tích điểm yếu</a>
-          <div class="nav-list__group">Tài khoản</div>
-          <a class="nav-list__item" href="../payment/wallet.html">Ví lượt thi</a>
-          <a class="nav-list__item" href="kyc-pending.html">Xác thực CCCD</a>
-          <a class="nav-list__item" href="profile.html">Hồ sơ</a>
+        <nav class="nav-list" aria-label="Main navigation">
+          <a class="nav-list__item is-active" href="dashboard.html">Home</a>
+          <div class="nav-list__group">Mock exams</div>
+          <a class="nav-list__item" href="exam-list.html">Test list</a>
+          <a class="nav-list__item" href="exam-history.html">Exam history</a>
+          <div class="nav-list__group">Practice</div>
+          <a class="nav-list__item" href="practice-select.html">Practice by part</a>
+          <a class="nav-list__item" href="weakness-analysis.html">Weakness analysis</a>
+          <div class="nav-list__group">Account</div>
+          <a class="nav-list__item" href="../payment/wallet.html">Credit wallet</a>
+          <a class="nav-list__item" href="kyc-pending.html">ID verification</a>
+          <a class="nav-list__item" href="profile.html">Profile</a>
         </nav>
       </aside>
       <main class="app-main">
@@ -52,26 +53,26 @@
             <div class="card"><div class="card__body">
               <div class="state-block">
                 <div class="state-block__icon" aria-hidden="true">!</div>
-                <div class="state-block__title">Không tải được dữ liệu</div>
-                <p class="state-block__desc">Kiểm tra kết nối rồi thử lại.</p>
-                <button class="btn btn--primary">Thử lại</button>
+                <div class="state-block__title">Could not load data</div>
+                <p class="state-block__desc">Check your connection and try again.</p>
+                <button class="btn btn--primary">Try again</button>
               </div>
             </div></div>
           </div>
 
           <!-- ===== empty: chưa thi lần nào ===== -->
           <div class="only-empty stack">
-            <h1>Xin chào, Nguyễn Văn A</h1>
+            <h1>Hello, Nguyễn Văn A</h1>
             <div class="card"><div class="card__body">
               <div class="state-block">
-                <div class="state-block__icon" aria-hidden="true">□</div>
-                <div class="state-block__title">Bạn chưa làm bài thi nào</div>
+                <div class="state-block__icon" aria-hidden="true">EMPTY</div>
+                <div class="state-block__title">You have not taken any exam</div>
                 <p class="state-block__desc">
-                  Làm một đề đầy đủ để biết trình độ hiện tại, hoặc luyện riêng từng part trước.
+                  Take a full test to find your current level, or practice individual Parts first.
                 </p>
                 <div class="row" style="justify-content: center">
-                  <a class="btn btn--primary btn--lg" href="exam-list.html">Bắt đầu thi thử</a>
-                  <a class="btn btn--lg" href="practice-select.html">Luyện theo part</a>
+                  <a class="btn btn--primary btn--lg" href="exam-list.html">Start mock exam</a>
+                  <a class="btn btn--lg" href="practice-select.html">Practice by part</a>
                 </div>
               </div>
             </div></div>
@@ -80,38 +81,38 @@
           <!-- ===== success ===== -->
           <div class="only-success stack">
             <div class="row row--between">
-              <h1 style="margin: 0">Xin chào, Nguyễn Văn A</h1>
-              <a class="btn btn--primary" href="exam-list.html">Thi thử ngay</a>
+              <h1 style="margin: 0">Hello, Nguyễn Văn A</h1>
+              <a class="btn btn--primary" href="exam-list.html">Take a mock test now</a>
             </div>
 
             <div class="grid-3">
               <div class="stat">
-                <div class="stat__label">Điểm gần nhất</div>
+                <div class="stat__label">Most recent score</div>
                 <div class="stat__value">720</div>
-                <div class="stat__hint">L 385 · R 335 — 18/09/2026</div>
+                <div class="stat__hint">L 385 · R 335 — 18 Sep 2026</div>
               </div>
               <div class="stat">
-                <div class="stat__label">Điểm cao nhất</div>
+                <div class="stat__label">Best score</div>
                 <div class="stat__value">745</div>
-                <div class="stat__hint">Đạt ngày 02/09/2026</div>
+                <div class="stat__hint">Achieved on 02 Sep 2026</div>
               </div>
               <div class="stat">
-                <div class="stat__label">Đã hoàn thành</div>
+                <div class="stat__label">Completed</div>
                 <div class="stat__value">6</div>
-                <div class="stat__hint">bài thi đầy đủ · 24 phiên luyện</div>
+                <div class="stat__hint">full exams · 24 practice sessions</div>
               </div>
             </div>
 
             <div class="card">
-              <div class="card__header"><strong>Trình độ CEFR tương đương</strong></div>
+              <div class="card__header"><strong>Equivalent CEFR level</strong></div>
               <div class="card__body">
                 <div class="cefr">
                   <div class="cefr__head">
                     <span class="cefr__current">B1</span>
-                    <span class="text-sm text-muted">720 điểm · cần 785 để lên B2</span>
+                    <span class="text-sm text-muted">720 points · 785 needed for B2</span>
                   </div>
                   <div class="cefr__track" role="img"
-                       aria-label="Trình độ CEFR hiện tại: B1, với 720 trên thang 10 đến 990">
+                       aria-label="Current CEFR level: B1, with 720 on a 10 to 990 scale">
                     <span class="cefr__band is-reached">&lt;A1</span>
                     <span class="cefr__band is-reached">A1</span>
                     <span class="cefr__band is-reached">A2</span>
@@ -128,7 +129,7 @@
                     <span class="cefr__tick">990</span>
                   </div>
                   <p class="cefr__note">
-                    Quy chiếu từ điểm gần nhất. Ngưỡng CEFR cố định theo chuẩn.
+                    Referenced from your most recent score. CEFR thresholds are fixed by the standard.
                   </p>
                 </div>
               </div>
@@ -137,69 +138,69 @@
             <div class="card">
               <div class="card__header">
                 <div class="row row--between">
-                  <strong>Độ chính xác theo part</strong>
-                  <a class="btn btn--sm" href="weakness-analysis.html">Phân tích đầy đủ</a>
+                  <strong>Accuracy by Part</strong>
+                  <a class="btn btn--sm" href="weakness-analysis.html">Full analysis</a>
                 </div>
               </div>
               <div class="card__body stack">
                 <div>
                   <div class="row row--between text-sm">
-                    <span>Part 1 — Ảnh</span><span class="text-muted">83%</span>
+                    <span>Part 1 — Photos</span><span class="text-muted">83%</span>
                   </div>
                   <div class="progress"><div class="progress__bar" style="width: 83%"></div></div>
                 </div>
                 <div>
                   <div class="row row--between text-sm">
-                    <span>Part 2 — Hỏi đáp</span><span class="text-muted">76%</span>
+                    <span>Part 2 — Question-Response</span><span class="text-muted">76%</span>
                   </div>
                   <div class="progress"><div class="progress__bar" style="width: 76%"></div></div>
                 </div>
                 <div>
                   <div class="row row--between text-sm">
-                    <span>Part 5 — Câu đơn</span><span class="text-muted">71%</span>
+                    <span>Part 5 — Incomplete Sentences</span><span class="text-muted">71%</span>
                   </div>
                   <div class="progress"><div class="progress__bar" style="width: 71%"></div></div>
                 </div>
                 <div>
                   <div class="row row--between text-sm">
-                    <span>Part 7 — Đoạn văn</span><span class="text-muted">58%</span>
+                    <span>Part 7 — Passages</span><span class="text-muted">58%</span>
                   </div>
                   <div class="progress"><div class="progress__bar" style="width: 58%"></div></div>
                 </div>
                 <p class="text-sm text-muted" style="margin: 0">
-                  Part 7 đang là điểm yếu. <a href="practice-select.html">Luyện Part 7</a>
+                  Part 7 is currently your weak area. <a href="practice-select.html">Practice Part 7</a>
                 </p>
               </div>
             </div>
 
             <div class="card">
-              <div class="card__header"><strong>Bài thi gần đây</strong></div>
+              <div class="card__header"><strong>Recent exams</strong></div>
               <div class="card__body">
                 <table class="table table--striped">
                   <thead>
-                    <tr><th>Đề</th><th>Ngày</th><th>Listening</th><th>Reading</th><th>Tổng</th><th></th></tr>
+                    <tr><th>Test</th><th>Date</th><th>Listening</th><th>Reading</th><th>Total</th><th></th></tr>
                   </thead>
                   <tbody>
                     <tr>
-                      <td>ETS 2024 — Test 3</td><td>18/09/2026</td>
+                      <td>ETS 2024 — Test 3</td><td>18 Sep 2026</td>
                       <td>385</td><td>335</td><td><strong>720</strong></td>
-                      <td><a href="exam-review.html?attempt=1181">Xem lại</a></td>
+                      <td><a href="exam-review.html?attempt=1181">Review</a></td>
                     </tr>
                     <tr>
-                      <td>ETS 2024 — Test 2</td><td>10/09/2026</td>
+                      <td>ETS 2024 — Test 2</td><td>10 Sep 2026</td>
                       <td>370</td><td>320</td><td><strong>690</strong></td>
-                      <td><a href="exam-review.html?attempt=1180">Xem lại</a></td>
+                      <td><a href="exam-review.html?attempt=1180">Review</a></td>
                     </tr>
                     <tr>
-                      <td>ETS 2024 — Test 1</td><td>02/09/2026</td>
+                      <td>ETS 2024 — Test 1</td><td>2 Sep 2026</td>
                       <td>395</td><td>350</td><td><strong>745</strong></td>
-                      <td><a href="exam-review.html?attempt=1179">Xem lại</a></td>
+                      <td><a href="exam-review.html?attempt=1179">Review</a></td>
                     </tr>
                   </tbody>
                 </table>
               </div>
               <div class="card__footer">
-                <a class="btn btn--sm" href="exam-history.html">Xem tất cả</a>
+                <a class="btn btn--sm" href="exam-history.html">View all</a>
               </div>
             </div>
           </div>

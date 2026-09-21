@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Tạo đề thi mới — Quản trị TOEIC Practice</title>
+  <title>Create new test — TOEIC Practice Admin</title>
+  <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../assets/css/tokens.css">
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
@@ -11,209 +12,207 @@
 <body data-states="success,step2,step3,submitting,error" data-state="success">
   <div class="app-shell app-shell--with-sidebar">
     <header class="app-topbar">
-      <strong>TOEIC Practice — Khu vực quản trị</strong>
+      <strong>TOEIC Practice — Admin area</strong>
       <div class="row">
         <span class="badge badge--warning">Admin</span>
         <span class="text-sm">admin@toeic.local</span>
-        <a class="btn btn--sm btn--ghost" href="../auth/login.html">Đăng xuất</a>
+        <a class="btn btn--sm btn--ghost" href="../auth/login.html">Sign out</a>
       </div>
     </header>
     <div class="app-body">
       <aside class="app-sidebar">
-        <nav class="nav-list" aria-label="Điều hướng quản trị">
-          <div class="nav-list__group">Tổng quan</div>
-          <a class="nav-list__item" href="dashboard.html">Bảng điều khiển</a>
-          <div class="nav-list__group">Nội dung</div>
-          <a class="nav-list__item is-active" href="exam-list.html">Đề thi</a>
-          <a class="nav-list__item" href="score-conversion.html">Bảng quy đổi điểm</a>
-          <div class="nav-list__group">Người dùng &amp; doanh thu</div>
-          <a class="nav-list__item" href="users.html">Học viên</a>
-          <a class="nav-list__item" href="kyc-review.html">Duyệt CCCD <span class="badge badge--danger">3</span></a>
-          <a class="nav-list__item" href="packages.html">Gói lượt thi</a>
-          <a class="nav-list__item" href="orders.html">Đơn hàng</a>
-          <div class="nav-list__group">Khác</div>
-          <a class="nav-list__item" href="../index.html">Mục lục prototype</a>
+        <nav class="nav-list" aria-label="Admin navigation">
+          <div class="nav-list__group">Overview</div>
+          <a class="nav-list__item" href="dashboard.html">Dashboard</a>
+          <div class="nav-list__group">Content</div>
+          <a class="nav-list__item is-active" href="exam-list.html">Test</a>
+          <a class="nav-list__item" href="score-conversion.html">Score conversion</a>
+          <div class="nav-list__group">Users &amp; revenue</div>
+          <a class="nav-list__item" href="users.html">Students</a>
+          <a class="nav-list__item" href="kyc-review.html">ID review <span class="badge badge--danger">3</span></a>
+          <a class="nav-list__item" href="packages.html">Credit packages</a>
+          <a class="nav-list__item" href="orders.html">Orders</a>
+          <div class="nav-list__group">Other</div>
+          <a class="nav-list__item" href="../index.html">Prototype catalog</a>
         </nav>
       </aside>
       <main class="app-main">
         <div class="container stack">
-          <h1>Tạo đề thi mới</h1>
+          <h1>Create new test</h1>
 
           <div class="stepper only-success">
-            <div class="stepper__item is-current">1. Thông tin đề</div>
-            <div class="stepper__item">2. Tải audio Listening</div>
-            <div class="stepper__item">3. Nhập câu hỏi</div>
+            <div class="stepper__item is-current">1. Test information</div>
+            <div class="stepper__item">2. Upload Listening audio</div>
+            <div class="stepper__item">3. Enter questions</div>
           </div>
 
           <div class="alert alert--danger only-error">
-            Không lưu được đề. Tên đề đã tồn tại trong hệ thống.
+            Could not save the test. That test name already exists in the system.
           </div>
 
           <!-- ===== Bước 1 ===== -->
           <div class="card only-success">
-            <div class="card__header"><strong>Thông tin đề</strong></div>
+            <div class="card__header"><strong>Test information</strong></div>
             <div class="card__body stack">
               <div class="field">
-                <label class="field__label" for="e-name">Tên đề</label>
+                <label class="field__label" for="e-name">Test name</label>
                 <input class="field__input" id="e-name" value="ETS 2024 — Test 4">
-                <span class="field__hint">Tên hiển thị cho học viên trong danh sách đề.</span>
+                <span class="field__hint">The name shown to students in the test list.</span>
               </div>
               <div class="grid-2">
                 <div class="field">
-                  <label class="field__label" for="e-source">Bộ đề / nguồn</label>
+                  <label class="field__label" for="e-source">Test set / source</label>
                   <input class="field__input" id="e-source" value="ETS 2024">
                 </div>
                 <div class="field">
-                  <label class="field__label" for="e-status">Trạng thái</label>
+                  <label class="field__label" for="e-status">Status</label>
                   <select class="field__input" id="e-status">
-                    <option selected>Nháp</option>
-                    <option>Đã phát hành</option>
-                    <option>Đã ẩn</option>
+                    <option selected>Draft</option>
+                    <option>Published</option>
+                    <option>Hidden</option>
                   </select>
                 </div>
               </div>
               <div class="field">
-                <label class="field__label" for="e-note">Ghi chú nội bộ</label>
-                <textarea class="field__input" id="e-note" rows="3">Đề dùng cho đợt ôn tháng 10.</textarea>
+                <label class="field__label" for="e-note">Internal note</label>
+                <textarea class="field__input" id="e-note" rows="3">Test used for the October revision round.</textarea>
               </div>
               <div class="alert alert--info">
-                Cấu trúc đề cố định: 200 câu, Listening 45 phút, Reading 75 phút.
-                Không sửa được số câu từng part.
+                The test structure is fixed: 200 questions, Listening 45 minutes, Reading 75 minutes. The number of questions per part cannot be changed.
               </div>
             </div>
             <div class="card__footer row row--between">
-              <a class="btn btn--ghost" href="exam-list.html">Huỷ</a>
-              <a class="btn btn--primary" href="exam-editor.html?state=step2">Tiếp tục: tải audio</a>
+              <a class="btn btn--ghost" href="exam-list.html">Cancel</a>
+              <a class="btn btn--primary" href="exam-editor.html?state=step2">Continue: upload audio</a>
             </div>
           </div>
           <!-- ===== Bước 2 ===== -->
           <div class="stepper only-step2">
-            <div class="stepper__item is-done">1. Thông tin đề</div>
-            <div class="stepper__item is-current">2. Tải audio Listening</div>
-            <div class="stepper__item">3. Nhập câu hỏi</div>
+            <div class="stepper__item is-done">1. Test information</div>
+            <div class="stepper__item is-current">2. Upload Listening audio</div>
+            <div class="stepper__item">3. Enter questions</div>
           </div>
 
           <div class="card only-step2">
-            <div class="card__header"><strong>Audio cho 4 part Listening</strong></div>
+            <div class="card__header"><strong>Listening audio (4 parts)</strong></div>
             <div class="card__body stack">
               <div class="alert alert--warning">
-                Học viên chỉ được nghe <strong>một lần</strong>, không tua lại.
-                File phải đúng thứ tự câu, chèn sẵn khoảng lặng giữa các câu.
+                Students may listen only <strong>once</strong>, no rewinding. The file must be in question order, with silent gaps inserted between questions.
               </div>
 
               <div class="upload">
-                <span class="field__label">Part 1 — 6 câu (hình ảnh)</span>
+                <span class="field__label">Part 1 — 6 questions <span class="label-note">(photos)</span></span>
                 <div class="upload__file">
                   <span>part1.mp3 — 3:12 — 2.9 MB</span>
-                  <button class="btn btn--sm btn--ghost">Thay file</button>
+                  <button class="btn btn--sm btn--ghost">Replace file</button>
                 </div>
               </div>
 
               <div class="upload">
-                <span class="field__label">Part 2 — 25 câu (hỏi đáp, 3 đáp án)</span>
+                <span class="field__label">Part 2 — 25 questions <span class="label-note">(question-response, 3 answers)</span></span>
                 <div class="upload__file">
                   <span>part2.mp3 — 9:48 — 8.7 MB</span>
-                  <button class="btn btn--sm btn--ghost">Thay file</button>
+                  <button class="btn btn--sm btn--ghost">Replace file</button>
                 </div>
               </div>
 
               <div class="upload">
-                <span class="field__label">Part 3 — 39 câu (13 hội thoại)</span>
+                <span class="field__label">Part 3 — 39 questions <span class="label-note">(13 conversations)</span></span>
                 <div class="upload__file upload__file--missing">
-                  <span>Chưa có file</span>
-                  <button class="btn btn--sm">Chọn file</button>
+                  <span>No file yet</span>
+                  <button class="btn btn--sm">Choose file</button>
                 </div>
                 <div class="upload__zone">
-                  <strong>Kéo file .mp3 vào đây</strong>
-                  <span>Tối đa 60 MB. Chỉ nhận .mp3 hoặc .m4a.</span>
-                  <button class="btn btn--sm">Chọn từ máy</button>
+                  <strong>Drag the .mp3 file here</strong>
+                  <span>Up to 60 MB. Only .mp3 or .m4a files.</span>
+                  <button class="btn btn--sm">Choose from device</button>
                 </div>
               </div>
 
               <div class="upload">
-                <span class="field__label">Part 4 — 30 câu (10 bài nói)</span>
+                <span class="field__label">Part 4 — 30 questions <span class="label-note">(10 talks)</span></span>
                 <div class="upload__file">
                   <span>part4.mp3 — 14:05 — 12.4 MB</span>
-                  <button class="btn btn--sm btn--ghost">Thay file</button>
+                  <button class="btn btn--sm btn--ghost">Replace file</button>
                 </div>
               </div>
 
               <div>
                 <div class="row row--between text-sm">
-                  <span>Đã tải 3 / 4 file</span><span>75%</span>
+                  <span>Uploaded 3 / 4 files</span><span>75%</span>
                 </div>
                 <div class="progress"><div class="progress__bar" style="width: 75%"></div></div>
               </div>
             </div>
             <div class="card__footer row row--between">
-              <a class="btn btn--ghost" href="exam-editor.html?state=success">Quay lại</a>
-              <a class="btn btn--primary" href="exam-editor.html?state=step3">Tiếp tục: nhập câu hỏi</a>
+              <a class="btn btn--ghost" href="exam-editor.html?state=success">Back</a>
+              <a class="btn btn--primary" href="exam-editor.html?state=step3">Continue: enter questions</a>
             </div>
           </div>
           <!-- ===== Bước 3 ===== -->
           <div class="stepper only-step3">
-            <div class="stepper__item is-done">1. Thông tin đề</div>
-            <div class="stepper__item is-done">2. Tải audio Listening</div>
-            <div class="stepper__item is-current">3. Nhập câu hỏi</div>
+            <div class="stepper__item is-done">1. Test information</div>
+            <div class="stepper__item is-done">2. Upload Listening audio</div>
+            <div class="stepper__item is-current">3. Enter questions</div>
           </div>
 
           <div class="card only-step3">
-            <div class="card__header"><strong>Tiến độ nhập câu hỏi</strong></div>
+            <div class="card__header"><strong>Question entry progress</strong></div>
             <div class="card__body">
               <table class="table table--striped">
                 <thead>
                   <tr>
-                    <th scope="col">Part</th><th scope="col">Dạng</th><th scope="col">Số đáp án</th>
-                    <th scope="col">Tiến độ</th><th scope="col">Trạng thái</th><th scope="col">Thao tác</th>
+                    <th scope="col">Part</th><th scope="col">Type</th><th scope="col">Answer count</th>
+                    <th scope="col">Progress</th><th scope="col">Status</th><th scope="col">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr>
-                    <td>Part 1</td><td>Mô tả hình ảnh</td><td>4</td><td>6 / 6</td>
-                    <td><span class="badge badge--success">Đủ</span></td>
-                    <td><a class="btn btn--sm" href="question-editor.html">Sửa</a></td>
+                    <td>Part 1</td><td>Photo description</td><td>4</td><td>6 / 6</td>
+                    <td><span class="badge badge--success">Complete</span></td>
+                    <td><a class="btn btn--sm" href="question-editor.html">Edit</a></td>
                   </tr>
                   <tr>
-                    <td>Part 2</td><td>Hỏi đáp</td><td><strong>3</strong></td><td>25 / 25</td>
-                    <td><span class="badge badge--success">Đủ</span></td>
-                    <td><a class="btn btn--sm" href="question-editor.html">Sửa</a></td>
+                    <td>Part 2</td><td>Question-Response</td><td><strong>3</strong></td><td>25 / 25</td>
+                    <td><span class="badge badge--success">Complete</span></td>
+                    <td><a class="btn btn--sm" href="question-editor.html">Edit</a></td>
                   </tr>
                   <tr>
-                    <td>Part 3</td><td>Hội thoại (13 bài)</td><td>4</td><td>25 / 39</td>
-                    <td><span class="badge badge--warning">Thiếu 14 câu</span></td>
-                    <td><a class="btn btn--sm" href="question-editor.html">Nhập tiếp</a></td>
+                    <td>Part 3</td><td>Conversations (13)</td><td>4</td><td>25 / 39</td>
+                    <td><span class="badge badge--warning">14 questions missing</span></td>
+                    <td><a class="btn btn--sm" href="question-editor.html">Enter next</a></td>
                   </tr>
                   <tr>
-                    <td>Part 4</td><td>Bài nói (10 bài)</td><td>4</td><td>30 / 30</td>
-                    <td><span class="badge badge--success">Đủ</span></td>
-                    <td><a class="btn btn--sm" href="question-editor.html">Sửa</a></td>
+                    <td>Part 4</td><td>Talks (10)</td><td>4</td><td>30 / 30</td>
+                    <td><span class="badge badge--success">Complete</span></td>
+                    <td><a class="btn btn--sm" href="question-editor.html">Edit</a></td>
                   </tr>
                   <tr>
-                    <td>Part 5</td><td>Điền câu</td><td>4</td><td>30 / 30</td>
-                    <td><span class="badge badge--success">Đủ</span></td>
-                    <td><a class="btn btn--sm" href="question-editor.html">Sửa</a></td>
+                    <td>Part 5</td><td>Sentence completion</td><td>4</td><td>30 / 30</td>
+                    <td><span class="badge badge--success">Complete</span></td>
+                    <td><a class="btn btn--sm" href="question-editor.html">Edit</a></td>
                   </tr>
                   <tr>
-                    <td>Part 6</td><td>Điền đoạn (4 đoạn)</td><td>4</td><td>16 / 16</td>
-                    <td><span class="badge badge--success">Đủ</span></td>
-                    <td><a class="btn btn--sm" href="question-editor.html">Sửa</a></td>
+                    <td>Part 6</td><td>Text Completion (4 passages)</td><td>4</td><td>16 / 16</td>
+                    <td><span class="badge badge--success">Complete</span></td>
+                    <td><a class="btn btn--sm" href="question-editor.html">Edit</a></td>
                   </tr>
                   <tr>
-                    <td>Part 7</td><td>Đọc hiểu</td><td>4</td><td>54 / 54</td>
-                    <td><span class="badge badge--success">Đủ</span></td>
-                    <td><a class="btn btn--sm" href="question-editor.html">Sửa</a></td>
+                    <td>Part 7</td><td>Reading Comprehension</td><td>4</td><td>54 / 54</td>
+                    <td><span class="badge badge--success">Complete</span></td>
+                    <td><a class="btn btn--sm" href="question-editor.html">Edit</a></td>
                   </tr>
                 </tbody>
               </table>
               <div class="alert alert--warning">
-                Còn thiếu 14 câu Part 3 và 1 file audio. Chưa thể phát hành đề.
+                Missing 14 Part 3 questions and 1 audio file. The test cannot be published yet.
               </div>
             </div>
             <div class="card__footer row row--between">
-              <a class="btn btn--ghost" href="exam-editor.html?state=step2">Quay lại</a>
+              <a class="btn btn--ghost" href="exam-editor.html?state=step2">Back</a>
               <div class="row">
-                <a class="btn" href="exam-list.html">Lưu nháp</a>
-                <button class="btn btn--primary" disabled>Phát hành đề</button>
+                <a class="btn" href="exam-list.html">Save draft</a>
+                <button class="btn btn--primary" disabled>Publish test</button>
               </div>
             </div>
           </div>
@@ -221,9 +220,9 @@
           <div class="card only-submitting">
             <div class="card__body">
               <div class="state-block">
-                <div class="state-block__icon" aria-hidden="true">⏳</div>
-                <h2 class="state-block__title">Đang lưu đề…</h2>
-                <p class="state-block__desc">Không đóng tab trong lúc tải audio lên.</p>
+                <div class="state-block__icon" aria-hidden="true">RUNNING</div>
+                <h2 class="state-block__title">Saving test…</h2>
+                <p class="state-block__desc">Do not close the tab while the audio is uploading.</p>
               </div>
               <div class="progress"><div class="progress__bar" style="width: 60%"></div></div>
             </div>

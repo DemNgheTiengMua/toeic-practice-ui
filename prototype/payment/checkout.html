@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Xác nhận đơn hàng — TOEIC Practice</title>
+  <title>Confirm order — TOEIC Practice</title>
+  <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../assets/css/tokens.css">
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
@@ -13,25 +14,25 @@
     <header class="app-topbar">
       <strong>TOEIC Practice</strong>
       <div class="row">
-        <span class="badge badge--info">Còn 3 lượt thi</span>
-        <a class="btn btn--sm" href="pricing.html">Mua thêm lượt</a>
+        <span class="badge badge--info">3 credits left</span>
+        <a class="btn btn--sm" href="pricing.html">Buy credits</a>
         <a class="btn btn--ghost btn--sm" href="../student/profile.html">Nguyễn Văn A</a>
       </div>
     </header>
     <div class="app-body">
       <aside class="app-sidebar">
-        <nav class="nav-list" aria-label="Điều hướng chính">
-          <a class="nav-list__item" href="../student/dashboard.html">Trang chủ</a>
-          <div class="nav-list__group">Thi thử</div>
-          <a class="nav-list__item" href="../student/exam-list.html">Danh sách đề</a>
-          <a class="nav-list__item" href="../student/exam-history.html">Lịch sử thi</a>
-          <div class="nav-list__group">Luyện tập</div>
-          <a class="nav-list__item" href="../student/practice-select.html">Luyện theo part</a>
-          <a class="nav-list__item" href="../student/weakness-analysis.html">Phân tích điểm yếu</a>
-          <div class="nav-list__group">Tài khoản</div>
-          <a class="nav-list__item is-active" href="wallet.html">Ví lượt thi</a>
-          <a class="nav-list__item" href="../student/kyc-pending.html">Xác thực CCCD</a>
-          <a class="nav-list__item" href="../student/profile.html">Hồ sơ</a>
+        <nav class="nav-list" aria-label="Main navigation">
+          <a class="nav-list__item" href="../student/dashboard.html">Home</a>
+          <div class="nav-list__group">Mock exams</div>
+          <a class="nav-list__item" href="../student/exam-list.html">Test list</a>
+          <a class="nav-list__item" href="../student/exam-history.html">Exam history</a>
+          <div class="nav-list__group">Practice</div>
+          <a class="nav-list__item" href="../student/practice-select.html">Practice by part</a>
+          <a class="nav-list__item" href="../student/weakness-analysis.html">Weakness analysis</a>
+          <div class="nav-list__group">Account</div>
+          <a class="nav-list__item is-active" href="wallet.html">Credit wallet</a>
+          <a class="nav-list__item" href="../student/kyc-pending.html">ID verification</a>
+          <a class="nav-list__item" href="../student/profile.html">Profile</a>
         </nav>
       </aside>
       <main class="app-main">
@@ -43,72 +44,70 @@
           <div class="card only-pending">
             <div class="card__body">
               <div class="state-block">
-                <div class="state-block__icon" aria-hidden="true">⏳</div>
-                <h1 class="state-block__title">Bạn đang có một đơn chưa hoàn tất</h1>
+                <div class="state-block__icon" aria-hidden="true">PENDING</div>
+                <h1 class="state-block__title">You have an unfinished order</h1>
                 <p class="state-block__desc">
-                  Đơn TOEIC-20260920-4417 · gói Ôn thi · 199.000 ₫ · tạo lúc 11:02.
-                  Đơn này còn hiệu lực nên chưa tạo đơn mới được.
+                  Order TOEIC-20260920-4417 · Exam Prep package · 199,000 ₫ · created at 11:02. This order is still valid, so a new one cannot be created yet.
                 </p>
               </div>
               <div class="alert alert--warning">
-                Nếu bạn đã trả tiền cho đơn cũ, đừng thanh toán lại —
-                lượt thi sẽ được cộng sau khi đối soát xong.
+                If you already paid for the previous order, do not pay again — your credits will be added once reconciliation is complete.
               </div>
             </div>
             <div class="card__footer row">
-              <a class="btn btn--primary" href="payment-result.html?state=pending">Kiểm tra đơn cũ</a>
-              <a class="btn btn--ghost" href="wallet.html">Xem ví lượt thi</a>
+              <a class="btn btn--primary" href="payment-result.html?state=pending">Check the previous order</a>
+              <a class="btn btn--ghost" href="wallet.html">View credit wallet</a>
             </div>
           </div>
 
           <div class="multi-state stack" data-show="success submitting error">
-            <h1>Xác nhận đơn hàng</h1>
+            <h1>Confirm order</h1>
 
             <div class="stepper">
-              <div class="stepper__item is-done">1. Chọn gói</div>
-              <div class="stepper__item is-current">2. Xác nhận</div>
-              <div class="stepper__item">3. Thanh toán</div>
-              <div class="stepper__item">4. Hoàn tất</div>
+              <div class="stepper__item is-done">1. Choose a package</div>
+              <div class="stepper__item is-current">2. Confirm</div>
+              <div class="stepper__item">3. Payment</div>
+              <div class="stepper__item">4. Done</div>
             </div>
 
             <div class="alert alert--danger only-error">
-              Không tạo được đơn hàng. Mã lỗi: ORDER_CREATE_FAILED. Vui lòng thử lại.
+              Could not create the order. Error code: ORDER_CREATE_FAILED. Please try again.
             </div>
 
             <div class="grid-2">
               <div class="card">
-                <div class="card__header"><strong>Phương thức thanh toán</strong></div>
+                <div class="card__header"><strong>Payment method</strong></div>
                 <div class="card__body">
-                  <div class="option-list" role="radiogroup" aria-label="Phương thức thanh toán">
-                    <label class="option option--selected">
-                      <input type="radio" name="method" value="vnpay" checked>
+                  <div class="option-list" role="radiogroup" aria-label="Payment method">
+                    <label class="option">
+                      <input class="option__input" type="radio" name="method" value="vnpay" checked>
                       <span class="option__marker">1</span>
-                      <span class="option__text">VNPay — thẻ ATM, Internet Banking, QR</span>
+                      <span class="option__text">VNPay — ATM card, Internet Banking, QR</span>
                     </label>
                     <label class="option">
-                      <input type="radio" name="method" value="momo">
+                      <input class="option__input" type="radio" name="method" value="momo">
                       <span class="option__marker">2</span>
-                      <span class="option__text">MoMo — ví điện tử</span>
+                      <span class="option__text">MoMo — e-wallet</span>
                     </label>
                   </div>
                   <p class="text-muted text-sm">
-                    Bạn sẽ được chuyển sang trang của cổng thanh toán để hoàn tất.
+                    You will be redirected to the payment gateway to finish.
                   </p>
                 </div>
               </div>
               <div class="card">
-                <div class="card__header"><strong>Đơn hàng</strong></div>
+                <div class="card__header"><strong>Orders</strong></div>
                 <div class="card__body stack">
-                  <div class="row row--between"><span>Gói Ôn Thi</span><strong>199.000 ₫</strong></div>
-                  <div class="row row--between"><span class="text-muted">Số lượt thi</span><span>5 lượt</span></div>
-                  <div class="row row--between"><span class="text-muted">Mã đơn</span><span>DH-20260920-0148</span></div>
+                  <div class="row row--between"><span>Exam Prep</span><strong>199,000 ₫</strong></div>
+                  <div class="row row--between"><span class="text-muted">Credits</span><span>5 credits</span></div>
+                  <div class="row row--between"><span class="text-muted">Order code</span><span>DH-20260920-0148</span></div>
                   <hr>
-                  <div class="row row--between"><strong>Tổng thanh toán</strong><strong>199.000 ₫</strong></div>
+                  <div class="row row--between"><strong>Total</strong><strong>199,000 ₫</strong></div>
                 </div>
                 <div class="card__footer">
-                  <a class="btn btn--primary btn--lg only-success" href="gateway-mock.html">Thanh toán 199.000 ₫</a>
-                  <button class="btn btn--primary btn--lg only-submitting" disabled>Đang tạo đơn hàng…</button>
-                  <a class="btn btn--ghost" href="pricing.html">Chọn gói khác</a>
+                  <a class="btn btn--primary btn--lg only-success" href="gateway-mock.html">Pay 199,000 ₫</a>
+                  <button class="btn btn--primary btn--lg only-submitting" disabled>Creating your order…</button>
+                  <a class="btn btn--ghost" href="pricing.html">Choose another package</a>
                 </div>
               </div>
             </div>
