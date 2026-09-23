@@ -145,6 +145,7 @@ a { color: var(--color-primary); text-underline-offset: 3px; }
 .only-error.only-error, .only-success.only-success,
 .only-resumed.only-resumed, .only-expired.only-expired,
 .only-submitting.only-submitting, .only-offline.only-offline,
+.only-saving.only-saving,
 .only-pending.only-pending, .only-failed.only-failed,
 .only-step2.only-step2, .only-step3.only-step3,
 .only-adjust.only-adjust, .only-edit.only-edit,
@@ -164,6 +165,7 @@ body[data-state="resumed"]    .only-resumed,
 body[data-state="expired"]    .only-expired,
 body[data-state="submitting"] .only-submitting,
 body[data-state="offline"]    .only-offline,
+body[data-state="saving"]     .only-saving,
 body[data-state="pending"]    .only-pending,
 body[data-state="failed"]     .only-failed,
 body[data-state="step2"]      .only-step2,
@@ -187,6 +189,7 @@ body[data-state="approved"]         .only-approved { display: revert; }
    in data-show. The class is doubled for the same specificity reason as .only-* */
 .multi-state.multi-state { display: none; }
 body[data-state="success"]    .multi-state[data-show~="success"],
+body[data-state="saving"]     .multi-state[data-show~="saving"],
 body[data-state="submitting"] .multi-state[data-show~="submitting"] { display: revert; }
 body[data-state="resumed"]    .multi-state[data-show~="resumed"],
 body[data-state="offline"]    .multi-state[data-show~="offline"],
@@ -236,7 +239,7 @@ body[data-state="cancelled"]  .modal-overlay.only-cancelled { display: grid; }
   font-size: var(--text-xs);
   z-index: var(--z-modal);
 }
-.state-switcher__label { color: #b9c0c7; }
+.state-switcher__label { color: var(--color-on-ink-muted); }
 .state-switcher__item {
   padding: 2px var(--space-2);
   color: #ffffff;
@@ -261,7 +264,7 @@ body[data-state="cancelled"]  .modal-overlay.only-cancelled { display: grid; }
   margin-top: var(--space-1);
   padding-top: var(--space-1);
   border-top: 1px solid #3d454e;
-  color: #ffb4b6;
+  color: var(--color-on-ink-danger);
 }
 .state-switcher__fallback {
   background: var(--sign-red);

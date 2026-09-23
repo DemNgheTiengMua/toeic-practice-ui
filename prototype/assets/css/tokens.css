@@ -171,9 +171,11 @@
   --color-on-band-success: #9fe8bd;
   --color-on-band-danger:  #ffc2c4;
 
-  /* The same problem on the ink surfaces (the modal header). Neutral rather
-     than blue, because these bands are ink and not sign-blue. 6.1:1 on ink. */
-  --color-on-ink-muted: #8f98a3;
+  /* The same problem on the ink surfaces (the modal header, the state switcher).
+     Neutral rather than blue, because these bands are ink and not sign-blue.
+     Muted 6.1:1; danger is the light rendition of sign-red, ~11.8:1 on ink. */
+  --color-on-ink-muted:  #8f98a3;
+  --color-on-ink-danger: #ffc2c4;
 
   /* --- spacing, 4px scale ------------------------------------------------ */
   --space-1: 4px;  --space-2: 8px;  --space-3: 12px; --space-4: 16px;

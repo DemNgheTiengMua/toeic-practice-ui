@@ -677,6 +677,31 @@
   line-height: 1.1; font-variant-numeric: tabular-nums;
   color: var(--ink); min-width: 3em; text-align: right;
 }
+/* The improvement delta is the emotional peak of the result: the total says
+   where the learner landed, this says they rose to it. It earns its own
+   painted field inside the blue placard — sign-green, "the condition is met" —
+   framed by an ink keyline like every badge, the figure in the mono face that
+   compares and the reason spelled out in caps. A sign stacked under a sign. */
+.score-hero__delta {
+  display: inline-flex; align-items: baseline; justify-content: center;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  background: var(--sign-green);
+  border: var(--keyline) solid var(--ink);
+  border-radius: 0;
+  color: #ffffff;
+}
+.score-hero__delta-value {
+  font-family: var(--font-mono); font-size: var(--text-3xl); font-weight: 700;
+  line-height: 1; font-variant-numeric: tabular-nums;
+  color: #ffffff;
+}
+.score-hero__delta-label {
+  font-family: var(--font-sign); font-size: var(--text-xs); font-weight: 700;
+  text-transform: uppercase; letter-spacing: .06em;
+  color: #ffffff;
+}
 
 /* ===== CEFR level bar =====
    The CEFR thresholds are fixed by the standard, not numbers an admin can edit:

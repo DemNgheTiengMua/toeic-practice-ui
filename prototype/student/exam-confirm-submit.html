@@ -10,7 +10,10 @@
   <link rel="stylesheet" href="../assets/css/components.css">
 </head>
 <body data-states="success,complete,submitting,expired">
-  <div class="app-shell">
+  <!-- A submit modal is open in every declared state, so the exam screen behind
+       it is always background: inert removes it from the tab order and pointer
+       events, aria-hidden hides it from assistive technology behind the dialog. -->
+  <div class="app-shell" inert aria-hidden="true">
     <header class="app-topbar">
       <div class="exam-topbar-group">
         <strong>ETS 2024 — Test 5</strong>
@@ -40,7 +43,7 @@
       <div class="modal__body stack">
         <div class="alert alert--warning">
           <strong>You have 19 unanswered questions.</strong>
-          Unanswered questions count as incorrect.
+          Unanswered questions count as incorrect, and answers cannot be changed after you submit.
         </div>
         <div class="grid-3">
           <div class="stat">
@@ -113,12 +116,12 @@
 
   <!-- ===== submitting ===== -->
   <div class="modal-overlay only-submitting" role="dialog" aria-modal="true"
-       aria-labelledby="submit-title-3">
+       aria-labelledby="submit-title-4">
     <div class="modal">
       <div class="modal__body">
         <div class="state-block">
           <div class="state-block__icon" aria-hidden="true">RUNNING</div>
-          <div class="state-block__title" id="submit-title-3">Submitting…</div>
+          <div class="state-block__title" id="submit-title-4">Submitting…</div>
           <p class="state-block__desc">Do not close the page.</p>
           <div class="progress" style="max-width: 240px; margin: 0 auto">
             <div class="progress__bar" style="width: 45%"></div>
