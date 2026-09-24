@@ -4,6 +4,7 @@ set -euo pipefail
 S='(localdb)\MSSQLLocalDB'
 DB='CompanionSchemaTest'
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+ROOT_WIN="$(cygpath -w "$ROOT")"
 sqlcmd -S "$S" -I -b -Q "IF DB_ID('$DB') IS NOT NULL BEGIN ALTER DATABASE [$DB] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE [$DB]; END; CREATE DATABASE [$DB];"
-sqlcmd -S "$S" -d "$DB" -I -b -i "$ROOT/docs/database-schema.sql"
+sqlcmd -S "$S" -d "$DB" -I -b -i "$ROOT_WIN/docs/database-schema.sql"
 echo "LOADED OK"
