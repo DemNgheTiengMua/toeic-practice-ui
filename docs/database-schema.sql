@@ -163,3 +163,27 @@ CREATE TABLE ImportLog (
   LoggedAt DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET()
 );
 GO
+
+-- ============ Domain 6: Practice (free) ============
+CREATE TABLE PracticeSessions (
+  SessionId    INT IDENTITY(1,1) PRIMARY KEY,
+  UserId       INT NOT NULL REFERENCES Users(UserId),
+  SectionId    INT NOT NULL REFERENCES Sections(SectionId),
+  QuestionCount INT NOT NULL CONSTRAINT CK_Practice_Count CHECK (QuestionCount > 0),
+  Status       VARCHAR(12) NOT NULL DEFAULT 'in_progress'
+    CONSTRAINT CK_Practice_Status CHECK (Status IN ('in_progress','finished','abandoned')),
+  CorrectCount INT NOT NULL DEFAULT 0,
+  StartedAt    DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
+  FinishedAt   DATETIMEOFFSET NULL
+);
+GO
+CREATE TABLE PracticeAnswers (
+  AnswerId         INT IDENTITY(1,1) PRIMARY KEY,
+  SessionId        INT NOT NULL REFERENCES PracticeSessions(SessionId),
+  QuestionId       INT NOT NULL REFERENCES Questions(QuestionId),
+  SelectedOptionId INT NULL REFERENCES QuestionOptions(OptionId),
+  IsCorrect        BIT NULL,
+  DisplayOrder     INT NOT NULL DEFAULT 0,
+  CONSTRAINT UQ_PracticeAnswers UNIQUE (SessionId, QuestionId)
+);
+GO
