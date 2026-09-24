@@ -110,8 +110,11 @@ Sections       SectionId, SkillId FK, Code, Name, OptionCount(nullable),
 Exams          ExamId, CertId FK, Name, Status(draft/published/archived),
                DurationMinutes, IsDeleted, CreatedAt
 QuestionGroups GroupId, ExamId FK, SectionId FK, Passage/AudioPath, DisplayOrder
-Questions      QuestionId, GroupId FK, Stem, DifficultyLevel(int),
+Questions      QuestionId, GroupId FK, Stem, DifficultyLevel(int 1-5 CHECK),
                QuestionType('mcq'|'free_response'), DisplayOrder
+               ← DifficultyLevel is a fixed 1-5 scale (1=easiest), not a free
+                 int, so "match the level" is a schema fact; PathModuleItems and
+                 placement use the same scale
 QuestionOptions OptionId, QuestionId FK, Label, Text, IsCorrect
                ← only for QuestionType='mcq'
 ImportBatches  BatchId, CertId FK, SourceName, Status(pending/done/failed),
@@ -143,6 +146,7 @@ ScoreScales  ScaleId, CertId FK, SkillId(NULL=total), ExamId(NULL=default),
              RawScore, ScaledScore
              ← raw→scaled: admin-editable per exam (difficulty varies per exam)
 ScoreBands   BandId, CertId FK, Code, Name, MinTotal, MaxTotal, DisplayOrder
+             UNIQUE (CertId, Code)  ← so TargetBands/snapshots can reference by code
              ← scaled→band: fixed standard, admin CANNOT edit; snapshot at grading
 ```
 
@@ -169,7 +173,7 @@ job.
 | Credit (+) | `purchase` | OrderId |
 | Credit (+) | `admin_grant` | (admin) |
 | Debit (−) | `mock_exam_start` | AttemptId |
-| Debit (−) | `ai_grading` | GradingId |
+| Debit (−) | `ai_grading` | AttemptId (one charge covers all answers in the attempt) |
 | Debit (−) | `mentor_booking` | BookingId |
 | Debit (−) | `premium_path` | LearnerPathId |
 | Revoke (−) | `admin_revoke` | (admin) |
@@ -228,7 +232,8 @@ the target band.
 AiGradings      GradingId, FreeResponseId FK, SkillId, Status(pending/done/
                 failed), OverallScaled, BandCode(snapshot), Model,
                 RequestedAt, CompletedAt
-                ← one grading per free-response answer; charged 'ai_grading' on create
+                ← one grading row per free-response answer (grading is still
+                  per-answer), but NOT charged per row — see charging note below
 GradingCriteria CriterionId, CertId FK, SkillId FK, Code, Name, MaxScore,
                 Weight, DisplayOrder
                 ← rubric per (certificate, skill): IELTS Speaking =
@@ -244,7 +249,12 @@ Recommendations RecId, UserId, CertId, GradingId(NULL if aggregate), SkillId,
   FK, so TOEIC never produces Speaking criteria it doesn't have.
 - Grading writes `AiGradingScores` per criterion, then emits `Recommendations`
   carrying a `TargetBandCode` so corrections aim at the right band.
-- Charged `ai_grading` at `AiGradings` creation (source column from Domain 5).
+- **Charged once per attempt, not per answer.** A single `ai_grading` debit
+  (source `AttemptId`) covers grading every free-response answer in that attempt,
+  so an 8-question Writing+Speaking attempt is one charge, not eight. The
+  per-answer `AiGradings` rows remain for grading detail; billing groups them by
+  attempt. (Practising a single speaking/writing item outside an attempt is a
+  one-item attempt and charged the same way — one debit.)
 - When a grading reaches `done`, its `FreeResponses.Status` → `graded`; only
   then can the parent attempt reach `graded`.
 
@@ -259,7 +269,13 @@ TargetBands      UserId, CertId FK, TargetBandCode FK, SetAt
 PathTemplates    TemplateId, CertId FK, FromBandCode, ToBandCode, Name
 PathModules      ModuleId, TemplateId FK, SkillId, DisplayOrder, Title
 PathModuleItems  ItemId, ModuleId FK, ItemType('practice_section'|'mock_exam'|
-                 'ai_task'|'mentor'), RefId, DifficultyLevel, DisplayOrder
+                 'ai_task'|'mentor'),
+                 RefSectionId FK->Sections NULL, RefExamId FK->Exams NULL,
+                 DifficultyLevel, DisplayOrder
+                 + CHECK: the ref column matching ItemType is non-null, others
+                   null (practice_section->RefSectionId, mock_exam->RefExamId;
+                   ai_task/mentor carry no ref, resolved to a grading/booking at
+                   runtime)
 LearnerPaths     LearnerPathId, UserId, CertId FK, TemplateId, CurrentBandCode,
                  Status(active/completed/reset), StartedAt
                  ← filtered unique (UserId, CertId) WHERE Status='active':
@@ -299,7 +315,10 @@ Bookings        BookingId, UserId, MentorId, SlotId(NULL if AI), Status(pending/
                 ← charged 'mentor_booking' on create; app stores only the link
 Reviews         ReviewId, BookingId FK, UserId, Rating(1-5), Text, CreatedAt
 Complaints      ComplaintId, BookingId FK, UserId, Reason, Status(open/reviewing/
-                resolved), Resolution, CreatedAt
+                resolved), Resolution, ResolvedByGrantTxnId(NULL) FK, CreatedAt
+MentorPayouts   PayoutId, MentorId FK, PeriodStart, PeriodEnd, BookingCount,
+                GrossAmount, Status(pending/paid), PaidAt
+MentorPayoutItems PayoutId FK, BookingId FK   ← which bookings a payout settles
 ```
 
 - **The app does not host sessions.** It collects the `mentor_booking` credit
@@ -310,6 +329,18 @@ Complaints      ComplaintId, BookingId FK, UserId, Reason, Status(open/reviewing
 - **Reviews and complaints attach only to a `BookingId`** — reviews are scoped to
   mentors/bookings, not exams or the system. `AvgRating` is a view, never
   stored — same ledger-style discipline as the wallet.
+- **Mentor payout (settlement).** Learner spending is a `mentor_booking` debit on
+  the learner's wallet; paying the human mentor is the other side. `MentorPayouts`
+  batches confirmed/done bookings into a settlement period, and `MentorPayoutItems`
+  records exactly which bookings each payout covers — so mentor income is
+  reconcilable, not implicit. Payout amount derives from `PricePerSlot` × settled
+  bookings; the actual outbound transfer happens outside the app (the app records
+  the obligation, it does not move money to mentors).
+- **Complaint resolution can refund.** A `resolved` complaint (e.g. mentor
+  no-show) may issue a credit refund by writing an `admin_grant` transaction and
+  linking it via `Complaints.ResolvedByGrantTxnId` — so a resolved complaint is
+  never a dead end, and the refund is auditable through the same ledger. General
+  cash refunds remain out of scope; this is a credit make-good.
 
 ## Cross-cutting conventions (carried from the current schema)
 
@@ -324,7 +355,10 @@ Complaints      ComplaintId, BookingId FK, UserId, Reason, Status(open/reviewing
 
 - The concrete import file format (still undecided per PRODUCT.md).
 - UI/UX — deferred by the product owner until the database is correct.
-- Refunds; class/cohort/teacher concepts.
+- Cash refunds (a resolved complaint may issue a *credit* make-good via
+  `admin_grant`, but money is never returned to a card/bank); class / cohort /
+  teacher concepts; the outbound money transfer to mentors (the app records the
+  payout obligation, a finance process settles it).
 
 ## Migration note
 
