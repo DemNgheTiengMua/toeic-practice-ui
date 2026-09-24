@@ -187,3 +187,87 @@ CREATE TABLE PracticeAnswers (
   CONSTRAINT UQ_PracticeAnswers UNIQUE (SessionId, QuestionId)
 );
 GO
+
+-- ============ Domain 7: MockExam ============
+CREATE TABLE ExamAttempts (
+  AttemptId       INT IDENTITY(1,1) PRIMARY KEY,
+  UserId          INT NOT NULL REFERENCES Users(UserId),
+  ExamId          INT NOT NULL REFERENCES Exams(ExamId),
+  Status          VARCHAR(12) NOT NULL DEFAULT 'in_progress'
+    CONSTRAINT CK_Attempts_Status CHECK (Status IN ('in_progress','submitted','graded','abandoned')),
+  StartedAt       DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
+  ExpiresAt       DATETIMEOFFSET NOT NULL,          -- server-authoritative
+  IsAutoSubmitted BIT NOT NULL DEFAULT 0,
+  TotalScore      INT NULL,
+  BandCode        VARCHAR(20) NULL                  -- snapshot at grading
+);
+GO
+CREATE TABLE AttemptSkillScores (
+  AttemptId   INT NOT NULL REFERENCES ExamAttempts(AttemptId),
+  SkillId     INT NOT NULL REFERENCES Skills(SkillId),
+  RawScore    INT NOT NULL,
+  ScaledScore INT NOT NULL,
+  CONSTRAINT PK_AttemptSkillScores PRIMARY KEY (AttemptId, SkillId)
+);
+GO
+CREATE TABLE AttemptAnswers (
+  AnswerId         INT IDENTITY(1,1) PRIMARY KEY,
+  AttemptId        INT NOT NULL REFERENCES ExamAttempts(AttemptId),
+  QuestionId       INT NOT NULL REFERENCES Questions(QuestionId),
+  SelectedOptionId INT NULL REFERENCES QuestionOptions(OptionId),
+  IsCorrect        BIT NULL,
+  CONSTRAINT UQ_AttemptAnswers UNIQUE (AttemptId, QuestionId)
+);
+GO
+CREATE TABLE FreeResponses (
+  FreeResponseId INT IDENTITY(1,1) PRIMARY KEY,
+  AttemptId      INT NOT NULL REFERENCES ExamAttempts(AttemptId),
+  QuestionId     INT NOT NULL REFERENCES Questions(QuestionId),
+  ResponseText   NVARCHAR(MAX) NULL,
+  AudioPath      NVARCHAR(400) NULL,
+  Status         VARCHAR(12) NOT NULL DEFAULT 'pending_ai'
+    CONSTRAINT CK_FreeResp_Status CHECK (Status IN ('pending_ai','graded')),
+  SubmittedAt    DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
+  CONSTRAINT UQ_FreeResponses UNIQUE (AttemptId, QuestionId),
+  CONSTRAINT CK_FreeResp_HasContent CHECK (ResponseText IS NOT NULL OR AudioPath IS NOT NULL)
+);
+GO
+-- attempts may only target published exams (carried from old schema)
+CREATE TRIGGER trg_ExamAttempts_PublishedExamOnly ON ExamAttempts AFTER INSERT AS
+BEGIN
+  SET NOCOUNT ON;
+  IF EXISTS (SELECT 1 FROM inserted i JOIN Exams e ON e.ExamId=i.ExamId WHERE e.Status <> 'published')
+  BEGIN
+    THROW 50010, 'Attempt must target a published exam.', 1;
+  END
+END;
+GO
+-- Review Focus #2: TotalScore must equal SUM of scaled skill scores (when both present)
+CREATE TRIGGER trg_Attempts_TotalMatchesSkills
+ON AttemptSkillScores AFTER INSERT, UPDATE, DELETE AS
+BEGIN
+  SET NOCOUNT ON;
+  IF EXISTS (
+    SELECT a.AttemptId
+    FROM ExamAttempts a
+    WHERE a.TotalScore IS NOT NULL
+      AND a.AttemptId IN (SELECT AttemptId FROM inserted UNION SELECT AttemptId FROM deleted)
+      AND a.TotalScore <> (SELECT ISNULL(SUM(ScaledScore),0) FROM AttemptSkillScores s WHERE s.AttemptId=a.AttemptId)
+  )
+    THROW 50011, 'TotalScore must equal the sum of scaled skill scores.', 1;
+END;
+GO
+-- same check when TotalScore itself changes
+CREATE TRIGGER trg_Attempts_TotalMatchesSkills_OnAttempt
+ON ExamAttempts AFTER UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+  IF UPDATE(TotalScore) AND EXISTS (
+    SELECT i.AttemptId FROM inserted i
+    WHERE i.TotalScore IS NOT NULL
+      AND EXISTS (SELECT 1 FROM AttemptSkillScores s WHERE s.AttemptId=i.AttemptId)
+      AND i.TotalScore <> (SELECT ISNULL(SUM(ScaledScore),0) FROM AttemptSkillScores s WHERE s.AttemptId=i.AttemptId)
+  )
+    THROW 50011, 'TotalScore must equal the sum of scaled skill scores.', 1;
+END;
+GO
