@@ -71,3 +71,25 @@ CREATE TABLE PasswordResetTokens (
   CreatedAt  DATETIMEOFFSET NOT NULL CONSTRAINT DF_PasswordResetTokens_CreatedAt DEFAULT SYSDATETIMEOFFSET()
 );
 GO
+-- ============ Domain 4: Scoring ============
+CREATE TABLE ScoreBands (
+  BandId       INT IDENTITY(1,1) PRIMARY KEY,
+  CertId       INT NOT NULL REFERENCES Certificates(CertId),
+  Code         VARCHAR(20) NOT NULL,
+  Name         NVARCHAR(60) NOT NULL,
+  MinTotal     INT NOT NULL,
+  MaxTotal     INT NOT NULL,
+  DisplayOrder INT NOT NULL DEFAULT 0,
+  CONSTRAINT CK_ScoreBands_Range CHECK (MaxTotal >= MinTotal),
+  CONSTRAINT UQ_ScoreBands_Cert_Code UNIQUE (CertId, Code)
+);
+GO
+CREATE TABLE ScoreScales (
+  ScaleId     INT IDENTITY(1,1) PRIMARY KEY,
+  CertId      INT NOT NULL REFERENCES Certificates(CertId),
+  SkillId     INT NULL REFERENCES Skills(SkillId),   -- NULL = total
+  ExamId      INT NULL,                              -- NULL = default; FK added in Task 4
+  RawScore    INT NOT NULL,
+  ScaledScore INT NOT NULL
+);
+GO
