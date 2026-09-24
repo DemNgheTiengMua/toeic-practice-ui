@@ -93,3 +93,73 @@ CREATE TABLE ScoreScales (
   ScaledScore INT NOT NULL
 );
 GO
+-- ============ Domain 3: Content ============
+-- (Sections already carries CertId + composite FK from Task 1)
+CREATE TABLE Exams (
+  ExamId          INT IDENTITY(1,1) PRIMARY KEY,
+  CertId          INT NOT NULL REFERENCES Certificates(CertId),
+  Name            NVARCHAR(160) NOT NULL,
+  Status          VARCHAR(12) NOT NULL DEFAULT 'draft'
+    CONSTRAINT CK_Exams_Status CHECK (Status IN ('draft','published','archived')),
+  DurationMinutes INT NOT NULL CONSTRAINT CK_Exams_Duration CHECK (DurationMinutes > 0),
+  IsDeleted       BIT NOT NULL DEFAULT 0,
+  CreatedAt       DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
+  CONSTRAINT UQ_Exams_Id_Cert UNIQUE (ExamId, CertId)   -- composite target for isolation
+);
+GO
+-- now that Exams exists, pin ScoreScales.ExamId
+ALTER TABLE ScoreScales ADD CONSTRAINT FK_ScoreScales_Exam FOREIGN KEY (ExamId) REFERENCES Exams(ExamId);
+GO
+CREATE TABLE QuestionGroups (
+  GroupId      INT IDENTITY(1,1) PRIMARY KEY,
+  ExamId       INT NOT NULL,
+  CertId       INT NOT NULL,
+  SectionId    INT NOT NULL,
+  Passage      NVARCHAR(MAX) NULL,
+  AudioPath    NVARCHAR(400) NULL,
+  DisplayOrder INT NOT NULL DEFAULT 0,
+  -- both composite FKs share CertId, so exam-cert and section-cert must agree:
+  CONSTRAINT FK_QGroups_ExamCert    FOREIGN KEY (ExamId, CertId)    REFERENCES Exams(ExamId, CertId),
+  CONSTRAINT FK_QGroups_SectionCert FOREIGN KEY (SectionId, CertId) REFERENCES Sections(SectionId, CertId)
+);
+GO
+CREATE TABLE Questions (
+  QuestionId      INT IDENTITY(1,1) PRIMARY KEY,
+  GroupId         INT NOT NULL REFERENCES QuestionGroups(GroupId),
+  Stem            NVARCHAR(MAX) NOT NULL,
+  DifficultyLevel INT NOT NULL CONSTRAINT CK_Questions_Difficulty CHECK (DifficultyLevel BETWEEN 1 AND 5),
+  QuestionType    VARCHAR(14) NOT NULL
+    CONSTRAINT CK_Questions_Type CHECK (QuestionType IN ('mcq','free_response')),
+  Explanation     NVARCHAR(MAX) NULL,
+  DisplayOrder    INT NOT NULL DEFAULT 0
+);
+GO
+CREATE TABLE QuestionOptions (
+  OptionId   INT IDENTITY(1,1) PRIMARY KEY,
+  QuestionId INT NOT NULL REFERENCES Questions(QuestionId),
+  Label      VARCHAR(4) NOT NULL,
+  Text       NVARCHAR(MAX) NOT NULL,
+  IsCorrect  BIT NOT NULL DEFAULT 0,
+  CONSTRAINT UQ_Options_Question_Label UNIQUE (QuestionId, Label)
+);
+GO
+CREATE TABLE ImportBatches (
+  BatchId     INT IDENTITY(1,1) PRIMARY KEY,
+  CertId      INT NOT NULL REFERENCES Certificates(CertId),
+  SourceName  NVARCHAR(260) NOT NULL,
+  Status      VARCHAR(10) NOT NULL DEFAULT 'pending'
+    CONSTRAINT CK_ImportBatches_Status CHECK (Status IN ('pending','done','failed')),
+  UploadedBy  INT NOT NULL REFERENCES Users(UserId),
+  CreatedAt   DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
+  CompletedAt DATETIMEOFFSET NULL
+);
+GO
+CREATE TABLE ImportLog (
+  LogId   INT IDENTITY(1,1) PRIMARY KEY,
+  BatchId INT NOT NULL REFERENCES ImportBatches(BatchId),
+  RowNo   INT NULL,
+  Level   VARCHAR(5) NOT NULL CONSTRAINT CK_ImportLog_Level CHECK (Level IN ('info','warn','error')),
+  Message NVARCHAR(1000) NOT NULL,
+  LoggedAt DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET()
+);
+GO
