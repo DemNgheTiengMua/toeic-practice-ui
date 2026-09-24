@@ -1,0 +1,9 @@
+-- docs/schema-tests/lib.sql — reference only. Wrap an insert that MUST fail:
+-- BEGIN TRY
+--   <insert that violates a constraint>;
+--   THROW 50000, 'EXPECT_REJECT FAILED: insert was accepted', 1;
+-- END TRY
+-- BEGIN CATCH
+--   IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
+--   PRINT 'rejected as expected: ' + ERROR_MESSAGE();
+-- END CATCH
