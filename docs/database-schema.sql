@@ -402,3 +402,83 @@ CREATE TABLE LearnerPathSteps (
   CompletedAt     DATETIMEOFFSET NULL
 );
 GO
+-- ============ Domain 10: Mentor ============
+CREATE TABLE MentorProfiles (
+  MentorId     INT IDENTITY(1,1) PRIMARY KEY,
+  UserId       INT NULL REFERENCES Users(UserId),   -- NULL for AI mentors
+  DisplayName  NVARCHAR(120) NOT NULL,
+  Bio          NVARCHAR(MAX) NULL,
+  CertId       INT NOT NULL REFERENCES Certificates(CertId),
+  SkillId      INT NULL REFERENCES Skills(SkillId),
+  Type         VARCHAR(6) NOT NULL CONSTRAINT CK_Mentor_Type CHECK (Type IN ('human','ai')),
+  PricePerSlot DECIMAL(10,2) NOT NULL CONSTRAINT CK_Mentor_Price CHECK (PricePerSlot >= 0),
+  IsActive     BIT NOT NULL DEFAULT 1
+);
+GO
+CREATE TABLE MentorSlots (
+  SlotId   INT IDENTITY(1,1) PRIMARY KEY,
+  MentorId INT NOT NULL REFERENCES MentorProfiles(MentorId),
+  StartAt  DATETIMEOFFSET NOT NULL,
+  EndAt    DATETIMEOFFSET NOT NULL,
+  Status   VARCHAR(6) NOT NULL DEFAULT 'open'
+    CONSTRAINT CK_Slots_Status CHECK (Status IN ('open','booked','closed')),
+  CONSTRAINT CK_Slots_Range CHECK (EndAt > StartAt)
+);
+GO
+CREATE TABLE Bookings (
+  BookingId INT IDENTITY(1,1) PRIMARY KEY,
+  UserId    INT NOT NULL REFERENCES Users(UserId),
+  MentorId  INT NOT NULL REFERENCES MentorProfiles(MentorId),
+  SlotId    INT NULL REFERENCES MentorSlots(SlotId),   -- NULL for AI
+  Status    VARCHAR(10) NOT NULL DEFAULT 'pending'
+    CONSTRAINT CK_Bookings_Status CHECK (Status IN ('pending','confirmed','done','cancelled')),
+  MeetLink  NVARCHAR(400) NULL,
+  CreatedAt DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET()
+);
+GO
+-- Review Focus #5: one live booking per slot (cancelled frees it)
+CREATE UNIQUE INDEX UX_Bookings_OnePerSlot
+  ON Bookings(SlotId) WHERE SlotId IS NOT NULL AND Status <> 'cancelled';
+GO
+CREATE TABLE Reviews (
+  ReviewId  INT IDENTITY(1,1) PRIMARY KEY,
+  BookingId INT NOT NULL REFERENCES Bookings(BookingId),
+  UserId    INT NOT NULL REFERENCES Users(UserId),
+  Rating    INT NOT NULL CONSTRAINT CK_Reviews_Rating CHECK (Rating BETWEEN 1 AND 5),
+  Text      NVARCHAR(MAX) NULL,
+  CreatedAt DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
+  CONSTRAINT UQ_Reviews_OnePerBooking UNIQUE (BookingId)
+);
+GO
+CREATE TABLE Complaints (
+  ComplaintId          INT IDENTITY(1,1) PRIMARY KEY,
+  BookingId            INT NOT NULL REFERENCES Bookings(BookingId),
+  UserId               INT NOT NULL REFERENCES Users(UserId),
+  Reason               NVARCHAR(MAX) NOT NULL,
+  Status               VARCHAR(10) NOT NULL DEFAULT 'open'
+    CONSTRAINT CK_Complaints_Status CHECK (Status IN ('open','reviewing','resolved')),
+  Resolution           NVARCHAR(MAX) NULL,
+  ResolvedByGrantTxnId INT NULL,      -- FK added in Task 10
+  CreatedAt            DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET()
+);
+GO
+CREATE TABLE MentorPayouts (
+  PayoutId     INT IDENTITY(1,1) PRIMARY KEY,
+  MentorId     INT NOT NULL REFERENCES MentorProfiles(MentorId),
+  PeriodStart  DATETIMEOFFSET NOT NULL,
+  PeriodEnd    DATETIMEOFFSET NOT NULL,
+  BookingCount INT NOT NULL DEFAULT 0,
+  GrossAmount  DECIMAL(12,2) NOT NULL DEFAULT 0,
+  Status       VARCHAR(7) NOT NULL DEFAULT 'pending'
+    CONSTRAINT CK_Payouts_Status CHECK (Status IN ('pending','paid')),
+  PaidAt       DATETIMEOFFSET NULL,
+  CONSTRAINT CK_Payouts_Range CHECK (PeriodEnd > PeriodStart)
+);
+GO
+CREATE TABLE MentorPayoutItems (
+  PayoutId  INT NOT NULL REFERENCES MentorPayouts(PayoutId),
+  BookingId INT NOT NULL REFERENCES Bookings(BookingId),
+  CONSTRAINT PK_PayoutItems PRIMARY KEY (PayoutId, BookingId),
+  CONSTRAINT UQ_PayoutItems_Booking UNIQUE (BookingId)   -- a booking settles once
+);
+GO
