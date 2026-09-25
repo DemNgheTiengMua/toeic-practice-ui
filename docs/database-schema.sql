@@ -199,7 +199,9 @@ CREATE TABLE ExamAttempts (
   ExpiresAt       DATETIMEOFFSET NOT NULL,          -- server-authoritative
   IsAutoSubmitted BIT NOT NULL DEFAULT 0,
   TotalScore      INT NULL,
-  BandCode        VARCHAR(20) NULL                  -- snapshot at grading
+  BandCode        VARCHAR(20) NULL,                 -- snapshot at grading
+  -- composite target so CreditTransactions can prove the charged user owns the attempt (H-1):
+  CONSTRAINT UQ_Attempts_Id_User UNIQUE (AttemptId, UserId)
 );
 GO
 CREATE TABLE AttemptSkillScores (
@@ -385,7 +387,9 @@ CREATE TABLE LearnerPaths (
   Status          VARCHAR(10) NOT NULL DEFAULT 'active'
     CONSTRAINT CK_LearnerPaths_Status CHECK (Status IN ('active','completed','reset')),
   IsPremium       BIT NOT NULL DEFAULT 0,
-  StartedAt       DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET()
+  StartedAt       DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
+  -- composite target so CreditTransactions can prove the charged user owns the path (H-1):
+  CONSTRAINT UQ_LearnerPaths_Id_User UNIQUE (LearnerPathId, UserId)
 );
 GO
 -- Review Focus #5: at most one active path per (UserId,CertId)
@@ -433,7 +437,10 @@ CREATE TABLE Bookings (
   Status    VARCHAR(10) NOT NULL DEFAULT 'pending'
     CONSTRAINT CK_Bookings_Status CHECK (Status IN ('pending','confirmed','done','cancelled')),
   MeetLink  NVARCHAR(400) NULL,
-  CreatedAt DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET()
+  CreatedAt DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
+  -- composite target so CreditTransactions can prove the charged user owns the booking (H-1).
+  -- Batch 2 (PartC-3) also needs this constraint; reused there, not recreated.
+  CONSTRAINT UQ_Bookings_Id_User UNIQUE (BookingId, UserId)
 );
 GO
 -- Review Focus #5: one live booking per slot (cancelled frees it)
@@ -458,8 +465,10 @@ CREATE TABLE Complaints (
   Status               VARCHAR(10) NOT NULL DEFAULT 'open'
     CONSTRAINT CK_Complaints_Status CHECK (Status IN ('open','reviewing','resolved')),
   Resolution           NVARCHAR(MAX) NULL,
-  ResolvedByGrantTxnId INT NULL,      -- FK added in Task 10
-  CreatedAt            DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET()
+  ResolvedByGrantTxnId INT NULL,      -- FK added in Task 10; composite FK to CreditTransactions(TxnId,UserId) added in Batch 1
+  CreatedAt            DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
+  -- M-16: a make-good grant can only be recorded once the complaint is resolved
+  CONSTRAINT CK_Complaints_GrantRequiresResolved CHECK (ResolvedByGrantTxnId IS NULL OR Status='resolved')
 );
 GO
 CREATE TABLE MentorPayouts (
@@ -498,9 +507,12 @@ CREATE TABLE Orders (
   PackageId INT NOT NULL REFERENCES Packages(PackageId),
   Status    VARCHAR(8) NOT NULL DEFAULT 'pending'
     CONSTRAINT CK_Orders_Status CHECK (Status IN ('pending','paid','failed','expired')),
-  Amount    DECIMAL(12,2) NOT NULL,
+  Amount    DECIMAL(12,2) NOT NULL CONSTRAINT CK_Orders_Amount CHECK (Amount >= 0),
   CreatedAt DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
-  PaidAt    DATETIMEOFFSET NULL
+  PaidAt    DATETIMEOFFSET NULL,
+  CONSTRAINT CK_Orders_PaidAtRequiresPaid CHECK (PaidAt IS NULL OR Status='paid'),
+  -- composite target so CreditTransactions can prove the charged user owns the order (H-1):
+  CONSTRAINT UQ_Orders_Id_User UNIQUE (OrderId, UserId)
 );
 GO
 -- Review Focus #5: one pending order per user
@@ -514,11 +526,20 @@ CREATE TABLE CreditTransactions (
     CONSTRAINT CK_CreditTxn_Reason CHECK (Reason IN
       ('purchase','admin_grant','mock_exam_start','ai_grading','mentor_booking','premium_path','admin_revoke')),
   Delta    INT NOT NULL CONSTRAINT CK_CreditTxn_NonZero CHECK (Delta <> 0),
-  OrderId       INT NULL REFERENCES Orders(OrderId),
-  AttemptId     INT NULL REFERENCES ExamAttempts(AttemptId),
-  BookingId     INT NULL REFERENCES Bookings(BookingId),
-  LearnerPathId INT NULL REFERENCES LearnerPaths(LearnerPathId),
+  OrderId       INT NULL,
+  AttemptId     INT NULL,
+  BookingId     INT NULL,
+  LearnerPathId INT NULL,
   CreatedAt DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
+  -- M-16: lets Complaints prove the linked grant belongs to the complainant
+  CONSTRAINT UQ_CreditTxn_Id_User UNIQUE (TxnId, UserId),
+  -- H-1: composite FKs carry UserId so the source row's owner must match the charged wallet.
+  -- MATCH SIMPLE (default) skips the FK check when any column is NULL, so admin_grant/admin_revoke
+  -- rows (all four source columns NULL) remain legal with no extra guards.
+  CONSTRAINT FK_CreditTxn_Order   FOREIGN KEY (OrderId, UserId)       REFERENCES Orders(OrderId, UserId),
+  CONSTRAINT FK_CreditTxn_Attempt FOREIGN KEY (AttemptId, UserId)     REFERENCES ExamAttempts(AttemptId, UserId),
+  CONSTRAINT FK_CreditTxn_Booking FOREIGN KEY (BookingId, UserId)     REFERENCES Bookings(BookingId, UserId),
+  CONSTRAINT FK_CreditTxn_Path    FOREIGN KEY (LearnerPathId, UserId) REFERENCES LearnerPaths(LearnerPathId, UserId),
   -- sign per reason
   CONSTRAINT CK_CreditTxn_DeltaSign CHECK (
        (Reason IN ('purchase','admin_grant') AND Delta > 0)
@@ -539,21 +560,76 @@ CREATE VIEW vw_UserCreditBalance AS
   SELECT UserId, SUM(Delta) AS Balance
   FROM CreditTransactions GROUP BY UserId;
 GO
--- Review Focus #4: no debit may drive the running balance below zero
+-- Review Focus #4 / C-1: no debit may drive the running balance below zero.
+-- Must also cover DELETE so a removed credit row can't leave a wallet negative unnoticed.
 CREATE TRIGGER trg_CreditTransactions_NoNegativeBalance
-ON CreditTransactions AFTER INSERT, UPDATE AS
+ON CreditTransactions AFTER INSERT, UPDATE, DELETE AS
 BEGIN
   SET NOCOUNT ON;
   IF EXISTS (
-    SELECT 1 FROM (SELECT DISTINCT UserId FROM inserted) u
+    SELECT 1 FROM (
+      SELECT DISTINCT UserId FROM inserted
+      UNION SELECT DISTINCT UserId FROM deleted
+    ) u
     WHERE (SELECT SUM(Delta) FROM CreditTransactions t WHERE t.UserId=u.UserId) < 0
   )
     THROW 50020, 'Transaction would drive wallet balance negative.', 1;
 END;
 GO
--- backfill the complaint make-good FK now that CreditTransactions exists
+-- C-1: the ledger is append-only. No row may ever be deleted.
+CREATE TRIGGER trg_CreditTransactions_AppendOnly
+ON CreditTransactions AFTER DELETE AS
+BEGIN
+  SET NOCOUNT ON;
+  IF EXISTS (SELECT 1 FROM deleted)
+    THROW 50021, 'CreditTransactions is append-only; rows cannot be deleted.', 1;
+END;
+GO
+-- H-2: OrderId/BookingId/LearnerPathId each fund at most one txn; AttemptId allows one
+-- mock_exam_start AND one ai_grading charge, but only one of each (spec: one charge covers all answers).
+CREATE UNIQUE INDEX UX_CreditTxn_Order ON CreditTransactions(OrderId) WHERE OrderId IS NOT NULL;
+GO
+CREATE UNIQUE INDEX UX_CreditTxn_Booking ON CreditTransactions(BookingId) WHERE BookingId IS NOT NULL;
+GO
+CREATE UNIQUE INDEX UX_CreditTxn_Path ON CreditTransactions(LearnerPathId) WHERE LearnerPathId IS NOT NULL;
+GO
+CREATE UNIQUE INDEX UX_CreditTxn_Attempt_Reason ON CreditTransactions(AttemptId, Reason) WHERE AttemptId IS NOT NULL;
+GO
+-- H-2: a 'purchase' txn must reference a paid order and its Delta must equal that order's package credits.
+CREATE TRIGGER trg_CreditTransactions_PurchaseMatchesOrder
+ON CreditTransactions AFTER INSERT, UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+  IF EXISTS (
+    SELECT 1
+    FROM inserted i
+    JOIN Orders o ON o.OrderId = i.OrderId
+    JOIN Packages pk ON pk.PackageId = o.PackageId
+    WHERE i.Reason = 'purchase'
+      AND (o.Status <> 'paid' OR i.Delta <> pk.Credits)
+  )
+    THROW 50022, 'purchase txn must reference a paid order with Delta equal to the package credits.', 1;
+END;
+GO
+-- backfill the complaint make-good FK now that CreditTransactions exists.
+-- M-16: composite FK carries UserId so the grant must belong to the complainant.
 ALTER TABLE Complaints
-  ADD CONSTRAINT FK_Complaints_GrantTxn FOREIGN KEY (ResolvedByGrantTxnId) REFERENCES CreditTransactions(TxnId);
+  ADD CONSTRAINT FK_Complaints_GrantTxn FOREIGN KEY (ResolvedByGrantTxnId, UserId) REFERENCES CreditTransactions(TxnId, UserId);
+GO
+-- M-16: the linked grant must actually be an admin_grant txn (a CHECK cannot read another table).
+CREATE TRIGGER trg_Complaints_GrantMustBeAdminGrant
+ON Complaints AFTER INSERT, UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+  IF EXISTS (
+    SELECT 1
+    FROM inserted i
+    JOIN CreditTransactions t ON t.TxnId = i.ResolvedByGrantTxnId
+    WHERE i.ResolvedByGrantTxnId IS NOT NULL
+      AND t.Reason <> 'admin_grant'
+  )
+    THROW 50023, 'ResolvedByGrantTxnId must reference an admin_grant transaction.', 1;
+END;
 GO
 -- expire stale pending orders (carried from old schema; frees UX_Orders_OnePendingPerUser)
 CREATE PROCEDURE usp_ExpireStalePendingOrders @OlderThanMinutes INT = 15 AS
