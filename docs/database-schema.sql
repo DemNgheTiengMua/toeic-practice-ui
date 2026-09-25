@@ -564,3 +564,13 @@ BEGIN
     AND CreatedAt < DATEADD(minute, -@OlderThanMinutes, SYSDATETIMEOFFSET());
 END;
 GO
+-- ============ Views ============
+CREATE VIEW vw_UserSectionAccuracy AS
+  SELECT ps.UserId, s.SectionId, s.Name AS SectionName,
+         COUNT(*) AS Answered,
+         SUM(CASE WHEN pa.IsCorrect=1 THEN 1 ELSE 0 END) AS Correct
+  FROM PracticeAnswers pa
+  JOIN PracticeSessions ps ON ps.SessionId = pa.SessionId
+  JOIN Sections s ON s.SectionId = ps.SectionId
+  GROUP BY ps.UserId, s.SectionId, s.Name;
+GO
