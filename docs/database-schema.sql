@@ -320,3 +320,85 @@ CREATE TABLE Recommendations (
   CreatedAt      DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET()
 );
 GO
+-- ============ Domain 9: LearningPath ============
+CREATE TABLE PlacementTests (
+  PlacementId    INT IDENTITY(1,1) PRIMARY KEY,
+  UserId         INT NOT NULL REFERENCES Users(UserId),
+  CertId         INT NOT NULL REFERENCES Certificates(CertId),
+  ExamId         INT NULL REFERENCES Exams(ExamId),
+  Status         VARCHAR(12) NOT NULL DEFAULT 'in_progress'
+    CONSTRAINT CK_Placement_Status CHECK (Status IN ('in_progress','done','abandoned')),
+  ResultBandCode VARCHAR(20) NULL,        -- snapshot
+  TakenAt        DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET()
+);
+GO
+CREATE TABLE TargetBands (
+  UserId         INT NOT NULL REFERENCES Users(UserId),
+  CertId         INT NOT NULL REFERENCES Certificates(CertId),
+  TargetBandCode VARCHAR(20) NOT NULL,
+  SetAt          DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
+  CONSTRAINT PK_TargetBands PRIMARY KEY (UserId, CertId),
+  CONSTRAINT FK_TargetBands_Band FOREIGN KEY (CertId, TargetBandCode) REFERENCES ScoreBands(CertId, Code)
+);
+GO
+CREATE TABLE PathTemplates (
+  TemplateId   INT IDENTITY(1,1) PRIMARY KEY,
+  CertId       INT NOT NULL REFERENCES Certificates(CertId),
+  FromBandCode VARCHAR(20) NOT NULL,
+  ToBandCode   VARCHAR(20) NOT NULL,
+  Name         NVARCHAR(120) NOT NULL,
+  CONSTRAINT FK_PathTpl_FromBand FOREIGN KEY (CertId, FromBandCode) REFERENCES ScoreBands(CertId, Code),
+  CONSTRAINT FK_PathTpl_ToBand   FOREIGN KEY (CertId, ToBandCode)   REFERENCES ScoreBands(CertId, Code)
+);
+GO
+CREATE TABLE PathModules (
+  ModuleId     INT IDENTITY(1,1) PRIMARY KEY,
+  TemplateId   INT NOT NULL REFERENCES PathTemplates(TemplateId),
+  SkillId      INT NOT NULL REFERENCES Skills(SkillId),
+  DisplayOrder INT NOT NULL DEFAULT 0,
+  Title        NVARCHAR(120) NOT NULL
+);
+GO
+CREATE TABLE PathModuleItems (
+  ItemId          INT IDENTITY(1,1) PRIMARY KEY,
+  ModuleId        INT NOT NULL REFERENCES PathModules(ModuleId),
+  ItemType        VARCHAR(16) NOT NULL
+    CONSTRAINT CK_PMI_Type CHECK (ItemType IN ('practice_section','mock_exam','ai_task','mentor')),
+  RefSectionId    INT NULL REFERENCES Sections(SectionId),
+  RefExamId       INT NULL REFERENCES Exams(ExamId),
+  DifficultyLevel INT NULL CONSTRAINT CK_PMI_Difficulty CHECK (DifficultyLevel IS NULL OR DifficultyLevel BETWEEN 1 AND 5),
+  DisplayOrder    INT NOT NULL DEFAULT 0,
+  -- Review Focus #3: the ref column must match ItemType
+  CONSTRAINT CK_PMI_RefMatchesType CHECK (
+       (ItemType='practice_section' AND RefSectionId IS NOT NULL AND RefExamId IS NULL)
+    OR (ItemType='mock_exam'        AND RefExamId    IS NOT NULL AND RefSectionId IS NULL)
+    OR (ItemType IN ('ai_task','mentor') AND RefSectionId IS NULL AND RefExamId IS NULL)
+  )
+);
+GO
+CREATE TABLE LearnerPaths (
+  LearnerPathId   INT IDENTITY(1,1) PRIMARY KEY,
+  UserId          INT NOT NULL REFERENCES Users(UserId),
+  CertId          INT NOT NULL REFERENCES Certificates(CertId),
+  TemplateId      INT NOT NULL REFERENCES PathTemplates(TemplateId),
+  CurrentBandCode VARCHAR(20) NULL,
+  Status          VARCHAR(10) NOT NULL DEFAULT 'active'
+    CONSTRAINT CK_LearnerPaths_Status CHECK (Status IN ('active','completed','reset')),
+  IsPremium       BIT NOT NULL DEFAULT 0,
+  StartedAt       DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET()
+);
+GO
+-- Review Focus #5: at most one active path per (UserId,CertId)
+CREATE UNIQUE INDEX UX_LearnerPaths_OneActive
+  ON LearnerPaths(UserId, CertId) WHERE Status = 'active';
+GO
+CREATE TABLE LearnerPathSteps (
+  StepId          INT IDENTITY(1,1) PRIMARY KEY,
+  LearnerPathId   INT NOT NULL REFERENCES LearnerPaths(LearnerPathId),
+  PathModuleItemId INT NOT NULL REFERENCES PathModuleItems(ItemId),
+  Status          VARCHAR(10) NOT NULL DEFAULT 'locked'
+    CONSTRAINT CK_Steps_Status CHECK (Status IN ('locked','available','done')),
+  Score           DECIMAL(6,2) NULL,
+  CompletedAt     DATETIMEOFFSET NULL
+);
+GO
