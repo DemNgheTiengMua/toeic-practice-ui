@@ -482,3 +482,85 @@ CREATE TABLE MentorPayoutItems (
   CONSTRAINT UQ_PayoutItems_Booking UNIQUE (BookingId)   -- a booking settles once
 );
 GO
+
+-- ============ Domain 5: Payment ============
+CREATE TABLE Packages (
+  PackageId INT IDENTITY(1,1) PRIMARY KEY,
+  Name      NVARCHAR(120) NOT NULL,
+  Credits   INT NOT NULL CONSTRAINT CK_Packages_Credits CHECK (Credits > 0),
+  Price     DECIMAL(12,2) NOT NULL CONSTRAINT CK_Packages_Price CHECK (Price >= 0),
+  IsActive  BIT NOT NULL DEFAULT 1
+);
+GO
+CREATE TABLE Orders (
+  OrderId   INT IDENTITY(1,1) PRIMARY KEY,
+  UserId    INT NOT NULL REFERENCES Users(UserId),
+  PackageId INT NOT NULL REFERENCES Packages(PackageId),
+  Status    VARCHAR(8) NOT NULL DEFAULT 'pending'
+    CONSTRAINT CK_Orders_Status CHECK (Status IN ('pending','paid','failed','expired')),
+  Amount    DECIMAL(12,2) NOT NULL,
+  CreatedAt DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
+  PaidAt    DATETIMEOFFSET NULL
+);
+GO
+-- Review Focus #5: one pending order per user
+CREATE UNIQUE INDEX UX_Orders_OnePendingPerUser
+  ON Orders(UserId) WHERE Status = 'pending';
+GO
+CREATE TABLE CreditTransactions (
+  TxnId    INT IDENTITY(1,1) PRIMARY KEY,
+  UserId   INT NOT NULL REFERENCES Users(UserId),
+  Reason   VARCHAR(16) NOT NULL
+    CONSTRAINT CK_CreditTxn_Reason CHECK (Reason IN
+      ('purchase','admin_grant','mock_exam_start','ai_grading','mentor_booking','premium_path','admin_revoke')),
+  Delta    INT NOT NULL CONSTRAINT CK_CreditTxn_NonZero CHECK (Delta <> 0),
+  OrderId       INT NULL REFERENCES Orders(OrderId),
+  AttemptId     INT NULL REFERENCES ExamAttempts(AttemptId),
+  BookingId     INT NULL REFERENCES Bookings(BookingId),
+  LearnerPathId INT NULL REFERENCES LearnerPaths(LearnerPathId),
+  CreatedAt DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
+  -- sign per reason
+  CONSTRAINT CK_CreditTxn_DeltaSign CHECK (
+       (Reason IN ('purchase','admin_grant') AND Delta > 0)
+    OR (Reason IN ('mock_exam_start','ai_grading','mentor_booking','premium_path','admin_revoke') AND Delta < 0)
+  ),
+  -- exactly the source column matching the reason is set (admin_* carry none)
+  CONSTRAINT CK_CreditTxn_Source CHECK (
+       (Reason='purchase'        AND OrderId IS NOT NULL AND AttemptId IS NULL AND BookingId IS NULL AND LearnerPathId IS NULL)
+    OR (Reason='mock_exam_start' AND AttemptId IS NOT NULL AND OrderId IS NULL AND BookingId IS NULL AND LearnerPathId IS NULL)
+    OR (Reason='ai_grading'      AND AttemptId IS NOT NULL AND OrderId IS NULL AND BookingId IS NULL AND LearnerPathId IS NULL)
+    OR (Reason='mentor_booking'  AND BookingId IS NOT NULL AND OrderId IS NULL AND AttemptId IS NULL AND LearnerPathId IS NULL)
+    OR (Reason='premium_path'    AND LearnerPathId IS NOT NULL AND OrderId IS NULL AND AttemptId IS NULL AND BookingId IS NULL)
+    OR (Reason IN ('admin_grant','admin_revoke') AND OrderId IS NULL AND AttemptId IS NULL AND BookingId IS NULL AND LearnerPathId IS NULL)
+  )
+);
+GO
+CREATE VIEW vw_UserCreditBalance AS
+  SELECT UserId, SUM(Delta) AS Balance
+  FROM CreditTransactions GROUP BY UserId;
+GO
+-- Review Focus #4: no debit may drive the running balance below zero
+CREATE TRIGGER trg_CreditTransactions_NoNegativeBalance
+ON CreditTransactions AFTER INSERT, UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+  IF EXISTS (
+    SELECT 1 FROM (SELECT DISTINCT UserId FROM inserted) u
+    WHERE (SELECT SUM(Delta) FROM CreditTransactions t WHERE t.UserId=u.UserId) < 0
+  )
+    THROW 50020, 'Transaction would drive wallet balance negative.', 1;
+END;
+GO
+-- backfill the complaint make-good FK now that CreditTransactions exists
+ALTER TABLE Complaints
+  ADD CONSTRAINT FK_Complaints_GrantTxn FOREIGN KEY (ResolvedByGrantTxnId) REFERENCES CreditTransactions(TxnId);
+GO
+-- expire stale pending orders (carried from old schema; frees UX_Orders_OnePendingPerUser)
+CREATE PROCEDURE usp_ExpireStalePendingOrders @OlderThanMinutes INT = 15 AS
+BEGIN
+  SET NOCOUNT ON;
+  UPDATE Orders SET Status='expired'
+  WHERE Status='pending'
+    AND CreatedAt < DATEADD(minute, -@OlderThanMinutes, SYSDATETIMEOFFSET());
+END;
+GO
