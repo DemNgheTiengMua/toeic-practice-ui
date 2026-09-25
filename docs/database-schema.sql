@@ -271,3 +271,52 @@ BEGIN
     THROW 50011, 'TotalScore must equal the sum of scaled skill scores.', 1;
 END;
 GO
+-- ============ Domain 8: AI Grading ============
+CREATE TABLE GradingCriteria (
+  CriterionId  INT IDENTITY(1,1) PRIMARY KEY,
+  CertId       INT NOT NULL REFERENCES Certificates(CertId),
+  SkillId      INT NOT NULL REFERENCES Skills(SkillId),
+  Code         VARCHAR(20) NOT NULL,
+  Name         NVARCHAR(120) NOT NULL,
+  MaxScore     DECIMAL(5,2) NOT NULL,
+  Weight       DECIMAL(5,2) NOT NULL DEFAULT 1.0,
+  DisplayOrder INT NOT NULL DEFAULT 0,
+  CONSTRAINT UQ_Criteria_Skill_Code UNIQUE (SkillId, Code)
+);
+GO
+CREATE TABLE AiGradings (
+  GradingId      INT IDENTITY(1,1) PRIMARY KEY,
+  FreeResponseId INT NOT NULL REFERENCES FreeResponses(FreeResponseId),
+  SkillId        INT NOT NULL REFERENCES Skills(SkillId),
+  Status         VARCHAR(8) NOT NULL DEFAULT 'pending'
+    CONSTRAINT CK_AiGradings_Status CHECK (Status IN ('pending','done','failed')),
+  OverallScaled  DECIMAL(6,2) NULL,
+  BandCode       VARCHAR(20) NULL,             -- snapshot
+  Model          NVARCHAR(80) NULL,
+  RequestedAt    DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
+  CompletedAt    DATETIMEOFFSET NULL,
+  CONSTRAINT UQ_AiGradings_FreeResponse UNIQUE (FreeResponseId)
+);
+GO
+CREATE TABLE AiGradingScores (
+  GradingId   INT NOT NULL REFERENCES AiGradings(GradingId),
+  CriterionId INT NOT NULL REFERENCES GradingCriteria(CriterionId),
+  Score       DECIMAL(5,2) NOT NULL,
+  Comment     NVARCHAR(MAX) NULL,
+  CONSTRAINT PK_AiGradingScores PRIMARY KEY (GradingId, CriterionId)
+);
+GO
+CREATE TABLE Recommendations (
+  RecId          INT IDENTITY(1,1) PRIMARY KEY,
+  UserId         INT NOT NULL REFERENCES Users(UserId),
+  CertId         INT NOT NULL REFERENCES Certificates(CertId),
+  GradingId      INT NULL REFERENCES AiGradings(GradingId),   -- NULL = aggregate
+  SkillId        INT NULL REFERENCES Skills(SkillId),
+  Text           NVARCHAR(MAX) NOT NULL,
+  Severity       VARCHAR(8) NOT NULL DEFAULT 'info'
+    CONSTRAINT CK_Reco_Severity CHECK (Severity IN ('info','minor','major')),
+  TargetBandCode VARCHAR(20) NULL,
+  IsResolved     BIT NOT NULL DEFAULT 0,
+  CreatedAt      DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET()
+);
+GO
