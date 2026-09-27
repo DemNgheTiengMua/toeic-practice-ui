@@ -27,7 +27,7 @@
           <a class="nav-list__item" href="exam-list.html">Test list</a>
           <a class="nav-list__item" href="exam-history.html">Exam history</a>
           <div class="nav-list__group">Practice</div>
-          <a class="nav-list__item is-active" href="practice-select.html">Practice by part</a>
+          <a class="nav-list__item is-active" href="practice-select.html">Practice by section</a>
           <a class="nav-list__item" href="weakness-analysis.html">Weakness analysis</a>
           <div class="nav-list__group">Account</div>
           <a class="nav-list__item" href="../payment/wallet.html">Credit wallet</a>
@@ -81,7 +81,7 @@
           <!-- ===== success ===== -->
           <div class="only-success stack">
             <div>
-              <h1 style="margin: 0 0 var(--space-1)">Practice by part</h1>
+              <h1 style="margin: 0 0 var(--space-1)">Practice by section</h1>
               <p class="text-muted" style="margin: 0">
                 No time limit, and you see the answer and explanation right after each question.
                 <strong>Free, no credit deducted.</strong>
@@ -95,7 +95,7 @@
                     <option>10 questions</option>
                     <option selected>20 questions</option>
                     <option>40 questions</option>
-                    <option>All Parts</option>
+                    <option>All sections</option>
                   </select>
                 </div>
                 <div class="field" style="flex: 0 0 220px">
@@ -115,105 +115,64 @@
                 </div>
               </div>
             </div>
-            <h2>Listening</h2>
-            <div class="grid-2">
-              <div class="card">
-                <div class="card__body stack">
-                  <div class="row row--between">
-                    <strong>Part 1 — Photos</strong>
-                    <span class="badge badge--success">83%</span>
-                  </div>
-                  <p class="text-sm text-muted" style="margin: 0">
-                    6 questions per test · 48 practiced · 1,240 questions in the bank
-                  </p>
-                  <div class="progress"><div class="progress__bar" style="width: 83%"></div></div>
-                  <a class="btn btn--primary" href="practice-take.html">Practice Part 1</a>
+
+            <div class="grid-3">
+              <button class="part-card" data-section="listening-1">
+                <div class="part-card__header">
+                  <span class="badge badge--info">Listening</span>
+                  <strong>Section 1</strong>
                 </div>
-              </div>
-              <div class="card">
-                <div class="card__body stack">
-                  <div class="row row--between">
-                    <strong>Part 2 — Question-Response</strong>
-                    <span class="badge badge--success">76%</span>
-                  </div>
-                  <p class="text-sm text-muted" style="margin: 0">
-                    25 questions per test · 150 practiced · 3,100 questions in the bank
-                  </p>
-                  <div class="progress"><div class="progress__bar" style="width: 76%"></div></div>
-                  <a class="btn btn--primary" href="practice-take.html">Practice Part 2</a>
+                <p class="part-card__desc">Photographs</p>
+                <div class="part-card__meta">6 questions</div>
+              </button>
+              <button class="part-card" data-section="listening-2">
+                <div class="part-card__header">
+                  <span class="badge badge--info">Listening</span>
+                  <strong>Section 2</strong>
                 </div>
-              </div>
-              <div class="card">
-                <div class="card__body stack">
-                  <div class="row row--between">
-                    <strong>Part 3 — Conversations</strong>
-                    <span class="badge badge--success">85%</span>
-                  </div>
-                  <p class="text-sm text-muted" style="margin: 0">
-                    39 questions per test · 78 practiced · 4,800 questions in the bank
-                  </p>
-                  <div class="progress"><div class="progress__bar" style="width: 85%"></div></div>
-                  <a class="btn btn--primary" href="practice-take.html">Practice Part 3</a>
+                <p class="part-card__desc">Question-Response</p>
+                <div class="part-card__meta">25 questions</div>
+              </button>
+              <button class="part-card" data-section="listening-3">
+                <div class="part-card__header">
+                  <span class="badge badge--info">Listening</span>
+                  <strong>Section 3</strong>
                 </div>
-              </div>
-              <div class="card">
-                <div class="card__body stack">
-                  <div class="row row--between">
-                    <strong>Part 4 — Talks</strong>
-                    <span class="badge badge--warning">77%</span>
-                  </div>
-                  <p class="text-sm text-muted" style="margin: 0">
-                    30 questions per test · 30 practiced · 3,700 questions in the bank
-                  </p>
-                  <div class="progress"><div class="progress__bar" style="width: 77%"></div></div>
-                  <a class="btn btn--primary" href="practice-take.html">Practice Part 4</a>
+                <p class="part-card__desc">Short Conversations</p>
+                <div class="part-card__meta">39 questions</div>
+              </button>
+              <button class="part-card" data-section="listening-4">
+                <div class="part-card__header">
+                  <span class="badge badge--info">Listening</span>
+                  <strong>Section 4</strong>
                 </div>
-              </div>
-            </div>
-            <h2>Reading</h2>
-            <div class="grid-2">
-              <div class="card">
-                <div class="card__body stack">
-                  <div class="row row--between">
-                    <strong>Part 5 — Incomplete Sentences</strong>
-                    <span class="badge badge--warning">71%</span>
-                  </div>
-                  <p class="text-sm text-muted" style="margin: 0">
-                    30 questions per test · 210 practiced · 3,700 questions in the bank
-                  </p>
-                  <div class="progress"><div class="progress__bar" style="width: 71%"></div></div>
-                  <a class="btn btn--primary" href="practice-take.html">Practice Part 5</a>
+                <p class="part-card__desc">Short Talks</p>
+                <div class="part-card__meta">30 questions</div>
+              </button>
+              <button class="part-card" data-section="reading-1">
+                <div class="part-card__header">
+                  <span class="badge badge--success">Reading</span>
+                  <strong>Section 5</strong>
                 </div>
-              </div>
-              <div class="card">
-                <div class="card__body stack">
-                  <div class="row row--between">
-                    <strong>Part 6 — Text Completion</strong>
-                    <span class="badge badge--warning">75%</span>
-                  </div>
-                  <p class="text-sm text-muted" style="margin: 0">
-                    16 questions per test · 32 practiced · 1,980 questions in the bank
-                  </p>
-                  <div class="progress"><div class="progress__bar" style="width: 75%"></div></div>
-                  <a class="btn btn--primary" href="practice-take.html">Practice Part 6</a>
+                <p class="part-card__desc">Incomplete Sentences</p>
+                <div class="part-card__meta">30 questions</div>
+              </button>
+              <button class="part-card" data-section="reading-2">
+                <div class="part-card__header">
+                  <span class="badge badge--success">Reading</span>
+                  <strong>Section 6</strong>
                 </div>
-              </div>
-              <div class="card" style="border-color: var(--color-warning)">
-                <div class="card__body stack">
-                  <div class="row row--between">
-                    <strong>Part 7 — Reading Comprehension</strong>
-                    <span class="badge badge--danger">58%</span>
-                  </div>
-                  <p class="text-sm text-muted" style="margin: 0">
-                    54 questions per test · 54 practiced · 6,700 questions in the bank
-                  </p>
-                  <div class="progress"><div class="progress__bar" style="width: 58%"></div></div>
-                  <div class="alert alert--warning text-sm" style="padding: var(--space-2) var(--space-3)">
-                    Your weakest Part. Practice this one first.
-                  </div>
-                  <a class="btn btn--primary" href="practice-take.html">Practice Part 7</a>
+                <p class="part-card__desc">Text Completion</p>
+                <div class="part-card__meta">16 questions</div>
+              </button>
+              <button class="part-card" data-section="reading-3">
+                <div class="part-card__header">
+                  <span class="badge badge--success">Reading</span>
+                  <strong>Section 7</strong>
                 </div>
-              </div>
+                <p class="part-card__desc">Reading Comprehension</p>
+                <div class="part-card__meta">54 questions</div>
+              </button>
             </div>
           </div>
         </div>
