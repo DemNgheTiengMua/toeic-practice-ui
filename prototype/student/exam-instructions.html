@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
 </head>
-<body data-states="success,kyc-required,kyc-pending,rejected,paywall,submitting">
+<body data-states="success,paywall,submitting">
   <div class="app-shell">
     <header class="app-topbar">
       <strong>ETS 2024 — Test 5</strong>
@@ -30,59 +30,6 @@
               <div class="row" style="justify-content: center">
                 <a class="btn btn--primary btn--lg" href="../payment/pricing.html">View pricing</a>
                 <a class="btn btn--lg" href="practice-select.html">Practice free</a>
-              </div>
-            </div>
-          </div></div>
-        </div>
-
-        <!-- ===== kyc-required =====
-             Chặn ở đây, TRƯỚC nút "Bắt đầu thi — dùng 1 credit". Chặn sau
-             nút đó là đã trừ lượt rồi mới báo thiếu điều kiện. -->
-        <div class="only-kyc-required">
-          <div class="card"><div class="card__body">
-            <div class="state-block">
-              <div class="state-block__icon" aria-hidden="true">CCCD</div>
-              <div class="state-block__title">ID verification required before the exam</div>
-              <p class="state-block__desc">
-                A one-time procedure, free, with no credit deducted. Your credits stay untouched.
-              </p>
-              <div class="row" style="justify-content: center">
-                <a class="btn btn--primary btn--lg" href="kyc-submit.html">ID verification</a>
-                <a class="btn btn--lg" href="practice-select.html">Practice free</a>
-              </div>
-            </div>
-          </div></div>
-        </div>
-
-        <!-- ===== kyc-pending ===== -->
-        <div class="only-kyc-pending">
-          <div class="card"><div class="card__body">
-            <div class="state-block">
-              <div class="state-block__icon" aria-hidden="true">PENDING</div>
-              <div class="state-block__title">Verification application pending review</div>
-              <p class="state-block__desc">
-                Usually within 1 business day. The real exam unlocks as soon as your application is approved.
-              </p>
-              <div class="row" style="justify-content: center">
-                <a class="btn btn--primary btn--lg" href="kyc-pending.html">View profile</a>
-                <a class="btn btn--lg" href="practice-select.html">Practice free</a>
-              </div>
-            </div>
-          </div></div>
-        </div>
-
-        <!-- ===== rejected ===== -->
-        <div class="only-rejected">
-          <div class="card"><div class="card__body">
-            <div class="state-block">
-              <div class="state-block__icon" aria-hidden="true">ERROR</div>
-              <div class="state-block__title">Verification application rejected</div>
-              <p class="state-block__desc">
-                The front-of-ID-card photo has glare. Fix it and resubmit to unlock the real exam.
-              </p>
-              <div class="row" style="justify-content: center">
-                <a class="btn btn--primary btn--lg" href="kyc-submit.html">Edit and resubmit</a>
-                <a class="btn btn--lg" href="kyc-pending.html">View reason</a>
               </div>
             </div>
           </div></div>
