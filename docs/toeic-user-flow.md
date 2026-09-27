@@ -1,277 +1,369 @@
-# Luồng nghiệp vụ TOEIC — kể theo tác nhân
+# Multi-Certificate Companion — User Flow by Actor
 
-Tài liệu này trả lời câu hỏi "người dùng đi qua những bước nào", khác với
-`2026-09-20-toeic-ui-design.md` trả lời "mỗi màn hình có state gì". Mỗi bước
-đều ghi rõ file prototype để tra ngược được.
+This document answers "what steps does each user type go through", distinct
+from the screen/state specs which answer "what states does each screen have".
 
-## 0. Tác nhân
+**IMPORTANT:** The static prototype under `prototype/` was built for the
+pre-pivot TOEIC-only, KYC-gated product and has not been re-screened for the
+multi-certificate companion. Screen-file citations below point at those
+historical screens; they illustrate state coverage patterns, not current scope.
 
-| Tác nhân | Vào ở đâu | Việc chính |
+## 0. Actors
+
+| Actor | Entry | Main work |
 |---|---|---|
-| **Khách** | `auth/register.html`, `auth/login.html` | Tạo tài khoản, đăng nhập |
-| **Học viên** | `student/dashboard.html` | Luyện miễn phí, xác thực CCCD, mua lượt, thi thật |
-| **Quản trị viên** | `admin/dashboard.html` | Duyệt KYC, soạn đề, quản lý gói/đơn, bảng quy đổi điểm |
+| **Guest** | `auth/register.html`, `auth/login.html` | Create account, log in |
+| **Learner** | `student/dashboard.html` | Pick certificate, placement, free practice, buy credits, mock exams, AI grading, mentor bookings, learning path |
+| **Admin** | `admin/dashboard.html` | Import/author exams, manage scales/bands per certificate, packages/orders, complaint resolution, stats |
+| **Mentor** | *(out of prototype scope)* | Sell slots, meet learners on Google Meet, get payouts |
 
-Hai điều tác nhân **Học viên** phải hiểu ngay từ đầu, vì chúng quyết định
-toàn bộ luồng:
+Two things a **Learner** must understand from the start, because they drive
+the entire flow:
 
-1. **Luyện tập và phân tích điểm yếu miễn phí, mãi mãi.** Không có paywall,
-   không CTA mua gói trong bất kỳ màn luyện tập nào.
-2. **Xác thực CCCD là bắt buộc trước khi thi thật, nhưng bản thân nó miễn
-   phí và không trừ lượt.** Lượt chỉ bị trừ khi bắt đầu một bài thi thật.
+1. **Practice, weakness analysis, and placement are free, forever.** No
+   paywall, no CTA, no ledger write.
+2. **Credits buy four things only:** mock exam starts, AI grading (one charge
+   per attempt, not per answer), mentor bookings, and premium path upgrades.
 
-## 1. Bản đồ tổng quát
+## 1. High-Level Map
 
 ```
-Khách ──đăng ký/đăng nhập──► Học viên ──► Dashboard
-                                              │
-        ┌─────────────────────────────────────┤
-        │                                     │
-        ▼                                     ▼
-  [MIỄN PHÍ] luyện theo part            [TRẢ TIỀN] thi thật
-  practice-select → practice-take              │
-        → practice-summary                     │  ┌── chưa xác thực CCCD ──► chặn
-        │                                      │  │      (không trừ lượt)
-        ▼                                      ├──┼── 0 lượt ──► paywall
-  weakness-analysis (miễn phí)                 │  │      (không trừ lượt)
-        │                                      │  │
-        └──── chỉ ra chỗ yếu ─────────────────►│  └── đủ điều kiện
-                                               ▼
-                              trừ 1 lượt → exam-instructions
-                                               ▼
-                              exam-listening → exam-reading
-                                               ▼
-                              exam-confirm-submit → exam-result (+ CEFR)
-                                               ▼
-                              exam-review · exam-history
+Guest ──register/login──► Learner ──► Dashboard
+                                         │
+                                         │ pick certificate (persists in parallel)
+                                         ▼
+                              [FREE] Placement test
+                                         ▼
+                              result band + target band
+                                         ▼
+                              generated learning path (basic=free)
+                                         │
+        ┌────────────────────────────────┼──────────────────────────┐
+        │                                │                          │
+        ▼                                ▼                          ▼
+  [FREE] practice by section    [PAID] mock exams        [PAID] mentor booking
+  → practice-take                       │                          │
+  → practice-summary                    │  ┌── 0 credits ──► paywall
+        │                               │  │      (no deduction)
+        ▼                               ├──┘
+  weakness-analysis (free)              ▼
+        │                       deduct 1 credit → exam-instructions
+        └── points to weak spots        ▼
+                              exam-listening / exam-reading
+                                         ▼
+                              exam-confirm-submit
+                                         ▼
+                              ┌── MCQ-only ──► exam-result (+ band)
+                              │
+                              └── has speaking/writing ──► grading pending
+                                                           ▼
+                                  [PAID] AI grades each free response (one charge covers all)
+                                                           ▼
+                                         exam-result (+ band) + recommendations
+                                                           ▼
+                              exam-review · exam-history (per certificate)
 ```
 
-Vòng lặp học tập là **miễn phí ở cả hai đầu**: luyện tập sinh ra dữ liệu,
-phân tích điểm yếu biến dữ liệu đó thành "bạn yếu Part 7" — và đó chính là
-lý do học viên thấy cần thi thật. Đây là phễu, không phải tính năng phụ.
+The learning loop is **free at both ends**: practice generates data, weakness
+analysis turns that into "you are weak at X" — and that is why a learner sees
+the need to spend credits. This is the funnel, not a side feature.
 
-## 2. Học viên — từng bước
+## 2. Learner — Step by Step
 
-### 2.1 Khách tạo tài khoản
+### 2.1 Guest Creates Account
 
-| Bước | Màn | Ghi chú |
+| Step | Screen | Notes |
 |---|---|---|
-| 1 | `auth/register.html` | Email + mật khẩu. Không cần KYC để đăng ký. |
+| 1 | `auth/register.html` | Email + password. No identity gate at registration. |
 | 2 | `auth/login.html` | — |
-| 3 | `auth/forgot-password.html` | Luồng quên mật khẩu |
+| 3 | `auth/forgot-password.html` | Password reset flow |
 
-KYC **không** nằm ở bước này. Bắt xác thực ngay lúc đăng ký là chặn người
-dùng trước khi họ thấy sản phẩm có gì — mà luyện tập thì miễn phí.
+No KYC, no CCCD. Removed in the pivot — mock testing needs no identity gate.
 
-### 2.2 Học viên mới: luyện tập miễn phí
+### 2.2 New Learner: Pick Certificate → Placement
 
-Vào thẳng từ sidebar: **Luyện theo part**.
+The placement test **selects the certificate first**, then tests, so the exam
+matches the skills that certificate actually has. Everything learner-scoped is
+keyed by `(user, certificate)` — placement results, target band, learning
+path, history — and persists independently. Switching certificates never
+destroys another certificate's data (only an explicit reset does).
 
-| Bước | Màn | Việc xảy ra |
+| Step | Screen | What happens |
 |---|---|---|
-| 1 | `practice-select.html` | Chọn part (Part 1–7) và số câu |
-| 2 | `practice-take.html` | Làm từng câu, **feedback ngay sau mỗi câu** |
-| 3 | `practice-summary.html` | Tổng kết phiên: độ chính xác từng part |
+| 1 | `student/dashboard.html` | Pick a certificate (TOEIC, IELTS, VSTEP, ...) |
+| 2 | *(new: placement-select)* | Pick a placement exam |
+| 3 | *(new: placement-take)* | Take the placement test — **FREE** |
+| 4 | *(new: placement-result)* | Get a band + set a target band |
+| 5 | *(new: path-generated)* | System generates a learning path from `PathTemplates` matching `fromBand → toBand` |
 
-Ở bước 2, khác với thi thật: đáp án và giải thích hiện **ngay**, không đợi
-nộp bài. Đây là điểm bán của chế độ luyện.
+The placement test and the basic generated path are free — they never write a
+`CreditTransactions` row. A learner may later upgrade to a **premium path**
+(one `premium_path` debit per path), but the structure is identical; only the
+richness and companion closeness differ.
 
-Không bước nào ở đây hỏi lượt thi, hỏi CCCD, hay hiện paywall.
+### 2.3 Free Practice by Section
 
-### 2.3 Phân tích điểm yếu (miễn phí)
+Accessed from the sidebar: **Practice by Section** (the old "Luyện theo part").
 
-`weakness-analysis.html` — gộp dữ liệu từ **cả** phiên luyện **và** bài thi
-đã chấm, nên nó vẫn hữu ích cho học viên chưa từng thi thật.
+| Step | Screen | What happens |
+|---|---|---|
+| 1 | `practice-select.html` | Pick a section (not "Part 1–7" — sections are data-driven per certificate) and question count |
+| 2 | `practice-take.html` | Answer each question, **feedback appears immediately after each one** |
+| 3 | `practice-summary.html` | Summary: per-section accuracy |
 
-Màn này trả lời ba câu, theo thứ tự:
+At step 2, unlike mock exams: the correct answer and explanation show
+**immediately**, not after submit. This is the selling point of practice mode.
 
-1. **Độ chính xác từng part, xếp yếu nhất trước** — không xếp theo số part,
-   vì học viên cần thấy chỗ yếu trước tiên.
-2. **Nên luyện gì trước** — chọn part vừa yếu vừa chiếm nhiều câu.
-3. **Dạng câu hay sai** — sai ở *dạng câu hỏi* nào, không chỉ part nào.
+**Practice is MCQ-only** — immediate grading structurally requires a correct
+option, so it can only work for listening/reading. Practising speaking/writing
+routes through the paid AI-grading path.
 
-Có ghi chú thẳng rằng số liệu dạng câu hỏi cần dữ liệu gắn nhãn ở tầng nội
-dung, tức là phụ thuộc vào chất lượng ngân hàng câu hỏi.
+No step here asks for credits, and no ledger row is written. Free by
+construction.
 
-### 2.4 Chạm paywall: mua lượt
+### 2.4 Weakness Analysis (Free)
 
-Học viên bấm vào một đề full ở `exam-list.html`. Nếu ví 0 lượt:
+`weakness-analysis.html` — aggregates data from **both** free practice
+sessions **and** graded mock attempts, so it is useful even for a learner who
+has never paid.
+
+This screen answers three questions, in order:
+
+1. **Per-section accuracy, sorted weakest-first** — not by section number,
+   because a learner needs to see the weak spots first.
+2. **What to practice next** — the section that is both weak and
+   high-question-count.
+3. **Which question types are often wrong** — not just which section, but
+   which *question type* within it.
+
+The question-type breakdown depends on tagged content at the question level —
+it is only as good as the question bank's tagging.
+
+### 2.5 Hitting the Paywall: Buy Credits
+
+A learner clicks a mock exam in `exam-list.html` but has 0 credits:
 
 ```
 exam-list.html (paywall)  →  payment/pricing.html
                           →  payment/checkout.html
-                          →  payment/gateway-mock.html   (cổng vẽ giả)
-                          →  payment/payment-result.html (4 nhánh)
+                          →  payment/gateway-mock.html   (gateway simulation)
+                          →  payment/payment-result.html (4 branches)
                           →  payment/wallet.html
 ```
 
-Bốn nhánh ở `payment-result.html`: `success` / `failed` / `pending` /
-`expired`. `expired` tách khỏi `failed` vì thông điệp khác nhau: hết hạn thì
-mời tạo đơn mới, cổng lỗi thì mời thử lại.
+Four branches at `payment-result.html`: `success` / `failed` / `pending` /
+`expired`. `expired` is separate from `failed` because the message differs:
+expired invites a new order, gateway error invites retry.
 
-Ràng buộc: **mỗi tài khoản chỉ được có một đơn `pending`**. `checkout.html`
-chặn ở tầng UI và DB ép bằng unique index có điều kiện. Không chặn thì bấm
-hai lần thành hai đơn, trả tiền hai lần.
+Constraint: **one `pending` order per account**. `checkout.html` blocks at the
+UI, and a filtered unique index blocks at the DB. Without this, double-click
+becomes two orders, paid twice.
 
-Lượt là **tổng của các giao dịch**, không phải một cột đếm — nên ví luôn
-đối chiếu được với lịch sử giao dịch.
+Credits are the **SUM of ledger rows**, not a stored column — so the wallet
+always reconciles against transaction history.
 
-### 2.5 Xác thực CCCD
+### 2.6 Mock Exams (Replaces "Thi Thật")
 
-Vào từ sidebar **Xác thực CCCD** (gốc nhóm là `kyc-pending.html`), hoặc từ
-thẻ KYC ở `profile.html`.
+Precondition: **credits > 0**. No identity gate — KYC was removed with the
+pivot.
 
-| Bước | Màn | Việc xảy ra |
+| Step | Screen | What happens |
 |---|---|---|
-| 1 | `kyc-submit.html` | Khai họ tên, ngày sinh, số CCCD; tải 3 ảnh; tích cam kết |
-| 2 | `kyc-pending.html?state=pending` | Hồ sơ đang chờ duyệt |
-| 3 | *(admin duyệt — xem §3.1)* | |
-| 4 | `kyc-pending.html?state=approved` | Đã duyệt → mở cổng thi thật |
-| 4' | `kyc-pending.html?state=rejected` | Bị từ chối → hiện **nguyên văn** lý do, có nút gửi lại |
+| 1 | `exam-list.html` | Pick a mock exam |
+| 2 | `exam-instructions.html` | Confirm **deduct 1 credit** (`mock_exam_start`) |
+| 3 | `exam-listening.html` | Listening sections, audio **cannot scrub**, cannot return to prior sections |
+| 4 | `exam-reading.html` | Reading sections, free navigation |
+| 5 | `question-navigator.html` | 200-cell grid, colored by per-question state |
+| 6 | `exam-confirm-submit.html` | Warn about unanswered questions |
+| 7a | *(MCQ-only exam)* | `exam-result.html` — scores + band immediate |
+| 7b | *(has speaking/writing)* | *(new: grading-pending screen)* — "AI is grading your responses, check back soon" |
+| 8 | *(after AI grading completes)* | `exam-result.html` — scores + band + recommendations toward target band |
+| 9 | `exam-review.html` | Correct answers + explanations (unlocked after grading) |
+| 10 | `exam-history.html` | History per certificate, each with its band |
 
-Ba ảnh bắt buộc: mặt trước CCCD, mặt sau CCCD, ảnh chân dung. Form có sẵn
-trạng thái thiếu ảnh chân dung để thấy việc chặn thiếu ảnh trông thế nào.
+Listening and Reading **are separate screens** because navigation constraints
+are opposite. Jamming them into one view becomes a pile of `if` statements.
 
-Cam kết phải tích: xác nhận là CCCD của chính mình, và hiểu rằng dùng giấy
-tờ người khác sẽ bị khoá tài khoản. Một CCCD chỉ gắn được với một tài khoản.
+For speaking/writing: the attempt cannot reach `graded` on submit — it goes to
+`submitted`, waits for the AI to grade each `FreeResponses` row (one
+`AiGradings` row per free response, but only **one `ai_grading` charge per
+attempt**, not per answer), and only reaches `graded` when all free responses
+are done.
 
-Có nút **"Để sau"** — vì chưa xác thực thì vẫn luyện tập được, nên không
-được nhốt người dùng vào form.
+### 2.7 Scores and Bands
 
-**Vì sao cần state `approved` riêng:** nếu không có, tín hiệu duy nhất học
-viên nhận được là cổng chặn ở `exam-list.html` *tự biến mất* — một tín hiệu
-im lặng, dễ bị bỏ qua hoặc hiểu nhầm thành lỗi. Khối `approved` nói rõ duyệt
-là **mở cổng, không trừ lượt**.
+Scores follow the path: **raw → scaled → band**.
 
-### 2.6 Thi thật
+- `raw → scaled` **differs per exam** (difficulty varies), so admin edits it,
+  and the table is per-exam (`ScoreScales`).
+- `scaled → band` is **fixed standard per certificate**. TOEIC→CEFR, IELTS→0–9,
+  VSTEP→bậc. Admin **cannot edit it** — `admin/score-conversion.html` shows it
+  read-only, no input fields. Bands are snapshotted (`BandCode`) at grading so
+  history survives catalog edits.
 
-Điều kiện vào: **đã xác thực CCCD** *và* **còn lượt**.
+Bands are shown to the learner as a **bar** in `dashboard.html`,
+`exam-history.html`, and `exam-result.html`: labeled ranges (e.g. six CEFR
+bands `<A1`, `A1`, `A2`, `B1`, `B2`, `C1` over the 10–990 scale) with a
+marker on the current band and visual distance to the next one — because a
+bare number like 785 does not tell a learner where they stand.
 
-| Bước | Màn | Việc xảy ra |
-|---|---|---|
-| 1 | `exam-list.html` | Chọn đề |
-| 2 | `exam-instructions.html` | Xác nhận **trừ 1 lượt** |
-| 3 | `exam-listening.html` | Part 1–4, audio **không tua**, khoá quay lại part trước |
-| 4 | `exam-reading.html` | Part 5–7, di chuyển tự do |
-| 5 | `question-navigator.html` | Panel 200 ô, tô màu theo state từng câu |
-| 6 | `exam-confirm-submit.html` | Cảnh báo số câu chưa làm |
-| 7 | `exam-result.html` | Điểm L / R / Total + **thanh CEFR** |
-| 8 | `exam-review.html` | Đáp án + giải thích (mở khoá sau khi chấm) |
-| 9 | `exam-history.html` | Lịch sử các lần thi, kèm bậc CEFR từng lần |
+Per-skill scores are rows (`AttemptSkillScores`) because skill counts vary by
+certificate (TOEIC 2, IELTS 4). `TotalScore` is always the SUM of scaled skill
+scores, trigger-enforced.
 
-Listening và Reading **tách màn riêng** vì ràng buộc điều hướng ngược nhau.
-Nhét chung một view sẽ thành một đống `if`.
+### 2.8 AI Grading and Recommendations
 
-Đề: 200 câu / 120 phút; Listening và Reading mỗi phần 5–495; tổng 10–990.
-Part 2 chỉ có 3 lựa chọn — số lựa chọn phải lấy động, không hardcode 4.
+When an attempt has speaking/writing answers:
 
-### 2.7 Điểm và bậc CEFR
+1. Submit goes to `submitted`, not `graded`.
+2. The server writes one `AiGradings` row per `FreeResponses` row (per answer).
+3. The server writes **one `ai_grading` debit** covering the entire attempt
+   (not per answer — an 8-question Speaking+Writing attempt is one charge).
+4. Each `AiGradings` row fans out to `AiGradingScores` — one row per rubric
+   criterion. The rubric (`GradingCriteria`) is data-driven per
+   `(certificate, skill)`, so IELTS Speaking gets
+   Fluency/Lexical/Grammar/Pronunciation, and TOEIC has none.
+5. When a grading reaches `done`, its free response flips to `graded`; only
+   when **all** free responses are graded can the attempt reach `graded`.
+6. The grading emits `Recommendations` — "what to fix to reach the target
+   band" — which can spawn new `ai_task` steps in the learning path.
 
-Điểm đi theo đường: **raw → scaled → bậc CEFR**.
+The learner sees a **pending-grading screen** while this runs, then gets the
+result with band, scores, and concrete recommendations.
 
-- `raw → scaled` **khác nhau giữa các đề** (độ khó khác nhau), nên admin sửa
-  được, và bảng này thuộc về từng đề.
-- `scaled → CEFR` là **hằng số theo chuẩn**, suy ra từ tổng điểm. Admin
-  **không sửa được** — `admin/score-conversion.html` hiển thị nó chỉ đọc,
-  không có ô nhập.
+### 2.9 Mentor Bookings
 
-Bậc CEFR hiện cho học viên bằng một **thanh** ở `dashboard.html`,
-`exam-history.html` và `exam-result.html`: sáu khoảng (`<A1`, `A1`, `A2`,
-`B1`, `B2`, `C1`) trên thang 10–990, có mốc 120/225/550/785/945/990 và
-đánh dấu khoảng đang đứng. Thanh này để học viên thấy mình đang ở đâu và
-còn cách bậc kế tiếp bao xa — một con số 785 không tự nói lên điều đó.
+*(new flow, not in the prototype)*
 
-## 3. Quản trị viên — từng bước
-
-### 3.1 Duyệt KYC — chặn hay mở cổng cho học viên
-
-`admin/kyc-review.html`. Hàng đợi hiện học viên, tên trên CCCD, số CCCD đã
-che, thời điểm gửi và **thời gian chờ** (để hồ sơ cũ nổi lên trước).
-
-| Hành động | Kết quả phía học viên |
+| Step | What happens |
 |---|---|
-| Duyệt | Cổng thi thật mở. **Không trừ lượt nào.** |
-| Từ chối | Hiện nguyên văn lý do ở `kyc-pending.html?state=rejected`, kèm nút gửi lại |
+| 1 | Browse mentors filtered by `(certificate, skill)` |
+| 2 | Human mentor: pick an open slot; AI mentor: no slot needed |
+| 3 | Confirm → deduct `mentor_booking` credit |
+| 4 | Booking created, status `pending` → `confirmed` → `done` |
+| 5 | System stores a Google Meet link; the app never hosts the session |
+| 6 | After the session: learner can leave a review (1–5 rating + text) |
+| 7 | If mentor no-show / issue: file a complaint → admin reviews → may issue `admin_grant` credit make-good |
 
-Từ chối **bắt buộc ghi lý do** — ép ở cả UI và DB (`CK_Kyc_RejectReason`).
-Học viên cần biết chính xác chỗ nào sai thì mới sửa được; "hồ sơ không hợp
-lệ" là vô dụng.
+One live booking per slot (filtered unique index); average mentor rating is a
+**view**, never stored.
 
-Hộp thoại duyệt đặt cạnh nhau ảnh CCCD và thông tin học viên khai, để admin
-đối chiếu mà không phải mở hai chỗ.
+## 3. Admin — Step by Step
 
-Ảnh CCCD **không lưu trong DB** và số CCCD được **băm** — màn duyệt chỉ hiện
-số đã che. Việc đối chiếu ảnh với khuôn mặt là OCR thật, nằm ngoài prototype.
+### 3.1 Exam Import and Authoring
 
-### 3.2 Các luồng admin khác
+`admin/exam-editor.html` (wizard), `admin/question-editor.html`. Upload audio
+and images; questions grouped by section. **Batch import** is now a
+first-class feature: `ImportBatches` + per-row `ImportLog` make ingest
+queryable, not hidden in backend logic — an advisor requirement.
 
-| Luồng | Màn | Ràng buộc |
+### 3.2 Score Conversion Tables
+
+`admin/score-conversion.html`. Two tables, two owners:
+
+| Table | Ownership | Editable? |
 |---|---|---|
-| Soạn đề | `exam-editor.html` (wizard), `question-editor.html` | Upload audio/ảnh; câu hỏi theo part |
-| Bảng quy đổi điểm | `score-conversion.html` | `raw → scaled` sửa được; **bảng CEFR chỉ đọc** |
-| Gói & giá | `packages.html` | Hộp thoại sửa gói |
-| Đơn hàng | `orders.html` | Đối chiếu đơn với cổng |
-| Học viên | `users.html` | Trạng thái KYC từng người |
-| Thống kê | `admin/dashboard.html` | — |
+| `raw → scaled` | Admin, per exam | **Yes** — difficulty varies per exam |
+| `scaled → band` | Fixed standard per certificate | **No** — read-only; otherwise two learners with the same score land in different bands |
 
-## 4. Ràng buộc thứ tự — phần dễ làm sai nhất
+### 3.3 Other Admin Flows
 
-Thứ tự kiểm tra khi học viên bấm vào một đề full là **bắt buộc**, không phải
-tuỳ chọn:
+| Flow | Screen | Constraints |
+|---|---|---|
+| Packages & prices | `packages.html` | Edit package dialog |
+| Orders | `orders.html` | Reconcile with gateway |
+| Complaint resolution | *(new)* | May issue `admin_grant` credit make-good linked to the complaint |
+| Users | `users.html` | Per-certificate history and path status |
+| Stats | `admin/dashboard.html` | — |
+
+The old **KYC review queue** (`admin/kyc-review.html`) is gone — removed with
+the KYC pivot.
+
+## 4. Ordering Constraint — The Part That's Easiest to Get Wrong
+
+The old flow had: check KYC → check balance → deduct. KYC is gone; the
+remaining order is **mandatory**:
 
 ```
-  kiểm tra KYC ──chưa xác thực──► chặn, KHÔNG trừ lượt
-       │ đã xác thực
+  check balance ──0 credits──► paywall, NO deduction
+       │ has credits
        ▼
-  kiểm tra số dư ──0 lượt──► paywall, KHÔNG trừ lượt
-       │ còn lượt
-       ▼
-  trừ 1 credit → vào phiên thi
+  deduct 1 credit → start the exam/grading/booking/path-upgrade
 ```
 
-**Chặn KYC sau khi trừ lượt là bug.** Học viên mất lượt rồi mới biết thiếu
-giấy tờ, và không có gì để hoàn lại (prototype không có luồng hoàn tiền).
+**Deducting after hitting a precondition failure is a bug.** The learner loses
+a credit and gets nothing, and the prototype has no refund flow (cash refunds
+are out of scope; complaint resolution can issue a *credit* make-good, but
+that is admin-driven).
 
-Vì vậy `exam-list.html` và `exam-instructions.html` đặt khối
-`kyc-required` / `kyc-pending` / `rejected` **trước** khối `paywall`, và mọi
-khối chặn đều ghi rõ **"không trừ lượt"**.
+Every blocking screen must say **"no credit was deducted"** and offer a free
+way forward — in this case, the free practice loop.
 
-Hệ quả lên UI: màn luyện tập **không được** có paywall hay CTA mua gói, và
-mọi màn chặn thi thật phải kèm lối thoát **"Luyện miễn phí"** — nếu không,
-người chưa muốn trả tiền bị dồn vào ngõ cụt.
+## 5. Abnormal Branches — Non-Straight Paths
 
-## 5. Nhánh bất thường — luồng không đi thẳng
-
-| Tình huống | Xảy ra ở | Xử lý |
+| Situation | Occurs at | Handling |
 |---|---|---|
-| Reload tab giữa lúc thi | `exam-reading.html` | `resumed` — về đúng câu đang làm, đúng thời gian còn lại |
-| Hết giờ | `exam-reading.html`, `exam-confirm-submit.html` | `expired` — nhánh **bình thường**, tự nộp, vẫn chấm phần đã làm |
-| Huỷ giữa chừng | `exam-confirm-submit.html` | `cancelled` — **mất lượt đã trừ**, hộp thoại phải nói thẳng |
-| Mất mạng khi lưu đáp án | Màn thi | `offline` — hàng đợi retry, không mất đáp án đã chọn |
-| Bấm gửi hai lần | `exam-confirm-submit.html` | `submitting` — khoá tương tác |
-| Cổng thanh toán trả về chậm | `payment-result.html` | `pending` — đang đối chiếu, auto-refresh |
-| Đơn quá hạn đối chiếu (15') | `payment-result.html` | `expired` — mời tạo đơn mới, khác `failed` |
-| KYC bị từ chối | `kyc-pending.html` | Hiện lý do + nút gửi lại. **Không mất lượt, không mất tiền.** |
+| Reload mid-exam | `exam-reading.html` | `resumed` — return to the right question, correct time remaining |
+| Time runs out | `exam-reading.html`, `exam-confirm-submit.html` | `expired` — **normal branch**, auto-submit, still grades what was answered |
+| Cancel mid-exam | `exam-confirm-submit.html` | `cancelled` — **credit already deducted**, dialog must say so |
+| Network drops during answer save | Exam screen | `offline` — queue retry, do not lose the selected answer |
+| Double-click submit | `exam-confirm-submit.html` | `submitting` — lock interaction |
+| Gateway responds slowly | `payment-result.html` | `pending` — reconciling, auto-refresh |
+| Order past reconciliation window (15 min) | `payment-result.html` | `expired` — invite new order, distinct from `failed` |
+| AI grading in progress | Between submit and result | Pending-grading screen — "check back soon" |
 
-Ba nhánh dễ bỏ sót nhất là `resumed`, `expired` và `cancelled` — cả ba đều
-là tình huống *sẽ* xảy ra với bài thi dài 120 phút, không phải lỗi hiếm.
+Three branches most often forgotten: `resumed`, `expired`, and `cancelled` —
+all three **will** happen in a long exam, not rare errors.
 
-## 6. Bảng free / paid — bản chốt
+## 6. Free / Paid Table — The Final Tally
 
-| Hoạt động | Giá | Vì sao |
+| Activity | Cost | Why |
 |---|---|---|
-| Luyện theo Part | miễn phí | Không có phễu thì không ai mua |
-| Phân tích điểm yếu | miễn phí | Chính là phễu: chỉ ra chỗ yếu để thấy cần thi thật |
-| Xác thực CCCD | miễn phí | Là điều kiện, không phải hàng hoá |
-| Thi thật (full 200 câu) | **1 lượt** | Thứ duy nhất tốn tiền |
+| Register, log in | free | Gate before seeing the product kills the funnel |
+| Pick a certificate, switch certificates | free | Learner-scoped data persists in parallel; switching is non-destructive |
+| Placement test | free | No funnel without it; the path it generates is free too |
+| Practice by section | free | Generates the data weakness analysis needs; no paywall here |
+| Weakness analysis | free | The funnel itself: shows the need to spend credits |
+| Basic learning path | free | Generated from the placement; only the *premium* upgrade costs |
+| Mock exam start | **1 credit** (`mock_exam_start`) | First of four credit-costing actions |
+| AI grading (entire attempt) | **1 charge** (`ai_grading`) | Second; one charge covers all free responses in the attempt |
+| Mentor booking | **1 charge** (`mentor_booking`) | Third; human or AI |
+| Premium path upgrade | **1 charge** (`premium_path`) | Fourth; richer modules, closer companion guidance |
 
-Đúng **một** thứ tốn tiền. Mọi thứ khác miễn phí — kể cả việc xác thực.
+Exactly **four** ledger reasons cost credits. Everything else is free.
 
-## 7. Ngoài phạm vi prototype
+## 7. Out of Scope
 
-- TOEIC Speaking & Writing (cần chấm tay hoặc AI)
-- Flashcard từ vựng
-- Đặt lịch ca thi theo slot
-- Hoàn tiền
-- OCR/đối chiếu khuôn mặt thật ở luồng KYC
-- Gọi API thật, thanh toán thật, chấm điểm thật
+- Real/high-stakes exam sittings (removed in the pivot)
+- KYC / CCCD identity verification (removed in the pivot)
+- TOEIC Speaking & Writing (the *old* TOEIC-only prototype had none; the *new*
+  schema supports them as data-driven skills — but no screens exist yet)
+- Flashcards
+- Scheduled exam slots with capacity
+- Cash refunds (credit make-goods exist; money-back does not)
+- OCR / face matching for identity (was deferred, then removed with KYC)
+- Calling real APIs, real payments, real AI grading providers
+- The concrete import file format (schema tables exist; format is undecided)
+
+## 8. What Changed in the Pivot (2026-09-24)
+
+**Removed:**
+- The entire "thi thật" (real exam) concept and its identity gate
+- All KYC / CCCD verification (`KycVerifications` table, all KYC screens, the
+  admin review queue)
+- The TOEIC-only constraint
+
+**Added:**
+- Multiple certificates, data-driven (TOEIC, IELTS, VSTEP, ...)
+- Skills beyond listening/reading: speaking, writing
+- Free placement test → generated learning path
+- AI grading of speaking/writing against a per-certificate rubric
+- Mentor bookings (human via Meet, or AI) with reviews, complaints, payouts
+- Batch import as a first-class, queryable feature
+- Certificate isolation enforced by composite foreign keys in the schema
+- Four distinct credit-spend reasons (was one: "start a real exam")
+
+**The static prototype** under `prototype/` predates the pivot and has not
+been re-screened. It demonstrates state-coverage discipline, not current scope.
+The schema (`docs/database-schema.sql`) and this flow doc are the source of
+truth.
