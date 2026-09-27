@@ -6,8 +6,8 @@ DECLARE @cert INT = SCOPE_IDENTITY();
 INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder)
   VALUES (@cert, 'LIST', N'Listening', 'listening', 1), (@cert, 'READ', N'Reading', 'reading', 2);
 DECLARE @skill INT = (SELECT SkillId FROM Skills WHERE CertId=@cert AND Code='LIST');
-INSERT INTO Sections (SkillId, CertId, Code, Name, OptionCount, DisplayOrder)
-  VALUES (@skill, @cert, 'P2', N'Question-Response', 3, 2);
+INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, DisplayOrder)
+  VALUES (@skill, @cert, 'listening', 'P2', N'Question-Response', 3, 2);
 PRINT 'valid catalog accepted';
 -- reject: Modality outside the allowed set
 BEGIN TRY

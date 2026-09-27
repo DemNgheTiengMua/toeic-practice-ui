@@ -24,13 +24,18 @@ CREATE TABLE Skills (
   DisplayOrder INT NOT NULL DEFAULT 0,
   CONSTRAINT UQ_Skills_Cert_Code UNIQUE (CertId, Code),
   -- composite target so Content can carry CertId down and pin isolation:
-  CONSTRAINT UQ_Skills_Id_Cert UNIQUE (SkillId, CertId)
+  CONSTRAINT UQ_Skills_Id_Cert UNIQUE (SkillId, CertId),
+  -- M-18: composite target so Sections can carry Modality down from its skill
+  CONSTRAINT UQ_Skills_Id_Modality UNIQUE (SkillId, Modality)
 );
 GO
 CREATE TABLE Sections (
   SectionId    INT IDENTITY(1,1) PRIMARY KEY,
   SkillId      INT NOT NULL,
   CertId       INT NOT NULL,
+  -- M-18: carried down from the owning skill so PracticeSessions can pin listening/reading-only
+  Modality     VARCHAR(10) NOT NULL
+    CONSTRAINT CK_Sections_Modality CHECK (Modality IN ('listening','reading','speaking','writing')),
   Code         VARCHAR(20) NOT NULL,
   Name         NVARCHAR(120) NOT NULL,
   OptionCount  INT NULL CONSTRAINT CK_Sections_OptionCount CHECK (OptionCount IS NULL OR OptionCount BETWEEN 2 AND 6),
@@ -38,8 +43,12 @@ CREATE TABLE Sections (
   CONSTRAINT UQ_Sections_Skill_Code UNIQUE (SkillId, Code),
   -- composite FK pins the section's cert to its skill's cert (isolation, enforced because CertId is NOT NULL):
   CONSTRAINT FK_Sections_SkillCert FOREIGN KEY (SkillId, CertId) REFERENCES Skills(SkillId, CertId),
+  -- M-18: Modality must be the skill's own (pins the literal via the FK)
+  CONSTRAINT FK_Sections_SkillModality FOREIGN KEY (SkillId, Modality) REFERENCES Skills(SkillId, Modality),
   -- composite target so QuestionGroups can require exam-cert = section-cert:
-  CONSTRAINT UQ_Sections_Id_Cert UNIQUE (SectionId, CertId)
+  CONSTRAINT UQ_Sections_Id_Cert UNIQUE (SectionId, CertId),
+  -- M-18: composite target so PracticeSessions can carry Modality down
+  CONSTRAINT UQ_Sections_Id_Modality UNIQUE (SectionId, Modality)
 );
 GO
 -- ============ Domain 1: Identity ============
@@ -120,28 +129,51 @@ CREATE TABLE QuestionGroups (
   DisplayOrder INT NOT NULL DEFAULT 0,
   -- both composite FKs share CertId, so exam-cert and section-cert must agree:
   CONSTRAINT FK_QGroups_ExamCert    FOREIGN KEY (ExamId, CertId)    REFERENCES Exams(ExamId, CertId),
-  CONSTRAINT FK_QGroups_SectionCert FOREIGN KEY (SectionId, CertId) REFERENCES Sections(SectionId, CertId)
+  CONSTRAINT FK_QGroups_SectionCert FOREIGN KEY (SectionId, CertId) REFERENCES Sections(SectionId, CertId),
+  -- composite targets so Questions can carry ExamId/SectionId down from its group (H-5 / Low):
+  CONSTRAINT UQ_QGroups_Id_Exam    UNIQUE (GroupId, ExamId),
+  CONSTRAINT UQ_QGroups_Id_Section UNIQUE (GroupId, SectionId)
 );
 GO
 CREATE TABLE Questions (
   QuestionId      INT IDENTITY(1,1) PRIMARY KEY,
   GroupId         INT NOT NULL REFERENCES QuestionGroups(GroupId),
+  -- H-5 / Low: carried down from the owning QuestionGroups row so attempts/answers can pin isolation
+  ExamId          INT NOT NULL,
+  SectionId       INT NOT NULL,
   Stem            NVARCHAR(MAX) NOT NULL,
   DifficultyLevel INT NOT NULL CONSTRAINT CK_Questions_Difficulty CHECK (DifficultyLevel BETWEEN 1 AND 5),
   QuestionType    VARCHAR(14) NOT NULL
     CONSTRAINT CK_Questions_Type CHECK (QuestionType IN ('mcq','free_response')),
   Explanation     NVARCHAR(MAX) NULL,
-  DisplayOrder    INT NOT NULL DEFAULT 0
+  DisplayOrder    INT NOT NULL DEFAULT 0,
+  -- ExamId/SectionId must be the group's own (composite FK pins them, not free-standing values)
+  CONSTRAINT FK_Questions_GroupExam    FOREIGN KEY (GroupId, ExamId)    REFERENCES QuestionGroups(GroupId, ExamId),
+  CONSTRAINT FK_Questions_GroupSection FOREIGN KEY (GroupId, SectionId) REFERENCES QuestionGroups(GroupId, SectionId),
+  -- composite targets for H-5 (attempt containment) and M-7 (MCQ/free-response branch)
+  CONSTRAINT UQ_Questions_Id_Exam    UNIQUE (QuestionId, ExamId),
+  CONSTRAINT UQ_Questions_Id_Section UNIQUE (QuestionId, SectionId),
+  CONSTRAINT UQ_Questions_Id_Type    UNIQUE (QuestionId, QuestionType)
 );
 GO
 CREATE TABLE QuestionOptions (
-  OptionId   INT IDENTITY(1,1) PRIMARY KEY,
-  QuestionId INT NOT NULL REFERENCES Questions(QuestionId),
-  Label      VARCHAR(4) NOT NULL,
-  Text       NVARCHAR(MAX) NOT NULL,
-  IsCorrect  BIT NOT NULL DEFAULT 0,
-  CONSTRAINT UQ_Options_Question_Label UNIQUE (QuestionId, Label)
+  OptionId     INT IDENTITY(1,1) PRIMARY KEY,
+  QuestionId   INT NOT NULL REFERENCES Questions(QuestionId),
+  -- M-7: options only belong to MCQ questions
+  QuestionType VARCHAR(14) NOT NULL
+    CONSTRAINT CK_Options_QuestionType CHECK (QuestionType = 'mcq'),
+  Label        VARCHAR(4) NOT NULL,
+  Text         NVARCHAR(MAX) NOT NULL,
+  IsCorrect    BIT NOT NULL DEFAULT 0,
+  CONSTRAINT UQ_Options_Question_Label UNIQUE (QuestionId, Label),
+  -- H-6: composite target so answer tables can pin the selected option to its own question
+  CONSTRAINT UQ_Options_Id_Question UNIQUE (OptionId, QuestionId),
+  -- M-7: QuestionType must match the question's own (pins the literal via the FK)
+  CONSTRAINT FK_Options_QuestionType FOREIGN KEY (QuestionId, QuestionType) REFERENCES Questions(QuestionId, QuestionType)
+  -- M-8: at most one correct option per question enforced below via UX_Options_OneCorrect
 );
+GO
+CREATE UNIQUE INDEX UX_Options_OneCorrect ON QuestionOptions(QuestionId) WHERE IsCorrect = 1;
 GO
 CREATE TABLE ImportBatches (
   BatchId     INT IDENTITY(1,1) PRIMARY KEY,
@@ -169,22 +201,37 @@ CREATE TABLE PracticeSessions (
   SessionId    INT IDENTITY(1,1) PRIMARY KEY,
   UserId       INT NOT NULL REFERENCES Users(UserId),
   SectionId    INT NOT NULL REFERENCES Sections(SectionId),
+  -- M-18: carried down from the section so free practice can be pinned to listening/reading only
+  Modality     VARCHAR(10) NOT NULL
+    CONSTRAINT CK_Practice_Modality CHECK (Modality IN ('listening','reading')),
   QuestionCount INT NOT NULL CONSTRAINT CK_Practice_Count CHECK (QuestionCount > 0),
   Status       VARCHAR(12) NOT NULL DEFAULT 'in_progress'
     CONSTRAINT CK_Practice_Status CHECK (Status IN ('in_progress','finished','abandoned')),
   CorrectCount INT NOT NULL DEFAULT 0,
   StartedAt    DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
-  FinishedAt   DATETIMEOFFSET NULL
+  FinishedAt   DATETIMEOFFSET NULL,
+  -- M-18: Modality must be the section's own (pins the literal via the FK) and excludes speaking/writing
+  CONSTRAINT FK_Practice_SectionModality FOREIGN KEY (SectionId, Modality) REFERENCES Sections(SectionId, Modality),
+  -- Low: composite target so PracticeAnswers can require QuestionId's SectionId = the session's own
+  CONSTRAINT UQ_PracticeSessions_Id_Section UNIQUE (SessionId, SectionId)
 );
 GO
 CREATE TABLE PracticeAnswers (
   AnswerId         INT IDENTITY(1,1) PRIMARY KEY,
   SessionId        INT NOT NULL REFERENCES PracticeSessions(SessionId),
   QuestionId       INT NOT NULL REFERENCES Questions(QuestionId),
-  SelectedOptionId INT NULL REFERENCES QuestionOptions(OptionId),
+  -- Low: carried down so a question must belong to the session's own section
+  SectionId        INT NOT NULL,
+  SelectedOptionId INT NULL,
   IsCorrect        BIT NULL,
   DisplayOrder     INT NOT NULL DEFAULT 0,
-  CONSTRAINT UQ_PracticeAnswers UNIQUE (SessionId, QuestionId)
+  CONSTRAINT UQ_PracticeAnswers UNIQUE (SessionId, QuestionId),
+  -- Low: SectionId must be the session's own
+  CONSTRAINT FK_PracticeAnswers_SessionSection FOREIGN KEY (SessionId, SectionId) REFERENCES PracticeSessions(SessionId, SectionId),
+  -- Low: QuestionId must belong to the same section (containment)
+  CONSTRAINT FK_PracticeAnswers_QuestionSection FOREIGN KEY (QuestionId, SectionId) REFERENCES Questions(QuestionId, SectionId),
+  -- H-6: SelectedOptionId must belong to this same question (NULL stays legal, MATCH SIMPLE)
+  CONSTRAINT FK_PracticeAnswers_OptionQuestion FOREIGN KEY (SelectedOptionId, QuestionId) REFERENCES QuestionOptions(OptionId, QuestionId)
 );
 GO
 
@@ -193,6 +240,8 @@ CREATE TABLE ExamAttempts (
   AttemptId       INT IDENTITY(1,1) PRIMARY KEY,
   UserId          INT NOT NULL REFERENCES Users(UserId),
   ExamId          INT NOT NULL REFERENCES Exams(ExamId),
+  -- H-5: carried down from the exam so children can be pinned to the same certificate
+  CertId          INT NOT NULL REFERENCES Certificates(CertId),
   Status          VARCHAR(12) NOT NULL DEFAULT 'in_progress'
     CONSTRAINT CK_Attempts_Status CHECK (Status IN ('in_progress','submitted','graded','abandoned')),
   StartedAt       DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
@@ -200,42 +249,73 @@ CREATE TABLE ExamAttempts (
   IsAutoSubmitted BIT NOT NULL DEFAULT 0,
   TotalScore      INT NULL,
   BandCode        VARCHAR(20) NULL,                 -- snapshot at grading
+  -- H-5: ExamId's CertId must be the attempt's own (pins the carried-down value)
+  CONSTRAINT FK_Attempts_ExamCert FOREIGN KEY (ExamId, CertId) REFERENCES Exams(ExamId, CertId),
   -- composite target so CreditTransactions can prove the charged user owns the attempt (H-1):
-  CONSTRAINT UQ_Attempts_Id_User UNIQUE (AttemptId, UserId)
+  CONSTRAINT UQ_Attempts_Id_User UNIQUE (AttemptId, UserId),
+  -- H-5: composite targets so AttemptAnswers/FreeResponses/AttemptSkillScores can pin containment
+  CONSTRAINT UQ_Attempts_Id_Exam UNIQUE (AttemptId, ExamId),
+  CONSTRAINT UQ_Attempts_Id_Cert UNIQUE (AttemptId, CertId)
 );
 GO
 CREATE TABLE AttemptSkillScores (
   AttemptId   INT NOT NULL REFERENCES ExamAttempts(AttemptId),
   SkillId     INT NOT NULL REFERENCES Skills(SkillId),
+  -- H-5: carried down from the attempt so the skill must belong to the attempt's own certificate
+  CertId      INT NOT NULL,
   RawScore    INT NOT NULL,
   ScaledScore INT NOT NULL,
-  CONSTRAINT PK_AttemptSkillScores PRIMARY KEY (AttemptId, SkillId)
+  CONSTRAINT PK_AttemptSkillScores PRIMARY KEY (AttemptId, SkillId),
+  -- H-5: the attempt's own CertId must be used
+  CONSTRAINT FK_ASS_AttemptCert FOREIGN KEY (AttemptId, CertId) REFERENCES ExamAttempts(AttemptId, CertId),
+  -- H-5: the skill must belong to that same certificate (target exists: Skills(SkillId,CertId))
+  CONSTRAINT FK_ASS_SkillCert FOREIGN KEY (SkillId, CertId) REFERENCES Skills(SkillId, CertId)
 );
 GO
 CREATE TABLE AttemptAnswers (
   AnswerId         INT IDENTITY(1,1) PRIMARY KEY,
   AttemptId        INT NOT NULL REFERENCES ExamAttempts(AttemptId),
   QuestionId       INT NOT NULL REFERENCES Questions(QuestionId),
-  SelectedOptionId INT NULL REFERENCES QuestionOptions(OptionId),
+  -- H-5: carried down from the attempt so the question must belong to the attempt's own exam
+  ExamId           INT NOT NULL,
+  SelectedOptionId INT NULL,
   IsCorrect        BIT NULL,
-  CONSTRAINT UQ_AttemptAnswers UNIQUE (AttemptId, QuestionId)
+  CONSTRAINT UQ_AttemptAnswers UNIQUE (AttemptId, QuestionId),
+  -- H-5: ExamId must be the attempt's own
+  CONSTRAINT FK_AttemptAnswers_AttemptExam FOREIGN KEY (AttemptId, ExamId) REFERENCES ExamAttempts(AttemptId, ExamId),
+  -- H-5: the question must belong to that same exam
+  CONSTRAINT FK_AttemptAnswers_QuestionExam FOREIGN KEY (QuestionId, ExamId) REFERENCES Questions(QuestionId, ExamId),
+  -- H-6: SelectedOptionId must belong to this same question (NULL stays legal, MATCH SIMPLE)
+  CONSTRAINT FK_AttemptAnswers_OptionQuestion FOREIGN KEY (SelectedOptionId, QuestionId) REFERENCES QuestionOptions(OptionId, QuestionId)
 );
 GO
 CREATE TABLE FreeResponses (
   FreeResponseId INT IDENTITY(1,1) PRIMARY KEY,
   AttemptId      INT NOT NULL REFERENCES ExamAttempts(AttemptId),
   QuestionId     INT NOT NULL REFERENCES Questions(QuestionId),
+  -- H-5: carried down from the attempt so the question must belong to the attempt's own exam
+  ExamId         INT NOT NULL,
+  -- M-7: pins the question to be a free_response question (a CHECK can't reach Questions)
+  QuestionType   VARCHAR(14) NOT NULL
+    CONSTRAINT CK_FreeResp_QuestionType CHECK (QuestionType = 'free_response'),
   ResponseText   NVARCHAR(MAX) NULL,
   AudioPath      NVARCHAR(400) NULL,
   Status         VARCHAR(12) NOT NULL DEFAULT 'pending_ai'
     CONSTRAINT CK_FreeResp_Status CHECK (Status IN ('pending_ai','graded')),
   SubmittedAt    DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
   CONSTRAINT UQ_FreeResponses UNIQUE (AttemptId, QuestionId),
-  CONSTRAINT CK_FreeResp_HasContent CHECK (ResponseText IS NOT NULL OR AudioPath IS NOT NULL)
+  CONSTRAINT CK_FreeResp_HasContent CHECK (ResponseText IS NOT NULL OR AudioPath IS NOT NULL),
+  -- H-5: ExamId must be the attempt's own
+  CONSTRAINT FK_FreeResp_AttemptExam FOREIGN KEY (AttemptId, ExamId) REFERENCES ExamAttempts(AttemptId, ExamId),
+  -- H-5: the question must belong to that same exam
+  CONSTRAINT FK_FreeResp_QuestionExam FOREIGN KEY (QuestionId, ExamId) REFERENCES Questions(QuestionId, ExamId),
+  -- M-7: QuestionType must be the question's own (pins the literal via the FK)
+  CONSTRAINT FK_FreeResp_QuestionType FOREIGN KEY (QuestionId, QuestionType) REFERENCES Questions(QuestionId, QuestionType)
 );
 GO
 -- attempts may only target published exams (carried from old schema)
-CREATE TRIGGER trg_ExamAttempts_PublishedExamOnly ON ExamAttempts AFTER INSERT AS
+-- M-5: also cover UPDATE so an attempt can't be moved onto a draft exam after creation
+CREATE TRIGGER trg_ExamAttempts_PublishedExamOnly ON ExamAttempts AFTER INSERT, UPDATE AS
 BEGIN
   SET NOCOUNT ON;
   IF EXISTS (SELECT 1 FROM inserted i JOIN Exams e ON e.ExamId=i.ExamId WHERE e.Status <> 'published')
@@ -273,6 +353,19 @@ BEGIN
     THROW 50011, 'TotalScore must equal the sum of scaled skill scores.', 1;
 END;
 GO
+-- M-6: an attempt cannot reach 'graded' while any of its free responses is still 'pending_ai'
+CREATE TRIGGER trg_Attempts_NoGradedWithPendingFreeResponses
+ON ExamAttempts AFTER UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+  IF EXISTS (
+    SELECT 1 FROM inserted i
+    WHERE i.Status = 'graded'
+      AND EXISTS (SELECT 1 FROM FreeResponses fr WHERE fr.AttemptId = i.AttemptId AND fr.Status <> 'graded')
+  )
+    THROW 50025, 'Attempt cannot be graded while a free response is still pending_ai.', 1;
+END;
+GO
 -- ============ Domain 8: AI Grading ============
 CREATE TABLE GradingCriteria (
   CriterionId  INT IDENTITY(1,1) PRIMARY KEY,
@@ -300,6 +393,18 @@ CREATE TABLE AiGradings (
   CONSTRAINT UQ_AiGradings_FreeResponse UNIQUE (FreeResponseId)
 );
 GO
+-- M-6: flip FreeResponses.Status to 'graded' once its AiGradings.Status reaches 'done'
+CREATE TRIGGER trg_AiGradings_MarkFreeResponseGraded
+ON AiGradings AFTER INSERT, UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+  UPDATE fr
+    SET Status = 'graded'
+  FROM FreeResponses fr
+  JOIN inserted i ON i.FreeResponseId = fr.FreeResponseId
+  WHERE i.Status = 'done' AND fr.Status <> 'graded';
+END;
+GO
 CREATE TABLE AiGradingScores (
   GradingId   INT NOT NULL REFERENCES AiGradings(GradingId),
   CriterionId INT NOT NULL REFERENCES GradingCriteria(CriterionId),
@@ -307,6 +412,20 @@ CREATE TABLE AiGradingScores (
   Comment     NVARCHAR(MAX) NULL,
   CONSTRAINT PK_AiGradingScores PRIMARY KEY (GradingId, CriterionId)
 );
+GO
+-- M-9: a rubric score cannot exceed its criterion's MaxScore (a CHECK can't reach another table)
+CREATE TRIGGER trg_AiGradingScores_BoundedByMaxScore
+ON AiGradingScores AFTER INSERT, UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+  IF EXISTS (
+    SELECT 1
+    FROM inserted i
+    JOIN GradingCriteria c ON c.CriterionId = i.CriterionId
+    WHERE i.Score > c.MaxScore
+  )
+    THROW 50026, 'AiGradingScores.Score cannot exceed the criterion MaxScore.', 1;
+END;
 GO
 CREATE TABLE Recommendations (
   RecId          INT IDENTITY(1,1) PRIMARY KEY,
@@ -715,7 +834,7 @@ GO
 -- ============ Views ============
 CREATE VIEW vw_UserSectionAccuracy AS
   SELECT ps.UserId, s.SectionId, s.Name AS SectionName,
-         COUNT(*) AS Answered,
+         COUNT(pa.IsCorrect) AS Answered,
          SUM(CASE WHEN pa.IsCorrect=1 THEN 1 ELSE 0 END) AS Correct
   FROM PracticeAnswers pa
   JOIN PracticeSessions ps ON ps.SessionId = pa.SessionId
