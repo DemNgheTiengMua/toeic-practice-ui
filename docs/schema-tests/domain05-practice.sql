@@ -36,11 +36,11 @@ INSERT INTO Exams (CertId,Name,Status,DurationMinutes) VALUES (@c,N'Practice Src
 DECLARE @ex INT=SCOPE_IDENTITY();
 INSERT INTO QuestionGroups (ExamId,CertId,SectionId,DisplayOrder) VALUES (@ex,@c,@sec,1);
 DECLARE @grp INT=SCOPE_IDENTITY();
-INSERT INTO Questions (GroupId,ExamId,SectionId,Stem,DifficultyLevel,QuestionType,DisplayOrder)
-  VALUES (@grp,@ex,@sec,N'q1',3,'mcq',1);
+INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,DifficultyLevel,QuestionType,DisplayOrder)
+  VALUES (@grp,@ex,@sec,@sk,N'q1',3,'mcq',1);
 DECLARE @pq1 INT=SCOPE_IDENTITY();
-INSERT INTO Questions (GroupId,ExamId,SectionId,Stem,DifficultyLevel,QuestionType,DisplayOrder)
-  VALUES (@grp,@ex,@sec,N'q2',3,'mcq',2);
+INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,DifficultyLevel,QuestionType,DisplayOrder)
+  VALUES (@grp,@ex,@sec,@sk,N'q2',3,'mcq',2);
 DECLARE @pq2 INT=SCOPE_IDENTITY();
 INSERT INTO QuestionOptions (QuestionId,QuestionType,Label,Text,IsCorrect) VALUES (@pq1,'mcq','A',N'q1 opt',1);
 DECLARE @pq1opt INT=SCOPE_IDENTITY();
@@ -63,8 +63,8 @@ INSERT INTO Sections (SkillId,CertId,Modality,Code,Name,OptionCount,DisplayOrder
 DECLARE @secOther INT=SCOPE_IDENTITY();
 INSERT INTO QuestionGroups (ExamId,CertId,SectionId,DisplayOrder) VALUES (@ex,@c,@secOther,2);
 DECLARE @grpOther INT=SCOPE_IDENTITY();
-INSERT INTO Questions (GroupId,ExamId,SectionId,Stem,DifficultyLevel,QuestionType,DisplayOrder)
-  VALUES (@grpOther,@ex,@secOther,N'other-q',3,'mcq',1);
+INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,DifficultyLevel,QuestionType,DisplayOrder)
+  VALUES (@grpOther,@ex,@secOther,@sk,N'other-q',3,'mcq',1);
 DECLARE @qOther INT=SCOPE_IDENTITY();
 BEGIN TRY
   INSERT INTO PracticeAnswers (SessionId,QuestionId,SectionId) VALUES (@sess,@qOther,@sec);

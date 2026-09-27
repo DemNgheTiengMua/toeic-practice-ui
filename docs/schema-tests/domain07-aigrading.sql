@@ -17,17 +17,17 @@ INSERT INTO Exams (CertId,Name,Status,DurationMinutes) VALUES (@c,N'M9 Exam','pu
 DECLARE @exam0 INT=SCOPE_IDENTITY();
 INSERT INTO QuestionGroups (ExamId,CertId,SectionId,DisplayOrder) VALUES (@exam0,@c,@sec0,1);
 DECLARE @grp0 INT=SCOPE_IDENTITY();
-INSERT INTO Questions (GroupId,ExamId,SectionId,Stem,DifficultyLevel,QuestionType,DisplayOrder)
-  VALUES (@grp0,@exam0,@sec0,N'fr-q1',3,'free_response',1);
+INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,DifficultyLevel,QuestionType,DisplayOrder)
+  VALUES (@grp0,@exam0,@sec0,@sk,N'fr-q1',3,'free_response',1);
 DECLARE @qfr1 INT=SCOPE_IDENTITY();
-INSERT INTO Questions (GroupId,ExamId,SectionId,Stem,DifficultyLevel,QuestionType,DisplayOrder)
-  VALUES (@grp0,@exam0,@sec0,N'fr-q2',3,'free_response',2);
+INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,DifficultyLevel,QuestionType,DisplayOrder)
+  VALUES (@grp0,@exam0,@sec0,@sk,N'fr-q2',3,'free_response',2);
 DECLARE @qfr2 INT=SCOPE_IDENTITY();
 INSERT INTO ExamAttempts (UserId,ExamId,CertId,Status,ExpiresAt) VALUES (@usr0,@exam0,@c,'submitted',SYSDATETIMEOFFSET());
 DECLARE @a0 INT=SCOPE_IDENTITY();
-INSERT INTO FreeResponses (AttemptId,QuestionId,ExamId,QuestionType,ResponseText) VALUES (@a0,@qfr1,@exam0,'free_response',N'r1');
+INSERT INTO FreeResponses (AttemptId,QuestionId,ExamId,SkillId,QuestionType,ResponseText) VALUES (@a0,@qfr1,@exam0,@sk,'free_response',N'r1');
 DECLARE @fr1 INT=SCOPE_IDENTITY();
-INSERT INTO FreeResponses (AttemptId,QuestionId,ExamId,QuestionType,ResponseText) VALUES (@a0,@qfr2,@exam0,'free_response',N'r2');
+INSERT INTO FreeResponses (AttemptId,QuestionId,ExamId,SkillId,QuestionType,ResponseText) VALUES (@a0,@qfr2,@exam0,@sk,'free_response',N'r2');
 DECLARE @fr2 INT=SCOPE_IDENTITY();
 -- reject: grading status outside the set
 BEGIN TRY
@@ -58,12 +58,12 @@ INSERT INTO Exams (CertId,Name,Status,DurationMinutes) VALUES (@c,N'M6 Exam','pu
 DECLARE @exam INT=SCOPE_IDENTITY();
 INSERT INTO QuestionGroups (ExamId,CertId,SectionId,DisplayOrder) VALUES (@exam,@c,@sec,1);
 DECLARE @grp INT=SCOPE_IDENTITY();
-INSERT INTO Questions (GroupId,ExamId,SectionId,Stem,DifficultyLevel,QuestionType,DisplayOrder)
-  VALUES (@grp,@exam,@sec,N'm6-q',3,'free_response',1);
+INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,DifficultyLevel,QuestionType,DisplayOrder)
+  VALUES (@grp,@exam,@sec,@sk,N'm6-q',3,'free_response',1);
 DECLARE @qm6 INT=SCOPE_IDENTITY();
 INSERT INTO ExamAttempts (UserId,ExamId,CertId,Status,ExpiresAt) VALUES (@usr,@exam,@c,'submitted',SYSDATETIMEOFFSET());
 DECLARE @am6 INT=SCOPE_IDENTITY();
-INSERT INTO FreeResponses (AttemptId,QuestionId,ExamId,QuestionType,ResponseText) VALUES (@am6,@qm6,@exam,'free_response',N'resp');
+INSERT INTO FreeResponses (AttemptId,QuestionId,ExamId,SkillId,QuestionType,ResponseText) VALUES (@am6,@qm6,@exam,@sk,'free_response',N'resp');
 BEGIN TRY
   UPDATE ExamAttempts SET Status='graded' WHERE AttemptId=@am6;
   THROW 50000,'EXPECT_REJECT FAILED: graded attempt with pending_ai free response accepted',1;
@@ -99,6 +99,23 @@ END TRY BEGIN CATCH
   IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
   PRINT 'rejected criterion from mismatched skill as expected';
 END CATCH
+-- M-3 clause 3: reject an AiGradings row naming a skill that is NOT its free response's
+-- question's section's skill (cross-certificate, unambiguous)
+BEGIN TRY
+  INSERT INTO AiGradings (FreeResponseId,SkillId,Status) VALUES (@fr1,@sk2,'pending');
+  THROW 50000,'EXPECT_REJECT FAILED: AiGradings skill unrelated to free response chain accepted',1;
+END TRY BEGIN CATCH
+  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
+  PRINT 'rejected AiGradings skill unrelated to free response chain as expected';
+END CATCH
+-- M-3 clause 3: the free response's own skill IS accepted
+INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,DifficultyLevel,QuestionType,DisplayOrder)
+  VALUES (@grp0,@exam0,@sec0,@sk,N'fr-q3',3,'free_response',3);
+DECLARE @qfr3 INT=SCOPE_IDENTITY();
+INSERT INTO FreeResponses (AttemptId,QuestionId,ExamId,SkillId,QuestionType,ResponseText) VALUES (@a0,@qfr3,@exam0,@sk,'free_response',N'r3');
+DECLARE @fr3 INT=SCOPE_IDENTITY();
+INSERT INTO AiGradings (FreeResponseId,SkillId,Status) VALUES (@fr3,@sk,'pending');
+PRINT 'valid AiGradings skill matching free response chain accepted';
 -- M-12: reject a Recommendation with a TargetBandCode not in ScoreBands for its cert
 INSERT INTO ScoreBands (CertId,Code,Name,MinTotal,MaxTotal,DisplayOrder) VALUES (@c,'A1',N'A1',1,100,1);
 BEGIN TRY

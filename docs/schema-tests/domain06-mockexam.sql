@@ -53,8 +53,8 @@ INSERT INTO Exams (CertId,Name,Status,DurationMinutes) VALUES (@c2,N'IELTS Exam'
 DECLARE @exam2 INT=SCOPE_IDENTITY();
 INSERT INTO QuestionGroups (ExamId,CertId,SectionId,DisplayOrder) VALUES (@exam2,@c2,@sec2,1);
 DECLARE @grp2 INT=SCOPE_IDENTITY();
-INSERT INTO Questions (GroupId,ExamId,SectionId,Stem,DifficultyLevel,QuestionType,DisplayOrder)
-  VALUES (@grp2,@exam2,@sec2,N'ielts-q',3,'free_response',1);
+INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,DifficultyLevel,QuestionType,DisplayOrder)
+  VALUES (@grp2,@exam2,@sec2,@s2,N'ielts-q',3,'free_response',1);
 DECLARE @qIelts INT=SCOPE_IDENTITY();
 -- H-5: reject a TOEIC attempt answering an IELTS question
 BEGIN TRY

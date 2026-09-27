@@ -48,7 +48,9 @@ CREATE TABLE Sections (
   -- composite target so QuestionGroups can require exam-cert = section-cert:
   CONSTRAINT UQ_Sections_Id_Cert UNIQUE (SectionId, CertId),
   -- M-18: composite target so PracticeSessions can carry Modality down
-  CONSTRAINT UQ_Sections_Id_Modality UNIQUE (SectionId, Modality)
+  CONSTRAINT UQ_Sections_Id_Modality UNIQUE (SectionId, Modality),
+  -- M-3: composite target so Questions can carry SkillId down (pins AI grading to the right skill)
+  CONSTRAINT UQ_Sections_Id_Skill UNIQUE (SectionId, SkillId)
 );
 GO
 -- ============ Domain 1: Identity ============
@@ -164,6 +166,8 @@ CREATE TABLE Questions (
   -- H-5 / Low: carried down from the owning QuestionGroups row so attempts/answers can pin isolation
   ExamId          INT NOT NULL,
   SectionId       INT NOT NULL,
+  -- M-3: carried down from the section so AI grading can be pinned to the question's own skill
+  SkillId         INT NOT NULL,
   Stem            NVARCHAR(MAX) NOT NULL,
   DifficultyLevel INT NOT NULL CONSTRAINT CK_Questions_Difficulty CHECK (DifficultyLevel BETWEEN 1 AND 5),
   QuestionType    VARCHAR(14) NOT NULL
@@ -173,10 +177,14 @@ CREATE TABLE Questions (
   -- ExamId/SectionId must be the group's own (composite FK pins them, not free-standing values)
   CONSTRAINT FK_Questions_GroupExam    FOREIGN KEY (GroupId, ExamId)    REFERENCES QuestionGroups(GroupId, ExamId),
   CONSTRAINT FK_Questions_GroupSection FOREIGN KEY (GroupId, SectionId) REFERENCES QuestionGroups(GroupId, SectionId),
+  -- M-3: SkillId must be the section's own
+  CONSTRAINT FK_Questions_SectionSkill FOREIGN KEY (SectionId, SkillId) REFERENCES Sections(SectionId, SkillId),
   -- composite targets for H-5 (attempt containment) and M-7 (MCQ/free-response branch)
   CONSTRAINT UQ_Questions_Id_Exam    UNIQUE (QuestionId, ExamId),
   CONSTRAINT UQ_Questions_Id_Section UNIQUE (QuestionId, SectionId),
-  CONSTRAINT UQ_Questions_Id_Type    UNIQUE (QuestionId, QuestionType)
+  CONSTRAINT UQ_Questions_Id_Type    UNIQUE (QuestionId, QuestionType),
+  -- M-3: composite target so FreeResponses can carry SkillId down
+  CONSTRAINT UQ_Questions_Id_Skill   UNIQUE (QuestionId, SkillId)
 );
 GO
 CREATE TABLE QuestionOptions (
@@ -318,6 +326,8 @@ CREATE TABLE FreeResponses (
   QuestionId     INT NOT NULL REFERENCES Questions(QuestionId),
   -- H-5: carried down from the attempt so the question must belong to the attempt's own exam
   ExamId         INT NOT NULL,
+  -- M-3: carried down from the question so AiGradings must name that question's own skill
+  SkillId        INT NOT NULL,
   -- M-7: pins the question to be a free_response question (a CHECK can't reach Questions)
   QuestionType   VARCHAR(14) NOT NULL
     CONSTRAINT CK_FreeResp_QuestionType CHECK (QuestionType = 'free_response'),
@@ -333,7 +343,11 @@ CREATE TABLE FreeResponses (
   -- H-5: the question must belong to that same exam
   CONSTRAINT FK_FreeResp_QuestionExam FOREIGN KEY (QuestionId, ExamId) REFERENCES Questions(QuestionId, ExamId),
   -- M-7: QuestionType must be the question's own (pins the literal via the FK)
-  CONSTRAINT FK_FreeResp_QuestionType FOREIGN KEY (QuestionId, QuestionType) REFERENCES Questions(QuestionId, QuestionType)
+  CONSTRAINT FK_FreeResp_QuestionType FOREIGN KEY (QuestionId, QuestionType) REFERENCES Questions(QuestionId, QuestionType),
+  -- M-3: SkillId must be the question's own
+  CONSTRAINT FK_FreeResp_QuestionSkill FOREIGN KEY (QuestionId, SkillId) REFERENCES Questions(QuestionId, SkillId),
+  -- M-3: composite target so AiGradings can require its SkillId to be this response's own
+  CONSTRAINT UQ_FreeResp_Id_Skill UNIQUE (FreeResponseId, SkillId)
 );
 GO
 -- attempts may only target published exams (carried from old schema)
@@ -409,7 +423,8 @@ GO
 CREATE TABLE AiGradings (
   GradingId      INT IDENTITY(1,1) PRIMARY KEY,
   FreeResponseId INT NOT NULL REFERENCES FreeResponses(FreeResponseId),
-  SkillId        INT NOT NULL REFERENCES Skills(SkillId),
+  -- M-3: no longer a bare Skills FK — it must be the graded response's OWN skill (see FK below)
+  SkillId        INT NOT NULL,
   Status         VARCHAR(8) NOT NULL DEFAULT 'pending'
     CONSTRAINT CK_AiGradings_Status CHECK (Status IN ('pending','done','failed')),
   OverallScaled  DECIMAL(6,2) NULL,
@@ -419,7 +434,10 @@ CREATE TABLE AiGradings (
   CompletedAt    DATETIMEOFFSET NULL,
   CONSTRAINT UQ_AiGradings_FreeResponse UNIQUE (FreeResponseId),
   -- composite target so AiGradingScores can require the criterion's skill = the grading's own skill
-  CONSTRAINT UQ_AiGradings_Id_Skill UNIQUE (GradingId, SkillId)
+  CONSTRAINT UQ_AiGradings_Id_Skill UNIQUE (GradingId, SkillId),
+  -- M-3 clause 3: the graded skill must be the free response's own skill, which the chain
+  -- FreeResponses → Questions → Sections pins to a single certificate
+  CONSTRAINT FK_AiGradings_ResponseSkill FOREIGN KEY (FreeResponseId, SkillId) REFERENCES FreeResponses(FreeResponseId, SkillId)
 );
 GO
 -- M-6: flip FreeResponses.Status to 'graded' once its AiGradings.Status reaches 'done'
