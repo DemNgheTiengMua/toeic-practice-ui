@@ -934,6 +934,149 @@
   .row { flex-wrap: wrap; }
 }
 
+/* === Mentor Card === */
+.mentor-card {
+  background: var(--color-surface, #ffffff);
+  border: var(--keyline, 2px) solid var(--ink, #14181d);
+  border-radius: 0;
+  padding: var(--space-5, 24px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3, 12px);
+}
+
+.mentor-card__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3, 12px);
+}
+
+.mentor-card__header strong {
+  font-family: var(--font-sign, "IBM Plex Sans Condensed", sans-serif);
+  font-size: var(--text-base, 16px);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+}
+
+.mentor-card__rating {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2, 8px);
+}
+
+.mentor-card__stars {
+  font-size: var(--text-lg, 18px);
+  color: var(--sign-gold, #f2b705);
+}
+
+.mentor-card__bio {
+  font-size: var(--text-sm, 14px);
+  color: var(--color-text-muted, #5c6570);
+  margin: 0;
+}
+
+.mentor-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--space-2, 8px);
+}
+
+.mentor-card__price {
+  font-family: var(--font-mono, "IBM Plex Mono", monospace);
+  font-size: var(--text-base, 16px);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+/* === Path Module Card === */
+.path-module {
+  background: var(--color-surface, #ffffff);
+  border: var(--keyline, 2px) solid var(--ink, #14181d);
+  border-radius: 0;
+  padding: var(--space-4, 16px) var(--space-5, 24px);
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: var(--space-4, 16px);
+  align-items: center;
+}
+
+.path-module__status {
+  /* Badge already styled */
+}
+
+.path-module__content strong {
+  display: block;
+  font-family: var(--font-sign, "IBM Plex Sans Condensed", sans-serif);
+  font-size: var(--text-base, 16px);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+  margin-bottom: var(--space-1, 4px);
+}
+
+.path-module__content p {
+  margin: 0;
+  font-size: var(--text-sm, 14px);
+  color: var(--color-text-muted, #5c6570);
+}
+
+/* === Rubric Scores === */
+.rubric-scores {
+  margin: var(--space-5, 24px) 0;
+}
+
+.rubric-scores h3 {
+  margin: 0 0 var(--space-3, 12px);
+  font-family: var(--font-sign, "IBM Plex Sans Condensed", sans-serif);
+  font-size: var(--text-base, 16px);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+}
+
+.rubric-scores__list {
+  display: grid;
+  gap: var(--space-3, 12px);
+  margin: 0;
+}
+
+.rubric-scores__item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--space-4, 16px);
+  padding: var(--space-3, 12px) 0;
+  border-bottom: 1px solid var(--color-border, #ccd2d6);
+}
+
+.rubric-scores__item:last-child {
+  border-bottom: 0;
+}
+
+.rubric-scores__item dt {
+  font-family: var(--font-sign, "IBM Plex Sans Condensed", sans-serif);
+  font-size: var(--text-sm, 14px);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+}
+
+.rubric-scores__item dd {
+  margin: 0;
+  font-family: var(--font-mono, "IBM Plex Mono", monospace);
+  font-size: var(--text-base, 16px);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.rubric-scores__item .score-value {
+  font-weight: 600;
+  color: var(--sign-blue, #0b4ea2);
+}
+}
+
 /* ===== Certificate Picker ===== */
 .certificate-picker {
   display: grid;
