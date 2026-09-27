@@ -88,7 +88,7 @@ END CATCH
 -- reject (M-16): a complaint resolved by another user's admin_grant txn
 INSERT INTO Certificates (Code,Name,IsActive) VALUES ('TOEIC',N'T',1); DECLARE @c INT=SCOPE_IDENTITY();
 INSERT INTO MentorProfiles (DisplayName,CertId,Type,PricePerSlot,IsActive) VALUES (N'Coach',@c,'ai',0,1); DECLARE @m INT=SCOPE_IDENTITY();
-INSERT INTO Bookings (UserId,MentorId,Status) VALUES (@u,@m,'done'); DECLARE @bk INT=SCOPE_IDENTITY();
+INSERT INTO Bookings (UserId,MentorId,MentorType,Status) VALUES (@u,@m,'ai','done'); DECLARE @bk INT=SCOPE_IDENTITY();
 INSERT INTO Complaints (BookingId,UserId,Reason) VALUES (@bk,@u,N'no show'); DECLARE @cp INT=SCOPE_IDENTITY();
 INSERT INTO CreditTransactions (UserId,Reason,Delta) VALUES (@u2,'admin_grant',5); DECLARE @grantTxn INT=SCOPE_IDENTITY();
 BEGIN TRY

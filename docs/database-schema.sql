@@ -416,7 +416,13 @@ CREATE TABLE MentorProfiles (
   SkillId      INT NULL REFERENCES Skills(SkillId),
   Type         VARCHAR(6) NOT NULL CONSTRAINT CK_Mentor_Type CHECK (Type IN ('human','ai')),
   PricePerSlot DECIMAL(10,2) NOT NULL CONSTRAINT CK_Mentor_Price CHECK (PricePerSlot >= 0),
-  IsActive     BIT NOT NULL DEFAULT 1
+  IsActive     BIT NOT NULL DEFAULT 1,
+  -- M-14: human mentors are people (UserId set), AI mentors are not
+  CONSTRAINT CK_Mentor_TypeUserId CHECK ((Type='human' AND UserId IS NOT NULL) OR (Type='ai' AND UserId IS NULL)),
+  -- M-14: a mentor's SkillId (if any) must belong to the mentor's own CertId
+  CONSTRAINT FK_Mentor_SkillCert FOREIGN KEY (SkillId, CertId) REFERENCES Skills(SkillId, CertId),
+  -- composite target so Bookings can carry MentorType down (M-14 / PartC-1):
+  CONSTRAINT UQ_MentorProfiles_Id_Type UNIQUE (MentorId, Type)
 );
 GO
 CREATE TABLE MentorSlots (
@@ -426,7 +432,9 @@ CREATE TABLE MentorSlots (
   EndAt    DATETIMEOFFSET NOT NULL,
   Status   VARCHAR(6) NOT NULL DEFAULT 'open'
     CONSTRAINT CK_Slots_Status CHECK (Status IN ('open','booked','closed')),
-  CONSTRAINT CK_Slots_Range CHECK (EndAt > StartAt)
+  CONSTRAINT CK_Slots_Range CHECK (EndAt > StartAt),
+  -- PartC-1: composite target so Bookings.SlotId must agree with the slot's owning mentor
+  CONSTRAINT UQ_MentorSlots_Id_Mentor UNIQUE (SlotId, MentorId)
 );
 GO
 CREATE TABLE Bookings (
@@ -434,13 +442,23 @@ CREATE TABLE Bookings (
   UserId    INT NOT NULL REFERENCES Users(UserId),
   MentorId  INT NOT NULL REFERENCES MentorProfiles(MentorId),
   SlotId    INT NULL REFERENCES MentorSlots(SlotId),   -- NULL for AI
+  MentorType VARCHAR(6) NOT NULL
+    CONSTRAINT CK_Bookings_MentorType CHECK (MentorType IN ('human','ai')),
   Status    VARCHAR(10) NOT NULL DEFAULT 'pending'
     CONSTRAINT CK_Bookings_Status CHECK (Status IN ('pending','confirmed','done','cancelled')),
   MeetLink  NVARCHAR(400) NULL,
   CreatedAt DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
   -- composite target so CreditTransactions can prove the charged user owns the booking (H-1).
   -- Batch 2 (PartC-3) also needs this constraint; reused there, not recreated.
-  CONSTRAINT UQ_Bookings_Id_User UNIQUE (BookingId, UserId)
+  CONSTRAINT UQ_Bookings_Id_User UNIQUE (BookingId, UserId),
+  -- PartC-2: composite target so a payout item must agree with the booking's mentor
+  CONSTRAINT UQ_Bookings_Id_Mentor UNIQUE (BookingId, MentorId),
+  -- PartC-1: SlotId must belong to the same mentor as MentorId (NULL SlotId stays legal, MATCH SIMPLE)
+  CONSTRAINT FK_Bookings_SlotMentor FOREIGN KEY (SlotId, MentorId) REFERENCES MentorSlots(SlotId, MentorId),
+  -- M-14: MentorType must be the mentor's actual Type
+  CONSTRAINT FK_Bookings_MentorType FOREIGN KEY (MentorId, MentorType) REFERENCES MentorProfiles(MentorId, Type),
+  -- M-14: only human mentors need a scheduled slot; AI books without one
+  CONSTRAINT CK_Bookings_MentorTypeSlot CHECK ((MentorType='human' AND SlotId IS NOT NULL) OR (MentorType='ai' AND SlotId IS NULL))
 );
 GO
 -- Review Focus #5: one live booking per slot (cancelled frees it)
@@ -449,17 +467,19 @@ CREATE UNIQUE INDEX UX_Bookings_OnePerSlot
 GO
 CREATE TABLE Reviews (
   ReviewId  INT IDENTITY(1,1) PRIMARY KEY,
-  BookingId INT NOT NULL REFERENCES Bookings(BookingId),
+  BookingId INT NOT NULL,
   UserId    INT NOT NULL REFERENCES Users(UserId),
   Rating    INT NOT NULL CONSTRAINT CK_Reviews_Rating CHECK (Rating BETWEEN 1 AND 5),
   Text      NVARCHAR(MAX) NULL,
   CreatedAt DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
-  CONSTRAINT UQ_Reviews_OnePerBooking UNIQUE (BookingId)
+  CONSTRAINT UQ_Reviews_OnePerBooking UNIQUE (BookingId),
+  -- PartC-3: a review must be written by the user who made the booking
+  CONSTRAINT FK_Reviews_BookingUser FOREIGN KEY (BookingId, UserId) REFERENCES Bookings(BookingId, UserId)
 );
 GO
 CREATE TABLE Complaints (
   ComplaintId          INT IDENTITY(1,1) PRIMARY KEY,
-  BookingId            INT NOT NULL REFERENCES Bookings(BookingId),
+  BookingId            INT NOT NULL,
   UserId               INT NOT NULL REFERENCES Users(UserId),
   Reason               NVARCHAR(MAX) NOT NULL,
   Status               VARCHAR(10) NOT NULL DEFAULT 'open'
@@ -468,7 +488,9 @@ CREATE TABLE Complaints (
   ResolvedByGrantTxnId INT NULL,      -- FK added in Task 10; composite FK to CreditTransactions(TxnId,UserId) added in Batch 1
   CreatedAt            DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
   -- M-16: a make-good grant can only be recorded once the complaint is resolved
-  CONSTRAINT CK_Complaints_GrantRequiresResolved CHECK (ResolvedByGrantTxnId IS NULL OR Status='resolved')
+  CONSTRAINT CK_Complaints_GrantRequiresResolved CHECK (ResolvedByGrantTxnId IS NULL OR Status='resolved'),
+  -- PartC-4: a complaint must be filed by the user who made the booking
+  CONSTRAINT FK_Complaints_BookingUser FOREIGN KEY (BookingId, UserId) REFERENCES Bookings(BookingId, UserId)
 );
 GO
 CREATE TABLE MentorPayouts (
@@ -476,20 +498,70 @@ CREATE TABLE MentorPayouts (
   MentorId     INT NOT NULL REFERENCES MentorProfiles(MentorId),
   PeriodStart  DATETIMEOFFSET NOT NULL,
   PeriodEnd    DATETIMEOFFSET NOT NULL,
-  BookingCount INT NOT NULL DEFAULT 0,
-  GrossAmount  DECIMAL(12,2) NOT NULL DEFAULT 0,
+  -- M-17: BookingCount/GrossAmount removed (stored aggregates drift) — see vw_MentorPayoutTotals
   Status       VARCHAR(7) NOT NULL DEFAULT 'pending'
     CONSTRAINT CK_Payouts_Status CHECK (Status IN ('pending','paid')),
   PaidAt       DATETIMEOFFSET NULL,
-  CONSTRAINT CK_Payouts_Range CHECK (PeriodEnd > PeriodStart)
+  CONSTRAINT CK_Payouts_Range CHECK (PeriodEnd > PeriodStart),
+  -- PartC-2: composite target so a payout item must agree with the payout's mentor
+  CONSTRAINT UQ_MentorPayouts_Id_Mentor UNIQUE (PayoutId, MentorId)
 );
 GO
 CREATE TABLE MentorPayoutItems (
-  PayoutId  INT NOT NULL REFERENCES MentorPayouts(PayoutId),
-  BookingId INT NOT NULL REFERENCES Bookings(BookingId),
+  PayoutId  INT NOT NULL,
+  BookingId INT NOT NULL,
+  MentorId  INT NOT NULL,
   CONSTRAINT PK_PayoutItems PRIMARY KEY (PayoutId, BookingId),
-  CONSTRAINT UQ_PayoutItems_Booking UNIQUE (BookingId)   -- a booking settles once
+  CONSTRAINT UQ_PayoutItems_Booking UNIQUE (BookingId),   -- a booking settles once
+  -- PartC-2: the booking's mentor and the payout's mentor must agree
+  CONSTRAINT FK_PayoutItems_BookingMentor FOREIGN KEY (BookingId, MentorId) REFERENCES Bookings(BookingId, MentorId),
+  CONSTRAINT FK_PayoutItems_PayoutMentor  FOREIGN KEY (PayoutId, MentorId)  REFERENCES MentorPayouts(PayoutId, MentorId)
 );
+GO
+-- M-15: reject bookings placed on a closed slot, and keep MentorSlots.Status in sync
+-- with live (non-cancelled) bookings. Booking-side filtered unique index is the double-book
+-- guard (kept as the accepted deviation from the spec's slot-side wording); this trigger only
+-- closes the remaining `closed`-slot hole and makes Status non-decorative.
+CREATE TRIGGER trg_Bookings_SlotStatusGuardAndSync
+ON Bookings AFTER INSERT, UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+  IF EXISTS (
+    SELECT 1 FROM inserted i
+    JOIN MentorSlots ms ON ms.SlotId = i.SlotId
+    WHERE i.SlotId IS NOT NULL AND i.Status <> 'cancelled' AND ms.Status = 'closed'
+  )
+    THROW 50024, 'Booking cannot be placed on a closed slot.', 1;
+
+  ;WITH affected AS (
+    SELECT SlotId FROM inserted WHERE SlotId IS NOT NULL
+    UNION SELECT SlotId FROM deleted WHERE SlotId IS NOT NULL
+  )
+  UPDATE ms
+    SET Status = CASE WHEN EXISTS (
+        SELECT 1 FROM Bookings b WHERE b.SlotId = ms.SlotId AND b.Status <> 'cancelled'
+      ) THEN 'booked' ELSE 'open' END
+  FROM MentorSlots ms
+  JOIN affected a ON a.SlotId = ms.SlotId
+  WHERE ms.Status <> 'closed';
+END;
+GO
+-- M-13: spec-mandated mentor rating aggregate (never stored, always derived)
+CREATE VIEW vw_MentorAvgRating AS
+  SELECT b.MentorId, AVG(CAST(r.Rating AS DECIMAL(3,2))) AS AvgRating, COUNT(*) AS ReviewCount
+  FROM Reviews r JOIN Bookings b ON b.BookingId = r.BookingId
+  GROUP BY b.MentorId;
+GO
+-- M-17: replaces the dropped MentorPayouts.BookingCount/GrossAmount stored counters
+CREATE VIEW vw_MentorPayoutTotals AS
+  SELECT mp.PayoutId, mp.MentorId,
+         COUNT(*) AS BookingCount,
+         SUM(m.PricePerSlot) AS GrossAmount
+  FROM MentorPayoutItems mpi
+  JOIN MentorPayouts mp ON mp.PayoutId = mpi.PayoutId
+  JOIN Bookings b ON b.BookingId = mpi.BookingId
+  JOIN MentorProfiles m ON m.MentorId = b.MentorId
+  GROUP BY mp.PayoutId, mp.MentorId;
 GO
 
 -- ============ Domain 5: Payment ============
