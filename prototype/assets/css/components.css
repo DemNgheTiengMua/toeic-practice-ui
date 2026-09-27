@@ -933,3 +933,62 @@
      that already fit: a flex line only breaks when it has to. */
   .row { flex-wrap: wrap; }
 }
+
+/* ===== Certificate Picker ===== */
+.certificate-picker {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-4, 16px);
+}
+
+.certificate-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2, 8px);
+  padding: var(--space-4, 16px);
+  border: 2px solid var(--color-keyline, #c9ced6);
+  background: var(--color-surface, #ffffff);
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.certificate-card:hover {
+  border-color: var(--sign-blue, #0b4ea2);
+  background: var(--sign-blue, #0b4ea2);
+  color: var(--on-ink, #ffffff);
+}
+
+.certificate-card__name {
+  font-family: var(--font-sign, "IBM Plex Sans Condensed", sans-serif);
+  font-size: var(--text-base, 16px);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+}
+
+.certificate-card__skills {
+  font-size: var(--text-sm, 14px);
+  color: var(--color-text-muted, #5c6570);
+}
+
+.certificate-card:hover .certificate-card__skills {
+  color: var(--on-ink-muted, #8f98a3);
+}
+
+/* === Active Certificate Display === */
+.active-certificate {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3, 12px);
+  flex-wrap: wrap;
+}
+
+.active-certificate__name {
+  font-family: var(--font-sign, "IBM Plex Sans Condensed", sans-serif);
+  font-size: var(--text-lg, 18px);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-sign, .055em);
+  color: var(--sign-blue, #0b4ea2);
+}
+}
