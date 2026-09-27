@@ -55,6 +55,16 @@
             <div class="card__header"><strong>Test information</strong></div>
             <div class="card__body stack">
               <div class="field">
+                <label class="field__label" for="e-certificate">Certificate</label>
+                <select class="field__input" id="e-certificate" required>
+                  <option value="">Select a certificate</option>
+                  <option value="toeic" selected>TOEIC</option>
+                  <option value="ielts">IELTS</option>
+                  <option value="vstep">VSTEP</option>
+                </select>
+                <span class="field__hint">Skills and sections will load based on your selection</span>
+              </div>
+              <div class="field">
                 <label class="field__label" for="e-name">Test name</label>
                 <input class="field__input" id="e-name" value="ETS 2024 — Test 4">
                 <span class="field__hint">The name shown to students in the test list.</span>
