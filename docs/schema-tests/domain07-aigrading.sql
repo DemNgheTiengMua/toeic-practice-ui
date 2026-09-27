@@ -41,14 +41,14 @@ END CATCH
 INSERT INTO AiGradings (FreeResponseId,SkillId,Status) VALUES (@fr2,@sk,'pending');
 DECLARE @grading INT=(SELECT GradingId FROM AiGradings WHERE FreeResponseId=@fr2);
 BEGIN TRY
-  INSERT INTO AiGradingScores (GradingId,CriterionId,Score) VALUES (@grading,@crit,999);
+  INSERT INTO AiGradingScores (GradingId,CriterionId,SkillId,Score) VALUES (@grading,@crit,@sk,999);
   THROW 50000,'EXPECT_REJECT FAILED: score above MaxScore accepted',1;
 END TRY BEGIN CATCH
   IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
   PRINT 'rejected out-of-range rubric score as expected';
 END CATCH
 -- valid: score within MaxScore
-INSERT INTO AiGradingScores (GradingId,CriterionId,Score) VALUES (@grading,@crit,7);
+INSERT INTO AiGradingScores (GradingId,CriterionId,SkillId,Score) VALUES (@grading,@crit,@sk,7);
 PRINT 'valid rubric score accepted';
 -- M-6: attempt cannot reach graded while a free response is still pending_ai
 INSERT INTO Users (RoleId,Email,PasswordHash) VALUES (@role0,'m6@x.com',0x00); DECLARE @usr INT=SCOPE_IDENTITY();
@@ -78,3 +78,43 @@ IF NOT EXISTS (SELECT 1 FROM FreeResponses WHERE FreeResponseId=@frm6 AND Status
   THROW 50000,'EXPECT_REJECT FAILED: FreeResponses.Status did not flip to graded',1;
 UPDATE ExamAttempts SET Status='graded' WHERE AttemptId=@am6;
 PRINT 'attempt reaches graded once free response is graded, as expected';
+-- M-3: reject a GradingCriteria row whose skill belongs to a different certificate
+INSERT INTO Certificates (Code,Name,IsActive) VALUES ('TOEIC',N'T',1); DECLARE @c2 INT=SCOPE_IDENTITY();
+INSERT INTO Skills (CertId,Code,Name,Modality,DisplayOrder) VALUES (@c2,'R',N'R','reading',1); DECLARE @sk2 INT=SCOPE_IDENTITY();
+BEGIN TRY
+  INSERT INTO GradingCriteria (CertId,SkillId,Code,Name,MaxScore,Weight,DisplayOrder)
+    VALUES (@c,@sk2,'XCERT',N'Cross-cert',9,1.0,2);
+  THROW 50000,'EXPECT_REJECT FAILED: cross-cert GradingCriteria accepted',1;
+END TRY BEGIN CATCH
+  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
+  PRINT 'rejected cross-cert GradingCriteria as expected';
+END CATCH
+-- M-3: reject an AiGradingScores row whose criterion's skill differs from the grading's own skill
+INSERT INTO GradingCriteria (CertId,SkillId,Code,Name,MaxScore,Weight,DisplayOrder)
+  VALUES (@c2,@sk2,'OTH',N'Other',9,1.0,1); DECLARE @critOther INT=SCOPE_IDENTITY();
+BEGIN TRY
+  INSERT INTO AiGradingScores (GradingId,CriterionId,SkillId,Score) VALUES (@grading,@critOther,@sk,5);
+  THROW 50000,'EXPECT_REJECT FAILED: criterion from mismatched skill accepted',1;
+END TRY BEGIN CATCH
+  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
+  PRINT 'rejected criterion from mismatched skill as expected';
+END CATCH
+-- M-12: reject a Recommendation with a TargetBandCode not in ScoreBands for its cert
+INSERT INTO ScoreBands (CertId,Code,Name,MinTotal,MaxTotal,DisplayOrder) VALUES (@c,'A1',N'A1',1,100,1);
+BEGIN TRY
+  INSERT INTO Recommendations (UserId,CertId,SkillId,Text,Severity,TargetBandCode)
+    VALUES (@usr0,@c,@sk,N'reco',N'info','NOT_A_BAND');
+  THROW 50000,'EXPECT_REJECT FAILED: unknown TargetBandCode accepted',1;
+END TRY BEGIN CATCH
+  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
+  PRINT 'rejected unknown TargetBandCode as expected';
+END CATCH
+-- M-12: reject a Recommendation whose SkillId belongs to a different certificate
+BEGIN TRY
+  INSERT INTO Recommendations (UserId,CertId,SkillId,Text,Severity,TargetBandCode)
+    VALUES (@usr0,@c,@sk2,N'reco2',N'info',NULL);
+  THROW 50000,'EXPECT_REJECT FAILED: cross-cert SkillId in Recommendations accepted',1;
+END TRY BEGIN CATCH
+  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
+  PRINT 'rejected cross-cert SkillId in Recommendations as expected';
+END CATCH

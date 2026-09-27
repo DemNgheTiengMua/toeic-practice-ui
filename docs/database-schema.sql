@@ -93,13 +93,35 @@ CREATE TABLE ScoreBands (
   CONSTRAINT UQ_ScoreBands_Cert_Code UNIQUE (CertId, Code)
 );
 GO
+-- M-10: no two bands within the same certificate may have overlapping [MinTotal,MaxTotal] ranges
+-- (a CHECK can't compare across rows/tables, so this is a trigger).
+CREATE TRIGGER trg_ScoreBands_NoOverlap
+ON ScoreBands AFTER INSERT, UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+  IF EXISTS (
+    SELECT 1
+    FROM inserted i
+    JOIN ScoreBands b
+      ON b.CertId = i.CertId
+     AND b.BandId <> i.BandId
+     AND i.MinTotal <= b.MaxTotal
+     AND i.MaxTotal >= b.MinTotal
+  )
+    THROW 50027, 'ScoreBands ranges may not overlap within a certificate.', 1;
+END;
+GO
 CREATE TABLE ScoreScales (
   ScaleId     INT IDENTITY(1,1) PRIMARY KEY,
   CertId      INT NOT NULL REFERENCES Certificates(CertId),
-  SkillId     INT NULL REFERENCES Skills(SkillId),   -- NULL = total
-  ExamId      INT NULL,                              -- NULL = default; FK added in Task 4
+  SkillId     INT NULL,   -- NULL = total
+  ExamId      INT NULL,   -- NULL = default; FK added below
   RawScore    INT NOT NULL,
-  ScaledScore INT NOT NULL
+  ScaledScore INT NOT NULL,
+  -- M-11: a (cert, skill, exam, raw score) mapping must be unambiguous
+  CONSTRAINT UQ_ScoreScales_Cert_Skill_Exam_Raw UNIQUE (CertId, SkillId, ExamId, RawScore),
+  -- M-11: the skill must belong to this same certificate (NULL stays legal, MATCH SIMPLE)
+  CONSTRAINT FK_ScoreScales_SkillCert FOREIGN KEY (SkillId, CertId) REFERENCES Skills(SkillId, CertId)
 );
 GO
 -- ============ Domain 3: Content ============
@@ -117,7 +139,8 @@ CREATE TABLE Exams (
 );
 GO
 -- now that Exams exists, pin ScoreScales.ExamId
-ALTER TABLE ScoreScales ADD CONSTRAINT FK_ScoreScales_Exam FOREIGN KEY (ExamId) REFERENCES Exams(ExamId);
+-- M-11: composite FK so the exam must belong to the same certificate (replaces the single-column FK)
+ALTER TABLE ScoreScales ADD CONSTRAINT FK_ScoreScales_Exam FOREIGN KEY (ExamId, CertId) REFERENCES Exams(ExamId, CertId);
 GO
 CREATE TABLE QuestionGroups (
   GroupId      INT IDENTITY(1,1) PRIMARY KEY,
@@ -370,13 +393,17 @@ GO
 CREATE TABLE GradingCriteria (
   CriterionId  INT IDENTITY(1,1) PRIMARY KEY,
   CertId       INT NOT NULL REFERENCES Certificates(CertId),
-  SkillId      INT NOT NULL REFERENCES Skills(SkillId),
+  SkillId      INT NOT NULL,
   Code         VARCHAR(20) NOT NULL,
   Name         NVARCHAR(120) NOT NULL,
   MaxScore     DECIMAL(5,2) NOT NULL,
   Weight       DECIMAL(5,2) NOT NULL DEFAULT 1.0,
   DisplayOrder INT NOT NULL DEFAULT 0,
-  CONSTRAINT UQ_Criteria_Skill_Code UNIQUE (SkillId, Code)
+  CONSTRAINT UQ_Criteria_Skill_Code UNIQUE (SkillId, Code),
+  -- M-3: the criterion's skill must belong to the criterion's own certificate
+  CONSTRAINT FK_GradingCriteria_SkillCert FOREIGN KEY (SkillId, CertId) REFERENCES Skills(SkillId, CertId),
+  -- composite target so AiGradingScores can carry SkillId down from its criterion
+  CONSTRAINT UQ_GradingCriteria_Id_Skill UNIQUE (CriterionId, SkillId)
 );
 GO
 CREATE TABLE AiGradings (
@@ -390,7 +417,9 @@ CREATE TABLE AiGradings (
   Model          NVARCHAR(80) NULL,
   RequestedAt    DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
   CompletedAt    DATETIMEOFFSET NULL,
-  CONSTRAINT UQ_AiGradings_FreeResponse UNIQUE (FreeResponseId)
+  CONSTRAINT UQ_AiGradings_FreeResponse UNIQUE (FreeResponseId),
+  -- composite target so AiGradingScores can require the criterion's skill = the grading's own skill
+  CONSTRAINT UQ_AiGradings_Id_Skill UNIQUE (GradingId, SkillId)
 );
 GO
 -- M-6: flip FreeResponses.Status to 'graded' once its AiGradings.Status reaches 'done'
@@ -406,11 +435,17 @@ BEGIN
 END;
 GO
 CREATE TABLE AiGradingScores (
-  GradingId   INT NOT NULL REFERENCES AiGradings(GradingId),
-  CriterionId INT NOT NULL REFERENCES GradingCriteria(CriterionId),
+  GradingId   INT NOT NULL,
+  CriterionId INT NOT NULL,
+  -- M-3: carried down from the grading so the criterion's own skill must match
+  SkillId     INT NOT NULL,
   Score       DECIMAL(5,2) NOT NULL,
   Comment     NVARCHAR(MAX) NULL,
-  CONSTRAINT PK_AiGradingScores PRIMARY KEY (GradingId, CriterionId)
+  CONSTRAINT PK_AiGradingScores PRIMARY KEY (GradingId, CriterionId),
+  -- M-3: SkillId must be the grading's own
+  CONSTRAINT FK_AGS_GradingSkill FOREIGN KEY (GradingId, SkillId) REFERENCES AiGradings(GradingId, SkillId),
+  -- M-3: the criterion's own skill must be that same skill (pins skill AND cert transitively)
+  CONSTRAINT FK_AGS_CriterionSkill FOREIGN KEY (CriterionId, SkillId) REFERENCES GradingCriteria(CriterionId, SkillId)
 );
 GO
 -- M-9: a rubric score cannot exceed its criterion's MaxScore (a CHECK can't reach another table)
@@ -432,13 +467,17 @@ CREATE TABLE Recommendations (
   UserId         INT NOT NULL REFERENCES Users(UserId),
   CertId         INT NOT NULL REFERENCES Certificates(CertId),
   GradingId      INT NULL REFERENCES AiGradings(GradingId),   -- NULL = aggregate
-  SkillId        INT NULL REFERENCES Skills(SkillId),
+  SkillId        INT NULL,
   Text           NVARCHAR(MAX) NOT NULL,
   Severity       VARCHAR(8) NOT NULL DEFAULT 'info'
     CONSTRAINT CK_Reco_Severity CHECK (Severity IN ('info','minor','major')),
   TargetBandCode VARCHAR(20) NULL,
   IsResolved     BIT NOT NULL DEFAULT 0,
-  CreatedAt      DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET()
+  CreatedAt      DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
+  -- M-12: the skill must belong to this same certificate (NULL stays legal, MATCH SIMPLE)
+  CONSTRAINT FK_Reco_SkillCert FOREIGN KEY (SkillId, CertId) REFERENCES Skills(SkillId, CertId),
+  -- M-12: the target band must be a real band of this same certificate (NULL stays legal, MATCH SIMPLE)
+  CONSTRAINT FK_Reco_TargetBand FOREIGN KEY (CertId, TargetBandCode) REFERENCES ScoreBands(CertId, Code)
 );
 GO
 -- ============ Domain 9: LearningPath ============
@@ -446,11 +485,13 @@ CREATE TABLE PlacementTests (
   PlacementId    INT IDENTITY(1,1) PRIMARY KEY,
   UserId         INT NOT NULL REFERENCES Users(UserId),
   CertId         INT NOT NULL REFERENCES Certificates(CertId),
-  ExamId         INT NULL REFERENCES Exams(ExamId),
+  ExamId         INT NULL,
   Status         VARCHAR(12) NOT NULL DEFAULT 'in_progress'
     CONSTRAINT CK_Placement_Status CHECK (Status IN ('in_progress','done','abandoned')),
   ResultBandCode VARCHAR(20) NULL,        -- snapshot
-  TakenAt        DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET()
+  TakenAt        DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
+  -- M-2: the placement exam must belong to the same certificate (NULL stays legal, MATCH SIMPLE)
+  CONSTRAINT FK_Placement_ExamCert FOREIGN KEY (ExamId, CertId) REFERENCES Exams(ExamId, CertId)
 );
 GO
 CREATE TABLE TargetBands (
@@ -469,24 +510,40 @@ CREATE TABLE PathTemplates (
   ToBandCode   VARCHAR(20) NOT NULL,
   Name         NVARCHAR(120) NOT NULL,
   CONSTRAINT FK_PathTpl_FromBand FOREIGN KEY (CertId, FromBandCode) REFERENCES ScoreBands(CertId, Code),
-  CONSTRAINT FK_PathTpl_ToBand   FOREIGN KEY (CertId, ToBandCode)   REFERENCES ScoreBands(CertId, Code)
+  CONSTRAINT FK_PathTpl_ToBand   FOREIGN KEY (CertId, ToBandCode)   REFERENCES ScoreBands(CertId, Code),
+  -- M-1: composite target so LearnerPaths can pin CertId to the template's own certificate
+  CONSTRAINT UQ_PathTemplates_Id_Cert UNIQUE (TemplateId, CertId)
 );
 GO
 CREATE TABLE PathModules (
   ModuleId     INT IDENTITY(1,1) PRIMARY KEY,
-  TemplateId   INT NOT NULL REFERENCES PathTemplates(TemplateId),
-  SkillId      INT NOT NULL REFERENCES Skills(SkillId),
+  TemplateId   INT NOT NULL,
+  SkillId      INT NOT NULL,
+  -- M-1: carried down from the owning template so the skill must belong to the same certificate
+  CertId       INT NOT NULL,
   DisplayOrder INT NOT NULL DEFAULT 0,
-  Title        NVARCHAR(120) NOT NULL
+  Title        NVARCHAR(120) NOT NULL,
+  -- M-1: CertId must be the template's own
+  CONSTRAINT FK_PathModules_TemplateCert FOREIGN KEY (TemplateId, CertId) REFERENCES PathTemplates(TemplateId, CertId),
+  -- M-1: the skill must belong to that same certificate
+  CONSTRAINT FK_PathModules_SkillCert FOREIGN KEY (SkillId, CertId) REFERENCES Skills(SkillId, CertId),
+  -- composite target so PathModuleItems can carry CertId down from its module
+  CONSTRAINT UQ_PathModules_Id_Cert UNIQUE (ModuleId, CertId),
+  -- M-1: composite target so PathModuleItems/LearnerPathSteps can carry TemplateId down from this module
+  CONSTRAINT UQ_PathModules_Id_Template UNIQUE (ModuleId, TemplateId)
 );
 GO
 CREATE TABLE PathModuleItems (
   ItemId          INT IDENTITY(1,1) PRIMARY KEY,
-  ModuleId        INT NOT NULL REFERENCES PathModules(ModuleId),
+  ModuleId        INT NOT NULL,
+  -- M-1: carried down from the owning module so refs must belong to the same certificate
+  CertId          INT NOT NULL,
+  -- M-1: carried down from the owning module so LearnerPathSteps can pin the item to its own template
+  TemplateId      INT NOT NULL,
   ItemType        VARCHAR(16) NOT NULL
     CONSTRAINT CK_PMI_Type CHECK (ItemType IN ('practice_section','mock_exam','ai_task','mentor')),
-  RefSectionId    INT NULL REFERENCES Sections(SectionId),
-  RefExamId       INT NULL REFERENCES Exams(ExamId),
+  RefSectionId    INT NULL,
+  RefExamId       INT NULL,
   DifficultyLevel INT NULL CONSTRAINT CK_PMI_Difficulty CHECK (DifficultyLevel IS NULL OR DifficultyLevel BETWEEN 1 AND 5),
   DisplayOrder    INT NOT NULL DEFAULT 0,
   -- Review Focus #3: the ref column must match ItemType
@@ -494,21 +551,34 @@ CREATE TABLE PathModuleItems (
        (ItemType='practice_section' AND RefSectionId IS NOT NULL AND RefExamId IS NULL)
     OR (ItemType='mock_exam'        AND RefExamId    IS NOT NULL AND RefSectionId IS NULL)
     OR (ItemType IN ('ai_task','mentor') AND RefSectionId IS NULL AND RefExamId IS NULL)
-  )
+  ),
+  -- M-1: CertId must be the module's own
+  CONSTRAINT FK_PMI_ModuleCert FOREIGN KEY (ModuleId, CertId) REFERENCES PathModules(ModuleId, CertId),
+  -- M-1: TemplateId must be the module's own
+  CONSTRAINT FK_PMI_ModuleTemplate FOREIGN KEY (ModuleId, TemplateId) REFERENCES PathModules(ModuleId, TemplateId),
+  -- M-1: a practice_section ref must be a section from that same certificate (NULL stays legal, MATCH SIMPLE)
+  CONSTRAINT FK_PMI_SectionCert FOREIGN KEY (RefSectionId, CertId) REFERENCES Sections(SectionId, CertId),
+  -- M-1: a mock_exam ref must be an exam from that same certificate (NULL stays legal, MATCH SIMPLE)
+  CONSTRAINT FK_PMI_ExamCert FOREIGN KEY (RefExamId, CertId) REFERENCES Exams(ExamId, CertId),
+  -- M-1: composite target so LearnerPathSteps can pin the item to its own template
+  CONSTRAINT UQ_PMI_Id_Template UNIQUE (ItemId, TemplateId)
 );
 GO
 CREATE TABLE LearnerPaths (
   LearnerPathId   INT IDENTITY(1,1) PRIMARY KEY,
   UserId          INT NOT NULL REFERENCES Users(UserId),
   CertId          INT NOT NULL REFERENCES Certificates(CertId),
-  TemplateId      INT NOT NULL REFERENCES PathTemplates(TemplateId),
+  TemplateId      INT NOT NULL,
   CurrentBandCode VARCHAR(20) NULL,
   Status          VARCHAR(10) NOT NULL DEFAULT 'active'
     CONSTRAINT CK_LearnerPaths_Status CHECK (Status IN ('active','completed','reset')),
-  IsPremium       BIT NOT NULL DEFAULT 0,
   StartedAt       DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
+  -- M-1: TemplateId's own CertId must equal the path's own (pins the carried-down value)
+  CONSTRAINT FK_LearnerPaths_TemplateCert FOREIGN KEY (TemplateId, CertId) REFERENCES PathTemplates(TemplateId, CertId),
   -- composite target so CreditTransactions can prove the charged user owns the path (H-1):
-  CONSTRAINT UQ_LearnerPaths_Id_User UNIQUE (LearnerPathId, UserId)
+  CONSTRAINT UQ_LearnerPaths_Id_User UNIQUE (LearnerPathId, UserId),
+  -- M-1: composite target so LearnerPathSteps can require the item's module belong to the same template
+  CONSTRAINT UQ_LearnerPaths_Id_Template UNIQUE (LearnerPathId, TemplateId)
 );
 GO
 -- Review Focus #5: at most one active path per (UserId,CertId)
@@ -517,12 +587,18 @@ CREATE UNIQUE INDEX UX_LearnerPaths_OneActive
 GO
 CREATE TABLE LearnerPathSteps (
   StepId          INT IDENTITY(1,1) PRIMARY KEY,
-  LearnerPathId   INT NOT NULL REFERENCES LearnerPaths(LearnerPathId),
-  PathModuleItemId INT NOT NULL REFERENCES PathModuleItems(ItemId),
+  LearnerPathId   INT NOT NULL,
+  PathModuleItemId INT NOT NULL,
+  -- M-1: carried down from the owning path so the item's own template must match the path's template
+  TemplateId      INT NOT NULL,
   Status          VARCHAR(10) NOT NULL DEFAULT 'locked'
     CONSTRAINT CK_Steps_Status CHECK (Status IN ('locked','available','done')),
   Score           DECIMAL(6,2) NULL,
-  CompletedAt     DATETIMEOFFSET NULL
+  CompletedAt     DATETIMEOFFSET NULL,
+  -- M-1: TemplateId must be the learner path's own
+  CONSTRAINT FK_Steps_PathTemplate FOREIGN KEY (LearnerPathId, TemplateId) REFERENCES LearnerPaths(LearnerPathId, TemplateId),
+  -- M-1: the module item must belong to that same template
+  CONSTRAINT FK_Steps_ItemTemplate FOREIGN KEY (PathModuleItemId, TemplateId) REFERENCES PathModuleItems(ItemId, TemplateId)
 );
 GO
 -- ============ Domain 10: Mentor ============
@@ -750,6 +826,15 @@ GO
 CREATE VIEW vw_UserCreditBalance AS
   SELECT UserId, SUM(Delta) AS Balance
   FROM CreditTransactions GROUP BY UserId;
+GO
+-- Low: IsPremium is derived from a 'premium_path' ledger charge, never a free-standing flag.
+CREATE VIEW vw_LearnerPathIsPremium AS
+  SELECT lp.LearnerPathId,
+         CAST(CASE WHEN EXISTS (
+           SELECT 1 FROM CreditTransactions t
+           WHERE t.LearnerPathId = lp.LearnerPathId AND t.Reason = 'premium_path'
+         ) THEN 1 ELSE 0 END AS BIT) AS IsPremium
+  FROM LearnerPaths lp;
 GO
 -- Review Focus #4 / C-1: no debit may drive the running balance below zero.
 -- Must also cover DELETE so a removed credit row can't leave a wallet negative unnoticed.
