@@ -114,3 +114,19 @@ INSERT INTO Reviews (BookingId,UserId,Rating,Text)
 DECLARE @avg DECIMAL(3,2) = (SELECT AvgRating FROM vw_MentorAvgRating WHERE MentorId=@m);
 IF @avg IS NULL THROW 50000,'vw_MentorAvgRating returned no row for mentor',1;
 PRINT 'vw_MentorAvgRating returned expected average: ' + CAST(@avg AS VARCHAR(10));
+
+-- ===== re-review residual (R6): a DELETED booking must free its slot =====
+-- The sync trigger was INSERT,UPDATE only, so deleting a booking left the slot 'booked' forever
+-- and that time could never be offered again.
+INSERT INTO MentorSlots (MentorId,StartAt,EndAt)
+  VALUES (@m,'2026-12-01T10:00:00+07:00','2026-12-01T11:00:00+07:00');
+DECLARE @slotDel INT=SCOPE_IDENTITY();
+INSERT INTO Bookings (UserId,MentorId,SlotId,MentorType,Status)
+  VALUES (@u,@m,@slotDel,'human','confirmed');
+DECLARE @bkDel INT=SCOPE_IDENTITY();
+IF (SELECT Status FROM MentorSlots WHERE SlotId=@slotDel) <> 'booked'
+  THROW 50000,'setup: slot did not sync to booked',1;
+DELETE FROM Bookings WHERE BookingId=@bkDel;
+IF (SELECT Status FROM MentorSlots WHERE SlotId=@slotDel) <> 'open'
+  THROW 50000,'EXPECT FAILED: deleting a booking left the slot booked',1;
+PRINT 'slot freed after booking delete as expected';

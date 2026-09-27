@@ -135,3 +135,60 @@ END TRY BEGIN CATCH
   IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
   PRINT 'rejected cross-cert SkillId in Recommendations as expected';
 END CATCH
+
+-- ===== re-review residuals: grading-lifecycle invariants must hold from BOTH sides =====
+-- reject (R4): a pending_ai free response inserted into an already-'graded' attempt.
+-- The attempt-side guard alone missed this, so the attempt stayed graded with ungraded work in it.
+INSERT INTO ExamAttempts (UserId,ExamId,CertId,Status,ExpiresAt) VALUES (@usr0,@exam0,@c,'in_progress',SYSDATETIMEOFFSET());
+DECLARE @aGraded INT=SCOPE_IDENTITY();
+UPDATE ExamAttempts SET Status='graded' WHERE AttemptId=@aGraded;   -- legal: it has no free responses yet
+INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,DifficultyLevel,QuestionType,DisplayOrder)
+  VALUES (@grp0,@exam0,@sec0,@sk,N'fr-late',3,'free_response',9);
+DECLARE @qLate INT=SCOPE_IDENTITY();
+BEGIN TRY
+  INSERT INTO FreeResponses (AttemptId,QuestionId,ExamId,SkillId,QuestionType,ResponseText)
+    VALUES (@aGraded,@qLate,@exam0,@sk,'free_response',N'late');
+  THROW 50000,'EXPECT_REJECT FAILED: pending free response added to a graded attempt',1;
+END TRY BEGIN CATCH
+  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
+  PRINT 'rejected pending free response into a graded attempt as expected';
+END CATCH
+
+-- accept: a graded attempt can still be reopened for correction (guard must not over-freeze)
+UPDATE ExamAttempts SET Status='submitted' WHERE AttemptId=@aGraded;
+PRINT 'accepted reopening a graded attempt to submitted';
+
+-- reject (R7): lowering a criterion's MaxScore below a score already recorded against it
+-- (otherwise the rubric ceiling is editable instead of the score, and OverallScaled unbounds again)
+INSERT INTO GradingCriteria (CertId,SkillId,Code,Name,MaxScore,Weight,DisplayOrder)
+  VALUES (@c,@sk,'R7C',N'R7 Criterion',9,1.0,7);
+DECLARE @crR7 INT=SCOPE_IDENTITY();
+INSERT INTO FreeResponses (AttemptId,QuestionId,ExamId,SkillId,QuestionType,ResponseText)
+  VALUES (@aGraded,@qLate,@exam0,@sk,'free_response',N'r7');
+DECLARE @frR7 INT=SCOPE_IDENTITY();
+INSERT INTO AiGradings (FreeResponseId,SkillId,Status) VALUES (@frR7,@sk,'pending');
+DECLARE @grR7 INT=SCOPE_IDENTITY();
+INSERT INTO AiGradingScores (GradingId,CriterionId,SkillId,Score) VALUES (@grR7,@crR7,@sk,9);
+BEGIN TRY
+  UPDATE GradingCriteria SET MaxScore=5 WHERE CriterionId=@crR7;
+  THROW 50000,'EXPECT_REJECT FAILED: MaxScore lowered below a stored score',1;
+END TRY BEGIN CATCH
+  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
+  PRINT 'rejected lowering MaxScore below a stored score as expected';
+END CATCH
+
+-- accept: raising MaxScore is still allowed
+UPDATE GradingCriteria SET MaxScore=10 WHERE CriterionId=@crR7;
+PRINT 'accepted raising MaxScore';
+
+-- reject: a negative rubric score
+INSERT INTO GradingCriteria (CertId,SkillId,Code,Name,MaxScore,Weight,DisplayOrder)
+  VALUES (@c,@sk,'R8C',N'R8 Criterion',9,1.0,8);
+DECLARE @crR8 INT=SCOPE_IDENTITY();
+BEGIN TRY
+  INSERT INTO AiGradingScores (GradingId,CriterionId,SkillId,Score) VALUES (@grR7,@crR8,@sk,-5);
+  THROW 50000,'EXPECT_REJECT FAILED: negative rubric score accepted',1;
+END TRY BEGIN CATCH
+  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
+  PRINT 'rejected negative rubric score as expected';
+END CATCH

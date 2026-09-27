@@ -47,3 +47,11 @@ END TRY BEGIN CATCH
   IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
   PRINT 'rejected cross-cert skill in ScoreScales as expected';
 END CATCH
+
+-- accept: identical band ranges in DIFFERENT certificates (the overlap trigger is cert-scoped;
+-- a trigger that forgot the CertId predicate would wrongly reject this)
+INSERT INTO Certificates (Code,Name,IsActive) VALUES ('ZBAND',N'Z',1); DECLARE @cz INT=SCOPE_IDENTITY();
+INSERT INTO ScoreBands (CertId,Code,Name,MinTotal,MaxTotal,DisplayOrder) VALUES (@cz,'Z1',N'Z1',0,100,1);
+INSERT INTO Certificates (Code,Name,IsActive) VALUES ('ZBAND2',N'Z2',1); DECLARE @cz2 INT=SCOPE_IDENTITY();
+INSERT INTO ScoreBands (CertId,Code,Name,MinTotal,MaxTotal,DisplayOrder) VALUES (@cz2,'Z1',N'Z1',0,100,1);
+PRINT 'accepted identical band ranges across different certificates';

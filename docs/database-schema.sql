@@ -403,6 +403,21 @@ BEGIN
     THROW 50025, 'Attempt cannot be graded while a free response is still pending_ai.', 1;
 END;
 GO
+-- R4: the guard above only watches the ATTEMPT side. The same invariant breaks from the child
+-- side: a pending_ai free response inserted into an already-'graded' attempt leaves the attempt
+-- graded with ungraded work inside it. Close it on the FreeResponses side too.
+CREATE TRIGGER trg_FreeResponses_NotIntoGradedAttempt
+ON FreeResponses AFTER INSERT, UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+  IF EXISTS (
+    SELECT 1 FROM inserted i
+    JOIN ExamAttempts a ON a.AttemptId = i.AttemptId
+    WHERE a.Status = 'graded' AND i.Status <> 'graded'
+  )
+    THROW 50030, 'A free response that is not graded cannot belong to a graded attempt.', 1;
+END;
+GO
 -- ============ Domain 8: AI Grading ============
 CREATE TABLE GradingCriteria (
   CriterionId  INT IDENTITY(1,1) PRIMARY KEY,
@@ -410,7 +425,7 @@ CREATE TABLE GradingCriteria (
   SkillId      INT NOT NULL,
   Code         VARCHAR(20) NOT NULL,
   Name         NVARCHAR(120) NOT NULL,
-  MaxScore     DECIMAL(5,2) NOT NULL,
+  MaxScore     DECIMAL(5,2) NOT NULL CONSTRAINT CK_Criteria_MaxScore CHECK (MaxScore > 0),
   Weight       DECIMAL(5,2) NOT NULL DEFAULT 1.0,
   DisplayOrder INT NOT NULL DEFAULT 0,
   CONSTRAINT UQ_Criteria_Skill_Code UNIQUE (SkillId, Code),
@@ -457,7 +472,7 @@ CREATE TABLE AiGradingScores (
   CriterionId INT NOT NULL,
   -- M-3: carried down from the grading so the criterion's own skill must match
   SkillId     INT NOT NULL,
-  Score       DECIMAL(5,2) NOT NULL,
+  Score       DECIMAL(5,2) NOT NULL CONSTRAINT CK_AGS_ScoreNonNegative CHECK (Score >= 0),
   Comment     NVARCHAR(MAX) NULL,
   CONSTRAINT PK_AiGradingScores PRIMARY KEY (GradingId, CriterionId),
   -- M-3: SkillId must be the grading's own
@@ -478,6 +493,22 @@ BEGIN
     WHERE i.Score > c.MaxScore
   )
     THROW 50026, 'AiGradingScores.Score cannot exceed the criterion MaxScore.', 1;
+END;
+GO
+-- R7: the bound is only checked when a SCORE is written. Lowering a criterion's MaxScore
+-- afterwards left stored scores above their own ceiling, so OverallScaled and the band snapshot
+-- derived from it become unbounded again by editing the rubric instead of the score.
+CREATE TRIGGER trg_GradingCriteria_MaxScoreNotBelowStored
+ON GradingCriteria AFTER UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+  IF EXISTS (
+    SELECT 1
+    FROM inserted i
+    JOIN AiGradingScores s ON s.CriterionId = i.CriterionId
+    WHERE s.Score > i.MaxScore
+  )
+    THROW 50031, 'MaxScore cannot be lowered below a score already recorded against this criterion.', 1;
 END;
 GO
 CREATE TABLE Recommendations (
@@ -735,8 +766,10 @@ GO
 -- with live (non-cancelled) bookings. Booking-side filtered unique index is the double-book
 -- guard (kept as the accepted deviation from the spec's slot-side wording); this trigger only
 -- closes the remaining `closed`-slot hole and makes Status non-decorative.
+-- R6: DELETE is in the event list because a deleted booking must free its slot; without it the
+-- slot stays 'booked' forever and no one can ever book that time again.
 CREATE TRIGGER trg_Bookings_SlotStatusGuardAndSync
-ON Bookings AFTER INSERT, UPDATE AS
+ON Bookings AFTER INSERT, UPDATE, DELETE AS
 BEGIN
   SET NOCOUNT ON;
   IF EXISTS (
@@ -879,6 +912,29 @@ BEGIN
     THROW 50021, 'CreditTransactions is append-only; rows cannot be deleted.', 1;
 END;
 GO
+-- R2b: append-only means IMMUTABLE, not merely undeletable. Without this, a settled
+-- purchase could be rewritten into an admin_grant with OrderId=NULL — severing it from its
+-- order, which frees UX_CreditTxn_Order to credit that same order a second time.
+CREATE TRIGGER trg_CreditTransactions_NoRewrite
+ON CreditTransactions AFTER UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+  IF EXISTS (
+    SELECT 1
+    FROM inserted i
+    JOIN deleted d ON d.TxnId = i.TxnId
+    WHERE i.UserId <> d.UserId
+       OR i.Reason <> d.Reason
+       OR i.Delta  <> d.Delta
+       -- source columns are nullable: compare with a sentinel so NULL->value is caught too
+       OR ISNULL(i.OrderId,-1)       <> ISNULL(d.OrderId,-1)
+       OR ISNULL(i.AttemptId,-1)     <> ISNULL(d.AttemptId,-1)
+       OR ISNULL(i.BookingId,-1)     <> ISNULL(d.BookingId,-1)
+       OR ISNULL(i.LearnerPathId,-1) <> ISNULL(d.LearnerPathId,-1)
+  )
+    THROW 50028, 'CreditTransactions is append-only; a posted transaction cannot be rewritten.', 1;
+END;
+GO
 -- H-2: OrderId/BookingId/LearnerPathId each fund at most one txn; AttemptId allows one
 -- mock_exam_start AND one ai_grading charge, but only one of each (spec: one charge covers all answers).
 CREATE UNIQUE INDEX UX_CreditTxn_Order ON CreditTransactions(OrderId) WHERE OrderId IS NOT NULL;
@@ -903,6 +959,24 @@ BEGIN
       AND (o.Status <> 'paid' OR i.Delta <> pk.Credits)
   )
     THROW 50022, 'purchase txn must reference a paid order with Delta equal to the package credits.', 1;
+END;
+GO
+-- R3: the above proves the order was 'paid' AT THE MOMENT OF CREDITING, but nothing stopped the
+-- order being reverted to 'pending'/'expired' afterwards, leaving a credit with no paid order
+-- behind it. A credited order is settled and may no longer leave 'paid'.
+CREATE TRIGGER trg_Orders_CreditedStaysPaid
+ON Orders AFTER UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+  IF EXISTS (
+    SELECT 1
+    FROM inserted i
+    JOIN deleted d ON d.OrderId = i.OrderId
+    WHERE d.Status = 'paid' AND i.Status <> 'paid'
+      AND EXISTS (SELECT 1 FROM CreditTransactions ct
+                  WHERE ct.OrderId = i.OrderId AND ct.Reason = 'purchase')
+  )
+    THROW 50029, 'An order that has already been credited cannot leave the paid status.', 1;
 END;
 GO
 -- backfill the complaint make-good FK now that CreditTransactions exists.

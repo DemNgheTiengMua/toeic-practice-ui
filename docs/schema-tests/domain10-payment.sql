@@ -98,3 +98,45 @@ END TRY BEGIN CATCH
   IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
   PRINT 'rejected cross-user grant resolution as expected: ' + ERROR_MESSAGE();
 END CATCH
+
+-- ===== re-review residuals: the ledger is IMMUTABLE, not merely undeletable =====
+-- reject (R2): rewriting a posted transaction's Delta
+INSERT INTO Orders (UserId,PackageId,Status,Amount) VALUES (@u,@pk,'pending',100000); DECLARE @o4 INT=SCOPE_IDENTITY();
+UPDATE Orders SET Status='paid', PaidAt=SYSDATETIMEOFFSET() WHERE OrderId=@o4;
+INSERT INTO CreditTransactions (UserId,Reason,Delta,OrderId) VALUES (@u,'purchase',10,@o4); DECLARE @txnR INT=SCOPE_IDENTITY();
+BEGIN TRY
+  UPDATE CreditTransactions SET Delta=10000 WHERE TxnId=@txnR;
+  THROW 50000,'EXPECT_REJECT FAILED: ledger Delta rewritten after posting',1;
+END TRY BEGIN CATCH
+  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
+  PRINT 'rejected ledger Delta rewrite as expected';
+END CATCH
+
+-- reject (R2b): severing a purchase from its order by rewriting Reason/source.
+-- This is the dangerous one: it would free UX_CreditTxn_Order to credit that order AGAIN.
+BEGIN TRY
+  UPDATE CreditTransactions SET Reason='admin_grant', OrderId=NULL WHERE TxnId=@txnR;
+  THROW 50000,'EXPECT_REJECT FAILED: ledger Reason/source rewritten after posting',1;
+END TRY BEGIN CATCH
+  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
+  PRINT 'rejected ledger Reason/source rewrite as expected';
+END CATCH
+
+-- reject (R3): un-paying an order that has already been credited
+BEGIN TRY
+  UPDATE Orders SET Status='pending', PaidAt=NULL WHERE OrderId=@o4;
+  THROW 50000,'EXPECT_REJECT FAILED: credited order reverted to pending',1;
+END TRY BEGIN CATCH
+  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
+  PRINT 'rejected un-paying a credited order as expected';
+END CATCH
+
+-- accept: an UNCREDITED pending order can still be expired (the stale-order proc must keep working)
+INSERT INTO Orders (UserId,PackageId,Status,Amount) VALUES (@u2,@pk,'pending',100000); DECLARE @o5 INT=SCOPE_IDENTITY();
+UPDATE Orders SET Status='expired' WHERE OrderId=@o5;
+PRINT 'accepted expiring an uncredited pending order';
+
+-- accept: admin_grant/admin_revoke (all four source columns NULL) stay legal under MATCH SIMPLE,
+-- and the ledger triggers are set-based (multi-row insert must work)
+INSERT INTO CreditTransactions (UserId,Reason,Delta) VALUES (@u,'admin_grant',1),(@u,'admin_grant',2);
+PRINT 'accepted multi-row all-NULL-source admin grants';
