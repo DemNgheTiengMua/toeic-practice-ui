@@ -80,31 +80,23 @@
 
           <!-- ===== success ===== -->
           <div class="only-success stack">
-            <div class="row row--between">
-              <h1 style="margin: 0">Hello, Nguyễn Văn A</h1>
-              <a class="btn btn--primary" href="exam-list.html">Take a mock test now</a>
+            <h1>Hello, Nguyễn Văn A</h1>
+
+            <div class="stat">
+              <div class="stat__label">Your current level</div>
+              <div class="stat__value">720</div>
+              <div class="stat__hint">CEFR B1 · L 385 · R 335 · 18 Sep 2026</div>
             </div>
 
-            <div class="grid-3">
-              <div class="stat">
-                <div class="stat__label">Most recent score</div>
-                <div class="stat__value">720</div>
-                <div class="stat__hint">L 385 · R 335 — 18 Sep 2026</div>
-              </div>
-              <div class="stat">
-                <div class="stat__label">Best score</div>
-                <div class="stat__value">745</div>
-                <div class="stat__hint">Achieved on 02 Sep 2026</div>
-              </div>
-              <div class="stat">
-                <div class="stat__label">Completed</div>
-                <div class="stat__value">6</div>
-                <div class="stat__hint">full exams · 24 practice sessions</div>
-              </div>
+            <div class="row" style="justify-content: center; gap: var(--space-4)">
+              <a class="btn btn--primary btn--lg" href="exam-list.html">Take a mock test</a>
+              <a class="btn btn--lg" href="practice-select.html">Practice by part</a>
             </div>
 
-            <div class="card">
-              <div class="card__header"><strong>Equivalent CEFR level</strong></div>
+            <details class="card">
+              <summary class="card__header" style="cursor: pointer">
+                <strong>View CEFR level details</strong>
+              </summary>
               <div class="card__body">
                 <div class="cefr">
                   <div class="cefr__head">
@@ -133,15 +125,12 @@
                   </p>
                 </div>
               </div>
-            </div>
+            </details>
 
-            <div class="card">
-              <div class="card__header">
-                <div class="row row--between">
-                  <strong>Accuracy by Part</strong>
-                  <a class="btn btn--sm" href="weakness-analysis.html">Full analysis</a>
-                </div>
-              </div>
+            <details class="card">
+              <summary class="card__header" style="cursor: pointer">
+                <strong>View accuracy by part</strong>
+              </summary>
               <div class="card__body stack">
                 <div>
                   <div class="row row--between text-sm">
@@ -171,10 +160,12 @@
                   Part 7 is currently your weak area. <a href="practice-select.html">Practice Part 7</a>
                 </p>
               </div>
-            </div>
+            </details>
 
-            <div class="card">
-              <div class="card__header"><strong>Recent exams</strong></div>
+            <details class="card">
+              <summary class="card__header" style="cursor: pointer">
+                <strong>View recent exams</strong>
+              </summary>
               <div class="card__body">
                 <table class="table table--striped">
                   <thead>
@@ -202,7 +193,7 @@
               <div class="card__footer">
                 <a class="btn btn--sm" href="exam-history.html">View all</a>
               </div>
-            </div>
+            </details>
           </div>
         </div>
       </main>
