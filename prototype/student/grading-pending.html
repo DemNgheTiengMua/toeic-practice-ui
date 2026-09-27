@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Grading In Progress — TOEIC Practice</title>
+  <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/css/tokens.css">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+</head>
+<body data-states="loading,error,success">
+  <div class="app-shell app-shell--with-sidebar">
+    <header class="app-topbar">
+      <strong>TOEIC Practice</strong>
+      <div class="row">
+        <span class="badge badge--info">3 credits left</span>
+        <a class="btn btn--sm" href="../payment/pricing.html">Buy credits</a>
+        <a class="btn btn--ghost btn--sm" href="profile.html">Nguyễn Văn A</a>
+      </div>
+    </header>
+    <div class="app-body">
+      <aside class="app-sidebar">
+        <nav class="nav-list" aria-label="Main navigation">
+          <a class="nav-list__item" href="dashboard.html">Home</a>
+          <div class="nav-list__group">Mock exams</div>
+          <a class="nav-list__item" href="exam-list.html">Test list</a>
+          <a class="nav-list__item" href="exam-history.html">Exam history</a>
+          <div class="nav-list__group">Practice</div>
+          <a class="nav-list__item" href="practice-select.html">Practice by section</a>
+          <a class="nav-list__item" href="weakness-analysis.html">Weakness analysis</a>
+          <div class="nav-list__group">Account</div>
+          <a class="nav-list__item" href="../payment/wallet.html">Credit wallet</a>
+          <a class="nav-list__item" href="profile.html">Profile</a>
+        </nav>
+      </aside>
+      <main class="app-main">
+        <div class="container stack">
+          <!-- ===== loading ===== -->
+          <div class="only-loading stack">
+            <div class="skeleton skeleton--title"></div>
+            <div class="skeleton skeleton--block" style="height: 200px"></div>
+          </div>
+
+          <!-- ===== error ===== -->
+          <div class="only-error">
+            <div class="card"><div class="card__body">
+              <div class="state-block">
+                <div class="state-block__icon" aria-hidden="true">!</div>
+                <div class="state-block__title">Grading failed</div>
+                <p class="state-block__desc">Could not process your submission. Contact support if this persists.</p>
+                <button class="btn btn--primary">Try again</button>
+              </div>
+            </div></div>
+          </div>
+
+          <!-- ===== success ===== -->
+          <div class="only-success stack">
+            <h1>AI grading in progress</h1>
+
+            <div class="card"><div class="card__body">
+              <div class="state-block">
+                <div class="state-block__icon" aria-hidden="true">RUNNING</div>
+                <div class="state-block__title">Your writing is being graded</div>
+                <p class="state-block__desc" id="timer-display" role="timer" aria-live="polite">
+                  Estimated 45 seconds remaining
+                </p>
+
+                <div class="stack" style="max-width: 420px; margin: var(--space-4, 16px) auto; gap: var(--space-3, 12px); text-align: left">
+                  <div class="row" style="gap: var(--space-3, 12px); align-items: center">
+                    <span style="color: var(--color-sign-green, #0a6b3c); font-size: 20px" aria-hidden="true">✓</span>
+                    <span class="text-sm">Checking grammar and spelling</span>
+                  </div>
+                  <div class="row" style="gap: var(--space-3, 12px); align-items: center">
+                    <span style="color: var(--color-sign-green, #0a6b3c); font-size: 20px" aria-hidden="true">✓</span>
+                    <span class="text-sm">Analyzing vocabulary range</span>
+                  </div>
+                  <div class="row" style="gap: var(--space-3, 12px); align-items: center" id="current-stage">
+                    <span style="color: var(--color-sign-blue, #0b4ea2); font-size: 20px" aria-hidden="true">⏳</span>
+                    <span class="text-sm"><strong>Scoring coherence and organization</strong></span>
+                  </div>
+                  <div class="row" style="gap: var(--space-3, 12px); align-items: center; opacity: 0.4">
+                    <span style="font-size: 20px" aria-hidden="true">○</span>
+                    <span class="text-sm">Evaluating task achievement</span>
+                  </div>
+                </div>
+
+                <div class="progress" style="max-width: 320px; margin: var(--space-4, 16px) auto 0;">
+                  <div class="progress__bar" id="progress-bar" style="width: 65%; transition: width 1s linear"></div>
+                </div>
+
+                <p class="text-sm text-muted" style="margin-top: var(--space-4, 16px)" id="timeout-message" hidden>
+                  Still working... Complex responses can take up to 2 minutes.
+                </p>
+              </div>
+            </div></div>
+
+            <div class="alert alert--info">
+              <strong>Stay on this page.</strong> Your results will appear automatically when grading is complete. Do not close this tab or your submission may be lost.
+            </div>
+
+            <div class="card">
+              <div class="card__header"><strong>While you wait</strong></div>
+              <div class="card__body">
+                <div class="row" style="justify-content: center; gap: var(--space-4, 16px)">
+                  <a class="btn btn--sm" href="exam-history.html">View previous scores</a>
+                  <a class="btn btn--sm" href="practice-select.html">Practice another section</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <script src="../assets/js/state-switch.js"></script>
+  <script>
+    // Simulated AI grading countdown and stage progression
+    (function() {
+      const timerDisplay = document.getElementById('timer-display');
+      const progressBar = document.getElementById('progress-bar');
+      const timeoutMessage = document.getElementById('timeout-message');
+
+      if (!timerDisplay || !progressBar) return;
+
+      let secondsRemaining = 45;
+      const totalSeconds = 45;
+
+      // Update timer every second
+      const timerInterval = setInterval(() => {
+        secondsRemaining--;
+
+        if (secondsRemaining > 0) {
+          timerDisplay.textContent = `Estimated ${secondsRemaining} second${secondsRemaining !== 1 ? 's' : ''} remaining`;
+
+          // Update progress bar
+          const progress = Math.round(((totalSeconds - secondsRemaining) / totalSeconds) * 100);
+          progressBar.style.width = `${Math.min(progress, 95)}%`;
+
+          // Show timeout message if exceeding expected time
+          if (secondsRemaining < -15 && timeoutMessage) {
+            timeoutMessage.hidden = false;
+          }
+        } else if (secondsRemaining === 0) {
+          timerDisplay.textContent = 'Finalizing results...';
+          progressBar.style.width = '95%';
+        } else {
+          // After 0, count time elapsed
+          const elapsed = Math.abs(secondsRemaining);
+          timerDisplay.textContent = `Processing (${elapsed}s elapsed)...`;
+        }
+      }, 1000);
+
+      // Stage progression (simulated)
+      const stages = [
+        { id: 'current-stage', time: 0, emoji: '⏳', text: 'Scoring coherence and organization', color: 'var(--color-sign-blue, #0b4ea2)' },
+        { id: 'current-stage', time: 20, emoji: '⏳', text: 'Evaluating task achievement', color: 'var(--color-sign-blue, #0b4ea2)' }
+      ];
+
+      stages.forEach(stage => {
+        setTimeout(() => {
+          const stageEl = document.getElementById(stage.id);
+          if (stageEl) {
+            const rows = stageEl.parentElement.children;
+            // Mark previous stages complete
+            for (let i = 0; i < rows.length - 1; i++) {
+              const span = rows[i].querySelector('span:first-child');
+              const text = rows[i].querySelector('span:last-child');
+              if (span && text) {
+                span.textContent = '✓';
+                span.style.color = 'var(--color-sign-green, #0a6b3c)';
+                text.innerHTML = text.textContent; // Remove bold
+              }
+            }
+            // Update current stage
+            const currentSpan = stageEl.querySelector('span:first-child');
+            const currentText = stageEl.querySelector('span:last-child');
+            if (currentSpan && currentText) {
+              currentSpan.textContent = stage.emoji;
+              currentSpan.style.color = stage.color;
+              currentText.innerHTML = `<strong>${stage.text}</strong>`;
+            }
+          }
+        }, stage.time * 1000);
+      });
+
+      // In real implementation, this would redirect on server completion
+      // For prototype: simulate completion after 50 seconds
+      setTimeout(() => {
+        clearInterval(timerInterval);
+        // Uncomment for actual redirect:
+        // window.location.href = 'exam-result.html?attempt=1234&state=graded';
+      }, 50000);
+
+      // Cleanup on page unload
+      window.addEventListener('beforeunload', () => {
+        clearInterval(timerInterval);
+      });
+    })();
+  </script>
+</body>
+</html>
