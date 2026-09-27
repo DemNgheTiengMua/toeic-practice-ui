@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Leave a Review — TOEIC Practice</title>
+  <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/css/tokens.css">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+</head>
+<body data-states="success,submitting,error">
+  <div class="app-shell app-shell--with-sidebar">
+    <header class="app-topbar">
+      <strong>TOEIC Practice</strong>
+      <div class="row">
+        <span class="badge badge--info">3 credits left</span>
+        <a class="btn btn--sm" href="../payment/pricing.html">Buy credits</a>
+        <a class="btn btn--ghost btn--sm" href="profile.html">Nguyễn Văn A</a>
+      </div>
+    </header>
+    <div class="app-body">
+      <aside class="app-sidebar">
+        <nav class="nav-list" aria-label="Main navigation">
+          <a class="nav-list__item" href="dashboard.html">Home</a>
+          <div class="nav-list__group">Mock exams</div>
+          <a class="nav-list__item" href="exam-list.html">Test list</a>
+          <a class="nav-list__item" href="exam-history.html">Exam history</a>
+          <div class="nav-list__group">Practice</div>
+          <a class="nav-list__item" href="practice-select.html">Practice by section</a>
+          <a class="nav-list__item" href="weakness-analysis.html">Weakness analysis</a>
+          <div class="nav-list__group">Learning</div>
+          <a class="nav-list__item" href="learning-path.html">My learning path</a>
+          <a class="nav-list__item" href="mentor-list.html">Find a mentor</a>
+          <div class="nav-list__group">Account</div>
+          <a class="nav-list__item" href="../payment/wallet.html">Credit wallet</a>
+          <a class="nav-list__item" href="profile.html">Profile</a>
+        </nav>
+      </aside>
+      <main class="app-main">
+        <div class="container stack">
+          <!-- ===== error ===== -->
+          <div class="only-error">
+            <div class="alert alert--danger">
+              <strong>Could not submit review.</strong> Try again.
+            </div>
+          </div>
+
+          <!-- ===== success ===== -->
+          <div class="only-success stack">
+            <h1>Leave a review</h1>
+            <p>Help other learners by sharing your experience with <strong>Dr. Nguyễn Văn A</strong>.</p>
+
+            <form class="card"><div class="card__body stack">
+              <label class="field">
+                <span class="field__label">Rating</span>
+                <div style="display: flex; gap: var(--space-2, 8px); font-size: var(--text-2xl, 24px); color: var(--sign-gold, #f2b705);">
+                  <label style="cursor: pointer;">
+                    <input type="radio" name="rating" value="1" style="position: absolute; opacity: 0;">
+                    <span>★</span>
+                  </label>
+                  <label style="cursor: pointer;">
+                    <input type="radio" name="rating" value="2" style="position: absolute; opacity: 0;">
+                    <span>★</span>
+                  </label>
+                  <label style="cursor: pointer;">
+                    <input type="radio" name="rating" value="3" style="position: absolute; opacity: 0;">
+                    <span>★</span>
+                  </label>
+                  <label style="cursor: pointer;">
+                    <input type="radio" name="rating" value="4" style="position: absolute; opacity: 0;">
+                    <span>★</span>
+                  </label>
+                  <label style="cursor: pointer;">
+                    <input type="radio" name="rating" value="5" checked style="position: absolute; opacity: 0;">
+                    <span>★</span>
+                  </label>
+                </div>
+              </label>
+
+              <label class="field">
+                <span class="field__label">Your review</span>
+                <textarea class="field__input" name="review" rows="5" placeholder="Share your experience with this mentor..." required></textarea>
+                <span class="field__hint">Be specific about what you learned and how the mentor helped you.</span>
+              </label>
+
+              <div class="row">
+                <button type="submit" class="btn btn--primary multi-state" data-show="success">Submit review</button>
+                <button type="button" class="btn btn--primary only-submitting" disabled>Submitting...</button>
+                <a href="booking-detail.html" class="btn btn--plate">Skip for now</a>
+              </div>
+            </div></form>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <script src="../assets/js/state-switch.js"></script>
+</body>
+</html>

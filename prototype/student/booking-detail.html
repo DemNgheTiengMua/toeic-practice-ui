@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Booking Details — TOEIC Practice</title>
+  <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/css/tokens.css">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+</head>
+<body data-states="pending,confirmed,done,cancelled">
+  <div class="app-shell app-shell--with-sidebar">
+    <header class="app-topbar">
+      <strong>TOEIC Practice</strong>
+      <div class="row">
+        <span class="badge badge--info">3 credits left</span>
+        <a class="btn btn--sm" href="../payment/pricing.html">Buy credits</a>
+        <a class="btn btn--ghost btn--sm" href="profile.html">Nguyễn Văn A</a>
+      </div>
+    </header>
+    <div class="app-body">
+      <aside class="app-sidebar">
+        <nav class="nav-list" aria-label="Main navigation">
+          <a class="nav-list__item" href="dashboard.html">Home</a>
+          <div class="nav-list__group">Mock exams</div>
+          <a class="nav-list__item" href="exam-list.html">Test list</a>
+          <a class="nav-list__item" href="exam-history.html">Exam history</a>
+          <div class="nav-list__group">Practice</div>
+          <a class="nav-list__item" href="practice-select.html">Practice by section</a>
+          <a class="nav-list__item" href="weakness-analysis.html">Weakness analysis</a>
+          <div class="nav-list__group">Learning</div>
+          <a class="nav-list__item" href="learning-path.html">My learning path</a>
+          <a class="nav-list__item" href="mentor-list.html">Find a mentor</a>
+          <div class="nav-list__group">Account</div>
+          <a class="nav-list__item" href="../payment/wallet.html">Credit wallet</a>
+          <a class="nav-list__item" href="profile.html">Profile</a>
+        </nav>
+      </aside>
+      <main class="app-main">
+        <div class="container stack">
+          <!-- ===== pending ===== -->
+          <div class="only-pending stack">
+            <h1>Booking pending confirmation</h1>
+            <div class="alert alert--info">
+              <strong>Waiting for mentor confirmation.</strong> You'll receive an email with the Google Meet link once the mentor accepts.
+            </div>
+
+            <div class="card"><div class="card__body stack">
+              <h2>Session details</h2>
+              <dl style="display: grid; gap: var(--space-3, 12px);">
+                <div style="display: grid; grid-template-columns: 120px 1fr; gap: var(--space-3, 12px);">
+                  <dt style="color: var(--color-text-muted, #5c6570);">Status</dt>
+                  <dd style="margin: 0;"><span class="badge badge--warning">Pending</span></dd>
+                </div>
+                <div style="display: grid; grid-template-columns: 120px 1fr; gap: var(--space-3, 12px);">
+                  <dt style="color: var(--color-text-muted, #5c6570);">Mentor</dt>
+                  <dd style="margin: 0; font-weight: 600;">Dr. Nguyễn Văn A</dd>
+                </div>
+                <div style="display: grid; grid-template-columns: 120px 1fr; gap: var(--space-3, 12px);">
+                  <dt style="color: var(--color-text-muted, #5c6570);">Time</dt>
+                  <dd style="margin: 0;"><strong>Monday, Sep 30 — 9:00 AM</strong></dd>
+                </div>
+              </dl>
+
+              <button class="btn btn--danger">Cancel booking</button>
+            </div></div>
+          </div>
+
+          <!-- ===== confirmed ===== -->
+          <div class="only-confirmed stack">
+            <h1>Booking confirmed</h1>
+            <div class="alert alert--success">
+              <strong>Your session is confirmed!</strong> Join via Google Meet at the scheduled time.
+            </div>
+
+            <div class="card"><div class="card__body stack">
+              <h2>Session details</h2>
+              <dl style="display: grid; gap: var(--space-3, 12px);">
+                <div style="display: grid; grid-template-columns: 120px 1fr; gap: var(--space-3, 12px);">
+                  <dt style="color: var(--color-text-muted, #5c6570);">Status</dt>
+                  <dd style="margin: 0;"><span class="badge badge--success">Confirmed</span></dd>
+                </div>
+                <div style="display: grid; grid-template-columns: 120px 1fr; gap: var(--space-3, 12px);">
+                  <dt style="color: var(--color-text-muted, #5c6570);">Mentor</dt>
+                  <dd style="margin: 0; font-weight: 600;">Dr. Nguyễn Văn A</dd>
+                </div>
+                <div style="display: grid; grid-template-columns: 120px 1fr; gap: var(--space-3, 12px);">
+                  <dt style="color: var(--color-text-muted, #5c6570);">Time</dt>
+                  <dd style="margin: 0;"><strong>Monday, Sep 30 — 9:00 AM</strong></dd>
+                </div>
+                <div style="display: grid; grid-template-columns: 120px 1fr; gap: var(--space-3, 12px);">
+                  <dt style="color: var(--color-text-muted, #5c6570);">Google Meet</dt>
+                  <dd style="margin: 0;"><a href="https://meet.google.com/abc-defg-hij" target="_blank" rel="noopener">meet.google.com/abc-defg-hij</a></dd>
+                </div>
+              </dl>
+
+              <a href="https://meet.google.com/abc-defg-hij" target="_blank" rel="noopener" class="btn btn--primary">Join meeting</a>
+              <button class="btn btn--danger">Cancel booking</button>
+            </div></div>
+          </div>
+
+          <!-- ===== done ===== -->
+          <div class="only-done stack">
+            <h1>Session completed</h1>
+            <div class="alert alert--success">
+              <strong>Session finished.</strong> How was your experience?
+            </div>
+
+            <div class="card"><div class="card__body stack">
+              <h2>Session details</h2>
+              <dl style="display: grid; gap: var(--space-3, 12px);">
+                <div style="display: grid; grid-template-columns: 120px 1fr; gap: var(--space-3, 12px);">
+                  <dt style="color: var(--color-text-muted, #5c6570);">Status</dt>
+                  <dd style="margin: 0;"><span class="badge badge--success">Done</span></dd>
+                </div>
+                <div style="display: grid; grid-template-columns: 120px 1fr; gap: var(--space-3, 12px);">
+                  <dt style="color: var(--color-text-muted, #5c6570);">Mentor</dt>
+                  <dd style="margin: 0; font-weight: 600;">Dr. Nguyễn Văn A</dd>
+                </div>
+                <div style="display: grid; grid-template-columns: 120px 1fr; gap: var(--space-3, 12px);">
+                  <dt style="color: var(--color-text-muted, #5c6570);">Completed</dt>
+                  <dd style="margin: 0;">Monday, Sep 30 — 9:00 AM</dd>
+                </div>
+              </dl>
+
+              <a href="booking-review.html" class="btn btn--primary">Leave a review</a>
+            </div></div>
+          </div>
+
+          <!-- ===== cancelled ===== -->
+          <div class="only-cancelled stack">
+            <h1>Booking cancelled</h1>
+            <div class="alert alert--info">
+              <strong>This booking was cancelled.</strong> Your credit has been refunded.
+            </div>
+
+            <div class="card"><div class="card__body stack">
+              <h2>Session details</h2>
+              <dl style="display: grid; gap: var(--space-3, 12px);">
+                <div style="display: grid; grid-template-columns: 120px 1fr; gap: var(--space-3, 12px);">
+                  <dt style="color: var(--color-text-muted, #5c6570);">Status</dt>
+                  <dd style="margin: 0;"><span class="badge">Cancelled</span></dd>
+                </div>
+                <div style="display: grid; grid-template-columns: 120px 1fr; gap: var(--space-3, 12px);">
+                  <dt style="color: var(--color-text-muted, #5c6570);">Mentor</dt>
+                  <dd style="margin: 0; font-weight: 600;">Dr. Nguyễn Văn A</dd>
+                </div>
+                <div style="display: grid; grid-template-columns: 120px 1fr; gap: var(--space-3, 12px);">
+                  <dt style="color: var(--color-text-muted, #5c6570);">Was scheduled</dt>
+                  <dd style="margin: 0;">Monday, Sep 30 — 9:00 AM</dd>
+                </div>
+              </dl>
+
+              <a href="mentor-list.html" class="btn btn--primary">Find another mentor</a>
+            </div></div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <script src="../assets/js/state-switch.js"></script>
+</body>
+</html>
