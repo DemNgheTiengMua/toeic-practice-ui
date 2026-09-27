@@ -36,33 +36,22 @@
   <div class="modal-overlay only-success" role="dialog" aria-modal="true"
        aria-labelledby="submit-title-1">
     <div class="modal">
-      <div class="modal__header"><h2 id="submit-title-1" style="margin: 0">Submit?</h2></div>
+      <div class="modal__header"><h2 id="submit-title-1" style="margin: 0">Submit now?</h2></div>
       <div class="modal__body stack">
-        <div class="alert alert--warning">
-          <strong>You have 19 unanswered questions.</strong>
-          Unanswered questions count as incorrect.
-        </div>
-        <div class="grid-3">
-          <div class="stat">
-            <div class="stat__label">Answered</div>
-            <div class="stat__value" style="font-size: var(--text-2xl)">181</div>
-          </div>
-          <div class="stat">
-            <div class="stat__label">Flag</div>
-            <div class="stat__value" style="font-size: var(--text-2xl)">7</div>
-          </div>
-          <div class="stat">
-            <div class="stat__label">Not done</div>
-            <div class="stat__value" style="font-size: var(--text-2xl); color: var(--color-danger)">19</div>
-          </div>
-        </div>
+        <p style="font-size: var(--text-lg, 18px); line-height: 1.5; margin: 0">
+          You have <strong style="color: var(--color-danger, #b31217)">19 unanswered questions</strong>
+          and <strong>6 minutes 31 seconds</strong> left.
+        </p>
+        <p style="margin: 0">
+          That's enough time to answer them. Unanswered questions count as incorrect.
+        </p>
         <p class="text-sm text-muted" style="margin: 0">
-          6 minutes 31 seconds left. You can still come back and continue.
+          You also flagged 7 questions for review.
         </p>
       </div>
       <div class="modal__footer">
-        <a class="btn" href="exam-reading.html">Go back and continue</a>
-        <a class="btn btn--danger" href="exam-result.html">Submit now</a>
+        <a class="btn btn--primary btn--lg" href="exam-reading.html">Go back and finish</a>
+        <a class="btn btn--lg" href="exam-result.html">Submit now anyway</a>
       </div>
     </div>
   </div>
