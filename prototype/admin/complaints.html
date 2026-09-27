@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Complaints — TOEIC Practice Admin</title>
+  <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/css/tokens.css">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+</head>
+<body data-states="loading,empty,error,success">
+  <div class="app-shell app-shell--with-sidebar">
+    <header class="app-topbar">
+      <strong>TOEIC Practice Admin</strong>
+      <a class="btn btn--ghost btn--sm" href="../student/dashboard.html">Admin Panel</a>
+    </header>
+    <div class="app-body">
+      <aside class="app-sidebar">
+        <nav class="nav-list" aria-label="Main navigation">
+          <a class="nav-list__item" href="dashboard.html">Dashboard</a>
+          <div class="nav-list__group">Content</div>
+          <a class="nav-list__item" href="exam-list.html">Exam management</a>
+          <a class="nav-list__item" href="question-editor.html">Question editor</a>
+          <a class="nav-list__item" href="score-conversion.html">Score conversion</a>
+          <div class="nav-list__group">Operations</div>
+          <a class="nav-list__item is-active" href="complaints.html">Complaints</a>
+          <a class="nav-list__item" href="kyc-review.html">KYC review</a>
+        </nav>
+      </aside>
+      <main class="app-main">
+        <div class="container stack">
+          <!-- ===== loading ===== -->
+          <div class="only-loading stack">
+            <div class="skeleton skeleton--title"></div>
+            <div class="skeleton skeleton--block" style="height: 400px"></div>
+          </div>
+
+          <!-- ===== error ===== -->
+          <div class="only-error">
+            <div class="card"><div class="card__body">
+              <div class="state-block">
+                <div class="state-block__icon" aria-hidden="true">!</div>
+                <div class="state-block__title">Could not load complaints</div>
+                <p class="state-block__desc">Check your connection and try again.</p>
+                <button class="btn btn--primary">Try again</button>
+              </div>
+            </div></div>
+          </div>
+
+          <!-- ===== empty ===== -->
+          <div class="only-empty">
+            <div class="card"><div class="card__body">
+              <div class="state-block">
+                <div class="state-block__icon" aria-hidden="true">EMPTY</div>
+                <div class="state-block__title">No complaints</div>
+                <p class="state-block__desc">All complaints have been resolved.</p>
+              </div>
+            </div></div>
+          </div>
+
+          <!-- ===== success ===== -->
+          <div class="only-success stack">
+            <h1>Complaints</h1>
+
+            <div class="row" style="margin-bottom: var(--space-4, 16px);">
+              <button class="btn btn--plate btn--sm">All</button>
+              <button class="btn btn--ghost btn--sm">Pending</button>
+              <button class="btn btn--ghost btn--sm">Resolved</button>
+            </div>
+
+            <div class="card">
+              <div class="card__body">
+                <table class="table table--striped">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Learner</th>
+                      <th>Type</th>
+                      <th>Related to</th>
+                      <th>Status</th>
+                      <th>Date</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>#C-1042</td>
+                      <td>Nguyễn Văn A</td>
+                      <td>Mentor no-show</td>
+                      <td>Booking #8821</td>
+                      <td><span class="badge badge--warning">Pending</span></td>
+                      <td>27 Sep 2026</td>
+                      <td><a href="complaint-detail.html" class="btn btn--sm">Review</a></td>
+                    </tr>
+                    <tr>
+                      <td>#C-1041</td>
+                      <td>Trần Thị B</td>
+                      <td>Grading issue</td>
+                      <td>Exam #1182</td>
+                      <td><span class="badge badge--warning">Pending</span></td>
+                      <td>26 Sep 2026</td>
+                      <td><a href="complaint-detail.html" class="btn btn--sm">Review</a></td>
+                    </tr>
+                    <tr>
+                      <td>#C-1040</td>
+                      <td>Lê Văn C</td>
+                      <td>Technical error</td>
+                      <td>Exam #1178</td>
+                      <td><span class="badge badge--success">Resolved</span></td>
+                      <td>25 Sep 2026</td>
+                      <td><a href="complaint-detail.html" class="btn btn--sm btn--ghost">View</a></td>
+                    </tr>
+                    <tr>
+                      <td>#C-1039</td>
+                      <td>Phạm Thị D</td>
+                      <td>Payment issue</td>
+                      <td>Order #4521</td>
+                      <td><span class="badge badge--success">Resolved</span></td>
+                      <td>24 Sep 2026</td>
+                      <td><a href="complaint-detail.html" class="btn btn--sm btn--ghost">View</a></td>
+                    </tr>
+                    <tr>
+                      <td>#C-1038</td>
+                      <td>Hoàng Văn E</td>
+                      <td>Mentor quality</td>
+                      <td>Booking #8815</td>
+                      <td><span class="badge badge--success">Resolved</span></td>
+                      <td>23 Sep 2026</td>
+                      <td><a href="complaint-detail.html" class="btn btn--sm btn--ghost">View</a></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <script src="../assets/js/state-switch.js"></script>
+</body>
+</html>

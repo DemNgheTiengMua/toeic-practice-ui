@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Complaint Detail — TOEIC Practice Admin</title>
+  <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/css/tokens.css">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+</head>
+<body data-states="success,submitting,resolved,error">
+  <div class="app-shell app-shell--with-sidebar">
+    <header class="app-topbar">
+      <strong>TOEIC Practice Admin</strong>
+      <a class="btn btn--ghost btn--sm" href="../student/dashboard.html">Admin Panel</a>
+    </header>
+    <div class="app-body">
+      <aside class="app-sidebar">
+        <nav class="nav-list" aria-label="Main navigation">
+          <a class="nav-list__item" href="dashboard.html">Dashboard</a>
+          <div class="nav-list__group">Content</div>
+          <a class="nav-list__item" href="exam-list.html">Exam management</a>
+          <a class="nav-list__item" href="question-editor.html">Question editor</a>
+          <a class="nav-list__item" href="score-conversion.html">Score conversion</a>
+          <div class="nav-list__group">Operations</div>
+          <a class="nav-list__item is-active" href="complaints.html">Complaints</a>
+          <a class="nav-list__item" href="kyc-review.html">KYC review</a>
+        </nav>
+      </aside>
+      <main class="app-main">
+        <div class="container stack">
+          <!-- ===== error ===== -->
+          <div class="only-error">
+            <div class="alert alert--danger">
+              <strong>Could not submit resolution.</strong> Try again.
+            </div>
+          </div>
+
+          <!-- ===== resolved ===== -->
+          <div class="only-resolved stack">
+            <a href="complaints.html" class="btn btn--ghost">← Back to complaints</a>
+
+            <div class="alert alert--success">
+              <strong>Complaint resolved.</strong> The learner has been notified.
+            </div>
+
+            <h1>Complaint #C-1042 — Resolved</h1>
+
+            <div class="card"><div class="card__body stack">
+              <h2>Resolution details</h2>
+              <dl style="display: grid; gap: var(--space-3, 12px);">
+                <div style="display: grid; grid-template-columns: 160px 1fr; gap: var(--space-3, 12px);">
+                  <dt style="color: var(--color-text-muted, #5c6570);">Status</dt>
+                  <dd style="margin: 0;"><span class="badge badge--success">Resolved</span></dd>
+                </div>
+                <div style="display: grid; grid-template-columns: 160px 1fr; gap: var(--space-3, 12px);">
+                  <dt style="color: var(--color-text-muted, #5c6570);">Credit issued</dt>
+                  <dd style="margin: 0; font-weight: 600;">1 credit (admin_grant)</dd>
+                </div>
+                <div style="display: grid; grid-template-columns: 160px 1fr; gap: var(--space-3, 12px);">
+                  <dt style="color: var(--color-text-muted, #5c6570);">Resolution notes</dt>
+                  <dd style="margin: 0;">Mentor confirmed no-show due to personal emergency. Full refund issued as make-good.</dd>
+                </div>
+              </dl>
+            </div></div>
+          </div>
+
+          <!-- ===== success ===== -->
+          <div class="only-success stack">
+            <a href="complaints.html" class="btn btn--ghost">← Back to complaints</a>
+
+            <h1>Complaint #C-1042</h1>
+
+            <div class="card"><div class="card__body stack">
+              <h2>Complaint details</h2>
+              <dl style="display: grid; gap: var(--space-3, 12px);">
+                <div style="display: grid; grid-template-columns: 160px 1fr; gap: var(--space-3, 12px);">
+                  <dt style="color: var(--color-text-muted, #5c6570);">Status</dt>
+                  <dd style="margin: 0;"><span class="badge badge--warning">Pending</span></dd>
+                </div>
+                <div style="display: grid; grid-template-columns: 160px 1fr; gap: var(--space-3, 12px);">
+                  <dt style="color: var(--color-text-muted, #5c6570);">Learner</dt>
+                  <dd style="margin: 0; font-weight: 600;">Nguyễn Văn A (user #3421)</dd>
+                </div>
+                <div style="display: grid; grid-template-columns: 160px 1fr; gap: var(--space-3, 12px);">
+                  <dt style="color: var(--color-text-muted, #5c6570);">Type</dt>
+                  <dd style="margin: 0;">Mentor no-show</dd>
+                </div>
+                <div style="display: grid; grid-template-columns: 160px 1fr; gap: var(--space-3, 12px);">
+                  <dt style="color: var(--color-text-muted, #5c6570);">Related to</dt>
+                  <dd style="margin: 0;"><a href="#">Booking #8821</a></dd>
+                </div>
+                <div style="display: grid; grid-template-columns: 160px 1fr; gap: var(--space-3, 12px);">
+                  <dt style="color: var(--color-text-muted, #5c6570);">Submitted</dt>
+                  <dd style="margin: 0;">27 Sep 2026, 10:15 AM</dd>
+                </div>
+                <div style="display: grid; grid-template-columns: 160px 1fr; gap: var(--space-3, 12px);">
+                  <dt style="color: var(--color-text-muted, #5c6570);">Description</dt>
+                  <dd style="margin: 0;">
+                    <p>Mentor Dr. Nguyễn Văn A did not join the scheduled session on Monday, Sep 30 at 9:00 AM. I waited for 20 minutes but received no response. The Google Meet link was correct. I would like a refund.</p>
+                  </dd>
+                </div>
+              </dl>
+            </div></div>
+
+            <form class="card"><div class="card__body stack">
+              <h2>Resolution</h2>
+
+              <label class="field">
+                <input type="checkbox" name="issue_credit" checked>
+                <span>Issue credit as make-good</span>
+              </label>
+
+              <label class="field">
+                <span class="field__label">Credit amount</span>
+                <input type="number" class="field__input" name="credit_amount" value="1" min="0" max="10" style="max-width: 120px;">
+                <span class="field__hint">Credits will be marked as admin_grant in transaction log</span>
+              </label>
+
+              <label class="field">
+                <span class="field__label">Internal notes</span>
+                <textarea class="field__input" name="notes" rows="4" placeholder="Document resolution decision and any actions taken..." required></textarea>
+                <span class="field__hint">Not shown to learner, for admin record only</span>
+              </label>
+
+              <div class="row">
+                <button type="submit" class="btn btn--danger multi-state" data-show="success">Resolve complaint</button>
+                <button type="button" class="btn btn--danger only-submitting" disabled>Resolving...</button>
+              </div>
+            </div></form>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <script src="../assets/js/state-switch.js"></script>
+</body>
+</html>
