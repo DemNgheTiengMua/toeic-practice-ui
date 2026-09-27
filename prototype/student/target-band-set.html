@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Set Target Level — TOEIC Practice</title>
+  <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/css/tokens.css">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+</head>
+<body data-states="submitting,error,success">
+  <div class="app-shell app-shell--with-sidebar">
+    <header class="app-topbar">
+      <strong>TOEIC Practice</strong>
+      <div class="row">
+        <span class="badge badge--info">3 credits left</span>
+        <a class="btn btn--sm" href="../payment/pricing.html">Buy credits</a>
+        <a class="btn btn--ghost btn--sm" href="profile.html">Nguyễn Văn A</a>
+      </div>
+    </header>
+    <div class="app-body">
+      <aside class="app-sidebar">
+        <nav class="nav-list" aria-label="Main navigation">
+          <a class="nav-list__item" href="dashboard.html">Home</a>
+          <div class="nav-list__group">Mock exams</div>
+          <a class="nav-list__item" href="exam-list.html">Test list</a>
+          <a class="nav-list__item" href="exam-history.html">Exam history</a>
+          <div class="nav-list__group">Practice</div>
+          <a class="nav-list__item" href="practice-select.html">Practice by section</a>
+          <a class="nav-list__item" href="weakness-analysis.html">Weakness analysis</a>
+          <div class="nav-list__group">Account</div>
+          <a class="nav-list__item" href="../payment/wallet.html">Credit wallet</a>
+          <a class="nav-list__item" href="profile.html">Profile</a>
+        </nav>
+      </aside>
+      <main class="app-main">
+        <div class="container stack">
+          <!-- ===== error ===== -->
+          <div class="only-error">
+            <div class="alert alert--danger">
+              <strong>Could not save your target.</strong> Try again.
+            </div>
+          </div>
+
+          <!-- ===== success ===== -->
+          <div class="only-success stack">
+            <h1>Set your target level</h1>
+            <p>Your current level is <strong>A2</strong>. Where do you want to be?</p>
+
+            <form class="stack" style="max-width: 500px;">
+              <label class="field">
+                <span class="field__label">Target level</span>
+                <select class="field__input" name="target" required>
+                  <option value="">Choose your target</option>
+                  <option value="b1">B1 (Intermediate) — 550-784 points</option>
+                  <option value="b2" selected>B2 (Upper Intermediate) — 785-944 points</option>
+                  <option value="c1">C1 (Advanced) — 945-990 points</option>
+                </select>
+                <span class="field__hint">Your learning path will guide you from A2 to your target level.</span>
+              </label>
+
+              <div class="row">
+                <button type="submit" class="btn btn--primary multi-state" data-show="success">Generate my path</button>
+                <button type="button" class="btn btn--primary only-submitting" disabled>Generating...</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <script src="../assets/js/state-switch.js"></script>
+</body>
+</html>

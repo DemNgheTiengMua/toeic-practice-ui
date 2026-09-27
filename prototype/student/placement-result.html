@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Placement Result — TOEIC Practice</title>
+  <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/css/tokens.css">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+</head>
+<body data-states="loading,error,success">
+  <div class="app-shell app-shell--with-sidebar">
+    <header class="app-topbar">
+      <strong>TOEIC Practice</strong>
+      <div class="row">
+        <span class="badge badge--info">3 credits left</span>
+        <a class="btn btn--sm" href="../payment/pricing.html">Buy credits</a>
+        <a class="btn btn--ghost btn--sm" href="profile.html">Nguyễn Văn A</a>
+      </div>
+    </header>
+    <div class="app-body">
+      <aside class="app-sidebar">
+        <nav class="nav-list" aria-label="Main navigation">
+          <a class="nav-list__item" href="dashboard.html">Home</a>
+          <div class="nav-list__group">Mock exams</div>
+          <a class="nav-list__item" href="exam-list.html">Test list</a>
+          <a class="nav-list__item" href="exam-history.html">Exam history</a>
+          <div class="nav-list__group">Practice</div>
+          <a class="nav-list__item" href="practice-select.html">Practice by section</a>
+          <a class="nav-list__item" href="weakness-analysis.html">Weakness analysis</a>
+          <div class="nav-list__group">Account</div>
+          <a class="nav-list__item" href="../payment/wallet.html">Credit wallet</a>
+          <a class="nav-list__item" href="profile.html">Profile</a>
+        </nav>
+      </aside>
+      <main class="app-main">
+        <div class="container stack">
+          <!-- ===== loading ===== -->
+          <div class="only-loading stack">
+            <div class="skeleton skeleton--title"></div>
+            <div class="skeleton skeleton--block" style="height: 200px"></div>
+          </div>
+
+          <!-- ===== error ===== -->
+          <div class="only-error">
+            <div class="card"><div class="card__body">
+              <div class="state-block">
+                <div class="state-block__icon" aria-hidden="true">!</div>
+                <div class="state-block__title">Could not load results</div>
+                <p class="state-block__desc">Check your connection and try again.</p>
+                <button class="btn btn--primary">Try again</button>
+              </div>
+            </div></div>
+          </div>
+
+          <!-- ===== success ===== -->
+          <div class="only-success stack">
+            <h1>Your placement result</h1>
+
+            <div class="card"><div class="card__body stack">
+              <div class="cefr-band">
+                <div class="cefr-band__head">
+                  <span class="cefr-band__current">A2</span>
+                  <span>385 points · Elementary level</span>
+                </div>
+                <div class="cefr-band__track" role="img" aria-label="Current band A2, score 385 out of 990">
+                  <span class="cefr-band__band is-reached">&lt;A1</span>
+                  <span class="cefr-band__band is-reached">A1</span>
+                  <span class="cefr-band__band is-current">A2</span>
+                  <span class="cefr-band__band">B1</span>
+                  <span class="cefr-band__band">B2</span>
+                  <span class="cefr-band__band">C1</span>
+                </div>
+                <div class="cefr-band__scale" aria-hidden="true">
+                  <span>10</span>
+                  <span class="cefr-band__tick">120</span>
+                  <span class="cefr-band__tick">225</span>
+                  <span class="cefr-band__tick">550</span>
+                  <span class="cefr-band__tick">785</span>
+                  <span class="cefr-band__tick">945</span>
+                </div>
+              </div>
+
+              <p>You scored <strong>385 points</strong> on the placement test. This places you at the <strong>A2 (Elementary)</strong> level.</p>
+
+              <a href="target-band-set.html" class="btn btn--primary">Set your target level</a>
+            </div></div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <script src="../assets/js/state-switch.js"></script>
+</body>
+</html>

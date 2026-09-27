@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Placement Test — TOEIC Practice</title>
+  <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/css/tokens.css">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+</head>
+<body data-states="loading,success,resumed,expired,submitting,offline">
+  <div class="app-shell">
+    <header class="app-topbar">
+      <div class="exam-topbar-group">
+        <strong>Placement Test</strong>
+        <span class="badge badge--info">Question 12 of 40</span>
+      </div>
+      <div class="exam-topbar-group">
+        <span class="save-status save-status--saved only-success" role="status" aria-live="polite">Saved</span>
+        <span class="save-status save-status--error only-offline" role="status" aria-live="polite">Connection lost — retrying…</span>
+        <span class="timer only-success" role="timer" aria-label="Time remaining">
+          <span class="text-sm text-muted">Time remaining</span>
+          <span class="timer__value">28:45</span>
+        </span>
+        <span class="timer timer--warning only-resumed" role="timer" aria-label="Time remaining">
+          <span class="text-sm">Time remaining</span>
+          <span class="timer__value">09:44</span>
+        </span>
+        <span class="timer timer--critical only-expired" role="timer" aria-label="Time is up">
+          <span class="text-sm">Time is up</span>
+          <span class="timer__value">00:00:00</span>
+        </span>
+      </div>
+    </header>
+    <main class="app-main">
+      <h1 class="visually-hidden">Placement Test</h1>
+
+      <!-- ===== loading ===== -->
+      <div class="container only-loading">
+        <div class="exam-layout">
+          <div class="stack">
+            <div class="skeleton skeleton--block" style="height: 90px"></div>
+            <div class="skeleton skeleton--title"></div>
+            <div class="skeleton skeleton--text"></div>
+            <div class="skeleton skeleton--text" style="width: 70%"></div>
+            <div class="skeleton skeleton--block" style="height: 200px"></div>
+          </div>
+          <div class="skeleton skeleton--block" style="height: 320px"></div>
+        </div>
+      </div>
+
+      <!-- ===== expired ===== -->
+      <div class="container only-expired" style="max-width: 560px">
+        <div class="card"><div class="card__body">
+          <div class="state-block">
+            <div class="state-block__icon" aria-hidden="true">TIME'S UP</div>
+            <div class="state-block__title">Time is up</div>
+            <p class="state-block__desc">
+              The test is being submitted automatically and graded on the questions you answered. No further action is needed.
+            </p>
+            <div class="progress" style="max-width: 280px; margin: 0 auto">
+              <div class="progress__bar" style="width: 70%"></div>
+            </div>
+          </div>
+        </div></div>
+      </div>
+
+      <!-- ===== submitting ===== -->
+      <div class="container only-submitting" style="max-width: 560px">
+        <div class="card"><div class="card__body">
+          <div class="state-block">
+            <div class="state-block__icon" aria-hidden="true">RUNNING</div>
+            <div class="state-block__title">Submitting…</div>
+            <p class="state-block__desc">Do not close the page. This takes a few seconds.</p>
+          </div>
+        </div></div>
+      </div>
+
+      <!-- banner for resumed / offline -->
+      <div class="container only-resumed" style="margin-bottom: var(--space-4)">
+        <div class="alert alert--info">
+          <strong>Your placement test in progress has been restored.</strong>
+          You returned to question 12; the time remaining is counted from the start.
+        </div>
+      </div>
+      <div class="container only-offline" style="margin-bottom: var(--space-4)">
+        <div class="alert alert--danger" role="alert">
+          <strong>Connection lost.</strong>
+          Your answers are being held on this device and will be sent automatically once you are back online. Do not close the tab.
+        </div>
+      </div>
+
+      <div class="container exam-body multi-state" data-show="success resumed offline">
+        <div class="exam-layout">
+
+          <!-- content column -->
+          <div class="stack">
+            <div class="exam-question">
+              <div class="exam-question__number">Question 12</div>
+              <div class="exam-question__text">
+                <p><strong>Choose the word that best completes the sentence:</strong></p>
+                <p>The manager asked the team to _______ the report by Friday.</p>
+              </div>
+            </div>
+
+            <form class="exam-choices">
+              <label class="choice">
+                <input type="radio" name="q12" value="A">
+                <span class="choice__mark">A</span>
+                <span class="choice__text">submit</span>
+              </label>
+              <label class="choice">
+                <input type="radio" name="q12" value="B">
+                <span class="choice__mark">B</span>
+                <span class="choice__text">submits</span>
+              </label>
+              <label class="choice">
+                <input type="radio" name="q12" value="C">
+                <span class="choice__mark">C</span>
+                <span class="choice__text">submitted</span>
+              </label>
+              <label class="choice">
+                <input type="radio" name="q12" value="D">
+                <span class="choice__mark">D</span>
+                <span class="choice__text">submitting</span>
+              </label>
+            </form>
+          </div>
+
+          <!-- navigation panel -->
+          <div class="exam-nav">
+            <div class="exam-nav__grid">
+              <button class="exam-nav__item is-answered" aria-label="Question 1, answered">1</button>
+              <button class="exam-nav__item is-answered" aria-label="Question 2, answered">2</button>
+              <button class="exam-nav__item is-answered" aria-label="Question 3, answered">3</button>
+              <button class="exam-nav__item is-answered" aria-label="Question 4, answered">4</button>
+              <button class="exam-nav__item is-answered" aria-label="Question 5, answered">5</button>
+              <button class="exam-nav__item is-answered" aria-label="Question 6, answered">6</button>
+              <button class="exam-nav__item is-answered" aria-label="Question 7, answered">7</button>
+              <button class="exam-nav__item is-answered" aria-label="Question 8, answered">8</button>
+              <button class="exam-nav__item is-answered" aria-label="Question 9, answered">9</button>
+              <button class="exam-nav__item is-answered" aria-label="Question 10, answered">10</button>
+              <button class="exam-nav__item is-answered" aria-label="Question 11, answered">11</button>
+              <button class="exam-nav__item is-current" aria-label="Question 12, current" aria-current="true">12</button>
+              <button class="exam-nav__item" aria-label="Question 13, not answered">13</button>
+              <button class="exam-nav__item" aria-label="Question 14, not answered">14</button>
+              <button class="exam-nav__item" aria-label="Question 15, not answered">15</button>
+              <button class="exam-nav__item" aria-label="Question 16, not answered">16</button>
+              <button class="exam-nav__item" aria-label="Question 17, not answered">17</button>
+              <button class="exam-nav__item" aria-label="Question 18, not answered">18</button>
+              <button class="exam-nav__item" aria-label="Question 19, not answered">19</button>
+              <button class="exam-nav__item" aria-label="Question 20, not answered">20</button>
+              <button class="exam-nav__item" aria-label="Question 21, not answered">21</button>
+              <button class="exam-nav__item" aria-label="Question 22, not answered">22</button>
+              <button class="exam-nav__item" aria-label="Question 23, not answered">23</button>
+              <button class="exam-nav__item" aria-label="Question 24, not answered">24</button>
+              <button class="exam-nav__item" aria-label="Question 25, not answered">25</button>
+              <button class="exam-nav__item" aria-label="Question 26, not answered">26</button>
+              <button class="exam-nav__item" aria-label="Question 27, not answered">27</button>
+              <button class="exam-nav__item" aria-label="Question 28, not answered">28</button>
+              <button class="exam-nav__item" aria-label="Question 29, not answered">29</button>
+              <button class="exam-nav__item" aria-label="Question 30, not answered">30</button>
+              <button class="exam-nav__item" aria-label="Question 31, not answered">31</button>
+              <button class="exam-nav__item" aria-label="Question 32, not answered">32</button>
+              <button class="exam-nav__item" aria-label="Question 33, not answered">33</button>
+              <button class="exam-nav__item" aria-label="Question 34, not answered">34</button>
+              <button class="exam-nav__item" aria-label="Question 35, not answered">35</button>
+              <button class="exam-nav__item" aria-label="Question 36, not answered">36</button>
+              <button class="exam-nav__item" aria-label="Question 37, not answered">37</button>
+              <button class="exam-nav__item" aria-label="Question 38, not answered">38</button>
+              <button class="exam-nav__item" aria-label="Question 39, not answered">39</button>
+              <button class="exam-nav__item" aria-label="Question 40, not answered">40</button>
+            </div>
+
+            <div class="exam-nav__actions">
+              <button class="btn btn--plate btn--sm">← Previous</button>
+              <button class="btn btn--primary btn--sm">Next →</button>
+            </div>
+
+            <button class="btn btn--danger" style="margin-top: var(--space-4, 16px);">Submit test</button>
+          </div>
+
+        </div>
+      </div>
+    </main>
+  </div>
+  <script src="../assets/js/state-switch.js"></script>
+</body>
+</html>
