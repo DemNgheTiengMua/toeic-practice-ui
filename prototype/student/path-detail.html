@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Module Detail — TOEIC Practice</title>
+  <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/css/tokens.css">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+</head>
+<body data-states="loading,locked,error,success">
+  <div class="app-shell app-shell--with-sidebar">
+    <header class="app-topbar">
+      <strong>TOEIC Practice</strong>
+      <div class="row">
+        <span class="badge badge--info">3 credits left</span>
+        <a class="btn btn--sm" href="../payment/pricing.html">Buy credits</a>
+        <a class="btn btn--ghost btn--sm" href="profile.html">Nguyễn Văn A</a>
+      </div>
+    </header>
+    <div class="app-body">
+      <aside class="app-sidebar">
+        <nav class="nav-list" aria-label="Main navigation">
+          <a class="nav-list__item" href="dashboard.html">Home</a>
+          <div class="nav-list__group">Mock exams</div>
+          <a class="nav-list__item" href="exam-list.html">Test list</a>
+          <a class="nav-list__item" href="exam-history.html">Exam history</a>
+          <div class="nav-list__group">Practice</div>
+          <a class="nav-list__item" href="practice-select.html">Practice by section</a>
+          <a class="nav-list__item" href="weakness-analysis.html">Weakness analysis</a>
+          <div class="nav-list__group">Learning</div>
+          <a class="nav-list__item is-active" href="learning-path.html">My learning path</a>
+          <div class="nav-list__group">Account</div>
+          <a class="nav-list__item" href="../payment/wallet.html">Credit wallet</a>
+          <a class="nav-list__item" href="profile.html">Profile</a>
+        </nav>
+      </aside>
+      <main class="app-main">
+        <div class="container stack">
+          <!-- ===== loading ===== -->
+          <div class="only-loading stack">
+            <div class="skeleton skeleton--title"></div>
+            <div class="skeleton skeleton--block" style="height: 200px"></div>
+          </div>
+
+          <!-- ===== error ===== -->
+          <div class="only-error">
+            <div class="card"><div class="card__body">
+              <div class="state-block">
+                <div class="state-block__icon" aria-hidden="true">!</div>
+                <div class="state-block__title">Could not load module</div>
+                <p class="state-block__desc">Check your connection and try again.</p>
+                <button class="btn btn--primary">Try again</button>
+              </div>
+            </div></div>
+          </div>
+
+          <!-- ===== locked ===== -->
+          <div class="only-locked">
+            <div class="card"><div class="card__body">
+              <div class="state-block">
+                <div class="state-block__icon" aria-hidden="true">LOCKED</div>
+                <div class="state-block__title">Module locked</div>
+                <p class="state-block__desc">Complete the previous modules to unlock this one.</p>
+                <a href="learning-path.html" class="btn btn--primary">Back to path</a>
+              </div>
+            </div></div>
+          </div>
+
+          <!-- ===== success ===== -->
+          <div class="only-success stack">
+            <div class="row" style="align-items: baseline;">
+              <h1>Module 2: Present Continuous</h1>
+              <span class="badge badge--warning">In progress</span>
+            </div>
+
+            <div class="card"><div class="card__body stack">
+              <p><strong>Practice module</strong> · 25 questions · Est. 20 minutes</p>
+              <p>Learn and practice the present continuous tense. This module covers when to use the present continuous, how to form it, and common mistakes to avoid.</p>
+
+              <div style="padding: var(--space-4, 16px); background: var(--color-bg-alt, #f5f6f7); border-left: 4px solid var(--sign-blue, #0b4ea2);">
+                <strong>What you'll learn:</strong>
+                <ul style="margin: var(--space-2, 8px) 0 0; padding-left: var(--space-5, 24px);">
+                  <li>When to use present continuous vs present simple</li>
+                  <li>Forming affirmative, negative, and question forms</li>
+                  <li>Common time expressions (now, at the moment, currently)</li>
+                  <li>Verbs that don't take continuous form (stative verbs)</li>
+                </ul>
+              </div>
+
+              <div style="margin-top: var(--space-4, 16px);">
+                <strong>Your progress:</strong>
+                <div class="progress" style="margin-top: var(--space-2, 8px);">
+                  <div class="progress__bar" style="width: 60%"></div>
+                </div>
+                <p class="text-muted" style="margin-top: var(--space-1, 4px);">15 of 25 questions completed</p>
+              </div>
+
+              <div class="row" style="margin-top: var(--space-4, 16px);">
+                <a href="practice-take.html" class="btn btn--primary">Continue module</a>
+                <a href="learning-path.html" class="btn btn--plate">Back to path</a>
+              </div>
+            </div></div>
+
+            <div class="alert alert--info">
+              <strong>Want more?</strong> <a href="path-upgrade.html">Upgrade to premium</a> for video lessons, detailed explanations, and AI-graded writing tasks.
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <script src="../assets/js/state-switch.js"></script>
+</body>
+</html>
