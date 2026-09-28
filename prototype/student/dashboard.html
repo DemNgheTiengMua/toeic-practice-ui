@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
 </head>
-<body data-states="loading,empty,error,success,first-time">
+<body data-states="loading,empty,error,success">
   <div class="app-shell app-shell--with-sidebar">
     <header class="app-topbar">
       <strong>TOEIC Practice</strong>
@@ -27,43 +27,16 @@
           <a class="nav-list__item" href="exam-list.html">Test list</a>
           <a class="nav-list__item" href="exam-history.html">Exam history</a>
           <div class="nav-list__group">Practice</div>
-          <a class="nav-list__item" href="practice-select.html">Practice by section</a>
+          <a class="nav-list__item" href="practice-select.html">Practice by part</a>
           <a class="nav-list__item" href="weakness-analysis.html">Weakness analysis</a>
           <div class="nav-list__group">Account</div>
           <a class="nav-list__item" href="../payment/wallet.html">Credit wallet</a>
+          <a class="nav-list__item" href="kyc-pending.html">ID verification</a>
           <a class="nav-list__item" href="profile.html">Profile</a>
         </nav>
       </aside>
       <main class="app-main">
         <div class="container stack">
-          <!-- ===== first-time: no active certificate ===== -->
-          <div class="only-first-time stack">
-            <h1>Hello, Nguyễn Văn A</h1>
-            <div class="card"><div class="card__body stack">
-              <h2>Pick a certificate to start</h2>
-              <div class="certificate-picker">
-                <button class="certificate-card" data-cert="toeic">
-                  <span class="badge badge--info">TOEIC</span>
-                  <strong class="certificate-card__name">Test of English for International Communication</strong>
-                  <span class="certificate-card__skills">Listening · Reading</span>
-                </button>
-                <button class="certificate-card" data-cert="ielts">
-                  <span class="badge badge--info">IELTS</span>
-                  <strong class="certificate-card__name">International English Language Testing System</strong>
-                  <span class="certificate-card__skills">Listening · Reading · Writing · Speaking</span>
-                </button>
-                <button class="certificate-card" data-cert="vstep">
-                  <span class="badge badge--info">VSTEP</span>
-                  <strong class="certificate-card__name">Vietnamese Standardised Test of English Proficiency</strong>
-                  <span class="certificate-card__skills">Listening · Reading · Writing · Speaking</span>
-                </button>
-              </div>
-              <p class="text-muted" style="text-align: center; margin-top: var(--space-4, 16px);">
-                Switching certificates later will not delete your progress. Each certificate's data is saved separately.
-              </p>
-            </div></div>
-          </div>
-
           <!-- ===== loading ===== -->
           <div class="only-loading stack">
             <div class="skeleton skeleton--title"></div>
@@ -99,7 +72,7 @@
                 </p>
                 <div class="row" style="justify-content: center">
                   <a class="btn btn--primary btn--lg" href="exam-list.html">Start mock exam</a>
-                  <a class="btn btn--lg" href="practice-select.html">Practice by section</a>
+                  <a class="btn btn--lg" href="practice-select.html">Practice by part</a>
                 </div>
               </div>
             </div></div>
@@ -107,37 +80,23 @@
 
           <!-- ===== success ===== -->
           <div class="only-success stack">
-            <div class="row row--between">
-              <h1 style="margin: 0">Hello, Nguyễn Văn A</h1>
-              <a class="btn btn--primary" href="exam-list.html">Take a mock test now</a>
+            <h1>Hello, Nguyễn Văn A</h1>
+
+            <div class="stat">
+              <div class="stat__label">Your current level</div>
+              <div class="stat__value">720</div>
+              <div class="stat__hint">CEFR B1 · L 385 · R 335 · 18 Sep 2026</div>
             </div>
 
-            <div class="active-certificate">
-              <span class="text-muted">Currently working on</span>
-              <strong class="active-certificate__name">TOEIC</strong>
-              <button class="btn btn--plate btn--sm">Switch certificate</button>
+            <div class="row" style="justify-content: center; gap: var(--space-4)">
+              <a class="btn btn--primary btn--lg" href="exam-list.html">Take a mock test</a>
+              <a class="btn btn--lg" href="practice-select.html">Practice by part</a>
             </div>
 
-            <div class="grid-3">
-              <div class="stat">
-                <div class="stat__label">Most recent score</div>
-                <div class="stat__value">720</div>
-                <div class="stat__hint">L 385 · R 335 — 18 Sep 2026</div>
-              </div>
-              <div class="stat">
-                <div class="stat__label">Best score</div>
-                <div class="stat__value">745</div>
-                <div class="stat__hint">Achieved on 02 Sep 2026</div>
-              </div>
-              <div class="stat">
-                <div class="stat__label">Completed</div>
-                <div class="stat__value">6</div>
-                <div class="stat__hint">full exams · 24 practice sessions</div>
-              </div>
-            </div>
-
-            <div class="card">
-              <div class="card__header"><strong>Equivalent CEFR level</strong></div>
+            <details class="card">
+              <summary class="card__header" style="cursor: pointer">
+                <strong>View CEFR level details</strong>
+              </summary>
               <div class="card__body">
                 <div class="cefr">
                   <div class="cefr__head">
@@ -166,15 +125,12 @@
                   </p>
                 </div>
               </div>
-            </div>
+            </details>
 
-            <div class="card">
-              <div class="card__header">
-                <div class="row row--between">
-                  <strong>Accuracy by Part</strong>
-                  <a class="btn btn--sm" href="weakness-analysis.html">Full analysis</a>
-                </div>
-              </div>
+            <details class="card">
+              <summary class="card__header" style="cursor: pointer">
+                <strong>View accuracy by part</strong>
+              </summary>
               <div class="card__body stack">
                 <div>
                   <div class="row row--between text-sm">
@@ -204,10 +160,12 @@
                   Part 7 is currently your weak area. <a href="practice-select.html">Practice Part 7</a>
                 </p>
               </div>
-            </div>
+            </details>
 
-            <div class="card">
-              <div class="card__header"><strong>Recent exams</strong></div>
+            <details class="card">
+              <summary class="card__header" style="cursor: pointer">
+                <strong>View recent exams</strong>
+              </summary>
               <div class="card__body">
                 <table class="table table--striped">
                   <thead>
@@ -235,7 +193,7 @@
               <div class="card__footer">
                 <a class="btn btn--sm" href="exam-history.html">View all</a>
               </div>
-            </div>
+            </details>
           </div>
         </div>
       </main>

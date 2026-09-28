@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" dir="ltr">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -8,6 +8,45 @@
   <link rel="stylesheet" href="../assets/css/tokens.css">
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
+  <style>
+    /* Polish: Mentor booking detail list styling */
+    .booking-details {
+      display: grid;
+      gap: var(--space-3);
+    }
+    .booking-details__row {
+      display: grid;
+      grid-template-columns: 120px 1fr;
+      gap: var(--space-3);
+      align-items: baseline;
+    }
+    .booking-details__label {
+      color: var(--color-text-muted);
+      font-size: var(--text-sm);
+    }
+    .booking-details__value {
+      margin: 0;
+      line-height: var(--leading-snug);
+    }
+    .booking-summary {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: var(--space-4);
+      margin-top: var(--space-4);
+      border-top: var(--keyline) solid var(--ink);
+    }
+    .booking-summary__label {
+      font-size: var(--text-lg);
+      font-weight: 700;
+    }
+    .booking-summary__value {
+      font-family: var(--font-mono);
+      font-size: var(--text-2xl);
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+  </style>
 </head>
 <body data-states="success,paywall,submitting,error">
   <div class="app-shell app-shell--with-sidebar">
@@ -60,48 +99,48 @@
             <h1>Confirm your booking</h1>
 
             <div class="card"><div class="card__body stack">
-              <h2>Session details</h2>
-              <dl style="display: grid; gap: var(--space-3, 12px);">
-                <div style="display: grid; grid-template-columns: 120px 1fr; gap: var(--space-3, 12px);">
-                  <dt style="color: var(--color-text-muted, #5c6570);">Mentor</dt>
-                  <dd style="margin: 0; font-weight: 600;">Dr. Nguyễn Văn A</dd>
+              <h3>Session details</h3>
+              <dl class="booking-details">
+                <div class="booking-details__row">
+                  <dt class="booking-details__label">Mentor</dt>
+                  <dd class="booking-details__value"><strong>Dr. Nguyễn Văn A</strong></dd>
                 </div>
-                <div style="display: grid; grid-template-columns: 120px 1fr; gap: var(--space-3, 12px);">
-                  <dt style="color: var(--color-text-muted, #5c6570);">Certificate</dt>
-                  <dd style="margin: 0;"><span class="badge badge--info">TOEIC</span></dd>
+                <div class="booking-details__row">
+                  <dt class="booking-details__label">Certificate</dt>
+                  <dd class="booking-details__value"><span class="badge badge--info">TOEIC</span></dd>
                 </div>
-                <div style="display: grid; grid-template-columns: 120px 1fr; gap: var(--space-3, 12px);">
-                  <dt style="color: var(--color-text-muted, #5c6570);">Focus area</dt>
-                  <dd style="margin: 0;">Listening strategies</dd>
+                <div class="booking-details__row">
+                  <dt class="booking-details__label">Focus area</dt>
+                  <dd class="booking-details__value">Listening strategies</dd>
                 </div>
-                <div style="display: grid; grid-template-columns: 120px 1fr; gap: var(--space-3, 12px);">
-                  <dt style="color: var(--color-text-muted, #5c6570);">Time</dt>
-                  <dd style="margin: 0;"><strong>Monday, Sep 30 — 9:00 AM</strong></dd>
+                <div class="booking-details__row">
+                  <dt class="booking-details__label">Time</dt>
+                  <dd class="booking-details__value"><strong>Monday, Sep 30 — 9:00 AM</strong></dd>
                 </div>
-                <div style="display: grid; grid-template-columns: 120px 1fr; gap: var(--space-3, 12px);">
-                  <dt style="color: var(--color-text-muted, #5c6570);">Duration</dt>
-                  <dd style="margin: 0;">60 minutes</dd>
+                <div class="booking-details__row">
+                  <dt class="booking-details__label">Duration</dt>
+                  <dd class="booking-details__value">60 minutes</dd>
                 </div>
-                <div style="display: grid; grid-template-columns: 120px 1fr; gap: var(--space-3, 12px);">
-                  <dt style="color: var(--color-text-muted, #5c6570);">Platform</dt>
-                  <dd style="margin: 0;">Google Meet (link sent after booking)</dd>
+                <div class="booking-details__row">
+                  <dt class="booking-details__label">Platform</dt>
+                  <dd class="booking-details__value">Google Meet (link sent after booking)</dd>
                 </div>
               </dl>
 
-              <div style="padding: var(--space-4, 16px); margin-top: var(--space-3, 12px); background: var(--color-bg-alt, #f5f6f7); border-left: 4px solid var(--sign-blue, #0b4ea2);">
+              <div class="alert alert--info">
                 <strong>Cancellation policy:</strong>
-                <p style="margin: var(--space-1, 4px) 0 0;">Free cancellation up to 24 hours before the session. No refund for late cancellations.</p>
+                <p style="margin: var(--space-1) 0 0;">Free cancellation up to 24 hours before the session. No refund for late cancellations.</p>
               </div>
 
-              <div style="display: flex; justify-content: space-between; align-items: center; padding-top: var(--space-4, 16px); margin-top: var(--space-4, 16px); border-top: 2px solid var(--ink, #14181d);">
-                <strong style="font-size: var(--text-lg, 18px);">Total cost</strong>
-                <span style="font-family: var(--font-mono, 'IBM Plex Mono', monospace); font-size: var(--text-2xl, 24px); font-weight: 600; font-variant-numeric: tabular-nums;">1 credit</span>
+              <div class="booking-summary">
+                <strong class="booking-summary__label">Total cost</strong>
+                <span class="booking-summary__value">1 credit</span>
               </div>
 
               <div class="row">
-                <button class="btn btn--primary multi-state" data-show="success">Confirm booking</button>
-                <button class="btn btn--primary only-submitting" disabled>Processing...</button>
-                <a href="mentor-detail.html" class="btn btn--plate">Cancel</a>
+                <button class="btn btn--primary multi-state" data-show="success" type="button">Confirm booking</button>
+                <button class="btn btn--primary only-submitting" disabled type="button">Processing...</button>
+                <a href="mentor-detail.html" class="btn">Cancel</a>
               </div>
             </div></div>
           </div>

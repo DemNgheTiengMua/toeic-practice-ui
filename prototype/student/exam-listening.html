@@ -108,7 +108,7 @@
               </div>
               <div class="row">
                 <label class="text-sm text-muted" for="volume">Volume</label>
-                <input id="volume" type="range" min="0" max="100" value="70">
+                <input id="volume" type="range" min="0" max="100" value="70" aria-label="Volume control">
               </div>
             </div>
 
@@ -122,23 +122,24 @@
               <p class="question__stem text-muted">
                 <em>Part 2 does not print the question. Choose only A, B, or C after listening.</em>
               </p>
-              <div class="option-list" role="radiogroup" aria-label="Answer for question 8">
+              <div class="option-list" role="radiogroup" aria-label="Answer for question 8" aria-required="false">
                 <label class="option">
-                  <input class="option__input" type="radio" name="q8" value="A" checked>
+                  <input class="option__input" type="radio" name="q8" value="A" checked aria-describedby="q8-hint">
                   <span class="option__marker">A</span>
                   <span class="option__text">Option A</span>
                 </label>
                 <label class="option">
-                  <input class="option__input" type="radio" name="q8" value="B">
+                  <input class="option__input" type="radio" name="q8" value="B" aria-describedby="q8-hint">
                   <span class="option__marker">B</span>
                   <span class="option__text">Option B</span>
                 </label>
                 <label class="option">
-                  <input class="option__input" type="radio" name="q8" value="C">
+                  <input class="option__input" type="radio" name="q8" value="C" aria-describedby="q8-hint">
                   <span class="option__marker">C</span>
                   <span class="option__text">Option C</span>
                 </label>
               </div>
+              <span id="q8-hint" class="visually-hidden">Select one answer from the options above</span>
             </div>
 
             <!-- câu Part 1 để minh hoạ dạng có ảnh + 4 option -->
@@ -150,41 +151,43 @@
               </div>
               <img class="question__image" src="../assets/img/part1-sample.svg"
                    alt="Illustration for question 3: a person standing next to a printer in an office">
-              <div class="option-list" role="radiogroup" aria-label="Answer for question 3">
+              <div class="option-list" role="radiogroup" aria-label="Answer for question 3" aria-required="false">
                 <label class="option">
-                  <input class="option__input" type="radio" name="q3" value="A">
+                  <input class="option__input" type="radio" name="q3" value="A" aria-describedby="q3-hint">
                   <span class="option__marker">A</span>
                   <span class="option__text">Option A</span>
                 </label>
                 <label class="option">
-                  <input class="option__input" type="radio" name="q3" value="B">
+                  <input class="option__input" type="radio" name="q3" value="B" aria-describedby="q3-hint">
                   <span class="option__marker">B</span>
                   <span class="option__text">Option B</span>
                 </label>
                 <label class="option">
-                  <input class="option__input" type="radio" name="q3" value="C">
+                  <input class="option__input" type="radio" name="q3" value="C" aria-describedby="q3-hint">
                   <span class="option__marker">C</span>
                   <span class="option__text">Option C</span>
                 </label>
                 <label class="option">
-                  <input class="option__input" type="radio" name="q3" value="D">
+                  <input class="option__input" type="radio" name="q3" value="D" aria-describedby="q3-hint">
                   <span class="option__marker">D</span>
                   <span class="option__text">Option D</span>
                 </label>
               </div>
+              <span id="q3-hint" class="visually-hidden">Select one answer from the options above</span>
             </div>
 
             <div class="row row--between">
-              <button class="btn" disabled
-                      title="Listening does not allow returning to a previous Part">
+              <button class="btn" type="button" disabled
+                      title="Listening does not allow returning to a previous Part"
+                      aria-label="Go to previous part (disabled)">
                 ← Previous Part
               </button>
               <div class="row">
-                <button class="btn btn--ghost">Flag for review</button>
-                <button class="btn btn--primary">Next question →</button>
+                <button class="btn btn--ghost" type="button" aria-pressed="false" aria-label="Flag current question for review">Flag for review</button>
+                <button class="btn btn--primary" type="button" aria-label="Go to next question">Next question →</button>
               </div>
             </div>
-            <p class="text-xs text-muted" style="margin: 0">
+            <p class="text-xs text-muted" style="margin: 0" role="note">
               Completed Parts are locked. Each Part's audio plays only once.
             </p>
           </div>
@@ -195,16 +198,16 @@
               <div class="card__header">
                 <div class="row row--between">
                   <strong class="text-sm">Listening</strong>
-                  <span class="text-xs text-muted">31/100 questions</span>
+                  <span class="text-xs text-muted" aria-label="31 out of 100 questions completed">31/100 questions</span>
                 </div>
               </div>
               <div class="card__body stack">
-                <div class="progress"><div class="progress__bar" style="width: 31%"></div></div>
-                <div class="stepper" style="flex-direction: column">
-                  <span class="stepper__item is-done">Part 1 — 6 questions · locked</span>
-                  <span class="stepper__item is-current">Part 2 — 25 questions · in progress</span>
-                  <span class="stepper__item">Part 3 — 39 questions</span>
-                  <span class="stepper__item">Part 4 — 30 questions</span>
+                <div class="progress" role="progressbar" aria-valuenow="31" aria-valuemin="0" aria-valuemax="100" aria-label="Listening section progress"><div class="progress__bar" style="width: 31%"></div></div>
+                <div class="stepper" style="flex-direction: column" role="list">
+                  <span class="stepper__item is-done" role="listitem">Part 1 — 6 questions · locked</span>
+                  <span class="stepper__item is-current" role="listitem" aria-current="step">Part 2 — 25 questions · in progress</span>
+                  <span class="stepper__item" role="listitem">Part 3 — 39 questions</span>
+                  <span class="stepper__item" role="listitem">Part 4 — 30 questions</span>
                 </div>
               </div>
             </div>
@@ -212,30 +215,30 @@
             <div class="card">
               <div class="card__header"><strong class="text-sm">Questions 1–31</strong></div>
               <div class="card__body stack">
-                <div class="navigator__grid">
-                  <span class="navigator__cell is-answered">1</span>
-                  <span class="navigator__cell is-answered">2</span>
-                  <span class="navigator__cell is-answered">3</span>
-                  <span class="navigator__cell is-marked">4</span>
-                  <span class="navigator__cell is-answered">5</span>
-                  <span class="navigator__cell is-answered">6</span>
-                  <span class="navigator__cell is-answered">7</span>
-                  <span class="navigator__cell is-current is-answered">8</span>
-                  <span class="navigator__cell is-unanswered">9</span>
-                  <span class="navigator__cell is-unanswered">10</span>
+                <div class="navigator__grid" role="group" aria-label="Quick navigation for questions 1 to 31">
+                  <button class="navigator__cell is-answered" aria-label="Question 1, answered" type="button">1</button>
+                  <button class="navigator__cell is-answered" aria-label="Question 2, answered" type="button">2</button>
+                  <button class="navigator__cell is-answered" aria-label="Question 3, answered" type="button">3</button>
+                  <button class="navigator__cell is-marked" aria-label="Question 4, flagged for review" type="button">4</button>
+                  <button class="navigator__cell is-answered" aria-label="Question 5, answered" type="button">5</button>
+                  <button class="navigator__cell is-answered" aria-label="Question 6, answered" type="button">6</button>
+                  <button class="navigator__cell is-answered" aria-label="Question 7, answered" type="button">7</button>
+                  <button class="navigator__cell is-current is-answered" aria-label="Question 8, current question, answered" type="button">8</button>
+                  <button class="navigator__cell is-unanswered" aria-label="Question 9, not yet answered" type="button">9</button>
+                  <button class="navigator__cell is-unanswered" aria-label="Question 10, not yet answered" type="button">10</button>
                 </div>
-                <p class="text-xs text-muted" style="margin: 0">
+                <p class="text-xs text-muted" style="margin: 0" role="note">
                   See the full 200-question panel in
                   <a href="question-navigator.html">question-navigator.html</a>
                 </p>
                 <div class="text-xs stack" style="gap: var(--space-1)">
-                  <div class="row"><span class="navigator__cell is-answered" style="width: 18px">1</span> answered</div>
-                  <div class="row"><span class="navigator__cell is-marked" style="width: 18px">2</span> flag for review</div>
-                  <div class="row"><span class="navigator__cell is-unanswered" style="width: 18px">3</span> unanswered</div>
+                  <div class="row"><span class="navigator__cell is-answered" style="width: 18px" aria-hidden="true">1</span> answered</div>
+                  <div class="row"><span class="navigator__cell is-marked" style="width: 18px" aria-hidden="true">2</span> flag for review</div>
+                  <div class="row"><span class="navigator__cell is-unanswered" style="width: 18px" aria-hidden="true">3</span> unanswered</div>
                 </div>
               </div>
             </div>
-            <a class="btn btn--danger" href="exam-confirm-submit.html">Submit early</a>
+            <button class="btn btn--danger" type="button" onclick="if(confirm('Submit your exam now? You cannot return to Listening after submitting.')) window.location.href='exam-confirm-submit.html'" aria-label="Submit exam early">Submit early</button>
           </aside>
         </div>
       </div>
@@ -243,5 +246,6 @@
     </main>
   </div>
   <script src="../assets/js/state-switch.js"></script>
+  <script src="../assets/js/keyboard-nav.js"></script>
 </body>
 </html>
