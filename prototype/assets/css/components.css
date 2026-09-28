@@ -15,6 +15,7 @@
   display: inline-flex; align-items: center; justify-content: center;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-4);
+  min-height: 44px; /* Touch target minimum */
   font-family: var(--font-sign);
   font-size: var(--text-sm); font-weight: 700;
   text-transform: uppercase; letter-spacing: var(--tracking-sign);
@@ -26,7 +27,26 @@
   cursor: pointer;
   text-decoration: none;
 }
+/* Adapt: Fine pointer devices can use denser touch targets */
+@media (pointer: fine) {
+  .btn { min-height: 32px; padding: var(--space-2) var(--space-4); }
+  .btn--lg { min-height: 40px; }
+  .btn--sm { min-height: 28px; }
+}
+/* Adapt: Coarse pointer devices need larger touch targets */
+@media (pointer: coarse) {
+  .btn { min-height: 44px; padding: 10px var(--space-4); }
+  .btn--lg { min-height: 52px; padding: var(--space-4) var(--space-5); }
+  .btn--sm { min-height: 44px; padding: var(--space-2) var(--space-3); }
+}
 .btn:hover { background: var(--ink); color: #ffffff; }
+/* Adapt: Only show hover states on devices that support hover */
+@media (hover: none) {
+  .btn:hover { background: var(--color-surface); color: var(--ink); }
+  .btn--primary:hover { background: var(--sign-blue); border-color: var(--sign-blue); color: #ffffff; }
+  .btn--danger:hover { background: var(--sign-red); border-color: var(--sign-red); color: #ffffff; }
+  .btn--ghost:hover { background: transparent; border-color: transparent; color: var(--ink); }
+}
 .btn[disabled], .btn[aria-disabled="true"] {
   opacity: .45; cursor: not-allowed; pointer-events: none;
 }
@@ -123,11 +143,16 @@
 .field__input {
   width: 100%;
   padding: var(--space-2) var(--space-3);
+  min-height: 44px; /* Touch target minimum */
   font: inherit;
   color: var(--ink);
   background: var(--color-surface);
   border: var(--keyline) solid var(--ink);
   border-radius: 0;
+}
+/* Adapt: Fine pointer devices can use slightly smaller inputs */
+@media (pointer: fine) {
+  .field__input { min-height: 38px; }
 }
 .field__input:focus-visible { border-color: var(--sign-blue); }
 .field__hint { margin-top: var(--space-1); font-size: var(--text-xs); color: var(--color-text-muted); }
@@ -144,12 +169,21 @@
 .option {
   display: flex; align-items: flex-start; gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
+  min-height: 44px; /* Touch target minimum */
   background: var(--color-surface);
   border: var(--keyline-soft) solid var(--color-border);
   border-radius: 0;
   cursor: pointer;
 }
+/* Adapt: Fine pointer devices can use slightly denser options */
+@media (pointer: fine) {
+  .option { min-height: 38px; padding: var(--space-2) var(--space-4); }
+}
 .option:hover { border-color: var(--ink); }
+/* Adapt: Only show hover states on devices that support hover */
+@media (hover: none) {
+  .option:hover { border-color: var(--color-border); }
+}
 /* Square marker: a sign has corners. */
 .option__marker {
   flex: 0 0 auto;
@@ -269,7 +303,8 @@
 }
 .navigator__cell {
   aspect-ratio: 1;
-  min-width: 20px;
+  min-width: 44px; /* Touch target minimum */
+  min-height: 44px;
   display: grid; place-items: center;
   font-family: var(--font-mono);
   font-size: var(--text-xs);
@@ -279,6 +314,10 @@
   background: var(--color-surface);
   color: var(--color-text-muted);
   cursor: pointer;
+}
+/* Adapt: Fine pointer devices can use denser grid cells */
+@media (pointer: fine) {
+  .navigator__cell { min-width: 32px; min-height: 32px; }
 }
 .navigator__cell.is-unanswered { color: var(--color-text-muted); }
 .navigator__cell.is-answered {
@@ -597,6 +636,42 @@
   .exam-layout { grid-template-columns: minmax(0, 1fr); }
   .exam-sidebar { position: static; }
 }
+
+/* ===== Tablet adaptation (768px) ===== */
+/* Tablet sits between desktop and mobile: support both touch and pointer,
+   allow denser layouts than phone but prioritize thumb-friendly spacing.
+   Two-column layouts where desktop shows three, single column for complex
+   forms and narrow content. */
+@media (max-width: 768px) {
+  /* Increase touch spacing for interactive rows */
+  .row { gap: var(--space-3); }
+
+  /* Stack catalog rows to single column on tablet portrait */
+  .catalog__row { grid-template-columns: minmax(0, 1fr); }
+
+  /* Navigation adjustments for tablet */
+  .nav { gap: var(--space-2); }
+
+  /* Form inputs get more breathing room */
+  .field { margin-bottom: var(--space-4); }
+
+  /* Card body padding slightly reduced for tablet */
+  .card__body { padding: var(--space-4); }
+  .card__header, .card__footer { padding: var(--space-3) var(--space-4); }
+
+  /* Question blocks adapt spacing */
+  .question { padding: var(--space-4); }
+
+  /* Option list gets more spacing between options for easier tapping */
+  .option-list { gap: var(--space-2); }
+
+  /* Topbar wraps more aggressively on tablet */
+  .exam-topbar-group { gap: var(--space-3); }
+
+  /* Tables get horizontal scroll on tablet when needed */
+  .table { display: block; overflow-x: auto; }
+}
+
 .exam-topbar-group { display: flex; align-items: center; gap: var(--space-4); flex-wrap: wrap; }
 
 /* ===== Answer save indicator ===== */
