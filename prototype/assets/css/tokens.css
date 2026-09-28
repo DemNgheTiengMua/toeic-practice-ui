@@ -207,30 +207,37 @@
   --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", "SF Mono",
                Consolas, "Liberation Mono", monospace;
 
-  /* Reading sizes carry the weight here. 16px body; exam prose gets its own
-     17px/1.7 because the passage is the only long-form text in the product and
-     the only place worth spending vertical space on. */
-  --text-xs: 12px;  --text-sm: 14px;  --text-base: 16px;
-  --text-lg: 18px;  --text-xl: 22px;  --text-2xl: 28px;  --text-3xl: 36px;
-  --text-display: 56px;
+  /* Type scale — refined for clearer hierarchy and better readability.
+     - xs/sm floor raised from 12px/14px to 13px/14px for dense chrome
+     - passage gets explicit 17px token
+     - display scale strengthened with clearer jumps */
+  --text-xs: 13px;  --text-sm: 14px;  --text-base: 16px;
+  --text-passage: 17px;  --text-lg: 18px;  --text-xl: 24px;
+  --text-2xl: 32px;  --text-3xl: 42px;  --text-display: 56px;
 
   /* Leading is set per job, not per element: caps never want more than tight,
-     chrome wants snug, prose wants body, and the passage wants read. */
-  --leading-tight: 1.15;
-  --leading-snug: 1.35;
+     chrome wants snug, prose wants body, and the passage wants read. Refined
+     for better vertical rhythm and reading comfort. */
+  --leading-tight: 1.2;
+  --leading-snug: 1.4;
   --leading-body: 1.6;
-  --leading-read: 1.7;
+  --leading-read: 1.75;
 
-  /* The measure. Long-form English reads best around 65-75 characters; below
-     that the eye jumps too often, above it the return sweep starts missing
-     lines. `ch` is resolved against the reading face, so this tracks the
-     typeface rather than a pixel guess. */
+  /* Reading measure — prose stays in the 45-75ch comfort zone. Passage text
+     optimized at 68ch for sustained reading under time pressure. */
   --measure: 68ch;
+  --measure-narrow: 45ch;
+  --measure-wide: 75ch;
 
-  /* Painted caps are spaced, not cramped. Small caps need more of it than
-     large ones or the counters close up. */
+  /* Tracking — refined per role and size.
+     - Sign lettering tracked for clarity in condensed caps
+     - Small caps need extra space or counters close
+     - Body text stays neutral; slight tightening only at display sizes
+     - Passage text gets minimal opening for reading comfort */
   --tracking-sign: .055em;
-  --tracking-caps-sm: .075em;
+  --tracking-caps-sm: .08em;
+  --tracking-tight: -.015em;
+  --tracking-passage: .003em;
 
   /* --- shape ------------------------------------------------------------- */
   /* Square. A sign has corners. The 2px frame is the painted keyline. */
