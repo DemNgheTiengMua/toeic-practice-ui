@@ -332,7 +332,18 @@
 }
 
 /* ===== Skeleton ===== */
-@keyframes skeleton-pulse { 0%, 100% { opacity: 1 } 50% { opacity: .55 } }
+/* ===== Loading skeleton ===== */
+/* A pulsing placeholder that indicates content is loading. The pulse is gentle
+   opacity change — not spatial movement — so it communicates state without
+   inducing motion sensitivity. */
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1 }
+  50% { opacity: .55 }
+}
+@keyframes skeleton-fade {
+  0%, 100% { opacity: .8 }
+  50% { opacity: .65 }
+}
 .skeleton {
   background: var(--color-track);
   border-radius: 0;
@@ -341,7 +352,15 @@
 .skeleton--text  { height: 12px; margin-bottom: var(--space-2); }
 .skeleton--title { height: 22px; width: 42%; margin-bottom: var(--space-3); }
 .skeleton--block { height: 120px; }
-@media (prefers-reduced-motion: reduce) { .skeleton { animation: none } }
+/* Reduced motion: gentler, slower pulse instead of no animation. Loading state
+   should still be visually communicated, just without aggressive movement. The
+   opacity range is narrower (.65-.8 vs .55-1) and the duration is longer
+   (2s vs 1.4s) for a calmer experience. */
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: skeleton-fade 2s ease-in-out infinite;
+  }
+}
 
 /* ===== Alert =====
    A notice placard. It was a 4px coloured left bar, which is the category's
