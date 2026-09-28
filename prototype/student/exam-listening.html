@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
 </head>
-<body data-states="loading,success,resumed,expired,submitting,offline">
+<body data-states="loading,success,saving,resumed,expired,submitting,offline">
   <div class="app-shell">
     <header class="app-topbar">
       <div class="exam-topbar-group">
@@ -17,9 +17,10 @@
         <span class="badge badge--info">Listening · Part 2</span>
       </div>
       <div class="exam-topbar-group">
+        <span class="save-status save-status--saving only-saving" role="status" aria-live="polite">Saving…</span>
         <span class="save-status save-status--saved only-success" role="status" aria-live="polite">Saved</span>
         <span class="save-status save-status--error only-offline" role="status" aria-live="polite">Connection lost — retrying…</span>
-        <span class="timer only-success" role="timer" aria-label="Time remaining">
+        <span class="timer multi-state" data-show="success saving" role="timer" aria-label="Time remaining">
           <span class="text-sm text-muted">Time remaining</span>
           <span class="timer__value">00:38:12</span>
         </span>
@@ -91,7 +92,7 @@
         </div>
       </div>
 
-      <div class="container exam-body multi-state" data-show="success resumed offline">
+      <div class="container exam-body multi-state" data-show="success saving resumed offline">
         <div class="exam-layout">
 
           <!-- cột nội dung -->

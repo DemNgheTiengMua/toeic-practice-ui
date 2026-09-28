@@ -10,7 +10,10 @@
   <link rel="stylesheet" href="../assets/css/components.css">
 </head>
 <body data-states="success,complete,submitting,expired">
-  <div class="app-shell">
+  <!-- A submit modal is open in every declared state, so the exam screen behind
+       it is always background: inert removes it from the tab order and pointer
+       events, aria-hidden hides it from assistive technology behind the dialog. -->
+  <div class="app-shell" inert aria-hidden="true">
     <header class="app-topbar">
       <div class="exam-topbar-group">
         <strong>ETS 2024 — Test 5</strong>
@@ -36,22 +39,33 @@
   <div class="modal-overlay only-success" role="dialog" aria-modal="true"
        aria-labelledby="submit-title-1">
     <div class="modal">
-      <div class="modal__header"><h2 id="submit-title-1" style="margin: 0">Submit now?</h2></div>
+      <div class="modal__header"><h2 id="submit-title-1" style="margin: 0">Submit?</h2></div>
       <div class="modal__body stack">
-        <p style="font-size: var(--text-lg, 18px); line-height: 1.5; margin: 0">
-          You have <strong style="color: var(--color-danger, #b31217)">19 unanswered questions</strong>
-          and <strong>6 minutes 31 seconds</strong> left.
-        </p>
-        <p style="margin: 0">
-          That's enough time to answer them. Unanswered questions count as incorrect.
-        </p>
+        <div class="alert alert--warning">
+          <strong>You have 19 unanswered questions.</strong>
+          Unanswered questions count as incorrect, and answers cannot be changed after you submit.
+        </div>
+        <div class="grid-3">
+          <div class="stat">
+            <div class="stat__label">Answered</div>
+            <div class="stat__value" style="font-size: var(--text-2xl)">181</div>
+          </div>
+          <div class="stat">
+            <div class="stat__label">Flag</div>
+            <div class="stat__value" style="font-size: var(--text-2xl)">7</div>
+          </div>
+          <div class="stat">
+            <div class="stat__label">Not done</div>
+            <div class="stat__value" style="font-size: var(--text-2xl); color: var(--color-danger)">19</div>
+          </div>
+        </div>
         <p class="text-sm text-muted" style="margin: 0">
-          You also flagged 7 questions for review.
+          6 minutes 31 seconds left. You can still come back and continue.
         </p>
       </div>
       <div class="modal__footer">
-        <a class="btn btn--primary btn--lg" href="exam-reading.html">Go back and finish</a>
-        <a class="btn btn--lg" href="exam-result.html">Submit now anyway</a>
+        <a class="btn" href="exam-reading.html">Go back and continue</a>
+        <a class="btn btn--danger" href="exam-result.html">Submit now</a>
       </div>
     </div>
   </div>
@@ -102,12 +116,12 @@
 
   <!-- ===== submitting ===== -->
   <div class="modal-overlay only-submitting" role="dialog" aria-modal="true"
-       aria-labelledby="submit-title-3">
+       aria-labelledby="submit-title-4">
     <div class="modal">
       <div class="modal__body">
         <div class="state-block">
           <div class="state-block__icon" aria-hidden="true">RUNNING</div>
-          <div class="state-block__title" id="submit-title-3">Submitting…</div>
+          <div class="state-block__title" id="submit-title-4">Submitting…</div>
           <p class="state-block__desc">Do not close the page.</p>
           <div class="progress" style="max-width: 240px; margin: 0 auto">
             <div class="progress__bar" style="width: 45%"></div>
@@ -117,6 +131,5 @@
     </div>
   </div>
   <script src="../assets/js/state-switch.js"></script>
-  <script src="../assets/js/keyboard-nav.js"></script>
 </body>
 </html>
