@@ -10,7 +10,8 @@ body {
 }
 
 /* Sign lettering: bold condensed caps. h1 and h2 are placard lines; h3 is a
-   panel heading, which stays sentence case so dense content remains readable. */
+   panel heading, which stays sentence case so dense content remains readable.
+   Refined scale for clearer hierarchy. */
 h1, h2, h3 { margin: 0 0 var(--space-3); line-height: var(--leading-tight); font-family: var(--font-sign); }
 h1 {
   font-size: var(--text-2xl); font-weight: 700;
@@ -20,8 +21,31 @@ h2 {
   font-size: var(--text-xl); font-weight: 700;
   text-transform: uppercase; letter-spacing: var(--tracking-sign);
 }
-h3 { font-size: var(--text-lg); font-weight: 700; }
+h3 {
+  font-size: var(--text-lg); font-weight: 700;
+  letter-spacing: -.01em;
+}
 p { margin: 0 0 var(--space-3); }
+
+/* Passage typography — optimized for sustained reading under time pressure.
+   Larger size, generous leading, subtle tracking, constrained measure. */
+.passage {
+  font-size: var(--text-passage);
+  line-height: var(--leading-read);
+  letter-spacing: var(--tracking-passage);
+  max-width: var(--measure);
+}
+.passage p { margin-bottom: var(--space-4); }
+.passage p:last-child { margin-bottom: 0; }
+
+/* Question stem — clear and slightly emphasized for quick scanning */
+.question__stem {
+  font-size: var(--text-base);
+  font-weight: 500;
+  line-height: var(--leading-snug);
+  margin-bottom: var(--space-3);
+}
+
 a { color: var(--color-primary); text-underline-offset: 3px; }
 :focus-visible { outline: 3px solid var(--sign-blue); outline-offset: 2px; }
 
@@ -124,9 +148,13 @@ a { color: var(--color-primary); text-underline-offset: 3px; }
    repeat(3,1fr) did at 390px. */
 .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
 .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4); }
+/* ===== Text utilities ==================================================== */
+/* Text size utilities with appropriate line heights */
+.text-xs { font-size: var(--text-xs); line-height: var(--leading-snug); }
+.text-sm { font-size: var(--text-sm); line-height: var(--leading-snug); }
+.text-base { font-size: var(--text-base); line-height: var(--leading-body); }
+.text-lg { font-size: var(--text-lg); line-height: var(--leading-snug); }
 .text-muted { color: var(--color-text-muted); }
-.text-sm { font-size: var(--text-sm); }
-.text-xs { font-size: var(--text-xs); }
 
 /* ===== state visibility ==================================================
    This rule group is the prototype's testable spec — do not change it. */

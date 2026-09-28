@@ -18,6 +18,7 @@
   font-family: var(--font-sign);
   font-size: var(--text-sm); font-weight: 700;
   text-transform: uppercase; letter-spacing: var(--tracking-sign);
+  line-height: var(--leading-tight);
   border: var(--keyline) solid var(--ink);
   border-radius: 0;
   background: var(--color-surface);
@@ -47,7 +48,7 @@
 }
 .btn--danger:hover { background: #8c0e12; border-color: #8c0e12; color: #ffffff; }
 .btn--lg { padding: var(--space-3) var(--space-5); font-size: var(--text-base); }
-.btn--sm { padding: var(--space-1) var(--space-3); font-size: var(--text-xs); }
+.btn--sm { padding: var(--space-1) var(--space-3); font-size: var(--text-xs); letter-spacing: var(--tracking-caps-sm); }
 
 /* ===== Panel (was Card) ===== */
 /* Not a floating rounded box: a painted panel with a keyline frame. The frame
@@ -65,6 +66,7 @@
 .card__header strong {
   font-family: var(--font-sign); font-weight: 700;
   text-transform: uppercase; letter-spacing: var(--tracking-sign);
+  line-height: var(--leading-tight);
   font-size: var(--text-sm);
 }
 .card__body { padding: var(--space-5); }
@@ -82,7 +84,8 @@
   border-radius: 0;
   font-family: var(--font-sign);
   font-size: var(--text-xs); font-weight: 700;
-  text-transform: uppercase; letter-spacing: .04em;
+  text-transform: uppercase; letter-spacing: var(--tracking-caps-sm);
+  line-height: var(--leading-tight);
   font-variant-numeric: tabular-nums;
   background: var(--color-surface);
   border: 1px solid var(--ink);
@@ -105,7 +108,8 @@
 .field__label {
   display: block; margin-bottom: var(--space-1);
   font-family: var(--font-sign); font-size: var(--text-xs); font-weight: 700;
-  text-transform: uppercase; letter-spacing: var(--tracking-sign);
+  text-transform: uppercase; letter-spacing: var(--tracking-caps-sm);
+  line-height: var(--leading-tight);
   color: var(--ink);
 }
 /* A label can carry a descriptor after the name — "Part 2 — 25 questions
@@ -155,8 +159,12 @@
   border-radius: 0;
   font-family: var(--font-sign);
   font-size: var(--text-sm); font-weight: 700;
+  line-height: 1;
 }
-.option__text { flex: 1 1 auto; }
+.option__text {
+  flex: 1 1 auto;
+  line-height: var(--leading-snug);
+}
 /* The chosen answer INVERTS its marker to solid ink. Correct/wrong are excluded
    so the review screen keeps its green/red while the input is checked. */
 .option--selected,
@@ -208,10 +216,12 @@
   border: var(--keyline) solid var(--ink);
   border-radius: 0;
   background: var(--color-surface);
+  line-height: var(--leading-tight);
 }
 .timer__value {
   font-family: var(--font-mono); font-size: var(--text-lg);
   font-variant-numeric: tabular-nums; letter-spacing: -.01em;
+  line-height: 1;
 }
 .timer--warning { border-color: var(--sign-gold); background: var(--sign-gold); color: var(--ink); }
 .timer--critical { border-color: var(--sign-red); background: var(--sign-red); color: #ffffff; }
@@ -235,7 +245,8 @@
   margin-bottom: var(--space-2);
   font-family: var(--font-sign);
   font-size: var(--text-xs); font-weight: 700;
-  text-transform: uppercase; letter-spacing: var(--tracking-sign);
+  text-transform: uppercase; letter-spacing: var(--tracking-caps-sm);
+  line-height: var(--leading-tight);
   color: var(--ink);
 }
 .navigator__range {
@@ -334,8 +345,8 @@
   color: #ffffff;
   font-family: var(--font-sign);
   font-size: var(--text-xs); font-weight: 700;
-  line-height: var(--leading-body);
-  text-transform: uppercase; letter-spacing: var(--tracking-sign);
+  line-height: var(--leading-snug);
+  text-transform: uppercase; letter-spacing: var(--tracking-caps-sm);
 }
 /* Sentence case, not uppercase. This title carries a whole sentence — "You have
    not answered any question in this exam" is 47 characters — and uppercase at
@@ -350,10 +361,14 @@
    wearing uppercase tracking. */
 .state-block__title {
   font-family: var(--font-sign); font-size: var(--text-lg); font-weight: 700;
-  text-transform: none; letter-spacing: normal;
+  text-transform: none; letter-spacing: -.01em;
+  line-height: var(--leading-tight);
   color: var(--ink); margin-bottom: var(--space-2);
 }
-.state-block__desc { margin-bottom: var(--space-4); max-width: var(--measure); margin-inline: auto; }
+.state-block__desc {
+  margin-bottom: var(--space-4); max-width: var(--measure); margin-inline: auto;
+  line-height: var(--leading-body);
+}
 
 /* ===== Modal ===== */
 .modal-overlay {
@@ -385,6 +400,7 @@
 .modal__header strong, .modal__header h2, .modal__header h3 {
   font-family: var(--font-sign); font-weight: 700;
   text-transform: uppercase; letter-spacing: var(--tracking-sign);
+  line-height: var(--leading-tight);
   font-size: var(--text-sm); color: #ffffff; margin: 0;
 }
 /* The header is an ink band, so the paper-tuned muted grey lands at 3.0:1 on
@@ -405,7 +421,7 @@
   border-radius: 0;
   color: #ffffff;
   font-family: var(--font-sign); font-size: var(--text-xs); font-weight: 700;
-  text-transform: uppercase; letter-spacing: var(--tracking-sign);
+  text-transform: uppercase; letter-spacing: var(--tracking-caps-sm);
   line-height: 1;
   cursor: pointer;
 }
@@ -487,7 +503,8 @@
   color: var(--color-text);
   text-decoration: none;
   font-family: var(--font-sign); font-size: var(--text-sm); font-weight: 700;
-  text-transform: uppercase; letter-spacing: .03em;
+  text-transform: uppercase; letter-spacing: var(--tracking-sign);
+  line-height: var(--leading-tight);
   border: var(--keyline-soft) solid transparent;
 }
 .nav-list__item:hover { background: var(--color-bg); border-color: var(--color-border); }
@@ -500,7 +517,9 @@
   margin-top: var(--space-4); margin-bottom: var(--space-1);
   font-family: var(--font-sign); font-size: var(--text-xs); font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: .08em; color: var(--color-text-muted);
+  letter-spacing: var(--tracking-caps-sm);
+  line-height: var(--leading-tight);
+  color: var(--color-text-muted);
 }
 
 /* ===== Stat readout ===== */
@@ -515,15 +534,19 @@
 }
 .stat__label {
   font-family: var(--font-sign); font-size: var(--text-xs); font-weight: 700;
-  text-transform: uppercase; letter-spacing: .06em;
+  text-transform: uppercase; letter-spacing: var(--tracking-caps-sm);
+  line-height: var(--leading-tight);
   color: var(--color-text-muted);
 }
 .stat__value {
   font-family: var(--font-mono); font-size: var(--text-3xl); font-weight: 700;
   line-height: 1.1; margin: var(--space-1) 0;
-  font-variant-numeric: tabular-nums; letter-spacing: -.02em;
+  font-variant-numeric: tabular-nums; letter-spacing: var(--tracking-tight);
 }
-.stat__hint { font-size: var(--text-xs); color: var(--color-text-muted); }
+.stat__hint {
+  font-size: var(--text-xs); line-height: var(--leading-snug);
+  color: var(--color-text-muted);
+}
 
 /* ===== Column chart =====
    A ruled column chart, not a soft rounded bar set: columns are painted plates
