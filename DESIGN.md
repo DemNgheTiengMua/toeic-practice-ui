@@ -1,5 +1,5 @@
 ---
-name: TOEIC Practice
+name: extra efficient
 description: Exam-hall signage — flat painted placards, hard painted keylines, bold condensed caps, and a door sign that reads open or shut.
 colors:
   sign-red: "#b31217"
@@ -35,6 +35,8 @@ colors:
   scroll-rail: "#3d454e"
   striped-row: "#f5f6f7"
   featured-panel: "#f4f7fc"
+  success-vivid: "#22c55e"
+  success-soft-vivid: "oklch(84% 0.19 80.46)"
 typography:
   display:
     fontFamily: "IBM Plex Mono, ui-monospace, Consolas, monospace"
@@ -78,10 +80,22 @@ typography:
     fontWeight: 400
     lineHeight: 1.6
     letterSpacing: "normal"
+  micro:
+    fontFamily: "IBM Plex Sans, system-ui, sans-serif"
+    fontSize: "10px"
+    fontWeight: 600
+    lineHeight: 1.4
+    letterSpacing: "0.06em"
+  small:
+    fontFamily: "IBM Plex Sans, system-ui, sans-serif"
+    fontSize: "11px"
+    fontWeight: 400
+    lineHeight: 1.4
+    letterSpacing: "normal"
 rounded:
-  sm: "0"
-  md: "0"
-  lg: "0"
+  none: "0"
+  xs: "3px"
+  sm: "4px"
 spacing:
   space-1: "4px"
   space-2: "8px"
