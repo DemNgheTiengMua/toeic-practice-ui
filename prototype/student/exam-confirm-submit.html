@@ -39,7 +39,7 @@
   <div class="modal-overlay only-success" role="dialog" aria-modal="true"
        aria-labelledby="submit-title-1">
     <div class="modal">
-      <div class="modal__header"><h2 id="submit-title-1" style="margin: 0">Submit?</h2></div>
+      <div class="modal__header"><h2 id="submit-title-1" class="no-margin">Submit?</h2></div>
       <div class="modal__body stack">
         <div class="alert alert--warning">
           <strong>You have 19 unanswered questions.</strong>
@@ -59,7 +59,7 @@
             <div class="stat__value" style="font-size: var(--text-2xl); color: var(--color-danger)">19</div>
           </div>
         </div>
-        <p class="text-sm text-muted" style="margin: 0">
+        <p class="text-sm text-muted" class="no-margin">
           6 minutes 31 seconds left. You can still come back and continue.
         </p>
       </div>
@@ -77,13 +77,13 @@
   <div class="modal-overlay only-expired" role="dialog" aria-modal="true"
        aria-labelledby="submit-title-3">
     <div class="modal">
-      <div class="modal__header"><h2 id="submit-title-3" style="margin: 0">Time is up</h2></div>
+      <div class="modal__header"><h2 id="submit-title-3" class="no-margin">Time is up</h2></div>
       <div class="modal__body stack">
         <div class="alert alert--warning" role="status">
           <strong>The 120 minutes ran out while you were confirming.</strong>
           The exam is being submitted automatically with 181 answered questions.
         </div>
-        <p class="text-sm text-muted" style="margin: 0">
+        <p class="text-sm text-muted" class="no-margin">
           19 unanswered questions count as incorrect. No further action is needed.
         </p>
       </div>
@@ -97,13 +97,13 @@
   <div class="modal-overlay only-complete" role="dialog" aria-modal="true"
        aria-labelledby="submit-title-2">
     <div class="modal">
-      <div class="modal__header"><h2 id="submit-title-2" style="margin: 0">Submit?</h2></div>
+      <div class="modal__header"><h2 id="submit-title-2" class="no-margin">Submit?</h2></div>
       <div class="modal__body stack">
         <div class="alert alert--success">
           <strong>You have answered all 200 questions.</strong>
           Answers cannot be changed after you submit.
         </div>
-        <p class="text-sm text-muted" style="margin: 0">
+        <p class="text-sm text-muted" class="no-margin">
           6 minutes 31 seconds left. Do you want to review the 7 flagged questions before submitting?
         </p>
       </div>
@@ -123,7 +123,7 @@
           <div class="state-block__icon" aria-hidden="true">RUNNING</div>
           <div class="state-block__title" id="submit-title-4">Submitting…</div>
           <p class="state-block__desc">Do not close the page.</p>
-          <div class="progress" style="max-width: 240px; margin: 0 auto">
+          <div class="progress mx-auto" style="max-width: 240px">
             <div class="progress__bar" style="width: 45%"></div>
           </div>
         </div>

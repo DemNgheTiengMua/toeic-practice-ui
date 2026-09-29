@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Weakness analysis — TOEIC Practice</title>
+  <title>Weakness analysis — extra efficient</title>
   <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../assets/css/tokens.css">
   <link rel="stylesheet" href="../assets/css/base.css">
@@ -12,7 +12,7 @@
 <body data-states="loading,empty,error,success">
   <div class="app-shell app-shell--with-sidebar">
     <header class="app-topbar">
-      <strong>TOEIC Practice</strong>
+      <strong>extra efficient</strong>
       <div class="row">
         <span class="badge badge--info">9 credits left</span>
         <a class="btn btn--sm" href="../payment/pricing.html">Buy credits</a>
@@ -49,7 +49,7 @@
                xong. Học viên mới chưa có gì thì phải nói rõ cần làm gì,
                không phải hiện bảng rỗng. -->
           <div class="only-empty stack">
-            <h1 style="margin: 0">Weakness analysis</h1>
+            <h1 class="no-margin">Weakness analysis</h1>
             <div class="card"><div class="card__body">
               <div class="state-block">
                 <div class="state-block__icon" aria-hidden="true">EMPTY</div>
@@ -57,7 +57,7 @@
                 <p class="state-block__desc">
                   At least one completed practice session or one graded exam is required. Practicing any single Part gives you results right away — <strong>free, no credit deducted</strong>.
                 </p>
-                <div class="row" style="justify-content: center">
+                <div class="row row--center">
                   <a class="btn btn--primary btn--lg" href="practice-select.html">Practice one Part</a>
                   <a class="btn btn--lg" href="exam-list.html">Take a mock test</a>
                 </div>
@@ -81,8 +81,8 @@
           <div class="only-success stack">
             <div class="row row--between">
               <div>
-                <h1 style="margin: 0 0 var(--space-1)">Weakness analysis</h1>
-                <p class="text-muted" style="margin: 0">
+                <h1 class="m-0 mb-1">Weakness analysis</h1>
+                <p class="text-muted" class="no-margin">
                   Combined from 6 graded exams and 24 practice sessions · updated 20 Sep 2026 11:42
                 </p>
               </div>
@@ -96,7 +96,7 @@
             <div class="card">
               <div class="card__header"><strong>Accuracy by Part</strong></div>
               <div class="card__body stack">
-                <p class="text-sm text-muted" style="margin: 0">
+                <p class="text-sm text-muted" class="no-margin">
                   Sorted weakest first. The "questions" column is the total number of questions answered, across both exams and practice.
                 </p>
 
@@ -165,7 +165,7 @@
               <div class="card">
                 <div class="card__header"><strong>What to practice first</strong></div>
                 <div class="card__body stack">
-                  <p class="text-sm text-muted" style="margin: 0">
+                  <p class="text-sm text-muted" class="no-margin">
                     Part 7 accounts for 54/200 questions — the most in the test — and sits at the lowest level. This is where you can improve your score fastest.
                   </p>
                   <div class="row">
@@ -178,12 +178,12 @@
               <div class="card">
                 <div class="card__header"><strong>Frequently missed question types</strong></div>
                 <div class="card__body">
-                  <ul style="margin: 0; padding-left: var(--space-5)">
+                  <ul class="m-0 pl-5">
                     <li>Part 7 — inference questions: 41%</li>
                     <li>Part 4 — questions about numerical details: 52%</li>
                     <li>Part 6 — verb tense in the passage: 63%</li>
                   </ul>
-                  <p class="text-sm text-muted" style="margin: var(--space-3) 0 0">
+                  <p class="text-sm text-muted mt-3">
                     Classification by question type requires question-type labels at the content layer.
                   </p>
                 </div>
@@ -193,7 +193,7 @@
             <div class="card">
               <div class="card__header"><strong>Progress over time</strong></div>
               <div class="card__body">
-                <p class="text-sm text-muted" style="margin: 0 0 var(--space-3)">
+                <p class="text-sm text-muted" class="m-0 mb-3">
                   Part 7 accuracy over the last 4 weeks.
                 </p>
                 <div class="chart chart--short">

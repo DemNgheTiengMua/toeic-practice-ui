@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Complaint Detail — TOEIC Practice Admin</title>
+  <title>Complaint Detail — extra efficient Admin</title>
   <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../assets/css/tokens.css">
   <link rel="stylesheet" href="../assets/css/base.css">
@@ -12,7 +12,7 @@
 <body data-states="success,submitting,resolved,error">
   <div class="app-shell app-shell--with-sidebar">
     <header class="app-topbar">
-      <strong>TOEIC Practice Admin</strong>
+      <strong>extra efficient Admin</strong>
       <a class="btn btn--ghost btn--sm" href="../student/dashboard.html">Admin Panel</a>
     </header>
     <div class="app-body">
@@ -49,18 +49,18 @@
 
             <div class="card"><div class="card__body stack">
               <h2>Resolution details</h2>
-              <dl style="display: grid; gap: var(--space-3, 12px);">
-                <div style="display: grid; grid-template-columns: 160px 1fr; gap: var(--space-3, 12px);">
+              <dl class="dl-grid">
+                <div>
                   <dt style="color: var(--color-text-muted, #5c6570);">Status</dt>
-                  <dd style="margin: 0;"><span class="badge badge--success">Resolved</span></dd>
+                  <dd class="m-0"><span class="badge badge--success">Resolved</span></dd>
                 </div>
-                <div style="display: grid; grid-template-columns: 160px 1fr; gap: var(--space-3, 12px);">
+                <div>
                   <dt style="color: var(--color-text-muted, #5c6570);">Credit issued</dt>
-                  <dd style="margin: 0; font-weight: 600;">1 credit (admin_grant)</dd>
+                  <dd class="m-0 fw-600">1 credit (admin_grant)</dd>
                 </div>
-                <div style="display: grid; grid-template-columns: 160px 1fr; gap: var(--space-3, 12px);">
+                <div>
                   <dt style="color: var(--color-text-muted, #5c6570);">Resolution notes</dt>
-                  <dd style="margin: 0;">Mentor confirmed no-show due to personal emergency. Full refund issued as make-good.</dd>
+                  <dd class="m-0">Mentor confirmed no-show due to personal emergency. Full refund issued as make-good.</dd>
                 </div>
               </dl>
             </div></div>
@@ -74,30 +74,30 @@
 
             <div class="card"><div class="card__body stack">
               <h2>Complaint details</h2>
-              <dl style="display: grid; gap: var(--space-3, 12px);">
-                <div style="display: grid; grid-template-columns: 160px 1fr; gap: var(--space-3, 12px);">
+              <dl class="dl-grid">
+                <div>
                   <dt style="color: var(--color-text-muted, #5c6570);">Status</dt>
-                  <dd style="margin: 0;"><span class="badge badge--warning">Pending</span></dd>
+                  <dd class="m-0"><span class="badge badge--warning">Pending</span></dd>
                 </div>
-                <div style="display: grid; grid-template-columns: 160px 1fr; gap: var(--space-3, 12px);">
+                <div>
                   <dt style="color: var(--color-text-muted, #5c6570);">Learner</dt>
-                  <dd style="margin: 0; font-weight: 600;">Nguyễn Văn A (user #3421)</dd>
+                  <dd class="m-0 fw-600">Nguyễn Văn A (user #3421)</dd>
                 </div>
-                <div style="display: grid; grid-template-columns: 160px 1fr; gap: var(--space-3, 12px);">
+                <div>
                   <dt style="color: var(--color-text-muted, #5c6570);">Type</dt>
-                  <dd style="margin: 0;">Mentor no-show</dd>
+                  <dd class="m-0">Mentor no-show</dd>
                 </div>
-                <div style="display: grid; grid-template-columns: 160px 1fr; gap: var(--space-3, 12px);">
+                <div>
                   <dt style="color: var(--color-text-muted, #5c6570);">Related to</dt>
-                  <dd style="margin: 0;"><a href="#">Booking #8821</a></dd>
+                  <dd class="m-0"><a href="#">Booking #8821</a></dd>
                 </div>
-                <div style="display: grid; grid-template-columns: 160px 1fr; gap: var(--space-3, 12px);">
+                <div>
                   <dt style="color: var(--color-text-muted, #5c6570);">Submitted</dt>
-                  <dd style="margin: 0;">27 Sep 2026, 10:15 AM</dd>
+                  <dd class="m-0">27 Sep 2026, 10:15 AM</dd>
                 </div>
-                <div style="display: grid; grid-template-columns: 160px 1fr; gap: var(--space-3, 12px);">
+                <div>
                   <dt style="color: var(--color-text-muted, #5c6570);">Description</dt>
-                  <dd style="margin: 0;">
+                  <dd class="m-0">
                     <p>Mentor Dr. Nguyễn Văn A did not join the scheduled session on Monday, Sep 30 at 9:00 AM. I waited for 20 minutes but received no response. The Google Meet link was correct. I would like a refund.</p>
                   </dd>
                 </div>

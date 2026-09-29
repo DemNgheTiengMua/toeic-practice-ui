@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Placement Test — TOEIC Practice</title>
+  <title>Placement Test — extra efficient</title>
   <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../assets/css/tokens.css">
   <link rel="stylesheet" href="../assets/css/base.css">
@@ -51,7 +51,7 @@
       </div>
 
       <!-- ===== expired ===== -->
-      <div class="container only-expired" style="max-width: 560px">
+      <div class="container container--form only-expired">
         <div class="card"><div class="card__body">
           <div class="state-block">
             <div class="state-block__icon" aria-hidden="true">TIME'S UP</div>
@@ -59,7 +59,7 @@
             <p class="state-block__desc">
               The test is being submitted automatically and graded on the questions you answered. No further action is needed.
             </p>
-            <div class="progress" style="max-width: 280px; margin: 0 auto">
+            <div class="progress mx-auto" style="max-width: 280px">
               <div class="progress__bar" style="width: 70%"></div>
             </div>
           </div>
@@ -67,7 +67,7 @@
       </div>
 
       <!-- ===== submitting ===== -->
-      <div class="container only-submitting" style="max-width: 560px">
+      <div class="container container--form only-submitting">
         <div class="card"><div class="card__body">
           <div class="state-block">
             <div class="state-block__icon" aria-hidden="true">RUNNING</div>
@@ -78,13 +78,13 @@
       </div>
 
       <!-- banner for resumed / offline -->
-      <div class="container only-resumed" style="margin-bottom: var(--space-4)">
+      <div class="container only-resumed" class="mb-4">
         <div class="alert alert--info">
           <strong>Your placement test in progress has been restored.</strong>
           You returned to question 12; the time remaining is counted from the start.
         </div>
       </div>
-      <div class="container only-offline" style="margin-bottom: var(--space-4)">
+      <div class="container only-offline" class="mb-4">
         <div class="alert alert--danger" role="alert">
           <strong>Connection lost.</strong>
           Your answers are being held on this device and will be sent automatically once you are back online. Do not close the tab.

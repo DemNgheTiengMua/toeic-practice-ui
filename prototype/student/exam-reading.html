@@ -52,7 +52,7 @@
       </div>
 
       <!-- ===== expired: hết giờ, đang tự nộp ===== -->
-      <div class="container only-expired" style="max-width: 560px">
+      <div class="container container--narrow only-expired">
         <div class="card"><div class="card__body">
           <div class="state-block">
             <div class="state-block__icon" aria-hidden="true">TIME'S UP</div>
@@ -60,7 +60,7 @@
             <p class="state-block__desc">
               The exam is being submitted automatically and graded on the questions you answered. No further action is needed.
             </p>
-            <div class="progress" style="max-width: 280px; margin: 0 auto">
+            <div class="progress progress--centered">
               <div class="progress__bar" style="width: 70%"></div>
             </div>
           </div>
@@ -68,7 +68,7 @@
       </div>
 
       <!-- ===== submitting ===== -->
-      <div class="container only-submitting" style="max-width: 560px">
+      <div class="container container--narrow only-submitting">
         <div class="card"><div class="card__body">
           <div class="state-block">
             <div class="state-block__icon" aria-hidden="true">RUNNING</div>
@@ -79,13 +79,13 @@
       </div>
 
       <!-- banner riêng cho resumed / offline -->
-      <div class="container only-resumed" style="margin-bottom: var(--space-4)">
+      <div class="container only-resumed" class="mb-4">
         <div class="alert alert--info">
           <strong>Your exam in progress has been restored.</strong>
           You returned to question 153; the time remaining is counted from the start.
         </div>
       </div>
-      <div class="container only-offline" style="margin-bottom: var(--space-4)">
+      <div class="container only-offline" class="mb-4">
         <div class="alert alert--danger" role="alert">
           <strong>Connection lost.</strong>
           Your answers are being held on this device and will be sent automatically once you are back online. Do not close the tab.
@@ -185,12 +185,12 @@
             <!-- Reading: điều hướng tự do cả hai chiều -->
             <div class="row row--between">
               <button class="btn">← Previous question</button>
-              <div class="row">
+              <div class="row row--tight">
                 <button class="btn btn--ghost">Remove flag</button>
                 <button class="btn btn--primary">Next question →</button>
               </div>
             </div>
-            <p class="text-xs text-muted" style="margin: 0">
+            <p class="text-xs text-muted no-margin">
               The Reading section lets you go back and change the answer to any question within 75 minutes.
             </p>
           </div>
@@ -205,12 +205,12 @@
               </div>
               <div class="card__body stack">
                 <div class="progress"><div class="progress__bar" style="width: 53%"></div></div>
-                <div class="stepper" style="flex-direction: column">
+                <div class="stepper" class="flex-col">
                   <span class="stepper__item is-done">Part 5 — 30 questions · done</span>
                   <span class="stepper__item is-done">Part 6 — 16 questions · done</span>
                   <span class="stepper__item is-current">Part 7 — 54 questions · in progress</span>
                 </div>
-                <p class="text-xs text-muted" style="margin: 0">
+                <p class="text-xs text-muted no-margin">
                   Listening is locked — you cannot return to it.
                 </p>
               </div>

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Test list — TOEIC Practice</title>
+  <title>Test list — extra efficient</title>
   <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../assets/css/tokens.css">
   <link rel="stylesheet" href="../assets/css/base.css">
@@ -12,7 +12,7 @@
 <body data-states="loading,empty,error,success,kyc-required,kyc-pending,paywall,cancelled">
   <div class="app-shell app-shell--with-sidebar">
     <header class="app-topbar">
-      <strong>TOEIC Practice</strong>
+      <strong>extra efficient</strong>
       <div class="row">
         <span class="badge badge--info">9 credits left</span>
         <a class="btn btn--sm" href="../payment/pricing.html">Buy credits</a>
@@ -79,7 +79,7 @@
             <div class="alert alert--warning">
               <strong>You are out of credits.</strong>
               Buy credits to take full tests. Practice by Part is still free.
-              <div class="row" style="margin-top: var(--space-3)">
+              <div class="row" class="mt-3">
                 <a class="btn btn--primary btn--sm" href="../payment/pricing.html">View pricing</a>
                 <a class="btn btn--sm" href="practice-select.html">Practice free</a>
               </div>
@@ -91,7 +91,7 @@
                     <strong>ETS 2024 — Test 4</strong>
                     <span class="badge badge--muted">1 credit required</span>
                   </div>
-                  <p class="text-sm text-muted" style="margin: 0">
+                  <p class="text-sm text-muted" class="no-margin">
                     200 questions · 120 minutes · 7 parts
                   </p>
                   <button class="btn btn--primary" disabled>Start test</button>
@@ -103,7 +103,7 @@
                     <strong>ETS 2024 — Test 5</strong>
                     <span class="badge badge--muted">1 credit required</span>
                   </div>
-                  <p class="text-sm text-muted" style="margin: 0">
+                  <p class="text-sm text-muted" class="no-margin">
                     200 questions · 120 minutes · 7 parts
                   </p>
                   <button class="btn btn--primary" disabled>Start test</button>
@@ -121,7 +121,7 @@
             <div class="alert alert--warning">
               <strong>ID verification is required before the real exam.</strong>
               This is a one-time procedure, free, with no credit deducted. Practice by Part works right away.
-              <div class="row" style="margin-top: var(--space-3)">
+              <div class="row" class="mt-3">
                 <a class="btn btn--primary btn--sm" href="kyc-submit.html">ID verification</a>
                 <a class="btn btn--sm" href="practice-select.html">Practice free</a>
               </div>
@@ -133,7 +133,7 @@
                     <strong>ETS 2024 — Test 4</strong>
                     <span class="badge badge--muted">Verification required</span>
                   </div>
-                  <p class="text-sm text-muted" style="margin: 0">
+                  <p class="text-sm text-muted" class="no-margin">
                     200 questions · 120 minutes · 7 parts
                   </p>
                   <a class="btn btn--primary" href="kyc-submit.html">Verify to take a test</a>
@@ -145,7 +145,7 @@
                     <strong>ETS 2024 — Test 5</strong>
                     <span class="badge badge--muted">Verification required</span>
                   </div>
-                  <p class="text-sm text-muted" style="margin: 0">
+                  <p class="text-sm text-muted" class="no-margin">
                     200 questions · 120 minutes · 7 parts
                   </p>
                   <a class="btn btn--primary" href="kyc-submit.html">Verify to take a test</a>
@@ -162,7 +162,7 @@
             <div class="alert alert--info">
               <strong>Verification application pending review.</strong>
               Usually within 1 business day. The real exam unlocks as soon as your application is approved.
-              <div class="row" style="margin-top: var(--space-3)">
+              <div class="row" class="mt-3">
                 <a class="btn btn--sm" href="kyc-pending.html">View submitted application</a>
                 <a class="btn btn--sm" href="practice-select.html">Practice free</a>
               </div>
@@ -174,7 +174,7 @@
                     <strong>ETS 2024 — Test 4</strong>
                     <span class="badge badge--warning">Application pending review</span>
                   </div>
-                  <p class="text-sm text-muted" style="margin: 0">
+                  <p class="text-sm text-muted" class="no-margin">
                     200 questions · 120 minutes · 7 parts
                   </p>
                   <button class="btn btn--primary" disabled>Start test</button>
@@ -186,7 +186,7 @@
                     <strong>ETS 2024 — Test 5</strong>
                     <span class="badge badge--warning">Application pending review</span>
                   </div>
-                  <p class="text-sm text-muted" style="margin: 0">
+                  <p class="text-sm text-muted" class="no-margin">
                     200 questions · 120 minutes · 7 parts
                   </p>
                   <button class="btn btn--primary" disabled>Start test</button>
@@ -202,7 +202,7 @@
                page. -->
           <div class="multi-state stack" data-show="success cancelled">
             <div class="row row--between">
-              <h1 style="margin: 0">Test list</h1>
+              <h1 class="no-margin">Test list</h1>
               <span class="badge badge--info">9 credits left</span>
             </div>
 
@@ -234,7 +234,7 @@
                     <span class="badge badge--info">TOEIC</span>
                     <span class="badge badge--warning">In progress</span>
                   </div>
-                  <p class="text-sm text-muted" style="margin: 0">
+                  <p class="text-sm text-muted" class="no-margin">
                     200 questions · 120 minutes · 47 minutes left · 128/200 answered
                   </p>
                   <div class="progress"><div class="progress__bar" style="width: 64%"></div></div>
@@ -253,7 +253,7 @@
                     <span class="badge badge--info">TOEIC</span>
                     <span class="badge badge--muted">Not done</span>
                   </div>
-                  <p class="text-sm text-muted" style="margin: 0">
+                  <p class="text-sm text-muted" class="no-margin">
                     200 questions · 120 minutes · 7 parts
                   </p>
                   <a class="btn btn--primary" href="exam-instructions.html">Start test</a>
@@ -268,7 +268,7 @@
                     <span class="badge badge--info">TOEIC</span>
                     <span class="badge badge--success">Done · 720</span>
                   </div>
-                  <p class="text-sm text-muted" style="margin: 0">
+                  <p class="text-sm text-muted" class="no-margin">
                     Completed 18 Sep 2026 · L 385 · R 335
                   </p>
                   <div class="row">
@@ -285,7 +285,7 @@
                     <span class="badge badge--info">TOEIC</span>
                     <span class="badge badge--success">Done · 690</span>
                   </div>
-                  <p class="text-sm text-muted" style="margin: 0">
+                  <p class="text-sm text-muted" class="no-margin">
                     Completed 10 Sep 2026 · L 370 · R 320
                   </p>
                   <div class="row">
@@ -305,13 +305,13 @@
   <div class="modal-overlay only-cancelled" role="dialog" aria-modal="true"
        aria-labelledby="cancel-title">
     <div class="modal">
-      <div class="modal__header"><h2 id="cancel-title" style="margin: 0">Cancel the exam in progress?</h2></div>
+      <div class="modal__header"><h2 id="cancel-title" class="no-margin">Cancel the exam in progress?</h2></div>
       <div class="modal__body stack">
         <div class="alert alert--danger">
           <strong>Cancelling means losing the credit already deducted.</strong>
           1 credit was deducted when you started this test and is not refunded.
         </div>
-        <p class="text-sm text-muted" style="margin: 0">
+        <p class="text-sm text-muted" class="no-margin">
           ETS 2024 — Test 4 · 128/200 answered · 47 minutes left. The exam will not be graded and will not appear in your exam history.
         </p>
       </div>

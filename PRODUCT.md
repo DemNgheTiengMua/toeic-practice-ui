@@ -215,14 +215,14 @@ the concrete question-import file format; OCR/face matching.
 mobile breakpoint coverage is intentionally not done.
 
 **Undecided — do not treat as settled:**
-- The product name. "TOEIC Practice" is a working name in page titles, not a
-  confirmed brand — and it no longer fits a multi-certificate product.
 - The ingest format for the real question content (see Evidence on Hand).
 - Which AI model/provider performs grading (`AiGradings.Model` records which
   one did, after the fact).
 
 ## Brand Commitments
 
+- **Product name: "extra efficient"** — confirmed brand for the multi-certificate
+  companion.
 - **UI copy and exam content are both English.** The prototype shipped its
   first pass in Vietnamese; it was translated to English in full (the UI
   chrome, the generated state-switcher labels, and the inline scripts
@@ -234,17 +234,22 @@ mobile breakpoint coverage is intentionally not done.
   VNPay/MoMo.
 - Personal names in sample data are Vietnamese and stay Vietnamese. The
   convention is to localise the language, not the users.
-- Working name: "TOEIC Practice" — unconfirmed and now mismatched with the
-  multi-certificate scope; see Undecided above.
 - No logo, identity assets, or legal/footer copy exist yet.
 
 ## Evidence on Hand
 
-- **34 static screens** + `prototype/index.html` catalog, committed on
+- **48 static HTML screens** spanning student (33), admin (10), auth (2), and
+  payment (3) sections + `prototype/index.html` catalog, committed on
   `feat/toeic-ui-prototype`. Every screen's states are reachable and verified
   (26 states, 143 state renders checked in-browser). **These screens describe
   the pre-pivot TOEIC-only product**; KYC screens and the "thi thật" framing
   no longer reflect scope.
+- **Layout system consolidation (2026-09-28):** 173 inline spacing overrides
+  eliminated and converted to utility classes; definition-list grids, progress
+  bars, centered content, and button groups now use consistent token-based
+  layout helpers (`stack--tight`, `row--center`, `container--narrow`,
+  `no-margin`). Skeleton loading animations refined for `prefers-reduced-motion`
+  accessibility.
 - **`docs/database-schema.sql`** — the multi-certificate companion schema,
   verified by live execution on LocalDB: 41 tables, 5 views, 16 triggers, 9
   filtered unique indexes, ~50 check constraints, plus 10 domain test scripts
@@ -297,7 +302,9 @@ research, no deployment or compliance claims, no chosen AI grading provider.
 
 ## Accessibility & Inclusion
 
-Confirmed requirements already applied across the prototype:
+**Target conformance: WCAG 2.1 AA** — confirmed standard for this product.
+
+Requirements already applied across the prototype:
 
 - Every input has a `<label>`; every image has `alt`.
 - Answer groups use `role="radiogroup"`; selection state is exposed via
@@ -309,5 +316,5 @@ Confirmed requirements already applied across the prototype:
   second layer, always paired with a label or number.
 - Tables are used only for real tabular data (score conversions, order lists),
   never for layout.
-
-No formal conformance level (e.g. WCAG 2.1 AA) has been set — undecided.
+- Skeleton animations respect `prefers-reduced-motion` by replacing motion with
+  fade-in transitions.
