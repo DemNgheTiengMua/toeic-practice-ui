@@ -36,7 +36,30 @@
         </nav>
       </aside>
       <main class="app-main">
+        <!-- Context bar (sticky) -->
+        <div class="context-bar">
+          <div class="context-bar__item">
+            <span class="context-bar__label">Certificate:</span>
+            <span class="context-bar__value">TOEIC</span>
+          </div>
+          <div class="context-bar__item">
+            <span class="context-bar__label">Credits:</span>
+            <span class="context-bar__value">9 left</span>
+          </div>
+          <div class="context-bar__item">
+            <span class="context-bar__label">Tests completed:</span>
+            <span class="context-bar__value">3</span>
+          </div>
+        </div>
+
         <div class="container stack">
+          <!-- Breadcrumbs -->
+          <nav class="breadcrumbs" aria-label="Breadcrumb">
+            <a href="dashboard.html" class="breadcrumbs__item">Home</a>
+            <span class="breadcrumbs__separator">›</span>
+            <span class="breadcrumbs__item">Test List</span>
+          </nav>
+
           <!-- ===== loading ===== -->
           <div class="only-loading stack">
             <div class="skeleton skeleton--title"></div>
@@ -65,10 +88,13 @@
             <h1>Test list</h1>
             <div class="card"><div class="card__body">
               <div class="state-block">
-                <div class="state-block__icon" aria-hidden="true">EMPTY</div>
-                <div class="state-block__title">No tests yet</div>
-                <p class="state-block__desc">New tests will appear here once they are published.</p>
-                <a class="btn" href="practice-select.html">Practice by section</a>
+                <div class="state-block__icon" aria-hidden="true">📝</div>
+                <div class="state-block__title">No tests available yet</div>
+                <p class="state-block__desc">New tests will appear here once they are published. Meanwhile, practice by section is always free!</p>
+                <div class="row row--center">
+                  <a class="btn btn--primary" href="practice-select.html">Practice by section</a>
+                  <a class="btn" href="placement-select.html">Take placement test</a>
+                </div>
               </div>
             </div></div>
           </div>

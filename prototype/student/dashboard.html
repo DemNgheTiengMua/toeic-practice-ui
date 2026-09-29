@@ -27,7 +27,7 @@
           <a class="nav-list__item" href="exam-list.html">Test list</a>
           <a class="nav-list__item" href="exam-history.html">Exam history</a>
           <div class="nav-list__group">Practice</div>
-          <a class="nav-list__item" href="practice-select.html">Practice by part</a>
+          <a class="nav-list__item" href="practice-select.html">Practice by section</a>
           <a class="nav-list__item" href="weakness-analysis.html">Weakness analysis</a>
           <div class="nav-list__group">Account</div>
           <a class="nav-list__item" href="../payment/wallet.html">Credit wallet</a>
@@ -36,6 +36,22 @@
         </nav>
       </aside>
       <main class="app-main">
+        <!-- Context bar (sticky) -->
+        <div class="context-bar">
+          <div class="context-bar__item">
+            <span class="context-bar__label">Certificate:</span>
+            <span class="context-bar__value">TOEIC</span>
+          </div>
+          <div class="context-bar__item">
+            <span class="context-bar__label">Target:</span>
+            <span class="context-bar__value">B2 (785)</span>
+          </div>
+          <div class="context-bar__item">
+            <span class="context-bar__label">Progress:</span>
+            <span class="context-bar__value">67%</span>
+          </div>
+        </div>
+
         <div class="container stack">
           <!-- ===== loading ===== -->
           <div class="only-loading stack">
@@ -65,32 +81,71 @@
             <h1>Hello, Nguyễn Văn A</h1>
             <div class="card"><div class="card__body">
               <div class="state-block">
-                <div class="state-block__icon" aria-hidden="true">EMPTY</div>
-                <div class="state-block__title">You have not taken any exam</div>
+                <div class="state-block__icon" aria-hidden="true">📊</div>
+                <div class="state-block__title">Start your TOEIC journey</div>
                 <p class="state-block__desc">
-                  Take a full test to find your current level, or practice individual Parts first.
+                  Take a placement test to find your current level, or jump straight into practice.
                 </p>
-                <div class="row row--center">
-                  <a class="btn btn--primary btn--lg" href="exam-list.html">Start mock exam</a>
-                  <a class="btn btn--lg" href="practice-select.html">Practice by part</a>
+                <div class="row row--center row--loose">
+                  <a class="btn btn--primary btn--lg" href="placement-select.html">Take placement test</a>
+                  <a class="btn btn--lg" href="exam-list.html">Start mock exam</a>
+                  <a class="btn btn--lg" href="practice-select.html">Practice by section</a>
                 </div>
               </div>
             </div></div>
+
+            <div class="card">
+              <div class="card__header"><strong>What's next?</strong></div>
+              <div class="card__body stack">
+                <div>
+                  <strong>1. Take a placement test (free)</strong>
+                  <p class="text-sm text-muted no-margin mt-1">Find your current level and get a personalized learning path.</p>
+                </div>
+                <div>
+                  <strong>2. Practice by section (free)</strong>
+                  <p class="text-sm text-muted no-margin mt-1">Master individual parts with immediate feedback.</p>
+                </div>
+                <div>
+                  <strong>3. Take mock exams (1 credit each)</strong>
+                  <p class="text-sm text-muted no-margin mt-1">Full 200-question tests with detailed score reports.</p>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- ===== success ===== -->
           <div class="only-success stack">
-            <h1>Hello, Nguyễn Văn A</h1>
+            <div class="row row--between">
+              <h1 class="no-margin">Hello, Nguyễn Văn A</h1>
+              <a class="btn btn--sm" href="profile.html">Switch certificate</a>
+            </div>
+
+            <div class="alert alert--info">
+              <strong>3 exams completed this month</strong> · 12 practice sessions · 45 hours studied
+            </div>
 
             <div class="stat">
               <div class="stat__label">Your current level</div>
               <div class="stat__value">720</div>
-              <div class="stat__hint">CEFR B1 · L 385 · R 335 · 18 Sep 2026</div>
+              <div class="stat__hint">CEFR B1 · L 385 · R 335 · Last tested 18 Sep 2026</div>
+            </div>
+
+            <div class="card">
+              <div class="card__header"><strong>Progress to target band</strong></div>
+              <div class="card__body">
+                <div class="row row--between text-sm mb-2">
+                  <span>Current: B1 (720)</span>
+                  <span class="text-muted">Target: B2 (785)</span>
+                </div>
+                <div class="progress"><div class="progress__bar" style="width: 67%"></div></div>
+                <p class="text-sm text-muted mt-2 no-margin">65 points to go · You're 67% of the way there!</p>
+              </div>
             </div>
 
             <div class="row row--center row--loose">
               <a class="btn btn--primary btn--lg" href="exam-list.html">Take a mock test</a>
-              <a class="btn btn--lg" href="practice-select.html">Practice by part</a>
+              <a class="btn btn--lg" href="practice-select.html">Practice by section</a>
+              <a class="btn btn--lg" href="weakness-analysis.html">View weak areas</a>
             </div>
 
             <details class="card">

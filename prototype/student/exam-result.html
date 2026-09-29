@@ -36,7 +36,28 @@
         </nav>
       </aside>
       <main class="app-main">
+        <!-- Context bar (sticky) -->
+        <div class="context-bar">
+          <div class="context-bar__item">
+            <span class="context-bar__label">Certificate:</span>
+            <span class="context-bar__value">TOEIC</span>
+          </div>
+          <div class="context-bar__item">
+            <span class="context-bar__label">Credits:</span>
+            <span class="context-bar__value">3 left</span>
+          </div>
+        </div>
+
         <div class="container stack">
+          <!-- Breadcrumbs -->
+          <nav class="breadcrumbs" aria-label="Breadcrumb">
+            <a href="dashboard.html" class="breadcrumbs__item">Home</a>
+            <span class="breadcrumbs__separator">›</span>
+            <a href="exam-history.html" class="breadcrumbs__item">Exam History</a>
+            <span class="breadcrumbs__separator">›</span>
+            <span class="breadcrumbs__item">Result</span>
+          </nav>
+
           <!-- ===== loading ===== -->
           <div class="only-loading stack">
             <div class="skeleton skeleton--title"></div>
@@ -335,6 +356,19 @@
                     <li>Part 6 — Text Completion: 75% · 4 incorrect answers</li>
                   </ul>
                   <a class="btn btn--sm" href="practice-select.html">Practice Part 7 now</a>
+                </div>
+              </div>
+            </div>
+
+            <!-- What's next section -->
+            <div class="card">
+              <div class="card__header"><strong>What's next?</strong></div>
+              <div class="card__body">
+                <div class="row row--center row--loose">
+                  <a class="btn btn--primary" href="weakness-analysis.html">View detailed weakness analysis</a>
+                  <a class="btn" href="mentor-list.html">Book a mentor session</a>
+                  <a class="btn" href="exam-list.html">Take another test</a>
+                  <a class="btn" href="learning-path.html">Continue learning path</a>
                 </div>
               </div>
             </div>
