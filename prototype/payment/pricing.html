@@ -36,6 +36,18 @@
         </nav>
       </aside>
       <main class="app-main">
+        <!-- Context bar (sticky) -->
+        <div class="context-bar">
+          <div class="context-bar__item">
+            <span class="context-bar__label">Certificate:</span>
+            <span class="context-bar__value">TOEIC</span>
+          </div>
+          <div class="context-bar__item">
+            <span class="context-bar__label">Credits:</span>
+            <span class="context-bar__value">3 left</span>
+          </div>
+        </div>
+
         <div class="container stack">
           <!-- ===== loading ===== -->
           <div class="only-loading grid-3">
@@ -75,14 +87,23 @@
           <div class="only-success stack">
             <div>
               <h1 class="m-0 mb-1">Buy credits</h1>
-              <p class="text-muted" class="no-margin">
-                Each credit covers one full 200-question test. Practice by section is always free.
+              <p class="text-muted no-margin">
+                Each credit covers one mock exam. Practice by section is always free.
               </p>
             </div>
 
-            <div class="alert alert--info">
-              You have <strong>3 credits</strong>. Exam credits do not expire.
+            <div class="card">
+              <div class="card__header"><strong>Your credit usage</strong></div>
+              <div class="card__body stack--tight">
+                <div class="row row--between text-sm">
+                  <span>You have <strong>3 credits</strong> remaining</span>
+                  <span class="text-muted">9 used this month</span>
+                </div>
+                <div class="progress"><div class="progress__bar" style="width: 25%"></div></div>
+                <p class="text-sm text-muted no-margin mt-2">You've used 9 of 12 credits. 2 more tests to reach your monthly goal!</p>
+              </div>
             </div>
+
             <div class="grid-3">
               <div class="price-card">
                 <div class="price-card__name">Pay as you go</div>

@@ -117,7 +117,17 @@
           <div class="only-success stack">
             <div class="row row--between">
               <h1 class="no-margin">Hello, Nguyễn Văn A</h1>
-              <a class="btn btn--sm" href="profile.html">Switch certificate</a>
+              <div style="position: relative;">
+                <button class="cert-switcher" onclick="document.getElementById('cert-dropdown').classList.toggle('is-open')">
+                  <span class="cert-switcher__current">TOEIC</span>
+                  <span class="cert-switcher__arrow">▼</span>
+                </button>
+                <div class="cert-dropdown" id="cert-dropdown">
+                  <a href="?cert=toeic" class="cert-dropdown__item is-current">TOEIC</a>
+                  <a href="?cert=ielts" class="cert-dropdown__item">IELTS</a>
+                  <a href="?cert=vstep" class="cert-dropdown__item">VSTEP</a>
+                </div>
+              </div>
             </div>
 
             <div class="alert alert--info">
