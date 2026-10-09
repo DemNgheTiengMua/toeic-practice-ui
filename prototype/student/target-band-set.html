@@ -8,13 +8,14 @@
   <link rel="stylesheet" href="../assets/css/tokens.css">
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
+  <script src="../assets/js/sidebar.js"></script>
 </head>
 <body data-states="submitting,error,success">
   <div class="app-shell app-shell--with-sidebar">
     <header class="app-topbar">
       <strong>extra efficient</strong>
       <div class="row">
-        <span class="badge badge--info">3 credits left</span>
+        <span class="badge badge--info">8 credits left</span>
         <a class="btn btn--sm" href="../payment/pricing.html">Buy credits</a>
         <a class="btn btn--ghost btn--sm" href="profile.html">Nguyễn Văn A</a>
       </div>
@@ -29,41 +30,123 @@
           <div class="nav-list__group">Practice</div>
           <a class="nav-list__item" href="practice-select.html">Practice by section</a>
           <a class="nav-list__item" href="weakness-analysis.html">Weakness analysis</a>
+          <div class="nav-list__group">Learning</div>
+          <a class="nav-list__item is-active" href="learning-path.html">My learning path</a>
+          <a class="nav-list__item" href="mentor-list.html">Find a mentor</a>
           <div class="nav-list__group">Account</div>
           <a class="nav-list__item" href="../payment/wallet.html">Credit wallet</a>
           <a class="nav-list__item" href="profile.html">Profile</a>
         </nav>
       </aside>
       <main class="app-main">
+        <div class="context-bar">
+          <div class="context-bar__item">
+            <span class="context-bar__label">Certificate:</span>
+            <span class="context-bar__value">TOEIC</span>
+          </div>
+          <div class="context-bar__item">
+            <span class="context-bar__label">Current level:</span>
+            <span class="context-bar__value">A2 · 385 points</span>
+          </div>
+          <div class="context-bar__item">
+            <span class="context-bar__label">Cost:</span>
+            <span class="context-bar__value">Free · 0 credits</span>
+          </div>
+        </div>
+
         <div class="container stack">
+          <nav class="breadcrumbs" aria-label="Breadcrumb">
+            <a href="dashboard.html" class="breadcrumbs__item">Home</a>
+            <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+            <a href="placement-result.html" class="breadcrumbs__item">Placement result</a>
+            <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+            <span class="breadcrumbs__item" aria-current="page">Target level</span>
+          </nav>
+
           <!-- ===== error ===== -->
           <div class="only-error">
-            <div class="alert alert--danger">
-              <strong>Could not save your target.</strong> Try again.
+<h1 class="visually-hidden">Set Target Level</h1>
+            <div class="alert alert--danger" role="alert">
+              <strong>Could not save your target.</strong> Nothing was changed. Try again.
             </div>
           </div>
 
-          <!-- ===== success ===== -->
-          <div class="only-success stack">
-            <h1>Set your target level</h1>
-            <p>Your current level is <strong>A2</strong>. Where do you want to be?</p>
+          <!-- ===== success + submitting =====
+               The submitting state only swaps the button, so the page body has
+               to stay on screen for it; an .only-success wrapper here hid the
+               whole form and left the state blank. -->
+          <div class="multi-state stack" data-show="success submitting">
+            <div>
+              <h1 class="m-0 mb-1">Set your target level</h1>
+              <p class="text-muted no-margin">You are at <strong>A2</strong>. Pick the band you are aiming for and your path is built between the two.</p>
+            </div>
 
-            <form class="stack" style="max-width: 500px;">
-              <label class="field">
-                <span class="field__label">Target level</span>
-                <select class="field__input" name="target" required>
-                  <option value="">Choose your target</option>
-                  <option value="b1">B1 (Intermediate) — 550-784 points</option>
-                  <option value="b2" selected>B2 (Upper Intermediate) — 785-944 points</option>
-                  <option value="c1">C1 (Advanced) — 945-990 points</option>
-                </select>
-                <span class="field__hint">Your learning path will guide you from A2 to your target level.</span>
-              </label>
-
-              <div class="row">
-                <button type="submit" class="btn btn--primary multi-state" data-show="success">Generate my path</button>
-                <button type="button" class="btn btn--primary only-submitting" disabled>Generating...</button>
+            <div class="card"><div class="card__body">
+              <div class="cefr">
+                <div class="cefr__head">
+                  <span class="cefr__current">A2 → B2</span>
+                  <span>385 points now · 785 needed</span>
+                </div>
+                <div class="cefr__track" role="img" aria-label="Current band A2, target band B2">
+                  <span class="cefr__band is-reached">&lt;A1</span>
+                  <span class="cefr__band is-reached">A1</span>
+                  <span class="cefr__band is-current">A2</span>
+                  <span class="cefr__band">B1</span>
+                  <span class="cefr__band">B2</span>
+                  <span class="cefr__band">C1</span>
+                </div>
+                <div class="cefr__scale" aria-hidden="true">
+                  <span>10</span>
+                  <span class="cefr__tick">120</span>
+                  <span class="cefr__tick">225</span>
+                  <span class="cefr__tick">550</span>
+                  <span class="cefr__tick">785</span>
+                  <span class="cefr__tick">945</span>
+                </div>
+                <p class="cefr__note">Two bands to cross. The gap is 400 points.</p>
               </div>
+            </div></div>
+
+            <form class="stack">
+              <section>
+                <h2 class="section-group__title">Choose your target</h2>
+                <div class="option-list" role="radiogroup" aria-label="Target level">
+                  <label class="option">
+                    <input class="option__input" type="radio" name="target" value="b1">
+                    <span class="option__marker">B1</span>
+                    <span class="option__text">
+                      <strong>Intermediate</strong> — 550 to 784 points<br>
+                      <span class="text-sm text-muted">One band up. Around 165 points from where you are.</span>
+                    </span>
+                  </label>
+                  <label class="option">
+                    <input class="option__input" type="radio" name="target" value="b2" checked>
+                    <span class="option__marker">B2</span>
+                    <span class="option__text">
+                      <strong>Upper intermediate</strong> — 785 to 944 points<br>
+                      <span class="text-sm text-muted">The band most employers in Vietnam ask for. Around 400 points away.</span>
+                    </span>
+                  </label>
+                  <label class="option">
+                    <input class="option__input" type="radio" name="target" value="c1">
+                    <span class="option__marker">C1</span>
+                    <span class="option__text">
+                      <strong>Advanced</strong> — 945 to 990 points<br>
+                      <span class="text-sm text-muted">Three bands up. A long path, and the modules assume daily study.</span>
+                    </span>
+                  </label>
+                </div>
+              </section>
+
+              <div class="card"><div class="card__footer">
+                <div class="row">
+                  <button type="submit" class="btn btn--primary multi-state" data-show="success">Generate my path</button>
+                  <button type="button" class="btn btn--primary only-submitting" disabled>Generating…</button>
+                  <a href="placement-result.html" class="btn">Back to result</a>
+                </div>
+              </div></div>
+
+              <p class="text-xs text-muted no-margin">You can change your target later from your learning path. Generating a path is free.</p>
             </form>
           </div>
         </div>
@@ -71,5 +154,6 @@
     </div>
   </div>
   <script src="../assets/js/state-switch.js"></script>
+  <script src="../assets/js/icons.js"></script>
 </body>
 </html>

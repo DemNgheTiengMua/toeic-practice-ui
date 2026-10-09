@@ -10,43 +10,56 @@
   <link rel="stylesheet" href="../assets/css/components.css">
 </head>
 <body data-states="success" data-state="success">
-  <div class="container container--narrow" style="padding-top: var(--space-6)">
-    <div class="stack">
-      <h1>Pay via the VNPay gateway</h1>
-
-      <div class="alert alert--warning">
-        A simulated payment gateway page. This is <strong>not</strong> the real VNPay — do not enter real card details.
+  <header class="app-topbar">
+    <strong>VNPay (simulated)</strong>
+    <span class="badge badge--warning">Not the real VNPay</span>
+  </header>
+  <main class="app-main">
+    <div class="container container--form stack">
+      <div class="stepper" aria-label="Checkout progress">
+        <div class="stepper__item is-done">1. Choose a package</div>
+        <div class="stepper__item is-done">2. Confirm</div>
+        <div class="stepper__item is-current">3. Payment</div>
+        <div class="stepper__item">4. Done</div>
       </div>
-
+      <h1 class="m-0">Pay via the VNPay gateway</h1>
+      <div class="alert alert--warning">
+        A simulated payment gateway page. This is <strong>not</strong> the real VNPay. Do not enter real card details.
+      </div>
       <div class="card">
-        <div class="card__header"><strong>VNPay (simulated)</strong></div>
+        <div class="card__header"><strong>Order summary</strong></div>
         <div class="card__body stack">
-          <div class="row row--between"><span class="text-muted">Seller</span><span>extra efficient</span></div>
-          <div class="row row--between"><span class="text-muted">Order code</span><span>DH-20260920-0148</span></div>
-          <div class="row row--between"><strong>Amount</strong><strong>199,000 ₫</strong></div>
-          <hr>
+          <dl class="dl-grid">
+            <div><dt class="text-muted">Seller</dt><dd class="m-0">extra efficient</dd></div>
+            <div><dt class="text-muted">Order code</dt><dd class="m-0">DH-20260920-0148</dd></div>
+            <div><dt class="text-muted">Package</dt><dd class="m-0">Exam Prep · 5 credits</dd></div>
+            <div><dt class="text-muted">Amount</dt><dd class="m-0"><strong>199,000 ₫</strong></dd></div>
+          </dl>
           <div class="field">
             <label class="field__label" for="card-number">Card number</label>
             <input class="field__input" id="card-number" value="9704 xxxx xxxx 1234" disabled>
             <span class="field__hint">This field is locked in the prototype.</span>
           </div>
         </div>
-        <div class="card__footer stack">
-          <p class="text-sm text-muted" class="no-margin">Choose a result to view:</p>
-          <div class="row">
+      </div>
+      <div class="card">
+        <div class="card__header"><strong>Choose the result to view</strong></div>
+        <div class="card__body stack">
+          <div class="row row--wrap">
             <a class="btn btn--primary" href="payment-result.html?state=success">Payment successful</a>
             <a class="btn btn--danger" href="payment-result.html?state=failed">Payment failed</a>
-            <a class="btn btn--ghost" href="payment-result.html?state=pending">Slow gateway</a>
-            <a class="btn btn--ghost" href="payment-result.html?state=expired">Order expired</a>
+            <a class="btn" href="payment-result.html?state=pending">Slow gateway</a>
+            <a class="btn" href="payment-result.html?state=expired">Order expired</a>
           </div>
-          <p class="text-sm text-muted" class="no-margin">
-            Use your browser's back button to return to checkout while the order is still valid:
+          <p class="text-sm text-muted no-margin">
+            To go back while the order is still valid, open
             <a href="checkout.html?state=pending">checkout in the pending state</a>.
           </p>
         </div>
       </div>
     </div>
-  </div>
+  </main>
   <script src="../assets/js/state-switch.js"></script>
+  <script src="../assets/js/icons.js"></script>
 </body>
 </html>

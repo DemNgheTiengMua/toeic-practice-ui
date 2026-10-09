@@ -22,6 +22,8 @@ CREATE TABLE Skills (
   Modality     VARCHAR(10) NOT NULL
     CONSTRAINT CK_Skills_Modality CHECK (Modality IN ('listening','reading','speaking','writing')),
   DisplayOrder INT NOT NULL DEFAULT 0,
+  -- UI-18: "Listening 45 minutes, Reading 75 minutes" on exam instructions / exam editor
+  DurationMinutes INT NULL CONSTRAINT CK_Skills_Duration CHECK (DurationMinutes IS NULL OR DurationMinutes > 0),
   CONSTRAINT UQ_Skills_Cert_Code UNIQUE (CertId, Code),
   -- composite target so Content can carry CertId down and pin isolation:
   CONSTRAINT UQ_Skills_Id_Cert UNIQUE (SkillId, CertId),
@@ -39,6 +41,8 @@ CREATE TABLE Sections (
   Code         VARCHAR(20) NOT NULL,
   Name         NVARCHAR(120) NOT NULL,
   OptionCount  INT NULL CONSTRAINT CK_Sections_OptionCount CHECK (OptionCount IS NULL OR OptionCount BETWEEN 2 AND 6),
+  -- UI-18: fixed per-Part question count ("Part 3 — 39 questions", editor progress "25 / 39")
+  ExpectedQuestionCount INT NULL CONSTRAINT CK_Sections_ExpectedCount CHECK (ExpectedQuestionCount IS NULL OR ExpectedQuestionCount > 0),
   DisplayOrder INT NOT NULL DEFAULT 0,
   CONSTRAINT UQ_Sections_Skill_Code UNIQUE (SkillId, Code),
   -- composite FK pins the section's cert to its skill's cert (isolation, enforced because CertId is NOT NULL):
@@ -66,12 +70,30 @@ CREATE TABLE Users (
   Email        VARCHAR(255) NOT NULL,
   PasswordHash VARBINARY(256) NOT NULL,
   ActiveCertId INT NULL CONSTRAINT FK_Users_ActiveCert REFERENCES Certificates(CertId),
+  -- UI-1: register/profile collect a name and phone; admin users list shows them
+  FullName     NVARCHAR(120) NULL,
+  Phone        VARCHAR(20)   NULL,
+  -- UI-2: admin users list filters Active / Locked / Not activated and shows last sign-in
+  IsLocked        BIT NOT NULL CONSTRAINT DF_Users_IsLocked DEFAULT 0,
+  EmailVerifiedAt DATETIMEOFFSET NULL,   -- NULL = "Not activated"
+  LastLoginAt     DATETIMEOFFSET NULL,   -- NULL = "Never signed in"
+  TermsAcceptedAt DATETIMEOFFSET NULL,   -- UI-1: register "I agree to the terms of use"
   IsDeleted    BIT NOT NULL CONSTRAINT DF_Users_IsDeleted DEFAULT 0,
   CreatedAt    DATETIMEOFFSET NOT NULL CONSTRAINT DF_Users_CreatedAt DEFAULT SYSDATETIMEOFFSET()
 );
 GO
 -- one account per live email (filtered so soft-deleted emails can be reused)
 CREATE UNIQUE INDEX UX_Users_Email ON Users(Email) WHERE IsDeleted = 0;
+GO
+-- UI-2: admin "Resend email" re-issues an activation link (same shape as password reset)
+CREATE TABLE EmailVerificationTokens (
+  TokenId    INT IDENTITY(1,1) PRIMARY KEY,
+  UserId     INT NOT NULL CONSTRAINT FK_EmailVerificationTokens_User REFERENCES Users(UserId),
+  TokenHash  VARBINARY(256) NOT NULL,
+  ExpiresAt  DATETIMEOFFSET NOT NULL,
+  UsedAt     DATETIMEOFFSET NULL,
+  CreatedAt  DATETIMEOFFSET NOT NULL CONSTRAINT DF_EmailVerificationTokens_CreatedAt DEFAULT SYSDATETIMEOFFSET()
+);
 GO
 CREATE TABLE PasswordResetTokens (
   TokenId    INT IDENTITY(1,1) PRIMARY KEY,
@@ -133,16 +155,52 @@ CREATE TABLE Exams (
   CertId          INT NOT NULL REFERENCES Certificates(CertId),
   Name            NVARCHAR(160) NOT NULL,
   Status          VARCHAR(12) NOT NULL DEFAULT 'draft'
-    CONSTRAINT CK_Exams_Status CHECK (Status IN ('draft','published','archived')),
+    CONSTRAINT CK_Exams_Status CHECK (Status IN ('draft','published','hidden')),  -- UI-4: admin labels
   DurationMinutes INT NOT NULL CONSTRAINT CK_Exams_Duration CHECK (DurationMinutes > 0),
+  -- UI-3: placement-select lists placement tests apart from mock exams; speaking practice is its own kind
+  Purpose         VARCHAR(20) NOT NULL CONSTRAINT DF_Exams_Purpose DEFAULT 'mock'
+    CONSTRAINT CK_Exams_Purpose CHECK (Purpose IN ('mock','placement','speaking_practice')),
+  Description     NVARCHAR(500) NULL,     -- UI-3: placement card copy ("Adaptive across both sections…")
+  SourceName      NVARCHAR(120) NULL,     -- UI-4: exam editor "Test set / source" (e.g. ETS 2024)
+  InternalNote    NVARCHAR(1000) NULL,    -- UI-4: exam editor note, admin only
   IsDeleted       BIT NOT NULL DEFAULT 0,
   CreatedAt       DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
-  CONSTRAINT UQ_Exams_Id_Cert UNIQUE (ExamId, CertId)   -- composite target for isolation
+  UpdatedAt       DATETIMEOFFSET NULL,    -- UI-4: admin exam list "Update" column
+  CONSTRAINT UQ_Exams_Id_Cert UNIQUE (ExamId, CertId),   -- composite target for isolation
+  -- UI-3: composite target so PlacementTests can require a placement-purpose exam
+  CONSTRAINT UQ_Exams_Id_Cert_Purpose UNIQUE (ExamId, CertId, Purpose)
 );
+GO
+-- UI-4: exam editor rejects "That test name already exists"
+CREATE UNIQUE INDEX UX_Exams_Cert_Name ON Exams(CertId, Name) WHERE IsDeleted = 0;
 GO
 -- now that Exams exists, pin ScoreScales.ExamId
 -- M-11: composite FK so the exam must belong to the same certificate (replaces the single-column FK)
 ALTER TABLE ScoreScales ADD CONSTRAINT FK_ScoreScales_Exam FOREIGN KEY (ExamId, CertId) REFERENCES Exams(ExamId, CertId);
+GO
+-- UI-6: exam editor uploads one audio file per Listening Part (4 files, "Uploaded 3 / 4")
+CREATE TABLE ExamSectionAudio (
+  ExamId       INT NOT NULL,
+  SectionId    INT NOT NULL,
+  CertId       INT NOT NULL,
+  AudioPath    NVARCHAR(400) NOT NULL,
+  DurationSec  INT NOT NULL CONSTRAINT CK_ExamSectionAudio_Duration CHECK (DurationSec > 0),
+  SizeBytes    BIGINT NOT NULL CONSTRAINT CK_ExamSectionAudio_Size CHECK (SizeBytes > 0 AND SizeBytes <= 62914560), -- 60 MB
+  UploadedAt   DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
+  CONSTRAINT PK_ExamSectionAudio PRIMARY KEY (ExamId, SectionId),
+  -- exam and section must share one certificate
+  CONSTRAINT FK_ExamSectionAudio_ExamCert    FOREIGN KEY (ExamId, CertId)    REFERENCES Exams(ExamId, CertId),
+  CONSTRAINT FK_ExamSectionAudio_SectionCert FOREIGN KEY (SectionId, CertId) REFERENCES Sections(SectionId, CertId)
+);
+GO
+-- UI-8: question-type labels ("Verb tense", "Part 7 — inference") per certificate
+CREATE TABLE QuestionCategories (
+  CategoryId INT IDENTITY(1,1) PRIMARY KEY,
+  CertId     INT NOT NULL REFERENCES Certificates(CertId),
+  Code       VARCHAR(40) NOT NULL,
+  Name       NVARCHAR(120) NOT NULL,
+  CONSTRAINT UQ_QuestionCategories_Cert_Code UNIQUE (CertId, Code)
+);
 GO
 CREATE TABLE QuestionGroups (
   GroupId      INT IDENTITY(1,1) PRIMARY KEY,
@@ -151,7 +209,21 @@ CREATE TABLE QuestionGroups (
   SectionId    INT NOT NULL,
   Passage      NVARCHAR(MAX) NULL,
   AudioPath    NVARCHAR(400) NULL,
+  -- UI-6: a Part's audio is one uploaded file (ExamSectionAudio); the group's slice of it lets
+  -- exam-review "Replay this question" play just this item. Both NULL when AudioPath is used instead.
+  AudioStartMs INT NULL,
+  AudioEndMs   INT NULL,
+  -- UI-5: Part 1 photos and speaking "Describe a picture"; alt text is required by the question editor
+  ImagePath    NVARCHAR(400) NULL,
+  ImageAlt     NVARCHAR(400) NULL,
+  Transcript   NVARCHAR(MAX) NULL,        -- UI-7: Part 3/4 conversation or talk script, shown after the exam
+  PrepSeconds  INT NULL CONSTRAINT CK_QGroups_Prep CHECK (PrepSeconds IS NULL OR PrepSeconds >= 0), -- UI-9: shared read time
   DisplayOrder INT NOT NULL DEFAULT 0,
+  CONSTRAINT CK_QGroups_ImageAlt CHECK (ImagePath IS NULL OR ImageAlt IS NOT NULL),
+  CONSTRAINT CK_QGroups_AudioSlice CHECK (
+       (AudioStartMs IS NULL AND AudioEndMs IS NULL)
+    OR (AudioStartMs >= 0 AND AudioEndMs > AudioStartMs)
+  ),
   -- both composite FKs share CertId, so exam-cert and section-cert must agree:
   CONSTRAINT FK_QGroups_ExamCert    FOREIGN KEY (ExamId, CertId)    REFERENCES Exams(ExamId, CertId),
   CONSTRAINT FK_QGroups_SectionCert FOREIGN KEY (SectionId, CertId) REFERENCES Sections(SectionId, CertId),
@@ -173,7 +245,19 @@ CREATE TABLE Questions (
   QuestionType    VARCHAR(14) NOT NULL
     CONSTRAINT CK_Questions_Type CHECK (QuestionType IN ('mcq','free_response')),
   Explanation     NVARCHAR(MAX) NULL,
+  -- UI-8: "Grammar type" (practice summary), "inference questions" (weakness analysis)
+  CategoryId      INT NULL CONSTRAINT FK_Questions_Category REFERENCES QuestionCategories(CategoryId),
+  -- UI-9 (speaking gap 1): per-question prepare/speak windows; MCQ never carries them
+  PrepSeconds     INT NULL,
+  ResponseSeconds INT NULL,
   DisplayOrder    INT NOT NULL DEFAULT 0,
+  UpdatedAt       DATETIMEOFFSET NULL,    -- UI-4: question editor "Last saved: 19:42"
+  CONSTRAINT CK_Questions_Timing CHECK (
+       (QuestionType = 'mcq' AND PrepSeconds IS NULL AND ResponseSeconds IS NULL)
+    OR (QuestionType = 'free_response'
+        AND (PrepSeconds IS NULL OR PrepSeconds >= 0)
+        AND (ResponseSeconds IS NULL OR ResponseSeconds > 0))
+  ),
   -- ExamId/SectionId must be the group's own (composite FK pins them, not free-standing values)
   CONSTRAINT FK_Questions_GroupExam    FOREIGN KEY (GroupId, ExamId)    REFERENCES QuestionGroups(GroupId, ExamId),
   CONSTRAINT FK_Questions_GroupSection FOREIGN KEY (GroupId, SectionId) REFERENCES QuestionGroups(GroupId, SectionId),
@@ -196,6 +280,9 @@ CREATE TABLE QuestionOptions (
   Label        VARCHAR(4) NOT NULL,
   Text         NVARCHAR(MAX) NOT NULL,
   IsCorrect    BIT NOT NULL DEFAULT 0,
+  -- UI-10: "why this option is wrong" feedback for the option the learner actually picked
+  -- (exam-review / practice-take revealed-wrong). Questions.Explanation stays the general why-correct text.
+  Rationale    NVARCHAR(MAX) NULL,
   CONSTRAINT UQ_Options_Question_Label UNIQUE (QuestionId, Label),
   -- H-6: composite target so answer tables can pin the selected option to its own question
   CONSTRAINT UQ_Options_Id_Question UNIQUE (OptionId, QuestionId),
@@ -227,6 +314,33 @@ CREATE TABLE ImportLog (
 );
 GO
 
+-- UI-36: a speaking_practice exam holds speaking sections only (its result never mixes skills)
+CREATE TRIGGER trg_QGroups_SpeakingPracticeOnlySpeaking
+ON QuestionGroups AFTER INSERT, UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+  IF EXISTS (
+    SELECT 1 FROM inserted i
+    JOIN Exams e    ON e.ExamId = i.ExamId
+    JOIN Sections s ON s.SectionId = i.SectionId
+    WHERE e.Purpose = 'speaking_practice' AND s.Modality <> 'speaking'
+  )
+    THROW 50037, 'A speaking-practice exam can only hold speaking sections.', 1;
+END;
+GO
+CREATE TRIGGER trg_Exams_PurposeKeepsContent
+ON Exams AFTER UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+  IF EXISTS (
+    SELECT 1 FROM inserted i
+    JOIN QuestionGroups g ON g.ExamId = i.ExamId
+    JOIN Sections s ON s.SectionId = g.SectionId
+    WHERE i.Purpose = 'speaking_practice' AND s.Modality <> 'speaking'
+  )
+    THROW 50037, 'A speaking-practice exam can only hold speaking sections.', 1;
+END;
+GO
 -- ============ Domain 6: Practice (free) ============
 CREATE TABLE PracticeSessions (
   SessionId    INT IDENTITY(1,1) PRIMARY KEY,
@@ -239,6 +353,14 @@ CREATE TABLE PracticeSessions (
   Status       VARCHAR(12) NOT NULL DEFAULT 'in_progress'
     CONSTRAINT CK_Practice_Status CHECK (Status IN ('in_progress','finished','abandoned')),
   CorrectCount INT NOT NULL DEFAULT 0,
+  -- UI-11: practice-select options "Question source" and "Feedback type"
+  QuestionSource VARCHAR(12) NOT NULL CONSTRAINT DF_Practice_Source DEFAULT 'all'
+    CONSTRAINT CK_Practice_Source CHECK (QuestionSource IN ('all','wrong_before','unseen')),
+  FeedbackMode   VARCHAR(10) NOT NULL CONSTRAINT DF_Practice_Feedback DEFAULT 'immediate'
+    CONSTRAINT CK_Practice_Feedback CHECK (FeedbackMode IN ('immediate','end')),
+  -- UI-12: a learning-path module runs as practice sessions; module progress/accuracy/time derive from them.
+  -- FK added after LearnerPathSteps exists.
+  LearnerPathStepId INT NULL,
   StartedAt    DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
   FinishedAt   DATETIMEOFFSET NULL,
   -- M-18: Modality must be the section's own (pins the literal via the FK) and excludes speaking/writing
@@ -265,6 +387,15 @@ CREATE TABLE PracticeAnswers (
   CONSTRAINT FK_PracticeAnswers_OptionQuestion FOREIGN KEY (SelectedOptionId, QuestionId) REFERENCES QuestionOptions(OptionId, QuestionId)
 );
 GO
+-- UI-13: "Save this question for review" / "saved to your incorrect-answer bank"
+CREATE TABLE SavedQuestions (
+  UserId     INT NOT NULL REFERENCES Users(UserId),
+  QuestionId INT NOT NULL REFERENCES Questions(QuestionId),
+  Source     VARCHAR(10) NOT NULL CONSTRAINT CK_SavedQ_Source CHECK (Source IN ('manual','incorrect')),
+  SavedAt    DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
+  CONSTRAINT PK_SavedQuestions PRIMARY KEY (UserId, QuestionId)
+);
+GO
 
 -- ============ Domain 7: MockExam ============
 CREATE TABLE ExamAttempts (
@@ -278,6 +409,10 @@ CREATE TABLE ExamAttempts (
   StartedAt       DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
   ExpiresAt       DATETIMEOFFSET NOT NULL,          -- server-authoritative
   IsAutoSubmitted BIT NOT NULL DEFAULT 0,
+  -- UI-14: result "Completed 20 Sep 2026 · 11:42 · time taken 01:53:29"
+  SubmittedAt     DATETIMEOFFSET NULL,
+  -- UI-15: resume "You returned to question 8"
+  LastQuestionId  INT NULL,
   TotalScore      INT NULL,
   BandCode        VARCHAR(20) NULL,                 -- snapshot at grading
   -- H-5: ExamId's CertId must be the attempt's own (pins the carried-down value)
@@ -286,7 +421,10 @@ CREATE TABLE ExamAttempts (
   CONSTRAINT UQ_Attempts_Id_User UNIQUE (AttemptId, UserId),
   -- H-5: composite targets so AttemptAnswers/FreeResponses/AttemptSkillScores can pin containment
   CONSTRAINT UQ_Attempts_Id_Exam UNIQUE (AttemptId, ExamId),
-  CONSTRAINT UQ_Attempts_Id_Cert UNIQUE (AttemptId, CertId)
+  CONSTRAINT UQ_Attempts_Id_Cert UNIQUE (AttemptId, CertId),
+  -- UI-15: the resume position must be a question of this attempt's own exam
+  CONSTRAINT FK_Attempts_LastQuestionExam FOREIGN KEY (LastQuestionId, ExamId) REFERENCES Questions(QuestionId, ExamId),
+  CONSTRAINT CK_Attempts_SubmittedAt CHECK (SubmittedAt IS NULL OR Status IN ('submitted','graded'))
 );
 GO
 CREATE TABLE AttemptSkillScores (
@@ -311,6 +449,8 @@ CREATE TABLE AttemptAnswers (
   ExamId           INT NOT NULL,
   SelectedOptionId INT NULL,
   IsCorrect        BIT NULL,
+  -- UI-16: "Flag for review", "Flag 7", review filter "Only flagged questions"
+  IsFlagged        BIT NOT NULL CONSTRAINT DF_AttemptAnswers_IsFlagged DEFAULT 0,
   CONSTRAINT UQ_AttemptAnswers UNIQUE (AttemptId, QuestionId),
   -- H-5: ExamId must be the attempt's own
   CONSTRAINT FK_AttemptAnswers_AttemptExam FOREIGN KEY (AttemptId, ExamId) REFERENCES ExamAttempts(AttemptId, ExamId),
@@ -333,6 +473,8 @@ CREATE TABLE FreeResponses (
     CONSTRAINT CK_FreeResp_QuestionType CHECK (QuestionType = 'free_response'),
   ResponseText   NVARCHAR(MAX) NULL,
   AudioPath      NVARCHAR(400) NULL,
+  -- UI-17 (speaking gap 4): "You spoke for 27 of 30 seconds"
+  DurationMs     INT NULL CONSTRAINT CK_FreeResp_Duration CHECK (DurationMs IS NULL OR DurationMs > 0),
   Status         VARCHAR(12) NOT NULL DEFAULT 'pending_ai'
     CONSTRAINT CK_FreeResp_Status CHECK (Status IN ('pending_ai','graded')),
   SubmittedAt    DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
@@ -359,6 +501,19 @@ BEGIN
   BEGIN
     THROW 50010, 'Attempt must target a published exam.', 1;
   END
+END;
+GO
+-- UI-19 (speaking gap 6): a speaking-practice attempt covers one skill of a summed scale, so a
+-- certificate band computed from it is meaningless. BandCode stays NULL for those attempts.
+CREATE TRIGGER trg_Attempts_NoBandForSpeakingPractice
+ON ExamAttempts AFTER INSERT, UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+  IF EXISTS (
+    SELECT 1 FROM inserted i JOIN Exams e ON e.ExamId = i.ExamId
+    WHERE e.Purpose = 'speaking_practice' AND i.BandCode IS NOT NULL
+  )
+    THROW 50032, 'A speaking-practice attempt cannot carry a certificate band.', 1;
 END;
 GO
 -- Review Focus #2: TotalScore must equal SUM of scaled skill scores (when both present)
@@ -435,6 +590,20 @@ CREATE TABLE GradingCriteria (
   CONSTRAINT UQ_GradingCriteria_Id_Skill UNIQUE (CriterionId, SkillId)
 );
 GO
+-- UI-20 (speaking gaps 2 + 3): a section declares which of its skill's criteria apply, and may
+-- override the ceiling (TOEIC Speaking Q1-10 score 0-3, Q11 scores 0-5 on the same criteria).
+-- A section with no rows here accepts every criterion of its skill at GradingCriteria.MaxScore.
+CREATE TABLE SectionCriteria (
+  SectionId   INT NOT NULL,
+  CriterionId INT NOT NULL,
+  SkillId     INT NOT NULL,
+  MaxScore    DECIMAL(5,2) NULL CONSTRAINT CK_SectionCriteria_MaxScore CHECK (MaxScore IS NULL OR MaxScore > 0),
+  CONSTRAINT PK_SectionCriteria PRIMARY KEY (SectionId, CriterionId),
+  -- section and criterion must belong to the same skill
+  CONSTRAINT FK_SectionCriteria_SectionSkill   FOREIGN KEY (SectionId, SkillId)   REFERENCES Sections(SectionId, SkillId),
+  CONSTRAINT FK_SectionCriteria_CriterionSkill FOREIGN KEY (CriterionId, SkillId) REFERENCES GradingCriteria(CriterionId, SkillId)
+);
+GO
 CREATE TABLE AiGradings (
   GradingId      INT IDENTITY(1,1) PRIMARY KEY,
   FreeResponseId INT NOT NULL REFERENCES FreeResponses(FreeResponseId),
@@ -445,9 +614,16 @@ CREATE TABLE AiGradings (
   OverallScaled  DECIMAL(6,2) NULL,
   BandCode       VARCHAR(20) NULL,             -- snapshot
   Model          NVARCHAR(80) NULL,
+  -- UI-35: speaking-review "Grading did not finish · Retry grading" (retry is free: one ai_grading
+  -- charge per attempt). A retry reuses this row: Status back to 'pending', AttemptCount + 1.
+  FailureReason  NVARCHAR(400) NULL,
+  AttemptCount   INT NOT NULL CONSTRAINT DF_AiGradings_AttemptCount DEFAULT 1
+    CONSTRAINT CK_AiGradings_AttemptCount CHECK (AttemptCount BETWEEN 1 AND 5),
   RequestedAt    DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
   CompletedAt    DATETIMEOFFSET NULL,
   CONSTRAINT UQ_AiGradings_FreeResponse UNIQUE (FreeResponseId),
+  CONSTRAINT CK_AiGradings_FailureReason CHECK (FailureReason IS NULL OR Status = 'failed'),
+  CONSTRAINT CK_AiGradings_CompletedAt CHECK (CompletedAt IS NULL OR Status IN ('done','failed')),
   -- composite target so AiGradingScores can require the criterion's skill = the grading's own skill
   CONSTRAINT UQ_AiGradings_Id_Skill UNIQUE (GradingId, SkillId),
   -- M-3 clause 3: the graded skill must be the free response's own skill, which the chain
@@ -482,6 +658,7 @@ CREATE TABLE AiGradingScores (
 );
 GO
 -- M-9: a rubric score cannot exceed its criterion's MaxScore (a CHECK can't reach another table)
+-- UI-20: the ceiling is the section override when one exists, else the criterion's own.
 CREATE TRIGGER trg_AiGradingScores_BoundedByMaxScore
 ON AiGradingScores AFTER INSERT, UPDATE AS
 BEGIN
@@ -490,9 +667,42 @@ BEGIN
     SELECT 1
     FROM inserted i
     JOIN GradingCriteria c ON c.CriterionId = i.CriterionId
-    WHERE i.Score > c.MaxScore
+    JOIN AiGradings g      ON g.GradingId = i.GradingId
+    JOIN FreeResponses fr  ON fr.FreeResponseId = g.FreeResponseId
+    JOIN Questions q       ON q.QuestionId = fr.QuestionId
+    LEFT JOIN SectionCriteria sc ON sc.SectionId = q.SectionId AND sc.CriterionId = i.CriterionId
+    WHERE i.Score > COALESCE(sc.MaxScore, c.MaxScore)
   )
     THROW 50026, 'AiGradingScores.Score cannot exceed the criterion MaxScore.', 1;
+  -- UI-20: a section that lists its criteria accepts only those
+  IF EXISTS (
+    SELECT 1
+    FROM inserted i
+    JOIN AiGradings g     ON g.GradingId = i.GradingId
+    JOIN FreeResponses fr ON fr.FreeResponseId = g.FreeResponseId
+    JOIN Questions q      ON q.QuestionId = fr.QuestionId
+    WHERE EXISTS (SELECT 1 FROM SectionCriteria x WHERE x.SectionId = q.SectionId)
+      AND NOT EXISTS (SELECT 1 FROM SectionCriteria x WHERE x.SectionId = q.SectionId AND x.CriterionId = i.CriterionId)
+  )
+    THROW 50033, 'This criterion does not apply to the question''s section.', 1;
+END;
+GO
+-- UI-20: same R7 guard for the section-level ceiling
+CREATE TRIGGER trg_SectionCriteria_MaxScoreNotBelowStored
+ON SectionCriteria AFTER INSERT, UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+  IF EXISTS (
+    SELECT 1
+    FROM inserted sc
+    JOIN Questions q      ON q.SectionId = sc.SectionId
+    JOIN FreeResponses fr ON fr.QuestionId = q.QuestionId
+    JOIN AiGradings g     ON g.FreeResponseId = fr.FreeResponseId
+    JOIN AiGradingScores s ON s.GradingId = g.GradingId AND s.CriterionId = sc.CriterionId
+    JOIN GradingCriteria c ON c.CriterionId = sc.CriterionId
+    WHERE s.Score > COALESCE(sc.MaxScore, c.MaxScore)
+  )
+    THROW 50034, 'A section ceiling cannot be set below a score already recorded against it.', 1;
 END;
 GO
 -- R7: the bound is only checked when a SCORE is written. Lowering a criterion's MaxScore
@@ -516,6 +726,8 @@ CREATE TABLE Recommendations (
   UserId         INT NOT NULL REFERENCES Users(UserId),
   CertId         INT NOT NULL REFERENCES Certificates(CertId),
   GradingId      INT NULL REFERENCES AiGradings(GradingId),   -- NULL = aggregate
+  -- UI-21: exam-result "To reach B2 (your target): …" lists recommendations for THIS attempt
+  AttemptId      INT NULL,
   SkillId        INT NULL,
   Text           NVARCHAR(MAX) NOT NULL,
   Severity       VARCHAR(8) NOT NULL DEFAULT 'info'
@@ -526,7 +738,9 @@ CREATE TABLE Recommendations (
   -- M-12: the skill must belong to this same certificate (NULL stays legal, MATCH SIMPLE)
   CONSTRAINT FK_Reco_SkillCert FOREIGN KEY (SkillId, CertId) REFERENCES Skills(SkillId, CertId),
   -- M-12: the target band must be a real band of this same certificate (NULL stays legal, MATCH SIMPLE)
-  CONSTRAINT FK_Reco_TargetBand FOREIGN KEY (CertId, TargetBandCode) REFERENCES ScoreBands(CertId, Code)
+  CONSTRAINT FK_Reco_TargetBand FOREIGN KEY (CertId, TargetBandCode) REFERENCES ScoreBands(CertId, Code),
+  -- UI-21: the attempt must be this user's own (NULL stays legal, MATCH SIMPLE)
+  CONSTRAINT FK_Reco_AttemptUser FOREIGN KEY (AttemptId, UserId) REFERENCES ExamAttempts(AttemptId, UserId)
 );
 GO
 -- ============ Domain 9: LearningPath ============
@@ -538,10 +752,23 @@ CREATE TABLE PlacementTests (
   Status         VARCHAR(12) NOT NULL DEFAULT 'in_progress'
     CONSTRAINT CK_Placement_Status CHECK (Status IN ('in_progress','done','abandoned')),
   ResultBandCode VARCHAR(20) NULL,        -- snapshot
+  -- UI-22: placement-take saves/resumes answers and placement-result shows L/R scores, time and
+  -- question count. All of that is an ExamAttempt (free: no mock_exam_start charge) — linked here.
+  AttemptId      INT NULL,
+  ExamPurpose    VARCHAR(20) NOT NULL CONSTRAINT DF_Placement_ExamPurpose DEFAULT 'placement'
+    CONSTRAINT CK_Placement_ExamPurpose CHECK (ExamPurpose = 'placement'),
+  TotalScore     INT NULL,                -- snapshot of the attempt total ("385 out of 990")
   TakenAt        DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
   -- M-2: the placement exam must belong to the same certificate (NULL stays legal, MATCH SIMPLE)
-  CONSTRAINT FK_Placement_ExamCert FOREIGN KEY (ExamId, CertId) REFERENCES Exams(ExamId, CertId)
+  CONSTRAINT FK_Placement_ExamCert FOREIGN KEY (ExamId, CertId) REFERENCES Exams(ExamId, CertId),
+  -- UI-3: and must be a placement exam, not a mock
+  CONSTRAINT FK_Placement_ExamPurpose FOREIGN KEY (ExamId, CertId, ExamPurpose) REFERENCES Exams(ExamId, CertId, Purpose),
+  -- UI-22: the attempt must be this user's own
+  CONSTRAINT FK_Placement_AttemptUser FOREIGN KEY (AttemptId, UserId) REFERENCES ExamAttempts(AttemptId, UserId),
+  CONSTRAINT UQ_PlacementTests_Id_User UNIQUE (PlacementId, UserId)
 );
+GO
+CREATE UNIQUE INDEX UX_PlacementTests_Attempt ON PlacementTests(AttemptId) WHERE AttemptId IS NOT NULL;
 GO
 CREATE TABLE TargetBands (
   UserId         INT NOT NULL REFERENCES Users(UserId),
@@ -572,6 +799,10 @@ CREATE TABLE PathModules (
   CertId       INT NOT NULL,
   DisplayOrder INT NOT NULL DEFAULT 0,
   Title        NVARCHAR(120) NOT NULL,
+  -- UI-23: learning-path / path-detail module copy
+  GroupName        NVARCHAR(120) NULL,   -- "Grammar foundations · modules 1–3"
+  Description      NVARCHAR(1000) NULL,  -- "What this module covers"
+  EstimatedMinutes INT NULL CONSTRAINT CK_PathModules_Est CHECK (EstimatedMinutes IS NULL OR EstimatedMinutes > 0),
   -- M-1: CertId must be the template's own
   CONSTRAINT FK_PathModules_TemplateCert FOREIGN KEY (TemplateId, CertId) REFERENCES PathTemplates(TemplateId, CertId),
   -- M-1: the skill must belong to that same certificate
@@ -594,6 +825,8 @@ CREATE TABLE PathModuleItems (
   RefSectionId    INT NULL,
   RefExamId       INT NULL,
   DifficultyLevel INT NULL CONSTRAINT CK_PMI_Difficulty CHECK (DifficultyLevel IS NULL OR DifficultyLevel BETWEEN 1 AND 5),
+  QuestionCount   INT NULL CONSTRAINT CK_PMI_QCount CHECK (QuestionCount IS NULL OR QuestionCount > 0), -- UI-23: "20 questions"
+  IsPremiumOnly   BIT NOT NULL CONSTRAINT DF_PMI_IsPremiumOnly DEFAULT 0, -- UI-23: AI-graded writing is premium-only
   DisplayOrder    INT NOT NULL DEFAULT 0,
   -- Review Focus #3: the ref column must match ItemType
   CONSTRAINT CK_PMI_RefMatchesType CHECK (
@@ -613,12 +846,26 @@ CREATE TABLE PathModuleItems (
   CONSTRAINT UQ_PMI_Id_Template UNIQUE (ItemId, TemplateId)
 );
 GO
+-- UI-23: path-detail "Topics covered in this module"; premium adds a video lesson per topic.
+-- Topic status (Done / In progress) derives from the module's practice answers in CategoryId.
+CREATE TABLE PathModuleTopics (
+  TopicId      INT IDENTITY(1,1) PRIMARY KEY,
+  ModuleId     INT NOT NULL REFERENCES PathModules(ModuleId),
+  Title        NVARCHAR(160) NOT NULL,
+  CategoryId   INT NULL REFERENCES QuestionCategories(CategoryId),
+  QuestionCount INT NULL CONSTRAINT CK_PMT_QCount CHECK (QuestionCount IS NULL OR QuestionCount > 0),
+  VideoPath    NVARCHAR(400) NULL,      -- premium only
+  DisplayOrder INT NOT NULL DEFAULT 0
+);
+GO
 CREATE TABLE LearnerPaths (
   LearnerPathId   INT IDENTITY(1,1) PRIMARY KEY,
   UserId          INT NOT NULL REFERENCES Users(UserId),
   CertId          INT NOT NULL REFERENCES Certificates(CertId),
   TemplateId      INT NOT NULL,
   CurrentBandCode VARCHAR(20) NULL,
+  -- UI-24: path-generated "Built from your placement result on 15 August 2026"
+  PlacementId     INT NULL,
   Status          VARCHAR(10) NOT NULL DEFAULT 'active'
     CONSTRAINT CK_LearnerPaths_Status CHECK (Status IN ('active','completed','reset')),
   StartedAt       DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
@@ -627,7 +874,9 @@ CREATE TABLE LearnerPaths (
   -- composite target so CreditTransactions can prove the charged user owns the path (H-1):
   CONSTRAINT UQ_LearnerPaths_Id_User UNIQUE (LearnerPathId, UserId),
   -- M-1: composite target so LearnerPathSteps can require the item's module belong to the same template
-  CONSTRAINT UQ_LearnerPaths_Id_Template UNIQUE (LearnerPathId, TemplateId)
+  CONSTRAINT UQ_LearnerPaths_Id_Template UNIQUE (LearnerPathId, TemplateId),
+  -- UI-24: the placement must be this user's own
+  CONSTRAINT FK_LearnerPaths_PlacementUser FOREIGN KEY (PlacementId, UserId) REFERENCES PlacementTests(PlacementId, UserId)
 );
 GO
 -- Review Focus #5: at most one active path per (UserId,CertId)
@@ -640,15 +889,20 @@ CREATE TABLE LearnerPathSteps (
   PathModuleItemId INT NOT NULL,
   -- M-1: carried down from the owning path so the item's own template must match the path's template
   TemplateId      INT NOT NULL,
-  Status          VARCHAR(10) NOT NULL DEFAULT 'locked'
-    CONSTRAINT CK_Steps_Status CHECK (Status IN ('locked','available','done')),
+  Status          VARCHAR(12) NOT NULL DEFAULT 'locked'
+    -- UI-25: learning-path shows Not started / In progress / Done / Locked
+    CONSTRAINT CK_Steps_Status CHECK (Status IN ('locked','available','in_progress','done')),
   Score           DECIMAL(6,2) NULL,
+  StartedAt       DATETIMEOFFSET NULL,
   CompletedAt     DATETIMEOFFSET NULL,
   -- M-1: TemplateId must be the learner path's own
   CONSTRAINT FK_Steps_PathTemplate FOREIGN KEY (LearnerPathId, TemplateId) REFERENCES LearnerPaths(LearnerPathId, TemplateId),
   -- M-1: the module item must belong to that same template
   CONSTRAINT FK_Steps_ItemTemplate FOREIGN KEY (PathModuleItemId, TemplateId) REFERENCES PathModuleItems(ItemId, TemplateId)
 );
+GO
+-- UI-12: now that LearnerPathSteps exists, link a practice session to the module step it serves
+ALTER TABLE PracticeSessions ADD CONSTRAINT FK_Practice_PathStep FOREIGN KEY (LearnerPathStepId) REFERENCES LearnerPathSteps(StepId);
 GO
 -- ============ Domain 10: Mentor ============
 CREATE TABLE MentorProfiles (
@@ -659,7 +913,14 @@ CREATE TABLE MentorProfiles (
   CertId       INT NOT NULL REFERENCES Certificates(CertId),
   SkillId      INT NULL REFERENCES Skills(SkillId),
   Type         VARCHAR(6) NOT NULL CONSTRAINT CK_Mentor_Type CHECK (Type IN ('human','ai')),
-  PricePerSlot DECIMAL(10,2) NOT NULL CONSTRAINT CK_Mentor_Price CHECK (PricePerSlot >= 0),
+  PricePerSlot DECIMAL(10,2) NOT NULL CONSTRAINT CK_Mentor_Price CHECK (PricePerSlot >= 0),  -- payout basis (cash)
+  -- UI-26 (gap 7): what the learner is charged; the mentor_booking ledger Delta must equal -PriceCredits
+  PriceCredits INT NOT NULL CONSTRAINT DF_Mentor_PriceCredits DEFAULT 1
+    CONSTRAINT CK_Mentor_PriceCredits CHECK (PriceCredits > 0),
+  Headline     NVARCHAR(200) NULL,   -- UI-26: one-line card copy ("10 years teaching TOEIC…")
+  Expertise    NVARCHAR(400) NULL,   -- UI-26: "Expertise: Listening strategies, pronunciation…"
+  SessionMinutes INT NOT NULL CONSTRAINT DF_Mentor_SessionMinutes DEFAULT 60
+    CONSTRAINT CK_Mentor_SessionMinutes CHECK (SessionMinutes > 0),
   IsActive     BIT NOT NULL DEFAULT 1,
   -- M-14: human mentors are people (UserId set), AI mentors are not
   CONSTRAINT CK_Mentor_TypeUserId CHECK ((Type='human' AND UserId IS NOT NULL) OR (Type='ai' AND UserId IS NULL)),
@@ -691,6 +952,8 @@ CREATE TABLE Bookings (
   Status    VARCHAR(10) NOT NULL DEFAULT 'pending'
     CONSTRAINT CK_Bookings_Status CHECK (Status IN ('pending','confirmed','done','cancelled')),
   MeetLink  NVARCHAR(400) NULL,
+  FocusArea NVARCHAR(120) NULL,          -- UI-27: mentor-confirm "Focus area: Listening strategies"
+  CancelledAt DATETIMEOFFSET NULL,       -- UI-27: refund only if cancelled 24h+ before the slot
   CreatedAt DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
   -- composite target so CreditTransactions can prove the charged user owns the booking (H-1).
   -- Batch 2 (PartC-3) also needs this constraint; reused there, not recreated.
@@ -702,7 +965,8 @@ CREATE TABLE Bookings (
   -- M-14: MentorType must be the mentor's actual Type
   CONSTRAINT FK_Bookings_MentorType FOREIGN KEY (MentorId, MentorType) REFERENCES MentorProfiles(MentorId, Type),
   -- M-14: only human mentors need a scheduled slot; AI books without one
-  CONSTRAINT CK_Bookings_MentorTypeSlot CHECK ((MentorType='human' AND SlotId IS NOT NULL) OR (MentorType='ai' AND SlotId IS NULL))
+  CONSTRAINT CK_Bookings_MentorTypeSlot CHECK ((MentorType='human' AND SlotId IS NOT NULL) OR (MentorType='ai' AND SlotId IS NULL)),
+  CONSTRAINT CK_Bookings_CancelledAt CHECK (CancelledAt IS NULL OR Status = 'cancelled')
 );
 GO
 -- Review Focus #5: one live booking per slot (cancelled frees it)
@@ -723,18 +987,39 @@ CREATE TABLE Reviews (
 GO
 CREATE TABLE Complaints (
   ComplaintId          INT IDENTITY(1,1) PRIMARY KEY,
-  BookingId            INT NOT NULL,
+  -- UI-28: admin complaints list relates complaints to a booking, an exam attempt or an order.
+  -- Exactly one subject is set; each composite FK proves the complainant owns it.
+  BookingId            INT NULL,
+  AttemptId            INT NULL,
+  OrderId              INT NULL,
   UserId               INT NOT NULL REFERENCES Users(UserId),
+  Type                 VARCHAR(16) NOT NULL
+    CONSTRAINT CK_Complaints_Type CHECK (Type IN
+      ('mentor_no_show','mentor_quality','grading_issue','technical_error','payment_issue')),
   Reason               NVARCHAR(MAX) NOT NULL,
   Status               VARCHAR(10) NOT NULL DEFAULT 'open'
     CONSTRAINT CK_Complaints_Status CHECK (Status IN ('open','reviewing','resolved')),
   Resolution           NVARCHAR(MAX) NULL,
+  InternalNotes        NVARCHAR(MAX) NULL,   -- UI-28: "Not shown to the learner"
+  ResolvedByUserId     INT NULL CONSTRAINT FK_Complaints_ResolvedBy REFERENCES Users(UserId),
+  ResolvedAt           DATETIMEOFFSET NULL,
   ResolvedByGrantTxnId INT NULL,      -- FK added in Task 10; composite FK to CreditTransactions(TxnId,UserId) added in Batch 1
   CreatedAt            DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
   -- M-16: a make-good grant can only be recorded once the complaint is resolved
   CONSTRAINT CK_Complaints_GrantRequiresResolved CHECK (ResolvedByGrantTxnId IS NULL OR Status='resolved'),
   -- PartC-4: a complaint must be filed by the user who made the booking
-  CONSTRAINT FK_Complaints_BookingUser FOREIGN KEY (BookingId, UserId) REFERENCES Bookings(BookingId, UserId)
+  CONSTRAINT FK_Complaints_BookingUser FOREIGN KEY (BookingId, UserId) REFERENCES Bookings(BookingId, UserId),
+  CONSTRAINT FK_Complaints_AttemptUser FOREIGN KEY (AttemptId, UserId) REFERENCES ExamAttempts(AttemptId, UserId),
+  -- FK_Complaints_OrderUser added once Orders exists
+  CONSTRAINT CK_Complaints_OneSubject CHECK (
+    (CASE WHEN BookingId IS NULL THEN 0 ELSE 1 END
+   + CASE WHEN AttemptId IS NULL THEN 0 ELSE 1 END
+   + CASE WHEN OrderId   IS NULL THEN 0 ELSE 1 END) = 1),
+  CONSTRAINT CK_Complaints_TypeMatchesSubject CHECK (
+       (Type IN ('mentor_no_show','mentor_quality') AND BookingId IS NOT NULL)
+    OR (Type IN ('grading_issue','technical_error') AND AttemptId IS NOT NULL)
+    OR (Type = 'payment_issue' AND OrderId IS NOT NULL)),
+  CONSTRAINT CK_Complaints_ResolvedAt CHECK (ResolvedAt IS NULL OR Status = 'resolved')
 );
 GO
 CREATE TABLE MentorPayouts (
@@ -816,39 +1101,65 @@ CREATE TABLE Packages (
   Name      NVARCHAR(120) NOT NULL,
   Credits   INT NOT NULL CONSTRAINT CK_Packages_Credits CHECK (Credits > 0),
   Price     DECIMAL(12,2) NOT NULL CONSTRAINT CK_Packages_Price CHECK (Price >= 0),
-  IsActive  BIT NOT NULL DEFAULT 1
+  IsActive  BIT NOT NULL DEFAULT 1,
+  IsFeatured   BIT NOT NULL CONSTRAINT DF_Packages_IsFeatured DEFAULT 0,  -- UI-29: "Featured" / "Popular"
+  Features     NVARCHAR(1000) NULL,  -- UI-29: pricing card bullet list, one per line
+  DisplayOrder INT NOT NULL CONSTRAINT DF_Packages_DisplayOrder DEFAULT 0
 );
+GO
+-- UI-29: "1 featured" on the packages page; pricing highlights a single card
+CREATE UNIQUE INDEX UX_Packages_OneFeatured ON Packages(IsFeatured) WHERE IsFeatured = 1;
 GO
 CREATE TABLE Orders (
   OrderId   INT IDENTITY(1,1) PRIMARY KEY,
   UserId    INT NOT NULL REFERENCES Users(UserId),
   PackageId INT NOT NULL REFERENCES Packages(PackageId),
-  Status    VARCHAR(8) NOT NULL DEFAULT 'pending'
-    CONSTRAINT CK_Orders_Status CHECK (Status IN ('pending','paid','failed','expired')),
+  Status    VARCHAR(12) NOT NULL DEFAULT 'pending'
+    -- UI-30: 'reconciling' = gateway has not returned a final result ("Reconciling transaction")
+    CONSTRAINT CK_Orders_Status CHECK (Status IN ('pending','reconciling','paid','failed','expired')),
   Amount    DECIMAL(12,2) NOT NULL CONSTRAINT CK_Orders_Amount CHECK (Amount >= 0),
+  -- UI-30: order code "DH-20260920-0148", gateway VNPay/MoMo, gateway txn ref and error code
+  OrderCode    VARCHAR(20) NOT NULL,
+  Gateway      VARCHAR(8) NOT NULL CONSTRAINT CK_Orders_Gateway CHECK (Gateway IN ('vnpay','momo')),
+  GatewayTxnRef  VARCHAR(64) NULL,
+  GatewayErrorCode VARCHAR(16) NULL,
   CreatedAt DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
   PaidAt    DATETIMEOFFSET NULL,
   CONSTRAINT CK_Orders_PaidAtRequiresPaid CHECK (PaidAt IS NULL OR Status='paid'),
   -- composite target so CreditTransactions can prove the charged user owns the order (H-1):
-  CONSTRAINT UQ_Orders_Id_User UNIQUE (OrderId, UserId)
+  CONSTRAINT UQ_Orders_Id_User UNIQUE (OrderId, UserId),
+  CONSTRAINT UQ_Orders_OrderCode UNIQUE (OrderCode)
 );
 GO
 -- Review Focus #5: one pending order per user
+-- UI-30: a reconciling order also blocks a new one ("do not pay again")
 CREATE UNIQUE INDEX UX_Orders_OnePendingPerUser
-  ON Orders(UserId) WHERE Status = 'pending';
+  ON Orders(UserId) WHERE Status IN ('pending','reconciling');
+GO
+CREATE UNIQUE INDEX UX_Orders_GatewayTxnRef ON Orders(Gateway, GatewayTxnRef) WHERE GatewayTxnRef IS NOT NULL;
+GO
+-- UI-28: complaint about an order must be the complainant's own order
+ALTER TABLE Complaints ADD CONSTRAINT FK_Complaints_OrderUser FOREIGN KEY (OrderId, UserId) REFERENCES Orders(OrderId, UserId);
 GO
 CREATE TABLE CreditTransactions (
   TxnId    INT IDENTITY(1,1) PRIMARY KEY,
   UserId   INT NOT NULL REFERENCES Users(UserId),
   Reason   VARCHAR(16) NOT NULL
     CONSTRAINT CK_CreditTxn_Reason CHECK (Reason IN
-      ('purchase','admin_grant','mock_exam_start','ai_grading','mentor_booking','premium_path','admin_revoke')),
+      ('purchase','admin_grant','mock_exam_start','ai_grading','mentor_booking','premium_path','admin_revoke',
+       'booking_cancel')),   -- UI-31 (gap 8): refund of a cancelled booking
   Delta    INT NOT NULL CONSTRAINT CK_CreditTxn_NonZero CHECK (Delta <> 0),
   OrderId       INT NULL,
   AttemptId     INT NULL,
   BookingId     INT NULL,
   LearnerPathId INT NULL,
+  -- UI-32: admin users "Adjust credits": reason is required and logged with the admin's name
+  AdminUserId   INT NULL CONSTRAINT FK_CreditTxn_Admin REFERENCES Users(UserId),
+  Note          NVARCHAR(400) NULL,
   CreatedAt DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
+  CONSTRAINT CK_CreditTxn_AdminActor CHECK (
+       (Reason IN ('admin_grant','admin_revoke') AND AdminUserId IS NOT NULL AND Note IS NOT NULL)
+    OR (Reason NOT IN ('admin_grant','admin_revoke') AND AdminUserId IS NULL)),
   -- M-16: lets Complaints prove the linked grant belongs to the complainant
   CONSTRAINT UQ_CreditTxn_Id_User UNIQUE (TxnId, UserId),
   -- H-1: composite FKs carry UserId so the source row's owner must match the charged wallet.
@@ -860,7 +1171,7 @@ CREATE TABLE CreditTransactions (
   CONSTRAINT FK_CreditTxn_Path    FOREIGN KEY (LearnerPathId, UserId) REFERENCES LearnerPaths(LearnerPathId, UserId),
   -- sign per reason
   CONSTRAINT CK_CreditTxn_DeltaSign CHECK (
-       (Reason IN ('purchase','admin_grant') AND Delta > 0)
+       (Reason IN ('purchase','admin_grant','booking_cancel') AND Delta > 0)
     OR (Reason IN ('mock_exam_start','ai_grading','mentor_booking','premium_path','admin_revoke') AND Delta < 0)
   ),
   -- exactly the source column matching the reason is set (admin_* carry none)
@@ -868,7 +1179,8 @@ CREATE TABLE CreditTransactions (
        (Reason='purchase'        AND OrderId IS NOT NULL AND AttemptId IS NULL AND BookingId IS NULL AND LearnerPathId IS NULL)
     OR (Reason='mock_exam_start' AND AttemptId IS NOT NULL AND OrderId IS NULL AND BookingId IS NULL AND LearnerPathId IS NULL)
     OR (Reason='ai_grading'      AND AttemptId IS NOT NULL AND OrderId IS NULL AND BookingId IS NULL AND LearnerPathId IS NULL)
-    OR (Reason='mentor_booking'  AND BookingId IS NOT NULL AND OrderId IS NULL AND AttemptId IS NULL AND LearnerPathId IS NULL)
+    OR (Reason IN ('mentor_booking','booking_cancel')
+                                 AND BookingId IS NOT NULL AND OrderId IS NULL AND AttemptId IS NULL AND LearnerPathId IS NULL)
     OR (Reason='premium_path'    AND LearnerPathId IS NOT NULL AND OrderId IS NULL AND AttemptId IS NULL AND BookingId IS NULL)
     OR (Reason IN ('admin_grant','admin_revoke') AND OrderId IS NULL AND AttemptId IS NULL AND BookingId IS NULL AND LearnerPathId IS NULL)
   )
@@ -935,11 +1247,12 @@ BEGIN
     THROW 50028, 'CreditTransactions is append-only; a posted transaction cannot be rewritten.', 1;
 END;
 GO
--- H-2: OrderId/BookingId/LearnerPathId each fund at most one txn; AttemptId allows one
+-- H-2: OrderId/LearnerPathId each fund at most one txn; AttemptId allows one
 -- mock_exam_start AND one ai_grading charge, but only one of each (spec: one charge covers all answers).
+-- UI-31: a booking likewise carries one mentor_booking charge and at most one booking_cancel refund.
 CREATE UNIQUE INDEX UX_CreditTxn_Order ON CreditTransactions(OrderId) WHERE OrderId IS NOT NULL;
 GO
-CREATE UNIQUE INDEX UX_CreditTxn_Booking ON CreditTransactions(BookingId) WHERE BookingId IS NOT NULL;
+CREATE UNIQUE INDEX UX_CreditTxn_Booking ON CreditTransactions(BookingId, Reason) WHERE BookingId IS NOT NULL;
 GO
 CREATE UNIQUE INDEX UX_CreditTxn_Path ON CreditTransactions(LearnerPathId) WHERE LearnerPathId IS NOT NULL;
 GO
@@ -959,6 +1272,46 @@ BEGIN
       AND (o.Status <> 'paid' OR i.Delta <> pk.Credits)
   )
     THROW 50022, 'purchase txn must reference a paid order with Delta equal to the package credits.', 1;
+END;
+GO
+-- UI-37: what an attempt may be charged depends on its exam's purpose:
+-- mock -> mock_exam_start and ai_grading; speaking_practice -> ai_grading only; placement -> nothing (free).
+CREATE TRIGGER trg_CreditTransactions_ChargeMatchesExamPurpose
+ON CreditTransactions AFTER INSERT, UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+  IF EXISTS (
+    SELECT 1 FROM inserted i
+    JOIN ExamAttempts a ON a.AttemptId = i.AttemptId
+    JOIN Exams e        ON e.ExamId = a.ExamId
+    WHERE (i.Reason = 'mock_exam_start' AND e.Purpose <> 'mock')
+       OR (i.Reason = 'ai_grading'      AND e.Purpose = 'placement')
+  )
+    THROW 50038, 'This charge does not apply to the attempt''s exam purpose.', 1;
+END;
+GO
+-- UI-26/UI-31: a mentor_booking charge must equal the mentor's PriceCredits; a booking_cancel refund
+-- must exactly reverse a prior charge on a booking that is now cancelled.
+CREATE TRIGGER trg_CreditTransactions_BookingAmounts
+ON CreditTransactions AFTER INSERT, UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+  IF EXISTS (
+    SELECT 1 FROM inserted i
+    JOIN Bookings b ON b.BookingId = i.BookingId
+    JOIN MentorProfiles m ON m.MentorId = b.MentorId
+    WHERE i.Reason = 'mentor_booking' AND i.Delta <> -m.PriceCredits
+  )
+    THROW 50035, 'mentor_booking Delta must equal minus the mentor''s PriceCredits.', 1;
+  IF EXISTS (
+    SELECT 1 FROM inserted i
+    JOIN Bookings b ON b.BookingId = i.BookingId
+    WHERE i.Reason = 'booking_cancel'
+      AND (b.Status <> 'cancelled'
+           OR NOT EXISTS (SELECT 1 FROM CreditTransactions c
+                          WHERE c.BookingId = i.BookingId AND c.Reason = 'mentor_booking' AND c.Delta = -i.Delta))
+  )
+    THROW 50036, 'booking_cancel must refund exactly the charge of a cancelled booking.', 1;
 END;
 GO
 -- R3: the above proves the order was 'paid' AT THE MOMENT OF CREDITING, but nothing stopped the
@@ -1009,6 +1362,48 @@ BEGIN
 END;
 GO
 -- ============ Views ============
+-- UI-33: wallet "15 purchased − 7 used", pricing "7 of 15 used"
+CREATE VIEW vw_UserCreditSummary AS
+  SELECT UserId,
+         SUM(Delta) AS Balance,
+         SUM(CASE WHEN Delta > 0 THEN Delta ELSE 0 END)  AS CreditsIn,
+         SUM(CASE WHEN Reason = 'purchase' THEN Delta ELSE 0 END) AS CreditsPurchased,
+         -SUM(CASE WHEN Delta < 0 AND Reason <> 'admin_revoke' THEN Delta ELSE 0 END)
+           - SUM(CASE WHEN Reason = 'booking_cancel' THEN Delta ELSE 0 END) AS CreditsUsed
+  FROM CreditTransactions GROUP BY UserId;
+GO
+-- UI-34: weakness analysis combines exams AND practice ("45/78 questions" across both)
+CREATE VIEW vw_UserSectionAccuracyAll AS
+  SELECT x.UserId, x.SectionId, COUNT(x.IsCorrect) AS Answered,
+         SUM(CASE WHEN x.IsCorrect = 1 THEN 1 ELSE 0 END) AS Correct
+  FROM (
+    SELECT ps.UserId, pa.SectionId, pa.IsCorrect
+    FROM PracticeAnswers pa JOIN PracticeSessions ps ON ps.SessionId = pa.SessionId
+    UNION ALL
+    SELECT a.UserId, q.SectionId, aa.IsCorrect
+    FROM AttemptAnswers aa
+    JOIN ExamAttempts a ON a.AttemptId = aa.AttemptId
+    JOIN Questions q    ON q.QuestionId = aa.QuestionId
+    WHERE a.Status = 'graded'
+  ) x
+  GROUP BY x.UserId, x.SectionId;
+GO
+-- UI-34: "Frequently missed question types" — same union, by category
+CREATE VIEW vw_UserCategoryAccuracy AS
+  SELECT x.UserId, q.CategoryId, COUNT(x.IsCorrect) AS Answered,
+         SUM(CASE WHEN x.IsCorrect = 1 THEN 1 ELSE 0 END) AS Correct
+  FROM (
+    SELECT ps.UserId, pa.QuestionId, pa.IsCorrect
+    FROM PracticeAnswers pa JOIN PracticeSessions ps ON ps.SessionId = pa.SessionId
+    UNION ALL
+    SELECT a.UserId, aa.QuestionId, aa.IsCorrect
+    FROM AttemptAnswers aa JOIN ExamAttempts a ON a.AttemptId = aa.AttemptId
+    WHERE a.Status = 'graded'
+  ) x
+  JOIN Questions q ON q.QuestionId = x.QuestionId
+  WHERE q.CategoryId IS NOT NULL
+  GROUP BY x.UserId, q.CategoryId;
+GO
 CREATE VIEW vw_UserSectionAccuracy AS
   SELECT ps.UserId, s.SectionId, s.Name AS SectionName,
          COUNT(pa.IsCorrect) AS Answered,
@@ -1017,4 +1412,52 @@ CREATE VIEW vw_UserSectionAccuracy AS
   JOIN PracticeSessions ps ON ps.SessionId = pa.SessionId
   JOIN Sections s ON s.SectionId = ps.SectionId
   GROUP BY ps.UserId, s.SectionId, s.Name;
+GO
+-- ============ Query indexes ============
+-- SQL Server does not index foreign keys. These cover the joins the triggers run on every write
+-- and the screens' hot reads. Uniqueness lives above; nothing here enforces a rule.
+-- Identity
+CREATE INDEX IX_EmailVerificationTokens_User ON EmailVerificationTokens(UserId);
+CREATE INDEX IX_PasswordResetTokens_User     ON PasswordResetTokens(UserId);
+-- Content (exam list, exam editor, question bank)
+CREATE INDEX IX_Exams_Cert_Status        ON Exams(CertId, Purpose, Status) WHERE IsDeleted = 0;
+CREATE INDEX IX_QGroups_Exam             ON QuestionGroups(ExamId, DisplayOrder);
+CREATE INDEX IX_QGroups_Section          ON QuestionGroups(SectionId);
+CREATE INDEX IX_Questions_Group          ON Questions(GroupId, DisplayOrder);
+CREATE INDEX IX_Questions_Section        ON Questions(SectionId);
+CREATE INDEX IX_Questions_Category       ON Questions(CategoryId) WHERE CategoryId IS NOT NULL;
+CREATE INDEX IX_ImportLog_Batch          ON ImportLog(BatchId);
+-- Practice (history, weakness views, path module progress)
+CREATE INDEX IX_Practice_User            ON PracticeSessions(UserId, StartedAt);
+CREATE INDEX IX_Practice_PathStep        ON PracticeSessions(LearnerPathStepId) WHERE LearnerPathStepId IS NOT NULL;
+CREATE INDEX IX_PracticeAnswers_Question ON PracticeAnswers(QuestionId);
+-- Mock exam (exam history, review, grading triggers)
+CREATE INDEX IX_Attempts_User            ON ExamAttempts(UserId, StartedAt) INCLUDE (ExamId, Status, TotalScore);
+CREATE INDEX IX_Attempts_Exam            ON ExamAttempts(ExamId);
+CREATE INDEX IX_AttemptAnswers_Question  ON AttemptAnswers(QuestionId);
+CREATE INDEX IX_FreeResponses_Question   ON FreeResponses(QuestionId);
+-- AI grading worker queue: pending first, failed for retry
+CREATE INDEX IX_FreeResponses_Pending    ON FreeResponses(SubmittedAt) WHERE Status = 'pending_ai';
+CREATE INDEX IX_AiGradings_Queue         ON AiGradings(Status, RequestedAt) WHERE Status IN ('pending','failed');
+CREATE INDEX IX_Recommendations_User     ON Recommendations(UserId, CertId);
+CREATE INDEX IX_Recommendations_Attempt  ON Recommendations(AttemptId) WHERE AttemptId IS NOT NULL;
+-- Learning path
+CREATE INDEX IX_Placement_User           ON PlacementTests(UserId, CertId);
+CREATE INDEX IX_PathModules_Template     ON PathModules(TemplateId, DisplayOrder);
+CREATE INDEX IX_PMI_Module               ON PathModuleItems(ModuleId, DisplayOrder);
+CREATE INDEX IX_PMT_Module               ON PathModuleTopics(ModuleId, DisplayOrder);
+CREATE INDEX IX_LearnerPaths_User        ON LearnerPaths(UserId, CertId);
+CREATE INDEX IX_Steps_LearnerPath        ON LearnerPathSteps(LearnerPathId);
+-- Mentor
+CREATE INDEX IX_Mentors_Cert             ON MentorProfiles(CertId) WHERE IsActive = 1;
+CREATE INDEX IX_MentorSlots_Mentor       ON MentorSlots(MentorId, StartAt);
+CREATE INDEX IX_Bookings_User            ON Bookings(UserId, CreatedAt);
+CREATE INDEX IX_Bookings_Mentor          ON Bookings(MentorId);
+CREATE INDEX IX_Complaints_Status        ON Complaints(Status, CreatedAt);
+CREATE INDEX IX_Complaints_User          ON Complaints(UserId);
+CREATE INDEX IX_MentorPayouts_Mentor     ON MentorPayouts(MentorId);
+-- Payment (wallet history, balance view, admin orders)
+CREATE INDEX IX_Orders_User              ON Orders(UserId, CreatedAt);
+CREATE INDEX IX_Orders_Open              ON Orders(CreatedAt) WHERE Status IN ('pending','reconciling');
+CREATE INDEX IX_CreditTxn_User           ON CreditTransactions(UserId, CreatedAt) INCLUDE (Reason, Delta);
 GO

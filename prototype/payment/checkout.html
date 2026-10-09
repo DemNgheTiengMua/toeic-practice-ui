@@ -8,13 +8,14 @@
   <link rel="stylesheet" href="../assets/css/tokens.css">
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
+  <script src="../assets/js/sidebar.js"></script>
 </head>
 <body data-states="success,submitting,error,pending">
   <div class="app-shell app-shell--with-sidebar">
     <header class="app-topbar">
       <strong>extra efficient</strong>
       <div class="row">
-        <span class="badge badge--info">9 credits left</span>
+        <span class="badge badge--info">8 credits left</span>
         <a class="btn btn--sm" href="pricing.html">Buy credits</a>
         <a class="btn btn--ghost btn--sm" href="../student/profile.html">Nguyễn Văn A</a>
       </div>
@@ -31,12 +32,34 @@
           <a class="nav-list__item" href="../student/weakness-analysis.html">Weakness analysis</a>
           <div class="nav-list__group">Account</div>
           <a class="nav-list__item is-active" href="wallet.html">Credit wallet</a>
-          <a class="nav-list__item" href="../student/kyc-pending.html">ID verification</a>
           <a class="nav-list__item" href="../student/profile.html">Profile</a>
         </nav>
       </aside>
       <main class="app-main">
+        <div class="context-bar">
+          <div class="context-bar__item">
+            <span class="context-bar__label">Package:</span>
+            <span class="context-bar__value">Exam Prep · 5 credits</span>
+          </div>
+          <div class="context-bar__item">
+            <span class="context-bar__label">Total:</span>
+            <span class="context-bar__value">199,000 ₫</span>
+          </div>
+          <div class="context-bar__item">
+            <span class="context-bar__label">Balance now:</span>
+            <span class="context-bar__value">8 credits</span>
+          </div>
+        </div>
         <div class="container stack">
+          <nav class="breadcrumbs" aria-label="Breadcrumb">
+            <a href="../student/dashboard.html" class="breadcrumbs__item">Home</a>
+            <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+            <a href="wallet.html" class="breadcrumbs__item">Credit wallet</a>
+            <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+            <a href="pricing.html" class="breadcrumbs__item">Buy credits</a>
+            <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+            <span class="breadcrumbs__item" aria-current="page">Confirm order</span>
+          </nav>
           <!-- ===== pending: đã có đơn chưa xong =====
                Người dùng bấm back từ cổng thanh toán về đây trong khi đơn cũ
                còn `pending` là luồng rất thường. Cho tạo đơn thứ hai thì dễ
@@ -47,7 +70,7 @@
                 <div class="state-block__icon" aria-hidden="true">PENDING</div>
                 <h1 class="state-block__title">You have an unfinished order</h1>
                 <p class="state-block__desc">
-                  Order TOEIC-20260920-4417 · Exam Prep package · 199,000 ₫ · created at 11:02. This order is still valid, so a new one cannot be created yet.
+                  Order DH-20260920-0139 · Exam Prep package · 199,000 ₫ · created at 11:02. This order is still valid, so a new one cannot be created yet.
                 </p>
               </div>
               <div class="alert alert--warning">
@@ -99,7 +122,8 @@
                 <div class="card__header"><strong>Orders</strong></div>
                 <div class="card__body stack">
                   <div class="row row--between"><span>Exam Prep</span><strong>199,000 ₫</strong></div>
-                  <div class="row row--between"><span class="text-muted">Credits</span><span>5 credits</span></div>
+                  <div class="row row--between"><span class="text-muted">Credits added</span><span>5 credits</span></div>
+                  <div class="row row--between"><span class="text-muted">Balance after payment</span><span>13 credits, from 8 now</span></div>
                   <div class="row row--between"><span class="text-muted">Order code</span><span>DH-20260920-0148</span></div>
                   <hr>
                   <div class="row row--between"><strong>Total</strong><strong>199,000 ₫</strong></div>
@@ -117,5 +141,6 @@
     </div>
   </div>
   <script src="../assets/js/state-switch.js"></script>
+  <script src="../assets/js/icons.js"></script>
 </body>
 </html>

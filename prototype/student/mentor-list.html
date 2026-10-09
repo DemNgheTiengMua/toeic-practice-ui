@@ -8,13 +8,14 @@
   <link rel="stylesheet" href="../assets/css/tokens.css">
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
+  <script src="../assets/js/sidebar.js"></script>
 </head>
 <body data-states="loading,empty,error,success">
   <div class="app-shell app-shell--with-sidebar">
     <header class="app-topbar">
       <strong>extra efficient</strong>
       <div class="row">
-        <span class="badge badge--info">3 credits left</span>
+        <span class="badge badge--info">8 credits left</span>
         <a class="btn btn--sm" href="../payment/pricing.html">Buy credits</a>
         <a class="btn btn--ghost btn--sm" href="profile.html">Nguyễn Văn A</a>
       </div>
@@ -38,9 +39,29 @@
         </nav>
       </aside>
       <main class="app-main">
+        <div class="context-bar">
+          <div class="context-bar__item">
+            <span class="context-bar__label">Certificate:</span>
+            <span class="context-bar__value">TOEIC</span>
+          </div>
+          <div class="context-bar__item">
+            <span class="context-bar__label">Credits:</span>
+            <span class="context-bar__value">8 left</span>
+          </div>
+          <div class="context-bar__item">
+            <span class="context-bar__label">Session:</span>
+            <span class="context-bar__value">60 minutes</span>
+          </div>
+        </div>
         <div class="container stack">
+          <nav class="breadcrumbs" aria-label="Breadcrumb">
+            <a href="dashboard.html" class="breadcrumbs__item">Home</a>
+            <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+            <span class="breadcrumbs__item" aria-current="page">Find a mentor</span>
+          </nav>
           <!-- ===== loading ===== -->
           <div class="only-loading stack">
+<h1 class="visually-hidden">Loading mentors</h1>
             <div class="skeleton skeleton--title"></div>
             <div class="grid-2">
               <div class="skeleton skeleton--block" style="height: 180px"></div>
@@ -53,8 +74,8 @@
           <div class="only-error">
             <div class="card"><div class="card__body">
               <div class="state-block">
-                <div class="state-block__icon" aria-hidden="true">!</div>
-                <div class="state-block__title">Could not load mentors</div>
+                <div class="state-block__icon" aria-hidden="true">ERROR</div>
+                <h1 class="state-block__title">Could not load mentors</h1>
                 <p class="state-block__desc">Check your connection and try again.</p>
                 <button class="btn btn--primary">Try again</button>
               </div>
@@ -66,7 +87,7 @@
             <div class="card"><div class="card__body">
               <div class="state-block">
                 <div class="state-block__icon" aria-hidden="true">EMPTY</div>
-                <div class="state-block__title">No mentors available</div>
+                <h1 class="state-block__title">No mentors available</h1>
                 <p class="state-block__desc">Check back soon for mentor availability.</p>
               </div>
             </div></div>
@@ -77,8 +98,8 @@
             <h1>Find a mentor</h1>
             <p>Book 1-on-1 sessions with TOEIC experts or AI mentors. Practice speaking, get feedback, and improve faster.</p>
 
-            <div class="row" class="mb-4">
-              <button class="btn btn--plate btn--sm">All skills</button>
+            <div class="row mb-4">
+              <button class="btn btn--sm" aria-pressed="true">All skills</button>
               <button class="btn btn--ghost btn--sm">Listening</button>
               <button class="btn btn--ghost btn--sm">Reading</button>
               <button class="btn btn--ghost btn--sm">Speaking</button>
@@ -88,17 +109,17 @@
             <div class="grid-2">
               <article class="mentor-card">
                 <div class="mentor-card__header">
-                  <strong>Dr. Nguyễn Văn A</strong>
+                  <strong>Dr. Trần Minh Khoa</strong>
                   <span class="badge badge--info">TOEIC</span>
                 </div>
                 <div class="mentor-card__rating">
-                  <span class="mentor-card__stars">★★★★★</span>
-                  <span class="text-muted">4.5 (20 reviews)</span>
+                  <span class="badge badge--muted">4.5 / 5</span>
+                  <span class="text-muted">20 reviews</span>
                 </div>
                 <p class="mentor-card__bio">10 years teaching TOEIC. Specializes in listening strategies and accent training for Vietnamese learners.</p>
                 <div class="mentor-card__footer">
-                  <span class="mentor-card__price">50,000₫</span>
-                  <a href="mentor-detail.html" class="btn btn--primary btn--sm">View profile</a>
+                  <span class="mentor-card__price">1 credit</span>
+                  <a href="mentor-detail.html" class="btn btn--sm">View profile</a>
                 </div>
               </article>
 
@@ -108,13 +129,13 @@
                   <span class="badge badge--info">IELTS</span>
                 </div>
                 <div class="mentor-card__rating">
-                  <span class="mentor-card__stars">★★★★★</span>
-                  <span class="text-muted">4.8 (35 reviews)</span>
+                  <span class="badge badge--muted">4.8 / 5</span>
+                  <span class="text-muted">35 reviews</span>
                 </div>
                 <p class="mentor-card__bio">IELTS 8.5 scorer. Focuses on writing Task 2 and speaking fluency for academic contexts.</p>
                 <div class="mentor-card__footer">
-                  <span class="mentor-card__price">100,000₫</span>
-                  <a href="mentor-detail.html" class="btn btn--primary btn--sm">View profile</a>
+                  <span class="mentor-card__price">1 credit</span>
+                  <a href="mentor-detail.html" class="btn btn--sm">View profile</a>
                 </div>
               </article>
 
@@ -127,12 +148,12 @@
                   </div>
                 </div>
                 <div class="mentor-card__rating">
-                  <span class="mentor-card__stars">★★★★★</span>
-                  <span class="text-muted">5.0 (120 reviews)</span>
+                  <span class="badge badge--muted">5.0 / 5</span>
+                  <span class="text-muted">120 reviews</span>
                 </div>
                 <p class="mentor-card__bio">AI-powered speaking practice. Available 24/7 with instant feedback and pronunciation analysis.</p>
                 <div class="mentor-card__footer">
-                  <span class="mentor-card__price">30,000₫</span>
+                  <span class="mentor-card__price">1 credit</span>
                   <a href="mentor-detail.html" class="btn btn--primary btn--sm">Book now</a>
                 </div>
               </article>
@@ -143,13 +164,13 @@
                   <span class="badge badge--info">VSTEP</span>
                 </div>
                 <div class="mentor-card__rating">
-                  <span class="mentor-card__stars">★★★★☆</span>
-                  <span class="text-muted">4.2 (15 reviews)</span>
+                  <span class="badge badge--muted">4.2 / 5</span>
+                  <span class="text-muted">15 reviews</span>
                 </div>
                 <p class="mentor-card__bio">VSTEP examiner. Teaches test-taking strategies and time management for university entrance exams.</p>
                 <div class="mentor-card__footer">
-                  <span class="mentor-card__price">75,000₫</span>
-                  <a href="mentor-detail.html" class="btn btn--primary btn--sm">View profile</a>
+                  <span class="mentor-card__price">1 credit</span>
+                  <a href="mentor-detail.html" class="btn btn--sm">View profile</a>
                 </div>
               </article>
             </div>
@@ -159,5 +180,6 @@
     </div>
   </div>
   <script src="../assets/js/state-switch.js"></script>
+  <script src="../assets/js/icons.js"></script>
 </body>
 </html>

@@ -8,13 +8,14 @@
   <link rel="stylesheet" href="../assets/css/tokens.css">
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
+  <script src="../assets/js/sidebar.js"></script>
 </head>
 <body data-states="loading,error,success">
   <div class="app-shell app-shell--with-sidebar">
     <header class="app-topbar">
       <strong>extra efficient</strong>
       <div class="row">
-        <span class="badge badge--info">9 credits left</span>
+        <span class="badge badge--info">8 credits left</span>
         <a class="btn btn--sm" href="wallet.html">Credit wallet</a>
         <a class="btn btn--ghost btn--sm" href="../student/profile.html">Nguyễn Văn A</a>
       </div>
@@ -31,7 +32,6 @@
           <a class="nav-list__item" href="../student/weakness-analysis.html">Weakness analysis</a>
           <div class="nav-list__group">Account</div>
           <a class="nav-list__item is-active" href="wallet.html">Credit wallet</a>
-          <a class="nav-list__item" href="../student/kyc-pending.html">ID verification</a>
           <a class="nav-list__item" href="../student/profile.html">Profile</a>
         </nav>
       </aside>
@@ -44,13 +44,21 @@
           </div>
           <div class="context-bar__item">
             <span class="context-bar__label">Credits:</span>
-            <span class="context-bar__value">3 left</span>
+            <span class="context-bar__value">8 left</span>
           </div>
         </div>
 
         <div class="container stack">
+          <nav class="breadcrumbs" aria-label="Breadcrumb">
+            <a href="../student/dashboard.html" class="breadcrumbs__item">Home</a>
+            <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+            <a href="wallet.html" class="breadcrumbs__item">Credit wallet</a>
+            <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+            <span class="breadcrumbs__item" aria-current="page">Buy credits</span>
+          </nav>
           <!-- ===== loading ===== -->
           <div class="only-loading grid-3">
+<h1 class="visually-hidden">Loading credit packages</h1>
             <div class="price-card">
               <div class="skeleton skeleton--title"></div>
               <div class="skeleton skeleton--text"></div>
@@ -75,8 +83,8 @@
           <div class="only-error">
             <div class="card"><div class="card__body">
               <div class="state-block">
-                <div class="state-block__icon" aria-hidden="true">!</div>
-                <div class="state-block__title">Could not load pricing</div>
+                <div class="state-block__icon" aria-hidden="true">ERROR</div>
+                <h1 class="state-block__title">Could not load pricing</h1>
                 <p class="state-block__desc">Please try again in a few minutes.</p>
                 <button class="btn btn--primary">Try again</button>
               </div>
@@ -88,7 +96,7 @@
             <div>
               <h1 class="m-0 mb-1">Buy credits</h1>
               <p class="text-muted no-margin">
-                Each credit covers one mock exam. Practice by section is always free.
+                One credit starts a mock exam, grades a speaking or writing answer, or books a mentor session. A premium learning path costs 5. Listening and reading practice is always free.
               </p>
             </div>
 
@@ -96,11 +104,11 @@
               <div class="card__header"><strong>Your credit usage</strong></div>
               <div class="card__body stack--tight">
                 <div class="row row--between text-sm">
-                  <span>You have <strong>3 credits</strong> remaining</span>
-                  <span class="text-muted">9 used this month</span>
+                  <span>You have <strong>8 credits</strong> remaining</span>
+                  <span class="text-muted">7 of 15 used</span>
                 </div>
-                <div class="progress"><div class="progress__bar" style="width: 25%"></div></div>
-                <p class="text-sm text-muted no-margin mt-2">You've used 9 of 12 credits. 2 more tests to reach your monthly goal!</p>
+                <div class="progress" role="progressbar" aria-valuenow="7" aria-valuemin="0" aria-valuemax="15" aria-label="Credits used"><div class="progress__bar" style="width: 47%"></div></div>
+                <p class="text-sm text-muted no-margin mt-2">You have used 7 of the 15 credits you bought, all on full tests. Credits do not expire.</p>
               </div>
             </div>
 
@@ -150,5 +158,6 @@
     </div>
   </div>
   <script src="../assets/js/state-switch.js"></script>
+  <script src="../assets/js/icons.js"></script>
 </body>
 </html>

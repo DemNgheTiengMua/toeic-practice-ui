@@ -19,13 +19,14 @@ process. Front end is ASP.NET Core MVC + Razor views calling the API via jQuery
 Ajax. SQL Server. JWT lives in an **HttpOnly cookie** on the MVC server, never
 in `localStorage`. Schema is already written: `docs/database-schema.sql` — the
 **multi-certificate companion** schema (10 domains), which supersedes the
-TOEIC-only schema the current static prototype was built against (see
-Architecture Pivot below).
+original TOEIC-only schema (see Architecture Pivot below).
 
 The prototype is step 1 of a graded course project; the .NET application is the
-deliverable that follows. The prototype's job was to lock the business flow and
-every screen state before real code exists; the schema has since pivoted wider
-than the prototype (see Architecture Pivot).
+deliverable that follows. The prototype's job is to lock the business flow and
+every screen state before real code exists. It has been re-screened for the
+pivot (see Architecture Pivot), and the schema was then audited against every
+screen state so each piece of displayed data has a column or a derivation
+(`docs/schema-ui-audit.md`).
 
 ## Architecture Pivot (2026-09-24)
 
@@ -49,10 +50,13 @@ product into a **multi-certificate practice-and-mock-exam companion**:
   for a mock exam start, AI grading, a mentor booking, or a premium learning
   path.
 
-The static prototype under `prototype/` still implements the old TOEIC-only,
-KYC-gated flow and **has not been re-screened** for the pivot. The schema and
-this document are the source of truth; the prototype is historical evidence of
-state coverage, not of current scope.
+The static prototype under `prototype/` has since been re-screened for the
+pivot (plan `docs/superpowers/plans/2026-09-27-multi-cert-ui-redesign.md`): KYC
+screens and messaging are gone; certificate picker, placement, learning path,
+AI grading, mentor booking, speaking practice, and complaint screens were
+added. The 2026-10-08 audit then closed the gaps the screens exposed in the
+schema (tagged `UI-n` in `docs/database-schema.sql`). Schema and screens now
+describe the same product.
 
 ## Users
 
@@ -99,8 +103,11 @@ graded paid attempts, so it is already useful to a learner who has never paid.
 
 Exactly four things cost credits, each a distinct ledger reason: starting a
 mock exam (`mock_exam_start`), AI-grading an attempt's free responses
-(`ai_grading`, one charge per attempt, not per answer), booking a mentor
-(`mentor_booking`), and upgrading to a premium learning path (`premium_path`).
+(`ai_grading`, one charge per attempt, not per answer — this is what a
+speaking-practice session costs, 1 credit), booking a mentor (`mentor_booking`,
+charged at the mentor's `PriceCredits`), and upgrading to a premium learning
+path (`premium_path`). Credits come back only as `booking_cancel` (refund of a
+cancelled booking, equal to the charge, once) or an `admin_grant`.
 
 The old identity gate is gone. With only mock testing, gating payment behind
 CCCD verification bought nothing — so verification, and the whole KYC queue,
@@ -125,10 +132,14 @@ finish grading on submit** — it waits for the AI grading pass; a learner
 switches between two certificates and expects both histories intact; a
 resolved mentor complaint may come back as a credit make-good.
 
-**Admin path:** exam authoring and **batch import** (import is a first-class,
-queryable feature with per-row logs — an advisor requirement) → per-exam
-raw→scaled tables → packages and prices → orders → complaint resolution → user
-list.
+**Admin path:** exam authoring (draft / published / hidden, source and internal
+note, one audio file per listening section, photo + required alt text and
+transcript per question group, question-type labels) and **batch import**
+(import is a first-class, queryable feature with per-row logs — an advisor
+requirement) → per-exam raw→scaled tables → packages and prices (one featured
+package) → orders, including `reconciling` ones → complaint resolution with
+internal notes → user list (lock account, resend activation email, adjust
+credits with a required reason).
 
 **Review ritual:** the prototype is reviewed in a browser from
 `prototype/index.html`, a catalog linking every screen and every one of its
@@ -155,10 +166,41 @@ counts (TOEIC 2, IELTS 4), and scales all come from catalog rows. Per-skill
 scores are rows (`AttemptSkillScores`), not fixed columns; the total must
 always equal the SUM of scaled skill scores (trigger-enforced).
 
-**Free:** practice by section with immediate per-question feedback (MCQ only —
-immediate grading structurally requires a correct option, so speaking/writing
-practice routes through paid AI grading); weakness analysis; the placement
-test and the basic generated path.
+**Free:** practice by section (MCQ only — immediate grading structurally
+requires a correct option, so speaking/writing practice routes through paid AI
+grading), with a question source (all / previously wrong / unseen) and a
+feedback mode (after each question / at the end); a rationale for why the
+learner's *chosen* option is wrong, beside the general explanation; a saved
+incorrect-answer bank; weakness analysis by section and by question type,
+across practice **and** graded exams; the placement test (listed apart from
+mocks, resumable) and the basic generated path.
+
+**Exam features.** Flag for review (and "only flagged" on the navigator and in
+review), resume at the last question after a reload, submitted time and time
+taken on results, per-attempt "to reach B2" recommendations, and replay of a
+single listening item with its transcript in review.
+
+**Speaking practice** is its own exam purpose (`speaking_practice`, speaking
+sections only): per-question prep and response timers, a mic check before the
+credit is spent, recorded duration stored, criteria and per-section maxima
+from `SectionCriteria`. It costs one `ai_grading` charge and never
+`mock_exam_start`; a failed grading is retried on the same row at no charge.
+It scores one skill of a summed scale, so it **never carries a certificate
+band** (trigger-enforced). Writing is allowed by the schema but has no screens.
+
+**Speaking backend contract** (no backend code exists yet; this is what the
+schema expects): the browser records per question and uploads the audio file;
+the server stores it outside the database and writes `FreeResponses.AudioPath`
++ `DurationMs`; one `AiGradings` row per response starts `pending`; a worker
+reads the queue (`IX_AiGradings_Queue`), transcribes and scores against the
+section's criteria, writes `AiGradingScores` with comments, then `done`
+(the trigger flips the response to `graded`) or `failed` with a reason. The
+attempt reaches `graded` only when every response is graded.
+
+**Learning path.** Modules are grouped, described, and estimated in minutes,
+list their topics, and may be premium-only; steps go locked → available →
+in progress → done; module progress comes from the practice sessions linked to
+that step; the path records which placement it was built from.
 
 **Score conversion, two steps with different ownership.** `raw → scaled`
 varies per exam because difficulty varies, so **admin edits it per exam**
@@ -175,18 +217,33 @@ wallet must own the source row; no transaction may drive a balance negative;
 an order that has been credited cannot leave `paid`. UI must never present the
 balance as an autonomous number.
 
-**Payments.** Redirect gateway (VNPay / MoMo, mocked in the prototype). Order
-states `pending` → `paid` | `failed` | `expired`. `expired` (past the
-15-minute reconciliation window) is deliberately separate from `failed` — one
-invites a retry, the other a new order. **One `pending` order per account.**
+**Payments.** Redirect gateway (VNPay / MoMo, mocked in the prototype). Each
+order has a human-readable order code and stores the gateway's transaction ref
+and error code. Order states `pending` → `reconciling` → `paid` | `failed` |
+`expired`. `expired` (past the 15-minute reconciliation window) is deliberately
+separate from `failed` — one invites a retry, the other a new order. **One open
+order per account** — `reconciling` blocks a new order too ("do not pay
+again"). The wallet shows "purchased − used" from a view
+(`vw_UserCreditSummary`), never a stored counter.
 
 **Mentors.** The app collects the booking credit and stores a Meet link; it
-never hosts sessions. Human mentors need slots (one live booking per slot);
-AI mentors book without one. Reviews and complaints attach only to bookings;
-average rating is a **view**, never stored. A resolved complaint may issue an
-`admin_grant` credit make-good, auditable through the same ledger. Mentor
-payouts batch settled bookings; payout totals are a **view**, and the actual
-outbound transfer happens outside the app.
+never hosts sessions. Each mentor has a headline, expertise, session length,
+and a price in credits; the learner names a focus area when booking. Human
+mentors need slots (one live booking per slot); AI mentors book without one.
+A cancelled booking refunds its charge through the ledger. Reviews attach only
+to bookings; average rating is a **view**, never stored. Mentor payouts batch
+settled bookings; payout totals are a **view**, and the actual outbound
+transfer happens outside the app.
+
+**Complaints** cover a booking (mentor no-show / quality), an attempt (grading
+issue / technical error), or an order — exactly one subject, its type must
+match, and it must be the complainant's own. Admin keeps internal notes and
+the resolver is recorded. A resolution may issue an `admin_grant` credit
+make-good; every admin grant or revoke requires a reason and names the admin.
+
+**Accounts.** Registration takes full name, phone, and terms acceptance; email
+must be verified (activation tokens stored hashed, re-sendable by admin);
+admin can lock an account; last sign-in is recorded.
 
 **Target-system constraints that shape the UI:**
 1. The timer is **server-authoritative** — the server returns an absolute
@@ -202,7 +259,7 @@ outbound transfer happens outside the app.
    pending-grading state between submit and result.
 
 **Security constraints already decided:** never store raw passwords (hash);
-password-reset tokens are stored hashed. (CCCD hashing and image handling are
+password-reset and email-verification tokens are stored hashed. (CCCD hashing and image handling are
 gone with KYC.)
 
 **Explicitly out of scope:** real/high-stakes exam sittings and everything
@@ -218,6 +275,11 @@ mobile breakpoint coverage is intentionally not done.
 - The ingest format for the real question content (see Evidence on Hand).
 - Which AI model/provider performs grading (`AiGradings.Model` records which
   one did, after the fact).
+- Re-recording a speaking answer: one response per question for now (kept as
+  a decision, `docs/schema-gaps-speaking.md` gap 5).
+- Not tracked by design: time-on-task ("hours studied" is only a rough
+  derivation), premium video watch progress, and admin "needs attention"
+  alerts (computed, not stored).
 
 ## Brand Commitments
 
@@ -238,12 +300,16 @@ mobile breakpoint coverage is intentionally not done.
 
 ## Evidence on Hand
 
-- **48 static HTML screens** spanning student (33), admin (10), auth (2), and
-  payment (3) sections + `prototype/index.html` catalog, committed on
-  `feat/toeic-ui-prototype`. Every screen's states are reachable and verified
-  (26 states, 143 state renders checked in-browser). **These screens describe
-  the pre-pivot TOEIC-only product**; KYC screens and the "thi thật" framing
-  no longer reflect scope.
+- **50 static HTML screens** spanning student (32), admin (10), auth (3), and
+  payment (5), plus `prototype/landing.html` and the `prototype/index.html`
+  catalog (~200 state links). These describe the **post-pivot** product: KYC
+  screens are removed; placement, learning path, AI grading, mentor booking,
+  speaking practice (`speaking-instructions`, `exam-speaking`,
+  `speaking-review`), and admin complaint screens are in.
+- **`docs/schema-ui-audit.md`** (2026-10-08) — every page and state read
+  against the schema; each gap fixed and tagged `UI-n`.
+  `docs/schema-gaps-speaking.md` records the speaking-format gaps (all fixed
+  except gap 5).
 - **Layout system consolidation (2026-09-28):** 173 inline spacing overrides
   eliminated and converted to utility classes; definition-list grids, progress
   bars, centered content, and button groups now use consistent token-based
@@ -251,16 +317,22 @@ mobile breakpoint coverage is intentionally not done.
   `no-margin`). Skeleton loading animations refined for `prefers-reduced-motion`
   accessibility.
 - **`docs/database-schema.sql`** — the multi-certificate companion schema,
-  verified by live execution on LocalDB: 41 tables, 5 views, 16 triggers, 9
-  filtered unique indexes, ~50 check constraints, plus 10 domain test scripts
-  (`docs/schema-tests/`) that all pass (`run-all.sh`).
+  verified by live execution on LocalDB: 47 tables, 8 views, 22 triggers, 13
+  filtered unique indexes, 36 query indexes (FK joins, history reads, the
+  AI-grading queue), 81 named check constraints, plus 11 domain test
+  scripts (`docs/schema-tests/`, including `domain11-ui-coverage.sql` for the
+  audit rules) that all pass (`run-all.sh`).
 - **`docs/superpowers/specs/2026-09-24-multi-cert-companion-design.md`** — the
-  pivot design (10 domains), the authority for the schema.
+  pivot design (10 domains). It predates the 2026-10-08 audit, so for
+  anything tagged `UI-n` the schema and `docs/schema-ui-audit.md` are ahead of
+  it.
 - **`docs/superpowers/plans/2026-09-24-multi-cert-companion-schema.md`** — the
   11-task schema build plan (executed; this doc update is its closing step).
 - **`docs/toeic-user-flow.md`** — the user flow told by actor, updated to the
-  post-pivot flow; screen-file citations still point at the pre-pivot
-  prototype.
+  post-pivot flow; its screen-file citations and "not re-screened" note
+  predate the UI redesign and are stale.
+- **`docs/superpowers/specs/2026-09-27-multi-cert-ui-redesign.md`** and its
+  plan — the prototype redesign for the pivot (executed).
 - **`docs/superpowers/specs/2026-09-20-toeic-ui-design.md`** and
   **`docs/superpowers/plans/2026-09-20-toeic-ui-prototype.md`** — the
   pre-pivot screen/state spec and build plan (historical).

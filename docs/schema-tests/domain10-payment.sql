@@ -2,10 +2,10 @@ SET QUOTED_IDENTIFIER ON; SET ANSI_NULLS ON;
 INSERT INTO Roles (Code,Name) VALUES ('student',N'S'); DECLARE @r INT=SCOPE_IDENTITY();
 INSERT INTO Users (RoleId,Email,PasswordHash) VALUES (@r,'u@x.com',0x00); DECLARE @u INT=SCOPE_IDENTITY();
 INSERT INTO Packages (Name,Credits,Price,IsActive) VALUES (N'10 credits',10,100000,1); DECLARE @pk INT=SCOPE_IDENTITY();
-INSERT INTO Orders (UserId,PackageId,Status,Amount) VALUES (@u,@pk,'pending',100000); DECLARE @o INT=SCOPE_IDENTITY();
+INSERT INTO Orders (UserId,PackageId,Status,Amount,OrderCode,Gateway) VALUES (@u,@pk,'pending',100000,'DH-T-0001','vnpay'); DECLARE @o INT=SCOPE_IDENTITY();
 -- reject (Review Focus #5): a second pending order for the same user
 BEGIN TRY
-  INSERT INTO Orders (UserId,PackageId,Status,Amount) VALUES (@u,@pk,'pending',100000);
+  INSERT INTO Orders (UserId,PackageId,Status,Amount,OrderCode,Gateway) VALUES (@u,@pk,'pending',100000,'DH-T-0002','vnpay');
   THROW 50000,'EXPECT_REJECT FAILED: second pending order accepted',1;
 END TRY BEGIN CATCH
   IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
@@ -19,7 +19,7 @@ IF @bal <> 10 THROW 50000,'balance expected 10',1;
 PRINT 'wallet balance = 10 as expected';
 -- reject (Review Focus #4): a debit that overdraws the wallet
 BEGIN TRY
-  INSERT INTO CreditTransactions (UserId,Reason,Delta,OrderId) VALUES (@u,'admin_revoke',-999,NULL);
+  INSERT INTO CreditTransactions (UserId,Reason,Delta,OrderId,AdminUserId,Note) VALUES (@u,'admin_revoke',-999,NULL,@u,N'test');
   THROW 50000,'EXPECT_REJECT FAILED: negative balance accepted',1;
 END TRY BEGIN CATCH
   IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
@@ -47,7 +47,7 @@ END TRY BEGIN CATCH
 END CATCH
 
 -- reject (H-1): crediting user B's wallet from user A's order
-INSERT INTO Orders (UserId,PackageId,Status,Amount) VALUES (@u,@pk,'paid',100000); DECLARE @o2 INT=SCOPE_IDENTITY();
+INSERT INTO Orders (UserId,PackageId,Status,Amount,OrderCode,Gateway) VALUES (@u,@pk,'paid',100000,'DH-T-0003','vnpay'); DECLARE @o2 INT=SCOPE_IDENTITY();
 BEGIN TRY
   INSERT INTO CreditTransactions (UserId,Reason,Delta,OrderId) VALUES (@u2,'purchase',10,@o2);
   THROW 50000,'EXPECT_REJECT FAILED: user B credited from user A''s order',1;
@@ -66,7 +66,7 @@ END TRY BEGIN CATCH
 END CATCH
 
 -- reject (H-2): a purchase against a still-pending (unpaid) order
-INSERT INTO Orders (UserId,PackageId,Status,Amount) VALUES (@u,@pk,'pending',100000); DECLARE @o3 INT=SCOPE_IDENTITY();
+INSERT INTO Orders (UserId,PackageId,Status,Amount,OrderCode,Gateway) VALUES (@u,@pk,'pending',100000,'DH-T-0004','vnpay'); DECLARE @o3 INT=SCOPE_IDENTITY();
 BEGIN TRY
   INSERT INTO CreditTransactions (UserId,Reason,Delta,OrderId) VALUES (@u,'purchase',10,@o3);
   THROW 50000,'EXPECT_REJECT FAILED: purchase against pending order accepted',1;
@@ -89,8 +89,8 @@ END CATCH
 INSERT INTO Certificates (Code,Name,IsActive) VALUES ('TOEIC',N'T',1); DECLARE @c INT=SCOPE_IDENTITY();
 INSERT INTO MentorProfiles (DisplayName,CertId,Type,PricePerSlot,IsActive) VALUES (N'Coach',@c,'ai',0,1); DECLARE @m INT=SCOPE_IDENTITY();
 INSERT INTO Bookings (UserId,MentorId,MentorType,Status) VALUES (@u,@m,'ai','done'); DECLARE @bk INT=SCOPE_IDENTITY();
-INSERT INTO Complaints (BookingId,UserId,Reason) VALUES (@bk,@u,N'no show'); DECLARE @cp INT=SCOPE_IDENTITY();
-INSERT INTO CreditTransactions (UserId,Reason,Delta) VALUES (@u2,'admin_grant',5); DECLARE @grantTxn INT=SCOPE_IDENTITY();
+INSERT INTO Complaints (BookingId,UserId,Type,Reason) VALUES (@bk,@u,'mentor_no_show',N'no show'); DECLARE @cp INT=SCOPE_IDENTITY();
+INSERT INTO CreditTransactions (UserId,Reason,Delta,AdminUserId,Note) VALUES (@u2,'admin_grant',5,@u,N'make-good'); DECLARE @grantTxn INT=SCOPE_IDENTITY();
 BEGIN TRY
   UPDATE Complaints SET Status='resolved', ResolvedByGrantTxnId=@grantTxn WHERE ComplaintId=@cp;
   THROW 50000,'EXPECT_REJECT FAILED: complaint resolved by another user''s grant accepted',1;
@@ -101,7 +101,7 @@ END CATCH
 
 -- ===== re-review residuals: the ledger is IMMUTABLE, not merely undeletable =====
 -- reject (R2): rewriting a posted transaction's Delta
-INSERT INTO Orders (UserId,PackageId,Status,Amount) VALUES (@u,@pk,'pending',100000); DECLARE @o4 INT=SCOPE_IDENTITY();
+INSERT INTO Orders (UserId,PackageId,Status,Amount,OrderCode,Gateway) VALUES (@u,@pk,'pending',100000,'DH-T-0005','vnpay'); DECLARE @o4 INT=SCOPE_IDENTITY();
 UPDATE Orders SET Status='paid', PaidAt=SYSDATETIMEOFFSET() WHERE OrderId=@o4;
 INSERT INTO CreditTransactions (UserId,Reason,Delta,OrderId) VALUES (@u,'purchase',10,@o4); DECLARE @txnR INT=SCOPE_IDENTITY();
 BEGIN TRY
@@ -132,11 +132,11 @@ END TRY BEGIN CATCH
 END CATCH
 
 -- accept: an UNCREDITED pending order can still be expired (the stale-order proc must keep working)
-INSERT INTO Orders (UserId,PackageId,Status,Amount) VALUES (@u2,@pk,'pending',100000); DECLARE @o5 INT=SCOPE_IDENTITY();
+INSERT INTO Orders (UserId,PackageId,Status,Amount,OrderCode,Gateway) VALUES (@u2,@pk,'pending',100000,'DH-T-0006','vnpay'); DECLARE @o5 INT=SCOPE_IDENTITY();
 UPDATE Orders SET Status='expired' WHERE OrderId=@o5;
 PRINT 'accepted expiring an uncredited pending order';
 
 -- accept: admin_grant/admin_revoke (all four source columns NULL) stay legal under MATCH SIMPLE,
 -- and the ledger triggers are set-based (multi-row insert must work)
-INSERT INTO CreditTransactions (UserId,Reason,Delta) VALUES (@u,'admin_grant',1),(@u,'admin_grant',2);
+INSERT INTO CreditTransactions (UserId,Reason,Delta,AdminUserId,Note) VALUES (@u,'admin_grant',1,@u2,N'a'),(@u,'admin_grant',2,@u2,N'b');
 PRINT 'accepted multi-row all-NULL-source admin grants';

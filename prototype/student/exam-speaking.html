@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Speaking — Question 3 of 11</title>
+  <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/css/tokens.css">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+</head>
+<body data-states="prepare,recording,recorded,saving,save-failed,resumed,expired,submitting,loading">
+  <div class="app-shell">
+    <header class="app-topbar">
+      <div class="exam-topbar-group">
+        <strong>Speaking practice</strong>
+        <span class="badge badge--info">Speaking · Question 3 of 11</span>
+      </div>
+      <div class="exam-topbar-group">
+        <span class="save-status save-status--saved multi-state" data-show="prepare recording recorded resumed" role="status" aria-live="polite">2 of 11 saved</span>
+        <span class="save-status save-status--saving only-saving" role="status" aria-live="polite">Saving question 3…</span>
+        <span class="save-status save-status--error only-save-failed" role="status" aria-live="polite">Question 3 not saved</span>
+        <span class="timer multi-state" data-show="prepare recording recorded saving save-failed" role="timer" aria-label="Time remaining in the test">
+          <span class="text-sm text-muted">Time remaining</span>
+          <span class="timer__value">00:17:42</span>
+        </span>
+        <span class="timer timer--warning only-resumed" role="timer" aria-label="Time remaining in the test">
+          <span class="text-sm">Time remaining</span>
+          <span class="timer__value">00:09:44</span>
+        </span>
+        <span class="timer timer--critical only-expired" role="timer" aria-label="Time is up">
+          <span class="text-sm">Time is up</span>
+          <span class="timer__value">00:00:00</span>
+        </span>
+      </div>
+    </header>
+    <main class="app-main">
+      <h1 class="visually-hidden">Speaking practice — question 3 of 11</h1>
+
+      <!-- ===== loading ===== -->
+      <div class="container only-loading">
+        <div class="exam-layout">
+          <div class="stack">
+            <div class="skeleton skeleton--title"></div>
+            <div class="skeleton skeleton--block" style="height: 220px"></div>
+            <div class="skeleton skeleton--block" style="height: 200px"></div>
+          </div>
+          <div class="skeleton skeleton--block" style="height: 360px"></div>
+        </div>
+      </div>
+
+      <!-- ===== expired: the server decided, not the clock on this page ===== -->
+      <div class="container container--form only-expired">
+        <div class="card"><div class="card__body">
+          <div class="state-block">
+            <div class="state-block__icon" aria-hidden="true">TIME'S UP</div>
+            <div class="state-block__title">Time is up</div>
+            <p class="state-block__desc">
+              Questions 1 and 2 were saved. Question 3 was cut off when time ran out, and the part you had recorded was kept. Your answers are being sent for grading, so no further action is needed.
+            </p>
+            <div class="progress mx-auto" style="max-width: 280px" role="progressbar" aria-valuenow="70" aria-valuemin="0" aria-valuemax="100" aria-label="Sending recordings"><div class="progress__bar" style="width: 70%"></div></div>
+          </div>
+        </div></div>
+      </div>
+
+      <!-- ===== submitting ===== -->
+      <div class="container container--form only-submitting">
+        <div class="card"><div class="card__body">
+          <div class="state-block">
+            <div class="state-block__icon" aria-hidden="true">RUNNING</div>
+            <div class="state-block__title">Sending your recordings…</div>
+            <p class="state-block__desc">Do not close the page. Recordings you did not make are not graded.</p>
+          </div>
+        </div></div>
+      </div>
+
+      <!-- banners: resumed and save-failed each say what survived -->
+      <div class="container only-resumed mb-4">
+        <div class="alert alert--info">
+          <strong>Your test in progress has been restored.</strong>
+          Questions 1 and 2 are saved. A recording that was open when the page closed is not kept, so question 3 starts again from its preparation time.
+        </div>
+      </div>
+      <div class="container only-save-failed mb-4">
+        <div class="alert alert--danger" role="alert">
+          <strong>Question 3 did not upload.</strong>
+          Your recording is still held on this device. Retry the upload, and keep this tab open until it is saved.
+        </div>
+      </div>
+
+      <div class="container multi-state" data-show="prepare recording recorded saving save-failed resumed">
+        <div class="exam-layout">
+
+          <div class="stack">
+            <div class="question">
+              <div class="question__meta">
+                <span class="question__number">Question 3</span>
+                <span class="badge badge--muted">Describe a picture</span>
+                <span>Look at the picture, then describe it in as much detail as you can.</span>
+              </div>
+              <img class="question__image" src="../assets/img/part1-sample.svg"
+                   alt="Picture for question 3. Describe what you see.">
+              <div class="grid-2">
+                <div class="stat">
+                  <div class="stat__label">Preparation</div>
+                  <div class="stat__value">45s</div>
+                  <div class="stat__hint">to look at the picture</div>
+                </div>
+                <div class="stat">
+                  <div class="stat__label">Speaking time</div>
+                  <div class="stat__value">30s</div>
+                  <div class="stat__hint">recording stops by itself</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card__header"><strong>Your answer</strong></div>
+              <div class="card__body">
+
+                <!-- prepare (and resumed, which restarts preparation) -->
+                <div class="state-block multi-state" data-show="prepare resumed">
+                  <div class="state-block__icon" aria-hidden="true">PREPARE</div>
+                  <div class="state-block__title">Recording starts when preparation ends</div>
+                  <p class="state-block__desc">Look at the picture and plan what to say. You are not being recorded yet.</p>
+                  <span class="timer" role="timer" aria-label="Preparation time left">
+                    <span class="text-sm text-muted">Starts in</span>
+                    <span class="timer__value">00:31</span>
+                  </span>
+                </div>
+
+                <!-- recording: the loudest thing on the page, on purpose -->
+                <div class="state-block only-recording">
+                  <div class="state-block__icon state-block__icon--danger" role="status">RECORDING</div>
+                  <div class="state-block__title">Speak now</div>
+                  <p class="state-block__desc">Describe the picture. The recording stops by itself when the time runs out.</p>
+                  <span class="timer timer--critical" role="timer" aria-label="Speaking time left">
+                    <span class="text-sm">Time to speak</span>
+                    <span class="timer__value">00:21</span>
+                  </span>
+                  <div class="progress mx-auto mt-4" style="max-width: 320px" role="progressbar" aria-valuenow="9" aria-valuemin="0" aria-valuemax="30" aria-label="Speaking time used"><div class="progress__bar progress__bar--danger" style="width: 30%"></div></div>
+                </div>
+
+                <!-- recorded: held on this device until it is saved -->
+                <div class="state-block only-recorded">
+                  <div class="state-block__icon state-block__icon--success" aria-hidden="true">RECORDED</div>
+                  <div class="state-block__title">You spoke for 27 of 30 seconds</div>
+                  <p class="state-block__desc">This recording is only on your device. Play it back, then save it or record it again.</p>
+                  <div class="exam-audio text-left">
+                    <span class="badge badge--muted">Your recording</span>
+                    <div style="flex: 1 1 auto">
+                      <div class="progress" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="27" aria-label="Playback position"><div class="progress__bar" style="width: 0%"></div></div>
+                      <p class="exam-audio__status m-0 mt-2">00:00 / 00:27</p>
+                    </div>
+                    <button class="btn btn--sm" type="button">Play back</button>
+                  </div>
+                </div>
+
+                <!-- saving -->
+                <div class="state-block only-saving">
+                  <div class="state-block__icon" aria-hidden="true">UPLOADING</div>
+                  <div class="state-block__title">Saving question 3…</div>
+                  <p class="state-block__desc">Keep this tab open until the upload finishes.</p>
+                  <div class="progress mx-auto" style="max-width: 320px" role="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100" aria-label="Upload progress"><div class="progress__bar" style="width: 60%"></div></div>
+                </div>
+
+                <!-- save-failed -->
+                <div class="state-block only-save-failed">
+                  <div class="state-block__icon state-block__icon--danger" aria-hidden="true">NOT SAVED</div>
+                  <div class="state-block__title">The upload did not finish</div>
+                  <p class="state-block__desc">Your 27-second recording is still on this device. It is lost if you close the tab before it uploads.</p>
+                </div>
+
+              </div>
+              <div class="card__footer">
+                <div class="row row--between">
+                  <div class="row">
+                    <button class="btn btn--primary multi-state" data-show="prepare resumed" type="button">Start recording now</button>
+                    <button class="btn only-recording" type="button">Stop recording</button>
+                    <button class="btn btn--primary only-recorded" type="button">Save and continue</button>
+                    <button class="btn btn--primary only-saving" type="button" disabled>Saving…</button>
+                    <button class="btn btn--primary only-save-failed" type="button">Retry upload</button>
+                    <button class="btn multi-state" data-show="recorded save-failed" type="button">Record again</button>
+                  </div>
+                  <p class="text-xs text-muted no-margin multi-state" data-show="recorded save-failed">Recording again replaces this take. The earlier one cannot be recovered.</p>
+                </div>
+              </div>
+            </div>
+
+            <p class="text-xs text-muted no-margin" role="note">
+              Questions are taken in order. Once a recording is saved you cannot return to it.
+            </p>
+          </div>
+
+          <aside class="exam-sidebar stack">
+            <div class="card">
+              <div class="card__header">
+                <div class="row row--between">
+                  <strong class="text-sm">Speaking</strong>
+                  <span class="text-xs text-muted">2 of 11 recorded</span>
+                </div>
+              </div>
+              <div class="card__body stack">
+                <div class="progress" role="progressbar" aria-valuenow="2" aria-valuemin="0" aria-valuemax="11" aria-label="Questions recorded"><div class="progress__bar" style="width: 18%"></div></div>
+                <div class="navigator" role="group" aria-label="Speaking questions by task">
+                  <div class="navigator__part">
+                    <div class="navigator__part-head">Read a text aloud <span class="navigator__range">1–2</span></div>
+                    <div class="navigator__grid">
+                      <span class="navigator__cell is-answered" aria-label="Question 1, recorded">1</span>
+                      <span class="navigator__cell is-answered" aria-label="Question 2, recorded">2</span>
+                    </div>
+                  </div>
+                  <div class="navigator__part">
+                    <div class="navigator__part-head">Describe a picture <span class="navigator__range">3–4</span></div>
+                    <div class="navigator__grid">
+                      <span class="navigator__cell is-current" aria-label="Question 3, current question" aria-current="step">3</span>
+                      <span class="navigator__cell is-unanswered" aria-label="Question 4, not yet recorded">4</span>
+                    </div>
+                  </div>
+                  <div class="navigator__part">
+                    <div class="navigator__part-head">Respond to questions <span class="navigator__range">5–7</span></div>
+                    <div class="navigator__grid">
+                      <span class="navigator__cell is-unanswered" aria-label="Question 5, not yet recorded">5</span>
+                      <span class="navigator__cell is-unanswered" aria-label="Question 6, not yet recorded">6</span>
+                      <span class="navigator__cell is-unanswered" aria-label="Question 7, not yet recorded">7</span>
+                    </div>
+                  </div>
+                  <div class="navigator__part">
+                    <div class="navigator__part-head">Respond using information <span class="navigator__range">8–10</span></div>
+                    <div class="navigator__grid">
+                      <span class="navigator__cell is-unanswered" aria-label="Question 8, not yet recorded">8</span>
+                      <span class="navigator__cell is-unanswered" aria-label="Question 9, not yet recorded">9</span>
+                      <span class="navigator__cell is-unanswered" aria-label="Question 10, not yet recorded">10</span>
+                    </div>
+                  </div>
+                  <div class="navigator__part">
+                    <div class="navigator__part-head">Express an opinion <span class="navigator__range">11</span></div>
+                    <div class="navigator__grid">
+                      <span class="navigator__cell is-unanswered" aria-label="Question 11, not yet recorded">11</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="text-xs stack" style="gap: var(--space-1)">
+                  <div class="row"><span class="navigator__cell is-answered" style="width: 18px" aria-hidden="true">1</span> recorded and saved</div>
+                  <div class="row"><span class="navigator__cell is-current" style="width: 18px" aria-hidden="true">2</span> current question</div>
+                  <div class="row"><span class="navigator__cell is-unanswered" style="width: 18px" aria-hidden="true">3</span> not yet recorded</div>
+                </div>
+              </div>
+            </div>
+            <a class="btn btn--danger" href="grading-pending.html">Finish and submit</a>
+            <p class="text-xs text-muted no-margin">Questions you have not recorded are not graded.</p>
+          </aside>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script src="../assets/js/state-switch.js"></script>
+  <script src="../assets/js/icons.js"></script>
+</body>
+</html>

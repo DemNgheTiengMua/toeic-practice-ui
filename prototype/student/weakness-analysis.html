@@ -8,13 +8,14 @@
   <link rel="stylesheet" href="../assets/css/tokens.css">
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
+  <script src="../assets/js/sidebar.js"></script>
 </head>
 <body data-states="loading,empty,error,success">
   <div class="app-shell app-shell--with-sidebar">
     <header class="app-topbar">
       <strong>extra efficient</strong>
       <div class="row">
-        <span class="badge badge--info">9 credits left</span>
+        <span class="badge badge--info">8 credits left</span>
         <a class="btn btn--sm" href="../payment/pricing.html">Buy credits</a>
         <a class="btn btn--ghost btn--sm" href="profile.html">Nguyễn Văn A</a>
       </div>
@@ -29,16 +30,38 @@
           <div class="nav-list__group">Practice</div>
           <a class="nav-list__item" href="practice-select.html">Practice by section</a>
           <a class="nav-list__item is-active" href="weakness-analysis.html">Weakness analysis</a>
+          <div class="nav-list__group">Learning</div>
+          <a class="nav-list__item" href="learning-path.html">My learning path</a>
+          <a class="nav-list__item" href="mentor-list.html">Find a mentor</a>
           <div class="nav-list__group">Account</div>
           <a class="nav-list__item" href="../payment/wallet.html">Credit wallet</a>
-          <a class="nav-list__item" href="kyc-pending.html">ID verification</a>
           <a class="nav-list__item" href="profile.html">Profile</a>
         </nav>
       </aside>
       <main class="app-main">
+        <div class="context-bar">
+          <div class="context-bar__item">
+            <span class="context-bar__label">Certificate:</span>
+            <span class="context-bar__value">TOEIC</span>
+          </div>
+          <div class="context-bar__item">
+            <span class="context-bar__label">Based on:</span>
+            <span class="context-bar__value">5 graded exams · 24 practice sessions</span>
+          </div>
+          <div class="context-bar__item">
+            <span class="context-bar__label">Cost:</span>
+            <span class="context-bar__value">Free · 0 credits</span>
+          </div>
+        </div>
         <div class="container stack">
+          <nav class="breadcrumbs" aria-label="Breadcrumb">
+            <a href="dashboard.html" class="breadcrumbs__item">Home</a>
+            <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+            <span class="breadcrumbs__item" aria-current="page">Weakness analysis</span>
+          </nav>
           <!-- ===== loading ===== -->
           <div class="only-loading stack">
+<h1 class="visually-hidden">Loading weakness analysis</h1>
             <div class="skeleton skeleton--title"></div>
             <div class="skeleton skeleton--block" style="height: 260px"></div>
             <div class="skeleton skeleton--block" style="height: 180px"></div>
@@ -69,8 +92,8 @@
           <div class="only-error">
             <div class="card"><div class="card__body">
               <div class="state-block">
-                <div class="state-block__icon" aria-hidden="true">!</div>
-                <div class="state-block__title">Could not load the analysis</div>
+                <div class="state-block__icon" aria-hidden="true">ERROR</div>
+                <h1 class="state-block__title">Could not load the analysis</h1>
                 <p class="state-block__desc">Check your connection and try again.</p>
                 <button class="btn btn--primary">Try again</button>
               </div>
@@ -82,8 +105,8 @@
             <div class="row row--between">
               <div>
                 <h1 class="m-0 mb-1">Weakness analysis</h1>
-                <p class="text-muted" class="no-margin">
-                  Combined from 6 graded exams and 24 practice sessions · updated 20 Sep 2026 11:42
+                <p class="text-muted no-margin">
+                  Combined from 5 graded exams and 24 practice sessions · updated 20 Sep 2026 11:42
                 </p>
               </div>
               <span class="badge badge--success">Free</span>
@@ -96,7 +119,7 @@
             <div class="card">
               <div class="card__header"><strong>Accuracy by Part</strong></div>
               <div class="card__body stack">
-                <p class="text-sm text-muted" class="no-margin">
+                <p class="text-sm text-muted no-margin">
                   Sorted weakest first. The "questions" column is the total number of questions answered, across both exams and practice.
                 </p>
 
@@ -165,7 +188,7 @@
               <div class="card">
                 <div class="card__header"><strong>What to practice first</strong></div>
                 <div class="card__body stack">
-                  <p class="text-sm text-muted" class="no-margin">
+                  <p class="text-sm text-muted no-margin">
                     Part 7 accounts for 54/200 questions — the most in the test — and sits at the lowest level. This is where you can improve your score fastest.
                   </p>
                   <div class="row">
@@ -184,7 +207,7 @@
                     <li>Part 6 — verb tense in the passage: 63%</li>
                   </ul>
                   <p class="text-sm text-muted mt-3">
-                    Classification by question type requires question-type labels at the content layer.
+                    Grouped by the question-type label each question carries, across exams and practice.
                   </p>
                 </div>
               </div>
@@ -193,7 +216,7 @@
             <div class="card">
               <div class="card__header"><strong>Progress over time</strong></div>
               <div class="card__body">
-                <p class="text-sm text-muted" class="m-0 mb-3">
+                <p class="text-sm text-muted m-0 mb-3">
                   Part 7 accuracy over the last 4 weeks.
                 </p>
                 <div class="chart chart--short">
@@ -222,5 +245,6 @@
     </div>
   </div>
   <script src="../assets/js/state-switch.js"></script>
+  <script src="../assets/js/icons.js"></script>
 </body>
 </html>

@@ -27,6 +27,29 @@ h3 {
 }
 p { margin: 0 0 var(--space-3); }
 
+/* The page title is a placard, not a line of text: an ink field with white caps
+   and a gold base rule. It is the same inverted-ink device the active nav tab
+   uses, so "you are here" reads identically in the rail and at the top of the
+   page. One rule covers every screen because every page h1 lives in .app-main;
+   the hidden loading h1s and the error-card titles are left alone.
+   The wipe plays once per appearance (states re-show their h1, so it also marks
+   a state change) and starts from the finished sign, so nothing is ever hidden. */
+.app-main h1:not(.visually-hidden):not(.state-block__title) {
+  display: block; width: fit-content; max-width: 100%;
+  padding: var(--space-3) var(--space-5);
+  background: var(--ink); color: #ffffff;
+  border-bottom: calc(var(--keyline) * 3) solid var(--sign-gold);
+  font-size: clamp(var(--text-xl), 1.2rem + 1.8vw, var(--text-3xl));
+  line-height: 1.1;
+  text-wrap: balance;
+  animation: placard-wipe 480ms cubic-bezier(.16, 1, .3, 1);
+}
+.app-main h1:not(.visually-hidden):not(.state-block__title) + p { margin-top: var(--space-3); }
+@keyframes placard-wipe {
+  from { clip-path: inset(0 100% 0 0); }
+  to   { clip-path: inset(0 0 0 0); }
+}
+
 /* Passage typography — optimized for sustained reading under time pressure.
    Larger size, generous leading, subtle tracking, constrained measure. */
 .passage {
@@ -70,7 +93,8 @@ a { color: var(--color-primary); text-underline-offset: 3px; }
 /* ===== shell ============================================================= */
 .app-shell { display: grid; grid-template-rows: auto 1fr; min-height: 100vh; }
 .app-shell--with-sidebar .app-body {
-  display: grid; grid-template-columns: 240px minmax(0, 1fr); min-height: 0;
+  display: grid; grid-template-columns: var(--sidebar-w, 240px) minmax(0, 1fr); min-height: 0;
+  transition: grid-template-columns 260ms cubic-bezier(.16, 1, .3, 1);
 }
 
 /* The topbar is the painted band: sign-blue field, white caps lettering. */
@@ -80,9 +104,22 @@ a { color: var(--color-primary); text-underline-offset: 3px; }
   padding: var(--space-3) var(--space-5);
   background: var(--sign-blue);
   color: #ffffff;
-  border-bottom: var(--keyline) solid var(--ink);
+  /* A gold base rule: the same edge the page placard below it carries, so the
+     band and the title read as one signage system. */
+  border-bottom: calc(var(--keyline) * 2) solid var(--sign-gold);
 }
 .app-topbar a { color: #ffffff; }
+/* The brand is lettered like the signs under it, not set as body text. Only the
+   direct brand mark: the exam screens' test title lives in a group and keeps
+   its own size. */
+.app-topbar > strong,
+.app-topbar__lead > strong {
+  font-family: var(--font-sign); font-size: var(--text-xl); font-weight: 700;
+  text-transform: uppercase; letter-spacing: var(--tracking-sign);
+  line-height: 1;
+}
+/* The global focus ring is sign-blue, which vanishes on the sign-blue band. */
+.app-topbar :focus-visible { outline-color: var(--sign-gold); }
 .app-topbar .text-muted { color: var(--color-on-band-muted); }
 
 /* The band inverts the page: its own lettering is white, so a component that
@@ -135,6 +172,53 @@ a { color: var(--color-primary); text-underline-offset: 3px; }
   background: var(--color-surface);
   border-right: var(--keyline) solid var(--ink);
 }
+
+/* ===== sidebar behaviour ================================================== */
+/* On a sidebar screen the band stays put and the rail sticks beneath it, so the
+   menu is never a scroll away. --topbar-h is measured by sidebar.js (the band
+   wraps on narrow screens); 58px is the desktop height if the script is absent. */
+.app-shell--with-sidebar > .app-topbar { position: sticky; top: 0; z-index: 90; }
+.app-shell--with-sidebar .context-bar { top: var(--topbar-h, 58px); }
+.app-shell--with-sidebar .app-sidebar {
+  position: sticky; top: var(--topbar-h, 58px);
+  align-self: start;
+  height: calc(100vh - var(--topbar-h, 58px));
+  height: calc(100dvh - var(--topbar-h, 58px));
+  min-width: 0;
+  overflow-x: hidden; overflow-y: auto;
+  /* Scroll lock, part one: wheel or touch at the end of the rail stops there
+     instead of chaining into the page behind it. */
+  overscroll-behavior: contain;
+}
+
+/* The menu button lives on the band, left of the brand. */
+.app-topbar__lead { display: flex; align-items: center; gap: var(--space-4); min-width: 0; }
+.sidebar-toggle, .sidebar-close {
+  display: inline-flex; align-items: center; gap: var(--space-2);
+  padding: 6px var(--space-3);
+  background: transparent; color: #ffffff;
+  border: var(--keyline) solid #ffffff; border-radius: 0;
+  font-family: var(--font-sign); font-size: var(--text-sm); font-weight: 700;
+  text-transform: uppercase; letter-spacing: var(--tracking-sign);
+  line-height: 1.2; cursor: pointer;
+}
+.sidebar-toggle:hover, .sidebar-close:hover { background: #ffffff; color: var(--sign-blue); }
+.sidebar-toggle svg, .sidebar-close svg { flex: none; }
+.sidebar-scrim { display: none; }
+.app-sidebar__head { display: none; }
+
+/* Desktop: the whole rail can be hidden, and the choice is remembered. */
+@media (min-width: 1025px) {
+  html.sidebar-collapsed { --sidebar-w: 0px; }
+  html.sidebar-collapsed .app-shell--with-sidebar .app-sidebar {
+    padding-inline: 0; border-right-width: 0; visibility: hidden;
+    /* The column animates to 0 (grid-template-columns above); hiding waits for it. */
+    transition: visibility 0s 260ms;
+  }
+}
+
+/* No transitions while the saved layout is being restored on load. */
+html.sidebar-booting *, html.sidebar-booting *::before { transition: none !important; }
 .app-main { padding: var(--space-5); min-width: 0; }
 .container { width: 100%; max-width: 1180px; margin: 0 auto; }
 .container--narrow { max-width: 460px; }
@@ -150,6 +234,7 @@ a { color: var(--color-primary); text-underline-offset: 3px; }
 .row--loose { gap: var(--space-4); }
 .row--between { justify-content: space-between; }
 .row--center { justify-content: center; }
+.row--wrap { flex-wrap: wrap; }
 
 /* Utility classes */
 .mx-auto { margin-left: auto; margin-right: auto; }
@@ -167,6 +252,7 @@ a { color: var(--color-primary); text-underline-offset: 3px; }
    repeat(3,1fr) did at 390px. */
 .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
 .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4); }
+.grid-4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-4); }
 /* Definition list grid layout */
 .dl-grid {
   display: grid;
@@ -239,12 +325,16 @@ a { color: var(--color-primary); text-underline-offset: 3px; }
 .only-step2.only-step2, .only-step3.only-step3,
 .only-adjust.only-adjust, .only-edit.only-edit,
 .only-paywall.only-paywall, .only-sent.only-sent,
+.only-locked.only-locked,
 .only-complete.only-complete,
 .only-answering.only-answering, .only-revealed-correct.only-revealed-correct,
 .only-revealed-wrong.only-revealed-wrong, .only-finished.only-finished,
 .only-cancelled.only-cancelled,
-.only-rejected.only-rejected, .only-kyc-required.only-kyc-required,
-.only-kyc-pending.only-kyc-pending,
+.only-graded-with-recommendations.only-graded-with-recommendations,
+.only-confirmed.only-confirmed, .only-done.only-done, .only-resolved.only-resolved,
+.only-prepare.only-prepare, .only-recording.only-recording,
+.only-recorded.only-recorded, .only-save-failed.only-save-failed,
+.only-mic-check.only-mic-check,
 .only-approved.only-approved { display: none; }
 body[data-state="loading"]    .only-loading,
 body[data-state="empty"]      .only-empty,
@@ -260,6 +350,7 @@ body[data-state="failed"]     .only-failed,
 body[data-state="step2"]      .only-step2,
 body[data-state="step3"]      .only-step3,
 body[data-state="paywall"]    .only-paywall,
+body[data-state="locked"]     .only-locked,
 body[data-state="sent"]       .only-sent,
 body[data-state="complete"]   .only-complete,
 body[data-state="adjust"]     .only-adjust,
@@ -269,9 +360,15 @@ body[data-state="revealed-correct"] .only-revealed-correct,
 body[data-state="revealed-wrong"]   .only-revealed-wrong,
 body[data-state="finished"]         .only-finished,
 body[data-state="cancelled"]        .only-cancelled,
-body[data-state="rejected"]         .only-rejected,
-body[data-state="kyc-required"]     .only-kyc-required,
-body[data-state="kyc-pending"]      .only-kyc-pending,
+body[data-state="graded-with-recommendations"] .only-graded-with-recommendations,
+body[data-state="confirmed"]        .only-confirmed,
+body[data-state="done"]             .only-done,
+body[data-state="resolved"]         .only-resolved,
+body[data-state="prepare"]          .only-prepare,
+body[data-state="recording"]        .only-recording,
+body[data-state="recorded"]         .only-recorded,
+body[data-state="save-failed"]      .only-save-failed,
+body[data-state="mic-check"]        .only-mic-check,
 body[data-state="approved"]         .only-approved { display: revert; }
 
 /* Elements that appear in several states: add .multi-state and list the states
@@ -289,6 +386,7 @@ body[data-state="revealed-wrong"]   .multi-state[data-show~="revealed-wrong"],
 body[data-state="finished"]         .multi-state[data-show~="finished"],
 body[data-state="complete"]         .multi-state[data-show~="complete"],
 body[data-state="paywall"]          .multi-state[data-show~="paywall"],
+body[data-state="locked"]           .multi-state[data-show~="locked"],
 body[data-state="pending"]          .multi-state[data-show~="pending"],
 body[data-state="failed"]           .multi-state[data-show~="failed"],
 body[data-state="loading"]          .multi-state[data-show~="loading"],
@@ -298,10 +396,16 @@ body[data-state="step2"]            .multi-state[data-show~="step2"],
 body[data-state="step3"]            .multi-state[data-show~="step3"],
 body[data-state="adjust"]           .multi-state[data-show~="adjust"],
 body[data-state="edit"]             .multi-state[data-show~="edit"],
-body[data-state="cancelled"]        .multi-state[data-show~="cancelled"],
-body[data-state="kyc-required"]     .multi-state[data-show~="kyc-required"],
-body[data-state="kyc-pending"]      .multi-state[data-show~="kyc-pending"],
-body[data-state="rejected"]         .multi-state[data-show~="rejected"] { display: revert; }
+body[data-state="graded-with-recommendations"] .multi-state[data-show~="graded-with-recommendations"],
+body[data-state="confirmed"]        .multi-state[data-show~="confirmed"],
+body[data-state="done"]             .multi-state[data-show~="done"],
+body[data-state="resolved"]         .multi-state[data-show~="resolved"],
+body[data-state="prepare"]          .multi-state[data-show~="prepare"],
+body[data-state="recording"]        .multi-state[data-show~="recording"],
+body[data-state="recorded"]         .multi-state[data-show~="recorded"],
+body[data-state="save-failed"]      .multi-state[data-show~="save-failed"],
+body[data-state="mic-check"]        .multi-state[data-show~="mic-check"],
+body[data-state="cancelled"]        .multi-state[data-show~="cancelled"] { display: revert; }
 
 /* .modal-overlay centres itself with display: grid, but `revert` in the two
    groups above restores the user-agent's `block`, which pins the modal to the
@@ -314,6 +418,20 @@ body[data-state="edit"]       .modal-overlay.only-edit,
 body[data-state="adjust"]     .modal-overlay.only-adjust,
 body[data-state="expired"]    .modal-overlay.only-expired,
 body[data-state="cancelled"]  .modal-overlay.only-cancelled { display: grid; }
+
+/* The same trap, for layout classes that are also state blocks. `display: revert`
+   hands a <div> back `block`, so a `.grid-3.only-success` lost its three columns and
+   a `.toolbar.multi-state` lost its row (stats stacked, filters stacked). Restated
+   per component, as the note above asks, at (0,3,1) so it beats the show rule. */
+body[data-state="success"] :is(.grid-2, .grid-3, .grid-4, .score-hero).only-success,
+body[data-state="loading"] :is(.grid-2, .grid-3, .grid-4).only-loading,
+body[data-state="success"] :is(.grid-2, .grid-3, .grid-4).multi-state[data-show~="success"],
+body[data-state="edit"]    :is(.grid-2, .grid-3, .grid-4).multi-state[data-show~="edit"] { display: grid; }
+body[data-state="success"] :is(.toolbar, .stepper).only-success,
+body[data-state="step2"]   .stepper.only-step2,
+body[data-state="step3"]   .stepper.only-step3,
+body[data-state="success"] :is(.toolbar, .stepper).multi-state[data-show~="success"],
+body[data-state="adjust"]  :is(.toolbar, .stepper).multi-state[data-show~="adjust"] { display: flex; }
 
 /* ===== state switcher (dev artifact, painted as a small plate) =========== */
 .state-switcher {
@@ -371,7 +489,53 @@ body[data-state="cancelled"]  .modal-overlay.only-cancelled { display: grid; }
     border-right: 0;
     border-bottom: var(--keyline) solid var(--ink);
   }
-  .grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .grid-3, .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+  /* No script: the rail stacks above the page as it always did. */
+  .app-shell--with-sidebar .app-sidebar { position: static; height: auto; }
+
+  /* With the script present the stacked rail becomes a drawer: it leaves the flow
+     (the page gets its full height back), slides in over a scrim, and the page
+     behind it is scroll-locked and inert while it is open. Without the script the
+     stacked rule above still applies, so navigation is never lost. */
+  html.has-sidebar-js .app-shell--with-sidebar .app-body { transition: none; }
+  html.has-sidebar-js .app-shell--with-sidebar .app-sidebar {
+    position: fixed; z-index: 110; top: 0; left: 0; bottom: 0;
+    /* The desktop rail sets align-self: start, which would shrink this box to its
+       content; the drawer is always the full height of the screen. */
+    align-self: stretch;
+    width: min(300px, 86vw); height: 100vh; height: 100dvh;
+    border-bottom: 0; border-right: var(--keyline) solid var(--ink);
+    transform: translateX(-100%); visibility: hidden;
+    transition: transform 260ms cubic-bezier(.16, 1, .3, 1), visibility 0s 260ms;
+  }
+  html.has-sidebar-js.sidebar-drawer-open .app-shell--with-sidebar .app-sidebar {
+    transform: none; visibility: visible;
+    transition: transform 260ms cubic-bezier(.16, 1, .3, 1), visibility 0s;
+  }
+  html.has-sidebar-js .sidebar-scrim {
+    display: block; position: fixed; inset: 0; z-index: 105;
+    background: var(--color-overlay);
+    opacity: 0; visibility: hidden;
+    transition: opacity 200ms ease-out, visibility 0s 200ms;
+  }
+  html.has-sidebar-js.sidebar-drawer-open .sidebar-scrim {
+    opacity: 1; visibility: visible; transition: opacity 200ms ease-out;
+  }
+  /* Scroll lock, part two: the page itself does not move under an open drawer.
+     The gutter stays reserved so the layout does not jump sideways. */
+  html.sidebar-drawer-open { overflow: hidden; scrollbar-gutter: stable; }
+  html.sidebar-drawer-open body { overflow: hidden; }
+  html.has-sidebar-js .app-sidebar__head {
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 1;
+    margin: calc(var(--space-4) * -1) calc(var(--space-4) * -1) var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    background: var(--ink); color: #ffffff;
+    font-family: var(--font-sign); font-size: var(--text-lg); font-weight: 700;
+    text-transform: uppercase; letter-spacing: var(--tracking-sign);
+  }
+  .app-sidebar__head .sidebar-close { padding: 4px var(--space-2); }
   /* The exam layout's collapse is NOT here, and must not be put back: this file
      loads before components.css, which declares `.exam-layout`'s columns
      unconditionally. An equal-specificity rule in this block loses to it at
@@ -382,7 +546,13 @@ body[data-state="cancelled"]  .modal-overlay.only-cancelled { display: grid; }
 @media (max-width: 640px) {
   .app-main { padding: var(--space-4); }
   .app-topbar { flex-wrap: wrap; row-gap: var(--space-2); }
-  .grid-2, .grid-3 { grid-template-columns: minmax(0, 1fr); }
+  .app-main h1:not(.visually-hidden):not(.state-block__title) { padding: var(--space-2) var(--space-4); }
+  /* A band that wraps to three rows is 138px tall; pinned, it would take a sixth of
+     the screen for the whole page. On a phone it scrolls away, the Menu button goes
+     with it, and the context bar sticks to the top edge instead. */
+  .app-shell--with-sidebar > .app-topbar { position: static; }
+  .app-shell--with-sidebar .context-bar { top: 0; }
+  .grid-2, .grid-3, .grid-4 { grid-template-columns: minmax(0, 1fr); }
   .container--narrow { max-width: 100%; }
   .state-switcher { max-width: calc(100vw - 2 * var(--space-4)); }
 }

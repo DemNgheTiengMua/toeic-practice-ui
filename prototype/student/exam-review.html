@@ -8,13 +8,14 @@
   <link rel="stylesheet" href="../assets/css/tokens.css">
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
+  <script src="../assets/js/sidebar.js"></script>
 </head>
 <body data-states="loading,empty,error,success">
   <div class="app-shell app-shell--with-sidebar">
     <header class="app-topbar">
       <strong>extra efficient</strong>
       <div class="row">
-        <span class="badge badge--info">9 credits left</span>
+        <span class="badge badge--info">8 credits left</span>
         <a class="btn btn--sm" href="../payment/pricing.html">Buy credits</a>
         <a class="btn btn--ghost btn--sm" href="profile.html">Nguyễn Văn A</a>
       </div>
@@ -29,16 +30,40 @@
           <div class="nav-list__group">Practice</div>
           <a class="nav-list__item" href="practice-select.html">Practice by section</a>
           <a class="nav-list__item" href="weakness-analysis.html">Weakness analysis</a>
+          <div class="nav-list__group">Learning</div>
+          <a class="nav-list__item" href="learning-path.html">My learning path</a>
+          <a class="nav-list__item" href="mentor-list.html">Find a mentor</a>
           <div class="nav-list__group">Account</div>
           <a class="nav-list__item" href="../payment/wallet.html">Credit wallet</a>
-          <a class="nav-list__item" href="kyc-pending.html">ID verification</a>
           <a class="nav-list__item" href="profile.html">Profile</a>
         </nav>
       </aside>
       <main class="app-main">
+        <div class="context-bar">
+          <div class="context-bar__item">
+            <span class="context-bar__label">Exam:</span>
+            <span class="context-bar__value">ETS 2024 — Test 5</span>
+          </div>
+          <div class="context-bar__item">
+            <span class="context-bar__label">Score:</span>
+            <span class="context-bar__value">760 points</span>
+          </div>
+          <div class="context-bar__item">
+            <span class="context-bar__label">Taken:</span>
+            <span class="context-bar__value">20 Sep 2026</span>
+          </div>
+        </div>
         <div class="container stack">
+          <nav class="breadcrumbs" aria-label="Breadcrumb">
+            <a href="dashboard.html" class="breadcrumbs__item">Home</a>
+            <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+            <a href="exam-history.html" class="breadcrumbs__item">Exam history</a>
+            <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+            <span class="breadcrumbs__item" aria-current="page">Review</span>
+          </nav>
           <!-- ===== loading ===== -->
           <div class="only-loading stack">
+<h1 class="visually-hidden">Loading your exam review</h1>
             <div class="skeleton skeleton--title"></div>
             <div class="skeleton skeleton--block" style="height: 90px"></div>
             <div class="skeleton skeleton--block" style="height: 260px"></div>
@@ -48,8 +73,8 @@
           <div class="only-error">
             <div class="card"><div class="card__body">
               <div class="state-block">
-                <div class="state-block__icon" aria-hidden="true">!</div>
-                <div class="state-block__title">Could not load your exam</div>
+                <div class="state-block__icon" aria-hidden="true">ERROR</div>
+                <h1 class="state-block__title">Could not load your exam</h1>
                 <p class="state-block__desc">Check your connection and try again.</p>
                 <button class="btn btn--primary">Try again</button>
               </div>
@@ -64,7 +89,7 @@
             <div class="card"><div class="card__body">
               <div class="state-block">
                 <div class="state-block__icon" aria-hidden="true">EMPTY</div>
-                <div class="state-block__title">You have not answered any question in this exam</div>
+                <h1 class="state-block__title">You have not answered any question in this exam</h1>
                 <p class="state-block__desc">
                   All 200 questions were left blank, so there is nothing to compare. You can still view the test and the correct answers, or practice each Part again.
                 </p>
@@ -81,7 +106,7 @@
             <div class="row row--between">
               <div>
                 <h1 class="m-0 mb-1">Review — ETS 2024 Test 5</h1>
-                <p class="text-sm text-muted" class="no-margin">
+                <p class="text-sm text-muted no-margin">
                   760 points · L 400 · R 360 · taken on 20 Sep 2026
                 </p>
               </div>
@@ -247,5 +272,6 @@
     </div>
   </div>
   <script src="../assets/js/state-switch.js"></script>
+  <script src="../assets/js/icons.js"></script>
 </body>
 </html>

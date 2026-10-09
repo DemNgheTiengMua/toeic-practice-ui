@@ -79,20 +79,20 @@
       </div>
 
       <!-- banner riêng cho resumed / offline -->
-      <div class="container only-resumed" class="mb-4">
+      <div class="container only-resumed mb-4">
         <div class="alert alert--info">
           <strong>Your exam in progress has been restored.</strong>
           You returned to question 8; the time remaining is counted from the start.
         </div>
       </div>
-      <div class="container only-offline" class="mb-4">
+      <div class="container only-offline mb-4">
         <div class="alert alert--danger" role="alert">
           <strong>Connection lost.</strong>
           Your answers are being held on this device and will be sent automatically once you are back online. Do not close the tab.
         </div>
       </div>
 
-      <div class="container exam-body multi-state" data-show="success saving resumed offline">
+      <div class="container multi-state" data-show="success saving resumed offline">
         <div class="exam-layout">
 
           <!-- cột nội dung -->
@@ -102,7 +102,7 @@
               <span class="badge badge--info">PLAYING</span>
               <div style="flex: 1 1 auto">
                 <div class="progress"><div class="progress__bar" style="width: 42%"></div></div>
-                <p class="exam-audio__status" class="m-0 mt-2">
+                <p class="exam-audio__status m-0 mt-2">
                   Playing Part 2 — 03:18 / 07:50 ·
                   <strong>no rewinding, no pausing</strong>
                 </p>
@@ -188,7 +188,7 @@
                 <button class="btn btn--primary" type="button" aria-label="Go to next question">Next question →</button>
               </div>
             </div>
-            <p class="text-xs text-muted" class="no-margin" role="note">
+            <p class="text-xs text-muted no-margin" role="note">
               Completed Parts are locked. Each Part's audio plays only once.
             </p>
           </div>
@@ -204,7 +204,7 @@
               </div>
               <div class="card__body stack">
                 <div class="progress" role="progressbar" aria-valuenow="31" aria-valuemin="0" aria-valuemax="100" aria-label="Listening section progress"><div class="progress__bar" style="width: 31%"></div></div>
-                <div class="stepper" class="flex-col" role="list">
+                <div class="stepper flex-col" role="list">
                   <span class="stepper__item is-done" role="listitem">Part 1 — 6 questions · locked</span>
                   <span class="stepper__item is-current" role="listitem" aria-current="step">Part 2 — 25 questions · in progress</span>
                   <span class="stepper__item" role="listitem">Part 3 — 39 questions</span>
@@ -228,7 +228,7 @@
                   <button class="navigator__cell is-unanswered" aria-label="Question 9, not yet answered" type="button">9</button>
                   <button class="navigator__cell is-unanswered" aria-label="Question 10, not yet answered" type="button">10</button>
                 </div>
-                <p class="text-xs text-muted" class="no-margin" role="note">
+                <p class="text-xs text-muted no-margin" role="note">
                   See the full 200-question panel in
                   <a href="question-navigator.html">question-navigator.html</a>
                 </p>
@@ -239,7 +239,7 @@
                 </div>
               </div>
             </div>
-            <button class="btn btn--danger" type="button" onclick="if(confirm('Submit your exam now? You cannot return to Listening after submitting.')) window.location.href='exam-confirm-submit.html'" aria-label="Submit exam early">Submit early</button>
+            <a class="btn btn--danger" href="exam-confirm-submit.html">Submit exam</a>
           </aside>
         </div>
       </div>
@@ -247,6 +247,7 @@
     </main>
   </div>
   <script src="../assets/js/state-switch.js"></script>
+  <script src="../assets/js/icons.js"></script>
   <script src="../assets/js/keyboard-nav.js"></script>
 </body>
 </html>

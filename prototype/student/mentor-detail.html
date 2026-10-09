@@ -8,13 +8,14 @@
   <link rel="stylesheet" href="../assets/css/tokens.css">
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
+  <script src="../assets/js/sidebar.js"></script>
 </head>
 <body data-states="loading,error,success">
   <div class="app-shell app-shell--with-sidebar">
     <header class="app-topbar">
       <strong>extra efficient</strong>
       <div class="row">
-        <span class="badge badge--info">3 credits left</span>
+        <span class="badge badge--info">8 credits left</span>
         <a class="btn btn--sm" href="../payment/pricing.html">Buy credits</a>
         <a class="btn btn--ghost btn--sm" href="profile.html">Nguyễn Văn A</a>
       </div>
@@ -38,9 +39,31 @@
         </nav>
       </aside>
       <main class="app-main">
+        <div class="context-bar">
+          <div class="context-bar__item">
+            <span class="context-bar__label">Certificate:</span>
+            <span class="context-bar__value">TOEIC</span>
+          </div>
+          <div class="context-bar__item">
+            <span class="context-bar__label">Rating:</span>
+            <span class="context-bar__value">4.5 / 5 · 20 reviews</span>
+          </div>
+          <div class="context-bar__item">
+            <span class="context-bar__label">Session:</span>
+            <span class="context-bar__value">60 minutes · Google Meet</span>
+          </div>
+        </div>
+
         <div class="container stack">
+          <nav class="breadcrumbs" aria-label="Breadcrumb">
+            <a href="mentor-list.html" class="breadcrumbs__item">Find a mentor</a>
+            <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+            <span class="breadcrumbs__item" aria-current="page">Dr. Trần Minh Khoa</span>
+          </nav>
+
           <!-- ===== loading ===== -->
           <div class="only-loading stack">
+            <h1 class="visually-hidden">Loading mentor profile</h1>
             <div class="skeleton skeleton--title"></div>
             <div class="skeleton skeleton--block" style="height: 300px"></div>
           </div>
@@ -49,8 +72,8 @@
           <div class="only-error">
             <div class="card"><div class="card__body">
               <div class="state-block">
-                <div class="state-block__icon" aria-hidden="true">!</div>
-                <div class="state-block__title">Could not load mentor profile</div>
+                <div class="state-block__icon" aria-hidden="true">ERROR</div>
+                <h1 class="state-block__title">Could not load mentor profile</h1>
                 <p class="state-block__desc">Check your connection and try again.</p>
                 <button class="btn btn--primary">Try again</button>
               </div>
@@ -59,97 +82,90 @@
 
           <!-- ===== success ===== -->
           <div class="only-success stack">
-            <a href="mentor-list.html" class="btn btn--ghost">← Back to mentors</a>
-
-            <div class="card"><div class="card__body stack">
-              <div style="display: flex; justify-content: space-between; align-items: start;">
-                <div>
-                  <h1 style="margin: 0 0 var(--space-2, 8px);">Dr. Nguyễn Văn A</h1>
-                  <div style="display: flex; gap: var(--space-2, 8px); margin-bottom: var(--space-3, 12px);">
-                    <span class="badge badge--info">TOEIC</span>
-                  </div>
-                  <div class="mentor-card__rating">
-                    <span class="mentor-card__stars">★★★★★</span>
-                    <span class="text-muted">4.5 (20 reviews)</span>
-                  </div>
-                </div>
-                <span class="mentor-card__price" style="font-size: var(--text-xl, 22px);">50,000₫</span>
-              </div>
-
-              <div style="padding: var(--space-4, 16px) 0; border-top: 2px solid var(--ink, #14181d); border-bottom: 2px solid var(--ink, #14181d);">
-                <h2 style="margin: 0 0 var(--space-2, 8px);">About</h2>
-                <p>10 years teaching TOEIC at major language centers in Ho Chi Minh City. Specializes in listening strategies and accent training for Vietnamese learners. Former ETS trainer with deep knowledge of TOEIC format and scoring.</p>
-                <p style="margin-top: var(--space-2, 8px);"><strong>Expertise:</strong> Listening strategies, pronunciation, test-taking techniques</p>
-              </div>
-
+            <div class="row row--between">
               <div>
-                <h2 style="margin: 0 0 var(--space-3, 12px);">Available time slots</h2>
-                <div class="stack">
-                  <label class="choice">
-                    <input type="radio" name="slot" value="1">
-                    <span class="choice__text">
-                      <strong>Monday, Sep 30 — 9:00 AM</strong>
-                      <span class="text-muted" style="display: block; margin-top: var(--space-1, 4px);">60 minutes via Google Meet</span>
-                    </span>
-                  </label>
-                  <label class="choice">
-                    <input type="radio" name="slot" value="2">
-                    <span class="choice__text">
-                      <strong>Monday, Sep 30 — 2:00 PM</strong>
-                      <span class="text-muted" style="display: block; margin-top: var(--space-1, 4px);">60 minutes via Google Meet</span>
-                    </span>
-                  </label>
-                  <label class="choice">
-                    <input type="radio" name="slot" value="3">
-                    <span class="choice__text">
-                      <strong>Wednesday, Oct 2 — 10:00 AM</strong>
-                      <span class="text-muted" style="display: block; margin-top: var(--space-1, 4px);">60 minutes via Google Meet</span>
-                    </span>
-                  </label>
-                  <label class="choice">
-                    <input type="radio" name="slot" value="4">
-                    <span class="choice__text">
-                      <strong>Friday, Oct 4 — 3:00 PM</strong>
-                      <span class="text-muted" style="display: block; margin-top: var(--space-1, 4px);">60 minutes via Google Meet</span>
-                    </span>
-                  </label>
+                <h1 class="m-0 mb-1">Dr. Trần Minh Khoa</h1>
+                <div class="row row--tight">
+                  <span class="badge badge--info">TOEIC</span>
+                  <span class="badge badge--muted">4.5 / 5</span>
+                  <span class="text-sm text-muted">20 reviews</span>
                 </div>
               </div>
+              <span class="mentor-card__price">1 credit</span>
+            </div>
 
-              <a href="mentor-confirm.html" class="btn btn--primary">Book selected slot</a>
-            </div></div>
-
-            <div class="card"><div class="card__body stack">
-              <h2>Reviews</h2>
+            <div class="grid-2">
               <div class="stack">
-                <div style="padding-bottom: var(--space-3, 12px); border-bottom: 1px solid var(--color-border, #ccd2d6);">
-                  <div style="display: flex; justify-content: space-between; margin-bottom: var(--space-2, 8px);">
-                    <strong>Nguyễn Thị D</strong>
-                    <span class="text-muted">★★★★★ 5.0</span>
-                  </div>
-                  <p style="margin: 0; color: var(--color-text-muted, #5c6570);">Very patient and explains listening strategies clearly. My score improved from 350 to 450 in 2 months.</p>
-                </div>
-                <div style="padding-bottom: var(--space-3, 12px); border-bottom: 1px solid var(--color-border, #ccd2d6);">
-                  <div style="display: flex; justify-content: space-between; margin-bottom: var(--space-2, 8px);">
-                    <strong>Trần Văn E</strong>
-                    <span class="text-muted">★★★★☆ 4.0</span>
-                  </div>
-                  <p style="margin: 0; color: var(--color-text-muted, #5c6570);">Good teacher but sometimes sessions run overtime. Content is excellent though.</p>
-                </div>
-                <div style="padding-bottom: 0;">
-                  <div style="display: flex; justify-content: space-between; margin-bottom: var(--space-2, 8px);">
-                    <strong>Lê Thị F</strong>
-                    <span class="text-muted">★★★★★ 5.0</span>
-                  </div>
-                  <p style="margin: 0; color: var(--color-text-muted, #5c6570);">Best TOEIC mentor I've worked with. Helped me reach 900+ score for job requirements.</p>
-                </div>
+                <section>
+                  <h2 class="section-group__title">About</h2>
+                  <div class="card"><div class="card__body">
+                    <p>10 years teaching TOEIC at major language centers in Ho Chi Minh City. Specializes in listening strategies and accent training for Vietnamese learners. Former ETS trainer with deep knowledge of TOEIC format and scoring.</p>
+                    <p class="no-margin"><strong>Expertise:</strong> Listening strategies, pronunciation, test-taking techniques</p>
+                  </div></div>
+                </section>
+
+                <section>
+                  <h2 class="section-group__title">Reviews</h2>
+                  <div class="card"><div class="card__body stack">
+                    <div class="stack--tight">
+                      <div class="row row--between"><strong>Nguyễn Thị D</strong><span class="badge badge--muted">5.0 / 5</span></div>
+                      <p class="text-muted no-margin">Very patient and explains listening strategies clearly. My score improved from 350 to 450 in 2 months.</p>
+                    </div>
+                    <hr>
+                    <div class="stack--tight">
+                      <div class="row row--between"><strong>Trần Văn E</strong><span class="badge badge--muted">4.0 / 5</span></div>
+                      <p class="text-muted no-margin">Good teacher but sometimes sessions run overtime. Content is excellent though.</p>
+                    </div>
+                    <hr>
+                    <div class="stack--tight">
+                      <div class="row row--between"><strong>Lê Thị F</strong><span class="badge badge--muted">5.0 / 5</span></div>
+                      <p class="text-muted no-margin">Best TOEIC mentor I've worked with. Helped me reach 900+ score for job requirements.</p>
+                    </div>
+                  </div></div>
+                </section>
               </div>
-            </div></div>
+
+              <section>
+                <h2 class="section-group__title">Pick a time</h2>
+                <form class="stack">
+                  <div class="option-list" role="radiogroup" aria-label="Available time slots">
+                    <label class="option">
+                      <input class="option__input" type="radio" name="slot" value="1" checked>
+                      <span class="option__marker">1</span>
+                      <span class="option__text"><strong>Wednesday, Sep 30 — 9:00 AM</strong><br><span class="text-sm text-muted">60 minutes via Google Meet</span></span>
+                    </label>
+                    <label class="option">
+                      <input class="option__input" type="radio" name="slot" value="2">
+                      <span class="option__marker">2</span>
+                      <span class="option__text"><strong>Wednesday, Sep 30 — 2:00 PM</strong><br><span class="text-sm text-muted">60 minutes via Google Meet</span></span>
+                    </label>
+                    <label class="option">
+                      <input class="option__input" type="radio" name="slot" value="3">
+                      <span class="option__marker">3</span>
+                      <span class="option__text"><strong>Friday, Oct 2 — 10:00 AM</strong><br><span class="text-sm text-muted">60 minutes via Google Meet</span></span>
+                    </label>
+                    <label class="option">
+                      <input class="option__input" type="radio" name="slot" value="4">
+                      <span class="option__marker">4</span>
+                      <span class="option__text"><strong>Monday, Oct 5 — 3:00 PM</strong><br><span class="text-sm text-muted">60 minutes via Google Meet</span></span>
+                    </label>
+                  </div>
+                  <div class="card"><div class="card__footer">
+                    <div class="row">
+                      <a href="mentor-confirm.html" class="btn btn--primary">Book selected slot</a>
+                      <a href="mentor-list.html" class="btn">Back to mentors</a>
+                    </div>
+                  </div></div>
+                  <p class="text-xs text-muted no-margin">You confirm the booking on the next screen. Nothing is charged until you do.</p>
+                </form>
+              </section>
+            </div>
           </div>
         </div>
       </main>
     </div>
   </div>
   <script src="../assets/js/state-switch.js"></script>
+  <script src="../assets/js/icons.js"></script>
 </body>
 </html>

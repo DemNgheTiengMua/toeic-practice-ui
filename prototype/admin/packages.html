@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="../assets/css/tokens.css">
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
+  <script src="../assets/js/sidebar.js"></script>
 </head>
 <body data-states="loading,error,success,edit" data-state="success">
   <div class="app-shell app-shell--with-sidebar">
@@ -25,24 +26,47 @@
           <div class="nav-list__group">Overview</div>
           <a class="nav-list__item" href="dashboard.html">Dashboard</a>
           <div class="nav-list__group">Content</div>
-          <a class="nav-list__item" href="exam-list.html">Test</a>
+          <a class="nav-list__item" href="exam-list.html">Tests</a>
           <a class="nav-list__item" href="score-conversion.html">Score conversion</a>
           <div class="nav-list__group">Users &amp; revenue</div>
           <a class="nav-list__item" href="users.html">Students</a>
-          <a class="nav-list__item" href="kyc-review.html">ID review <span class="badge badge--danger">3</span></a>
           <a class="nav-list__item is-active" href="packages.html">Credit packages</a>
           <a class="nav-list__item" href="orders.html">Orders</a>
+          <div class="nav-list__group">Operations</div>
+          <a class="nav-list__item" href="complaints.html">Complaints</a>
           <div class="nav-list__group">Other</div>
           <a class="nav-list__item" href="../index.html">Prototype catalog</a>
         </nav>
       </aside>
       <main class="app-main">
         <div class="container stack">
+          <nav class="breadcrumbs" aria-label="Breadcrumb">
+            <a href="dashboard.html" class="breadcrumbs__item">Admin</a>
+            <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+            <span class="breadcrumbs__item" aria-current="page">Credit packages</span>
+          </nav>
           <div class="row row--between">
             <h1>Credit packages</h1>
             <a class="btn btn--primary multi-state" data-show="success" href="packages.html?state=edit">Create new package</a>
           </div>
 
+          <div class="grid-3 multi-state" data-show="success edit">
+            <div class="stat">
+              <div class="stat__label">Packages on sale</div>
+              <div class="stat__value">3</div>
+              <div class="stat__hint">1 featured</div>
+            </div>
+            <div class="stat">
+              <div class="stat__label">Orders sold</div>
+              <div class="stat__value">792</div>
+              <div class="stat__hint">412 + 286 + 94, all time</div>
+            </div>
+            <div class="stat">
+              <div class="stat__label">Revenue, all time</div>
+              <div class="stat__value">109.9M ₫</div>
+              <div class="stat__hint">20.2M + 56.9M + 32.8M</div>
+            </div>
+          </div>
           <div class="alert alert--info multi-state" data-show="success edit">
             Editing the price only affects new orders. Paid orders keep the old price.
           </div>
@@ -57,7 +81,7 @@
               <div class="price-card__unit">1 credit — 49,000 ₫/credit</div>
               <ul class="price-card__list">
                 <li>Sold: 412 orders</li>
-                <li>Doanh thu: 20.2M ₫</li>
+                <li>Revenue: 20.2M ₫</li>
               </ul>
               <a class="btn" href="packages.html?state=edit">Edit package</a>
             </div>
@@ -71,7 +95,7 @@
               <div class="price-card__unit">5 credits — 39,800 ₫/credit</div>
               <ul class="price-card__list">
                 <li>Sold: 286 orders</li>
-                <li>Doanh thu: 56.9M ₫</li>
+                <li>Revenue: 56.9M ₫</li>
               </ul>
               <a class="btn" href="packages.html?state=edit">Edit package</a>
             </div>
@@ -79,13 +103,13 @@
             <div class="price-card">
               <div class="row row--between">
                 <div class="price-card__name">Intensive</div>
-                <span class="badge">Hidden</span>
+                <span class="badge badge--success">On sale</span>
               </div>
               <div class="price-card__amount">349,000 ₫</div>
               <div class="price-card__unit">10 credits — 34,900 ₫/credit</div>
               <ul class="price-card__list">
                 <li>Sold: 94 orders</li>
-                <li>Doanh thu: 32.8M ₫</li>
+                <li>Revenue: 32.8M ₫</li>
               </ul>
               <a class="btn" href="packages.html?state=edit">Edit package</a>
             </div>
@@ -100,7 +124,7 @@
           <div class="card only-error">
             <div class="card__body">
               <div class="state-block">
-                <div class="state-block__icon" aria-hidden="true">!</div>
+                <div class="state-block__icon" aria-hidden="true">ERROR</div>
                 <h2 class="state-block__title">Could not load the package list</h2>
                 <button class="btn">Reload</button>
               </div>
@@ -148,5 +172,6 @@
     </div>
   </div>
   <script src="../assets/js/state-switch.js"></script>
+  <script src="../assets/js/icons.js"></script>
 </body>
 </html>

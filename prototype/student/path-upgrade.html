@@ -8,13 +8,15 @@
   <link rel="stylesheet" href="../assets/css/tokens.css">
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
+  <script src="../assets/js/sidebar.js"></script>
 </head>
 <body data-states="paywall,submitting,error,success">
   <div class="app-shell app-shell--with-sidebar">
     <header class="app-topbar">
       <strong>extra efficient</strong>
       <div class="row">
-        <span class="badge badge--info">3 credits left</span>
+        <span class="badge badge--info multi-state" data-show="success submitting error">8 credits left</span>
+        <span class="badge badge--warning only-paywall">3 credits left</span>
         <a class="btn btn--sm" href="../payment/pricing.html">Buy credits</a>
         <a class="btn btn--ghost btn--sm" href="profile.html">Nguyễn Văn A</a>
       </div>
@@ -30,73 +32,163 @@
           <a class="nav-list__item" href="practice-select.html">Practice by section</a>
           <a class="nav-list__item" href="weakness-analysis.html">Weakness analysis</a>
           <div class="nav-list__group">Learning</div>
-          <a class="nav-list__item" href="learning-path.html">My learning path</a>
+          <a class="nav-list__item is-active" href="learning-path.html">My learning path</a>
+          <a class="nav-list__item" href="mentor-list.html">Find a mentor</a>
           <div class="nav-list__group">Account</div>
           <a class="nav-list__item" href="../payment/wallet.html">Credit wallet</a>
           <a class="nav-list__item" href="profile.html">Profile</a>
         </nav>
       </aside>
       <main class="app-main">
+        <div class="context-bar">
+          <div class="context-bar__item">
+            <span class="context-bar__label">Path:</span>
+            <span class="context-bar__value">A2 → B2</span>
+          </div>
+          <div class="context-bar__item">
+            <span class="context-bar__label">Current tier:</span>
+            <span class="context-bar__value">Free</span>
+          </div>
+          <div class="context-bar__item">
+            <span class="context-bar__label">Upgrade cost:</span>
+            <span class="context-bar__value">5 credits</span>
+          </div>
+          <div class="context-bar__item">
+            <span class="context-bar__label">Balance:</span>
+            <span class="context-bar__value multi-state" data-show="success submitting error">8 credits</span><span class="context-bar__value only-paywall">3 credits</span>
+          </div>
+        </div>
+
         <div class="container stack">
+          <nav class="breadcrumbs" aria-label="Breadcrumb">
+            <a href="dashboard.html" class="breadcrumbs__item">Home</a>
+            <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+            <a href="learning-path.html" class="breadcrumbs__item">My learning path</a>
+            <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+            <span class="breadcrumbs__item" aria-current="page">Upgrade</span>
+          </nav>
+
           <!-- ===== paywall ===== -->
-          <div class="only-paywall">
-            <div class="alert alert--info">
-              <strong>Nothing was deducted.</strong> Buy credits to upgrade your learning path.
+          <div class="only-paywall stack">
+            <div class="alert alert--warning" role="alert">
+              <strong>Not enough credits.</strong> The upgrade costs 5 credits and you have 3. Nothing was deducted.
             </div>
-            <h1>Upgrade to premium path</h1>
-            <p><a href="../payment/pricing.html" class="btn btn--primary">Buy credits</a></p>
+
+            <div>
+              <h1 class="m-0 mb-1">Upgrade to premium path</h1>
+              <p class="text-muted no-margin">Your free path is unchanged and still available.</p>
+            </div>
+
+            <div class="grid-3">
+              <div class="stat">
+                <div class="stat__label">Upgrade cost</div>
+                <div class="stat__value">5</div>
+                <div class="stat__hint">credits, one time</div>
+              </div>
+              <div class="stat">
+                <div class="stat__label">Your balance</div>
+                <div class="stat__value">3</div>
+                <div class="stat__hint">credits available</div>
+              </div>
+              <div class="stat">
+                <div class="stat__label">Short by</div>
+                <div class="stat__value">2</div>
+                <div class="stat__hint">credits needed</div>
+              </div>
+            </div>
+
+            <div class="card"><div class="card__footer">
+              <div class="row">
+                <a href="../payment/pricing.html" class="btn btn--primary">Buy credits</a>
+                <a href="learning-path.html" class="btn">Keep the free path</a>
+              </div>
+            </div></div>
           </div>
 
           <!-- ===== error ===== -->
           <div class="only-error">
-            <div class="alert alert--danger">
-              <strong>Could not upgrade path.</strong> Try again or contact support.
+<h1 class="visually-hidden">Upgrade Path</h1>
+            <div class="alert alert--danger" role="alert">
+              <strong>Could not upgrade path.</strong> No credits were deducted. Try again or contact support.
             </div>
           </div>
 
-          <!-- ===== success ===== -->
-          <div class="only-success stack">
-            <h1>Upgrade to premium path</h1>
-            <p>Unlock AI-graded writing tasks, video lessons, and deeper explanations for each module.</p>
+          <!-- ===== success + submitting =====
+               Same reason as target-band-set: submitting only swaps the button,
+               so the comparison table has to stay on screen behind it. -->
+          <div class="multi-state stack" data-show="success submitting">
+            <div class="row row--between">
+              <div>
+                <h1 class="m-0 mb-1">Upgrade to premium path</h1>
+                <p class="text-muted no-margin">Same 14 modules, with video lessons, AI-graded writing, and per-question explanations.</p>
+              </div>
+              <span class="badge badge--warning">5 credits</span>
+            </div>
 
-            <div class="card"><div class="card__body">
-              <h2>What's included in premium</h2>
-              <ul class="stack--tight" style="list-style: none; padding: 0;">
-                <li style="padding: var(--space-3) 0; border-bottom: 1px solid var(--color-border);">
-                  <strong>AI-graded writing tasks</strong>
-                  <p class="mt-1 text-muted">Write essays and get instant feedback with rubric scores</p>
-                </li>
-                <li style="padding: var(--space-3) 0; border-bottom: 1px solid var(--color-border);">
-                  <strong>Video lessons</strong>
-                  <p class="mt-1 text-muted">Watch expert explanations for each grammar point and strategy</p>
-                </li>
-                <li style="padding: var(--space-3) 0; border-bottom: 1px solid var(--color-border);">
-                  <strong>Detailed explanations</strong>
-                  <p class="mt-1 text-muted">Every practice question includes why each answer is right or wrong</p>
-                </li>
-                <li style="padding: var(--space-3) 0 0;">
-                  <strong>Progress tracking</strong>
-                  <p class="mt-1 text-muted">See your improvement over time with detailed analytics</p>
-                </li>
-              </ul>
-
-              <div style="margin-top: var(--space-6); padding-top: var(--space-5); border-top: 2px solid var(--ink);">
-                <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: var(--space-4);">
-                  <strong style="font-size: var(--text-lg);">Premium path upgrade</strong>
-                  <span style="font-family: var(--font-mono); font-size: var(--text-xl); font-weight: 600; font-variant-numeric: tabular-nums;">5 credits</span>
-                </div>
-                <div class="row">
-                  <button class="btn btn--primary multi-state" data-show="success">Upgrade now</button>
-                  <button class="btn btn--primary only-submitting" disabled>Processing...</button>
-                  <a href="learning-path.html" class="btn btn--plate">Keep free version</a>
+            <div class="card">
+              <div class="card__header"><strong>Free compared with premium</strong></div>
+              <div class="card__body">
+                <table class="table">
+                  <caption class="visually-hidden">What the free and premium learning paths each include</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">What you get</th>
+                      <th scope="col">Free</th>
+                      <th scope="col">Premium</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <th scope="row">Practice modules in order</th>
+                      <td><span class="badge badge--success">Included</span></td>
+                      <td><span class="badge badge--success">Included</span></td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Progress tracking against your target</th>
+                      <td><span class="badge badge--success">Included</span></td>
+                      <td><span class="badge badge--success">Included</span></td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Why each answer is right or wrong</th>
+                      <td><span class="badge badge--muted">Not included</span></td>
+                      <td><span class="badge badge--success">Included</span></td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Video lesson per grammar point</th>
+                      <td><span class="badge badge--muted">Not included</span></td>
+                      <td><span class="badge badge--success">Included</span></td>
+                    </tr>
+                    <tr>
+                      <th scope="row">AI-graded writing tasks with rubric scores</th>
+                      <td><span class="badge badge--muted">Not included</span></td>
+                      <td><span class="badge badge--success">Included</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="card__footer">
+                <div class="row row--between">
+                  <div class="stat" style="border-top: 0; padding: 0">
+                    <div class="stat__label">Premium path upgrade</div>
+                    <div class="stat__value">5</div>
+                    <div class="stat__hint">credits, charged once</div>
+                  </div>
+                  <div class="row">
+                    <button class="btn btn--primary multi-state" data-show="success">Upgrade now</button>
+                    <button class="btn btn--primary only-submitting" disabled>Processing…</button>
+                    <a href="learning-path.html" class="btn">Keep the free path</a>
+                  </div>
                 </div>
               </div>
-            </div></div>
+            </div>
+
+            <p class="text-xs text-muted no-margin">Credits are deducted when the upgrade is confirmed, not now. AI-graded writing tasks deduct credits separately.</p>
           </div>
         </div>
       </main>
     </div>
   </div>
   <script src="../assets/js/state-switch.js"></script>
+  <script src="../assets/js/icons.js"></script>
 </body>
 </html>

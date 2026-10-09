@@ -79,20 +79,20 @@
       </div>
 
       <!-- banner riêng cho resumed / offline -->
-      <div class="container only-resumed" class="mb-4">
+      <div class="container only-resumed mb-4">
         <div class="alert alert--info">
           <strong>Your exam in progress has been restored.</strong>
           You returned to question 153; the time remaining is counted from the start.
         </div>
       </div>
-      <div class="container only-offline" class="mb-4">
+      <div class="container only-offline mb-4">
         <div class="alert alert--danger" role="alert">
           <strong>Connection lost.</strong>
           Your answers are being held on this device and will be sent automatically once you are back online. Do not close the tab.
         </div>
       </div>
 
-      <div class="container exam-body multi-state" data-show="success saving resumed offline">
+      <div class="container multi-state" data-show="success saving resumed offline">
         <div class="exam-layout">
 
           <div class="stack">
@@ -205,7 +205,7 @@
               </div>
               <div class="card__body stack">
                 <div class="progress"><div class="progress__bar" style="width: 53%"></div></div>
-                <div class="stepper" class="flex-col">
+                <div class="stepper flex-col">
                   <span class="stepper__item is-done">Part 5 — 30 questions · done</span>
                   <span class="stepper__item is-done">Part 6 — 16 questions · done</span>
                   <span class="stepper__item is-current">Part 7 — 54 questions · in progress</span>
@@ -235,7 +235,7 @@
               </div>
             </div>
 
-            <a class="btn btn--primary" href="exam-confirm-submit.html">Submit</a>
+            <a class="btn btn--danger" href="exam-confirm-submit.html">Submit exam</a>
           </aside>
         </div>
       </div>
@@ -243,5 +243,7 @@
     </main>
   </div>
   <script src="../assets/js/state-switch.js"></script>
+  <script src="../assets/js/icons.js"></script>
+  <script src="../assets/js/keyboard-nav.js"></script>
 </body>
 </html>

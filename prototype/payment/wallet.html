@@ -8,13 +8,14 @@
   <link rel="stylesheet" href="../assets/css/tokens.css">
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
+  <script src="../assets/js/sidebar.js"></script>
 </head>
 <body data-states="loading,empty,error,success">
   <div class="app-shell app-shell--with-sidebar">
     <header class="app-topbar">
       <strong>extra efficient</strong>
       <div class="row">
-        <span class="badge badge--info">9 credits left</span>
+        <span class="badge badge--info">8 credits left</span>
         <a class="btn btn--sm" href="pricing.html">Buy credits</a>
         <a class="btn btn--ghost btn--sm" href="../student/profile.html">Nguyễn Văn A</a>
       </div>
@@ -31,12 +32,30 @@
           <a class="nav-list__item" href="../student/weakness-analysis.html">Weakness analysis</a>
           <div class="nav-list__group">Account</div>
           <a class="nav-list__item is-active" href="wallet.html">Credit wallet</a>
-          <a class="nav-list__item" href="../student/kyc-pending.html">ID verification</a>
           <a class="nav-list__item" href="../student/profile.html">Profile</a>
         </nav>
       </aside>
       <main class="app-main">
+        <div class="context-bar">
+          <div class="context-bar__item">
+            <span class="context-bar__label">Credits:</span>
+            <span class="context-bar__value">8 left</span>
+          </div>
+          <div class="context-bar__item">
+            <span class="context-bar__label">Purchased:</span>
+            <span class="context-bar__value">15</span>
+          </div>
+          <div class="context-bar__item">
+            <span class="context-bar__label">Used:</span>
+            <span class="context-bar__value">7</span>
+          </div>
+        </div>
         <div class="container stack">
+          <nav class="breadcrumbs" aria-label="Breadcrumb">
+            <a href="../student/dashboard.html" class="breadcrumbs__item">Home</a>
+            <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+            <span class="breadcrumbs__item" aria-current="page">Credit wallet</span>
+          </nav>
           <div class="row row--between">
             <h1>Credit wallet</h1>
             <a class="btn btn--primary" href="pricing.html">Buy more credits</a>
@@ -45,13 +64,13 @@
           <div class="grid-3 only-success">
             <div class="stat">
               <div class="stat__label">Credits remaining</div>
-              <div class="stat__value">9</div>
-              <div class="stat__hint">15 purchased − 6 used, from the ledger below</div>
+              <div class="stat__value">8</div>
+              <div class="stat__hint">15 purchased − 7 used, from the ledger below</div>
             </div>
             <div class="stat">
               <div class="stat__label">Used</div>
-              <div class="stat__value">6</div>
-              <div class="stat__hint">6 full tests</div>
+              <div class="stat__value">7</div>
+              <div class="stat__hint">7 full tests</div>
             </div>
             <div class="stat">
               <div class="stat__label">Total purchased</div>
@@ -81,18 +100,23 @@
                     <td><span class="badge badge--success">Paid</span></td>
                   </tr>
                   <tr>
+                    <td>DH-20260920-0139</td><td>Exam Prep (5 credits)</td><td>199,000 ₫</td>
+                    <td>VNPay</td><td>20 Sep 2026 11:02</td>
+                    <td><span class="badge">Expired</span></td>
+                  </tr>
+                  <tr>
                     <td>DH-20260915-0092</td><td>Pay as you go (1 credit)</td><td>49,000 ₫</td>
                     <td>MoMo</td><td>15 Sep 2026 09:10</td>
                     <td><span class="badge badge--warning">Reconciling</span></td>
                   </tr>
                   <tr>
-                    <td>DH-20260903-0031</td><td>Intensive (10 credits)</td><td>349,000 ₫</td>
-                    <td>VNPay</td><td>3 Sep 2026 20:44</td>
+                    <td>DH-20260817-0031</td><td>Intensive (10 credits)</td><td>349,000 ₫</td>
+                    <td>VNPay</td><td>17 Aug 2026 20:44</td>
                     <td><span class="badge badge--success">Paid</span></td>
                   </tr>
                   <tr>
-                    <td>DH-20260901-0007</td><td>Pay as you go (1 credit)</td><td>49,000 ₫</td>
-                    <td>VNPay</td><td>1 Sep 2026 11:02</td>
+                    <td>DH-20260814-0007</td><td>Pay as you go (1 credit)</td><td>49,000 ₫</td>
+                    <td>VNPay</td><td>14 Aug 2026 11:02</td>
                     <td><span class="badge badge--danger">Failed</span></td>
                   </tr>
                 </tbody>
@@ -127,7 +151,7 @@
           <div class="card only-error">
             <div class="card__body">
               <div class="state-block">
-                <div class="state-block__icon" aria-hidden="true">!</div>
+                <div class="state-block__icon" aria-hidden="true">ERROR</div>
                 <h2 class="state-block__title">Could not load your credit wallet</h2>
                 <p class="state-block__desc">
                   The credit count shown may be out of date. Try reloading the page.
@@ -141,5 +165,6 @@
     </div>
   </div>
   <script src="../assets/js/state-switch.js"></script>
+  <script src="../assets/js/icons.js"></script>
 </body>
 </html>

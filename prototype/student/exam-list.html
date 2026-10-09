@@ -8,13 +8,15 @@
   <link rel="stylesheet" href="../assets/css/tokens.css">
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
+  <script src="../assets/js/sidebar.js"></script>
 </head>
-<body data-states="loading,empty,error,success,kyc-required,kyc-pending,paywall,cancelled">
+<body data-states="loading,empty,error,success,paywall,cancelled">
   <div class="app-shell app-shell--with-sidebar">
     <header class="app-topbar">
       <strong>extra efficient</strong>
       <div class="row">
-        <span class="badge badge--info">9 credits left</span>
+        <span class="badge badge--info multi-state" data-show="loading empty error success cancelled">8 credits left</span>
+        <span class="badge badge--warning only-paywall">0 credits left</span>
         <a class="btn btn--sm" href="../payment/pricing.html">Buy credits</a>
         <a class="btn btn--ghost btn--sm" href="profile.html">Nguyễn Văn A</a>
       </div>
@@ -29,9 +31,11 @@
           <div class="nav-list__group">Practice</div>
           <a class="nav-list__item" href="practice-select.html">Practice by section</a>
           <a class="nav-list__item" href="weakness-analysis.html">Weakness analysis</a>
+          <div class="nav-list__group">Learning</div>
+          <a class="nav-list__item" href="learning-path.html">My learning path</a>
+          <a class="nav-list__item" href="mentor-list.html">Find a mentor</a>
           <div class="nav-list__group">Account</div>
           <a class="nav-list__item" href="../payment/wallet.html">Credit wallet</a>
-          <a class="nav-list__item" href="kyc-pending.html">ID verification</a>
           <a class="nav-list__item" href="profile.html">Profile</a>
         </nav>
       </aside>
@@ -44,11 +48,11 @@
           </div>
           <div class="context-bar__item">
             <span class="context-bar__label">Credits:</span>
-            <span class="context-bar__value">9 left</span>
+            <span class="context-bar__value multi-state" data-show="loading empty error success cancelled">8 left</span><span class="context-bar__value only-paywall">0 left</span>
           </div>
           <div class="context-bar__item">
             <span class="context-bar__label">Tests completed:</span>
-            <span class="context-bar__value">3</span>
+            <span class="context-bar__value">4</span>
           </div>
         </div>
 
@@ -56,12 +60,13 @@
           <!-- Breadcrumbs -->
           <nav class="breadcrumbs" aria-label="Breadcrumb">
             <a href="dashboard.html" class="breadcrumbs__item">Home</a>
-            <span class="breadcrumbs__separator">›</span>
-            <span class="breadcrumbs__item">Test List</span>
+            <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+            <span class="breadcrumbs__item" aria-current="page">Test List</span>
           </nav>
 
           <!-- ===== loading ===== -->
           <div class="only-loading stack">
+<h1 class="visually-hidden">Loading the test list</h1>
             <div class="skeleton skeleton--title"></div>
             <div class="grid-2">
               <div class="skeleton skeleton--block" style="height: 150px"></div>
@@ -75,8 +80,8 @@
           <div class="only-error">
             <div class="card"><div class="card__body">
               <div class="state-block">
-                <div class="state-block__icon" aria-hidden="true">!</div>
-                <div class="state-block__title">Could not load the test list</div>
+                <div class="state-block__icon" aria-hidden="true">ERROR</div>
+                <h1 class="state-block__title">Could not load the test list</h1>
                 <p class="state-block__desc">Check your connection and try again.</p>
                 <button class="btn btn--primary">Try again</button>
               </div>
@@ -105,7 +110,7 @@
             <div class="alert alert--warning">
               <strong>You are out of credits.</strong>
               Buy credits to take full tests. Practice by Part is still free.
-              <div class="row" class="mt-3">
+              <div class="row mt-3">
                 <a class="btn btn--primary btn--sm" href="../payment/pricing.html">View pricing</a>
                 <a class="btn btn--sm" href="practice-select.html">Practice free</a>
               </div>
@@ -117,7 +122,7 @@
                     <strong>ETS 2024 — Test 4</strong>
                     <span class="badge badge--muted">1 credit required</span>
                   </div>
-                  <p class="text-sm text-muted" class="no-margin">
+                  <p class="text-sm text-muted no-margin">
                     200 questions · 120 minutes · 7 parts
                   </p>
                   <button class="btn btn--primary" disabled>Start test</button>
@@ -129,90 +134,7 @@
                     <strong>ETS 2024 — Test 5</strong>
                     <span class="badge badge--muted">1 credit required</span>
                   </div>
-                  <p class="text-sm text-muted" class="no-margin">
-                    200 questions · 120 minutes · 7 parts
-                  </p>
-                  <button class="btn btn--primary" disabled>Start test</button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- ===== kyc-required: chưa xác thực CCCD =====
-               Gate này đứng TRƯỚC paywall và trước khi trừ credit.
-               Thứ tự quan trọng: chặn sau khi trừ lượt thì học viên mất
-               lượt rồi mới biết mình chưa đủ điều kiện thi. -->
-          <div class="only-kyc-required stack">
-            <h1>Test list</h1>
-            <div class="alert alert--warning">
-              <strong>ID verification is required before the real exam.</strong>
-              This is a one-time procedure, free, with no credit deducted. Practice by Part works right away.
-              <div class="row" class="mt-3">
-                <a class="btn btn--primary btn--sm" href="kyc-submit.html">ID verification</a>
-                <a class="btn btn--sm" href="practice-select.html">Practice free</a>
-              </div>
-            </div>
-            <div class="grid-2">
-              <div class="card">
-                <div class="card__body stack">
-                  <div class="row row--between">
-                    <strong>ETS 2024 — Test 4</strong>
-                    <span class="badge badge--muted">Verification required</span>
-                  </div>
-                  <p class="text-sm text-muted" class="no-margin">
-                    200 questions · 120 minutes · 7 parts
-                  </p>
-                  <a class="btn btn--primary" href="kyc-submit.html">Verify to take a test</a>
-                </div>
-              </div>
-              <div class="card">
-                <div class="card__body stack">
-                  <div class="row row--between">
-                    <strong>ETS 2024 — Test 5</strong>
-                    <span class="badge badge--muted">Verification required</span>
-                  </div>
-                  <p class="text-sm text-muted" class="no-margin">
-                    200 questions · 120 minutes · 7 parts
-                  </p>
-                  <a class="btn btn--primary" href="kyc-submit.html">Verify to take a test</a>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- ===== kyc-pending: đã gửi, đang chờ duyệt =====
-               Khác kyc-required ở chỗ học viên không còn gì để làm —
-               nên không có CTA hành động, chỉ có đường lui về luyện tập. -->
-          <div class="only-kyc-pending stack">
-            <h1>Test list</h1>
-            <div class="alert alert--info">
-              <strong>Verification application pending review.</strong>
-              Usually within 1 business day. The real exam unlocks as soon as your application is approved.
-              <div class="row" class="mt-3">
-                <a class="btn btn--sm" href="kyc-pending.html">View submitted application</a>
-                <a class="btn btn--sm" href="practice-select.html">Practice free</a>
-              </div>
-            </div>
-            <div class="grid-2">
-              <div class="card">
-                <div class="card__body stack">
-                  <div class="row row--between">
-                    <strong>ETS 2024 — Test 4</strong>
-                    <span class="badge badge--warning">Application pending review</span>
-                  </div>
-                  <p class="text-sm text-muted" class="no-margin">
-                    200 questions · 120 minutes · 7 parts
-                  </p>
-                  <button class="btn btn--primary" disabled>Start test</button>
-                </div>
-              </div>
-              <div class="card">
-                <div class="card__body stack">
-                  <div class="row row--between">
-                    <strong>ETS 2024 — Test 5</strong>
-                    <span class="badge badge--warning">Application pending review</span>
-                  </div>
-                  <p class="text-sm text-muted" class="no-margin">
+                  <p class="text-sm text-muted no-margin">
                     200 questions · 120 minutes · 7 parts
                   </p>
                   <button class="btn btn--primary" disabled>Start test</button>
@@ -229,7 +151,7 @@
           <div class="multi-state stack" data-show="success cancelled">
             <div class="row row--between">
               <h1 class="no-margin">Test list</h1>
-              <span class="badge badge--info">9 credits left</span>
+              <span class="badge badge--info">8 credits left</span>
             </div>
 
             <div class="card">
@@ -260,7 +182,7 @@
                     <span class="badge badge--info">TOEIC</span>
                     <span class="badge badge--warning">In progress</span>
                   </div>
-                  <p class="text-sm text-muted" class="no-margin">
+                  <p class="text-sm text-muted no-margin">
                     200 questions · 120 minutes · 47 minutes left · 128/200 answered
                   </p>
                   <div class="progress"><div class="progress__bar" style="width: 64%"></div></div>
@@ -277,12 +199,15 @@
                   <div class="row row--between">
                     <strong>ETS 2024 — Test 5</strong>
                     <span class="badge badge--info">TOEIC</span>
-                    <span class="badge badge--muted">Not done</span>
+                    <span class="badge badge--success">Done · 760</span>
                   </div>
-                  <p class="text-sm text-muted" class="no-margin">
-                    200 questions · 120 minutes · 7 parts
+                  <p class="text-sm text-muted no-margin">
+                    Completed 20 Sep 2026 · L 400 · R 360
                   </p>
-                  <a class="btn btn--primary" href="exam-instructions.html">Start test</a>
+                  <div class="row">
+                    <a class="btn" href="exam-review.html?attempt=1182">Review</a>
+                    <a class="btn" href="exam-instructions.html">Retake</a>
+                  </div>
                 </div>
               </div>
 
@@ -294,7 +219,7 @@
                     <span class="badge badge--info">TOEIC</span>
                     <span class="badge badge--success">Done · 720</span>
                   </div>
-                  <p class="text-sm text-muted" class="no-margin">
+                  <p class="text-sm text-muted no-margin">
                     Completed 18 Sep 2026 · L 385 · R 335
                   </p>
                   <div class="row">
@@ -311,7 +236,7 @@
                     <span class="badge badge--info">TOEIC</span>
                     <span class="badge badge--success">Done · 690</span>
                   </div>
-                  <p class="text-sm text-muted" class="no-margin">
+                  <p class="text-sm text-muted no-margin">
                     Completed 10 Sep 2026 · L 370 · R 320
                   </p>
                   <div class="row">
@@ -337,7 +262,7 @@
           <strong>Cancelling means losing the credit already deducted.</strong>
           1 credit was deducted when you started this test and is not refunded.
         </div>
-        <p class="text-sm text-muted" class="no-margin">
+        <p class="text-sm text-muted no-margin">
           ETS 2024 — Test 4 · 128/200 answered · 47 minutes left. The exam will not be graded and will not appear in your exam history.
         </p>
       </div>
@@ -349,5 +274,6 @@
   </div>
 
   <script src="../assets/js/state-switch.js"></script>
+  <script src="../assets/js/icons.js"></script>
 </body>
 </html>

@@ -8,13 +8,14 @@
   <link rel="stylesheet" href="../assets/css/tokens.css">
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
+  <script src="../assets/js/sidebar.js"></script>
 </head>
 <body data-states="success,submitting,error">
   <div class="app-shell app-shell--with-sidebar">
     <header class="app-topbar">
       <strong>extra efficient</strong>
       <div class="row">
-        <span class="badge badge--info">3 credits left</span>
+        <span class="badge badge--info">8 credits left</span>
         <a class="btn btn--sm" href="../payment/pricing.html">Buy credits</a>
         <a class="btn btn--ghost btn--sm" href="profile.html">Nguyễn Văn A</a>
       </div>
@@ -31,70 +32,109 @@
           <a class="nav-list__item" href="weakness-analysis.html">Weakness analysis</a>
           <div class="nav-list__group">Learning</div>
           <a class="nav-list__item" href="learning-path.html">My learning path</a>
-          <a class="nav-list__item" href="mentor-list.html">Find a mentor</a>
+          <a class="nav-list__item is-active" href="mentor-list.html">Find a mentor</a>
           <div class="nav-list__group">Account</div>
           <a class="nav-list__item" href="../payment/wallet.html">Credit wallet</a>
           <a class="nav-list__item" href="profile.html">Profile</a>
         </nav>
       </aside>
       <main class="app-main">
+        <div class="context-bar">
+          <div class="context-bar__item">
+            <span class="context-bar__label">Mentor:</span>
+            <span class="context-bar__value">Dr. Trần Minh Khoa</span>
+          </div>
+          <div class="context-bar__item">
+            <span class="context-bar__label">Session:</span>
+            <span class="context-bar__value">Tuesday, Sep 22 · 60 min</span>
+          </div>
+          <div class="context-bar__item">
+            <span class="context-bar__label">Cost:</span>
+            <span class="context-bar__value">No credits</span>
+          </div>
+        </div>
+
         <div class="container stack">
+          <nav class="breadcrumbs" aria-label="Breadcrumb">
+            <a href="mentor-list.html" class="breadcrumbs__item">Find a mentor</a>
+            <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+            <a href="booking-detail.html" class="breadcrumbs__item">Booking</a>
+            <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+            <span class="breadcrumbs__item" aria-current="page">Review</span>
+          </nav>
+
           <!-- ===== error ===== -->
           <div class="only-error">
-            <div class="alert alert--danger">
-              <strong>Could not submit review.</strong> Try again.
+<h1 class="visually-hidden">Leave a Review</h1>
+            <div class="alert alert--danger" role="alert">
+              <strong>Could not submit your review.</strong> Nothing was saved. Try again.
             </div>
           </div>
 
-          <!-- ===== success ===== -->
-          <div class="only-success stack">
-            <h1>Leave a review</h1>
-            <p>Help other learners by sharing your experience with <strong>Dr. Nguyễn Văn A</strong>.</p>
+          <!-- ===== success + submitting =====
+               submitting only swaps the button, so the form stays on screen
+               behind it; an .only-success wrapper left the state blank. -->
+          <div class="multi-state stack" data-show="success submitting">
+            <div>
+              <h1 class="m-0 mb-1">Leave a review</h1>
+              <p class="text-muted no-margin">Help other learners by sharing your experience with <strong>Dr. Trần Minh Khoa</strong>.</p>
+            </div>
 
-            <form class="card"><div class="card__body stack">
-              <label class="field">
-                <span class="field__label">Rating</span>
-                <div style="display: flex; gap: var(--space-2, 8px); font-size: var(--text-2xl, 24px); color: var(--sign-gold, #f2b705);">
-                  <label style="cursor: pointer;">
-                    <input type="radio" name="rating" value="1" style="position: absolute; opacity: 0;">
-                    <span>★</span>
+            <form class="stack">
+              <section>
+                <h2 class="section-group__title">Rating</h2>
+                <div class="option-list" role="radiogroup" aria-label="Rating out of 5">
+                  <label class="option">
+                    <input class="option__input" type="radio" name="rating" value="5" required>
+                    <span class="option__marker">5</span>
+                    <span class="option__text"><strong>Excellent</strong> — clear, prepared, and I improved</span>
                   </label>
-                  <label style="cursor: pointer;">
-                    <input type="radio" name="rating" value="2" style="position: absolute; opacity: 0;">
-                    <span>★</span>
+                  <label class="option">
+                    <input class="option__input" type="radio" name="rating" value="4">
+                    <span class="option__marker">4</span>
+                    <span class="option__text"><strong>Good</strong> — useful, with small things to fix</span>
                   </label>
-                  <label style="cursor: pointer;">
-                    <input type="radio" name="rating" value="3" style="position: absolute; opacity: 0;">
-                    <span>★</span>
+                  <label class="option">
+                    <input class="option__input" type="radio" name="rating" value="3">
+                    <span class="option__marker">3</span>
+                    <span class="option__text"><strong>Fair</strong> — some parts helped, some did not</span>
                   </label>
-                  <label style="cursor: pointer;">
-                    <input type="radio" name="rating" value="4" style="position: absolute; opacity: 0;">
-                    <span>★</span>
+                  <label class="option">
+                    <input class="option__input" type="radio" name="rating" value="2">
+                    <span class="option__marker">2</span>
+                    <span class="option__text"><strong>Poor</strong> — hard to follow or off topic</span>
                   </label>
-                  <label style="cursor: pointer;">
-                    <input type="radio" name="rating" value="5" checked style="position: absolute; opacity: 0;">
-                    <span>★</span>
+                  <label class="option">
+                    <input class="option__input" type="radio" name="rating" value="1">
+                    <span class="option__marker">1</span>
+                    <span class="option__text"><strong>Very poor</strong> — the session did not help</span>
                   </label>
                 </div>
-              </label>
+              </section>
 
-              <label class="field">
-                <span class="field__label">Your review</span>
-                <textarea class="field__input" name="review" rows="5" placeholder="Share your experience with this mentor..." required></textarea>
-                <span class="field__hint">Be specific about what you learned and how the mentor helped you.</span>
-              </label>
-
-              <div class="row">
-                <button type="submit" class="btn btn--primary multi-state" data-show="success">Submit review</button>
-                <button type="button" class="btn btn--primary only-submitting" disabled>Submitting...</button>
-                <a href="booking-detail.html" class="btn btn--plate">Skip for now</a>
+              <div class="card">
+                <div class="card__body">
+                  <label class="field">
+                    <span class="field__label">Your review</span>
+                    <textarea class="field__input" name="review" rows="5" placeholder="Share your experience with this mentor…" required></textarea>
+                    <span class="field__hint">Be specific about what you learned and how the mentor helped you.</span>
+                  </label>
+                </div>
+                <div class="card__footer">
+                  <div class="row">
+                    <button type="submit" class="btn btn--primary multi-state" data-show="success">Submit review</button>
+                    <button type="button" class="btn btn--primary only-submitting" disabled>Submitting…</button>
+                    <a href="booking-detail.html" class="btn">Skip for now</a>
+                  </div>
+                </div>
               </div>
-            </div></form>
+            </form>
           </div>
         </div>
       </main>
     </div>
   </div>
   <script src="../assets/js/state-switch.js"></script>
+  <script src="../assets/js/icons.js"></script>
 </body>
 </html>

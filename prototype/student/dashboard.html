@@ -8,13 +8,14 @@
   <link rel="stylesheet" href="../assets/css/tokens.css">
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
+  <script src="../assets/js/sidebar.js"></script>
 </head>
 <body data-states="loading,empty,error,success">
   <div class="app-shell app-shell--with-sidebar">
     <header class="app-topbar">
       <strong>extra efficient</strong>
       <div class="row">
-        <span class="badge badge--info">9 credits left</span>
+        <span class="badge badge--info">8 credits left</span>
         <a class="btn btn--sm" href="../payment/pricing.html">Buy credits</a>
         <a class="btn btn--ghost btn--sm" href="profile.html">Nguyễn Văn A</a>
       </div>
@@ -29,9 +30,11 @@
           <div class="nav-list__group">Practice</div>
           <a class="nav-list__item" href="practice-select.html">Practice by section</a>
           <a class="nav-list__item" href="weakness-analysis.html">Weakness analysis</a>
+          <div class="nav-list__group">Learning</div>
+          <a class="nav-list__item" href="learning-path.html">My learning path</a>
+          <a class="nav-list__item" href="mentor-list.html">Find a mentor</a>
           <div class="nav-list__group">Account</div>
           <a class="nav-list__item" href="../payment/wallet.html">Credit wallet</a>
-          <a class="nav-list__item" href="kyc-pending.html">ID verification</a>
           <a class="nav-list__item" href="profile.html">Profile</a>
         </nav>
       </aside>
@@ -55,6 +58,7 @@
         <div class="container stack">
           <!-- ===== loading ===== -->
           <div class="only-loading stack">
+<h1 class="visually-hidden">Loading your dashboard</h1>
             <div class="skeleton skeleton--title"></div>
             <div class="grid-3">
               <div class="skeleton skeleton--block"></div>
@@ -68,8 +72,8 @@
           <div class="only-error">
             <div class="card"><div class="card__body">
               <div class="state-block">
-                <div class="state-block__icon" aria-hidden="true">!</div>
-                <div class="state-block__title">Could not load data</div>
+                <div class="state-block__icon" aria-hidden="true">ERROR</div>
+                <h1 class="state-block__title">Could not load data</h1>
                 <p class="state-block__desc">Check your connection and try again.</p>
                 <button class="btn btn--primary">Try again</button>
               </div>
@@ -131,24 +135,24 @@
             </div>
 
             <div class="alert alert--info">
-              <strong>3 exams completed this month</strong> · 12 practice sessions · 45 hours studied
+              <strong>4 exams completed this month</strong> · 12 practice sessions · 45 hours studied
             </div>
 
             <div class="stat">
               <div class="stat__label">Your current level</div>
-              <div class="stat__value">720</div>
-              <div class="stat__hint">CEFR B1 · L 385 · R 335 · Last tested 18 Sep 2026</div>
+              <div class="stat__value">760</div>
+              <div class="stat__hint">CEFR B1 · L 400 · R 360 · Last tested 20 Sep 2026</div>
             </div>
 
             <div class="card">
               <div class="card__header"><strong>Progress to target band</strong></div>
               <div class="card__body">
                 <div class="row row--between text-sm mb-2">
-                  <span>Current: B1 (720)</span>
+                  <span>Current: B1 (760)</span>
                   <span class="text-muted">Target: B2 (785)</span>
                 </div>
-                <div class="progress"><div class="progress__bar" style="width: 67%"></div></div>
-                <p class="text-sm text-muted mt-2 no-margin">65 points to go · You're 67% of the way there!</p>
+                <div class="progress"><div class="progress__bar" style="width: 94%"></div></div>
+                <p class="text-sm text-muted mt-2 no-margin">25 points to go.</p>
               </div>
             </div>
 
@@ -159,17 +163,17 @@
             </div>
 
             <details class="card">
-              <summary class="card__header" class="cursor-pointer">
+              <summary class="card__header cursor-pointer">
                 <strong>View CEFR level details</strong>
               </summary>
               <div class="card__body">
                 <div class="cefr">
                   <div class="cefr__head">
                     <span class="cefr__current">B1</span>
-                    <span class="text-sm text-muted">720 points · 785 needed for B2</span>
+                    <span class="text-sm text-muted">760 points · 785 needed for B2</span>
                   </div>
                   <div class="cefr__track" role="img"
-                       aria-label="Current CEFR level: B1, with 720 on a 10 to 990 scale">
+                       aria-label="Current CEFR level: B1, with 760 on a 10 to 990 scale">
                     <span class="cefr__band is-reached">&lt;A1</span>
                     <span class="cefr__band is-reached">A1</span>
                     <span class="cefr__band is-reached">A2</span>
@@ -193,7 +197,7 @@
             </details>
 
             <details class="card">
-              <summary class="card__header" class="cursor-pointer">
+              <summary class="card__header cursor-pointer">
                 <strong>View accuracy by part</strong>
               </summary>
               <div class="card__body stack">
@@ -228,7 +232,7 @@
             </details>
 
             <details class="card">
-              <summary class="card__header" class="cursor-pointer">
+              <summary class="card__header cursor-pointer">
                 <strong>View recent exams</strong>
               </summary>
               <div class="card__body">
@@ -237,6 +241,11 @@
                     <tr><th>Test</th><th>Date</th><th>Listening</th><th>Reading</th><th>Total</th><th></th></tr>
                   </thead>
                   <tbody>
+                    <tr>
+                      <td>ETS 2024 — Test 5</td><td>20 Sep 2026</td>
+                      <td>400</td><td>360</td><td><strong>760</strong></td>
+                      <td><a href="exam-review.html?attempt=1182">Review</a></td>
+                    </tr>
                     <tr>
                       <td>ETS 2024 — Test 3</td><td>18 Sep 2026</td>
                       <td>385</td><td>335</td><td><strong>720</strong></td>
@@ -249,7 +258,7 @@
                     </tr>
                     <tr>
                       <td>ETS 2024 — Test 1</td><td>2 Sep 2026</td>
-                      <td>395</td><td>350</td><td><strong>745</strong></td>
+                      <td>355</td><td>325</td><td><strong>680</strong></td>
                       <td><a href="exam-review.html?attempt=1179">Review</a></td>
                     </tr>
                   </tbody>
@@ -265,5 +274,6 @@
     </div>
   </div>
   <script src="../assets/js/state-switch.js"></script>
+  <script src="../assets/js/icons.js"></script>
 </body>
 </html>

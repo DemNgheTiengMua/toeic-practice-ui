@@ -8,13 +8,14 @@
   <link rel="stylesheet" href="../assets/css/tokens.css">
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
+  <script src="../assets/js/sidebar.js"></script>
 </head>
 <body data-states="loading,error,success">
   <div class="app-shell app-shell--with-sidebar">
     <header class="app-topbar">
       <strong>extra efficient</strong>
       <div class="row">
-        <span class="badge badge--info">3 credits left</span>
+        <span class="badge badge--info">8 credits left</span>
         <a class="btn btn--sm" href="../payment/pricing.html">Buy credits</a>
         <a class="btn btn--ghost btn--sm" href="profile.html">Nguyễn Văn A</a>
       </div>
@@ -29,25 +30,57 @@
           <div class="nav-list__group">Practice</div>
           <a class="nav-list__item" href="practice-select.html">Practice by section</a>
           <a class="nav-list__item" href="weakness-analysis.html">Weakness analysis</a>
+          <div class="nav-list__group">Learning</div>
+          <a class="nav-list__item is-active" href="learning-path.html">My learning path</a>
+          <a class="nav-list__item" href="mentor-list.html">Find a mentor</a>
           <div class="nav-list__group">Account</div>
           <a class="nav-list__item" href="../payment/wallet.html">Credit wallet</a>
           <a class="nav-list__item" href="profile.html">Profile</a>
         </nav>
       </aside>
       <main class="app-main">
+        <div class="context-bar">
+          <div class="context-bar__item">
+            <span class="context-bar__label">Certificate:</span>
+            <span class="context-bar__value">TOEIC</span>
+          </div>
+          <div class="context-bar__item">
+            <span class="context-bar__label">Placement:</span>
+            <span class="context-bar__value">Free · no credits used</span>
+          </div>
+          <div class="context-bar__item">
+            <span class="context-bar__label">Next step:</span>
+            <span class="context-bar__value">Set your target level</span>
+          </div>
+        </div>
+
         <div class="container stack">
+          <nav class="breadcrumbs" aria-label="Breadcrumb">
+            <a href="dashboard.html" class="breadcrumbs__item">Home</a>
+            <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+            <a href="placement-select.html" class="breadcrumbs__item">Placement test</a>
+            <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+            <span class="breadcrumbs__item" aria-current="page">Result</span>
+          </nav>
+
           <!-- ===== loading ===== -->
           <div class="only-loading stack">
+<h1 class="visually-hidden">Loading your placement result</h1>
             <div class="skeleton skeleton--title"></div>
-            <div class="skeleton skeleton--block" style="height: 200px"></div>
+            <div class="skeleton skeleton--block" style="height: 120px"></div>
+            <div class="grid-3">
+              <div class="skeleton skeleton--block" style="height: 110px"></div>
+              <div class="skeleton skeleton--block" style="height: 110px"></div>
+              <div class="skeleton skeleton--block" style="height: 110px"></div>
+            </div>
           </div>
 
           <!-- ===== error ===== -->
           <div class="only-error">
             <div class="card"><div class="card__body">
               <div class="state-block">
-                <div class="state-block__icon" aria-hidden="true">!</div>
-                <div class="state-block__title">Could not load results</div>
+                <div class="state-block__icon" aria-hidden="true">ERROR</div>
+                <h1 class="state-block__title">Could not load results</h1>
                 <p class="state-block__desc">Check your connection and try again.</p>
                 <button class="btn btn--primary">Try again</button>
               </div>
@@ -56,41 +89,107 @@
 
           <!-- ===== success ===== -->
           <div class="only-success stack">
-            <h1>Your placement result</h1>
+            <div class="row row--between">
+              <div>
+                <h1 class="m-0 mb-1">Your placement result</h1>
+                <p class="text-muted no-margin">Taken 15 August 2026 · 40 questions · 28 minutes</p>
+              </div>
+              <span class="badge badge--success">Free</span>
+            </div>
 
             <div class="card"><div class="card__body stack">
-              <div class="cefr-band">
-                <div class="cefr-band__head">
-                  <span class="cefr-band__current">A2</span>
+              <div class="cefr">
+                <div class="cefr__head">
+                  <span class="cefr__current">A2</span>
                   <span>385 points · Elementary level</span>
                 </div>
-                <div class="cefr-band__track" role="img" aria-label="Current band A2, score 385 out of 990">
-                  <span class="cefr-band__band is-reached">&lt;A1</span>
-                  <span class="cefr-band__band is-reached">A1</span>
-                  <span class="cefr-band__band is-current">A2</span>
-                  <span class="cefr-band__band">B1</span>
-                  <span class="cefr-band__band">B2</span>
-                  <span class="cefr-band__band">C1</span>
+                <div class="cefr__track" role="img" aria-label="Current band A2, score 385 out of 990">
+                  <span class="cefr__band is-reached">&lt;A1</span>
+                  <span class="cefr__band is-reached">A1</span>
+                  <span class="cefr__band is-current">A2</span>
+                  <span class="cefr__band">B1</span>
+                  <span class="cefr__band">B2</span>
+                  <span class="cefr__band">C1</span>
                 </div>
-                <div class="cefr-band__scale" aria-hidden="true">
+                <div class="cefr__scale" aria-hidden="true">
                   <span>10</span>
-                  <span class="cefr-band__tick">120</span>
-                  <span class="cefr-band__tick">225</span>
-                  <span class="cefr-band__tick">550</span>
-                  <span class="cefr-band__tick">785</span>
-                  <span class="cefr-band__tick">945</span>
+                  <span class="cefr__tick">120</span>
+                  <span class="cefr__tick">225</span>
+                  <span class="cefr__tick">550</span>
+                  <span class="cefr__tick">785</span>
+                  <span class="cefr__tick">945</span>
+                </div>
+                <p class="cefr__note">
+                  A2 spans 225–549 points. You are 165 points below B1 and 400 below B2.
+                </p>
+              </div>
+            </div></div>
+
+            <div class="grid-3">
+              <div class="stat">
+                <div class="stat__label">Total score</div>
+                <div class="stat__value">385</div>
+                <div class="stat__hint">out of 990</div>
+              </div>
+              <div class="stat">
+                <div class="stat__label">Listening</div>
+                <div class="stat__value">215</div>
+                <div class="stat__hint">13 of 20 correct</div>
+              </div>
+              <div class="stat">
+                <div class="stat__label">Reading</div>
+                <div class="stat__value">170</div>
+                <div class="stat__hint">10 of 20 correct</div>
+              </div>
+            </div>
+
+            <div class="alert alert--info">
+              <strong>Reading is your weaker section.</strong>
+              Your learning path will start there. <a href="weakness-analysis.html">View the full breakdown</a>
+            </div>
+
+            <div class="card">
+              <div class="card__header"><strong>Where this puts you</strong></div>
+              <div class="card__body">
+                <table class="table">
+                  <caption class="visually-hidden">Section results from your placement test</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Section</th>
+                      <th scope="col">Correct</th>
+                      <th scope="col">Score</th>
+                      <th scope="col">Band</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <th scope="row">Listening</th>
+                      <td>13 / 20</td>
+                      <td>215</td>
+                      <td><span class="badge badge--muted">A2</span></td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Reading</th>
+                      <td>10 / 20</td>
+                      <td>170</td>
+                      <td><span class="badge badge--warning">A1</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="card__footer">
+                <div class="row">
+                  <a href="target-band-set.html" class="btn btn--primary">Set your target level</a>
+                  <a href="practice-select.html" class="btn">Practice a section first</a>
                 </div>
               </div>
-
-              <p>You scored <strong>385 points</strong> on the placement test. This places you at the <strong>A2 (Elementary)</strong> level.</p>
-
-              <a href="target-band-set.html" class="btn btn--primary">Set your target level</a>
-            </div></div>
+            </div>
           </div>
         </div>
       </main>
     </div>
   </div>
   <script src="../assets/js/state-switch.js"></script>
+  <script src="../assets/js/icons.js"></script>
 </body>
 </html>

@@ -8,13 +8,14 @@
   <link rel="stylesheet" href="../assets/css/tokens.css">
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
+  <script src="../assets/js/sidebar.js"></script>
 </head>
 <body data-states="loading,empty,error,success">
   <div class="app-shell app-shell--with-sidebar">
     <header class="app-topbar">
       <strong>extra efficient</strong>
       <div class="row">
-        <span class="badge badge--info">3 credits left</span>
+        <span class="badge badge--info">8 credits left</span>
         <a class="btn btn--sm" href="../payment/pricing.html">Buy credits</a>
         <a class="btn btn--ghost btn--sm" href="profile.html">Nguyễn Văn A</a>
       </div>
@@ -29,25 +30,54 @@
           <div class="nav-list__group">Practice</div>
           <a class="nav-list__item" href="practice-select.html">Practice by section</a>
           <a class="nav-list__item" href="weakness-analysis.html">Weakness analysis</a>
+          <div class="nav-list__group">Learning</div>
+          <a class="nav-list__item is-active" href="learning-path.html">My learning path</a>
+          <a class="nav-list__item" href="mentor-list.html">Find a mentor</a>
           <div class="nav-list__group">Account</div>
           <a class="nav-list__item" href="../payment/wallet.html">Credit wallet</a>
           <a class="nav-list__item" href="profile.html">Profile</a>
         </nav>
       </aside>
       <main class="app-main">
+        <div class="context-bar">
+          <div class="context-bar__item">
+            <span class="context-bar__label">Certificate:</span>
+            <span class="context-bar__value">TOEIC</span>
+          </div>
+          <div class="context-bar__item">
+            <span class="context-bar__label">Cost:</span>
+            <span class="context-bar__value">Free · 0 credits</span>
+          </div>
+          <div class="context-bar__item">
+            <span class="context-bar__label">Current level:</span>
+            <span class="context-bar__value">Not yet assessed</span>
+          </div>
+        </div>
+
         <div class="container stack">
+          <nav class="breadcrumbs" aria-label="Breadcrumb">
+            <a href="dashboard.html" class="breadcrumbs__item">Home</a>
+            <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+            <span class="breadcrumbs__item" aria-current="page">Placement test</span>
+          </nav>
+
           <!-- ===== loading ===== -->
           <div class="only-loading stack">
+<h1 class="visually-hidden">Loading the placement test</h1>
             <div class="skeleton skeleton--title"></div>
-            <div class="skeleton skeleton--block" style="height: 300px"></div>
+            <div class="skeleton skeleton--block" style="height: 90px"></div>
+            <div class="grid-2">
+              <div class="skeleton skeleton--block" style="height: 190px"></div>
+              <div class="skeleton skeleton--block" style="height: 190px"></div>
+            </div>
           </div>
 
           <!-- ===== error ===== -->
           <div class="only-error">
             <div class="card"><div class="card__body">
               <div class="state-block">
-                <div class="state-block__icon" aria-hidden="true">!</div>
-                <div class="state-block__title">Could not load placement tests</div>
+                <div class="state-block__icon" aria-hidden="true">ERROR</div>
+                <h1 class="state-block__title">Could not load placement tests</h1>
                 <p class="state-block__desc">Check your connection and try again.</p>
                 <button class="btn btn--primary">Try again</button>
               </div>
@@ -59,7 +89,7 @@
             <div class="card"><div class="card__body">
               <div class="state-block">
                 <div class="state-block__icon" aria-hidden="true">EMPTY</div>
-                <div class="state-block__title">No placement tests available</div>
+                <h1 class="state-block__title">No placement tests available</h1>
                 <p class="state-block__desc">Placement tests are being prepared for TOEIC. Check back soon.</p>
               </div>
             </div></div>
@@ -67,27 +97,84 @@
 
           <!-- ===== success ===== -->
           <div class="only-success stack">
-            <h1>Pick a placement test</h1>
-            <div class="alert alert--info">
-              <strong>Placement tests are free.</strong> This test will determine your current level and generate a personalized learning path.
+            <div class="row row--between">
+              <div>
+                <h1 class="m-0 mb-1">Pick a placement test</h1>
+                <p class="text-muted no-margin">
+                  One test sets your starting level and builds your learning path.
+                  <strong>Free, no credit deducted.</strong>
+                </p>
+              </div>
+              <span class="badge badge--success">Free</span>
             </div>
 
-            <div class="grid-2">
-              <article class="exam-card">
-                <div class="exam-card__header">
-                  <strong>TOEIC Placement Test — Standard</strong>
-                  <span class="badge badge--info">TOEIC</span>
-                </div>
-                <div class="exam-card__meta">
-                  <span>40 questions</span>
-                  <span>·</span>
-                  <span>30 minutes</span>
-                </div>
-                <p class="exam-card__desc">Listening and Reading sections. Quick assessment of your current TOEIC level.</p>
-                <div class="exam-card__footer">
-                  <a href="placement-take.html" class="btn btn--primary">Start test</a>
-                </div>
-              </article>
+            <div class="alert alert--info">
+              <strong>You have not been assessed yet.</strong>
+              Until you take a placement test, your learning path cannot be generated. <a href="learning-path.html">About learning paths</a>
+            </div>
+
+            <section>
+              <h2 class="section-group__title">Available tests</h2>
+              <div class="grid-2">
+                <a class="part-card" href="placement-take.html">
+                  <div class="part-card__header">
+                    <strong>Standard</strong>
+                    <span class="badge badge--info">Recommended</span>
+                  </div>
+                  <p class="part-card__desc">
+                    Listening and Reading, adaptive across both sections. Gives a score on the full 10–990 scale and a CEFR band.
+                  </p>
+                  <div class="part-card__meta">40 questions · 30 minutes</div>
+                </a>
+                <a class="part-card" href="placement-take.html">
+                  <div class="part-card__header">
+                    <strong>Quick</strong>
+                    <span class="badge badge--muted">Shorter</span>
+                  </div>
+                  <p class="part-card__desc">
+                    A shorter screen for a rough band only. Useful if you are returning after a break and want a fast re-check.
+                  </p>
+                  <div class="part-card__meta">20 questions · 15 minutes</div>
+                </a>
+              </div>
+            </section>
+
+            <div class="card">
+              <div class="card__header"><strong>What happens after the test</strong></div>
+              <div class="card__body">
+                <table class="table">
+                  <caption class="visually-hidden">Steps that follow the placement test</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Step</th>
+                      <th scope="col">What you get</th>
+                      <th scope="col">Cost</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <th scope="row">Result</th>
+                      <td>Your score, CEFR band, and per-section breakdown</td>
+                      <td>Free</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Target level</th>
+                      <td>You choose the band you are aiming for</td>
+                      <td>Free</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Learning path</th>
+                      <td>Ordered modules from your level to your target</td>
+                      <td>Free</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Premium path</th>
+                      <td>Video lessons, AI-graded writing, detailed explanations</td>
+                      <td>5 credits</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
@@ -95,5 +182,6 @@
     </div>
   </div>
   <script src="../assets/js/state-switch.js"></script>
+  <script src="../assets/js/icons.js"></script>
 </body>
 </html>

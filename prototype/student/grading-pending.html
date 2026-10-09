@@ -8,13 +8,14 @@
   <link rel="stylesheet" href="../assets/css/tokens.css">
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
+  <script src="../assets/js/sidebar.js"></script>
 </head>
-<body data-states="loading,error,success">
+<body data-states="loading,error,failed,success">
   <div class="app-shell app-shell--with-sidebar">
     <header class="app-topbar">
       <strong>extra efficient</strong>
       <div class="row">
-        <span class="badge badge--info">3 credits left</span>
+        <span class="badge badge--info">8 credits left</span>
         <a class="btn btn--sm" href="../payment/pricing.html">Buy credits</a>
         <a class="btn btn--ghost btn--sm" href="profile.html">Nguyễn Văn A</a>
       </div>
@@ -25,19 +26,44 @@
           <a class="nav-list__item" href="dashboard.html">Home</a>
           <div class="nav-list__group">Mock exams</div>
           <a class="nav-list__item" href="exam-list.html">Test list</a>
-          <a class="nav-list__item" href="exam-history.html">Exam history</a>
+          <a class="nav-list__item is-active" href="exam-history.html">Exam history</a>
           <div class="nav-list__group">Practice</div>
           <a class="nav-list__item" href="practice-select.html">Practice by section</a>
           <a class="nav-list__item" href="weakness-analysis.html">Weakness analysis</a>
+          <div class="nav-list__group">Learning</div>
+          <a class="nav-list__item" href="learning-path.html">My learning path</a>
+          <a class="nav-list__item" href="mentor-list.html">Find a mentor</a>
           <div class="nav-list__group">Account</div>
           <a class="nav-list__item" href="../payment/wallet.html">Credit wallet</a>
           <a class="nav-list__item" href="profile.html">Profile</a>
         </nav>
       </aside>
       <main class="app-main">
+        <div class="context-bar">
+          <div class="context-bar__item">
+            <span class="context-bar__label">Certificate:</span>
+            <span class="context-bar__value">TOEIC</span>
+          </div>
+          <div class="context-bar__item">
+            <span class="context-bar__label">Grading:</span>
+            <span class="context-bar__value">AI, against the rubric</span>
+          </div>
+          <div class="context-bar__item">
+            <span class="context-bar__label">Cost:</span>
+            <span class="context-bar__value">1 credit · already charged</span>
+          </div>
+        </div>
         <div class="container stack">
+          <nav class="breadcrumbs" aria-label="Breadcrumb">
+            <a href="dashboard.html" class="breadcrumbs__item">Home</a>
+            <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+            <a href="exam-history.html" class="breadcrumbs__item">Exam history</a>
+            <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+            <span class="breadcrumbs__item" aria-current="page">Grading in progress</span>
+          </nav>
           <!-- ===== loading ===== -->
           <div class="only-loading stack">
+<h1 class="visually-hidden">Loading grading status</h1>
             <div class="skeleton skeleton--title"></div>
             <div class="skeleton skeleton--block" style="height: 200px"></div>
           </div>
@@ -46,10 +72,25 @@
           <div class="only-error">
             <div class="card"><div class="card__body">
               <div class="state-block">
-                <div class="state-block__icon" aria-hidden="true">!</div>
-                <div class="state-block__title">Grading failed</div>
-                <p class="state-block__desc">Could not process your submission. Contact support if this persists.</p>
+                <div class="state-block__icon" aria-hidden="true">ERROR</div>
+                <h1 class="state-block__title">Could not check your grading</h1>
+                <p class="state-block__desc">Your responses are saved. Check your connection and try again.</p>
                 <button class="btn btn--primary">Try again</button>
+              </div>
+            </div></div>
+          </div>
+
+          <!-- ===== failed: the grader ran and did not finish =====
+               Different from error above, which is this page failing to load.
+               The ai_grading charge was already made, and a second one on the
+               same attempt is impossible, so the retry is free. -->
+          <div class="only-failed">
+            <div class="card"><div class="card__body">
+              <div class="state-block">
+                <div class="state-block__icon state-block__icon--danger" aria-hidden="true">FAILED</div>
+                <h1 class="state-block__title">Grading did not finish</h1>
+                <p class="state-block__desc">Your responses are saved. Retrying does not charge another credit.</p>
+                <button class="btn btn--primary">Retry grading</button>
               </div>
             </div></div>
           </div>
@@ -61,29 +102,31 @@
             <div class="card"><div class="card__body">
               <div class="state-block">
                 <div class="state-block__icon" aria-hidden="true">RUNNING</div>
-                <div class="state-block__title">Your writing is being graded</div>
+                <div class="state-block__title">Your responses are being graded</div>
                 <p class="state-block__desc" id="timer-display" role="timer" aria-live="polite">
                   Estimated 45 seconds remaining
                 </p>
 
-                <div class="stack mx-auto text-left" style="max-width: 420px; gap: var(--space-3, 12px)">
-                  <div class="row">
-                    <span style="color: var(--color-sign-green, #0a6b3c); font-size: 20px" aria-hidden="true">✓</span>
-                    <span class="text-sm">Checking grammar and spelling</span>
-                  </div>
-                  <div class="row">
-                    <span style="color: var(--color-sign-green, #0a6b3c); font-size: 20px" aria-hidden="true">✓</span>
-                    <span class="text-sm">Analyzing vocabulary range</span>
-                  </div>
-                  <div class="row" id="current-stage">
-                    <span style="color: var(--color-sign-blue, #0b4ea2); font-size: 20px" aria-hidden="true">⏳</span>
-                    <span class="text-sm"><strong>Scoring coherence and organization</strong></span>
-                  </div>
-                  <div class="row" style="opacity: 0.4">
-                    <span style="font-size: 20px" aria-hidden="true">○</span>
-                    <span class="text-sm">Evaluating task achievement</span>
-                  </div>
-                </div>
+                <!-- Stages are worded for any free response, spoken or written.
+                     A badge carries the word, so no glyph stands in for an icon. -->
+                <ol class="stack mx-auto text-left m-0" id="stage-list" style="max-width: 420px; list-style: none; padding: 0; gap: var(--space-3)">
+                  <li class="row" data-stage>
+                    <span class="badge badge--success" data-badge>Done</span>
+                    <span class="text-sm">Responses received</span>
+                  </li>
+                  <li class="row" data-stage>
+                    <span class="badge badge--success" data-badge>Done</span>
+                    <span class="text-sm">Marked against the rubric</span>
+                  </li>
+                  <li class="row" data-stage aria-current="step">
+                    <span class="badge badge--info" data-badge>Now</span>
+                    <span class="text-sm"><strong data-label>Scoring each criterion</strong></span>
+                  </li>
+                  <li class="row" data-stage>
+                    <span class="badge badge--muted" data-badge>Next</span>
+                    <span class="text-sm" data-label>Writing your feedback</span>
+                  </li>
+                </ol>
 
                 <div class="progress mx-auto" style="max-width: 320px; margin-top: var(--space-4)">
                   <div class="progress__bar" id="progress-bar" style="width: 65%; transition: transform 1s linear; transform-origin: left"></div>
@@ -114,6 +157,7 @@
     </div>
   </div>
   <script src="../assets/js/state-switch.js"></script>
+  <script src="../assets/js/icons.js"></script>
   <script>
     // Simulated AI grading countdown and stage progression
     (function() {
@@ -151,38 +195,30 @@
         }
       }, 1000);
 
-      // Stage progression (simulated)
-      const stages = [
-        { id: 'current-stage', time: 0, emoji: '⏳', text: 'Scoring coherence and organization', color: 'var(--color-sign-blue, #0b4ea2)' },
-        { id: 'current-stage', time: 20, emoji: '⏳', text: 'Evaluating task achievement', color: 'var(--color-sign-blue, #0b4ea2)' }
-      ];
-
-      stages.forEach(stage => {
-        setTimeout(() => {
-          const stageEl = document.getElementById(stage.id);
-          if (stageEl) {
-            const rows = stageEl.parentElement.children;
-            // Mark previous stages complete
-            for (let i = 0; i < rows.length - 1; i++) {
-              const span = rows[i].querySelector('span:first-child');
-              const text = rows[i].querySelector('span:last-child');
-              if (span && text) {
-                span.textContent = '✓';
-                span.style.color = 'var(--color-sign-green, #0a6b3c)';
-                text.innerHTML = text.textContent; // Remove bold
-              }
-            }
-            // Update current stage
-            const currentSpan = stageEl.querySelector('span:first-child');
-            const currentText = stageEl.querySelector('span:last-child');
-            if (currentSpan && currentText) {
-              currentSpan.textContent = stage.emoji;
-              currentSpan.style.color = stage.color;
-              currentText.innerHTML = `<strong>${stage.text}</strong>`;
-            }
+      // Stage progression (simulated). Each stage is a row with a word badge:
+      // Done, Now or Next. Advancing moves the "Now" badge down one row.
+      const rows = Array.prototype.slice.call(document.querySelectorAll('#stage-list [data-stage]'));
+      const setBadge = (row, cls, word) => {
+        const badge = row.querySelector('[data-badge]');
+        badge.className = 'badge ' + cls;
+        badge.textContent = word;
+      };
+      const advanceTo = (index) => {
+        rows.forEach((row, i) => {
+          const label = row.querySelector('[data-label]');
+          if (i < index) {
+            setBadge(row, 'badge--success', 'Done');
+            row.removeAttribute('aria-current');
+            if (label && label.tagName === 'STRONG') label.outerHTML = label.textContent;
+          } else if (i === index) {
+            setBadge(row, 'badge--info', 'Now');
+            row.setAttribute('aria-current', 'step');
+            if (label && label.tagName !== 'STRONG') label.innerHTML = '<strong>' + label.textContent + '</strong>';
           }
-        }, stage.time * 1000);
-      });
+        });
+      };
+      // After 20 seconds the last stage becomes the current one.
+      setTimeout(() => advanceTo(rows.length - 1), 20000);
 
       // In real implementation, this would redirect on server completion
       // For prototype: simulate completion after 50 seconds

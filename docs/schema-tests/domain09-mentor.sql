@@ -88,8 +88,8 @@ END CATCH
 
 -- reject (PartC-4): a complaint filed by a non-booker
 BEGIN TRY
-  INSERT INTO Complaints (BookingId,UserId,Reason)
-    SELECT TOP 1 BookingId,@u3,N'not my booking' FROM Bookings WHERE MentorId=@m;
+  INSERT INTO Complaints (BookingId,UserId,Type,Reason)
+    SELECT TOP 1 BookingId,@u3,'mentor_quality',N'not my booking' FROM Bookings WHERE MentorId=@m;
   THROW 50000,'EXPECT_REJECT FAILED: complaint by non-booker accepted',1;
 END TRY BEGIN CATCH
   IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;

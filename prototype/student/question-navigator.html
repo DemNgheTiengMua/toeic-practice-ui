@@ -17,10 +17,27 @@
     </header>
     <main class="app-main">
       <div class="container stack">
+        <nav class="breadcrumbs" aria-label="Breadcrumb">
+          <a href="../index.html" class="breadcrumbs__item">Prototype catalog</a>
+          <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+          <span class="breadcrumbs__item" aria-current="page">Question navigator</span>
+        </nav>
         <h1>Question navigator (200 questions)</h1>
         <p class="text-muted">
           Component shared by the Listening and Reading exam screens and the submit confirmation screen. The three question states are distinguished by both colour and shape, not colour alone.
         </p>
+        <div class="card">
+          <div class="card__header"><strong>Where it is used</strong></div>
+          <div class="card__body">
+            <ul class="stack--tight m-0 pl-5">
+              <li><a href="exam-listening.html">Listening exam</a>, as a ten-cell window beside the question</li>
+              <li><a href="exam-reading.html">Reading exam</a>, as a ten-cell window beside the question</li>
+              <li><a href="placement-take.html">Placement test</a>, grouped by part</li>
+              <li><a href="exam-speaking.html">Speaking practice</a>, grouped by task</li>
+              <li><a href="exam-confirm-submit.html">Submit confirmation</a>, behind the dialog</li>
+            </ul>
+          </div>
+        </div>
 
         <div class="card">
           <div class="card__header">
@@ -131,5 +148,7 @@
     })();
   </script>
   <script src="../assets/js/state-switch.js"></script>
+  <script src="../assets/js/icons.js"></script>
+  <script src="../assets/js/keyboard-nav.js"></script>
 </body>
 </html>

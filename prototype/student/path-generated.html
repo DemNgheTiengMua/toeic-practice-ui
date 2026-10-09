@@ -8,13 +8,14 @@
   <link rel="stylesheet" href="../assets/css/tokens.css">
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
+  <script src="../assets/js/sidebar.js"></script>
 </head>
 <body data-states="loading,error,success">
   <div class="app-shell app-shell--with-sidebar">
     <header class="app-topbar">
       <strong>extra efficient</strong>
       <div class="row">
-        <span class="badge badge--info">3 credits left</span>
+        <span class="badge badge--info">8 credits left</span>
         <a class="btn btn--sm" href="../payment/pricing.html">Buy credits</a>
         <a class="btn btn--ghost btn--sm" href="profile.html">Nguyễn Văn A</a>
       </div>
@@ -29,26 +30,58 @@
           <div class="nav-list__group">Practice</div>
           <a class="nav-list__item" href="practice-select.html">Practice by section</a>
           <a class="nav-list__item" href="weakness-analysis.html">Weakness analysis</a>
+          <div class="nav-list__group">Learning</div>
+          <a class="nav-list__item is-active" href="learning-path.html">My learning path</a>
+          <a class="nav-list__item" href="mentor-list.html">Find a mentor</a>
           <div class="nav-list__group">Account</div>
           <a class="nav-list__item" href="../payment/wallet.html">Credit wallet</a>
           <a class="nav-list__item" href="profile.html">Profile</a>
         </nav>
       </aside>
       <main class="app-main">
+        <div class="context-bar">
+          <div class="context-bar__item">
+            <span class="context-bar__label">Certificate:</span>
+            <span class="context-bar__value">TOEIC</span>
+          </div>
+          <div class="context-bar__item">
+            <span class="context-bar__label">Path:</span>
+            <span class="context-bar__value">A2 → B2</span>
+          </div>
+          <div class="context-bar__item">
+            <span class="context-bar__label">Cost:</span>
+            <span class="context-bar__value">Free · 0 credits</span>
+          </div>
+        </div>
+
         <div class="container stack">
+          <nav class="breadcrumbs" aria-label="Breadcrumb">
+            <a href="dashboard.html" class="breadcrumbs__item">Home</a>
+            <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+            <a href="target-band-set.html" class="breadcrumbs__item">Target level</a>
+            <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+            <span class="breadcrumbs__item" aria-current="page">Path generated</span>
+          </nav>
+
           <!-- ===== loading ===== -->
           <div class="only-loading stack">
+<h1 class="visually-hidden">Loading your learning path</h1>
+            <div class="skeleton skeleton--block" style="height: 60px"></div>
             <div class="skeleton skeleton--title"></div>
-            <div class="skeleton skeleton--block" style="height: 200px"></div>
+            <div class="grid-3">
+              <div class="skeleton skeleton--block" style="height: 110px"></div>
+              <div class="skeleton skeleton--block" style="height: 110px"></div>
+              <div class="skeleton skeleton--block" style="height: 110px"></div>
+            </div>
           </div>
 
           <!-- ===== error ===== -->
           <div class="only-error">
             <div class="card"><div class="card__body">
               <div class="state-block">
-                <div class="state-block__icon" aria-hidden="true">!</div>
-                <div class="state-block__title">Could not generate path</div>
-                <p class="state-block__desc">Try again or contact support.</p>
+                <div class="state-block__icon" aria-hidden="true">ERROR</div>
+                <h1 class="state-block__title">Could not generate path</h1>
+                <p class="state-block__desc">Your target level was saved. Try generating the path again.</p>
                 <button class="btn btn--primary">Try again</button>
               </div>
             </div></div>
@@ -57,15 +90,78 @@
           <!-- ===== success ===== -->
           <div class="only-success stack">
             <div class="alert alert--success">
-              <strong>Your learning path is ready!</strong> We've generated a personalized path from A2 to B2.
+              <strong>Your learning path is ready.</strong> 14 modules were selected from A2 to B2, weakest sections first.
             </div>
 
-            <h1>A2 → B2 Learning Path</h1>
-            <p>Follow this path to reach your target level. Free modules practice your weak areas. Upgrade to premium for deeper guidance and AI tasks.</p>
+            <div>
+              <h1 class="m-0 mb-1">A2 → B2 learning path</h1>
+              <p class="text-muted no-margin">Built from your placement result on 15 August 2026. Modules unlock in order.</p>
+            </div>
 
-            <div class="row">
-              <a href="learning-path.html" class="btn btn--primary">View my path</a>
-              <a href="dashboard.html" class="btn">Go to dashboard</a>
+            <div class="grid-3">
+              <div class="stat">
+                <div class="stat__label">Modules</div>
+                <div class="stat__value">14</div>
+                <div class="stat__hint">8 practice · 6 reading</div>
+              </div>
+              <div class="stat">
+                <div class="stat__label">Estimated time</div>
+                <div class="stat__value">5h 20m</div>
+                <div class="stat__hint">across all modules</div>
+              </div>
+              <div class="stat">
+                <div class="stat__label">Points to close</div>
+                <div class="stat__value">400</div>
+                <div class="stat__hint">385 at placement · 785 target</div>
+              </div>
+            </div>
+
+            <section>
+              <h2 class="section-group__title">Starts with</h2>
+              <div class="stack">
+                <article class="path-module">
+                  <div class="path-module__status">
+                    <span class="badge badge--info">Module 1</span>
+                  </div>
+                  <div class="path-module__content">
+                    <strong>Present Simple Tense</strong>
+                    <p>Practice · 20 questions · Est. 15 minutes</p>
+                  </div>
+                  <a href="path-detail.html" class="btn btn--primary btn--sm">Start</a>
+                </article>
+                <article class="path-module">
+                  <div class="path-module__status">
+                    <span class="badge">Module 2</span>
+                  </div>
+                  <div class="path-module__content">
+                    <strong>Present Continuous</strong>
+                    <p>Practice · 25 questions · Est. 20 minutes</p>
+                  </div>
+                  <button class="btn btn--sm" disabled>Locked</button>
+                </article>
+                <article class="path-module">
+                  <div class="path-module__status">
+                    <span class="badge">Module 3</span>
+                  </div>
+                  <div class="path-module__content">
+                    <strong>Past Simple</strong>
+                    <p>Practice · 30 questions · Est. 25 minutes</p>
+                  </div>
+                  <button class="btn btn--sm" disabled>Locked</button>
+                </article>
+              </div>
+            </section>
+
+            <div class="card"><div class="card__footer">
+              <div class="row">
+                <a href="learning-path.html" class="btn">View all 14 modules</a>
+                <a href="dashboard.html" class="btn">Go to dashboard</a>
+              </div>
+            </div></div>
+
+            <div class="alert alert--info">
+              <strong>This is the free path.</strong>
+              It covers practice modules. <a href="path-upgrade.html">Premium</a> adds video lessons, detailed explanations, and AI-graded writing for 5 credits.
             </div>
           </div>
         </div>
@@ -73,5 +169,6 @@
     </div>
   </div>
   <script src="../assets/js/state-switch.js"></script>
+  <script src="../assets/js/icons.js"></script>
 </body>
 </html>

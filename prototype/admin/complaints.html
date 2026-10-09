@@ -8,30 +8,46 @@
   <link rel="stylesheet" href="../assets/css/tokens.css">
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
+  <script src="../assets/js/sidebar.js"></script>
 </head>
 <body data-states="loading,empty,error,success">
   <div class="app-shell app-shell--with-sidebar">
     <header class="app-topbar">
-      <strong>extra efficient Admin</strong>
-      <a class="btn btn--ghost btn--sm" href="../student/dashboard.html">Admin Panel</a>
+      <strong>extra efficient — Admin area</strong>
+      <div class="row">
+        <span class="badge badge--warning">Admin</span>
+        <span class="text-sm">admin@toeic.local</span>
+        <a class="btn btn--sm btn--ghost" href="../auth/login.html">Sign out</a>
+      </div>
     </header>
     <div class="app-body">
       <aside class="app-sidebar">
-        <nav class="nav-list" aria-label="Main navigation">
+        <nav class="nav-list" aria-label="Admin navigation">
+          <div class="nav-list__group">Overview</div>
           <a class="nav-list__item" href="dashboard.html">Dashboard</a>
           <div class="nav-list__group">Content</div>
-          <a class="nav-list__item" href="exam-list.html">Exam management</a>
-          <a class="nav-list__item" href="question-editor.html">Question editor</a>
+          <a class="nav-list__item" href="exam-list.html">Tests</a>
           <a class="nav-list__item" href="score-conversion.html">Score conversion</a>
+          <div class="nav-list__group">Users &amp; revenue</div>
+          <a class="nav-list__item" href="users.html">Students</a>
+          <a class="nav-list__item" href="packages.html">Credit packages</a>
+          <a class="nav-list__item" href="orders.html">Orders</a>
           <div class="nav-list__group">Operations</div>
           <a class="nav-list__item is-active" href="complaints.html">Complaints</a>
-          <a class="nav-list__item" href="kyc-review.html">KYC review</a>
+          <div class="nav-list__group">Other</div>
+          <a class="nav-list__item" href="../index.html">Prototype catalog</a>
         </nav>
       </aside>
       <main class="app-main">
         <div class="container stack">
+          <nav class="breadcrumbs" aria-label="Breadcrumb">
+            <a href="dashboard.html" class="breadcrumbs__item">Admin</a>
+            <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+            <span class="breadcrumbs__item" aria-current="page">Complaints</span>
+          </nav>
           <!-- ===== loading ===== -->
           <div class="only-loading stack">
+            <h1 class="visually-hidden">Loading complaints</h1>
             <div class="skeleton skeleton--title"></div>
             <div class="skeleton skeleton--block" style="height: 400px"></div>
           </div>
@@ -40,8 +56,8 @@
           <div class="only-error">
             <div class="card"><div class="card__body">
               <div class="state-block">
-                <div class="state-block__icon" aria-hidden="true">!</div>
-                <div class="state-block__title">Could not load complaints</div>
+                <div class="state-block__icon" aria-hidden="true">ERROR</div>
+                <h1 class="state-block__title">Could not load complaints</h1>
                 <p class="state-block__desc">Check your connection and try again.</p>
                 <button class="btn btn--primary">Try again</button>
               </div>
@@ -53,7 +69,7 @@
             <div class="card"><div class="card__body">
               <div class="state-block">
                 <div class="state-block__icon" aria-hidden="true">EMPTY</div>
-                <div class="state-block__title">No complaints</div>
+                <h1 class="state-block__title">No complaints</h1>
                 <p class="state-block__desc">All complaints have been resolved.</p>
               </div>
             </div></div>
@@ -61,26 +77,51 @@
 
           <!-- ===== success ===== -->
           <div class="only-success stack">
-            <h1>Complaints</h1>
+            <h1 class="m-0">Complaints</h1>
 
-            <div class="row" class="mb-4">
-              <button class="btn btn--plate btn--sm">All</button>
-              <button class="btn btn--ghost btn--sm">Pending</button>
-              <button class="btn btn--ghost btn--sm">Resolved</button>
+            <div class="grid-3">
+              <div class="stat">
+                <div class="stat__label">Pending</div>
+                <div class="stat__value">2</div>
+                <div class="stat__hint">waiting for a decision</div>
+              </div>
+              <div class="stat">
+                <div class="stat__label">Resolved</div>
+                <div class="stat__value">3</div>
+                <div class="stat__hint">in the last 7 days</div>
+              </div>
+              <div class="stat">
+                <div class="stat__label">Oldest pending</div>
+                <div class="stat__value">26 Sep</div>
+                <div class="stat__hint">#C-1041 · grading issue</div>
+              </div>
+            </div>
+
+            <div class="toolbar">
+              <div class="field toolbar__grow">
+                <label class="field__label" for="c-q">Search by complaint ID or learner</label>
+                <input class="field__input" id="c-q" type="search" placeholder="#C-…">
+              </div>
+              <div class="row row--tight" role="group" aria-label="Filter by status">
+                <button class="btn btn--sm" aria-pressed="true">All</button>
+                <button class="btn btn--sm">Pending</button>
+                <button class="btn btn--sm">Resolved</button>
+              </div>
             </div>
 
             <div class="card">
               <div class="card__body">
                 <table class="table table--striped">
+                  <caption class="visually-hidden">Complaints, newest first</caption>
                   <thead>
                     <tr>
-                      <th>ID</th>
-                      <th>Learner</th>
-                      <th>Type</th>
-                      <th>Related to</th>
-                      <th>Status</th>
-                      <th>Date</th>
-                      <th>Actions</th>
+                      <th scope="col">ID</th>
+                      <th scope="col">Learner</th>
+                      <th scope="col">Type</th>
+                      <th scope="col">Related to</th>
+                      <th scope="col">Status</th>
+                      <th scope="col">Date</th>
+                      <th scope="col">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -91,20 +132,20 @@
                       <td>Booking #8821</td>
                       <td><span class="badge badge--warning">Pending</span></td>
                       <td>27 Sep 2026</td>
-                      <td><a href="complaint-detail.html" class="btn btn--sm">Review</a></td>
+                      <td><a href="complaint-detail.html" class="btn btn--sm btn--primary">Review</a></td>
                     </tr>
                     <tr>
                       <td>#C-1041</td>
-                      <td>Trần Thị B</td>
+                      <td>Trần Thị Bình</td>
                       <td>Grading issue</td>
-                      <td>Exam #1182</td>
+                      <td>Exam #1176</td>
                       <td><span class="badge badge--warning">Pending</span></td>
                       <td>26 Sep 2026</td>
-                      <td><a href="complaint-detail.html" class="btn btn--sm">Review</a></td>
+                      <td><a href="complaint-detail.html" class="btn btn--sm btn--primary">Review</a></td>
                     </tr>
                     <tr>
                       <td>#C-1040</td>
-                      <td>Lê Văn C</td>
+                      <td>Lê Minh Cường</td>
                       <td>Technical error</td>
                       <td>Exam #1178</td>
                       <td><span class="badge badge--success">Resolved</span></td>
@@ -113,9 +154,9 @@
                     </tr>
                     <tr>
                       <td>#C-1039</td>
-                      <td>Phạm Thị D</td>
+                      <td>Phạm Thu Hà</td>
                       <td>Payment issue</td>
-                      <td>Order #4521</td>
+                      <td>Order DH-20260919-0122</td>
                       <td><span class="badge badge--success">Resolved</span></td>
                       <td>24 Sep 2026</td>
                       <td><a href="complaint-detail.html" class="btn btn--sm btn--ghost">View</a></td>
@@ -139,5 +180,6 @@
     </div>
   </div>
   <script src="../assets/js/state-switch.js"></script>
+  <script src="../assets/js/icons.js"></script>
 </body>
 </html>

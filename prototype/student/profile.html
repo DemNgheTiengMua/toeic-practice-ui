@@ -8,13 +8,14 @@
   <link rel="stylesheet" href="../assets/css/tokens.css">
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
+  <script src="../assets/js/sidebar.js"></script>
 </head>
-<body data-states="loading,success,submitting,error,kyc-required,kyc-pending,rejected">
+<body data-states="loading,success,submitting,error">
   <div class="app-shell app-shell--with-sidebar">
     <header class="app-topbar">
       <strong>extra efficient</strong>
       <div class="row">
-        <span class="badge badge--info">9 credits left</span>
+        <span class="badge badge--info">8 credits left</span>
         <a class="btn btn--sm" href="../payment/pricing.html">Buy credits</a>
         <a class="btn btn--ghost btn--sm" href="profile.html">Nguyễn Văn A</a>
       </div>
@@ -29,37 +30,61 @@
           <div class="nav-list__group">Practice</div>
           <a class="nav-list__item" href="practice-select.html">Practice by section</a>
           <a class="nav-list__item" href="weakness-analysis.html">Weakness analysis</a>
+          <div class="nav-list__group">Learning</div>
+          <a class="nav-list__item" href="learning-path.html">My learning path</a>
+          <a class="nav-list__item" href="mentor-list.html">Find a mentor</a>
           <div class="nav-list__group">Account</div>
           <a class="nav-list__item" href="../payment/wallet.html">Credit wallet</a>
-          <a class="nav-list__item" href="kyc-pending.html">ID verification</a>
           <a class="nav-list__item is-active" href="profile.html">Profile</a>
         </nav>
       </aside>
       <main class="app-main">
+        <div class="context-bar">
+          <div class="context-bar__item">
+            <span class="context-bar__label">Certificate:</span>
+            <span class="context-bar__value">TOEIC</span>
+          </div>
+          <div class="context-bar__item">
+            <span class="context-bar__label">Target:</span>
+            <span class="context-bar__value">B2 · 785 points</span>
+          </div>
+          <div class="context-bar__item">
+            <span class="context-bar__label">Credits:</span>
+            <span class="context-bar__value">8 left</span>
+          </div>
+        </div>
+
         <div class="container stack">
+          <nav class="breadcrumbs" aria-label="Breadcrumb">
+            <a href="dashboard.html" class="breadcrumbs__item">Home</a>
+            <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+            <span class="breadcrumbs__item" aria-current="page">Profile</span>
+          </nav>
+
           <!-- ===== loading ===== -->
           <div class="only-loading stack">
+            <h1 class="visually-hidden">Loading your profile</h1>
             <div class="skeleton skeleton--title"></div>
             <div class="grid-2">
-              <div class="skeleton skeleton--block" style="height: 240px"></div>
-              <div class="skeleton skeleton--block" style="height: 240px"></div>
+              <div class="skeleton skeleton--block" style="height: 420px"></div>
+              <div class="skeleton skeleton--block" style="height: 420px"></div>
             </div>
           </div>
 
-          <!-- ===== error ===== -->
-          <div class="only-error">
-            <div class="alert alert--danger">
-              Could not save your changes. Please try again.
-            </div>
-          </div>
+          <!-- ===== error + success + submitting =====
+               An error on save leaves the form on screen with what the user
+               typed; the alert sits above it. Hiding the form behind the alert
+               threw the input away. -->
+          <div class="multi-state stack" data-show="success submitting error">
+            <h1 class="m-0">My profile</h1>
 
-          <div class="multi-state stack"
-               data-show="success submitting kyc-required kyc-pending rejected">
-            <h1>My profile</h1>
+            <div class="alert alert--danger only-error" role="alert">
+              <strong>Could not save your changes.</strong> Nothing was changed. Try again.
+            </div>
 
             <div class="grid-2">
               <div class="card">
-                <div class="card__header">Basic information</div>
+                <div class="card__header"><strong>Basic information</strong></div>
                 <div class="card__body stack">
                   <div class="field">
                     <label class="field__label" for="p-name">Full name</label>
@@ -84,52 +109,56 @@
                     <input class="field__input" id="p-phone" type="tel" value="0901 234 567">
                   </div>
                   <div class="field">
-                    <label class="field__label" for="p-target">Target score</label>
+                    <label class="field__label" for="p-target">Target level</label>
                     <select class="field__input" id="p-target">
-                      <option>600</option>
-                      <option selected>800</option>
-                      <option>900</option>
+                      <option value="b1">B1 — 550 to 784 points</option>
+                      <option value="b2" selected>B2 — 785 to 944 points</option>
+                      <option value="c1">C1 — 945 to 990 points</option>
                     </select>
+                    <div class="field__hint">Changing it rebuilds your learning path. Your placement result is kept.</div>
                   </div>
                 </div>
                 <div class="card__footer">
-                  <button class="btn btn--primary only-success">Save changes</button>
+                  <button class="btn btn--primary multi-state" data-show="success error">Save changes</button>
                   <button class="btn btn--primary only-submitting" disabled>Saving…</button>
                 </div>
               </div>
 
+              <div class="stack">
                 <div class="card">
-                  <div class="card__header">Credit wallet</div>
+                  <div class="card__header"><strong>Credit wallet</strong></div>
                   <div class="card__body stack">
                     <div class="stat">
                       <div class="stat__label">Credits remaining</div>
-                      <div class="stat__value">3</div>
+                      <div class="stat__value">8</div>
                     </div>
                     <p class="m-0 text-muted text-sm">
-                      Each mock exam attempt deducts 1 credit. Credits do not expire.
+                      Credits pay for a mock exam start, AI grading, a mentor booking, or a premium learning path. Practice, weakness analysis and the placement test are free. Credits do not expire.
                     </p>
                   </div>
                   <div class="card__footer">
-                    <a class="btn btn--primary" href="../payment/pricing.html">Buy credits</a>
-                    <a class="btn btn--ghost" href="../payment/wallet.html">View wallet history</a>
+                    <div class="row row--wrap">
+                      <a class="btn" href="../payment/pricing.html">Buy credits</a>
+                      <a class="btn btn--ghost" href="../payment/wallet.html">View wallet history</a>
+                    </div>
                   </div>
                 </div>
 
                 <div class="card">
-                  <div class="card__header">Change password</div>
+                  <div class="card__header"><strong>Change password</strong></div>
                   <div class="card__body stack">
                     <div class="field">
                       <label class="field__label" for="p-old">Current password</label>
-                      <input class="field__input" id="p-old" type="password" placeholder="••••••••">
+                      <input class="field__input" id="p-old" type="password" autocomplete="current-password" placeholder="••••••••">
                     </div>
                     <div class="field">
                       <label class="field__label" for="p-new">New password</label>
-                      <input class="field__input" id="p-new" type="password" placeholder="••••••••">
+                      <input class="field__input" id="p-new" type="password" autocomplete="new-password" placeholder="••••••••">
                       <div class="field__hint">At least 8 characters, with letters and numbers.</div>
                     </div>
                     <div class="field">
                       <label class="field__label" for="p-new2">Re-enter new password</label>
-                      <input class="field__input" id="p-new2" type="password" placeholder="••••••••">
+                      <input class="field__input" id="p-new2" type="password" autocomplete="new-password" placeholder="••••••••">
                     </div>
                   </div>
                   <div class="card__footer">
@@ -144,5 +173,6 @@
     </div>
   </div>
   <script src="../assets/js/state-switch.js"></script>
+  <script src="../assets/js/icons.js"></script>
 </body>
 </html>

@@ -8,13 +8,14 @@
   <link rel="stylesheet" href="../assets/css/tokens.css">
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
+  <script src="../assets/js/sidebar.js"></script>
 </head>
 <body data-states="loading,empty,error,success">
   <div class="app-shell app-shell--with-sidebar">
     <header class="app-topbar">
       <strong>extra efficient</strong>
       <div class="row">
-        <span class="badge badge--info">9 credits left</span>
+        <span class="badge badge--info">8 credits left</span>
         <a class="btn btn--sm" href="../payment/pricing.html">Buy credits</a>
         <a class="btn btn--ghost btn--sm" href="profile.html">Nguyễn Văn A</a>
       </div>
@@ -29,16 +30,42 @@
           <div class="nav-list__group">Practice</div>
           <a class="nav-list__item" href="practice-select.html">Practice by section</a>
           <a class="nav-list__item" href="weakness-analysis.html">Weakness analysis</a>
+          <div class="nav-list__group">Learning</div>
+          <a class="nav-list__item" href="learning-path.html">My learning path</a>
+          <a class="nav-list__item" href="mentor-list.html">Find a mentor</a>
           <div class="nav-list__group">Account</div>
           <a class="nav-list__item" href="../payment/wallet.html">Credit wallet</a>
-          <a class="nav-list__item" href="kyc-pending.html">ID verification</a>
           <a class="nav-list__item" href="profile.html">Profile</a>
         </nav>
       </aside>
       <main class="app-main">
+        <div class="context-bar">
+          <div class="context-bar__item">
+            <span class="context-bar__label">Certificate:</span>
+            <span class="context-bar__value">TOEIC</span>
+          </div>
+          <div class="context-bar__item">
+            <span class="context-bar__label">Exams taken:</span>
+            <span class="context-bar__value">5</span>
+          </div>
+          <div class="context-bar__item">
+            <span class="context-bar__label">Best score:</span>
+            <span class="context-bar__value">760</span>
+          </div>
+          <div class="context-bar__item">
+            <span class="context-bar__label">Credits:</span>
+            <span class="context-bar__value">8 left</span>
+          </div>
+        </div>
         <div class="container stack">
+          <nav class="breadcrumbs" aria-label="Breadcrumb">
+            <a href="dashboard.html" class="breadcrumbs__item">Home</a>
+            <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+            <span class="breadcrumbs__item" aria-current="page">Exam history</span>
+          </nav>
           <!-- ===== loading ===== -->
           <div class="only-loading stack">
+<h1 class="visually-hidden">Loading exam history</h1>
             <div class="skeleton skeleton--title"></div>
             <div class="skeleton skeleton--block" style="height: 120px"></div>
             <div class="skeleton skeleton--block" style="height: 240px"></div>
@@ -48,8 +75,8 @@
           <div class="only-error">
             <div class="card"><div class="card__body">
               <div class="state-block">
-                <div class="state-block__icon" aria-hidden="true">!</div>
-                <div class="state-block__title">Could not load history</div>
+                <div class="state-block__icon" aria-hidden="true">ERROR</div>
+                <h1 class="state-block__title">Could not load history</h1>
                 <p class="state-block__desc">Check your connection and try again.</p>
                 <button class="btn btn--primary">Try again</button>
               </div>
@@ -85,7 +112,7 @@
               </div>
               <div class="stat">
                 <div class="stat__label">Average score</div>
-                <div class="stat__value">705</div>
+                <div class="stat__value">694</div>
               </div>
             </div>
 
@@ -134,8 +161,8 @@
                     <div class="chart__value">680</div>
                   </div>
                   <div class="chart__col">
-                    <div class="chart__bar" style="height: 122px"></div>
-                    <div class="chart__value">715</div>
+                    <div class="chart__bar" style="height: 118px"></div>
+                    <div class="chart__value">690</div>
                   </div>
                   <div class="chart__col">
                     <div class="chart__bar chart__bar--marked" style="height: 130px"></div>
@@ -161,14 +188,26 @@
                   </thead>
                   <tbody>
                     <tr>
-                      <td>18 Sep 2026</td>
+                      <td>20 Sep 2026</td>
                       <td>
-                        ETS 2024 — Test 3
+                        ETS 2024 — Test 5
                         <span class="badge badge--info">TOEIC</span>
                       </td>
                       <td>400</td>
                       <td>360</td>
                       <td><strong>760</strong></td>
+                      <td><span class="badge badge--success">Completed</span></td>
+                      <td><a href="exam-review.html?attempt=1182">Review</a></td>
+                    </tr>
+                    <tr>
+                      <td>18 Sep 2026</td>
+                      <td>
+                        ETS 2024 — Test 3
+                        <span class="badge badge--info">TOEIC</span>
+                      </td>
+                      <td>385</td>
+                      <td>335</td>
+                      <td><strong>720</strong></td>
                       <td><span class="badge badge--success">Completed</span></td>
                       <td><a href="exam-review.html?attempt=1181">Review</a></td>
                     </tr>
@@ -178,9 +217,9 @@
                         ETS 2024 — Test 2
                         <span class="badge badge--info">TOEIC</span>
                       </td>
-                      <td>375</td>
-                      <td>340</td>
-                      <td><strong>715</strong></td>
+                      <td>370</td>
+                      <td>320</td>
+                      <td><strong>690</strong></td>
                       <td><span class="badge badge--success">Completed</span></td>
                       <td><a href="exam-review.html?attempt=1180">Review</a></td>
                     </tr>
@@ -227,5 +266,6 @@
     </div>
   </div>
   <script src="../assets/js/state-switch.js"></script>
+  <script src="../assets/js/icons.js"></script>
 </body>
 </html>

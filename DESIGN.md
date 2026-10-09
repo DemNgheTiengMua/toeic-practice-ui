@@ -233,7 +233,7 @@ Density is high and unapologetic. This is a 200-question exam under a 120-minute
 - Active state inverts to a solid ink block; it never tints.
 - Colour is a second layer of information, always paired with a word or a number.
 - Depth is the keyline hierarchy — 2px ink frame, 1px soft interior rule — plus one dark scrim under dialogs.
-- The world has no icon set. A sign says the word.
+- Icons are a small drawn set that sits beside a word and never replaces it. A sign still says the word.
 
 ## Colors
 
@@ -390,7 +390,7 @@ A notice placard, not a callout: a full painted keyline in the variant's colour 
 
 ### Signature — The State Block
 
-The empty, error and blocked screens share one component: a small ink stamp above a sentence-case title, a description at the 68ch measure, and the way forward. The stamp is a **word in a painted box**, not a pictograph — `EMPTY`, `FAILED`, `EXPIRED`, `BLOCKED`. The world has no icon set; a sign says the word. The title is deliberately sentence case at 18px in the condensed bold face, because these are the screens where the reader is already stuck and uppercase measurably slows reading.
+The empty, error and blocked screens share one component: a small ink stamp above a sentence-case title, a description at the 68ch measure, and the way forward. The stamp is a **word in a painted box** with a small drawn mark beside it, not a pictograph standing alone — `EMPTY`, `FAILED`, `EXPIRED`, `BLOCKED`. The world has no icon set; a sign says the word. The title is deliberately sentence case at 18px in the condensed bold face, because these are the screens where the reader is already stuck and uppercase measurably slows reading.
 
 ### Signature — The CEFR Band Bar
 
@@ -430,7 +430,7 @@ Not the hero-metric template. The total sits on its own solid sign-blue field as
 - **Don't** use a gradient, a `box-shadow`, a `backdrop-filter`, or a non-zero `border-radius` anywhere. The tokens for radius and shadow are zeroed precisely so this cannot happen by accident.
 - **Don't** put a coloured `border-left` or `border-right` above 1px on a card, alert, list item or callout. The alert used to be a 4px left bar; it is the category's most recognisable tell.
 - **Don't** use a coloured field as lettering at full strength. Gold `#f2b705` is never text; use `#8a5a00`. Blue, green and red follow the same rule.
-- **Don't** use a Unicode glyph or an emoji as an icon. The world has no icon set — a sign says the word. The modal close is the word "Close", not a ✕.
+- **Don't** use a Unicode glyph or an emoji as an icon, and don't let an icon stand without its word. Icons come from the drawn set (`assets/js/icons.js`: 24px grid, one 2.5px square-cap stroke, `currentColor`) and sit beside the label they repeat. The modal close is the word "Close", not a ✕.
 - **Don't** set a full sentence in uppercase, and don't put uppercase tracking on sentence-case text: `text-transform` and `letter-spacing` both have to be explicitly reset, or the element-level rule in `base.css` wins.
 - **Don't** introduce a pale wash to mean "selected". A wash means "related to" or "reached"; selection inverts.
 - **Don't** use a system display face as the display voice. IBM Plex is self-hosted so this cannot drift.

@@ -8,13 +8,14 @@
   <link rel="stylesheet" href="../assets/css/tokens.css">
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
+  <script src="../assets/js/sidebar.js"></script>
 </head>
 <body data-states="loading,error,success,graded-with-recommendations">
   <div class="app-shell app-shell--with-sidebar">
     <header class="app-topbar">
       <strong>extra efficient</strong>
       <div class="row">
-        <span class="badge badge--info">9 credits left</span>
+        <span class="badge badge--info">8 credits left</span>
         <a class="btn btn--sm" href="../payment/pricing.html">Buy credits</a>
         <a class="btn btn--ghost btn--sm" href="profile.html">Nguyễn Văn A</a>
       </div>
@@ -29,9 +30,11 @@
           <div class="nav-list__group">Practice</div>
           <a class="nav-list__item" href="practice-select.html">Practice by section</a>
           <a class="nav-list__item" href="weakness-analysis.html">Weakness analysis</a>
+          <div class="nav-list__group">Learning</div>
+          <a class="nav-list__item" href="learning-path.html">My learning path</a>
+          <a class="nav-list__item" href="mentor-list.html">Find a mentor</a>
           <div class="nav-list__group">Account</div>
           <a class="nav-list__item" href="../payment/wallet.html">Credit wallet</a>
-          <a class="nav-list__item" href="kyc-pending.html">ID verification</a>
           <a class="nav-list__item" href="profile.html">Profile</a>
         </nav>
       </aside>
@@ -44,7 +47,7 @@
           </div>
           <div class="context-bar__item">
             <span class="context-bar__label">Credits:</span>
-            <span class="context-bar__value">3 left</span>
+            <span class="context-bar__value">8 left</span>
           </div>
         </div>
 
@@ -52,14 +55,15 @@
           <!-- Breadcrumbs -->
           <nav class="breadcrumbs" aria-label="Breadcrumb">
             <a href="dashboard.html" class="breadcrumbs__item">Home</a>
-            <span class="breadcrumbs__separator">›</span>
+            <span class="breadcrumbs__separator" aria-hidden="true">›</span>
             <a href="exam-history.html" class="breadcrumbs__item">Exam History</a>
-            <span class="breadcrumbs__separator">›</span>
-            <span class="breadcrumbs__item">Result</span>
+            <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+            <span class="breadcrumbs__item" aria-current="page">Result</span>
           </nav>
 
           <!-- ===== loading ===== -->
           <div class="only-loading stack">
+<h1 class="visually-hidden">Loading results</h1>
             <div class="skeleton skeleton--title"></div>
             <div class="skeleton skeleton--block" style="height: 150px"></div>
             <div class="skeleton skeleton--block" style="height: 220px"></div>
@@ -69,8 +73,8 @@
           <div class="only-error">
             <div class="card"><div class="card__body">
               <div class="state-block">
-                <div class="state-block__icon" aria-hidden="true">!</div>
-                <div class="state-block__title">Could not load results</div>
+                <div class="state-block__icon" aria-hidden="true">ERROR</div>
+                <h1 class="state-block__title">Could not load results</h1>
                 <p class="state-block__desc">
                   Your exam has been saved. Reload to see your score.
                 </p>
@@ -84,7 +88,7 @@
             <div class="row row--between">
               <div>
                 <h1 class="m-0 mb-1">Results — ETS 2024 Test 5</h1>
-                <p class="text-sm text-muted" class="no-margin">
+                <p class="text-sm text-muted no-margin">
                   Completed 20 Sep 2026 · 11:42 · time taken 01:53:29
                 </p>
               </div>
@@ -106,12 +110,12 @@
               <div class="score-hero__section">
                 <div class="score-hero__section-value">400</div>
                 <div class="text-sm text-muted">Listening · 5–495</div>
-                <p class="text-xs text-muted" class="m-0 mt-1">82/100 correct</p>
+                <p class="text-xs text-muted m-0 mt-1">82/100 correct</p>
               </div>
               <div class="score-hero__section">
                 <div class="score-hero__section-value">360</div>
                 <div class="text-sm text-muted">Reading · 5–495</div>
-                <p class="text-xs text-muted" class="m-0 mt-1">74/100 correct</p>
+                <p class="text-xs text-muted m-0 mt-1">74/100 correct</p>
               </div>
             </div>
 
@@ -209,7 +213,7 @@
             <div class="row row--between">
               <div>
                 <h1 class="m-0 mb-1">Results — ETS 2024 Test 5</h1>
-                <p class="text-sm text-muted" class="no-margin">
+                <p class="text-sm text-muted no-margin">
                   Completed 20 Sep 2026 · 11:42 · time taken 01:53:29
                 </p>
               </div>
@@ -223,19 +227,19 @@
               <div class="score-hero__total">
                 <div class="score-hero__total-value">760</div>
                 <div class="score-hero__total-label">Total score · 10–990 scale</div>
-                <p class="text-sm" class="m-0 mt-2">
+                <p class="text-sm m-0 mt-2">
                   <span class="badge badge--success">+40 vs. the previous attempt</span>
                 </p>
               </div>
               <div class="score-hero__section">
                 <div class="score-hero__section-value">400</div>
                 <div class="text-sm text-muted">Listening · 5–495</div>
-                <p class="text-xs text-muted" class="m-0 mt-1">82/100 correct</p>
+                <p class="text-xs text-muted m-0 mt-1">82/100 correct</p>
               </div>
               <div class="score-hero__section">
                 <div class="score-hero__section-value">360</div>
                 <div class="text-sm text-muted">Reading · 5–495</div>
-                <p class="text-xs text-muted" class="m-0 mt-1">74/100 correct</p>
+                <p class="text-xs text-muted m-0 mt-1">74/100 correct</p>
               </div>
             </div>
 
@@ -264,6 +268,35 @@
                     </div>
                   </dl>
                 </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card__header"><strong>AI-graded speaking scores</strong></div>
+              <div class="card__body stack">
+                <div class="rubric-scores">
+                  <h2 class="visually-hidden">Speaking assessment</h2>
+                  <h3>Speaking rubric breakdown</h3>
+                  <dl class="rubric-scores__list">
+                    <div class="rubric-scores__item">
+                      <dt>Pronunciation</dt>
+                      <dd><span class="score-value">2.2</span> / 3</dd>
+                    </div>
+                    <div class="rubric-scores__item">
+                      <dt>Intonation &amp; Stress</dt>
+                      <dd><span class="score-value">2.0</span> / 3</dd>
+                    </div>
+                    <div class="rubric-scores__item">
+                      <dt>Grammar, Vocabulary &amp; Cohesion</dt>
+                      <dd><span class="score-value">1.8</span> / 3</dd>
+                    </div>
+                    <div class="rubric-scores__item">
+                      <dt>Relevance &amp; Completeness</dt>
+                      <dd><span class="score-value">1.9</span> / 3</dd>
+                    </div>
+                  </dl>
+                </div>
+                <p class="text-xs text-muted no-margin">Averages over questions 1–10, counting only the questions each criterion applies to. Question 11 is scored out of 5 and is shown on the <a href="speaking-review.html">speaking result</a>.</p>
               </div>
             </div>
 
@@ -365,7 +398,7 @@
               <div class="card__header"><strong>What's next?</strong></div>
               <div class="card__body">
                 <div class="row row--center row--loose">
-                  <a class="btn btn--primary" href="weakness-analysis.html">View detailed weakness analysis</a>
+                  <a class="btn" href="weakness-analysis.html">View detailed weakness analysis</a>
                   <a class="btn" href="mentor-list.html">Book a mentor session</a>
                   <a class="btn" href="exam-list.html">Take another test</a>
                   <a class="btn" href="learning-path.html">Continue learning path</a>
@@ -378,5 +411,6 @@
     </div>
   </div>
   <script src="../assets/js/state-switch.js"></script>
+  <script src="../assets/js/icons.js"></script>
 </body>
 </html>

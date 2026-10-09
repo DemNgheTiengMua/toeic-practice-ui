@@ -62,7 +62,6 @@
         <div class="catalog__row">
           <span class="catalog__name">Dashboard</span>
           <div class="catalog__states">
-            <a class="catalog__state" href="student/dashboard.html?state=first-time">first-time</a>
             <a class="catalog__state" href="student/dashboard.html?state=success">success</a>
             <a class="catalog__state" href="student/dashboard.html?state=loading">loading</a>
             <a class="catalog__state" href="student/dashboard.html?state=empty">empty</a>
@@ -114,6 +113,7 @@
           <div class="catalog__states">
             <a class="catalog__state" href="student/exam-listening.html?state=success">success</a>
             <a class="catalog__state" href="student/exam-listening.html?state=loading">loading</a>
+            <a class="catalog__state" href="student/exam-listening.html?state=saving">saving</a>
             <a class="catalog__state" href="student/exam-listening.html?state=resumed">resumed</a>
             <a class="catalog__state" href="student/exam-listening.html?state=offline">offline</a>
             <a class="catalog__state" href="student/exam-listening.html?state=expired">expired</a>
@@ -125,6 +125,7 @@
           <div class="catalog__states">
             <a class="catalog__state" href="student/exam-reading.html?state=success">success</a>
             <a class="catalog__state" href="student/exam-reading.html?state=loading">loading</a>
+            <a class="catalog__state" href="student/exam-reading.html?state=saving">saving</a>
             <a class="catalog__state" href="student/exam-reading.html?state=resumed">resumed</a>
             <a class="catalog__state" href="student/exam-reading.html?state=offline">offline</a>
             <a class="catalog__state" href="student/exam-reading.html?state=expired">expired</a>
@@ -161,6 +162,7 @@
             <a class="catalog__state" href="student/grading-pending.html?state=success">success</a>
             <a class="catalog__state" href="student/grading-pending.html?state=loading">loading</a>
             <a class="catalog__state" href="student/grading-pending.html?state=error">error</a>
+            <a class="catalog__state" href="student/grading-pending.html?state=failed">failed</a>
           </div>
         </div>
         <div class="catalog__row">
@@ -193,6 +195,39 @@
             <a class="catalog__state" href="student/practice-take.html?state=finished">finished</a>
             <a class="catalog__state" href="student/practice-take.html?state=loading">loading</a>
             <a class="catalog__state" href="student/practice-take.html?state=error">error</a>
+          </div>
+        </div>
+        <div class="catalog__row">
+          <span class="catalog__name">Speaking instructions</span>
+          <div class="catalog__states">
+            <a class="catalog__state" href="student/speaking-instructions.html?state=success">success</a>
+            <a class="catalog__state" href="student/speaking-instructions.html?state=mic-check">mic-check</a>
+            <a class="catalog__state" href="student/speaking-instructions.html?state=paywall">paywall</a>
+            <a class="catalog__state" href="student/speaking-instructions.html?state=submitting">submitting</a>
+          </div>
+        </div>
+        <div class="catalog__row">
+          <span class="catalog__name">Speaking test</span>
+          <div class="catalog__states">
+            <a class="catalog__state" href="student/exam-speaking.html?state=prepare">prepare</a>
+            <a class="catalog__state" href="student/exam-speaking.html?state=recording">recording</a>
+            <a class="catalog__state" href="student/exam-speaking.html?state=recorded">recorded</a>
+            <a class="catalog__state" href="student/exam-speaking.html?state=saving">saving</a>
+            <a class="catalog__state" href="student/exam-speaking.html?state=save-failed">save-failed</a>
+            <a class="catalog__state" href="student/exam-speaking.html?state=resumed">resumed</a>
+            <a class="catalog__state" href="student/exam-speaking.html?state=expired">expired</a>
+            <a class="catalog__state" href="student/exam-speaking.html?state=submitting">submitting</a>
+            <a class="catalog__state" href="student/exam-speaking.html?state=loading">loading</a>
+          </div>
+        </div>
+        <div class="catalog__row">
+          <span class="catalog__name">Speaking result</span>
+          <div class="catalog__states">
+            <a class="catalog__state" href="student/speaking-review.html?state=success">success</a>
+            <a class="catalog__state" href="student/speaking-review.html?state=failed">failed</a>
+            <a class="catalog__state" href="student/speaking-review.html?state=loading">loading</a>
+            <a class="catalog__state" href="student/speaking-review.html?state=error">error</a>
+            <a class="catalog__state" href="student/speaking-review.html?state=empty">empty</a>
           </div>
         </div>
         <div class="catalog__row">
@@ -423,21 +458,30 @@
           </div>
         </div>
         <div class="catalog__row">
-          <span class="catalog__name">ID verification review</span>
-          <div class="catalog__states">
-            <a class="catalog__state" href="admin/kyc-review.html?state=success">success</a>
-            <a class="catalog__state" href="admin/kyc-review.html?state=adjust">adjust</a>
-            <a class="catalog__state" href="admin/kyc-review.html?state=loading">loading</a>
-            <a class="catalog__state" href="admin/kyc-review.html?state=empty">empty</a>
-            <a class="catalog__state" href="admin/kyc-review.html?state=error">error</a>
-          </div>
-        </div>
-        <div class="catalog__row">
           <span class="catalog__name">Score conversion</span>
           <div class="catalog__states">
             <a class="catalog__state" href="admin/score-conversion.html?state=success">success</a>
             <a class="catalog__state" href="admin/score-conversion.html?state=loading">loading</a>
             <a class="catalog__state" href="admin/score-conversion.html?state=error">error</a>
+            <a class="catalog__state" href="admin/score-conversion.html?state=submitting">submitting</a>
+          </div>
+        </div>
+        <div class="catalog__row">
+          <span class="catalog__name">Credit packages</span>
+          <div class="catalog__states">
+            <a class="catalog__state" href="admin/packages.html?state=success">success</a>
+            <a class="catalog__state" href="admin/packages.html?state=edit">edit</a>
+            <a class="catalog__state" href="admin/packages.html?state=loading">loading</a>
+            <a class="catalog__state" href="admin/packages.html?state=error">error</a>
+          </div>
+        </div>
+        <div class="catalog__row">
+          <span class="catalog__name">Orders</span>
+          <div class="catalog__states">
+            <a class="catalog__state" href="admin/orders.html?state=success">success</a>
+            <a class="catalog__state" href="admin/orders.html?state=loading">loading</a>
+            <a class="catalog__state" href="admin/orders.html?state=empty">empty</a>
+            <a class="catalog__state" href="admin/orders.html?state=error">error</a>
           </div>
         </div>
         <div class="catalog__row">
@@ -462,5 +506,6 @@
     </div>
   </div>
 </div>
+  <script src="assets/js/icons.js"></script>
 </body>
 </html>

@@ -16,53 +16,71 @@
       <a class="btn btn--ghost btn--sm" href="../index.html">Prototype catalog</a>
     </header>
     <main class="app-main">
-      <div class="container container--narrow stack">
-        <h1>Sign in</h1>
-
-        <div class="alert alert--danger only-error" role="alert">
-          Incorrect email or password.
-        </div>
-
-        <div class="card">
-          <div class="card__body stack">
-            <div class="field">
-              <label class="field__label" for="login-email">Email</label>
-              <input class="field__input" id="login-email" type="email"
-                     autocomplete="email" placeholder="ban@example.com">
+      <div class="container">
+        <div class="grid-2">
+          <div class="stack">
+            <h1>Sign in</h1>
+            <div class="alert alert--danger only-error" role="alert">
+              Incorrect email or password.
             </div>
-
-            <div class="field">
-              <label class="field__label" for="login-password">Password</label>
-              <input class="field__input" id="login-password" type="password"
-                     autocomplete="current-password">
-              <p class="field__hint">
-                <a href="forgot-password.html">Forgot your password?</a>
-              </p>
+            <div class="card">
+              <div class="card__body stack">
+                <div class="field">
+                  <label class="field__label" for="login-email">Email</label>
+                  <input class="field__input" id="login-email" type="email"
+                         autocomplete="email" placeholder="ban@example.com">
+                </div>
+                <div class="field">
+                  <label class="field__label" for="login-password">Password</label>
+                  <input class="field__input" id="login-password" type="password"
+                         autocomplete="current-password">
+                  <p class="field__hint">
+                    <a href="forgot-password.html">Forgot your password?</a>
+                  </p>
+                </div>
+                <label class="row">
+                  <input type="checkbox" id="login-remember">
+                  <span class="text-sm">Keep me signed in</span>
+                </label>
+              </div>
+              <div class="card__footer stack">
+                <button class="btn btn--primary btn--lg multi-state" data-show="success error" style="width: 100%">
+                  Sign in
+                </button>
+                <button class="btn btn--primary btn--lg only-submitting" style="width: 100%" disabled>
+                  Signing in…
+                </button>
+                <p class="text-sm text-muted m-0 text-center">
+                  No account yet? <a href="register.html">Sign up</a>
+                </p>
+              </div>
             </div>
+          </div>
 
-            <label class="row">
-              <input type="checkbox" id="login-remember">
-              <span class="text-sm">Keep me signed in</span>
-            </label>
-          </div>
-          <div class="card__footer stack">
-            <button class="btn btn--primary btn--lg only-success" style="width: 100%">
-              Sign in
-            </button>
-            <button class="btn btn--primary btn--lg only-error" style="width: 100%">
-              Sign in
-            </button>
-            <button class="btn btn--primary btn--lg only-submitting" style="width: 100%" disabled>
-              Signing in…
-            </button>
-            <p class="text-sm text-muted m-0 text-center">
-              No account yet? <a href="register.html">Sign up</a>
-            </p>
-          </div>
+          <aside class="card">
+            <div class="card__header"><strong>What is free and what costs credits</strong></div>
+            <div class="card__body stack">
+              <table class="table">
+                <caption class="visually-hidden">The actions in the app and what each one costs</caption>
+                <thead><tr><th scope="col">Action</th><th scope="col">Cost</th></tr></thead>
+                <tbody>
+                  <tr><th scope="row">Placement test</th><td><span class="badge badge--success">Free</span></td></tr>
+                  <tr><th scope="row">Practice, listening and reading</th><td><span class="badge badge--success">Free</span></td></tr>
+                  <tr><th scope="row">Weakness analysis</th><td><span class="badge badge--success">Free</span></td></tr>
+                  <tr><th scope="row">Start a mock exam</th><td>1 credit</td></tr>
+                  <tr><th scope="row">AI grading of speaking or writing</th><td>1 credit</td></tr>
+                  <tr><th scope="row">Book a mentor session</th><td>1 credit</td></tr>
+                  <tr><th scope="row">Premium learning path</th><td>5 credits</td></tr>
+                </tbody>
+              </table>
+              <p class="text-xs text-muted no-margin">Credits do not expire. Start with the free tools and buy credits only when you want a mock exam or a graded answer.</p>
+            </div>
+          </aside>
         </div>
       </div>
     </main>
   </div>
   <script src="../assets/js/state-switch.js"></script>
+  <script src="../assets/js/icons.js"></script>
 </body>
 </html>

@@ -8,13 +8,14 @@
   <link rel="stylesheet" href="../assets/css/tokens.css">
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
+  <script src="../assets/js/sidebar.js"></script>
 </head>
 <body data-states="pending,confirmed,done,cancelled">
   <div class="app-shell app-shell--with-sidebar">
     <header class="app-topbar">
       <strong>extra efficient</strong>
       <div class="row">
-        <span class="badge badge--info">3 credits left</span>
+        <span class="badge badge--info">8 credits left</span>
         <a class="btn btn--sm" href="../payment/pricing.html">Buy credits</a>
         <a class="btn btn--ghost btn--sm" href="profile.html">Nguyễn Văn A</a>
       </div>
@@ -31,14 +32,34 @@
           <a class="nav-list__item" href="weakness-analysis.html">Weakness analysis</a>
           <div class="nav-list__group">Learning</div>
           <a class="nav-list__item" href="learning-path.html">My learning path</a>
-          <a class="nav-list__item" href="mentor-list.html">Find a mentor</a>
+          <a class="nav-list__item is-active" href="mentor-list.html">Find a mentor</a>
           <div class="nav-list__group">Account</div>
           <a class="nav-list__item" href="../payment/wallet.html">Credit wallet</a>
           <a class="nav-list__item" href="profile.html">Profile</a>
         </nav>
       </aside>
       <main class="app-main">
+        <div class="context-bar">
+          <div class="context-bar__item">
+            <span class="context-bar__label">Mentor:</span>
+            <span class="context-bar__value">Dr. Trần Minh Khoa</span>
+          </div>
+          <div class="context-bar__item">
+            <span class="context-bar__label">Certificate:</span>
+            <span class="context-bar__value">TOEIC</span>
+          </div>
+          <div class="context-bar__item">
+            <span class="context-bar__label">Cost:</span>
+            <span class="context-bar__value">1 credit</span>
+          </div>
+        </div>
         <div class="container stack">
+          <nav class="breadcrumbs" aria-label="Breadcrumb">
+            <a href="mentor-list.html" class="breadcrumbs__item">Find a mentor</a>
+            <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+            <span class="breadcrumbs__item" aria-current="page">Booking</span>
+          </nav>
+
           <!-- ===== pending ===== -->
           <div class="only-pending stack">
             <h1>Booking pending confirmation</h1>
@@ -55,11 +76,11 @@
                 </div>
                 <div>
                   <dt>Mentor</dt>
-                  <dd class="m-0 fw-600">Dr. Nguyễn Văn A</dd>
+                  <dd class="m-0 fw-600">Dr. Trần Minh Khoa</dd>
                 </div>
                 <div>
                   <dt>Time</dt>
-                  <dd class="m-0"><strong>Monday, Sep 30 — 9:00 AM</strong></dd>
+                  <dd class="m-0"><strong>Wednesday, Sep 30 — 9:00 AM</strong></dd>
                 </div>
               </dl>
 
@@ -83,11 +104,11 @@
                 </div>
                 <div>
                   <dt>Mentor</dt>
-                  <dd class="m-0 fw-600">Dr. Nguyễn Văn A</dd>
+                  <dd class="m-0 fw-600">Dr. Trần Minh Khoa</dd>
                 </div>
                 <div>
                   <dt>Time</dt>
-                  <dd class="m-0"><strong>Monday, Sep 30 — 9:00 AM</strong></dd>
+                  <dd class="m-0"><strong>Wednesday, Sep 30 — 9:00 AM</strong></dd>
                 </div>
                 <div>
                   <dt>Google Meet</dt>
@@ -116,11 +137,11 @@
                 </div>
                 <div>
                   <dt>Mentor</dt>
-                  <dd class="m-0 fw-600">Dr. Nguyễn Văn A</dd>
+                  <dd class="m-0 fw-600">Dr. Trần Minh Khoa</dd>
                 </div>
                 <div>
                   <dt>Completed</dt>
-                  <dd class="m-0">Monday, Sep 30 — 9:00 AM</dd>
+                  <dd class="m-0">Tuesday, Sep 22 — 9:00 AM</dd>
                 </div>
               </dl>
 
@@ -144,11 +165,11 @@
                 </div>
                 <div>
                   <dt>Mentor</dt>
-                  <dd class="m-0 fw-600">Dr. Nguyễn Văn A</dd>
+                  <dd class="m-0 fw-600">Dr. Trần Minh Khoa</dd>
                 </div>
                 <div>
                   <dt>Was scheduled</dt>
-                  <dd class="m-0">Monday, Sep 30 — 9:00 AM</dd>
+                  <dd class="m-0">Wednesday, Sep 30 — 9:00 AM</dd>
                 </div>
               </dl>
 
@@ -160,5 +181,6 @@
     </div>
   </div>
   <script src="../assets/js/state-switch.js"></script>
+  <script src="../assets/js/icons.js"></script>
 </body>
 </html>

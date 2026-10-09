@@ -27,10 +27,95 @@
     <main class="app-main">
       <h1 class="visually-hidden">Confirm submission — ETS 2024 Test 5</h1>
       <div class="container">
-        <p class="text-muted">The background is the Reading exam screen, still open.</p>
-        <div class="skeleton skeleton--title"></div>
-        <div class="skeleton skeleton--text"></div>
-        <div class="skeleton skeleton--text" style="width: 64%"></div>
+        <div class="exam-layout">
+          <div class="stack">
+            <div class="question">
+              <div class="question__meta">
+                <span class="badge badge--muted">Part 7 — Reading Comprehension</span>
+                <span>Read the email below and answer questions 153–155.</span>
+              </div>
+              <div class="passage">
+                <p><strong>From:</strong> m.torres@brightpath.com<br>
+                   <strong>To:</strong> all-staff@brightpath.com<br>
+                   <strong>Date:</strong> October 4<br>
+                   <strong>Subject:</strong> Office relocation schedule</p>
+                <p>Dear colleagues,</p>
+                <p>As announced last month, our headquarters will move to the
+                   Fairview Business Centre on November 15. Packing materials will be
+                   delivered to each floor on November 11. Please label every box with
+                   your department code before leaving on November 14.</p>
+                <p>Thank you for your cooperation,<br>Marisol Torres, Operations Manager</p>
+              </div>
+            </div>
+            <div class="question">
+              <div class="question__meta">
+                <span class="question__number">Question 153</span>
+                <span class="badge badge--muted">Part 7</span>
+              </div>
+              <p class="question__stem">What is the purpose of the email?</p>
+              <div class="option-list" role="radiogroup" aria-label="Answer for question 153">
+                <label class="option">
+                  <input class="option__input" type="radio" name="bg153" value="A" checked>
+                  <span class="option__marker">A</span>
+                  <span class="option__text">To explain the steps of an office move</span>
+                </label>
+                <label class="option">
+                  <input class="option__input" type="radio" name="bg153" value="B">
+                  <span class="option__marker">B</span>
+                  <span class="option__text">To announce a new operations manager</span>
+                </label>
+                <label class="option">
+                  <input class="option__input" type="radio" name="bg153" value="C">
+                  <span class="option__marker">C</span>
+                  <span class="option__text">To request feedback on a floor plan</span>
+                </label>
+                <label class="option">
+                  <input class="option__input" type="radio" name="bg153" value="D">
+                  <span class="option__marker">D</span>
+                  <span class="option__text">To confirm a delivery of new computers</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <aside class="exam-sidebar stack">
+            <div class="card">
+              <div class="card__header">
+                <div class="row row--between">
+                  <strong class="text-sm">Reading</strong>
+                  <span class="text-xs text-muted">81/100 questions</span>
+                </div>
+              </div>
+              <div class="card__body stack">
+                <div class="progress"><div class="progress__bar" style="width: 81%"></div></div>
+                <div class="stepper flex-col">
+                  <span class="stepper__item is-done">Part 5 — 30 questions · done</span>
+                  <span class="stepper__item">Part 6 — 16 questions · 4 unanswered</span>
+                  <span class="stepper__item is-current">Part 7 — 54 questions · 15 unanswered</span>
+                </div>
+                <p class="text-xs text-muted no-margin">Listening is locked — you cannot return to it.</p>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card__header"><strong class="text-sm">Questions 146–155</strong></div>
+              <div class="card__body">
+                <div class="navigator__grid">
+                  <span class="navigator__cell is-answered">146</span>
+                  <span class="navigator__cell is-answered">147</span>
+                  <span class="navigator__cell is-marked">148</span>
+                  <span class="navigator__cell is-answered">149</span>
+                  <span class="navigator__cell is-unanswered">150</span>
+                  <span class="navigator__cell is-answered">151</span>
+                  <span class="navigator__cell is-answered">152</span>
+                  <span class="navigator__cell is-current is-answered">153</span>
+                  <span class="navigator__cell is-unanswered">154</span>
+                  <span class="navigator__cell is-unanswered">155</span>
+                </div>
+              </div>
+            </div>
+            <span class="btn btn--danger" aria-disabled="true">Submit exam</span>
+          </aside>
+        </div>
       </div>
     </main>
   </div>
@@ -48,18 +133,27 @@
         <div class="grid-3">
           <div class="stat">
             <div class="stat__label">Answered</div>
-            <div class="stat__value" style="font-size: var(--text-2xl)">181</div>
+            <div class="stat__value">181</div>
           </div>
           <div class="stat">
             <div class="stat__label">Flag</div>
-            <div class="stat__value" style="font-size: var(--text-2xl)">7</div>
+            <div class="stat__value">7</div>
           </div>
           <div class="stat">
             <div class="stat__label">Not done</div>
-            <div class="stat__value" style="font-size: var(--text-2xl); color: var(--color-danger)">19</div>
+            <div class="stat__value">19</div>
           </div>
         </div>
-        <p class="text-sm text-muted" class="no-margin">
+        <table class="table">
+          <caption class="visually-hidden">Where the 19 unanswered questions are</caption>
+          <thead><tr><th scope="col">Part</th><th scope="col">Unanswered</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">Part 5 — Incomplete Sentences</th><td>0</td></tr>
+            <tr><th scope="row">Part 6 — Text Completion</th><td>4</td></tr>
+            <tr><th scope="row">Part 7 — Reading Comprehension</th><td>15</td></tr>
+          </tbody>
+        </table>
+        <p class="text-sm text-muted no-margin">
           6 minutes 31 seconds left. You can still come back and continue.
         </p>
       </div>
@@ -83,7 +177,7 @@
           <strong>The 120 minutes ran out while you were confirming.</strong>
           The exam is being submitted automatically with 181 answered questions.
         </div>
-        <p class="text-sm text-muted" class="no-margin">
+        <p class="text-sm text-muted no-margin">
           19 unanswered questions count as incorrect. No further action is needed.
         </p>
       </div>
@@ -103,7 +197,7 @@
           <strong>You have answered all 200 questions.</strong>
           Answers cannot be changed after you submit.
         </div>
-        <p class="text-sm text-muted" class="no-margin">
+        <p class="text-sm text-muted no-margin">
           6 minutes 31 seconds left. Do you want to review the 7 flagged questions before submitting?
         </p>
       </div>
@@ -131,5 +225,6 @@
     </div>
   </div>
   <script src="../assets/js/state-switch.js"></script>
+  <script src="../assets/js/icons.js"></script>
 </body>
 </html>

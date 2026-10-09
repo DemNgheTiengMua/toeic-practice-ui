@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Speaking result — extra efficient</title>
+  <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/css/tokens.css">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <script src="../assets/js/sidebar.js"></script>
+</head>
+<body data-states="loading,empty,error,failed,success">
+  <div class="app-shell app-shell--with-sidebar">
+    <header class="app-topbar">
+      <strong>extra efficient</strong>
+      <div class="row">
+        <span class="badge badge--info">7 credits left</span>
+        <a class="btn btn--sm" href="../payment/pricing.html">Buy credits</a>
+        <a class="btn btn--ghost btn--sm" href="profile.html">Nguyễn Văn A</a>
+      </div>
+    </header>
+    <div class="app-body">
+      <aside class="app-sidebar">
+        <nav class="nav-list" aria-label="Main navigation">
+          <a class="nav-list__item" href="dashboard.html">Home</a>
+          <div class="nav-list__group">Mock exams</div>
+          <a class="nav-list__item" href="exam-list.html">Test list</a>
+          <a class="nav-list__item" href="exam-history.html">Exam history</a>
+          <div class="nav-list__group">Practice</div>
+          <a class="nav-list__item is-active" href="practice-select.html">Practice by section</a>
+          <a class="nav-list__item" href="weakness-analysis.html">Weakness analysis</a>
+          <div class="nav-list__group">Learning</div>
+          <a class="nav-list__item" href="learning-path.html">My learning path</a>
+          <a class="nav-list__item" href="mentor-list.html">Find a mentor</a>
+          <div class="nav-list__group">Account</div>
+          <a class="nav-list__item" href="../payment/wallet.html">Credit wallet</a>
+          <a class="nav-list__item" href="profile.html">Profile</a>
+        </nav>
+      </aside>
+      <main class="app-main">
+        <div class="context-bar">
+          <div class="context-bar__item">
+            <span class="context-bar__label">Certificate:</span>
+            <span class="context-bar__value">TOEIC</span>
+          </div>
+          <div class="context-bar__item">
+            <span class="context-bar__label">Attempt:</span>
+            <span class="context-bar__value">Speaking practice</span>
+          </div>
+          <div class="context-bar__item">
+            <span class="context-bar__label">Cost:</span>
+            <span class="context-bar__value">1 credit · AI grading</span>
+          </div>
+        </div>
+
+        <div class="container stack">
+          <nav class="breadcrumbs" aria-label="Breadcrumb">
+            <a href="dashboard.html" class="breadcrumbs__item">Home</a>
+            <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+            <a href="practice-select.html" class="breadcrumbs__item">Practice by section</a>
+            <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+            <span class="breadcrumbs__item" aria-current="page">Speaking result</span>
+          </nav>
+
+          <!-- ===== loading ===== -->
+          <div class="only-loading stack">
+<h1 class="visually-hidden">Loading speaking result</h1>
+            <div class="skeleton skeleton--title"></div>
+            <div class="skeleton skeleton--block" style="height: 150px"></div>
+            <div class="skeleton skeleton--block" style="height: 320px"></div>
+          </div>
+
+          <!-- ===== error: the page failed to load ===== -->
+          <div class="only-error">
+            <div class="card"><div class="card__body">
+              <div class="state-block">
+                <div class="state-block__icon" aria-hidden="true">ERROR</div>
+                <h1 class="state-block__title">Could not load your result</h1>
+                <p class="state-block__desc">Your recordings are saved. Reload to see your result.</p>
+                <button class="btn btn--primary">Try again</button>
+              </div>
+            </div></div>
+          </div>
+
+          <!-- ===== empty ===== -->
+          <div class="only-empty">
+            <div class="card"><div class="card__body">
+              <div class="state-block">
+                <div class="state-block__icon" aria-hidden="true">EMPTY</div>
+                <h1 class="state-block__title">No speaking practice yet</h1>
+                <p class="state-block__desc">Record your answers to the 11 speaking questions and the AI grading result will appear here.</p>
+                <a href="speaking-instructions.html" class="btn btn--primary">Start speaking practice</a>
+              </div>
+            </div></div>
+          </div>
+
+          <!-- ===== failed: grading ran and did not finish ===== -->
+          <div class="only-failed">
+            <div class="card"><div class="card__body">
+              <div class="state-block">
+                <div class="state-block__icon state-block__icon--danger" aria-hidden="true">FAILED</div>
+                <h1 class="state-block__title">Grading did not finish</h1>
+                <p class="state-block__desc">Your 11 recordings are saved. Retrying does not charge another credit.</p>
+                <button class="btn btn--primary">Retry grading</button>
+              </div>
+            </div></div>
+          </div>
+
+          <!-- ===== success ===== -->
+          <div class="only-success stack">
+            <div class="row row--between">
+              <div>
+                <h1 class="m-0 mb-1">Speaking result</h1>
+                <p class="text-sm text-muted no-margin">Graded 27 September 2026 · 11 of 11 questions recorded · about 20 minutes</p>
+              </div>
+              <div class="row">
+                <a class="btn" href="practice-select.html">Practice by section</a>
+                <a class="btn btn--primary" href="speaking-instructions.html">Practise speaking again</a>
+              </div>
+            </div>
+
+            <div class="score-hero">
+              <div class="score-hero__total">
+                <div class="score-hero__total-value">120</div>
+                <div class="score-hero__total-label">Speaking score · 0–200 scale</div>
+              </div>
+              <div class="score-hero__section">
+                <div class="score-hero__section-value">23</div>
+                <div class="text-sm text-muted">Points earned · 35 available</div>
+                <p class="text-xs text-muted m-0 mt-1">Questions 1–10 out of 3, question 11 out of 5</p>
+              </div>
+              <div class="score-hero__section">
+                <div class="score-hero__section-value">1</div>
+                <div class="text-sm text-muted">Credit used</div>
+                <p class="text-xs text-muted m-0 mt-1">AI grading, charged at the start</p>
+              </div>
+            </div>
+
+            <section>
+              <h2 class="section-group__title">Your 11 answers</h2>
+              <div class="card"><div class="card__body">
+                <table class="table">
+                  <caption class="visually-hidden">Score and recording for each speaking question</caption>
+                  <thead>
+                    <tr><th scope="col">Question</th><th scope="col">Task</th><th scope="col">Score</th><th scope="col">Recording</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr><th scope="row">1</th><td>Read a text aloud</td><td>2 / 3</td><td><button class="btn btn--sm" type="button" aria-label="Play your recording for question 1">Play</button></td></tr>
+                    <tr><th scope="row">2</th><td>Read a text aloud</td><td>2 / 3</td><td><button class="btn btn--sm" type="button" aria-label="Play your recording for question 2">Play</button></td></tr>
+                    <tr><th scope="row">3</th><td>Describe a picture</td><td>2 / 3</td><td><button class="btn btn--sm" type="button" aria-label="Play your recording for question 3">Play</button></td></tr>
+                    <tr><th scope="row">4</th><td>Describe a picture</td><td>3 / 3</td><td><button class="btn btn--sm" type="button" aria-label="Play your recording for question 4">Play</button></td></tr>
+                    <tr><th scope="row">5</th><td>Respond to questions</td><td>2 / 3</td><td><button class="btn btn--sm" type="button" aria-label="Play your recording for question 5">Play</button></td></tr>
+                    <tr><th scope="row">6</th><td>Respond to questions</td><td>2 / 3</td><td><button class="btn btn--sm" type="button" aria-label="Play your recording for question 6">Play</button></td></tr>
+                    <tr><th scope="row">7</th><td>Respond to questions</td><td><span class="badge badge--danger">1 / 3</span></td><td><button class="btn btn--sm" type="button" aria-label="Play your recording for question 7">Play</button></td></tr>
+                    <tr><th scope="row">8</th><td>Respond using information</td><td>2 / 3</td><td><button class="btn btn--sm" type="button" aria-label="Play your recording for question 8">Play</button></td></tr>
+                    <tr><th scope="row">9</th><td>Respond using information</td><td>2 / 3</td><td><button class="btn btn--sm" type="button" aria-label="Play your recording for question 9">Play</button></td></tr>
+                    <tr><th scope="row">10</th><td>Respond using information</td><td>2 / 3</td><td><button class="btn btn--sm" type="button" aria-label="Play your recording for question 10">Play</button></td></tr>
+                    <tr><th scope="row">11</th><td>Express an opinion</td><td>3 / 5</td><td><button class="btn btn--sm" type="button" aria-label="Play your recording for question 11">Play</button></td></tr>
+                  </tbody>
+                  <tfoot>
+                    <tr><th scope="row" colspan="2">Total</th><td colspan="2">23 / 35</td></tr>
+                  </tfoot>
+                </table>
+              </div></div>
+            </section>
+
+            <section>
+              <h2 class="section-group__title">Lowest score: question 7</h2>
+              <div class="card"><div class="card__body stack">
+                <p class="no-margin">Respond to questions · 1 of 3. Play your recording, then read what the grader noted on each criterion.</p>
+                <ul class="stack m-0 pl-5">
+                  <li><strong>Pronunciation:</strong> Clear overall, with the final consonants dropped on several words.</li>
+                  <li><strong>Intonation and stress:</strong> Flat across the answer, with no stress on the key information.</li>
+                  <li><strong>Grammar, vocabulary and cohesion:</strong> The answer stopped after one short sentence.</li>
+                  <li><strong>Relevance and completeness:</strong> It answered the question but gave no supporting detail.</li>
+                </ul>
+                <div class="row">
+                  <button class="btn" type="button" aria-label="Play your recording for question 7">Play question 7</button>
+                </div>
+              </div></div>
+            </section>
+
+            <div class="alert alert--info">
+              <strong>No band is shown for speaking alone.</strong>
+              Bands are set from the total of a full mock exam. See <a href="exam-result.html">a full exam result</a> for how a band is reported.
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <script src="../assets/js/state-switch.js"></script>
+  <script src="../assets/js/icons.js"></script>
+</body>
+</html>

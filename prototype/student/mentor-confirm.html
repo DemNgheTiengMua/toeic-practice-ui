@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="../assets/css/tokens.css">
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
+  <script src="../assets/js/sidebar.js"></script>
   <style>
     /* Polish: Mentor booking detail list styling */
     .booking-details {
@@ -53,7 +54,8 @@
     <header class="app-topbar">
       <strong>extra efficient</strong>
       <div class="row">
-        <span class="badge badge--info">3 credits left</span>
+        <span class="badge badge--info multi-state" data-show="success submitting error">8 credits left</span>
+        <span class="badge badge--warning only-paywall">0 credits left</span>
         <a class="btn btn--sm" href="../payment/pricing.html">Buy credits</a>
         <a class="btn btn--ghost btn--sm" href="profile.html">Nguyễn Văn A</a>
       </div>
@@ -77,70 +79,117 @@
         </nav>
       </aside>
       <main class="app-main">
+        <div class="context-bar">
+          <div class="context-bar__item">
+            <span class="context-bar__label">Mentor:</span>
+            <span class="context-bar__value">Dr. Trần Minh Khoa</span>
+          </div>
+          <div class="context-bar__item">
+            <span class="context-bar__label">Cost:</span>
+            <span class="context-bar__value">1 credit</span>
+          </div>
+          <div class="context-bar__item">
+            <span class="context-bar__label">Balance:</span>
+            <span class="context-bar__value multi-state" data-show="success submitting error">8 credits</span>
+            <span class="context-bar__value only-paywall">0 credits</span>
+          </div>
+        </div>
+
         <div class="container stack">
+          <nav class="breadcrumbs" aria-label="Breadcrumb">
+            <a href="mentor-list.html" class="breadcrumbs__item">Find a mentor</a>
+            <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+            <a href="mentor-detail.html" class="breadcrumbs__item">Dr. Trần Minh Khoa</a>
+            <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+            <span class="breadcrumbs__item" aria-current="page">Confirm booking</span>
+          </nav>
+
           <!-- ===== paywall ===== -->
-          <div class="only-paywall">
-            <div class="alert alert--info">
-              <strong>Nothing was deducted.</strong> Buy credits to book this mentor session.
+          <div class="only-paywall stack">
+            <div class="alert alert--warning" role="alert">
+              <strong>Not enough credits.</strong> A mentor session costs 1 credit and you have 0. Nothing was deducted.
             </div>
-            <h1>Confirm booking</h1>
-            <p><a href="../payment/pricing.html" class="btn btn--primary">Buy credits</a></p>
+            <h1 class="m-0">Confirm booking</h1>
+            <div class="grid-3">
+              <div class="stat">
+                <div class="stat__label">Session cost</div>
+                <div class="stat__value">1</div>
+                <div class="stat__hint">credit, charged on confirm</div>
+              </div>
+              <div class="stat">
+                <div class="stat__label">Your balance</div>
+                <div class="stat__value">0</div>
+                <div class="stat__hint">credits available</div>
+              </div>
+              <div class="stat">
+                <div class="stat__label">Short by</div>
+                <div class="stat__value">1</div>
+                <div class="stat__hint">credit needed</div>
+              </div>
+            </div>
+            <div class="card"><div class="card__footer">
+              <div class="row">
+                <a href="../payment/pricing.html" class="btn btn--primary">Buy credits</a>
+                <a href="mentor-detail.html" class="btn">Back to the mentor</a>
+              </div>
+            </div></div>
           </div>
 
           <!-- ===== error ===== -->
           <div class="only-error">
-            <div class="alert alert--danger">
-              <strong>Booking failed.</strong> The time slot may no longer be available. Try again or pick a different slot.
+<h1 class="visually-hidden">Confirm Booking</h1>
+            <div class="alert alert--danger" role="alert">
+              <strong>Booking failed.</strong> The time slot may no longer be available. No credit was deducted. Pick a different slot.
             </div>
           </div>
 
-          <!-- ===== success ===== -->
-          <div class="only-success stack">
-            <h1>Confirm your booking</h1>
-
-            <div class="card"><div class="card__body stack">
-              <h2 class="visually-hidden">Booking information</h2>
-              <h3>Session details</h3>
-              <dl class="booking-details">
-                <div class="booking-details__row">
-                  <dt class="booking-details__label">Mentor</dt>
-                  <dd class="booking-details__value"><strong>Dr. Nguyễn Văn A</strong></dd>
-                </div>
-                <div class="booking-details__row">
-                  <dt class="booking-details__label">Certificate</dt>
-                  <dd class="booking-details__value"><span class="badge badge--info">TOEIC</span></dd>
-                </div>
-                <div class="booking-details__row">
-                  <dt class="booking-details__label">Focus area</dt>
-                  <dd class="booking-details__value">Listening strategies</dd>
-                </div>
-                <div class="booking-details__row">
-                  <dt class="booking-details__label">Time</dt>
-                  <dd class="booking-details__value"><strong>Monday, Sep 30 — 9:00 AM</strong></dd>
-                </div>
-                <div class="booking-details__row">
-                  <dt class="booking-details__label">Duration</dt>
-                  <dd class="booking-details__value">60 minutes</dd>
-                </div>
-                <div class="booking-details__row">
-                  <dt class="booking-details__label">Platform</dt>
-                  <dd class="booking-details__value">Google Meet (link sent after booking)</dd>
-                </div>
-              </dl>
-
-              <div class="alert alert--info">
-                <strong>Cancellation policy:</strong>
-                <p style="margin: var(--space-1) 0 0;">Free cancellation up to 24 hours before the session. No refund for late cancellations.</p>
+          <!-- ===== success + submitting =====
+               submitting only swaps the button, so the summary has to stay on
+               screen behind it; an .only-success wrapper left the state blank. -->
+          <div class="multi-state stack" data-show="success submitting">
+            <div class="row row--between">
+              <div>
+                <h1 class="m-0 mb-1">Confirm your booking</h1>
+                <p class="text-muted no-margin">Check the time. The credit is charged when you confirm.</p>
               </div>
+              <span class="badge badge--warning">1 credit</span>
+            </div>
 
-              <div class="booking-summary">
-                <strong class="booking-summary__label">Total cost</strong>
-                <span class="booking-summary__value">1 credit</span>
+            <div class="card">
+              <div class="card__header"><strong>Session details</strong></div>
+              <div class="card__body">
+                <dl class="dl-grid">
+                  <div><dt class="text-muted">Mentor</dt><dd class="m-0 fw-600">Dr. Trần Minh Khoa</dd></div>
+                  <div><dt class="text-muted">Certificate</dt><dd class="m-0"><span class="badge badge--info">TOEIC</span></dd></div>
+                  <div><dt class="text-muted">Focus area</dt><dd class="m-0">Listening strategies</dd></div>
+                  <div><dt class="text-muted">Time</dt><dd class="m-0"><strong>Wednesday, Sep 30 — 9:00 AM</strong></dd></div>
+                  <div><dt class="text-muted">Duration</dt><dd class="m-0">60 minutes</dd></div>
+                  <div><dt class="text-muted">Platform</dt><dd class="m-0">Google Meet, link sent after booking</dd></div>
+                </dl>
               </div>
+            </div>
 
+            <div class="grid-2">
+              <div class="stat">
+                <div class="stat__label">Total cost</div>
+                <div class="stat__value">1</div>
+                <div class="stat__hint">credit</div>
+              </div>
+              <div class="stat">
+                <div class="stat__label">Balance after booking</div>
+                <div class="stat__value">7</div>
+                <div class="stat__hint">credits, from 8 now</div>
+              </div>
+            </div>
+
+            <div class="alert alert--info">
+              <strong>Cancellation.</strong> Free up to 24 hours before the session. Later cancellations are not credited back.
+            </div>
+
+            <div class="card"><div class="card__footer">
               <div class="row">
                 <button class="btn btn--primary multi-state" data-show="success" type="button">Confirm booking</button>
-                <button class="btn btn--primary only-submitting" disabled type="button">Processing...</button>
+                <button class="btn btn--primary only-submitting" disabled type="button">Processing…</button>
                 <a href="mentor-detail.html" class="btn">Cancel</a>
               </div>
             </div></div>
@@ -150,5 +199,6 @@
     </div>
   </div>
   <script src="../assets/js/state-switch.js"></script>
+  <script src="../assets/js/icons.js"></script>
 </body>
 </html>
