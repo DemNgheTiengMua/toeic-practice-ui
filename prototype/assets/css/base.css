@@ -335,6 +335,7 @@ html.sidebar-booting *, html.sidebar-booting *::before { transition: none !impor
 .only-prepare.only-prepare, .only-recording.only-recording,
 .only-recorded.only-recorded, .only-save-failed.only-save-failed,
 .only-mic-check.only-mic-check,
+.only-writing.only-writing, .only-near-limit.only-near-limit, .only-over-limit.only-over-limit, .only-task-time-up.only-task-time-up, .only-hint-shown.only-hint-shown, 
 .only-approved.only-approved { display: none; }
 body[data-state="loading"]    .only-loading,
 body[data-state="empty"]      .only-empty,
@@ -369,6 +370,11 @@ body[data-state="recording"]        .only-recording,
 body[data-state="recorded"]         .only-recorded,
 body[data-state="save-failed"]      .only-save-failed,
 body[data-state="mic-check"]        .only-mic-check,
+body[data-state="writing"] .only-writing,
+body[data-state="near-limit"] .only-near-limit,
+body[data-state="over-limit"] .only-over-limit,
+body[data-state="task-time-up"] .only-task-time-up,
+body[data-state="hint-shown"] .only-hint-shown,
 body[data-state="approved"]         .only-approved { display: revert; }
 
 /* Elements that appear in several states: add .multi-state and list the states
@@ -405,6 +411,11 @@ body[data-state="recording"]        .multi-state[data-show~="recording"],
 body[data-state="recorded"]         .multi-state[data-show~="recorded"],
 body[data-state="save-failed"]      .multi-state[data-show~="save-failed"],
 body[data-state="mic-check"]        .multi-state[data-show~="mic-check"],
+body[data-state="writing"] .multi-state[data-show~="writing"],
+body[data-state="near-limit"] .multi-state[data-show~="near-limit"],
+body[data-state="over-limit"] .multi-state[data-show~="over-limit"],
+body[data-state="task-time-up"] .multi-state[data-show~="task-time-up"],
+body[data-state="hint-shown"] .multi-state[data-show~="hint-shown"],
 body[data-state="cancelled"]        .multi-state[data-show~="cancelled"] { display: revert; }
 
 /* .modal-overlay centres itself with display: grid, but `revert` in the two

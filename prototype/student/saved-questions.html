@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Saved questions — extra efficient</title>
+  <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/css/tokens.css">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <script src="../assets/js/sidebar.js"></script>
+</head>
+<body data-states="loading,empty,error,success">
+  <div class="app-shell app-shell--with-sidebar">
+    <header class="app-topbar">
+      <strong>extra efficient</strong>
+      <div class="row">
+        <span class="badge badge--info">8 credits left</span>
+        <a class="btn btn--sm" href="../payment/pricing.html">Buy credits</a>
+        <a class="btn btn--ghost btn--sm" href="profile.html">Nguyễn Văn A</a>
+      </div>
+    </header>
+    <div class="app-body">
+      <aside class="app-sidebar">
+        <nav class="nav-list" aria-label="Main navigation">
+          <a class="nav-list__item" href="dashboard.html">Home</a>
+          <div class="nav-list__group">Mock exams</div>
+          <a class="nav-list__item" href="exam-list.html">Test list</a>
+          <a class="nav-list__item" href="exam-history.html">Exam history</a>
+          <div class="nav-list__group">Practice</div>
+          <a class="nav-list__item" href="practice-select.html">Practice by section</a>
+          <a class="nav-list__item" href="weakness-analysis.html">Weakness analysis</a>
+          <a class="nav-list__item is-active" href="saved-questions.html">Saved questions</a>
+          <div class="nav-list__group">Learning</div>
+          <a class="nav-list__item" href="learning-path.html">My learning path</a>
+          <a class="nav-list__item" href="mentor-list.html">Find a mentor</a>
+          <div class="nav-list__group">Account</div>
+          <a class="nav-list__item" href="../payment/wallet.html">Credit wallet</a>
+          <a class="nav-list__item" href="support-report.html">Report a problem</a>
+          <a class="nav-list__item" href="profile.html">Profile</a>
+        </nav>
+      </aside>
+      <main class="app-main">
+        <div class="context-bar">
+          <div class="context-bar__item">
+            <span class="context-bar__label">Certificate:</span>
+            <span class="context-bar__value">TOEIC</span>
+          </div>
+          <div class="context-bar__item">
+            <span class="context-bar__label">Saved:</span>
+            <span class="context-bar__value">14 questions</span>
+          </div>
+          <div class="context-bar__item">
+            <span class="context-bar__label">Cost:</span>
+            <span class="context-bar__value">Free · 0 credits</span>
+          </div>
+        </div>
+        <div class="container stack">
+          <nav class="breadcrumbs" aria-label="Breadcrumb">
+            <a href="dashboard.html" class="breadcrumbs__item">Home</a>
+            <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+            <span class="breadcrumbs__item" aria-current="page">Saved questions</span>
+          </nav>
+
+          <!-- ===== loading ===== -->
+          <div class="only-loading stack">
+            <h1 class="visually-hidden">Loading saved questions</h1>
+            <div class="skeleton skeleton--title"></div>
+            <div class="skeleton skeleton--block" style="height: 90px"></div>
+            <div class="skeleton skeleton--block" style="height: 140px"></div>
+            <div class="skeleton skeleton--block" style="height: 140px"></div>
+            <div class="skeleton skeleton--block" style="height: 140px"></div>
+          </div>
+
+          <!-- ===== empty: chưa lưu câu nào ===== -->
+          <div class="only-empty stack">
+            <h1 class="no-margin">Saved questions</h1>
+            <div class="card"><div class="card__body">
+              <div class="state-block">
+                <div class="state-block__icon" aria-hidden="true">EMPTY</div>
+                <div class="state-block__title">No saved questions yet</div>
+                <p class="state-block__desc">
+                  Questions land here two ways: you tap <strong>Save question</strong> while reviewing, or you answer a practice question wrong and it is saved automatically.
+                </p>
+                <div class="row row--center">
+                  <a class="btn btn--primary btn--lg" href="practice-select.html">Start a practice session</a>
+                  <a class="btn btn--lg" href="exam-history.html">Review a past exam</a>
+                </div>
+              </div>
+            </div></div>
+          </div>
+
+          <!-- ===== error ===== -->
+          <div class="only-error">
+            <div class="card"><div class="card__body">
+              <div class="state-block">
+                <div class="state-block__icon" aria-hidden="true">ERROR</div>
+                <h1 class="state-block__title">Could not load saved questions</h1>
+                <p class="state-block__desc">Check your connection and try again.</p>
+                <button class="btn btn--primary">Try again</button>
+              </div>
+            </div></div>
+          </div>
+
+          <!-- ===== success ===== -->
+          <div class="only-success stack">
+            <div class="row row--between">
+              <div>
+                <h1 class="m-0 mb-1">Saved questions</h1>
+                <p class="text-muted no-margin">
+                  14 questions in your bank — 9 saved automatically from wrong answers, 5 saved by you.
+                  <strong>Practicing them is free, no credit deducted.</strong>
+                </p>
+              </div>
+              <a class="btn btn--primary" href="practice-take.html">Practice all 14</a>
+            </div>
+
+            <div class="card">
+              <div class="card__body row" style="gap: var(--space-4); flex-wrap: wrap">
+                <div class="field" style="flex: 0 0 200px">
+                  <label class="field__label" for="sq-source">Source</label>
+                  <select class="field__input" id="sq-source">
+                    <option selected>All sources</option>
+                    <option>Wrong answers (automatic)</option>
+                    <option>Saved by me</option>
+                  </select>
+                </div>
+                <div class="field" style="flex: 0 0 200px">
+                  <label class="field__label" for="sq-part">Part</label>
+                  <select class="field__input" id="sq-part">
+                    <option selected>All parts</option>
+                    <option>Part 1 — Photographs</option>
+                    <option>Part 2 — Question-Response</option>
+                    <option>Part 5 — Incomplete Sentences</option>
+                    <option>Part 6 — Text Completion</option>
+                    <option>Part 7 — Reading Comprehension</option>
+                  </select>
+                </div>
+                <div class="field" style="flex: 0 0 200px">
+                  <label class="field__label" for="sq-type">Question type</label>
+                  <select class="field__input" id="sq-type">
+                    <option selected>All types</option>
+                    <option>Verb tense</option>
+                    <option>Vocabulary in context</option>
+                    <option>Inference</option>
+                    <option>Preposition</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- SavedQuestions (Source='manual'|'incorrect') + QuestionCategories labels -->
+            <div class="card">
+              <div class="card__body stack">
+                <div class="row row--between">
+                  <span class="text-sm">
+                    <span class="badge badge--danger">Wrong answer</span>
+                    <span class="badge badge--muted">Part 7 — inference</span>
+                  </span>
+                  <span class="text-sm text-muted">Saved 19 Sep 2026</span>
+                </div>
+                <p class="no-margin">What does the speaker imply about the delivery schedule?</p>
+                <div class="row row--between">
+                  <span class="text-sm text-muted">ETS 2024 — Test 5 · missed 2 times</span>
+                  <span class="row">
+                    <a class="btn btn--sm" href="exam-review.html?attempt=1182">Review</a>
+                    <button class="btn btn--ghost btn--sm">Remove</button>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card__body stack">
+                <div class="row row--between">
+                  <span class="text-sm">
+                    <span class="badge badge--danger">Wrong answer</span>
+                    <span class="badge badge--muted">Part 5 — verb tense</span>
+                  </span>
+                  <span class="text-sm text-muted">Saved 18 Sep 2026</span>
+                </div>
+                <p class="no-margin">The manager asked that the report ______ by Friday.</p>
+                <div class="row row--between">
+                  <span class="text-sm text-muted">Practice session · missed 1 time</span>
+                  <span class="row">
+                    <a class="btn btn--sm" href="practice-summary.html">Review</a>
+                    <button class="btn btn--ghost btn--sm">Remove</button>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card__body stack">
+                <div class="row row--between">
+                  <span class="text-sm">
+                    <span class="badge badge--info">Saved by you</span>
+                    <span class="badge badge--muted">Part 6 — vocabulary</span>
+                  </span>
+                  <span class="text-sm text-muted">Saved 15 Sep 2026</span>
+                </div>
+                <p class="no-margin">The company decided to ______ its refund policy after customer feedback.</p>
+                <div class="row row--between">
+                  <span class="text-sm text-muted">ETS 2024 — Test 3</span>
+                  <span class="row">
+                    <a class="btn btn--sm" href="exam-review.html?attempt=1181">Review</a>
+                    <button class="btn btn--ghost btn--sm">Remove</button>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div class="row row--center">
+              <button class="btn btn--sm">Load more (11 remaining)</button>
+            </div>
+
+            <div class="card">
+              <div class="card__header"><strong>About your bank</strong></div>
+              <div class="card__body">
+                <p class="text-sm no-margin">
+                  Remove a question once it stops being useful. Practicing this bank starts a normal practice session — instant feedback after each question, no time limit.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <script src="../assets/js/state-switch.js"></script>
+  <script src="../assets/js/icons.js"></script>
+</body>
+</html>

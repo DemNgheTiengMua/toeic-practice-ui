@@ -30,11 +30,13 @@
           <div class="nav-list__group">Practice</div>
           <a class="nav-list__item is-active" href="practice-select.html">Practice by section</a>
           <a class="nav-list__item" href="weakness-analysis.html">Weakness analysis</a>
+          <a class="nav-list__item" href="saved-questions.html">Saved questions</a>
           <div class="nav-list__group">Learning</div>
           <a class="nav-list__item" href="learning-path.html">My learning path</a>
           <a class="nav-list__item" href="mentor-list.html">Find a mentor</a>
           <div class="nav-list__group">Account</div>
           <a class="nav-list__item" href="../payment/wallet.html">Credit wallet</a>
+          <a class="nav-list__item" href="support-report.html">Report a problem</a>
           <a class="nav-list__item" href="profile.html">Profile</a>
         </nav>
       </aside>
@@ -106,12 +108,12 @@
               <div class="stat">
                 <div class="stat__label">Correct</div>
                 <div class="stat__value" style="color: var(--color-success)">15</div>
-                <div class="stat__hint">out of 20 questions · 75%</div>
+                <div class="stat__hint">out of 19 answered · 79% · 2 with a hint</div>
               </div>
               <div class="stat">
                 <div class="stat__label">Incorrect</div>
                 <div class="stat__value" style="color: var(--color-danger)">4</div>
-                <div class="stat__hint">saved to your incorrect-answer bank</div>
+                <div class="stat__hint">saved to your <a href="saved-questions.html">incorrect-answer bank</a> · 1 with a hint</div>
               </div>
               <div class="stat">
                 <div class="stat__label">Skip</div>
@@ -121,26 +123,51 @@
             </div>
 
             <div class="alert alert--success">
-              Your Part 5 accuracy increased from <strong>71%</strong> move up to
+              Your Part 5 accuracy moved up from <strong>71%</strong> to
               <strong>72%</strong> after this session.
             </div>
+            <!-- UI-43: recommendations are generated from this session and point at what to do next -->
+            <section>
+              <h2 class="section-group__title">What to do next</h2>
+              <div class="card"><div class="card__body stack">
+                <p class="text-sm text-muted no-margin">Three notes from this session, kept on your weakness analysis until you resolve them.</p>
+                <ul class="stack m-0 pl-5">
+                  <li>
+                    <strong>Verb tense after a time marker.</strong>
+                    Both verb-tense questions you missed had the time marker at the end of the sentence. Read the sentence to the end before choosing.
+                    <a class="text-sm" href="practice-take.html">Practise verb tense</a>
+                  </li>
+                  <li>
+                    <strong>You used a hint on 3 of 20 questions.</strong>
+                    Two of those were still correct. Try the next set without hints to see where you actually stand.
+                  </li>
+                  <li>
+                    <strong>Relative pronouns are your weakest type here.</strong>
+                    1 of 2 wrong, and only 2 questions seen. Not enough to be sure yet — your weakness analysis will say more after another session.
+                    <a class="text-sm" href="weakness-analysis.html">Weakness analysis</a>
+                  </li>
+                </ul>
+              </div></div>
+            </section>
+
             <div class="card">
               <div class="card__header">
                 <div class="row row--between">
                   <strong>Questions to review</strong>
-                  <span class="text-sm text-muted">4 incorrect answers · 1 skipped</span>
+                  <span class="text-sm text-muted">4 incorrect answers · 1 skipped · hints marked</span>
                 </div>
               </div>
               <div class="card__body">
                 <table class="table table--striped">
                   <thead>
-                    <tr><th>Question</th><th>Grammar type</th><th>Your answer</th><th>Answer</th><th></th></tr>
+                    <tr><th>Question</th><th>Grammar type</th><th>Your answer</th><th>Answer</th><th>Hint</th><th></th></tr>
                   </thead>
                   <tbody>
                     <tr>
                       <td>7</td><td>Verb tense</td>
                       <td><span class="badge badge--danger">B — reviewing</span></td>
                       <td><span class="badge badge--success">C — will review</span></td>
+                      <td>Used</td>
                       <td>
                         <details>
                           <summary>View explanation</summary>
@@ -157,6 +184,7 @@
                       <td>11</td><td>Preposition</td>
                       <td><span class="badge badge--danger">A — in</span></td>
                       <td><span class="badge badge--success">D — within</span></td>
+                      <td><span class="text-muted">No</span></td>
                       <td>
                         <details>
                           <summary>View explanation</summary>
@@ -173,6 +201,7 @@
                       <td>14</td><td>Part of speech</td>
                       <td><span class="badge badge--danger">C — competitively</span></td>
                       <td><span class="badge badge--success">B — competitive</span></td>
+                      <td><span class="text-muted">No</span></td>
                       <td>
                         <details>
                           <summary>View explanation</summary>
@@ -190,6 +219,7 @@
                       <td>18</td><td>Relative pronoun</td>
                       <td><span class="badge badge--danger">A — which</span></td>
                       <td><span class="badge badge--success">C — whose</span></td>
+                      <td><span class="text-muted">No</span></td>
                       <td>
                         <details>
                           <summary>View explanation</summary>
@@ -206,6 +236,7 @@
                       <td>20</td><td>Conjunction</td>
                       <td><span class="badge badge--muted">Skip</span></td>
                       <td><span class="badge badge--success">B — although</span></td>
+                      <td><span class="text-muted">No</span></td>
                       <td>
                         <details>
                           <summary>View explanation</summary>
@@ -213,7 +244,7 @@
                             <div class="explain__title">Why B is correct</div>
                             <p class="no-margin">
                               The two clauses contrast, so a concessive conjunction is needed
-                              <strong>although</strong>. You skipped this question — questions left blank count as incorrect.
+                              <strong>although</strong>. You skipped this question — a skipped question is not counted in the rate.
                             </p>
                           </div>
                         </details>

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Writing instructions — extra efficient</title>
+  <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/css/tokens.css">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+</head>
+<body data-states="success,paywall,submitting">
+  <div class="app-shell">
+    <header class="app-topbar">
+      <strong>Writing practice</strong>
+      <a class="btn btn--ghost btn--sm" href="practice-select.html">Exit</a>
+    </header>
+    <main class="app-main">
+      <div class="container container--prose">
+
+        <!-- ===== paywall ===== -->
+        <div class="only-paywall">
+          <div class="card"><div class="card__body">
+            <div class="state-block">
+              <div class="state-block__icon" aria-hidden="true">LOCKED</div>
+              <h1 class="state-block__title">You are out of credits</h1>
+              <p class="state-block__desc">
+                Writing practice uses 1 credit, for the AI grading of your answers. Listening and reading practice stay free.
+              </p>
+              <div class="row row--center">
+                <a class="btn btn--primary btn--lg" href="../payment/pricing.html">View pricing</a>
+                <a class="btn btn--lg" href="practice-select.html">Practice free</a>
+              </div>
+            </div>
+          </div></div>
+        </div>
+
+        <!-- ===== success ===== -->
+        <div class="only-success stack">
+          <h1>Before you begin</h1>
+
+          <div class="card">
+            <div class="card__header"><strong>Writing structure</strong></div>
+            <div class="card__body">
+              <table class="table">
+                <caption class="visually-hidden">The three writing tasks, with time and length</caption>
+                <thead>
+                  <tr><th scope="col">Questions</th><th scope="col">Task</th><th scope="col">Time</th><th scope="col">Length</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>1–5</td><td>Write a sentence based on a picture, using two given words</td><td>8 min for all five</td><td>One sentence each</td></tr>
+                  <tr><td>6–7</td><td>Respond to a written request (an email)</td><td>10 min each</td><td>Up to 150 words in this test</td></tr>
+                  <tr><td>8</td><td>Write an opinion essay</td><td>30 min</td><td>At least 300 words</td></tr>
+                </tbody>
+                <tfoot>
+                  <tr><th scope="row" colspan="2">Total</th><td colspan="2">8 questions · about 1 hour</td></tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+
+          <div class="alert alert--warning">
+            <strong>Each time block closes by itself.</strong>
+            When a block's time runs out, what you have written is kept and the next block opens. You cannot go back to a closed block.
+          </div>
+
+          <div class="card">
+            <div class="card__header"><strong>Note</strong></div>
+            <div class="card__body">
+              <ul class="stack m-0 pl-5">
+                <li>As on test day, there is no spell check or grammar help. You can paste text.</li>
+                <li>Your writing is saved every few seconds. If the page closes, you continue from the last save.</li>
+                <li>This practice uses <strong>1 credit</strong>, charged when you start, for the AI grading of all your answers. Your balance is shown in the top bar.</li>
+                <li>The credit is not returned if you leave before finishing. Empty answers are not graded.</li>
+              </ul>
+            </div>
+          </div>
+
+          <label class="row">
+            <input type="checkbox" id="confirm-ready">
+            <span class="text-sm">I have read the instructions and am ready to begin</span>
+          </label>
+
+          <div class="row">
+            <a class="btn btn--primary btn--lg" href="exam-writing.html">Start — uses 1 credit</a>
+            <a class="btn btn--lg" href="practice-select.html">Later</a>
+          </div>
+        </div>
+
+        <!-- ===== submitting ===== -->
+        <div class="only-submitting">
+          <div class="card"><div class="card__body">
+            <div class="state-block">
+              <div class="state-block__icon" aria-hidden="true">RUNNING</div>
+              <h1 class="state-block__title">Starting your writing practice…</h1>
+              <p class="state-block__desc">Deducting 1 credit and loading the first question. Do not close the page.</p>
+            </div>
+          </div></div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+  <script src="../assets/js/state-switch.js"></script>
+  <script src="../assets/js/icons.js"></script>
+</body>
+</html>

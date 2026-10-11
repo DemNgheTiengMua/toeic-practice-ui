@@ -127,7 +127,8 @@
     "ERROR": "alert", "EMPTY": "inbox", "RUNNING": "spinner", "TIME'S UP": "clock",
     "LOCKED": "lock", "DONE": "check", "UPLOADING": "upload", "SENT": "mail",
     "PREPARE": "mic", "PENDING": "clock", "FAILED": "x-sq", "RECORDED": "check",
-    "RECORDING": "mic", "NOT SAVED": "alert"
+    "RECORDING": "mic", "NOT SAVED": "alert",
+    "WRITING": "pencil", "OFFLINE": "alert", "SAVED": "check", "HINT": "info"
   };
   each(".state-block__icon", function (s) { lead(s, STAMP[text(s)]); });
 
@@ -143,6 +144,7 @@
     [/^Filter/, "filter", "lead"],
     [/^(Create (new|a new)|Generate)/, "plus", "lead"],
     [/^(Save this question)/, "bookmark", "lead"],
+    [/^(Show hint|Hide hint)/, "info", "lead"],
     [/^Save/, "save", "lead"],
     [/^(Choose file|Choose from device|Replace file|Retry upload)/, "upload", "lead"],
     [/^(Resend|Send link)/, "mail", "lead"],

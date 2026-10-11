@@ -158,11 +158,15 @@ CREATE TABLE Exams (
     CONSTRAINT CK_Exams_Status CHECK (Status IN ('draft','published','hidden')),  -- UI-4: admin labels
   DurationMinutes INT NOT NULL CONSTRAINT CK_Exams_Duration CHECK (DurationMinutes > 0),
   -- UI-3: placement-select lists placement tests apart from mock exams; speaking practice is its own kind
+  -- UI-38: so is writing practice (writing-instructions / exam-writing / writing-review)
   Purpose         VARCHAR(20) NOT NULL CONSTRAINT DF_Exams_Purpose DEFAULT 'mock'
-    CONSTRAINT CK_Exams_Purpose CHECK (Purpose IN ('mock','placement','speaking_practice')),
+    CONSTRAINT CK_Exams_Purpose CHECK (Purpose IN ('mock','placement','speaking_practice','writing_practice')),
   Description     NVARCHAR(500) NULL,     -- UI-3: placement card copy ("Adaptive across both sections…")
   SourceName      NVARCHAR(120) NULL,     -- UI-4: exam editor "Test set / source" (e.g. ETS 2024)
   InternalNote    NVARCHAR(1000) NULL,    -- UI-4: exam editor note, admin only
+  -- UI-45: placement-select card meta "40 questions · 30 minutes"; kept on the exam because the
+  -- question bank can grow past the fixed count (an adaptive form draws a subset)
+  QuestionCount   INT NULL CONSTRAINT CK_Exams_QuestionCount CHECK (QuestionCount IS NULL OR QuestionCount > 0),
   IsDeleted       BIT NOT NULL DEFAULT 0,
   CreatedAt       DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
   UpdatedAt       DATETIMEOFFSET NULL,    -- UI-4: admin exam list "Update" column
@@ -218,6 +222,8 @@ CREATE TABLE QuestionGroups (
   ImageAlt     NVARCHAR(400) NULL,
   Transcript   NVARCHAR(MAX) NULL,        -- UI-7: Part 3/4 conversation or talk script, shown after the exam
   PrepSeconds  INT NULL CONSTRAINT CK_QGroups_Prep CHECK (PrepSeconds IS NULL OR PrepSeconds >= 0), -- UI-9: shared read time
+  -- UI-41: one time block shared by the group's questions (TOEIC Writing Q1-5: 8 minutes for five sentences)
+  ResponseSeconds INT NULL CONSTRAINT CK_QGroups_Response CHECK (ResponseSeconds IS NULL OR ResponseSeconds > 0),
   DisplayOrder INT NOT NULL DEFAULT 0,
   CONSTRAINT CK_QGroups_ImageAlt CHECK (ImagePath IS NULL OR ImageAlt IS NOT NULL),
   CONSTRAINT CK_QGroups_AudioSlice CHECK (
@@ -250,8 +256,19 @@ CREATE TABLE Questions (
   -- UI-9 (speaking gap 1): per-question prepare/speak windows; MCQ never carries them
   PrepSeconds     INT NULL,
   ResponseSeconds INT NULL,
+  -- UI-39: exam-writing word counter "142 / 150-300 words"; free response only
+  MinWords        INT NULL,
+  MaxWords        INT NULL,
+  -- UI-42: practice-take "Show hint" (a nudge, not the answer; Explanation stays the after-answer why)
+  Hint            NVARCHAR(1000) NULL,
   DisplayOrder    INT NOT NULL DEFAULT 0,
   UpdatedAt       DATETIMEOFFSET NULL,    -- UI-4: question editor "Last saved: 19:42"
+  CONSTRAINT CK_Questions_Words CHECK (
+       (MinWords IS NULL AND MaxWords IS NULL)
+    OR (QuestionType = 'free_response'
+        AND (MinWords IS NULL OR MinWords > 0)
+        AND (MaxWords IS NULL OR MaxWords >= ISNULL(MinWords, 1)))
+  ),
   CONSTRAINT CK_Questions_Timing CHECK (
        (QuestionType = 'mcq' AND PrepSeconds IS NULL AND ResponseSeconds IS NULL)
     OR (QuestionType = 'free_response'
@@ -314,8 +331,9 @@ CREATE TABLE ImportLog (
 );
 GO
 
--- UI-36: a speaking_practice exam holds speaking sections only (its result never mixes skills)
-CREATE TRIGGER trg_QGroups_SpeakingPracticeOnlySpeaking
+-- UI-36 / UI-38: a speaking_practice exam holds speaking sections only, a writing_practice exam
+-- writing sections only (a one-skill result never mixes skills)
+CREATE TRIGGER trg_QGroups_SkillPracticeOneModality
 ON QuestionGroups AFTER INSERT, UPDATE AS
 BEGIN
   SET NOCOUNT ON;
@@ -323,9 +341,10 @@ BEGIN
     SELECT 1 FROM inserted i
     JOIN Exams e    ON e.ExamId = i.ExamId
     JOIN Sections s ON s.SectionId = i.SectionId
-    WHERE e.Purpose = 'speaking_practice' AND s.Modality <> 'speaking'
+    WHERE (e.Purpose = 'speaking_practice' AND s.Modality <> 'speaking')
+       OR (e.Purpose = 'writing_practice'  AND s.Modality <> 'writing')
   )
-    THROW 50037, 'A speaking-practice exam can only hold speaking sections.', 1;
+    THROW 50037, 'A speaking- or writing-practice exam can only hold sections of that skill.', 1;
 END;
 GO
 CREATE TRIGGER trg_Exams_PurposeKeepsContent
@@ -336,9 +355,10 @@ BEGIN
     SELECT 1 FROM inserted i
     JOIN QuestionGroups g ON g.ExamId = i.ExamId
     JOIN Sections s ON s.SectionId = g.SectionId
-    WHERE i.Purpose = 'speaking_practice' AND s.Modality <> 'speaking'
+    WHERE (i.Purpose = 'speaking_practice' AND s.Modality <> 'speaking')
+       OR (i.Purpose = 'writing_practice'  AND s.Modality <> 'writing')
   )
-    THROW 50037, 'A speaking-practice exam can only hold speaking sections.', 1;
+    THROW 50037, 'A speaking- or writing-practice exam can only hold sections of that skill.', 1;
 END;
 GO
 -- ============ Domain 6: Practice (free) ============
@@ -366,7 +386,9 @@ CREATE TABLE PracticeSessions (
   -- M-18: Modality must be the section's own (pins the literal via the FK) and excludes speaking/writing
   CONSTRAINT FK_Practice_SectionModality FOREIGN KEY (SectionId, Modality) REFERENCES Sections(SectionId, Modality),
   -- Low: composite target so PracticeAnswers can require QuestionId's SectionId = the session's own
-  CONSTRAINT UQ_PracticeSessions_Id_Section UNIQUE (SessionId, SectionId)
+  CONSTRAINT UQ_PracticeSessions_Id_Section UNIQUE (SessionId, SectionId),
+  -- UI-43: composite target so a recommendation can name the learner's own session
+  CONSTRAINT UQ_PracticeSessions_Id_User UNIQUE (SessionId, UserId)
 );
 GO
 CREATE TABLE PracticeAnswers (
@@ -377,6 +399,7 @@ CREATE TABLE PracticeAnswers (
   SectionId        INT NOT NULL,
   SelectedOptionId INT NULL,
   IsCorrect        BIT NULL,
+  HintUsed         BIT NOT NULL CONSTRAINT DF_PracticeAnswers_HintUsed DEFAULT 0,  -- UI-42: summary "2 with a hint"
   DisplayOrder     INT NOT NULL DEFAULT 0,
   CONSTRAINT UQ_PracticeAnswers UNIQUE (SessionId, QuestionId),
   -- Low: SectionId must be the session's own
@@ -475,9 +498,16 @@ CREATE TABLE FreeResponses (
   AudioPath      NVARCHAR(400) NULL,
   -- UI-17 (speaking gap 4): "You spoke for 27 of 30 seconds"
   DurationMs     INT NULL CONSTRAINT CK_FreeResp_Duration CHECK (DurationMs IS NULL OR DurationMs > 0),
+  -- UI-40: exam-writing autosaves a 'draft' (restored after a reload); submit turns it into 'pending_ai'.
+  -- A draft has no SubmittedAt; insert drafts with SubmittedAt = NULL explicitly (the default is for submits).
   Status         VARCHAR(12) NOT NULL DEFAULT 'pending_ai'
-    CONSTRAINT CK_FreeResp_Status CHECK (Status IN ('pending_ai','graded')),
-  SubmittedAt    DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
+    CONSTRAINT CK_FreeResp_Status CHECK (Status IN ('draft','pending_ai','graded')),
+  DraftSavedAt   DATETIMEOFFSET NULL,      -- UI-40: "Saved 11:42:05"
+  SubmittedAt    DATETIMEOFFSET NULL DEFAULT SYSDATETIMEOFFSET(),
+  CONSTRAINT CK_FreeResp_DraftNotSubmitted CHECK (
+       (Status = 'draft'  AND SubmittedAt IS NULL)
+    OR (Status <> 'draft' AND SubmittedAt IS NOT NULL)
+  ),
   CONSTRAINT UQ_FreeResponses UNIQUE (AttemptId, QuestionId),
   CONSTRAINT CK_FreeResp_HasContent CHECK (ResponseText IS NOT NULL OR AudioPath IS NOT NULL),
   -- H-5: ExamId must be the attempt's own
@@ -505,15 +535,22 @@ END;
 GO
 -- UI-19 (speaking gap 6): a speaking-practice attempt covers one skill of a summed scale, so a
 -- certificate band computed from it is meaningless. BandCode stays NULL for those attempts.
+-- UI-45: the same holds for the total score — speaking-review and writing-review show rubric
+-- scores only, never "out of 990". TotalScore stays NULL on skill-practice attempts.
 CREATE TRIGGER trg_Attempts_NoBandForSpeakingPractice
 ON ExamAttempts AFTER INSERT, UPDATE AS
 BEGIN
   SET NOCOUNT ON;
   IF EXISTS (
     SELECT 1 FROM inserted i JOIN Exams e ON e.ExamId = i.ExamId
-    WHERE e.Purpose = 'speaking_practice' AND i.BandCode IS NOT NULL
+    WHERE e.Purpose IN ('speaking_practice','writing_practice') AND i.BandCode IS NOT NULL  -- UI-38
   )
-    THROW 50032, 'A speaking-practice attempt cannot carry a certificate band.', 1;
+    THROW 50032, 'A speaking- or writing-practice attempt cannot carry a certificate band.', 1;
+  IF EXISTS (
+    SELECT 1 FROM inserted i JOIN Exams e ON e.ExamId = i.ExamId
+    WHERE e.Purpose IN ('speaking_practice','writing_practice') AND i.TotalScore IS NOT NULL  -- UI-45
+  )
+    THROW 50041, 'A speaking- or writing-practice attempt cannot carry a total score.', 1;
 END;
 GO
 -- Review Focus #2: TotalScore must equal SUM of scaled skill scores (when both present)
@@ -573,6 +610,31 @@ BEGIN
     THROW 50030, 'A free response that is not graded cannot belong to a graded attempt.', 1;
 END;
 GO
+-- UI-40: submit turns every draft into pending_ai first; an attempt past in_progress holds no draft
+CREATE TRIGGER trg_Attempts_NoDraftsAfterSubmit
+ON ExamAttempts AFTER UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+  IF EXISTS (
+    SELECT 1 FROM inserted i
+    WHERE i.Status IN ('submitted','graded')
+      AND EXISTS (SELECT 1 FROM FreeResponses fr WHERE fr.AttemptId = i.AttemptId AND fr.Status = 'draft')
+  )
+    THROW 50039, 'Submit every draft before the attempt is submitted.', 1;
+END;
+GO
+CREATE TRIGGER trg_FreeResponses_DraftOnlyInProgress
+ON FreeResponses AFTER INSERT, UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+  IF EXISTS (
+    SELECT 1 FROM inserted i
+    JOIN ExamAttempts a ON a.AttemptId = i.AttemptId
+    WHERE i.Status = 'draft' AND a.Status <> 'in_progress'
+  )
+    THROW 50039, 'A draft can only belong to an attempt in progress.', 1;
+END;
+GO
 -- ============ Domain 8: AI Grading ============
 CREATE TABLE GradingCriteria (
   CriterionId  INT IDENTITY(1,1) PRIMARY KEY,
@@ -630,6 +692,18 @@ CREATE TABLE AiGradings (
   -- FreeResponses → Questions → Sections pins to a single certificate
   CONSTRAINT FK_AiGradings_ResponseSkill FOREIGN KEY (FreeResponseId, SkillId) REFERENCES FreeResponses(FreeResponseId, SkillId)
 );
+GO
+-- UI-40: a draft is not graded (nor charged for) until it is submitted
+CREATE TRIGGER trg_AiGradings_NotOnDraft
+ON AiGradings AFTER INSERT, UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+  IF EXISTS (
+    SELECT 1 FROM inserted i JOIN FreeResponses fr ON fr.FreeResponseId = i.FreeResponseId
+    WHERE fr.Status = 'draft'
+  )
+    THROW 50040, 'A draft response cannot be graded.', 1;
+END;
 GO
 -- M-6: flip FreeResponses.Status to 'graded' once its AiGradings.Status reaches 'done'
 CREATE TRIGGER trg_AiGradings_MarkFreeResponseGraded
@@ -728,6 +802,8 @@ CREATE TABLE Recommendations (
   GradingId      INT NULL REFERENCES AiGradings(GradingId),   -- NULL = aggregate
   -- UI-21: exam-result "To reach B2 (your target): …" lists recommendations for THIS attempt
   AttemptId      INT NULL,
+  -- UI-43: practice-summary "Next: review present perfect" lists recommendations for THIS session
+  PracticeSessionId INT NULL,
   SkillId        INT NULL,
   Text           NVARCHAR(MAX) NOT NULL,
   Severity       VARCHAR(8) NOT NULL DEFAULT 'info'
@@ -740,7 +816,10 @@ CREATE TABLE Recommendations (
   -- M-12: the target band must be a real band of this same certificate (NULL stays legal, MATCH SIMPLE)
   CONSTRAINT FK_Reco_TargetBand FOREIGN KEY (CertId, TargetBandCode) REFERENCES ScoreBands(CertId, Code),
   -- UI-21: the attempt must be this user's own (NULL stays legal, MATCH SIMPLE)
-  CONSTRAINT FK_Reco_AttemptUser FOREIGN KEY (AttemptId, UserId) REFERENCES ExamAttempts(AttemptId, UserId)
+  CONSTRAINT FK_Reco_AttemptUser FOREIGN KEY (AttemptId, UserId) REFERENCES ExamAttempts(AttemptId, UserId),
+  -- UI-43: the session must be this user's own; a recommendation names at most one source
+  CONSTRAINT FK_Reco_SessionUser FOREIGN KEY (PracticeSessionId, UserId) REFERENCES PracticeSessions(SessionId, UserId),
+  CONSTRAINT CK_Reco_OneSource CHECK (AttemptId IS NULL OR PracticeSessionId IS NULL)
 );
 GO
 -- ============ Domain 9: LearningPath ============
@@ -765,8 +844,24 @@ CREATE TABLE PlacementTests (
   CONSTRAINT FK_Placement_ExamPurpose FOREIGN KEY (ExamId, CertId, ExamPurpose) REFERENCES Exams(ExamId, CertId, Purpose),
   -- UI-22: the attempt must be this user's own
   CONSTRAINT FK_Placement_AttemptUser FOREIGN KEY (AttemptId, UserId) REFERENCES ExamAttempts(AttemptId, UserId),
+  -- UI-46: a finished placement snapshot names its result band and its total
+  CONSTRAINT CK_Placement_DoneHasResult CHECK (Status <> 'done' OR (ResultBandCode IS NOT NULL AND TotalScore IS NOT NULL AND AttemptId IS NOT NULL)),
   CONSTRAINT UQ_PlacementTests_Id_User UNIQUE (PlacementId, UserId)
 );
+GO
+-- UI-46: the snapshot is a copy of the attempt's own result, not a free-standing number —
+-- a placement-result page ("385 out of 990 · L 215 · R 170") must trace back to real scores.
+CREATE TRIGGER trg_PlacementTests_SnapshotMatchesAttempt
+ON PlacementTests AFTER INSERT, UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+  IF EXISTS (
+    SELECT 1 FROM inserted i
+    JOIN ExamAttempts a ON a.AttemptId = i.AttemptId
+    WHERE i.TotalScore IS NOT NULL AND i.TotalScore <> a.TotalScore
+  )
+    THROW 50042, 'PlacementTests.TotalScore must be a snapshot of the attempt''s own TotalScore.', 1;
+END;
 GO
 CREATE UNIQUE INDEX UX_PlacementTests_Attempt ON PlacementTests(AttemptId) WHERE AttemptId IS NOT NULL;
 GO
@@ -832,7 +927,8 @@ CREATE TABLE PathModuleItems (
   CONSTRAINT CK_PMI_RefMatchesType CHECK (
        (ItemType='practice_section' AND RefSectionId IS NOT NULL AND RefExamId IS NULL)
     OR (ItemType='mock_exam'        AND RefExamId    IS NOT NULL AND RefSectionId IS NULL)
-    OR (ItemType IN ('ai_task','mentor') AND RefSectionId IS NULL AND RefExamId IS NULL)
+    OR (ItemType='ai_task'          AND RefSectionId IS NULL)   -- UI-44: may carry RefExamId (a writing/speaking practice exam)
+    OR (ItemType='mentor'           AND RefSectionId IS NULL AND RefExamId IS NULL)
   ),
   -- M-1: CertId must be the module's own
   CONSTRAINT FK_PMI_ModuleCert FOREIGN KEY (ModuleId, CertId) REFERENCES PathModules(ModuleId, CertId),
@@ -903,6 +999,22 @@ CREATE TABLE LearnerPathSteps (
 GO
 -- UI-12: now that LearnerPathSteps exists, link a practice session to the module step it serves
 ALTER TABLE PracticeSessions ADD CONSTRAINT FK_Practice_PathStep FOREIGN KEY (LearnerPathStepId) REFERENCES LearnerPathSteps(StepId);
+GO
+-- UI-44: an ai_task item may name the practice exam it opens, and only a skill-practice exam —
+-- never a mock (which would charge mock_exam_start) or a placement (which must stay free).
+CREATE TRIGGER trg_PMI_AiTaskRefsSkillPracticeExam
+ON PathModuleItems AFTER INSERT, UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+  IF EXISTS (
+    SELECT 1 FROM inserted i
+    JOIN Exams e ON e.ExamId = i.RefExamId
+    WHERE i.ItemType = 'ai_task'
+      AND i.RefExamId IS NOT NULL
+      AND e.Purpose NOT IN ('writing_practice','speaking_practice')
+  )
+    THROW 50043, 'An ai_task item may only reference a writing- or speaking-practice exam.', 1;
+END;
 GO
 -- ============ Domain 10: Mentor ============
 CREATE TABLE MentorProfiles (
@@ -1275,7 +1387,8 @@ BEGIN
 END;
 GO
 -- UI-37: what an attempt may be charged depends on its exam's purpose:
--- mock -> mock_exam_start and ai_grading; speaking_practice -> ai_grading only; placement -> nothing (free).
+-- mock -> mock_exam_start and ai_grading; speaking/writing practice -> ai_grading only (UI-38);
+-- placement -> nothing (free).
 CREATE TRIGGER trg_CreditTransactions_ChargeMatchesExamPurpose
 ON CreditTransactions AFTER INSERT, UPDATE AS
 BEGIN
@@ -1362,7 +1475,7 @@ BEGIN
 END;
 GO
 -- ============ Views ============
--- UI-33: wallet "15 purchased − 7 used", pricing "7 of 15 used"
+-- UI-33: wallet "15 purchased − 7 used", pricing "7 of 15 used", "Total purchased 548,000 ₫"
 CREATE VIEW vw_UserCreditSummary AS
   SELECT UserId,
          SUM(Delta) AS Balance,
@@ -1371,6 +1484,15 @@ CREATE VIEW vw_UserCreditSummary AS
          -SUM(CASE WHEN Delta < 0 AND Reason <> 'admin_revoke' THEN Delta ELSE 0 END)
            - SUM(CASE WHEN Reason = 'booking_cancel' THEN Delta ELSE 0 END) AS CreditsUsed
   FROM CreditTransactions GROUP BY UserId;
+GO
+-- UI-33: wallet stat "Total purchased 548,000 ₫ · 2 paid orders" — money, not credits
+CREATE VIEW vw_UserPurchaseTotals AS
+  SELECT o.UserId,
+         SUM(o.Amount)    AS AmountPurchased,
+         COUNT(*)         AS PaidOrderCount
+  FROM Orders o
+  WHERE o.Status = 'paid'
+  GROUP BY o.UserId;
 GO
 -- UI-34: weakness analysis combines exams AND practice ("45/78 questions" across both)
 CREATE VIEW vw_UserSectionAccuracyAll AS
@@ -1441,6 +1563,7 @@ CREATE INDEX IX_FreeResponses_Pending    ON FreeResponses(SubmittedAt) WHERE Sta
 CREATE INDEX IX_AiGradings_Queue         ON AiGradings(Status, RequestedAt) WHERE Status IN ('pending','failed');
 CREATE INDEX IX_Recommendations_User     ON Recommendations(UserId, CertId);
 CREATE INDEX IX_Recommendations_Attempt  ON Recommendations(AttemptId) WHERE AttemptId IS NOT NULL;
+CREATE INDEX IX_Recommendations_Session  ON Recommendations(PracticeSessionId) WHERE PracticeSessionId IS NOT NULL;
 -- Learning path
 CREATE INDEX IX_Placement_User           ON PlacementTests(UserId, CertId);
 CREATE INDEX IX_PathModules_Template     ON PathModules(TemplateId, DisplayOrder);

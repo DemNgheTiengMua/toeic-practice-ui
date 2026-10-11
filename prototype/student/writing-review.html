@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Writing result — extra efficient</title>
+  <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/css/tokens.css">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <script src="../assets/js/sidebar.js"></script>
+</head>
+<body data-states="loading,empty,error,failed,success">
+  <div class="app-shell app-shell--with-sidebar">
+    <header class="app-topbar">
+      <strong>extra efficient</strong>
+      <div class="row">
+        <span class="badge badge--info">6 credits left</span>
+        <a class="btn btn--sm" href="../payment/pricing.html">Buy credits</a>
+        <a class="btn btn--ghost btn--sm" href="profile.html">Nguyễn Văn A</a>
+      </div>
+    </header>
+    <div class="app-body">
+      <aside class="app-sidebar">
+        <nav class="nav-list" aria-label="Main navigation">
+          <a class="nav-list__item" href="dashboard.html">Home</a>
+          <div class="nav-list__group">Mock exams</div>
+          <a class="nav-list__item" href="exam-list.html">Test list</a>
+          <a class="nav-list__item" href="exam-history.html">Exam history</a>
+          <div class="nav-list__group">Practice</div>
+          <a class="nav-list__item is-active" href="practice-select.html">Practice by section</a>
+          <a class="nav-list__item" href="weakness-analysis.html">Weakness analysis</a>
+          <a class="nav-list__item" href="saved-questions.html">Saved questions</a>
+          <div class="nav-list__group">Learning</div>
+          <a class="nav-list__item" href="learning-path.html">My learning path</a>
+          <a class="nav-list__item" href="mentor-list.html">Find a mentor</a>
+          <div class="nav-list__group">Account</div>
+          <a class="nav-list__item" href="../payment/wallet.html">Credit wallet</a>
+          <a class="nav-list__item" href="support-report.html">Report a problem</a>
+          <a class="nav-list__item" href="profile.html">Profile</a>
+        </nav>
+      </aside>
+      <main class="app-main">
+        <div class="context-bar">
+          <div class="context-bar__item">
+            <span class="context-bar__label">Certificate:</span>
+            <span class="context-bar__value">TOEIC</span>
+          </div>
+          <div class="context-bar__item">
+            <span class="context-bar__label">Attempt:</span>
+            <span class="context-bar__value">Writing practice</span>
+          </div>
+          <div class="context-bar__item">
+            <span class="context-bar__label">Cost:</span>
+            <span class="context-bar__value">1 credit · AI grading</span>
+          </div>
+        </div>
+
+        <div class="container stack">
+          <nav class="breadcrumbs" aria-label="Breadcrumb">
+            <a href="dashboard.html" class="breadcrumbs__item">Home</a>
+            <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+            <a href="practice-select.html" class="breadcrumbs__item">Practice by section</a>
+            <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+            <span class="breadcrumbs__item" aria-current="page">Writing result</span>
+          </nav>
+
+          <!-- ===== loading ===== -->
+          <div class="only-loading stack">
+            <h1 class="visually-hidden">Loading writing result</h1>
+            <div class="skeleton skeleton--title"></div>
+            <div class="skeleton skeleton--block" style="height: 150px"></div>
+            <div class="skeleton skeleton--block" style="height: 320px"></div>
+          </div>
+
+          <!-- ===== error: the page failed to load ===== -->
+          <div class="only-error">
+            <div class="card"><div class="card__body">
+              <div class="state-block">
+                <div class="state-block__icon" aria-hidden="true">ERROR</div>
+                <h1 class="state-block__title">Could not load your result</h1>
+                <p class="state-block__desc">Your answers are saved. Reload to see your result.</p>
+                <button class="btn btn--primary">Try again</button>
+              </div>
+            </div></div>
+          </div>
+
+          <!-- ===== empty ===== -->
+          <div class="only-empty">
+            <div class="card"><div class="card__body">
+              <div class="state-block">
+                <div class="state-block__icon" aria-hidden="true">EMPTY</div>
+                <h1 class="state-block__title">No writing practice yet</h1>
+                <p class="state-block__desc">Answer the 8 writing questions and the AI grading result will appear here.</p>
+                <a href="writing-instructions.html" class="btn btn--primary">Start writing practice</a>
+              </div>
+            </div></div>
+          </div>
+
+          <!-- ===== failed: grading ran and did not finish ===== -->
+          <div class="only-failed">
+            <div class="card"><div class="card__body">
+              <div class="state-block">
+                <div class="state-block__icon state-block__icon--danger" aria-hidden="true">FAILED</div>
+                <h1 class="state-block__title">Grading did not finish</h1>
+                <p class="state-block__desc">Your 8 answers are saved. Retrying does not charge another credit.</p>
+                <button class="btn btn--primary">Retry grading</button>
+              </div>
+            </div></div>
+          </div>
+
+          <!-- ===== success ===== -->
+          <div class="only-success stack">
+            <div class="row row--between">
+              <div>
+                <h1 class="m-0 mb-1">Writing result</h1>
+                <p class="text-sm text-muted no-margin">Graded 9 October 2026 · 8 of 8 questions answered · about 1 hour</p>
+              </div>
+              <div class="row">
+                <a class="btn" href="practice-select.html">Practice by section</a>
+                <a class="btn btn--primary" href="writing-instructions.html">Practise writing again</a>
+                <a class="btn btn--ghost" href="support-report.html">Dispute this grading</a>
+              </div>
+            </div>
+
+            <div class="score-hero">
+              <div class="score-hero__total">
+                <div class="score-hero__total-value">140</div>
+                <div class="score-hero__total-label">Writing score · 0–200 scale</div>
+              </div>
+              <div class="score-hero__section">
+                <div class="score-hero__section-value">21</div>
+                <div class="text-sm text-muted">Points earned · 28 available</div>
+                <p class="text-xs text-muted m-0 mt-1">Questions 1–5 out of 3 each, 6–7 out of 4 each, question 8 out of 5</p>
+              </div>
+              <div class="score-hero__section">
+                <div class="score-hero__section-value">1</div>
+                <div class="text-sm text-muted">Credit used</div>
+                <p class="text-xs text-muted m-0 mt-1">AI grading, charged at the start</p>
+              </div>
+            </div>
+
+            <section>
+              <h2 class="section-group__title">Your 8 answers</h2>
+              <div class="card"><div class="card__body">
+                <table class="table">
+                  <caption class="visually-hidden">Score and length for each writing question</caption>
+                  <thead>
+                    <tr><th scope="col">Question</th><th scope="col">Task</th><th scope="col">Words</th><th scope="col">Score</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr><th scope="row">1</th><td>Sentence from a picture</td><td>11</td><td>3 / 3</td></tr>
+                    <tr><th scope="row">2</th><td>Sentence from a picture</td><td>9</td><td>3 / 3</td></tr>
+                    <tr><th scope="row">3</th><td>Sentence from a picture</td><td>12</td><td>2 / 3</td></tr>
+                    <tr><th scope="row">4</th><td>Sentence from a picture</td><td>8</td><td>3 / 3</td></tr>
+                    <tr><th scope="row">5</th><td>Sentence from a picture</td><td>10</td><td><span class="badge badge--danger">1 / 3</span></td></tr>
+                    <tr><th scope="row">6</th><td>Respond to a request</td><td>156 · 6 over</td><td>3 / 4</td></tr>
+                    <tr><th scope="row">7</th><td>Respond to a request</td><td>132</td><td>3 / 4</td></tr>
+                    <tr><th scope="row">8</th><td>Opinion essay</td><td>412</td><td>3 / 5</td></tr>
+                  </tbody>
+                  <tfoot>
+                    <tr><th scope="row" colspan="3">Total</th><td>21 / 28</td></tr>
+                  </tfoot>
+                </table>
+              </div></div>
+            </section>
+
+            <section>
+              <h2 class="section-group__title">Question 8: your essay</h2>
+              <div class="card">
+                <div class="card__body stack">
+                  <p class="text-sm text-muted no-margin">
+                    Some companies now let their staff choose which days they work from home. Do you think this is a good idea?
+                  </p>
+                  <div class="graded-text">I agree that letting staff choose their own days at home is a good idea, for two reasons. The first is concentration. In my own team, the work that needs long stretches of quiet — writing a report, reviewing a design — is almost impossible in our office, where the phone rings every few minutes. On the two days I work at home I finish that kind of task in half the time.
+
+The second reason is that the choice itself matters. A fixed rule, such as every Wednesday at home, sounds fair but ignores how people actually work: a parent may need Monday, and someone sharing a small flat may want the office every day. Letting people decide week by week respects that difference, and in my experience it costs the company nothing.
+
+There is one condition. A team cannot work if nobody is ever in the same room, so the days people choose have to be visible to everyone, and the team needs at least one day together each week. With that in place, I believe the choice is better for both the staff and the company.</div>
+                </div>
+                <div class="card__footer">
+                  <table class="table">
+                    <caption class="visually-hidden">What the grader noted on each criterion for question 8</caption>
+                    <thead>
+                      <tr><th scope="col">Criterion</th><th scope="col">Score</th><th scope="col">Grader's note</th></tr>
+                    </thead>
+                    <tbody>
+                      <tr><th scope="row">Opinion and support</th><td>4 / 5</td><td>A clear position with two reasons, each backed by a personal example.</td></tr>
+                      <tr><th scope="row">Organisation</th><td>3 / 5</td><td>Paragraphs are clear, but there is no conclusion beyond the last sentence of the third paragraph.</td></tr>
+                      <tr><th scope="row">Grammar</th><td>3 / 5</td><td>Accurate overall, with little range: most sentences use the same simple-present pattern.</td></tr>
+                      <tr><th scope="row">Vocabulary</th><td>2 / 5</td><td>Plain and repeated ("work", "people", "choice"). Vary the words that carry your argument.</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+
+            <section>
+              <h2 class="section-group__title">Lowest score: question 5</h2>
+              <div class="card"><div class="card__body stack">
+                <p class="no-margin">Sentence from a picture · 1 of 3. Given words: <span class="given-words__word">although</span> <span class="given-words__word">umbrella</span></p>
+                <p class="graded-text no-margin">Although it raining, the woman is holding umbrella.</p>
+                <ul class="stack m-0 pl-5">
+                  <li><strong>Grammar:</strong> "it raining" is missing its verb ("it is raining"), and "umbrella" needs an article.</li>
+                  <li><strong>Relevance to the picture:</strong> The picture shows a dry street. Both words are used, but the sentence does not describe what is shown.</li>
+                </ul>
+              </div></div>
+            </section>
+
+            <div class="alert alert--info">
+              <strong>No band is shown for writing alone.</strong>
+              Bands are set from the total of a full mock exam. See <a href="exam-result.html">a full exam result</a> for how a band is reported.
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <script src="../assets/js/state-switch.js"></script>
+  <script src="../assets/js/icons.js"></script>
+</body>
+</html>

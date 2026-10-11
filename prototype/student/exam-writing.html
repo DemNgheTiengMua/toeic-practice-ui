@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Writing — Question 8 of 8</title>
+  <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/css/tokens.css">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+</head>
+<body data-states="writing,near-limit,over-limit,saving,save-failed,offline,resumed,task-time-up,expired,submitting,loading">
+  <div class="app-shell">
+    <header class="app-topbar">
+      <div class="exam-topbar-group">
+        <strong>Writing practice</strong>
+        <span class="badge badge--info multi-state" data-show="writing near-limit saving save-failed offline resumed task-time-up expired submitting loading">Writing · Question 8 of 8</span>
+        <span class="badge badge--info only-over-limit">Writing · Question 6 of 8</span>
+      </div>
+      <div class="exam-topbar-group">
+        <span class="save-status save-status--saved multi-state" data-show="writing near-limit over-limit resumed task-time-up" role="status" aria-live="polite">Saved 11:42:05</span>
+        <span class="save-status save-status--saving only-saving" role="status" aria-live="polite">Saving…</span>
+        <span class="save-status save-status--error only-save-failed" role="status" aria-live="polite">Not saved since 11:38:12</span>
+        <span class="save-status save-status--error only-offline" role="status" aria-live="polite">Offline · last saved 11:40:51</span>
+        <span class="timer multi-state" data-show="writing saving save-failed offline" role="timer" aria-label="Time remaining in this task">
+          <span class="text-sm text-muted">Essay time left</span>
+          <span class="timer__value">00:21:16</span>
+        </span>
+        <span class="timer timer--warning multi-state" data-show="near-limit resumed" role="timer" aria-label="Time remaining in this task">
+          <span class="text-sm">Essay time left</span>
+          <span class="timer__value">00:04:38</span>
+        </span>
+        <span class="timer only-over-limit" role="timer" aria-label="Time remaining in this task">
+          <span class="text-sm text-muted">Reply time left</span>
+          <span class="timer__value">00:02:51</span>
+        </span>
+        <span class="timer timer--critical multi-state" data-show="task-time-up expired" role="timer" aria-label="Time is up">
+          <span class="text-sm">Time is up</span>
+          <span class="timer__value">00:00:00</span>
+        </span>
+      </div>
+    </header>
+    <main class="app-main">
+      <h1 class="visually-hidden">Writing practice — question 8 of 8</h1>
+
+      <!-- ===== loading ===== -->
+      <div class="container only-loading">
+        <div class="writing-panes">
+          <div class="stack">
+            <div class="skeleton skeleton--title"></div>
+            <div class="skeleton skeleton--block" style="height: 240px"></div>
+          </div>
+          <div class="stack">
+            <div class="skeleton skeleton--block" style="height: 380px"></div>
+            <div class="skeleton skeleton--block" style="height: 64px"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== expired: the server closed the session, not the clock on this page ===== -->
+      <div class="container container--form only-expired">
+        <div class="card"><div class="card__body">
+          <div class="state-block">
+            <div class="state-block__icon" aria-hidden="true">TIME'S UP</div>
+            <div class="state-block__title">Time is up</div>
+            <p class="state-block__desc">
+              Questions 1 to 7 were saved. Your essay was kept as you left it, at 284 words, and sent for grading with the rest. No further action is needed.
+            </p>
+            <div class="progress mx-auto" style="max-width: 280px" role="progressbar" aria-valuenow="70" aria-valuemin="0" aria-valuemax="100" aria-label="Sending answers"><div class="progress__bar" style="width: 70%"></div></div>
+          </div>
+        </div></div>
+      </div>
+
+      <!-- ===== submitting ===== -->
+      <div class="container container--form only-submitting">
+        <div class="card"><div class="card__body">
+          <div class="state-block">
+            <div class="state-block__icon" aria-hidden="true">RUNNING</div>
+            <div class="state-block__title">Sending your answers…</div>
+            <p class="state-block__desc">Do not close the page. Empty answers are not graded.</p>
+          </div>
+        </div></div>
+      </div>
+
+      <!-- banners: each says exactly what survived -->
+      <div class="container only-resumed mb-4">
+        <div class="alert alert--info">
+          <strong>Your writing has been restored.</strong>
+          The essay is back as it was at the last save, 11:40:51, at 284 words. Anything typed in the few seconds after that is not kept. The clock kept running while the page was closed.
+        </div>
+      </div>
+      <div class="container only-save-failed mb-4">
+        <div class="alert alert--danger" role="alert">
+          <strong>Your last changes did not save.</strong>
+          The text is still in this editor and in this browser. Keep the tab open and retry, or copy your text somewhere safe before you leave.
+        </div>
+      </div>
+      <div class="container only-offline mb-4">
+        <div class="alert alert--warning" role="alert">
+          <strong>You are offline.</strong>
+          Keep writing — your text is held in this browser and will save by itself when the connection returns. The last save was 11:40:51.
+        </div>
+      </div>
+      <div class="container only-task-time-up mb-4">
+        <div class="alert alert--warning" role="alert">
+          <strong>The essay's 30 minutes are up.</strong>
+          Your answer was kept at 412 words and can no longer be edited. This was the last question, so submit when you are ready.
+        </div>
+      </div>
+
+      <div class="container multi-state" data-show="writing near-limit over-limit saving save-failed offline resumed task-time-up">
+        <div class="writing-panes">
+
+          <!-- the prompt: read while answering, so it stays beside the sheet -->
+          <div class="writing-panes__prompt stack">
+            <!-- over-limit is shown on question 6, an email reply with a 150-word cap set by the exam author -->
+            <div class="question only-over-limit">
+              <div class="question__meta">
+                <span class="question__number">Question 6</span>
+                <span class="badge badge--muted">Respond to a request</span>
+              </div>
+              <div class="mail-prompt">
+                <dl class="mail-prompt__head">
+                  <dt>From</dt><dd>Linh Tran, Training Coordinator</dd>
+                  <dt>To</dt><dd>Office Services</dd>
+                  <dt>Subject</dt><dd>Training room on the 14th</dd>
+                </dl>
+                <p class="m-0">Hello, I have booked the second-floor training room for the morning of the 14th. Could you confirm the room is free until 1 p.m., and tell me what equipment it has? We may be a larger group than last time.</p>
+                <p class="mail-prompt__task m-0"><strong>Reply as the office services team.</strong> Confirm the booking, give two pieces of information, and make one request.</p>
+              </div>
+              <div class="grid-2 mt-4">
+                <div class="stat">
+                  <div class="stat__label">Time</div>
+                  <div class="stat__value">10 min</div>
+                  <div class="stat__hint">for this question alone</div>
+                </div>
+                <div class="stat">
+                  <div class="stat__label">Length</div>
+                  <div class="stat__value">≤150</div>
+                  <div class="stat__hint">words, set for this test</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="question multi-state" data-show="writing near-limit saving save-failed offline resumed task-time-up">
+              <div class="question__meta">
+                <span class="question__number">Question 8</span>
+                <span class="badge badge--muted">Opinion essay</span>
+              </div>
+              <p class="question__stem">
+                Some companies now let their staff choose which days they work from home. Do you think this is a good idea? Give reasons and examples to support your opinion.
+              </p>
+              <div class="grid-2">
+                <div class="stat">
+                  <div class="stat__label">Time</div>
+                  <div class="stat__value">30 min</div>
+                  <div class="stat__hint">for this question alone</div>
+                </div>
+                <div class="stat">
+                  <div class="stat__label">Length</div>
+                  <div class="stat__value">300+</div>
+                  <div class="stat__hint">words, no upper limit</div>
+                </div>
+              </div>
+            </div>
+
+            <p class="text-xs text-muted no-margin" role="note">
+              Questions are taken in order, each in its own time block. A block that has closed cannot be reopened.
+            </p>
+          </div>
+
+          <!-- the answer sheet -->
+          <div class="stack">
+            <div class="card">
+              <div class="card__header">
+                <div class="row row--between">
+                  <strong>Your answer</strong>
+                  <span class="text-xs text-muted multi-state" data-show="writing near-limit over-limit saving save-failed offline resumed">No spell check, as on test day</span>
+                  <span class="text-xs text-muted only-task-time-up">Closed · 412 words</span>
+                </div>
+              </div>
+              <div class="card__body stack">
+                <label class="visually-hidden" for="essay">Your essay for question 8. At least 300 words.</label>
+                <textarea class="answer-sheet multi-state" data-show="writing saving save-failed offline" id="essay" spellcheck="false"
+                  aria-describedby="word-state essay-help">I agree that letting staff choose their own days at home is a good idea, for two reasons.
+
+The first is concentration. In my own team, the work that needs long stretches of quiet — writing a report, reviewing a design — is almost impossible in our office, where the phone rings every few minutes. On the two days I work at home I finish that kind of task in half the time.
+
+The second reason is that the choice itself matters. A fixed rule, such as every Wednesday at home, sounds fair but ignores how people actually work.</textarea>
+                <textarea class="answer-sheet only-near-limit" spellcheck="false" aria-label="Your essay for question 8. At least 300 words." aria-describedby="word-state-near">I agree that letting staff choose their own days at home is a good idea, for two reasons. The first is concentration. In my own team, the work that needs long stretches of quiet — writing a report, reviewing a design — is almost impossible in our office, where the phone rings every few minutes. On the two days I work at home I finish that kind of task in half the time. The second reason is that the choice itself matters. A fixed rule, such as every Wednesday at home, sounds fair but ignores how people actually work: a parent may need Monday, and someone sharing a small flat may want the office every day. Letting people decide week by week respects that difference, and in my experience it costs the company nothing.</textarea>
+                <textarea class="answer-sheet only-over-limit" spellcheck="false" aria-label="Your reply for question 6. 150 words at most." aria-describedby="word-state-over">Dear Ms Tran, thank you for your message about the training room on the 14th. I am writing to confirm that the room will be free from nine in the morning until one in the afternoon, and that the projector and the whiteboard are both working after last week's repair. I have also asked our facilities team to set out twenty chairs rather than the usual twelve, since you mentioned a larger group this time, and to leave a spare extension lead by the window for the laptops. If you would like coffee and water on the side table, please tell me by the Friday before, because the kitchen orders on that day and anything later than that cannot be added to the delivery. One more thing: the lift in the north wing is still out of service, so please ask anyone arriving with heavy equipment to use the south entrance instead, where the ramp is.</textarea>
+                <div class="answer-sheet only-task-time-up" role="region" aria-label="Your closed answer for question 8" tabindex="0" style="overflow-y: auto; max-height: 24lh">I agree that letting staff choose their own days at home is a good idea, for two reasons. The first is concentration. In my own team, the work that needs long stretches of quiet — writing a report, reviewing a design — is almost impossible in our office, where the phone rings every few minutes. On the two days I work at home I finish that kind of task in half the time. The second reason is that the choice itself matters. A fixed rule, such as every Wednesday at home, sounds fair but ignores how people actually work: a parent may need Monday, and someone sharing a small flat may want the office every day. Letting people decide week by week respects that difference, and in my experience it costs the company nothing. There is one condition. A team cannot work if nobody is ever in the same room, so the days people choose have to be visible to everyone, and the team needs at least one day together each week. With that in place, I believe the choice is better for both the staff and the company.</div>
+                <textarea class="answer-sheet only-resumed" spellcheck="false" aria-label="Your essay for question 8. At least 300 words." aria-describedby="word-state-resumed">I agree that letting staff choose their own days at home is a good idea, for two reasons. The first is concentration. In my own team, the work that needs long stretches of quiet — writing a report, reviewing a design — is almost impossible in our office, where the phone rings every few minutes. On the two days I work at home I finish that kind of task in half the time. The second reason is that the choice itself matters. A fixed rule, such as every Wednesday at home, sounds fair but ignores how people actually work: a parent may need Monday, and someone sharing a small flat may want the office every day.</textarea>
+
+                <!-- the word meter: the signature readout of this screen -->
+                <div class="word-meter multi-state" data-show="writing saving save-failed offline">
+                  <div class="word-meter__readout">
+                    <span class="word-meter__count">118</span>
+                    <span id="word-state" class="word-meter__state">words · 182 under the 300-word minimum</span>
+                  </div>
+                  <div class="word-meter__track">
+                    <div class="word-meter__tick" style="left: 75%" aria-hidden="true"><span class="word-meter__tick-label">min 300</span></div>
+                    <div class="word-meter__fill" style="width: 29%"></div>
+                  </div>
+                </div>
+                <div class="word-meter word-meter--met only-near-limit">
+                  <div class="word-meter__readout">
+                    <span class="word-meter__count">301</span>
+                    <span id="word-state-near" class="word-meter__state">words · the 300-word minimum is met</span>
+                  </div>
+                  <div class="word-meter__track">
+                    <div class="word-meter__tick" style="left: 75%" aria-hidden="true"><span class="word-meter__tick-label">min 300</span></div>
+                    <div class="word-meter__fill" style="width: 75%"></div>
+                  </div>
+                </div>
+                <div class="word-meter word-meter--met only-resumed">
+                  <div class="word-meter__readout">
+                    <span class="word-meter__count">284</span>
+                    <span id="word-state-resumed" class="word-meter__state">words · 16 under the 300-word minimum</span>
+                  </div>
+                  <div class="word-meter__track">
+                    <div class="word-meter__tick" style="left: 75%" aria-hidden="true"><span class="word-meter__tick-label">min 300</span></div>
+                    <div class="word-meter__fill" style="width: 71%"></div>
+                  </div>
+                </div>
+                <div class="word-meter word-meter--over only-over-limit">
+                  <div class="word-meter__readout">
+                    <span class="word-meter__count">156</span>
+                    <span id="word-state-over" class="word-meter__state">words · 6 over the 150-word maximum</span>
+                  </div>
+                  <div class="word-meter__track">
+                    <div class="word-meter__tick" style="left: 83%" aria-hidden="true"><span class="word-meter__tick-label">150 max</span></div>
+                    <div class="word-meter__fill" style="width: 87%"></div>
+                  </div>
+                </div>
+                <div class="word-meter word-meter--met only-task-time-up">
+                  <div class="word-meter__readout">
+                    <span class="word-meter__count">412</span>
+                    <span class="word-meter__state">words · the 300-word minimum is met</span>
+                  </div>
+                  <div class="word-meter__track">
+                    <div class="word-meter__tick" style="left: 75%" aria-hidden="true"><span class="word-meter__tick-label">min 300</span></div>
+                    <div class="word-meter__fill" style="width: 100%"></div>
+                  </div>
+                </div>
+
+                <p id="essay-help" class="text-xs text-muted no-margin multi-state" data-show="writing near-limit over-limit saving save-failed offline resumed">
+                  Writing under the minimum, or over the maximum, costs marks but is still graded.
+                </p>
+
+                <!-- save state, spelled out beside the editor -->
+                <div class="state-block only-saving">
+                  <div class="state-block__icon" aria-hidden="true">UPLOADING</div>
+                  <div class="state-block__title">Saving…</div>
+                  <p class="state-block__desc">Keep this tab open. The last save was 11:40:51.</p>
+                </div>
+                <div class="state-block only-save-failed">
+                  <div class="state-block__icon state-block__icon--danger" aria-hidden="true">NOT SAVED</div>
+                  <div class="state-block__title">Your last changes did not save</div>
+                  <p class="state-block__desc">Everything up to 11:38:12 is saved. The 46 words you typed after that are only in this browser.</p>
+                </div>
+                <div class="state-block only-offline">
+                  <div class="state-block__icon state-block__icon--danger" aria-hidden="true">OFFLINE</div>
+                  <div class="state-block__title">No connection</div>
+                  <p class="state-block__desc">Your text is held in this browser and saves by itself when the connection returns.</p>
+                </div>
+              </div>
+              <div class="card__footer">
+                <div class="row row--between">
+                  <div class="row">
+                    <button class="btn btn--primary multi-state" data-show="writing near-limit over-limit resumed" type="button">Save and submit</button>
+                    <button class="btn btn--primary only-saving" type="button" disabled>Saving…</button>
+                    <button class="btn btn--primary only-save-failed" type="button">Retry save</button>
+                    <button class="btn btn--primary only-offline" type="button" disabled>Waiting for a connection</button>
+                    <a class="btn btn--primary only-task-time-up" href="grading-pending.html">Submit all answers</a>
+                  </div>
+                  <p class="text-xs text-muted no-margin multi-state" data-show="writing near-limit resumed">Question 8 is the last one.</p>
+                  <p class="text-xs text-muted no-margin only-over-limit">Submitting moves on to question 7.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- the question navigator sits below on this screen: the panes above own the width -->
+        <div class="mt-5">
+          <div class="card">
+            <div class="card__header">
+              <div class="row row--between">
+                <strong class="text-sm">Writing</strong>
+                <span class="text-xs text-muted multi-state" data-show="writing near-limit saving save-failed offline resumed task-time-up">7 of 8 answered</span>
+                <span class="text-xs text-muted only-over-limit">5 of 8 answered</span>
+              </div>
+            </div>
+            <div class="card__body stack">
+              <div class="progress multi-state" data-show="writing near-limit saving save-failed offline resumed task-time-up" role="progressbar" aria-valuenow="7" aria-valuemin="0" aria-valuemax="8" aria-label="Questions answered"><div class="progress__bar" style="width: 88%"></div></div>
+              <div class="progress only-over-limit" role="progressbar" aria-valuenow="5" aria-valuemin="0" aria-valuemax="8" aria-label="Questions answered"><div class="progress__bar" style="width: 63%"></div></div>
+              <div class="navigator navigator--strip" role="group" aria-label="Writing questions by task">
+                <div class="navigator__part">
+                  <div class="navigator__part-head">Sentence from a picture <span class="navigator__range">1–5</span></div>
+                  <div class="navigator__grid">
+                    <span class="navigator__cell is-answered" aria-label="Question 1, answered">1</span>
+                    <span class="navigator__cell is-answered" aria-label="Question 2, answered">2</span>
+                    <span class="navigator__cell is-answered" aria-label="Question 3, answered">3</span>
+                    <span class="navigator__cell is-answered" aria-label="Question 4, answered">4</span>
+                    <span class="navigator__cell is-answered" aria-label="Question 5, answered">5</span>
+                  </div>
+                </div>
+                <div class="navigator__part">
+                  <div class="navigator__part-head">Respond to a request <span class="navigator__range">6–7</span></div>
+                  <div class="navigator__grid">
+                    <span class="navigator__cell is-answered multi-state" data-show="writing near-limit saving save-failed offline resumed task-time-up" aria-label="Question 6, answered">6</span>
+                    <span class="navigator__cell is-current only-over-limit" aria-label="Question 6, current question" aria-current="step">6</span>
+                    <span class="navigator__cell is-answered multi-state" data-show="writing near-limit saving save-failed offline resumed task-time-up" aria-label="Question 7, answered">7</span>
+                    <span class="navigator__cell is-unanswered only-over-limit" aria-label="Question 7, not yet answered">7</span>
+                  </div>
+                </div>
+                <div class="navigator__part">
+                  <div class="navigator__part-head">Opinion essay <span class="navigator__range">8</span></div>
+                  <div class="navigator__grid">
+                    <span class="navigator__cell is-current multi-state" data-show="writing near-limit saving save-failed offline resumed task-time-up" aria-label="Question 8, current question" aria-current="step">8</span>
+                    <span class="navigator__cell is-unanswered only-over-limit" aria-label="Question 8, not yet answered">8</span>
+                  </div>
+                </div>
+              </div>
+              <div class="text-xs stack" style="gap: var(--space-1)">
+                <div class="row"><span class="navigator__cell navigator__cell--swatch is-answered" aria-hidden="true">1</span> answered and saved</div>
+                <div class="row"><span class="navigator__cell navigator__cell--swatch is-current" aria-hidden="true">2</span> current question</div>
+                <div class="row"><span class="navigator__cell navigator__cell--swatch is-unanswered" aria-hidden="true">3</span> not yet answered</div>
+              </div>
+              <p class="text-xs text-muted no-margin">A closed time block cannot be reopened. Empty answers are not graded.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script src="../assets/js/state-switch.js"></script>
+  <script src="../assets/js/icons.js"></script>
+</body>
+</html>

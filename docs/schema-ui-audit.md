@@ -46,12 +46,50 @@ Added 2026-10-09: a **Query indexes** section at the end of the schema (36 index
 does not index foreign keys, so every trigger join and history read was a scan.
 The AI-grading worker reads `IX_AiGradings_Queue` / `IX_FreeResponses_Pending`.
 
+## Final pass — 2026-10-10
+
+| Tag | What the screen needs | Pages | Change |
+|---|---|---|---|
+| UI-45 | A writing/speaking result is rubric-only, never "out of 990"; placement card meta "40 questions · 30 minutes" | writing-review, speaking-review, placement-select | `trg_Attempts_NoBandForSpeakingPractice` also rejects `TotalScore` on skill-practice attempts; `Exams.QuestionCount` |
+| UI-46 | Placement snapshot must trace to the attempt's own scores; a done placement carries band + total + attempt | placement-result | `trg_PlacementTests_SnapshotMatchesAttempt`, `CK_Placement_DoneHasResult` |
+| UI-44 (fixed) | `ai_task` path item must open the writing/speaking practice exam it names — `CK_PMI_RefMatchesType` forced `RefExamId` NULL | path-detail "Write it" task | CHECK allows `RefExamId` for `ai_task`; `trg_PMI_AiTaskRefsSkillPracticeExam` pins it to a `writing_practice`/`speaking_practice` exam (never a mock or placement) |
+| UI-33 | Wallet stat "Total purchased 548,000 ₫ · 2 paid orders" (money, not credits) | wallet | `vw_UserPurchaseTotals` |
+
+Second-pass UI fixes (found by re-reading every modified page plus the five the first pass deferred):
+- `exam-listening`: sidebar claimed "31/100 questions" while the stepper showed Part 1 done (6) and Q8 current — the count is 7. The flag moved from Q4 (inside the locked Part 1, unreachable) to Q7.
+- `practice-select`: "Questions per session → All sections" is not representable — a session is per-section by FK. Now "All questions in this part".
+- `path-detail`: the premium AI writing task sat inside the topics table, but `PathModuleTopics` has no premium/type columns (premium lives on `PathModuleItems`). It is now its own "AI-graded task" block.
+- `placement-take`: Q12/40 with 28:45 left of 30:00 was implausible pacing. Now 21:38.
+- `exam-speaking`: "Finish and submit" rendered even in the prepare state, before anything is recorded. Now it appears from the first saved recording.
+
 ## Fixed in the prototype (UI was wrong, not the schema)
 
 - Mentor cards showed cash prices (50,000 ₫…) while booking charges 1 credit. Now "1 credit" (`mentor-list`, `mentor-detail`).
 - `mentor-confirm`: "Balance after booking 8, from 9" contradicted the 8-credit top bar. Now 7 from 8.
 - `admin/users`: "currently has 8, add 1 → 4 credits". Now 9.
 - `weakness-analysis`: the "requires question-type labels" disclaimer no longer applies.
+- `wallet` / `pricing`: "used 7, all on full tests" contradicts the credit model (AI grading and mentors also spend credits). Now "full tests, AI gradings, mentor sessions".
+- `learning-path`: Module 4 said "Reading · 50 terms" — modules are practice sessions, which the schema counts in questions. Now "Practice · 50 questions".
+- `register`: no phone field although the schema stores `Users.Phone` and profile collects it. Added.
+- `exam-writing`: the word-meter tick said "300 min" (a word count, not minutes). Now "min 300" (matching "150 max").
+- `writing-review`: "Questions 1–5 out of 3, 6–7 out of 4" read as totals (3 and 4) that contradict 21/28. Now "out of 3 each / 4 each".
+- `practice-summary`: the stat "15 out of 20 · 75%" contradicted the skip rule shown on the same page ("not counted in the rate") — 15/(15+4) is 79%. Now "out of 19 answered · 79%", and the skip explanation no longer says blank answers count as incorrect.
+
+## Feature additions — 2026-10-10
+
+Screens added to close functional gaps; each maps to existing tables, no schema change needed.
+
+| Tag | Screen | Backing data |
+|---|---|---|
+| UI-47 | `student/saved-questions.html` — the incorrect-answer bank / saved-question list that practice-take and practice-summary already promised ("Save this question", "saved to your incorrect-answer bank") | `SavedQuestions (Source 'manual'/'incorrect')`, part filter from `Sections`, type filter from `QuestionCategories` |
+| UI-48 | `student/support-report.html` — learner files a complaint; type selector mirrors `CK_Complaints_TypeMatchesSubject` (mentor→booking, exam→attempt, payment→order) | `Complaints` |
+| UI-49 | `student/support-history.html` — learner tracks open/resolved reports and reads `Resolution` (never `InternalNotes`) | `Complaints.Status/Resolution` |
+| UI-50 | `certificates.html` — per-certificate structure & band explainer; landing certificate cards link here | `Certificates`, `Skills.DurationMinutes`, `Sections.QuestionCount`, `ScoreBands` |
+| UI-51 | dashboard email-verification nudge ("Resend email", dismissible) | `Users.EmailVerifiedAt`, `EmailVerificationTokens` |
+
+Also: "Save this question for review" buttons and the practice-summary stat now link to the bank;
+booking-detail and writing-review offer "Report a problem" / "Dispute this grading";
+admin complaints page links back to the learner form.
 
 ## Derivable, no column needed
 

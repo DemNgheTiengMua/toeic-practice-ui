@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/components.css">
 </head>
-<body data-states="answering,revealed-correct,revealed-wrong,finished,loading,error">
+<body data-states="answering,hint-shown,revealed-correct,revealed-wrong,finished,loading,error">
   <div class="app-shell">
     <header class="app-topbar">
       <div class="exam-topbar-group">
@@ -18,8 +18,8 @@
       </div>
       <div class="exam-topbar-group">
         <span class="text-sm text-muted multi-state"
-              data-show="answering revealed-correct revealed-wrong">Question 7 / 20</span>
-        <div class="progress multi-state" data-show="answering revealed-correct revealed-wrong"
+              data-show="answering hint-shown revealed-correct revealed-wrong">Question 7 / 20</span>
+        <div class="progress multi-state" data-show="answering hint-shown revealed-correct revealed-wrong"
              style="width: 160px">
           <div class="progress__bar" style="width: 35%"></div>
         </div>
@@ -56,7 +56,7 @@
         </div>
 
         <!-- ===== đang trả lời: chưa có feedback ===== -->
-        <div class="only-answering stack">
+        <div class="multi-state stack" data-show="answering hint-shown">
           <div class="question">
             <div class="question__meta">
               <span class="question__number">Question 7</span>
@@ -87,9 +87,18 @@
                 <span class="option__text">to review</span>
               </label>
             </div>
+            <!-- UI-42: a hint is a nudge toward the rule, never the answer; the explanation comes after -->
+            <div class="hint only-hint-shown mt-4" id="q7-hint" role="note">
+              <span class="hint__label">Hint</span>
+              Does the sentence already have a main verb? Then look at the time marker at the end.
+            </div>
           </div>
           <div class="row row--between">
-            <button class="btn btn--ghost">Skip this question</button>
+            <div class="row">
+              <button class="btn btn--ghost">Skip this question</button>
+              <button class="btn btn--ghost only-answering" type="button" aria-controls="q7-hint" aria-expanded="false">Show hint</button>
+              <span class="text-xs text-muted only-hint-shown">Hint used · it is noted in your summary</span>
+            </div>
             <button class="btn btn--primary btn--lg">Check answers</button>
           </div>
         </div>
@@ -117,15 +126,16 @@
               <div class="option"><span class="option__marker">D</span>
                 <span class="option__text">to review</span></div>
             </div>
+            <!-- the correct state matches the explanation on this page: C "will review" -->
             <div class="explain">
               <div class="explain__title">Explanation</div>
               <p class="no-margin">
-                The sentence lacks a main verb, so eliminate it <em>reviewing</em> and <em>to review</em>. The time marker "before the board meeting" refers to something that has not happened yet, so choose the future tense <strong>will review</strong>. Type <em>review</em> does not agree with the singular subject.
+                The sentence lacks a main verb, so eliminate <em>reviewing</em> and <em>to review</em> — neither is a conjugated verb. The time marker "before the board meeting" refers to something that has not happened yet, so choose the future tense <strong>will review</strong>. Plain <em>review</em> would clash with "asked": the asking is past, the report is still to come.
               </p>
             </div>
           </div>
           <div class="row row--between">
-            <button class="btn btn--ghost">Save this question for review</button>
+            <a class="btn btn--ghost" href="saved-questions.html">Save this question for review</a>
             <button class="btn btn--primary btn--lg">Next question →</button>
           </div>
         </div>
@@ -136,6 +146,7 @@
               <span class="question__number">Question 7</span>
               <span class="badge badge--muted">Part 5 — Incomplete Sentences</span>
               <span class="badge badge--danger">Incorrect</span>
+              <span class="badge badge--muted">Hint used</span>
             </div>
             <p class="question__stem">
               The regional manager ------- the quarterly figures before the board meeting.
@@ -168,7 +179,7 @@
             </div>
           </div>
           <div class="row row--between">
-            <button class="btn btn--ghost">Save this question for review</button>
+            <a class="btn btn--ghost" href="saved-questions.html">Save this question for review</a>
             <button class="btn btn--primary btn--lg">Next question →</button>
           </div>
         </div>

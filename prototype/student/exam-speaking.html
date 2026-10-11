@@ -241,14 +241,17 @@
                   </div>
                 </div>
                 <div class="text-xs stack" style="gap: var(--space-1)">
-                  <div class="row"><span class="navigator__cell is-answered" style="width: 18px" aria-hidden="true">1</span> recorded and saved</div>
-                  <div class="row"><span class="navigator__cell is-current" style="width: 18px" aria-hidden="true">2</span> current question</div>
-                  <div class="row"><span class="navigator__cell is-unanswered" style="width: 18px" aria-hidden="true">3</span> not yet recorded</div>
+                  <div class="row"><span class="navigator__cell navigator__cell--swatch is-answered" aria-hidden="true">1</span> recorded and saved</div>
+                  <div class="row"><span class="navigator__cell navigator__cell--swatch is-current" aria-hidden="true">2</span> current question</div>
+                  <div class="row"><span class="navigator__cell navigator__cell--swatch is-unanswered" aria-hidden="true">3</span> not yet recorded</div>
                 </div>
               </div>
             </div>
-            <a class="btn btn--danger" href="grading-pending.html">Finish and submit</a>
-            <p class="text-xs text-muted no-margin">Questions you have not recorded are not graded.</p>
+            <!-- submit appears once at least one recording exists; before that there is nothing to grade -->
+            <div class="multi-state stack" data-show="recorded saving save-failed resumed submitting expired">
+              <a class="btn btn--danger" href="grading-pending.html">Finish and submit</a>
+              <p class="text-xs text-muted no-margin">Questions you have not recorded are not graded.</p>
+            </div>
           </aside>
         </div>
       </div>

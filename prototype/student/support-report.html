@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Report a problem — extra efficient</title>
+  <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/css/tokens.css">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <script src="../assets/js/sidebar.js"></script>
+</head>
+<body data-states="success,sent,error,submitting">
+  <div class="app-shell app-shell--with-sidebar">
+    <header class="app-topbar">
+      <strong>extra efficient</strong>
+      <div class="row">
+        <span class="badge badge--info">8 credits left</span>
+        <a class="btn btn--sm" href="../payment/pricing.html">Buy credits</a>
+        <a class="btn btn--ghost btn--sm" href="profile.html">Nguyễn Văn A</a>
+      </div>
+    </header>
+    <div class="app-body">
+      <aside class="app-sidebar">
+        <nav class="nav-list" aria-label="Main navigation">
+          <a class="nav-list__item" href="dashboard.html">Home</a>
+          <div class="nav-list__group">Mock exams</div>
+          <a class="nav-list__item" href="exam-list.html">Test list</a>
+          <a class="nav-list__item" href="exam-history.html">Exam history</a>
+          <div class="nav-list__group">Practice</div>
+          <a class="nav-list__item" href="practice-select.html">Practice by section</a>
+          <a class="nav-list__item" href="weakness-analysis.html">Weakness analysis</a>
+          <a class="nav-list__item" href="saved-questions.html">Saved questions</a>
+          <div class="nav-list__group">Learning</div>
+          <a class="nav-list__item" href="learning-path.html">My learning path</a>
+          <a class="nav-list__item" href="mentor-list.html">Find a mentor</a>
+          <div class="nav-list__group">Account</div>
+          <a class="nav-list__item" href="../payment/wallet.html">Credit wallet</a>
+          <a class="nav-list__item is-active" href="support-report.html">Report a problem</a>
+          <a class="nav-list__item" href="profile.html">Profile</a>
+        </nav>
+      </aside>
+      <main class="app-main">
+        <div class="context-bar">
+          <div class="context-bar__item">
+            <span class="context-bar__label">Certificate:</span>
+            <span class="context-bar__value">TOEIC</span>
+          </div>
+          <div class="context-bar__item">
+            <span class="context-bar__label">Response time:</span>
+            <span class="context-bar__value">Within 2 working days</span>
+          </div>
+        </div>
+        <div class="container stack">
+          <nav class="breadcrumbs" aria-label="Breadcrumb">
+            <a href="dashboard.html" class="breadcrumbs__item">Home</a>
+            <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+            <span class="breadcrumbs__item" aria-current="page">Report a problem</span>
+          </nav>
+
+          <!-- ===== success: the form (Complaints table — exactly one subject per report) ===== -->
+          <div class="only-success stack" style="max-width: 640px">
+            <div>
+              <h1 class="m-0 mb-1">Report a problem</h1>
+              <p class="text-muted no-margin">
+                Something went wrong with a booking, an exam, or a payment? Tell us what happened — an admin will review it and reply here.
+              </p>
+            </div>
+
+            <form class="card"><div class="card__body stack">
+              <div class="field">
+                <label class="field__label" for="sr-type">What is this about?</label>
+                <select class="field__input" id="sr-type">
+                  <option>A mentor session</option>
+                  <option>An exam or its grading</option>
+                  <option>A payment</option>
+                </select>
+              </div>
+
+              <!-- subject picker depends on the type above:
+                   mentor  → mentor_no_show / mentor_quality  (links a BookingId)
+                   exam    → grading_issue / technical_error  (links an AttemptId)
+                   payment → payment_issue                    (links an OrderId) -->
+              <div class="field">
+                <label class="field__label" for="sr-reason">What happened?</label>
+                <select class="field__input" id="sr-reason">
+                  <option>The mentor did not show up</option>
+                  <option>The session quality was poor</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label class="field__label" for="sr-subject">Which session?</label>
+                <select class="field__input" id="sr-subject">
+                  <option>Trần Thị B — 22 Sep 2026, 19:00 (completed)</option>
+                  <option>Trần Thị B — 15 Sep 2026, 19:00 (completed)</option>
+                </select>
+                <p class="text-sm text-muted no-margin mt-1">Only your own bookings appear in this list.</p>
+              </div>
+
+              <div class="field">
+                <label class="field__label" for="sr-details">Describe the problem</label>
+                <textarea class="field__input" id="sr-details" rows="5"
+                  placeholder="What happened, and when? The more detail you give, the faster we can resolve it."></textarea>
+              </div>
+
+              <div class="only-error">
+                <div class="alert alert--danger no-margin">
+                  Please choose a session and describe the problem before sending.
+                </div>
+              </div>
+
+              <div class="row">
+                <button type="button" class="btn btn--primary">Send report</button>
+                <a class="btn" href="dashboard.html">Cancel</a>
+              </div>
+            </div></form>
+
+            <div class="card">
+              <div class="card__body">
+                <p class="text-sm no-margin">
+                  <strong>Credit refunds:</strong> if your report is accepted — for example a mentor no-show — the credit is returned to your wallet automatically when the report is resolved.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- ===== submitting ===== -->
+          <div class="only-submitting stack" style="max-width: 640px">
+            <h1 class="m-0 mb-1">Report a problem</h1>
+            <div class="card"><div class="card__body">
+              <div class="state-block">
+                <div class="state-block__icon" aria-hidden="true">…</div>
+                <div class="state-block__title">Sending your report</div>
+                <p class="state-block__desc">This usually takes a few seconds.</p>
+              </div>
+            </div></div>
+          </div>
+
+          <!-- ===== sent ===== -->
+          <div class="only-sent stack" style="max-width: 640px">
+            <h1 class="visually-hidden">Report sent</h1>
+            <div class="card"><div class="card__body">
+              <div class="state-block">
+                <div class="state-block__icon" aria-hidden="true">✓</div>
+                <div class="state-block__title">Report received</div>
+                <p class="state-block__desc">
+                  An admin will review your report within 2 working days. You can follow its status below.
+                </p>
+                <div class="row row--center">
+                  <a class="btn btn--primary btn--lg" href="support-history.html">View my reports</a>
+                  <a class="btn btn--lg" href="dashboard.html">Back to home</a>
+                </div>
+              </div>
+            </div></div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <script src="../assets/js/state-switch.js"></script>
+  <script src="../assets/js/icons.js"></script>
+</body>
+</html>
