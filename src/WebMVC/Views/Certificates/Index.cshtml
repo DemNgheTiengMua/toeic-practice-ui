@@ -1,0 +1,108 @@
+@model IReadOnlyList<Contracts.CertificateDto>
+@{
+    ViewData["Title"] = "Certificates";
+    ViewData["Description"] = "TOEIC, IELTS and VSTEP on extra efficient — test structure, score bands and what you can practice for each certificate.";
+}
+
+<div class="container stack" style="padding-top: var(--space-6); padding-bottom: var(--space-8)">
+  <nav class="breadcrumbs" aria-label="Breadcrumb">
+    <a href="/" class="breadcrumbs__item">Home</a>
+    <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+    <span class="breadcrumbs__item" aria-current="page">Certificates</span>
+  </nav>
+
+  <div style="max-width: 640px">
+    <h1 class="m-0 mb-1">Three certificates, one account</h1>
+    <p class="text-muted no-margin">
+      Pick the certificate you are working toward. Your placement test, learning path, practice bank and
+      mock exams all follow that certificate's real structure and scoring — and you can switch at any time.
+    </p>
+  </div>
+
+  @foreach (var cert in Model)
+  {
+    <section class="stack" aria-labelledby="cert-@cert.Code.ToLowerInvariant()">
+      <h2 id="cert-@cert.Code.ToLowerInvariant()" class="section-group__title">@cert.Code — @cert.Name</h2>
+      <div class="card">
+        <div class="card__body stack">
+          @if (!string.IsNullOrEmpty(cert.Description))
+          {
+            <p class="no-margin">@cert.Description</p>
+          }
+          <div class="grid-2">
+            @foreach (var skill in cert.Skills)
+            {
+              <div>
+                <strong>
+                  @skill.Name
+                  @if (skill.DurationMinutes is not null)
+                  {
+                    <text> — @skill.DurationMinutes minutes</text>
+                  }
+                  @if (skill.Sections.Count > 0)
+                  {
+                    var total = skill.Sections.Sum(s => s.ExpectedQuestionCount ?? 0);
+                    if (total > 0)
+                    {
+                      <text> · @total questions</text>
+                    }
+                  }
+                </strong>
+                @if (skill.Sections.Count > 0)
+                {
+                  <ul class="text-sm text-muted mt-1 mb-0 pl-5">
+                    @foreach (var sec in skill.Sections)
+                    {
+                      <li>
+                        @sec.Code — @sec.Name
+                        @if (sec.ExpectedQuestionCount is not null)
+                        {
+                          <text>(@sec.ExpectedQuestionCount)</text>
+                        }
+                      </li>
+                    }
+                  </ul>
+                }
+              </div>
+            }
+          </div>
+          @if (cert.Bands.Count > 0)
+          {
+            var lowest = cert.Bands.Min(b => b.MinTotal);
+            var highest = cert.Bands.Max(b => b.MaxTotal);
+            <div>
+              <strong class="text-sm">Score bands</strong>
+              <div class="cefr mt-2">
+                <div class="cefr__track" role="img"
+                     aria-label="@cert.Code score bands from @cert.Bands.First().Code at @lowest to @cert.Bands.Last().Code at @highest">
+                  @foreach (var band in cert.Bands)
+                  {
+                    <span class="cefr__band">@band.Code</span>
+                  }
+                </div>
+                <div class="cefr__scale" aria-hidden="true">
+                  @foreach (var band in cert.Bands)
+                  {
+                    <span class="cefr__tick">@band.MinTotal</span>
+                  }
+                </div>
+                <p class="cefr__note">@lowest–@highest scale. Bands follow the certificate's standard level mapping.</p>
+              </div>
+            </div>
+          }
+        </div>
+        <div class="card__footer">
+          <a class="btn btn--primary" href="/register">Start with @cert.Code</a>
+        </div>
+      </div>
+    </section>
+  }
+
+  <div class="card">
+    <div class="card__body row row--between" style="flex-wrap: wrap; gap: var(--space-4)">
+      <p class="no-margin"><strong>Not sure which one fits your goal?</strong><br>
+        <span class="text-muted">Create a free account and take the placement test — it works for every certificate.</span></p>
+      <a class="btn btn--primary btn--lg" href="/register">Start for free</a>
+    </div>
+  </div>
+</div>

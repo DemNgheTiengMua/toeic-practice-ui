@@ -20,3 +20,8 @@ shot-*.png
 
 # ERD generator intermediate (regenerated from the database)
 docs/erd/meta.json
+
+# .NET build artifacts and IDE state
+.vs/
+bin/
+obj/

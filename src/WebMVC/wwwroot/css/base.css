@@ -1,0 +1,573 @@
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  color: var(--color-text);
+  background: var(--color-bg);
+  line-height: var(--leading-body);
+  caret-color: var(--sign-blue);
+}
+
+/* Sign lettering: bold condensed caps. h1 and h2 are placard lines; h3 is a
+   panel heading, which stays sentence case so dense content remains readable.
+   Refined scale for clearer hierarchy. */
+h1, h2, h3 { margin: 0 0 var(--space-3); line-height: var(--leading-tight); font-family: var(--font-sign); }
+h1 {
+  font-size: var(--text-2xl); font-weight: 700;
+  text-transform: uppercase; letter-spacing: var(--tracking-sign);
+}
+h2 {
+  font-size: var(--text-xl); font-weight: 700;
+  text-transform: uppercase; letter-spacing: var(--tracking-sign);
+}
+h3 {
+  font-size: var(--text-lg); font-weight: 700;
+  letter-spacing: -.01em;
+}
+p { margin: 0 0 var(--space-3); }
+
+/* The page title is a placard, not a line of text: an ink field with white caps
+   and a gold base rule. It is the same inverted-ink device the active nav tab
+   uses, so "you are here" reads identically in the rail and at the top of the
+   page. One rule covers every screen because every page h1 lives in .app-main;
+   the hidden loading h1s and the error-card titles are left alone.
+   The wipe plays once per appearance (states re-show their h1, so it also marks
+   a state change) and starts from the finished sign, so nothing is ever hidden. */
+.app-main h1:not(.visually-hidden):not(.state-block__title) {
+  display: block; width: fit-content; max-width: 100%;
+  padding: var(--space-3) var(--space-5);
+  background: var(--ink); color: #ffffff;
+  border-bottom: calc(var(--keyline) * 3) solid var(--sign-gold);
+  font-size: clamp(var(--text-xl), 1.2rem + 1.8vw, var(--text-3xl));
+  line-height: 1.1;
+  text-wrap: balance;
+  animation: placard-wipe 480ms cubic-bezier(.16, 1, .3, 1);
+}
+.app-main h1:not(.visually-hidden):not(.state-block__title) + p { margin-top: var(--space-3); }
+@keyframes placard-wipe {
+  from { clip-path: inset(0 100% 0 0); }
+  to   { clip-path: inset(0 0 0 0); }
+}
+
+/* Passage typography — optimized for sustained reading under time pressure.
+   Larger size, generous leading, subtle tracking, constrained measure. */
+.passage {
+  font-size: var(--text-passage);
+  line-height: var(--leading-read);
+  letter-spacing: var(--tracking-passage);
+  max-width: var(--measure);
+}
+.passage p { margin-bottom: var(--space-4); }
+.passage p:last-child { margin-bottom: 0; }
+
+/* Question stem — clear and slightly emphasized for quick scanning */
+.question__stem {
+  font-size: var(--text-base);
+  font-weight: 500;
+  line-height: var(--leading-snug);
+  margin-bottom: var(--space-3);
+}
+
+a { color: var(--color-primary); text-underline-offset: 3px; }
+:focus-visible { outline: 3px solid var(--sign-blue); outline-offset: 2px; }
+
+/* Browser surfaces carry the world too — the cheapest signal that a page was
+   built rather than assembled. Selection is the highlighter over the page;
+   the scrollbar is a painted rail, not the platform default. */
+::selection { background: var(--sign-gold); color: var(--ink); }
+* { scrollbar-width: thin; scrollbar-color: #3d454e var(--wall); }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--wall); }
+::-webkit-scrollbar-thumb { background: #3d454e; border: 2px solid var(--wall); }
+
+/* Announced to assistive technology, invisible on screen. Used for the exam
+   surfaces' missing headings, which the critique flagged. */
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px;
+  margin: -1px; padding: 0; overflow: hidden;
+  clip: rect(0 0 0 0); clip-path: inset(50%);
+  white-space: nowrap; border: 0;
+}
+
+/* ===== shell ============================================================= */
+.app-shell { display: grid; grid-template-rows: auto 1fr; min-height: 100vh; }
+.app-shell--with-sidebar .app-body {
+  display: grid; grid-template-columns: var(--sidebar-w, 240px) minmax(0, 1fr); min-height: 0;
+  transition: grid-template-columns 260ms cubic-bezier(.16, 1, .3, 1);
+}
+
+/* The topbar is the painted band: sign-blue field, white caps lettering. */
+.app-topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-5);
+  background: var(--sign-blue);
+  color: #ffffff;
+  /* A gold base rule: the same edge the page placard below it carries, so the
+     band and the title read as one signage system. */
+  border-bottom: calc(var(--keyline) * 2) solid var(--sign-gold);
+}
+.app-topbar a { color: #ffffff; }
+/* The brand is lettered like the signs under it, not set as body text. Only the
+   direct brand mark: the exam screens' test title lives in a group and keeps
+   its own size. */
+.app-topbar > strong,
+.app-topbar__lead > strong {
+  font-family: var(--font-sign); font-size: var(--text-xl); font-weight: 700;
+  text-transform: uppercase; letter-spacing: var(--tracking-sign);
+  line-height: 1;
+}
+/* The global focus ring is sign-blue, which vanishes on the sign-blue band. */
+.app-topbar :focus-visible { outline-color: var(--sign-gold); }
+.app-topbar .text-muted { color: var(--color-on-band-muted); }
+
+/* The band inverts the page: its own lettering is white, so a component that
+   expects a paper background has to be re-stated for it. `.app-topbar a`
+   outranks `.btn`, which turned the button's ink label white and left it at
+   1.0:1 on its own white field — an invisible label on every screen that
+   carries the band. These rules give the band's button and chip their own
+   fields. The button stays a paper chip (that IS the house button); the chip
+   becomes an outlined one, because a sign-blue chip on a sign-blue band has no
+   frame at all and reads as loose text. */
+.app-topbar .btn {
+  background: var(--color-surface);
+  border-color: var(--ink);
+  color: var(--ink);
+}
+.app-topbar .btn:hover { background: var(--ink); color: #ffffff; }
+.app-topbar .btn--ghost {
+  background: transparent; border-color: transparent; color: #ffffff;
+}
+/* White keyline on hover, not ink: an ink frame on the blue band is 2.2:1. */
+.app-topbar .btn--ghost:hover {
+  background: transparent; border-color: #ffffff; color: #ffffff;
+}
+/* Only the blue chips need this — a blue chip on the blue band has no frame.
+   Gold, green and red chips keep their own fields, which read fine on blue and
+   carry meaning the band should not erase. */
+.app-topbar .badge--info,
+.app-topbar .badge--primary {
+  background: transparent; border-color: #ffffff; color: #ffffff;
+}
+
+/* The exam clock is a paper plate sitting on the band, so its lettering is ink,
+   not the white it would otherwise inherit — inherited white on its own white
+   field left the timer at 1.0:1, i.e. invisible on the one screen where it is
+   the most important number. The gold and red plates carry their own lettering
+   already; they are restated so the plate rule above cannot flatten them. */
+.app-topbar .timer { color: var(--ink); }
+.app-topbar .timer .text-muted { color: var(--color-text-muted); }
+.app-topbar .timer--warning { color: var(--ink); }
+.app-topbar .timer--critical { color: #ffffff; }
+
+/* The autosave status sits directly on the band, so it needs the light
+   renditions of the status inks; the paper ones are ~1.2:1 on sign-blue. */
+.app-topbar .save-status--saved { color: var(--color-on-band-success); }
+.app-topbar .save-status--error { color: var(--color-on-band-danger); }
+
+/* The rail is a painted panel with a hard ink keyline on its inner edge. */
+.app-sidebar {
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border-right: var(--keyline) solid var(--ink);
+}
+
+/* ===== sidebar behaviour ================================================== */
+/* On a sidebar screen the band stays put and the rail sticks beneath it, so the
+   menu is never a scroll away. --topbar-h is measured by sidebar.js (the band
+   wraps on narrow screens); 58px is the desktop height if the script is absent. */
+.app-shell--with-sidebar > .app-topbar { position: sticky; top: 0; z-index: 90; }
+.app-shell--with-sidebar .context-bar { top: var(--topbar-h, 58px); }
+.app-shell--with-sidebar .app-sidebar {
+  position: sticky; top: var(--topbar-h, 58px);
+  align-self: start;
+  height: calc(100vh - var(--topbar-h, 58px));
+  height: calc(100dvh - var(--topbar-h, 58px));
+  min-width: 0;
+  overflow-x: hidden; overflow-y: auto;
+  /* Scroll lock, part one: wheel or touch at the end of the rail stops there
+     instead of chaining into the page behind it. */
+  overscroll-behavior: contain;
+}
+
+/* The menu button lives on the band, left of the brand. */
+.app-topbar__lead { display: flex; align-items: center; gap: var(--space-4); min-width: 0; }
+.sidebar-toggle, .sidebar-close {
+  display: inline-flex; align-items: center; gap: var(--space-2);
+  padding: 6px var(--space-3);
+  background: transparent; color: #ffffff;
+  border: var(--keyline) solid #ffffff; border-radius: 0;
+  font-family: var(--font-sign); font-size: var(--text-sm); font-weight: 700;
+  text-transform: uppercase; letter-spacing: var(--tracking-sign);
+  line-height: 1.2; cursor: pointer;
+}
+.sidebar-toggle:hover, .sidebar-close:hover { background: #ffffff; color: var(--sign-blue); }
+.sidebar-toggle svg, .sidebar-close svg { flex: none; }
+.sidebar-scrim { display: none; }
+.app-sidebar__head { display: none; }
+
+/* Desktop: the whole rail can be hidden, and the choice is remembered. */
+@media (min-width: 1025px) {
+  html.sidebar-collapsed { --sidebar-w: 0px; }
+  html.sidebar-collapsed .app-shell--with-sidebar .app-sidebar {
+    padding-inline: 0; border-right-width: 0; visibility: hidden;
+    /* The column animates to 0 (grid-template-columns above); hiding waits for it. */
+    transition: visibility 0s 260ms;
+  }
+}
+
+/* No transitions while the saved layout is being restored on load. */
+html.sidebar-booting *, html.sidebar-booting *::before { transition: none !important; }
+.app-main { padding: var(--space-5); min-width: 0; }
+.container { width: 100%; max-width: 1180px; margin: 0 auto; }
+.container--narrow { max-width: 460px; }
+.container--prose { max-width: 760px; }
+.container--form { max-width: 560px; }
+
+/* ===== layout helper ===================================================== */
+.stack > * + * { margin-top: var(--space-4); }
+.stack--tight > * + * { margin-top: var(--space-3); }
+.stack--loose > * + * { margin-top: var(--space-5); }
+.row { display: flex; align-items: center; gap: var(--space-3); }
+.row--tight { gap: var(--space-2); }
+.row--loose { gap: var(--space-4); }
+.row--between { justify-content: space-between; }
+.row--center { justify-content: center; }
+.row--wrap { flex-wrap: wrap; }
+
+/* Utility classes */
+.mx-auto { margin-left: auto; margin-right: auto; }
+.mb-0 { margin-bottom: 0; }
+.mb-1 { margin-bottom: var(--space-1); }
+.mb-2 { margin-bottom: var(--space-2); }
+.mb-3 { margin-bottom: var(--space-3); }
+.mt-1 { margin-top: var(--space-1); }
+.mt-2 { margin-top: var(--space-2); }
+.mt-3 { margin-top: var(--space-3); }
+.text-left { text-align: left; }
+
+/* minmax(0,1fr) stops the columns blowing past the container; the breakpoints
+   below stop them collapsing into unreadable slivers, which is what the old
+   repeat(3,1fr) did at 390px. */
+.grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+.grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4); }
+.grid-4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-4); }
+/* Definition list grid layout */
+.dl-grid {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.dl-grid > div {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: var(--space-3);
+}
+
+.dl-grid--compact > div {
+  grid-template-columns: 120px 1fr;
+}
+
+.dl-grid dt {
+  color: var(--color-text-muted);
+}
+
+/* Utility classes for common inline overrides */
+.m-0 { margin: 0; }
+.text-center { text-align: center; }
+.mt-1 { margin-top: var(--space-1); }
+.mt-2 { margin-top: var(--space-2); }
+.mt-3 { margin-top: var(--space-3); }
+.mt-4 { margin-top: var(--space-4); }
+.mb-1 { margin-bottom: var(--space-1); }
+.mb-3 { margin-bottom: var(--space-3); }
+.mb-4 { margin-bottom: var(--space-4); }
+.cursor-pointer { cursor: pointer; }
+.flex-col { flex-direction: column; }
+.fw-600 { font-weight: 600; }
+.pl-5 { padding-left: var(--space-5); }
+.no-margin { margin: 0; }
+
+/* Container width variants */
+.container--narrow { max-width: 560px; }
+.container--form { max-width: 760px; }
+.container--quiz { max-width: 820px; }
+.centered-block { margin-inline: auto; }
+.no-margin { margin: 0; }
+/* ===== Text utilities ==================================================== */
+/* Text size utilities with appropriate line heights */
+.text-xs { font-size: var(--text-xs); line-height: var(--leading-snug); }
+.text-sm { font-size: var(--text-sm); line-height: var(--leading-snug); }
+.text-base { font-size: var(--text-base); line-height: var(--leading-body); }
+.text-lg { font-size: var(--text-lg); line-height: var(--leading-snug); }
+.text-muted { color: var(--color-text-muted); }
+
+/* ===== state visibility ==================================================
+   This rule group is the prototype's testable spec — do not change it. */
+/* The known `display: revert` trap in the two groups below: revert restores the
+   user-agent default for that element, NOT the display the component declares.
+   A <button> reverts to inline-block, while .btn sets inline-flex. So a
+   .btn.only-* with an icon inside silently loses its flex `gap` and
+   `align-items`: no error, no visible sign on the page. Nothing hits this today
+   (the auth pages' .btn elements are text-only, so revert is a no-op). When a
+   task first needs it, fix it with `revert-layer`, or narrow the rule to the
+   exact component — do not widen the change beyond that. */
+/* The class is doubled to raise specificity to (0,2,0): it has to beat the
+   component's display (.btn sets inline-flex in components.css, which loads
+   after base.css). The rule below is (0,2,1), so it still beats this hide. */
+.only-loading.only-loading, .only-empty.only-empty,
+.only-error.only-error, .only-success.only-success,
+.only-resumed.only-resumed, .only-expired.only-expired,
+.only-submitting.only-submitting, .only-offline.only-offline,
+.only-saving.only-saving,
+.only-pending.only-pending, .only-failed.only-failed,
+.only-step2.only-step2, .only-step3.only-step3,
+.only-adjust.only-adjust, .only-edit.only-edit,
+.only-paywall.only-paywall, .only-sent.only-sent,
+.only-locked.only-locked,
+.only-complete.only-complete,
+.only-answering.only-answering, .only-revealed-correct.only-revealed-correct,
+.only-revealed-wrong.only-revealed-wrong, .only-finished.only-finished,
+.only-cancelled.only-cancelled,
+.only-graded-with-recommendations.only-graded-with-recommendations,
+.only-confirmed.only-confirmed, .only-done.only-done, .only-resolved.only-resolved,
+.only-prepare.only-prepare, .only-recording.only-recording,
+.only-recorded.only-recorded, .only-save-failed.only-save-failed,
+.only-mic-check.only-mic-check,
+.only-writing.only-writing, .only-near-limit.only-near-limit, .only-over-limit.only-over-limit, .only-task-time-up.only-task-time-up, .only-hint-shown.only-hint-shown, 
+.only-approved.only-approved { display: none; }
+body[data-state="loading"]    .only-loading,
+body[data-state="empty"]      .only-empty,
+body[data-state="error"]      .only-error,
+body[data-state="success"]    .only-success,
+body[data-state="resumed"]    .only-resumed,
+body[data-state="expired"]    .only-expired,
+body[data-state="submitting"] .only-submitting,
+body[data-state="offline"]    .only-offline,
+body[data-state="saving"]     .only-saving,
+body[data-state="pending"]    .only-pending,
+body[data-state="failed"]     .only-failed,
+body[data-state="step2"]      .only-step2,
+body[data-state="step3"]      .only-step3,
+body[data-state="paywall"]    .only-paywall,
+body[data-state="locked"]     .only-locked,
+body[data-state="sent"]       .only-sent,
+body[data-state="complete"]   .only-complete,
+body[data-state="adjust"]     .only-adjust,
+body[data-state="edit"]       .only-edit,
+body[data-state="answering"]        .only-answering,
+body[data-state="revealed-correct"] .only-revealed-correct,
+body[data-state="revealed-wrong"]   .only-revealed-wrong,
+body[data-state="finished"]         .only-finished,
+body[data-state="cancelled"]        .only-cancelled,
+body[data-state="graded-with-recommendations"] .only-graded-with-recommendations,
+body[data-state="confirmed"]        .only-confirmed,
+body[data-state="done"]             .only-done,
+body[data-state="resolved"]         .only-resolved,
+body[data-state="prepare"]          .only-prepare,
+body[data-state="recording"]        .only-recording,
+body[data-state="recorded"]         .only-recorded,
+body[data-state="save-failed"]      .only-save-failed,
+body[data-state="mic-check"]        .only-mic-check,
+body[data-state="writing"] .only-writing,
+body[data-state="near-limit"] .only-near-limit,
+body[data-state="over-limit"] .only-over-limit,
+body[data-state="task-time-up"] .only-task-time-up,
+body[data-state="hint-shown"] .only-hint-shown,
+body[data-state="approved"]         .only-approved { display: revert; }
+
+/* Elements that appear in several states: add .multi-state and list the states
+   in data-show. The class is doubled for the same specificity reason as .only-* */
+.multi-state.multi-state { display: none; }
+body[data-state="success"]    .multi-state[data-show~="success"],
+body[data-state="saving"]     .multi-state[data-show~="saving"],
+body[data-state="submitting"] .multi-state[data-show~="submitting"] { display: revert; }
+body[data-state="resumed"]    .multi-state[data-show~="resumed"],
+body[data-state="offline"]    .multi-state[data-show~="offline"],
+body[data-state="expired"]    .multi-state[data-show~="expired"] { display: revert; }
+body[data-state="answering"]        .multi-state[data-show~="answering"],
+body[data-state="revealed-correct"] .multi-state[data-show~="revealed-correct"],
+body[data-state="revealed-wrong"]   .multi-state[data-show~="revealed-wrong"],
+body[data-state="finished"]         .multi-state[data-show~="finished"],
+body[data-state="complete"]         .multi-state[data-show~="complete"],
+body[data-state="paywall"]          .multi-state[data-show~="paywall"],
+body[data-state="locked"]           .multi-state[data-show~="locked"],
+body[data-state="pending"]          .multi-state[data-show~="pending"],
+body[data-state="failed"]           .multi-state[data-show~="failed"],
+body[data-state="loading"]          .multi-state[data-show~="loading"],
+body[data-state="empty"]            .multi-state[data-show~="empty"],
+body[data-state="error"]            .multi-state[data-show~="error"],
+body[data-state="step2"]            .multi-state[data-show~="step2"],
+body[data-state="step3"]            .multi-state[data-show~="step3"],
+body[data-state="adjust"]           .multi-state[data-show~="adjust"],
+body[data-state="edit"]             .multi-state[data-show~="edit"],
+body[data-state="graded-with-recommendations"] .multi-state[data-show~="graded-with-recommendations"],
+body[data-state="confirmed"]        .multi-state[data-show~="confirmed"],
+body[data-state="done"]             .multi-state[data-show~="done"],
+body[data-state="resolved"]         .multi-state[data-show~="resolved"],
+body[data-state="prepare"]          .multi-state[data-show~="prepare"],
+body[data-state="recording"]        .multi-state[data-show~="recording"],
+body[data-state="recorded"]         .multi-state[data-show~="recorded"],
+body[data-state="save-failed"]      .multi-state[data-show~="save-failed"],
+body[data-state="mic-check"]        .multi-state[data-show~="mic-check"],
+body[data-state="writing"] .multi-state[data-show~="writing"],
+body[data-state="near-limit"] .multi-state[data-show~="near-limit"],
+body[data-state="over-limit"] .multi-state[data-show~="over-limit"],
+body[data-state="task-time-up"] .multi-state[data-show~="task-time-up"],
+body[data-state="hint-shown"] .multi-state[data-show~="hint-shown"],
+body[data-state="cancelled"]        .multi-state[data-show~="cancelled"] { display: revert; }
+
+/* .modal-overlay centres itself with display: grid, but `revert` in the two
+   groups above restores the user-agent's `block`, which pins the modal to the
+   top-left corner. Override exactly this component for the states that have a
+   modal — do not widen the change. */
+body[data-state="success"]    .modal-overlay.only-success,
+body[data-state="complete"]   .modal-overlay.only-complete,
+body[data-state="submitting"] .modal-overlay.only-submitting,
+body[data-state="edit"]       .modal-overlay.only-edit,
+body[data-state="adjust"]     .modal-overlay.only-adjust,
+body[data-state="expired"]    .modal-overlay.only-expired,
+body[data-state="cancelled"]  .modal-overlay.only-cancelled { display: grid; }
+
+/* The same trap, for layout classes that are also state blocks. `display: revert`
+   hands a <div> back `block`, so a `.grid-3.only-success` lost its three columns and
+   a `.toolbar.multi-state` lost its row (stats stacked, filters stacked). Restated
+   per component, as the note above asks, at (0,3,1) so it beats the show rule. */
+body[data-state="success"] :is(.grid-2, .grid-3, .grid-4, .score-hero).only-success,
+body[data-state="loading"] :is(.grid-2, .grid-3, .grid-4).only-loading,
+body[data-state="success"] :is(.grid-2, .grid-3, .grid-4).multi-state[data-show~="success"],
+body[data-state="edit"]    :is(.grid-2, .grid-3, .grid-4).multi-state[data-show~="edit"] { display: grid; }
+body[data-state="success"] :is(.toolbar, .stepper).only-success,
+body[data-state="step2"]   .stepper.only-step2,
+body[data-state="step3"]   .stepper.only-step3,
+body[data-state="success"] :is(.toolbar, .stepper).multi-state[data-show~="success"],
+body[data-state="adjust"]  :is(.toolbar, .stepper).multi-state[data-show~="adjust"] { display: flex; }
+
+/* ===== state switcher (dev artifact, painted as a small plate) =========== */
+.state-switcher {
+  position: fixed; right: var(--space-4); bottom: var(--space-4);
+  display: flex; align-items: center; gap: var(--space-2);
+  flex-wrap: wrap; max-width: 60vw;
+  padding: var(--space-2) var(--space-3);
+  background: var(--ink);
+  color: #ffffff;
+  border: var(--keyline) solid var(--ink);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  z-index: var(--z-modal);
+}
+.state-switcher__label { color: var(--color-on-ink-muted); }
+.state-switcher__item {
+  padding: 2px var(--space-2);
+  color: #ffffff;
+  text-decoration: none;
+}
+.state-switcher__item:hover { background: #3d454e; }
+.state-switcher__item[aria-current="true"] {
+  background: var(--sign-gold);
+  color: var(--ink);
+  font-weight: 700;
+}
+/* An unrecognised ?state= falls back to the first state, and the fallback has to
+   be legible as a fallback. Gold marks what you asked for and did not get; ink
+   marks what is actually on screen. Without this the page just looks like the
+   state you typed. */
+.state-switcher--unknown {
+  border-color: var(--sign-red);
+  box-shadow: inset 0 0 0 var(--keyline) var(--sign-red);
+}
+.state-switcher__warn {
+  flex: 1 0 100%;
+  margin-top: var(--space-1);
+  padding-top: var(--space-1);
+  border-top: 1px solid #3d454e;
+  color: var(--color-on-ink-danger);
+}
+.state-switcher__fallback {
+  background: var(--sign-red);
+  color: #ffffff;
+  font-weight: 700;
+  cursor: help;
+}
+
+/* ===== responsive ======================================================= */
+/* Desktop-first is a recorded trade-off; content collapsing into 23px columns
+   is not. Two breakpoints, placed where the layouts actually break. */
+@media (max-width: 1024px) {
+  .app-shell--with-sidebar .app-body { grid-template-columns: minmax(0, 1fr); }
+  .app-sidebar {
+    border-right: 0;
+    border-bottom: var(--keyline) solid var(--ink);
+  }
+  .grid-3, .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+  /* No script: the rail stacks above the page as it always did. */
+  .app-shell--with-sidebar .app-sidebar { position: static; height: auto; }
+
+  /* With the script present the stacked rail becomes a drawer: it leaves the flow
+     (the page gets its full height back), slides in over a scrim, and the page
+     behind it is scroll-locked and inert while it is open. Without the script the
+     stacked rule above still applies, so navigation is never lost. */
+  html.has-sidebar-js .app-shell--with-sidebar .app-body { transition: none; }
+  html.has-sidebar-js .app-shell--with-sidebar .app-sidebar {
+    position: fixed; z-index: 110; top: 0; left: 0; bottom: 0;
+    /* The desktop rail sets align-self: start, which would shrink this box to its
+       content; the drawer is always the full height of the screen. */
+    align-self: stretch;
+    width: min(300px, 86vw); height: 100vh; height: 100dvh;
+    border-bottom: 0; border-right: var(--keyline) solid var(--ink);
+    transform: translateX(-100%); visibility: hidden;
+    transition: transform 260ms cubic-bezier(.16, 1, .3, 1), visibility 0s 260ms;
+  }
+  html.has-sidebar-js.sidebar-drawer-open .app-shell--with-sidebar .app-sidebar {
+    transform: none; visibility: visible;
+    transition: transform 260ms cubic-bezier(.16, 1, .3, 1), visibility 0s;
+  }
+  html.has-sidebar-js .sidebar-scrim {
+    display: block; position: fixed; inset: 0; z-index: 105;
+    background: var(--color-overlay);
+    opacity: 0; visibility: hidden;
+    transition: opacity 200ms ease-out, visibility 0s 200ms;
+  }
+  html.has-sidebar-js.sidebar-drawer-open .sidebar-scrim {
+    opacity: 1; visibility: visible; transition: opacity 200ms ease-out;
+  }
+  /* Scroll lock, part two: the page itself does not move under an open drawer.
+     The gutter stays reserved so the layout does not jump sideways. */
+  html.sidebar-drawer-open { overflow: hidden; scrollbar-gutter: stable; }
+  html.sidebar-drawer-open body { overflow: hidden; }
+  html.has-sidebar-js .app-sidebar__head {
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 1;
+    margin: calc(var(--space-4) * -1) calc(var(--space-4) * -1) var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    background: var(--ink); color: #ffffff;
+    font-family: var(--font-sign); font-size: var(--text-lg); font-weight: 700;
+    text-transform: uppercase; letter-spacing: var(--tracking-sign);
+  }
+  .app-sidebar__head .sidebar-close { padding: 4px var(--space-2); }
+  /* The exam layout's collapse is NOT here, and must not be put back: this file
+     loads before components.css, which declares `.exam-layout`'s columns
+     unconditionally. An equal-specificity rule in this block loses to it at
+     every viewport, so the pair that used to sit here was dead code that read
+     like a working breakpoint. It lives beside the rule it overrides, in
+     components.css. */
+}
+@media (max-width: 640px) {
+  .app-main { padding: var(--space-4); }
+  .app-topbar { flex-wrap: wrap; row-gap: var(--space-2); }
+  .app-main h1:not(.visually-hidden):not(.state-block__title) { padding: var(--space-2) var(--space-4); }
+  /* A band that wraps to three rows is 138px tall; pinned, it would take a sixth of
+     the screen for the whole page. On a phone it scrolls away, the Menu button goes
+     with it, and the context bar sticks to the top edge instead. */
+  .app-shell--with-sidebar > .app-topbar { position: static; }
+  .app-shell--with-sidebar .context-bar { top: 0; }
+  .grid-2, .grid-3, .grid-4 { grid-template-columns: minmax(0, 1fr); }
+  .container--narrow { max-width: 100%; }
+  .state-switcher { max-width: calc(100vw - 2 * var(--space-4)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+}

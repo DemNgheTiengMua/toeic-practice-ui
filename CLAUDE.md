@@ -3,6 +3,30 @@
 Prototype UI for a multi-certificate TOEIC practice app. See `PRODUCT.md`
 for product scope and `DESIGN.md` for the design system.
 
+## Build, test, run
+
+The backend is a .NET 10 solution (`ExtraEfficiency.slnx`): six layers —
+`BusinessObjects` (domain shapes) ← `DataAccess` (EF Core, database-first from
+`docs/database-schema.sql`) ← `Services` (use cases) ← `Contracts` (wire DTOs
+plus the API client) — consumed by `WebAPI` (minimal API, port 5001) and
+`WebMVC` (server-rendered site, port 5000, the API's only caller — ADR-0002).
+
+```sh
+dotnet build                                   # whole solution
+dotnet test                                    # Services tests against LocalDB,
+                                               # schema reloaded per run
+sqlcmd -S "(localdb)\MSSQLLocalDB" -I -b -Q "IF DB_ID('ExtraEfficiency') IS NOT NULL DROP DATABASE [ExtraEfficiency]; CREATE DATABASE [ExtraEfficiency];"
+sqlcmd -S "(localdb)\MSSQLLocalDB" -d ExtraEfficiency -I -b -i docs/database-schema.sql
+sqlcmd -S "(localdb)\MSSQLLocalDB" -d ExtraEfficiency -I -b -i docs/seed-demo.sql
+dotnet run --project src/WebAPI                # http://localhost:5001
+dotnet run --project src/WebMVC                # http://localhost:5000/certificates
+```
+
+After a schema change: edit `docs/database-schema.sql`, run
+`docs/schema-tests/run-all.sh`, then re-scaffold —
+`dotnet ef dbcontext scaffold "<conn>" Microsoft.EntityFrameworkCore.SqlServer --project src/DataAccess --context CompanionDbContext --output-dir Scaffold --context-dir . --use-database-names --no-onconfiguring --data-annotations --force`
+— and verify every trigger still has a `HasTrigger` in the generated context.
+
 ## Agent skills
 
 ### Issue tracker
