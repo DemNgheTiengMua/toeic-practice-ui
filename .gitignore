@@ -17,3 +17,6 @@ shot-*.png
 # deliberately; the capture PNGs are throwaway evidence, like shot-*.png.
 .impeccable/*.png
 .impeccable/review/*.png
+
+# ERD generator intermediate (regenerated from the database)
+docs/erd/meta.json
