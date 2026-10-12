@@ -69,7 +69,7 @@ END TRY BEGIN CATCH IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW; PRINT
 
 -- UI-38: writing practice is charged ai_grading only and carries no band
 INSERT INTO Packages (Name,Credits,Price) VALUES (N'P',5,50000); DECLARE @pk INT=SCOPE_IDENTITY();
-INSERT INTO Orders (UserId,PackageId,Amount,Status,OrderCode,Gateway) VALUES (@u,@pk,50000,'pending','EE-W-1','vnpay'); DECLARE @o INT=SCOPE_IDENTITY();
+INSERT INTO Orders (UserId,PackageId,Amount,Status,OrderCode,PaymentNo,Gateway) VALUES (@u,@pk,50000,'pending','EE-W-1',NEXT VALUE FOR SEQ_PaymentNo,'payos'); DECLARE @o INT=SCOPE_IDENTITY();
 UPDATE Orders SET Status='paid', PaidAt=SYSDATETIMEOFFSET(), GatewayTxnRef='9001' WHERE OrderId=@o;
 INSERT INTO CreditTransactions (UserId,Reason,Delta,OrderId) VALUES (@u,'purchase',5,@o);
 BEGIN TRY

@@ -2,10 +2,10 @@ SET QUOTED_IDENTIFIER ON; SET ANSI_NULLS ON;
 INSERT INTO Roles (Code,Name) VALUES ('student',N'S'); DECLARE @r INT=SCOPE_IDENTITY();
 INSERT INTO Users (RoleId,Email,PasswordHash) VALUES (@r,'u@x.com',0x00); DECLARE @u INT=SCOPE_IDENTITY();
 INSERT INTO Packages (Name,Credits,Price,IsActive) VALUES (N'10 credits',10,100000,1); DECLARE @pk INT=SCOPE_IDENTITY();
-INSERT INTO Orders (UserId,PackageId,Status,Amount,OrderCode,Gateway) VALUES (@u,@pk,'pending',100000,'DH-T-0001','vnpay'); DECLARE @o INT=SCOPE_IDENTITY();
+INSERT INTO Orders (UserId,PackageId,Status,Amount,OrderCode,PaymentNo,Gateway) VALUES (@u,@pk,'pending',100000,'DH-T-0001',NEXT VALUE FOR SEQ_PaymentNo,'payos'); DECLARE @o INT=SCOPE_IDENTITY();
 -- reject (Review Focus #5): a second pending order for the same user
 BEGIN TRY
-  INSERT INTO Orders (UserId,PackageId,Status,Amount,OrderCode,Gateway) VALUES (@u,@pk,'pending',100000,'DH-T-0002','vnpay');
+  INSERT INTO Orders (UserId,PackageId,Status,Amount,OrderCode,PaymentNo,Gateway) VALUES (@u,@pk,'pending',100000,'DH-T-0002',NEXT VALUE FOR SEQ_PaymentNo,'payos');
   THROW 50000,'EXPECT_REJECT FAILED: second pending order accepted',1;
 END TRY BEGIN CATCH
   IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
@@ -47,7 +47,7 @@ END TRY BEGIN CATCH
 END CATCH
 
 -- reject (H-1): crediting user B's wallet from user A's order
-INSERT INTO Orders (UserId,PackageId,Status,Amount,OrderCode,Gateway) VALUES (@u,@pk,'paid',100000,'DH-T-0003','vnpay'); DECLARE @o2 INT=SCOPE_IDENTITY();
+INSERT INTO Orders (UserId,PackageId,Status,Amount,OrderCode,PaymentNo,Gateway) VALUES (@u,@pk,'paid',100000,'DH-T-0003',NEXT VALUE FOR SEQ_PaymentNo,'payos'); DECLARE @o2 INT=SCOPE_IDENTITY();
 BEGIN TRY
   INSERT INTO CreditTransactions (UserId,Reason,Delta,OrderId) VALUES (@u2,'purchase',10,@o2);
   THROW 50000,'EXPECT_REJECT FAILED: user B credited from user A''s order',1;
@@ -66,7 +66,7 @@ END TRY BEGIN CATCH
 END CATCH
 
 -- reject (H-2): a purchase against a still-pending (unpaid) order
-INSERT INTO Orders (UserId,PackageId,Status,Amount,OrderCode,Gateway) VALUES (@u,@pk,'pending',100000,'DH-T-0004','vnpay'); DECLARE @o3 INT=SCOPE_IDENTITY();
+INSERT INTO Orders (UserId,PackageId,Status,Amount,OrderCode,PaymentNo,Gateway) VALUES (@u,@pk,'pending',100000,'DH-T-0004',NEXT VALUE FOR SEQ_PaymentNo,'payos'); DECLARE @o3 INT=SCOPE_IDENTITY();
 BEGIN TRY
   INSERT INTO CreditTransactions (UserId,Reason,Delta,OrderId) VALUES (@u,'purchase',10,@o3);
   THROW 50000,'EXPECT_REJECT FAILED: purchase against pending order accepted',1;
@@ -101,7 +101,7 @@ END CATCH
 
 -- ===== re-review residuals: the ledger is IMMUTABLE, not merely undeletable =====
 -- reject (R2): rewriting a posted transaction's Delta
-INSERT INTO Orders (UserId,PackageId,Status,Amount,OrderCode,Gateway) VALUES (@u,@pk,'pending',100000,'DH-T-0005','vnpay'); DECLARE @o4 INT=SCOPE_IDENTITY();
+INSERT INTO Orders (UserId,PackageId,Status,Amount,OrderCode,PaymentNo,Gateway) VALUES (@u,@pk,'pending',100000,'DH-T-0005',NEXT VALUE FOR SEQ_PaymentNo,'payos'); DECLARE @o4 INT=SCOPE_IDENTITY();
 UPDATE Orders SET Status='paid', PaidAt=SYSDATETIMEOFFSET() WHERE OrderId=@o4;
 INSERT INTO CreditTransactions (UserId,Reason,Delta,OrderId) VALUES (@u,'purchase',10,@o4); DECLARE @txnR INT=SCOPE_IDENTITY();
 BEGIN TRY
@@ -132,7 +132,7 @@ END TRY BEGIN CATCH
 END CATCH
 
 -- accept: an UNCREDITED pending order can still be expired (the stale-order proc must keep working)
-INSERT INTO Orders (UserId,PackageId,Status,Amount,OrderCode,Gateway) VALUES (@u2,@pk,'pending',100000,'DH-T-0006','vnpay'); DECLARE @o5 INT=SCOPE_IDENTITY();
+INSERT INTO Orders (UserId,PackageId,Status,Amount,OrderCode,PaymentNo,Gateway) VALUES (@u2,@pk,'pending',100000,'DH-T-0006',NEXT VALUE FOR SEQ_PaymentNo,'payos'); DECLARE @o5 INT=SCOPE_IDENTITY();
 UPDATE Orders SET Status='expired' WHERE OrderId=@o5;
 PRINT 'accepted expiring an uncredited pending order';
 

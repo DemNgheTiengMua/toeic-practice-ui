@@ -3,14 +3,14 @@
 Scope is frozen against this list. A new idea goes here first; nothing is built mid-batch.
 Each batch: schema + tests → screens → audit row in `docs/schema-ui-audit.md` → commit.
 
-## Batch A — learner feedback (in progress)
+## Batch A — learner feedback (done; verified 2026-10-12: schema, screens, and domain tests all pass)
 
-- [ ] **Writing practice** (brief approved 2026-10-09): `writing-instructions`, `exam-writing`,
+- [x] **Writing practice** (brief approved 2026-10-09): `writing-instructions`, `exam-writing`,
   `writing-review`; mock exam writing rows; path-detail writing task.
   Schema: `writing_practice` purpose (writing sections only, `ai_grading` only, no band),
   `Questions.MinWords/MaxWords`, draft state on `FreeResponses`, group `ResponseSeconds`,
   `ai_task` path item may carry `RefExamId`.
-- [ ] **Practice hints and recommendations**: hint on demand in `practice-take`,
+- [x] **Practice hints and recommendations**: hint on demand in `practice-take`,
   recommendations on `practice-summary`.
   Schema: `Questions.Hint`, hint-used flag on `PracticeAnswers`, `Recommendations.PracticeSessionId`.
 
@@ -23,10 +23,29 @@ Each batch: schema + tests → screens → audit row in `docs/schema-ui-audit.md
 - [ ] Admin batch import screen (schema has `ImportBatches` / `ImportLog`)
 - [ ] Question editor: inputs for question-type label and per-option rationale
 
+## Batch B — backend groundwork (schema done 2026-10-12; screens pending)
+
+Schema + tests (`domain14-ai-insights-payments.sql`): `Users.TimeZoneId`, `Orders.PaymentNo` +
+`SEQ_PaymentNo`, gateways `payos`/`mock`, `PaymentEvents`, `AiInsights`, `Recommendations.InsightId`.
+
+- [ ] Profile: time-zone picker (UI-52); every date/time renders in the user's zone
+- [ ] Checkout / gateway-mock / payment-result / wallet / admin orders: VNPay/MoMo → payOS
+  (VietQR transfer); drop the gateway choice at checkout (ADR-0003)
+- [ ] AI insight panels on dashboard, practice-summary, exam-result, weakness-analysis,
+  path-detail, each with loading / failed / stale states (ADR-0004)
+
 ## Decisions needed before backend planning
 
-- [ ] AI provider for transcription and grading
+- [x] AI provider: Azure AI Speech for speaking, Claude via HH-tech proxy for grading and
+  insights (ADR-0005)
 - [ ] Ingest format for real question content
+
+## Later (decided against for now)
+
+- Mentor role and self-service mentor area (admin manages mentors today)
+- Real-time spoken conversation with an AI mentor (AI mentor = speaking practice attempt today)
+- AI-authored learning-path steps (insights may only flag priorities today)
+- Real VNPay / MoMo gateways
 
 ## Out of scope by decision
 

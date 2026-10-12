@@ -78,6 +78,9 @@ CREATE TABLE Users (
   EmailVerifiedAt DATETIMEOFFSET NULL,   -- NULL = "Not activated"
   LastLoginAt     DATETIMEOFFSET NULL,   -- NULL = "Never signed in"
   TermsAcceptedAt DATETIMEOFFSET NULL,   -- UI-1: register "I agree to the terms of use"
+  -- UI-52: profile picks a time zone; every screen renders stored UTC instants in it.
+  -- IANA id (e.g. 'Asia/Ho_Chi_Minh'); the app offers a shortlist, not the full tz database.
+  TimeZoneId   VARCHAR(64) NOT NULL CONSTRAINT DF_Users_TimeZoneId DEFAULT 'Asia/Ho_Chi_Minh',
   IsDeleted    BIT NOT NULL CONSTRAINT DF_Users_IsDeleted DEFAULT 0,
   CreatedAt    DATETIMEOFFSET NOT NULL CONSTRAINT DF_Users_CreatedAt DEFAULT SYSDATETIMEOFFSET()
 );
@@ -795,11 +798,66 @@ BEGIN
     THROW 50031, 'MaxScore cannot be lowered below a score already recorded against this criterion.', 1;
 END;
 GO
+-- ADR-0004: one AI narrative about a learner's progress, as shown on the dashboard, practice-summary,
+-- exam-result, weakness-analysis and path-detail. Distinct from AiGradings, which scores ONE free
+-- response against a rubric; an insight reads the learner's accuracy history and says what it means.
+CREATE TABLE AiInsights (
+  InsightId   INT IDENTITY(1,1) PRIMARY KEY,
+  UserId      INT NOT NULL REFERENCES Users(UserId),
+  CertId      INT NOT NULL REFERENCES Certificates(CertId),
+  Scope       VARCHAR(16) NOT NULL
+    CONSTRAINT CK_AiInsights_Scope CHECK (Scope IN ('practice_session','attempt','path','dashboard')),
+  PracticeSessionId INT NULL,
+  AttemptId         INT NULL,
+  LearnerPathId     INT NULL,
+  -- the prose the learner reads ("stronger in reading, Part 5 slipped")
+  Narrative   NVARCHAR(MAX) NULL,
+  Trend       VARCHAR(10) NULL
+    CONSTRAINT CK_AiInsights_Trend CHECK (Trend IN ('improving','flat','declining')),
+  Status      VARCHAR(8) NOT NULL CONSTRAINT DF_AiInsights_Status DEFAULT 'pending'
+    CONSTRAINT CK_AiInsights_Status CHECK (Status IN ('pending','done','failed')),
+  FailureReason NVARCHAR(400) NULL,
+  Model       NVARCHAR(80) NULL,
+  PromptTokens     INT NULL,
+  CompletionTokens INT NULL,
+  -- hash of the inputs this insight was generated from. Opening the dashboard ten times must not
+  -- call the model ten times: unchanged inputs mean the stored insight is still current.
+  SourceFingerprint CHAR(64) NOT NULL,
+  CreatedAt   DATETIMEOFFSET NOT NULL CONSTRAINT DF_AiInsights_CreatedAt DEFAULT SYSDATETIMEOFFSET(),
+  CompletedAt DATETIMEOFFSET NULL,
+  CONSTRAINT CK_AiInsights_FailureReason CHECK (FailureReason IS NULL OR Status = 'failed'),
+  CONSTRAINT CK_AiInsights_CompletedAt CHECK (CompletedAt IS NULL OR Status IN ('done','failed')),
+  CONSTRAINT CK_AiInsights_Narrative CHECK (Status <> 'done' OR Narrative IS NOT NULL),
+  -- each scope names exactly the source it is about; a dashboard insight names none
+  CONSTRAINT CK_AiInsights_Source CHECK (
+       (Scope='practice_session' AND PracticeSessionId IS NOT NULL AND AttemptId IS NULL AND LearnerPathId IS NULL)
+    OR (Scope='attempt'          AND AttemptId IS NOT NULL AND PracticeSessionId IS NULL AND LearnerPathId IS NULL)
+    OR (Scope='path'             AND LearnerPathId IS NOT NULL AND PracticeSessionId IS NULL AND AttemptId IS NULL)
+    OR (Scope='dashboard'        AND PracticeSessionId IS NULL AND AttemptId IS NULL AND LearnerPathId IS NULL)
+  ),
+  -- H-1 style composite FKs: the named source must be this same learner's own
+  CONSTRAINT FK_AiInsights_SessionUser FOREIGN KEY (PracticeSessionId, UserId) REFERENCES PracticeSessions(SessionId, UserId),
+  CONSTRAINT FK_AiInsights_AttemptUser FOREIGN KEY (AttemptId, UserId) REFERENCES ExamAttempts(AttemptId, UserId),
+  CONSTRAINT UQ_AiInsights_Id_User UNIQUE (InsightId, UserId)
+);
+GO
+-- one insight per set of inputs: the reuse check that keeps cost proportional to learner activity
+-- rather than to page views
+CREATE UNIQUE INDEX UX_AiInsights_Fingerprint ON AiInsights(UserId, Scope, SourceFingerprint);
+GO
+-- the dashboard reads the newest done insight for the active certificate
+CREATE INDEX IX_AiInsights_Latest ON AiInsights(UserId, CertId, Scope, CreatedAt DESC) WHERE Status = 'done';
+GO
+-- the background generator's queue, mirroring IX_AiGradings_Queue
+CREATE INDEX IX_AiInsights_Queue ON AiInsights(Status, CreatedAt) WHERE Status = 'pending';
+GO
 CREATE TABLE Recommendations (
   RecId          INT IDENTITY(1,1) PRIMARY KEY,
   UserId         INT NOT NULL REFERENCES Users(UserId),
   CertId         INT NOT NULL REFERENCES Certificates(CertId),
-  GradingId      INT NULL REFERENCES AiGradings(GradingId),   -- NULL = aggregate
+  GradingId      INT NULL REFERENCES AiGradings(GradingId),   -- NULL = not from rubric grading
+  -- ADR-0004: the aggregate insight that produced this recommendation, when one did
+  InsightId      INT NULL,
   -- UI-21: exam-result "To reach B2 (your target): …" lists recommendations for THIS attempt
   AttemptId      INT NULL,
   -- UI-43: practice-summary "Next: review present perfect" lists recommendations for THIS session
@@ -819,7 +877,11 @@ CREATE TABLE Recommendations (
   CONSTRAINT FK_Reco_AttemptUser FOREIGN KEY (AttemptId, UserId) REFERENCES ExamAttempts(AttemptId, UserId),
   -- UI-43: the session must be this user's own; a recommendation names at most one source
   CONSTRAINT FK_Reco_SessionUser FOREIGN KEY (PracticeSessionId, UserId) REFERENCES PracticeSessions(SessionId, UserId),
-  CONSTRAINT CK_Reco_OneSource CHECK (AttemptId IS NULL OR PracticeSessionId IS NULL)
+  CONSTRAINT CK_Reco_OneSource CHECK (AttemptId IS NULL OR PracticeSessionId IS NULL),
+  -- ADR-0004: the insight must be this same learner's own, and a recommendation comes from rubric
+  -- grading or from an aggregate insight, never from both
+  CONSTRAINT FK_Reco_InsightUser FOREIGN KEY (InsightId, UserId) REFERENCES AiInsights(InsightId, UserId),
+  CONSTRAINT CK_Reco_OneProducer CHECK (GradingId IS NULL OR InsightId IS NULL)
 );
 GO
 -- ============ Domain 9: LearningPath ============
@@ -974,6 +1036,11 @@ CREATE TABLE LearnerPaths (
   -- UI-24: the placement must be this user's own
   CONSTRAINT FK_LearnerPaths_PlacementUser FOREIGN KEY (PlacementId, UserId) REFERENCES PlacementTests(PlacementId, UserId)
 );
+GO
+-- ADR-0004: declared here because AiInsights (Domain 8) is created before LearnerPaths (Domain 9).
+-- Composite so a path insight must be about this same learner's own path.
+ALTER TABLE AiInsights ADD CONSTRAINT FK_AiInsights_PathUser
+  FOREIGN KEY (LearnerPathId, UserId) REFERENCES LearnerPaths(LearnerPathId, UserId);
 GO
 -- Review Focus #5: at most one active path per (UserId,CertId)
 CREATE UNIQUE INDEX UX_LearnerPaths_OneActive
@@ -1222,6 +1289,11 @@ GO
 -- UI-29: "1 featured" on the packages page; pricing highlights a single card
 CREATE UNIQUE INDEX UX_Packages_OneFeatured ON Packages(IsFeatured) WHERE IsFeatured = 1;
 GO
+-- ADR-0003: numeric merchant order number sent to the gateway. A SEQUENCE (not IDENTITY) because the
+-- value is needed to build the checkout request before the Orders row is written, and because every
+-- gateway must see a number it has never seen before — including across retries of a failed insert.
+CREATE SEQUENCE SEQ_PaymentNo AS BIGINT START WITH 1 INCREMENT BY 1 NO CYCLE;
+GO
 CREATE TABLE Orders (
   OrderId   INT IDENTITY(1,1) PRIMARY KEY,
   UserId    INT NOT NULL REFERENCES Users(UserId),
@@ -1230,9 +1302,15 @@ CREATE TABLE Orders (
     -- UI-30: 'reconciling' = gateway has not returned a final result ("Reconciling transaction")
     CONSTRAINT CK_Orders_Status CHECK (Status IN ('pending','reconciling','paid','failed','expired')),
   Amount    DECIMAL(12,2) NOT NULL CONSTRAINT CK_Orders_Amount CHECK (Amount >= 0),
-  -- UI-30: order code "DH-20260920-0148", gateway VNPay/MoMo, gateway txn ref and error code
+  -- UI-30: order code "DH-20260920-0148" is what the learner sees and quotes in a complaint
   OrderCode    VARCHAR(20) NOT NULL,
-  Gateway      VARCHAR(8) NOT NULL CONSTRAINT CK_Orders_Gateway CHECK (Gateway IN ('vnpay','momo')),
+  -- ADR-0003: gateway-agnostic numeric merchant order number (payOS requires a number, and so do
+  -- most gateways). Drawn from SEQ_PaymentNo, never reused, unique across every gateway.
+  PaymentNo    BIGINT NOT NULL,
+  -- ADR-0003: 'payos' is the real gateway; 'mock' moves no money (demos, tests, offline grading).
+  -- Adding vnpay/momo later means a new value here plus a new IPaymentGateway implementation.
+  Gateway      VARCHAR(8) NOT NULL CONSTRAINT CK_Orders_Gateway CHECK (Gateway IN ('payos','mock')),
+  -- payOS paymentLinkId (its own id for the checkout link)
   GatewayTxnRef  VARCHAR(64) NULL,
   GatewayErrorCode VARCHAR(16) NULL,
   CreatedAt DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
@@ -1240,7 +1318,8 @@ CREATE TABLE Orders (
   CONSTRAINT CK_Orders_PaidAtRequiresPaid CHECK (PaidAt IS NULL OR Status='paid'),
   -- composite target so CreditTransactions can prove the charged user owns the order (H-1):
   CONSTRAINT UQ_Orders_Id_User UNIQUE (OrderId, UserId),
-  CONSTRAINT UQ_Orders_OrderCode UNIQUE (OrderCode)
+  CONSTRAINT UQ_Orders_OrderCode UNIQUE (OrderCode),
+  CONSTRAINT UQ_Orders_PaymentNo UNIQUE (PaymentNo)
 );
 GO
 -- Review Focus #5: one pending order per user
@@ -1249,6 +1328,38 @@ CREATE UNIQUE INDEX UX_Orders_OnePendingPerUser
   ON Orders(UserId) WHERE Status IN ('pending','reconciling');
 GO
 CREATE UNIQUE INDEX UX_Orders_GatewayTxnRef ON Orders(Gateway, GatewayTxnRef) WHERE GatewayTxnRef IS NOT NULL;
+GO
+-- ADR-0003: every message about an order from or to its gateway, kept as evidence. Credit is granted
+-- only on a signature-verified webhook or a server-side status query — never on the return redirect,
+-- which anyone can type — so which source said "paid" has to be auditable after the fact.
+CREATE TABLE PaymentEvents (
+  EventId    INT IDENTITY(1,1) PRIMARY KEY,
+  OrderId    INT NOT NULL REFERENCES Orders(OrderId),
+  Source     VARCHAR(16) NOT NULL
+    -- webhook: gateway called us. status_query: we asked the gateway. return_redirect: the browser
+    -- came back (recorded, never trusted). cancel: we told the gateway to void the link.
+    CONSTRAINT CK_PaymentEvents_Source CHECK (Source IN ('webhook','status_query','return_redirect','cancel')),
+  -- the order status this event asserted, as the gateway reported it; NULL when the call itself failed
+  ReportedStatus VARCHAR(12) NULL
+    CONSTRAINT CK_PaymentEvents_ReportedStatus CHECK (ReportedStatus IN ('pending','paid','failed','expired','cancelled')),
+  -- true only for a webhook whose signature verified; always 0 for other sources
+  SignatureValid BIT NOT NULL CONSTRAINT DF_PaymentEvents_SignatureValid DEFAULT 0,
+  -- whether this event is the one that moved the order (a repeat webhook is logged but changes nothing)
+  WasApplied BIT NOT NULL CONSTRAINT DF_PaymentEvents_WasApplied DEFAULT 0,
+  Payload    NVARCHAR(MAX) NULL,   -- raw body or response, for reconciliation
+  Note       NVARCHAR(400) NULL,
+  CreatedAt  DATETIMEOFFSET NOT NULL CONSTRAINT DF_PaymentEvents_CreatedAt DEFAULT SYSDATETIMEOFFSET(),
+  CONSTRAINT CK_PaymentEvents_SigOnlyWebhook CHECK (SignatureValid = 0 OR Source = 'webhook'),
+  -- only a trusted source may be the event that granted credit
+  CONSTRAINT CK_PaymentEvents_AppliedTrusted CHECK (
+    WasApplied = 0
+    OR (Source = 'status_query')
+    OR (Source = 'webhook' AND SignatureValid = 1)
+    OR (Source = 'cancel')
+  )
+);
+GO
+CREATE INDEX IX_PaymentEvents_Order ON PaymentEvents(OrderId, CreatedAt DESC);
 GO
 -- UI-28: complaint about an order must be the complainant's own order
 ALTER TABLE Complaints ADD CONSTRAINT FK_Complaints_OrderUser FOREIGN KEY (OrderId, UserId) REFERENCES Orders(OrderId, UserId);

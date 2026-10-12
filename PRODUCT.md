@@ -13,11 +13,12 @@ vanilla JS (ES2020). No build step, no framework, no npm, no CDN. Shared
 `tokens.css` / `base.css` / `components.css`; display state switches via
 `?state=` query param handled by `state-switch.js`.
 
-**Target (binding — this is what gets assessed):** ASP.NET Core Web API, RESTful,
-JWT bearer auth, modules in one project separated by folder + DI, not by
-process. Front end is ASP.NET Core MVC + Razor views calling the API via jQuery
-Ajax. SQL Server. JWT lives in an **HttpOnly cookie** on the MVC server, never
-in `localStorage`. Schema is already written: `docs/database-schema.sql` — the
+**Target (binding — this is what gets assessed):** .NET 10, N-layer solution
+(BusinessObjects → DataAccess → Services → WebAPI / WebMVC), EF Core
+database-first (`docs/adr/0001`). ASP.NET Core Web API, RESTful, JWT bearer
+auth. Front end is ASP.NET Core MVC + Razor views using jQuery Ajax through the
+MVC server, which forwards to the API (`docs/adr/0002`). SQL Server. JWT lives
+in an **HttpOnly cookie** on the MVC server, never in `localStorage`. Schema is already written: `docs/database-schema.sql` — the
 **multi-certificate companion** schema (10 domains), which supersedes the
 original TOEIC-only schema (see Architecture Pivot below).
 
@@ -118,7 +119,7 @@ were removed rather than softened.
 **Learner path:** register → pick a certificate (placement selects the
 certificate **first**, so the test matches the skills that certificate
 actually has) → free placement test → band + target band → generated learning
-path → practise free → buy credits through a redirect gateway (VNPay / MoMo) →
+path → practise free → buy credits through a redirect gateway (payOS) →
 spend them on mock exams / AI grading / mentor bookings / premium path →
 review answers with explanations → history per certificate.
 
@@ -217,9 +218,12 @@ wallet must own the source row; no transaction may drive a balance negative;
 an order that has been credited cannot leave `paid`. UI must never present the
 balance as an autonomous number.
 
-**Payments.** Redirect gateway (VNPay / MoMo, mocked in the prototype). Each
-order has a human-readable order code and stores the gateway's transaction ref
-and error code. Order states `pending` → `reconciling` → `paid` | `failed` |
+**Payments.** Redirect gateway: payOS VietQR bank transfer, with a mock gateway
+for demos and tests (`docs/adr/0003`). Each order has a human-readable order
+code, a numeric `PaymentNo` for the gateway, and stores the gateway's
+transaction ref and error code. Every webhook, return redirect and status query
+is kept in `PaymentEvents`; credit is granted only on a signature-verified
+webhook or a server-side status query, never on the return redirect. Order states `pending` → `reconciling` → `paid` | `failed` |
 `expired`. `expired` (past the 15-minute reconciliation window) is deliberately
 separate from `failed` — one invites a retry, the other a new order. **One open
 order per account** — `reconciling` blocks a new order too ("do not pay
@@ -292,8 +296,8 @@ mobile breakpoint coverage is intentionally not done.
 - **The product is still Vietnamese**, and the type system is built to survive
   the copy moving back without a rewrite: IBM Plex is self-hosted in the latin
   *and* vietnamese subsets, so diacritics render from the same family rather
-  than falling through to a fallback. Prices stay in ₫, the gateway stays
-  VNPay/MoMo.
+  than falling through to a fallback. Prices stay in ₫, the gateway is
+  payOS.
 - Personal names in sample data are Vietnamese and stay Vietnamese. The
   convention is to localise the language, not the users.
 - No logo, identity assets, or legal/footer copy exist yet.
