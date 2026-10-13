@@ -9,5 +9,6 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Services.Tests/Services.Tests.csproj" />
+    <Project Path="tests/WebMVC.Tests/WebMVC.Tests.csproj" />
   </Folder>
 </Solution>

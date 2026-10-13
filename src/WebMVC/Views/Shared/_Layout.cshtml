@@ -19,6 +19,7 @@
       @if (CurrentUser.IsSignedIn)
       {
         <a href="@(CurrentUser.IsAdmin ? "/admin" : "/dashboard")">Dashboard</a>
+        <a href="/profile">Profile</a>
         <form method="post" action="/auth/sign-out" class="no-margin">
           @Html.AntiForgeryToken()
           <button type="submit" class="btn">Sign out (@(CurrentUser.FullName ?? CurrentUser.Email))</button>

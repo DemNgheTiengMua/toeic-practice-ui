@@ -9,8 +9,7 @@ public sealed record CertificateOption(string Code, string Name);
 public sealed record LearnerContext(
     CertificateOption Active,
     IReadOnlyList<CertificateOption> Certificates,
-    int CreditBalance,
-    string TimeZoneId);
+    int CreditBalance);
 
 /// <summary>The learner's home page for their active certificate. Every list here belongs to
 /// <see cref="Certificate"/> only; TOEIC history never shows while IELTS is active.</summary>

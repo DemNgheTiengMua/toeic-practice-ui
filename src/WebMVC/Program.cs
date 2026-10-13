@@ -81,6 +81,7 @@ builder.Services.AddAuthorizationBuilder()
     .AddPolicy(Roles.Learner, policy => policy.RequireRole(Roles.Learner));
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<CurrentUser>();
+builder.Services.AddScoped<DateTimeFormatter>();
 
 var app = builder.Build();
 
@@ -113,6 +114,10 @@ app.UseRouting();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Load the signed-in learner's time zone for this request; DateTimeFormatter renders every
+// stored UTC instant in it (UI-52).
+app.UseMiddleware<TimeZoneMiddleware>();
 
 app.MapStaticAssets();
 

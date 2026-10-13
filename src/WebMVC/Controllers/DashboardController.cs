@@ -1,5 +1,6 @@
 using Contracts;
 using Microsoft.AspNetCore.Mvc;
+using WebMVC.Models;
 
 namespace WebMVC.Controllers;
 
@@ -8,10 +9,25 @@ namespace WebMVC.Controllers;
 public sealed class DashboardController(ICompanionApiClient api, CurrentUser currentUser, ILogger<DashboardController> logger)
     : LearnerControllerBase(api, currentUser, logger)
 {
-    public async Task<IActionResult> Index(CancellationToken cancellationToken)
+    /// <param name="activation">"sent" or "failed" after the reminder's Resend button.</param>
+    public async Task<IActionResult> Index(string? activation, CancellationToken cancellationToken)
     {
-        var dashboard = await Api.GetDashboardAsync(await BearerAsync(), cancellationToken);
-        return View(dashboard);
+        var bearer = await BearerAsync();
+        var dashboard = await Api.GetDashboardAsync(bearer, cancellationToken);
+
+        // Verification is read live, not from the cookie: the learner may have just clicked the link.
+        bool? emailVerified = null;
+        try
+        {
+            emailVerified = (await Api.GetMeAsync(bearer, cancellationToken)).EmailVerified;
+        }
+        catch (HttpRequestException ex) when (ex is not ApiException)
+        {
+            // API unreachable: render without the reminder rather than fail the page.
+            logger.LogWarning(ex, "Could not read verification status for the dashboard");
+        }
+
+        return View(new DashboardViewModel(CurrentUser, dashboard, emailVerified, activation));
     }
 
     [HttpPost("/learner/active-certificate")]

@@ -44,15 +44,10 @@ public sealed class LearnerService(CompanionDbContext db) : ILearnerService
             .Where(b => b.UserId == userId)
             .Select(b => b.Balance)
             .SingleOrDefaultAsync(cancellationToken) ?? 0;
-        var timeZoneId = await LiveUser(userId)
-            .Select(u => u.TimeZoneId)
-            .SingleAsync(cancellationToken);
-
         return new LearnerContext(
             certificates.Single(c => c.CertId == activeId).Option,
             certificates.Select(c => c.Option).ToList(),
-            balance,
-            timeZoneId);
+            balance);
     }
 
     public async Task SwitchCertificateAsync(int userId, string certificateCode, CancellationToken cancellationToken = default)

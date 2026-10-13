@@ -21,6 +21,9 @@ shot-*.png
 # ERD generator intermediate (regenerated from the database)
 docs/erd/meta.json
 
+# Dev mail drop (DropFolderEmailSender writes activation/reset mail here)
+mail-drop/
+
 # .NET build artifacts and IDE state
 .vs/
 bin/

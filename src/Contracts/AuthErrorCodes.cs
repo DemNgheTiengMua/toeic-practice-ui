@@ -14,4 +14,7 @@ public static class AuthErrorCodes
 
     /// <summary>A locked account, at sign-in or on any later request.</summary>
     public const string Locked = "AUTH_LOCKED";
+
+    /// <summary>An activation or reset link that is unknown, already used, or expired.</summary>
+    public const string TokenInvalid = "AUTH_TOKEN_INVALID";
 }
