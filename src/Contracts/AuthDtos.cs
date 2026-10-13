@@ -8,3 +8,9 @@ public sealed record SignInRequest(string Email, string Password);
 public sealed record AuthTokenResponse(string Token, DateTimeOffset ExpiresAt, AuthUserDto User);
 
 public sealed record AuthUserDto(int UserId, string Email, string? FullName, string Role);
+
+public sealed record ProfileDto(string FullName, string? Phone, string TimeZoneId);
+
+public sealed record UpdateProfileRequest(string FullName, string? Phone, string TimeZoneId);
+
+public sealed record ChangePasswordRequest(string CurrentPassword, string NewPassword);

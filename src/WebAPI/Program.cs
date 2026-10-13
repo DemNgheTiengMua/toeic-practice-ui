@@ -233,6 +233,57 @@ app.MapGet("/api/auth/me", async Task<IResult> (HttpContext http, IAuthService a
     return Results.Ok(new AuthUserDto(user.UserId, user.Email, user.FullName, user.Role));
 }).RequireAuthorization();
 
+// ---- Profile (issue #6) ----
+
+app.MapGet("/api/profile", async (HttpContext http, IAuthService auth, CancellationToken cancellationToken) =>
+{
+    var userId = int.Parse(http.User.FindFirst(IAccessTokenFactory.ClaimUserId)!.Value);
+    var profile = await auth.GetProfileAsync(userId, cancellationToken);
+    return Results.Ok(new ProfileDto(profile.FullName, profile.Phone, profile.TimeZoneId));
+}).RequireAuthorization();
+
+app.MapPut("/api/profile", async Task<IResult> (
+    UpdateProfileRequest request,
+    HttpContext http,
+    IAuthService auth,
+    CancellationToken cancellationToken) =>
+{
+    var userId = int.Parse(http.User.FindFirst(IAccessTokenFactory.ClaimUserId)!.Value);
+    try
+    {
+        var profile = await auth.UpdateProfileAsync(
+            userId, new UpdateProfileInput(request.FullName, request.Phone, request.TimeZoneId), cancellationToken);
+        return Results.Ok(new ProfileDto(profile.FullName, profile.Phone, profile.TimeZoneId));
+    }
+    catch (ValidationException ex)
+    {
+        return Problem(StatusCodes.Status400BadRequest, "Validation failed", ApiError.Codes.Validation, ex.Message);
+    }
+}).RequireAuthorization();
+
+app.MapPost("/api/profile/password", async Task<IResult> (
+    ChangePasswordRequest request,
+    HttpContext http,
+    IAuthService auth,
+    CancellationToken cancellationToken) =>
+{
+    var userId = int.Parse(http.User.FindFirst(IAccessTokenFactory.ClaimUserId)!.Value);
+    try
+    {
+        await auth.ChangePasswordAsync(
+            userId, new ChangePasswordInput(request.CurrentPassword, request.NewPassword), cancellationToken);
+        return Results.NoContent();
+    }
+    catch (ValidationException ex)
+    {
+        return Problem(StatusCodes.Status400BadRequest, "Validation failed", ApiError.Codes.Validation, ex.Message);
+    }
+    catch (AuthException ex) when (ex.Code == AuthException.InvalidCredentials)
+    {
+        return Problem(StatusCodes.Status400BadRequest, "Password change failed", ApiError.Codes.InvalidCredentials, ex.Message);
+    }
+}).RequireAuthorization();
+
 // Demo of the admin-only policy: admin pages and endpoints refuse a learner.
 app.MapGet("/api/admin/summary", (HttpContext http) =>
     Results.Ok(new { admin = http.User.FindFirst(IAccessTokenFactory.ClaimEmail)!.Value }))

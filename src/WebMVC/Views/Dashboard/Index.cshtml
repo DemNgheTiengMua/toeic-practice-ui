@@ -1,4 +1,5 @@
 @model CurrentUser
+@inject DateTimeFormatter Dates
 @{
     ViewData["Title"] = "Dashboard";
     ViewData["Description"] = "Your learning dashboard.";
@@ -7,5 +8,6 @@
 <div class="container stack" style="padding-top: var(--space-6); padding-bottom: var(--space-8)">
   <h1 class="m-0 mb-1">Welcome back, @(Model.FullName ?? Model.Email)</h1>
   <p class="text-muted no-margin">Your placement exam, learning path and practice drills will live here.</p>
+  <p class="text-muted no-margin">Right now it's @Dates.Format(DateTimeOffset.UtcNow) for you.</p>
   <div><a class="btn btn--primary" href="/certificates">Browse certificates</a></div>
 </div>

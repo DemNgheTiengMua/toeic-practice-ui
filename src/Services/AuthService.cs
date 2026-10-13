@@ -32,7 +32,19 @@ public interface IAuthService
     /// (the MVC site's cookie check) must use this, not the token's claims — the claims are a
     /// sign-in-time snapshot.</summary>
     Task<AuthUser?> GetUserAsync(int userId, CancellationToken cancellationToken = default);
+
+    /// <summary>The learner's editable profile: name, phone, time zone (an IANA id from the
+    /// Contracts.TimeZones shortlist).</summary>
+    Task<ProfileInfo> GetProfileAsync(int userId, CancellationToken cancellationToken = default);
+
+    Task<ProfileInfo> UpdateProfileAsync(int userId, UpdateProfileInput input, CancellationToken cancellationToken = default);
+
+    /// <summary>Requires the current password — a stolen session must not be enough to change it.</summary>
+    Task ChangePasswordAsync(int userId, ChangePasswordInput input, CancellationToken cancellationToken = default);
 }
+
+/// <summary>What the profile page edits.</summary>
+public sealed record ProfileInfo(string FullName, string? Phone, string TimeZoneId);
 
 public sealed class AuthService(CompanionDbContext db) : IAuthService
 {
@@ -120,5 +132,46 @@ public sealed class AuthService(CompanionDbContext db) : IAuthService
             .Where(u => u.UserId == userId && !u.IsDeleted)
             .Select(u => new AuthUser(u.UserId, u.Email, u.FullName, u.Role.Code))
             .SingleOrDefaultAsync(cancellationToken);
+    }
+
+    public async Task<ProfileInfo> GetProfileAsync(int userId, CancellationToken cancellationToken = default)
+    {
+        return await db.Users
+            .AsNoTracking()
+            .Where(u => u.UserId == userId && !u.IsDeleted)
+            .Select(u => new ProfileInfo(u.FullName ?? "", u.Phone, u.TimeZoneId))
+            .SingleAsync(cancellationToken);
+    }
+
+    public async Task<ProfileInfo> UpdateProfileAsync(int userId, UpdateProfileInput input, CancellationToken cancellationToken = default)
+    {
+        Validator.ValidateObject(input, new ValidationContext(input), validateAllProperties: true);
+        if (!TimeZones.Contains(input.TimeZoneId))
+        {
+            throw new ValidationException("Pick a time zone from the list.");
+        }
+
+        var user = await db.Users.SingleAsync(u => u.UserId == userId && !u.IsDeleted, cancellationToken);
+        user.FullName = input.FullName.Trim();
+        user.Phone = string.IsNullOrWhiteSpace(input.Phone) ? null : input.Phone.Trim();
+        user.TimeZoneId = input.TimeZoneId;
+        await db.SaveChangesAsync(cancellationToken);
+
+        return new ProfileInfo(user.FullName, user.Phone, user.TimeZoneId);
+    }
+
+    public async Task ChangePasswordAsync(int userId, ChangePasswordInput input, CancellationToken cancellationToken = default)
+    {
+        Validator.ValidateObject(input, new ValidationContext(input), validateAllProperties: true);
+
+        var user = await db.Users.SingleAsync(u => u.UserId == userId && !u.IsDeleted, cancellationToken);
+        if (Hasher.VerifyHashedPassword(user, Convert.ToBase64String(user.PasswordHash), input.CurrentPassword)
+                == PasswordVerificationResult.Failed)
+        {
+            throw new AuthException(AuthException.InvalidCredentials, "The current password is incorrect.");
+        }
+
+        user.PasswordHash = Convert.FromBase64String(Hasher.HashPassword(user, input.NewPassword));
+        await db.SaveChangesAsync(cancellationToken);
     }
 }
