@@ -39,7 +39,21 @@ app.UseExceptionHandler(errorApp =>
         await context.Response.WriteAsJsonAsync(problem);
     }));
 
-app.UseStatusCodePages();
+// Bare status-code results (404 for an unknown route, etc.) get the same ProblemDetails body;
+// the no-arg UseStatusCodePages() overload emits plain text, which would skip the "code".
+app.UseStatusCodePages(async context =>
+{
+    var response = context.HttpContext.Response;
+    var problem = new ProblemDetails
+    {
+        Title = response.StatusCode == StatusCodes.Status404NotFound ? "Not Found" : "Error",
+        Status = response.StatusCode,
+    };
+    problem.Extensions["code"] = response.StatusCode == StatusCodes.Status404NotFound
+        ? ApiError.Codes.NotFound
+        : ApiError.Codes.Unexpected;
+    await response.WriteAsJsonAsync(problem);
+});
 
 app.MapHealthChecks("/healthz");
 

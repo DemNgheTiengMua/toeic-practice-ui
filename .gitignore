@@ -25,3 +25,5 @@ docs/erd/meta.json
 .vs/
 bin/
 obj/
+src/WebMVC/WebMVC.csproj.user
+*.user

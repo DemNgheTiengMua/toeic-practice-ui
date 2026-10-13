@@ -2,7 +2,7 @@
 
 `docs/database-schema.sql` is the single source of truth for the database. EF Core entities and the
 `DbContext` are scaffolded from it, never the other way round, and there are no EF migrations. The
-schema carries most of its invariants in SQL Server itself — 22 triggers, 8 views, 13 filtered unique
+schema carries most of its invariants in SQL Server itself — 27 triggers, 9 views, 13 filtered unique
 indexes, composite foreign keys for certificate isolation — and all of it is verified by
 `docs/schema-tests/`. Code-first would have meant re-expressing that as raw SQL inside migrations and
 losing the tested script; Dapper would have meant hand-writing mapping for 47 tables.
