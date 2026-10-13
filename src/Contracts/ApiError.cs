@@ -28,5 +28,8 @@ public sealed record ApiError(string Code, string Title, int Status, string? Det
 
         /// <summary>Signed in, but the role doesn't allow this (e.g. a learner on an admin endpoint).</summary>
         public const string Forbidden = "AUTH_FORBIDDEN";
+
+        /// <summary>Switching to a certificate that doesn't exist or has been retired.</summary>
+        public const string CertificateUnavailable = "CERT_UNAVAILABLE";
     }
 }

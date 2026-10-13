@@ -77,7 +77,8 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         };
     });
 builder.Services.AddAuthorizationBuilder()
-    .AddPolicy(Roles.Admin, policy => policy.RequireRole(Roles.Admin));
+    .AddPolicy(Roles.Admin, policy => policy.RequireRole(Roles.Admin))
+    .AddPolicy(Roles.Learner, policy => policy.RequireRole(Roles.Learner));
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<CurrentUser>();
 

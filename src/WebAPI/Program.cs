@@ -105,7 +105,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 builder.Services.AddAuthorizationBuilder()
-    .AddPolicy(Roles.Admin, policy => policy.RequireRole(Roles.Admin));
+    .AddPolicy(Roles.Admin, policy => policy.RequireRole(Roles.Admin))
+    .AddPolicy(Roles.Learner, policy => policy.RequireRole(Roles.Learner));
 // Every failure — thrown exception or bare status-code result — leaves the API as RFC 9457
 // ProblemDetails with a stable machine-readable "code" extension the MVC site switches on.
 builder.Services.AddProblemDetails(options =>
@@ -119,6 +120,7 @@ builder.Services.AddProblemDetails(options =>
     });
 builder.Services.AddScoped<ICertificateService, CertificateService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<ILearnerService, LearnerService>();
 
 var app = builder.Build();
 
@@ -237,6 +239,63 @@ app.MapGet("/api/auth/me", async Task<IResult> (HttpContext http, IAuthService a
 app.MapGet("/api/admin/summary", (HttpContext http) =>
     Results.Ok(new { admin = http.User.FindFirst(IAccessTokenFactory.ClaimEmail)!.Value }))
     .RequireAuthorization(Roles.Admin);
+
+// ---- Learner (issue #7) ----
+// The learner is always the token's own user: no endpoint takes a user id or a certificate to
+// filter by, so one learner can't read another's data and no screen can mix certificates.
+
+var learner = app.MapGroup("/api/learner").RequireAuthorization(Roles.Learner);
+
+learner.MapGet("/context", async (HttpContext http, ILearnerService learners, CancellationToken cancellationToken) =>
+{
+    var context = await learners.GetContextAsync(UserIdOf(http), cancellationToken);
+    return Results.Ok(new LearnerContextDto(
+        ToDto(context.Active),
+        context.Certificates.Select(ToDto).ToList(),
+        context.CreditBalance,
+        context.TimeZoneId));
+});
+
+learner.MapPut("/active-certificate", async Task<IResult> (
+    SwitchCertificateRequest request,
+    HttpContext http,
+    ILearnerService learners,
+    CancellationToken cancellationToken) =>
+{
+    if (string.IsNullOrWhiteSpace(request.Code))
+    {
+        return Problem(StatusCodes.Status400BadRequest, "Validation failed", ApiError.Codes.Validation, "Choose a certificate.");
+    }
+
+    try
+    {
+        await learners.SwitchCertificateAsync(UserIdOf(http), request.Code, cancellationToken);
+    }
+    catch (CertificateUnavailableException ex)
+    {
+        return Problem(StatusCodes.Status404NotFound, "Certificate unavailable", ApiError.Codes.CertificateUnavailable, ex.Message);
+    }
+
+    return Results.NoContent();
+});
+
+learner.MapGet("/dashboard", async (HttpContext http, ILearnerService learners, CancellationToken cancellationToken) =>
+{
+    var d = await learners.GetDashboardAsync(UserIdOf(http), cancellationToken);
+    return Results.Ok(new LearnerDashboardDto(
+        ToDto(d.Certificate),
+        d.LatestResult is { } r ? new LatestResultDto(r.TotalScore, r.BandCode, r.BandName, r.TakenAt) : null,
+        d.AttemptCount,
+        d.PracticeCount,
+        d.RecentAttempts.Select(a => new RecentAttemptDto(
+            a.AttemptId, a.ExamName, a.Purpose, a.Status, a.StartedAt, a.TotalScore, a.BandCode)).ToList(),
+        d.RecentPractice.Select(p => new RecentPracticeDto(
+            p.SessionId, p.SectionName, p.Status, p.CorrectCount, p.QuestionCount, p.StartedAt)).ToList()));
+});
+
+static int UserIdOf(HttpContext http) => int.Parse(http.User.FindFirst(IAccessTokenFactory.ClaimUserId)!.Value);
+
+static CertificateOptionDto ToDto(CertificateOption option) => new(option.Code, option.Name);
 
 static IResult ToTokenResponse(AuthUser user, IAccessTokenFactory tokens)
 {

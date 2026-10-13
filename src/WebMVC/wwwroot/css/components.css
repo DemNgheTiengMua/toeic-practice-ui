@@ -1526,6 +1526,35 @@ button.nav-list__group.has-current[aria-expanded="false"] .nav-list__count {
   display: block;
 }
 
+/* The app's switcher is a <details> menu of submit buttons, so it opens and posts
+   without script; the open state replaces the prototype's .is-open toggle. */
+.cert-menu { position: relative; }
+.cert-menu > summary { list-style: none; }
+.cert-menu > summary::-webkit-details-marker { display: none; }
+.cert-menu[open] > .cert-dropdown { display: block; }
+/* icons.js gives every <summary> a disclosure chevron; the switcher already
+   carries its own trailing one, so the second would read as a stray mark. */
+.cert-menu > summary > .icon--disclosure { display: none; }
+/* The switcher sits at the start of the context bar, so the menu opens rightward. */
+.cert-menu > .cert-dropdown { left: 0; right: auto; }
+.cert-menu[open] .cert-switcher__arrow { transform: rotate(180deg); }
+button.cert-dropdown__item {
+  width: 100%;
+  background: transparent;
+  border: 0;
+  border-bottom: var(--keyline-soft) solid var(--color-border);
+  text-align: left;
+  cursor: pointer;
+}
+.cert-dropdown__item .text-xs {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--font-sans);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
 .cert-dropdown__item {
   display: block;
   padding: var(--space-3);
