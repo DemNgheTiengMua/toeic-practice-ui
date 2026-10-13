@@ -173,6 +173,24 @@ public sealed class AccountEmailTests(DatabaseFixture database)
     }
 
     [Fact]
+    public async Task Changing_the_password_kills_an_outstanding_activation_link()
+    {
+        // Same reasoning as the reset link: a link sitting in a mailbox the owner no longer
+        // trusts must not keep working once they secure the account.
+        var user = await RegisterAsync("activate-race@example.com", "old-password");
+        var pending = mail.LastToken("activate-race@example.com", VerifyPath);
+
+        await CreateService().ChangePasswordAsync(user.UserId, new ChangePasswordInput("old-password", "owner-password"));
+
+        var ex = await Assert.ThrowsAsync<AuthException>(() => CreateService().VerifyEmailAsync(pending));
+        Assert.Equal(AuthException.TokenInvalid, ex.Code);
+        // The owner can still verify: a fresh link works.
+        await CreateService().ResendActivationAsync(user.UserId);
+        await CreateService().VerifyEmailAsync(mail.LastToken("activate-race@example.com", VerifyPath));
+        Assert.True((await CreateService().GetUserAsync(user.UserId))!.EmailVerified);
+    }
+
+    [Fact]
     public async Task A_reset_kills_the_other_outstanding_reset_links()
     {
         // Two links were requested; consuming one must retire the rest, so an older link can't be
