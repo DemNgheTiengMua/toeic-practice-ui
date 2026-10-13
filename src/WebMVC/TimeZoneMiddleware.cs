@@ -22,14 +22,14 @@ public sealed class TimeZoneMiddleware(RequestDelegate next)
                     var profile = await api.GetProfileAsync(token, context.RequestAborted);
                     context.Items[DateTimeFormatter.ZoneItemKey] = profile.TimeZoneId;
                 }
-                catch (ApiException)
+                // One clause, because ApiException is an HttpRequestException: a separate transport
+                // catch would swallow what an ApiException filter let through. A dead token
+                // (locked, signed out elsewhere) must reach the sign-out middleware in Program.cs,
+                // or the page renders as if still signed in; the filter matches LearnerControllerBase.
+                catch (HttpRequestException ex)
+                    when (ex is not ApiException { Code: ApiError.Codes.Locked or ApiError.Codes.Unauthenticated })
                 {
-                    // Token rejected mid-request (e.g. just locked): the auth pipeline handles the
-                    // sign-out; the page just renders in the default zone.
-                }
-                catch (HttpRequestException)
-                {
-                    // API unreachable: render in the default zone rather than fail the page.
+                    // API unreachable or any other refusal: render in the default zone.
                 }
             }
         }

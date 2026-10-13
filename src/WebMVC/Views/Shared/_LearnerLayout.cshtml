@@ -1,0 +1,89 @@
+@using WebMVC.Controllers
+@inject CurrentUser CurrentUser
+@{
+    var shell = LearnerShell.Get(Context);
+    var path = Context.Request.Path.Value ?? "/";
+    var returnUrl = path + Context.Request.QueryString;
+    string NavClass(string href) => path.StartsWith(href, StringComparison.OrdinalIgnoreCase)
+        ? "nav-list__item is-active" : "nav-list__item";
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="@ViewData["Description"]">
+  <title>@ViewData["Title"] — extra efficient</title>
+  <link rel="icon" href="~/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="~/css/tokens.css">
+  <link rel="stylesheet" href="~/css/base.css">
+  <link rel="stylesheet" href="~/css/components.css">
+</head>
+<body>
+  <a class="visually-hidden" href="#main">Skip to content</a>
+  <div class="app-shell app-shell--with-sidebar">
+    <header class="app-topbar">
+      <a href="/dashboard"><strong>extra efficient</strong></a>
+      <div class="row">
+        @if (shell is not null)
+        {
+          <span class="badge badge--info">@shell.CreditBalance @(shell.CreditBalance == 1 ? "credit" : "credits") left</span>
+        }
+        <form method="post" action="/auth/sign-out" class="no-margin">
+          @Html.AntiForgeryToken()
+          <button type="submit" class="btn btn--ghost btn--sm">Sign out (@(CurrentUser.FullName ?? CurrentUser.Email))</button>
+        </form>
+      </div>
+    </header>
+    <div class="app-body">
+      <aside class="app-sidebar">
+        <nav class="nav-list" aria-label="Main navigation">
+          <a class="@NavClass("/dashboard")" href="/dashboard" aria-current="@(path.StartsWith("/dashboard", StringComparison.OrdinalIgnoreCase) ? "page" : null)">Home</a>
+          <div class="nav-list__group">Catalogue</div>
+          <a class="nav-list__item" href="/certificates">Certificates</a>
+          <div class="nav-list__group">Account</div>
+          <a class="@NavClass("/profile")" href="/profile">Profile</a>
+        </nav>
+      </aside>
+      <main class="app-main" id="main">
+        @if (shell is not null)
+        {
+          <div class="context-bar">
+            <div class="context-bar__item">
+              <span class="context-bar__label" id="cert-switcher-label">Certificate:</span>
+              <details class="cert-menu">
+                <summary class="cert-switcher" aria-labelledby="cert-switcher-label cert-switcher-current">
+                  <span class="cert-switcher__current" id="cert-switcher-current">@shell.Active.Code</span>
+                  <span class="cert-switcher__arrow" aria-hidden="true">▼</span>
+                </summary>
+                <form class="cert-dropdown" method="post" action="/learner/active-certificate">
+                  @Html.AntiForgeryToken()
+                  <input type="hidden" name="returnUrl" value="@returnUrl">
+                  @foreach (var cert in shell.Certificates)
+                  {
+                    var isCurrent = cert.Code == shell.Active.Code;
+                    <button type="submit" name="code" value="@cert.Code"
+                            class="cert-dropdown__item@(isCurrent ? " is-current" : "")"
+                            aria-current="@(isCurrent ? "true" : null)">
+                      @cert.Code <span class="text-xs">@cert.Name</span>
+                    </button>
+                  }
+                </form>
+              </details>
+            </div>
+          </div>
+        }
+        <div class="container stack">
+          @if (TempData["ShellError"] is string shellError)
+          {
+            <div class="alert alert--warning" role="alert">@shellError</div>
+          }
+          @RenderBody()
+        </div>
+      </main>
+    </div>
+  </div>
+  <script src="~/js/icons.js"></script>
+  @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

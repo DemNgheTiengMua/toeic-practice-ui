@@ -33,6 +33,11 @@ public sealed record SignInInput(
     [property: Required(ErrorMessage = "Password is required.")]
     string Password);
 
+/// <summary>The certificate a learner is switching to, named by its catalogue code.</summary>
+public sealed record SwitchCertificateInput(
+    [property: Required(ErrorMessage = "Choose a certificate.")]
+    string Code);
+
 /// <summary>The first half of a password reset: the address to send the link to.</summary>
 public sealed record ForgotPasswordInput(
     [property: Required(ErrorMessage = "Email is required.")]

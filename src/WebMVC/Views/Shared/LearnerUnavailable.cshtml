@@ -1,0 +1,18 @@
+@{
+    ViewData["Title"] = "Dashboard unavailable";
+    ViewData["Description"] = "Your learning data could not be loaded.";
+}
+
+<div class="container stack" style="padding-top: var(--space-6); padding-bottom: var(--space-8)">
+  <div class="card"><div class="card__body">
+    <div class="state-block">
+      <div class="state-block__icon state-block__icon--danger" aria-hidden="true">ERROR</div>
+      <h1 class="state-block__title">We can't load your learning data right now</h1>
+      <p class="state-block__desc">
+        The service that holds your progress didn't answer. This is usually temporary —
+        try again in a moment.
+      </p>
+      <a class="btn btn--primary" href="@(Context.Request.Path + Context.Request.QueryString)">Try again</a>
+    </div>
+  </div></div>
+</div>

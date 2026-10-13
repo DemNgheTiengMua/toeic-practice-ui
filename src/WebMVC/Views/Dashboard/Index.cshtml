@@ -1,39 +1,177 @@
 @model DashboardViewModel
 @inject DateTimeFormatter Dates
 @{
+    Layout = "_LearnerLayout";
     ViewData["Title"] = "Dashboard";
     ViewData["Description"] = "Your learning dashboard.";
+    var dashboard = Model.Dashboard;
+    var cert = dashboard.Certificate;
+    string PurposeLabel(string purpose) => purpose switch
+    {
+        "mock" => "Mock exam",
+        "placement" => "Placement test",
+        "speaking_practice" => "Speaking practice",
+        "writing_practice" => "Writing practice",
+        _ => purpose,
+    };
+    string StatusLabel(string status) => status switch
+    {
+        "in_progress" => "In progress",
+        "submitted" => "Submitted",
+        "graded" => "Graded",
+        "abandoned" => "Cancelled",
+        "finished" => "Finished",
+        _ => status,
+    };
 }
 
-<div class="container stack" style="padding-top: var(--space-6); padding-bottom: var(--space-8)">
-  @if (Model.Activation == "sent")
-  {
-    <div class="alert alert--success" role="status">A new activation link is on its way to @Model.User.Email. It expires in 24 hours.</div>
-  }
-  else if (Model.Activation == "failed")
-  {
-    <div class="alert alert--danger" role="alert">Could not send the activation email. Try again in a few minutes.</div>
-  }
+@if (Model.Activation == "sent")
+{
+  <div class="alert alert--success" role="status">A new activation link is on its way to @Model.User.Email. It expires in 24 hours.</div>
+}
+else if (Model.Activation == "failed")
+{
+  <div class="alert alert--danger" role="alert">Could not send the activation email. Try again in a few minutes.</div>
+}
 
-  @if (Model.ShowVerificationReminder)
+@if (Model.ShowVerificationReminder)
+{
+  @* Users.EmailVerifiedAt IS NULL: practice stays open, buying credits needs a verified email. *@
+  <div class="alert alert--warning row row--between row--wrap" role="status" id="verify-reminder">
+    <span><strong>Verify your email</strong> to unlock buying credits. We sent a link to @Model.User.Email.</span>
+    <span class="row">
+      <form method="post" action="/auth/resend-activation" class="no-margin">
+        @Html.AntiForgeryToken()
+        <button type="submit" class="btn btn--sm">Resend email</button>
+      </form>
+      @* Dismiss hides it for this page view only; it returns on the next visit until verified. *@
+      <button type="button" class="btn btn--ghost btn--sm" aria-label="Dismiss"
+              onclick="document.getElementById('verify-reminder').hidden = true">✕</button>
+    </span>
+  </div>
+}
+
+<h1 class="no-margin">Hello, @(Model.User.FullName ?? Model.User.Email)</h1>
+
+@if (dashboard.IsNew)
+{
+  <div class="card"><div class="card__body">
+    <div class="state-block">
+      <div class="state-block__icon" aria-hidden="true">START</div>
+      <h2 class="state-block__title">Start your @cert.Code journey</h2>
+      <p class="state-block__desc">
+        You haven't practised or sat an exam for @cert.Name yet. Your scores and recent activity
+        for @cert.Code will show here once you do.
+      </p>
+      <div class="row row--center row--loose row--wrap">
+        <a class="btn btn--primary btn--lg" href="/certificates#cert-@cert.Code.ToLowerInvariant()">See what @cert.Code tests</a>
+      </div>
+    </div>
+  </div></div>
+
+  <div class="card">
+    <div class="card__header"><strong>What's next?</strong></div>
+    <div class="card__body stack">
+      <div>
+        <strong>1. Take a placement test (free)</strong>
+        <p class="text-sm text-muted no-margin mt-1">Find your current level and get a personalised learning path.</p>
+      </div>
+      <div>
+        <strong>2. Practise by section (free)</strong>
+        <p class="text-sm text-muted no-margin mt-1">Drill one listening or reading section with immediate feedback.</p>
+      </div>
+      <div>
+        <strong>3. Take mock exams (paid with credits)</strong>
+        <p class="text-sm text-muted no-margin mt-1">Full timed tests with a scaled score and band.</p>
+      </div>
+    </div>
+  </div>
+}
+else
+{
+  <div class="alert alert--info">
+    <strong>@dashboard.AttemptCount @(dashboard.AttemptCount == 1 ? "exam" : "exams")</strong>
+    · @dashboard.PracticeCount practice @(dashboard.PracticeCount == 1 ? "session" : "sessions") for @cert.Code
+  </div>
+
+  @if (dashboard.LatestResult is { } latest)
   {
-    @* Users.EmailVerifiedAt IS NULL: practice stays open, buying credits needs a verified email. *@
-    <div class="alert alert--warning row row--between row--wrap" role="status" id="verify-reminder">
-      <span><strong>Verify your email</strong> to unlock buying credits. We sent a link to @Model.User.Email.</span>
-      <span class="row">
-        <form method="post" action="/auth/resend-activation" class="no-margin">
-          @Html.AntiForgeryToken()
-          <button type="submit" class="btn btn--sm">Resend email</button>
-        </form>
-        @* Dismiss hides it for this page view only; it returns on the next visit until verified. *@
-        <button type="button" class="btn btn--ghost btn--sm" aria-label="Dismiss"
-                onclick="document.getElementById('verify-reminder').hidden = true">✕</button>
-      </span>
+    <div class="stat">
+      <div class="stat__label">Your current level</div>
+      <div class="stat__value">@latest.TotalScore</div>
+      <div class="stat__hint">
+        @(latest.BandName ?? latest.BandCode ?? "No band") · Last tested @Dates.FormatDate(latest.TakenAt)
+      </div>
+    </div>
+  }
+  else
+  {
+    <div class="stat">
+      <div class="stat__label">Your current level</div>
+      <div class="stat__value">—</div>
+      <div class="stat__hint">Finish a mock exam to get a scaled score and band.</div>
     </div>
   }
 
-  <h1 class="m-0 mb-1">Welcome back, @(Model.User.FullName ?? Model.User.Email)</h1>
-  <p class="text-muted no-margin">Your placement exam, learning path and practice drills will live here.</p>
-  <p class="text-muted no-margin">Right now it's @Dates.Format(DateTimeOffset.UtcNow) for you.</p>
-  <div><a class="btn btn--primary" href="/certificates">Browse certificates</a></div>
-</div>
+  <div class="card">
+    <div class="card__header"><strong>Recent exams</strong></div>
+    <div class="card__body">
+      @if (dashboard.RecentAttempts.Count == 0)
+      {
+        <p class="text-muted no-margin">No exams yet for @cert.Code.</p>
+      }
+      else
+      {
+        <table class="table table--striped">
+          <caption class="visually-hidden">Your most recent @cert.Code exams, newest first</caption>
+          <thead>
+            <tr><th scope="col">Test</th><th scope="col">Type</th><th scope="col">Date</th><th scope="col">Status</th><th scope="col">Total</th><th scope="col">Band</th></tr>
+          </thead>
+          <tbody>
+            @foreach (var a in dashboard.RecentAttempts)
+            {
+              <tr>
+                <td>@a.ExamName</td>
+                <td>@PurposeLabel(a.Purpose)</td>
+                <td>@Dates.FormatDate(a.StartedAt)</td>
+                <td>@StatusLabel(a.Status)</td>
+                <td><strong>@(a.TotalScore?.ToString() ?? "—")</strong></td>
+                <td>@(a.BandCode ?? "—")</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card__header"><strong>Recent practice</strong></div>
+    <div class="card__body">
+      @if (dashboard.RecentPractice.Count == 0)
+      {
+        <p class="text-muted no-margin">No practice sessions yet for @cert.Code.</p>
+      }
+      else
+      {
+        <table class="table table--striped">
+          <caption class="visually-hidden">Your most recent @cert.Code practice sessions, newest first</caption>
+          <thead>
+            <tr><th scope="col">Section</th><th scope="col">Date</th><th scope="col">Status</th><th scope="col">Correct</th></tr>
+          </thead>
+          <tbody>
+            @foreach (var p in dashboard.RecentPractice)
+            {
+              <tr>
+                <td>@p.SectionName</td>
+                <td>@Dates.FormatDate(p.StartedAt)</td>
+                <td>@StatusLabel(p.Status)</td>
+                <td>@p.CorrectCount / @p.QuestionCount</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+  </div>
+}

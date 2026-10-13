@@ -323,15 +323,21 @@ public sealed class AuthService(
         where TToken : class, IOneTimeToken, new()
     {
         var now = clock.GetUtcNow();
-        await tokens
-            .Where(t => t.UserId == user.UserId && t.UsedAt == null)
-            .ExecuteUpdateAsync(s => s.SetProperty(t => t.UsedAt, now), cancellationToken);
+        await RetireLinksAsync(tokens, user.UserId, now, cancellationToken);
 
         var token = NewToken();
         tokens.Add(new TToken { UserId = user.UserId, TokenHash = HashToken(token), ExpiresAt = now + lifetime });
         await db.SaveChangesAsync(cancellationToken);
         return token;
     }
+
+    /// <summary>Marks every unused link of this kind for the user as used, so none of them works.</summary>
+    private static Task RetireLinksAsync<TToken>(
+        DbSet<TToken> tokens, int userId, DateTimeOffset now, CancellationToken cancellationToken)
+        where TToken : class, IOneTimeToken =>
+        tokens
+            .Where(t => t.UserId == userId && t.UsedAt == null)
+            .ExecuteUpdateAsync(s => s.SetProperty(t => t.UsedAt, now), cancellationToken);
 
     /// <summary>Marks a live link used and returns its (tracked) owner. Call inside a transaction
     /// so the token and whatever it unlocks commit together. Unknown, used, expired, or owned by a
@@ -404,7 +410,16 @@ public sealed class AuthService(
             throw new AuthException(AuthException.InvalidCredentials, "The current password is incorrect.");
         }
 
+        // Every emailed link issued before the change dies with the old password, or whoever
+        // holds one (a hijacked mailbox) could still take the account over, or verify it, after
+        // the owner secures it. All writes commit together. The session stamp ends old sessions.
+        var now = clock.GetUtcNow();
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await RetireLinksAsync(db.PasswordResetTokens, userId, now, cancellationToken);
+        await RetireLinksAsync(db.EmailVerificationTokens, userId, now, cancellationToken);
+
         user.PasswordHash = Convert.FromBase64String(Hasher.HashPassword(user, input.NewPassword));
         await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
     }
 }

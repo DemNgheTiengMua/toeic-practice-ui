@@ -128,3 +128,54 @@ GO
 
 PRINT 'demo accounts seeded';
 GO
+
+-- ============ Active certificate and learner history (issue #7) ============
+-- The demo learner prepares for TOEIC, with two graded mock attempts and two practice sessions
+-- under it and nothing under IELTS or VSTEP: switching the certificate on the dashboard shows
+-- the isolation directly. The admin account gets no active certificate — admins have no learner
+-- shell. Credits are granted by the admin so the balance on the shell is a real ledger sum.
+DECLARE @learner INT = (SELECT UserId FROM Users WHERE Email = 'learner@demo.local');
+DECLARE @adminUser INT = (SELECT UserId FROM Users WHERE Email = 'admin@demo.local');
+DECLARE @toeicCert INT = (SELECT CertId FROM Certificates WHERE Code = 'TOEIC');
+
+UPDATE Users SET ActiveCertId = @toeicCert WHERE UserId = @learner AND ActiveCertId IS NULL;
+
+IF NOT EXISTS (SELECT 1 FROM CreditTransactions WHERE UserId = @learner)
+  INSERT INTO CreditTransactions (UserId, Reason, Delta, AdminUserId, Note)
+  VALUES (@learner, 'admin_grant', 8, @adminUser, N'Demo starting credits');
+GO
+
+-- A published TOEIC mock exam to hang the demo attempts off. Questions arrive in issue #15;
+-- an exam with no questions is still a legal published exam and is all the dashboard reads.
+DECLARE @toeicCert INT = (SELECT CertId FROM Certificates WHERE Code = 'TOEIC');
+IF NOT EXISTS (SELECT 1 FROM Exams WHERE CertId = @toeicCert AND Name = N'ETS 2024 — Test 1')
+  INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose, Description, SourceName, QuestionCount)
+  VALUES (@toeicCert, N'ETS 2024 — Test 1', 'published', 120, 'mock',
+          N'A full TOEIC Listening & Reading form.', N'ETS 2024', 200);
+GO
+
+DECLARE @learner INT = (SELECT UserId FROM Users WHERE Email = 'learner@demo.local');
+DECLARE @toeicCert INT = (SELECT CertId FROM Certificates WHERE Code = 'TOEIC');
+DECLARE @toeicExam INT = (SELECT ExamId FROM Exams WHERE CertId = @toeicCert AND Name = N'ETS 2024 — Test 1');
+-- Scores are stored on the attempt only (AttemptSkillScores would have to sum to the total;
+-- the per-skill breakdown arrives with the real scoring slice).
+IF NOT EXISTS (SELECT 1 FROM ExamAttempts WHERE UserId = @learner AND CertId = @toeicCert)
+  INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt, SubmittedAt, TotalScore, BandCode) VALUES
+    (@learner, @toeicExam, @toeicCert, 'graded',
+     DATEADD(DAY, -21, SYSDATETIMEOFFSET()), DATEADD(DAY, -21, DATEADD(HOUR, 2, SYSDATETIMEOFFSET())),
+     DATEADD(DAY, -21, DATEADD(MINUTE, 113, SYSDATETIMEOFFSET())), 690, 'B1'),
+    (@learner, @toeicExam, @toeicCert, 'graded',
+     DATEADD(DAY, -4, SYSDATETIMEOFFSET()), DATEADD(DAY, -4, DATEADD(HOUR, 2, SYSDATETIMEOFFSET())),
+     DATEADD(DAY, -4, DATEADD(MINUTE, 109, SYSDATETIMEOFFSET())), 760, 'B1');
+
+IF NOT EXISTS (SELECT 1 FROM PracticeSessions p JOIN Sections s ON s.SectionId = p.SectionId
+               WHERE p.UserId = @learner AND s.CertId = @toeicCert)
+  INSERT INTO PracticeSessions (UserId, SectionId, Modality, QuestionCount, Status, CorrectCount, StartedAt, FinishedAt) VALUES
+    (@learner, (SELECT SectionId FROM Sections WHERE CertId = @toeicCert AND Code = 'P2'), 'listening',
+     25, 'finished', 19, DATEADD(DAY, -3, SYSDATETIMEOFFSET()), DATEADD(DAY, -3, DATEADD(MINUTE, 18, SYSDATETIMEOFFSET()))),
+    (@learner, (SELECT SectionId FROM Sections WHERE CertId = @toeicCert AND Code = 'P5'), 'reading',
+     30, 'finished', 21, DATEADD(DAY, -1, SYSDATETIMEOFFSET()), DATEADD(DAY, -1, DATEADD(MINUTE, 24, SYSDATETIMEOFFSET())));
+GO
+
+PRINT 'demo learner history seeded';
+GO

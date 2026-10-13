@@ -44,7 +44,7 @@ public sealed class CertificateServiceTests(DatabaseFixture database)
 
         var catalog = await service.GetCatalogAsync();
 
-        var toeic = Assert.Single(catalog);
+        var toeic = Assert.Single(catalog, c => c.Code == "TOEIC");
         Assert.Equal("TOEIC", toeic.Code);
         Assert.Equal("The standard workplace English test.", toeic.Description);
 

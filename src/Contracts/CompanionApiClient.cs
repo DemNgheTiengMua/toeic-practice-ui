@@ -31,6 +31,12 @@ public interface ICompanionApiClient
     Task ForgotPasswordAsync(ForgotPasswordRequest request, CancellationToken cancellationToken = default);
 
     Task ResetPasswordAsync(ResetPasswordRequest request, CancellationToken cancellationToken = default);
+
+    Task<LearnerContextDto> GetLearnerContextAsync(string bearerToken, CancellationToken cancellationToken = default);
+
+    Task SwitchCertificateAsync(string bearerToken, string code, CancellationToken cancellationToken = default);
+
+    Task<LearnerDashboardDto> GetDashboardAsync(string bearerToken, CancellationToken cancellationToken = default);
 }
 
 /// <summary>Raised when the API answers with a non-success status; carries the ProblemDetails code.</summary>
@@ -145,6 +151,32 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
         AttachBearer(message, bearerToken);
         using var response = await http.SendAsync(message, cancellationToken);
         await EnsureSuccessAsync(response, cancellationToken);
+    }
+
+    public Task<LearnerContextDto> GetLearnerContextAsync(string bearerToken, CancellationToken cancellationToken = default) =>
+        GetAuthorizedAsync<LearnerContextDto>("api/learner/context", bearerToken, cancellationToken);
+
+    public async Task SwitchCertificateAsync(string bearerToken, string code, CancellationToken cancellationToken = default)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Put, "api/learner/active-certificate")
+        {
+            Content = JsonContent.Create(new SwitchCertificateRequest(code), options: Json),
+        };
+        AttachBearer(request, bearerToken);
+        using var response = await http.SendAsync(request, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+    }
+
+    public Task<LearnerDashboardDto> GetDashboardAsync(string bearerToken, CancellationToken cancellationToken = default) =>
+        GetAuthorizedAsync<LearnerDashboardDto>("api/learner/dashboard", bearerToken, cancellationToken);
+
+    private async Task<T> GetAuthorizedAsync<T>(string path, string bearerToken, CancellationToken cancellationToken)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, path);
+        AttachBearer(request, bearerToken);
+        using var response = await http.SendAsync(request, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+        return (await response.Content.ReadFromJsonAsync<T>(Json, cancellationToken))!;
     }
 
     private static void AttachBearer(HttpRequestMessage request, string? bearerToken)

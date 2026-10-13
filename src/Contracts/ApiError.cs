@@ -34,5 +34,8 @@ public sealed record ApiError(string Code, string Title, int Status, string? Det
 
         /// <summary>The mail could not be handed to the sender; the learner should retry later.</summary>
         public const string MailUnavailable = "MAIL_UNAVAILABLE";
+
+        /// <summary>Switching to a certificate that doesn't exist or has been retired.</summary>
+        public const string CertificateUnavailable = "CERT_UNAVAILABLE";
     }
 }
