@@ -1,0 +1,11 @@
+@model Contracts.AuthUserDto
+@{
+    ViewData["Title"] = "Admin";
+    ViewData["Description"] = "Administration dashboard.";
+}
+
+<div class="container stack" style="padding-top: var(--space-6); padding-bottom: var(--space-8)">
+  <h1 class="m-0 mb-1">Admin dashboard</h1>
+  <p class="text-muted no-margin">Signed in to the API as <strong>@Model.Email</strong> (role: @Model.Role).</p>
+  <p class="text-muted no-margin">User management, exam imports and moderation will live here.</p>
+</div>

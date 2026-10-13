@@ -1,13 +1,22 @@
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace Contracts;
 
-/// <summary>What the MVC site knows about the API: typed calls, errors surfaced with their stable code.</summary>
+/// <summary>What the MVC site knows about the API: typed calls, errors surfaced with their stable code.
+/// Calls that need identity take the JWT from the MVC site's cookie as <paramref name="bearerToken"/>
+/// and forward it — the browser never sees the token (ADR-0002).</summary>
 public interface ICompanionApiClient
 {
-    Task<IReadOnlyList<CertificateDto>> GetCertificatesAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<CertificateDto>> GetCertificatesAsync(string? bearerToken = null, CancellationToken cancellationToken = default);
+
+    Task<AuthTokenResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default);
+
+    Task<AuthTokenResponse> SignInAsync(SignInRequest request, CancellationToken cancellationToken = default);
+
+    Task<AuthUserDto> GetMeAsync(string bearerToken, CancellationToken cancellationToken = default);
 }
 
 /// <summary>Raised when the API answers with a non-success status; carries the ProblemDetails code.</summary>
@@ -32,12 +41,45 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
-    public async Task<IReadOnlyList<CertificateDto>> GetCertificatesAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<CertificateDto>> GetCertificatesAsync(string? bearerToken = null, CancellationToken cancellationToken = default)
     {
-        var response = await http.GetAsync("api/certificates", cancellationToken);
+        using var request = new HttpRequestMessage(HttpMethod.Get, "api/certificates");
+        AttachBearer(request, bearerToken);
+        using var response = await http.SendAsync(request, cancellationToken);
         await EnsureSuccessAsync(response, cancellationToken);
         var certificates = await response.Content.ReadFromJsonAsync<List<CertificateDto>>(Json, cancellationToken);
         return certificates ?? [];
+    }
+
+    public async Task<AuthTokenResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
+    {
+        using var response = await http.PostAsJsonAsync("api/auth/register", request, Json, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+        return (await response.Content.ReadFromJsonAsync<AuthTokenResponse>(Json, cancellationToken))!;
+    }
+
+    public async Task<AuthTokenResponse> SignInAsync(SignInRequest request, CancellationToken cancellationToken = default)
+    {
+        using var response = await http.PostAsJsonAsync("api/auth/sign-in", request, Json, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+        return (await response.Content.ReadFromJsonAsync<AuthTokenResponse>(Json, cancellationToken))!;
+    }
+
+    public async Task<AuthUserDto> GetMeAsync(string bearerToken, CancellationToken cancellationToken = default)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, "api/auth/me");
+        AttachBearer(request, bearerToken);
+        using var response = await http.SendAsync(request, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+        return (await response.Content.ReadFromJsonAsync<AuthUserDto>(Json, cancellationToken))!;
+    }
+
+    private static void AttachBearer(HttpRequestMessage request, string? bearerToken)
+    {
+        if (!string.IsNullOrEmpty(bearerToken))
+        {
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", bearerToken);
+        }
     }
 
     private static async Task EnsureSuccessAsync(HttpResponseMessage response, CancellationToken cancellationToken)

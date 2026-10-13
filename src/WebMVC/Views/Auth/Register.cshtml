@@ -1,0 +1,56 @@
+@model RegisterViewModel
+@{
+    ViewData["Title"] = "Register";
+    ViewData["Description"] = "Create a free extra efficient account.";
+}
+
+<div class="container stack" style="padding-top: var(--space-6); padding-bottom: var(--space-8); max-width: 480px">
+  <h1 class="m-0 mb-1">Create your account</h1>
+  <p class="text-muted no-margin">Free placement exam, practice drills, and a learning path that follows your certificate.</p>
+
+  <form method="post" asp-action="Register" class="card">
+    <div class="card__body stack">
+      @if (!string.IsNullOrEmpty(Model.FormError))
+      {
+        <p class="text-danger no-margin" role="alert">@Model.FormError</p>
+      }
+      @Html.AntiForgeryToken()
+      <input type="hidden" asp-for="ReturnUrl">
+
+      <div>
+        <label asp-for="FullName"></label>
+        <input asp-for="FullName" autocomplete="name">
+        <span asp-validation-for="FullName" class="text-danger"></span>
+      </div>
+
+      <div>
+        <label asp-for="Email"></label>
+        <input asp-for="Email" autocomplete="email">
+        <span asp-validation-for="Email" class="text-danger"></span>
+      </div>
+
+      <div>
+        <label asp-for="Phone">Phone <span class="text-muted">(optional)</span></label>
+        <input asp-for="Phone" autocomplete="tel">
+        <span asp-validation-for="Phone" class="text-danger"></span>
+      </div>
+
+      <div>
+        <label asp-for="Password"></label>
+        <input asp-for="Password" autocomplete="new-password">
+        <span asp-validation-for="Password" class="text-danger"></span>
+      </div>
+
+      <div class="row" style="gap: var(--space-2); align-items: center">
+        <input asp-for="TermsAccepted" type="checkbox">
+        <label asp-for="TermsAccepted" class="no-margin"></label>
+      </div>
+      <span asp-validation-for="TermsAccepted" class="text-danger"></span>
+
+      <div>
+        <button type="submit" class="btn btn--primary btn--lg">Register</button>
+      </div>
+      <p class="text-sm text-muted no-margin">Already have an account? <a href="/auth/sign-in">Sign in</a>.</p>
+    </div>
+  </form>
+</div>

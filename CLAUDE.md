@@ -18,9 +18,16 @@ dotnet test                                    # Services tests against LocalDB,
 sqlcmd -S "(localdb)\MSSQLLocalDB" -I -b -Q "IF DB_ID('ExtraEfficiency') IS NOT NULL DROP DATABASE [ExtraEfficiency]; CREATE DATABASE [ExtraEfficiency];"
 sqlcmd -S "(localdb)\MSSQLLocalDB" -d ExtraEfficiency -I -b -i docs/database-schema.sql
 sqlcmd -S "(localdb)\MSSQLLocalDB" -d ExtraEfficiency -I -b -i docs/seed-demo.sql
+# First time only: the API refuses to boot without a JWT signing key.
+dotnet user-secrets set "Jwt:SigningKey" "$(openssl rand -base64 32)" --project src/WebAPI
+dotnet user-secrets set "Jwt:Issuer" "extra-efficient" --project src/WebAPI
+dotnet user-secrets set "Jwt:Audience" "extra-efficient" --project src/WebAPI
 dotnet run --project src/WebAPI                # http://localhost:5001
 dotnet run --project src/WebMVC                # http://localhost:5000/certificates
 ```
+
+Demo accounts from the seed: `learner@demo.local` / `Learner!1234` and
+`admin@demo.local` / `Admin!1234`.
 
 After a schema change: edit `docs/database-schema.sql`, run
 `docs/schema-tests/run-all.sh`, then re-scaffold —

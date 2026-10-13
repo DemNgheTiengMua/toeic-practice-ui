@@ -1,12 +1,16 @@
 ﻿-- docs/seed-demo.sql
--- Demo seed: the public catalog (certificates, skills, sections, score bands) plus the two
--- identity roles. Loaded after database-schema.sql. Later slices append their own demo data
--- here (users, exams, packages...) — keep everything idempotent by key where practical.
+-- Demo seed: the public catalog (certificates, skills, sections, score bands), the two identity
+-- roles, and the two demo accounts (learner@demo.local, admin@demo.local). Loaded after
+-- database-schema.sql. Later slices append their own demo data here (exams, packages...) —
+-- keep everything idempotent by key where practical.
 SET QUOTED_IDENTIFIER ON; SET ANSI_NULLS ON;
 GO
 
 -- ============ Identity: roles ============
-INSERT INTO Roles (Code, Name) VALUES ('learner', N'Learner'), ('admin', N'Administrator');
+IF NOT EXISTS (SELECT 1 FROM Roles WHERE Code = 'learner')
+  INSERT INTO Roles (Code, Name) VALUES ('learner', N'Learner');
+IF NOT EXISTS (SELECT 1 FROM Roles WHERE Code = 'admin')
+  INSERT INTO Roles (Code, Name) VALUES ('admin', N'Administrator');
 GO
 
 -- ============ TOEIC ============
@@ -101,4 +105,26 @@ INSERT INTO ScoreBands (CertId, Code, Name, MinTotal, MaxTotal, DisplayOrder) VA
 GO
 
 PRINT 'demo catalog seeded';
+GO
+
+-- ============ Demo accounts (issue #4) ============
+-- One learner and one admin. Passwords are framework PasswordHasher hashes (PBKDF2-SHA256,
+-- format v1, stored raw in the VARBINARY column — the app converts base64 at the boundary):
+--   learner@demo.local / Learner!1234      admin@demo.local / Admin!1234
+-- TermsAcceptedAt is set because registration requires it. EmailVerifiedAt is left NULL —
+-- email activation is a later slice (see EmailVerificationTokens), and a demo account should
+-- look like a real registered account until then.
+IF NOT EXISTS (SELECT 1 FROM Users WHERE Email = 'learner@demo.local')
+  INSERT INTO Users (RoleId, Email, PasswordHash, FullName, Phone, TermsAcceptedAt)
+  VALUES ((SELECT RoleId FROM Roles WHERE Code = 'learner'), 'learner@demo.local',
+    0x0100000002000186A000000010D7A3A03C3CDA12DC7DE9F8E355177F9E52878DFC5F8E1C648FB5B6A7E779DD958F54F2355062DA531CBA010CFA0A06C6,
+    N'Demo Learner', '+84 901 000 001', SYSDATETIMEOFFSET());
+IF NOT EXISTS (SELECT 1 FROM Users WHERE Email = 'admin@demo.local')
+  INSERT INTO Users (RoleId, Email, PasswordHash, FullName, TermsAcceptedAt)
+  VALUES ((SELECT RoleId FROM Roles WHERE Code = 'admin'), 'admin@demo.local',
+    0x0100000002000186A00000001021E5B23D0E21492CC2BAA81AA8B2AFBAAEA0790A49CDD2323CDFC2FC1AC71F58BFCBC50B442992BA08751C83CC16A1A4,
+    N'Demo Admin', SYSDATETIMEOFFSET());
+GO
+
+PRINT 'demo accounts seeded';
 GO

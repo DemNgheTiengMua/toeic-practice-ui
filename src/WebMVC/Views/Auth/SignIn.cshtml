@@ -1,0 +1,38 @@
+@model SignInViewModel
+@{
+    ViewData["Title"] = "Sign in";
+    ViewData["Description"] = "Sign in to extra efficient.";
+}
+
+<div class="container stack" style="padding-top: var(--space-6); padding-bottom: var(--space-8); max-width: 480px">
+  <h1 class="m-0 mb-1">Sign in</h1>
+  <p class="text-muted no-margin">Pick up where you left off.</p>
+
+  <form method="post" asp-action="SignIn" class="card">
+    <div class="card__body stack">
+      @if (!string.IsNullOrEmpty(Model.FormError))
+      {
+        <p class="text-danger no-margin" role="alert">@Model.FormError</p>
+      }
+      @Html.AntiForgeryToken()
+      <input type="hidden" asp-for="ReturnUrl">
+
+      <div>
+        <label asp-for="Email"></label>
+        <input asp-for="Email" autocomplete="email">
+        <span asp-validation-for="Email" class="text-danger"></span>
+      </div>
+
+      <div>
+        <label asp-for="Password"></label>
+        <input asp-for="Password" autocomplete="current-password">
+        <span asp-validation-for="Password" class="text-danger"></span>
+      </div>
+
+      <div>
+        <button type="submit" class="btn btn--primary btn--lg">Sign in</button>
+      </div>
+      <p class="text-sm text-muted no-margin">No account yet? <a href="/auth/register@(string.IsNullOrEmpty(Model.ReturnUrl) ? "" : $"?returnUrl={Uri.EscapeDataString(Model.ReturnUrl)}")">Register</a> — it's free.</p>
+    </div>
+  </form>
+</div>

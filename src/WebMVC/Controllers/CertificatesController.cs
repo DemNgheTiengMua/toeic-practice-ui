@@ -12,7 +12,7 @@ public sealed class CertificatesController(ILogger<CertificatesController> logge
     {
         try
         {
-            var certificates = await api.GetCertificatesAsync(cancellationToken);
+            var certificates = await api.GetCertificatesAsync(cancellationToken: cancellationToken);
             return View(certificates);
         }
         catch (ApiException ex)
