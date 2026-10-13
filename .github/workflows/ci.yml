@@ -32,6 +32,16 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
+      # The tests shell out to sqlcmd; the runner image doesn't carry the SQL Server client
+      # tools (the container's own copy isn't on the runner's PATH), so install them.
+      - name: Install sqlcmd
+        run: |
+          curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | sudo gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg
+          curl -fsSL https://packages.microsoft.com/config/ubuntu/22.04/prod.list | sudo tee /etc/apt/sources.list.d/mssql-release.list
+          sudo apt-get update
+          sudo ACCEPT_EULA=Y apt-get install -y mssql-tools18 unixodbc-dev
+          echo "/opt/mssql-tools18/bin" >> "$GITHUB_PATH"
+
       - name: Build
         run: dotnet build --configuration Release
 

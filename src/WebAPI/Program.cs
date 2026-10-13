@@ -224,14 +224,18 @@ app.MapPost("/api/auth/sign-in", async Task<IResult> (
         new AuthUserDto(user.UserId, user.Email, user.FullName, user.RoleCode)));
 });
 
-app.MapGet("/api/auth/me", (HttpContext http) =>
+// Returns the live database row, not the token's claims: the MVC site's cookie revalidation
+// compares against this to catch server-side changes (role, name) since sign-in.
+app.MapGet("/api/auth/me", async Task<IResult> (HttpContext http, IAuthService auth, CancellationToken cancellationToken) =>
 {
-    var principal = http.User;
-    return Results.Ok(new AuthUserDto(
-        int.Parse(principal.FindFirst(IAccessTokenFactory.ClaimUserId)!.Value),
-        principal.FindFirst(IAccessTokenFactory.ClaimEmail)!.Value,
-        principal.FindFirst(IAccessTokenFactory.ClaimName)?.Value,
-        principal.FindFirst(IAccessTokenFactory.ClaimRole)!.Value));
+    var userId = int.Parse(http.User.FindFirst(IAccessTokenFactory.ClaimUserId)!.Value);
+    var user = await auth.GetUserAsync(userId, cancellationToken);
+    if (user is null)
+    {
+        return Problem(StatusCodes.Status404NotFound, "Not Found", ApiError.Codes.NotFound);
+    }
+
+    return Results.Ok(new AuthUserDto(user.UserId, user.Email, user.FullName, user.RoleCode));
 }).RequireAuthorization();
 
 // Demo of the admin-only policy: admin pages and endpoints refuse a learner.

@@ -22,6 +22,34 @@ public sealed class DatabaseFixture : IAsyncLifetime
 
     private static string RepoRoot { get; } = FindRepoRoot();
 
+    /// <summary>Locally sqlcmd is on PATH; on CI it lives inside the SQL Server container image
+    /// at a path the runner doesn't search. The env var wins, then the known container paths,
+    /// then bare "sqlcmd" for local dev.</summary>
+    private static string SqlCmdPath { get; } = ResolveSqlCmdPath();
+
+    private static string ResolveSqlCmdPath()
+    {
+        var fromEnv = Environment.GetEnvironmentVariable("SQLCMD_PATH");
+        if (!string.IsNullOrEmpty(fromEnv))
+        {
+            return fromEnv;
+        }
+
+        foreach (var candidate in new[]
+        {
+            "/opt/mssql-tools18/bin/sqlcmd",
+            "/opt/mssql-tools/bin/sqlcmd",
+        })
+        {
+            if (File.Exists(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        return "sqlcmd";
+    }
+
     public async Task InitializeAsync()
     {
         await SqlAsync("master",
@@ -71,7 +99,7 @@ public sealed class DatabaseFixture : IAsyncLifetime
         {
             StartInfo = new ProcessStartInfo
             {
-                FileName = "sqlcmd",
+                FileName = SqlCmdPath,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,

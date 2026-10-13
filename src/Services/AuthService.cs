@@ -26,6 +26,11 @@ public interface IAuthService
 
     /// <summary>Re-checks a signed-in user on every request: locked, soft-deleted or missing fails.</summary>
     Task<bool> IsActiveAsync(int userId, CancellationToken cancellationToken = default);
+
+    /// <summary>The user's live record. Callers that re-validate a session against the database
+    /// (the MVC site's cookie check) must use this, not the token's claims — the claims are a
+    /// sign-in-time snapshot.</summary>
+    Task<AuthUser?> GetUserAsync(int userId, CancellationToken cancellationToken = default);
 }
 
 public sealed class AuthService(CompanionDbContext db) : IAuthService
@@ -105,5 +110,14 @@ public sealed class AuthService(CompanionDbContext db) : IAuthService
     {
         return await db.Users
             .AnyAsync(u => u.UserId == userId && !u.IsLocked && !u.IsDeleted, cancellationToken);
+    }
+
+    public async Task<AuthUser?> GetUserAsync(int userId, CancellationToken cancellationToken = default)
+    {
+        return await db.Users
+            .AsNoTracking()
+            .Where(u => u.UserId == userId && !u.IsDeleted)
+            .Select(u => new AuthUser(u.UserId, u.Email, u.FullName, u.Role.Code))
+            .SingleOrDefaultAsync(cancellationToken);
     }
 }

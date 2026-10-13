@@ -121,6 +121,21 @@ public sealed class AuthServiceTests(DatabaseFixture database)
     }
 
     [Fact]
+    public async Task GetUser_returns_the_live_role_not_a_snapshot()
+    {
+        await SeedRolesAsync();
+        var user = await CreateService().RegisterAsync(new RegisterInput("Learner", "live@example.com", null, "password-ok", true));
+        Assert.Equal("learner", (await CreateService().GetUserAsync(user.UserId))!.RoleCode);
+
+        await database.SqlAsync($"""
+            UPDATE Users SET RoleId = (SELECT RoleId FROM Roles WHERE Code = 'admin')
+            WHERE UserId = {user.UserId};
+            """);
+
+        Assert.Equal("admin", (await CreateService().GetUserAsync(user.UserId))!.RoleCode);
+    }
+
+    [Fact]
     public async Task IsActive_flips_to_false_the_moment_the_account_is_locked()
     {
         await SeedRolesAsync();
