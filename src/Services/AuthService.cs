@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using BusinessObjects;
+using Contracts;
 using DataAccess;
 using DataAccess.Scaffold;
 using Microsoft.AspNetCore.Identity;
@@ -15,10 +16,10 @@ namespace Services;
 /// registration, bad credentials at sign-in. <see cref="Code"/> is the API's stable error code.</summary>
 public sealed class AuthException(string code, string message) : Exception(message)
 {
-    public const string DuplicateEmail = "AUTH_EMAIL_TAKEN";
-    public const string InvalidCredentials = "AUTH_INVALID_CREDENTIALS";
-    public const string Locked = "AUTH_LOCKED";
-    public const string TokenInvalid = "AUTH_TOKEN_INVALID";
+    public const string DuplicateEmail = AuthErrorCodes.EmailTaken;
+    public const string InvalidCredentials = AuthErrorCodes.InvalidCredentials;
+    public const string Locked = AuthErrorCodes.Locked;
+    public const string TokenInvalid = AuthErrorCodes.TokenInvalid;
 
     public string Code { get; } = code;
 }
@@ -39,6 +40,15 @@ public interface IAuthService
     /// sign-in-time snapshot.</summary>
     Task<AuthUser?> GetUserAsync(int userId, CancellationToken cancellationToken = default);
 
+    /// <summary>The learner's editable profile: name, phone, time zone (an IANA id from the
+    /// Contracts.TimeZones shortlist).</summary>
+    Task<ProfileInfo> GetProfileAsync(int userId, CancellationToken cancellationToken = default);
+
+    Task<ProfileInfo> UpdateProfileAsync(int userId, UpdateProfileInput input, CancellationToken cancellationToken = default);
+
+    /// <summary>Requires the current password — a stolen session must not be enough to change it.</summary>
+    Task ChangePasswordAsync(int userId, ChangePasswordInput input, CancellationToken cancellationToken = default);
+
     /// <summary>Consumes an activation token and marks the email verified. Unknown, used or
     /// expired tokens all fail with <see cref="AuthException.TokenInvalid"/>.</summary>
     Task VerifyEmailAsync(string token, CancellationToken cancellationToken = default);
@@ -56,6 +66,9 @@ public interface IAuthService
     /// the link proves the learner controls the mailbox.</summary>
     Task ResetPasswordAsync(ResetPasswordInput input, CancellationToken cancellationToken = default);
 }
+
+/// <summary>What the profile page edits.</summary>
+public sealed record ProfileInfo(string FullName, string? Phone, string TimeZoneId);
 
 public enum SessionStatus
 {
@@ -98,7 +111,7 @@ public sealed class AuthService(
         }
 
         var learnerRoleId = await db.Roles
-            .Where(r => r.Code == "learner")
+            .Where(r => r.Code == Roles.Learner)
             .Select(r => r.RoleId)
             .SingleOrDefaultAsync(cancellationToken);
         if (learnerRoleId == 0)
@@ -134,7 +147,7 @@ public sealed class AuthService(
         }
 
         return new AuthUser(
-            user.UserId, user.Email, user.FullName, "learner", EmailVerified: false, StampOf(user.PasswordHash));
+            user.UserId, user.Email, user.FullName, Roles.Learner, EmailVerified: false, StampOf(user.PasswordHash));
     }
 
     public async Task<AuthUser> SignInAsync(SignInInput input, CancellationToken cancellationToken = default)
@@ -353,4 +366,45 @@ public sealed class AuthService(
 
     private string Link(string path, string token) =>
         $"{links.PublicBaseUrl.TrimEnd('/')}{path}?token={token}";
+
+    public async Task<ProfileInfo> GetProfileAsync(int userId, CancellationToken cancellationToken = default)
+    {
+        return await db.Users
+            .AsNoTracking()
+            .Where(u => u.UserId == userId && !u.IsDeleted)
+            .Select(u => new ProfileInfo(u.FullName ?? "", u.Phone, u.TimeZoneId))
+            .SingleAsync(cancellationToken);
+    }
+
+    public async Task<ProfileInfo> UpdateProfileAsync(int userId, UpdateProfileInput input, CancellationToken cancellationToken = default)
+    {
+        Validator.ValidateObject(input, new ValidationContext(input), validateAllProperties: true);
+        if (!TimeZones.Contains(input.TimeZoneId))
+        {
+            throw new ValidationException("Pick a time zone from the list.");
+        }
+
+        var user = await db.Users.SingleAsync(u => u.UserId == userId && !u.IsDeleted, cancellationToken);
+        user.FullName = input.FullName.Trim();
+        user.Phone = string.IsNullOrWhiteSpace(input.Phone) ? null : input.Phone.Trim();
+        user.TimeZoneId = input.TimeZoneId;
+        await db.SaveChangesAsync(cancellationToken);
+
+        return new ProfileInfo(user.FullName, user.Phone, user.TimeZoneId);
+    }
+
+    public async Task ChangePasswordAsync(int userId, ChangePasswordInput input, CancellationToken cancellationToken = default)
+    {
+        Validator.ValidateObject(input, new ValidationContext(input), validateAllProperties: true);
+
+        var user = await db.Users.SingleAsync(u => u.UserId == userId && !u.IsDeleted, cancellationToken);
+        if (Hasher.VerifyHashedPassword(user, Convert.ToBase64String(user.PasswordHash), input.CurrentPassword)
+                == PasswordVerificationResult.Failed)
+        {
+            throw new AuthException(AuthException.InvalidCredentials, "The current password is incorrect.");
+        }
+
+        user.PasswordHash = Convert.FromBase64String(Hasher.HashPassword(user, input.NewPassword));
+        await db.SaveChangesAsync(cancellationToken);
+    }
 }

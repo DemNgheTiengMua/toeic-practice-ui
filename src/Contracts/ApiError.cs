@@ -15,13 +15,13 @@ public sealed record ApiError(string Code, string Title, int Status, string? Det
         public const string Validation = "VALIDATION";
 
         /// <summary>Registration with an email that already has a live account.</summary>
-        public const string EmailTaken = "AUTH_EMAIL_TAKEN";
+        public const string EmailTaken = AuthErrorCodes.EmailTaken;
 
         /// <summary>Unknown email or wrong password at sign-in (deliberately indistinguishable).</summary>
-        public const string InvalidCredentials = "AUTH_INVALID_CREDENTIALS";
+        public const string InvalidCredentials = AuthErrorCodes.InvalidCredentials;
 
         /// <summary>A locked account, at sign-in or on any later request.</summary>
-        public const string Locked = "AUTH_LOCKED";
+        public const string Locked = AuthErrorCodes.Locked;
 
         /// <summary>No valid bearer token on a request that needs one.</summary>
         public const string Unauthenticated = "AUTH_REQUIRED";

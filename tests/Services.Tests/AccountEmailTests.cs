@@ -257,9 +257,9 @@ public sealed class AccountEmailTests(DatabaseFixture database)
     [Fact]
     public async Task Password_reset_validates_the_new_password()
     {
-        await RegisterAsync("weak@example.com", "old-password");
-        await CreateService().RequestPasswordResetAsync(new ForgotPasswordInput("weak@example.com"));
-        var token = mail.LastToken("weak@example.com", ResetPath);
+        await RegisterAsync("weak-reset@example.com", "old-password");
+        await CreateService().RequestPasswordResetAsync(new ForgotPasswordInput("weak-reset@example.com"));
+        var token = mail.LastToken("weak-reset@example.com", ResetPath);
 
         await Assert.ThrowsAsync<System.ComponentModel.DataAnnotations.ValidationException>(() =>
             CreateService().ResetPasswordAsync(new ResetPasswordInput(token, "short")));

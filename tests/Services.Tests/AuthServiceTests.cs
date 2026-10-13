@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using BusinessObjects;
+using Contracts;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -38,7 +39,7 @@ public sealed class AuthServiceTests(DatabaseFixture database)
 
         Assert.True(user.UserId > 0);
         Assert.Equal("a@example.com", user.Email);
-        Assert.Equal("learner", user.RoleCode);
+        Assert.Equal(Roles.Learner, user.Role);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
         var row = await db.Users.SingleAsync(u => u.UserId == user.UserId);
@@ -87,7 +88,7 @@ public sealed class AuthServiceTests(DatabaseFixture database)
 
         var user = await CreateService().SignInAsync(new SignInInput("SIGNIN@example.com", "right-password"));
 
-        Assert.Equal("learner", user.RoleCode);
+        Assert.Equal(Roles.Learner, user.Role);
         await using var db = DbContextFactory.Create(database.ConnectionString);
         var row = await db.Users.SingleAsync(u => u.UserId == user.UserId);
         Assert.NotNull(row.LastLoginAt);
@@ -127,14 +128,14 @@ public sealed class AuthServiceTests(DatabaseFixture database)
     {
         await SeedRolesAsync();
         var user = await CreateService().RegisterAsync(new RegisterInput("Learner", "live@example.com", null, "password-ok", true));
-        Assert.Equal("learner", (await CreateService().GetUserAsync(user.UserId))!.RoleCode);
+        Assert.Equal(Roles.Learner, (await CreateService().GetUserAsync(user.UserId))!.Role);
 
         await database.SqlAsync($"""
             UPDATE Users SET RoleId = (SELECT RoleId FROM Roles WHERE Code = 'admin')
             WHERE UserId = {user.UserId};
             """);
 
-        Assert.Equal("admin", (await CreateService().GetUserAsync(user.UserId))!.RoleCode);
+        Assert.Equal(Roles.Admin, (await CreateService().GetUserAsync(user.UserId))!.Role);
     }
 
     [Fact]
@@ -159,5 +160,71 @@ public sealed class AuthServiceTests(DatabaseFixture database)
         Assert.Equal(SessionStatus.Ended, await CreateService().CheckSessionAsync(user.UserId, null));
         Assert.Equal(SessionStatus.Ended, await CreateService().CheckSessionAsync(user.UserId, "not-the-stamp"));
         Assert.Equal(SessionStatus.Ended, await CreateService().CheckSessionAsync(user.UserId + 10_000, user.SessionStamp));
+    }
+
+    [Fact]
+    public async Task Profile_defaults_to_ho_chi_minh_and_updates_name_phone_zone()
+    {
+        await SeedRolesAsync();
+        var user = await CreateService().RegisterAsync(new RegisterInput("Learner", "profile@example.com", null, "password-ok", true));
+
+        var initial = await CreateService().GetProfileAsync(user.UserId);
+        Assert.Equal("Asia/Ho_Chi_Minh", initial.TimeZoneId);
+
+        var updated = await CreateService().UpdateProfileAsync(
+            user.UserId, new UpdateProfileInput("  Nguyen Van B  ", " +84 912 000 000 ", "Asia/Tokyo"));
+
+        Assert.Equal("Nguyen Van B", updated.FullName);
+        Assert.Equal("+84 912 000 000", updated.Phone);
+        Assert.Equal("Asia/Tokyo", updated.TimeZoneId);
+        // The read-back agrees with the update result — the change is persisted, not just returned.
+        Assert.Equal(updated, await CreateService().GetProfileAsync(user.UserId));
+    }
+
+    [Fact]
+    public async Task UpdateProfile_refuses_a_zone_outside_the_shortlist()
+    {
+        await SeedRolesAsync();
+        var user = await CreateService().RegisterAsync(new RegisterInput("Learner", "zone@example.com", null, "password-ok", true));
+
+        await Assert.ThrowsAsync<ValidationException>(() =>
+            CreateService().UpdateProfileAsync(user.UserId, new UpdateProfileInput("Name", null, "America/Sao_Paulo")));
+    }
+
+    [Fact]
+    public async Task ChangePassword_requires_the_current_password()
+    {
+        await SeedRolesAsync();
+        var user = await CreateService().RegisterAsync(new RegisterInput("Learner", "pw@example.com", null, "old-password", true));
+
+        var ex = await Assert.ThrowsAsync<AuthException>(() =>
+            CreateService().ChangePasswordAsync(user.UserId, new ChangePasswordInput("not-the-password", "new-password-1")));
+        Assert.Equal(AuthException.InvalidCredentials, ex.Code);
+
+        // The old password still works — a refused change must not half-apply.
+        await CreateService().SignInAsync(new SignInInput("pw@example.com", "old-password"));
+    }
+
+    [Fact]
+    public async Task ChangePassword_swaps_the_password()
+    {
+        await SeedRolesAsync();
+        var user = await CreateService().RegisterAsync(new RegisterInput("Learner", "swap@example.com", null, "old-password", true));
+
+        await CreateService().ChangePasswordAsync(user.UserId, new ChangePasswordInput("old-password", "new-password-1"));
+
+        await Assert.ThrowsAsync<AuthException>(() =>
+            CreateService().SignInAsync(new SignInInput("swap@example.com", "old-password")));
+        await CreateService().SignInAsync(new SignInInput("swap@example.com", "new-password-1"));
+    }
+
+    [Fact]
+    public async Task ChangePassword_validates_the_new_password()
+    {
+        await SeedRolesAsync();
+        var user = await CreateService().RegisterAsync(new RegisterInput("Learner", "weak@example.com", null, "old-password", true));
+
+        await Assert.ThrowsAsync<ValidationException>(() =>
+            CreateService().ChangePasswordAsync(user.UserId, new ChangePasswordInput("old-password", "short")));
     }
 }

@@ -1,0 +1,52 @@
+@model ProfileViewModel
+@{
+    ViewData["Title"] = "Profile";
+    ViewData["Description"] = "Your profile and time zone.";
+}
+
+<div class="container stack" style="padding-top: var(--space-6); padding-bottom: var(--space-8); max-width: 480px">
+  <h1 class="m-0 mb-1">Profile</h1>
+  <p class="text-muted no-margin">How we address you, and the zone every date and time renders in.</p>
+
+  <form method="post" asp-action="Index" class="card">
+    <div class="card__body stack">
+      @if (!string.IsNullOrEmpty(Model.SuccessMessage))
+      {
+        <p class="no-margin" role="status">@Model.SuccessMessage</p>
+      }
+      @if (!string.IsNullOrEmpty(Model.FormError))
+      {
+        <p class="text-danger no-margin" role="alert">@Model.FormError</p>
+      }
+      @Html.AntiForgeryToken()
+
+      <div>
+        <label asp-for="FullName"></label>
+        <input asp-for="FullName" autocomplete="name">
+        <span asp-validation-for="FullName" class="text-danger"></span>
+      </div>
+
+      <div>
+        <label asp-for="Phone"></label>
+        <input asp-for="Phone" autocomplete="tel">
+        <span asp-validation-for="Phone" class="text-danger"></span>
+      </div>
+
+      <div>
+        <label asp-for="TimeZoneId"></label>
+        <select asp-for="TimeZoneId">
+          @foreach (var zone in Model.TimeZoneOptions)
+          {
+            <option value="@zone">@zone.Replace("_", " ")</option>
+          }
+        </select>
+        <span asp-validation-for="TimeZoneId" class="text-danger"></span>
+      </div>
+
+      <div>
+        <button type="submit" class="btn btn--primary btn--lg">Save profile</button>
+      </div>
+      <p class="text-sm text-muted no-margin">Want a new password? <a href="/profile/password">Change password</a>.</p>
+    </div>
+  </form>
+</div>

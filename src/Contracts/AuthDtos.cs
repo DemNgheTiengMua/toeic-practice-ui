@@ -9,6 +9,12 @@ public sealed record AuthTokenResponse(string Token, DateTimeOffset ExpiresAt, A
 
 public sealed record AuthUserDto(int UserId, string Email, string? FullName, string Role, bool EmailVerified);
 
+public sealed record ProfileDto(string FullName, string? Phone, string TimeZoneId);
+
+public sealed record UpdateProfileRequest(string FullName, string? Phone, string TimeZoneId);
+
+public sealed record ChangePasswordRequest(string CurrentPassword, string NewPassword);
+
 /// <summary>The token from an emailed activation link.</summary>
 public sealed record VerifyEmailRequest(string Token);
 

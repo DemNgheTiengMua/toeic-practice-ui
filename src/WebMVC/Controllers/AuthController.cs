@@ -83,7 +83,7 @@ public sealed class AuthController(ICompanionApiClient api) : Controller
         }
 
         // Learners and admins land on their own dashboards.
-        return result.User.Role == "admin"
+        return result.User.Role == Roles.Admin
             ? RedirectToAction("Index", "Admin")
             : RedirectToAction("Index", "Dashboard");
     }
@@ -217,16 +217,7 @@ public sealed class AuthController(ICompanionApiClient api) : Controller
 
     private async Task SignInCookieAsync(AuthTokenResponse result)
     {
-        var claims = new List<Claim>
-        {
-            new(IAccessTokenFactory.ClaimUserId, result.User.UserId.ToString()),
-            new(IAccessTokenFactory.ClaimEmail, result.User.Email),
-            new(IAccessTokenFactory.ClaimRole, result.User.Role),
-        };
-        if (!string.IsNullOrEmpty(result.User.FullName))
-        {
-            claims.Add(new Claim(IAccessTokenFactory.ClaimName, result.User.FullName));
-        }
+        var claims = AuthClaims.For(result.User.UserId, result.User.Email, result.User.Role, result.User.FullName);
 
         // The identity must declare the compact claim types as its name/role claim types, or
         // RequireRole and User.Identity.Name fall back to the long XML-namespace defaults.
