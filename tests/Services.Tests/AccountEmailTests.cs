@@ -156,6 +156,42 @@ public sealed class AccountEmailTests(DatabaseFixture database)
     }
 
     [Fact]
+    public async Task Changing_the_password_kills_an_outstanding_reset_link()
+    {
+        // Someone who got a reset link (e.g. from a hijacked mailbox) must not still be able to
+        // take the account over after the owner notices and changes their password.
+        var user = await RegisterAsync("race@example.com", "old-password");
+        await CreateService().RequestPasswordResetAsync(new ForgotPasswordInput("race@example.com"));
+        var stolen = mail.LastToken("race@example.com", ResetPath);
+
+        await CreateService().ChangePasswordAsync(user.UserId, new ChangePasswordInput("old-password", "owner-password"));
+
+        var ex = await Assert.ThrowsAsync<AuthException>(() =>
+            CreateService().ResetPasswordAsync(new ResetPasswordInput(stolen, "attacker-password")));
+        Assert.Equal(AuthException.TokenInvalid, ex.Code);
+        await CreateService().SignInAsync(new SignInInput("race@example.com", "owner-password"));
+    }
+
+    [Fact]
+    public async Task A_reset_kills_the_other_outstanding_reset_links()
+    {
+        // Two links were requested; consuming one must retire the rest, so an older link can't be
+        // replayed later to re-take the account.
+        await RegisterAsync("twolinks@example.com", "old-password");
+        await CreateService().RequestPasswordResetAsync(new ForgotPasswordInput("twolinks@example.com"));
+        var first = mail.LastToken("twolinks@example.com", ResetPath);
+        await CreateService().RequestPasswordResetAsync(new ForgotPasswordInput("twolinks@example.com"));
+        var second = mail.LastToken("twolinks@example.com", ResetPath);
+        Assert.NotEqual(first, second);
+
+        await CreateService().ResetPasswordAsync(new ResetPasswordInput(second, "new-password"));
+
+        var ex = await Assert.ThrowsAsync<AuthException>(() =>
+            CreateService().ResetPasswordAsync(new ResetPasswordInput(first, "attacker-password")));
+        Assert.Equal(AuthException.TokenInvalid, ex.Code);
+    }
+
+    [Fact]
     public async Task Password_reset_replaces_the_password_and_the_link_works_once()
     {
         await RegisterAsync("reset@example.com", "old-password");

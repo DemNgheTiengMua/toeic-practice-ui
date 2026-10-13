@@ -404,7 +404,16 @@ public sealed class AuthService(
             throw new AuthException(AuthException.InvalidCredentials, "The current password is incorrect.");
         }
 
+        // A reset link requested before the change must die with the old password, or whoever
+        // holds it (a hijacked mailbox) could still take the account over afterwards. Both writes
+        // commit together. The session stamp already ends the old sessions.
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await db.PasswordResetTokens
+            .Where(t => t.UserId == userId && t.UsedAt == null)
+            .ExecuteUpdateAsync(s => s.SetProperty(t => t.UsedAt, clock.GetUtcNow()), cancellationToken);
+
         user.PasswordHash = Convert.FromBase64String(Hasher.HashPassword(user, input.NewPassword));
         await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
     }
 }
