@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using BusinessObjects;
+using Contracts;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -36,7 +37,7 @@ public sealed class AuthServiceTests(DatabaseFixture database)
 
         Assert.True(user.UserId > 0);
         Assert.Equal("a@example.com", user.Email);
-        Assert.Equal("learner", user.RoleCode);
+        Assert.Equal(Roles.Learner, user.Role);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
         var row = await db.Users.SingleAsync(u => u.UserId == user.UserId);
@@ -85,7 +86,7 @@ public sealed class AuthServiceTests(DatabaseFixture database)
 
         var user = await CreateService().SignInAsync(new SignInInput("SIGNIN@example.com", "right-password"));
 
-        Assert.Equal("learner", user.RoleCode);
+        Assert.Equal(Roles.Learner, user.Role);
         await using var db = DbContextFactory.Create(database.ConnectionString);
         var row = await db.Users.SingleAsync(u => u.UserId == user.UserId);
         Assert.NotNull(row.LastLoginAt);
@@ -125,14 +126,14 @@ public sealed class AuthServiceTests(DatabaseFixture database)
     {
         await SeedRolesAsync();
         var user = await CreateService().RegisterAsync(new RegisterInput("Learner", "live@example.com", null, "password-ok", true));
-        Assert.Equal("learner", (await CreateService().GetUserAsync(user.UserId))!.RoleCode);
+        Assert.Equal(Roles.Learner, (await CreateService().GetUserAsync(user.UserId))!.Role);
 
         await database.SqlAsync($"""
             UPDATE Users SET RoleId = (SELECT RoleId FROM Roles WHERE Code = 'admin')
             WHERE UserId = {user.UserId};
             """);
 
-        Assert.Equal("admin", (await CreateService().GetUserAsync(user.UserId))!.RoleCode);
+        Assert.Equal(Roles.Admin, (await CreateService().GetUserAsync(user.UserId))!.Role);
     }
 
     [Fact]

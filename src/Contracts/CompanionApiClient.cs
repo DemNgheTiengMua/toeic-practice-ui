@@ -10,7 +10,7 @@ namespace Contracts;
 /// and forward it — the browser never sees the token (ADR-0002).</summary>
 public interface ICompanionApiClient
 {
-    Task<IReadOnlyList<CertificateDto>> GetCertificatesAsync(string? bearerToken = null, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<CertificateDto>> GetCertificatesAsync(CancellationToken cancellationToken = default);
 
     Task<AuthTokenResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default);
 
@@ -41,13 +41,10 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
-    public async Task<IReadOnlyList<CertificateDto>> GetCertificatesAsync(string? bearerToken = null, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<CertificateDto>> GetCertificatesAsync(CancellationToken cancellationToken = default)
     {
-        using var request = new HttpRequestMessage(HttpMethod.Get, "api/certificates");
-        AttachBearer(request, bearerToken);
-        using var response = await http.SendAsync(request, cancellationToken);
-        await EnsureSuccessAsync(response, cancellationToken);
-        var certificates = await response.Content.ReadFromJsonAsync<List<CertificateDto>>(Json, cancellationToken);
+        // The certificate catalog is anonymous — no bearer to forward here.
+        var certificates = await http.GetFromJsonAsync<List<CertificateDto>>("api/certificates", Json, cancellationToken);
         return certificates ?? [];
     }
 

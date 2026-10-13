@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using BusinessObjects;
+using Contracts;
 using DataAccess;
 using DataAccess.Scaffold;
 using Microsoft.AspNetCore.Identity;
@@ -11,9 +12,9 @@ namespace Services;
 /// registration, bad credentials at sign-in. <see cref="Code"/> is the API's stable error code.</summary>
 public sealed class AuthException(string code, string message) : Exception(message)
 {
-    public const string DuplicateEmail = "AUTH_EMAIL_TAKEN";
-    public const string InvalidCredentials = "AUTH_INVALID_CREDENTIALS";
-    public const string Locked = "AUTH_LOCKED";
+    public const string DuplicateEmail = AuthErrorCodes.EmailTaken;
+    public const string InvalidCredentials = AuthErrorCodes.InvalidCredentials;
+    public const string Locked = AuthErrorCodes.Locked;
 
     public string Code { get; } = code;
 }
@@ -51,7 +52,7 @@ public sealed class AuthService(CompanionDbContext db) : IAuthService
         }
 
         var learnerRoleId = await db.Roles
-            .Where(r => r.Code == "learner")
+            .Where(r => r.Code == Roles.Learner)
             .Select(r => r.RoleId)
             .SingleOrDefaultAsync(cancellationToken);
         if (learnerRoleId == 0)
@@ -75,7 +76,7 @@ public sealed class AuthService(CompanionDbContext db) : IAuthService
         db.Users.Add(user);
         await db.SaveChangesAsync(cancellationToken);
 
-        return new AuthUser(user.UserId, user.Email, user.FullName, "learner");
+        return new AuthUser(user.UserId, user.Email, user.FullName, Roles.Learner);
     }
 
     public async Task<AuthUser> SignInAsync(SignInInput input, CancellationToken cancellationToken = default)

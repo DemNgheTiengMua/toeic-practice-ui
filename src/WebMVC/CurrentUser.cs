@@ -21,7 +21,7 @@ public sealed class CurrentUser(IHttpContextAccessor accessor)
 
     public string? Role => Principal?.FindFirst(IAccessTokenFactory.ClaimRole)?.Value;
 
-    public bool IsAdmin => Role == "admin";
+    public bool IsAdmin => Role == Roles.Admin;
 
     public async Task<string?> GetBearerTokenAsync()
     {

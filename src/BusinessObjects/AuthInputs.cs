@@ -2,8 +2,8 @@ using System.ComponentModel.DataAnnotations;
 
 namespace BusinessObjects;
 
-/// <summary>What the registration form collects. Validation lives here so the API and any
-/// future caller share one set of rules.</summary>
+/// <summary>What the registration form collects. These attributes are the API's server-side
+/// authority; the MVC view models mirror them for instant per-field feedback on the form.</summary>
 public sealed record RegisterInput(
     [property: Required(ErrorMessage = "Please tell us your name.")]
     [property: StringLength(120, ErrorMessage = "Name must be 120 characters or fewer.")]
@@ -33,5 +33,5 @@ public sealed record SignInInput(
     [property: Required(ErrorMessage = "Password is required.")]
     string Password);
 
-/// <summary>Who someone is once signed in. <paramref name="RoleCode"/> is 'learner' or 'admin'.</summary>
-public sealed record AuthUser(int UserId, string Email, string? FullName, string RoleCode);
+/// <summary>Who someone is once signed in. <paramref name="Role"/> is one of <see cref="Roles"/>.</summary>
+public sealed record AuthUser(int UserId, string Email, string? FullName, string Role);

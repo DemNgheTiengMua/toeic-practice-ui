@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Services;
+using WebAPI;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -104,7 +105,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 builder.Services.AddAuthorizationBuilder()
-    .AddPolicy("admin", policy => policy.RequireRole("admin"));
+    .AddPolicy(Roles.Admin, policy => policy.RequireRole(Roles.Admin));
 // Every failure — thrown exception or bare status-code result — leaves the API as RFC 9457
 // ProblemDetails with a stable machine-readable "code" extension the MVC site switches on.
 builder.Services.AddProblemDetails(options =>
@@ -188,10 +189,7 @@ app.MapPost("/api/auth/register", async Task<IResult> (
         return Problem(StatusCodes.Status409Conflict, "Email already registered", ApiError.Codes.EmailTaken, ex.Message);
     }
 
-    var token = tokens.Create(user.UserId, user.Email, user.RoleCode, user.FullName);
-    return Results.Ok(new AuthTokenResponse(
-        token.Token, token.ExpiresAt,
-        new AuthUserDto(user.UserId, user.Email, user.FullName, user.RoleCode)));
+    return ToTokenResponse(user, tokens);
 });
 
 app.MapPost("/api/auth/sign-in", async Task<IResult> (
@@ -218,10 +216,7 @@ app.MapPost("/api/auth/sign-in", async Task<IResult> (
         return Problem(StatusCodes.Status401Unauthorized, "Account locked", ApiError.Codes.Locked, ex.Message);
     }
 
-    var token = tokens.Create(user.UserId, user.Email, user.RoleCode, user.FullName);
-    return Results.Ok(new AuthTokenResponse(
-        token.Token, token.ExpiresAt,
-        new AuthUserDto(user.UserId, user.Email, user.FullName, user.RoleCode)));
+    return ToTokenResponse(user, tokens);
 });
 
 // Returns the live database row, not the token's claims: the MVC site's cookie revalidation
@@ -235,13 +230,21 @@ app.MapGet("/api/auth/me", async Task<IResult> (HttpContext http, IAuthService a
         return Problem(StatusCodes.Status404NotFound, "Not Found", ApiError.Codes.NotFound);
     }
 
-    return Results.Ok(new AuthUserDto(user.UserId, user.Email, user.FullName, user.RoleCode));
+    return Results.Ok(new AuthUserDto(user.UserId, user.Email, user.FullName, user.Role));
 }).RequireAuthorization();
 
 // Demo of the admin-only policy: admin pages and endpoints refuse a learner.
 app.MapGet("/api/admin/summary", (HttpContext http) =>
     Results.Ok(new { admin = http.User.FindFirst(IAccessTokenFactory.ClaimEmail)!.Value }))
-    .RequireAuthorization("admin");
+    .RequireAuthorization(Roles.Admin);
+
+static IResult ToTokenResponse(AuthUser user, IAccessTokenFactory tokens)
+{
+    var token = tokens.Create(user.UserId, user.Email, user.Role, user.FullName);
+    return Results.Ok(new AuthTokenResponse(
+        token.Token, token.ExpiresAt,
+        new AuthUserDto(user.UserId, user.Email, user.FullName, user.Role)));
+}
 
 static IResult Problem(int status, string title, string code, string? detail = null)
 {
