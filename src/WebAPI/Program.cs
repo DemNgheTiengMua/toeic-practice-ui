@@ -83,11 +83,19 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                     return;
                 }
 
-                if (!await auth.IsActiveAsync(userId, context.HttpContext.RequestAborted))
+                // The stamp ends sessions issued before a password change (e.g. a reset after a
+                // stolen session) without waiting out the 8-hour token.
+                var stamp = context.Principal?.FindFirst(IAccessTokenFactory.ClaimSessionStamp)?.Value;
+                switch (await auth.CheckSessionAsync(userId, stamp, context.HttpContext.RequestAborted))
                 {
-                    context.Fail("Account is locked or no longer exists.");
-                    // Items, not a response header: this is server-internal plumbing between events.
-                    context.HttpContext.Items["auth-failure"] = ApiError.Codes.Locked;
+                    case SessionStatus.Locked:
+                        context.Fail("Account is locked.");
+                        // Items, not a response header: this is server-internal plumbing between events.
+                        context.HttpContext.Items["auth-failure"] = ApiError.Codes.Locked;
+                        break;
+                    case SessionStatus.Ended:
+                        context.Fail("Account no longer exists or the password has changed.");
+                        break;
                 }
             },
             OnChallenge = async context =>
@@ -198,7 +206,7 @@ app.MapPost("/api/auth/register", async Task<IResult> (
         return Problem(StatusCodes.Status409Conflict, "Email already registered", ApiError.Codes.EmailTaken, ex.Message);
     }
 
-    var token = tokens.Create(user.UserId, user.Email, user.RoleCode, user.FullName);
+    var token = tokens.Create(user.UserId, user.Email, user.RoleCode, user.FullName, user.SessionStamp);
     return Results.Ok(new AuthTokenResponse(
         token.Token, token.ExpiresAt,
         ToDto(user)));
@@ -228,7 +236,7 @@ app.MapPost("/api/auth/sign-in", async Task<IResult> (
         return Problem(StatusCodes.Status401Unauthorized, "Account locked", ApiError.Codes.Locked, ex.Message);
     }
 
-    var token = tokens.Create(user.UserId, user.Email, user.RoleCode, user.FullName);
+    var token = tokens.Create(user.UserId, user.Email, user.RoleCode, user.FullName, user.SessionStamp);
     return Results.Ok(new AuthTokenResponse(
         token.Token, token.ExpiresAt,
         ToDto(user)));

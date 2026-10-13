@@ -50,5 +50,8 @@ public sealed record ResetPasswordInput(
     string NewPassword);
 
 /// <summary>Who someone is once signed in. <paramref name="RoleCode"/> is 'learner' or 'admin'.
-/// <paramref name="EmailVerified"/> gates buying credits, never the free loop.</summary>
-public sealed record AuthUser(int UserId, string Email, string? FullName, string RoleCode, bool EmailVerified);
+/// <paramref name="EmailVerified"/> gates buying credits, never the free loop.
+/// <paramref name="SessionStamp"/> is derived from the current password hash and rides in the
+/// access token; a password change alters it, which ends every session issued before.</summary>
+public sealed record AuthUser(
+    int UserId, string Email, string? FullName, string RoleCode, bool EmailVerified, string SessionStamp);

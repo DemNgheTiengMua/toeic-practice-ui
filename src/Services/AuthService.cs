@@ -29,8 +29,10 @@ public interface IAuthService
 
     Task<AuthUser> SignInAsync(SignInInput input, CancellationToken cancellationToken = default);
 
-    /// <summary>Re-checks a signed-in user on every request: locked, soft-deleted or missing fails.</summary>
-    Task<bool> IsActiveAsync(int userId, CancellationToken cancellationToken = default);
+    /// <summary>Re-checks a signed-in user on every request. Locked is reported apart from Ended
+    /// (soft-deleted, missing, or a session stamp from before the last password change) so the
+    /// site can say "contact support" only when that's true.</summary>
+    Task<SessionStatus> CheckSessionAsync(int userId, string? sessionStamp, CancellationToken cancellationToken = default);
 
     /// <summary>The user's live record. Callers that re-validate a session against the database
     /// (the MVC site's cookie check) must use this, not the token's claims — the claims are a
@@ -53,6 +55,13 @@ public interface IAuthService
     /// <summary>Consumes a reset token and replaces the password. Also verifies the email: following
     /// the link proves the learner controls the mailbox.</summary>
     Task ResetPasswordAsync(ResetPasswordInput input, CancellationToken cancellationToken = default);
+}
+
+public enum SessionStatus
+{
+    Active,
+    Locked,
+    Ended,
 }
 
 /// <summary>Where emailed links point: the MVC site, the only thing a learner's browser talks to.</summary>
@@ -124,7 +133,8 @@ public sealed class AuthService(
             log.LogError(ex, "Activation mail for user {UserId} could not be sent", user.UserId);
         }
 
-        return new AuthUser(user.UserId, user.Email, user.FullName, "learner", EmailVerified: false);
+        return new AuthUser(
+            user.UserId, user.Email, user.FullName, "learner", EmailVerified: false, StampOf(user.PasswordHash));
     }
 
     public async Task<AuthUser> SignInAsync(SignInInput input, CancellationToken cancellationToken = default)
@@ -152,23 +162,49 @@ public sealed class AuthService(
         user.LastLoginAt = clock.GetUtcNow();
         await db.SaveChangesAsync(cancellationToken);
 
-        return new AuthUser(user.UserId, user.Email, user.FullName, user.Role.Code, user.EmailVerifiedAt != null);
+        return new AuthUser(
+            user.UserId, user.Email, user.FullName, user.Role.Code, user.EmailVerifiedAt != null, StampOf(user.PasswordHash));
     }
 
-    public async Task<bool> IsActiveAsync(int userId, CancellationToken cancellationToken = default)
+    public async Task<SessionStatus> CheckSessionAsync(int userId, string? sessionStamp, CancellationToken cancellationToken = default)
     {
-        return await db.Users
-            .AnyAsync(u => u.UserId == userId && !u.IsLocked && !u.IsDeleted, cancellationToken);
+        var row = await db.Users
+            .Where(u => u.UserId == userId && !u.IsDeleted)
+            .Select(u => new { u.IsLocked, u.PasswordHash })
+            .SingleOrDefaultAsync(cancellationToken);
+        if (row is null)
+        {
+            return SessionStatus.Ended;
+        }
+
+        if (row.IsLocked)
+        {
+            return SessionStatus.Locked;
+        }
+
+        return sessionStamp is not null
+            && CryptographicOperations.FixedTimeEquals(
+                Encoding.ASCII.GetBytes(StampOf(row.PasswordHash)), Encoding.ASCII.GetBytes(sessionStamp))
+            ? SessionStatus.Active
+            : SessionStatus.Ended;
     }
 
     public async Task<AuthUser?> GetUserAsync(int userId, CancellationToken cancellationToken = default)
     {
-        return await db.Users
+        var row = await db.Users
             .AsNoTracking()
             .Where(u => u.UserId == userId && !u.IsDeleted)
-            .Select(u => new AuthUser(u.UserId, u.Email, u.FullName, u.Role.Code, u.EmailVerifiedAt != null))
+            .Select(u => new { u.UserId, u.Email, u.FullName, Role = u.Role.Code, Verified = u.EmailVerifiedAt != null, u.PasswordHash })
             .SingleOrDefaultAsync(cancellationToken);
+        return row is null
+            ? null
+            : new AuthUser(row.UserId, row.Email, row.FullName, row.Role, row.Verified, StampOf(row.PasswordHash));
     }
+
+    // A short digest of the stored hash: changes whenever the password does (the hasher salts
+    // afresh each time), without a schema column. Never reveals the hash itself.
+    private static string StampOf(byte[] passwordHash) =>
+        Base64Url.EncodeToString(SHA256.HashData(passwordHash).AsSpan(0, 12));
 
     public async Task VerifyEmailAsync(string token, CancellationToken cancellationToken = default)
     {
@@ -183,7 +219,7 @@ public sealed class AuthService(
     public async Task ResendActivationAsync(int userId, CancellationToken cancellationToken = default)
     {
         var user = await db.Users
-            .SingleOrDefaultAsync(u => u.UserId == userId && !u.IsDeleted, cancellationToken);
+            .SingleOrDefaultAsync(u => u.UserId == userId && !u.IsDeleted && !u.IsLocked, cancellationToken);
         if (user is null || user.EmailVerifiedAt is not null)
         {
             return;
@@ -199,7 +235,8 @@ public sealed class AuthService(
         var email = input.Email.Trim().ToLowerInvariant();
         var user = await db.Users
             .SingleOrDefaultAsync(u => !u.IsDeleted && u.Email.ToLower() == email, cancellationToken);
-        if (user is null)
+        // Locked behaves like unknown: no link, same quiet outcome.
+        if (user is null || user.IsLocked)
         {
             return;
         }
@@ -292,7 +329,9 @@ public sealed class AuthService(
     {
         var now = clock.GetUtcNow();
         var hash = HashToken(rawToken);
-        var live = tokens.Where(t => t.TokenHash == hash && t.UsedAt == null && t.ExpiresAt > now && !t.User.IsDeleted);
+        // A locked account's links are dead too: a lock must not be escapable through an emailed link.
+        var live = tokens.Where(t => t.TokenHash == hash && t.UsedAt == null && t.ExpiresAt > now
+            && !t.User.IsDeleted && !t.User.IsLocked);
         var user = await live.Select(t => t.User).SingleOrDefaultAsync(cancellationToken);
 
         // The conditional update is the single-use guarantee: of two concurrent clicks only one

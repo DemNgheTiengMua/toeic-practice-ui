@@ -30,14 +30,17 @@ public interface IAccessTokenFactory
     public const string ClaimRole = "role";
     public const string ClaimName = "name";
 
-    AccessToken Create(int userId, string email, string role, string? fullName);
+    /// <summary>Changes when the password does; the API refuses a token whose stamp is stale.</summary>
+    public const string ClaimSessionStamp = "sst";
+
+    AccessToken Create(int userId, string email, string role, string? fullName, string sessionStamp);
 }
 
 public sealed class JwtAccessTokenFactory(IOptions<JwtOptions> options) : IAccessTokenFactory
 {
     private readonly JwtOptions _options = options.Value;
 
-    public AccessToken Create(int userId, string email, string role, string? fullName)
+    public AccessToken Create(int userId, string email, string role, string? fullName, string sessionStamp)
     {
         var key = new SymmetricSecurityKey(Convert.FromBase64String(_options.SigningKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
@@ -48,6 +51,7 @@ public sealed class JwtAccessTokenFactory(IOptions<JwtOptions> options) : IAcces
             new(IAccessTokenFactory.ClaimUserId, userId.ToString()),
             new(IAccessTokenFactory.ClaimEmail, email),
             new(IAccessTokenFactory.ClaimRole, role),
+            new(IAccessTokenFactory.ClaimSessionStamp, sessionStamp),
         };
         if (!string.IsNullOrEmpty(fullName))
         {

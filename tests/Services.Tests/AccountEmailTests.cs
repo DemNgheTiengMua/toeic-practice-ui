@@ -209,6 +209,52 @@ public sealed class AccountEmailTests(DatabaseFixture database)
     }
 
     [Fact]
+    public async Task Password_reset_ends_sessions_issued_under_the_old_password()
+    {
+        await RegisterAsync("sessions@example.com", "old-password");
+        var before = await CreateService().SignInAsync(new SignInInput("sessions@example.com", "old-password"));
+        Assert.Equal(SessionStatus.Active, await CreateService().CheckSessionAsync(before.UserId, before.SessionStamp));
+
+        await CreateService().RequestPasswordResetAsync(new ForgotPasswordInput("sessions@example.com"));
+        await CreateService().ResetPasswordAsync(
+            new ResetPasswordInput(mail.LastToken("sessions@example.com", ResetPath), "new-password"));
+
+        Assert.Equal(SessionStatus.Ended, await CreateService().CheckSessionAsync(before.UserId, before.SessionStamp));
+        var after = await CreateService().SignInAsync(new SignInInput("sessions@example.com", "new-password"));
+        Assert.Equal(SessionStatus.Active, await CreateService().CheckSessionAsync(after.UserId, after.SessionStamp));
+    }
+
+    [Fact]
+    public async Task A_locked_account_gets_no_reset_link_and_cannot_use_one()
+    {
+        var user = await RegisterAsync("locked-reset@example.com", "old-password");
+        await CreateService().RequestPasswordResetAsync(new ForgotPasswordInput("locked-reset@example.com"));
+        var issuedBeforeLock = mail.LastToken("locked-reset@example.com", ResetPath);
+        await database.SqlAsync($"UPDATE Users SET IsLocked = 1 WHERE UserId = {user.UserId}");
+        var mailsBefore = mail.To("locked-reset@example.com").Count();
+
+        await CreateService().RequestPasswordResetAsync(new ForgotPasswordInput("locked-reset@example.com"));
+
+        Assert.Equal(mailsBefore, mail.To("locked-reset@example.com").Count());
+        var ex = await Assert.ThrowsAsync<AuthException>(() =>
+            CreateService().ResetPasswordAsync(new ResetPasswordInput(issuedBeforeLock, "new-password")));
+        Assert.Equal(AuthException.TokenInvalid, ex.Code);
+    }
+
+    [Fact]
+    public async Task A_locked_account_cannot_verify_or_resend_activation()
+    {
+        var user = await RegisterAsync("locked-verify@example.com");
+        var token = mail.LastToken("locked-verify@example.com", VerifyPath);
+        await database.SqlAsync($"UPDATE Users SET IsLocked = 1 WHERE UserId = {user.UserId}");
+
+        await CreateService().ResendActivationAsync(user.UserId);
+
+        Assert.Single(mail.To("locked-verify@example.com"));
+        await Assert.ThrowsAsync<AuthException>(() => CreateService().VerifyEmailAsync(token));
+    }
+
+    [Fact]
     public async Task Password_reset_validates_the_new_password()
     {
         await RegisterAsync("weak@example.com", "old-password");
