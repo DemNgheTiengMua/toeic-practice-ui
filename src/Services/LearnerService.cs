@@ -1,5 +1,7 @@
+using System.ComponentModel.DataAnnotations;
 using BusinessObjects;
 using DataAccess;
+using DataAccess.Scaffold;
 using Microsoft.EntityFrameworkCore;
 
 namespace Services;
@@ -42,8 +44,7 @@ public sealed class LearnerService(CompanionDbContext db) : ILearnerService
             .Where(b => b.UserId == userId)
             .Select(b => b.Balance)
             .SingleOrDefaultAsync(cancellationToken) ?? 0;
-        var timeZoneId = await db.Users
-            .Where(u => u.UserId == userId)
+        var timeZoneId = await LiveUser(userId)
             .Select(u => u.TimeZoneId)
             .SingleAsync(cancellationToken);
 
@@ -56,21 +57,19 @@ public sealed class LearnerService(CompanionDbContext db) : ILearnerService
 
     public async Task SwitchCertificateAsync(int userId, string certificateCode, CancellationToken cancellationToken = default)
     {
-        var code = certificateCode.Trim();
+        // Validated the same way as the auth inputs: DataAnnotations on a BusinessObjects record
+        // are the server-side authority, so a blank code is a ValidationException, not a 404.
+        var input = new SwitchCertificateInput((certificateCode ?? "").Trim());
+        Validator.ValidateObject(input, new ValidationContext(input), validateAllProperties: true);
+
         // Codes are stored upper-case in a case-insensitive collation; the comparison is the database's.
         var certId = await db.Certificates
-            .Where(c => c.IsActive && c.Code == code)
+            .Where(c => c.IsActive && c.Code == input.Code)
             .Select(c => (int?)c.CertId)
             .SingleOrDefaultAsync(cancellationToken)
-            ?? throw new CertificateUnavailableException(code);
+            ?? throw new CertificateUnavailableException(input.Code);
 
-        var updated = await db.Users
-            .Where(u => u.UserId == userId && !u.IsDeleted)
-            .ExecuteUpdateAsync(set => set.SetProperty(u => u.ActiveCertId, certId), cancellationToken);
-        if (updated == 0)
-        {
-            throw new InvalidOperationException($"User {userId} does not exist.");
-        }
+        await SetActiveCertIdAsync(userId, certId, cancellationToken);
     }
 
     public async Task<LearnerDashboard> GetDashboardAsync(int userId, CancellationToken cancellationToken = default)
@@ -143,18 +142,42 @@ public sealed class LearnerService(CompanionDbContext db) : ILearnerService
     }
 
     /// <summary>The stored choice while it is still offered; otherwise the first active certificate.
-    /// The fallback is not written back — the learner's choice stays theirs to make.</summary>
+    /// A learner who never chose gets that default saved on first use, so adding a certificate
+    /// later can't move them. A choice that was retired is not overwritten: if the certificate
+    /// comes back, so does the learner's own choice.</summary>
     private async Task<int> ResolveActiveCertIdAsync(
         int userId, List<ActiveCertificate> certificates, CancellationToken cancellationToken)
     {
-        var stored = await db.Users
-            .Where(u => u.UserId == userId && !u.IsDeleted)
+        var stored = await LiveUser(userId)
             .Select(u => new { u.ActiveCertId })
             .SingleOrDefaultAsync(cancellationToken)
-            ?? throw new InvalidOperationException($"User {userId} does not exist.");
+            ?? throw UserMissing(userId);
 
-        return certificates.Any(c => c.CertId == stored.ActiveCertId)
-            ? stored.ActiveCertId!.Value
-            : certificates[0].CertId;
+        if (certificates.Any(c => c.CertId == stored.ActiveCertId))
+        {
+            return stored.ActiveCertId!.Value;
+        }
+
+        var fallback = certificates[0].CertId;
+        if (stored.ActiveCertId is null)
+        {
+            await SetActiveCertIdAsync(userId, fallback, cancellationToken);
+        }
+
+        return fallback;
     }
+
+    private async Task SetActiveCertIdAsync(int userId, int certId, CancellationToken cancellationToken)
+    {
+        var updated = await LiveUser(userId)
+            .ExecuteUpdateAsync(set => set.SetProperty(u => u.ActiveCertId, certId), cancellationToken);
+        if (updated == 0)
+        {
+            throw UserMissing(userId);
+        }
+    }
+
+    private IQueryable<User> LiveUser(int userId) => db.Users.Where(u => u.UserId == userId && !u.IsDeleted);
+
+    private static InvalidOperationException UserMissing(int userId) => new($"User {userId} does not exist.");
 }

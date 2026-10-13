@@ -262,14 +262,13 @@ learner.MapPut("/active-certificate", async Task<IResult> (
     ILearnerService learners,
     CancellationToken cancellationToken) =>
 {
-    if (string.IsNullOrWhiteSpace(request.Code))
-    {
-        return Problem(StatusCodes.Status400BadRequest, "Validation failed", ApiError.Codes.Validation, "Choose a certificate.");
-    }
-
     try
     {
         await learners.SwitchCertificateAsync(UserIdOf(http), request.Code, cancellationToken);
+    }
+    catch (ValidationException ex)
+    {
+        return Problem(StatusCodes.Status400BadRequest, "Validation failed", ApiError.Codes.Validation, ex.Message);
     }
     catch (CertificateUnavailableException ex)
     {
@@ -281,15 +280,18 @@ learner.MapPut("/active-certificate", async Task<IResult> (
 
 learner.MapGet("/dashboard", async (HttpContext http, ILearnerService learners, CancellationToken cancellationToken) =>
 {
-    var d = await learners.GetDashboardAsync(UserIdOf(http), cancellationToken);
+    var dashboard = await learners.GetDashboardAsync(UserIdOf(http), cancellationToken);
     return Results.Ok(new LearnerDashboardDto(
-        ToDto(d.Certificate),
-        d.LatestResult is { } r ? new LatestResultDto(r.TotalScore, r.BandCode, r.BandName, r.TakenAt) : null,
-        d.AttemptCount,
-        d.PracticeCount,
-        d.RecentAttempts.Select(a => new RecentAttemptDto(
+        ToDto(dashboard.Certificate),
+        dashboard.LatestResult is { } latest
+            ? new LatestResultDto(latest.TotalScore, latest.BandCode, latest.BandName, latest.TakenAt)
+            : null,
+        dashboard.IsNew,
+        dashboard.AttemptCount,
+        dashboard.PracticeCount,
+        dashboard.RecentAttempts.Select(a => new RecentAttemptDto(
             a.AttemptId, a.ExamName, a.Purpose, a.Status, a.StartedAt, a.TotalScore, a.BandCode)).ToList(),
-        d.RecentPractice.Select(p => new RecentPracticeDto(
+        dashboard.RecentPractice.Select(p => new RecentPracticeDto(
             p.SessionId, p.SectionName, p.Status, p.CorrectCount, p.QuestionCount, p.StartedAt)).ToList()));
 });
 

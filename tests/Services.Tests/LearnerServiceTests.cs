@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using Microsoft.EntityFrameworkCore;
 
 namespace Services.Tests;
@@ -116,6 +117,33 @@ public sealed class LearnerServiceTests(DatabaseFixture database)
         var active = await db.Certificates.Where(c => c.IsActive).OrderBy(c => c.CertId).Select(c => c.Code).ToListAsync();
         Assert.Equal(active[0], context.Active.Code);
         Assert.Equal(active, context.Certificates.Select(c => c.Code));
+    }
+
+    [Fact]
+    public async Task Switch_refuses_a_blank_code_as_a_validation_error()
+    {
+        var code = Unique("V");
+        await SeedCertificateAsync(code);
+        var userId = await SeedLearnerAsync(code);
+
+        await Assert.ThrowsAsync<ValidationException>(() => CreateService().SwitchCertificateAsync(userId, "  "));
+
+        Assert.Equal(code, (await CreateService().GetContextAsync(userId)).Active.Code);
+    }
+
+    [Fact]
+    public async Task The_first_fallback_is_saved_so_later_catalog_changes_do_not_move_the_learner()
+    {
+        var userId = await SeedLearnerAsync();
+        var first = (await CreateService().GetContextAsync(userId)).Active.Code;
+
+        // A certificate added later (with a higher id) or reordering must not change what this
+        // learner sees: the fallback became their stored choice on first use.
+        await SeedCertificateAsync(Unique("Z"));
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var stored = await db.Users.Where(u => u.UserId == userId).Select(u => u.ActiveCert!.Code).SingleAsync();
+
+        Assert.Equal(first, stored);
     }
 
     [Fact]

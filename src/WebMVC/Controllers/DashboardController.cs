@@ -6,7 +6,7 @@ namespace WebMVC.Controllers;
 /// <summary>The learner's landing page after sign-in, and the certificate switch every learner
 /// page's switcher posts to.</summary>
 public sealed class DashboardController(ICompanionApiClient api, CurrentUser currentUser, ILogger<DashboardController> logger)
-    : LearnerControllerBase(api, currentUser)
+    : LearnerControllerBase(api, currentUser, logger)
 {
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
@@ -24,10 +24,12 @@ public sealed class DashboardController(ICompanionApiClient api, CurrentUser cur
         }
         catch (ApiException ex) when (ex.Code is ApiError.Codes.CertificateUnavailable or ApiError.Codes.Validation)
         {
-            // A stale switcher (the certificate was retired since the page loaded) or a tampered
-            // form: keep the current choice and say so rather than failing the page.
+            // A stale switcher (the certificate was retired since the page loaded) or a form
+            // posted without a choice: keep the current certificate and say why.
             logger.LogWarning("Certificate switch to {Code} refused: {ApiCode}", code, ex.Code);
-            TempData["ShellError"] = "That certificate is no longer available. Your active certificate was not changed.";
+            TempData["ShellError"] = ex.Code == ApiError.Codes.Validation
+                ? "Choose a certificate to switch to. Your active certificate was not changed."
+                : "That certificate is no longer available. Your active certificate was not changed.";
         }
 
         return !string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl)

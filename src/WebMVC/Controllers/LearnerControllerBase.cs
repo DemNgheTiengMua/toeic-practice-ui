@@ -9,7 +9,7 @@ namespace WebMVC.Controllers;
 /// switcher), so the shell's context is loaded once here before any action runs and handed to
 /// the layout through <see cref="LearnerShell"/>. Learner controllers inherit this.</summary>
 [Authorize(Policy = Roles.Learner)]
-public abstract class LearnerControllerBase(ICompanionApiClient api, CurrentUser currentUser) : Controller
+public abstract class LearnerControllerBase(ICompanionApiClient api, CurrentUser currentUser, ILogger logger) : Controller
 {
     protected ICompanionApiClient Api { get; } = api;
 
@@ -28,8 +28,7 @@ public abstract class LearnerControllerBase(ICompanionApiClient api, CurrentUser
         // AUTH_LOCKED / AUTH_REQUIRED propagate to the sign-out middleware in Program.cs.
         catch (HttpRequestException ex) when (ex is not ApiException { Code: ApiError.Codes.Locked or ApiError.Codes.Unauthenticated })
         {
-            HttpContext.RequestServices.GetRequiredService<ILogger<LearnerControllerBase>>()
-                .LogError(ex, "Learner context could not be loaded");
+            logger.LogError(ex, "Learner context could not be loaded");
             context.Result = View("~/Views/Shared/LearnerUnavailable.cshtml");
             return;
         }

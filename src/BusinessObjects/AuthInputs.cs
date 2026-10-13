@@ -33,5 +33,10 @@ public sealed record SignInInput(
     [property: Required(ErrorMessage = "Password is required.")]
     string Password);
 
+/// <summary>The certificate a learner is switching to, named by its catalogue code.</summary>
+public sealed record SwitchCertificateInput(
+    [property: Required(ErrorMessage = "Choose a certificate.")]
+    string Code);
+
 /// <summary>Who someone is once signed in. <paramref name="Role"/> is one of <see cref="Roles"/>.</summary>
 public sealed record AuthUser(int UserId, string Email, string? FullName, string Role);

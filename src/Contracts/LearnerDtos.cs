@@ -13,16 +13,16 @@ public sealed record LearnerContextDto(
 
 public sealed record SwitchCertificateRequest(string Code);
 
+/// <summary><paramref name="IsNew"/> is decided by the service (LearnerDashboard.IsNew) and sent
+/// as data, so the rule for "show the getting-started state" lives in one place.</summary>
 public sealed record LearnerDashboardDto(
     CertificateOptionDto Certificate,
     LatestResultDto? LatestResult,
+    bool IsNew,
     int AttemptCount,
     int PracticeCount,
     IReadOnlyList<RecentAttemptDto> RecentAttempts,
-    IReadOnlyList<RecentPracticeDto> RecentPractice)
-{
-    public bool IsNew => AttemptCount == 0 && PracticeCount == 0;
-}
+    IReadOnlyList<RecentPracticeDto> RecentPractice);
 
 public sealed record LatestResultDto(int TotalScore, string? BandCode, string? BandName, DateTimeOffset TakenAt);
 
