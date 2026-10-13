@@ -26,6 +26,40 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.LoginPath = "/auth/sign-in";
         options.AccessDeniedPath = "/auth/denied";
         options.ExpireTimeSpan = TimeSpan.FromHours(IAccessTokenFactory.LifetimeHours);
+        // The cookie alone must not outrun the account: re-validate the forwarded JWT against
+        // the API (which itself re-checks the lock flag on every call) and reject the principal
+        // when the token is dead — a locked user's next MVC request then fails too, not just
+        // their next API call. Note a re-validation also renews the cookie by default; the
+        // ticket's pinned ExpiresUtc (the JWT's own expiry) still caps the session.
+        options.Events = new CookieAuthenticationEvents
+        {
+            OnValidatePrincipal = async context =>
+            {
+                var token = context.Properties.GetString("jwt");
+                if (string.IsNullOrEmpty(token))
+                {
+                    context.RejectPrincipal();
+                    return;
+                }
+
+                var api = context.HttpContext.RequestServices.GetRequiredService<ICompanionApiClient>();
+                try
+                {
+                    await api.GetMeAsync(token, context.HttpContext.RequestAborted);
+                }
+                catch (ApiException)
+                {
+                    context.RejectPrincipal();
+                    await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                }
+                catch (HttpRequestException)
+                {
+                    // API unreachable: keep the principal — page-level calls already degrade
+                    // (CertificatesController renders "Unavailable"), and signing everyone out
+                    // during an API blip would be worse.
+                }
+            },
+        };
     });
 builder.Services.AddAuthorizationBuilder()
     .AddPolicy("admin", policy => policy.RequireRole("admin"));

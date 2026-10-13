@@ -120,8 +120,11 @@ public sealed class AuthController(ICompanionApiClient api) : Controller
         var principal = new ClaimsPrincipal(identity);
 
         var properties = new AuthenticationProperties(
-            new Dictionary<string, string?> { ["jwt"] = result.Token },
-            new Dictionary<string, object?> { [".expiry"] = result.ExpiresAt.ToString("O") });
+            new Dictionary<string, string?> { ["jwt"] = result.Token })
+        {
+            // Cookie lifetime is pinned to the token's expiry, not a second hardcoded constant.
+            ExpiresUtc = result.ExpiresAt,
+        };
 
         await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal, properties);
     }
