@@ -1,4 +1,4 @@
--- docs/seed-demo.sql
+﻿-- docs/seed-demo.sql
 -- Demo seed: the public catalog (certificates, skills, sections, score bands) plus the two
 -- identity roles. Loaded after database-schema.sql. Later slices append their own demo data
 -- here (users, exams, packages...) — keep everything idempotent by key where practical.

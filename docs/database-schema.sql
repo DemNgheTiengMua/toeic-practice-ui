@@ -1,4 +1,4 @@
--- docs/database-schema.sql
+﻿-- docs/database-schema.sql
 -- Multi-certificate mock-exam companion schema.
 -- Spec: docs/superpowers/specs/2026-09-24-multi-cert-companion-design.md
 SET QUOTED_IDENTIFIER ON;
