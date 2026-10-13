@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using BusinessObjects;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Services.Tests;
 
@@ -22,7 +23,8 @@ public sealed class AuthServiceTests(DatabaseFixture database)
     private AuthService CreateService()
     {
         var db = DbContextFactory.Create(database.ConnectionString);
-        return new AuthService(db);
+        return new AuthService(
+            db, new RecordingEmailSender(), TimeProvider.System, new AuthLinkOptions(), NullLogger<AuthService>.Instance);
     }
 
     [Fact]

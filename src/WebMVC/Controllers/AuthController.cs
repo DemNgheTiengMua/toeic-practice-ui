@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Contracts;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using WebMVC.Models;
 
@@ -47,10 +48,11 @@ public sealed class AuthController(ICompanionApiClient api) : Controller
     }
 
     [HttpGet("/auth/sign-in")]
-    public IActionResult SignIn(string? returnUrl = null, bool locked = false) => View(new SignInViewModel
+    public IActionResult SignIn(string? returnUrl = null, bool locked = false, bool reset = false) => View(new SignInViewModel
     {
         ReturnUrl = returnUrl,
         FormError = locked ? "This account is locked. Contact support." : null,
+        Notice = reset ? "Password changed. Sign in with your new password." : null,
     });
 
     [HttpPost("/auth/sign-in")]
@@ -96,6 +98,122 @@ public sealed class AuthController(ICompanionApiClient api) : Controller
 
     [HttpGet("/auth/denied")]
     public IActionResult Denied() => View();
+
+    // ---- Email verification (issue #5) ----
+    // The emailed link lands on a confirm page and the token is consumed by a POST, not the GET:
+    // mail scanners prefetch links, and a GET that burned a single-use token would leave the
+    // learner holding a dead link.
+
+    [HttpGet("/auth/verify-email")]
+    public IActionResult VerifyEmail(string? token = null) => View(new VerifyEmailViewModel
+    {
+        Token = token ?? "",
+        Verified = string.IsNullOrEmpty(token) ? false : null,
+    });
+
+    [HttpPost("/auth/verify-email")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> VerifyEmail(VerifyEmailViewModel model, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await api.VerifyEmailAsync(new VerifyEmailRequest(model.Token), cancellationToken);
+            model.Verified = true;
+        }
+        catch (ApiException ex) when (ex.Code is ApiError.Codes.TokenInvalid or ApiError.Codes.Validation)
+        {
+            model.Verified = false;
+        }
+
+        return View(model);
+    }
+
+    [Authorize]
+    [HttpPost("/auth/resend-activation")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ResendActivation([FromServices] CurrentUser currentUser, CancellationToken cancellationToken)
+    {
+        var token = await currentUser.GetBearerTokenAsync();
+        try
+        {
+            await api.ResendActivationAsync(token!, cancellationToken);
+        }
+        catch (ApiException ex) when (ex.Code == ApiError.Codes.MailUnavailable)
+        {
+            return RedirectToAction("Index", "Dashboard", new { activation = "failed" });
+        }
+
+        return RedirectToAction("Index", "Dashboard", new { activation = "sent" });
+    }
+
+    // ---- Password reset (issue #5) ----
+
+    [HttpGet("/auth/forgot-password")]
+    public IActionResult ForgotPassword() => View(new ForgotPasswordViewModel());
+
+    [HttpPost("/auth/forgot-password")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ForgotPassword(ForgotPasswordViewModel model, CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid)
+        {
+            return View(model);
+        }
+
+        try
+        {
+            await api.ForgotPasswordAsync(new ForgotPasswordRequest(model.Email), cancellationToken);
+            model.Sent = true;
+        }
+        catch (ApiException ex) when (ex.Code == ApiError.Codes.Validation)
+        {
+            model.FormError = ex.Detail ?? ex.Title;
+        }
+        catch (HttpRequestException)
+        {
+            // API down (any ApiException not caught above is a 5xx). The copy never says "no such
+            // account": it must not reveal whether the address is registered.
+            model.FormError = "Could not send the password reset link. Try again in a few minutes.";
+        }
+
+        return View(model);
+    }
+
+    [HttpGet("/auth/reset-password")]
+    public IActionResult ResetPassword(string? token = null) => View(new ResetPasswordViewModel
+    {
+        Token = token ?? "",
+        LinkInvalid = string.IsNullOrEmpty(token),
+    });
+
+    [HttpPost("/auth/reset-password")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ResetPassword(ResetPasswordViewModel model, CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid)
+        {
+            return View(model);
+        }
+
+        try
+        {
+            await api.ResetPasswordAsync(new ResetPasswordRequest(model.Token, model.NewPassword), cancellationToken);
+        }
+        catch (ApiException ex) when (ex.Code == ApiError.Codes.TokenInvalid)
+        {
+            model.LinkInvalid = true;
+            return View(model);
+        }
+        catch (ApiException ex) when (ex.Code == ApiError.Codes.Validation)
+        {
+            model.FormError = ex.Detail ?? ex.Title;
+            return View(model);
+        }
+
+        // Any session still open in this browser belongs to the old password; start clean.
+        await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+        return Redirect("/auth/sign-in?reset=1");
+    }
 
     private async Task SignInCookieAsync(AuthTokenResponse result)
     {

@@ -29,6 +29,10 @@ dotnet run --project src/WebMVC                # http://localhost:5000/certifica
 Demo accounts from the seed: `learner@demo.local` / `Learner!1234` and
 `admin@demo.local` / `Admin!1234`.
 
+Mail (activation, password reset) is not sent: `DropFolderEmailSender` writes
+each message as a `.eml` file to `src/WebAPI/mail-drop/` (gitignored) and logs
+the path. Open the newest file to follow the link.
+
 After a schema change: edit `docs/database-schema.sql`, run
 `docs/schema-tests/run-all.sh`, then re-scaffold —
 `dotnet ef dbcontext scaffold "<conn>" Microsoft.EntityFrameworkCore.SqlServer --project src/DataAccess --context CompanionDbContext --output-dir Scaffold --context-dir . --use-database-names --no-onconfiguring --data-annotations --force`

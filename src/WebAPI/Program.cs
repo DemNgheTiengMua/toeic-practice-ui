@@ -118,6 +118,16 @@ builder.Services.AddProblemDetails(options =>
     });
 builder.Services.AddScoped<ICertificateService, CertificateService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddSingleton(TimeProvider.System);
+// Emailed links point at the MVC site (the browser never talks to the API, ADR-0002).
+builder.Services.AddSingleton(
+    builder.Configuration.GetSection(AuthLinkOptions.SectionName).Get<AuthLinkOptions>() ?? new AuthLinkOptions());
+// Dev mail: every message lands as a .eml file in a folder; swap the implementation for real SMTP.
+var emailOptions = builder.Configuration.GetSection(EmailOptions.SectionName).Get<EmailOptions>() ?? new EmailOptions();
+builder.Services.AddSingleton<IEmailSender>(sp => new DropFolderEmailSender(
+    Path.GetFullPath(emailOptions.DropFolder, builder.Environment.ContentRootPath),
+    emailOptions.From,
+    sp.GetRequiredService<ILogger<DropFolderEmailSender>>()));
 
 var app = builder.Build();
 
@@ -191,7 +201,7 @@ app.MapPost("/api/auth/register", async Task<IResult> (
     var token = tokens.Create(user.UserId, user.Email, user.RoleCode, user.FullName);
     return Results.Ok(new AuthTokenResponse(
         token.Token, token.ExpiresAt,
-        new AuthUserDto(user.UserId, user.Email, user.FullName, user.RoleCode)));
+        ToDto(user)));
 });
 
 app.MapPost("/api/auth/sign-in", async Task<IResult> (
@@ -221,7 +231,7 @@ app.MapPost("/api/auth/sign-in", async Task<IResult> (
     var token = tokens.Create(user.UserId, user.Email, user.RoleCode, user.FullName);
     return Results.Ok(new AuthTokenResponse(
         token.Token, token.ExpiresAt,
-        new AuthUserDto(user.UserId, user.Email, user.FullName, user.RoleCode)));
+        ToDto(user)));
 });
 
 // Returns the live database row, not the token's claims: the MVC site's cookie revalidation
@@ -235,13 +245,87 @@ app.MapGet("/api/auth/me", async Task<IResult> (HttpContext http, IAuthService a
         return Problem(StatusCodes.Status404NotFound, "Not Found", ApiError.Codes.NotFound);
     }
 
-    return Results.Ok(new AuthUserDto(user.UserId, user.Email, user.FullName, user.RoleCode));
+    return Results.Ok(ToDto(user));
 }).RequireAuthorization();
+
+// ---- Email verification and password reset (issue #5) ----
+// Links in mail point at the MVC site; it posts the token here. Tokens are single-use and expire.
+
+app.MapPost("/api/auth/verify-email", async Task<IResult> (
+    VerifyEmailRequest request, IAuthService auth, CancellationToken cancellationToken) =>
+{
+    try
+    {
+        await auth.VerifyEmailAsync(request.Token, cancellationToken);
+    }
+    catch (AuthException ex) when (ex.Code == AuthException.TokenInvalid)
+    {
+        return Problem(StatusCodes.Status400BadRequest, "Link not valid", ApiError.Codes.TokenInvalid, ex.Message);
+    }
+
+    return Results.NoContent();
+});
+
+app.MapPost("/api/auth/resend-activation", async Task<IResult> (
+    HttpContext http, IAuthService auth, CancellationToken cancellationToken) =>
+{
+    var userId = int.Parse(http.User.FindFirst(IAccessTokenFactory.ClaimUserId)!.Value);
+    try
+    {
+        await auth.ResendActivationAsync(userId, cancellationToken);
+    }
+    catch (EmailDeliveryException)
+    {
+        // Safe to surface here: the caller is signed in and owns the account.
+        return Problem(StatusCodes.Status503ServiceUnavailable, "Could not send the email", ApiError.Codes.MailUnavailable);
+    }
+
+    return Results.NoContent();
+}).RequireAuthorization();
+
+// Always 204 for a well-formed address, account or not, sent or not: the answer must not
+// enumerate users. The service logs a failed send instead of raising it.
+app.MapPost("/api/auth/forgot-password", async Task<IResult> (
+    ForgotPasswordRequest request, IAuthService auth, CancellationToken cancellationToken) =>
+{
+    try
+    {
+        await auth.RequestPasswordResetAsync(new ForgotPasswordInput(request.Email), cancellationToken);
+    }
+    catch (ValidationException ex)
+    {
+        return Problem(StatusCodes.Status400BadRequest, "Validation failed", ApiError.Codes.Validation, ex.Message);
+    }
+
+    return Results.NoContent();
+});
+
+app.MapPost("/api/auth/reset-password", async Task<IResult> (
+    ResetPasswordRequest request, IAuthService auth, CancellationToken cancellationToken) =>
+{
+    try
+    {
+        await auth.ResetPasswordAsync(new ResetPasswordInput(request.Token, request.NewPassword), cancellationToken);
+    }
+    catch (ValidationException ex)
+    {
+        return Problem(StatusCodes.Status400BadRequest, "Validation failed", ApiError.Codes.Validation, ex.Message);
+    }
+    catch (AuthException ex) when (ex.Code == AuthException.TokenInvalid)
+    {
+        return Problem(StatusCodes.Status400BadRequest, "Link not valid", ApiError.Codes.TokenInvalid, ex.Message);
+    }
+
+    return Results.NoContent();
+});
 
 // Demo of the admin-only policy: admin pages and endpoints refuse a learner.
 app.MapGet("/api/admin/summary", (HttpContext http) =>
     Results.Ok(new { admin = http.User.FindFirst(IAccessTokenFactory.ClaimEmail)!.Value }))
     .RequireAuthorization("admin");
+
+static AuthUserDto ToDto(AuthUser user) =>
+    new(user.UserId, user.Email, user.FullName, user.RoleCode, user.EmailVerified);
 
 static IResult Problem(int status, string title, string code, string? detail = null)
 {

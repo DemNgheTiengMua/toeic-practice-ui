@@ -17,22 +17,34 @@ public interface ICompanionApiClient
     Task<AuthTokenResponse> SignInAsync(SignInRequest request, CancellationToken cancellationToken = default);
 
     Task<AuthUserDto> GetMeAsync(string bearerToken, CancellationToken cancellationToken = default);
+
+    Task VerifyEmailAsync(VerifyEmailRequest request, CancellationToken cancellationToken = default);
+
+    Task ResendActivationAsync(string bearerToken, CancellationToken cancellationToken = default);
+
+    Task ForgotPasswordAsync(ForgotPasswordRequest request, CancellationToken cancellationToken = default);
+
+    Task ResetPasswordAsync(ResetPasswordRequest request, CancellationToken cancellationToken = default);
 }
 
 /// <summary>Raised when the API answers with a non-success status; carries the ProblemDetails code.</summary>
 public sealed class ApiException : HttpRequestException
 {
-    public ApiException(string code, string? title, int status)
+    public ApiException(string code, string? title, int status, string? detail = null)
         : base($"API error {status} ({code}): {title}", null, (System.Net.HttpStatusCode)status)
     {
         Code = code;
         Title = title;
         Status = status;
+        Detail = detail;
     }
 
     public string Code { get; }
 
     public new string? Title { get; }
+
+    /// <summary>The human-readable explanation (e.g. which validation rule failed), when the API gave one.</summary>
+    public string? Detail { get; }
 
     public int Status { get; }
 }
@@ -65,6 +77,32 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
         return (await response.Content.ReadFromJsonAsync<AuthTokenResponse>(Json, cancellationToken))!;
     }
 
+    public async Task VerifyEmailAsync(VerifyEmailRequest request, CancellationToken cancellationToken = default)
+    {
+        using var response = await http.PostAsJsonAsync("api/auth/verify-email", request, Json, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+    }
+
+    public async Task ResendActivationAsync(string bearerToken, CancellationToken cancellationToken = default)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, "api/auth/resend-activation");
+        AttachBearer(request, bearerToken);
+        using var response = await http.SendAsync(request, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+    }
+
+    public async Task ForgotPasswordAsync(ForgotPasswordRequest request, CancellationToken cancellationToken = default)
+    {
+        using var response = await http.PostAsJsonAsync("api/auth/forgot-password", request, Json, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+    }
+
+    public async Task ResetPasswordAsync(ResetPasswordRequest request, CancellationToken cancellationToken = default)
+    {
+        using var response = await http.PostAsJsonAsync("api/auth/reset-password", request, Json, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+    }
+
     public async Task<AuthUserDto> GetMeAsync(string bearerToken, CancellationToken cancellationToken = default)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, "api/auth/me");
@@ -93,6 +131,7 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
         // Fall back to the generic code when the body is missing or not the expected shape.
         var code = ApiError.Codes.Unexpected;
         string? title = response.ReasonPhrase;
+        string? detail = null;
         try
         {
             var problem = await response.Content.ReadFromJsonAsync<ProblemDetailsBody>(Json, cancellationToken);
@@ -104,6 +143,7 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
                 }
 
                 title = problem.Title ?? title;
+                detail = problem.Detail;
             }
         }
         catch (JsonException)
@@ -111,12 +151,14 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
             // Body wasn't ProblemDetails JSON; keep the fallback code.
         }
 
-        throw new ApiException(code, title, (int)response.StatusCode);
+        throw new ApiException(code, title, (int)response.StatusCode, detail);
     }
 
     private sealed class ProblemDetailsBody
     {
         public string? Title { get; set; }
+
+        public string? Detail { get; set; }
 
         public int? Status { get; set; }
 

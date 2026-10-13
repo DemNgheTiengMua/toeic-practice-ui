@@ -4,6 +4,10 @@ using DataAccess;
 using DataAccess.Scaffold;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using System.Buffers.Text;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace Services;
 
@@ -14,6 +18,7 @@ public sealed class AuthException(string code, string message) : Exception(messa
     public const string DuplicateEmail = "AUTH_EMAIL_TAKEN";
     public const string InvalidCredentials = "AUTH_INVALID_CREDENTIALS";
     public const string Locked = "AUTH_LOCKED";
+    public const string TokenInvalid = "AUTH_TOKEN_INVALID";
 
     public string Code { get; } = code;
 }
@@ -31,12 +36,45 @@ public interface IAuthService
     /// (the MVC site's cookie check) must use this, not the token's claims — the claims are a
     /// sign-in-time snapshot.</summary>
     Task<AuthUser?> GetUserAsync(int userId, CancellationToken cancellationToken = default);
+
+    /// <summary>Consumes an activation token and marks the email verified. Unknown, used or
+    /// expired tokens all fail with <see cref="AuthException.TokenInvalid"/>.</summary>
+    Task VerifyEmailAsync(string token, CancellationToken cancellationToken = default);
+
+    /// <summary>Issues a fresh activation link, retiring any earlier one. A no-op for an already
+    /// verified or missing account. A failed send raises <see cref="EmailDeliveryException"/> so the
+    /// signed-in learner can be told to retry (no enumeration risk: they own the account).</summary>
+    Task ResendActivationAsync(int userId, CancellationToken cancellationToken = default);
+
+    /// <summary>Emails a reset link if the address has a live account. Unknown address and failed
+    /// send both complete normally (the failure is logged), so the outcome can't enumerate accounts.</summary>
+    Task RequestPasswordResetAsync(ForgotPasswordInput input, CancellationToken cancellationToken = default);
+
+    /// <summary>Consumes a reset token and replaces the password. Also verifies the email: following
+    /// the link proves the learner controls the mailbox.</summary>
+    Task ResetPasswordAsync(ResetPasswordInput input, CancellationToken cancellationToken = default);
 }
 
-public sealed class AuthService(CompanionDbContext db) : IAuthService
+/// <summary>Where emailed links point: the MVC site, the only thing a learner's browser talks to.</summary>
+public sealed class AuthLinkOptions
+{
+    public const string SectionName = "AuthLinks";
+
+    public string PublicBaseUrl { get; set; } = "http://localhost:5000";
+}
+
+public sealed class AuthService(
+    CompanionDbContext db,
+    IEmailSender mail,
+    TimeProvider clock,
+    AuthLinkOptions links,
+    ILogger<AuthService> log) : IAuthService
 {
     // The framework hasher (PBKDF2-SHA256, iterated, salted per password, format version 1).
     private static readonly PasswordHasher<User> Hasher = new();
+
+    public static readonly TimeSpan ActivationLifetime = TimeSpan.FromHours(24);
+    public static readonly TimeSpan ResetLifetime = TimeSpan.FromMinutes(15);
 
     public async Task<AuthUser> RegisterAsync(RegisterInput input, CancellationToken cancellationToken = default)
     {
@@ -67,7 +105,7 @@ public sealed class AuthService(CompanionDbContext db) : IAuthService
             Email = email,
             FullName = input.FullName.Trim(),
             Phone = string.IsNullOrWhiteSpace(input.Phone) ? null : input.Phone.Trim(),
-            TermsAcceptedAt = DateTimeOffset.UtcNow,
+            TermsAcceptedAt = clock.GetUtcNow(),
         };
         // The column is VARBINARY; the framework hasher works in base64 strings — convert at the boundary.
         user.PasswordHash = Convert.FromBase64String(Hasher.HashPassword(user, input.Password));
@@ -75,7 +113,18 @@ public sealed class AuthService(CompanionDbContext db) : IAuthService
         db.Users.Add(user);
         await db.SaveChangesAsync(cancellationToken);
 
-        return new AuthUser(user.UserId, user.Email, user.FullName, "learner");
+        // The account exists whether or not the mail goes out; a failed send is logged and the
+        // learner can resend from the dashboard reminder.
+        try
+        {
+            await SendActivationAsync(user, cancellationToken);
+        }
+        catch (EmailDeliveryException ex)
+        {
+            log.LogError(ex, "Activation mail for user {UserId} could not be sent", user.UserId);
+        }
+
+        return new AuthUser(user.UserId, user.Email, user.FullName, "learner", EmailVerified: false);
     }
 
     public async Task<AuthUser> SignInAsync(SignInInput input, CancellationToken cancellationToken = default)
@@ -100,10 +149,10 @@ public sealed class AuthService(CompanionDbContext db) : IAuthService
             throw new AuthException(AuthException.Locked, "This account is locked. Contact support.");
         }
 
-        user.LastLoginAt = DateTimeOffset.UtcNow;
+        user.LastLoginAt = clock.GetUtcNow();
         await db.SaveChangesAsync(cancellationToken);
 
-        return new AuthUser(user.UserId, user.Email, user.FullName, user.Role.Code);
+        return new AuthUser(user.UserId, user.Email, user.FullName, user.Role.Code, user.EmailVerifiedAt != null);
     }
 
     public async Task<bool> IsActiveAsync(int userId, CancellationToken cancellationToken = default)
@@ -117,7 +166,152 @@ public sealed class AuthService(CompanionDbContext db) : IAuthService
         return await db.Users
             .AsNoTracking()
             .Where(u => u.UserId == userId && !u.IsDeleted)
-            .Select(u => new AuthUser(u.UserId, u.Email, u.FullName, u.Role.Code))
+            .Select(u => new AuthUser(u.UserId, u.Email, u.FullName, u.Role.Code, u.EmailVerifiedAt != null))
             .SingleOrDefaultAsync(cancellationToken);
     }
+
+    public async Task VerifyEmailAsync(string token, CancellationToken cancellationToken = default)
+    {
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        var (user, now) = await ConsumeAsync(db.EmailVerificationTokens, token, cancellationToken);
+
+        user.EmailVerifiedAt ??= now;
+        await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+    }
+
+    public async Task ResendActivationAsync(int userId, CancellationToken cancellationToken = default)
+    {
+        var user = await db.Users
+            .SingleOrDefaultAsync(u => u.UserId == userId && !u.IsDeleted, cancellationToken);
+        if (user is null || user.EmailVerifiedAt is not null)
+        {
+            return;
+        }
+
+        await SendActivationAsync(user, cancellationToken);
+    }
+
+    public async Task RequestPasswordResetAsync(ForgotPasswordInput input, CancellationToken cancellationToken = default)
+    {
+        Validator.ValidateObject(input, new ValidationContext(input), validateAllProperties: true);
+
+        var email = input.Email.Trim().ToLowerInvariant();
+        var user = await db.Users
+            .SingleOrDefaultAsync(u => !u.IsDeleted && u.Email.ToLower() == email, cancellationToken);
+        if (user is null)
+        {
+            return;
+        }
+
+        var token = await IssueAsync(db.PasswordResetTokens, user, ResetLifetime, cancellationToken);
+        try
+        {
+            await SendResetMailAsync(user, token, cancellationToken);
+        }
+        catch (EmailDeliveryException ex)
+        {
+            // Swallowed, not surfaced: a failure only a registered address can produce would tell
+            // the caller the account exists.
+            log.LogError(ex, "Password reset mail for user {UserId} could not be sent", user.UserId);
+        }
+    }
+
+    private Task SendResetMailAsync(User user, string token, CancellationToken cancellationToken) =>
+        mail.SendAsync(new EmailMessage(
+            user.Email,
+            "Reset your extra efficient password",
+            $"""
+            Hello {user.FullName ?? user.Email},
+
+            Someone asked to reset the password for this account. To choose a new one, open:
+
+            {Link("/auth/reset-password", token)}
+
+            The link works once and expires in {ResetLifetime.TotalMinutes:0} minutes. If you didn't
+            ask for this, ignore this email; your password stays the same.
+            """),
+            cancellationToken);
+
+    public async Task ResetPasswordAsync(ResetPasswordInput input, CancellationToken cancellationToken = default)
+    {
+        // Validate before touching the token, so a too-short password doesn't burn the link.
+        Validator.ValidateObject(input, new ValidationContext(input), validateAllProperties: true);
+
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        var (user, now) = await ConsumeAsync(db.PasswordResetTokens, input.Token, cancellationToken);
+
+        user.PasswordHash = Convert.FromBase64String(Hasher.HashPassword(user, input.NewPassword));
+        user.EmailVerifiedAt ??= now;
+        await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+    }
+
+    private async Task SendActivationAsync(User user, CancellationToken cancellationToken)
+    {
+        var token = await IssueAsync(db.EmailVerificationTokens, user, ActivationLifetime, cancellationToken);
+        await mail.SendAsync(new EmailMessage(
+            user.Email,
+            "Verify your extra efficient email",
+            $"""
+            Hello {user.FullName ?? user.Email},
+
+            Welcome to extra efficient. Confirm this is your email address by opening:
+
+            {Link("/auth/verify-email", token)}
+
+            The link works once and expires in {ActivationLifetime.TotalHours:0} hours. You can keep
+            practising in the meantime; buying credits needs a verified email.
+            """),
+            cancellationToken);
+    }
+
+    /// <summary>Stores a fresh link for <paramref name="user"/> and returns the raw token for the
+    /// email. Only the newest link is live: the user's earlier unused links are retired.</summary>
+    private async Task<string> IssueAsync<TToken>(
+        DbSet<TToken> tokens, User user, TimeSpan lifetime, CancellationToken cancellationToken)
+        where TToken : class, IOneTimeToken, new()
+    {
+        var now = clock.GetUtcNow();
+        await tokens
+            .Where(t => t.UserId == user.UserId && t.UsedAt == null)
+            .ExecuteUpdateAsync(s => s.SetProperty(t => t.UsedAt, now), cancellationToken);
+
+        var token = NewToken();
+        tokens.Add(new TToken { UserId = user.UserId, TokenHash = HashToken(token), ExpiresAt = now + lifetime });
+        await db.SaveChangesAsync(cancellationToken);
+        return token;
+    }
+
+    /// <summary>Marks a live link used and returns its (tracked) owner. Call inside a transaction
+    /// so the token and whatever it unlocks commit together. Unknown, used, expired, or owned by a
+    /// deleted account all fail the same way.</summary>
+    private async Task<(User User, DateTimeOffset Now)> ConsumeAsync<TToken>(
+        DbSet<TToken> tokens, string? rawToken, CancellationToken cancellationToken)
+        where TToken : class, IOneTimeToken
+    {
+        var now = clock.GetUtcNow();
+        var hash = HashToken(rawToken);
+        var live = tokens.Where(t => t.TokenHash == hash && t.UsedAt == null && t.ExpiresAt > now && !t.User.IsDeleted);
+        var user = await live.Select(t => t.User).SingleOrDefaultAsync(cancellationToken);
+
+        // The conditional update is the single-use guarantee: of two concurrent clicks only one
+        // still finds UsedAt NULL and gets a row back.
+        if (user is null
+            || await live.ExecuteUpdateAsync(s => s.SetProperty(t => t.UsedAt, now), cancellationToken) == 0)
+        {
+            throw new AuthException(AuthException.TokenInvalid, "This link is invalid, already used, or expired. Ask for a new one.");
+        }
+
+        return (user, now);
+    }
+
+    // 256 bits from the OS CSPRNG, base64url so it rides in a query string unescaped.
+    private static string NewToken() => Base64Url.EncodeToString(RandomNumberGenerator.GetBytes(32));
+
+    // Only the hash is stored; a database leak doesn't hand out working links.
+    private static byte[] HashToken(string? token) => SHA256.HashData(Encoding.ASCII.GetBytes(token ?? ""));
+
+    private string Link(string path, string token) =>
+        $"{links.PublicBaseUrl.TrimEnd('/')}{path}?token={token}";
 }

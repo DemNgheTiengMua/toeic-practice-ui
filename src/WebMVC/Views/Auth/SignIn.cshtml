@@ -10,6 +10,10 @@
 
   <form method="post" asp-action="SignIn" class="card">
     <div class="card__body stack">
+      @if (!string.IsNullOrEmpty(Model.Notice))
+      {
+        <div class="alert alert--success" role="status">@Model.Notice</div>
+      }
       @if (!string.IsNullOrEmpty(Model.FormError))
       {
         <p class="text-danger no-margin" role="alert">@Model.FormError</p>
@@ -27,6 +31,7 @@
         <label asp-for="Password"></label>
         <input asp-for="Password" autocomplete="current-password">
         <span asp-validation-for="Password" class="text-danger"></span>
+        <p class="text-sm no-margin"><a href="/auth/forgot-password">Forgot password?</a></p>
       </div>
 
       <div>
