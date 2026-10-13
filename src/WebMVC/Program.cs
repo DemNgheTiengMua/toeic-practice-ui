@@ -26,11 +26,12 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.LoginPath = "/auth/sign-in";
         options.AccessDeniedPath = "/auth/denied";
         options.ExpireTimeSpan = TimeSpan.FromHours(IAccessTokenFactory.LifetimeHours);
+        // No sliding renewal: re-validation would otherwise re-issue the cookie past the JWT's
+        // own expiry. The ticket's ExpiresUtc is pinned to the token's expiry at sign-in.
+        options.SlidingExpiration = false;
         // The cookie alone must not outrun the account: re-validate the forwarded JWT against
-        // the API (which itself re-checks the lock flag on every call) and reject the principal
-        // when the token is dead — a locked user's next MVC request then fails too, not just
-        // their next API call. Note a re-validation also renews the cookie by default; the
-        // ticket's pinned ExpiresUtc (the JWT's own expiry) still caps the session.
+        // the API (which itself re-checks the lock flag on every call). A dead token, or one
+        // whose role changed since the cookie was issued, ends the session.
         options.Events = new CookieAuthenticationEvents
         {
             OnValidatePrincipal = async context =>
@@ -45,7 +46,15 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
                 var api = context.HttpContext.RequestServices.GetRequiredService<ICompanionApiClient>();
                 try
                 {
-                    await api.GetMeAsync(token, context.HttpContext.RequestAborted);
+                    var me = await api.GetMeAsync(token, context.HttpContext.RequestAborted);
+                    var cookieRole = context.Principal?.FindFirst(IAccessTokenFactory.ClaimRole)?.Value;
+                    if (me.Role != cookieRole)
+                    {
+                        // Role changed server-side (e.g. promoted or demoted); refuse rather than
+                        // serve pages under the stale role.
+                        context.RejectPrincipal();
+                        await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                    }
                 }
                 catch (ApiException)
                 {
@@ -56,7 +65,13 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
                 {
                     // API unreachable: keep the principal — page-level calls already degrade
                     // (CertificatesController renders "Unavailable"), and signing everyone out
-                    // during an API blip would be worse.
+                    // during an API blip would be worse. Fail-open is a deliberate availability
+                    // tradeoff; the API still enforces the lock on every forwarded call, so a
+                    // locked user can browse static pages but gets nothing from the API.
+                }
+                catch (OperationCanceledException) when (!context.HttpContext.RequestAborted.IsCancellationRequested)
+                {
+                    // Transport timeout, not a client abort: same deliberate fail-open as above.
                 }
             },
         };
