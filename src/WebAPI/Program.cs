@@ -182,7 +182,7 @@ app.MapPost("/api/auth/register", async Task<IResult> (
     }
     catch (ValidationException ex)
     {
-        return Problem(StatusCodes.Status400BadRequest, "Validation failed", ApiError.Codes.Validation, ex.Message);
+        return ValidationProblem(ex);
     }
     catch (AuthException ex) when (ex.Code == AuthException.DuplicateEmail)
     {
@@ -205,7 +205,7 @@ app.MapPost("/api/auth/sign-in", async Task<IResult> (
     }
     catch (ValidationException ex)
     {
-        return Problem(StatusCodes.Status400BadRequest, "Validation failed", ApiError.Codes.Validation, ex.Message);
+        return ValidationProblem(ex);
     }
     catch (AuthException ex) when (ex.Code == AuthException.InvalidCredentials)
     {
@@ -223,8 +223,7 @@ app.MapPost("/api/auth/sign-in", async Task<IResult> (
 // compares against this to catch server-side changes (role, name) since sign-in.
 app.MapGet("/api/auth/me", async Task<IResult> (HttpContext http, IAuthService auth, CancellationToken cancellationToken) =>
 {
-    var userId = int.Parse(http.User.FindFirst(IAccessTokenFactory.ClaimUserId)!.Value);
-    var user = await auth.GetUserAsync(userId, cancellationToken);
+    var user = await auth.GetUserAsync(CurrentUserId(http), cancellationToken);
     if (user is null)
     {
         return Problem(StatusCodes.Status404NotFound, "Not Found", ApiError.Codes.NotFound);
@@ -237,8 +236,7 @@ app.MapGet("/api/auth/me", async Task<IResult> (HttpContext http, IAuthService a
 
 app.MapGet("/api/profile", async (HttpContext http, IAuthService auth, CancellationToken cancellationToken) =>
 {
-    var userId = int.Parse(http.User.FindFirst(IAccessTokenFactory.ClaimUserId)!.Value);
-    var profile = await auth.GetProfileAsync(userId, cancellationToken);
+    var profile = await auth.GetProfileAsync(CurrentUserId(http), cancellationToken);
     return Results.Ok(new ProfileDto(profile.FullName, profile.Phone, profile.TimeZoneId));
 }).RequireAuthorization();
 
@@ -248,16 +246,15 @@ app.MapPut("/api/profile", async Task<IResult> (
     IAuthService auth,
     CancellationToken cancellationToken) =>
 {
-    var userId = int.Parse(http.User.FindFirst(IAccessTokenFactory.ClaimUserId)!.Value);
     try
     {
         var profile = await auth.UpdateProfileAsync(
-            userId, new UpdateProfileInput(request.FullName, request.Phone, request.TimeZoneId), cancellationToken);
+            CurrentUserId(http), new UpdateProfileInput(request.FullName, request.Phone, request.TimeZoneId), cancellationToken);
         return Results.Ok(new ProfileDto(profile.FullName, profile.Phone, profile.TimeZoneId));
     }
     catch (ValidationException ex)
     {
-        return Problem(StatusCodes.Status400BadRequest, "Validation failed", ApiError.Codes.Validation, ex.Message);
+        return ValidationProblem(ex);
     }
 }).RequireAuthorization();
 
@@ -267,16 +264,15 @@ app.MapPost("/api/profile/password", async Task<IResult> (
     IAuthService auth,
     CancellationToken cancellationToken) =>
 {
-    var userId = int.Parse(http.User.FindFirst(IAccessTokenFactory.ClaimUserId)!.Value);
     try
     {
         await auth.ChangePasswordAsync(
-            userId, new ChangePasswordInput(request.CurrentPassword, request.NewPassword), cancellationToken);
+            CurrentUserId(http), new ChangePasswordInput(request.CurrentPassword, request.NewPassword), cancellationToken);
         return Results.NoContent();
     }
     catch (ValidationException ex)
     {
-        return Problem(StatusCodes.Status400BadRequest, "Validation failed", ApiError.Codes.Validation, ex.Message);
+        return ValidationProblem(ex);
     }
     catch (AuthException ex) when (ex.Code == AuthException.InvalidCredentials)
     {
@@ -288,6 +284,12 @@ app.MapPost("/api/profile/password", async Task<IResult> (
 app.MapGet("/api/admin/summary", (HttpContext http) =>
     Results.Ok(new { admin = http.User.FindFirst(IAccessTokenFactory.ClaimEmail)!.Value }))
     .RequireAuthorization(Roles.Admin);
+
+static int CurrentUserId(HttpContext http) =>
+    int.Parse(http.User.FindFirst(IAccessTokenFactory.ClaimUserId)!.Value);
+
+static IResult ValidationProblem(ValidationException ex) =>
+    Problem(StatusCodes.Status400BadRequest, "Validation failed", ApiError.Codes.Validation, ex.Message);
 
 static IResult ToTokenResponse(AuthUser user, IAccessTokenFactory tokens)
 {

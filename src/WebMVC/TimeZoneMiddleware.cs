@@ -3,9 +3,10 @@ using Contracts;
 namespace WebMVC;
 
 /// <summary>
-/// Loads the signed-in learner's time zone once per request into HttpContext.Items["tz"], where
-/// DateTimeFormatter reads it. Anonymous requests and any failure fall back to the shortlist
-/// default — a page must never break because a zone lookup failed.
+/// Loads the signed-in learner's time zone once per request into HttpContext.Items under
+/// DateTimeFormatter.ZoneItemKey, where DateTimeFormatter reads it. Anonymous requests and any
+/// failure fall back to the shortlist default — a page must never break because a zone lookup
+/// failed.
 /// </summary>
 public sealed class TimeZoneMiddleware(RequestDelegate next)
 {
@@ -19,7 +20,7 @@ public sealed class TimeZoneMiddleware(RequestDelegate next)
                 try
                 {
                     var profile = await api.GetProfileAsync(token, context.RequestAborted);
-                    context.Items["tz"] = profile.TimeZoneId;
+                    context.Items[DateTimeFormatter.ZoneItemKey] = profile.TimeZoneId;
                 }
                 catch (ApiException)
                 {
