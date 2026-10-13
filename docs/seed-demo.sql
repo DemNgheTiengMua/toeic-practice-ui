@@ -111,9 +111,9 @@ GO
 -- One learner and one admin. Passwords are framework PasswordHasher hashes (PBKDF2-SHA256,
 -- format v1, stored raw in the VARBINARY column — the app converts base64 at the boundary):
 --   learner@demo.local / Learner!1234      admin@demo.local / Admin!1234
--- TermsAcceptedAt is set because registration requires it. EmailVerifiedAt is left NULL —
--- email activation is a later slice (see EmailVerificationTokens), and a demo account should
--- look like a real registered account until then.
+-- TermsAcceptedAt is set because registration requires it. EmailVerifiedAt is left NULL so
+-- the demo learner shows the dashboard's verification reminder; "Resend email" there drops a
+-- fresh activation link in src/WebAPI/mail-drop/ (issue #5).
 IF NOT EXISTS (SELECT 1 FROM Users WHERE Email = 'learner@demo.local')
   INSERT INTO Users (RoleId, Email, PasswordHash, FullName, Phone, TermsAcceptedAt)
   VALUES ((SELECT RoleId FROM Roles WHERE Code = 'learner'), 'learner@demo.local',

@@ -1,4 +1,4 @@
-@model CurrentUser
+@model DashboardViewModel
 @inject DateTimeFormatter Dates
 @{
     ViewData["Title"] = "Dashboard";
@@ -6,7 +6,33 @@
 }
 
 <div class="container stack" style="padding-top: var(--space-6); padding-bottom: var(--space-8)">
-  <h1 class="m-0 mb-1">Welcome back, @(Model.FullName ?? Model.Email)</h1>
+  @if (Model.Activation == "sent")
+  {
+    <div class="alert alert--success" role="status">A new activation link is on its way to @Model.User.Email. It expires in 24 hours.</div>
+  }
+  else if (Model.Activation == "failed")
+  {
+    <div class="alert alert--danger" role="alert">Could not send the activation email. Try again in a few minutes.</div>
+  }
+
+  @if (Model.ShowVerificationReminder)
+  {
+    @* Users.EmailVerifiedAt IS NULL: practice stays open, buying credits needs a verified email. *@
+    <div class="alert alert--warning row row--between row--wrap" role="status" id="verify-reminder">
+      <span><strong>Verify your email</strong> to unlock buying credits. We sent a link to @Model.User.Email.</span>
+      <span class="row">
+        <form method="post" action="/auth/resend-activation" class="no-margin">
+          @Html.AntiForgeryToken()
+          <button type="submit" class="btn btn--sm">Resend email</button>
+        </form>
+        @* Dismiss hides it for this page view only; it returns on the next visit until verified. *@
+        <button type="button" class="btn btn--ghost btn--sm" aria-label="Dismiss"
+                onclick="document.getElementById('verify-reminder').hidden = true">✕</button>
+      </span>
+    </div>
+  }
+
+  <h1 class="m-0 mb-1">Welcome back, @(Model.User.FullName ?? Model.User.Email)</h1>
   <p class="text-muted no-margin">Your placement exam, learning path and practice drills will live here.</p>
   <p class="text-muted no-margin">Right now it's @Dates.Format(DateTimeOffset.UtcNow) for you.</p>
   <div><a class="btn btn--primary" href="/certificates">Browse certificates</a></div>

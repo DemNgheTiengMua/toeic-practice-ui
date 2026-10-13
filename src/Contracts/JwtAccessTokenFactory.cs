@@ -14,7 +14,10 @@ public interface IAccessTokenFactory
     public const string ClaimRole = "role";
     public const string ClaimName = "name";
 
-    AccessToken Create(int userId, string email, string role, string? fullName);
+    /// <summary>Changes when the password does; the API refuses a token whose stamp is stale.</summary>
+    public const string ClaimSessionStamp = "sst";
+
+    AccessToken Create(int userId, string email, string role, string? fullName, string sessionStamp);
 }
 
 public sealed record AccessToken(string Token, DateTimeOffset ExpiresAt);

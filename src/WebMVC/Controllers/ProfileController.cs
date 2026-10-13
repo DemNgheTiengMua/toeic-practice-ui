@@ -1,4 +1,6 @@
 using Contracts;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using WebMVC.Models;
@@ -70,13 +72,17 @@ public sealed class ProfileController(ICompanionApiClient api, CurrentUser curre
             await api.ChangePasswordAsync(
                 new ChangePasswordRequest(model.CurrentPassword, model.NewPassword),
                 await TokenAsync(), cancellationToken);
-            return View(new ChangePasswordViewModel { SuccessMessage = "Password changed." });
         }
         catch (ApiException ex) when (ex.Code is ApiError.Codes.InvalidCredentials or ApiError.Codes.Validation)
         {
             model.FormError = ex.Title;
             return View(model);
         }
+
+        // A password change ends every session issued under the old password, this one included
+        // (the API's session stamp), so sign out cleanly instead of failing on the next request.
+        await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+        return Redirect("/auth/sign-in?reset=1");
     }
 
     private async Task<string> TokenAsync() => (await currentUser.GetBearerTokenAsync())!;

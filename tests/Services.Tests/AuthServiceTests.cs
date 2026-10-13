@@ -3,6 +3,7 @@ using BusinessObjects;
 using Contracts;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Services.Tests;
 
@@ -23,7 +24,8 @@ public sealed class AuthServiceTests(DatabaseFixture database)
     private AuthService CreateService()
     {
         var db = DbContextFactory.Create(database.ConnectionString);
-        return new AuthService(db);
+        return new AuthService(
+            db, new RecordingEmailSender(), TimeProvider.System, new AuthLinkOptions(), NullLogger<AuthService>.Instance);
     }
 
     [Fact]
@@ -137,16 +139,27 @@ public sealed class AuthServiceTests(DatabaseFixture database)
     }
 
     [Fact]
-    public async Task IsActive_flips_to_false_the_moment_the_account_is_locked()
+    public async Task CheckSession_reports_locked_the_moment_the_account_is_locked()
     {
         await SeedRolesAsync();
         var user = await CreateService().RegisterAsync(new RegisterInput("Learner", "flip@example.com", null, "password-ok", true));
 
-        Assert.True(await CreateService().IsActiveAsync(user.UserId));
+        Assert.Equal(SessionStatus.Active, await CreateService().CheckSessionAsync(user.UserId, user.SessionStamp));
 
         await database.SqlAsync($"UPDATE Users SET IsLocked = 1 WHERE UserId = {user.UserId}");
 
-        Assert.False(await CreateService().IsActiveAsync(user.UserId));
+        Assert.Equal(SessionStatus.Locked, await CreateService().CheckSessionAsync(user.UserId, user.SessionStamp));
+    }
+
+    [Fact]
+    public async Task CheckSession_refuses_a_missing_or_mismatched_stamp()
+    {
+        await SeedRolesAsync();
+        var user = await CreateService().RegisterAsync(new RegisterInput("Learner", "stamp@example.com", null, "password-ok", true));
+
+        Assert.Equal(SessionStatus.Ended, await CreateService().CheckSessionAsync(user.UserId, null));
+        Assert.Equal(SessionStatus.Ended, await CreateService().CheckSessionAsync(user.UserId, "not-the-stamp"));
+        Assert.Equal(SessionStatus.Ended, await CreateService().CheckSessionAsync(user.UserId + 10_000, user.SessionStamp));
     }
 
     [Fact]
