@@ -1,0 +1,319 @@
+@model ExamReviewViewModel
+@inject WebMVC.DateTimeFormatter Dates
+@{
+    Layout = "_LearnerLayout";
+    var rev = Model.Review;
+    ViewData["Title"] = $"Review — {rev.ExamName}";
+    ViewData["Description"] = $"Mock exam detailed answer review for {rev.ExamName}.";
+
+    var distinctParts = rev.Questions
+        .GroupBy(q => new { q.SectionCode, q.SectionName })
+        .Select(g => new { Code = g.Key.SectionCode, Name = g.Key.SectionName, Count = g.Count() })
+        .ToList();
+}
+
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+  <a href="/dashboard" class="breadcrumbs__item">Home</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <a href="/exams/history" class="breadcrumbs__item">Exam history</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <span class="breadcrumbs__item" aria-current="page">Review</span>
+</nav>
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+  <div class="alert alert--danger" role="alert">@Model.ErrorMessage</div>
+}
+
+<div class="row row--between" style="align-items: baseline; margin-bottom: var(--space-4);">
+  <div>
+    <h1 class="m-0 mb-1">Review — @rev.ExamName</h1>
+    <p class="text-sm text-muted no-margin">
+      <strong>@rev.TotalScore points</strong>
+      @if (rev.SkillScores.Count > 0)
+      {
+        <span>· @string.Join(" · ", rev.SkillScores.Select(s => $"{s.SkillCode} {s.ScaledScore}"))</span>
+      }
+      · Completed on @Dates.Format(rev.SubmittedAt)
+    </p>
+  </div>
+  <div class="row" style="gap: var(--space-2);">
+    <a class="btn" href="/exams/result/@rev.AttemptId">Back to results</a>
+    <a class="btn btn--ghost" href="/exams/history">Back to history</a>
+  </div>
+</div>
+
+<!-- Filter Toolbar -->
+<div class="card mb-4">
+  <div class="card__body row" style="gap: var(--space-4); flex-wrap: wrap; align-items: flex-end;">
+    <div class="field" style="flex: 0 0 220px; margin-bottom: 0;">
+      <label class="field__label" for="review-part-select">Part / Section</label>
+      <select class="field__input" id="review-part-select">
+        <option value="all">All @rev.TotalQuestions questions</option>
+        @foreach (var part in distinctParts)
+        {
+          <option value="@part.Code">@part.Code — @part.Name (@part.Count)</option>
+        }
+      </select>
+    </div>
+
+    <div class="field" style="flex: 0 0 220px; margin-bottom: 0;">
+      <label class="field__label" for="review-filter-select">Filter by Status</label>
+      <select class="field__input" id="review-filter-select">
+        <option value="all">All questions</option>
+        <option value="incorrect">Only incorrect questions</option>
+        <option value="blank">Only questions left blank</option>
+        <option value="flagged">Only flagged questions</option>
+        <option value="correct">Only correct questions</option>
+      </select>
+    </div>
+
+    <div class="row" style="gap: var(--space-2); margin-left: auto; align-self: center;">
+      <span class="badge badge--success">@rev.CorrectCount correct</span>
+      <span class="badge badge--danger">@rev.IncorrectCount incorrect</span>
+      <span class="badge badge--muted">@rev.BlankCount left blank</span>
+      <span class="badge badge--warning">@rev.FlaggedCount flagged</span>
+    </div>
+  </div>
+</div>
+
+<div class="exam-layout">
+  <!-- Main Questions Column -->
+  <div class="stack" id="questions-container" style="flex: 1; min-width: 0;">
+    @foreach (var q in rev.Questions)
+    {
+      var statusKey = q.IsCorrect == true ? "correct" : (q.IsCorrect == false ? "incorrect" : "blank");
+      <div class="card question-item"
+           id="question-card-@q.QuestionId"
+           data-question-id="@q.QuestionId"
+           data-order="@q.DisplayOrder"
+           data-part="@q.SectionCode"
+           data-status="@statusKey"
+           data-flagged="@(q.IsFlagged ? "true" : "false")">
+        <div class="card__body">
+          <!-- Question Meta Header -->
+          <div class="question__meta row row--between mb-3" style="align-items: center;">
+            <div class="row" style="gap: var(--space-2); align-items: center;">
+              <span class="question__number" style="font-weight: 700;">Question @q.DisplayOrder</span>
+              <span class="badge badge--muted">@q.SectionCode — @q.SectionName</span>
+              @if (q.IsCorrect == true)
+              {
+                <span class="badge badge--success">Correct answer</span>
+              }
+              else if (q.IsCorrect == false)
+              {
+                <span class="badge badge--danger">Your answer is incorrect</span>
+              }
+              else
+              {
+                <span class="badge badge--warning">Blank</span>
+              }
+            </div>
+
+            @if (q.IsFlagged)
+            {
+              <span class="badge badge--warning">Flagged for review</span>
+            }
+          </div>
+
+          <!-- Audio player if present -->
+          @if (!string.IsNullOrEmpty(q.AudioPath))
+          {
+            <div class="card mb-3" style="background-color: var(--soft-bg, #f7f9fa);">
+              <div class="card__body p-3">
+                <div class="row row--between mb-2" style="align-items: center;">
+                  <span class="badge badge--info">AUDIO</span>
+                  <span class="text-xs text-muted">Replay this question</span>
+                </div>
+                <audio controls src="@q.AudioPath" style="width: 100%; border: 1px solid var(--ink); border-radius: 0;"></audio>
+              </div>
+            </div>
+          }
+
+          <!-- Passage if present -->
+          @if (!string.IsNullOrEmpty(q.Passage))
+          {
+            <div class="card mb-3" style="background-color: var(--soft-bg, #f7f9fa);">
+              <div class="card__body">
+                <p class="no-margin" style="white-space: pre-line; line-height: var(--leading-relaxed);">@q.Passage</p>
+              </div>
+            </div>
+          }
+
+          <!-- Image if present -->
+          @if (!string.IsNullOrEmpty(q.ImagePath))
+          {
+            <div class="mb-3">
+              <img src="@q.ImagePath" alt="@(q.ImageAlt ?? "Question illustration")" class="img-fluid" style="max-height: 350px; border: 2px solid var(--ink);" />
+            </div>
+          }
+
+          <!-- Stem -->
+          <p class="question__stem" style="font-size: var(--text-base); margin: var(--space-3) 0;">
+            @q.Stem
+          </p>
+
+          <!-- Options -->
+          <div class="option-list mb-3" role="group" aria-label="Answers for Question @q.DisplayOrder">
+            @foreach (var opt in q.Options)
+            {
+              var isSelected = opt.OptionId == q.SelectedOptionId;
+              var isCorrectOpt = opt.IsCorrect;
+              var optClass = isCorrectOpt ? "option--correct" : (isSelected ? "option--wrong" : "");
+              <div class="option @optClass @(isSelected ? "is-selected" : "")" style="cursor: default;">
+                <span class="option__marker">@opt.Label</span>
+                <span class="option__text">@opt.Text</span>
+                @if (isCorrectOpt && isSelected)
+                {
+                  <span class="badge badge--success">Your answer · Correct</span>
+                }
+                else if (isCorrectOpt)
+                {
+                  <span class="badge badge--success">Correct answer</span>
+                }
+                else if (isSelected)
+                {
+                  <span class="badge badge--danger">Your answer</span>
+                }
+              </div>
+
+              @if (!string.IsNullOrWhiteSpace(opt.Rationale))
+              {
+                <div class="text-xs text-muted mb-2" style="padding-left: var(--space-4); margin-top: -4px; border-left: 2px solid var(--soft-rule, #ccd2d6);">
+                  <strong>Option @opt.Label:</strong> @opt.Rationale
+                </div>
+              }
+            }
+          </div>
+
+          <!-- Explanation -->
+          @if (!string.IsNullOrWhiteSpace(q.Explanation))
+          {
+            <div class="explain mb-3">
+              <div class="explain__title"><strong>Explanation</strong></div>
+              <p class="no-margin" style="margin-top: var(--space-1);">@q.Explanation</p>
+            </div>
+          }
+
+          <!-- Transcript -->
+          @if (!string.IsNullOrWhiteSpace(q.Transcript))
+          {
+            <div class="explain__transcript p-2" style="background-color: var(--soft-bg, #f7f9fa); border-left: 2px solid var(--sign-blue, #0b4ea2); font-size: var(--text-sm);">
+              <strong>Transcript:</strong> @q.Transcript
+            </div>
+          }
+        </div>
+      </div>
+    }
+
+    <div id="no-filtered-results" class="card" style="display: none;">
+      <div class="card__body text-center p-4">
+        <p class="text-muted no-margin">No questions match the selected filters.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sidebar Navigator (reflects answered, flagged, and unanswered states) -->
+  <aside class="exam-sidebar stack" style="flex: 0 0 300px;">
+    <div class="card">
+      <div class="card__header">
+        <div class="row row--between">
+          <strong class="text-sm">Question Navigator</strong>
+          <span class="text-xs text-muted">@rev.TotalQuestions questions</span>
+        </div>
+      </div>
+      <div class="card__body stack">
+        <div class="navigator__grid" role="group" aria-label="Question Navigator">
+          @foreach (var nav in rev.Navigator)
+          {
+            var statusClass = nav.IsAnswered ? "is-answered" : "is-unanswered";
+            var markClass = nav.IsFlagged ? "is-marked" : "";
+            var correctnessClass = nav.IsCorrect == true ? "is-correct-badge" : (nav.IsCorrect == false ? "is-incorrect-badge" : "");
+            <a href="#question-card-@nav.QuestionId"
+               class="navigator__cell @statusClass @markClass @correctnessClass"
+               id="nav-cell-@nav.QuestionId"
+               data-target-id="@nav.QuestionId"
+               data-order="@nav.DisplayOrder"
+               title="Question @nav.DisplayOrder@(nav.IsAnswered ? " · Answered" : " · Unanswered")@(nav.IsFlagged ? " · Flagged" : "")@(nav.IsCorrect == true ? " · Correct" : (nav.IsCorrect == false ? " · Incorrect" : ""))">
+              @nav.DisplayOrder
+            </a>
+          }
+        </div>
+
+        <div class="text-xs stack mt-2" style="gap: var(--space-1)">
+          <div class="row" style="align-items: center; gap: var(--space-2);">
+            <span class="navigator__cell navigator__cell--swatch is-answered" aria-hidden="true">1</span> Answered
+          </div>
+          <div class="row" style="align-items: center; gap: var(--space-2);">
+            <span class="navigator__cell navigator__cell--swatch is-marked" aria-hidden="true">2</span> Flagged for review
+          </div>
+          <div class="row" style="align-items: center; gap: var(--space-2);">
+            <span class="navigator__cell navigator__cell--swatch is-unanswered" aria-hidden="true">3</span> Unanswered
+          </div>
+        </div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<script>
+  (function () {
+    "use strict";
+    var partSelect = document.getElementById("review-part-select");
+    var filterSelect = document.getElementById("review-filter-select");
+    var questions = document.querySelectorAll(".question-item");
+    var navCells = document.querySelectorAll(".navigator__cell[data-target-id]");
+    var emptyBlock = document.getElementById("no-filtered-results");
+
+    function applyFilters() {
+      var selectedPart = partSelect ? partSelect.value : "all";
+      var selectedFilter = filterSelect ? filterSelect.value : "all";
+      var visibleCount = 0;
+
+      questions.forEach(function (card) {
+        var part = card.getAttribute("data-part");
+        var status = card.getAttribute("data-status");
+        var flagged = card.getAttribute("data-flagged") === "true";
+        var qId = card.getAttribute("data-question-id");
+
+        var matchesPart = (selectedPart === "all" || part === selectedPart);
+        var matchesStatus = true;
+        if (selectedFilter === "incorrect") matchesStatus = (status === "incorrect");
+        else if (selectedFilter === "blank") matchesStatus = (status === "blank");
+        else if (selectedFilter === "flagged") matchesStatus = flagged;
+        else if (selectedFilter === "correct") matchesStatus = (status === "correct");
+
+        var isVisible = matchesPart && matchesStatus;
+        card.style.display = isVisible ? "" : "none";
+        if (isVisible) visibleCount++;
+
+        var cell = document.getElementById("nav-cell-" + qId);
+        if (cell) {
+          cell.style.opacity = isVisible ? "1" : "0.25";
+        }
+      });
+
+      if (emptyBlock) {
+        emptyBlock.style.display = visibleCount === 0 ? "" : "none";
+      }
+    }
+
+    if (partSelect) partSelect.addEventListener("change", applyFilters);
+    if (filterSelect) filterSelect.addEventListener("change", applyFilters);
+
+    navCells.forEach(function (cell) {
+      cell.addEventListener("click", function (e) {
+        var targetId = cell.getAttribute("data-target-id");
+        var targetCard = document.getElementById("question-card-target-" + targetId) || document.getElementById("question-card-" + targetId);
+        if (targetCard) {
+          e.preventDefault();
+          targetCard.scrollIntoView({ behavior: "smooth", block: "start" });
+          targetCard.style.outline = "2px solid var(--sign-blue, #0b4ea2)";
+          setTimeout(function () {
+            targetCard.style.outline = "";
+          }, 1500);
+        }
+      });
+    });
+  })();
+</script>

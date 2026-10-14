@@ -21,3 +21,12 @@ public sealed record SaveAnswerFormModel(
 public sealed record ExamResultViewModel(
     AttemptResultDto Result,
     string? ErrorMessage = null);
+
+public sealed record ExamHistoryViewModel(
+    ExamHistoryDto History,
+    string? ErrorMessage = null);
+
+public sealed record ExamReviewViewModel(
+    AttemptReviewDto Review,
+    string? ErrorMessage = null);
+

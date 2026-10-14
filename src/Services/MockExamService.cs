@@ -19,6 +19,7 @@ public class MockExamException(string code, string message) : Exception(message)
     public const string AttemptNotActive = "attempt_not_active";
     public const string InvalidOption = "invalid_option";
     public const string QuestionNotFound = "question_not_found";
+    public const string AttemptNotFinished = "attempt_not_finished";
 
     public string Code { get; } = code;
 }
@@ -40,6 +41,10 @@ public interface IMockExamService
     Task CancelAttemptAsync(int userId, int attemptId, CancellationToken cancellationToken = default);
 
     Task<AttemptResultView> GetAttemptResultAsync(int userId, int attemptId, CancellationToken cancellationToken = default);
+
+    Task<ExamHistoryView> GetExamHistoryAsync(int userId, CancellationToken cancellationToken = default);
+
+    Task<AttemptReviewView> GetAttemptReviewAsync(int userId, int attemptId, CancellationToken cancellationToken = default);
 }
 
 public sealed class MockExamService(CompanionDbContext db, ILearnerService learners) : IMockExamService
@@ -709,5 +714,258 @@ public sealed class MockExamService(CompanionDbContext db, ILearnerService learn
             scoreItems,
             prevScore,
             scoreDelta);
+    }
+
+    public async Task<ExamHistoryView> GetExamHistoryAsync(int userId, CancellationToken cancellationToken = default)
+    {
+        var certId = await learners.GetActiveCertIdAsync(userId, cancellationToken);
+        var cert = await db.Certificates
+            .AsNoTracking()
+            .Where(c => c.CertId == certId)
+            .Select(c => new CertificateOption(c.Code, c.Name))
+            .SingleAsync(cancellationToken);
+
+        // Auto-submit any expired in-progress attempts first
+        var expiredAttempts = await db.ExamAttempts
+            .Where(a => a.UserId == userId && a.CertId == certId && a.Status == "in_progress" && DateTimeOffset.UtcNow >= a.ExpiresAt)
+            .Select(a => a.AttemptId)
+            .ToListAsync(cancellationToken);
+
+        foreach (var expiredId in expiredAttempts)
+        {
+            await SubmitAttemptInternalAsync(expiredId, userId, isAutoSubmit: true, cancellationToken);
+        }
+
+        var attempts = await db.ExamAttempts
+            .AsNoTracking()
+            .Where(a => a.UserId == userId && a.CertId == certId && a.Status == "graded" && a.TotalScore.HasValue)
+            .Include(a => a.Exam)
+            .OrderByDescending(a => a.SubmittedAt ?? a.StartedAt)
+            .ToListAsync(cancellationToken);
+
+        var bands = await db.ScoreBands
+            .AsNoTracking()
+            .Where(b => b.CertId == certId)
+            .OrderBy(b => b.MinTotal)
+            .Select(b => new ScoreBandItem(b.Code, b.Name, b.MinTotal, b.MaxTotal, b.DisplayOrder))
+            .ToListAsync(cancellationToken);
+
+        var attemptIds = attempts.Select(a => a.AttemptId).ToList();
+        var skillScores = await db.AttemptSkillScores
+            .AsNoTracking()
+            .Where(s => attemptIds.Contains(s.AttemptId))
+            .Include(s => s.Skill)
+            .ToListAsync(cancellationToken);
+
+        var questionCounts = await db.AttemptAnswers
+            .AsNoTracking()
+            .Where(a => attemptIds.Contains(a.AttemptId))
+            .GroupBy(a => new { a.AttemptId, a.Question.Section.SkillId })
+            .Select(g => new { g.Key.AttemptId, g.Key.SkillId, Count = g.Count() })
+            .ToListAsync(cancellationToken);
+
+        var bandDict = bands.ToDictionary(b => b.Code, b => b.Name);
+
+        var attemptItems = new List<ExamHistoryItem>();
+        foreach (var att in attempts)
+        {
+            var attScores = skillScores
+                .Where(s => s.AttemptId == att.AttemptId)
+                .OrderBy(s => s.Skill.DisplayOrder)
+                .Select(s => new AttemptSkillScoreItem(
+                    s.SkillId,
+                    s.Skill.Code,
+                    s.Skill.Name,
+                    s.Skill.Modality,
+                    s.RawScore,
+                    s.ScaledScore,
+                    questionCounts.FirstOrDefault(q => q.AttemptId == att.AttemptId && q.SkillId == s.SkillId)?.Count ?? 0))
+                .ToList();
+
+            string? bandName = att.BandCode != null && bandDict.TryGetValue(att.BandCode, out var bName) ? bName : null;
+
+            attemptItems.Add(new ExamHistoryItem(
+                att.AttemptId,
+                att.ExamId,
+                att.Exam?.Name ?? "Mock Exam",
+                att.CertId,
+                cert.Code,
+                att.StartedAt,
+                att.SubmittedAt ?? att.StartedAt,
+                att.TotalScore ?? 0,
+                att.BandCode,
+                bandName,
+                attScores,
+                "Completed"));
+        }
+
+        int totalAttempts = attempts.Count;
+        int? bestScore = attempts.Count > 0 ? attempts.Max(a => a.TotalScore) : null;
+        int? averageScore = attempts.Count > 0 ? (int)Math.Round(attempts.Average(a => a.TotalScore!.Value)) : null;
+
+        string? bestScoreBandCode = null;
+        string? bestScoreBandName = null;
+        if (bestScore.HasValue && bands.Count > 0)
+        {
+            var match = bands.FirstOrDefault(b => bestScore.Value >= b.MinTotal && bestScore.Value <= b.MaxTotal);
+            if (match == null)
+            {
+                match = bestScore.Value < bands[0].MinTotal ? bands[0] : bands[^1];
+            }
+            bestScoreBandCode = match?.Code;
+            bestScoreBandName = match?.Name;
+        }
+
+        return new ExamHistoryView(
+            cert,
+            totalAttempts,
+            bestScore,
+            averageScore,
+            bestScoreBandCode,
+            bestScoreBandName,
+            bands,
+            attemptItems);
+    }
+
+    public async Task<AttemptReviewView> GetAttemptReviewAsync(int userId, int attemptId, CancellationToken cancellationToken = default)
+    {
+        var attempt = await db.ExamAttempts
+            .AsNoTracking()
+            .Include(a => a.Exam)
+            .Include(a => a.Cert)
+            .SingleOrDefaultAsync(a => a.AttemptId == attemptId, cancellationToken)
+            ?? throw new MockExamException(MockExamException.AttemptNotFound, $"Attempt {attemptId} not found.");
+
+        if (attempt.UserId != userId)
+        {
+            throw new MockExamException(MockExamException.AttemptNotFound, $"Attempt {attemptId} not found.");
+        }
+
+        if (attempt.Status != "graded")
+        {
+            throw new MockExamException(MockExamException.AttemptNotFinished, "Review is available only for finished exam attempts.");
+        }
+
+        var questions = await db.Questions
+            .AsNoTracking()
+            .Where(q => q.ExamId == attempt.ExamId)
+            .Include(q => q.Section).ThenInclude(s => s.Skill)
+            .Include(q => q.Group)
+            .Include(q => q.QuestionOptionQuestionNavigations)
+            .OrderBy(q => q.DisplayOrder)
+            .ToListAsync(cancellationToken);
+
+        var answers = await db.AttemptAnswers
+            .AsNoTracking()
+            .Where(a => a.AttemptId == attemptId)
+            .ToDictionaryAsync(a => a.QuestionId, cancellationToken);
+
+        var skillScores = await db.AttemptSkillScores
+            .AsNoTracking()
+            .Where(s => s.AttemptId == attemptId)
+            .Include(s => s.Skill)
+            .OrderBy(s => s.Skill.DisplayOrder)
+            .ToListAsync(cancellationToken);
+
+        var questionCounts = questions
+            .GroupBy(q => q.Section.SkillId)
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        var scoreItems = skillScores
+            .Select(s => new AttemptSkillScoreItem(
+                s.SkillId,
+                s.Skill.Code,
+                s.Skill.Name,
+                s.Skill.Modality,
+                s.RawScore,
+                s.ScaledScore,
+                questionCounts.TryGetValue(s.SkillId, out var count) ? count : 0))
+            .ToList();
+
+        var band = await db.ScoreBands
+            .AsNoTracking()
+            .Where(b => b.CertId == attempt.CertId && b.Code == attempt.BandCode)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        var reviewQuestions = new List<AttemptReviewQuestion>();
+        var navigator = new List<ReviewNavigatorItem>();
+
+        foreach (var q in questions)
+        {
+            var options = q.QuestionOptionQuestionNavigations
+                .OrderBy(o => o.Label)
+                .Select(o => new AttemptReviewOption(o.OptionId, o.Label, o.Text, o.IsCorrect, o.Rationale))
+                .ToList();
+
+            bool hasAnswer = answers.TryGetValue(q.QuestionId, out var ans);
+            int? selectedOptionId = ans?.SelectedOptionId;
+            bool isFlagged = ans?.IsFlagged ?? false;
+            bool isAnswered = selectedOptionId.HasValue;
+            bool? isCorrect = isAnswered ? ans?.IsCorrect : null;
+
+            reviewQuestions.Add(new AttemptReviewQuestion(
+                q.QuestionId,
+                q.DisplayOrder,
+                questions.Count,
+                q.SectionId,
+                q.Section.Code,
+                q.Section.Name,
+                q.Section.Skill.Code,
+                q.Section.Skill.Name,
+                q.Section.Modality,
+                q.Stem,
+                q.Group.ImagePath,
+                q.Group.ImageAlt,
+                q.Group.AudioPath,
+                q.Group.Transcript,
+                q.Group.Passage,
+                q.Explanation,
+                options,
+                selectedOptionId,
+                isCorrect,
+                isFlagged));
+
+            navigator.Add(new ReviewNavigatorItem(
+                q.QuestionId,
+                q.DisplayOrder,
+                q.SectionId,
+                q.Section.Code,
+                q.Section.Modality,
+                isAnswered,
+                isFlagged,
+                isCorrect));
+        }
+
+        int totalQuestions = questions.Count;
+        int answeredCount = questions.Count(q => answers.TryGetValue(q.QuestionId, out var a) && a.SelectedOptionId.HasValue);
+        int correctCount = questions.Count(q => answers.TryGetValue(q.QuestionId, out var a) && a.IsCorrect == true);
+        int incorrectCount = questions.Count(q => answers.TryGetValue(q.QuestionId, out var a) && a.SelectedOptionId.HasValue && a.IsCorrect == false);
+        int blankCount = totalQuestions - answeredCount;
+        int flaggedCount = questions.Count(q => answers.TryGetValue(q.QuestionId, out var a) && a.IsFlagged);
+        int durationSeconds = (int)Math.Max(0, ((attempt.SubmittedAt ?? DateTimeOffset.UtcNow) - attempt.StartedAt).TotalSeconds);
+
+        return new AttemptReviewView(
+            attempt.AttemptId,
+            attempt.ExamId,
+            attempt.Exam?.Name ?? "Mock Exam",
+            attempt.CertId,
+            attempt.Cert?.Code ?? "",
+            attempt.Cert?.Name ?? "",
+            attempt.Status,
+            attempt.StartedAt,
+            attempt.SubmittedAt ?? attempt.StartedAt,
+            durationSeconds,
+            attempt.TotalScore ?? 0,
+            attempt.BandCode,
+            band?.Name,
+            scoreItems,
+            totalQuestions,
+            answeredCount,
+            correctCount,
+            incorrectCount,
+            blankCount,
+            flaggedCount,
+            reviewQuestions,
+            navigator);
     }
 }

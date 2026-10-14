@@ -1,0 +1,173 @@
+@model ExamHistoryViewModel
+@inject WebMVC.DateTimeFormatter Dates
+@{
+    Layout = "_LearnerLayout";
+    var h = Model.History;
+    ViewData["Title"] = "Exam history";
+    ViewData["Description"] = $"Mock exam history and score progression for {h.Certificate.Name}.";
+}
+
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+  <a href="/dashboard" class="breadcrumbs__item">Home</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <span class="breadcrumbs__item" aria-current="page">Exam history</span>
+</nav>
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+  <div class="alert alert--danger" role="alert">@Model.ErrorMessage</div>
+}
+
+<div class="row row--between" style="align-items: baseline;">
+  <div>
+    <h1 class="m-0 mb-1">Exam history</h1>
+    <p class="text-sm text-muted no-margin">Track your mock exam attempts and score progression for @h.Certificate.Name.</p>
+  </div>
+  <a class="btn btn--primary" href="/exams">Start test</a>
+</div>
+
+@if (h.Attempts.Count == 0)
+{
+  <div class="card">
+    <div class="card__body">
+      <div class="state-block">
+        <div class="state-block__icon" aria-hidden="true">EMPTY</div>
+        <h2 class="state-block__title">No exams yet</h2>
+        <p class="state-block__desc">
+          Take your first mock exam to start tracking your score progression and CEFR proficiency.
+        </p>
+        <a class="btn btn--primary" href="/exams">Start test</a>
+      </div>
+    </div>
+  </div>
+}
+else
+{
+  <div class="grid-3">
+    <div class="stat">
+      <div class="stat__label">Exams taken</div>
+      <div class="stat__value">@h.TotalAttempts</div>
+    </div>
+    <div class="stat">
+      <div class="stat__label">Best score</div>
+      <div class="stat__value">@(h.BestScore?.ToString() ?? "--")</div>
+    </div>
+    <div class="stat">
+      <div class="stat__label">Average score</div>
+      <div class="stat__value">@(h.AverageScore?.ToString() ?? "--")</div>
+    </div>
+  </div>
+
+  @if (!string.IsNullOrEmpty(h.BestScoreBandCode) && h.CefrBands.Count > 0)
+  {
+    <div class="card">
+      <div class="card__header"><strong>Equivalent CEFR Level</strong></div>
+      <div class="card__body">
+        <div class="cefr">
+          <div class="cefr__head">
+            <span class="cefr__current">@h.BestScoreBandCode</span>
+            <span class="text-sm text-muted">@h.BestScoreBandName · @(h.BestScore) best score</span>
+          </div>
+          <div class="cefr__track" role="img" aria-label="Current CEFR level: @h.BestScoreBandCode">
+            @foreach (var band in h.CefrBands)
+            {
+              var isCurrent = band.Code == h.BestScoreBandCode;
+              var isReached = h.BestScore.HasValue && h.BestScore.Value >= band.MinTotal;
+              var cls = isCurrent ? "is-current" : (isReached ? "is-reached" : "");
+              <span class="cefr__band @cls">@band.Code</span>
+            }
+          </div>
+          <div class="cefr__scale" aria-hidden="true">
+            @foreach (var band in h.CefrBands)
+            {
+              <span class="cefr__tick">@band.MinTotal</span>
+            }
+          </div>
+          <p class="cefr__note">
+            Referenced from your best score. CEFR thresholds are fixed by the certification standard.
+          </p>
+        </div>
+      </div>
+    </div>
+  }
+
+  <div class="card">
+    <div class="card__header"><strong>Score Progress</strong></div>
+    <div class="card__body">
+      <div class="chart">
+        @foreach (var att in h.Attempts.OrderBy(a => a.SubmittedAt).TakeLast(10))
+        {
+          var isBest = att.TotalScore == h.BestScore;
+          var barHeight = Math.Max(20, (int)Math.Round((double)att.TotalScore / 990.0 * 140));
+          <div class="chart__col">
+            <div class="chart__bar @(isBest ? "chart__bar--marked" : "")" style="height: @(barHeight)px" title="@att.ExamName: @att.TotalScore pts"></div>
+            <div class="chart__value">@(isBest ? Html.Raw($"<strong>{att.TotalScore}</strong>") : att.TotalScore.ToString())</div>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card__header">
+      <div class="row row--between">
+        <strong>Attempts (@h.Attempts.Count)</strong>
+        <span class="text-sm text-muted">Active certificate: <strong>@h.Certificate.Code</strong></span>
+      </div>
+    </div>
+    <div class="card__body">
+      <table class="table table--striped">
+        <thead>
+          <tr>
+            <th scope="col">Exam date</th>
+            <th scope="col">Test</th>
+            <th scope="col">Skills</th>
+            <th scope="col">Total score</th>
+            <th scope="col">Band</th>
+            <th scope="col">Status</th>
+            <th scope="col"></th>
+          </tr>
+        </thead>
+        <tbody>
+          @foreach (var att in h.Attempts)
+          {
+            <tr>
+              <td>@Dates.Format(att.SubmittedAt)</td>
+              <td>
+                <strong>@att.ExamName</strong>
+                <span class="badge badge--info">@att.CertCode</span>
+              </td>
+              <td>
+                @if (att.SkillScores.Count > 0)
+                {
+                  <span class="text-sm">
+                    @string.Join(" · ", att.SkillScores.Select(s => $"{s.SkillCode} {s.ScaledScore}"))
+                  </span>
+                }
+                else
+                {
+                  <span class="text-muted">--</span>
+                }
+              </td>
+              <td><strong>@att.TotalScore</strong></td>
+              <td>
+                @if (!string.IsNullOrEmpty(att.BandCode))
+                {
+                  <span class="badge badge--info">@att.BandCode</span>
+                }
+                else
+                {
+                  <span class="text-muted">--</span>
+                }
+              </td>
+              <td><span class="badge badge--success">Completed</span></td>
+              <td style="text-align: right;">
+                <a class="btn btn--sm" href="/exams/review/@att.AttemptId">Review</a>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+}

@@ -327,4 +327,115 @@ public sealed class MockExamServiceTests(DatabaseFixture database)
         Assert.Equal("graded", dbAttempt.Status);
         Assert.NotNull(dbAttempt.SubmittedAt);
     }
+
+    [Fact]
+    public async Task History_Lists_Attempts_For_Active_Certificate_Only()
+    {
+        var certCode1 = Unique("C1");
+        var certCode2 = Unique("C2");
+        var (cert1Id, exam1Id, q1A, q1B, o1A, o1B) = await SeedMockExamFixtureAsync(certCode1);
+        var (cert2Id, exam2Id, q2A, q2B, o2A, o2B) = await SeedMockExamFixtureAsync(certCode2);
+
+        var userId = await SeedLearnerAsync(certCode1, startingCredits: 5);
+        var (service, learners) = CreateServices();
+
+        // Complete an attempt for Cert 1
+        var attempt1 = await service.StartAttemptAsync(userId, exam1Id);
+        await service.SaveAnswerAsync(userId, attempt1.AttemptId, q1A, o1A, false);
+        await service.SubmitAttemptAsync(userId, attempt1.AttemptId, false);
+
+        // Switch active cert to Cert 2, complete an attempt for Cert 2
+        await learners.SwitchCertificateAsync(userId, certCode2);
+        var attempt2 = await service.StartAttemptAsync(userId, exam2Id);
+        await service.SaveAnswerAsync(userId, attempt2.AttemptId, q2A, o2A, false);
+        await service.SubmitAttemptAsync(userId, attempt2.AttemptId, false);
+
+        // While active cert is Cert 2, history should only list attempt2
+        var historyCert2 = await service.GetExamHistoryAsync(userId);
+        Assert.Equal(certCode2, historyCert2.Certificate.Code);
+        Assert.Single(historyCert2.Attempts);
+        Assert.Equal(attempt2.AttemptId, historyCert2.Attempts[0].AttemptId);
+
+        // Switch back to Cert 1, history should only list attempt1
+        await learners.SwitchCertificateAsync(userId, certCode1);
+        var historyCert1 = await service.GetExamHistoryAsync(userId);
+        Assert.Equal(certCode1, historyCert1.Certificate.Code);
+        Assert.Single(historyCert1.Attempts);
+        Assert.Equal(attempt1.AttemptId, historyCert1.Attempts[0].AttemptId);
+    }
+
+    [Fact]
+    public async Task Review_Is_Available_Only_For_Learners_Own_Finished_Attempts()
+    {
+        var certCode = Unique("REV");
+        var (certId, examId, q1Id, q2Id, opt1Id, opt2Id) = await SeedMockExamFixtureAsync(certCode);
+
+        var user1 = await SeedLearnerAsync(certCode, startingCredits: 5);
+        var user2 = await SeedLearnerAsync(certCode, startingCredits: 5);
+        var (service, _) = CreateServices();
+
+        var attempt = await service.StartAttemptAsync(user1, examId);
+
+        // 1. In-progress attempt cannot be reviewed (AttemptNotFinished)
+        var exNotFinished = await Assert.ThrowsAsync<MockExamException>(
+            () => service.GetAttemptReviewAsync(user1, attempt.AttemptId));
+        Assert.Equal(MockExamException.AttemptNotFinished, exNotFinished.Code);
+
+        // 2. Another learner cannot review it (AttemptNotFound)
+        var exOtherUser = await Assert.ThrowsAsync<MockExamException>(
+            () => service.GetAttemptReviewAsync(user2, attempt.AttemptId));
+        Assert.Equal(MockExamException.AttemptNotFound, exOtherUser.Code);
+
+        // 3. Complete and submit attempt
+        await service.SaveAnswerAsync(user1, attempt.AttemptId, q1Id, opt1Id, false);
+        await service.SubmitAttemptAsync(user1, attempt.AttemptId, false);
+
+        // 4. Now user1 can review their own finished attempt
+        var review = await service.GetAttemptReviewAsync(user1, attempt.AttemptId);
+        Assert.NotNull(review);
+        Assert.Equal(attempt.AttemptId, review.AttemptId);
+        Assert.Equal(2, review.Questions.Count);
+
+        // 5. User2 still cannot review user1's finished attempt
+        var exStillForbidden = await Assert.ThrowsAsync<MockExamException>(
+            () => service.GetAttemptReviewAsync(user2, attempt.AttemptId));
+        Assert.Equal(MockExamException.AttemptNotFound, exStillForbidden.Code);
+    }
+
+    [Fact]
+    public async Task Question_Navigator_Reflects_Answered_Flagged_And_Unanswered_States()
+    {
+        var certCode = Unique("NAV");
+        var (certId, examId, q1Id, q2Id, opt1Id, opt2Id) = await SeedMockExamFixtureAsync(certCode);
+
+        var userId = await SeedLearnerAsync(certCode, startingCredits: 5);
+        var (service, _) = CreateServices();
+
+        var attempt = await service.StartAttemptAsync(userId, examId);
+
+        // Answer Q1 and flag it
+        await service.SaveAnswerAsync(userId, attempt.AttemptId, q1Id, opt1Id, isFlagged: true);
+        // Leave Q2 unanswered but not flagged
+        // Submit
+        await service.SubmitAttemptAsync(userId, attempt.AttemptId, false);
+
+        var review = await service.GetAttemptReviewAsync(userId, attempt.AttemptId);
+        Assert.Equal(2, review.Navigator.Count);
+
+        var nav1 = review.Navigator.Single(n => n.QuestionId == q1Id);
+        Assert.True(nav1.IsAnswered);
+        Assert.True(nav1.IsFlagged);
+        Assert.True(nav1.IsCorrect);
+
+        var nav2 = review.Navigator.Single(n => n.QuestionId == q2Id);
+        Assert.False(nav2.IsAnswered);
+        Assert.False(nav2.IsFlagged);
+        Assert.Null(nav2.IsCorrect);
+
+        Assert.Equal(1, review.AnsweredCount);
+        Assert.Equal(1, review.BlankCount);
+        Assert.Equal(1, review.FlaggedCount);
+        Assert.Equal(1, review.CorrectCount);
+        Assert.Equal(0, review.IncorrectCount);
+    }
 }

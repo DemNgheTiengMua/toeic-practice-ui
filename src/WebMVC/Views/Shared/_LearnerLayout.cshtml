@@ -4,8 +4,18 @@
     var shell = LearnerShell.Get(Context);
     var path = Context.Request.Path.Value ?? "/";
     var returnUrl = path + Context.Request.QueryString;
-    string NavClass(string href) => path.StartsWith(href, StringComparison.OrdinalIgnoreCase)
-        ? "nav-list__item is-active" : "nav-list__item";
+    string NavClass(string href)
+    {
+        if (href == "/exams")
+        {
+            return (path.Equals("/exams", StringComparison.OrdinalIgnoreCase) || 
+                    path.StartsWith("/exams/index", StringComparison.OrdinalIgnoreCase) || 
+                    (path.StartsWith("/exams/", StringComparison.OrdinalIgnoreCase) && !path.StartsWith("/exams/history", StringComparison.OrdinalIgnoreCase) && !path.StartsWith("/exams/review", StringComparison.OrdinalIgnoreCase)))
+                ? "nav-list__item is-active" : "nav-list__item";
+        }
+        return path.StartsWith(href, StringComparison.OrdinalIgnoreCase)
+            ? "nav-list__item is-active" : "nav-list__item";
+    }
 }
 <!DOCTYPE html>
 <html lang="en">
@@ -40,7 +50,8 @@
         <nav class="nav-list" aria-label="Main navigation">
           <a class="@NavClass("/dashboard")" href="/dashboard" aria-current="@(path.StartsWith("/dashboard", StringComparison.OrdinalIgnoreCase) ? "page" : null)">Home</a>
           <div class="nav-list__group">Mock exams</div>
-          <a class="@NavClass("/exams")" href="/exams" aria-current="@(path.StartsWith("/exams", StringComparison.OrdinalIgnoreCase) ? "page" : null)">Exams</a>
+          <a class="@NavClass("/exams")" href="/exams" aria-current="@(path.Equals("/exams", StringComparison.OrdinalIgnoreCase) ? "page" : null)">Exams</a>
+          <a class="@NavClass("/exams/history")" href="/exams/history" aria-current="@(path.StartsWith("/exams/history", StringComparison.OrdinalIgnoreCase) ? "page" : null)">Exam history</a>
           <div class="nav-list__group">Practice sessions</div>
           <a class="@NavClass("/practice")" href="/practice" aria-current="@(path.StartsWith("/practice", StringComparison.OrdinalIgnoreCase) ? "page" : null)">Practice by section</a>
           <a class="@NavClass("/weakness-analysis")" href="/weakness-analysis" aria-current="@(path.StartsWith("/weakness-analysis", StringComparison.OrdinalIgnoreCase) ? "page" : null)">Weakness analysis</a>

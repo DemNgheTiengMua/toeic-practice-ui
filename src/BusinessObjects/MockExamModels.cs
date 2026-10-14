@@ -141,3 +141,98 @@ public sealed record AttemptResultView(
     IReadOnlyList<AttemptSkillScoreItem> SkillScores,
     int? PreviousAttemptScore,
     int? ScoreDelta);
+
+public sealed record ScoreBandItem(
+    string Code,
+    string Name,
+    int MinTotal,
+    int MaxTotal,
+    int DisplayOrder);
+
+public sealed record ExamHistoryItem(
+    int AttemptId,
+    int ExamId,
+    string ExamName,
+    int CertId,
+    string CertCode,
+    DateTimeOffset StartedAt,
+    DateTimeOffset SubmittedAt,
+    int TotalScore,
+    string? BandCode,
+    string? BandName,
+    IReadOnlyList<AttemptSkillScoreItem> SkillScores,
+    string Status);
+
+public sealed record ExamHistoryView(
+    CertificateOption Certificate,
+    int TotalAttempts,
+    int? BestScore,
+    int? AverageScore,
+    string? BestScoreBandCode,
+    string? BestScoreBandName,
+    IReadOnlyList<ScoreBandItem> CefrBands,
+    IReadOnlyList<ExamHistoryItem> Attempts);
+
+public sealed record AttemptReviewOption(
+    int OptionId,
+    string Label,
+    string Text,
+    bool IsCorrect,
+    string? Rationale);
+
+public sealed record AttemptReviewQuestion(
+    int QuestionId,
+    int DisplayOrder,
+    int TotalQuestions,
+    int SectionId,
+    string SectionCode,
+    string SectionName,
+    string SkillCode,
+    string SkillName,
+    string Modality,
+    string Stem,
+    string? ImagePath,
+    string? ImageAlt,
+    string? AudioPath,
+    string? Transcript,
+    string? Passage,
+    string? Explanation,
+    IReadOnlyList<AttemptReviewOption> Options,
+    int? SelectedOptionId,
+    bool? IsCorrect,
+    bool IsFlagged);
+
+public sealed record ReviewNavigatorItem(
+    int QuestionId,
+    int DisplayOrder,
+    int SectionId,
+    string SectionCode,
+    string Modality,
+    bool IsAnswered,
+    bool IsFlagged,
+    bool? IsCorrect);
+
+public sealed record AttemptReviewView(
+    int AttemptId,
+    int ExamId,
+    string ExamName,
+    int CertId,
+    string CertCode,
+    string CertName,
+    string Status,
+    DateTimeOffset StartedAt,
+    DateTimeOffset SubmittedAt,
+    int DurationSeconds,
+    int TotalScore,
+    string? BandCode,
+    string? BandName,
+    IReadOnlyList<AttemptSkillScoreItem> SkillScores,
+    int TotalQuestions,
+    int AnsweredCount,
+    int CorrectCount,
+    int IncorrectCount,
+    int BlankCount,
+    int FlaggedCount,
+    IReadOnlyList<AttemptReviewQuestion> Questions,
+    IReadOnlyList<ReviewNavigatorItem> Navigator);
+

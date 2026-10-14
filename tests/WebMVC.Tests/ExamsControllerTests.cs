@@ -391,5 +391,103 @@ public sealed class ExamsControllerTests
 
         public Task<AttemptResultDto> GetAttemptResultAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<AttemptResultDto>(ExceptionToThrow) : Task.FromResult(ResultDto!);
+
+        public ExamHistoryDto? HistoryDto { get; set; }
+        public AttemptReviewDto? ReviewDto { get; set; }
+
+        public Task<ExamHistoryDto> GetExamHistoryAsync(string bearerToken, CancellationToken cancellationToken = default) =>
+            ExceptionToThrow != null ? Task.FromException<ExamHistoryDto>(ExceptionToThrow) : Task.FromResult(HistoryDto!);
+
+        public Task<AttemptReviewDto> GetAttemptReviewAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) =>
+            ExceptionToThrow != null ? Task.FromException<AttemptReviewDto>(ExceptionToThrow) : Task.FromResult(ReviewDto!);
+    }
+
+    [Fact]
+    public async Task History_returns_view_with_model()
+    {
+        var api = new TestApiClient
+        {
+            HistoryDto = new ExamHistoryDto(
+                new CertificateOptionDto("TOEIC", "TOEIC Test"),
+                1, 750, 750, "B1", "Intermediate",
+                [new ScoreBandItemDto("B1", "Intermediate", 550, 780, 1)],
+                [new ExamHistoryItemDto(100, 1, "ETS 2024 Test 1", 1, "TOEIC", DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow, 750, "B1", "Intermediate", [], "Completed")])
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.History(CancellationToken.None);
+
+        var viewResult = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<ExamHistoryViewModel>(viewResult.Model);
+        Assert.Equal(1, model.History.TotalAttempts);
+        Assert.Equal(750, model.History.BestScore);
+    }
+
+    [Fact]
+    public async Task History_when_api_exception_redirects_to_Index()
+    {
+        var api = new TestApiClient
+        {
+            ExceptionToThrow = new ApiException("FAIL", "Error", 500)
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.History(CancellationToken.None);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(ExamsController.Index), redirect.ActionName);
+    }
+
+    [Fact]
+    public async Task Review_returns_view_with_model()
+    {
+        var api = new TestApiClient
+        {
+            ReviewDto = new AttemptReviewDto(
+                100, 1, "ETS 2024 Test 1", 1, "TOEIC", "TOEIC Test", "graded",
+                DateTimeOffset.UtcNow.AddHours(-1), DateTimeOffset.UtcNow, 3600, 750, "B1", "Intermediate",
+                [], 2, 2, 2, 0, 0, 0, [], [])
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.Review(100, CancellationToken.None);
+
+        var viewResult = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<ExamReviewViewModel>(viewResult.Model);
+        Assert.Equal(100, model.Review.AttemptId);
+        Assert.Equal(750, model.Review.TotalScore);
+    }
+
+    [Fact]
+    public async Task Review_when_not_found_returns_AttemptNotFound()
+    {
+        var api = new TestApiClient
+        {
+            ExceptionToThrow = new ApiException(ApiError.Codes.AttemptNotFound, "Attempt not found", 404)
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.Review(999, CancellationToken.None);
+
+        var viewResult = Assert.IsType<ViewResult>(result);
+        Assert.Equal("AttemptNotFound", viewResult.ViewName);
+        Assert.Equal(404, controller.Response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Review_when_not_finished_redirects_to_Take()
+    {
+        var api = new TestApiClient
+        {
+            ExceptionToThrow = new ApiException(ApiError.Codes.AttemptNotFinished, "Attempt not finished", 400)
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.Review(100, CancellationToken.None);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(ExamsController.Take), redirect.ActionName);
+        Assert.Equal(100, redirect.RouteValues?["attemptId"]);
     }
 }
+

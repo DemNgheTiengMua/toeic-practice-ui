@@ -1,0 +1,187 @@
+@model AdminScoreConversionViewModel
+@{
+    Layout = "_AdminLayout";
+    var conv = Model.Conversion;
+    ViewData["Title"] = "Score conversion";
+    ViewData["Description"] = $"Admin score conversion and CEFR band editor for {conv.CertName}.";
+    int scaleIndex = 0;
+    int bandIndex = 0;
+}
+
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+  <a href="/admin" class="breadcrumbs__item">Admin</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <span class="breadcrumbs__item" aria-current="page">Score conversion</span>
+</nav>
+
+<form method="post" action="/admin/score-conversion/@conv.CertId" id="score-conversion-form">
+  @Html.AntiForgeryToken()
+  @if (conv.ExamId.HasValue)
+  {
+    <input type="hidden" name="ExamId" value="@conv.ExamId.Value" />
+  }
+
+  <div class="row row--between mb-3" style="align-items: baseline;">
+    <div>
+      <h1 class="m-0 mb-1">Score conversion — @conv.CertName</h1>
+      <p class="text-sm text-muted no-margin">The number of correct answers is converted to scaled scores and proficiency bands.</p>
+    </div>
+    <div class="row" style="gap: var(--space-3); align-items: center;">
+      <!-- Certificate Switcher -->
+      <div class="row" style="gap: var(--space-2); align-items: center;">
+        <label for="cert-select" class="text-sm font-semibold" style="margin: 0;">Certificate:</label>
+        <select id="cert-select" class="field__input" style="width: auto; padding: 4px 8px;" onchange="if (this.value) window.location.href='/admin/score-conversion?cert=' + encodeURIComponent(this.value);">
+          @foreach (var c in conv.Certificates)
+          {
+            <option value="@c.Code" selected="@(c.Code == conv.CertCode ? "selected" : null)">@c.Code — @c.Name</option>
+          }
+        </select>
+      </div>
+
+      <button type="submit" class="btn btn--primary">Save table</button>
+    </div>
+  </div>
+
+  @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+  {
+    <div class="alert alert--danger mb-4" role="alert">@Model.ErrorMessage</div>
+  }
+  @if (!string.IsNullOrEmpty(Model.SuccessMessage))
+  {
+    <div class="alert alert--success mb-4" role="status">@Model.SuccessMessage</div>
+  }
+
+  <div class="alert alert--warning mb-4">
+    <strong>Notice:</strong> Score conversions are <strong>monotonic</strong>. An incorrect edit shifts the scores of subsequent mock exam attempts. Previously scored attempts preserve their snapshotted band.
+  </div>
+
+  <!-- Score Scales by Skill -->
+  <div class="grid-2 mb-4">
+    @foreach (var skillGroup in conv.SkillScales)
+    {
+      <div class="card">
+        <div class="card__header">
+          <strong>@skillGroup.SkillName (@skillGroup.SkillCode)</strong>
+        </div>
+        <div class="card__body" style="max-height: 520px; overflow-y: auto;">
+          <table class="table table--striped">
+            <thead>
+              <tr>
+                <th scope="col" style="width: 50%;">Correct answers (Raw)</th>
+                <th scope="col" style="width: 50%;">Scaled Score</th>
+              </tr>
+            </thead>
+            <tbody>
+              @foreach (var row in skillGroup.Scales)
+              {
+                var curIdx = scaleIndex++;
+                <tr>
+                  <td>
+                    <strong>@row.RawScore</strong>
+                    <input type="hidden" name="Scales[@curIdx].SkillId" value="@row.SkillId" />
+                    <input type="hidden" name="Scales[@curIdx].RawScore" value="@row.RawScore" />
+                  </td>
+                  <td>
+                    <input class="field__input"
+                           type="number"
+                           name="Scales[@curIdx].ScaledScore"
+                           value="@row.ScaledScore"
+                           min="0"
+                           required
+                           style="width: 120px;"
+                           aria-label="@skillGroup.SkillName score for @row.RawScore correct answers" />
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- Score Bands / CEFR Reference Table -->
+  <div class="card mb-4">
+    <div class="card__header">
+      <div class="row row--between">
+        <strong>Proficiency Bands / CEFR Reference (@conv.CertCode)</strong>
+        <span class="text-xs text-muted">Ranges must be non-overlapping and monotonic</span>
+      </div>
+    </div>
+    <div class="card__body">
+      <p class="text-sm text-muted m-0 mb-3">
+        Edit band score thresholds for this certificate. Ranges must not overlap.
+      </p>
+      <table class="table table--striped">
+        <thead>
+          <tr>
+            <th scope="col">Code</th>
+            <th scope="col">Band Name</th>
+            <th scope="col">Min Total</th>
+            <th scope="col">Max Total</th>
+            <th scope="col">Order</th>
+          </tr>
+        </thead>
+        <tbody>
+          @foreach (var band in conv.Bands)
+          {
+            var curBandIdx = bandIndex++;
+            <tr>
+              <td>
+                <input type="hidden" name="Bands[@curBandIdx].BandId" value="@band.BandId" />
+                <input class="field__input"
+                       type="text"
+                       name="Bands[@curBandIdx].Code"
+                       value="@band.Code"
+                       required
+                       style="width: 120px; font-weight: 700;"
+                       aria-label="Band Code" />
+              </td>
+              <td>
+                <input class="field__input"
+                       type="text"
+                       name="Bands[@curBandIdx].Name"
+                       value="@band.Name"
+                       required
+                       style="width: 220px;"
+                       aria-label="Band Name" />
+              </td>
+              <td>
+                <input class="field__input"
+                       type="number"
+                       name="Bands[@curBandIdx].MinTotal"
+                       value="@band.MinTotal"
+                       min="0"
+                       required
+                       style="width: 100px;"
+                       aria-label="Min Total Score" />
+              </td>
+              <td>
+                <input class="field__input"
+                       type="number"
+                       name="Bands[@curBandIdx].MaxTotal"
+                       value="@band.MaxTotal"
+                       min="0"
+                       required
+                       style="width: 100px;"
+                       aria-label="Max Total Score" />
+              </td>
+              <td>
+                <input class="field__input"
+                       type="number"
+                       name="Bands[@curBandIdx].DisplayOrder"
+                       value="@band.DisplayOrder"
+                       style="width: 70px;"
+                       aria-label="Display Order" />
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="row row--end mb-4">
+    <button type="submit" class="btn btn--primary">Save table</button>
+  </div>
+</form>

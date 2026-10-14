@@ -146,6 +146,7 @@ builder.Services.AddScoped<IPackageService, PackageService>();
 builder.Services.AddScoped<IMockExamService, MockExamService>();
 builder.Services.AddScoped<IAdminOrderService, AdminOrderService>();
 builder.Services.AddScoped<IAdminUserService, AdminUserService>();
+builder.Services.AddScoped<IScoreConversionService, ScoreConversionService>();
 
 var payOsOptions = builder.Configuration.GetSection(PayOsOptions.SectionName).Get<PayOsOptions>() ?? new PayOsOptions();
 builder.Services.AddSingleton(payOsOptions);
@@ -579,6 +580,79 @@ admin.MapPost("/users/{userId:int}/adjust-credits", async (
     }
 });
 
+admin.MapGet("/score-conversion", async (
+    string? certCode,
+    int? examId,
+    IScoreConversionService scoreConversionService,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var view = await scoreConversionService.GetScoreConversionAsync(certCode, examId, cancellationToken);
+        return Results.Ok(new AdminScoreConversionDto(
+            view.CertId,
+            view.CertCode,
+            view.CertName,
+            view.Certificates.Select(ToCertificateDto).ToList(),
+            view.ExamId,
+            view.ExamName,
+            view.SkillScales.Select(s => new SkillScoreScaleGroupDto(
+                s.SkillId,
+                s.SkillCode,
+                s.SkillName,
+                s.MaxQuestions,
+                s.Scales.Select(sc => new ScoreScaleRowDto(
+                    sc.ScaleId, sc.SkillId, sc.SkillCode, sc.SkillName, sc.RawScore, sc.ScaledScore)).ToList())).ToList(),
+            view.Bands.Select(b => new ScoreBandConfigDto(
+                b.BandId, b.Code, b.Name, b.MinTotal, b.MaxTotal, b.DisplayOrder)).ToList()));
+    }
+    catch (ScoreConversionException ex) when (ex.Code == ScoreConversionException.CertificateNotFound)
+    {
+        return Problem(StatusCodes.Status404NotFound, "Certificate not found", ApiError.Codes.CertificateUnavailable, ex.Message);
+    }
+});
+
+admin.MapPut("/score-conversion/{certId:int}", async Task<IResult> (
+    int certId,
+    UpdateScoreConversionRequest request,
+    IScoreConversionService scoreConversionService,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var command = new UpdateScoreConversionCommand(
+            request.ExamId,
+            request.Scales.Select(s => new UpdateScoreScaleEntry(s.SkillId, s.RawScore, s.ScaledScore)).ToList(),
+            request.Bands.Select(b => new UpdateScoreBandEntry(b.BandId, b.Code, b.Name, b.MinTotal, b.MaxTotal, b.DisplayOrder)).ToList());
+
+        var view = await scoreConversionService.UpdateScoreConversionAsync(certId, command, cancellationToken);
+        return Results.Ok(new AdminScoreConversionDto(
+            view.CertId,
+            view.CertCode,
+            view.CertName,
+            view.Certificates.Select(ToCertificateDto).ToList(),
+            view.ExamId,
+            view.ExamName,
+            view.SkillScales.Select(s => new SkillScoreScaleGroupDto(
+                s.SkillId,
+                s.SkillCode,
+                s.SkillName,
+                s.MaxQuestions,
+                s.Scales.Select(sc => new ScoreScaleRowDto(
+                    sc.ScaleId, sc.SkillId, sc.SkillCode, sc.SkillName, sc.RawScore, sc.ScaledScore)).ToList())).ToList(),
+            view.Bands.Select(b => new ScoreBandConfigDto(
+                b.BandId, b.Code, b.Name, b.MinTotal, b.MaxTotal, b.DisplayOrder)).ToList()));
+    }
+    catch (ScoreConversionException ex) when (ex.Code == ScoreConversionException.CertificateNotFound)
+    {
+        return Problem(StatusCodes.Status404NotFound, "Certificate not found", ApiError.Codes.CertificateUnavailable, ex.Message);
+    }
+    catch (ScoreConversionException ex)
+    {
+        return Problem(StatusCodes.Status400BadRequest, "Score conversion invalid", ApiError.Codes.ScoreConversionInvalid, ex.Message);
+    }
+});
+
 
 // ---- Learner (issue #7) ----
 // The learner is always the token's own user: no endpoint takes a user id or a certificate to
@@ -905,6 +979,101 @@ learner.MapGet("/attempts/{attemptId:int}/result", async Task<IResult> (
     catch (MockExamException ex) when (ex.Code == MockExamException.AttemptNotActive)
     {
         return Problem(StatusCodes.Status400BadRequest, "Attempt not active", ApiError.Codes.AttemptNotActive, ex.Message);
+    }
+});
+
+learner.MapGet("/exams/history", async (
+    HttpContext http,
+    IMockExamService mockExamService,
+    CancellationToken cancellationToken) =>
+{
+    var h = await mockExamService.GetExamHistoryAsync(CurrentUserId(http), cancellationToken);
+    return Results.Ok(new ExamHistoryDto(
+        ToCertificateDto(h.Certificate),
+        h.TotalAttempts,
+        h.BestScore,
+        h.AverageScore,
+        h.BestScoreBandCode,
+        h.BestScoreBandName,
+        h.CefrBands.Select(b => new ScoreBandItemDto(b.Code, b.Name, b.MinTotal, b.MaxTotal, b.DisplayOrder)).ToList(),
+        h.Attempts.Select(a => new ExamHistoryItemDto(
+            a.AttemptId,
+            a.ExamId,
+            a.ExamName,
+            a.CertId,
+            a.CertCode,
+            a.StartedAt,
+            a.SubmittedAt,
+            a.TotalScore,
+            a.BandCode,
+            a.BandName,
+            a.SkillScores.Select(s => new AttemptSkillScoreDto(
+                s.SkillId, s.SkillCode, s.SkillName, s.Modality, s.RawScore, s.ScaledScore, s.TotalQuestions)).ToList(),
+            a.Status)).ToList()));
+});
+
+learner.MapGet("/attempts/{attemptId:int}/review", async Task<IResult> (
+    int attemptId,
+    HttpContext http,
+    IMockExamService mockExamService,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var r = await mockExamService.GetAttemptReviewAsync(CurrentUserId(http), attemptId, cancellationToken);
+        return Results.Ok(new AttemptReviewDto(
+            r.AttemptId,
+            r.ExamId,
+            r.ExamName,
+            r.CertId,
+            r.CertCode,
+            r.CertName,
+            r.Status,
+            r.StartedAt,
+            r.SubmittedAt,
+            r.DurationSeconds,
+            r.TotalScore,
+            r.BandCode,
+            r.BandName,
+            r.SkillScores.Select(s => new AttemptSkillScoreDto(
+                s.SkillId, s.SkillCode, s.SkillName, s.Modality, s.RawScore, s.ScaledScore, s.TotalQuestions)).ToList(),
+            r.TotalQuestions,
+            r.AnsweredCount,
+            r.CorrectCount,
+            r.IncorrectCount,
+            r.BlankCount,
+            r.FlaggedCount,
+            r.Questions.Select(q => new AttemptReviewQuestionDto(
+                q.QuestionId,
+                q.DisplayOrder,
+                q.TotalQuestions,
+                q.SectionId,
+                q.SectionCode,
+                q.SectionName,
+                q.SkillCode,
+                q.SkillName,
+                q.Modality,
+                q.Stem,
+                q.ImagePath,
+                q.ImageAlt,
+                q.AudioPath,
+                q.Transcript,
+                q.Passage,
+                q.Explanation,
+                q.Options.Select(o => new AttemptReviewOptionDto(o.OptionId, o.Label, o.Text, o.IsCorrect, o.Rationale)).ToList(),
+                q.SelectedOptionId,
+                q.IsCorrect,
+                q.IsFlagged)).ToList(),
+            r.Navigator.Select(n => new ReviewNavigatorItemDto(
+                n.QuestionId, n.DisplayOrder, n.SectionId, n.SectionCode, n.Modality, n.IsAnswered, n.IsFlagged, n.IsCorrect)).ToList()));
+    }
+    catch (MockExamException ex) when (ex.Code == MockExamException.AttemptNotFound)
+    {
+        return Problem(StatusCodes.Status404NotFound, "Attempt not found", ApiError.Codes.AttemptNotFound, ex.Message);
+    }
+    catch (MockExamException ex) when (ex.Code == MockExamException.AttemptNotFinished)
+    {
+        return Problem(StatusCodes.Status400BadRequest, "Attempt not finished", ApiError.Codes.AttemptNotFinished, ex.Message);
     }
 });
 
