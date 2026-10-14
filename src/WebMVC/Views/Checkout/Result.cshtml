@@ -1,0 +1,145 @@
+@using Contracts
+@model WebMVC.Models.PaymentResultViewModel
+@{
+    Layout = "_LearnerLayout";
+    ViewData["Title"] = "Payment result";
+    ViewData["Description"] = "Outcome of your credit purchase.";
+    var result = Model.Result;
+    var isPaid = result.Status == "paid";
+    var isFailed = result.Status == "failed";
+    var isExpired = result.Status == "expired";
+    var isReconciling = result.Status == "reconciling" || result.Status == "pending";
+}
+
+@if (isReconciling)
+{
+    @section Scripts {
+        <meta http-equiv="refresh" content="5">
+    }
+}
+
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+  <a href="/dashboard" class="breadcrumbs__item">Home</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <a href="/wallet" class="breadcrumbs__item">Credit wallet</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <span class="breadcrumbs__item" aria-current="page">Payment result</span>
+</nav>
+
+<div class="stepper" aria-label="Checkout progress">
+  <div class="stepper__item is-done">1. Choose a package</div>
+  <div class="stepper__item is-done">2. Confirm</div>
+  <div class="stepper__item is-done">3. Payment</div>
+  <div class="stepper__item is-current">4. Done</div>
+</div>
+
+@if (isPaid)
+{
+    <div class="card">
+      <div class="card__body">
+        <div class="state-block">
+          <div class="state-block__icon" aria-hidden="true">DONE</div>
+          <h1 class="state-block__title">Payment successful</h1>
+          <p class="state-block__desc">
+            Added <strong>@result.Credits @(result.Credits == 1 ? "credit" : "credits")</strong> to your account. You currently have <strong>@result.CurrentBalance @(result.CurrentBalance == 1 ? "credit" : "credits")</strong>.
+          </p>
+        </div>
+        <table class="table">
+          <tbody>
+            <tr><th scope="row">Order code</th><td><strong>@result.OrderCode</strong></td></tr>
+            <tr><th scope="row">Package</th><td>@result.PackageName — @result.Credits @(result.Credits == 1 ? "credit" : "credits")</td></tr>
+            <tr><th scope="row">Amount</th><td><strong>@CurrencyFormatter.FormatVnd(result.Amount)</strong></td></tr>
+            <tr><th scope="row">Method</th><td>@result.Gateway.ToUpperInvariant()</td></tr>
+            <tr><th scope="row">Time</th><td>@(result.PaidAt?.ToString("dd MMM yyyy HH:mm") ?? result.CreatedAt.ToString("dd MMM yyyy HH:mm"))</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card__footer row">
+        <a class="btn btn--primary" href="/practice">Start practice</a>
+        <a class="btn btn--ghost" href="/wallet">View credit wallet</a>
+      </div>
+    </div>
+}
+else if (isFailed)
+{
+    <div class="card">
+      <div class="card__body">
+        <div class="state-block">
+          <div class="state-block__icon" aria-hidden="true">ERROR</div>
+          <h1 class="state-block__title">Payment failed</h1>
+          <p class="state-block__desc">
+            The payment gateway reported the transaction as failed or cancelled. You <strong>have not been charged</strong> and your credits have not been added yet.
+          </p>
+        </div>
+        @if (!string.IsNullOrEmpty(result.GatewayErrorCode))
+        {
+            <div class="alert alert--warning">
+              Gateway error code: @result.GatewayErrorCode — transaction was not completed.
+            </div>
+        }
+      </div>
+      <div class="card__footer row">
+        <a class="btn btn--primary" href="/checkout">Try paying again</a>
+        <a class="btn btn--ghost" href="/pricing">Choose another package</a>
+      </div>
+    </div>
+}
+else if (isExpired)
+{
+    <div class="card">
+      <div class="card__body">
+        <div class="state-block">
+          <div class="state-block__icon" aria-hidden="true">TIME'S UP</div>
+          <h1 class="state-block__title">This order has expired</h1>
+          <p class="state-block__desc">
+            Orders expire after 15 minutes if not completed. You <strong>have not been charged</strong> and your credits have not been added yet.
+          </p>
+        </div>
+        <div class="alert alert--info">
+          Order code: @result.OrderCode · created at @result.CreatedAt.ToString("HH:mm"). This order is closed — create a new one to proceed.
+        </div>
+      </div>
+      <div class="card__footer row">
+        <a class="btn btn--primary" href="/pricing">Create a new order</a>
+        <a class="btn btn--ghost" href="/wallet">View credit wallet</a>
+      </div>
+    </div>
+}
+else if (isReconciling)
+{
+    <div class="card">
+      <div class="card__body">
+        <div class="state-block">
+          <div class="state-block__icon" aria-hidden="true">RUNNING</div>
+          <h1 class="state-block__title">Reconciling transaction</h1>
+          <p class="state-block__desc">
+            The payment gateway has not returned a final result yet. This page will check again in <strong>5 seconds</strong>.
+          </p>
+        </div>
+        <div class="alert alert--info">
+          If you were charged, your credits will be added automatically within a few minutes. Do not pay again, or you may be charged twice.
+        </div>
+      </div>
+      <div class="card__footer row">
+        <a class="btn" href="/payment/result?orderCode=@result.OrderCode">Check again now</a>
+        <a class="btn btn--ghost" href="/wallet">View credit wallet</a>
+      </div>
+    </div>
+}
+else
+{
+    <div class="card">
+      <div class="card__body">
+        <div class="state-block">
+          <div class="state-block__icon" aria-hidden="true">ERROR</div>
+          <h1 class="state-block__title">Could not read order status</h1>
+          <p class="state-block__desc">
+            Order @result.OrderCode exists. Please open your credit wallet to view transaction status.
+          </p>
+        </div>
+      </div>
+      <div class="card__footer row">
+        <a class="btn btn--primary" href="/wallet">Open credit wallet</a>
+      </div>
+    </div>
+}

@@ -1,0 +1,151 @@
+@using Contracts
+@model WebMVC.Models.WalletViewModel
+@{
+    Layout = "_LearnerLayout";
+    ViewData["Title"] = "Credit wallet";
+    ViewData["Description"] = "Overview of your credit balance, purchases, and ledger history.";
+    var wallet = Model.Wallet;
+    var hasTransactions = wallet.Orders.Count > 0 || wallet.Ledger.Count > 0;
+}
+
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+  <a href="/dashboard" class="breadcrumbs__item">Home</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <span class="breadcrumbs__item" aria-current="page">Credit wallet</span>
+</nav>
+
+<div class="stack">
+  <div class="row row--between">
+    <h1 class="m-0">Credit wallet</h1>
+    <a class="btn btn--primary" href="/pricing">Buy more credits</a>
+  </div>
+
+  <div class="grid-3">
+    <div class="stat">
+      <div class="stat__label">Credits remaining</div>
+      <div class="stat__value">@wallet.Balance</div>
+      <div class="stat__hint">@wallet.CreditsPurchased purchased − @wallet.CreditsUsed used, from the ledger</div>
+    </div>
+    <div class="stat">
+      <div class="stat__label">Used</div>
+      <div class="stat__value">@wallet.CreditsUsed</div>
+      <div class="stat__hint">full tests, AI gradings, mentor sessions</div>
+    </div>
+    <div class="stat">
+      <div class="stat__label">Total purchased</div>
+      <div class="stat__value">@CurrencyFormatter.FormatVnd(wallet.AmountPurchased)</div>
+      <div class="stat__hint">@wallet.PaidOrderCount @(wallet.PaidOrderCount == 1 ? "paid order" : "paid orders") · @wallet.CreditsPurchased credits</div>
+    </div>
+  </div>
+
+  @if (!hasTransactions)
+  {
+      <div class="card">
+        <div class="card__body">
+          <div class="state-block">
+            <div class="state-block__icon" aria-hidden="true">₫</div>
+            <h2 class="state-block__title">No transactions yet</h2>
+            <p class="state-block__desc">
+              Buy credits to take full tests. Practice by section stays free.
+            </p>
+            <a class="btn btn--primary" href="/pricing">View pricing</a>
+          </div>
+        </div>
+      </div>
+  }
+  else
+  {
+      @if (wallet.Orders.Count > 0)
+      {
+          <div class="card">
+            <div class="card__header"><strong>Order history</strong></div>
+            <div class="card__body">
+              <table class="table table--striped">
+                <thead>
+                  <tr>
+                    <th scope="col">Order code</th>
+                    <th scope="col">Package</th>
+                    <th scope="col">Amount</th>
+                    <th scope="col">Method</th>
+                    <th scope="col">Time</th>
+                    <th scope="col">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @foreach (var order in wallet.Orders)
+                  {
+                      var badgeClass = order.Status switch
+                      {
+                          "paid" => "badge badge--success",
+                          "reconciling" => "badge badge--warning",
+                          "failed" => "badge badge--danger",
+                          _ => "badge"
+                      };
+                      var displayStatus = order.Status switch
+                      {
+                          "paid" => "Paid",
+                          "reconciling" => "Reconciling",
+                          "failed" => "Failed",
+                          "expired" => "Expired",
+                          _ => order.Status
+                      };
+
+                      <tr>
+                        <td>
+                          @if (order.Status == "pending" || order.Status == "reconciling")
+                          {
+                              <a href="/payment/result?orderCode=@order.OrderCode"><strong>@order.OrderCode</strong></a>
+                          }
+                          else
+                          {
+                              <strong>@order.OrderCode</strong>
+                          }
+                        </td>
+                        <td>@order.PackageName (@order.Credits @(order.Credits == 1 ? "credit" : "credits"))</td>
+                        <td>@CurrencyFormatter.FormatVnd(order.Amount)</td>
+                        <td>@order.Gateway.ToUpperInvariant()</td>
+                        <td>@order.CreatedAt.ToString("dd MMM yyyy HH:mm")</td>
+                        <td><span class="@badgeClass">@displayStatus</span></td>
+                      </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+      }
+
+      @if (wallet.Ledger.Count > 0)
+      {
+          <div class="card">
+            <div class="card__header"><strong>Credit ledger</strong></div>
+            <div class="card__body">
+              <table class="table table--striped">
+                <thead>
+                  <tr>
+                    <th scope="col">Date</th>
+                    <th scope="col">Reason</th>
+                    <th scope="col">Delta</th>
+                    <th scope="col">Reference</th>
+                    <th scope="col">Note</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @foreach (var item in wallet.Ledger)
+                  {
+                      var deltaClass = item.Delta > 0 ? "text-success" : "text-danger";
+                      var deltaSign = item.Delta > 0 ? $"+{item.Delta}" : item.Delta.ToString();
+                      <tr>
+                        <td>@item.CreatedAt.ToString("dd MMM yyyy HH:mm")</td>
+                        <td><code>@item.Reason</code></td>
+                        <td><strong class="@deltaClass">@deltaSign</strong></td>
+                        <td>@(item.OrderCode ?? "—")</td>
+                        <td>@(item.Note ?? "—")</td>
+                      </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+      }
+  }
+</div>

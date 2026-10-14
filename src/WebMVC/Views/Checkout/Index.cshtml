@@ -1,0 +1,139 @@
+@using Contracts
+@model WebMVC.Models.CheckoutViewModel
+@{
+    Layout = "_LearnerLayout";
+    ViewData["Title"] = "Confirm order";
+    ViewData["Description"] = "Confirm your credit package order before payment.";
+    var preview = Model.Preview;
+}
+
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+  <a href="/dashboard" class="breadcrumbs__item">Home</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <a href="/wallet" class="breadcrumbs__item">Credit wallet</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <a href="/pricing" class="breadcrumbs__item">Buy credits</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <span class="breadcrumbs__item" aria-current="page">Confirm order</span>
+</nav>
+
+@if (Model.IsBlockedUnverified)
+{
+    <div class="card">
+      <div class="card__body">
+        <div class="state-block">
+          <div class="state-block__icon" aria-hidden="true">UNVERIFIED</div>
+          <h1 class="state-block__title">Email verification required</h1>
+          <p class="state-block__desc">
+            You must verify your email address before you can purchase credits. Please check your inbox or request a new verification email from your profile.
+          </p>
+        </div>
+        <div class="alert alert--warning">
+          Unverified learners cannot proceed to checkout. Diagnostic practice and section drilling remain completely free.
+        </div>
+      </div>
+      <div class="card__footer row">
+        <a class="btn btn--primary" href="/profile">Go to profile</a>
+        <a class="btn btn--ghost" href="/practice">Practice by section</a>
+      </div>
+    </div>
+}
+else if (preview?.OpenOrder is not null)
+{
+    var open = preview.OpenOrder;
+    <div class="card">
+      <div class="card__body">
+        <div class="state-block">
+          <div class="state-block__icon" aria-hidden="true">PENDING</div>
+          <h1 class="state-block__title">You have an unfinished order</h1>
+          <p class="state-block__desc">
+            Order <strong>@open.OrderCode</strong> · @open.PackageName package · @CurrencyFormatter.FormatVnd(open.Amount) · created at @open.CreatedAt.ToString("HH:mm"). This order is still valid, so a new one cannot be created yet.
+          </p>
+        </div>
+        <div class="alert alert--warning">
+          If you already paid for the previous order, do not pay again — your credits will be added once reconciliation is complete.
+        </div>
+      </div>
+      <div class="card__footer row">
+        <a class="btn btn--primary" href="/payment/result?orderCode=@open.OrderCode">Check the previous order</a>
+        <a class="btn btn--ghost" href="/wallet">View credit wallet</a>
+      </div>
+    </div>
+}
+else if (preview is not null)
+{
+    <div class="stack">
+      <div class="row row--between">
+        <h1 class="m-0">Confirm order</h1>
+      </div>
+
+      <div class="stepper" aria-label="Checkout progress">
+        <div class="stepper__item is-done">1. Choose a package</div>
+        <div class="stepper__item is-current">2. Confirm</div>
+        <div class="stepper__item">3. Payment</div>
+        <div class="stepper__item">4. Done</div>
+      </div>
+
+      @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+      {
+          <div class="alert alert--danger" role="alert">
+            @Model.ErrorMessage
+          </div>
+      }
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card__header"><strong>Payment method</strong></div>
+          <div class="card__body">
+            <div class="option-list" role="radiogroup" aria-label="Payment method">
+              <label class="option">
+                <input class="option__input" type="radio" name="method" value="vietqr" checked>
+                <span class="option__marker">1</span>
+                <span class="option__text">payOS — VietQR Bank Transfer / Online Checkout</span>
+              </label>
+            </div>
+            <p class="text-muted text-sm mt-2 mb-0">
+              You will be redirected to complete payment securely.
+            </p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card__header"><strong>Order summary</strong></div>
+          <div class="card__body stack">
+            <div class="row row--between">
+              <span>@preview.PackageName</span>
+              <strong>@CurrencyFormatter.FormatVnd(preview.Price)</strong>
+            </div>
+            <div class="row row--between">
+              <span class="text-muted">Credits added</span>
+              <span>@preview.Credits @(preview.Credits == 1 ? "credit" : "credits")</span>
+            </div>
+            <div class="row row--between">
+              <span class="text-muted">Current balance</span>
+              <span>@preview.CurrentBalance @(preview.CurrentBalance == 1 ? "credit" : "credits")</span>
+            </div>
+            <div class="row row--between">
+              <span class="text-muted">Balance after payment</span>
+              <span><strong>@preview.BalanceAfter credits</strong></span>
+            </div>
+            <hr>
+            <div class="row row--between">
+              <strong>Total</strong>
+              <strong class="text-lg">@CurrencyFormatter.FormatVnd(preview.Price)</strong>
+            </div>
+          </div>
+          <div class="card__footer stack--tight">
+            <form method="post" action="/checkout">
+              @Html.AntiForgeryToken()
+              <input type="hidden" name="packageId" value="@preview.PackageId">
+              <button type="submit" class="btn btn--primary btn--lg" style="width: 100%;">
+                Pay @CurrencyFormatter.FormatVnd(preview.Price)
+              </button>
+            </form>
+            <a class="btn btn--ghost" href="/pricing" style="width: 100%; text-align: center;">Choose another package</a>
+          </div>
+        </div>
+      </div>
+    </div>
+}

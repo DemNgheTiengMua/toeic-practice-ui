@@ -9,11 +9,17 @@ public sealed class PackageServiceTests(DatabaseFixture database)
     private async Task CleanPackagesAsync()
     {
         await database.SqlAsync("""
+            ALTER TABLE CreditTransactions DISABLE TRIGGER ALL;
+            ALTER TABLE Orders DISABLE TRIGGER ALL;
+            ALTER TABLE CreditTransactions NOCHECK CONSTRAINT ALL;
             DELETE FROM PaymentEvents;
             DELETE FROM Complaints;
-            UPDATE CreditTransactions SET OrderId = NULL WHERE OrderId IS NOT NULL;
+            DELETE FROM CreditTransactions;
             DELETE FROM Orders;
             DELETE FROM Packages;
+            ALTER TABLE CreditTransactions CHECK CONSTRAINT ALL;
+            ALTER TABLE CreditTransactions ENABLE TRIGGER ALL;
+            ALTER TABLE Orders ENABLE TRIGGER ALL;
             """);
     }
 

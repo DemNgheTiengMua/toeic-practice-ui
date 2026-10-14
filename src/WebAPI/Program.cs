@@ -144,6 +144,22 @@ builder.Services.AddScoped<ISavedQuestionService, SavedQuestionService>();
 builder.Services.AddScoped<IWeaknessAnalysisService, WeaknessAnalysisService>();
 builder.Services.AddScoped<IPackageService, PackageService>();
 
+var gatewayChoice = builder.Configuration["Payment:Gateway"]?.ToLowerInvariant() ?? "mock";
+if (gatewayChoice == "payos")
+{
+    var payOsOptions = builder.Configuration.GetSection(PayOsOptions.SectionName).Get<PayOsOptions>() ?? new PayOsOptions();
+    builder.Services.AddSingleton(payOsOptions);
+    builder.Services.AddSingleton<IPaymentGateway, PayOsPaymentGateway>();
+}
+else
+{
+    var mock = new MockPaymentGateway();
+    builder.Services.AddSingleton(mock);
+    builder.Services.AddSingleton<IMockPaymentGateway>(mock);
+    builder.Services.AddSingleton<IPaymentGateway>(mock);
+}
+builder.Services.AddScoped<IPaymentService, PaymentService>();
+
 var app = builder.Build();
 
 // Every unhandled failure leaves the API as RFC 9457 ProblemDetails with a stable code.
@@ -933,6 +949,139 @@ app.MapGet("/api/packages", async (IPackageService packages, CancellationToken c
     var list = await packages.GetActivePackagesAsync(cancellationToken);
     return Results.Ok(list);
 });
+
+app.MapGet("/api/checkout/preview", async (
+    int packageId,
+    HttpContext http,
+    IPaymentService payments,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var preview = await payments.GetCheckoutPreviewAsync(CurrentUserId(http), packageId, cancellationToken);
+        return Results.Ok(preview);
+    }
+    catch (EmailNotVerifiedException ex)
+    {
+        return Problem(StatusCodes.Status403Forbidden, "Email verification required", ApiError.Codes.EmailNotVerified, ex.Message);
+    }
+    catch (PackageNotFoundException ex)
+    {
+        return Problem(StatusCodes.Status404NotFound, "Package not found", ApiError.Codes.PackageNotFound, ex.Message);
+    }
+}).RequireAuthorization(Roles.Learner);
+
+app.MapPost("/api/checkout/orders", async (
+    CreateOrderRequest request,
+    HttpContext http,
+    IPaymentService payments,
+    AuthLinkOptions authLinks,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var baseUrl = !string.IsNullOrWhiteSpace(authLinks.PublicBaseUrl)
+            ? authLinks.PublicBaseUrl
+            : $"{http.Request.Scheme}://{http.Request.Host}";
+        var response = await payments.CreateOrderAsync(CurrentUserId(http), request.PackageId, baseUrl, cancellationToken);
+        return Results.Ok(response);
+    }
+    catch (EmailNotVerifiedException ex)
+    {
+        return Problem(StatusCodes.Status403Forbidden, "Email verification required", ApiError.Codes.EmailNotVerified, ex.Message);
+    }
+    catch (OrderAlreadyOpenException ex)
+    {
+        return Problem(StatusCodes.Status409Conflict, "Order already open", ApiError.Codes.OrderAlreadyOpen, ex.Message);
+    }
+    catch (PackageNotFoundException ex)
+    {
+        return Problem(StatusCodes.Status404NotFound, "Package not found", ApiError.Codes.PackageNotFound, ex.Message);
+    }
+}).RequireAuthorization(Roles.Learner);
+
+app.MapPost("/api/checkout/return", async (
+    HandleReturnRequest request,
+    HttpContext http,
+    IPaymentService payments,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var result = await payments.HandleReturnRedirectAsync(CurrentUserId(http), request.OrderCode, cancellationToken);
+        return Results.Ok(result);
+    }
+    catch (OrderNotFoundException ex)
+    {
+        return Problem(StatusCodes.Status404NotFound, "Order not found", ApiError.Codes.OrderNotFound, ex.Message);
+    }
+}).RequireAuthorization(Roles.Learner);
+
+app.MapGet("/api/checkout/orders/{orderCode}/result", async (
+    string orderCode,
+    HttpContext http,
+    IPaymentService payments,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var result = await payments.GetPaymentResultAsync(CurrentUserId(http), orderCode, cancellationToken);
+        return Results.Ok(result);
+    }
+    catch (OrderNotFoundException ex)
+    {
+        return Problem(StatusCodes.Status404NotFound, "Order not found", ApiError.Codes.OrderNotFound, ex.Message);
+    }
+}).RequireAuthorization(Roles.Learner);
+
+app.MapPost("/api/mock-gateway/action", async (
+    MockGatewayActionRequest request,
+    HttpContext http,
+    IPaymentService payments,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var result = await payments.ApplyMockGatewayActionAsync(
+            CurrentUserId(http),
+            request.OrderCode,
+            request.Action,
+            request.ErrorCode,
+            cancellationToken);
+        return Results.Ok(result);
+    }
+    catch (OrderNotFoundException ex)
+    {
+        return Problem(StatusCodes.Status404NotFound, "Order not found", ApiError.Codes.OrderNotFound, ex.Message);
+    }
+}).RequireAuthorization(Roles.Learner);
+
+app.MapPost("/api/payments/webhook", async (
+    HttpContext http,
+    IPaymentService payments,
+    CancellationToken cancellationToken) =>
+{
+    using var reader = new StreamReader(http.Request.Body);
+    var body = await reader.ReadToEndAsync(cancellationToken);
+    var signature = http.Request.Headers["x-signature"].FirstOrDefault()
+        ?? http.Request.Headers["signature"].FirstOrDefault();
+
+    var result = await payments.HandleWebhookAsync(body, signature, cancellationToken);
+    if (!result.IsValid)
+    {
+        return Results.BadRequest(new { error = "Invalid signature" });
+    }
+    return Results.Ok(new { message = "Webhook processed" });
+}).AllowAnonymous();
+
+app.MapGet("/api/learner/wallet", async (
+    HttpContext http,
+    IPaymentService payments,
+    CancellationToken cancellationToken) =>
+{
+    var wallet = await payments.GetWalletAsync(CurrentUserId(http), cancellationToken);
+    return Results.Ok(wallet);
+}).RequireAuthorization(Roles.Learner);
 
 app.Run();
 
