@@ -1,0 +1,328 @@
+@model WebMVC.Models.SavedQuestionsIndexViewModel
+@inject WebMVC.DateTimeFormatter Dates
+@{
+    Layout = "_LearnerLayout";
+    ViewData["Title"] = "Saved questions";
+    ViewData["Description"] = "Review your saved questions and bank of incorrect answers.";
+    var data = Model.Data;
+    var hasActiveFilters = !string.IsNullOrEmpty(Model.CurrentSource) || Model.CurrentSectionId.HasValue || Model.CurrentCategoryId.HasValue;
+}
+
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+  <a href="/dashboard" class="breadcrumbs__item">Home</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <span class="breadcrumbs__item" aria-current="page">Saved questions</span>
+</nav>
+
+<div class="row row--between row--wrap">
+  <div>
+    <h1 class="m-0 mb-1">Saved questions</h1>
+    <p class="text-sm text-muted no-margin">
+      @data.TotalSavedCount @(data.TotalSavedCount == 1 ? "question" : "questions") in your bank — @data.IncorrectSavedCount saved automatically from wrong answers, @data.ManualSavedCount saved by you.
+      <strong>Practicing them is free, no credit deducted.</strong>
+    </p>
+  </div>
+  @if (data.TotalSavedCount > 0)
+  {
+    <a class="btn btn--primary" href="/practice">Start a practice session</a>
+  }
+</div>
+
+@if (TempData["SuccessMessage"] is string successMsg)
+{
+  <div class="alert alert--success mt-4" role="status">@successMsg</div>
+}
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+  <div class="alert alert--danger mt-4" role="alert">@Model.ErrorMessage</div>
+}
+
+@if (data.TotalSavedCount == 0 && !hasActiveFilters)
+{
+  <!-- Empty state: no questions saved yet -->
+  <div class="card mt-4">
+    <div class="card__body">
+      <div class="state-block">
+        <div class="state-block__icon" aria-hidden="true">EMPTY</div>
+        <div class="state-block__title">No saved questions yet</div>
+        <p class="state-block__desc">
+          Questions land here two ways: you tap <strong>Save question</strong> while reviewing, or you answer a practice question wrong and it is saved automatically.
+        </p>
+        <div class="row row--center mt-3">
+          <a class="btn btn--primary btn--lg" href="/practice">Start a practice session</a>
+        </div>
+      </div>
+    </div>
+  </div>
+}
+else
+{
+  <!-- Filters bar -->
+  <div class="card mt-4">
+    <div class="card__body">
+      <form method="get" action="/saved-questions" class="row row--wrap" style="gap: var(--space-4); align-items: flex-end;" id="filter-form">
+        <div class="field" style="flex: 1 1 200px; margin-bottom: 0;">
+          <label class="field__label" for="sq-source">Source</label>
+          <select class="field__input" id="sq-source" name="source" onchange="this.form.submit()">
+            <option value="" selected="@(string.IsNullOrEmpty(Model.CurrentSource))">All sources (@data.TotalSavedCount)</option>
+            <option value="incorrect" selected="@(Model.CurrentSource == "incorrect")">Wrong answers (@data.IncorrectSavedCount)</option>
+            <option value="manual" selected="@(Model.CurrentSource == "manual")">Saved by me (@data.ManualSavedCount)</option>
+          </select>
+        </div>
+
+        @if (data.Sections.Count > 0)
+        {
+          <div class="field" style="flex: 1 1 200px; margin-bottom: 0;">
+            <label class="field__label" for="sq-section">Part / Section</label>
+            <select class="field__input" id="sq-section" name="sectionId" onchange="this.form.submit()">
+              <option value="" selected="@(!Model.CurrentSectionId.HasValue)">All parts</option>
+              @foreach (var sec in data.Sections)
+              {
+                <option value="@sec.SectionId" selected="@(Model.CurrentSectionId == sec.SectionId)">@sec.Code — @sec.Name (@sec.Count)</option>
+              }
+            </select>
+          </div>
+        }
+
+        @if (data.Categories.Count > 0)
+        {
+          <div class="field" style="flex: 1 1 200px; margin-bottom: 0;">
+            <label class="field__label" for="sq-category">Question type</label>
+            <select class="field__input" id="sq-category" name="categoryId" onchange="this.form.submit()">
+              <option value="" selected="@(!Model.CurrentCategoryId.HasValue)">All types</option>
+              @foreach (var cat in data.Categories)
+              {
+                <option value="@cat.CategoryId" selected="@(Model.CurrentCategoryId == cat.CategoryId)">@cat.Name (@cat.Count)</option>
+              }
+            </select>
+          </div>
+        }
+
+        @if (hasActiveFilters)
+        {
+          <div>
+            <a href="/saved-questions" class="btn btn--ghost btn--sm">Reset filters</a>
+          </div>
+        }
+      </form>
+    </div>
+  </div>
+
+  @if (data.Questions.Count == 0)
+  {
+    <div class="card mt-4">
+      <div class="card__body">
+        <div class="state-block">
+          <div class="state-block__icon" aria-hidden="true">EMPTY</div>
+          <div class="state-block__title">No matching saved questions</div>
+          <p class="state-block__desc">No saved questions matched your current filter criteria.</p>
+          <div class="row row--center mt-2">
+            <a class="btn btn--primary" href="/saved-questions">Show all saved questions</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+  else
+  {
+    <div class="stack mt-4" style="gap: var(--space-4);" id="saved-questions-list">
+      @foreach (var item in data.Questions)
+      {
+        <article class="card saved-question-card" id="card-@item.QuestionId" data-question-id="@item.QuestionId">
+          <div class="card__body stack" style="gap: var(--space-3);">
+            <div class="row row--between row--wrap">
+              <span class="text-sm">
+                @if (item.Source == "incorrect")
+                {
+                  <span class="badge badge--danger">Wrong answer</span>
+                }
+                else
+                {
+                  <span class="badge badge--info">Saved by you</span>
+                }
+                <span class="badge badge--muted">@item.SectionCode — @item.SectionName</span>
+                @if (!string.IsNullOrEmpty(item.CategoryName))
+                {
+                  <span class="badge badge--muted">@item.CategoryName</span>
+                }
+              </span>
+              <span class="text-sm text-muted">Saved @Dates.Format(item.SavedAt)</span>
+            </div>
+
+            <p class="no-margin" style="font-size: 1.05rem; line-height: 1.5; color: var(--ink); white-space: pre-wrap;">@item.Stem</p>
+
+            <div class="row row--between row--wrap" style="align-items: center;">
+              <span class="text-xs text-muted">@item.SectionCode · @item.Options.Count options</span>
+              <div class="row" style="gap: var(--space-2);">
+                <button type="button" class="btn btn--sm review-toggle-btn" data-target="review-@item.QuestionId" aria-expanded="false" aria-controls="review-@item.QuestionId">
+                  Review explanation
+                </button>
+                <form method="post" action="/saved-questions/@item.QuestionId/remove" class="no-margin remove-form" data-question-id="@item.QuestionId">
+                  @Html.AntiForgeryToken()
+                  <button type="submit" class="btn btn--ghost btn--sm">Remove</button>
+                </form>
+              </div>
+            </div>
+
+            <!-- Review panel (expanded inline) -->
+            <div class="saved-review-panel mt-3 pt-3" id="review-@item.QuestionId" style="display: none; border-top: 1px solid var(--soft-rule);" role="region" aria-label="Question @item.QuestionId review and explanation">
+              @if (!string.IsNullOrEmpty(item.Passage))
+              {
+                <div class="card mb-3" style="background: var(--color-surface); border: 1px solid var(--soft-rule);">
+                  <div class="card__body">
+                    <p class="no-margin text-sm" style="white-space: pre-line;">@item.Passage</p>
+                  </div>
+                </div>
+              }
+
+              @if (!string.IsNullOrEmpty(item.ImagePath))
+              {
+                <div class="mb-3">
+                  <img src="@item.ImagePath" alt="Question illustration" style="max-height: 240px; border: 2px solid var(--ink); display: block;" />
+                </div>
+              }
+
+              @if (!string.IsNullOrEmpty(item.AudioPath))
+              {
+                <div class="mb-3">
+                  <audio controls src="@item.AudioPath" style="width: 100%;"></audio>
+                </div>
+              }
+
+              <div class="option-list" aria-label="Answer options">
+                @foreach (var opt in item.Options)
+                {
+                  var isCorrect = opt.IsCorrect;
+                  var optClass = isCorrect ? "option option--correct" : "option";
+                  <div class="@optClass">
+                    <span class="option__marker">@opt.Label</span>
+                    <span class="option__text">@opt.Text</span>
+                    @if (isCorrect)
+                    {
+                      <span class="badge badge--success">Correct answer</span>
+                    }
+                  </div>
+                }
+              </div>
+
+              @if (!string.IsNullOrEmpty(item.Explanation))
+              {
+                <div class="explain mt-3">
+                  <div class="explain__title">Explanation</div>
+                  <p class="no-margin text-sm">@item.Explanation</p>
+                  @if (!string.IsNullOrEmpty(item.Transcript))
+                  {
+                    <div class="explain__transcript mt-2 text-xs">
+                      <strong>Transcript:</strong> @item.Transcript
+                    </div>
+                  }
+                </div>
+              }
+
+              <div class="row row--between mt-3 text-xs text-muted">
+                <a href="/saved-questions/@item.QuestionId" class="text-muted" style="text-decoration: underline;">Open dedicated review page ›</a>
+                <button type="button" class="btn btn--ghost btn--sm close-review-btn" data-target="review-@item.QuestionId">Close review</button>
+              </div>
+            </div>
+          </div>
+        </article>
+      }
+    </div>
+
+    <div class="card mt-4">
+      <div class="card__header"><strong>About your bank</strong></div>
+      <div class="card__body">
+        <p class="text-sm no-margin">
+          Remove a question once it stops being useful. Review questions anytime with complete explanations and answer keys.
+        </p>
+      </div>
+    </div>
+  }
+}
+
+@section Scripts {
+  <script>
+    (function () {
+      // Inline toggle for question review
+      document.querySelectorAll('.review-toggle-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var targetId = btn.getAttribute('data-target');
+          var panel = document.getElementById(targetId);
+          if (!panel) return;
+
+          var isHidden = panel.style.display === 'none';
+          panel.style.display = isHidden ? 'block' : 'none';
+          btn.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
+          btn.textContent = isHidden ? 'Hide explanation' : 'Review explanation';
+        });
+      });
+
+      document.querySelectorAll('.close-review-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var targetId = btn.getAttribute('data-target');
+          var panel = document.getElementById(targetId);
+          if (!panel) return;
+          panel.style.display = 'none';
+
+          var toggleBtn = document.querySelector('[data-target="' + targetId + '"].review-toggle-btn');
+          if (toggleBtn) {
+            toggleBtn.setAttribute('aria-expanded', 'false');
+            toggleBtn.textContent = 'Review explanation';
+          }
+        });
+      });
+
+      // AJAX remove handling with progressive enhancement
+      document.querySelectorAll('.remove-form').forEach(function (form) {
+        form.addEventListener('submit', function (e) {
+          e.preventDefault();
+          var questionId = form.getAttribute('data-question-id');
+          var card = document.getElementById('card-' + questionId);
+          var csrfInput = form.querySelector('input[name="__RequestVerificationToken"]');
+          var token = csrfInput ? csrfInput.value : '';
+
+          var btn = form.querySelector('button[type="submit"]');
+          if (btn) btn.disabled = true;
+
+          var formData = new URLSearchParams();
+          formData.append('__RequestVerificationToken', token);
+
+          fetch('/saved-questions/' + questionId + '/remove', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+              'RequestVerificationToken': token,
+              'X-Requested-With': 'XMLHttpRequest',
+              'Accept': 'application/json'
+            },
+            body: formData.toString()
+          })
+          .then(function (res) {
+            if (!res.ok) throw new Error('Failed to remove');
+            return res.json();
+          })
+          .then(function () {
+            if (card) {
+              card.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
+              card.style.opacity = '0';
+              card.style.transform = 'translateY(-10px)';
+              setTimeout(function () {
+                card.remove();
+                var remaining = document.querySelectorAll('.saved-question-card');
+                if (remaining.length === 0) {
+                  window.location.reload();
+                }
+              }, 200);
+            }
+          })
+          .catch(function (err) {
+            console.error('Remove error', err);
+            if (btn) btn.disabled = false;
+            form.submit(); // fallback to standard POST
+          });
+        });
+      });
+    })();
+  </script>
+}

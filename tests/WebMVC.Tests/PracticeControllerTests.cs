@@ -310,5 +310,10 @@ public sealed class PracticeControllerTests
 
         public Task<PracticeSummaryDto> GetPracticeSummaryAsync(int sessionId, string bearerToken, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<PracticeSummaryDto>(ExceptionToThrow) : Task.FromResult(Summary!);
+
+        public Task<SavedQuestionsViewDto> GetSavedQuestionsAsync(string? source, int? sectionId, int? categoryId, string bearerToken, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<SavedQuestionItemDto> GetSavedQuestionAsync(int questionId, string bearerToken, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<SaveQuestionResultDto> SaveQuestionAsync(int questionId, string? source, string bearerToken, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<SaveQuestionResultDto> UnsaveQuestionAsync(int questionId, string bearerToken, CancellationToken cancellationToken = default) => throw new NotImplementedException();
     }
 }

@@ -140,6 +140,7 @@ builder.Services.AddSingleton<IEmailSender>(sp => new DropFolderEmailSender(
     sp.GetRequiredService<ILogger<DropFolderEmailSender>>()));
 builder.Services.AddScoped<ILearnerService, LearnerService>();
 builder.Services.AddScoped<IPracticeService, PracticeService>();
+builder.Services.AddScoped<ISavedQuestionService, SavedQuestionService>();
 
 var app = builder.Build();
 
@@ -566,7 +567,8 @@ practice.MapGet("/sessions/{sessionId:int}/questions/{displayOrder:int}", async 
             q.Passage,
             q.AudioPath,
             q.ImagePath,
-            q.ImageAlt));
+            q.ImageAlt,
+            q.IsSaved));
     }
     catch (PracticeException ex) when (ex.Code == PracticeException.SessionNotFound)
     {
@@ -623,7 +625,8 @@ practice.MapPost("/sessions/{sessionId:int}/questions/{questionId:int}/answer", 
             result.Explanation,
             result.Transcript,
             result.IsSessionFinished,
-            result.NextQuestionDisplayOrder));
+            result.NextQuestionDisplayOrder,
+            result.IsSaved));
     }
     catch (PracticeException ex) when (ex.Code == PracticeException.SessionNotFound)
     {
@@ -685,6 +688,107 @@ practice.MapGet("/sessions/{sessionId:int}/summary", async Task<IResult> (
     {
         return Problem(StatusCodes.Status404NotFound, "Session not found", ApiError.Codes.PracticeSessionNotFound, ex.Message);
     }
+});
+
+// ---- Saved Questions (issue #9) ----
+var savedQuestions = learner.MapGroup("/saved-questions");
+
+savedQuestions.MapGet("", async (
+    [FromQuery] string? source,
+    [FromQuery] int? sectionId,
+    [FromQuery] int? categoryId,
+    HttpContext http,
+    ISavedQuestionService savedService,
+    CancellationToken cancellationToken) =>
+{
+    var filter = new SavedQuestionFilterInput(source, sectionId, categoryId);
+    var view = await savedService.GetSavedQuestionsAsync(CurrentUserId(http), filter, cancellationToken);
+    return Results.Ok(new SavedQuestionsViewDto(
+        ToCertificateDto(view.Certificate),
+        view.TotalSavedCount,
+        view.ManualSavedCount,
+        view.IncorrectSavedCount,
+        view.Questions.Select(q => new SavedQuestionItemDto(
+            q.QuestionId,
+            q.Source,
+            q.SavedAt,
+            q.SectionId,
+            q.SectionCode,
+            q.SectionName,
+            q.CategoryId,
+            q.CategoryName,
+            q.Stem,
+            q.Passage,
+            q.ImagePath,
+            q.AudioPath,
+            q.Hint,
+            q.Explanation,
+            q.Transcript,
+            q.Options.Select(o => new SavedQuestionOptionDto(o.OptionId, o.Label, o.Text, o.IsCorrect)).ToList())).ToList(),
+        view.Sections.Select(s => new SavedQuestionSectionFilterDto(s.SectionId, s.Code, s.Name, s.Count)).ToList(),
+        view.Categories.Select(c => new SavedQuestionCategoryFilterDto(c.CategoryId, c.Name, c.Count)).ToList()));
+});
+
+savedQuestions.MapGet("/{questionId:int}", async Task<IResult> (
+    int questionId,
+    HttpContext http,
+    ISavedQuestionService savedService,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var q = await savedService.GetSavedQuestionAsync(CurrentUserId(http), questionId, cancellationToken);
+        return Results.Ok(new SavedQuestionItemDto(
+            q.QuestionId,
+            q.Source,
+            q.SavedAt,
+            q.SectionId,
+            q.SectionCode,
+            q.SectionName,
+            q.CategoryId,
+            q.CategoryName,
+            q.Stem,
+            q.Passage,
+            q.ImagePath,
+            q.AudioPath,
+            q.Hint,
+            q.Explanation,
+            q.Transcript,
+            q.Options.Select(o => new SavedQuestionOptionDto(o.OptionId, o.Label, o.Text, o.IsCorrect)).ToList()));
+    }
+    catch (SavedQuestionException ex) when (ex.Code == SavedQuestionException.SavedQuestionNotFound)
+    {
+        return Problem(StatusCodes.Status404NotFound, "Saved question not found", ApiError.Codes.SavedQuestionNotFound, ex.Message);
+    }
+});
+
+savedQuestions.MapPost("/{questionId:int}", async Task<IResult> (
+    int questionId,
+    SaveQuestionRequest? request,
+    HttpContext http,
+    ISavedQuestionService savedService,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var source = request?.Source ?? "manual";
+        var res = await savedService.SaveQuestionAsync(CurrentUserId(http), questionId, source, cancellationToken);
+        return Results.Ok(new SaveQuestionResultDto(res.IsSaved, res.Source, res.SavedAt));
+    }
+    catch (SavedQuestionException ex) when (ex.Code == SavedQuestionException.QuestionNotFound)
+    {
+        return Problem(StatusCodes.Status404NotFound, "Question not found", ApiError.Codes.QuestionNotFound, ex.Message);
+    }
+});
+
+savedQuestions.MapDelete("/{questionId:int}", async (
+    int questionId,
+    HttpContext http,
+    ISavedQuestionService savedService,
+    CancellationToken cancellationToken) =>
+{
+    var res = await savedService.UnsaveQuestionAsync(CurrentUserId(http), questionId, cancellationToken);
+    return Results.Ok(new SaveQuestionResultDto(res.IsSaved, res.Source, res.SavedAt));
 });
 
 static CertificateOptionDto ToCertificateDto(CertificateOption option) => new(option.Code, option.Name);

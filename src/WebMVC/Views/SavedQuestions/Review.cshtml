@@ -1,0 +1,128 @@
+@model WebMVC.Models.SavedQuestionReviewViewModel
+@inject WebMVC.DateTimeFormatter Dates
+@{
+    Layout = "_LearnerLayout";
+    var q = Model.Question;
+    ViewData["Title"] = $"Question review — {q.SectionCode}";
+    ViewData["Description"] = "Detailed review and explanation for this saved question.";
+}
+
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+  <a href="/dashboard" class="breadcrumbs__item">Home</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <a href="/saved-questions" class="breadcrumbs__item">Saved questions</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <span class="breadcrumbs__item" aria-current="page">Question review</span>
+</nav>
+
+<div class="row row--between row--wrap mb-4">
+  <div>
+    <h1 class="m-0 mb-1">Question review</h1>
+    <p class="text-sm text-muted no-margin">
+      @q.SectionCode — @q.SectionName
+      @if (!string.IsNullOrEmpty(q.CategoryName))
+      {
+        <span>· @q.CategoryName</span>
+      }
+      · Saved @Dates.Format(q.SavedAt)
+    </p>
+  </div>
+  <div class="row">
+    <a class="btn btn--ghost" href="/saved-questions">Back to saved questions</a>
+  </div>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+  <div class="alert alert--danger mb-4" role="alert">@Model.ErrorMessage</div>
+}
+
+<article class="card">
+  <div class="card__body stack">
+    <div class="row row--between">
+      <span class="text-sm">
+        @if (q.Source == "incorrect")
+        {
+          <span class="badge badge--danger">Wrong answer</span>
+        }
+        else
+        {
+          <span class="badge badge--info">Saved by you</span>
+        }
+        <span class="badge badge--muted">@q.SectionCode — @q.SectionName</span>
+      </span>
+      <span class="text-sm text-muted">@q.Options.Count options</span>
+    </div>
+
+    @if (!string.IsNullOrEmpty(q.Passage))
+    {
+      <div class="card mb-3" style="background: var(--color-surface); border: 1px solid var(--soft-rule);">
+        <div class="card__body">
+          <p class="no-margin" style="white-space: pre-line;">@q.Passage</p>
+        </div>
+      </div>
+    }
+
+    @if (!string.IsNullOrEmpty(q.ImagePath))
+    {
+      <div class="mb-3">
+        <img src="@q.ImagePath" alt="Question illustration" style="max-height: 300px; border: 2px solid var(--ink); display: block;" />
+      </div>
+    }
+
+    @if (!string.IsNullOrEmpty(q.AudioPath))
+    {
+      <div class="mb-3">
+        <audio controls src="@q.AudioPath" style="width: 100%;"></audio>
+      </div>
+    }
+
+    <p class="question__stem" style="font-size: 1.15rem; font-weight: 500; line-height: 1.5; white-space: pre-wrap;">@q.Stem</p>
+
+    <div class="option-list" aria-label="Answer options">
+      @foreach (var opt in q.Options)
+      {
+        var isCorrect = opt.IsCorrect;
+        var optClass = isCorrect ? "option option--correct" : "option";
+        <div class="@optClass">
+          <span class="option__marker">@opt.Label</span>
+          <span class="option__text">@opt.Text</span>
+          @if (isCorrect)
+          {
+            <span class="badge badge--success">Correct answer</span>
+          }
+        </div>
+      }
+    </div>
+
+    @if (!string.IsNullOrEmpty(q.Hint))
+    {
+      <div class="hint mt-3" role="note">
+        <span class="hint__label">Hint</span>
+        <span>@q.Hint</span>
+      </div>
+    }
+
+    @if (!string.IsNullOrEmpty(q.Explanation))
+    {
+      <div class="explain mt-4">
+        <div class="explain__title">Explanation</div>
+        <p class="no-margin">@q.Explanation</p>
+        @if (!string.IsNullOrEmpty(q.Transcript))
+        {
+          <div class="explain__transcript mt-2">
+            <strong>Transcript:</strong> @q.Transcript
+          </div>
+        }
+      </div>
+    }
+
+    <div class="row row--between mt-4 pt-3" style="border-top: 1px solid var(--soft-rule);">
+      <a class="btn btn--ghost" href="/saved-questions">Back to list</a>
+      <form method="post" action="/saved-questions/@q.QuestionId/remove" class="no-margin">
+        @Html.AntiForgeryToken()
+        <button type="submit" class="btn btn--ghost">Remove from saved bank</button>
+      </form>
+    </div>
+  </div>
+</article>

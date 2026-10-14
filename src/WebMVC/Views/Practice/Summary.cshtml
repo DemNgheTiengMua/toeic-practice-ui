@@ -22,6 +22,7 @@
     </p>
   </div>
   <div class="row">
+    <a class="btn btn--ghost" href="/saved-questions">Saved questions bank</a>
     <a class="btn" href="/practice">Choose another section</a>
     <a class="btn btn--primary" href="/practice">Practice more questions</a>
   </div>
@@ -43,13 +44,13 @@
     <div class="stat__label">Incorrect</div>
     <div class="stat__value" style="color: var(--color-danger)">@Model.IncorrectCount</div>
     <div class="stat__hint">
-      @if (Model.IncorrectWithHintCount > 0)
+      @if (Model.IncorrectCount > 0)
       {
-        <span>@Model.IncorrectWithHintCount with a hint</span>
+        <span>saved to your <a href="/saved-questions" style="color: var(--sign-blue); font-weight: 600;">saved questions bank</a></span>
       }
       else
       {
-        <span>Review explanations below</span>
+        <span>No incorrect answers · great job!</span>
       }
     </div>
   </div>

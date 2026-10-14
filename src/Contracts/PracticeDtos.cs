@@ -66,7 +66,8 @@ public sealed record PracticeQuestionDto(
     string? Passage,
     string? AudioPath,
     string? ImagePath,
-    string? ImageAlt);
+    string? ImageAlt,
+    bool IsSaved = false);
 
 public sealed record SubmitPracticeAnswerRequest(int? SelectedOptionId);
 
@@ -77,7 +78,8 @@ public sealed record GradedAnswerDto(
     string? Explanation,
     string? Transcript,
     bool IsSessionFinished,
-    int? NextQuestionDisplayOrder);
+    int? NextQuestionDisplayOrder,
+    bool IsSaved = false);
 
 public sealed record QuestionOutcomeDto(
     int DisplayOrder,

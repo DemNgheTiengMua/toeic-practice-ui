@@ -88,7 +88,8 @@ public sealed record PracticeQuestionView(
     string? Passage,
     string? AudioPath,
     string? ImagePath,
-    string? ImageAlt);
+    string? ImageAlt,
+    bool IsSaved = false);
 
 public sealed record SubmitPracticeAnswerInput(int? SelectedOptionId);
 
@@ -99,7 +100,8 @@ public sealed record GradedPracticeAnswerResult(
     string? Explanation,
     string? Transcript,
     bool IsSessionFinished,
-    int? NextQuestionDisplayOrder);
+    int? NextQuestionDisplayOrder,
+    bool IsSaved = false);
 
 public sealed record QuestionOutcome(
     int DisplayOrder,

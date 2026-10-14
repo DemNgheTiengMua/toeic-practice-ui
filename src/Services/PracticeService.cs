@@ -359,6 +359,8 @@ public sealed class PracticeService(
         }
 
         var hintText = answer.HintUsed ? q.Hint : null;
+        var isSaved = await db.SavedQuestions
+            .AnyAsync(sq => sq.UserId == userId && sq.QuestionId == q.QuestionId, cancellationToken);
 
         return new PracticeQuestionView(
             sessionId,
@@ -379,7 +381,8 @@ public sealed class PracticeService(
             group.Passage,
             group.AudioPath,
             group.ImagePath,
-            group.ImageAlt);
+            group.ImageAlt,
+            isSaved);
     }
 
     public async Task<string?> RevealHintAsync(int userId, int sessionId, int questionId, CancellationToken cancellationToken = default)
@@ -468,6 +471,30 @@ public sealed class PracticeService(
             await db.SaveChangesAsync(cancellationToken);
         }
 
+        bool isSaved = false;
+        if (answer.IsCorrect == false)
+        {
+            var existingSq = await db.SavedQuestions
+                .FirstOrDefaultAsync(sq => sq.UserId == userId && sq.QuestionId == questionId, cancellationToken);
+            if (existingSq == null)
+            {
+                db.SavedQuestions.Add(new SavedQuestion
+                {
+                    UserId = userId,
+                    QuestionId = questionId,
+                    Source = "incorrect",
+                    SavedAt = DateTimeOffset.UtcNow
+                });
+                await db.SaveChangesAsync(cancellationToken);
+            }
+            isSaved = true;
+        }
+        else
+        {
+            isSaved = await db.SavedQuestions
+                .AnyAsync(sq => sq.UserId == userId && sq.QuestionId == questionId, cancellationToken);
+        }
+
         int? nextDisplayOrder = isLast ? null : answer.DisplayOrder + 1;
 
         return new GradedPracticeAnswerResult(
@@ -477,7 +504,8 @@ public sealed class PracticeService(
             q.Explanation,
             q.Group.Transcript,
             isLast,
-            nextDisplayOrder);
+            nextDisplayOrder,
+            isSaved);
     }
 
     public async Task<PracticeSummary> GetSummaryAsync(int userId, int sessionId, CancellationToken cancellationToken = default)
