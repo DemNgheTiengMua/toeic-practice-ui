@@ -16,6 +16,7 @@
 
 <form method="post" action="/admin/score-conversion/@conv.CertId" id="score-conversion-form">
   @Html.AntiForgeryToken()
+  <input type="hidden" name="CertCode" value="@conv.CertCode" />
   @if (conv.ExamId.HasValue)
   {
     <input type="hidden" name="ExamId" value="@conv.ExamId.Value" />
@@ -133,8 +134,8 @@
                        type="text"
                        name="Bands[@curBandIdx].Code"
                        value="@band.Code"
-                       required
-                       style="width: 120px; font-weight: 700;"
+                       readonly
+                       style="width: 120px; font-weight: 700; background-color: var(--soft-bg, #f7f9fa); cursor: not-allowed;"
                        aria-label="Band Code" />
               </td>
               <td>

@@ -589,22 +589,7 @@ admin.MapGet("/score-conversion", async (
     try
     {
         var view = await scoreConversionService.GetScoreConversionAsync(certCode, examId, cancellationToken);
-        return Results.Ok(new AdminScoreConversionDto(
-            view.CertId,
-            view.CertCode,
-            view.CertName,
-            view.Certificates.Select(ToCertificateDto).ToList(),
-            view.ExamId,
-            view.ExamName,
-            view.SkillScales.Select(s => new SkillScoreScaleGroupDto(
-                s.SkillId,
-                s.SkillCode,
-                s.SkillName,
-                s.MaxQuestions,
-                s.Scales.Select(sc => new ScoreScaleRowDto(
-                    sc.ScaleId, sc.SkillId, sc.SkillCode, sc.SkillName, sc.RawScore, sc.ScaledScore)).ToList())).ToList(),
-            view.Bands.Select(b => new ScoreBandConfigDto(
-                b.BandId, b.Code, b.Name, b.MinTotal, b.MaxTotal, b.DisplayOrder)).ToList()));
+        return Results.Ok(ToAdminScoreConversionDto(view));
     }
     catch (ScoreConversionException ex) when (ex.Code == ScoreConversionException.CertificateNotFound)
     {
@@ -626,22 +611,7 @@ admin.MapPut("/score-conversion/{certId:int}", async Task<IResult> (
             request.Bands.Select(b => new UpdateScoreBandEntry(b.BandId, b.Code, b.Name, b.MinTotal, b.MaxTotal, b.DisplayOrder)).ToList());
 
         var view = await scoreConversionService.UpdateScoreConversionAsync(certId, command, cancellationToken);
-        return Results.Ok(new AdminScoreConversionDto(
-            view.CertId,
-            view.CertCode,
-            view.CertName,
-            view.Certificates.Select(ToCertificateDto).ToList(),
-            view.ExamId,
-            view.ExamName,
-            view.SkillScales.Select(s => new SkillScoreScaleGroupDto(
-                s.SkillId,
-                s.SkillCode,
-                s.SkillName,
-                s.MaxQuestions,
-                s.Scales.Select(sc => new ScoreScaleRowDto(
-                    sc.ScaleId, sc.SkillId, sc.SkillCode, sc.SkillName, sc.RawScore, sc.ScaledScore)).ToList())).ToList(),
-            view.Bands.Select(b => new ScoreBandConfigDto(
-                b.BandId, b.Code, b.Name, b.MinTotal, b.MaxTotal, b.DisplayOrder)).ToList()));
+        return Results.Ok(ToAdminScoreConversionDto(view));
     }
     catch (ScoreConversionException ex) when (ex.Code == ScoreConversionException.CertificateNotFound)
     {
@@ -987,16 +957,16 @@ learner.MapGet("/exams/history", async (
     IMockExamService mockExamService,
     CancellationToken cancellationToken) =>
 {
-    var h = await mockExamService.GetExamHistoryAsync(CurrentUserId(http), cancellationToken);
+    var history = await mockExamService.GetExamHistoryAsync(CurrentUserId(http), cancellationToken);
     return Results.Ok(new ExamHistoryDto(
-        ToCertificateDto(h.Certificate),
-        h.TotalAttempts,
-        h.BestScore,
-        h.AverageScore,
-        h.BestScoreBandCode,
-        h.BestScoreBandName,
-        h.CefrBands.Select(b => new ScoreBandItemDto(b.Code, b.Name, b.MinTotal, b.MaxTotal, b.DisplayOrder)).ToList(),
-        h.Attempts.Select(a => new ExamHistoryItemDto(
+        ToCertificateDto(history.Certificate),
+        history.TotalAttempts,
+        history.BestScore,
+        history.AverageScore,
+        history.BestScoreBandCode,
+        history.BestScoreBandName,
+        history.CefrBands.Select(b => new ScoreBandItemDto(b.Code, b.Name, b.MinTotal, b.MaxTotal, b.DisplayOrder)).ToList(),
+        history.Attempts.Select(a => new ExamHistoryItemDto(
             a.AttemptId,
             a.ExamId,
             a.ExamName,
@@ -1020,30 +990,30 @@ learner.MapGet("/attempts/{attemptId:int}/review", async Task<IResult> (
 {
     try
     {
-        var r = await mockExamService.GetAttemptReviewAsync(CurrentUserId(http), attemptId, cancellationToken);
+        var review = await mockExamService.GetAttemptReviewAsync(CurrentUserId(http), attemptId, cancellationToken);
         return Results.Ok(new AttemptReviewDto(
-            r.AttemptId,
-            r.ExamId,
-            r.ExamName,
-            r.CertId,
-            r.CertCode,
-            r.CertName,
-            r.Status,
-            r.StartedAt,
-            r.SubmittedAt,
-            r.DurationSeconds,
-            r.TotalScore,
-            r.BandCode,
-            r.BandName,
-            r.SkillScores.Select(s => new AttemptSkillScoreDto(
+            review.AttemptId,
+            review.ExamId,
+            review.ExamName,
+            review.CertId,
+            review.CertCode,
+            review.CertName,
+            review.Status,
+            review.StartedAt,
+            review.SubmittedAt,
+            review.DurationSeconds,
+            review.TotalScore,
+            review.BandCode,
+            review.BandName,
+            review.SkillScores.Select(s => new AttemptSkillScoreDto(
                 s.SkillId, s.SkillCode, s.SkillName, s.Modality, s.RawScore, s.ScaledScore, s.TotalQuestions)).ToList(),
-            r.TotalQuestions,
-            r.AnsweredCount,
-            r.CorrectCount,
-            r.IncorrectCount,
-            r.BlankCount,
-            r.FlaggedCount,
-            r.Questions.Select(q => new AttemptReviewQuestionDto(
+            review.TotalQuestions,
+            review.AnsweredCount,
+            review.CorrectCount,
+            review.IncorrectCount,
+            review.BlankCount,
+            review.FlaggedCount,
+            review.Questions.Select(q => new AttemptReviewQuestionDto(
                 q.QuestionId,
                 q.DisplayOrder,
                 q.TotalQuestions,
@@ -1064,7 +1034,7 @@ learner.MapGet("/attempts/{attemptId:int}/review", async Task<IResult> (
                 q.SelectedOptionId,
                 q.IsCorrect,
                 q.IsFlagged)).ToList(),
-            r.Navigator.Select(n => new ReviewNavigatorItemDto(
+            review.Navigator.Select(n => new ReviewNavigatorItemDto(
                 n.QuestionId, n.DisplayOrder, n.SectionId, n.SectionCode, n.Modality, n.IsAnswered, n.IsFlagged, n.IsCorrect)).ToList()));
     }
     catch (MockExamException ex) when (ex.Code == MockExamException.AttemptNotFound)
@@ -1451,6 +1421,24 @@ weakness.MapPost("/recommendations/{recId:int}/resolve", async (
 });
 
 static CertificateOptionDto ToCertificateDto(CertificateOption option) => new(option.Code, option.Name);
+
+static AdminScoreConversionDto ToAdminScoreConversionDto(AdminScoreConversionView view) =>
+    new(
+        view.CertId,
+        view.CertCode,
+        view.CertName,
+        view.Certificates.Select(ToCertificateDto).ToList(),
+        view.ExamId,
+        view.ExamName,
+        view.SkillScales.Select(s => new SkillScoreScaleGroupDto(
+            s.SkillId,
+            s.SkillCode,
+            s.SkillName,
+            s.MaxQuestions,
+            s.Scales.Select(sc => new ScoreScaleRowDto(
+                sc.ScaleId, sc.SkillId, sc.SkillCode, sc.SkillName, sc.RawScore, sc.ScaledScore)).ToList())).ToList(),
+        view.Bands.Select(b => new ScoreBandConfigDto(
+            b.BandId, b.Code, b.Name, b.MinTotal, b.MaxTotal, b.DisplayOrder)).ToList());
 
 static SavedQuestionItemDto ToSavedQuestionDto(SavedQuestionItem q) => new(
     q.QuestionId,

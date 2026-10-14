@@ -192,6 +192,13 @@ public sealed class ScoreConversionService(CompanionDbContext db) : IScoreConver
                         ScoreConversionException.OverlappingBands,
                         $"Score bands '{orderedBands[i].Name}' and '{orderedBands[i + 1].Name}' have overlapping ranges [{orderedBands[i].MinTotal}, {orderedBands[i].MaxTotal}] and [{orderedBands[i + 1].MinTotal}, {orderedBands[i + 1].MaxTotal}].");
                 }
+
+                if (orderedBands[i].DisplayOrder >= orderedBands[i + 1].DisplayOrder)
+                {
+                    throw new ScoreConversionException(
+                        ScoreConversionException.InvalidData,
+                        $"Score band '{orderedBands[i + 1].Name}' with higher score range must have a greater DisplayOrder ({orderedBands[i + 1].DisplayOrder}) than '{orderedBands[i].Name}' ({orderedBands[i].DisplayOrder}).");
+                }
             }
         }
 
@@ -199,8 +206,8 @@ public sealed class ScoreConversionService(CompanionDbContext db) : IScoreConver
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
         try
         {
-            // Update ScoreScales
-            if (command.Scales != null)
+            // Update ScoreScales only when non-empty scales list is provided
+            if (command.Scales != null && command.Scales.Count > 0)
             {
                 var existingScales = await db.ScoreScales
                     .Where(s => s.CertId == certId && s.ExamId == command.ExamId)
@@ -223,21 +230,15 @@ public sealed class ScoreConversionService(CompanionDbContext db) : IScoreConver
                 await db.SaveChangesAsync(cancellationToken);
             }
 
-            // Update ScoreBands
+            // Update ScoreBands atomically without negative temp-shifts
             if (command.Bands != null && command.Bands.Count > 0)
             {
                 var existingBands = await db.ScoreBands
                     .Where(b => b.CertId == certId)
                     .ToListAsync(cancellationToken);
 
-                // Temporarily shift existing bands out of range to prevent trg_ScoreBands_NoOverlap false positives during in-place updates
-                int tempShift = -20000;
-                for (int i = 0; i < existingBands.Count; i++)
-                {
-                    existingBands[i].MinTotal = tempShift - (i * 20);
-                    existingBands[i].MaxTotal = tempShift - (i * 20) + 1;
-                }
-                await db.SaveChangesAsync(cancellationToken);
+                var updates = new List<(int BandId, string Code, string Name, int MinTotal, int MaxTotal, int DisplayOrder)>();
+                var inserts = new List<ScoreBand>();
 
                 foreach (var b in command.Bands)
                 {
@@ -247,15 +248,11 @@ public sealed class ScoreConversionService(CompanionDbContext db) : IScoreConver
 
                     if (existing != null)
                     {
-                        existing.Code = b.Code;
-                        existing.Name = b.Name;
-                        existing.MinTotal = b.MinTotal;
-                        existing.MaxTotal = b.MaxTotal;
-                        existing.DisplayOrder = b.DisplayOrder;
+                        updates.Add((existing.BandId, b.Code, b.Name, b.MinTotal, b.MaxTotal, b.DisplayOrder));
                     }
                     else
                     {
-                        db.ScoreBands.Add(new ScoreBand
+                        inserts.Add(new ScoreBand
                         {
                             CertId = certId,
                             Code = b.Code,
@@ -267,7 +264,53 @@ public sealed class ScoreConversionService(CompanionDbContext db) : IScoreConver
                     }
                 }
 
-                await db.SaveChangesAsync(cancellationToken);
+                var updatedBandIds = updates.Select(u => u.BandId).ToHashSet();
+                var toDelete = existingBands.Where(b => !updatedBandIds.Contains(b.BandId)).ToList();
+                if (toDelete.Count > 0)
+                {
+                    db.ScoreBands.RemoveRange(toDelete);
+                    await db.SaveChangesAsync(cancellationToken);
+                }
+
+                // If updating existing bands, execute a single multi-row UPDATE join so trg_ScoreBands_NoOverlap
+                // sees all final non-overlapping ranges at once without trigger violations or negative values.
+                if (updates.Count > 0)
+                {
+                    var parameters = new List<object>();
+                    var selectClauses = new List<string>();
+                    for (int i = 0; i < updates.Count; i++)
+                    {
+                        var u = updates[i];
+                        int p0 = i * 6;
+                        selectClauses.Add($"SELECT {{{p0}}} AS BandId, {{{p0 + 1}}} AS Code, {{{p0 + 2}}} AS Name, {{{p0 + 3}}} AS MinTotal, {{{p0 + 4}}} AS MaxTotal, {{{p0 + 5}}} AS DisplayOrder");
+                        parameters.Add(u.BandId);
+                        parameters.Add(u.Code);
+                        parameters.Add(u.Name);
+                        parameters.Add(u.MinTotal);
+                        parameters.Add(u.MaxTotal);
+                        parameters.Add(u.DisplayOrder);
+                    }
+
+                    var sql = $"""
+                        UPDATE b
+                        SET b.Code = v.Code,
+                            b.Name = v.Name,
+                            b.MinTotal = v.MinTotal,
+                            b.MaxTotal = v.MaxTotal,
+                            b.DisplayOrder = v.DisplayOrder
+                        FROM ScoreBands b
+                        JOIN ({string.Join(" UNION ALL ", selectClauses)}) v
+                          ON b.BandId = v.BandId
+                        """;
+
+                    await db.Database.ExecuteSqlRawAsync(sql, parameters.ToArray(), cancellationToken);
+                }
+
+                if (inserts.Count > 0)
+                {
+                    db.ScoreBands.AddRange(inserts);
+                    await db.SaveChangesAsync(cancellationToken);
+                }
             }
 
             await tx.CommitAsync(cancellationToken);

@@ -803,17 +803,19 @@ public sealed class MockExamService(CompanionDbContext db, ILearnerService learn
         int? bestScore = attempts.Count > 0 ? attempts.Max(a => a.TotalScore) : null;
         int? averageScore = attempts.Count > 0 ? (int)Math.Round(attempts.Average(a => a.TotalScore!.Value)) : null;
 
-        string? bestScoreBandCode = null;
+        var bestAttempt = attempts
+            .Where(a => a.TotalScore.HasValue)
+            .OrderByDescending(a => a.TotalScore!.Value)
+            .ThenByDescending(a => a.SubmittedAt)
+            .FirstOrDefault();
+
+        string? bestScoreBandCode = bestAttempt?.BandCode;
         string? bestScoreBandName = null;
-        if (bestScore.HasValue && bands.Count > 0)
+        if (bestScoreBandCode != null)
         {
-            var match = bands.FirstOrDefault(b => bestScore.Value >= b.MinTotal && bestScore.Value <= b.MaxTotal);
-            if (match == null)
-            {
-                match = bestScore.Value < bands[0].MinTotal ? bands[0] : bands[^1];
-            }
-            bestScoreBandCode = match?.Code;
-            bestScoreBandName = match?.Name;
+            bestScoreBandName = bandDict.TryGetValue(bestScoreBandCode, out var bName)
+                ? bName
+                : bestScoreBandCode;
         }
 
         return new ExamHistoryView(
@@ -957,7 +959,7 @@ public sealed class MockExamService(CompanionDbContext db, ILearnerService learn
             durationSeconds,
             attempt.TotalScore ?? 0,
             attempt.BandCode,
-            band?.Name,
+            band?.Name ?? attempt.BandCode,
             scoreItems,
             totalQuestions,
             answeredCount,

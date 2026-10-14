@@ -130,12 +130,13 @@ public sealed class AdminScoreConversionControllerTests
         };
 
         var controller = CreateController(api);
-        var form = new ScoreConversionFormModel();
+        var form = new ScoreConversionFormModel { CertCode = "TOEIC" };
 
         var result = await controller.Save(certId: 1, form, CancellationToken.None);
 
         var redirect = Assert.IsType<RedirectToActionResult>(result);
         Assert.Equal(nameof(AdminScoreConversionController.Index), redirect.ActionName);
+        Assert.Equal("TOEIC", redirect.RouteValues?["cert"]);
         Assert.Equal("Scales must be monotonic.", controller.TempData["Error"]);
     }
 

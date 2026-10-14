@@ -27,6 +27,7 @@ public sealed class ScoreBandFormEntry
 
 public sealed class ScoreConversionFormModel
 {
+    public string? CertCode { get; set; }
     public int? ExamId { get; set; }
     public List<ScoreScaleFormEntry> Scales { get; set; } = [];
     public List<ScoreBandFormEntry> Bands { get; set; } = [];

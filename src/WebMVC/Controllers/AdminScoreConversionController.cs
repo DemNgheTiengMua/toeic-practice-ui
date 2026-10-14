@@ -55,7 +55,7 @@ public sealed class AdminScoreConversionController(
         {
             logger.LogWarning(ex, "Failed to save score conversion for cert {CertId}", certId);
             TempData["Error"] = ex.Detail ?? "Failed to save score conversion table. Check ranges and monotonicity.";
-            return RedirectToAction(nameof(Index));
+            return RedirectToAction(nameof(Index), new { cert = form.CertCode, examId = form.ExamId });
         }
     }
 }

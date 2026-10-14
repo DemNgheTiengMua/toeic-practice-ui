@@ -160,7 +160,7 @@
               var isSelected = opt.OptionId == q.SelectedOptionId;
               var isCorrectOpt = opt.IsCorrect;
               var optClass = isCorrectOpt ? "option--correct" : (isSelected ? "option--wrong" : "");
-              <div class="option @optClass @(isSelected ? "is-selected" : "")" style="cursor: default;">
+              <div class="option @optClass @(isSelected ? "option--selected" : "")" style="cursor: default;">
                 <span class="option__marker">@opt.Label</span>
                 <span class="option__text">@opt.Text</span>
                 @if (isCorrectOpt && isSelected)
@@ -228,9 +228,8 @@
           {
             var statusClass = nav.IsAnswered ? "is-answered" : "is-unanswered";
             var markClass = nav.IsFlagged ? "is-marked" : "";
-            var correctnessClass = nav.IsCorrect == true ? "is-correct-badge" : (nav.IsCorrect == false ? "is-incorrect-badge" : "");
             <a href="#question-card-@nav.QuestionId"
-               class="navigator__cell @statusClass @markClass @correctnessClass"
+               class="navigator__cell @statusClass @markClass"
                id="nav-cell-@nav.QuestionId"
                data-target-id="@nav.QuestionId"
                data-order="@nav.DisplayOrder"

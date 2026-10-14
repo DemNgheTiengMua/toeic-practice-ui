@@ -128,6 +128,62 @@ public sealed class ScoreConversionServiceTests(DatabaseFixture database)
     }
 
     [Fact]
+    public async Task UpdateScoreConversion_Rejects_Non_Monotonic_DisplayOrder()
+    {
+        var certCode = Unique("ORD");
+        var (certId, _) = await SeedCertificateAndSkillAsync(certCode);
+        var service = CreateService();
+
+        var command = new UpdateScoreConversionCommand(
+            ExamId: null,
+            Scales: [],
+            Bands:
+            [
+                new UpdateScoreBandEntry(null, "B1", "Band 1", MinTotal: 0, MaxTotal: 500, DisplayOrder: 2),
+                new UpdateScoreBandEntry(null, "B2", "Band 2", MinTotal: 501, MaxTotal: 990, DisplayOrder: 1) // Non-monotonic DisplayOrder
+            ]
+        );
+
+        var ex = await Assert.ThrowsAsync<ScoreConversionException>(
+            () => service.UpdateScoreConversionAsync(certId, command));
+
+        Assert.Equal(ScoreConversionException.InvalidData, ex.Code);
+    }
+
+    [Fact]
+    public async Task UpdateScoreConversion_EmptyScalesList_DoesNotWipeExistingScales()
+    {
+        var certCode = Unique("WIPE");
+        var (certId, skillId) = await SeedCertificateAndSkillAsync(certCode);
+        await database.SqlAsync($"""
+            INSERT INTO ScoreScales (CertId, SkillId, RawScore, ScaledScore) VALUES
+              ({certId}, {skillId}, 0, 100),
+              ({certId}, {skillId}, 1, 200);
+            """);
+
+        var service = CreateService();
+
+        // Update bands only, passing Scales: []
+        var command = new UpdateScoreConversionCommand(
+            ExamId: null,
+            Scales: [],
+            Bands:
+            [
+                new UpdateScoreBandEntry(null, "LOW", "Low Band Updated", MinTotal: 0, MaxTotal: 599, DisplayOrder: 1),
+                new UpdateScoreBandEntry(null, "HIGH", "High Band Updated", MinTotal: 600, MaxTotal: 990, DisplayOrder: 2)
+            ]
+        );
+
+        var view = await service.UpdateScoreConversionAsync(certId, command);
+
+        // Verify that existing scales are NOT wiped
+        var skillGroup = Assert.Single(view.SkillScales);
+        Assert.Equal(2, skillGroup.Scales.Count);
+        Assert.Equal(100, skillGroup.Scales[0].ScaledScore);
+        Assert.Equal(200, skillGroup.Scales[1].ScaledScore);
+    }
+
+    [Fact]
     public async Task Previously_Scored_Attempt_Preserves_Snapshotted_Band_After_Admin_Edit()
     {
         var certCode = Unique("SNAP");
