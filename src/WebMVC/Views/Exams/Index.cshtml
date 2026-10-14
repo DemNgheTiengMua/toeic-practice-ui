@@ -1,0 +1,188 @@
+@model ExamIndexViewModel
+@{
+    Layout = "_LearnerLayout";
+    ViewData["Title"] = "Test list";
+    ViewData["Description"] = "Full mock exams with timing, scoring, and score conversion.";
+    var catalog = Model.Catalog;
+    var hasCredits = catalog.CreditBalance > 0;
+}
+
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+  <a href="/dashboard" class="breadcrumbs__item">Home</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <span class="breadcrumbs__item" aria-current="page">Test List</span>
+</nav>
+
+<div class="row row--between">
+  <div>
+    <h1 class="m-0 mb-1">Test list</h1>
+    <p class="text-muted no-margin">
+      Full exams replicate real test conditions with strict timers and scaled score conversion.
+      Each mock exam uses <strong>1 credit</strong>.
+    </p>
+  </div>
+  <div>
+    <span class="badge @(hasCredits ? "badge--info" : "badge--warning")">
+      @catalog.CreditBalance @(catalog.CreditBalance == 1 ? "credit" : "credits") left
+    </span>
+  </div>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+  <div class="alert alert--danger" role="alert">@Model.ErrorMessage</div>
+}
+@if (TempData["ShellSuccess"] is string successMsg)
+{
+  <div class="alert alert--success" role="status">@successMsg</div>
+}
+
+@if (!hasCredits)
+{
+  <div class="alert alert--warning">
+    <strong>You are out of credits.</strong>
+    Buy credits to take full tests. Practice by section is still free.
+    <div class="row mt-3">
+      <a class="btn btn--primary btn--sm" href="/pricing">View pricing</a>
+      <a class="btn btn--sm" href="/practice">Practice free</a>
+    </div>
+  </div>
+}
+
+@if (catalog.Exams.Count == 0)
+{
+  <div class="card">
+    <div class="card__body">
+      <div class="state-block">
+        <div class="state-block__icon" aria-hidden="true">📝</div>
+        <h2 class="state-block__title">No tests available yet</h2>
+        <p class="state-block__desc">
+          New tests for @catalog.Certificate.Name will appear here once published. Meanwhile, practice by section is always free!
+        </p>
+        <div class="row row--center">
+          <a class="btn btn--primary" href="/practice">Practice by section</a>
+        </div>
+      </div>
+    </div>
+  </div>
+}
+else
+{
+  <div class="grid-2">
+    @foreach (var exam in catalog.Exams)
+    {
+      <div class="card">
+        <div class="card__body stack">
+          <div class="row row--between">
+            <strong>@exam.Name</strong>
+            <div class="row" style="gap: var(--space-2);">
+              <span class="badge badge--info">@exam.CertCode</span>
+              @if (exam.ActiveAttemptId.HasValue)
+              {
+                <span class="badge badge--warning">In progress</span>
+              }
+              else if (exam.CompletedAttemptScore.HasValue)
+              {
+                <span class="badge badge--success">Done · @exam.CompletedAttemptScore @(!string.IsNullOrEmpty(exam.CompletedAttemptBand) ? $"({exam.CompletedAttemptBand})" : "")</span>
+              }
+            </div>
+          </div>
+
+          <p class="text-sm text-muted no-margin">
+            @(exam.QuestionCount.HasValue ? $"{exam.QuestionCount} questions · " : "")@exam.DurationMinutes minutes
+            @if (!string.IsNullOrEmpty(exam.SourceName))
+            {
+              <span> · @exam.SourceName</span>
+            }
+          </p>
+
+          @if (!string.IsNullOrEmpty(exam.Description))
+          {
+            <p class="text-sm no-margin">@exam.Description</p>
+          }
+
+          <div class="row mt-2" style="align-items: center;">
+            @if (exam.ActiveAttemptId.HasValue)
+            {
+              <a class="btn btn--primary" href="/exams/take/@exam.ActiveAttemptId">Continue</a>
+              <button type="button" class="btn btn--ghost btn--sm js-cancel-exam-btn"
+                      data-attempt-id="@exam.ActiveAttemptId"
+                      data-exam-name="@exam.Name">
+                Cancel exam
+              </button>
+            }
+            else if (hasCredits)
+            {
+              <a class="btn btn--primary" href="/exams/@exam.ExamId/instructions">
+                @(exam.CompletedAttemptScore.HasValue ? "Retake" : "Start test")
+              </a>
+            }
+            else
+            {
+              <button class="btn btn--primary" disabled title="1 credit required">Start test</button>
+              <a class="btn btn--sm" href="/pricing">Get credits</a>
+            }
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+}
+
+<!-- Modal for confirming cancel attempt -->
+<div id="cancel-modal" class="modal-overlay" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="cancel-modal-title">
+  <div class="modal">
+    <div class="modal__header">
+      <h2 id="cancel-modal-title" class="no-margin">Cancel the exam in progress?</h2>
+    </div>
+    <div class="modal__body stack">
+      <div class="alert alert--danger">
+        <strong>Cancelling means losing the credit already deducted.</strong>
+        1 credit was deducted when you started this test and is not refunded.
+      </div>
+      <p class="text-sm text-muted no-margin" id="cancel-modal-desc">
+        The exam will not be graded and will not appear in your completed tests.
+      </p>
+    </div>
+    <div class="modal__footer">
+      <button type="button" class="btn js-close-cancel-modal">Go back and continue</button>
+      <form id="cancel-form" method="post" action="" style="display: inline;">
+        @Html.AntiForgeryToken()
+        <button type="submit" class="btn btn--danger">Cancel exam, lose 1 credit</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+<script>
+  (function () {
+    var modal = document.getElementById('cancel-modal');
+    var form = document.getElementById('cancel-form');
+    var cancelBtns = document.querySelectorAll('.js-cancel-exam-btn');
+    var closeBtns = document.querySelectorAll('.js-close-cancel-modal');
+
+    cancelBtns.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var attemptId = btn.getAttribute('data-attempt-id');
+        var examName = btn.getAttribute('data-exam-name');
+        document.getElementById('cancel-modal-desc').textContent = examName + ' · The exam will not be graded and will not appear in your completed tests.';
+        form.action = '/exams/take/' + attemptId + '/cancel';
+        modal.style.display = 'flex';
+      });
+    });
+
+    closeBtns.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        modal.style.display = 'none';
+      });
+    });
+
+    window.addEventListener('click', function (e) {
+      if (e.target === modal) {
+        modal.style.display = 'none';
+      }
+    });
+  })();
+</script>
+}

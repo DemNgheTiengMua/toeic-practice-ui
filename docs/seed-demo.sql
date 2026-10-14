@@ -35,6 +35,7 @@ INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, Expect
   (@toeicRead, @toeic, 'reading', 'P7', N'Reading Comprehension', 4, 54, 3);
 
 INSERT INTO ScoreBands (CertId, Code, Name, MinTotal, MaxTotal, DisplayOrder) VALUES
+  (@toeic, 'below_A1', N'Below A1', 10, 119, 0),
   (@toeic, 'A1', N'Beginner', 120, 220, 1),
   (@toeic, 'A2', N'Elementary', 225, 545, 2),
   (@toeic, 'B1', N'Intermediate', 550, 780, 3),
@@ -540,5 +541,58 @@ IF NOT EXISTS (SELECT 1 FROM Packages WHERE Name = N'Intensive')
 GO
 
 PRINT 'demo credit packages seeded';
+GO
+
+-- ============ Demo ScoreScales (issue #15) ============
+DECLARE @toeicCert INT = (SELECT CertId FROM Certificates WHERE Code = 'TOEIC');
+DECLARE @toeicExam INT = (SELECT ExamId FROM Exams WHERE CertId = @toeicCert AND Name = N'ETS 2024 — Test 1');
+DECLARE @toeicList INT = (SELECT SkillId FROM Skills WHERE CertId = @toeicCert AND Code = 'LIST');
+DECLARE @toeicRead INT = (SELECT SkillId FROM Skills WHERE CertId = @toeicCert AND Code = 'READ');
+
+IF NOT EXISTS (SELECT 1 FROM ScoreScales WHERE CertId = @toeicCert AND ExamId = @toeicExam)
+BEGIN
+  -- TOEIC ETS 2024 Test 1 has 4 listening questions and 3 reading questions seeded
+  INSERT INTO ScoreScales (CertId, SkillId, ExamId, RawScore, ScaledScore) VALUES
+    (@toeicCert, @toeicList, @toeicExam, 0, 5),
+    (@toeicCert, @toeicList, @toeicExam, 1, 150),
+    (@toeicCert, @toeicList, @toeicExam, 2, 260),
+    (@toeicCert, @toeicList, @toeicExam, 3, 380),
+    (@toeicCert, @toeicList, @toeicExam, 4, 495),
+    (@toeicCert, @toeicRead, @toeicExam, 0, 5),
+    (@toeicCert, @toeicRead, @toeicExam, 1, 175),
+    (@toeicCert, @toeicRead, @toeicExam, 2, 340),
+    (@toeicCert, @toeicRead, @toeicExam, 3, 495);
+END
+
+DECLARE @ieltsCert INT = (SELECT CertId FROM Certificates WHERE Code = 'IELTS');
+DECLARE @ieltsExam INT = (SELECT ExamId FROM Exams WHERE CertId = @ieltsCert AND Name = N'Cambridge IELTS 18 — Academic Test 1');
+DECLARE @ieltsList INT = (SELECT SkillId FROM Skills WHERE CertId = @ieltsCert AND Code = 'LIST');
+DECLARE @ieltsRead INT = (SELECT SkillId FROM Skills WHERE CertId = @ieltsCert AND Code = 'READ');
+
+IF NOT EXISTS (SELECT 1 FROM ScoreScales WHERE CertId = @ieltsCert AND ExamId = @ieltsExam)
+BEGIN
+  INSERT INTO ScoreScales (CertId, SkillId, ExamId, RawScore, ScaledScore) VALUES
+    (@ieltsCert, @ieltsList, @ieltsExam, 0, 20),
+    (@ieltsCert, @ieltsList, @ieltsExam, 1, 40),
+    (@ieltsCert, @ieltsRead, @ieltsExam, 0, 20),
+    (@ieltsCert, @ieltsRead, @ieltsExam, 1, 40);
+END
+
+DECLARE @vstepCert INT = (SELECT CertId FROM Certificates WHERE Code = 'VSTEP');
+DECLARE @vstepExam INT = (SELECT ExamId FROM Exams WHERE CertId = @vstepCert AND Name = N'VSTEP Sample Test 1');
+DECLARE @vstepList INT = (SELECT SkillId FROM Skills WHERE CertId = @vstepCert AND Code = 'LIST');
+DECLARE @vstepRead INT = (SELECT SkillId FROM Skills WHERE CertId = @vstepCert AND Code = 'READ');
+
+IF NOT EXISTS (SELECT 1 FROM ScoreScales WHERE CertId = @vstepCert AND ExamId = @vstepExam)
+BEGIN
+  INSERT INTO ScoreScales (CertId, SkillId, ExamId, RawScore, ScaledScore) VALUES
+    (@vstepCert, @vstepList, @vstepExam, 0, 20),
+    (@vstepCert, @vstepList, @vstepExam, 1, 35),
+    (@vstepCert, @vstepRead, @vstepExam, 0, 20),
+    (@vstepCert, @vstepRead, @vstepExam, 1, 35);
+END
+GO
+
+PRINT 'demo score scales seeded';
 GO
 

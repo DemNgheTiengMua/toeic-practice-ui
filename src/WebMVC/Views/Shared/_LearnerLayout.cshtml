@@ -39,6 +39,8 @@
       <aside class="app-sidebar">
         <nav class="nav-list" aria-label="Main navigation">
           <a class="@NavClass("/dashboard")" href="/dashboard" aria-current="@(path.StartsWith("/dashboard", StringComparison.OrdinalIgnoreCase) ? "page" : null)">Home</a>
+          <div class="nav-list__group">Mock exams</div>
+          <a class="@NavClass("/exams")" href="/exams" aria-current="@(path.StartsWith("/exams", StringComparison.OrdinalIgnoreCase) ? "page" : null)">Test list</a>
           <div class="nav-list__group">Practice sessions</div>
           <a class="@NavClass("/practice")" href="/practice" aria-current="@(path.StartsWith("/practice", StringComparison.OrdinalIgnoreCase) ? "page" : null)">Practice by section</a>
           <a class="@NavClass("/weakness-analysis")" href="/weakness-analysis" aria-current="@(path.StartsWith("/weakness-analysis", StringComparison.OrdinalIgnoreCase) ? "page" : null)">Weakness analysis</a>

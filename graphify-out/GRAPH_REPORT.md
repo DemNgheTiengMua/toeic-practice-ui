@@ -1,16 +1,16 @@
 # Graph Report - extra_efficiency_ui  (2026-10-14)
 
 ## Corpus Check
-- 254 files · ~234,644 words
+- 266 files · ~245,564 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 2343 nodes · 5271 edges · 215 communities (90 shown, 125 thin omitted)
-- Extraction: 96% EXTRACTED · 4% INFERRED · 0% AMBIGUOUS · INFERRED: 185 edges (avg confidence: 0.81)
+- 2553 nodes · 5933 edges · 249 communities (119 shown, 130 thin omitted)
+- Extraction: 96% EXTRACTED · 4% INFERRED · 0% AMBIGUOUS · INFERRED: 220 edges (avg confidence: 0.81)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `1e062713`
+- Built from commit: `8c2de711`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -64,18 +64,22 @@
 - CompanionApiClient.cs
 - CancellationToken
 - Schema gaps — speaking / writing (free-response) support
+- system_componentmodel_dataannotations_schema
 - CLAUDE.md
 - Certificate
 - Multi-Certificate Companion — User Flow by Actor
 - .Index
+- Program.cs
 - Prototype Finish Review
 - SavedQuestion
+- Contracts
 - Surface brief — TOEIC Practice prototype (re-skin)
 - vw_UserCategoryAccuracy
 - MentorProfile
 - Language
 - Backlog
 - Schema vs. screens audit — 2026-10-08
+- WeaknessAnalysisControllerTests.cs
 - Hệ thống Ôn và thi chứng chỉ TOEIC — Spec màn hình & state
 - 6. Danh sách màn hình (34)
 - Issue tracker: GitHub
@@ -86,6 +90,8 @@
 - 3. Phạm vi nghiệp vụ
 - 5. State machine
 - 3. Admin — Step by Step
+- AuthService
+- .Edit
 - WebAPI
 - WebMVC
 - wwwroot/js/icons.js
@@ -94,6 +100,7 @@
 - payOS is the real gateway; gateways are pluggable
 - AI narratives are insights, not gradings
 - Two AI providers, both behind interfaces
+- HttpContext
 - AiInsight
 - _LearnerLayout.cshtml
 - rules/graphify.md
@@ -105,10 +112,12 @@
 - Recommendation
 - Dashboard/Index.cshtml
 - Take.cshtml
+- Controller
 - Free vs Paid Pricing Matrix Aside
 - TOEIC Practice Favicon
 - Part 1 Photo Placeholder
 - Find a Mentor Prototype View
+- Task
 - TOEIC Practice Favicon
 - September 20 TOEIC Prototype Critique
 - Dual-Agent Heuristic Review Method
@@ -212,27 +221,51 @@
 - QuestionGroup
 - PracticeController
 - Order
+- EmailSender.cs
+- .InvokeAsync
+- .FormatInZone
 - WalletDto
+- .Index
+- Task
+- Task
 - Index.cshtml
 - MockGateway.cshtml
 - CurrencyFormatter
 - PracticeSessionDto
 - Index.cshtml
+- TestUrlHelper
+- AuthService.cs
+- AuthInputs.cs
+- HttpContext
+- ITempDataProvider
+- WeaknessAnalysisDto
+- ImportBatch.cs
+- ExamViewModels.cs
+- HomeController
+- PracticeSessionDto
+- TimeZones
+- PaymentViewModels.cs
+- ApiError.cs
+- CertificateDtos.cs
+- Result.cshtml
+- ExamIndexViewModel
+- ExamInstructionsViewModel
+- ExamTakeViewModel
 - Packages.cshtml
 - PackageForm.cshtml
 - _AdminLayout.cshtml
 
 ## God Nodes (most connected - your core abstractions)
-1. `DataAccess.Scaffold` - 71 edges
+1. `DataAccess.Scaffold` - 73 edges
 2. `CompanionDbContext` - 63 edges
-3. `Contracts` - 56 edges
-4. `ICompanionApiClient` - 53 edges
-5. `CompanionApiClient` - 45 edges
-6. `TestApiClient` - 36 edges
-7. `TestApiClient` - 33 edges
-8. `TestApiClient` - 32 edges
-9. `User` - 31 edges
-10. `AccountEmailTests` - 28 edges
+3. `ICompanionApiClient` - 62 edges
+4. `Contracts` - 60 edges
+5. `CompanionApiClient` - 53 edges
+6. `TestApiClient` - 45 edges
+7. `TestApiClient` - 36 edges
+8. `TestApiClient` - 33 edges
+9. `TestApiClient` - 32 edges
+10. `User` - 31 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `TestApiClient` --implements--> `ICompanionApiClient`  [EXTRACTED]
@@ -240,11 +273,11 @@
 - `TestApiClient` --implements--> `ICompanionApiClient`  [EXTRACTED]
   tests/WebMVC.Tests/CheckoutControllerTests.cs → src/Contracts/CompanionApiClient.cs
 - `TestApiClient` --implements--> `ICompanionApiClient`  [EXTRACTED]
+  tests/WebMVC.Tests/ExamsControllerTests.cs → src/Contracts/CompanionApiClient.cs
+- `TestApiClient` --implements--> `ICompanionApiClient`  [EXTRACTED]
   tests/WebMVC.Tests/PracticeControllerTests.cs → src/Contracts/CompanionApiClient.cs
 - `TestApiClient` --implements--> `ICompanionApiClient`  [EXTRACTED]
   tests/WebMVC.Tests/PricingControllerTests.cs → src/Contracts/CompanionApiClient.cs
-- `TestApiClient` --implements--> `ICompanionApiClient`  [EXTRACTED]
-  tests/WebMVC.Tests/SavedQuestionsControllerTests.cs → src/Contracts/CompanionApiClient.cs
 
 ## Import Cycles
 - None detected.
@@ -266,15 +299,15 @@
 - **Database-First Invariant Architecture** — docs_adr_0001_database_first_ef_core_decision, claude_layering_structure, product_derived_aggregates, _github_workflows_ci_mssql_service [INFERRED 0.95]
 - **Exam-Hall Signage Design Philosophy** — _impeccable_surfaces_prototype_bang_hieu_viet_nam, design_signage_design_system, _impeccable_review_finish_review_flat_field_refusal, design_color_system [INFERRED 0.95]
 
-## Communities (215 total, 125 thin omitted)
+## Communities (249 total, 130 thin omitted)
 
 ### Community 0 - "Exam"
-Cohesion: 0.14
-Nodes (11): DateTimeOffset, ICollection, Exam, DateTimeOffset, ExamSectionAudio, ICollection, PathModuleItem, ICollection (+3 more)
+Cohesion: 0.09
+Nodes (17): DateTimeOffset, ICollection, Exam, DateTimeOffset, ExamSectionAudio, DateTimeOffset, ICollection, LearnerPathStep (+9 more)
 
 ### Community 1 - "AuthService"
-Cohesion: 0.10
-Nodes (22): Now, PasswordHasher, AuthUser, ChangePasswordInput, ForgotPasswordInput, RegisterInput, ResetPasswordInput, SignInInput (+14 more)
+Cohesion: 0.23
+Nodes (7): ChangePasswordInput, ResetPasswordInput, UpdateProfileInput, CancellationToken, Task, IAuthService, ProfileInfo
 
 ### Community 2 - ".SqlAsync"
 Cohesion: 0.12
@@ -293,16 +326,16 @@ Cohesion: 0.14
 Nodes (17): EmailMessage, IEmailSender, IEnumerable, system_text_regularexpressions, AuthService, Fact, string, Task (+9 more)
 
 ### Community 6 - "ApiException"
-Cohesion: 0.11
-Nodes (21): DispatchProxy, MethodInfo, ClaimsPrincipal, CurrentUser, HttpContext, Task, TimeZoneMiddleware, AuthenticateResult (+13 more)
+Cohesion: 0.18
+Nodes (10): DispatchProxy, MethodInfo, Context, Exception, Fact, InlineData, Theory, User (+2 more)
 
 ### Community 7 - "Services.Tests.csproj"
 Cohesion: 0.06
 Nodes (34): Microsoft.AspNetCore.Authentication.JwtBearer (10.0.12), Microsoft.EntityFrameworkCore.Design (10.0.12), Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore (10.0.12), Microsoft.Extensions.Http (10.0.12), Microsoft.Extensions.Identity.Core (10.0.12), payOS (2.1.0), System.IdentityModel.Tokens.Jwt (8.19.2), net10.0 (+26 more)
 
 ### Community 8 - "FreeResponse"
-Cohesion: 0.12
-Nodes (20): DbContext, DbSet, ModelBuilder, CompanionDbContext, AttemptAnswer, AttemptSkillScore, DateTimeOffset, ICollection (+12 more)
+Cohesion: 0.09
+Nodes (19): DbContext, DbSet, ModelBuilder, CompanionDbContext, DateTimeOffset, ICollection, AiGrading, AiGradingScore (+11 more)
 
 ### Community 9 - "Test Catalog & Exam Selection Page"
 Cohesion: 0.16
@@ -318,15 +351,15 @@ Nodes (38): Linear Learning Module Progression and Gating, Module Detail Prototy
 
 ### Community 12 - "EmailVerificationToken"
 Cohesion: 0.08
-Nodes (26): ActionExecutingContext, ActionExecutionDelegate, CancellationToken, HttpGet, HttpPost, IActionResult, Task, ValidateAntiForgeryToken (+18 more)
+Nodes (28): ActionExecutingContext, ActionExecutionDelegate, CancellationToken, HttpGet, HttpPost, IActionResult, Task, ValidateAntiForgeryToken (+20 more)
 
 ### Community 13 - "LearnerControllerBase"
 Cohesion: 0.16
 Nodes (14): CancellationToken, HttpGet, HttpPost, IActionResult, Task, ValidateAntiForgeryToken, PracticeController, PracticeCatalogViewModel (+6 more)
 
 ### Community 14 - "microsoft_entityframeworkcore"
-Cohesion: 0.14
-Nodes (15): Services.Tests, Services, BusinessObjects, DataAccess, microsoft_aspnetcore_authentication_jwtbearer, microsoft_aspnetcore_identity, microsoft_entityframeworkcore, ActiveCertificate (+7 more)
+Cohesion: 0.22
+Nodes (11): Services, BusinessObjects, DataAccess, DataAccess.Scaffold, CategoryAccuracy, RecommendationItem, SectionAccuracy, system (+3 more)
 
 ### Community 15 - "Components"
 Cohesion: 0.06
@@ -341,8 +374,8 @@ Cohesion: 0.07
 Nodes (32): ActiveCertificate, Expression, InvalidOperationException, IQueryable, CertificateOption, LatestResult, LearnerContext, LearnerDashboard (+24 more)
 
 ### Community 18 - "TestApiClient"
-Cohesion: 0.06
-Nodes (28): CategoryAccuracyDto, RecommendationItemDto, ResolveRecommendationResultDto, SectionAccuracyDto, WeaknessAnalysisDto, CancellationToken, HttpGet, HttpPost (+20 more)
+Cohesion: 0.16
+Nodes (7): SaveQuestionResultDto, ResolveRecommendationResultDto, CancellationToken, Exception, IReadOnlyList, Task, TestApiClient
 
 ### Community 19 - "Multi-Certificate Practice Platform — UX Critique"
 Cohesion: 0.07
@@ -357,8 +390,8 @@ Cohesion: 0.23
 Nodes (14): SpeakingSecId, CertId, CorrectOptionIds, Fact, Learner, LearnerService, List, Practice (+6 more)
 
 ### Community 22 - "User"
-Cohesion: 0.10
-Nodes (24): Exception, microsoft_extensions_logging, string, AuthException, AuthLinkOptions, CancellationToken, string, Task (+16 more)
+Cohesion: 0.15
+Nodes (15): Exception, EmailDeliveryException, CertificateUnavailableException, string, MockExamException, DateTimeOffset, EmailNotVerifiedException, OrderAlreadyOpenException (+7 more)
 
 ### Community 23 - "Multi-Certificate Companion UI Prototype Redesign — Implementation Plan"
 Cohesion: 0.07
@@ -369,12 +402,12 @@ Cohesion: 0.25
 Nodes (9): closeDrawer(), onBreakpoint(), openDrawer(), persistGroups(), setFolded(), setInert(), setRailCollapsed(), syncToggle() (+1 more)
 
 ### Community 25 - "ScoreBand"
-Cohesion: 0.14
-Nodes (11): ICollection, Certificate, ICollection, PathTemplate, ICollection, ScoreBand, ScoreScale, ICollection (+3 more)
+Cohesion: 0.09
+Nodes (22): DateTimeOffset, ICollection, AiInsight, ICollection, Certificate, DateTimeOffset, ICollection, ExamAttempt (+14 more)
 
 ### Community 26 - "TestApiClient"
 Cohesion: 0.11
-Nodes (16): GradedAnswerDto, PracticeCatalogDto, PracticeOptionDto, PracticeQuestionDto, PracticeSectionDto, PracticeSessionDto, PracticeSummaryDto, QuestionOutcomeDto (+8 more)
+Nodes (14): GradedAnswerDto, PracticeCatalogDto, PracticeOptionDto, PracticeQuestionDto, PracticeSectionDto, PracticeSummaryDto, QuestionOutcomeDto, RevealHintResponse (+6 more)
 
 ### Community 27 - "Impeccable Critique — TOEIC L&R Prototype"
 Cohesion: 0.09
@@ -385,16 +418,16 @@ Cohesion: 0.16
 Nodes (17): domain_order(), domains_from_schema(), draw_edges(), draw_group(), draw_table(), main(), Page, Generate docs/database-erd.drawio from the live schema metadata.  Usage (from th (+9 more)
 
 ### Community 29 - ".OnModelCreating"
-Cohesion: 0.08
-Nodes (34): DataAccess.Scaffold, DateTimeOffset, ICollection, AiGrading, AiGradingScore, DateTimeOffset, EmailVerificationToken, ICollection (+26 more)
+Cohesion: 0.11
+Nodes (12): Services.Tests, microsoft_entityframeworkcore, vw_MentorAvgRating, vw_MentorPayoutTotal, vw_UserCategoryAccuracy, vw_UserCreditBalance, vw_UserCreditSummary, vw_UserPurchaseTotal (+4 more)
 
 ### Community 30 - "Multi-Certificate Mock-Exam Companion — Database Design"
 Cohesion: 0.11
 Nodes (18): Cross-cutting conventions (carried from the current schema), Domain 10 — Mentor (NEW), Domain 1 — Identity, Domain 2 — Catalog (NEW, data-driven), Domain 3 — Content (Exams + Questions + Import), Domain 4 — Scoring (per-certificate, replaces hardcoded CEFR), Domain 5 — Payment (credit ledger kept, spend reasons added), Domain 6 — Practice (generalised, credit-free) (+10 more)
 
 ### Community 31 - "Question"
-Cohesion: 0.19
-Nodes (10): CheckoutPreviewDto, CreateOrderRequest, CreateOrderResponse, CreditLedgerEntryDto, HandleReturnRequest, MockGatewayActionRequest, PaymentResultDto, CancellationToken (+2 more)
+Cohesion: 0.05
+Nodes (36): AttemptOptionDto, AttemptQuestionDto, AttemptResultDto, AttemptSkillScoreDto, AttemptTakeDto, MockExamInstructionsDto, MockExamItemDto, MockExamListViewDto (+28 more)
 
 ### Community 32 - "CreditTransaction"
 Cohesion: 0.12
@@ -425,16 +458,16 @@ Cohesion: 0.06
 Nodes (29): HttpDelete, SavedQuestionCategoryFilterDto, SavedQuestionItemDto, SavedQuestionOptionDto, SavedQuestionSectionFilterDto, SavedQuestionsViewDto, SaveQuestionRequest, CancellationToken (+21 more)
 
 ### Community 39 - "AuthController"
-Cohesion: 0.10
-Nodes (28): Authorize, Claim, WebAPI, microsoft_extensions_options, microsoft_identitymodel_tokens, AuthClaims, List, AccessToken (+20 more)
+Cohesion: 0.24
+Nodes (14): Authorize, CancellationToken, CurrentUser, HttpGet, HttpPost, IActionResult, Task, ValidateAntiForgeryToken (+6 more)
 
 ### Community 40 - "WeaknessAnalysisControllerTests.cs"
-Cohesion: 0.11
-Nodes (17): DateTimeOffset, EmailVerificationToken, IOneTimeToken, PasswordResetToken, DateTimeOffset, ICollection, AiInsight, DateTimeOffset (+9 more)
+Cohesion: 0.14
+Nodes (13): DateTimeOffset, EmailVerificationToken, IOneTimeToken, PasswordResetToken, DateTimeOffset, EmailVerificationToken, DateTimeOffset, PasswordResetToken (+5 more)
 
 ### Community 41 - "Contracts"
-Cohesion: 0.06
-Nodes (41): Contracts, WebMVC.Models, WebMVC.Controllers, WebMVC, WebMVC.Tests, microsoft_aspnetcore_authentication, microsoft_aspnetcore_authentication_cookies, microsoft_aspnetcore_authorization (+33 more)
+Cohesion: 0.19
+Nodes (7): WebMVC.Models, WebMVC.Controllers, microsoft_aspnetcore_authentication_cookies, microsoft_aspnetcore_authorization, microsoft_aspnetcore_mvc, microsoft_aspnetcore_mvc_filters, ErrorViewModel
 
 ### Community 42 - "Product"
 Cohesion: 0.14
@@ -445,24 +478,28 @@ Cohesion: 0.17
 Nodes (12): 2.10 Mentor Bookings, 2.11 Complaints, 2.1 Guest Creates Account, 2.2 New Learner: Pick Certificate → Placement, 2.3 Free Practice by Section, 2.4 Weakness Analysis (Free), 2.5 Hitting the Paywall: Buy Credits, 2.6 Mock Exams (+4 more)
 
 ### Community 44 - "MentorPayout"
-Cohesion: 0.10
-Nodes (18): CategoryAccuracy, RecommendationItem, SectionAccuracy, DateTimeOffset, ICollection, Booking, DateTimeOffset, ICollection (+10 more)
+Cohesion: 0.13
+Nodes (15): DateTimeOffset, ICollection, Booking, DateTimeOffset, ICollection, MentorPayout, MentorPayoutItem, ICollection (+7 more)
 
 ### Community 45 - "GradingCriterion"
-Cohesion: 0.17
-Nodes (9): DateTimeOffset, ICollection, LearnerPath, DateTimeOffset, ICollection, LearnerPathStep, DateTimeOffset, ICollection (+1 more)
+Cohesion: 0.10
+Nodes (28): examId, learners, opt1CorrectId, opt2CorrectId, q1Id, q2Id, service, AttemptOption (+20 more)
 
 ### Community 46 - "CompanionApiClient.cs"
-Cohesion: 0.06
-Nodes (33): ConcurrentDictionary, HttpRequestException, PayOSClient, ApiException, ProblemDetailsBody, OrderDto, CancellationToken, Task (+25 more)
+Cohesion: 0.05
+Nodes (43): ConcurrentDictionary, HttpRequestException, PayOSClient, ApiException, ProblemDetailsBody, CheckoutPreviewDto, CreateOrderRequest, CreateOrderResponse (+35 more)
 
 ### Community 47 - "CancellationToken"
-Cohesion: 0.10
+Cohesion: 0.08
 Nodes (6): CertificateDto, ICompanionApiClient, CancellationToken, IReadOnlyList, Task, LearnerDashboardDto
 
 ### Community 48 - "Schema gaps — speaking / writing (free-response) support"
 Cohesion: 0.18
 Nodes (10): Gap 1 — nowhere to store per-question timing, Gap 2 — criteria sets cannot vary by question, Gap 3 — one criterion cannot have two maximums, Gap 4 — no recorded length on a free response, Gap 5 — no version history on a re-recording, Gap 6 — a speaking-only attempt has no coherent band, Gap 7 — mentor price is cash, the ledger charges credits, Gap 8 — a cancelled booking has no ledger reason to credit it back (+2 more)
+
+### Community 49 - "system_componentmodel_dataannotations_schema"
+Cohesion: 0.12
+Nodes (15): AttemptAnswer, ICollection, PathModule, PathModuleTopic, PracticeAnswer, DateTimeOffset, ICollection, Question (+7 more)
 
 ### Community 50 - "CLAUDE.md"
 Cohesion: 0.20
@@ -477,12 +514,20 @@ Cohesion: 0.20
 Nodes (9): 0. Actors, 1. High-Level Map, 4. Ordering Constraint — The Part That's Easiest to Get Wrong, 5. Abnormal Branches — Non-Straight Paths, 6. Free / Paid Table — The Final Tally, 7. Out of Scope, 8. What Changed in the Pivot (2026-09-24), Multi-Certificate Companion User Flow by Actor (+1 more)
 
 ### Community 53 - ".Index"
-Cohesion: 0.06
-Nodes (37): Controller, ResponseCache, CancellationToken, IActionResult, Task, AdminController, CancellationToken, HttpGet (+29 more)
+Cohesion: 0.22
+Nodes (11): CancellationToken, HttpGet, HttpPost, IActionResult, IReadOnlyList, Task, ValidateAntiForgeryToken, ProfileController (+3 more)
+
+### Community 54 - "Program.cs"
+Cohesion: 0.11
+Nodes (16): Claim, WebAPI, microsoft_aspnetcore_authentication_jwtbearer, microsoft_extensions_options, microsoft_identitymodel_tokens, AuthClaims, List, AccessToken (+8 more)
 
 ### Community 56 - "SavedQuestion"
 Cohesion: 0.17
 Nodes (10): AuthTokenResponse, AuthUserDto, ChangePasswordRequest, ForgotPasswordRequest, ProfileDto, RegisterRequest, ResetPasswordRequest, SignInRequest (+2 more)
+
+### Community 57 - "Contracts"
+Cohesion: 0.12
+Nodes (9): Contracts, WebMVC, AuthErrorCodes, string, Roles, string, DashboardViewModel, SavedQuestionReviewViewModel (+1 more)
 
 ### Community 58 - "Surface brief — TOEIC Practice prototype (re-skin)"
 Cohesion: 0.20
@@ -508,6 +553,10 @@ Nodes (7): Backlog, Batch A — learner feedback (done; verified 2026-10-12: sch
 Cohesion: 0.25
 Nodes (7): Derivable, no column needed, Feature additions — 2026-10-10, Final pass — 2026-10-10, Fixed in the prototype (UI was wrong, not the schema), Fixed in the schema, Left open on purpose, Schema vs. screens audit — 2026-10-08
 
+### Community 64 - "WeaknessAnalysisControllerTests.cs"
+Cohesion: 0.41
+Nodes (9): WebMVC.Tests, microsoft_aspnetcore_authentication, microsoft_aspnetcore_http, microsoft_aspnetcore_mvc_viewfeatures, microsoft_extensions_dependencyinjection, microsoft_extensions_logging_abstractions, system_reflection, system_security_claims (+1 more)
+
 ### Community 65 - "Hệ thống Ôn và thi chứng chỉ TOEIC — Spec màn hình & state"
 Cohesion: 0.25
 Nodes (8): 1. Mục tiêu, 2. Bối cảnh dự án đích, 4.1 Bậc CEFR, 4. Cấu trúc đề thi TOEIC L&R, 7. State cần vẽ cho mỗi trang, 8. Cấu trúc file prototype, 9. Không làm trong prototype, Hệ thống Ôn và thi chứng chỉ TOEIC — Spec màn hình & state
@@ -529,12 +578,12 @@ Cohesion: 0.33
 Nodes (5): Before exploring, read these, Domain Docs, File structure, Flag ADR conflicts, Use the glossary's vocabulary
 
 ### Community 70 - "TestApiClient"
-Cohesion: 0.07
-Nodes (28): IAuthenticationService, ITempDataProvider, AuthenticateResult, AuthenticationProperties, ClaimsPrincipal, Fact, HttpContext, IDictionary (+20 more)
+Cohesion: 0.22
+Nodes (8): IAuthenticationService, AuthenticateResult, AuthenticationProperties, ClaimsPrincipal, HttpContext, IDictionary, EmptyTempDataProvider, FixedAuthentication
 
 ### Community 71 - ".EnsureSuccessAsync"
-Cohesion: 0.17
-Nodes (5): HttpRequestMessage, HttpResponseMessage, JsonSerializerOptions, CompanionApiClient, SaveQuestionResultDto
+Cohesion: 0.16
+Nodes (4): HttpRequestMessage, HttpResponseMessage, JsonSerializerOptions, CompanionApiClient
 
 ### Community 72 - "3. Phạm vi nghiệp vụ"
 Cohesion: 0.50
@@ -547,6 +596,14 @@ Nodes (4): 5.1 Cổng thanh toán (đứng trước phiên thi), 5.2 Phiên thi,
 ### Community 74 - "3. Admin — Step by Step"
 Cohesion: 0.50
 Nodes (4): 3.1 Exam Import and Authoring, 3.2 Score Conversion Tables, 3.3 Other Admin Flows, 3. Admin — Step by Step
+
+### Community 75 - "AuthService"
+Cohesion: 0.21
+Nodes (7): Now, PasswordHasher, ForgotPasswordInput, DateTimeOffset, DbSet, TimeSpan, AuthService
+
+### Community 76 - ".Edit"
+Cohesion: 0.39
+Nodes (8): CancellationToken, HttpGet, HttpPost, IActionResult, Task, ValidateAntiForgeryToken, AdminPackagesController, PackageFormViewModel
 
 ### Community 77 - "WebAPI"
 Cohesion: 0.22
@@ -564,9 +621,17 @@ Nodes (5): has(), lead(), make(), svg(), trail()
 Cohesion: 0.50
 Nodes (7): getFocusableElements(), handleEscape(), init(), initModal(), setupExamKeyboardShortcuts(), setupNavigatorKeyboard(), trapFocus()
 
+### Community 85 - "HttpContext"
+Cohesion: 0.24
+Nodes (7): AuthenticateResult, AuthenticationProperties, ClaimsPrincipal, HttpContext, IDictionary, EmptyTempDataProvider, FixedAuthentication
+
 ### Community 86 - "AiInsight"
 Cohesion: 0.50
 Nodes (3): IReadOnlyList<Contracts.PackageDto>, Contracts, WebMVC.Controllers
+
+### Community 97 - "Controller"
+Cohesion: 0.15
+Nodes (11): Controller, AdminController, CancellationToken, IActionResult, Task, CertificatesController, CancellationToken, HttpGet (+3 more)
 
 ### Community 99 - "TOEIC Practice Favicon"
 Cohesion: 0.67
@@ -580,37 +645,117 @@ Nodes (3): Minimal SVG Placeholder Graphic Pattern, Part 1 Photo Placeholder, TO
 Cohesion: 0.67
 Nodes (3): Credit-Based Mentor Discovery and Booking, Find a Mentor Prototype View, Mentor List Async States Pattern
 
+### Community 102 - "Task"
+Cohesion: 0.44
+Nodes (4): Fact, Task, TestApiClient, CheckoutControllerTests
+
 ### Community 103 - "TOEIC Practice Favicon"
 Cohesion: 0.67
 Nodes (3): Bahnschrift Display Typography, Sign Blue and Gold Brand Identity, TOEIC Practice Favicon
+
+### Community 214 - "EmailSender.cs"
+Cohesion: 0.30
+Nodes (8): microsoft_extensions_logging, CancellationToken, string, Task, DropFolderEmailSender, EmailMessage, EmailOptions, IEmailSender
+
+### Community 215 - ".InvokeAsync"
+Cohesion: 0.18
+Nodes (9): CancellationToken, IActionResult, Task, ClaimsPrincipal, Task, CurrentUser, HttpContext, Task (+1 more)
+
+### Community 216 - ".FormatInZone"
+Cohesion: 0.29
+Nodes (6): DateTimeOffset, string, DateTimeFormatter, DateTimeOffset, Fact, DateTimeFormatterTests
 
 ### Community 217 - "WalletDto"
 Cohesion: 0.47
 Nodes (3): WalletDto, CancellationToken, TestApiClient
 
+### Community 218 - ".Index"
+Cohesion: 0.20
+Nodes (8): CancellationToken, HttpGet, IActionResult, Task, WalletController, Fact, TestApiClient, WalletControllerTests
+
+### Community 219 - "Task"
+Cohesion: 0.38
+Nodes (6): AuthenticateResult, AuthenticationProperties, ClaimsPrincipal, HttpContext, Task, FixedAuthentication
+
+### Community 220 - "Task"
+Cohesion: 0.38
+Nodes (6): AuthenticateResult, AuthenticationProperties, ClaimsPrincipal, HttpContext, Task, FixedAuthentication
+
 ### Community 223 - "CurrencyFormatter"
 Cohesion: 0.26
 Nodes (6): CultureInfo, CurrencyFormatter, system_globalization, InlineData, Theory, CurrencyFormatterTests
 
+### Community 226 - "TestUrlHelper"
+Cohesion: 0.20
+Nodes (5): ActionContext, IUrlHelper, TestUrlHelper, UrlActionContext, UrlRouteContext
+
+### Community 227 - "AuthService.cs"
+Cohesion: 0.22
+Nodes (8): microsoft_aspnetcore_identity, string, AuthException, AuthLinkOptions, SessionStatus, system_buffers_text, system_security_cryptography, system_text
+
+### Community 228 - "AuthInputs.cs"
+Cohesion: 0.31
+Nodes (4): AuthUser, RegisterInput, SignInInput, SwitchCertificateInput
+
+### Community 229 - "HttpContext"
+Cohesion: 0.36
+Nodes (5): AuthenticateResult, AuthenticationProperties, ClaimsPrincipal, HttpContext, FixedAuthentication
+
+### Community 230 - "ITempDataProvider"
+Cohesion: 0.28
+Nodes (5): ITempDataProvider, IDictionary, EmptyTempDataProvider, IDictionary, EmptyTempDataProvider
+
+### Community 231 - "WeaknessAnalysisDto"
+Cohesion: 0.29
+Nodes (5): CategoryAccuracyDto, RecommendationItemDto, SectionAccuracyDto, WeaknessAnalysisDto, WeaknessAnalysisViewModel
+
+### Community 232 - "ImportBatch.cs"
+Cohesion: 0.29
+Nodes (5): DateTimeOffset, ICollection, ImportBatch, DateTimeOffset, ImportLog
+
+### Community 233 - "ExamViewModels.cs"
+Cohesion: 0.33
+Nodes (5): ExamIndexViewModel, ExamInstructionsViewModel, ExamResultViewModel, ExamTakeViewModel, SaveAnswerFormModel
+
+### Community 234 - "HomeController"
+Cohesion: 0.50
+Nodes (3): ResponseCache, IActionResult, HomeController
+
+### Community 236 - "TimeZones"
+Cohesion: 0.40
+Nodes (3): TimeZones, IReadOnlyList, string
+
+### Community 237 - "PaymentViewModels.cs"
+Cohesion: 0.40
+Nodes (4): CheckoutViewModel, MockGatewayViewModel, PaymentResultViewModel, WalletViewModel
+
+### Community 238 - "ApiError.cs"
+Cohesion: 0.50
+Nodes (3): ApiError, Codes, string
+
+### Community 239 - "CertificateDtos.cs"
+Cohesion: 0.50
+Nodes (3): BandDto, SectionDto, SkillDto
+
 ## Knowledge Gaps
-- **542 isolated node(s):** `reset-and-load.sh script`, `run-all.sh script`, `SwitchCertificateInput`, `net10.0`, `Microsoft.NET.Sdk` (+537 more)
+- **563 isolated node(s):** `reset-and-load.sh script`, `run-all.sh script`, `SwitchCertificateInput`, `net10.0`, `Microsoft.NET.Sdk` (+558 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **125 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **130 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Contracts` connect `Contracts` to `AuthService`, `ExamAttempt`, `TestApiClient`, `TestApiClient`, `AuthController`, `LearnerControllerBase`, `CompanionApiClient.cs`, `microsoft_entityframeworkcore`, `TestApiClient`, `SavedQuestion`, `TestApiClient`, `Question`, `CurrencyFormatter`?**
-  _High betweenness centrality (0.158) - this node is a cross-community bridge._
-- **Why does `ICompanionApiClient` connect `CancellationToken` to `ExamAttempt`, `TestApiClient`, `ApiException`, `.EnsureSuccessAsync`, `TestApiClient`, `EmailVerificationToken`, `CompanionApiClient.cs`, `TestApiClient`, `.Index`, `SavedQuestion`, `WalletDto`, `TestApiClient`, `Question`?**
-  _High betweenness centrality (0.040) - this node is a cross-community bridge._
-- **Why does `Services` connect `microsoft_entityframeworkcore` to `CompanionApiClient.cs`, `User`?**
-  _High betweenness centrality (0.024) - this node is a cross-community bridge._
+- **Why does `Contracts` connect `Contracts` to `LearnerControllerBase`, `microsoft_entityframeworkcore`, `TestApiClient`, `.OnModelCreating`, `Question`, `ExamAttempt`, `TestApiClient`, `TestApiClient`, `Contracts`, `CompanionApiClient.cs`, `Program.cs`, `SavedQuestion`, `WeaknessAnalysisControllerTests.cs`, `CurrencyFormatter`, `AuthService.cs`, `WeaknessAnalysisDto`, `ExamViewModels.cs`, `TimeZones`, `PaymentViewModels.cs`, `ApiError.cs`, `CertificateDtos.cs`?**
+  _High betweenness centrality (0.172) - this node is a cross-community bridge._
+- **Why does `ICompanionApiClient` connect `CancellationToken` to `Controller`, `ExamAttempt`, `TestApiClient`, `TestApiClient`, `.EnsureSuccessAsync`, `ApiException`, `PracticeSessionDto`, `EmailVerificationToken`, `CompanionApiClient.cs`, `TestApiClient`, `.InvokeAsync`, `SavedQuestion`, `WalletDto`, `TestApiClient`, `Question`?**
+  _High betweenness centrality (0.037) - this node is a cross-community bridge._
+- **Why does `BusinessObjects` connect `microsoft_entityframeworkcore` to `PackageService`, `AuthService.cs`, `AuthInputs.cs`, `Test Catalog & Exam Selection Page`, `GradingCriterion`, `CancellationToken`, `Program.cs`, `.OnModelCreating`?**
+  _High betweenness centrality (0.023) - this node is a cross-community bridge._
 - **What connects `reset-and-load.sh script`, `run-all.sh script`, `SwitchCertificateInput` to the rest of the system?**
-  _542 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _563 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Exam` be split into smaller, more focused modules?**
-  _Cohesion score 0.14166666666666666 - nodes in this community are weakly interconnected._
-- **Should `AuthService` be split into smaller, more focused modules?**
-  _Cohesion score 0.09740259740259741 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.09420289855072464 - nodes in this community are weakly interconnected._
 - **Should `.SqlAsync` be split into smaller, more focused modules?**
   _Cohesion score 0.11528291909042834 - nodes in this community are weakly interconnected._
+- **Should `Users Table` be split into smaller, more focused modules?**
+  _Cohesion score 0.09398907103825137 - nodes in this community are weakly interconnected._

@@ -1,0 +1,330 @@
+using System;
+using System.Linq;
+using System.Threading.Tasks;
+using BusinessObjects;
+using DataAccess;
+using DataAccess.Scaffold;
+using Microsoft.EntityFrameworkCore;
+using Services;
+using Xunit;
+
+namespace Services.Tests;
+
+[Collection(DatabaseCollection.Name)]
+public sealed class MockExamServiceTests(DatabaseFixture database)
+{
+    private static string Unique(string prefix) => $"{prefix}{Guid.NewGuid():N}"[..20];
+
+    private (MockExamService service, LearnerService learners) CreateServices()
+    {
+        var db = DbContextFactory.Create(database.ConnectionString);
+        var learners = new LearnerService(db);
+        var service = new MockExamService(db, learners);
+        return (service, learners);
+    }
+
+    private async Task<int> SeedLearnerAsync(string? activeCertCode = null, int startingCredits = 0)
+    {
+        var email = $"{Guid.NewGuid():N}@test.local";
+        await database.SqlAsync($"""
+            IF NOT EXISTS (SELECT 1 FROM Roles WHERE Code = 'learner')
+              INSERT INTO Roles (Code, Name) VALUES ('learner', N'Learner');
+            INSERT INTO Users (RoleId, Email, PasswordHash, FullName, ActiveCertId)
+            VALUES ((SELECT RoleId FROM Roles WHERE Code = 'learner'), '{email}', 0x01, N'Test Learner',
+                    (SELECT CertId FROM Certificates WHERE Code = {(activeCertCode is null ? "NULL" : $"'{activeCertCode}'")}));
+            """);
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var userId = await db.Users.Where(u => u.Email == email).Select(u => u.UserId).SingleAsync();
+
+        if (startingCredits > 0)
+        {
+            await database.SqlAsync($"""
+                IF NOT EXISTS (SELECT 1 FROM Roles WHERE Code = 'admin')
+                  INSERT INTO Roles (Code, Name) VALUES ('admin', N'Admin');
+                INSERT INTO Users (RoleId, Email, PasswordHash, FullName, EmailVerifiedAt)
+                VALUES ((SELECT RoleId FROM Roles WHERE Code = 'admin'), 'admin-{Guid.NewGuid():N}@test.local', 0x01, N'Admin', SYSDATETIMEOFFSET());
+                DECLARE @adminId INT = SCOPE_IDENTITY();
+                INSERT INTO CreditTransactions (UserId, Reason, Delta, AdminUserId, Note)
+                VALUES ({userId}, 'admin_grant', {startingCredits}, @adminId, N'Test setup credits');
+                """);
+        }
+
+        return userId;
+    }
+
+    private async Task<(int certId, int examId, int q1Id, int q2Id, int opt1CorrectId, int opt2CorrectId)> SeedMockExamFixtureAsync(string certCode)
+    {
+        await database.SqlAsync($"""
+            INSERT INTO Certificates (Code, Name, IsActive) VALUES ('{certCode}', N'Cert {certCode}', 1);
+            DECLARE @cert INT = SCOPE_IDENTITY();
+
+            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder) VALUES
+              (@cert, 'LIST', N'Listening', 'listening', 1),
+              (@cert, 'READ', N'Reading', 'reading', 2);
+            DECLARE @sL INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'LIST');
+            DECLARE @sR INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'READ');
+
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder) VALUES
+              (@sL, @cert, 'listening', 'P1', N'Photos', 1),
+              (@sR, @cert, 'reading', 'P5', N'Sentences', 2);
+            DECLARE @secL INT = (SELECT SectionId FROM Sections WHERE CertId = @cert AND Code = 'P1');
+            DECLARE @secR INT = (SELECT SectionId FROM Sections WHERE CertId = @cert AND Code = 'P5');
+
+            INSERT INTO ScoreBands (CertId, Code, Name, MinTotal, MaxTotal, DisplayOrder) VALUES
+              (@cert, 'LOW', N'Low', 0, 499, 1),
+              (@cert, 'HIGH', N'High', 500, 990, 2);
+
+            INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose) VALUES
+              (@cert, N'Mock {certCode}', 'published', 120, 'mock');
+            DECLARE @exam INT = SCOPE_IDENTITY();
+
+            -- Scale:
+            -- LIST: 0 -> 100, 1 -> 400
+            -- READ: 0 -> 100, 1 -> 400
+            INSERT INTO ScoreScales (CertId, SkillId, ExamId, RawScore, ScaledScore) VALUES
+              (@cert, @sL, @exam, 0, 100),
+              (@cert, @sL, @exam, 1, 400),
+              (@cert, @sR, @exam, 0, 100),
+              (@cert, @sR, @exam, 1, 400);
+
+            -- Question 1: Listening
+            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @secL, 1);
+            DECLARE @grp1 INT = SCOPE_IDENTITY();
+            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder)
+            VALUES (@grp1, @exam, @secL, @sL, N'Listening Q1', 1, 'mcq', 1);
+            DECLARE @q1 INT = SCOPE_IDENTITY();
+            INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
+              (@q1, 'mcq', 'A', N'Opt A', 1),
+              (@q1, 'mcq', 'B', N'Opt B', 0);
+
+            -- Question 2: Reading
+            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @secR, 2);
+            DECLARE @grp2 INT = SCOPE_IDENTITY();
+            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder)
+            VALUES (@grp2, @exam, @secR, @sR, N'Reading Q2', 1, 'mcq', 2);
+            DECLARE @q2 INT = SCOPE_IDENTITY();
+            INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
+              (@q2, 'mcq', 'A', N'Opt A', 0),
+              (@q2, 'mcq', 'B', N'Opt B', 1);
+            """);
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var cert = await db.Certificates.SingleAsync(c => c.Code == certCode);
+        var exam = await db.Exams.SingleAsync(e => e.CertId == cert.CertId);
+        var questions = await db.Questions.Where(q => q.ExamId == exam.ExamId).OrderBy(q => q.DisplayOrder).ToListAsync();
+        var q1 = questions[0];
+        var q2 = questions[1];
+
+        var opt1 = await db.QuestionOptions.SingleAsync(o => o.QuestionId == q1.QuestionId && o.IsCorrect);
+        var opt2 = await db.QuestionOptions.SingleAsync(o => o.QuestionId == q2.QuestionId && o.IsCorrect);
+
+        return (cert.CertId, exam.ExamId, q1.QuestionId, q2.QuestionId, opt1.OptionId, opt2.OptionId);
+    }
+
+    [Fact]
+    public async Task StartAttempt_WhenInsufficientCredits_ThrowsInsufficientCreditsBeforeCharge()
+    {
+        var certCode = Unique("MC01");
+        var (_, examId, _, _, _, _) = await SeedMockExamFixtureAsync(certCode);
+        var userId = await SeedLearnerAsync(certCode, startingCredits: 0);
+        var (service, _) = CreateServices();
+
+        var ex = await Assert.ThrowsAsync<MockExamException>(() => service.StartAttemptAsync(userId, examId));
+        Assert.Equal(MockExamException.InsufficientCredits, ex.Code);
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var attempts = await db.ExamAttempts.Where(a => a.UserId == userId).ToListAsync();
+        var txns = await db.CreditTransactions.Where(t => t.UserId == userId).ToListAsync();
+
+        Assert.Empty(attempts);
+        Assert.Empty(txns);
+    }
+
+    [Fact]
+    public async Task StartAttempt_WhenCreditsSufficient_ChargesOneCreditAndSetsServerCountdown()
+    {
+        var certCode = Unique("MC02");
+        var (_, examId, _, _, _, _) = await SeedMockExamFixtureAsync(certCode);
+        var userId = await SeedLearnerAsync(certCode, startingCredits: 5);
+        var (service, _) = CreateServices();
+
+        var attempt = await service.StartAttemptAsync(userId, examId);
+
+        Assert.Equal("in_progress", attempt.Status);
+        Assert.False(attempt.IsAutoSubmitted);
+        Assert.True(attempt.ExpiresAt > DateTimeOffset.UtcNow.AddMinutes(115));
+        Assert.True(attempt.RemainingSeconds > 7100);
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var dbAttempt = await db.ExamAttempts.SingleAsync(a => a.AttemptId == attempt.AttemptId);
+        Assert.Equal("in_progress", dbAttempt.Status);
+
+        var balance = await db.vw_UserCreditBalances.Where(b => b.UserId == userId).Select(b => b.Balance).SingleAsync();
+        Assert.Equal(4, balance); // 5 - 1 = 4
+
+        var answers = await db.AttemptAnswers.Where(a => a.AttemptId == attempt.AttemptId).ToListAsync();
+        Assert.Equal(2, answers.Count);
+        Assert.All(answers, a =>
+        {
+            Assert.Null(a.SelectedOptionId);
+            Assert.Null(a.IsCorrect);
+            Assert.False(a.IsFlagged);
+        });
+    }
+
+    [Fact]
+    public async Task StartAttempt_WhenAlreadyActive_ResumesWithoutDoubleCharging()
+    {
+        var certCode = Unique("MC03");
+        var (_, examId, _, _, _, _) = await SeedMockExamFixtureAsync(certCode);
+        var userId = await SeedLearnerAsync(certCode, startingCredits: 3);
+        var (service, _) = CreateServices();
+
+        var first = await service.StartAttemptAsync(userId, examId);
+        var second = await service.StartAttemptAsync(userId, examId);
+
+        Assert.Equal(first.AttemptId, second.AttemptId);
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var balance = await db.vw_UserCreditBalances.Where(b => b.UserId == userId).Select(b => b.Balance).SingleAsync();
+        Assert.Equal(2, balance); // only charged once
+    }
+
+    [Fact]
+    public async Task SaveAnswer_PersistsAnswerAndFlagState()
+    {
+        var certCode = Unique("MC04");
+        var (_, examId, q1Id, _, opt1Id, _) = await SeedMockExamFixtureAsync(certCode);
+        var userId = await SeedLearnerAsync(certCode, startingCredits: 2);
+        var (service, _) = CreateServices();
+
+        var attempt = await service.StartAttemptAsync(userId, examId);
+        var saveResult = await service.SaveAnswerAsync(userId, attempt.AttemptId, q1Id, opt1Id, isFlagged: true);
+
+        Assert.Equal(q1Id, saveResult.QuestionId);
+        Assert.Equal(opt1Id, saveResult.SelectedOptionId);
+        Assert.True(saveResult.IsFlagged);
+
+        // Verify take view restores answer and flagged state
+        var take = await service.GetAttemptTakeAsync(userId, attempt.AttemptId, questionDisplayOrder: 1);
+        Assert.Equal(1, take.AnsweredCount);
+        Assert.Equal(1, take.FlaggedCount);
+        Assert.Equal(opt1Id, take.CurrentQuestion.SelectedOptionId);
+        Assert.True(take.CurrentQuestion.IsFlagged);
+        Assert.True(take.Navigator[0].IsAnswered);
+        Assert.True(take.Navigator[0].IsFlagged);
+    }
+
+    [Fact]
+    public async Task Reload_DoesNotResetCountdown()
+    {
+        var certCode = Unique("MC05");
+        var (_, examId, _, _, _, _) = await SeedMockExamFixtureAsync(certCode);
+        var userId = await SeedLearnerAsync(certCode, startingCredits: 2);
+        var (service, _) = CreateServices();
+
+        var attempt = await service.StartAttemptAsync(userId, examId);
+
+        var firstTake = await service.GetAttemptTakeAsync(userId, attempt.AttemptId, null);
+        var secondTake = await service.GetAttemptTakeAsync(userId, attempt.AttemptId, null);
+
+        Assert.Equal(firstTake.ExpiresAt, secondTake.ExpiresAt);
+        Assert.True(secondTake.RemainingSeconds <= firstTake.RemainingSeconds);
+    }
+
+    [Fact]
+    public async Task AutoSubmit_OnNextTouchPastDeadline_SetsIsAutoSubmittedAndScores()
+    {
+        var certCode = Unique("MC06");
+        var (_, examId, q1Id, _, opt1Id, _) = await SeedMockExamFixtureAsync(certCode);
+        var userId = await SeedLearnerAsync(certCode, startingCredits: 2);
+        var (service, _) = CreateServices();
+
+        var attempt = await service.StartAttemptAsync(userId, examId);
+
+        // Manually expire the attempt in the database
+        await database.SqlAsync($"""
+            UPDATE ExamAttempts
+            SET ExpiresAt = DATEADD(MINUTE, -10, SYSDATETIMEOFFSET())
+            WHERE AttemptId = {attempt.AttemptId};
+            """);
+
+        // Next touch via SaveAnswer (on a subsequent request) should fail with AttemptExpired and auto-submit
+        var (touchService, _) = CreateServices();
+        var ex = await Assert.ThrowsAsync<MockExamException>(() =>
+            touchService.SaveAnswerAsync(userId, attempt.AttemptId, q1Id, opt1Id, isFlagged: false));
+        Assert.Equal(MockExamException.AttemptExpired, ex.Code);
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var dbAttempt = await db.ExamAttempts.SingleAsync(a => a.AttemptId == attempt.AttemptId);
+        Assert.Equal("graded", dbAttempt.Status);
+        Assert.True(dbAttempt.IsAutoSubmitted);
+        Assert.NotNull(dbAttempt.SubmittedAt);
+        Assert.NotNull(dbAttempt.TotalScore);
+        Assert.NotNull(dbAttempt.BandCode);
+    }
+
+    [Fact]
+    public async Task CancelAttempt_EndsAttemptWithoutResult()
+    {
+        var certCode = Unique("MC07");
+        var (_, examId, _, _, _, _) = await SeedMockExamFixtureAsync(certCode);
+        var userId = await SeedLearnerAsync(certCode, startingCredits: 2);
+        var (service, _) = CreateServices();
+
+        var attempt = await service.StartAttemptAsync(userId, examId);
+        await service.CancelAttemptAsync(userId, attempt.AttemptId);
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var dbAttempt = await db.ExamAttempts.SingleAsync(a => a.AttemptId == attempt.AttemptId);
+
+        Assert.Equal("abandoned", dbAttempt.Status);
+        Assert.Null(dbAttempt.SubmittedAt);
+        Assert.Null(dbAttempt.TotalScore);
+        Assert.Null(dbAttempt.BandCode);
+
+        // Getting result of abandoned attempt throws AttemptNotActive
+        await Assert.ThrowsAsync<MockExamException>(() =>
+            service.GetAttemptResultAsync(userId, attempt.AttemptId));
+    }
+
+    [Fact]
+    public async Task SubmitAttempt_ComputesScaledScoresAndSnapshotsBand()
+    {
+        var certCode = Unique("MC08");
+        var (_, examId, q1Id, q2Id, opt1CorrectId, opt2CorrectId) = await SeedMockExamFixtureAsync(certCode);
+        var userId = await SeedLearnerAsync(certCode, startingCredits: 2);
+        var (service, _) = CreateServices();
+
+        var attempt = await service.StartAttemptAsync(userId, examId);
+
+        // Answer Q1 correctly (Listening) and Q2 correctly (Reading)
+        await service.SaveAnswerAsync(userId, attempt.AttemptId, q1Id, opt1CorrectId, isFlagged: false);
+        await service.SaveAnswerAsync(userId, attempt.AttemptId, q2Id, opt2CorrectId, isFlagged: false);
+
+        var result = await service.SubmitAttemptAsync(userId, attempt.AttemptId, isAutoSubmit: false);
+
+        Assert.Equal("graded", result.Status);
+        Assert.False(result.IsAutoSubmitted);
+        Assert.Equal(800, result.TotalScore); // Listening 400 + Reading 400 = 800
+        Assert.Equal("HIGH", result.BandCode); // 800 is in HIGH (500-990)
+        Assert.Equal(2, result.SkillScores.Count);
+
+        var listeningScore = result.SkillScores.Single(s => s.SkillCode == "LIST");
+        Assert.Equal(1, listeningScore.RawScore);
+        Assert.Equal(400, listeningScore.ScaledScore);
+
+        var readingScore = result.SkillScores.Single(s => s.SkillCode == "READ");
+        Assert.Equal(1, readingScore.RawScore);
+        Assert.Equal(400, readingScore.ScaledScore);
+
+        // Verify snapshotted state in DB
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var dbAttempt = await db.ExamAttempts.SingleAsync(a => a.AttemptId == attempt.AttemptId);
+        Assert.Equal(800, dbAttempt.TotalScore);
+        Assert.Equal("HIGH", dbAttempt.BandCode);
+        Assert.Equal("graded", dbAttempt.Status);
+        Assert.NotNull(dbAttempt.SubmittedAt);
+    }
+}

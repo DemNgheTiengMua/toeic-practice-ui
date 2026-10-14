@@ -1,0 +1,136 @@
+@model ExamResultViewModel
+@inject DateTimeFormatter Dates
+@{
+    Layout = "_LearnerLayout";
+    var res = Model.Result;
+    ViewData["Title"] = $"Results — {res.ExamName}";
+    ViewData["Description"] = $"Mock exam results for {res.ExamName}.";
+
+    var hours = res.DurationSeconds / 3600;
+    var minutes = (res.DurationSeconds % 3600) / 60;
+    var seconds = res.DurationSeconds % 60;
+    var durationStr = hours > 0
+        ? $"{hours}h {minutes}m {seconds}s"
+        : $"{minutes}m {seconds}s";
+}
+
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+  <a href="/dashboard" class="breadcrumbs__item">Home</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <a href="/exams" class="breadcrumbs__item">Test List</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <span class="breadcrumbs__item" aria-current="page">Results</span>
+</nav>
+
+<div class="row row--between" style="align-items: baseline;">
+  <div>
+    <h1 class="m-0 mb-1">Results — @res.ExamName</h1>
+    <p class="text-sm text-muted no-margin">
+      Completed @Dates.Format(res.SubmittedAt) · Time taken: <strong>@durationStr</strong>
+    </p>
+  </div>
+  <div class="row" style="gap: var(--space-2);">
+    <a class="btn" href="/exams">Back to test list</a>
+    <a class="btn btn--primary" href="/practice">Practice by section</a>
+  </div>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+  <div class="alert alert--danger" role="alert">@Model.ErrorMessage</div>
+}
+
+@if (res.IsAutoSubmitted)
+{
+  <div class="alert alert--warning" role="status">
+    <strong>Time is up.</strong> The exam was submitted automatically when your deadline expired and graded on the questions you answered.
+  </div>
+}
+
+<!-- Score Hero -->
+<div class="score-hero">
+  <div class="score-hero__total">
+    <div class="score-hero__total-value">@res.TotalScore</div>
+    <div class="score-hero__total-label">
+      Total scaled score · @res.CertCode
+    </div>
+    @if (res.ScoreDelta.HasValue)
+    {
+      <p class="score-hero__delta" role="status">
+        <span class="score-hero__delta-value">@(res.ScoreDelta.Value >= 0 ? $"+{res.ScoreDelta.Value}" : res.ScoreDelta.Value.ToString())</span>
+        <span class="score-hero__delta-label">vs. previous attempt</span>
+      </p>
+    }
+  </div>
+
+  @foreach (var skill in res.SkillScores)
+  {
+    <div class="score-hero__section">
+      <div class="score-hero__section-value">@skill.ScaledScore</div>
+      <div class="text-sm text-muted">@skill.SkillName</div>
+      <p class="text-xs text-muted m-0 mt-1">@skill.RawScore/@skill.TotalQuestions correct</p>
+    </div>
+  }
+</div>
+
+@if (!string.IsNullOrEmpty(res.BandCode))
+{
+  <div class="card">
+    <div class="card__header"><strong>Proficiency Level / Score Band</strong></div>
+    <div class="card__body">
+      <div class="cefr">
+        <div class="cefr__head">
+          <span class="cefr__current">@res.BandCode</span>
+          <span class="text-sm text-muted">@res.BandName · @res.CertName</span>
+        </div>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Breakdown by Skill Table -->
+<div class="card">
+  <div class="card__header"><strong>Skill Performance Breakdown</strong></div>
+  <div class="card__body">
+    <table class="table table--striped">
+      <thead>
+        <tr>
+          <th>Skill</th>
+          <th>Raw Score</th>
+          <th>Total Questions</th>
+          <th>Scaled Score</th>
+          <th>Accuracy</th>
+        </tr>
+      </thead>
+      <tbody>
+        @foreach (var skill in res.SkillScores)
+        {
+          var pct = skill.TotalQuestions > 0 ? (int)Math.Round((double)skill.RawScore / skill.TotalQuestions * 100) : 0;
+          <tr>
+            <td><strong>@skill.SkillName</strong></td>
+            <td>@skill.RawScore</td>
+            <td>@skill.TotalQuestions</td>
+            <td><strong>@skill.ScaledScore</strong></td>
+            <td>@pct%</td>
+          </tr>
+        }
+      </tbody>
+      <tfoot>
+        <tr>
+          <th>Total</th>
+          <th>@res.SkillScores.Sum(s => s.RawScore)</th>
+          <th>@res.SkillScores.Sum(s => s.TotalQuestions)</th>
+          <th><strong>@res.TotalScore</strong></th>
+          <th>
+            @{
+              var totalRaw = res.SkillScores.Sum(s => s.RawScore);
+              var totalQuestions = res.SkillScores.Sum(s => s.TotalQuestions);
+              var totalPct = totalQuestions > 0 ? (int)Math.Round((double)totalRaw / totalQuestions * 100) : 0;
+            }
+            @totalPct%
+          </th>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>

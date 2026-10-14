@@ -1,0 +1,139 @@
+@model ExamInstructionsViewModel
+@{
+    Layout = "_LearnerLayout";
+    var instr = Model.Instructions;
+    ViewData["Title"] = $"Instructions — {instr.ExamName}";
+    ViewData["Description"] = $"Mock exam instructions for {instr.ExamName}.";
+    var hasCredits = instr.CreditBalance >= instr.CreditCost;
+}
+
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+  <a href="/dashboard" class="breadcrumbs__item">Home</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <a href="/exams" class="breadcrumbs__item">Test List</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <span class="breadcrumbs__item" aria-current="page">Instructions</span>
+</nav>
+
+<div class="row row--between">
+  <div>
+    <h1 class="m-0 mb-1">Before you begin: @instr.ExamName</h1>
+    <p class="text-muted no-margin">
+      Certificate: <strong>@instr.CertCode</strong> · Duration: <strong>@instr.DurationMinutes minutes</strong>
+      @(instr.QuestionCount.HasValue ? $"· Questions: {instr.QuestionCount}" : "")
+    </p>
+  </div>
+  <div>
+    <span class="badge @(hasCredits ? "badge--info" : "badge--warning")">
+      @instr.CreditBalance @(instr.CreditBalance == 1 ? "credit" : "credits") left
+    </span>
+  </div>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+  <div class="alert alert--danger" role="alert">@Model.ErrorMessage</div>
+}
+
+@if (!hasCredits)
+{
+  <div class="card">
+    <div class="card__body">
+      <div class="state-block">
+        <div class="state-block__icon" aria-hidden="true">LOCKED</div>
+        <h2 class="state-block__title">You are out of credits</h2>
+        <p class="state-block__desc">
+          Each full exam uses <strong>@instr.CreditCost credit</strong>. Buy more to continue or practice individual sections for free.
+        </p>
+        <div class="row row--center">
+          <a class="btn btn--primary btn--lg" href="/pricing">View pricing</a>
+          <a class="btn btn--lg" href="/practice">Practice free</a>
+        </div>
+      </div>
+    </div>
+  </div>
+}
+else
+{
+  <div class="stack">
+    @if (instr.Sections.Count > 0)
+    {
+      <div class="card">
+        <div class="card__header"><strong>Exam structure</strong></div>
+        <div class="card__body">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Skill</th>
+                <th>Section</th>
+                <th>Questions</th>
+                <th>Time</th>
+              </tr>
+            </thead>
+            <tbody>
+              @foreach (var sec in instr.Sections)
+              {
+                <tr>
+                  <td>@sec.SkillName</td>
+                  <td>@sec.SectionName</td>
+                  <td>@(sec.ExpectedQuestionCount.HasValue ? sec.ExpectedQuestionCount.ToString() : "—")</td>
+                  <td>@(sec.DurationMinutes.HasValue ? $"{sec.DurationMinutes} minutes" : "—")</td>
+                </tr>
+              }
+            </tbody>
+            <tfoot>
+              <tr>
+                <th>Total</th>
+                <th></th>
+                <th>@(instr.QuestionCount.HasValue ? instr.QuestionCount.ToString() : "—")</th>
+                <th>@instr.DurationMinutes minutes</th>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    }
+
+    <div class="card">
+      <div class="card__header"><strong>Important instructions</strong></div>
+      <div class="card__body">
+        <ul class="stack m-0 pl-5">
+          <li>Answers are saved automatically as you make each selection.</li>
+          <li>Countdown is strictly tracked against the server clock. Closing the browser does not pause the timer.</li>
+          <li>When time expires, the attempt will automatically submit and be scored on the questions you answered.</li>
+          <li>Starting this exam will deduct <strong>@instr.CreditCost credit</strong> from your wallet. You will have @(instr.CreditBalance - instr.CreditCost) credits left.</li>
+          <li>Make sure your device audio is connected and functioning before starting.</li>
+        </ul>
+      </div>
+    </div>
+
+    <label class="row" style="cursor: pointer; align-items: center; gap: var(--space-2);">
+      <input type="checkbox" id="confirm-ready" style="width: 1.25rem; height: 1.25rem;">
+      <span class="text-sm">I have read the instructions and am ready to begin</span>
+    </label>
+
+    <div class="row" style="gap: var(--space-3); align-items: center;">
+      <form method="post" action="/exams/@instr.ExamId/start" class="no-margin">
+        @Html.AntiForgeryToken()
+        <button type="submit" id="start-btn" class="btn btn--primary btn--lg" disabled>
+          Start test — uses @instr.CreditCost credit
+        </button>
+      </form>
+      <a class="btn btn--lg" href="/exams">Later</a>
+    </div>
+  </div>
+
+  @section Scripts {
+  <script>
+    (function () {
+      var check = document.getElementById('confirm-ready');
+      var startBtn = document.getElementById('start-btn');
+      if (check && startBtn) {
+        check.addEventListener('change', function () {
+          startBtn.disabled = !check.checked;
+        });
+      }
+    })();
+  </script>
+  }
+}
