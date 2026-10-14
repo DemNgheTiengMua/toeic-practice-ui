@@ -144,6 +144,8 @@ builder.Services.AddScoped<ISavedQuestionService, SavedQuestionService>();
 builder.Services.AddScoped<IWeaknessAnalysisService, WeaknessAnalysisService>();
 builder.Services.AddScoped<IPackageService, PackageService>();
 builder.Services.AddScoped<IMockExamService, MockExamService>();
+builder.Services.AddScoped<IAdminOrderService, AdminOrderService>();
+builder.Services.AddScoped<IAdminUserService, AdminUserService>();
 
 var payOsOptions = builder.Configuration.GetSection(PayOsOptions.SectionName).Get<PayOsOptions>() ?? new PayOsOptions();
 builder.Services.AddSingleton(payOsOptions);
@@ -455,6 +457,100 @@ admin.MapPost("/packages/{packageId:int}/deactivate", async (int packageId, IPac
         return Results.NotFound();
     }
 });
+
+admin.MapGet("/orders", async (
+    string? q,
+    string? status,
+    string? gateway,
+    int? page,
+    int? pageSize,
+    IAdminOrderService orders,
+    CancellationToken cancellationToken) =>
+{
+    var summary = await orders.GetOrdersAsync(q, status, gateway, page ?? 1, pageSize ?? 20, cancellationToken);
+    return Results.Ok(summary);
+});
+
+admin.MapGet("/orders/{orderId:int}", async (
+    int orderId,
+    IAdminOrderService orders,
+    CancellationToken cancellationToken) =>
+{
+    var detail = await orders.GetOrderDetailAsync(orderId, cancellationToken);
+    return detail is not null ? Results.Ok(detail) : Results.NotFound();
+});
+
+admin.MapPost("/orders/{orderId:int}/reconcile", async (
+    int orderId,
+    IAdminOrderService orders,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var result = await orders.ReconcileOrderAsync(orderId, cancellationToken);
+        return Results.Ok(result);
+    }
+    catch (ApiException ex) when (ex.Code == ApiError.Codes.OrderNotFound)
+    {
+        return Results.NotFound();
+    }
+});
+
+admin.MapGet("/users", async (
+    string? q,
+    string? status,
+    int? page,
+    int? pageSize,
+    IAdminUserService users,
+    CancellationToken cancellationToken) =>
+{
+    var summary = await users.GetUsersAsync(q, status, page ?? 1, pageSize ?? 20, cancellationToken);
+    return Results.Ok(summary);
+});
+
+admin.MapPost("/users/{userId:int}/lock", async (
+    int userId,
+    HttpContext http,
+    IAdminUserService users,
+    CancellationToken cancellationToken) =>
+{
+    var adminId = int.Parse(http.User.FindFirst(IAccessTokenFactory.ClaimUserId)!.Value);
+    var updated = await users.SetLockAsync(adminId, userId, isLocked: true, cancellationToken);
+    return Results.Ok(updated);
+});
+
+admin.MapPost("/users/{userId:int}/unlock", async (
+    int userId,
+    HttpContext http,
+    IAdminUserService users,
+    CancellationToken cancellationToken) =>
+{
+    var adminId = int.Parse(http.User.FindFirst(IAccessTokenFactory.ClaimUserId)!.Value);
+    var updated = await users.SetLockAsync(adminId, userId, isLocked: false, cancellationToken);
+    return Results.Ok(updated);
+});
+
+admin.MapPost("/users/{userId:int}/resend-activation", async (
+    int userId,
+    IAdminUserService users,
+    CancellationToken cancellationToken) =>
+{
+    await users.ResendActivationAsync(userId, cancellationToken);
+    return Results.NoContent();
+});
+
+admin.MapPost("/users/{userId:int}/adjust-credits", async (
+    int userId,
+    AdjustCreditsRequest request,
+    HttpContext http,
+    IAdminUserService users,
+    CancellationToken cancellationToken) =>
+{
+    var adminId = int.Parse(http.User.FindFirst(IAccessTokenFactory.ClaimUserId)!.Value);
+    var result = await users.AdjustCreditsAsync(adminId, userId, request.Delta, request.Reason, cancellationToken);
+    return Results.Ok(result);
+});
+
 
 // ---- Learner (issue #7) ----
 // The learner is always the token's own user: no endpoint takes a user id or a certificate to

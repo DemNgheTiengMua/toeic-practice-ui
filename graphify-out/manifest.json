@@ -186,9 +186,9 @@
     "semantic_hash": ""
   },
   "src/Contracts/ApiError.cs": {
-    "mtime": 1791981864.6879506,
-    "seen": 1791985312.1546125,
-    "ast_hash": "b89890914c682263b75bbf74d92febd0",
+    "mtime": 1791986093.6138158,
+    "seen": 1791986689.4705105,
+    "ast_hash": "c7b87c795b54cf6bb6d33f5cafd65752",
     "semantic_hash": ""
   },
   "src/Contracts/AuthClaims.cs": {
@@ -216,9 +216,9 @@
     "semantic_hash": "5fa1bb2011284e3f35ad8f4fb9993180"
   },
   "src/Contracts/CompanionApiClient.cs": {
-    "mtime": 1791982312.9855516,
-    "seen": 1791985312.15462,
-    "ast_hash": "a5e87cbdb67205eab2998a8b1295a7f3",
+    "mtime": 1791986159.2951334,
+    "seen": 1791986689.4705186,
+    "ast_hash": "e8121559afbd8668dd75036bd846fa63",
     "semantic_hash": ""
   },
   "src/Contracts/Contracts.csproj": {
@@ -654,9 +654,9 @@
     "semantic_hash": "a1e0ec747b63abe2941b00c6252f53a5"
   },
   "src/WebAPI/Program.cs": {
-    "mtime": 1791985245.5641775,
-    "seen": 1791985312.1547642,
-    "ast_hash": "2fdda0807d2573e076d21216f3475ff1",
+    "mtime": 1791986386.8144557,
+    "seen": 1791986689.4706724,
+    "ast_hash": "cd7a44e3939bc19cc6e58ea951e3d8ac",
     "semantic_hash": ""
   },
   "src/WebAPI/Properties/launchSettings.json": {
@@ -1788,9 +1788,9 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Shared/_AdminLayout.cshtml": {
-    "mtime": 1791970032.5792408,
-    "seen": 1791985312.1548767,
-    "ast_hash": "8994e2a17b12fc3240589c5e97482935",
+    "mtime": 1791986511.631713,
+    "seen": 1791986689.470798,
+    "ast_hash": "8523a4b42be17a983d0dfbe02551cc40",
     "semantic_hash": ""
   },
   "tests/Services.Tests/PackageServiceTests.cs": {
@@ -2001,6 +2001,78 @@
     "mtime": 1791985218.0358636,
     "seen": 1791985312.1549952,
     "ast_hash": "891093d687799dba5db68b76d629ba89",
+    "semantic_hash": ""
+  },
+  "src/Contracts/AdminDtos.cs": {
+    "mtime": 1791986103.7420816,
+    "seen": 1791986689.4705079,
+    "ast_hash": "2a0036a0112e31f37bd8c00011c436d3",
+    "semantic_hash": ""
+  },
+  "src/Services/AdminOrderService.cs": {
+    "mtime": 1791986199.0429602,
+    "seen": 1791986689.4706407,
+    "ast_hash": "d1d06b05a969c75015b55f4db5ce8718",
+    "semantic_hash": ""
+  },
+  "src/Services/AdminUserService.cs": {
+    "mtime": 1791986215.6362898,
+    "seen": 1791986689.4706423,
+    "ast_hash": "c86433be112df988c3235023f5ac81e7",
+    "semantic_hash": ""
+  },
+  "src/WebMVC/Controllers/AdminOrdersController.cs": {
+    "mtime": 1791986421.7421763,
+    "seen": 1791986689.4706817,
+    "ast_hash": "44a60b545cedc5a3c44add860a447ba0",
+    "semantic_hash": ""
+  },
+  "src/WebMVC/Controllers/AdminUsersController.cs": {
+    "mtime": 1791986435.0172079,
+    "seen": 1791986689.4706848,
+    "ast_hash": "944559b82786a5885bd1ba72454a6e4d",
+    "semantic_hash": ""
+  },
+  "src/WebMVC/Models/AdminViewModels.cs": {
+    "mtime": 1791986410.1304736,
+    "seen": 1791986689.4707103,
+    "ast_hash": "33a97032402e52dd8bdb8c8f75df0af2",
+    "semantic_hash": ""
+  },
+  "src/WebMVC/Views/Admin/Orders.cshtml": {
+    "mtime": 1791986570.3615463,
+    "seen": 1791986689.470735,
+    "ast_hash": "adb7659779c77d3491c11ab0f3e9ec0c",
+    "semantic_hash": ""
+  },
+  "src/WebMVC/Views/Admin/Users.cshtml": {
+    "mtime": 1791986547.62057,
+    "seen": 1791986689.4707396,
+    "ast_hash": "6760be73324747e5e99d55b5b89abcd6",
+    "semantic_hash": ""
+  },
+  "tests/Services.Tests/AdminOrderServiceTests.cs": {
+    "mtime": 1791986250.5020335,
+    "seen": 1791986689.4708166,
+    "ast_hash": "d1f795de6077bb019775764d2d7ad9fe",
+    "semantic_hash": ""
+  },
+  "tests/Services.Tests/AdminUserServiceTests.cs": {
+    "mtime": 1791986311.3551567,
+    "seen": 1791986689.4708178,
+    "ast_hash": "f82d4c87b6d1ecaf04a1f4dd8840c1f2",
+    "semantic_hash": ""
+  },
+  "tests/WebMVC.Tests/AdminOrdersControllerTests.cs": {
+    "mtime": 1791986607.4118958,
+    "seen": 1791986689.4708397,
+    "ast_hash": "3bf67162513373d284351950b708b43b",
+    "semantic_hash": ""
+  },
+  "tests/WebMVC.Tests/AdminUsersControllerTests.cs": {
+    "mtime": 1791986629.2557676,
+    "seen": 1791986689.4708426,
+    "ast_hash": "21fbed247375a74a152d538b6b78060c",
     "semantic_hash": ""
   }
 }

@@ -62,5 +62,7 @@ public sealed record ApiError(string Code, string Title, int Status, string? Det
         public const string ExamNotFound = "EXAM_NOT_FOUND";
         public const string AttemptNotFound = "ATTEMPT_NOT_FOUND";
         public const string AttemptNotActive = "ATTEMPT_NOT_ACTIVE";
+
+        public const string UserNotFound = "USER_NOT_FOUND";
     }
 }

@@ -1,0 +1,323 @@
+@using Contracts
+@model WebMVC.Models.AdminOrdersViewModel
+@inject WebMVC.DateTimeFormatter Formatter
+@{
+    ViewData["Title"] = "Orders";
+    ViewData["Description"] = "List and reconcile platform orders and inspection of payment event audit trails.";
+    var summary = Model.Summary;
+    var selected = Model.SelectedOrder;
+}
+
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+  <a href="/admin" class="breadcrumbs__item">Admin</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <span class="breadcrumbs__item" aria-current="page">Orders</span>
+</nav>
+
+<h1>Orders</h1>
+
+<div class="grid-3">
+  <div class="stat">
+    <div class="stat__label">Paid (this month)</div>
+    <div class="stat__value">@summary.PaidThisMonthCount</div>
+    <div class="stat__hint">@CurrencyFormatter.FormatVnd(summary.PaidThisMonthAmount)</div>
+  </div>
+  <div class="stat">
+    <div class="stat__label">Reconciling</div>
+    <div class="stat__value">@summary.ReconcilingCount</div>
+    <div class="stat__hint">Orders awaiting gateway confirmation</div>
+  </div>
+  <div class="stat">
+    <div class="stat__label">Failed / expired</div>
+    <div class="stat__value">@summary.FailedOrExpiredCount</div>
+    <div class="stat__hint">Cancelled, expired, or failed attempts</div>
+  </div>
+</div>
+
+<form method="get" action="/admin/orders" class="toolbar">
+  <div class="field toolbar__grow">
+    <label class="field__label" for="o-q">Search by order code, email, or student name</label>
+    <input class="field__input" id="o-q" name="q" type="search" placeholder="DH-20260920-…" value="@Model.Query">
+  </div>
+  <div class="field">
+    <label class="field__label" for="o-status">Status</label>
+    <select class="field__input" id="o-status" name="status">
+      <option value="">All</option>
+      <option value="paid" selected="@(Model.Status?.Equals("paid", StringComparison.OrdinalIgnoreCase) == true)">Paid</option>
+      <option value="reconciling" selected="@(Model.Status?.Equals("reconciling", StringComparison.OrdinalIgnoreCase) == true)">Reconciling</option>
+      <option value="pending" selected="@(Model.Status?.Equals("pending", StringComparison.OrdinalIgnoreCase) == true)">Pending</option>
+      <option value="failed" selected="@(Model.Status?.Equals("failed", StringComparison.OrdinalIgnoreCase) == true)">Failed</option>
+      <option value="expired" selected="@(Model.Status?.Equals("expired", StringComparison.OrdinalIgnoreCase) == true)">Expired</option>
+    </select>
+  </div>
+  <div class="field">
+    <label class="field__label" for="o-method">Gateway</label>
+    <select class="field__input" id="o-method" name="gateway">
+      <option value="">All</option>
+      <option value="payos" selected="@(Model.Gateway?.Equals("payos", StringComparison.OrdinalIgnoreCase) == true)">payOS</option>
+      <option value="mock" selected="@(Model.Gateway?.Equals("mock", StringComparison.OrdinalIgnoreCase) == true)">Mock</option>
+    </select>
+  </div>
+  <button type="submit" class="btn btn--primary">Filter</button>
+  @if (!string.IsNullOrEmpty(Model.Query) || !string.IsNullOrEmpty(Model.Status) || !string.IsNullOrEmpty(Model.Gateway))
+  {
+    <a href="/admin/orders" class="btn btn--ghost">Reset</a>
+  }
+</form>
+
+@if (summary.Orders.Count == 0)
+{
+  <div class="card">
+    <div class="card__body">
+      <div class="state-block">
+        <div class="state-block__icon" aria-hidden="true">?</div>
+        <h2 class="state-block__title">No orders match the filter</h2>
+        <p class="state-block__desc">Try widening the search keyword or removing the status filter.</p>
+      </div>
+    </div>
+  </div>
+}
+else
+{
+  <div class="card">
+    <div class="card__body">
+      <table class="table table--striped">
+        <thead>
+          <tr>
+            <th scope="col">Order code</th>
+            <th scope="col">Student</th>
+            <th scope="col">Package</th>
+            <th scope="col">Amount</th>
+            <th scope="col">Gateway</th>
+            <th scope="col">Transaction code</th>
+            <th scope="col">Time</th>
+            <th scope="col">Status</th>
+            <th scope="col">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @foreach (var order in summary.Orders)
+          {
+            <tr>
+              <td><code>@order.OrderCode</code></td>
+              <td>
+                <div>@order.UserEmail</div>
+                @if (!string.IsNullOrEmpty(order.UserFullName))
+                {
+                  <small class="text-muted">@order.UserFullName</small>
+                }
+              </td>
+              <td>@order.PackageName</td>
+              <td>@CurrencyFormatter.FormatVnd(order.Amount)</td>
+              <td><span class="badge">@order.Gateway.ToUpperInvariant()</span></td>
+              <td>@(order.GatewayTxnRef ?? "—")</td>
+              <td>@Formatter.Format(order.CreatedAt)</td>
+              <td>
+                @switch (order.Status)
+                {
+                  case "paid":
+                    <span class="badge badge--success">Paid</span>
+                    break;
+                  case "reconciling":
+                    <span class="badge badge--warning">Reconciling</span>
+                    break;
+                  case "pending":
+                    <span class="badge">Pending</span>
+                    break;
+                  case "failed":
+                    <span class="badge badge--danger">Failed</span>
+                    break;
+                  case "expired":
+                    <span class="badge">Expired</span>
+                    break;
+                  default:
+                    <span class="badge">@order.Status</span>
+                    break;
+                }
+              </td>
+              <td>
+                <div class="row">
+                  <a class="btn btn--sm btn--ghost" href="/admin/orders?@(string.IsNullOrEmpty(Model.Query) ? "" : $"q={Uri.EscapeDataString(Model.Query)}&")@(string.IsNullOrEmpty(Model.Status) ? "" : $"status={Uri.EscapeDataString(Model.Status)}&")detailId=@order.OrderId">Details</a>
+                  @if (order.Status is "reconciling" or "pending")
+                  {
+                    <form method="post" action="/admin/orders/@order.OrderId/reconcile" class="no-margin">
+                      @Html.AntiForgeryToken()
+                      <button type="submit" class="btn btn--sm">Reconcile</button>
+                    </form>
+                  }
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (summary.TotalCount > summary.PageSize)
+    {
+      <div class="card__footer">
+        <div class="pagination">
+          <span class="pagination__info">Showing @(((summary.Page - 1) * summary.PageSize) + 1)–@(Math.Min(summary.Page * summary.PageSize, summary.TotalCount)) of @summary.TotalCount orders</span>
+          @if (summary.Page > 1)
+          {
+            <a class="pagination__page" href="/admin/orders?page=@(summary.Page - 1)&q=@Model.Query&status=@Model.Status&gateway=@Model.Gateway">Previous</a>
+          }
+          else
+          {
+            <span class="pagination__page" aria-disabled="true">Previous</span>
+          }
+          <span class="pagination__page is-current" aria-current="page">@summary.Page</span>
+          @if (summary.Page * summary.PageSize < summary.TotalCount)
+          {
+            <a class="pagination__page" href="/admin/orders?page=@(summary.Page + 1)&q=@Model.Query&status=@Model.Status&gateway=@Model.Gateway">Next</a>
+          }
+          else
+          {
+            <span class="pagination__page" aria-disabled="true">Next</span>
+          }
+        </div>
+      </div>
+    }
+  </div>
+}
+
+@if (selected is not null)
+{
+  <div class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="order-detail-title">
+    <div class="modal" style="max-width: 800px; width: 90%;">
+      <div class="modal__header row row--between">
+        <div>
+          <h2 id="order-detail-title">Order <code>@selected.Order.OrderCode</code></h2>
+          <p class="text-muted">
+            @selected.Order.UserEmail
+            @if (!string.IsNullOrEmpty(selected.Order.UserFullName))
+            {
+              <span>(@selected.Order.UserFullName)</span>
+            }
+            — @selected.Order.PackageName (@CurrencyFormatter.FormatVnd(selected.Order.Amount))
+          </p>
+        </div>
+        <a class="btn btn--sm btn--ghost" href="/admin/orders?q=@Model.Query&status=@Model.Status&gateway=@Model.Gateway">Close</a>
+      </div>
+      <div class="modal__body stack">
+        <div class="grid-2">
+          <div>
+            <strong>Gateway:</strong> @selected.Order.Gateway.ToUpperInvariant()<br>
+            <strong>Payment No:</strong> <code>@selected.Order.PaymentNo</code><br>
+            <strong>Txn Reference:</strong> @(selected.Order.GatewayTxnRef ?? "—")<br>
+          </div>
+          <div>
+            <strong>Status:</strong>
+            @switch (selected.Order.Status)
+            {
+              case "paid":
+                <span class="badge badge--success">Paid</span>
+                break;
+              case "reconciling":
+                <span class="badge badge--warning">Reconciling</span>
+                break;
+              case "pending":
+                <span class="badge">Pending</span>
+                break;
+              case "failed":
+                <span class="badge badge--danger">Failed</span>
+                break;
+              case "expired":
+                <span class="badge">Expired</span>
+                break;
+              default:
+                <span class="badge">@selected.Order.Status</span>
+                break;
+            }
+            <br>
+            <strong>Created:</strong> @Formatter.Format(selected.Order.CreatedAt)<br>
+            @if (selected.Order.PaidAt.HasValue)
+            {
+              <strong>Paid at:</strong> @Formatter.Format(selected.Order.PaidAt.Value)<br>
+            }
+          </div>
+        </div>
+
+        <h3>Payment Events Timeline</h3>
+        <p class="text-sm text-muted">Audit trail of all webhooks, return redirects, status queries, and cancellations in chronological order.</p>
+
+        @if (selected.Events.Count == 0)
+        {
+          <p class="text-muted">No payment events recorded for this order.</p>
+        }
+        else
+        {
+          <table class="table table--striped">
+            <thead>
+              <tr>
+                <th scope="col">Time</th>
+                <th scope="col">Source</th>
+                <th scope="col">Reported status</th>
+                <th scope="col">Verified</th>
+                <th scope="col">Applied</th>
+                <th scope="col">Note</th>
+              </tr>
+            </thead>
+            <tbody>
+              @foreach (var ev in selected.Events)
+              {
+                <tr>
+                  <td>@Formatter.Format(ev.CreatedAt)</td>
+                  <td><code>@ev.Source</code></td>
+                  <td>
+                    @if (ev.ReportedStatus is not null)
+                    {
+                      <span class="badge">@ev.ReportedStatus</span>
+                    }
+                    else
+                    {
+                      <span>—</span>
+                    }
+                  </td>
+                  <td>
+                    @if (ev.SignatureValid)
+                    {
+                      <span class="badge badge--success">Valid</span>
+                    }
+                    else if (ev.Source == "webhook")
+                    {
+                      <span class="badge badge--danger">Invalid</span>
+                    }
+                    else
+                    {
+                      <span class="text-muted">N/A</span>
+                    }
+                  </td>
+                  <td>
+                    @if (ev.WasApplied)
+                    {
+                      <span class="badge badge--success">Yes</span>
+                    }
+                    else
+                    {
+                      <span class="text-muted">No</span>
+                    }
+                  </td>
+                  <td>@(ev.Note ?? "—")</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </div>
+      <div class="modal__footer row row--between">
+        @if (selected.Order.Status is "reconciling" or "pending")
+        {
+          <form method="post" action="/admin/orders/@selected.Order.OrderId/reconcile" class="no-margin">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn--primary">Reconcile status with gateway</button>
+          </form>
+        }
+        else
+        {
+          <div></div>
+        }
+        <a class="btn btn--ghost" href="/admin/orders?q=@Model.Query&status=@Model.Status&gateway=@Model.Gateway">Close</a>
+      </div>
+    </div>
+  </div>
+}

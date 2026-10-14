@@ -1,0 +1,201 @@
+@model WebMVC.Models.AdminUsersViewModel
+@inject WebMVC.DateTimeFormatter Formatter
+@{
+    ViewData["Title"] = "Students";
+    ViewData["Description"] = "Manage students: lock/unlock, resend activation email, and adjust credit ledger.";
+    var summary = Model.Summary;
+    var adjust = Model.AdjustUser;
+}
+
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+  <a href="/admin" class="breadcrumbs__item">Admin</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <span class="breadcrumbs__item" aria-current="page">Students</span>
+</nav>
+
+<h1>Students</h1>
+
+<form method="get" action="/admin/users" class="toolbar">
+  <div class="field toolbar__grow">
+    <label class="field__label" for="u-q">Search by email or name</label>
+    <input class="field__input" id="u-q" name="q" type="search" placeholder="an.nguyen@@example.com" value="@Model.Query">
+  </div>
+  <div class="field">
+    <label class="field__label" for="u-status">Status</label>
+    <select class="field__input" id="u-status" name="status">
+      <option value="">All</option>
+      <option value="active" selected="@(Model.Status?.Equals("active", StringComparison.OrdinalIgnoreCase) == true)">Active (@summary.ActiveCount)</option>
+      <option value="locked" selected="@(Model.Status?.Equals("locked", StringComparison.OrdinalIgnoreCase) == true)">Locked (@summary.LockedCount)</option>
+      <option value="not_activated" selected="@(Model.Status?.Equals("not_activated", StringComparison.OrdinalIgnoreCase) == true)">Not activated (@summary.NotActivatedCount)</option>
+    </select>
+  </div>
+  <button type="submit" class="btn btn--primary">Filter</button>
+  @if (!string.IsNullOrEmpty(Model.Query) || !string.IsNullOrEmpty(Model.Status))
+  {
+    <a href="/admin/users" class="btn btn--ghost">Reset</a>
+  }
+</form>
+
+@if (summary.Users.Count == 0)
+{
+  <div class="card">
+    <div class="card__body">
+      <div class="state-block">
+        <div class="state-block__icon" aria-hidden="true">?</div>
+        <h2 class="state-block__title">No students found</h2>
+        <p class="state-block__desc">Try removing the filter or entering a different keyword.</p>
+      </div>
+    </div>
+  </div>
+}
+else
+{
+  <div class="card">
+    <div class="card__body">
+      <table class="table table--striped">
+        <thead>
+          <tr>
+            <th scope="col">Student</th>
+            <th scope="col">Email</th>
+            <th scope="col">Credits left</th>
+            <th scope="col">Tests taken</th>
+            <th scope="col">Best score</th>
+            <th scope="col">Last sign-in</th>
+            <th scope="col">Status</th>
+            <th scope="col">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @foreach (var user in summary.Users)
+          {
+            <tr>
+              <td>
+                <div><strong>@(user.FullName ?? "—")</strong></div>
+                @if (!string.IsNullOrEmpty(user.Phone))
+                {
+                  <small class="text-muted">@user.Phone</small>
+                }
+              </td>
+              <td><code>@user.Email</code></td>
+              <td><strong>@user.CreditsLeft</strong></td>
+              <td>@user.TestsTaken</td>
+              <td>@(user.BestScore?.ToString() ?? "—")</td>
+              <td>
+                @if (user.LastLoginAt.HasValue)
+                {
+                  @Formatter.Format(user.LastLoginAt.Value)
+                }
+                else
+                {
+                  <span class="text-muted">Never signed in</span>
+                }
+              </td>
+              <td>
+                @if (user.IsLocked)
+                {
+                  <span class="badge badge--danger">Locked</span>
+                }
+                else if (user.EmailVerifiedAt is null)
+                {
+                  <span class="badge badge--warning">Not activated</span>
+                }
+                else
+                {
+                  <span class="badge badge--success">Active</span>
+                }
+              </td>
+              <td>
+                <div class="row">
+                  <a class="btn btn--sm" href="/admin/users?@(string.IsNullOrEmpty(Model.Query) ? "" : $"q={Uri.EscapeDataString(Model.Query)}&")@(string.IsNullOrEmpty(Model.Status) ? "" : $"status={Uri.EscapeDataString(Model.Status)}&")adjustUserId=@user.UserId">Edit credits</a>
+                  
+                  @if (user.IsLocked)
+                  {
+                    <form method="post" action="/admin/users/@user.UserId/unlock" class="no-margin">
+                      @Html.AntiForgeryToken()
+                      <button type="submit" class="btn btn--sm btn--ghost">Unlock</button>
+                    </form>
+                  }
+                  else
+                  {
+                    <form method="post" action="/admin/users/@user.UserId/lock" class="no-margin">
+                      @Html.AntiForgeryToken()
+                      <button type="submit" class="btn btn--sm btn--ghost">Lock</button>
+                    </form>
+                  }
+
+                  @if (!user.IsLocked && user.EmailVerifiedAt is null)
+                  {
+                    <form method="post" action="/admin/users/@user.UserId/resend-activation" class="no-margin">
+                      @Html.AntiForgeryToken()
+                      <button type="submit" class="btn btn--sm btn--ghost">Resend email</button>
+                    </form>
+                  }
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (summary.TotalCount > summary.PageSize)
+    {
+      <div class="card__footer">
+        <div class="pagination">
+          <span class="pagination__info">Showing @(((summary.Page - 1) * summary.PageSize) + 1)–@(Math.Min(summary.Page * summary.PageSize, summary.TotalCount)) of @summary.TotalCount students</span>
+          @if (summary.Page > 1)
+          {
+            <a class="pagination__page" href="/admin/users?page=@(summary.Page - 1)&q=@Model.Query&status=@Model.Status">Previous</a>
+          }
+          else
+          {
+            <span class="pagination__page" aria-disabled="true">Previous</span>
+          }
+          <span class="pagination__page is-current" aria-current="page">@summary.Page</span>
+          @if (summary.Page * summary.PageSize < summary.TotalCount)
+          {
+            <a class="pagination__page" href="/admin/users?page=@(summary.Page + 1)&q=@Model.Query&status=@Model.Status">Next</a>
+          }
+          else
+          {
+            <span class="pagination__page" aria-disabled="true">Next</span>
+          }
+        </div>
+      </div>
+    }
+  </div>
+}
+
+@if (adjust is not null)
+{
+  <div class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="adj-title">
+    <div class="modal" style="max-width: 560px; width: 90%;">
+      <form method="post" action="/admin/users/@adjust.UserId/adjust-credits">
+        @Html.AntiForgeryToken()
+        <div class="modal__header">
+          <h2 id="adj-title">Adjust credits</h2>
+          <p class="text-muted">
+            @(adjust.FullName ?? "Student") — <code>@adjust.Email</code> — currently has <strong>@adjust.CreditsLeft credits</strong>.
+          </p>
+        </div>
+        <div class="modal__body stack">
+          <div class="field">
+            <label class="field__label" for="adj-amount">Credits to add</label>
+            <input class="field__input" id="adj-amount" name="delta" type="number" value="1" required>
+            <span class="field__hint">Enter a negative number (e.g. -1) to deduct credits. Balance cannot drop below 0.</span>
+          </div>
+          <div class="field">
+            <label class="field__label" for="adj-reason">Reason (required)</label>
+            <input class="field__input" id="adj-reason" name="reason" placeholder="e.g. Compensation for audio issue on 18 Sep" required>
+          </div>
+          <div class="alert alert--warning">
+            Every adjustment is permanently logged in the credit ledger together with the current admin's identifier.
+          </div>
+        </div>
+        <div class="modal__footer row row--between">
+          <a class="btn btn--ghost" href="/admin/users?q=@Model.Query&status=@Model.Status">Cancel</a>
+          <button type="submit" class="btn btn--primary">Confirm adjustment</button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
