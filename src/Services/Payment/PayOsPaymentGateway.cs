@@ -1,4 +1,7 @@
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using PayOS;
 using PayOS.Models.V2.PaymentRequests;
 using PayOS.Models.Webhooks;
@@ -11,6 +14,7 @@ public sealed class PayOsOptions
     public string ClientId { get; set; } = "";
     public string ApiKey { get; set; } = "";
     public string ChecksumKey { get; set; } = "";
+    public string? WebhookUrl { get; set; }
 }
 
 public sealed class PayOsPaymentGateway : IPaymentGateway
@@ -18,16 +22,36 @@ public sealed class PayOsPaymentGateway : IPaymentGateway
     public const string Name = "payos";
     public string GatewayName => Name;
 
-    private readonly PayOSClient _client;
-
-    public PayOsPaymentGateway(PayOsOptions options)
+    private static readonly JsonSerializerOptions JsonOptions = new()
     {
+        PropertyNameCaseInsensitive = true
+    };
+
+    private readonly PayOSClient _client;
+    private readonly PayOsOptions _options;
+    private readonly ILogger<PayOsPaymentGateway>? _logger;
+
+    public PayOsPaymentGateway(PayOsOptions options, ILogger<PayOsPaymentGateway>? logger = null)
+    {
+        _options = options;
+        _logger = logger;
         _client = new PayOSClient(new PayOS.PayOSOptions
         {
             ClientId = options.ClientId,
             ApiKey = options.ApiKey,
             ChecksumKey = options.ChecksumKey
         });
+    }
+
+    public async Task<string?> ConfirmWebhookUrlAsync(string? webhookUrl = null, CancellationToken cancellationToken = default)
+    {
+        var url = webhookUrl ?? _options.WebhookUrl;
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return null;
+        }
+        var res = await _client.Webhooks.ConfirmAsync(url);
+        return res?.WebhookUrl;
     }
 
     public async Task<PaymentGatewayLinkResult> CreatePaymentLinkAsync(
@@ -62,14 +86,7 @@ public sealed class PayOsPaymentGateway : IPaymentGateway
         {
             var idToQuery = !string.IsNullOrEmpty(gatewayTxnRef) ? gatewayTxnRef : paymentNo.ToString();
             var info = await _client.PaymentRequests.GetAsync(idToQuery);
-            var statusStr = info.Status.ToString().ToLowerInvariant();
-            var status = statusStr switch
-            {
-                "paid" => "paid",
-                "cancelled" or "canceled" => "failed",
-                "expired" => "expired",
-                _ => "pending"
-            };
+            var status = MapPayOsStatus(info.Status.ToString());
 
             return new GatewayPaymentStatus(
                 Status: status,
@@ -79,11 +96,32 @@ public sealed class PayOsPaymentGateway : IPaymentGateway
         }
         catch (Exception ex)
         {
+            _logger?.LogWarning(ex, "QueryPaymentStatusAsync failed for paymentNo {PaymentNo}", paymentNo);
             return new GatewayPaymentStatus(
                 Status: "pending",
                 GatewayTxnRef: gatewayTxnRef,
                 ErrorCode: ex.Message,
                 RawPayload: ex.ToString());
+        }
+    }
+
+    public async Task<bool> CancelPaymentLinkAsync(
+        long paymentNo,
+        string? gatewayTxnRef,
+        string? cancellationReason = null,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var idToQuery = !string.IsNullOrEmpty(gatewayTxnRef) ? gatewayTxnRef : paymentNo.ToString();
+            var reason = string.IsNullOrWhiteSpace(cancellationReason) ? "Order expired" : cancellationReason;
+            await _client.PaymentRequests.CancelAsync(idToQuery, reason);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "CancelPaymentLinkAsync failed for paymentNo {PaymentNo}", paymentNo);
+            return false;
         }
     }
 
@@ -94,7 +132,12 @@ public sealed class PayOsPaymentGateway : IPaymentGateway
     {
         try
         {
-            var webhook = JsonSerializer.Deserialize<Webhook>(payload);
+            if (string.IsNullOrWhiteSpace(payload))
+            {
+                return new WebhookVerificationResult(false, 0, null, "failed", "EMPTY_PAYLOAD", payload ?? "");
+            }
+
+            var webhook = JsonSerializer.Deserialize<Webhook>(payload, JsonOptions);
             if (webhook is null)
             {
                 return new WebhookVerificationResult(false, 0, null, "failed", "DESERIALIZATION_FAILED", payload);
@@ -105,12 +148,13 @@ public sealed class PayOsPaymentGateway : IPaymentGateway
                 webhook.Signature = signature;
             }
 
-            var verifiedData = await _client.Webhooks.VerifyAsync(webhook);
-            var status = (verifiedData.Code ?? "").ToLowerInvariant() switch
+            if (string.IsNullOrWhiteSpace(webhook.Signature))
             {
-                "00" => "paid",
-                _ => "failed"
-            };
+                return new WebhookVerificationResult(false, 0, null, "failed", "MISSING_SIGNATURE", payload);
+            }
+
+            var verifiedData = await _client.Webhooks.VerifyAsync(webhook);
+            var status = MapWebhookCodeToStatus(verifiedData.Code);
 
             return new WebhookVerificationResult(
                 IsValid: true,
@@ -122,6 +166,7 @@ public sealed class PayOsPaymentGateway : IPaymentGateway
         }
         catch (Exception ex)
         {
+            _logger?.LogWarning(ex, "Webhook signature verification rejected: {Message}", ex.Message);
             return new WebhookVerificationResult(
                 IsValid: false,
                 PaymentNo: 0,
@@ -130,5 +175,42 @@ public sealed class PayOsPaymentGateway : IPaymentGateway
                 ErrorCode: ex.Message,
                 RawPayload: payload);
         }
+    }
+
+    public static string MapPayOsStatus(string? payOsStatus)
+    {
+        return (payOsStatus ?? "").Trim().ToLowerInvariant() switch
+        {
+            "paid" => "paid",
+            "cancelled" or "canceled" => "failed",
+            "expired" => "expired",
+            "pending" or "processing" => "pending",
+            _ => "pending"
+        };
+    }
+
+    public static string MapWebhookCodeToStatus(string? code)
+    {
+        return (code ?? "").Trim().ToLowerInvariant() switch
+        {
+            "00" => "paid",
+            _ => "failed"
+        };
+    }
+
+    public static string CreateWebhookSignature(WebhookData data, string checksumKey)
+    {
+        var method = typeof(PayOS.Crypto.CryptoProvider).GetMethod(
+            "ConvertToSortedQueryString",
+            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        var query = method?.Invoke(null, [data, false]) as string ?? "";
+        return GenerateHmacSha256Signature(query, checksumKey);
+    }
+
+    public static string GenerateHmacSha256Signature(string dataString, string checksumKey)
+    {
+        using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(checksumKey));
+        var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(dataString));
+        return Convert.ToHexString(hash).ToLowerInvariant();
     }
 }

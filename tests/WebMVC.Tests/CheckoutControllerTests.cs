@@ -261,6 +261,61 @@ public sealed class CheckoutControllerTests
         Assert.Equal(13, model.Result.CurrentBalance);
     }
 
+    [Fact]
+    public async Task CreateOrder_via_ajax_returns_json_with_checkout_details()
+    {
+        var api = new TestApiClient
+        {
+            CreateOrderResponse = new CreateOrderResponse(
+                OrderId: 15,
+                OrderCode: "DH-20261014-0015",
+                PaymentNo: 15,
+                Amount: 349000,
+                Gateway: "payos",
+                CheckoutUrl: "https://pay.payos.vn/web/paylink-15",
+                Status: "pending"),
+        };
+        var controller = CreateController(api);
+        controller.Request.Headers["X-Requested-With"] = "XMLHttpRequest";
+
+        var result = await controller.CreateOrder(3, CancellationToken.None);
+
+        var json = Assert.IsType<JsonResult>(result);
+        Assert.NotNull(json.Value);
+    }
+
+    [Fact]
+    public async Task CreateOrder_via_ajax_returns_conflict_when_order_already_open()
+    {
+        var api = new TestApiClient
+        {
+            ExceptionToThrow = new ApiException(ApiError.Codes.OrderAlreadyOpen, "Order already open", 409),
+        };
+        var controller = CreateController(api);
+        controller.Request.Headers["X-Requested-With"] = "XMLHttpRequest";
+
+        var result = await controller.CreateOrder(3, CancellationToken.None);
+
+        var statusResult = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(409, statusResult.StatusCode);
+    }
+
+    [Fact]
+    public async Task CreateOrder_via_ajax_returns_forbidden_when_unverified()
+    {
+        var api = new TestApiClient
+        {
+            ExceptionToThrow = new ApiException(ApiError.Codes.EmailNotVerified, "Unverified", 403),
+        };
+        var controller = CreateController(api);
+        controller.Request.Headers["X-Requested-With"] = "XMLHttpRequest";
+
+        var result = await controller.CreateOrder(3, CancellationToken.None);
+
+        var statusResult = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(403, statusResult.StatusCode);
+    }
+
     private sealed class FixedAuthentication(ClaimsPrincipal principal, AuthenticationProperties properties) : IAuthenticationService
     {
         public Task<AuthenticateResult> AuthenticateAsync(HttpContext context, string? scheme) =>

@@ -26,6 +26,8 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
             .Select(b => b.Balance)
             .SingleOrDefaultAsync(cancellationToken) ?? 0;
 
+        await ExpireStaleOrdersAsync(olderThanMinutes: 15, cancellationToken);
+
         var openOrder = await db.Orders
             .Include(o => o.Package)
             .Where(o => o.UserId == userId && (o.Status == "pending" || o.Status == "reconciling"))
@@ -133,9 +135,10 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
         string orderCode,
         CancellationToken cancellationToken = default)
     {
+        long.TryParse(orderCode, out var parsedPaymentNo);
         var order = await db.Orders
             .Include(o => o.Package)
-            .Where(o => o.OrderCode == orderCode && o.UserId == userId)
+            .Where(o => (o.OrderCode == orderCode || (parsedPaymentNo > 0 && o.PaymentNo == parsedPaymentNo)) && o.UserId == userId)
             .SingleOrDefaultAsync(cancellationToken)
             ?? throw new OrderNotFoundException(orderCode);
 
@@ -193,15 +196,16 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
             else if (gatewayStatus.Status == "expired" || order.CreatedAt < DateTimeOffset.UtcNow.AddMinutes(-15))
             {
                 order.Status = "expired";
+                await gateway.CancelPaymentLinkAsync(order.PaymentNo, order.GatewayTxnRef, "Order expired", cancellationToken);
                 db.PaymentEvents.Add(new PaymentEvent
                 {
                     OrderId = order.OrderId,
-                    Source = "status_query",
+                    Source = "cancel",
                     ReportedStatus = "expired",
                     SignatureValid = false,
                     WasApplied = true,
                     Payload = gatewayStatus.RawPayload,
-                    Note = "Order expired",
+                    Note = "Order expired upon return and cancelled at gateway",
                     CreatedAt = DateTimeOffset.UtcNow
                 });
                 await db.SaveChangesAsync(cancellationToken);
@@ -233,9 +237,10 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
         string orderCode,
         CancellationToken cancellationToken = default)
     {
+        long.TryParse(orderCode, out var parsedPaymentNo);
         var order = await db.Orders
             .Include(o => o.Package)
-            .Where(o => o.OrderCode == orderCode && o.UserId == userId)
+            .Where(o => (o.OrderCode == orderCode || (parsedPaymentNo > 0 && o.PaymentNo == parsedPaymentNo)) && o.UserId == userId)
             .SingleOrDefaultAsync(cancellationToken)
             ?? throw new OrderNotFoundException(orderCode);
 
@@ -245,6 +250,17 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
             if (order.CreatedAt < DateTimeOffset.UtcNow.AddMinutes(-15))
             {
                 order.Status = "expired";
+                await gateway.CancelPaymentLinkAsync(order.PaymentNo, order.GatewayTxnRef, "Order expired", cancellationToken);
+                db.PaymentEvents.Add(new PaymentEvent
+                {
+                    OrderId = order.OrderId,
+                    Source = "cancel",
+                    ReportedStatus = "expired",
+                    SignatureValid = false,
+                    WasApplied = true,
+                    Note = "Reconciling order timed out and cancelled at gateway",
+                    CreatedAt = DateTimeOffset.UtcNow
+                });
                 await db.SaveChangesAsync(cancellationToken);
             }
             else
@@ -586,6 +602,17 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
             foreach (var order in staleOrders)
             {
                 order.Status = "expired";
+                await gateway.CancelPaymentLinkAsync(order.PaymentNo, order.GatewayTxnRef, "Order expired", cancellationToken);
+                db.PaymentEvents.Add(new PaymentEvent
+                {
+                    OrderId = order.OrderId,
+                    Source = "cancel",
+                    ReportedStatus = "expired",
+                    SignatureValid = false,
+                    WasApplied = true,
+                    Note = "Stale order expired and cancelled at gateway",
+                    CreatedAt = DateTimeOffset.UtcNow
+                });
             }
             await db.SaveChangesAsync(cancellationToken);
         }

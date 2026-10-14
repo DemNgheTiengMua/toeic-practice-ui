@@ -374,4 +374,129 @@ public sealed class PaymentServiceTests(DatabaseFixture database)
         Assert.Contains(events, e => e.Source == "return_redirect" && e.ReportedStatus == "pending");
         Assert.Contains(events, e => e.Source == "status_query" && e.ReportedStatus == "pending");
     }
+
+    [Fact]
+    public async Task ExpireStaleOrdersAsync_cancels_payment_link_at_gateway_and_logs_cancel_event()
+    {
+        var pkgId = await SeedPackageAsync("ExpireCancelTest", 5, 199000);
+        var mockGateway = new MockPaymentGateway();
+        var service = CreateService(mockGateway);
+
+        var userId = await SeedUserAsync(isVerified: true);
+        var order = await service.CreateOrderAsync(userId, pkgId, "http://localhost:5000");
+
+        // Backdate order to 20 minutes ago
+        await database.SqlAsync($"""
+            UPDATE Orders
+            SET CreatedAt = DATEADD(minute, -20, SYSDATETIMEOFFSET())
+            WHERE OrderId = {order.OrderId};
+            """);
+
+        var expireService = CreateService(mockGateway);
+        await expireService.ExpireStaleOrdersAsync(olderThanMinutes: 15);
+
+        // Verify gateway cancellation
+        Assert.True(mockGateway.IsCancelled(order.PaymentNo));
+
+        // Verify database state
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var updated = await db.Orders.SingleAsync(o => o.OrderId == order.OrderId);
+        Assert.Equal("expired", updated.Status);
+
+        var cancelEvent = await db.PaymentEvents
+            .Where(e => e.OrderId == order.OrderId && e.Source == "cancel")
+            .SingleOrDefaultAsync();
+        Assert.NotNull(cancelEvent);
+        Assert.Equal("expired", cancelEvent.ReportedStatus);
+        Assert.True(cancelEvent.WasApplied);
+    }
+
+    [Fact]
+    public async Task HandleReturnRedirectAsync_with_expired_order_cancels_at_gateway()
+    {
+        var pkgId = await SeedPackageAsync("ReturnExpireCancelTest", 5, 199000);
+        var mockGateway = new MockPaymentGateway();
+        var service = CreateService(mockGateway);
+
+        var userId = await SeedUserAsync(isVerified: true);
+        var order = await service.CreateOrderAsync(userId, pkgId, "http://localhost:5000");
+
+        // Backdate order to 20 minutes ago
+        await database.SqlAsync($"""
+            UPDATE Orders
+            SET CreatedAt = DATEADD(minute, -20, SYSDATETIMEOFFSET())
+            WHERE OrderId = {order.OrderId};
+            """);
+
+        var returnService = CreateService(mockGateway);
+        var result = await returnService.HandleReturnRedirectAsync(userId, order.OrderCode);
+
+        Assert.Equal("expired", result.Status);
+        Assert.True(mockGateway.IsCancelled(order.PaymentNo));
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var cancelEvent = await db.PaymentEvents
+            .Where(e => e.OrderId == order.OrderId && e.Source == "cancel")
+            .SingleOrDefaultAsync();
+        Assert.NotNull(cancelEvent);
+        Assert.Equal("expired", cancelEvent.ReportedStatus);
+    }
+
+    [Fact]
+    public async Task GetPaymentResultAsync_with_timed_out_reconciling_order_cancels_at_gateway()
+    {
+        var pkgId = await SeedPackageAsync("ReconcileTimeoutCancelTest", 5, 199000);
+        var mockGateway = new MockPaymentGateway();
+        var service = CreateService(mockGateway);
+
+        var userId = await SeedUserAsync(isVerified: true);
+        var order = await service.CreateOrderAsync(userId, pkgId, "http://localhost:5000");
+
+        // Mark as reconciling and backdate
+        await service.ApplyMockGatewayActionAsync(userId, order.OrderCode, "pending");
+        await database.SqlAsync($"""
+            UPDATE Orders
+            SET CreatedAt = DATEADD(minute, -20, SYSDATETIMEOFFSET())
+            WHERE OrderId = {order.OrderId};
+            """);
+
+        var resultService = CreateService(mockGateway);
+        var result = await resultService.GetPaymentResultAsync(userId, order.OrderCode);
+
+        Assert.Equal("expired", result.Status);
+        Assert.True(mockGateway.IsCancelled(order.PaymentNo));
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var cancelEvent = await db.PaymentEvents
+            .Where(e => e.OrderId == order.OrderId && e.Source == "cancel")
+            .SingleOrDefaultAsync();
+        Assert.NotNull(cancelEvent);
+        Assert.Equal("expired", cancelEvent.ReportedStatus);
+    }
+
+    [Fact]
+    public async Task GetCheckoutPreviewAsync_auto_expires_stale_orders_allowing_new_checkout()
+    {
+        var pkgId = await SeedPackageAsync("AutoExpirePreviewTest", 5, 199000);
+        var mockGateway = new MockPaymentGateway();
+        var service = CreateService(mockGateway);
+
+        var userId = await SeedUserAsync(isVerified: true);
+        var staleOrder = await service.CreateOrderAsync(userId, pkgId, "http://localhost:5000");
+
+        // Backdate order to 20 minutes ago
+        await database.SqlAsync($"""
+            UPDATE Orders
+            SET CreatedAt = DATEADD(minute, -20, SYSDATETIMEOFFSET())
+            WHERE OrderId = {staleOrder.OrderId};
+            """);
+
+        // Learner visits checkout preview
+        var previewService = CreateService(mockGateway);
+        var preview = await previewService.GetCheckoutPreviewAsync(userId, pkgId);
+
+        // Preview should have cleared the open order by expiring it
+        Assert.Null(preview.OpenOrder);
+        Assert.True(mockGateway.IsCancelled(staleOrder.PaymentNo));
+    }
 }

@@ -145,18 +145,21 @@ builder.Services.AddScoped<IWeaknessAnalysisService, WeaknessAnalysisService>();
 builder.Services.AddScoped<IPackageService, PackageService>();
 builder.Services.AddScoped<IMockExamService, MockExamService>();
 
+var payOsOptions = builder.Configuration.GetSection(PayOsOptions.SectionName).Get<PayOsOptions>() ?? new PayOsOptions();
+builder.Services.AddSingleton(payOsOptions);
+builder.Services.AddSingleton<PayOsPaymentGateway>();
+
+var mock = new MockPaymentGateway();
+builder.Services.AddSingleton(mock);
+builder.Services.AddSingleton<IMockPaymentGateway>(mock);
+
 var gatewayChoice = builder.Configuration["Payment:Gateway"]?.ToLowerInvariant() ?? "mock";
 if (gatewayChoice == "payos")
 {
-    var payOsOptions = builder.Configuration.GetSection(PayOsOptions.SectionName).Get<PayOsOptions>() ?? new PayOsOptions();
-    builder.Services.AddSingleton(payOsOptions);
-    builder.Services.AddSingleton<IPaymentGateway, PayOsPaymentGateway>();
+    builder.Services.AddSingleton<IPaymentGateway>(sp => sp.GetRequiredService<PayOsPaymentGateway>());
 }
 else
 {
-    var mock = new MockPaymentGateway();
-    builder.Services.AddSingleton(mock);
-    builder.Services.AddSingleton<IMockPaymentGateway>(mock);
     builder.Services.AddSingleton<IPaymentGateway>(mock);
 }
 builder.Services.AddScoped<IPaymentService, PaymentService>();
@@ -1342,6 +1345,14 @@ app.MapPost("/api/payments/webhook", async (
     }
     return Results.Ok(new { message = "Webhook processed" });
 }).AllowAnonymous();
+
+app.MapPost("/api/payments/payos/confirm-webhook", async (
+    PayOsPaymentGateway payos,
+    CancellationToken cancellationToken) =>
+{
+    var confirmedUrl = await payos.ConfirmWebhookUrlAsync(cancellationToken: cancellationToken);
+    return Results.Ok(new { webhookUrl = confirmedUrl });
+}).RequireAuthorization(Roles.Admin);
 
 app.MapGet("/api/learner/wallet", async (
     HttpContext http,

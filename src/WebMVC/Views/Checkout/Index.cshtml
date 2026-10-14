@@ -124,7 +124,7 @@ else if (preview is not null)
             </div>
           </div>
           <div class="card__footer stack--tight">
-            <form method="post" action="/checkout">
+            <form id="checkout-form" method="post" action="/checkout">
               @Html.AntiForgeryToken()
               <input type="hidden" name="packageId" value="@preview.PackageId">
               <button type="submit" class="btn btn--primary btn--lg" style="width: 100%;">
@@ -135,5 +135,101 @@ else if (preview is not null)
           </div>
         </div>
       </div>
+
+      <div id="embedded-payment-modal" style="display: none; margin-top: 1.5rem;">
+        <div class="card">
+          <div class="card__header row row--between">
+            <strong>payOS Payment</strong>
+            <button type="button" class="btn btn--sm btn--ghost" id="btn-close-embedded">Cancel</button>
+          </div>
+          <div class="card__body" style="padding: 0; min-height: 450px;">
+            <div id="embedded-payment-container" style="width: 100%; min-height: 450px;"></div>
+          </div>
+        </div>
+      </div>
     </div>
+}
+
+@section Scripts {
+  <script src="https://cdn.payos.vn/payos-checkout/v1/stable/payos-initialize.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      var form = document.getElementById("checkout-form");
+      var embeddedModal = document.getElementById("embedded-payment-modal");
+      var btnClose = document.getElementById("btn-close-embedded");
+      var payosInstance = null;
+
+      if (btnClose) {
+        btnClose.addEventListener("click", function () {
+          if (payosInstance) {
+            try { payosInstance.exit(); } catch (e) {}
+          }
+          if (embeddedModal) embeddedModal.style.display = "none";
+          var submitBtn = form ? form.querySelector("button[type='submit']") : null;
+          if (submitBtn) submitBtn.disabled = false;
+        });
+      }
+
+      if (form && window.PayOSCheckout) {
+        form.addEventListener("submit", async function (e) {
+          var submitBtn = form.querySelector("button[type='submit']");
+          if (submitBtn) submitBtn.disabled = true;
+
+          try {
+            var tokenInput = form.querySelector("input[name='__RequestVerificationToken']");
+            var packageIdInput = form.querySelector("input[name='packageId']");
+            var formData = new FormData();
+            formData.append("packageId", packageIdInput ? packageIdInput.value : "");
+            if (tokenInput) formData.append("__RequestVerificationToken", tokenInput.value);
+
+            var res = await fetch("/checkout", {
+              method: "POST",
+              headers: {
+                "Accept": "application/json",
+                "X-Requested-With": "XMLHttpRequest"
+              },
+              body: formData
+            });
+
+            if (!res.ok) {
+              form.submit();
+              return;
+            }
+
+            var data = await res.json();
+            if (data.gateway === "payos" && data.checkoutUrl && data.checkoutUrl.startsWith("http")) {
+              e.preventDefault();
+              embeddedModal.style.display = "block";
+              embeddedModal.scrollIntoView({ behavior: "smooth" });
+
+              var config = {
+                RETURN_URL: window.location.origin + "/payment/result?orderCode=" + encodeURIComponent(data.orderCode),
+                ELEMENT_ID: "embedded-payment-container",
+                CHECKOUT_URL: data.checkoutUrl,
+                embedded: true,
+                onSuccess: function (event) {
+                  window.location.href = "/payment/result?orderCode=" + encodeURIComponent(data.orderCode);
+                },
+                onCancel: function (event) {
+                  window.location.href = "/payment/result?orderCode=" + encodeURIComponent(data.orderCode);
+                },
+                onExit: function (event) {
+                  if (embeddedModal) embeddedModal.style.display = "none";
+                  if (submitBtn) submitBtn.disabled = false;
+                }
+              };
+
+              payosInstance = PayOSCheckout.usePayOS(config);
+              payosInstance.open();
+            } else if (data.checkoutUrl) {
+              e.preventDefault();
+              window.location.href = data.checkoutUrl;
+            }
+          } catch (err) {
+            form.submit();
+          }
+        });
+      }
+    });
+  </script>
 }

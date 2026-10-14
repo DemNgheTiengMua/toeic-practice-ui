@@ -47,18 +47,41 @@ public sealed class CheckoutController(
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CreateOrder([FromForm] int packageId, CancellationToken cancellationToken)
     {
+        var isAjax = Request.Headers["X-Requested-With"] == "XMLHttpRequest"
+            || Request.Headers.Accept.Any(a => a?.Contains("application/json") == true);
+
         try
         {
             var bearer = await BearerAsync();
             var response = await Api.CreateOrderAsync(new CreateOrderRequest(packageId), bearer, cancellationToken);
+            if (isAjax)
+            {
+                return Json(new
+                {
+                    checkoutUrl = response.CheckoutUrl,
+                    orderCode = response.OrderCode,
+                    paymentNo = response.PaymentNo,
+                    amount = response.Amount,
+                    gateway = response.Gateway,
+                    status = response.Status
+                });
+            }
             return Redirect(response.CheckoutUrl);
         }
         catch (ApiException ex) when (ex.Code == ApiError.Codes.EmailNotVerified)
         {
+            if (isAjax)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { error = "EMAIL_NOT_VERIFIED", message = "Email verification required" });
+            }
             return View("Index", new CheckoutViewModel(null, IsBlockedUnverified: true));
         }
         catch (ApiException ex) when (ex.Code == ApiError.Codes.OrderAlreadyOpen)
         {
+            if (isAjax)
+            {
+                return StatusCode(StatusCodes.Status409Conflict, new { error = "ORDER_ALREADY_OPEN", message = "You already have an unfinished order." });
+            }
             TempData["ErrorMessage"] = "You already have an unfinished order.";
             return RedirectToAction("Index", new { packageId });
         }

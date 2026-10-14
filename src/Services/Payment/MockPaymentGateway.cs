@@ -6,6 +6,8 @@ namespace Services;
 public interface IMockPaymentGateway : IPaymentGateway
 {
     void SetOutcome(long paymentNo, string status, string? errorCode = null);
+    bool IsCancelled(long paymentNo);
+    IReadOnlyCollection<long> CancelledPaymentNos { get; }
 }
 
 public sealed class MockPaymentGateway : IMockPaymentGateway
@@ -14,10 +16,25 @@ public sealed class MockPaymentGateway : IMockPaymentGateway
     public string GatewayName => Name;
 
     private readonly ConcurrentDictionary<long, (string Status, string? ErrorCode)> _byPaymentNo = new();
+    private readonly ConcurrentBag<long> _cancelledPaymentNos = new();
+
+    public bool IsCancelled(long paymentNo) => _cancelledPaymentNos.Contains(paymentNo);
+    public IReadOnlyCollection<long> CancelledPaymentNos => _cancelledPaymentNos.ToArray();
 
     public void SetOutcome(long paymentNo, string status, string? errorCode = null)
     {
         _byPaymentNo[paymentNo] = (status, errorCode);
+    }
+
+    public Task<bool> CancelPaymentLinkAsync(
+        long paymentNo,
+        string? gatewayTxnRef,
+        string? cancellationReason = null,
+        CancellationToken cancellationToken = default)
+    {
+        _cancelledPaymentNos.Add(paymentNo);
+        _byPaymentNo[paymentNo] = ("expired", null);
+        return Task.FromResult(true);
     }
 
     public Task<PaymentGatewayLinkResult> CreatePaymentLinkAsync(

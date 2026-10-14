@@ -43,4 +43,10 @@ public interface IPaymentGateway
         long paymentNo,
         string? gatewayTxnRef,
         CancellationToken cancellationToken = default);
+
+    Task<bool> CancelPaymentLinkAsync(
+        long paymentNo,
+        string? gatewayTxnRef,
+        string? cancellationReason = null,
+        CancellationToken cancellationToken = default);
 }
