@@ -366,6 +366,7 @@
 
         fetch('/exams/take/' + attemptId + '/answers/' + questionId, {
           method: 'POST',
+          keepalive: true,
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
             'X-Requested-With': 'XMLHttpRequest',

@@ -217,6 +217,8 @@ public sealed class MockExamService(CompanionDbContext db, ILearnerService learn
         var now = DateTimeOffset.UtcNow;
         var expiresAt = now.AddMinutes(exam.DurationMinutes);
 
+        await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
+
         var attempt = new ExamAttempt
         {
             UserId = userId,
@@ -271,6 +273,7 @@ public sealed class MockExamService(CompanionDbContext db, ILearnerService learn
         }
 
         await db.SaveChangesAsync(cancellationToken);
+        await tx.CommitAsync(cancellationToken);
 
         var remainingSeconds = Math.Max(0, (int)(expiresAt - now).TotalSeconds);
         return new ExamAttemptInfo(
