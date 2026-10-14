@@ -80,7 +80,7 @@ public sealed class CheckoutController(
         {
             if (isAjax)
             {
-                return StatusCode(StatusCodes.Status409Conflict, new { error = "ORDER_ALREADY_OPEN", message = "You already have an unfinished order." });
+                return StatusCode(StatusCodes.Status409Conflict, new { error = ApiError.Codes.OrderAlreadyOpen, message = "You already have an unfinished order." });
             }
             TempData["ErrorMessage"] = "You already have an unfinished order.";
             return RedirectToAction("Index", new { packageId });

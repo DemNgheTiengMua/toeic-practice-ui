@@ -1,7 +1,7 @@
 @model ExamIndexViewModel
 @{
     Layout = "_LearnerLayout";
-    ViewData["Title"] = "Test list";
+    ViewData["Title"] = "Exams";
     ViewData["Description"] = "Full mock exams with timing, scoring, and score conversion.";
     var catalog = Model.Catalog;
     var hasCredits = catalog.CreditBalance > 0;
@@ -10,14 +10,14 @@
 <nav class="breadcrumbs" aria-label="Breadcrumb">
   <a href="/dashboard" class="breadcrumbs__item">Home</a>
   <span class="breadcrumbs__separator" aria-hidden="true">›</span>
-  <span class="breadcrumbs__item" aria-current="page">Test List</span>
+  <span class="breadcrumbs__item" aria-current="page">Exams</span>
 </nav>
 
 <div class="row row--between">
   <div>
-    <h1 class="m-0 mb-1">Test list</h1>
+    <h1 class="m-0 mb-1">Exams</h1>
     <p class="text-muted no-margin">
-      Full exams replicate real test conditions with strict timers and scaled score conversion.
+      Full exams replicate real exam conditions with strict timers and scaled score conversion.
       Each mock exam uses <strong>1 credit</strong>.
     </p>
   </div>

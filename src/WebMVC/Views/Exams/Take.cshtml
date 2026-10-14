@@ -115,18 +115,18 @@
               <div>
                 @if (prevOrder.HasValue)
                 {
-                  <a class="btn" href="/exams/take/@take.AttemptId?q=@prevOrder">← Previous</a>
+                  <a class="btn" href="/exams/take/@take.AttemptId?q=@prevOrder">Previous</a>
                 }
                 else
                 {
-                  <button class="btn" disabled>← Previous</button>
+                  <button class="btn" disabled>Previous</button>
                 }
               </div>
 
               <div class="row" style="gap: var(--space-3);">
                 @if (nextOrder.HasValue)
                 {
-                  <a class="btn btn--primary" href="/exams/take/@take.AttemptId?q=@nextOrder">Next question →</a>
+                  <a class="btn btn--primary" href="/exams/take/@take.AttemptId?q=@nextOrder">Next question</a>
                 }
                 else
                 {

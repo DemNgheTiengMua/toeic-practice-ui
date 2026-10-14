@@ -49,7 +49,7 @@ public sealed record AdminUserDto(
     string? FullName,
     string? Phone,
     int CreditsLeft,
-    int TestsTaken,
+    int ExamsTaken,
     int? BestScore,
     DateTimeOffset? LastLoginAt,
     bool IsLocked,

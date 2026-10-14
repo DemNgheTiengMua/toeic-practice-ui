@@ -41,8 +41,8 @@
   <div class="card">
     <div class="card__body">
       <div class="state-block">
-        <div class="state-block__icon" aria-hidden="true">?</div>
-        <h2 class="state-block__title">No students found</h2>
+        <div class="state-block__icon" aria-hidden="true">EMPTY</div>
+        <h2 class="state-block__title">No learners found</h2>
         <p class="state-block__desc">Try removing the filter or entering a different keyword.</p>
       </div>
     </div>
@@ -55,10 +55,10 @@ else
       <table class="table table--striped">
         <thead>
           <tr>
-            <th scope="col">Student</th>
+            <th scope="col">Learner</th>
             <th scope="col">Email</th>
             <th scope="col">Credits left</th>
-            <th scope="col">Tests taken</th>
+            <th scope="col">Exams taken</th>
             <th scope="col">Best score</th>
             <th scope="col">Last sign-in</th>
             <th scope="col">Status</th>
@@ -78,7 +78,7 @@ else
               </td>
               <td><code>@user.Email</code></td>
               <td><strong>@user.CreditsLeft</strong></td>
-              <td>@user.TestsTaken</td>
+              <td>@user.ExamsTaken</td>
               <td>@(user.BestScore?.ToString() ?? "—")</td>
               <td>
                 @if (user.LastLoginAt.HasValue)

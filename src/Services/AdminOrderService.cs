@@ -40,6 +40,8 @@ public sealed class AdminOrderService(
         if (page < 1) page = 1;
         if (pageSize < 1) pageSize = 20;
 
+        await paymentService.ExpireStaleOrdersAsync(olderThanMinutes: 15, cancellationToken);
+
         var now = clock.GetUtcNow();
         var startOfMonth = new DateTimeOffset(now.Year, now.Month, 1, 0, 0, 0, TimeSpan.Zero);
 
@@ -184,7 +186,7 @@ public sealed class AdminOrderService(
 
         if (order is null)
         {
-            throw new ApiException(ApiError.Codes.OrderNotFound, "Order not found", 404);
+            throw new OrderNotFoundException(orderId.ToString());
         }
 
         return await paymentService.GetPaymentResultAsync(order.UserId, order.OrderCode, cancellationToken);

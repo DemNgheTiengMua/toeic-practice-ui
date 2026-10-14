@@ -54,16 +54,16 @@ public sealed class AdminUserServiceTests(DatabaseFixture database)
         var service = CreateUserService();
 
         // 1. Rejects missing / empty / whitespace reason
-        var exEmpty = await Assert.ThrowsAsync<ApiException>(() =>
+        var exEmpty = await Assert.ThrowsAsync<AdminUserException>(() =>
             service.AdjustCreditsAsync(adminId, learner.UserId, delta: 5, reason: ""));
         Assert.Equal(ApiError.Codes.Validation, exEmpty.Code);
 
-        var exWhitespace = await Assert.ThrowsAsync<ApiException>(() =>
+        var exWhitespace = await Assert.ThrowsAsync<AdminUserException>(() =>
             service.AdjustCreditsAsync(adminId, learner.UserId, delta: 5, reason: "   "));
         Assert.Equal(ApiError.Codes.Validation, exWhitespace.Code);
 
         // 2. Rejects zero delta
-        var exZero = await Assert.ThrowsAsync<ApiException>(() =>
+        var exZero = await Assert.ThrowsAsync<AdminUserException>(() =>
             service.AdjustCreditsAsync(adminId, learner.UserId, delta: 0, reason: "Zero delta"));
         Assert.Equal(ApiError.Codes.Validation, exZero.Code);
 
@@ -86,7 +86,7 @@ public sealed class AdminUserServiceTests(DatabaseFixture database)
         }
 
         // 4. Negative adjustment (revoke) cannot exceed current balance
-        var exOverDeduct = await Assert.ThrowsAsync<ApiException>(() =>
+        var exOverDeduct = await Assert.ThrowsAsync<AdminUserException>(() =>
             service.AdjustCreditsAsync(adminId, learner.UserId, delta: -10, reason: "Over deduction"));
         Assert.Equal(ApiError.Codes.InsufficientCredits, exOverDeduct.Code);
 
@@ -172,7 +172,7 @@ public sealed class AdminUserServiceTests(DatabaseFixture database)
         await authService.VerifyEmailAsync(token);
 
         // Resending to an already-verified learner throws validation error
-        var exVerified = await Assert.ThrowsAsync<ApiException>(() =>
+        var exVerified = await Assert.ThrowsAsync<AdminUserException>(() =>
             userService.ResendActivationAsync(learner.UserId));
         Assert.Equal(ApiError.Codes.Validation, exVerified.Code);
     }

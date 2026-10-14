@@ -490,7 +490,7 @@ admin.MapPost("/orders/{orderId:int}/reconcile", async (
         var result = await orders.ReconcileOrderAsync(orderId, cancellationToken);
         return Results.Ok(result);
     }
-    catch (ApiException ex) when (ex.Code == ApiError.Codes.OrderNotFound)
+    catch (OrderNotFoundException)
     {
         return Results.NotFound();
     }
@@ -514,9 +514,16 @@ admin.MapPost("/users/{userId:int}/lock", async (
     IAdminUserService users,
     CancellationToken cancellationToken) =>
 {
-    var adminId = int.Parse(http.User.FindFirst(IAccessTokenFactory.ClaimUserId)!.Value);
-    var updated = await users.SetLockAsync(adminId, userId, isLocked: true, cancellationToken);
-    return Results.Ok(updated);
+    try
+    {
+        var adminId = int.Parse(http.User.FindFirst(IAccessTokenFactory.ClaimUserId)!.Value);
+        var updated = await users.SetLockAsync(adminId, userId, isLocked: true, cancellationToken);
+        return Results.Ok(updated);
+    }
+    catch (AdminUserException ex)
+    {
+        return Problem(ex.Status, ex.Message, ex.Code);
+    }
 });
 
 admin.MapPost("/users/{userId:int}/unlock", async (
@@ -525,9 +532,16 @@ admin.MapPost("/users/{userId:int}/unlock", async (
     IAdminUserService users,
     CancellationToken cancellationToken) =>
 {
-    var adminId = int.Parse(http.User.FindFirst(IAccessTokenFactory.ClaimUserId)!.Value);
-    var updated = await users.SetLockAsync(adminId, userId, isLocked: false, cancellationToken);
-    return Results.Ok(updated);
+    try
+    {
+        var adminId = int.Parse(http.User.FindFirst(IAccessTokenFactory.ClaimUserId)!.Value);
+        var updated = await users.SetLockAsync(adminId, userId, isLocked: false, cancellationToken);
+        return Results.Ok(updated);
+    }
+    catch (AdminUserException ex)
+    {
+        return Problem(ex.Status, ex.Message, ex.Code);
+    }
 });
 
 admin.MapPost("/users/{userId:int}/resend-activation", async (
@@ -535,8 +549,15 @@ admin.MapPost("/users/{userId:int}/resend-activation", async (
     IAdminUserService users,
     CancellationToken cancellationToken) =>
 {
-    await users.ResendActivationAsync(userId, cancellationToken);
-    return Results.NoContent();
+    try
+    {
+        await users.ResendActivationAsync(userId, cancellationToken);
+        return Results.NoContent();
+    }
+    catch (AdminUserException ex)
+    {
+        return Problem(ex.Status, ex.Message, ex.Code);
+    }
 });
 
 admin.MapPost("/users/{userId:int}/adjust-credits", async (
@@ -546,9 +567,16 @@ admin.MapPost("/users/{userId:int}/adjust-credits", async (
     IAdminUserService users,
     CancellationToken cancellationToken) =>
 {
-    var adminId = int.Parse(http.User.FindFirst(IAccessTokenFactory.ClaimUserId)!.Value);
-    var result = await users.AdjustCreditsAsync(adminId, userId, request.Delta, request.Reason, cancellationToken);
-    return Results.Ok(result);
+    try
+    {
+        var adminId = int.Parse(http.User.FindFirst(IAccessTokenFactory.ClaimUserId)!.Value);
+        var result = await users.AdjustCreditsAsync(adminId, userId, request.Delta, request.Reason, cancellationToken);
+        return Results.Ok(result);
+    }
+    catch (AdminUserException ex)
+    {
+        return Problem(ex.Status, ex.Message, ex.Code);
+    }
 });
 
 

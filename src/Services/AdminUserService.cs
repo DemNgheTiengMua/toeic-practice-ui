@@ -5,6 +5,15 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Services;
 
+public class AdminUserException(string code, string message, int status = 400) : Exception(message)
+{
+    public string Code => code;
+    public int Status => status;
+}
+
+public sealed class UserNotFoundException(int userId)
+    : AdminUserException(ApiError.Codes.UserNotFound, $"User with id {userId} not found.", 404);
+
 public interface IAdminUserService
 {
     Task<AdminUsersSummaryDto> GetUsersAsync(
@@ -99,7 +108,7 @@ public sealed class AdminUserService(
                 u.Email,
                 u.FullName,
                 u.Phone,
-                db.CreditTransactions.Where(c => c.UserId == u.UserId).Sum(c => (int?)c.Delta) ?? 0,
+                db.vw_UserCreditBalances.Where(b => b.UserId == u.UserId).Select(b => b.Balance).FirstOrDefault() ?? 0,
                 db.ExamAttempts.Count(a => a.UserId == u.UserId),
                 db.ExamAttempts.Where(a => a.UserId == u.UserId && a.TotalScore != null).Max(a => (int?)a.TotalScore),
                 u.LastLoginAt,
@@ -130,22 +139,23 @@ public sealed class AdminUserService(
 
         if (user is null)
         {
-            throw new ApiException(ApiError.Codes.UserNotFound, "User not found.", 404);
+            throw new UserNotFoundException(targetUserId);
         }
 
         if (user.Role.Code == Roles.Admin)
         {
-            throw new ApiException(ApiError.Codes.Forbidden, "Cannot modify lock status of an administrator.", 403);
+            throw new AdminUserException(ApiError.Codes.Forbidden, "Cannot modify lock status of an administrator.", 403);
         }
 
         user.IsLocked = isLocked;
         await db.SaveChangesAsync(cancellationToken);
 
-        var creditsLeft = await db.CreditTransactions
-            .Where(c => c.UserId == targetUserId)
-            .SumAsync(c => (int?)c.Delta, cancellationToken) ?? 0;
+        var creditsLeft = await db.vw_UserCreditBalances
+            .Where(b => b.UserId == targetUserId)
+            .Select(b => b.Balance)
+            .SingleOrDefaultAsync(cancellationToken) ?? 0;
 
-        var testsTaken = await db.ExamAttempts
+        var examsTaken = await db.ExamAttempts
             .CountAsync(a => a.UserId == targetUserId, cancellationToken);
 
         var bestScore = await db.ExamAttempts
@@ -158,7 +168,7 @@ public sealed class AdminUserService(
             user.FullName,
             user.Phone,
             creditsLeft,
-            testsTaken,
+            examsTaken,
             bestScore,
             user.LastLoginAt,
             user.IsLocked,
@@ -175,12 +185,12 @@ public sealed class AdminUserService(
     {
         if (delta == 0)
         {
-            throw new ApiException(ApiError.Codes.Validation, "Credit adjustment delta cannot be 0.", 400);
+            throw new AdminUserException(ApiError.Codes.Validation, "Credit adjustment delta cannot be 0.", 400);
         }
 
         if (string.IsNullOrWhiteSpace(reason))
         {
-            throw new ApiException(ApiError.Codes.Validation, "Reason is required for credit adjustments.", 400);
+            throw new AdminUserException(ApiError.Codes.Validation, "Reason is required for credit adjustments.", 400);
         }
 
         var user = await db.Users
@@ -189,16 +199,17 @@ public sealed class AdminUserService(
 
         if (user is null)
         {
-            throw new ApiException(ApiError.Codes.UserNotFound, "User not found.", 404);
+            throw new UserNotFoundException(targetUserId);
         }
 
-        var currentBalance = await db.CreditTransactions
-            .Where(c => c.UserId == targetUserId)
-            .SumAsync(c => (int?)c.Delta, cancellationToken) ?? 0;
+        var currentBalance = await db.vw_UserCreditBalances
+            .Where(b => b.UserId == targetUserId)
+            .Select(b => b.Balance)
+            .SingleOrDefaultAsync(cancellationToken) ?? 0;
 
         if (delta < 0 && currentBalance + delta < 0)
         {
-            throw new ApiException(ApiError.Codes.InsufficientCredits, "Credit deduction cannot exceed the user's current balance.", 400);
+            throw new AdminUserException(ApiError.Codes.InsufficientCredits, "Credit deduction cannot exceed the user's current balance.", 400);
         }
 
         var trimmedReason = reason.Trim();
@@ -215,7 +226,10 @@ public sealed class AdminUserService(
         db.CreditTransactions.Add(txn);
         await db.SaveChangesAsync(cancellationToken);
 
-        var newBalance = currentBalance + delta;
+        var newBalance = await db.vw_UserCreditBalances
+            .Where(b => b.UserId == targetUserId)
+            .Select(b => b.Balance)
+            .SingleOrDefaultAsync(cancellationToken) ?? 0;
         return new AdjustCreditsResultDto(txn.TxnId, targetUserId, newBalance, delta, trimmedReason);
     }
 
@@ -229,17 +243,17 @@ public sealed class AdminUserService(
 
         if (user is null)
         {
-            throw new ApiException(ApiError.Codes.UserNotFound, "User not found.", 404);
+            throw new UserNotFoundException(targetUserId);
         }
 
         if (user.IsLocked)
         {
-            throw new ApiException(ApiError.Codes.Locked, "Cannot resend activation to a locked account.", 400);
+            throw new AdminUserException(ApiError.Codes.Locked, "Cannot resend activation to a locked account.", 400);
         }
 
         if (user.EmailVerifiedAt != null)
         {
-            throw new ApiException(ApiError.Codes.Validation, "Account is already verified.", 400);
+            throw new AdminUserException(ApiError.Codes.Validation, "Account is already verified.", 400);
         }
 
         await authService.ResendActivationAsync(targetUserId, cancellationToken);

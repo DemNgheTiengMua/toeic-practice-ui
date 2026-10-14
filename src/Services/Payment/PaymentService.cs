@@ -244,8 +244,8 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
             .SingleOrDefaultAsync(cancellationToken)
             ?? throw new OrderNotFoundException(orderCode);
 
-        // Check if reconciling order should be checked again or has expired
-        if (order.Status == "reconciling")
+        // Check if reconciling or pending order should be checked again or has expired
+        if (order.Status == "reconciling" || order.Status == "pending")
         {
             if (order.CreatedAt < DateTimeOffset.UtcNow.AddMinutes(-15))
             {
@@ -620,12 +620,12 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
 
     private async Task AssertUserEmailVerifiedAsync(int userId, CancellationToken cancellationToken)
     {
-        var user = await db.Users
+        var emailVerifiedAt = await db.Users
             .Where(u => u.UserId == userId)
-            .Select(u => new { u.EmailVerifiedAt, u.IsLocked })
+            .Select(u => u.EmailVerifiedAt)
             .SingleOrDefaultAsync(cancellationToken);
 
-        if (user is null || user.EmailVerifiedAt is null)
+        if (emailVerifiedAt is null)
         {
             throw new EmailNotVerifiedException();
         }

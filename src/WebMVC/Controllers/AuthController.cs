@@ -90,7 +90,7 @@ public sealed class AuthController(ICompanionApiClient api) : Controller
 
     [HttpPost("/auth/sign-out")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> SignOut()
+    public new async Task<IActionResult> SignOut()
     {
         await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
         return RedirectToAction("Index", "Home");

@@ -190,7 +190,7 @@ public sealed class ApiException : HttpRequestException
 
     public string Code { get; }
 
-    public new string? Title { get; }
+    public string? Title { get; }
 
     /// <summary>The human-readable explanation (e.g. which validation rule failed), when the API gave one.</summary>
     public string? Detail { get; }

@@ -50,7 +50,7 @@ public sealed record ApiError(string Code, string Title, int Status, string? Det
         public const string QuestionNotFound = "QUESTION_NOT_FOUND";
         public const string RecommendationNotFound = "RECOMMENDATION_NOT_FOUND";
 
-        public const string OrderAlreadyOpen = "ORDER_ALREADY_OPEN";
+        public const string OrderAlreadyOpen = "order_already_open";
         public const string EmailNotVerified = "AUTH_EMAIL_UNVERIFIED";
         public const string OrderNotFound = "ORDER_NOT_FOUND";
         public const string PackageNotFound = "PACKAGE_NOT_FOUND";
