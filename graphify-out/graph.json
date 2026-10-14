@@ -1120,8 +1120,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_businessobjects_certificatecatalog",
-      "community": 35,
-      "community_name": "ExamAttempt",
+      "community": 33,
+      "community_name": "PackageService",
       "norm_label": "certificatecatalog.cs"
     },
     {
@@ -1137,8 +1137,8 @@
       },
       "_origin": "ast",
       "id": "src_businessobjects_certificatecatalog_businessobjects_certificatecatalog",
-      "community": 35,
-      "community_name": "ExamAttempt",
+      "community": 33,
+      "community_name": "PackageService",
       "norm_label": "certificatecatalog"
     },
     {
@@ -1154,8 +1154,8 @@
       },
       "_origin": "ast",
       "id": "src_businessobjects_certificatecatalog_businessobjects_skillcatalog",
-      "community": 35,
-      "community_name": "ExamAttempt",
+      "community": 33,
+      "community_name": "PackageService",
       "norm_label": "skillcatalog"
     },
     {
@@ -1171,8 +1171,8 @@
       },
       "_origin": "ast",
       "id": "src_businessobjects_certificatecatalog_businessobjects_sectioncatalog",
-      "community": 35,
-      "community_name": "ExamAttempt",
+      "community": 33,
+      "community_name": "PackageService",
       "norm_label": "sectioncatalog"
     },
     {
@@ -1188,8 +1188,8 @@
       },
       "_origin": "ast",
       "id": "src_businessobjects_certificatecatalog_businessobjects_bandcatalog",
-      "community": 35,
-      "community_name": "ExamAttempt",
+      "community": 33,
+      "community_name": "PackageService",
       "norm_label": "bandcatalog"
     },
     {
@@ -1617,115 +1617,14 @@
       "norm_label": "savequestionresult"
     },
     {
-      "label": "WalletModels.cs",
-      "file_type": "code",
-      "source_file": "src/BusinessObjects/WalletModels.cs",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "src_businessobjects_walletmodels",
-      "community": 22,
-      "community_name": "User",
-      "norm_label": "walletmodels.cs"
-    },
-    {
-      "label": "EmailNotVerifiedException",
-      "file_type": "code",
-      "source_file": "src/BusinessObjects/WalletModels.cs",
-      "source_location": "L3",
-      "metadata": {
-        "namespace": "BusinessObjects",
-        "scope_chain": [
-          "s0"
-        ]
-      },
-      "_origin": "ast",
-      "id": "src_businessobjects_walletmodels_businessobjects_emailnotverifiedexception",
-      "community": 22,
-      "community_name": "User",
-      "norm_label": "emailnotverifiedexception"
-    },
-    {
-      "label": "Exception",
-      "file_type": "code",
-      "source_file": "",
-      "source_location": "",
-      "_origin": "ast",
-      "id": "exception",
-      "community": 22,
-      "community_name": "User",
-      "norm_label": "exception"
-    },
-    {
-      "label": "OrderAlreadyOpenException",
-      "file_type": "code",
-      "source_file": "src/BusinessObjects/WalletModels.cs",
-      "source_location": "L6",
-      "metadata": {
-        "namespace": "BusinessObjects",
-        "scope_chain": [
-          "s0"
-        ]
-      },
-      "_origin": "ast",
-      "id": "src_businessobjects_walletmodels_businessobjects_orderalreadyopenexception",
-      "community": 22,
-      "community_name": "User",
-      "norm_label": "orderalreadyopenexception"
-    },
-    {
-      "label": "DateTimeOffset",
-      "file_type": "code",
-      "source_file": "",
-      "source_location": "",
-      "_origin": "ast",
-      "id": "src_businessobjects_walletmodels_cs_datetimeoffset",
-      "community": 22,
-      "community_name": "User",
-      "norm_label": "datetimeoffset"
-    },
-    {
-      "label": "OrderNotFoundException",
-      "file_type": "code",
-      "source_file": "src/BusinessObjects/WalletModels.cs",
-      "source_location": "L31",
-      "metadata": {
-        "namespace": "BusinessObjects",
-        "scope_chain": [
-          "s0"
-        ]
-      },
-      "_origin": "ast",
-      "id": "src_businessobjects_walletmodels_businessobjects_ordernotfoundexception",
-      "community": 22,
-      "community_name": "User",
-      "norm_label": "ordernotfoundexception"
-    },
-    {
-      "label": "PackageNotFoundException",
-      "file_type": "code",
-      "source_file": "src/BusinessObjects/WalletModels.cs",
-      "source_location": "L37",
-      "metadata": {
-        "namespace": "BusinessObjects",
-        "scope_chain": [
-          "s0"
-        ]
-      },
-      "_origin": "ast",
-      "id": "src_businessobjects_walletmodels_businessobjects_packagenotfoundexception",
-      "community": 22,
-      "community_name": "User",
-      "norm_label": "packagenotfoundexception"
-    },
-    {
       "label": "WeaknessModels.cs",
       "file_type": "code",
       "source_file": "src/BusinessObjects/WeaknessModels.cs",
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_businessobjects_weaknessmodels",
-      "community": 220,
-      "community_name": "WeaknessModels.cs",
+      "community": 44,
+      "community_name": "MentorPayout",
       "norm_label": "weaknessmodels.cs"
     },
     {
@@ -1741,8 +1640,8 @@
       },
       "_origin": "ast",
       "id": "src_businessobjects_weaknessmodels_businessobjects_sectionaccuracy",
-      "community": 220,
-      "community_name": "WeaknessModels.cs",
+      "community": 44,
+      "community_name": "MentorPayout",
       "norm_label": "sectionaccuracy"
     },
     {
@@ -1758,8 +1657,8 @@
       },
       "_origin": "ast",
       "id": "src_businessobjects_weaknessmodels_businessobjects_categoryaccuracy",
-      "community": 220,
-      "community_name": "WeaknessModels.cs",
+      "community": 44,
+      "community_name": "MentorPayout",
       "norm_label": "categoryaccuracy"
     },
     {
@@ -1775,8 +1674,8 @@
       },
       "_origin": "ast",
       "id": "src_businessobjects_weaknessmodels_businessobjects_recommendationitem",
-      "community": 220,
-      "community_name": "WeaknessModels.cs",
+      "community": 44,
+      "community_name": "MentorPayout",
       "norm_label": "recommendationitem"
     },
     {
@@ -1803,8 +1702,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_contracts_apierror",
-      "community": 102,
-      "community_name": "ApiError.cs",
+      "community": 41,
+      "community_name": "Contracts",
       "norm_label": "apierror.cs"
     },
     {
@@ -1836,8 +1735,8 @@
       },
       "_origin": "ast",
       "id": "src_contracts_apierror_contracts_apierror",
-      "community": 102,
-      "community_name": "ApiError.cs",
+      "community": 41,
+      "community_name": "Contracts",
       "norm_label": "apierror"
     },
     {
@@ -1854,8 +1753,8 @@
       },
       "_origin": "ast",
       "id": "src_contracts_apierror_contracts_codes",
-      "community": 102,
-      "community_name": "ApiError.cs",
+      "community": 41,
+      "community_name": "Contracts",
       "norm_label": "codes"
     },
     {
@@ -1865,8 +1764,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_contracts_apierror_cs_string",
-      "community": 102,
-      "community_name": "ApiError.cs",
+      "community": 41,
+      "community_name": "Contracts",
       "norm_label": "string"
     },
     {
@@ -1876,8 +1775,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_contracts_authclaims",
-      "community": 218,
-      "community_name": ".For",
+      "community": 41,
+      "community_name": "Contracts",
       "norm_label": "authclaims.cs"
     },
     {
@@ -1893,8 +1792,8 @@
       },
       "_origin": "ast",
       "id": "src_contracts_authclaims_contracts_authclaims",
-      "community": 218,
-      "community_name": ".For",
+      "community": 39,
+      "community_name": "AuthController",
       "norm_label": "authclaims"
     },
     {
@@ -1910,8 +1809,8 @@
       },
       "_origin": "ast",
       "id": "src_contracts_authclaims_contracts_authclaims_for",
-      "community": 218,
-      "community_name": ".For",
+      "community": 39,
+      "community_name": "AuthController",
       "norm_label": ".for()"
     },
     {
@@ -1921,8 +1820,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_contracts_authclaims_cs_list",
-      "community": 218,
-      "community_name": ".For",
+      "community": 39,
+      "community_name": "AuthController",
       "norm_label": "list"
     },
     {
@@ -1932,8 +1831,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "claim",
-      "community": 218,
-      "community_name": ".For",
+      "community": 39,
+      "community_name": "AuthController",
       "norm_label": "claim"
     },
     {
@@ -2124,8 +2023,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_contracts_autherrorcodes",
-      "community": 85,
-      "community_name": "AuthErrorCodes.cs",
+      "community": 41,
+      "community_name": "Contracts",
       "norm_label": "autherrorcodes.cs"
     },
     {
@@ -2141,8 +2040,8 @@
       },
       "_origin": "ast",
       "id": "src_contracts_autherrorcodes_contracts_autherrorcodes",
-      "community": 85,
-      "community_name": "AuthErrorCodes.cs",
+      "community": 41,
+      "community_name": "Contracts",
       "norm_label": "autherrorcodes"
     },
     {
@@ -2152,8 +2051,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_contracts_autherrorcodes_cs_string",
-      "community": 85,
-      "community_name": "AuthErrorCodes.cs",
+      "community": 41,
+      "community_name": "Contracts",
       "norm_label": "string"
     },
     {
@@ -2163,8 +2062,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_contracts_certificatedtos",
-      "community": 75,
-      "community_name": "CertificateDto",
+      "community": 41,
+      "community_name": "Contracts",
       "norm_label": "certificatedtos.cs"
     },
     {
@@ -2197,8 +2096,8 @@
       },
       "_origin": "ast",
       "id": "src_contracts_certificatedtos_contracts_skilldto",
-      "community": 75,
-      "community_name": "CertificateDto",
+      "community": 41,
+      "community_name": "Contracts",
       "norm_label": "skilldto"
     },
     {
@@ -2214,8 +2113,8 @@
       },
       "_origin": "ast",
       "id": "src_contracts_certificatedtos_contracts_sectiondto",
-      "community": 75,
-      "community_name": "CertificateDto",
+      "community": 41,
+      "community_name": "Contracts",
       "norm_label": "sectiondto"
     },
     {
@@ -2231,8 +2130,8 @@
       },
       "_origin": "ast",
       "id": "src_contracts_certificatedtos_contracts_banddto",
-      "community": 75,
-      "community_name": "CertificateDto",
+      "community": 41,
+      "community_name": "Contracts",
       "norm_label": "banddto"
     },
     {
@@ -3899,8 +3798,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_contracts_jwtaccesstokenfactory",
-      "community": 45,
-      "community_name": "GradingCriterion",
+      "community": 39,
+      "community_name": "AuthController",
       "norm_label": "jwtaccesstokenfactory.cs"
     },
     {
@@ -3916,8 +3815,8 @@
       },
       "_origin": "ast",
       "id": "src_contracts_jwtaccesstokenfactory_contracts_iaccesstokenfactory",
-      "community": 45,
-      "community_name": "GradingCriterion",
+      "community": 39,
+      "community_name": "AuthController",
       "norm_label": "iaccesstokenfactory"
     },
     {
@@ -3927,8 +3826,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_contracts_jwtaccesstokenfactory_cs_int",
-      "community": 45,
-      "community_name": "GradingCriterion",
+      "community": 39,
+      "community_name": "AuthController",
       "norm_label": "int"
     },
     {
@@ -3938,8 +3837,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_contracts_jwtaccesstokenfactory_cs_string",
-      "community": 45,
-      "community_name": "GradingCriterion",
+      "community": 39,
+      "community_name": "AuthController",
       "norm_label": "string"
     },
     {
@@ -3955,8 +3854,8 @@
       },
       "_origin": "ast",
       "id": "src_contracts_jwtaccesstokenfactory_contracts_iaccesstokenfactory_create",
-      "community": 45,
-      "community_name": "GradingCriterion",
+      "community": 39,
+      "community_name": "AuthController",
       "norm_label": ".create()"
     },
     {
@@ -3972,8 +3871,8 @@
       },
       "_origin": "ast",
       "id": "src_contracts_jwtaccesstokenfactory_contracts_accesstoken",
-      "community": 45,
-      "community_name": "GradingCriterion",
+      "community": 39,
+      "community_name": "AuthController",
       "norm_label": "accesstoken"
     },
     {
@@ -4113,8 +4012,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_contracts_packagedtos",
-      "community": 33,
-      "community_name": "PackageService",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": "packagedtos.cs"
     },
     {
@@ -4130,8 +4029,8 @@
       },
       "_origin": "ast",
       "id": "src_contracts_packagedtos_contracts_packagedto",
-      "community": 33,
-      "community_name": "PackageService",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": "packagedto"
     },
     {
@@ -4141,8 +4040,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_contracts_packagedtos_cs_ireadonlylist",
-      "community": 33,
-      "community_name": "PackageService",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": "ireadonlylist"
     },
     {
@@ -4158,8 +4057,8 @@
       },
       "_origin": "ast",
       "id": "src_contracts_packagedtos_contracts_createpackagerequest",
-      "community": 33,
-      "community_name": "PackageService",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": "createpackagerequest"
     },
     {
@@ -4175,8 +4074,8 @@
       },
       "_origin": "ast",
       "id": "src_contracts_packagedtos_contracts_updatepackagerequest",
-      "community": 33,
-      "community_name": "PackageService",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": "updatepackagerequest"
     },
     {
@@ -4192,8 +4091,8 @@
       },
       "_origin": "ast",
       "id": "src_contracts_packagedtos_contracts_adminpackagessummarydto",
-      "community": 33,
-      "community_name": "PackageService",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": "adminpackagessummarydto"
     },
     {
@@ -4565,8 +4464,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_contracts_roles",
-      "community": 85,
-      "community_name": "AuthErrorCodes.cs",
+      "community": 41,
+      "community_name": "Contracts",
       "norm_label": "roles.cs"
     },
     {
@@ -4582,8 +4481,8 @@
       },
       "_origin": "ast",
       "id": "src_contracts_roles_contracts_roles",
-      "community": 85,
-      "community_name": "AuthErrorCodes.cs",
+      "community": 41,
+      "community_name": "Contracts",
       "norm_label": "roles"
     },
     {
@@ -4593,8 +4492,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_contracts_roles_cs_string",
-      "community": 85,
-      "community_name": "AuthErrorCodes.cs",
+      "community": 41,
+      "community_name": "Contracts",
       "norm_label": "string"
     },
     {
@@ -5119,8 +5018,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_onetimetoken",
-      "community": 1,
-      "community_name": "AuthService",
+      "community": 40,
+      "community_name": "WeaknessAnalysisControllerTests.cs",
       "norm_label": "onetimetoken.cs"
     },
     {
@@ -5135,8 +5034,8 @@
       },
       "_origin": "ast",
       "id": "csharp_namespace:f2f6f46574d2f22a",
-      "community": 14,
-      "community_name": "microsoft_entityframeworkcore",
+      "community": 29,
+      "community_name": ".OnModelCreating",
       "norm_label": "dataaccess.scaffold"
     },
     {
@@ -5152,8 +5051,8 @@
       },
       "_origin": "ast",
       "id": "src_dataaccess_onetimetoken_dataaccess_scaffold_ionetimetoken",
-      "community": 1,
-      "community_name": "AuthService",
+      "community": 40,
+      "community_name": "WeaknessAnalysisControllerTests.cs",
       "norm_label": "ionetimetoken"
     },
     {
@@ -5163,8 +5062,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_dataaccess_onetimetoken_cs_datetimeoffset",
-      "community": 1,
-      "community_name": "AuthService",
+      "community": 40,
+      "community_name": "WeaknessAnalysisControllerTests.cs",
       "norm_label": "datetimeoffset"
     },
     {
@@ -5180,8 +5079,8 @@
       },
       "_origin": "ast",
       "id": "src_dataaccess_onetimetoken_dataaccess_scaffold_emailverificationtoken",
-      "community": 1,
-      "community_name": "AuthService",
+      "community": 40,
+      "community_name": "WeaknessAnalysisControllerTests.cs",
       "norm_label": "emailverificationtoken"
     },
     {
@@ -5197,8 +5096,8 @@
       },
       "_origin": "ast",
       "id": "src_dataaccess_onetimetoken_dataaccess_scaffold_passwordresettoken",
-      "community": 1,
-      "community_name": "AuthService",
+      "community": 40,
+      "community_name": "WeaknessAnalysisControllerTests.cs",
       "norm_label": "passwordresettoken"
     },
     {
@@ -5208,8 +5107,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_aigrading",
-      "community": 216,
-      "community_name": "AiGrading.cs",
+      "community": 29,
+      "community_name": ".OnModelCreating",
       "norm_label": "aigrading.cs"
     },
     {
@@ -5225,8 +5124,8 @@
       },
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_aigrading_dataaccess_scaffold_aigrading",
-      "community": 216,
-      "community_name": "AiGrading.cs",
+      "community": 29,
+      "community_name": ".OnModelCreating",
       "norm_label": "aigrading"
     },
     {
@@ -5236,8 +5135,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_aigrading_cs_datetimeoffset",
-      "community": 216,
-      "community_name": "AiGrading.cs",
+      "community": 29,
+      "community_name": ".OnModelCreating",
       "norm_label": "datetimeoffset"
     },
     {
@@ -5247,8 +5146,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_aigrading_cs_icollection",
-      "community": 216,
-      "community_name": "AiGrading.cs",
+      "community": 29,
+      "community_name": ".OnModelCreating",
       "norm_label": "icollection"
     },
     {
@@ -5286,8 +5185,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_aiinsight",
-      "community": 25,
-      "community_name": "ScoreBand",
+      "community": 40,
+      "community_name": "WeaknessAnalysisControllerTests.cs",
       "norm_label": "aiinsight.cs"
     },
     {
@@ -5303,8 +5202,8 @@
       },
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_aiinsight_dataaccess_scaffold_aiinsight",
-      "community": 25,
-      "community_name": "ScoreBand",
+      "community": 40,
+      "community_name": "WeaknessAnalysisControllerTests.cs",
       "norm_label": "aiinsight"
     },
     {
@@ -5314,8 +5213,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_aiinsight_cs_datetimeoffset",
-      "community": 25,
-      "community_name": "ScoreBand",
+      "community": 40,
+      "community_name": "WeaknessAnalysisControllerTests.cs",
       "norm_label": "datetimeoffset"
     },
     {
@@ -5325,8 +5224,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_aiinsight_cs_icollection",
-      "community": 25,
-      "community_name": "ScoreBand",
+      "community": 40,
+      "community_name": "WeaknessAnalysisControllerTests.cs",
       "norm_label": "icollection"
     },
     {
@@ -5336,8 +5235,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_attemptanswer",
-      "community": 8,
-      "community_name": "FreeResponse",
+      "community": 29,
+      "community_name": ".OnModelCreating",
       "norm_label": "attemptanswer.cs"
     },
     {
@@ -5364,8 +5263,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_attemptskillscore",
-      "community": 29,
-      "community_name": ".OnModelCreating",
+      "community": 8,
+      "community_name": "FreeResponse",
       "norm_label": "attemptskillscore.cs"
     },
     {
@@ -5381,8 +5280,8 @@
       },
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_attemptskillscore_dataaccess_scaffold_attemptskillscore",
-      "community": 29,
-      "community_name": ".OnModelCreating",
+      "community": 8,
+      "community_name": "FreeResponse",
       "norm_label": "attemptskillscore"
     },
     {
@@ -5587,8 +5486,8 @@
       },
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_emailverificationtoken_dataaccess_scaffold_emailverificationtoken",
-      "community": 1,
-      "community_name": "AuthService",
+      "community": 29,
+      "community_name": ".OnModelCreating",
       "norm_label": "emailverificationtoken"
     },
     {
@@ -5598,8 +5497,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_emailverificationtoken_cs_datetimeoffset",
-      "community": 1,
-      "community_name": "AuthService",
+      "community": 29,
+      "community_name": ".OnModelCreating",
       "norm_label": "datetimeoffset"
     },
     {
@@ -5659,8 +5558,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_examattempt",
-      "community": 25,
-      "community_name": "ScoreBand",
+      "community": 8,
+      "community_name": "FreeResponse",
       "norm_label": "examattempt.cs"
     },
     {
@@ -5676,8 +5575,8 @@
       },
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_examattempt_dataaccess_scaffold_examattempt",
-      "community": 25,
-      "community_name": "ScoreBand",
+      "community": 8,
+      "community_name": "FreeResponse",
       "norm_label": "examattempt"
     },
     {
@@ -5687,8 +5586,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_examattempt_cs_datetimeoffset",
-      "community": 25,
-      "community_name": "ScoreBand",
+      "community": 8,
+      "community_name": "FreeResponse",
       "norm_label": "datetimeoffset"
     },
     {
@@ -5698,8 +5597,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_examattempt_cs_icollection",
-      "community": 25,
-      "community_name": "ScoreBand",
+      "community": 8,
+      "community_name": "FreeResponse",
       "norm_label": "icollection"
     },
     {
@@ -5748,8 +5647,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_freeresponse",
-      "community": 216,
-      "community_name": "AiGrading.cs",
+      "community": 8,
+      "community_name": "FreeResponse",
       "norm_label": "freeresponse.cs"
     },
     {
@@ -5765,8 +5664,8 @@
       },
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_freeresponse_dataaccess_scaffold_freeresponse",
-      "community": 216,
-      "community_name": "AiGrading.cs",
+      "community": 8,
+      "community_name": "FreeResponse",
       "norm_label": "freeresponse"
     },
     {
@@ -5776,8 +5675,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_freeresponse_cs_datetimeoffset",
-      "community": 216,
-      "community_name": "AiGrading.cs",
+      "community": 8,
+      "community_name": "FreeResponse",
       "norm_label": "datetimeoffset"
     },
     {
@@ -5787,8 +5686,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_freeresponse_cs_icollection",
-      "community": 216,
-      "community_name": "AiGrading.cs",
+      "community": 8,
+      "community_name": "FreeResponse",
       "norm_label": "icollection"
     },
     {
@@ -5837,8 +5736,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_importbatch",
-      "community": 64,
-      "community_name": "ImportBatch",
+      "community": 29,
+      "community_name": ".OnModelCreating",
       "norm_label": "importbatch.cs"
     },
     {
@@ -5854,8 +5753,8 @@
       },
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_importbatch_dataaccess_scaffold_importbatch",
-      "community": 64,
-      "community_name": "ImportBatch",
+      "community": 29,
+      "community_name": ".OnModelCreating",
       "norm_label": "importbatch"
     },
     {
@@ -5865,8 +5764,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_importbatch_cs_datetimeoffset",
-      "community": 64,
-      "community_name": "ImportBatch",
+      "community": 29,
+      "community_name": ".OnModelCreating",
       "norm_label": "datetimeoffset"
     },
     {
@@ -5876,8 +5775,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_importbatch_cs_icollection",
-      "community": 64,
-      "community_name": "ImportBatch",
+      "community": 29,
+      "community_name": ".OnModelCreating",
       "norm_label": "icollection"
     },
     {
@@ -5887,8 +5786,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_importlog",
-      "community": 64,
-      "community_name": "ImportBatch",
+      "community": 29,
+      "community_name": ".OnModelCreating",
       "norm_label": "importlog.cs"
     },
     {
@@ -5904,8 +5803,8 @@
       },
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_importlog_dataaccess_scaffold_importlog",
-      "community": 64,
-      "community_name": "ImportBatch",
+      "community": 29,
+      "community_name": ".OnModelCreating",
       "norm_label": "importlog"
     },
     {
@@ -5915,8 +5814,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_importlog_cs_datetimeoffset",
-      "community": 64,
-      "community_name": "ImportBatch",
+      "community": 29,
+      "community_name": ".OnModelCreating",
       "norm_label": "datetimeoffset"
     },
     {
@@ -5926,8 +5825,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_learnerpath",
-      "community": 25,
-      "community_name": "ScoreBand",
+      "community": 45,
+      "community_name": "GradingCriterion",
       "norm_label": "learnerpath.cs"
     },
     {
@@ -5943,8 +5842,8 @@
       },
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_learnerpath_dataaccess_scaffold_learnerpath",
-      "community": 25,
-      "community_name": "ScoreBand",
+      "community": 45,
+      "community_name": "GradingCriterion",
       "norm_label": "learnerpath"
     },
     {
@@ -5954,8 +5853,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_learnerpath_cs_datetimeoffset",
-      "community": 25,
-      "community_name": "ScoreBand",
+      "community": 45,
+      "community_name": "GradingCriterion",
       "norm_label": "datetimeoffset"
     },
     {
@@ -5965,8 +5864,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_learnerpath_cs_icollection",
-      "community": 25,
-      "community_name": "ScoreBand",
+      "community": 45,
+      "community_name": "GradingCriterion",
       "norm_label": "icollection"
     },
     {
@@ -5976,8 +5875,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_learnerpathstep",
-      "community": 25,
-      "community_name": "ScoreBand",
+      "community": 45,
+      "community_name": "GradingCriterion",
       "norm_label": "learnerpathstep.cs"
     },
     {
@@ -5993,8 +5892,8 @@
       },
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_learnerpathstep_dataaccess_scaffold_learnerpathstep",
-      "community": 25,
-      "community_name": "ScoreBand",
+      "community": 45,
+      "community_name": "GradingCriterion",
       "norm_label": "learnerpathstep"
     },
     {
@@ -6004,8 +5903,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_learnerpathstep_cs_datetimeoffset",
-      "community": 25,
-      "community_name": "ScoreBand",
+      "community": 45,
+      "community_name": "GradingCriterion",
       "norm_label": "datetimeoffset"
     },
     {
@@ -6015,8 +5914,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_learnerpathstep_cs_icollection",
-      "community": 25,
-      "community_name": "ScoreBand",
+      "community": 45,
+      "community_name": "GradingCriterion",
       "norm_label": "icollection"
     },
     {
@@ -6299,8 +6198,8 @@
       },
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_passwordresettoken_dataaccess_scaffold_passwordresettoken",
-      "community": 1,
-      "community_name": "AuthService",
+      "community": 29,
+      "community_name": ".OnModelCreating",
       "norm_label": "passwordresettoken"
     },
     {
@@ -6310,8 +6209,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_passwordresettoken_cs_datetimeoffset",
-      "community": 1,
-      "community_name": "AuthService",
+      "community": 29,
+      "community_name": ".OnModelCreating",
       "norm_label": "datetimeoffset"
     },
     {
@@ -6505,8 +6404,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_placementtest",
-      "community": 25,
-      "community_name": "ScoreBand",
+      "community": 45,
+      "community_name": "GradingCriterion",
       "norm_label": "placementtest.cs"
     },
     {
@@ -6522,8 +6421,8 @@
       },
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_placementtest_dataaccess_scaffold_placementtest",
-      "community": 25,
-      "community_name": "ScoreBand",
+      "community": 45,
+      "community_name": "GradingCriterion",
       "norm_label": "placementtest"
     },
     {
@@ -6533,8 +6432,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_placementtest_cs_datetimeoffset",
-      "community": 25,
-      "community_name": "ScoreBand",
+      "community": 45,
+      "community_name": "GradingCriterion",
       "norm_label": "datetimeoffset"
     },
     {
@@ -6544,8 +6443,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_placementtest_cs_icollection",
-      "community": 25,
-      "community_name": "ScoreBand",
+      "community": 45,
+      "community_name": "GradingCriterion",
       "norm_label": "icollection"
     },
     {
@@ -6555,8 +6454,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_practiceanswer",
-      "community": 8,
-      "community_name": "FreeResponse",
+      "community": 29,
+      "community_name": ".OnModelCreating",
       "norm_label": "practiceanswer.cs"
     },
     {
@@ -6583,8 +6482,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_practicesession",
-      "community": 25,
-      "community_name": "ScoreBand",
+      "community": 40,
+      "community_name": "WeaknessAnalysisControllerTests.cs",
       "norm_label": "practicesession.cs"
     },
     {
@@ -6600,8 +6499,8 @@
       },
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_practicesession_dataaccess_scaffold_practicesession",
-      "community": 25,
-      "community_name": "ScoreBand",
+      "community": 40,
+      "community_name": "WeaknessAnalysisControllerTests.cs",
       "norm_label": "practicesession"
     },
     {
@@ -6611,8 +6510,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_practicesession_cs_datetimeoffset",
-      "community": 25,
-      "community_name": "ScoreBand",
+      "community": 40,
+      "community_name": "WeaknessAnalysisControllerTests.cs",
       "norm_label": "datetimeoffset"
     },
     {
@@ -6622,8 +6521,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_practicesession_cs_icollection",
-      "community": 25,
-      "community_name": "ScoreBand",
+      "community": 40,
+      "community_name": "WeaknessAnalysisControllerTests.cs",
       "norm_label": "icollection"
     },
     {
@@ -6633,8 +6532,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_question",
-      "community": 8,
-      "community_name": "FreeResponse",
+      "community": 29,
+      "community_name": ".OnModelCreating",
       "norm_label": "question.cs"
     },
     {
@@ -6761,8 +6660,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_questionoption",
-      "community": 8,
-      "community_name": "FreeResponse",
+      "community": 29,
+      "community_name": ".OnModelCreating",
       "norm_label": "questionoption.cs"
     },
     {
@@ -6800,8 +6699,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_recommendation",
-      "community": 25,
-      "community_name": "ScoreBand",
+      "community": 40,
+      "community_name": "WeaknessAnalysisControllerTests.cs",
       "norm_label": "recommendation.cs"
     },
     {
@@ -6817,8 +6716,8 @@
       },
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_recommendation_dataaccess_scaffold_recommendation",
-      "community": 25,
-      "community_name": "ScoreBand",
+      "community": 40,
+      "community_name": "WeaknessAnalysisControllerTests.cs",
       "norm_label": "recommendation"
     },
     {
@@ -6828,8 +6727,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_recommendation_cs_datetimeoffset",
-      "community": 25,
-      "community_name": "ScoreBand",
+      "community": 40,
+      "community_name": "WeaknessAnalysisControllerTests.cs",
       "norm_label": "datetimeoffset"
     },
     {
@@ -6878,8 +6777,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_role",
-      "community": 29,
-      "community_name": ".OnModelCreating",
+      "community": 40,
+      "community_name": "WeaknessAnalysisControllerTests.cs",
       "norm_label": "role.cs"
     },
     {
@@ -6895,8 +6794,8 @@
       },
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_role_dataaccess_scaffold_role",
-      "community": 29,
-      "community_name": ".OnModelCreating",
+      "community": 40,
+      "community_name": "WeaknessAnalysisControllerTests.cs",
       "norm_label": "role"
     },
     {
@@ -6906,8 +6805,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_role_cs_icollection",
-      "community": 29,
-      "community_name": ".OnModelCreating",
+      "community": 40,
+      "community_name": "WeaknessAnalysisControllerTests.cs",
       "norm_label": "icollection"
     },
     {
@@ -6995,8 +6894,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_scorescale",
-      "community": 29,
-      "community_name": ".OnModelCreating",
+      "community": 25,
+      "community_name": "ScoreBand",
       "norm_label": "scorescale.cs"
     },
     {
@@ -7012,8 +6911,8 @@
       },
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_scorescale_dataaccess_scaffold_scorescale",
-      "community": 29,
-      "community_name": ".OnModelCreating",
+      "community": 25,
+      "community_name": "ScoreBand",
       "norm_label": "scorescale"
     },
     {
@@ -7090,8 +6989,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_skill",
-      "community": 29,
-      "community_name": ".OnModelCreating",
+      "community": 25,
+      "community_name": "ScoreBand",
       "norm_label": "skill.cs"
     },
     {
@@ -7107,8 +7006,8 @@
       },
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_skill_dataaccess_scaffold_skill",
-      "community": 29,
-      "community_name": ".OnModelCreating",
+      "community": 25,
+      "community_name": "ScoreBand",
       "norm_label": "skill"
     },
     {
@@ -7118,8 +7017,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_skill_cs_icollection",
-      "community": 29,
-      "community_name": ".OnModelCreating",
+      "community": 25,
+      "community_name": "ScoreBand",
       "norm_label": "icollection"
     },
     {
@@ -7168,8 +7067,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_user",
-      "community": 29,
-      "community_name": ".OnModelCreating",
+      "community": 40,
+      "community_name": "WeaknessAnalysisControllerTests.cs",
       "norm_label": "user.cs"
     },
     {
@@ -7185,8 +7084,8 @@
       },
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_user_dataaccess_scaffold_user",
-      "community": 1,
-      "community_name": "AuthService",
+      "community": 40,
+      "community_name": "WeaknessAnalysisControllerTests.cs",
       "norm_label": "user"
     },
     {
@@ -7196,8 +7095,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_user_cs_datetimeoffset",
-      "community": 1,
-      "community_name": "AuthService",
+      "community": 40,
+      "community_name": "WeaknessAnalysisControllerTests.cs",
       "norm_label": "datetimeoffset"
     },
     {
@@ -7207,8 +7106,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_user_cs_icollection",
-      "community": 1,
-      "community_name": "AuthService",
+      "community": 40,
+      "community_name": "WeaknessAnalysisControllerTests.cs",
       "norm_label": "icollection"
     },
     {
@@ -7506,6 +7405,17 @@
       "community": 22,
       "community_name": "User",
       "norm_label": "authexception"
+    },
+    {
+      "label": "Exception",
+      "file_type": "code",
+      "source_file": "",
+      "source_location": "",
+      "_origin": "ast",
+      "id": "exception",
+      "community": 22,
+      "community_name": "User",
+      "norm_label": "exception"
     },
     {
       "label": "string",
@@ -8231,8 +8141,8 @@
       },
       "_origin": "ast",
       "id": "src_services_certificateservice_services_icertificateservice",
-      "community": 35,
-      "community_name": "ExamAttempt",
+      "community": 33,
+      "community_name": "PackageService",
       "norm_label": "icertificateservice"
     },
     {
@@ -8248,8 +8158,8 @@
       },
       "_origin": "ast",
       "id": "src_services_certificateservice_services_icertificateservice_getcatalogasync",
-      "community": 35,
-      "community_name": "ExamAttempt",
+      "community": 33,
+      "community_name": "PackageService",
       "norm_label": ".getcatalogasync()"
     },
     {
@@ -8259,8 +8169,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_services_certificateservice_cs_cancellationtoken",
-      "community": 35,
-      "community_name": "ExamAttempt",
+      "community": 33,
+      "community_name": "PackageService",
       "norm_label": "cancellationtoken"
     },
     {
@@ -8270,8 +8180,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_services_certificateservice_cs_task",
-      "community": 35,
-      "community_name": "ExamAttempt",
+      "community": 33,
+      "community_name": "PackageService",
       "norm_label": "task"
     },
     {
@@ -8281,8 +8191,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_services_certificateservice_cs_ireadonlylist",
-      "community": 35,
-      "community_name": "ExamAttempt",
+      "community": 33,
+      "community_name": "PackageService",
       "norm_label": "ireadonlylist"
     },
     {
@@ -8298,8 +8208,8 @@
       },
       "_origin": "ast",
       "id": "src_services_certificateservice_services_certificateservice",
-      "community": 35,
-      "community_name": "ExamAttempt",
+      "community": 33,
+      "community_name": "PackageService",
       "norm_label": "certificateservice"
     },
     {
@@ -8315,8 +8225,8 @@
       },
       "_origin": "ast",
       "id": "src_services_certificateservice_services_certificateservice_getcatalogasync",
-      "community": 35,
-      "community_name": "ExamAttempt",
+      "community": 33,
+      "community_name": "PackageService",
       "norm_label": ".getcatalogasync()"
     },
     {
@@ -8890,8 +8800,8 @@
       },
       "_origin": "ast",
       "id": "src_services_packageservice_services_ipackageservice",
-      "community": 33,
-      "community_name": "PackageService",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": "ipackageservice"
     },
     {
@@ -8907,8 +8817,8 @@
       },
       "_origin": "ast",
       "id": "src_services_packageservice_services_ipackageservice_getactivepackagesasync",
-      "community": 33,
-      "community_name": "PackageService",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": ".getactivepackagesasync()"
     },
     {
@@ -8918,8 +8828,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_services_packageservice_cs_cancellationtoken",
-      "community": 33,
-      "community_name": "PackageService",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": "cancellationtoken"
     },
     {
@@ -8929,8 +8839,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_services_packageservice_cs_task",
-      "community": 33,
-      "community_name": "PackageService",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": "task"
     },
     {
@@ -8940,8 +8850,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_services_packageservice_cs_ireadonlylist",
-      "community": 33,
-      "community_name": "PackageService",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": "ireadonlylist"
     },
     {
@@ -8957,8 +8867,8 @@
       },
       "_origin": "ast",
       "id": "src_services_packageservice_services_ipackageservice_getadminpackagesasync",
-      "community": 33,
-      "community_name": "PackageService",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": ".getadminpackagesasync()"
     },
     {
@@ -8974,8 +8884,8 @@
       },
       "_origin": "ast",
       "id": "src_services_packageservice_services_ipackageservice_getpackagebyidasync",
-      "community": 33,
-      "community_name": "PackageService",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": ".getpackagebyidasync()"
     },
     {
@@ -8991,8 +8901,8 @@
       },
       "_origin": "ast",
       "id": "src_services_packageservice_services_ipackageservice_createpackageasync",
-      "community": 33,
-      "community_name": "PackageService",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": ".createpackageasync()"
     },
     {
@@ -9008,8 +8918,8 @@
       },
       "_origin": "ast",
       "id": "src_services_packageservice_services_ipackageservice_updatepackageasync",
-      "community": 33,
-      "community_name": "PackageService",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": ".updatepackageasync()"
     },
     {
@@ -9025,8 +8935,8 @@
       },
       "_origin": "ast",
       "id": "src_services_packageservice_services_ipackageservice_deactivatepackageasync",
-      "community": 33,
-      "community_name": "PackageService",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": ".deactivatepackageasync()"
     },
     {
@@ -9042,8 +8952,8 @@
       },
       "_origin": "ast",
       "id": "src_services_packageservice_services_packageservice",
-      "community": 33,
-      "community_name": "PackageService",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": "packageservice"
     },
     {
@@ -9059,8 +8969,8 @@
       },
       "_origin": "ast",
       "id": "src_services_packageservice_services_packageservice_getactivepackagesasync",
-      "community": 33,
-      "community_name": "PackageService",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": ".getactivepackagesasync()"
     },
     {
@@ -9076,8 +8986,8 @@
       },
       "_origin": "ast",
       "id": "src_services_packageservice_services_packageservice_getadminpackagesasync",
-      "community": 33,
-      "community_name": "PackageService",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": ".getadminpackagesasync()"
     },
     {
@@ -9093,8 +9003,8 @@
       },
       "_origin": "ast",
       "id": "src_services_packageservice_services_packageservice_getpackagebyidasync",
-      "community": 33,
-      "community_name": "PackageService",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": ".getpackagebyidasync()"
     },
     {
@@ -9110,8 +9020,8 @@
       },
       "_origin": "ast",
       "id": "src_services_packageservice_services_packageservice_createpackageasync",
-      "community": 33,
-      "community_name": "PackageService",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": ".createpackageasync()"
     },
     {
@@ -9127,8 +9037,8 @@
       },
       "_origin": "ast",
       "id": "src_services_packageservice_services_packageservice_updatepackageasync",
-      "community": 33,
-      "community_name": "PackageService",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": ".updatepackageasync()"
     },
     {
@@ -9144,8 +9054,8 @@
       },
       "_origin": "ast",
       "id": "src_services_packageservice_services_packageservice_deactivatepackageasync",
-      "community": 33,
-      "community_name": "PackageService",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": ".deactivatepackageasync()"
     },
     {
@@ -9161,8 +9071,8 @@
       },
       "_origin": "ast",
       "id": "src_services_packageservice_services_packageservice_validateinput",
-      "community": 33,
-      "community_name": "PackageService",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": ".validateinput()"
     },
     {
@@ -9583,27 +9493,10 @@
       "norm_label": ".setoutcome()"
     },
     {
-      "label": ".SetOutcomeByOrderCode()",
-      "file_type": "code",
-      "source_file": "src/Services/Payment/MockPaymentGateway.cs",
-      "source_location": "L9",
-      "metadata": {
-        "namespace": "Services",
-        "scope_chain": [
-          "s62"
-        ]
-      },
-      "_origin": "ast",
-      "id": "src_services_payment_mockpaymentgateway_services_imockpaymentgateway_setoutcomebyordercode",
-      "community": 46,
-      "community_name": "CompanionApiClient.cs",
-      "norm_label": ".setoutcomebyordercode()"
-    },
-    {
       "label": "MockPaymentGateway",
       "file_type": "code",
       "source_file": "src/Services/Payment/MockPaymentGateway.cs",
-      "source_location": "L12",
+      "source_location": "L11",
       "metadata": {
         "namespace": "Services",
         "scope_chain": [
@@ -9642,7 +9535,7 @@
       "label": ".SetOutcome()",
       "file_type": "code",
       "source_file": "src/Services/Payment/MockPaymentGateway.cs",
-      "source_location": "L20",
+      "source_location": "L18",
       "metadata": {
         "namespace": "Services",
         "scope_chain": [
@@ -9656,27 +9549,10 @@
       "norm_label": ".setoutcome()"
     },
     {
-      "label": ".SetOutcomeByOrderCode()",
-      "file_type": "code",
-      "source_file": "src/Services/Payment/MockPaymentGateway.cs",
-      "source_location": "L25",
-      "metadata": {
-        "namespace": "Services",
-        "scope_chain": [
-          "s62"
-        ]
-      },
-      "_origin": "ast",
-      "id": "src_services_payment_mockpaymentgateway_services_mockpaymentgateway_setoutcomebyordercode",
-      "community": 46,
-      "community_name": "CompanionApiClient.cs",
-      "norm_label": ".setoutcomebyordercode()"
-    },
-    {
       "label": ".CreatePaymentLinkAsync()",
       "file_type": "code",
       "source_file": "src/Services/Payment/MockPaymentGateway.cs",
-      "source_location": "L30",
+      "source_location": "L23",
       "metadata": {
         "namespace": "Services",
         "scope_chain": [
@@ -9715,7 +9591,7 @@
       "label": ".QueryPaymentStatusAsync()",
       "file_type": "code",
       "source_file": "src/Services/Payment/MockPaymentGateway.cs",
-      "source_location": "L39",
+      "source_location": "L32",
       "metadata": {
         "namespace": "Services",
         "scope_chain": [
@@ -9732,7 +9608,7 @@
       "label": ".VerifyWebhookAsync()",
       "file_type": "code",
       "source_file": "src/Services/Payment/MockPaymentGateway.cs",
-      "source_location": "L58",
+      "source_location": "L46",
       "metadata": {
         "namespace": "Services",
         "scope_chain": [
@@ -9886,6 +9762,96 @@
       "norm_label": ".verifywebhookasync()"
     },
     {
+      "label": "PaymentExceptions.cs",
+      "file_type": "code",
+      "source_file": "src/Services/Payment/PaymentExceptions.cs",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "src_services_payment_paymentexceptions",
+      "community": 22,
+      "community_name": "User",
+      "norm_label": "paymentexceptions.cs"
+    },
+    {
+      "label": "EmailNotVerifiedException",
+      "file_type": "code",
+      "source_file": "src/Services/Payment/PaymentExceptions.cs",
+      "source_location": "L3",
+      "metadata": {
+        "namespace": "Services",
+        "scope_chain": [
+          "s0"
+        ]
+      },
+      "_origin": "ast",
+      "id": "src_services_payment_paymentexceptions_services_emailnotverifiedexception",
+      "community": 22,
+      "community_name": "User",
+      "norm_label": "emailnotverifiedexception"
+    },
+    {
+      "label": "OrderAlreadyOpenException",
+      "file_type": "code",
+      "source_file": "src/Services/Payment/PaymentExceptions.cs",
+      "source_location": "L6",
+      "metadata": {
+        "namespace": "Services",
+        "scope_chain": [
+          "s0"
+        ]
+      },
+      "_origin": "ast",
+      "id": "src_services_payment_paymentexceptions_services_orderalreadyopenexception",
+      "community": 22,
+      "community_name": "User",
+      "norm_label": "orderalreadyopenexception"
+    },
+    {
+      "label": "DateTimeOffset",
+      "file_type": "code",
+      "source_file": "",
+      "source_location": "",
+      "_origin": "ast",
+      "id": "src_services_payment_paymentexceptions_cs_datetimeoffset",
+      "community": 22,
+      "community_name": "User",
+      "norm_label": "datetimeoffset"
+    },
+    {
+      "label": "OrderNotFoundException",
+      "file_type": "code",
+      "source_file": "src/Services/Payment/PaymentExceptions.cs",
+      "source_location": "L31",
+      "metadata": {
+        "namespace": "Services",
+        "scope_chain": [
+          "s0"
+        ]
+      },
+      "_origin": "ast",
+      "id": "src_services_payment_paymentexceptions_services_ordernotfoundexception",
+      "community": 22,
+      "community_name": "User",
+      "norm_label": "ordernotfoundexception"
+    },
+    {
+      "label": "PackageNotFoundException",
+      "file_type": "code",
+      "source_file": "src/Services/Payment/PaymentExceptions.cs",
+      "source_location": "L37",
+      "metadata": {
+        "namespace": "Services",
+        "scope_chain": [
+          "s0"
+        ]
+      },
+      "_origin": "ast",
+      "id": "src_services_payment_paymentexceptions_services_packagenotfoundexception",
+      "community": 22,
+      "community_name": "User",
+      "norm_label": "packagenotfoundexception"
+    },
+    {
       "label": "PaymentService.cs",
       "file_type": "code",
       "source_file": "src/Services/Payment/PaymentService.cs",
@@ -9904,7 +9870,7 @@
       "metadata": {
         "namespace": "Services",
         "scope_chain": [
-          "s123"
+          "s119"
         ]
       },
       "_origin": "ast",
@@ -9921,7 +9887,7 @@
       "metadata": {
         "namespace": "Services",
         "scope_chain": [
-          "s123"
+          "s119"
         ]
       },
       "_origin": "ast",
@@ -9960,7 +9926,7 @@
       "metadata": {
         "namespace": "Services",
         "scope_chain": [
-          "s123"
+          "s119"
         ]
       },
       "_origin": "ast",
@@ -9977,7 +9943,7 @@
       "metadata": {
         "namespace": "Services",
         "scope_chain": [
-          "s123"
+          "s119"
         ]
       },
       "_origin": "ast",
@@ -9990,11 +9956,11 @@
       "label": ".GetPaymentResultAsync()",
       "file_type": "code",
       "source_file": "src/Services/Payment/PaymentService.cs",
-      "source_location": "L225",
+      "source_location": "L231",
       "metadata": {
         "namespace": "Services",
         "scope_chain": [
-          "s123"
+          "s119"
         ]
       },
       "_origin": "ast",
@@ -10007,11 +9973,11 @@
       "label": ".SettleOrderAsync()",
       "file_type": "code",
       "source_file": "src/Services/Payment/PaymentService.cs",
-      "source_location": "L284",
+      "source_location": "L311",
       "metadata": {
         "namespace": "Services",
         "scope_chain": [
-          "s123"
+          "s119"
         ]
       },
       "_origin": "ast",
@@ -10024,11 +9990,11 @@
       "label": ".HandleWebhookAsync()",
       "file_type": "code",
       "source_file": "src/Services/Payment/PaymentService.cs",
-      "source_location": "L366",
+      "source_location": "L394",
       "metadata": {
         "namespace": "Services",
         "scope_chain": [
-          "s123"
+          "s119"
         ]
       },
       "_origin": "ast",
@@ -10041,11 +10007,11 @@
       "label": ".ApplyMockGatewayActionAsync()",
       "file_type": "code",
       "source_file": "src/Services/Payment/PaymentService.cs",
-      "source_location": "L415",
+      "source_location": "L443",
       "metadata": {
         "namespace": "Services",
         "scope_chain": [
-          "s123"
+          "s119"
         ]
       },
       "_origin": "ast",
@@ -10058,11 +10024,11 @@
       "label": ".GetWalletAsync()",
       "file_type": "code",
       "source_file": "src/Services/Payment/PaymentService.cs",
-      "source_location": "L498",
+      "source_location": "L526",
       "metadata": {
         "namespace": "Services",
         "scope_chain": [
-          "s123"
+          "s119"
         ]
       },
       "_origin": "ast",
@@ -10075,11 +10041,11 @@
       "label": ".ExpireStaleOrdersAsync()",
       "file_type": "code",
       "source_file": "src/Services/Payment/PaymentService.cs",
-      "source_location": "L547",
+      "source_location": "L575",
       "metadata": {
         "namespace": "Services",
         "scope_chain": [
-          "s123"
+          "s119"
         ]
       },
       "_origin": "ast",
@@ -10092,11 +10058,11 @@
       "label": ".AssertUserEmailVerifiedAsync()",
       "file_type": "code",
       "source_file": "src/Services/Payment/PaymentService.cs",
-      "source_location": "L566",
+      "source_location": "L594",
       "metadata": {
         "namespace": "Services",
         "scope_chain": [
-          "s123"
+          "s119"
         ]
       },
       "_origin": "ast",
@@ -10109,11 +10075,11 @@
       "label": ".ToOrderDto()",
       "file_type": "code",
       "source_file": "src/Services/Payment/PaymentService.cs",
-      "source_location": "L579",
+      "source_location": "L607",
       "metadata": {
         "namespace": "Services",
         "scope_chain": [
-          "s123"
+          "s119"
         ]
       },
       "_origin": "ast",
@@ -10962,8 +10928,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_webapi_jwtaccesstokenfactory",
-      "community": 45,
-      "community_name": "GradingCriterion",
+      "community": 39,
+      "community_name": "AuthController",
       "norm_label": "jwtaccesstokenfactory.cs"
     },
     {
@@ -10978,8 +10944,8 @@
       },
       "_origin": "ast",
       "id": "csharp_namespace:14fcec19ef2f1369",
-      "community": 45,
-      "community_name": "GradingCriterion",
+      "community": 39,
+      "community_name": "AuthController",
       "norm_label": "webapi"
     },
     {
@@ -10995,8 +10961,8 @@
       },
       "_origin": "ast",
       "id": "src_webapi_jwtaccesstokenfactory_webapi_jwtoptions",
-      "community": 45,
-      "community_name": "GradingCriterion",
+      "community": 39,
+      "community_name": "AuthController",
       "norm_label": "jwtoptions"
     },
     {
@@ -11006,8 +10972,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_webapi_jwtaccesstokenfactory_cs_string",
-      "community": 45,
-      "community_name": "GradingCriterion",
+      "community": 39,
+      "community_name": "AuthController",
       "norm_label": "string"
     },
     {
@@ -11023,8 +10989,8 @@
       },
       "_origin": "ast",
       "id": "src_webapi_jwtaccesstokenfactory_webapi_jwtaccesstokenfactory",
-      "community": 45,
-      "community_name": "GradingCriterion",
+      "community": 39,
+      "community_name": "AuthController",
       "norm_label": "jwtaccesstokenfactory"
     },
     {
@@ -11040,8 +11006,8 @@
       },
       "_origin": "ast",
       "id": "src_webapi_jwtaccesstokenfactory_webapi_jwtaccesstokenfactory_create",
-      "community": 45,
-      "community_name": "GradingCriterion",
+      "community": 39,
+      "community_name": "AuthController",
       "norm_label": ".create()"
     },
     {
@@ -11051,8 +11017,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_webapi_program",
-      "community": 45,
-      "community_name": "GradingCriterion",
+      "community": 14,
+      "community_name": "microsoft_entityframeworkcore",
       "norm_label": "program.cs"
     },
     {
@@ -11062,8 +11028,8 @@
       "source_location": "L1089",
       "_origin": "ast",
       "id": "src_webapi_program_program",
-      "community": 45,
-      "community_name": "GradingCriterion",
+      "community": 14,
+      "community_name": "microsoft_entityframeworkcore",
       "norm_label": "program"
     },
     {
@@ -11260,8 +11226,8 @@
       },
       "_origin": "ast",
       "id": "src_webmvc_controllers_admincontroller_webmvc_controllers_admincontroller",
-      "community": 76,
-      "community_name": "PracticeSession",
+      "community": 53,
+      "community_name": ".Index",
       "norm_label": "admincontroller"
     },
     {
@@ -11271,8 +11237,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "controller",
-      "community": 76,
-      "community_name": "PracticeSession",
+      "community": 53,
+      "community_name": ".Index",
       "norm_label": "controller"
     },
     {
@@ -11288,8 +11254,8 @@
       },
       "_origin": "ast",
       "id": "src_webmvc_controllers_admincontroller_webmvc_controllers_admincontroller_index",
-      "community": 214,
-      "community_name": ".GetBearerTokenAsync",
+      "community": 53,
+      "community_name": ".Index",
       "norm_label": ".index()"
     },
     {
@@ -11299,8 +11265,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_webmvc_controllers_admincontroller_cs_cancellationtoken",
-      "community": 214,
-      "community_name": ".GetBearerTokenAsync",
+      "community": 53,
+      "community_name": ".Index",
       "norm_label": "cancellationtoken"
     },
     {
@@ -11310,8 +11276,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_webmvc_controllers_admincontroller_cs_task",
-      "community": 214,
-      "community_name": ".GetBearerTokenAsync",
+      "community": 53,
+      "community_name": ".Index",
       "norm_label": "task"
     },
     {
@@ -11321,8 +11287,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_webmvc_controllers_admincontroller_cs_iactionresult",
-      "community": 214,
-      "community_name": ".GetBearerTokenAsync",
+      "community": 53,
+      "community_name": ".Index",
       "norm_label": "iactionresult"
     },
     {
@@ -11349,8 +11315,8 @@
       },
       "_origin": "ast",
       "id": "src_webmvc_controllers_adminpackagescontroller_webmvc_controllers_adminpackagescontroller",
-      "community": 57,
-      "community_name": "PlacementTest",
+      "community": 53,
+      "community_name": ".Index",
       "norm_label": "adminpackagescontroller"
     },
     {
@@ -11366,8 +11332,8 @@
       },
       "_origin": "ast",
       "id": "src_webmvc_controllers_adminpackagescontroller_webmvc_controllers_adminpackagescontroller_bearerasync",
-      "community": 57,
-      "community_name": "PlacementTest",
+      "community": 53,
+      "community_name": ".Index",
       "norm_label": ".bearerasync()"
     },
     {
@@ -11377,8 +11343,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_webmvc_controllers_adminpackagescontroller_cs_task",
-      "community": 57,
-      "community_name": "PlacementTest",
+      "community": 53,
+      "community_name": ".Index",
       "norm_label": "task"
     },
     {
@@ -11394,8 +11360,8 @@
       },
       "_origin": "ast",
       "id": "src_webmvc_controllers_adminpackagescontroller_webmvc_controllers_adminpackagescontroller_index",
-      "community": 57,
-      "community_name": "PlacementTest",
+      "community": 53,
+      "community_name": ".Index",
       "norm_label": ".index()"
     },
     {
@@ -11405,8 +11371,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_webmvc_controllers_adminpackagescontroller_cs_cancellationtoken",
-      "community": 57,
-      "community_name": "PlacementTest",
+      "community": 53,
+      "community_name": ".Index",
       "norm_label": "cancellationtoken"
     },
     {
@@ -11416,8 +11382,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_webmvc_controllers_adminpackagescontroller_cs_iactionresult",
-      "community": 57,
-      "community_name": "PlacementTest",
+      "community": 53,
+      "community_name": ".Index",
       "norm_label": "iactionresult"
     },
     {
@@ -11427,8 +11393,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_webmvc_controllers_adminpackagescontroller_cs_httpget",
-      "community": 57,
-      "community_name": "PlacementTest",
+      "community": 53,
+      "community_name": ".Index",
       "norm_label": "httpget"
     },
     {
@@ -11444,8 +11410,8 @@
       },
       "_origin": "ast",
       "id": "src_webmvc_controllers_adminpackagescontroller_webmvc_controllers_adminpackagescontroller_create",
-      "community": 57,
-      "community_name": "PlacementTest",
+      "community": 53,
+      "community_name": ".Index",
       "norm_label": ".create()"
     },
     {
@@ -11455,8 +11421,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_webmvc_controllers_adminpackagescontroller_cs_httppost",
-      "community": 57,
-      "community_name": "PlacementTest",
+      "community": 53,
+      "community_name": ".Index",
       "norm_label": "httppost"
     },
     {
@@ -11466,8 +11432,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_webmvc_controllers_adminpackagescontroller_cs_validateantiforgerytoken",
-      "community": 57,
-      "community_name": "PlacementTest",
+      "community": 53,
+      "community_name": ".Index",
       "norm_label": "validateantiforgerytoken"
     },
     {
@@ -11483,8 +11449,8 @@
       },
       "_origin": "ast",
       "id": "src_webmvc_controllers_adminpackagescontroller_webmvc_controllers_adminpackagescontroller_edit",
-      "community": 57,
-      "community_name": "PlacementTest",
+      "community": 53,
+      "community_name": ".Index",
       "norm_label": ".edit()"
     },
     {
@@ -11500,8 +11466,8 @@
       },
       "_origin": "ast",
       "id": "src_webmvc_controllers_adminpackagescontroller_webmvc_controllers_adminpackagescontroller_deactivate",
-      "community": 57,
-      "community_name": "PlacementTest",
+      "community": 53,
+      "community_name": ".Index",
       "norm_label": ".deactivate()"
     },
     {
@@ -11517,8 +11483,8 @@
       },
       "_origin": "ast",
       "id": "src_webmvc_controllers_adminpackagescontroller_webmvc_controllers_adminpackagescontroller_togglefeatured",
-      "community": 57,
-      "community_name": "PlacementTest",
+      "community": 53,
+      "community_name": ".Index",
       "norm_label": ".togglefeatured()"
     },
     {
@@ -11814,8 +11780,8 @@
       },
       "_origin": "ast",
       "id": "src_webmvc_controllers_certificatescontroller_webmvc_controllers_certificatescontroller",
-      "community": 76,
-      "community_name": "PracticeSession",
+      "community": 53,
+      "community_name": ".Index",
       "norm_label": "certificatescontroller"
     },
     {
@@ -11831,8 +11797,8 @@
       },
       "_origin": "ast",
       "id": "src_webmvc_controllers_certificatescontroller_webmvc_controllers_certificatescontroller_index",
-      "community": 76,
-      "community_name": "PracticeSession",
+      "community": 53,
+      "community_name": ".Index",
       "norm_label": ".index()"
     },
     {
@@ -11842,8 +11808,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_webmvc_controllers_certificatescontroller_cs_cancellationtoken",
-      "community": 76,
-      "community_name": "PracticeSession",
+      "community": 53,
+      "community_name": ".Index",
       "norm_label": "cancellationtoken"
     },
     {
@@ -11853,8 +11819,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_webmvc_controllers_certificatescontroller_cs_task",
-      "community": 76,
-      "community_name": "PracticeSession",
+      "community": 53,
+      "community_name": ".Index",
       "norm_label": "task"
     },
     {
@@ -11864,8 +11830,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_webmvc_controllers_certificatescontroller_cs_iactionresult",
-      "community": 76,
-      "community_name": "PracticeSession",
+      "community": 53,
+      "community_name": ".Index",
       "norm_label": "iactionresult"
     },
     {
@@ -12188,8 +12154,8 @@
       },
       "_origin": "ast",
       "id": "src_webmvc_controllers_homecontroller_webmvc_controllers_homecontroller",
-      "community": 76,
-      "community_name": "PracticeSession",
+      "community": 53,
+      "community_name": ".Index",
       "norm_label": "homecontroller"
     },
     {
@@ -12205,8 +12171,8 @@
       },
       "_origin": "ast",
       "id": "src_webmvc_controllers_homecontroller_webmvc_controllers_homecontroller_index",
-      "community": 76,
-      "community_name": "PracticeSession",
+      "community": 53,
+      "community_name": ".Index",
       "norm_label": ".index()"
     },
     {
@@ -12216,8 +12182,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_webmvc_controllers_homecontroller_cs_iactionresult",
-      "community": 76,
-      "community_name": "PracticeSession",
+      "community": 53,
+      "community_name": ".Index",
       "norm_label": "iactionresult"
     },
     {
@@ -12233,8 +12199,8 @@
       },
       "_origin": "ast",
       "id": "src_webmvc_controllers_homecontroller_webmvc_controllers_homecontroller_error",
-      "community": 76,
-      "community_name": "PracticeSession",
+      "community": 53,
+      "community_name": ".Index",
       "norm_label": ".error()"
     },
     {
@@ -12244,8 +12210,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "responsecache",
-      "community": 76,
-      "community_name": "PracticeSession",
+      "community": 53,
+      "community_name": ".Index",
       "norm_label": "responsecache"
     },
     {
@@ -12664,8 +12630,8 @@
       },
       "_origin": "ast",
       "id": "src_webmvc_controllers_pricingcontroller_webmvc_controllers_pricingcontroller",
-      "community": 76,
-      "community_name": "PracticeSession",
+      "community": 53,
+      "community_name": ".Index",
       "norm_label": "pricingcontroller"
     },
     {
@@ -12681,8 +12647,8 @@
       },
       "_origin": "ast",
       "id": "src_webmvc_controllers_pricingcontroller_webmvc_controllers_pricingcontroller_index",
-      "community": 214,
-      "community_name": ".GetBearerTokenAsync",
+      "community": 53,
+      "community_name": ".Index",
       "norm_label": ".index()"
     },
     {
@@ -12692,8 +12658,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_webmvc_controllers_pricingcontroller_cs_cancellationtoken",
-      "community": 214,
-      "community_name": ".GetBearerTokenAsync",
+      "community": 53,
+      "community_name": ".Index",
       "norm_label": "cancellationtoken"
     },
     {
@@ -12703,8 +12669,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_webmvc_controllers_pricingcontroller_cs_task",
-      "community": 214,
-      "community_name": ".GetBearerTokenAsync",
+      "community": 53,
+      "community_name": ".Index",
       "norm_label": "task"
     },
     {
@@ -12714,8 +12680,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_webmvc_controllers_pricingcontroller_cs_iactionresult",
-      "community": 214,
-      "community_name": ".GetBearerTokenAsync",
+      "community": 53,
+      "community_name": ".Index",
       "norm_label": "iactionresult"
     },
     {
@@ -12725,8 +12691,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_webmvc_controllers_pricingcontroller_cs_httpget",
-      "community": 214,
-      "community_name": ".GetBearerTokenAsync",
+      "community": 53,
+      "community_name": ".Index",
       "norm_label": "httpget"
     },
     {
@@ -13350,8 +13316,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_webmvc_currentuser",
-      "community": 54,
-      "community_name": "DateTimeFormatter",
+      "community": 41,
+      "community_name": "Contracts",
       "norm_label": "currentuser.cs"
     },
     {
@@ -13366,8 +13332,8 @@
       },
       "_origin": "ast",
       "id": "csharp_namespace:4edd7a70a2dc96b0",
-      "community": 54,
-      "community_name": "DateTimeFormatter",
+      "community": 41,
+      "community_name": "Contracts",
       "norm_label": "webmvc"
     },
     {
@@ -13411,8 +13377,8 @@
       },
       "_origin": "ast",
       "id": "src_webmvc_currentuser_webmvc_currentuser_getbearertokenasync",
-      "community": 214,
-      "community_name": ".GetBearerTokenAsync",
+      "community": 53,
+      "community_name": ".Index",
       "norm_label": ".getbearertokenasync()"
     },
     {
@@ -13422,8 +13388,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_webmvc_currentuser_cs_task",
-      "community": 214,
-      "community_name": ".GetBearerTokenAsync",
+      "community": 53,
+      "community_name": ".Index",
       "norm_label": "task"
     },
     {
@@ -13433,8 +13399,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_webmvc_datetimeformatter",
-      "community": 54,
-      "community_name": "DateTimeFormatter",
+      "community": 41,
+      "community_name": "Contracts",
       "norm_label": "datetimeformatter.cs"
     },
     {
@@ -13450,8 +13416,8 @@
       },
       "_origin": "ast",
       "id": "src_webmvc_datetimeformatter_webmvc_datetimeformatter",
-      "community": 54,
-      "community_name": "DateTimeFormatter",
+      "community": 41,
+      "community_name": "Contracts",
       "norm_label": "datetimeformatter"
     },
     {
@@ -13461,8 +13427,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_webmvc_datetimeformatter_cs_string",
-      "community": 54,
-      "community_name": "DateTimeFormatter",
+      "community": 41,
+      "community_name": "Contracts",
       "norm_label": "string"
     },
     {
@@ -13478,8 +13444,8 @@
       },
       "_origin": "ast",
       "id": "src_webmvc_datetimeformatter_webmvc_datetimeformatter_format",
-      "community": 54,
-      "community_name": "DateTimeFormatter",
+      "community": 41,
+      "community_name": "Contracts",
       "norm_label": ".format()"
     },
     {
@@ -13489,8 +13455,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_webmvc_datetimeformatter_cs_datetimeoffset",
-      "community": 54,
-      "community_name": "DateTimeFormatter",
+      "community": 41,
+      "community_name": "Contracts",
       "norm_label": "datetimeoffset"
     },
     {
@@ -13506,8 +13472,8 @@
       },
       "_origin": "ast",
       "id": "src_webmvc_datetimeformatter_webmvc_datetimeformatter_formatdate",
-      "community": 54,
-      "community_name": "DateTimeFormatter",
+      "community": 41,
+      "community_name": "Contracts",
       "norm_label": ".formatdate()"
     },
     {
@@ -13523,8 +13489,8 @@
       },
       "_origin": "ast",
       "id": "src_webmvc_datetimeformatter_webmvc_datetimeformatter_formatinzone",
-      "community": 54,
-      "community_name": "DateTimeFormatter",
+      "community": 41,
+      "community_name": "Contracts",
       "norm_label": ".formatinzone()"
     },
     {
@@ -13674,8 +13640,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_webmvc_models_errorviewmodel",
-      "community": 49,
-      "community_name": "HomeController.cs",
+      "community": 41,
+      "community_name": "Contracts",
       "norm_label": "errorviewmodel.cs"
     },
     {
@@ -13691,8 +13657,8 @@
       },
       "_origin": "ast",
       "id": "src_webmvc_models_errorviewmodel_webmvc_models_errorviewmodel",
-      "community": 49,
-      "community_name": "HomeController.cs",
+      "community": 41,
+      "community_name": "Contracts",
       "norm_label": "errorviewmodel"
     },
     {
@@ -13702,8 +13668,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_webmvc_models_packageviewmodels",
-      "community": 57,
-      "community_name": "PlacementTest",
+      "community": 53,
+      "community_name": ".Index",
       "norm_label": "packageviewmodels.cs"
     },
     {
@@ -13719,8 +13685,8 @@
       },
       "_origin": "ast",
       "id": "src_webmvc_models_packageviewmodels_webmvc_models_packageformviewmodel",
-      "community": 57,
-      "community_name": "PlacementTest",
+      "community": 53,
+      "community_name": ".Index",
       "norm_label": "packageformviewmodel"
     },
     {
@@ -13730,8 +13696,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_webmvc_models_paymentviewmodels",
-      "community": 219,
-      "community_name": "PaymentViewModels.cs",
+      "community": 41,
+      "community_name": "Contracts",
       "norm_label": "paymentviewmodels.cs"
     },
     {
@@ -13747,8 +13713,8 @@
       },
       "_origin": "ast",
       "id": "src_webmvc_models_paymentviewmodels_webmvc_models_checkoutviewmodel",
-      "community": 219,
-      "community_name": "PaymentViewModels.cs",
+      "community": 41,
+      "community_name": "Contracts",
       "norm_label": "checkoutviewmodel"
     },
     {
@@ -13764,8 +13730,8 @@
       },
       "_origin": "ast",
       "id": "src_webmvc_models_paymentviewmodels_webmvc_models_mockgatewayviewmodel",
-      "community": 219,
-      "community_name": "PaymentViewModels.cs",
+      "community": 41,
+      "community_name": "Contracts",
       "norm_label": "mockgatewayviewmodel"
     },
     {
@@ -13781,8 +13747,8 @@
       },
       "_origin": "ast",
       "id": "src_webmvc_models_paymentviewmodels_webmvc_models_paymentresultviewmodel",
-      "community": 219,
-      "community_name": "PaymentViewModels.cs",
+      "community": 41,
+      "community_name": "Contracts",
       "norm_label": "paymentresultviewmodel"
     },
     {
@@ -13798,8 +13764,8 @@
       },
       "_origin": "ast",
       "id": "src_webmvc_models_paymentviewmodels_webmvc_models_walletviewmodel",
-      "community": 219,
-      "community_name": "PaymentViewModels.cs",
+      "community": 41,
+      "community_name": "Contracts",
       "norm_label": "walletviewmodel"
     },
     {
@@ -13944,8 +13910,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_webmvc_models_savedquestionsviewmodels",
-      "community": 97,
-      "community_name": "Booking",
+      "community": 41,
+      "community_name": "Contracts",
       "norm_label": "savedquestionsviewmodels.cs"
     },
     {
@@ -13961,8 +13927,8 @@
       },
       "_origin": "ast",
       "id": "src_webmvc_models_savedquestionsviewmodels_webmvc_models_savedquestionsindexviewmodel",
-      "community": 97,
-      "community_name": "Booking",
+      "community": 41,
+      "community_name": "Contracts",
       "norm_label": "savedquestionsindexviewmodel"
     },
     {
@@ -13978,8 +13944,8 @@
       },
       "_origin": "ast",
       "id": "src_webmvc_models_savedquestionsviewmodels_webmvc_models_savedquestionreviewviewmodel",
-      "community": 97,
-      "community_name": "Booking",
+      "community": 41,
+      "community_name": "Contracts",
       "norm_label": "savedquestionreviewviewmodel"
     },
     {
@@ -14127,8 +14093,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_webmvc_timezonemiddleware",
-      "community": 54,
-      "community_name": "DateTimeFormatter",
+      "community": 41,
+      "community_name": "Contracts",
       "norm_label": "timezonemiddleware.cs"
     },
     {
@@ -14144,8 +14110,8 @@
       },
       "_origin": "ast",
       "id": "src_webmvc_timezonemiddleware_webmvc_timezonemiddleware",
-      "community": 54,
-      "community_name": "DateTimeFormatter",
+      "community": 6,
+      "community_name": "ApiException",
       "norm_label": "timezonemiddleware"
     },
     {
@@ -15997,8 +15963,8 @@
       },
       "_origin": "ast",
       "id": "tests_services_tests_certificateservicetests_services_tests_certificateservicetests",
-      "community": 35,
-      "community_name": "ExamAttempt",
+      "community": 33,
+      "community_name": "PackageService",
       "norm_label": "certificateservicetests"
     },
     {
@@ -16014,8 +15980,8 @@
       },
       "_origin": "ast",
       "id": "tests_services_tests_certificateservicetests_services_tests_certificateservicetests_seedtoeicasync",
-      "community": 35,
-      "community_name": "ExamAttempt",
+      "community": 33,
+      "community_name": "PackageService",
       "norm_label": ".seedtoeicasync()"
     },
     {
@@ -16025,8 +15991,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "tests_services_tests_certificateservicetests_cs_task",
-      "community": 35,
-      "community_name": "ExamAttempt",
+      "community": 33,
+      "community_name": "PackageService",
       "norm_label": "task"
     },
     {
@@ -16042,8 +16008,8 @@
       },
       "_origin": "ast",
       "id": "tests_services_tests_certificateservicetests_services_tests_certificateservicetests_getcatalog_returns_active_certificates_with_skills_sections_and_bands",
-      "community": 35,
-      "community_name": "ExamAttempt",
+      "community": 33,
+      "community_name": "PackageService",
       "norm_label": ".getcatalog_returns_active_certificates_with_skills_sections_and_bands()"
     },
     {
@@ -16053,8 +16019,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "tests_services_tests_certificateservicetests_cs_fact",
-      "community": 35,
-      "community_name": "ExamAttempt",
+      "community": 33,
+      "community_name": "PackageService",
       "norm_label": "fact"
     },
     {
@@ -16070,8 +16036,8 @@
       },
       "_origin": "ast",
       "id": "tests_services_tests_certificateservicetests_services_tests_certificateservicetests_getcatalog_skips_inactive_certificates",
-      "community": 35,
-      "community_name": "ExamAttempt",
+      "community": 33,
+      "community_name": "PackageService",
       "norm_label": ".getcatalog_skips_inactive_certificates()"
     },
     {
@@ -16087,8 +16053,8 @@
       },
       "_origin": "ast",
       "id": "tests_services_tests_certificateservicetests_services_tests_certificateservicetests_database_has_triggers_and_views_from_the_schema_script",
-      "community": 35,
-      "community_name": "ExamAttempt",
+      "community": 33,
+      "community_name": "PackageService",
       "norm_label": ".database_has_triggers_and_views_from_the_schema_script()"
     },
     {
@@ -17020,8 +16986,8 @@
       },
       "_origin": "ast",
       "id": "tests_services_tests_packageservicetests_services_tests_packageservicetests",
-      "community": 33,
-      "community_name": "PackageService",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": "packageservicetests"
     },
     {
@@ -17037,8 +17003,8 @@
       },
       "_origin": "ast",
       "id": "tests_services_tests_packageservicetests_services_tests_packageservicetests_cleanpackagesasync",
-      "community": 33,
-      "community_name": "PackageService",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": ".cleanpackagesasync()"
     },
     {
@@ -17048,8 +17014,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "tests_services_tests_packageservicetests_cs_task",
-      "community": 33,
-      "community_name": "PackageService",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": "task"
     },
     {
@@ -17065,8 +17031,8 @@
       },
       "_origin": "ast",
       "id": "tests_services_tests_packageservicetests_services_tests_packageservicetests_getactivepackagesasync_returns_only_active_packages_ordered_by_display_order",
-      "community": 33,
-      "community_name": "PackageService",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": ".getactivepackagesasync_returns_only_active_packages_ordered_by_display_order()"
     },
     {
@@ -17076,8 +17042,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "tests_services_tests_packageservicetests_cs_fact",
-      "community": 33,
-      "community_name": "PackageService",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": "fact"
     },
     {
@@ -17093,8 +17059,8 @@
       },
       "_origin": "ast",
       "id": "tests_services_tests_packageservicetests_services_tests_packageservicetests_inactive_packages_are_hidden_from_pricing",
-      "community": 33,
-      "community_name": "PackageService",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": ".inactive_packages_are_hidden_from_pricing()"
     },
     {
@@ -17110,8 +17076,8 @@
       },
       "_origin": "ast",
       "id": "tests_services_tests_packageservicetests_services_tests_packageservicetests_only_one_featured_package_at_a_time_when_creating_package",
-      "community": 33,
-      "community_name": "PackageService",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": ".only_one_featured_package_at_a_time_when_creating_package()"
     },
     {
@@ -17127,8 +17093,8 @@
       },
       "_origin": "ast",
       "id": "tests_services_tests_packageservicetests_services_tests_packageservicetests_only_one_featured_package_at_a_time_when_updating_package",
-      "community": 33,
-      "community_name": "PackageService",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": ".only_one_featured_package_at_a_time_when_updating_package()"
     },
     {
@@ -17144,8 +17110,8 @@
       },
       "_origin": "ast",
       "id": "tests_services_tests_packageservicetests_services_tests_packageservicetests_deactivatepackage_hides_package_from_public_pricing",
-      "community": 33,
-      "community_name": "PackageService",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": ".deactivatepackage_hides_package_from_public_pricing()"
     },
     {
@@ -17161,8 +17127,8 @@
       },
       "_origin": "ast",
       "id": "tests_services_tests_packageservicetests_services_tests_packageservicetests_validation_enforces_required_name_positive_credits_and_non_negative_price",
-      "community": 33,
-      "community_name": "PackageService",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": ".validation_enforces_required_name_positive_credits_and_non_negative_price()"
     },
     {
@@ -17178,8 +17144,8 @@
       },
       "_origin": "ast",
       "id": "tests_services_tests_packageservicetests_services_tests_packageservicetests_getadminpackagesasync_calculates_summary_stats",
-      "community": 33,
-      "community_name": "PackageService",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": ".getadminpackagesasync_calculates_summary_stats()"
     },
     {
@@ -17195,8 +17161,8 @@
       },
       "_origin": "ast",
       "id": "tests_services_tests_packageservicetests_services_tests_packageservicetests_deactivatepackageasync_unfeatures_package_and_frees_unique_index_slot",
-      "community": 33,
-      "community_name": "PackageService",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": ".deactivatepackageasync_unfeatures_package_and_frees_unique_index_slot()"
     },
     {
@@ -17212,8 +17178,8 @@
       },
       "_origin": "ast",
       "id": "tests_services_tests_packageservicetests_services_tests_packageservicetests_inactive_package_cannot_be_featured_on_create_or_update",
-      "community": 33,
-      "community_name": "PackageService",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": ".inactive_package_cannot_be_featured_on_create_or_update()"
     },
     {
@@ -17525,6 +17491,23 @@
       "community": 33,
       "community_name": "PackageService",
       "norm_label": ".mock_gateway_actions_simulate_success_failed_pending_and_expired()"
+    },
+    {
+      "label": ".Reconciling_order_refresh_logs_event_and_does_not_violate_status_constraint()",
+      "file_type": "code",
+      "source_file": "tests/Services.Tests/PaymentServiceTests.cs",
+      "source_location": "L346",
+      "metadata": {
+        "namespace": "Services.Tests",
+        "scope_chain": [
+          "s91"
+        ]
+      },
+      "_origin": "ast",
+      "id": "tests_services_tests_paymentservicetests_services_tests_paymentservicetests_reconciling_order_refresh_logs_event_and_does_not_violate_status_constraint",
+      "community": 33,
+      "community_name": "PackageService",
+      "norm_label": ".reconciling_order_refresh_logs_event_and_does_not_violate_status_constraint()"
     },
     {
       "label": "PracticeServiceTests.cs",
@@ -18848,8 +18831,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_webmvc_tests_adminpackagescontrollertests",
-      "community": 40,
-      "community_name": "WeaknessAnalysisControllerTests.cs",
+      "community": 41,
+      "community_name": "Contracts",
       "norm_label": "adminpackagescontrollertests.cs"
     },
     {
@@ -18864,8 +18847,8 @@
       },
       "_origin": "ast",
       "id": "csharp_namespace:fd5db1bc71f34e1b",
-      "community": 40,
-      "community_name": "WeaknessAnalysisControllerTests.cs",
+      "community": 41,
+      "community_name": "Contracts",
       "norm_label": "webmvc.tests"
     },
     {
@@ -18881,8 +18864,8 @@
       },
       "_origin": "ast",
       "id": "tests_webmvc_tests_adminpackagescontrollertests_webmvc_tests_adminpackagescontrollertests",
-      "community": 70,
-      "community_name": "TestApiClient",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": "adminpackagescontrollertests"
     },
     {
@@ -18898,8 +18881,8 @@
       },
       "_origin": "ast",
       "id": "tests_webmvc_tests_adminpackagescontrollertests_webmvc_tests_adminpackagescontrollertests_samplesummary",
-      "community": 70,
-      "community_name": "TestApiClient",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": ".samplesummary()"
     },
     {
@@ -18915,8 +18898,8 @@
       },
       "_origin": "ast",
       "id": "tests_webmvc_tests_adminpackagescontrollertests_webmvc_tests_adminpackagescontrollertests_createcontroller",
-      "community": 70,
-      "community_name": "TestApiClient",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": ".createcontroller()"
     },
     {
@@ -18926,8 +18909,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "tests_webmvc_tests_adminpackagescontrollertests_cs_testapiclient",
-      "community": 70,
-      "community_name": "TestApiClient",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": "testapiclient"
     },
     {
@@ -18943,8 +18926,8 @@
       },
       "_origin": "ast",
       "id": "tests_webmvc_tests_adminpackagescontrollertests_webmvc_tests_adminpackagescontrollertests_index_returns_view_with_summary",
-      "community": 70,
-      "community_name": "TestApiClient",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": ".index_returns_view_with_summary()"
     },
     {
@@ -18954,8 +18937,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "tests_webmvc_tests_adminpackagescontrollertests_cs_task",
-      "community": 70,
-      "community_name": "TestApiClient",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": "task"
     },
     {
@@ -18965,8 +18948,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "tests_webmvc_tests_adminpackagescontrollertests_cs_fact",
-      "community": 70,
-      "community_name": "TestApiClient",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": "fact"
     },
     {
@@ -18982,8 +18965,8 @@
       },
       "_origin": "ast",
       "id": "tests_webmvc_tests_adminpackagescontrollertests_webmvc_tests_adminpackagescontrollertests_create_get_returns_form_view_with_default_model",
-      "community": 70,
-      "community_name": "TestApiClient",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": ".create_get_returns_form_view_with_default_model()"
     },
     {
@@ -18999,8 +18982,8 @@
       },
       "_origin": "ast",
       "id": "tests_webmvc_tests_adminpackagescontrollertests_webmvc_tests_adminpackagescontrollertests_create_post_with_valid_model_calls_api_and_redirects",
-      "community": 70,
-      "community_name": "TestApiClient",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": ".create_post_with_valid_model_calls_api_and_redirects()"
     },
     {
@@ -19016,8 +18999,8 @@
       },
       "_origin": "ast",
       "id": "tests_webmvc_tests_adminpackagescontrollertests_webmvc_tests_adminpackagescontrollertests_create_post_with_invalid_model_redisplays_form",
-      "community": 70,
-      "community_name": "TestApiClient",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": ".create_post_with_invalid_model_redisplays_form()"
     },
     {
@@ -19033,8 +19016,8 @@
       },
       "_origin": "ast",
       "id": "tests_webmvc_tests_adminpackagescontrollertests_webmvc_tests_adminpackagescontrollertests_edit_get_loads_package_into_form_view",
-      "community": 70,
-      "community_name": "TestApiClient",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": ".edit_get_loads_package_into_form_view()"
     },
     {
@@ -19050,8 +19033,8 @@
       },
       "_origin": "ast",
       "id": "tests_webmvc_tests_adminpackagescontrollertests_webmvc_tests_adminpackagescontrollertests_edit_post_with_valid_model_calls_api_and_redirects",
-      "community": 70,
-      "community_name": "TestApiClient",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": ".edit_post_with_valid_model_calls_api_and_redirects()"
     },
     {
@@ -19067,8 +19050,8 @@
       },
       "_origin": "ast",
       "id": "tests_webmvc_tests_adminpackagescontrollertests_webmvc_tests_adminpackagescontrollertests_deactivate_post_calls_api_and_redirects",
-      "community": 70,
-      "community_name": "TestApiClient",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": ".deactivate_post_calls_api_and_redirects()"
     },
     {
@@ -19084,8 +19067,8 @@
       },
       "_origin": "ast",
       "id": "tests_webmvc_tests_adminpackagescontrollertests_webmvc_tests_adminpackagescontrollertests_togglefeatured_post_toggles_featured_and_redirects",
-      "community": 70,
-      "community_name": "TestApiClient",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": ".togglefeatured_post_toggles_featured_and_redirects()"
     },
     {
@@ -19101,8 +19084,8 @@
       },
       "_origin": "ast",
       "id": "tests_webmvc_tests_adminpackagescontrollertests_webmvc_tests_adminpackagescontrollertests_togglefeatured_post_refuses_to_feature_inactive_package",
-      "community": 70,
-      "community_name": "TestApiClient",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": ".togglefeatured_post_refuses_to_feature_inactive_package()"
     },
     {
@@ -19119,8 +19102,8 @@
       },
       "_origin": "ast",
       "id": "tests_webmvc_tests_adminpackagescontrollertests_webmvc_tests_emptytempdataprovider",
-      "community": 70,
-      "community_name": "TestApiClient",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": "emptytempdataprovider"
     },
     {
@@ -19147,8 +19130,8 @@
       },
       "_origin": "ast",
       "id": "tests_webmvc_tests_adminpackagescontrollertests_webmvc_tests_emptytempdataprovider_loadtempdata",
-      "community": 70,
-      "community_name": "TestApiClient",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": ".loadtempdata()"
     },
     {
@@ -19158,8 +19141,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "tests_webmvc_tests_adminpackagescontrollertests_cs_httpcontext",
-      "community": 70,
-      "community_name": "TestApiClient",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": "httpcontext"
     },
     {
@@ -19169,8 +19152,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "tests_webmvc_tests_adminpackagescontrollertests_cs_idictionary",
-      "community": 70,
-      "community_name": "TestApiClient",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": "idictionary"
     },
     {
@@ -19186,8 +19169,8 @@
       },
       "_origin": "ast",
       "id": "tests_webmvc_tests_adminpackagescontrollertests_webmvc_tests_emptytempdataprovider_savetempdata",
-      "community": 70,
-      "community_name": "TestApiClient",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": ".savetempdata()"
     },
     {
@@ -19204,8 +19187,8 @@
       },
       "_origin": "ast",
       "id": "tests_webmvc_tests_adminpackagescontrollertests_webmvc_tests_fixedauthentication",
-      "community": 70,
-      "community_name": "TestApiClient",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": "fixedauthentication"
     },
     {
@@ -19232,8 +19215,8 @@
       },
       "_origin": "ast",
       "id": "tests_webmvc_tests_adminpackagescontrollertests_webmvc_tests_fixedauthentication_authenticateasync",
-      "community": 70,
-      "community_name": "TestApiClient",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": ".authenticateasync()"
     },
     {
@@ -19243,8 +19226,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "tests_webmvc_tests_adminpackagescontrollertests_cs_authenticateresult",
-      "community": 70,
-      "community_name": "TestApiClient",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": "authenticateresult"
     },
     {
@@ -19260,8 +19243,8 @@
       },
       "_origin": "ast",
       "id": "tests_webmvc_tests_adminpackagescontrollertests_webmvc_tests_fixedauthentication_challengeasync",
-      "community": 70,
-      "community_name": "TestApiClient",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": ".challengeasync()"
     },
     {
@@ -19271,8 +19254,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "tests_webmvc_tests_adminpackagescontrollertests_cs_authenticationproperties",
-      "community": 70,
-      "community_name": "TestApiClient",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": "authenticationproperties"
     },
     {
@@ -19288,8 +19271,8 @@
       },
       "_origin": "ast",
       "id": "tests_webmvc_tests_adminpackagescontrollertests_webmvc_tests_fixedauthentication_forbidasync",
-      "community": 70,
-      "community_name": "TestApiClient",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": ".forbidasync()"
     },
     {
@@ -19305,8 +19288,8 @@
       },
       "_origin": "ast",
       "id": "tests_webmvc_tests_adminpackagescontrollertests_webmvc_tests_fixedauthentication_signinasync",
-      "community": 70,
-      "community_name": "TestApiClient",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": ".signinasync()"
     },
     {
@@ -19316,8 +19299,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "tests_webmvc_tests_adminpackagescontrollertests_cs_claimsprincipal",
-      "community": 70,
-      "community_name": "TestApiClient",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": "claimsprincipal"
     },
     {
@@ -19333,8 +19316,8 @@
       },
       "_origin": "ast",
       "id": "tests_webmvc_tests_adminpackagescontrollertests_webmvc_tests_fixedauthentication_signoutasync",
-      "community": 70,
-      "community_name": "TestApiClient",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": ".signoutasync()"
     },
     {
@@ -19351,8 +19334,8 @@
       },
       "_origin": "ast",
       "id": "tests_webmvc_tests_adminpackagescontrollertests_webmvc_tests_testapiclient",
-      "community": 33,
-      "community_name": "PackageService",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": "testapiclient"
     },
     {
@@ -19368,8 +19351,8 @@
       },
       "_origin": "ast",
       "id": "tests_webmvc_tests_adminpackagescontrollertests_webmvc_tests_testapiclient_getadminpackagesasync",
-      "community": 33,
-      "community_name": "PackageService",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": ".getadminpackagesasync()"
     },
     {
@@ -19379,8 +19362,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "tests_webmvc_tests_adminpackagescontrollertests_cs_cancellationtoken",
-      "community": 33,
-      "community_name": "PackageService",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": "cancellationtoken"
     },
     {
@@ -19396,8 +19379,8 @@
       },
       "_origin": "ast",
       "id": "tests_webmvc_tests_adminpackagescontrollertests_webmvc_tests_testapiclient_getadminpackageasync",
-      "community": 33,
-      "community_name": "PackageService",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": ".getadminpackageasync()"
     },
     {
@@ -19413,8 +19396,8 @@
       },
       "_origin": "ast",
       "id": "tests_webmvc_tests_adminpackagescontrollertests_webmvc_tests_testapiclient_createpackageasync",
-      "community": 33,
-      "community_name": "PackageService",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": ".createpackageasync()"
     },
     {
@@ -19430,8 +19413,8 @@
       },
       "_origin": "ast",
       "id": "tests_webmvc_tests_adminpackagescontrollertests_webmvc_tests_testapiclient_updatepackageasync",
-      "community": 33,
-      "community_name": "PackageService",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": ".updatepackageasync()"
     },
     {
@@ -19447,8 +19430,8 @@
       },
       "_origin": "ast",
       "id": "tests_webmvc_tests_adminpackagescontrollertests_webmvc_tests_testapiclient_deactivatepackageasync",
-      "community": 33,
-      "community_name": "PackageService",
+      "community": 35,
+      "community_name": "ExamAttempt",
       "norm_label": ".deactivatepackageasync()"
     },
     {
@@ -19458,8 +19441,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_webmvc_tests_checkoutcontrollertests",
-      "community": 40,
-      "community_name": "WeaknessAnalysisControllerTests.cs",
+      "community": 41,
+      "community_name": "Contracts",
       "norm_label": "checkoutcontrollertests.cs"
     },
     {
@@ -20125,8 +20108,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_webmvc_tests_datetimeformattertests",
-      "community": 54,
-      "community_name": "DateTimeFormatter",
+      "community": 41,
+      "community_name": "Contracts",
       "norm_label": "datetimeformattertests.cs"
     },
     {
@@ -20142,8 +20125,8 @@
       },
       "_origin": "ast",
       "id": "tests_webmvc_tests_datetimeformattertests_webmvc_tests_datetimeformattertests",
-      "community": 54,
-      "community_name": "DateTimeFormatter",
+      "community": 41,
+      "community_name": "Contracts",
       "norm_label": "datetimeformattertests"
     },
     {
@@ -20153,8 +20136,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "tests_webmvc_tests_datetimeformattertests_cs_datetimeoffset",
-      "community": 54,
-      "community_name": "DateTimeFormatter",
+      "community": 41,
+      "community_name": "Contracts",
       "norm_label": "datetimeoffset"
     },
     {
@@ -20170,8 +20153,8 @@
       },
       "_origin": "ast",
       "id": "tests_webmvc_tests_datetimeformattertests_webmvc_tests_datetimeformattertests_format_renders_the_stored_utc_instant_in_the_given_zone",
-      "community": 54,
-      "community_name": "DateTimeFormatter",
+      "community": 41,
+      "community_name": "Contracts",
       "norm_label": ".format_renders_the_stored_utc_instant_in_the_given_zone()"
     },
     {
@@ -20181,8 +20164,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "tests_webmvc_tests_datetimeformattertests_cs_fact",
-      "community": 54,
-      "community_name": "DateTimeFormatter",
+      "community": 41,
+      "community_name": "Contracts",
       "norm_label": "fact"
     },
     {
@@ -20198,8 +20181,8 @@
       },
       "_origin": "ast",
       "id": "tests_webmvc_tests_datetimeformattertests_webmvc_tests_datetimeformattertests_formatdate_renders_only_the_date_in_the_given_zone",
-      "community": 54,
-      "community_name": "DateTimeFormatter",
+      "community": 41,
+      "community_name": "Contracts",
       "norm_label": ".formatdate_renders_only_the_date_in_the_given_zone()"
     },
     {
@@ -20215,8 +20198,8 @@
       },
       "_origin": "ast",
       "id": "tests_webmvc_tests_datetimeformattertests_webmvc_tests_datetimeformattertests_format_preserves_the_instant_not_the_wall_clock",
-      "community": 54,
-      "community_name": "DateTimeFormatter",
+      "community": 41,
+      "community_name": "Contracts",
       "norm_label": ".format_preserves_the_instant_not_the_wall_clock()"
     },
     {
@@ -20226,8 +20209,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_webmvc_tests_practicecontrollertests",
-      "community": 40,
-      "community_name": "WeaknessAnalysisControllerTests.cs",
+      "community": 41,
+      "community_name": "Contracts",
       "norm_label": "practicecontrollertests.cs"
     },
     {
@@ -21211,8 +21194,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_webmvc_tests_pricingcontrollertests",
-      "community": 40,
-      "community_name": "WeaknessAnalysisControllerTests.cs",
+      "community": 41,
+      "community_name": "Contracts",
       "norm_label": "pricingcontrollertests.cs"
     },
     {
@@ -21652,8 +21635,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_webmvc_tests_savedquestionscontrollertests",
-      "community": 40,
-      "community_name": "WeaknessAnalysisControllerTests.cs",
+      "community": 41,
+      "community_name": "Contracts",
       "norm_label": "savedquestionscontrollertests.cs"
     },
     {
@@ -22671,8 +22654,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_webmvc_tests_timezonemiddlewaretests",
-      "community": 40,
-      "community_name": "WeaknessAnalysisControllerTests.cs",
+      "community": 41,
+      "community_name": "Contracts",
       "norm_label": "timezonemiddlewaretests.cs"
     },
     {
@@ -22716,8 +22699,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "tests_webmvc_tests_timezonemiddlewaretests_cs_task",
-      "community": 215,
-      "community_name": "Task",
+      "community": 6,
+      "community_name": "ApiException",
       "norm_label": "task"
     },
     {
@@ -22811,8 +22794,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "tests_webmvc_tests_timezonemiddlewaretests_cs_httpcontext",
-      "community": 215,
-      "community_name": "Task",
+      "community": 6,
+      "community_name": "ApiException",
       "norm_label": "httpcontext"
     },
     {
@@ -22879,8 +22862,8 @@
       },
       "_origin": "ast",
       "id": "tests_webmvc_tests_timezonemiddlewaretests_webmvc_tests_fixedauthentication",
-      "community": 215,
-      "community_name": "Task",
+      "community": 6,
+      "community_name": "ApiException",
       "norm_label": "fixedauthentication"
     },
     {
@@ -22896,8 +22879,8 @@
       },
       "_origin": "ast",
       "id": "tests_webmvc_tests_timezonemiddlewaretests_webmvc_tests_fixedauthentication_authenticateasync",
-      "community": 215,
-      "community_name": "Task",
+      "community": 6,
+      "community_name": "ApiException",
       "norm_label": ".authenticateasync()"
     },
     {
@@ -22907,8 +22890,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "tests_webmvc_tests_timezonemiddlewaretests_cs_authenticateresult",
-      "community": 215,
-      "community_name": "Task",
+      "community": 6,
+      "community_name": "ApiException",
       "norm_label": "authenticateresult"
     },
     {
@@ -22924,8 +22907,8 @@
       },
       "_origin": "ast",
       "id": "tests_webmvc_tests_timezonemiddlewaretests_webmvc_tests_fixedauthentication_challengeasync",
-      "community": 215,
-      "community_name": "Task",
+      "community": 6,
+      "community_name": "ApiException",
       "norm_label": ".challengeasync()"
     },
     {
@@ -22935,8 +22918,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "tests_webmvc_tests_timezonemiddlewaretests_cs_authenticationproperties",
-      "community": 215,
-      "community_name": "Task",
+      "community": 6,
+      "community_name": "ApiException",
       "norm_label": "authenticationproperties"
     },
     {
@@ -22952,8 +22935,8 @@
       },
       "_origin": "ast",
       "id": "tests_webmvc_tests_timezonemiddlewaretests_webmvc_tests_fixedauthentication_forbidasync",
-      "community": 215,
-      "community_name": "Task",
+      "community": 6,
+      "community_name": "ApiException",
       "norm_label": ".forbidasync()"
     },
     {
@@ -22969,8 +22952,8 @@
       },
       "_origin": "ast",
       "id": "tests_webmvc_tests_timezonemiddlewaretests_webmvc_tests_fixedauthentication_signinasync",
-      "community": 215,
-      "community_name": "Task",
+      "community": 6,
+      "community_name": "ApiException",
       "norm_label": ".signinasync()"
     },
     {
@@ -22980,8 +22963,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "tests_webmvc_tests_timezonemiddlewaretests_cs_claimsprincipal",
-      "community": 215,
-      "community_name": "Task",
+      "community": 6,
+      "community_name": "ApiException",
       "norm_label": "claimsprincipal"
     },
     {
@@ -22997,8 +22980,8 @@
       },
       "_origin": "ast",
       "id": "tests_webmvc_tests_timezonemiddlewaretests_webmvc_tests_fixedauthentication_signoutasync",
-      "community": 215,
-      "community_name": "Task",
+      "community": 6,
+      "community_name": "ApiException",
       "norm_label": ".signoutasync()"
     },
     {
@@ -23082,8 +23065,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_webmvc_tests_walletcontrollertests",
-      "community": 40,
-      "community_name": "WeaknessAnalysisControllerTests.cs",
+      "community": 41,
+      "community_name": "Contracts",
       "norm_label": "walletcontrollertests.cs"
     },
     {
@@ -23145,8 +23128,8 @@
       },
       "_origin": "ast",
       "id": "tests_webmvc_tests_walletcontrollertests_webmvc_tests_emptytempdataprovider",
-      "community": 12,
-      "community_name": "EmailVerificationToken",
+      "community": 70,
+      "community_name": "TestApiClient",
       "norm_label": "emptytempdataprovider"
     },
     {
@@ -23162,8 +23145,8 @@
       },
       "_origin": "ast",
       "id": "tests_webmvc_tests_walletcontrollertests_webmvc_tests_emptytempdataprovider_loadtempdata",
-      "community": 12,
-      "community_name": "EmailVerificationToken",
+      "community": 70,
+      "community_name": "TestApiClient",
       "norm_label": ".loadtempdata()"
     },
     {
@@ -23173,8 +23156,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "tests_webmvc_tests_walletcontrollertests_cs_httpcontext",
-      "community": 12,
-      "community_name": "EmailVerificationToken",
+      "community": 70,
+      "community_name": "TestApiClient",
       "norm_label": "httpcontext"
     },
     {
@@ -23184,8 +23167,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "tests_webmvc_tests_walletcontrollertests_cs_idictionary",
-      "community": 12,
-      "community_name": "EmailVerificationToken",
+      "community": 70,
+      "community_name": "TestApiClient",
       "norm_label": "idictionary"
     },
     {
@@ -23201,8 +23184,8 @@
       },
       "_origin": "ast",
       "id": "tests_webmvc_tests_walletcontrollertests_webmvc_tests_emptytempdataprovider_savetempdata",
-      "community": 12,
-      "community_name": "EmailVerificationToken",
+      "community": 70,
+      "community_name": "TestApiClient",
       "norm_label": ".savetempdata()"
     },
     {
@@ -23229,8 +23212,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "tests_webmvc_tests_walletcontrollertests_cs_task",
-      "community": 12,
-      "community_name": "EmailVerificationToken",
+      "community": 70,
+      "community_name": "TestApiClient",
       "norm_label": "task"
     },
     {
@@ -23258,8 +23241,8 @@
       },
       "_origin": "ast",
       "id": "tests_webmvc_tests_walletcontrollertests_webmvc_tests_fixedauthentication",
-      "community": 12,
-      "community_name": "EmailVerificationToken",
+      "community": 70,
+      "community_name": "TestApiClient",
       "norm_label": "fixedauthentication"
     },
     {
@@ -23275,8 +23258,8 @@
       },
       "_origin": "ast",
       "id": "tests_webmvc_tests_walletcontrollertests_webmvc_tests_fixedauthentication_authenticateasync",
-      "community": 12,
-      "community_name": "EmailVerificationToken",
+      "community": 70,
+      "community_name": "TestApiClient",
       "norm_label": ".authenticateasync()"
     },
     {
@@ -23286,8 +23269,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "tests_webmvc_tests_walletcontrollertests_cs_authenticateresult",
-      "community": 12,
-      "community_name": "EmailVerificationToken",
+      "community": 70,
+      "community_name": "TestApiClient",
       "norm_label": "authenticateresult"
     },
     {
@@ -23303,8 +23286,8 @@
       },
       "_origin": "ast",
       "id": "tests_webmvc_tests_walletcontrollertests_webmvc_tests_fixedauthentication_challengeasync",
-      "community": 12,
-      "community_name": "EmailVerificationToken",
+      "community": 70,
+      "community_name": "TestApiClient",
       "norm_label": ".challengeasync()"
     },
     {
@@ -23314,8 +23297,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "tests_webmvc_tests_walletcontrollertests_cs_authenticationproperties",
-      "community": 12,
-      "community_name": "EmailVerificationToken",
+      "community": 70,
+      "community_name": "TestApiClient",
       "norm_label": "authenticationproperties"
     },
     {
@@ -23331,8 +23314,8 @@
       },
       "_origin": "ast",
       "id": "tests_webmvc_tests_walletcontrollertests_webmvc_tests_fixedauthentication_forbidasync",
-      "community": 12,
-      "community_name": "EmailVerificationToken",
+      "community": 70,
+      "community_name": "TestApiClient",
       "norm_label": ".forbidasync()"
     },
     {
@@ -23348,8 +23331,8 @@
       },
       "_origin": "ast",
       "id": "tests_webmvc_tests_walletcontrollertests_webmvc_tests_fixedauthentication_signinasync",
-      "community": 12,
-      "community_name": "EmailVerificationToken",
+      "community": 70,
+      "community_name": "TestApiClient",
       "norm_label": ".signinasync()"
     },
     {
@@ -23359,8 +23342,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "tests_webmvc_tests_walletcontrollertests_cs_claimsprincipal",
-      "community": 12,
-      "community_name": "EmailVerificationToken",
+      "community": 70,
+      "community_name": "TestApiClient",
       "norm_label": "claimsprincipal"
     },
     {
@@ -23376,8 +23359,8 @@
       },
       "_origin": "ast",
       "id": "tests_webmvc_tests_walletcontrollertests_webmvc_tests_fixedauthentication_signoutasync",
-      "community": 12,
-      "community_name": "EmailVerificationToken",
+      "community": 70,
+      "community_name": "TestApiClient",
       "norm_label": ".signoutasync()"
     },
     {
@@ -23450,8 +23433,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_webmvc_tests_weaknessanalysiscontrollertests",
-      "community": 40,
-      "community_name": "WeaknessAnalysisControllerTests.cs",
+      "community": 41,
+      "community_name": "Contracts",
       "norm_label": "weaknessanalysiscontrollertests.cs"
     },
     {
@@ -32275,8 +32258,8 @@
     {
       "label": "microsoft_aspnetcore_authentication_jwtbearer",
       "_origin": "semantic",
-      "community": 45,
-      "community_name": "GradingCriterion",
+      "community": 14,
+      "community_name": "microsoft_entityframeworkcore",
       "external": true,
       "file_type": "concept",
       "norm_label": "microsoft_aspnetcore_authentication_jwtbearer",
@@ -32311,8 +32294,8 @@
     {
       "label": "microsoft_extensions_options",
       "_origin": "semantic",
-      "community": 45,
-      "community_name": "GradingCriterion",
+      "community": 39,
+      "community_name": "AuthController",
       "external": true,
       "file_type": "concept",
       "norm_label": "microsoft_extensions_options",
@@ -32323,8 +32306,8 @@
     {
       "label": "microsoft_identitymodel_tokens",
       "_origin": "semantic",
-      "community": 45,
-      "community_name": "GradingCriterion",
+      "community": 39,
+      "community_name": "AuthController",
       "external": true,
       "file_type": "concept",
       "norm_label": "microsoft_identitymodel_tokens",
@@ -32359,8 +32342,8 @@
     {
       "label": "system_collections_generic",
       "_origin": "semantic",
-      "community": 29,
-      "community_name": ".OnModelCreating",
+      "community": 44,
+      "community_name": "MentorPayout",
       "external": true,
       "file_type": "concept",
       "norm_label": "system_collections_generic",
@@ -32395,8 +32378,8 @@
     {
       "label": "system_identitymodel_tokens_jwt",
       "_origin": "semantic",
-      "community": 45,
-      "community_name": "GradingCriterion",
+      "community": 39,
+      "community_name": "AuthController",
       "external": true,
       "file_type": "concept",
       "norm_label": "system_identitymodel_tokens_jwt",
@@ -32503,8 +32486,8 @@
     {
       "label": "microsoft_aspnetcore_authentication",
       "_origin": "semantic",
-      "community": 40,
-      "community_name": "WeaknessAnalysisControllerTests.cs",
+      "community": 41,
+      "community_name": "Contracts",
       "external": true,
       "file_type": "concept",
       "norm_label": "microsoft_aspnetcore_authentication",
@@ -32527,8 +32510,8 @@
     {
       "label": "microsoft_aspnetcore_http",
       "_origin": "semantic",
-      "community": 40,
-      "community_name": "WeaknessAnalysisControllerTests.cs",
+      "community": 41,
+      "community_name": "Contracts",
       "external": true,
       "file_type": "concept",
       "norm_label": "microsoft_aspnetcore_http",
@@ -32539,8 +32522,8 @@
     {
       "label": "microsoft_extensions_dependencyinjection",
       "_origin": "semantic",
-      "community": 40,
-      "community_name": "WeaknessAnalysisControllerTests.cs",
+      "community": 41,
+      "community_name": "Contracts",
       "external": true,
       "file_type": "concept",
       "norm_label": "microsoft_extensions_dependencyinjection",
@@ -32551,8 +32534,8 @@
     {
       "label": "microsoft_extensions_logging_abstractions",
       "_origin": "semantic",
-      "community": 40,
-      "community_name": "WeaknessAnalysisControllerTests.cs",
+      "community": 41,
+      "community_name": "Contracts",
       "external": true,
       "file_type": "concept",
       "norm_label": "microsoft_extensions_logging_abstractions",
@@ -32563,8 +32546,8 @@
     {
       "label": "system_reflection",
       "_origin": "semantic",
-      "community": 40,
-      "community_name": "WeaknessAnalysisControllerTests.cs",
+      "community": 41,
+      "community_name": "Contracts",
       "external": true,
       "file_type": "concept",
       "norm_label": "system_reflection",
@@ -32575,8 +32558,8 @@
     {
       "label": "system_security_claims",
       "_origin": "semantic",
-      "community": 40,
-      "community_name": "WeaknessAnalysisControllerTests.cs",
+      "community": 41,
+      "community_name": "Contracts",
       "external": true,
       "file_type": "concept",
       "norm_label": "system_security_claims",
@@ -32726,8 +32709,8 @@
     },
     {
       "label": "microsoft_aspnetcore_mvc_viewfeatures",
-      "community": 40,
-      "community_name": "WeaknessAnalysisControllerTests.cs",
+      "community": 41,
+      "community_name": "Contracts",
       "external": true,
       "file_type": "concept",
       "norm_label": "microsoft_aspnetcore_mvc_viewfeatures",
@@ -32737,8 +32720,8 @@
     },
     {
       "label": "xunit",
-      "community": 40,
-      "community_name": "WeaknessAnalysisControllerTests.cs",
+      "community": 41,
+      "community_name": "Contracts",
       "external": true,
       "file_type": "concept",
       "norm_label": "xunit",
@@ -34295,16 +34278,6 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "src/BusinessObjects/WalletModels.cs",
-      "source_location": "L1",
-      "weight": 1.0,
-      "source": "src_businessobjects_walletmodels",
-      "target": "csharp_namespace:62ff456d59fbd68c",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
       "source_file": "src/BusinessObjects/WeaknessModels.cs",
       "source_location": "L4",
       "weight": 1.0,
@@ -34357,22 +34330,6 @@
         "scope_kind": "file"
       },
       "source": "src_services_learnerservice",
-      "target": "csharp_namespace:62ff456d59fbd68c",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "src/Services/Payment/PaymentService.cs",
-      "source_location": "L1",
-      "weight": 1.0,
-      "metadata": {
-        "using_kind": "namespace",
-        "target_fqn": "BusinessObjects",
-        "scope_kind": "file"
-      },
-      "source": "src_services_payment_paymentservice",
       "target": "csharp_namespace:62ff456d59fbd68c",
       "confidence_score": 1.0
     },
@@ -35566,190 +35523,6 @@
       },
       "source": "src_services_savedquestionservice_services_savedquestionservice_unsavequestionasync",
       "target": "src_businessobjects_savedquestionmodels_businessobjects_savequestionresult",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "src/BusinessObjects/WalletModels.cs",
-      "source_location": "L3",
-      "weight": 1.0,
-      "source": "src_businessobjects_walletmodels",
-      "target": "src_businessobjects_walletmodels_businessobjects_emailnotverifiedexception",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "src/BusinessObjects/WalletModels.cs",
-      "source_location": "L6",
-      "weight": 1.0,
-      "source": "src_businessobjects_walletmodels",
-      "target": "src_businessobjects_walletmodels_businessobjects_orderalreadyopenexception",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "src/BusinessObjects/WalletModels.cs",
-      "source_location": "L31",
-      "weight": 1.0,
-      "source": "src_businessobjects_walletmodels",
-      "target": "src_businessobjects_walletmodels_businessobjects_ordernotfoundexception",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "src/BusinessObjects/WalletModels.cs",
-      "source_location": "L37",
-      "weight": 1.0,
-      "source": "src_businessobjects_walletmodels",
-      "target": "src_businessobjects_walletmodels_businessobjects_packagenotfoundexception",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "inherits",
-      "confidence": "EXTRACTED",
-      "source_file": "src/BusinessObjects/WalletModels.cs",
-      "source_location": "L3",
-      "weight": 1.0,
-      "metadata": {
-        "ref_token": "Exception"
-      },
-      "source": "src_businessobjects_walletmodels_businessobjects_emailnotverifiedexception",
-      "target": "exception",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "inherits",
-      "confidence": "EXTRACTED",
-      "source_file": "src/BusinessObjects/WalletModels.cs",
-      "source_location": "L6",
-      "weight": 1.0,
-      "metadata": {
-        "ref_token": "Exception"
-      },
-      "source": "src_businessobjects_walletmodels_businessobjects_orderalreadyopenexception",
-      "target": "exception",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "inherits",
-      "confidence": "EXTRACTED",
-      "source_file": "src/BusinessObjects/WalletModels.cs",
-      "source_location": "L31",
-      "weight": 1.0,
-      "metadata": {
-        "ref_token": "Exception"
-      },
-      "source": "src_businessobjects_walletmodels_businessobjects_ordernotfoundexception",
-      "target": "exception",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "inherits",
-      "confidence": "EXTRACTED",
-      "source_file": "src/BusinessObjects/WalletModels.cs",
-      "source_location": "L37",
-      "weight": 1.0,
-      "metadata": {
-        "ref_token": "Exception"
-      },
-      "source": "src_businessobjects_walletmodels_businessobjects_packagenotfoundexception",
-      "target": "exception",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "inherits",
-      "confidence": "EXTRACTED",
-      "source_file": "src/Services/AuthService.cs",
-      "source_location": "L17",
-      "weight": 1.0,
-      "metadata": {
-        "ref_token": "Exception"
-      },
-      "source": "src_services_authservice_services_authexception",
-      "target": "exception",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "inherits",
-      "confidence": "EXTRACTED",
-      "source_file": "src/Services/EmailSender.cs",
-      "source_location": "L10",
-      "weight": 1.0,
-      "metadata": {
-        "ref_token": "Exception"
-      },
-      "source": "src_services_emailsender_services_emaildeliveryexception",
-      "target": "exception",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "inherits",
-      "confidence": "EXTRACTED",
-      "source_file": "src/Services/LearnerService.cs",
-      "source_location": "L10",
-      "weight": 1.0,
-      "metadata": {
-        "ref_token": "Exception"
-      },
-      "source": "src_services_learnerservice_services_certificateunavailableexception",
-      "target": "exception",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "inherits",
-      "confidence": "EXTRACTED",
-      "source_file": "src/Services/PracticeService.cs",
-      "source_location": "L9",
-      "weight": 1.0,
-      "metadata": {
-        "ref_token": "Exception"
-      },
-      "source": "src_services_practiceservice_services_practiceexception",
-      "target": "exception",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "inherits",
-      "confidence": "EXTRACTED",
-      "source_file": "src/Services/SavedQuestionService.cs",
-      "source_location": "L13",
-      "weight": 1.0,
-      "metadata": {
-        "ref_token": "Exception"
-      },
-      "source": "src_services_savedquestionservice_services_savedquestionexception",
-      "target": "exception",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "inherits",
-      "confidence": "EXTRACTED",
-      "source_file": "src/Services/WeaknessAnalysisService.cs",
-      "source_location": "L13",
-      "weight": 1.0,
-      "metadata": {
-        "ref_token": "Exception"
-      },
-      "source": "src_services_weaknessanalysisservice_services_recommendationnotfoundexception",
-      "target": "exception",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "source_file": "src/BusinessObjects/WalletModels.cs",
-      "source_location": "L11",
-      "weight": 1.0,
-      "context": "field",
-      "metadata": {
-        "ref_token": "DateTimeOffset"
-      },
-      "source": "src_businessobjects_walletmodels_businessobjects_orderalreadyopenexception",
-      "target": "src_businessobjects_walletmodels_cs_datetimeoffset",
       "confidence_score": 1.0
     },
     {
@@ -44121,7 +43894,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/Payment/PaymentService.cs",
-      "source_location": "L579",
+      "source_location": "L607",
       "weight": 1.0,
       "context": "return_type",
       "metadata": {
@@ -44191,7 +43964,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/Payment/PaymentService.cs",
-      "source_location": "L415",
+      "source_location": "L443",
       "weight": 1.0,
       "context": "generic_arg",
       "metadata": {
@@ -44205,7 +43978,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/Payment/PaymentService.cs",
-      "source_location": "L225",
+      "source_location": "L231",
       "weight": 1.0,
       "context": "generic_arg",
       "metadata": {
@@ -44303,7 +44076,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/Payment/PaymentService.cs",
-      "source_location": "L498",
+      "source_location": "L526",
       "weight": 1.0,
       "context": "generic_arg",
       "metadata": {
@@ -51404,7 +51177,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/Payment/PaymentService.cs",
-      "source_location": "L579",
+      "source_location": "L607",
       "weight": 1.0,
       "context": "parameter_type",
       "metadata": {
@@ -55597,6 +55370,16 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
+      "source_file": "src/Services/Payment/PaymentExceptions.cs",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "src_services_payment_paymentexceptions",
+      "target": "csharp_namespace:5cbd584046863bc7",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
       "source_file": "src/Services/Payment/PaymentService.cs",
       "source_location": "L7",
       "weight": 1.0,
@@ -55661,6 +55444,19 @@
       "confidence_score": 1.0
     },
     {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "source_file": "src/Services/AuthService.cs",
+      "source_location": "L17",
+      "weight": 1.0,
+      "metadata": {
+        "ref_token": "Exception"
+      },
+      "source": "src_services_authservice_services_authexception",
+      "target": "exception",
+      "confidence_score": 1.0
+    },
+    {
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/AuthService.cs",
@@ -55672,6 +55468,123 @@
       },
       "source": "src_services_authservice_services_authexception",
       "target": "src_services_authservice_cs_string",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "source_file": "src/Services/EmailSender.cs",
+      "source_location": "L10",
+      "weight": 1.0,
+      "metadata": {
+        "ref_token": "Exception"
+      },
+      "source": "src_services_emailsender_services_emaildeliveryexception",
+      "target": "exception",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "source_file": "src/Services/LearnerService.cs",
+      "source_location": "L10",
+      "weight": 1.0,
+      "metadata": {
+        "ref_token": "Exception"
+      },
+      "source": "src_services_learnerservice_services_certificateunavailableexception",
+      "target": "exception",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "source_file": "src/Services/Payment/PaymentExceptions.cs",
+      "source_location": "L3",
+      "weight": 1.0,
+      "metadata": {
+        "ref_token": "Exception"
+      },
+      "source": "src_services_payment_paymentexceptions_services_emailnotverifiedexception",
+      "target": "exception",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "source_file": "src/Services/Payment/PaymentExceptions.cs",
+      "source_location": "L6",
+      "weight": 1.0,
+      "metadata": {
+        "ref_token": "Exception"
+      },
+      "source": "src_services_payment_paymentexceptions_services_orderalreadyopenexception",
+      "target": "exception",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "source_file": "src/Services/Payment/PaymentExceptions.cs",
+      "source_location": "L31",
+      "weight": 1.0,
+      "metadata": {
+        "ref_token": "Exception"
+      },
+      "source": "src_services_payment_paymentexceptions_services_ordernotfoundexception",
+      "target": "exception",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "source_file": "src/Services/Payment/PaymentExceptions.cs",
+      "source_location": "L37",
+      "weight": 1.0,
+      "metadata": {
+        "ref_token": "Exception"
+      },
+      "source": "src_services_payment_paymentexceptions_services_packagenotfoundexception",
+      "target": "exception",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "source_file": "src/Services/PracticeService.cs",
+      "source_location": "L9",
+      "weight": 1.0,
+      "metadata": {
+        "ref_token": "Exception"
+      },
+      "source": "src_services_practiceservice_services_practiceexception",
+      "target": "exception",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "source_file": "src/Services/SavedQuestionService.cs",
+      "source_location": "L13",
+      "weight": 1.0,
+      "metadata": {
+        "ref_token": "Exception"
+      },
+      "source": "src_services_savedquestionservice_services_savedquestionexception",
+      "target": "exception",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "source_file": "src/Services/WeaknessAnalysisService.cs",
+      "source_location": "L13",
+      "weight": 1.0,
+      "metadata": {
+        "ref_token": "Exception"
+      },
+      "source": "src_services_weaknessanalysisservice_services_recommendationnotfoundexception",
+      "target": "exception",
       "confidence_score": 1.0
     },
     {
@@ -59298,7 +59211,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/Payment/MockPaymentGateway.cs",
-      "source_location": "L30",
+      "source_location": "L23",
       "weight": 1.0,
       "context": "parameter_type",
       "metadata": {
@@ -59340,7 +59253,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/Payment/MockPaymentGateway.cs",
-      "source_location": "L30",
+      "source_location": "L23",
       "weight": 1.0,
       "context": "generic_arg",
       "metadata": {
@@ -59396,7 +59309,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/Payment/MockPaymentGateway.cs",
-      "source_location": "L58",
+      "source_location": "L46",
       "weight": 1.0,
       "context": "generic_arg",
       "metadata": {
@@ -59410,7 +59323,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/Payment/PaymentService.cs",
-      "source_location": "L366",
+      "source_location": "L394",
       "weight": 1.0,
       "context": "generic_arg",
       "metadata": {
@@ -59452,7 +59365,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/Payment/MockPaymentGateway.cs",
-      "source_location": "L39",
+      "source_location": "L32",
       "weight": 1.0,
       "context": "generic_arg",
       "metadata": {
@@ -59633,7 +59546,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "src/Services/Payment/PaymentService.cs",
-      "source_location": "L371",
+      "source_location": "L399",
       "weight": 1.0,
       "source": "src_services_payment_paymentservice_services_paymentservice_handlewebhookasync",
       "target": "src_services_payment_ipaymentgateway_services_ipaymentgateway_verifywebhookasync"
@@ -59644,7 +59557,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "src/Services/Payment/PaymentService.cs",
-      "source_location": "L246",
+      "source_location": "L252",
       "weight": 1.0,
       "source": "src_services_payment_paymentservice_services_paymentservice_getpaymentresultasync",
       "target": "src_services_payment_ipaymentgateway_services_ipaymentgateway_querypaymentstatusasync"
@@ -59655,7 +59568,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "src/Services/Payment/PaymentService.cs",
-      "source_location": "L159",
+      "source_location": "L165",
       "weight": 1.0,
       "source": "src_services_payment_paymentservice_services_paymentservice_handlereturnredirectasync",
       "target": "src_services_payment_ipaymentgateway_services_ipaymentgateway_querypaymentstatusasync"
@@ -60039,7 +59952,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/Payment/MockPaymentGateway.cs",
-      "source_location": "L12",
+      "source_location": "L11",
       "weight": 1.0,
       "source": "src_services_payment_mockpaymentgateway",
       "target": "src_services_payment_mockpaymentgateway_services_mockpaymentgateway",
@@ -60072,20 +59985,10 @@
       "confidence_score": 1.0
     },
     {
-      "relation": "method",
-      "confidence": "EXTRACTED",
-      "source_file": "src/Services/Payment/MockPaymentGateway.cs",
-      "source_location": "L9",
-      "weight": 1.0,
-      "source": "src_services_payment_mockpaymentgateway_services_imockpaymentgateway",
-      "target": "src_services_payment_mockpaymentgateway_services_imockpaymentgateway_setoutcomebyordercode",
-      "confidence_score": 1.0
-    },
-    {
       "relation": "implements",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/Payment/MockPaymentGateway.cs",
-      "source_location": "L12",
+      "source_location": "L11",
       "weight": 1.0,
       "metadata": {
         "ref_token": "IMockPaymentGateway"
@@ -60098,7 +60001,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/Payment/MockPaymentGateway.cs",
-      "source_location": "L18",
+      "source_location": "L16",
       "weight": 1.0,
       "context": "field",
       "metadata": {
@@ -60112,7 +60015,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/Payment/MockPaymentGateway.cs",
-      "source_location": "L14",
+      "source_location": "L13",
       "weight": 1.0,
       "context": "field",
       "metadata": {
@@ -60126,7 +60029,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/Payment/MockPaymentGateway.cs",
-      "source_location": "L30",
+      "source_location": "L23",
       "weight": 1.0,
       "source": "src_services_payment_mockpaymentgateway_services_mockpaymentgateway",
       "target": "src_services_payment_mockpaymentgateway_services_mockpaymentgateway_createpaymentlinkasync",
@@ -60136,7 +60039,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/Payment/MockPaymentGateway.cs",
-      "source_location": "L39",
+      "source_location": "L32",
       "weight": 1.0,
       "source": "src_services_payment_mockpaymentgateway_services_mockpaymentgateway",
       "target": "src_services_payment_mockpaymentgateway_services_mockpaymentgateway_querypaymentstatusasync",
@@ -60146,7 +60049,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/Payment/MockPaymentGateway.cs",
-      "source_location": "L20",
+      "source_location": "L18",
       "weight": 1.0,
       "source": "src_services_payment_mockpaymentgateway_services_mockpaymentgateway",
       "target": "src_services_payment_mockpaymentgateway_services_mockpaymentgateway_setoutcome",
@@ -60156,17 +60059,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/Payment/MockPaymentGateway.cs",
-      "source_location": "L25",
-      "weight": 1.0,
-      "source": "src_services_payment_mockpaymentgateway_services_mockpaymentgateway",
-      "target": "src_services_payment_mockpaymentgateway_services_mockpaymentgateway_setoutcomebyordercode",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "method",
-      "confidence": "EXTRACTED",
-      "source_file": "src/Services/Payment/MockPaymentGateway.cs",
-      "source_location": "L58",
+      "source_location": "L46",
       "weight": 1.0,
       "source": "src_services_payment_mockpaymentgateway_services_mockpaymentgateway",
       "target": "src_services_payment_mockpaymentgateway_services_mockpaymentgateway_verifywebhookasync",
@@ -60176,7 +60069,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/Payment/MockPaymentGateway.cs",
-      "source_location": "L30",
+      "source_location": "L23",
       "weight": 1.0,
       "context": "parameter_type",
       "metadata": {
@@ -60190,7 +60083,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/Payment/MockPaymentGateway.cs",
-      "source_location": "L30",
+      "source_location": "L23",
       "weight": 1.0,
       "context": "return_type",
       "metadata": {
@@ -60204,7 +60097,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/Payment/MockPaymentGateway.cs",
-      "source_location": "L39",
+      "source_location": "L32",
       "weight": 1.0,
       "context": "parameter_type",
       "metadata": {
@@ -60218,7 +60111,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/Payment/MockPaymentGateway.cs",
-      "source_location": "L58",
+      "source_location": "L46",
       "weight": 1.0,
       "context": "parameter_type",
       "metadata": {
@@ -60232,7 +60125,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/Payment/MockPaymentGateway.cs",
-      "source_location": "L39",
+      "source_location": "L32",
       "weight": 1.0,
       "context": "return_type",
       "metadata": {
@@ -60246,7 +60139,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/Payment/MockPaymentGateway.cs",
-      "source_location": "L58",
+      "source_location": "L46",
       "weight": 1.0,
       "context": "return_type",
       "metadata": {
@@ -60449,6 +60342,60 @@
       "confidence_score": 1.0
     },
     {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/Services/Payment/PaymentExceptions.cs",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "src_services_payment_paymentexceptions",
+      "target": "src_services_payment_paymentexceptions_services_emailnotverifiedexception",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/Services/Payment/PaymentExceptions.cs",
+      "source_location": "L6",
+      "weight": 1.0,
+      "source": "src_services_payment_paymentexceptions",
+      "target": "src_services_payment_paymentexceptions_services_orderalreadyopenexception",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/Services/Payment/PaymentExceptions.cs",
+      "source_location": "L31",
+      "weight": 1.0,
+      "source": "src_services_payment_paymentexceptions",
+      "target": "src_services_payment_paymentexceptions_services_ordernotfoundexception",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/Services/Payment/PaymentExceptions.cs",
+      "source_location": "L37",
+      "weight": 1.0,
+      "source": "src_services_payment_paymentexceptions",
+      "target": "src_services_payment_paymentexceptions_services_packagenotfoundexception",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "source_file": "src/Services/Payment/PaymentExceptions.cs",
+      "source_location": "L11",
+      "weight": 1.0,
+      "context": "field",
+      "metadata": {
+        "ref_token": "DateTimeOffset"
+      },
+      "source": "src_services_payment_paymentexceptions_services_orderalreadyopenexception",
+      "target": "src_services_payment_paymentexceptions_cs_datetimeoffset",
+      "confidence_score": 1.0
+    },
+    {
       "relation": "imports",
       "context": "import",
       "confidence": "EXTRACTED",
@@ -60478,7 +60425,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/Payment/PaymentService.cs",
-      "source_location": "L415",
+      "source_location": "L443",
       "weight": 1.0,
       "source": "src_services_payment_paymentservice_services_paymentservice",
       "target": "src_services_payment_paymentservice_services_paymentservice_applymockgatewayactionasync",
@@ -60488,7 +60435,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/Payment/PaymentService.cs",
-      "source_location": "L566",
+      "source_location": "L594",
       "weight": 1.0,
       "source": "src_services_payment_paymentservice_services_paymentservice",
       "target": "src_services_payment_paymentservice_services_paymentservice_assertuseremailverifiedasync",
@@ -60508,7 +60455,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/Payment/PaymentService.cs",
-      "source_location": "L547",
+      "source_location": "L575",
       "weight": 1.0,
       "source": "src_services_payment_paymentservice_services_paymentservice",
       "target": "src_services_payment_paymentservice_services_paymentservice_expirestaleordersasync",
@@ -60528,7 +60475,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/Payment/PaymentService.cs",
-      "source_location": "L225",
+      "source_location": "L231",
       "weight": 1.0,
       "source": "src_services_payment_paymentservice_services_paymentservice",
       "target": "src_services_payment_paymentservice_services_paymentservice_getpaymentresultasync",
@@ -60538,7 +60485,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/Payment/PaymentService.cs",
-      "source_location": "L498",
+      "source_location": "L526",
       "weight": 1.0,
       "source": "src_services_payment_paymentservice_services_paymentservice",
       "target": "src_services_payment_paymentservice_services_paymentservice_getwalletasync",
@@ -60558,7 +60505,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/Payment/PaymentService.cs",
-      "source_location": "L366",
+      "source_location": "L394",
       "weight": 1.0,
       "source": "src_services_payment_paymentservice_services_paymentservice",
       "target": "src_services_payment_paymentservice_services_paymentservice_handlewebhookasync",
@@ -60568,7 +60515,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/Payment/PaymentService.cs",
-      "source_location": "L284",
+      "source_location": "L311",
       "weight": 1.0,
       "source": "src_services_payment_paymentservice_services_paymentservice",
       "target": "src_services_payment_paymentservice_services_paymentservice_settleorderasync",
@@ -60578,7 +60525,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/Payment/PaymentService.cs",
-      "source_location": "L579",
+      "source_location": "L607",
       "weight": 1.0,
       "source": "src_services_payment_paymentservice_services_paymentservice",
       "target": "src_services_payment_paymentservice_services_paymentservice_toorderdto",
@@ -60649,7 +60596,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/Payment/PaymentService.cs",
-      "source_location": "L415",
+      "source_location": "L443",
       "weight": 1.0,
       "context": "parameter_type",
       "metadata": {
@@ -60663,7 +60610,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/Payment/PaymentService.cs",
-      "source_location": "L566",
+      "source_location": "L594",
       "weight": 1.0,
       "context": "parameter_type",
       "metadata": {
@@ -60691,7 +60638,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/Payment/PaymentService.cs",
-      "source_location": "L547",
+      "source_location": "L575",
       "weight": 1.0,
       "context": "parameter_type",
       "metadata": {
@@ -60705,7 +60652,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/Payment/PaymentService.cs",
-      "source_location": "L225",
+      "source_location": "L231",
       "weight": 1.0,
       "context": "parameter_type",
       "metadata": {
@@ -60719,7 +60666,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/Payment/PaymentService.cs",
-      "source_location": "L498",
+      "source_location": "L526",
       "weight": 1.0,
       "context": "parameter_type",
       "metadata": {
@@ -60747,7 +60694,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/Payment/PaymentService.cs",
-      "source_location": "L366",
+      "source_location": "L394",
       "weight": 1.0,
       "context": "parameter_type",
       "metadata": {
@@ -60761,7 +60708,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/Payment/PaymentService.cs",
-      "source_location": "L284",
+      "source_location": "L311",
       "weight": 1.0,
       "context": "parameter_type",
       "metadata": {
@@ -60775,7 +60722,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/Payment/PaymentService.cs",
-      "source_location": "L415",
+      "source_location": "L443",
       "weight": 1.0,
       "context": "return_type",
       "metadata": {
@@ -60789,7 +60736,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/Payment/PaymentService.cs",
-      "source_location": "L566",
+      "source_location": "L594",
       "weight": 1.0,
       "context": "return_type",
       "metadata": {
@@ -60817,7 +60764,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/Payment/PaymentService.cs",
-      "source_location": "L547",
+      "source_location": "L575",
       "weight": 1.0,
       "context": "return_type",
       "metadata": {
@@ -60831,7 +60778,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/Payment/PaymentService.cs",
-      "source_location": "L225",
+      "source_location": "L231",
       "weight": 1.0,
       "context": "return_type",
       "metadata": {
@@ -60845,7 +60792,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/Payment/PaymentService.cs",
-      "source_location": "L498",
+      "source_location": "L526",
       "weight": 1.0,
       "context": "return_type",
       "metadata": {
@@ -60873,7 +60820,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/Payment/PaymentService.cs",
-      "source_location": "L366",
+      "source_location": "L394",
       "weight": 1.0,
       "context": "return_type",
       "metadata": {
@@ -60887,7 +60834,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/Payment/PaymentService.cs",
-      "source_location": "L284",
+      "source_location": "L311",
       "weight": 1.0,
       "context": "return_type",
       "metadata": {
@@ -60924,7 +60871,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/Payment/PaymentService.cs",
-      "source_location": "L222",
+      "source_location": "L228",
       "weight": 1.0,
       "source": "src_services_payment_paymentservice_services_paymentservice_handlereturnredirectasync",
       "target": "src_services_payment_paymentservice_services_paymentservice_getpaymentresultasync",
@@ -60935,7 +60882,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/Payment/PaymentService.cs",
-      "source_location": "L162",
+      "source_location": "L168",
       "weight": 1.0,
       "source": "src_services_payment_paymentservice_services_paymentservice_handlereturnredirectasync",
       "target": "src_services_payment_paymentservice_services_paymentservice_settleorderasync",
@@ -60946,7 +60893,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/Payment/PaymentService.cs",
-      "source_location": "L495",
+      "source_location": "L523",
       "weight": 1.0,
       "source": "src_services_payment_paymentservice_services_paymentservice_applymockgatewayactionasync",
       "target": "src_services_payment_paymentservice_services_paymentservice_getpaymentresultasync",
@@ -60957,7 +60904,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/Payment/PaymentService.cs",
-      "source_location": "L249",
+      "source_location": "L255",
       "weight": 1.0,
       "source": "src_services_payment_paymentservice_services_paymentservice_getpaymentresultasync",
       "target": "src_services_payment_paymentservice_services_paymentservice_settleorderasync",
@@ -60968,7 +60915,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/Payment/PaymentService.cs",
-      "source_location": "L434",
+      "source_location": "L462",
       "weight": 1.0,
       "source": "src_services_payment_paymentservice_services_paymentservice_applymockgatewayactionasync",
       "target": "src_services_payment_paymentservice_services_paymentservice_settleorderasync",
@@ -60979,7 +60926,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/Payment/PaymentService.cs",
-      "source_location": "L381",
+      "source_location": "L409",
       "weight": 1.0,
       "source": "src_services_payment_paymentservice_services_paymentservice_handlewebhookasync",
       "target": "src_services_payment_paymentservice_services_paymentservice_settleorderasync",
@@ -60990,7 +60937,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/Payment/PaymentService.cs",
-      "source_location": "L502",
+      "source_location": "L530",
       "weight": 1.0,
       "source": "src_services_payment_paymentservice_services_paymentservice_getwalletasync",
       "target": "src_services_payment_paymentservice_services_paymentservice_expirestaleordersasync",
@@ -73618,6 +73565,17 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "tests/Services.Tests/PaymentServiceTests.cs",
+      "source_location": "L368",
+      "weight": 1.0,
+      "source": "tests_services_tests_paymentservicetests_services_tests_paymentservicetests_reconciling_order_refresh_logs_event_and_does_not_violate_status_constraint",
+      "target": "tests_services_tests_dbcontextfactory_services_tests_dbcontextfactory_create"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/Services.Tests/PaymentServiceTests.cs",
       "source_location": "L167",
       "weight": 1.0,
       "source": "tests_services_tests_paymentservicetests_services_tests_paymentservicetests_return_redirect_never_grants_credit_and_logs_return_redirect_event",
@@ -75973,6 +75931,16 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/PaymentServiceTests.cs",
+      "source_location": "L346",
+      "weight": 1.0,
+      "source": "tests_services_tests_paymentservicetests_services_tests_paymentservicetests",
+      "target": "tests_services_tests_paymentservicetests_services_tests_paymentservicetests_reconciling_order_refresh_logs_event_and_does_not_violate_status_constraint",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/Services.Tests/PaymentServiceTests.cs",
       "source_location": "L153",
       "weight": 1.0,
       "source": "tests_services_tests_paymentservicetests_services_tests_paymentservicetests",
@@ -76137,6 +76105,17 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/PaymentServiceTests.cs",
+      "source_location": "L351",
+      "weight": 1.0,
+      "source": "tests_services_tests_paymentservicetests_services_tests_paymentservicetests_reconciling_order_refresh_logs_event_and_does_not_violate_status_constraint",
+      "target": "tests_services_tests_paymentservicetests_services_tests_paymentservicetests_createservice",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/Services.Tests/PaymentServiceTests.cs",
       "source_location": "L159",
       "weight": 1.0,
       "source": "tests_services_tests_paymentservicetests_services_tests_paymentservicetests_return_redirect_never_grants_credit_and_logs_return_redirect_event",
@@ -76250,6 +76229,17 @@
       "source_location": "L129",
       "weight": 1.0,
       "source": "tests_services_tests_paymentservicetests_services_tests_paymentservicetests_orders_unpaid_after_15_minutes_become_expired",
+      "target": "tests_services_tests_paymentservicetests_services_tests_paymentservicetests_seeduserasync",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/Services.Tests/PaymentServiceTests.cs",
+      "source_location": "L353",
+      "weight": 1.0,
+      "source": "tests_services_tests_paymentservicetests_services_tests_paymentservicetests_reconciling_order_refresh_logs_event_and_does_not_violate_status_constraint",
       "target": "tests_services_tests_paymentservicetests_services_tests_paymentservicetests_seeduserasync",
       "confidence_score": 1.0
     },
@@ -76400,6 +76390,20 @@
         "ref_token": "Task"
       },
       "source": "tests_services_tests_paymentservicetests_services_tests_paymentservicetests_orders_unpaid_after_15_minutes_become_expired",
+      "target": "tests_services_tests_paymentservicetests_cs_task",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/Services.Tests/PaymentServiceTests.cs",
+      "source_location": "L346",
+      "weight": 1.0,
+      "context": "return_type",
+      "metadata": {
+        "ref_token": "Task"
+      },
+      "source": "tests_services_tests_paymentservicetests_services_tests_paymentservicetests_reconciling_order_refresh_logs_event_and_does_not_violate_status_constraint",
       "target": "tests_services_tests_paymentservicetests_cs_task",
       "confidence_score": 1.0
     },
@@ -76561,6 +76565,17 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/PaymentServiceTests.cs",
+      "source_location": "L349",
+      "weight": 1.0,
+      "source": "tests_services_tests_paymentservicetests_services_tests_paymentservicetests_reconciling_order_refresh_logs_event_and_does_not_violate_status_constraint",
+      "target": "tests_services_tests_paymentservicetests_services_tests_paymentservicetests_seedpackageasync",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/Services.Tests/PaymentServiceTests.cs",
       "source_location": "L157",
       "weight": 1.0,
       "source": "tests_services_tests_paymentservicetests_services_tests_paymentservicetests_return_redirect_never_grants_credit_and_logs_return_redirect_event",
@@ -76703,6 +76718,20 @@
         "ref_token": "Fact"
       },
       "source": "tests_services_tests_paymentservicetests_services_tests_paymentservicetests_orders_unpaid_after_15_minutes_become_expired",
+      "target": "tests_services_tests_paymentservicetests_cs_fact",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/Services.Tests/PaymentServiceTests.cs",
+      "source_location": "L346",
+      "weight": 1.0,
+      "context": "attribute",
+      "metadata": {
+        "ref_token": "Fact"
+      },
+      "source": "tests_services_tests_paymentservicetests_services_tests_paymentservicetests_reconciling_order_refresh_logs_event_and_does_not_violate_status_constraint",
       "target": "tests_services_tests_paymentservicetests_cs_fact",
       "confidence_score": 1.0
     },
@@ -98296,5 +98325,5 @@
       "source_file": ".impeccable/surfaces/prototype.md"
     }
   ],
-  "built_at_commit": "62eb64636e732ef8c1034f4260ec1a4495eae45e"
+  "built_at_commit": "1e062713fcb558a7dd715a17414df8c40612af14"
 }
