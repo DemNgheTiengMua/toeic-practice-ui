@@ -428,7 +428,13 @@ learner.MapGet("/dashboard", async (HttpContext http, ILearnerService learners, 
         dashboard.RecentAttempts.Select(a => new RecentAttemptDto(
             a.AttemptId, a.ExamName, a.Purpose, a.Status, a.StartedAt, a.TotalScore, a.BandCode)).ToList(),
         dashboard.RecentPractice.Select(p => new RecentPracticeDto(
-            p.SessionId, p.SectionName, p.Status, p.CorrectCount, p.QuestionCount, p.StartedAt)).ToList()));
+            p.SessionId, p.SectionName, p.Status, p.CorrectCount, p.QuestionCount, p.StartedAt)).ToList(),
+        dashboard.UnfinishedAttempt is { } ua
+            ? new RecentAttemptDto(ua.AttemptId, ua.ExamName, ua.Purpose, ua.Status, ua.StartedAt, ua.TotalScore, ua.BandCode)
+            : null,
+        dashboard.UnfinishedPractice is { } up
+            ? new RecentPracticeDto(up.SessionId, up.SectionName, up.Status, up.CorrectCount, up.QuestionCount, up.StartedAt)
+            : null));
 });
 
 // ---- Practice (issue #8) ----
@@ -446,7 +452,13 @@ practice.MapGet("/catalog", async (HttpContext http, IPracticeService practiceSe
         view.ListeningSections.Select(ToSectionDto).ToList(),
         view.ReadingSections.Select(ToSectionDto).ToList(),
         view.OtherSections.Select(ToSectionDto).ToList(),
-        view.WeakestSection is { } w ? ToSectionDto(w) : null));
+        view.WeakestSection is { } w ? ToSectionDto(w) : null,
+        view.UnfinishedSession is { } ufs
+            ? new PracticeSessionDto(
+                ufs.SessionId, ufs.SectionId, ufs.SectionCode, ufs.SectionName, ufs.Modality,
+                ufs.QuestionCount, ufs.Status, ufs.CorrectCount, ufs.QuestionSource, ufs.FeedbackMode,
+                ufs.StartedAt, ufs.FinishedAt)
+            : null));
 });
 
 practice.MapPost("/sessions", async Task<IResult> (

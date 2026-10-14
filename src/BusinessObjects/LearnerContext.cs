@@ -19,7 +19,9 @@ public sealed record LearnerDashboard(
     int AttemptCount,
     int PracticeCount,
     IReadOnlyList<RecentAttempt> RecentAttempts,
-    IReadOnlyList<RecentPractice> RecentPractice)
+    IReadOnlyList<RecentPractice> RecentPractice,
+    RecentAttempt? UnfinishedAttempt = null,
+    RecentPractice? UnfinishedPractice = null)
 {
     /// <summary>No attempt and no practice yet for this certificate: the page shows its
     /// getting-started state instead of empty tables.</summary>

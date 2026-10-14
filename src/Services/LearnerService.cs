@@ -106,13 +106,29 @@ public sealed class LearnerService(CompanionDbContext db) : ILearnerService
             })
             .FirstOrDefaultAsync(cancellationToken);
 
+        var unfinishedAttempt = await attempts
+            .Where(a => a.Status == "in_progress")
+            .OrderByDescending(a => a.StartedAt)
+            .Select(a => new RecentAttempt(
+                a.AttemptId, a.Exam.Name, a.Exam.Purpose, a.Status, a.StartedAt, a.TotalScore, a.BandCode))
+            .FirstOrDefaultAsync(cancellationToken);
+
+        var unfinishedPractice = await practice
+            .Where(p => p.Status == "in_progress")
+            .OrderByDescending(p => p.StartedAt)
+            .Select(p => new RecentPractice(
+                p.SessionId, p.Section.Name, p.Status, p.CorrectCount, p.QuestionCount, p.StartedAt))
+            .FirstOrDefaultAsync(cancellationToken);
+
         return new LearnerDashboard(
             certificates.Single(c => c.CertId == certId).Option,
             latest is null ? null : new LatestResult(latest.Total, latest.BandCode, latest.BandName, latest.TakenAt),
             await attempts.CountAsync(cancellationToken),
             await practice.CountAsync(cancellationToken),
             recentAttempts,
-            recentPractice);
+            recentPractice,
+            unfinishedAttempt,
+            unfinishedPractice);
     }
 
     public async Task<int> GetActiveCertIdAsync(int userId, CancellationToken cancellationToken = default) =>

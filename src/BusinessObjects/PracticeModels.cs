@@ -23,7 +23,8 @@ public sealed record PracticeSectionsView(
     IReadOnlyList<PracticeSectionItem> ListeningSections,
     IReadOnlyList<PracticeSectionItem> ReadingSections,
     IReadOnlyList<PracticeSectionItem> OtherSections,
-    PracticeSectionItem? WeakestSection);
+    PracticeSectionItem? WeakestSection,
+    PracticeSessionInfo? UnfinishedSession = null);
 
 /// <summary>Options for launching a new practice drill.</summary>
 public sealed record StartPracticeSessionInput

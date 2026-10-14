@@ -997,8 +997,8 @@
       },
       "_origin": "ast",
       "id": "csharp_namespace:62ff456d59fbd68c",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 20,
+      "community_name": "Authentication Views & ViewModels",
       "norm_label": "businessobjects"
     },
     {
@@ -1166,8 +1166,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_businessobjects_certificatecatalog",
-      "community": 21,
-      "community_name": "Authentication Inputs & Validation",
+      "community": 20,
+      "community_name": "Authentication Views & ViewModels",
       "norm_label": "certificatecatalog.cs"
     },
     {
@@ -1183,8 +1183,8 @@
       },
       "_origin": "ast",
       "id": "src_businessobjects_certificatecatalog_businessobjects_certificatecatalog",
-      "community": 21,
-      "community_name": "Authentication Inputs & Validation",
+      "community": 20,
+      "community_name": "Authentication Views & ViewModels",
       "norm_label": "certificatecatalog"
     },
     {
@@ -1200,8 +1200,8 @@
       },
       "_origin": "ast",
       "id": "src_businessobjects_certificatecatalog_businessobjects_skillcatalog",
-      "community": 21,
-      "community_name": "Authentication Inputs & Validation",
+      "community": 20,
+      "community_name": "Authentication Views & ViewModels",
       "norm_label": "skillcatalog"
     },
     {
@@ -1217,8 +1217,8 @@
       },
       "_origin": "ast",
       "id": "src_businessobjects_certificatecatalog_businessobjects_sectioncatalog",
-      "community": 21,
-      "community_name": "Authentication Inputs & Validation",
+      "community": 20,
+      "community_name": "Authentication Views & ViewModels",
       "norm_label": "sectioncatalog"
     },
     {
@@ -1234,8 +1234,8 @@
       },
       "_origin": "ast",
       "id": "src_businessobjects_certificatecatalog_businessobjects_bandcatalog",
-      "community": 21,
-      "community_name": "Authentication Inputs & Validation",
+      "community": 20,
+      "community_name": "Authentication Views & ViewModels",
       "norm_label": "bandcatalog"
     },
     {
@@ -1304,7 +1304,7 @@
       "label": "LatestResult",
       "file_type": "code",
       "source_file": "src/BusinessObjects/LearnerContext.cs",
-      "source_location": "L30",
+      "source_location": "L32",
       "metadata": {
         "namespace": "BusinessObjects",
         "scope_chain": [
@@ -1321,7 +1321,7 @@
       "label": "RecentAttempt",
       "file_type": "code",
       "source_file": "src/BusinessObjects/LearnerContext.cs",
-      "source_location": "L32",
+      "source_location": "L34",
       "metadata": {
         "namespace": "BusinessObjects",
         "scope_chain": [
@@ -1338,7 +1338,7 @@
       "label": "RecentPractice",
       "file_type": "code",
       "source_file": "src/BusinessObjects/LearnerContext.cs",
-      "source_location": "L41",
+      "source_location": "L43",
       "metadata": {
         "namespace": "BusinessObjects",
         "scope_chain": [
@@ -1400,7 +1400,7 @@
       "label": "StartPracticeSessionInput",
       "file_type": "code",
       "source_file": "src/BusinessObjects/PracticeModels.cs",
-      "source_location": "L29",
+      "source_location": "L30",
       "metadata": {
         "namespace": "BusinessObjects",
         "scope_chain": [
@@ -1417,7 +1417,7 @@
       "label": "PracticeSessionInfo",
       "file_type": "code",
       "source_file": "src/BusinessObjects/PracticeModels.cs",
-      "source_location": "L52",
+      "source_location": "L53",
       "metadata": {
         "namespace": "BusinessObjects",
         "scope_chain": [
@@ -1434,7 +1434,7 @@
       "label": "PracticeQuestionOption",
       "file_type": "code",
       "source_file": "src/BusinessObjects/PracticeModels.cs",
-      "source_location": "L66",
+      "source_location": "L67",
       "metadata": {
         "namespace": "BusinessObjects",
         "scope_chain": [
@@ -1451,7 +1451,7 @@
       "label": "PracticeQuestionView",
       "file_type": "code",
       "source_file": "src/BusinessObjects/PracticeModels.cs",
-      "source_location": "L71",
+      "source_location": "L72",
       "metadata": {
         "namespace": "BusinessObjects",
         "scope_chain": [
@@ -1468,7 +1468,7 @@
       "label": "SubmitPracticeAnswerInput",
       "file_type": "code",
       "source_file": "src/BusinessObjects/PracticeModels.cs",
-      "source_location": "L92",
+      "source_location": "L93",
       "metadata": {
         "namespace": "BusinessObjects",
         "scope_chain": [
@@ -1485,7 +1485,7 @@
       "label": "GradedPracticeAnswerResult",
       "file_type": "code",
       "source_file": "src/BusinessObjects/PracticeModels.cs",
-      "source_location": "L94",
+      "source_location": "L95",
       "metadata": {
         "namespace": "BusinessObjects",
         "scope_chain": [
@@ -1502,7 +1502,7 @@
       "label": "QuestionOutcome",
       "file_type": "code",
       "source_file": "src/BusinessObjects/PracticeModels.cs",
-      "source_location": "L103",
+      "source_location": "L104",
       "metadata": {
         "namespace": "BusinessObjects",
         "scope_chain": [
@@ -1519,7 +1519,7 @@
       "label": "PracticeSummary",
       "file_type": "code",
       "source_file": "src/BusinessObjects/PracticeModels.cs",
-      "source_location": "L116",
+      "source_location": "L117",
       "metadata": {
         "namespace": "BusinessObjects",
         "scope_chain": [
@@ -1555,8 +1555,8 @@
       },
       "_origin": "ast",
       "id": "csharp_namespace:32767bc87ce3ae8c",
-      "community": 41,
-      "community_name": "UI View: _ViewImports.cshtml",
+      "community": 40,
+      "community_name": "UI View: DashboardViewModel.cs",
       "norm_label": "contracts"
     },
     {
@@ -1612,8 +1612,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_contracts_authclaims",
-      "community": 45,
-      "community_name": "Path Module Item",
+      "community": 40,
+      "community_name": "UI View: DashboardViewModel.cs",
       "norm_label": "authclaims.cs"
     },
     {
@@ -1629,8 +1629,8 @@
       },
       "_origin": "ast",
       "id": "src_contracts_authclaims_contracts_authclaims",
-      "community": 45,
-      "community_name": "Path Module Item",
+      "community": 40,
+      "community_name": "UI View: DashboardViewModel.cs",
       "norm_label": "authclaims"
     },
     {
@@ -3093,7 +3093,7 @@
       "label": "LatestResultDto",
       "file_type": "code",
       "source_file": "src/Contracts/LearnerDtos.cs",
-      "source_location": "L27",
+      "source_location": "L29",
       "metadata": {
         "namespace": "Contracts",
         "scope_chain": [
@@ -3110,7 +3110,7 @@
       "label": "RecentAttemptDto",
       "file_type": "code",
       "source_file": "src/Contracts/LearnerDtos.cs",
-      "source_location": "L29",
+      "source_location": "L31",
       "metadata": {
         "namespace": "Contracts",
         "scope_chain": [
@@ -3127,7 +3127,7 @@
       "label": "RecentPracticeDto",
       "file_type": "code",
       "source_file": "src/Contracts/LearnerDtos.cs",
-      "source_location": "L38",
+      "source_location": "L40",
       "metadata": {
         "namespace": "Contracts",
         "scope_chain": [
@@ -3189,7 +3189,7 @@
       "label": "StartPracticeRequest",
       "file_type": "code",
       "source_file": "src/Contracts/PracticeDtos.cs",
-      "source_location": "L24",
+      "source_location": "L25",
       "metadata": {
         "namespace": "Contracts",
         "scope_chain": [
@@ -3206,7 +3206,7 @@
       "label": "PracticeSessionDto",
       "file_type": "code",
       "source_file": "src/Contracts/PracticeDtos.cs",
-      "source_location": "L30",
+      "source_location": "L31",
       "metadata": {
         "namespace": "Contracts",
         "scope_chain": [
@@ -3223,7 +3223,7 @@
       "label": "PracticeOptionDto",
       "file_type": "code",
       "source_file": "src/Contracts/PracticeDtos.cs",
-      "source_location": "L44",
+      "source_location": "L45",
       "metadata": {
         "namespace": "Contracts",
         "scope_chain": [
@@ -3240,7 +3240,7 @@
       "label": "PracticeQuestionDto",
       "file_type": "code",
       "source_file": "src/Contracts/PracticeDtos.cs",
-      "source_location": "L49",
+      "source_location": "L50",
       "metadata": {
         "namespace": "Contracts",
         "scope_chain": [
@@ -3257,7 +3257,7 @@
       "label": "SubmitPracticeAnswerRequest",
       "file_type": "code",
       "source_file": "src/Contracts/PracticeDtos.cs",
-      "source_location": "L70",
+      "source_location": "L71",
       "metadata": {
         "namespace": "Contracts",
         "scope_chain": [
@@ -3274,7 +3274,7 @@
       "label": "GradedAnswerDto",
       "file_type": "code",
       "source_file": "src/Contracts/PracticeDtos.cs",
-      "source_location": "L72",
+      "source_location": "L73",
       "metadata": {
         "namespace": "Contracts",
         "scope_chain": [
@@ -3291,7 +3291,7 @@
       "label": "QuestionOutcomeDto",
       "file_type": "code",
       "source_file": "src/Contracts/PracticeDtos.cs",
-      "source_location": "L81",
+      "source_location": "L82",
       "metadata": {
         "namespace": "Contracts",
         "scope_chain": [
@@ -3308,7 +3308,7 @@
       "label": "PracticeSummaryDto",
       "file_type": "code",
       "source_file": "src/Contracts/PracticeDtos.cs",
-      "source_location": "L94",
+      "source_location": "L95",
       "metadata": {
         "namespace": "Contracts",
         "scope_chain": [
@@ -3325,7 +3325,7 @@
       "label": "RevealHintResponse",
       "file_type": "code",
       "source_file": "src/Contracts/PracticeDtos.cs",
-      "source_location": "L112",
+      "source_location": "L113",
       "metadata": {
         "namespace": "Contracts",
         "scope_chain": [
@@ -3345,8 +3345,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_contracts_roles",
-      "community": 86,
-      "community_name": "Role Collection Code",
+      "community": 85,
+      "community_name": "Profile Async Update",
       "norm_label": "roles.cs"
     },
     {
@@ -3362,8 +3362,8 @@
       },
       "_origin": "ast",
       "id": "src_contracts_roles_contracts_roles",
-      "community": 86,
-      "community_name": "Role Collection Code",
+      "community": 85,
+      "community_name": "Profile Async Update",
       "norm_label": "roles"
     },
     {
@@ -3373,8 +3373,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_contracts_roles_cs_string",
-      "community": 86,
-      "community_name": "Role Collection Code",
+      "community": 85,
+      "community_name": "Profile Async Update",
       "norm_label": "string"
     },
     {
@@ -3451,8 +3451,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_companiondbcontext_practice",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 35,
+      "community_name": "Order Gateway Code",
       "norm_label": "companiondbcontext.practice.cs"
     },
     {
@@ -3467,8 +3467,8 @@
       },
       "_origin": "ast",
       "id": "csharp_namespace:80d813aeb0f0d247",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 20,
+      "community_name": "Authentication Views & ViewModels",
       "norm_label": "dataaccess"
     },
     {
@@ -3523,8 +3523,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_companiondbcontext",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 32,
+      "community_name": "User Admin Attempt",
       "norm_label": "companiondbcontext.cs"
     },
     {
@@ -3689,8 +3689,8 @@
       },
       "_origin": "ast",
       "id": "csharp_namespace:f2f6f46574d2f22a",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 14,
+      "community_name": "Learning Path Progression &",
       "norm_label": "dataaccess.scaffold"
     },
     {
@@ -3762,8 +3762,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_aigrading",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 35,
+      "community_name": "Order Gateway Code",
       "norm_label": "aigrading.cs"
     },
     {
@@ -3779,8 +3779,8 @@
       },
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_aigrading_dataaccess_scaffold_aigrading",
-      "community": 29,
-      "community_name": "Database Views & Financial Aggregates",
+      "community": 35,
+      "community_name": "Order Gateway Code",
       "norm_label": "aigrading"
     },
     {
@@ -3790,8 +3790,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_aigrading_cs_datetimeoffset",
-      "community": 29,
-      "community_name": "Database Views & Financial Aggregates",
+      "community": 35,
+      "community_name": "Order Gateway Code",
       "norm_label": "datetimeoffset"
     },
     {
@@ -3801,8 +3801,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_aigrading_cs_icollection",
-      "community": 29,
-      "community_name": "Database Views & Financial Aggregates",
+      "community": 35,
+      "community_name": "Order Gateway Code",
       "norm_label": "icollection"
     },
     {
@@ -3812,8 +3812,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_aigradingscore",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 35,
+      "community_name": "Order Gateway Code",
       "norm_label": "aigradingscore.cs"
     },
     {
@@ -3829,8 +3829,8 @@
       },
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_aigradingscore_dataaccess_scaffold_aigradingscore",
-      "community": 29,
-      "community_name": "Database Views & Financial Aggregates",
+      "community": 35,
+      "community_name": "Order Gateway Code",
       "norm_label": "aigradingscore"
     },
     {
@@ -3840,8 +3840,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_aiinsight",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 25,
+      "community_name": "Certificate Entity & Domain Catalog",
       "norm_label": "aiinsight.cs"
     },
     {
@@ -3857,8 +3857,8 @@
       },
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_aiinsight_dataaccess_scaffold_aiinsight",
-      "community": 70,
-      "community_name": "AiInsight",
+      "community": 25,
+      "community_name": "Certificate Entity & Domain Catalog",
       "norm_label": "aiinsight"
     },
     {
@@ -3868,8 +3868,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_aiinsight_cs_datetimeoffset",
-      "community": 70,
-      "community_name": "AiInsight",
+      "community": 25,
+      "community_name": "Certificate Entity & Domain Catalog",
       "norm_label": "datetimeoffset"
     },
     {
@@ -3879,8 +3879,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_aiinsight_cs_icollection",
-      "community": 70,
-      "community_name": "AiInsight",
+      "community": 25,
+      "community_name": "Certificate Entity & Domain Catalog",
       "norm_label": "icollection"
     },
     {
@@ -3890,8 +3890,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_attemptanswer",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 8,
+      "community_name": "AI Grading & Score Calculations",
       "norm_label": "attemptanswer.cs"
     },
     {
@@ -3935,8 +3935,8 @@
       },
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_attemptskillscore_dataaccess_scaffold_attemptskillscore",
-      "community": 8,
-      "community_name": "AI Grading & Score Calculations",
+      "community": 0,
+      "community_name": "Core Domain Services &",
       "norm_label": "attemptskillscore"
     },
     {
@@ -3946,8 +3946,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_booking",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 44,
+      "community_name": "Mentor Payout Period",
       "norm_label": "booking.cs"
     },
     {
@@ -3996,8 +3996,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_certificate",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 25,
+      "community_name": "Certificate Entity & Domain Catalog",
       "norm_label": "certificate.cs"
     },
     {
@@ -4035,8 +4035,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_complaint",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 32,
+      "community_name": "User Admin Attempt",
       "norm_label": "complaint.cs"
     },
     {
@@ -4074,8 +4074,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_credittransaction",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 32,
+      "community_name": "User Admin Attempt",
       "norm_label": "credittransaction.cs"
     },
     {
@@ -4124,8 +4124,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_emailverificationtoken",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 12,
+      "community_name": "User Entity & Multi-Cert Profile",
       "norm_label": "emailverificationtoken.cs"
     },
     {
@@ -4163,8 +4163,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_exam",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 38,
+      "community_name": "Exam Placement Attempt",
       "norm_label": "exam.cs"
     },
     {
@@ -4180,8 +4180,8 @@
       },
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_exam_dataaccess_scaffold_exam",
-      "community": 14,
-      "community_name": "Learning Path Progression &",
+      "community": 38,
+      "community_name": "Exam Placement Attempt",
       "norm_label": "exam"
     },
     {
@@ -4191,8 +4191,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_exam_cs_datetimeoffset",
-      "community": 14,
-      "community_name": "Learning Path Progression &",
+      "community": 38,
+      "community_name": "Exam Placement Attempt",
       "norm_label": "datetimeoffset"
     },
     {
@@ -4202,8 +4202,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_exam_cs_icollection",
-      "community": 14,
-      "community_name": "Learning Path Progression &",
+      "community": 38,
+      "community_name": "Exam Placement Attempt",
       "norm_label": "icollection"
     },
     {
@@ -4213,8 +4213,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_examattempt",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 38,
+      "community_name": "Exam Placement Attempt",
       "norm_label": "examattempt.cs"
     },
     {
@@ -4230,8 +4230,8 @@
       },
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_examattempt_dataaccess_scaffold_examattempt",
-      "community": 8,
-      "community_name": "AI Grading & Score Calculations",
+      "community": 38,
+      "community_name": "Exam Placement Attempt",
       "norm_label": "examattempt"
     },
     {
@@ -4241,8 +4241,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_examattempt_cs_datetimeoffset",
-      "community": 8,
-      "community_name": "AI Grading & Score Calculations",
+      "community": 38,
+      "community_name": "Exam Placement Attempt",
       "norm_label": "datetimeoffset"
     },
     {
@@ -4252,8 +4252,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_examattempt_cs_icollection",
-      "community": 8,
-      "community_name": "AI Grading & Score Calculations",
+      "community": 38,
+      "community_name": "Exam Placement Attempt",
       "norm_label": "icollection"
     },
     {
@@ -4263,8 +4263,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_examsectionaudio",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 14,
+      "community_name": "Learning Path Progression &",
       "norm_label": "examsectionaudio.cs"
     },
     {
@@ -4302,8 +4302,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_freeresponse",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 35,
+      "community_name": "Order Gateway Code",
       "norm_label": "freeresponse.cs"
     },
     {
@@ -4319,8 +4319,8 @@
       },
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_freeresponse_dataaccess_scaffold_freeresponse",
-      "community": 8,
-      "community_name": "AI Grading & Score Calculations",
+      "community": 35,
+      "community_name": "Order Gateway Code",
       "norm_label": "freeresponse"
     },
     {
@@ -4330,8 +4330,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_freeresponse_cs_datetimeoffset",
-      "community": 8,
-      "community_name": "AI Grading & Score Calculations",
+      "community": 35,
+      "community_name": "Order Gateway Code",
       "norm_label": "datetimeoffset"
     },
     {
@@ -4341,8 +4341,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_freeresponse_cs_icollection",
-      "community": 8,
-      "community_name": "AI Grading & Score Calculations",
+      "community": 35,
+      "community_name": "Order Gateway Code",
       "norm_label": "icollection"
     },
     {
@@ -4352,8 +4352,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_gradingcriterion",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 35,
+      "community_name": "Order Gateway Code",
       "norm_label": "gradingcriterion.cs"
     },
     {
@@ -4369,8 +4369,8 @@
       },
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_gradingcriterion_dataaccess_scaffold_gradingcriterion",
-      "community": 29,
-      "community_name": "Database Views & Financial Aggregates",
+      "community": 35,
+      "community_name": "Order Gateway Code",
       "norm_label": "gradingcriterion"
     },
     {
@@ -4380,8 +4380,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_gradingcriterion_cs_icollection",
-      "community": 29,
-      "community_name": "Database Views & Financial Aggregates",
+      "community": 35,
+      "community_name": "Order Gateway Code",
       "norm_label": "icollection"
     },
     {
@@ -4391,8 +4391,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_importbatch",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 51,
+      "community_name": "Import Batch Cert",
       "norm_label": "importbatch.cs"
     },
     {
@@ -4441,8 +4441,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_importlog",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 51,
+      "community_name": "Import Batch Cert",
       "norm_label": "importlog.cs"
     },
     {
@@ -4480,8 +4480,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_learnerpath",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 25,
+      "community_name": "Certificate Entity & Domain Catalog",
       "norm_label": "learnerpath.cs"
     },
     {
@@ -4497,8 +4497,8 @@
       },
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_learnerpath_dataaccess_scaffold_learnerpath",
-      "community": 38,
-      "community_name": "Exam Placement Attempt",
+      "community": 25,
+      "community_name": "Certificate Entity & Domain Catalog",
       "norm_label": "learnerpath"
     },
     {
@@ -4508,8 +4508,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_learnerpath_cs_datetimeoffset",
-      "community": 38,
-      "community_name": "Exam Placement Attempt",
+      "community": 25,
+      "community_name": "Certificate Entity & Domain Catalog",
       "norm_label": "datetimeoffset"
     },
     {
@@ -4519,8 +4519,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_learnerpath_cs_icollection",
-      "community": 38,
-      "community_name": "Exam Placement Attempt",
+      "community": 25,
+      "community_name": "Certificate Entity & Domain Catalog",
       "norm_label": "icollection"
     },
     {
@@ -4530,8 +4530,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_learnerpathstep",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 14,
+      "community_name": "Learning Path Progression &",
       "norm_label": "learnerpathstep.cs"
     },
     {
@@ -4580,8 +4580,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_mentorpayout",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 44,
+      "community_name": "Mentor Payout Period",
       "norm_label": "mentorpayout.cs"
     },
     {
@@ -4630,8 +4630,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_mentorpayoutitem",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 44,
+      "community_name": "Mentor Payout Period",
       "norm_label": "mentorpayoutitem.cs"
     },
     {
@@ -4658,8 +4658,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_mentorprofile",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 44,
+      "community_name": "Mentor Payout Period",
       "norm_label": "mentorprofile.cs"
     },
     {
@@ -4675,8 +4675,8 @@
       },
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_mentorprofile_dataaccess_scaffold_mentorprofile",
-      "community": 25,
-      "community_name": "Certificate Entity & Domain Catalog",
+      "community": 44,
+      "community_name": "Mentor Payout Period",
       "norm_label": "mentorprofile"
     },
     {
@@ -4686,8 +4686,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_mentorprofile_cs_icollection",
-      "community": 25,
-      "community_name": "Certificate Entity & Domain Catalog",
+      "community": 44,
+      "community_name": "Mentor Payout Period",
       "norm_label": "icollection"
     },
     {
@@ -4697,8 +4697,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_mentorslot",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 44,
+      "community_name": "Mentor Payout Period",
       "norm_label": "mentorslot.cs"
     },
     {
@@ -4747,8 +4747,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_order",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 32,
+      "community_name": "User Admin Attempt",
       "norm_label": "order.cs"
     },
     {
@@ -4797,8 +4797,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_package",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 32,
+      "community_name": "User Admin Attempt",
       "norm_label": "package.cs"
     },
     {
@@ -4836,8 +4836,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_passwordresettoken",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 12,
+      "community_name": "User Entity & Multi-Cert Profile",
       "norm_label": "passwordresettoken.cs"
     },
     {
@@ -4892,8 +4892,8 @@
       },
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_pathmodule_dataaccess_scaffold_pathmodule",
-      "community": 25,
-      "community_name": "Certificate Entity & Domain Catalog",
+      "community": 0,
+      "community_name": "Core Domain Services &",
       "norm_label": "pathmodule"
     },
     {
@@ -4903,8 +4903,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_pathmodule_cs_icollection",
-      "community": 25,
-      "community_name": "Certificate Entity & Domain Catalog",
+      "community": 0,
+      "community_name": "Core Domain Services &",
       "norm_label": "icollection"
     },
     {
@@ -4914,8 +4914,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_pathmoduleitem",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 14,
+      "community_name": "Learning Path Progression &",
       "norm_label": "pathmoduleitem.cs"
     },
     {
@@ -4970,8 +4970,8 @@
       },
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_pathmoduletopic_dataaccess_scaffold_pathmoduletopic",
-      "community": 25,
-      "community_name": "Certificate Entity & Domain Catalog",
+      "community": 0,
+      "community_name": "Core Domain Services &",
       "norm_label": "pathmoduletopic"
     },
     {
@@ -4981,8 +4981,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_pathtemplate",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 25,
+      "community_name": "Certificate Entity & Domain Catalog",
       "norm_label": "pathtemplate.cs"
     },
     {
@@ -5020,8 +5020,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_paymentevent",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 32,
+      "community_name": "User Admin Attempt",
       "norm_label": "paymentevent.cs"
     },
     {
@@ -5059,8 +5059,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_placementtest",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 38,
+      "community_name": "Exam Placement Attempt",
       "norm_label": "placementtest.cs"
     },
     {
@@ -5109,8 +5109,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_practiceanswer",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 8,
+      "community_name": "AI Grading & Score Calculations",
       "norm_label": "practiceanswer.cs"
     },
     {
@@ -5137,8 +5137,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_practicesession",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 25,
+      "community_name": "Certificate Entity & Domain Catalog",
       "norm_label": "practicesession.cs"
     },
     {
@@ -5154,8 +5154,8 @@
       },
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_practicesession_dataaccess_scaffold_practicesession",
-      "community": 70,
-      "community_name": "AiInsight",
+      "community": 25,
+      "community_name": "Certificate Entity & Domain Catalog",
       "norm_label": "practicesession"
     },
     {
@@ -5165,8 +5165,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_practicesession_cs_datetimeoffset",
-      "community": 70,
-      "community_name": "AiInsight",
+      "community": 25,
+      "community_name": "Certificate Entity & Domain Catalog",
       "norm_label": "datetimeoffset"
     },
     {
@@ -5176,8 +5176,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_practicesession_cs_icollection",
-      "community": 70,
-      "community_name": "AiInsight",
+      "community": 25,
+      "community_name": "Certificate Entity & Domain Catalog",
       "norm_label": "icollection"
     },
     {
@@ -5187,8 +5187,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_question",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 8,
+      "community_name": "AI Grading & Score Calculations",
       "norm_label": "question.cs"
     },
     {
@@ -5254,8 +5254,8 @@
       },
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_questioncategory_dataaccess_scaffold_questioncategory",
-      "community": 25,
-      "community_name": "Certificate Entity & Domain Catalog",
+      "community": 0,
+      "community_name": "Core Domain Services &",
       "norm_label": "questioncategory"
     },
     {
@@ -5265,8 +5265,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_questioncategory_cs_icollection",
-      "community": 25,
-      "community_name": "Certificate Entity & Domain Catalog",
+      "community": 0,
+      "community_name": "Core Domain Services &",
       "norm_label": "icollection"
     },
     {
@@ -5276,8 +5276,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_questiongroup",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 14,
+      "community_name": "Learning Path Progression &",
       "norm_label": "questiongroup.cs"
     },
     {
@@ -5315,8 +5315,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_questionoption",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 8,
+      "community_name": "AI Grading & Score Calculations",
       "norm_label": "questionoption.cs"
     },
     {
@@ -5354,8 +5354,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_recommendation",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 25,
+      "community_name": "Certificate Entity & Domain Catalog",
       "norm_label": "recommendation.cs"
     },
     {
@@ -5393,8 +5393,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_review",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 44,
+      "community_name": "Mentor Payout Period",
       "norm_label": "review.cs"
     },
     {
@@ -5432,8 +5432,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_role",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 12,
+      "community_name": "User Entity & Multi-Cert Profile",
       "norm_label": "role.cs"
     },
     {
@@ -5471,8 +5471,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_savedquestion",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 8,
+      "community_name": "AI Grading & Score Calculations",
       "norm_label": "savedquestion.cs"
     },
     {
@@ -5488,8 +5488,8 @@
       },
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_savedquestion_dataaccess_scaffold_savedquestion",
-      "community": 12,
-      "community_name": "User Entity & Multi-Cert Profile",
+      "community": 8,
+      "community_name": "AI Grading & Score Calculations",
       "norm_label": "savedquestion"
     },
     {
@@ -5499,8 +5499,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_savedquestion_cs_datetimeoffset",
-      "community": 12,
-      "community_name": "User Entity & Multi-Cert Profile",
+      "community": 8,
+      "community_name": "AI Grading & Score Calculations",
       "norm_label": "datetimeoffset"
     },
     {
@@ -5510,8 +5510,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_scoreband",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 25,
+      "community_name": "Certificate Entity & Domain Catalog",
       "norm_label": "scoreband.cs"
     },
     {
@@ -5566,8 +5566,8 @@
       },
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_scorescale_dataaccess_scaffold_scorescale",
-      "community": 25,
-      "community_name": "Certificate Entity & Domain Catalog",
+      "community": 0,
+      "community_name": "Core Domain Services &",
       "norm_label": "scorescale"
     },
     {
@@ -5577,8 +5577,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_section",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 14,
+      "community_name": "Learning Path Progression &",
       "norm_label": "section.cs"
     },
     {
@@ -5616,8 +5616,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_sectioncriterion",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 14,
+      "community_name": "Learning Path Progression &",
       "norm_label": "sectioncriterion.cs"
     },
     {
@@ -5633,8 +5633,8 @@
       },
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_sectioncriterion_dataaccess_scaffold_sectioncriterion",
-      "community": 29,
-      "community_name": "Database Views & Financial Aggregates",
+      "community": 14,
+      "community_name": "Learning Path Progression &",
       "norm_label": "sectioncriterion"
     },
     {
@@ -5661,8 +5661,8 @@
       },
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_skill_dataaccess_scaffold_skill",
-      "community": 25,
-      "community_name": "Certificate Entity & Domain Catalog",
+      "community": 0,
+      "community_name": "Core Domain Services &",
       "norm_label": "skill"
     },
     {
@@ -5672,8 +5672,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_skill_cs_icollection",
-      "community": 25,
-      "community_name": "Certificate Entity & Domain Catalog",
+      "community": 0,
+      "community_name": "Core Domain Services &",
       "norm_label": "icollection"
     },
     {
@@ -5683,8 +5683,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_targetband",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 25,
+      "community_name": "Certificate Entity & Domain Catalog",
       "norm_label": "targetband.cs"
     },
     {
@@ -5722,8 +5722,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_user",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 12,
+      "community_name": "User Entity & Multi-Cert Profile",
       "norm_label": "user.cs"
     },
     {
@@ -5789,8 +5789,8 @@
       },
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_vw_learnerpathispremium_dataaccess_scaffold_vw_learnerpathispremium",
-      "community": 29,
-      "community_name": "Database Views & Financial Aggregates",
+      "community": 0,
+      "community_name": "Core Domain Services &",
       "norm_label": "vw_learnerpathispremium"
     },
     {
@@ -5817,8 +5817,8 @@
       },
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_vw_mentoravgrating_dataaccess_scaffold_vw_mentoravgrating",
-      "community": 29,
-      "community_name": "Database Views & Financial Aggregates",
+      "community": 0,
+      "community_name": "Core Domain Services &",
       "norm_label": "vw_mentoravgrating"
     },
     {
@@ -5845,8 +5845,8 @@
       },
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_vw_mentorpayouttotal_dataaccess_scaffold_vw_mentorpayouttotal",
-      "community": 29,
-      "community_name": "Database Views & Financial Aggregates",
+      "community": 0,
+      "community_name": "Core Domain Services &",
       "norm_label": "vw_mentorpayouttotal"
     },
     {
@@ -5856,8 +5856,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_vw_usercategoryaccuracy",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 14,
+      "community_name": "Learning Path Progression &",
       "norm_label": "vw_usercategoryaccuracy.cs"
     },
     {
@@ -5884,8 +5884,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_vw_usercreditbalance",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 29,
+      "community_name": "Database Views & Financial Aggregates",
       "norm_label": "vw_usercreditbalance.cs"
     },
     {
@@ -5929,8 +5929,8 @@
       },
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_vw_usercreditsummary_dataaccess_scaffold_vw_usercreditsummary",
-      "community": 29,
-      "community_name": "Database Views & Financial Aggregates",
+      "community": 0,
+      "community_name": "Core Domain Services &",
       "norm_label": "vw_usercreditsummary"
     },
     {
@@ -5940,8 +5940,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_vw_userpurchasetotal",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 29,
+      "community_name": "Database Views & Financial Aggregates",
       "norm_label": "vw_userpurchasetotal.cs"
     },
     {
@@ -5968,8 +5968,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_vw_usersectionaccuracy",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 29,
+      "community_name": "Database Views & Financial Aggregates",
       "norm_label": "vw_usersectionaccuracy.cs"
     },
     {
@@ -6013,8 +6013,8 @@
       },
       "_origin": "ast",
       "id": "src_dataaccess_scaffold_vw_usersectionaccuracyall_dataaccess_scaffold_vw_usersectionaccuracyall",
-      "community": 29,
-      "community_name": "Database Views & Financial Aggregates",
+      "community": 0,
+      "community_name": "Core Domain Services &",
       "norm_label": "vw_usersectionaccuracyall"
     },
     {
@@ -6024,8 +6024,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_services_authservice",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 1,
+      "community_name": "Identity & Authentication Services",
       "norm_label": "authservice.cs"
     },
     {
@@ -6040,8 +6040,8 @@
       },
       "_origin": "ast",
       "id": "csharp_namespace:5cbd584046863bc7",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 20,
+      "community_name": "Authentication Views & ViewModels",
       "norm_label": "services"
     },
     {
@@ -6057,8 +6057,8 @@
       },
       "_origin": "ast",
       "id": "src_services_authservice_services_authexception",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 1,
+      "community_name": "Identity & Authentication Services",
       "norm_label": "authexception"
     },
     {
@@ -6068,8 +6068,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "exception",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 20,
+      "community_name": "Authentication Views & ViewModels",
       "norm_label": "exception"
     },
     {
@@ -6079,8 +6079,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_services_authservice_cs_string",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 1,
+      "community_name": "Identity & Authentication Services",
       "norm_label": "string"
     },
     {
@@ -6356,8 +6356,8 @@
       },
       "_origin": "ast",
       "id": "src_services_authservice_services_authlinkoptions",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 1,
+      "community_name": "Identity & Authentication Services",
       "norm_label": "authlinkoptions"
     },
     {
@@ -6779,8 +6779,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_services_certificateservice",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 20,
+      "community_name": "Authentication Views & ViewModels",
       "norm_label": "certificateservice.cs"
     },
     {
@@ -6796,8 +6796,8 @@
       },
       "_origin": "ast",
       "id": "src_services_certificateservice_services_icertificateservice",
-      "community": 21,
-      "community_name": "Authentication Inputs & Validation",
+      "community": 20,
+      "community_name": "Authentication Views & ViewModels",
       "norm_label": "icertificateservice"
     },
     {
@@ -6813,8 +6813,8 @@
       },
       "_origin": "ast",
       "id": "src_services_certificateservice_services_icertificateservice_getcatalogasync",
-      "community": 21,
-      "community_name": "Authentication Inputs & Validation",
+      "community": 20,
+      "community_name": "Authentication Views & ViewModels",
       "norm_label": ".getcatalogasync()"
     },
     {
@@ -6824,8 +6824,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_services_certificateservice_cs_cancellationtoken",
-      "community": 21,
-      "community_name": "Authentication Inputs & Validation",
+      "community": 20,
+      "community_name": "Authentication Views & ViewModels",
       "norm_label": "cancellationtoken"
     },
     {
@@ -6835,8 +6835,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_services_certificateservice_cs_task",
-      "community": 21,
-      "community_name": "Authentication Inputs & Validation",
+      "community": 20,
+      "community_name": "Authentication Views & ViewModels",
       "norm_label": "task"
     },
     {
@@ -6846,8 +6846,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_services_certificateservice_cs_ireadonlylist",
-      "community": 21,
-      "community_name": "Authentication Inputs & Validation",
+      "community": 20,
+      "community_name": "Authentication Views & ViewModels",
       "norm_label": "ireadonlylist"
     },
     {
@@ -6863,8 +6863,8 @@
       },
       "_origin": "ast",
       "id": "src_services_certificateservice_services_certificateservice",
-      "community": 21,
-      "community_name": "Authentication Inputs & Validation",
+      "community": 20,
+      "community_name": "Authentication Views & ViewModels",
       "norm_label": "certificateservice"
     },
     {
@@ -6880,8 +6880,8 @@
       },
       "_origin": "ast",
       "id": "src_services_certificateservice_services_certificateservice_getcatalogasync",
-      "community": 21,
-      "community_name": "Authentication Inputs & Validation",
+      "community": 20,
+      "community_name": "Authentication Views & ViewModels",
       "norm_label": ".getcatalogasync()"
     },
     {
@@ -6925,8 +6925,8 @@
       },
       "_origin": "ast",
       "id": "src_services_emailsender_services_emaildeliveryexception",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 20,
+      "community_name": "Authentication Views & ViewModels",
       "norm_label": "emaildeliveryexception"
     },
     {
@@ -7071,8 +7071,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_services_learnerservice",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 20,
+      "community_name": "Authentication Views & ViewModels",
       "norm_label": "learnerservice.cs"
     },
     {
@@ -7088,8 +7088,8 @@
       },
       "_origin": "ast",
       "id": "src_services_learnerservice_services_certificateunavailableexception",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 20,
+      "community_name": "Authentication Views & ViewModels",
       "norm_label": "certificateunavailableexception"
     },
     {
@@ -7282,7 +7282,7 @@
       "label": ".GetActiveCertIdAsync()",
       "file_type": "code",
       "source_file": "src/Services/LearnerService.cs",
-      "source_location": "L118",
+      "source_location": "L134",
       "metadata": {
         "namespace": "Services",
         "scope_chain": [
@@ -7299,7 +7299,7 @@
       "label": "ActiveCertificate",
       "file_type": "code",
       "source_file": "src/Services/LearnerService.cs",
-      "source_location": "L121",
+      "source_location": "L137",
       "metadata": {
         "is_nested_type": true,
         "namespace": "Services",
@@ -7309,15 +7309,15 @@
       },
       "_origin": "ast",
       "id": "src_services_learnerservice_services_activecertificate",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 20,
+      "community_name": "Authentication Views & ViewModels",
       "norm_label": "activecertificate"
     },
     {
       "label": ".ActiveCertificatesAsync()",
       "file_type": "code",
       "source_file": "src/Services/LearnerService.cs",
-      "source_location": "L123",
+      "source_location": "L139",
       "metadata": {
         "namespace": "Services",
         "scope_chain": [
@@ -7345,7 +7345,7 @@
       "label": ".ResolveActiveCertIdAsync()",
       "file_type": "code",
       "source_file": "src/Services/LearnerService.cs",
-      "source_location": "L143",
+      "source_location": "L159",
       "metadata": {
         "namespace": "Services",
         "scope_chain": [
@@ -7362,7 +7362,7 @@
       "label": ".SetActiveCertIdAsync()",
       "file_type": "code",
       "source_file": "src/Services/LearnerService.cs",
-      "source_location": "L165",
+      "source_location": "L181",
       "metadata": {
         "namespace": "Services",
         "scope_chain": [
@@ -7379,7 +7379,7 @@
       "label": ".LiveUser()",
       "file_type": "code",
       "source_file": "src/Services/LearnerService.cs",
-      "source_location": "L175",
+      "source_location": "L191",
       "metadata": {
         "namespace": "Services",
         "scope_chain": [
@@ -7407,7 +7407,7 @@
       "label": ".UserMissing()",
       "file_type": "code",
       "source_file": "src/Services/LearnerService.cs",
-      "source_location": "L177",
+      "source_location": "L193",
       "metadata": {
         "namespace": "Services",
         "scope_chain": [
@@ -7438,8 +7438,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_services_practiceservice",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 20,
+      "community_name": "Authentication Views & ViewModels",
       "norm_label": "practiceservice.cs"
     },
     {
@@ -7455,8 +7455,8 @@
       },
       "_origin": "ast",
       "id": "src_services_practiceservice_services_practiceexception",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 20,
+      "community_name": "Authentication Views & ViewModels",
       "norm_label": "practiceexception"
     },
     {
@@ -7466,8 +7466,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_services_practiceservice_cs_string",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 20,
+      "community_name": "Authentication Views & ViewModels",
       "norm_label": "string"
     },
     {
@@ -7677,7 +7677,7 @@
       "label": ".StartSessionAsync()",
       "file_type": "code",
       "source_file": "src/Services/PracticeService.cs",
-      "source_location": "L123",
+      "source_location": "L146",
       "metadata": {
         "namespace": "Services",
         "scope_chain": [
@@ -7694,7 +7694,7 @@
       "label": ".GetSessionInfoAsync()",
       "file_type": "code",
       "source_file": "src/Services/PracticeService.cs",
-      "source_location": "L253",
+      "source_location": "L276",
       "metadata": {
         "namespace": "Services",
         "scope_chain": [
@@ -7711,7 +7711,7 @@
       "label": ".GetQuestionAsync()",
       "file_type": "code",
       "source_file": "src/Services/PracticeService.cs",
-      "source_location": "L277",
+      "source_location": "L300",
       "metadata": {
         "namespace": "Services",
         "scope_chain": [
@@ -7728,7 +7728,7 @@
       "label": ".RevealHintAsync()",
       "file_type": "code",
       "source_file": "src/Services/PracticeService.cs",
-      "source_location": "L362",
+      "source_location": "L385",
       "metadata": {
         "namespace": "Services",
         "scope_chain": [
@@ -7745,7 +7745,7 @@
       "label": ".SubmitAnswerAsync()",
       "file_type": "code",
       "source_file": "src/Services/PracticeService.cs",
-      "source_location": "L385",
+      "source_location": "L408",
       "metadata": {
         "namespace": "Services",
         "scope_chain": [
@@ -7762,7 +7762,7 @@
       "label": ".GetSummaryAsync()",
       "file_type": "code",
       "source_file": "src/Services/PracticeService.cs",
-      "source_location": "L460",
+      "source_location": "L483",
       "metadata": {
         "namespace": "Services",
         "scope_chain": [
@@ -7779,7 +7779,7 @@
       "label": ".PruneOldSessionsAsync()",
       "file_type": "code",
       "source_file": "src/Services/PracticeService.cs",
-      "source_location": "L542",
+      "source_location": "L565",
       "metadata": {
         "namespace": "Services",
         "scope_chain": [
@@ -7929,7 +7929,7 @@
       "label": "Program",
       "file_type": "code",
       "source_file": "src/WebAPI/Program.cs",
-      "source_location": "L722",
+      "source_location": "L734",
       "_origin": "ast",
       "id": "src_webapi_program_program",
       "community": 57,
@@ -9315,8 +9315,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_webmvc_currentuser",
-      "community": 41,
-      "community_name": "UI View: _ViewImports.cshtml",
+      "community": 40,
+      "community_name": "UI View: DashboardViewModel.cs",
       "norm_label": "currentuser.cs"
     },
     {
@@ -9639,8 +9639,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_webmvc_models_errorviewmodel",
-      "community": 47,
-      "community_name": "UI View: ProfileViewModels.cs",
+      "community": 41,
+      "community_name": "UI View: _ViewImports.cshtml",
       "norm_label": "errorviewmodel.cs"
     },
     {
@@ -9656,8 +9656,8 @@
       },
       "_origin": "ast",
       "id": "src_webmvc_models_errorviewmodel_webmvc_models_errorviewmodel",
-      "community": 47,
-      "community_name": "UI View: ProfileViewModels.cs",
+      "community": 41,
+      "community_name": "UI View: _ViewImports.cshtml",
       "norm_label": "errorviewmodel"
     },
     {
@@ -9802,8 +9802,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_webmvc_program",
-      "community": 41,
-      "community_name": "UI View: _ViewImports.cshtml",
+      "community": 40,
+      "community_name": "UI View: DashboardViewModel.cs",
       "norm_label": "program.cs"
     },
     {
@@ -10176,7 +10176,7 @@
       "source_file": "src/WebMVC/Views/Dashboard/Index.cshtml",
       "source_location": "L2",
       "_origin": "ast",
-      "id": "datetimeformatter",
+      "id": "src_webmvc_views_dashboard_index_cshtml_datetimeformatter",
       "community": 95,
       "community_name": "UI View: DashboardViewModel",
       "norm_label": "datetimeformatter"
@@ -10213,6 +10213,17 @@
       "community": 93,
       "community_name": "User Section Accuracy",
       "norm_label": "practicecatalogviewmodel"
+    },
+    {
+      "label": "DateTimeFormatter",
+      "file_type": "code",
+      "source_file": "src/WebMVC/Views/Practice/Index.cshtml",
+      "source_location": "L2",
+      "_origin": "ast",
+      "id": "src_webmvc_views_practice_index_cshtml_datetimeformatter",
+      "community": 93,
+      "community_name": "User Section Accuracy",
+      "norm_label": "datetimeformatter"
     },
     {
       "label": "SessionNotFound.cshtml",
@@ -10562,8 +10573,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_services_tests_accountemailtests",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 22,
+      "community_name": "AI Insights & Analytics",
       "norm_label": "accountemailtests.cs"
     },
     {
@@ -10578,8 +10589,8 @@
       },
       "_origin": "ast",
       "id": "csharp_namespace:32f8250bf4c3a398",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 22,
+      "community_name": "AI Insights & Analytics",
       "norm_label": "services.tests"
     },
     {
@@ -11058,8 +11069,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_services_tests_authservicetests",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 22,
+      "community_name": "AI Insights & Analytics",
       "norm_label": "authservicetests.cs"
     },
     {
@@ -11391,8 +11402,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_services_tests_certificateservicetests",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 21,
+      "community_name": "Authentication Inputs & Validation",
       "norm_label": "certificateservicetests.cs"
     },
     {
@@ -11739,8 +11750,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_services_tests_dbcontextfactory",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 22,
+      "community_name": "AI Insights & Analytics",
       "norm_label": "dbcontextfactory.cs"
     },
     {
@@ -11756,8 +11767,8 @@
       },
       "_origin": "ast",
       "id": "tests_services_tests_dbcontextfactory_services_tests_dbcontextfactory",
-      "community": 21,
-      "community_name": "Authentication Inputs & Validation",
+      "community": 22,
+      "community_name": "AI Insights & Analytics",
       "norm_label": "dbcontextfactory"
     },
     {
@@ -11784,8 +11795,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_services_tests_fakes",
-      "community": 5,
-      "community_name": "Email Delivery & Password Recovery",
+      "community": 22,
+      "community_name": "AI Insights & Analytics",
       "norm_label": "fakes.cs"
     },
     {
@@ -12013,8 +12024,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_services_tests_learnerservicetests",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 8,
+      "community_name": "AI Grading & Score Calculations",
       "norm_label": "learnerservicetests.cs"
     },
     {
@@ -12159,10 +12170,44 @@
       "norm_label": ".seedpracticeasync()"
     },
     {
-      "label": ".Switch_persists_the_active_certificate_for_that_user()",
+      "label": ".SeedInProgressAttemptAsync()",
       "file_type": "code",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
       "source_location": "L62",
+      "metadata": {
+        "namespace": "Services.Tests",
+        "scope_chain": [
+          "s86"
+        ]
+      },
+      "_origin": "ast",
+      "id": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_seedinprogressattemptasync",
+      "community": 2,
+      "community_name": "Certificate Catalog Management",
+      "norm_label": ".seedinprogressattemptasync()"
+    },
+    {
+      "label": ".SeedInProgressPracticeAsync()",
+      "file_type": "code",
+      "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
+      "source_location": "L70",
+      "metadata": {
+        "namespace": "Services.Tests",
+        "scope_chain": [
+          "s86"
+        ]
+      },
+      "_origin": "ast",
+      "id": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_seedinprogresspracticeasync",
+      "community": 2,
+      "community_name": "Certificate Catalog Management",
+      "norm_label": ".seedinprogresspracticeasync()"
+    },
+    {
+      "label": ".Switch_persists_the_active_certificate_for_that_user()",
+      "file_type": "code",
+      "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
+      "source_location": "L77",
       "metadata": {
         "namespace": "Services.Tests",
         "scope_chain": [
@@ -12190,7 +12235,7 @@
       "label": ".Switch_matches_the_code_case_insensitively()",
       "file_type": "code",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L79",
+      "source_location": "L94",
       "metadata": {
         "namespace": "Services.Tests",
         "scope_chain": [
@@ -12207,7 +12252,7 @@
       "label": ".Switch_refuses_an_unknown_or_retired_certificate_and_keeps_the_old_choice()",
       "file_type": "code",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L91",
+      "source_location": "L106",
       "metadata": {
         "namespace": "Services.Tests",
         "scope_chain": [
@@ -12224,7 +12269,7 @@
       "label": ".A_learner_who_never_chose_gets_the_first_active_certificate()",
       "file_type": "code",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L108",
+      "source_location": "L123",
       "metadata": {
         "namespace": "Services.Tests",
         "scope_chain": [
@@ -12241,7 +12286,7 @@
       "label": ".Switch_refuses_a_blank_code_as_a_validation_error()",
       "file_type": "code",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L122",
+      "source_location": "L137",
       "metadata": {
         "namespace": "Services.Tests",
         "scope_chain": [
@@ -12258,7 +12303,7 @@
       "label": ".The_first_fallback_is_saved_so_later_catalog_changes_do_not_move_the_learner()",
       "file_type": "code",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L134",
+      "source_location": "L149",
       "metadata": {
         "namespace": "Services.Tests",
         "scope_chain": [
@@ -12275,7 +12320,7 @@
       "label": ".A_stored_choice_that_was_retired_falls_back_to_an_active_certificate()",
       "file_type": "code",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L149",
+      "source_location": "L164",
       "metadata": {
         "namespace": "Services.Tests",
         "scope_chain": [
@@ -12292,7 +12337,7 @@
       "label": ".Context_reports_the_ledger_balance_and_zero_for_an_empty_ledger()",
       "file_type": "code",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L163",
+      "source_location": "L178",
       "metadata": {
         "namespace": "Services.Tests",
         "scope_chain": [
@@ -12309,7 +12354,7 @@
       "label": ".Dashboard_for_a_new_learner_is_empty()",
       "file_type": "code",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L184",
+      "source_location": "L199",
       "metadata": {
         "namespace": "Services.Tests",
         "scope_chain": [
@@ -12326,7 +12371,7 @@
       "label": ".Dashboard_shows_only_the_active_certificate_history()",
       "file_type": "code",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L199",
+      "source_location": "L214",
       "metadata": {
         "namespace": "Services.Tests",
         "scope_chain": [
@@ -12343,7 +12388,7 @@
       "label": ".Dashboard_keeps_other_learners_out()",
       "file_type": "code",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L236",
+      "source_location": "L251",
       "metadata": {
         "namespace": "Services.Tests",
         "scope_chain": [
@@ -12357,14 +12402,31 @@
       "norm_label": ".dashboard_keeps_other_learners_out()"
     },
     {
+      "label": ".Dashboard_surfaces_unfinished_attempt_and_practice()",
+      "file_type": "code",
+      "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
+      "source_location": "L266",
+      "metadata": {
+        "namespace": "Services.Tests",
+        "scope_chain": [
+          "s86"
+        ]
+      },
+      "_origin": "ast",
+      "id": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_dashboard_surfaces_unfinished_attempt_and_practice",
+      "community": 2,
+      "community_name": "Certificate Catalog Management",
+      "norm_label": ".dashboard_surfaces_unfinished_attempt_and_practice()"
+    },
+    {
       "label": "PracticeServiceTests.cs",
       "file_type": "code",
       "source_file": "tests/Services.Tests/PracticeServiceTests.cs",
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_services_tests_practiceservicetests",
-      "community": 0,
-      "community_name": "Core Domain Services &",
+      "community": 20,
+      "community_name": "Authentication Views & ViewModels",
       "norm_label": "practiceservicetests.cs"
     },
     {
@@ -12800,6 +12862,23 @@
       "norm_label": ".startsession_marks_partially_answered_in_progress_session_as_abandoned()"
     },
     {
+      "label": ".GetPracticeSections_returns_unfinished_session_when_in_progress()",
+      "file_type": "code",
+      "source_file": "tests/Services.Tests/PracticeServiceTests.cs",
+      "source_location": "L383",
+      "metadata": {
+        "namespace": "Services.Tests",
+        "scope_chain": [
+          "s106"
+        ]
+      },
+      "_origin": "ast",
+      "id": "tests_services_tests_practiceservicetests_services_tests_practiceservicetests_getpracticesections_returns_unfinished_session_when_in_progress",
+      "community": 21,
+      "community_name": "Authentication Inputs & Validation",
+      "norm_label": ".getpracticesections_returns_unfinished_session_when_in_progress()"
+    },
+    {
       "label": "net10.0",
       "file_type": "concept",
       "source_file": "tests/Services.Tests/Services.Tests.csproj",
@@ -13000,8 +13079,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_webmvc_tests_practicecontrollertests",
-      "community": 41,
-      "community_name": "UI View: _ViewImports.cshtml",
+      "community": 40,
+      "community_name": "UI View: DashboardViewModel.cs",
       "norm_label": "practicecontrollertests.cs"
     },
     {
@@ -13272,8 +13351,8 @@
       },
       "_origin": "ast",
       "id": "tests_webmvc_tests_practicecontrollertests_webmvc_tests_emptytempdataprovider",
-      "community": 35,
-      "community_name": "Order Gateway Code",
+      "community": 6,
+      "community_name": "MVC API Proxy &",
       "norm_label": "emptytempdataprovider"
     },
     {
@@ -13283,8 +13362,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "itempdataprovider",
-      "community": 35,
-      "community_name": "Order Gateway Code",
+      "community": 6,
+      "community_name": "MVC API Proxy &",
       "norm_label": "itempdataprovider"
     },
     {
@@ -13300,8 +13379,8 @@
       },
       "_origin": "ast",
       "id": "tests_webmvc_tests_practicecontrollertests_webmvc_tests_emptytempdataprovider_loadtempdata",
-      "community": 35,
-      "community_name": "Order Gateway Code",
+      "community": 6,
+      "community_name": "MVC API Proxy &",
       "norm_label": ".loadtempdata()"
     },
     {
@@ -13311,8 +13390,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "tests_webmvc_tests_practicecontrollertests_cs_httpcontext",
-      "community": 35,
-      "community_name": "Order Gateway Code",
+      "community": 6,
+      "community_name": "MVC API Proxy &",
       "norm_label": "httpcontext"
     },
     {
@@ -13322,8 +13401,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "idictionary",
-      "community": 35,
-      "community_name": "Order Gateway Code",
+      "community": 6,
+      "community_name": "MVC API Proxy &",
       "norm_label": "idictionary"
     },
     {
@@ -13339,8 +13418,8 @@
       },
       "_origin": "ast",
       "id": "tests_webmvc_tests_practicecontrollertests_webmvc_tests_emptytempdataprovider_savetempdata",
-      "community": 35,
-      "community_name": "Order Gateway Code",
+      "community": 6,
+      "community_name": "MVC API Proxy &",
       "norm_label": ".savetempdata()"
     },
     {
@@ -13357,8 +13436,8 @@
       },
       "_origin": "ast",
       "id": "tests_webmvc_tests_practicecontrollertests_webmvc_tests_fixedauthentication",
-      "community": 35,
-      "community_name": "Order Gateway Code",
+      "community": 6,
+      "community_name": "MVC API Proxy &",
       "norm_label": "fixedauthentication"
     },
     {
@@ -13368,8 +13447,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "iauthenticationservice",
-      "community": 35,
-      "community_name": "Order Gateway Code",
+      "community": 6,
+      "community_name": "MVC API Proxy &",
       "norm_label": "iauthenticationservice"
     },
     {
@@ -13385,8 +13464,8 @@
       },
       "_origin": "ast",
       "id": "tests_webmvc_tests_practicecontrollertests_webmvc_tests_fixedauthentication_authenticateasync",
-      "community": 35,
-      "community_name": "Order Gateway Code",
+      "community": 6,
+      "community_name": "MVC API Proxy &",
       "norm_label": ".authenticateasync()"
     },
     {
@@ -13396,8 +13475,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "tests_webmvc_tests_practicecontrollertests_cs_authenticateresult",
-      "community": 35,
-      "community_name": "Order Gateway Code",
+      "community": 6,
+      "community_name": "MVC API Proxy &",
       "norm_label": "authenticateresult"
     },
     {
@@ -13413,8 +13492,8 @@
       },
       "_origin": "ast",
       "id": "tests_webmvc_tests_practicecontrollertests_webmvc_tests_fixedauthentication_challengeasync",
-      "community": 35,
-      "community_name": "Order Gateway Code",
+      "community": 6,
+      "community_name": "MVC API Proxy &",
       "norm_label": ".challengeasync()"
     },
     {
@@ -13424,8 +13503,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "tests_webmvc_tests_practicecontrollertests_cs_authenticationproperties",
-      "community": 35,
-      "community_name": "Order Gateway Code",
+      "community": 6,
+      "community_name": "MVC API Proxy &",
       "norm_label": "authenticationproperties"
     },
     {
@@ -13441,8 +13520,8 @@
       },
       "_origin": "ast",
       "id": "tests_webmvc_tests_practicecontrollertests_webmvc_tests_fixedauthentication_forbidasync",
-      "community": 35,
-      "community_name": "Order Gateway Code",
+      "community": 6,
+      "community_name": "MVC API Proxy &",
       "norm_label": ".forbidasync()"
     },
     {
@@ -13458,8 +13537,8 @@
       },
       "_origin": "ast",
       "id": "tests_webmvc_tests_practicecontrollertests_webmvc_tests_fixedauthentication_signinasync",
-      "community": 35,
-      "community_name": "Order Gateway Code",
+      "community": 6,
+      "community_name": "MVC API Proxy &",
       "norm_label": ".signinasync()"
     },
     {
@@ -13469,8 +13548,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "tests_webmvc_tests_practicecontrollertests_cs_claimsprincipal",
-      "community": 35,
-      "community_name": "Order Gateway Code",
+      "community": 6,
+      "community_name": "MVC API Proxy &",
       "norm_label": "claimsprincipal"
     },
     {
@@ -13486,8 +13565,8 @@
       },
       "_origin": "ast",
       "id": "tests_webmvc_tests_practicecontrollertests_webmvc_tests_fixedauthentication_signoutasync",
-      "community": 35,
-      "community_name": "Order Gateway Code",
+      "community": 6,
+      "community_name": "MVC API Proxy &",
       "norm_label": ".signoutasync()"
     },
     {
@@ -22545,24 +22624,24 @@
     },
     {
       "label": "microsoft_entityframeworkcore",
-      "community": 0,
+      "community": 35,
       "external": true,
       "file_type": "concept",
       "norm_label": "microsoft_entityframeworkcore",
       "source_file": "",
       "type": "external",
-      "community_name": "Core Domain Services &",
+      "community_name": "Order Gateway Code",
       "id": "microsoft_entityframeworkcore"
     },
     {
       "label": "microsoft_extensions_logging_abstractions",
-      "community": 0,
+      "community": 22,
       "external": true,
       "file_type": "concept",
       "norm_label": "microsoft_extensions_logging_abstractions",
       "source_file": "",
       "type": "external",
-      "community_name": "Core Domain Services &",
+      "community_name": "AI Insights & Analytics",
       "id": "microsoft_extensions_logging_abstractions"
     },
     {
@@ -22578,24 +22657,24 @@
     },
     {
       "label": "system_collections_generic",
-      "community": 0,
+      "community": 32,
       "external": true,
       "file_type": "concept",
       "norm_label": "system_collections_generic",
       "source_file": "",
       "type": "external",
-      "community_name": "Core Domain Services &",
+      "community_name": "User Admin Attempt",
       "id": "system_collections_generic"
     },
     {
       "label": "system_componentmodel_dataannotations",
-      "community": 0,
+      "community": 8,
       "external": true,
       "file_type": "concept",
       "norm_label": "system_componentmodel_dataannotations",
       "source_file": "",
       "type": "external",
-      "community_name": "Core Domain Services &",
+      "community_name": "AI Grading & Score Calculations",
       "id": "system_componentmodel_dataannotations"
     },
     {
@@ -22611,13 +22690,13 @@
     },
     {
       "label": "microsoft_aspnetcore_identity",
-      "community": 0,
+      "community": 22,
       "external": true,
       "file_type": "concept",
       "norm_label": "microsoft_aspnetcore_identity",
       "source_file": "",
       "type": "external",
-      "community_name": "Core Domain Services &",
+      "community_name": "AI Insights & Analytics",
       "id": "microsoft_aspnetcore_identity"
     },
     {
@@ -22633,35 +22712,35 @@
     },
     {
       "label": "system_buffers_text",
-      "community": 0,
+      "community": 1,
       "external": true,
       "file_type": "concept",
       "norm_label": "system_buffers_text",
       "source_file": "",
       "type": "external",
-      "community_name": "Core Domain Services &",
+      "community_name": "Identity & Authentication Services",
       "id": "system_buffers_text"
     },
     {
       "label": "system_security_cryptography",
-      "community": 0,
+      "community": 1,
       "external": true,
       "file_type": "concept",
       "norm_label": "system_security_cryptography",
       "source_file": "",
       "type": "external",
-      "community_name": "Core Domain Services &",
+      "community_name": "Identity & Authentication Services",
       "id": "system_security_cryptography"
     },
     {
       "label": "system_text",
-      "community": 0,
+      "community": 22,
       "external": true,
       "file_type": "concept",
       "norm_label": "system_text",
       "source_file": "",
       "type": "external",
-      "community_name": "Core Domain Services &",
+      "community_name": "AI Insights & Analytics",
       "id": "system_text"
     },
     {
@@ -22765,24 +22844,24 @@
     },
     {
       "label": "system_security_claims",
-      "community": 41,
+      "community": 40,
       "external": true,
       "file_type": "concept",
       "norm_label": "system_security_claims",
       "source_file": "",
       "type": "external",
-      "community_name": "UI View: _ViewImports.cshtml",
+      "community_name": "UI View: DashboardViewModel.cs",
       "id": "system_security_claims"
     },
     {
       "label": "microsoft_aspnetcore_authentication",
-      "community": 41,
+      "community": 40,
       "external": true,
       "file_type": "concept",
       "norm_label": "microsoft_aspnetcore_authentication",
       "source_file": "",
       "type": "external",
-      "community_name": "UI View: _ViewImports.cshtml",
+      "community_name": "UI View: DashboardViewModel.cs",
       "id": "microsoft_aspnetcore_authentication"
     },
     {
@@ -22875,13 +22954,13 @@
     },
     {
       "label": "system_text_regularexpressions",
-      "community": 5,
+      "community": 22,
       "external": true,
       "file_type": "concept",
       "norm_label": "system_text_regularexpressions",
       "source_file": "",
       "type": "external",
-      "community_name": "Email Delivery & Password Recovery",
+      "community_name": "AI Insights & Analytics",
       "id": "system_text_regularexpressions"
     },
     {
@@ -24931,7 +25010,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/BusinessObjects/LearnerContext.cs",
-      "source_location": "L30",
+      "source_location": "L32",
       "weight": 1.0,
       "source": "src_businessobjects_learnercontext",
       "target": "src_businessobjects_learnercontext_businessobjects_latestresult",
@@ -24961,7 +25040,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/BusinessObjects/LearnerContext.cs",
-      "source_location": "L32",
+      "source_location": "L34",
       "weight": 1.0,
       "source": "src_businessobjects_learnercontext",
       "target": "src_businessobjects_learnercontext_businessobjects_recentattempt",
@@ -24971,7 +25050,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/BusinessObjects/LearnerContext.cs",
-      "source_location": "L41",
+      "source_location": "L43",
       "weight": 1.0,
       "source": "src_businessobjects_learnercontext",
       "target": "src_businessobjects_learnercontext_businessobjects_recentpractice",
@@ -25037,7 +25116,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/BusinessObjects/PracticeModels.cs",
-      "source_location": "L94",
+      "source_location": "L95",
       "weight": 1.0,
       "source": "src_businessobjects_practicemodels",
       "target": "src_businessobjects_practicemodels_businessobjects_gradedpracticeanswerresult",
@@ -25047,7 +25126,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/BusinessObjects/PracticeModels.cs",
-      "source_location": "L66",
+      "source_location": "L67",
       "weight": 1.0,
       "source": "src_businessobjects_practicemodels",
       "target": "src_businessobjects_practicemodels_businessobjects_practicequestionoption",
@@ -25057,7 +25136,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/BusinessObjects/PracticeModels.cs",
-      "source_location": "L71",
+      "source_location": "L72",
       "weight": 1.0,
       "source": "src_businessobjects_practicemodels",
       "target": "src_businessobjects_practicemodels_businessobjects_practicequestionview",
@@ -25087,7 +25166,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/BusinessObjects/PracticeModels.cs",
-      "source_location": "L52",
+      "source_location": "L53",
       "weight": 1.0,
       "source": "src_businessobjects_practicemodels",
       "target": "src_businessobjects_practicemodels_businessobjects_practicesessioninfo",
@@ -25097,7 +25176,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/BusinessObjects/PracticeModels.cs",
-      "source_location": "L116",
+      "source_location": "L117",
       "weight": 1.0,
       "source": "src_businessobjects_practicemodels",
       "target": "src_businessobjects_practicemodels_businessobjects_practicesummary",
@@ -25107,7 +25186,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/BusinessObjects/PracticeModels.cs",
-      "source_location": "L103",
+      "source_location": "L104",
       "weight": 1.0,
       "source": "src_businessobjects_practicemodels",
       "target": "src_businessobjects_practicemodels_businessobjects_questionoutcome",
@@ -25117,7 +25196,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/BusinessObjects/PracticeModels.cs",
-      "source_location": "L29",
+      "source_location": "L30",
       "weight": 1.0,
       "source": "src_businessobjects_practicemodels",
       "target": "src_businessobjects_practicemodels_businessobjects_startpracticesessioninput",
@@ -25127,7 +25206,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/BusinessObjects/PracticeModels.cs",
-      "source_location": "L92",
+      "source_location": "L93",
       "weight": 1.0,
       "source": "src_businessobjects_practicemodels",
       "target": "src_businessobjects_practicemodels_businessobjects_submitpracticeanswerinput",
@@ -25195,7 +25274,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/PracticeService.cs",
-      "source_location": "L123",
+      "source_location": "L146",
       "weight": 1.0,
       "context": "parameter_type",
       "metadata": {
@@ -25237,7 +25316,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/PracticeService.cs",
-      "source_location": "L253",
+      "source_location": "L276",
       "weight": 1.0,
       "context": "generic_arg",
       "metadata": {
@@ -25251,7 +25330,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/PracticeService.cs",
-      "source_location": "L123",
+      "source_location": "L146",
       "weight": 1.0,
       "context": "generic_arg",
       "metadata": {
@@ -25279,7 +25358,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/PracticeService.cs",
-      "source_location": "L277",
+      "source_location": "L300",
       "weight": 1.0,
       "context": "generic_arg",
       "metadata": {
@@ -25307,7 +25386,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/PracticeService.cs",
-      "source_location": "L385",
+      "source_location": "L408",
       "weight": 1.0,
       "context": "parameter_type",
       "metadata": {
@@ -25335,7 +25414,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/PracticeService.cs",
-      "source_location": "L385",
+      "source_location": "L408",
       "weight": 1.0,
       "context": "generic_arg",
       "metadata": {
@@ -25363,7 +25442,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/PracticeService.cs",
-      "source_location": "L460",
+      "source_location": "L483",
       "weight": 1.0,
       "context": "generic_arg",
       "metadata": {
@@ -29457,7 +29536,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/Contracts/LearnerDtos.cs",
-      "source_location": "L27",
+      "source_location": "L29",
       "weight": 1.0,
       "source": "src_contracts_learnerdtos",
       "target": "src_contracts_learnerdtos_contracts_latestresultdto",
@@ -29487,7 +29566,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/Contracts/LearnerDtos.cs",
-      "source_location": "L29",
+      "source_location": "L31",
       "weight": 1.0,
       "source": "src_contracts_learnerdtos",
       "target": "src_contracts_learnerdtos_contracts_recentattemptdto",
@@ -29497,7 +29576,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/Contracts/LearnerDtos.cs",
-      "source_location": "L38",
+      "source_location": "L40",
       "weight": 1.0,
       "source": "src_contracts_learnerdtos",
       "target": "src_contracts_learnerdtos_contracts_recentpracticedto",
@@ -29573,7 +29652,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/Contracts/PracticeDtos.cs",
-      "source_location": "L72",
+      "source_location": "L73",
       "weight": 1.0,
       "source": "src_contracts_practicedtos",
       "target": "src_contracts_practicedtos_contracts_gradedanswerdto",
@@ -29593,7 +29672,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/Contracts/PracticeDtos.cs",
-      "source_location": "L44",
+      "source_location": "L45",
       "weight": 1.0,
       "source": "src_contracts_practicedtos",
       "target": "src_contracts_practicedtos_contracts_practiceoptiondto",
@@ -29603,7 +29682,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/Contracts/PracticeDtos.cs",
-      "source_location": "L49",
+      "source_location": "L50",
       "weight": 1.0,
       "source": "src_contracts_practicedtos",
       "target": "src_contracts_practicedtos_contracts_practicequestiondto",
@@ -29623,7 +29702,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/Contracts/PracticeDtos.cs",
-      "source_location": "L30",
+      "source_location": "L31",
       "weight": 1.0,
       "source": "src_contracts_practicedtos",
       "target": "src_contracts_practicedtos_contracts_practicesessiondto",
@@ -29633,7 +29712,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/Contracts/PracticeDtos.cs",
-      "source_location": "L94",
+      "source_location": "L95",
       "weight": 1.0,
       "source": "src_contracts_practicedtos",
       "target": "src_contracts_practicedtos_contracts_practicesummarydto",
@@ -29643,7 +29722,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/Contracts/PracticeDtos.cs",
-      "source_location": "L81",
+      "source_location": "L82",
       "weight": 1.0,
       "source": "src_contracts_practicedtos",
       "target": "src_contracts_practicedtos_contracts_questionoutcomedto",
@@ -29653,7 +29732,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/Contracts/PracticeDtos.cs",
-      "source_location": "L112",
+      "source_location": "L113",
       "weight": 1.0,
       "source": "src_contracts_practicedtos",
       "target": "src_contracts_practicedtos_contracts_revealhintresponse",
@@ -29663,7 +29742,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/Contracts/PracticeDtos.cs",
-      "source_location": "L24",
+      "source_location": "L25",
       "weight": 1.0,
       "source": "src_contracts_practicedtos",
       "target": "src_contracts_practicedtos_contracts_startpracticerequest",
@@ -29673,7 +29752,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/Contracts/PracticeDtos.cs",
-      "source_location": "L70",
+      "source_location": "L71",
       "weight": 1.0,
       "source": "src_contracts_practicedtos",
       "target": "src_contracts_practicedtos_contracts_submitpracticeanswerrequest",
@@ -38730,7 +38809,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/LearnerService.cs",
-      "source_location": "L175",
+      "source_location": "L191",
       "weight": 1.0,
       "context": "generic_arg",
       "metadata": {
@@ -41848,7 +41927,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/LearnerService.cs",
-      "source_location": "L121",
+      "source_location": "L137",
       "weight": 1.0,
       "source": "src_services_learnerservice",
       "target": "src_services_learnerservice_services_activecertificate",
@@ -42027,7 +42106,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/LearnerService.cs",
-      "source_location": "L123",
+      "source_location": "L139",
       "weight": 1.0,
       "context": "parameter_type",
       "metadata": {
@@ -42041,7 +42120,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/LearnerService.cs",
-      "source_location": "L118",
+      "source_location": "L134",
       "weight": 1.0,
       "context": "parameter_type",
       "metadata": {
@@ -42083,7 +42162,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/LearnerService.cs",
-      "source_location": "L143",
+      "source_location": "L159",
       "weight": 1.0,
       "context": "parameter_type",
       "metadata": {
@@ -42097,7 +42176,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/LearnerService.cs",
-      "source_location": "L165",
+      "source_location": "L181",
       "weight": 1.0,
       "context": "parameter_type",
       "metadata": {
@@ -42167,7 +42246,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/LearnerService.cs",
-      "source_location": "L123",
+      "source_location": "L139",
       "weight": 1.0,
       "context": "return_type",
       "metadata": {
@@ -42181,7 +42260,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/LearnerService.cs",
-      "source_location": "L118",
+      "source_location": "L134",
       "weight": 1.0,
       "context": "return_type",
       "metadata": {
@@ -42223,7 +42302,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/LearnerService.cs",
-      "source_location": "L143",
+      "source_location": "L159",
       "weight": 1.0,
       "context": "return_type",
       "metadata": {
@@ -42237,7 +42316,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/LearnerService.cs",
-      "source_location": "L165",
+      "source_location": "L181",
       "weight": 1.0,
       "context": "return_type",
       "metadata": {
@@ -42278,7 +42357,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "src/Services/PracticeService.cs",
-      "source_location": "L127",
+      "source_location": "L150",
       "weight": 1.0,
       "source": "src_services_practiceservice_services_practiceservice_startsessionasync",
       "target": "src_services_learnerservice_services_ilearnerservice_getactivecertidasync"
@@ -42301,7 +42380,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/LearnerService.cs",
-      "source_location": "L123",
+      "source_location": "L139",
       "weight": 1.0,
       "source": "src_services_learnerservice_services_learnerservice",
       "target": "src_services_learnerservice_services_learnerservice_activecertificatesasync",
@@ -42311,7 +42390,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/LearnerService.cs",
-      "source_location": "L118",
+      "source_location": "L134",
       "weight": 1.0,
       "source": "src_services_learnerservice_services_learnerservice",
       "target": "src_services_learnerservice_services_learnerservice_getactivecertidasync",
@@ -42341,7 +42420,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/LearnerService.cs",
-      "source_location": "L175",
+      "source_location": "L191",
       "weight": 1.0,
       "source": "src_services_learnerservice_services_learnerservice",
       "target": "src_services_learnerservice_services_learnerservice_liveuser",
@@ -42351,7 +42430,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/LearnerService.cs",
-      "source_location": "L143",
+      "source_location": "L159",
       "weight": 1.0,
       "source": "src_services_learnerservice_services_learnerservice",
       "target": "src_services_learnerservice_services_learnerservice_resolveactivecertidasync",
@@ -42361,7 +42440,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/LearnerService.cs",
-      "source_location": "L165",
+      "source_location": "L181",
       "weight": 1.0,
       "source": "src_services_learnerservice_services_learnerservice",
       "target": "src_services_learnerservice_services_learnerservice_setactivecertidasync",
@@ -42381,7 +42460,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/LearnerService.cs",
-      "source_location": "L177",
+      "source_location": "L193",
       "weight": 1.0,
       "source": "src_services_learnerservice_services_learnerservice",
       "target": "src_services_learnerservice_services_learnerservice_usermissing",
@@ -42447,7 +42526,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/LearnerService.cs",
-      "source_location": "L119",
+      "source_location": "L135",
       "weight": 1.0,
       "source": "src_services_learnerservice_services_learnerservice_getactivecertidasync",
       "target": "src_services_learnerservice_services_learnerservice_activecertificatesasync",
@@ -42458,7 +42537,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/LearnerService.cs",
-      "source_location": "L119",
+      "source_location": "L135",
       "weight": 1.0,
       "source": "src_services_learnerservice_services_learnerservice_getactivecertidasync",
       "target": "src_services_learnerservice_services_learnerservice_resolveactivecertidasync",
@@ -42468,7 +42547,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/LearnerService.cs",
-      "source_location": "L123",
+      "source_location": "L139",
       "weight": 1.0,
       "context": "generic_arg",
       "metadata": {
@@ -42482,7 +42561,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/LearnerService.cs",
-      "source_location": "L123",
+      "source_location": "L139",
       "weight": 1.0,
       "context": "generic_arg",
       "metadata": {
@@ -42496,7 +42575,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/LearnerService.cs",
-      "source_location": "L143",
+      "source_location": "L159",
       "weight": 1.0,
       "context": "parameter_type",
       "metadata": {
@@ -42510,7 +42589,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/LearnerService.cs",
-      "source_location": "L143",
+      "source_location": "L159",
       "weight": 1.0,
       "context": "generic_arg",
       "metadata": {
@@ -42525,7 +42604,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/LearnerService.cs",
-      "source_location": "L146",
+      "source_location": "L162",
       "weight": 1.0,
       "source": "src_services_learnerservice_services_learnerservice_resolveactivecertidasync",
       "target": "src_services_learnerservice_services_learnerservice_liveuser",
@@ -42536,7 +42615,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/LearnerService.cs",
-      "source_location": "L159",
+      "source_location": "L175",
       "weight": 1.0,
       "source": "src_services_learnerservice_services_learnerservice_resolveactivecertidasync",
       "target": "src_services_learnerservice_services_learnerservice_setactivecertidasync",
@@ -42547,7 +42626,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/LearnerService.cs",
-      "source_location": "L149",
+      "source_location": "L165",
       "weight": 1.0,
       "source": "src_services_learnerservice_services_learnerservice_resolveactivecertidasync",
       "target": "src_services_learnerservice_services_learnerservice_usermissing",
@@ -42558,7 +42637,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/LearnerService.cs",
-      "source_location": "L167",
+      "source_location": "L183",
       "weight": 1.0,
       "source": "src_services_learnerservice_services_learnerservice_setactivecertidasync",
       "target": "src_services_learnerservice_services_learnerservice_liveuser",
@@ -42569,7 +42648,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/LearnerService.cs",
-      "source_location": "L171",
+      "source_location": "L187",
       "weight": 1.0,
       "source": "src_services_learnerservice_services_learnerservice_setactivecertidasync",
       "target": "src_services_learnerservice_services_learnerservice_usermissing",
@@ -42579,7 +42658,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/LearnerService.cs",
-      "source_location": "L175",
+      "source_location": "L191",
       "weight": 1.0,
       "context": "return_type",
       "metadata": {
@@ -42593,7 +42672,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/LearnerService.cs",
-      "source_location": "L177",
+      "source_location": "L193",
       "weight": 1.0,
       "context": "return_type",
       "metadata": {
@@ -42892,7 +42971,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/PracticeService.cs",
-      "source_location": "L277",
+      "source_location": "L300",
       "weight": 1.0,
       "context": "parameter_type",
       "metadata": {
@@ -42906,7 +42985,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/PracticeService.cs",
-      "source_location": "L253",
+      "source_location": "L276",
       "weight": 1.0,
       "context": "parameter_type",
       "metadata": {
@@ -42920,7 +42999,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/PracticeService.cs",
-      "source_location": "L460",
+      "source_location": "L483",
       "weight": 1.0,
       "context": "parameter_type",
       "metadata": {
@@ -42934,7 +43013,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/PracticeService.cs",
-      "source_location": "L542",
+      "source_location": "L565",
       "weight": 1.0,
       "context": "parameter_type",
       "metadata": {
@@ -42948,7 +43027,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/PracticeService.cs",
-      "source_location": "L362",
+      "source_location": "L385",
       "weight": 1.0,
       "context": "parameter_type",
       "metadata": {
@@ -42962,7 +43041,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/PracticeService.cs",
-      "source_location": "L123",
+      "source_location": "L146",
       "weight": 1.0,
       "context": "parameter_type",
       "metadata": {
@@ -42976,7 +43055,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/PracticeService.cs",
-      "source_location": "L385",
+      "source_location": "L408",
       "weight": 1.0,
       "context": "parameter_type",
       "metadata": {
@@ -43088,7 +43167,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/PracticeService.cs",
-      "source_location": "L277",
+      "source_location": "L300",
       "weight": 1.0,
       "context": "return_type",
       "metadata": {
@@ -43102,7 +43181,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/PracticeService.cs",
-      "source_location": "L253",
+      "source_location": "L276",
       "weight": 1.0,
       "context": "return_type",
       "metadata": {
@@ -43116,7 +43195,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/PracticeService.cs",
-      "source_location": "L460",
+      "source_location": "L483",
       "weight": 1.0,
       "context": "return_type",
       "metadata": {
@@ -43130,7 +43209,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/PracticeService.cs",
-      "source_location": "L542",
+      "source_location": "L565",
       "weight": 1.0,
       "context": "return_type",
       "metadata": {
@@ -43144,7 +43223,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/PracticeService.cs",
-      "source_location": "L362",
+      "source_location": "L385",
       "weight": 1.0,
       "context": "return_type",
       "metadata": {
@@ -43158,7 +43237,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/PracticeService.cs",
-      "source_location": "L123",
+      "source_location": "L146",
       "weight": 1.0,
       "context": "return_type",
       "metadata": {
@@ -43172,7 +43251,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/PracticeService.cs",
-      "source_location": "L385",
+      "source_location": "L408",
       "weight": 1.0,
       "context": "return_type",
       "metadata": {
@@ -43210,7 +43289,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/PracticeService.cs",
-      "source_location": "L277",
+      "source_location": "L300",
       "weight": 1.0,
       "source": "src_services_practiceservice_services_practiceservice",
       "target": "src_services_practiceservice_services_practiceservice_getquestionasync",
@@ -43220,7 +43299,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/PracticeService.cs",
-      "source_location": "L253",
+      "source_location": "L276",
       "weight": 1.0,
       "source": "src_services_practiceservice_services_practiceservice",
       "target": "src_services_practiceservice_services_practiceservice_getsessioninfoasync",
@@ -43230,7 +43309,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/PracticeService.cs",
-      "source_location": "L460",
+      "source_location": "L483",
       "weight": 1.0,
       "source": "src_services_practiceservice_services_practiceservice",
       "target": "src_services_practiceservice_services_practiceservice_getsummaryasync",
@@ -43240,7 +43319,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/PracticeService.cs",
-      "source_location": "L542",
+      "source_location": "L565",
       "weight": 1.0,
       "source": "src_services_practiceservice_services_practiceservice",
       "target": "src_services_practiceservice_services_practiceservice_pruneoldsessionsasync",
@@ -43250,7 +43329,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/PracticeService.cs",
-      "source_location": "L362",
+      "source_location": "L385",
       "weight": 1.0,
       "source": "src_services_practiceservice_services_practiceservice",
       "target": "src_services_practiceservice_services_practiceservice_revealhintasync",
@@ -43260,7 +43339,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/PracticeService.cs",
-      "source_location": "L123",
+      "source_location": "L146",
       "weight": 1.0,
       "source": "src_services_practiceservice_services_practiceservice",
       "target": "src_services_practiceservice_services_practiceservice_startsessionasync",
@@ -43270,7 +43349,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/PracticeService.cs",
-      "source_location": "L385",
+      "source_location": "L408",
       "weight": 1.0,
       "source": "src_services_practiceservice_services_practiceservice",
       "target": "src_services_practiceservice_services_practiceservice_submitanswerasync",
@@ -43281,7 +43360,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/PracticeService.cs",
-      "source_location": "L236",
+      "source_location": "L259",
       "weight": 1.0,
       "source": "src_services_practiceservice_services_practiceservice_startsessionasync",
       "target": "src_services_practiceservice_services_practiceservice_pruneoldsessionsasync",
@@ -43292,7 +43371,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/PracticeService.cs",
-      "source_location": "L441",
+      "source_location": "L464",
       "weight": 1.0,
       "source": "src_services_practiceservice_services_practiceservice_submitanswerasync",
       "target": "src_services_practiceservice_services_practiceservice_pruneoldsessionsasync",
@@ -43303,7 +43382,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/Services/PracticeService.cs",
-      "source_location": "L473",
+      "source_location": "L496",
       "weight": 1.0,
       "source": "src_services_practiceservice_services_practiceservice_getsummaryasync",
       "target": "src_services_practiceservice_services_practiceservice_pruneoldsessionsasync",
@@ -43525,7 +43604,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/WebAPI/Program.cs",
-      "source_location": "L722",
+      "source_location": "L734",
       "weight": 1.0,
       "source": "src_webapi_program",
       "target": "src_webapi_program_program",
@@ -47481,7 +47560,7 @@
       "source_location": "L2",
       "weight": 1.0,
       "source": "src_webmvc_views_dashboard_index",
-      "target": "datetimeformatter",
+      "target": "src_webmvc_views_dashboard_index_cshtml_datetimeformatter",
       "confidence_score": 1.0
     },
     {
@@ -47492,6 +47571,16 @@
       "weight": 1.0,
       "source": "src_webmvc_views_practice_index",
       "target": "practicecatalogviewmodel",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "src/WebMVC/Views/Practice/Index.cshtml",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "src_webmvc_views_practice_index",
+      "target": "src_webmvc_views_practice_index_cshtml_datetimeformatter",
       "confidence_score": 1.0
     },
     {
@@ -51075,7 +51164,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L156",
+      "source_location": "L171",
       "weight": 1.0,
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_a_stored_choice_that_was_retired_falls_back_to_an_active_certificate",
       "target": "tests_services_tests_databasefixture_services_tests_databasefixture_sqlasync"
@@ -51086,7 +51175,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L174",
+      "source_location": "L189",
       "weight": 1.0,
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_context_reports_the_ledger_balance_and_zero_for_an_empty_ledger",
       "target": "tests_services_tests_databasefixture_services_tests_databasefixture_sqlasync"
@@ -51111,6 +51200,28 @@
       "source_location": "L47",
       "weight": 1.0,
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_seedgradedattemptasync",
+      "target": "tests_services_tests_databasefixture_services_tests_databasefixture_sqlasync"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
+      "source_location": "L63",
+      "weight": 1.0,
+      "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_seedinprogressattemptasync",
+      "target": "tests_services_tests_databasefixture_services_tests_databasefixture_sqlasync"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
+      "source_location": "L71",
+      "weight": 1.0,
+      "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_seedinprogresspracticeasync",
       "target": "tests_services_tests_databasefixture_services_tests_databasefixture_sqlasync"
     },
     {
@@ -51240,7 +51351,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L116",
+      "source_location": "L131",
       "weight": 1.0,
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_a_learner_who_never_chose_gets_the_first_active_certificate",
       "target": "tests_services_tests_dbcontextfactory_services_tests_dbcontextfactory_create"
@@ -51273,7 +51384,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L143",
+      "source_location": "L158",
       "weight": 1.0,
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_the_first_fallback_is_saved_so_later_catalog_changes_do_not_move_the_learner",
       "target": "tests_services_tests_dbcontextfactory_services_tests_dbcontextfactory_create"
@@ -51653,7 +51764,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L108",
+      "source_location": "L123",
       "weight": 1.0,
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests",
       "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_a_learner_who_never_chose_gets_the_first_active_certificate",
@@ -51663,7 +51774,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L149",
+      "source_location": "L164",
       "weight": 1.0,
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests",
       "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_a_stored_choice_that_was_retired_falls_back_to_an_active_certificate",
@@ -51673,7 +51784,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L163",
+      "source_location": "L178",
       "weight": 1.0,
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests",
       "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_context_reports_the_ledger_balance_and_zero_for_an_empty_ledger",
@@ -51693,7 +51804,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L184",
+      "source_location": "L199",
       "weight": 1.0,
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests",
       "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_dashboard_for_a_new_learner_is_empty",
@@ -51703,7 +51814,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L236",
+      "source_location": "L251",
       "weight": 1.0,
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests",
       "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_dashboard_keeps_other_learners_out",
@@ -51713,10 +51824,20 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L199",
+      "source_location": "L214",
       "weight": 1.0,
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests",
       "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_dashboard_shows_only_the_active_certificate_history",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
+      "source_location": "L266",
+      "weight": 1.0,
+      "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests",
+      "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_dashboard_surfaces_unfinished_attempt_and_practice",
       "confidence_score": 1.0
     },
     {
@@ -51743,6 +51864,26 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
+      "source_location": "L62",
+      "weight": 1.0,
+      "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests",
+      "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_seedinprogressattemptasync",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
+      "source_location": "L70",
+      "weight": 1.0,
+      "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests",
+      "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_seedinprogresspracticeasync",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
       "source_location": "L15",
       "weight": 1.0,
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests",
@@ -51763,7 +51904,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L79",
+      "source_location": "L94",
       "weight": 1.0,
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests",
       "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_switch_matches_the_code_case_insensitively",
@@ -51773,7 +51914,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L62",
+      "source_location": "L77",
       "weight": 1.0,
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests",
       "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_switch_persists_the_active_certificate_for_that_user",
@@ -51783,7 +51924,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L122",
+      "source_location": "L137",
       "weight": 1.0,
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests",
       "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_switch_refuses_a_blank_code_as_a_validation_error",
@@ -51793,7 +51934,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L91",
+      "source_location": "L106",
       "weight": 1.0,
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests",
       "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_switch_refuses_an_unknown_or_retired_certificate_and_keeps_the_old_choice",
@@ -51803,7 +51944,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L134",
+      "source_location": "L149",
       "weight": 1.0,
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests",
       "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_the_first_fallback_is_saved_so_later_catalog_changes_do_not_move_the_learner",
@@ -51824,7 +51965,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L111",
+      "source_location": "L126",
       "weight": 1.0,
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_a_learner_who_never_chose_gets_the_first_active_certificate",
       "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_unique",
@@ -51835,7 +51976,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L152",
+      "source_location": "L167",
       "weight": 1.0,
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_a_stored_choice_that_was_retired_falls_back_to_an_active_certificate",
       "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_unique",
@@ -51846,7 +51987,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L166",
+      "source_location": "L181",
       "weight": 1.0,
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_context_reports_the_ledger_balance_and_zero_for_an_empty_ledger",
       "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_unique",
@@ -51857,7 +51998,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L187",
+      "source_location": "L202",
       "weight": 1.0,
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_dashboard_for_a_new_learner_is_empty",
       "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_unique",
@@ -51868,7 +52009,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L239",
+      "source_location": "L254",
       "weight": 1.0,
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_dashboard_keeps_other_learners_out",
       "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_unique",
@@ -51879,7 +52020,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L202",
+      "source_location": "L217",
       "weight": 1.0,
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_dashboard_shows_only_the_active_certificate_history",
       "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_unique",
@@ -51890,7 +52031,18 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L82",
+      "source_location": "L269",
+      "weight": 1.0,
+      "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_dashboard_surfaces_unfinished_attempt_and_practice",
+      "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_unique",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
+      "source_location": "L97",
       "weight": 1.0,
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_switch_matches_the_code_case_insensitively",
       "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_unique",
@@ -51901,7 +52053,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L65",
+      "source_location": "L80",
       "weight": 1.0,
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_switch_persists_the_active_certificate_for_that_user",
       "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_unique",
@@ -51912,7 +52064,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L125",
+      "source_location": "L140",
       "weight": 1.0,
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_switch_refuses_a_blank_code_as_a_validation_error",
       "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_unique",
@@ -51923,7 +52075,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L94",
+      "source_location": "L109",
       "weight": 1.0,
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_switch_refuses_an_unknown_or_retired_certificate_and_keeps_the_old_choice",
       "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_unique",
@@ -51934,7 +52086,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L142",
+      "source_location": "L157",
       "weight": 1.0,
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_the_first_fallback_is_saved_so_later_catalog_changes_do_not_move_the_learner",
       "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_unique",
@@ -51945,7 +52097,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L114",
+      "source_location": "L129",
       "weight": 1.0,
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_a_learner_who_never_chose_gets_the_first_active_certificate",
       "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_createservice",
@@ -51956,7 +52108,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L158",
+      "source_location": "L173",
       "weight": 1.0,
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_a_stored_choice_that_was_retired_falls_back_to_an_active_certificate",
       "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_createservice",
@@ -51967,7 +52119,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L172",
+      "source_location": "L187",
       "weight": 1.0,
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_context_reports_the_ledger_balance_and_zero_for_an_empty_ledger",
       "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_createservice",
@@ -51992,7 +52144,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L191",
+      "source_location": "L206",
       "weight": 1.0,
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_dashboard_for_a_new_learner_is_empty",
       "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_createservice",
@@ -52003,7 +52155,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L246",
+      "source_location": "L261",
       "weight": 1.0,
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_dashboard_keeps_other_learners_out",
       "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_createservice",
@@ -52014,7 +52166,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L212",
+      "source_location": "L227",
       "weight": 1.0,
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_dashboard_shows_only_the_active_certificate_history",
       "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_createservice",
@@ -52025,31 +52177,9 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L86",
+      "source_location": "L276",
       "weight": 1.0,
-      "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_switch_matches_the_code_case_insensitively",
-      "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_createservice",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L71",
-      "weight": 1.0,
-      "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_switch_persists_the_active_certificate_for_that_user",
-      "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_createservice",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L129",
-      "weight": 1.0,
-      "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_switch_refuses_a_blank_code_as_a_validation_error",
+      "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_dashboard_surfaces_unfinished_attempt_and_practice",
       "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_createservice",
       "confidence_score": 1.0
     },
@@ -52060,6 +52190,39 @@
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
       "source_location": "L101",
       "weight": 1.0,
+      "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_switch_matches_the_code_case_insensitively",
+      "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_createservice",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
+      "source_location": "L86",
+      "weight": 1.0,
+      "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_switch_persists_the_active_certificate_for_that_user",
+      "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_createservice",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
+      "source_location": "L144",
+      "weight": 1.0,
+      "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_switch_refuses_a_blank_code_as_a_validation_error",
+      "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_createservice",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
+      "source_location": "L116",
+      "weight": 1.0,
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_switch_refuses_an_unknown_or_retired_certificate_and_keeps_the_old_choice",
       "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_createservice",
       "confidence_score": 1.0
@@ -52069,7 +52232,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L138",
+      "source_location": "L153",
       "weight": 1.0,
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_the_first_fallback_is_saved_so_later_catalog_changes_do_not_move_the_learner",
       "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_createservice",
@@ -52080,7 +52243,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L112",
+      "source_location": "L127",
       "weight": 1.0,
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_a_learner_who_never_chose_gets_the_first_active_certificate",
       "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_seedlearnerasync",
@@ -52091,7 +52254,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L155",
+      "source_location": "L170",
       "weight": 1.0,
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_a_stored_choice_that_was_retired_falls_back_to_an_active_certificate",
       "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_seedlearnerasync",
@@ -52102,7 +52265,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L168",
+      "source_location": "L183",
       "weight": 1.0,
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_context_reports_the_ledger_balance_and_zero_for_an_empty_ledger",
       "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_seedlearnerasync",
@@ -52113,7 +52276,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L189",
+      "source_location": "L204",
       "weight": 1.0,
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_dashboard_for_a_new_learner_is_empty",
       "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_seedlearnerasync",
@@ -52124,7 +52287,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L241",
+      "source_location": "L256",
       "weight": 1.0,
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_dashboard_keeps_other_learners_out",
       "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_seedlearnerasync",
@@ -52135,9 +52298,20 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L206",
+      "source_location": "L221",
       "weight": 1.0,
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_dashboard_shows_only_the_active_certificate_history",
+      "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_seedlearnerasync",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
+      "source_location": "L271",
+      "weight": 1.0,
+      "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_dashboard_surfaces_unfinished_attempt_and_practice",
       "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_seedlearnerasync",
       "confidence_score": 1.0
     },
@@ -52160,7 +52334,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L84",
+      "source_location": "L99",
       "weight": 1.0,
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_switch_matches_the_code_case_insensitively",
       "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_seedlearnerasync",
@@ -52171,7 +52345,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L69",
+      "source_location": "L84",
       "weight": 1.0,
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_switch_persists_the_active_certificate_for_that_user",
       "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_seedlearnerasync",
@@ -52182,7 +52356,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L127",
+      "source_location": "L142",
       "weight": 1.0,
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_switch_refuses_a_blank_code_as_a_validation_error",
       "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_seedlearnerasync",
@@ -52193,7 +52367,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L98",
+      "source_location": "L113",
       "weight": 1.0,
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_switch_refuses_an_unknown_or_retired_certificate_and_keeps_the_old_choice",
       "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_seedlearnerasync",
@@ -52204,7 +52378,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L137",
+      "source_location": "L152",
       "weight": 1.0,
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_the_first_fallback_is_saved_so_later_catalog_changes_do_not_move_the_learner",
       "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_seedlearnerasync",
@@ -52214,7 +52388,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L108",
+      "source_location": "L123",
       "weight": 1.0,
       "context": "return_type",
       "metadata": {
@@ -52228,7 +52402,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L149",
+      "source_location": "L164",
       "weight": 1.0,
       "context": "return_type",
       "metadata": {
@@ -52242,7 +52416,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L163",
+      "source_location": "L178",
       "weight": 1.0,
       "context": "return_type",
       "metadata": {
@@ -52256,7 +52430,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L184",
+      "source_location": "L199",
       "weight": 1.0,
       "context": "return_type",
       "metadata": {
@@ -52270,7 +52444,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L236",
+      "source_location": "L251",
       "weight": 1.0,
       "context": "return_type",
       "metadata": {
@@ -52284,13 +52458,27 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L199",
+      "source_location": "L214",
       "weight": 1.0,
       "context": "return_type",
       "metadata": {
         "ref_token": "Task"
       },
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_dashboard_shows_only_the_active_certificate_history",
+      "target": "tests_services_tests_learnerservicetests_cs_task",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
+      "source_location": "L266",
+      "weight": 1.0,
+      "context": "return_type",
+      "metadata": {
+        "ref_token": "Task"
+      },
+      "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_dashboard_surfaces_unfinished_attempt_and_practice",
       "target": "tests_services_tests_learnerservicetests_cs_task",
       "confidence_score": 1.0
     },
@@ -52326,6 +52514,34 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
+      "source_location": "L62",
+      "weight": 1.0,
+      "context": "return_type",
+      "metadata": {
+        "ref_token": "Task"
+      },
+      "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_seedinprogressattemptasync",
+      "target": "tests_services_tests_learnerservicetests_cs_task",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
+      "source_location": "L70",
+      "weight": 1.0,
+      "context": "return_type",
+      "metadata": {
+        "ref_token": "Task"
+      },
+      "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_seedinprogresspracticeasync",
+      "target": "tests_services_tests_learnerservicetests_cs_task",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
       "source_location": "L55",
       "weight": 1.0,
       "context": "return_type",
@@ -52340,7 +52556,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L79",
+      "source_location": "L94",
       "weight": 1.0,
       "context": "return_type",
       "metadata": {
@@ -52354,7 +52570,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L62",
+      "source_location": "L77",
       "weight": 1.0,
       "context": "return_type",
       "metadata": {
@@ -52368,7 +52584,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L122",
+      "source_location": "L137",
       "weight": 1.0,
       "context": "return_type",
       "metadata": {
@@ -52382,7 +52598,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L91",
+      "source_location": "L106",
       "weight": 1.0,
       "context": "return_type",
       "metadata": {
@@ -52396,7 +52612,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L134",
+      "source_location": "L149",
       "weight": 1.0,
       "context": "return_type",
       "metadata": {
@@ -52404,94 +52620,6 @@
       },
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_the_first_fallback_is_saved_so_later_catalog_changes_do_not_move_the_learner",
       "target": "tests_services_tests_learnerservicetests_cs_task",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L111",
-      "weight": 1.0,
-      "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_a_learner_who_never_chose_gets_the_first_active_certificate",
-      "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_seedcertificateasync",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L153",
-      "weight": 1.0,
-      "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_a_stored_choice_that_was_retired_falls_back_to_an_active_certificate",
-      "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_seedcertificateasync",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L167",
-      "weight": 1.0,
-      "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_context_reports_the_ledger_balance_and_zero_for_an_empty_ledger",
-      "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_seedcertificateasync",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L188",
-      "weight": 1.0,
-      "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_dashboard_for_a_new_learner_is_empty",
-      "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_seedcertificateasync",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L240",
-      "weight": 1.0,
-      "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_dashboard_keeps_other_learners_out",
-      "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_seedcertificateasync",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L204",
-      "weight": 1.0,
-      "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_dashboard_shows_only_the_active_certificate_history",
-      "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_seedcertificateasync",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L83",
-      "weight": 1.0,
-      "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_switch_matches_the_code_case_insensitively",
-      "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_seedcertificateasync",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L67",
-      "weight": 1.0,
-      "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_switch_persists_the_active_certificate_for_that_user",
-      "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_seedcertificateasync",
       "confidence_score": 1.0
     },
     {
@@ -52501,6 +52629,105 @@
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
       "source_location": "L126",
       "weight": 1.0,
+      "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_a_learner_who_never_chose_gets_the_first_active_certificate",
+      "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_seedcertificateasync",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
+      "source_location": "L168",
+      "weight": 1.0,
+      "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_a_stored_choice_that_was_retired_falls_back_to_an_active_certificate",
+      "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_seedcertificateasync",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
+      "source_location": "L182",
+      "weight": 1.0,
+      "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_context_reports_the_ledger_balance_and_zero_for_an_empty_ledger",
+      "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_seedcertificateasync",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
+      "source_location": "L203",
+      "weight": 1.0,
+      "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_dashboard_for_a_new_learner_is_empty",
+      "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_seedcertificateasync",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
+      "source_location": "L255",
+      "weight": 1.0,
+      "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_dashboard_keeps_other_learners_out",
+      "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_seedcertificateasync",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
+      "source_location": "L219",
+      "weight": 1.0,
+      "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_dashboard_shows_only_the_active_certificate_history",
+      "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_seedcertificateasync",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
+      "source_location": "L270",
+      "weight": 1.0,
+      "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_dashboard_surfaces_unfinished_attempt_and_practice",
+      "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_seedcertificateasync",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
+      "source_location": "L98",
+      "weight": 1.0,
+      "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_switch_matches_the_code_case_insensitively",
+      "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_seedcertificateasync",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
+      "source_location": "L82",
+      "weight": 1.0,
+      "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_switch_persists_the_active_certificate_for_that_user",
+      "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_seedcertificateasync",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
+      "source_location": "L141",
+      "weight": 1.0,
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_switch_refuses_a_blank_code_as_a_validation_error",
       "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_seedcertificateasync",
       "confidence_score": 1.0
@@ -52510,7 +52737,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L96",
+      "source_location": "L111",
       "weight": 1.0,
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_switch_refuses_an_unknown_or_retired_certificate_and_keeps_the_old_choice",
       "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_seedcertificateasync",
@@ -52521,7 +52748,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L142",
+      "source_location": "L157",
       "weight": 1.0,
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_the_first_fallback_is_saved_so_later_catalog_changes_do_not_move_the_learner",
       "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_seedcertificateasync",
@@ -52532,7 +52759,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L243",
+      "source_location": "L258",
       "weight": 1.0,
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_dashboard_keeps_other_learners_out",
       "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_seedgradedattemptasync",
@@ -52543,7 +52770,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L207",
+      "source_location": "L222",
       "weight": 1.0,
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_dashboard_shows_only_the_active_certificate_history",
       "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_seedgradedattemptasync",
@@ -52554,7 +52781,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L244",
+      "source_location": "L259",
       "weight": 1.0,
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_dashboard_keeps_other_learners_out",
       "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_seedpracticeasync",
@@ -52565,17 +52792,39 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L209",
+      "source_location": "L224",
       "weight": 1.0,
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_dashboard_shows_only_the_active_certificate_history",
       "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_seedpracticeasync",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
+      "source_location": "L273",
+      "weight": 1.0,
+      "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_dashboard_surfaces_unfinished_attempt_and_practice",
+      "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_seedinprogressattemptasync",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
+      "source_location": "L274",
+      "weight": 1.0,
+      "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_dashboard_surfaces_unfinished_attempt_and_practice",
+      "target": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_seedinprogresspracticeasync",
       "confidence_score": 1.0
     },
     {
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L62",
+      "source_location": "L77",
       "weight": 1.0,
       "context": "attribute",
       "metadata": {
@@ -52589,7 +52838,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L108",
+      "source_location": "L123",
       "weight": 1.0,
       "context": "attribute",
       "metadata": {
@@ -52603,7 +52852,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L149",
+      "source_location": "L164",
       "weight": 1.0,
       "context": "attribute",
       "metadata": {
@@ -52617,41 +52866,13 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L163",
+      "source_location": "L178",
       "weight": 1.0,
       "context": "attribute",
       "metadata": {
         "ref_token": "Fact"
       },
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_context_reports_the_ledger_balance_and_zero_for_an_empty_ledger",
-      "target": "tests_services_tests_learnerservicetests_cs_fact",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L184",
-      "weight": 1.0,
-      "context": "attribute",
-      "metadata": {
-        "ref_token": "Fact"
-      },
-      "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_dashboard_for_a_new_learner_is_empty",
-      "target": "tests_services_tests_learnerservicetests_cs_fact",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L236",
-      "weight": 1.0,
-      "context": "attribute",
-      "metadata": {
-        "ref_token": "Fact"
-      },
-      "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_dashboard_keeps_other_learners_out",
       "target": "tests_services_tests_learnerservicetests_cs_fact",
       "confidence_score": 1.0
     },
@@ -52665,6 +52886,34 @@
       "metadata": {
         "ref_token": "Fact"
       },
+      "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_dashboard_for_a_new_learner_is_empty",
+      "target": "tests_services_tests_learnerservicetests_cs_fact",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
+      "source_location": "L251",
+      "weight": 1.0,
+      "context": "attribute",
+      "metadata": {
+        "ref_token": "Fact"
+      },
+      "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_dashboard_keeps_other_learners_out",
+      "target": "tests_services_tests_learnerservicetests_cs_fact",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
+      "source_location": "L214",
+      "weight": 1.0,
+      "context": "attribute",
+      "metadata": {
+        "ref_token": "Fact"
+      },
       "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_dashboard_shows_only_the_active_certificate_history",
       "target": "tests_services_tests_learnerservicetests_cs_fact",
       "confidence_score": 1.0
@@ -52673,7 +52922,21 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L79",
+      "source_location": "L266",
+      "weight": 1.0,
+      "context": "attribute",
+      "metadata": {
+        "ref_token": "Fact"
+      },
+      "source": "tests_services_tests_learnerservicetests_services_tests_learnerservicetests_dashboard_surfaces_unfinished_attempt_and_practice",
+      "target": "tests_services_tests_learnerservicetests_cs_fact",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
+      "source_location": "L94",
       "weight": 1.0,
       "context": "attribute",
       "metadata": {
@@ -52687,7 +52950,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L122",
+      "source_location": "L137",
       "weight": 1.0,
       "context": "attribute",
       "metadata": {
@@ -52701,7 +52964,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L91",
+      "source_location": "L106",
       "weight": 1.0,
       "context": "attribute",
       "metadata": {
@@ -52715,7 +52978,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/LearnerServiceTests.cs",
-      "source_location": "L134",
+      "source_location": "L149",
       "weight": 1.0,
       "context": "attribute",
       "metadata": {
@@ -52769,6 +53032,16 @@
       "weight": 1.0,
       "source": "tests_services_tests_practiceservicetests_services_tests_practiceservicetests",
       "target": "tests_services_tests_practiceservicetests_services_tests_practiceservicetests_getpracticesections_returns_sections_with_available_question_counts",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/Services.Tests/PracticeServiceTests.cs",
+      "source_location": "L383",
+      "weight": 1.0,
+      "source": "tests_services_tests_practiceservicetests_services_tests_practiceservicetests",
+      "target": "tests_services_tests_practiceservicetests_services_tests_practiceservicetests_getpracticesections_returns_unfinished_session_when_in_progress",
       "confidence_score": 1.0
     },
     {
@@ -52919,6 +53192,17 @@
       "source_location": "L89",
       "weight": 1.0,
       "source": "tests_services_tests_practiceservicetests_services_tests_practiceservicetests_getpracticesections_returns_sections_with_available_question_counts",
+      "target": "tests_services_tests_practiceservicetests_services_tests_practiceservicetests_unique",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/Services.Tests/PracticeServiceTests.cs",
+      "source_location": "L386",
+      "weight": 1.0,
+      "source": "tests_services_tests_practiceservicetests_services_tests_practiceservicetests_getpracticesections_returns_unfinished_session_when_in_progress",
       "target": "tests_services_tests_practiceservicetests_services_tests_practiceservicetests_unique",
       "confidence_score": 1.0
     },
@@ -53115,6 +53399,17 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "tests/Services.Tests/PracticeServiceTests.cs",
+      "source_location": "L389",
+      "weight": 1.0,
+      "source": "tests_services_tests_practiceservicetests_services_tests_practiceservicetests_getpracticesections_returns_unfinished_session_when_in_progress",
+      "target": "tests_services_tests_practiceservicetests_services_tests_practiceservicetests_createservices",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/Services.Tests/PracticeServiceTests.cs",
       "source_location": "L234",
       "weight": 1.0,
       "source": "tests_services_tests_practiceservicetests_services_tests_practiceservicetests_getsummary_computes_per_question_outcome_and_skip_accuracy_math",
@@ -53239,6 +53534,17 @@
       "source_location": "L91",
       "weight": 1.0,
       "source": "tests_services_tests_practiceservicetests_services_tests_practiceservicetests_getpracticesections_returns_sections_with_available_question_counts",
+      "target": "tests_services_tests_practiceservicetests_services_tests_practiceservicetests_seedlearnerasync",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/Services.Tests/PracticeServiceTests.cs",
+      "source_location": "L388",
+      "weight": 1.0,
+      "source": "tests_services_tests_practiceservicetests_services_tests_practiceservicetests_getpracticesections_returns_unfinished_session_when_in_progress",
       "target": "tests_services_tests_practiceservicetests_services_tests_practiceservicetests_seedlearnerasync",
       "confidence_score": 1.0
     },
@@ -53388,6 +53694,20 @@
         "ref_token": "Task"
       },
       "source": "tests_services_tests_practiceservicetests_services_tests_practiceservicetests_getpracticesections_returns_sections_with_available_question_counts",
+      "target": "tests_services_tests_practiceservicetests_cs_task",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/Services.Tests/PracticeServiceTests.cs",
+      "source_location": "L383",
+      "weight": 1.0,
+      "context": "return_type",
+      "metadata": {
+        "ref_token": "Task"
+      },
+      "source": "tests_services_tests_practiceservicetests_services_tests_practiceservicetests_getpracticesections_returns_unfinished_session_when_in_progress",
       "target": "tests_services_tests_practiceservicetests_cs_task",
       "confidence_score": 1.0
     },
@@ -53567,6 +53887,17 @@
       "source_location": "L90",
       "weight": 1.0,
       "source": "tests_services_tests_practiceservicetests_services_tests_practiceservicetests_getpracticesections_returns_sections_with_available_question_counts",
+      "target": "tests_services_tests_practiceservicetests_services_tests_practiceservicetests_seedcertificatewithquestionsasync",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/Services.Tests/PracticeServiceTests.cs",
+      "source_location": "L387",
+      "weight": 1.0,
+      "source": "tests_services_tests_practiceservicetests_services_tests_practiceservicetests_getpracticesections_returns_unfinished_session_when_in_progress",
       "target": "tests_services_tests_practiceservicetests_services_tests_practiceservicetests_seedcertificatewithquestionsasync",
       "confidence_score": 1.0
     },
@@ -53800,6 +54131,20 @@
         "ref_token": "Fact"
       },
       "source": "tests_services_tests_practiceservicetests_services_tests_practiceservicetests_getpracticesections_returns_sections_with_available_question_counts",
+      "target": "tests_services_tests_practiceservicetests_cs_fact",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/Services.Tests/PracticeServiceTests.cs",
+      "source_location": "L383",
+      "weight": 1.0,
+      "context": "attribute",
+      "metadata": {
+        "ref_token": "Fact"
+      },
+      "source": "tests_services_tests_practiceservicetests_services_tests_practiceservicetests_getpracticesections_returns_unfinished_session_when_in_progress",
       "target": "tests_services_tests_practiceservicetests_cs_fact",
       "confidence_score": 1.0
     },
@@ -63909,5 +64254,5 @@
       "source_file": ".impeccable/surfaces/prototype.md"
     }
   ],
-  "built_at_commit": "5cc8379dba781d8a0b4f4e7eaa36d3f448888d00"
+  "built_at_commit": "5cd71aa1dc5234425f90934e4da3a3067d9dc1a6"
 }

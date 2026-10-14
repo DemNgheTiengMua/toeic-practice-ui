@@ -59,6 +59,21 @@ public sealed class LearnerServiceTests(DatabaseFixture database)
                     'listening', {count}, 'finished', {correct}, SYSDATETIMEOFFSET());
             """);
 
+    private Task SeedInProgressAttemptAsync(int userId, string certCode, string startedAt) =>
+        database.SqlAsync($"""
+            DECLARE @cert INT = (SELECT CertId FROM Certificates WHERE Code = '{certCode}');
+            INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt)
+            VALUES ({userId}, (SELECT ExamId FROM Exams WHERE CertId = @cert), @cert, 'in_progress',
+                    '{startedAt}', DATEADD(HOUR, 2, CAST('{startedAt}' AS DATETIMEOFFSET)));
+            """);
+
+    private Task SeedInProgressPracticeAsync(int userId, string certCode, int count) =>
+        database.SqlAsync($"""
+            INSERT INTO PracticeSessions (UserId, SectionId, Modality, QuestionCount, Status, CorrectCount, StartedAt)
+            VALUES ({userId}, (SELECT SectionId FROM Sections WHERE CertId = (SELECT CertId FROM Certificates WHERE Code = '{certCode}')),
+                    'listening', {count}, 'in_progress', 0, SYSDATETIMEOFFSET());
+            """);
+
     [Fact]
     public async Task Switch_persists_the_active_certificate_for_that_user()
     {
@@ -246,5 +261,27 @@ public sealed class LearnerServiceTests(DatabaseFixture database)
         var dashboard = await CreateService().GetDashboardAsync(mine);
 
         Assert.True(dashboard.IsNew);
+    }
+
+    [Fact]
+    public async Task Dashboard_surfaces_unfinished_attempt_and_practice()
+    {
+        var code = Unique("U");
+        await SeedCertificateAsync(code);
+        var userId = await SeedLearnerAsync(code);
+
+        await SeedInProgressAttemptAsync(userId, code, "2026-10-01T10:00:00+07:00");
+        await SeedInProgressPracticeAsync(userId, code, count: 20);
+
+        var dashboard = await CreateService().GetDashboardAsync(userId);
+
+        Assert.NotNull(dashboard.UnfinishedAttempt);
+        Assert.Equal("in_progress", dashboard.UnfinishedAttempt.Status);
+        Assert.Equal($"Mock {code}", dashboard.UnfinishedAttempt.ExamName);
+
+        Assert.NotNull(dashboard.UnfinishedPractice);
+        Assert.Equal("in_progress", dashboard.UnfinishedPractice.Status);
+        Assert.Equal($"Photographs {code}", dashboard.UnfinishedPractice.SectionName);
+        Assert.Equal(20, dashboard.UnfinishedPractice.QuestionCount);
     }
 }

@@ -379,4 +379,22 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         Assert.Equal("abandoned", session1InDb.Status);
         Assert.NotNull(session1InDb.FinishedAt);
     }
+
+    [Fact]
+    public async Task GetPracticeSections_returns_unfinished_session_when_in_progress()
+    {
+        var certCode = Unique("UP");
+        var (_, secId, _, _, _, _) = await SeedCertificateWithQuestionsAsync(certCode);
+        var userId = await SeedLearnerAsync(certCode);
+        var (practice, _) = CreateServices();
+
+        var s1 = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId, 2));
+
+        var catalog = await practice.GetPracticeSectionsAsync(userId);
+
+        Assert.NotNull(catalog.UnfinishedSession);
+        Assert.Equal(s1.SessionId, catalog.UnfinishedSession.SessionId);
+        Assert.Equal("in_progress", catalog.UnfinishedSession.Status);
+        Assert.Equal(secId, catalog.UnfinishedSession.SectionId);
+    }
 }

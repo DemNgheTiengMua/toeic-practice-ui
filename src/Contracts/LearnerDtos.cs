@@ -22,7 +22,9 @@ public sealed record LearnerDashboardDto(
     int AttemptCount,
     int PracticeCount,
     IReadOnlyList<RecentAttemptDto> RecentAttempts,
-    IReadOnlyList<RecentPracticeDto> RecentPractice);
+    IReadOnlyList<RecentPracticeDto> RecentPractice,
+    RecentAttemptDto? UnfinishedAttempt = null,
+    RecentPracticeDto? UnfinishedPractice = null);
 
 public sealed record LatestResultDto(int TotalScore, string? BandCode, string? BandName, DateTimeOffset TakenAt);
 

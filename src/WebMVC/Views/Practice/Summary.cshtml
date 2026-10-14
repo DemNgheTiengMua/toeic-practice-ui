@@ -70,71 +70,106 @@
 
 <div class="card mt-4">
   <div class="card__header">
-    <div class="row row--between">
+    <div class="row row--between row--wrap">
       <strong>Questions review</strong>
-      <span class="text-sm text-muted">@Model.Questions.Count questions</span>
+      <span class="text-sm text-muted">@Model.Questions.Count questions (@Model.CorrectCount correct, @Model.IncorrectCount incorrect, @Model.SkippedCount skipped)</span>
     </div>
   </div>
-  <div class="card__body">
-    <table class="table table--striped">
+  <div class="card__body p-0">
+    <table class="table table--striped" style="margin-bottom: 0;">
       <caption class="visually-hidden">Detailed question review for this practice session</caption>
       <thead>
         <tr>
-          <th scope="col" style="width: 60px">#</th>
-          <th scope="col">Category</th>
-          <th scope="col">Your answer</th>
-          <th scope="col">Correct answer</th>
-          <th scope="col" style="width: 80px">Hint</th>
-          <th scope="col">Explanation</th>
+          <th scope="col" style="width: 120px;"># & Status</th>
+          <th scope="col" style="width: 38%;">Question</th>
+          <th scope="col" style="width: 32%;">Answer Result</th>
+          <th scope="col" style="width: 30%;">Explanation</th>
         </tr>
       </thead>
       <tbody>
         @foreach (var q in Model.Questions)
         {
           <tr>
-            <td><strong>@q.DisplayOrder</strong></td>
-            <td>@(q.CategoryName ?? "General")</td>
-            <td>
+            <td style="vertical-align: top;">
+              <div class="stack" style="gap: var(--space-1); align-items: flex-start;">
+                <span style="font-family: var(--font-data); font-weight: 700; font-size: 15px;">#@q.DisplayOrder</span>
+                @if (q.IsCorrect == true)
+                {
+                  <span class="badge badge--success">Correct</span>
+                }
+                else if (q.IsCorrect == false)
+                {
+                  <span class="badge badge--danger">Incorrect</span>
+                }
+                else
+                {
+                  <span class="badge badge--muted">Skipped</span>
+                }
+                @if (q.HintUsed)
+                {
+                  <span class="badge badge--warning text-xs">Hint used</span>
+                }
+                <a href="/practice/@Model.SessionId?q=@q.DisplayOrder" class="text-xs mt-1" style="font-weight: 600; color: var(--sign-blue);">Read in test ›</a>
+              </div>
+            </td>
+            <td style="vertical-align: top;">
+              @if (!string.IsNullOrEmpty(q.CategoryName))
+              {
+                <span class="badge badge--muted text-xs mb-1" style="display: inline-block;">@q.CategoryName</span>
+              }
+              <div class="question-stem text-sm" style="line-height: 1.6; color: var(--ink); white-space: pre-wrap;">@q.Stem</div>
+            </td>
+            <td style="vertical-align: top;">
               @if (q.IsCorrect == true)
               {
-                <span class="badge badge--success">@q.SelectedOptionLabel — @q.SelectedOptionText</span>
+                <div class="stack" style="gap: var(--space-1);">
+                  <div>
+                    <span class="badge badge--success" style="white-space: normal; text-align: left; line-height: 1.4;">✓ @q.CorrectOptionLabel — @q.CorrectOptionText</span>
+                  </div>
+                  <span class="text-xs text-muted">Your answer · Correct</span>
+                </div>
               }
               else if (q.IsCorrect == false)
               {
-                <span class="badge badge--danger">@q.SelectedOptionLabel — @q.SelectedOptionText</span>
+                <div class="stack" style="gap: var(--space-2);">
+                  <div>
+                    <div class="text-xs uppercase text-muted mb-1" style="font-weight: 700; letter-spacing: 0.04em;">Your choice:</div>
+                    <span class="badge badge--danger" style="white-space: normal; text-align: left; line-height: 1.4;">✗ @q.SelectedOptionLabel — @q.SelectedOptionText</span>
+                  </div>
+                  <div>
+                    <div class="text-xs uppercase text-muted mb-1" style="font-weight: 700; letter-spacing: 0.04em;">Correct answer:</div>
+                    <span class="badge badge--success" style="white-space: normal; text-align: left; line-height: 1.4;">✓ @q.CorrectOptionLabel — @q.CorrectOptionText</span>
+                  </div>
+                </div>
               }
               else
               {
-                <span class="badge badge--muted">Skipped</span>
+                <div class="stack" style="gap: var(--space-2);">
+                  <div>
+                    <span class="badge badge--muted">Skipped</span>
+                  </div>
+                  <div>
+                    <div class="text-xs uppercase text-muted mb-1" style="font-weight: 700; letter-spacing: 0.04em;">Correct answer:</div>
+                    <span class="badge badge--success" style="white-space: normal; text-align: left; line-height: 1.4;">✓ @q.CorrectOptionLabel — @q.CorrectOptionText</span>
+                  </div>
+                </div>
               }
             </td>
-            <td>
-              <span class="badge badge--success">@q.CorrectOptionLabel — @q.CorrectOptionText</span>
-            </td>
-            <td>
-              @if (q.HintUsed)
-              {
-                <span class="badge badge--muted">Used</span>
-              }
-              else
-              {
-                <span class="text-muted">No</span>
-              }
-            </td>
-            <td>
+            <td style="vertical-align: top;">
               @if (!string.IsNullOrEmpty(q.Explanation))
               {
                 <details>
-                  <summary>View explanation</summary>
-                  <div class="explain mt-2">
-                    <div class="explain__title">Why @q.CorrectOptionLabel is correct</div>
+                  <summary class="text-sm" style="font-weight: 600; color: var(--sign-blue); cursor: pointer; text-decoration: underline;">
+                    Why @q.CorrectOptionLabel is correct
+                  </summary>
+                  <div class="explain mt-2" style="margin-top: var(--space-2); padding: var(--space-2) var(--space-3); border-left: 3px solid var(--sign-blue); background: var(--color-surface); font-size: var(--text-sm);">
                     <p class="no-margin">@q.Explanation</p>
                   </div>
                 </details>
               }
               else
               {
-                <span class="text-muted">—</span>
+                <span class="text-muted text-sm">—</span>
               }
             </td>
           </tr>

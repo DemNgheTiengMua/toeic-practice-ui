@@ -53,6 +53,28 @@ else if (Model.Activation == "failed")
 
 <h1 class="no-margin">Hello, @(Model.User.FullName ?? Model.User.Email)</h1>
 
+@if (dashboard.UnfinishedPractice is { } unfinishedPractice)
+{
+  <div class="alert alert--info row row--between row--wrap mt-3" role="status" style="border-left: 4px solid var(--sign-blue); background: var(--color-surface); align-items: center;">
+    <div>
+      <strong>Unfinished practice:</strong> You have an in-progress session in <strong>@unfinishedPractice.SectionName</strong> started @Dates.FormatDate(unfinishedPractice.StartedAt).
+      <div class="text-sm text-muted">@unfinishedPractice.CorrectCount of @unfinishedPractice.QuestionCount questions answered so far. Finish to update your accuracy and weak points.</div>
+    </div>
+    <a class="btn btn--primary btn--sm" href="/practice/@unfinishedPractice.SessionId">Resume practice ›</a>
+  </div>
+}
+
+@if (dashboard.UnfinishedAttempt is { } unfinishedAttempt)
+{
+  <div class="alert alert--warning row row--between row--wrap mt-3" role="status" style="border-left: 4px solid var(--sign-gold); background: var(--color-surface); align-items: center;">
+    <div>
+      <strong>Unfinished exam:</strong> You have an in-progress @PurposeLabel(unfinishedAttempt.Purpose) (<strong>@unfinishedAttempt.ExamName</strong>) started @Dates.FormatDate(unfinishedAttempt.StartedAt).
+      <div class="text-sm text-muted">Complete your exam to receive your scaled score and band.</div>
+    </div>
+    <span class="badge badge--warning">In progress</span>
+  </div>
+}
+
 @if (dashboard.IsNew)
 {
   <div class="card"><div class="card__body">
@@ -134,7 +156,16 @@ else
                 <td>@a.ExamName</td>
                 <td>@PurposeLabel(a.Purpose)</td>
                 <td>@Dates.FormatDate(a.StartedAt)</td>
-                <td>@StatusLabel(a.Status)</td>
+                <td>
+                  @if (a.Status == "in_progress")
+                  {
+                    <span class="badge badge--warning">In progress</span>
+                  }
+                  else
+                  {
+                    @StatusLabel(a.Status)
+                  }
+                </td>
                 <td><strong>@(a.TotalScore?.ToString() ?? "—")</strong></td>
                 <td>@(a.BandCode ?? "—")</td>
               </tr>
@@ -157,7 +188,7 @@ else
         <table class="table table--striped">
           <caption class="visually-hidden">Your most recent @cert.Code practice sessions, newest first</caption>
           <thead>
-            <tr><th scope="col">Section</th><th scope="col">Date</th><th scope="col">Status</th><th scope="col">Correct</th></tr>
+            <tr><th scope="col">Section</th><th scope="col">Date</th><th scope="col">Status</th><th scope="col">Correct</th><th scope="col" style="width: 120px;">Action</th></tr>
           </thead>
           <tbody>
             @foreach (var p in dashboard.RecentPractice)
@@ -167,8 +198,31 @@ else
                   <a href="@(p.Status == "finished" ? $"/practice/{p.SessionId}/summary" : $"/practice/{p.SessionId}")">@p.SectionName</a>
                 </td>
                 <td>@Dates.FormatDate(p.StartedAt)</td>
-                <td>@StatusLabel(p.Status)</td>
+                <td>
+                  @if (p.Status == "in_progress")
+                  {
+                    <span class="badge badge--warning">In progress</span>
+                  }
+                  else
+                  {
+                    @StatusLabel(p.Status)
+                  }
+                </td>
                 <td>@p.CorrectCount / @p.QuestionCount</td>
+                <td>
+                  @if (p.Status == "in_progress")
+                  {
+                    <a class="btn btn--sm btn--primary" href="/practice/@p.SessionId">Resume ›</a>
+                  }
+                  else if (p.Status == "finished")
+                  {
+                    <a class="btn btn--sm btn--ghost" href="/practice/@p.SessionId/summary">Summary</a>
+                  }
+                  else
+                  {
+                    <span class="text-muted">—</span>
+                  }
+                </td>
               </tr>
             }
           </tbody>

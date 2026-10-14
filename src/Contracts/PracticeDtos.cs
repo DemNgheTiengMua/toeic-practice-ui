@@ -19,7 +19,8 @@ public sealed record PracticeCatalogDto(
     IReadOnlyList<PracticeSectionDto> ListeningSections,
     IReadOnlyList<PracticeSectionDto> ReadingSections,
     IReadOnlyList<PracticeSectionDto> OtherSections,
-    PracticeSectionDto? WeakestSection);
+    PracticeSectionDto? WeakestSection,
+    PracticeSessionDto? UnfinishedSession = null);
 
 public sealed record StartPracticeRequest(
     int SectionId,

@@ -117,7 +117,30 @@ public sealed class PracticeService(
             .ThenByDescending(i => i.AnsweredCount)
             .FirstOrDefault();
 
-        return new PracticeSectionsView(cert, listening, reading, other, weakest);
+        var unfinishedSession = await db.PracticeSessions
+            .AsNoTracking()
+            .Include(ps => ps.Section)
+            .Where(ps => ps.UserId == userId
+                && ps.Section.CertId == activeCertId
+                && ps.Status == "in_progress"
+                && ps.LearnerPathStepId == null)
+            .OrderByDescending(ps => ps.StartedAt)
+            .Select(ps => new PracticeSessionInfo(
+                ps.SessionId,
+                ps.SectionId,
+                ps.Section.Code,
+                ps.Section.Name,
+                ps.Section.Modality,
+                ps.QuestionCount,
+                ps.Status,
+                ps.CorrectCount,
+                ps.QuestionSource,
+                ps.FeedbackMode,
+                ps.StartedAt,
+                ps.FinishedAt))
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return new PracticeSectionsView(cert, listening, reading, other, weakest, unfinishedSession);
     }
 
     public async Task<PracticeSessionInfo> StartSessionAsync(int userId, StartPracticeSessionInput input, CancellationToken cancellationToken = default)
