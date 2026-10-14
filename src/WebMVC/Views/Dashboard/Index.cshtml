@@ -77,7 +77,7 @@ else if (Model.Activation == "failed")
         <p class="text-sm text-muted no-margin mt-1">Find your current level and get a personalised learning path.</p>
       </div>
       <div>
-        <strong>2. Practise by section (free)</strong>
+        <strong><a href="/practice">2. Practise by section (free)</a></strong>
         <p class="text-sm text-muted no-margin mt-1">Drill one listening or reading section with immediate feedback.</p>
       </div>
       <div>
@@ -163,7 +163,9 @@ else
             @foreach (var p in dashboard.RecentPractice)
             {
               <tr>
-                <td>@p.SectionName</td>
+                <td>
+                  <a href="@(p.Status == "finished" ? $"/practice/{p.SessionId}/summary" : $"/practice/{p.SessionId}")">@p.SectionName</a>
+                </td>
                 <td>@Dates.FormatDate(p.StartedAt)</td>
                 <td>@StatusLabel(p.Status)</td>
                 <td>@p.CorrectCount / @p.QuestionCount</td>

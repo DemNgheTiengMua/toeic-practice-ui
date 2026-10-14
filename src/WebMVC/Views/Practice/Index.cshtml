@@ -1,0 +1,167 @@
+@model PracticeCatalogViewModel
+@{
+    Layout = "_LearnerLayout";
+    ViewData["Title"] = "Practice by section";
+    ViewData["Description"] = "Drill listening and reading sections with immediate feedback.";
+    var catalog = Model.Catalog;
+}
+
+<div class="row row--between">
+  <div>
+    <h1 class="m-0 mb-1">Practice by section</h1>
+    <p class="text-muted no-margin">
+      Listening and reading have no time limit, and you see the answer and explanation right after each question.
+      <strong>Free, no credit deducted.</strong> Speaking and writing are graded by AI and use 1 credit each.
+    </p>
+  </div>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+  <div class="alert alert--danger" role="alert">@Model.ErrorMessage</div>
+}
+
+@if (catalog.WeakestSection is { } weakest && weakest.AccuracyPercentage.HasValue)
+{
+  <div class="alert alert--info">
+    <strong>@weakest.Name is your weakest section</strong> at @weakest.AccuracyPercentage% accuracy — start there to improve your score fastest.
+  </div>
+}
+
+@if (catalog.ListeningSections.Count == 0 && catalog.ReadingSections.Count == 0)
+{
+  <div class="card"><div class="card__body">
+    <div class="state-block">
+      <div class="state-block__icon" aria-hidden="true">EMPTY</div>
+      <h2 class="state-block__title">No questions to practice yet</h2>
+      <p class="state-block__desc">
+        The practice question bank is being updated. You can still take a full mock exam, or come back later.
+      </p>
+      <div class="row row--center">
+        <a class="btn btn--primary" href="/certificates">View certificates</a>
+        <a class="btn" href="/dashboard">Back to home</a>
+      </div>
+    </div>
+  </div></div>
+}
+else
+{
+  <form method="post" action="/practice/start" id="practice-form">
+    @Html.AntiForgeryToken()
+    <div class="card">
+      <div class="card__body row" style="gap: var(--space-4); flex-wrap: wrap">
+        <div class="field" style="flex: 0 0 200px">
+          <label class="field__label" for="pr-count">Questions per session</label>
+          <select class="field__input" id="pr-count" name="QuestionCount">
+            <option value="10">10 questions</option>
+            <option value="20" selected>20 questions</option>
+            <option value="40">40 questions</option>
+            <option value="100">All questions in this section</option>
+          </select>
+        </div>
+        <div class="field" style="flex: 0 0 220px">
+          <label class="field__label" for="pr-source">Question source</label>
+          <select class="field__input" id="pr-source" name="QuestionSource">
+            <option value="all" selected>All exams</option>
+            <option value="wrong_before">Only questions I got wrong before</option>
+            <option value="unseen">Only questions never attempted</option>
+          </select>
+        </div>
+        <div class="field" style="flex: 0 0 200px">
+          <label class="field__label" for="pr-mode">Feedback type</label>
+          <select class="field__input" id="pr-mode" name="FeedbackMode">
+            <option value="immediate" selected>Show the answer right after each question</option>
+            <option value="end">Shown only at the end of the session</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    @if (catalog.ListeningSections.Count > 0)
+    {
+      <section class="mt-4">
+        <h2 class="section-group__title">Listening</h2>
+        <div class="grid-4">
+          @foreach (var sec in catalog.ListeningSections)
+          {
+            <button type="submit" name="SectionId" value="@sec.SectionId" class="part-card" style="text-align: left; width: 100%; cursor: pointer;">
+              <div class="part-card__header">
+                <strong>@sec.Code</strong>
+                @if (sec.AccuracyPercentage.HasValue)
+                {
+                  var badgeClass = sec.AccuracyPercentage < 60 ? "badge--danger" : "badge--muted";
+                  <span class="badge @badgeClass">@sec.AccuracyPercentage%</span>
+                }
+                else
+                {
+                  <span class="badge badge--muted">Not taken</span>
+                }
+              </div>
+              <p class="part-card__desc">@sec.Name</p>
+              <div class="part-card__meta">@sec.AvailableQuestionCount questions available</div>
+            </button>
+          }
+        </div>
+      </section>
+    }
+
+    @if (catalog.ReadingSections.Count > 0)
+    {
+      <section class="mt-4">
+        <h2 class="section-group__title">Reading</h2>
+        <div class="grid-3">
+          @foreach (var sec in catalog.ReadingSections)
+          {
+            <button type="submit" name="SectionId" value="@sec.SectionId" class="part-card" style="text-align: left; width: 100%; cursor: pointer;">
+              <div class="part-card__header">
+                <strong>@sec.Code</strong>
+                @if (sec.AccuracyPercentage.HasValue)
+                {
+                  var badgeClass = sec.AccuracyPercentage < 60 ? "badge--danger" : "badge--muted";
+                  <span class="badge @badgeClass">@sec.AccuracyPercentage%</span>
+                }
+                else
+                {
+                  <span class="badge badge--muted">Not taken</span>
+                }
+              </div>
+              <p class="part-card__desc">@sec.Name</p>
+              <div class="part-card__meta">@sec.AvailableQuestionCount questions available</div>
+            </button>
+          }
+        </div>
+      </section>
+    }
+  </form>
+
+  @if (catalog.OtherSections.Count > 0)
+  {
+    @foreach (var group in catalog.OtherSections.GroupBy(s => s.SkillName))
+    {
+      <section class="mt-4">
+        <h2 class="section-group__title">@group.Key</h2>
+        <div class="grid-2">
+          @foreach (var sec in group)
+          {
+            <div class="part-card" style="opacity: 0.85">
+              <div class="part-card__header">
+                <strong>@sec.Name</strong>
+                <span class="badge badge--muted">1 credit</span>
+              </div>
+              <p class="part-card__desc">Free response graded by AI against rubric criteria.</p>
+              <div class="part-card__meta">Available in full mock exams</div>
+            </div>
+          }
+          <div class="card">
+            <div class="card__header"><strong>How @group.Key differs</strong></div>
+            <div class="card__body">
+              <p class="text-sm no-margin">
+                You record or write answers and an AI grades them against rubrics after submission. Free practice drills are available for listening and reading (MCQ) sections.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+    }
+  }
+}

@@ -1,0 +1,353 @@
+@model PracticeTakeViewModel
+@{
+    Layout = null;
+    var session = Model.Session;
+    var q = Model.Question;
+    var isAnswered = q.SelectedOptionId.HasValue || q.IsCorrect.HasValue;
+    var progressPercent = (int)Math.Round((double)q.DisplayOrder / q.TotalQuestions * 100);
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Practice @session.SectionName — extra efficient</title>
+  <link rel="icon" href="~/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="~/css/tokens.css">
+  <link rel="stylesheet" href="~/css/base.css">
+  <link rel="stylesheet" href="~/css/components.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-topbar">
+      <div class="exam-topbar-group">
+        <strong>Practice @session.SectionName</strong>
+        <span class="badge badge--muted">No time limit</span>
+      </div>
+      <div class="exam-topbar-group">
+        <span class="text-sm text-muted">Question @q.DisplayOrder / @q.TotalQuestions</span>
+        <div class="progress" style="width: 160px">
+          <div class="progress__bar" style="width: @progressPercent%"></div>
+        </div>
+        <a class="btn btn--ghost btn--sm" href="/practice">Exit</a>
+      </div>
+    </header>
+    <main class="app-main">
+      <div class="container" style="max-width: 820px">
+        @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+        {
+          <div class="alert alert--danger mb-4" role="alert">@Model.ErrorMessage</div>
+        }
+
+        <div class="stack" id="question-container">
+          <div class="question">
+            <div class="question__meta">
+              <span class="question__number">Question @q.DisplayOrder</span>
+              <span class="badge badge--muted">@session.SectionName</span>
+              @if (!string.IsNullOrEmpty(q.CategoryName))
+              {
+                <span class="badge badge--muted">@q.CategoryName</span>
+              }
+              @if (q.IsCorrect == true)
+              {
+                <span class="badge badge--success" id="status-badge">Accuracy</span>
+              }
+              else if (q.IsCorrect == false)
+              {
+                <span class="badge badge--danger" id="status-badge">Incorrect</span>
+              }
+              else
+              {
+                <span class="badge" id="status-badge" style="display: none;"></span>
+              }
+              <span class="badge badge--muted" id="hint-meta-badge" style="@(q.HintUsed ? "" : "display: none;")">Hint used</span>
+            </div>
+
+            @if (!string.IsNullOrEmpty(q.Passage))
+            {
+              <div class="card mb-4">
+                <div class="card__body">
+                  <p class="no-margin" style="white-space: pre-line">@q.Passage</p>
+                </div>
+              </div>
+            }
+
+            @if (!string.IsNullOrEmpty(q.ImagePath))
+            {
+              <div class="mb-4">
+                <img src="@q.ImagePath" alt="@(q.ImageAlt ?? "Question image")" class="img-fluid" style="max-height: 300px; border: 2px solid var(--ink);" />
+              </div>
+            }
+
+            @if (!string.IsNullOrEmpty(q.AudioPath))
+            {
+              <div class="audio-player mb-4">
+                <audio controls src="@q.AudioPath" style="width: 100%"></audio>
+              </div>
+            }
+
+            <p class="question__stem">@q.Stem</p>
+
+            @if (isAnswered)
+            {
+              <div class="option-list" aria-label="Answer for question @q.DisplayOrder">
+                @foreach (var opt in q.Options)
+                {
+                  var isSelected = opt.OptionId == q.SelectedOptionId;
+                  var isCorrectOpt = opt.OptionId == q.CorrectOptionId;
+                  var optClass = isCorrectOpt ? "option option--correct" : (isSelected ? "option option--wrong" : "option");
+
+                  <div class="@optClass">
+                    <span class="option__marker">@opt.Label</span>
+                    <span class="option__text">@opt.Text</span>
+                    @if (isCorrectOpt && isSelected)
+                    {
+                      <span class="badge badge--success">Your answer · correct</span>
+                    }
+                    else if (isCorrectOpt)
+                    {
+                      <span class="badge badge--success">Correct answer</span>
+                    }
+                    else if (isSelected)
+                    {
+                      <span class="badge badge--danger">Your answer</span>
+                    }
+                  </div>
+                }
+              </div>
+
+              @if (!string.IsNullOrEmpty(q.Explanation))
+              {
+                <div class="explain mt-4">
+                  <div class="explain__title">Explanation</div>
+                  <p class="no-margin">@q.Explanation</p>
+                  @if (!string.IsNullOrEmpty(q.Transcript))
+                  {
+                    <div class="explain__transcript mt-2">
+                      <strong>Transcript:</strong> @q.Transcript
+                    </div>
+                  }
+                </div>
+              }
+
+              <div class="row row--between mt-4">
+                <div></div>
+                @if (q.DisplayOrder < q.TotalQuestions)
+                {
+                  <a class="btn btn--primary btn--lg" href="/practice/@session.SessionId?q=@(q.DisplayOrder + 1)">Next question</a>
+                }
+                else
+                {
+                  <a class="btn btn--primary btn--lg" href="/practice/@session.SessionId/summary">View summary</a>
+                }
+              </div>
+            }
+            else
+            {
+              <form method="post" action="/practice/@session.SessionId/questions/@q.QuestionId/answer?displayOrder=@q.DisplayOrder" id="answer-form">
+                @Html.AntiForgeryToken()
+                <div class="option-list" role="radiogroup" aria-label="Answer for question @q.DisplayOrder" id="option-list">
+                  @foreach (var opt in q.Options)
+                  {
+                    <label class="option" id="opt-label-@opt.OptionId">
+                      <input class="option__input" type="radio" name="SelectedOptionId" value="@opt.OptionId" required>
+                      <span class="option__marker">@opt.Label</span>
+                      <span class="option__text">@opt.Text</span>
+                    </label>
+                  }
+                </div>
+
+                <div class="hint mt-4" id="hint-box" style="@(q.HintUsed ? "" : "display: none;")" role="note">
+                  <span class="hint__label">Hint</span>
+                  <span id="hint-text">@(q.Hint ?? "")</span>
+                </div>
+
+                <div id="explanation-container"></div>
+
+                <div class="row row--between mt-4" id="controls-row">
+                  <div class="row">
+                    <button type="submit" name="Action" value="skip" class="btn btn--ghost" formnovalidate>Skip this question</button>
+                    @if (!q.HintUsed)
+                    {
+                      <button class="btn btn--ghost" type="button" id="show-hint-btn">Show hint</button>
+                    }
+                    <span class="text-xs text-muted" id="hint-used-msg" style="@(q.HintUsed ? "" : "display: none;")">Hint used · it is noted in your summary</span>
+                  </div>
+                  <button type="submit" class="btn btn--primary btn--lg" id="submit-btn">Check answer</button>
+                </div>
+              </form>
+            }
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="~/js/icons.js"></script>
+  <script>
+    (function () {
+      var form = document.getElementById('answer-form');
+      if (!form) return;
+
+      var sessionId = @session.SessionId;
+      var questionId = @q.QuestionId;
+      var displayOrder = @q.DisplayOrder;
+      var totalQuestions = @q.TotalQuestions;
+      var tokenInput = form.querySelector('input[name="__RequestVerificationToken"]');
+      var csrfToken = tokenInput ? tokenInput.value : '';
+
+      var showHintBtn = document.getElementById('show-hint-btn');
+      var hintBox = document.getElementById('hint-box');
+      var hintText = document.getElementById('hint-text');
+      var hintUsedMsg = document.getElementById('hint-used-msg');
+      var hintMetaBadge = document.getElementById('hint-meta-badge');
+      var statusBadge = document.getElementById('status-badge');
+      var submitBtn = document.getElementById('submit-btn');
+      var explanationContainer = document.getElementById('explanation-container');
+      var controlsRow = document.getElementById('controls-row');
+
+      if (showHintBtn) {
+        showHintBtn.addEventListener('click', function () {
+          showHintBtn.disabled = true;
+          fetch('/practice/' + sessionId + '/questions/' + questionId + '/hint', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+              'RequestVerificationToken': csrfToken,
+              'X-Requested-With': 'XMLHttpRequest',
+              'Accept': 'application/json'
+            },
+            body: '__RequestVerificationToken=' + encodeURIComponent(csrfToken)
+          })
+          .then(function (res) { return res.json(); })
+          .then(function (data) {
+            if (data.hint) {
+              hintText.textContent = data.hint;
+              hintBox.style.display = '';
+              showHintBtn.style.display = 'none';
+              hintUsedMsg.style.display = '';
+              hintMetaBadge.style.display = '';
+            }
+          })
+          .catch(function (err) {
+            console.error('Failed to reveal hint', err);
+            showHintBtn.disabled = false;
+          });
+        });
+      }
+
+      form.addEventListener('submit', function (e) {
+        var submitter = e.submitter;
+        if (submitter && submitter.value === 'skip') {
+          // Let standard skip post happen
+          return;
+        }
+
+        var checkedInput = form.querySelector('input[name="SelectedOptionId"]:checked');
+        if (!checkedInput) {
+          return; // Let browser HTML5 validation handle missing radio
+        }
+
+        e.preventDefault();
+        submitBtn.disabled = true;
+
+        var selectedOptionId = parseInt(checkedInput.value, 10);
+        var formData = new URLSearchParams();
+        formData.append('__RequestVerificationToken', csrfToken);
+        formData.append('SelectedOptionId', selectedOptionId);
+
+        fetch('/practice/' + sessionId + '/questions/' + questionId + '/answer?displayOrder=' + displayOrder, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'RequestVerificationToken': csrfToken,
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+          },
+          body: formData.toString()
+        })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          // Disable all radio buttons
+          var allRadios = form.querySelectorAll('input[type="radio"]');
+          for (var i = 0; i < allRadios.length; i++) {
+            allRadios[i].disabled = true;
+          }
+
+          var allLabels = form.querySelectorAll('.option');
+          for (var j = 0; j < allLabels.length; j++) {
+            var lbl = allLabels[j];
+            var inp = lbl.querySelector('input');
+            var optId = inp ? parseInt(inp.value, 10) : null;
+
+            if (optId === data.correctOptionId) {
+              lbl.classList.add('option--correct');
+              var correctBadge = document.createElement('span');
+              correctBadge.className = 'badge badge--success';
+              correctBadge.textContent = (optId === data.selectedOptionId) ? 'Your answer · correct' : 'Correct answer';
+              lbl.appendChild(correctBadge);
+            } else if (optId === data.selectedOptionId && !data.isCorrect) {
+              lbl.classList.add('option--wrong');
+              var wrongBadge = document.createElement('span');
+              wrongBadge.className = 'badge badge--danger';
+              wrongBadge.textContent = 'Your answer';
+              lbl.appendChild(wrongBadge);
+            }
+          }
+
+          // Update status badge
+          if (data.isCorrect) {
+            statusBadge.className = 'badge badge--success';
+            statusBadge.textContent = 'Accuracy';
+            statusBadge.style.display = '';
+          } else {
+            statusBadge.className = 'badge badge--danger';
+            statusBadge.textContent = 'Incorrect';
+            statusBadge.style.display = '';
+          }
+
+          // Show explanation
+          if (data.explanation) {
+            var explainDiv = document.createElement('div');
+            explainDiv.className = 'explain mt-4';
+            var titleDiv = document.createElement('div');
+            titleDiv.className = 'explain__title';
+            titleDiv.textContent = 'Explanation';
+            explainDiv.appendChild(titleDiv);
+
+            var pDesc = document.createElement('p');
+            pDesc.className = 'no-margin';
+            pDesc.textContent = data.explanation;
+            explainDiv.appendChild(pDesc);
+
+            if (data.transcript) {
+              var trDiv = document.createElement('div');
+              trDiv.className = 'explain__transcript mt-2';
+              trDiv.innerHTML = '<strong>Transcript:</strong> ' + data.transcript;
+              explainDiv.appendChild(trDiv);
+            }
+
+            explanationContainer.appendChild(explainDiv);
+          }
+
+          // Replace controls with Next button
+          var nextHref = data.isSessionFinished
+            ? ('/practice/' + sessionId + '/summary')
+            : ('/practice/' + sessionId + '?q=' + (data.nextQuestionDisplayOrder || (displayOrder + 1)));
+
+          var nextText = data.isSessionFinished ? 'View summary' : 'Next question';
+
+          controlsRow.innerHTML = '<div class="row row--between" style="width: 100%">' +
+            '<div></div>' +
+            '<a class="btn btn--primary btn--lg" href="' + nextHref + '">' + nextText + '</a>' +
+            '</div>';
+        })
+        .catch(function (err) {
+          console.error('Failed to submit answer', err);
+          submitBtn.disabled = false;
+        });
+      });
+    })();
+  </script>
+</body>
+</html>

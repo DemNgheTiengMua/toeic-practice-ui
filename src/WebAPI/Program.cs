@@ -139,6 +139,7 @@ builder.Services.AddSingleton<IEmailSender>(sp => new DropFolderEmailSender(
     emailOptions.From,
     sp.GetRequiredService<ILogger<DropFolderEmailSender>>()));
 builder.Services.AddScoped<ILearnerService, LearnerService>();
+builder.Services.AddScoped<IPracticeService, PracticeService>();
 
 var app = builder.Build();
 
@@ -428,6 +429,250 @@ learner.MapGet("/dashboard", async (HttpContext http, ILearnerService learners, 
             a.AttemptId, a.ExamName, a.Purpose, a.Status, a.StartedAt, a.TotalScore, a.BandCode)).ToList(),
         dashboard.RecentPractice.Select(p => new RecentPracticeDto(
             p.SessionId, p.SectionName, p.Status, p.CorrectCount, p.QuestionCount, p.StartedAt)).ToList()));
+});
+
+// ---- Practice (issue #8) ----
+var practice = learner.MapGroup("/practice");
+
+practice.MapGet("/catalog", async (HttpContext http, IPracticeService practiceService, CancellationToken cancellationToken) =>
+{
+    var view = await practiceService.GetPracticeSectionsAsync(CurrentUserId(http), cancellationToken);
+    static PracticeSectionDto ToSectionDto(PracticeSectionItem s) => new(
+        s.SectionId, s.SkillCode, s.SkillName, s.Modality, s.Code, s.Name, s.OptionCount,
+        s.ExpectedQuestionCount, s.AvailableQuestionCount, s.AccuracyPercentage, s.AnsweredCount, s.DisplayOrder);
+
+    return Results.Ok(new PracticeCatalogDto(
+        ToCertificateDto(view.Certificate),
+        view.ListeningSections.Select(ToSectionDto).ToList(),
+        view.ReadingSections.Select(ToSectionDto).ToList(),
+        view.OtherSections.Select(ToSectionDto).ToList(),
+        view.WeakestSection is { } w ? ToSectionDto(w) : null));
+});
+
+practice.MapPost("/sessions", async Task<IResult> (
+    StartPracticeRequest request,
+    HttpContext http,
+    IPracticeService practiceService,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var input = new StartPracticeSessionInput(
+            request.SectionId,
+            request.QuestionCount,
+            request.QuestionSource ?? "all",
+            request.FeedbackMode ?? "immediate");
+
+        var session = await practiceService.StartSessionAsync(CurrentUserId(http), input, cancellationToken);
+        return Results.Ok(new PracticeSessionDto(
+            session.SessionId,
+            session.SectionId,
+            session.SectionCode,
+            session.SectionName,
+            session.Modality,
+            session.QuestionCount,
+            session.Status,
+            session.CorrectCount,
+            session.QuestionSource,
+            session.FeedbackMode,
+            session.StartedAt,
+            session.FinishedAt));
+    }
+    catch (ValidationException ex)
+    {
+        return ValidationProblem(ex);
+    }
+    catch (PracticeException ex) when (ex.Code == PracticeException.ModalityNotAllowed)
+    {
+        return Problem(StatusCodes.Status400BadRequest, "Modality not allowed for free practice", ApiError.Codes.PracticeModalityNotAllowed, ex.Message);
+    }
+    catch (PracticeException ex) when (ex.Code == PracticeException.SectionUnavailable)
+    {
+        return Problem(StatusCodes.Status404NotFound, "Section unavailable", ApiError.Codes.PracticeSectionUnavailable, ex.Message);
+    }
+    catch (PracticeException ex) when (ex.Code == PracticeException.NoQuestionsAvailable)
+    {
+        return Problem(StatusCodes.Status404NotFound, "No questions available", ApiError.Codes.PracticeNoQuestionsAvailable, ex.Message);
+    }
+});
+
+practice.MapGet("/sessions/{sessionId:int}", async Task<IResult> (
+    int sessionId,
+    HttpContext http,
+    IPracticeService practiceService,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var session = await practiceService.GetSessionInfoAsync(CurrentUserId(http), sessionId, cancellationToken);
+        return Results.Ok(new PracticeSessionDto(
+            session.SessionId,
+            session.SectionId,
+            session.SectionCode,
+            session.SectionName,
+            session.Modality,
+            session.QuestionCount,
+            session.Status,
+            session.CorrectCount,
+            session.QuestionSource,
+            session.FeedbackMode,
+            session.StartedAt,
+            session.FinishedAt));
+    }
+    catch (PracticeException ex) when (ex.Code == PracticeException.SessionNotFound)
+    {
+        return Problem(StatusCodes.Status404NotFound, "Session not found", ApiError.Codes.PracticeSessionNotFound, ex.Message);
+    }
+});
+
+practice.MapGet("/sessions/{sessionId:int}/questions/{displayOrder:int}", async Task<IResult> (
+    int sessionId,
+    int displayOrder,
+    HttpContext http,
+    IPracticeService practiceService,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var q = await practiceService.GetQuestionAsync(CurrentUserId(http), sessionId, displayOrder, cancellationToken);
+        return Results.Ok(new PracticeQuestionDto(
+            q.SessionId,
+            q.SectionName,
+            q.QuestionId,
+            q.DisplayOrder,
+            q.TotalQuestions,
+            q.Stem,
+            q.CategoryName,
+            q.Hint,
+            q.HintUsed,
+            q.Options.Select(o => new PracticeOptionDto(o.OptionId, o.Label, o.Text)).ToList(),
+            q.SelectedOptionId,
+            q.IsCorrect,
+            q.CorrectOptionId,
+            q.Explanation,
+            q.Transcript,
+            q.Passage,
+            q.AudioPath,
+            q.ImagePath,
+            q.ImageAlt));
+    }
+    catch (PracticeException ex) when (ex.Code == PracticeException.SessionNotFound)
+    {
+        return Problem(StatusCodes.Status404NotFound, "Session not found", ApiError.Codes.PracticeSessionNotFound, ex.Message);
+    }
+    catch (PracticeException ex) when (ex.Code == PracticeException.QuestionNotFound)
+    {
+        return Problem(StatusCodes.Status404NotFound, "Question not found", ApiError.Codes.PracticeQuestionNotFound, ex.Message);
+    }
+});
+
+practice.MapPost("/sessions/{sessionId:int}/questions/{questionId:int}/hint", async Task<IResult> (
+    int sessionId,
+    int questionId,
+    HttpContext http,
+    IPracticeService practiceService,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var hint = await practiceService.RevealHintAsync(CurrentUserId(http), sessionId, questionId, cancellationToken);
+        return Results.Ok(new RevealHintResponse(hint, true));
+    }
+    catch (PracticeException ex) when (ex.Code == PracticeException.SessionNotFound)
+    {
+        return Problem(StatusCodes.Status404NotFound, "Session not found", ApiError.Codes.PracticeSessionNotFound, ex.Message);
+    }
+    catch (PracticeException ex) when (ex.Code == PracticeException.QuestionNotFound)
+    {
+        return Problem(StatusCodes.Status404NotFound, "Question not found", ApiError.Codes.PracticeQuestionNotFound, ex.Message);
+    }
+    catch (PracticeException ex) when (ex.Code == PracticeException.SessionAlreadyFinished)
+    {
+        return Problem(StatusCodes.Status400BadRequest, "Session already finished", ApiError.Codes.PracticeSessionAlreadyFinished, ex.Message);
+    }
+});
+
+practice.MapPost("/sessions/{sessionId:int}/questions/{questionId:int}/answer", async Task<IResult> (
+    int sessionId,
+    int questionId,
+    SubmitPracticeAnswerRequest request,
+    HttpContext http,
+    IPracticeService practiceService,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var result = await practiceService.SubmitAnswerAsync(
+            CurrentUserId(http), sessionId, questionId, new SubmitPracticeAnswerInput(request.SelectedOptionId), cancellationToken);
+        return Results.Ok(new GradedAnswerDto(
+            result.IsCorrect,
+            result.SelectedOptionId,
+            result.CorrectOptionId,
+            result.Explanation,
+            result.Transcript,
+            result.IsSessionFinished,
+            result.NextQuestionDisplayOrder));
+    }
+    catch (PracticeException ex) when (ex.Code == PracticeException.SessionNotFound)
+    {
+        return Problem(StatusCodes.Status404NotFound, "Session not found", ApiError.Codes.PracticeSessionNotFound, ex.Message);
+    }
+    catch (PracticeException ex) when (ex.Code == PracticeException.QuestionNotFound)
+    {
+        return Problem(StatusCodes.Status404NotFound, "Question not found", ApiError.Codes.PracticeQuestionNotFound, ex.Message);
+    }
+    catch (PracticeException ex) when (ex.Code == PracticeException.InvalidOption)
+    {
+        return Problem(StatusCodes.Status400BadRequest, "Invalid option", ApiError.Codes.PracticeInvalidOption, ex.Message);
+    }
+    catch (PracticeException ex) when (ex.Code == PracticeException.SessionAlreadyFinished)
+    {
+        return Problem(StatusCodes.Status400BadRequest, "Session already finished", ApiError.Codes.PracticeSessionAlreadyFinished, ex.Message);
+    }
+});
+
+practice.MapGet("/sessions/{sessionId:int}/summary", async Task<IResult> (
+    int sessionId,
+    HttpContext http,
+    IPracticeService practiceService,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var s = await practiceService.GetSummaryAsync(CurrentUserId(http), sessionId, cancellationToken);
+        return Results.Ok(new PracticeSummaryDto(
+            s.SessionId,
+            s.SectionCode,
+            s.SectionName,
+            s.Modality,
+            s.StartedAt,
+            s.FinishedAt,
+            s.TotalQuestions,
+            s.AnsweredCount,
+            s.CorrectCount,
+            s.IncorrectCount,
+            s.SkippedCount,
+            s.AccuracyPercentage,
+            s.HintUsedCount,
+            s.CorrectWithHintCount,
+            s.IncorrectWithHintCount,
+            s.Questions.Select(q => new QuestionOutcomeDto(
+                q.DisplayOrder,
+                q.QuestionId,
+                q.CategoryName,
+                q.Stem,
+                q.SelectedOptionLabel,
+                q.SelectedOptionText,
+                q.CorrectOptionLabel,
+                q.CorrectOptionText,
+                q.IsCorrect,
+                q.HintUsed,
+                q.Explanation)).ToList()));
+    }
+    catch (PracticeException ex) when (ex.Code == PracticeException.SessionNotFound)
+    {
+        return Problem(StatusCodes.Status404NotFound, "Session not found", ApiError.Codes.PracticeSessionNotFound, ex.Message);
+    }
 });
 
 static CertificateOptionDto ToCertificateDto(CertificateOption option) => new(option.Code, option.Name);

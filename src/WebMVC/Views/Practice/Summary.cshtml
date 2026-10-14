@@ -1,0 +1,145 @@
+@model Contracts.PracticeSummaryDto
+@inject WebMVC.DateTimeFormatter Dates
+@{
+    Layout = "_LearnerLayout";
+    ViewData["Title"] = $"Practice summary — {Model.SectionName}";
+    ViewData["Description"] = "Results and review of your practice session.";
+}
+
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+  <a href="/dashboard" class="breadcrumbs__item">Home</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <a href="/practice" class="breadcrumbs__item">Practice by section</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <span class="breadcrumbs__item" aria-current="page">Session summary</span>
+</nav>
+
+<div class="row row--between">
+  <div>
+    <h1 class="m-0 mb-1">Practice session summary</h1>
+    <p class="text-sm text-muted no-margin">
+      @Model.SectionName · @Model.TotalQuestions questions · @Dates.Format(Model.StartedAt)
+    </p>
+  </div>
+  <div class="row">
+    <a class="btn" href="/practice">Choose another section</a>
+    <a class="btn btn--primary" href="/practice">Practice more questions</a>
+  </div>
+</div>
+
+<div class="grid-3 mt-4">
+  <div class="stat">
+    <div class="stat__label">Correct</div>
+    <div class="stat__value" style="color: var(--color-success)">@Model.CorrectCount</div>
+    <div class="stat__hint">
+      out of @Model.AnsweredCount answered · @Model.AccuracyPercentage% accuracy
+      @if (Model.CorrectWithHintCount > 0)
+      {
+        <span>· @Model.CorrectWithHintCount with a hint</span>
+      }
+    </div>
+  </div>
+  <div class="stat">
+    <div class="stat__label">Incorrect</div>
+    <div class="stat__value" style="color: var(--color-danger)">@Model.IncorrectCount</div>
+    <div class="stat__hint">
+      @if (Model.IncorrectWithHintCount > 0)
+      {
+        <span>@Model.IncorrectWithHintCount with a hint</span>
+      }
+      else
+      {
+        <span>Review explanations below</span>
+      }
+    </div>
+  </div>
+  <div class="stat">
+    <div class="stat__label">Skipped</div>
+    <div class="stat__value">@Model.SkippedCount</div>
+    <div class="stat__hint">not counted in accuracy rate</div>
+  </div>
+</div>
+
+@if (Model.HintUsedCount > 0)
+{
+  <div class="alert alert--info mt-4">
+    You used a hint on <strong>@Model.HintUsedCount</strong> of @Model.TotalQuestions questions
+    (@Model.CorrectWithHintCount correct with a hint). Try the next set without hints to see your true baseline!
+  </div>
+}
+
+<div class="card mt-4">
+  <div class="card__header">
+    <div class="row row--between">
+      <strong>Questions review</strong>
+      <span class="text-sm text-muted">@Model.Questions.Count questions</span>
+    </div>
+  </div>
+  <div class="card__body">
+    <table class="table table--striped">
+      <caption class="visually-hidden">Detailed question review for this practice session</caption>
+      <thead>
+        <tr>
+          <th scope="col" style="width: 60px">#</th>
+          <th scope="col">Category</th>
+          <th scope="col">Your answer</th>
+          <th scope="col">Correct answer</th>
+          <th scope="col" style="width: 80px">Hint</th>
+          <th scope="col">Explanation</th>
+        </tr>
+      </thead>
+      <tbody>
+        @foreach (var q in Model.Questions)
+        {
+          <tr>
+            <td><strong>@q.DisplayOrder</strong></td>
+            <td>@(q.CategoryName ?? "General")</td>
+            <td>
+              @if (q.IsCorrect == true)
+              {
+                <span class="badge badge--success">@q.SelectedOptionLabel — @q.SelectedOptionText</span>
+              }
+              else if (q.IsCorrect == false)
+              {
+                <span class="badge badge--danger">@q.SelectedOptionLabel — @q.SelectedOptionText</span>
+              }
+              else
+              {
+                <span class="badge badge--muted">Skipped</span>
+              }
+            </td>
+            <td>
+              <span class="badge badge--success">@q.CorrectOptionLabel — @q.CorrectOptionText</span>
+            </td>
+            <td>
+              @if (q.HintUsed)
+              {
+                <span class="badge badge--muted">Used</span>
+              }
+              else
+              {
+                <span class="text-muted">No</span>
+              }
+            </td>
+            <td>
+              @if (!string.IsNullOrEmpty(q.Explanation))
+              {
+                <details>
+                  <summary>View explanation</summary>
+                  <div class="explain mt-2">
+                    <div class="explain__title">Why @q.CorrectOptionLabel is correct</div>
+                    <p class="no-margin">@q.Explanation</p>
+                  </div>
+                </details>
+              }
+              else
+              {
+                <span class="text-muted">—</span>
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>
