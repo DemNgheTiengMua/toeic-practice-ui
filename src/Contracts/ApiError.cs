@@ -48,5 +48,6 @@ public sealed record ApiError(string Code, string Title, int Status, string? Det
 
         public const string SavedQuestionNotFound = "SAVED_QUESTION_NOT_FOUND";
         public const string QuestionNotFound = "QUESTION_NOT_FOUND";
+        public const string RecommendationNotFound = "RECOMMENDATION_NOT_FOUND";
     }
 }

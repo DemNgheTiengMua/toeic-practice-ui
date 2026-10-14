@@ -155,8 +155,8 @@
     "semantic_hash": ""
   },
   "src/Contracts/ApiError.cs": {
-    "mtime": 1791962280.572782,
-    "ast_hash": "919f13318f290e8ef3e46d751e545f64",
+    "mtime": 1791964078.6379976,
+    "ast_hash": "c517c07edb38f21c4e80380473374bb3",
     "semantic_hash": ""
   },
   "src/Contracts/AuthClaims.cs": {
@@ -180,8 +180,8 @@
     "semantic_hash": "5fa1bb2011284e3f35ad8f4fb9993180"
   },
   "src/Contracts/CompanionApiClient.cs": {
-    "mtime": 1791962310.5376537,
-    "ast_hash": "a5c4e8d6586fc15fb5a4245ee50bc110",
+    "mtime": 1791964102.0236306,
+    "ast_hash": "9cd1d96d0284f5e003b0916c40741ebe",
     "semantic_hash": ""
   },
   "src/Contracts/Contracts.csproj": {
@@ -545,8 +545,8 @@
     "semantic_hash": "a1e0ec747b63abe2941b00c6252f53a5"
   },
   "src/WebAPI/Program.cs": {
-    "mtime": 1791962493.080235,
-    "ast_hash": "c1d66010cfd720efde9dcbcafa65c07f",
+    "mtime": 1791964344.06295,
+    "ast_hash": "7ab46e1542366f05bac51a0261eda8b1",
     "semantic_hash": ""
   },
   "src/WebAPI/Properties/launchSettings.json": {
@@ -730,8 +730,8 @@
     "semantic_hash": "5697f7954ed8a66961aa642d65f306c1"
   },
   "src/WebMVC/Views/Shared/_LearnerLayout.cshtml": {
-    "mtime": 1791962797.7732375,
-    "ast_hash": "87e97b7bb13cb9c3dcf4fedc69e1bd7d",
+    "mtime": 1791964451.084911,
+    "ast_hash": "51a861eb96824d8f3f16130e8f9d0a29",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/_ViewImports.cshtml": {
@@ -1326,8 +1326,8 @@
     "semantic_hash": ""
   },
   "tests/WebMVC.Tests/PracticeControllerTests.cs": {
-    "mtime": 1791962574.150748,
-    "ast_hash": "808f8553c7af22b4ab1158125e6c4a58",
+    "mtime": 1791964640.4356508,
+    "ast_hash": "af0c7438d95b1c87bdce06be14250d9a",
     "semantic_hash": ""
   },
   ".agents/rules/graphify.md": {
@@ -1396,8 +1396,48 @@
     "semantic_hash": ""
   },
   "tests/WebMVC.Tests/SavedQuestionsControllerTests.cs": {
-    "mtime": 1791963051.6393216,
-    "ast_hash": "af0d9932ff2eaf9100d1562f45a1b868",
+    "mtime": 1791964655.2620041,
+    "ast_hash": "4b2fac12cba964600ce4046ac43dcb35",
+    "semantic_hash": ""
+  },
+  "src/BusinessObjects/WeaknessModels.cs": {
+    "mtime": 1791964074.7515974,
+    "ast_hash": "ca34fcd21ee9e13f0cdc8849f25df936",
+    "semantic_hash": ""
+  },
+  "src/Contracts/WeaknessDtos.cs": {
+    "mtime": 1791964083.979669,
+    "ast_hash": "6cd026761b2553518f75030d032980cf",
+    "semantic_hash": ""
+  },
+  "src/Services/WeaknessAnalysisService.cs": {
+    "mtime": 1791964248.9354458,
+    "ast_hash": "de6d53c41642155d90ebe5c9b1f12718",
+    "semantic_hash": ""
+  },
+  "src/WebMVC/Controllers/WeaknessAnalysisController.cs": {
+    "mtime": 1791964426.4032733,
+    "ast_hash": "2ed26fe1eee52ad97510195e3a78f7a0",
+    "semantic_hash": ""
+  },
+  "src/WebMVC/Models/WeaknessAnalysisViewModels.cs": {
+    "mtime": 1791964361.8921897,
+    "ast_hash": "46e266d1e760a205cb47119e3519faf8",
+    "semantic_hash": ""
+  },
+  "src/WebMVC/Views/WeaknessAnalysis/Index.cshtml": {
+    "mtime": 1791964478.7076838,
+    "ast_hash": "458d38bbb83a7bfc2d9468b01ef90039",
+    "semantic_hash": ""
+  },
+  "tests/Services.Tests/WeaknessAnalysisServiceTests.cs": {
+    "mtime": 1791964255.050118,
+    "ast_hash": "68e051c7fddb0283815d09b6bab02474",
+    "semantic_hash": ""
+  },
+  "tests/WebMVC.Tests/WeaknessAnalysisControllerTests.cs": {
+    "mtime": 1791964682.9756606,
+    "ast_hash": "4e6cc657be1d5025a0e6f7faea344a5c",
     "semantic_hash": ""
   }
 }

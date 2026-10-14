@@ -1,0 +1,268 @@
+@model WebMVC.Models.WeaknessAnalysisViewModel
+@inject WebMVC.DateTimeFormatter Dates
+@{
+    Layout = "_LearnerLayout";
+    ViewData["Title"] = "Weakness analysis";
+    ViewData["Description"] = "Deterministic accuracy across sections and categories from practice and mock exams.";
+    var data = Model.Data;
+}
+
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+  <a href="/dashboard" class="breadcrumbs__item">Home</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <span class="breadcrumbs__item" aria-current="page">Weakness analysis</span>
+</nav>
+
+<div class="row row--between row--wrap">
+  <div>
+    <h1 class="m-0 mb-1">Weakness analysis</h1>
+    <p class="text-sm text-muted no-margin">
+      Combined from @data.GradedExamCount @(data.GradedExamCount == 1 ? "graded exam" : "graded exams") and @data.CompletedPracticeCount @(data.CompletedPracticeCount == 1 ? "practice session" : "practice sessions").
+    </p>
+  </div>
+  <span class="badge badge--success">Free</span>
+</div>
+
+@if (TempData["SuccessMessage"] is string successMsg)
+{
+  <div class="alert alert--success mt-4" role="status">@successMsg</div>
+}
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+  <div class="alert alert--danger mt-4" role="alert">@Model.ErrorMessage</div>
+}
+
+@if (!data.HasData)
+{
+  <!-- Empty state: not enough data to analyse -->
+  <div class="card mt-4">
+    <div class="card__body">
+      <div class="state-block">
+        <div class="state-block__icon" aria-hidden="true">EMPTY</div>
+        <div class="state-block__title">Not enough data to analyse</div>
+        <p class="state-block__desc">
+          At least one completed practice session or one graded exam is required. Practicing any single Part gives you results right away — <strong>free, no credit deducted</strong>.
+        </p>
+        <div class="row row--center mt-3">
+          <a class="btn btn--primary btn--lg" href="/practice">Practice one Part</a>
+          <a class="btn btn--lg" href="/certificates">Take a mock test</a>
+        </div>
+      </div>
+    </div>
+  </div>
+}
+else
+{
+  <div class="alert alert--info mt-4">
+    This is a study tool, not an exam result. The figures come from every question you have answered, including practice sessions.
+  </div>
+
+  <div class="card mt-4">
+    <div class="card__header"><strong>Accuracy by Part</strong></div>
+    <div class="card__body stack">
+      <p class="text-sm text-muted no-margin">
+        Sorted weakest first. The "questions" column is the total number of questions answered, across both exams and practice.
+      </p>
+
+      @foreach (var s in data.Sections)
+      {
+        <div>
+          <div class="row row--between text-sm">
+            <span>
+              <strong>Part @s.Code — @s.Name</strong>
+              @if (s.IsWeakest)
+              {
+                <span class="badge badge--danger ml-1">Weakest</span>
+              }
+              else if (s.IsStrongest)
+              {
+                <span class="badge badge--success ml-1">Strongest</span>
+              }
+            </span>
+            <span class="text-muted">
+              @if (s.Answered > 0)
+              {
+                <span>@s.AccuracyPercentage% · @s.Correct/@s.Answered questions</span>
+              }
+              else
+              {
+                <span>Not attempted yet</span>
+              }
+            </span>
+          </div>
+          <div class="progress mt-1">
+            @{
+              var barClass = s.Answered == 0
+                ? ""
+                : s.AccuracyPercentage < 70
+                  ? "progress__bar--danger"
+                  : s.AccuracyPercentage < 80
+                    ? "progress__bar--warning"
+                    : "progress__bar--success";
+            }
+            <div class="progress__bar @barClass" style="width: @(s.Answered > 0 ? s.AccuracyPercentage : 0)%" role="progressbar" aria-valuenow="@s.AccuracyPercentage" aria-valuemin="0" aria-valuemax="100"></div>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+
+  <div class="grid-2 mt-4">
+    <div class="card">
+      <div class="card__header"><strong>What to practice first</strong></div>
+      <div class="card__body stack">
+        @if (data.PriorityPracticeSection is not null)
+        {
+          <p class="text-sm text-muted no-margin">
+            Part @data.PriorityPracticeSection.Code sits at your lowest accuracy level (@data.PriorityPracticeSection.AccuracyPercentage%). This is where you can improve your score fastest.
+          </p>
+          <div class="row mt-2">
+            <a class="btn btn--primary" href="/practice">Practice Part @data.PriorityPracticeSection.Code now</a>
+            <a class="btn btn--sm" href="/saved-questions?sectionId=@data.PriorityPracticeSection.SectionId">View saved questions in Part @data.PriorityPracticeSection.Code</a>
+          </div>
+        }
+        else
+        {
+          <p class="text-sm text-muted no-margin">
+            Keep practicing across all sections to uncover your target areas for improvement.
+          </p>
+          <div class="row mt-2">
+            <a class="btn btn--primary" href="/practice">Practice now</a>
+          </div>
+        }
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card__header"><strong>Frequently missed question types</strong></div>
+      <div class="card__body">
+        @if (data.FrequentlyMissedCategories.Count > 0)
+        {
+          <ul class="m-0 pl-5">
+            @foreach (var cat in data.FrequentlyMissedCategories)
+            {
+              <li class="mb-1">
+                <strong>@cat.Name</strong>: @cat.AccuracyPercentage% (@cat.Correct/@cat.Answered correct@(cat.Answered > cat.Correct ? $", {cat.Answered - cat.Correct} missed" : ""))
+              </li>
+            }
+          </ul>
+          <p class="text-sm text-muted mt-3 no-margin">
+            Grouped by the question-type label each question carries, across exams and practice.
+          </p>
+        }
+        else
+        {
+          <p class="text-sm text-muted no-margin">
+            No question category weaknesses detected yet.
+          </p>
+        }
+      </div>
+    </div>
+  </div>
+
+  <div class="card mt-4" id="recommendations-card">
+    <div class="card__header">
+      <strong>Recommendations</strong>
+    </div>
+    <div class="card__body stack" id="recommendations-list">
+      <p class="text-sm text-muted no-margin">
+        Actionable recommendations from your study history. Open items remain until marked resolved.
+      </p>
+
+      @if (data.Recommendations.Count > 0)
+      {
+        @foreach (var reco in data.Recommendations)
+        {
+          <div class="p-3 border stack reco-item" id="reco-@reco.RecId">
+            <div class="row row--between">
+              <div class="row">
+                @if (reco.Severity == "major")
+                {
+                  <span class="badge badge--danger">Priority</span>
+                }
+                else if (reco.Severity == "minor")
+                {
+                  <span class="badge badge--warning">Suggestion</span>
+                }
+                else
+                {
+                  <span class="badge badge--info">Tip</span>
+                }
+                @if (!string.IsNullOrEmpty(reco.TargetBandCode))
+                {
+                  <span class="badge ml-1">Target @reco.TargetBandCode</span>
+                }
+                @if (!string.IsNullOrEmpty(reco.SkillName))
+                {
+                  <span class="text-sm text-muted ml-1">(@reco.SkillName)</span>
+                }
+              </div>
+              <form method="post" action="/weakness-analysis/recommendations/@reco.RecId/resolve" class="no-margin js-resolve-form" data-reco-id="@reco.RecId">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn--sm">Mark resolved</button>
+              </form>
+            </div>
+            <div class="text-sm mt-1">@reco.Text</div>
+          </div>
+        }
+      }
+      else
+      {
+        <div class="p-4 text-center text-muted border" id="no-recos-message">
+          All recommendations resolved. Great work!
+        </div>
+      }
+    </div>
+  </div>
+}
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const forms = document.querySelectorAll('.js-resolve-form');
+    forms.forEach(function (form) {
+      form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const recoId = form.getAttribute('data-reco-id');
+        const tokenInput = form.querySelector('input[name="__RequestVerificationToken"]');
+        const token = tokenInput ? tokenInput.value : '';
+
+        try {
+          const res = await fetch(form.action, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+              'X-Requested-With': 'XMLHttpRequest',
+              'Accept': 'application/json'
+            },
+            body: new URLSearchParams({
+              '__RequestVerificationToken': token
+            })
+          });
+
+          if (res.ok) {
+            const row = document.getElementById('reco-' + recoId);
+            if (row) {
+              row.remove();
+            }
+            const remaining = document.querySelectorAll('.reco-item');
+            if (remaining.length === 0) {
+              const list = document.getElementById('recommendations-list');
+              if (list && !document.getElementById('no-recos-message')) {
+                const emptyMsg = document.createElement('div');
+                emptyMsg.id = 'no-recos-message';
+                emptyMsg.className = 'p-4 text-center text-muted border';
+                emptyMsg.textContent = 'All recommendations resolved. Great work!';
+                list.appendChild(emptyMsg);
+              }
+            }
+          } else {
+            form.submit();
+          }
+        } catch (err) {
+          form.submit();
+        }
+      });
+    });
+  });
+</script>

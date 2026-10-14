@@ -334,5 +334,9 @@ public sealed class SavedQuestionsControllerTests
 
         public Task<SaveQuestionResultDto> UnsaveQuestionAsync(int questionId, string bearerToken, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<SaveQuestionResultDto>(ExceptionToThrow) : Task.FromResult(UnsaveResult!);
+
+        public Task<WeaknessAnalysisDto> GetWeaknessAnalysisAsync(string bearerToken, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+
+        public Task<ResolveRecommendationResultDto> ResolveRecommendationAsync(int recId, string bearerToken, CancellationToken cancellationToken = default) => throw new NotImplementedException();
     }
 }
