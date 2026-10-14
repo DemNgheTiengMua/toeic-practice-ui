@@ -1,4 +1,4 @@
-using BusinessObjects;
+using System.Data;
 using Contracts;
 using DataAccess;
 using DataAccess.Scaffold;
@@ -140,11 +140,17 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
             ?? throw new OrderNotFoundException(orderCode);
 
         // ADR-0003: Every return redirect is logged as a payment event, but NEVER grants credit.
+        var reportedStatus = order.Status switch
+        {
+            "reconciling" => "pending",
+            _ => order.Status
+        };
+
         var returnEvent = new PaymentEvent
         {
             OrderId = order.OrderId,
             Source = "return_redirect",
-            ReportedStatus = order.Status,
+            ReportedStatus = reportedStatus,
             SignatureValid = false,
             WasApplied = false,
             Note = "Browser return redirect logged",
@@ -259,6 +265,27 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
                         .Where(o => o.OrderCode == orderCode && o.UserId == userId)
                         .SingleAsync(cancellationToken);
                 }
+                else
+                {
+                    // ADR-0003: Every status query is logged as a payment event
+                    var reportedStatus = gatewayStatus.Status switch
+                    {
+                        "reconciling" => "pending",
+                        _ => gatewayStatus.Status
+                    };
+                    db.PaymentEvents.Add(new PaymentEvent
+                    {
+                        OrderId = order.OrderId,
+                        Source = "status_query",
+                        ReportedStatus = reportedStatus,
+                        SignatureValid = false,
+                        WasApplied = false,
+                        Payload = gatewayStatus.RawPayload,
+                        Note = "Status query checked during reconcile refresh",
+                        CreatedAt = DateTimeOffset.UtcNow
+                    });
+                    await db.SaveChangesAsync(cancellationToken);
+                }
             }
         }
 
@@ -295,6 +322,8 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
             throw new InvalidOperationException("Credit can only be granted by a trusted source (status_query or verified webhook).");
         }
 
+        await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+
         var order = await db.Orders
             .Include(o => o.Package)
             .Where(o => o.PaymentNo == paymentNo)
@@ -325,10 +354,9 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
                 CreatedAt = DateTimeOffset.UtcNow
             });
             await db.SaveChangesAsync(cancellationToken);
+            await tx.CommitAsync(cancellationToken);
             return true;
         }
-
-        await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
 
         var now = DateTimeOffset.UtcNow;
         order.Status = "paid";

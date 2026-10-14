@@ -342,4 +342,36 @@ public sealed class PaymentServiceTests(DatabaseFixture database)
         var resExpired = await service.ApplyMockGatewayActionAsync(u4, oExpired.OrderCode, "expired");
         Assert.Equal("expired", resExpired.Status);
     }
+
+    [Fact]
+    public async Task Reconciling_order_refresh_logs_event_and_does_not_violate_status_constraint()
+    {
+        var pkgId = await SeedPackageAsync("ReconcileEventTest", 5, 199000);
+        var mockGateway = new MockPaymentGateway();
+        var service = CreateService(mockGateway);
+
+        var userId = await SeedUserAsync(isVerified: true);
+        var order = await service.CreateOrderAsync(userId, pkgId, "http://localhost:5000");
+
+        // Mark as reconciling
+        await service.ApplyMockGatewayActionAsync(userId, order.OrderCode, "pending");
+
+        // Learner returns to Result page multiple times while reconciling (simulating 5s refresh)
+        var returnRes = await service.HandleReturnRedirectAsync(userId, order.OrderCode);
+        Assert.Equal("reconciling", returnRes.Status);
+
+        // Status check runs while still unresolved in mock gateway
+        var statusRes = await service.GetPaymentResultAsync(userId, order.OrderCode);
+        Assert.Equal("reconciling", statusRes.Status);
+
+        // Verify PaymentEvents table has recorded the events without throwing SQL constraint violations
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var events = await db.PaymentEvents
+            .Where(e => e.OrderId == returnRes.OrderId)
+            .OrderBy(e => e.EventId)
+            .ToListAsync();
+
+        Assert.Contains(events, e => e.Source == "return_redirect" && e.ReportedStatus == "pending");
+        Assert.Contains(events, e => e.Source == "status_query" && e.ReportedStatus == "pending");
+    }
 }

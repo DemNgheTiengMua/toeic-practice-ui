@@ -6,7 +6,6 @@ namespace Services;
 public interface IMockPaymentGateway : IPaymentGateway
 {
     void SetOutcome(long paymentNo, string status, string? errorCode = null);
-    void SetOutcomeByOrderCode(string orderCode, string status, string? errorCode = null);
 }
 
 public sealed class MockPaymentGateway : IMockPaymentGateway
@@ -15,16 +14,10 @@ public sealed class MockPaymentGateway : IMockPaymentGateway
     public string GatewayName => Name;
 
     private readonly ConcurrentDictionary<long, (string Status, string? ErrorCode)> _byPaymentNo = new();
-    private readonly ConcurrentDictionary<string, (string Status, string? ErrorCode)> _byOrderCode = new();
 
     public void SetOutcome(long paymentNo, string status, string? errorCode = null)
     {
         _byPaymentNo[paymentNo] = (status, errorCode);
-    }
-
-    public void SetOutcomeByOrderCode(string orderCode, string status, string? errorCode = null)
-    {
-        _byOrderCode[orderCode] = (status, errorCode);
     }
 
     public Task<PaymentGatewayLinkResult> CreatePaymentLinkAsync(
@@ -44,11 +37,6 @@ public sealed class MockPaymentGateway : IMockPaymentGateway
         if (_byPaymentNo.TryGetValue(paymentNo, out var outcome))
         {
             return Task.FromResult(new GatewayPaymentStatus(outcome.Status, gatewayTxnRef, outcome.ErrorCode, $"{{ \"status\": \"{outcome.Status}\", \"paymentNo\": {paymentNo} }}"));
-        }
-
-        if (gatewayTxnRef != null && gatewayTxnRef.StartsWith("DH-") && _byOrderCode.TryGetValue(gatewayTxnRef, out outcome))
-        {
-            return Task.FromResult(new GatewayPaymentStatus(outcome.Status, gatewayTxnRef, outcome.ErrorCode, $"{{ \"status\": \"{outcome.Status}\", \"orderCode\": \"{gatewayTxnRef}\" }}"));
         }
 
         // Default state when nothing simulated yet: pending
