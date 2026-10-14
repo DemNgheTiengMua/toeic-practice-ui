@@ -3,7 +3,10 @@
     Layout = null;
     var session = Model.Session;
     var q = Model.Question;
+    var isFinished = session.Status == "finished";
     var isAnswered = q.SelectedOptionId.HasValue || q.IsCorrect.HasValue;
+    var isReviewMode = isFinished || isAnswered;
+    var isSkipped = isFinished && !isAnswered;
     var progressPercent = (int)Math.Round((double)q.DisplayOrder / q.TotalQuestions * 100);
 }
 <!DOCTYPE html>
@@ -56,6 +59,10 @@
               {
                 <span class="badge badge--danger" id="status-badge">Incorrect</span>
               }
+              else if (isSkipped)
+              {
+                <span class="badge badge--muted" id="status-badge">Skipped</span>
+              }
               else
               {
                 <span class="badge" id="status-badge" style="display: none;"></span>
@@ -88,7 +95,7 @@
 
             <p class="question__stem">@q.Stem</p>
 
-            @if (isAnswered)
+            @if (isReviewMode)
             {
               <div class="option-list" aria-label="Answer for question @q.DisplayOrder">
                 @foreach (var opt in q.Options)
@@ -131,7 +138,14 @@
               }
 
               <div class="row row--between mt-4">
-                <div></div>
+                @if (isFinished)
+                {
+                  <a class="btn btn--ghost" href="/practice/@session.SessionId/summary">Back to summary</a>
+                }
+                else
+                {
+                  <div></div>
+                }
                 @if (q.DisplayOrder < q.TotalQuestions)
                 {
                   <a class="btn btn--primary btn--lg" href="/practice/@session.SessionId?q=@(q.DisplayOrder + 1)">Next question</a>
@@ -246,7 +260,14 @@
           })
           .then(function (res) {
             if (!res.ok) {
-              throw new Error('Server returned HTTP ' + res.status);
+              return res.json().then(function (errData) {
+                var err = new Error(errData.error || ('Server returned HTTP ' + res.status));
+                err.code = errData.code;
+                throw err;
+              }).catch(function (fallback) {
+                if (fallback.code) throw fallback;
+                throw new Error('Server returned HTTP ' + res.status);
+              });
             }
             return res.json();
           })
@@ -264,7 +285,11 @@
           .catch(function (err) {
             console.error('Failed to reveal hint', err);
             showHintBtn.disabled = false;
-            showError('Could not load hint. Your connection may be unstable. Please try again.');
+            if (err.code === 'PRACTICE_SESSION_FINISHED') {
+              showError('This practice session has already been finished.');
+              return;
+            }
+            showError(err.code ? err.message : 'Could not load hint. Your connection may be unstable. Please try again.');
           });
         });
       }
@@ -302,7 +327,17 @@
         })
         .then(function (res) {
           if (!res.ok) {
-            throw new Error('Server returned HTTP ' + res.status);
+            return res.json().then(function (errData) {
+              var err = new Error(errData.error || ('Server returned HTTP ' + res.status));
+              err.code = errData.code;
+              err.status = res.status;
+              throw err;
+            }).catch(function (fallback) {
+              if (fallback.code || fallback.status) throw fallback;
+              var err = new Error('Server returned HTTP ' + res.status);
+              err.status = res.status;
+              throw err;
+            });
           }
           return res.json();
         })
@@ -384,6 +419,35 @@
         .catch(function (err) {
           console.error('Failed to submit answer', err);
           submitBtn.disabled = false;
+
+          if (err.code === 'PRACTICE_SESSION_FINISHED') {
+            showError('This practice session has already been finished.');
+            controlsRow.innerHTML = '<div class="row row--between" style="width: 100%">' +
+              '<div></div>' +
+              '<a class="btn btn--primary btn--lg" href="/practice/' + sessionId + '/summary">View summary</a>' +
+              '</div>';
+            return;
+          }
+
+          if (err.code === 'PRACTICE_INVALID_OPTION') {
+            showError('The selected option is invalid for this question. Please select a valid option.');
+            return;
+          }
+
+          if (err.code === 'PRACTICE_SESSION_NOT_FOUND') {
+            showError('This practice session was not found.');
+            controlsRow.innerHTML = '<div class="row row--between" style="width: 100%">' +
+              '<div></div>' +
+              '<a class="btn btn--primary btn--lg" href="/practice">Back to practice</a>' +
+              '</div>';
+            return;
+          }
+
+          if (err.code && err.message) {
+            showError(err.message);
+            return;
+          }
+
           showError('Your answer could not be saved. Your network connection may be unstable. Please try again.');
         });
       });

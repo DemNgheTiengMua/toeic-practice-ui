@@ -291,4 +291,92 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         Assert.Equal(qIds[1], unseenQ1.QuestionId);
         Assert.Equal(qIds[2], unseenQ2.QuestionId);
     }
+
+    [Fact]
+    public async Task StartSession_prunes_older_sessions_and_answer_logs_when_exceeding_limit()
+    {
+        var certCode = Unique("PR");
+        var (_, secId, _, qIds, correctOpts, _) = await SeedCertificateWithQuestionsAsync(certCode);
+        var userId = await SeedLearnerAsync(certCode);
+        var (practice, _) = CreateServices();
+        practice.MaxSavedSessionsPerCertificate = 2; // Test limit of 2
+
+        // Session 1: complete it
+        var s1 = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId, 1));
+        await practice.SubmitAnswerAsync(userId, s1.SessionId, qIds[0], new SubmitPracticeAnswerInput(correctOpts[0]));
+
+        // Session 2: complete it
+        var s2 = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId, 1));
+        await practice.SubmitAnswerAsync(userId, s2.SessionId, qIds[0], new SubmitPracticeAnswerInput(correctOpts[0]));
+
+        // Session 3: start it -> exceeds limit of 2, so s1 and its answers should be pruned
+        var s3 = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId, 1));
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var remainingSessions = await db.PracticeSessions
+            .Where(s => s.UserId == userId)
+            .OrderBy(s => s.SessionId)
+            .Select(s => s.SessionId)
+            .ToListAsync();
+
+        Assert.Equal(2, remainingSessions.Count);
+        Assert.DoesNotContain(s1.SessionId, remainingSessions);
+        Assert.Contains(s2.SessionId, remainingSessions);
+        Assert.Contains(s3.SessionId, remainingSessions);
+
+        // s1's answers should also have been deleted
+        var s1Answers = await db.PracticeAnswers.Where(pa => pa.SessionId == s1.SessionId).ToListAsync();
+        Assert.Empty(s1Answers);
+
+        // s2 and s3 answers exist
+        var s2Answers = await db.PracticeAnswers.Where(pa => pa.SessionId == s2.SessionId).ToListAsync();
+        Assert.NotEmpty(s2Answers);
+    }
+
+    [Fact]
+    public async Task StartSession_cleans_up_empty_unstarted_in_progress_sessions()
+    {
+        var certCode = Unique("AB");
+        var (_, secId, _, _, _, _) = await SeedCertificateWithQuestionsAsync(certCode);
+        var userId = await SeedLearnerAsync(certCode);
+        var (practice, _) = CreateServices();
+
+        // Start session 1 but do not answer any questions
+        var s1 = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId, 2));
+
+        // Start session 2 -> s1 was empty, so it should be cleaned up immediately
+        var s2 = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId, 2));
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var sessions = await db.PracticeSessions.Where(s => s.UserId == userId).ToListAsync();
+
+        Assert.Single(sessions);
+        Assert.Equal(s2.SessionId, sessions[0].SessionId);
+
+        var s1Answers = await db.PracticeAnswers.Where(pa => pa.SessionId == s1.SessionId).ToListAsync();
+        Assert.Empty(s1Answers);
+    }
+
+    [Fact]
+    public async Task StartSession_marks_partially_answered_in_progress_session_as_abandoned()
+    {
+        var certCode = Unique("PA");
+        var (_, secId, _, qIds, correctOpts, _) = await SeedCertificateWithQuestionsAsync(certCode);
+        var userId = await SeedLearnerAsync(certCode);
+        var (practice, _) = CreateServices();
+
+        // Start session 1 and answer question 1
+        var s1 = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId, 2));
+        await practice.SubmitAnswerAsync(userId, s1.SessionId, qIds[0], new SubmitPracticeAnswerInput(correctOpts[0]));
+
+        // Start session 2 -> s1 had an answer, so it should be preserved as "abandoned"
+        var s2 = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId, 2));
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var session1InDb = await db.PracticeSessions.SingleOrDefaultAsync(s => s.SessionId == s1.SessionId);
+
+        Assert.NotNull(session1InDb);
+        Assert.Equal("abandoned", session1InDb.Status);
+        Assert.NotNull(session1InDb.FinishedAt);
+    }
 }

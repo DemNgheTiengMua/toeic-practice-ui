@@ -177,6 +177,38 @@ public sealed class PracticeControllerTests
         Assert.Equal(1, model.SkippedCount);
     }
 
+    [Fact]
+    public async Task Take_when_session_not_found_returns_404_view()
+    {
+        var api = new TestApiClient
+        {
+            ExceptionToThrow = new ApiException(ApiError.Codes.PracticeSessionNotFound, "Not found", 404),
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.Take(999, null, CancellationToken.None);
+
+        var viewResult = Assert.IsType<ViewResult>(result);
+        Assert.Equal("SessionNotFound", viewResult.ViewName);
+        Assert.Equal(404, controller.Response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Summary_when_session_not_found_returns_404_view()
+    {
+        var api = new TestApiClient
+        {
+            ExceptionToThrow = new ApiException(ApiError.Codes.PracticeSessionNotFound, "Not found", 404),
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.Summary(999, CancellationToken.None);
+
+        var viewResult = Assert.IsType<ViewResult>(result);
+        Assert.Equal("SessionNotFound", viewResult.ViewName);
+        Assert.Equal(404, controller.Response.StatusCode);
+    }
+
     private static PracticeController CreateController(TestApiClient api)
     {
         var identity = new ClaimsIdentity(AuthClaims.For(7, "learner@test.local", Roles.Learner, "Learner"), "Cookies");
@@ -229,6 +261,8 @@ public sealed class PracticeControllerTests
 
     private sealed class TestApiClient : ICompanionApiClient
     {
+        public Exception? ExceptionToThrow { get; set; }
+
         public PracticeCatalogDto? Catalog { get; set; }
 
         public PracticeSessionDto? Session { get; set; }
@@ -257,24 +291,24 @@ public sealed class PracticeControllerTests
         public Task<LearnerDashboardDto> GetDashboardAsync(string bearerToken, CancellationToken cancellationToken = default) => throw new NotImplementedException();
 
         public Task<PracticeCatalogDto> GetPracticeCatalogAsync(string bearerToken, CancellationToken cancellationToken = default) =>
-            Task.FromResult(Catalog!);
+            ExceptionToThrow != null ? Task.FromException<PracticeCatalogDto>(ExceptionToThrow) : Task.FromResult(Catalog!);
 
         public Task<PracticeSessionDto> StartPracticeSessionAsync(StartPracticeRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
-            Task.FromResult(Session!);
+            ExceptionToThrow != null ? Task.FromException<PracticeSessionDto>(ExceptionToThrow) : Task.FromResult(Session!);
 
         public Task<PracticeSessionDto> GetPracticeSessionInfoAsync(int sessionId, string bearerToken, CancellationToken cancellationToken = default) =>
-            Task.FromResult(Session!);
+            ExceptionToThrow != null ? Task.FromException<PracticeSessionDto>(ExceptionToThrow) : Task.FromResult(Session!);
 
         public Task<PracticeQuestionDto> GetPracticeQuestionAsync(int sessionId, int displayOrder, string bearerToken, CancellationToken cancellationToken = default) =>
-            Task.FromResult(Question!);
+            ExceptionToThrow != null ? Task.FromException<PracticeQuestionDto>(ExceptionToThrow) : Task.FromResult(Question!);
 
         public Task<RevealHintResponse> RevealPracticeHintAsync(int sessionId, int questionId, string bearerToken, CancellationToken cancellationToken = default) =>
-            Task.FromResult(HintResponse!);
+            ExceptionToThrow != null ? Task.FromException<RevealHintResponse>(ExceptionToThrow) : Task.FromResult(HintResponse!);
 
         public Task<GradedAnswerDto> SubmitPracticeAnswerAsync(int sessionId, int questionId, SubmitPracticeAnswerRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
-            Task.FromResult(GradedResult!);
+            ExceptionToThrow != null ? Task.FromException<GradedAnswerDto>(ExceptionToThrow) : Task.FromResult(GradedResult!);
 
         public Task<PracticeSummaryDto> GetPracticeSummaryAsync(int sessionId, string bearerToken, CancellationToken cancellationToken = default) =>
-            Task.FromResult(Summary!);
+            ExceptionToThrow != null ? Task.FromException<PracticeSummaryDto>(ExceptionToThrow) : Task.FromResult(Summary!);
     }
 }

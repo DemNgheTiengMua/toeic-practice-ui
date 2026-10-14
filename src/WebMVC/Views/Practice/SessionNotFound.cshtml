@@ -1,0 +1,23 @@
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Practice session not found";
+    ViewData["Description"] = "The requested practice session could not be found.";
+}
+
+<div class="container stack" style="padding-top: var(--space-8); padding-bottom: var(--space-8); max-width: 520px">
+  <div class="card">
+    <div class="card__body">
+      <div class="state-block">
+        <div class="state-block__icon state-block__icon--danger" aria-hidden="true">ERROR</div>
+        <h1 class="state-block__title">Practice session not found</h1>
+        <p class="state-block__desc">
+          This practice session does not exist, belongs to another learner, or has expired.
+        </p>
+        <div class="row" style="justify-content: center; gap: var(--space-3); margin-top: var(--space-4)">
+          <a class="btn btn--primary" href="/practice">Back to practice</a>
+          <a class="btn btn--ghost" href="/dashboard">Back to home</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

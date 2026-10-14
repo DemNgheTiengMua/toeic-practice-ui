@@ -65,6 +65,12 @@ public sealed class PracticeController(
 
             return View(new PracticeTakeViewModel(session, question, TempData["ErrorMessage"] as string));
         }
+        catch (ApiException ex) when (ex.Status == 404 || ex.Code == ApiError.Codes.PracticeSessionNotFound || ex.Code == ApiError.Codes.PracticeQuestionNotFound)
+        {
+            logger.LogWarning(ex, "Practice session or question not found: {SessionId}", sessionId);
+            Response.StatusCode = 404;
+            return View("SessionNotFound");
+        }
         catch (ApiException ex)
         {
             logger.LogError(ex, "Failed to load practice session {SessionId}", sessionId);
@@ -144,6 +150,12 @@ public sealed class PracticeController(
                 return StatusCode(ex.Status, new { error = ex.Detail ?? ex.Message, code = ex.Code });
             }
 
+            if (ex.Status == 404 || ex.Code == ApiError.Codes.PracticeSessionNotFound)
+            {
+                Response.StatusCode = 404;
+                return View("SessionNotFound");
+            }
+
             TempData["ErrorMessage"] = ex.Detail ?? "Could not submit your answer. Please try again.";
             return RedirectToAction(nameof(Take), new { sessionId, q = displayOrder });
         }
@@ -161,6 +173,12 @@ public sealed class PracticeController(
             var bearer = await BearerAsync();
             var summary = await Api.GetPracticeSummaryAsync(sessionId, bearer, cancellationToken);
             return View(summary);
+        }
+        catch (ApiException ex) when (ex.Status == 404 || ex.Code == ApiError.Codes.PracticeSessionNotFound)
+        {
+            logger.LogWarning(ex, "Practice summary for session {SessionId} not found", sessionId);
+            Response.StatusCode = 404;
+            return View("SessionNotFound");
         }
         catch (ApiException ex)
         {

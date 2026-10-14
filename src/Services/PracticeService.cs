@@ -36,8 +36,21 @@ public interface IPracticeService
     Task<PracticeSummary> GetSummaryAsync(int userId, int sessionId, CancellationToken cancellationToken = default);
 }
 
-public sealed class PracticeService(CompanionDbContext db, ILearnerService learners) : IPracticeService
+public sealed class PracticeService(
+    CompanionDbContext db,
+    ILearnerService learners,
+    Microsoft.Extensions.Configuration.IConfiguration? config = null) : IPracticeService
 {
+    public const int DefaultMaxSavedSessionsPerCertificate = 20;
+
+    /// <summary>The maximum number of recent standalone practice sessions (and their associated answer logs)
+    /// retained per learner per certificate. Older sessions exceeding this limit are pruned to keep storage
+    /// bounded in the long run while retaining enough historical data for weakness analysis and AI mentor insights.</summary>
+    public int MaxSavedSessionsPerCertificate { get; set; } =
+        config != null && int.TryParse(config["Practice:MaxSavedSessionsPerCertificate"], out var configuredMax) && configuredMax > 0
+            ? configuredMax
+            : DefaultMaxSavedSessionsPerCertificate;
+
     public async Task<PracticeSectionsView> GetPracticeSectionsAsync(int userId, CancellationToken cancellationToken = default)
     {
         var activeCertId = await learners.GetActiveCertIdAsync(userId, cancellationToken);
@@ -164,6 +177,31 @@ public sealed class PracticeService(CompanionDbContext db, ILearnerService learn
         var takeCount = Math.Min(candidateQuestionIds.Count, input.QuestionCount);
         var selectedIds = candidateQuestionIds.Take(takeCount).ToList();
 
+        // Clean up or abandon any existing standalone in-progress sessions for this user and certificate
+        var existingInProgress = await db.PracticeSessions
+            .Where(s => s.UserId == userId && s.Section.CertId == activeCertId && s.Status == "in_progress" && s.LearnerPathStepId == null)
+            .ToListAsync(cancellationToken);
+
+        foreach (var inProg in existingInProgress)
+        {
+            var hasAnswers = await db.PracticeAnswers
+                .AnyAsync(pa => pa.SessionId == inProg.SessionId && (pa.SelectedOptionId != null || pa.IsCorrect != null), cancellationToken);
+
+            if (!hasAnswers)
+            {
+                var emptyAnswers = await db.PracticeAnswers
+                    .Where(pa => pa.SessionId == inProg.SessionId)
+                    .ToListAsync(cancellationToken);
+                db.PracticeAnswers.RemoveRange(emptyAnswers);
+                db.PracticeSessions.Remove(inProg);
+            }
+            else
+            {
+                inProg.Status = "abandoned";
+                inProg.FinishedAt = DateTimeOffset.UtcNow;
+            }
+        }
+
         var session = new PracticeSession
         {
             UserId = userId,
@@ -194,6 +232,8 @@ public sealed class PracticeService(CompanionDbContext db, ILearnerService learn
             });
         }
         await db.SaveChangesAsync(cancellationToken);
+
+        await PruneOldSessionsAsync(userId, activeCertId, cancellationToken);
 
         return new PracticeSessionInfo(
             session.SessionId,
@@ -271,6 +311,7 @@ public sealed class PracticeService(CompanionDbContext db, ILearnerService learn
 
         var q = answer.Question;
         var group = q.Group;
+        var isFinished = answer.Session.Status == "finished";
         var isAnswered = answer.SelectedOptionId.HasValue || answer.IsCorrect.HasValue;
 
         var allOptions = await db.QuestionOptions
@@ -287,7 +328,7 @@ public sealed class PracticeService(CompanionDbContext db, ILearnerService learn
         string? explanation = null;
         string? transcript = null;
 
-        if (isAnswered)
+        if (isAnswered || isFinished)
         {
             correctOptionId = allOptions.FirstOrDefault(o => o.IsCorrect)?.OptionId;
             explanation = q.Explanation;
@@ -345,6 +386,7 @@ public sealed class PracticeService(CompanionDbContext db, ILearnerService learn
     {
         var answer = await db.PracticeAnswers
             .Include(pa => pa.Session)
+                .ThenInclude(s => s.Section)
             .Include(pa => pa.Question)
                 .ThenInclude(q => q.Group)
             .Include(pa => pa.Question)
@@ -393,9 +435,15 @@ public sealed class PracticeService(CompanionDbContext db, ILearnerService learn
         {
             answer.Session.Status = "finished";
             answer.Session.FinishedAt = DateTimeOffset.UtcNow;
-        }
+            await db.SaveChangesAsync(cancellationToken);
 
-        await db.SaveChangesAsync(cancellationToken);
+            var certId = answer.Session.Section.CertId;
+            await PruneOldSessionsAsync(userId, certId, cancellationToken);
+        }
+        else
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
 
         int? nextDisplayOrder = isLast ? null : answer.DisplayOrder + 1;
 
@@ -422,6 +470,7 @@ public sealed class PracticeService(CompanionDbContext db, ILearnerService learn
             session.Status = "finished";
             session.FinishedAt = DateTimeOffset.UtcNow;
             await db.SaveChangesAsync(cancellationToken);
+            await PruneOldSessionsAsync(userId, session.Section.CertId, cancellationToken);
         }
 
         var answers = await db.PracticeAnswers
@@ -488,5 +537,66 @@ public sealed class PracticeService(CompanionDbContext db, ILearnerService learn
             correctWithHint,
             incorrectWithHint,
             outcomes);
+    }
+
+    private async Task PruneOldSessionsAsync(int userId, int certId, CancellationToken cancellationToken)
+    {
+        var sessions = await db.PracticeSessions
+            .Where(s => s.UserId == userId && s.Section.CertId == certId && s.LearnerPathStepId == null)
+            .OrderByDescending(s => s.StartedAt)
+            .ThenByDescending(s => s.SessionId)
+            .Select(s => s.SessionId)
+            .ToListAsync(cancellationToken);
+
+        if (sessions.Count <= MaxSavedSessionsPerCertificate)
+        {
+            return;
+        }
+
+        var excessSessionIds = sessions.Skip(MaxSavedSessionsPerCertificate).ToList();
+        if (excessSessionIds.Count == 0)
+        {
+            return;
+        }
+
+        var insightIds = await db.AiInsights
+            .Where(ai => ai.PracticeSessionId.HasValue && excessSessionIds.Contains(ai.PracticeSessionId.Value))
+            .Select(ai => ai.InsightId)
+            .ToListAsync(cancellationToken);
+
+        var recos = await db.Recommendations
+            .Where(r => (r.PracticeSessionId.HasValue && excessSessionIds.Contains(r.PracticeSessionId.Value))
+                     || (r.InsightId.HasValue && insightIds.Contains(r.InsightId.Value)))
+            .ToListAsync(cancellationToken);
+        if (recos.Count > 0)
+        {
+            db.Recommendations.RemoveRange(recos);
+        }
+
+        var insights = await db.AiInsights
+            .Where(ai => ai.PracticeSessionId.HasValue && excessSessionIds.Contains(ai.PracticeSessionId.Value))
+            .ToListAsync(cancellationToken);
+        if (insights.Count > 0)
+        {
+            db.AiInsights.RemoveRange(insights);
+        }
+
+        var answers = await db.PracticeAnswers
+            .Where(pa => excessSessionIds.Contains(pa.SessionId))
+            .ToListAsync(cancellationToken);
+        if (answers.Count > 0)
+        {
+            db.PracticeAnswers.RemoveRange(answers);
+        }
+
+        var sessionsToRemove = await db.PracticeSessions
+            .Where(s => excessSessionIds.Contains(s.SessionId))
+            .ToListAsync(cancellationToken);
+        if (sessionsToRemove.Count > 0)
+        {
+            db.PracticeSessions.RemoveRange(sessionsToRemove);
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
     }
 }

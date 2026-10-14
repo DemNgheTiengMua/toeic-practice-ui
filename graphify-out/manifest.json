@@ -850,9 +850,9 @@
     "semantic_hash": ""
   },
   "CONTEXT.md": {
-    "mtime": 1791748439.4546368,
-    "ast_hash": "d47c5fd763bc3ba9c12939bdba62b975",
-    "semantic_hash": "d47c5fd763bc3ba9c12939bdba62b975"
+    "mtime": 1791960421.365511,
+    "ast_hash": "c566f3e832e1462d284e490a2574e408",
+    "semantic_hash": ""
   },
   "DESIGN.md": {
     "mtime": 1791739824.4387708,
@@ -1291,13 +1291,13 @@
     "semantic_hash": ""
   },
   "src/Services/PracticeService.cs": {
-    "mtime": 1791956289.6120412,
-    "ast_hash": "2e4a009ec7ca5a60c6d6d843f3992889",
+    "mtime": 1791960335.2715821,
+    "ast_hash": "3bc02169e418e3e2ca4bbf717ec7a780",
     "semantic_hash": ""
   },
   "src/WebMVC/Controllers/PracticeController.cs": {
-    "mtime": 1791957349.9052243,
-    "ast_hash": "7a9895334d2450835b9ef7c7cf061d93",
+    "mtime": 1791959747.2198093,
+    "ast_hash": "671d1a923e507036c46108956288369b",
     "semantic_hash": ""
   },
   "src/WebMVC/Models/PracticeViewModels.cs": {
@@ -1316,18 +1316,18 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Practice/Take.cshtml": {
-    "mtime": 1791957317.4038894,
-    "ast_hash": "ec220d18af64f40ad1f737faed40b9e1",
+    "mtime": 1791959715.188774,
+    "ast_hash": "4809c00424a906a8f6fb49876942ab19",
     "semantic_hash": ""
   },
   "tests/Services.Tests/PracticeServiceTests.cs": {
-    "mtime": 1791955950.5315626,
-    "ast_hash": "ee93d395adf08757799b029ab4fe166b",
+    "mtime": 1791960356.101229,
+    "ast_hash": "a5dd22ef284c638b1b2d9934d6d2d46c",
     "semantic_hash": ""
   },
   "tests/WebMVC.Tests/PracticeControllerTests.cs": {
-    "mtime": 1791957366.3887503,
-    "ast_hash": "b92a098b0540033615c4381f1a75b8d7",
+    "mtime": 1791959780.0863426,
+    "ast_hash": "a80ccbcd6286c947945380ab659a67a0",
     "semantic_hash": ""
   },
   ".agents/rules/graphify.md": {
@@ -1341,13 +1341,18 @@
     "semantic_hash": ""
   },
   "AGENTS.md": {
-    "mtime": 1791954879.0258274,
-    "ast_hash": "92b54e3be5769cea8e8d71d00428cc75",
+    "mtime": 1791960410.5327084,
+    "ast_hash": "965fd93f608b680fbd421314912bdb05",
     "semantic_hash": ""
   },
   "src/DataAccess/CompanionDbContext.Practice.cs": {
     "mtime": 1791957267.6598244,
     "ast_hash": "9aec7d1311533cc902874ab11ff51653",
+    "semantic_hash": ""
+  },
+  "src/WebMVC/Views/Practice/SessionNotFound.cshtml": {
+    "mtime": 1791959623.7282205,
+    "ast_hash": "6c773e7db5145cdda3a2267e8f55812a",
     "semantic_hash": ""
   }
 }

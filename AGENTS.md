@@ -29,6 +29,12 @@ The backend is a .NET 10 solution (`ExtraEfficiency.slnx`) structured in six str
 4. **Certificate Isolation (`PRODUCT.md`)**:
    - Composite foreign keys carry `CertId` down through exams, sections, attempts, and learning paths.
    - One certificate's content, scoring, or rubric can never leak into another.
+5. **Practice Session Retention & Logging Bound (`CONTEXT.md`, `PRODUCT.md`)**:
+   - Practice drilling generates free diagnostic data (`PracticeSessions` and `PracticeAnswers`).
+   - To keep storage bounded in the long run while retaining enough data for AI mentor insights and weakness analysis (`vw_UserSectionAccuracyAll`, `vw_UserCategoryAccuracy`), standalone sessions are capped per certificate per learner (default: 20 sessions).
+   - Sessions exceeding the limit, along with their answer logs, hint records, and attached insights/recommendations, are automatically pruned FIFO.
+   - Learning-path practice sessions (`LearnerPathStepId IS NOT NULL`) are never pruned.
+   - Unanswered in-progress sessions are cleaned up immediately when starting a new session; partially answered ones are marked `abandoned`.
 
 ---
 
