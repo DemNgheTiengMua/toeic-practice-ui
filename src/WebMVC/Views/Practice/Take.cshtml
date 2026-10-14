@@ -206,8 +206,33 @@
       var explanationContainer = document.getElementById('explanation-container');
       var controlsRow = document.getElementById('controls-row');
 
+      function showError(message) {
+        var errEl = document.getElementById('ajax-error-alert');
+        if (!errEl) {
+          errEl = document.createElement('div');
+          errEl.id = 'ajax-error-alert';
+          errEl.className = 'alert alert--danger mb-4';
+          errEl.setAttribute('role', 'alert');
+          var main = document.querySelector('main .container');
+          if (main) {
+            main.insertBefore(errEl, main.firstChild);
+          }
+        }
+        errEl.textContent = message;
+        errEl.style.display = '';
+        errEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+
+      function clearError() {
+        var errEl = document.getElementById('ajax-error-alert');
+        if (errEl) {
+          errEl.style.display = 'none';
+        }
+      }
+
       if (showHintBtn) {
         showHintBtn.addEventListener('click', function () {
+          clearError();
           showHintBtn.disabled = true;
           fetch('/practice/' + sessionId + '/questions/' + questionId + '/hint', {
             method: 'POST',
@@ -219,7 +244,12 @@
             },
             body: '__RequestVerificationToken=' + encodeURIComponent(csrfToken)
           })
-          .then(function (res) { return res.json(); })
+          .then(function (res) {
+            if (!res.ok) {
+              throw new Error('Server returned HTTP ' + res.status);
+            }
+            return res.json();
+          })
           .then(function (data) {
             if (data.hint) {
               hintText.textContent = data.hint;
@@ -227,11 +257,14 @@
               showHintBtn.style.display = 'none';
               hintUsedMsg.style.display = '';
               hintMetaBadge.style.display = '';
+            } else {
+              showHintBtn.disabled = false;
             }
           })
           .catch(function (err) {
             console.error('Failed to reveal hint', err);
             showHintBtn.disabled = false;
+            showError('Could not load hint. Your connection may be unstable. Please try again.');
           });
         });
       }
@@ -249,6 +282,7 @@
         }
 
         e.preventDefault();
+        clearError();
         submitBtn.disabled = true;
 
         var selectedOptionId = parseInt(checkedInput.value, 10);
@@ -266,7 +300,12 @@
           },
           body: formData.toString()
         })
-        .then(function (res) { return res.json(); })
+        .then(function (res) {
+          if (!res.ok) {
+            throw new Error('Server returned HTTP ' + res.status);
+          }
+          return res.json();
+        })
         .then(function (data) {
           // Disable all radio buttons
           var allRadios = form.querySelectorAll('input[type="radio"]');
@@ -345,6 +384,7 @@
         .catch(function (err) {
           console.error('Failed to submit answer', err);
           submitBtn.disabled = false;
+          showError('Your answer could not be saved. Your network connection may be unstable. Please try again.');
         });
       });
     })();
