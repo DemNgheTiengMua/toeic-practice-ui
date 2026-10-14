@@ -1,11 +1,32 @@
 @model Contracts.AuthUserDto
 @{
-    ViewData["Title"] = "Admin";
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Dashboard";
     ViewData["Description"] = "Administration dashboard.";
 }
 
-<div class="container stack" style="padding-top: var(--space-6); padding-bottom: var(--space-8)">
-  <h1 class="m-0 mb-1">Admin dashboard</h1>
-  <p class="text-muted no-margin">Signed in to the API as <strong>@Model.Email</strong> (role: @Model.Role).</p>
-  <p class="text-muted no-margin">User management, exam imports and moderation will live here.</p>
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+  <span class="breadcrumbs__item" aria-current="page">Admin</span>
+</nav>
+
+<div class="row row--between">
+  <h1>Dashboard</h1>
+</div>
+
+<div class="grid-3">
+  <div class="stat">
+    <div class="stat__label">Administrator</div>
+    <div class="stat__value text-base">@Model.Email</div>
+    <div class="stat__hint">Role: @Model.Role</div>
+  </div>
+  <div class="stat">
+    <div class="stat__label">Quick actions</div>
+    <div class="stat__value text-base"><a href="/admin/packages">Manage credit packages</a></div>
+    <div class="stat__hint">Prices, featured status &amp; sales</div>
+  </div>
+  <div class="stat">
+    <div class="stat__label">Public catalogue</div>
+    <div class="stat__value text-base"><a href="/pricing">View live pricing</a></div>
+    <div class="stat__hint">Public-facing VND pricing</div>
+  </div>
 </div>

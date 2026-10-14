@@ -142,6 +142,7 @@ builder.Services.AddScoped<ILearnerService, LearnerService>();
 builder.Services.AddScoped<IPracticeService, PracticeService>();
 builder.Services.AddScoped<ISavedQuestionService, SavedQuestionService>();
 builder.Services.AddScoped<IWeaknessAnalysisService, WeaknessAnalysisService>();
+builder.Services.AddScoped<IPackageService, PackageService>();
 
 var app = builder.Build();
 
@@ -374,10 +375,66 @@ app.MapPost("/api/auth/reset-password", async Task<IResult> (
     return Results.NoContent();
 });
 
-// Demo of the admin-only policy: admin pages and endpoints refuse a learner.
-app.MapGet("/api/admin/summary", (HttpContext http) =>
-    Results.Ok(new { admin = http.User.FindFirst(IAccessTokenFactory.ClaimEmail)!.Value }))
-    .RequireAuthorization(Roles.Admin);
+// ---- Admin endpoints ----
+var admin = app.MapGroup("/api/admin").RequireAuthorization(Roles.Admin);
+
+admin.MapGet("/summary", (HttpContext http) =>
+    Results.Ok(new { admin = http.User.FindFirst(IAccessTokenFactory.ClaimEmail)!.Value }));
+
+admin.MapGet("/packages", async (IPackageService packages, CancellationToken cancellationToken) =>
+{
+    var summary = await packages.GetAdminPackagesAsync(cancellationToken);
+    return Results.Ok(summary);
+});
+
+admin.MapGet("/packages/{packageId:int}", async (int packageId, IPackageService packages, CancellationToken cancellationToken) =>
+{
+    var pkg = await packages.GetPackageByIdAsync(packageId, cancellationToken);
+    return pkg is not null ? Results.Ok(pkg) : Results.NotFound();
+});
+
+admin.MapPost("/packages", async (CreatePackageRequest request, IPackageService packages, CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var created = await packages.CreatePackageAsync(request, cancellationToken);
+        return Results.Created($"/api/admin/packages/{created.PackageId}", created);
+    }
+    catch (ArgumentException ex)
+    {
+        return Problem(StatusCodes.Status400BadRequest, "Validation error", ApiError.Codes.Validation, ex.Message);
+    }
+});
+
+admin.MapPut("/packages/{packageId:int}", async (int packageId, UpdatePackageRequest request, IPackageService packages, CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var updated = await packages.UpdatePackageAsync(packageId, request, cancellationToken);
+        return Results.Ok(updated);
+    }
+    catch (KeyNotFoundException)
+    {
+        return Results.NotFound();
+    }
+    catch (ArgumentException ex)
+    {
+        return Problem(StatusCodes.Status400BadRequest, "Validation error", ApiError.Codes.Validation, ex.Message);
+    }
+});
+
+admin.MapPost("/packages/{packageId:int}/deactivate", async (int packageId, IPackageService packages, CancellationToken cancellationToken) =>
+{
+    try
+    {
+        await packages.DeactivatePackageAsync(packageId, cancellationToken);
+        return Results.NoContent();
+    }
+    catch (KeyNotFoundException)
+    {
+        return Results.NotFound();
+    }
+});
 
 // ---- Learner (issue #7) ----
 // The learner is always the token's own user: no endpoint takes a user id or a certificate to
@@ -883,6 +940,12 @@ app.MapGet("/api/certificates", async (ICertificateService certificates, Cancell
             s.Sections.Select(sec => new SectionDto(sec.Code, sec.Name, sec.ExpectedQuestionCount)).ToList())).ToList(),
         c.Bands.Select(b => new BandDto(b.Code, b.Name, b.MinTotal, b.MaxTotal)).ToList()));
     return Results.Ok(dtos);
+});
+
+app.MapGet("/api/packages", async (IPackageService packages, CancellationToken cancellationToken) =>
+{
+    var list = await packages.GetActivePackagesAsync(cancellationToken);
+    return Results.Ok(list);
 });
 
 app.Run();

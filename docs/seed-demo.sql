@@ -525,3 +525,20 @@ GO
 PRINT 'demo practice questions seeded for all certificates';
 GO
 
+-- ============ Demo Credit Packages (issue #11) ============
+IF NOT EXISTS (SELECT 1 FROM Packages WHERE Name = N'Pay as you go')
+  INSERT INTO Packages (Name, Credits, Price, IsActive, IsFeatured, Features, DisplayOrder)
+  VALUES (N'Pay as you go', 1, 49000, 1, 0, N'1 full-test credit' + CHAR(10) + N'Review answers and explanations' + CHAR(10) + N'Never expires', 1);
+
+IF NOT EXISTS (SELECT 1 FROM Packages WHERE Name = N'Exam Prep')
+  INSERT INTO Packages (Name, Credits, Price, IsActive, IsFeatured, Features, DisplayOrder)
+  VALUES (N'Exam Prep', 5, 199000, 1, 1, N'5 full-test credits' + CHAR(10) + N'Strengths and weaknesses by part' + CHAR(10) + N'Never expires', 2);
+
+IF NOT EXISTS (SELECT 1 FROM Packages WHERE Name = N'Intensive')
+  INSERT INTO Packages (Name, Credits, Price, IsActive, IsFeatured, Features, DisplayOrder)
+  VALUES (N'Intensive', 10, 349000, 1, 0, N'10 full-test credits' + CHAR(10) + N'Strengths and weaknesses by part' + CHAR(10) + N'Never expires', 3);
+GO
+
+PRINT 'demo credit packages seeded';
+GO
+

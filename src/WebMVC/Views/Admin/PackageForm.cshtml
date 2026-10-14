@@ -1,0 +1,106 @@
+@model WebMVC.Models.PackageFormViewModel
+@{
+    Layout = "_AdminLayout";
+    var isEdit = Model.PackageId.HasValue;
+    ViewData["Title"] = isEdit ? $"Edit package — {Model.Name}" : "Create new package";
+    ViewData["Description"] = isEdit ? "Update credit package details" : "Create a new credit package";
+    var actionUrl = isEdit ? $"/admin/packages/edit/{Model.PackageId}" : "/admin/packages/create";
+}
+
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+  <a href="/admin" class="breadcrumbs__item">Admin</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <a href="/admin/packages" class="breadcrumbs__item">Credit packages</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <span class="breadcrumbs__item" aria-current="page">@(isEdit ? "Edit package" : "Create package")</span>
+</nav>
+
+<div class="row row--between">
+  <h1>@(isEdit ? $"Edit package — {Model.Name}" : "Create new package")</h1>
+</div>
+
+<div class="card" style="max-width: 640px">
+  <div class="card__body">
+    <form method="post" action="@actionUrl" class="stack">
+      @Html.AntiForgeryToken()
+      <div asp-validation-summary="ModelOnly" class="alert alert--danger"></div>
+
+      <div class="field">
+        <label class="field__label" for="pkg-name">Package name</label>
+        <input class="field__input" id="pkg-name" name="Name" value="@Model.Name" required maxlength="120">
+        <span asp-validation-for="Name" class="text-xs text-danger"></span>
+      </div>
+
+      <div class="grid-2">
+        <div class="field">
+          <label class="field__label" for="pkg-credits">Credits</label>
+          <input class="field__input" id="pkg-credits" name="Credits" type="number" min="1" value="@Model.Credits" required>
+          <span asp-validation-for="Credits" class="text-xs text-danger"></span>
+        </div>
+        <div class="field">
+          <label class="field__label" for="pkg-price">Price (₫)</label>
+          <input class="field__input" id="pkg-price" name="Price" type="number" min="0" step="1000" value="@((long)Model.Price)" required>
+          <span class="field__hint" id="pkg-unit-hint">Unit price: @(Model.Credits > 0 ? (Model.Price / Model.Credits).ToString("#,##0") : "0") ₫/credit</span>
+          <span asp-validation-for="Price" class="text-xs text-danger"></span>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="field">
+          <label class="field__label" for="pkg-status">Status</label>
+          <select class="field__input" id="pkg-status" name="IsActive">
+            @if (Model.IsActive)
+            {
+              <option value="true" selected>On sale</option>
+              <option value="false">Hidden</option>
+            }
+            else
+            {
+              <option value="true">On sale</option>
+              <option value="false" selected>Hidden</option>
+            }
+          </select>
+        </div>
+        <div class="field">
+          <label class="field__label" for="pkg-order">Display order</label>
+          <input class="field__input" id="pkg-order" name="DisplayOrder" type="number" value="@Model.DisplayOrder">
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="pkg-features">Features (bullet list, one per line)</label>
+        <textarea class="field__input" id="pkg-features" name="Features" rows="4" placeholder="5 full-test credits&#10;Strengths and weaknesses by part&#10;Never expires">@Model.Features</textarea>
+      </div>
+
+      <label class="text-sm">
+        <input type="checkbox" id="pkg-featured" name="IsFeatured" value="true" @(Model.IsFeatured ? "checked" : "")>
+        Mark as a featured package on the pricing page
+      </label>
+
+      <div class="row row--between pt-4">
+        <a class="btn btn--ghost" href="/admin/packages">Cancel</a>
+        <button type="submit" class="btn btn--primary">Save package</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+@section Scripts {
+<script>
+  (function() {
+    var inputCredits = document.getElementById('pkg-credits');
+    var inputPrice = document.getElementById('pkg-price');
+    var unitHint = document.getElementById('pkg-unit-hint');
+
+    function updateHint() {
+      var credits = parseInt(inputCredits.value, 10) || 1;
+      var price = parseFloat(inputPrice.value) || 0;
+      var unit = Math.round(price / (credits > 0 ? credits : 1));
+      unitHint.textContent = 'Unit price: ' + unit.toLocaleString('en-US') + ' ₫/credit';
+    }
+
+    inputCredits.addEventListener('input', updateHint);
+    inputPrice.addEventListener('input', updateHint);
+  })();
+</script>
+}

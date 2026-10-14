@@ -1,0 +1,64 @@
+@inject CurrentUser CurrentUser
+@{
+    var path = Context.Request.Path.Value ?? "/";
+    string NavClass(params string[] hrefs) =>
+        hrefs.Any(h => path.Equals(h, StringComparison.OrdinalIgnoreCase) || 
+                       (h != "/admin" && path.StartsWith(h, StringComparison.OrdinalIgnoreCase)))
+            ? "nav-list__item is-active" : "nav-list__item";
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="@ViewData["Description"]">
+  <title>@ViewData["Title"] — extra efficient Admin</title>
+  <link rel="icon" href="~/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="~/css/tokens.css">
+  <link rel="stylesheet" href="~/css/base.css">
+  <link rel="stylesheet" href="~/css/components.css">
+</head>
+<body>
+  <div class="app-shell app-shell--with-sidebar">
+    <header class="app-topbar">
+      <strong>extra efficient — Admin area</strong>
+      <div class="row">
+        <span class="badge badge--warning">Admin</span>
+        <span class="text-sm">@(CurrentUser.Email)</span>
+        <form method="post" action="/auth/sign-out" class="no-margin">
+          @Html.AntiForgeryToken()
+          <button type="submit" class="btn btn--sm btn--ghost">Sign out</button>
+        </form>
+      </div>
+    </header>
+    <div class="app-body">
+      <aside class="app-sidebar">
+        <nav class="nav-list" aria-label="Admin navigation">
+          <div class="nav-list__group">Overview</div>
+          <a class="@NavClass("/admin")" href="/admin">Dashboard</a>
+          <div class="nav-list__group">Users &amp; revenue</div>
+          <a class="@NavClass("/admin/packages")" href="/admin/packages">Credit packages</a>
+          <div class="nav-list__group">Public site</div>
+          <a class="nav-list__item" href="/pricing">Pricing page</a>
+          <a class="nav-list__item" href="/certificates">Certificates</a>
+        </nav>
+      </aside>
+      <main class="app-main">
+        <div class="container stack">
+          @if (TempData["Success"] is string successMsg)
+          {
+            <div class="alert alert--success" role="status">@successMsg</div>
+          }
+          @if (TempData["Error"] is string errorMsg)
+          {
+            <div class="alert alert--danger" role="alert">@errorMsg</div>
+          }
+          @RenderBody()
+        </div>
+      </main>
+    </div>
+  </div>
+  <script src="~/js/icons.js"></script>
+  @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

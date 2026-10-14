@@ -1,0 +1,248 @@
+@using Contracts
+@model Contracts.AdminPackagesSummaryDto
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Credit packages";
+    ViewData["Description"] = "Manage credit packages, pricing and featured selection.";
+}
+
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+  <a href="/admin" class="breadcrumbs__item">Admin</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <span class="breadcrumbs__item" aria-current="page">Credit packages</span>
+</nav>
+
+<div class="row row--between">
+  <h1>Credit packages</h1>
+  <a class="btn btn--primary" id="btn-create-pkg" href="/admin/packages/create">Create new package</a>
+</div>
+
+<div class="grid-3">
+  <div class="stat">
+    <div class="stat__label">Packages on sale</div>
+    <div class="stat__value">@Model.PackagesOnSale</div>
+    <div class="stat__hint">@Model.FeaturedCount featured</div>
+  </div>
+  <div class="stat">
+    <div class="stat__label">Orders sold</div>
+    <div class="stat__value">@Model.TotalOrdersSold</div>
+    <div class="stat__hint">All time</div>
+  </div>
+  <div class="stat">
+    <div class="stat__label">Revenue, all time</div>
+    <div class="stat__value">@CurrencyFormatter.FormatRevenue(Model.TotalRevenue)</div>
+    <div class="stat__hint">@CurrencyFormatter.FormatVnd(Model.TotalRevenue)</div>
+  </div>
+</div>
+
+<div class="alert alert--info">
+  Editing the price only affects new orders. Paid orders keep the old price.
+</div>
+
+@if (Model.Packages.Count == 0)
+{
+    <div class="card">
+      <div class="card__body">
+        <div class="state-block">
+          <h2 class="state-block__title">No credit packages created yet</h2>
+          <p class="state-block__desc">Create packages to allow students to purchase test credits.</p>
+          <a class="btn btn--primary" href="/admin/packages/create">Create first package</a>
+        </div>
+      </div>
+    </div>
+}
+else
+{
+    <div class="grid-3">
+      @foreach (var pkg in Model.Packages)
+      {
+        <div class="price-card@(pkg.IsFeatured ? " price-card--featured" : "")">
+          <div class="row row--between">
+            <div class="price-card__name">@pkg.Name</div>
+            <div class="row" style="gap: var(--space-1)">
+              @if (pkg.IsFeatured)
+              {
+                <span class="badge badge--primary">Featured</span>
+              }
+              @if (pkg.IsActive)
+              {
+                <span class="badge badge--success">On sale</span>
+              }
+              else
+              {
+                <span class="badge badge--muted">Hidden</span>
+              }
+            </div>
+          </div>
+          <div class="price-card__amount">@CurrencyFormatter.FormatVnd(pkg.Price)</div>
+          <div class="price-card__unit">@pkg.Credits @(pkg.Credits == 1 ? "credit" : "credits") — @CurrencyFormatter.FormatUnitPrice(pkg.Price, pkg.Credits)</div>
+          <ul class="price-card__list">
+            <li>Sold: @pkg.OrdersSold orders</li>
+            <li>Revenue: @CurrencyFormatter.FormatRevenue(pkg.TotalRevenue)</li>
+            @foreach (var feat in pkg.FeatureList)
+            {
+              <li>@feat</li>
+            }
+          </ul>
+          <div class="row row--between mt-3" style="gap: var(--space-2)">
+            <a class="btn btn-edit-pkg" href="/admin/packages/edit/@pkg.PackageId"
+               data-id="@pkg.PackageId"
+               data-name="@pkg.Name"
+               data-credits="@pkg.Credits"
+               data-price="@((long)pkg.Price)"
+               data-active="@pkg.IsActive.ToString().ToLower()"
+               data-featured="@pkg.IsFeatured.ToString().ToLower()"
+               data-order="@pkg.DisplayOrder"
+               data-features="@pkg.Features">Edit package</a>
+            @if (pkg.IsActive)
+            {
+              <form method="post" action="/admin/packages/deactivate/@pkg.PackageId" class="no-margin">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn--ghost text-sm" onclick="return confirm('Deactivate package @pkg.Name?')">Deactivate</button>
+              </form>
+            }
+          </div>
+        </div>
+      }
+    </div>
+}
+
+<div class="modal-overlay" id="pkg-modal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="modal-pkg-title">
+  <div class="modal">
+    <form method="post" id="pkg-modal-form" action="/admin/packages/create">
+      @Html.AntiForgeryToken()
+      <div class="modal__header">
+        <h2 id="modal-pkg-title">Create new package</h2>
+      </div>
+      <div class="modal__body stack">
+        <div class="field">
+          <label class="field__label" for="modal-pkg-name">Package name</label>
+          <input class="field__input" id="modal-pkg-name" name="Name" required maxlength="120">
+        </div>
+        <div class="grid-2">
+          <div class="field">
+            <label class="field__label" for="modal-pkg-credits">Credits</label>
+            <input class="field__input" id="modal-pkg-credits" name="Credits" type="number" min="1" value="5" required>
+          </div>
+          <div class="field">
+            <label class="field__label" for="modal-pkg-price">Price (₫)</label>
+            <input class="field__input" id="modal-pkg-price" name="Price" type="number" min="0" step="1000" value="199000" required>
+            <span class="field__hint" id="modal-pkg-unit-hint">Unit price: 39,800 ₫/credit</span>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="field">
+            <label class="field__label" for="modal-pkg-status">Status</label>
+            <select class="field__input" id="modal-pkg-status" name="IsActive">
+              <option value="true" selected>On sale</option>
+              <option value="false">Hidden</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field__label" for="modal-pkg-order">Display order</label>
+            <input class="field__input" id="modal-pkg-order" name="DisplayOrder" type="number" value="1">
+          </div>
+        </div>
+        <div class="field">
+          <label class="field__label" for="modal-pkg-features">Features (one per line)</label>
+          <textarea class="field__input" id="modal-pkg-features" name="Features" rows="3" placeholder="5 full-test credits&#10;Strengths and weaknesses by part&#10;Never expires"></textarea>
+        </div>
+        <label class="text-sm">
+          <input type="checkbox" id="modal-pkg-featured" name="IsFeatured" value="true">
+          Mark as a featured package on the pricing page
+        </label>
+      </div>
+      <div class="modal__footer row row--between">
+        <button type="button" class="btn btn--ghost" id="modal-pkg-cancel">Cancel</button>
+        <button type="submit" class="btn btn--primary" id="modal-pkg-save">Save package</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+@section Scripts {
+<script>
+  (function() {
+    var modal = document.getElementById('pkg-modal');
+    var form = document.getElementById('pkg-modal-form');
+    var modalTitle = document.getElementById('modal-pkg-title');
+    var btnCreate = document.getElementById('btn-create-pkg');
+    var btnCancel = document.getElementById('modal-pkg-cancel');
+    var inputName = document.getElementById('modal-pkg-name');
+    var inputCredits = document.getElementById('modal-pkg-credits');
+    var inputPrice = document.getElementById('modal-pkg-price');
+    var inputStatus = document.getElementById('modal-pkg-status');
+    var inputOrder = document.getElementById('modal-pkg-order');
+    var inputFeatures = document.getElementById('modal-pkg-features');
+    var inputFeatured = document.getElementById('modal-pkg-featured');
+    var unitHint = document.getElementById('modal-pkg-unit-hint');
+
+    function updateHint() {
+      var credits = parseInt(inputCredits.value, 10) || 1;
+      var price = parseFloat(inputPrice.value) || 0;
+      var unit = Math.round(price / (credits > 0 ? credits : 1));
+      unitHint.textContent = 'Unit price: ' + unit.toLocaleString('en-US') + ' ₫/credit';
+    }
+
+    inputCredits.addEventListener('input', updateHint);
+    inputPrice.addEventListener('input', updateHint);
+
+    function openCreate(e) {
+      if (e) e.preventDefault();
+      modalTitle.textContent = 'Create new package';
+      form.action = '/admin/packages/create';
+      inputName.value = '';
+      inputCredits.value = '5';
+      inputPrice.value = '199000';
+      inputStatus.value = 'true';
+      inputOrder.value = '1';
+      inputFeatures.value = '';
+      inputFeatured.checked = false;
+      updateHint();
+      modal.style.display = 'flex';
+      inputName.focus();
+    }
+
+    function openEdit(e, btn) {
+      if (e) e.preventDefault();
+      var id = btn.getAttribute('data-id');
+      modalTitle.textContent = 'Edit package — ' + btn.getAttribute('data-name');
+      form.action = '/admin/packages/edit/' + id;
+      inputName.value = btn.getAttribute('data-name') || '';
+      inputCredits.value = btn.getAttribute('data-credits') || '1';
+      inputPrice.value = btn.getAttribute('data-price') || '0';
+      inputStatus.value = btn.getAttribute('data-active') === 'true' ? 'true' : 'false';
+      inputOrder.value = btn.getAttribute('data-order') || '0';
+      inputFeatures.value = btn.getAttribute('data-features') || '';
+      inputFeatured.checked = btn.getAttribute('data-featured') === 'true';
+      updateHint();
+      modal.style.display = 'flex';
+      inputName.focus();
+    }
+
+    function closeModal() {
+      modal.style.display = 'none';
+    }
+
+    if (btnCreate) {
+      btnCreate.addEventListener('click', openCreate);
+    }
+    if (btnCancel) {
+      btnCancel.addEventListener('click', closeModal);
+    }
+
+    var editBtns = document.querySelectorAll('.btn-edit-pkg');
+    editBtns.forEach(function(btn) {
+      btn.addEventListener('click', function(e) {
+        openEdit(e, btn);
+      });
+    });
+
+    modal.addEventListener('click', function(e) {
+      if (e.target === modal) {
+        closeModal();
+      }
+    });
+  })();
+</script>
+}

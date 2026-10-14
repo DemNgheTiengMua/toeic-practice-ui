@@ -16,6 +16,7 @@
     <a href="/" class="no-margin"><strong>extra efficient</strong></a>
     <nav class="row" style="gap: var(--space-4); align-items: center">
       <a href="/certificates">Certificates</a>
+      <a href="/pricing">Pricing</a>
       @if (CurrentUser.IsSignedIn)
       {
         <a href="@(CurrentUser.IsAdmin ? "/admin" : "/dashboard")">Dashboard</a>

@@ -1,0 +1,91 @@
+@using Contracts
+@using WebMVC.Controllers
+@model IReadOnlyList<Contracts.PackageDto>
+@{
+    var isLearner = LearnerShell.Get(Context) is not null;
+    Layout = isLearner ? "_LearnerLayout" : "_Layout";
+    ViewData["Title"] = "Buy credits";
+    ViewData["Description"] = "Credit packages for exams, AI grading, and mentor sessions.";
+}
+
+@if (isLearner)
+{
+    <nav class="breadcrumbs" aria-label="Breadcrumb">
+      <a href="/dashboard" class="breadcrumbs__item">Home</a>
+      <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+      <span class="breadcrumbs__item" aria-current="page">Buy credits</span>
+    </nav>
+}
+else
+{
+    <nav class="breadcrumbs" aria-label="Breadcrumb" style="padding-top: var(--space-4)">
+      <a href="/" class="breadcrumbs__item">Home</a>
+      <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+      <span class="breadcrumbs__item" aria-current="page">Pricing</span>
+    </nav>
+}
+
+<div class="stack" style="@(isLearner ? "" : "padding-bottom: var(--space-8)")">
+  <div>
+    <h1 class="m-0 mb-1">Buy credits</h1>
+    <p class="text-muted no-margin">
+      One credit starts a mock exam, grades a speaking or writing answer, or books a mentor session. A premium learning path costs 5. Listening and reading practice is always free.
+    </p>
+  </div>
+
+  @if (isLearner)
+  {
+      var shell = LearnerShell.Get(Context)!;
+      <div class="card">
+        <div class="card__header"><strong>Your credit usage</strong></div>
+        <div class="card__body stack--tight">
+          <div class="row row--between text-sm">
+            <span>You have <strong>@shell.CreditBalance @(shell.CreditBalance == 1 ? "credit" : "credits")</strong> remaining</span>
+          </div>
+          <p class="text-sm text-muted no-margin mt-1">Full tests, AI gradings, mentor sessions. Credits do not expire.</p>
+        </div>
+      </div>
+  }
+
+  @if (Model.Count == 0)
+  {
+      <div class="card">
+        <div class="card__body">
+          <div class="state-block">
+            <h2 class="state-block__title">No credit packages currently on sale</h2>
+            <p class="state-block__desc">Please check back later or contact support.</p>
+          </div>
+        </div>
+      </div>
+  }
+  else
+  {
+      <div class="grid-3">
+        @foreach (var pkg in Model)
+        {
+          <div class="price-card@(pkg.IsFeatured ? " price-card--featured" : "")">
+            @if (pkg.IsFeatured)
+            {
+              <div class="row row--between">
+                <div class="price-card__name">@pkg.Name</div>
+                <span class="badge badge--primary">Popular</span>
+              </div>
+            }
+            else
+            {
+              <div class="price-card__name">@pkg.Name</div>
+            }
+            <div class="price-card__amount">@CurrencyFormatter.FormatVnd(pkg.Price)</div>
+            <div class="price-card__unit">@pkg.Credits @(pkg.Credits == 1 ? "credit" : "credits") — @CurrencyFormatter.FormatUnitPrice(pkg.Price, pkg.Credits)</div>
+            <ul class="price-card__list">
+              @foreach (var feature in pkg.FeatureList)
+              {
+                <li>@feature</li>
+              }
+            </ul>
+            <a class="btn@(pkg.IsFeatured ? " btn--primary" : "")" href="/checkout?packageId=@pkg.PackageId">Choose this package</a>
+          </div>
+        }
+      </div>
+  }
+</div>
