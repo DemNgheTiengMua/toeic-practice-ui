@@ -35,6 +35,27 @@ public sealed class SavedQuestionService(
     CompanionDbContext db,
     ILearnerService learners) : ISavedQuestionService
 {
+    private static readonly System.Linq.Expressions.Expression<Func<SavedQuestion, SavedQuestionItem>> QuestionItemProjection = sq => new SavedQuestionItem(
+        sq.QuestionId,
+        sq.Source,
+        sq.SavedAt,
+        sq.Question.SectionId,
+        sq.Question.Section.Code,
+        sq.Question.Section.Name,
+        sq.Question.CategoryId,
+        sq.Question.Category != null ? sq.Question.Category.Name : null,
+        sq.Question.Stem,
+        sq.Question.Group.Passage,
+        sq.Question.Group.ImagePath,
+        sq.Question.Group.AudioPath,
+        sq.Question.Hint,
+        sq.Question.Explanation,
+        sq.Question.Group.Transcript,
+        sq.Question.QuestionOptionQuestionNavigations
+            .OrderBy(o => o.Label)
+            .Select(o => new SavedQuestionOption(o.OptionId, o.Label, o.Text, o.IsCorrect))
+            .ToList());
+
     public async Task<SavedQuestionsView> GetSavedQuestionsAsync(int userId, SavedQuestionFilterInput filter, CancellationToken cancellationToken = default)
     {
         var activeCertId = await learners.GetActiveCertIdAsync(userId, cancellationToken);
@@ -97,49 +118,10 @@ public sealed class SavedQuestionService(
             query = query.Where(sq => sq.Question.CategoryId == filter.CategoryId.Value);
         }
 
-        var savedItems = await query
+        var questions = await query
             .OrderByDescending(sq => sq.SavedAt)
-            .Select(sq => new
-            {
-                sq.QuestionId,
-                sq.Source,
-                sq.SavedAt,
-                sq.Question.SectionId,
-                SectionCode = sq.Question.Section.Code,
-                SectionName = sq.Question.Section.Name,
-                sq.Question.CategoryId,
-                CategoryName = sq.Question.Category != null ? sq.Question.Category.Name : null,
-                sq.Question.Stem,
-                Passage = sq.Question.Group.Passage,
-                ImagePath = sq.Question.Group.ImagePath,
-                AudioPath = sq.Question.Group.AudioPath,
-                sq.Question.Hint,
-                sq.Question.Explanation,
-                Transcript = sq.Question.Group.Transcript,
-                Options = sq.Question.QuestionOptionQuestionNavigations
-                    .OrderBy(o => o.Label)
-                    .Select(o => new SavedQuestionOption(o.OptionId, o.Label, o.Text, o.IsCorrect))
-                    .ToList()
-            })
+            .Select(QuestionItemProjection)
             .ToListAsync(cancellationToken);
-
-        var questions = savedItems.Select(item => new SavedQuestionItem(
-            item.QuestionId,
-            item.Source,
-            item.SavedAt,
-            item.SectionId,
-            item.SectionCode,
-            item.SectionName,
-            item.CategoryId,
-            item.CategoryName,
-            item.Stem,
-            item.Passage,
-            item.ImagePath,
-            item.AudioPath,
-            item.Hint,
-            item.Explanation,
-            item.Transcript,
-            item.Options)).ToList();
 
         return new SavedQuestionsView(
             cert,
@@ -153,56 +135,20 @@ public sealed class SavedQuestionService(
 
     public async Task<SavedQuestionItem> GetSavedQuestionAsync(int userId, int questionId, CancellationToken cancellationToken = default)
     {
-        var item = await db.SavedQuestions
+        var activeCertId = await learners.GetActiveCertIdAsync(userId, cancellationToken);
+        return await db.SavedQuestions
             .AsNoTracking()
-            .Where(sq => sq.UserId == userId && sq.QuestionId == questionId)
-            .Select(sq => new
-            {
-                sq.QuestionId,
-                sq.Source,
-                sq.SavedAt,
-                sq.Question.SectionId,
-                SectionCode = sq.Question.Section.Code,
-                SectionName = sq.Question.Section.Name,
-                sq.Question.CategoryId,
-                CategoryName = sq.Question.Category != null ? sq.Question.Category.Name : null,
-                sq.Question.Stem,
-                Passage = sq.Question.Group.Passage,
-                ImagePath = sq.Question.Group.ImagePath,
-                AudioPath = sq.Question.Group.AudioPath,
-                sq.Question.Hint,
-                sq.Question.Explanation,
-                Transcript = sq.Question.Group.Transcript,
-                Options = sq.Question.QuestionOptionQuestionNavigations
-                    .OrderBy(o => o.Label)
-                    .Select(o => new SavedQuestionOption(o.OptionId, o.Label, o.Text, o.IsCorrect))
-                    .ToList()
-            })
+            .Where(sq => sq.UserId == userId && sq.QuestionId == questionId && sq.Question.Section.CertId == activeCertId)
+            .Select(QuestionItemProjection)
             .SingleOrDefaultAsync(cancellationToken)
             ?? throw new SavedQuestionException(SavedQuestionException.SavedQuestionNotFound, $"Question {questionId} is not in your saved bank.");
-
-        return new SavedQuestionItem(
-            item.QuestionId,
-            item.Source,
-            item.SavedAt,
-            item.SectionId,
-            item.SectionCode,
-            item.SectionName,
-            item.CategoryId,
-            item.CategoryName,
-            item.Stem,
-            item.Passage,
-            item.ImagePath,
-            item.AudioPath,
-            item.Hint,
-            item.Explanation,
-            item.Transcript,
-            item.Options);
     }
 
     public async Task<SaveQuestionResult> SaveQuestionAsync(int userId, int questionId, string source = "manual", CancellationToken cancellationToken = default)
     {
-        var questionExists = await db.Questions.AnyAsync(q => q.QuestionId == questionId, cancellationToken);
+        var activeCertId = await learners.GetActiveCertIdAsync(userId, cancellationToken);
+        var questionExists = await db.Questions
+            .AnyAsync(q => q.QuestionId == questionId && q.Section.CertId == activeCertId, cancellationToken);
         if (!questionExists)
         {
             throw new SavedQuestionException(SavedQuestionException.QuestionNotFound, $"Question {questionId} does not exist.");

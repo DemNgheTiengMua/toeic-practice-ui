@@ -158,6 +158,12 @@ public sealed class AdminPackagesController(
         try
         {
             var pkg = await api.GetAdminPackageAsync(id, await BearerAsync(), cancellationToken);
+            if (!pkg.IsActive && !pkg.IsFeatured)
+            {
+                TempData["Error"] = "Cannot feature an inactive package. Activate it first.";
+                return RedirectToAction(nameof(Index));
+            }
+
             var updated = new UpdatePackageRequest(
                 pkg.Name,
                 pkg.Credits,

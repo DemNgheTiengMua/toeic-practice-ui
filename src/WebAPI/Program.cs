@@ -766,23 +766,7 @@ savedQuestions.MapGet("", async (
         view.TotalSavedCount,
         view.ManualSavedCount,
         view.IncorrectSavedCount,
-        view.Questions.Select(q => new SavedQuestionItemDto(
-            q.QuestionId,
-            q.Source,
-            q.SavedAt,
-            q.SectionId,
-            q.SectionCode,
-            q.SectionName,
-            q.CategoryId,
-            q.CategoryName,
-            q.Stem,
-            q.Passage,
-            q.ImagePath,
-            q.AudioPath,
-            q.Hint,
-            q.Explanation,
-            q.Transcript,
-            q.Options.Select(o => new SavedQuestionOptionDto(o.OptionId, o.Label, o.Text, o.IsCorrect)).ToList())).ToList(),
+        view.Questions.Select(ToSavedQuestionDto).ToList(),
         view.Sections.Select(s => new SavedQuestionSectionFilterDto(s.SectionId, s.Code, s.Name, s.Count)).ToList(),
         view.Categories.Select(c => new SavedQuestionCategoryFilterDto(c.CategoryId, c.Name, c.Count)).ToList()));
 });
@@ -796,23 +780,7 @@ savedQuestions.MapGet("/{questionId:int}", async Task<IResult> (
     try
     {
         var q = await savedService.GetSavedQuestionAsync(CurrentUserId(http), questionId, cancellationToken);
-        return Results.Ok(new SavedQuestionItemDto(
-            q.QuestionId,
-            q.Source,
-            q.SavedAt,
-            q.SectionId,
-            q.SectionCode,
-            q.SectionName,
-            q.CategoryId,
-            q.CategoryName,
-            q.Stem,
-            q.Passage,
-            q.ImagePath,
-            q.AudioPath,
-            q.Hint,
-            q.Explanation,
-            q.Transcript,
-            q.Options.Select(o => new SavedQuestionOptionDto(o.OptionId, o.Label, o.Text, o.IsCorrect)).ToList()));
+        return Results.Ok(ToSavedQuestionDto(q));
     }
     catch (SavedQuestionException ex) when (ex.Code == SavedQuestionException.SavedQuestionNotFound)
     {
@@ -902,6 +870,24 @@ weakness.MapPost("/recommendations/{recId:int}/resolve", async (
 });
 
 static CertificateOptionDto ToCertificateDto(CertificateOption option) => new(option.Code, option.Name);
+
+static SavedQuestionItemDto ToSavedQuestionDto(SavedQuestionItem q) => new(
+    q.QuestionId,
+    q.Source,
+    q.SavedAt,
+    q.SectionId,
+    q.SectionCode,
+    q.SectionName,
+    q.CategoryId,
+    q.CategoryName,
+    q.Stem,
+    q.Passage,
+    q.ImagePath,
+    q.AudioPath,
+    q.Hint,
+    q.Explanation,
+    q.Transcript,
+    q.Options.Select(o => new SavedQuestionOptionDto(o.OptionId, o.Label, o.Text, o.IsCorrect)).ToList());
 
 static int CurrentUserId(HttpContext http) =>
     int.Parse(http.User.FindFirst(IAccessTokenFactory.ClaimUserId)!.Value);

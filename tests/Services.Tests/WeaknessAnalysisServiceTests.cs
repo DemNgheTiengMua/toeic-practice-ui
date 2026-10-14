@@ -338,4 +338,64 @@ public sealed class WeaknessAnalysisServiceTests(DatabaseFixture database)
         await Assert.ThrowsAsync<RecommendationNotFoundException>(() =>
             service.ResolveRecommendationAsync(user2, recId));
     }
+
+    [Fact]
+    public async Task Empty_accuracy_learner_still_receives_open_recommendations()
+    {
+        var certCode = Unique("EMPTYREC");
+        var (certId, _, _, _, _, _) = await SeedCertificateWithCatalogAsync(certCode);
+        var userId = await SeedLearnerAsync(certCode);
+        var (service, _) = CreateServices();
+
+        // Seed an open recommendation without any practice/exam answers
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            db.Recommendations.Add(new Recommendation
+            {
+                UserId = userId,
+                CertId = certId,
+                Text = "Focus on time management for reading.",
+                Severity = "major",
+                IsResolved = false,
+                CreatedAt = DateTimeOffset.UtcNow
+            });
+            await db.SaveChangesAsync();
+        }
+
+        var view = await service.GetWeaknessAnalysisAsync(userId);
+        Assert.False(view.HasData); // No accuracy data from SQL views
+        Assert.Single(view.Recommendations); // But recommendations are present!
+        Assert.Equal("Focus on time management for reading.", view.Recommendations[0].Text);
+    }
+
+    [Fact]
+    public async Task Recommendations_are_strictly_isolated_by_active_certificate()
+    {
+        var certCodeA = Unique("RECA");
+        var certCodeB = Unique("RECB");
+        var (certIdA, _, _, _, _, _) = await SeedCertificateWithCatalogAsync(certCodeA);
+        var (certIdB, _, _, _, _, _) = await SeedCertificateWithCatalogAsync(certCodeB);
+        var userId = await SeedLearnerAsync(certCodeA);
+        var (service, learner) = CreateServices();
+
+        // Add reco in Cert A and Cert B
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            db.Recommendations.AddRange(
+                new Recommendation { UserId = userId, CertId = certIdA, Text = "Reco in Cert A", Severity = "minor", IsResolved = false, CreatedAt = DateTimeOffset.UtcNow },
+                new Recommendation { UserId = userId, CertId = certIdB, Text = "Reco in Cert B", Severity = "minor", IsResolved = false, CreatedAt = DateTimeOffset.UtcNow });
+            await db.SaveChangesAsync();
+        }
+
+        // When in Cert A, only Cert A reco appears
+        var viewA = await service.GetWeaknessAnalysisAsync(userId);
+        Assert.Single(viewA.Recommendations);
+        Assert.Equal("Reco in Cert A", viewA.Recommendations[0].Text);
+
+        // Switch to Cert B
+        await learner.SwitchCertificateAsync(userId, certCodeB);
+        var viewB = await service.GetWeaknessAnalysisAsync(userId);
+        Assert.Single(viewB.Recommendations);
+        Assert.Equal("Reco in Cert B", viewB.Recommendations[0].Text);
+    }
 }

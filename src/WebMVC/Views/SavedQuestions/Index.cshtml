@@ -74,9 +74,9 @@ else
         @if (data.Sections.Count > 0)
         {
           <div class="field" style="flex: 1 1 200px; margin-bottom: 0;">
-            <label class="field__label" for="sq-section">Part / Section</label>
+            <label class="field__label" for="sq-section">Section</label>
             <select class="field__input" id="sq-section" name="sectionId" onchange="this.form.submit()">
-              <option value="" selected="@(!Model.CurrentSectionId.HasValue)">All parts</option>
+              <option value="" selected="@(!Model.CurrentSectionId.HasValue)">All sections</option>
               @foreach (var sec in data.Sections)
               {
                 <option value="@sec.SectionId" selected="@(Model.CurrentSectionId == sec.SectionId)">@sec.Code — @sec.Name (@sec.Count)</option>

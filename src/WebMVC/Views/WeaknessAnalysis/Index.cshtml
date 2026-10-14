@@ -42,11 +42,11 @@
         <div class="state-block__icon" aria-hidden="true">EMPTY</div>
         <div class="state-block__title">Not enough data to analyse</div>
         <p class="state-block__desc">
-          At least one completed practice session or one graded exam is required. Practicing any single Part gives you results right away — <strong>free, no credit deducted</strong>.
+          At least one completed practice session or one graded exam is required. Practicing any single section gives you results right away — <strong>free, no credit deducted</strong>.
         </p>
         <div class="row row--center mt-3">
-          <a class="btn btn--primary btn--lg" href="/practice">Practice one Part</a>
-          <a class="btn btn--lg" href="/certificates">Take a mock test</a>
+          <a class="btn btn--primary btn--lg" href="/practice">Practice a section</a>
+          <a class="btn btn--lg" href="/certificates">Take a mock exam</a>
         </div>
       </div>
     </div>
@@ -59,7 +59,7 @@ else
   </div>
 
   <div class="card mt-4">
-    <div class="card__header"><strong>Accuracy by Part</strong></div>
+    <div class="card__header"><strong>Accuracy by section</strong></div>
     <div class="card__body stack">
       <p class="text-sm text-muted no-margin">
         Sorted weakest first. The "questions" column is the total number of questions answered, across both exams and practice.
@@ -70,7 +70,7 @@ else
         <div>
           <div class="row row--between text-sm">
             <span>
-              <strong>Part @s.Code — @s.Name</strong>
+              <strong>@(data.Certificate.Code == "TOEIC" ? "Part " : "Section ")@s.Code — @s.Name</strong>
               @if (s.IsWeakest)
               {
                 <span class="badge badge--danger ml-1">Weakest</span>
@@ -115,11 +115,11 @@ else
         @if (data.PriorityPracticeSection is not null)
         {
           <p class="text-sm text-muted no-margin">
-            Part @data.PriorityPracticeSection.Code sits at your lowest accuracy level (@data.PriorityPracticeSection.AccuracyPercentage%). This is where you can improve your score fastest.
+            @(data.Certificate.Code == "TOEIC" ? "Part " : "Section ")@data.PriorityPracticeSection.Code sits at your lowest accuracy level (@data.PriorityPracticeSection.AccuracyPercentage%). This is where you can improve your score fastest.
           </p>
           <div class="row mt-2">
-            <a class="btn btn--primary" href="/practice">Practice Part @data.PriorityPracticeSection.Code now</a>
-            <a class="btn btn--sm" href="/saved-questions?sectionId=@data.PriorityPracticeSection.SectionId">View saved questions in Part @data.PriorityPracticeSection.Code</a>
+            <a class="btn btn--primary" href="/practice">Practice @(data.Certificate.Code == "TOEIC" ? "Part " : "Section ")@data.PriorityPracticeSection.Code now</a>
+            <a class="btn btn--sm" href="/saved-questions?sectionId=@data.PriorityPracticeSection.SectionId">View saved questions in @(data.Certificate.Code == "TOEIC" ? "Part " : "Section ")@data.PriorityPracticeSection.Code</a>
           </div>
         }
         else
@@ -160,8 +160,9 @@ else
       </div>
     </div>
   </div>
+}
 
-  <div class="card mt-4" id="recommendations-card">
+<div class="card mt-4" id="recommendations-card">
     <div class="card__header">
       <strong>Recommendations</strong>
     </div>
@@ -215,7 +216,6 @@ else
       }
     </div>
   </div>
-}
 
 <script>
   document.addEventListener('DOMContentLoaded', function () {

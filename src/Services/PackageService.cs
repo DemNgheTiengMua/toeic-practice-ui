@@ -107,7 +107,8 @@ public sealed class PackageService(CompanionDbContext db) : IPackageService
     {
         ValidateInput(request.Name, request.Credits, request.Price);
 
-        if (request.IsFeatured)
+        var isFeatured = request.IsActive && request.IsFeatured;
+        if (isFeatured)
         {
             // Only one featured package at a time: unfeature any currently featured package first
             await db.Packages
@@ -121,7 +122,7 @@ public sealed class PackageService(CompanionDbContext db) : IPackageService
             Credits = request.Credits,
             Price = request.Price,
             IsActive = request.IsActive,
-            IsFeatured = request.IsFeatured,
+            IsFeatured = isFeatured,
             Features = request.Features?.Trim(),
             DisplayOrder = request.DisplayOrder,
         };
@@ -150,7 +151,8 @@ public sealed class PackageService(CompanionDbContext db) : IPackageService
 
         ValidateInput(request.Name, request.Credits, request.Price);
 
-        if (request.IsFeatured)
+        var isFeatured = request.IsActive && request.IsFeatured;
+        if (isFeatured)
         {
             // Only one featured package at a time: unfeature any other package first
             await db.Packages
@@ -162,7 +164,7 @@ public sealed class PackageService(CompanionDbContext db) : IPackageService
         package.Credits = request.Credits;
         package.Price = request.Price;
         package.IsActive = request.IsActive;
-        package.IsFeatured = request.IsFeatured;
+        package.IsFeatured = isFeatured;
         package.Features = request.Features?.Trim();
         package.DisplayOrder = request.DisplayOrder;
 
@@ -188,6 +190,7 @@ public sealed class PackageService(CompanionDbContext db) : IPackageService
         }
 
         package.IsActive = false;
+        package.IsFeatured = false; // Always clear featured slot when deactivating so unique constraint is freed
         await db.SaveChangesAsync(cancellationToken);
     }
 

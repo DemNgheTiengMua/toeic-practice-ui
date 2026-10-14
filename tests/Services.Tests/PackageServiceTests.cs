@@ -199,4 +199,58 @@ public sealed class PackageServiceTests(DatabaseFixture database)
         Assert.Equal(0, summary.TotalOrdersSold);
         Assert.Equal(0m, summary.TotalRevenue);
     }
+
+    [Fact]
+    public async Task DeactivatePackageAsync_unfeatures_package_and_frees_unique_index_slot()
+    {
+        await CleanPackagesAsync();
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var service = new PackageService(db);
+
+        // Create featured active package
+        var pkg1 = await service.CreatePackageAsync(new CreatePackageRequest("Package 1", 5, 199000, IsActive: true, IsFeatured: true));
+        Assert.True(pkg1.IsFeatured);
+
+        // Deactivate package 1
+        await service.DeactivatePackageAsync(pkg1.PackageId);
+
+        var deactivated = await service.GetPackageByIdAsync(pkg1.PackageId);
+        Assert.False(deactivated!.IsActive);
+        Assert.False(deactivated.IsFeatured); // Must be unfeatured so it doesn't hold unique slot while hidden
+
+        // Unique index slot is free: can create new featured package without violation
+        var pkg2 = await service.CreatePackageAsync(new CreatePackageRequest("Package 2", 10, 349000, IsActive: true, IsFeatured: true));
+        Assert.True(pkg2.IsFeatured);
+
+        var activePackages = await service.GetActivePackagesAsync();
+        var featured = Assert.Single(activePackages, p => p.IsFeatured);
+        Assert.Equal(pkg2.PackageId, featured.PackageId);
+    }
+
+    [Fact]
+    public async Task Inactive_package_cannot_be_featured_on_create_or_update()
+    {
+        await CleanPackagesAsync();
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var service = new PackageService(db);
+
+        // Creating inactive package with IsFeatured=true must force IsFeatured=false
+        var created = await service.CreatePackageAsync(new CreatePackageRequest("Inactive Pkg", 5, 199000, IsActive: false, IsFeatured: true));
+        Assert.False(created.IsActive);
+        Assert.False(created.IsFeatured);
+
+        // Updating an active featured package to inactive must clear IsFeatured
+        var active = await service.CreatePackageAsync(new CreatePackageRequest("Active Featured", 5, 199000, IsActive: true, IsFeatured: true));
+        Assert.True(active.IsFeatured);
+
+        var updated = await service.UpdatePackageAsync(active.PackageId, new UpdatePackageRequest(
+            Name: "Now Inactive",
+            Credits: 5,
+            Price: 199000,
+            IsActive: false,
+            IsFeatured: true));
+
+        Assert.False(updated.IsActive);
+        Assert.False(updated.IsFeatured);
+    }
 }

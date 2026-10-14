@@ -239,6 +239,38 @@ public sealed class SavedQuestionsControllerTests
         Assert.Equal("manual", val.GetProperty("source").GetString());
     }
 
+    [Fact]
+    public async Task Save_rejects_external_referer_open_redirect()
+    {
+        var api = new TestApiClient
+        {
+            SaveResult = new SaveQuestionResultDto(true, "manual", DateTimeOffset.UtcNow),
+        };
+
+        var controller = CreateController(api);
+        controller.Request.Headers.Referer = "https://evil.com/phishing";
+        var result = await controller.Save(101, "manual", CancellationToken.None);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(SavedQuestionsController.Index), redirect.ActionName);
+    }
+
+    [Fact]
+    public async Task Save_redirects_to_valid_local_referer()
+    {
+        var api = new TestApiClient
+        {
+            SaveResult = new SaveQuestionResultDto(true, "manual", DateTimeOffset.UtcNow),
+        };
+
+        var controller = CreateController(api);
+        controller.Request.Headers.Referer = "https://localhost:5000/practice/42?q=3";
+        var result = await controller.Save(101, "manual", CancellationToken.None);
+
+        var redirect = Assert.IsType<RedirectResult>(result);
+        Assert.Equal("/practice/42?q=3", redirect.Url);
+    }
+
     private static SavedQuestionsController CreateController(TestApiClient api)
     {
         var identity = new ClaimsIdentity(AuthClaims.For(7, "learner@test.local", Roles.Learner, "Learner"), "Cookies");
@@ -252,6 +284,8 @@ public sealed class SavedQuestionsControllerTests
         var serviceProvider = services.BuildServiceProvider();
 
         var httpContext = new DefaultHttpContext { User = principal, RequestServices = serviceProvider };
+        httpContext.Request.Host = new HostString("localhost", 5000);
+        httpContext.Request.Scheme = "https";
         var currentUser = new CurrentUser(new HttpContextAccessor { HttpContext = httpContext });
 
         var controller = new SavedQuestionsController(api, currentUser, NullLogger<SavedQuestionsController>.Instance)

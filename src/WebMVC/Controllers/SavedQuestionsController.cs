@@ -161,10 +161,40 @@ public sealed class SavedQuestionsController(
     private IActionResult RedirectBackOr(string actionName)
     {
         var referer = Request.Headers.Referer.ToString();
-        if (!string.IsNullOrEmpty(referer) && Uri.TryCreate(referer, UriKind.Absolute, out var uri))
+        if (!string.IsNullOrEmpty(referer))
         {
-            return Redirect(uri.PathAndQuery);
+            if (Uri.TryCreate(referer, UriKind.Absolute, out var uri))
+            {
+                var isSameHost = Request.Host.HasValue
+                    ? string.Equals(uri.Host, Request.Host.Host, StringComparison.OrdinalIgnoreCase)
+                    : string.Equals(uri.Host, "localhost", StringComparison.OrdinalIgnoreCase);
+
+                if (isSameHost)
+                {
+                    var target = uri.PathAndQuery;
+                    if (IsLocalUrl(target))
+                    {
+                        return Redirect(target);
+                    }
+                }
+            }
+            else if (IsLocalUrl(referer))
+            {
+                return Redirect(referer);
+            }
         }
         return RedirectToAction(actionName);
+    }
+
+    private bool IsLocalUrl(string? url)
+    {
+        if (Url is not null)
+        {
+            return Url.IsLocalUrl(url);
+        }
+
+        return !string.IsNullOrEmpty(url) &&
+               ((url[0] == '/' && (url.Length == 1 || (url[1] != '/' && url[1] != '\\'))) ||
+                (url.Length > 1 && url[0] == '~' && url[1] == '/'));
     }
 }

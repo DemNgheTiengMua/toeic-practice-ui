@@ -170,9 +170,12 @@ public sealed class SavedQuestionServiceTests(DatabaseFixture database)
         var user2 = await SeedLearnerAsync(certA);
         var (savedQuestions, _, learners) = CreateServices();
 
-        // User1 saves Q1 from CertA and Q1 from CertB
+        // User1 saves Q1 from CertA
         await savedQuestions.SaveQuestionAsync(user1, qIdsA[0], "manual");
+        // User1 switches to CertB to save Q1 from CertB, then switches back to CertA
+        await learners.SwitchCertificateAsync(user1, certB);
         await savedQuestions.SaveQuestionAsync(user1, qIdsB[0], "manual");
+        await learners.SwitchCertificateAsync(user1, certA);
 
         // User2 saves Q2 from CertA
         await savedQuestions.SaveQuestionAsync(user2, qIdsA[1], "manual");
@@ -308,5 +311,51 @@ public sealed class SavedQuestionServiceTests(DatabaseFixture database)
         // Source stays manual
         var savedItem = await savedQuestions.GetSavedQuestionAsync(userId, qId);
         Assert.Equal("manual", savedItem.Source);
+    }
+
+    [Fact]
+    public async Task GetSavedQuestionAsync_throws_when_question_belongs_to_different_certificate_than_active()
+    {
+        var certCodeA = Unique("SQA");
+        var certCodeB = Unique("SQB");
+        var (_, _, qIdsA, _, _) = await SeedCertificateWithQuestionsAsync(certCodeA);
+        await SeedCertificateWithQuestionsAsync(certCodeB);
+
+        var userId = await SeedLearnerAsync(certCodeA);
+        var (savedQuestions, _, learner) = CreateServices();
+        var qIdA = qIdsA[0];
+
+        // Save question while cert A is active
+        await savedQuestions.SaveQuestionAsync(userId, qIdA, "manual");
+
+        // Verify it loads when cert A is active
+        var item = await savedQuestions.GetSavedQuestionAsync(userId, qIdA);
+        Assert.Equal(qIdA, item.QuestionId);
+
+        // Switch learner's active cert to cert B
+        await learner.SwitchCertificateAsync(userId, certCodeB);
+
+        // Certificate isolation: accessing cert A question while in cert B must throw 404 / not found
+        var ex = await Assert.ThrowsAsync<SavedQuestionException>(() =>
+            savedQuestions.GetSavedQuestionAsync(userId, qIdA));
+        Assert.Equal(SavedQuestionException.SavedQuestionNotFound, ex.Code);
+    }
+
+    [Fact]
+    public async Task SaveQuestionAsync_throws_when_question_belongs_to_different_certificate_than_active()
+    {
+        var certCodeA = Unique("SQA");
+        var certCodeB = Unique("SQB");
+        var (_, _, qIdsA, _, _) = await SeedCertificateWithQuestionsAsync(certCodeA);
+        await SeedCertificateWithQuestionsAsync(certCodeB);
+
+        var userId = await SeedLearnerAsync(certCodeB); // active cert is B
+        var (savedQuestions, _, _) = CreateServices();
+        var qIdA = qIdsA[0]; // question belongs to cert A
+
+        // Saving a question from another certificate must be rejected
+        var ex = await Assert.ThrowsAsync<SavedQuestionException>(() =>
+            savedQuestions.SaveQuestionAsync(userId, qIdA, "manual"));
+        Assert.Equal(SavedQuestionException.QuestionNotFound, ex.Code);
     }
 }

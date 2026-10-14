@@ -209,6 +209,23 @@ public sealed class AdminPackagesControllerTests
         Assert.Equal("Package 'Intensive' marked as featured.", controller.TempData["Success"]);
     }
 
+    [Fact]
+    public async Task ToggleFeatured_POST_refuses_to_feature_inactive_package()
+    {
+        var api = new TestApiClient
+        {
+            PackageToReturn = new PackageDto(3, "Deactivated Pkg", 10, 349000, IsActive: false, IsFeatured: false, null, 3),
+        };
+        var controller = CreateController(api);
+
+        var result = await controller.ToggleFeatured(3, CancellationToken.None);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(AdminPackagesController.Index), redirect.ActionName);
+        Assert.Null(api.UpdatedRequest); // Must NOT update or feature
+        Assert.Equal("Cannot feature an inactive package. Activate it first.", controller.TempData["Error"]);
+    }
+
     private sealed class EmptyTempDataProvider : ITempDataProvider
     {
         public IDictionary<string, object> LoadTempData(HttpContext context) => new Dictionary<string, object>();
