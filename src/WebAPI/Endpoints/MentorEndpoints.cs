@@ -117,6 +117,33 @@ public static class MentorEndpoints
             return Results.Ok(bookings);
         });
 
+        learnerMentors.MapPost("/bookings/{bookingId:int}/rate", async (
+            int bookingId,
+            RateMentorRequest request,
+            HttpContext http,
+            IMentorService mentorService,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var userId = CurrentUserId(http);
+                var review = await mentorService.RateBookingAsync(bookingId, userId, request, cancellationToken);
+                return Results.Ok(review);
+            }
+            catch (KeyNotFoundException)
+            {
+                return Results.NotFound();
+            }
+            catch (MentorBookingException ex)
+            {
+                return Problem(ex.Status, "Mentor rating error", ex.Code, ex.Message);
+            }
+            catch (ValidationException ex)
+            {
+                return ValidationProblem(ex);
+            }
+        });
+
         // Admin endpoints
         var admin = app.MapGroup("/api/admin/mentors").RequireAuthorization(Roles.Admin);
 

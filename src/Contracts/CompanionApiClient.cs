@@ -351,6 +351,12 @@ public interface ICompanionApiClient
 
     Task<IReadOnlyList<MentorBookingDto>> GetLearnerBookingsAsync(string bearerToken, CancellationToken cancellationToken = default) =>
         throw new NotImplementedException();
+
+    Task<MentorReviewDto> RateBookingAsync(int bookingId, RateMentorRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
+
+    Task<MentorReviewDto> RateBookingAsync(int bookingId, RateMentorRequest request, CancellationToken cancellationToken = default) =>
+        RateBookingAsync(bookingId, request, string.Empty, cancellationToken);
 }
 
 
@@ -1132,6 +1138,12 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
 
     public Task<IReadOnlyList<MentorBookingDto>> GetLearnerBookingsAsync(string bearerToken, CancellationToken cancellationToken = default) =>
         GetAuthorizedAsync<IReadOnlyList<MentorBookingDto>>("api/mentors/bookings", bearerToken, cancellationToken);
+
+    public Task<MentorReviewDto> RateBookingAsync(int bookingId, RateMentorRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
+        PostAuthorizedAsync<RateMentorRequest, MentorReviewDto>($"api/mentors/bookings/{bookingId}/rate", request, bearerToken, cancellationToken);
+
+    public Task<MentorReviewDto> RateBookingAsync(int bookingId, RateMentorRequest request, CancellationToken cancellationToken = default) =>
+        RateBookingAsync(bookingId, request, string.Empty, cancellationToken);
 
 
     private async Task<T> GetAuthorizedAsync<T>(string path, string bearerToken, CancellationToken cancellationToken)

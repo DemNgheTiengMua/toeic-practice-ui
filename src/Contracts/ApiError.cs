@@ -87,6 +87,8 @@ public sealed record ApiError(string Code, string Title, int Status, string? Det
         public const string BookingNotFound = "booking_not_found";
         public const string BookingCannotCancel = "booking_cannot_cancel";
         public const string BookingAlreadyRefunded = "booking_already_refunded";
+        public const string BookingNotFinished = "booking_not_finished";
+        public const string BookingAlreadyRated = "booking_already_rated";
         public const string MentorNotFound = "mentor_not_found";
     }
 
