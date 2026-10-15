@@ -596,3 +596,54 @@ GO
 PRINT 'demo score scales seeded';
 GO
 
+-- ============ Demo Writing Practice Exam & Rubric (issue #18) ============
+DECLARE @ieltsCert INT = (SELECT CertId FROM Certificates WHERE Code = 'IELTS');
+DECLARE @ieltsWrit INT = (SELECT SkillId FROM Skills WHERE CertId = @ieltsCert AND Code = 'WRIT');
+DECLARE @secT1 INT = (SELECT SectionId FROM Sections WHERE CertId = @ieltsCert AND Code = 'T1');
+DECLARE @secT2 INT = (SELECT SectionId FROM Sections WHERE CertId = @ieltsCert AND Code = 'T2');
+
+-- Seed IELTS Writing Rubric Criteria (TR, CC, LR, GRA - MaxScore 9.0)
+IF NOT EXISTS (SELECT 1 FROM GradingCriteria WHERE CertId = @ieltsCert AND SkillId = @ieltsWrit AND Code = 'TR')
+  INSERT INTO GradingCriteria (CertId, SkillId, Code, Name, MaxScore, Weight, DisplayOrder) VALUES
+    (@ieltsCert, @ieltsWrit, 'TR', N'Task Response', 9.0, 1.0, 1),
+    (@ieltsCert, @ieltsWrit, 'CC', N'Coherence & Cohesion', 9.0, 1.0, 2),
+    (@ieltsCert, @ieltsWrit, 'LR', N'Lexical Resource', 9.0, 1.0, 3),
+    (@ieltsCert, @ieltsWrit, 'GRA', N'Grammatical Range & Accuracy', 9.0, 1.0, 4);
+
+-- Published Writing Practice Exam
+IF NOT EXISTS (SELECT 1 FROM Exams WHERE CertId = @ieltsCert AND Name = N'Cambridge IELTS 18 — Writing Practice Test 1')
+BEGIN
+  INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose, Description, SourceName, QuestionCount)
+  VALUES (@ieltsCert, N'Cambridge IELTS 18 — Writing Practice Test 1', 'published', 60, 'writing_practice',
+          N'Complete Academic Writing test with Task 1 (visual chart report) and Task 2 (argumentative essay). Scored with AI against official IELTS criteria.',
+          N'Cambridge 18', 2);
+  DECLARE @writingExam INT = SCOPE_IDENTITY();
+
+  -- Task 1 Group & Question
+  INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, Passage)
+  VALUES (@writingExam, @ieltsCert, @secT1, 1,
+          N'The chart below shows the percentage of households with internet access in three European countries between 2010 and 2020.' + CHAR(10) +
+          N'Summarise the information by selecting and reporting the main features, and make comparisons where relevant.');
+  DECLARE @grpT1 INT = SCOPE_IDENTITY();
+
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, MinWords, MaxWords, DisplayOrder)
+  VALUES (@grpT1, @writingExam, @secT1, @ieltsWrit,
+          N'Write at least 150 words summarizing the main features and comparisons in the chart.',
+          3, 'free_response', 150, NULL, 1);
+
+  -- Task 2 Group & Question
+  INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, Passage)
+  VALUES (@writingExam, @ieltsCert, @secT2, 2,
+          N'Some people believe that unpaid community service should be a compulsory part of high school programmes (such as working for a charity, improving the neighborhood, or coaching younger children).' + CHAR(10) +
+          N'To what extent do you agree or disagree? Give reasons for your answer and include any relevant examples from your own knowledge or experience.');
+  DECLARE @grpT2 INT = SCOPE_IDENTITY();
+
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, MinWords, MaxWords, DisplayOrder)
+  VALUES (@grpT2, @writingExam, @secT2, @ieltsWrit,
+          N'Write an essay of at least 250 words discussing your opinion with supporting arguments.',
+          4, 'free_response', 250, NULL, 2);
+END;
+GO
+
+PRINT 'demo writing practice exam seeded';
+GO
