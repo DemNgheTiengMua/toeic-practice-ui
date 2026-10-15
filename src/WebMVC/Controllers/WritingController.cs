@@ -83,7 +83,8 @@ public sealed class WritingController(
         catch (ApiException ex) when (ex.Code == ApiError.Codes.AttemptExpired)
         {
             logger.LogInformation("Writing attempt {AttemptId} has expired", attemptId);
-            return RedirectToAction(nameof(Pending), new { attemptId });
+            TempData["ShellError"] = "This writing practice attempt has expired.";
+            return RedirectToAction("Index", "Practice");
         }
         catch (ApiException ex) when (ex.Status == 404 || ex.Code == ApiError.Codes.AttemptNotFound)
         {

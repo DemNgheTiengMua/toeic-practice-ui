@@ -14,7 +14,8 @@ public record AiGradingRequest(
     int? MinWords,
     int? MaxWords,
     string ResponseText,
-    IReadOnlyList<GradingCriterionDetail> Criteria
+    IReadOnlyList<GradingCriterionDetail> Criteria,
+    int AttemptCount = 1
 );
 
 public record GradingCriterionDetail(
@@ -47,6 +48,7 @@ public interface IAiGrader
 /// Deterministic fake grader for offline execution and testing.
 /// Scores responses against criteria within [0, MaxScore] bounds.
 /// Supports simulated failures when text contains "[simulate_fail]".
+/// When AttemptCount > 1 (e.g. after a retry), the simulated failure resolves.
 /// </summary>
 public sealed class FakeAiGrader : IAiGrader
 {
@@ -55,7 +57,7 @@ public sealed class FakeAiGrader : IAiGrader
 
     public Task<AiGradingResult> GradeAsync(AiGradingRequest request, CancellationToken cancellationToken = default)
     {
-        if (request.ResponseText?.Contains(SimulateFailMarker, StringComparison.OrdinalIgnoreCase) == true)
+        if (request.ResponseText?.Contains(SimulateFailMarker, StringComparison.OrdinalIgnoreCase) == true && request.AttemptCount <= 1)
         {
             return Task.FromResult(new AiGradingResult(
                 Success: false,

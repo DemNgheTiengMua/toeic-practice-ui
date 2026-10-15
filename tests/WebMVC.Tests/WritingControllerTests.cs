@@ -110,6 +110,23 @@ public sealed class WritingControllerTests
     }
 
     [Fact]
+    public async Task Take_when_attempt_expired_redirects_to_Practice_Index()
+    {
+        var api = new TestApiClient
+        {
+            ExceptionToThrow = new ApiException(ApiError.Codes.AttemptExpired, "Attempt expired", 410)
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.Take(100, null, CancellationToken.None);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal("Index", redirect.ActionName);
+        Assert.Equal("Practice", redirect.ControllerName);
+        Assert.NotNull(controller.TempData["ShellError"]);
+    }
+
+    [Fact]
     public async Task Take_when_attempt_graded_redirects_to_Review()
     {
         var api = new TestApiClient

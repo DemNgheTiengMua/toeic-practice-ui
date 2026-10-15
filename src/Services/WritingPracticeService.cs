@@ -593,20 +593,20 @@ public sealed class WritingPracticeService(
 
             if (fr.AiGradingFreeResponse?.AiGradingScores is { Count: > 0 } scores)
             {
-                foreach (var sc in scores.OrderBy(s => s.GradingCriterion.DisplayOrder))
+                foreach (var critScore in scores.OrderBy(s => s.GradingCriterion.DisplayOrder))
                 {
-                    var overrideMax = sectionCriteria.FirstOrDefault(c => c.SectionId == fr.Question.SectionId && c.CriterionId == sc.CriterionId)?.MaxScore;
-                    var criterionMax = overrideMax ?? sc.GradingCriterion.MaxScore;
+                    var overrideMax = sectionCriteria.FirstOrDefault(c => c.SectionId == fr.Question.SectionId && c.CriterionId == critScore.CriterionId)?.MaxScore;
+                    var criterionMax = overrideMax ?? critScore.GradingCriterion.MaxScore;
 
                     criteriaScores.Add(new WritingCriterionScoreItem(
-                        sc.CriterionId,
-                        sc.GradingCriterion.Code,
-                        sc.GradingCriterion.Name,
-                        sc.Score,
+                        critScore.CriterionId,
+                        critScore.GradingCriterion.Code,
+                        critScore.GradingCriterion.Name,
+                        critScore.Score,
                         criterionMax,
-                        sc.Comment));
+                        critScore.Comment));
 
-                    qScore += sc.Score;
+                    qScore += critScore.Score;
                     qMax += criterionMax;
                 }
             }
@@ -702,7 +702,8 @@ public sealed class WritingPracticeService(
                 question.MinWords,
                 question.MaxWords,
                 fr.ResponseText ?? string.Empty,
-                criteriaDetails);
+                criteriaDetails,
+                grading.AttemptCount);
 
             var result = await aiGrader.GradeAsync(request, cancellationToken);
 

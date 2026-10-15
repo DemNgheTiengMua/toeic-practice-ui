@@ -127,6 +127,12 @@
                 <span class="word-meter__tick-label">min @q.MinWords</span>
               </div>
             }
+            else if (q.MaxWords.HasValue && q.MaxWords.Value > 0)
+            {
+              <div class="word-meter__tick" style="left: 85%" aria-hidden="true">
+                <span class="word-meter__tick-label">max @q.MaxWords</span>
+              </div>
+            }
             <div id="word-meter-fill" class="word-meter__fill" style="width: 0%"></div>
           </div>
         </div>
@@ -208,6 +214,7 @@
       const words = countWords(editor.value);
       wordCountSpan.textContent = words;
 
+      const wordMeterContainer = document.getElementById('word-meter-container');
       let pct = 0;
       let statusDesc = 'words';
 
@@ -216,24 +223,29 @@
           const under = minWords - words;
           statusDesc = `words · ${under} under the ${minWords}-word minimum`;
           pct = Math.min(70, Math.round((words / minWords) * 70));
+          if (wordMeterContainer) wordMeterContainer.className = 'word-meter';
         } else if (maxWords > 0 && words > maxWords) {
           const over = words - maxWords;
           statusDesc = `words · ${over} over the ${maxWords}-word maximum`;
           pct = 100;
+          if (wordMeterContainer) wordMeterContainer.className = 'word-meter word-meter--over';
         } else {
-          statusDesc = `words · minimum ${minWords} met`;
+          statusDesc = `words · the ${minWords}-word minimum is met`;
           pct = maxWords > 0
             ? 70 + Math.min(30, Math.round(((words - minWords) / (maxWords - minWords)) * 30))
             : 85;
+          if (wordMeterContainer) wordMeterContainer.className = 'word-meter word-meter--met';
         }
       } else if (maxWords > 0) {
         if (words > maxWords) {
           const over = words - maxWords;
           statusDesc = `words · ${over} over the ${maxWords}-word maximum`;
           pct = 100;
+          if (wordMeterContainer) wordMeterContainer.className = 'word-meter word-meter--over';
         } else {
           statusDesc = `words · within ${maxWords}-word limit`;
           pct = Math.round((words / maxWords) * 100);
+          if (wordMeterContainer) wordMeterContainer.className = 'word-meter word-meter--met';
         }
       }
 
@@ -256,7 +268,7 @@
     });
 
     async function saveDraft() {
-      if (isSaving || !dirty) return;
+      if (isSaving || !dirty) return true;
       isSaving = true;
       saveStatusText.textContent = 'Saving…';
 
@@ -282,11 +294,14 @@
           const timeStr = d.toTimeString().split(' ')[0];
           saveStatusText.textContent = `Saved ${timeStr}`;
           dirty = false;
+          return true;
         } else {
           saveStatusText.textContent = 'Save failed';
+          return false;
         }
       } catch (err) {
         saveStatusText.textContent = 'Save failed';
+        return false;
       } finally {
         isSaving = false;
       }
@@ -294,9 +309,29 @@
 
     btnSaveDraft.addEventListener('click', saveDraft);
 
+    // Prevent draft loss on submit: await save before proceeding
+    const submitForm = document.getElementById('submit-form');
+    if (submitForm) {
+      submitForm.addEventListener('submit', async function(e) {
+        if (dirty) {
+          e.preventDefault();
+          btnSaveDraft.disabled = true;
+          const submitBtn = document.getElementById('btn-submit-exam');
+          if (submitBtn) submitBtn.disabled = true;
+          await saveDraft();
+          submitForm.submit();
+        }
+      });
+    }
+
+    // Prevent draft loss on question navigation
     window.handleNavClick = function(e, targetQId) {
       if (dirty) {
-        saveDraft();
+        e.preventDefault();
+        saveDraft().then(function() {
+          window.location.href = '@Url.Action("Take", "Writing", new { attemptId = take.AttemptId })?q=' + targetQId;
+        });
+        return false;
       }
       return true;
     };

@@ -6,6 +6,11 @@ using WebMVC;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllersWithViews();
+builder.Services.AddAntiforgery(options =>
+{
+    options.HeaderName = "RequestVerificationToken";
+});
+
 
 // The MVC site is the only caller of the API (ADR-0002); the JWT travels in an HttpOnly cookie
 // and is forwarded as a bearer token on each API call.
