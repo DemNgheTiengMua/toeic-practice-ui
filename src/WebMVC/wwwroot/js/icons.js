@@ -118,7 +118,7 @@
     "Weakness analysis": "chart", "My learning path": "route",
     "Find a mentor": "chat", "Credit wallet": "wallet", "Profile": "user",
     "Students": "user", "Score conversion": "swap", "Credit packages": "box",
-    "Orders": "receipt", "Complaints": "flag", "Prototype catalog": "grid",
+    "Orders": "receipt", "Complaints": "flag", "Support reports": "flag", "Prototype catalog": "grid",
     "Saved questions": "bookmark", "Placement test": "target"
   };
   each(".nav-list__item", function (a) { lead(a, NAV[text(a)]); });

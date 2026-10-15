@@ -1,0 +1,167 @@
+@using Contracts
+@model WebMVC.Models.AdminComplaintsViewModel
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Complaints";
+    ViewData["Description"] = "Learner complaints and dispute resolution.";
+
+    string FormatType(ComplaintTypeDto type) => type switch
+    {
+        ComplaintTypeDto.MentorNoShow => "Mentor no-show",
+        ComplaintTypeDto.MentorQuality => "Mentor quality",
+        ComplaintTypeDto.GradingIssue => "Grading issue",
+        ComplaintTypeDto.TechnicalError => "Technical error",
+        ComplaintTypeDto.PaymentIssue => "Payment issue",
+        _ => type.ToString(),
+    };
+
+    var currentStatus = string.IsNullOrWhiteSpace(Model.Status) ? "all" : Model.Status.ToLowerInvariant();
+}
+
+<div class="stack">
+  <nav class="breadcrumbs" aria-label="Breadcrumb">
+    <a href="/admin" class="breadcrumbs__item">Admin</a>
+    <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+    <span class="breadcrumbs__item" aria-current="page">Complaints</span>
+  </nav>
+
+  <h1 class="m-0">Complaints</h1>
+  <p class="text-muted no-margin">Filed by learners from <a href="/support/report">Report a problem</a>; resolving can grant a make-good credit.</p>
+
+  <div class="grid-3">
+    <div class="stat">
+      <div class="stat__label">Pending</div>
+      <div class="stat__value">@Model.Summary.PendingCount</div>
+      <div class="stat__hint">waiting for a decision</div>
+    </div>
+    <div class="stat">
+      <div class="stat__label">Resolved</div>
+      <div class="stat__value">@Model.Summary.ResolvedCount</div>
+      <div class="stat__hint">completed resolutions</div>
+    </div>
+    <div class="stat">
+      <div class="stat__label">Oldest pending</div>
+      <div class="stat__value">
+        @(Model.Summary.OldestPendingCreatedAt?.ToString("dd MMM") ?? "—")
+      </div>
+      <div class="stat__hint">
+        @if (Model.Summary.OldestPendingId.HasValue && Model.Summary.OldestPendingType.HasValue)
+        {
+          <span>#C-@Model.Summary.OldestPendingId.Value · @FormatType(Model.Summary.OldestPendingType.Value)</span>
+        }
+        else
+        {
+          <span>all caught up</span>
+        }
+      </div>
+    </div>
+  </div>
+
+  <form method="get" action="/admin/complaints" class="toolbar">
+    <div class="field toolbar__grow">
+      <label class="field__label" for="c-q">Search by complaint ID or learner</label>
+      <input class="field__input" id="c-q" name="q" type="search" placeholder="#C-… or learner name" value="@Model.Query">
+    </div>
+    <input type="hidden" name="status" value="@currentStatus">
+    <div class="row row--tight" role="group" aria-label="Filter by status">
+      <a href="/admin/complaints?q=@Model.Query&status=all" class="btn btn--sm" aria-pressed="@(currentStatus == "all" ? "true" : "false")">All</a>
+      <a href="/admin/complaints?q=@Model.Query&status=pending" class="btn btn--sm" aria-pressed="@(currentStatus == "pending" ? "true" : "false")">Pending</a>
+      <a href="/admin/complaints?q=@Model.Query&status=resolved" class="btn btn--sm" aria-pressed="@(currentStatus == "resolved" ? "true" : "false")">Resolved</a>
+    </div>
+  </form>
+
+  @if (Model.Summary.Complaints.Count == 0)
+  {
+    <div class="card">
+      <div class="card__body">
+        <div class="state-block">
+          <div class="state-block__icon" aria-hidden="true">EMPTY</div>
+          <div class="state-block__title">No complaints</div>
+          <p class="state-block__desc">All complaints matching this view have been resolved.</p>
+        </div>
+      </div>
+    </div>
+  }
+  else
+  {
+    <div class="card">
+      <div class="card__body">
+        <table class="table table--striped">
+          <caption class="visually-hidden">Complaints, newest first</caption>
+          <thead>
+            <tr>
+              <th scope="col">ID</th>
+              <th scope="col">Learner</th>
+              <th scope="col">Type</th>
+              <th scope="col">Related to</th>
+              <th scope="col">Status</th>
+              <th scope="col">Date</th>
+              <th scope="col">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @foreach (var c in Model.Summary.Complaints)
+            {
+              <tr>
+                <td>#C-@c.ComplaintId</td>
+                <td>@c.LearnerName</td>
+                <td>@FormatType(c.Type)</td>
+                <td>@c.SubjectSummary</td>
+                <td>
+                  @if (c.Status == ComplaintStatusDto.Open)
+                  {
+                    <span class="badge badge--warning">Pending</span>
+                  }
+                  else if (c.Status == ComplaintStatusDto.Reviewing)
+                  {
+                    <span class="badge badge--info">Reviewing</span>
+                  }
+                  else if (c.Status == ComplaintStatusDto.Resolved)
+                  {
+                    <span class="badge badge--success">Resolved</span>
+                  }
+                </td>
+                <td>@c.CreatedAt.ToString("dd MMM yyyy")</td>
+                <td>
+                  @if (c.Status == ComplaintStatusDto.Resolved)
+                  {
+                    <a href="/admin/complaints/@c.ComplaintId" class="btn btn--sm btn--ghost">View</a>
+                  }
+                  else
+                  {
+                    <a href="/admin/complaints/@c.ComplaintId" class="btn btn--sm btn--primary">Review</a>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      @if (Model.Summary.TotalCount > Model.Summary.PageSize)
+      {
+        <div class="card__footer">
+          <div class="pagination">
+            <span class="pagination__info">Showing @(((Model.Summary.Page - 1) * Model.Summary.PageSize) + 1)–@(Math.Min(Model.Summary.Page * Model.Summary.PageSize, Model.Summary.TotalCount)) of @Model.Summary.TotalCount complaints</span>
+            @if (Model.Summary.Page > 1)
+            {
+              <a class="pagination__page" href="/admin/complaints?page=@(Model.Summary.Page - 1)&q=@Model.Query&status=@Model.Status">Previous</a>
+            }
+            else
+            {
+              <span class="pagination__page" aria-disabled="true">Previous</span>
+            }
+            <span class="pagination__page is-current" aria-current="page">@Model.Summary.Page</span>
+            @if (Model.Summary.Page * Model.Summary.PageSize < Model.Summary.TotalCount)
+            {
+              <a class="pagination__page" href="/admin/complaints?page=@(Model.Summary.Page + 1)&q=@Model.Query&status=@Model.Status">Next</a>
+            }
+            else
+            {
+              <span class="pagination__page" aria-disabled="true">Next</span>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>

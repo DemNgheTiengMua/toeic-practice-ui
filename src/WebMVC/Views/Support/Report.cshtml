@@ -1,0 +1,175 @@
+@model WebMVC.Models.SupportReportViewModel
+@{
+    Layout = "_LearnerLayout";
+    ViewData["Title"] = "Report a problem";
+    ViewData["Description"] = "Report an issue with a mentor session, exam attempt, or payment.";
+}
+
+<div class="stack">
+  <nav class="breadcrumbs" aria-label="Breadcrumb">
+    <a href="/dashboard" class="breadcrumbs__item">Home</a>
+    <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+    <span class="breadcrumbs__item" aria-current="page">Report a problem</span>
+  </nav>
+
+  <div class="stack" style="max-width: 640px">
+    <div>
+      <h1 class="m-0 mb-1">Report a problem</h1>
+      <p class="text-muted no-margin">
+        Something went wrong with a booking, an exam, or a payment? Tell us what happened — an admin will review it and reply here.
+      </p>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+      <div class="alert alert--danger" role="alert">
+        @Model.ErrorMessage
+      </div>
+    }
+
+    <form method="post" action="/support/report" class="card">
+      @Html.AntiForgeryToken()
+      <div class="card__body stack">
+        <div class="field">
+          <label class="field__label" for="sr-category">What is this about?</label>
+          <select class="field__input" id="sr-category" name="category" onchange="updateFormCategories()">
+            <option value="mentor" selected="@(Model.Category == "mentor" ? "selected" : null)">A mentor session</option>
+            <option value="exam" selected="@(Model.Category == "exam" ? "selected" : null)">An exam or its grading</option>
+            <option value="payment" selected="@(Model.Category == "payment" ? "selected" : null)">A payment</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="sr-type">What happened?</label>
+          <select class="field__input" id="sr-type" name="type">
+            <!-- Populated via script based on category -->
+          </select>
+        </div>
+
+        <div class="field" id="field-booking">
+          <label class="field__label" for="sr-booking">Which session?</label>
+          <select class="field__input" id="sr-booking" name="bookingId">
+            <option value="">-- Choose session --</option>
+            @if (Model.EligibleSubjects.Bookings.Count == 0)
+            {
+              <option value="" disabled>(No sessions found)</option>
+            }
+            @foreach (var b in Model.EligibleSubjects.Bookings)
+            {
+              var time = b.ScheduledAt?.ToString("dd MMM yyyy, HH:mm") ?? "Scheduled";
+              <option value="@b.BookingId" selected="@(Model.BookingId == b.BookingId ? "selected" : null)">
+                Booking #@b.BookingId — @b.MentorName (@time, @b.Status)
+              </option>
+            }
+          </select>
+          <p class="text-sm text-muted no-margin mt-1">Only your own bookings appear in this list.</p>
+        </div>
+
+        <div class="field" id="field-attempt" style="display: none;">
+          <label class="field__label" for="sr-attempt">Which exam attempt?</label>
+          <select class="field__input" id="sr-attempt" name="attemptId">
+            <option value="">-- Choose exam attempt --</option>
+            @if (Model.EligibleSubjects.Attempts.Count == 0)
+            {
+              <option value="" disabled>(No exam attempts found)</option>
+            }
+            @foreach (var a in Model.EligibleSubjects.Attempts)
+            {
+              var score = a.TotalScore.HasValue ? $", score {a.TotalScore}" : "";
+              <option value="@a.AttemptId" selected="@(Model.AttemptId == a.AttemptId ? "selected" : null)">
+                Exam #@a.AttemptId — @a.ExamTitle (@a.StartedAt.ToString("dd MMM yyyy, HH:mm")@score)
+              </option>
+            }
+          </select>
+          <p class="text-sm text-muted no-margin mt-1">Only your own exam attempts appear in this list.</p>
+        </div>
+
+        <div class="field" id="field-order" style="display: none;">
+          <label class="field__label" for="sr-order">Which order?</label>
+          <select class="field__input" id="sr-order" name="orderId">
+            <option value="">-- Choose order --</option>
+            @if (Model.EligibleSubjects.Orders.Count == 0)
+            {
+              <option value="" disabled>(No orders found)</option>
+            }
+            @foreach (var o in Model.EligibleSubjects.Orders)
+            {
+              <option value="@o.OrderId" selected="@(Model.OrderId == o.OrderId ? "selected" : null)">
+                Order @o.OrderCode — @o.PackageName (@o.Amount.ToString("N0") ₫, @o.Status)
+              </option>
+            }
+          </select>
+          <p class="text-sm text-muted no-margin mt-1">Only your own orders appear in this list.</p>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="sr-details">Describe the problem</label>
+          <textarea class="field__input" id="sr-details" name="reason" rows="5"
+                    placeholder="What happened, and when? The more detail you give, the faster we can resolve it." required>@Model.Reason</textarea>
+        </div>
+
+        <div class="row">
+          <button type="submit" class="btn btn--primary">Send report</button>
+          <a class="btn" href="/dashboard">Cancel</a>
+        </div>
+      </div>
+    </form>
+
+    <div class="card">
+      <div class="card__body">
+        <p class="text-sm no-margin">
+          <strong>Credit refunds:</strong> if your report is accepted — for example a mentor no-show — the credit is returned to your wallet automatically when the report is resolved.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  var currentType = "@Html.Raw(System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(Model.Type ?? "mentor_no_show"))";
+
+  function updateFormCategories() {
+    var cat = document.getElementById("sr-category").value;
+    var typeSelect = document.getElementById("sr-type");
+    typeSelect.innerHTML = "";
+
+    var bookingField = document.getElementById("field-booking");
+    var attemptField = document.getElementById("field-attempt");
+    var orderField = document.getElementById("field-order");
+
+    bookingField.style.display = "none";
+    attemptField.style.display = "none";
+    orderField.style.display = "none";
+
+    if (cat === "mentor") {
+      bookingField.style.display = "";
+      addOption(typeSelect, "mentor_no_show", "The mentor did not show up", currentType);
+      addOption(typeSelect, "mentor_quality", "The session quality was poor", currentType);
+    } else if (cat === "exam") {
+      attemptField.style.display = "";
+      addOption(typeSelect, "grading_issue", "An issue with grading or scoring", currentType);
+      addOption(typeSelect, "technical_error", "Technical error during exam", currentType);
+    } else if (cat === "payment") {
+      orderField.style.display = "";
+      addOption(typeSelect, "payment_issue", "A payment or credit issue", currentType);
+    }
+  }
+
+  function addOption(select, value, text, selectedVal) {
+    var opt = document.createElement("option");
+    opt.value = value;
+    opt.textContent = text;
+    if (value === selectedVal) opt.selected = true;
+    select.appendChild(opt);
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    var typeSelect = document.getElementById("sr-type");
+    if (typeSelect) {
+      typeSelect.addEventListener("change", function () {
+        currentType = this.value;
+      });
+    }
+    updateFormCategories();
+  });
+</script>
