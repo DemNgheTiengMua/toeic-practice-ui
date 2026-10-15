@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -30,6 +30,14 @@ public partial class User
     public string? Phone { get; set; }
 
     public bool IsLocked { get; set; }
+
+    [StringLength(36)]
+    [Unicode(false)]
+    public string SecurityStamp { get; set; } = null!;
+
+    public int FailedAttempts { get; set; }
+
+    public DateTimeOffset? LockoutEnd { get; set; }
 
     public DateTimeOffset? EmailVerifiedAt { get; set; }
 

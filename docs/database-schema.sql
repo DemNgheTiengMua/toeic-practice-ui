@@ -1,4 +1,4 @@
-﻿-- docs/database-schema.sql
+-- docs/database-schema.sql
 -- Multi-certificate mock-exam companion schema.
 -- Spec: docs/superpowers/specs/2026-09-24-multi-cert-companion-design.md
 SET QUOTED_IDENTIFIER ON;
@@ -75,6 +75,9 @@ CREATE TABLE Users (
   Phone        VARCHAR(20)   NULL,
   -- UI-2: admin users list filters Active / Locked / Not activated and shows last sign-in
   IsLocked        BIT NOT NULL CONSTRAINT DF_Users_IsLocked DEFAULT 0,
+  SecurityStamp   VARCHAR(36) NOT NULL CONSTRAINT DF_Users_SecurityStamp DEFAULT CONVERT(VARCHAR(36), NEWID()),
+  FailedAttempts  INT NOT NULL CONSTRAINT DF_Users_FailedAttempts DEFAULT 0,
+  LockoutEnd      DATETIMEOFFSET NULL,
   EmailVerifiedAt DATETIMEOFFSET NULL,   -- NULL = "Not activated"
   LastLoginAt     DATETIMEOFFSET NULL,   -- NULL = "Never signed in"
   TermsAcceptedAt DATETIMEOFFSET NULL,   -- UI-1: register "I agree to the terms of use"

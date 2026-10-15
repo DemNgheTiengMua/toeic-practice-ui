@@ -10,8 +10,8 @@
     "semantic_hash": "8971e2adf3c51939eb3d4bfb9faaaee0"
   },
   "docs/database-schema.sql": {
-    "mtime": 1791891842.2227447,
-    "ast_hash": "ac557b5aff1ac1a1070d8c8542c5cd03",
+    "mtime": 1792074264.7227452,
+    "ast_hash": "5827c7d6ee6980e191bdf5bc11fb3f5b",
     "semantic_hash": ""
   },
   "docs/erd/export-meta.sql": {
@@ -30,9 +30,9 @@
     "semantic_hash": "442cd86adc695661558265cd1606425d"
   },
   "docs/schema-tests/domain02-identity.sql": {
-    "mtime": 1790590090.9771197,
-    "ast_hash": "97b959d0c7236f9797274ac281bcd8b3",
-    "semantic_hash": "97b959d0c7236f9797274ac281bcd8b3"
+    "mtime": 1792074272.7376468,
+    "ast_hash": "cb997a703d16097aa758bea4295dcc4c",
+    "semantic_hash": ""
   },
   "docs/schema-tests/domain03-scoring.sql": {
     "mtime": 1790590090.9860287,
@@ -155,8 +155,8 @@
     "semantic_hash": ""
   },
   "src/Contracts/ApiError.cs": {
-    "mtime": 1792071597.5075116,
-    "ast_hash": "f9188f9fc4fbec4a7464b62d4fcca0fc",
+    "mtime": 1792075256.4972763,
+    "ast_hash": "555f83731d9f61131e26dfcaedeaabdf",
     "semantic_hash": ""
   },
   "src/Contracts/AuthClaims.cs": {
@@ -180,7 +180,7 @@
     "semantic_hash": ""
   },
   "src/Contracts/CompanionApiClient.cs": {
-    "mtime": 1792073267.6442785,
+    "mtime": 1792073618.0647821,
     "ast_hash": "d3a98a3f127b45dfb2bd409153452825",
     "semantic_hash": ""
   },
@@ -210,8 +210,8 @@
     "semantic_hash": ""
   },
   "src/DataAccess/CompanionDbContext.cs": {
-    "mtime": 1792066725.1262324,
-    "ast_hash": "0d246626f414f9ae9dccdca0417e16f5",
+    "mtime": 1792074301.5299792,
+    "ast_hash": "e51190852a9764033de48056beb86452",
     "semantic_hash": ""
   },
   "src/DataAccess/DataAccess.csproj": {
@@ -465,9 +465,9 @@
     "semantic_hash": "861ee2ddec508a4d51463e746bb413a7"
   },
   "src/DataAccess/Scaffold/User.cs": {
-    "mtime": 1791830556.1087523,
-    "ast_hash": "acda140bc9c016b233e30f60779fc134",
-    "semantic_hash": "acda140bc9c016b233e30f60779fc134"
+    "mtime": 1792074292.2186182,
+    "ast_hash": "6332dee83b1cf6fd5eec785dcf166366",
+    "semantic_hash": ""
   },
   "src/DataAccess/Scaffold/vw_LearnerPathIsPremium.cs": {
     "mtime": 1791830556.1087523,
@@ -515,9 +515,9 @@
     "semantic_hash": "e66cd7bfbee6e414f219dbbc45931495"
   },
   "src/Services/AuthService.cs": {
-    "mtime": 1791951575.9948657,
-    "ast_hash": "a0f09acf38914e43f5655eb24fa2c2aa",
-    "semantic_hash": "a0f09acf38914e43f5655eb24fa2c2aa"
+    "mtime": 1792075291.4352224,
+    "ast_hash": "9c8c8b90fad9686606f39037831c2509",
+    "semantic_hash": ""
   },
   "src/Services/CertificateService.cs": {
     "mtime": 1792023972.8544834,
@@ -545,8 +545,8 @@
     "semantic_hash": "a1e0ec747b63abe2941b00c6252f53a5"
   },
   "src/WebAPI/Program.cs": {
-    "mtime": 1792072132.155144,
-    "ast_hash": "dc8c56d2b4b5b984ec439f55e686ebbc",
+    "mtime": 1792075315.8635118,
+    "ast_hash": "638fa383add5d6e690847df384eb0265",
     "semantic_hash": ""
   },
   "src/WebAPI/Properties/launchSettings.json": {
@@ -570,13 +570,13 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Controllers/AdminController.cs": {
-    "mtime": 1792073287.7224135,
-    "ast_hash": "08d7c0a87ed0c8d7209ff7d3e2488292",
+    "mtime": 1792073618.066287,
+    "ast_hash": "c2aadc46e077dd0ce86e6bdb6d24995c",
     "semantic_hash": ""
   },
   "src/WebMVC/Controllers/AuthController.cs": {
-    "mtime": 1791988488.4587793,
-    "ast_hash": "54027ac377951e7ee7445b419404c690",
+    "mtime": 1792075328.004938,
+    "ast_hash": "9f7d00002a5f24dca730ccc13bd46b4f",
     "semantic_hash": ""
   },
   "src/WebMVC/Controllers/CertificatesController.cs": {
@@ -600,9 +600,9 @@
     "semantic_hash": "ce71fa9acfa68d8a984a9bd2717d3445"
   },
   "src/WebMVC/Controllers/ProfileController.cs": {
-    "mtime": 1791951575.9988675,
-    "ast_hash": "78edb7e5dedf02b9d46159bd45e7d13b",
-    "semantic_hash": "78edb7e5dedf02b9d46159bd45e7d13b"
+    "mtime": 1792075338.260682,
+    "ast_hash": "c327394d6cf0781d83ffbd1cf14c4b3a",
+    "semantic_hash": ""
   },
   "src/WebMVC/CurrentUser.cs": {
     "mtime": 1791910369.6644938,
@@ -650,8 +650,8 @@
     "semantic_hash": "5796329b55c6473bfcb5f70d7eb91067"
   },
   "src/WebMVC/Views/Admin/Index.cshtml": {
-    "mtime": 1792073300.2058756,
-    "ast_hash": "d8fd32f3678982407de0e57a80a6c7ac",
+    "mtime": 1792073618.066287,
+    "ast_hash": "0fc5b58edcd7778ecd948a961b245e5e",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Auth/Denied.cshtml": {
@@ -770,9 +770,9 @@
     "semantic_hash": "d0fb1f0ebd79c9b0d77fdb3f4b9a9f12"
   },
   "tests/Services.Tests/AuthServiceTests.cs": {
-    "mtime": 1791951576.009077,
-    "ast_hash": "bb842ac0b4b5a1b7ba63820b825dc629",
-    "semantic_hash": "bb842ac0b4b5a1b7ba63820b825dc629"
+    "mtime": 1792075388.1692798,
+    "ast_hash": "080fa1832f00d862f5fadad5ade9fbaa",
+    "semantic_hash": ""
   },
   "tests/Services.Tests/CertificateServiceTests.cs": {
     "mtime": 1791951576.0105813,
@@ -780,8 +780,8 @@
     "semantic_hash": "edd86a0e57dc24612563b24d59dee7dc"
   },
   "tests/Services.Tests/DatabaseFixture.cs": {
-    "mtime": 1792072253.2943726,
-    "ast_hash": "5feccb94811a6f9b8da0e1d2b84a2e28",
+    "mtime": 1792073618.0672884,
+    "ast_hash": "6722bc525caf9431049fa74481d96532",
     "semantic_hash": ""
   },
   "tests/Services.Tests/DbContextFactory.cs": {
@@ -1671,7 +1671,7 @@
     "semantic_hash": ""
   },
   "src/Contracts/AdminDtos.cs": {
-    "mtime": 1792073263.4625766,
+    "mtime": 1792073618.0637774,
     "ast_hash": "113dae5cc662e2a13e92bf489cc25810",
     "semantic_hash": ""
   },
@@ -1801,13 +1801,13 @@
     "semantic_hash": ""
   },
   "src/WebAPI/Endpoints/AdminEndpoints.cs": {
-    "mtime": 1792072140.7474062,
+    "mtime": 1792073618.0657818,
     "ast_hash": "fdebd7046f4cdcb696ba642479cd1c96",
     "semantic_hash": ""
   },
   "src/WebAPI/Endpoints/AuthEndpoints.cs": {
-    "mtime": 1792023972.8589416,
-    "ast_hash": "8257d66aa94823105b0d4df7fbcd3678",
+    "mtime": 1792074411.713053,
+    "ast_hash": "050f3cefc81e411a187566e6a2e9dcba",
     "semantic_hash": ""
   },
   "src/WebAPI/Endpoints/CatalogEndpoints.cs": {
@@ -2386,18 +2386,23 @@
     "semantic_hash": ""
   },
   "src/Services/AdminDashboardService.cs": {
-    "mtime": 1792073278.880586,
-    "ast_hash": "319826a8817ad9417616e2be62bdcda7",
+    "mtime": 1792073618.0647821,
+    "ast_hash": "7204c97f0998fd2b3c5a4199cd7b4fd8",
     "semantic_hash": ""
   },
   "tests/Services.Tests/AdminDashboardServiceTests.cs": {
-    "mtime": 1792073435.9126103,
-    "ast_hash": "0532a677276a29d6b708e0a23382cfb6",
+    "mtime": 1792073618.066287,
+    "ast_hash": "209b4c3add7e74cc12e3d6ee5e18cd06",
     "semantic_hash": ""
   },
   "tests/WebMVC.Tests/AdminControllerTests.cs": {
-    "mtime": 1792073376.0859048,
-    "ast_hash": "86030ae4fb9c85e5468a403c354c5f37",
+    "mtime": 1792073618.0672884,
+    "ast_hash": "8a52de9c8282ebc0fcbde2e9c521bde8",
+    "semantic_hash": ""
+  },
+  "tests/WebMVC.Tests/ProfileControllerTests.cs": {
+    "mtime": 1792075351.4058082,
+    "ast_hash": "5cf494b445c71e0cd95638f15cb95ecb",
     "semantic_hash": ""
   }
 }

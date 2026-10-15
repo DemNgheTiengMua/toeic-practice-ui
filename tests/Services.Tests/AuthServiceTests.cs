@@ -21,11 +21,18 @@ public sealed class AuthServiceTests(DatabaseFixture database)
             """);
     }
 
-    private AuthService CreateService()
+    private AuthService CreateService(TimeProvider? clock = null)
     {
         var db = DbContextFactory.Create(database.ConnectionString);
         return new AuthService(
-            db, new RecordingEmailSender(), TimeProvider.System, new AuthLinkOptions(), NullLogger<AuthService>.Instance);
+            db, new RecordingEmailSender(), clock ?? TimeProvider.System, new AuthLinkOptions(), NullLogger<AuthService>.Instance);
+    }
+
+    private sealed class MutableTimeProvider(DateTimeOffset initial) : TimeProvider
+    {
+        public DateTimeOffset UtcNow { get; set; } = initial;
+        public override DateTimeOffset GetUtcNow() => UtcNow;
+        public void Advance(TimeSpan delta) => UtcNow += delta;
     }
 
     [Fact]
@@ -226,5 +233,234 @@ public sealed class AuthServiceTests(DatabaseFixture database)
 
         await Assert.ThrowsAsync<ValidationException>(() =>
             CreateService().ChangePasswordAsync(user.UserId, new ChangePasswordInput("old-password", "short")));
+    }
+
+    [Fact]
+    public async Task ChangePassword_bumps_SecurityStamp_and_invalidates_old_session()
+    {
+        await SeedRolesAsync();
+        var user = await CreateService().RegisterAsync(new RegisterInput("Learner", "revokestamp@example.com", null, "old-password", true));
+        var initialStamp = user.SessionStamp;
+
+        Assert.Equal(SessionStatus.Active, await CreateService().CheckSessionAsync(user.UserId, initialStamp));
+
+        await CreateService().ChangePasswordAsync(user.UserId, new ChangePasswordInput("old-password", "new-password-123"));
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var row = await db.Users.SingleAsync(u => u.UserId == user.UserId);
+        Assert.NotEqual(initialStamp, row.SecurityStamp);
+
+        // Old stamp is now ended
+        Assert.Equal(SessionStatus.Ended, await CreateService().CheckSessionAsync(user.UserId, initialStamp));
+        // New stamp is active
+        Assert.Equal(SessionStatus.Active, await CreateService().CheckSessionAsync(user.UserId, row.SecurityStamp));
+    }
+
+    [Fact]
+    public async Task SignIn_failed_attempts_increment_and_lock_out_after_five_failures()
+    {
+        await SeedRolesAsync();
+        var clock = new MutableTimeProvider(DateTimeOffset.UtcNow);
+        var user = await CreateService(clock).RegisterAsync(new RegisterInput("Learner", "bruteforce@example.com", null, "correct-password", true));
+
+        // 4 failed attempts
+        for (var i = 1; i <= 4; i++)
+        {
+            var ex = await Assert.ThrowsAsync<AuthException>(() =>
+                CreateService(clock).SignInAsync(new SignInInput("bruteforce@example.com", "wrong-password")));
+            Assert.Equal(AuthException.InvalidCredentials, ex.Code);
+
+            await using var db = DbContextFactory.Create(database.ConnectionString);
+            var row = await db.Users.SingleAsync(u => u.UserId == user.UserId);
+            Assert.Equal(i, row.FailedAttempts);
+            Assert.Null(row.LockoutEnd);
+        }
+
+        // 5th failed attempt locks out for 15 minutes
+        var fifthEx = await Assert.ThrowsAsync<AuthException>(() =>
+            CreateService(clock).SignInAsync(new SignInInput("bruteforce@example.com", "wrong-password")));
+        Assert.Equal(AuthException.InvalidCredentials, fifthEx.Code);
+
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            var row = await db.Users.SingleAsync(u => u.UserId == user.UserId);
+            Assert.Equal(5, row.FailedAttempts);
+            Assert.NotNull(row.LockoutEnd);
+            Assert.Equal(clock.GetUtcNow().AddMinutes(15), row.LockoutEnd);
+        }
+
+        // Sign-in during lockout (even with correct password) throws AuthException.Locked
+        var lockedEx = await Assert.ThrowsAsync<AuthException>(() =>
+            CreateService(clock).SignInAsync(new SignInInput("bruteforce@example.com", "correct-password")));
+        Assert.Equal(AuthException.Locked, lockedEx.Code);
+        Assert.Contains("temporarily locked", lockedEx.Message);
+
+        // Advance clock past 15-minute lockout
+        clock.Advance(TimeSpan.FromMinutes(16));
+
+        // Successful sign-in clears FailedAttempts and LockoutEnd
+        var signedIn = await CreateService(clock).SignInAsync(new SignInInput("bruteforce@example.com", "correct-password"));
+        Assert.Equal(user.UserId, signedIn.UserId);
+
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            var row = await db.Users.SingleAsync(u => u.UserId == user.UserId);
+            Assert.Equal(0, row.FailedAttempts);
+            Assert.Null(row.LockoutEnd);
+        }
+    }
+
+    [Fact]
+    public async Task ChangePassword_failed_attempts_increment_and_lock_out_after_five_failures()
+    {
+        await SeedRolesAsync();
+        var clock = new MutableTimeProvider(DateTimeOffset.UtcNow);
+        var user = await CreateService(clock).RegisterAsync(new RegisterInput("Learner", "pwlock@example.com", null, "initial-password", true));
+
+        for (var i = 1; i <= 4; i++)
+        {
+            var ex = await Assert.ThrowsAsync<AuthException>(() =>
+                CreateService(clock).ChangePasswordAsync(user.UserId, new ChangePasswordInput("wrong-current-pw", "new-password-1")));
+            Assert.Equal(AuthException.InvalidCredentials, ex.Code);
+
+            await using var db = DbContextFactory.Create(database.ConnectionString);
+            var row = await db.Users.SingleAsync(u => u.UserId == user.UserId);
+            Assert.Equal(i, row.FailedAttempts);
+            Assert.Null(row.LockoutEnd);
+        }
+
+        // 5th failed password change attempt
+        var fifthEx = await Assert.ThrowsAsync<AuthException>(() =>
+            CreateService(clock).ChangePasswordAsync(user.UserId, new ChangePasswordInput("wrong-current-pw", "new-password-1")));
+        Assert.Equal(AuthException.InvalidCredentials, fifthEx.Code);
+
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            var row = await db.Users.SingleAsync(u => u.UserId == user.UserId);
+            Assert.Equal(5, row.FailedAttempts);
+            Assert.NotNull(row.LockoutEnd);
+            Assert.Equal(clock.GetUtcNow().AddMinutes(15), row.LockoutEnd);
+        }
+
+        // Change password during lockout throws AuthException.Locked
+        var lockedEx = await Assert.ThrowsAsync<AuthException>(() =>
+            CreateService(clock).ChangePasswordAsync(user.UserId, new ChangePasswordInput("initial-password", "new-password-1")));
+        Assert.Equal(AuthException.Locked, lockedEx.Code);
+        Assert.Contains("temporarily locked", lockedEx.Message);
+
+        // Sign-in during this lockout also fails with AuthException.Locked because counter is shared
+        var signinLockedEx = await Assert.ThrowsAsync<AuthException>(() =>
+            CreateService(clock).SignInAsync(new SignInInput("pwlock@example.com", "initial-password")));
+        Assert.Equal(AuthException.Locked, signinLockedEx.Code);
+
+        // Advance clock past 15-minute lockout
+        clock.Advance(TimeSpan.FromMinutes(16));
+
+        // Successful password change resets FailedAttempts and LockoutEnd
+        await CreateService(clock).ChangePasswordAsync(user.UserId, new ChangePasswordInput("initial-password", "brand-new-password"));
+
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            var row = await db.Users.SingleAsync(u => u.UserId == user.UserId);
+            Assert.Equal(0, row.FailedAttempts);
+            Assert.Null(row.LockoutEnd);
+        }
+    }
+
+    [Fact]
+    public async Task Expired_lockout_resets_failure_counter_on_subsequent_failed_attempt()
+    {
+        await SeedRolesAsync();
+        var clock = new MutableTimeProvider(DateTimeOffset.UtcNow);
+        var user = await CreateService(clock).RegisterAsync(new RegisterInput("Learner", "expiredlock@example.com", null, "correct-password", true));
+
+        // Fail 5 times to trigger lockout
+        for (var i = 1; i <= 5; i++)
+        {
+            await Assert.ThrowsAsync<AuthException>(() =>
+                CreateService(clock).SignInAsync(new SignInInput("expiredlock@example.com", "wrong-password")));
+        }
+
+        // Verify locked out
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            var row = await db.Users.SingleAsync(u => u.UserId == user.UserId);
+            Assert.Equal(5, row.FailedAttempts);
+            Assert.NotNull(row.LockoutEnd);
+        }
+
+        // Advance past lockout window
+        clock.Advance(TimeSpan.FromMinutes(16));
+
+        // Subsequent failure should NOT throw AuthException.Locked; it should throw InvalidCredentials and reset counter to 1
+        var failEx = await Assert.ThrowsAsync<AuthException>(() =>
+            CreateService(clock).SignInAsync(new SignInInput("expiredlock@example.com", "still-wrong-password")));
+        Assert.Equal(AuthException.InvalidCredentials, failEx.Code);
+
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            var row = await db.Users.SingleAsync(u => u.UserId == user.UserId);
+            Assert.Equal(1, row.FailedAttempts);
+            Assert.Null(row.LockoutEnd);
+        }
+    }
+
+    [Fact]
+    public async Task Failed_attempt_counter_is_shared_between_signin_and_changepassword()
+    {
+        await SeedRolesAsync();
+        var clock = new MutableTimeProvider(DateTimeOffset.UtcNow);
+        var user = await CreateService(clock).RegisterAsync(new RegisterInput("Learner", "sharedcounter@example.com", null, "my-pass-1234", true));
+
+        // 3 failed sign-ins
+        for (var i = 1; i <= 3; i++)
+        {
+            await Assert.ThrowsAsync<AuthException>(() =>
+                CreateService(clock).SignInAsync(new SignInInput("sharedcounter@example.com", "wrong-pass")));
+        }
+
+        // 2 failed change password attempts -> total 5 failures
+        for (var i = 4; i <= 5; i++)
+        {
+            await Assert.ThrowsAsync<AuthException>(() =>
+                CreateService(clock).ChangePasswordAsync(user.UserId, new ChangePasswordInput("wrong-current", "new-pass-5678")));
+        }
+
+        // Now both sign-in and password change must be locked out
+        var signinEx = await Assert.ThrowsAsync<AuthException>(() =>
+            CreateService(clock).SignInAsync(new SignInInput("sharedcounter@example.com", "my-pass-1234")));
+        Assert.Equal(AuthException.Locked, signinEx.Code);
+
+        var changePwEx = await Assert.ThrowsAsync<AuthException>(() =>
+            CreateService(clock).ChangePasswordAsync(user.UserId, new ChangePasswordInput("my-pass-1234", "new-pass-5678")));
+        Assert.Equal(AuthException.Locked, changePwEx.Code);
+    }
+
+    [Fact]
+    public async Task CheckSession_with_invalid_or_oversized_stamp_returns_ended()
+    {
+        await SeedRolesAsync();
+        var user = await CreateService().RegisterAsync(new RegisterInput("Learner", "stamps@example.com", null, "secure-pass-123", true));
+
+        // Null stamp
+        Assert.Equal(SessionStatus.Ended, await CreateService().CheckSessionAsync(user.UserId, null));
+
+        // Oversized stamp (> 128 characters)
+        var oversized = new string('x', 200);
+        Assert.Equal(SessionStatus.Ended, await CreateService().CheckSessionAsync(user.UserId, oversized));
+
+        // Wrong stamp
+        Assert.Equal(SessionStatus.Ended, await CreateService().CheckSessionAsync(user.UserId, Guid.NewGuid().ToString()));
+
+        // Correct stamp
+        Assert.Equal(SessionStatus.Active, await CreateService().CheckSessionAsync(user.UserId, user.SessionStamp));
+    }
+
+    [Fact]
+    public async Task SignIn_with_invalid_model_throws_ValidationException()
+    {
+        await SeedRolesAsync();
+        await Assert.ThrowsAsync<ValidationException>(() =>
+            CreateService().SignInAsync(new SignInInput("not-an-email", "pass")));
     }
 }
