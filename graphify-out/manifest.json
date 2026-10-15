@@ -10,8 +10,8 @@
     "semantic_hash": "8971e2adf3c51939eb3d4bfb9faaaee0"
   },
   "docs/database-schema.sql": {
-    "mtime": 1792074264.7227452,
-    "ast_hash": "5827c7d6ee6980e191bdf5bc11fb3f5b",
+    "mtime": 1792075575.9589999,
+    "ast_hash": "f0fd1a45b4f8b74cc80d07256a3a0e7b",
     "semantic_hash": ""
   },
   "docs/erd/export-meta.sql": {
@@ -30,7 +30,7 @@
     "semantic_hash": "442cd86adc695661558265cd1606425d"
   },
   "docs/schema-tests/domain02-identity.sql": {
-    "mtime": 1792074272.7376468,
+    "mtime": 1792075575.9589999,
     "ast_hash": "cb997a703d16097aa758bea4295dcc4c",
     "semantic_hash": ""
   },
@@ -100,18 +100,18 @@
     "semantic_hash": "b8d4a85dd0ef7c5abca46b8ade16cf87"
   },
   "docs/schema-tests/reset-and-load.sh": {
-    "mtime": 1790590090.9879675,
-    "ast_hash": "90b78dea0a3a1b0139247bc686108adc",
-    "semantic_hash": "90b78dea0a3a1b0139247bc686108adc"
+    "mtime": 1792078254.212898,
+    "ast_hash": "7d9511c9c34959347ef2b8c841ff6dae",
+    "semantic_hash": ""
   },
   "docs/schema-tests/run-all.sh": {
-    "mtime": 1790590090.9879675,
-    "ast_hash": "e01c216d2abcc29b61c3b3d8cfc226e3",
-    "semantic_hash": "e01c216d2abcc29b61c3b3d8cfc226e3"
+    "mtime": 1792078260.0291953,
+    "ast_hash": "177ef4669acf8ab7e03e175985599221",
+    "semantic_hash": ""
   },
   "docs/seed-demo.sql": {
-    "mtime": 1792062771.6821053,
-    "ast_hash": "f8f322cc31c2e6d5f0043834dcff5ebf",
+    "mtime": 1792077963.4980402,
+    "ast_hash": "45111c2298575b708384f0d7ff41a253",
     "semantic_hash": ""
   },
   "prototype/assets/js/icons.js": {
@@ -155,7 +155,7 @@
     "semantic_hash": ""
   },
   "src/Contracts/ApiError.cs": {
-    "mtime": 1792075256.4972763,
+    "mtime": 1792075575.9972987,
     "ast_hash": "555f83731d9f61131e26dfcaedeaabdf",
     "semantic_hash": ""
   },
@@ -210,7 +210,7 @@
     "semantic_hash": ""
   },
   "src/DataAccess/CompanionDbContext.cs": {
-    "mtime": 1792074301.5299792,
+    "mtime": 1792075575.9972987,
     "ast_hash": "e51190852a9764033de48056beb86452",
     "semantic_hash": ""
   },
@@ -465,7 +465,7 @@
     "semantic_hash": "861ee2ddec508a4d51463e746bb413a7"
   },
   "src/DataAccess/Scaffold/User.cs": {
-    "mtime": 1792074292.2186182,
+    "mtime": 1792075575.9972987,
     "ast_hash": "6332dee83b1cf6fd5eec785dcf166366",
     "semantic_hash": ""
   },
@@ -515,7 +515,7 @@
     "semantic_hash": "e66cd7bfbee6e414f219dbbc45931495"
   },
   "src/Services/AuthService.cs": {
-    "mtime": 1792075291.4352224,
+    "mtime": 1792075575.9982975,
     "ast_hash": "9c8c8b90fad9686606f39037831c2509",
     "semantic_hash": ""
   },
@@ -545,7 +545,7 @@
     "semantic_hash": "a1e0ec747b63abe2941b00c6252f53a5"
   },
   "src/WebAPI/Program.cs": {
-    "mtime": 1792075315.8635118,
+    "mtime": 1792075575.9992971,
     "ast_hash": "638fa383add5d6e690847df384eb0265",
     "semantic_hash": ""
   },
@@ -575,7 +575,7 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Controllers/AuthController.cs": {
-    "mtime": 1792075328.004938,
+    "mtime": 1792075575.9992971,
     "ast_hash": "9f7d00002a5f24dca730ccc13bd46b4f",
     "semantic_hash": ""
   },
@@ -600,7 +600,7 @@
     "semantic_hash": "ce71fa9acfa68d8a984a9bd2717d3445"
   },
   "src/WebMVC/Controllers/ProfileController.cs": {
-    "mtime": 1792075338.260682,
+    "mtime": 1792075575.999803,
     "ast_hash": "c327394d6cf0781d83ffbd1cf14c4b3a",
     "semantic_hash": ""
   },
@@ -770,7 +770,7 @@
     "semantic_hash": "d0fb1f0ebd79c9b0d77fdb3f4b9a9f12"
   },
   "tests/Services.Tests/AuthServiceTests.cs": {
-    "mtime": 1792075388.1692798,
+    "mtime": 1792075575.999803,
     "ast_hash": "080fa1832f00d862f5fadad5ade9fbaa",
     "semantic_hash": ""
   },
@@ -780,8 +780,8 @@
     "semantic_hash": "edd86a0e57dc24612563b24d59dee7dc"
   },
   "tests/Services.Tests/DatabaseFixture.cs": {
-    "mtime": 1792073618.0672884,
-    "ast_hash": "6722bc525caf9431049fa74481d96532",
+    "mtime": 1792078240.2492962,
+    "ast_hash": "318578fc97b03f61fcd79eac02e72508",
     "semantic_hash": ""
   },
   "tests/Services.Tests/DbContextFactory.cs": {
@@ -1806,7 +1806,7 @@
     "semantic_hash": ""
   },
   "src/WebAPI/Endpoints/AuthEndpoints.cs": {
-    "mtime": 1792074411.713053,
+    "mtime": 1792075575.9982975,
     "ast_hash": "050f3cefc81e411a187566e6a2e9dcba",
     "semantic_hash": ""
   },
@@ -2401,8 +2401,23 @@
     "semantic_hash": ""
   },
   "tests/WebMVC.Tests/ProfileControllerTests.cs": {
-    "mtime": 1792075351.4058082,
-    "ast_hash": "5cf494b445c71e0cd95638f15cb95ecb",
+    "mtime": 1792075575.999803,
+    "ast_hash": "e7e2b033a4540a3664d411220f184614",
+    "semantic_hash": ""
+  },
+  "scripts/build_seed.py": {
+    "mtime": 1792078033.7954016,
+    "ast_hash": "04a9e3b1f8b81eb20e3667778730eccb",
+    "semantic_hash": ""
+  },
+  "tests/Services.Tests/DemoSeedTests.cs": {
+    "mtime": 1792078328.921268,
+    "ast_hash": "28efc17d4097a2c3245633f371021508",
+    "semantic_hash": ""
+  },
+  "src/WebMVC/wwwroot/img/part1-sample.svg": {
+    "mtime": 1789971713.4556582,
+    "ast_hash": "670a0b663cc000255604727ef51d15f6",
     "semantic_hash": ""
   }
 }
