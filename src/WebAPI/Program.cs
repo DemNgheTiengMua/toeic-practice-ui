@@ -147,7 +147,11 @@ builder.Services.AddScoped<IAdminOrderService, AdminOrderService>();
 builder.Services.AddScoped<IAdminUserService, AdminUserService>();
 builder.Services.AddScoped<IScoreConversionService, ScoreConversionService>();
 builder.Services.AddSingleton<IAiGrader, FakeAiGrader>();
+var audioStoragePath = builder.Configuration["FileStore:AudioDirectory"]
+    ?? Path.Combine(builder.Environment.ContentRootPath, "..", "..", "App_Data", "audio");
+builder.Services.AddSingleton<IFileStore>(new LocalFileStore(audioStoragePath));
 builder.Services.AddScoped<IWritingPracticeService, WritingPracticeService>();
+builder.Services.AddScoped<ISpeakingPracticeService, SpeakingPracticeService>();
 builder.Services.AddHostedService<AiGradingBackgroundService>();
 
 var payOsOptions = builder.Configuration.GetSection(PayOsOptions.SectionName).Get<PayOsOptions>() ?? new PayOsOptions();
@@ -224,6 +228,7 @@ app.MapWeaknessEndpoints();
 app.MapCatalogEndpoints();
 app.MapCheckoutEndpoints();
 app.MapWritingEndpoints();
+app.MapSpeakingEndpoints();
 
 app.Run();
 

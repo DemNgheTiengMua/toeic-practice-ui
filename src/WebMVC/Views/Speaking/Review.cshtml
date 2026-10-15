@@ -1,0 +1,243 @@
+@model SpeakingReviewViewModel
+@{
+    Layout = "_LearnerLayout";
+    var r = Model.Review;
+    ViewData["Title"] = $"Speaking Result — {r.ExamName}";
+    ViewData["Description"] = $"Speaking practice grading result for {r.ExamName}.";
+}
+
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+  <a href="/dashboard" class="breadcrumbs__item">Home</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <a href="/practice" class="breadcrumbs__item">Practice</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <span class="breadcrumbs__item" aria-current="page">Speaking result</span>
+</nav>
+
+<div class="context-bar mb-4">
+  <div class="context-bar__item">
+    <span class="context-bar__label">Certificate:</span>
+    <span class="context-bar__value">@r.CertCode</span>
+  </div>
+  <div class="context-bar__item">
+    <span class="context-bar__label">Attempt:</span>
+    <span class="context-bar__value">Speaking practice</span>
+  </div>
+  <div class="context-bar__item">
+    <span class="context-bar__label">Cost:</span>
+    <span class="context-bar__value">1 credit · AI grading</span>
+  </div>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+  <div class="alert alert--danger mb-3" role="alert">@Model.ErrorMessage</div>
+}
+
+<div class="stack">
+  <div class="row row--between">
+    <div>
+      <h1 class="m-0 mb-1">Speaking result</h1>
+      <p class="text-sm text-muted no-margin">
+        @(r.SubmittedAt.HasValue ? $"Graded {r.SubmittedAt.Value:dd MMMM yyyy · HH:mm} · " : "")
+        @r.AnsweredQuestions of @r.TotalQuestions questions recorded
+      </p>
+    </div>
+    <div class="row">
+      <a class="btn" href="/practice">Practice by section</a>
+      <a class="btn btn--primary" href="/speaking/@r.ExamId/instructions">Practise speaking again</a>
+    </div>
+  </div>
+
+  <!-- Score Hero -->
+  <div class="score-hero">
+    <div class="score-hero__total">
+      <div class="score-hero__total-value">@(r.ScaledScore?.ToString() ?? r.TotalScore.ToString("0.#"))</div>
+      <div class="score-hero__total-label">Speaking score · 0–200 scale</div>
+    </div>
+    <div class="score-hero__section">
+      <div class="score-hero__section-value">@r.TotalScore.ToString("0.#")</div>
+      <div class="text-sm text-muted">Points earned · @r.MaxScore.ToString("0.#") available</div>
+      <p class="text-xs text-muted m-0 mt-1">Sum of all scored criteria</p>
+    </div>
+    <div class="score-hero__section">
+      <div class="score-hero__section-value">1</div>
+      <div class="text-sm text-muted">Credit used</div>
+      <p class="text-xs text-muted m-0 mt-1">AI evaluation and rubric scoring</p>
+    </div>
+  </div>
+
+  <!-- Table of answers -->
+  <section>
+    <h2 class="section-group__title">Your @r.AnsweredQuestions recorded answers</h2>
+    <div class="card">
+      <div class="card__body">
+        <table class="table">
+          <caption class="visually-hidden">Score and audio for each speaking question</caption>
+          <thead>
+            <tr>
+              <th scope="col">Question</th>
+              <th scope="col">Task / Section</th>
+              <th scope="col">Score</th>
+              <th scope="col">Recording</th>
+            </tr>
+          </thead>
+          <tbody>
+            @foreach (var q in r.Questions)
+            {
+              <tr>
+                <th scope="row">@q.DisplayOrder</th>
+                <td>@q.SectionName</td>
+                <td>
+                  <strong>@q.TotalScore.ToString("0.#")</strong> / @q.MaxScore.ToString("0.#")
+                </td>
+                <td>
+                  @if (!string.IsNullOrEmpty(q.AudioPath))
+                  {
+                    <button class="btn btn--sm" type="button" onclick="playAudio('@q.QuestionId')" aria-label="Play recording for question @q.DisplayOrder">
+                      Play
+                    </button>
+                  }
+                  else
+                  {
+                    <span class="text-muted text-xs">No recording</span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr>
+              <th scope="row" colspan="2">Total points</th>
+              <td colspan="2"><strong>@r.TotalScore.ToString("0.#") / @r.MaxScore.ToString("0.#")</strong></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Highlight Lowest Scored Question if available -->
+  @if (r.LowestScoredQuestion != null && r.LowestScoredQuestion.Criteria.Count > 0)
+  {
+    var lowest = r.LowestScoredQuestion;
+    <section>
+      <h2 class="section-group__title">Focus area: Question @lowest.DisplayOrder</h2>
+      <div class="card">
+        <div class="card__body stack">
+          <p class="no-margin">
+            <strong>@lowest.SectionName</strong> · Scored <strong>@lowest.TotalScore.ToString("0.#") of @lowest.MaxScore.ToString("0.#")</strong>.
+            Listen to your response and review the AI feedback below:
+          </p>
+
+          @if (!string.IsNullOrEmpty(lowest.AudioPath))
+          {
+            <div class="exam-audio text-left" style="max-width: 480px; margin: var(--space-2) 0">
+              <span class="badge badge--muted">Question @lowest.DisplayOrder</span>
+              <div style="flex: 1 1 auto">
+                <audio controls src="/speaking/audio/@r.AttemptId/@lowest.QuestionId" style="width: 100%"></audio>
+              </div>
+            </div>
+          }
+
+          @if (!string.IsNullOrEmpty(lowest.Transcript))
+          {
+            <div class="alert alert--info" style="margin: var(--space-2) 0">
+              <strong>Transcript:</strong> @lowest.Transcript
+            </div>
+          }
+
+          <ul class="stack m-0 pl-5">
+            @foreach (var c in lowest.Criteria)
+            {
+              <li>
+                <strong>@c.Name (@c.Score.ToString("0.#")/@c.MaxScore.ToString("0.#")):</strong>
+                @(c.Comment ?? "Evaluated against rubric standards.")
+              </li>
+            }
+          </ul>
+        </div>
+      </div>
+    </section>
+  }
+
+  <!-- Per-question detailed criteria & transcripts -->
+  <section>
+    <h2 class="section-group__title">Detailed feedback by question</h2>
+    <div class="stack">
+      @foreach (var q in r.Questions)
+      {
+        <div class="card">
+          <div class="card__header">
+            <div class="row row--between">
+              <strong>Question @q.DisplayOrder: @q.SectionName</strong>
+              <span>
+                Score: <strong>@q.TotalScore.ToString("0.#") / @q.MaxScore.ToString("0.#")</strong>
+              </span>
+            </div>
+          </div>
+          <div class="card__body stack">
+            <p class="text-sm text-muted no-margin">@q.Stem</p>
+
+            @if (!string.IsNullOrEmpty(q.AudioPath))
+            {
+              <div class="exam-audio text-left" style="max-width: 520px; margin: var(--space-2) 0">
+                <span class="badge badge--muted">Recording</span>
+                <div style="flex: 1 1 auto">
+                  <audio id="audio-q-@q.QuestionId" controls src="/speaking/audio/@r.AttemptId/@q.QuestionId" style="width: 100%"></audio>
+                </div>
+                @if (q.DurationMs.HasValue)
+                {
+                  <span class="text-xs text-muted">@Math.Round((double)q.DurationMs.Value / 1000)s</span>
+                }
+              </div>
+            }
+
+            @if (!string.IsNullOrEmpty(q.Transcript))
+            {
+              <div style="background: var(--color-surface-soft, #f7f9fa); border-left: 3px solid var(--color-ink, #14181d); padding: var(--space-3); margin: var(--space-2) 0">
+                <div class="text-xs text-muted" style="text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-1)">Transcript</div>
+                <div class="text-sm">@q.Transcript</div>
+              </div>
+            }
+
+            @if (q.Criteria.Count > 0)
+            {
+              <div class="stack" style="gap: var(--space-2); margin-top: var(--space-2)">
+                <div class="text-xs text-muted" style="text-transform: uppercase; letter-spacing: 0.05em">Evaluation Criteria</div>
+                <div class="grid-2">
+                  @foreach (var c in q.Criteria)
+                  {
+                    <div style="border: 1px solid var(--color-rule, #ccd2d6); padding: var(--space-3)">
+                      <div class="row row--between mb-1">
+                        <strong>@c.Name</strong>
+                        <span class="badge badge--info">@c.Score.ToString("0.#") / @c.MaxScore.ToString("0.#")</span>
+                      </div>
+                      <p class="text-xs text-muted no-margin">@(c.Comment ?? "Criteria satisfied.")</p>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  </section>
+
+  <div class="alert alert--info">
+    <strong>No certificate band is shown for speaking practice alone.</strong>
+    Certificate bands are determined from a complete mock exam spanning all required skills.
+    See <a href="/exams">full mock exams</a> to take a full test.
+  </div>
+</div>
+
+<script>
+  function playAudio(questionId) {
+    const el = document.getElementById('audio-q-' + questionId);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.play();
+    }
+  }
+</script>

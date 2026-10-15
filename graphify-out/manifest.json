@@ -110,8 +110,8 @@
     "semantic_hash": "e01c216d2abcc29b61c3b3d8cfc226e3"
   },
   "docs/seed-demo.sql": {
-    "mtime": 1792027480.511032,
-    "ast_hash": "59efb876dd540091adf03e2ba092f6b0",
+    "mtime": 1792038157.7014506,
+    "ast_hash": "7b0e6bf9ed8eeda0323780dd83559802",
     "semantic_hash": ""
   },
   "prototype/assets/js/icons.js": {
@@ -180,8 +180,8 @@
     "semantic_hash": ""
   },
   "src/Contracts/CompanionApiClient.cs": {
-    "mtime": 1792034064.9090335,
-    "ast_hash": "ddee9f3f34b366461889b5a028636338",
+    "mtime": 1792037771.0037408,
+    "ast_hash": "8614790295dd865f143af90e4e01957d",
     "semantic_hash": ""
   },
   "src/Contracts/Contracts.csproj": {
@@ -545,8 +545,8 @@
     "semantic_hash": "a1e0ec747b63abe2941b00c6252f53a5"
   },
   "src/WebAPI/Program.cs": {
-    "mtime": 1792027359.562482,
-    "ast_hash": "772b32ab5622ade3d57cfa0e48acbeed",
+    "mtime": 1792037818.427846,
+    "ast_hash": "7ecfa41bf0225c458c05fa6b6be933c3",
     "semantic_hash": ""
   },
   "src/WebAPI/Properties/launchSettings.json": {
@@ -1871,13 +1871,13 @@
     "semantic_hash": ""
   },
   "src/Services/AiGrader.cs": {
-    "mtime": 1792027359.5604675,
-    "ast_hash": "975a1c28f012551df51636f612944e2b",
+    "mtime": 1792037345.920834,
+    "ast_hash": "563be260ec616d90ed08249e3c3773d0",
     "semantic_hash": ""
   },
   "src/Services/WritingPracticeService.cs": {
-    "mtime": 1792027359.5604675,
-    "ast_hash": "c06cbc2543b1015908935add4a5083ea",
+    "mtime": 1792037358.9976323,
+    "ast_hash": "35de501a89290579e024e75d87eeda99",
     "semantic_hash": ""
   },
   "src/WebAPI/AiGradingBackgroundService.cs": {
@@ -1933,6 +1933,81 @@
   "tests/WebMVC.Tests/WritingControllerTests.cs": {
     "mtime": 1792027359.5678823,
     "ast_hash": "8264e19651b2ea98f9c64c972c1ca83d",
+    "semantic_hash": ""
+  },
+  "src/BusinessObjects/SpeakingPracticeModels.cs": {
+    "mtime": 1792037289.5972924,
+    "ast_hash": "0ad6b8e7ff47f0a6af5baf0f69767edb",
+    "semantic_hash": ""
+  },
+  "src/Contracts/SpeakingDtos.cs": {
+    "mtime": 1792037297.0994656,
+    "ast_hash": "1a350be7ecce048ad807bb5f95f9b133",
+    "semantic_hash": ""
+  },
+  "src/Services/FileStore.cs": {
+    "mtime": 1792037674.97288,
+    "ast_hash": "3108f26417e744d24c91af0a1465be4d",
+    "semantic_hash": ""
+  },
+  "src/Services/IFileStore.cs": {
+    "mtime": 1792037303.8328438,
+    "ast_hash": "1c115e0a07f29c037068bff3dad8b326",
+    "semantic_hash": ""
+  },
+  "src/Services/SpeakingPracticeService.cs": {
+    "mtime": 1792037689.6482108,
+    "ast_hash": "a3943891a0cf47ff011ccf1e33e45ad0",
+    "semantic_hash": ""
+  },
+  "src/WebAPI/Endpoints/SpeakingEndpoints.cs": {
+    "mtime": 1792037796.8124642,
+    "ast_hash": "ff97aa41a9ea50a6f5bbe79655e10b64",
+    "semantic_hash": ""
+  },
+  "src/WebMVC/Controllers/SpeakingController.cs": {
+    "mtime": 1792037870.731335,
+    "ast_hash": "14ad73958499bc42900148a0e2a21dcd",
+    "semantic_hash": ""
+  },
+  "src/WebMVC/Models/SpeakingViewModels.cs": {
+    "mtime": 1792037851.9434528,
+    "ast_hash": "3406eb39d4cbe3ea26501f75ad678bb4",
+    "semantic_hash": ""
+  },
+  "src/WebMVC/Views/Speaking/AttemptNotFound.cshtml": {
+    "mtime": 1792037900.2056746,
+    "ast_hash": "2cc4491155199f3f5b2630eef9788fee",
+    "semantic_hash": ""
+  },
+  "src/WebMVC/Views/Speaking/Instructions.cshtml": {
+    "mtime": 1792037925.7331111,
+    "ast_hash": "790cef829e8a9b5388f9c2795f4db4d0",
+    "semantic_hash": ""
+  },
+  "src/WebMVC/Views/Speaking/Pending.cshtml": {
+    "mtime": 1792038008.0736287,
+    "ast_hash": "2a600643d2a67ed5cefe54679e88d3e4",
+    "semantic_hash": ""
+  },
+  "src/WebMVC/Views/Speaking/Review.cshtml": {
+    "mtime": 1792038028.228688,
+    "ast_hash": "26a3ffd3820c1d9729ccd11cddc621b0",
+    "semantic_hash": ""
+  },
+  "src/WebMVC/Views/Speaking/Take.cshtml": {
+    "mtime": 1792037962.1860778,
+    "ast_hash": "e38a249a5493c9e151ea5ae021d77f3a",
+    "semantic_hash": ""
+  },
+  "tests/Services.Tests/SpeakingPracticeServiceTests.cs": {
+    "mtime": 1792037460.6998274,
+    "ast_hash": "bccf4c191bacd820c186129f91c2043c",
+    "semantic_hash": ""
+  },
+  "tests/WebMVC.Tests/SpeakingControllerTests.cs": {
+    "mtime": 1792038111.6626642,
+    "ast_hash": "96f382ed36702136eb1930f59c94f42e",
     "semantic_hash": ""
   }
 }

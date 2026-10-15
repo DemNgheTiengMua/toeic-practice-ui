@@ -213,6 +213,33 @@ public interface ICompanionApiClient
 
     Task<WritingReviewDto> GetWritingReviewAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) =>
         throw new NotImplementedException();
+
+    Task<SpeakingInstructionsDto> GetSpeakingInstructionsAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
+
+    Task<StartSpeakingAttemptResponse> StartSpeakingAttemptAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
+
+    Task<SpeakingTakeDto> GetSpeakingTakeAsync(int attemptId, int? questionId, string bearerToken, CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
+
+    Task<UploadSpeakingAudioResponse> UploadSpeakingAudioAsync(int attemptId, int questionId, Stream audioStream, string fileName, string contentType, int? durationMs, string bearerToken, CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
+
+    Task<SubmitSpeakingResponse> SubmitSpeakingAttemptAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
+
+    Task<SpeakingGradingPendingDto> GetSpeakingGradingPendingAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
+
+    Task RetrySpeakingGradingAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
+
+    Task<SpeakingReviewDto> GetSpeakingReviewAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
+
+    Task<(Stream Stream, string ContentType, string FileName)> GetSpeakingAudioStreamAsync(int attemptId, int questionId, string bearerToken, CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
 }
 
 /// <summary>Raised when the API answers with a non-success status; carries the ProblemDetails code.</summary>
@@ -741,6 +768,86 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
 
     public Task<WritingReviewDto> GetWritingReviewAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) =>
         GetAuthorizedAsync<WritingReviewDto>($"api/learner/writing/attempts/{attemptId}/review", bearerToken, cancellationToken);
+
+    public Task<SpeakingInstructionsDto> GetSpeakingInstructionsAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) =>
+        GetAuthorizedAsync<SpeakingInstructionsDto>($"api/learner/speaking/{examId}/instructions", bearerToken, cancellationToken);
+
+    public async Task<StartSpeakingAttemptResponse> StartSpeakingAttemptAsync(int examId, string bearerToken, CancellationToken cancellationToken = default)
+    {
+        using var message = new HttpRequestMessage(HttpMethod.Post, $"api/learner/speaking/{examId}/start");
+        AttachBearer(message, bearerToken);
+        using var response = await http.SendAsync(message, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+        return (await response.Content.ReadFromJsonAsync<StartSpeakingAttemptResponse>(Json, cancellationToken))!;
+    }
+
+    public Task<SpeakingTakeDto> GetSpeakingTakeAsync(int attemptId, int? questionId, string bearerToken, CancellationToken cancellationToken = default)
+    {
+        var path = questionId.HasValue
+            ? $"api/learner/speaking/attempts/{attemptId}?questionId={questionId.Value}"
+            : $"api/learner/speaking/attempts/{attemptId}";
+        return GetAuthorizedAsync<SpeakingTakeDto>(path, bearerToken, cancellationToken);
+    }
+
+    public async Task<UploadSpeakingAudioResponse> UploadSpeakingAudioAsync(int attemptId, int questionId, Stream audioStream, string fileName, string contentType, int? durationMs, string bearerToken, CancellationToken cancellationToken = default)
+    {
+        using var content = new MultipartFormDataContent();
+        var fileContent = new StreamContent(audioStream);
+        fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
+        content.Add(fileContent, "audioFile", fileName);
+
+        if (durationMs.HasValue)
+        {
+            content.Add(new StringContent(durationMs.Value.ToString()), "durationMs");
+        }
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"api/learner/speaking/attempts/{attemptId}/questions/{questionId}/audio")
+        {
+            Content = content
+        };
+        AttachBearer(request, bearerToken);
+
+        using var response = await http.SendAsync(request, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+        return (await response.Content.ReadFromJsonAsync<UploadSpeakingAudioResponse>(Json, cancellationToken))!;
+    }
+
+    public async Task<SubmitSpeakingResponse> SubmitSpeakingAttemptAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default)
+    {
+        using var message = new HttpRequestMessage(HttpMethod.Post, $"api/learner/speaking/attempts/{attemptId}/submit");
+        AttachBearer(message, bearerToken);
+        using var response = await http.SendAsync(message, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+        return (await response.Content.ReadFromJsonAsync<SubmitSpeakingResponse>(Json, cancellationToken))!;
+    }
+
+    public Task<SpeakingGradingPendingDto> GetSpeakingGradingPendingAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) =>
+        GetAuthorizedAsync<SpeakingGradingPendingDto>($"api/learner/speaking/attempts/{attemptId}/pending", bearerToken, cancellationToken);
+
+    public async Task RetrySpeakingGradingAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default)
+    {
+        using var message = new HttpRequestMessage(HttpMethod.Post, $"api/learner/speaking/attempts/{attemptId}/retry");
+        AttachBearer(message, bearerToken);
+        using var response = await http.SendAsync(message, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+    }
+
+    public Task<SpeakingReviewDto> GetSpeakingReviewAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) =>
+        GetAuthorizedAsync<SpeakingReviewDto>($"api/learner/speaking/attempts/{attemptId}/review", bearerToken, cancellationToken);
+
+    public async Task<(Stream Stream, string ContentType, string FileName)> GetSpeakingAudioStreamAsync(int attemptId, int questionId, string bearerToken, CancellationToken cancellationToken = default)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Get, $"api/learner/speaking/attempts/{attemptId}/questions/{questionId}/audio");
+        AttachBearer(request, bearerToken);
+
+        var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+
+        var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        var contentType = response.Content.Headers.ContentType?.MediaType ?? "application/octet-stream";
+        var fileName = response.Content.Headers.ContentDisposition?.FileName?.Trim('"') ?? $"audio_{attemptId}_{questionId}.webm";
+        return (stream, contentType, fileName);
+    }
 
     private async Task<T> GetAuthorizedAsync<T>(string path, string bearerToken, CancellationToken cancellationToken)
     {

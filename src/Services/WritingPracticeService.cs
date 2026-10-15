@@ -703,12 +703,18 @@ public sealed class WritingPracticeService(
                 question.MaxWords,
                 fr.ResponseText ?? string.Empty,
                 criteriaDetails,
-                grading.AttemptCount);
+                grading.AttemptCount,
+                fr.AudioPath,
+                fr.DurationMs);
 
             var result = await aiGrader.GradeAsync(request, cancellationToken);
 
             if (result.Success)
             {
+                if (!string.IsNullOrEmpty(result.Transcript) && string.IsNullOrWhiteSpace(fr.ResponseText))
+                {
+                    fr.ResponseText = result.Transcript;
+                }
                 // Clear any existing scores for this grading
                 var existingScores = await db.AiGradingScores
                     .Where(s => s.GradingId == grading.GradingId)

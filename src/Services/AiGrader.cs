@@ -15,7 +15,9 @@ public record AiGradingRequest(
     int? MaxWords,
     string ResponseText,
     IReadOnlyList<GradingCriterionDetail> Criteria,
-    int AttemptCount = 1
+    int AttemptCount = 1,
+    string? AudioPath = null,
+    int? DurationMs = null
 );
 
 public record GradingCriterionDetail(
@@ -30,7 +32,8 @@ public record AiGradingResult(
     bool Success,
     string? FailureReason,
     string? Model,
-    IReadOnlyList<AiCriterionScoreResult> Scores
+    IReadOnlyList<AiCriterionScoreResult> Scores,
+    string? Transcript = null
 );
 
 public record AiCriterionScoreResult(
@@ -47,8 +50,9 @@ public interface IAiGrader
 /// <summary>
 /// Deterministic fake grader for offline execution and testing.
 /// Scores responses against criteria within [0, MaxScore] bounds.
-/// Supports simulated failures when text contains "[simulate_fail]".
+/// Supports simulated failures when text or AudioPath contains "[simulate_fail]".
 /// When AttemptCount > 1 (e.g. after a retry), the simulated failure resolves.
+/// Generates realistic transcripts and pronunciation feedback for spoken responses.
 /// </summary>
 public sealed class FakeAiGrader : IAiGrader
 {
@@ -57,13 +61,70 @@ public sealed class FakeAiGrader : IAiGrader
 
     public Task<AiGradingResult> GradeAsync(AiGradingRequest request, CancellationToken cancellationToken = default)
     {
-        if (request.ResponseText?.Contains(SimulateFailMarker, StringComparison.OrdinalIgnoreCase) == true && request.AttemptCount <= 1)
+        var hasFailMarker = (request.ResponseText?.Contains(SimulateFailMarker, StringComparison.OrdinalIgnoreCase) == true)
+            || (request.AudioPath?.Contains(SimulateFailMarker, StringComparison.OrdinalIgnoreCase) == true);
+
+        if (hasFailMarker && request.AttemptCount <= 1)
         {
             return Task.FromResult(new AiGradingResult(
                 Success: false,
                 FailureReason: "Simulated grading failure for test purposes.",
                 Model: DefaultModel,
                 Scores: Array.Empty<AiCriterionScoreResult>()));
+        }
+
+        // Handle spoken responses (AudioPath is present)
+        if (!string.IsNullOrEmpty(request.AudioPath))
+        {
+            var transcript = string.IsNullOrWhiteSpace(request.ResponseText)
+                ? $"Transcript for prompt '{request.QuestionStem}': In this response, the speaker clearly articulated the key concepts with appropriate pronunciation and fluent structure."
+                : request.ResponseText;
+
+            var speakingScores = new List<AiCriterionScoreResult>();
+            foreach (var criterion in request.Criteria)
+            {
+                var code = criterion.Code.ToUpperInvariant();
+                var name = criterion.Name.ToLowerInvariant();
+                decimal factor;
+                string comment;
+
+                if (code.Contains("PRON") || name.Contains("pronunciation"))
+                {
+                    factor = 0.85m;
+                    comment = "Clear pronunciation overall with accurate vowel length and distinct consonant endings.";
+                }
+                else if (code.Contains("INT") || name.Contains("intonation") || name.Contains("stress"))
+                {
+                    factor = 0.8m;
+                    comment = "Natural sentence stress and pitch variation across key clauses.";
+                }
+                else if (code.Contains("GRAM") || name.Contains("grammar") || code.Contains("LR") || name.Contains("vocabulary"))
+                {
+                    factor = 0.85m;
+                    comment = "Accurate grammatical constructions and diverse task-appropriate vocabulary.";
+                }
+                else if (code.Contains("REL") || name.Contains("relevance") || name.Contains("content") || name.Contains("completeness"))
+                {
+                    factor = 0.8m;
+                    comment = "Directly addresses the question with adequate detail and clear logical cohesion.";
+                }
+                else
+                {
+                    factor = 0.8m;
+                    comment = $"Solid response addressing the prompt criteria effectively for {criterion.Name}.";
+                }
+
+                var raw = Math.Round(criterion.MaxScore * factor, 1, MidpointRounding.AwayFromZero);
+                var boundedScore = Math.Clamp(raw, 0m, criterion.MaxScore);
+                speakingScores.Add(new AiCriterionScoreResult(criterion.CriterionId, boundedScore, comment));
+            }
+
+            return Task.FromResult(new AiGradingResult(
+                Success: true,
+                FailureReason: null,
+                Model: DefaultModel,
+                Scores: speakingScores,
+                Transcript: transcript));
         }
 
         var isBlank = string.IsNullOrWhiteSpace(request.ResponseText);
@@ -90,31 +151,31 @@ public sealed class FakeAiGrader : IAiGrader
                 Scores: scores));
         }
 
-        decimal factor = 0.8m;
+        decimal writingFactor = 0.8m;
         if (request.MinWords.HasValue && request.MinWords.Value > 0)
         {
             if (words < request.MinWords.Value / 2)
             {
-                factor = 0.4m;
+                writingFactor = 0.4m;
             }
             else if (words < request.MinWords.Value)
             {
-                factor = 0.7m;
+                writingFactor = 0.7m;
             }
             else
             {
-                factor = 0.85m;
+                writingFactor = 0.85m;
             }
         }
 
         if (request.MaxWords.HasValue && request.MaxWords.Value > 0 && words > request.MaxWords.Value)
         {
-            factor = Math.Max(0.5m, factor - 0.15m);
+            writingFactor = Math.Max(0.5m, writingFactor - 0.15m);
         }
 
         foreach (var criterion in request.Criteria)
         {
-            var raw = Math.Round(criterion.MaxScore * factor, 1, MidpointRounding.AwayFromZero);
+            var raw = Math.Round(criterion.MaxScore * writingFactor, 1, MidpointRounding.AwayFromZero);
             var boundedScore = Math.Clamp(raw, 0m, criterion.MaxScore);
 
             var comment = words >= (request.MinWords ?? 10)

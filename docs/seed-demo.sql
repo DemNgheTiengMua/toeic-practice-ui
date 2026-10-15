@@ -647,3 +647,81 @@ GO
 
 PRINT 'demo writing practice exam seeded';
 GO
+
+-- ============ Demo Speaking Practice Exam & Rubric (issue #19) ============
+DECLARE @toeicCert INT = (SELECT CertId FROM Certificates WHERE Code = 'TOEIC');
+IF NOT EXISTS (SELECT 1 FROM Skills WHERE CertId = @toeicCert AND Code = 'SPEA')
+BEGIN
+  INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder, DurationMinutes)
+  VALUES (@toeicCert, 'SPEA', N'Speaking', 'speaking', 3, 20);
+END;
+
+DECLARE @toeicSpea INT = (SELECT SkillId FROM Skills WHERE CertId = @toeicCert AND Code = 'SPEA');
+
+IF NOT EXISTS (SELECT 1 FROM Sections WHERE CertId = @toeicCert AND Code = 'S1')
+BEGIN
+  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder) VALUES
+    (@toeicSpea, @toeicCert, 'speaking', 'S1', N'Read a text aloud', NULL, 2, 1),
+    (@toeicSpea, @toeicCert, 'speaking', 'S2', N'Describe a picture', NULL, 2, 2),
+    (@toeicSpea, @toeicCert, 'speaking', 'S3', N'Respond to questions', NULL, 3, 3),
+    (@toeicSpea, @toeicCert, 'speaking', 'S4', N'Respond using information provided', NULL, 3, 4),
+    (@toeicSpea, @toeicCert, 'speaking', 'S5', N'Express an opinion', NULL, 1, 5);
+END;
+
+IF NOT EXISTS (SELECT 1 FROM GradingCriteria WHERE CertId = @toeicCert AND SkillId = @toeicSpea AND Code = 'PRON')
+BEGIN
+  INSERT INTO GradingCriteria (CertId, SkillId, Code, Name, MaxScore, Weight, DisplayOrder) VALUES
+    (@toeicCert, @toeicSpea, 'PRON', N'Pronunciation', 3.0, 1.0, 1),
+    (@toeicCert, @toeicSpea, 'INT', N'Intonation and stress', 3.0, 1.0, 2),
+    (@toeicCert, @toeicSpea, 'GRAM', N'Grammar, vocabulary and cohesion', 3.0, 1.0, 3),
+    (@toeicCert, @toeicSpea, 'REL', N'Relevance and completeness', 3.0, 1.0, 4);
+END;
+
+DECLARE @secS1 INT = (SELECT SectionId FROM Sections WHERE CertId = @toeicCert AND Code = 'S1');
+DECLARE @secS2 INT = (SELECT SectionId FROM Sections WHERE CertId = @toeicCert AND Code = 'S2');
+DECLARE @secS3 INT = (SELECT SectionId FROM Sections WHERE CertId = @toeicCert AND Code = 'S3');
+
+IF NOT EXISTS (SELECT 1 FROM Exams WHERE CertId = @toeicCert AND Name = N'ETS TOEIC Speaking Practice Test 1')
+BEGIN
+  INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose, Description, SourceName, QuestionCount)
+  VALUES (@toeicCert, N'ETS TOEIC Speaking Practice Test 1', 'published', 20, 'speaking_practice',
+          N'Complete workplace English speaking test with 11 questions across 5 task types. Scored with AI against official pronunciation and fluency rubric criteria.',
+          N'ETS Official 2024', 3);
+  DECLARE @speakingExam INT = SCOPE_IDENTITY();
+
+  -- Question 1: Read aloud
+  INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, Passage)
+  VALUES (@speakingExam, @toeicCert, @secS1, 1,
+          N'Attention all shoppers. The annual summer clearance sale will end today at 9:00 PM. Please bring all selected items to the front registers.');
+  DECLARE @grpS1 INT = SCOPE_IDENTITY();
+
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, PrepSeconds, ResponseSeconds, DisplayOrder)
+  VALUES (@grpS1, @speakingExam, @secS1, @toeicSpea,
+          N'Read the announcement aloud as clearly and naturally as possible.',
+          2, 'free_response', 45, 45, 1);
+
+  -- Question 2: Describe picture
+  INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, ImagePath, ImageAlt)
+  VALUES (@speakingExam, @toeicCert, @secS2, 2,
+          N'/assets/img/part1-sample.svg', N'Office workers in a team meeting');
+  DECLARE @grpS2 INT = SCOPE_IDENTITY();
+
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, PrepSeconds, ResponseSeconds, DisplayOrder)
+  VALUES (@grpS2, @speakingExam, @secS2, @toeicSpea,
+          N'Look at the picture and describe it in as much detail as you can.',
+          2, 'free_response', 45, 30, 2);
+
+  -- Question 3: Respond to question
+  INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder)
+  VALUES (@speakingExam, @toeicCert, @secS3, 3);
+  DECLARE @grpS3 INT = SCOPE_IDENTITY();
+
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, PrepSeconds, ResponseSeconds, DisplayOrder)
+  VALUES (@grpS3, @speakingExam, @secS3, @toeicSpea,
+          N'How often do you go shopping for clothes, and what is your favorite clothing store?',
+          3, 'free_response', 3, 15, 3);
+END;
+GO
+
+PRINT 'demo speaking practice exam seeded';
+GO

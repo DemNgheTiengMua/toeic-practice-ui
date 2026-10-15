@@ -1,0 +1,23 @@
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Speaking attempt not found";
+    ViewData["Description"] = "The requested speaking practice attempt could not be found.";
+}
+
+<div class="container stack" style="padding-top: var(--space-8); padding-bottom: var(--space-8); max-width: 520px">
+  <div class="card">
+    <div class="card__body">
+      <div class="state-block">
+        <div class="state-block__icon state-block__icon--danger" aria-hidden="true">ERROR</div>
+        <h1 class="state-block__title">Speaking attempt not found</h1>
+        <p class="state-block__desc">
+          This speaking practice attempt does not exist, belongs to another learner, or has been abandoned.
+        </p>
+        <div class="row" style="justify-content: center; gap: var(--space-3); margin-top: var(--space-4)">
+          <a class="btn btn--primary" href="/practice">Back to practice</a>
+          <a class="btn btn--ghost" href="/dashboard">Back to home</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
