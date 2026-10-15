@@ -378,6 +378,48 @@ public interface ICompanionApiClient
 
     Task<AdminComplaintDetailDto> ResolveAdminComplaintAsync(int complaintId, ResolveComplaintRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
         throw new NotImplementedException();
+
+    Task<AdminExamListSummaryDto> GetAdminExamsAsync(string? q, string? status, int? certId, int page, int pageSize, string bearerToken, CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
+
+    Task<AdminExamDetailDto> GetAdminExamByIdAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
+
+    Task<AdminExamDetailDto> CreateAdminExamAsync(CreateAdminExamRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
+
+    Task<AdminExamDetailDto> UpdateAdminExamAsync(int examId, UpdateAdminExamRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
+
+    Task<AdminPublishExamResultDto> PublishAdminExamAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
+
+    Task DeleteAdminExamAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
+
+    Task<AdminExamQuestionsDto> GetAdminExamQuestionsAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
+
+    Task<AdminQuestionGroupDto> CreateAdminQuestionGroupAsync(int examId, CreateQuestionGroupRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
+
+    Task<AdminQuestionGroupDto> UpdateAdminQuestionGroupAsync(int examId, int groupId, UpdateQuestionGroupRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
+
+    Task DeleteAdminQuestionGroupAsync(int examId, int groupId, string bearerToken, CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
+
+    Task<AdminQuestionDto> CreateAdminQuestionAsync(int examId, CreateQuestionRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
+
+    Task<AdminQuestionDto> UpdateAdminQuestionAsync(int questionId, UpdateQuestionRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
+
+    Task DeleteAdminQuestionAsync(int questionId, string bearerToken, CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
+
+    Task<AdminExamSectionAudioDto> SaveAdminExamSectionAudioAsync(int examId, SaveExamSectionAudioRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
 }
 
 
@@ -1192,6 +1234,73 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
 
     public Task<AdminComplaintDetailDto> ResolveAdminComplaintAsync(int complaintId, ResolveComplaintRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
         PostAuthorizedAsync<ResolveComplaintRequest, AdminComplaintDetailDto>($"api/admin/complaints/{complaintId}/resolve", request, bearerToken, cancellationToken);
+
+    public Task<AdminExamListSummaryDto> GetAdminExamsAsync(string? q, string? status, int? certId, int page, int pageSize, string bearerToken, CancellationToken cancellationToken = default)
+    {
+        var query = new List<string> { $"page={page}", $"pageSize={pageSize}" };
+        if (!string.IsNullOrWhiteSpace(q)) query.Add($"q={Uri.EscapeDataString(q)}");
+        if (!string.IsNullOrWhiteSpace(status)) query.Add($"status={Uri.EscapeDataString(status)}");
+        if (certId.HasValue) query.Add($"certId={certId.Value}");
+        var path = $"api/admin/exams?{string.Join("&", query)}";
+        return GetAuthorizedAsync<AdminExamListSummaryDto>(path, bearerToken, cancellationToken);
+    }
+
+    public Task<AdminExamDetailDto> GetAdminExamByIdAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) =>
+        GetAuthorizedAsync<AdminExamDetailDto>($"api/admin/exams/{examId}", bearerToken, cancellationToken);
+
+    public Task<AdminExamDetailDto> CreateAdminExamAsync(CreateAdminExamRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
+        PostAuthorizedAsync<CreateAdminExamRequest, AdminExamDetailDto>("api/admin/exams", request, bearerToken, cancellationToken);
+
+    public Task<AdminExamDetailDto> UpdateAdminExamAsync(int examId, UpdateAdminExamRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
+        PutAuthorizedAsync<UpdateAdminExamRequest, AdminExamDetailDto>($"api/admin/exams/{examId}", request, bearerToken, cancellationToken);
+
+    public Task<AdminPublishExamResultDto> PublishAdminExamAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) =>
+        PostAuthorizedAsync<object, AdminPublishExamResultDto>($"api/admin/exams/{examId}/publish", new { }, bearerToken, cancellationToken);
+
+    public Task DeleteAdminExamAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) =>
+        DeleteAuthorizedAsync($"api/admin/exams/{examId}", bearerToken, cancellationToken);
+
+    public Task<AdminExamQuestionsDto> GetAdminExamQuestionsAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) =>
+        GetAuthorizedAsync<AdminExamQuestionsDto>($"api/admin/exams/{examId}/questions", bearerToken, cancellationToken);
+
+    public Task<AdminQuestionGroupDto> CreateAdminQuestionGroupAsync(int examId, CreateQuestionGroupRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
+        PostAuthorizedAsync<CreateQuestionGroupRequest, AdminQuestionGroupDto>($"api/admin/exams/{examId}/groups", request, bearerToken, cancellationToken);
+
+    public Task<AdminQuestionGroupDto> UpdateAdminQuestionGroupAsync(int examId, int groupId, UpdateQuestionGroupRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
+        PutAuthorizedAsync<UpdateQuestionGroupRequest, AdminQuestionGroupDto>($"api/admin/exams/{examId}/groups/{groupId}", request, bearerToken, cancellationToken);
+
+    public Task DeleteAdminQuestionGroupAsync(int examId, int groupId, string bearerToken, CancellationToken cancellationToken = default) =>
+        DeleteAuthorizedAsync($"api/admin/exams/{examId}/groups/{groupId}", bearerToken, cancellationToken);
+
+    public Task<AdminQuestionDto> CreateAdminQuestionAsync(int examId, CreateQuestionRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
+        PostAuthorizedAsync<CreateQuestionRequest, AdminQuestionDto>($"api/admin/exams/{examId}/questions", request, bearerToken, cancellationToken);
+
+    public Task<AdminQuestionDto> UpdateAdminQuestionAsync(int questionId, UpdateQuestionRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
+        PutAuthorizedAsync<UpdateQuestionRequest, AdminQuestionDto>($"api/admin/questions/{questionId}", request, bearerToken, cancellationToken);
+
+    public Task DeleteAdminQuestionAsync(int questionId, string bearerToken, CancellationToken cancellationToken = default) =>
+        DeleteAuthorizedAsync($"api/admin/questions/{questionId}", bearerToken, cancellationToken);
+
+    public Task<AdminExamSectionAudioDto> SaveAdminExamSectionAudioAsync(int examId, SaveExamSectionAudioRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
+        PostAuthorizedAsync<SaveExamSectionAudioRequest, AdminExamSectionAudioDto>($"api/admin/exams/{examId}/audio", request, bearerToken, cancellationToken);
+
+    private async Task<TResponse> PutAuthorizedAsync<TRequest, TResponse>(string path, TRequest body, string bearerToken, CancellationToken cancellationToken)
+    {
+        using var message = new HttpRequestMessage(HttpMethod.Put, path);
+        AttachBearer(message, bearerToken);
+        message.Content = JsonContent.Create(body, options: Json);
+        using var response = await http.SendAsync(message, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+        return (await response.Content.ReadFromJsonAsync<TResponse>(Json, cancellationToken))!;
+    }
+
+    private async Task DeleteAuthorizedAsync(string path, string bearerToken, CancellationToken cancellationToken)
+    {
+        using var message = new HttpRequestMessage(HttpMethod.Delete, path);
+        AttachBearer(message, bearerToken);
+        using var response = await http.SendAsync(message, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+    }
 
 
     private async Task<T> GetAuthorizedAsync<T>(string path, string bearerToken, CancellationToken cancellationToken)

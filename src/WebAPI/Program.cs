@@ -146,6 +146,7 @@ builder.Services.AddScoped<IMockExamService, MockExamService>();
 builder.Services.AddScoped<IAdminOrderService, AdminOrderService>();
 builder.Services.AddScoped<IAdminUserService, AdminUserService>();
 builder.Services.AddScoped<IScoreConversionService, ScoreConversionService>();
+builder.Services.AddScoped<IAdminExamService, AdminExamService>();
 builder.Services.AddSingleton<IAiGrader, FakeAiGrader>();
 var audioStoragePath = builder.Configuration["FileStore:AudioDirectory"]
     ?? Path.Combine(builder.Environment.ContentRootPath, "..", "..", "App_Data", "audio");

@@ -337,6 +337,19 @@
   "335": "ProfileViewModel",
   "336": "EmptyTempDataProvider",
   "337": "WeaknessModels.cs",
+  "338": "LearnerPath",
+  "339": "MockPaymentGateway",
   "340": "HomeController",
-  "349": "PayOsPaymentGateway"
+  "341": "GatewayStatus",
+  "342": ".GetWeaknessAnalysisAsync",
+  "343": ".GetSpeakingAudioStreamAsync",
+  "344": "ImportBatch",
+  "345": "ComplaintViewModels.cs",
+  "346": "PaymentViewModels.cs",
+  "347": "CertificateDtos.cs",
+  "348": "LearningPathViewModels.cs",
+  "349": "PayOsPaymentGateway",
+  "351": "ExamEditor.cshtml",
+  "352": "Exams.cshtml",
+  "353": "QuestionEditor.cshtml"
 }

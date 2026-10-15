@@ -1,0 +1,155 @@
+@model WebMVC.Models.AdminExamListViewModel
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Exams";
+    var summary = Model.Summary;
+    var totalPages = Math.Max(1, (int)Math.Ceiling((double)summary.TotalCount / summary.PageSize));
+}
+
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+  <a href="/admin" class="breadcrumbs__item">Admin</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <span class="breadcrumbs__item" aria-current="page">Exams</span>
+</nav>
+
+<div class="row row--between">
+  <h1>Exams</h1>
+  <a class="btn btn--primary" href="/admin/exams/create">Create new exam</a>
+</div>
+
+<form method="get" action="/admin/exams" class="toolbar">
+  <div class="field toolbar__grow">
+    <label class="field__label" for="q">Search by exam name</label>
+    <input class="field__input" id="q" name="q" type="search" value="@Model.Query" placeholder="ETS 2024…">
+  </div>
+  <div class="field">
+    <label class="field__label" for="f-status">Status</label>
+    <select class="field__input" id="f-status" name="status">
+      <option value="" selected="@(string.IsNullOrEmpty(Model.Status) || Model.Status.Equals("all", StringComparison.OrdinalIgnoreCase))">All</option>
+      <option value="published" selected="@("published".Equals(Model.Status, StringComparison.OrdinalIgnoreCase))">Published</option>
+      <option value="draft" selected="@("draft".Equals(Model.Status, StringComparison.OrdinalIgnoreCase))">Draft</option>
+      <option value="hidden" selected="@("hidden".Equals(Model.Status, StringComparison.OrdinalIgnoreCase))">Hidden</option>
+    </select>
+  </div>
+  <button type="submit" class="btn">Filter</button>
+  @if (!string.IsNullOrEmpty(Model.Query) || !string.IsNullOrEmpty(Model.Status))
+  {
+    <a href="/admin/exams" class="btn btn--ghost">Reset</a>
+  }
+</form>
+
+@if (summary.Exams.Count == 0)
+{
+  <div class="card">
+    <div class="card__body">
+      <div class="state-block">
+        <div class="state-block__icon" aria-hidden="true">EMPTY</div>
+        <h2 class="state-block__title">No exams yet</h2>
+        <p class="state-block__desc">Create your first exam, then enter questions part by part.</p>
+        <a class="btn btn--primary" href="/admin/exams/create">Create new exam</a>
+      </div>
+    </div>
+  </div>
+}
+else
+{
+  <div class="card">
+    <div class="card__body">
+      <table class="table table--striped">
+        <thead>
+          <tr>
+            <th scope="col">Exam name</th>
+            <th scope="col">Questions</th>
+            <th scope="col">Audio</th>
+            <th scope="col">Attempts</th>
+            <th scope="col">Update</th>
+            <th scope="col">Status</th>
+            <th scope="col">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @foreach (var exam in summary.Exams)
+          {
+            var questionDisplay = exam.QuestionCount.HasValue
+                ? $"{exam.ActualQuestionCount}/{exam.QuestionCount.Value}"
+                : $"{exam.ActualQuestionCount}";
+
+            var statusBadgeClass = exam.Status switch
+            {
+                Contracts.ExamStatusDto.Published => "badge badge--success",
+                Contracts.ExamStatusDto.Draft => "badge badge--warning",
+                _ => "badge"
+            };
+
+            var dateDisplay = exam.UpdatedAt?.ToString("dd MMM yyyy") ?? exam.CreatedAt.ToString("dd MMM yyyy");
+
+            <tr>
+              <td>
+                <strong>@exam.Name</strong>
+                @if (!string.IsNullOrEmpty(exam.SourceName))
+                {
+                  <span class="text-xs text-muted block">@exam.SourceName · @exam.CertName</span>
+                }
+              </td>
+              <td>@questionDisplay</td>
+              <td>@exam.AudioStatus</td>
+              <td>@exam.FinishedAttemptCount</td>
+              <td>@dateDisplay</td>
+              <td><span class="@statusBadgeClass">@exam.Status</span></td>
+              <td>
+                <div class="row">
+                  <a class="btn btn--sm" href="/admin/exams/@exam.ExamId/edit">Edit</a>
+                  <a class="btn btn--sm btn--ghost" href="/admin/exams/@exam.ExamId/questions">Questions</a>
+                  @if (exam.FinishedAttemptCount == 0)
+                  {
+                    <form method="post" action="/admin/exams/@exam.ExamId/delete" onsubmit="return confirm('Delete this exam?');" style="display:inline; margin:0;">
+                      @Html.AntiForgeryToken()
+                      <button type="submit" class="btn btn--sm btn--danger">Delete</button>
+                    </form>
+                  }
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (totalPages > 1)
+    {
+      <div class="card__footer">
+        <div class="pagination">
+          <span class="pagination__info">Showing @(((summary.Page - 1) * summary.PageSize) + 1)–@(Math.Min(summary.Page * summary.PageSize, summary.TotalCount)) of @summary.TotalCount exams</span>
+          @if (summary.Page > 1)
+          {
+            <a class="pagination__page" href="/admin/exams?page=@(summary.Page - 1)&q=@Model.Query&status=@Model.Status">Previous</a>
+          }
+          else
+          {
+            <span class="pagination__page" aria-disabled="true">Previous</span>
+          }
+
+          @for (var p = 1; p <= totalPages; p++)
+          {
+            if (p == summary.Page)
+            {
+              <span class="pagination__page is-current" aria-current="page">@p</span>
+            }
+            else
+            {
+              <a class="pagination__page" href="/admin/exams?page=@p&q=@Model.Query&status=@Model.Status">@p</a>
+            }
+          }
+
+          @if (summary.Page < totalPages)
+          {
+            <a class="pagination__page" href="/admin/exams?page=@(summary.Page + 1)&q=@Model.Query&status=@Model.Status">Next</a>
+          }
+          else
+          {
+            <span class="pagination__page" aria-disabled="true">Next</span>
+          }
+        </div>
+      </div>
+    }
+  </div>
+}

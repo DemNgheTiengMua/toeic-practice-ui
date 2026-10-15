@@ -1,0 +1,598 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using BusinessObjects;
+using Contracts;
+using DataAccess;
+using DataAccess.Scaffold;
+using Microsoft.EntityFrameworkCore;
+using Services;
+using Xunit;
+
+namespace Services.Tests;
+
+[Collection(DatabaseCollection.Name)]
+public sealed class AdminExamServiceTests(DatabaseFixture database)
+{
+    private AdminExamService CreateService()
+    {
+        var db = DbContextFactory.Create(database.ConnectionString);
+        return new AdminExamService(db, TimeProvider.System);
+    }
+
+    private async Task<(int certId, int secListeningId, int secReadingId, int secSpeakingId, int secWritingId)> SeedCertificateWithSectionsAsync(string certCode)
+    {
+        await database.SqlAsync($"""
+            INSERT INTO Certificates (Code, Name, IsActive) VALUES ('{certCode}', N'Cert {certCode}', 1);
+            DECLARE @cert INT = SCOPE_IDENTITY();
+            DECLARE @certStr VARCHAR(10) = CAST(@cert AS VARCHAR(10));
+
+            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder) VALUES
+              (@cert, 'L_' + @certStr, N'Listening', 'listening', 1),
+              (@cert, 'R_' + @certStr, N'Reading', 'reading', 2),
+              (@cert, 'S_' + @certStr, N'Speaking', 'speaking', 3),
+              (@cert, 'W_' + @certStr, N'Writing', 'writing', 4);
+
+            DECLARE @sL INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'L_' + @certStr);
+            DECLARE @sR INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'R_' + @certStr);
+            DECLARE @sS INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'S_' + @certStr);
+            DECLARE @sW INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'W_' + @certStr);
+
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder) VALUES
+              (@sL, @cert, 'listening', 'SL_' + @certStr, N'Listening Part 1', 1),
+              (@sR, @cert, 'reading', 'SR_' + @certStr, N'Reading Part 5', 2),
+              (@sS, @cert, 'speaking', 'SS_' + @certStr, N'Speaking Part 1', 3),
+              (@sW, @cert, 'writing', 'SW_' + @certStr, N'Writing Part 1', 4);
+            """);
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var cert = await db.Certificates.SingleAsync(c => c.Code == certCode);
+        var secL = await db.Sections.SingleAsync(s => s.CertId == cert.CertId && s.Modality == "listening");
+        var secR = await db.Sections.SingleAsync(s => s.CertId == cert.CertId && s.Modality == "reading");
+        var secS = await db.Sections.SingleAsync(s => s.CertId == cert.CertId && s.Modality == "speaking");
+        var secW = await db.Sections.SingleAsync(s => s.CertId == cert.CertId && s.Modality == "writing");
+
+        return (cert.CertId, secL.SectionId, secR.SectionId, secS.SectionId, secW.SectionId);
+    }
+
+    [Fact]
+    public async Task McqQuestionValidation_ValidatesOptionsAndTimingAndWords()
+    {
+        var (certId, secL, secR, _, _) = await SeedCertificateWithSectionsAsync($"MCQ_{Guid.NewGuid():N}"[..18]);
+        var service = CreateService();
+
+        var exam = await service.CreateExamAsync(new CreateAdminExamRequest(
+            certId,
+            $"MCQ Test {Guid.NewGuid():N}"[..25],
+            60,
+            ExamPurposeDto.Mock));
+
+        var group = await service.CreateQuestionGroupAsync(exam.ExamId, new CreateQuestionGroupRequest(secR));
+
+        // 1. Less than 2 options throws validation error
+        var ex1 = await Assert.ThrowsAsync<AdminExamException>(() => service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
+            group.GroupId,
+            "Stem 1",
+            3,
+            QuestionTypeDto.Mcq,
+            Options: [new AdminQuestionOptionInput(null, "A", "Opt A", true, null)])));
+        Assert.Equal(ApiError.Codes.Validation, ex1.Code);
+
+        // 2. 0 correct options throws validation error
+        var ex2 = await Assert.ThrowsAsync<AdminExamException>(() => service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
+            group.GroupId,
+            "Stem 2",
+            3,
+            QuestionTypeDto.Mcq,
+            Options:
+            [
+                new AdminQuestionOptionInput(null, "A", "Opt A", false, null),
+                new AdminQuestionOptionInput(null, "B", "Opt B", false, null)
+            ])));
+        Assert.Equal(ApiError.Codes.Validation, ex2.Code);
+
+        // 3. More than 1 correct option throws validation error
+        var ex3 = await Assert.ThrowsAsync<AdminExamException>(() => service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
+            group.GroupId,
+            "Stem 3",
+            3,
+            QuestionTypeDto.Mcq,
+            Options:
+            [
+                new AdminQuestionOptionInput(null, "A", "Opt A", true, null),
+                new AdminQuestionOptionInput(null, "B", "Opt B", true, null)
+            ])));
+        Assert.Equal(ApiError.Codes.Validation, ex3.Code);
+
+        // 4. MCQ with PrepSeconds or ResponseSeconds throws validation error
+        var ex4 = await Assert.ThrowsAsync<AdminExamException>(() => service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
+            group.GroupId,
+            "Stem 4",
+            3,
+            QuestionTypeDto.Mcq,
+            PrepSeconds: 15,
+            Options:
+            [
+                new AdminQuestionOptionInput(null, "A", "Opt A", true, null),
+                new AdminQuestionOptionInput(null, "B", "Opt B", false, null)
+            ])));
+        Assert.Equal(ApiError.Codes.Validation, ex4.Code);
+
+        // 5. MCQ with MinWords or MaxWords throws validation error
+        var ex5 = await Assert.ThrowsAsync<AdminExamException>(() => service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
+            group.GroupId,
+            "Stem 5",
+            3,
+            QuestionTypeDto.Mcq,
+            MinWords: 50,
+            Options:
+            [
+                new AdminQuestionOptionInput(null, "A", "Opt A", true, null),
+                new AdminQuestionOptionInput(null, "B", "Opt B", false, null)
+            ])));
+        Assert.Equal(ApiError.Codes.Validation, ex5.Code);
+
+        // 6. Valid MCQ succeeds
+        var validMcq = await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
+            group.GroupId,
+            "Valid MCQ Stem",
+            3,
+            QuestionTypeDto.Mcq,
+            Options:
+            [
+                new AdminQuestionOptionInput(null, "A", "Option A", true, "Rationale A"),
+                new AdminQuestionOptionInput(null, "B", "Option B", false, "Rationale B"),
+                new AdminQuestionOptionInput(null, "C", "Option C", false, "Rationale C"),
+                new AdminQuestionOptionInput(null, "D", "Option D", false, "Rationale D")
+            ]));
+
+        Assert.NotNull(validMcq);
+        Assert.Equal("Valid MCQ Stem", validMcq.Stem);
+        Assert.Equal(4, validMcq.Options.Count);
+        Assert.Single(validMcq.Options, o => o.IsCorrect);
+    }
+
+    [Fact]
+    public async Task FreeResponseValidation_ValidatesTimingWordsAndNoOptions()
+    {
+        var (certId, _, _, _, secW) = await SeedCertificateWithSectionsAsync($"FR_{Guid.NewGuid():N}"[..18]);
+        var service = CreateService();
+
+        var exam = await service.CreateExamAsync(new CreateAdminExamRequest(
+            certId,
+            $"FR Test {Guid.NewGuid():N}"[..25],
+            60,
+            ExamPurposeDto.WritingPractice));
+
+        var group = await service.CreateQuestionGroupAsync(exam.ExamId, new CreateQuestionGroupRequest(secW));
+
+        // 1. Free response cannot have options
+        var ex1 = await Assert.ThrowsAsync<AdminExamException>(() => service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
+            group.GroupId,
+            "FR Stem 1",
+            3,
+            QuestionTypeDto.FreeResponse,
+            Options: [new AdminQuestionOptionInput(null, "A", "Opt A", true, null)])));
+        Assert.Equal(ApiError.Codes.Validation, ex1.Code);
+
+        // 2. ResponseSeconds must be > 0
+        var ex2 = await Assert.ThrowsAsync<AdminExamException>(() => service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
+            group.GroupId,
+            "FR Stem 2",
+            3,
+            QuestionTypeDto.FreeResponse,
+            ResponseSeconds: 0)));
+        Assert.Equal(ApiError.Codes.Validation, ex2.Code);
+
+        // 3. MaxWords < MinWords throws validation error
+        var ex3 = await Assert.ThrowsAsync<AdminExamException>(() => service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
+            group.GroupId,
+            "FR Stem 3",
+            3,
+            QuestionTypeDto.FreeResponse,
+            MinWords: 150,
+            MaxWords: 100)));
+        Assert.Equal(ApiError.Codes.Validation, ex3.Code);
+
+        // 4. Valid Free Response succeeds
+        var validFr = await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
+            group.GroupId,
+            "Write an essay about technology.",
+            4,
+            QuestionTypeDto.FreeResponse,
+            PrepSeconds: 60,
+            ResponseSeconds: 1800,
+            MinWords: 150,
+            MaxWords: 300,
+            Hint: "Consider advantages and disadvantages."));
+
+        Assert.NotNull(validFr);
+        Assert.Equal(QuestionTypeDto.FreeResponse, validFr.QuestionType);
+        Assert.Empty(validFr.Options);
+        Assert.Equal(150, validFr.MinWords);
+        Assert.Equal(300, validFr.MaxWords);
+    }
+
+    [Fact]
+    public async Task QuestionGroupValidation_ImageAlt_AudioSlice_And_Modality()
+    {
+        var (certId, secL, secR, secS, secW) = await SeedCertificateWithSectionsAsync($"GRP_{Guid.NewGuid():N}"[..18]);
+        var service = CreateService();
+
+        var mockExam = await service.CreateExamAsync(new CreateAdminExamRequest(
+            certId,
+            $"Mock Test {Guid.NewGuid():N}"[..25],
+            60,
+            ExamPurposeDto.Mock));
+
+        var speakingExam = await service.CreateExamAsync(new CreateAdminExamRequest(
+            certId,
+            $"Speaking Test {Guid.NewGuid():N}"[..25],
+            30,
+            ExamPurposeDto.SpeakingPractice));
+
+        // 1. ImagePath without ImageAlt throws error
+        var ex1 = await Assert.ThrowsAsync<AdminExamException>(() => service.CreateQuestionGroupAsync(mockExam.ExamId, new CreateQuestionGroupRequest(
+            secR,
+            ImagePath: "img/test.jpg",
+            ImageAlt: null)));
+        Assert.Equal(ApiError.Codes.Validation, ex1.Code);
+
+        // 2. AudioStartMs without AudioEndMs throws error
+        var ex2 = await Assert.ThrowsAsync<AdminExamException>(() => service.CreateQuestionGroupAsync(mockExam.ExamId, new CreateQuestionGroupRequest(
+            secL,
+            AudioStartMs: 1000,
+            AudioEndMs: null)));
+        Assert.Equal(ApiError.Codes.Validation, ex2.Code);
+
+        // 3. AudioEndMs <= AudioStartMs throws error
+        var ex3 = await Assert.ThrowsAsync<AdminExamException>(() => service.CreateQuestionGroupAsync(mockExam.ExamId, new CreateQuestionGroupRequest(
+            secL,
+            AudioStartMs: 5000,
+            AudioEndMs: 4000)));
+        Assert.Equal(ApiError.Codes.Validation, ex3.Code);
+
+        // 4. Speaking exam rejects reading section
+        var ex4 = await Assert.ThrowsAsync<AdminExamException>(() => service.CreateQuestionGroupAsync(speakingExam.ExamId, new CreateQuestionGroupRequest(
+            secR)));
+        Assert.Equal(ApiError.Codes.Validation, ex4.Code);
+
+        // 5. Valid group succeeds
+        var validGrp = await service.CreateQuestionGroupAsync(mockExam.ExamId, new CreateQuestionGroupRequest(
+            secL,
+            ImagePath: "img/q1.jpg",
+            ImageAlt: "A desk with a laptop",
+            AudioStartMs: 1000,
+            AudioEndMs: 8000));
+        Assert.NotNull(validGrp);
+        Assert.Equal("A desk with a laptop", validGrp.ImageAlt);
+    }
+
+    [Fact]
+    public async Task PublishExam_IncompleteExam_FailsWithDetails_CompleteExam_Succeeds()
+    {
+        var (certId, secL, secR, _, _) = await SeedCertificateWithSectionsAsync($"PUB_{Guid.NewGuid():N}"[..18]);
+        var service = CreateService();
+
+        var exam = await service.CreateExamAsync(new CreateAdminExamRequest(
+            certId,
+            $"Publish Test {Guid.NewGuid():N}"[..25],
+            60,
+            ExamPurposeDto.Mock,
+            QuestionCount: 2));
+
+        // 1. Exam with 0 questions fails publishing
+        var ex1 = await Assert.ThrowsAsync<AdminExamException>(() => service.PublishExamAsync(exam.ExamId));
+        Assert.Equal(ApiError.Codes.ExamIncomplete, ex1.Code);
+
+        // Add 1 question in reading section
+        var grpR = await service.CreateQuestionGroupAsync(exam.ExamId, new CreateQuestionGroupRequest(secR));
+        await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
+            grpR.GroupId,
+            "Question 1 Stem",
+            2,
+            QuestionTypeDto.Mcq,
+            Options:
+            [
+                new AdminQuestionOptionInput(null, "A", "Correct", true, null),
+                new AdminQuestionOptionInput(null, "B", "Wrong", false, null)
+            ]));
+
+        // 2. QuestionCount requirement is 2, but only 1 question present -> fails
+        var ex2 = await Assert.ThrowsAsync<AdminExamException>(() => service.PublishExamAsync(exam.ExamId));
+        Assert.Equal(ApiError.Codes.ExamIncomplete, ex2.Code);
+
+        // Add 2nd question in listening section
+        var grpL = await service.CreateQuestionGroupAsync(exam.ExamId, new CreateQuestionGroupRequest(secL));
+        await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
+            grpL.GroupId,
+            "Question 2 Listening Stem",
+            3,
+            QuestionTypeDto.Mcq,
+            Options:
+            [
+                new AdminQuestionOptionInput(null, "A", "Opt A", true, null),
+                new AdminQuestionOptionInput(null, "B", "Opt B", false, null)
+            ]));
+
+        // 3. Listening section present, but audio is missing -> fails
+        var ex3 = await Assert.ThrowsAsync<AdminExamException>(() => service.PublishExamAsync(exam.ExamId));
+        Assert.Equal(ApiError.Codes.ExamIncomplete, ex3.Code);
+        Assert.Contains("audio", ex3.Message, StringComparison.OrdinalIgnoreCase);
+
+        // Upload listening audio
+        await service.SaveSectionAudioAsync(exam.ExamId, new SaveExamSectionAudioRequest(
+            secL,
+            "audio/test_part1.mp3",
+            180,
+            2048576));
+
+        // 4. Now exam is complete -> publish succeeds!
+        var publishResult = await service.PublishExamAsync(exam.ExamId);
+        Assert.True(publishResult.Success);
+
+        var updatedExam = await service.GetExamByIdAsync(exam.ExamId);
+        Assert.Equal(ExamStatusDto.Published, updatedExam.Status);
+    }
+
+    [Fact]
+    public async Task DeleteQuestion_BlockedWhenAttemptAnswersExist_SucceedsWhenUnattempted()
+    {
+        var (certId, _, secR, _, _) = await SeedCertificateWithSectionsAsync($"DEL_{Guid.NewGuid():N}"[..18]);
+        var service = CreateService();
+
+        var exam = await service.CreateExamAsync(new CreateAdminExamRequest(
+            certId,
+            $"Attempted Test {Guid.NewGuid():N}"[..25],
+            60,
+            ExamPurposeDto.Mock,
+            Status: ExamStatusDto.Published));
+
+        var grp = await service.CreateQuestionGroupAsync(exam.ExamId, new CreateQuestionGroupRequest(secR));
+        var q1 = await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
+            grp.GroupId,
+            "Question 1 (will be answered)",
+            2,
+            QuestionTypeDto.Mcq,
+            Options:
+            [
+                new AdminQuestionOptionInput(null, "A", "Correct", true, null),
+                new AdminQuestionOptionInput(null, "B", "Wrong", false, null)
+            ]));
+
+        var q2 = await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
+            grp.GroupId,
+            "Question 2 (unattempted)",
+            2,
+            QuestionTypeDto.Mcq,
+            Options:
+            [
+                new AdminQuestionOptionInput(null, "A", "Opt A", true, null),
+                new AdminQuestionOptionInput(null, "B", "Opt B", false, null)
+            ]));
+
+        // Record learner attempt and answer for q1
+        var userEmail = $"{Guid.NewGuid():N}@deltest.local";
+        await database.SqlAsync($"""
+            IF NOT EXISTS (SELECT 1 FROM Roles WHERE Code = 'learner')
+              INSERT INTO Roles (Code, Name) VALUES ('learner', N'Learner');
+            INSERT INTO Users (RoleId, Email, PasswordHash, FullName)
+            VALUES ((SELECT RoleId FROM Roles WHERE Code = 'learner'), '{userEmail}', 0x01, N'Learner Tester');
+            DECLARE @userId INT = SCOPE_IDENTITY();
+
+            INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt)
+            VALUES (@userId, {exam.ExamId}, {certId}, 'submitted', SYSDATETIMEOFFSET(), DATEADD(HOUR, 2, SYSDATETIMEOFFSET()));
+            DECLARE @attemptId INT = SCOPE_IDENTITY();
+
+            INSERT INTO AttemptAnswers (AttemptId, QuestionId, ExamId, SelectedOptionId, IsCorrect, IsFlagged)
+            VALUES (@attemptId, {q1.QuestionId}, {exam.ExamId}, {q1.Options.First().OptionId}, 1, 0);
+            """);
+
+        // 1. Deleting q1 is blocked because it has recorded attempt answers
+        var ex = await Assert.ThrowsAsync<AdminExamException>(() => service.DeleteQuestionAsync(q1.QuestionId));
+        Assert.Equal(ApiError.Codes.QuestionHasAttemptAnswers, ex.Code);
+
+        // 2. Deleting q2 (unattempted) succeeds
+        await service.DeleteQuestionAsync(q2.QuestionId);
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var q2Exists = await db.Questions.AnyAsync(q => q.QuestionId == q2.QuestionId);
+        Assert.False(q2Exists);
+    }
+
+    [Fact]
+    public async Task DeleteExam_BlockedWhenFinishedAttemptsExist_CanSoftDeleteOtherwise()
+    {
+        var (certId, _, secR, _, _) = await SeedCertificateWithSectionsAsync($"EXAM_DEL_{Guid.NewGuid():N}"[..18]);
+        var service = CreateService();
+
+        var exam = await service.CreateExamAsync(new CreateAdminExamRequest(
+            certId,
+            $"Finished Attempt Exam {Guid.NewGuid():N}"[..25],
+            60,
+            ExamPurposeDto.Mock,
+            Status: ExamStatusDto.Published));
+
+        var unattemptedExam = await service.CreateExamAsync(new CreateAdminExamRequest(
+            certId,
+            $"Unattempted Exam {Guid.NewGuid():N}"[..25],
+            60,
+            ExamPurposeDto.Mock));
+
+        // Create a finished attempt on exam
+        var userEmail = $"{Guid.NewGuid():N}@finished.local";
+        await database.SqlAsync($"""
+            IF NOT EXISTS (SELECT 1 FROM Roles WHERE Code = 'learner')
+              INSERT INTO Roles (Code, Name) VALUES ('learner', N'Learner');
+            INSERT INTO Users (RoleId, Email, PasswordHash, FullName)
+            VALUES ((SELECT RoleId FROM Roles WHERE Code = 'learner'), '{userEmail}', 0x01, N'Finished Learner');
+            DECLARE @userId INT = SCOPE_IDENTITY();
+
+            INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt)
+            VALUES (@userId, {exam.ExamId}, {certId}, 'graded', SYSDATETIMEOFFSET(), DATEADD(HOUR, 2, SYSDATETIMEOFFSET()));
+            """);
+
+        // 1. Deleting exam with finished attempts is blocked
+        var ex1 = await Assert.ThrowsAsync<AdminExamException>(() => service.DeleteExamAsync(exam.ExamId));
+        Assert.Equal(ApiError.Codes.ExamHasFinishedAttempts, ex1.Code);
+
+        // 2. Changing purpose or certificate of exam with finished attempts is blocked
+        var ex2 = await Assert.ThrowsAsync<AdminExamException>(() => service.UpdateExamAsync(exam.ExamId, new UpdateAdminExamRequest(
+            certId,
+            exam.Name,
+            exam.DurationMinutes,
+            ExamPurposeDto.Placement,
+            ExamStatusDto.Published)));
+        Assert.Equal(ApiError.Codes.ExamHasFinishedAttempts, ex2.Code);
+
+        // 3. Deleting unattempted exam succeeds
+        await service.DeleteExamAsync(unattemptedExam.ExamId);
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var dbExam = await db.Exams.SingleAsync(e => e.ExamId == unattemptedExam.ExamId);
+        Assert.True(dbExam.IsDeleted);
+    }
+
+    [Fact]
+    public async Task CreateExam_RejectsDuplicateNameInSameCertificate()
+    {
+        var (certId, _, _, _, _) = await SeedCertificateWithSectionsAsync($"DUP_{Guid.NewGuid():N}"[..18]);
+        var service = CreateService();
+
+        var examName = $"Unique Exam Name {Guid.NewGuid():N}"[..25];
+        await service.CreateExamAsync(new CreateAdminExamRequest(
+            certId,
+            examName,
+            90,
+            ExamPurposeDto.Mock));
+
+        var ex = await Assert.ThrowsAsync<AdminExamException>(() => service.CreateExamAsync(new CreateAdminExamRequest(
+            certId,
+            examName,
+            90,
+            ExamPurposeDto.Mock)));
+
+        Assert.Equal(ApiError.Codes.Validation, ex.Code);
+        Assert.Contains("already exists", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task UpdateQuestion_SwitchingCorrectOption_SucceedsWithoutUniqueConstraintViolation()
+    {
+        var (certId, _, secR, _, _) = await SeedCertificateWithSectionsAsync($"SWOPT_{Guid.NewGuid():N}"[..18]);
+        var service = CreateService();
+
+        var exam = await service.CreateExamAsync(new CreateAdminExamRequest(
+            certId,
+            $"Switch Option Exam {Guid.NewGuid():N}"[..25],
+            60,
+            ExamPurposeDto.Mock));
+
+        var grp = await service.CreateQuestionGroupAsync(exam.ExamId, new CreateQuestionGroupRequest(secR));
+        var q = await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
+            grp.GroupId,
+            "MCQ to switch correct option",
+            3,
+            QuestionTypeDto.Mcq,
+            Options:
+            [
+                new AdminQuestionOptionInput(null, "A", "Text A", true, null),
+                new AdminQuestionOptionInput(null, "B", "Text B", false, null)
+            ]));
+
+        // Switch correct option from A to B
+        var updated = await service.UpdateQuestionAsync(q.QuestionId, new UpdateQuestionRequest(
+            grp.GroupId,
+            "MCQ with switched correct option",
+            3,
+            QuestionTypeDto.Mcq,
+            Options:
+            [
+                new AdminQuestionOptionInput(null, "A", "Text A", false, null),
+                new AdminQuestionOptionInput(null, "B", "Text B", true, null)
+            ]));
+
+        Assert.Equal(2, updated.Options.Count);
+        Assert.False(updated.Options.Single(o => o.Label == "A").IsCorrect);
+        Assert.True(updated.Options.Single(o => o.Label == "B").IsCorrect);
+    }
+
+    [Fact]
+    public async Task UpdateExam_BlockedWhenChangingCertificateWithExistingContent()
+    {
+        var (cert1Id, _, sec1R, _, _) = await SeedCertificateWithSectionsAsync($"C1_{Guid.NewGuid():N}"[..18]);
+        var (cert2Id, _, _, _, _) = await SeedCertificateWithSectionsAsync($"C2_{Guid.NewGuid():N}"[..18]);
+        var service = CreateService();
+
+        var exam = await service.CreateExamAsync(new CreateAdminExamRequest(
+            cert1Id,
+            $"Cert Change Test {Guid.NewGuid():N}"[..25],
+            60,
+            ExamPurposeDto.Mock));
+
+        await service.CreateQuestionGroupAsync(exam.ExamId, new CreateQuestionGroupRequest(sec1R));
+
+        // Changing certId when exam has question groups is blocked
+        var ex = await Assert.ThrowsAsync<AdminExamException>(() => service.UpdateExamAsync(exam.ExamId, new UpdateAdminExamRequest(
+            cert2Id,
+            exam.Name,
+            exam.DurationMinutes,
+            ExamPurposeDto.Mock,
+            ExamStatusDto.Draft)));
+
+        Assert.Equal(ApiError.Codes.Validation, ex.Code);
+        Assert.Contains("Cannot change certificate", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task DeleteExam_BlockedWhenInProgressAttemptsExist()
+    {
+        var (certId, _, _, _, _) = await SeedCertificateWithSectionsAsync($"INP_{Guid.NewGuid():N}"[..18]);
+        var service = CreateService();
+
+        var exam = await service.CreateExamAsync(new CreateAdminExamRequest(
+            certId,
+            $"In-Progress Exam {Guid.NewGuid():N}"[..25],
+            60,
+            ExamPurposeDto.Mock,
+            Status: ExamStatusDto.Published));
+
+        var userEmail = $"{Guid.NewGuid():N}@inprogress.local";
+        await database.SqlAsync($"""
+            IF NOT EXISTS (SELECT 1 FROM Roles WHERE Code = 'learner')
+              INSERT INTO Roles (Code, Name) VALUES ('learner', N'Learner');
+            INSERT INTO Users (RoleId, Email, PasswordHash, FullName)
+            VALUES ((SELECT RoleId FROM Roles WHERE Code = 'learner'), '{userEmail}', 0x01, N'Active Learner');
+            DECLARE @userId INT = SCOPE_IDENTITY();
+
+            INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt)
+            VALUES (@userId, {exam.ExamId}, {certId}, 'in_progress', SYSDATETIMEOFFSET(), DATEADD(HOUR, 2, SYSDATETIMEOFFSET()));
+            """);
+
+        var ex = await Assert.ThrowsAsync<AdminExamException>(() => service.DeleteExamAsync(exam.ExamId));
+        Assert.Equal(ApiError.Codes.Validation, ex.Code);
+        Assert.Contains("in progress", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task SaveSectionAudio_RejectsNonListeningSection()
+    {
+        var (certId, _, secR, _, _) = await SeedCertificateWithSectionsAsync($"AUD_MOD_{Guid.NewGuid():N}"[..18]);
+        var service = CreateService();
+
+        var exam = await service.CreateExamAsync(new CreateAdminExamRequest(
+            certId,
+            $"Audio Modality Test {Guid.NewGuid():N}"[..25],
+            60,
+            ExamPurposeDto.Mock));
+
+        var ex = await Assert.ThrowsAsync<AdminExamException>(() => service.SaveSectionAudioAsync(exam.ExamId, new SaveExamSectionAudioRequest(
+            secR,
+            "audio/reading.mp3",
+            120,
+            1048576)));
+
+        Assert.Equal(ApiError.Codes.Validation, ex.Code);
+        Assert.Contains("listening", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+}

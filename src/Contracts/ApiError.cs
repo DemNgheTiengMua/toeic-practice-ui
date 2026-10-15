@@ -94,6 +94,11 @@ public sealed record ApiError(string Code, string Title, int Status, string? Det
         public const string ComplaintNotFound = "COMPLAINT_NOT_FOUND";
         public const string ComplaintInvalidSubject = "COMPLAINT_INVALID_SUBJECT";
         public const string ComplaintAlreadyResolved = "COMPLAINT_ALREADY_RESOLVED";
+
+        public const string ExamIncomplete = "EXAM_INCOMPLETE";
+        public const string ExamHasFinishedAttempts = "EXAM_HAS_FINISHED_ATTEMPTS";
+        public const string QuestionHasAttemptAnswers = "QUESTION_HAS_ATTEMPT_ANSWERS";
+        public const string QuestionGroupNotFound = "QUESTION_GROUP_NOT_FOUND";
     }
 
 }
