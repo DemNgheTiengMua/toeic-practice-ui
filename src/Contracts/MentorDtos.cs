@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace Contracts;
 
 public sealed record MentorSummaryDto(
@@ -116,6 +118,10 @@ public sealed record BookMentorRequest(
     string? FocusArea = null,
     int? ExamId = null);
 
+public sealed record RateMentorRequest(
+    [property: Range(1, 5, ErrorMessage = "Rating must be between 1 and 5.")] int Rating,
+    [property: StringLength(2000, ErrorMessage = "Review text cannot exceed 2000 characters.")] string? Text = null);
+
 public sealed record MentorBookingDto(
     int BookingId,
     int UserId,
@@ -133,7 +139,8 @@ public sealed record MentorBookingDto(
     DateTimeOffset? CancelledAt,
     DateTimeOffset CreatedAt,
     int? AttemptId = null,
-    string? RedirectUrl = null);
+    string? RedirectUrl = null,
+    MentorReviewDto? Review = null);
 
 public sealed record CancelBookingResultDto(
     int BookingId,

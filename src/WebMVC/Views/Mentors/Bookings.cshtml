@@ -65,6 +65,14 @@
                   else if (isDone)
                   {
                     <span class="badge badge--info">Completed</span>
+                    @if (b.Review != null)
+                    {
+                      <span class="badge badge--muted">Rated @b.Review.Rating/5</span>
+                    }
+                    else
+                    {
+                      <span class="badge badge--warning">Unrated</span>
+                    }
                   }
                   else
                   {
@@ -97,7 +105,14 @@
                 {
                   <a href="@b.MeetLink" target="_blank" rel="noopener" class="btn btn--sm btn--primary">Join meeting</a>
                 }
-                <a href="/mentors/bookings/@b.BookingId" class="btn btn--sm">View details</a>
+                @if (isDone && b.Review == null)
+                {
+                  <a href="/mentors/bookings/@b.BookingId" class="btn btn--sm btn--primary">Rate session</a>
+                }
+                else
+                {
+                  <a href="/mentors/bookings/@b.BookingId" class="btn btn--sm">View details</a>
+                }
               </div>
             </div>
           </div>

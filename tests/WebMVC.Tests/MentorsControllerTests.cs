@@ -386,6 +386,222 @@ public sealed class MentorsControllerTests
         Assert.NotNull(controller.TempData["ShellSuccess"]);
     }
 
+    [Fact]
+    public async Task BookingDetail_when_done_and_unrated_displays_rating_form()
+    {
+        var booking = new MentorBookingDto(
+            101, 7, 1, "Dr. Trần Minh Khoa", "Headline", "human", 1,
+            DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(-1).AddHours(1),
+            "done", null, "Listening", 1, null, DateTimeOffset.UtcNow.AddDays(-2),
+            Review: null);
+
+        var api = new TestApiClient
+        {
+            BookingResult = booking,
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.BookingDetail(101, CancellationToken.None);
+
+        var viewResult = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<MentorBookingDetailViewModel>(viewResult.Model);
+        Assert.Equal("done", model.Booking.Status);
+        Assert.Null(model.Booking.Review);
+    }
+
+    [Fact]
+    public async Task BookingDetail_when_done_and_already_rated_displays_review()
+    {
+        var review = new MentorReviewDto(1, 5, "Excellent session!", "Learner", DateTimeOffset.UtcNow.AddHours(-1));
+        var booking = new MentorBookingDto(
+            101, 7, 1, "Dr. Trần Minh Khoa", "Headline", "human", 1,
+            DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(-1).AddHours(1),
+            "done", null, "Listening", 1, null, DateTimeOffset.UtcNow.AddDays(-2),
+            Review: review);
+
+        var api = new TestApiClient
+        {
+            BookingResult = booking,
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.BookingDetail(101, CancellationToken.None);
+
+        var viewResult = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<MentorBookingDetailViewModel>(viewResult.Model);
+        Assert.Equal("done", model.Booking.Status);
+        Assert.NotNull(model.Booking.Review);
+        Assert.Equal(5, model.Booking.Review.Rating);
+        Assert.Equal("Excellent session!", model.Booking.Review.Text);
+    }
+
+    [Fact]
+    public async Task RateBooking_valid_submission_redirects_to_detail_with_success_message()
+    {
+        var api = new TestApiClient
+        {
+            RateResult = new MentorReviewDto(1, 5, "Great mentor!", "Learner", DateTimeOffset.UtcNow),
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.RateBooking(101, 5, "Great mentor!", CancellationToken.None);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(MentorsController.BookingDetail), redirect.ActionName);
+        Assert.Equal(101, redirect.RouteValues?["bookingId"]);
+        Assert.Equal(101, api.LastRatedBookingId);
+        Assert.NotNull(api.LastRateRequest);
+        Assert.Equal(5, api.LastRateRequest.Rating);
+        Assert.Equal("Great mentor!", api.LastRateRequest.Text);
+        Assert.NotNull(controller.TempData["ShellSuccess"]);
+    }
+
+    [Fact]
+    public async Task RateBooking_unfinished_booking_redirects_with_error()
+    {
+        var api = new TestApiClient
+        {
+            ExceptionToThrow = new ApiException(ApiError.Codes.BookingNotFinished, "Booking not finished", 400),
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.RateBooking(101, 5, "Great mentor!", CancellationToken.None);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(MentorsController.BookingDetail), redirect.ActionName);
+        Assert.Equal(101, redirect.RouteValues?["bookingId"]);
+        Assert.Equal("Only completed bookings can be rated.", controller.TempData["ShellError"]);
+    }
+
+    [Fact]
+    public async Task RateBooking_already_rated_redirects_with_error()
+    {
+        var api = new TestApiClient
+        {
+            ExceptionToThrow = new ApiException(ApiError.Codes.BookingAlreadyRated, "Already rated", 400),
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.RateBooking(101, 5, "Great mentor!", CancellationToken.None);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(MentorsController.BookingDetail), redirect.ActionName);
+        Assert.Equal(101, redirect.RouteValues?["bookingId"]);
+        Assert.Equal("This booking has already been rated.", controller.TempData["ShellError"]);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(6)]
+    public async Task RateBooking_invalid_rating_sets_error_and_does_not_call_api(int invalidRating)
+    {
+        var api = new TestApiClient();
+        var controller = CreateController(api);
+        var result = await controller.RateBooking(101, invalidRating, "Comment", CancellationToken.None);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(MentorsController.BookingDetail), redirect.ActionName);
+        Assert.Equal(101, redirect.RouteValues?["bookingId"]);
+        Assert.Null(api.LastRatedBookingId);
+        Assert.Equal("Rating must be between 1 and 5.", controller.TempData["ShellError"]);
+    }
+
+    [Fact]
+    public async Task RateBooking_booking_not_found_returns_not_found()
+    {
+        var api = new TestApiClient
+        {
+            ExceptionToThrow = new ApiException(ApiError.Codes.NotFound, "Not Found", 404),
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.RateBooking(999, 5, "Comment", CancellationToken.None);
+
+        Assert.IsType<NotFoundResult>(result);
+    }
+
+    [Fact]
+    public async Task RateBooking_text_too_long_sets_error_and_does_not_call_api()
+    {
+        var api = new TestApiClient();
+        var controller = CreateController(api);
+        var longText = new string('A', 2001);
+        var result = await controller.RateBooking(101, 5, longText, CancellationToken.None);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(MentorsController.BookingDetail), redirect.ActionName);
+        Assert.Equal(101, redirect.RouteValues?["bookingId"]);
+        Assert.Null(api.LastRatedBookingId);
+        Assert.Equal("Review comments cannot exceed 2000 characters.", controller.TempData["ShellError"]);
+    }
+
+    [Fact]
+    public async Task RateBooking_unexpected_api_exception_sets_shell_error()
+    {
+        var api = new TestApiClient
+        {
+            ExceptionToThrow = new ApiException(ApiError.Codes.Unexpected, "Internal Server Error", 500, "Unexpected failure."),
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.RateBooking(101, 5, "Comment", CancellationToken.None);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(MentorsController.BookingDetail), redirect.ActionName);
+        Assert.Equal(101, redirect.RouteValues?["bookingId"]);
+        Assert.Equal("Unexpected failure.", controller.TempData["ShellError"]);
+    }
+
+    [Fact]
+    public async Task Bookings_when_done_and_unrated_includes_booking_with_null_review()
+    {
+        var booking = new MentorBookingDto(
+            101, 7, 1, "Dr. Trần Minh Khoa", "Headline", "human", 1,
+            DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(-1).AddHours(1),
+            "done", null, "Listening", 1, null, DateTimeOffset.UtcNow.AddDays(-2),
+            Review: null);
+
+        var api = new TestApiClient
+        {
+            BookingsList = [booking],
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.Bookings(CancellationToken.None);
+
+        var viewResult = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<LearnerBookingsViewModel>(viewResult.Model);
+        Assert.Single(model.Bookings);
+        Assert.Equal("done", model.Bookings[0].Status);
+        Assert.Null(model.Bookings[0].Review);
+    }
+
+    [Fact]
+    public async Task Bookings_when_done_and_rated_includes_booking_with_review()
+    {
+        var review = new MentorReviewDto(1, 5, "Great lesson!", "Learner", DateTimeOffset.UtcNow);
+        var booking = new MentorBookingDto(
+            101, 7, 1, "Dr. Trần Minh Khoa", "Headline", "human", 1,
+            DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(-1).AddHours(1),
+            "done", null, "Listening", 1, null, DateTimeOffset.UtcNow.AddDays(-2),
+            Review: review);
+
+        var api = new TestApiClient
+        {
+            BookingsList = [booking],
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.Bookings(CancellationToken.None);
+
+        var viewResult = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<LearnerBookingsViewModel>(viewResult.Model);
+        Assert.Single(model.Bookings);
+        Assert.Equal("done", model.Bookings[0].Status);
+        Assert.NotNull(model.Bookings[0].Review);
+        Assert.Equal(5, model.Bookings[0].Review!.Rating);
+    }
+
     private sealed class EmptyTempDataProvider : ITempDataProvider
     {
         public IDictionary<string, object> LoadTempData(HttpContext context) => new Dictionary<string, object>();
@@ -413,6 +629,9 @@ public sealed class MentorsControllerTests
         public string? LastSkillQuery { get; set; }
         public Exception? ExceptionToThrow { get; set; }
         public Exception? BookExceptionToThrow { get; set; }
+        public RateMentorRequest? LastRateRequest { get; set; }
+        public int? LastRatedBookingId { get; set; }
+        public MentorReviewDto? RateResult { get; set; }
 
         public Task<IReadOnlyList<MentorSummaryDto>> GetMentorsAsync(string? certCode = null, string? skill = null, CancellationToken cancellationToken = default)
         {
@@ -451,5 +670,16 @@ public sealed class MentorsControllerTests
             if (ExceptionToThrow is not null) throw ExceptionToThrow;
             return Task.FromResult(BookingsList);
         }
+
+        public Task<MentorReviewDto> RateBookingAsync(int bookingId, RateMentorRequest request, string bearerToken, CancellationToken cancellationToken = default)
+        {
+            if (ExceptionToThrow is not null) throw ExceptionToThrow;
+            LastRatedBookingId = bookingId;
+            LastRateRequest = request;
+            return Task.FromResult(RateResult ?? new MentorReviewDto(1, request.Rating, request.Text, "Learner", DateTimeOffset.UtcNow));
+        }
+
+        public Task<MentorReviewDto> RateBookingAsync(int bookingId, RateMentorRequest request, CancellationToken cancellationToken = default) =>
+            RateBookingAsync(bookingId, request, string.Empty, cancellationToken);
     }
 }

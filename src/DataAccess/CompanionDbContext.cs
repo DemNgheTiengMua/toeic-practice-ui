@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using DataAccess.Scaffold;
 using Microsoft.EntityFrameworkCore;
@@ -1063,6 +1063,9 @@ public partial class CompanionDbContext : DbContext
         modelBuilder.Entity<Review>(entity =>
         {
             entity.HasKey(e => e.ReviewId).HasName("PK__Reviews__74BC79CED44C1C2D");
+
+            entity.HasIndex(e => e.BookingId, "UQ_Reviews_OnePerBooking")
+                .IsUnique();
 
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysdatetimeoffset())");
 

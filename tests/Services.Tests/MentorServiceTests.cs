@@ -991,4 +991,408 @@ public sealed class MentorServiceTests(DatabaseFixture database)
         await Assert.ThrowsAsync<KeyNotFoundException>(() =>
             service.CancelBookingAsync(booking.BookingId, learner2));
     }
+
+    [Fact]
+    public async Task RateBookingAsync_FinishedBooking_CreatesReviewAndReturnsDto()
+    {
+        var service = CreateService();
+        var (certId, skillId, certCode) = await SeedCertAndSkillAsync();
+        var mentorUserId = await SeedUserAsync("human-mentor-rate");
+        var learnerUserId = await SeedLearnerWithCreditsAsync(startingCredits: 5, activeCertCode: certCode);
+
+        var mentor = await service.CreateMentorAsync(new CreateMentorProfileRequest(
+            mentorUserId,
+            $"Dr. Rate {Guid.NewGuid():N}",
+            "Bio",
+            certId,
+            skillId,
+            "human",
+            200000m,
+            1,
+            "Headline",
+            "Expertise",
+            60,
+            true));
+
+        var slot = await service.CreateMentorSlotAsync(
+            mentor.MentorId,
+            mentorUserId,
+            new CreateMentorSlotRequest(new DateTime(2026, 10, 18, 9, 0, 0), new DateTime(2026, 10, 18, 10, 0, 0)));
+
+        var booking = await service.BookMentorAsync(mentor.MentorId, learnerUserId, new BookMentorRequest(slot.SlotId));
+
+        // Mark booking as done
+        await database.SqlAsync($"UPDATE Bookings SET Status = 'done' WHERE BookingId = {booking.BookingId};");
+
+        var review = await service.RateBookingAsync(booking.BookingId, learnerUserId, new RateMentorRequest(5, "Excellent session, very clear feedback!"));
+
+        Assert.NotNull(review);
+        Assert.True(review.ReviewId > 0);
+        Assert.Equal(5, review.Rating);
+        Assert.Equal("Excellent session, very clear feedback!", review.Text);
+        Assert.Equal("Learner Test", review.UserDisplayName);
+
+        // Verify review exists in DB
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var dbReview = await db.Reviews.FirstOrDefaultAsync(r => r.BookingId == booking.BookingId);
+        Assert.NotNull(dbReview);
+        Assert.Equal(5, dbReview.Rating);
+        Assert.Equal(learnerUserId, dbReview.UserId);
+
+        // Verify vw_MentorAvgRating reflects the review
+        var ratingRow = await db.vw_MentorAvgRatings.FirstOrDefaultAsync(r => r.MentorId == mentor.MentorId);
+        Assert.NotNull(ratingRow);
+        Assert.Equal(5.0m, ratingRow.AvgRating);
+        Assert.Equal(1, ratingRow.ReviewCount);
+
+        // Verify booking detail includes the review
+        var bookingDetail = await service.GetBookingDetailAsync(booking.BookingId, learnerUserId);
+        Assert.NotNull(bookingDetail.Review);
+        Assert.Equal(5, bookingDetail.Review.Rating);
+        Assert.Equal("Excellent session, very clear feedback!", bookingDetail.Review.Text);
+    }
+
+    [Fact]
+    public async Task RateBookingAsync_UnfinishedBooking_ThrowsBookingNotFinished()
+    {
+        var service = CreateService();
+        var (certId, skillId, certCode) = await SeedCertAndSkillAsync();
+        var mentorUserId = await SeedUserAsync("human-mentor-unfin");
+        var learnerUserId = await SeedLearnerWithCreditsAsync(startingCredits: 5, activeCertCode: certCode);
+
+        var mentor = await service.CreateMentorAsync(new CreateMentorProfileRequest(
+            mentorUserId,
+            $"Dr. Unfinished {Guid.NewGuid():N}",
+            "Bio",
+            certId,
+            skillId,
+            "human",
+            200000m,
+            1,
+            "Headline",
+            "Expertise",
+            60,
+            true));
+
+        var slot = await service.CreateMentorSlotAsync(
+            mentor.MentorId,
+            mentorUserId,
+            new CreateMentorSlotRequest(new DateTime(2026, 10, 19, 9, 0, 0), new DateTime(2026, 10, 19, 10, 0, 0)));
+
+        var booking = await service.BookMentorAsync(mentor.MentorId, learnerUserId, new BookMentorRequest(slot.SlotId));
+
+        // Booking is 'confirmed', not 'done'
+        var ex = await Assert.ThrowsAsync<MentorBookingException>(() =>
+            service.RateBookingAsync(booking.BookingId, learnerUserId, new RateMentorRequest(5, "Premature review")));
+
+        Assert.Equal(MentorBookingException.BookingNotFinished, ex.Code);
+        Assert.Equal(400, ex.Status);
+
+        // Test with cancelled booking
+        await database.SqlAsync($"UPDATE Bookings SET Status = 'cancelled' WHERE BookingId = {booking.BookingId};");
+        var exCancelled = await Assert.ThrowsAsync<MentorBookingException>(() =>
+            service.RateBookingAsync(booking.BookingId, learnerUserId, new RateMentorRequest(4, "Cancelled review")));
+
+        Assert.Equal(MentorBookingException.BookingNotFinished, exCancelled.Code);
+    }
+
+    [Fact]
+    public async Task RateBookingAsync_DifferentUser_ThrowsKeyNotFoundException()
+    {
+        var service = CreateService();
+        var (certId, skillId, certCode) = await SeedCertAndSkillAsync();
+        var mentorUserId = await SeedUserAsync("human-mentor-userdiff");
+        var learner1 = await SeedLearnerWithCreditsAsync(startingCredits: 5, activeCertCode: certCode);
+        var learner2 = await SeedLearnerWithCreditsAsync(startingCredits: 5, activeCertCode: certCode);
+
+        var mentor = await service.CreateMentorAsync(new CreateMentorProfileRequest(
+            mentorUserId,
+            $"Dr. UserDiff {Guid.NewGuid():N}",
+            "Bio",
+            certId,
+            skillId,
+            "human",
+            200000m,
+            1,
+            "Headline",
+            "Expertise",
+            60,
+            true));
+
+        var slot = await service.CreateMentorSlotAsync(
+            mentor.MentorId,
+            mentorUserId,
+            new CreateMentorSlotRequest(new DateTime(2026, 10, 21, 9, 0, 0), new DateTime(2026, 10, 21, 10, 0, 0)));
+
+        var booking = await service.BookMentorAsync(mentor.MentorId, learner1, new BookMentorRequest(slot.SlotId));
+        await database.SqlAsync($"UPDATE Bookings SET Status = 'done' WHERE BookingId = {booking.BookingId};");
+
+        // Learner 2 tries to rate learner 1's booking
+        await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            service.RateBookingAsync(booking.BookingId, learner2, new RateMentorRequest(5, "Other learner review")));
+    }
+
+    [Fact]
+    public async Task RateBookingAsync_AlreadyRated_ThrowsBookingAlreadyRated()
+    {
+        var service = CreateService();
+        var (certId, skillId, certCode) = await SeedCertAndSkillAsync();
+        var mentorUserId = await SeedUserAsync("human-mentor-dup");
+        var learnerUserId = await SeedLearnerWithCreditsAsync(startingCredits: 5, activeCertCode: certCode);
+
+        var mentor = await service.CreateMentorAsync(new CreateMentorProfileRequest(
+            mentorUserId,
+            $"Dr. Dup {Guid.NewGuid():N}",
+            "Bio",
+            certId,
+            skillId,
+            "human",
+            200000m,
+            1,
+            "Headline",
+            "Expertise",
+            60,
+            true));
+
+        var slot = await service.CreateMentorSlotAsync(
+            mentor.MentorId,
+            mentorUserId,
+            new CreateMentorSlotRequest(new DateTime(2026, 10, 22, 9, 0, 0), new DateTime(2026, 10, 22, 10, 0, 0)));
+
+        var booking = await service.BookMentorAsync(mentor.MentorId, learnerUserId, new BookMentorRequest(slot.SlotId));
+        await database.SqlAsync($"UPDATE Bookings SET Status = 'done' WHERE BookingId = {booking.BookingId};");
+
+        // First review succeeds
+        await service.RateBookingAsync(booking.BookingId, learnerUserId, new RateMentorRequest(5, "First review"));
+
+        // Second review attempt throws BookingAlreadyRated
+        var ex = await Assert.ThrowsAsync<MentorBookingException>(() =>
+            service.RateBookingAsync(booking.BookingId, learnerUserId, new RateMentorRequest(4, "Second review attempt")));
+
+        Assert.Equal(MentorBookingException.BookingAlreadyRated, ex.Code);
+        Assert.Equal(400, ex.Status);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(6)]
+    [InlineData(10)]
+    public async Task RateBookingAsync_InvalidRating_ThrowsValidationException(int invalidRating)
+    {
+        var service = CreateService();
+        var (certId, skillId, certCode) = await SeedCertAndSkillAsync();
+        var mentorUserId = await SeedUserAsync("human-mentor-inv");
+        var learnerUserId = await SeedLearnerWithCreditsAsync(startingCredits: 5, activeCertCode: certCode);
+
+        var mentor = await service.CreateMentorAsync(new CreateMentorProfileRequest(
+            mentorUserId,
+            $"Dr. Inv {Guid.NewGuid():N}",
+            "Bio",
+            certId,
+            skillId,
+            "human",
+            200000m,
+            1,
+            "Headline",
+            "Expertise",
+            60,
+            true));
+
+        var slot = await service.CreateMentorSlotAsync(
+            mentor.MentorId,
+            mentorUserId,
+            new CreateMentorSlotRequest(new DateTime(2026, 10, 23, 9, 0, 0), new DateTime(2026, 10, 23, 10, 0, 0)));
+
+        var booking = await service.BookMentorAsync(mentor.MentorId, learnerUserId, new BookMentorRequest(slot.SlotId));
+        await database.SqlAsync($"UPDATE Bookings SET Status = 'done' WHERE BookingId = {booking.BookingId};");
+
+        var ex = await Assert.ThrowsAsync<ValidationException>(() =>
+            service.RateBookingAsync(booking.BookingId, learnerUserId, new RateMentorRequest(invalidRating, "Invalid rating")));
+
+        Assert.Contains("Rating must be between 1 and 5", ex.Message);
+    }
+
+    [Fact]
+    public async Task RateBookingAsync_MultipleReviews_UpdatesMentorAvgRating()
+    {
+        var service = CreateService();
+        var (certId, skillId, certCode) = await SeedCertAndSkillAsync();
+        var mentorUserId = await SeedUserAsync("human-mentor-multirate");
+        var learner1 = await SeedLearnerWithCreditsAsync(startingCredits: 5, activeCertCode: certCode);
+        var learner2 = await SeedLearnerWithCreditsAsync(startingCredits: 5, activeCertCode: certCode);
+
+        var mentor = await service.CreateMentorAsync(new CreateMentorProfileRequest(
+            mentorUserId,
+            $"Dr. MultiRate {Guid.NewGuid():N}",
+            "Bio",
+            certId,
+            skillId,
+            "human",
+            200000m,
+            1,
+            "Headline",
+            "Expertise",
+            60,
+            true));
+
+        var slot1 = await service.CreateMentorSlotAsync(
+            mentor.MentorId,
+            mentorUserId,
+            new CreateMentorSlotRequest(new DateTime(2026, 10, 24, 9, 0, 0), new DateTime(2026, 10, 24, 10, 0, 0)));
+
+        var slot2 = await service.CreateMentorSlotAsync(
+            mentor.MentorId,
+            mentorUserId,
+            new CreateMentorSlotRequest(new DateTime(2026, 10, 24, 11, 0, 0), new DateTime(2026, 10, 24, 12, 0, 0)));
+
+        var booking1 = await service.BookMentorAsync(mentor.MentorId, learner1, new BookMentorRequest(slot1.SlotId));
+        var booking2 = await service.BookMentorAsync(mentor.MentorId, learner2, new BookMentorRequest(slot2.SlotId));
+
+        await database.SqlAsync($"""
+            UPDATE Bookings SET Status = 'done' WHERE BookingId IN ({booking1.BookingId}, {booking2.BookingId});
+            """);
+
+        // Learner 1 rates 4
+        await service.RateBookingAsync(booking1.BookingId, learner1, new RateMentorRequest(4, "Good session"));
+        // Learner 2 rates 5
+        await service.RateBookingAsync(booking2.BookingId, learner2, new RateMentorRequest(5, "Superb help"));
+
+        // Verify view: (4 + 5) / 2 = 4.5
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var ratingRow = await db.vw_MentorAvgRatings.FirstOrDefaultAsync(r => r.MentorId == mentor.MentorId);
+        Assert.NotNull(ratingRow);
+        Assert.Equal(4.5m, ratingRow.AvgRating);
+        Assert.Equal(2, ratingRow.ReviewCount);
+
+        // Verify GetMentorDetailAsync reflects updated rating and returns reviews
+        var detail = await service.GetMentorDetailAsync(mentor.MentorId);
+        Assert.Equal(4.5m, detail.Mentor.AvgRating);
+        Assert.Equal(2, detail.Mentor.ReviewCount);
+        Assert.Equal(2, detail.Reviews.Count);
+        Assert.Contains(detail.Reviews, r => r.Rating == 4 && r.Text == "Good session");
+        Assert.Contains(detail.Reviews, r => r.Rating == 5 && r.Text == "Superb help");
+    }
+
+    [Fact]
+    public async Task RateBookingAsync_ReviewTextExceeds2000Chars_ThrowsValidationException()
+    {
+        var service = CreateService();
+        var (certId, skillId, certCode) = await SeedCertAndSkillAsync();
+        var mentorUserId = await SeedUserAsync("human-mentor-toolong");
+        var learnerUserId = await SeedLearnerWithCreditsAsync(startingCredits: 5, activeCertCode: certCode);
+
+        var mentor = await service.CreateMentorAsync(new CreateMentorProfileRequest(
+            mentorUserId,
+            $"Dr. TooLong {Guid.NewGuid():N}",
+            "Bio",
+            certId,
+            skillId,
+            "human",
+            200000m,
+            1,
+            "Headline",
+            "Expertise",
+            60,
+            true));
+
+        var slot = await service.CreateMentorSlotAsync(
+            mentor.MentorId,
+            mentorUserId,
+            new CreateMentorSlotRequest(new DateTime(2026, 10, 25, 9, 0, 0), new DateTime(2026, 10, 25, 10, 0, 0)));
+
+        var booking = await service.BookMentorAsync(mentor.MentorId, learnerUserId, new BookMentorRequest(slot.SlotId));
+        await database.SqlAsync($"UPDATE Bookings SET Status = 'done' WHERE BookingId = {booking.BookingId};");
+
+        var longText = new string('A', 2001);
+        var ex = await Assert.ThrowsAsync<ValidationException>(() =>
+            service.RateBookingAsync(booking.BookingId, learnerUserId, new RateMentorRequest(5, longText)));
+
+        Assert.Contains("Review text cannot exceed 2000 characters", ex.Message);
+    }
+
+    [Fact]
+    public async Task RateBookingAsync_WhitespaceReviewText_IsSavedAsNull()
+    {
+        var service = CreateService();
+        var (certId, skillId, certCode) = await SeedCertAndSkillAsync();
+        var mentorUserId = await SeedUserAsync("human-mentor-white");
+        var learnerUserId = await SeedLearnerWithCreditsAsync(startingCredits: 5, activeCertCode: certCode);
+
+        var mentor = await service.CreateMentorAsync(new CreateMentorProfileRequest(
+            mentorUserId,
+            $"Dr. White {Guid.NewGuid():N}",
+            "Bio",
+            certId,
+            skillId,
+            "human",
+            200000m,
+            1,
+            "Headline",
+            "Expertise",
+            60,
+            true));
+
+        var slot = await service.CreateMentorSlotAsync(
+            mentor.MentorId,
+            mentorUserId,
+            new CreateMentorSlotRequest(new DateTime(2026, 10, 26, 9, 0, 0), new DateTime(2026, 10, 26, 10, 0, 0)));
+
+        var booking = await service.BookMentorAsync(mentor.MentorId, learnerUserId, new BookMentorRequest(slot.SlotId));
+        await database.SqlAsync($"UPDATE Bookings SET Status = 'done' WHERE BookingId = {booking.BookingId};");
+
+        var review = await service.RateBookingAsync(booking.BookingId, learnerUserId, new RateMentorRequest(5, "   \n\t  "));
+        Assert.Null(review.Text);
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var dbReview = await db.Reviews.FirstOrDefaultAsync(r => r.BookingId == booking.BookingId);
+        Assert.NotNull(dbReview);
+        Assert.Null(dbReview.Text);
+    }
+
+    [Fact]
+    public async Task GetLearnerBookingsAsync_IncludesReviewDto_WhenBookingIsRated()
+    {
+        var service = CreateService();
+        var (certId, skillId, certCode) = await SeedCertAndSkillAsync();
+        var mentorUserId = await SeedUserAsync("human-mentor-listrev");
+        var learnerUserId = await SeedLearnerWithCreditsAsync(startingCredits: 5, activeCertCode: certCode);
+
+        var mentor = await service.CreateMentorAsync(new CreateMentorProfileRequest(
+            mentorUserId,
+            $"Dr. ListRev {Guid.NewGuid():N}",
+            "Bio",
+            certId,
+            skillId,
+            "human",
+            200000m,
+            1,
+            "Headline",
+            "Expertise",
+            60,
+            true));
+
+        var slot = await service.CreateMentorSlotAsync(
+            mentor.MentorId,
+            mentorUserId,
+            new CreateMentorSlotRequest(new DateTime(2026, 10, 27, 9, 0, 0), new DateTime(2026, 10, 27, 10, 0, 0)));
+
+        var booking = await service.BookMentorAsync(mentor.MentorId, learnerUserId, new BookMentorRequest(slot.SlotId));
+        await database.SqlAsync($"UPDATE Bookings SET Status = 'done' WHERE BookingId = {booking.BookingId};");
+
+        // Before rating: review is null in learner bookings list
+        var bookingsBefore = await service.GetLearnerBookingsAsync(learnerUserId);
+        var bBefore = Assert.Single(bookingsBefore, b => b.BookingId == booking.BookingId);
+        Assert.Null(bBefore.Review);
+
+        // Submit rating
+        await service.RateBookingAsync(booking.BookingId, learnerUserId, new RateMentorRequest(5, "Great lesson!"));
+
+        // After rating: review is populated in learner bookings list
+        var bookingsAfter = await service.GetLearnerBookingsAsync(learnerUserId);
+        var bAfter = Assert.Single(bookingsAfter, b => b.BookingId == booking.BookingId);
+        Assert.NotNull(bAfter.Review);
+        Assert.Equal(5, bAfter.Review.Rating);
+        Assert.Equal("Great lesson!", bAfter.Review.Text);
+    }
 }

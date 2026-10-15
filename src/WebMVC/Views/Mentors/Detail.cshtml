@@ -75,11 +75,11 @@
               <div class="stack--tight">
                 <div class="row row--between">
                   <strong>@review.UserDisplayName</strong>
-                  <span class="badge badge--muted">@review.Rating.ToString("0.0") / 5</span>
+                  <span class="badge badge--muted">@review.Rating / 5</span>
                 </div>
                 @if (!string.IsNullOrWhiteSpace(review.Text))
                 {
-                  <p class="text-muted no-margin">@review.Text</p>
+                  <p class="text-muted no-margin" style="white-space: pre-line;">@review.Text</p>
                 }
                 <span class="text-xs text-muted">@Dates.FormatDate(review.CreatedAt)</span>
               </div>

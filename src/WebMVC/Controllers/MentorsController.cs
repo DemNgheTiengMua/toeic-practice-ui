@@ -229,4 +229,56 @@ public sealed class MentorsController(
             return RedirectToAction(nameof(BookingDetail), new { bookingId });
         }
     }
+
+    [HttpPost("/mentors/bookings/{bookingId:int}/rate")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RateBooking(
+        int bookingId,
+        [FromForm] int rating,
+        [FromForm] string? text,
+        CancellationToken cancellationToken)
+    {
+        if (rating < 1 || rating > 5)
+        {
+            TempData["ShellError"] = "Rating must be between 1 and 5.";
+            return RedirectToAction(nameof(BookingDetail), new { bookingId });
+        }
+
+        if (text is not null && text.Length > 2000)
+        {
+            TempData["ShellError"] = "Review comments cannot exceed 2000 characters.";
+            return RedirectToAction(nameof(BookingDetail), new { bookingId });
+        }
+
+        try
+        {
+            var bearer = await BearerAsync();
+            var request = new RateMentorRequest(rating, text);
+            await Api.RateBookingAsync(bookingId, request, bearer, cancellationToken);
+            TempData["ShellSuccess"] = "Thank you for rating your mentor session!";
+            return RedirectToAction(nameof(BookingDetail), new { bookingId });
+        }
+        catch (ApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return NotFound();
+        }
+        catch (ApiException ex) when (ex.Code == ApiError.Codes.BookingAlreadyRated)
+        {
+            logger.LogWarning(ex, "Booking {BookingId} has already been rated", bookingId);
+            TempData["ShellError"] = "This booking has already been rated.";
+            return RedirectToAction(nameof(BookingDetail), new { bookingId });
+        }
+        catch (ApiException ex) when (ex.Code == ApiError.Codes.BookingNotFinished)
+        {
+            logger.LogWarning(ex, "Booking {BookingId} is not finished", bookingId);
+            TempData["ShellError"] = "Only completed bookings can be rated.";
+            return RedirectToAction(nameof(BookingDetail), new { bookingId });
+        }
+        catch (ApiException ex)
+        {
+            logger.LogError(ex, "Failed to submit rating for booking {BookingId}", bookingId);
+            TempData["ShellError"] = ex.Detail ?? "Could not submit rating. Please try again.";
+            return RedirectToAction(nameof(BookingDetail), new { bookingId });
+        }
+    }
 }

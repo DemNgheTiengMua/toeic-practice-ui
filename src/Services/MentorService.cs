@@ -14,6 +14,8 @@ public class MentorBookingException(string code, string message, int status = 40
     public const string BookingNotFound = ApiError.Codes.BookingNotFound;
     public const string BookingCannotCancel = ApiError.Codes.BookingCannotCancel;
     public const string BookingAlreadyRefunded = ApiError.Codes.BookingAlreadyRefunded;
+    public const string BookingNotFinished = ApiError.Codes.BookingNotFinished;
+    public const string BookingAlreadyRated = ApiError.Codes.BookingAlreadyRated;
     public const string MentorNotFound = ApiError.Codes.MentorNotFound;
     public const string ExamNotFound = ApiError.Codes.ExamNotFound;
     public const string Validation = ApiError.Codes.Validation;
@@ -33,6 +35,7 @@ public interface IMentorService
     Task<CancelBookingResultDto> CancelBookingAsync(int bookingId, int userId, CancellationToken cancellationToken = default);
     Task<MentorBookingDto> GetBookingDetailAsync(int bookingId, int userId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<MentorBookingDto>> GetLearnerBookingsAsync(int userId, CancellationToken cancellationToken = default);
+    Task<MentorReviewDto> RateBookingAsync(int bookingId, int userId, RateMentorRequest request, CancellationToken cancellationToken = default);
 
     // Admin management
     Task<IReadOnlyList<AdminMentorListItemDto>> GetAdminMentorsAsync(CancellationToken cancellationToken = default);
@@ -712,10 +715,23 @@ public sealed class MentorService(
             .AsNoTracking()
             .Include(b => b.Mentor)
             .Include(b => b.Slot)
+            .Include(b => b.User)
+            .Include(b => b.Reviews)
+                .ThenInclude(r => r.User)
             .FirstOrDefaultAsync(b => b.BookingId == bookingId && b.UserId == userId, cancellationToken)
             ?? throw new KeyNotFoundException($"Booking with id {bookingId} was not found.");
 
-        return ToBookingDto(booking, booking.Mentor, booking.Slot);
+        var review = booking.Reviews.FirstOrDefault();
+        var reviewDto = review != null
+            ? new MentorReviewDto(
+                review.ReviewId,
+                review.Rating,
+                review.Text,
+                review.User?.FullName ?? booking.User?.FullName ?? "Anonymous",
+                review.CreatedAt)
+            : null;
+
+        return ToBookingDto(booking, booking.Mentor, booking.Slot, review: reviewDto);
     }
 
     public async Task<IReadOnlyList<MentorBookingDto>> GetLearnerBookingsAsync(int userId, CancellationToken cancellationToken = default)
@@ -724,11 +740,84 @@ public sealed class MentorService(
             .AsNoTracking()
             .Include(b => b.Mentor)
             .Include(b => b.Slot)
+            .Include(b => b.User)
+            .Include(b => b.Reviews)
+                .ThenInclude(r => r.User)
             .Where(b => b.UserId == userId)
             .OrderByDescending(b => b.CreatedAt)
             .ToListAsync(cancellationToken);
 
-        return bookings.Select(b => ToBookingDto(b, b.Mentor, b.Slot)).ToList();
+        return bookings.Select(b =>
+        {
+            var review = b.Reviews.FirstOrDefault();
+            var reviewDto = review != null
+                ? new MentorReviewDto(
+                    review.ReviewId,
+                    review.Rating,
+                    review.Text,
+                    review.User?.FullName ?? b.User?.FullName ?? "Anonymous",
+                    review.CreatedAt)
+                : null;
+            return ToBookingDto(b, b.Mentor, b.Slot, review: reviewDto);
+        }).ToList();
+    }
+
+    public async Task<MentorReviewDto> RateBookingAsync(int bookingId, int userId, RateMentorRequest request, CancellationToken cancellationToken = default)
+    {
+        if (request.Rating < 1 || request.Rating > 5)
+        {
+            throw new ValidationException("Rating must be between 1 and 5.");
+        }
+
+        if (request.Text is not null && request.Text.Length > 2000)
+        {
+            throw new ValidationException("Review text cannot exceed 2000 characters.");
+        }
+
+        var booking = await db.Bookings
+            .AsNoTracking()
+            .Include(b => b.User)
+            .Include(b => b.Reviews)
+            .FirstOrDefaultAsync(b => b.BookingId == bookingId && b.UserId == userId, cancellationToken)
+            ?? throw new KeyNotFoundException($"Booking with id {bookingId} was not found.");
+
+        if (booking.Status != BookingStatus.Done.ToCode())
+        {
+            throw new MentorBookingException(MentorBookingException.BookingNotFinished, "Only completed bookings can be rated.");
+        }
+
+        var alreadyRated = booking.Reviews.Any() || await db.Reviews.AnyAsync(r => r.BookingId == bookingId, cancellationToken);
+        if (alreadyRated)
+        {
+            throw new MentorBookingException(MentorBookingException.BookingAlreadyRated, "This booking has already been rated.");
+        }
+
+        var now = clock.GetUtcNow();
+        var review = new Review
+        {
+            BookingId = bookingId,
+            UserId = userId,
+            Rating = request.Rating,
+            Text = string.IsNullOrWhiteSpace(request.Text) ? null : request.Text.Trim(),
+            CreatedAt = now,
+        };
+
+        db.Reviews.Add(review);
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException)
+        {
+            throw new MentorBookingException(MentorBookingException.BookingAlreadyRated, "This booking has already been rated.");
+        }
+
+        return new MentorReviewDto(
+            review.ReviewId,
+            review.Rating,
+            review.Text,
+            booking.User?.FullName ?? "Anonymous",
+            review.CreatedAt);
     }
 
     private static string GenerateMeetLink()
@@ -738,7 +827,7 @@ public sealed class MentorService(
         return $"https://meet.google.com/{Part(3)}-{Part(4)}-{Part(3)}";
     }
 
-    private static MentorBookingDto ToBookingDto(Booking b, MentorProfile mentor, MentorSlot? slot, int? attemptId = null, string? redirectUrl = null) =>
+    private static MentorBookingDto ToBookingDto(Booking b, MentorProfile mentor, MentorSlot? slot, int? attemptId = null, string? redirectUrl = null, MentorReviewDto? review = null) =>
         new(
             b.BookingId,
             b.UserId,
@@ -756,7 +845,8 @@ public sealed class MentorService(
             b.CancelledAt,
             b.CreatedAt,
             attemptId,
-            redirectUrl);
+            redirectUrl,
+            review);
 
     private static MentorSummaryDto ToSummaryDto(MentorProfile m, vw_MentorAvgRating? r) =>
         new(
