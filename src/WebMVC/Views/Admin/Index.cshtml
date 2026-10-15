@@ -1,4 +1,5 @@
-@model Contracts.AuthUserDto
+@using Contracts
+@model Contracts.AdminDashboardDto
 @{
     Layout = "_AdminLayout";
     ViewData["Title"] = "Dashboard";
@@ -15,18 +16,93 @@
 
 <div class="grid-3">
   <div class="stat">
-    <div class="stat__label">Administrator</div>
-    <div class="stat__value text-base">@Model.Email</div>
-    <div class="stat__hint">Role: @Model.Role</div>
+    <div class="stat__label">Active learners</div>
+    <div class="stat__value">@Model.ActiveLearnersCount.ToString("N0")</div>
+    <div class="stat__hint">+@Model.NewLearners7DaysCount.ToString("N0") in 7 days</div>
   </div>
   <div class="stat">
-    <div class="stat__label">Quick actions</div>
-    <div class="stat__value text-base"><a href="/admin/packages">Manage credit packages</a></div>
-    <div class="stat__hint">Prices, featured status &amp; sales</div>
+    <div class="stat__label">Credits used (this month)</div>
+    <div class="stat__value">@Model.CreditsUsedThisMonth.ToString("N0")</div>
+    <div class="stat__hint">Average @Math.Round(Model.CreditsPerDayAverage, 0).ToString("N0") credits/day</div>
   </div>
   <div class="stat">
-    <div class="stat__label">Public catalogue</div>
-    <div class="stat__value text-base"><a href="/pricing">View live pricing</a></div>
-    <div class="stat__hint">Public-facing VND pricing</div>
+    <div class="stat__label">Revenue this month</div>
+    <div class="stat__value">@CurrencyFormatter.FormatRevenue(Model.RevenueThisMonthVnd)</div>
+    <div class="stat__hint">@Model.PaidOrdersThisMonthCount.ToString("N0") @(Model.PaidOrdersThisMonthCount == 1 ? "paid order" : "paid orders")</div>
+  </div>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <div class="card__header"><strong>Most attempted exams</strong></div>
+    <div class="card__body">
+      @if (Model.MostAttemptedExams.Count == 0)
+      {
+        <p class="text-muted">No exam attempts yet</p>
+      }
+      else
+      {
+        <table class="table table--striped">
+          <thead>
+            <tr>
+              <th scope="col">Exam</th>
+              <th scope="col">Attempts</th>
+              <th scope="col">Avg. score</th>
+            </tr>
+          </thead>
+          <tbody>
+            @foreach (var exam in Model.MostAttemptedExams)
+            {
+              <tr>
+                <td>@exam.ExamName</td>
+                <td>@exam.AttemptsCount.ToString("N0")</td>
+                <td>@(exam.AverageScore.HasValue ? (exam.AverageScore.Value % 1 == 0 ? exam.AverageScore.Value.ToString("N0") : exam.AverageScore.Value.ToString("0.#")) : "—")</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card__header"><strong>Needs attention</strong></div>
+    <div class="card__body stack">
+      @{
+        var hasAlerts = Model.NeedsAttention.DraftExamsCount > 0
+                     || Model.NeedsAttention.StalePendingOrdersCount > 0
+                     || Model.NeedsAttention.OpenComplaintsCount > 0;
+      }
+      @if (!hasAlerts)
+      {
+        <div class="alert alert--success">All systems operational — no issues needing attention</div>
+      }
+      else
+      {
+        @if (Model.NeedsAttention.DraftExamsCount > 0)
+        {
+          <div class="alert alert--warning">
+            @Model.NeedsAttention.DraftExamsCount @(Model.NeedsAttention.DraftExamsCount == 1 ? "exam is" : "exams are") in draft status.
+          </div>
+        }
+        @if (Model.NeedsAttention.StalePendingOrdersCount > 0)
+        {
+          <div class="alert alert--info">
+            @Model.NeedsAttention.StalePendingOrdersCount @(Model.NeedsAttention.StalePendingOrdersCount == 1 ? "order has" : "orders have") been waiting for reconciliation for over 30 minutes.
+          </div>
+        }
+        @if (Model.NeedsAttention.OpenComplaintsCount > 0)
+        {
+          <div class="alert alert--info">
+            @Model.NeedsAttention.OpenComplaintsCount @(Model.NeedsAttention.OpenComplaintsCount == 1 ? "complaint requires" : "complaints require") review.
+          </div>
+        }
+      }
+    </div>
+    <div class="card__footer row">
+      <a class="btn" href="/admin/exams">Open exam list</a>
+      <a class="btn btn--ghost" href="/admin/orders">Open orders</a>
+      <a class="btn btn--ghost" href="/admin/complaints">Open complaints</a>
+    </div>
   </div>
 </div>
