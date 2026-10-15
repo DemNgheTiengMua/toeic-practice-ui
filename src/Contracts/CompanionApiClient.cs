@@ -190,6 +190,9 @@ public interface ICompanionApiClient
     Task<AdjustCreditsResultDto> AdjustUserCreditsAsync(int userId, AdjustCreditsRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
         throw new NotImplementedException();
 
+    Task<AdminDashboardDto> GetAdminDashboardAsync(string bearerToken, CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
+
     Task<WritingInstructionsDto> GetWritingInstructionsAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) =>
         throw new NotImplementedException();
 
@@ -894,6 +897,9 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
         await EnsureSuccessAsync(response, cancellationToken);
         return (await response.Content.ReadFromJsonAsync<AdjustCreditsResultDto>(Json, cancellationToken))!;
     }
+
+    public Task<AdminDashboardDto> GetAdminDashboardAsync(string bearerToken, CancellationToken cancellationToken = default) =>
+        GetAuthorizedAsync<AdminDashboardDto>("api/admin/dashboard", bearerToken, cancellationToken);
 
     public Task<WritingInstructionsDto> GetWritingInstructionsAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) =>
         GetAuthorizedAsync<WritingInstructionsDto>($"api/learner/writing/{examId}/instructions", bearerToken, cancellationToken);

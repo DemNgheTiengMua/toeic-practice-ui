@@ -15,6 +15,12 @@ public static class AdminEndpoints
         admin.MapGet("/summary", (HttpContext http) =>
             Results.Ok(new { admin = http.User.FindFirst(IAccessTokenFactory.ClaimEmail)!.Value }));
 
+        admin.MapGet("/dashboard", async (IAdminDashboardService dashboard, CancellationToken cancellationToken) =>
+        {
+            var metrics = await dashboard.GetDashboardMetricsAsync(cancellationToken);
+            return Results.Ok(metrics);
+        });
+
         admin.MapGet("/packages", async (IPackageService packages, CancellationToken cancellationToken) =>
         {
             var summary = await packages.GetAdminPackagesAsync(cancellationToken);

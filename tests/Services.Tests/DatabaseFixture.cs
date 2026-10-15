@@ -61,6 +61,23 @@ public sealed class DatabaseFixture : IAsyncLifetime
 
     public Task DisposeAsync() => Task.CompletedTask;
 
+    public async Task<string> CreateFreshDatabaseAsync(string databaseName)
+    {
+        await SqlAsync("master",
+            $"IF DB_ID('{databaseName}') IS NOT NULL BEGIN " +
+            $"ALTER DATABASE [{databaseName}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE [{databaseName}]; END; " +
+            $"CREATE DATABASE [{databaseName}];");
+        await SqlCmdFileAsync(databaseName, Path.Combine(RepoRoot, "docs", "database-schema.sql"));
+        return $"{BaseConnectionString};Database={databaseName}";
+    }
+
+    public async Task DropDatabaseAsync(string databaseName)
+    {
+        await SqlAsync("master",
+            $"IF DB_ID('{databaseName}') IS NOT NULL BEGIN " +
+            $"ALTER DATABASE [{databaseName}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE [{databaseName}]; END;");
+    }
+
     /// <summary>Run an ad-hoc batch against the test database (used to seed rows per test).</summary>
     public Task SqlAsync(string batch) => SqlAsync(Database, batch);
 

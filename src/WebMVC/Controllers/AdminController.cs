@@ -7,13 +7,24 @@ namespace WebMVC.Controllers;
 /// <summary>Admin-only pages. The policy refuses a learner before any action runs; the API
 /// enforces the same rule on its own endpoints, so a forged or replayed cookie gets nothing.</summary>
 [Authorize(Policy = Roles.Admin)]
-public sealed class AdminController(ICompanionApiClient api, CurrentUser currentUser) : Controller
+public sealed class AdminController(
+    ICompanionApiClient api,
+    CurrentUser currentUser,
+    ILogger<AdminController>? logger = null) : Controller
 {
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
-        // Proves the bearer forward works end to end: this API call carries the cookie's JWT.
-        // The policy guarantees a signed-in user, so a token is always present.
-        var me = await api.GetMeAsync((await currentUser.GetBearerTokenAsync())!, cancellationToken);
-        return View(me);
+        try
+        {
+            var token = (await currentUser.GetBearerTokenAsync())!;
+            var dashboard = await api.GetAdminDashboardAsync(token, cancellationToken);
+            return View(dashboard ?? AdminDashboardDto.Empty);
+        }
+        catch (HttpRequestException ex)
+        {
+            logger?.LogError(ex, "Could not load admin dashboard metrics");
+            TempData["Error"] = "Could not load the dashboard metrics. Please try again.";
+            return View(AdminDashboardDto.Empty);
+        }
     }
 }
