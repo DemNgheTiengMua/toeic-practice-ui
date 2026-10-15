@@ -20,5 +20,6 @@ public sealed record AiInsightView(
     string SourceFingerprint,
     DateTimeOffset CreatedAt,
     DateTimeOffset? CompletedAt,
-    IReadOnlyList<RecommendationItem> Recommendations
+    IReadOnlyList<RecommendationItem> Recommendations,
+    int? LearnerPathId = null
 );

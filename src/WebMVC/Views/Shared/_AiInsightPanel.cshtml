@@ -140,6 +140,9 @@
           ? `/learner/insights/dashboard?certId=${activityId}`
           : '/learner/insights/dashboard';
       }
+      if (scope === 'path') {
+        return '/learner/insights/path';
+      }
       return scope === 'practice_session'
         ? `/practice/insight/${activityId}`
         : `/exams/insight/${activityId}`;
@@ -150,6 +153,9 @@
         return activityId && activityId !== '0'
           ? `/learner/insights/dashboard/retry?certId=${activityId}`
           : '/learner/insights/dashboard/retry';
+      }
+      if (scope === 'path') {
+        return '/learner/insights/path/retry';
       }
       return scope === 'practice_session'
         ? `/practice/insight/${activityId}/retry`

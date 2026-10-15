@@ -356,5 +356,382 @@ public sealed class LearningPathControllerTests
 
         public Task<ResetLearningPathResultDto> ResetLearningPathAsync(string bearerToken, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<ResetLearningPathResultDto>(ExceptionToThrow) : Task.FromResult(ResetResult!);
+
+        public WalletDto? Wallet { get; set; }
+        public AiInsightDto? PathInsight { get; set; }
+        public bool UpgradeCalled { get; set; }
+        public bool RetryPathInsightCalled { get; set; }
+
+        public Task<WalletDto> GetWalletAsync(string bearerToken, CancellationToken cancellationToken = default) =>
+            ExceptionToThrow != null ? Task.FromException<WalletDto>(ExceptionToThrow) : Task.FromResult(Wallet ?? new WalletDto(10, 10, 0, 100000m, 1, [], []));
+
+        public Task<LearningPathSummaryDto> UpgradeLearningPathAsync(string bearerToken, CancellationToken cancellationToken = default)
+        {
+            UpgradeCalled = true;
+            return ExceptionToThrow != null ? Task.FromException<LearningPathSummaryDto>(ExceptionToThrow) : Task.FromResult(LearningPathSummary!);
+        }
+
+        public Task<AiInsightDto> GetPathInsightAsync(string bearerToken, CancellationToken cancellationToken = default) =>
+            ExceptionToThrow != null ? Task.FromException<AiInsightDto>(ExceptionToThrow) : Task.FromResult(PathInsight ?? new AiInsightDto(
+                InsightId: 1,
+                UserId: 1,
+                CertId: 1,
+                Scope: AiInsightScopeDto.Path,
+                PracticeSessionId: null,
+                AttemptId: null,
+                Narrative: "Sample path insight narrative",
+                Trend: AiInsightTrendDto.Improving,
+                Status: AiInsightStatusDto.Done,
+                FailureReason: null,
+                Model: "fake-model",
+                PromptTokens: 100,
+                CompletionTokens: 80,
+                SourceFingerprint: new string('a', 64),
+                CreatedAt: DateTimeOffset.UtcNow,
+                CompletedAt: DateTimeOffset.UtcNow,
+                Recommendations: []));
+
+        public Task RetryPathInsightAsync(string bearerToken, CancellationToken cancellationToken = default)
+        {
+            RetryPathInsightCalled = true;
+            return ExceptionToThrow != null ? Task.FromException(ExceptionToThrow) : Task.CompletedTask;
+        }
+    }
+
+    [Fact]
+    public async Task Index_WhenActivePath_PopulatesInsightPanel()
+    {
+        var api = new TestApiClient
+        {
+            LearningPathSummary = new LearningPathSummaryDto(
+                HasActivePath: true,
+                ActiveCert: new CertificateOptionDto("TOEIC", "TOEIC Listening & Reading"),
+                LearnerPathId: 10,
+                FromBandCode: "A2",
+                ToBandCode: "B2",
+                FromBandName: "Elementary",
+                ToBandName: "Upper intermediate",
+                CurrentBandCode: "A2",
+                CurrentScore: 385,
+                TargetBandCode: "B2",
+                TargetScore: 785,
+                Status: LearnerPathStatusDto.Active,
+                StartedAt: DateTimeOffset.UtcNow,
+                IsPremium: false,
+                TotalModules: 2,
+                CompletedModules: 1,
+                TotalEstimatedMinutes: 45,
+                RemainingMinutes: 20,
+                CefrBands: [],
+                Modules: [],
+                NextModuleId: 2)
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.Index(CancellationToken.None);
+
+        var viewResult = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<LearningPathIndexViewModel>(viewResult.Model);
+        Assert.NotNull(model.InsightPanel);
+        Assert.Equal("path", model.InsightPanel.Scope);
+        Assert.Equal(10, model.InsightPanel.ActivityId);
+        Assert.NotNull(model.InsightPanel.Insight);
+    }
+
+    [Fact]
+    public async Task Upgrade_WhenBalanceLessThanFive_RendersPaywall()
+    {
+        var api = new TestApiClient
+        {
+            LearningPathSummary = new LearningPathSummaryDto(
+                HasActivePath: true,
+                ActiveCert: new CertificateOptionDto("TOEIC", "TOEIC Listening & Reading"),
+                LearnerPathId: 10,
+                FromBandCode: "A2",
+                ToBandCode: "B2",
+                FromBandName: "Elementary",
+                ToBandName: "Upper intermediate",
+                CurrentBandCode: "A2",
+                CurrentScore: 385,
+                TargetBandCode: "B2",
+                TargetScore: 785,
+                Status: LearnerPathStatusDto.Active,
+                StartedAt: DateTimeOffset.UtcNow,
+                IsPremium: false,
+                TotalModules: 14,
+                CompletedModules: 1,
+                TotalEstimatedMinutes: 200,
+                RemainingMinutes: 180,
+                CefrBands: [],
+                Modules: [],
+                NextModuleId: 2),
+            Wallet = new WalletDto(3, 3, 0, 30000m, 1, [], [])
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.Upgrade(CancellationToken.None);
+
+        var viewResult = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<LearningPathUpgradeViewModel>(viewResult.Model);
+        Assert.False(model.CanUpgrade);
+        Assert.Equal(3, model.Balance);
+        Assert.Equal(5, model.UpgradeCost);
+        Assert.Equal(2, model.ShortBy);
+    }
+
+    [Fact]
+    public async Task Upgrade_WhenBalanceAtLeastFive_RendersConfirmation()
+    {
+        var api = new TestApiClient
+        {
+            LearningPathSummary = new LearningPathSummaryDto(
+                HasActivePath: true,
+                ActiveCert: new CertificateOptionDto("TOEIC", "TOEIC Listening & Reading"),
+                LearnerPathId: 10,
+                FromBandCode: "A2",
+                ToBandCode: "B2",
+                FromBandName: "Elementary",
+                ToBandName: "Upper intermediate",
+                CurrentBandCode: "A2",
+                CurrentScore: 385,
+                TargetBandCode: "B2",
+                TargetScore: 785,
+                Status: LearnerPathStatusDto.Active,
+                StartedAt: DateTimeOffset.UtcNow,
+                IsPremium: false,
+                TotalModules: 14,
+                CompletedModules: 1,
+                TotalEstimatedMinutes: 200,
+                RemainingMinutes: 180,
+                CefrBands: [],
+                Modules: [],
+                NextModuleId: 2),
+            Wallet = new WalletDto(8, 8, 0, 80000m, 1, [], [])
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.Upgrade(CancellationToken.None);
+
+        var viewResult = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<LearningPathUpgradeViewModel>(viewResult.Model);
+        Assert.True(model.CanUpgrade);
+        Assert.Equal(8, model.Balance);
+        Assert.Equal(5, model.UpgradeCost);
+        Assert.Equal(0, model.ShortBy);
+    }
+
+    [Fact]
+    public async Task UpgradeConfirmed_WhenSuccessful_RedirectsToIndexWithSuccessMessage()
+    {
+        var api = new TestApiClient
+        {
+            LearningPathSummary = new LearningPathSummaryDto(
+                HasActivePath: true,
+                ActiveCert: new CertificateOptionDto("TOEIC", "TOEIC Listening & Reading"),
+                LearnerPathId: 10,
+                FromBandCode: "A2",
+                ToBandCode: "B2",
+                FromBandName: "Elementary",
+                ToBandName: "Upper intermediate",
+                CurrentBandCode: "A2",
+                CurrentScore: 385,
+                TargetBandCode: "B2",
+                TargetScore: 785,
+                Status: LearnerPathStatusDto.Active,
+                StartedAt: DateTimeOffset.UtcNow,
+                IsPremium: true,
+                TotalModules: 14,
+                CompletedModules: 1,
+                TotalEstimatedMinutes: 200,
+                RemainingMinutes: 180,
+                CefrBands: [],
+                Modules: [],
+                NextModuleId: 2)
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.UpgradeConfirmed(CancellationToken.None);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal("Index", redirect.ActionName);
+        Assert.True(api.UpgradeCalled);
+        Assert.NotNull(controller.TempData["SuccessMessage"]);
+    }
+
+    [Fact]
+    public async Task UpgradeConfirmed_WhenInsufficientCredits_RedirectsToUpgradeWithErrorMessage()
+    {
+        var api = new TestApiClient
+        {
+            ExceptionToThrow = new ApiException(ApiError.Codes.InsufficientCredits, "Insufficient credits", 400)
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.UpgradeConfirmed(CancellationToken.None);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal("Upgrade", redirect.ActionName);
+        Assert.NotNull(controller.TempData["ErrorMessage"]);
+    }
+
+    [Fact]
+    public async Task GetPathInsight_WhenSuccessful_ReturnsOk()
+    {
+        var api = new TestApiClient();
+        var controller = CreateController(api);
+
+        var result = await controller.GetPathInsight(CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var dto = Assert.IsType<AiInsightDto>(ok.Value);
+        Assert.Equal(AiInsightScopeDto.Path, dto.Scope);
+    }
+
+    [Fact]
+    public async Task RetryPathInsight_WhenSuccessful_ReturnsOk()
+    {
+        var api = new TestApiClient();
+        var controller = CreateController(api);
+
+        var result = await controller.RetryPathInsight(CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(result);
+        Assert.True(api.RetryPathInsightCalled);
+    }
+
+    [Fact]
+    public async Task Upgrade_WhenNoActivePath_RedirectsToIndex()
+    {
+        var api = new TestApiClient
+        {
+            LearningPathSummary = new LearningPathSummaryDto(
+                HasActivePath: false,
+                ActiveCert: new CertificateOptionDto("TOEIC", "TOEIC"),
+                LearnerPathId: null,
+                FromBandCode: null,
+                ToBandCode: null,
+                FromBandName: null,
+                ToBandName: null,
+                CurrentBandCode: null,
+                CurrentScore: null,
+                TargetBandCode: null,
+                TargetScore: null,
+                Status: null,
+                StartedAt: null,
+                IsPremium: false,
+                TotalModules: 0,
+                CompletedModules: 0,
+                TotalEstimatedMinutes: 0,
+                RemainingMinutes: 0,
+                CefrBands: [],
+                Modules: [],
+                NextModuleId: null)
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.Upgrade(CancellationToken.None);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal("Index", redirect.ActionName);
+    }
+
+    [Fact]
+    public async Task Upgrade_WhenApiException_RedirectsToIndexWithErrorMessage()
+    {
+        var api = new TestApiClient
+        {
+            ExceptionToThrow = new ApiException("api_error", "Failed to fetch wallet", 500)
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.Upgrade(CancellationToken.None);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal("Index", redirect.ActionName);
+        Assert.NotNull(controller.TempData["ErrorMessage"]);
+    }
+
+    [Fact]
+    public async Task UpgradeConfirmed_WhenGenericApiException_RedirectsToUpgradeWithErrorMessage()
+    {
+        var api = new TestApiClient
+        {
+            ExceptionToThrow = new ApiException("general_error", "Something went wrong", 500)
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.UpgradeConfirmed(CancellationToken.None);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal("Upgrade", redirect.ActionName);
+        Assert.Equal("Something went wrong", controller.TempData["ErrorMessage"]);
+    }
+
+    [Fact]
+    public async Task GetPathInsight_WhenApiException_ReturnsStatusCode()
+    {
+        var api = new TestApiClient
+        {
+            ExceptionToThrow = new ApiException("not_found", "Insight not found", 404)
+        };
+        var controller = CreateController(api);
+
+        var result = await controller.GetPathInsight(CancellationToken.None);
+
+        var statusResult = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(404, statusResult.StatusCode);
+    }
+
+    [Fact]
+    public async Task RetryPathInsight_WhenApiException_ReturnsStatusCode()
+    {
+        var api = new TestApiClient
+        {
+            ExceptionToThrow = new ApiException("not_found", "Insight not found", 404)
+        };
+        var controller = CreateController(api);
+
+        var result = await controller.RetryPathInsight(CancellationToken.None);
+
+        var statusResult = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(404, statusResult.StatusCode);
+    }
+
+    [Fact]
+    public async Task Index_WhenSuccessMessageInTempData_PassesSuccessMessageToModel()
+    {
+        var api = new TestApiClient
+        {
+            LearningPathSummary = new LearningPathSummaryDto(
+                HasActivePath: true,
+                ActiveCert: new CertificateOptionDto("TOEIC", "TOEIC Listening & Reading"),
+                LearnerPathId: 10,
+                FromBandCode: "A2",
+                ToBandCode: "B2",
+                FromBandName: "Elementary",
+                ToBandName: "Upper intermediate",
+                CurrentBandCode: "A2",
+                CurrentScore: 385,
+                TargetBandCode: "B2",
+                TargetScore: 785,
+                Status: LearnerPathStatusDto.Active,
+                StartedAt: DateTimeOffset.UtcNow,
+                IsPremium: true,
+                TotalModules: 2,
+                CompletedModules: 1,
+                TotalEstimatedMinutes: 45,
+                RemainingMinutes: 20,
+                CefrBands: [],
+                Modules: [],
+                NextModuleId: 2)
+        };
+        var controller = CreateController(api);
+        controller.TempData["SuccessMessage"] = "Successfully upgraded to premium path!";
+
+        var result = await controller.Index(CancellationToken.None);
+
+        var viewResult = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<LearningPathIndexViewModel>(viewResult.Model);
+        Assert.Equal("Successfully upgraded to premium path!", model.SuccessMessage);
     }
 }

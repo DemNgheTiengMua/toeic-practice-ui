@@ -518,4 +518,212 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
             .CountAsync(s => s.UserId == userId && s.LearnerPathStepId == null);
         Assert.True(standaloneCount <= 25);
     }
+
+    private async Task GrantCreditsAsync(int userId, int credits)
+    {
+        var adminEmail = $"{Guid.NewGuid():N}@admin.test";
+        await database.SqlAsync($"""
+            IF NOT EXISTS (SELECT 1 FROM Roles WHERE Code = 'admin')
+              INSERT INTO Roles (Code, Name) VALUES ('admin', N'Admin');
+            INSERT INTO Users (RoleId, Email, PasswordHash, FullName)
+            VALUES ((SELECT RoleId FROM Roles WHERE Code = 'admin'), '{adminEmail}', 0x01, N'Admin User');
+            DECLARE @adminId INT = SCOPE_IDENTITY();
+            INSERT INTO CreditTransactions (UserId, Reason, Delta, AdminUserId, Note)
+            VALUES ({userId}, 'admin_grant', {credits}, @adminId, N'Test setup credits');
+            """);
+    }
+
+    [Fact]
+    public async Task UpgradePathAsync_Succeeds_WhenBalanceSufficient_DebitsCredits_SetsIsPremiumTrue()
+    {
+        var certCode = Unique("UP");
+        var (certId, templateId, m1Id, _, _, _, secId, qId) = await SeedPathFixtureAsync(certCode);
+        var userId = await SeedLearnerAsync(certCode);
+        await GrantCreditsAsync(userId, 10);
+
+        var (service, _, _, db) = CreateServices();
+        var initial = await service.GeneratePathAsync(userId);
+        Assert.False(initial.IsPremium);
+
+        var upgraded = await service.UpgradePathAsync(userId);
+        Assert.True(upgraded.IsPremium);
+
+        // Verify credit transaction row in ledger
+        var txn = await db.CreditTransactions
+            .FirstOrDefaultAsync(t => t.LearnerPathId == initial.LearnerPathId && t.Reason == "premium_path");
+        Assert.NotNull(txn);
+        Assert.Equal(-5, txn.Delta);
+        Assert.Equal(userId, txn.UserId);
+
+        // Verify balance decreased from 10 to 5
+        var balance = await db.CreditTransactions.Where(t => t.UserId == userId).SumAsync(t => (int?)t.Delta) ?? 0;
+        Assert.Equal(5, balance);
+
+        // Verify GetActivePathAsync returns IsPremium = true
+        var active = await service.GetActivePathAsync(userId);
+        Assert.True(active.IsPremium);
+    }
+
+    [Fact]
+    public async Task UpgradePathAsync_ThrowsInsufficientCredits_WhenBalanceLessThanFive()
+    {
+        var certCode = Unique("IC");
+        var (certId, templateId, m1Id, _, _, _, secId, qId) = await SeedPathFixtureAsync(certCode);
+        var userId = await SeedLearnerAsync(certCode);
+        await GrantCreditsAsync(userId, 3); // Short by 2
+
+        var (service, _, _, db) = CreateServices();
+        var initial = await service.GeneratePathAsync(userId);
+        Assert.False(initial.IsPremium);
+
+        var ex = await Assert.ThrowsAsync<LearningPathException>(() => service.UpgradePathAsync(userId));
+        Assert.Equal(LearningPathException.InsufficientCredits, ex.Code);
+
+        // Verify no premium_path debit was written
+        var txnExists = await db.CreditTransactions
+            .AnyAsync(t => t.LearnerPathId == initial.LearnerPathId && t.Reason == "premium_path");
+        Assert.False(txnExists);
+
+        // Balance untouched
+        var balance = await db.CreditTransactions.Where(t => t.UserId == userId).SumAsync(t => (int?)t.Delta) ?? 0;
+        Assert.Equal(3, balance);
+
+        // Still free
+        var active = await service.GetActivePathAsync(userId);
+        Assert.False(active.IsPremium);
+    }
+
+    [Fact]
+    public async Task UpgradePathAsync_IsIdempotent_WhenCalledMultipleTimes()
+    {
+        var certCode = Unique("IDEM");
+        var (certId, templateId, m1Id, _, _, _, secId, qId) = await SeedPathFixtureAsync(certCode);
+        var userId = await SeedLearnerAsync(certCode);
+        await GrantCreditsAsync(userId, 10);
+
+        var (service, _, _, db) = CreateServices();
+        var initial = await service.GeneratePathAsync(userId);
+
+        // First call charges 5 credits
+        var firstUpgrade = await service.UpgradePathAsync(userId);
+        Assert.True(firstUpgrade.IsPremium);
+
+        var txnCount1 = await db.CreditTransactions.CountAsync(t => t.LearnerPathId == initial.LearnerPathId && t.Reason == "premium_path");
+        Assert.Equal(1, txnCount1);
+
+        // Second call is idempotent: does not charge again
+        var secondUpgrade = await service.UpgradePathAsync(userId);
+        Assert.True(secondUpgrade.IsPremium);
+
+        var txnCount2 = await db.CreditTransactions.CountAsync(t => t.LearnerPathId == initial.LearnerPathId && t.Reason == "premium_path");
+        Assert.Equal(1, txnCount2);
+
+        var balance = await db.CreditTransactions.Where(t => t.UserId == userId).SumAsync(t => (int?)t.Delta) ?? 0;
+        Assert.Equal(5, balance);
+    }
+
+    [Fact]
+    public async Task StartStepAsync_BlocksPremiumOnlyStep_WhenPathIsNotPremium()
+    {
+        var certCode = Unique("PREM");
+        var (certId, templateId, m1Id, _, _, _, secId, qId) = await SeedPathFixtureAsync(certCode);
+        var userId = await SeedLearnerAsync(certCode);
+        await GrantCreditsAsync(userId, 10);
+
+        await database.SqlAsync($"""
+            INSERT INTO PathModuleItems (ModuleId, CertId, TemplateId, ItemType, RefSectionId, QuestionCount, IsPremiumOnly, DisplayOrder)
+            VALUES ({m1Id}, {certId}, {templateId}, 'practice_section', {secId}, 5, 1, 99);
+            """);
+
+        var (service, _, _, db) = CreateServices();
+        var summary = await service.GeneratePathAsync(userId);
+
+        var premiumStep = await db.LearnerPathSteps
+            .Include(s => s.PathModuleItem)
+            .FirstAsync(s => s.LearnerPathId == summary.LearnerPathId && s.PathModuleItem.IsPremiumOnly);
+
+        // Make the step available
+        premiumStep.Status = "available";
+        await db.SaveChangesAsync();
+
+        // While path is free, StartStepAsync throws StepLocked
+        var ex = await Assert.ThrowsAsync<LearningPathException>(() => service.StartStepAsync(userId, premiumStep.StepId));
+        Assert.Equal(LearningPathException.StepLocked, ex.Code);
+
+        // Upgrade path to premium
+        await service.UpgradePathAsync(userId);
+
+        // Now StartStepAsync succeeds
+        var result = await service.StartStepAsync(userId, premiumStep.StepId);
+        Assert.NotNull(result);
+        Assert.Equal(premiumStep.StepId, result.StepId);
+    }
+
+    [Fact]
+    public async Task GetModuleDetailAsync_ReflectsIsPremium_AndProvidesVideoAccess()
+    {
+        var certCode = Unique("VID");
+        var (certId, templateId, m1Id, _, _, _, secId, qId) = await SeedPathFixtureAsync(certCode);
+        var userId = await SeedLearnerAsync(certCode);
+        await GrantCreditsAsync(userId, 10);
+
+        await database.SqlAsync($"""
+            INSERT INTO PathModuleTopics (ModuleId, Title, QuestionCount, VideoPath, DisplayOrder)
+            VALUES ({m1Id}, N'Topic with Video', 5, N'/videos/module1.mp4', 2);
+            """);
+
+        var (service, _, _, db) = CreateServices();
+        await service.GeneratePathAsync(userId);
+
+        // Free path: CanAccessVideo is false, VideoPath is null
+        var freeDetail = await service.GetModuleDetailAsync(userId, m1Id);
+        Assert.False(freeDetail.IsPremium);
+        var topicFree = freeDetail.Topics.First(t => t.Title == "Topic with Video");
+        Assert.False(topicFree.CanAccessVideo);
+        Assert.Null(topicFree.VideoPath);
+
+        // Upgrade path
+        await service.UpgradePathAsync(userId);
+
+        // Upgraded path: CanAccessVideo is true, VideoPath is populated
+        var premiumDetail = await service.GetModuleDetailAsync(userId, m1Id);
+        Assert.True(premiumDetail.IsPremium);
+        var topicPremium = premiumDetail.Topics.First(t => t.Title == "Topic with Video");
+        Assert.True(topicPremium.CanAccessVideo);
+        Assert.Equal("/videos/module1.mp4", topicPremium.VideoPath);
+    }
+
+    [Fact]
+    public async Task UpgradePathAsync_ThrowsPathNotFound_WhenNoActivePathExists()
+    {
+        var certCode = Unique("NP");
+        await SeedPathFixtureAsync(certCode);
+        var userId = await SeedLearnerAsync(certCode);
+
+        var (service, _, _, _) = CreateServices();
+        var ex = await Assert.ThrowsAsync<LearningPathException>(() => service.UpgradePathAsync(userId));
+        Assert.Equal(LearningPathException.PathNotFound, ex.Code);
+    }
+
+    [Fact]
+    public async Task ResetActivePathAsync_ThenGenerateNewPath_StartsAsFreePath()
+    {
+        var certCode = Unique("RESET");
+        var (certId, templateId, m1Id, _, _, _, secId, qId) = await SeedPathFixtureAsync(certCode);
+        var userId = await SeedLearnerAsync(certCode);
+        await GrantCreditsAsync(userId, 10);
+
+        var (service, _, _, db) = CreateServices();
+        var initial = await service.GeneratePathAsync(userId);
+        var upgraded = await service.UpgradePathAsync(userId);
+        Assert.True(upgraded.IsPremium);
+
+        // Reset path
+        var reset = await service.ResetActivePathAsync(userId);
+        Assert.True(reset);
+
+        // Generate new path
+        var newPath = await service.GeneratePathAsync(userId);
+        Assert.False(newPath.IsPremium);
+    }
 }

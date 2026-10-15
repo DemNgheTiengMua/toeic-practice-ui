@@ -1,0 +1,147 @@
+@model LearningPathUpgradeViewModel
+@{
+    Layout = "_LearnerLayout";
+    ViewData["Title"] = "Upgrade to premium path";
+    ViewData["Description"] = "Upgrade your learning path to premium for video lessons, AI-graded writing, and per-question explanations.";
+    var summary = Model.Summary;
+}
+
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+  <a href="/dashboard" class="breadcrumbs__item">Home</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <a href="/learning-path" class="breadcrumbs__item">My learning path</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <span class="breadcrumbs__item" aria-current="page">Upgrade</span>
+</nav>
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+  <div class="alert alert--danger" role="alert">
+    <strong>Could not upgrade path.</strong> @Model.ErrorMessage
+  </div>
+}
+
+@if (Model.IsAlreadyPremium)
+{
+  <div class="card"><div class="card__body stack">
+    <div class="alert alert--info" role="alert">
+      <strong>Already upgraded.</strong> You are already on the premium tier for this learning path. All video lessons and premium modules are unlocked.
+    </div>
+    <div class="row">
+      <a href="/learning-path" class="btn btn--primary">Back to learning path</a>
+    </div>
+  </div></div>
+}
+else if (!Model.CanUpgrade)
+{
+  <!-- Paywall state: balance < 5 -->
+  <div class="stack" id="paywall-state">
+    <div class="alert alert--warning" role="alert">
+      <strong>Not enough credits.</strong> The upgrade costs @Model.UpgradeCost credits and you have @Model.Balance. Nothing was deducted.
+    </div>
+
+    <div>
+      <h1 class="m-0 mb-1">Upgrade to premium path</h1>
+      <p class="text-muted no-margin">Your free path is unchanged and still available.</p>
+    </div>
+
+    <div class="grid-3">
+      <div class="stat">
+        <div class="stat__label">Upgrade cost</div>
+        <div class="stat__value">@Model.UpgradeCost</div>
+        <div class="stat__hint">credits, one time</div>
+      </div>
+      <div class="stat">
+        <div class="stat__label">Your balance</div>
+        <div class="stat__value">@Model.Balance</div>
+        <div class="stat__hint">credits available</div>
+      </div>
+      <div class="stat">
+        <div class="stat__label">Short by</div>
+        <div class="stat__value">@Model.ShortBy</div>
+        <div class="stat__hint">credits needed</div>
+      </div>
+    </div>
+
+    <div class="card"><div class="card__footer">
+      <div class="row">
+        <a href="/pricing" class="btn btn--primary">Buy credits</a>
+        <a href="/learning-path" class="btn">Keep the free path</a>
+      </div>
+    </div></div>
+  </div>
+}
+else
+{
+  <!-- Confirmation state: balance >= 5 -->
+  <div class="stack" id="upgrade-confirm-state">
+    <div class="row row--between" style="align-items: center;">
+      <div>
+        <h1 class="m-0 mb-1">Upgrade to premium path</h1>
+        <p class="text-muted no-margin">Same @summary.TotalModules modules, with video lessons, AI-graded writing, and per-question explanations.</p>
+      </div>
+      <span class="badge badge--warning">@Model.UpgradeCost credits</span>
+    </div>
+
+    <div class="card">
+      <div class="card__header"><strong>Free compared with premium</strong></div>
+      <div class="card__body">
+        <table class="table">
+          <caption class="visually-hidden">What the free and premium learning paths each include</caption>
+          <thead>
+            <tr>
+              <th scope="col">What you get</th>
+              <th scope="col">Free</th>
+              <th scope="col">Premium</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row">Practice modules in order</th>
+              <td><span class="badge badge--success">Included</span></td>
+              <td><span class="badge badge--success">Included</span></td>
+            </tr>
+            <tr>
+              <th scope="row">Progress tracking against your target</th>
+              <td><span class="badge badge--success">Included</span></td>
+              <td><span class="badge badge--success">Included</span></td>
+            </tr>
+            <tr>
+              <th scope="row">Why each answer is right or wrong</th>
+              <td><span class="badge badge--muted">Not included</span></td>
+              <td><span class="badge badge--success">Included</span></td>
+            </tr>
+            <tr>
+              <th scope="row">Video lesson per grammar point</th>
+              <td><span class="badge badge--muted">Not included</span></td>
+              <td><span class="badge badge--success">Included</span></td>
+            </tr>
+            <tr>
+              <th scope="row">AI-graded writing tasks with rubric scores</th>
+              <td><span class="badge badge--muted">Not included</span></td>
+              <td><span class="badge badge--success">Included</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card__footer">
+        <div class="row row--between" style="align-items: center;">
+          <div class="stat" style="border-top: 0; padding: 0">
+            <div class="stat__label">Premium path upgrade</div>
+            <div class="stat__value">@Model.UpgradeCost</div>
+            <div class="stat__hint">credits, charged once (Balance: @Model.Balance)</div>
+          </div>
+          <form method="post" action="/learning-path/upgrade" class="no-margin">
+            @Html.AntiForgeryToken()
+            <div class="row" style="gap: var(--space-2);">
+              <button type="submit" class="btn btn--primary">Upgrade now</button>
+              <a href="/learning-path" class="btn">Keep the free path</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <p class="text-xs text-muted no-margin">Credits are deducted when the upgrade is confirmed, not now. AI-graded writing tasks deduct credits separately.</p>
+  </div>
+}

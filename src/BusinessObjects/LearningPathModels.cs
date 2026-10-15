@@ -50,7 +50,9 @@ public sealed record ModuleTopicInfo(
     int TopicId,
     string Title,
     int? QuestionCount,
-    string Status);
+    string Status,
+    string? VideoPath = null,
+    bool CanAccessVideo = false);
 
 public sealed record ModuleStepInfo(
     int StepId,

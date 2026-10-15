@@ -17,6 +17,11 @@
   <div class="alert alert--danger" role="alert">@Model.ErrorMessage</div>
 }
 
+@if (!string.IsNullOrEmpty(Model.SuccessMessage))
+{
+  <div class="alert alert--success mb-4" role="status">@Model.SuccessMessage</div>
+}
+
 @if (!summary.HasActivePath)
 {
   <div class="card"><div class="card__body">
@@ -94,8 +99,13 @@ else
     {
       <div class="alert alert--info">
         <strong>You are on the free path.</strong>
-        It covers practice modules. <a href="/pricing">Upgrade to premium</a> for AI-graded writing, video lessons, and detailed explanations.
+        It covers practice modules. <a href="/learning-path/upgrade">Upgrade to premium</a> for AI-graded writing, video lessons, and detailed explanations.
       </div>
+    }
+
+    @if (Model.InsightPanel != null)
+    {
+      @await Html.PartialAsync("_AiInsightPanel", Model.InsightPanel)
     }
 
     @foreach (var group in summary.Modules.GroupBy(m => m.GroupName ?? "Learning modules"))

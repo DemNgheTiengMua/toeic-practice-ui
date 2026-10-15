@@ -19,6 +19,7 @@ public class LearningPathException(string code, string message) : Exception(mess
     public const string StepNotFound = "step_not_found";
     public const string StepLocked = "step_locked";
     public const string NoQuestionsAvailable = "no_questions_available";
+    public const string InsufficientCredits = "insufficient_credits";
 
     public string Code { get; } = code;
 }
@@ -36,6 +37,8 @@ public interface ILearningPathService
     Task<bool> CompleteStepAsync(int userId, int stepId, decimal? score = null, CancellationToken cancellationToken = default);
 
     Task<bool> ResetActivePathAsync(int userId, CancellationToken cancellationToken = default);
+
+    Task<LearningPathSummaryView> UpgradePathAsync(int userId, CancellationToken cancellationToken = default);
 }
 
 public sealed class LearningPathService(
@@ -116,7 +119,7 @@ public sealed class LearningPathService(
             b.Code == activePath.PathTemplate.ToBandCode)).ToList();
 
         bool isPremium = await db.CreditTransactions
-            .AnyAsync(t => t.LearnerPathId == activePath.LearnerPathId && t.Reason == "premium_path", cancellationToken);
+            .AnyAsync(t => t.LearnerPathId == activePath.LearnerPathId && t.Reason == CreditReason.PremiumPath.ToCode(), cancellationToken);
 
         var templateModules = await db.PathModules
             .AsNoTracking()
@@ -391,7 +394,7 @@ public sealed class LearningPathService(
             .ToListAsync(cancellationToken);
 
         bool isPremium = await db.CreditTransactions
-            .AnyAsync(t => t.LearnerPathId == activePath.LearnerPathId && t.Reason == "premium_path", cancellationToken);
+            .AnyAsync(t => t.LearnerPathId == activePath.LearnerPathId && t.Reason == CreditReason.PremiumPath.ToCode(), cancellationToken);
 
         string moduleStatus = "not_started";
         if (steps.Count > 0 && steps.All(s => s.Status == "done"))
@@ -466,7 +469,7 @@ public sealed class LearningPathService(
                     topicStatus = "not_started";
                 }
             }
-            topics.Add(new ModuleTopicInfo(t.TopicId, t.Title, t.QuestionCount, topicStatus));
+            topics.Add(new ModuleTopicInfo(t.TopicId, t.Title, t.QuestionCount, topicStatus, isPremium ? t.VideoPath : null, isPremium && !string.IsNullOrEmpty(t.VideoPath)));
         }
 
         var stepInfos = steps.Select(s =>
@@ -490,14 +493,16 @@ public sealed class LearningPathService(
                 s.Score,
                 s.PathModuleItem.QuestionCount,
                 s.PathModuleItem.IsPremiumOnly,
-                CanStart: stepStatus != LearnerPathStepStatus.Locked,
+                CanStart: stepStatus != LearnerPathStepStatus.Locked && (!s.PathModuleItem.IsPremiumOnly || isPremium),
                 s.StartedAt,
                 s.CompletedAt,
                 s.PathModuleItem.RefSectionId,
                 s.PathModuleItem.RefExamId);
         }).ToList();
 
-        var activeStep = steps.FirstOrDefault(s => s.Status == "in_progress")
+        var activeStep = steps.FirstOrDefault(s => s.Status == "in_progress" && (!s.PathModuleItem.IsPremiumOnly || isPremium))
+            ?? steps.FirstOrDefault(s => s.Status == "available" && (!s.PathModuleItem.IsPremiumOnly || isPremium))
+            ?? steps.FirstOrDefault(s => s.Status == "in_progress")
             ?? steps.FirstOrDefault(s => s.Status == "available")
             ?? steps.FirstOrDefault();
 
@@ -548,6 +553,16 @@ public sealed class LearningPathService(
         if (step.Status == "locked")
         {
             throw new LearningPathException(LearningPathException.StepLocked, "This step is locked.");
+        }
+
+        if (step.PathModuleItem.IsPremiumOnly)
+        {
+            bool isPremium = await db.CreditTransactions
+                .AnyAsync(t => t.LearnerPathId == step.LearnerPathId && t.Reason == CreditReason.PremiumPath.ToCode(), cancellationToken);
+            if (!isPremium)
+            {
+                throw new LearningPathException(LearningPathException.StepLocked, "This step requires a premium learning path.");
+            }
         }
 
         if (step.Status == "available")
@@ -712,5 +727,65 @@ public sealed class LearningPathService(
         }
 
         return false;
+    }
+
+    public async Task<LearningPathSummaryView> UpgradePathAsync(int userId, CancellationToken cancellationToken = default)
+    {
+        var activeCertId = await learners.GetActiveCertIdAsync(userId, cancellationToken);
+        var activePath = await db.LearnerPaths
+            .FirstOrDefaultAsync(p => p.UserId == userId && p.CertId == activeCertId && p.Status == "active", cancellationToken)
+            ?? throw new LearningPathException(LearningPathException.PathNotFound, "No active learning path found.");
+
+        // Idempotency: if already unlocked, return current path summary directly
+        var premiumReason = CreditReason.PremiumPath.ToCode();
+        bool alreadyPremium = await db.CreditTransactions
+            .AnyAsync(t => t.LearnerPathId == activePath.LearnerPathId && t.Reason == premiumReason, cancellationToken);
+        if (alreadyPremium)
+        {
+            return await GetActivePathAsync(userId, cancellationToken);
+        }
+
+        // "Block before you charge": verify balance >= 5 credits via vw_UserCreditBalances
+        var currentBalance = await db.vw_UserCreditBalances
+            .Where(b => b.UserId == userId)
+            .Select(b => b.Balance)
+            .FirstOrDefaultAsync(cancellationToken) ?? 0;
+
+        if (currentBalance < 5)
+        {
+            throw new LearningPathException(LearningPathException.InsufficientCredits, "You do not have enough credits to upgrade to premium (5 credits required).");
+        }
+
+        var debitTxn = new CreditTransaction
+        {
+            UserId = userId,
+            Reason = premiumReason,
+            Delta = -5,
+            LearnerPathId = activePath.LearnerPathId,
+            OrderId = null,
+            AttemptId = null,
+            BookingId = null,
+            AdminUserId = null,
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+
+        try
+        {
+            db.CreditTransactions.Add(debitTxn);
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException)
+        {
+            db.Entry(debitTxn).State = EntityState.Detached;
+            // Check if concurrently upgraded (UX_CreditTxn_Path)
+            bool upgraded = await db.CreditTransactions
+                .AnyAsync(t => t.LearnerPathId == activePath.LearnerPathId && t.Reason == premiumReason, cancellationToken);
+            if (!upgraded)
+            {
+                throw;
+            }
+        }
+
+        return await GetActivePathAsync(userId, cancellationToken);
     }
 }

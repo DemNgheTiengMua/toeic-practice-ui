@@ -33,5 +33,6 @@ public sealed record AiInsightDto(
     string SourceFingerprint,
     DateTimeOffset CreatedAt,
     DateTimeOffset? CompletedAt,
-    IReadOnlyList<RecommendationDto> Recommendations
+    IReadOnlyList<RecommendationDto> Recommendations,
+    int? LearnerPathId = null
 );

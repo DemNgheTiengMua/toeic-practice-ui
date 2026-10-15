@@ -24,7 +24,24 @@ public sealed class LearningPathController(
         {
             var bearer = await BearerAsync();
             var summary = await Api.GetLearningPathAsync(bearer, cancellationToken);
-            return View(new LearningPathIndexViewModel(summary, TempData["ErrorMessage"] as string));
+            AiInsightDto? insight = null;
+            if (summary is { HasActivePath: true, LearnerPathId: { } pathId })
+            {
+                try
+                {
+                    insight = await Api.GetPathInsightAsync(bearer, cancellationToken);
+                }
+                catch (ApiException ex)
+                {
+                    logger.LogWarning(ex, "Failed to load path insight for path {PathId}", pathId);
+                }
+            }
+
+            var insightPanel = summary is { HasActivePath: true, LearnerPathId: { } pId }
+                ? new AiInsightPanelViewModel("path", pId, insight)
+                : null;
+
+            return View(new LearningPathIndexViewModel(summary!, TempData["ErrorMessage"] as string, insightPanel, TempData["SuccessMessage"] as string));
         }
         catch (ApiException ex)
         {
@@ -93,7 +110,7 @@ public sealed class LearningPathController(
         catch (ApiException ex) when (ex.Code == ApiError.Codes.LearningPathStepLocked)
         {
             logger.LogWarning(ex, "Step {StepId} is locked", stepId);
-            TempData["ErrorMessage"] = "This step is locked. Complete previous steps first.";
+            TempData["ErrorMessage"] = ex.Detail ?? ex.Message ?? "This step is locked. Complete previous steps first.";
             return RedirectToAction(nameof(Index));
         }
         catch (ApiException ex)
@@ -119,6 +136,88 @@ public sealed class LearningPathController(
             logger.LogError(ex, "Failed to reset learning path");
             TempData["ErrorMessage"] = ex.Detail ?? "Could not reset learning path.";
             return RedirectToAction(nameof(Index));
+        }
+    }
+
+    [HttpGet("/learning-path/upgrade")]
+    public async Task<IActionResult> Upgrade(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var bearer = await BearerAsync();
+            var summary = await Api.GetLearningPathAsync(bearer, cancellationToken);
+            if (!summary.HasActivePath)
+            {
+                return RedirectToAction(nameof(Index));
+            }
+
+            var wallet = await Api.GetWalletAsync(bearer, cancellationToken);
+            return View(new LearningPathUpgradeViewModel(
+                Summary: summary,
+                Balance: wallet.Balance,
+                ErrorMessage: TempData["ErrorMessage"] as string));
+        }
+        catch (ApiException ex)
+        {
+            logger.LogError(ex, "Failed to load upgrade page");
+            TempData["ErrorMessage"] = "Could not load the upgrade details. Please try again.";
+            return RedirectToAction(nameof(Index));
+        }
+    }
+
+    [HttpPost("/learning-path/upgrade")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UpgradeConfirmed(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var bearer = await BearerAsync();
+            await Api.UpgradeLearningPathAsync(bearer, cancellationToken);
+            TempData["SuccessMessage"] = "Successfully upgraded to premium path!";
+            return RedirectToAction(nameof(Index));
+        }
+        catch (ApiException ex) when (ex.Code == ApiError.Codes.InsufficientCredits)
+        {
+            logger.LogWarning(ex, "User has insufficient credits to upgrade");
+            TempData["ErrorMessage"] = "Not enough credits. The upgrade costs 5 credits.";
+            return RedirectToAction(nameof(Upgrade));
+        }
+        catch (ApiException ex)
+        {
+            logger.LogError(ex, "Failed to upgrade learning path");
+            TempData["ErrorMessage"] = ex.Detail ?? ex.Title ?? "Could not upgrade learning path. Please try again.";
+            return RedirectToAction(nameof(Upgrade));
+        }
+    }
+
+    [HttpGet("/learner/insights/path")]
+    public async Task<IActionResult> GetPathInsight(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var bearer = await BearerAsync();
+            var insight = await Api.GetPathInsightAsync(bearer, cancellationToken);
+            return Ok(insight);
+        }
+        catch (ApiException ex)
+        {
+            return StatusCode(ex.Status, new { code = ex.Code, message = ex.Message });
+        }
+    }
+
+    [HttpPost("/learner/insights/path/retry")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RetryPathInsight(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var bearer = await BearerAsync();
+            await Api.RetryPathInsightAsync(bearer, cancellationToken);
+            return Ok(new { success = true });
+        }
+        catch (ApiException ex)
+        {
+            return StatusCode(ex.Status, new { code = ex.Code, message = ex.Message });
         }
     }
 }

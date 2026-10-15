@@ -700,6 +700,171 @@ public sealed class AiInsightServiceTests(DatabaseFixture database)
         Assert.Equal(AiInsightScope.Dashboard, insight.Scope);
     }
 
+    private async Task<(int certId, int templateId, int pathId, int step1Id, int step2Id)> SeedLearningPathFixtureAsync(int userId, string certCode)
+    {
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+
+        var cert = new Certificate { Code = certCode, Name = $"Cert {certCode}", IsActive = true };
+        db.Certificates.Add(cert);
+        await db.SaveChangesAsync();
+
+        var skill = new Skill { CertId = cert.CertId, Code = "READ", Name = "Reading", Modality = "reading", DisplayOrder = 1 };
+        db.Skills.Add(skill);
+        await db.SaveChangesAsync();
+
+        var section = new Section { CertId = cert.CertId, SkillId = skill.SkillId, Modality = "reading", Code = "P5", Name = "Incomplete Sentences", DisplayOrder = 1, OptionCount = 4 };
+        db.Sections.Add(section);
+
+        var bandA = new ScoreBand { CertId = cert.CertId, Code = "A2", Name = "Elementary", MinTotal = 200, MaxTotal = 400, DisplayOrder = 1 };
+        var bandB = new ScoreBand { CertId = cert.CertId, Code = "B2", Name = "Upper Intermediate", MinTotal = 700, MaxTotal = 900, DisplayOrder = 2 };
+        db.ScoreBands.AddRange(bandA, bandB);
+        await db.SaveChangesAsync();
+
+        var template = new PathTemplate { CertId = cert.CertId, FromBandCode = "A2", ToBandCode = "B2", Name = "A2 to B2" };
+        db.PathTemplates.Add(template);
+        await db.SaveChangesAsync();
+
+        var module = new PathModule { TemplateId = template.TemplateId, SkillId = skill.SkillId, CertId = cert.CertId, DisplayOrder = 1, Title = "Grammar" };
+        db.PathModules.Add(module);
+        await db.SaveChangesAsync();
+
+        var item1 = new PathModuleItem { ModuleId = module.ModuleId, CertId = cert.CertId, TemplateId = template.TemplateId, ItemType = "practice_section", RefSectionId = section.SectionId, DisplayOrder = 1 };
+        var item2 = new PathModuleItem { ModuleId = module.ModuleId, CertId = cert.CertId, TemplateId = template.TemplateId, ItemType = "practice_section", RefSectionId = section.SectionId, DisplayOrder = 2 };
+        db.PathModuleItems.AddRange(item1, item2);
+        await db.SaveChangesAsync();
+
+        var path = new LearnerPath { UserId = userId, CertId = cert.CertId, TemplateId = template.TemplateId, CurrentBandCode = "A2", Status = "active", StartedAt = DateTimeOffset.UtcNow };
+        db.LearnerPaths.Add(path);
+        await db.SaveChangesAsync();
+
+        var step1 = new LearnerPathStep { LearnerPathId = path.LearnerPathId, PathModuleItemId = item1.ItemId, TemplateId = template.TemplateId, Status = "available" };
+        var step2 = new LearnerPathStep { LearnerPathId = path.LearnerPathId, PathModuleItemId = item2.ItemId, TemplateId = template.TemplateId, Status = "locked" };
+        db.LearnerPathSteps.AddRange(step1, step2);
+        await db.SaveChangesAsync();
+
+        var user = await db.Users.FindAsync(userId);
+        user!.ActiveCertId = cert.CertId;
+        await db.SaveChangesAsync();
+
+        return (cert.CertId, template.TemplateId, path.LearnerPathId, step1.StepId, step2.StepId);
+    }
+
+    [Fact]
+    public async Task GetOrCreatePathInsightAsync_CreatesPendingInsight_WithCorrectScopeAndFingerprint()
+    {
+        var certCode = Unique("PI");
+        var userId = await SeedLearnerAsync();
+        var (certId, templateId, pathId, step1Id, step2Id) = await SeedLearningPathFixtureAsync(userId, certCode);
+        var (service, _) = CreateService();
+
+        var insight = await service.GetOrCreatePathInsightAsync(userId);
+
+        Assert.Equal(userId, insight.UserId);
+        Assert.Equal(certId, insight.CertId);
+        Assert.Equal(AiInsightScope.Path, insight.Scope);
+        Assert.Equal(pathId, insight.LearnerPathId);
+        Assert.Null(insight.PracticeSessionId);
+        Assert.Null(insight.AttemptId);
+        Assert.Equal(AiInsightStatus.Pending, insight.Status);
+        Assert.NotNull(insight.SourceFingerprint);
+        Assert.Equal(64, insight.SourceFingerprint.Length);
+    }
+
+    [Fact]
+    public async Task GetOrCreatePathInsightAsync_ReusesInsight_WhenStepsUnchanged()
+    {
+        var certCode = Unique("PR");
+        var userId = await SeedLearnerAsync();
+        var (certId, templateId, pathId, step1Id, step2Id) = await SeedLearningPathFixtureAsync(userId, certCode);
+        var (service, _) = CreateService();
+
+        var initial = await service.GetOrCreatePathInsightAsync(userId);
+        await service.ProcessPendingInsightsAsync();
+
+        var reloaded = await service.GetOrCreatePathInsightAsync(userId);
+
+        Assert.Equal(initial.InsightId, reloaded.InsightId);
+        Assert.Equal(initial.SourceFingerprint, reloaded.SourceFingerprint);
+    }
+
+    [Fact]
+    public async Task GetOrCreatePathInsightAsync_Regenerates_WhenStepCompleted()
+    {
+        var certCode = Unique("PG");
+        var userId = await SeedLearnerAsync();
+        var (certId, templateId, pathId, step1Id, step2Id) = await SeedLearningPathFixtureAsync(userId, certCode);
+        var (service, _) = CreateService();
+
+        var initial = await service.GetOrCreatePathInsightAsync(userId);
+        await service.ProcessPendingInsightsAsync();
+
+        // Complete step 1
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            var step = await db.LearnerPathSteps.FindAsync(step1Id);
+            step!.Status = "done";
+            step.CompletedAt = DateTimeOffset.UtcNow;
+            step.Score = 85m;
+            await db.SaveChangesAsync();
+        }
+
+        // Call again -> fingerprint must change because completed step count changed
+        var updated = await service.GetOrCreatePathInsightAsync(userId);
+
+        Assert.NotEqual(initial.InsightId, updated.InsightId);
+        Assert.NotEqual(initial.SourceFingerprint, updated.SourceFingerprint);
+        Assert.Equal(AiInsightStatus.Pending, updated.Status);
+    }
+
+    [Fact]
+    public async Task ProcessPendingInsightsAsync_GeneratesPathInsightNarrativeAndRecommendations()
+    {
+        var certCode = Unique("PN");
+        var userId = await SeedLearnerAsync();
+        var (certId, templateId, pathId, step1Id, step2Id) = await SeedLearningPathFixtureAsync(userId, certCode);
+        var (service, _) = CreateService();
+
+        await service.GetOrCreatePathInsightAsync(userId);
+
+        int processed = await service.ProcessPendingInsightsAsync();
+        Assert.True(processed >= 1);
+
+        var doneInsight = await service.GetOrCreatePathInsightAsync(userId);
+        Assert.Equal(AiInsightStatus.Done, doneInsight.Status);
+        Assert.NotNull(doneInsight.Narrative);
+        Assert.NotEmpty(doneInsight.Narrative);
+        Assert.NotNull(doneInsight.Trend);
+        Assert.NotEmpty(doneInsight.Recommendations);
+    }
+
+    [Fact]
+    public async Task RetryPathInsightAsync_ResetsFailedInsightToPending()
+    {
+        var certCode = Unique("PFAIL");
+        var userId = await SeedLearnerAsync();
+        var (certId, templateId, pathId, step1Id, step2Id) = await SeedLearningPathFixtureAsync(userId, certCode);
+
+        var generator = new FakeAiInsightGenerator { ShouldSimulateFailure = true };
+        var (service, _) = CreateService(generator);
+
+        await service.GetOrCreatePathInsightAsync(userId);
+        await service.ProcessPendingInsightsAsync();
+
+        var failedInsight = await service.GetOrCreatePathInsightAsync(userId);
+        Assert.Equal(AiInsightStatus.Failed, failedInsight.Status);
+
+        // Turn off simulated failure and retry
+        generator.ShouldSimulateFailure = false;
+        await service.RetryPathInsightAsync(userId);
+
+        var retriedInsight = await service.GetOrCreatePathInsightAsync(userId);
+        Assert.Equal(AiInsightStatus.Pending, retriedInsight.Status);
+
+        await service.ProcessPendingInsightsAsync();
+        var doneInsight = await service.GetOrCreatePathInsightAsync(userId);
+        Assert.Equal(AiInsightStatus.Done, doneInsight.Status);
+    }
+
     private sealed class CustomRecoGenerator(IReadOnlyList<GeneratedRecommendation> recommendations) : FakeAiInsightGenerator
     {
         public override Task<AiInsightResult> GenerateInsightAsync(AiInsightGenerationRequest request, System.Threading.CancellationToken cancellationToken = default)

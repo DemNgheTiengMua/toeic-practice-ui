@@ -190,6 +190,56 @@ public static class InsightEndpoints
                 return Problem(StatusCodes.Status400BadRequest, "Insight error", ex.Code, ex.Message);
             }
         });
+
+        // GET /api/learner/insights/path
+        learner.MapGet("/path", async (
+            HttpContext http,
+            IAiInsightService insightService,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var view = await insightService.GetOrCreatePathInsightAsync(CurrentUserId(http), cancellationToken);
+                return Results.Ok(ToDto(view));
+            }
+            catch (AiInsightException ex) when (ex.Code == ApiError.Codes.LearningPathNotFound)
+            {
+                return Problem(StatusCodes.Status404NotFound, "Active learning path not found", ApiError.Codes.LearningPathNotFound, ex.Message);
+            }
+            catch (AiInsightException ex)
+            {
+                return Problem(StatusCodes.Status400BadRequest, "Insight error", ex.Code, ex.Message);
+            }
+        });
+
+        // POST /api/learner/insights/path/retry
+        learner.MapPost("/path/retry", async (
+            HttpContext http,
+            IAiInsightService insightService,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                await insightService.RetryPathInsightAsync(CurrentUserId(http), cancellationToken);
+                return Results.NoContent();
+            }
+            catch (AiInsightException ex) when (ex.Code == ApiError.Codes.LearningPathNotFound)
+            {
+                return Problem(StatusCodes.Status404NotFound, "Active learning path not found", ApiError.Codes.LearningPathNotFound, ex.Message);
+            }
+            catch (AiInsightException ex) when (ex.Code == ApiError.Codes.InsightNotFound)
+            {
+                return Problem(StatusCodes.Status404NotFound, "Insight not found", ApiError.Codes.InsightNotFound, ex.Message);
+            }
+            catch (AiInsightException ex) when (ex.Code == ApiError.Codes.InsightNotFailed)
+            {
+                return Problem(StatusCodes.Status400BadRequest, "Retry not allowed", ApiError.Codes.Validation, ex.Message);
+            }
+            catch (AiInsightException ex)
+            {
+                return Problem(StatusCodes.Status400BadRequest, "Insight error", ex.Code, ex.Message);
+            }
+        });
     }
 
     private static AiInsightDto ToDto(AiInsightView view) => new(
@@ -219,6 +269,7 @@ public static class InsightEndpoints
             r.TargetBandCode,
             r.SkillName,
             r.IsResolved,
-            r.CreatedAt)).ToList()
+            r.CreatedAt)).ToList(),
+        view.LearnerPathId
     );
 }
