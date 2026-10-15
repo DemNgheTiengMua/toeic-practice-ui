@@ -1,0 +1,160 @@
+@model WritingReviewViewModel
+@{
+    Layout = "_LearnerLayout";
+    var rev = Model.Review;
+    ViewData["Title"] = $"Writing Result — {rev.ExamName}";
+    ViewData["Description"] = $"Writing practice evaluation for attempt {rev.AttemptId}.";
+}
+
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+  <a href="/dashboard" class="breadcrumbs__item">Home</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <a href="/practice" class="breadcrumbs__item">Practice</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <span class="breadcrumbs__item" aria-current="page">Writing result</span>
+</nav>
+
+<div class="context-bar mb-4">
+  <div class="context-bar__item">
+    <span class="context-bar__label">Certificate:</span>
+    <span class="context-bar__value">@rev.CertCode</span>
+  </div>
+  <div class="context-bar__item">
+    <span class="context-bar__label">Attempt:</span>
+    <span class="context-bar__value">Writing practice</span>
+  </div>
+  <div class="context-bar__item">
+    <span class="context-bar__label">Cost:</span>
+    <span class="context-bar__value">1 credit · AI grading</span>
+  </div>
+</div>
+
+<div class="stack">
+  <div class="row row--between">
+    <div>
+      <h1 class="m-0 mb-1">Writing result: @rev.ExamName</h1>
+      <p class="text-sm text-muted no-margin">
+        @(rev.SubmittedAt.HasValue ? $"Graded {rev.SubmittedAt.Value:d MMMM yyyy} · " : "")
+        @rev.AnsweredQuestions of @rev.TotalQuestions questions answered
+      </p>
+    </div>
+    <div class="row" style="gap: var(--space-2)">
+      <a class="btn" href="/practice">Practice by section</a>
+      <a class="btn btn--primary" href="/writing/@rev.ExamId/instructions">Practise writing again</a>
+    </div>
+  </div>
+
+  <!-- Score Hero -->
+  <div class="score-hero">
+    <div class="score-hero__total">
+      <div class="score-hero__total-value">@rev.TotalScore.ToString("0.#")</div>
+      <div class="score-hero__total-label">Points earned · out of @rev.MaxScore.ToString("0.#")</div>
+    </div>
+    <div class="score-hero__section">
+      <div class="score-hero__section-value">@rev.AnsweredQuestions / @rev.TotalQuestions</div>
+      <div class="text-sm text-muted">Questions completed</div>
+      <p class="text-xs text-muted m-0 mt-1">Free response AI rubric evaluation</p>
+    </div>
+    <div class="score-hero__section">
+      <div class="score-hero__section-value">1</div>
+      <div class="text-sm text-muted">Credit used</div>
+      <p class="text-xs text-muted m-0 mt-1">AI grading, charged upon submission</p>
+    </div>
+  </div>
+
+  <div class="alert alert--info">
+    <strong>No band is shown for writing alone.</strong>
+    Certificate bands are set from the total of a full multi-skill mock exam. Rubric criteria scores evaluate individual writing performance.
+  </div>
+
+  <!-- Questions Summary Table -->
+  <section class="mt-4">
+    <h2 class="section-group__title">Your answers overview</h2>
+    <div class="card">
+      <div class="card__body">
+        <table class="table">
+          <caption class="visually-hidden">Score and word count for each writing question</caption>
+          <thead>
+            <tr>
+              <th scope="col">Question</th>
+              <th scope="col">Task</th>
+              <th scope="col">Words</th>
+              <th scope="col">Score</th>
+            </tr>
+          </thead>
+          <tbody>
+            @foreach (var q in rev.Questions)
+            {
+              <tr>
+                <th scope="row">@q.DisplayOrder</th>
+                <td>@q.SectionName</td>
+                <td>@q.WordCount</td>
+                <td><strong>@q.TotalScore.ToString("0.#") / @q.MaxScore.ToString("0.#")</strong></td>
+              </tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr>
+              <th scope="row" colspan="3">Total</th>
+              <td><strong>@rev.TotalScore.ToString("0.#") / @rev.MaxScore.ToString("0.#")</strong></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Detailed Per-Question & Per-Criterion Feedback -->
+  <section class="mt-4 stack">
+    <h2 class="section-group__title">Per-question criteria and feedback</h2>
+    @foreach (var q in rev.Questions)
+    {
+      <div class="card mb-4">
+        <div class="card__header">
+          <div class="row row--between">
+            <strong>Question @q.DisplayOrder: @q.SectionName</strong>
+            <span class="badge badge--info">@q.TotalScore.ToString("0.#") / @q.MaxScore.ToString("0.#") pts</span>
+          </div>
+        </div>
+        <div class="card__body stack">
+          <p class="text-sm text-muted no-margin"><strong>Prompt:</strong> @q.Stem</p>
+          <div class="graded-text">
+            @if (string.IsNullOrWhiteSpace(q.ResponseText))
+            {
+              <em class="text-muted">No response was provided.</em>
+            }
+            else
+            {
+              @q.ResponseText
+            }
+          </div>
+        </div>
+        @if (q.Criteria.Count > 0)
+        {
+          <div class="card__footer">
+            <table class="table">
+              <caption class="visually-hidden">What the grader noted on each criterion for question @q.DisplayOrder</caption>
+              <thead>
+                <tr>
+                  <th scope="col" style="width: 25%">Criterion</th>
+                  <th scope="col" style="width: 15%">Score</th>
+                  <th scope="col">Grader's note</th>
+                </tr>
+              </thead>
+              <tbody>
+                @foreach (var crit in q.Criteria)
+                {
+                  <tr>
+                    <th scope="row">@crit.Name</th>
+                    <td><strong>@crit.Score.ToString("0.#") / @crit.MaxScore.ToString("0.#")</strong></td>
+                    <td>@(crit.Comment ?? "Evaluated against rubric.")</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    }
+  </section>
+</div>

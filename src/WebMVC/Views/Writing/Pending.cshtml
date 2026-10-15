@@ -1,0 +1,136 @@
+@model WritingPendingViewModel
+@{
+    Layout = "_LearnerLayout";
+    var p = Model.Pending;
+    ViewData["Title"] = $"AI Grading In Progress — {p.ExamName}";
+    ViewData["Description"] = $"AI grading status for attempt {p.AttemptId}.";
+}
+
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+  <a href="/dashboard" class="breadcrumbs__item">Home</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <a href="/practice" class="breadcrumbs__item">Practice</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <span class="breadcrumbs__item" aria-current="page">Grading in progress</span>
+</nav>
+
+<div class="context-bar mb-4">
+  <div class="context-bar__item">
+    <span class="context-bar__label">Certificate:</span>
+    <span class="context-bar__value">@p.CertCode</span>
+  </div>
+  <div class="context-bar__item">
+    <span class="context-bar__label">Grading:</span>
+    <span class="context-bar__value">AI, against the rubric</span>
+  </div>
+  <div class="context-bar__item">
+    <span class="context-bar__label">Cost:</span>
+    <span class="context-bar__value">1 credit · already charged</span>
+  </div>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+  <div class="alert alert--danger mb-3" role="alert">@Model.ErrorMessage</div>
+}
+
+@if (p.CanRetry || p.FailedResponses > 0)
+{
+  <div class="card mb-4">
+    <div class="card__body">
+      <div class="state-block">
+        <div class="state-block__icon state-block__icon--danger" aria-hidden="true">FAILED</div>
+        <h1 class="state-block__title">Grading did not finish</h1>
+        <p class="state-block__desc">
+          @(p.FailureReason ?? "One or more responses could not be graded.") Your answers are saved. Retrying does not charge another credit.
+        </p>
+        <form method="post" action="/writing/retry/@p.AttemptId" class="mt-3">
+          @Html.AntiForgeryToken()
+          <button type="submit" class="btn btn--primary btn--lg">Retry grading</button>
+        </form>
+      </div>
+    </div>
+  </div>
+}
+else
+{
+  <div class="stack">
+    <h1>AI grading in progress</h1>
+
+    <div class="card">
+      <div class="card__body">
+        <div class="state-block">
+          <div class="state-block__icon" aria-hidden="true">RUNNING</div>
+          <div class="state-block__title">Your responses are being graded</div>
+          <p class="state-block__desc" id="timer-display" role="timer" aria-live="polite">
+            Processing questions (@p.GradedResponses of @p.TotalResponses complete)…
+          </p>
+
+          <ol class="stack mx-auto text-left m-0" id="stage-list" style="max-width: 420px; list-style: none; padding: 0; gap: var(--space-3)">
+            <li class="row">
+              <span class="badge badge--success">Done</span>
+              <span class="text-sm">Responses received</span>
+            </li>
+            <li class="row">
+              <span class="badge @(p.GradedResponses > 0 ? "badge--success" : "badge--info")">@(p.GradedResponses > 0 ? "Done" : "Now")</span>
+              <span class="text-sm">Marked against the rubric</span>
+            </li>
+            <li class="row">
+              <span class="badge @(p.GradedResponses == p.TotalResponses ? "badge--success" : "badge--info")">@(p.GradedResponses == p.TotalResponses ? "Done" : "Now")</span>
+              <span class="text-sm">Scoring each criterion</span>
+            </li>
+            <li class="row">
+              <span class="badge badge--muted">Next</span>
+              <span class="text-sm">Generating reviewer comments</span>
+            </li>
+          </ol>
+
+          <div class="progress mx-auto" style="max-width: 320px; margin-top: var(--space-4)">
+            @{
+              var pct = p.TotalResponses > 0 ? Math.Round((double)p.GradedResponses / p.TotalResponses * 100) : 50;
+              if (pct < 20) pct = 20;
+            }
+            <div class="progress__bar" id="progress-bar" style="width: @pct%;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="alert alert--info">
+      <strong>Stay on this page.</strong> Your results will appear automatically when grading completes.
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      const attemptId = @p.AttemptId;
+
+      async function pollStatus() {
+        try {
+          const resp = await fetch(`/writing/status/${attemptId}`);
+          if (resp.ok) {
+            const data = await resp.json();
+            if (data.attemptStatus === 'graded' || data.attemptStatus === 2) {
+              window.location.href = `/writing/review/${attemptId}`;
+              return;
+            }
+            if (data.canRetry || data.failedResponses > 0) {
+              window.location.reload();
+              return;
+            }
+            // Update counts if partially graded
+            const desc = document.getElementById('timer-display');
+            if (desc) {
+              desc.textContent = `Processing questions (${data.gradedResponses} of ${data.totalResponses} complete)…`;
+            }
+          }
+        } catch (err) {
+          // Keep polling
+        }
+        setTimeout(pollStatus, 2000);
+      }
+
+      setTimeout(pollStatus, 2000);
+    })();
+  </script>
+}

@@ -53,6 +53,24 @@ public enum AttemptStatusDto
     [JsonStringEnumMemberName("abandoned")] Abandoned,
 }
 
+/// <summary>CK_FreeResp_Status: draft, pending_ai, graded.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<FreeResponseStatusDto>))]
+public enum FreeResponseStatusDto
+{
+    [JsonStringEnumMemberName("draft")] Draft,
+    [JsonStringEnumMemberName("pending_ai")] PendingAi,
+    [JsonStringEnumMemberName("graded")] Graded,
+}
+
+/// <summary>CK_AiGradings_Status: pending, done, failed.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<AiGradingStatusDto>))]
+public enum AiGradingStatusDto
+{
+    [JsonStringEnumMemberName("pending")] Pending,
+    [JsonStringEnumMemberName("done")] Done,
+    [JsonStringEnumMemberName("failed")] Failed,
+}
+
 /// <summary>CK_Practice_Status: in_progress, finished, abandoned.</summary>
 [JsonConverter(typeof(JsonStringEnumConverter<PracticeStatusDto>))]
 public enum PracticeStatusDto

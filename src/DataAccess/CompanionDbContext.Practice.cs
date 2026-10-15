@@ -25,5 +25,10 @@ public partial class CompanionDbContext
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__QuestionO__Quest__339FAB6E");
         });
+
+        modelBuilder.Entity<FreeResponse>(entity =>
+        {
+            entity.Property(e => e.SubmittedAt).ValueGeneratedNever();
+        });
     }
 }

@@ -47,6 +47,22 @@ public enum AttemptStatus
     Abandoned,
 }
 
+/// <summary>CK_FreeResp_Status: draft, pending_ai, graded.</summary>
+public enum FreeResponseStatus
+{
+    Draft,
+    PendingAi,
+    Graded,
+}
+
+/// <summary>CK_AiGradings_Status: pending, done, failed.</summary>
+public enum AiGradingStatus
+{
+    Pending,
+    Done,
+    Failed,
+}
+
 /// <summary>CK_Practice_Status: in_progress, finished, abandoned.</summary>
 public enum PracticeStatus
 {

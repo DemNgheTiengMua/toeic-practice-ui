@@ -1,0 +1,323 @@
+@model WritingTakeViewModel
+@{
+    Layout = "_LearnerLayout";
+    var take = Model.Take;
+    var q = take.Question;
+    ViewData["Title"] = $"Writing — Question {take.CurrentQuestionIndex} of {take.TotalQuestions}";
+    ViewData["Description"] = $"Writing attempt {take.AttemptId} on {take.ExamName}.";
+}
+
+@Html.AntiForgeryToken()
+
+<div class="row row--between mb-3">
+  <div class="row" style="gap: var(--space-2)">
+    <strong>@take.ExamName</strong>
+    <span class="badge badge--info">Question @take.CurrentQuestionIndex of @take.TotalQuestions</span>
+  </div>
+  <div class="row" style="gap: var(--space-3)">
+    <span id="save-status-text" class="save-status save-status--saved" role="status" aria-live="polite">
+      @(q.DraftSavedAt.HasValue ? $"Saved {q.DraftSavedAt.Value:HH:mm:ss}" : "Draft ready")
+    </span>
+    <span class="timer" role="timer" aria-label="Time remaining">
+      <span class="text-sm text-muted">Time left</span>
+      <span id="timer-display" class="timer__value" data-remaining="@take.RemainingSeconds">--:--</span>
+    </span>
+  </div>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+  <div class="alert alert--danger mb-3" role="alert">@Model.ErrorMessage</div>
+}
+
+<div class="writing-panes">
+  <!-- Left pane: Prompt -->
+  <div class="writing-panes__prompt stack">
+    <div class="card">
+      <div class="card__header">
+        <div class="row row--between">
+          <span class="question__number">Question @take.CurrentQuestionIndex</span>
+          <span class="badge badge--muted">@q.SectionName</span>
+        </div>
+      </div>
+      <div class="card__body stack">
+        @if (!string.IsNullOrEmpty(q.GroupImagePath))
+        {
+          <div class="mb-3">
+            <img src="@q.GroupImagePath" alt="@(q.GroupImageAlt ?? "Question illustration")" class="img-fluid" style="max-height: 260px; object-fit: contain; width: 100%; border: 1px solid var(--color-rule);" />
+          </div>
+        }
+
+        <p class="question__stem" style="font-size: 1.1rem; line-height: 1.5;">@q.Stem</p>
+
+        @if (!string.IsNullOrEmpty(q.Hint))
+        {
+          <div class="alert alert--info text-sm">
+            <strong>Hint:</strong> @q.Hint
+          </div>
+        }
+
+        <div class="grid-2 mt-3">
+          @if (q.ResponseSeconds.HasValue)
+          {
+            <div class="stat">
+              <div class="stat__label">Recommended time</div>
+              <div class="stat__value">@(q.ResponseSeconds.Value / 60) min</div>
+            </div>
+          }
+          <div class="stat">
+            <div class="stat__label">Target length</div>
+            <div class="stat__value">
+              @if (q.MinWords.HasValue && q.MaxWords.HasValue)
+              {
+                <span>@q.MinWords–@q.MaxWords</span>
+              }
+              else if (q.MinWords.HasValue)
+              {
+                <span>@q.MinWords+</span>
+              }
+              else if (q.MaxWords.HasValue)
+              {
+                <span>≤@q.MaxWords</span>
+              }
+              else
+              {
+                <span>Open</span>
+              }
+            </div>
+            <div class="stat__hint">words</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right pane: Answer Editor -->
+  <div class="stack">
+    <div class="card">
+      <div class="card__header">
+        <div class="row row--between">
+          <strong>Your answer</strong>
+          <span class="text-xs text-muted">No spell check, as on test day</span>
+        </div>
+      </div>
+      <div class="card__body stack">
+        <label class="visually-hidden" for="writing-editor">Your writing response</label>
+        <textarea
+          id="writing-editor"
+          class="answer-sheet"
+          rows="14"
+          spellcheck="false"
+          placeholder="Type your response here..."
+          data-attempt-id="@take.AttemptId"
+          data-question-id="@q.QuestionId"
+          data-min-words="@(q.MinWords ?? 0)"
+          data-max-words="@(q.MaxWords ?? 0)">@(q.ResponseText ?? "")</textarea>
+
+        <!-- Live Word Meter -->
+        <div class="word-meter" id="word-meter-container">
+          <div class="word-meter__readout">
+            <span id="word-count" class="word-meter__count">0</span>
+            <span id="word-status" class="word-meter__state">words</span>
+          </div>
+          <div class="word-meter__track">
+            @if (q.MinWords.HasValue && q.MinWords.Value > 0)
+            {
+              <div class="word-meter__tick" style="left: 70%" aria-hidden="true">
+                <span class="word-meter__tick-label">min @q.MinWords</span>
+              </div>
+            }
+            <div id="word-meter-fill" class="word-meter__fill" style="width: 0%"></div>
+          </div>
+        </div>
+
+        <p class="text-xs text-muted no-margin">
+          Writing under the minimum, or over the maximum, costs marks in AI grading but is still accepted.
+        </p>
+      </div>
+
+      <div class="card__footer">
+        <div class="row row--between">
+          <div class="row" style="gap: var(--space-2)">
+            <button type="button" class="btn btn--secondary" id="btn-save-draft">Save draft</button>
+            <form method="post" action="/writing/submit/@take.AttemptId" id="submit-form" style="display:inline;">
+              @Html.AntiForgeryToken()
+              <button type="submit" class="btn btn--primary" id="btn-submit-exam" onclick="return confirm('Are you sure you want to finish and submit your writing for AI grading?');">
+                Finish and submit for AI grading
+              </button>
+            </form>
+          </div>
+          <span class="text-xs text-muted">Question @take.CurrentQuestionIndex of @take.TotalQuestions</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Question Navigator -->
+<div class="mt-4">
+  <div class="card">
+    <div class="card__header">
+      <div class="row row--between">
+        <strong class="text-sm">Questions navigator</strong>
+        <span class="text-xs text-muted">
+          @take.Questions.Count(n => n.IsAnswered) of @take.TotalQuestions answered
+        </span>
+      </div>
+    </div>
+    <div class="card__body">
+      <div class="navigator navigator--strip" role="group" aria-label="Questions list">
+        @foreach (var nav in take.Questions)
+        {
+          var cls = nav.IsCurrent ? "is-current" : (nav.IsAnswered ? "is-answered" : "is-unanswered");
+          <a href="/writing/take/@take.AttemptId?q=@nav.QuestionId"
+             class="navigator__cell @cls"
+             aria-label="Question @nav.DisplayOrder (@(nav.IsAnswered ? "Answered" : "Unanswered"))"
+             onclick="return handleNavClick(event, '@nav.QuestionId');">
+            @nav.DisplayOrder
+          </a>
+        }
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function() {
+    const editor = document.getElementById('writing-editor');
+    const wordCountSpan = document.getElementById('word-count');
+    const wordStatusSpan = document.getElementById('word-status');
+    const wordMeterFill = document.getElementById('word-meter-fill');
+    const saveStatusText = document.getElementById('save-status-text');
+    const btnSaveDraft = document.getElementById('btn-save-draft');
+
+    if (!editor) return;
+
+    const attemptId = parseInt(editor.getAttribute('data-attempt-id'), 10);
+    const questionId = parseInt(editor.getAttribute('data-question-id'), 10);
+    const minWords = parseInt(editor.getAttribute('data-min-words'), 10) || 0;
+    const maxWords = parseInt(editor.getAttribute('data-max-words'), 10) || 0;
+
+    function countWords(str) {
+      if (!str) return 0;
+      const tokens = str.trim().split(/\s+/);
+      return tokens.length === 1 && tokens[0] === '' ? 0 : tokens.length;
+    }
+
+    function updateWordMeter() {
+      const words = countWords(editor.value);
+      wordCountSpan.textContent = words;
+
+      let pct = 0;
+      let statusDesc = 'words';
+
+      if (minWords > 0) {
+        if (words < minWords) {
+          const under = minWords - words;
+          statusDesc = `words · ${under} under the ${minWords}-word minimum`;
+          pct = Math.min(70, Math.round((words / minWords) * 70));
+        } else if (maxWords > 0 && words > maxWords) {
+          const over = words - maxWords;
+          statusDesc = `words · ${over} over the ${maxWords}-word maximum`;
+          pct = 100;
+        } else {
+          statusDesc = `words · minimum ${minWords} met`;
+          pct = maxWords > 0
+            ? 70 + Math.min(30, Math.round(((words - minWords) / (maxWords - minWords)) * 30))
+            : 85;
+        }
+      } else if (maxWords > 0) {
+        if (words > maxWords) {
+          const over = words - maxWords;
+          statusDesc = `words · ${over} over the ${maxWords}-word maximum`;
+          pct = 100;
+        } else {
+          statusDesc = `words · within ${maxWords}-word limit`;
+          pct = Math.round((words / maxWords) * 100);
+        }
+      }
+
+      wordStatusSpan.textContent = statusDesc;
+      wordMeterFill.style.width = pct + '%';
+    }
+
+    editor.addEventListener('input', updateWordMeter);
+    updateWordMeter();
+
+    // Auto-save logic
+    let isSaving = false;
+    let dirty = false;
+    let saveTimeout = null;
+
+    editor.addEventListener('input', function() {
+      dirty = true;
+      if (saveTimeout) clearTimeout(saveTimeout);
+      saveTimeout = setTimeout(saveDraft, 4000);
+    });
+
+    async function saveDraft() {
+      if (isSaving || !dirty) return;
+      isSaving = true;
+      saveStatusText.textContent = 'Saving…';
+
+      try {
+        const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
+        const token = tokenInput ? tokenInput.value : '';
+
+        const resp = await fetch('/writing/save-draft', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'RequestVerificationToken': token
+          },
+          body: JSON.stringify({
+            attemptId: attemptId,
+            questionId: questionId,
+            responseText: editor.value
+          })
+        });
+
+        if (resp.ok) {
+          const d = new Date();
+          const timeStr = d.toTimeString().split(' ')[0];
+          saveStatusText.textContent = `Saved ${timeStr}`;
+          dirty = false;
+        } else {
+          saveStatusText.textContent = 'Save failed';
+        }
+      } catch (err) {
+        saveStatusText.textContent = 'Save failed';
+      } finally {
+        isSaving = false;
+      }
+    }
+
+    btnSaveDraft.addEventListener('click', saveDraft);
+
+    window.handleNavClick = function(e, targetQId) {
+      if (dirty) {
+        saveDraft();
+      }
+      return true;
+    };
+
+    // Timer countdown
+    const timerDisplay = document.getElementById('timer-display');
+    let remaining = parseInt(timerDisplay?.getAttribute('data-remaining') || '0', 10);
+
+    function updateTimer() {
+      if (!timerDisplay) return;
+      if (remaining <= 0) {
+        timerDisplay.textContent = '00:00';
+        return;
+      }
+      const m = Math.floor(remaining / 60);
+      const s = remaining % 60;
+      timerDisplay.textContent = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+      remaining--;
+    }
+
+    setInterval(updateTimer, 1000);
+    updateTimer();
+  })();
+</script>

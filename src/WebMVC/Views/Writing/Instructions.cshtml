@@ -1,0 +1,132 @@
+@model WritingInstructionsViewModel
+@{
+    Layout = "_LearnerLayout";
+    var instr = Model.Instructions;
+    ViewData["Title"] = $"Writing Instructions — {instr.ExamName}";
+    ViewData["Description"] = $"Writing practice instructions for {instr.ExamName}.";
+    var hasCredits = instr.CreditBalance >= instr.CreditCost;
+}
+
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+  <a href="/dashboard" class="breadcrumbs__item">Home</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <a href="/practice" class="breadcrumbs__item">Practice</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <span class="breadcrumbs__item" aria-current="page">Writing instructions</span>
+</nav>
+
+<div class="row row--between">
+  <div>
+    <h1 class="m-0 mb-1">Before you begin: @instr.ExamName</h1>
+    <p class="text-muted no-margin">
+      Certificate: <strong>@instr.CertCode</strong> · Duration: <strong>@instr.DurationMinutes minutes</strong> · Questions: <strong>@instr.QuestionCount</strong>
+    </p>
+  </div>
+  <div>
+    <span class="badge @(hasCredits ? "badge--info" : "badge--warning")">
+      @instr.CreditBalance @(instr.CreditBalance == 1 ? "credit" : "credits") left
+    </span>
+  </div>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+  <div class="alert alert--danger" role="alert">@Model.ErrorMessage</div>
+}
+
+@if (!hasCredits)
+{
+  <div class="card">
+    <div class="card__body">
+      <div class="state-block">
+        <div class="state-block__icon" aria-hidden="true">LOCKED</div>
+        <h2 class="state-block__title">You are out of credits</h2>
+        <p class="state-block__desc">
+          Writing practice uses <strong>@instr.CreditCost credit</strong> for AI grading of all your answers. Listening and reading practice stay free.
+        </p>
+        <div class="row row--center">
+          <a class="btn btn--primary btn--lg" href="/pricing">View pricing</a>
+          <a class="btn btn--lg" href="/practice">Practice free</a>
+        </div>
+      </div>
+    </div>
+  </div>
+}
+else
+{
+  <div class="stack">
+    @if (instr.Sections.Count > 0)
+    {
+      <div class="card">
+        <div class="card__header"><strong>Writing structure</strong></div>
+        <div class="card__body">
+          <table class="table">
+            <caption class="visually-hidden">The writing tasks with structure and requirements</caption>
+            <thead>
+              <tr>
+                <th scope="col">Section</th>
+                <th scope="col">Task</th>
+                <th scope="col">Questions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @foreach (var sec in instr.Sections)
+              {
+                <tr>
+                  <td>@sec.Code</td>
+                  <td>@sec.Name</td>
+                  <td>@sec.ExpectedQuestionCount</td>
+                </tr>
+              }
+            </tbody>
+            <tfoot>
+              <tr>
+                <th scope="row" colspan="2">Total</th>
+                <td>@instr.QuestionCount questions · @instr.DurationMinutes min</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    }
+
+    <div class="alert alert--warning">
+      <strong>Your drafts are autosaved as you write.</strong>
+      Answers are not graded or charged until you submit. After submit, our AI grader scores each question against the official rubric criteria.
+    </div>
+
+    <div class="card">
+      <div class="card__header"><strong>Important notes</strong></div>
+      <div class="card__body">
+        <ul class="stack m-0 pl-5">
+          <li>As on test day, spell check and grammar assistance are disabled.</li>
+          <li>Your writing is automatically saved every few seconds. If you reload or leave, your drafts will be restored.</li>
+          <li>Starting the attempt does not charge. <strong>1 credit</strong> is deducted upon final submission for AI grading.</li>
+          <li>If an AI grading fails, retrying is completely free and will never charge again.</li>
+        </ul>
+      </div>
+    </div>
+
+    <form method="post" action="/writing/@instr.ExamId/start" class="stack">
+      @Html.AntiForgeryToken()
+      <label class="row">
+        <input type="checkbox" id="confirm-ready" required>
+        <span class="text-sm">I have read the instructions and am ready to begin</span>
+      </label>
+
+      <div class="row">
+        <button type="submit" class="btn btn--primary btn--lg" id="btn-start" disabled>
+          Start writing practice — uses @instr.CreditCost credit on submit
+        </button>
+        <a class="btn btn--lg" href="/practice">Later</a>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    document.getElementById('confirm-ready')?.addEventListener('change', function() {
+      const btn = document.getElementById('btn-start');
+      if (btn) btn.disabled = !this.checked;
+    });
+  </script>
+}

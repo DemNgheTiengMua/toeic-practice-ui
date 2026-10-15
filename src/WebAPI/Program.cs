@@ -1,4 +1,4 @@
-﻿using Contracts;
+using Contracts;
 using DataAccess;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
@@ -146,6 +146,9 @@ builder.Services.AddScoped<IMockExamService, MockExamService>();
 builder.Services.AddScoped<IAdminOrderService, AdminOrderService>();
 builder.Services.AddScoped<IAdminUserService, AdminUserService>();
 builder.Services.AddScoped<IScoreConversionService, ScoreConversionService>();
+builder.Services.AddSingleton<IAiGrader, FakeAiGrader>();
+builder.Services.AddScoped<IWritingPracticeService, WritingPracticeService>();
+builder.Services.AddHostedService<AiGradingBackgroundService>();
 
 var payOsOptions = builder.Configuration.GetSection(PayOsOptions.SectionName).Get<PayOsOptions>() ?? new PayOsOptions();
 builder.Services.AddSingleton(payOsOptions);
@@ -220,6 +223,7 @@ app.MapSavedQuestionEndpoints();
 app.MapWeaknessEndpoints();
 app.MapCatalogEndpoints();
 app.MapCheckoutEndpoints();
+app.MapWritingEndpoints();
 
 app.Run();
 
