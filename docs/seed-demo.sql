@@ -725,3 +725,158 @@ GO
 
 PRINT 'demo speaking practice exam seeded';
 GO
+
+-- ============ Demo Placement Exams (issue #23) ============
+DECLARE @toeicCert INT = (SELECT CertId FROM Certificates WHERE Code = 'TOEIC');
+DECLARE @secP1 INT = (SELECT SectionId FROM Sections WHERE CertId = @toeicCert AND Code = 'P1');
+DECLARE @secP2 INT = (SELECT SectionId FROM Sections WHERE CertId = @toeicCert AND Code = 'P2');
+DECLARE @secP5 INT = (SELECT SectionId FROM Sections WHERE CertId = @toeicCert AND Code = 'P5');
+DECLARE @secP6 INT = (SELECT SectionId FROM Sections WHERE CertId = @toeicCert AND Code = 'P6');
+DECLARE @toeicList INT = (SELECT SkillId FROM Skills WHERE CertId = @toeicCert AND Code = 'LIST');
+DECLARE @toeicRead INT = (SELECT SkillId FROM Skills WHERE CertId = @toeicCert AND Code = 'READ');
+
+IF NOT EXISTS (SELECT 1 FROM Exams WHERE CertId = @toeicCert AND Name = N'TOEIC Placement Test — Standard')
+BEGIN
+  INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose, Description, SourceName, QuestionCount)
+  VALUES (@toeicCert, N'TOEIC Placement Test — Standard', 'published', 45, 'placement',
+          N'Comprehensive diagnostic covering Listening and Reading. Calibrates your starting CEFR band and personalizes your study plan.',
+          N'ETS Diagnostic 2024', 4);
+  DECLARE @stdExam INT = SCOPE_IDENTITY();
+
+  -- Part 1: Listening photograph
+  INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, ImagePath, ImageAlt)
+  VALUES (@stdExam, @toeicCert, @secP1, 1, '/assets/img/demo-p1-meeting.jpg', N'Office workers in meeting');
+  DECLARE @grpStd1 INT = SCOPE_IDENTITY();
+
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Hint, Explanation, DisplayOrder)
+  VALUES (@grpStd1, @stdExam, @secP1, @toeicList,
+          N'Look at the picture and select the best statement describing what you see.',
+          2, 'mcq', N'Notice the people sitting around the table.',
+          N'Option A correctly describes people sitting at the conference table.', 1);
+  DECLARE @qStd1 INT = SCOPE_IDENTITY();
+  INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
+    (@qStd1, 'mcq', 'A', N'People are seated around a conference table.', 1),
+    (@qStd1, 'mcq', 'B', N'They are unpacking boxes in a warehouse.', 0),
+    (@qStd1, 'mcq', 'C', N'A presenter is leaving the room.', 0),
+    (@qStd1, 'mcq', 'D', N'All the chairs are unoccupied.', 0);
+
+  -- Part 2: Question-response
+  INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder)
+  VALUES (@stdExam, @toeicCert, @secP2, 2);
+  DECLARE @grpStd2 INT = SCOPE_IDENTITY();
+
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  VALUES (@grpStd2, @stdExam, @secP2, @toeicList,
+          N'Where is the quarterly performance report?',
+          2, 'mcq', N'Option B directly answers the question about the report location.', 2);
+  DECLARE @qStd2 INT = SCOPE_IDENTITY();
+  INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
+    (@qStd2, 'mcq', 'A', N'Yes, every three months.', 0),
+    (@qStd2, 'mcq', 'B', N'It is on Ms. Chen''s desk.', 1),
+    (@qStd2, 'mcq', 'C', N'No, I haven''t seen him.', 0);
+
+  -- Part 5: Incomplete sentence
+  INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder)
+  VALUES (@stdExam, @toeicCert, @secP5, 3);
+  DECLARE @grpStd3 INT = SCOPE_IDENTITY();
+
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  VALUES (@grpStd3, @stdExam, @secP5, @toeicRead,
+          N'Customer satisfaction surveys must be submitted ------- Friday afternoon to be included in the quarterly review.',
+          2, 'mcq', N'Preposition of time "before" indicates the deadline.', 3);
+  DECLARE @qStd3 INT = SCOPE_IDENTITY();
+  INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
+    (@qStd3, 'mcq', 'A', N'before', 1),
+    (@qStd3, 'mcq', 'B', N'during', 0),
+    (@qStd3, 'mcq', 'C', N'between', 0),
+    (@qStd3, 'mcq', 'D', N'among', 0);
+
+  -- Part 6: Text completion
+  INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, Passage)
+  VALUES (@stdExam, @toeicCert, @secP6, 4,
+          N'Thank you for contacting Apex Support. We have received your inquiry regarding account renewal. A representative will review your request and ------- within 24 business hours.');
+  DECLARE @grpStd4 INT = SCOPE_IDENTITY();
+
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  VALUES (@grpStd4, @stdExam, @secP6, @toeicRead,
+          N'Choose the correct verb form to complete the sentence.',
+          2, 'mcq', N'The modal auxiliary "will" requires the base form of the verb "respond".', 4);
+  DECLARE @qStd4 INT = SCOPE_IDENTITY();
+  INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
+    (@qStd4, 'mcq', 'A', N'respond', 1),
+    (@qStd4, 'mcq', 'B', N'response', 0),
+    (@qStd4, 'mcq', 'C', N'responded', 0),
+    (@qStd4, 'mcq', 'D', N'responding', 0);
+
+  -- Score scales for Standard Placement Test
+  INSERT INTO ScoreScales (CertId, SkillId, ExamId, RawScore, ScaledScore) VALUES
+    (@toeicCert, @toeicList, @stdExam, 0, 100),
+    (@toeicCert, @toeicList, @stdExam, 1, 250),
+    (@toeicCert, @toeicList, @stdExam, 2, 450),
+    (@toeicCert, @toeicRead, @stdExam, 0, 100),
+    (@toeicCert, @toeicRead, @stdExam, 1, 200),
+    (@toeicCert, @toeicRead, @stdExam, 2, 440);
+END;
+
+IF NOT EXISTS (SELECT 1 FROM Exams WHERE CertId = @toeicCert AND Name = N'TOEIC Placement Test — Quick')
+BEGIN
+  INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose, Description, SourceName, QuestionCount)
+  VALUES (@toeicCert, N'TOEIC Placement Test — Quick', 'published', 20, 'placement',
+          N'Fast 20-minute diagnostic to quickly estimate your starting level across core listening and reading skills.',
+          N'ETS Diagnostic 2024', 2);
+  DECLARE @quickExam INT = SCOPE_IDENTITY();
+
+  -- Part 2: Listening question-response
+  INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder)
+  VALUES (@quickExam, @toeicCert, @secP2, 1);
+  DECLARE @grpQ1 INT = SCOPE_IDENTITY();
+
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  VALUES (@grpQ1, @quickExam, @secP2, @toeicList,
+          N'Who is responsible for booking the meeting room?',
+          1, 'mcq', N'Option C identifies the person responsible.', 1);
+  DECLARE @qQ1 INT = SCOPE_IDENTITY();
+  INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
+    (@qQ1, 'mcq', 'A', N'At 2:00 PM.', 0),
+    (@qQ1, 'mcq', 'B', N'In Conference Room B.', 0),
+    (@qQ1, 'mcq', 'C', N'Ms. Tanaka from HR.', 1);
+
+  -- Part 5: Reading sentence completion
+  INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder)
+  VALUES (@quickExam, @toeicCert, @secP5, 2);
+  DECLARE @grpQ2 INT = SCOPE_IDENTITY();
+
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  VALUES (@grpQ2, @quickExam, @secP5, @toeicRead,
+          N'The new software update will ------- improve database query performance across all branch offices.',
+          2, 'mcq', N'Adverb "significantly" modifies the verb "improve".', 2);
+  DECLARE @qQ2 INT = SCOPE_IDENTITY();
+  INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
+    (@qQ2, 'mcq', 'A', N'significant', 0),
+    (@qQ2, 'mcq', 'B', N'significantly', 1),
+    (@qQ2, 'mcq', 'C', N'significance', 0),
+    (@qQ2, 'mcq', 'D', N'signified', 0);
+
+  -- Score scales for Quick Placement Test
+  INSERT INTO ScoreScales (CertId, SkillId, ExamId, RawScore, ScaledScore) VALUES
+    (@toeicCert, @toeicList, @quickExam, 0, 150),
+    (@toeicCert, @toeicList, @quickExam, 1, 350),
+    (@toeicCert, @toeicRead, @quickExam, 0, 150),
+    (@toeicCert, @toeicRead, @quickExam, 1, 350);
+END;
+GO
+
+PRINT 'demo placement exams seeded';
+GO
+
+-- Demo target band for demo learner (issue #23)
+DECLARE @learner INT = (SELECT UserId FROM Users WHERE Email = 'learner@demo.local');
+DECLARE @toeicCert INT = (SELECT CertId FROM Certificates WHERE Code = 'TOEIC');
+
+IF NOT EXISTS (SELECT 1 FROM TargetBands WHERE UserId = @learner AND CertId = @toeicCert)
+  INSERT INTO TargetBands (UserId, CertId, TargetBandCode)
+  VALUES (@learner, @toeicCert, 'B2');
+GO
+
+PRINT 'demo target band seeded';
+GO

@@ -261,6 +261,30 @@ public interface ICompanionApiClient
 
     Task<(Stream Stream, string ContentType, string FileName)> GetSpeakingAudioStreamAsync(int attemptId, int questionId, string bearerToken, CancellationToken cancellationToken = default) =>
         throw new NotImplementedException();
+
+    Task<PlacementCatalogViewDto> GetPlacementCatalogAsync(string bearerToken, CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
+
+    Task<PlacementTestInfoDto> StartPlacementTestAsync(StartPlacementTestRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
+
+    Task<PlacementTakeViewDto> GetPlacementTakeAsync(int placementId, int? questionDisplayOrder, string bearerToken, CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
+
+    Task<SaveAnswerResultDto> SavePlacementAnswerAsync(int placementId, int questionId, SaveAnswerRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
+
+    Task<PlacementResultViewDto> SubmitPlacementTestAsync(int placementId, SubmitPlacementTestRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
+
+    Task<PlacementResultViewDto> GetPlacementResultAsync(int placementId, string bearerToken, CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
+
+    Task<TargetBandViewDto> GetTargetBandViewAsync(string bearerToken, CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
+
+    Task<SetTargetBandResultDto> SetTargetBandAsync(SetTargetBandRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
 }
 
 /// <summary>Raised when the API answers with a non-success status; carries the ProblemDetails code.</summary>
@@ -915,6 +939,35 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
         return (stream, contentType, fileName);
     }
 
+    public Task<PlacementCatalogViewDto> GetPlacementCatalogAsync(string bearerToken, CancellationToken cancellationToken = default) =>
+        GetAuthorizedAsync<PlacementCatalogViewDto>("api/learner/placement", bearerToken, cancellationToken);
+
+    public Task<PlacementTestInfoDto> StartPlacementTestAsync(StartPlacementTestRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
+        PostAuthorizedAsync<StartPlacementTestRequest, PlacementTestInfoDto>("api/learner/placement/start", request, bearerToken, cancellationToken);
+
+    public Task<PlacementTakeViewDto> GetPlacementTakeAsync(int placementId, int? questionDisplayOrder, string bearerToken, CancellationToken cancellationToken = default)
+    {
+        var url = questionDisplayOrder.HasValue
+            ? $"api/learner/placement/take/{placementId}?q={questionDisplayOrder.Value}"
+            : $"api/learner/placement/take/{placementId}";
+        return GetAuthorizedAsync<PlacementTakeViewDto>(url, bearerToken, cancellationToken);
+    }
+
+    public Task<SaveAnswerResultDto> SavePlacementAnswerAsync(int placementId, int questionId, SaveAnswerRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
+        PostAuthorizedAsync<SaveAnswerRequest, SaveAnswerResultDto>($"api/learner/placement/take/{placementId}/answers/{questionId}", request, bearerToken, cancellationToken);
+
+    public Task<PlacementResultViewDto> SubmitPlacementTestAsync(int placementId, SubmitPlacementTestRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
+        PostAuthorizedAsync<SubmitPlacementTestRequest, PlacementResultViewDto>($"api/learner/placement/take/{placementId}/submit", request, bearerToken, cancellationToken);
+
+    public Task<PlacementResultViewDto> GetPlacementResultAsync(int placementId, string bearerToken, CancellationToken cancellationToken = default) =>
+        GetAuthorizedAsync<PlacementResultViewDto>($"api/learner/placement/result/{placementId}", bearerToken, cancellationToken);
+
+    public Task<TargetBandViewDto> GetTargetBandViewAsync(string bearerToken, CancellationToken cancellationToken = default) =>
+        GetAuthorizedAsync<TargetBandViewDto>("api/learner/target-band", bearerToken, cancellationToken);
+
+    public Task<SetTargetBandResultDto> SetTargetBandAsync(SetTargetBandRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
+        PostAuthorizedAsync<SetTargetBandRequest, SetTargetBandResultDto>("api/learner/target-band", request, bearerToken, cancellationToken);
+
     private async Task<T> GetAuthorizedAsync<T>(string path, string bearerToken, CancellationToken cancellationToken)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, path);
@@ -922,6 +975,16 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
         using var response = await http.SendAsync(request, cancellationToken);
         await EnsureSuccessAsync(response, cancellationToken);
         return (await response.Content.ReadFromJsonAsync<T>(Json, cancellationToken))!;
+    }
+
+    private async Task<TResponse> PostAuthorizedAsync<TRequest, TResponse>(string path, TRequest body, string bearerToken, CancellationToken cancellationToken)
+    {
+        using var message = new HttpRequestMessage(HttpMethod.Post, path);
+        AttachBearer(message, bearerToken);
+        message.Content = JsonContent.Create(body, options: Json);
+        using var response = await http.SendAsync(message, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+        return (await response.Content.ReadFromJsonAsync<TResponse>(Json, cancellationToken))!;
     }
 
     private static void AttachBearer(HttpRequestMessage request, string? bearerToken)

@@ -1,0 +1,158 @@
+@model PlacementSelectViewModel
+@{
+    ViewData["Title"] = "Placement Test";
+    var catalog = Model.Catalog;
+}
+
+<div class="context-bar">
+  <div class="context-bar__item">
+    <span class="context-bar__label">Certificate:</span>
+    <span class="context-bar__value">@catalog.ActiveCert.Code</span>
+  </div>
+  <div class="context-bar__item">
+    <span class="context-bar__label">Cost:</span>
+    <span class="context-bar__value">Free · 0 credits</span>
+  </div>
+  <div class="context-bar__item">
+    <span class="context-bar__label">Current level:</span>
+    <span class="context-bar__value">@(catalog.CurrentBandCode != null ? $"{catalog.CurrentBandCode} · {catalog.CurrentTotalScore} points" : "Not yet assessed")</span>
+  </div>
+</div>
+
+<div class="container stack">
+  <nav class="breadcrumbs" aria-label="Breadcrumb">
+    <a href="/dashboard" class="breadcrumbs__item">Home</a>
+    <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+    <span class="breadcrumbs__item" aria-current="page">Placement test</span>
+  </nav>
+
+  @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+  {
+    <div class="alert alert--danger" role="alert">@Model.ErrorMessage</div>
+  }
+
+  <div class="row row--between">
+    <div>
+      <h1 class="m-0 mb-1">Pick a placement test</h1>
+      <p class="text-muted no-margin">
+        One test sets your starting level and builds your learning path.
+        <strong>Free, no credit deducted.</strong>
+      </p>
+    </div>
+    <span class="badge badge--success">Free</span>
+  </div>
+
+  @if (catalog.CurrentBandCode == null)
+  {
+    <div class="alert alert--info">
+      <strong>You have not been assessed yet.</strong>
+      Until you take a placement test, your learning path cannot be generated.
+    </div>
+  }
+  else
+  {
+    <div class="alert alert--info">
+      <strong>Current level: @catalog.CurrentBandCode (@(catalog.CurrentTotalScore) points).</strong>
+      You can set your target band or retake a placement test to update your starting level.
+      <a href="/placement/target-band" class="ml-2">Set target band</a>
+    </div>
+  }
+
+  <section>
+    <h2 class="section-group__title">Available placement tests</h2>
+    @if (catalog.Exams.Count == 0)
+    {
+      <div class="card">
+        <div class="card__body">
+          <div class="state-block">
+            <div class="state-block__icon" aria-hidden="true">EMPTY</div>
+            <h2 class="state-block__title">No placement tests available</h2>
+            <p class="state-block__desc">Placement tests are being prepared for @catalog.ActiveCert.Code. Check back soon.</p>
+          </div>
+        </div>
+      </div>
+    }
+    else
+    {
+      <div class="grid-2">
+        @foreach (var exam in catalog.Exams)
+        {
+          <div class="card" style="border: 2px solid var(--ink); border-radius: 0;">
+            <div class="card__body stack" style="height: 100%; justify-content: space-between;">
+              <div class="stack">
+                <div class="row row--between">
+                  <strong style="font-size: var(--text-lg);">@exam.Name</strong>
+                  @if (exam.IsRecommended)
+                  {
+                    <span class="badge badge--info">Recommended</span>
+                  }
+                  else
+                  {
+                    <span class="badge badge--muted">Quick</span>
+                  }
+                </div>
+                <p class="text-muted no-margin" style="line-height: var(--leading-relaxed);">
+                  @exam.Description
+                </p>
+                <div class="text-sm font-mono text-muted">@exam.QuestionCount questions · @exam.DurationMinutes minutes</div>
+              </div>
+
+              <div class="mt-3">
+                @if (exam.ActivePlacementId.HasValue)
+                {
+                  <a href="/placement/take/@exam.ActivePlacementId.Value" class="btn btn--primary" style="width: 100%; text-align: center;">Resume in-progress test</a>
+                }
+                else
+                {
+                  <form method="post" action="/placement/start" class="no-margin">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="examId" value="@exam.ExamId" />
+                    <button type="submit" class="btn btn--primary" style="width: 100%;">Start placement test</button>
+                  </form>
+                }
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </section>
+
+  <div class="card" style="border: 2px solid var(--ink); border-radius: 0;">
+    <div class="card__header"><strong>What happens after the test</strong></div>
+    <div class="card__body">
+      <table class="table">
+        <caption class="visually-hidden">Steps that follow the placement test</caption>
+        <thead>
+          <tr>
+            <th scope="col">Step</th>
+            <th scope="col">What you get</th>
+            <th scope="col">Cost</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Result</th>
+            <td>Your score, CEFR band, and per-section breakdown</td>
+            <td>Free</td>
+          </tr>
+          <tr>
+            <th scope="row">Target level</th>
+            <td>You choose the band you are aiming for</td>
+            <td>Free</td>
+          </tr>
+          <tr>
+            <th scope="row">Learning path</th>
+            <td>Ordered modules from your level to your target</td>
+            <td>Free</td>
+          </tr>
+          <tr>
+            <th scope="row">Premium path</th>
+            <td>Video lessons, AI-graded writing, detailed explanations</td>
+            <td>5 credits</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

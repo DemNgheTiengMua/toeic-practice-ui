@@ -69,5 +69,11 @@ public sealed record ApiError(string Code, string Title, int Status, string? Det
         public const string UserNotFound = "USER_NOT_FOUND";
         public const string InsightNotFound = "INSIGHT_NOT_FOUND";
         public const string InsightNotFailed = "INSIGHT_NOT_FAILED";
+
+        public const string PlacementNotFound = "placement_not_found";
+        public const string PlacementNotActive = "placement_not_active";
+        public const string PlacementExpired = "placement_expired";
+        public const string PlacementNotFinished = "placement_not_finished";
+        public const string TargetBandInvalid = "target_band_invalid";
     }
 }

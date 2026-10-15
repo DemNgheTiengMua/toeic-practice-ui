@@ -152,6 +152,7 @@ var audioStoragePath = builder.Configuration["FileStore:AudioDirectory"]
 builder.Services.AddSingleton<IFileStore>(new LocalFileStore(audioStoragePath));
 builder.Services.AddScoped<IWritingPracticeService, WritingPracticeService>();
 builder.Services.AddScoped<ISpeakingPracticeService, SpeakingPracticeService>();
+builder.Services.AddScoped<IPlacementService, PlacementService>();
 builder.Services.AddHostedService<AiGradingBackgroundService>();
 builder.Services.AddSingleton<IAiInsightGenerator, FakeAiInsightGenerator>();
 builder.Services.AddScoped<IAiInsightService, AiInsightService>();
@@ -233,6 +234,7 @@ app.MapCheckoutEndpoints();
 app.MapWritingEndpoints();
 app.MapSpeakingEndpoints();
 app.MapInsightEndpoints();
+app.MapPlacementEndpoints();
 
 app.Run();
 

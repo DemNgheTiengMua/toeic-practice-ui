@@ -1,0 +1,151 @@
+@model PlacementResultViewModel
+@{
+    ViewData["Title"] = "Placement Result";
+    var result = Model.Result;
+    var listSkill = result.SkillScores.FirstOrDefault(s => s.SkillCode == "LIST" || s.SkillName.Contains("Listening", StringComparison.OrdinalIgnoreCase));
+    var readSkill = result.SkillScores.FirstOrDefault(s => s.SkillCode == "READ" || s.SkillName.Contains("Reading", StringComparison.OrdinalIgnoreCase));
+}
+
+<div class="context-bar">
+  <div class="context-bar__item">
+    <span class="context-bar__label">Certificate:</span>
+    <span class="context-bar__value">@result.CertCode</span>
+  </div>
+  <div class="context-bar__item">
+    <span class="context-bar__label">Placement:</span>
+    <span class="context-bar__value">Free · no credits used</span>
+  </div>
+  <div class="context-bar__item">
+    <span class="context-bar__label">Next step:</span>
+    <span class="context-bar__value">Set your target level</span>
+  </div>
+</div>
+
+<div class="container stack">
+  <nav class="breadcrumbs" aria-label="Breadcrumb">
+    <a href="/dashboard" class="breadcrumbs__item">Home</a>
+    <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+    <a href="/placement" class="breadcrumbs__item">Placement test</a>
+    <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+    <span class="breadcrumbs__item" aria-current="page">Result</span>
+  </nav>
+
+  @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+  {
+    <div class="alert alert--danger" role="alert">@Model.ErrorMessage</div>
+  }
+
+  <div class="row row--between">
+    <div>
+      <h1 class="m-0 mb-1">Your placement result</h1>
+      <p class="text-muted no-margin">
+        Taken @result.TakenAt.ToString("d MMMM yyyy") · @result.TotalQuestions questions · @result.DurationMinutes minutes
+      </p>
+    </div>
+    <span class="badge badge--success">Free</span>
+  </div>
+
+  @if (result.IsAutoSubmitted)
+  {
+    <div class="alert alert--warning" role="status">
+      <strong>Time is up.</strong> The placement test was submitted automatically when your deadline expired and graded on the questions you answered.
+    </div>
+  }
+
+  <div class="card" style="border: 2px solid var(--ink); border-radius: 0;">
+    <div class="card__body stack">
+      <div class="cefr">
+        <div class="cefr__head">
+          <span class="cefr__current font-mono">@result.ResultBandCode</span>
+          <span>@result.TotalScore points · @result.ResultBandName level</span>
+        </div>
+        <div class="cefr__track" role="img" aria-label="Current band @result.ResultBandCode, score @result.TotalScore">
+          @foreach (var band in result.CefrBands)
+          {
+            var classes = "cefr__band";
+            if (band.IsCurrent) classes += " is-current";
+            else if (band.IsReached) classes += " is-reached";
+
+            var label = band.Code == "below_A1" ? "<A1" : band.Code;
+            <span class="@classes font-mono">@label</span>
+          }
+        </div>
+        <div class="cefr__scale" aria-hidden="true">
+          @foreach (var band in result.CefrBands)
+          {
+            <span class="cefr__tick font-mono">@band.MinTotal</span>
+          }
+        </div>
+        @if (!string.IsNullOrEmpty(result.BandNote))
+        {
+          <p class="cefr__note">
+            @result.BandNote
+          </p>
+        }
+      </div>
+    </div>
+  </div>
+
+  @{
+    var maxPossible = result.CefrBands.Count > 0 ? result.CefrBands.Max(b => b.MaxTotal) : 990;
+  }
+  <div class="grid-3">
+    <div class="stat" style="border: 2px solid var(--ink); border-radius: 0;">
+      <div class="stat__label">Total score</div>
+      <div class="stat__value font-mono">@result.TotalScore</div>
+      <div class="stat__hint font-mono text-muted">out of @maxPossible</div>
+    </div>
+    <div class="stat" style="border: 2px solid var(--ink); border-radius: 0;">
+      <div class="stat__label">Listening</div>
+      <div class="stat__value font-mono">@(listSkill?.ScaledScore ?? 0)</div>
+      <div class="stat__hint font-mono text-muted">@(listSkill?.RawScore ?? 0) of @(listSkill?.TotalQuestions ?? 0) correct</div>
+    </div>
+    <div class="stat" style="border: 2px solid var(--ink); border-radius: 0;">
+      <div class="stat__label">Reading</div>
+      <div class="stat__value font-mono">@(readSkill?.ScaledScore ?? 0)</div>
+      <div class="stat__hint font-mono text-muted">@(readSkill?.RawScore ?? 0) of @(readSkill?.TotalQuestions ?? 0) correct</div>
+    </div>
+  </div>
+
+  @if (!string.IsNullOrEmpty(result.WeakerSkillName))
+  {
+    <div class="alert alert--info">
+      <strong>@result.WeakerSkillName is your weaker section.</strong>
+      Your learning path will focus on areas where you have the largest score opportunity.
+    </div>
+  }
+
+  <div class="card" style="border: 2px solid var(--ink); border-radius: 0;">
+    <div class="card__header"><strong>Where this puts you</strong></div>
+    <div class="card__body">
+      <table class="table">
+        <caption class="visually-hidden">Section results from your placement test</caption>
+        <thead>
+          <tr>
+            <th scope="col">Section</th>
+            <th scope="col">Correct</th>
+            <th scope="col">Score</th>
+            <th scope="col">Band</th>
+          </tr>
+        </thead>
+        <tbody>
+          @foreach (var s in result.SkillScores)
+          {
+            <tr>
+              <th scope="row">@s.SkillName</th>
+              <td class="font-mono">@s.RawScore / @s.TotalQuestions</td>
+              <td class="font-mono">@s.ScaledScore</td>
+              <td><span class="badge badge--muted font-mono">@(s.BandCode ?? result.ResultBandCode)</span></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <div class="card__footer">
+      <div class="row" style="gap: var(--space-3);">
+        <a href="/placement/target-band" class="btn btn--primary">Set your target level</a>
+        <a href="/practice" class="btn">Practice a section first</a>
+      </div>
+    </div>
+  </div>
+</div>

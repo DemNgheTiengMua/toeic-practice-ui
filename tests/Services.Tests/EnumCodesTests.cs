@@ -18,6 +18,7 @@ public sealed class EnumCodesTests
         { typeof(ExamStatus), typeof(ExamStatusDto), "CK_Exams_Status" },
         { typeof(ExamPurpose), typeof(ExamPurposeDto), "CK_Exams_Purpose" },
         { typeof(AttemptStatus), typeof(AttemptStatusDto), "CK_Attempts_Status" },
+        { typeof(PlacementStatus), typeof(PlacementStatusDto), "CK_Placement_Status" },
         { typeof(FreeResponseStatus), typeof(FreeResponseStatusDto), "CK_FreeResp_Status" },
         { typeof(AiGradingStatus), typeof(AiGradingStatusDto), "CK_AiGradings_Status" },
         { typeof(AiInsightScope), typeof(AiInsightScopeDto), "CK_AiInsights_Scope" },

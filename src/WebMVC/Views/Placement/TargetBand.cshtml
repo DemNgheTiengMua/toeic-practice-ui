@@ -1,0 +1,156 @@
+@model TargetBandViewModel
+@{
+    ViewData["Title"] = "Set Target Level";
+    var view = Model.View;
+    var currentBandCode = view.CurrentBandCode ?? "Not assessed";
+    var currentScore = view.CurrentTotalScore ?? 0;
+    var targetCode = view.TargetBandCode ?? view.AvailableBands.FirstOrDefault(b => !b.IsCurrent)?.Code ?? "B2";
+    var targetBand = view.AvailableBands.FirstOrDefault(b => b.Code == targetCode);
+    var pointsNeeded = targetBand != null && currentScore > 0 ? Math.Max(0, targetBand.MinTotal - currentScore) : 0;
+}
+
+<div class="context-bar">
+  <div class="context-bar__item">
+    <span class="context-bar__label">Certificate:</span>
+    <span class="context-bar__value">@view.ActiveCert.Code</span>
+  </div>
+  <div class="context-bar__item">
+    <span class="context-bar__label">Current level:</span>
+    <span class="context-bar__value">@(view.CurrentBandCode != null ? $"{view.CurrentBandCode} · {view.CurrentTotalScore} points" : "Not yet assessed")</span>
+  </div>
+  <div class="context-bar__item">
+    <span class="context-bar__label">Cost:</span>
+    <span class="context-bar__value">Free · 0 credits</span>
+  </div>
+</div>
+
+<div class="container stack">
+  <nav class="breadcrumbs" aria-label="Breadcrumb">
+    <a href="/dashboard" class="breadcrumbs__item">Home</a>
+    <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+    <a href="/placement" class="breadcrumbs__item">Placement test</a>
+    <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+    <span class="breadcrumbs__item" aria-current="page">Target level</span>
+  </nav>
+
+  @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+  {
+    <div class="alert alert--danger" role="alert">@Model.ErrorMessage</div>
+  }
+  @if (!string.IsNullOrEmpty(Model.SuccessMessage))
+  {
+    <div class="alert alert--success" role="alert">@Model.SuccessMessage</div>
+  }
+
+  <div>
+    <h1 class="m-0 mb-1">Set your target level</h1>
+    <p class="text-muted no-margin">
+      @if (view.CurrentBandCode != null)
+      {
+        <span>You are at <strong>@view.CurrentBandCode</strong>. Pick the band you are aiming for and your path is built between the two.</span>
+      }
+      else
+      {
+        <span>Pick the score band you are aiming for to track your preparation.</span>
+      }
+    </p>
+  </div>
+
+  <div class="card" style="border: 2px solid var(--ink); border-radius: 0;">
+    <div class="card__body">
+      <div class="cefr">
+        <div class="cefr__head">
+          <span class="cefr__current font-mono">@(view.CurrentBandCode ?? "Start") to <span id="cefr-target-display">@targetCode</span></span>
+          <span>@(currentScore > 0 ? $"{currentScore} points now · " : "")<span id="cefr-needed-display">@(targetBand != null ? $"{targetBand.MinTotal} needed" : "")</span></span>
+        </div>
+        <div class="cefr__track" role="img" aria-label="Target level tracking">
+          @foreach (var band in view.CefrBands)
+          {
+            var classes = "cefr__band";
+            if (band.IsCurrent) classes += " is-current";
+            else if (band.IsReached) classes += " is-reached";
+
+            var label = band.Code == "below_A1" ? "<A1" : band.Code;
+            <span class="@classes font-mono" id="cefr-band-@band.Code">@label</span>
+          }
+        </div>
+        <div class="cefr__scale" aria-hidden="true">
+          @foreach (var band in view.CefrBands)
+          {
+            <span class="cefr__tick font-mono">@band.MinTotal</span>
+          }
+        </div>
+        <p class="cefr__note" id="cefr-note-display">
+          @if (pointsNeeded > 0)
+          {
+            <span>Points to target: @pointsNeeded points gap from your starting placement score.</span>
+          }
+          else
+          {
+            <span>Choose the certificate band that matches your goal.</span>
+          }
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <form method="post" action="/placement/target-band" class="stack">
+    @Html.AntiForgeryToken()
+    <section>
+      <h2 class="section-group__title">Choose your target</h2>
+      <div class="option-list" role="radiogroup" aria-label="Target level">
+        @foreach (var opt in view.AvailableBands)
+        {
+          var isChecked = opt.Code == targetCode;
+          <label class="option @(isChecked ? "is-selected" : "")" style="cursor: pointer; border-radius: 0;">
+            <input class="option__input js-target-radio" type="radio" name="TargetBandCode"
+                   value="@opt.Code" @(isChecked ? "checked" : "")
+                   data-name="@opt.Name" data-min="@opt.MinTotal" data-max="@opt.MaxTotal">
+            <span class="option__marker font-mono">@opt.Code</span>
+            <span class="option__text">
+              <strong>@opt.Name</strong> — @opt.MinTotal to @opt.MaxTotal points<br>
+              <span class="text-sm text-muted">@opt.Description</span>
+            </span>
+          </label>
+        }
+      </div>
+    </section>
+
+    <div class="card" style="border: 2px solid var(--ink); border-radius: 0;">
+      <div class="card__footer">
+        <div class="row" style="gap: var(--space-3);">
+          <button type="submit" class="btn btn--primary">Save target level</button>
+          <a href="/placement" class="btn">Back to tests</a>
+        </div>
+      </div>
+    </div>
+
+    <p class="text-xs text-muted no-margin">
+      You can change your target level at any time. Saving a target level is free and deducts 0 credits.
+    </p>
+  </form>
+</div>
+
+<script>
+  document.querySelectorAll('.js-target-radio').forEach(radio => {
+    radio.addEventListener('change', function () {
+      document.querySelectorAll('.option').forEach(l => l.classList.remove('is-selected'));
+      this.closest('.option')?.classList.add('is-selected');
+
+      const code = this.value;
+      const min = parseInt(this.getAttribute('data-min'), 10) || 0;
+      const targetDisplay = document.getElementById('cefr-target-display');
+      if (targetDisplay) targetDisplay.textContent = code;
+
+      const neededDisplay = document.getElementById('cefr-needed-display');
+      if (neededDisplay) neededDisplay.textContent = min + ' needed';
+
+      const currentScore = @currentScore;
+      const noteDisplay = document.getElementById('cefr-note-display');
+      if (noteDisplay && currentScore > 0) {
+        const gap = Math.max(0, min - currentScore);
+        noteDisplay.textContent = `Points to target: ${gap} points gap from your starting placement score.`;
+      }
+    });
+  });
+</script>

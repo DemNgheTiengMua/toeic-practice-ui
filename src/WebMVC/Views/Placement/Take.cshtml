@@ -1,0 +1,418 @@
+@model PlacementTakeViewModel
+@{
+    Layout = null;
+    var take = Model.Take;
+    var q = take.CurrentQuestion;
+    var prevOrder = q.DisplayOrder > 1 ? q.DisplayOrder - 1 : (int?)null;
+    var nextOrder = q.DisplayOrder < take.TotalQuestions ? q.DisplayOrder + 1 : (int?)null;
+    var isLastQuestion = q.DisplayOrder >= take.TotalQuestions;
+    var progressPercent = (int)Math.Round((double)take.AnsweredCount / Math.Max(1, take.TotalQuestions) * 100);
+
+    // Group navigator by section/skill
+    var navigatorGroups = take.Navigator
+        .GroupBy(n => new { n.SectionId, n.SectionCode, n.Modality })
+        .OrderBy(g => g.Min(x => x.DisplayOrder))
+        .ToList();
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Placement Test — Question @q.DisplayOrder — extra efficient</title>
+  <link rel="icon" href="~/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="~/css/tokens.css">
+  <link rel="stylesheet" href="~/css/base.css">
+  <link rel="stylesheet" href="~/css/components.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-topbar">
+      <div class="exam-topbar-group">
+        <strong>Placement Test</strong>
+        <span class="badge badge--info">Question @q.DisplayOrder of @take.TotalQuestions</span>
+      </div>
+      <div class="exam-topbar-group">
+        <span id="save-status" class="save-status save-status--saved" role="status" aria-live="polite">Saved</span>
+        <span id="timer-box" class="timer" role="timer" aria-label="Time remaining">
+          <span class="text-sm text-muted">Time remaining</span>
+          <span id="timer-display" class="timer__value font-mono">--:--</span>
+        </span>
+        <a href="/placement" class="btn btn--ghost btn--sm" id="btn-exit">Exit</a>
+      </div>
+    </header>
+
+    <main class="app-main">
+      <div class="container" style="max-width: 1200px">
+        <form id="anti-forgery-holder" style="display:none;">@Html.AntiForgeryToken()</form>
+
+        @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+        {
+          <div class="alert alert--danger mb-4" role="alert">@Model.ErrorMessage</div>
+        }
+
+        <div class="exam-layout">
+          <!-- Question Pane -->
+          <div class="stack">
+            @if (!string.IsNullOrEmpty(q.AudioPath))
+            {
+              <div class="card mb-3" style="border: 2px solid var(--ink); border-radius: 0;">
+                <div class="card__body">
+                  <div class="row row--between" style="align-items: center; margin-bottom: var(--space-2);">
+                    <span class="badge badge--info">AUDIO</span>
+                    <span class="text-xs text-muted">Listen carefully</span>
+                  </div>
+                  <audio controls src="@q.AudioPath" style="width: 100%; border: 1px solid var(--ink); border-radius: 0;"></audio>
+                </div>
+              </div>
+            }
+
+            @if (!string.IsNullOrEmpty(q.Passage))
+            {
+              <div class="card mb-3" style="border: 2px solid var(--ink); border-radius: 0;">
+                <div class="card__body">
+                  <p class="no-margin" style="white-space: pre-line; line-height: var(--leading-relaxed);">@q.Passage</p>
+                </div>
+              </div>
+            }
+
+            @if (!string.IsNullOrEmpty(q.ImagePath))
+            {
+              <div class="mb-3">
+                <img src="@q.ImagePath" alt="@(q.ImageAlt ?? "Question illustration")" class="img-fluid" style="max-height: 350px; border: 2px solid var(--ink); border-radius: 0;" />
+              </div>
+            }
+
+            <div class="question" style="border: 2px solid var(--ink); border-radius: 0; padding: var(--space-4); background: var(--bg-surface);">
+              <div class="question__meta row row--between" style="align-items: center;">
+                <div class="row" style="gap: var(--space-2); align-items: center;">
+                  <span class="question__number font-mono font-bold" style="font-size: var(--text-base);">Question @q.DisplayOrder</span>
+                  <span class="badge badge--muted">@q.SkillName · @q.SectionName</span>
+                </div>
+                <div>
+                  <button type="button" class="btn btn--ghost btn--sm @(q.IsFlagged ? "btn--primary" : "")" id="flag-btn"
+                          aria-pressed="@(q.IsFlagged ? "true" : "false")"
+                          data-flagged="@(q.IsFlagged ? "true" : "false")">
+                    @(q.IsFlagged ? "Flagged for review" : "Flag for review")
+                  </button>
+                </div>
+              </div>
+
+              <p class="question__stem" style="font-size: var(--text-base); margin: var(--space-3) 0;">
+                @q.Stem
+              </p>
+
+              <div class="option-list" role="radiogroup" aria-label="Answer for question @q.DisplayOrder">
+                @foreach (var opt in q.Options)
+                {
+                  var isSelected = opt.OptionId == q.SelectedOptionId;
+                  <label class="option @(isSelected ? "is-selected" : "")" style="cursor: pointer; border-radius: 0;">
+                    <input class="option__input js-option-radio" type="radio" name="selectedOptionId"
+                           value="@opt.OptionId" @(isSelected ? "checked" : "")>
+                    <span class="option__marker font-mono">@opt.Label</span>
+                    <span class="option__text">@opt.Text</span>
+                  </label>
+                }
+              </div>
+            </div>
+
+            <!-- Navigation Row -->
+            <div class="row row--between mt-4" style="align-items: center;">
+              <div>
+                @if (prevOrder.HasValue)
+                {
+                  <a class="btn" href="/placement/take/@take.PlacementId?q=@prevOrder">Previous</a>
+                }
+                else
+                {
+                  <button class="btn" disabled>Previous</button>
+                }
+              </div>
+
+              <div class="row" style="gap: var(--space-3);">
+                @if (nextOrder.HasValue)
+                {
+                  <a class="btn btn--primary" href="/placement/take/@take.PlacementId?q=@nextOrder">Next question</a>
+                }
+                else
+                {
+                  <button type="button" class="btn btn--danger js-open-submit-modal">Review & Submit test</button>
+                }
+              </div>
+            </div>
+          </div>
+
+          <!-- Sidebar Navigator -->
+          <aside class="exam-sidebar stack">
+            <div class="card" style="border: 2px solid var(--ink); border-radius: 0;">
+              <div class="card__header">
+                <div class="row row--between">
+                  <strong class="text-sm">Progress</strong>
+                  <span class="text-xs text-muted" id="progress-text">@take.AnsweredCount/@take.TotalQuestions answered</span>
+                </div>
+              </div>
+              <div class="card__body stack">
+                <div class="progress" role="progressbar" aria-valuenow="@take.AnsweredCount" aria-valuemin="0" aria-valuemax="@take.TotalQuestions" style="border-radius: 0;">
+                  <div class="progress__bar" id="progress-bar" style="width: @progressPercent%; border-radius: 0;"></div>
+                </div>
+
+                <div class="navigator">
+                  @foreach (var grp in navigatorGroups)
+                  {
+                    var itemsInGrp = grp.OrderBy(x => x.DisplayOrder).ToList();
+                    var minOrd = itemsInGrp.First().DisplayOrder;
+                    var maxOrd = itemsInGrp.Last().DisplayOrder;
+                    var title = grp.Key.Modality == ModalityDto.Listening ? "Listening" : "Reading";
+
+                    <div class="navigator__part">
+                      <div class="navigator__part-head row row--between">
+                        <span>@title</span>
+                        <span class="navigator__range font-mono text-xs">@minOrd–@maxOrd</span>
+                      </div>
+                      <div class="navigator__grid" role="group" aria-label="Questions @minOrd to @maxOrd">
+                        @foreach (var cell in itemsInGrp)
+                        {
+                          var classes = "navigator__cell";
+                          if (cell.IsCurrent) classes += " is-current";
+                          if (cell.IsAnswered) classes += " is-answered";
+                          else classes += " is-unanswered";
+                          if (cell.IsFlagged) classes += " is-flagged";
+
+                          <a href="/placement/take/@take.PlacementId?q=@cell.DisplayOrder"
+                             class="@classes"
+                             id="nav-cell-@cell.QuestionId"
+                             style="text-decoration: none; border-radius: 0;"
+                             aria-label="Question @cell.DisplayOrder @(cell.IsAnswered ? "answered" : "unanswered")"
+                             aria-current="@(cell.IsCurrent ? "true" : "false")">
+                            @cell.DisplayOrder
+                          </a>
+                        }
+                      </div>
+                    </div>
+                  }
+                </div>
+
+                <div class="text-xs stack" style="gap: var(--space-1)">
+                  <div class="row" style="align-items: center; gap: var(--space-2);">
+                    <span class="navigator__cell is-answered" style="width: 18px; height: 18px; font-size: 10px; display: inline-flex; align-items: center; justify-content: center; border-radius: 0;" aria-hidden="true">1</span> answered
+                  </div>
+                  <div class="row" style="align-items: center; gap: var(--space-2);">
+                    <span class="navigator__cell is-unanswered" style="width: 18px; height: 18px; font-size: 10px; display: inline-flex; align-items: center; justify-content: center; border-radius: 0;" aria-hidden="true">2</span> unanswered
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <p class="text-xs text-muted no-margin" role="note" style="line-height: var(--leading-relaxed);">
+              The placement test is free and deducts no credits. Your result sets the starting level of your learning path.
+            </p>
+
+            <button type="button" class="btn btn--danger js-open-submit-modal" style="width: 100%;">Submit test</button>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <!-- Modal for Submit Confirmation -->
+    <div id="submit-modal" class="modal" role="dialog" aria-modal="true" style="display:none; position:fixed; inset:0; background:rgba(20,24,29,0.7); z-index:999; align-items:center; justify-content:center;">
+      <div class="card" style="max-width:480px; width:90%; border:2px solid var(--ink); border-radius: 0; background:var(--bg-canvas);">
+        <div class="card__header"><strong>Submit placement test?</strong></div>
+        <div class="card__body">
+          <p id="submit-modal-summary" style="margin-bottom: var(--space-3);">
+            You have answered <strong id="modal-answered-count">@take.AnsweredCount</strong> of <strong>@take.TotalQuestions</strong> questions.
+          </p>
+          <p class="text-sm text-muted">
+            Once submitted, your answers will be graded immediately and your starting CEFR band calculated.
+          </p>
+        </div>
+        <div class="card__footer row row--between">
+          <button type="button" class="btn" id="btn-cancel-submit">Keep answering</button>
+          <form method="post" action="/placement/take/@take.PlacementId/submit" class="no-margin" id="submit-form">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="isAutoSubmit" id="is-auto-submit-input" value="false" />
+            <button type="submit" class="btn btn--danger" id="btn-confirm-submit">Yes, submit test</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const placementId = @take.PlacementId;
+      const questionId = @q.QuestionId;
+      let remainingSeconds = @take.RemainingSeconds;
+      let isFlagged = @(q.IsFlagged ? "true" : "false");
+      const totalQuestions = @take.TotalQuestions;
+      let answeredCount = @take.AnsweredCount;
+
+      const antiForgeryToken = document.querySelector('#anti-forgery-holder input[name="__RequestVerificationToken"]')?.value || '';
+      const saveStatusEl = document.getElementById('save-status');
+      const timerDisplayEl = document.getElementById('timer-display');
+      const timerBoxEl = document.getElementById('timer-box');
+      const flagBtn = document.getElementById('flag-btn');
+      const progressBar = document.getElementById('progress-bar');
+      const progressText = document.getElementById('progress-text');
+      const modalAnsweredCount = document.getElementById('modal-answered-count');
+      const navCell = document.getElementById('nav-cell-' + questionId);
+
+      // --- Countdown Timer ---
+      function formatTime(totalSec) {
+        if (totalSec <= 0) return '00:00';
+        const mins = Math.floor(totalSec / 60);
+        const secs = totalSec % 60;
+        return String(mins).padStart(2, '0') + ':' + String(secs).padStart(2, '0');
+      }
+
+      function updateTimerDisplay() {
+        if (!timerDisplayEl) return;
+        timerDisplayEl.textContent = formatTime(remainingSeconds);
+
+        if (remainingSeconds <= 120) {
+          timerBoxEl?.classList.remove('timer--warning');
+          timerBoxEl?.classList.add('timer--critical');
+        } else if (remainingSeconds <= 300) {
+          timerBoxEl?.classList.add('timer--warning');
+          timerBoxEl?.classList.remove('timer--critical');
+        } else {
+          timerBoxEl?.classList.remove('timer--warning', 'timer--critical');
+        }
+      }
+
+      updateTimerDisplay();
+
+      const timerInterval = setInterval(() => {
+        remainingSeconds--;
+        if (remainingSeconds <= 0) {
+          clearInterval(timerInterval);
+          updateTimerDisplay();
+          // Auto submit when time runs out
+          const autoInput = document.getElementById('is-auto-submit-input');
+          if (autoInput) autoInput.value = 'true';
+          document.getElementById('submit-form')?.submit();
+        } else {
+          updateTimerDisplay();
+        }
+      }, 1000);
+
+      // --- Save Answer via AJAX ---
+      async function sendAnswer(selectedOptionId, flagged) {
+        if (!saveStatusEl) return;
+        saveStatusEl.textContent = 'Saving…';
+        saveStatusEl.className = 'save-status';
+
+        try {
+          const body = new URLSearchParams();
+          if (selectedOptionId !== null && selectedOptionId !== undefined) {
+            body.append('selectedOptionId', selectedOptionId);
+          }
+          body.append('isFlagged', flagged ? 'true' : 'false');
+          body.append('__RequestVerificationToken', antiForgeryToken);
+
+          const res = await fetch(`/placement/take/${placementId}/answers/${questionId}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+              'RequestVerificationToken': antiForgeryToken
+            },
+            body: body.toString()
+          });
+
+          if (!res.ok) {
+            throw new Error('Save answer failed with status ' + res.status);
+          }
+
+          const data = await res.json();
+          if (data.redirectUrl) {
+            window.location.href = data.redirectUrl;
+            return;
+          }
+
+          saveStatusEl.textContent = 'Saved';
+          saveStatusEl.className = 'save-status save-status--saved';
+
+          // Update remaining seconds if returned
+          if (typeof data.remainingSeconds === 'number') {
+            remainingSeconds = data.remainingSeconds;
+            updateTimerDisplay();
+          }
+
+          // Update navigator cell appearance
+          if (navCell) {
+            if (data.selectedOptionId !== null) {
+              navCell.classList.add('is-answered');
+              navCell.classList.remove('is-unanswered');
+            }
+            if (data.isFlagged) {
+              navCell.classList.add('is-flagged');
+            } else {
+              navCell.classList.remove('is-flagged');
+            }
+          }
+        } catch (err) {
+          console.error(err);
+          saveStatusEl.textContent = 'Save error';
+          saveStatusEl.className = 'save-status save-status--error';
+        }
+      }
+
+      // Option selection change
+      const optionInputs = document.querySelectorAll('.js-option-radio');
+      optionInputs.forEach(input => {
+        input.addEventListener('change', function () {
+          document.querySelectorAll('.option').forEach(l => l.classList.remove('is-selected'));
+          this.closest('.option')?.classList.add('is-selected');
+
+          const wasAnswered = navCell?.classList.contains('is-answered');
+          if (!wasAnswered) {
+            answeredCount++;
+            if (progressText) progressText.textContent = `${answeredCount}/${totalQuestions} answered`;
+            if (modalAnsweredCount) modalAnsweredCount.textContent = answeredCount;
+            const pct = Math.round((answeredCount / Math.max(1, totalQuestions)) * 100);
+            if (progressBar) progressBar.style.width = pct + '%';
+          }
+
+          sendAnswer(this.value, isFlagged);
+        });
+      });
+
+      // Flag for review button
+      if (flagBtn) {
+        flagBtn.addEventListener('click', function () {
+          isFlagged = !isFlagged;
+          this.setAttribute('data-flagged', isFlagged ? 'true' : 'false');
+          this.setAttribute('aria-pressed', isFlagged ? 'true' : 'false');
+          this.textContent = isFlagged ? 'Flagged for review' : 'Flag for review';
+          if (isFlagged) {
+            this.classList.add('btn--primary');
+          } else {
+            this.classList.remove('btn--primary');
+          }
+
+          const currentSelected = document.querySelector('.js-option-radio:checked')?.value || null;
+          sendAnswer(currentSelected, isFlagged);
+        });
+      }
+
+      // Submit Confirmation Modal
+      const submitModal = document.getElementById('submit-modal');
+      const openSubmitBtns = document.querySelectorAll('.js-open-submit-modal');
+      const cancelSubmitBtn = document.getElementById('btn-cancel-submit');
+
+      openSubmitBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (submitModal) {
+            submitModal.style.display = 'flex';
+          }
+        });
+      });
+
+      if (cancelSubmitBtn && submitModal) {
+        cancelSubmitBtn.addEventListener('click', () => {
+          submitModal.style.display = 'none';
+        });
+      }
+    })();
+  </script>
+</body>
+</html>

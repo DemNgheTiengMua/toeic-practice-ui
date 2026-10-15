@@ -119,7 +119,7 @@
     "Find a mentor": "chat", "Credit wallet": "wallet", "Profile": "user",
     "Students": "user", "Score conversion": "swap", "Credit packages": "box",
     "Orders": "receipt", "Complaints": "flag", "Prototype catalog": "grid",
-    "Saved questions": "bookmark"
+    "Saved questions": "bookmark", "Placement test": "target"
   };
   each(".nav-list__item", function (a) { lead(a, NAV[text(a)]); });
 
