@@ -340,13 +340,8 @@
   "338": "WeaknessModels.cs",
   "339": ".MapCheckoutEndpoints",
   "340": "AuthService.cs",
-  "341": "Task",
-  "342": "AdminQuestionGroupDto",
-  "343": ".CreatePackageAsync",
   "344": ".GetSpeakingAudioStreamAsync",
-  "345": "HttpContext",
   "346": "PaymentViewModels.cs",
-  "347": "PackageDto",
   "348": "LearningPathViewModels.cs",
   "349": "PayOsPaymentGateway",
   "350": "MockPaymentGateway",
@@ -355,7 +350,5 @@
   "353": "QuestionEditor.cshtml",
   "354": "LearnerContextDto",
   "355": "Booking",
-  "356": ".GetOrderDetailAsync_shows_every_payment_event_in_chronological_order",
-  "357": ".SaveAdminExamSectionAudioAsync",
-  "358": "GatewayStatus"
+  "356": ".GetOrderDetailAsync_shows_every_payment_event_in_chronological_order"
 }
