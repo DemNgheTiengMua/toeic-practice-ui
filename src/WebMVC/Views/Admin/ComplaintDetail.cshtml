@@ -1,0 +1,208 @@
+@using Contracts
+@model WebMVC.Models.AdminComplaintDetailViewModel
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = $"Complaint #C-{Model.Complaint.ComplaintId}";
+    ViewData["Description"] = "Complaint detail and admin resolution.";
+
+    string FormatType(ComplaintTypeDto type) => type switch
+    {
+        ComplaintTypeDto.MentorNoShow => "Mentor no-show",
+        ComplaintTypeDto.MentorQuality => "Mentor quality",
+        ComplaintTypeDto.GradingIssue => "Grading issue",
+        ComplaintTypeDto.TechnicalError => "Technical error",
+        ComplaintTypeDto.PaymentIssue => "Payment issue",
+        _ => type.ToString(),
+    };
+
+    var isResolved = Model.Complaint.Status == ComplaintStatusDto.Resolved;
+}
+
+<div class="stack">
+  <nav class="breadcrumbs" aria-label="Breadcrumb">
+    <a href="/admin" class="breadcrumbs__item">Admin</a>
+    <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+    <a href="/admin/complaints" class="breadcrumbs__item">Complaints</a>
+    <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+    <span class="breadcrumbs__item" aria-current="page">#C-@Model.Complaint.ComplaintId</span>
+  </nav>
+
+  @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+  {
+    <div class="alert alert--danger" role="alert">@Model.ErrorMessage</div>
+  }
+
+  @if (isResolved)
+  {
+    <div class="row row--between">
+      <h1 class="m-0">Complaint #C-@Model.Complaint.ComplaintId</h1>
+      <span class="badge badge--success">Resolved</span>
+    </div>
+
+    <div class="grid-3">
+      <div class="stat">
+        <div class="stat__label">Credit granted</div>
+        <div class="stat__value">@(Model.Complaint.GrantedCredits ?? 0)</div>
+        <div class="stat__hint">admin_grant in the ledger</div>
+      </div>
+      <div class="stat">
+        <div class="stat__label">Learner</div>
+        <div class="stat__value">#@Model.Complaint.UserId</div>
+        <div class="stat__hint">@Model.Complaint.LearnerName</div>
+      </div>
+      <div class="stat">
+        <div class="stat__label">Related to</div>
+        <div class="stat__value">@Model.Complaint.SubjectType</div>
+        <div class="stat__hint">@Model.Complaint.SubjectSummary</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card__header"><strong>Resolution details</strong></div>
+      <div class="card__body">
+        <dl class="dl-grid">
+          <div>
+            <dt class="text-muted">Status</dt>
+            <dd class="m-0"><span class="badge badge--success">Resolved</span></dd>
+          </div>
+          <div>
+            <dt class="text-muted">Resolved by</dt>
+            <dd class="m-0 fw-600">@(Model.Complaint.ResolvedByUserName ?? "Admin") · @Model.Complaint.ResolvedAt?.ToString("dd MMM yyyy, HH:mm")</dd>
+          </div>
+          <div>
+            <dt class="text-muted">Credit issued</dt>
+            <dd class="m-0 fw-600">
+              @if (Model.Complaint.GrantedCredits.HasValue && Model.Complaint.GrantedCredits.Value > 0)
+              {
+                <span>@Model.Complaint.GrantedCredits.Value credit (admin_grant, txn #@Model.Complaint.ResolvedByGrantTxnId)</span>
+              }
+              else
+              {
+                <span>None (no credit granted)</span>
+              }
+            </dd>
+          </div>
+          <div>
+            <dt class="text-muted">Reply to learner</dt>
+            <dd class="m-0">@(Model.Complaint.Resolution ?? "—")</dd>
+          </div>
+          <div>
+            <dt class="text-muted">Internal notes</dt>
+            <dd class="m-0 text-muted">@(Model.Complaint.InternalNotes ?? "—")</dd>
+          </div>
+        </dl>
+      </div>
+      <div class="card__footer">
+        <a href="/admin/complaints" class="btn">Back to complaints</a>
+      </div>
+    </div>
+  }
+  else
+  {
+    <div class="row row--between">
+      <h1 class="m-0">Complaint #C-@Model.Complaint.ComplaintId</h1>
+      <div>
+        @if (Model.Complaint.Status == ComplaintStatusDto.Open)
+        {
+          <span class="badge badge--warning">Pending</span>
+        }
+        else if (Model.Complaint.Status == ComplaintStatusDto.Reviewing)
+        {
+          <span class="badge badge--info">Reviewing</span>
+        }
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card__header row row--between">
+          <strong>Complaint details</strong>
+          <div>
+            @if (Model.Complaint.Status == ComplaintStatusDto.Open)
+            {
+              <form method="post" action="/admin/complaints/@Model.Complaint.ComplaintId/status" class="no-margin">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="status" value="reviewing">
+                <button type="submit" class="btn btn--sm btn--ghost">Mark reviewing</button>
+              </form>
+            }
+            else if (Model.Complaint.Status == ComplaintStatusDto.Reviewing)
+            {
+              <form method="post" action="/admin/complaints/@Model.Complaint.ComplaintId/status" class="no-margin">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="status" value="open">
+                <button type="submit" class="btn btn--sm btn--ghost">Return to open</button>
+              </form>
+            }
+          </div>
+        </div>
+        <div class="card__body">
+          <dl class="dl-grid">
+            <div>
+              <dt class="text-muted">Learner</dt>
+              <dd class="m-0 fw-600">@Model.Complaint.LearnerName (user #@Model.Complaint.UserId)</dd>
+            </div>
+            <div>
+              <dt class="text-muted">Email</dt>
+              <dd class="m-0">@Model.Complaint.LearnerEmail</dd>
+            </div>
+            <div>
+              <dt class="text-muted">Type</dt>
+              <dd class="m-0">@FormatType(Model.Complaint.Type)</dd>
+            </div>
+            <div>
+              <dt class="text-muted">Related to</dt>
+              <dd class="m-0">
+                @Model.Complaint.SubjectSummary
+                @if (!string.IsNullOrEmpty(Model.Complaint.SubjectDetails))
+                {
+                  <br><span class="text-sm text-muted">@Model.Complaint.SubjectDetails</span>
+                }
+              </dd>
+            </div>
+            <div>
+              <dt class="text-muted">Submitted</dt>
+              <dd class="m-0">@Model.Complaint.CreatedAt.ToString("dd MMM yyyy, HH:mm")</dd>
+            </div>
+            <div>
+              <dt class="text-muted">Description</dt>
+              <dd class="m-0">@Model.Complaint.Reason</dd>
+            </div>
+          </dl>
+        </div>
+      </div>
+
+      <form method="post" action="/admin/complaints/@Model.Complaint.ComplaintId/resolve" class="card">
+        @Html.AntiForgeryToken()
+        <div class="card__header"><strong>Resolution</strong></div>
+        <div class="card__body stack">
+          <label class="row">
+            <input type="checkbox" name="issue_credit" id="cb-issue-credit" checked onchange="document.getElementById('credit-amount-wrapper').style.display = this.checked ? '' : 'none';">
+            <span>Issue credit as make-good</span>
+          </label>
+          <div class="field" id="credit-amount-wrapper">
+            <label class="field__label" for="cd-amount">Credit amount</label>
+            <input id="cd-amount" type="number" class="field__input" name="credit_amount" value="1" min="1" max="10">
+            <span class="field__hint">Recorded as admin_grant in the transaction log. There are no cash refunds.</span>
+          </div>
+          <div class="field">
+            <label class="field__label" for="cd-resolution">Reply to learner</label>
+            <textarea id="cd-resolution" class="field__input" name="resolution" rows="3" placeholder="Explain the resolution to the learner…" required></textarea>
+            <span class="field__hint">Shown directly to the learner in their support history.</span>
+          </div>
+          <div class="field">
+            <label class="field__label" for="cd-notes">Internal notes</label>
+            <textarea id="cd-notes" class="field__input" name="internalNotes" rows="4" placeholder="Document the decision and any actions taken…" required></textarea>
+            <span class="field__hint">Not shown to the learner. For the admin record only.</span>
+          </div>
+        </div>
+        <div class="card__footer">
+          <div class="row">
+            <button type="submit" class="btn btn--danger">Resolve complaint</button>
+            <a href="/admin/complaints" class="btn">Back to complaints</a>
+          </div>
+        </div>
+      </form>
+    </div>
+  }
+</div>

@@ -1,0 +1,120 @@
+@using Contracts
+@model WebMVC.Models.SupportHistoryViewModel
+@{
+    Layout = "_LearnerLayout";
+    ViewData["Title"] = "My reports";
+    ViewData["Description"] = "Track the problems you have reported and our replies.";
+
+    string FormatType(ComplaintTypeDto type) => type switch
+    {
+        ComplaintTypeDto.MentorNoShow => "Mentor did not show up",
+        ComplaintTypeDto.MentorQuality => "Mentor quality issue",
+        ComplaintTypeDto.GradingIssue => "Grading issue",
+        ComplaintTypeDto.TechnicalError => "Technical error",
+        ComplaintTypeDto.PaymentIssue => "Payment issue",
+        _ => type.ToString(),
+    };
+}
+
+<div class="stack">
+  <nav class="breadcrumbs" aria-label="Breadcrumb">
+    <a href="/dashboard" class="breadcrumbs__item">Home</a>
+    <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+    <span class="breadcrumbs__item" aria-current="page">My reports</span>
+  </nav>
+
+  @if (TempData["Success"] is string successMsg)
+  {
+    <div class="alert alert--success" role="status">@successMsg</div>
+  }
+  @if (TempData["Error"] is string errorMsg)
+  {
+    <div class="alert alert--danger" role="alert">@errorMsg</div>
+  }
+
+  <div class="row row--between">
+    <div>
+      <h1 class="m-0 mb-1">My reports</h1>
+      <p class="text-muted no-margin">Track the problems you have reported and our replies.</p>
+    </div>
+    <a class="btn btn--primary" href="/support/report">New report</a>
+  </div>
+
+  @if (Model.Complaints.Count == 0)
+  {
+    <div class="card">
+      <div class="card__body">
+        <div class="state-block">
+          <div class="state-block__icon" aria-hidden="true">EMPTY</div>
+          <div class="state-block__title">No reports yet</div>
+          <p class="state-block__desc">
+            If a mentor session, an exam, or a payment goes wrong, report it here and an admin will follow up.
+          </p>
+          <a class="btn btn--primary btn--lg" href="/support/report">Report a problem</a>
+        </div>
+      </div>
+    </div>
+  }
+  else
+  {
+    <div class="stack">
+      @foreach (var c in Model.Complaints)
+      {
+        <div class="card">
+          <div class="card__header row row--between">
+            <div>
+              <strong>@FormatType(c.Type)</strong>
+              @if (c.Status == ComplaintStatusDto.Open)
+              {
+                <span class="badge badge--warning">Open</span>
+              }
+              else if (c.Status == ComplaintStatusDto.Reviewing)
+              {
+                <span class="badge badge--info">Reviewing</span>
+              }
+              else if (c.Status == ComplaintStatusDto.Resolved)
+              {
+                <span class="badge badge--success">Resolved</span>
+              }
+            </div>
+            <span class="text-sm text-muted">
+              @c.CreatedAt.ToString("dd MMM yyyy")
+              @if (c.ResolvedAt.HasValue)
+              {
+                <span> · resolved @c.ResolvedAt.Value.ToString("dd MMM yyyy")</span>
+              }
+            </span>
+          </div>
+          <div class="card__body stack">
+            <p class="text-sm no-margin">
+              @if (!string.IsNullOrEmpty(c.SubjectSummary))
+              {
+                <strong>@c.SubjectSummary:</strong>
+              }
+              @c.Reason
+            </p>
+
+            @if (c.Status is ComplaintStatusDto.Open or ComplaintStatusDto.Reviewing)
+            {
+              <p class="text-sm text-muted no-margin">
+                We will reply within 2 working days. If the report is accepted, credit is returned to your wallet automatically.
+              </p>
+            }
+            else if (c.Status == ComplaintStatusDto.Resolved)
+            {
+              <div class="alert alert--success no-margin">
+                <strong>Our reply:</strong> @(c.Resolution ?? "Complaint resolved.")
+              </div>
+              @if (c.GrantedCredits.HasValue && c.GrantedCredits.Value > 0)
+              {
+                <p class="text-sm text-success fw-600 no-margin">
+                  @c.GrantedCredits.Value credit@(c.GrantedCredits.Value == 1 ? "" : "s") granted to your wallet.
+                </p>
+              }
+            }
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>

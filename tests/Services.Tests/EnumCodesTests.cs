@@ -40,6 +40,8 @@ public sealed class EnumCodesTests
         { typeof(MentorType), typeof(MentorTypeDto), "CK_Mentor_Type" },
         { typeof(SlotStatus), typeof(SlotStatusDto), "CK_Slots_Status" },
         { typeof(BookingStatus), typeof(BookingStatusDto), "CK_Bookings_Status" },
+        { typeof(ComplaintType), typeof(ComplaintTypeDto), "CK_Complaints_Type" },
+        { typeof(ComplaintStatus), typeof(ComplaintStatusDto), "CK_Complaints_Status" },
     };
 
 

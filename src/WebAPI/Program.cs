@@ -155,6 +155,7 @@ builder.Services.AddScoped<ISpeakingPracticeService, SpeakingPracticeService>();
 builder.Services.AddScoped<IPlacementService, PlacementService>();
 builder.Services.AddScoped<ILearningPathService, LearningPathService>();
 builder.Services.AddScoped<IMentorService, MentorService>();
+builder.Services.AddScoped<IComplaintService, ComplaintService>();
 builder.Services.AddHostedService<AiGradingBackgroundService>();
 
 builder.Services.AddSingleton<IAiInsightGenerator, FakeAiInsightGenerator>();
@@ -240,6 +241,7 @@ app.MapInsightEndpoints();
 app.MapPlacementEndpoints();
 app.MapLearningPathEndpoints();
 app.MapMentorEndpoints();
+app.MapComplaintEndpoints();
 
 app.Run();
 

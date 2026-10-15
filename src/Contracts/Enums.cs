@@ -261,3 +261,23 @@ public enum BookingStatusDto
     [JsonStringEnumMemberName("cancelled")] Cancelled,
 }
 
+/// <summary>CK_Complaints_Type: mentor_no_show, mentor_quality, grading_issue, technical_error, payment_issue.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<ComplaintTypeDto>))]
+public enum ComplaintTypeDto
+{
+    [JsonStringEnumMemberName("mentor_no_show")] MentorNoShow,
+    [JsonStringEnumMemberName("mentor_quality")] MentorQuality,
+    [JsonStringEnumMemberName("grading_issue")] GradingIssue,
+    [JsonStringEnumMemberName("technical_error")] TechnicalError,
+    [JsonStringEnumMemberName("payment_issue")] PaymentIssue,
+}
+
+/// <summary>CK_Complaints_Status: open, reviewing, resolved.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<ComplaintStatusDto>))]
+public enum ComplaintStatusDto
+{
+    [JsonStringEnumMemberName("open")] Open,
+    [JsonStringEnumMemberName("reviewing")] Reviewing,
+    [JsonStringEnumMemberName("resolved")] Resolved,
+}
+

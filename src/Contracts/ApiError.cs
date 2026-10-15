@@ -90,6 +90,10 @@ public sealed record ApiError(string Code, string Title, int Status, string? Det
         public const string BookingNotFinished = "booking_not_finished";
         public const string BookingAlreadyRated = "booking_already_rated";
         public const string MentorNotFound = "mentor_not_found";
+
+        public const string ComplaintNotFound = "COMPLAINT_NOT_FOUND";
+        public const string ComplaintInvalidSubject = "COMPLAINT_INVALID_SUBJECT";
+        public const string ComplaintAlreadyResolved = "COMPLAINT_ALREADY_RESOLVED";
     }
 
 }
