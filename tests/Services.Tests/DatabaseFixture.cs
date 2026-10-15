@@ -21,6 +21,7 @@ public sealed class DatabaseFixture : IAsyncLifetime
     public string ConnectionString { get; } = $"{BaseConnectionString};Database={Database}";
 
     private static string RepoRoot { get; } = FindRepoRoot();
+    public static string RepoRootPath => RepoRoot;
 
     /// <summary>Locally sqlcmd is on PATH; on CI it lives inside the SQL Server container image
     /// at a path the runner doesn't search. The env var wins, then the known container paths,
@@ -87,6 +88,8 @@ public sealed class DatabaseFixture : IAsyncLifetime
         Assert.True(result.ExitCode == 0, $"sqlcmd failed ({result.ExitCode}): {result.Output}");
     }
 
+    public Task SqlCmdFileToDatabaseAsync(string database, string scriptPath) => SqlCmdFileAsync(database, scriptPath);
+
     private static async Task SqlCmdFileAsync(string database, string scriptPath)
     {
         var result = await RunSqlCmdAsync(database, ("-i", scriptPath));
@@ -100,7 +103,7 @@ public sealed class DatabaseFixture : IAsyncLifetime
         var server = builder["Server"].ToString()!;
         var trusted = builder.TryGetValue("Trusted_Connection", out var tc) && tc.ToString() == "True";
 
-        var argumentList = new List<string> { "-S", server, "-d", database, "-I", "-b", "-C" };
+        var argumentList = new List<string> { "-S", server, "-d", database, "-I", "-b", "-C", "-f", "65001" };
         if (!trusted)
         {
             argumentList.AddRange(["-U", builder["User ID"].ToString()!, "-P", builder["Password"].ToString()!]);
