@@ -499,4 +499,31 @@ public sealed class PaymentServiceTests(DatabaseFixture database)
         Assert.Null(preview.OpenOrder);
         Assert.True(mockGateway.IsCancelled(staleOrder.PaymentNo));
     }
+
+    [Fact]
+    public async Task CancelOrderAsync_when_order_is_pending_cancels_at_gateway_and_marks_failed()
+    {
+        var pkgId = await SeedPackageAsync("UserCancelTest", 5, 199000);
+        var mockGateway = new MockPaymentGateway();
+        var service = CreateService(mockGateway);
+
+        var userId = await SeedUserAsync(isVerified: true);
+        var order = await service.CreateOrderAsync(userId, pkgId, "http://localhost:5000");
+
+        // Learner actively cancels order
+        await service.CancelOrderAsync(userId, order.OrderCode);
+
+        // Verify gateway was cancelled
+        Assert.True(mockGateway.IsCancelled(order.PaymentNo));
+
+        // Verify order status is failed with user_cancelled
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var updatedOrder = await db.Orders.SingleAsync(o => o.OrderId == order.OrderId);
+        Assert.Equal("failed", updatedOrder.Status);
+        Assert.Equal("user_cancelled", updatedOrder.GatewayErrorCode);
+
+        // Verify user can immediately create a new order without UX_Orders_OnePendingPerUser error
+        var newOrder = await service.CreateOrderAsync(userId, pkgId, "http://localhost:5000");
+        Assert.NotNull(newOrder);
+    }
 }

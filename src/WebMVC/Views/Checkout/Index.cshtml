@@ -55,7 +55,24 @@ else if (preview?.OpenOrder is not null)
         </div>
       </div>
       <div class="card__footer row">
-        <a class="btn btn--primary" href="/payment/result?orderCode=@open.OrderCode">Check the previous order</a>
+        @if (open.Status is OrderStatusDto.Pending or OrderStatusDto.Reconciling && !string.IsNullOrEmpty(open.CheckoutUrl))
+        {
+          <button type="button" class="btn btn--primary" id="btn-resume-qr"
+                  data-ordercode="@open.OrderCode"
+                  data-packagename="@open.PackageName"
+                  data-amount="@CurrencyFormatter.FormatVnd(open.Amount)"
+                  data-credits="@open.Credits"
+                  data-checkouturl="@open.CheckoutUrl">
+            Scan VietQR to Pay
+          </button>
+        }
+        <a class="btn btn--secondary" href="/payment/result?orderCode=@open.OrderCode">Check payment status</a>
+        <form method="post" action="/checkout/cancel" style="display: inline-block;">
+          @Html.AntiForgeryToken()
+          <input type="hidden" name="orderCode" value="@open.OrderCode" />
+          <input type="hidden" name="returnUrl" value="/checkout?packageId=@open.PackageId" />
+          <button type="submit" class="btn btn--danger" onclick="return confirm('Cancel this order and start a new one?');">Cancel this order</button>
+        </form>
         <a class="btn btn--ghost" href="/wallet">View credit wallet</a>
       </div>
     </div>
@@ -135,43 +152,206 @@ else if (preview is not null)
           </div>
         </div>
       </div>
+    </div>
+}
 
-      <div id="embedded-payment-modal" style="display: none; margin-top: 1.5rem;">
-        <div class="card">
-          <div class="card__header row row--between">
-            <strong>payOS Payment</strong>
-            <button type="button" class="btn btn--sm btn--ghost" id="btn-close-embedded">Cancel</button>
+@if (preview is not null)
+{
+    <!-- QR Payment Modal Dialog with Order Details Panel -->
+    <div id="embedded-payment-modal" style="display: none; position: fixed; inset: 0; background: rgba(20, 24, 29, 0.75); z-index: 10000; align-items: center; justify-content: center; padding: 1rem; overflow-y: auto;">
+      <div class="card" style="max-width: 880px; width: 100%; border: 2px solid #14181d; background: #ffffff; margin: auto;">
+        
+        <div class="card__header row row--between" style="background: #14181d; color: #ffffff; padding: 0.75rem 1.25rem;">
+          <div class="row" style="align-items: center; gap: 0.75rem;">
+            <span style="display: inline-block; width: 10px; height: 10px; background: #0b4ea2;"></span>
+            <strong style="text-transform: uppercase; letter-spacing: 0.05em; font-family: 'IBM Plex Sans Condensed', sans-serif; font-size: 1rem;">
+              VietQR Payment — payOS
+            </strong>
           </div>
-          <div class="card__body" style="padding: 0; min-height: 450px;">
-            <div id="embedded-payment-container" style="width: 100%; min-height: 450px;"></div>
-          </div>
+          <button type="button" class="btn btn--sm" id="btn-close-embedded" style="background: transparent; color: #ffffff; border: 1px solid #ffffff; padding: 0.25rem 0.6rem; cursor: pointer;">
+            ✕ Close
+          </button>
         </div>
+
+        <div class="qr-modal-grid" style="display: grid; grid-template-columns: minmax(300px, 1fr) minmax(360px, 1.2fr); border-bottom: 1px solid #ccd2d6;">
+          
+          <!-- Left Column: Order Summary & Instructions (Fills the white gap) -->
+          <div style="padding: 1.5rem; background: #f5f7f9; border-right: 1px solid #ccd2d6; display: flex; flex-direction: column; justify-content: space-between;">
+            <div class="stack">
+              <div class="row row--between" style="align-items: center;">
+                <span style="font-family: 'IBM Plex Sans Condensed', sans-serif; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.08em; color: #64748b; font-weight: 700;">
+                  Order Details
+                </span>
+                <span class="badge badge--warning" style="font-size: 0.75rem; padding: 2px 6px;">WAITING PAYMENT</span>
+              </div>
+
+              <div style="background: #ffffff; border: 1px solid #ccd2d6; padding: 1rem; margin-top: 0.5rem;" class="stack--tight">
+                <div class="row row--between text-sm">
+                  <span class="text-muted">Order code:</span>
+                  <strong style="font-family: 'IBM Plex Mono', monospace; font-size: 0.95rem;" id="modal-order-code">DH-0000</strong>
+                </div>
+                <div class="row row--between text-sm">
+                  <span class="text-muted">Package:</span>
+                  <strong id="modal-package-name">Credit Package</strong>
+                </div>
+                <div class="row row--between text-sm">
+                  <span class="text-muted">Credits added:</span>
+                  <strong style="color: #0a6b3c;" id="modal-credits">+0 credits</strong>
+                </div>
+                <hr style="margin: 0.5rem 0; border: none; border-top: 1px solid #ccd2d6;">
+                <div class="row row--between">
+                  <strong style="font-size: 1rem;">Total amount:</strong>
+                  <strong style="font-family: 'IBM Plex Mono', monospace; font-size: 1.35rem; color: #0b4ea2;" id="modal-amount">0 đ</strong>
+                </div>
+              </div>
+
+              <div style="margin-top: 0.75rem;">
+                <div style="font-family: 'IBM Plex Sans Condensed', sans-serif; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.08em; color: #64748b; font-weight: 700; margin-bottom: 0.5rem;">
+                  Payment Instructions
+                </div>
+                <ol style="margin: 0; padding-left: 1.25rem; font-size: 0.85rem; line-height: 1.5; color: #334155;">
+                  <li>Open your mobile banking app (Vietcombank, MB Bank, Techcombank, etc.) or e-wallet.</li>
+                  <li>Select <strong>Scan QR (Quét mã QR)</strong>.</li>
+                  <li>Scan the <strong>VietQR</strong> code on the right.</li>
+                  <li>Confirm the transfer. Your credits are credited immediately!</li>
+                </ol>
+              </div>
+
+              <div style="background: #e6f4ea; border-left: 3px solid #0a6b3c; padding: 0.5rem 0.75rem; font-size: 0.8rem; color: #0a6b3c; margin-top: 0.75rem;">
+                <strong>Auto-sync:</strong> Do not close this window while paying. Once transferred, this screen automatically updates.
+              </div>
+            </div>
+
+            <div style="margin-top: 1.25rem; font-size: 0.75rem; color: #64748b;">
+              Having trouble scanning? You can also open the official hosted checkout page directly.
+            </div>
+          </div>
+
+          <!-- Right Column: payOS VietQR iframe container -->
+          <div style="padding: 0; min-height: 540px; background: #ffffff; display: flex; align-items: center; justify-content: center;">
+            <div id="embedded-payment-container" style="width: 100%; height: 540px; min-height: 540px;"></div>
+          </div>
+
+        </div>
+
+        <div class="card__footer row row--between" style="padding: 0.75rem 1.25rem; background: #ffffff;">
+          <form id="modal-cancel-form" method="post" action="/checkout/cancel" style="margin: 0;">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="orderCode" id="modal-cancel-orderCode" value="" />
+            <input type="hidden" name="returnUrl" value="/checkout@(preview != null ? $"?packageId={preview.PackageId}" : "")" />
+            <button type="submit" class="btn btn--danger btn--sm" onclick="return confirm('Cancel this payment order?');">
+              Cancel order
+            </button>
+          </form>
+          <a id="btn-direct-checkout" href="#" target="_blank" rel="noopener noreferrer" class="btn btn--secondary btn--sm">
+            Open payOS hosted page ↗
+          </a>
+        </div>
+
       </div>
     </div>
 }
 
 @section Scripts {
+  <style>
+    @("@media") (max-width: 768px) {
+      .qr-modal-grid { grid-template-columns: 1fr !important; }
+    }
+  </style>
   <script src="https://cdn.payos.vn/payos-checkout/v1/stable/payos-initialize.js"></script>
   <script>
     document.addEventListener("DOMContentLoaded", function () {
       var form = document.getElementById("checkout-form");
       var embeddedModal = document.getElementById("embedded-payment-modal");
       var btnClose = document.getElementById("btn-close-embedded");
+      var directLink = document.getElementById("btn-direct-checkout");
+      var modalCancelOrderCode = document.getElementById("modal-cancel-orderCode");
+      var btnResume = document.getElementById("btn-resume-qr");
       var payosInstance = null;
 
-      if (btnClose) {
-        btnClose.addEventListener("click", function () {
-          if (payosInstance) {
-            try { payosInstance.exit(); } catch (e) {}
-          }
-          if (embeddedModal) embeddedModal.style.display = "none";
-          var submitBtn = form ? form.querySelector("button[type='submit']") : null;
-          if (submitBtn) submitBtn.disabled = false;
-        });
+      function closeModal() {
+        if (payosInstance) {
+          try { payosInstance.exit(); } catch (e) {}
+        }
+        var container = document.getElementById("embedded-payment-container");
+        if (container) container.innerHTML = "";
+        if (embeddedModal) embeddedModal.style.display = "none";
+        var submitBtn = form ? form.querySelector("button[type='submit']") : null;
+        if (submitBtn) submitBtn.disabled = false;
       }
 
-      if (form && window.PayOSCheckout) {
+      function openQrModal(order) {
+        var codeEl = document.getElementById("modal-order-code");
+        var pkgEl = document.getElementById("modal-package-name");
+        var amtEl = document.getElementById("modal-amount");
+        var credEl = document.getElementById("modal-credits");
+
+        if (codeEl) codeEl.textContent = order.orderCode || "";
+        if (pkgEl) pkgEl.textContent = order.packageName || "Credit Package";
+        if (amtEl) amtEl.textContent = order.amount || "";
+        if (credEl) credEl.textContent = "+" + (order.credits || "0") + " credits";
+        if (modalCancelOrderCode) modalCancelOrderCode.value = order.orderCode || "";
+        if (directLink) directLink.href = order.checkoutUrl || "#";
+
+        if (window.PayOSCheckout && typeof window.PayOSCheckout.usePayOS === "function" && order.checkoutUrl) {
+          var container = document.getElementById("embedded-payment-container");
+          if (container) container.innerHTML = "";
+          if (embeddedModal) embeddedModal.style.display = "flex";
+
+          var config = {
+            RETURN_URL: window.location.origin + "/payment/result?orderCode=" + encodeURIComponent(order.orderCode),
+            ELEMENT_ID: "embedded-payment-container",
+            CHECKOUT_URL: order.checkoutUrl,
+            embedded: true,
+            onSuccess: function (event) {
+              window.location.href = "/payment/result?orderCode=" + encodeURIComponent(order.orderCode);
+            },
+            onCancel: function (event) {
+              console.log("payOS onCancel:", event);
+            },
+            onExit: function (event) {
+              console.log("payOS onExit:", event);
+              closeModal();
+            }
+          };
+
+          try {
+            payosInstance = PayOSCheckout.usePayOS(config);
+            payosInstance.open();
+          } catch (popupErr) {
+            console.warn("PayOS embedded open failed, redirecting to hosted checkout:", popupErr);
+            window.location.href = order.checkoutUrl;
+          }
+        } else if (order.checkoutUrl) {
+          window.location.href = order.checkoutUrl;
+        }
+      }
+
+      if (btnClose) {
+        btnClose.addEventListener("click", closeModal);
+      }
+
+      if (btnResume) {
+        btnResume.addEventListener("click", function () {
+          openQrModal({
+            orderCode: btnResume.getAttribute("data-ordercode"),
+            packageName: btnResume.getAttribute("data-packagename"),
+            amount: btnResume.getAttribute("data-amount"),
+            credits: btnResume.getAttribute("data-credits"),
+            checkoutUrl: btnResume.getAttribute("data-checkouturl")
+          });
+        });
+
+        // If URL has ?openQr=1, auto-trigger the resume modal
+        var urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get("openQr") === "1") {
+          btnResume.click();
+        }
+      }
+
+      if (form) {
         form.addEventListener("submit", async function (e) {
+          e.preventDefault();
           var submitBtn = form.querySelector("button[type='submit']");
           if (submitBtn) submitBtn.disabled = true;
 
@@ -192,41 +372,35 @@ else if (preview is not null)
             });
 
             if (!res.ok) {
-              form.submit();
+              var errData = null;
+              try { errData = await res.json(); } catch (_) {}
+              if (errData && errData.message) {
+                alert(errData.message);
+              } else {
+                alert("Could not create payment order. Please refresh and try again.");
+              }
+              if (submitBtn) submitBtn.disabled = false;
               return;
             }
 
             var data = await res.json();
-            if (data.gateway === "payos" && data.checkoutUrl && data.checkoutUrl.startsWith("http")) {
-              e.preventDefault();
-              embeddedModal.style.display = "block";
-              embeddedModal.scrollIntoView({ behavior: "smooth" });
-
-              var config = {
-                RETURN_URL: window.location.origin + "/payment/result?orderCode=" + encodeURIComponent(data.orderCode),
-                ELEMENT_ID: "embedded-payment-container",
-                CHECKOUT_URL: data.checkoutUrl,
-                embedded: true,
-                onSuccess: function (event) {
-                  window.location.href = "/payment/result?orderCode=" + encodeURIComponent(data.orderCode);
-                },
-                onCancel: function (event) {
-                  window.location.href = "/payment/result?orderCode=" + encodeURIComponent(data.orderCode);
-                },
-                onExit: function (event) {
-                  if (embeddedModal) embeddedModal.style.display = "none";
-                  if (submitBtn) submitBtn.disabled = false;
-                }
-              };
-
-              payosInstance = PayOSCheckout.usePayOS(config);
-              payosInstance.open();
+            if (data.gateway === "payos" && data.checkoutUrl) {
+              openQrModal({
+                orderCode: data.orderCode,
+                packageName: "@(preview?.PackageName ?? "Credit Package")",
+                amount: "@(preview != null ? CurrencyFormatter.FormatVnd(preview.Price) : "")",
+                credits: "@(preview?.Credits ?? 0)",
+                checkoutUrl: data.checkoutUrl
+              });
             } else if (data.checkoutUrl) {
-              e.preventDefault();
               window.location.href = data.checkoutUrl;
+            } else {
+              if (submitBtn) submitBtn.disabled = false;
             }
           } catch (err) {
-            form.submit();
+            console.error("Checkout submission failed", err);
+            alert("An unexpected error occurred. Please try again.");
+            if (submitBtn) submitBtn.disabled = false;
           }
         });
       }

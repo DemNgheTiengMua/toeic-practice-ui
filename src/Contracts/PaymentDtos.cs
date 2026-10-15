@@ -33,9 +33,11 @@ public sealed record OrderDto(
     string? GatewayTxnRef,
     string? GatewayErrorCode,
     DateTimeOffset CreatedAt,
-    DateTimeOffset? PaidAt);
+    DateTimeOffset? PaidAt,
+    string? CheckoutUrl = null);
 
 public sealed record HandleReturnRequest(string OrderCode);
+public sealed record CancelOrderRequest(string OrderCode);
 
 public sealed record PaymentResultDto(
     int OrderId,
@@ -49,7 +51,9 @@ public sealed record PaymentResultDto(
     DateTimeOffset? PaidAt,
     int CurrentBalance,
     string? GatewayErrorCode = null,
-    string? Message = null);
+    string? Message = null,
+    string? CheckoutUrl = null,
+    int PackageId = 0);
 
 public sealed record WalletDto(
     int Balance,

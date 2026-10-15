@@ -92,6 +92,23 @@ public static class CheckoutEndpoints
             }
         }).RequireAuthorization(Roles.Learner);
 
+        app.MapPost("/api/checkout/cancel", async (
+            CancelOrderRequest request,
+            HttpContext http,
+            IPaymentService payments,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                await payments.CancelOrderAsync(CurrentUserId(http), request.OrderCode, cancellationToken);
+                return Results.Ok(new { message = "Order cancelled successfully" });
+            }
+            catch (OrderNotFoundException ex)
+            {
+                return Problem(StatusCodes.Status404NotFound, "Order not found", ApiError.Codes.OrderNotFound, ex.Message);
+            }
+        }).RequireAuthorization(Roles.Learner);
+
         app.MapPost("/api/mock-gateway/action", async (
             MockGatewayActionRequest request,
             HttpContext http,

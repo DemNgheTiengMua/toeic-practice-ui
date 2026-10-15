@@ -119,8 +119,20 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
             CreatedAt = now
         };
 
-        db.Orders.Add(order);
-        await db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            db.Orders.Add(order);
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is Microsoft.Data.SqlClient.SqlException sqlEx && (sqlEx.Number == 2601 || sqlEx.Number == 2627))
+        {
+            throw new OrderAlreadyOpenException(
+                order.OrderCode,
+                package.Name,
+                order.Amount,
+                order.CreatedAt,
+                OrderStatus.Pending);
+        }
 
         return new CreateOrderResponse(
             OrderId: order.OrderId,
@@ -234,6 +246,41 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
         return await GetPaymentResultAsync(userId, orderCode, cancellationToken);
     }
 
+    public async Task CancelOrderAsync(
+        int userId,
+        string orderCode,
+        CancellationToken cancellationToken = default)
+    {
+        long.TryParse(orderCode, out var parsedPaymentNo);
+        var order = await db.Orders
+            .Where(o => (o.OrderCode == orderCode || (parsedPaymentNo > 0 && o.PaymentNo == parsedPaymentNo)) && o.UserId == userId)
+            .SingleOrDefaultAsync(cancellationToken)
+            ?? throw new OrderNotFoundException(orderCode);
+
+        if (order.Status != OrderStatus.Pending.ToCode() && order.Status != OrderStatus.Reconciling.ToCode())
+        {
+            return;
+        }
+
+        await gateway.CancelPaymentLinkAsync(order.PaymentNo, order.GatewayTxnRef, "Cancelled by user", cancellationToken);
+
+        order.Status = OrderStatus.Failed.ToCode();
+        order.GatewayErrorCode = "user_cancelled";
+
+        db.PaymentEvents.Add(new PaymentEvent
+        {
+            OrderId = order.OrderId,
+            Source = PaymentEventSource.Cancel.ToCode(),
+            ReportedStatus = GatewayStatus.Cancelled.ToCode(),
+            SignatureValid = false,
+            WasApplied = true,
+            Note = "Cancelled by user",
+            CreatedAt = DateTimeOffset.UtcNow
+        });
+
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
     public async Task<PaymentResultDto> GetPaymentResultAsync(
         int userId,
         string orderCode,
@@ -308,6 +355,14 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
             .Select(b => b.Balance)
             .SingleOrDefaultAsync(cancellationToken) ?? 0;
 
+        string? checkoutUrl = null;
+        if (order.Gateway == PaymentGateway.Payos.ToCode() &&
+            !string.IsNullOrEmpty(order.GatewayTxnRef) &&
+            (order.Status == OrderStatus.Pending.ToCode() || order.Status == OrderStatus.Reconciling.ToCode()))
+        {
+            checkoutUrl = $"https://pay.payos.vn/web/{order.GatewayTxnRef}";
+        }
+
         return new PaymentResultDto(
             OrderId: order.OrderId,
             OrderCode: order.OrderCode,
@@ -319,7 +374,9 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
             CreatedAt: order.CreatedAt,
             PaidAt: order.PaidAt,
             CurrentBalance: balance,
-            GatewayErrorCode: order.GatewayErrorCode);
+            GatewayErrorCode: order.GatewayErrorCode,
+            CheckoutUrl: checkoutUrl,
+            PackageId: order.PackageId);
     }
 
     public async Task<bool> SettleOrderAsync(
@@ -631,18 +688,30 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
         }
     }
 
-    private static OrderDto ToOrderDto(Order o) => new(
-        OrderId: o.OrderId,
-        OrderCode: o.OrderCode,
-        PaymentNo: o.PaymentNo,
-        PackageId: o.PackageId,
-        PackageName: o.Package?.Name ?? "Credit Package",
-        Credits: o.Package?.Credits ?? 0,
-        Amount: o.Amount,
-        Status: ParseWireCode<OrderStatusDto>(o.Status),
-        Gateway: ParseWireCode<PaymentGatewayDto>(o.Gateway),
-        GatewayTxnRef: o.GatewayTxnRef,
-        GatewayErrorCode: o.GatewayErrorCode,
-        CreatedAt: o.CreatedAt,
-        PaidAt: o.PaidAt);
+    private static OrderDto ToOrderDto(Order o)
+    {
+        string? checkoutUrl = null;
+        if (o.Gateway == PaymentGateway.Payos.ToCode() &&
+            !string.IsNullOrEmpty(o.GatewayTxnRef) &&
+            (o.Status == OrderStatus.Pending.ToCode() || o.Status == OrderStatus.Reconciling.ToCode()))
+        {
+            checkoutUrl = $"https://pay.payos.vn/web/{o.GatewayTxnRef}";
+        }
+
+        return new(
+            OrderId: o.OrderId,
+            OrderCode: o.OrderCode,
+            PaymentNo: o.PaymentNo,
+            PackageId: o.PackageId,
+            PackageName: o.Package?.Name ?? "Credit Package",
+            Credits: o.Package?.Credits ?? 0,
+            Amount: o.Amount,
+            Status: ParseWireCode<OrderStatusDto>(o.Status),
+            Gateway: ParseWireCode<PaymentGatewayDto>(o.Gateway),
+            GatewayTxnRef: o.GatewayTxnRef,
+            GatewayErrorCode: o.GatewayErrorCode,
+            CreatedAt: o.CreatedAt,
+            PaidAt: o.PaidAt,
+            CheckoutUrl: checkoutUrl);
+    }
 }

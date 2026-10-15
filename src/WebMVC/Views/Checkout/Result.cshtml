@@ -123,7 +123,19 @@ else if (isReconciling)
         </div>
       </div>
       <div class="card__footer row">
+        @if (result.PackageId > 0 && !string.IsNullOrEmpty(result.CheckoutUrl))
+        {
+          <a class="btn btn--primary" href="/checkout?packageId=@result.PackageId&openQr=1">
+            Scan VietQR to Pay
+          </a>
+        }
         <a class="btn" href="/payment/result?orderCode=@result.OrderCode">Check again now</a>
+        <form method="post" action="/checkout/cancel" style="display: inline-block;">
+          @Html.AntiForgeryToken()
+          <input type="hidden" name="orderCode" value="@result.OrderCode" />
+          <input type="hidden" name="returnUrl" value="/wallet" />
+          <button type="submit" class="btn btn--danger" onclick="return confirm('Cancel this order?');">Cancel this order</button>
+        </form>
         <a class="btn btn--ghost" href="/wallet">View credit wallet</a>
       </div>
     </div>

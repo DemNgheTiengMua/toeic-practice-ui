@@ -21,6 +21,11 @@ public interface IPaymentService
         string orderCode,
         CancellationToken cancellationToken = default);
 
+    Task CancelOrderAsync(
+        int userId,
+        string orderCode,
+        CancellationToken cancellationToken = default);
+
     Task<PaymentResultDto> GetPaymentResultAsync(
         int userId,
         string orderCode,

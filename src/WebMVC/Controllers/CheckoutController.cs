@@ -87,6 +87,38 @@ public sealed class CheckoutController(
         }
     }
 
+    [HttpPost("/checkout/cancel")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CancelOrder(
+        [FromForm] string orderCode,
+        [FromForm] string? returnUrl,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(orderCode))
+        {
+            return RedirectToAction("Index", "Pricing");
+        }
+
+        try
+        {
+            var bearer = await BearerAsync();
+            await Api.CancelOrderAsync(new CancelOrderRequest(orderCode), bearer, cancellationToken);
+            TempData["ShellNotice"] = $"Order {orderCode} was cancelled.";
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to cancel order {OrderCode}", orderCode);
+            TempData["ShellError"] = "Could not cancel order.";
+        }
+
+        if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+        {
+            return Redirect(returnUrl);
+        }
+
+        return RedirectToAction("Index", "Wallet");
+    }
+
     [HttpGet("/checkout/mock-gateway")]
     public async Task<IActionResult> MockGateway([FromQuery] string orderCode, CancellationToken cancellationToken)
     {
