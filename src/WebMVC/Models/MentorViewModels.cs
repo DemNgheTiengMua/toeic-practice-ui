@@ -13,6 +13,28 @@ public sealed record MentorDetailViewModel(
     MentorDetailDto Detail,
     string? ErrorMessage = null);
 
+public sealed record MentorConfirmViewModel(
+    MentorSummaryDto Mentor,
+    MentorSlotDto? SelectedSlot,
+    int CreditBalance,
+    string? FocusArea = null,
+    int? ExamId = null,
+    string? ErrorMessage = null)
+{
+    public bool IsPaywall => CreditBalance < Mentor.PriceCredits;
+    public int ShortBy => Math.Max(0, Mentor.PriceCredits - CreditBalance);
+    public int BalanceAfterBooking => Math.Max(0, CreditBalance - Mentor.PriceCredits);
+}
+
+public sealed record MentorBookingDetailViewModel(
+    MentorBookingDto Booking,
+    string? SuccessMessage = null,
+    string? ErrorMessage = null);
+
+public sealed record LearnerBookingsViewModel(
+    IReadOnlyList<MentorBookingDto> Bookings,
+    string? ErrorMessage = null);
+
 public sealed class MentorFormViewModel
 {
     public int? MentorId { get; set; }

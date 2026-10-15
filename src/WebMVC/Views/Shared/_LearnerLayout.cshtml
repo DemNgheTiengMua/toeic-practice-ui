@@ -59,7 +59,8 @@
           <div class="nav-list__group">Learning</div>
           <a class="@NavClass("/placement")" href="/placement" aria-current="@(path.StartsWith("/placement", StringComparison.OrdinalIgnoreCase) ? "page" : null)">Placement test</a>
           <a class="@NavClass("/learning-path")" href="/learning-path" aria-current="@(path.StartsWith("/learning-path", StringComparison.OrdinalIgnoreCase) ? "page" : null)">My learning path</a>
-          <a class="@NavClass("/mentors")" href="/mentors" aria-current="@(path.StartsWith("/mentors", StringComparison.OrdinalIgnoreCase) ? "page" : null)">Find a mentor</a>
+          <a class="@NavClass("/mentors")" href="/mentors" aria-current="@(path.Equals("/mentors", StringComparison.OrdinalIgnoreCase) || path.StartsWith("/mentors/", StringComparison.OrdinalIgnoreCase) && !path.StartsWith("/mentors/bookings", StringComparison.OrdinalIgnoreCase) ? "page" : null)">Find a mentor</a>
+          <a class="@NavClass("/mentors/bookings")" href="/mentors/bookings" aria-current="@(path.StartsWith("/mentors/bookings", StringComparison.OrdinalIgnoreCase) ? "page" : null)">My bookings</a>
           <div class="nav-list__group">Catalogue</div>
 
           <a class="nav-list__item" href="/certificates">Certificates</a>

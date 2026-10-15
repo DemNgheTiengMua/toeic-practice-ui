@@ -1,0 +1,169 @@
+@model WebMVC.Models.MentorConfirmViewModel
+@inject WebMVC.DateTimeFormatter Dates
+@{
+    Layout = "_LearnerLayout";
+    var mentor = Model.Mentor;
+    var isAi = mentor.Type == "ai";
+    ViewData["Title"] = "Confirm Booking — " + mentor.DisplayName;
+}
+
+<div class="context-bar">
+  <div class="context-bar__item">
+    <span class="context-bar__label">Mentor:</span>
+    <span class="context-bar__value">@mentor.DisplayName</span>
+  </div>
+  <div class="context-bar__item">
+    <span class="context-bar__label">Cost:</span>
+    <span class="context-bar__value">@mentor.PriceCredits @(mentor.PriceCredits == 1 ? "credit" : "credits")</span>
+  </div>
+  <div class="context-bar__item">
+    <span class="context-bar__label">Balance:</span>
+    <span class="context-bar__value">@Model.CreditBalance @(Model.CreditBalance == 1 ? "credit" : "credits")</span>
+  </div>
+</div>
+
+<div class="container stack">
+  <nav class="breadcrumbs" aria-label="Breadcrumb">
+    <a href="/mentors" class="breadcrumbs__item">Find a mentor</a>
+    <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+    <a href="/mentors/@mentor.MentorId" class="breadcrumbs__item">@mentor.DisplayName</a>
+    <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+    <span class="breadcrumbs__item" aria-current="page">Confirm booking</span>
+  </nav>
+
+  @if (Model.IsPaywall)
+  {
+    <!-- ===== paywall ===== -->
+    <div class="stack">
+      <div class="alert alert--warning" role="alert">
+        <strong>Not enough credits.</strong> A mentor session costs @mentor.PriceCredits @(mentor.PriceCredits == 1 ? "credit" : "credits") and you have @Model.CreditBalance. Nothing was deducted.
+      </div>
+      <h1 class="m-0">Confirm booking</h1>
+      <div class="grid-3">
+        <div class="stat">
+          <div class="stat__label">Session cost</div>
+          <div class="stat__value">@mentor.PriceCredits</div>
+          <div class="stat__hint">credit, charged on confirm</div>
+        </div>
+        <div class="stat">
+          <div class="stat__label">Your balance</div>
+          <div class="stat__value">@Model.CreditBalance</div>
+          <div class="stat__hint">credits available</div>
+        </div>
+        <div class="stat">
+          <div class="stat__label">Short by</div>
+          <div class="stat__value">@Model.ShortBy</div>
+          <div class="stat__hint">credit@(Model.ShortBy == 1 ? "" : "s") needed</div>
+        </div>
+      </div>
+      <div class="card"><div class="card__footer">
+        <div class="row">
+          <a href="/pricing" class="btn btn--primary">Buy credits</a>
+          <a href="/mentors/@mentor.MentorId" class="btn">Back to the mentor</a>
+        </div>
+      </div></div>
+    </div>
+  }
+  else
+  {
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+      <div class="alert alert--danger" role="alert">
+        <strong>Booking failed.</strong> @Model.ErrorMessage
+      </div>
+    }
+
+    <div class="stack">
+      <div class="row row--between">
+        <div>
+          <h1 class="m-0 mb-1">Confirm your booking</h1>
+          <p class="text-muted no-margin">Check the time. The credit is charged when you confirm.</p>
+        </div>
+        <span class="badge badge--warning">@mentor.PriceCredits @(mentor.PriceCredits == 1 ? "credit" : "credits")</span>
+      </div>
+
+      <div class="card">
+        <div class="card__header"><strong>Session details</strong></div>
+        <div class="card__body">
+          <dl class="dl-grid">
+            <div><dt class="text-muted">Mentor</dt><dd class="m-0 fw-600">@mentor.DisplayName</dd></div>
+            <div><dt class="text-muted">Certificate</dt><dd class="m-0"><span class="badge badge--info">@mentor.CertCode</span></dd></div>
+            <div><dt class="text-muted">Time</dt><dd class="m-0">
+              @if (isAi)
+              {
+                <strong>Instant booking — Available 24/7</strong>
+              }
+              else if (Model.SelectedSlot != null)
+              {
+                <strong>@Dates.FormatCustom(Model.SelectedSlot.StartAt, "dddd, MMM d — h:mm tt")</strong>
+              }
+              else
+              {
+                <span class="text-danger">No slot selected</span>
+              }
+            </dd></div>
+            <div><dt class="text-muted">Duration</dt><dd class="m-0">@mentor.SessionMinutes minutes</dd></div>
+            <div><dt class="text-muted">Platform</dt><dd class="m-0">
+              @if (isAi)
+              {
+                <span>Speaking practice attempt with AI mentor</span>
+              }
+              else
+              {
+                <span>Google Meet, link sent after booking</span>
+              }
+            </dd></div>
+          </dl>
+        </div>
+      </div>
+
+      <form method="post" action="/mentors/@mentor.MentorId/confirm" class="stack">
+        @Html.AntiForgeryToken()
+        @if (Model.SelectedSlot != null)
+        {
+          <input type="hidden" name="slotId" value="@Model.SelectedSlot.SlotId" />
+        }
+        @if (Model.ExamId.HasValue)
+        {
+          <input type="hidden" name="examId" value="@Model.ExamId.Value" />
+        }
+
+        <div class="form-group">
+          <label class="form-label" for="focusArea">Focus area (optional)</label>
+          <input type="text" id="focusArea" name="focusArea" class="form-input" value="@Model.FocusArea" placeholder="e.g. Listening strategies, pronunciation, Part 3-4 conversation" />
+        </div>
+
+        <div class="grid-2">
+          <div class="stat">
+            <div class="stat__label">Total cost</div>
+            <div class="stat__value">@mentor.PriceCredits</div>
+            <div class="stat__hint">credit@(mentor.PriceCredits == 1 ? "" : "s")</div>
+          </div>
+          <div class="stat">
+            <div class="stat__label">Balance after booking</div>
+            <div class="stat__value">@Model.BalanceAfterBooking</div>
+            <div class="stat__hint">credits, from @Model.CreditBalance now</div>
+          </div>
+        </div>
+
+        <div class="alert alert--info">
+          <strong>Cancellation.</strong> Free up to 24 hours before the session. Later cancellations are not credited back.
+        </div>
+
+        <div class="card"><div class="card__footer">
+          <div class="row">
+            @if (!isAi && Model.SelectedSlot == null)
+            {
+              <a href="/mentors/@mentor.MentorId" class="btn btn--primary">Pick another slot</a>
+            }
+            else
+            {
+              <button class="btn btn--primary" type="submit">Confirm booking</button>
+            }
+            <a href="/mentors/@mentor.MentorId" class="btn">Cancel</a>
+          </div>
+        </div></div>
+      </form>
+    </div>
+  }
+</div>

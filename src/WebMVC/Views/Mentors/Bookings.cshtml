@@ -1,0 +1,108 @@
+@model WebMVC.Models.LearnerBookingsViewModel
+@inject WebMVC.DateTimeFormatter Dates
+@{
+    Layout = "_LearnerLayout";
+    ViewData["Title"] = "My Bookings";
+}
+
+<div class="container stack">
+  <nav class="breadcrumbs" aria-label="Breadcrumb">
+    <a href="/mentors" class="breadcrumbs__item">Find a mentor</a>
+    <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+    <span class="breadcrumbs__item" aria-current="page">My bookings</span>
+  </nav>
+
+  <div class="row row--between">
+    <div>
+      <h1 class="m-0 mb-1">My Bookings</h1>
+      <p class="text-muted no-margin">Track your scheduled mentor sessions and speaking practice.</p>
+    </div>
+    <a href="/mentors" class="btn btn--primary">Find a mentor</a>
+  </div>
+
+  @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+  {
+    <div class="alert alert--danger" role="alert">
+      <strong>Error:</strong> @Model.ErrorMessage
+    </div>
+  }
+
+  @if (Model.Bookings.Count == 0)
+  {
+    <div class="card">
+      <div class="card__body stack text-center" style="padding: var(--space-8) var(--space-4);">
+        <h2 class="m-0">No bookings yet</h2>
+        <p class="text-muted no-margin">You haven't booked any mentor sessions. Choose an expert mentor or practice speaking with an AI coach.</p>
+        <div class="row row--center">
+          <a href="/mentors" class="btn btn--primary">Browse mentors</a>
+        </div>
+      </div>
+    </div>
+  }
+  else
+  {
+    <div class="stack">
+      @foreach (var b in Model.Bookings)
+      {
+        var isConfirmed = b.Status == "confirmed";
+        var isCancelled = b.Status == "cancelled";
+        var isDone = b.Status == "done";
+
+        <div class="card">
+          <div class="card__body">
+            <div class="row row--between">
+              <div class="stack--tight">
+                <div class="row row--tight">
+                  <h3 class="m-0">@b.MentorName</h3>
+                  @if (isConfirmed)
+                  {
+                    <span class="badge badge--success">Confirmed</span>
+                  }
+                  else if (isCancelled)
+                  {
+                    <span class="badge badge--muted">Cancelled</span>
+                  }
+                  else if (isDone)
+                  {
+                    <span class="badge badge--info">Completed</span>
+                  }
+                  else
+                  {
+                    <span class="badge badge--warning">@b.Status</span>
+                  }
+                  <span class="badge badge--muted">@(b.MentorType == "ai" ? "AI Coach" : "Human")</span>
+                </div>
+
+                @if (b.StartAt.HasValue)
+                {
+                  <p class="text-muted no-margin">
+                    <strong>Time:</strong> @Dates.FormatCustom(b.StartAt.Value, "dddd, MMM d — h:mm tt")
+                  </p>
+                }
+                else
+                {
+                  <p class="text-muted no-margin">
+                    <strong>Booked on:</strong> @Dates.Format(b.CreatedAt)
+                  </p>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(b.FocusArea))
+                {
+                  <p class="text-sm text-muted no-margin">Focus: @b.FocusArea</p>
+                }
+              </div>
+
+              <div class="row">
+                @if (isConfirmed && !string.IsNullOrWhiteSpace(b.MeetLink))
+                {
+                  <a href="@b.MeetLink" target="_blank" rel="noopener" class="btn btn--sm btn--primary">Join meeting</a>
+                }
+                <a href="/mentors/bookings/@b.BookingId" class="btn btn--sm">View details</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>

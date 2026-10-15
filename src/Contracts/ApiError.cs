@@ -82,6 +82,12 @@ public sealed record ApiError(string Code, string Title, int Status, string? Det
         public const string LearningPathModuleNotFound = "LEARNING_PATH_MODULE_NOT_FOUND";
         public const string LearningPathStepNotFound = "LEARNING_PATH_STEP_NOT_FOUND";
         public const string LearningPathStepLocked = "LEARNING_PATH_STEP_LOCKED";
+
+        public const string SlotNotAvailable = "slot_not_available";
+        public const string BookingNotFound = "booking_not_found";
+        public const string BookingCannotCancel = "booking_cannot_cancel";
+        public const string BookingAlreadyRefunded = "booking_already_refunded";
+        public const string MentorNotFound = "mentor_not_found";
     }
 
 }

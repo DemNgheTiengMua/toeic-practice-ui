@@ -106,6 +106,7 @@
           </div>
           <div class="card__footer">
             <div class="row">
+              <a href="/mentors/@mentor.MentorId/confirm" class="btn btn--primary">Book session</a>
               <a href="/mentors" class="btn">Back to mentors</a>
             </div>
           </div>
@@ -127,14 +128,14 @@
         }
         else
         {
-          <div class="stack">
+          <form method="get" action="/mentors/@mentor.MentorId/confirm" class="stack">
             <div class="option-list" role="radiogroup" aria-label="Available time slots">
               @for (var i = 0; i < Model.Detail.AvailableSlots.Count; i++)
               {
                 var slot = Model.Detail.AvailableSlots[i];
                 var formattedDate = Dates.FormatCustom(slot.StartAt, "dddd, MMM d — h:mm tt");
                 <label class="option">
-                  <input class="option__input" type="radio" name="slot" value="@slot.SlotId" @(i == 0 ? "checked" : "")>
+                  <input class="option__input" type="radio" name="slotId" value="@slot.SlotId" @(i == 0 ? "checked" : "")>
                   <span class="option__marker">@(i + 1)</span>
                   <span class="option__text">
                     <strong>@formattedDate</strong><br>
@@ -145,10 +146,11 @@
             </div>
             <div class="card"><div class="card__footer">
               <div class="row">
+                <button type="submit" class="btn btn--primary">Book selected slot</button>
                 <a href="/mentors" class="btn">Back to mentors</a>
               </div>
             </div></div>
-          </div>
+          </form>
         }
       }
     </section>

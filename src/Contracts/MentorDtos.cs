@@ -110,3 +110,33 @@ public sealed record MentorCertificateOptionDto(
     string Code,
     string Name,
     IReadOnlyList<MentorSkillOptionDto> Skills);
+
+public sealed record BookMentorRequest(
+    int? SlotId = null,
+    string? FocusArea = null,
+    int? ExamId = null);
+
+public sealed record MentorBookingDto(
+    int BookingId,
+    int UserId,
+    int MentorId,
+    string MentorName,
+    string? MentorHeadline,
+    string MentorType,
+    int? SlotId,
+    DateTimeOffset? StartAt,
+    DateTimeOffset? EndAt,
+    string Status,
+    string? MeetLink,
+    string? FocusArea,
+    int PriceCredits,
+    DateTimeOffset? CancelledAt,
+    DateTimeOffset CreatedAt,
+    int? AttemptId = null,
+    string? RedirectUrl = null);
+
+public sealed record CancelBookingResultDto(
+    int BookingId,
+    string Status,
+    DateTimeOffset CancelledAt,
+    int RefundedCredits);

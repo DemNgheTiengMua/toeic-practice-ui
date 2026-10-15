@@ -339,6 +339,18 @@ public interface ICompanionApiClient
 
     Task<IReadOnlyList<MentorCertificateOptionDto>> GetMentorCertificateOptionsAsync(string bearerToken, CancellationToken cancellationToken = default) =>
         throw new NotImplementedException();
+
+    Task<MentorBookingDto> BookMentorAsync(int mentorId, BookMentorRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
+
+    Task<CancelBookingResultDto> CancelBookingAsync(int bookingId, string bearerToken, CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
+
+    Task<MentorBookingDto> GetBookingDetailAsync(int bookingId, string bearerToken, CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
+
+    Task<IReadOnlyList<MentorBookingDto>> GetLearnerBookingsAsync(string bearerToken, CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
 }
 
 
@@ -1108,6 +1120,18 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
 
     public Task<IReadOnlyList<MentorCertificateOptionDto>> GetMentorCertificateOptionsAsync(string bearerToken, CancellationToken cancellationToken = default) =>
         GetAuthorizedAsync<IReadOnlyList<MentorCertificateOptionDto>>("api/admin/mentors/options", bearerToken, cancellationToken);
+
+    public Task<MentorBookingDto> BookMentorAsync(int mentorId, BookMentorRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
+        PostAuthorizedAsync<BookMentorRequest, MentorBookingDto>($"api/mentors/{mentorId}/book", request, bearerToken, cancellationToken);
+
+    public Task<CancelBookingResultDto> CancelBookingAsync(int bookingId, string bearerToken, CancellationToken cancellationToken = default) =>
+        PostAuthorizedAsync<object, CancelBookingResultDto>($"api/mentors/bookings/{bookingId}/cancel", new { }, bearerToken, cancellationToken);
+
+    public Task<MentorBookingDto> GetBookingDetailAsync(int bookingId, string bearerToken, CancellationToken cancellationToken = default) =>
+        GetAuthorizedAsync<MentorBookingDto>($"api/mentors/bookings/{bookingId}", bearerToken, cancellationToken);
+
+    public Task<IReadOnlyList<MentorBookingDto>> GetLearnerBookingsAsync(string bearerToken, CancellationToken cancellationToken = default) =>
+        GetAuthorizedAsync<IReadOnlyList<MentorBookingDto>>("api/mentors/bookings", bearerToken, cancellationToken);
 
 
     private async Task<T> GetAuthorizedAsync<T>(string path, string bearerToken, CancellationToken cancellationToken)

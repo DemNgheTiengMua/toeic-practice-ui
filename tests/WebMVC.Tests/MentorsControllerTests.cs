@@ -193,6 +193,199 @@ public sealed class MentorsControllerTests
         Assert.NotNull(controller.TempData["ShellError"]);
     }
 
+    [Fact]
+    public async Task Confirm_returns_view_with_slot_and_balance()
+    {
+        var futureSlot = new MentorSlotDto(1, 1, DateTimeOffset.UtcNow.AddDays(1), DateTimeOffset.UtcNow.AddDays(1).AddHours(1), "open");
+        var api = new TestApiClient
+        {
+            Detail = new MentorDetailDto(SampleHumanMentor(1), [futureSlot], []),
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.Confirm(1, 1, CancellationToken.None);
+
+        var viewResult = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<MentorConfirmViewModel>(viewResult.Model);
+        Assert.Equal(1, model.Mentor.MentorId);
+        Assert.NotNull(model.SelectedSlot);
+        Assert.Equal(1, model.SelectedSlot.SlotId);
+        Assert.Equal(8, model.CreditBalance);
+        Assert.False(model.IsPaywall);
+    }
+
+    [Fact]
+    public async Task Confirm_displays_paywall_when_insufficient_credits()
+    {
+        var futureSlot = new MentorSlotDto(1, 1, DateTimeOffset.UtcNow.AddDays(1), DateTimeOffset.UtcNow.AddDays(1).AddHours(1), "open");
+        var expensiveMentor = SampleHumanMentor(1) with { PriceCredits = 10 };
+        var api = new TestApiClient
+        {
+            Detail = new MentorDetailDto(expensiveMentor, [futureSlot], []),
+        };
+
+        var controller = CreateController(api); // user has 8 credits, mentor costs 10
+        var result = await controller.Confirm(1, 1, CancellationToken.None);
+
+        var viewResult = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<MentorConfirmViewModel>(viewResult.Model);
+        Assert.True(model.IsPaywall);
+        Assert.Equal(2, model.ShortBy);
+    }
+
+    [Fact]
+    public async Task Confirm_redirects_to_detail_if_slot_missing_for_human_mentor()
+    {
+        var api = new TestApiClient
+        {
+            Detail = new MentorDetailDto(SampleHumanMentor(1), [], []),
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.Confirm(1, null, CancellationToken.None);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(MentorsController.Detail), redirect.ActionName);
+    }
+
+    [Fact]
+    public async Task ConfirmBooking_redirects_to_booking_detail_for_human_mentor()
+    {
+        var api = new TestApiClient
+        {
+            BookingResult = new MentorBookingDto(
+                101, 7, 1, "Dr. Trần Minh Khoa", "Headline", "human", 1,
+                DateTimeOffset.UtcNow.AddDays(1), DateTimeOffset.UtcNow.AddDays(1).AddHours(1),
+                "confirmed", "https://meet.google.com/abc-defg-hij", "Listening", 1, null, DateTimeOffset.UtcNow),
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.ConfirmBooking(1, 1, "Listening", null, CancellationToken.None);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(MentorsController.BookingDetail), redirect.ActionName);
+        Assert.Equal(101, redirect.RouteValues?["bookingId"]);
+        Assert.Equal("Booking confirmed!", controller.TempData["ShellSuccess"]);
+    }
+
+    [Fact]
+    public async Task ConfirmBooking_redirects_to_speaking_attempt_for_ai_mentor()
+    {
+        var api = new TestApiClient
+        {
+            BookingResult = new MentorBookingDto(
+                102, 7, 2, "AI Coach", "Headline", "ai", null,
+                null, null, "confirmed", null, null, 1, null, DateTimeOffset.UtcNow,
+                AttemptId: 55, RedirectUrl: "/speaking/take/55"),
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.ConfirmBooking(2, null, null, null, CancellationToken.None);
+
+        var redirect = Assert.IsType<RedirectResult>(result);
+        Assert.Equal("/speaking/take/55", redirect.Url);
+    }
+
+    [Fact]
+    public async Task ConfirmBooking_redisplays_confirm_view_when_insufficient_credits()
+    {
+        var futureSlot = new MentorSlotDto(1, 1, DateTimeOffset.UtcNow.AddDays(1), DateTimeOffset.UtcNow.AddDays(1).AddHours(1), "open");
+        var api = new TestApiClient
+        {
+            Detail = new MentorDetailDto(SampleHumanMentor(1), [futureSlot], []),
+            BookExceptionToThrow = new ApiException(ApiError.Codes.InsufficientCredits, "Not enough credits", 400),
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.ConfirmBooking(1, 1, null, null, CancellationToken.None);
+
+        var viewResult = Assert.IsType<ViewResult>(result);
+        Assert.Equal("Confirm", viewResult.ViewName);
+        var model = Assert.IsType<MentorConfirmViewModel>(viewResult.Model);
+        Assert.NotNull(model.ErrorMessage);
+        Assert.Contains("Not enough credits", model.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task ConfirmBooking_redisplays_confirm_view_when_slot_not_available()
+    {
+        var api = new TestApiClient
+        {
+            Detail = new MentorDetailDto(SampleHumanMentor(1), [], []),
+            BookExceptionToThrow = new ApiException(ApiError.Codes.SlotNotAvailable, "Slot not available", 400),
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.ConfirmBooking(1, 1, null, null, CancellationToken.None);
+
+        var viewResult = Assert.IsType<ViewResult>(result);
+        Assert.Equal("Confirm", viewResult.ViewName);
+        var model = Assert.IsType<MentorConfirmViewModel>(viewResult.Model);
+        Assert.NotNull(model.ErrorMessage);
+        Assert.Contains("no longer be available", model.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task Bookings_returns_view_with_learner_bookings()
+    {
+        var booking = new MentorBookingDto(
+            101, 7, 1, "Dr. Trần Minh Khoa", "Headline", "human", 1,
+            DateTimeOffset.UtcNow.AddDays(1), DateTimeOffset.UtcNow.AddDays(1).AddHours(1),
+            "confirmed", "https://meet.google.com/abc-defg-hij", "Listening", 1, null, DateTimeOffset.UtcNow);
+
+        var api = new TestApiClient
+        {
+            BookingsList = [booking],
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.Bookings(CancellationToken.None);
+
+        var viewResult = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<LearnerBookingsViewModel>(viewResult.Model);
+        Assert.Single(model.Bookings);
+        Assert.Equal(101, model.Bookings[0].BookingId);
+    }
+
+    [Fact]
+    public async Task BookingDetail_returns_view_with_booking_details()
+    {
+        var booking = new MentorBookingDto(
+            101, 7, 1, "Dr. Trần Minh Khoa", "Headline", "human", 1,
+            DateTimeOffset.UtcNow.AddDays(1), DateTimeOffset.UtcNow.AddDays(1).AddHours(1),
+            "confirmed", "https://meet.google.com/abc-defg-hij", "Listening", 1, null, DateTimeOffset.UtcNow);
+
+        var api = new TestApiClient
+        {
+            BookingResult = booking,
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.BookingDetail(101, CancellationToken.None);
+
+        var viewResult = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<MentorBookingDetailViewModel>(viewResult.Model);
+        Assert.Equal(101, model.Booking.BookingId);
+        Assert.Equal("https://meet.google.com/abc-defg-hij", model.Booking.MeetLink);
+    }
+
+    [Fact]
+    public async Task CancelBooking_cancels_and_redirects_to_booking_detail()
+    {
+        var api = new TestApiClient
+        {
+            CancelResult = new CancelBookingResultDto(101, "cancelled", DateTimeOffset.UtcNow, 1),
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.CancelBooking(101, CancellationToken.None);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(MentorsController.BookingDetail), redirect.ActionName);
+        Assert.Equal(101, redirect.RouteValues?["bookingId"]);
+        Assert.NotNull(controller.TempData["ShellSuccess"]);
+    }
+
     private sealed class EmptyTempDataProvider : ITempDataProvider
     {
         public IDictionary<string, object> LoadTempData(HttpContext context) => new Dictionary<string, object>();
@@ -214,8 +407,12 @@ public sealed class MentorsControllerTests
     {
         public IReadOnlyList<MentorSummaryDto> Mentors { get; set; } = [];
         public MentorDetailDto? Detail { get; set; }
+        public MentorBookingDto? BookingResult { get; set; }
+        public CancelBookingResultDto? CancelResult { get; set; }
+        public IReadOnlyList<MentorBookingDto> BookingsList { get; set; } = [];
         public string? LastSkillQuery { get; set; }
         public Exception? ExceptionToThrow { get; set; }
+        public Exception? BookExceptionToThrow { get; set; }
 
         public Task<IReadOnlyList<MentorSummaryDto>> GetMentorsAsync(string? certCode = null, string? skill = null, CancellationToken cancellationToken = default)
         {
@@ -228,6 +425,31 @@ public sealed class MentorsControllerTests
         {
             if (ExceptionToThrow is not null) throw ExceptionToThrow;
             return Task.FromResult(Detail!);
+        }
+
+        public Task<MentorBookingDto> BookMentorAsync(int mentorId, BookMentorRequest request, string bearerToken, CancellationToken cancellationToken = default)
+        {
+            if (BookExceptionToThrow is not null) throw BookExceptionToThrow;
+            if (ExceptionToThrow is not null) throw ExceptionToThrow;
+            return Task.FromResult(BookingResult!);
+        }
+
+        public Task<CancelBookingResultDto> CancelBookingAsync(int bookingId, string bearerToken, CancellationToken cancellationToken = default)
+        {
+            if (ExceptionToThrow is not null) throw ExceptionToThrow;
+            return Task.FromResult(CancelResult!);
+        }
+
+        public Task<MentorBookingDto> GetBookingDetailAsync(int bookingId, string bearerToken, CancellationToken cancellationToken = default)
+        {
+            if (ExceptionToThrow is not null) throw ExceptionToThrow;
+            return Task.FromResult(BookingResult!);
+        }
+
+        public Task<IReadOnlyList<MentorBookingDto>> GetLearnerBookingsAsync(string bearerToken, CancellationToken cancellationToken = default)
+        {
+            if (ExceptionToThrow is not null) throw ExceptionToThrow;
+            return Task.FromResult(BookingsList);
         }
     }
 }

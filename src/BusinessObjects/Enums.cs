@@ -224,3 +224,12 @@ public enum SlotStatus
     Closed,
 }
 
+/// <summary>CK_Bookings_Status: pending, confirmed, done, cancelled.</summary>
+public enum BookingStatus
+{
+    Pending,
+    Confirmed,
+    Done,
+    Cancelled,
+}
+

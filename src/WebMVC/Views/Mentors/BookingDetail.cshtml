@@ -1,0 +1,236 @@
+@model WebMVC.Models.MentorBookingDetailViewModel
+@inject WebMVC.DateTimeFormatter Dates
+@{
+    Layout = "_LearnerLayout";
+    var booking = Model.Booking;
+    var isConfirmed = booking.Status == "confirmed";
+    var isCancelled = booking.Status == "cancelled";
+    var isDone = booking.Status == "done";
+    var isPending = booking.Status == "pending";
+    ViewData["Title"] = "Booking Details — " + booking.MentorName;
+}
+
+<div class="context-bar">
+  <div class="context-bar__item">
+    <span class="context-bar__label">Mentor:</span>
+    <span class="context-bar__value">@booking.MentorName</span>
+  </div>
+  <div class="context-bar__item">
+    <span class="context-bar__label">Type:</span>
+    <span class="context-bar__value">@(booking.MentorType == "ai" ? "AI Coach" : "Human Mentor")</span>
+  </div>
+  <div class="context-bar__item">
+    <span class="context-bar__label">Cost:</span>
+    <span class="context-bar__value">@booking.PriceCredits @(booking.PriceCredits == 1 ? "credit" : "credits")</span>
+  </div>
+</div>
+
+<div class="container stack">
+  <nav class="breadcrumbs" aria-label="Breadcrumb">
+    <a href="/mentors" class="breadcrumbs__item">Find a mentor</a>
+    <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+    <a href="/mentors/bookings" class="breadcrumbs__item">My bookings</a>
+    <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+    <span class="breadcrumbs__item" aria-current="page">Booking #@booking.BookingId</span>
+  </nav>
+
+  @if (!string.IsNullOrEmpty(Model.SuccessMessage))
+  {
+    <div class="alert alert--success" role="alert">
+      <strong>Success!</strong> @Model.SuccessMessage
+    </div>
+  }
+
+  @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+  {
+    <div class="alert alert--danger" role="alert">
+      <strong>Error:</strong> @Model.ErrorMessage
+    </div>
+  }
+
+  @if (isPending)
+  {
+    <div class="stack">
+      <h1>Booking pending confirmation</h1>
+      <div class="alert alert--info">
+        <strong>Waiting for mentor confirmation.</strong> You'll receive an update once the mentor confirms.
+      </div>
+
+      <div class="card"><div class="card__body stack">
+        <h2>Session details</h2>
+        <dl class="dl-grid dl-grid--compact">
+          <div>
+            <dt>Status</dt>
+            <dd class="m-0"><span class="badge badge--warning">Pending</span></dd>
+          </div>
+          <div>
+            <dt>Mentor</dt>
+            <dd class="m-0 fw-600">@booking.MentorName</dd>
+          </div>
+          @if (booking.StartAt.HasValue)
+          {
+            <div>
+              <dt>Time</dt>
+              <dd class="m-0"><strong>@Dates.FormatCustom(booking.StartAt.Value, "dddd, MMM d — h:mm tt")</strong></dd>
+            </div>
+          }
+          @if (!string.IsNullOrWhiteSpace(booking.FocusArea))
+          {
+            <div>
+              <dt>Focus area</dt>
+              <dd class="m-0">@booking.FocusArea</dd>
+            </div>
+          }
+        </dl>
+
+        <form method="post" action="/mentors/bookings/@booking.BookingId/cancel" class="no-margin">
+          @Html.AntiForgeryToken()
+          <button type="submit" class="btn btn--danger" onclick="return confirm('Are you sure you want to cancel this booking? Your credits will be refunded.');">Cancel booking</button>
+        </form>
+      </div></div>
+    </div>
+  }
+  else if (isConfirmed)
+  {
+    <div class="stack">
+      <h1>Booking confirmed</h1>
+      <div class="alert alert--success">
+        <strong>Your session is confirmed!</strong> @(booking.MentorType == "human" ? "Join via Google Meet at the scheduled time." : "AI speaking practice session is ready.")
+      </div>
+
+      <div class="card"><div class="card__body stack">
+        <h2>Session details</h2>
+        <dl class="dl-grid dl-grid--compact">
+          <div>
+            <dt>Status</dt>
+            <dd class="m-0"><span class="badge badge--success">Confirmed</span></dd>
+          </div>
+          <div>
+            <dt>Mentor</dt>
+            <dd class="m-0 fw-600">@booking.MentorName</dd>
+          </div>
+          @if (booking.StartAt.HasValue)
+          {
+            <div>
+              <dt>Time</dt>
+              <dd class="m-0"><strong>@Dates.FormatCustom(booking.StartAt.Value, "dddd, MMM d — h:mm tt")</strong></dd>
+            </div>
+          }
+          @if (!string.IsNullOrWhiteSpace(booking.MeetLink))
+          {
+            <div>
+              <dt>Google Meet</dt>
+              <dd class="m-0"><a href="@booking.MeetLink" target="_blank" rel="noopener">@booking.MeetLink</a></dd>
+            </div>
+          }
+          @if (!string.IsNullOrWhiteSpace(booking.FocusArea))
+          {
+            <div>
+              <dt>Focus area</dt>
+              <dd class="m-0">@booking.FocusArea</dd>
+            </div>
+          }
+          <div>
+            <dt>Booked on</dt>
+            <dd class="m-0">@Dates.Format(booking.CreatedAt)</dd>
+          </div>
+        </dl>
+
+        <div class="row">
+          @if (!string.IsNullOrWhiteSpace(booking.MeetLink))
+          {
+            <a href="@booking.MeetLink" target="_blank" rel="noopener" class="btn btn--primary">Join meeting</a>
+          }
+          @if (booking.MentorType == "ai")
+          {
+            <a href="/speaking" class="btn btn--primary">Go to speaking practice</a>
+          }
+          <form method="post" action="/mentors/bookings/@booking.BookingId/cancel" class="no-margin">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn--danger" onclick="return confirm('Are you sure you want to cancel this booking? Your credits will be refunded.');">Cancel booking</button>
+          </form>
+        </div>
+      </div></div>
+    </div>
+  }
+  else if (isDone)
+  {
+    <div class="stack">
+      <h1>Session completed</h1>
+      <div class="alert alert--success">
+        <strong>Session finished.</strong> How was your experience?
+      </div>
+
+      <div class="card"><div class="card__body stack">
+        <h2>Session details</h2>
+        <dl class="dl-grid dl-grid--compact">
+          <div>
+            <dt>Status</dt>
+            <dd class="m-0"><span class="badge badge--success">Done</span></dd>
+          </div>
+          <div>
+            <dt>Mentor</dt>
+            <dd class="m-0 fw-600">@booking.MentorName</dd>
+          </div>
+          @if (booking.StartAt.HasValue)
+          {
+            <div>
+              <dt>Was scheduled</dt>
+              <dd class="m-0">@Dates.FormatCustom(booking.StartAt.Value, "dddd, MMM d — h:mm tt")</dd>
+            </div>
+          }
+          @if (!string.IsNullOrWhiteSpace(booking.FocusArea))
+          {
+            <div>
+              <dt>Focus area</dt>
+              <dd class="m-0">@booking.FocusArea</dd>
+            </div>
+          }
+        </dl>
+
+        <div class="row">
+          <a href="/mentors" class="btn btn--primary">Find another mentor</a>
+        </div>
+      </div></div>
+    </div>
+  }
+  else if (isCancelled)
+  {
+    <div class="stack">
+      <h1>Booking cancelled</h1>
+      <div class="alert alert--info">
+        <strong>This booking was cancelled.</strong> Your credit has been refunded.
+      </div>
+
+      <div class="card"><div class="card__body stack">
+        <h2>Session details</h2>
+        <dl class="dl-grid dl-grid--compact">
+          <div>
+            <dt>Status</dt>
+            <dd class="m-0"><span class="badge badge--muted">Cancelled</span></dd>
+          </div>
+          <div>
+            <dt>Mentor</dt>
+            <dd class="m-0 fw-600">@booking.MentorName</dd>
+          </div>
+          @if (booking.StartAt.HasValue)
+          {
+            <div>
+              <dt>Was scheduled</dt>
+              <dd class="m-0">@Dates.FormatCustom(booking.StartAt.Value, "dddd, MMM d — h:mm tt")</dd>
+            </div>
+          }
+          @if (booking.CancelledAt.HasValue)
+          {
+            <div>
+              <dt>Cancelled at</dt>
+              <dd class="m-0">@Dates.Format(booking.CancelledAt.Value)</dd>
+            </div>
+          }
+        </dl>
+
+        <a href="/mentors" class="btn btn--primary">Find another mentor</a>
+      </div></div>
+    </div>
+  }
+</div>

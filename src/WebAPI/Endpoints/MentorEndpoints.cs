@@ -37,6 +37,86 @@ public static class MentorEndpoints
             }
         });
 
+        // Learner booking endpoints
+        var learnerMentors = app.MapGroup("/api/mentors").RequireAuthorization(Roles.Learner);
+
+        learnerMentors.MapPost("/{mentorId:int}/book", async (
+            int mentorId,
+            BookMentorRequest request,
+            HttpContext http,
+            IMentorService mentorService,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var userId = CurrentUserId(http);
+                var booking = await mentorService.BookMentorAsync(mentorId, userId, request, cancellationToken);
+                return Results.Created($"/api/mentors/bookings/{booking.BookingId}", booking);
+            }
+            catch (KeyNotFoundException)
+            {
+                return Results.NotFound();
+            }
+            catch (MentorBookingException ex)
+            {
+                return Problem(ex.Status, "Mentor booking error", ex.Code, ex.Message);
+            }
+            catch (ValidationException ex)
+            {
+                return ValidationProblem(ex);
+            }
+        });
+
+        learnerMentors.MapPost("/bookings/{bookingId:int}/cancel", async (
+            int bookingId,
+            HttpContext http,
+            IMentorService mentorService,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var userId = CurrentUserId(http);
+                var result = await mentorService.CancelBookingAsync(bookingId, userId, cancellationToken);
+                return Results.Ok(result);
+            }
+            catch (KeyNotFoundException)
+            {
+                return Results.NotFound();
+            }
+            catch (MentorBookingException ex)
+            {
+                return Problem(ex.Status, "Mentor booking cancellation error", ex.Code, ex.Message);
+            }
+        });
+
+        learnerMentors.MapGet("/bookings/{bookingId:int}", async (
+            int bookingId,
+            HttpContext http,
+            IMentorService mentorService,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var userId = CurrentUserId(http);
+                var booking = await mentorService.GetBookingDetailAsync(bookingId, userId, cancellationToken);
+                return Results.Ok(booking);
+            }
+            catch (KeyNotFoundException)
+            {
+                return Results.NotFound();
+            }
+        });
+
+        learnerMentors.MapGet("/bookings", async (
+            HttpContext http,
+            IMentorService mentorService,
+            CancellationToken cancellationToken) =>
+        {
+            var userId = CurrentUserId(http);
+            var bookings = await mentorService.GetLearnerBookingsAsync(userId, cancellationToken);
+            return Results.Ok(bookings);
+        });
+
         // Admin endpoints
         var admin = app.MapGroup("/api/admin/mentors").RequireAuthorization(Roles.Admin);
 
