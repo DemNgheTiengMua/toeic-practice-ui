@@ -113,7 +113,7 @@
 
   /* ---- sidebar: one mark per destination, keyed by the label ---------------- */
   var NAV = {
-    "Home": "home", "Dashboard": "grid", "Test list": "test", "Tests": "test",
+    "Home": "home", "Dashboard": "grid", "Test list": "test", "Tests": "test", "Exams": "test",
     "Exam history": "archive", "Practice by section": "pencil",
     "Weakness analysis": "chart", "My learning path": "route",
     "Find a mentor": "chat", "Credit wallet": "wallet", "Profile": "user",

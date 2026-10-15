@@ -233,5 +233,235 @@ public static class AdminEndpoints
                 return Problem(StatusCodes.Status400BadRequest, "Score conversion invalid", ApiError.Codes.ScoreConversionInvalid, ex.Message);
             }
         });
+
+        // ---- Admin Exam & Question Editor endpoints ----
+        admin.MapGet("/exams", async (
+            string? q,
+            string? status,
+            int? certId,
+            int? page,
+            int? pageSize,
+            IAdminExamService exams,
+            CancellationToken cancellationToken) =>
+        {
+            var summary = await exams.GetExamsAsync(q, status, certId, page ?? 1, pageSize ?? 20, cancellationToken);
+            return Results.Ok(summary);
+        });
+
+        admin.MapPost("/exams", async (
+            CreateAdminExamRequest request,
+            IAdminExamService exams,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var created = await exams.CreateExamAsync(request, cancellationToken);
+                return Results.Created($"/api/admin/exams/{created.ExamId}", created);
+            }
+            catch (AdminExamException ex)
+            {
+                return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
+            }
+        });
+
+        admin.MapGet("/exams/{examId:int}", async (
+            int examId,
+            IAdminExamService exams,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var exam = await exams.GetExamByIdAsync(examId, cancellationToken);
+                return Results.Ok(exam);
+            }
+            catch (AdminExamException ex)
+            {
+                return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
+            }
+        });
+
+        admin.MapPut("/exams/{examId:int}", async (
+            int examId,
+            UpdateAdminExamRequest request,
+            IAdminExamService exams,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var updated = await exams.UpdateExamAsync(examId, request, cancellationToken);
+                return Results.Ok(updated);
+            }
+            catch (AdminExamException ex)
+            {
+                return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
+            }
+        });
+
+        admin.MapPost("/exams/{examId:int}/publish", async (
+            int examId,
+            IAdminExamService exams,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var result = await exams.PublishExamAsync(examId, cancellationToken);
+                return Results.Ok(result);
+            }
+            catch (AdminExamException ex)
+            {
+                return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
+            }
+        });
+
+        admin.MapDelete("/exams/{examId:int}", async (
+            int examId,
+            IAdminExamService exams,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                await exams.DeleteExamAsync(examId, cancellationToken);
+                return Results.NoContent();
+            }
+            catch (AdminExamException ex)
+            {
+                return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
+            }
+        });
+
+        admin.MapGet("/exams/{examId:int}/questions", async (
+            int examId,
+            IAdminExamService exams,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var questions = await exams.GetExamQuestionsAsync(examId, cancellationToken);
+                return Results.Ok(questions);
+            }
+            catch (AdminExamException ex)
+            {
+                return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
+            }
+        });
+
+        admin.MapPost("/exams/{examId:int}/groups", async (
+            int examId,
+            CreateQuestionGroupRequest request,
+            IAdminExamService exams,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var created = await exams.CreateQuestionGroupAsync(examId, request, cancellationToken);
+                return Results.Created($"/api/admin/exams/{examId}/groups/{created.GroupId}", created);
+            }
+            catch (AdminExamException ex)
+            {
+                return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
+            }
+        });
+
+        admin.MapPut("/exams/{examId:int}/groups/{groupId:int}", async (
+            int examId,
+            int groupId,
+            UpdateQuestionGroupRequest request,
+            IAdminExamService exams,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var updated = await exams.UpdateQuestionGroupAsync(examId, groupId, request, cancellationToken);
+                return Results.Ok(updated);
+            }
+            catch (AdminExamException ex)
+            {
+                return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
+            }
+        });
+
+        admin.MapDelete("/exams/{examId:int}/groups/{groupId:int}", async (
+            int examId,
+            int groupId,
+            IAdminExamService exams,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                await exams.DeleteQuestionGroupAsync(examId, groupId, cancellationToken);
+                return Results.NoContent();
+            }
+            catch (AdminExamException ex)
+            {
+                return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
+            }
+        });
+
+        admin.MapPost("/exams/{examId:int}/questions", async (
+            int examId,
+            CreateQuestionRequest request,
+            IAdminExamService exams,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var created = await exams.CreateQuestionAsync(examId, request, cancellationToken);
+                return Results.Created($"/api/admin/questions/{created.QuestionId}", created);
+            }
+            catch (AdminExamException ex)
+            {
+                return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
+            }
+        });
+
+        admin.MapPut("/questions/{questionId:int}", async (
+            int questionId,
+            UpdateQuestionRequest request,
+            IAdminExamService exams,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var updated = await exams.UpdateQuestionAsync(questionId, request, cancellationToken);
+                return Results.Ok(updated);
+            }
+            catch (AdminExamException ex)
+            {
+                return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
+            }
+        });
+
+        admin.MapDelete("/questions/{questionId:int}", async (
+            int questionId,
+            IAdminExamService exams,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                await exams.DeleteQuestionAsync(questionId, cancellationToken);
+                return Results.NoContent();
+            }
+            catch (AdminExamException ex)
+            {
+                return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
+            }
+        });
+
+        admin.MapPost("/exams/{examId:int}/audio", async (
+            int examId,
+            SaveExamSectionAudioRequest request,
+            IAdminExamService exams,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var audio = await exams.SaveSectionAudioAsync(examId, request, cancellationToken);
+                return Results.Ok(audio);
+            }
+            catch (AdminExamException ex)
+            {
+                return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
+            }
+        });
     }
 }

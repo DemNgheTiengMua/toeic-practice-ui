@@ -1,0 +1,290 @@
+@model WebMVC.Models.ExamFormViewModel
+@{
+    Layout = "_AdminLayout";
+    var isEdit = Model.ExamId.HasValue && Model.ExamId.Value > 0;
+    ViewData["Title"] = isEdit ? $"Edit {Model.Name}" : "Create new exam";
+    var detail = Model.Detail;
+}
+
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+  <a href="/admin" class="breadcrumbs__item">Admin</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <a href="/admin/exams" class="breadcrumbs__item">Exams</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <span class="breadcrumbs__item" aria-current="page">@(isEdit ? "Edit exam" : "Create new exam")</span>
+</nav>
+
+<h1>@(isEdit ? $"Edit: {Model.Name}" : "Create new exam")</h1>
+
+<div class="stepper">
+  <a href="@(isEdit ? $"/admin/exams/{Model.ExamId}/edit?step=1" : "#")" class="stepper__item @(Model.Step == 1 ? "is-current" : isEdit ? "is-done" : "")">1. Exam information</a>
+  <a href="@(isEdit ? $"/admin/exams/{Model.ExamId}/edit?step=2" : "#")" class="stepper__item @(Model.Step == 2 ? "is-current" : Model.Step > 2 ? "is-done" : "")">2. Upload Listening audio</a>
+  <a href="@(isEdit ? $"/admin/exams/{Model.ExamId}/edit?step=3" : "#")" class="stepper__item @(Model.Step == 3 ? "is-current" : "")">3. Enter questions</a>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+  <div class="alert alert--danger">@Model.ErrorMessage</div>
+}
+@if (!string.IsNullOrEmpty(Model.SuccessMessage))
+{
+  <div class="alert alert--success">@Model.SuccessMessage</div>
+}
+
+<!-- ===== Step 1: Exam information ===== -->
+@if (Model.Step == 1)
+{
+  <div class="card">
+    <div class="card__header"><strong>Exam information</strong></div>
+    <form method="post" action="@(isEdit ? $"/admin/exams/{Model.ExamId}/edit" : "/admin/exams/create")">
+      @Html.AntiForgeryToken()
+      <input type="hidden" name="Step" value="1" />
+      @if (isEdit)
+      {
+        <input type="hidden" name="ExamId" value="@Model.ExamId" />
+      }
+
+      <div class="card__body stack">
+        <div class="field">
+          <label class="field__label" for="CertId">Certificate</label>
+          <select class="field__input" id="CertId" name="CertId" required>
+            <option value="">Select a certificate</option>
+            @foreach (var c in Model.Certificates)
+            {
+              <option value="@c.CertId" selected="@(c.CertId == Model.CertId)">@c.Name (@c.Code.ToUpperInvariant())</option>
+            }
+          </select>
+          <span class="field__hint">Skills and sections load based on your selection</span>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="Name">Exam name</label>
+          <input class="field__input" id="Name" name="Name" value="@Model.Name" required placeholder="ETS 2024 — Test 4">
+          <span class="field__hint">The name shown to learners in the exam list.</span>
+        </div>
+
+        <div class="grid-2">
+          <div class="field">
+            <label class="field__label" for="SourceName">Exam set / source</label>
+            <input class="field__input" id="SourceName" name="SourceName" value="@Model.SourceName" placeholder="ETS 2024">
+          </div>
+          <div class="field">
+            <label class="field__label" for="Status">Status</label>
+            <select class="field__input" id="Status" name="Status">
+              <option value="Draft" selected="@(Model.Status == Contracts.ExamStatusDto.Draft)">Draft</option>
+              <option value="Published" selected="@(Model.Status == Contracts.ExamStatusDto.Published)">Published</option>
+              <option value="Hidden" selected="@(Model.Status == Contracts.ExamStatusDto.Hidden)">Hidden</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid-3">
+          <div class="field">
+            <label class="field__label" for="Purpose">Purpose</label>
+            <select class="field__input" id="Purpose" name="Purpose">
+              <option value="Mock" selected="@(Model.Purpose == Contracts.ExamPurposeDto.Mock)">Mock Exam</option>
+              <option value="Placement" selected="@(Model.Purpose == Contracts.ExamPurposeDto.Placement)">Placement Test</option>
+              <option value="SpeakingPractice" selected="@(Model.Purpose == Contracts.ExamPurposeDto.SpeakingPractice)">Speaking Practice</option>
+              <option value="WritingPractice" selected="@(Model.Purpose == Contracts.ExamPurposeDto.WritingPractice)">Writing Practice</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field__label" for="DurationMinutes">Duration (minutes)</label>
+            <input class="field__input" id="DurationMinutes" name="DurationMinutes" type="number" min="1" value="@Model.DurationMinutes" required>
+          </div>
+          <div class="field">
+            <label class="field__label" for="QuestionCount">Required Question Count</label>
+            <input class="field__input" id="QuestionCount" name="QuestionCount" type="number" min="1" value="@Model.QuestionCount" placeholder="e.g. 200">
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="Description">Public Description</label>
+          <textarea class="field__input" id="Description" name="Description" rows="2" placeholder="Description shown to learners…">@Model.Description</textarea>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="InternalNote">Internal note (admin only)</label>
+          <textarea class="field__input" id="InternalNote" name="InternalNote" rows="3" placeholder="Exam notes for administrators…">@Model.InternalNote</textarea>
+        </div>
+      </div>
+
+      <div class="card__footer row row--between">
+        <a class="btn btn--ghost" href="/admin/exams">Cancel</a>
+        <div class="row">
+          <button type="submit" class="btn btn--primary">@(isEdit ? "Save exam information" : "Save & Continue: upload audio")</button>
+          @if (isEdit)
+          {
+            <a class="btn" href="/admin/exams/@Model.ExamId/edit?step=2">Next: Upload audio ›</a>
+          }
+        </div>
+      </div>
+    </form>
+  </div>
+}
+
+<!-- ===== Step 2: Upload Listening audio ===== -->
+@if (Model.Step == 2 && isEdit && detail != null)
+{
+  var listeningSections = detail.SectionProgress.Where(s => s.Modality == Contracts.ModalityDto.Listening).ToList();
+  var uploadedCount = detail.Audios.Count;
+  var totalListening = listeningSections.Count;
+  var percent = totalListening > 0 ? (int)Math.Round((double)uploadedCount / totalListening * 100) : 100;
+
+  <div class="card">
+    <div class="card__header"><strong>Listening audio (@totalListening parts)</strong></div>
+    <div class="card__body stack">
+      <div class="alert alert--warning">
+        Learners may listen only <strong>once</strong>, no rewinding. The file must be in question order, with silent gaps inserted between questions.
+      </div>
+
+      @if (listeningSections.Count == 0)
+      {
+        <div class="alert alert--info">This exam's certificate does not contain listening sections requiring full section audio.</div>
+      }
+      else
+      {
+        @foreach (var s in listeningSections)
+        {
+          var audio = detail.Audios.FirstOrDefault(a => a.SectionId == s.SectionId);
+          <div class="upload" style="border:1px solid #ccd2d6; padding:1rem; margin-bottom:1rem;">
+            <span class="field__label"><strong>@s.SectionName</strong> (@s.SectionCode)</span>
+
+            @if (audio != null)
+            {
+              <div class="upload__file row row--between" style="background:#f4f5f6; padding:0.5rem 1rem; border:1px solid #ccd2d6; margin-top:0.5rem;">
+                <span>@audio.AudioPath — @(audio.DurationSec / 60):@(audio.DurationSec % 60 < 10 ? "0" : "")@(audio.DurationSec % 60) — @(Math.Round((double)audio.SizeBytes / (1024 * 1024), 1)) MB</span>
+                <span class="badge badge--success">Uploaded</span>
+              </div>
+            }
+            else
+            {
+              <div class="upload__file upload__file--missing row row--between" style="background:#fff3cd; padding:0.5rem 1rem; border:1px solid #ffeeba; margin-top:0.5rem;">
+                <span>No file uploaded yet</span>
+                <span class="badge badge--warning">Missing</span>
+              </div>
+            }
+
+            <details style="margin-top:0.75rem;">
+              <summary class="btn btn--sm btn--ghost" style="cursor:pointer; display:inline-block;">@(audio != null ? "Replace file / path" : "Upload / specify file")</summary>
+              <form method="post" action="/admin/exams/@Model.ExamId/audio" class="stack" style="margin-top:0.75rem; background:#fff; padding:1rem; border:1px solid #ccd2d6;">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="SectionId" value="@s.SectionId" />
+                <div class="field">
+                  <label class="field__label" for="path-@s.SectionId">Audio Path / Filename</label>
+                  <input class="field__input" id="path-@s.SectionId" name="AudioPath" value="@(audio?.AudioPath ?? $"audio/{s.SectionCode.ToLowerInvariant()}.mp3")" required />
+                </div>
+                <div class="grid-2">
+                  <div class="field">
+                    <label class="field__label" for="dur-@s.SectionId">Duration (seconds)</label>
+                    <input class="field__input" id="dur-@s.SectionId" name="DurationSec" type="number" min="1" value="@(audio?.DurationSec ?? 300)" required />
+                  </div>
+                  <div class="field">
+                    <label class="field__label" for="size-@s.SectionId">Size (bytes, max 60 MB)</label>
+                    <input class="field__input" id="size-@s.SectionId" name="SizeBytes" type="number" min="1" max="62914560" value="@(audio?.SizeBytes ?? 5242880)" required />
+                  </div>
+                </div>
+                <button type="submit" class="btn btn--sm btn--primary">Save audio</button>
+              </form>
+            </details>
+          </div>
+        }
+
+        <div>
+          <div class="row row--between text-sm">
+            <span>Uploaded @uploadedCount / @totalListening files</span>
+            <span>@percent%</span>
+          </div>
+          <div class="progress" style="height:8px; background:#ccd2d6; margin-top:4px;">
+            <div class="progress__bar" style="width: @percent%; height:100%; background:#0b4ea2;"></div>
+          </div>
+        </div>
+      }
+    </div>
+    <div class="card__footer row row--between">
+      <a class="btn btn--ghost" href="/admin/exams/@Model.ExamId/edit?step=1">‹ Back to information</a>
+      <a class="btn btn--primary" href="/admin/exams/@Model.ExamId/edit?step=3">Continue: enter questions ›</a>
+    </div>
+  </div>
+}
+
+<!-- ===== Step 3: Question entry progress ===== -->
+@if (Model.Step == 3 && isEdit && detail != null)
+{
+  var allComplete = detail.SectionProgress.All(s => s.IsComplete);
+  var listeningMissing = detail.SectionProgress.Count(s => s.Modality == Contracts.ModalityDto.Listening && !s.HasAudio);
+  var totalEntered = detail.ActualQuestionCount;
+  var required = detail.QuestionCount ?? detail.SectionProgress.Sum(s => s.ExpectedQuestionCount ?? 0);
+
+  <div class="card">
+    <div class="card__header row row--between">
+      <strong>Question entry progress</strong>
+      <a class="btn btn--sm btn--primary" href="/admin/exams/@Model.ExamId/questions">Open Question Editor</a>
+    </div>
+    <div class="card__body stack">
+      <table class="table table--striped">
+        <thead>
+          <tr>
+            <th scope="col">Part</th>
+            <th scope="col">Modality</th>
+            <th scope="col">Entered</th>
+            <th scope="col">Target</th>
+            <th scope="col">Status</th>
+            <th scope="col">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @foreach (var s in detail.SectionProgress)
+          {
+            var badgeClass = s.IsComplete ? "badge badge--success" : "badge badge--warning";
+            <tr>
+              <td><strong>@s.SectionName</strong> <span class="text-xs text-muted">(@s.SectionCode)</span></td>
+              <td>@s.Modality</td>
+              <td>@s.QuestionCount</td>
+              <td>@(s.ExpectedQuestionCount.HasValue ? s.ExpectedQuestionCount.Value.ToString() : "—")</td>
+              <td><span class="@badgeClass">@s.StatusText</span></td>
+              <td>
+                <a class="btn btn--sm" href="/admin/exams/@Model.ExamId/questions?sectionId=@s.SectionId">
+                  @(s.IsComplete ? "Edit" : "Enter questions")
+                </a>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+
+      @if (!allComplete || (detail.QuestionCount.HasValue && totalEntered < detail.QuestionCount.Value))
+      {
+        <div class="alert alert--warning">
+          @if (listeningMissing > 0)
+          {
+            <span>Missing audio for @listeningMissing listening parts. </span>
+          }
+          @if (detail.QuestionCount.HasValue && totalEntered < detail.QuestionCount.Value)
+          {
+            <span>Exam requires @detail.QuestionCount.Value questions (currently @totalEntered). </span>
+          }
+          <span>The exam cannot be published until all questions and required audio are complete.</span>
+        </div>
+      }
+      else
+      {
+        <div class="alert alert--success">
+          All questions and required audio files are complete. The exam is ready to publish!
+        </div>
+      }
+    </div>
+    <div class="card__footer row row--between">
+      <a class="btn btn--ghost" href="/admin/exams/@Model.ExamId/edit?step=2">‹ Back to audio upload</a>
+      <div class="row">
+        <a class="btn" href="/admin/exams">Back to exam list</a>
+        <form method="post" action="/admin/exams/@Model.ExamId/publish" style="display:inline; margin:0;">
+          @Html.AntiForgeryToken()
+          <button type="submit" class="btn btn--primary" @(!allComplete || (detail.QuestionCount.HasValue && totalEntered < detail.QuestionCount.Value) ? "disabled" : "")>
+            Publish exam
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+}
