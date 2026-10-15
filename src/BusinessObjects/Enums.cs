@@ -63,6 +63,31 @@ public enum AiGradingStatus
     Failed,
 }
 
+/// <summary>CK_AiInsights_Scope: practice_session, attempt, path, dashboard.</summary>
+public enum AiInsightScope
+{
+    PracticeSession,
+    Attempt,
+    Path,
+    Dashboard,
+}
+
+/// <summary>CK_AiInsights_Status: pending, done, failed.</summary>
+public enum AiInsightStatus
+{
+    Pending,
+    Done,
+    Failed,
+}
+
+/// <summary>CK_AiInsights_Trend: improving, flat, declining.</summary>
+public enum AiInsightTrend
+{
+    Improving,
+    Flat,
+    Declining,
+}
+
 /// <summary>CK_Practice_Status: in_progress, finished, abandoned.</summary>
 public enum PracticeStatus
 {

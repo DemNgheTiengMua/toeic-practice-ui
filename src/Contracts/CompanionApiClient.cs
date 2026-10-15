@@ -214,6 +214,21 @@ public interface ICompanionApiClient
     Task<WritingReviewDto> GetWritingReviewAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) =>
         throw new NotImplementedException();
 
+    Task<AiInsightDto> GetPracticeInsightAsync(int sessionId, string bearerToken, CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
+
+    Task RetryPracticeInsightAsync(int sessionId, string bearerToken, CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
+
+    Task<AiInsightDto> GetExamInsightAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
+
+    Task RetryExamInsightAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
+
+    Task RetryInsightAsync(int insightId, string bearerToken, CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
+
     Task<SpeakingInstructionsDto> GetSpeakingInstructionsAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) =>
         throw new NotImplementedException();
 
@@ -768,6 +783,36 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
 
     public Task<WritingReviewDto> GetWritingReviewAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) =>
         GetAuthorizedAsync<WritingReviewDto>($"api/learner/writing/attempts/{attemptId}/review", bearerToken, cancellationToken);
+
+    public Task<AiInsightDto> GetPracticeInsightAsync(int sessionId, string bearerToken, CancellationToken cancellationToken = default) =>
+        GetAuthorizedAsync<AiInsightDto>($"api/learner/insights/practice/{sessionId}", bearerToken, cancellationToken);
+
+    public async Task RetryPracticeInsightAsync(int sessionId, string bearerToken, CancellationToken cancellationToken = default)
+    {
+        using var message = new HttpRequestMessage(HttpMethod.Post, $"api/learner/insights/practice/{sessionId}/retry");
+        AttachBearer(message, bearerToken);
+        using var response = await http.SendAsync(message, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+    }
+
+    public Task<AiInsightDto> GetExamInsightAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) =>
+        GetAuthorizedAsync<AiInsightDto>($"api/learner/insights/exam/{attemptId}", bearerToken, cancellationToken);
+
+    public async Task RetryExamInsightAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default)
+    {
+        using var message = new HttpRequestMessage(HttpMethod.Post, $"api/learner/insights/exam/{attemptId}/retry");
+        AttachBearer(message, bearerToken);
+        using var response = await http.SendAsync(message, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+    }
+
+    public async Task RetryInsightAsync(int insightId, string bearerToken, CancellationToken cancellationToken = default)
+    {
+        using var message = new HttpRequestMessage(HttpMethod.Post, $"api/learner/insights/{insightId}/retry");
+        AttachBearer(message, bearerToken);
+        using var response = await http.SendAsync(message, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+    }
 
     public Task<SpeakingInstructionsDto> GetSpeakingInstructionsAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) =>
         GetAuthorizedAsync<SpeakingInstructionsDto>($"api/learner/speaking/{examId}/instructions", bearerToken, cancellationToken);

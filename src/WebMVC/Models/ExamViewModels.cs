@@ -20,7 +20,8 @@ public sealed record SaveAnswerFormModel(
 
 public sealed record ExamResultViewModel(
     AttemptResultDto Result,
-    string? ErrorMessage = null);
+    string? ErrorMessage = null,
+    AiInsightDto? Insight = null);
 
 public sealed record ExamHistoryViewModel(
     ExamHistoryDto History,

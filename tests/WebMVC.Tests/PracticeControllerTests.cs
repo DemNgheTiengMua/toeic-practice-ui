@@ -209,6 +209,60 @@ public sealed class PracticeControllerTests
         Assert.Equal(404, controller.Response.StatusCode);
     }
 
+    [Fact]
+    public async Task GetInsight_returns_ok_with_insight_dto()
+    {
+        var sampleInsight = new AiInsightDto(
+            1, 7, 1, AiInsightScopeDto.PracticeSession, 42, null,
+            "Great practice", AiInsightTrendDto.Improving, AiInsightStatusDto.Done,
+            null, "fake-ai-insight-v1", 140, 110, "fingerprint",
+            DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, []);
+
+        var api = new TestApiClient { Insight = sampleInsight };
+        var controller = CreateController(api);
+
+        var result = await controller.GetInsight(42, CancellationToken.None);
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var returned = Assert.IsType<AiInsightDto>(okResult.Value);
+        Assert.Equal(sampleInsight.InsightId, returned.InsightId);
+        Assert.Equal(AiInsightStatusDto.Done, returned.Status);
+    }
+
+    [Fact]
+    public async Task RetryInsight_calls_api_and_returns_ok()
+    {
+        var api = new TestApiClient();
+        var controller = CreateController(api);
+
+        var result = await controller.RetryInsight(42, CancellationToken.None);
+        Assert.IsType<OkObjectResult>(result);
+        Assert.True(api.RetryInsightCalled);
+    }
+
+    [Fact]
+    public async Task Summary_prefetches_insight_into_viewbag()
+    {
+        var sampleInsight = new AiInsightDto(
+            1, 7, 1, AiInsightScopeDto.PracticeSession, 42, null,
+            "Pre-fetched insight", AiInsightTrendDto.Improving, AiInsightStatusDto.Done,
+            null, "fake-ai-insight-v1", 140, 110, "fingerprint",
+            DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, []);
+
+        var api = new TestApiClient
+        {
+            Summary = new PracticeSummaryDto(
+                42, "P5", "Part 5", ModalityDto.Reading, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, 20, 19, 15, 4, 1, 79, 3, 2, 1, []),
+            Insight = sampleInsight
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.Summary(42, CancellationToken.None);
+
+        var viewResult = Assert.IsType<ViewResult>(result);
+        var insightInViewBag = Assert.IsType<AiInsightDto>(viewResult.ViewData["Insight"]);
+        Assert.Equal("Pre-fetched insight", insightInViewBag.Narrative);
+    }
+
     private static PracticeController CreateController(TestApiClient api)
     {
         var identity = new ClaimsIdentity(AuthClaims.For(7, "learner@test.local", Roles.Learner, "Learner"), "Cookies");
@@ -317,5 +371,18 @@ public sealed class PracticeControllerTests
         public Task<SaveQuestionResultDto> UnsaveQuestionAsync(int questionId, string bearerToken, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<WeaknessAnalysisDto> GetWeaknessAnalysisAsync(string bearerToken, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<ResolveRecommendationResultDto> ResolveRecommendationAsync(int recId, string bearerToken, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+
+        public AiInsightDto? Insight { get; set; }
+        public bool RetryInsightCalled { get; set; }
+
+        public Task<AiInsightDto> GetPracticeInsightAsync(int sessionId, string bearerToken, CancellationToken cancellationToken = default) =>
+            ExceptionToThrow != null ? Task.FromException<AiInsightDto>(ExceptionToThrow) : Task.FromResult(Insight!);
+
+        public Task RetryPracticeInsightAsync(int sessionId, string bearerToken, CancellationToken cancellationToken = default)
+        {
+            if (ExceptionToThrow != null) return Task.FromException(ExceptionToThrow);
+            RetryInsightCalled = true;
+            return Task.CompletedTask;
+        }
     }
 }

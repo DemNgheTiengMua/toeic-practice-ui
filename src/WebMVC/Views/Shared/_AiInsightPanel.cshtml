@@ -1,0 +1,329 @@
+@model WebMVC.Models.AiInsightPanelViewModel
+@using Contracts
+@{
+    var insight = Model.Insight;
+    var status = insight?.Status.ToWireCode() ?? "pending";
+    var isDone = status == "done";
+    var isFailed = status == "failed";
+    var isPending = !isDone && !isFailed;
+}
+
+@functions {
+    string FormatNarrative(string? narrative)
+    {
+        if (string.IsNullOrEmpty(narrative)) return "";
+        var encoded = System.Net.WebUtility.HtmlEncode(narrative);
+        return System.Text.RegularExpressions.Regex.Replace(encoded, @"\*\*(.+?)\*\*", "<strong>$1</strong>");
+    }
+}
+
+<div class="card mt-4 ai-insight-panel" id="ai-insight-panel" data-scope="@Model.Scope" data-activity-id="@Model.ActivityId" data-status="@status">
+  <div id="ai-insight-csrf" style="display: none;">
+    @Html.AntiForgeryToken()
+  </div>
+
+  <div class="card__header">
+    <div class="row row--between row--wrap" style="align-items: center; gap: var(--space-2);">
+      <div class="row" style="align-items: center; gap: var(--space-2);">
+        <span class="badge badge--info" style="font-family: var(--font-data); text-transform: uppercase; font-weight: 700; letter-spacing: 0.04em;">AI Insight</span>
+        <strong>Diagnostic Analysis & Recommendations</strong>
+      </div>
+      <div id="ai-insight-header-badges" class="row" style="align-items: center; gap: var(--space-2);">
+        @if (isDone && insight?.Trend != null)
+        {
+          var trendBadge = insight.Trend switch
+          {
+              AiInsightTrendDto.Improving => "badge--success",
+              AiInsightTrendDto.Declining => "badge--danger",
+              _ => "badge--warning"
+          };
+          var trendLabel = insight.Trend switch
+          {
+              AiInsightTrendDto.Improving => "Trend: Improving",
+              AiInsightTrendDto.Declining => "Trend: Declining",
+              _ => "Trend: Flat"
+          };
+          <span class="badge @trendBadge text-xs" style="font-family: var(--font-data);">@trendLabel</span>
+        }
+      </div>
+    </div>
+  </div>
+
+  <div class="card__body" id="ai-insight-body">
+    @if (isPending)
+    {
+      <div class="state-block p-4" id="ai-insight-loading">
+        <div class="state-block__icon" aria-hidden="true">ANALYZING</div>
+        <div class="state-block__title">Generating AI Insights…</div>
+        <p class="state-block__desc">
+          Evaluating answer patterns, luck vs. competence, and alignment with your target band. This will take just a few seconds.
+        </p>
+        <div class="progress progress--centered mt-3">
+          <div class="progress__bar" style="width: 65%;"></div>
+        </div>
+      </div>
+    }
+    else if (isFailed)
+    {
+      <div class="state-block p-4" id="ai-insight-failed">
+        <div class="state-block__icon state-block__icon--danger" aria-hidden="true">FAILED</div>
+        <div class="state-block__title">AI Insight Generation Did Not Complete</div>
+        <p class="state-block__desc" id="ai-insight-failure-reason">
+          @(insight?.FailureReason ?? "Could not generate AI diagnostic insight at this time.")
+        </p>
+        <button type="button" class="btn btn--primary mt-2" id="ai-insight-retry-btn" onclick="retryAiInsight()">Retry Analysis</button>
+      </div>
+    }
+    else if (isDone && insight != null)
+    {
+      <div id="ai-insight-content">
+        <div class="ai-insight-narrative" style="line-height: 1.6; font-size: 15px; white-space: pre-line; margin-bottom: var(--space-4); color: var(--ink);">
+          @Html.Raw(FormatNarrative(insight.Narrative))
+        </div>
+
+        @if (insight.Recommendations is { Count: > 0 })
+        {
+          <div class="mt-4 pt-3" style="border-top: 1px solid var(--rule-soft, #ccd2d6);">
+            <div class="text-xs uppercase text-muted mb-2" style="font-weight: 700; font-family: var(--font-sign); letter-spacing: 0.05em;">Recommended Next Steps:</div>
+            <div class="stack" style="gap: var(--space-2);">
+              @foreach (var rec in insight.Recommendations)
+              {
+                var sevBadge = rec.Severity switch
+                {
+                    RecommendationSeverityDto.Major => "badge--danger",
+                    RecommendationSeverityDto.Minor => "badge--warning",
+                    _ => "badge--info"
+                };
+                var sevLabel = rec.Severity switch
+                {
+                    RecommendationSeverityDto.Major => "Priority",
+                    RecommendationSeverityDto.Minor => "Focus",
+                    _ => "Tip"
+                };
+                <div class="row row--between" style="padding: var(--space-2) var(--space-3); background: var(--color-surface, #f5f7f8); border-left: 3px solid var(--sign-blue, #0b4ea2); align-items: baseline;">
+                  <div class="row" style="gap: var(--space-2); align-items: baseline;">
+                    <span class="badge @sevBadge text-xs">@sevLabel</span>
+                    <span class="text-sm">@rec.Text</span>
+                  </div>
+                  @if (!string.IsNullOrEmpty(rec.TargetBandCode))
+                  {
+                    <span class="badge badge--muted text-xs">Band @rec.TargetBandCode</span>
+                  }
+                </div>
+              }
+            </div>
+          </div>
+        }
+
+        <div class="text-xs text-muted mt-3" style="font-family: var(--font-data);">
+          Model: @(insight.Model ?? "fake-ai-insight-v1")
+        </div>
+      </div>
+    }
+  </div>
+</div>
+
+<script>
+  (function() {
+    const panel = document.getElementById('ai-insight-panel');
+    if (!panel) return;
+
+    const scope = panel.dataset.scope;
+    const activityId = panel.dataset.activityId;
+    let currentStatus = panel.dataset.status;
+    let pollCount = 0;
+    const maxPolls = 30; // 60 seconds maximum polling bound
+
+    function getEndpoint() {
+      return scope === 'practice_session'
+        ? `/practice/insight/${activityId}`
+        : `/exams/insight/${activityId}`;
+    }
+
+    function getRetryEndpoint() {
+      return scope === 'practice_session'
+        ? `/practice/insight/${activityId}/retry`
+        : `/exams/insight/${activityId}/retry`;
+    }
+
+    function getCsrfToken() {
+      const input = document.querySelector('#ai-insight-csrf input[name="__RequestVerificationToken"]');
+      return input ? input.value : '';
+    }
+
+    function renderDone(data) {
+      const body = document.getElementById('ai-insight-body');
+      const badges = document.getElementById('ai-insight-header-badges');
+      if (!body) return;
+
+      panel.dataset.status = 'done';
+
+      // Update trend badge
+      if (badges && data.trend) {
+        let trendClass = 'badge--warning';
+        let trendText = 'Trend: Flat';
+        if (data.trend === 'improving' || data.trend === 0) {
+          trendClass = 'badge--success';
+          trendText = 'Trend: Improving';
+        } else if (data.trend === 'declining' || data.trend === 2) {
+          trendClass = 'badge--danger';
+          trendText = 'Trend: Declining';
+        }
+        badges.innerHTML = `<span class="badge ${trendClass} text-xs" style="font-family: var(--font-data);">${trendText}</span>`;
+      }
+
+      let recsHtml = '';
+      if (data.recommendations && data.recommendations.length > 0) {
+        let itemsHtml = data.recommendations.map(r => {
+          let badgeClass = 'badge--info';
+          let label = 'Tip';
+          if (r.severity === 'major' || r.severity === 2) {
+            badgeClass = 'badge--danger';
+            label = 'Priority';
+          } else if (r.severity === 'minor' || r.severity === 1) {
+            badgeClass = 'badge--warning';
+            label = 'Focus';
+          }
+          let bandTag = r.targetBandCode ? `<span class="badge badge--muted text-xs">Band ${escapeHtml(r.targetBandCode)}</span>` : '';
+          return `
+            <div class="row row--between" style="padding: var(--space-2) var(--space-3); background: var(--color-surface, #f5f7f8); border-left: 3px solid var(--sign-blue, #0b4ea2); align-items: baseline;">
+              <div class="row" style="gap: var(--space-2); align-items: baseline;">
+                <span class="badge ${badgeClass} text-xs">${label}</span>
+                <span class="text-sm">${escapeHtml(r.text)}</span>
+              </div>
+              ${bandTag}
+            </div>
+          `;
+        }).join('');
+
+        recsHtml = `
+          <div class="mt-4 pt-3" style="border-top: 1px solid var(--rule-soft, #ccd2d6);">
+            <div class="text-xs uppercase text-muted mb-2" style="font-weight: 700; font-family: var(--font-sign); letter-spacing: 0.05em;">Recommended Next Steps:</div>
+            <div class="stack" style="gap: var(--space-2);">
+              ${itemsHtml}
+            </div>
+          </div>
+        `;
+      }
+
+      body.innerHTML = `
+        <div id="ai-insight-content">
+          <div class="ai-insight-narrative" style="line-height: 1.6; font-size: 15px; white-space: pre-line; margin-bottom: var(--space-4); color: var(--ink);">
+            ${formatNarrative(data.narrative || '')}
+          </div>
+          ${recsHtml}
+          <div class="text-xs text-muted mt-3" style="font-family: var(--font-data);">
+            Model: ${escapeHtml(data.model || 'fake-ai-insight-v1')}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderFailed(reason) {
+      const body = document.getElementById('ai-insight-body');
+      if (!body) return;
+      panel.dataset.status = 'failed';
+      body.innerHTML = `
+        <div class="state-block p-4" id="ai-insight-failed">
+          <div class="state-block__icon state-block__icon--danger" aria-hidden="true">FAILED</div>
+          <div class="state-block__title">AI Insight Generation Did Not Complete</div>
+          <p class="state-block__desc" id="ai-insight-failure-reason">
+            ${escapeHtml(reason || 'Could not generate AI diagnostic insight at this time.')}
+          </p>
+          <button type="button" class="btn btn--primary mt-2" id="ai-insight-retry-btn" onclick="retryAiInsight()">Retry Analysis</button>
+        </div>
+      `;
+    }
+
+    function renderLoading() {
+      const body = document.getElementById('ai-insight-body');
+      if (!body) return;
+      panel.dataset.status = 'pending';
+      body.innerHTML = `
+        <div class="state-block p-4" id="ai-insight-loading">
+          <div class="state-block__icon" aria-hidden="true">ANALYZING</div>
+          <div class="state-block__title">Generating AI Insights…</div>
+          <p class="state-block__desc">
+            Evaluating answer patterns, luck vs. competence, and alignment with your target band. This will take just a few seconds.
+          </p>
+          <div class="progress progress--centered mt-3">
+            <div class="progress__bar" style="width: 65%;"></div>
+          </div>
+        </div>
+      `;
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function formatNarrative(str) {
+      const escaped = escapeHtml(str || '');
+      return escaped.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    }
+
+    window.retryAiInsight = async function() {
+      renderLoading();
+      pollCount = 0;
+      try {
+        const csrfToken = getCsrfToken();
+        const resp = await fetch(getRetryEndpoint(), {
+          method: 'POST',
+          headers: {
+            'RequestVerificationToken': csrfToken,
+            'Content-Type': 'application/x-www-form-urlencoded'
+          },
+          body: `__RequestVerificationToken=${encodeURIComponent(csrfToken)}`
+        });
+
+        if (resp.ok) {
+          setTimeout(pollStatus, 1000);
+        } else {
+          renderFailed('Retry request could not be processed. Please try again.');
+        }
+      } catch (err) {
+        renderFailed('Network error while requesting retry.');
+      }
+    };
+
+    async function pollStatus() {
+      if (pollCount++ >= maxPolls) {
+        renderFailed('AI insight generation is taking longer than expected. Click retry to run analysis again.');
+        return;
+      }
+
+      try {
+        const resp = await fetch(getEndpoint());
+        if (resp.ok) {
+          const data = await resp.json();
+          const s = (data.status || '').toLowerCase();
+          if (s === 'done' || s === '1') {
+            renderDone(data);
+            return;
+          }
+          if (s === 'failed' || s === '2') {
+            renderFailed(data.failureReason);
+            return;
+          }
+        } else if (resp.status === 401 || resp.status === 403 || resp.status === 404) {
+          renderFailed('Insight data is unavailable for this session or user.');
+          return;
+        }
+      } catch (err) {
+        // Continue polling on transient errors
+      }
+
+      setTimeout(pollStatus, 2000);
+    }
+
+    if (currentStatus === 'pending' || !currentStatus) {
+      setTimeout(pollStatus, 1500);
+    }
+  })();
+</script>

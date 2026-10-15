@@ -71,6 +71,34 @@ public enum AiGradingStatusDto
     [JsonStringEnumMemberName("failed")] Failed,
 }
 
+/// <summary>CK_AiInsights_Scope: practice_session, attempt, path, dashboard.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<AiInsightScopeDto>))]
+public enum AiInsightScopeDto
+{
+    [JsonStringEnumMemberName("practice_session")] PracticeSession,
+    [JsonStringEnumMemberName("attempt")] Attempt,
+    [JsonStringEnumMemberName("path")] Path,
+    [JsonStringEnumMemberName("dashboard")] Dashboard,
+}
+
+/// <summary>CK_AiInsights_Status: pending, done, failed.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<AiInsightStatusDto>))]
+public enum AiInsightStatusDto
+{
+    [JsonStringEnumMemberName("pending")] Pending,
+    [JsonStringEnumMemberName("done")] Done,
+    [JsonStringEnumMemberName("failed")] Failed,
+}
+
+/// <summary>CK_AiInsights_Trend: improving, flat, declining.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<AiInsightTrendDto>))]
+public enum AiInsightTrendDto
+{
+    [JsonStringEnumMemberName("improving")] Improving,
+    [JsonStringEnumMemberName("flat")] Flat,
+    [JsonStringEnumMemberName("declining")] Declining,
+}
+
 /// <summary>CK_Practice_Status: in_progress, finished, abandoned.</summary>
 [JsonConverter(typeof(JsonStringEnumConverter<PracticeStatusDto>))]
 public enum PracticeStatusDto

@@ -273,6 +273,63 @@ public sealed class ExamsControllerTests
         Assert.Equal(50, model.Result.ScoreDelta);
     }
 
+    [Fact]
+    public async Task GetInsight_returns_ok_with_insight_dto()
+    {
+        var sampleInsight = new AiInsightDto(
+            1, 7, 1, AiInsightScopeDto.Attempt, null, 100,
+            "Solid mock performance", AiInsightTrendDto.Improving, AiInsightStatusDto.Done,
+            null, "fake-ai-insight-v1", 140, 110, "fingerprint",
+            DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, []);
+
+        var api = new TestApiClient { InsightDto = sampleInsight };
+        var controller = CreateController(api);
+
+        var result = await controller.GetInsight(100, CancellationToken.None);
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var returned = Assert.IsType<AiInsightDto>(okResult.Value);
+        Assert.Equal(sampleInsight.InsightId, returned.InsightId);
+        Assert.Equal(AiInsightStatusDto.Done, returned.Status);
+    }
+
+    [Fact]
+    public async Task RetryInsight_calls_api_and_returns_ok()
+    {
+        var api = new TestApiClient();
+        var controller = CreateController(api);
+
+        var result = await controller.RetryInsight(100, CancellationToken.None);
+        Assert.IsType<OkObjectResult>(result);
+        Assert.True(api.RetryInsightCalled);
+    }
+
+    [Fact]
+    public async Task Result_prefetches_insight_into_view_model()
+    {
+        var resDto = new AttemptResultDto(
+            100, 1, "ETS 2024 — Test 1", 1, "TOEIC", "TOEIC", AttemptStatusDto.Graded,
+            DateTimeOffset.UtcNow.AddHours(-2), DateTimeOffset.UtcNow, 7200, false,
+            750, "B1", "Threshold user",
+            [new AttemptSkillScoreDto(1, "listening", "Listening", ModalityDto.Listening, 80, 400, 100)],
+            700, 50);
+
+        var sampleInsight = new AiInsightDto(
+            1, 7, 1, AiInsightScopeDto.Attempt, null, 100,
+            "Pre-fetched exam insight", AiInsightTrendDto.Improving, AiInsightStatusDto.Done,
+            null, "fake-ai-insight-v1", 140, 110, "fingerprint",
+            DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, []);
+
+        var api = new TestApiClient { ResultDto = resDto, InsightDto = sampleInsight };
+        var controller = CreateController(api);
+
+        var result = await controller.Result(100, CancellationToken.None);
+
+        var viewResult = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<ExamResultViewModel>(viewResult.Model);
+        Assert.NotNull(model.Insight);
+        Assert.Equal("Pre-fetched exam insight", model.Insight.Narrative);
+    }
+
     private static ExamsController CreateController(TestApiClient api)
     {
         var identity = new ClaimsIdentity(AuthClaims.For(7, "learner@test.local", Roles.Learner, "Learner"), "Cookies");
@@ -400,6 +457,19 @@ public sealed class ExamsControllerTests
 
         public Task<AttemptReviewDto> GetAttemptReviewAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<AttemptReviewDto>(ExceptionToThrow) : Task.FromResult(ReviewDto!);
+
+        public AiInsightDto? InsightDto { get; set; }
+        public bool RetryInsightCalled { get; set; }
+
+        public Task<AiInsightDto> GetExamInsightAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) =>
+            ExceptionToThrow != null ? Task.FromException<AiInsightDto>(ExceptionToThrow) : Task.FromResult(InsightDto!);
+
+        public Task RetryExamInsightAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default)
+        {
+            if (ExceptionToThrow != null) return Task.FromException(ExceptionToThrow);
+            RetryInsightCalled = true;
+            return Task.CompletedTask;
+        }
     }
 
     [Fact]

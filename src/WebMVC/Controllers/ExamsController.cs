@@ -198,7 +198,18 @@ public sealed class ExamsController(
         {
             var bearer = await BearerAsync();
             var result = await Api.GetAttemptResultAsync(attemptId, bearer, cancellationToken);
-            return View(new ExamResultViewModel(result, TempData["ErrorMessage"] as string));
+
+            AiInsightDto? insight = null;
+            try
+            {
+                insight = await Api.GetExamInsightAsync(attemptId, bearer, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Could not pre-fetch AI insight for attempt {AttemptId}", attemptId);
+            }
+
+            return View(new ExamResultViewModel(result, TempData["ErrorMessage"] as string, insight));
         }
         catch (ApiException ex) when (ex.Status == 404 || ex.Code == ApiError.Codes.AttemptNotFound)
         {
@@ -211,6 +222,37 @@ public sealed class ExamsController(
             logger.LogError(ex, "Failed to load result for attempt {AttemptId}", attemptId);
             TempData["ShellError"] = "Could not load exam results.";
             return RedirectToAction(nameof(Index));
+        }
+    }
+
+    [HttpGet("/exams/insight/{attemptId:int}")]
+    public async Task<IActionResult> GetInsight(int attemptId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var bearer = await BearerAsync();
+            var insight = await Api.GetExamInsightAsync(attemptId, bearer, cancellationToken);
+            return Ok(insight);
+        }
+        catch (ApiException ex)
+        {
+            return StatusCode(ex.Status, new { code = ex.Code, message = ex.Message });
+        }
+    }
+
+    [HttpPost("/exams/insight/{attemptId:int}/retry")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RetryInsight(int attemptId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var bearer = await BearerAsync();
+            await Api.RetryExamInsightAsync(attemptId, bearer, cancellationToken);
+            return Ok(new { success = true });
+        }
+        catch (ApiException ex)
+        {
+            return StatusCode(ex.Status, new { code = ex.Code, message = ex.Message });
         }
     }
 

@@ -89,8 +89,11 @@
   </div>
 }
 
+<!-- AI Insight Panel (Ticket #20) -->
+<partial name="_AiInsightPanel" model='new WebMVC.Models.AiInsightPanelViewModel("attempt", res.AttemptId, Model.Insight)' />
+
 <!-- Breakdown by Skill Table -->
-<div class="card">
+<div class="card mt-4">
   <div class="card__header"><strong>Skill Performance Breakdown</strong></div>
   <div class="card__body">
     <table class="table table--striped">

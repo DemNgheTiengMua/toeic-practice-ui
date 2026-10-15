@@ -67,5 +67,7 @@ public sealed record ApiError(string Code, string Title, int Status, string? Det
         public const string ScoreConversionInvalid = "SCORE_CONVERSION_INVALID";
 
         public const string UserNotFound = "USER_NOT_FOUND";
+        public const string InsightNotFound = "INSIGHT_NOT_FOUND";
+        public const string InsightNotFailed = "INSIGHT_NOT_FAILED";
     }
 }

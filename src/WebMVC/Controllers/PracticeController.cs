@@ -172,6 +172,18 @@ public sealed class PracticeController(
         {
             var bearer = await BearerAsync();
             var summary = await Api.GetPracticeSummaryAsync(sessionId, bearer, cancellationToken);
+
+            AiInsightDto? insight = null;
+            try
+            {
+                insight = await Api.GetPracticeInsightAsync(sessionId, bearer, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Could not pre-fetch AI insight for practice session {SessionId}", sessionId);
+            }
+            ViewBag.Insight = insight;
+
             return View(summary);
         }
         catch (ApiException ex) when (ex.Status == 404 || ex.Code == ApiError.Codes.PracticeSessionNotFound)
@@ -185,6 +197,37 @@ public sealed class PracticeController(
             logger.LogError(ex, "Failed to load practice summary for session {SessionId}", sessionId);
             TempData["ErrorMessage"] = "Could not load practice summary.";
             return RedirectToAction(nameof(Index));
+        }
+    }
+
+    [HttpGet("/practice/insight/{sessionId:int}")]
+    public async Task<IActionResult> GetInsight(int sessionId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var bearer = await BearerAsync();
+            var insight = await Api.GetPracticeInsightAsync(sessionId, bearer, cancellationToken);
+            return Ok(insight);
+        }
+        catch (ApiException ex)
+        {
+            return StatusCode(ex.Status, new { code = ex.Code, message = ex.Message });
+        }
+    }
+
+    [HttpPost("/practice/insight/{sessionId:int}/retry")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RetryInsight(int sessionId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var bearer = await BearerAsync();
+            await Api.RetryPracticeInsightAsync(sessionId, bearer, cancellationToken);
+            return Ok(new { success = true });
+        }
+        catch (ApiException ex)
+        {
+            return StatusCode(ex.Status, new { code = ex.Code, message = ex.Message });
         }
     }
 }
