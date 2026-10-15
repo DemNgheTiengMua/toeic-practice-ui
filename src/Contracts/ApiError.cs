@@ -75,5 +75,13 @@ public sealed record ApiError(string Code, string Title, int Status, string? Det
         public const string PlacementExpired = "placement_expired";
         public const string PlacementNotFinished = "placement_not_finished";
         public const string TargetBandInvalid = "target_band_invalid";
+
+        public const string LearningPathNotFound = "LEARNING_PATH_NOT_FOUND";
+        public const string LearningPathAlreadyActive = "LEARNING_PATH_ALREADY_ACTIVE";
+        public const string LearningPathTemplateNotFound = "LEARNING_PATH_TEMPLATE_NOT_FOUND";
+        public const string LearningPathModuleNotFound = "LEARNING_PATH_MODULE_NOT_FOUND";
+        public const string LearningPathStepNotFound = "LEARNING_PATH_STEP_NOT_FOUND";
+        public const string LearningPathStepLocked = "LEARNING_PATH_STEP_LOCKED";
     }
+
 }

@@ -284,9 +284,9 @@
   "282": "Writing/AttemptNotFound.cshtml",
   "283": "Speaking/Take.cshtml",
   "284": "SpeakingController",
-  "285": "SavedQuestionsController",
+  "285": "ImportBatch.cs",
   "286": "Speaking/AttemptNotFound.cshtml",
-  "287": "RecordingEmailSender",
+  "287": "DispatchProxyStub",
   "288": "PlacementController",
   "289": "HomeController",
   "290": ".CreateServices",
@@ -298,7 +298,6 @@
   "296": "PlacementNotFound.cshtml",
   "297": "PracticeController",
   "298": "DashboardControllerTests",
-  "299": "MockExamServiceTests",
   "300": "DatabaseFixture",
   "301": ".SeedCertificateWithCatalogAsync",
   "302": "SaveQuestionResultDto",
@@ -307,8 +306,6 @@
   "305": "PracticeAnswer",
   "306": "WritingPracticeService",
   "307": "ProfileViewModel",
-  "308": "FixedAuthentication",
   "309": "FixedAuthentication",
-  "313": ".GetOrderDetailAsync_shows_every_payment_event_in_chronological_order",
-  "329": "CertificateOptionDto"
+  "313": ".GetOrderDetailAsync_shows_every_payment_event_in_chronological_order"
 }

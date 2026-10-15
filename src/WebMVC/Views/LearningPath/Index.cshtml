@@ -1,0 +1,163 @@
+@model LearningPathIndexViewModel
+@{
+    Layout = "_LearnerLayout";
+    ViewData["Title"] = "My learning path";
+    ViewData["Description"] = "Personalized learning path with structured modules to reach your target band.";
+    var summary = Model.Summary;
+}
+
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+  <a href="/dashboard" class="breadcrumbs__item">Home</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <span class="breadcrumbs__item" aria-current="page">My learning path</span>
+</nav>
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+  <div class="alert alert--danger" role="alert">@Model.ErrorMessage</div>
+}
+
+@if (!summary.HasActivePath)
+{
+  <div class="card"><div class="card__body">
+    <div class="state-block">
+      <div class="state-block__icon" aria-hidden="true">EMPTY</div>
+      <h1 class="state-block__title">No learning path yet</h1>
+      <p class="state-block__desc">Take a placement test to generate your personalized learning path, or generate one from your current level.</p>
+      <div class="row row--center" style="gap: var(--space-3); margin-top: var(--space-3);">
+        <a href="/placement" class="btn btn--primary">Start placement test</a>
+        <form method="post" action="/learning-path/generate" class="no-margin">
+          @Html.AntiForgeryToken()
+          <button type="submit" class="btn">Generate path</button>
+        </form>
+      </div>
+    </div>
+  </div></div>
+}
+else
+{
+  <div class="stack">
+    <div class="row row--between" style="align-items: center;">
+      <div>
+        <h1 class="m-0 mb-1">@summary.FromBandCode → @summary.ToBandCode learning path</h1>
+        <p class="text-muted no-margin">From <strong>@summary.FromBandName</strong> to <strong>@summary.ToBandName</strong>. Modules unlock in order.</p>
+      </div>
+      @if (summary.IsPremium)
+      {
+        <span class="badge badge--success">Premium tier</span>
+      }
+      else
+      {
+        <span class="badge badge--muted">Free tier</span>
+      }
+    </div>
+
+    <div class="card"><div class="card__body stack">
+      <div class="row row--between">
+        <strong class="text-sm">Path progress</strong>
+        @{
+            int remainingHours = summary.RemainingMinutes / 60;
+            int remainingMins = summary.RemainingMinutes % 60;
+            string timeLeft = remainingHours > 0 ? $"{remainingHours}h {remainingMins:D2}m left" : $"{remainingMins}m left";
+        }
+        <span class="text-sm text-muted">@summary.CompletedModules of @summary.TotalModules modules done · @timeLeft</span>
+      </div>
+      @{
+          int progressPct = summary.TotalModules > 0 ? (int)Math.Round((double)summary.CompletedModules / summary.TotalModules * 100) : 0;
+      }
+      <div class="progress" role="progressbar" aria-valuenow="@summary.CompletedModules" aria-valuemin="0" aria-valuemax="@summary.TotalModules" aria-label="Learning path progress">
+        <div class="progress__bar" style="width: @(progressPct)%"></div>
+      </div>
+      <div class="cefr">
+        <div class="cefr__head">
+          <span class="cefr__current">@summary.FromBandCode → @summary.ToBandCode</span>
+          <span>@(summary.CurrentScore.HasValue ? $"{summary.CurrentScore} at placement" : "")@(summary.CurrentScore.HasValue && summary.TargetScore.HasValue ? " · " : "")@(summary.TargetScore.HasValue ? $"{summary.TargetScore} target" : "")</span>
+        </div>
+        <div class="cefr__track" role="img" aria-label="Current band @summary.CurrentBandCode, target band @summary.TargetBandCode">
+          @foreach (var band in summary.CefrBands)
+          {
+            var isCurrent = band.Code == summary.CurrentBandCode;
+            var isReached = band.IsReached;
+            <span class="cefr__band@(isCurrent ? " is-current" : isReached ? " is-reached" : "")">@band.Code</span>
+          }
+        </div>
+        <div class="cefr__scale" aria-hidden="true">
+          @foreach (var band in summary.CefrBands)
+          {
+            <span class="cefr__tick">@band.MinTotal</span>
+          }
+        </div>
+      </div>
+    </div></div>
+
+    @if (!summary.IsPremium)
+    {
+      <div class="alert alert--info">
+        <strong>You are on the free path.</strong>
+        It covers practice modules. <a href="/pricing">Upgrade to premium</a> for AI-graded writing, video lessons, and detailed explanations.
+      </div>
+    }
+
+    @foreach (var group in summary.Modules.GroupBy(m => m.GroupName ?? "Learning modules"))
+    {
+      <section>
+        <h2 class="section-group__title">@group.Key</h2>
+        <div class="stack">
+          @foreach (var module in group)
+          {
+            <article class="path-module">
+              <div class="path-module__status">
+                @if (module.Status == "done")
+                {
+                  <span class="badge badge--success">Done</span>
+                }
+                else if (module.Status == "in_progress")
+                {
+                  <span class="badge badge--warning">In progress</span>
+                }
+                else if (module.Status == "locked")
+                {
+                  <span class="badge">Locked</span>
+                }
+                else
+                {
+                  <span class="badge">Not started</span>
+                }
+              </div>
+              <div class="path-module__content">
+                <strong>@module.Title</strong>
+                <p>@module.SkillName · @module.TotalQuestions questions · Est. @module.EstimatedMinutes minutes</p>
+              </div>
+              @if (module.Status == "done")
+              {
+                <a href="/learning-path/modules/@module.ModuleId" class="btn btn--sm">Review</a>
+              }
+              else if (module.Status == "in_progress")
+              {
+                <a href="/learning-path/modules/@module.ModuleId" class="btn btn--primary btn--sm">Continue</a>
+              }
+              else if (module.Status == "locked")
+              {
+                <button class="btn btn--sm" disabled>Locked</button>
+              }
+              else
+              {
+                <a href="/learning-path/modules/@module.ModuleId" class="btn btn--primary btn--sm">Start</a>
+              }
+            </article>
+          }
+        </div>
+      </section>
+    }
+
+    <div class="card mt-4"><div class="card__footer">
+      <form method="post" action="/learning-path/reset">
+        @Html.AntiForgeryToken()
+        <div class="row row--between" style="align-items: center;">
+          <span class="text-sm text-muted">Resetting clears your module progress. Your placement result and target level are kept.</span>
+          <button type="submit" class="btn btn--danger" onclick="return confirm('Resetting clears your module progress. Are you sure you want to reset your learning path?');">Reset progress</button>
+        </div>
+      </form>
+    </div></div>
+  </div>
+}

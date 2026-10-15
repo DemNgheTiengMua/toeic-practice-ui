@@ -285,7 +285,23 @@ public interface ICompanionApiClient
 
     Task<SetTargetBandResultDto> SetTargetBandAsync(SetTargetBandRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
         throw new NotImplementedException();
+
+    Task<LearningPathSummaryDto> GetLearningPathAsync(string bearerToken, CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
+
+    Task<LearningPathSummaryDto> GenerateLearningPathAsync(GenerateLearningPathRequest? request, string bearerToken, CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
+
+    Task<LearningPathModuleDetailDto> GetLearningPathModuleAsync(int moduleId, string bearerToken, CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
+
+    Task<StartStepResultDto> StartLearningPathStepAsync(int stepId, string bearerToken, CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
+
+    Task<ResetLearningPathResultDto> ResetLearningPathAsync(string bearerToken, CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
 }
+
 
 /// <summary>Raised when the API answers with a non-success status; carries the ProblemDetails code.</summary>
 public sealed class ApiException : HttpRequestException
@@ -967,6 +983,22 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
 
     public Task<SetTargetBandResultDto> SetTargetBandAsync(SetTargetBandRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
         PostAuthorizedAsync<SetTargetBandRequest, SetTargetBandResultDto>("api/learner/target-band", request, bearerToken, cancellationToken);
+
+    public Task<LearningPathSummaryDto> GetLearningPathAsync(string bearerToken, CancellationToken cancellationToken = default) =>
+        GetAuthorizedAsync<LearningPathSummaryDto>("api/learner/learning-path", bearerToken, cancellationToken);
+
+    public Task<LearningPathSummaryDto> GenerateLearningPathAsync(GenerateLearningPathRequest? request, string bearerToken, CancellationToken cancellationToken = default) =>
+        PostAuthorizedAsync<GenerateLearningPathRequest, LearningPathSummaryDto>("api/learner/learning-path/generate", request ?? new GenerateLearningPathRequest(), bearerToken, cancellationToken);
+
+    public Task<LearningPathModuleDetailDto> GetLearningPathModuleAsync(int moduleId, string bearerToken, CancellationToken cancellationToken = default) =>
+        GetAuthorizedAsync<LearningPathModuleDetailDto>($"api/learner/learning-path/modules/{moduleId}", bearerToken, cancellationToken);
+
+    public Task<StartStepResultDto> StartLearningPathStepAsync(int stepId, string bearerToken, CancellationToken cancellationToken = default) =>
+        PostAuthorizedAsync<object, StartStepResultDto>($"api/learner/learning-path/steps/{stepId}/start", new { }, bearerToken, cancellationToken);
+
+    public Task<ResetLearningPathResultDto> ResetLearningPathAsync(string bearerToken, CancellationToken cancellationToken = default) =>
+        PostAuthorizedAsync<object, ResetLearningPathResultDto>("api/learner/learning-path/reset", new { }, bearerToken, cancellationToken);
+
 
     private async Task<T> GetAuthorizedAsync<T>(string path, string bearerToken, CancellationToken cancellationToken)
     {

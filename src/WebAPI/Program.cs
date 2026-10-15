@@ -153,7 +153,9 @@ builder.Services.AddSingleton<IFileStore>(new LocalFileStore(audioStoragePath));
 builder.Services.AddScoped<IWritingPracticeService, WritingPracticeService>();
 builder.Services.AddScoped<ISpeakingPracticeService, SpeakingPracticeService>();
 builder.Services.AddScoped<IPlacementService, PlacementService>();
+builder.Services.AddScoped<ILearningPathService, LearningPathService>();
 builder.Services.AddHostedService<AiGradingBackgroundService>();
+
 builder.Services.AddSingleton<IAiInsightGenerator, FakeAiInsightGenerator>();
 builder.Services.AddScoped<IAiInsightService, AiInsightService>();
 builder.Services.AddHostedService<AiInsightBackgroundService>();
@@ -235,8 +237,10 @@ app.MapWritingEndpoints();
 app.MapSpeakingEndpoints();
 app.MapInsightEndpoints();
 app.MapPlacementEndpoints();
+app.MapLearningPathEndpoints();
 
 app.Run();
+
 
 // For WebApplicationFactory-based tests in later slices.
 public partial class Program;

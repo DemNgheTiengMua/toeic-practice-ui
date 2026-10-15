@@ -880,3 +880,99 @@ GO
 
 PRINT 'demo target band seeded';
 GO
+
+-- ============ Demo Learning Path Templates (issue #24) ============
+DECLARE @toeicCert INT = (SELECT CertId FROM Certificates WHERE Code = 'TOEIC');
+DECLARE @toeicList INT = (SELECT SkillId FROM Skills WHERE CertId = @toeicCert AND Code = 'LIST');
+DECLARE @toeicRead INT = (SELECT SkillId FROM Skills WHERE CertId = @toeicCert AND Code = 'READ');
+DECLARE @secP1 INT = (SELECT SectionId FROM Sections WHERE CertId = @toeicCert AND Code = 'P1');
+DECLARE @secP2 INT = (SELECT SectionId FROM Sections WHERE CertId = @toeicCert AND Code = 'P2');
+DECLARE @secP3 INT = (SELECT SectionId FROM Sections WHERE CertId = @toeicCert AND Code = 'P3');
+DECLARE @secP5 INT = (SELECT SectionId FROM Sections WHERE CertId = @toeicCert AND Code = 'P5');
+DECLARE @secP6 INT = (SELECT SectionId FROM Sections WHERE CertId = @toeicCert AND Code = 'P6');
+DECLARE @mockExam INT = (SELECT ExamId FROM Exams WHERE CertId = @toeicCert AND Name = N'ETS 2024 — Test 1');
+DECLARE @speakingExam INT = (SELECT ExamId FROM Exams WHERE CertId = @toeicCert AND Name = N'ETS TOEIC Speaking Practice — Test 1');
+DECLARE @catTense INT = (SELECT CategoryId FROM QuestionCategories WHERE CertId = @toeicCert AND Code = 'grammar_tense');
+
+IF NOT EXISTS (SELECT 1 FROM PathTemplates WHERE CertId = @toeicCert AND FromBandCode = 'A2' AND ToBandCode = 'B2')
+BEGIN
+  INSERT INTO PathTemplates (CertId, FromBandCode, ToBandCode, Name)
+  VALUES (@toeicCert, 'A2', 'B2', N'TOEIC A2 → B2 Comprehensive Path');
+  DECLARE @tplId INT = SCOPE_IDENTITY();
+
+  -- Module 1: Present Simple Tense
+  INSERT INTO PathModules (TemplateId, SkillId, CertId, DisplayOrder, Title, GroupName, Description, EstimatedMinutes)
+  VALUES (@tplId, @toeicRead, @toeicCert, 1, N'Module 1: Present Simple Tense',
+          N'Grammar foundations · modules 1–3',
+          N'Master the fundamentals of present simple verbs, subject-verb agreement, and third-person singular rules.',
+          15);
+  DECLARE @mod1 INT = SCOPE_IDENTITY();
+
+  INSERT INTO PathModuleItems (ModuleId, CertId, TemplateId, ItemType, RefSectionId, QuestionCount, DisplayOrder)
+  VALUES (@mod1, @toeicCert, @tplId, 'practice_section', @secP5, 20, 1);
+
+  INSERT INTO PathModuleTopics (ModuleId, Title, CategoryId, QuestionCount, DisplayOrder) VALUES
+    (@mod1, N'Subject-verb agreement basics', @catTense, 10, 1),
+    (@mod1, N'Frequency adverbs and word order', @catTense, 10, 2);
+
+  -- Module 2: Present Continuous
+  INSERT INTO PathModules (TemplateId, SkillId, CertId, DisplayOrder, Title, GroupName, Description, EstimatedMinutes)
+  VALUES (@tplId, @toeicRead, @toeicCert, 2, N'Module 2: Present Continuous',
+          N'Grammar foundations · modules 1–3',
+          N'Learn and practice the present continuous tense: when it applies, how it is formed, and the mistakes that cost marks in Part 5.',
+          20);
+  DECLARE @mod2 INT = SCOPE_IDENTITY();
+
+  INSERT INTO PathModuleItems (ModuleId, CertId, TemplateId, ItemType, RefSectionId, QuestionCount, DisplayOrder)
+  VALUES (@mod2, @toeicCert, @tplId, 'practice_section', @secP5, 25, 1);
+
+  IF @speakingExam IS NOT NULL
+  BEGIN
+    INSERT INTO PathModuleItems (ModuleId, CertId, TemplateId, ItemType, RefExamId, QuestionCount, IsPremiumOnly, DisplayOrder)
+    VALUES (@mod2, @toeicCert, @tplId, 'ai_task', @speakingExam, 5, 1, 2);
+  END;
+
+  INSERT INTO PathModuleTopics (ModuleId, Title, CategoryId, QuestionCount, DisplayOrder) VALUES
+    (@mod2, N'Present continuous vs present simple', @catTense, 8, 1),
+    (@mod2, N'Affirmative, negative, and question forms', @catTense, 7, 2),
+    (@mod2, N'Time expressions: now, at the moment, currently', @catTense, 5, 3),
+    (@mod2, N'Stative verbs that take no continuous form', @catTense, 5, 4);
+
+  -- Module 3: Past Simple
+  INSERT INTO PathModules (TemplateId, SkillId, CertId, DisplayOrder, Title, GroupName, Description, EstimatedMinutes)
+  VALUES (@tplId, @toeicRead, @toeicCert, 3, N'Module 3: Past Simple',
+          N'Grammar foundations · modules 1–3',
+          N'Review regular and irregular past tense forms, time markers, and question formation.',
+          25);
+  DECLARE @mod3 INT = SCOPE_IDENTITY();
+
+  INSERT INTO PathModuleItems (ModuleId, CertId, TemplateId, ItemType, RefSectionId, QuestionCount, DisplayOrder)
+  VALUES (@mod3, @toeicCert, @tplId, 'practice_section', @secP5, 30, 1);
+
+  -- Module 4: Vocabulary Building — Business Context
+  INSERT INTO PathModules (TemplateId, SkillId, CertId, DisplayOrder, Title, GroupName, Description, EstimatedMinutes)
+  VALUES (@tplId, @toeicRead, @toeicCert, 4, N'Module 4: Vocabulary Building — Business Context',
+          N'Reading and listening · modules 4–5',
+          N'Core workplace vocabulary frequently tested in Part 6 text completion.',
+          30);
+  DECLARE @mod4 INT = SCOPE_IDENTITY();
+
+  INSERT INTO PathModuleItems (ModuleId, CertId, TemplateId, ItemType, RefSectionId, QuestionCount, DisplayOrder)
+  VALUES (@mod4, @toeicCert, @tplId, 'practice_section', @secP6, 20, 1);
+
+  -- Module 5: Listening Comprehension — Short Conversations
+  INSERT INTO PathModules (TemplateId, SkillId, CertId, DisplayOrder, Title, GroupName, Description, EstimatedMinutes)
+  VALUES (@tplId, @toeicList, @toeicCert, 5, N'Module 5: Listening Comprehension — Short Conversations',
+          N'Reading and listening · modules 4–5',
+          N'Part 3 listening tactics: identifying context, speaker intentions, and graphic-prompt connections.',
+          20);
+  DECLARE @mod5 INT = SCOPE_IDENTITY();
+
+  INSERT INTO PathModuleItems (ModuleId, CertId, TemplateId, ItemType, RefSectionId, QuestionCount, DisplayOrder)
+  VALUES (@mod5, @toeicCert, @tplId, 'practice_section', @secP3, 15, 1);
+END;
+GO
+
+PRINT 'demo learning path templates seeded';
+GO
+

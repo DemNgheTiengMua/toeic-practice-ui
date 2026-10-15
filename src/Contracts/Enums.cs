@@ -204,3 +204,33 @@ public enum CreditReasonDto
     [JsonStringEnumMemberName("admin_revoke")] AdminRevoke,
     [JsonStringEnumMemberName("booking_cancel")] BookingCancel,
 }
+
+/// <summary>CK_LearnerPaths_Status: active, completed, reset.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<LearnerPathStatusDto>))]
+public enum LearnerPathStatusDto
+{
+    [JsonStringEnumMemberName("active")] Active,
+    [JsonStringEnumMemberName("completed")] Completed,
+    [JsonStringEnumMemberName("reset")] Reset,
+}
+
+/// <summary>CK_Steps_Status: locked, available, in_progress, done.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<LearnerPathStepStatusDto>))]
+public enum LearnerPathStepStatusDto
+{
+    [JsonStringEnumMemberName("locked")] Locked,
+    [JsonStringEnumMemberName("available")] Available,
+    [JsonStringEnumMemberName("in_progress")] InProgress,
+    [JsonStringEnumMemberName("done")] Done,
+}
+
+/// <summary>CK_PMI_Type: practice_section, mock_exam, ai_task, mentor.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<PathModuleItemTypeDto>))]
+public enum PathModuleItemTypeDto
+{
+    [JsonStringEnumMemberName("practice_section")] PracticeSection,
+    [JsonStringEnumMemberName("mock_exam")] MockExam,
+    [JsonStringEnumMemberName("ai_task")] AiTask,
+    [JsonStringEnumMemberName("mentor")] Mentor,
+}
+

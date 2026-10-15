@@ -169,7 +169,6 @@ public enum GatewayStatus
     Expired,
     Cancelled,
 }
-
 /// <summary>CK_CreditTxn_Reason: purchase, admin_grant, mock_exam_start, ai_grading, mentor_booking, premium_path, admin_revoke, booking_cancel.</summary>
 public enum CreditReason
 {
@@ -182,3 +181,31 @@ public enum CreditReason
     AdminRevoke,
     BookingCancel,
 }
+
+
+/// <summary>CK_LearnerPaths_Status: active, completed, reset.</summary>
+public enum LearnerPathStatus
+{
+    Active,
+    Completed,
+    Reset,
+}
+
+/// <summary>CK_Steps_Status: locked, available, in_progress, done.</summary>
+public enum LearnerPathStepStatus
+{
+    Locked,
+    Available,
+    InProgress,
+    Done,
+}
+
+/// <summary>CK_PMI_Type: practice_section, mock_exam, ai_task, mentor.</summary>
+public enum PathModuleItemType
+{
+    PracticeSection,
+    MockExam,
+    AiTask,
+    Mentor,
+}
+

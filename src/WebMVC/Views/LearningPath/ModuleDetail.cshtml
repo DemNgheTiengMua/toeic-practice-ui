@@ -1,0 +1,193 @@
+@model LearningPathModuleDetailViewModel
+@{
+    Layout = "_LearnerLayout";
+    var detail = Model.Detail;
+    ViewData["Title"] = $"Module {detail.ModuleIndex}: {detail.Title}";
+    ViewData["Description"] = detail.Description ?? $"Module {detail.ModuleIndex} of your learning path.";
+}
+
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+  <a href="/dashboard" class="breadcrumbs__item">Home</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <a href="/learning-path" class="breadcrumbs__item">My learning path</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <span class="breadcrumbs__item" aria-current="page">Module @detail.ModuleIndex</span>
+</nav>
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+  <div class="alert alert--danger" role="alert">@Model.ErrorMessage</div>
+}
+
+@if (detail.IsLocked)
+{
+  <div class="card"><div class="card__body">
+    <div class="state-block">
+      <div class="state-block__icon" aria-hidden="true">LOCKED</div>
+      <h1 class="state-block__title">Module locked</h1>
+      <p class="state-block__desc">Complete the previous modules to unlock this one.</p>
+      <a href="/learning-path" class="btn btn--primary">Back to path</a>
+    </div>
+  </div></div>
+}
+else
+{
+  <div class="stack">
+    <div class="row row--between" style="align-items: center;">
+      <div>
+        <h1 class="m-0 mb-1">Module @detail.ModuleIndex: @detail.Title</h1>
+        <p class="text-muted no-margin">@detail.SkillName module · @detail.TotalQuestions questions · Est. @detail.EstimatedMinutes minutes · Free</p>
+      </div>
+      @if (detail.Status == "done")
+      {
+        <span class="badge badge--success">Done</span>
+      }
+      else if (detail.Status == "in_progress")
+      {
+        <span class="badge badge--warning">In progress</span>
+      }
+      else
+      {
+        <span class="badge">Not started</span>
+      }
+    </div>
+
+    <div class="card"><div class="card__body stack">
+      <div class="row row--between">
+        <strong class="text-sm">Module progress</strong>
+        @{
+            int remaining = Math.Max(0, detail.TotalQuestions - detail.AnsweredQuestions);
+        }
+        <span class="text-sm text-muted">@detail.AnsweredQuestions of @detail.TotalQuestions questions · @remaining left</span>
+      </div>
+      @{
+          int progressPct = detail.TotalQuestions > 0 ? (int)Math.Round((double)detail.AnsweredQuestions / detail.TotalQuestions * 100) : 0;
+      }
+      <div class="progress" role="progressbar" aria-valuenow="@detail.AnsweredQuestions" aria-valuemin="0" aria-valuemax="@detail.TotalQuestions" aria-label="Module progress">
+        <div class="progress__bar" style="width: @(progressPct)%"></div>
+      </div>
+      <div class="row" style="gap: var(--space-3); margin-top: var(--space-2);">
+        @if (detail.ActiveStepId is { } stepId)
+        {
+          <form method="post" action="/learning-path/steps/@stepId/start" class="no-margin">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn--primary">@(detail.Status == "done" ? "Review module" : detail.Status == "in_progress" ? "Continue module" : "Start module")</button>
+          </form>
+        }
+        <a href="/learning-path" class="btn">Back to path</a>
+      </div>
+    </div></div>
+
+    <div class="grid-3">
+      <div class="stat">
+        <div class="stat__label">Answered</div>
+        <div class="stat__value">@detail.AnsweredQuestions</div>
+        <div class="stat__hint">of @detail.TotalQuestions questions</div>
+      </div>
+      <div class="stat">
+        <div class="stat__label">Accuracy so far</div>
+        <div class="stat__value">@(detail.AccuracyPercentage.HasValue ? $"{detail.AccuracyPercentage}%" : "—")</div>
+        <div class="stat__hint">@detail.CorrectCount of @detail.AnsweredQuestions correct</div>
+      </div>
+      <div class="stat">
+        <div class="stat__label">Time spent</div>
+        <div class="stat__value">@(detail.TimeSpentMinutes)m</div>
+        <div class="stat__hint">est. @(detail.EstimatedMinutesRemaining)m remaining</div>
+      </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(detail.Description) || detail.Topics.Count > 0)
+    {
+      <section>
+        <h2 class="section-group__title">What this module covers</h2>
+        <div class="card"><div class="card__body">
+          @if (!string.IsNullOrEmpty(detail.Description))
+          {
+            <p class="no-margin mb-4">@detail.Description</p>
+          }
+          @if (detail.Topics.Count > 0)
+          {
+            <table class="table">
+              <caption class="visually-hidden">Topics covered in this module</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Topic</th>
+                  <th scope="col">Questions</th>
+                  <th scope="col">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                @foreach (var topic in detail.Topics)
+                {
+                  <tr>
+                    <th scope="row">@topic.Title</th>
+                    <td>@(topic.QuestionCount?.ToString() ?? "—")</td>
+                    <td>
+                      @if (topic.Status == "done")
+                      {
+                        <span class="badge badge--success">Done</span>
+                      }
+                      else if (topic.Status == "in_progress")
+                      {
+                        <span class="badge badge--warning">In progress</span>
+                      }
+                      else
+                      {
+                        <span class="badge">Not started</span>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
+        </div></div>
+      </section>
+    }
+
+    @if (detail.Steps.Any(s => s.ItemType != PathModuleItemTypeDto.PracticeSection))
+    {
+      @foreach (var step in detail.Steps.Where(s => s.ItemType != PathModuleItemTypeDto.PracticeSection))
+      {
+        <section>
+          <h2 class="section-group__title">@(step.ItemType == PathModuleItemTypeDto.AiTask ? "AI-graded task" : step.ItemType == PathModuleItemTypeDto.MockExam ? "Mock exam assessment" : "Mentor session")</h2>
+          <div class="card"><div class="card__body">
+            <div class="row row--between" style="align-items: center;">
+              <div>
+                <strong>@step.Title</strong>
+                <p class="text-sm text-muted no-margin mt-1">
+                  @(step.ItemType == PathModuleItemTypeDto.AiTask ? "AI writing/speaking task · graded with notes per criterion" : "Full timed mock exam")
+                </p>
+              </div>
+              <div class="row row--tight" style="align-items: center; gap: var(--space-2);">
+                @if (step.IsPremiumOnly)
+                {
+                  <span class="badge badge--muted">Premium</span>
+                }
+                @if (step.CanStart)
+                {
+                  <form method="post" action="/learning-path/steps/@step.StepId/start" class="no-margin">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn--sm">@(step.Status == LearnerPathStepStatusDto.Done ? "Review" : "Start")</button>
+                  </form>
+                }
+                else
+                {
+                  <button class="btn btn--sm" disabled>Locked</button>
+                }
+              </div>
+            </div>
+          </div></div>
+        </section>
+      }
+    }
+
+    @if (!detail.IsPremium)
+    {
+      <div class="alert alert--info">
+        <strong>This module is on the free path.</strong>
+        <a href="/pricing">Premium</a> adds a video lesson per topic, an explanation on every question, and AI-graded writing.
+      </div>
+    }
+  </div>
+}

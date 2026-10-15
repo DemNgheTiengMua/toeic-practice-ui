@@ -463,6 +463,42 @@ public sealed class PracticeService(
             answer.Session.FinishedAt = DateTimeOffset.UtcNow;
             await db.SaveChangesAsync(cancellationToken);
 
+            if (answer.Session.LearnerPathStepId is { } stepId)
+            {
+                var step = await db.LearnerPathSteps
+                    .Include(s => s.LearnerPath)
+                    .FirstOrDefaultAsync(s => s.StepId == stepId, cancellationToken);
+                if (step != null && step.Status != "done")
+                {
+                    step.Status = "done";
+                    step.CompletedAt = DateTimeOffset.UtcNow;
+                    step.Score = answer.Session.QuestionCount > 0
+                        ? Math.Round((decimal)answer.Session.CorrectCount / answer.Session.QuestionCount * 100m, 2)
+                        : 100m;
+
+                    var allSteps = await db.LearnerPathSteps
+                        .Include(s => s.PathModuleItem)
+                            .ThenInclude(pmi => pmi.PathModule)
+                        .Where(s => s.LearnerPathId == step.LearnerPathId)
+                        .OrderBy(s => s.PathModuleItem.PathModule.DisplayOrder)
+                        .ThenBy(s => s.PathModuleItem.DisplayOrder)
+                        .ToListAsync(cancellationToken);
+
+                    var nextLocked = allSteps.FirstOrDefault(s => s.Status == "locked");
+                    if (nextLocked != null)
+                    {
+                        nextLocked.Status = "available";
+                    }
+
+                    if (allSteps.All(s => s.Status == "done"))
+                    {
+                        step.LearnerPath.Status = "completed";
+                    }
+
+                    await db.SaveChangesAsync(cancellationToken);
+                }
+            }
+
             var certId = answer.Session.Section.CertId;
             await PruneOldSessionsAsync(userId, certId, cancellationToken);
         }

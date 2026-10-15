@@ -34,7 +34,11 @@ public sealed class EnumCodesTests
         { typeof(PaymentEventSource), typeof(PaymentEventSourceDto), "CK_PaymentEvents_Source" },
         { typeof(GatewayStatus), typeof(GatewayStatusDto), "CK_PaymentEvents_ReportedStatus" },
         { typeof(CreditReason), typeof(CreditReasonDto), "CK_CreditTxn_Reason" },
+        { typeof(LearnerPathStatus), typeof(LearnerPathStatusDto), "CK_LearnerPaths_Status" },
+        { typeof(LearnerPathStepStatus), typeof(LearnerPathStepStatusDto), "CK_Steps_Status" },
+        { typeof(PathModuleItemType), typeof(PathModuleItemTypeDto), "CK_PMI_Type" },
     };
+
 
     [Theory]
     [MemberData(nameof(Enums))]
