@@ -73,9 +73,14 @@ public sealed class ProfileController(ICompanionApiClient api, CurrentUser curre
                 new ChangePasswordRequest(model.CurrentPassword, model.NewPassword),
                 await TokenAsync(), cancellationToken);
         }
-        catch (ApiException ex) when (ex.Code is ApiError.Codes.InvalidCredentials or ApiError.Codes.Validation)
+        catch (ApiException ex) when (ex.Code is ApiError.Codes.InvalidCredentials or ApiError.Codes.Validation or ApiError.Codes.Locked)
         {
             model.FormError = ex.Title;
+            return View(model);
+        }
+        catch (ApiException ex) when (ex.Code is ApiError.Codes.TooManyRequests)
+        {
+            model.FormError = "Too many attempts. Please wait a moment before trying again.";
             return View(model);
         }
 

@@ -62,7 +62,7 @@ public static class AuthEndpoints
             }
 
             return ToTokenResponse(user, tokens);
-        });
+        }).RequireRateLimiting("auth");
 
         // Returns the live database row, not the token's claims: the MVC site's cookie revalidation
         // compares against this to catch server-side changes (role, name) since sign-in.
@@ -123,7 +123,11 @@ public static class AuthEndpoints
             {
                 return Problem(StatusCodes.Status400BadRequest, "Password change failed", ApiError.Codes.InvalidCredentials, ex.Message);
             }
-        }).RequireAuthorization();
+            catch (AuthException ex) when (ex.Code == AuthException.Locked)
+            {
+                return Problem(StatusCodes.Status401Unauthorized, "Account locked", ApiError.Codes.Locked, ex.Message);
+            }
+        }).RequireRateLimiting("auth").RequireAuthorization();
 
         // ---- Email verification and password reset (issue #5) ----
         // Links in mail point at the MVC site; it posts the token here. Tokens are single-use and expire.

@@ -1199,6 +1199,12 @@ public partial class CompanionDbContext : DbContext
                 .HasFilter("([IsDeleted]=(0))");
 
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysdatetimeoffset())", "DF_Users_CreatedAt");
+            entity.Property(e => e.FailedAttempts).HasDefaultValue(0, "DF_Users_FailedAttempts");
+            entity.Property(e => e.IsLocked).HasDefaultValue(false, "DF_Users_IsLocked");
+            entity.Property(e => e.SecurityStamp)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasDefaultValueSql("(CONVERT([varchar](36),newid()))", "DF_Users_SecurityStamp");
             entity.Property(e => e.TimeZoneId).HasDefaultValue("Asia/Ho_Chi_Minh", "DF_Users_TimeZoneId");
 
             entity.HasOne(d => d.ActiveCert).WithMany(p => p.Users).HasConstraintName("FK_Users_ActiveCert");

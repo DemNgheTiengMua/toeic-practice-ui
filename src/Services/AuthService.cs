@@ -128,6 +128,8 @@ public sealed class AuthService(
             FullName = input.FullName.Trim(),
             Phone = string.IsNullOrWhiteSpace(input.Phone) ? null : input.Phone.Trim(),
             TermsAcceptedAt = clock.GetUtcNow(),
+            SecurityStamp = Guid.NewGuid().ToString(),
+            FailedAttempts = 0,
         };
         // The column is VARBINARY; the framework hasher works in base64 strings — convert at the boundary.
         user.PasswordHash = Convert.FromBase64String(Hasher.HashPassword(user, input.Password));
@@ -147,7 +149,7 @@ public sealed class AuthService(
         }
 
         return new AuthUser(
-            user.UserId, user.Email, user.FullName, Roles.Learner, EmailVerified: false, StampOf(user.PasswordHash));
+            user.UserId, user.Email, user.FullName, Roles.Learner, EmailVerified: false, user.SecurityStamp);
     }
 
     public async Task<AuthUser> SignInAsync(SignInInput input, CancellationToken cancellationToken = default)
@@ -159,10 +161,7 @@ public sealed class AuthService(
             .Include(u => u.Role)
             .SingleOrDefaultAsync(u => !u.IsDeleted && u.Email.ToLower() == email, cancellationToken);
 
-        // Same refusal for "no such email" and "wrong password" so the response can't enumerate accounts.
-        if (user is null
-            || Hasher.VerifyHashedPassword(user, Convert.ToBase64String(user.PasswordHash), input.Password)
-                == PasswordVerificationResult.Failed)
+        if (user is null)
         {
             throw new AuthException(AuthException.InvalidCredentials, "Incorrect email or password.");
         }
@@ -172,18 +171,45 @@ public sealed class AuthService(
             throw new AuthException(AuthException.Locked, "This account is locked. Contact support.");
         }
 
-        user.LastLoginAt = clock.GetUtcNow();
+        var now = clock.GetUtcNow();
+        if (user.LockoutEnd.HasValue)
+        {
+            if (user.LockoutEnd.Value > now)
+            {
+                throw new AuthException(AuthException.Locked, "Account is temporarily locked due to failed sign-in attempts. Try again later.");
+            }
+
+            user.LockoutEnd = null;
+            user.FailedAttempts = 0;
+        }
+
+        if (Hasher.VerifyHashedPassword(user, Convert.ToBase64String(user.PasswordHash), input.Password)
+            == PasswordVerificationResult.Failed)
+        {
+            user.FailedAttempts++;
+            if (user.FailedAttempts >= 5)
+            {
+                user.LockoutEnd = now.AddMinutes(15);
+            }
+            await db.SaveChangesAsync(cancellationToken);
+            throw new AuthException(AuthException.InvalidCredentials, "Incorrect email or password.");
+        }
+
+        user.FailedAttempts = 0;
+        user.LockoutEnd = null;
+        user.LastLoginAt = now;
         await db.SaveChangesAsync(cancellationToken);
 
         return new AuthUser(
-            user.UserId, user.Email, user.FullName, user.Role.Code, user.EmailVerifiedAt != null, StampOf(user.PasswordHash));
+            user.UserId, user.Email, user.FullName, user.Role.Code, user.EmailVerifiedAt != null, user.SecurityStamp);
     }
 
     public async Task<SessionStatus> CheckSessionAsync(int userId, string? sessionStamp, CancellationToken cancellationToken = default)
     {
         var row = await db.Users
+            .AsNoTracking()
             .Where(u => u.UserId == userId && !u.IsDeleted)
-            .Select(u => new { u.IsLocked, u.PasswordHash })
+            .Select(u => new { u.IsLocked, u.SecurityStamp })
             .SingleOrDefaultAsync(cancellationToken);
         if (row is null)
         {
@@ -195,9 +221,24 @@ public sealed class AuthService(
             return SessionStatus.Locked;
         }
 
-        return sessionStamp is not null
-            && CryptographicOperations.FixedTimeEquals(
-                Encoding.ASCII.GetBytes(StampOf(row.PasswordHash)), Encoding.ASCII.GetBytes(sessionStamp))
+        if (sessionStamp is null || row.SecurityStamp is null)
+        {
+            return SessionStatus.Ended;
+        }
+
+        // Limit stackalloc to reasonable max length (SecurityStamp is 36 chars) to prevent stack overflow from untrusted claims
+        if (sessionStamp.Length > 128)
+        {
+            return SessionStatus.Ended;
+        }
+
+        Span<byte> expectedBytes = stackalloc byte[Encoding.UTF8.GetMaxByteCount(row.SecurityStamp.Length)];
+        var expectedLen = Encoding.UTF8.GetBytes(row.SecurityStamp, expectedBytes);
+
+        Span<byte> actualBytes = stackalloc byte[Encoding.UTF8.GetMaxByteCount(sessionStamp.Length)];
+        var actualLen = Encoding.UTF8.GetBytes(sessionStamp, actualBytes);
+
+        return CryptographicOperations.FixedTimeEquals(expectedBytes[..expectedLen], actualBytes[..actualLen])
             ? SessionStatus.Active
             : SessionStatus.Ended;
     }
@@ -207,17 +248,12 @@ public sealed class AuthService(
         var row = await db.Users
             .AsNoTracking()
             .Where(u => u.UserId == userId && !u.IsDeleted)
-            .Select(u => new { u.UserId, u.Email, u.FullName, Role = u.Role.Code, Verified = u.EmailVerifiedAt != null, u.PasswordHash })
+            .Select(u => new { u.UserId, u.Email, u.FullName, Role = u.Role.Code, Verified = u.EmailVerifiedAt != null, u.SecurityStamp })
             .SingleOrDefaultAsync(cancellationToken);
         return row is null
             ? null
-            : new AuthUser(row.UserId, row.Email, row.FullName, row.Role, row.Verified, StampOf(row.PasswordHash));
+            : new AuthUser(row.UserId, row.Email, row.FullName, row.Role, row.Verified, row.SecurityStamp);
     }
-
-    // A short digest of the stored hash: changes whenever the password does (the hasher salts
-    // afresh each time), without a schema column. Never reveals the hash itself.
-    private static string StampOf(byte[] passwordHash) =>
-        Base64Url.EncodeToString(SHA256.HashData(passwordHash).AsSpan(0, 12));
 
     public async Task VerifyEmailAsync(string token, CancellationToken cancellationToken = default)
     {
@@ -292,6 +328,9 @@ public sealed class AuthService(
         var (user, now) = await ConsumeAsync(db.PasswordResetTokens, input.Token, cancellationToken);
 
         user.PasswordHash = Convert.FromBase64String(Hasher.HashPassword(user, input.NewPassword));
+        user.SecurityStamp = Guid.NewGuid().ToString();
+        user.FailedAttempts = 0;
+        user.LockoutEnd = null;
         user.EmailVerifiedAt ??= now;
         await db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
@@ -404,16 +443,42 @@ public sealed class AuthService(
         Validator.ValidateObject(input, new ValidationContext(input), validateAllProperties: true);
 
         var user = await db.Users.SingleAsync(u => u.UserId == userId && !u.IsDeleted, cancellationToken);
+        if (user.IsLocked)
+        {
+            throw new AuthException(AuthException.Locked, "This account is locked. Contact support.");
+        }
+
+        var now = clock.GetUtcNow();
+        if (user.LockoutEnd.HasValue)
+        {
+            if (user.LockoutEnd.Value > now)
+            {
+                throw new AuthException(AuthException.Locked, "Account is temporarily locked. Try again later.");
+            }
+
+            user.LockoutEnd = null;
+            user.FailedAttempts = 0;
+        }
+
         if (Hasher.VerifyHashedPassword(user, Convert.ToBase64String(user.PasswordHash), input.CurrentPassword)
                 == PasswordVerificationResult.Failed)
         {
+            user.FailedAttempts++;
+            if (user.FailedAttempts >= 5)
+            {
+                user.LockoutEnd = now.AddMinutes(15);
+            }
+            await db.SaveChangesAsync(cancellationToken);
             throw new AuthException(AuthException.InvalidCredentials, "The current password is incorrect.");
         }
+
+        user.FailedAttempts = 0;
+        user.LockoutEnd = null;
+        user.SecurityStamp = Guid.NewGuid().ToString();
 
         // Every emailed link issued before the change dies with the old password, or whoever
         // holds one (a hijacked mailbox) could still take the account over, or verify it, after
         // the owner secures it. All writes commit together. The session stamp ends old sessions.
-        var now = clock.GetUtcNow();
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
         await RetireLinksAsync(db.PasswordResetTokens, userId, now, cancellationToken);
         await RetireLinksAsync(db.EmailVerificationTokens, userId, now, cancellationToken);

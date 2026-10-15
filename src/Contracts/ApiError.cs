@@ -23,6 +23,9 @@ public sealed record ApiError(string Code, string Title, int Status, string? Det
         /// <summary>A locked account, at sign-in or on any later request.</summary>
         public const string Locked = AuthErrorCodes.Locked;
 
+        /// <summary>Too many requests / rate limit exceeded (HTTP 429).</summary>
+        public const string TooManyRequests = "TOO_MANY_REQUESTS";
+
         /// <summary>No valid bearer token on a request that needs one.</summary>
         public const string Unauthenticated = "AUTH_REQUIRED";
 

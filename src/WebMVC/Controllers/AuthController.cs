@@ -74,6 +74,11 @@ public sealed class AuthController(ICompanionApiClient api) : Controller
             model.FormError = ex.Title;
             return View(model);
         }
+        catch (ApiException ex) when (ex.Code is ApiError.Codes.TooManyRequests)
+        {
+            model.FormError = "Too many attempts. Please wait a moment before trying again.";
+            return View(model);
+        }
 
         await SignInCookieAsync(result);
 

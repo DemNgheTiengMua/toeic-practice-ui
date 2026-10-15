@@ -2,10 +2,12 @@ using Contracts;
 using DataAccess;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Services;
+using System.Threading.RateLimiting;
 using WebAPI;
 using WebAPI.Endpoints;
 
@@ -114,6 +116,30 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorizationBuilder()
     .AddPolicy(Roles.Admin, policy => policy.RequireRole(Roles.Admin))
     .AddPolicy(Roles.Learner, policy => policy.RequireRole(Roles.Learner));
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("auth", httpContext =>
+    {
+        var forwardedFor = httpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault();
+        var clientIp = !string.IsNullOrWhiteSpace(forwardedFor)
+            ? forwardedFor.Split(',')[0].Trim()
+            : httpContext.Connection.RemoteIpAddress?.ToString();
+
+        var partitionKey = httpContext.User.FindFirst(IAccessTokenFactory.ClaimUserId)?.Value
+            ?? clientIp
+            ?? "anonymous";
+
+        return RateLimitPartition.GetFixedWindowLimiter(partitionKey, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 10,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0,
+        });
+    });
+});
+
 // Every failure — thrown exception or bare status-code result — leaves the API as RFC 9457
 // ProblemDetails with a stable machine-readable "code" extension the MVC site switches on.
 builder.Services.AddProblemDetails(options =>
@@ -122,6 +148,7 @@ builder.Services.AddProblemDetails(options =>
         context.ProblemDetails.Extensions["code"] = context.ProblemDetails.Status switch
         {
             StatusCodes.Status404NotFound => ApiError.Codes.NotFound,
+            StatusCodes.Status429TooManyRequests => ApiError.Codes.TooManyRequests,
             _ => ApiError.Codes.Unexpected,
         };
     });
@@ -202,6 +229,7 @@ app.UseExceptionHandler(errorApp =>
 app.MapHealthChecks("/healthz");
 
 app.UseAuthentication();
+app.UseRateLimiter();
 app.UseAuthorization();
 
 // Bare status-code results get a ProblemDetails body. Bearer-auth 401/403s are answered by the
