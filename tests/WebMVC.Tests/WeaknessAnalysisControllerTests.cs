@@ -69,6 +69,48 @@ public sealed class WeaknessAnalysisControllerTests
     }
 
     [Fact]
+    public async Task Index_prefetches_dashboard_insight_into_viewbag()
+    {
+        var sampleInsight = new AiInsightDto(
+            10, 7, 1, AiInsightScopeDto.Dashboard, null, null,
+            "Diagnostic overview", AiInsightTrendDto.Improving, AiInsightStatusDto.Done,
+            null, "fake-ai-insight-v1", 160, 130, "fingerprint",
+            DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, []);
+
+        var api = new TestApiClient
+        {
+            WeaknessData = SampleDto(true),
+            InsightData = sampleInsight
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.Index(CancellationToken.None);
+
+        var viewResult = Assert.IsType<ViewResult>(result);
+        var insightInViewBag = Assert.IsType<AiInsightDto>(viewResult.ViewData["Insight"]);
+        Assert.Equal(10, insightInViewBag.InsightId);
+        Assert.Equal("Diagnostic overview", insightInViewBag.Narrative);
+    }
+
+    [Fact]
+    public async Task Index_succeeds_even_when_dashboard_insight_prefetch_fails()
+    {
+        var api = new TestApiClient
+        {
+            WeaknessData = SampleDto(true),
+            InsightData = null // Throws exception in TestApiClient
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.Index(CancellationToken.None);
+
+        var viewResult = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<WeaknessAnalysisViewModel>(viewResult.Model);
+        Assert.True(model.Data.HasData);
+        Assert.Null(viewResult.ViewData["Insight"]);
+    }
+
+    [Fact]
     public async Task Index_renders_empty_state_model_when_has_no_data()
     {
         var api = new TestApiClient
@@ -212,6 +254,11 @@ public sealed class WeaknessAnalysisControllerTests
         public WeaknessAnalysisDto? WeaknessData { get; set; }
 
         public ResolveRecommendationResultDto? ResolveResult { get; set; }
+
+        public AiInsightDto? InsightData { get; set; }
+
+        public Task<AiInsightDto> GetDashboardInsightAsync(string bearerToken, int? certId = null, CancellationToken cancellationToken = default) =>
+            InsightData != null ? Task.FromResult(InsightData) : Task.FromException<AiInsightDto>(new Exception("No insight"));
 
         public Task<IReadOnlyList<CertificateDto>> GetCertificatesAsync(CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<AuthTokenResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default) => throw new NotImplementedException();

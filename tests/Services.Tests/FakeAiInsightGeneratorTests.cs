@@ -190,4 +190,149 @@ public sealed class FakeAiInsightGeneratorTests
         Assert.False(result.Success);
         Assert.NotNull(result.FailureReason);
     }
+
+    [Fact]
+    public async Task Dashboard_scope_generates_baseline_narrative_when_no_previous_insight()
+    {
+        var generator = new FakeAiInsightGenerator();
+
+        var sections = new List<InsightSectionAccuracy>
+        {
+            new(1, "P1", "Photographs", 20, 18, 90),
+            new(2, "P5", "Incomplete Sentences", 20, 10, 50)
+        };
+
+        var categories = new List<InsightCategoryAccuracy>
+        {
+            new(101, "PREP", "Prepositions", 10, 4, 40)
+        };
+
+        var request = new AiInsightGenerationRequest(
+            UserId: 1,
+            CertId: 1,
+            CertName: "TOEIC",
+            Scope: AiInsightScope.Dashboard,
+            PracticeSessionId: null,
+            AttemptId: null,
+            ActivityTitle: "TOEIC Dashboard",
+            TotalQuestions: 40,
+            AnsweredCount: 40,
+            CorrectCount: 28,
+            HintUsedCount: null,
+            CorrectWithHintCount: null,
+            TargetBandCode: "B2",
+            TargetBandName: "Vantage",
+            ScaledScore: 750,
+            CurrentBandCode: "B2",
+            Questions: Array.Empty<InsightQuestionDetail>(),
+            SectionAccuracies: sections,
+            CategoryAccuracies: categories,
+            PreviousInsight: null);
+
+        var result = await generator.GenerateInsightAsync(request);
+
+        Assert.True(result.Success);
+        Assert.NotNull(result.Narrative);
+        Assert.Contains("Performance Summary", result.Narrative);
+        Assert.Contains("Progress & Trend", result.Narrative);
+        Assert.Contains("Initial diagnostic baseline", result.Narrative);
+        Assert.Contains("Section Breakdown", result.Narrative);
+        Assert.Contains("Target Band Alignment", result.Narrative);
+        Assert.NotEmpty(result.Recommendations);
+        Assert.Contains(result.Recommendations, r => r.Severity == RecommendationSeverity.Major);
+    }
+
+    [Fact]
+    public async Task Dashboard_scope_compares_against_previous_insight_and_detects_improving_trend()
+    {
+        var generator = new FakeAiInsightGenerator();
+
+        var sections = new List<InsightSectionAccuracy>
+        {
+            new(1, "P1", "Photographs", 20, 18, 90),
+            new(2, "P5", "Incomplete Sentences", 20, 16, 80)
+        };
+
+        var previousInsight = new PreviousInsightSummary(
+            InsightId: 99,
+            Narrative: "**Performance Summary**: Overall accuracy of 60% (24/40 questions answered across TOEIC).",
+            Trend: AiInsightTrend.Flat,
+            CreatedAt: DateTimeOffset.UtcNow.AddDays(-7));
+
+        var request = new AiInsightGenerationRequest(
+            UserId: 1,
+            CertId: 1,
+            CertName: "TOEIC",
+            Scope: AiInsightScope.Dashboard,
+            PracticeSessionId: null,
+            AttemptId: null,
+            ActivityTitle: "TOEIC Dashboard",
+            TotalQuestions: 40,
+            AnsweredCount: 40,
+            CorrectCount: 34, // 85% vs previous 60%
+            HintUsedCount: null,
+            CorrectWithHintCount: null,
+            TargetBandCode: "B2",
+            TargetBandName: "Vantage",
+            ScaledScore: 800,
+            CurrentBandCode: "B2",
+            Questions: Array.Empty<InsightQuestionDetail>(),
+            SectionAccuracies: sections,
+            CategoryAccuracies: Array.Empty<InsightCategoryAccuracy>(),
+            PreviousInsight: previousInsight);
+
+        var result = await generator.GenerateInsightAsync(request);
+
+        Assert.True(result.Success);
+        Assert.Equal(AiInsightTrend.Improving, result.Trend);
+        Assert.Contains("improving", result.Narrative);
+        Assert.Contains("Compared to your previous review", result.Narrative);
+    }
+
+    [Fact]
+    public async Task Dashboard_scope_detects_declining_trend_when_accuracy_drops()
+    {
+        var generator = new FakeAiInsightGenerator();
+
+        var sections = new List<InsightSectionAccuracy>
+        {
+            new(1, "P1", "Photographs", 20, 10, 50),
+            new(2, "P5", "Incomplete Sentences", 20, 8, 40)
+        };
+
+        var previousInsight = new PreviousInsightSummary(
+            InsightId: 99,
+            Narrative: "**Performance Summary**: Overall accuracy of 75% (30/40 questions answered across TOEIC).",
+            Trend: AiInsightTrend.Improving,
+            CreatedAt: DateTimeOffset.UtcNow.AddDays(-7));
+
+        var request = new AiInsightGenerationRequest(
+            UserId: 1,
+            CertId: 1,
+            CertName: "TOEIC",
+            Scope: AiInsightScope.Dashboard,
+            PracticeSessionId: null,
+            AttemptId: null,
+            ActivityTitle: "TOEIC Dashboard",
+            TotalQuestions: 40,
+            AnsweredCount: 40,
+            CorrectCount: 18, // 45% vs previous 75%
+            HintUsedCount: null,
+            CorrectWithHintCount: null,
+            TargetBandCode: "B2",
+            TargetBandName: "Vantage",
+            ScaledScore: 450,
+            CurrentBandCode: "B1",
+            Questions: Array.Empty<InsightQuestionDetail>(),
+            SectionAccuracies: sections,
+            CategoryAccuracies: Array.Empty<InsightCategoryAccuracy>(),
+            PreviousInsight: previousInsight);
+
+        var result = await generator.GenerateInsightAsync(request);
+
+        Assert.True(result.Success);
+        Assert.Equal(AiInsightTrend.Declining, result.Trend);
+        Assert.Contains("declined", result.Narrative);
+        Assert.Contains("Compared to your previous review", result.Narrative);
+    }
 }

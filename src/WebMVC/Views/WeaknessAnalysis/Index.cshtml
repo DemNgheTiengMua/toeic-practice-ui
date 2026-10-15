@@ -35,6 +35,10 @@
 
 @if (!data.HasData)
 {
+  @if (ViewBag.Insight != null)
+  {
+    <partial name="_AiInsightPanel" model='new AiInsightPanelViewModel("dashboard", (ViewBag.Insight as AiInsightDto)?.CertId ?? 0, ViewBag.Insight as AiInsightDto)' />
+  }
   <!-- Empty state: not enough data to analyse -->
   <div class="card mt-4">
     <div class="card__body">
@@ -57,6 +61,8 @@ else
   <div class="alert alert--info mt-4">
     This is a study tool, not an exam result. The figures come from every question you have answered, including practice sessions.
   </div>
+
+  <partial name="_AiInsightPanel" model='new AiInsightPanelViewModel("dashboard", (ViewBag.Insight as AiInsightDto)?.CertId ?? 0, ViewBag.Insight as AiInsightDto)' />
 
   <div class="card mt-4">
     <div class="card__header"><strong>Accuracy by section</strong></div>

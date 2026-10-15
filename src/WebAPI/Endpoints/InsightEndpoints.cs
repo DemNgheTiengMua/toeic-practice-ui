@@ -142,6 +142,54 @@ public static class InsightEndpoints
                 return Problem(StatusCodes.Status400BadRequest, "Insight error", ex.Code, ex.Message);
             }
         });
+
+        // GET /api/learner/insights/dashboard
+        learner.MapGet("/dashboard", async (
+            int? certId,
+            HttpContext http,
+            IAiInsightService insightService,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var view = await insightService.GetOrCreateDashboardInsightAsync(CurrentUserId(http), certId, cancellationToken);
+                return Results.Ok(ToDto(view));
+            }
+            catch (AiInsightException ex) when (ex.Code == ApiError.Codes.CertificateUnavailable)
+            {
+                return Problem(StatusCodes.Status404NotFound, "Certificate not found", ApiError.Codes.CertificateUnavailable, ex.Message);
+            }
+            catch (AiInsightException ex)
+            {
+                return Problem(StatusCodes.Status400BadRequest, "Insight error", ex.Code, ex.Message);
+            }
+        });
+
+        // POST /api/learner/insights/dashboard/retry
+        learner.MapPost("/dashboard/retry", async (
+            int? certId,
+            HttpContext http,
+            IAiInsightService insightService,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                await insightService.RetryDashboardInsightAsync(CurrentUserId(http), certId, cancellationToken);
+                return Results.NoContent();
+            }
+            catch (AiInsightException ex) when (ex.Code == ApiError.Codes.InsightNotFound)
+            {
+                return Problem(StatusCodes.Status404NotFound, "Insight not found", ApiError.Codes.InsightNotFound, ex.Message);
+            }
+            catch (AiInsightException ex) when (ex.Code == ApiError.Codes.InsightNotFailed)
+            {
+                return Problem(StatusCodes.Status400BadRequest, "Retry not allowed", ApiError.Codes.Validation, ex.Message);
+            }
+            catch (AiInsightException ex)
+            {
+                return Problem(StatusCodes.Status400BadRequest, "Insight error", ex.Code, ex.Message);
+            }
+        });
     }
 
     private static AiInsightDto ToDto(AiInsightView view) => new(

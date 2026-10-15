@@ -421,6 +421,285 @@ public sealed class AiInsightServiceTests(DatabaseFixture database)
         Assert.Null(insight.FailureReason);
     }
 
+    [Fact]
+    public async Task GetOrCreateDashboardInsightAsync_creates_pending_insight_and_reuses_on_reload()
+    {
+        var certCode = Unique("DB");
+        var userId = await SeedLearnerAsync();
+        var (certId, _, sessionId) = await SeedPracticeSessionFixtureAsync(userId, certCode);
+
+        var (service, _) = CreateService();
+
+        // 1. Initial request -> creates pending dashboard insight
+        var initial = await service.GetOrCreateDashboardInsightAsync(userId, certId);
+        Assert.Equal(AiInsightStatus.Pending, initial.Status);
+        Assert.Equal(AiInsightScope.Dashboard, initial.Scope);
+        Assert.Null(initial.PracticeSessionId);
+        Assert.Null(initial.AttemptId);
+        Assert.Equal(certId, initial.CertId);
+        Assert.NotNull(initial.SourceFingerprint);
+        Assert.Equal(64, initial.SourceFingerprint.Length);
+
+        // 2. Reload without activity -> reuses existing insight (UX_AiInsights_Fingerprint)
+        var reloaded = await service.GetOrCreateDashboardInsightAsync(userId, certId);
+        Assert.Equal(initial.InsightId, reloaded.InsightId);
+        Assert.Equal(initial.SourceFingerprint, reloaded.SourceFingerprint);
+    }
+
+    [Fact]
+    public async Task GetOrCreateDashboardInsightAsync_recomputes_fingerprint_when_new_activity_occurs()
+    {
+        var certCode = Unique("FP");
+        var userId = await SeedLearnerAsync();
+        var (certId, sectionId, sessionId1) = await SeedPracticeSessionFixtureAsync(userId, certCode);
+
+        var (service, _) = CreateService();
+
+        var initial = await service.GetOrCreateDashboardInsightAsync(userId, certId);
+        Assert.NotNull(initial.SourceFingerprint);
+
+        // Process initial insight
+        await service.ProcessPendingInsightsAsync();
+
+        // Learner completes another practice session -> new activity
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            var session2 = new PracticeSession
+            {
+                UserId = userId,
+                SectionId = sectionId,
+                Modality = "reading",
+                QuestionCount = 1,
+                Status = PracticeStatus.Finished.ToCode(),
+                CorrectCount = 1,
+                QuestionSource = QuestionSource.All.ToCode(),
+                FeedbackMode = FeedbackMode.End.ToCode(),
+                StartedAt = DateTimeOffset.UtcNow.AddMinutes(-5),
+                FinishedAt = DateTimeOffset.UtcNow
+            };
+            db.PracticeSessions.Add(session2);
+            await db.SaveChangesAsync();
+
+            var q = await db.Questions.FirstAsync(q => q.SectionId == sectionId);
+            var opt = await db.QuestionOptions.FirstAsync(o => o.QuestionId == q.QuestionId && o.IsCorrect);
+            db.PracticeAnswers.Add(new PracticeAnswer
+            {
+                SessionId = session2.SessionId,
+                SectionId = sectionId,
+                QuestionId = q.QuestionId,
+                SelectedOptionId = opt.OptionId,
+                IsCorrect = true,
+                HintUsed = false,
+                DisplayOrder = 1
+            });
+            await db.SaveChangesAsync();
+        }
+
+        // Subsequent call -> fingerprint changes because new session and accuracy numbers changed
+        var updated = await service.GetOrCreateDashboardInsightAsync(userId, certId);
+        Assert.NotEqual(initial.InsightId, updated.InsightId);
+        Assert.NotEqual(initial.SourceFingerprint, updated.SourceFingerprint);
+    }
+
+    [Fact]
+    public async Task ProcessPendingInsightsAsync_processes_dashboard_insight_and_links_recommendations()
+    {
+        var certCode = Unique("DP");
+        var userId = await SeedLearnerAsync();
+        var (certId, _, _) = await SeedPracticeSessionFixtureAsync(userId, certCode);
+
+        var (service, _) = CreateService();
+
+        var pending = await service.GetOrCreateDashboardInsightAsync(userId, certId);
+        Assert.Equal(AiInsightStatus.Pending, pending.Status);
+
+        var processed = await service.ProcessPendingInsightsAsync();
+        Assert.True(processed >= 1);
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var doneInsight = await db.AiInsights
+            .Include(i => i.Recommendations)
+            .SingleAsync(i => i.InsightId == pending.InsightId);
+
+        Assert.Equal(AiInsightStatus.Done.ToCode(), doneInsight.Status);
+        Assert.NotNull(doneInsight.Narrative);
+        Assert.Contains("Performance Summary", doneInsight.Narrative);
+        Assert.Contains("Section Breakdown", doneInsight.Narrative);
+        Assert.Contains("Target Band Alignment", doneInsight.Narrative);
+        Assert.NotNull(doneInsight.Trend);
+        Assert.Equal(FakeAiInsightGenerator.DefaultModel, doneInsight.Model);
+        Assert.NotNull(doneInsight.CompletedAt);
+
+        // Recommendations must link to InsightId and have null session/attempt IDs (CK_Reco_OneProducer, CK_Reco_OneSource)
+        Assert.NotEmpty(doneInsight.Recommendations);
+        foreach (var reco in doneInsight.Recommendations)
+        {
+            Assert.Equal(doneInsight.InsightId, reco.InsightId);
+            Assert.Null(reco.GradingId);
+            Assert.Null(reco.PracticeSessionId);
+            Assert.Null(reco.AttemptId);
+            Assert.Equal(userId, reco.UserId);
+            Assert.Equal(certId, reco.CertId);
+        }
+    }
+
+    [Fact]
+    public async Task Dashboard_insight_evaluates_trend_and_compares_against_previous_insight()
+    {
+        var certCode = Unique("TR");
+        var userId = await SeedLearnerAsync();
+        var (certId, sectionId, _) = await SeedPracticeSessionFixtureAsync(userId, certCode);
+
+        var (service, _) = CreateService();
+
+        // 1. Generate first baseline dashboard insight
+        var firstPending = await service.GetOrCreateDashboardInsightAsync(userId, certId);
+        await service.ProcessPendingInsightsAsync();
+
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            var firstDone = await db.AiInsights.SingleAsync(i => i.InsightId == firstPending.InsightId);
+            Assert.Equal(AiInsightStatus.Done.ToCode(), firstDone.Status);
+            Assert.Contains("Initial diagnostic baseline", firstDone.Narrative);
+        }
+
+        // 2. Add further practice activity to trigger new insight
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            var session2 = new PracticeSession
+            {
+                UserId = userId,
+                SectionId = sectionId,
+                Modality = "reading",
+                QuestionCount = 1,
+                Status = PracticeStatus.Finished.ToCode(),
+                CorrectCount = 1,
+                QuestionSource = QuestionSource.All.ToCode(),
+                FeedbackMode = FeedbackMode.End.ToCode(),
+                StartedAt = DateTimeOffset.UtcNow,
+                FinishedAt = DateTimeOffset.UtcNow
+            };
+            db.PracticeSessions.Add(session2);
+            await db.SaveChangesAsync();
+
+            var q = await db.Questions.FirstAsync(q => q.SectionId == sectionId);
+            var opt = await db.QuestionOptions.FirstAsync(o => o.QuestionId == q.QuestionId && o.IsCorrect);
+            db.PracticeAnswers.Add(new PracticeAnswer
+            {
+                SessionId = session2.SessionId,
+                SectionId = sectionId,
+                QuestionId = q.QuestionId,
+                SelectedOptionId = opt.OptionId,
+                IsCorrect = true,
+                HintUsed = false,
+                DisplayOrder = 1
+            });
+            await db.SaveChangesAsync();
+        }
+
+        // 3. Generate second dashboard insight -> should compare against previous insight
+        var secondPending = await service.GetOrCreateDashboardInsightAsync(userId, certId);
+        Assert.NotEqual(firstPending.InsightId, secondPending.InsightId);
+
+        await service.ProcessPendingInsightsAsync();
+
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            var secondDone = await db.AiInsights.SingleAsync(i => i.InsightId == secondPending.InsightId);
+            Assert.Equal(AiInsightStatus.Done.ToCode(), secondDone.Status);
+            Assert.NotNull(secondDone.Trend);
+            // Trend is evaluated and narrative compares with previous review
+            Assert.Contains("Compared to your previous review", secondDone.Narrative);
+        }
+    }
+
+    [Fact]
+    public async Task RetryDashboardInsightAsync_retries_failed_insight()
+    {
+        var certCode = Unique("RF");
+        var userId = await SeedLearnerAsync();
+        var (certId, _, _) = await SeedPracticeSessionFixtureAsync(userId, certCode);
+
+        var generator = new FakeAiInsightGenerator { ShouldSimulateFailure = true };
+        var (service, _) = CreateService(generator);
+
+        var pending = await service.GetOrCreateDashboardInsightAsync(userId, certId);
+
+        // Process queue -> fails due to simulated failure
+        await service.ProcessPendingInsightsAsync();
+
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            var failed = await db.AiInsights.FindAsync(pending.InsightId);
+            Assert.Equal(AiInsightStatus.Failed.ToCode(), failed!.Status);
+            Assert.NotNull(failed.FailureReason);
+        }
+
+        // Retry dashboard insight
+        await service.RetryDashboardInsightAsync(userId, certId);
+
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            var retried = await db.AiInsights.FindAsync(pending.InsightId);
+            Assert.Equal(AiInsightStatus.Pending.ToCode(), retried!.Status);
+            Assert.Null(retried.FailureReason);
+        }
+
+        // Process again -> succeeds
+        await service.ProcessPendingInsightsAsync();
+
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            var completed = await db.AiInsights.FindAsync(pending.InsightId);
+            Assert.Equal(AiInsightStatus.Done.ToCode(), completed!.Status);
+            Assert.NotNull(completed.Narrative);
+        }
+    }
+
+    [Fact]
+    public async Task GetOrCreateDashboardInsightAsync_handles_concurrent_creation_without_throwing_duplicate_key_error()
+    {
+        var certCode = Unique("DC");
+        var userId = await SeedLearnerAsync();
+        var (certId, _, _) = await SeedPracticeSessionFixtureAsync(userId, certCode);
+
+        // Simulate two concurrent requests arriving with separate DbContext instances
+        var (service1, _) = CreateService();
+        var (service2, _) = CreateService();
+
+        var task1 = service1.GetOrCreateDashboardInsightAsync(userId, certId);
+        var task2 = service2.GetOrCreateDashboardInsightAsync(userId, certId);
+
+        var results = await Task.WhenAll(task1, task2);
+
+        Assert.NotNull(results[0]);
+        Assert.NotNull(results[1]);
+        Assert.Equal(results[0].InsightId, results[1].InsightId);
+        Assert.Equal(results[0].SourceFingerprint, results[1].SourceFingerprint);
+    }
+
+    [Fact]
+    public async Task GetOrCreateDashboardInsightAsync_resolves_active_certificate_when_certId_is_null()
+    {
+        var certCode = Unique("AC");
+        var userId = await SeedLearnerAsync();
+        var (certId, _, _) = await SeedPracticeSessionFixtureAsync(userId, certCode);
+
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            var user = await db.Users.FindAsync(userId);
+            user!.ActiveCertId = certId;
+            await db.SaveChangesAsync();
+        }
+
+        var (service, _) = CreateService();
+        var insight = await service.GetOrCreateDashboardInsightAsync(userId, certId: null);
+
+        Assert.NotNull(insight);
+        Assert.Equal(certId, insight.CertId);
+        Assert.Equal(AiInsightScope.Dashboard, insight.Scope);
+    }
+
     private sealed class CustomRecoGenerator(IReadOnlyList<GeneratedRecommendation> recommendations) : FakeAiInsightGenerator
     {
         public override Task<AiInsightResult> GenerateInsightAsync(AiInsightGenerationRequest request, System.Threading.CancellationToken cancellationToken = default)

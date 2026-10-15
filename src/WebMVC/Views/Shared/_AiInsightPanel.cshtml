@@ -135,12 +135,22 @@
     const maxPolls = 30; // 60 seconds maximum polling bound
 
     function getEndpoint() {
+      if (scope === 'dashboard') {
+        return activityId && activityId !== '0'
+          ? `/learner/insights/dashboard?certId=${activityId}`
+          : '/learner/insights/dashboard';
+      }
       return scope === 'practice_session'
         ? `/practice/insight/${activityId}`
         : `/exams/insight/${activityId}`;
     }
 
     function getRetryEndpoint() {
+      if (scope === 'dashboard') {
+        return activityId && activityId !== '0'
+          ? `/learner/insights/dashboard/retry?certId=${activityId}`
+          : '/learner/insights/dashboard/retry';
+      }
       return scope === 'practice_session'
         ? `/practice/insight/${activityId}/retry`
         : `/exams/insight/${activityId}/retry`;
@@ -157,15 +167,19 @@
       if (!body) return;
 
       panel.dataset.status = 'done';
+      if (data.certId && (!panel.dataset.activityId || panel.dataset.activityId === '0')) {
+        panel.dataset.activityId = data.certId;
+      }
 
       // Update trend badge
-      if (badges && data.trend) {
+      if (badges && data.trend !== undefined && data.trend !== null) {
         let trendClass = 'badge--warning';
         let trendText = 'Trend: Flat';
-        if (data.trend === 'improving' || data.trend === 0) {
+        const t = (data.trend || '').toString().toLowerCase();
+        if (t === 'improving' || t === '0') {
           trendClass = 'badge--success';
           trendText = 'Trend: Improving';
-        } else if (data.trend === 'declining' || data.trend === 2) {
+        } else if (t === 'declining' || t === '2') {
           trendClass = 'badge--danger';
           trendText = 'Trend: Declining';
         }

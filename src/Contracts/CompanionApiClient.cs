@@ -229,6 +229,12 @@ public interface ICompanionApiClient
     Task RetryInsightAsync(int insightId, string bearerToken, CancellationToken cancellationToken = default) =>
         throw new NotImplementedException();
 
+    Task<AiInsightDto> GetDashboardInsightAsync(string bearerToken, int? certId = null, CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
+
+    Task RetryDashboardInsightAsync(string bearerToken, int? certId = null, CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
+
     Task<SpeakingInstructionsDto> GetSpeakingInstructionsAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) =>
         throw new NotImplementedException();
 
@@ -809,6 +815,21 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
     public async Task RetryInsightAsync(int insightId, string bearerToken, CancellationToken cancellationToken = default)
     {
         using var message = new HttpRequestMessage(HttpMethod.Post, $"api/learner/insights/{insightId}/retry");
+        AttachBearer(message, bearerToken);
+        using var response = await http.SendAsync(message, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+    }
+
+    public Task<AiInsightDto> GetDashboardInsightAsync(string bearerToken, int? certId = null, CancellationToken cancellationToken = default)
+    {
+        var path = certId.HasValue ? $"api/learner/insights/dashboard?certId={certId.Value}" : "api/learner/insights/dashboard";
+        return GetAuthorizedAsync<AiInsightDto>(path, bearerToken, cancellationToken);
+    }
+
+    public async Task RetryDashboardInsightAsync(string bearerToken, int? certId = null, CancellationToken cancellationToken = default)
+    {
+        var path = certId.HasValue ? $"api/learner/insights/dashboard/retry?certId={certId.Value}" : "api/learner/insights/dashboard/retry";
+        using var message = new HttpRequestMessage(HttpMethod.Post, path);
         AttachBearer(message, bearerToken);
         using var response = await http.SendAsync(message, cancellationToken);
         await EnsureSuccessAsync(response, cancellationToken);

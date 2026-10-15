@@ -21,6 +21,18 @@ public sealed class WeaknessAnalysisController(
         {
             var bearer = await BearerAsync();
             var data = await Api.GetWeaknessAnalysisAsync(bearer, cancellationToken);
+
+            AiInsightDto? insight = null;
+            try
+            {
+                insight = await Api.GetDashboardInsightAsync(bearer, cancellationToken: cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Could not pre-fetch AI insight for weakness analysis");
+            }
+            ViewBag.Insight = insight;
+
             return View(new WeaknessAnalysisViewModel(data, TempData["ErrorMessage"] as string, TempData["SuccessMessage"] as string));
         }
         catch (ApiException ex)

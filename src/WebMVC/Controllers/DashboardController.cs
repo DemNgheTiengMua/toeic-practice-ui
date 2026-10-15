@@ -27,7 +27,50 @@ public sealed class DashboardController(ICompanionApiClient api, CurrentUser cur
             logger.LogWarning(ex, "Could not read verification status for the dashboard");
         }
 
+        AiInsightDto? insight = null;
+        try
+        {
+            insight = await Api.GetDashboardInsightAsync(bearer, cancellationToken: cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            // Failure to generate or fetch never blocks the dashboard
+            logger.LogWarning(ex, "Could not pre-fetch AI insight for dashboard");
+        }
+        ViewBag.Insight = insight;
+
         return View(new DashboardViewModel(CurrentUser, dashboard, emailVerified, activation));
+    }
+
+    [HttpGet("/learner/insights/dashboard")]
+    public async Task<IActionResult> GetDashboardInsight(int? certId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var bearer = await BearerAsync();
+            var insight = await Api.GetDashboardInsightAsync(bearer, certId, cancellationToken);
+            return Ok(insight);
+        }
+        catch (ApiException ex)
+        {
+            return StatusCode(ex.Status, new { code = ex.Code, message = ex.Message });
+        }
+    }
+
+    [HttpPost("/learner/insights/dashboard/retry")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RetryDashboardInsight(int? certId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var bearer = await BearerAsync();
+            await Api.RetryDashboardInsightAsync(bearer, certId, cancellationToken);
+            return Ok(new { success = true });
+        }
+        catch (ApiException ex)
+        {
+            return StatusCode(ex.Status, new { code = ex.Code, message = ex.Message });
+        }
     }
 
     [HttpPost("/learner/active-certificate")]
