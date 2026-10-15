@@ -6,22 +6,28 @@
     ViewData["Description"] = "Your learning dashboard.";
     var dashboard = Model.Dashboard;
     var cert = dashboard.Certificate;
-    string PurposeLabel(string purpose) => purpose switch
+    string PurposeLabel(ExamPurposeDto purpose) => purpose switch
     {
-        "mock" => "Mock exam",
-        "placement" => "Placement test",
-        "speaking_practice" => "Speaking practice",
-        "writing_practice" => "Writing practice",
-        _ => purpose,
+        ExamPurposeDto.Mock => "Mock exam",
+        ExamPurposeDto.Placement => "Placement test",
+        ExamPurposeDto.SpeakingPractice => "Speaking practice",
+        ExamPurposeDto.WritingPractice => "Writing practice",
+        _ => purpose.ToWireCode(),
     };
-    string StatusLabel(string status) => status switch
+    string AttemptStatusLabel(AttemptStatusDto status) => status switch
     {
-        "in_progress" => "In progress",
-        "submitted" => "Submitted",
-        "graded" => "Graded",
-        "abandoned" => "Cancelled",
-        "finished" => "Finished",
-        _ => status,
+        AttemptStatusDto.InProgress => "In progress",
+        AttemptStatusDto.Submitted => "Submitted",
+        AttemptStatusDto.Graded => "Graded",
+        AttemptStatusDto.Abandoned => "Cancelled",
+        _ => status.ToWireCode(),
+    };
+    string PracticeStatusLabel(PracticeStatusDto status) => status switch
+    {
+        PracticeStatusDto.InProgress => "In progress",
+        PracticeStatusDto.Finished => "Finished",
+        PracticeStatusDto.Abandoned => "Cancelled",
+        _ => status.ToWireCode(),
     };
 }
 
@@ -157,13 +163,13 @@ else
                 <td>@PurposeLabel(a.Purpose)</td>
                 <td>@Dates.FormatDate(a.StartedAt)</td>
                 <td>
-                  @if (a.Status == "in_progress")
+                  @if (a.Status == AttemptStatusDto.InProgress)
                   {
                     <span class="badge badge--warning">In progress</span>
                   }
                   else
                   {
-                    @StatusLabel(a.Status)
+                    @AttemptStatusLabel(a.Status)
                   }
                 </td>
                 <td><strong>@(a.TotalScore?.ToString() ?? "—")</strong></td>
@@ -195,26 +201,26 @@ else
             {
               <tr>
                 <td>
-                  <a href="@(p.Status == "finished" ? $"/practice/{p.SessionId}/summary" : $"/practice/{p.SessionId}")">@p.SectionName</a>
+                  <a href="@(p.Status == PracticeStatusDto.Finished ? $"/practice/{p.SessionId}/summary" : $"/practice/{p.SessionId}")">@p.SectionName</a>
                 </td>
                 <td>@Dates.FormatDate(p.StartedAt)</td>
                 <td>
-                  @if (p.Status == "in_progress")
+                  @if (p.Status == PracticeStatusDto.InProgress)
                   {
                     <span class="badge badge--warning">In progress</span>
                   }
                   else
                   {
-                    @StatusLabel(p.Status)
+                    @PracticeStatusLabel(p.Status)
                   }
                 </td>
                 <td>@p.CorrectCount / @p.QuestionCount</td>
                 <td>
-                  @if (p.Status == "in_progress")
+                  @if (p.Status == PracticeStatusDto.InProgress)
                   {
                     <a class="btn btn--sm btn--primary" href="/practice/@p.SessionId">Resume ›</a>
                   }
-                  else if (p.Status == "finished")
+                  else if (p.Status == PracticeStatusDto.Finished)
                   {
                     <a class="btn btn--sm btn--ghost" href="/practice/@p.SessionId/summary">Summary</a>
                   }

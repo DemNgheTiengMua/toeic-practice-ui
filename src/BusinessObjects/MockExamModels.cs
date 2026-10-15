@@ -27,7 +27,7 @@ public sealed record MockExamSectionInfo(
     int SectionId,
     string SkillCode,
     string SkillName,
-    string Modality,
+    Modality Modality,
     string SectionCode,
     string SectionName,
     int? ExpectedQuestionCount,
@@ -50,7 +50,7 @@ public sealed record MockExamInstructionsView(
 public sealed record ExamAttemptInfo(
     int AttemptId,
     int ExamId,
-    string Status,
+    AttemptStatus Status,
     DateTimeOffset StartedAt,
     DateTimeOffset ExpiresAt,
     int RemainingSeconds,
@@ -70,7 +70,7 @@ public sealed record AttemptQuestionInfo(
     string SectionName,
     string SkillCode,
     string SkillName,
-    string Modality,
+    Modality Modality,
     string Stem,
     string? ImagePath,
     string? ImageAlt,
@@ -86,7 +86,7 @@ public sealed record NavigatorItem(
     int DisplayOrder,
     int SectionId,
     string SectionCode,
-    string Modality,
+    Modality Modality,
     bool IsAnswered,
     bool IsFlagged,
     bool IsCurrent);
@@ -96,7 +96,7 @@ public sealed record AttemptTakeView(
     int ExamId,
     string ExamName,
     string CertCode,
-    string Status,
+    AttemptStatus Status,
     DateTimeOffset StartedAt,
     DateTimeOffset ExpiresAt,
     int RemainingSeconds,
@@ -118,7 +118,7 @@ public sealed record AttemptSkillScoreItem(
     int SkillId,
     string SkillCode,
     string SkillName,
-    string Modality,
+    Modality Modality,
     int RawScore,
     int ScaledScore,
     int TotalQuestions);
@@ -130,7 +130,7 @@ public sealed record AttemptResultView(
     int CertId,
     string CertCode,
     string CertName,
-    string Status,
+    AttemptStatus Status,
     DateTimeOffset StartedAt,
     DateTimeOffset SubmittedAt,
     int DurationSeconds,
@@ -161,7 +161,7 @@ public sealed record ExamHistoryItem(
     string? BandCode,
     string? BandName,
     IReadOnlyList<AttemptSkillScoreItem> SkillScores,
-    string Status);
+    AttemptStatus Status);
 
 public sealed record ExamHistoryView(
     CertificateOption Certificate,
@@ -189,7 +189,7 @@ public sealed record AttemptReviewQuestion(
     string SectionName,
     string SkillCode,
     string SkillName,
-    string Modality,
+    Modality Modality,
     string Stem,
     string? ImagePath,
     string? ImageAlt,
@@ -207,7 +207,7 @@ public sealed record ReviewNavigatorItem(
     int DisplayOrder,
     int SectionId,
     string SectionCode,
-    string Modality,
+    Modality Modality,
     bool IsAnswered,
     bool IsFlagged,
     bool? IsCorrect);
@@ -219,7 +219,7 @@ public sealed record AttemptReviewView(
     int CertId,
     string CertCode,
     string CertName,
-    string Status,
+    AttemptStatus Status,
     DateTimeOffset StartedAt,
     DateTimeOffset SubmittedAt,
     int DurationSeconds,

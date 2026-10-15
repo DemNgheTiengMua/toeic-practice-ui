@@ -152,15 +152,15 @@ public sealed class CheckoutController(
             return View(new PaymentResultViewModel(new PaymentResultDto(
                 OrderId: 0,
                 OrderCode: orderCode,
-                Status: "error",
+                Status: OrderStatusDto.Pending,
                 PackageName: "Unknown",
                 Credits: 0,
                 Amount: 0,
-                Gateway: "unknown",
+                Gateway: PaymentGatewayDto.Mock,
                 CreatedAt: DateTimeOffset.UtcNow,
                 PaidAt: null,
                 CurrentBalance: 0,
-                Message: "Could not read the order status.")));
+                Message: "Could not read the order status."), LoadFailed: true));
         }
     }
 }

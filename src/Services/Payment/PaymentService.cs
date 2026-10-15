@@ -1,8 +1,10 @@
 using System.Data;
+using BusinessObjects;
 using Contracts;
 using DataAccess;
 using DataAccess.Scaffold;
 using Microsoft.EntityFrameworkCore;
+using static Contracts.EnumMapping;
 
 namespace Services;
 
@@ -30,7 +32,7 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
 
         var openOrder = await db.Orders
             .Include(o => o.Package)
-            .Where(o => o.UserId == userId && (o.Status == "pending" || o.Status == "reconciling"))
+            .Where(o => o.UserId == userId && (o.Status == OrderStatus.Pending.ToCode() || o.Status == OrderStatus.Reconciling.ToCode()))
             .OrderByDescending(o => o.CreatedAt)
             .FirstOrDefaultAsync(cancellationToken);
 
@@ -57,7 +59,7 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
 
         var openOrder = await db.Orders
             .Include(o => o.Package)
-            .Where(o => o.UserId == userId && (o.Status == "pending" || o.Status == "reconciling"))
+            .Where(o => o.UserId == userId && (o.Status == OrderStatus.Pending.ToCode() || o.Status == OrderStatus.Reconciling.ToCode()))
             .FirstOrDefaultAsync(cancellationToken);
 
         if (openOrder is not null)
@@ -67,7 +69,7 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
                 openOrder.Package?.Name ?? "Credit Package",
                 openOrder.Amount,
                 openOrder.CreatedAt,
-                openOrder.Status);
+                EnumCodes.Parse<OrderStatus>(openOrder.Status));
         }
 
         var package = await db.Packages
@@ -109,10 +111,10 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
             UserId = userId,
             PackageId = package.PackageId,
             Amount = package.Price,
-            Status = "pending",
+            Status = OrderStatus.Pending.ToCode(),
             OrderCode = orderCode,
             PaymentNo = paymentNo,
-            Gateway = gateway.GatewayName,
+            Gateway = gateway.GatewayName.ToCode(),
             GatewayTxnRef = linkResult.GatewayTxnRef,
             CreatedAt = now
         };
@@ -125,9 +127,9 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
             OrderCode: order.OrderCode,
             PaymentNo: order.PaymentNo,
             Amount: order.Amount,
-            Gateway: order.Gateway,
+            Gateway: ParseWireCode<PaymentGatewayDto>(order.Gateway),
             CheckoutUrl: linkResult.CheckoutUrl,
-            Status: order.Status);
+            Status: ParseWireCode<OrderStatusDto>(order.Status));
     }
 
     public async Task<PaymentResultDto> HandleReturnRedirectAsync(
@@ -143,17 +145,17 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
             ?? throw new OrderNotFoundException(orderCode);
 
         // ADR-0003: Every return redirect is logged as a payment event, but NEVER grants credit.
-        var reportedStatus = order.Status switch
-        {
-            "reconciling" => "pending",
-            _ => order.Status
-        };
+        // An order's own status as a gateway would report it: reconciling is still pending there.
+        var orderStatus = EnumCodes.Parse<OrderStatus>(order.Status);
+        var reportedStatus = orderStatus == OrderStatus.Reconciling
+            ? GatewayStatus.Pending
+            : orderStatus.MapTo<GatewayStatus>();
 
         var returnEvent = new PaymentEvent
         {
             OrderId = order.OrderId,
-            Source = "return_redirect",
-            ReportedStatus = reportedStatus,
+            Source = PaymentEventSource.ReturnRedirect.ToCode(),
+            ReportedStatus = reportedStatus.ToCode(),
             SignatureValid = false,
             WasApplied = false,
             Note = "Browser return redirect logged",
@@ -162,29 +164,29 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
         db.PaymentEvents.Add(returnEvent);
         await db.SaveChangesAsync(cancellationToken);
 
-        if (order.Status == "pending")
+        if (order.Status == OrderStatus.Pending.ToCode())
         {
             // Perform trusted server-side status query
             var gatewayStatus = await gateway.QueryPaymentStatusAsync(order.PaymentNo, order.GatewayTxnRef, cancellationToken);
-            if (gatewayStatus.Status == "paid")
+            if (gatewayStatus.Status == GatewayStatus.Paid)
             {
                 await SettleOrderAsync(
                     order.PaymentNo,
-                    source: "status_query",
+                    source: PaymentEventSource.StatusQuery,
                     signatureValid: false,
                     rawPayload: gatewayStatus.RawPayload,
                     note: "Settled upon return status query",
                     cancellationToken: cancellationToken);
             }
-            else if (gatewayStatus.Status == "failed" || gatewayStatus.Status == "cancelled")
+            else if (gatewayStatus.Status == GatewayStatus.Failed || gatewayStatus.Status == GatewayStatus.Cancelled)
             {
-                order.Status = "failed";
+                order.Status = OrderStatus.Failed.ToCode();
                 order.GatewayErrorCode = gatewayStatus.ErrorCode ?? "24";
                 db.PaymentEvents.Add(new PaymentEvent
                 {
                     OrderId = order.OrderId,
-                    Source = "status_query",
-                    ReportedStatus = "failed",
+                    Source = PaymentEventSource.StatusQuery.ToCode(),
+                    ReportedStatus = GatewayStatus.Failed.ToCode(),
                     SignatureValid = false,
                     WasApplied = true,
                     Payload = gatewayStatus.RawPayload,
@@ -193,15 +195,15 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
                 });
                 await db.SaveChangesAsync(cancellationToken);
             }
-            else if (gatewayStatus.Status == "expired" || order.CreatedAt < DateTimeOffset.UtcNow.AddMinutes(-15))
+            else if (gatewayStatus.Status == GatewayStatus.Expired || order.CreatedAt < DateTimeOffset.UtcNow.AddMinutes(-15))
             {
-                order.Status = "expired";
+                order.Status = OrderStatus.Expired.ToCode();
                 await gateway.CancelPaymentLinkAsync(order.PaymentNo, order.GatewayTxnRef, "Order expired", cancellationToken);
                 db.PaymentEvents.Add(new PaymentEvent
                 {
                     OrderId = order.OrderId,
-                    Source = "cancel",
-                    ReportedStatus = "expired",
+                    Source = PaymentEventSource.Cancel.ToCode(),
+                    ReportedStatus = GatewayStatus.Expired.ToCode(),
                     SignatureValid = false,
                     WasApplied = true,
                     Payload = gatewayStatus.RawPayload,
@@ -213,12 +215,12 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
             else
             {
                 // Unconfirmed payment becomes reconciling ("Reconciling transaction")
-                order.Status = "reconciling";
+                order.Status = OrderStatus.Reconciling.ToCode();
                 db.PaymentEvents.Add(new PaymentEvent
                 {
                     OrderId = order.OrderId,
-                    Source = "status_query",
-                    ReportedStatus = "pending",
+                    Source = PaymentEventSource.StatusQuery.ToCode(),
+                    ReportedStatus = GatewayStatus.Pending.ToCode(),
                     SignatureValid = false,
                     WasApplied = true,
                     Payload = gatewayStatus.RawPayload,
@@ -245,17 +247,17 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
             ?? throw new OrderNotFoundException(orderCode);
 
         // Check if reconciling or pending order should be checked again or has expired
-        if (order.Status == "reconciling" || order.Status == "pending")
+        if (order.Status == OrderStatus.Reconciling.ToCode() || order.Status == OrderStatus.Pending.ToCode())
         {
             if (order.CreatedAt < DateTimeOffset.UtcNow.AddMinutes(-15))
             {
-                order.Status = "expired";
+                order.Status = OrderStatus.Expired.ToCode();
                 await gateway.CancelPaymentLinkAsync(order.PaymentNo, order.GatewayTxnRef, "Order expired", cancellationToken);
                 db.PaymentEvents.Add(new PaymentEvent
                 {
                     OrderId = order.OrderId,
-                    Source = "cancel",
-                    ReportedStatus = "expired",
+                    Source = PaymentEventSource.Cancel.ToCode(),
+                    ReportedStatus = GatewayStatus.Expired.ToCode(),
                     SignatureValid = false,
                     WasApplied = true,
                     Note = "Reconciling order timed out and cancelled at gateway",
@@ -266,11 +268,11 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
             else
             {
                 var gatewayStatus = await gateway.QueryPaymentStatusAsync(order.PaymentNo, order.GatewayTxnRef, cancellationToken);
-                if (gatewayStatus.Status == "paid")
+                if (gatewayStatus.Status == GatewayStatus.Paid)
                 {
                     await SettleOrderAsync(
                         order.PaymentNo,
-                        source: "status_query",
+                        source: PaymentEventSource.StatusQuery,
                         signatureValid: false,
                         rawPayload: gatewayStatus.RawPayload,
                         note: "Settled during status refresh",
@@ -284,16 +286,12 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
                 else
                 {
                     // ADR-0003: Every status query is logged as a payment event
-                    var reportedStatus = gatewayStatus.Status switch
-                    {
-                        "reconciling" => "pending",
-                        _ => gatewayStatus.Status
-                    };
+                    var reportedStatus = gatewayStatus.Status;
                     db.PaymentEvents.Add(new PaymentEvent
                     {
                         OrderId = order.OrderId,
-                        Source = "status_query",
-                        ReportedStatus = reportedStatus,
+                        Source = PaymentEventSource.StatusQuery.ToCode(),
+                        ReportedStatus = reportedStatus.ToCode(),
                         SignatureValid = false,
                         WasApplied = false,
                         Payload = gatewayStatus.RawPayload,
@@ -313,11 +311,11 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
         return new PaymentResultDto(
             OrderId: order.OrderId,
             OrderCode: order.OrderCode,
-            Status: order.Status,
+            Status: ParseWireCode<OrderStatusDto>(order.Status),
             PackageName: order.Package?.Name ?? "Credit Package",
             Credits: order.Package?.Credits ?? 0,
             Amount: order.Amount,
-            Gateway: order.Gateway,
+            Gateway: ParseWireCode<PaymentGatewayDto>(order.Gateway),
             CreatedAt: order.CreatedAt,
             PaidAt: order.PaidAt,
             CurrentBalance: balance,
@@ -326,14 +324,14 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
 
     public async Task<bool> SettleOrderAsync(
         long paymentNo,
-        string source,
+        PaymentEventSource source,
         bool signatureValid,
         string? rawPayload = null,
         string? note = null,
         CancellationToken cancellationToken = default)
     {
         // Credit is granted ONLY on a trusted source (status_query or verified webhook)
-        if (source != "status_query" && !(source == "webhook" && signatureValid))
+        if (source != PaymentEventSource.StatusQuery && !(source == PaymentEventSource.Webhook && signatureValid))
         {
             throw new InvalidOperationException("Credit can only be granted by a trusted source (status_query or verified webhook).");
         }
@@ -352,17 +350,17 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
 
         // Idempotency: check if already credited
         var existingCreditTxn = await db.CreditTransactions
-            .Where(t => t.OrderId == order.OrderId && t.Reason == "purchase")
+            .Where(t => t.OrderId == order.OrderId && t.Reason == CreditReason.Purchase.ToCode())
             .FirstOrDefaultAsync(cancellationToken);
 
-        if (existingCreditTxn is not null || order.Status == "paid")
+        if (existingCreditTxn is not null || order.Status == OrderStatus.Paid.ToCode())
         {
             // Log repeat event without applying
             db.PaymentEvents.Add(new PaymentEvent
             {
                 OrderId = order.OrderId,
-                Source = source,
-                ReportedStatus = "paid",
+                Source = source.ToCode(),
+                ReportedStatus = GatewayStatus.Paid.ToCode(),
                 SignatureValid = signatureValid,
                 WasApplied = false,
                 Payload = rawPayload,
@@ -375,14 +373,14 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
         }
 
         var now = DateTimeOffset.UtcNow;
-        order.Status = "paid";
+        order.Status = OrderStatus.Paid.ToCode();
         order.PaidAt = now;
         await db.SaveChangesAsync(cancellationToken);
 
         var creditTxn = new CreditTransaction
         {
             UserId = order.UserId,
-            Reason = "purchase",
+            Reason = CreditReason.Purchase.ToCode(),
             Delta = order.Package.Credits,
             OrderId = order.OrderId,
             CreatedAt = now
@@ -392,8 +390,8 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
         var paymentEvent = new PaymentEvent
         {
             OrderId = order.OrderId,
-            Source = source,
-            ReportedStatus = "paid",
+            Source = source.ToCode(),
+            ReportedStatus = GatewayStatus.Paid.ToCode(),
             SignatureValid = signatureValid,
             WasApplied = true,
             Payload = rawPayload,
@@ -420,11 +418,11 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
 
         if (result.PaymentNo > 0)
         {
-            if (result.Status == "paid")
+            if (result.Status == GatewayStatus.Paid)
             {
                 await SettleOrderAsync(
                     result.PaymentNo,
-                    source: "webhook",
+                    source: PaymentEventSource.Webhook,
                     signatureValid: true,
                     rawPayload: result.RawPayload,
                     note: "Settled via signature-verified webhook",
@@ -433,15 +431,17 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
             else
             {
                 var order = await db.Orders.FirstOrDefaultAsync(o => o.PaymentNo == result.PaymentNo, cancellationToken);
-                if (order is not null && order.Status != "paid")
+                if (order is not null && order.Status != OrderStatus.Paid.ToCode())
                 {
-                    order.Status = result.Status == "cancelled" || result.Status == "failed" ? "failed" : result.Status;
+                    order.Status = (result.Status is GatewayStatus.Cancelled or GatewayStatus.Failed
+                        ? OrderStatus.Failed
+                        : result.Status.MapTo<OrderStatus>()).ToCode();
                     order.GatewayErrorCode = result.ErrorCode;
                     db.PaymentEvents.Add(new PaymentEvent
                     {
                         OrderId = order.OrderId,
-                        Source = "webhook",
-                        ReportedStatus = result.Status,
+                        Source = PaymentEventSource.Webhook.ToCode(),
+                        ReportedStatus = result.Status.ToCode(),
                         SignatureValid = true,
                         WasApplied = true,
                         Payload = result.RawPayload,
@@ -474,24 +474,24 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
             switch (action.ToLowerInvariant())
             {
                 case "success":
-                    mock.SetOutcome(order.PaymentNo, "paid");
+                    mock.SetOutcome(order.PaymentNo, GatewayStatus.Paid);
                     await SettleOrderAsync(
                         order.PaymentNo,
-                        source: "status_query",
+                        source: PaymentEventSource.StatusQuery,
                         signatureValid: false,
                         rawPayload: "{\"status\":\"paid\"}",
                         note: "Settled via mock gateway success action",
                         cancellationToken: cancellationToken);
                     break;
                 case "failed":
-                    mock.SetOutcome(order.PaymentNo, "failed", errorCode ?? "24");
-                    order.Status = "failed";
+                    mock.SetOutcome(order.PaymentNo, GatewayStatus.Failed, errorCode ?? "24");
+                    order.Status = OrderStatus.Failed.ToCode();
                     order.GatewayErrorCode = errorCode ?? "24";
                     db.PaymentEvents.Add(new PaymentEvent
                     {
                         OrderId = order.OrderId,
-                        Source = "status_query",
-                        ReportedStatus = "failed",
+                        Source = PaymentEventSource.StatusQuery.ToCode(),
+                        ReportedStatus = GatewayStatus.Failed.ToCode(),
                         SignatureValid = false,
                         WasApplied = true,
                         Payload = "{\"status\":\"failed\"}",
@@ -501,13 +501,13 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
                     await db.SaveChangesAsync(cancellationToken);
                     break;
                 case "expired":
-                    mock.SetOutcome(order.PaymentNo, "expired");
-                    order.Status = "expired";
+                    mock.SetOutcome(order.PaymentNo, GatewayStatus.Expired);
+                    order.Status = OrderStatus.Expired.ToCode();
                     db.PaymentEvents.Add(new PaymentEvent
                     {
                         OrderId = order.OrderId,
-                        Source = "status_query",
-                        ReportedStatus = "expired",
+                        Source = PaymentEventSource.StatusQuery.ToCode(),
+                        ReportedStatus = GatewayStatus.Expired.ToCode(),
                         SignatureValid = false,
                         WasApplied = true,
                         Payload = "{\"status\":\"expired\"}",
@@ -518,13 +518,13 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
                     break;
                 case "pending":
                 default:
-                    mock.SetOutcome(order.PaymentNo, "pending");
-                    order.Status = "reconciling";
+                    mock.SetOutcome(order.PaymentNo, GatewayStatus.Pending);
+                    order.Status = OrderStatus.Reconciling.ToCode();
                     db.PaymentEvents.Add(new PaymentEvent
                     {
                         OrderId = order.OrderId,
-                        Source = "status_query",
-                        ReportedStatus = "pending",
+                        Source = PaymentEventSource.StatusQuery.ToCode(),
+                        ReportedStatus = GatewayStatus.Pending.ToCode(),
                         SignatureValid = false,
                         WasApplied = true,
                         Payload = "{\"status\":\"pending\"}",
@@ -581,7 +581,7 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
             Orders: orders.Select(ToOrderDto).ToList(),
             Ledger: ledger.Select(t => new CreditLedgerEntryDto(
                 TxnId: t.TxnId,
-                Reason: t.Reason,
+                Reason: ParseWireCode<CreditReasonDto>(t.Reason),
                 Delta: t.Delta,
                 Note: t.Note,
                 CreatedAt: t.CreatedAt,
@@ -594,20 +594,20 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
     {
         var cutoff = DateTimeOffset.UtcNow.AddMinutes(-olderThanMinutes);
         var staleOrders = await db.Orders
-            .Where(o => (o.Status == "pending" || o.Status == "reconciling") && o.CreatedAt < cutoff)
+            .Where(o => (o.Status == OrderStatus.Pending.ToCode() || o.Status == OrderStatus.Reconciling.ToCode()) && o.CreatedAt < cutoff)
             .ToListAsync(cancellationToken);
 
         if (staleOrders.Count > 0)
         {
             foreach (var order in staleOrders)
             {
-                order.Status = "expired";
+                order.Status = OrderStatus.Expired.ToCode();
                 await gateway.CancelPaymentLinkAsync(order.PaymentNo, order.GatewayTxnRef, "Order expired", cancellationToken);
                 db.PaymentEvents.Add(new PaymentEvent
                 {
                     OrderId = order.OrderId,
-                    Source = "cancel",
-                    ReportedStatus = "expired",
+                    Source = PaymentEventSource.Cancel.ToCode(),
+                    ReportedStatus = GatewayStatus.Expired.ToCode(),
                     SignatureValid = false,
                     WasApplied = true,
                     Note = "Stale order expired and cancelled at gateway",
@@ -639,8 +639,8 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
         PackageName: o.Package?.Name ?? "Credit Package",
         Credits: o.Package?.Credits ?? 0,
         Amount: o.Amount,
-        Status: o.Status,
-        Gateway: o.Gateway,
+        Status: ParseWireCode<OrderStatusDto>(o.Status),
+        Gateway: ParseWireCode<PaymentGatewayDto>(o.Gateway),
         GatewayTxnRef: o.GatewayTxnRef,
         GatewayErrorCode: o.GatewayErrorCode,
         CreatedAt: o.CreatedAt,

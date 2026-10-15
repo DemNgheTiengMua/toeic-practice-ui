@@ -1,3 +1,4 @@
+using BusinessObjects;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -19,8 +20,8 @@ public sealed class PayOsOptions
 
 public sealed class PayOsPaymentGateway : IPaymentGateway
 {
-    public const string Name = "payos";
-    public string GatewayName => Name;
+
+    public PaymentGateway GatewayName => PaymentGateway.Payos;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -98,7 +99,7 @@ public sealed class PayOsPaymentGateway : IPaymentGateway
         {
             _logger?.LogWarning(ex, "QueryPaymentStatusAsync failed for paymentNo {PaymentNo}", paymentNo);
             return new GatewayPaymentStatus(
-                Status: "pending",
+                Status: GatewayStatus.Pending,
                 GatewayTxnRef: gatewayTxnRef,
                 ErrorCode: ex.Message,
                 RawPayload: ex.ToString());
@@ -134,13 +135,13 @@ public sealed class PayOsPaymentGateway : IPaymentGateway
         {
             if (string.IsNullOrWhiteSpace(payload))
             {
-                return new WebhookVerificationResult(false, 0, null, "failed", "EMPTY_PAYLOAD", payload ?? "");
+                return new WebhookVerificationResult(false, 0, null, GatewayStatus.Failed, "EMPTY_PAYLOAD", payload ?? "");
             }
 
             var webhook = JsonSerializer.Deserialize<Webhook>(payload, JsonOptions);
             if (webhook is null)
             {
-                return new WebhookVerificationResult(false, 0, null, "failed", "DESERIALIZATION_FAILED", payload);
+                return new WebhookVerificationResult(false, 0, null, GatewayStatus.Failed, "DESERIALIZATION_FAILED", payload);
             }
 
             if (!string.IsNullOrEmpty(signature))
@@ -150,7 +151,7 @@ public sealed class PayOsPaymentGateway : IPaymentGateway
 
             if (string.IsNullOrWhiteSpace(webhook.Signature))
             {
-                return new WebhookVerificationResult(false, 0, null, "failed", "MISSING_SIGNATURE", payload);
+                return new WebhookVerificationResult(false, 0, null, GatewayStatus.Failed, "MISSING_SIGNATURE", payload);
             }
 
             var verifiedData = await _client.Webhooks.VerifyAsync(webhook);
@@ -171,30 +172,30 @@ public sealed class PayOsPaymentGateway : IPaymentGateway
                 IsValid: false,
                 PaymentNo: 0,
                 GatewayTxnRef: null,
-                Status: "failed",
+                Status: GatewayStatus.Failed,
                 ErrorCode: ex.Message,
                 RawPayload: payload);
         }
     }
 
-    public static string MapPayOsStatus(string? payOsStatus)
+    public static GatewayStatus MapPayOsStatus(string? payOsStatus)
     {
         return (payOsStatus ?? "").Trim().ToLowerInvariant() switch
         {
-            "paid" => "paid",
-            "cancelled" or "canceled" => "failed",
-            "expired" => "expired",
-            "pending" or "processing" => "pending",
-            _ => "pending"
+            "paid" => GatewayStatus.Paid,
+            "cancelled" or "canceled" => GatewayStatus.Failed,
+            "expired" => GatewayStatus.Expired,
+            "pending" or "processing" => GatewayStatus.Pending,
+            _ => GatewayStatus.Pending
         };
     }
 
-    public static string MapWebhookCodeToStatus(string? code)
+    public static GatewayStatus MapWebhookCodeToStatus(string? code)
     {
         return (code ?? "").Trim().ToLowerInvariant() switch
         {
-            "00" => "paid",
-            _ => "failed"
+            "00" => GatewayStatus.Paid,
+            _ => GatewayStatus.Failed
         };
     }
 

@@ -80,19 +80,19 @@ public sealed class LearnerService(CompanionDbContext db) : ILearnerService
             .OrderByDescending(a => a.StartedAt)
             .Take(RecentCount)
             .Select(a => new RecentAttempt(
-                a.AttemptId, a.Exam.Name, a.Exam.Purpose, a.Status, a.StartedAt, a.TotalScore, a.BandCode))
+                a.AttemptId, a.Exam.Name, EnumCodes.Parse<ExamPurpose>(a.Exam.Purpose), EnumCodes.Parse<AttemptStatus>(a.Status), a.StartedAt, a.TotalScore, a.BandCode))
             .ToListAsync(cancellationToken);
 
         var recentPractice = await practice
             .OrderByDescending(p => p.StartedAt)
             .Take(RecentCount)
             .Select(p => new RecentPractice(
-                p.SessionId, p.Section.Name, p.Status, p.CorrectCount, p.QuestionCount, p.StartedAt))
+                p.SessionId, p.Section.Name, EnumCodes.Parse<PracticeStatus>(p.Status), p.CorrectCount, p.QuestionCount, p.StartedAt))
             .ToListAsync(cancellationToken);
 
         // The current level is the latest graded mock: placement and skill practice don't score the whole test.
         var latest = await attempts
-            .Where(a => a.Status == "graded" && a.Exam.Purpose == "mock" && a.TotalScore != null)
+            .Where(a => a.Status == AttemptStatus.Graded.ToCode() && a.Exam.Purpose == ExamPurpose.Mock.ToCode() && a.TotalScore != null)
             .OrderByDescending(a => a.SubmittedAt ?? a.StartedAt)
             .Select(a => new
             {
@@ -107,17 +107,17 @@ public sealed class LearnerService(CompanionDbContext db) : ILearnerService
             .FirstOrDefaultAsync(cancellationToken);
 
         var unfinishedAttempt = await attempts
-            .Where(a => a.Status == "in_progress")
+            .Where(a => a.Status == AttemptStatus.InProgress.ToCode())
             .OrderByDescending(a => a.StartedAt)
             .Select(a => new RecentAttempt(
-                a.AttemptId, a.Exam.Name, a.Exam.Purpose, a.Status, a.StartedAt, a.TotalScore, a.BandCode))
+                a.AttemptId, a.Exam.Name, EnumCodes.Parse<ExamPurpose>(a.Exam.Purpose), EnumCodes.Parse<AttemptStatus>(a.Status), a.StartedAt, a.TotalScore, a.BandCode))
             .FirstOrDefaultAsync(cancellationToken);
 
         var unfinishedPractice = await practice
-            .Where(p => p.Status == "in_progress")
+            .Where(p => p.Status == PracticeStatus.InProgress.ToCode())
             .OrderByDescending(p => p.StartedAt)
             .Select(p => new RecentPractice(
-                p.SessionId, p.Section.Name, p.Status, p.CorrectCount, p.QuestionCount, p.StartedAt))
+                p.SessionId, p.Section.Name, EnumCodes.Parse<PracticeStatus>(p.Status), p.CorrectCount, p.QuestionCount, p.StartedAt))
             .FirstOrDefaultAsync(cancellationToken);
 
         return new LearnerDashboard(

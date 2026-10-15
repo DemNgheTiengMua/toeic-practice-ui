@@ -16,9 +16,9 @@ public sealed record CreateOrderResponse(
     string OrderCode,
     long PaymentNo,
     decimal Amount,
-    string Gateway,
+    PaymentGatewayDto Gateway,
     string CheckoutUrl,
-    string Status);
+    OrderStatusDto Status);
 
 public sealed record OrderDto(
     int OrderId,
@@ -28,8 +28,8 @@ public sealed record OrderDto(
     string PackageName,
     int Credits,
     decimal Amount,
-    string Status,
-    string Gateway,
+    OrderStatusDto Status,
+    PaymentGatewayDto Gateway,
     string? GatewayTxnRef,
     string? GatewayErrorCode,
     DateTimeOffset CreatedAt,
@@ -40,11 +40,11 @@ public sealed record HandleReturnRequest(string OrderCode);
 public sealed record PaymentResultDto(
     int OrderId,
     string OrderCode,
-    string Status,
+    OrderStatusDto Status,
     string PackageName,
     int Credits,
     decimal Amount,
-    string Gateway,
+    PaymentGatewayDto Gateway,
     DateTimeOffset CreatedAt,
     DateTimeOffset? PaidAt,
     int CurrentBalance,
@@ -62,7 +62,7 @@ public sealed record WalletDto(
 
 public sealed record CreditLedgerEntryDto(
     int TxnId,
-    string Reason,
+    CreditReasonDto Reason,
     int Delta,
     string? Note,
     DateTimeOffset CreatedAt,

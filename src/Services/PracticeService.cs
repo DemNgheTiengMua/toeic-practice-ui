@@ -70,7 +70,7 @@ public sealed class PracticeService(
 
         var questionCounts = await db.Questions
             .AsNoTracking()
-            .Where(q => q.Section.CertId == activeCertId && q.QuestionType == "mcq")
+            .Where(q => q.Section.CertId == activeCertId && q.QuestionType == QuestionType.Mcq.ToCode())
             .GroupBy(q => q.SectionId)
             .Select(g => new { SectionId = g.Key, Count = g.Count() })
             .ToDictionaryAsync(g => g.SectionId, g => g.Count, cancellationToken);
@@ -95,7 +95,7 @@ public sealed class PracticeService(
                 s.SectionId,
                 s.Skill.Code,
                 s.Skill.Name,
-                s.Modality,
+                EnumCodes.Parse<Modality>(s.Modality),
                 s.Code,
                 s.Name,
                 s.OptionCount,
@@ -106,13 +106,13 @@ public sealed class PracticeService(
                 s.DisplayOrder);
         }).ToList();
 
-        var listening = items.Where(i => i.Modality == "listening").ToList();
-        var reading = items.Where(i => i.Modality == "reading").ToList();
-        var other = items.Where(i => i.Modality is not ("listening" or "reading")).ToList();
+        var listening = items.Where(i => i.Modality == Modality.Listening).ToList();
+        var reading = items.Where(i => i.Modality == Modality.Reading).ToList();
+        var other = items.Where(i => i.Modality is not (Modality.Listening or Modality.Reading)).ToList();
 
         // Weakest part: listening/reading section with lowest accuracy among those with at least 1 answer
         var weakest = items
-            .Where(i => i.Modality is "listening" or "reading" && i.AccuracyPercentage.HasValue && i.AnsweredCount > 0)
+            .Where(i => i.Modality is Modality.Listening or Modality.Reading && i.AccuracyPercentage.HasValue && i.AnsweredCount > 0)
             .OrderBy(i => i.AccuracyPercentage!.Value)
             .ThenByDescending(i => i.AnsweredCount)
             .FirstOrDefault();
@@ -122,7 +122,7 @@ public sealed class PracticeService(
             .Include(ps => ps.Section)
             .Where(ps => ps.UserId == userId
                 && ps.Section.CertId == activeCertId
-                && ps.Status == "in_progress"
+                && ps.Status == PracticeStatus.InProgress.ToCode()
                 && ps.LearnerPathStepId == null)
             .OrderByDescending(ps => ps.StartedAt)
             .Select(ps => new PracticeSessionInfo(
@@ -130,12 +130,12 @@ public sealed class PracticeService(
                 ps.SectionId,
                 ps.Section.Code,
                 ps.Section.Name,
-                ps.Section.Modality,
+                EnumCodes.Parse<Modality>(ps.Section.Modality),
                 ps.QuestionCount,
-                ps.Status,
+                EnumCodes.Parse<PracticeStatus>(ps.Status),
                 ps.CorrectCount,
-                ps.QuestionSource,
-                ps.FeedbackMode,
+                EnumCodes.Parse<QuestionSource>(ps.QuestionSource),
+                EnumCodes.Parse<FeedbackMode>(ps.FeedbackMode),
                 ps.StartedAt,
                 ps.FinishedAt))
             .FirstOrDefaultAsync(cancellationToken);
@@ -154,16 +154,16 @@ public sealed class PracticeService(
             .SingleOrDefaultAsync(cancellationToken)
             ?? throw new PracticeException(PracticeException.SectionUnavailable, $"Section {input.SectionId} is not available for active certificate.");
 
-        if (section.Modality is not ("listening" or "reading"))
+        if (EnumCodes.Parse<Modality>(section.Modality) is not (Modality.Listening or Modality.Reading))
         {
             throw new PracticeException(PracticeException.ModalityNotAllowed, "Free practice is only available for listening and reading sections.");
         }
 
         var query = db.Questions
             .AsNoTracking()
-            .Where(q => q.SectionId == section.SectionId && q.QuestionType == "mcq" && db.QuestionOptions.Any(o => o.QuestionId == q.QuestionId));
+            .Where(q => q.SectionId == section.SectionId && q.QuestionType == QuestionType.Mcq.ToCode() && db.QuestionOptions.Any(o => o.QuestionId == q.QuestionId));
 
-        if (input.QuestionSource == "wrong_before")
+        if (input.QuestionSource == QuestionSource.WrongBefore)
         {
             var wrongFromPractice = db.PracticeAnswers
                 .Where(pa => pa.Session.UserId == userId && pa.SectionId == section.SectionId && pa.IsCorrect == false)
@@ -174,7 +174,7 @@ public sealed class PracticeService(
             var wrongIds = wrongFromPractice.Union(wrongFromAttempts);
             query = query.Where(q => wrongIds.Contains(q.QuestionId));
         }
-        else if (input.QuestionSource == "unseen")
+        else if (input.QuestionSource == QuestionSource.Unseen)
         {
             var seenFromPractice = db.PracticeAnswers
                 .Where(pa => pa.Session.UserId == userId && pa.SectionId == section.SectionId)
@@ -202,7 +202,7 @@ public sealed class PracticeService(
 
         // Clean up or abandon any existing standalone in-progress sessions for this user and certificate
         var existingInProgress = await db.PracticeSessions
-            .Where(s => s.UserId == userId && s.Section.CertId == activeCertId && s.Status == "in_progress" && s.LearnerPathStepId == null)
+            .Where(s => s.UserId == userId && s.Section.CertId == activeCertId && s.Status == PracticeStatus.InProgress.ToCode() && s.LearnerPathStepId == null)
             .ToListAsync(cancellationToken);
 
         foreach (var inProg in existingInProgress)
@@ -220,7 +220,7 @@ public sealed class PracticeService(
             }
             else
             {
-                inProg.Status = "abandoned";
+                inProg.Status = PracticeStatus.Abandoned.ToCode();
                 inProg.FinishedAt = DateTimeOffset.UtcNow;
             }
         }
@@ -231,10 +231,10 @@ public sealed class PracticeService(
             SectionId = section.SectionId,
             Modality = section.Modality,
             QuestionCount = selectedIds.Count,
-            Status = "in_progress",
+            Status = PracticeStatus.InProgress.ToCode(),
             CorrectCount = 0,
-            QuestionSource = input.QuestionSource,
-            FeedbackMode = input.FeedbackMode,
+            QuestionSource = input.QuestionSource.ToCode(),
+            FeedbackMode = input.FeedbackMode.ToCode(),
             StartedAt = DateTimeOffset.UtcNow,
         };
 
@@ -263,12 +263,12 @@ public sealed class PracticeService(
             session.SectionId,
             section.Code,
             section.Name,
-            session.Modality,
+            EnumCodes.Parse<Modality>(session.Modality),
             session.QuestionCount,
-            session.Status,
+            EnumCodes.Parse<PracticeStatus>(session.Status),
             session.CorrectCount,
-            session.QuestionSource,
-            session.FeedbackMode,
+            EnumCodes.Parse<QuestionSource>(session.QuestionSource),
+            EnumCodes.Parse<FeedbackMode>(session.FeedbackMode),
             session.StartedAt,
             session.FinishedAt);
     }
@@ -287,12 +287,12 @@ public sealed class PracticeService(
             session.SectionId,
             session.Section.Code,
             session.Section.Name,
-            session.Modality,
+            EnumCodes.Parse<Modality>(session.Modality),
             session.QuestionCount,
-            session.Status,
+            EnumCodes.Parse<PracticeStatus>(session.Status),
             session.CorrectCount,
-            session.QuestionSource,
-            session.FeedbackMode,
+            EnumCodes.Parse<QuestionSource>(session.QuestionSource),
+            EnumCodes.Parse<FeedbackMode>(session.FeedbackMode),
             session.StartedAt,
             session.FinishedAt);
     }
@@ -334,7 +334,7 @@ public sealed class PracticeService(
 
         var q = answer.Question;
         var group = q.Group;
-        var isFinished = answer.Session.Status == "finished";
+        var isFinished = answer.Session.Status == PracticeStatus.Finished.ToCode();
         var isAnswered = answer.SelectedOptionId.HasValue || answer.IsCorrect.HasValue;
 
         var allOptions = await db.QuestionOptions
@@ -394,7 +394,7 @@ public sealed class PracticeService(
             .SingleOrDefaultAsync(cancellationToken)
             ?? throw new PracticeException(PracticeException.QuestionNotFound, $"Question {questionId} was not found in session {sessionId}.");
 
-        if (answer.Session.Status != "in_progress")
+        if (answer.Session.Status != PracticeStatus.InProgress.ToCode())
         {
             throw new PracticeException(PracticeException.SessionAlreadyFinished, "Hints cannot be revealed in a finished session.");
         }
@@ -421,7 +421,7 @@ public sealed class PracticeService(
             .SingleOrDefaultAsync(cancellationToken)
             ?? throw new PracticeException(PracticeException.QuestionNotFound, $"Question {questionId} was not found in session {sessionId}.");
 
-        if (answer.Session.Status != "in_progress")
+        if (answer.Session.Status != PracticeStatus.InProgress.ToCode())
         {
             throw new PracticeException(PracticeException.SessionAlreadyFinished, "Answers cannot be submitted to a finished session.");
         }
@@ -459,7 +459,7 @@ public sealed class PracticeService(
         var isLast = answer.DisplayOrder >= answer.Session.QuestionCount;
         if (isLast)
         {
-            answer.Session.Status = "finished";
+            answer.Session.Status = PracticeStatus.Finished.ToCode();
             answer.Session.FinishedAt = DateTimeOffset.UtcNow;
             await db.SaveChangesAsync(cancellationToken);
 
@@ -482,7 +482,7 @@ public sealed class PracticeService(
                 {
                     UserId = userId,
                     QuestionId = questionId,
-                    Source = "incorrect",
+                    Source = SavedQuestionSource.Incorrect.ToCode(),
                     SavedAt = DateTimeOffset.UtcNow
                 });
                 await db.SaveChangesAsync(cancellationToken);
@@ -516,9 +516,9 @@ public sealed class PracticeService(
             .SingleOrDefaultAsync(cancellationToken)
             ?? throw new PracticeException(PracticeException.SessionNotFound, $"Practice session {sessionId} was not found.");
 
-        if (session.Status == "in_progress")
+        if (session.Status == PracticeStatus.InProgress.ToCode())
         {
-            session.Status = "finished";
+            session.Status = PracticeStatus.Finished.ToCode();
             session.FinishedAt = DateTimeOffset.UtcNow;
             await db.SaveChangesAsync(cancellationToken);
             await PruneOldSessionsAsync(userId, session.Section.CertId, cancellationToken);
@@ -575,7 +575,7 @@ public sealed class PracticeService(
             session.SessionId,
             session.Section.Code,
             session.Section.Name,
-            session.Modality,
+            EnumCodes.Parse<Modality>(session.Modality),
             session.StartedAt,
             session.FinishedAt,
             total,

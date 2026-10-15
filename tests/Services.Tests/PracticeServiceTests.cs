@@ -140,7 +140,7 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
 
         var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId, 2));
 
-        Assert.Equal("in_progress", session.Status);
+        Assert.Equal(PracticeStatus.InProgress, session.Status);
         Assert.Equal(2, session.QuestionCount);
         Assert.Equal(0, session.CorrectCount);
 
@@ -204,7 +204,7 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         Assert.Null(result2.NextQuestionDisplayOrder);
 
         var info = await practice.GetSessionInfoAsync(userId, session.SessionId);
-        Assert.Equal("finished", info.Status);
+        Assert.Equal(PracticeStatus.Finished, info.Status);
         Assert.Equal(1, info.CorrectCount);
     }
 
@@ -278,13 +278,13 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         await practice.SubmitAnswerAsync(userId, session1.SessionId, qIds[0], new SubmitPracticeAnswerInput(wrongOpts[0]));
 
         // Session with wrong_before: only Q1 should be selected
-        var sessionWrong = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId, 10, questionSource: "wrong_before"));
+        var sessionWrong = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId, 10, questionSource: QuestionSource.WrongBefore));
         Assert.Equal(1, sessionWrong.QuestionCount);
         var wrongQ = await practice.GetQuestionAsync(userId, sessionWrong.SessionId, 1);
         Assert.Equal(qIds[0], wrongQ.QuestionId);
 
         // Session with unseen: only Q2 and Q3 should be selected
-        var sessionUnseen = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId, 10, questionSource: "unseen"));
+        var sessionUnseen = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId, 10, questionSource: QuestionSource.Unseen));
         Assert.Equal(2, sessionUnseen.QuestionCount);
         var unseenQ1 = await practice.GetQuestionAsync(userId, sessionUnseen.SessionId, 1);
         var unseenQ2 = await practice.GetQuestionAsync(userId, sessionUnseen.SessionId, 2);
@@ -394,7 +394,7 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
 
         Assert.NotNull(catalog.UnfinishedSession);
         Assert.Equal(s1.SessionId, catalog.UnfinishedSession.SessionId);
-        Assert.Equal("in_progress", catalog.UnfinishedSession.Status);
+        Assert.Equal(PracticeStatus.InProgress, catalog.UnfinishedSession.Status);
         Assert.Equal(secId, catalog.UnfinishedSession.SectionId);
     }
 }

@@ -1,3 +1,4 @@
+using BusinessObjects;
 namespace Services;
 
 public sealed class EmailNotVerifiedException(string message = "Email verification is required before purchasing credits.")
@@ -9,14 +10,14 @@ public sealed class OrderAlreadyOpenException : Exception
     public string PackageName { get; }
     public decimal Amount { get; }
     public DateTimeOffset CreatedAt { get; }
-    public string Status { get; }
+    public OrderStatus Status { get; }
 
     public OrderAlreadyOpenException(
         string orderCode,
         string packageName,
         decimal amount,
         DateTimeOffset createdAt,
-        string status,
+        OrderStatus status,
         string message = "You already have an open order that must be completed or expired.")
         : base(message)
     {

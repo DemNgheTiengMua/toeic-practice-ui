@@ -23,7 +23,9 @@ public static class SavedQuestionEndpoints
             ISavedQuestionService savedService,
             CancellationToken cancellationToken) =>
         {
-            var filter = new SavedQuestionFilterInput(source, sectionId, categoryId);
+            // An unknown source shows every saved question, as the string filter always did.
+            SavedQuestionSource? sourceFilter = EnumCodes.TryParse<SavedQuestionSource>(source, out var parsedSource) ? parsedSource : null;
+            var filter = new SavedQuestionFilterInput(sourceFilter, sectionId, categoryId);
             var view = await savedService.GetSavedQuestionsAsync(CurrentUserId(http), filter, cancellationToken);
             return Results.Ok(new SavedQuestionsViewDto(
                 ToCertificateDto(view.Certificate),
@@ -61,9 +63,12 @@ public static class SavedQuestionEndpoints
         {
             try
             {
-                var source = request?.Source ?? "manual";
+                // Only the practice flow asks for "incorrect"; anything else is a manual save.
+                var source = EnumCodes.TryParse<SavedQuestionSource>(request?.Source, out var parsedSource)
+                    ? parsedSource
+                    : SavedQuestionSource.Manual;
                 var res = await savedService.SaveQuestionAsync(CurrentUserId(http), questionId, source, cancellationToken);
-                return Results.Ok(new SaveQuestionResultDto(res.IsSaved, res.Source, res.SavedAt));
+                return Results.Ok(new SaveQuestionResultDto(res.IsSaved, res.Source?.MapTo<SavedQuestionSourceDto>(), res.SavedAt));
             }
             catch (SavedQuestionException ex) when (ex.Code == SavedQuestionException.QuestionNotFound)
             {
@@ -78,7 +83,7 @@ public static class SavedQuestionEndpoints
             CancellationToken cancellationToken) =>
         {
             var res = await savedService.UnsaveQuestionAsync(CurrentUserId(http), questionId, cancellationToken);
-            return Results.Ok(new SaveQuestionResultDto(res.IsSaved, res.Source, res.SavedAt));
+            return Results.Ok(new SaveQuestionResultDto(res.IsSaved, res.Source?.MapTo<SavedQuestionSourceDto>(), res.SavedAt));
         });
     }
 }

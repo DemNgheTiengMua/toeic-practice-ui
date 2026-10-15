@@ -30,7 +30,7 @@ public static class EndpointHelpers
 
     public static SavedQuestionItemDto ToSavedQuestionDto(SavedQuestionItem q) => new(
         q.QuestionId,
-        q.Source,
+        q.Source.MapTo<SavedQuestionSourceDto>(),
         q.SavedAt,
         q.SectionId,
         q.SectionCode,

@@ -84,8 +84,8 @@ public sealed class CheckoutControllerTests
             PackageName: "Exam Prep",
             Credits: 5,
             Amount: 199000,
-            Status: "pending",
-            Gateway: "mock",
+            Status: OrderStatusDto.Pending,
+            Gateway: PaymentGatewayDto.Mock,
             GatewayTxnRef: "mock-10",
             GatewayErrorCode: null,
             CreatedAt: DateTimeOffset.UtcNow,
@@ -152,9 +152,9 @@ public sealed class CheckoutControllerTests
                 OrderCode: "DH-20261014-0010",
                 PaymentNo: 10,
                 Amount: 199000,
-                Gateway: "mock",
+                Gateway: PaymentGatewayDto.Mock,
                 CheckoutUrl: "/checkout/mock-gateway?orderCode=DH-20261014-0010",
-                Status: "pending"),
+                Status: OrderStatusDto.Pending),
         };
         var controller = CreateController(api);
 
@@ -188,11 +188,11 @@ public sealed class CheckoutControllerTests
             PaymentResult = new PaymentResultDto(
                 OrderId: 10,
                 OrderCode: "DH-20261014-0010",
-                Status: "pending",
+                Status: OrderStatusDto.Pending,
                 PackageName: "Exam Prep",
                 Credits: 5,
                 Amount: 199000,
-                Gateway: "mock",
+                Gateway: PaymentGatewayDto.Mock,
                 CreatedAt: DateTimeOffset.UtcNow,
                 PaidAt: null,
                 CurrentBalance: 8),
@@ -216,11 +216,11 @@ public sealed class CheckoutControllerTests
             PaymentResult = new PaymentResultDto(
                 OrderId: 10,
                 OrderCode: "DH-20261014-0010",
-                Status: "paid",
+                Status: OrderStatusDto.Paid,
                 PackageName: "Exam Prep",
                 Credits: 5,
                 Amount: 199000,
-                Gateway: "mock",
+                Gateway: PaymentGatewayDto.Mock,
                 CreatedAt: DateTimeOffset.UtcNow,
                 PaidAt: DateTimeOffset.UtcNow,
                 CurrentBalance: 13),
@@ -241,11 +241,11 @@ public sealed class CheckoutControllerTests
             PaymentResult = new PaymentResultDto(
                 OrderId: 10,
                 OrderCode: "DH-20261014-0010",
-                Status: "paid",
+                Status: OrderStatusDto.Paid,
                 PackageName: "Exam Prep",
                 Credits: 5,
                 Amount: 199000,
-                Gateway: "mock",
+                Gateway: PaymentGatewayDto.Mock,
                 CreatedAt: DateTimeOffset.UtcNow,
                 PaidAt: DateTimeOffset.UtcNow,
                 CurrentBalance: 13),
@@ -256,7 +256,7 @@ public sealed class CheckoutControllerTests
 
         var view = Assert.IsType<ViewResult>(result);
         var model = Assert.IsType<PaymentResultViewModel>(view.Model);
-        Assert.Equal("paid", model.Result.Status);
+        Assert.Equal(OrderStatusDto.Paid, model.Result.Status);
         Assert.Equal(5, model.Result.Credits);
         Assert.Equal(13, model.Result.CurrentBalance);
     }
@@ -271,9 +271,9 @@ public sealed class CheckoutControllerTests
                 OrderCode: "DH-20261014-0015",
                 PaymentNo: 15,
                 Amount: 349000,
-                Gateway: "payos",
+                Gateway: PaymentGatewayDto.Payos,
                 CheckoutUrl: "https://pay.payos.vn/web/paylink-15",
-                Status: "pending"),
+                Status: OrderStatusDto.Pending),
         };
         var controller = CreateController(api);
         controller.Request.Headers["X-Requested-With"] = "XMLHttpRequest";

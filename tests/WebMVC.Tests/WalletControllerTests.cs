@@ -61,14 +61,14 @@ public sealed class WalletControllerTests
     {
         var orders = new List<OrderDto>
         {
-            new(1, "DH-20260920-0148", 148, 2, "Exam Prep", 5, 199000, "paid", "mock", null, null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow),
-            new(2, "DH-20260920-0139", 139, 2, "Exam Prep", 5, 199000, "expired", "mock", null, null, DateTimeOffset.UtcNow.AddHours(-1), null),
+            new(1, "DH-20260920-0148", 148, 2, "Exam Prep", 5, 199000, OrderStatusDto.Paid, PaymentGatewayDto.Mock, null, null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow),
+            new(2, "DH-20260920-0139", 139, 2, "Exam Prep", 5, 199000, OrderStatusDto.Expired, PaymentGatewayDto.Mock, null, null, DateTimeOffset.UtcNow.AddHours(-1), null),
         };
 
         var ledger = new List<CreditLedgerEntryDto>
         {
-            new(101, "purchase", 5, "Order DH-20260920-0148", DateTimeOffset.UtcNow, "DH-20260920-0148"),
-            new(102, "mock_exam_start", -1, "Mock exam charge", DateTimeOffset.UtcNow.AddMinutes(-30), null),
+            new(101, CreditReasonDto.Purchase, 5, "Order DH-20260920-0148", DateTimeOffset.UtcNow, "DH-20260920-0148"),
+            new(102, CreditReasonDto.MockExamStart, -1, "Mock exam charge", DateTimeOffset.UtcNow.AddMinutes(-30), null),
         };
 
         var wallet = new WalletDto(

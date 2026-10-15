@@ -1,7 +1,9 @@
+using BusinessObjects;
 using Contracts;
 using DataAccess;
 using DataAccess.Scaffold;
 using Microsoft.EntityFrameworkCore;
+using static Contracts.EnumMapping;
 
 namespace Services;
 
@@ -47,7 +49,7 @@ public sealed class AdminOrderService(
 
         var paidThisMonth = await db.Orders
             .AsNoTracking()
-            .Where(o => o.Status == "paid" && o.PaidAt >= startOfMonth)
+            .Where(o => o.Status == OrderStatus.Paid.ToCode() && o.PaidAt >= startOfMonth)
             .Select(o => o.Amount)
             .ToListAsync(cancellationToken);
 
@@ -56,11 +58,11 @@ public sealed class AdminOrderService(
 
         var reconcilingCount = await db.Orders
             .AsNoTracking()
-            .CountAsync(o => o.Status == "reconciling", cancellationToken);
+            .CountAsync(o => o.Status == OrderStatus.Reconciling.ToCode(), cancellationToken);
 
         var failedOrExpiredCount = await db.Orders
             .AsNoTracking()
-            .CountAsync(o => o.Status == "failed" || o.Status == "expired", cancellationToken);
+            .CountAsync(o => o.Status == OrderStatus.Failed.ToCode() || o.Status == OrderStatus.Expired.ToCode(), cancellationToken);
 
         IQueryable<Order> query = db.Orders
             .AsNoTracking()
@@ -78,14 +80,15 @@ public sealed class AdminOrderService(
 
         if (!string.IsNullOrWhiteSpace(status) && !status.Equals("all", StringComparison.OrdinalIgnoreCase))
         {
-            var lowerStatus = status.Trim().ToLower();
-            query = query.Where(o => o.Status == lowerStatus);
+            // An unknown filter value matches nothing, as the raw string compare did before.
+            var statusCode = EnumCodes.TryParse<OrderStatus>(status.Trim(), out var parsedStatus) ? parsedStatus.ToCode() : null;
+            query = query.Where(o => o.Status == statusCode);
         }
 
         if (!string.IsNullOrWhiteSpace(gateway) && !gateway.Equals("all", StringComparison.OrdinalIgnoreCase))
         {
-            var lowerGateway = gateway.Trim().ToLower();
-            query = query.Where(o => o.Gateway == lowerGateway);
+            var gatewayCode = EnumCodes.TryParse<PaymentGateway>(gateway.Trim(), out var parsedGateway) ? parsedGateway.ToCode() : null;
+            query = query.Where(o => o.Gateway == gatewayCode);
         }
 
         var totalCount = await query.CountAsync(cancellationToken);
@@ -105,8 +108,8 @@ public sealed class AdminOrderService(
                 o.Package.Name,
                 o.Package.Credits,
                 o.Amount,
-                o.Status,
-                o.Gateway,
+                ParseWireCode<OrderStatusDto>(o.Status),
+                ParseWireCode<PaymentGatewayDto>(o.Gateway),
                 o.GatewayTxnRef,
                 o.GatewayErrorCode,
                 o.CreatedAt,
@@ -151,8 +154,8 @@ public sealed class AdminOrderService(
             order.Package.Name,
             order.Package.Credits,
             order.Amount,
-            order.Status,
-            order.Gateway,
+            ParseWireCode<OrderStatusDto>(order.Status),
+            ParseWireCode<PaymentGatewayDto>(order.Gateway),
             order.GatewayTxnRef,
             order.GatewayErrorCode,
             order.CreatedAt,
@@ -164,8 +167,8 @@ public sealed class AdminOrderService(
             .Select(e => new AdminPaymentEventDto(
                 e.EventId,
                 e.OrderId,
-                e.Source,
-                e.ReportedStatus,
+                ParseWireCode<PaymentEventSourceDto>(e.Source),
+                e.ReportedStatus is null ? null : ParseWireCode<GatewayStatusDto>(e.ReportedStatus),
                 e.SignatureValid,
                 e.WasApplied,
                 e.Note,

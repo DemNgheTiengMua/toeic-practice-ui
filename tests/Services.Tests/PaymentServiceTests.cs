@@ -91,8 +91,8 @@ public sealed class PaymentServiceTests(DatabaseFixture database)
         Assert.StartsWith("DH-", res.OrderCode);
         Assert.True(res.PaymentNo > 0);
         Assert.Equal(349000, res.Amount);
-        Assert.Equal("mock", res.Gateway);
-        Assert.Equal("pending", res.Status);
+        Assert.Equal(PaymentGatewayDto.Mock, res.Gateway);
+        Assert.Equal(OrderStatusDto.Pending, res.Status);
         Assert.Contains(res.OrderCode, res.CheckoutUrl);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
@@ -115,7 +115,7 @@ public sealed class PaymentServiceTests(DatabaseFixture database)
 
         Assert.Equal(first.OrderCode, ex.OrderCode);
         Assert.Equal("Single", ex.PackageName);
-        Assert.Equal("pending", ex.Status);
+        Assert.Equal(OrderStatus.Pending, ex.Status);
 
         // Preview also exposes the open order
         var preview = await service.GetCheckoutPreviewAsync(userId, pkgId);
@@ -174,7 +174,7 @@ public sealed class PaymentServiceTests(DatabaseFixture database)
         Assert.False(redirectEvent.SignatureValid);
 
         // Order is reconciling because payment was unconfirmed
-        Assert.Equal("reconciling", result.Status);
+        Assert.Equal(OrderStatusDto.Reconciling, result.Status);
     }
 
     [Fact]
@@ -189,10 +189,10 @@ public sealed class PaymentServiceTests(DatabaseFixture database)
 
         var result = await service.HandleReturnRedirectAsync(userId, order.OrderCode);
 
-        Assert.Equal("reconciling", result.Status);
+        Assert.Equal(OrderStatusDto.Reconciling, result.Status);
 
         var queried = await service.GetPaymentResultAsync(userId, order.OrderCode);
-        Assert.Equal("reconciling", queried.Status);
+        Assert.Equal(OrderStatusDto.Reconciling, queried.Status);
     }
 
     [Fact]
@@ -207,7 +207,7 @@ public sealed class PaymentServiceTests(DatabaseFixture database)
         // First settle via trusted source
         var settled1 = await service.SettleOrderAsync(
             order.PaymentNo,
-            source: "status_query",
+            source: PaymentEventSource.StatusQuery,
             signatureValid: false,
             rawPayload: "{\"status\":\"paid\"}",
             note: "First status query confirmation");
@@ -227,7 +227,7 @@ public sealed class PaymentServiceTests(DatabaseFixture database)
         // Second settle attempt for same order (e.g. repeated callback or query)
         var settled2 = await service.SettleOrderAsync(
             order.PaymentNo,
-            source: "status_query",
+            source: PaymentEventSource.StatusQuery,
             signatureValid: false,
             rawPayload: "{\"status\":\"paid\"}",
             note: "Repeat query");
@@ -257,11 +257,11 @@ public sealed class PaymentServiceTests(DatabaseFixture database)
 
         // Untrusted source 1: return_redirect
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            service.SettleOrderAsync(order.PaymentNo, source: "return_redirect", signatureValid: false));
+            service.SettleOrderAsync(order.PaymentNo, source: PaymentEventSource.ReturnRedirect, signatureValid: false));
 
         // Untrusted source 2: webhook with signatureValid = false
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            service.SettleOrderAsync(order.PaymentNo, source: "webhook", signatureValid: false));
+            service.SettleOrderAsync(order.PaymentNo, source: PaymentEventSource.Webhook, signatureValid: false));
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
         var txns = await db.CreditTransactions.Where(t => t.OrderId == order.OrderId).ToListAsync();
@@ -278,11 +278,11 @@ public sealed class PaymentServiceTests(DatabaseFixture database)
 
         // Order 1: paid
         var o1 = await service.CreateOrderAsync(userId, pkg1, "http://localhost:5000");
-        await service.SettleOrderAsync(o1.PaymentNo, "status_query", false);
+        await service.SettleOrderAsync(o1.PaymentNo, PaymentEventSource.StatusQuery, false);
 
         // Order 2: paid
         var o2 = await service.CreateOrderAsync(userId, pkg2, "http://localhost:5000");
-        await service.SettleOrderAsync(o2.PaymentNo, "status_query", false);
+        await service.SettleOrderAsync(o2.PaymentNo, PaymentEventSource.StatusQuery, false);
 
         // Seed a mock exam spend (-1 credit)
         await database.SqlAsync($"""
@@ -320,27 +320,27 @@ public sealed class PaymentServiceTests(DatabaseFixture database)
         var u1 = await SeedUserAsync(isVerified: true);
         var oSuccess = await service.CreateOrderAsync(u1, pkgId, "http://localhost:5000");
         var resSuccess = await service.ApplyMockGatewayActionAsync(u1, oSuccess.OrderCode, "success");
-        Assert.Equal("paid", resSuccess.Status);
+        Assert.Equal(OrderStatusDto.Paid, resSuccess.Status);
         Assert.Equal(5, resSuccess.Credits);
 
         // 2. Failed action
         var u2 = await SeedUserAsync(isVerified: true);
         var oFailed = await service.CreateOrderAsync(u2, pkgId, "http://localhost:5000");
         var resFailed = await service.ApplyMockGatewayActionAsync(u2, oFailed.OrderCode, "failed", errorCode: "24");
-        Assert.Equal("failed", resFailed.Status);
+        Assert.Equal(OrderStatusDto.Failed, resFailed.Status);
         Assert.Equal("24", resFailed.GatewayErrorCode);
 
         // 3. Pending/slow gateway action
         var u3 = await SeedUserAsync(isVerified: true);
         var oPending = await service.CreateOrderAsync(u3, pkgId, "http://localhost:5000");
         var resPending = await service.ApplyMockGatewayActionAsync(u3, oPending.OrderCode, "pending");
-        Assert.Equal("reconciling", resPending.Status);
+        Assert.Equal(OrderStatusDto.Reconciling, resPending.Status);
 
         // 4. Expired action
         var u4 = await SeedUserAsync(isVerified: true);
         var oExpired = await service.CreateOrderAsync(u4, pkgId, "http://localhost:5000");
         var resExpired = await service.ApplyMockGatewayActionAsync(u4, oExpired.OrderCode, "expired");
-        Assert.Equal("expired", resExpired.Status);
+        Assert.Equal(OrderStatusDto.Expired, resExpired.Status);
     }
 
     [Fact]
@@ -358,11 +358,11 @@ public sealed class PaymentServiceTests(DatabaseFixture database)
 
         // Learner returns to Result page multiple times while reconciling (simulating 5s refresh)
         var returnRes = await service.HandleReturnRedirectAsync(userId, order.OrderCode);
-        Assert.Equal("reconciling", returnRes.Status);
+        Assert.Equal(OrderStatusDto.Reconciling, returnRes.Status);
 
         // Status check runs while still unresolved in mock gateway
         var statusRes = await service.GetPaymentResultAsync(userId, order.OrderCode);
-        Assert.Equal("reconciling", statusRes.Status);
+        Assert.Equal(OrderStatusDto.Reconciling, statusRes.Status);
 
         // Verify PaymentEvents table has recorded the events without throwing SQL constraint violations
         await using var db = DbContextFactory.Create(database.ConnectionString);
@@ -431,7 +431,7 @@ public sealed class PaymentServiceTests(DatabaseFixture database)
         var returnService = CreateService(mockGateway);
         var result = await returnService.HandleReturnRedirectAsync(userId, order.OrderCode);
 
-        Assert.Equal("expired", result.Status);
+        Assert.Equal(OrderStatusDto.Expired, result.Status);
         Assert.True(mockGateway.IsCancelled(order.PaymentNo));
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
@@ -463,7 +463,7 @@ public sealed class PaymentServiceTests(DatabaseFixture database)
         var resultService = CreateService(mockGateway);
         var result = await resultService.GetPaymentResultAsync(userId, order.OrderCode);
 
-        Assert.Equal("expired", result.Status);
+        Assert.Equal(OrderStatusDto.Expired, result.Status);
         Assert.True(mockGateway.IsCancelled(order.PaymentNo));
 
         await using var db = DbContextFactory.Create(database.ConnectionString);

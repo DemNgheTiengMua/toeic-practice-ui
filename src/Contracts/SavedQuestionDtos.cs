@@ -11,7 +11,7 @@ public sealed record SavedQuestionOptionDto(
 
 public sealed record SavedQuestionItemDto(
     int QuestionId,
-    string Source,
+    SavedQuestionSourceDto Source,
     DateTimeOffset SavedAt,
     int SectionId,
     string SectionCode,
@@ -51,5 +51,5 @@ public sealed record SaveQuestionRequest(string? Source = "manual");
 
 public sealed record SaveQuestionResultDto(
     bool IsSaved,
-    string? Source,
+    SavedQuestionSourceDto? Source,
     DateTimeOffset? SavedAt);

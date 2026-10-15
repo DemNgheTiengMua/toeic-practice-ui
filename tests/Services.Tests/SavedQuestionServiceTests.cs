@@ -96,15 +96,15 @@ public sealed class SavedQuestionServiceTests(DatabaseFixture database)
         var qId = qIds[0];
 
         // First call saves question
-        var res1 = await savedQuestions.SaveQuestionAsync(userId, qId, "manual");
+        var res1 = await savedQuestions.SaveQuestionAsync(userId, qId, SavedQuestionSource.Manual);
         Assert.True(res1.IsSaved);
-        Assert.Equal("manual", res1.Source);
+        Assert.Equal(SavedQuestionSource.Manual, res1.Source);
         Assert.NotNull(res1.SavedAt);
 
         // Second call on same question succeeds idempotently without error
-        var res2 = await savedQuestions.SaveQuestionAsync(userId, qId, "manual");
+        var res2 = await savedQuestions.SaveQuestionAsync(userId, qId, SavedQuestionSource.Manual);
         Assert.True(res2.IsSaved);
-        Assert.Equal("manual", res2.Source);
+        Assert.Equal(SavedQuestionSource.Manual, res2.Source);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
         var rows = await db.SavedQuestions.Where(sq => sq.UserId == userId && sq.QuestionId == qId).ToListAsync();
@@ -125,7 +125,7 @@ public sealed class SavedQuestionServiceTests(DatabaseFixture database)
         Assert.False(res1.IsSaved);
 
         // Save it first
-        await savedQuestions.SaveQuestionAsync(userId, qId, "manual");
+        await savedQuestions.SaveQuestionAsync(userId, qId, SavedQuestionSource.Manual);
         Assert.True(await savedQuestions.IsQuestionSavedAsync(userId, qId));
 
         // Unsave it
@@ -148,14 +148,14 @@ public sealed class SavedQuestionServiceTests(DatabaseFixture database)
         var qId = qIds[0];
 
         // Initially saved as incorrect
-        await savedQuestions.SaveQuestionAsync(userId, qId, "incorrect");
+        await savedQuestions.SaveQuestionAsync(userId, qId, SavedQuestionSource.Incorrect);
         var view1 = await savedQuestions.GetSavedQuestionAsync(userId, qId);
-        Assert.Equal("incorrect", view1.Source);
+        Assert.Equal(SavedQuestionSource.Incorrect, view1.Source);
 
         // Later learner explicitly saves it manually
-        await savedQuestions.SaveQuestionAsync(userId, qId, "manual");
+        await savedQuestions.SaveQuestionAsync(userId, qId, SavedQuestionSource.Manual);
         var view2 = await savedQuestions.GetSavedQuestionAsync(userId, qId);
-        Assert.Equal("manual", view2.Source);
+        Assert.Equal(SavedQuestionSource.Manual, view2.Source);
     }
 
     [Fact]
@@ -171,14 +171,14 @@ public sealed class SavedQuestionServiceTests(DatabaseFixture database)
         var (savedQuestions, _, learners) = CreateServices();
 
         // User1 saves Q1 from CertA
-        await savedQuestions.SaveQuestionAsync(user1, qIdsA[0], "manual");
+        await savedQuestions.SaveQuestionAsync(user1, qIdsA[0], SavedQuestionSource.Manual);
         // User1 switches to CertB to save Q1 from CertB, then switches back to CertA
         await learners.SwitchCertificateAsync(user1, certB);
-        await savedQuestions.SaveQuestionAsync(user1, qIdsB[0], "manual");
+        await savedQuestions.SaveQuestionAsync(user1, qIdsB[0], SavedQuestionSource.Manual);
         await learners.SwitchCertificateAsync(user1, certA);
 
         // User2 saves Q2 from CertA
-        await savedQuestions.SaveQuestionAsync(user2, qIdsA[1], "manual");
+        await savedQuestions.SaveQuestionAsync(user2, qIdsA[1], SavedQuestionSource.Manual);
 
         // User1 viewing CertA should only see User1's question from CertA
         var viewUser1CertA = await savedQuestions.GetSavedQuestionsAsync(user1, new SavedQuestionFilterInput());
@@ -210,11 +210,11 @@ public sealed class SavedQuestionServiceTests(DatabaseFixture database)
         var userId = await SeedLearnerAsync(certCode);
         var (savedQuestions, _, _) = CreateServices();
 
-        await savedQuestions.SaveQuestionAsync(userId, qIds[0], "manual");
-        await savedQuestions.SaveQuestionAsync(userId, qIds[1], "incorrect");
+        await savedQuestions.SaveQuestionAsync(userId, qIds[0], SavedQuestionSource.Manual);
+        await savedQuestions.SaveQuestionAsync(userId, qIds[1], SavedQuestionSource.Incorrect);
 
         // Filter by manual
-        var manualOnly = await savedQuestions.GetSavedQuestionsAsync(userId, new SavedQuestionFilterInput(Source: "manual"));
+        var manualOnly = await savedQuestions.GetSavedQuestionsAsync(userId, new SavedQuestionFilterInput(Source: SavedQuestionSource.Manual));
         Assert.Single(manualOnly.Questions);
         Assert.Equal(qIds[0], manualOnly.Questions[0].QuestionId);
         Assert.Equal(2, manualOnly.TotalSavedCount); // Total overall for cert remains 2
@@ -222,7 +222,7 @@ public sealed class SavedQuestionServiceTests(DatabaseFixture database)
         Assert.Equal(1, manualOnly.IncorrectSavedCount);
 
         // Filter by incorrect
-        var incorrectOnly = await savedQuestions.GetSavedQuestionsAsync(userId, new SavedQuestionFilterInput(Source: "incorrect"));
+        var incorrectOnly = await savedQuestions.GetSavedQuestionsAsync(userId, new SavedQuestionFilterInput(Source: SavedQuestionSource.Incorrect));
         Assert.Single(incorrectOnly.Questions);
         Assert.Equal(qIds[1], incorrectOnly.Questions[0].QuestionId);
 
@@ -240,7 +240,7 @@ public sealed class SavedQuestionServiceTests(DatabaseFixture database)
         var (savedQuestions, _, _) = CreateServices();
         var qId = qIds[0];
 
-        await savedQuestions.SaveQuestionAsync(userId, qId, "manual");
+        await savedQuestions.SaveQuestionAsync(userId, qId, SavedQuestionSource.Manual);
 
         var item = await savedQuestions.GetSavedQuestionAsync(userId, qId);
         Assert.Equal(qId, item.QuestionId);
@@ -286,7 +286,7 @@ public sealed class SavedQuestionServiceTests(DatabaseFixture database)
         // Verify question now exists in SavedQuestions with source = 'incorrect'
         var savedItem = await savedQuestions.GetSavedQuestionAsync(userId, qId);
         Assert.Equal(qId, savedItem.QuestionId);
-        Assert.Equal("incorrect", savedItem.Source);
+        Assert.Equal(SavedQuestionSource.Incorrect, savedItem.Source);
     }
 
     [Fact]
@@ -299,7 +299,7 @@ public sealed class SavedQuestionServiceTests(DatabaseFixture database)
         var qId = qIds[0];
 
         // Manually save first
-        await savedQuestions.SaveQuestionAsync(userId, qId, "manual");
+        await savedQuestions.SaveQuestionAsync(userId, qId, SavedQuestionSource.Manual);
 
         var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId, 1));
 
@@ -310,7 +310,7 @@ public sealed class SavedQuestionServiceTests(DatabaseFixture database)
 
         // Source stays manual
         var savedItem = await savedQuestions.GetSavedQuestionAsync(userId, qId);
-        Assert.Equal("manual", savedItem.Source);
+        Assert.Equal(SavedQuestionSource.Manual, savedItem.Source);
     }
 
     [Fact]
@@ -326,7 +326,7 @@ public sealed class SavedQuestionServiceTests(DatabaseFixture database)
         var qIdA = qIdsA[0];
 
         // Save question while cert A is active
-        await savedQuestions.SaveQuestionAsync(userId, qIdA, "manual");
+        await savedQuestions.SaveQuestionAsync(userId, qIdA, SavedQuestionSource.Manual);
 
         // Verify it loads when cert A is active
         var item = await savedQuestions.GetSavedQuestionAsync(userId, qIdA);
@@ -355,7 +355,7 @@ public sealed class SavedQuestionServiceTests(DatabaseFixture database)
 
         // Saving a question from another certificate must be rejected
         var ex = await Assert.ThrowsAsync<SavedQuestionException>(() =>
-            savedQuestions.SaveQuestionAsync(userId, qIdA, "manual"));
+            savedQuestions.SaveQuestionAsync(userId, qIdA, SavedQuestionSource.Manual));
         Assert.Equal(SavedQuestionException.QuestionNotFound, ex.Code);
     }
 }

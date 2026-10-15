@@ -76,23 +76,23 @@
                   {
                       var badgeClass = order.Status switch
                       {
-                          "paid" => "badge badge--success",
-                          "reconciling" => "badge badge--warning",
-                          "failed" => "badge badge--danger",
+                          OrderStatusDto.Paid => "badge badge--success",
+                          OrderStatusDto.Reconciling => "badge badge--warning",
+                          OrderStatusDto.Failed => "badge badge--danger",
                           _ => "badge"
                       };
                       var displayStatus = order.Status switch
                       {
-                          "paid" => "Paid",
-                          "reconciling" => "Reconciling",
-                          "failed" => "Failed",
-                          "expired" => "Expired",
-                          _ => order.Status
+                          OrderStatusDto.Paid => "Paid",
+                          OrderStatusDto.Reconciling => "Reconciling",
+                          OrderStatusDto.Failed => "Failed",
+                          OrderStatusDto.Expired => "Expired",
+                          _ => "Pending"
                       };
 
                       <tr>
                         <td>
-                          @if (order.Status == "pending" || order.Status == "reconciling")
+                          @if (order.Status is OrderStatusDto.Pending or OrderStatusDto.Reconciling)
                           {
                               <a href="/payment/result?orderCode=@order.OrderCode"><strong>@order.OrderCode</strong></a>
                           }
@@ -103,7 +103,7 @@
                         </td>
                         <td>@order.PackageName (@order.Credits @(order.Credits == 1 ? "credit" : "credits"))</td>
                         <td>@CurrencyFormatter.FormatVnd(order.Amount)</td>
-                        <td>@order.Gateway.ToUpperInvariant()</td>
+                        <td>@order.Gateway.ToWireCode().ToUpperInvariant()</td>
                         <td>@order.CreatedAt.ToString("dd MMM yyyy HH:mm")</td>
                         <td><span class="@badgeClass">@displayStatus</span></td>
                       </tr>

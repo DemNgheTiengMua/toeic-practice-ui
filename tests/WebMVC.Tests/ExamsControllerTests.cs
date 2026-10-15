@@ -44,7 +44,7 @@ public sealed class ExamsControllerTests
             Instructions = new MockExamInstructionsDto(
                 1, 1, "TOEIC", "ETS 2024 — Test 1", "Full test", 120, 200, 1, 8, null,
                 [
-                    new MockExamSectionInfoDto(1, "listening", "Listening", "listening", "P1", "Part 1", 6, 45, 1)
+                    new MockExamSectionInfoDto(1, "listening", "Listening", ModalityDto.Listening, "P1", "Part 1", 6, 45, 1)
                 ]),
         };
 
@@ -77,7 +77,7 @@ public sealed class ExamsControllerTests
     {
         var api = new TestApiClient
         {
-            StartResponse = new StartMockExamResponse(100, 1, "in_progress", DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddHours(2), 7200, false),
+            StartResponse = new StartMockExamResponse(100, 1, AttemptStatusDto.InProgress, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddHours(2), 7200, false),
         };
 
         var controller = CreateController(api);
@@ -109,16 +109,16 @@ public sealed class ExamsControllerTests
     public async Task Take_with_active_attempt_returns_view()
     {
         var q = new AttemptQuestionDto(
-            10, 1, 200, 1, "P1", "Part 1", "listening", "Listening", "listening",
+            10, 1, 200, 1, "P1", "Part 1", "listening", "Listening", ModalityDto.Listening,
             "Look at the picture.", null, null, null, null, null,
             [new AttemptOptionDto(1, "A", "Text A"), new AttemptOptionDto(2, "B", "Text B")],
             null, false);
 
         var take = new AttemptTakeDto(
-            100, 1, "ETS 2024 — Test 1", "TOEIC", "in_progress",
+            100, 1, "ETS 2024 — Test 1", "TOEIC", AttemptStatusDto.InProgress,
             DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddHours(2), 7200,
             200, 0, 0, q,
-            [new NavigatorItemDto(10, 1, 1, "P1", "listening", false, false, true)],
+            [new NavigatorItemDto(10, 1, 1, "P1", ModalityDto.Listening, false, false, true)],
             false);
 
         var api = new TestApiClient { TakeDto = take };
@@ -135,9 +135,9 @@ public sealed class ExamsControllerTests
     [Fact]
     public async Task Take_when_attempt_is_graded_redirects_to_Result()
     {
-        var q = new AttemptQuestionDto(10, 1, 200, 1, "P1", "Part 1", "listening", "Listening", "listening", "Stem", null, null, null, null, null, [], null, false);
+        var q = new AttemptQuestionDto(10, 1, 200, 1, "P1", "Part 1", "listening", "Listening", ModalityDto.Listening, "Stem", null, null, null, null, null, [], null, false);
         var take = new AttemptTakeDto(
-            100, 1, "ETS 2024 — Test 1", "TOEIC", "graded",
+            100, 1, "ETS 2024 — Test 1", "TOEIC", AttemptStatusDto.Graded,
             DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddHours(2), 0,
             200, 200, 0, q, [], false);
 
@@ -228,7 +228,7 @@ public sealed class ExamsControllerTests
     {
         var api = new TestApiClient
         {
-            SubmitResponse = new SubmitAttemptResponse(100, "graded", 800, "B2", "Independent user", DateTimeOffset.UtcNow, false),
+            SubmitResponse = new SubmitAttemptResponse(100, AttemptStatusDto.Graded, 800, "B2", "Independent user", DateTimeOffset.UtcNow, false),
         };
 
         var controller = CreateController(api);
@@ -256,10 +256,10 @@ public sealed class ExamsControllerTests
     public async Task Result_returns_view_with_result_data()
     {
         var resDto = new AttemptResultDto(
-            100, 1, "ETS 2024 — Test 1", 1, "TOEIC", "TOEIC", "graded",
+            100, 1, "ETS 2024 — Test 1", 1, "TOEIC", "TOEIC", AttemptStatusDto.Graded,
             DateTimeOffset.UtcNow.AddHours(-2), DateTimeOffset.UtcNow, 7200, false,
             750, "B1", "Threshold user",
-            [new AttemptSkillScoreDto(1, "listening", "Listening", "listening", 80, 400, 100)],
+            [new AttemptSkillScoreDto(1, "listening", "Listening", ModalityDto.Listening, 80, 400, 100)],
             700, 50);
 
         var api = new TestApiClient { ResultDto = resDto };
@@ -411,7 +411,7 @@ public sealed class ExamsControllerTests
                 new CertificateOptionDto("TOEIC", "TOEIC Test"),
                 1, 750, 750, "B1", "Intermediate",
                 [new ScoreBandItemDto("B1", "Intermediate", 550, 780, 1)],
-                [new ExamHistoryItemDto(100, 1, "ETS 2024 Test 1", 1, "TOEIC", DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow, 750, "B1", "Intermediate", [], "Completed")])
+                [new ExamHistoryItemDto(100, 1, "ETS 2024 Test 1", 1, "TOEIC", DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow, 750, "B1", "Intermediate", [], AttemptStatusDto.Graded)])
         };
 
         var controller = CreateController(api);
@@ -444,7 +444,7 @@ public sealed class ExamsControllerTests
         var api = new TestApiClient
         {
             ReviewDto = new AttemptReviewDto(
-                100, 1, "ETS 2024 Test 1", 1, "TOEIC", "TOEIC Test", "graded",
+                100, 1, "ETS 2024 Test 1", 1, "TOEIC", "TOEIC Test", AttemptStatusDto.Graded,
                 DateTimeOffset.UtcNow.AddHours(-1), DateTimeOffset.UtcNow, 3600, 750, "B1", "Intermediate",
                 [], 2, 2, 2, 0, 0, 0, [], [])
         };

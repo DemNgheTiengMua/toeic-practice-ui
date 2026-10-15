@@ -3,7 +3,7 @@
     Layout = null;
     var session = Model.Session;
     var q = Model.Question;
-    var isFinished = session.Status == "finished";
+    var isFinished = session.Status == PracticeStatusDto.Finished;
     var isAnswered = q.SelectedOptionId.HasValue || q.IsCorrect.HasValue;
     var isReviewMode = isFinished || isAnswered;
     var isSkipped = isFinished && !isAnswered;

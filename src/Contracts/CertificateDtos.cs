@@ -11,7 +11,7 @@ public sealed record CertificateDto(
 public sealed record SkillDto(
     string Code,
     string Name,
-    string Modality,
+    ModalityDto Modality,
     int? DurationMinutes,
     IReadOnlyList<SectionDto> Sections);
 

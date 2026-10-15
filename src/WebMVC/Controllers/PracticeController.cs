@@ -55,7 +55,7 @@ public sealed class PracticeController(
             var bearer = await BearerAsync();
             var session = await Api.GetPracticeSessionInfoAsync(sessionId, bearer, cancellationToken);
 
-            if (session.Status == "finished" && !q.HasValue)
+            if (session.Status == PracticeStatusDto.Finished && !q.HasValue)
             {
                 return RedirectToAction(nameof(Summary), new { sessionId });
             }

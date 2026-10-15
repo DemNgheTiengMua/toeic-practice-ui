@@ -1,3 +1,4 @@
+using BusinessObjects;
 using Contracts;
 using DataAccess;
 using DataAccess.Scaffold;
@@ -54,8 +55,8 @@ public sealed class PackageService(CompanionDbContext db) : IPackageService
                 p.IsFeatured,
                 p.Features,
                 p.DisplayOrder,
-                OrdersSold = p.Orders.Count(o => o.Status == "paid"),
-                TotalRevenue = p.Orders.Where(o => o.Status == "paid").Sum(o => (decimal?)o.Amount) ?? 0m,
+                OrdersSold = p.Orders.Count(o => o.Status == OrderStatus.Paid.ToCode()),
+                TotalRevenue = p.Orders.Where(o => o.Status == OrderStatus.Paid.ToCode()).Sum(o => (decimal?)o.Amount) ?? 0m,
             })
             .ToListAsync(cancellationToken);
 
@@ -98,8 +99,8 @@ public sealed class PackageService(CompanionDbContext db) : IPackageService
                 p.IsFeatured,
                 p.Features,
                 p.DisplayOrder,
-                p.Orders.Count(o => o.Status == "paid"),
-                p.Orders.Where(o => o.Status == "paid").Sum(o => (decimal?)o.Amount) ?? 0m))
+                p.Orders.Count(o => o.Status == OrderStatus.Paid.ToCode()),
+                p.Orders.Where(o => o.Status == OrderStatus.Paid.ToCode()).Sum(o => (decimal?)o.Amount) ?? 0m))
             .FirstOrDefaultAsync(cancellationToken);
     }
 

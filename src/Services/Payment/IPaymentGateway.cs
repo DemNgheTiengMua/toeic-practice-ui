@@ -1,3 +1,4 @@
+using BusinessObjects;
 namespace Services;
 
 public sealed record PaymentGatewayOrderInfo(
@@ -16,19 +17,19 @@ public sealed record WebhookVerificationResult(
     bool IsValid,
     long PaymentNo,
     string? GatewayTxnRef,
-    string Status,
+    GatewayStatus Status,
     string? ErrorCode,
     string RawPayload);
 
 public sealed record GatewayPaymentStatus(
-    string Status,
+    GatewayStatus Status,
     string? GatewayTxnRef,
     string? ErrorCode,
     string RawPayload);
 
 public interface IPaymentGateway
 {
-    string GatewayName { get; }
+    PaymentGateway GatewayName { get; }
 
     Task<PaymentGatewayLinkResult> CreatePaymentLinkAsync(
         PaymentGatewayOrderInfo orderInfo,

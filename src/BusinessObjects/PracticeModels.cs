@@ -7,7 +7,7 @@ public sealed record PracticeSectionItem(
     int SectionId,
     string SkillCode,
     string SkillName,
-    string Modality,
+    Modality Modality,
     string Code,
     string Name,
     int? OptionCount,
@@ -29,12 +29,38 @@ public sealed record PracticeSectionsView(
 /// <summary>Options for launching a new practice drill.</summary>
 public sealed record StartPracticeSessionInput
 {
-    public StartPracticeSessionInput(int sectionId, int? questionCount = 20, string questionSource = "all", string feedbackMode = "immediate")
+    public const string QuestionSourceError = "Question source must be 'all', 'wrong_before', or 'unseen'.";
+    public const string FeedbackModeError = "Feedback mode must be 'immediate' or 'end'.";
+
+    public StartPracticeSessionInput(
+        int sectionId,
+        int? questionCount = 20,
+        QuestionSource questionSource = QuestionSource.All,
+        FeedbackMode feedbackMode = FeedbackMode.Immediate)
     {
         SectionId = sectionId;
         QuestionCount = questionCount ?? 20;
-        QuestionSource = questionSource ?? "all";
-        FeedbackMode = feedbackMode ?? "immediate";
+        QuestionSource = questionSource;
+        FeedbackMode = feedbackMode;
+    }
+
+    /// <summary>From the wire's raw codes; null means the default. An unknown code fails
+    /// validation with the same message the old string check gave.</summary>
+    public static StartPracticeSessionInput FromCodes(int sectionId, int? questionCount, string? questionSource, string? feedbackMode)
+    {
+        var source = QuestionSource.All;
+        if (questionSource is not null && !EnumCodes.TryParse(questionSource, out source))
+        {
+            throw new ValidationException(QuestionSourceError);
+        }
+
+        var mode = FeedbackMode.Immediate;
+        if (feedbackMode is not null && !EnumCodes.TryParse(feedbackMode, out mode))
+        {
+            throw new ValidationException(FeedbackModeError);
+        }
+
+        return new StartPracticeSessionInput(sectionId, questionCount, source, mode);
     }
 
     [Range(1, int.MaxValue, ErrorMessage = "A valid section must be chosen.")]
@@ -43,11 +69,11 @@ public sealed record StartPracticeSessionInput
     [Range(1, 200, ErrorMessage = "Question count must be between 1 and 200.")]
     public int QuestionCount { get; init; }
 
-    [RegularExpression("^(all|wrong_before|unseen)$", ErrorMessage = "Question source must be 'all', 'wrong_before', or 'unseen'.")]
-    public string QuestionSource { get; init; }
+    [EnumDataType(typeof(QuestionSource), ErrorMessage = QuestionSourceError)]
+    public QuestionSource QuestionSource { get; init; }
 
-    [RegularExpression("^(immediate|end)$", ErrorMessage = "Feedback mode must be 'immediate' or 'end'.")]
-    public string FeedbackMode { get; init; }
+    [EnumDataType(typeof(FeedbackMode), ErrorMessage = FeedbackModeError)]
+    public FeedbackMode FeedbackMode { get; init; }
 }
 
 public sealed record PracticeSessionInfo(
@@ -55,12 +81,12 @@ public sealed record PracticeSessionInfo(
     int SectionId,
     string SectionCode,
     string SectionName,
-    string Modality,
+    Modality Modality,
     int QuestionCount,
-    string Status,
+    PracticeStatus Status,
     int CorrectCount,
-    string QuestionSource,
-    string FeedbackMode,
+    QuestionSource QuestionSource,
+    FeedbackMode FeedbackMode,
     DateTimeOffset StartedAt,
     DateTimeOffset? FinishedAt);
 
@@ -120,7 +146,7 @@ public sealed record PracticeSummary(
     int SessionId,
     string SectionCode,
     string SectionName,
-    string Modality,
+    Modality Modality,
     DateTimeOffset StartedAt,
     DateTimeOffset? FinishedAt,
     int TotalQuestions,

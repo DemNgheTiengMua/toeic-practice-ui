@@ -54,7 +54,7 @@ public sealed class CertificateService(CompanionDbContext db) : ICertificateServ
                     .Select(s => new SkillCatalog(
                         s.Code,
                         s.Name,
-                        s.Modality,
+                        EnumCodes.Parse<Modality>(s.Modality),
                         s.DurationMinutes,
                         sections.Where(sec => sec.SkillId == s.SkillId)
                             .Select(sec => new SectionCatalog(

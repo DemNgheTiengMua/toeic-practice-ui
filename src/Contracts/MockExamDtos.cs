@@ -27,7 +27,7 @@ public sealed record MockExamSectionInfoDto(
     int SectionId,
     string SkillCode,
     string SkillName,
-    string Modality,
+    ModalityDto Modality,
     string SectionCode,
     string SectionName,
     int? ExpectedQuestionCount,
@@ -50,7 +50,7 @@ public sealed record MockExamInstructionsDto(
 public sealed record StartMockExamResponse(
     int AttemptId,
     int ExamId,
-    string Status,
+    AttemptStatusDto Status,
     DateTimeOffset StartedAt,
     DateTimeOffset ExpiresAt,
     int RemainingSeconds,
@@ -70,7 +70,7 @@ public sealed record AttemptQuestionDto(
     string SectionName,
     string SkillCode,
     string SkillName,
-    string Modality,
+    ModalityDto Modality,
     string Stem,
     string? ImagePath,
     string? ImageAlt,
@@ -86,7 +86,7 @@ public sealed record NavigatorItemDto(
     int DisplayOrder,
     int SectionId,
     string SectionCode,
-    string Modality,
+    ModalityDto Modality,
     bool IsAnswered,
     bool IsFlagged,
     bool IsCurrent);
@@ -96,7 +96,7 @@ public sealed record AttemptTakeDto(
     int ExamId,
     string ExamName,
     string CertCode,
-    string Status,
+    AttemptStatusDto Status,
     DateTimeOffset StartedAt,
     DateTimeOffset ExpiresAt,
     int RemainingSeconds,
@@ -120,7 +120,7 @@ public sealed record SaveAnswerResultDto(
 
 public sealed record SubmitAttemptResponse(
     int AttemptId,
-    string Status,
+    AttemptStatusDto Status,
     int TotalScore,
     string? BandCode,
     string? BandName,
@@ -131,7 +131,7 @@ public sealed record AttemptSkillScoreDto(
     int SkillId,
     string SkillCode,
     string SkillName,
-    string Modality,
+    ModalityDto Modality,
     int RawScore,
     int ScaledScore,
     int TotalQuestions);
@@ -143,7 +143,7 @@ public sealed record AttemptResultDto(
     int CertId,
     string CertCode,
     string CertName,
-    string Status,
+    AttemptStatusDto Status,
     DateTimeOffset StartedAt,
     DateTimeOffset SubmittedAt,
     int DurationSeconds,
@@ -174,7 +174,7 @@ public sealed record ExamHistoryItemDto(
     string? BandCode,
     string? BandName,
     IReadOnlyList<AttemptSkillScoreDto> SkillScores,
-    string Status);
+    AttemptStatusDto Status);
 
 public sealed record ExamHistoryDto(
     CertificateOptionDto Certificate,
@@ -202,7 +202,7 @@ public sealed record AttemptReviewQuestionDto(
     string SectionName,
     string SkillCode,
     string SkillName,
-    string Modality,
+    ModalityDto Modality,
     string Stem,
     string? ImagePath,
     string? ImageAlt,
@@ -220,7 +220,7 @@ public sealed record ReviewNavigatorItemDto(
     int DisplayOrder,
     int SectionId,
     string SectionCode,
-    string Modality,
+    ModalityDto Modality,
     bool IsAnswered,
     bool IsFlagged,
     bool? IsCorrect);
@@ -232,7 +232,7 @@ public sealed record AttemptReviewDto(
     int CertId,
     string CertCode,
     string CertName,
-    string Status,
+    AttemptStatusDto Status,
     DateTimeOffset StartedAt,
     DateTimeOffset SubmittedAt,
     int DurationSeconds,

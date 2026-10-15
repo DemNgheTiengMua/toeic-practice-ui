@@ -5,10 +5,12 @@
     ViewData["Title"] = "Payment result";
     ViewData["Description"] = "Outcome of your credit purchase.";
     var result = Model.Result;
-    var isPaid = result.Status == "paid";
-    var isFailed = result.Status == "failed";
-    var isExpired = result.Status == "expired";
-    var isReconciling = result.Status == "reconciling" || result.Status == "pending";
+    // A failed load falls through to the final "could not read order status" branch.
+    var loaded = !Model.LoadFailed;
+    var isPaid = loaded && result.Status == OrderStatusDto.Paid;
+    var isFailed = loaded && result.Status == OrderStatusDto.Failed;
+    var isExpired = loaded && result.Status == OrderStatusDto.Expired;
+    var isReconciling = loaded && result.Status is OrderStatusDto.Reconciling or OrderStatusDto.Pending;
 }
 
 @if (isReconciling)
@@ -49,7 +51,7 @@
             <tr><th scope="row">Order code</th><td><strong>@result.OrderCode</strong></td></tr>
             <tr><th scope="row">Package</th><td>@result.PackageName — @result.Credits @(result.Credits == 1 ? "credit" : "credits")</td></tr>
             <tr><th scope="row">Amount</th><td><strong>@CurrencyFormatter.FormatVnd(result.Amount)</strong></td></tr>
-            <tr><th scope="row">Method</th><td>@result.Gateway.ToUpperInvariant()</td></tr>
+            <tr><th scope="row">Method</th><td>@result.Gateway.ToWireCode().ToUpperInvariant()</td></tr>
             <tr><th scope="row">Time</th><td>@(result.PaidAt?.ToString("dd MMM yyyy HH:mm") ?? result.CreatedAt.ToString("dd MMM yyyy HH:mm"))</td></tr>
           </tbody>
         </table>

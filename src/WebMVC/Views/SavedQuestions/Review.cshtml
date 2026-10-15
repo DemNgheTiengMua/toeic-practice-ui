@@ -41,7 +41,7 @@
   <div class="card__body stack">
     <div class="row row--between">
       <span class="text-sm">
-        @if (q.Source == "incorrect")
+        @if (q.Source == SavedQuestionSourceDto.Incorrect)
         {
           <span class="badge badge--danger">Wrong answer</span>
         }

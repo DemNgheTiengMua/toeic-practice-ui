@@ -1,4 +1,5 @@
 using System.Text.Json;
+using BusinessObjects;
 using PayOS.Models.Webhooks;
 using Services;
 using Xunit;
@@ -32,7 +33,7 @@ public sealed class PayOsPaymentGatewayTests
     public void MapPayOsStatus_correctly_maps_to_order_status(string? input, string expected)
     {
         var result = PayOsPaymentGateway.MapPayOsStatus(input);
-        Assert.Equal(expected, result);
+        Assert.Equal(expected, result.ToCode());
     }
 
     [Theory]
@@ -43,7 +44,7 @@ public sealed class PayOsPaymentGatewayTests
     public void MapWebhookCodeToStatus_correctly_maps_code(string? code, string expected)
     {
         var result = PayOsPaymentGateway.MapWebhookCodeToStatus(code);
-        Assert.Equal(expected, result);
+        Assert.Equal(expected, result.ToCode());
     }
 
     [Fact]
@@ -66,7 +67,7 @@ public sealed class PayOsPaymentGatewayTests
         var resWhitespace = await gateway.VerifyWebhookAsync("   ", null);
 
         Assert.False(resEmpty.IsValid);
-        Assert.Equal("failed", resEmpty.Status);
+        Assert.Equal(GatewayStatus.Failed, resEmpty.Status);
         Assert.False(resWhitespace.IsValid);
     }
 
@@ -78,7 +79,7 @@ public sealed class PayOsPaymentGatewayTests
         var res = await gateway.VerifyWebhookAsync("{ invalid json ", "some-sig");
 
         Assert.False(res.IsValid);
-        Assert.Equal("failed", res.Status);
+        Assert.Equal(GatewayStatus.Failed, res.Status);
     }
 
     [Fact]
@@ -99,7 +100,7 @@ public sealed class PayOsPaymentGatewayTests
         var res = await gateway.VerifyWebhookAsync(payload, null);
 
         Assert.False(res.IsValid);
-        Assert.Equal("failed", res.Status);
+        Assert.Equal(GatewayStatus.Failed, res.Status);
         Assert.Equal("MISSING_SIGNATURE", res.ErrorCode);
     }
 
@@ -129,7 +130,7 @@ public sealed class PayOsPaymentGatewayTests
         var res = await gateway.VerifyWebhookAsync(payload, null);
 
         Assert.False(res.IsValid);
-        Assert.Equal("failed", res.Status);
+        Assert.Equal(GatewayStatus.Failed, res.Status);
     }
 
     [Fact]
@@ -176,7 +177,7 @@ public sealed class PayOsPaymentGatewayTests
         Assert.True(validResult.IsValid, $"Verification failed with error: {validResult.ErrorCode}");
         Assert.Equal(2001, validResult.PaymentNo);
         Assert.Equal("plink-2001", validResult.GatewayTxnRef);
-        Assert.Equal("paid", validResult.Status);
+        Assert.Equal(GatewayStatus.Paid, validResult.Status);
         Assert.Equal("00", validResult.ErrorCode);
 
         // Tamper 1: change amount from 50000 to 10000 while keeping original signature
@@ -255,7 +256,7 @@ public sealed class PayOsPaymentGatewayTests
 
         var result = await gateway.VerifyWebhookAsync(failedPayload, null);
         Assert.True(result.IsValid);
-        Assert.Equal("failed", result.Status);
+        Assert.Equal(GatewayStatus.Failed, result.Status);
         Assert.Equal("01", result.ErrorCode);
     }
 
@@ -276,7 +277,7 @@ public sealed class PayOsPaymentGatewayTests
 
         // When querying non-existent order, it returns pending status with error details without throwing
         var result = await gateway.QueryPaymentStatusAsync(999999, "non-existent-link");
-        Assert.Equal("pending", result.Status);
+        Assert.Equal(GatewayStatus.Pending, result.Status);
         Assert.NotNull(result.ErrorCode);
     }
 }

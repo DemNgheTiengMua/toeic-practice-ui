@@ -17,7 +17,7 @@ public static class CatalogEndpoints
                 c.Skills.Select(s => new SkillDto(
                     s.Code,
                     s.Name,
-                    s.Modality,
+                    s.Modality.MapTo<ModalityDto>(),
                     s.DurationMinutes,
                     s.Sections.Select(sec => new SectionDto(sec.Code, sec.Name, sec.ExpectedQuestionCount)).ToList())).ToList(),
                 c.Bands.Select(b => new BandDto(b.Code, b.Name, b.MinTotal, b.MaxTotal)).ToList()));

@@ -38,11 +38,11 @@ public sealed class WeaknessAnalysisService(
 
         var gradedExamCount = await db.ExamAttempts
             .AsNoTracking()
-            .CountAsync(a => a.UserId == userId && a.CertId == activeCertId && a.Status == "graded", cancellationToken);
+            .CountAsync(a => a.UserId == userId && a.CertId == activeCertId && a.Status == AttemptStatus.Graded.ToCode(), cancellationToken);
 
         var completedPracticeCount = await db.PracticeSessions
             .AsNoTracking()
-            .CountAsync(p => p.UserId == userId && p.Section.CertId == activeCertId && p.Status == "finished", cancellationToken);
+            .CountAsync(p => p.UserId == userId && p.Section.CertId == activeCertId && p.Status == PracticeStatus.Finished.ToCode(), cancellationToken);
 
         var sections = await db.Sections
             .AsNoTracking()
@@ -178,7 +178,7 @@ public sealed class WeaknessAnalysisService(
             .Select(r => new RecommendationItem(
                 r.RecId,
                 r.Text,
-                r.Severity,
+                EnumCodes.Parse<RecommendationSeverity>(r.Severity),
                 r.TargetBandCode,
                 r.Skill != null ? r.Skill.Name : null,
                 r.CreatedAt,

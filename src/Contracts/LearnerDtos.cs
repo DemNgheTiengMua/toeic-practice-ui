@@ -31,8 +31,8 @@ public sealed record LatestResultDto(int TotalScore, string? BandCode, string? B
 public sealed record RecentAttemptDto(
     int AttemptId,
     string ExamName,
-    string Purpose,
-    string Status,
+    ExamPurposeDto Purpose,
+    AttemptStatusDto Status,
     DateTimeOffset StartedAt,
     int? TotalScore,
     string? BandCode);
@@ -40,7 +40,7 @@ public sealed record RecentAttemptDto(
 public sealed record RecentPracticeDto(
     int SessionId,
     string SectionName,
-    string Status,
+    PracticeStatusDto Status,
     int CorrectCount,
     int QuestionCount,
     DateTimeOffset StartedAt);

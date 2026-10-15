@@ -109,36 +109,36 @@ else
               </td>
               <td>@order.PackageName</td>
               <td>@CurrencyFormatter.FormatVnd(order.Amount)</td>
-              <td><span class="badge">@order.Gateway.ToUpperInvariant()</span></td>
+              <td><span class="badge">@order.Gateway.ToWireCode().ToUpperInvariant()</span></td>
               <td>@(order.GatewayTxnRef ?? "—")</td>
               <td>@Formatter.Format(order.CreatedAt)</td>
               <td>
                 @switch (order.Status)
                 {
-                  case "paid":
+                  case OrderStatusDto.Paid:
                     <span class="badge badge--success">Paid</span>
                     break;
-                  case "reconciling":
+                  case OrderStatusDto.Reconciling:
                     <span class="badge badge--warning">Reconciling</span>
                     break;
-                  case "pending":
+                  case OrderStatusDto.Pending:
                     <span class="badge">Pending</span>
                     break;
-                  case "failed":
+                  case OrderStatusDto.Failed:
                     <span class="badge badge--danger">Failed</span>
                     break;
-                  case "expired":
+                  case OrderStatusDto.Expired:
                     <span class="badge">Expired</span>
                     break;
                   default:
-                    <span class="badge">@order.Status</span>
+                    <span class="badge">@order.Status.ToWireCode()</span>
                     break;
                 }
               </td>
               <td>
                 <div class="row">
                   <a class="btn btn--sm btn--ghost" href="/admin/orders?@(string.IsNullOrEmpty(Model.Query) ? "" : $"q={Uri.EscapeDataString(Model.Query)}&")@(string.IsNullOrEmpty(Model.Status) ? "" : $"status={Uri.EscapeDataString(Model.Status)}&")detailId=@order.OrderId">Details</a>
-                  @if (order.Status is "reconciling" or "pending")
+                  @if (order.Status is OrderStatusDto.Reconciling or OrderStatusDto.Pending)
                   {
                     <form method="post" action="/admin/orders/@order.OrderId/reconcile" class="no-margin">
                       @Html.AntiForgeryToken()
@@ -201,7 +201,7 @@ else
       <div class="modal__body stack">
         <div class="grid-2">
           <div>
-            <strong>Gateway:</strong> @selected.Order.Gateway.ToUpperInvariant()<br>
+            <strong>Gateway:</strong> @selected.Order.Gateway.ToWireCode().ToUpperInvariant()<br>
             <strong>Payment No:</strong> <code>@selected.Order.PaymentNo</code><br>
             <strong>Txn Reference:</strong> @(selected.Order.GatewayTxnRef ?? "—")<br>
           </div>
@@ -209,23 +209,23 @@ else
             <strong>Status:</strong>
             @switch (selected.Order.Status)
             {
-              case "paid":
+              case OrderStatusDto.Paid:
                 <span class="badge badge--success">Paid</span>
                 break;
-              case "reconciling":
+              case OrderStatusDto.Reconciling:
                 <span class="badge badge--warning">Reconciling</span>
                 break;
-              case "pending":
+              case OrderStatusDto.Pending:
                 <span class="badge">Pending</span>
                 break;
-              case "failed":
+              case OrderStatusDto.Failed:
                 <span class="badge badge--danger">Failed</span>
                 break;
-              case "expired":
+              case OrderStatusDto.Expired:
                 <span class="badge">Expired</span>
                 break;
               default:
-                <span class="badge">@selected.Order.Status</span>
+                <span class="badge">@selected.Order.Status.ToWireCode()</span>
                 break;
             }
             <br>
@@ -278,7 +278,7 @@ else
                     {
                       <span class="badge badge--success">Valid</span>
                     }
-                    else if (ev.Source == "webhook")
+                    else if (ev.Source == PaymentEventSourceDto.Webhook)
                     {
                       <span class="badge badge--danger">Invalid</span>
                     }
@@ -305,7 +305,7 @@ else
         }
       </div>
       <div class="modal__footer row row--between">
-        @if (selected.Order.Status is "reconciling" or "pending")
+        @if (selected.Order.Status is OrderStatusDto.Reconciling or OrderStatusDto.Pending)
         {
           <form method="post" action="/admin/orders/@selected.Order.OrderId/reconcile" class="no-margin">
             @Html.AntiForgeryToken()

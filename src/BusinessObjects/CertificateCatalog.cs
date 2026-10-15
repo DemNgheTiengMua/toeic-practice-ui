@@ -11,7 +11,7 @@ public sealed record CertificateCatalog(
 public sealed record SkillCatalog(
     string Code,
     string Name,
-    string Modality,
+    Modality Modality,
     int? DurationMinutes,
     IReadOnlyList<SectionCatalog> Sections);
 

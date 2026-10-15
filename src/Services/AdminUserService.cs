@@ -1,3 +1,4 @@
+using BusinessObjects;
 using Contracts;
 using DataAccess;
 using DataAccess.Scaffold;
@@ -216,7 +217,7 @@ public sealed class AdminUserService(
         var txn = new CreditTransaction
         {
             UserId = targetUserId,
-            Reason = delta > 0 ? "admin_grant" : "admin_revoke",
+            Reason = (delta > 0 ? CreditReason.AdminGrant : CreditReason.AdminRevoke).ToCode(),
             Delta = delta,
             AdminUserId = adminUserId,
             Note = trimmedReason,

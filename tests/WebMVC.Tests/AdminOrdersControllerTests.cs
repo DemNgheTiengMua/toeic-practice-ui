@@ -17,8 +17,8 @@ public sealed class AdminOrdersControllerTests
     private static AdminOrdersSummaryDto SampleOrdersSummary() => new(
         Orders:
         [
-            new(1, "DH-20261014-0001", 1001, 10, "learner@demo.local", "Learner Demo", 2, "Exam Prep", 5, 199000, "paid", "payos", "plink-1", null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow),
-            new(2, "DH-20261014-0002", 1002, 11, "other@demo.local", "Other Learner", 1, "Pay as you go", 1, 49000, "reconciling", "mock", null, null, DateTimeOffset.UtcNow, null),
+            new(1, "DH-20261014-0001", 1001, 10, "learner@demo.local", "Learner Demo", 2, "Exam Prep", 5, 199000, OrderStatusDto.Paid, PaymentGatewayDto.Payos, "plink-1", null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow),
+            new(2, "DH-20261014-0002", 1002, 11, "other@demo.local", "Other Learner", 1, "Pay as you go", 1, 49000, OrderStatusDto.Reconciling, PaymentGatewayDto.Mock, null, null, DateTimeOffset.UtcNow, null),
         ],
         TotalCount: 2,
         Page: 1,
@@ -29,11 +29,11 @@ public sealed class AdminOrdersControllerTests
         FailedOrExpiredCount: 0);
 
     private static AdminOrderDetailDto SampleOrderDetail(int orderId) => new(
-        Order: new(orderId, "DH-20261014-0001", 1001, 10, "learner@demo.local", "Learner Demo", 2, "Exam Prep", 5, 199000, "paid", "payos", "plink-1", null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow),
+        Order: new(orderId, "DH-20261014-0001", 1001, 10, "learner@demo.local", "Learner Demo", 2, "Exam Prep", 5, 199000, OrderStatusDto.Paid, PaymentGatewayDto.Payos, "plink-1", null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow),
         Events:
         [
-            new(1, orderId, "return_redirect", "pending", false, false, "Browser return", null, DateTimeOffset.UtcNow.AddMinutes(-5)),
-            new(2, orderId, "webhook", "paid", true, true, "Webhook paid", null, DateTimeOffset.UtcNow),
+            new(1, orderId, PaymentEventSourceDto.ReturnRedirect, GatewayStatusDto.Pending, false, false, "Browser return", null, DateTimeOffset.UtcNow.AddMinutes(-5)),
+            new(2, orderId, PaymentEventSourceDto.Webhook, GatewayStatusDto.Paid, true, true, "Webhook paid", null, DateTimeOffset.UtcNow),
         ]);
 
     private static AdminOrdersController CreateController(TestOrdersApiClient api)
@@ -112,7 +112,7 @@ public sealed class AdminOrdersControllerTests
         var api = new TestOrdersApiClient
         {
             ReconcileResult = new PaymentResultDto(
-                2, "DH-20261014-0002", "paid", "Pay as you go", 1, 49000, "mock", DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, 1),
+                2, "DH-20261014-0002", OrderStatusDto.Paid, "Pay as you go", 1, 49000, PaymentGatewayDto.Mock, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, 1),
         };
         var controller = CreateController(api);
 
@@ -179,7 +179,7 @@ public sealed class AdminOrdersControllerTests
         {
             ReconciledOrderId = orderId;
             return Task.FromResult(ReconcileResult ?? new PaymentResultDto(
-                orderId, "DH-20261014-0001", "paid", "Pkg", 5, 199000, "mock", DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, 5));
+                orderId, "DH-20261014-0001", OrderStatusDto.Paid, "Pkg", 5, 199000, PaymentGatewayDto.Mock, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, 5));
         }
     }
 }

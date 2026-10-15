@@ -151,7 +151,7 @@ public sealed class MockExamServiceTests(DatabaseFixture database)
 
         var attempt = await service.StartAttemptAsync(userId, examId);
 
-        Assert.Equal("in_progress", attempt.Status);
+        Assert.Equal(AttemptStatus.InProgress, attempt.Status);
         Assert.False(attempt.IsAutoSubmitted);
         Assert.True(attempt.ExpiresAt > DateTimeOffset.UtcNow.AddMinutes(115));
         Assert.True(attempt.RemainingSeconds > 7100);
@@ -305,7 +305,7 @@ public sealed class MockExamServiceTests(DatabaseFixture database)
 
         var result = await service.SubmitAttemptAsync(userId, attempt.AttemptId, isAutoSubmit: false);
 
-        Assert.Equal("graded", result.Status);
+        Assert.Equal(AttemptStatus.Graded, result.Status);
         Assert.False(result.IsAutoSubmitted);
         Assert.Equal(800, result.TotalScore); // Listening 400 + Reading 400 = 800
         Assert.Equal("HIGH", result.BandCode); // 800 is in HIGH (500-990)

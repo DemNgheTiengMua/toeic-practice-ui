@@ -24,7 +24,7 @@ public sealed record CategoryAccuracyDto(
 public sealed record RecommendationItemDto(
     int RecId,
     string Text,
-    string Severity,
+    RecommendationSeverityDto Severity,
     string? TargetBandCode,
     string? SkillName,
     DateTimeOffset CreatedAt,

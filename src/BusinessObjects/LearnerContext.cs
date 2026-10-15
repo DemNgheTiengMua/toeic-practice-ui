@@ -34,8 +34,8 @@ public sealed record LatestResult(int TotalScore, string? BandCode, string? Band
 public sealed record RecentAttempt(
     int AttemptId,
     string ExamName,
-    string Purpose,
-    string Status,
+    ExamPurpose Purpose,
+    AttemptStatus Status,
     DateTimeOffset StartedAt,
     int? TotalScore,
     string? BandCode);
@@ -43,7 +43,7 @@ public sealed record RecentAttempt(
 public sealed record RecentPractice(
     int SessionId,
     string SectionName,
-    string Status,
+    PracticeStatus Status,
     int CorrectCount,
     int QuestionCount,
     DateTimeOffset StartedAt);

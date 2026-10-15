@@ -30,7 +30,7 @@ public static class WeaknessEndpoints
                 view.FrequentlyMissedCategories.Select(c => new CategoryAccuracyDto(
                     c.CategoryId, c.Code, c.Name, c.Answered, c.Correct, c.AccuracyPercentage)).ToList(),
                 view.Recommendations.Select(r => new RecommendationItemDto(
-                    r.RecId, r.Text, r.Severity, r.TargetBandCode, r.SkillName, r.CreatedAt, r.IsResolved)).ToList(),
+                    r.RecId, r.Text, r.Severity.MapTo<RecommendationSeverityDto>(), r.TargetBandCode, r.SkillName, r.CreatedAt, r.IsResolved)).ToList(),
                 view.PriorityPracticeSection is null ? null : new SectionAccuracyDto(
                     view.PriorityPracticeSection.SectionId,
                     view.PriorityPracticeSection.Code,

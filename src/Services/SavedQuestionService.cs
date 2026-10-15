@@ -24,7 +24,7 @@ public interface ISavedQuestionService
 
     Task<SavedQuestionItem> GetSavedQuestionAsync(int userId, int questionId, CancellationToken cancellationToken = default);
 
-    Task<SaveQuestionResult> SaveQuestionAsync(int userId, int questionId, string source = "manual", CancellationToken cancellationToken = default);
+    Task<SaveQuestionResult> SaveQuestionAsync(int userId, int questionId, SavedQuestionSource source = SavedQuestionSource.Manual, CancellationToken cancellationToken = default);
 
     Task<SaveQuestionResult> UnsaveQuestionAsync(int userId, int questionId, CancellationToken cancellationToken = default);
 
@@ -37,7 +37,7 @@ public sealed class SavedQuestionService(
 {
     private static readonly System.Linq.Expressions.Expression<Func<SavedQuestion, SavedQuestionItem>> QuestionItemProjection = sq => new SavedQuestionItem(
         sq.QuestionId,
-        sq.Source,
+        EnumCodes.Parse<SavedQuestionSource>(sq.Source),
         sq.SavedAt,
         sq.Question.SectionId,
         sq.Question.Section.Code,
@@ -71,8 +71,8 @@ public sealed class SavedQuestionService(
             .Where(sq => sq.UserId == userId && sq.Question.Section.CertId == activeCertId);
 
         var totalSaved = await baseQuery.CountAsync(cancellationToken);
-        var manualSaved = await baseQuery.CountAsync(sq => sq.Source == "manual", cancellationToken);
-        var incorrectSaved = await baseQuery.CountAsync(sq => sq.Source == "incorrect", cancellationToken);
+        var manualSaved = await baseQuery.CountAsync(sq => sq.Source == SavedQuestionSource.Manual.ToCode(), cancellationToken);
+        var incorrectSaved = await baseQuery.CountAsync(sq => sq.Source == SavedQuestionSource.Incorrect.ToCode(), cancellationToken);
 
         var sectionData = await baseQuery
             .Select(sq => new
@@ -103,9 +103,10 @@ public sealed class SavedQuestionService(
             .ToList();
 
         var query = baseQuery;
-        if (!string.IsNullOrWhiteSpace(filter.Source) && (filter.Source == "manual" || filter.Source == "incorrect"))
+        if (filter.Source is { } sourceFilter)
         {
-            query = query.Where(sq => sq.Source == filter.Source);
+            var sourceCode = sourceFilter.ToCode();
+            query = query.Where(sq => sq.Source == sourceCode);
         }
 
         if (filter.SectionId.HasValue)
@@ -144,7 +145,7 @@ public sealed class SavedQuestionService(
             ?? throw new SavedQuestionException(SavedQuestionException.SavedQuestionNotFound, $"Question {questionId} is not in your saved bank.");
     }
 
-    public async Task<SaveQuestionResult> SaveQuestionAsync(int userId, int questionId, string source = "manual", CancellationToken cancellationToken = default)
+    public async Task<SaveQuestionResult> SaveQuestionAsync(int userId, int questionId, SavedQuestionSource source = SavedQuestionSource.Manual, CancellationToken cancellationToken = default)
     {
         var activeCertId = await learners.GetActiveCertIdAsync(userId, cancellationToken);
         var questionExists = await db.Questions
@@ -154,20 +155,20 @@ public sealed class SavedQuestionService(
             throw new SavedQuestionException(SavedQuestionException.QuestionNotFound, $"Question {questionId} does not exist.");
         }
 
-        var normalizedSource = source == "incorrect" ? "incorrect" : "manual";
+        var normalizedSource = source.ToCode();
         var existing = await db.SavedQuestions
             .FirstOrDefaultAsync(sq => sq.UserId == userId && sq.QuestionId == questionId, cancellationToken);
 
         if (existing != null)
         {
             // Idempotent: If user manually saves an automatically saved question, upgrade source to manual
-            if (normalizedSource == "manual" && existing.Source == "incorrect")
+            if (source == SavedQuestionSource.Manual && existing.Source == SavedQuestionSource.Incorrect.ToCode())
             {
-                existing.Source = "manual";
+                existing.Source = SavedQuestionSource.Manual.ToCode();
                 await db.SaveChangesAsync(cancellationToken);
             }
 
-            return new SaveQuestionResult(true, existing.Source, existing.SavedAt);
+            return new SaveQuestionResult(true, EnumCodes.Parse<SavedQuestionSource>(existing.Source), existing.SavedAt);
         }
 
         var saved = new SavedQuestion
@@ -181,7 +182,7 @@ public sealed class SavedQuestionService(
         db.SavedQuestions.Add(saved);
         await db.SaveChangesAsync(cancellationToken);
 
-        return new SaveQuestionResult(true, saved.Source, saved.SavedAt);
+        return new SaveQuestionResult(true, EnumCodes.Parse<SavedQuestionSource>(saved.Source), saved.SavedAt);
     }
 
     public async Task<SaveQuestionResult> UnsaveQuestionAsync(int userId, int questionId, CancellationToken cancellationToken = default)

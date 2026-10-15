@@ -178,11 +178,11 @@ else
           <div class="p-3 border stack reco-item" id="reco-@reco.RecId">
             <div class="row row--between">
               <div class="row">
-                @if (reco.Severity == "major")
+                @if (reco.Severity == RecommendationSeverityDto.Major)
                 {
                   <span class="badge badge--danger">Priority</span>
                 }
-                else if (reco.Severity == "minor")
+                else if (reco.Severity == RecommendationSeverityDto.Minor)
                 {
                   <span class="badge badge--warning">Suggestion</span>
                 }

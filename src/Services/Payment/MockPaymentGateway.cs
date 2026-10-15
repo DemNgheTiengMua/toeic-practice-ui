@@ -1,3 +1,4 @@
+using BusinessObjects;
 using System.Collections.Concurrent;
 using System.Text.Json;
 
@@ -5,23 +6,22 @@ namespace Services;
 
 public interface IMockPaymentGateway : IPaymentGateway
 {
-    void SetOutcome(long paymentNo, string status, string? errorCode = null);
+    void SetOutcome(long paymentNo, GatewayStatus status, string? errorCode = null);
     bool IsCancelled(long paymentNo);
     IReadOnlyCollection<long> CancelledPaymentNos { get; }
 }
 
 public sealed class MockPaymentGateway : IMockPaymentGateway
 {
-    public const string Name = "mock";
-    public string GatewayName => Name;
+    public PaymentGateway GatewayName => PaymentGateway.Mock;
 
-    private readonly ConcurrentDictionary<long, (string Status, string? ErrorCode)> _byPaymentNo = new();
+    private readonly ConcurrentDictionary<long, (GatewayStatus Status, string? ErrorCode)> _byPaymentNo = new();
     private readonly ConcurrentBag<long> _cancelledPaymentNos = new();
 
     public bool IsCancelled(long paymentNo) => _cancelledPaymentNos.Contains(paymentNo);
     public IReadOnlyCollection<long> CancelledPaymentNos => _cancelledPaymentNos.ToArray();
 
-    public void SetOutcome(long paymentNo, string status, string? errorCode = null)
+    public void SetOutcome(long paymentNo, GatewayStatus status, string? errorCode = null)
     {
         _byPaymentNo[paymentNo] = (status, errorCode);
     }
@@ -33,7 +33,7 @@ public sealed class MockPaymentGateway : IMockPaymentGateway
         CancellationToken cancellationToken = default)
     {
         _cancelledPaymentNos.Add(paymentNo);
-        _byPaymentNo[paymentNo] = ("expired", null);
+        _byPaymentNo[paymentNo] = (GatewayStatus.Expired, null);
         return Task.FromResult(true);
     }
 
@@ -53,11 +53,11 @@ public sealed class MockPaymentGateway : IMockPaymentGateway
     {
         if (_byPaymentNo.TryGetValue(paymentNo, out var outcome))
         {
-            return Task.FromResult(new GatewayPaymentStatus(outcome.Status, gatewayTxnRef, outcome.ErrorCode, $"{{ \"status\": \"{outcome.Status}\", \"paymentNo\": {paymentNo} }}"));
+            return Task.FromResult(new GatewayPaymentStatus(outcome.Status, gatewayTxnRef, outcome.ErrorCode, $"{{ \"status\": \"{outcome.Status.ToCode()}\", \"paymentNo\": {paymentNo} }}"));
         }
 
         // Default state when nothing simulated yet: pending
-        return Task.FromResult(new GatewayPaymentStatus("pending", gatewayTxnRef, null, $"{{ \"status\": \"pending\", \"paymentNo\": {paymentNo} }}"));
+        return Task.FromResult(new GatewayPaymentStatus(GatewayStatus.Pending, gatewayTxnRef, null, $"{{ \"status\": \"pending\", \"paymentNo\": {paymentNo} }}"));
     }
 
     public Task<WebhookVerificationResult> VerifyWebhookAsync(
@@ -71,7 +71,7 @@ public sealed class MockPaymentGateway : IMockPaymentGateway
                 IsValid: false,
                 PaymentNo: 0,
                 GatewayTxnRef: null,
-                Status: "failed",
+                Status: GatewayStatus.Failed,
                 ErrorCode: "INVALID_SIGNATURE",
                 RawPayload: payload));
         }
@@ -90,7 +90,9 @@ public sealed class MockPaymentGateway : IMockPaymentGateway
                 paymentNo = ocLong;
             }
 
-            var status = root.TryGetProperty("status", out var sProp) ? sProp.GetString() ?? "paid" : "paid";
+            // A test-only payload: an absent or unknown status reads as paid, as before.
+            var statusCode = root.TryGetProperty("status", out var sProp) ? sProp.GetString() : null;
+            var status = EnumCodes.TryParse<GatewayStatus>(statusCode, out var parsed) ? parsed : GatewayStatus.Paid;
             var errorCode = root.TryGetProperty("errorCode", out var errProp) ? errProp.GetString() : null;
             var txnRef = root.TryGetProperty("gatewayTxnRef", out var txnProp) ? txnProp.GetString() : $"MOCK-{paymentNo}";
 
@@ -109,7 +111,7 @@ public sealed class MockPaymentGateway : IMockPaymentGateway
                 IsValid: true,
                 PaymentNo: 0,
                 GatewayTxnRef: null,
-                Status: "paid",
+                Status: GatewayStatus.Paid,
                 ErrorCode: null,
                 RawPayload: payload));
         }

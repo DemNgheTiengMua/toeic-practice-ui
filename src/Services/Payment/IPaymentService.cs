@@ -1,3 +1,4 @@
+using BusinessObjects;
 using Contracts;
 
 namespace Services;
@@ -27,7 +28,7 @@ public interface IPaymentService
 
     Task<bool> SettleOrderAsync(
         long paymentNo,
-        string source,
+        PaymentEventSource source,
         bool signatureValid,
         string? rawPayload = null,
         string? note = null,

@@ -67,7 +67,7 @@ public sealed class MockExamService(CompanionDbContext db, ILearnerService learn
 
         // Auto-submit any expired in-progress attempts first
         var expiredAttempts = await db.ExamAttempts
-            .Where(a => a.UserId == userId && a.CertId == certId && a.Status == "in_progress" && DateTimeOffset.UtcNow >= a.ExpiresAt)
+            .Where(a => a.UserId == userId && a.CertId == certId && a.Status == AttemptStatus.InProgress.ToCode() && DateTimeOffset.UtcNow >= a.ExpiresAt)
             .Select(a => a.AttemptId)
             .ToListAsync(cancellationToken);
 
@@ -78,7 +78,7 @@ public sealed class MockExamService(CompanionDbContext db, ILearnerService learn
 
         var exams = await db.Exams
             .AsNoTracking()
-            .Where(e => e.CertId == certId && e.Purpose == "mock" && e.Status == "published" && !e.IsDeleted)
+            .Where(e => e.CertId == certId && e.Purpose == ExamPurpose.Mock.ToCode() && e.Status == ExamStatus.Published.ToCode() && !e.IsDeleted)
             .OrderBy(e => e.Name)
             .ToListAsync(cancellationToken);
 
@@ -91,9 +91,9 @@ public sealed class MockExamService(CompanionDbContext db, ILearnerService learn
         foreach (var exam in exams)
         {
             var attemptsForExam = userAttempts.Where(a => a.ExamId == exam.ExamId).ToList();
-            var activeAttempt = attemptsForExam.FirstOrDefault(a => a.Status == "in_progress");
+            var activeAttempt = attemptsForExam.FirstOrDefault(a => a.Status == AttemptStatus.InProgress.ToCode());
             var latestGraded = attemptsForExam
-                .Where(a => a.Status == "graded")
+                .Where(a => a.Status == AttemptStatus.Graded.ToCode())
                 .OrderByDescending(a => a.SubmittedAt ?? a.StartedAt)
                 .FirstOrDefault();
 
@@ -121,7 +121,7 @@ public sealed class MockExamService(CompanionDbContext db, ILearnerService learn
         var certId = await learners.GetActiveCertIdAsync(userId, cancellationToken);
         var exam = await db.Exams
             .AsNoTracking()
-            .Where(e => e.ExamId == examId && e.CertId == certId && e.Purpose == "mock" && e.Status == "published" && !e.IsDeleted)
+            .Where(e => e.ExamId == examId && e.CertId == certId && e.Purpose == ExamPurpose.Mock.ToCode() && e.Status == ExamStatus.Published.ToCode() && !e.IsDeleted)
             .Include(e => e.Cert)
             .SingleOrDefaultAsync(cancellationToken)
             ?? throw new MockExamException(MockExamException.ExamNotFound, $"Mock exam {examId} not found.");
@@ -133,7 +133,7 @@ public sealed class MockExamService(CompanionDbContext db, ILearnerService learn
 
         // Auto-submit expired attempt if any
         var activeAttempt = await db.ExamAttempts
-            .Where(a => a.UserId == userId && a.ExamId == examId && a.Status == "in_progress")
+            .Where(a => a.UserId == userId && a.ExamId == examId && a.Status == AttemptStatus.InProgress.ToCode())
             .FirstOrDefaultAsync(cancellationToken);
 
         if (activeAttempt is not null && DateTimeOffset.UtcNow >= activeAttempt.ExpiresAt)
@@ -152,7 +152,7 @@ public sealed class MockExamService(CompanionDbContext db, ILearnerService learn
                 s.SectionId,
                 s.Skill.Code,
                 s.Skill.Name,
-                s.Modality,
+                EnumCodes.Parse<Modality>(s.Modality),
                 s.Code,
                 s.Name,
                 s.ExpectedQuestionCount,
@@ -178,13 +178,13 @@ public sealed class MockExamService(CompanionDbContext db, ILearnerService learn
     {
         var certId = await learners.GetActiveCertIdAsync(userId, cancellationToken);
         var exam = await db.Exams
-            .Where(e => e.ExamId == examId && e.CertId == certId && e.Purpose == "mock" && e.Status == "published" && !e.IsDeleted)
+            .Where(e => e.ExamId == examId && e.CertId == certId && e.Purpose == ExamPurpose.Mock.ToCode() && e.Status == ExamStatus.Published.ToCode() && !e.IsDeleted)
             .SingleOrDefaultAsync(cancellationToken)
             ?? throw new MockExamException(MockExamException.ExamNotFound, $"Mock exam {examId} not found.");
 
         // Check if there is already an in-progress attempt for this exam
         var existingAttempt = await db.ExamAttempts
-            .Where(a => a.UserId == userId && a.ExamId == examId && a.Status == "in_progress")
+            .Where(a => a.UserId == userId && a.ExamId == examId && a.Status == AttemptStatus.InProgress.ToCode())
             .FirstOrDefaultAsync(cancellationToken);
 
         if (existingAttempt is not null)
@@ -200,7 +200,7 @@ public sealed class MockExamService(CompanionDbContext db, ILearnerService learn
                 return new ExamAttemptInfo(
                     existingAttempt.AttemptId,
                     existingAttempt.ExamId,
-                    existingAttempt.Status,
+                    EnumCodes.Parse<AttemptStatus>(existingAttempt.Status),
                     existingAttempt.StartedAt,
                     existingAttempt.ExpiresAt,
                     remaining,
@@ -229,7 +229,7 @@ public sealed class MockExamService(CompanionDbContext db, ILearnerService learn
             UserId = userId,
             ExamId = examId,
             CertId = certId,
-            Status = "in_progress",
+            Status = AttemptStatus.InProgress.ToCode(),
             StartedAt = now,
             ExpiresAt = expiresAt,
             IsAutoSubmitted = false
@@ -242,7 +242,7 @@ public sealed class MockExamService(CompanionDbContext db, ILearnerService learn
         var creditTxn = new CreditTransaction
         {
             UserId = userId,
-            Reason = "mock_exam_start",
+            Reason = CreditReason.MockExamStart.ToCode(),
             Delta = -ExamCreditCost,
             AttemptId = attempt.AttemptId,
             CreatedAt = now
@@ -284,7 +284,7 @@ public sealed class MockExamService(CompanionDbContext db, ILearnerService learn
         return new ExamAttemptInfo(
             attempt.AttemptId,
             attempt.ExamId,
-            attempt.Status,
+            EnumCodes.Parse<AttemptStatus>(attempt.Status),
             attempt.StartedAt,
             attempt.ExpiresAt,
             remainingSeconds,
@@ -299,13 +299,13 @@ public sealed class MockExamService(CompanionDbContext db, ILearnerService learn
             .SingleOrDefaultAsync(a => a.AttemptId == attemptId && a.UserId == userId, cancellationToken)
             ?? throw new MockExamException(MockExamException.AttemptNotFound, $"Attempt {attemptId} not found.");
 
-        if (attempt.Status == "abandoned")
+        if (attempt.Status == AttemptStatus.Abandoned.ToCode())
         {
             throw new MockExamException(MockExamException.AttemptNotActive, "This exam attempt has been cancelled.");
         }
 
         // Auto-submit if expired
-        if (attempt.Status == "in_progress" && DateTimeOffset.UtcNow >= attempt.ExpiresAt)
+        if (attempt.Status == AttemptStatus.InProgress.ToCode() && DateTimeOffset.UtcNow >= attempt.ExpiresAt)
         {
             await SubmitAttemptInternalAsync(attempt.AttemptId, userId, isAutoSubmit: true, cancellationToken);
             // Reload after auto-submit
@@ -362,7 +362,7 @@ public sealed class MockExamService(CompanionDbContext db, ILearnerService learn
                 q.Section.Name,
                 q.Section.Skill.Code,
                 q.Section.Skill.Name,
-                q.Section.Modality,
+                EnumCodes.Parse<Modality>(q.Section.Modality),
                 q.Stem,
                 q.Group.ImagePath,
                 q.Group.ImageAlt,
@@ -376,7 +376,7 @@ public sealed class MockExamService(CompanionDbContext db, ILearnerService learn
         else
         {
             currentQuestionInfo = new AttemptQuestionInfo(
-                0, 0, 0, 0, "", "", "", "", "reading", "", null, null, null, null, null, [], null, false);
+                0, 0, 0, 0, "", "", "", "", Modality.Reading, "", null, null, null, null, null, [], null, false);
         }
 
         var navigator = answers.Select((a, idx) => new NavigatorItem(
@@ -384,7 +384,7 @@ public sealed class MockExamService(CompanionDbContext db, ILearnerService learn
             idx + 1,
             a.Question.SectionId,
             a.Question.Section.Code,
-            a.Question.Section.Modality,
+            EnumCodes.Parse<Modality>(a.Question.Section.Modality),
             a.SelectedOptionId != null,
             a.IsFlagged,
             idx == targetIndex)).ToList();
@@ -396,7 +396,7 @@ public sealed class MockExamService(CompanionDbContext db, ILearnerService learn
             attempt.ExamId,
             attempt.Exam.Name,
             attempt.Cert.Code,
-            attempt.Status,
+            EnumCodes.Parse<AttemptStatus>(attempt.Status),
             attempt.StartedAt,
             attempt.ExpiresAt,
             remainingSeconds,
@@ -420,7 +420,7 @@ public sealed class MockExamService(CompanionDbContext db, ILearnerService learn
             .SingleOrDefaultAsync(a => a.AttemptId == attemptId && a.UserId == userId, cancellationToken)
             ?? throw new MockExamException(MockExamException.AttemptNotFound, $"Attempt {attemptId} not found.");
 
-        if (attempt.Status != "in_progress")
+        if (attempt.Status != AttemptStatus.InProgress.ToCode())
         {
             throw new MockExamException(MockExamException.AttemptNotActive, "Exam attempt is not in progress.");
         }
@@ -471,17 +471,17 @@ public sealed class MockExamService(CompanionDbContext db, ILearnerService learn
             .SingleOrDefaultAsync(a => a.AttemptId == attemptId && a.UserId == userId, cancellationToken)
             ?? throw new MockExamException(MockExamException.AttemptNotFound, $"Attempt {attemptId} not found.");
 
-        if (attempt.Status == "abandoned")
+        if (attempt.Status == AttemptStatus.Abandoned.ToCode())
         {
             return;
         }
 
-        if (attempt.Status == "graded")
+        if (attempt.Status == AttemptStatus.Graded.ToCode())
         {
             throw new MockExamException(MockExamException.AttemptNotActive, "Graded attempt cannot be cancelled.");
         }
 
-        attempt.Status = "abandoned";
+        attempt.Status = AttemptStatus.Abandoned.ToCode();
         await db.SaveChangesAsync(cancellationToken);
     }
 
@@ -493,12 +493,12 @@ public sealed class MockExamService(CompanionDbContext db, ILearnerService learn
             .SingleOrDefaultAsync(a => a.AttemptId == attemptId && a.UserId == userId, cancellationToken)
             ?? throw new MockExamException(MockExamException.AttemptNotFound, $"Attempt {attemptId} not found.");
 
-        if (attempt.Status == "in_progress" && DateTimeOffset.UtcNow >= attempt.ExpiresAt)
+        if (attempt.Status == AttemptStatus.InProgress.ToCode() && DateTimeOffset.UtcNow >= attempt.ExpiresAt)
         {
             return await SubmitAttemptInternalAsync(attemptId, userId, isAutoSubmit: true, cancellationToken);
         }
 
-        if (attempt.Status != "graded")
+        if (attempt.Status != AttemptStatus.Graded.ToCode())
         {
             throw new MockExamException(MockExamException.AttemptNotActive, "Attempt is not graded.");
         }
@@ -518,18 +518,18 @@ public sealed class MockExamService(CompanionDbContext db, ILearnerService learn
             .SingleOrDefaultAsync(a => a.AttemptId == attemptId && a.UserId == userId, cancellationToken)
             ?? throw new MockExamException(MockExamException.AttemptNotFound, $"Attempt {attemptId} not found.");
 
-        if (attempt.Status == "graded")
+        if (attempt.Status == AttemptStatus.Graded.ToCode())
         {
             return await BuildAttemptResultViewAsync(attempt, cancellationToken);
         }
 
-        if (attempt.Status == "abandoned")
+        if (attempt.Status == AttemptStatus.Abandoned.ToCode())
         {
             throw new MockExamException(MockExamException.AttemptNotActive, "This attempt was abandoned.");
         }
 
         var now = DateTimeOffset.UtcNow;
-        attempt.Status = "graded";
+        attempt.Status = AttemptStatus.Graded.ToCode();
         attempt.SubmittedAt = now;
         if (isAutoSubmit || now >= attempt.ExpiresAt)
         {
@@ -674,7 +674,7 @@ public sealed class MockExamService(CompanionDbContext db, ILearnerService learn
                 s.SkillId,
                 s.Skill.Code,
                 s.Skill.Name,
-                s.Skill.Modality,
+                EnumCodes.Parse<Modality>(s.Skill.Modality),
                 s.RawScore,
                 s.ScaledScore,
                 questionCounts.TryGetValue(s.SkillId, out var count) ? count : 0))
@@ -685,7 +685,7 @@ public sealed class MockExamService(CompanionDbContext db, ILearnerService learn
             .FirstOrDefaultAsync(cancellationToken);
 
         var prevAttempt = await db.ExamAttempts
-            .Where(a => a.UserId == attempt.UserId && a.CertId == attempt.CertId && a.AttemptId != attempt.AttemptId && a.Status == "graded" && a.TotalScore.HasValue)
+            .Where(a => a.UserId == attempt.UserId && a.CertId == attempt.CertId && a.AttemptId != attempt.AttemptId && a.Status == AttemptStatus.Graded.ToCode() && a.TotalScore.HasValue)
             .OrderByDescending(a => a.SubmittedAt ?? a.StartedAt)
             .FirstOrDefaultAsync(cancellationToken);
 
@@ -703,7 +703,7 @@ public sealed class MockExamService(CompanionDbContext db, ILearnerService learn
             attempt.CertId,
             attempt.Cert!.Code,
             attempt.Cert!.Name,
-            attempt.Status,
+            EnumCodes.Parse<AttemptStatus>(attempt.Status),
             attempt.StartedAt,
             attempt.SubmittedAt ?? DateTimeOffset.UtcNow,
             durationSeconds,
@@ -727,7 +727,7 @@ public sealed class MockExamService(CompanionDbContext db, ILearnerService learn
 
         // Auto-submit any expired in-progress attempts first
         var expiredAttempts = await db.ExamAttempts
-            .Where(a => a.UserId == userId && a.CertId == certId && a.Status == "in_progress" && DateTimeOffset.UtcNow >= a.ExpiresAt)
+            .Where(a => a.UserId == userId && a.CertId == certId && a.Status == AttemptStatus.InProgress.ToCode() && DateTimeOffset.UtcNow >= a.ExpiresAt)
             .Select(a => a.AttemptId)
             .ToListAsync(cancellationToken);
 
@@ -738,7 +738,7 @@ public sealed class MockExamService(CompanionDbContext db, ILearnerService learn
 
         var attempts = await db.ExamAttempts
             .AsNoTracking()
-            .Where(a => a.UserId == userId && a.CertId == certId && a.Status == "graded" && a.TotalScore.HasValue)
+            .Where(a => a.UserId == userId && a.CertId == certId && a.Status == AttemptStatus.Graded.ToCode() && a.TotalScore.HasValue)
             .Include(a => a.Exam)
             .OrderByDescending(a => a.SubmittedAt ?? a.StartedAt)
             .ToListAsync(cancellationToken);
@@ -776,7 +776,7 @@ public sealed class MockExamService(CompanionDbContext db, ILearnerService learn
                     s.SkillId,
                     s.Skill.Code,
                     s.Skill.Name,
-                    s.Skill.Modality,
+                    EnumCodes.Parse<Modality>(s.Skill.Modality),
                     s.RawScore,
                     s.ScaledScore,
                     questionCounts.FirstOrDefault(q => q.AttemptId == att.AttemptId && q.SkillId == s.SkillId)?.Count ?? 0))
@@ -796,7 +796,7 @@ public sealed class MockExamService(CompanionDbContext db, ILearnerService learn
                 att.BandCode,
                 bandName,
                 attScores,
-                "Completed"));
+                EnumCodes.Parse<AttemptStatus>(att.Status)));
         }
 
         int totalAttempts = attempts.Count;
@@ -843,7 +843,7 @@ public sealed class MockExamService(CompanionDbContext db, ILearnerService learn
             throw new MockExamException(MockExamException.AttemptNotFound, $"Attempt {attemptId} not found.");
         }
 
-        if (attempt.Status != "graded")
+        if (attempt.Status != AttemptStatus.Graded.ToCode())
         {
             throw new MockExamException(MockExamException.AttemptNotFinished, "Review is available only for finished exam attempts.");
         }
@@ -878,7 +878,7 @@ public sealed class MockExamService(CompanionDbContext db, ILearnerService learn
                 s.SkillId,
                 s.Skill.Code,
                 s.Skill.Name,
-                s.Skill.Modality,
+                EnumCodes.Parse<Modality>(s.Skill.Modality),
                 s.RawScore,
                 s.ScaledScore,
                 questionCounts.TryGetValue(s.SkillId, out var count) ? count : 0))
@@ -914,7 +914,7 @@ public sealed class MockExamService(CompanionDbContext db, ILearnerService learn
                 q.Section.Name,
                 q.Section.Skill.Code,
                 q.Section.Skill.Name,
-                q.Section.Modality,
+                EnumCodes.Parse<Modality>(q.Section.Modality),
                 q.Stem,
                 q.Group.ImagePath,
                 q.Group.ImageAlt,
@@ -932,7 +932,7 @@ public sealed class MockExamService(CompanionDbContext db, ILearnerService learn
                 q.DisplayOrder,
                 q.SectionId,
                 q.Section.Code,
-                q.Section.Modality,
+                EnumCodes.Parse<Modality>(q.Section.Modality),
                 isAnswered,
                 isFlagged,
                 isCorrect));
@@ -953,7 +953,7 @@ public sealed class MockExamService(CompanionDbContext db, ILearnerService learn
             attempt.CertId,
             attempt.Cert?.Code ?? "",
             attempt.Cert?.Name ?? "",
-            attempt.Status,
+            EnumCodes.Parse<AttemptStatus>(attempt.Status),
             attempt.StartedAt,
             attempt.SubmittedAt ?? attempt.StartedAt,
             durationSeconds,

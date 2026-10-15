@@ -83,7 +83,7 @@ public sealed class ExamsController(
             var bearer = await BearerAsync();
             var take = await Api.GetAttemptTakeAsync(attemptId, q, bearer, cancellationToken);
 
-            if (take.Status == "graded" || take.IsAutoSubmitted)
+            if (take.Status == AttemptStatusDto.Graded || take.IsAutoSubmitted)
             {
                 return RedirectToAction(nameof(Result), new { attemptId });
             }

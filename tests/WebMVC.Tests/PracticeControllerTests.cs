@@ -20,8 +20,8 @@ public sealed class PracticeControllerTests
         {
             Catalog = new PracticeCatalogDto(
                 new CertificateOptionDto("TOEIC", "Test of English for International Communication"),
-                [new PracticeSectionDto(1, "listening", "Listening", "listening", "P1", "Part 1", 4, 6, 6, 80, 5, 1)],
-                [new PracticeSectionDto(5, "reading", "Reading", "reading", "P5", "Part 5", 4, 30, 20, 60, 10, 5)],
+                [new PracticeSectionDto(1, "listening", "Listening", ModalityDto.Listening, "P1", "Part 1", 4, 6, 6, 80, 5, 1)],
+                [new PracticeSectionDto(5, "reading", "Reading", ModalityDto.Reading, "P5", "Part 5", 4, 30, 20, 60, 10, 5)],
                 [],
                 null),
         };
@@ -41,7 +41,7 @@ public sealed class PracticeControllerTests
         var api = new TestApiClient
         {
             Session = new PracticeSessionDto(
-                42, 5, "P5", "Part 5", "reading", 20, "in_progress", 0, "all", "immediate", DateTimeOffset.UtcNow, null),
+                42, 5, "P5", "Part 5", ModalityDto.Reading, 20, PracticeStatusDto.InProgress, 0, QuestionSourceDto.All, FeedbackModeDto.Immediate, DateTimeOffset.UtcNow, null),
         };
 
         var controller = CreateController(api);
@@ -58,7 +58,7 @@ public sealed class PracticeControllerTests
         var api = new TestApiClient
         {
             Session = new PracticeSessionDto(
-                42, 5, "P5", "Part 5", "reading", 20, "finished", 15, "all", "immediate", DateTimeOffset.UtcNow, DateTimeOffset.UtcNow),
+                42, 5, "P5", "Part 5", ModalityDto.Reading, 20, PracticeStatusDto.Finished, 15, QuestionSourceDto.All, FeedbackModeDto.Immediate, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow),
         };
 
         var controller = CreateController(api);
@@ -75,7 +75,7 @@ public sealed class PracticeControllerTests
         var api = new TestApiClient
         {
             Session = new PracticeSessionDto(
-                42, 5, "P5", "Part 5", "reading", 20, "in_progress", 0, "all", "immediate", DateTimeOffset.UtcNow, null),
+                42, 5, "P5", "Part 5", ModalityDto.Reading, 20, PracticeStatusDto.InProgress, 0, QuestionSourceDto.All, FeedbackModeDto.Immediate, DateTimeOffset.UtcNow, null),
             Question = new PracticeQuestionDto(
                 42, "Part 5", 101, 1, 20, "Choose the correct word.", "Grammar", "Think about tense.", false,
                 [new PracticeOptionDto(1, "A", "run"), new PracticeOptionDto(2, "B", "ran")],
@@ -165,7 +165,7 @@ public sealed class PracticeControllerTests
         var api = new TestApiClient
         {
             Summary = new PracticeSummaryDto(
-                42, "P5", "Part 5", "reading", DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, 20, 19, 15, 4, 1, 79, 3, 2, 1, []),
+                42, "P5", "Part 5", ModalityDto.Reading, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, 20, 19, 15, 4, 1, 79, 3, 2, 1, []),
         };
 
         var controller = CreateController(api);

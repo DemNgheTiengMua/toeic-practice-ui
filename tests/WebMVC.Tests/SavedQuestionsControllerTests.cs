@@ -22,7 +22,7 @@ public sealed class SavedQuestionsControllerTests
         [
             new SavedQuestionItemDto(
                 QuestionId: 101,
-                Source: "manual",
+                Source: SavedQuestionSourceDto.Manual,
                 SavedAt: DateTimeOffset.UtcNow,
                 SectionId: 5,
                 SectionCode: "P5",
@@ -43,7 +43,7 @@ public sealed class SavedQuestionsControllerTests
                 ]),
             new SavedQuestionItemDto(
                 QuestionId: 102,
-                Source: "incorrect",
+                Source: SavedQuestionSourceDto.Incorrect,
                 SavedAt: DateTimeOffset.UtcNow.AddMinutes(-5),
                 SectionId: 5,
                 SectionCode: "P5",
@@ -176,7 +176,7 @@ public sealed class SavedQuestionsControllerTests
     {
         var api = new TestApiClient
         {
-            SaveResult = new SaveQuestionResultDto(true, "manual", DateTimeOffset.UtcNow),
+            SaveResult = new SaveQuestionResultDto(true, SavedQuestionSourceDto.Manual, DateTimeOffset.UtcNow),
         };
 
         var controller = CreateController(api);
@@ -227,7 +227,7 @@ public sealed class SavedQuestionsControllerTests
     {
         var api = new TestApiClient
         {
-            SaveResult = new SaveQuestionResultDto(true, "manual", DateTimeOffset.UtcNow),
+            SaveResult = new SaveQuestionResultDto(true, SavedQuestionSourceDto.Manual, DateTimeOffset.UtcNow),
         };
 
         var controller = CreateController(api);
@@ -244,7 +244,7 @@ public sealed class SavedQuestionsControllerTests
     {
         var api = new TestApiClient
         {
-            SaveResult = new SaveQuestionResultDto(true, "manual", DateTimeOffset.UtcNow),
+            SaveResult = new SaveQuestionResultDto(true, SavedQuestionSourceDto.Manual, DateTimeOffset.UtcNow),
         };
 
         var controller = CreateController(api);
@@ -260,7 +260,7 @@ public sealed class SavedQuestionsControllerTests
     {
         var api = new TestApiClient
         {
-            SaveResult = new SaveQuestionResultDto(true, "manual", DateTimeOffset.UtcNow),
+            SaveResult = new SaveQuestionResultDto(true, SavedQuestionSourceDto.Manual, DateTimeOffset.UtcNow),
         };
 
         var controller = CreateController(api);

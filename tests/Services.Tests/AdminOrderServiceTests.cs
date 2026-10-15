@@ -107,17 +107,17 @@ public sealed class AdminOrderServiceTests(DatabaseFixture database)
         Assert.Equal(3, detail.Events.Count);
 
         // Acceptance criterion: Order detail shows every payment event in chronological order
-        Assert.Equal("return_redirect", detail.Events[0].Source);
-        Assert.Equal("pending", detail.Events[0].ReportedStatus);
+        Assert.Equal(PaymentEventSourceDto.ReturnRedirect, detail.Events[0].Source);
+        Assert.Equal(GatewayStatusDto.Pending, detail.Events[0].ReportedStatus);
         Assert.False(detail.Events[0].SignatureValid);
         Assert.False(detail.Events[0].WasApplied);
 
-        Assert.Equal("status_query", detail.Events[1].Source);
-        Assert.Equal("pending", detail.Events[1].ReportedStatus);
+        Assert.Equal(PaymentEventSourceDto.StatusQuery, detail.Events[1].Source);
+        Assert.Equal(GatewayStatusDto.Pending, detail.Events[1].ReportedStatus);
         Assert.False(detail.Events[1].WasApplied);
 
-        Assert.Equal("webhook", detail.Events[2].Source);
-        Assert.Equal("paid", detail.Events[2].ReportedStatus);
+        Assert.Equal(PaymentEventSourceDto.Webhook, detail.Events[2].Source);
+        Assert.Equal(GatewayStatusDto.Paid, detail.Events[2].ReportedStatus);
         Assert.True(detail.Events[2].SignatureValid);
         Assert.True(detail.Events[2].WasApplied);
 

@@ -61,7 +61,7 @@ public static class ExamEndpoints
                         s.SectionId,
                         s.SkillCode,
                         s.SkillName,
-                        s.Modality,
+                        s.Modality.MapTo<ModalityDto>(),
                         s.SectionCode,
                         s.SectionName,
                         s.ExpectedQuestionCount,
@@ -86,7 +86,7 @@ public static class ExamEndpoints
                 return Results.Ok(new StartMockExamResponse(
                     attempt.AttemptId,
                     attempt.ExamId,
-                    attempt.Status,
+                    attempt.Status.MapTo<AttemptStatusDto>(),
                     attempt.StartedAt,
                     attempt.ExpiresAt,
                     attempt.RemainingSeconds,
@@ -122,7 +122,7 @@ public static class ExamEndpoints
                     qInfo.SectionName,
                     qInfo.SkillCode,
                     qInfo.SkillName,
-                    qInfo.Modality,
+                    qInfo.Modality.MapTo<ModalityDto>(),
                     qInfo.Stem,
                     qInfo.ImagePath,
                     qInfo.ImageAlt,
@@ -138,7 +138,7 @@ public static class ExamEndpoints
                     take.ExamId,
                     take.ExamName,
                     take.CertCode,
-                    take.Status,
+                    take.Status.MapTo<AttemptStatusDto>(),
                     take.StartedAt,
                     take.ExpiresAt,
                     take.RemainingSeconds,
@@ -147,7 +147,7 @@ public static class ExamEndpoints
                     take.FlaggedCount,
                     currentQDto,
                     take.Navigator.Select(n => new NavigatorItemDto(
-                        n.QuestionId, n.DisplayOrder, n.SectionId, n.SectionCode, n.Modality, n.IsAnswered, n.IsFlagged, n.IsCurrent)).ToList(),
+                        n.QuestionId, n.DisplayOrder, n.SectionId, n.SectionCode, n.Modality.MapTo<ModalityDto>(), n.IsAnswered, n.IsFlagged, n.IsCurrent)).ToList(),
                     take.IsAutoSubmitted));
             }
             catch (MockExamException ex) when (ex.Code == MockExamException.AttemptNotFound)
@@ -207,7 +207,7 @@ public static class ExamEndpoints
             {
                 var res = await mockExamService.SubmitAttemptAsync(CurrentUserId(http), attemptId, isAutoSubmit: false, cancellationToken);
                 return Results.Ok(new SubmitAttemptResponse(
-                    res.AttemptId, res.Status, res.TotalScore, res.BandCode, res.BandName, res.SubmittedAt, res.IsAutoSubmitted));
+                    res.AttemptId, res.Status.MapTo<AttemptStatusDto>(), res.TotalScore, res.BandCode, res.BandName, res.SubmittedAt, res.IsAutoSubmitted));
             }
             catch (MockExamException ex) when (ex.Code == MockExamException.AttemptNotFound)
             {
@@ -256,7 +256,7 @@ public static class ExamEndpoints
                     r.CertId,
                     r.CertCode,
                     r.CertName,
-                    r.Status,
+                    r.Status.MapTo<AttemptStatusDto>(),
                     r.StartedAt,
                     r.SubmittedAt,
                     r.DurationSeconds,
@@ -265,7 +265,7 @@ public static class ExamEndpoints
                     r.BandCode,
                     r.BandName,
                     r.SkillScores.Select(s => new AttemptSkillScoreDto(
-                        s.SkillId, s.SkillCode, s.SkillName, s.Modality, s.RawScore, s.ScaledScore, s.TotalQuestions)).ToList(),
+                        s.SkillId, s.SkillCode, s.SkillName, s.Modality.MapTo<ModalityDto>(), s.RawScore, s.ScaledScore, s.TotalQuestions)).ToList(),
                     r.PreviousAttemptScore,
                     r.ScoreDelta));
             }
@@ -305,8 +305,8 @@ public static class ExamEndpoints
                     a.BandCode,
                     a.BandName,
                     a.SkillScores.Select(s => new AttemptSkillScoreDto(
-                        s.SkillId, s.SkillCode, s.SkillName, s.Modality, s.RawScore, s.ScaledScore, s.TotalQuestions)).ToList(),
-                    a.Status)).ToList()));
+                        s.SkillId, s.SkillCode, s.SkillName, s.Modality.MapTo<ModalityDto>(), s.RawScore, s.ScaledScore, s.TotalQuestions)).ToList(),
+                    a.Status.MapTo<AttemptStatusDto>())).ToList()));
         });
 
         learner.MapGet("/attempts/{attemptId:int}/review", async Task<IResult> (
@@ -325,7 +325,7 @@ public static class ExamEndpoints
                     review.CertId,
                     review.CertCode,
                     review.CertName,
-                    review.Status,
+                    review.Status.MapTo<AttemptStatusDto>(),
                     review.StartedAt,
                     review.SubmittedAt,
                     review.DurationSeconds,
@@ -333,7 +333,7 @@ public static class ExamEndpoints
                     review.BandCode,
                     review.BandName,
                     review.SkillScores.Select(s => new AttemptSkillScoreDto(
-                        s.SkillId, s.SkillCode, s.SkillName, s.Modality, s.RawScore, s.ScaledScore, s.TotalQuestions)).ToList(),
+                        s.SkillId, s.SkillCode, s.SkillName, s.Modality.MapTo<ModalityDto>(), s.RawScore, s.ScaledScore, s.TotalQuestions)).ToList(),
                     review.TotalQuestions,
                     review.AnsweredCount,
                     review.CorrectCount,
@@ -349,7 +349,7 @@ public static class ExamEndpoints
                         q.SectionName,
                         q.SkillCode,
                         q.SkillName,
-                        q.Modality,
+                        q.Modality.MapTo<ModalityDto>(),
                         q.Stem,
                         q.ImagePath,
                         q.ImageAlt,
@@ -362,7 +362,7 @@ public static class ExamEndpoints
                         q.IsCorrect,
                         q.IsFlagged)).ToList(),
                     review.Navigator.Select(n => new ReviewNavigatorItemDto(
-                        n.QuestionId, n.DisplayOrder, n.SectionId, n.SectionCode, n.Modality, n.IsAnswered, n.IsFlagged, n.IsCorrect)).ToList()));
+                        n.QuestionId, n.DisplayOrder, n.SectionId, n.SectionCode, n.Modality.MapTo<ModalityDto>(), n.IsAnswered, n.IsFlagged, n.IsCorrect)).ToList()));
             }
             catch (MockExamException ex) when (ex.Code == MockExamException.AttemptNotFound)
             {

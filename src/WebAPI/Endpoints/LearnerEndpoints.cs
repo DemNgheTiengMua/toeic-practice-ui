@@ -58,14 +58,14 @@ public static class LearnerEndpoints
                 dashboard.AttemptCount,
                 dashboard.PracticeCount,
                 dashboard.RecentAttempts.Select(a => new RecentAttemptDto(
-                    a.AttemptId, a.ExamName, a.Purpose, a.Status, a.StartedAt, a.TotalScore, a.BandCode)).ToList(),
+                    a.AttemptId, a.ExamName, a.Purpose.MapTo<ExamPurposeDto>(), a.Status.MapTo<AttemptStatusDto>(), a.StartedAt, a.TotalScore, a.BandCode)).ToList(),
                 dashboard.RecentPractice.Select(p => new RecentPracticeDto(
-                    p.SessionId, p.SectionName, p.Status, p.CorrectCount, p.QuestionCount, p.StartedAt)).ToList(),
+                    p.SessionId, p.SectionName, p.Status.MapTo<PracticeStatusDto>(), p.CorrectCount, p.QuestionCount, p.StartedAt)).ToList(),
                 dashboard.UnfinishedAttempt is { } ua
-                    ? new RecentAttemptDto(ua.AttemptId, ua.ExamName, ua.Purpose, ua.Status, ua.StartedAt, ua.TotalScore, ua.BandCode)
+                    ? new RecentAttemptDto(ua.AttemptId, ua.ExamName, ua.Purpose.MapTo<ExamPurposeDto>(), ua.Status.MapTo<AttemptStatusDto>(), ua.StartedAt, ua.TotalScore, ua.BandCode)
                     : null,
                 dashboard.UnfinishedPractice is { } up
-                    ? new RecentPracticeDto(up.SessionId, up.SectionName, up.Status, up.CorrectCount, up.QuestionCount, up.StartedAt)
+                    ? new RecentPracticeDto(up.SessionId, up.SectionName, up.Status.MapTo<PracticeStatusDto>(), up.CorrectCount, up.QuestionCount, up.StartedAt)
                     : null));
         });
     }

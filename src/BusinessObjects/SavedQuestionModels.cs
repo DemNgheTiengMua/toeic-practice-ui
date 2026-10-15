@@ -11,7 +11,7 @@ public sealed record SavedQuestionOption(
 
 public sealed record SavedQuestionItem(
     int QuestionId,
-    string Source,
+    SavedQuestionSource Source,
     DateTimeOffset SavedAt,
     int SectionId,
     string SectionCode,
@@ -48,11 +48,11 @@ public sealed record SavedQuestionsView(
     IReadOnlyList<SavedQuestionCategoryFilter> Categories);
 
 public sealed record SavedQuestionFilterInput(
-    string? Source = null,
+    SavedQuestionSource? Source = null,
     int? SectionId = null,
     int? CategoryId = null);
 
 public sealed record SaveQuestionResult(
     bool IsSaved,
-    string? Source,
+    SavedQuestionSource? Source,
     DateTimeOffset? SavedAt);

@@ -1,3 +1,4 @@
+using BusinessObjects;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.EntityFrameworkCore;
 
@@ -276,11 +277,11 @@ public sealed class LearnerServiceTests(DatabaseFixture database)
         var dashboard = await CreateService().GetDashboardAsync(userId);
 
         Assert.NotNull(dashboard.UnfinishedAttempt);
-        Assert.Equal("in_progress", dashboard.UnfinishedAttempt.Status);
+        Assert.Equal(AttemptStatus.InProgress, dashboard.UnfinishedAttempt.Status);
         Assert.Equal($"Mock {code}", dashboard.UnfinishedAttempt.ExamName);
 
         Assert.NotNull(dashboard.UnfinishedPractice);
-        Assert.Equal("in_progress", dashboard.UnfinishedPractice.Status);
+        Assert.Equal(PracticeStatus.InProgress, dashboard.UnfinishedPractice.Status);
         Assert.Equal($"Photographs {code}", dashboard.UnfinishedPractice.SectionName);
         Assert.Equal(20, dashboard.UnfinishedPractice.QuestionCount);
     }

@@ -41,7 +41,7 @@ public sealed class WeaknessAnalysisControllerTests
             : [],
         Recommendations: hasData
             ? [
-                new RecommendationItemDto(101, "Focus on inference questions in Part 7", "major", "B2", "Reading", DateTimeOffset.UtcNow, false)
+                new RecommendationItemDto(101, "Focus on inference questions in Part 7", RecommendationSeverityDto.Major, "B2", "Reading", DateTimeOffset.UtcNow, false)
               ]
             : [],
         PriorityPracticeSection: hasData

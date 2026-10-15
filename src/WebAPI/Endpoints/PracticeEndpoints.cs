@@ -19,7 +19,7 @@ public static class PracticeEndpoints
         {
             var view = await practiceService.GetPracticeSectionsAsync(CurrentUserId(http), cancellationToken);
             static PracticeSectionDto ToSectionDto(PracticeSectionItem s) => new(
-                s.SectionId, s.SkillCode, s.SkillName, s.Modality, s.Code, s.Name, s.OptionCount,
+                s.SectionId, s.SkillCode, s.SkillName, s.Modality.MapTo<ModalityDto>(), s.Code, s.Name, s.OptionCount,
                 s.ExpectedQuestionCount, s.AvailableQuestionCount, s.AccuracyPercentage, s.AnsweredCount, s.DisplayOrder);
 
             return Results.Ok(new PracticeCatalogDto(
@@ -30,8 +30,8 @@ public static class PracticeEndpoints
                 view.WeakestSection is { } w ? ToSectionDto(w) : null,
                 view.UnfinishedSession is { } ufs
                     ? new PracticeSessionDto(
-                        ufs.SessionId, ufs.SectionId, ufs.SectionCode, ufs.SectionName, ufs.Modality,
-                        ufs.QuestionCount, ufs.Status, ufs.CorrectCount, ufs.QuestionSource, ufs.FeedbackMode,
+                        ufs.SessionId, ufs.SectionId, ufs.SectionCode, ufs.SectionName, ufs.Modality.MapTo<ModalityDto>(),
+                        ufs.QuestionCount, ufs.Status.MapTo<PracticeStatusDto>(), ufs.CorrectCount, ufs.QuestionSource.MapTo<QuestionSourceDto>(), ufs.FeedbackMode.MapTo<FeedbackModeDto>(),
                         ufs.StartedAt, ufs.FinishedAt)
                     : null));
         });
@@ -44,11 +44,11 @@ public static class PracticeEndpoints
         {
             try
             {
-                var input = new StartPracticeSessionInput(
+                var input = StartPracticeSessionInput.FromCodes(
                     request.SectionId,
                     request.QuestionCount,
-                    request.QuestionSource ?? "all",
-                    request.FeedbackMode ?? "immediate");
+                    request.QuestionSource,
+                    request.FeedbackMode);
 
                 var session = await practiceService.StartSessionAsync(CurrentUserId(http), input, cancellationToken);
                 return Results.Ok(new PracticeSessionDto(
@@ -56,12 +56,12 @@ public static class PracticeEndpoints
                     session.SectionId,
                     session.SectionCode,
                     session.SectionName,
-                    session.Modality,
+                    session.Modality.MapTo<ModalityDto>(),
                     session.QuestionCount,
-                    session.Status,
+                    session.Status.MapTo<PracticeStatusDto>(),
                     session.CorrectCount,
-                    session.QuestionSource,
-                    session.FeedbackMode,
+                    session.QuestionSource.MapTo<QuestionSourceDto>(),
+                    session.FeedbackMode.MapTo<FeedbackModeDto>(),
                     session.StartedAt,
                     session.FinishedAt));
             }
@@ -97,12 +97,12 @@ public static class PracticeEndpoints
                     session.SectionId,
                     session.SectionCode,
                     session.SectionName,
-                    session.Modality,
+                    session.Modality.MapTo<ModalityDto>(),
                     session.QuestionCount,
-                    session.Status,
+                    session.Status.MapTo<PracticeStatusDto>(),
                     session.CorrectCount,
-                    session.QuestionSource,
-                    session.FeedbackMode,
+                    session.QuestionSource.MapTo<QuestionSourceDto>(),
+                    session.FeedbackMode.MapTo<FeedbackModeDto>(),
                     session.StartedAt,
                     session.FinishedAt));
             }
@@ -233,7 +233,7 @@ public static class PracticeEndpoints
                     s.SessionId,
                     s.SectionCode,
                     s.SectionName,
-                    s.Modality,
+                    s.Modality.MapTo<ModalityDto>(),
                     s.StartedAt,
                     s.FinishedAt,
                     s.TotalQuestions,
