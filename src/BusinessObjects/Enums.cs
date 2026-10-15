@@ -209,3 +209,18 @@ public enum PathModuleItemType
     Mentor,
 }
 
+/// <summary>CK_Mentor_Type: human, ai.</summary>
+public enum MentorType
+{
+    Human,
+    Ai,
+}
+
+/// <summary>CK_Slots_Status: open, booked, closed.</summary>
+public enum SlotStatus
+{
+    Open,
+    Booked,
+    Closed,
+}
+

@@ -37,6 +37,8 @@ public sealed class EnumCodesTests
         { typeof(LearnerPathStatus), typeof(LearnerPathStatusDto), "CK_LearnerPaths_Status" },
         { typeof(LearnerPathStepStatus), typeof(LearnerPathStepStatusDto), "CK_Steps_Status" },
         { typeof(PathModuleItemType), typeof(PathModuleItemTypeDto), "CK_PMI_Type" },
+        { typeof(MentorType), typeof(MentorTypeDto), "CK_Mentor_Type" },
+        { typeof(SlotStatus), typeof(SlotStatusDto), "CK_Slots_Status" },
     };
 
 

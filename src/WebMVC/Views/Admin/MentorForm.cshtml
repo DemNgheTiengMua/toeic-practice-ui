@@ -1,0 +1,188 @@
+@model WebMVC.Models.MentorFormViewModel
+@{
+    Layout = "_AdminLayout";
+    var isEdit = Model.MentorId.HasValue;
+    ViewData["Title"] = isEdit ? $"Edit mentor — {Model.DisplayName}" : "Create new mentor";
+    ViewData["Description"] = isEdit ? "Update mentor profile details" : "Register a new human or AI mentor";
+    var actionUrl = isEdit ? $"/admin/mentors/{Model.MentorId}/edit" : "/admin/mentors/create";
+}
+
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+  <a href="/admin" class="breadcrumbs__item">Admin</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <a href="/admin/mentors" class="breadcrumbs__item">Mentors</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <span class="breadcrumbs__item" aria-current="page">@(isEdit ? "Edit mentor" : "Create mentor")</span>
+</nav>
+
+<div class="row row--between">
+  <h1>@(isEdit ? $"Edit mentor — {Model.DisplayName}" : "Create new mentor")</h1>
+</div>
+
+<div class="card" style="max-width: 680px">
+  <div class="card__body">
+    <form method="post" action="@actionUrl" class="stack">
+      @Html.AntiForgeryToken()
+      <div asp-validation-summary="ModelOnly" class="alert alert--danger"></div>
+
+      <div class="grid-2">
+        <div class="field">
+          <label class="field__label" for="mentor-type">Mentor type</label>
+          @if (isEdit)
+          {
+            <input class="field__input" value="@(Model.Type == "ai" ? "AI Mentor" : "Human Mentor")" readonly disabled>
+            <input type="hidden" name="Type" value="@Model.Type">
+          }
+          else
+          {
+            <select class="field__input" id="mentor-type" name="Type">
+              <option value="human" selected="@(Model.Type == "human")">Human mentor</option>
+              <option value="ai" selected="@(Model.Type == "ai")">AI mentor</option>
+            </select>
+          }
+          <span asp-validation-for="Type" class="text-xs text-danger"></span>
+        </div>
+
+        <div class="field" id="user-field-group">
+          <label class="field__label" for="mentor-user">User account (for human mentors)</label>
+          <select class="field__input" id="mentor-user" name="UserId">
+            <option value="">-- Select user --</option>
+            @foreach (var user in Model.Users)
+            {
+              <option value="@user.UserId" selected="@(Model.UserId == user.UserId)">
+                @(user.FullName ?? user.Email) (@user.Email)
+              </option>
+            }
+          </select>
+          <span asp-validation-for="UserId" class="text-xs text-danger"></span>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="mentor-name">Display name</label>
+        <input class="field__input" id="mentor-name" name="DisplayName" value="@Model.DisplayName" required maxlength="120">
+        <span asp-validation-for="DisplayName" class="text-xs text-danger"></span>
+      </div>
+
+      <div class="grid-2">
+        <div class="field">
+          <label class="field__label" for="mentor-cert">Certificate</label>
+          <select class="field__input" id="mentor-cert" name="CertId" required>
+            @foreach (var cert in Model.Certificates)
+            {
+              <option value="@(cert.Code == "TOEIC" ? 1 : cert.Code == "IELTS" ? 2 : 3)" selected="@(Model.CertId == (cert.Code == "TOEIC" ? 1 : cert.Code == "IELTS" ? 2 : 3))">
+                @cert.Code — @cert.Name
+              </option>
+            }
+          </select>
+          <span asp-validation-for="CertId" class="text-xs text-danger"></span>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="mentor-skill">Skill (optional)</label>
+          <select class="field__input" id="mentor-skill" name="SkillId">
+            <option value="">All skills / General</option>
+            @foreach (var cert in Model.Certificates)
+            {
+              var cId = cert.Code == "TOEIC" ? 1 : cert.Code == "IELTS" ? 2 : 3;
+              @foreach (var s in cert.Skills)
+              {
+                var sId = s.Code switch {
+                  "LIST" when cId == 1 => 1,
+                  "READ" when cId == 1 => 2,
+                  "LIST" when cId == 2 => 3,
+                  "READ" when cId == 2 => 4,
+                  "WRIT" when cId == 2 => 5,
+                  "SPEA" when cId == 2 => 6,
+                  "LIST" when cId == 3 => 7,
+                  "READ" when cId == 3 => 8,
+                  "WRIT" when cId == 3 => 9,
+                  "SPEA" when cId == 3 => 10,
+                  _ => 1
+                };
+                <option value="@sId" data-cert="@cId" selected="@(Model.SkillId == sId)">
+                  [@cert.Code] @s.Name (@s.Modality)
+                </option>
+              }
+            }
+          </select>
+          <span asp-validation-for="SkillId" class="text-xs text-danger"></span>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="mentor-headline">Headline</label>
+        <input class="field__input" id="mentor-headline" name="Headline" value="@Model.Headline" maxlength="200" placeholder="e.g. 10 years teaching TOEIC. Specializes in listening strategies.">
+        <span asp-validation-for="Headline" class="text-xs text-danger"></span>
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="mentor-expertise">Expertise</label>
+        <input class="field__input" id="mentor-expertise" name="Expertise" value="@Model.Expertise" maxlength="400" placeholder="e.g. Listening strategies, pronunciation, test-taking techniques">
+        <span asp-validation-for="Expertise" class="text-xs text-danger"></span>
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="mentor-bio">Biography</label>
+        <textarea class="field__input" id="mentor-bio" name="Bio" rows="4">@Model.Bio</textarea>
+        <span asp-validation-for="Bio" class="text-xs text-danger"></span>
+      </div>
+
+      <div class="grid-3">
+        <div class="field">
+          <label class="field__label" for="mentor-credits">Price (credits)</label>
+          <input class="field__input" id="mentor-credits" name="PriceCredits" type="number" min="1" value="@Model.PriceCredits" required>
+          <span asp-validation-for="PriceCredits" class="text-xs text-danger"></span>
+        </div>
+        <div class="field">
+          <label class="field__label" for="mentor-payout">Fee per slot (VND)</label>
+          <input class="field__input" id="mentor-payout" name="PricePerSlot" type="number" min="0" step="10000" value="@((long)Model.PricePerSlot)" required>
+          <span asp-validation-for="PricePerSlot" class="text-xs text-danger"></span>
+        </div>
+        <div class="field">
+          <label class="field__label" for="mentor-duration">Duration (minutes)</label>
+          <input class="field__input" id="mentor-duration" name="SessionMinutes" type="number" min="15" max="300" step="15" value="@Model.SessionMinutes" required>
+          <span asp-validation-for="SessionMinutes" class="text-xs text-danger"></span>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="checkbox">
+          <input type="checkbox" name="IsActive" value="true" @(Model.IsActive ? "checked" : "")>
+          <span>Active (listed on public mentor browser)</span>
+        </label>
+      </div>
+
+      <div class="row mt-4">
+        <button type="submit" class="btn btn--primary">@(isEdit ? "Save changes" : "Create mentor")</button>
+        <a class="btn btn--ghost" href="/admin/mentors">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+@section Scripts {
+  <script>
+    (function() {
+      var typeSelect = document.getElementById('mentor-type');
+      var userGroup = document.getElementById('user-field-group');
+      var userSelect = document.getElementById('mentor-user');
+
+      function updateVisibility() {
+        if (!typeSelect) return;
+        var isAi = typeSelect.value === 'ai';
+        if (isAi) {
+          userGroup.style.display = 'none';
+          if (userSelect) userSelect.value = '';
+        } else {
+          userGroup.style.display = '';
+        }
+      }
+
+      if (typeSelect) {
+        typeSelect.addEventListener('change', updateVisibility);
+        updateVisibility();
+      }
+    })();
+  </script>
+}

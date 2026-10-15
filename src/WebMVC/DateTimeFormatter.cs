@@ -29,6 +29,10 @@ public sealed class DateTimeFormatter(IHttpContextAccessor accessor)
     public string FormatDate(DateTimeOffset instant) =>
         FormatInZone(instant, ZoneId, "d MMM yyyy");
 
+    /// <summary>Format with a custom format string in the learner's zone.</summary>
+    public string FormatCustom(DateTimeOffset instant, string format) =>
+        FormatInZone(instant, ZoneId, format);
+
     /// <summary>The conversion, separable from the request so tests can drive it directly.</summary>
     public static string FormatInZone(DateTimeOffset instant, string zoneId, string format) =>
         TimeZoneInfo.ConvertTime(instant, TimeZoneInfo.FindSystemTimeZoneById(zoneId))

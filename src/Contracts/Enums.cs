@@ -234,3 +234,20 @@ public enum PathModuleItemTypeDto
     [JsonStringEnumMemberName("mentor")] Mentor,
 }
 
+/// <summary>CK_Mentor_Type: human, ai.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<MentorTypeDto>))]
+public enum MentorTypeDto
+{
+    [JsonStringEnumMemberName("human")] Human,
+    [JsonStringEnumMemberName("ai")] Ai,
+}
+
+/// <summary>CK_Slots_Status: open, booked, closed.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<SlotStatusDto>))]
+public enum SlotStatusDto
+{
+    [JsonStringEnumMemberName("open")] Open,
+    [JsonStringEnumMemberName("booked")] Booked,
+    [JsonStringEnumMemberName("closed")] Closed,
+}
+

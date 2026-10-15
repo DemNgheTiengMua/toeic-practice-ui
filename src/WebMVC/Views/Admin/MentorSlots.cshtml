@@ -1,0 +1,131 @@
+@model WebMVC.Models.MentorSlotsViewModel
+@inject WebMVC.DateTimeFormatter Formatter
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = $"Slots — {Model.Mentor.DisplayName}";
+    ViewData["Description"] = $"Manage scheduling slots for {Model.Mentor.DisplayName}";
+}
+
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+  <a href="/admin" class="breadcrumbs__item">Admin</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <a href="/admin/mentors" class="breadcrumbs__item">Mentors</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <span class="breadcrumbs__item" aria-current="page">Slots</span>
+</nav>
+
+<div class="row row--between">
+  <div>
+    <h1>Slots — @Model.Mentor.DisplayName</h1>
+    <div class="row row--tight">
+      <span class="badge badge--info">@Model.Mentor.CertCode</span>
+      <span class="badge badge--muted">@Model.Mentor.SessionMinutes minutes</span>
+      <span class="badge badge--muted">@Model.Mentor.PriceCredits credits</span>
+    </div>
+  </div>
+  <a class="btn btn--ghost" href="/admin/mentors">Back to mentors</a>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <div class="card__header">
+      <h2>Add a time slot</h2>
+    </div>
+    <div class="card__body">
+      <div class="alert alert--info">
+        Slots are entered in your local time zone and converted to UTC for universal storage.
+      </div>
+
+      <form method="post" action="/admin/mentors/@Model.Mentor.MentorId/slots/create" class="stack">
+        @Html.AntiForgeryToken()
+
+        <div class="field">
+          <label class="field__label" for="slot-start">Start date &amp; time</label>
+          <input class="field__input" id="slot-start" name="LocalStartAt" type="datetime-local" value="@Model.NewSlot.LocalStartAt.ToString("yyyy-MM-ddTHH:mm")" required>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="slot-end">End date &amp; time (optional, defaults to +@Model.Mentor.SessionMinutes mins)</label>
+          <input class="field__input" id="slot-end" name="LocalEndAt" type="datetime-local" value="@(Model.NewSlot.LocalEndAt.HasValue ? Model.NewSlot.LocalEndAt.Value.ToString("yyyy-MM-ddTHH:mm") : "")">
+          <span class="field__hint">Leave blank to use the mentor's default session duration (@Model.Mentor.SessionMinutes minutes).</span>
+        </div>
+
+        <div class="row mt-4">
+          <button type="submit" class="btn btn--primary">Add slot</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="stack">
+    <h2>Existing slots (@Model.Slots.Count)</h2>
+
+    @if (Model.Slots.Count == 0)
+    {
+      <div class="card">
+        <div class="card__body">
+          <div class="state-block">
+            <h3 class="state-block__title">No slots scheduled</h3>
+            <p class="state-block__desc">Add your first time slot using the form on the left.</p>
+          </div>
+        </div>
+      </div>
+    }
+    else
+    {
+      <div class="card">
+        <div class="card__body">
+          <table class="table table--striped">
+            <thead>
+              <tr>
+                <th scope="col">ID</th>
+                <th scope="col">Time slot</th>
+                <th scope="col">Status</th>
+                <th scope="col">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @foreach (var slot in Model.Slots)
+              {
+                <tr>
+                  <td><code>#@slot.SlotId</code></td>
+                  <td>
+                    <strong>@Formatter.Format(slot.StartAt)</strong>
+                    <br><small class="text-muted">to @Formatter.Format(slot.EndAt)</small>
+                  </td>
+                  <td>
+                    @if (slot.Status == "open")
+                    {
+                      <span class="badge badge--success">Open</span>
+                    }
+                    else if (slot.Status == "booked")
+                    {
+                      <span class="badge badge--warning">Booked</span>
+                    }
+                    else
+                    {
+                      <span class="badge badge--muted">Closed</span>
+                    }
+                  </td>
+                  <td>
+                    @if (slot.Status == "open")
+                    {
+                      <form method="post" action="/admin/mentors/@Model.Mentor.MentorId/slots/@slot.SlotId/close" class="no-margin">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn--sm btn--danger">Close</button>
+                      </form>
+                    }
+                    else
+                    {
+                      <span class="text-muted">—</span>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+  </div>
+</div>

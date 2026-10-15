@@ -110,8 +110,8 @@
     "semantic_hash": "e01c216d2abcc29b61c3b3d8cfc226e3"
   },
   "docs/seed-demo.sql": {
-    "mtime": 1792057434.2865038,
-    "ast_hash": "f061726b140c9e6c25e160d8e1138d23",
+    "mtime": 1792061140.5688782,
+    "ast_hash": "f8f322cc31c2e6d5f0043834dcff5ebf",
     "semantic_hash": ""
   },
   "prototype/assets/js/icons.js": {
@@ -180,8 +180,8 @@
     "semantic_hash": ""
   },
   "src/Contracts/CompanionApiClient.cs": {
-    "mtime": 1792058151.8678153,
-    "ast_hash": "4ff82f627cd1f87038df60c1ff84b948",
+    "mtime": 1792060777.8323708,
+    "ast_hash": "698e786137d0cc16074be975ecac26e6",
     "semantic_hash": ""
   },
   "src/Contracts/Contracts.csproj": {
@@ -545,8 +545,8 @@
     "semantic_hash": "a1e0ec747b63abe2941b00c6252f53a5"
   },
   "src/WebAPI/Program.cs": {
-    "mtime": 1792057434.3208697,
-    "ast_hash": "48646cc893b78a16d36bcf5af0725f2c",
+    "mtime": 1792060924.3037379,
+    "ast_hash": "b207e64c56a93047d37def68bb9f2069",
     "semantic_hash": ""
   },
   "src/WebAPI/Properties/launchSettings.json": {
@@ -610,8 +610,8 @@
     "semantic_hash": ""
   },
   "src/WebMVC/DateTimeFormatter.cs": {
-    "mtime": 1791912829.6442215,
-    "ast_hash": "e65f4f38273796b71a1bc3756be11af8",
+    "mtime": 1792060966.4513073,
+    "ast_hash": "bd0390d4aa407824f00dfeb63f32aa14",
     "semantic_hash": ""
   },
   "src/WebMVC/Models/AuthViewModels.cs": {
@@ -730,8 +730,8 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Shared/_LearnerLayout.cshtml": {
-    "mtime": 1792057434.3219306,
-    "ast_hash": "a46ec7f285fead19b1e969be8e7e517d",
+    "mtime": 1792061106.0505502,
+    "ast_hash": "1b80e5352d81658fb086a772061748eb",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/_ViewImports.cshtml": {
@@ -1491,8 +1491,8 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Shared/_AdminLayout.cshtml": {
-    "mtime": 1791990997.9257834,
-    "ast_hash": "e6304f31ab4400780c7fdd252fd6cad7",
+    "mtime": 1792061096.438742,
+    "ast_hash": "877358b20e0e3defc12124c01bb7c194",
     "semantic_hash": ""
   },
   "tests/Services.Tests/PackageServiceTests.cs": {
@@ -1786,8 +1786,8 @@
     "semantic_hash": ""
   },
   "src/BusinessObjects/Enums.cs": {
-    "mtime": 1792057434.3172705,
-    "ast_hash": "63d69da0e55938a58a6f9540b722e265",
+    "mtime": 1792060684.028862,
+    "ast_hash": "7269cd3435b5b0adb10afec7e9e279cd",
     "semantic_hash": ""
   },
   "src/Contracts/EnumMapping.cs": {
@@ -1796,8 +1796,8 @@
     "semantic_hash": ""
   },
   "src/Contracts/Enums.cs": {
-    "mtime": 1792057434.3192852,
-    "ast_hash": "9e42345f7d5e30892ee7d1944c5a29d6",
+    "mtime": 1792060693.6375024,
+    "ast_hash": "321ac116566495e4aeb75a6d72a14f85",
     "semantic_hash": ""
   },
   "src/WebAPI/Endpoints/AdminEndpoints.cs": {
@@ -1851,8 +1851,8 @@
     "semantic_hash": ""
   },
   "tests/Services.Tests/EnumCodesTests.cs": {
-    "mtime": 1792057434.3229487,
-    "ast_hash": "4958a29b5b94898986f7e5e980c11f68",
+    "mtime": 1792060701.5724928,
+    "ast_hash": "43002e0700b43b6a3a096df189a248b4",
     "semantic_hash": ""
   },
   "docs/adr/0006-typed-domain-and-wire-enums.md": {
@@ -2011,22 +2011,22 @@
     "semantic_hash": ""
   },
   "src/BusinessObjects/AiInsightModels.cs": {
-    "mtime": 1792058103.9693773,
+    "mtime": 1792060012.496391,
     "ast_hash": "642d90cdf02320bb10d95409cceb92b8",
     "semantic_hash": ""
   },
   "src/Contracts/AiInsightDtos.cs": {
-    "mtime": 1792058113.0378501,
+    "mtime": 1792060012.4974003,
     "ast_hash": "a321908f2cde3dd43f5d63c0badaa6cb",
     "semantic_hash": ""
   },
   "src/Services/AiInsightGenerator.cs": {
-    "mtime": 1792058190.578453,
+    "mtime": 1792060012.4984002,
     "ast_hash": "fadbf3c75848b7ba0745b5170c0e477c",
     "semantic_hash": ""
   },
   "src/Services/AiInsightService.cs": {
-    "mtime": 1792058318.1436434,
+    "mtime": 1792060012.4984002,
     "ast_hash": "222c71664e84b8ff9b29db54ef73d3ac",
     "semantic_hash": ""
   },
@@ -2036,7 +2036,7 @@
     "semantic_hash": ""
   },
   "src/WebAPI/Endpoints/InsightEndpoints.cs": {
-    "mtime": 1792058411.5279956,
+    "mtime": 1792060012.4999077,
     "ast_hash": "fe3c22e05c9066ee616f74a172499355",
     "semantic_hash": ""
   },
@@ -2046,12 +2046,12 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Shared/_AiInsightPanel.cshtml": {
-    "mtime": 1792058464.0345898,
+    "mtime": 1792060012.5019171,
     "ast_hash": "a2872f90ee70f9780d7cef687dce9bcc",
     "semantic_hash": ""
   },
   "tests/Services.Tests/AiInsightServiceTests.cs": {
-    "mtime": 1792058597.482155,
+    "mtime": 1792060012.5024626,
     "ast_hash": "639611b5a4beb517bba10abca54377fa",
     "semantic_hash": ""
   },
@@ -2136,58 +2136,128 @@
     "semantic_hash": ""
   },
   "src/BusinessObjects/LearningPathModels.cs": {
-    "mtime": 1792058099.4776995,
+    "mtime": 1792060012.496391,
     "ast_hash": "d3fd014608199e027a6c4f997bafa7e6",
     "semantic_hash": ""
   },
   "src/Contracts/LearningPathDtos.cs": {
-    "mtime": 1792058109.1500962,
+    "mtime": 1792060012.4974003,
     "ast_hash": "d4533491916acd370aa0f5ef197d3890",
     "semantic_hash": ""
   },
   "src/Services/LearningPathService.cs": {
-    "mtime": 1792059578.7315454,
+    "mtime": 1792060012.4984002,
     "ast_hash": "643c034c676774e7986aa1d033ac4392",
     "semantic_hash": ""
   },
   "src/WebAPI/Endpoints/LearningPathEndpoints.cs": {
-    "mtime": 1792059586.5637271,
+    "mtime": 1792060012.4999077,
     "ast_hash": "ffe65f558ca136d655aab328f934eddd",
     "semantic_hash": ""
   },
   "src/WebMVC/Controllers/LearningPathController.cs": {
-    "mtime": 1792059729.994791,
+    "mtime": 1792060012.500398,
     "ast_hash": "5ada243f6b9f77e422701ae0a4755b28",
     "semantic_hash": ""
   },
   "src/WebMVC/Models/LearningPathViewModels.cs": {
-    "mtime": 1792059475.3065653,
+    "mtime": 1792060012.5009167,
     "ast_hash": "18a463c52ca4dc26153d9620c07dcb75",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/LearningPath/Index.cshtml": {
-    "mtime": 1792059500.9478023,
+    "mtime": 1792060012.5009167,
     "ast_hash": "e1318fe54f9143771c8ff17b7eb7021a",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/LearningPath/ModuleDetail.cshtml": {
-    "mtime": 1792059521.922342,
+    "mtime": 1792060012.5009167,
     "ast_hash": "8a26b8b80d8086bc1a401372043ab6ac",
     "semantic_hash": ""
   },
   "tests/Services.Tests/LearningPathServiceTests.cs": {
-    "mtime": 1792059620.0441082,
+    "mtime": 1792060012.50297,
     "ast_hash": "672dbdae6b049095bac1d74c0c8fd642",
     "semantic_hash": ""
   },
   "tests/WebMVC.Tests/LearningPathControllerTests.cs": {
-    "mtime": 1792059689.5262165,
+    "mtime": 1792060012.50297,
     "ast_hash": "07134c311bcbb66aa43919865f57b74a",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/LearningPath/Upgrade.cshtml": {
-    "mtime": 1792058512.58003,
-    "ast_hash": "0f0d00a20ff50db0463d58cef05cf101",
+    "mtime": 1792060012.5019171,
+    "ast_hash": "93637ed62fd8a2850346f5dcc1b2057a",
+    "semantic_hash": ""
+  },
+  "src/Contracts/MentorDtos.cs": {
+    "mtime": 1792060726.2033944,
+    "ast_hash": "8698f12aba85350e9be513be871e027a",
+    "semantic_hash": ""
+  },
+  "src/Services/MentorService.cs": {
+    "mtime": 1792060868.0389044,
+    "ast_hash": "ce9a0565cfd3092ddd0a4f9544a574ab",
+    "semantic_hash": ""
+  },
+  "src/WebAPI/Endpoints/MentorEndpoints.cs": {
+    "mtime": 1792060905.647634,
+    "ast_hash": "c60f9510e9b8c42f811c196a2c4d4549",
+    "semantic_hash": ""
+  },
+  "src/WebMVC/Controllers/AdminMentorsController.cs": {
+    "mtime": 1792061002.976307,
+    "ast_hash": "914f4bf8287310d2c8e36752c148dbce",
+    "semantic_hash": ""
+  },
+  "src/WebMVC/Controllers/MentorsController.cs": {
+    "mtime": 1792060986.2873418,
+    "ast_hash": "400f1289dc2063039827b3c39ca37aa9",
+    "semantic_hash": ""
+  },
+  "src/WebMVC/Models/MentorViewModels.cs": {
+    "mtime": 1792060979.0664575,
+    "ast_hash": "f8851cf44a7dddc138cc8e549fcd89e2",
+    "semantic_hash": ""
+  },
+  "src/WebMVC/Views/Admin/MentorForm.cshtml": {
+    "mtime": 1792061075.19038,
+    "ast_hash": "dbd007336e59b583eaddae56548a4b15",
+    "semantic_hash": ""
+  },
+  "src/WebMVC/Views/Admin/MentorSlots.cshtml": {
+    "mtime": 1792061085.792622,
+    "ast_hash": "fc591306e309c52cae2f2c8e5f7b746c",
+    "semantic_hash": ""
+  },
+  "src/WebMVC/Views/Admin/Mentors.cshtml": {
+    "mtime": 1792061056.1080308,
+    "ast_hash": "3fb564e62e31eb83283f77bbf995bf11",
+    "semantic_hash": ""
+  },
+  "src/WebMVC/Views/Mentors/Detail.cshtml": {
+    "mtime": 1792061034.9262905,
+    "ast_hash": "c36563c2648ef09f94a44a4b3bb53d73",
+    "semantic_hash": ""
+  },
+  "src/WebMVC/Views/Mentors/Index.cshtml": {
+    "mtime": 1792061024.421213,
+    "ast_hash": "f7d3b446d5717fac65be13e19d667193",
+    "semantic_hash": ""
+  },
+  "tests/Services.Tests/MentorServiceTests.cs": {
+    "mtime": 1792061421.5503852,
+    "ast_hash": "f1ea6a549cc1a84e3c0ebf29ed76208d",
+    "semantic_hash": ""
+  },
+  "tests/WebMVC.Tests/AdminMentorsControllerTests.cs": {
+    "mtime": 1792061304.4482932,
+    "ast_hash": "a8d709b5ae834ffeffad939cb13fe182",
+    "semantic_hash": ""
+  },
+  "tests/WebMVC.Tests/MentorsControllerTests.cs": {
+    "mtime": 1792061396.9212067,
+    "ast_hash": "a5dac2dcca5d9589aa3d3068e1a5e2d7",
     "semantic_hash": ""
   }
 }

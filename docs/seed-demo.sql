@@ -976,3 +976,89 @@ GO
 PRINT 'demo learning path templates seeded';
 GO
 
+-- ============ Domain 10: Mentors (issue #26) ============
+IF NOT EXISTS (SELECT 1 FROM Users WHERE Email = 'mentor.khoa@demo.local')
+  INSERT INTO Users (RoleId, Email, PasswordHash, FullName, Phone, TermsAcceptedAt)
+  VALUES ((SELECT RoleId FROM Roles WHERE Code = 'learner'), 'mentor.khoa@demo.local',
+    0x0100000002000186A000000010D7A3A03C3CDA12DC7DE9F8E355177F9E52878DFC5F8E1C648FB5B6A7E779DD958F54F2355062DA531CBA010CFA0A06C6,
+    N'Dr. Trần Minh Khoa', '+84 901 000 002', SYSDATETIMEOFFSET());
+GO
+
+DECLARE @toeicCert INT = (SELECT CertId FROM Certificates WHERE Code = 'TOEIC');
+DECLARE @toeicListSkill INT = (SELECT SkillId FROM Skills WHERE CertId = @toeicCert AND Code = 'LIST');
+DECLARE @khoaUserId INT = (SELECT UserId FROM Users WHERE Email = 'mentor.khoa@demo.local');
+
+-- Human Mentor: Dr. Trần Minh Khoa
+IF NOT EXISTS (SELECT 1 FROM MentorProfiles WHERE DisplayName = N'Dr. Trần Minh Khoa')
+BEGIN
+  INSERT INTO MentorProfiles (UserId, DisplayName, Bio, CertId, SkillId, Type, PricePerSlot, PriceCredits, Headline, Expertise, SessionMinutes, IsActive)
+  VALUES (
+    @khoaUserId,
+    N'Dr. Trần Minh Khoa',
+    N'10 years teaching TOEIC at major language centers in Ho Chi Minh City. Specializes in listening strategies and accent training for Vietnamese learners. Former ETS trainer with deep knowledge of TOEIC format and scoring.',
+    @toeicCert,
+    @toeicListSkill,
+    'human',
+    200000.00,
+    1,
+    N'10 years teaching TOEIC. Specializes in listening strategies and accent training for Vietnamese learners.',
+    N'Listening strategies, pronunciation, test-taking techniques',
+    60,
+    1
+  );
+END;
+
+-- AI Mentor: AI Mentor — TOEIC Coach
+IF NOT EXISTS (SELECT 1 FROM MentorProfiles WHERE DisplayName = N'AI Mentor — TOEIC Coach')
+BEGIN
+  INSERT INTO MentorProfiles (UserId, DisplayName, Bio, CertId, SkillId, Type, PricePerSlot, PriceCredits, Headline, Expertise, SessionMinutes, IsActive)
+  VALUES (
+    NULL,
+    N'AI Mentor — TOEIC Coach',
+    N'AI-powered speaking practice. Available 24/7 with instant feedback and pronunciation analysis.',
+    @toeicCert,
+    NULL,
+    'ai',
+    0.00,
+    1,
+    N'AI-powered speaking practice. Available 24/7 with instant feedback and pronunciation analysis.',
+    N'Instant speaking feedback, AI pronunciation diagnosis, 24/7 practice',
+    60,
+    1
+  );
+END;
+
+DECLARE @khoaMentorId INT = (SELECT MentorId FROM MentorProfiles WHERE DisplayName = N'Dr. Trần Minh Khoa');
+
+-- Future open slots for Dr. Trần Minh Khoa
+IF NOT EXISTS (SELECT 1 FROM MentorSlots WHERE MentorId = @khoaMentorId AND Status = 'open')
+BEGIN
+  INSERT INTO MentorSlots (MentorId, StartAt, EndAt, Status)
+  VALUES
+    (@khoaMentorId, DATEADD(hour, 24, SYSDATETIMEOFFSET()), DATEADD(hour, 25, SYSDATETIMEOFFSET()), 'open'),
+    (@khoaMentorId, DATEADD(hour, 29, SYSDATETIMEOFFSET()), DATEADD(hour, 30, SYSDATETIMEOFFSET()), 'open'),
+    (@khoaMentorId, DATEADD(hour, 48, SYSDATETIMEOFFSET()), DATEADD(hour, 49, SYSDATETIMEOFFSET()), 'open'),
+    (@khoaMentorId, DATEADD(hour, 120, SYSDATETIMEOFFSET()), DATEADD(hour, 121, SYSDATETIMEOFFSET()), 'open');
+END;
+
+-- Seed sample past booking and review for Dr. Trần Minh Khoa so vw_MentorAvgRating is populated
+DECLARE @demoLearnerId INT = (SELECT UserId FROM Users WHERE Email = 'learner@demo.local');
+IF NOT EXISTS (SELECT 1 FROM Bookings WHERE MentorId = @khoaMentorId)
+BEGIN
+  -- Insert past slot (status 'open' so trigger sets it to 'booked' upon booking insert)
+  INSERT INTO MentorSlots (MentorId, StartAt, EndAt, Status)
+  VALUES (@khoaMentorId, DATEADD(day, -5, SYSDATETIMEOFFSET()), DATEADD(day, -5, DATEADD(hour, 1, SYSDATETIMEOFFSET())), 'open');
+  DECLARE @pastSlotId INT = SCOPE_IDENTITY();
+
+  INSERT INTO Bookings (UserId, MentorId, SlotId, MentorType, Status, FocusArea, CreatedAt)
+  VALUES (@demoLearnerId, @khoaMentorId, @pastSlotId, 'human', 'done', N'Listening strategies', DATEADD(day, -5, SYSDATETIMEOFFSET()));
+  DECLARE @bookingId INT = SCOPE_IDENTITY();
+
+  INSERT INTO Reviews (BookingId, UserId, Rating, Text, CreatedAt)
+  VALUES (@bookingId, @demoLearnerId, 5, N'Very patient and explains listening strategies clearly. My score improved from 350 to 450 in 2 months.', DATEADD(day, -4, SYSDATETIMEOFFSET()));
+END;
+GO
+
+PRINT 'demo mentors seeded';
+GO
+

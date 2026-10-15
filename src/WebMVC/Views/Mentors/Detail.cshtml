@@ -1,0 +1,156 @@
+@model WebMVC.Models.MentorDetailViewModel
+@inject WebMVC.DateTimeFormatter Dates
+@{
+    Layout = "_LearnerLayout";
+    var mentor = Model.Detail.Mentor;
+    var isAi = mentor.Type == "ai";
+    ViewData["Title"] = mentor.DisplayName;
+    ViewData["Description"] = mentor.Headline ?? mentor.Bio;
+}
+
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+  <a href="/mentors" class="breadcrumbs__item">Find a mentor</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <span class="breadcrumbs__item" aria-current="page">@mentor.DisplayName</span>
+</nav>
+
+<div class="stack">
+  <div class="row row--between">
+    <div>
+      <h1 class="m-0 mb-1">@mentor.DisplayName</h1>
+      <div class="row row--tight">
+        <span class="badge badge--info">@mentor.CertCode</span>
+        @if (isAi)
+        {
+          <span class="badge badge--success">Instant booking</span>
+        }
+        else if (!string.IsNullOrEmpty(mentor.SkillName))
+        {
+          <span class="badge badge--muted">@mentor.SkillName</span>
+        }
+        @if (mentor.AvgRating.HasValue)
+        {
+          <span class="badge badge--muted">@mentor.AvgRating.Value.ToString("0.0") / 5</span>
+          <span class="text-sm text-muted">@mentor.ReviewCount @(mentor.ReviewCount == 1 ? "review" : "reviews")</span>
+        }
+        else
+        {
+          <span class="badge badge--muted">New</span>
+          <span class="text-sm text-muted">No reviews yet</span>
+        }
+      </div>
+    </div>
+    <span class="mentor-card__price">@mentor.PriceCredits @(mentor.PriceCredits == 1 ? "credit" : "credits")</span>
+  </div>
+
+  <div class="grid-2">
+    <div class="stack">
+      <section>
+        <h2 class="section-group__title">About</h2>
+        <div class="card"><div class="card__body">
+          <p>@(mentor.Bio ?? mentor.Headline ?? "No biography available.")</p>
+          @if (!string.IsNullOrWhiteSpace(mentor.Expertise))
+          {
+            <p class="no-margin"><strong>Expertise:</strong> @mentor.Expertise</p>
+          }
+        </div></div>
+      </section>
+
+      <section>
+        <h2 class="section-group__title">Reviews</h2>
+        <div class="card"><div class="card__body stack">
+          @if (Model.Detail.Reviews.Count == 0)
+          {
+            <p class="text-muted no-margin">No reviews yet for this mentor.</p>
+          }
+          else
+          {
+            @for (var i = 0; i < Model.Detail.Reviews.Count; i++)
+            {
+              var review = Model.Detail.Reviews[i];
+              if (i > 0)
+              {
+                <hr>
+              }
+              <div class="stack--tight">
+                <div class="row row--between">
+                  <strong>@review.UserDisplayName</strong>
+                  <span class="badge badge--muted">@review.Rating.ToString("0.0") / 5</span>
+                </div>
+                @if (!string.IsNullOrWhiteSpace(review.Text))
+                {
+                  <p class="text-muted no-margin">@review.Text</p>
+                }
+                <span class="text-xs text-muted">@Dates.FormatDate(review.CreatedAt)</span>
+              </div>
+            }
+          }
+        </div></div>
+      </section>
+    </div>
+
+    <section>
+      @if (isAi)
+      {
+        <h2 class="section-group__title">Session details</h2>
+        <div class="card">
+          <div class="card__body stack">
+            <div class="alert alert--info">
+              <strong>24/7 Availability</strong>
+              <p class="no-margin">AI mentors are always online. Get instant feedback on your speaking and answers anytime without scheduling in advance.</p>
+            </div>
+            <div>
+              <p><strong>Session duration:</strong> @mentor.SessionMinutes minutes</p>
+              <p><strong>Cost:</strong> @mentor.PriceCredits @(mentor.PriceCredits == 1 ? "credit" : "credits")</p>
+            </div>
+          </div>
+          <div class="card__footer">
+            <div class="row">
+              <a href="/mentors" class="btn">Back to mentors</a>
+            </div>
+          </div>
+        </div>
+      }
+      else
+      {
+        <h2 class="section-group__title">Pick a time</h2>
+        @if (Model.Detail.AvailableSlots.Count == 0)
+        {
+          <div class="card">
+            <div class="card__body">
+              <p class="text-muted no-margin">No open slots available at the moment. Please check back later.</p>
+            </div>
+            <div class="card__footer">
+              <a href="/mentors" class="btn">Back to mentors</a>
+            </div>
+          </div>
+        }
+        else
+        {
+          <div class="stack">
+            <div class="option-list" role="radiogroup" aria-label="Available time slots">
+              @for (var i = 0; i < Model.Detail.AvailableSlots.Count; i++)
+              {
+                var slot = Model.Detail.AvailableSlots[i];
+                var formattedDate = Dates.FormatCustom(slot.StartAt, "dddd, MMM d — h:mm tt");
+                <label class="option">
+                  <input class="option__input" type="radio" name="slot" value="@slot.SlotId" @(i == 0 ? "checked" : "")>
+                  <span class="option__marker">@(i + 1)</span>
+                  <span class="option__text">
+                    <strong>@formattedDate</strong><br>
+                    <span class="text-sm text-muted">@mentor.SessionMinutes minutes via Google Meet</span>
+                  </span>
+                </label>
+              }
+            </div>
+            <div class="card"><div class="card__footer">
+              <div class="row">
+                <a href="/mentors" class="btn">Back to mentors</a>
+              </div>
+            </div></div>
+          </div>
+        }
+      }
+    </section>
+  </div>
+</div>

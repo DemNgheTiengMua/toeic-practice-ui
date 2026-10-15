@@ -1,0 +1,145 @@
+@model IReadOnlyList<Contracts.AdminMentorListItemDto>
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Mentors";
+    ViewData["Description"] = "Manage human and AI mentors, pricing and time slots.";
+}
+
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+  <a href="/admin" class="breadcrumbs__item">Admin</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <span class="breadcrumbs__item" aria-current="page">Mentors</span>
+</nav>
+
+<div class="row row--between">
+  <h1>Mentors</h1>
+  <a class="btn btn--primary" href="/admin/mentors/create">Create new mentor</a>
+</div>
+
+<div class="grid-3">
+  <div class="stat">
+    <div class="stat__label">Total mentors</div>
+    <div class="stat__value">@Model.Count</div>
+    <div class="stat__hint">Human &amp; AI</div>
+  </div>
+  <div class="stat">
+    <div class="stat__label">Active mentors</div>
+    <div class="stat__value">@Model.Count(m => m.IsActive)</div>
+    <div class="stat__hint">Listed for students</div>
+  </div>
+  <div class="stat">
+    <div class="stat__label">Available slots</div>
+    <div class="stat__value">@Model.Sum(m => m.OpenSlotsCount)</div>
+    <div class="stat__hint">Open future slots</div>
+  </div>
+</div>
+
+@if (Model.Count == 0)
+{
+  <div class="card">
+    <div class="card__body">
+      <div class="state-block">
+        <h2 class="state-block__title">No mentors registered yet</h2>
+        <p class="state-block__desc">Add your first human or AI mentor to start offering 1-on-1 sessions.</p>
+        <a class="btn btn--primary" href="/admin/mentors/create">Create first mentor</a>
+      </div>
+    </div>
+  </div>
+}
+else
+{
+  <div class="card">
+    <div class="card__body">
+      <table class="table table--striped">
+        <thead>
+          <tr>
+            <th scope="col">Mentor</th>
+            <th scope="col">Type</th>
+            <th scope="col">Certificate / Skill</th>
+            <th scope="col">Price</th>
+            <th scope="col">Rating</th>
+            <th scope="col">Slots</th>
+            <th scope="col">Status</th>
+            <th scope="col">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @foreach (var mentor in Model)
+          {
+            var isAi = mentor.Type == "ai";
+            <tr>
+              <td>
+                <div><strong>@mentor.DisplayName</strong></div>
+                <small class="text-muted">ID: @mentor.MentorId</small>
+              </td>
+              <td>
+                @if (isAi)
+                {
+                  <span class="badge badge--success">AI</span>
+                }
+                else
+                {
+                  <span class="badge badge--info">Human</span>
+                }
+              </td>
+              <td>
+                <span class="badge badge--info">@mentor.CertCode</span>
+                @if (!string.IsNullOrEmpty(mentor.SkillName))
+                {
+                  <small class="text-muted">· @mentor.SkillName</small>
+                }
+              </td>
+              <td>
+                <strong>@mentor.PriceCredits @(mentor.PriceCredits == 1 ? "credit" : "credits")</strong>
+                @if (!isAi)
+                {
+                  <br><small class="text-muted">Payout: @mentor.PricePerSlot.ToString("N0") VND</small>
+                }
+              </td>
+              <td>
+                @if (mentor.AvgRating.HasValue)
+                {
+                  <span class="badge badge--muted">@mentor.AvgRating.Value.ToString("0.0") / 5</span>
+                  <small class="text-muted">(@mentor.ReviewCount)</small>
+                }
+                else
+                {
+                  <span class="text-muted">No reviews</span>
+                }
+              </td>
+              <td>
+                @if (isAi)
+                {
+                  <span class="text-muted">24/7 (Instant)</span>
+                }
+                else
+                {
+                  <strong>@mentor.OpenSlotsCount</strong> <span class="text-muted">open / @mentor.TotalSlotsCount total</span>
+                }
+              </td>
+              <td>
+                @if (mentor.IsActive)
+                {
+                  <span class="badge badge--success">Active</span>
+                }
+                else
+                {
+                  <span class="badge badge--muted">Inactive</span>
+                }
+              </td>
+              <td>
+                <div class="row row--tight">
+                  <a class="btn btn--sm btn--ghost" href="/admin/mentors/@mentor.MentorId/edit">Edit</a>
+                  @if (!isAi)
+                  {
+                    <a class="btn btn--sm" href="/admin/mentors/@mentor.MentorId/slots">Slots</a>
+                  }
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+}

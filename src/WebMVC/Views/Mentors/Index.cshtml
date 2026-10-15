@@ -1,0 +1,78 @@
+@model WebMVC.Models.MentorListViewModel
+@{
+    Layout = "_LearnerLayout";
+    ViewData["Title"] = "Find a mentor";
+    ViewData["Description"] = "Book 1-on-1 sessions with experts or AI mentors.";
+}
+
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+  <a href="/dashboard" class="breadcrumbs__item">Home</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <span class="breadcrumbs__item" aria-current="page">Find a mentor</span>
+</nav>
+
+<div class="stack">
+  <h1>Find a mentor</h1>
+  <p>Book 1-on-1 sessions with @Model.ActiveCertCode experts or AI mentors. Practice speaking, get feedback, and improve faster.</p>
+
+  <div class="row mb-4">
+    <a href="/mentors" class="btn btn--sm @(string.IsNullOrEmpty(Model.ActiveSkill) || Model.ActiveSkill.Equals("all", StringComparison.OrdinalIgnoreCase) ? "" : "btn--ghost")" aria-pressed="@(string.IsNullOrEmpty(Model.ActiveSkill) ? "true" : "false")">All skills</a>
+    <a href="/mentors?skill=listening" class="btn btn--sm @(string.Equals(Model.ActiveSkill, "listening", StringComparison.OrdinalIgnoreCase) ? "" : "btn--ghost")">Listening</a>
+    <a href="/mentors?skill=reading" class="btn btn--sm @(string.Equals(Model.ActiveSkill, "reading", StringComparison.OrdinalIgnoreCase) ? "" : "btn--ghost")">Reading</a>
+    <a href="/mentors?skill=speaking" class="btn btn--sm @(string.Equals(Model.ActiveSkill, "speaking", StringComparison.OrdinalIgnoreCase) ? "" : "btn--ghost")">Speaking</a>
+    <a href="/mentors?skill=writing" class="btn btn--sm @(string.Equals(Model.ActiveSkill, "writing", StringComparison.OrdinalIgnoreCase) ? "" : "btn--ghost")">Writing</a>
+  </div>
+
+  @if (Model.Mentors.Count == 0)
+  {
+    <div class="card"><div class="card__body">
+      <div class="state-block">
+        <div class="state-block__icon" aria-hidden="true">EMPTY</div>
+        <h2 class="state-block__title">No mentors available</h2>
+        <p class="state-block__desc">Check back soon for mentor availability.</p>
+      </div>
+    </div></div>
+  }
+  else
+  {
+    <div class="grid-2">
+      @foreach (var mentor in Model.Mentors)
+      {
+        var isAi = mentor.Type == "ai";
+        <article class="mentor-card">
+          <div class="mentor-card__header">
+            <strong>@mentor.DisplayName</strong>
+            <div style="display: flex; gap: var(--space-2, 8px);">
+              <span class="badge badge--info">@mentor.CertCode</span>
+              @if (isAi)
+              {
+                <span class="badge badge--success">Instant booking</span>
+              }
+              else if (!string.IsNullOrEmpty(mentor.SkillName))
+              {
+                <span class="badge badge--muted">@mentor.SkillName</span>
+              }
+            </div>
+          </div>
+          <div class="mentor-card__rating">
+            @if (mentor.AvgRating.HasValue)
+            {
+              <span class="badge badge--muted">@mentor.AvgRating.Value.ToString("0.0") / 5</span>
+              <span class="text-muted">@mentor.ReviewCount @(mentor.ReviewCount == 1 ? "review" : "reviews")</span>
+            }
+            else
+            {
+              <span class="badge badge--muted">New</span>
+              <span class="text-muted">No reviews yet</span>
+            }
+          </div>
+          <p class="mentor-card__bio">@(mentor.Headline ?? mentor.Bio ?? "Experienced mentor ready to assist your exam preparation.")</p>
+          <div class="mentor-card__footer">
+            <span class="mentor-card__price">@mentor.PriceCredits @(mentor.PriceCredits == 1 ? "credit" : "credits")</span>
+            <a href="/mentors/@mentor.MentorId" class="btn @(isAi ? "btn--primary" : "") btn--sm">@(isAi ? "Book now" : "View profile")</a>
+          </div>
+        </article>
+      }
+    </div>
+  }
+</div>
