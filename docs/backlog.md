@@ -46,6 +46,7 @@ Schema + tests (`domain14-ai-insights-payments.sql`): `Users.TimeZoneId`, `Order
 - Real-time spoken conversation with an AI mentor (AI mentor = speaking practice attempt today)
 - AI-authored learning-path steps (insights may only flag priorities today)
 - Real VNPay / MoMo gateways
+- Speaking practice enterprise improvements: pre-flight mic check, codec fallback, VAD, S3 storage (`docs/speaking-practice-improvements.md`)
 
 ## Out of scope by decision
 
