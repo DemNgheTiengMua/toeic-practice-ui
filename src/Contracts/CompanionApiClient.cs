@@ -336,6 +336,9 @@ public interface ICompanionApiClient
 
     Task CloseMentorSlotAsync(int mentorId, int slotId, string bearerToken, CancellationToken cancellationToken = default) =>
         throw new NotImplementedException();
+
+    Task<IReadOnlyList<MentorCertificateOptionDto>> GetMentorCertificateOptionsAsync(string bearerToken, CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
 }
 
 
@@ -1102,6 +1105,9 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
         using var response = await http.SendAsync(message, cancellationToken);
         await EnsureSuccessAsync(response, cancellationToken);
     }
+
+    public Task<IReadOnlyList<MentorCertificateOptionDto>> GetMentorCertificateOptionsAsync(string bearerToken, CancellationToken cancellationToken = default) =>
+        GetAuthorizedAsync<IReadOnlyList<MentorCertificateOptionDto>>("api/admin/mentors/options", bearerToken, cancellationToken);
 
 
     private async Task<T> GetAuthorizedAsync<T>(string path, string bearerToken, CancellationToken cancellationToken)

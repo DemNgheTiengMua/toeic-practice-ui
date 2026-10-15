@@ -50,7 +50,7 @@ public sealed class MentorFormViewModel
 
     public bool IsActive { get; set; } = true;
 
-    public IReadOnlyList<CertificateDto> Certificates { get; set; } = [];
+    public IReadOnlyList<MentorCertificateOptionDto> Certificates { get; set; } = [];
 
     public IReadOnlyList<AdminUserDto> Users { get; set; } = [];
 }

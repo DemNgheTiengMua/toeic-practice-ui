@@ -46,6 +46,12 @@ public static class MentorEndpoints
             return Results.Ok(list);
         });
 
+        admin.MapGet("/options", async (IMentorService mentorService, CancellationToken cancellationToken) =>
+        {
+            var options = await mentorService.GetCertificateOptionsAsync(cancellationToken);
+            return Results.Ok(options);
+        });
+
         admin.MapGet("/{mentorId:int}", async (int mentorId, IMentorService mentorService, CancellationToken cancellationToken) =>
         {
             try
@@ -151,6 +157,10 @@ public static class MentorEndpoints
             catch (KeyNotFoundException)
             {
                 return Results.NotFound();
+            }
+            catch (ValidationException ex)
+            {
+                return ValidationProblem(ex);
             }
         });
     }

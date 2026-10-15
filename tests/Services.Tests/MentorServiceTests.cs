@@ -276,4 +276,137 @@ public sealed class MentorServiceTests(DatabaseFixture database)
         Assert.Equal(5.0m, matched.AvgRating);
         Assert.Equal(1, matched.ReviewCount);
     }
+
+    [Fact]
+    public async Task CreateMentorSlotAsync_ThrowsWhenMentorIsInactive()
+    {
+        var service = CreateService();
+        var (certId, skillId, _) = await SeedCertAndSkillAsync();
+        var mentorUserId = await SeedUserAsync("mentor-inactive-slot");
+        var adminUserId = await SeedUserAsync("admin-inactive-slot");
+
+        var mentor = await service.CreateMentorAsync(new CreateMentorProfileRequest(
+            mentorUserId, $"Inactive Slot Mentor {Guid.NewGuid():N}", "Bio", certId, skillId, "human", 200000m, 1, null, null, 60, false));
+
+        var ex = await Assert.ThrowsAsync<ValidationException>(() =>
+            service.CreateMentorSlotAsync(mentor.MentorId, adminUserId, new CreateMentorSlotRequest(new DateTime(2026, 11, 1, 9, 0, 0), null)));
+        Assert.Contains("inactive mentor", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task CreateMentorSlotAsync_ThrowsWhenSlotOverlaps()
+    {
+        var service = CreateService();
+        var (certId, skillId, _) = await SeedCertAndSkillAsync();
+        var mentorUserId = await SeedUserAsync("mentor-overlap");
+        var adminUserId = await SeedUserAsync("admin-overlap");
+
+        var mentor = await service.CreateMentorAsync(new CreateMentorProfileRequest(
+            mentorUserId, $"Overlap Mentor {Guid.NewGuid():N}", "Bio", certId, skillId, "human", 200000m, 1, null, null, 60, true));
+
+        // Create first slot: 10:00 - 11:00 UTC
+        await service.CreateMentorSlotAsync(mentor.MentorId, adminUserId, new CreateMentorSlotRequest(
+            new DateTime(2026, 11, 2, 10, 0, 0),
+            new DateTime(2026, 11, 2, 11, 0, 0),
+            "UTC"));
+
+        // Overlapping slot: 10:30 - 11:30 UTC
+        var ex = await Assert.ThrowsAsync<ValidationException>(() =>
+            service.CreateMentorSlotAsync(mentor.MentorId, adminUserId, new CreateMentorSlotRequest(
+                new DateTime(2026, 11, 2, 10, 30, 0),
+                new DateTime(2026, 11, 2, 11, 30, 0),
+                "UTC")));
+        Assert.Contains("overlaps", ex.Message, StringComparison.OrdinalIgnoreCase);
+
+        // Non-overlapping slot: 11:00 - 12:00 UTC (exact adjacent boundary is allowed)
+        var adjacentSlot = await service.CreateMentorSlotAsync(mentor.MentorId, adminUserId, new CreateMentorSlotRequest(
+            new DateTime(2026, 11, 2, 11, 0, 0),
+            new DateTime(2026, 11, 2, 12, 0, 0),
+            "UTC"));
+        Assert.NotNull(adjacentSlot);
+    }
+
+    [Fact]
+    public async Task CreateMentorSlotAsync_ThrowsWhenEndTimeIsBeforeOrEqualStartTime()
+    {
+        var service = CreateService();
+        var (certId, skillId, _) = await SeedCertAndSkillAsync();
+        var mentorUserId = await SeedUserAsync("mentor-time-range");
+        var adminUserId = await SeedUserAsync("admin-time-range");
+
+        var mentor = await service.CreateMentorAsync(new CreateMentorProfileRequest(
+            mentorUserId, $"Range Mentor {Guid.NewGuid():N}", "Bio", certId, skillId, "human", 200000m, 1, null, null, 60, true));
+
+        var ex = await Assert.ThrowsAsync<ValidationException>(() =>
+            service.CreateMentorSlotAsync(mentor.MentorId, adminUserId, new CreateMentorSlotRequest(
+                new DateTime(2026, 11, 3, 11, 0, 0),
+                new DateTime(2026, 11, 3, 10, 0, 0),
+                "UTC")));
+        Assert.Contains("End time must be after start time", ex.Message);
+    }
+
+    [Fact]
+    public async Task CreateMentorSlotAsync_SupportsWindowsTimeZoneIdWithConversion()
+    {
+        var service = CreateService();
+        var (certId, skillId, _) = await SeedCertAndSkillAsync();
+        var mentorUserId = await SeedUserAsync("mentor-wintz");
+        var adminUserId = await SeedUserAsync("admin-wintz");
+
+        var mentor = await service.CreateMentorAsync(new CreateMentorProfileRequest(
+            mentorUserId, $"WinTz Mentor {Guid.NewGuid():N}", "Bio", certId, skillId, "human", 200000m, 1, null, null, 60, true));
+
+        // Use Windows time zone "SE Asia Standard Time" (+07:00)
+        var slot = await service.CreateMentorSlotAsync(mentor.MentorId, adminUserId, new CreateMentorSlotRequest(
+            new DateTime(2026, 11, 4, 14, 0, 0),
+            null,
+            "SE Asia Standard Time"));
+
+        Assert.NotNull(slot);
+        // 14:00 +07:00 is 07:00 UTC
+        Assert.Equal(new DateTimeOffset(2026, 11, 4, 7, 0, 0, TimeSpan.Zero), slot.StartAt);
+    }
+
+    [Fact]
+    public async Task CloseMentorSlotAsync_ThrowsWhenSlotIsBooked()
+    {
+        var service = CreateService();
+        var (certId, skillId, _) = await SeedCertAndSkillAsync();
+        var mentorUserId = await SeedUserAsync("mentor-close-booked");
+        var learnerUserId = await SeedUserAsync("learner-close-booked");
+
+        var mentor = await service.CreateMentorAsync(new CreateMentorProfileRequest(
+            mentorUserId, $"Booked Slot Mentor {Guid.NewGuid():N}", "Bio", certId, skillId, "human", 200000m, 1, null, null, 60, true));
+
+        await database.SqlAsync($"""
+            INSERT INTO MentorSlots (MentorId, StartAt, EndAt, Status)
+            VALUES ({mentor.MentorId}, DATEADD(day, 2, SYSDATETIMEOFFSET()), DATEADD(day, 2, DATEADD(hour, 1, SYSDATETIMEOFFSET())), 'booked');
+            DECLARE @slotId INT = SCOPE_IDENTITY();
+
+            INSERT INTO Bookings (UserId, MentorId, SlotId, MentorType, Status, CreatedAt)
+            VALUES ({learnerUserId}, {mentor.MentorId}, @slotId, 'human', 'confirmed', SYSDATETIMEOFFSET());
+            """);
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var bookedSlot = await db.MentorSlots.FirstAsync(s => s.MentorId == mentor.MentorId && s.Status == "booked");
+
+        var ex = await Assert.ThrowsAsync<ValidationException>(() =>
+            service.CloseMentorSlotAsync(mentor.MentorId, bookedSlot.SlotId));
+        Assert.Contains("booked", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task GetCertificateOptionsAsync_ReturnsActiveCertificatesWithSkills()
+    {
+        var service = CreateService();
+        var (certId, skillId, certCode) = await SeedCertAndSkillAsync();
+
+        var options = await service.GetCertificateOptionsAsync();
+        Assert.NotEmpty(options);
+
+        var matched = options.FirstOrDefault(c => c.CertId == certId);
+        Assert.NotNull(matched);
+        Assert.Equal(certCode, matched.Code);
+        Assert.Contains(matched.Skills, s => s.SkillId == skillId);
+    }
 }

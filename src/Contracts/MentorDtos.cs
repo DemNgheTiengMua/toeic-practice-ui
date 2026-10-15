@@ -97,3 +97,16 @@ public sealed record CreateMentorSlotRequest(
     DateTime LocalStartAt,
     DateTime? LocalEndAt,
     string? TimeZoneId = null);
+
+public sealed record MentorSkillOptionDto(
+    int SkillId,
+    int CertId,
+    string Code,
+    string Name,
+    string Modality);
+
+public sealed record MentorCertificateOptionDto(
+    int CertId,
+    string Code,
+    string Name,
+    IReadOnlyList<MentorSkillOptionDto> Skills);

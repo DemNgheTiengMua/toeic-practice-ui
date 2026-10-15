@@ -34,14 +34,14 @@ public sealed class AdminMentorsController(
     public async Task<IActionResult> Create(CancellationToken cancellationToken)
     {
         var bearer = await BearerAsync();
-        var certs = await api.GetCertificatesAsync(cancellationToken);
+        var certOptions = await api.GetMentorCertificateOptionsAsync(bearer, cancellationToken);
         var usersSummary = await api.GetAdminUsersAsync(null, null, 1, 100, bearer, cancellationToken);
 
         var model = new MentorFormViewModel
         {
-            Certificates = certs,
+            Certificates = certOptions,
             Users = usersSummary.Users,
-            CertId = certs.Count > 0 ? certs[0].Code == "TOEIC" ? 1 : 1 : 1, // Default to first cert
+            CertId = certOptions.Count > 0 ? certOptions[0].CertId : 0,
             Type = "human",
             PricePerSlot = 200000,
             PriceCredits = 1,
@@ -65,7 +65,7 @@ public sealed class AdminMentorsController(
 
         if (!ModelState.IsValid)
         {
-            model.Certificates = await api.GetCertificatesAsync(cancellationToken);
+            model.Certificates = await api.GetMentorCertificateOptionsAsync(bearer, cancellationToken);
             var usersSummary = await api.GetAdminUsersAsync(null, null, 1, 100, bearer, cancellationToken);
             model.Users = usersSummary.Users;
             return View("~/Views/Admin/MentorForm.cshtml", model);
@@ -95,7 +95,7 @@ public sealed class AdminMentorsController(
         {
             logger.LogError(ex, "Failed to create mentor");
             ModelState.AddModelError(string.Empty, ex.Detail ?? ex.Message);
-            model.Certificates = await api.GetCertificatesAsync(cancellationToken);
+            model.Certificates = await api.GetMentorCertificateOptionsAsync(bearer, cancellationToken);
             var usersSummary = await api.GetAdminUsersAsync(null, null, 1, 100, bearer, cancellationToken);
             model.Users = usersSummary.Users;
             return View("~/Views/Admin/MentorForm.cshtml", model);
@@ -110,7 +110,7 @@ public sealed class AdminMentorsController(
         try
         {
             var mentor = await api.GetAdminMentorByIdAsync(mentorId, bearer, cancellationToken);
-            var certs = await api.GetCertificatesAsync(cancellationToken);
+            var certOptions = await api.GetMentorCertificateOptionsAsync(bearer, cancellationToken);
             var usersSummary = await api.GetAdminUsersAsync(null, null, 1, 100, bearer, cancellationToken);
 
             var model = new MentorFormViewModel
@@ -128,7 +128,7 @@ public sealed class AdminMentorsController(
                 Expertise = mentor.Expertise,
                 SessionMinutes = mentor.SessionMinutes,
                 IsActive = mentor.IsActive,
-                Certificates = certs,
+                Certificates = certOptions,
                 Users = usersSummary.Users,
             };
 
@@ -153,7 +153,7 @@ public sealed class AdminMentorsController(
 
         if (!ModelState.IsValid)
         {
-            model.Certificates = await api.GetCertificatesAsync(cancellationToken);
+            model.Certificates = await api.GetMentorCertificateOptionsAsync(bearer, cancellationToken);
             var usersSummary = await api.GetAdminUsersAsync(null, null, 1, 100, bearer, cancellationToken);
             model.Users = usersSummary.Users;
             return View("~/Views/Admin/MentorForm.cshtml", model);
@@ -182,7 +182,7 @@ public sealed class AdminMentorsController(
         {
             logger.LogError(ex, "Failed to update mentor {MentorId}", mentorId);
             ModelState.AddModelError(string.Empty, ex.Detail ?? ex.Message);
-            model.Certificates = await api.GetCertificatesAsync(cancellationToken);
+            model.Certificates = await api.GetMentorCertificateOptionsAsync(bearer, cancellationToken);
             var usersSummary = await api.GetAdminUsersAsync(null, null, 1, 100, bearer, cancellationToken);
             model.Users = usersSummary.Users;
             return View("~/Views/Admin/MentorForm.cshtml", model);

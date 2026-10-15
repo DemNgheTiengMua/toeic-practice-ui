@@ -21,6 +21,7 @@ public interface IMentorService
     Task<IReadOnlyList<AdminMentorSlotDto>> GetAdminMentorSlotsAsync(int mentorId, CancellationToken cancellationToken = default);
     Task<AdminMentorSlotDto> CreateMentorSlotAsync(int mentorId, int adminUserId, CreateMentorSlotRequest request, CancellationToken cancellationToken = default);
     Task CloseMentorSlotAsync(int mentorId, int slotId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<MentorCertificateOptionDto>> GetCertificateOptionsAsync(CancellationToken cancellationToken = default);
 }
 
 public sealed class MentorService(CompanionDbContext db, TimeProvider clock) : IMentorService
@@ -220,6 +221,10 @@ public sealed class MentorService(CompanionDbContext db, TimeProvider clock) : I
         {
             profile.UserId = request.UserId;
         }
+        else
+        {
+            profile.UserId = null;
+        }
         profile.PricePerSlot = request.PricePerSlot;
         profile.PriceCredits = request.PriceCredits;
         profile.Headline = string.IsNullOrWhiteSpace(request.Headline) ? null : request.Headline.Trim();
@@ -254,6 +259,11 @@ public sealed class MentorService(CompanionDbContext db, TimeProvider clock) : I
             .FirstOrDefaultAsync(m => m.MentorId == mentorId, cancellationToken)
             ?? throw new KeyNotFoundException($"Mentor with id {mentorId} was not found.");
 
+        if (!mentor.IsActive)
+        {
+            throw new ValidationException("Cannot schedule slots for an inactive mentor.");
+        }
+
         if (mentor.Type == MentorType.Ai.ToCode())
         {
             throw new ValidationException("AI mentors do not use scheduled slots.");
@@ -264,13 +274,7 @@ public sealed class MentorService(CompanionDbContext db, TimeProvider clock) : I
             .FirstOrDefaultAsync(u => u.UserId == adminUserId, cancellationToken)
             ?? throw new KeyNotFoundException($"Admin user with id {adminUserId} was not found.");
 
-        var timeZoneId = !string.IsNullOrWhiteSpace(request.TimeZoneId) && TimeZones.Contains(request.TimeZoneId)
-            ? request.TimeZoneId
-            : (!string.IsNullOrWhiteSpace(adminUser.TimeZoneId) && TimeZones.Contains(adminUser.TimeZoneId)
-                ? adminUser.TimeZoneId
-                : TimeZones.DefaultId);
-
-        var tz = TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
+        var tz = ResolveTimeZone(request.TimeZoneId, adminUser.TimeZoneId);
         var unspecifiedStart = DateTime.SpecifyKind(request.LocalStartAt, DateTimeKind.Unspecified);
         var startOffset = tz.GetUtcOffset(unspecifiedStart);
         var startUtc = new DateTimeOffset(unspecifiedStart, startOffset).ToUniversalTime();
@@ -290,6 +294,18 @@ public sealed class MentorService(CompanionDbContext db, TimeProvider clock) : I
         if (endUtc <= startUtc)
         {
             throw new ValidationException("End time must be after start time.");
+        }
+
+        var hasOverlap = await db.MentorSlots.AnyAsync(
+            s => s.MentorId == mentorId &&
+                 s.Status != SlotStatus.Closed.ToCode() &&
+                 s.StartAt < endUtc &&
+                 s.EndAt > startUtc,
+            cancellationToken);
+
+        if (hasOverlap)
+        {
+            throw new ValidationException("The specified time slot overlaps with an existing slot for this mentor.");
         }
 
         var slot = new MentorSlot
@@ -312,8 +328,53 @@ public sealed class MentorService(CompanionDbContext db, TimeProvider clock) : I
             .FirstOrDefaultAsync(s => s.SlotId == slotId && s.MentorId == mentorId, cancellationToken)
             ?? throw new KeyNotFoundException($"Slot with id {slotId} for mentor {mentorId} was not found.");
 
+        if (slot.Status == SlotStatus.Booked.ToCode())
+        {
+            throw new ValidationException("Cannot close a slot that has already been booked.");
+        }
+
         slot.Status = SlotStatus.Closed.ToCode();
         await db.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<MentorCertificateOptionDto>> GetCertificateOptionsAsync(CancellationToken cancellationToken = default)
+    {
+        var certificates = await db.Certificates
+            .AsNoTracking()
+            .Where(c => c.IsActive)
+            .OrderBy(c => c.CertId)
+            .ToListAsync(cancellationToken);
+
+        var certIds = certificates.Select(c => c.CertId).ToList();
+
+        var skills = await db.Skills
+            .AsNoTracking()
+            .Where(s => certIds.Contains(s.CertId))
+            .OrderBy(s => s.DisplayOrder)
+            .ToListAsync(cancellationToken);
+
+        return certificates.Select(c => new MentorCertificateOptionDto(
+            c.CertId,
+            c.Code,
+            c.Name,
+            skills.Where(s => s.CertId == c.CertId)
+                  .Select(s => new MentorSkillOptionDto(s.SkillId, s.CertId, s.Code, s.Name, s.Modality))
+                  .ToList())).ToList();
+    }
+
+    private static TimeZoneInfo ResolveTimeZone(string? preferredZoneId, string? fallbackZoneId)
+    {
+        var candidates = new[] { preferredZoneId, fallbackZoneId, TimeZones.DefaultId, "UTC" };
+        foreach (var candidate in candidates)
+        {
+            if (string.IsNullOrWhiteSpace(candidate)) continue;
+            if (TimeZoneInfo.TryFindSystemTimeZoneById(candidate, out var tz)) return tz;
+            if (TimeZoneInfo.TryConvertIanaIdToWindowsId(candidate, out var winId) &&
+                TimeZoneInfo.TryFindSystemTimeZoneById(winId, out tz)) return tz;
+            if (TimeZoneInfo.TryConvertWindowsIdToIanaId(candidate, out var ianaId) &&
+                TimeZoneInfo.TryFindSystemTimeZoneById(ianaId, out tz)) return tz;
+        }
+        return TimeZoneInfo.Utc;
     }
 
     private async Task ValidateMentorInputAsync(

@@ -35,6 +35,21 @@ public sealed class DateTimeFormatter(IHttpContextAccessor accessor)
 
     /// <summary>The conversion, separable from the request so tests can drive it directly.</summary>
     public static string FormatInZone(DateTimeOffset instant, string zoneId, string format) =>
-        TimeZoneInfo.ConvertTime(instant, TimeZoneInfo.FindSystemTimeZoneById(zoneId))
+        TimeZoneInfo.ConvertTime(instant, ResolveTimeZone(zoneId))
             .ToString(format);
+
+    private static TimeZoneInfo ResolveTimeZone(string? zoneId)
+    {
+        if (!string.IsNullOrWhiteSpace(zoneId))
+        {
+            if (TimeZoneInfo.TryFindSystemTimeZoneById(zoneId, out var tz)) return tz;
+            if (TimeZoneInfo.TryConvertIanaIdToWindowsId(zoneId, out var winId) &&
+                TimeZoneInfo.TryFindSystemTimeZoneById(winId, out tz)) return tz;
+            if (TimeZoneInfo.TryConvertWindowsIdToIanaId(zoneId, out var ianaId) &&
+                TimeZoneInfo.TryFindSystemTimeZoneById(ianaId, out tz)) return tz;
+        }
+
+        if (TimeZoneInfo.TryFindSystemTimeZoneById(TimeZones.DefaultId, out var defaultTz)) return defaultTz;
+        return TimeZoneInfo.Utc;
+    }
 }

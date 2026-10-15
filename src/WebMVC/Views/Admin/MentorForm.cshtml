@@ -70,7 +70,7 @@
           <select class="field__input" id="mentor-cert" name="CertId" required>
             @foreach (var cert in Model.Certificates)
             {
-              <option value="@(cert.Code == "TOEIC" ? 1 : cert.Code == "IELTS" ? 2 : 3)" selected="@(Model.CertId == (cert.Code == "TOEIC" ? 1 : cert.Code == "IELTS" ? 2 : 3))">
+              <option value="@cert.CertId" selected="@(Model.CertId == cert.CertId)">
                 @cert.Code — @cert.Name
               </option>
             }
@@ -84,23 +84,9 @@
             <option value="">All skills / General</option>
             @foreach (var cert in Model.Certificates)
             {
-              var cId = cert.Code == "TOEIC" ? 1 : cert.Code == "IELTS" ? 2 : 3;
               @foreach (var s in cert.Skills)
               {
-                var sId = s.Code switch {
-                  "LIST" when cId == 1 => 1,
-                  "READ" when cId == 1 => 2,
-                  "LIST" when cId == 2 => 3,
-                  "READ" when cId == 2 => 4,
-                  "WRIT" when cId == 2 => 5,
-                  "SPEA" when cId == 2 => 6,
-                  "LIST" when cId == 3 => 7,
-                  "READ" when cId == 3 => 8,
-                  "WRIT" when cId == 3 => 9,
-                  "SPEA" when cId == 3 => 10,
-                  _ => 1
-                };
-                <option value="@sId" data-cert="@cId" selected="@(Model.SkillId == sId)">
+                <option value="@s.SkillId" data-cert="@cert.CertId" selected="@(Model.SkillId == s.SkillId)">
                   [@cert.Code] @s.Name (@s.Modality)
                 </option>
               }
@@ -167,6 +153,8 @@
       var typeSelect = document.getElementById('mentor-type');
       var userGroup = document.getElementById('user-field-group');
       var userSelect = document.getElementById('mentor-user');
+      var certSelect = document.getElementById('mentor-cert');
+      var skillSelect = document.getElementById('mentor-skill');
 
       function updateVisibility() {
         if (!typeSelect) return;
@@ -179,9 +167,34 @@
         }
       }
 
+      function updateSkills() {
+        if (!certSelect || !skillSelect) return;
+        var selectedCert = certSelect.value;
+        for (var i = 0; i < skillSelect.options.length; i++) {
+          var opt = skillSelect.options[i];
+          var optCert = opt.getAttribute('data-cert');
+          if (!optCert) continue; // "All skills / General" option
+          if (optCert === selectedCert) {
+            opt.style.display = '';
+            opt.disabled = false;
+          } else {
+            opt.style.display = 'none';
+            opt.disabled = true;
+            if (opt.selected) {
+              skillSelect.value = '';
+            }
+          }
+        }
+      }
+
       if (typeSelect) {
         typeSelect.addEventListener('change', updateVisibility);
         updateVisibility();
+      }
+
+      if (certSelect) {
+        certSelect.addEventListener('change', updateSkills);
+        updateSkills();
       }
     })();
   </script>

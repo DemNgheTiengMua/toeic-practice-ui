@@ -88,7 +88,7 @@ public sealed class AdminMentorsControllerTests
     {
         var api = new TestApiClient
         {
-            Certificates = [new CertificateDto("TOEIC", "TOEIC", "Desc", [], [])],
+            CertificateOptions = [new MentorCertificateOptionDto(1, "TOEIC", "TOEIC", [])],
             AdminUsers = new AdminUsersSummaryDto([new AdminUserDto(10, "m@test.local", "Mentor User", null, 0, 0, null, null, false, null, DateTimeOffset.UtcNow)], 1, 1, 10, 1, 0, 0),
         };
 
@@ -220,6 +220,7 @@ public sealed class AdminMentorsControllerTests
         public IReadOnlyList<AdminMentorListItemDto> AdminMentors { get; set; } = [];
         public MentorSummaryDto? MentorSummary { get; set; }
         public IReadOnlyList<CertificateDto> Certificates { get; set; } = [];
+        public IReadOnlyList<MentorCertificateOptionDto> CertificateOptions { get; set; } = [];
         public AdminUsersSummaryDto? AdminUsers { get; set; }
         public IReadOnlyList<AdminMentorSlotDto> AdminSlots { get; set; } = [];
         public CreateMentorProfileRequest? CreatedRequest { get; set; }
@@ -234,6 +235,9 @@ public sealed class AdminMentorsControllerTests
 
         public Task<IReadOnlyList<CertificateDto>> GetCertificatesAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(Certificates);
+
+        public Task<IReadOnlyList<MentorCertificateOptionDto>> GetMentorCertificateOptionsAsync(string bearerToken, CancellationToken cancellationToken = default) =>
+            Task.FromResult(CertificateOptions);
 
         public Task<AdminUsersSummaryDto> GetAdminUsersAsync(string? q, string? status, int page, int pageSize, string bearerToken, CancellationToken cancellationToken = default) =>
             Task.FromResult(AdminUsers ?? new AdminUsersSummaryDto([], 0, 1, 10, 0, 0, 0));
