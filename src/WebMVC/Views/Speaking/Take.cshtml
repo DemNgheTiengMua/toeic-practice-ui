@@ -17,8 +17,8 @@
       <span class="save-status save-status--saved" id="save-status-text" role="status" aria-live="polite">
         @take.SavedCount of @take.TotalQuestions saved
       </span>
-      <span class="timer" role="timer" aria-label="Time remaining in the test">
-        <span class="text-sm text-muted">Test time remaining</span>
+      <span class="timer" role="timer" aria-label="Time remaining in the exam">
+        <span class="text-sm text-muted">Exam time remaining</span>
         <span class="timer__value" id="test-timer-val">--:--</span>
       </span>
     </div>
@@ -191,9 +191,9 @@
               </div>
 
               <div class="text-xs stack" style="gap: var(--space-1)">
-                <div class="row"><span class="navigator__cell navigator__cell--swatch is-answered" aria-hidden="true">✓</span> Saved</div>
-                <div class="row"><span class="navigator__cell navigator__cell--swatch is-current" aria-hidden="true">●</span> Current</div>
-                <div class="row"><span class="navigator__cell navigator__cell--swatch is-unanswered" aria-hidden="true">○</span> Remaining</div>
+                <div class="row"><span class="navigator__cell navigator__cell--swatch is-answered" aria-hidden="true">1</span> Saved</div>
+                <div class="row"><span class="navigator__cell navigator__cell--swatch is-current" aria-hidden="true">2</span> Current</div>
+                <div class="row"><span class="navigator__cell navigator__cell--swatch is-unanswered" aria-hidden="true">3</span> Remaining</div>
               </div>
             </div>
           </div>
@@ -268,13 +268,13 @@
     return (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
   }
 
-  // Update whole-test timer
+  // Update whole-exam timer
   function updateTestTimer() {
     testTimerVal.textContent = formatTime(remainingTestSeconds);
     if (remainingTestSeconds > 0) {
       remainingTestSeconds--;
     } else {
-      alert("Test time has expired. Submitting your saved answers...");
+      alert("Exam time has expired. Submitting your saved answers...");
       document.querySelector('form[action^="/speaking/submit/"]').submit();
     }
   }

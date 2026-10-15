@@ -681,11 +681,11 @@ DECLARE @secS1 INT = (SELECT SectionId FROM Sections WHERE CertId = @toeicCert A
 DECLARE @secS2 INT = (SELECT SectionId FROM Sections WHERE CertId = @toeicCert AND Code = 'S2');
 DECLARE @secS3 INT = (SELECT SectionId FROM Sections WHERE CertId = @toeicCert AND Code = 'S3');
 
-IF NOT EXISTS (SELECT 1 FROM Exams WHERE CertId = @toeicCert AND Name = N'ETS TOEIC Speaking Practice Test 1')
+IF NOT EXISTS (SELECT 1 FROM Exams WHERE CertId = @toeicCert AND Name = N'ETS TOEIC Speaking Practice Exam 1')
 BEGIN
   INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose, Description, SourceName, QuestionCount)
-  VALUES (@toeicCert, N'ETS TOEIC Speaking Practice Test 1', 'published', 20, 'speaking_practice',
-          N'Complete workplace English speaking test with 11 questions across 5 task types. Scored with AI against official pronunciation and fluency rubric criteria.',
+  VALUES (@toeicCert, N'ETS TOEIC Speaking Practice Exam 1', 'published', 20, 'speaking_practice',
+          N'Complete workplace English speaking practice exam with 11 questions across 5 task types. Scored with AI against official pronunciation and fluency rubric criteria.',
           N'ETS Official 2024', 3);
   DECLARE @speakingExam INT = SCOPE_IDENTITY();
 

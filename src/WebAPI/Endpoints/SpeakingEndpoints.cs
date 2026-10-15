@@ -221,7 +221,7 @@ public static class SpeakingEndpoints
                 var fileInfo = await speakingService.GetAudioFileAsync(CurrentUserId(http), attemptId, questionId, cancellationToken);
                 if (fileInfo is null)
                 {
-                    return Results.NotFound();
+                    return Problem(StatusCodes.Status404NotFound, "Audio file not found", ApiError.Codes.AttemptNotFound, "The audio file could not be found.");
                 }
 
                 return Results.Stream(fileInfo.Stream, fileInfo.ContentType, fileInfo.FileName, enableRangeProcessing: true);

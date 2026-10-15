@@ -56,7 +56,7 @@ public sealed class SpeakingPracticeService(
     CompanionDbContext db,
     ILearnerService learners,
     IFileStore fileStore,
-    IAiGrader aiGrader) : ISpeakingPracticeService
+    IWritingPracticeService writingService) : ISpeakingPracticeService
 {
     public const int SpeakingPracticeCreditCost = 1;
 
@@ -382,11 +382,17 @@ public sealed class SpeakingPracticeService(
         }
         else
         {
+            var oldAudioPath = fr.AudioPath;
             fr.AudioPath = relativePath;
             fr.DurationMs = durationMs;
             fr.Status = FreeResponseStatus.Draft.ToCode();
             fr.DraftSavedAt = now;
             fr.SubmittedAt = null;
+
+            if (!string.IsNullOrWhiteSpace(oldAudioPath) && !string.Equals(oldAudioPath, relativePath, StringComparison.OrdinalIgnoreCase))
+            {
+                await fileStore.DeleteAudioAsync(oldAudioPath, cancellationToken);
+            }
         }
 
         await db.SaveChangesAsync(cancellationToken);
@@ -726,142 +732,7 @@ public sealed class SpeakingPracticeService(
         return result;
     }
 
-    public async Task<int> ProcessPendingGradingsAsync(CancellationToken cancellationToken = default)
-    {
-        var pendingGradings = await db.AiGradings
-            .Include(g => g.FreeResponse)
-                .ThenInclude(fr => fr.Question)
-                    .ThenInclude(q => q.Section)
-            .Include(g => g.FreeResponse)
-                .ThenInclude(fr => fr.Attempt)
-            .Where(g => g.Status == AiGradingStatus.Pending.ToCode())
-            .OrderBy(g => g.RequestedAt)
-            .Take(10)
-            .ToListAsync(cancellationToken);
-
-        if (pendingGradings.Count == 0) return 0;
-
-        int processed = 0;
-        foreach (var grading in pendingGradings)
-        {
-            var fr = grading.FreeResponse;
-            var question = fr.Question;
-
-            // Load applicable criteria
-            var sectionCriteria = await db.SectionCriteria
-                .AsNoTracking()
-                .Where(sc => sc.SectionId == question.SectionId)
-                .Include(sc => sc.GradingCriterion)
-                .OrderBy(sc => sc.GradingCriterion.DisplayOrder)
-                .ToListAsync(cancellationToken);
-
-            List<GradingCriterionDetail> criteriaDetails;
-            if (sectionCriteria.Count > 0)
-            {
-                criteriaDetails = sectionCriteria.Select(sc => new GradingCriterionDetail(
-                    sc.CriterionId,
-                    sc.GradingCriterion.Code,
-                    sc.GradingCriterion.Name,
-                    sc.MaxScore ?? sc.GradingCriterion.MaxScore,
-                    sc.GradingCriterion.Weight)).ToList();
-            }
-            else
-            {
-                var generalCriteria = await db.GradingCriteria
-                    .AsNoTracking()
-                    .Where(c => c.SkillId == grading.SkillId)
-                    .OrderBy(c => c.DisplayOrder)
-                    .ToListAsync(cancellationToken);
-
-                criteriaDetails = generalCriteria.Select(c => new GradingCriterionDetail(
-                    c.CriterionId,
-                    c.Code,
-                    c.Name,
-                    c.MaxScore,
-                    c.Weight)).ToList();
-            }
-
-            var request = new AiGradingRequest(
-                fr.FreeResponseId,
-                grading.SkillId,
-                fr.Attempt.CertId,
-                question.Stem,
-                question.MinWords,
-                question.MaxWords,
-                fr.ResponseText ?? string.Empty,
-                criteriaDetails,
-                grading.AttemptCount,
-                fr.AudioPath,
-                fr.DurationMs);
-
-            var result = await aiGrader.GradeAsync(request, cancellationToken);
-
-            if (result.Success)
-            {
-                if (!string.IsNullOrEmpty(result.Transcript) && string.IsNullOrWhiteSpace(fr.ResponseText))
-                {
-                    fr.ResponseText = result.Transcript;
-                }
-
-                // Clear any existing scores for this grading
-                var existingScores = await db.AiGradingScores
-                    .Where(s => s.GradingId == grading.GradingId)
-                    .ToListAsync(cancellationToken);
-                db.AiGradingScores.RemoveRange(existingScores);
-
-                decimal totalScore = 0m;
-                foreach (var s in result.Scores)
-                {
-                    var detail = criteriaDetails.FirstOrDefault(c => c.CriterionId == s.CriterionId);
-                    var max = detail?.MaxScore ?? s.Score;
-                    var clampedScore = Math.Clamp(s.Score, 0m, max);
-
-                    db.AiGradingScores.Add(new AiGradingScore
-                    {
-                        GradingId = grading.GradingId,
-                        CriterionId = s.CriterionId,
-                        SkillId = grading.SkillId,
-                        Score = clampedScore,
-                        Comment = s.Comment
-                    });
-                    totalScore += clampedScore;
-                }
-
-                grading.Status = AiGradingStatus.Done.ToCode();
-                grading.CompletedAt = DateTimeOffset.UtcNow;
-                grading.Model = result.Model ?? FakeAiGrader.DefaultModel;
-                grading.FailureReason = null;
-                grading.OverallScaled = totalScore;
-
-                await db.SaveChangesAsync(cancellationToken);
-
-                // Check if all free responses for this attempt are now graded
-                var anyPending = await db.FreeResponses
-                    .AnyAsync(r => r.AttemptId == fr.AttemptId && r.Status != FreeResponseStatus.Graded.ToCode(), cancellationToken);
-
-                if (!anyPending)
-                {
-                    var attempt = await db.ExamAttempts.FindAsync(new object[] { fr.AttemptId }, cancellationToken);
-                    if (attempt != null && attempt.Status != AttemptStatus.Graded.ToCode())
-                    {
-                        attempt.Status = AttemptStatus.Graded.ToCode();
-                        attempt.TotalScore = null; // UI-45 / trg_Attempts_NoBandForSpeakingPractice (50041)
-                        attempt.BandCode = null;   // UI-38 / trg_Attempts_NoBandForSpeakingPractice (50032)
-                        await db.SaveChangesAsync(cancellationToken);
-                    }
-                }
-            }
-            else
-            {
-                grading.Status = AiGradingStatus.Failed.ToCode();
-                grading.FailureReason = result.FailureReason ?? "Grading failed.";
-                grading.CompletedAt = DateTimeOffset.UtcNow;
-                await db.SaveChangesAsync(cancellationToken);
-            }
-
-            processed++;
-        }
-
-        return processed;
-    }
+    public Task<int> ProcessPendingGradingsAsync(CancellationToken cancellationToken = default)
+        => writingService.ProcessPendingGradingsAsync(cancellationToken);
 }
+

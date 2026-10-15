@@ -10,31 +10,34 @@ public static class AudioValidation
 {
     public const long MaxAudioSizeBytes = 10 * 1024 * 1024; // 10 MB
 
-    public static readonly HashSet<string> AllowedContentTypes = new(StringComparer.OrdinalIgnoreCase)
+    public static readonly Dictionary<string, string> ExtensionToMime = new(StringComparer.OrdinalIgnoreCase)
     {
-        "audio/webm",
-        "audio/wav",
-        "audio/wave",
-        "audio/x-wav",
-        "audio/mp3",
-        "audio/mpeg",
-        "audio/ogg",
-        "audio/x-m4a",
-        "audio/m4a",
-        "audio/mp4",
-        "audio/aac"
+        [".webm"] = "audio/webm",
+        [".wav"] = "audio/wav",
+        [".mp3"] = "audio/mpeg",
+        [".ogg"] = "audio/ogg",
+        [".m4a"] = "audio/mp4",
+        [".mp4"] = "audio/mp4",
+        [".aac"] = "audio/aac",
     };
 
-    public static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
+    public static readonly Dictionary<string, string> MimeToExtension = new(StringComparer.OrdinalIgnoreCase)
     {
-        ".webm",
-        ".wav",
-        ".mp3",
-        ".ogg",
-        ".m4a",
-        ".mp4",
-        ".aac"
+        ["audio/webm"] = ".webm",
+        ["audio/wav"] = ".wav",
+        ["audio/wave"] = ".wav",
+        ["audio/x-wav"] = ".wav",
+        ["audio/mp3"] = ".mp3",
+        ["audio/mpeg"] = ".mp3",
+        ["audio/ogg"] = ".ogg",
+        ["audio/x-m4a"] = ".m4a",
+        ["audio/m4a"] = ".m4a",
+        ["audio/mp4"] = ".mp4",
+        ["audio/aac"] = ".aac",
     };
+
+    public static readonly HashSet<string> AllowedContentTypes = new(MimeToExtension.Keys, StringComparer.OrdinalIgnoreCase);
+    public static readonly HashSet<string> AllowedExtensions = new(ExtensionToMime.Keys, StringComparer.OrdinalIgnoreCase);
 
     public static (bool IsValid, string? ErrorMessage) Validate(long length, string? contentType, string? fileName)
     {
@@ -49,10 +52,23 @@ public static class AudioValidation
         }
 
         var ext = Path.GetExtension(fileName ?? string.Empty);
-        var extValid = !string.IsNullOrEmpty(ext) && AllowedExtensions.Contains(ext);
-        var mimeValid = !string.IsNullOrEmpty(contentType) && AllowedContentTypes.Contains(contentType);
+        var hasExt = !string.IsNullOrEmpty(ext);
+        var extValid = hasExt && AllowedExtensions.Contains(ext);
 
-        if (!extValid && !mimeValid)
+        var hasMime = !string.IsNullOrEmpty(contentType);
+        var mimeValid = hasMime && AllowedContentTypes.Contains(contentType!);
+
+        if (hasExt && !extValid)
+        {
+            return (false, $"Invalid audio file format or extension '{ext}'. Allowed formats: {string.Join(", ", AllowedExtensions)}.");
+        }
+
+        if (hasMime && !mimeValid)
+        {
+            return (false, $"Invalid audio file format or MIME type '{contentType}'. Allowed formats: {string.Join(", ", AllowedContentTypes)}.");
+        }
+
+        if (!hasExt && !hasMime)
         {
             return (false, "Invalid audio file format. Allowed formats: webm, wav, mp3, ogg, m4a, mp4, aac.");
         }
@@ -75,6 +91,25 @@ public class LocalFileStore : IFileStore
     }
 
     public string BaseDirectory => _baseDirectory;
+
+    private string? ResolveSafeFullPath(string? relativePath)
+    {
+        if (string.IsNullOrWhiteSpace(relativePath))
+        {
+            return null;
+        }
+
+        // Prevent path traversal
+        var normalized = relativePath.Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
+        var fullPath = Path.GetFullPath(Path.Combine(_baseDirectory, normalized));
+
+        if (!fullPath.StartsWith(_baseDirectory, StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        return fullPath;
+    }
 
     public async Task<string> SaveAudioAsync(
         int attemptId,
@@ -114,21 +149,8 @@ public class LocalFileStore : IFileStore
 
     public Task<FileStreamResultInfo?> GetAudioAsync(string relativePath, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(relativePath))
-        {
-            return Task.FromResult<FileStreamResultInfo?>(null);
-        }
-
-        // Prevent path traversal
-        var normalized = relativePath.Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
-        var fullPath = Path.GetFullPath(Path.Combine(_baseDirectory, normalized));
-
-        if (!fullPath.StartsWith(_baseDirectory, StringComparison.OrdinalIgnoreCase))
-        {
-            return Task.FromResult<FileStreamResultInfo?>(null);
-        }
-
-        if (!File.Exists(fullPath))
+        var fullPath = ResolveSafeFullPath(relativePath);
+        if (fullPath is null || !File.Exists(fullPath))
         {
             return Task.FromResult<FileStreamResultInfo?>(null);
         }
@@ -142,20 +164,8 @@ public class LocalFileStore : IFileStore
 
     public Task<bool> DeleteAudioAsync(string relativePath, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(relativePath))
-        {
-            return Task.FromResult(false);
-        }
-
-        var normalized = relativePath.Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
-        var fullPath = Path.GetFullPath(Path.Combine(_baseDirectory, normalized));
-
-        if (!fullPath.StartsWith(_baseDirectory, StringComparison.OrdinalIgnoreCase))
-        {
-            return Task.FromResult(false);
-        }
-
-        if (File.Exists(fullPath))
+        var fullPath = ResolveSafeFullPath(relativePath);
+        if (fullPath is not null && File.Exists(fullPath))
         {
             File.Delete(fullPath);
             return Task.FromResult(true);
@@ -166,32 +176,13 @@ public class LocalFileStore : IFileStore
 
     public static string GetContentTypeFromFileName(string path)
     {
-        var ext = Path.GetExtension(path).ToLowerInvariant();
-        return ext switch
-        {
-            ".webm" => "audio/webm",
-            ".wav" => "audio/wav",
-            ".mp3" => "audio/mpeg",
-            ".ogg" => "audio/ogg",
-            ".m4a" => "audio/mp4",
-            ".mp4" => "audio/mp4",
-            ".aac" => "audio/aac",
-            _ => "application/octet-stream"
-        };
+        var ext = Path.GetExtension(path);
+        return AudioValidation.ExtensionToMime.TryGetValue(ext, out var mime) ? mime : "application/octet-stream";
     }
 
     public static string? GetExtensionFromContentType(string? contentType)
     {
         if (string.IsNullOrWhiteSpace(contentType)) return null;
-        return contentType.ToLowerInvariant() switch
-        {
-            "audio/webm" => ".webm",
-            "audio/wav" or "audio/wave" or "audio/x-wav" => ".wav",
-            "audio/mp3" or "audio/mpeg" => ".mp3",
-            "audio/ogg" => ".ogg",
-            "audio/x-m4a" or "audio/m4a" or "audio/mp4" => ".m4a",
-            "audio/aac" => ".aac",
-            _ => null
-        };
+        return AudioValidation.MimeToExtension.TryGetValue(contentType, out var ext) ? ext : null;
     }
 }

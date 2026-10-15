@@ -24,7 +24,8 @@ public sealed class SpeakingPracticeServiceTests(DatabaseFixture database)
         var tempDir = Path.Combine(Path.GetTempPath(), "extra_efficiency_audio_tests_" + Guid.NewGuid().ToString("N"));
         var fileStore = new LocalFileStore(tempDir);
         var grader = new FakeAiGrader();
-        var service = new SpeakingPracticeService(db, learners, fileStore, customGrader ?? grader);
+        var writingService = new WritingPracticeService(db, learners, customGrader ?? grader);
+        var service = new SpeakingPracticeService(db, learners, fileStore, writingService);
         return (service, learners, fileStore, grader);
     }
 
@@ -192,11 +193,17 @@ public sealed class SpeakingPracticeServiceTests(DatabaseFixture database)
 
         var info = await service.StartAttemptAsync(userId, examId);
 
-        // Test invalid audio upload
+        // Test invalid audio upload (invalid mime)
         using var invalidStream = new MemoryStream(new byte[100]);
         var exInvalid = await Assert.ThrowsAsync<SpeakingPracticeException>(() =>
             service.SaveAudioAsync(userId, info.AttemptId, q1Id, invalidStream, "text/plain", "file.txt", 1000));
         Assert.Equal(SpeakingPracticeException.InvalidAudio, exInvalid.Code);
+
+        // Test invalid audio upload (invalid extension with audio mime)
+        using var exeStream = new MemoryStream(new byte[100]);
+        var exExe = await Assert.ThrowsAsync<SpeakingPracticeException>(() =>
+            service.SaveAudioAsync(userId, info.AttemptId, q1Id, exeStream, "audio/webm", "malicious.exe", 1000));
+        Assert.Equal(SpeakingPracticeException.InvalidAudio, exExe.Code);
 
         // Test valid audio upload
         var fakeAudioBytes = Encoding.UTF8.GetBytes("RIFF....WAVEfmt ....data....fake audio payload");
@@ -208,14 +215,24 @@ public sealed class SpeakingPracticeServiceTests(DatabaseFixture database)
         Assert.False(string.IsNullOrEmpty(saveResult.AudioPath));
 
         // Check storage location is inside fileStore base directory (outside web root)
-        var fileInfo = await fileStore.GetAudioAsync(saveResult.AudioPath);
-        Assert.NotNull(fileInfo);
-        Assert.Equal("audio/webm", fileInfo.ContentType);
+        using (var fileInfo = await fileStore.GetAudioAsync(saveResult.AudioPath))
+        {
+            Assert.NotNull(fileInfo);
+            Assert.Equal("audio/webm", fileInfo.ContentType);
+        }
+
+        // Test re-recording cleans up the previous audio file from disk
+        var oldPath = saveResult.AudioPath;
+        using var reRecordStream = new MemoryStream(fakeAudioBytes);
+        var saveResult2 = await service.SaveAudioAsync(userId, info.AttemptId, q1Id, reRecordStream, "audio/webm", "q1_take2.webm", 29000);
+        Assert.NotEqual(oldPath, saveResult2.AudioPath);
+        var oldAudioDeleted = await fileStore.GetAudioAsync(oldPath);
+        Assert.Null(oldAudioDeleted);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
         var draft = await db.FreeResponses.SingleAsync(fr => fr.AttemptId == info.AttemptId && fr.QuestionId == q1Id);
-        Assert.Equal(saveResult.AudioPath, draft.AudioPath);
-        Assert.Equal(27000, draft.DurationMs);
+        Assert.Equal(saveResult2.AudioPath, draft.AudioPath);
+        Assert.Equal(29000, draft.DurationMs);
         Assert.Equal("draft", draft.Status);
         Assert.Null(draft.SubmittedAt);
         Assert.NotNull(draft.DraftSavedAt);
