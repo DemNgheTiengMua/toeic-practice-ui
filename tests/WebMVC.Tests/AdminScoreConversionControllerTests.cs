@@ -18,7 +18,7 @@ namespace WebMVC.Tests;
 
 public sealed class AdminScoreConversionControllerTests
 {
-    private static AdminScoreConversionController CreateController(ICompanionApiClient api)
+    private static AdminScoreConversionController CreateController(IAdminScoreConversionClient api)
     {
         var identity = new ClaimsIdentity(AuthClaims.For(1, "admin@toeic.local", Roles.Admin, "Admin"), "Cookies");
         var principal = new ClaimsPrincipal(identity);
@@ -53,16 +53,6 @@ public sealed class AdminScoreConversionControllerTests
         public void SaveTempData(HttpContext context, IDictionary<string, object> values) { }
     }
 
-    private sealed class FixedAuthentication(ClaimsPrincipal principal, AuthenticationProperties properties) : IAuthenticationService
-    {
-        public Task<AuthenticateResult> AuthenticateAsync(HttpContext context, string? scheme) =>
-            Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(principal, properties, "Cookies")));
-
-        public Task ChallengeAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task ForbidAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task SignInAsync(HttpContext context, string? scheme, ClaimsPrincipal principal, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task SignOutAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-    }
 
     [Fact]
     public async Task Index_returns_view_with_score_conversion_model()
@@ -140,16 +130,16 @@ public sealed class AdminScoreConversionControllerTests
         Assert.Equal("Scales must be monotonic.", controller.TempData["Error"]);
     }
 
-    private sealed class TestScoreConversionApiClient : ICompanionApiClient
+    private sealed class TestScoreConversionApiClient : IAdminScoreConversionClient
     {
         public Exception? ExceptionToThrow { get; set; }
         public AdminScoreConversionDto? ConversionDto { get; set; }
         public AdminScoreConversionDto? UpdatedDto { get; set; }
 
-        public Task<AdminScoreConversionDto> GetAdminScoreConversionAsync(string? certCode, int? examId, string bearerToken, CancellationToken cancellationToken = default) =>
+        public Task<AdminScoreConversionDto> GetAdminScoreConversionAsync(string? certCode = null, int? examId = null, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<AdminScoreConversionDto>(ExceptionToThrow) : Task.FromResult(ConversionDto!);
 
-        public Task<AdminScoreConversionDto> UpdateAdminScoreConversionAsync(int certId, UpdateScoreConversionRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
+        public Task<AdminScoreConversionDto> UpdateAdminScoreConversionAsync(int certId, UpdateScoreConversionRequest request, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<AdminScoreConversionDto>(ExceptionToThrow) : Task.FromResult(UpdatedDto!);
     }
 }

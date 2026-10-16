@@ -608,18 +608,7 @@ public sealed class MentorsControllerTests
         public void SaveTempData(HttpContext context, IDictionary<string, object> values) { }
     }
 
-    private sealed class FixedAuthentication(ClaimsPrincipal principal, AuthenticationProperties properties) : IAuthenticationService
-    {
-        public Task<AuthenticateResult> AuthenticateAsync(HttpContext context, string? scheme) =>
-            Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(principal, properties, "Cookies")));
-
-        public Task ChallengeAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task ForbidAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task SignInAsync(HttpContext context, string? scheme, ClaimsPrincipal principal, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task SignOutAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-    }
-
-    private sealed class TestApiClient : ICompanionApiClient
+    private sealed class TestApiClient : IMentorsClient
     {
         public IReadOnlyList<MentorSummaryDto> Mentors { get; set; } = [];
         public MentorDetailDto? Detail { get; set; }
@@ -646,40 +635,40 @@ public sealed class MentorsControllerTests
             return Task.FromResult(Detail!);
         }
 
-        public Task<MentorBookingDto> BookMentorAsync(int mentorId, BookMentorRequest request, string bearerToken, CancellationToken cancellationToken = default)
+        public Task<IReadOnlyList<MentorCertificateOptionDto>> GetMentorCertificateOptionsAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<MentorCertificateOptionDto>>([]);
+
+        public Task<MentorBookingDto> BookMentorAsync(int mentorId, BookMentorRequest request, CancellationToken cancellationToken = default)
         {
             if (BookExceptionToThrow is not null) throw BookExceptionToThrow;
             if (ExceptionToThrow is not null) throw ExceptionToThrow;
             return Task.FromResult(BookingResult!);
         }
 
-        public Task<CancelBookingResultDto> CancelBookingAsync(int bookingId, string bearerToken, CancellationToken cancellationToken = default)
+        public Task<CancelBookingResultDto> CancelBookingAsync(int bookingId, CancellationToken cancellationToken = default)
         {
             if (ExceptionToThrow is not null) throw ExceptionToThrow;
             return Task.FromResult(CancelResult!);
         }
 
-        public Task<MentorBookingDto> GetBookingDetailAsync(int bookingId, string bearerToken, CancellationToken cancellationToken = default)
+        public Task<MentorBookingDto> GetBookingDetailAsync(int bookingId, CancellationToken cancellationToken = default)
         {
             if (ExceptionToThrow is not null) throw ExceptionToThrow;
             return Task.FromResult(BookingResult!);
         }
 
-        public Task<IReadOnlyList<MentorBookingDto>> GetLearnerBookingsAsync(string bearerToken, CancellationToken cancellationToken = default)
+        public Task<IReadOnlyList<MentorBookingDto>> GetLearnerBookingsAsync(CancellationToken cancellationToken = default)
         {
             if (ExceptionToThrow is not null) throw ExceptionToThrow;
             return Task.FromResult(BookingsList);
         }
 
-        public Task<MentorReviewDto> RateBookingAsync(int bookingId, RateMentorRequest request, string bearerToken, CancellationToken cancellationToken = default)
+        public Task<MentorReviewDto> RateBookingAsync(int bookingId, RateMentorRequest request, CancellationToken cancellationToken = default)
         {
             if (ExceptionToThrow is not null) throw ExceptionToThrow;
             LastRatedBookingId = bookingId;
             LastRateRequest = request;
             return Task.FromResult(RateResult ?? new MentorReviewDto(1, request.Rating, request.Text, "Learner", DateTimeOffset.UtcNow));
         }
-
-        public Task<MentorReviewDto> RateBookingAsync(int bookingId, RateMentorRequest request, CancellationToken cancellationToken = default) =>
-            RateBookingAsync(bookingId, request, string.Empty, cancellationToken);
     }
 }

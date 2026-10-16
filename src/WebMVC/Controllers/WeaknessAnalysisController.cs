@@ -5,10 +5,10 @@ using WebMVC.Models;
 namespace WebMVC.Controllers;
 
 public sealed class WeaknessAnalysisController(
-    ICompanionApiClient api,
+    IWeaknessAnalysisClient api,
     CurrentUser currentUser,
     ILogger<WeaknessAnalysisController> logger)
-    : LearnerControllerBase(api, currentUser, logger)
+    : LearnerControllerBase(currentUser, logger)
 {
     private bool IsAjaxRequest =>
         Request.Headers.XRequestedWith == "XMLHttpRequest" ||
@@ -19,13 +19,12 @@ public sealed class WeaknessAnalysisController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var data = await Api.GetWeaknessAnalysisAsync(bearer, cancellationToken);
+            var data = await api.GetWeaknessAnalysisAsync(cancellationToken);
 
             AiInsightDto? insight = null;
             try
             {
-                insight = await Api.GetDashboardInsightAsync(bearer, cancellationToken: cancellationToken);
+                insight = await api.GetDashboardInsightAsync(cancellationToken: cancellationToken);
             }
             catch (Exception ex)
             {
@@ -49,8 +48,7 @@ public sealed class WeaknessAnalysisController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var res = await Api.ResolveRecommendationAsync(recId, bearer, cancellationToken);
+            var res = await api.ResolveRecommendationAsync(recId, cancellationToken);
 
             if (IsAjaxRequest)
             {

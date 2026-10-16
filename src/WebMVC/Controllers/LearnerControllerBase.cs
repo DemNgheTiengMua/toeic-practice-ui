@@ -3,15 +3,20 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 
+using Microsoft.Extensions.DependencyInjection;
+
 namespace WebMVC.Controllers;
 
 /// <summary>Every learner page renders inside the learner shell (credit balance, certificate
 /// switcher), so the shell's context is loaded once here before any action runs and handed to
 /// the layout through <see cref="LearnerShell"/>. Learner controllers inherit this.</summary>
 [Authorize(Policy = Roles.Learner)]
-public abstract class LearnerControllerBase(ICompanionApiClient api, CurrentUser currentUser, ILogger logger) : Controller
+public abstract class LearnerControllerBase(CurrentUser currentUser, ILogger logger, ILearnerContextClient? learnerContext = null) : Controller
 {
-    protected ICompanionApiClient Api { get; } = api;
+    public LearnerControllerBase(ILearnerContextClient api, CurrentUser currentUser, ILogger logger)
+        : this(currentUser, logger, api)
+    {
+    }
 
     protected CurrentUser CurrentUser { get; } = currentUser;
 
@@ -22,8 +27,12 @@ public abstract class LearnerControllerBase(ICompanionApiClient api, CurrentUser
     {
         try
         {
-            var shell = await Api.GetLearnerContextAsync(await BearerAsync(), HttpContext.RequestAborted);
-            LearnerShell.Set(HttpContext, shell);
+            var client = learnerContext ?? context.HttpContext.RequestServices.GetService<ILearnerContextClient>();
+            if (client is not null)
+            {
+                var shell = await client.GetLearnerContextAsync(HttpContext.RequestAborted);
+                LearnerShell.Set(HttpContext, shell);
+            }
         }
         // AUTH_LOCKED / AUTH_REQUIRED propagate to the sign-out middleware in Program.cs.
         catch (HttpRequestException ex) when (ex is not ApiException { Code: ApiError.Codes.Locked or ApiError.Codes.Unauthenticated })

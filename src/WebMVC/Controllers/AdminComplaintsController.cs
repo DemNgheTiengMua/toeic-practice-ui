@@ -8,11 +8,10 @@ namespace WebMVC.Controllers;
 [Authorize(Policy = Roles.Admin)]
 [Route("admin/complaints")]
 public sealed class AdminComplaintsController(
-    ICompanionApiClient api,
+    IAdminComplaintsClient api,
     CurrentUser currentUser,
     ILogger<AdminComplaintsController> logger) : Controller
 {
-    private async Task<string> BearerAsync() => (await currentUser.GetBearerTokenAsync())!;
 
     [HttpGet("")]
     public async Task<IActionResult> Index(
@@ -23,8 +22,7 @@ public sealed class AdminComplaintsController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var summary = await api.GetAdminComplaintsAsync(q, status, page, 20, bearer, cancellationToken);
+            var summary = await api.GetAdminComplaintsAsync(q, status, page, 20, cancellationToken);
             var vm = new AdminComplaintsViewModel(summary, q, status, page);
             return View("~/Views/Admin/Complaints.cshtml", vm);
         }
@@ -42,8 +40,7 @@ public sealed class AdminComplaintsController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var detail = await api.GetAdminComplaintDetailAsync(id, bearer, cancellationToken);
+            var detail = await api.GetAdminComplaintDetailAsync(id, cancellationToken);
             if (detail is null)
             {
                 return NotFound();
@@ -79,8 +76,7 @@ public sealed class AdminComplaintsController(
 
         try
         {
-            var bearer = await BearerAsync();
-            await api.SetAdminComplaintStatusAsync(id, new UpdateComplaintStatusRequest(statusDto), bearer, cancellationToken);
+            await api.SetAdminComplaintStatusAsync(id, new UpdateComplaintStatusRequest(statusDto), cancellationToken);
             TempData["Success"] = $"Complaint status updated to '{status}'.";
         }
         catch (ApiException ex)
@@ -130,9 +126,8 @@ public sealed class AdminComplaintsController(
 
         try
         {
-            var bearer = await BearerAsync();
             var request = new ResolveComplaintRequest(resolution.Trim(), internalNotes.Trim(), grantCredits);
-            await api.ResolveAdminComplaintAsync(id, request, bearer, cancellationToken);
+            await api.ResolveAdminComplaintAsync(id, request, cancellationToken);
             TempData["Success"] = "Complaint resolved. The learner has been notified.";
         }
         catch (ApiException ex)

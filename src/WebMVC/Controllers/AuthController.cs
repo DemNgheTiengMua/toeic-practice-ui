@@ -11,7 +11,7 @@ namespace WebMVC.Controllers;
 /// <summary>Register, sign in, sign out. The API mints the JWT; this controller stores it in an
 /// HttpOnly cookie as an authentication token and mirrors the identity into cookie claims.
 /// Every POST here is a forwarding endpoint and carries an anti-forgery token (ADR-0002).</summary>
-public sealed class AuthController(ICompanionApiClient api) : Controller
+public sealed class AuthController(IAuthClient api) : Controller
 {
     [HttpGet("/auth/register")]
     public IActionResult Register(string? returnUrl = null) => View(new RegisterViewModel { ReturnUrl = returnUrl });
@@ -138,10 +138,10 @@ public sealed class AuthController(ICompanionApiClient api) : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ResendActivation([FromServices] CurrentUser currentUser, CancellationToken cancellationToken)
     {
-        var token = await currentUser.GetBearerTokenAsync();
+        
         try
         {
-            await api.ResendActivationAsync(token!, cancellationToken);
+            await api.ResendActivationAsync(cancellationToken);
         }
         catch (ApiException ex) when (ex.Code == ApiError.Codes.MailUnavailable)
         {

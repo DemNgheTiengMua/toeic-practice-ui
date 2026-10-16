@@ -14,11 +14,10 @@ namespace WebMVC.Controllers;
 [Authorize(Policy = Roles.Admin)]
 [Route("admin/exams")]
 public sealed class AdminExamsController(
-    ICompanionApiClient api,
+    IAdminExamsClient api,
     CurrentUser currentUser,
     ILogger<AdminExamsController> logger) : Controller
 {
-    private async Task<string> BearerAsync() => (await currentUser.GetBearerTokenAsync())!;
 
     [HttpGet("")]
     public async Task<IActionResult> Index(
@@ -30,8 +29,7 @@ public sealed class AdminExamsController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var summary = await api.GetAdminExamsAsync(q, status, certId, page, 20, bearer, cancellationToken);
+            var summary = await api.GetAdminExamsAsync(q, status, certId, page, 20, cancellationToken);
             var vm = new AdminExamListViewModel(
                 summary,
                 q,
@@ -84,7 +82,6 @@ public sealed class AdminExamsController(
 
         try
         {
-            var bearer = await BearerAsync();
             var request = new CreateAdminExamRequest(
                 model.CertId,
                 model.Name,
@@ -96,7 +93,7 @@ public sealed class AdminExamsController(
                 model.InternalNote,
                 model.QuestionCount);
 
-            var created = await api.CreateAdminExamAsync(request, bearer, cancellationToken);
+            var created = await api.CreateAdminExamAsync(request, cancellationToken);
             TempData["Success"] = $"Exam '{created.Name}' created successfully.";
             return RedirectToAction(nameof(Edit), new { id = created.ExamId, step = 2 });
         }
@@ -115,8 +112,7 @@ public sealed class AdminExamsController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var detail = await api.GetAdminExamByIdAsync(id, bearer, cancellationToken);
+            var detail = await api.GetAdminExamByIdAsync(id, cancellationToken);
             var certs = await LoadCertificatesAsync(cancellationToken);
 
             var vm = new ExamFormViewModel
@@ -164,7 +160,6 @@ public sealed class AdminExamsController(
 
         try
         {
-            var bearer = await BearerAsync();
             var request = new UpdateAdminExamRequest(
                 model.CertId,
                 model.Name,
@@ -176,7 +171,7 @@ public sealed class AdminExamsController(
                 model.InternalNote,
                 model.QuestionCount);
 
-            var updated = await api.UpdateAdminExamAsync(id, request, bearer, cancellationToken);
+            var updated = await api.UpdateAdminExamAsync(id, request, cancellationToken);
             TempData["Success"] = $"Exam '{updated.Name}' updated successfully.";
             var nextStep = model.Step == 1 ? 2 : model.Step;
             return RedirectToAction(nameof(Edit), new { id, step = nextStep });
@@ -195,8 +190,7 @@ public sealed class AdminExamsController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var result = await api.PublishAdminExamAsync(id, bearer, cancellationToken);
+            var result = await api.PublishAdminExamAsync(id, cancellationToken);
             TempData["Success"] = result.Message;
             return RedirectToAction(nameof(Index));
         }
@@ -214,8 +208,7 @@ public sealed class AdminExamsController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            await api.DeleteAdminExamAsync(id, bearer, cancellationToken);
+            await api.DeleteAdminExamAsync(id, cancellationToken);
             TempData["Success"] = "Exam deleted successfully.";
             return RedirectToAction(nameof(Index));
         }
@@ -233,9 +226,8 @@ public sealed class AdminExamsController(
     {
         try
         {
-            var bearer = await BearerAsync();
             var request = new SaveExamSectionAudioRequest(model.SectionId, model.AudioPath, model.DurationSec, model.SizeBytes);
-            await api.SaveAdminExamSectionAudioAsync(id, request, bearer, cancellationToken);
+            await api.SaveAdminExamSectionAudioAsync(id, request, cancellationToken);
             TempData["Success"] = "Audio file saved successfully.";
             return RedirectToAction(nameof(Edit), new { id, step = 2 });
         }
@@ -252,8 +244,7 @@ public sealed class AdminExamsController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var questionsData = await api.GetAdminExamQuestionsAsync(id, bearer, cancellationToken);
+            var questionsData = await api.GetAdminExamQuestionsAsync(id, cancellationToken);
             var vm = new QuestionEditorViewModel(
                 questionsData,
                 SelectedSectionId: sectionId,
@@ -281,7 +272,6 @@ public sealed class AdminExamsController(
     {
         try
         {
-            var bearer = await BearerAsync();
             if (model.GroupId.HasValue && model.GroupId.Value > 0)
             {
                 var updateReq = new UpdateQuestionGroupRequest(
@@ -296,7 +286,7 @@ public sealed class AdminExamsController(
                     model.PrepSeconds,
                     model.ResponseSeconds,
                     model.DisplayOrder);
-                await api.UpdateAdminQuestionGroupAsync(id, model.GroupId.Value, updateReq, bearer, cancellationToken);
+                await api.UpdateAdminQuestionGroupAsync(id, model.GroupId.Value, updateReq, cancellationToken);
                 TempData["Success"] = "Question group updated successfully.";
             }
             else
@@ -313,7 +303,7 @@ public sealed class AdminExamsController(
                     model.PrepSeconds,
                     model.ResponseSeconds,
                     model.DisplayOrder);
-                await api.CreateAdminQuestionGroupAsync(id, createReq, bearer, cancellationToken);
+                await api.CreateAdminQuestionGroupAsync(id, createReq, cancellationToken);
                 TempData["Success"] = "Question group created successfully.";
             }
 
@@ -333,8 +323,7 @@ public sealed class AdminExamsController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            await api.DeleteAdminQuestionGroupAsync(id, groupId, bearer, cancellationToken);
+            await api.DeleteAdminQuestionGroupAsync(id, groupId, cancellationToken);
             TempData["Success"] = "Question group deleted.";
             return RedirectToAction(nameof(Questions), new { id, sectionId });
         }
@@ -352,7 +341,6 @@ public sealed class AdminExamsController(
     {
         try
         {
-            var bearer = await BearerAsync();
 
             var optionInputs = new List<AdminQuestionOptionInput>();
             if (model.QuestionType == QuestionTypeDto.Mcq && model.Options.Count > 0)
@@ -389,7 +377,7 @@ public sealed class AdminExamsController(
                     model.DisplayOrder,
                     optionInputs);
 
-                await api.UpdateAdminQuestionAsync(model.QuestionId.Value, updateReq, bearer, cancellationToken);
+                await api.UpdateAdminQuestionAsync(model.QuestionId.Value, updateReq, cancellationToken);
                 TempData["Success"] = $"Question {model.DisplayOrder} saved successfully.";
                 return RedirectToAction(nameof(Questions), new { id, sectionId = model.SectionId, questionId = model.QuestionId });
             }
@@ -410,7 +398,7 @@ public sealed class AdminExamsController(
                     model.DisplayOrder,
                     optionInputs);
 
-                var created = await api.CreateAdminQuestionAsync(id, createReq, bearer, cancellationToken);
+                var created = await api.CreateAdminQuestionAsync(id, createReq, cancellationToken);
                 TempData["Success"] = $"Question {created.DisplayOrder} created successfully.";
                 return RedirectToAction(nameof(Questions), new { id, sectionId = model.SectionId, questionId = created.QuestionId });
             }
@@ -429,8 +417,7 @@ public sealed class AdminExamsController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            await api.DeleteAdminQuestionAsync(questionId, bearer, cancellationToken);
+            await api.DeleteAdminQuestionAsync(questionId, cancellationToken);
             TempData["Success"] = "Question deleted successfully.";
             return RedirectToAction(nameof(Questions), new { id, sectionId });
         }
@@ -446,8 +433,7 @@ public sealed class AdminExamsController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var exams = await api.GetAdminExamsAsync(null, null, null, 1, 1, bearer, cancellationToken);
+            var exams = await api.GetAdminExamsAsync(null, null, null, 1, 1, cancellationToken);
             if (exams.Certificates.Count > 0)
             {
                 return exams.Certificates;

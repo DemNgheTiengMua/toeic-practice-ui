@@ -6,20 +6,23 @@ namespace WebMVC.Controllers;
 
 /// <summary>The learner's landing page after sign-in, and the certificate switch every learner
 /// page's switcher posts to.</summary>
-public sealed class DashboardController(ICompanionApiClient api, CurrentUser currentUser, ILogger<DashboardController> logger)
-    : LearnerControllerBase(api, currentUser, logger)
+public sealed class DashboardController(
+    ILearnerContextClient api,
+    IAuthClient auth,
+    CurrentUser currentUser,
+    ILogger<DashboardController> logger)
+    : LearnerControllerBase(currentUser, logger)
 {
     /// <param name="activation">"sent" or "failed" after the reminder's Resend button.</param>
     public async Task<IActionResult> Index(string? activation, CancellationToken cancellationToken)
     {
-        var bearer = await BearerAsync();
-        var dashboard = await Api.GetDashboardAsync(bearer, cancellationToken);
+        var dashboard = await api.GetDashboardAsync(cancellationToken);
 
         // Verification is read live, not from the cookie: the learner may have just clicked the link.
         bool? emailVerified = null;
         try
         {
-            emailVerified = (await Api.GetMeAsync(bearer, cancellationToken)).EmailVerified;
+            emailVerified = (await auth.GetMeAsync(cancellationToken)).EmailVerified;
         }
         catch (HttpRequestException ex) when (ex is not ApiException)
         {
@@ -30,7 +33,7 @@ public sealed class DashboardController(ICompanionApiClient api, CurrentUser cur
         AiInsightDto? insight = null;
         try
         {
-            insight = await Api.GetDashboardInsightAsync(bearer, cancellationToken: cancellationToken);
+            insight = await api.GetDashboardInsightAsync(cancellationToken: cancellationToken);
         }
         catch (Exception ex)
         {
@@ -47,8 +50,7 @@ public sealed class DashboardController(ICompanionApiClient api, CurrentUser cur
     {
         try
         {
-            var bearer = await BearerAsync();
-            var insight = await Api.GetDashboardInsightAsync(bearer, certId, cancellationToken);
+            var insight = await api.GetDashboardInsightAsync(certId, cancellationToken);
             return Ok(insight);
         }
         catch (ApiException ex)
@@ -63,8 +65,7 @@ public sealed class DashboardController(ICompanionApiClient api, CurrentUser cur
     {
         try
         {
-            var bearer = await BearerAsync();
-            await Api.RetryDashboardInsightAsync(bearer, certId, cancellationToken);
+            await api.RetryDashboardInsightAsync(certId, cancellationToken);
             return Ok(new { success = true });
         }
         catch (ApiException ex)
@@ -79,7 +80,7 @@ public sealed class DashboardController(ICompanionApiClient api, CurrentUser cur
     {
         try
         {
-            await Api.SwitchCertificateAsync(await BearerAsync(), code, cancellationToken);
+            await api.SwitchCertificateAsync(code, cancellationToken);
         }
         catch (ApiException ex) when (ex.Code is ApiError.Codes.CertificateUnavailable or ApiError.Codes.Validation)
         {

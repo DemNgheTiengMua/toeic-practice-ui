@@ -10,12 +10,12 @@ namespace WebMVC.Controllers;
 /// <summary>The learner's profile: name, phone, time zone (UI-52) and password change. Both POSTs
 /// are forwarding endpoints and carry an anti-forgery token (ADR-0002).</summary>
 [Authorize]
-public sealed class ProfileController(ICompanionApiClient api, CurrentUser currentUser) : Controller
+public sealed class ProfileController(IProfileClient api) : Controller
 {
     [HttpGet("/profile")]
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
-        var profile = await api.GetProfileAsync(await TokenAsync(), cancellationToken);
+        var profile = await api.GetProfileAsync(cancellationToken);
         return View(new ProfileViewModel
         {
             FullName = profile.FullName,
@@ -44,7 +44,7 @@ public sealed class ProfileController(ICompanionApiClient api, CurrentUser curre
         {
             await api.UpdateProfileAsync(
                 new UpdateProfileRequest(model.FullName, model.Phone, model.TimeZoneId),
-                await TokenAsync(), cancellationToken);
+                cancellationToken);
             model.SuccessMessage = "Profile saved.";
             return View(model);
         }
@@ -71,7 +71,7 @@ public sealed class ProfileController(ICompanionApiClient api, CurrentUser curre
         {
             await api.ChangePasswordAsync(
                 new ChangePasswordRequest(model.CurrentPassword, model.NewPassword),
-                await TokenAsync(), cancellationToken);
+                cancellationToken);
         }
         catch (ApiException ex) when (ex.Code is ApiError.Codes.InvalidCredentials or ApiError.Codes.Validation or ApiError.Codes.Locked)
         {
@@ -89,8 +89,6 @@ public sealed class ProfileController(ICompanionApiClient api, CurrentUser curre
         await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
         return Redirect("/auth/sign-in?reset=1");
     }
-
-    private async Task<string> TokenAsync() => (await currentUser.GetBearerTokenAsync())!;
 
     /// <summary>The shortlist, plus the current zone if it isn't listed (e.g. a zone removed from
     /// the shortlist later) so the picker never silently discards it.</summary>

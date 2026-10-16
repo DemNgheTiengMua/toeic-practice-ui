@@ -8,7 +8,7 @@ namespace WebMVC.Controllers;
 /// enforces the same rule on its own endpoints, so a forged or replayed cookie gets nothing.</summary>
 [Authorize(Policy = Roles.Admin)]
 public sealed class AdminController(
-    ICompanionApiClient api,
+    IAdminDashboardClient api,
     CurrentUser currentUser,
     ILogger<AdminController>? logger = null) : Controller
 {
@@ -16,8 +16,7 @@ public sealed class AdminController(
     {
         try
         {
-            var token = (await currentUser.GetBearerTokenAsync())!;
-            var dashboard = await api.GetAdminDashboardAsync(token, cancellationToken);
+            var dashboard = await api.GetAdminDashboardAsync(cancellationToken);
             return View(dashboard ?? AdminDashboardDto.Empty);
         }
         catch (HttpRequestException ex)

@@ -286,28 +286,17 @@ public sealed class SupportControllerTests
         public void SaveTempData(HttpContext context, IDictionary<string, object> values) { }
     }
 
-    private sealed class FixedAuthentication(ClaimsPrincipal principal, AuthenticationProperties properties) : IAuthenticationService
-    {
-        public Task<AuthenticateResult> AuthenticateAsync(HttpContext context, string? scheme) =>
-            Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(principal, properties, "Cookies")));
-
-        public Task ChallengeAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task ForbidAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task SignInAsync(HttpContext context, string? scheme, ClaimsPrincipal principal, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task SignOutAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-    }
-
-    private sealed class TestSupportApiClient : ICompanionApiClient
+    private sealed class TestSupportApiClient : ISupportClient
     {
         public EligibleSubjectsDto? EligibleSubjects { get; set; }
         public IReadOnlyList<LearnerComplaintDto>? Complaints { get; set; }
         public FileComplaintRequest? LastFiledRequest { get; set; }
         public Exception? ThrowOnSubmit { get; set; }
 
-        public Task<EligibleSubjectsDto> GetEligibleSubjectsAsync(string bearerToken, CancellationToken cancellationToken = default) =>
+        public Task<EligibleSubjectsDto> GetEligibleSubjectsAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(EligibleSubjects ?? SampleEligibleSubjects());
 
-        public Task<LearnerComplaintDto> FileComplaintAsync(FileComplaintRequest request, string bearerToken, CancellationToken cancellationToken = default)
+        public Task<LearnerComplaintDto> FileComplaintAsync(FileComplaintRequest request, CancellationToken cancellationToken = default)
         {
             if (ThrowOnSubmit != null) throw ThrowOnSubmit;
             LastFiledRequest = request;
@@ -315,7 +304,7 @@ public sealed class SupportControllerTests
                 100, request.Type, request.Reason, ComplaintStatusDto.Open, null, null, null, null, DateTimeOffset.UtcNow, request.BookingId, request.AttemptId, request.OrderId, "Summary"));
         }
 
-        public Task<IReadOnlyList<LearnerComplaintDto>> GetLearnerComplaintsAsync(string bearerToken, CancellationToken cancellationToken = default) =>
+        public Task<IReadOnlyList<LearnerComplaintDto>> GetLearnerComplaintsAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(Complaints ?? []);
     }
 }

@@ -7,10 +7,10 @@ namespace WebMVC.Controllers;
 
 [Authorize(Policy = Roles.Learner)]
 public sealed class PlacementController(
-    ICompanionApiClient api,
+    IPlacementClient api,
     CurrentUser currentUser,
     ILogger<PlacementController> logger)
-    : LearnerControllerBase(api, currentUser, logger)
+    : LearnerControllerBase(currentUser, logger)
 {
     [HttpGet("/placement")]
     [HttpGet("/placement/index")]
@@ -18,8 +18,7 @@ public sealed class PlacementController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var catalog = await Api.GetPlacementCatalogAsync(bearer, cancellationToken);
+            var catalog = await api.GetPlacementCatalogAsync(cancellationToken);
             return View(new PlacementSelectViewModel(catalog, TempData["ErrorMessage"] as string));
         }
         catch (ApiException ex)
@@ -36,8 +35,7 @@ public sealed class PlacementController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var response = await Api.StartPlacementTestAsync(new StartPlacementTestRequest(examId), bearer, cancellationToken);
+            var response = await api.StartPlacementTestAsync(new StartPlacementTestRequest(examId), cancellationToken);
             return RedirectToAction(nameof(Take), new { placementId = response.PlacementId });
         }
         catch (ApiException ex) when (ex.Status == 404 || ex.Code == ApiError.Codes.ExamNotFound)
@@ -59,8 +57,7 @@ public sealed class PlacementController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var take = await Api.GetPlacementTakeAsync(placementId, q, bearer, cancellationToken);
+            var take = await api.GetPlacementTakeAsync(placementId, q, cancellationToken);
 
             if (take.Status == PlacementStatusDto.Done || take.IsAutoSubmitted)
             {
@@ -104,9 +101,8 @@ public sealed class PlacementController(
     {
         try
         {
-            var bearer = await BearerAsync();
             var request = new SaveAnswerRequest(form.SelectedOptionId, form.IsFlagged);
-            var result = await Api.SavePlacementAnswerAsync(placementId, questionId, request, bearer, cancellationToken);
+            var result = await api.SavePlacementAnswerAsync(placementId, questionId, request, cancellationToken);
 
             return Json(new
             {
@@ -140,8 +136,7 @@ public sealed class PlacementController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            await Api.SubmitPlacementTestAsync(placementId, new SubmitPlacementTestRequest(isAutoSubmit), bearer, cancellationToken);
+            await api.SubmitPlacementTestAsync(placementId, new SubmitPlacementTestRequest(isAutoSubmit), cancellationToken);
             return RedirectToAction(nameof(Result), new { placementId });
         }
         catch (ApiException ex) when (ex.Code == ApiError.Codes.PlacementExpired || ex.Code == ApiError.Codes.PlacementNotActive)
@@ -162,8 +157,7 @@ public sealed class PlacementController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var result = await Api.GetPlacementResultAsync(placementId, bearer, cancellationToken);
+            var result = await api.GetPlacementResultAsync(placementId, cancellationToken);
             return View(new PlacementResultViewModel(result, TempData["ErrorMessage"] as string));
         }
         catch (ApiException ex) when (ex.Code == ApiError.Codes.PlacementNotFinished)
@@ -190,8 +184,7 @@ public sealed class PlacementController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var targetView = await Api.GetTargetBandViewAsync(bearer, cancellationToken);
+            var targetView = await api.GetTargetBandViewAsync(cancellationToken);
             return View(new TargetBandViewModel(
                 targetView,
                 TempData["ErrorMessage"] as string,
@@ -217,8 +210,7 @@ public sealed class PlacementController(
 
         try
         {
-            var bearer = await BearerAsync();
-            await Api.SetTargetBandAsync(new SetTargetBandRequest(form.TargetBandCode), bearer, cancellationToken);
+            await api.SetTargetBandAsync(new SetTargetBandRequest(form.TargetBandCode), cancellationToken);
             TempData["SuccessMessage"] = "Your target level has been saved.";
             return RedirectToAction(nameof(TargetBand));
         }

@@ -400,18 +400,7 @@ public sealed class AdminExamsControllerTests
         public void SaveTempData(HttpContext context, IDictionary<string, object> values) { }
     }
 
-    private sealed class FixedAuthentication(ClaimsPrincipal principal, AuthenticationProperties properties) : IAuthenticationService
-    {
-        public Task<AuthenticateResult> AuthenticateAsync(HttpContext context, string? scheme) =>
-            Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(principal, properties, scheme ?? "Cookies")));
-
-        public Task ChallengeAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task ForbidAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task SignInAsync(HttpContext context, string? scheme, ClaimsPrincipal principal, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task SignOutAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-    }
-
-    private sealed class TestApiClient : ICompanionApiClient
+    private sealed class TestApiClient : IAdminExamsClient
     {
         public AdminExamListSummaryDto? Summary { get; set; }
         public AdminExamDetailDto? DetailToReturn { get; set; }
@@ -428,41 +417,50 @@ public sealed class AdminExamsControllerTests
         public ApiException? CreateExamException { get; set; }
         public ApiException? PublishException { get; set; }
 
-        public Task<AdminExamListSummaryDto> GetAdminExamsAsync(string? q, string? status, int? certId, int page, int pageSize, string bearerToken, CancellationToken cancellationToken = default) =>
+        public Task<AdminExamListSummaryDto> GetAdminExamsAsync(string? q = null, string? status = null, int? certId = null, int page = 1, int pageSize = 20, CancellationToken cancellationToken = default) =>
             Task.FromResult(Summary ?? SampleSummary());
 
-        public Task<AdminExamDetailDto> GetAdminExamByIdAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) =>
+        public Task<AdminExamDetailDto> GetAdminExamByIdAsync(int examId, CancellationToken cancellationToken = default) =>
             Task.FromResult(DetailToReturn ?? SampleDetail(examId));
 
-        public Task<AdminExamDetailDto> CreateAdminExamAsync(CreateAdminExamRequest request, string bearerToken, CancellationToken cancellationToken = default)
+        public Task<AdminExamDetailDto> CreateAdminExamAsync(CreateAdminExamRequest request, CancellationToken cancellationToken = default)
         {
             if (CreateExamException != null) throw CreateExamException;
             CreatedExamRequest = request;
             return Task.FromResult(DetailToReturn ?? SampleDetail(42));
         }
 
-        public Task<AdminExamDetailDto> UpdateAdminExamAsync(int examId, UpdateAdminExamRequest request, string bearerToken, CancellationToken cancellationToken = default)
+        public Task<AdminExamDetailDto> UpdateAdminExamAsync(int examId, UpdateAdminExamRequest request, CancellationToken cancellationToken = default)
         {
             UpdatedExamRequest = request;
             return Task.FromResult(DetailToReturn ?? SampleDetail(examId));
         }
 
-        public Task<AdminPublishExamResultDto> PublishAdminExamAsync(int examId, string bearerToken, CancellationToken cancellationToken = default)
+        public Task<AdminPublishExamResultDto> PublishAdminExamAsync(int examId, CancellationToken cancellationToken = default)
         {
             if (PublishException != null) throw PublishException;
             return Task.FromResult(PublishResultToReturn ?? new AdminPublishExamResultDto(true, "Exam published successfully.", []));
         }
 
-        public Task DeleteAdminExamAsync(int examId, string bearerToken, CancellationToken cancellationToken = default)
+        public Task DeleteAdminExamAsync(int examId, CancellationToken cancellationToken = default)
         {
             DeletedExamId = examId;
             return Task.CompletedTask;
         }
 
-        public Task<AdminExamQuestionsDto> GetAdminExamQuestionsAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) =>
+        public Task<AdminExamQuestionsDto> GetAdminExamQuestionsAsync(int examId, CancellationToken cancellationToken = default) =>
             Task.FromResult(QuestionsToReturn ?? SampleQuestions(examId));
 
-        public Task<AdminQuestionDto> CreateAdminQuestionAsync(int examId, CreateQuestionRequest request, string bearerToken, CancellationToken cancellationToken = default)
+        public Task<AdminQuestionGroupDto> CreateAdminQuestionGroupAsync(int examId, CreateQuestionGroupRequest request, CancellationToken cancellationToken = default) =>
+            Task.FromResult<AdminQuestionGroupDto>(null!);
+
+        public Task<AdminQuestionGroupDto> UpdateAdminQuestionGroupAsync(int examId, int groupId, UpdateQuestionGroupRequest request, CancellationToken cancellationToken = default) =>
+            Task.FromResult<AdminQuestionGroupDto>(null!);
+
+        public Task DeleteAdminQuestionGroupAsync(int examId, int groupId, CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
+
+        public Task<AdminQuestionDto> CreateAdminQuestionAsync(int examId, CreateQuestionRequest request, CancellationToken cancellationToken = default)
         {
             CreatedQuestionRequest = request;
             return Task.FromResult(new AdminQuestionDto(
@@ -491,7 +489,7 @@ public sealed class AdminExamsControllerTests
                 HasAnswers: false));
         }
 
-        public Task<AdminQuestionDto> UpdateAdminQuestionAsync(int questionId, UpdateQuestionRequest request, string bearerToken, CancellationToken cancellationToken = default)
+        public Task<AdminQuestionDto> UpdateAdminQuestionAsync(int questionId, UpdateQuestionRequest request, CancellationToken cancellationToken = default)
         {
             UpdatedQuestionRequest = request;
             return Task.FromResult(new AdminQuestionDto(
@@ -520,10 +518,13 @@ public sealed class AdminExamsControllerTests
                 HasAnswers: false));
         }
 
-        public Task DeleteAdminQuestionAsync(int questionId, string bearerToken, CancellationToken cancellationToken = default)
+        public Task DeleteAdminQuestionAsync(int questionId, CancellationToken cancellationToken = default)
         {
             DeletedQuestionId = questionId;
             return Task.CompletedTask;
         }
+
+        public Task<AdminExamSectionAudioDto> SaveAdminExamSectionAudioAsync(int examId, SaveExamSectionAudioRequest request, CancellationToken cancellationToken = default) =>
+            Task.FromResult<AdminExamSectionAudioDto>(null!);
     }
 }

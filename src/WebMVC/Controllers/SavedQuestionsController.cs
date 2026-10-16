@@ -5,10 +5,10 @@ using WebMVC.Models;
 namespace WebMVC.Controllers;
 
 public sealed class SavedQuestionsController(
-    ICompanionApiClient api,
+    ISavedQuestionsClient api,
     CurrentUser currentUser,
     ILogger<SavedQuestionsController> logger)
-    : LearnerControllerBase(api, currentUser, logger)
+    : LearnerControllerBase(currentUser, logger)
 {
     private bool IsAjaxRequest =>
         Request.Headers.XRequestedWith == "XMLHttpRequest" ||
@@ -24,8 +24,7 @@ public sealed class SavedQuestionsController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var data = await Api.GetSavedQuestionsAsync(source, sectionId, categoryId, bearer, cancellationToken);
+            var data = await api.GetSavedQuestionsAsync(source, sectionId, categoryId, cancellationToken);
             return View(new SavedQuestionsIndexViewModel(data, source, sectionId, categoryId, TempData["ErrorMessage"] as string));
         }
         catch (ApiException ex)
@@ -41,8 +40,7 @@ public sealed class SavedQuestionsController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var question = await Api.GetSavedQuestionAsync(questionId, bearer, cancellationToken);
+            var question = await api.GetSavedQuestionAsync(questionId, cancellationToken);
 
             if (IsAjaxRequest)
             {
@@ -79,8 +77,7 @@ public sealed class SavedQuestionsController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var res = await Api.SaveQuestionAsync(questionId, source ?? "manual", bearer, cancellationToken);
+            var res = await api.SaveQuestionAsync(questionId, source ?? "manual", cancellationToken);
 
             if (IsAjaxRequest)
             {
@@ -109,8 +106,7 @@ public sealed class SavedQuestionsController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var res = await Api.UnsaveQuestionAsync(questionId, bearer, cancellationToken);
+            var res = await api.UnsaveQuestionAsync(questionId, cancellationToken);
 
             if (IsAjaxRequest)
             {
@@ -138,15 +134,14 @@ public sealed class SavedQuestionsController(
     {
         try
         {
-            var bearer = await BearerAsync();
             SaveQuestionResultDto res;
             if (currentlySaved == true)
             {
-                res = await Api.UnsaveQuestionAsync(questionId, bearer, cancellationToken);
+                res = await api.UnsaveQuestionAsync(questionId, cancellationToken);
             }
             else
             {
-                res = await Api.SaveQuestionAsync(questionId, source ?? "manual", bearer, cancellationToken);
+                res = await api.SaveQuestionAsync(questionId, source ?? "manual", cancellationToken);
             }
 
             return Json(new { isSaved = res.IsSaved, source = res.Source, savedAt = res.SavedAt });

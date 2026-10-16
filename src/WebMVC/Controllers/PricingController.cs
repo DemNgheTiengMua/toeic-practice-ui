@@ -7,23 +7,20 @@ namespace WebMVC.Controllers;
 [AllowAnonymous]
 [Route("pricing")]
 public sealed class PricingController(
-    ICompanionApiClient api,
+    IOrdersClient api,
     CurrentUser currentUser,
-    ILogger<PricingController> logger) : Controller
+    ILogger<PricingController> logger,
+    ILearnerContextClient? learnerContext = null) : Controller
 {
     [HttpGet("")]
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
-        if (currentUser.IsSignedIn && currentUser.Role == Roles.Learner)
+        if (currentUser.IsSignedIn && currentUser.Role == Roles.Learner && learnerContext is not null)
         {
             try
             {
-                var token = await currentUser.GetBearerTokenAsync();
-                if (!string.IsNullOrEmpty(token))
-                {
-                    var shell = await api.GetLearnerContextAsync(token, cancellationToken);
-                    LearnerShell.Set(HttpContext, shell);
-                }
+                var shell = await learnerContext.GetLearnerContextAsync(cancellationToken);
+                LearnerShell.Set(HttpContext, shell);
             }
             catch (Exception ex)
             {

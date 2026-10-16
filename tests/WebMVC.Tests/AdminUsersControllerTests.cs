@@ -184,18 +184,7 @@ public sealed class AdminUsersControllerTests
         public void SaveTempData(HttpContext context, IDictionary<string, object> values) { }
     }
 
-    private sealed class FixedAuthentication(ClaimsPrincipal principal, AuthenticationProperties properties) : IAuthenticationService
-    {
-        public Task<AuthenticateResult> AuthenticateAsync(HttpContext context, string? scheme) =>
-            Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(principal, properties, "Cookies")));
-
-        public Task ChallengeAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task ForbidAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task SignInAsync(HttpContext context, string? scheme, ClaimsPrincipal principal, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task SignOutAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-    }
-
-    private sealed class TestUsersApiClient : ICompanionApiClient
+    private sealed class TestUsersApiClient : IAdminUsersClient
     {
         public AdminUsersSummaryDto? Summary { get; set; }
         public int? LockedUserId { get; set; }
@@ -206,31 +195,31 @@ public sealed class AdminUsersControllerTests
         public AdjustCreditsResultDto? AdjustResult { get; set; }
         public Exception? ExceptionToThrow { get; set; }
 
-        public Task<AdminUsersSummaryDto> GetAdminUsersAsync(string? q, string? status, int page, int pageSize, string bearerToken, CancellationToken cancellationToken = default) =>
+        public Task<AdminUsersSummaryDto> GetAdminUsersAsync(string? q = null, string? status = null, int page = 1, int pageSize = 20, CancellationToken cancellationToken = default) =>
             Task.FromResult(Summary ?? new AdminUsersSummaryDto([], 0, 1, 20, 0, 0, 0));
 
-        public Task<AdminUserDto> LockUserAsync(int userId, string bearerToken, CancellationToken cancellationToken = default)
+        public Task<AdminUserDto> LockUserAsync(int userId, CancellationToken cancellationToken = default)
         {
             if (ExceptionToThrow is not null) throw ExceptionToThrow;
             LockedUserId = userId;
             return Task.FromResult(new AdminUserDto(userId, "locked@demo.local", "Locked", null, 0, 0, null, null, true, null, DateTimeOffset.UtcNow));
         }
 
-        public Task<AdminUserDto> UnlockUserAsync(int userId, string bearerToken, CancellationToken cancellationToken = default)
+        public Task<AdminUserDto> UnlockUserAsync(int userId, CancellationToken cancellationToken = default)
         {
             if (ExceptionToThrow is not null) throw ExceptionToThrow;
             UnlockedUserId = userId;
             return Task.FromResult(new AdminUserDto(userId, "unlocked@demo.local", "Unlocked", null, 0, 0, null, null, false, null, DateTimeOffset.UtcNow));
         }
 
-        public Task ResendUserActivationAsync(int userId, string bearerToken, CancellationToken cancellationToken = default)
+        public Task ResendUserActivationAsync(int userId, CancellationToken cancellationToken = default)
         {
             if (ExceptionToThrow is not null) throw ExceptionToThrow;
             ResentUserId = userId;
             return Task.CompletedTask;
         }
 
-        public Task<AdjustCreditsResultDto> AdjustUserCreditsAsync(int userId, AdjustCreditsRequest request, string bearerToken, CancellationToken cancellationToken = default)
+        public Task<AdjustCreditsResultDto> AdjustUserCreditsAsync(int userId, AdjustCreditsRequest request, CancellationToken cancellationToken = default)
         {
             if (ExceptionToThrow is not null) throw ExceptionToThrow;
             AdjustedUserId = userId;

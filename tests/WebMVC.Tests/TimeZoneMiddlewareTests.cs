@@ -69,23 +69,8 @@ public sealed class TimeZoneMiddlewareTests
         return (context, new CurrentUser(new HttpContextAccessor { HttpContext = context }));
     }
 
-    private static ICompanionApiClient Stub(Exception profileFailure) =>
+    private static IProfileClient Stub(Exception profileFailure) =>
         DispatchProxyStub.Create(profileFailure);
-
-    private sealed class FixedAuthentication(ClaimsPrincipal principal, AuthenticationProperties properties) : IAuthenticationService
-    {
-        public Task<AuthenticateResult> AuthenticateAsync(HttpContext context, string? scheme) =>
-            Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(principal, properties, "Cookies")));
-
-        public Task ChallengeAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-
-        public Task ForbidAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-
-        public Task SignInAsync(HttpContext context, string? scheme, ClaimsPrincipal principal, AuthenticationProperties? props) =>
-            Task.CompletedTask;
-
-        public Task SignOutAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-    }
 
     /// <summary>The API client fake: GetProfileAsync fails with the given exception; nothing else
     /// may be called. A proxy keeps the fake from growing a stub per API method.</summary>
@@ -93,15 +78,15 @@ public sealed class TimeZoneMiddlewareTests
     {
         private Exception failure = null!;
 
-        public static ICompanionApiClient Create(Exception failure)
+        public static IProfileClient Create(Exception failure)
         {
-            var proxy = DispatchProxy.Create<ICompanionApiClient, DispatchProxyStub>();
+            var proxy = DispatchProxy.Create<IProfileClient, DispatchProxyStub>();
             ((DispatchProxyStub)(object)proxy).failure = failure;
             return proxy;
         }
 
         protected override object? Invoke(MethodInfo? targetMethod, object?[]? args) =>
-            targetMethod?.Name == nameof(ICompanionApiClient.GetProfileAsync)
+            targetMethod?.Name == nameof(IProfileClient.GetProfileAsync)
                 ? Task.FromException<ProfileDto>(failure)
                 : throw new InvalidOperationException($"Unexpected API call: {targetMethod?.Name}");
     }

@@ -8,11 +8,10 @@ namespace WebMVC.Controllers;
 [Authorize(Policy = Roles.Admin)]
 [Route("admin/users")]
 public sealed class AdminUsersController(
-    ICompanionApiClient api,
+    IAdminUsersClient api,
     CurrentUser currentUser,
     ILogger<AdminUsersController> logger) : Controller
 {
-    private async Task<string> BearerAsync() => (await currentUser.GetBearerTokenAsync())!;
 
     [HttpGet("")]
     public async Task<IActionResult> Index(
@@ -24,8 +23,7 @@ public sealed class AdminUsersController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var summary = await api.GetAdminUsersAsync(q, status, page, 20, bearer, cancellationToken);
+            var summary = await api.GetAdminUsersAsync(q, status, page, 20, cancellationToken);
 
             AdminUserDto? adjustUser = null;
             if (adjustUserId.HasValue)
@@ -51,8 +49,7 @@ public sealed class AdminUsersController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var updated = await api.LockUserAsync(id, bearer, cancellationToken);
+            var updated = await api.LockUserAsync(id, cancellationToken);
             TempData["Success"] = $"Account '{updated.Email}' has been locked. The lock takes effect immediately.";
         }
         catch (ApiException ex)
@@ -70,8 +67,7 @@ public sealed class AdminUsersController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var updated = await api.UnlockUserAsync(id, bearer, cancellationToken);
+            var updated = await api.UnlockUserAsync(id, cancellationToken);
             TempData["Success"] = $"Account '{updated.Email}' has been unlocked.";
         }
         catch (ApiException ex)
@@ -89,8 +85,7 @@ public sealed class AdminUsersController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            await api.ResendUserActivationAsync(id, bearer, cancellationToken);
+            await api.ResendUserActivationAsync(id, cancellationToken);
             TempData["Success"] = "Activation email has been resent.";
         }
         catch (ApiException ex)
@@ -124,8 +119,7 @@ public sealed class AdminUsersController(
 
         try
         {
-            var bearer = await BearerAsync();
-            var result = await api.AdjustUserCreditsAsync(id, new AdjustCreditsRequest(delta, reason), bearer, cancellationToken);
+            var result = await api.AdjustUserCreditsAsync(id, new AdjustCreditsRequest(delta, reason), cancellationToken);
             TempData["Success"] = $"Adjusted credits by {(delta > 0 ? $"+{delta}" : delta.ToString())}. New balance is {result.NewBalance} credits.";
             return RedirectToAction(nameof(Index));
         }

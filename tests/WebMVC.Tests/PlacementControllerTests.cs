@@ -558,18 +558,7 @@ public sealed class PlacementControllerTests
         public void SaveTempData(HttpContext context, IDictionary<string, object> values) { }
     }
 
-    private sealed class FixedAuthentication(ClaimsPrincipal principal, AuthenticationProperties properties) : IAuthenticationService
-    {
-        public Task<AuthenticateResult> AuthenticateAsync(HttpContext context, string? scheme) =>
-            Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(principal, properties, "Cookies")));
-
-        public Task ChallengeAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task ForbidAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task SignInAsync(HttpContext context, string? scheme, ClaimsPrincipal principal, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task SignOutAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-    }
-
-    private sealed class TestApiClient : ICompanionApiClient
+    private sealed class TestApiClient : IPlacementClient
     {
         public Exception? ExceptionToThrow { get; set; }
         public PlacementCatalogViewDto? PlacementCatalog { get; set; }
@@ -581,31 +570,31 @@ public sealed class PlacementControllerTests
         public SetTargetBandResultDto? SetTargetBandResult { get; set; }
         public SubmitPlacementTestRequest? LastSubmitRequest { get; set; }
 
-        public Task<PlacementCatalogViewDto> GetPlacementCatalogAsync(string bearerToken, CancellationToken cancellationToken = default) =>
+        public Task<PlacementCatalogViewDto> GetPlacementCatalogAsync(CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<PlacementCatalogViewDto>(ExceptionToThrow) : Task.FromResult(PlacementCatalog!);
 
-        public Task<PlacementTestInfoDto> StartPlacementTestAsync(StartPlacementTestRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
+        public Task<PlacementTestInfoDto> StartPlacementTestAsync(StartPlacementTestRequest request, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<PlacementTestInfoDto>(ExceptionToThrow) : Task.FromResult(StartPlacementResponse!);
 
-        public Task<PlacementTakeViewDto> GetPlacementTakeAsync(int placementId, int? questionDisplayOrder, string bearerToken, CancellationToken cancellationToken = default) =>
+        public Task<PlacementTakeViewDto> GetPlacementTakeAsync(int placementId, int? questionDisplayOrder = null, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<PlacementTakeViewDto>(ExceptionToThrow) : Task.FromResult(PlacementTake!);
 
-        public Task<SaveAnswerResultDto> SavePlacementAnswerAsync(int placementId, int questionId, SaveAnswerRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
+        public Task<SaveAnswerResultDto> SavePlacementAnswerAsync(int placementId, int questionId, SaveAnswerRequest request, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<SaveAnswerResultDto>(ExceptionToThrow) : Task.FromResult(SaveAnswerResult!);
 
-        public Task<PlacementResultViewDto> SubmitPlacementTestAsync(int placementId, SubmitPlacementTestRequest request, string bearerToken, CancellationToken cancellationToken = default)
+        public Task<PlacementResultViewDto> SubmitPlacementTestAsync(int placementId, SubmitPlacementTestRequest request, CancellationToken cancellationToken = default)
         {
             LastSubmitRequest = request;
             return ExceptionToThrow != null ? Task.FromException<PlacementResultViewDto>(ExceptionToThrow) : Task.FromResult(PlacementResult!);
         }
 
-        public Task<PlacementResultViewDto> GetPlacementResultAsync(int placementId, string bearerToken, CancellationToken cancellationToken = default) =>
+        public Task<PlacementResultViewDto> GetPlacementResultAsync(int placementId, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<PlacementResultViewDto>(ExceptionToThrow) : Task.FromResult(PlacementResult!);
 
-        public Task<TargetBandViewDto> GetTargetBandViewAsync(string bearerToken, CancellationToken cancellationToken = default) =>
+        public Task<TargetBandViewDto> GetTargetBandViewAsync(CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<TargetBandViewDto>(ExceptionToThrow) : Task.FromResult(TargetBandView!);
 
-        public Task<SetTargetBandResultDto> SetTargetBandAsync(SetTargetBandRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
+        public Task<SetTargetBandResultDto> SetTargetBandAsync(SetTargetBandRequest request, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<SetTargetBandResultDto>(ExceptionToThrow) : Task.FromResult(SetTargetBandResult!);
     }
 }

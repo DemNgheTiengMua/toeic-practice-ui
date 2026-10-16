@@ -8,19 +8,17 @@ namespace WebMVC.Controllers;
 [Authorize(Policy = Roles.Admin)]
 [Route("admin/score-conversion")]
 public sealed class AdminScoreConversionController(
-    ICompanionApiClient api,
+    IAdminScoreConversionClient api,
     CurrentUser currentUser,
     ILogger<AdminScoreConversionController> logger) : Controller
 {
-    private async Task<string> BearerAsync() => (await currentUser.GetBearerTokenAsync())!;
 
     [HttpGet("")]
     public async Task<IActionResult> Index([FromQuery] string? cert, [FromQuery] int? examId, CancellationToken cancellationToken)
     {
         try
         {
-            var bearer = await BearerAsync();
-            var conversion = await api.GetAdminScoreConversionAsync(cert, examId, bearer, cancellationToken);
+            var conversion = await api.GetAdminScoreConversionAsync(cert, examId, cancellationToken);
             return View("~/Views/Admin/ScoreConversion.cshtml", new AdminScoreConversionViewModel(
                 conversion,
                 ErrorMessage: TempData["Error"] as string,
@@ -42,12 +40,11 @@ public sealed class AdminScoreConversionController(
     {
         try
         {
-            var bearer = await BearerAsync();
             var scales = form.Scales.Select(s => new UpdateScoreScaleEntryDto(s.SkillId, s.RawScore, s.ScaledScore)).ToList();
             var bands = form.Bands.Select(b => new UpdateScoreBandEntryDto(b.BandId, b.Code, b.Name, b.MinTotal, b.MaxTotal, b.DisplayOrder)).ToList();
             var request = new UpdateScoreConversionRequest(form.ExamId, scales, bands);
 
-            var updated = await api.UpdateAdminScoreConversionAsync(certId, request, bearer, cancellationToken);
+            var updated = await api.UpdateAdminScoreConversionAsync(certId, request, cancellationToken);
             TempData["Success"] = "Score conversion table saved successfully.";
             return RedirectToAction(nameof(Index), new { cert = updated.CertCode, examId = updated.ExamId });
         }

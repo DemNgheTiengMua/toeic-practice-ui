@@ -44,7 +44,7 @@ public sealed class PricingControllerTests
         var httpContext = new DefaultHttpContext { User = principal, RequestServices = serviceProvider };
         var currentUser = new CurrentUser(new HttpContextAccessor { HttpContext = httpContext });
 
-        return new PricingController(api, currentUser, NullLogger<PricingController>.Instance)
+        return new PricingController(api, currentUser, NullLogger<PricingController>.Instance, api)
         {
             ControllerContext = new ControllerContext
             {
@@ -114,18 +114,7 @@ public sealed class PricingControllerTests
         Assert.Equal(8, shell.CreditBalance);
     }
 
-    private sealed class FixedAuthentication(ClaimsPrincipal principal, AuthenticationProperties properties) : IAuthenticationService
-    {
-        public Task<AuthenticateResult> AuthenticateAsync(HttpContext context, string? scheme) =>
-            Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(principal, properties, "Cookies")));
-
-        public Task ChallengeAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task ForbidAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task SignInAsync(HttpContext context, string? scheme, ClaimsPrincipal principal, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task SignOutAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-    }
-
-    private sealed class TestApiClient : ICompanionApiClient
+    private sealed class TestApiClient : IOrdersClient, ILearnerContextClient
     {
         public Exception? ExceptionToThrow { get; set; }
         public IReadOnlyList<PackageDto>? PublicPackages { get; set; }
@@ -137,10 +126,22 @@ public sealed class PricingControllerTests
             return Task.FromResult(PublicPackages ?? []);
         }
 
-        public Task<LearnerContextDto> GetLearnerContextAsync(string bearerToken, CancellationToken cancellationToken = default)
+        public Task<CheckoutPreviewDto> GetCheckoutPreviewAsync(int packageId, CancellationToken cancellationToken = default) => Task.FromResult<CheckoutPreviewDto>(null!);
+        public Task<CreateOrderResponse> CreateOrderAsync(CreateOrderRequest request, CancellationToken cancellationToken = default) => Task.FromResult<CreateOrderResponse>(null!);
+        public Task CancelOrderAsync(CancelOrderRequest request, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task<PaymentResultDto> HandleReturnAsync(HandleReturnRequest request, CancellationToken cancellationToken = default) => Task.FromResult<PaymentResultDto>(null!);
+        public Task<PaymentResultDto> GetPaymentResultAsync(string orderCode, CancellationToken cancellationToken = default) => Task.FromResult<PaymentResultDto>(null!);
+        public Task<PaymentResultDto> ApplyMockGatewayActionAsync(MockGatewayActionRequest request, CancellationToken cancellationToken = default) => Task.FromResult<PaymentResultDto>(null!);
+
+        public Task<LearnerContextDto> GetLearnerContextAsync(CancellationToken cancellationToken = default)
         {
             if (ExceptionToThrow is not null) throw ExceptionToThrow;
             return Task.FromResult(LearnerContext ?? new LearnerContextDto(new CertificateOptionDto("", ""), [], 0));
         }
+
+        public Task SwitchCertificateAsync(string code, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task<LearnerDashboardDto> GetDashboardAsync(CancellationToken cancellationToken = default) => Task.FromResult<LearnerDashboardDto>(null!);
+        public Task<AiInsightDto> GetDashboardInsightAsync(int? certId = null, CancellationToken cancellationToken = default) => Task.FromResult<AiInsightDto>(null!);
+        public Task RetryDashboardInsightAsync(int? certId = null, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 }

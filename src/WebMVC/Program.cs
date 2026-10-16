@@ -12,11 +12,42 @@ builder.Services.AddAntiforgery(options =>
 });
 
 
+builder.Services.AddTransient<CookieBearerHandler>();
+
 // The MVC site is the only caller of the API (ADR-0002); the JWT travels in an HttpOnly cookie
-// and is forwarded as a bearer token on each API call.
+// and is forwarded as a bearer token on each API call via CookieBearerHandler.
 builder.Services.AddHttpClient<ICompanionApiClient, CompanionApiClient>(client =>
     client.BaseAddress = new Uri(builder.Configuration["ApiBaseUrl"]
-        ?? throw new InvalidOperationException("ApiBaseUrl is not configured.")));
+        ?? throw new InvalidOperationException("ApiBaseUrl is not configured.")))
+    .AddHttpMessageHandler<CookieBearerHandler>();
+
+builder.Services.AddScoped<ICertificatesClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
+builder.Services.AddScoped<IAuthClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
+builder.Services.AddScoped<IProfileClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
+builder.Services.AddScoped<ILearnerContextClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
+builder.Services.AddScoped<IPracticeClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
+builder.Services.AddScoped<ISavedQuestionsClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
+builder.Services.AddScoped<IWeaknessAnalysisClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
+builder.Services.AddScoped<IOrdersClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
+builder.Services.AddScoped<IWalletClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
+builder.Services.AddScoped<IMockExamsClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
+builder.Services.AddScoped<IWritingClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
+builder.Services.AddScoped<ISpeakingClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
+builder.Services.AddScoped<IPlacementClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
+builder.Services.AddScoped<ILearningPathClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
+builder.Services.AddScoped<IMentorsClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
+builder.Services.AddScoped<ISupportClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
+builder.Services.AddScoped<IAiInsightsClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
+builder.Services.AddScoped<IMediaClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
+builder.Services.AddScoped<IAdminPackagesClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
+builder.Services.AddScoped<IAdminScoreConversionClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
+builder.Services.AddScoped<IAdminOrdersClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
+builder.Services.AddScoped<IAdminUsersClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
+builder.Services.AddScoped<IAdminDashboardClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
+builder.Services.AddScoped<IAdminMentorsClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
+builder.Services.AddScoped<IAdminComplaintsClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
+builder.Services.AddScoped<IAdminExamsClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
+builder.Services.AddScoped<IAdminImportsClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
 
 // Cookie lifetime matches the token's single lifetime; there is no sliding renewal because
 // there is no refresh token. SecurePolicy: SameAsRequest because local dev and the grading

@@ -316,55 +316,47 @@ public sealed class CheckoutControllerTests
         Assert.Equal(403, statusResult.StatusCode);
     }
 
-    private sealed class FixedAuthentication(ClaimsPrincipal principal, AuthenticationProperties properties) : IAuthenticationService
-    {
-        public Task<AuthenticateResult> AuthenticateAsync(HttpContext context, string? scheme) =>
-            Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(principal, properties, "Cookies")));
-
-        public Task ChallengeAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task ForbidAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task SignInAsync(HttpContext context, string? scheme, ClaimsPrincipal principal, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task SignOutAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-    }
-
-    private sealed class TestApiClient : ICompanionApiClient
+    private sealed class TestApiClient : IOrdersClient
     {
         public Exception? ExceptionToThrow { get; set; }
         public CheckoutPreviewDto? CheckoutPreview { get; set; }
         public CreateOrderResponse? CreateOrderResponse { get; set; }
         public PaymentResultDto? PaymentResult { get; set; }
 
-        public Task<CheckoutPreviewDto> GetCheckoutPreviewAsync(int packageId, string bearerToken, CancellationToken cancellationToken = default)
+        public Task<IReadOnlyList<PackageDto>> GetPublicPackagesAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<PackageDto>>([]);
+
+        public Task<CheckoutPreviewDto> GetCheckoutPreviewAsync(int packageId, CancellationToken cancellationToken = default)
         {
             if (ExceptionToThrow is not null) throw ExceptionToThrow;
             return Task.FromResult(CheckoutPreview!);
         }
 
-        public Task<CreateOrderResponse> CreateOrderAsync(CreateOrderRequest request, string bearerToken, CancellationToken cancellationToken = default)
+        public Task<CreateOrderResponse> CreateOrderAsync(CreateOrderRequest request, CancellationToken cancellationToken = default)
         {
             if (ExceptionToThrow is not null) throw ExceptionToThrow;
             return Task.FromResult(CreateOrderResponse!);
         }
 
-        public Task<PaymentResultDto> HandleReturnAsync(HandleReturnRequest request, string bearerToken, CancellationToken cancellationToken = default)
+        public Task CancelOrderAsync(CancelOrderRequest request, CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
+
+        public Task<PaymentResultDto> HandleReturnAsync(HandleReturnRequest request, CancellationToken cancellationToken = default)
         {
             if (ExceptionToThrow is not null) throw ExceptionToThrow;
             return Task.FromResult(PaymentResult!);
         }
 
-        public Task<PaymentResultDto> GetPaymentResultAsync(string orderCode, string bearerToken, CancellationToken cancellationToken = default)
+        public Task<PaymentResultDto> GetPaymentResultAsync(string orderCode, CancellationToken cancellationToken = default)
         {
             if (ExceptionToThrow is not null) throw ExceptionToThrow;
             return Task.FromResult(PaymentResult!);
         }
 
-        public Task<PaymentResultDto> ApplyMockGatewayActionAsync(MockGatewayActionRequest request, string bearerToken, CancellationToken cancellationToken = default)
+        public Task<PaymentResultDto> ApplyMockGatewayActionAsync(MockGatewayActionRequest request, CancellationToken cancellationToken = default)
         {
             if (ExceptionToThrow is not null) throw ExceptionToThrow;
             return Task.FromResult(PaymentResult!);
         }
-
-        public Task<LearnerContextDto> GetLearnerContextAsync(string bearerToken, CancellationToken cancellationToken = default) =>
-            Task.FromResult(new LearnerContextDto(new CertificateOptionDto("TOEIC", "TOEIC"), [], 8));
     }
 }

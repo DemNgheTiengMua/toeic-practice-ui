@@ -5,10 +5,10 @@ using WebMVC.Models;
 namespace WebMVC.Controllers;
 
 public sealed class ExamsController(
-    ICompanionApiClient api,
+    IMockExamsClient api,
     CurrentUser currentUser,
     ILogger<ExamsController> logger)
-    : LearnerControllerBase(api, currentUser, logger)
+    : LearnerControllerBase(currentUser, logger)
 {
     [HttpGet("/exams")]
     [HttpGet("/exams/index")]
@@ -16,8 +16,7 @@ public sealed class ExamsController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var catalog = await Api.GetMockExamsAsync(bearer, cancellationToken);
+            var catalog = await api.GetMockExamsAsync(cancellationToken);
             return View(new ExamIndexViewModel(catalog, TempData["ErrorMessage"] as string));
         }
         catch (ApiException ex)
@@ -33,8 +32,7 @@ public sealed class ExamsController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var instructions = await Api.GetMockExamInstructionsAsync(id, bearer, cancellationToken);
+            var instructions = await api.GetMockExamInstructionsAsync(id, cancellationToken);
             return View(new ExamInstructionsViewModel(instructions, TempData["ErrorMessage"] as string));
         }
         catch (ApiException ex) when (ex.Status == 404 || ex.Code == ApiError.Codes.ExamNotFound)
@@ -57,8 +55,7 @@ public sealed class ExamsController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var response = await Api.StartMockExamAsync(id, bearer, cancellationToken);
+            var response = await api.StartMockExamAsync(id, cancellationToken);
             return RedirectToAction(nameof(Take), new { attemptId = response.AttemptId });
         }
         catch (ApiException ex) when (ex.Code == ApiError.Codes.InsufficientCredits)
@@ -80,8 +77,7 @@ public sealed class ExamsController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var take = await Api.GetAttemptTakeAsync(attemptId, q, bearer, cancellationToken);
+            var take = await api.GetAttemptTakeAsync(attemptId, q, cancellationToken);
 
             if (take.Status == AttemptStatusDto.Graded || take.IsAutoSubmitted)
             {
@@ -119,9 +115,8 @@ public sealed class ExamsController(
     {
         try
         {
-            var bearer = await BearerAsync();
             var request = new SaveAnswerRequest(form.SelectedOptionId, form.IsFlagged);
-            var result = await Api.SaveAttemptAnswerAsync(attemptId, questionId, request, bearer, cancellationToken);
+            var result = await api.SaveAttemptAnswerAsync(attemptId, questionId, request, cancellationToken);
 
             return Json(new
             {
@@ -155,8 +150,7 @@ public sealed class ExamsController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            await Api.SubmitAttemptAsync(attemptId, bearer, cancellationToken);
+            await api.SubmitAttemptAsync(attemptId, cancellationToken);
             return RedirectToAction(nameof(Result), new { attemptId });
         }
         catch (ApiException ex) when (ex.Code == ApiError.Codes.AttemptExpired || ex.Code == ApiError.Codes.AttemptNotActive)
@@ -178,8 +172,7 @@ public sealed class ExamsController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            await Api.CancelAttemptAsync(attemptId, bearer, cancellationToken);
+            await api.CancelAttemptAsync(attemptId, cancellationToken);
             TempData["ShellSuccess"] = "The exam attempt was cancelled.";
             return RedirectToAction(nameof(Index));
         }
@@ -196,13 +189,12 @@ public sealed class ExamsController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var result = await Api.GetAttemptResultAsync(attemptId, bearer, cancellationToken);
+            var result = await api.GetAttemptResultAsync(attemptId, cancellationToken);
 
             AiInsightDto? insight = null;
             try
             {
-                insight = await Api.GetExamInsightAsync(attemptId, bearer, cancellationToken);
+                insight = await api.GetExamInsightAsync(attemptId, cancellationToken);
             }
             catch (Exception ex)
             {
@@ -230,8 +222,7 @@ public sealed class ExamsController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var insight = await Api.GetExamInsightAsync(attemptId, bearer, cancellationToken);
+            var insight = await api.GetExamInsightAsync(attemptId, cancellationToken);
             return Ok(insight);
         }
         catch (ApiException ex)
@@ -246,8 +237,7 @@ public sealed class ExamsController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            await Api.RetryExamInsightAsync(attemptId, bearer, cancellationToken);
+            await api.RetryExamInsightAsync(attemptId, cancellationToken);
             return Ok(new { success = true });
         }
         catch (ApiException ex)
@@ -261,8 +251,7 @@ public sealed class ExamsController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var history = await Api.GetExamHistoryAsync(bearer, cancellationToken);
+            var history = await api.GetExamHistoryAsync(cancellationToken);
             return View(new ExamHistoryViewModel(history, TempData["ErrorMessage"] as string));
         }
         catch (ApiException ex)
@@ -278,8 +267,7 @@ public sealed class ExamsController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var review = await Api.GetAttemptReviewAsync(attemptId, bearer, cancellationToken);
+            var review = await api.GetAttemptReviewAsync(attemptId, cancellationToken);
             return View(new ExamReviewViewModel(review, TempData["ErrorMessage"] as string));
         }
         catch (ApiException ex) when (ex.Status == 404 || ex.Code == ApiError.Codes.AttemptNotFound)

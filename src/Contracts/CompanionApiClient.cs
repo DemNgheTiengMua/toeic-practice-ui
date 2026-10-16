@@ -5,439 +5,40 @@ using System.Text.Json.Serialization;
 
 namespace Contracts;
 
-/// <summary>What the MVC site knows about the API: typed calls, errors surfaced with their stable code.
-/// Calls that need identity take the JWT from the MVC site's cookie as <paramref name="bearerToken"/>
-/// and forward it — the browser never sees the token (ADR-0002).</summary>
-public interface ICompanionApiClient
+/// <summary>
+/// Composite companion API client aggregating all segregated domain client interfaces.
+/// Identity forwarding is handled transparently by the HTTP message handler pipeline (ADR-0002).
+/// </summary>
+public interface ICompanionApiClient :
+    ICertificatesClient,
+    IAuthClient,
+    IProfileClient,
+    ILearnerContextClient,
+    IPracticeClient,
+    ISavedQuestionsClient,
+    IWeaknessAnalysisClient,
+    IOrdersClient,
+    IWalletClient,
+    IMockExamsClient,
+    IWritingClient,
+    ISpeakingClient,
+    IPlacementClient,
+    ILearningPathClient,
+    IMentorsClient,
+    ISupportClient,
+    IAiInsightsClient,
+    IMediaClient,
+    IAdminPackagesClient,
+    IAdminScoreConversionClient,
+    IAdminOrdersClient,
+    IAdminUsersClient,
+    IAdminDashboardClient,
+    IAdminMentorsClient,
+    IAdminComplaintsClient,
+    IAdminExamsClient,
+    IAdminImportsClient
 {
-    Task<IReadOnlyList<CertificateDto>> GetCertificatesAsync(CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<AuthTokenResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<AuthTokenResponse> SignInAsync(SignInRequest request, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<AuthUserDto> GetMeAsync(string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<ProfileDto> GetProfileAsync(string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<ProfileDto> UpdateProfileAsync(UpdateProfileRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task ChangePasswordAsync(ChangePasswordRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task VerifyEmailAsync(VerifyEmailRequest request, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task ResendActivationAsync(string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task ForgotPasswordAsync(ForgotPasswordRequest request, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task ResetPasswordAsync(ResetPasswordRequest request, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<LearnerContextDto> GetLearnerContextAsync(string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task SwitchCertificateAsync(string bearerToken, string code, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<LearnerDashboardDto> GetDashboardAsync(string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<PracticeCatalogDto> GetPracticeCatalogAsync(string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<PracticeSessionDto> StartPracticeSessionAsync(StartPracticeRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<PracticeSessionDto> GetPracticeSessionInfoAsync(int sessionId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<PracticeQuestionDto> GetPracticeQuestionAsync(int sessionId, int displayOrder, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<RevealHintResponse> RevealPracticeHintAsync(int sessionId, int questionId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<GradedAnswerDto> SubmitPracticeAnswerAsync(int sessionId, int questionId, SubmitPracticeAnswerRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<PracticeSummaryDto> GetPracticeSummaryAsync(int sessionId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<SavedQuestionsViewDto> GetSavedQuestionsAsync(string? source, int? sectionId, int? categoryId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<SavedQuestionItemDto> GetSavedQuestionAsync(int questionId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<SaveQuestionResultDto> SaveQuestionAsync(int questionId, string? source, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<SaveQuestionResultDto> UnsaveQuestionAsync(int questionId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<WeaknessAnalysisDto> GetWeaknessAnalysisAsync(string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<ResolveRecommendationResultDto> ResolveRecommendationAsync(int recId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<IReadOnlyList<PackageDto>> GetPublicPackagesAsync(CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<AdminPackagesSummaryDto> GetAdminPackagesAsync(string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<PackageDto> GetAdminPackageAsync(int packageId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<PackageDto> CreatePackageAsync(CreatePackageRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<PackageDto> UpdatePackageAsync(int packageId, UpdatePackageRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task DeactivatePackageAsync(int packageId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<CheckoutPreviewDto> GetCheckoutPreviewAsync(int packageId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<CreateOrderResponse> CreateOrderAsync(CreateOrderRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<PaymentResultDto> HandleReturnAsync(HandleReturnRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<PaymentResultDto> GetPaymentResultAsync(string orderCode, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task CancelOrderAsync(CancelOrderRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<PaymentResultDto> ApplyMockGatewayActionAsync(MockGatewayActionRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<WalletDto> GetWalletAsync(string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<MockExamListViewDto> GetMockExamsAsync(string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<MockExamInstructionsDto> GetMockExamInstructionsAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<StartMockExamResponse> StartMockExamAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<AttemptTakeDto> GetAttemptTakeAsync(int attemptId, int? q, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<SaveAnswerResultDto> SaveAttemptAnswerAsync(int attemptId, int questionId, SaveAnswerRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<SubmitAttemptResponse> SubmitAttemptAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task CancelAttemptAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<AttemptResultDto> GetAttemptResultAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<ExamHistoryDto> GetExamHistoryAsync(string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<AttemptReviewDto> GetAttemptReviewAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<AdminScoreConversionDto> GetAdminScoreConversionAsync(string? certCode, int? examId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<AdminScoreConversionDto> UpdateAdminScoreConversionAsync(int certId, UpdateScoreConversionRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<AdminOrdersSummaryDto> GetAdminOrdersAsync(string? q, string? status, string? gateway, int page, int pageSize, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<AdminOrderDetailDto> GetAdminOrderDetailAsync(int orderId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<PaymentResultDto> ReconcileAdminOrderAsync(int orderId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<AdminUsersSummaryDto> GetAdminUsersAsync(string? q, string? status, int page, int pageSize, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<AdminUserDto> LockUserAsync(int userId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<AdminUserDto> UnlockUserAsync(int userId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task ResendUserActivationAsync(int userId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<AdjustCreditsResultDto> AdjustUserCreditsAsync(int userId, AdjustCreditsRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<AdminDashboardDto> GetAdminDashboardAsync(string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<WritingInstructionsDto> GetWritingInstructionsAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<StartWritingAttemptResponse> StartWritingAttemptAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<WritingTakeDto> GetWritingTakeAsync(int attemptId, int? questionId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<SaveWritingDraftResponse> SaveWritingDraftAsync(int attemptId, SaveWritingDraftRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<SubmitWritingResponse> SubmitWritingAttemptAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<WritingGradingPendingDto> GetWritingGradingPendingAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task RetryWritingGradingAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<WritingReviewDto> GetWritingReviewAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<AiInsightDto> GetPracticeInsightAsync(int sessionId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task RetryPracticeInsightAsync(int sessionId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<AiInsightDto> GetExamInsightAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task RetryExamInsightAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task RetryInsightAsync(int insightId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<AiInsightDto> GetDashboardInsightAsync(string bearerToken, int? certId = null, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task RetryDashboardInsightAsync(string bearerToken, int? certId = null, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<AiInsightDto> GetPathInsightAsync(string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task RetryPathInsightAsync(string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<SpeakingInstructionsDto> GetSpeakingInstructionsAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<StartSpeakingAttemptResponse> StartSpeakingAttemptAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<SpeakingTakeDto> GetSpeakingTakeAsync(int attemptId, int? questionId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<UploadSpeakingAudioResponse> UploadSpeakingAudioAsync(int attemptId, int questionId, Stream audioStream, string fileName, string contentType, int? durationMs, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<SubmitSpeakingResponse> SubmitSpeakingAttemptAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<SpeakingGradingPendingDto> GetSpeakingGradingPendingAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task RetrySpeakingGradingAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<SpeakingReviewDto> GetSpeakingReviewAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<(Stream Stream, string ContentType, string FileName)> GetSpeakingAudioStreamAsync(int attemptId, int questionId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<PlacementCatalogViewDto> GetPlacementCatalogAsync(string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<PlacementTestInfoDto> StartPlacementTestAsync(StartPlacementTestRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<PlacementTakeViewDto> GetPlacementTakeAsync(int placementId, int? questionDisplayOrder, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<SaveAnswerResultDto> SavePlacementAnswerAsync(int placementId, int questionId, SaveAnswerRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<PlacementResultViewDto> SubmitPlacementTestAsync(int placementId, SubmitPlacementTestRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<PlacementResultViewDto> GetPlacementResultAsync(int placementId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<TargetBandViewDto> GetTargetBandViewAsync(string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<SetTargetBandResultDto> SetTargetBandAsync(SetTargetBandRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<LearningPathSummaryDto> GetLearningPathAsync(string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<LearningPathSummaryDto> GenerateLearningPathAsync(GenerateLearningPathRequest? request, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<LearningPathModuleDetailDto> GetLearningPathModuleAsync(int moduleId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<StartStepResultDto> StartLearningPathStepAsync(int stepId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<ResetLearningPathResultDto> ResetLearningPathAsync(string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<LearningPathSummaryDto> UpgradeLearningPathAsync(string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<IReadOnlyList<MentorSummaryDto>> GetMentorsAsync(string? certCode = null, string? skill = null, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<MentorDetailDto> GetMentorDetailAsync(int mentorId, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<IReadOnlyList<AdminMentorListItemDto>> GetAdminMentorsAsync(string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<MentorSummaryDto> GetAdminMentorByIdAsync(int mentorId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<MentorSummaryDto> CreateMentorAsync(CreateMentorProfileRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<MentorSummaryDto> UpdateMentorAsync(int mentorId, UpdateMentorProfileRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<IReadOnlyList<AdminMentorSlotDto>> GetAdminMentorSlotsAsync(int mentorId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<AdminMentorSlotDto> CreateMentorSlotAsync(int mentorId, CreateMentorSlotRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task CloseMentorSlotAsync(int mentorId, int slotId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<IReadOnlyList<MentorCertificateOptionDto>> GetMentorCertificateOptionsAsync(string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<MentorBookingDto> BookMentorAsync(int mentorId, BookMentorRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<CancelBookingResultDto> CancelBookingAsync(int bookingId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<MentorBookingDto> GetBookingDetailAsync(int bookingId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<IReadOnlyList<MentorBookingDto>> GetLearnerBookingsAsync(string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<MentorReviewDto> RateBookingAsync(int bookingId, RateMentorRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<MentorReviewDto> RateBookingAsync(int bookingId, RateMentorRequest request, CancellationToken cancellationToken = default) =>
-        RateBookingAsync(bookingId, request, string.Empty, cancellationToken);
-
-    Task<IReadOnlyList<LearnerComplaintDto>> GetLearnerComplaintsAsync(string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<EligibleSubjectsDto> GetEligibleSubjectsAsync(string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<LearnerComplaintDto> FileComplaintAsync(FileComplaintRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<AdminComplaintsSummaryDto> GetAdminComplaintsAsync(string? q, string? status, int page, int pageSize, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<AdminComplaintDetailDto> GetAdminComplaintDetailAsync(int complaintId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<AdminComplaintDetailDto> SetAdminComplaintStatusAsync(int complaintId, UpdateComplaintStatusRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<AdminComplaintDetailDto> ResolveAdminComplaintAsync(int complaintId, ResolveComplaintRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<AdminExamListSummaryDto> GetAdminExamsAsync(string? q, string? status, int? certId, int page, int pageSize, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<AdminExamDetailDto> GetAdminExamByIdAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<AdminExamDetailDto> CreateAdminExamAsync(CreateAdminExamRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<AdminExamDetailDto> UpdateAdminExamAsync(int examId, UpdateAdminExamRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<AdminPublishExamResultDto> PublishAdminExamAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task DeleteAdminExamAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<AdminExamQuestionsDto> GetAdminExamQuestionsAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<AdminQuestionGroupDto> CreateAdminQuestionGroupAsync(int examId, CreateQuestionGroupRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<AdminQuestionGroupDto> UpdateAdminQuestionGroupAsync(int examId, int groupId, UpdateQuestionGroupRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task DeleteAdminQuestionGroupAsync(int examId, int groupId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<AdminQuestionDto> CreateAdminQuestionAsync(int examId, CreateQuestionRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<AdminQuestionDto> UpdateAdminQuestionAsync(int questionId, UpdateQuestionRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task DeleteAdminQuestionAsync(int questionId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<AdminExamSectionAudioDto> SaveAdminExamSectionAudioAsync(int examId, SaveExamSectionAudioRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<AdminImportBatchesDto> GetAdminImportBatchesAsync(int? certId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<AdminImportBatchDetailDto> GetAdminImportBatchAsync(int batchId, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    Task<AdminImportResultDto> UploadAdminImportAsync(int certId, Stream content, string fileName, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
-
-    /// <summary>An imported audio or image file (ADR-0007), for any signed-in user.</summary>
-    Task<(Stream Stream, string ContentType)> GetImportMediaAsync(int batchId, string fileName, string bearerToken, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
 }
-
 
 /// <summary>Raised when the API answers with a non-success status; carries the ProblemDetails code.</summary>
 public sealed class ApiException : HttpRequestException
@@ -1344,6 +945,401 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
         var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
         return (stream, response.Content.Headers.ContentType?.MediaType ?? "application/octet-stream");
     }
+
+
+    // Token-free forwarding methods for segregated domain client interfaces (ADR-0002)
+    public Task<AuthUserDto> GetMeAsync(CancellationToken cancellationToken = default) =>
+        GetMeAsync(string.Empty, cancellationToken);
+
+    public Task ResendActivationAsync(CancellationToken cancellationToken = default) =>
+        ResendActivationAsync(string.Empty, cancellationToken);
+
+    public Task<ProfileDto> GetProfileAsync(CancellationToken cancellationToken = default) =>
+        GetProfileAsync(string.Empty, cancellationToken);
+
+    public Task<ProfileDto> UpdateProfileAsync(UpdateProfileRequest request, CancellationToken cancellationToken = default) =>
+        UpdateProfileAsync(request, string.Empty, cancellationToken);
+
+    public Task ChangePasswordAsync(ChangePasswordRequest request, CancellationToken cancellationToken = default) =>
+        ChangePasswordAsync(request, string.Empty, cancellationToken);
+
+    public Task<LearnerContextDto> GetLearnerContextAsync(CancellationToken cancellationToken = default) =>
+        GetLearnerContextAsync(string.Empty, cancellationToken);
+
+    public Task SwitchCertificateAsync(string code, CancellationToken cancellationToken = default) =>
+        SwitchCertificateAsync(string.Empty, code, cancellationToken);
+
+    public Task<LearnerDashboardDto> GetDashboardAsync(CancellationToken cancellationToken = default) =>
+        GetDashboardAsync(string.Empty, cancellationToken);
+
+    public Task<PracticeCatalogDto> GetPracticeCatalogAsync(CancellationToken cancellationToken = default) =>
+        GetPracticeCatalogAsync(string.Empty, cancellationToken);
+
+    public Task<PracticeSessionDto> StartPracticeSessionAsync(StartPracticeRequest request, CancellationToken cancellationToken = default) =>
+        StartPracticeSessionAsync(request, string.Empty, cancellationToken);
+
+    public Task<PracticeSessionDto> GetPracticeSessionInfoAsync(int sessionId, CancellationToken cancellationToken = default) =>
+        GetPracticeSessionInfoAsync(sessionId, string.Empty, cancellationToken);
+
+    public Task<PracticeQuestionDto> GetPracticeQuestionAsync(int sessionId, int displayOrder, CancellationToken cancellationToken = default) =>
+        GetPracticeQuestionAsync(sessionId, displayOrder, string.Empty, cancellationToken);
+
+    public Task<RevealHintResponse> RevealPracticeHintAsync(int sessionId, int questionId, CancellationToken cancellationToken = default) =>
+        RevealPracticeHintAsync(sessionId, questionId, string.Empty, cancellationToken);
+
+    public Task<GradedAnswerDto> SubmitPracticeAnswerAsync(int sessionId, int questionId, SubmitPracticeAnswerRequest request, CancellationToken cancellationToken = default) =>
+        SubmitPracticeAnswerAsync(sessionId, questionId, request, string.Empty, cancellationToken);
+
+    public Task<PracticeSummaryDto> GetPracticeSummaryAsync(int sessionId, CancellationToken cancellationToken = default) =>
+        GetPracticeSummaryAsync(sessionId, string.Empty, cancellationToken);
+
+    public Task<SavedQuestionsViewDto> GetSavedQuestionsAsync(string? source, int? sectionId, int? categoryId, CancellationToken cancellationToken = default) =>
+        GetSavedQuestionsAsync(source, sectionId, categoryId, string.Empty, cancellationToken);
+
+    public Task<SavedQuestionItemDto> GetSavedQuestionAsync(int questionId, CancellationToken cancellationToken = default) =>
+        GetSavedQuestionAsync(questionId, string.Empty, cancellationToken);
+
+    public Task<SaveQuestionResultDto> SaveQuestionAsync(int questionId, string? source, CancellationToken cancellationToken = default) =>
+        SaveQuestionAsync(questionId, source, string.Empty, cancellationToken);
+
+    public Task<SaveQuestionResultDto> UnsaveQuestionAsync(int questionId, CancellationToken cancellationToken = default) =>
+        UnsaveQuestionAsync(questionId, string.Empty, cancellationToken);
+
+    public Task<WeaknessAnalysisDto> GetWeaknessAnalysisAsync(CancellationToken cancellationToken = default) =>
+        GetWeaknessAnalysisAsync(string.Empty, cancellationToken);
+
+    public Task<ResolveRecommendationResultDto> ResolveRecommendationAsync(int recId, CancellationToken cancellationToken = default) =>
+        ResolveRecommendationAsync(recId, string.Empty, cancellationToken);
+
+    public Task<CheckoutPreviewDto> GetCheckoutPreviewAsync(int packageId, CancellationToken cancellationToken = default) =>
+        GetCheckoutPreviewAsync(packageId, string.Empty, cancellationToken);
+
+    public Task<CreateOrderResponse> CreateOrderAsync(CreateOrderRequest request, CancellationToken cancellationToken = default) =>
+        CreateOrderAsync(request, string.Empty, cancellationToken);
+
+    public Task<PaymentResultDto> HandleReturnAsync(HandleReturnRequest request, CancellationToken cancellationToken = default) =>
+        HandleReturnAsync(request, string.Empty, cancellationToken);
+
+    public Task<PaymentResultDto> GetPaymentResultAsync(string orderCode, CancellationToken cancellationToken = default) =>
+        GetPaymentResultAsync(orderCode, string.Empty, cancellationToken);
+
+    public Task CancelOrderAsync(CancelOrderRequest request, CancellationToken cancellationToken = default) =>
+        CancelOrderAsync(request, string.Empty, cancellationToken);
+
+    public Task<PaymentResultDto> ApplyMockGatewayActionAsync(MockGatewayActionRequest request, CancellationToken cancellationToken = default) =>
+        ApplyMockGatewayActionAsync(request, string.Empty, cancellationToken);
+
+    public Task<WalletDto> GetWalletAsync(CancellationToken cancellationToken = default) =>
+        GetWalletAsync(string.Empty, cancellationToken);
+
+    public Task<MockExamListViewDto> GetMockExamsAsync(CancellationToken cancellationToken = default) =>
+        GetMockExamsAsync(string.Empty, cancellationToken);
+
+    public Task<MockExamInstructionsDto> GetMockExamInstructionsAsync(int examId, CancellationToken cancellationToken = default) =>
+        GetMockExamInstructionsAsync(examId, string.Empty, cancellationToken);
+
+    public Task<StartMockExamResponse> StartMockExamAsync(int examId, CancellationToken cancellationToken = default) =>
+        StartMockExamAsync(examId, string.Empty, cancellationToken);
+
+    public Task<AttemptTakeDto> GetAttemptTakeAsync(int attemptId, int? q, CancellationToken cancellationToken = default) =>
+        GetAttemptTakeAsync(attemptId, q, string.Empty, cancellationToken);
+
+    public Task<SaveAnswerResultDto> SaveAttemptAnswerAsync(int attemptId, int questionId, SaveAnswerRequest request, CancellationToken cancellationToken = default) =>
+        SaveAttemptAnswerAsync(attemptId, questionId, request, string.Empty, cancellationToken);
+
+    public Task<SubmitAttemptResponse> SubmitAttemptAsync(int attemptId, CancellationToken cancellationToken = default) =>
+        SubmitAttemptAsync(attemptId, string.Empty, cancellationToken);
+
+    public Task CancelAttemptAsync(int attemptId, CancellationToken cancellationToken = default) =>
+        CancelAttemptAsync(attemptId, string.Empty, cancellationToken);
+
+    public Task<AttemptResultDto> GetAttemptResultAsync(int attemptId, CancellationToken cancellationToken = default) =>
+        GetAttemptResultAsync(attemptId, string.Empty, cancellationToken);
+
+    public Task<ExamHistoryDto> GetExamHistoryAsync(CancellationToken cancellationToken = default) =>
+        GetExamHistoryAsync(string.Empty, cancellationToken);
+
+    public Task<AttemptReviewDto> GetAttemptReviewAsync(int attemptId, CancellationToken cancellationToken = default) =>
+        GetAttemptReviewAsync(attemptId, string.Empty, cancellationToken);
+
+    public Task<WritingInstructionsDto> GetWritingInstructionsAsync(int examId, CancellationToken cancellationToken = default) =>
+        GetWritingInstructionsAsync(examId, string.Empty, cancellationToken);
+
+    public Task<StartWritingAttemptResponse> StartWritingAttemptAsync(int examId, CancellationToken cancellationToken = default) =>
+        StartWritingAttemptAsync(examId, string.Empty, cancellationToken);
+
+    public Task<WritingTakeDto> GetWritingTakeAsync(int attemptId, int? questionId, CancellationToken cancellationToken = default) =>
+        GetWritingTakeAsync(attemptId, questionId, string.Empty, cancellationToken);
+
+    public Task<SaveWritingDraftResponse> SaveWritingDraftAsync(int attemptId, SaveWritingDraftRequest request, CancellationToken cancellationToken = default) =>
+        SaveWritingDraftAsync(attemptId, request, string.Empty, cancellationToken);
+
+    public Task<SubmitWritingResponse> SubmitWritingAttemptAsync(int attemptId, CancellationToken cancellationToken = default) =>
+        SubmitWritingAttemptAsync(attemptId, string.Empty, cancellationToken);
+
+    public Task<WritingGradingPendingDto> GetWritingGradingPendingAsync(int attemptId, CancellationToken cancellationToken = default) =>
+        GetWritingGradingPendingAsync(attemptId, string.Empty, cancellationToken);
+
+    public Task RetryWritingGradingAsync(int attemptId, CancellationToken cancellationToken = default) =>
+        RetryWritingGradingAsync(attemptId, string.Empty, cancellationToken);
+
+    public Task<WritingReviewDto> GetWritingReviewAsync(int attemptId, CancellationToken cancellationToken = default) =>
+        GetWritingReviewAsync(attemptId, string.Empty, cancellationToken);
+
+    public Task<SpeakingInstructionsDto> GetSpeakingInstructionsAsync(int examId, CancellationToken cancellationToken = default) =>
+        GetSpeakingInstructionsAsync(examId, string.Empty, cancellationToken);
+
+    public Task<StartSpeakingAttemptResponse> StartSpeakingAttemptAsync(int examId, CancellationToken cancellationToken = default) =>
+        StartSpeakingAttemptAsync(examId, string.Empty, cancellationToken);
+
+    public Task<SpeakingTakeDto> GetSpeakingTakeAsync(int attemptId, int? questionId, CancellationToken cancellationToken = default) =>
+        GetSpeakingTakeAsync(attemptId, questionId, string.Empty, cancellationToken);
+
+    public Task<UploadSpeakingAudioResponse> UploadSpeakingAudioAsync(int attemptId, int questionId, Stream audioStream, string fileName, string contentType, int? durationMs, CancellationToken cancellationToken = default) =>
+        UploadSpeakingAudioAsync(attemptId, questionId, audioStream, fileName, contentType, durationMs, string.Empty, cancellationToken);
+
+    public Task<SubmitSpeakingResponse> SubmitSpeakingAttemptAsync(int attemptId, CancellationToken cancellationToken = default) =>
+        SubmitSpeakingAttemptAsync(attemptId, string.Empty, cancellationToken);
+
+    public Task<SpeakingGradingPendingDto> GetSpeakingGradingPendingAsync(int attemptId, CancellationToken cancellationToken = default) =>
+        GetSpeakingGradingPendingAsync(attemptId, string.Empty, cancellationToken);
+
+    public Task RetrySpeakingGradingAsync(int attemptId, CancellationToken cancellationToken = default) =>
+        RetrySpeakingGradingAsync(attemptId, string.Empty, cancellationToken);
+
+    public Task<SpeakingReviewDto> GetSpeakingReviewAsync(int attemptId, CancellationToken cancellationToken = default) =>
+        GetSpeakingReviewAsync(attemptId, string.Empty, cancellationToken);
+
+    public Task<(Stream Stream, string ContentType, string FileName)> GetSpeakingAudioStreamAsync(int attemptId, int questionId, CancellationToken cancellationToken = default) =>
+        GetSpeakingAudioStreamAsync(attemptId, questionId, string.Empty, cancellationToken);
+
+    public Task<PlacementCatalogViewDto> GetPlacementCatalogAsync(CancellationToken cancellationToken = default) =>
+        GetPlacementCatalogAsync(string.Empty, cancellationToken);
+
+    public Task<PlacementTestInfoDto> StartPlacementTestAsync(StartPlacementTestRequest request, CancellationToken cancellationToken = default) =>
+        StartPlacementTestAsync(request, string.Empty, cancellationToken);
+
+    public Task<PlacementTakeViewDto> GetPlacementTakeAsync(int placementId, int? questionDisplayOrder, CancellationToken cancellationToken = default) =>
+        GetPlacementTakeAsync(placementId, questionDisplayOrder, string.Empty, cancellationToken);
+
+    public Task<SaveAnswerResultDto> SavePlacementAnswerAsync(int placementId, int questionId, SaveAnswerRequest request, CancellationToken cancellationToken = default) =>
+        SavePlacementAnswerAsync(placementId, questionId, request, string.Empty, cancellationToken);
+
+    public Task<PlacementResultViewDto> SubmitPlacementTestAsync(int placementId, SubmitPlacementTestRequest request, CancellationToken cancellationToken = default) =>
+        SubmitPlacementTestAsync(placementId, request, string.Empty, cancellationToken);
+
+    public Task<PlacementResultViewDto> GetPlacementResultAsync(int placementId, CancellationToken cancellationToken = default) =>
+        GetPlacementResultAsync(placementId, string.Empty, cancellationToken);
+
+    public Task<TargetBandViewDto> GetTargetBandViewAsync(CancellationToken cancellationToken = default) =>
+        GetTargetBandViewAsync(string.Empty, cancellationToken);
+
+    public Task<SetTargetBandResultDto> SetTargetBandAsync(SetTargetBandRequest request, CancellationToken cancellationToken = default) =>
+        SetTargetBandAsync(request, string.Empty, cancellationToken);
+
+    public Task<LearningPathSummaryDto> GetLearningPathAsync(CancellationToken cancellationToken = default) =>
+        GetLearningPathAsync(string.Empty, cancellationToken);
+
+    public Task<LearningPathSummaryDto> GenerateLearningPathAsync(GenerateLearningPathRequest? request, CancellationToken cancellationToken = default) =>
+        GenerateLearningPathAsync(request, string.Empty, cancellationToken);
+
+    public Task<LearningPathModuleDetailDto> GetLearningPathModuleAsync(int moduleId, CancellationToken cancellationToken = default) =>
+        GetLearningPathModuleAsync(moduleId, string.Empty, cancellationToken);
+
+    public Task<StartStepResultDto> StartLearningPathStepAsync(int stepId, CancellationToken cancellationToken = default) =>
+        StartLearningPathStepAsync(stepId, string.Empty, cancellationToken);
+
+    public Task<ResetLearningPathResultDto> ResetLearningPathAsync(CancellationToken cancellationToken = default) =>
+        ResetLearningPathAsync(string.Empty, cancellationToken);
+
+    public Task<LearningPathSummaryDto> UpgradeLearningPathAsync(CancellationToken cancellationToken = default) =>
+        UpgradeLearningPathAsync(string.Empty, cancellationToken);
+
+    public Task<IReadOnlyList<MentorCertificateOptionDto>> GetMentorCertificateOptionsAsync(CancellationToken cancellationToken = default) =>
+        GetMentorCertificateOptionsAsync(string.Empty, cancellationToken);
+
+    public Task<MentorBookingDto> BookMentorAsync(int mentorId, BookMentorRequest request, CancellationToken cancellationToken = default) =>
+        BookMentorAsync(mentorId, request, string.Empty, cancellationToken);
+
+    public Task<CancelBookingResultDto> CancelBookingAsync(int bookingId, CancellationToken cancellationToken = default) =>
+        CancelBookingAsync(bookingId, string.Empty, cancellationToken);
+
+    public Task<MentorBookingDto> GetBookingDetailAsync(int bookingId, CancellationToken cancellationToken = default) =>
+        GetBookingDetailAsync(bookingId, string.Empty, cancellationToken);
+
+    public Task<IReadOnlyList<MentorBookingDto>> GetLearnerBookingsAsync(CancellationToken cancellationToken = default) =>
+        GetLearnerBookingsAsync(string.Empty, cancellationToken);
+
+    public Task<IReadOnlyList<LearnerComplaintDto>> GetLearnerComplaintsAsync(CancellationToken cancellationToken = default) =>
+        GetLearnerComplaintsAsync(string.Empty, cancellationToken);
+
+    public Task<EligibleSubjectsDto> GetEligibleSubjectsAsync(CancellationToken cancellationToken = default) =>
+        GetEligibleSubjectsAsync(string.Empty, cancellationToken);
+
+    public Task<LearnerComplaintDto> FileComplaintAsync(FileComplaintRequest request, CancellationToken cancellationToken = default) =>
+        FileComplaintAsync(request, string.Empty, cancellationToken);
+
+    public Task<AiInsightDto> GetPracticeInsightAsync(int sessionId, CancellationToken cancellationToken = default) =>
+        GetPracticeInsightAsync(sessionId, string.Empty, cancellationToken);
+
+    public Task RetryPracticeInsightAsync(int sessionId, CancellationToken cancellationToken = default) =>
+        RetryPracticeInsightAsync(sessionId, string.Empty, cancellationToken);
+
+    public Task<AiInsightDto> GetExamInsightAsync(int attemptId, CancellationToken cancellationToken = default) =>
+        GetExamInsightAsync(attemptId, string.Empty, cancellationToken);
+
+    public Task RetryExamInsightAsync(int attemptId, CancellationToken cancellationToken = default) =>
+        RetryExamInsightAsync(attemptId, string.Empty, cancellationToken);
+
+    public Task RetryInsightAsync(int insightId, CancellationToken cancellationToken = default) =>
+        RetryInsightAsync(insightId, string.Empty, cancellationToken);
+
+    public Task<AiInsightDto> GetDashboardInsightAsync(int? certId = null, CancellationToken cancellationToken = default) =>
+        GetDashboardInsightAsync(string.Empty, certId, cancellationToken);
+
+    public Task RetryDashboardInsightAsync(int? certId = null, CancellationToken cancellationToken = default) =>
+        RetryDashboardInsightAsync(string.Empty, certId, cancellationToken);
+
+    public Task<AiInsightDto> GetPathInsightAsync(CancellationToken cancellationToken = default) =>
+        GetPathInsightAsync(string.Empty, cancellationToken);
+
+    public Task RetryPathInsightAsync(CancellationToken cancellationToken = default) =>
+        RetryPathInsightAsync(string.Empty, cancellationToken);
+
+    public Task<(Stream Stream, string ContentType)> GetImportMediaAsync(int batchId, string fileName, CancellationToken cancellationToken = default) =>
+        GetImportMediaAsync(batchId, fileName, string.Empty, cancellationToken);
+
+    public Task<AdminPackagesSummaryDto> GetAdminPackagesAsync(CancellationToken cancellationToken = default) =>
+        GetAdminPackagesAsync(string.Empty, cancellationToken);
+
+    public Task<PackageDto> GetAdminPackageAsync(int packageId, CancellationToken cancellationToken = default) =>
+        GetAdminPackageAsync(packageId, string.Empty, cancellationToken);
+
+    public Task<PackageDto> CreatePackageAsync(CreatePackageRequest request, CancellationToken cancellationToken = default) =>
+        CreatePackageAsync(request, string.Empty, cancellationToken);
+
+    public Task<PackageDto> UpdatePackageAsync(int packageId, UpdatePackageRequest request, CancellationToken cancellationToken = default) =>
+        UpdatePackageAsync(packageId, request, string.Empty, cancellationToken);
+
+    public Task DeactivatePackageAsync(int packageId, CancellationToken cancellationToken = default) =>
+        DeactivatePackageAsync(packageId, string.Empty, cancellationToken);
+
+    public Task<AdminScoreConversionDto> GetAdminScoreConversionAsync(string? certCode, int? examId, CancellationToken cancellationToken = default) =>
+        GetAdminScoreConversionAsync(certCode, examId, string.Empty, cancellationToken);
+
+    public Task<AdminScoreConversionDto> UpdateAdminScoreConversionAsync(int certId, UpdateScoreConversionRequest request, CancellationToken cancellationToken = default) =>
+        UpdateAdminScoreConversionAsync(certId, request, string.Empty, cancellationToken);
+
+    public Task<AdminOrdersSummaryDto> GetAdminOrdersAsync(string? q, string? status, string? gateway, int page, int pageSize, CancellationToken cancellationToken = default) =>
+        GetAdminOrdersAsync(q, status, gateway, page, pageSize, string.Empty, cancellationToken);
+
+    public Task<AdminOrderDetailDto> GetAdminOrderDetailAsync(int orderId, CancellationToken cancellationToken = default) =>
+        GetAdminOrderDetailAsync(orderId, string.Empty, cancellationToken);
+
+    public Task<PaymentResultDto> ReconcileAdminOrderAsync(int orderId, CancellationToken cancellationToken = default) =>
+        ReconcileAdminOrderAsync(orderId, string.Empty, cancellationToken);
+
+    public Task<AdminUsersSummaryDto> GetAdminUsersAsync(string? q, string? status, int page, int pageSize, CancellationToken cancellationToken = default) =>
+        GetAdminUsersAsync(q, status, page, pageSize, string.Empty, cancellationToken);
+
+    public Task<AdminUserDto> LockUserAsync(int userId, CancellationToken cancellationToken = default) =>
+        LockUserAsync(userId, string.Empty, cancellationToken);
+
+    public Task<AdminUserDto> UnlockUserAsync(int userId, CancellationToken cancellationToken = default) =>
+        UnlockUserAsync(userId, string.Empty, cancellationToken);
+
+    public Task ResendUserActivationAsync(int userId, CancellationToken cancellationToken = default) =>
+        ResendUserActivationAsync(userId, string.Empty, cancellationToken);
+
+    public Task<AdjustCreditsResultDto> AdjustUserCreditsAsync(int userId, AdjustCreditsRequest request, CancellationToken cancellationToken = default) =>
+        AdjustUserCreditsAsync(userId, request, string.Empty, cancellationToken);
+
+    public Task<AdminDashboardDto> GetAdminDashboardAsync(CancellationToken cancellationToken = default) =>
+        GetAdminDashboardAsync(string.Empty, cancellationToken);
+
+    public Task<IReadOnlyList<AdminMentorListItemDto>> GetAdminMentorsAsync(CancellationToken cancellationToken = default) =>
+        GetAdminMentorsAsync(string.Empty, cancellationToken);
+
+    public Task<MentorSummaryDto> GetAdminMentorByIdAsync(int mentorId, CancellationToken cancellationToken = default) =>
+        GetAdminMentorByIdAsync(mentorId, string.Empty, cancellationToken);
+
+    public Task<MentorSummaryDto> CreateMentorAsync(CreateMentorProfileRequest request, CancellationToken cancellationToken = default) =>
+        CreateMentorAsync(request, string.Empty, cancellationToken);
+
+    public Task<MentorSummaryDto> UpdateMentorAsync(int mentorId, UpdateMentorProfileRequest request, CancellationToken cancellationToken = default) =>
+        UpdateMentorAsync(mentorId, request, string.Empty, cancellationToken);
+
+    public Task<IReadOnlyList<AdminMentorSlotDto>> GetAdminMentorSlotsAsync(int mentorId, CancellationToken cancellationToken = default) =>
+        GetAdminMentorSlotsAsync(mentorId, string.Empty, cancellationToken);
+
+    public Task<AdminMentorSlotDto> CreateMentorSlotAsync(int mentorId, CreateMentorSlotRequest request, CancellationToken cancellationToken = default) =>
+        CreateMentorSlotAsync(mentorId, request, string.Empty, cancellationToken);
+
+    public Task CloseMentorSlotAsync(int mentorId, int slotId, CancellationToken cancellationToken = default) =>
+        CloseMentorSlotAsync(mentorId, slotId, string.Empty, cancellationToken);
+
+    public Task<AdminComplaintsSummaryDto> GetAdminComplaintsAsync(string? q, string? status, int page, int pageSize, CancellationToken cancellationToken = default) =>
+        GetAdminComplaintsAsync(q, status, page, pageSize, string.Empty, cancellationToken);
+
+    public Task<AdminComplaintDetailDto> GetAdminComplaintDetailAsync(int complaintId, CancellationToken cancellationToken = default) =>
+        GetAdminComplaintDetailAsync(complaintId, string.Empty, cancellationToken);
+
+    public Task<AdminComplaintDetailDto> SetAdminComplaintStatusAsync(int complaintId, UpdateComplaintStatusRequest request, CancellationToken cancellationToken = default) =>
+        SetAdminComplaintStatusAsync(complaintId, request, string.Empty, cancellationToken);
+
+    public Task<AdminComplaintDetailDto> ResolveAdminComplaintAsync(int complaintId, ResolveComplaintRequest request, CancellationToken cancellationToken = default) =>
+        ResolveAdminComplaintAsync(complaintId, request, string.Empty, cancellationToken);
+
+    public Task<AdminExamListSummaryDto> GetAdminExamsAsync(string? q, string? status, int? certId, int page, int pageSize, CancellationToken cancellationToken = default) =>
+        GetAdminExamsAsync(q, status, certId, page, pageSize, string.Empty, cancellationToken);
+
+    public Task<AdminExamDetailDto> GetAdminExamByIdAsync(int examId, CancellationToken cancellationToken = default) =>
+        GetAdminExamByIdAsync(examId, string.Empty, cancellationToken);
+
+    public Task<AdminExamDetailDto> CreateAdminExamAsync(CreateAdminExamRequest request, CancellationToken cancellationToken = default) =>
+        CreateAdminExamAsync(request, string.Empty, cancellationToken);
+
+    public Task<AdminExamDetailDto> UpdateAdminExamAsync(int examId, UpdateAdminExamRequest request, CancellationToken cancellationToken = default) =>
+        UpdateAdminExamAsync(examId, request, string.Empty, cancellationToken);
+
+    public Task<AdminPublishExamResultDto> PublishAdminExamAsync(int examId, CancellationToken cancellationToken = default) =>
+        PublishAdminExamAsync(examId, string.Empty, cancellationToken);
+
+    public Task DeleteAdminExamAsync(int examId, CancellationToken cancellationToken = default) =>
+        DeleteAdminExamAsync(examId, string.Empty, cancellationToken);
+
+    public Task<AdminExamQuestionsDto> GetAdminExamQuestionsAsync(int examId, CancellationToken cancellationToken = default) =>
+        GetAdminExamQuestionsAsync(examId, string.Empty, cancellationToken);
+
+    public Task<AdminQuestionGroupDto> CreateAdminQuestionGroupAsync(int examId, CreateQuestionGroupRequest request, CancellationToken cancellationToken = default) =>
+        CreateAdminQuestionGroupAsync(examId, request, string.Empty, cancellationToken);
+
+    public Task<AdminQuestionGroupDto> UpdateAdminQuestionGroupAsync(int examId, int groupId, UpdateQuestionGroupRequest request, CancellationToken cancellationToken = default) =>
+        UpdateAdminQuestionGroupAsync(examId, groupId, request, string.Empty, cancellationToken);
+
+    public Task DeleteAdminQuestionGroupAsync(int examId, int groupId, CancellationToken cancellationToken = default) =>
+        DeleteAdminQuestionGroupAsync(examId, groupId, string.Empty, cancellationToken);
+
+    public Task<AdminQuestionDto> CreateAdminQuestionAsync(int examId, CreateQuestionRequest request, CancellationToken cancellationToken = default) =>
+        CreateAdminQuestionAsync(examId, request, string.Empty, cancellationToken);
+
+    public Task<AdminQuestionDto> UpdateAdminQuestionAsync(int questionId, UpdateQuestionRequest request, CancellationToken cancellationToken = default) =>
+        UpdateAdminQuestionAsync(questionId, request, string.Empty, cancellationToken);
+
+    public Task DeleteAdminQuestionAsync(int questionId, CancellationToken cancellationToken = default) =>
+        DeleteAdminQuestionAsync(questionId, string.Empty, cancellationToken);
+
+    public Task<AdminExamSectionAudioDto> SaveAdminExamSectionAudioAsync(int examId, SaveExamSectionAudioRequest request, CancellationToken cancellationToken = default) =>
+        SaveAdminExamSectionAudioAsync(examId, request, string.Empty, cancellationToken);
+
+    public Task<AdminImportBatchesDto> GetAdminImportBatchesAsync(int? certId, CancellationToken cancellationToken = default) =>
+        GetAdminImportBatchesAsync(certId, string.Empty, cancellationToken);
+
+    public Task<AdminImportBatchDetailDto> GetAdminImportBatchAsync(int batchId, CancellationToken cancellationToken = default) =>
+        GetAdminImportBatchAsync(batchId, string.Empty, cancellationToken);
+
+    public Task<AdminImportResultDto> UploadAdminImportAsync(int certId, Stream content, string fileName, CancellationToken cancellationToken = default) =>
+        UploadAdminImportAsync(certId, content, fileName, string.Empty, cancellationToken);
 
     private async Task<TResponse> PutAuthorizedAsync<TRequest, TResponse>(string path, TRequest body, string bearerToken, CancellationToken cancellationToken)
     {

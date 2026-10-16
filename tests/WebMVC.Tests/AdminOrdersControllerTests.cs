@@ -144,18 +144,7 @@ public sealed class AdminOrdersControllerTests
         public void SaveTempData(HttpContext context, IDictionary<string, object> values) { }
     }
 
-    private sealed class FixedAuthentication(ClaimsPrincipal principal, AuthenticationProperties properties) : IAuthenticationService
-    {
-        public Task<AuthenticateResult> AuthenticateAsync(HttpContext context, string? scheme) =>
-            Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(principal, properties, "Cookies")));
-
-        public Task ChallengeAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task ForbidAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task SignInAsync(HttpContext context, string? scheme, ClaimsPrincipal principal, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task SignOutAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-    }
-
-    private sealed class TestOrdersApiClient : ICompanionApiClient
+    private sealed class TestOrdersApiClient : IAdminOrdersClient
     {
         public AdminOrdersSummaryDto? Summary { get; set; }
         public AdminOrderDetailDto? DetailToReturn { get; set; }
@@ -163,19 +152,19 @@ public sealed class AdminOrdersControllerTests
         public int? ReconciledOrderId { get; set; }
         public bool ShouldFail { get; set; }
 
-        public Task<AdminOrdersSummaryDto> GetAdminOrdersAsync(string? q, string? status, string? gateway, int page, int pageSize, string bearerToken, CancellationToken cancellationToken = default)
+        public Task<AdminOrdersSummaryDto> GetAdminOrdersAsync(string? q = null, string? status = null, string? gateway = null, int page = 1, int pageSize = 20, CancellationToken cancellationToken = default)
         {
             if (ShouldFail) throw new HttpRequestException("Network failure");
             return Task.FromResult(Summary ?? new AdminOrdersSummaryDto([], 0, 1, 20, 0, 0, 0, 0));
         }
 
-        public Task<AdminOrderDetailDto> GetAdminOrderDetailAsync(int orderId, string bearerToken, CancellationToken cancellationToken = default)
+        public Task<AdminOrderDetailDto> GetAdminOrderDetailAsync(int orderId, CancellationToken cancellationToken = default)
         {
             if (ShouldFail) throw new HttpRequestException("Network failure");
             return Task.FromResult(DetailToReturn ?? SampleOrderDetail(orderId));
         }
 
-        public Task<PaymentResultDto> ReconcileAdminOrderAsync(int orderId, string bearerToken, CancellationToken cancellationToken = default)
+        public Task<PaymentResultDto> ReconcileAdminOrderAsync(int orderId, CancellationToken cancellationToken = default)
         {
             ReconciledOrderId = orderId;
             return Task.FromResult(ReconcileResult ?? new PaymentResultDto(

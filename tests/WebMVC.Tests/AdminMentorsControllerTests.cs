@@ -204,22 +204,10 @@ public sealed class AdminMentorsControllerTests
         public void SaveTempData(HttpContext context, IDictionary<string, object> values) { }
     }
 
-    private sealed class FixedAuthentication(ClaimsPrincipal principal, AuthenticationProperties properties) : IAuthenticationService
-    {
-        public Task<AuthenticateResult> AuthenticateAsync(HttpContext context, string? scheme) =>
-            Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(principal, properties, "Cookies")));
-
-        public Task ChallengeAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task ForbidAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task SignInAsync(HttpContext context, string? scheme, ClaimsPrincipal principal, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task SignOutAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-    }
-
-    private sealed class TestApiClient : ICompanionApiClient
+    private sealed class TestApiClient : IAdminMentorsClient
     {
         public IReadOnlyList<AdminMentorListItemDto> AdminMentors { get; set; } = [];
         public MentorSummaryDto? MentorSummary { get; set; }
-        public IReadOnlyList<CertificateDto> Certificates { get; set; } = [];
         public IReadOnlyList<MentorCertificateOptionDto> CertificateOptions { get; set; } = [];
         public AdminUsersSummaryDto? AdminUsers { get; set; }
         public IReadOnlyList<AdminMentorSlotDto> AdminSlots { get; set; } = [];
@@ -227,40 +215,37 @@ public sealed class AdminMentorsControllerTests
         public CreateMentorSlotRequest? CreatedSlotRequest { get; set; }
         public (int MentorId, int SlotId)? ClosedSlot { get; set; }
 
-        public Task<IReadOnlyList<AdminMentorListItemDto>> GetAdminMentorsAsync(string bearerToken, CancellationToken cancellationToken = default) =>
+        public Task<IReadOnlyList<AdminMentorListItemDto>> GetAdminMentorsAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(AdminMentors);
 
-        public Task<MentorSummaryDto> GetAdminMentorByIdAsync(int mentorId, string bearerToken, CancellationToken cancellationToken = default) =>
+        public Task<MentorSummaryDto> GetAdminMentorByIdAsync(int mentorId, CancellationToken cancellationToken = default) =>
             Task.FromResult(MentorSummary ?? new MentorSummaryDto(mentorId, 10, "Name", null, 1, "TOEIC", "TOEIC", null, null, null, null, "human", 200000m, 1, null, null, 60, true, null, 0));
 
-        public Task<IReadOnlyList<CertificateDto>> GetCertificatesAsync(CancellationToken cancellationToken = default) =>
-            Task.FromResult(Certificates);
-
-        public Task<IReadOnlyList<MentorCertificateOptionDto>> GetMentorCertificateOptionsAsync(string bearerToken, CancellationToken cancellationToken = default) =>
+        public Task<IReadOnlyList<MentorCertificateOptionDto>> GetMentorCertificateOptionsAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(CertificateOptions);
 
-        public Task<AdminUsersSummaryDto> GetAdminUsersAsync(string? q, string? status, int page, int pageSize, string bearerToken, CancellationToken cancellationToken = default) =>
+        public Task<AdminUsersSummaryDto> GetAdminUsersAsync(string? q = null, string? status = null, int page = 1, int pageSize = 10, CancellationToken cancellationToken = default) =>
             Task.FromResult(AdminUsers ?? new AdminUsersSummaryDto([], 0, 1, 10, 0, 0, 0));
 
-        public Task<MentorSummaryDto> CreateMentorAsync(CreateMentorProfileRequest request, string bearerToken, CancellationToken cancellationToken = default)
+        public Task<MentorSummaryDto> CreateMentorAsync(CreateMentorProfileRequest request, CancellationToken cancellationToken = default)
         {
             CreatedRequest = request;
             return Task.FromResult(new MentorSummaryDto(1, request.UserId, request.DisplayName, request.Bio, request.CertId, "TOEIC", "TOEIC", request.SkillId, null, null, null, request.Type, request.PricePerSlot, request.PriceCredits, request.Headline, request.Expertise, request.SessionMinutes, request.IsActive, null, 0));
         }
 
-        public Task<MentorSummaryDto> UpdateMentorAsync(int mentorId, UpdateMentorProfileRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
+        public Task<MentorSummaryDto> UpdateMentorAsync(int mentorId, UpdateMentorProfileRequest request, CancellationToken cancellationToken = default) =>
             Task.FromResult(new MentorSummaryDto(mentorId, request.UserId, request.DisplayName, request.Bio, request.CertId, "TOEIC", "TOEIC", request.SkillId, null, null, null, "human", request.PricePerSlot, request.PriceCredits, request.Headline, request.Expertise, request.SessionMinutes, request.IsActive, null, 0));
 
-        public Task<IReadOnlyList<AdminMentorSlotDto>> GetAdminMentorSlotsAsync(int mentorId, string bearerToken, CancellationToken cancellationToken = default) =>
+        public Task<IReadOnlyList<AdminMentorSlotDto>> GetAdminMentorSlotsAsync(int mentorId, CancellationToken cancellationToken = default) =>
             Task.FromResult(AdminSlots);
 
-        public Task<AdminMentorSlotDto> CreateMentorSlotAsync(int mentorId, CreateMentorSlotRequest request, string bearerToken, CancellationToken cancellationToken = default)
+        public Task<AdminMentorSlotDto> CreateMentorSlotAsync(int mentorId, CreateMentorSlotRequest request, CancellationToken cancellationToken = default)
         {
             CreatedSlotRequest = request;
             return Task.FromResult(new AdminMentorSlotDto(1, mentorId, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddHours(1), "open"));
         }
 
-        public Task CloseMentorSlotAsync(int mentorId, int slotId, string bearerToken, CancellationToken cancellationToken = default)
+        public Task CloseMentorSlotAsync(int mentorId, int slotId, CancellationToken cancellationToken = default)
         {
             ClosedSlot = (mentorId, slotId);
             return Task.CompletedTask;

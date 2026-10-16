@@ -8,18 +8,17 @@ namespace WebMVC.Controllers;
 [Authorize(Policy = Roles.Admin)]
 [Route("admin/mentors")]
 public sealed class AdminMentorsController(
-    ICompanionApiClient api,
+    IAdminMentorsClient api,
     CurrentUser currentUser,
     ILogger<AdminMentorsController> logger) : Controller
 {
-    private async Task<string> BearerAsync() => (await currentUser.GetBearerTokenAsync())!;
 
     [HttpGet("")]
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
         try
         {
-            var mentors = await api.GetAdminMentorsAsync(await BearerAsync(), cancellationToken);
+            var mentors = await api.GetAdminMentorsAsync(cancellationToken);
             return View("~/Views/Admin/Mentors.cshtml", mentors);
         }
         catch (HttpRequestException ex)
@@ -33,9 +32,8 @@ public sealed class AdminMentorsController(
     [HttpGet("create")]
     public async Task<IActionResult> Create(CancellationToken cancellationToken)
     {
-        var bearer = await BearerAsync();
-        var certOptions = await api.GetMentorCertificateOptionsAsync(bearer, cancellationToken);
-        var usersSummary = await api.GetAdminUsersAsync(null, null, 1, 100, bearer, cancellationToken);
+        var certOptions = await api.GetMentorCertificateOptionsAsync(cancellationToken);
+        var usersSummary = await api.GetAdminUsersAsync(null, null, 1, 100, cancellationToken);
 
         var model = new MentorFormViewModel
         {
@@ -56,7 +54,6 @@ public sealed class AdminMentorsController(
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create([FromForm] MentorFormViewModel model, CancellationToken cancellationToken)
     {
-        var bearer = await BearerAsync();
 
         if (model.Type == "human" && (!model.UserId.HasValue || model.UserId.Value <= 0))
         {
@@ -65,8 +62,8 @@ public sealed class AdminMentorsController(
 
         if (!ModelState.IsValid)
         {
-            model.Certificates = await api.GetMentorCertificateOptionsAsync(bearer, cancellationToken);
-            var usersSummary = await api.GetAdminUsersAsync(null, null, 1, 100, bearer, cancellationToken);
+            model.Certificates = await api.GetMentorCertificateOptionsAsync(cancellationToken);
+            var usersSummary = await api.GetAdminUsersAsync(null, null, 1, 100, cancellationToken);
             model.Users = usersSummary.Users;
             return View("~/Views/Admin/MentorForm.cshtml", model);
         }
@@ -87,7 +84,7 @@ public sealed class AdminMentorsController(
                 model.SessionMinutes,
                 model.IsActive);
 
-            await api.CreateMentorAsync(request, bearer, cancellationToken);
+            await api.CreateMentorAsync(request, cancellationToken);
             TempData["Success"] = $"Mentor '{model.DisplayName}' created successfully.";
             return RedirectToAction(nameof(Index));
         }
@@ -95,8 +92,8 @@ public sealed class AdminMentorsController(
         {
             logger.LogError(ex, "Failed to create mentor");
             ModelState.AddModelError(string.Empty, ex.Detail ?? ex.Message);
-            model.Certificates = await api.GetMentorCertificateOptionsAsync(bearer, cancellationToken);
-            var usersSummary = await api.GetAdminUsersAsync(null, null, 1, 100, bearer, cancellationToken);
+            model.Certificates = await api.GetMentorCertificateOptionsAsync(cancellationToken);
+            var usersSummary = await api.GetAdminUsersAsync(null, null, 1, 100, cancellationToken);
             model.Users = usersSummary.Users;
             return View("~/Views/Admin/MentorForm.cshtml", model);
         }
@@ -105,13 +102,12 @@ public sealed class AdminMentorsController(
     [HttpGet("{mentorId:int}/edit")]
     public async Task<IActionResult> Edit(int mentorId, CancellationToken cancellationToken)
     {
-        var bearer = await BearerAsync();
 
         try
         {
-            var mentor = await api.GetAdminMentorByIdAsync(mentorId, bearer, cancellationToken);
-            var certOptions = await api.GetMentorCertificateOptionsAsync(bearer, cancellationToken);
-            var usersSummary = await api.GetAdminUsersAsync(null, null, 1, 100, bearer, cancellationToken);
+            var mentor = await api.GetAdminMentorByIdAsync(mentorId, cancellationToken);
+            var certOptions = await api.GetMentorCertificateOptionsAsync(cancellationToken);
+            var usersSummary = await api.GetAdminUsersAsync(null, null, 1, 100, cancellationToken);
 
             var model = new MentorFormViewModel
             {
@@ -144,7 +140,6 @@ public sealed class AdminMentorsController(
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(int mentorId, [FromForm] MentorFormViewModel model, CancellationToken cancellationToken)
     {
-        var bearer = await BearerAsync();
 
         if (model.Type == "human" && (!model.UserId.HasValue || model.UserId.Value <= 0))
         {
@@ -153,8 +148,8 @@ public sealed class AdminMentorsController(
 
         if (!ModelState.IsValid)
         {
-            model.Certificates = await api.GetMentorCertificateOptionsAsync(bearer, cancellationToken);
-            var usersSummary = await api.GetAdminUsersAsync(null, null, 1, 100, bearer, cancellationToken);
+            model.Certificates = await api.GetMentorCertificateOptionsAsync(cancellationToken);
+            var usersSummary = await api.GetAdminUsersAsync(null, null, 1, 100, cancellationToken);
             model.Users = usersSummary.Users;
             return View("~/Views/Admin/MentorForm.cshtml", model);
         }
@@ -174,7 +169,7 @@ public sealed class AdminMentorsController(
                 model.SessionMinutes,
                 model.IsActive);
 
-            await api.UpdateMentorAsync(mentorId, request, bearer, cancellationToken);
+            await api.UpdateMentorAsync(mentorId, request, cancellationToken);
             TempData["Success"] = $"Mentor '{model.DisplayName}' updated successfully.";
             return RedirectToAction(nameof(Index));
         }
@@ -182,8 +177,8 @@ public sealed class AdminMentorsController(
         {
             logger.LogError(ex, "Failed to update mentor {MentorId}", mentorId);
             ModelState.AddModelError(string.Empty, ex.Detail ?? ex.Message);
-            model.Certificates = await api.GetMentorCertificateOptionsAsync(bearer, cancellationToken);
-            var usersSummary = await api.GetAdminUsersAsync(null, null, 1, 100, bearer, cancellationToken);
+            model.Certificates = await api.GetMentorCertificateOptionsAsync(cancellationToken);
+            var usersSummary = await api.GetAdminUsersAsync(null, null, 1, 100, cancellationToken);
             model.Users = usersSummary.Users;
             return View("~/Views/Admin/MentorForm.cshtml", model);
         }
@@ -192,12 +187,11 @@ public sealed class AdminMentorsController(
     [HttpGet("{mentorId:int}/slots")]
     public async Task<IActionResult> Slots(int mentorId, CancellationToken cancellationToken)
     {
-        var bearer = await BearerAsync();
 
         try
         {
-            var mentor = await api.GetAdminMentorByIdAsync(mentorId, bearer, cancellationToken);
-            var slots = await api.GetAdminMentorSlotsAsync(mentorId, bearer, cancellationToken);
+            var mentor = await api.GetAdminMentorByIdAsync(mentorId, cancellationToken);
+            var slots = await api.GetAdminMentorSlotsAsync(mentorId, cancellationToken);
 
             var model = new MentorSlotsViewModel
             {
@@ -221,7 +215,6 @@ public sealed class AdminMentorsController(
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CreateSlot(int mentorId, [FromForm] CreateSlotViewModel form, CancellationToken cancellationToken)
     {
-        var bearer = await BearerAsync();
 
         if (!ModelState.IsValid)
         {
@@ -232,7 +225,7 @@ public sealed class AdminMentorsController(
         try
         {
             var request = new CreateMentorSlotRequest(form.LocalStartAt, form.LocalEndAt);
-            await api.CreateMentorSlotAsync(mentorId, request, bearer, cancellationToken);
+            await api.CreateMentorSlotAsync(mentorId, request, cancellationToken);
             TempData["Success"] = "Slot added successfully.";
         }
         catch (ApiException ex)
@@ -248,11 +241,10 @@ public sealed class AdminMentorsController(
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CloseSlot(int mentorId, int slotId, CancellationToken cancellationToken)
     {
-        var bearer = await BearerAsync();
 
         try
         {
-            await api.CloseMentorSlotAsync(mentorId, slotId, bearer, cancellationToken);
+            await api.CloseMentorSlotAsync(mentorId, slotId, cancellationToken);
             TempData["Success"] = "Slot closed.";
         }
         catch (ApiException ex)

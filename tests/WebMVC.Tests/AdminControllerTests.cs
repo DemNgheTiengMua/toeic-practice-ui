@@ -158,24 +158,13 @@ public sealed class AdminControllerTests
         public void SaveTempData(HttpContext context, IDictionary<string, object> values) { }
     }
 
-    private sealed class FixedAuthentication(ClaimsPrincipal principal, AuthenticationProperties properties) : IAuthenticationService
-    {
-        public Task<AuthenticateResult> AuthenticateAsync(HttpContext context, string? scheme) =>
-            Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(principal, properties, "Cookies")));
-
-        public Task ChallengeAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task ForbidAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task SignInAsync(HttpContext context, string? scheme, ClaimsPrincipal principal, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task SignOutAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-    }
-
-    private sealed class TestAdminApiClient : ICompanionApiClient
+    private sealed class TestAdminApiClient : IAdminDashboardClient
     {
         public AdminDashboardDto? DashboardToReturn { get; set; }
         public bool ShouldFail { get; set; }
         public bool ReturnNull { get; set; }
 
-        public Task<AdminDashboardDto> GetAdminDashboardAsync(string bearerToken, CancellationToken cancellationToken = default)
+        public Task<AdminDashboardDto> GetAdminDashboardAsync(CancellationToken cancellationToken = default)
         {
             if (ShouldFail) throw new HttpRequestException("API failure");
             if (ReturnNull) return Task.FromResult<AdminDashboardDto>(null!);

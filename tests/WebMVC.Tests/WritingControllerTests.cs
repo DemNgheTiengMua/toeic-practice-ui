@@ -302,18 +302,7 @@ public sealed class WritingControllerTests
         public void SaveTempData(HttpContext context, IDictionary<string, object> values) { }
     }
 
-    private sealed class FixedAuthentication(ClaimsPrincipal principal, AuthenticationProperties properties) : IAuthenticationService
-    {
-        public Task<AuthenticateResult> AuthenticateAsync(HttpContext context, string? scheme) =>
-            Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(principal, properties, "Cookies")));
-
-        public Task ChallengeAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task ForbidAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task SignInAsync(HttpContext context, string? scheme, ClaimsPrincipal principal, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task SignOutAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-    }
-
-    private sealed class TestApiClient : ICompanionApiClient
+    private sealed class TestApiClient : IWritingClient
     {
         public Exception? ExceptionToThrow { get; set; }
         public WritingInstructionsDto? WritingInstructions { get; set; }
@@ -324,28 +313,28 @@ public sealed class WritingControllerTests
         public WritingGradingPendingDto? PendingDto { get; set; }
         public WritingReviewDto? ReviewDto { get; set; }
 
-        public Task<WritingInstructionsDto> GetWritingInstructionsAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) =>
+        public Task<WritingInstructionsDto> GetWritingInstructionsAsync(int examId, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<WritingInstructionsDto>(ExceptionToThrow) : Task.FromResult(WritingInstructions!);
 
-        public Task<StartWritingAttemptResponse> StartWritingAttemptAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) =>
+        public Task<StartWritingAttemptResponse> StartWritingAttemptAsync(int examId, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<StartWritingAttemptResponse>(ExceptionToThrow) : Task.FromResult(StartWritingResponse!);
 
-        public Task<WritingTakeDto> GetWritingTakeAsync(int attemptId, int? questionId, string bearerToken, CancellationToken cancellationToken = default) =>
+        public Task<WritingTakeDto> GetWritingTakeAsync(int attemptId, int? questionId = null, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<WritingTakeDto>(ExceptionToThrow) : Task.FromResult(TakeDto!);
 
-        public Task<SaveWritingDraftResponse> SaveWritingDraftAsync(int attemptId, SaveWritingDraftRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
+        public Task<SaveWritingDraftResponse> SaveWritingDraftAsync(int attemptId, SaveWritingDraftRequest request, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<SaveWritingDraftResponse>(ExceptionToThrow) : Task.FromResult(SaveDraftResponse!);
 
-        public Task<SubmitWritingResponse> SubmitWritingAttemptAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) =>
+        public Task<SubmitWritingResponse> SubmitWritingAttemptAsync(int attemptId, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<SubmitWritingResponse>(ExceptionToThrow) : Task.FromResult(SubmitResponse!);
 
-        public Task<WritingGradingPendingDto> GetWritingGradingPendingAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) =>
+        public Task<WritingGradingPendingDto> GetWritingGradingPendingAsync(int attemptId, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<WritingGradingPendingDto>(ExceptionToThrow) : Task.FromResult(PendingDto!);
 
-        public Task RetryWritingGradingAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) =>
+        public Task RetryWritingGradingAsync(int attemptId, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException(ExceptionToThrow) : Task.CompletedTask;
 
-        public Task<WritingReviewDto> GetWritingReviewAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) =>
+        public Task<WritingReviewDto> GetWritingReviewAsync(int attemptId, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<WritingReviewDto>(ExceptionToThrow) : Task.FromResult(ReviewDto!);
     }
 }

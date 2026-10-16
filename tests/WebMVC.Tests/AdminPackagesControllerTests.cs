@@ -232,18 +232,7 @@ public sealed class AdminPackagesControllerTests
         public void SaveTempData(HttpContext context, IDictionary<string, object> values) { }
     }
 
-    private sealed class FixedAuthentication(ClaimsPrincipal principal, AuthenticationProperties properties) : IAuthenticationService
-    {
-        public Task<AuthenticateResult> AuthenticateAsync(HttpContext context, string? scheme) =>
-            Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(principal, properties, "Cookies")));
-
-        public Task ChallengeAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task ForbidAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task SignInAsync(HttpContext context, string? scheme, ClaimsPrincipal principal, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task SignOutAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-    }
-
-    private sealed class TestApiClient : ICompanionApiClient
+    private sealed class TestApiClient : IAdminPackagesClient
     {
         public AdminPackagesSummaryDto? Summary { get; set; }
         public PackageDto? PackageToReturn { get; set; }
@@ -252,26 +241,26 @@ public sealed class AdminPackagesControllerTests
         public UpdatePackageRequest? UpdatedRequest { get; set; }
         public int? DeactivatedPackageId { get; set; }
 
-        public Task<AdminPackagesSummaryDto> GetAdminPackagesAsync(string bearerToken, CancellationToken cancellationToken = default) =>
+        public Task<AdminPackagesSummaryDto> GetAdminPackagesAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(Summary ?? new AdminPackagesSummaryDto([], 0, 0, 0, 0));
 
-        public Task<PackageDto> GetAdminPackageAsync(int packageId, string bearerToken, CancellationToken cancellationToken = default) =>
+        public Task<PackageDto> GetAdminPackageAsync(int packageId, CancellationToken cancellationToken = default) =>
             Task.FromResult(PackageToReturn ?? new PackageDto(packageId, "Test", 1, 10000, true, false, null, 0));
 
-        public Task<PackageDto> CreatePackageAsync(CreatePackageRequest request, string bearerToken, CancellationToken cancellationToken = default)
+        public Task<PackageDto> CreatePackageAsync(CreatePackageRequest request, CancellationToken cancellationToken = default)
         {
             CreatedRequest = request;
             return Task.FromResult(new PackageDto(99, request.Name, request.Credits, request.Price, request.IsActive, request.IsFeatured, request.Features, request.DisplayOrder));
         }
 
-        public Task<PackageDto> UpdatePackageAsync(int packageId, UpdatePackageRequest request, string bearerToken, CancellationToken cancellationToken = default)
+        public Task<PackageDto> UpdatePackageAsync(int packageId, UpdatePackageRequest request, CancellationToken cancellationToken = default)
         {
             UpdatedPackageId = packageId;
             UpdatedRequest = request;
             return Task.FromResult(new PackageDto(packageId, request.Name, request.Credits, request.Price, request.IsActive, request.IsFeatured, request.Features, request.DisplayOrder));
         }
 
-        public Task DeactivatePackageAsync(int packageId, string bearerToken, CancellationToken cancellationToken = default)
+        public Task DeactivatePackageAsync(int packageId, CancellationToken cancellationToken = default)
         {
             DeactivatedPackageId = packageId;
             return Task.CompletedTask;

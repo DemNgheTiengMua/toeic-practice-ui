@@ -11,10 +11,11 @@ namespace WebMVC.Controllers;
 
 [Authorize(Policy = Roles.Learner)]
 public sealed class LearningPathController(
-    ICompanionApiClient api,
+    ILearningPathClient api,
+    IWalletClient wallet,
     CurrentUser currentUser,
     ILogger<LearningPathController> logger)
-    : LearnerControllerBase(api, currentUser, logger)
+    : LearnerControllerBase(currentUser, logger)
 {
     [HttpGet("/learning-path")]
     [HttpGet("/learning-path/index")]
@@ -22,14 +23,13 @@ public sealed class LearningPathController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var summary = await Api.GetLearningPathAsync(bearer, cancellationToken);
+            var summary = await api.GetLearningPathAsync(cancellationToken);
             AiInsightDto? insight = null;
             if (summary is { HasActivePath: true, LearnerPathId: { } pathId })
             {
                 try
                 {
-                    insight = await Api.GetPathInsightAsync(bearer, cancellationToken);
+                    insight = await api.GetPathInsightAsync(cancellationToken);
                 }
                 catch (ApiException ex)
                 {
@@ -57,8 +57,7 @@ public sealed class LearningPathController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            await Api.GenerateLearningPathAsync(new GenerateLearningPathRequest(targetBandCode), bearer, cancellationToken);
+            await api.GenerateLearningPathAsync(new GenerateLearningPathRequest(targetBandCode), cancellationToken);
             return RedirectToAction(nameof(Index));
         }
         catch (ApiException ex) when (ex.Code == ApiError.Codes.LearningPathAlreadyActive)
@@ -79,8 +78,7 @@ public sealed class LearningPathController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var detail = await Api.GetLearningPathModuleAsync(moduleId, bearer, cancellationToken);
+            var detail = await api.GetLearningPathModuleAsync(moduleId, cancellationToken);
             return View(new LearningPathModuleDetailViewModel(detail, TempData["ErrorMessage"] as string));
         }
         catch (ApiException ex) when (ex.Status == 404 || ex.Code == ApiError.Codes.LearningPathModuleNotFound || ex.Code == ApiError.Codes.LearningPathNotFound)
@@ -103,8 +101,7 @@ public sealed class LearningPathController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var result = await Api.StartLearningPathStepAsync(stepId, bearer, cancellationToken);
+            var result = await api.StartLearningPathStepAsync(stepId, cancellationToken);
             return Redirect(result.RedirectUrl);
         }
         catch (ApiException ex) when (ex.Code == ApiError.Codes.LearningPathStepLocked)
@@ -127,8 +124,7 @@ public sealed class LearningPathController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            await Api.ResetLearningPathAsync(bearer, cancellationToken);
+            await api.ResetLearningPathAsync(cancellationToken);
             return RedirectToAction(nameof(Index));
         }
         catch (ApiException ex)
@@ -144,17 +140,16 @@ public sealed class LearningPathController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var summary = await Api.GetLearningPathAsync(bearer, cancellationToken);
+            var summary = await api.GetLearningPathAsync(cancellationToken);
             if (!summary.HasActivePath)
             {
                 return RedirectToAction(nameof(Index));
             }
 
-            var wallet = await Api.GetWalletAsync(bearer, cancellationToken);
+            var walletData = await wallet.GetWalletAsync(cancellationToken);
             return View(new LearningPathUpgradeViewModel(
                 Summary: summary,
-                Balance: wallet.Balance,
+                Balance: walletData.Balance,
                 ErrorMessage: TempData["ErrorMessage"] as string));
         }
         catch (ApiException ex)
@@ -171,8 +166,7 @@ public sealed class LearningPathController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            await Api.UpgradeLearningPathAsync(bearer, cancellationToken);
+            await api.UpgradeLearningPathAsync(cancellationToken);
             TempData["SuccessMessage"] = "Successfully upgraded to premium path!";
             return RedirectToAction(nameof(Index));
         }
@@ -195,8 +189,7 @@ public sealed class LearningPathController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var insight = await Api.GetPathInsightAsync(bearer, cancellationToken);
+            var insight = await api.GetPathInsightAsync(cancellationToken);
             return Ok(insight);
         }
         catch (ApiException ex)
@@ -211,8 +204,7 @@ public sealed class LearningPathController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            await Api.RetryPathInsightAsync(bearer, cancellationToken);
+            await api.RetryPathInsightAsync(cancellationToken);
             return Ok(new { success = true });
         }
         catch (ApiException ex)

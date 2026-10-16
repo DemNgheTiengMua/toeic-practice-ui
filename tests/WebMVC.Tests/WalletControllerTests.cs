@@ -14,7 +14,7 @@ namespace WebMVC.Tests;
 public sealed class WalletControllerTests
 {
     private static WalletController CreateController(
-        TestApiClient api,
+        IWalletClient api,
         bool isSignedIn = true,
         string role = Roles.Learner)
     {
@@ -80,8 +80,7 @@ public sealed class WalletControllerTests
             Orders: orders,
             Ledger: ledger);
 
-        var api = new TestApiClient { Wallet = wallet };
-        var controller = CreateController(api);
+        var controller = CreateController(new FakeWalletClient(wallet));
 
         var result = await controller.Index(CancellationToken.None);
 
@@ -96,25 +95,9 @@ public sealed class WalletControllerTests
         Assert.Equal(2, model.Wallet.Ledger.Count);
     }
 
-    private sealed class FixedAuthentication(ClaimsPrincipal principal, AuthenticationProperties properties) : IAuthenticationService
+    private sealed class FakeWalletClient(WalletDto wallet) : IWalletClient
     {
-        public Task<AuthenticateResult> AuthenticateAsync(HttpContext context, string? scheme) =>
-            Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(principal, properties, "Cookies")));
-
-        public Task ChallengeAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task ForbidAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task SignInAsync(HttpContext context, string? scheme, ClaimsPrincipal principal, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task SignOutAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-    }
-
-    private sealed class TestApiClient : ICompanionApiClient
-    {
-        public WalletDto? Wallet { get; set; }
-
-        public Task<WalletDto> GetWalletAsync(string bearerToken, CancellationToken cancellationToken = default) =>
-            Task.FromResult(Wallet!);
-
-        public Task<LearnerContextDto> GetLearnerContextAsync(string bearerToken, CancellationToken cancellationToken = default) =>
-            Task.FromResult(new LearnerContextDto(new CertificateOptionDto("TOEIC", "TOEIC"), [], 4));
+        public Task<WalletDto> GetWalletAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult(wallet);
     }
 }

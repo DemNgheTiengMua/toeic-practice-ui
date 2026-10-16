@@ -308,69 +308,24 @@ public sealed class SavedQuestionsControllerTests
         public void SaveTempData(HttpContext context, IDictionary<string, object> values) { }
     }
 
-    private sealed class FixedAuthentication(ClaimsPrincipal principal, AuthenticationProperties properties) : IAuthenticationService
-    {
-        public Task<AuthenticateResult> AuthenticateAsync(HttpContext context, string? scheme) =>
-            Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(principal, properties, "Cookies")));
-
-        public Task ChallengeAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-
-        public Task ForbidAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-
-        public Task SignInAsync(HttpContext context, string? scheme, ClaimsPrincipal principal, AuthenticationProperties? props) =>
-            Task.CompletedTask;
-
-        public Task SignOutAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-    }
-
-    private sealed class TestApiClient : ICompanionApiClient
+    private sealed class TestApiClient : ISavedQuestionsClient
     {
         public Exception? ExceptionToThrow { get; set; }
-
         public SavedQuestionsViewDto? SavedQuestions { get; set; }
-
         public SavedQuestionItemDto? SavedItem { get; set; }
-
         public SaveQuestionResultDto? SaveResult { get; set; }
-
         public SaveQuestionResultDto? UnsaveResult { get; set; }
 
-        public Task<IReadOnlyList<CertificateDto>> GetCertificatesAsync(CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<AuthTokenResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<AuthTokenResponse> SignInAsync(SignInRequest request, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<AuthUserDto> GetMeAsync(string bearerToken, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<ProfileDto> GetProfileAsync(string bearerToken, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<ProfileDto> UpdateProfileAsync(UpdateProfileRequest request, string bearerToken, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task ChangePasswordAsync(ChangePasswordRequest request, string bearerToken, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task VerifyEmailAsync(VerifyEmailRequest request, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task ResendActivationAsync(string bearerToken, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task ForgotPasswordAsync(ForgotPasswordRequest request, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task ResetPasswordAsync(ResetPasswordRequest request, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<LearnerContextDto> GetLearnerContextAsync(string bearerToken, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task SwitchCertificateAsync(string bearerToken, string code, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<LearnerDashboardDto> GetDashboardAsync(string bearerToken, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<PracticeCatalogDto> GetPracticeCatalogAsync(string bearerToken, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<PracticeSessionDto> StartPracticeSessionAsync(StartPracticeRequest request, string bearerToken, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<PracticeSessionDto> GetPracticeSessionInfoAsync(int sessionId, string bearerToken, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<PracticeQuestionDto> GetPracticeQuestionAsync(int sessionId, int displayOrder, string bearerToken, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<RevealHintResponse> RevealPracticeHintAsync(int sessionId, int questionId, string bearerToken, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<GradedAnswerDto> SubmitPracticeAnswerAsync(int sessionId, int questionId, SubmitPracticeAnswerRequest request, string bearerToken, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<PracticeSummaryDto> GetPracticeSummaryAsync(int sessionId, string bearerToken, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-
-        public Task<SavedQuestionsViewDto> GetSavedQuestionsAsync(string? source, int? sectionId, int? categoryId, string bearerToken, CancellationToken cancellationToken = default) =>
+        public Task<SavedQuestionsViewDto> GetSavedQuestionsAsync(string? source = null, int? sectionId = null, int? categoryId = null, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<SavedQuestionsViewDto>(ExceptionToThrow) : Task.FromResult(SavedQuestions!);
 
-        public Task<SavedQuestionItemDto> GetSavedQuestionAsync(int questionId, string bearerToken, CancellationToken cancellationToken = default) =>
+        public Task<SavedQuestionItemDto> GetSavedQuestionAsync(int questionId, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<SavedQuestionItemDto>(ExceptionToThrow) : Task.FromResult(SavedItem!);
 
-        public Task<SaveQuestionResultDto> SaveQuestionAsync(int questionId, string? source, string bearerToken, CancellationToken cancellationToken = default) =>
+        public Task<SaveQuestionResultDto> SaveQuestionAsync(int questionId, string? source = null, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<SaveQuestionResultDto>(ExceptionToThrow) : Task.FromResult(SaveResult!);
 
-        public Task<SaveQuestionResultDto> UnsaveQuestionAsync(int questionId, string bearerToken, CancellationToken cancellationToken = default) =>
+        public Task<SaveQuestionResultDto> UnsaveQuestionAsync(int questionId, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<SaveQuestionResultDto>(ExceptionToThrow) : Task.FromResult(UnsaveResult!);
-
-        public Task<WeaknessAnalysisDto> GetWeaknessAnalysisAsync(string bearerToken, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-
-        public Task<ResolveRecommendationResultDto> ResolveRecommendationAsync(int recId, string bearerToken, CancellationToken cancellationToken = default) => throw new NotImplementedException();
     }
 }

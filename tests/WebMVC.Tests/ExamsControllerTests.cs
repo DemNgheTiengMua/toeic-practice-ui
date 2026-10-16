@@ -375,18 +375,7 @@ public sealed class ExamsControllerTests
         public void SaveTempData(HttpContext context, IDictionary<string, object> values) { }
     }
 
-    private sealed class FixedAuthentication(ClaimsPrincipal principal, AuthenticationProperties properties) : IAuthenticationService
-    {
-        public Task<AuthenticateResult> AuthenticateAsync(HttpContext context, string? scheme) =>
-            Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(principal, properties, "Cookies")));
-
-        public Task ChallengeAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task ForbidAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task SignInAsync(HttpContext context, string? scheme, ClaimsPrincipal principal, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task SignOutAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-    }
-
-    private sealed class TestApiClient : ICompanionApiClient
+    private sealed class TestApiClient : IMockExamsClient
     {
         public Exception? ExceptionToThrow { get; set; }
         public MockExamListViewDto? MockExamsCatalog { get; set; }
@@ -396,75 +385,45 @@ public sealed class ExamsControllerTests
         public SaveAnswerResultDto? SaveResult { get; set; }
         public SubmitAttemptResponse? SubmitResponse { get; set; }
         public AttemptResultDto? ResultDto { get; set; }
-
-        public Task<IReadOnlyList<CertificateDto>> GetCertificatesAsync(CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<AuthTokenResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<AuthTokenResponse> SignInAsync(SignInRequest request, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<AuthUserDto> GetMeAsync(string bearerToken, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<ProfileDto> GetProfileAsync(string bearerToken, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<ProfileDto> UpdateProfileAsync(UpdateProfileRequest request, string bearerToken, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task ChangePasswordAsync(ChangePasswordRequest request, string bearerToken, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task VerifyEmailAsync(VerifyEmailRequest request, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task ResendActivationAsync(string bearerToken, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task ForgotPasswordAsync(ForgotPasswordRequest request, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task ResetPasswordAsync(ResetPasswordRequest request, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<LearnerContextDto> GetLearnerContextAsync(string bearerToken, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task SwitchCertificateAsync(string bearerToken, string code, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<LearnerDashboardDto> GetDashboardAsync(string bearerToken, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<PracticeCatalogDto> GetPracticeCatalogAsync(string bearerToken, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<PracticeSessionDto> StartPracticeSessionAsync(StartPracticeRequest request, string bearerToken, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<PracticeSessionDto> GetPracticeSessionInfoAsync(int sessionId, string bearerToken, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<PracticeQuestionDto> GetPracticeQuestionAsync(int sessionId, int displayOrder, string bearerToken, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<RevealHintResponse> RevealPracticeHintAsync(int sessionId, int questionId, string bearerToken, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<GradedAnswerDto> SubmitPracticeAnswerAsync(int sessionId, int questionId, SubmitPracticeAnswerRequest request, string bearerToken, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<PracticeSummaryDto> GetPracticeSummaryAsync(int sessionId, string bearerToken, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<SavedQuestionsViewDto> GetSavedQuestionsAsync(string? source, int? sectionId, int? categoryId, string bearerToken, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<SavedQuestionItemDto> GetSavedQuestionAsync(int questionId, string bearerToken, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<SaveQuestionResultDto> SaveQuestionAsync(int questionId, string? source, string bearerToken, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<SaveQuestionResultDto> UnsaveQuestionAsync(int questionId, string bearerToken, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<WeaknessAnalysisDto> GetWeaknessAnalysisAsync(string bearerToken, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<ResolveRecommendationResultDto> ResolveRecommendationAsync(int recId, string bearerToken, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-
-        public Task<MockExamListViewDto> GetMockExamsAsync(string bearerToken, CancellationToken cancellationToken = default) =>
-            ExceptionToThrow != null ? Task.FromException<MockExamListViewDto>(ExceptionToThrow) : Task.FromResult(MockExamsCatalog!);
-
-        public Task<MockExamInstructionsDto> GetMockExamInstructionsAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) =>
-            ExceptionToThrow != null ? Task.FromException<MockExamInstructionsDto>(ExceptionToThrow) : Task.FromResult(Instructions!);
-
-        public Task<StartMockExamResponse> StartMockExamAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) =>
-            ExceptionToThrow != null ? Task.FromException<StartMockExamResponse>(ExceptionToThrow) : Task.FromResult(StartResponse!);
-
-        public Task<AttemptTakeDto> GetAttemptTakeAsync(int attemptId, int? q, string bearerToken, CancellationToken cancellationToken = default) =>
-            ExceptionToThrow != null ? Task.FromException<AttemptTakeDto>(ExceptionToThrow) : Task.FromResult(TakeDto!);
-
-        public Task<SaveAnswerResultDto> SaveAttemptAnswerAsync(int attemptId, int questionId, SaveAnswerRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
-            ExceptionToThrow != null ? Task.FromException<SaveAnswerResultDto>(ExceptionToThrow) : Task.FromResult(SaveResult!);
-
-        public Task<SubmitAttemptResponse> SubmitAttemptAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) =>
-            ExceptionToThrow != null ? Task.FromException<SubmitAttemptResponse>(ExceptionToThrow) : Task.FromResult(SubmitResponse!);
-
-        public Task CancelAttemptAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) =>
-            ExceptionToThrow != null ? Task.FromException(ExceptionToThrow) : Task.CompletedTask;
-
-        public Task<AttemptResultDto> GetAttemptResultAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) =>
-            ExceptionToThrow != null ? Task.FromException<AttemptResultDto>(ExceptionToThrow) : Task.FromResult(ResultDto!);
-
         public ExamHistoryDto? HistoryDto { get; set; }
         public AttemptReviewDto? ReviewDto { get; set; }
-
-        public Task<ExamHistoryDto> GetExamHistoryAsync(string bearerToken, CancellationToken cancellationToken = default) =>
-            ExceptionToThrow != null ? Task.FromException<ExamHistoryDto>(ExceptionToThrow) : Task.FromResult(HistoryDto!);
-
-        public Task<AttemptReviewDto> GetAttemptReviewAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) =>
-            ExceptionToThrow != null ? Task.FromException<AttemptReviewDto>(ExceptionToThrow) : Task.FromResult(ReviewDto!);
-
         public AiInsightDto? InsightDto { get; set; }
         public bool RetryInsightCalled { get; set; }
 
-        public Task<AiInsightDto> GetExamInsightAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) =>
+        public Task<MockExamListViewDto> GetMockExamsAsync(CancellationToken cancellationToken = default) =>
+            ExceptionToThrow != null ? Task.FromException<MockExamListViewDto>(ExceptionToThrow) : Task.FromResult(MockExamsCatalog!);
+
+        public Task<MockExamInstructionsDto> GetMockExamInstructionsAsync(int examId, CancellationToken cancellationToken = default) =>
+            ExceptionToThrow != null ? Task.FromException<MockExamInstructionsDto>(ExceptionToThrow) : Task.FromResult(Instructions!);
+
+        public Task<StartMockExamResponse> StartMockExamAsync(int examId, CancellationToken cancellationToken = default) =>
+            ExceptionToThrow != null ? Task.FromException<StartMockExamResponse>(ExceptionToThrow) : Task.FromResult(StartResponse!);
+
+        public Task<AttemptTakeDto> GetAttemptTakeAsync(int attemptId, int? q = null, CancellationToken cancellationToken = default) =>
+            ExceptionToThrow != null ? Task.FromException<AttemptTakeDto>(ExceptionToThrow) : Task.FromResult(TakeDto!);
+
+        public Task<SaveAnswerResultDto> SaveAttemptAnswerAsync(int attemptId, int questionId, SaveAnswerRequest request, CancellationToken cancellationToken = default) =>
+            ExceptionToThrow != null ? Task.FromException<SaveAnswerResultDto>(ExceptionToThrow) : Task.FromResult(SaveResult!);
+
+        public Task<SubmitAttemptResponse> SubmitAttemptAsync(int attemptId, CancellationToken cancellationToken = default) =>
+            ExceptionToThrow != null ? Task.FromException<SubmitAttemptResponse>(ExceptionToThrow) : Task.FromResult(SubmitResponse!);
+
+        public Task CancelAttemptAsync(int attemptId, CancellationToken cancellationToken = default) =>
+            ExceptionToThrow != null ? Task.FromException(ExceptionToThrow) : Task.CompletedTask;
+
+        public Task<AttemptResultDto> GetAttemptResultAsync(int attemptId, CancellationToken cancellationToken = default) =>
+            ExceptionToThrow != null ? Task.FromException<AttemptResultDto>(ExceptionToThrow) : Task.FromResult(ResultDto!);
+
+        public Task<ExamHistoryDto> GetExamHistoryAsync(CancellationToken cancellationToken = default) =>
+            ExceptionToThrow != null ? Task.FromException<ExamHistoryDto>(ExceptionToThrow) : Task.FromResult(HistoryDto!);
+
+        public Task<AttemptReviewDto> GetAttemptReviewAsync(int attemptId, CancellationToken cancellationToken = default) =>
+            ExceptionToThrow != null ? Task.FromException<AttemptReviewDto>(ExceptionToThrow) : Task.FromResult(ReviewDto!);
+
+        public Task<AiInsightDto> GetExamInsightAsync(int attemptId, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<AiInsightDto>(ExceptionToThrow) : Task.FromResult(InsightDto!);
 
-        public Task RetryExamInsightAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default)
+        public Task RetryExamInsightAsync(int attemptId, CancellationToken cancellationToken = default)
         {
             if (ExceptionToThrow != null) return Task.FromException(ExceptionToThrow);
             RetryInsightCalled = true;

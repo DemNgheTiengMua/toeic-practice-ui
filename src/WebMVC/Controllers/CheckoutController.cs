@@ -5,17 +5,17 @@ using WebMVC.Models;
 namespace WebMVC.Controllers;
 
 public sealed class CheckoutController(
-    ICompanionApiClient api,
+    IOrdersClient api,
     CurrentUser currentUser,
     ILogger<CheckoutController> logger)
-    : LearnerControllerBase(api, currentUser, logger)
+    : LearnerControllerBase(currentUser, logger)
 {
     [HttpGet("/checkout")]
     public async Task<IActionResult> Index([FromQuery] int packageId, CancellationToken cancellationToken)
     {
         if (packageId <= 0)
         {
-            var packages = await Api.GetPublicPackagesAsync(cancellationToken);
+            var packages = await api.GetPublicPackagesAsync(cancellationToken);
             var featured = packages.FirstOrDefault(p => p.IsFeatured) ?? packages.FirstOrDefault();
             if (featured is null)
             {
@@ -26,8 +26,7 @@ public sealed class CheckoutController(
 
         try
         {
-            var bearer = await BearerAsync();
-            var preview = await Api.GetCheckoutPreviewAsync(packageId, bearer, cancellationToken);
+            var preview = await api.GetCheckoutPreviewAsync(packageId, cancellationToken);
             return View(new CheckoutViewModel(preview, ErrorMessage: TempData["ErrorMessage"] as string));
         }
         catch (ApiException ex) when (ex.Code == ApiError.Codes.EmailNotVerified)
@@ -52,8 +51,7 @@ public sealed class CheckoutController(
 
         try
         {
-            var bearer = await BearerAsync();
-            var response = await Api.CreateOrderAsync(new CreateOrderRequest(packageId), bearer, cancellationToken);
+            var response = await api.CreateOrderAsync(new CreateOrderRequest(packageId), cancellationToken);
             if (isAjax)
             {
                 return Json(new
@@ -101,8 +99,7 @@ public sealed class CheckoutController(
 
         try
         {
-            var bearer = await BearerAsync();
-            await Api.CancelOrderAsync(new CancelOrderRequest(orderCode), bearer, cancellationToken);
+            await api.CancelOrderAsync(new CancelOrderRequest(orderCode), cancellationToken);
             TempData["ShellNotice"] = $"Order {orderCode} was cancelled.";
         }
         catch (Exception ex)
@@ -129,8 +126,7 @@ public sealed class CheckoutController(
 
         try
         {
-            var bearer = await BearerAsync();
-            var result = await Api.GetPaymentResultAsync(orderCode, bearer, cancellationToken);
+            var result = await api.GetPaymentResultAsync(orderCode, cancellationToken);
             return View(new MockGatewayViewModel(orderCode, result.PackageName, result.Credits, result.Amount));
         }
         catch (ApiException ex)
@@ -150,10 +146,8 @@ public sealed class CheckoutController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            await Api.ApplyMockGatewayActionAsync(
+            await api.ApplyMockGatewayActionAsync(
                 new MockGatewayActionRequest(orderCode, action, errorCode),
-                bearer,
                 cancellationToken);
             return Redirect($"/payment/result?orderCode={Uri.EscapeDataString(orderCode)}");
         }
@@ -174,8 +168,7 @@ public sealed class CheckoutController(
 
         try
         {
-            var bearer = await BearerAsync();
-            var result = await Api.HandleReturnAsync(new HandleReturnRequest(orderCode), bearer, cancellationToken);
+            var result = await api.HandleReturnAsync(new HandleReturnRequest(orderCode), cancellationToken);
             return View(new PaymentResultViewModel(result));
         }
         catch (ApiException ex)

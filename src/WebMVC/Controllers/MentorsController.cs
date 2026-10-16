@@ -5,10 +5,10 @@ using WebMVC.Models;
 namespace WebMVC.Controllers;
 
 public sealed class MentorsController(
-    ICompanionApiClient api,
+    IMentorsClient api,
     CurrentUser currentUser,
     ILogger<MentorsController> logger)
-    : LearnerControllerBase(api, currentUser, logger)
+    : LearnerControllerBase(currentUser, logger)
 {
     [HttpGet("/mentors")]
     public async Task<IActionResult> Index([FromQuery] string? skill, CancellationToken cancellationToken)
@@ -18,7 +18,7 @@ public sealed class MentorsController(
 
         try
         {
-            var mentors = await Api.GetMentorsAsync(activeCertCode, skill, cancellationToken);
+            var mentors = await api.GetMentorsAsync(activeCertCode, skill, cancellationToken);
             return View(new MentorListViewModel(mentors, skill, activeCertCode));
         }
         catch (ApiException ex)
@@ -33,7 +33,7 @@ public sealed class MentorsController(
     {
         try
         {
-            var detail = await Api.GetMentorDetailAsync(mentorId, cancellationToken);
+            var detail = await api.GetMentorDetailAsync(mentorId, cancellationToken);
             return View(new MentorDetailViewModel(detail));
         }
         catch (ApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
@@ -53,7 +53,7 @@ public sealed class MentorsController(
     {
         try
         {
-            var detail = await Api.GetMentorDetailAsync(mentorId, cancellationToken);
+            var detail = await api.GetMentorDetailAsync(mentorId, cancellationToken);
             var shell = LearnerShell.Get(HttpContext);
             var balance = shell?.CreditBalance ?? 0;
 
@@ -109,9 +109,8 @@ public sealed class MentorsController(
     {
         try
         {
-            var bearer = await BearerAsync();
             var request = new BookMentorRequest(slotId, focusArea, examId);
-            var booking = await Api.BookMentorAsync(mentorId, request, bearer, cancellationToken);
+            var booking = await api.BookMentorAsync(mentorId, request, cancellationToken);
 
             if (booking.MentorType == "ai" && !string.IsNullOrEmpty(booking.RedirectUrl) && booking.RedirectUrl.StartsWith("/") && !booking.RedirectUrl.StartsWith("//"))
             {
@@ -124,7 +123,7 @@ public sealed class MentorsController(
         catch (ApiException ex) when (ex.Code == ApiError.Codes.InsufficientCredits)
         {
             logger.LogWarning(ex, "Insufficient credits to book mentor {MentorId}", mentorId);
-            var detail = await Api.GetMentorDetailAsync(mentorId, cancellationToken);
+            var detail = await api.GetMentorDetailAsync(mentorId, cancellationToken);
             var shell = LearnerShell.Get(HttpContext);
             var balance = shell?.CreditBalance ?? 0;
             var selectedSlot = slotId.HasValue ? detail.AvailableSlots.FirstOrDefault(s => s.SlotId == slotId.Value) : null;
@@ -139,7 +138,7 @@ public sealed class MentorsController(
         catch (ApiException ex) when (ex.Code == ApiError.Codes.SlotNotAvailable)
         {
             logger.LogWarning(ex, "Slot {SlotId} not available for mentor {MentorId}", slotId, mentorId);
-            var detail = await Api.GetMentorDetailAsync(mentorId, cancellationToken);
+            var detail = await api.GetMentorDetailAsync(mentorId, cancellationToken);
             var shell = LearnerShell.Get(HttpContext);
             var balance = shell?.CreditBalance ?? 0;
             return View("Confirm", new MentorConfirmViewModel(
@@ -153,7 +152,7 @@ public sealed class MentorsController(
         catch (ApiException ex)
         {
             logger.LogError(ex, "Failed to book mentor {MentorId}", mentorId);
-            var detail = await Api.GetMentorDetailAsync(mentorId, cancellationToken);
+            var detail = await api.GetMentorDetailAsync(mentorId, cancellationToken);
             var shell = LearnerShell.Get(HttpContext);
             var balance = shell?.CreditBalance ?? 0;
             var selectedSlot = slotId.HasValue ? detail.AvailableSlots.FirstOrDefault(s => s.SlotId == slotId.Value) : null;
@@ -172,8 +171,7 @@ public sealed class MentorsController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var bookings = await Api.GetLearnerBookingsAsync(bearer, cancellationToken);
+            var bookings = await api.GetLearnerBookingsAsync(cancellationToken);
             return View(new LearnerBookingsViewModel(bookings));
         }
         catch (ApiException ex)
@@ -188,8 +186,7 @@ public sealed class MentorsController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var booking = await Api.GetBookingDetailAsync(bookingId, bearer, cancellationToken);
+            var booking = await api.GetBookingDetailAsync(bookingId, cancellationToken);
             return View(new MentorBookingDetailViewModel(
                 booking,
                 SuccessMessage: TempData["ShellSuccess"] as string,
@@ -213,8 +210,7 @@ public sealed class MentorsController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var result = await Api.CancelBookingAsync(bookingId, bearer, cancellationToken);
+            var result = await api.CancelBookingAsync(bookingId, cancellationToken);
             TempData["ShellSuccess"] = "Your booking was cancelled and your credit has been refunded.";
             return RedirectToAction(nameof(BookingDetail), new { bookingId });
         }
@@ -252,9 +248,8 @@ public sealed class MentorsController(
 
         try
         {
-            var bearer = await BearerAsync();
             var request = new RateMentorRequest(rating, text);
-            await Api.RateBookingAsync(bookingId, request, bearer, cancellationToken);
+            await api.RateBookingAsync(bookingId, request, cancellationToken);
             TempData["ShellSuccess"] = "Thank you for rating your mentor session!";
             return RedirectToAction(nameof(BookingDetail), new { bookingId });
         }

@@ -41,7 +41,7 @@ public sealed class ProfileControllerTests
         var currentUser = new CurrentUser(new HttpContextAccessor { HttpContext = httpContext });
 
         var api = new TestProfileApiClient();
-        var controller = new ProfileController(api, currentUser)
+        var controller = new ProfileController(api)
         {
             ControllerContext = new ControllerContext
             {
@@ -181,12 +181,18 @@ public sealed class ProfileControllerTests
         }
     }
 
-    private sealed class TestProfileApiClient : ICompanionApiClient
+    private sealed class TestProfileApiClient : IProfileClient
     {
         public ApiException? ChangePasswordException { get; set; }
         public ChangePasswordRequest? LastChangePasswordRequest { get; private set; }
 
-        public Task ChangePasswordAsync(ChangePasswordRequest request, string bearerToken, CancellationToken cancellationToken = default)
+        public Task<ProfileDto> GetProfileAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult<ProfileDto>(null!);
+
+        public Task<ProfileDto> UpdateProfileAsync(UpdateProfileRequest request, CancellationToken cancellationToken = default) =>
+            Task.FromResult<ProfileDto>(null!);
+
+        public Task ChangePasswordAsync(ChangePasswordRequest request, CancellationToken cancellationToken = default)
         {
             LastChangePasswordRequest = request;
             if (ChangePasswordException is not null)

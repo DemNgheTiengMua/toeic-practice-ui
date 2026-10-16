@@ -9,17 +9,16 @@ using WebMVC.Models;
 namespace WebMVC.Controllers;
 
 public sealed class WritingController(
-    ICompanionApiClient api,
+    IWritingClient api,
     CurrentUser currentUser,
-    ILogger<WritingController> logger) : LearnerControllerBase(api, currentUser, logger)
+    ILogger<WritingController> logger) : LearnerControllerBase(currentUser, logger)
 {
     [HttpGet("/writing/{id:int}/instructions")]
     public async Task<IActionResult> Instructions(int id, CancellationToken cancellationToken)
     {
         try
         {
-            var bearer = await BearerAsync();
-            var instructions = await Api.GetWritingInstructionsAsync(id, bearer, cancellationToken);
+            var instructions = await api.GetWritingInstructionsAsync(id, cancellationToken);
             return View(new WritingInstructionsViewModel(instructions, TempData["ErrorMessage"] as string));
         }
         catch (ApiException ex) when (ex.Status == 404 || ex.Code == ApiError.Codes.ExamNotFound)
@@ -42,8 +41,7 @@ public sealed class WritingController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var response = await Api.StartWritingAttemptAsync(id, bearer, cancellationToken);
+            var response = await api.StartWritingAttemptAsync(id, cancellationToken);
             return RedirectToAction(nameof(Take), new { attemptId = response.AttemptId });
         }
         catch (ApiException ex) when (ex.Code == ApiError.Codes.InsufficientCredits)
@@ -65,8 +63,7 @@ public sealed class WritingController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var take = await Api.GetWritingTakeAsync(attemptId, q, bearer, cancellationToken);
+            var take = await api.GetWritingTakeAsync(attemptId, q, cancellationToken);
 
             if (take.Status == AttemptStatusDto.Graded)
             {
@@ -106,9 +103,8 @@ public sealed class WritingController(
     {
         try
         {
-            var bearer = await BearerAsync();
             var request = new SaveWritingDraftRequest(model.QuestionId, model.ResponseText);
-            var result = await Api.SaveWritingDraftAsync(model.AttemptId, request, bearer, cancellationToken);
+            var result = await api.SaveWritingDraftAsync(model.AttemptId, request, cancellationToken);
             return Ok(result);
         }
         catch (ApiException ex)
@@ -124,8 +120,7 @@ public sealed class WritingController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            await Api.SubmitWritingAttemptAsync(attemptId, bearer, cancellationToken);
+            await api.SubmitWritingAttemptAsync(attemptId, cancellationToken);
             return RedirectToAction(nameof(Pending), new { attemptId });
         }
         catch (ApiException ex) when (ex.Code == ApiError.Codes.InsufficientCredits)
@@ -147,8 +142,7 @@ public sealed class WritingController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var pending = await Api.GetWritingGradingPendingAsync(attemptId, bearer, cancellationToken);
+            var pending = await api.GetWritingGradingPendingAsync(attemptId, cancellationToken);
 
             if (pending.AttemptStatus == AttemptStatusDto.Graded)
             {
@@ -176,8 +170,7 @@ public sealed class WritingController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var pending = await Api.GetWritingGradingPendingAsync(attemptId, bearer, cancellationToken);
+            var pending = await api.GetWritingGradingPendingAsync(attemptId, cancellationToken);
             return Ok(pending);
         }
         catch (ApiException ex)
@@ -192,8 +185,7 @@ public sealed class WritingController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            await Api.RetryWritingGradingAsync(attemptId, bearer, cancellationToken);
+            await api.RetryWritingGradingAsync(attemptId, cancellationToken);
             return RedirectToAction(nameof(Pending), new { attemptId });
         }
         catch (ApiException ex)
@@ -209,8 +201,7 @@ public sealed class WritingController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var review = await Api.GetWritingReviewAsync(attemptId, bearer, cancellationToken);
+            var review = await api.GetWritingReviewAsync(attemptId, cancellationToken);
             return View(new WritingReviewViewModel(review, TempData["ErrorMessage"] as string));
         }
         catch (ApiException ex) when (ex.Code == ApiError.Codes.AttemptNotFinished)

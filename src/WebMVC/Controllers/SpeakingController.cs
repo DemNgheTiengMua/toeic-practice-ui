@@ -11,17 +11,16 @@ using WebMVC.Models;
 namespace WebMVC.Controllers;
 
 public sealed class SpeakingController(
-    ICompanionApiClient api,
+    ISpeakingClient api,
     CurrentUser currentUser,
-    ILogger<SpeakingController> logger) : LearnerControllerBase(api, currentUser, logger)
+    ILogger<SpeakingController> logger) : LearnerControllerBase(currentUser, logger)
 {
     [HttpGet("/speaking/{id:int}/instructions")]
     public async Task<IActionResult> Instructions(int id, CancellationToken cancellationToken)
     {
         try
         {
-            var bearer = await BearerAsync();
-            var instructions = await Api.GetSpeakingInstructionsAsync(id, bearer, cancellationToken);
+            var instructions = await api.GetSpeakingInstructionsAsync(id, cancellationToken);
             return View(new SpeakingInstructionsViewModel(instructions, TempData["ErrorMessage"] as string));
         }
         catch (ApiException ex) when (ex.Status == 404 || ex.Code == ApiError.Codes.ExamNotFound)
@@ -44,8 +43,7 @@ public sealed class SpeakingController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var response = await Api.StartSpeakingAttemptAsync(id, bearer, cancellationToken);
+            var response = await api.StartSpeakingAttemptAsync(id, cancellationToken);
             return RedirectToAction(nameof(Take), new { attemptId = response.AttemptId });
         }
         catch (ApiException ex) when (ex.Code == ApiError.Codes.InsufficientCredits)
@@ -67,8 +65,7 @@ public sealed class SpeakingController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var take = await Api.GetSpeakingTakeAsync(attemptId, q, bearer, cancellationToken);
+            var take = await api.GetSpeakingTakeAsync(attemptId, q, cancellationToken);
 
             if (take.Status == AttemptStatusDto.Graded)
             {
@@ -118,16 +115,14 @@ public sealed class SpeakingController(
 
         try
         {
-            var bearer = await BearerAsync();
             using var stream = audioFile.OpenReadStream();
-            var result = await Api.UploadSpeakingAudioAsync(
+            var result = await api.UploadSpeakingAudioAsync(
                 attemptId,
                 questionId,
                 stream,
                 audioFile.FileName,
                 audioFile.ContentType,
                 durationMs,
-                bearer,
                 cancellationToken);
 
             return Ok(result);
@@ -145,8 +140,7 @@ public sealed class SpeakingController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            await Api.SubmitSpeakingAttemptAsync(attemptId, bearer, cancellationToken);
+            await api.SubmitSpeakingAttemptAsync(attemptId, cancellationToken);
             return RedirectToAction(nameof(Pending), new { attemptId });
         }
         catch (ApiException ex) when (ex.Code == ApiError.Codes.InsufficientCredits)
@@ -168,8 +162,7 @@ public sealed class SpeakingController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var pending = await Api.GetSpeakingGradingPendingAsync(attemptId, bearer, cancellationToken);
+            var pending = await api.GetSpeakingGradingPendingAsync(attemptId, cancellationToken);
 
             if (pending.AttemptStatus == AttemptStatusDto.Graded)
             {
@@ -197,8 +190,7 @@ public sealed class SpeakingController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var pending = await Api.GetSpeakingGradingPendingAsync(attemptId, bearer, cancellationToken);
+            var pending = await api.GetSpeakingGradingPendingAsync(attemptId, cancellationToken);
             return Ok(pending);
         }
         catch (ApiException ex)
@@ -213,8 +205,7 @@ public sealed class SpeakingController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            await Api.RetrySpeakingGradingAsync(attemptId, bearer, cancellationToken);
+            await api.RetrySpeakingGradingAsync(attemptId, cancellationToken);
             return RedirectToAction(nameof(Pending), new { attemptId });
         }
         catch (ApiException ex)
@@ -230,8 +221,7 @@ public sealed class SpeakingController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var review = await Api.GetSpeakingReviewAsync(attemptId, bearer, cancellationToken);
+            var review = await api.GetSpeakingReviewAsync(attemptId, cancellationToken);
             return View(new SpeakingReviewViewModel(review, TempData["ErrorMessage"] as string));
         }
         catch (ApiException ex) when (ex.Code == ApiError.Codes.AttemptNotFinished)
@@ -257,8 +247,7 @@ public sealed class SpeakingController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var (stream, contentType, fileName) = await Api.GetSpeakingAudioStreamAsync(attemptId, questionId, bearer, cancellationToken);
+            var (stream, contentType, fileName) = await api.GetSpeakingAudioStreamAsync(attemptId, questionId, cancellationToken);
             return File(stream, contentType, fileName, enableRangeProcessing: true);
         }
         catch (ApiException ex) when (ex.Status == 403 || ex.Code == ApiError.Codes.Forbidden)

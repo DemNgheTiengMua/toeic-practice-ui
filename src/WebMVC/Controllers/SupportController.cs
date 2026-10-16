@@ -8,9 +8,9 @@ namespace WebMVC.Controllers;
 [Authorize(Policy = Roles.Learner)]
 [Route("support")]
 public sealed class SupportController(
-    ICompanionApiClient api,
+    ISupportClient api,
     CurrentUser currentUser,
-    ILogger<SupportController> logger) : LearnerControllerBase(api, currentUser, logger)
+    ILogger<SupportController> logger) : LearnerControllerBase(currentUser, logger)
 {
     [HttpGet("report")]
     public async Task<IActionResult> Report(
@@ -29,9 +29,7 @@ public sealed class SupportController(
         var safeType = EnumMapping.TryParseWireCode<ComplaintTypeDto>(type ?? "", out var parsedType)
             ? parsedType.ToWireCode()
             : (safeCategory == "exam" ? "grading_issue" : safeCategory == "payment" ? "payment_issue" : "mentor_no_show");
-
-        var bearer = await BearerAsync();
-        var eligible = await Api.GetEligibleSubjectsAsync(bearer, cancellationToken);
+        var eligible = await api.GetEligibleSubjectsAsync(cancellationToken);
         var vm = new SupportReportViewModel(eligible, safeCategory, safeType, bookingId, attemptId, orderId);
         return View("~/Views/Support/Report.cshtml", vm);
     }
@@ -47,11 +45,10 @@ public sealed class SupportController(
         [FromForm] string? reason,
         CancellationToken cancellationToken = default)
     {
-        var bearer = await BearerAsync();
 
         if (string.IsNullOrWhiteSpace(reason))
         {
-            var eligible = await Api.GetEligibleSubjectsAsync(bearer, cancellationToken);
+            var eligible = await api.GetEligibleSubjectsAsync(cancellationToken);
             var vm = new SupportReportViewModel(
                 eligible, category, type, bookingId, attemptId, orderId, reason,
                 "Please describe the problem before sending.");
@@ -60,7 +57,7 @@ public sealed class SupportController(
 
         if (reason.Trim().Length > 4000)
         {
-            var eligible = await Api.GetEligibleSubjectsAsync(bearer, cancellationToken);
+            var eligible = await api.GetEligibleSubjectsAsync(cancellationToken);
             var vm = new SupportReportViewModel(
                 eligible, category, type, bookingId, attemptId, orderId, reason,
                 "Please keep your description under 4000 characters.");
@@ -69,7 +66,7 @@ public sealed class SupportController(
 
         if (string.IsNullOrWhiteSpace(type) || !EnumMapping.TryParseWireCode<ComplaintTypeDto>(type, out var typeDto))
         {
-            var eligible = await Api.GetEligibleSubjectsAsync(bearer, cancellationToken);
+            var eligible = await api.GetEligibleSubjectsAsync(cancellationToken);
             var vm = new SupportReportViewModel(
                 eligible, category, type, bookingId, attemptId, orderId, reason,
                 "Please choose what happened.");
@@ -85,7 +82,7 @@ public sealed class SupportController(
         {
             if (!bookingId.HasValue || bookingId.Value <= 0)
             {
-                var eligible = await Api.GetEligibleSubjectsAsync(bearer, cancellationToken);
+                var eligible = await api.GetEligibleSubjectsAsync(cancellationToken);
                 var vm = new SupportReportViewModel(
                     eligible, category, type, bookingId, attemptId, orderId, reason,
                     "Please choose a session before sending.");
@@ -97,7 +94,7 @@ public sealed class SupportController(
         {
             if (!attemptId.HasValue || attemptId.Value <= 0)
             {
-                var eligible = await Api.GetEligibleSubjectsAsync(bearer, cancellationToken);
+                var eligible = await api.GetEligibleSubjectsAsync(cancellationToken);
                 var vm = new SupportReportViewModel(
                     eligible, category, type, bookingId, attemptId, orderId, reason,
                     "Please choose an exam before sending.");
@@ -109,7 +106,7 @@ public sealed class SupportController(
         {
             if (!orderId.HasValue || orderId.Value <= 0)
             {
-                var eligible = await Api.GetEligibleSubjectsAsync(bearer, cancellationToken);
+                var eligible = await api.GetEligibleSubjectsAsync(cancellationToken);
                 var vm = new SupportReportViewModel(
                     eligible, category, type, bookingId, attemptId, orderId, reason,
                     "Please choose an order before sending.");
@@ -121,14 +118,14 @@ public sealed class SupportController(
         try
         {
             var request = new FileComplaintRequest(typeDto, reason.Trim(), finalBookingId, finalAttemptId, finalOrderId);
-            await Api.FileComplaintAsync(request, bearer, cancellationToken);
+            await api.FileComplaintAsync(request, cancellationToken);
             TempData["Success"] = "Report received. An admin will review your report within 2 working days.";
             return RedirectToAction(nameof(History));
         }
         catch (ApiException ex)
         {
             logger.LogWarning(ex, "Failed to submit complaint: {Code}", ex.Code);
-            var eligible = await Api.GetEligibleSubjectsAsync(bearer, cancellationToken);
+            var eligible = await api.GetEligibleSubjectsAsync(cancellationToken);
             var vm = new SupportReportViewModel(
                 eligible, category, type, bookingId, attemptId, orderId, reason,
                 ex.Detail ?? ex.Title ?? ex.Message);
@@ -139,8 +136,7 @@ public sealed class SupportController(
     [HttpGet("history")]
     public async Task<IActionResult> History(CancellationToken cancellationToken = default)
     {
-        var bearer = await BearerAsync();
-        var complaints = await Api.GetLearnerComplaintsAsync(bearer, cancellationToken);
+        var complaints = await api.GetLearnerComplaintsAsync(cancellationToken);
         var vm = new SupportHistoryViewModel(complaints);
         return View("~/Views/Support/History.cshtml", vm);
     }

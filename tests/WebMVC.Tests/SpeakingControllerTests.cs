@@ -315,18 +315,7 @@ public sealed class SpeakingControllerTests
         public void SaveTempData(HttpContext context, IDictionary<string, object> values) { }
     }
 
-    private sealed class FixedAuthentication(ClaimsPrincipal principal, AuthenticationProperties properties) : IAuthenticationService
-    {
-        public Task<AuthenticateResult> AuthenticateAsync(HttpContext context, string? scheme) =>
-            Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(principal, properties, "Cookies")));
-
-        public Task ChallengeAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task ForbidAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task SignInAsync(HttpContext context, string? scheme, ClaimsPrincipal principal, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task SignOutAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-    }
-
-    private sealed class TestApiClient : ICompanionApiClient
+    private sealed class TestApiClient : ISpeakingClient
     {
         public Exception? ExceptionToThrow { get; set; }
         public SpeakingInstructionsDto? SpeakingInstructions { get; set; }
@@ -338,31 +327,31 @@ public sealed class SpeakingControllerTests
         public SpeakingReviewDto? ReviewDto { get; set; }
         public (Stream Stream, string ContentType, string FileName)? AudioStreamResult { get; set; }
 
-        public Task<SpeakingInstructionsDto> GetSpeakingInstructionsAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) =>
+        public Task<SpeakingInstructionsDto> GetSpeakingInstructionsAsync(int examId, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<SpeakingInstructionsDto>(ExceptionToThrow) : Task.FromResult(SpeakingInstructions!);
 
-        public Task<StartSpeakingAttemptResponse> StartSpeakingAttemptAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) =>
+        public Task<StartSpeakingAttemptResponse> StartSpeakingAttemptAsync(int examId, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<StartSpeakingAttemptResponse>(ExceptionToThrow) : Task.FromResult(StartSpeakingResponse!);
 
-        public Task<SpeakingTakeDto> GetSpeakingTakeAsync(int attemptId, int? questionId, string bearerToken, CancellationToken cancellationToken = default) =>
+        public Task<SpeakingTakeDto> GetSpeakingTakeAsync(int attemptId, int? questionId = null, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<SpeakingTakeDto>(ExceptionToThrow) : Task.FromResult(TakeDto!);
 
-        public Task<UploadSpeakingAudioResponse> UploadSpeakingAudioAsync(int attemptId, int questionId, Stream audioStream, string fileName, string contentType, int? durationMs, string bearerToken, CancellationToken cancellationToken = default) =>
+        public Task<UploadSpeakingAudioResponse> UploadSpeakingAudioAsync(int attemptId, int questionId, Stream audioStream, string fileName, string contentType, int? durationMs = null, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<UploadSpeakingAudioResponse>(ExceptionToThrow) : Task.FromResult(UploadResponse!);
 
-        public Task<SubmitSpeakingResponse> SubmitSpeakingAttemptAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) =>
+        public Task<SubmitSpeakingResponse> SubmitSpeakingAttemptAsync(int attemptId, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<SubmitSpeakingResponse>(ExceptionToThrow) : Task.FromResult(SubmitResponse!);
 
-        public Task<SpeakingGradingPendingDto> GetSpeakingGradingPendingAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) =>
+        public Task<SpeakingGradingPendingDto> GetSpeakingGradingPendingAsync(int attemptId, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<SpeakingGradingPendingDto>(ExceptionToThrow) : Task.FromResult(PendingDto!);
 
-        public Task RetrySpeakingGradingAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) =>
+        public Task RetrySpeakingGradingAsync(int attemptId, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException(ExceptionToThrow) : Task.CompletedTask;
 
-        public Task<SpeakingReviewDto> GetSpeakingReviewAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) =>
+        public Task<SpeakingReviewDto> GetSpeakingReviewAsync(int attemptId, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<SpeakingReviewDto>(ExceptionToThrow) : Task.FromResult(ReviewDto!);
 
-        public Task<(Stream Stream, string ContentType, string FileName)> GetSpeakingAudioStreamAsync(int attemptId, int questionId, string bearerToken, CancellationToken cancellationToken = default) =>
+        public Task<(Stream Stream, string ContentType, string FileName)> GetSpeakingAudioStreamAsync(int attemptId, int questionId, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<(Stream Stream, string ContentType, string FileName)>(ExceptionToThrow) : Task.FromResult(AudioStreamResult!.Value);
     }
 }

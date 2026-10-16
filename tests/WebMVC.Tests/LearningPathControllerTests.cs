@@ -302,7 +302,7 @@ public sealed class LearningPathControllerTests
         var httpContext = new DefaultHttpContext { User = principal, RequestServices = serviceProvider };
         var currentUser = new CurrentUser(new HttpContextAccessor { HttpContext = httpContext });
 
-        return new LearningPathController(api, currentUser, NullLogger<LearningPathController>.Instance)
+        return new LearningPathController(api, api, currentUser, NullLogger<LearningPathController>.Instance)
         {
             ControllerContext = new ControllerContext
             {
@@ -319,18 +319,7 @@ public sealed class LearningPathControllerTests
         public void SaveTempData(HttpContext context, IDictionary<string, object> values) { }
     }
 
-    private sealed class FixedAuthentication(ClaimsPrincipal principal, AuthenticationProperties properties) : IAuthenticationService
-    {
-        public Task<AuthenticateResult> AuthenticateAsync(HttpContext context, string? scheme) =>
-            Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(principal, properties, "Cookies")));
-
-        public Task ChallengeAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task ForbidAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task SignInAsync(HttpContext context, string? scheme, ClaimsPrincipal principal, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task SignOutAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-    }
-
-    private sealed class TestApiClient : ICompanionApiClient
+    private sealed class TestApiClient : ILearningPathClient, IWalletClient
     {
         public Exception? ExceptionToThrow { get; set; }
         public LearningPathSummaryDto? LearningPathSummary { get; set; }
@@ -339,22 +328,22 @@ public sealed class LearningPathControllerTests
         public ResetLearningPathResultDto? ResetResult { get; set; }
         public GenerateLearningPathRequest? LastGenerateRequest { get; set; }
 
-        public Task<LearningPathSummaryDto> GetLearningPathAsync(string bearerToken, CancellationToken cancellationToken = default) =>
+        public Task<LearningPathSummaryDto> GetLearningPathAsync(CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<LearningPathSummaryDto>(ExceptionToThrow) : Task.FromResult(LearningPathSummary!);
 
-        public Task<LearningPathSummaryDto> GenerateLearningPathAsync(GenerateLearningPathRequest? request, string bearerToken, CancellationToken cancellationToken = default)
+        public Task<LearningPathSummaryDto> GenerateLearningPathAsync(GenerateLearningPathRequest? request, CancellationToken cancellationToken = default)
         {
             LastGenerateRequest = request;
             return ExceptionToThrow != null ? Task.FromException<LearningPathSummaryDto>(ExceptionToThrow) : Task.FromResult(LearningPathSummary!);
         }
 
-        public Task<LearningPathModuleDetailDto> GetLearningPathModuleAsync(int moduleId, string bearerToken, CancellationToken cancellationToken = default) =>
+        public Task<LearningPathModuleDetailDto> GetLearningPathModuleAsync(int moduleId, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<LearningPathModuleDetailDto>(ExceptionToThrow) : Task.FromResult(LearningPathModuleDetail!);
 
-        public Task<StartStepResultDto> StartLearningPathStepAsync(int stepId, string bearerToken, CancellationToken cancellationToken = default) =>
+        public Task<StartStepResultDto> StartLearningPathStepAsync(int stepId, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<StartStepResultDto>(ExceptionToThrow) : Task.FromResult(StartStepResult!);
 
-        public Task<ResetLearningPathResultDto> ResetLearningPathAsync(string bearerToken, CancellationToken cancellationToken = default) =>
+        public Task<ResetLearningPathResultDto> ResetLearningPathAsync(CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<ResetLearningPathResultDto>(ExceptionToThrow) : Task.FromResult(ResetResult!);
 
         public WalletDto? Wallet { get; set; }
@@ -362,16 +351,16 @@ public sealed class LearningPathControllerTests
         public bool UpgradeCalled { get; set; }
         public bool RetryPathInsightCalled { get; set; }
 
-        public Task<WalletDto> GetWalletAsync(string bearerToken, CancellationToken cancellationToken = default) =>
+        public Task<WalletDto> GetWalletAsync(CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<WalletDto>(ExceptionToThrow) : Task.FromResult(Wallet ?? new WalletDto(10, 10, 0, 100000m, 1, [], []));
 
-        public Task<LearningPathSummaryDto> UpgradeLearningPathAsync(string bearerToken, CancellationToken cancellationToken = default)
+        public Task<LearningPathSummaryDto> UpgradeLearningPathAsync(CancellationToken cancellationToken = default)
         {
             UpgradeCalled = true;
             return ExceptionToThrow != null ? Task.FromException<LearningPathSummaryDto>(ExceptionToThrow) : Task.FromResult(LearningPathSummary!);
         }
 
-        public Task<AiInsightDto> GetPathInsightAsync(string bearerToken, CancellationToken cancellationToken = default) =>
+        public Task<AiInsightDto> GetPathInsightAsync(CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<AiInsightDto>(ExceptionToThrow) : Task.FromResult(PathInsight ?? new AiInsightDto(
                 InsightId: 1,
                 UserId: 1,
@@ -391,7 +380,7 @@ public sealed class LearningPathControllerTests
                 CompletedAt: DateTimeOffset.UtcNow,
                 Recommendations: []));
 
-        public Task RetryPathInsightAsync(string bearerToken, CancellationToken cancellationToken = default)
+        public Task RetryPathInsightAsync(CancellationToken cancellationToken = default)
         {
             RetryPathInsightCalled = true;
             return ExceptionToThrow != null ? Task.FromException(ExceptionToThrow) : Task.CompletedTask;

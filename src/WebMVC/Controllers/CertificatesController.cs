@@ -7,7 +7,7 @@ namespace WebMVC.Controllers;
 public sealed class CertificatesController(ILogger<CertificatesController> logger) : Controller
 {
     public async Task<IActionResult> Index(
-        [FromServices] ICompanionApiClient api,
+        [FromServices] ICertificatesClient api,
         CancellationToken cancellationToken)
     {
         try

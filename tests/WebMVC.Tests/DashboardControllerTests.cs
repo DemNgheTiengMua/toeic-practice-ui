@@ -178,7 +178,7 @@ public sealed class DashboardControllerTests
         var httpContext = new DefaultHttpContext { User = principal, RequestServices = serviceProvider };
         var currentUser = new CurrentUser(new HttpContextAccessor { HttpContext = httpContext });
 
-        var controller = new DashboardController(api, currentUser, NullLogger<DashboardController>.Instance)
+        var controller = new DashboardController(api, api, currentUser, NullLogger<DashboardController>.Instance)
         {
             ControllerContext = new ControllerContext
             {
@@ -197,18 +197,7 @@ public sealed class DashboardControllerTests
         public void SaveTempData(HttpContext? context, IDictionary<string, object>? values) { }
     }
 
-    private sealed class FixedAuthentication(ClaimsPrincipal principal, AuthenticationProperties properties) : IAuthenticationService
-    {
-        public Task<AuthenticateResult> AuthenticateAsync(HttpContext context, string? scheme) =>
-            Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(principal, properties, scheme ?? "Cookies")));
-
-        public Task ChallengeAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task ForbidAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task SignInAsync(HttpContext context, string? scheme, ClaimsPrincipal principal, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task SignOutAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-    }
-
-    private sealed class TestApiClient : ICompanionApiClient
+    private sealed class TestApiClient : ILearnerContextClient, IAuthClient
     {
         public LearnerDashboardDto? DashboardData { get; set; }
         public AuthUserDto? MeData { get; set; }
@@ -218,16 +207,16 @@ public sealed class DashboardControllerTests
         public bool RetryDashboardInsightCalled { get; set; }
         public int? RetryDashboardInsightCertId { get; set; }
 
-        public Task<LearnerDashboardDto> GetDashboardAsync(string bearerToken, CancellationToken cancellationToken = default) =>
+        public Task<LearnerDashboardDto> GetDashboardAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(DashboardData!);
 
-        public Task<AuthUserDto> GetMeAsync(string bearerToken, CancellationToken cancellationToken = default) =>
+        public Task<AuthUserDto> GetMeAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(MeData!);
 
-        public Task<AiInsightDto> GetDashboardInsightAsync(string bearerToken, int? certId = null, CancellationToken cancellationToken = default) =>
+        public Task<AiInsightDto> GetDashboardInsightAsync(int? certId = null, CancellationToken cancellationToken = default) =>
             InsightExceptionToThrow != null ? Task.FromException<AiInsightDto>(InsightExceptionToThrow) : Task.FromResult(InsightData!);
 
-        public Task RetryDashboardInsightAsync(string bearerToken, int? certId = null, CancellationToken cancellationToken = default)
+        public Task RetryDashboardInsightAsync(int? certId = null, CancellationToken cancellationToken = default)
         {
             if (RetryExceptionToThrow != null) throw RetryExceptionToThrow;
             RetryDashboardInsightCalled = true;
@@ -235,17 +224,16 @@ public sealed class DashboardControllerTests
             return Task.CompletedTask;
         }
 
-        public Task<IReadOnlyList<CertificateDto>> GetCertificatesAsync(CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<AuthTokenResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<AuthTokenResponse> SignInAsync(SignInRequest request, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<ProfileDto> GetProfileAsync(string bearerToken, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<ProfileDto> UpdateProfileAsync(UpdateProfileRequest request, string bearerToken, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task ChangePasswordAsync(ChangePasswordRequest request, string bearerToken, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task VerifyEmailAsync(VerifyEmailRequest request, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task ResendActivationAsync(string bearerToken, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task ForgotPasswordAsync(ForgotPasswordRequest request, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task ResetPasswordAsync(ResetPasswordRequest request, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<LearnerContextDto> GetLearnerContextAsync(string bearerToken, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task SwitchCertificateAsync(string bearerToken, string code, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<LearnerContextDto> GetLearnerContextAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult(new LearnerContextDto(new CertificateOptionDto("TOEIC", "TOEIC"), [], 8));
+
+        public Task SwitchCertificateAsync(string code, CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+        public Task<AuthTokenResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default) => Task.FromResult<AuthTokenResponse>(null!);
+        public Task<AuthTokenResponse> SignInAsync(SignInRequest request, CancellationToken cancellationToken = default) => Task.FromResult<AuthTokenResponse>(null!);
+        public Task VerifyEmailAsync(VerifyEmailRequest request, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task ResendActivationAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task ForgotPasswordAsync(ForgotPasswordRequest request, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task ResetPasswordAsync(ResetPasswordRequest request, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 }

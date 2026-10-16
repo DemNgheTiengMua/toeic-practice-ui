@@ -275,18 +275,7 @@ public sealed class AdminComplaintsControllerTests
         public void SaveTempData(HttpContext context, IDictionary<string, object> values) { }
     }
 
-    private sealed class FixedAuthentication(ClaimsPrincipal principal, AuthenticationProperties properties) : IAuthenticationService
-    {
-        public Task<AuthenticateResult> AuthenticateAsync(HttpContext context, string? scheme) =>
-            Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(principal, properties, "Cookies")));
-
-        public Task ChallengeAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task ForbidAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task SignInAsync(HttpContext context, string? scheme, ClaimsPrincipal principal, AuthenticationProperties? props) => Task.CompletedTask;
-        public Task SignOutAsync(HttpContext context, string? scheme, AuthenticationProperties? props) => Task.CompletedTask;
-    }
-
-    private sealed class TestAdminComplaintsApiClient : ICompanionApiClient
+    private sealed class TestAdminComplaintsApiClient : IAdminComplaintsClient
     {
         public AdminComplaintsSummaryDto? Summary { get; set; }
         public AdminComplaintDetailDto? DetailToReturn { get; set; }
@@ -294,26 +283,26 @@ public sealed class AdminComplaintsControllerTests
         public ResolveComplaintRequest? LastResolveRequest { get; set; }
         public bool ShouldFail { get; set; }
 
-        public Task<AdminComplaintsSummaryDto> GetAdminComplaintsAsync(string? q, string? status, int page, int pageSize, string bearerToken, CancellationToken cancellationToken = default)
+        public Task<AdminComplaintsSummaryDto> GetAdminComplaintsAsync(string? q = null, string? status = null, int page = 1, int pageSize = 20, CancellationToken cancellationToken = default)
         {
             if (ShouldFail) throw new HttpRequestException("Network failure");
             return Task.FromResult(Summary ?? new AdminComplaintsSummaryDto([], 0, 1, 20, 0, 0, null, null, null));
         }
 
-        public Task<AdminComplaintDetailDto> GetAdminComplaintDetailAsync(int complaintId, string bearerToken, CancellationToken cancellationToken = default)
+        public Task<AdminComplaintDetailDto> GetAdminComplaintDetailAsync(int complaintId, CancellationToken cancellationToken = default)
         {
             if (ShouldFail) throw new HttpRequestException("Network failure");
             if (DetailToReturn is null) throw new ApiException(ApiError.Codes.ComplaintNotFound, "Not found", 404);
             return Task.FromResult(DetailToReturn);
         }
 
-        public Task<AdminComplaintDetailDto> SetAdminComplaintStatusAsync(int complaintId, UpdateComplaintStatusRequest request, string bearerToken, CancellationToken cancellationToken = default)
+        public Task<AdminComplaintDetailDto> SetAdminComplaintStatusAsync(int complaintId, UpdateComplaintStatusRequest request, CancellationToken cancellationToken = default)
         {
             LastStatusUpdate = request;
             return Task.FromResult(DetailToReturn ?? SampleDetail(complaintId));
         }
 
-        public Task<AdminComplaintDetailDto> ResolveAdminComplaintAsync(int complaintId, ResolveComplaintRequest request, string bearerToken, CancellationToken cancellationToken = default)
+        public Task<AdminComplaintDetailDto> ResolveAdminComplaintAsync(int complaintId, ResolveComplaintRequest request, CancellationToken cancellationToken = default)
         {
             LastResolveRequest = request;
             return Task.FromResult(DetailToReturn ?? SampleDetail(complaintId, ComplaintStatusDto.Resolved));

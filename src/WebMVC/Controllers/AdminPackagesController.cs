@@ -8,18 +8,17 @@ namespace WebMVC.Controllers;
 [Authorize(Policy = Roles.Admin)]
 [Route("admin/packages")]
 public sealed class AdminPackagesController(
-    ICompanionApiClient api,
+    IAdminPackagesClient api,
     CurrentUser currentUser,
     ILogger<AdminPackagesController> logger) : Controller
 {
-    private async Task<string> BearerAsync() => (await currentUser.GetBearerTokenAsync())!;
 
     [HttpGet("")]
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
         try
         {
-            var summary = await api.GetAdminPackagesAsync(await BearerAsync(), cancellationToken);
+            var summary = await api.GetAdminPackagesAsync(cancellationToken);
             return View("~/Views/Admin/Packages.cshtml", summary);
         }
         catch (HttpRequestException ex)
@@ -62,7 +61,7 @@ public sealed class AdminPackagesController(
                 model.Features,
                 model.DisplayOrder);
 
-            await api.CreatePackageAsync(request, await BearerAsync(), cancellationToken);
+            await api.CreatePackageAsync(request, cancellationToken);
             TempData["Success"] = $"Package '{model.Name}' created successfully.";
             return RedirectToAction(nameof(Index));
         }
@@ -78,7 +77,7 @@ public sealed class AdminPackagesController(
     {
         try
         {
-            var pkg = await api.GetAdminPackageAsync(id, await BearerAsync(), cancellationToken);
+            var pkg = await api.GetAdminPackageAsync(id, cancellationToken);
             var model = new PackageFormViewModel
             {
                 PackageId = pkg.PackageId,
@@ -121,7 +120,7 @@ public sealed class AdminPackagesController(
                 model.Features,
                 model.DisplayOrder);
 
-            await api.UpdatePackageAsync(id, request, await BearerAsync(), cancellationToken);
+            await api.UpdatePackageAsync(id, request, cancellationToken);
             TempData["Success"] = $"Package '{model.Name}' updated successfully.";
             return RedirectToAction(nameof(Index));
         }
@@ -139,7 +138,7 @@ public sealed class AdminPackagesController(
     {
         try
         {
-            await api.DeactivatePackageAsync(id, await BearerAsync(), cancellationToken);
+            await api.DeactivatePackageAsync(id, cancellationToken);
             TempData["Success"] = "Package deactivated.";
         }
         catch (Exception ex)
@@ -157,7 +156,7 @@ public sealed class AdminPackagesController(
     {
         try
         {
-            var pkg = await api.GetAdminPackageAsync(id, await BearerAsync(), cancellationToken);
+            var pkg = await api.GetAdminPackageAsync(id, cancellationToken);
             if (!pkg.IsActive && !pkg.IsFeatured)
             {
                 TempData["Error"] = "Cannot feature an inactive package. Activate it first.";
@@ -173,7 +172,7 @@ public sealed class AdminPackagesController(
                 pkg.Features,
                 pkg.DisplayOrder);
 
-            await api.UpdatePackageAsync(id, updated, await BearerAsync(), cancellationToken);
+            await api.UpdatePackageAsync(id, updated, cancellationToken);
             TempData["Success"] = !pkg.IsFeatured
                 ? $"Package '{pkg.Name}' marked as featured."
                 : $"Package '{pkg.Name}' is no longer featured.";

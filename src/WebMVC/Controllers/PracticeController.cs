@@ -5,10 +5,10 @@ using WebMVC.Models;
 namespace WebMVC.Controllers;
 
 public sealed class PracticeController(
-    ICompanionApiClient api,
+    IPracticeClient api,
     CurrentUser currentUser,
     ILogger<PracticeController> logger)
-    : LearnerControllerBase(api, currentUser, logger)
+    : LearnerControllerBase(currentUser, logger)
 {
     [HttpGet("/practice")]
     [HttpGet("/practice/index")]
@@ -16,8 +16,7 @@ public sealed class PracticeController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var catalog = await Api.GetPracticeCatalogAsync(bearer, cancellationToken);
+            var catalog = await api.GetPracticeCatalogAsync(cancellationToken);
             return View(new PracticeCatalogViewModel(catalog, TempData["ErrorMessage"] as string));
         }
         catch (ApiException ex)
@@ -34,9 +33,8 @@ public sealed class PracticeController(
     {
         try
         {
-            var bearer = await BearerAsync();
             var request = new StartPracticeRequest(form.SectionId, form.QuestionCount, form.QuestionSource, form.FeedbackMode);
-            var session = await Api.StartPracticeSessionAsync(request, bearer, cancellationToken);
+            var session = await api.StartPracticeSessionAsync(request, cancellationToken);
             return RedirectToAction(nameof(Take), new { sessionId = session.SessionId });
         }
         catch (ApiException ex)
@@ -52,8 +50,7 @@ public sealed class PracticeController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var session = await Api.GetPracticeSessionInfoAsync(sessionId, bearer, cancellationToken);
+            var session = await api.GetPracticeSessionInfoAsync(sessionId, cancellationToken);
 
             if (session.Status == PracticeStatusDto.Finished && !q.HasValue)
             {
@@ -61,7 +58,7 @@ public sealed class PracticeController(
             }
 
             var displayOrder = q.GetValueOrDefault(0);
-            var question = await Api.GetPracticeQuestionAsync(sessionId, displayOrder, bearer, cancellationToken);
+            var question = await api.GetPracticeQuestionAsync(sessionId, displayOrder, cancellationToken);
 
             return View(new PracticeTakeViewModel(session, question, TempData["ErrorMessage"] as string));
         }
@@ -85,8 +82,7 @@ public sealed class PracticeController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var result = await Api.RevealPracticeHintAsync(sessionId, questionId, bearer, cancellationToken);
+            var result = await api.RevealPracticeHintAsync(sessionId, questionId, cancellationToken);
             return Json(new { hint = result.Hint, hintUsed = result.HintUsed });
         }
         catch (ApiException ex)
@@ -107,11 +103,10 @@ public sealed class PracticeController(
     {
         try
         {
-            var bearer = await BearerAsync();
             var isSkip = form.Action == "skip";
             var selectedOptionId = isSkip ? null : form.SelectedOptionId;
-            var result = await Api.SubmitPracticeAnswerAsync(
-                sessionId, questionId, new SubmitPracticeAnswerRequest(selectedOptionId), bearer, cancellationToken);
+            var result = await api.SubmitPracticeAnswerAsync(
+                sessionId, questionId, new SubmitPracticeAnswerRequest(selectedOptionId), cancellationToken);
 
             if (IsAjaxRequest())
             {
@@ -170,13 +165,12 @@ public sealed class PracticeController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var summary = await Api.GetPracticeSummaryAsync(sessionId, bearer, cancellationToken);
+            var summary = await api.GetPracticeSummaryAsync(sessionId, cancellationToken);
 
             AiInsightDto? insight = null;
             try
             {
-                insight = await Api.GetPracticeInsightAsync(sessionId, bearer, cancellationToken);
+                insight = await api.GetPracticeInsightAsync(sessionId, cancellationToken);
             }
             catch (Exception ex)
             {
@@ -205,8 +199,7 @@ public sealed class PracticeController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var insight = await Api.GetPracticeInsightAsync(sessionId, bearer, cancellationToken);
+            var insight = await api.GetPracticeInsightAsync(sessionId, cancellationToken);
             return Ok(insight);
         }
         catch (ApiException ex)
@@ -221,8 +214,7 @@ public sealed class PracticeController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            await Api.RetryPracticeInsightAsync(sessionId, bearer, cancellationToken);
+            await api.RetryPracticeInsightAsync(sessionId, cancellationToken);
             return Ok(new { success = true });
         }
         catch (ApiException ex)

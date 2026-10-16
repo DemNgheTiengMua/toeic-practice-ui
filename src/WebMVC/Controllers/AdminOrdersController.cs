@@ -8,11 +8,10 @@ namespace WebMVC.Controllers;
 [Authorize(Policy = Roles.Admin)]
 [Route("admin/orders")]
 public sealed class AdminOrdersController(
-    ICompanionApiClient api,
+    IAdminOrdersClient api,
     CurrentUser currentUser,
     ILogger<AdminOrdersController> logger) : Controller
 {
-    private async Task<string> BearerAsync() => (await currentUser.GetBearerTokenAsync())!;
 
     [HttpGet("")]
     public async Task<IActionResult> Index(
@@ -25,15 +24,14 @@ public sealed class AdminOrdersController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var summary = await api.GetAdminOrdersAsync(q, status, gateway, page, 20, bearer, cancellationToken);
+            var summary = await api.GetAdminOrdersAsync(q, status, gateway, page, 20, cancellationToken);
 
             AdminOrderDetailDto? selectedOrder = null;
             if (detailId.HasValue)
             {
                 try
                 {
-                    selectedOrder = await api.GetAdminOrderDetailAsync(detailId.Value, bearer, cancellationToken);
+                    selectedOrder = await api.GetAdminOrderDetailAsync(detailId.Value, cancellationToken);
                 }
                 catch (Exception ex)
                 {
@@ -58,8 +56,7 @@ public sealed class AdminOrdersController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var detail = await api.GetAdminOrderDetailAsync(id, bearer, cancellationToken);
+            var detail = await api.GetAdminOrderDetailAsync(id, cancellationToken);
             return Json(detail);
         }
         catch (ApiException ex) when (ex.Code == ApiError.Codes.OrderNotFound)
@@ -74,8 +71,7 @@ public sealed class AdminOrdersController(
     {
         try
         {
-            var bearer = await BearerAsync();
-            var result = await api.ReconcileAdminOrderAsync(id, bearer, cancellationToken);
+            var result = await api.ReconcileAdminOrderAsync(id, cancellationToken);
             TempData["Success"] = $"Order {result.OrderCode} reconciled: status is now '{result.Status}'.";
         }
         catch (Exception ex)

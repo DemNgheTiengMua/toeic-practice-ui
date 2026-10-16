@@ -5,18 +5,17 @@ using WebMVC.Models;
 namespace WebMVC.Controllers;
 
 public sealed class WalletController(
-    ICompanionApiClient api,
+    IWalletClient api,
     CurrentUser currentUser,
     ILogger<WalletController> logger)
-    : LearnerControllerBase(api, currentUser, logger)
+    : LearnerControllerBase(currentUser, logger)
 {
     [HttpGet("/wallet")]
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
         try
         {
-            var bearer = await BearerAsync();
-            var wallet = await Api.GetWalletAsync(bearer, cancellationToken);
+            var wallet = await api.GetWalletAsync(cancellationToken);
             return View(new WalletViewModel(wallet));
         }
         catch (ApiException ex)

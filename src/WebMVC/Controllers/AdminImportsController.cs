@@ -9,23 +9,20 @@ namespace WebMVC.Controllers;
 [Authorize(Policy = Roles.Admin)]
 [Route("admin/imports")]
 public sealed class AdminImportsController(
-    ICompanionApiClient api,
+    IAdminImportsClient api,
     CurrentUser currentUser,
     ILogger<AdminImportsController> logger) : Controller
 {
     /// <summary>Matches the API's package limit (QuestionImportService.MaxUploadBytes) plus form overhead.</summary>
     private const long MaxUploadBytes = 101L * 1024 * 1024;
 
-    private async Task<string> BearerAsync() => (await currentUser.GetBearerTokenAsync())!;
-
     [HttpGet("")]
     public async Task<IActionResult> Index([FromQuery] int? certId, [FromQuery] int? batchId, CancellationToken cancellationToken)
     {
-        var bearer = await BearerAsync();
         AdminImportBatchesDto batches;
         try
         {
-            batches = await api.GetAdminImportBatchesAsync(certId, bearer, cancellationToken);
+            batches = await api.GetAdminImportBatchesAsync(certId, cancellationToken);
         }
         catch (HttpRequestException ex)
         {
@@ -40,7 +37,7 @@ public sealed class AdminImportsController(
         {
             try
             {
-                selected = await api.GetAdminImportBatchAsync(id, bearer, cancellationToken);
+                selected = await api.GetAdminImportBatchAsync(id, cancellationToken);
             }
             catch (ApiException ex) when (ex.Status == StatusCodes.Status404NotFound)
             {
@@ -73,7 +70,7 @@ public sealed class AdminImportsController(
         try
         {
             await using var stream = file.OpenReadStream();
-            var result = await api.UploadAdminImportAsync(certId.Value, stream, file.FileName, await BearerAsync(), cancellationToken);
+            var result = await api.UploadAdminImportAsync(certId.Value, stream, file.FileName, cancellationToken);
 
             if (result.Status == ImportBatchStatusDto.Done)
             {
