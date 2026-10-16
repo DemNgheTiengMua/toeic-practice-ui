@@ -251,3 +251,19 @@ public enum ComplaintStatus
     Resolved,
 }
 
+
+/// <summary>CK_ImportBatches_Status: pending, done, failed.</summary>
+public enum ImportBatchStatus
+{
+    Pending,
+    Done,
+    Failed,
+}
+
+/// <summary>CK_ImportLog_Level: info, warn, error.</summary>
+public enum ImportLogLevel
+{
+    Info,
+    Warn,
+    Error,
+}

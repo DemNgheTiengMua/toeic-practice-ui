@@ -147,6 +147,23 @@ public class LocalFileStore : IFileStore
         return relativePath;
     }
 
+    public async Task<string> SaveImportMediaAsync(int batchId, Stream stream, string fileExtension, CancellationToken cancellationToken = default)
+    {
+        var batchDir = Path.Combine(_baseDirectory, "imports", batchId.ToString());
+        Directory.CreateDirectory(batchDir);
+
+        // The author's file name is never reused on disk: only the (already allow-listed) extension.
+        var safeFileName = $"{Guid.NewGuid():N}{fileExtension.ToLowerInvariant()}";
+        var fullPath = Path.Combine(batchDir, safeFileName);
+
+        using (var fileStream = new FileStream(fullPath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 4096, useAsync: true))
+        {
+            await stream.CopyToAsync(fileStream, cancellationToken);
+        }
+
+        return Path.Combine("imports", batchId.ToString(), safeFileName).Replace('\\', '/');
+    }
+
     public Task<FileStreamResultInfo?> GetAudioAsync(string relativePath, CancellationToken cancellationToken = default)
     {
         var fullPath = ResolveSafeFullPath(relativePath);
@@ -177,8 +194,18 @@ public class LocalFileStore : IFileStore
     public static string GetContentTypeFromFileName(string path)
     {
         var ext = Path.GetExtension(path);
-        return AudioValidation.ExtensionToMime.TryGetValue(ext, out var mime) ? mime : "application/octet-stream";
+        return AudioValidation.ExtensionToMime.TryGetValue(ext, out var mime) ? mime
+            : ImageMime.TryGetValue(ext, out var image) ? image
+            : "application/octet-stream";
     }
+
+    // Question images arrive through the import package (ADR-0007) and share this store.
+    private static readonly Dictionary<string, string> ImageMime = new(StringComparer.OrdinalIgnoreCase)
+    {
+        [".jpg"] = "image/jpeg",
+        [".jpeg"] = "image/jpeg",
+        [".png"] = "image/png",
+    };
 
     public static string? GetExtensionFromContentType(string? contentType)
     {

@@ -16,46 +16,42 @@ We adopt a dual-entry package model:
 
 ### 2. Manifest Schema
 
-The manifest is structured hierarchically to mirror the domain model (`Exams` → `Sections` → `QuestionGroups` → `Questions` → `QuestionOptions` / `RubricCriteria`):
+The manifest mirrors the domain model (`Exams` → `Sections` → `QuestionGroups` → `Questions` → `QuestionOptions`) and uses the schema's own codes — no translation table sits between the file and the database:
 
 ```json
 {
-  "$schema": "https://extra-efficiency.local/schemas/question-ingest.v1.json",
   "version": "1.0",
   "exam": {
-    "code": "TOEIC-ETS-2024-TEST-01",
     "title": "TOEIC ETS 2024 Practice Test 1",
-    "purpose": "mock_exam",
+    "purpose": "mock",
     "durationMinutes": 120,
-    "totalScore": 990
+    "sourceName": "ETS 2024",
+    "description": null,
+    "questionCount": null
   },
   "sections": [
     {
-      "sectionCode": "PART_5",
+      "sectionCode": "P5",
       "groups": [
         {
           "passage": null,
-          "audioFile": null,
-          "audioStartMs": null,
-          "audioEndMs": null,
-          "imageFile": null,
-          "imageAlt": null,
+          "audioFile": null, "audioStartMs": null, "audioEndMs": null,
+          "imageFile": null, "imageAlt": null,
           "transcript": null,
+          "prepSeconds": null, "responseSeconds": null,
           "displayOrder": 1,
           "questions": [
             {
               "stem": "Ms. Tanaka requested that all department managers submit their quarterly budgets by _____ Friday.",
               "difficultyLevel": 3,
               "questionType": "mcq",
-              "categoryCode": "GRAMMAR",
+              "categoryCode": "grammar_prep",
               "explanation": "The adjective 'next' correctly precedes a specific day of the week to denote future timing.",
               "hint": "Look for a temporal adjective that describes the upcoming day.",
               "displayOrder": 1,
               "options": [
                 { "label": "A", "text": "next", "isCorrect": true, "rationale": "Correct temporal adjective modifying Friday." },
-                { "label": "B", "text": "nearly", "isCorrect": false, "rationale": "Adverb meaning almost; cannot modify Friday directly." },
-                { "label": "C", "text": "nearness", "isCorrect": false, "rationale": "Noun meaning proximity; grammatically incorrect here." },
-                { "label": "D", "text": "near", "isCorrect": false, "rationale": "Preposition or adjective typically requiring 'to' for temporal use." }
+                { "label": "B", "text": "nearly", "isCorrect": false, "rationale": "Adverb meaning almost; cannot modify Friday directly." }
               ]
             }
           ]
@@ -66,7 +62,10 @@ The manifest is structured hierarchically to mirror the domain model (`Exams` �
 }
 ```
 
-For **free response questions** (Speaking and Writing), the question defines timing/word boundaries and a `criteria` collection instead of `options`:
+- `exam.purpose` is a `CK_Exams_Purpose` code: `mock`, `placement`, `speaking_practice`, `writing_practice` (default `mock`). The exam is always created as a **draft**; the admin reviews it in the exam editor and publishes it there, where the publish checks (expected counts per part, listening audio) apply.
+- `sectionCode` is a `Sections.Code` of the chosen certificate (TOEIC `P1`–`P7`, `S1`–`S5`, `W1`–`W3`; IELTS `REC`, `PAS`, `T1`, `T2`, `INT`; …). A code shared by two skills of one certificate cannot be imported by code and is refused.
+- `categoryCode` is optional and must be a `QuestionCategories.Code` of the certificate.
+- A **free response** question carries `prepSeconds`, `responseSeconds`, `minWords`, `maxWords` instead of `options`, and may list `criteria` by code:
 
 ```json
 {
@@ -75,41 +74,37 @@ For **free response questions** (Speaking and Writing), the question defines tim
   "questionType": "free_response",
   "prepSeconds": 45,
   "responseSeconds": 60,
-  "minWords": null,
-  "maxWords": null,
-  "explanation": "Provide a well-structured answer detailing the problem, your action, and the outcome.",
-  "hint": "Use the STAR method: Situation, Task, Action, Result.",
-  "criteria": [
-    { "code": "PRON", "name": "Pronunciation & Intonation", "maxScore": 5.0, "weight": 1.0 },
-    { "code": "FLUENCY", "name": "Fluency & Coherence", "maxScore": 5.0, "weight": 1.0 },
-    { "code": "GRAMMAR", "name": "Grammatical Accuracy", "maxScore": 5.0, "weight": 1.0 },
-    { "code": "VOCAB", "name": "Lexical Resource", "maxScore": 5.0, "weight": 1.0 }
-  ]
+  "criteria": [ { "code": "PRON" }, { "code": "INT" }, { "code": "GRAM" }, { "code": "REL" } ]
 }
 ```
 
+  The rubric itself is the skill's `GradingCriteria`, managed by admins and used by AI grading (ADR-0004). `criteria` only asserts which ones the author wrote the question against, so each code must already exist for the section's skill; an unknown code is an error, and nothing is created.
+- Unknown fields are rejected, so a typo (`"exma"`) is reported rather than silently ignored. `$schema` is accepted as an editor hint.
+- Media paths are relative to the package root and must sit under `media/` (`media/part1-photo-01.wav`). Imported files are stored through `IFileStore` under `imports/{batchId}/` with generated names; the question rows hold `/media/imports/{batchId}/{file}`, which the MVC site serves to any signed-in user by forwarding to the API (ADR-0002).
+
 ### 3. Validation Rules
 
-The ingest service enforces the following validation invariants before committing:
-1. **Certificate Isolation**: Every import is scoped to a specific `CertId`. All sections (`sectionCode`) must belong to that certificate.
-2. **MCQ Correctness Invariant**: Every `mcq` question must contain at least 2 options and **exactly one** option with `isCorrect: true` (enforced by `UX_Options_OneCorrect`).
-3. **Option Label Uniqueness**: Option labels within a question must be unique (`A`, `B`, `C`, `D`).
-4. **Media Path Integrity**:
-   - Any relative path specified in `audioFile` or `imageFile` must exist within the ZIP's `media/` directory.
-   - If `imageFile` is provided, `imageAlt` is mandatory (`CK_QGroups_ImageAlt`).
-5. **Audio Slicing Bounds**: If `audioStartMs` or `audioEndMs` is specified, both must be present, and `audioEndMs > audioStartMs >= 0` (`CK_QGroups_AudioSlice`).
-6. **Timing & Word Limits**:
-   - `mcq` questions must have `prepSeconds = null` and `responseSeconds = null` (`CK_Questions_Timing`).
-   - `free_response` questions may specify `prepSeconds >= 0` and `responseSeconds > 0`.
-   - `minWords` and `maxWords` are valid only for `free_response`, with `maxWords >= minWords >= 1` (`CK_Questions_Words`).
-7. **Modality Invariant**: For exams with purpose `speaking_practice` or `writing_practice`, all groups must belong strictly to sections of that modality (`trg_QGroups_SkillPracticeOneModality`).
-8. **Atomic Transaction & Logging**:
-   - Import execution is wrapped in a single database transaction.
-   - Validation failures write detailed diagnostic entries to `ImportLog` (`RowNo`, `Level`, `Message`) and mark `ImportBatches.Status = 'failed'`.
-   - On success, media assets are saved to the persistent file store (`IFileStore`), the database rows are committed, and `ImportBatches.Status = 'done'`.
+The whole file is validated before anything is written, and every problem is reported, not just the first. Each rule mirrors a schema constraint, so a file that passes never reaches SQL Server as a constraint error (ADR-0001).
+
+1. **Certificate isolation**: the admin picks one certificate per upload; section, category and criterion codes are resolved only within it.
+2. **Exam header**: `title` required, at most 160 characters, and not already the name of a live exam of that certificate; `durationMinutes > 0`; `purpose` a known code.
+3. **MCQ**: at least 2 options, **exactly one** `isCorrect: true` (`UX_Options_OneCorrect`), unique non-empty labels of at most 4 characters (`UQ_Options_Question_Label`), text on every option; no `prepSeconds`, `responseSeconds`, `minWords`, `maxWords` or `criteria` (`CK_Questions_Timing`, `CK_Questions_Words`); only in listening or reading sections.
+4. **Free response**: no options; `prepSeconds >= 0`, `responseSeconds > 0`, `minWords >= 1`, `maxWords >= minWords` (`CK_Questions_Timing`, `CK_Questions_Words`); only in speaking or writing sections; criteria codes must exist for the skill.
+5. **Every question**: `stem` required, `difficultyLevel` 1–5, `hint` at most 1000 characters.
+6. **Media integrity**: `audioFile` is `.mp3` or `.wav`, `imageFile` is `.jpg`, `.jpeg` or `.png`; each must exist in the package's `media/` folder and may not climb out of it. A plain `.json` upload cannot reference media. `imageAlt` is required with `imageFile` (`CK_QGroups_ImageAlt`).
+7. **Audio slicing**: `audioStartMs` and `audioEndMs` come together, with `audioEndMs > audioStartMs >= 0` (`CK_QGroups_AudioSlice`).
+8. **Modality**: a `speaking_practice` or `writing_practice` exam holds only sections of that skill (`trg_QGroups_SkillPracticeOneModality`).
+9. **Limits**: upload up to 100 MB, manifest up to 5 MB, each media file up to 60 MB, at most 500 entries and 200 MB unpacked per package.
+
+**Outcome and logging.** Each upload for a real certificate creates one `ImportBatches` row.
+- Validation failure: one `ImportLog` row per problem (`Level = 'error'`; `RowNo` is the question's 1-based position in the file, null for file- or group-level problems, and the message names the section, group and question), batch `failed`, nothing else written.
+- Success: media saved through `IFileStore`, then the exam, groups, questions and options written in one transaction, one `info` log line, batch `done`.
+- If storing media or the transaction fails, the rows roll back, the files already written are deleted, and the batch is `failed` with the reason.
 
 ## Consequences
 
 - Authors can readily generate valid packages using standard LLM prompts from PDF or textbook source materials.
 - Media assets remain decoupled from the database, stored securely through `IFileStore`.
-- The import engine is deterministic, self-contained, and thoroughly testable using static sample files.
+- The import engine is deterministic, self-contained, and thoroughly testable using static sample files. `docs/samples/` (`sample-reading-mcq.json`, `sample-free-response.json`, `sample-listening-package.zip` and its `sample-listening-manifest.json`) import cleanly into the seeded TOEIC certificate, and `QuestionImportServiceTests` imports them as its happy path, so the documented format and the importer cannot drift apart.
+- Authors write the schema's codes (`P5`, `grammar_prep`, `mock`), so a manifest is tied to one certificate's catalog. That is the point of rule 1; it does mean an author needs the code list, which the error message for an unknown code supplies.
+- One upload is one exam. Adding questions to an existing exam stays in the question editor.

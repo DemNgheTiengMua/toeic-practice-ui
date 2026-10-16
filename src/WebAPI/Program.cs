@@ -174,6 +174,7 @@ builder.Services.AddScoped<IAdminOrderService, AdminOrderService>();
 builder.Services.AddScoped<IAdminUserService, AdminUserService>();
 builder.Services.AddScoped<IScoreConversionService, ScoreConversionService>();
 builder.Services.AddScoped<IAdminExamService, AdminExamService>();
+builder.Services.AddScoped<IQuestionImportService, QuestionImportService>();
 builder.Services.AddScoped<IAdminDashboardService, AdminDashboardService>();
 var speechSuperOptions = builder.Configuration.GetSection(SpeechSuperOptions.SectionName).Get<SpeechSuperOptions>() ?? new SpeechSuperOptions();
 speechSuperOptions.AppKey = builder.Configuration["SPEECHSUPER_APP_KEY"] ?? speechSuperOptions.AppKey;
@@ -276,6 +277,7 @@ app.UseStatusCodePages(async context =>
 
 app.MapAuthEndpoints();
 app.MapAdminEndpoints();
+app.MapAdminImportEndpoints();
 app.MapLearnerEndpoints();
 app.MapExamEndpoints();
 app.MapPracticeEndpoints();

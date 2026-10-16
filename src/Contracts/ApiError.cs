@@ -102,6 +102,8 @@ public sealed record ApiError(string Code, string Title, int Status, string? Det
         public const string ExamHasFinishedAttempts = "EXAM_HAS_FINISHED_ATTEMPTS";
         public const string QuestionHasAttemptAnswers = "QUESTION_HAS_ATTEMPT_ANSWERS";
         public const string QuestionGroupNotFound = "QUESTION_GROUP_NOT_FOUND";
+
+        public const string ImportBatchNotFound = "IMPORT_BATCH_NOT_FOUND";
     }
 
 }

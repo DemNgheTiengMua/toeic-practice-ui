@@ -42,6 +42,8 @@ public sealed class EnumCodesTests
         { typeof(BookingStatus), typeof(BookingStatusDto), "CK_Bookings_Status" },
         { typeof(ComplaintType), typeof(ComplaintTypeDto), "CK_Complaints_Type" },
         { typeof(ComplaintStatus), typeof(ComplaintStatusDto), "CK_Complaints_Status" },
+        { typeof(ImportBatchStatus), typeof(ImportBatchStatusDto), "CK_ImportBatches_Status" },
+        { typeof(ImportLogLevel), typeof(ImportLogLevelDto), "CK_ImportLog_Level" },
     };
 
 

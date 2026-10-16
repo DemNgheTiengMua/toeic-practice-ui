@@ -1,16 +1,15 @@
 {
-  "$schema": "https://extra-efficiency.local/schemas/question-ingest.v1.json",
   "version": "1.0",
   "exam": {
-    "code": "SAMPLE-TOEIC-LISTENING-01",
     "title": "TOEIC Listening Sample (Part 1 Photograph & Part 2 Question-Response)",
-    "purpose": "practice_drill",
+    "purpose": "mock",
     "durationMinutes": 30,
-    "totalScore": 495
+    "sourceName": "Sample pack — listening",
+    "description": null
   },
   "sections": [
     {
-      "sectionCode": "PART_1",
+      "sectionCode": "P1",
       "groups": [
         {
           "passage": null,
@@ -26,7 +25,7 @@
               "stem": "Look at the photograph and choose the statement that best describes what you see.",
               "difficultyLevel": 1,
               "questionType": "mcq",
-              "categoryCode": "LISTENING_PHOTOGRAPHS",
+              "categoryCode": "listening_photo",
               "explanation": "Statement (B) accurately describes the action shown in the photo.",
               "hint": "Focus on the main subject's hands and activity.",
               "displayOrder": 1,
@@ -62,7 +61,7 @@
       ]
     },
     {
-      "sectionCode": "PART_2",
+      "sectionCode": "P2",
       "groups": [
         {
           "passage": null,
@@ -78,7 +77,7 @@
               "stem": "Where did you leave the contract files?",
               "difficultyLevel": 2,
               "questionType": "mcq",
-              "categoryCode": "QUESTION_RESPONSE",
+              "categoryCode": "listening_detail",
               "explanation": "Question starts with 'Where', requiring a location response.",
               "hint": "Identify the question word (Where) which asks for a place.",
               "displayOrder": 1,

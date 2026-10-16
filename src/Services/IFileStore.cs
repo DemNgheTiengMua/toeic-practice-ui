@@ -16,4 +16,14 @@ public interface IFileStore
     Task<FileStreamResultInfo?> GetAudioAsync(string relativePath, CancellationToken cancellationToken = default);
 
     Task<bool> DeleteAudioAsync(string relativePath, CancellationToken cancellationToken = default);
+
+    /// <summary>Stores one media file from a question import package under a fresh name and returns
+    /// its relative path (imports/{batchId}/...). Read and delete it with the audio or media methods.</summary>
+    Task<string> SaveImportMediaAsync(int batchId, Stream stream, string fileExtension, CancellationToken cancellationToken = default);
+
+    Task<FileStreamResultInfo?> GetMediaAsync(string relativePath, CancellationToken cancellationToken = default) =>
+        GetAudioAsync(relativePath, cancellationToken);
+
+    Task<bool> DeleteMediaAsync(string relativePath, CancellationToken cancellationToken = default) =>
+        DeleteAudioAsync(relativePath, cancellationToken);
 }

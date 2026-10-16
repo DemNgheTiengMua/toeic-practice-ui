@@ -155,8 +155,8 @@
     "semantic_hash": ""
   },
   "src/Contracts/ApiError.cs": {
-    "mtime": 1792078564.293192,
-    "ast_hash": "555f83731d9f61131e26dfcaedeaabdf",
+    "mtime": 1792133078.6159375,
+    "ast_hash": "495e4a89dbb03e009f820ab1a86c42a4",
     "semantic_hash": ""
   },
   "src/Contracts/AuthClaims.cs": {
@@ -180,8 +180,8 @@
     "semantic_hash": ""
   },
   "src/Contracts/CompanionApiClient.cs": {
-    "mtime": 1792078564.293192,
-    "ast_hash": "d3a98a3f127b45dfb2bd409153452825",
+    "mtime": 1792134792.5882118,
+    "ast_hash": "35f7dd003e76d9c2f90536fcbbbc3e95",
     "semantic_hash": ""
   },
   "src/Contracts/Contracts.csproj": {
@@ -545,8 +545,8 @@
     "semantic_hash": "a1e0ec747b63abe2941b00c6252f53a5"
   },
   "src/WebAPI/Program.cs": {
-    "mtime": 1792128055.272786,
-    "ast_hash": "370f3eda85e801cf4c2c6532f659028f",
+    "mtime": 1792134757.4218445,
+    "ast_hash": "6ba1fe428d0cb68e91f4f691960e9fdf",
     "semantic_hash": ""
   },
   "src/WebAPI/Properties/launchSettings.json": {
@@ -790,9 +790,9 @@
     "semantic_hash": ""
   },
   "tests/Services.Tests/Fakes.cs": {
-    "mtime": 1791951576.0111856,
-    "ast_hash": "fde44ed71464f011ae438dc41e7b35fd",
-    "semantic_hash": "fde44ed71464f011ae438dc41e7b35fd"
+    "mtime": 1792133852.271731,
+    "ast_hash": "c84e50808fd9d22f1e1a60a7f8f467ab",
+    "semantic_hash": ""
   },
   "tests/Services.Tests/LearnerServiceTests.cs": {
     "mtime": 1792023972.86897,
@@ -906,8 +906,8 @@
     "semantic_hash": "85409347dbf487c8a25c9dac59708b83"
   },
   "docs/backlog.md": {
-    "mtime": 1792046048.8544133,
-    "ast_hash": "0febbf7a025e15f5fcb4c214e4e37d09",
+    "mtime": 1792134970.995637,
+    "ast_hash": "ed6707210bd37f6d633e9c80e0add4d1",
     "semantic_hash": ""
   },
   "docs/critique-2026-09-27-multi-certificate-ui.md": {
@@ -1491,8 +1491,8 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Shared/_AdminLayout.cshtml": {
-    "mtime": 1792078564.3168893,
-    "ast_hash": "2209c6df95d421c16c1dd4e00be049b1",
+    "mtime": 1792134843.8357427,
+    "ast_hash": "f1ed2486116008b2f1f20378b58b20c6",
     "semantic_hash": ""
   },
   "tests/Services.Tests/PackageServiceTests.cs": {
@@ -1696,8 +1696,8 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Models/AdminViewModels.cs": {
-    "mtime": 1791986410.1304736,
-    "ast_hash": "33a97032402e52dd8bdb8c8f75df0af2",
+    "mtime": 1792134843.7906668,
+    "ast_hash": "4758554e22fa7ca421428e424229f765",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Admin/Orders.cshtml": {
@@ -1786,8 +1786,8 @@
     "semantic_hash": ""
   },
   "src/BusinessObjects/Enums.cs": {
-    "mtime": 1792078564.291194,
-    "ast_hash": "3d79062426115136fc4e0059eb098d52",
+    "mtime": 1792133078.5423996,
+    "ast_hash": "a0bb11338c51572b5e072200f3f18b49",
     "semantic_hash": ""
   },
   "src/Contracts/EnumMapping.cs": {
@@ -1796,8 +1796,8 @@
     "semantic_hash": ""
   },
   "src/Contracts/Enums.cs": {
-    "mtime": 1792078564.293192,
-    "ast_hash": "6b2582120f079419081e7d065304e3f8",
+    "mtime": 1792133078.5650744,
+    "ast_hash": "3f6354ec54847e3932078ddba093cb44",
     "semantic_hash": ""
   },
   "src/WebAPI/Endpoints/AdminEndpoints.cs": {
@@ -1851,8 +1851,8 @@
     "semantic_hash": ""
   },
   "tests/Services.Tests/EnumCodesTests.cs": {
-    "mtime": 1792078564.3214602,
-    "ast_hash": "8689e00f73592a9ad43a9806dfca3243",
+    "mtime": 1792133078.6159375,
+    "ast_hash": "1d70e86c348349e58cf08992393fc101",
     "semantic_hash": ""
   },
   "docs/adr/0006-typed-domain-and-wire-enums.md": {
@@ -1946,13 +1946,13 @@
     "semantic_hash": ""
   },
   "src/Services/FileStore.cs": {
-    "mtime": 1792044943.5716228,
-    "ast_hash": "43d36258660c1e1243605f6959619927",
+    "mtime": 1792133882.1748252,
+    "ast_hash": "7df8b2aedb4ebd9b68ccd9387b4b6954",
     "semantic_hash": ""
   },
   "src/Services/IFileStore.cs": {
-    "mtime": 1792044935.551939,
-    "ast_hash": "49c58d473a627810db2a7a2e0d073dee",
+    "mtime": 1792136648.2532265,
+    "ast_hash": "4ee877f6d77497aa3e1b291a700d04b4",
     "semantic_hash": ""
   },
   "src/Services/SpeakingPracticeService.cs": {
@@ -2441,8 +2441,73 @@
     "semantic_hash": ""
   },
   "tests/Services.Tests/SpeechSuperTests.cs": {
-    "mtime": 1792128155.2522042,
-    "ast_hash": "aeafbb7cf4a79a1a7b6db656d45da8cc",
+    "mtime": 1792133852.3192334,
+    "ast_hash": "8925d06037de197286efb9c93bcde289",
+    "semantic_hash": ""
+  },
+  "docs/samples/sample-free-response.json": {
+    "mtime": 1792133552.351373,
+    "ast_hash": "5c150c7581d445442c1c595f5a72cfdc",
+    "semantic_hash": ""
+  },
+  "docs/samples/sample-listening-manifest.json": {
+    "mtime": 1792133552.351373,
+    "ast_hash": "6bafaec3ca71d1fd6d5d14a0b3a28982",
+    "semantic_hash": ""
+  },
+  "docs/samples/sample-reading-mcq.json": {
+    "mtime": 1792133552.351373,
+    "ast_hash": "c2a2301a35fb874a7935b178e296840f",
+    "semantic_hash": ""
+  },
+  "docs/adr/0007-question-ingest-format.md": {
+    "mtime": 1792134986.52643,
+    "ast_hash": "8bc3eb47601a1c985afb9aff2c965894",
+    "semantic_hash": ""
+  },
+  "src/Contracts/AdminImportDtos.cs": {
+    "mtime": 1792133162.9116466,
+    "ast_hash": "217507b56745e154cba21ae23b2d013e",
+    "semantic_hash": ""
+  },
+  "src/Services/QuestionImportManifest.cs": {
+    "mtime": 1792134167.8353736,
+    "ast_hash": "9ec6406e8ec7629b09fd106c70c17647",
+    "semantic_hash": ""
+  },
+  "src/Services/QuestionImportService.cs": {
+    "mtime": 1792136664.7971218,
+    "ast_hash": "87259fb5799c21515de938893ec3da2a",
+    "semantic_hash": ""
+  },
+  "src/WebAPI/Endpoints/AdminImportEndpoints.cs": {
+    "mtime": 1792136656.9035468,
+    "ast_hash": "19c3897a905465d92a877d180cd92646",
+    "semantic_hash": ""
+  },
+  "src/WebMVC/Controllers/AdminImportsController.cs": {
+    "mtime": 1792136684.332853,
+    "ast_hash": "8a56daafb2dbfd85030b464313a79269",
+    "semantic_hash": ""
+  },
+  "src/WebMVC/Controllers/MediaController.cs": {
+    "mtime": 1792134832.7146761,
+    "ast_hash": "1affe3e7d3b1710fd7c8559c030b2300",
+    "semantic_hash": ""
+  },
+  "src/WebMVC/Views/Admin/Imports.cshtml": {
+    "mtime": 1792136692.449398,
+    "ast_hash": "7ebafe380e084f4d0f8fede9f778d827",
+    "semantic_hash": ""
+  },
+  "tests/Services.Tests/QuestionImportServiceTests.cs": {
+    "mtime": 1792136716.389045,
+    "ast_hash": "899a5e03a900c8228e2b70c5ee5e9ef3",
+    "semantic_hash": ""
+  },
+  "2026-10-16-142849-command-messagemattpocock-skillsimplementcom.txt": {
+    "mtime": 1792135736.7353873,
+    "ast_hash": "582bc3da7e773ac9a30e7cfcd463065d",
     "semantic_hash": ""
   }
 }

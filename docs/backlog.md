@@ -20,7 +20,7 @@ Each batch: schema + tests → screens → audit row in `docs/schema-ui-audit.md
 - [x] Saved-questions bank screen — `saved-questions` (2026-10-10, UI-47)
 - [x] Certificates explainer page — `certificates.html` (2026-10-10, UI-50)
 - [x] Email-verification nudge on dashboard (2026-10-10, UI-51)
-- [ ] Admin batch import screen (schema has `ImportBatches` / `ImportLog`)
+- [x] Admin batch import screen — `/admin/imports` (2026-10-16, ADR-0007)
 - [ ] Question editor: inputs for question-type label and per-option rationale
 
 ## Batch B — backend groundwork (schema done 2026-10-12; screens pending)
@@ -38,7 +38,7 @@ Schema + tests (`domain14-ai-insights-payments.sql`): `Users.TimeZoneId`, `Order
 
 - [x] AI provider: Azure AI Speech for speaking, Claude via HH-tech proxy for grading and
   insights (ADR-0005)
-- [ ] Ingest format for real question content
+- [x] Ingest format for real question content (ADR-0007)
 
 ## Later (decided against for now)
 

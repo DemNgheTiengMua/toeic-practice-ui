@@ -17,3 +17,10 @@ public sealed record AdminUsersViewModel(
     int CurrentPage,
     AdminUserDto? AdjustUser = null,
     string? FormError = null);
+
+public sealed record AdminImportsViewModel(
+    AdminImportBatchesDto Batches,
+    int? CertId,
+    AdminImportBatchDetailDto? SelectedBatch,
+    string? ErrorMessage = null,
+    string? SuccessMessage = null);

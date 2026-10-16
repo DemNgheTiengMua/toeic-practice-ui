@@ -44,6 +44,9 @@ public sealed class SpeechSuperTests
         {
             return Task.FromResult(files.Remove(relativePath));
         }
+
+        public Task<string> SaveImportMediaAsync(int batchId, Stream stream, string fileExtension, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
     }
 
     [Fact]

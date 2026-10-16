@@ -281,3 +281,21 @@ public enum ComplaintStatusDto
     [JsonStringEnumMemberName("resolved")] Resolved,
 }
 
+
+/// <summary>CK_ImportBatches_Status: pending, done, failed.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<ImportBatchStatusDto>))]
+public enum ImportBatchStatusDto
+{
+    [JsonStringEnumMemberName("pending")] Pending,
+    [JsonStringEnumMemberName("done")] Done,
+    [JsonStringEnumMemberName("failed")] Failed,
+}
+
+/// <summary>CK_ImportLog_Level: info, warn, error.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<ImportLogLevelDto>))]
+public enum ImportLogLevelDto
+{
+    [JsonStringEnumMemberName("info")] Info,
+    [JsonStringEnumMemberName("warn")] Warn,
+    [JsonStringEnumMemberName("error")] Error,
+}

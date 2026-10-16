@@ -1,16 +1,15 @@
 {
-  "$schema": "https://extra-efficiency.local/schemas/question-ingest.v1.json",
   "version": "1.0",
   "exam": {
-    "code": "SAMPLE-SPEAKING-WRITING-01",
     "title": "Speaking and Writing Free Response Sample",
-    "purpose": "practice_drill",
+    "purpose": "mock",
     "durationMinutes": 60,
-    "totalScore": 400
+    "sourceName": "Sample pack — speaking and writing",
+    "description": null
   },
   "sections": [
     {
-      "sectionCode": "SPEAKING_PART_1",
+      "sectionCode": "S3",
       "groups": [
         {
           "passage": null,
@@ -26,7 +25,7 @@
               "stem": "Describe a memorable celebration or holiday you attended. Explain why it was important to you.",
               "difficultyLevel": 3,
               "questionType": "free_response",
-              "categoryCode": "SPEAKING_DESCRIPTIVE",
+              "categoryCode": null,
               "prepSeconds": 45,
               "responseSeconds": 60,
               "minWords": null,
@@ -36,28 +35,16 @@
               "displayOrder": 1,
               "criteria": [
                 {
-                  "code": "PRON",
-                  "name": "Pronunciation & Intonation",
-                  "maxScore": 5.0,
-                  "weight": 1.0
+                  "code": "PRON"
                 },
                 {
-                  "code": "FLUENCY",
-                  "name": "Fluency & Coherence",
-                  "maxScore": 5.0,
-                  "weight": 1.0
+                  "code": "INT"
                 },
                 {
-                  "code": "GRAMMAR",
-                  "name": "Grammatical Accuracy",
-                  "maxScore": 5.0,
-                  "weight": 1.0
+                  "code": "GRAM"
                 },
                 {
-                  "code": "VOCAB",
-                  "name": "Lexical Resource",
-                  "maxScore": 5.0,
-                  "weight": 1.0
+                  "code": "REL"
                 }
               ]
             }
@@ -66,7 +53,7 @@
       ]
     },
     {
-      "sectionCode": "WRITING_PART_2",
+      "sectionCode": "W2",
       "groups": [
         {
           "passage": "You received an email from your client requesting an update on project milestones.",
@@ -82,7 +69,7 @@
               "stem": "Write an email responding to the client. In your email, summarize current progress, explain any pending items, and propose a date for the next status meeting.",
               "difficultyLevel": 4,
               "questionType": "free_response",
-              "categoryCode": "BUSINESS_WRITING",
+              "categoryCode": null,
               "prepSeconds": null,
               "responseSeconds": 900,
               "minWords": 100,
@@ -92,28 +79,16 @@
               "displayOrder": 1,
               "criteria": [
                 {
-                  "code": "TASK_ACHIEVEMENT",
-                  "name": "Task Achievement & Completeness",
-                  "maxScore": 5.0,
-                  "weight": 1.0
+                  "code": "GRAM"
                 },
                 {
-                  "code": "COHERENCE",
-                  "name": "Coherence & Organization",
-                  "maxScore": 5.0,
-                  "weight": 1.0
+                  "code": "VOCAB"
                 },
                 {
-                  "code": "VOCABULARY",
-                  "name": "Lexical Resource & Tone",
-                  "maxScore": 5.0,
-                  "weight": 1.0
+                  "code": "ORG"
                 },
                 {
-                  "code": "GRAMMAR",
-                  "name": "Grammar & Accuracy",
-                  "maxScore": 5.0,
-                  "weight": 1.0
+                  "code": "REL"
                 }
               ]
             }

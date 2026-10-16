@@ -1,16 +1,15 @@
 {
-  "$schema": "https://extra-efficiency.local/schemas/question-ingest.v1.json",
   "version": "1.0",
   "exam": {
-    "code": "SAMPLE-TOEIC-READING-01",
     "title": "TOEIC Reading Sample (Part 5 & Part 7)",
-    "purpose": "practice_drill",
+    "purpose": "mock",
     "durationMinutes": 45,
-    "totalScore": 495
+    "sourceName": "Sample pack — reading",
+    "description": null
   },
   "sections": [
     {
-      "sectionCode": "PART_5",
+      "sectionCode": "P5",
       "groups": [
         {
           "passage": null,
@@ -26,7 +25,7 @@
               "stem": "The annual sales report will be released to shareholders _____ the end of the current fiscal year.",
               "difficultyLevel": 2,
               "questionType": "mcq",
-              "categoryCode": "PREPOSITION",
+              "categoryCode": "grammar_prep",
               "explanation": "The preposition 'at' or 'by' denotes a deadline or specific point in time; 'at the end of' is the standard idiomatic phrase.",
               "hint": "Identify the standard preposition pairing with 'the end of'.",
               "displayOrder": 1,
@@ -62,7 +61,7 @@
       ]
     },
     {
-      "sectionCode": "PART_7",
+      "sectionCode": "P7",
       "groups": [
         {
           "passage": "Notice to all building tenants:\nThe main elevators in the North Tower will be undergoing scheduled maintenance this Saturday, October 20, between 8:00 AM and 2:00 PM. During this period, please use the service elevator located near the rear entrance. We apologize for any inconvenience.",
@@ -78,7 +77,7 @@
               "stem": "What is the purpose of the notice?",
               "difficultyLevel": 3,
               "questionType": "mcq",
-              "categoryCode": "READING_COMPREHENSION",
+              "categoryCode": "reading_inference",
               "explanation": "The notice informs tenants about elevator maintenance and alternative access.",
               "hint": "Look at the first sentence of the notice for the main subject.",
               "displayOrder": 1,
