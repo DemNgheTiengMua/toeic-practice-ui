@@ -1,16 +1,236 @@
+@inject CurrentUser CurrentUser
 @{
-    ViewData["Title"] = "Practice your way";
+    Layout = null;
+    ViewData["Title"] = "extra efficient — Practice your way";
     ViewData["Description"] = "Practice for TOEIC, IELTS and VSTEP with a free placement exam, a personalized learning path, and skill-based exercises.";
 }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="@ViewData["Description"]">
+  <title>@ViewData["Title"]</title>
+  <link rel="icon" href="~/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="~/css/tokens.css">
+  <link rel="stylesheet" href="~/css/base.css">
+  <link rel="stylesheet" href="~/css/components.css">
+  <link rel="stylesheet" href="~/css/landing.css">
+</head>
+<body class="landing-page">
+  <a class="landing-skip" href="#main">Skip navigation</a>
+  <header class="landing-header">
+    <nav class="landing-nav landing-container" aria-label="Main navigation">
+      <a class="landing-brand" href="/" aria-label="extra efficient — Home">
+        <span class="landing-brand__mark" aria-hidden="true">ee</span>
+        <span>extra efficient</span>
+      </a>
+      <div class="landing-nav__links">
+        <a href="/certificates">Certificates</a>
+        <a href="/pricing">Pricing</a>
+        <a href="#method">How it works</a>
+        <a href="#features">Features</a>
+      </div>
+      <div class="landing-nav__actions">
+        @if (CurrentUser.IsSignedIn)
+        {
+          <a class="landing-login" href="@(CurrentUser.IsAdmin ? "/admin" : "/dashboard")">Dashboard</a>
+          <form method="post" action="/auth/sign-out" class="no-margin" style="display:inline">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn--plate btn--sm">Sign out</button>
+          </form>
+        }
+        else
+        {
+          <a class="landing-login" href="/auth/sign-in">Log in</a>
+          <a class="btn btn--plate" href="/auth/register">Create account</a>
+        }
+      </div>
+    </nav>
+  </header>
 
-<div class="container stack" style="padding-top: var(--space-6); padding-bottom: var(--space-8)">
-  <div style="max-width: 640px">
-    <h1 class="m-0 mb-1">Know where you stand. Know what's next.</h1>
-    <p class="text-muted no-margin">
-      Practice for an English certificate with a level-matched path, skill-based exercises, and progress that's your own.
-    </p>
-  </div>
-  <div>
-    <a class="btn btn--primary btn--lg" href="/certificates">Browse certificates</a>
-  </div>
-</div>
+  <main id="main">
+    <section class="landing-hero">
+      <div class="landing-container landing-hero__grid">
+        <div class="landing-hero__copy">
+          <h1>Know where you stand.<br><span>Know what's next.</span></h1>
+          <p class="landing-hero__lead">
+            Practice for an English certificate with a level-matched path, skill-based exercises, and progress that's your own.
+          </p>
+          <div class="landing-hero__actions">
+            <a class="btn btn--primary btn--lg" href="/auth/register">Start for free <span aria-hidden="true">→</span></a>
+            <a class="landing-text-link" href="#method">Explore how it works</a>
+          </div>
+          <div class="landing-hero__note">
+            <span class="landing-hero__note-label">START WITH</span>
+            <a class="landing-hero__note-chip" href="/certificates#cert-toeic">TOEIC</a>
+            <a class="landing-hero__note-chip" href="/certificates#cert-ielts">IELTS</a>
+            <a class="landing-hero__note-chip" href="/certificates#cert-vstep">VSTEP</a>
+          </div>
+        </div>
+
+        <div class="landing-preview" aria-label="Sample illustration: a learner's dashboard">
+          <div class="landing-preview__top">
+            <span class="landing-preview__brand">LEARNING PATH</span>
+            <span class="landing-preview__live"><span aria-hidden="true"></span> TOEIC · SAMPLE</span>
+          </div>
+          <div class="landing-preview__body">
+            <div class="landing-preview__welcome">
+              <div>
+                <p class="landing-preview__label">SAMPLE PATH</p>
+                <h2>Step by step<br>to your target.</h2>
+              </div>
+              <div class="landing-preview__score">
+                <span class="landing-preview__score-label">TARGET</span>
+                <strong>750</strong>
+                <span>TOEIC</span>
+              </div>
+            </div>
+            <div class="landing-preview__progress">
+              <div class="landing-preview__progress-head">
+                <span>Progress this week</span><strong>68%</strong>
+              </div>
+              <div class="landing-preview__track" role="img" aria-label="Progress this week: 68 percent">
+                <span style="width: 68%"></span>
+              </div>
+              <div class="landing-preview__progress-foot"><span>4 / 6 sessions</span><span>Following a personalized path</span></div>
+            </div>
+            <div class="landing-preview__next">
+              <span class="landing-preview__next-index">NEXT STEP <strong>03</strong></span>
+              <div>
+                <strong>Listening practice — Part 3</strong>
+                <span>12 questions · about 15 min</span>
+              </div>
+              <span class="landing-preview__arrow" aria-hidden="true">→</span>
+            </div>
+          </div>
+          <div class="landing-preview__footer">
+            <span>TODAY</span>
+            <span class="landing-preview__footer-status">1 TASK PENDING</span>
+          </div>
+        </div>
+      </div>
+      <div class="landing-hero__bottom-rule" aria-hidden="true"></div>
+    </section>
+
+    <section class="landing-certificates" id="certificates" aria-labelledby="certificates-title">
+      <div class="landing-container landing-certificates__inner">
+        <div class="landing-certificates__intro">
+          <h2 id="certificates-title">Pick a certificate.<br>Start your journey.</h2>
+        </div>
+        <a class="landing-certificate" href="/certificates#cert-toeic">
+          <span class="landing-certificate__code">01 / TOEIC</span>
+          <span class="landing-certificate__name">Listening · Reading</span>
+          <span class="landing-certificate__action">See test details <span aria-hidden="true">→</span></span>
+        </a>
+        <a class="landing-certificate" href="/certificates#cert-ielts">
+          <span class="landing-certificate__code">02 / IELTS</span>
+          <span class="landing-certificate__name">Listening · Speaking · Reading · Writing</span>
+          <span class="landing-certificate__action">See test details <span aria-hidden="true">→</span></span>
+        </a>
+        <a class="landing-certificate" href="/certificates#cert-vstep">
+          <span class="landing-certificate__code">03 / VSTEP</span>
+          <span class="landing-certificate__name">All four skills</span>
+          <span class="landing-certificate__action">See test details <span aria-hidden="true">→</span></span>
+        </a>
+      </div>
+    </section>
+
+    <section class="landing-method landing-section" id="method" aria-labelledby="method-title">
+      <div class="landing-container">
+        <div class="landing-section__heading">
+          <div>
+            <h2 id="method-title">Study with direction.</h2>
+          </div>
+          <p>Start from your current level, focus on the skills that need work, and track every step forward.</p>
+        </div>
+        <div class="landing-steps">
+          <article class="landing-step">
+            <span class="landing-step__number">01</span>
+            <div>
+              <h3>Find your level</h3>
+              <p>Take a free placement exam to see your strengths and what to practice next.</p>
+            </div>
+            <span class="landing-step__tag">FREE</span>
+          </article>
+          <article class="landing-step">
+            <span class="landing-step__number">02</span>
+            <div>
+              <h3>Get a matching path</h3>
+              <p>Pick a target score. Your study plan is suggested based on your certificate and level.</p>
+            </div>
+            <span class="landing-step__tag">PERSONALIZED</span>
+          </article>
+          <article class="landing-step">
+            <span class="landing-step__number">03</span>
+            <div>
+              <h3>Practice and improve</h3>
+              <p>Practice each skill, see your weakness analysis, and adjust your next step.</p>
+            </div>
+            <span class="landing-step__tag">TRACKED</span>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="landing-features landing-section" id="features" aria-labelledby="features-title">
+      <div class="landing-container landing-features__grid">
+        <div class="landing-features__heading">
+          <h2 id="features-title">From practice<br>to exam day.</h2>
+          <p>One place to practice regularly, understand your results, and know what to do next.</p>
+          <a class="btn btn--primary" href="/auth/register">Build my path</a>
+        </div>
+        <div class="landing-feature-list">
+          <article class="landing-feature">
+            <span class="landing-feature__number">A</span>
+            <div><h3>Practice by skill</h3><p>Content broken down by exam section, with answers and explanations to reinforce what you learn.</p></div>
+          </article>
+          <article class="landing-feature">
+            <span class="landing-feature__number">B</span>
+            <div><h3>See where you need work</h3><p>Track practice and mock exam results to know which skills to prioritize.</p></div>
+          </article>
+          <article class="landing-feature">
+            <span class="landing-feature__number">C</span>
+            <div><h3>Get specific feedback</h3><p>For speaking and writing, get feedback against a grading rubric so you know how to improve.</p></div>
+          </article>
+          <article class="landing-feature">
+            <span class="landing-feature__number">D</span>
+            <div><h3>Mock exams close to the real thing</h3><p>Simulate the exam to get used to the time pressure and check how ready you are.</p></div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="landing-cta" aria-labelledby="cta-title">
+      <div class="landing-container landing-cta__inner">
+        <div>
+          <h2 id="cta-title" class="landing-cta__title">A clear target.<br>Progress every day.</h2>
+        </div>
+        <div class="landing-cta__action">
+          <p>Start with the placement exam and build a path that fits you.</p>
+          <a class="btn btn--primary btn--lg" href="/auth/register">Start for free <span aria-hidden="true">→</span></a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="landing-footer">
+    <div class="landing-container landing-footer__inner">
+      <a class="landing-brand" href="/">
+        <span class="landing-brand__mark" aria-hidden="true">ee</span>
+        <span>extra efficient</span>
+      </a>
+      <p>Focus on what matters. Reach your target with confidence.</p>
+      @if (CurrentUser.IsSignedIn)
+      {
+        <a href="/dashboard">Dashboard</a>
+      }
+      else
+      {
+        <a href="/auth/sign-in">Log in</a>
+      }
+    </div>
+  </footer>
+  <script src="~/js/icons.js"></script>
+</body>
+</html>

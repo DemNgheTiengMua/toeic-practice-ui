@@ -280,4 +280,48 @@ public sealed class PayOsPaymentGatewayTests
         Assert.Equal(GatewayStatus.Pending, result.Status);
         Assert.NotNull(result.ErrorCode);
     }
+
+    [Fact]
+    public async Task Post_live_simulated_webhook_for_order_3()
+    {
+        var gateway = new PayOsPaymentGateway(_options);
+        var dataObj = new WebhookData
+        {
+            OrderCode = 3,
+            Amount = 190000,
+            Description = "Credits 10",
+            AccountNumber = "12345678",
+            Reference = "REF-3",
+            TransactionDateTime = "2026-10-16 15:40:50",
+            Currency = "VND",
+            PaymentLinkId = "plink-3",
+            Code = "00"
+        };
+        var signature = PayOsPaymentGateway.CreateWebhookSignature(dataObj, _options.ChecksumKey);
+        var payload = $$"""
+            {
+              "code": "00",
+              "desc": "success",
+              "success": true,
+              "data": {
+                "orderCode": 3,
+                "amount": 190000,
+                "description": "Credits 10",
+                "accountNumber": "12345678",
+                "reference": "REF-3",
+                "transactionDateTime": "2026-10-16 15:40:50",
+                "currency": "VND",
+                "paymentLinkId": "plink-3",
+                "code": "00"
+              },
+              "signature": "{{signature}}"
+            }
+            """;
+
+        using var client = new HttpClient();
+        var content = new StringContent(payload, System.Text.Encoding.UTF8, System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json"));
+        content.Headers.Add("x-signature", signature);
+        var resp = await client.PostAsync("http://localhost:5001/api/payments/webhook", content);
+        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
+    }
 }

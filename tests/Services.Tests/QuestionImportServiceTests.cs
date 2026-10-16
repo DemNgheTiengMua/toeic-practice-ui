@@ -455,4 +455,43 @@ public sealed class QuestionImportServiceTests(DatabaseFixture database)
         Assert.Equal(ImportBatchStatusDto.Failed, result.Status);
         Assert.Contains(await LogsAsync(result.BatchId), l => l.Message.Contains("must be a file inside media/"));
     }
+
+    [Fact]
+    public async Task Generated_toeic_and_ielts_sample_packages_import_cleanly()
+    {
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var toeicId = await db.Certificates.Where(c => c.Code == "TOEIC").Select(c => c.CertId).FirstOrDefaultAsync();
+        var ieltsId = await db.Certificates.Where(c => c.Code == "IELTS").Select(c => c.CertId).FirstOrDefaultAsync();
+        var adminId = await db.Users.Where(u => u.Email == "admin@demo.local").Select(u => u.UserId).FirstOrDefaultAsync();
+
+        if (toeicId != 0 && adminId != 0)
+        {
+            // 1. TOEIC Standalone JSON
+            await using var toeicJson = File.OpenRead(SamplePath("sample-exam-toeic-2skill.json"));
+            var res1 = await CreateService().ImportAsync(adminId, toeicId, "sample-exam-toeic-2skill.json", toeicJson);
+            Assert.Equal(ImportBatchStatusDto.Done, res1.Status);
+            Assert.True(res1.QuestionCount > 0);
+
+            // 2. TOEIC Package ZIP
+            await using var toeicZip = File.OpenRead(SamplePath("sample-exam-toeic-2skill-package.zip"));
+            var res2 = await CreateService().ImportAsync(adminId, toeicId, "sample-exam-toeic-2skill-package.zip", toeicZip);
+            Assert.Equal(ImportBatchStatusDto.Done, res2.Status);
+            Assert.True(res2.QuestionCount > 0);
+        }
+
+        if (ieltsId != 0 && adminId != 0)
+        {
+            // 3. IELTS Standalone JSON
+            await using var ieltsJson = File.OpenRead(SamplePath("sample-exam-ielts-4skill.json"));
+            var res3 = await CreateService().ImportAsync(adminId, ieltsId, "sample-exam-ielts-4skill.json", ieltsJson);
+            Assert.Equal(ImportBatchStatusDto.Done, res3.Status);
+            Assert.True(res3.QuestionCount > 0);
+
+            // 4. IELTS Package ZIP
+            await using var ieltsZip = File.OpenRead(SamplePath("sample-exam-ielts-4skill-package.zip"));
+            var res4 = await CreateService().ImportAsync(adminId, ieltsId, "sample-exam-ielts-4skill-package.zip", ieltsZip);
+            Assert.Equal(ImportBatchStatusDto.Done, res4.Status);
+            Assert.True(res4.QuestionCount > 0);
+        }
+    }
 }

@@ -223,19 +223,26 @@ claudeOptions.BaseUrl = builder.Configuration["CLAUDE_BASE_URL"] ?? claudeOption
 claudeOptions.Model = builder.Configuration["CLAUDE_MODEL"] ?? claudeOptions.Model;
 
 builder.Services.AddSingleton(claudeOptions);
+builder.Services.AddHttpClient<IClaudeClient, ClaudeClient>();
+builder.Services.AddSingleton<ClaudeAiGrader>();
 
 var audioStoragePath = builder.Configuration["FileStore:AudioDirectory"]
     ?? Path.Combine(builder.Environment.ContentRootPath, "..", "..", "App_Data", "audio");
 builder.Services.AddSingleton<IFileStore>(new LocalFileStore(audioStoragePath));
 
-var aiProvider = builder.Configuration["AI_PROVIDER"] ?? builder.Configuration["AiProviders:Provider"] ?? "fake";
+var aiProvider = builder.Configuration["AI_PROVIDER"] ?? builder.Configuration["AiProviders:Provider"] ?? "real";
 if (aiProvider.Equals("real", StringComparison.OrdinalIgnoreCase))
 {
-    builder.Services.AddSingleton<IAiGrader, SpeechSuperAiGrader>();
+    builder.Services.AddSingleton<IAiGrader>(sp => new SpeechSuperAiGrader(
+        sp.GetRequiredService<ISpeechSuperClient>(),
+        sp.GetRequiredService<IFileStore>(),
+        sp.GetRequiredService<ClaudeAiGrader>()));
+    builder.Services.AddSingleton<IAiInsightGenerator, ClaudeAiInsightGenerator>();
 }
 else
 {
     builder.Services.AddSingleton<IAiGrader, FakeAiGrader>();
+    builder.Services.AddSingleton<IAiInsightGenerator, FakeAiInsightGenerator>();
 }
 builder.Services.AddScoped<IAiGradingProcessor, AiGradingProcessor>();
 builder.Services.AddScoped<IWritingPracticeService, WritingPracticeService>();
@@ -246,7 +253,6 @@ builder.Services.AddScoped<IMentorService, MentorService>();
 builder.Services.AddScoped<IComplaintService, ComplaintService>();
 builder.Services.AddHostedService<AiGradingBackgroundService>();
 
-builder.Services.AddSingleton<IAiInsightGenerator, FakeAiInsightGenerator>();
 builder.Services.AddScoped<IAiInsightService, AiInsightService>();
 builder.Services.AddHostedService<AiInsightBackgroundService>();
 

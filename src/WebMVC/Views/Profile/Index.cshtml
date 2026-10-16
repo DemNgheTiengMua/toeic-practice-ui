@@ -1,52 +1,96 @@
+@inject CurrentUser CurrentUser
 @model ProfileViewModel
 @{
-    ViewData["Title"] = "Profile";
+    var isLearner = !CurrentUser.IsAdmin;
+    Layout = isLearner ? "_LearnerLayout" : "_AdminLayout";
+    ViewData["Title"] = "My profile";
     ViewData["Description"] = "Your profile and time zone.";
 }
 
-<div class="container stack" style="padding-top: var(--space-6); padding-bottom: var(--space-8); max-width: 480px">
-  <h1 class="m-0 mb-1">Profile</h1>
-  <p class="text-muted no-margin">How we address you, and the zone every date and time renders in.</p>
+@if (isLearner)
+{
+  <nav class="breadcrumbs" aria-label="Breadcrumb">
+    <a href="/dashboard" class="breadcrumbs__item">Home</a>
+    <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+    <span class="breadcrumbs__item" aria-current="page">My profile</span>
+  </nav>
+}
 
-  <form method="post" asp-action="Index" class="card">
-    <div class="card__body stack">
-      @if (!string.IsNullOrEmpty(Model.SuccessMessage))
-      {
-        <p class="no-margin" role="status">@Model.SuccessMessage</p>
-      }
-      @if (!string.IsNullOrEmpty(Model.FormError))
-      {
-        <p class="text-danger no-margin" role="alert">@Model.FormError</p>
-      }
-      @Html.AntiForgeryToken()
+<div class="stack">
+  <div>
+    <h1 class="m-0 mb-1">My profile</h1>
+    <p class="text-muted no-margin">How we address you, and the zone every date and time renders in.</p>
+  </div>
 
-      <div>
-        <label asp-for="FullName"></label>
-        <input asp-for="FullName" autocomplete="name">
-        <span asp-validation-for="FullName" class="text-danger"></span>
+  @if (!string.IsNullOrEmpty(Model.SuccessMessage))
+  {
+    <div class="alert alert--success" role="status">@Model.SuccessMessage</div>
+  }
+  @if (!string.IsNullOrEmpty(Model.FormError))
+  {
+    <div class="alert alert--danger" role="alert">@Model.FormError</div>
+  }
+
+  <div class="grid-2">
+    <form method="post" asp-action="Index" class="card">
+      <div class="card__header"><strong>Basic information</strong></div>
+      <div class="card__body stack">
+        @Html.AntiForgeryToken()
+
+        <div class="field">
+          <label class="field__label" asp-for="FullName">Full name</label>
+          <input class="field__input" asp-for="FullName" autocomplete="name" required>
+          <span asp-validation-for="FullName" class="field__error"></span>
+        </div>
+
+        <div class="field">
+          <label class="field__label" asp-for="Phone">Phone number</label>
+          <input class="field__input" asp-for="Phone" autocomplete="tel">
+          <span asp-validation-for="Phone" class="field__error"></span>
+        </div>
+
+        <div class="field">
+          <label class="field__label" asp-for="TimeZoneId">Time zone</label>
+          <select class="field__input" asp-for="TimeZoneId">
+            @foreach (var zone in Model.TimeZoneOptions)
+            {
+              <option value="@zone">@zone.Replace("_", " ")</option>
+            }
+          </select>
+          <span asp-validation-for="TimeZoneId" class="field__error"></span>
+          <div class="field__hint">All exam timestamps, bookings, and reports use this timezone.</div>
+        </div>
       </div>
 
-      <div>
-        <label asp-for="Phone"></label>
-        <input asp-for="Phone" autocomplete="tel">
-        <span asp-validation-for="Phone" class="text-danger"></span>
+      <div class="card__footer">
+        <button type="submit" class="btn btn--primary">Save changes</button>
+      </div>
+    </form>
+
+    <div class="stack">
+      <div class="card">
+        <div class="card__header"><strong>Credit wallet</strong></div>
+        <div class="card__body stack">
+          <p class="m-0 text-muted text-sm">
+            Credits pay for a mock exam start, AI grading, or a mentor booking. Practice, weakness analysis, and placement exams are completely free. Credits never expire.
+          </p>
+          <div>
+            <a class="btn btn--sm" href="/pricing">Buy credits</a>
+          </div>
+        </div>
       </div>
 
-      <div>
-        <label asp-for="TimeZoneId"></label>
-        <select asp-for="TimeZoneId">
-          @foreach (var zone in Model.TimeZoneOptions)
-          {
-            <option value="@zone">@zone.Replace("_", " ")</option>
-          }
-        </select>
-        <span asp-validation-for="TimeZoneId" class="text-danger"></span>
+      <div class="card">
+        <div class="card__header"><strong>Password &amp; Security</strong></div>
+        <div class="card__body stack">
+          <p class="m-0 text-muted text-sm">
+            Keep your account secure with a strong password. Changing your password signs out all existing sessions.
+          </p>
+          <div>
+            <a class="btn btn--sm" href="/profile/password">Change password</a>
+          </div>
+        </div>
       </div>
-
-      <div>
-        <button type="submit" class="btn btn--primary btn--lg">Save profile</button>
-      </div>
-      <p class="text-sm text-muted no-margin">Want a new password? <a href="/profile/password">Change password</a>.</p>
     </div>
-  </form>
+  </div>
 </div>

@@ -100,9 +100,12 @@
 
             @if (!string.IsNullOrEmpty(q.AudioPath))
             {
-              <div class="audio-player mb-4">
-                <audio controls src="@q.AudioPath" class="w-100"></audio>
-              </div>
+              @await Html.PartialAsync("_ExamAudioPlayer", new ExamAudioPlayerModel(
+                  AudioPath: q.AudioPath,
+                  AllowReplay: isReviewMode,
+                  SectionTitle: "Practice Audio",
+                  BadgeText: "READY"
+              ))
             }
 
             <p class="question__stem">@q.Stem</p>
@@ -514,5 +517,6 @@
       });
     })();
   </script>
+  <script src="~/js/exam-audio.js"></script>
 </body>
 </html>

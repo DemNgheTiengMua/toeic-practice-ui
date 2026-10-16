@@ -638,7 +638,10 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
             .Include(q => q.Section).ThenInclude(s => s.Skill)
             .Include(q => q.Group)
             .Include(q => q.QuestionOptionQuestionNavigations)
-            .OrderBy(q => q.DisplayOrder)
+            .OrderBy(q => q.Section.Skill.DisplayOrder)
+            .ThenBy(q => q.Section.DisplayOrder)
+            .ThenBy(q => q.Group.DisplayOrder)
+            .ThenBy(q => q.DisplayOrder)
             .ToListAsync(cancellationToken);
 
         var answers = await db.AttemptAnswers
@@ -676,8 +679,11 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
         var reviewQuestions = new List<AttemptReviewQuestion>();
         var navigator = new List<ReviewNavigatorItem>();
 
-        foreach (var q in questions)
+        for (int idx = 0; idx < questions.Count; idx++)
         {
+            var q = questions[idx];
+            int displayOrder = idx + 1;
+
             var options = q.QuestionOptionQuestionNavigations
                 .OrderBy(o => o.Label)
                 .Select(o => new AttemptReviewOption(o.OptionId, o.Label, o.Text, o.IsCorrect, o.Rationale))
@@ -691,7 +697,7 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
 
             reviewQuestions.Add(new AttemptReviewQuestion(
                 q.QuestionId,
-                q.DisplayOrder,
+                displayOrder,
                 questions.Count,
                 q.SectionId,
                 q.Section.Code,
@@ -713,7 +719,7 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
 
             navigator.Add(new ReviewNavigatorItem(
                 q.QuestionId,
-                q.DisplayOrder,
+                displayOrder,
                 q.SectionId,
                 q.Section.Code,
                 EnumCodes.Parse<Modality>(q.Section.Modality),

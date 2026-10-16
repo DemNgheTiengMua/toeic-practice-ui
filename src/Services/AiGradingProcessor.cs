@@ -165,6 +165,7 @@ public sealed class AiGradingProcessor(
                     totalScore += clampedScore;
                 }
 
+                fr.Status = FreeResponseStatus.Graded.ToCode();
                 grading.Status = AiGradingStatus.Done.ToCode();
                 grading.CompletedAt = DateTimeOffset.UtcNow;
                 grading.Model = result.Model ?? FakeAiGrader.DefaultModel;

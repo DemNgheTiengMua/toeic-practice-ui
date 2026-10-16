@@ -571,15 +571,153 @@
 .progress__bar--warning { background: var(--sign-gold); }
 .progress__bar--success { background: var(--sign-green); }
 
-/* ===== Audio (Listening exam screen) ===== */
+/* ===== Exam Audio Player ("Bảng hiệu phòng thi" Design Language) ===== */
 .exam-audio {
-  display: flex; align-items: center; gap: var(--space-4);
-  padding: var(--space-4);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
   background: var(--color-surface);
   border: var(--keyline) solid var(--ink);
   border-radius: 0;
+  box-shadow: none;
+  width: 100%;
 }
-.exam-audio__status { font-size: var(--text-sm); color: var(--color-text-muted); }
+.exam-audio__native {
+  display: none !important;
+}
+.exam-audio__btn-play {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-width: 96px;
+  height: 38px;
+  padding: 0 var(--space-3);
+  background: var(--ink);
+  color: #ffffff !important;
+  border: var(--keyline) solid var(--ink);
+  border-radius: 0;
+  font-family: var(--font-sign);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-sign);
+  cursor: pointer;
+  transition: none;
+  flex-shrink: 0;
+}
+.exam-audio__btn-play:hover:not(:disabled) {
+  background: var(--sign-blue);
+  border-color: var(--sign-blue);
+  color: #ffffff !important;
+}
+.exam-audio__btn-play:disabled,
+.exam-audio__btn-play.disabled {
+  background: var(--color-track);
+  border-color: var(--color-border);
+  color: var(--color-text-muted) !important;
+  cursor: not-allowed;
+}
+.exam-audio__badge {
+  font-family: var(--font-sign);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: var(--tracking-sign);
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 0;
+  flex-shrink: 0;
+}
+.exam-audio__center {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.exam-audio__progress {
+  height: 10px;
+  background: var(--color-track);
+  border: 1px solid var(--color-border);
+  border-radius: 0;
+  overflow: hidden;
+  pointer-events: none; /* Strictly no scrubbing/seeking */
+  cursor: default;
+}
+.exam-audio__bar {
+  height: 100%;
+  background: var(--sign-blue);
+  width: 0%;
+  transition: width 150ms linear;
+  border-radius: 0;
+}
+.exam-audio__meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: var(--text-xs);
+  gap: var(--space-2);
+}
+.exam-audio__status {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.exam-audio__timer {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--color-text);
+  white-space: nowrap;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+}
+.exam-audio__volume {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-shrink: 0;
+}
+.exam-audio__btn-mute {
+  padding: var(--space-1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 0;
+}
+.exam-audio__slider {
+  width: 65px;
+  height: 6px;
+  appearance: none;
+  background: var(--color-track);
+  border: 1px solid var(--color-border);
+  border-radius: 0;
+  outline: none;
+}
+.exam-audio__slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 12px;
+  height: 14px;
+  background: var(--ink);
+  border-radius: 0;
+  cursor: pointer;
+}
+.exam-audio__slider::-moz-range-thumb {
+  width: 12px;
+  height: 14px;
+  background: var(--ink);
+  border-radius: 0;
+  cursor: pointer;
+}
+.exam-audio-card {
+  border-radius: 0;
+  box-shadow: none;
+  border: var(--keyline) solid var(--ink);
+}
 
 /* ===== Sidebar nav ===== */
 /* Painted tabs. The active tab is a solid ink block with white caps — inverted,

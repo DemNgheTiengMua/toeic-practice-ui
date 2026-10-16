@@ -367,7 +367,6 @@
   "365": "FixedAuthentication",
   "366": "IPaymentGateway",
   "367": "Booking",
-  "368": "LearningPathViewModels.cs",
   "369": "Extra Efficiency Companion",
   "370": "ProfileDto",
   "371": "HttpContext",
@@ -378,12 +377,8 @@
   "376": "EnumMapping",
   "377": "DispatchProxyStub",
   "378": "Imports.cshtml",
-  "379": "ScoreConversionDtos.cs",
   "380": "ITempDataProvider",
   "381": ".Index",
-  "382": "AdminExamSectionAudioDto",
   "383": "AuthErrorCodes.cs",
-  "384": ".SaveAttemptAnswerAsync",
-  "385": "Roles.cs",
   "386": "ClaudeOptions.cs"
 }

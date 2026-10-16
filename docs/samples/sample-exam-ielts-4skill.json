@@ -1,0 +1,223 @@
+{
+  "version": "1.0",
+  "exam": {
+    "title": "IELTS Academic Mock Test Form 01 (Text Ingest)",
+    "purpose": "mock",
+    "durationMinutes": 150,
+    "sourceName": "Cambridge Academic Model",
+    "description": "Academic test package covering Reading, Writing Task 1-2, and Speaking interview prompts."
+  },
+  "sections": [
+    {
+      "sectionCode": "PAS",
+      "groups": [
+        {
+          "displayOrder": 1,
+          "passage": "Urban Microclimates and Green Canopy Effects:\nModern metropolises frequently experience the urban heat island effect, wherein asphalt and concrete structures absorb solar radiation during daylight hours and release thermal energy after dusk. Recent observational studies in Singapore demonstrate that increasing urban canopy coverage to 40 percent reduces ambient surface temperatures by an average of 3.2 degrees Celsius.",
+          "audioFile": null,
+          "audioStartMs": null,
+          "audioEndMs": null,
+          "imageFile": null,
+          "imageAlt": null,
+          "transcript": null,
+          "questions": [
+            {
+              "displayOrder": 1,
+              "stem": "What temperature reduction was achieved with 40 percent urban canopy coverage?",
+              "difficultyLevel": 3,
+              "questionType": "mcq",
+              "categoryCode": "ielts_detail",
+              "explanation": "The text states an average reduction of 3.2 degrees Celsius.",
+              "hint": "Check the numerical data in the final sentence.",
+              "options": [
+                {
+                  "label": "A",
+                  "text": "3.2 degrees Celsius",
+                  "isCorrect": true,
+                  "rationale": "Directly matches stated observational study."
+                },
+                {
+                  "label": "B",
+                  "text": "4.0 degrees Celsius",
+                  "isCorrect": false,
+                  "rationale": "40 percent was canopy coverage, not temperature reduction."
+                },
+                {
+                  "label": "C",
+                  "text": "1.5 degrees Celsius",
+                  "isCorrect": false,
+                  "rationale": "Not mentioned in the passage."
+                },
+                {
+                  "label": "D",
+                  "text": "5.0 degrees Celsius",
+                  "isCorrect": false,
+                  "rationale": "Not supported by text."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "sectionCode": "T1",
+      "groups": [
+        {
+          "displayOrder": 2,
+          "passage": "The table below provides figures on international tourism expenditures in billions of USD across five countries between 2020 and 2025.",
+          "audioFile": null,
+          "audioStartMs": null,
+          "audioEndMs": null,
+          "imageFile": null,
+          "imageAlt": null,
+          "transcript": null,
+          "questions": [
+            {
+              "displayOrder": 1,
+              "stem": "Summarise the information by selecting and reporting the main features, and make comparisons where relevant.",
+              "difficultyLevel": 4,
+              "questionType": "free_response",
+              "categoryCode": null,
+              "prepSeconds": null,
+              "responseSeconds": 1200,
+              "minWords": 150,
+              "maxWords": 220,
+              "explanation": "Provide a clear overview, highlight highest and lowest expenditures, and compare trends across periods.",
+              "hint": "Ensure you include an overview paragraph summarizing the general trend.",
+              "criteria": [
+                {
+                  "code": "TR"
+                },
+                {
+                  "code": "CC"
+                },
+                {
+                  "code": "LR"
+                },
+                {
+                  "code": "GRA"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "sectionCode": "T2",
+      "groups": [
+        {
+          "displayOrder": 3,
+          "passage": null,
+          "audioFile": null,
+          "audioStartMs": null,
+          "audioEndMs": null,
+          "imageFile": null,
+          "imageAlt": null,
+          "transcript": null,
+          "questions": [
+            {
+              "displayOrder": 1,
+              "stem": "In many countries, an increasing number of young people choose to study abroad rather than attending domestic universities. Do the advantages of this trend outweigh the disadvantages?",
+              "difficultyLevel": 4,
+              "questionType": "free_response",
+              "categoryCode": null,
+              "prepSeconds": null,
+              "responseSeconds": 2400,
+              "minWords": 250,
+              "maxWords": 400,
+              "explanation": "Discuss cultural exposure and quality education vs expenses and homesickness, stating a clear thesis throughout.",
+              "hint": "Structure into Introduction, Advantage paragraph, Disadvantage paragraph, and Opinionated Conclusion.",
+              "criteria": [
+                {
+                  "code": "TR"
+                },
+                {
+                  "code": "CC"
+                },
+                {
+                  "code": "LR"
+                },
+                {
+                  "code": "GRA"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "sectionCode": "INT",
+      "groups": [
+        {
+          "displayOrder": 4,
+          "passage": null,
+          "audioFile": null,
+          "audioStartMs": null,
+          "audioEndMs": null,
+          "imageFile": null,
+          "imageAlt": null,
+          "transcript": null,
+          "questions": [
+            {
+              "displayOrder": 1,
+              "stem": "Part 1 (Interview): Let's talk about daily routines. What time do you usually wake up, and how do you like to start your morning?",
+              "difficultyLevel": 3,
+              "questionType": "free_response",
+              "categoryCode": null,
+              "prepSeconds": 15,
+              "responseSeconds": 45,
+              "minWords": null,
+              "maxWords": null,
+              "explanation": "Answer with natural fluency, varied sentence structures, and appropriate time markers.",
+              "hint": "Mention morning habits like exercise, coffee, or planning the day.",
+              "criteria": [
+                {
+                  "code": "FC"
+                },
+                {
+                  "code": "LR"
+                },
+                {
+                  "code": "GRA"
+                },
+                {
+                  "code": "PRON"
+                }
+              ]
+            },
+            {
+              "displayOrder": 2,
+              "stem": "Part 2 (Cue Card): Describe an invention that has significantly changed people's daily lives. You should say: what the invention is, when you first used it, how it benefits society, and explain whether all changes brought by it are positive.",
+              "difficultyLevel": 4,
+              "questionType": "free_response",
+              "categoryCode": null,
+              "prepSeconds": 60,
+              "responseSeconds": 120,
+              "minWords": null,
+              "maxWords": null,
+              "explanation": "Deliver a continuous 2-minute speech covering all points with sophisticated vocabulary and cohesive devices.",
+              "hint": "Address advantages and possible negative side effects (e.g. smartphones, internet).",
+              "criteria": [
+                {
+                  "code": "FC"
+                },
+                {
+                  "code": "LR"
+                },
+                {
+                  "code": "GRA"
+                },
+                {
+                  "code": "PRON"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

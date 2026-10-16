@@ -119,15 +119,12 @@
           <!-- Audio player if present -->
           @if (!string.IsNullOrEmpty(q.AudioPath))
           {
-            <div class="card mb-3">
-              <div class="card__body p-3">
-                <div class="row row--between mb-2">
-                  <span class="badge badge--info">AUDIO</span>
-                  <span class="text-xs text-muted">Replay this question</span>
-                </div>
-                <audio controls src="@q.AudioPath" class="audio-player"></audio>
-              </div>
-            </div>
+            @await Html.PartialAsync("_ExamAudioPlayer", new ExamAudioPlayerModel(
+                AudioPath: q.AudioPath,
+                AllowReplay: true,
+                SectionTitle: "Review Question Audio",
+                BadgeText: "READY"
+            ))
           }
 
           <!-- Passage if present -->

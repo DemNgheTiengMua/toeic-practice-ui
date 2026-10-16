@@ -4,44 +4,60 @@
     ViewData["Description"] = "Confirm the email address on your extra efficient account.";
 }
 
-<div class="container stack" style="padding-top: var(--space-6); padding-bottom: var(--space-8); max-width: 480px">
-  <h1 class="m-0 mb-1">Verify your email</h1>
+<div class="container" style="padding-top: var(--space-6); padding-bottom: var(--space-8)">
+  <div class="grid-2">
+    <div class="stack">
+      <h1 class="m-0 mb-1">Verify your email</h1>
 
-  <div class="card">
-    <div class="card__body">
-      @if (Model.Verified == true)
-      {
-        <div class="state-block" role="status">
-          <div class="state-block__icon state-block__icon--success" aria-hidden="true">OK</div>
-          <div class="state-block__title">Email verified</div>
-          <p class="state-block__desc">Thanks. Your account is fully active, and buying credits is unlocked.</p>
-          <a class="btn btn--primary" href="/dashboard">Go to your dashboard</a>
+      <div class="card">
+        <div class="card__body">
+          @if (Model.Verified == true)
+          {
+            <div class="state-block" role="status">
+              <div class="state-block__icon state-block__icon--success" aria-hidden="true">OK</div>
+              <div class="state-block__title">Email verified</div>
+              <p class="state-block__desc">Thanks. Your account is fully active, and buying credits is unlocked.</p>
+              <a class="btn btn--primary" href="/dashboard">Go to your dashboard</a>
+            </div>
+          }
+          else if (Model.Verified == false)
+          {
+            <div class="state-block" role="alert">
+              <div class="state-block__icon state-block__icon--danger" aria-hidden="true">!</div>
+              <div class="state-block__title">This link no longer works</div>
+              <p class="state-block__desc">
+                Activation links work once and expire after 24 hours. Sign in and use
+                <strong>Resend email</strong> on your dashboard for a fresh one.
+              </p>
+              <a class="btn" href="/dashboard">Go to your dashboard</a>
+            </div>
+          }
+          else
+          {
+            @* The token is consumed by this POST, not by opening the link: mail scanners prefetch links. *@
+            <form method="post" asp-action="VerifyEmail" class="stack">
+              @Html.AntiForgeryToken()
+              <input type="hidden" asp-for="Token">
+              <p class="no-margin">Confirm that this is your email address.</p>
+              <div>
+                <button type="submit" class="btn btn--primary btn--lg w-100" style="width: 100%">Verify my email</button>
+              </div>
+            </form>
+          }
         </div>
-      }
-      else if (Model.Verified == false)
-      {
-        <div class="state-block" role="alert">
-          <div class="state-block__icon state-block__icon--danger" aria-hidden="true">!</div>
-          <div class="state-block__title">This link no longer works</div>
-          <p class="state-block__desc">
-            Activation links work once and expire after 24 hours. Sign in and use
-            <strong>Resend email</strong> on your dashboard for a fresh one.
-          </p>
-          <a class="btn" href="/dashboard">Go to your dashboard</a>
-        </div>
-      }
-      else
-      {
-        @* The token is consumed by this POST, not by opening the link: mail scanners prefetch links. *@
-        <form method="post" asp-action="VerifyEmail" class="stack">
-          @Html.AntiForgeryToken()
-          <input type="hidden" asp-for="Token">
-          <p class="no-margin">Confirm that this is your email address.</p>
-          <div>
-            <button type="submit" class="btn btn--primary btn--lg">Verify my email</button>
-          </div>
-        </form>
-      }
+      </div>
     </div>
+
+    <aside class="card">
+      <div class="card__header"><strong>Why verify your email?</strong></div>
+      <div class="card__body stack">
+        <ol class="stack--tight m-0" style="padding-left: var(--space-5)">
+          <li>Unlocks <strong>credit purchasing</strong> and full mock exams.</li>
+          <li>Enables password reset links if you ever forget your password.</li>
+          <li>Receives AI grading reports and mentor booking confirmations.</li>
+        </ol>
+        <p class="text-xs text-muted no-margin">Need help? Contact support if you did not receive an email.</p>
+      </div>
+    </aside>
   </div>
 </div>

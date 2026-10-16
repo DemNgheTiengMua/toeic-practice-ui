@@ -185,9 +185,12 @@ else
 
               @if (!string.IsNullOrEmpty(item.AudioPath))
               {
-                <div class="mb-3">
-                  <audio controls src="@item.AudioPath" class="w-100"></audio>
-                </div>
+                @await Html.PartialAsync("_ExamAudioPlayer", new ExamAudioPlayerModel(
+                    AudioPath: item.AudioPath,
+                    AllowReplay: true,
+                    SectionTitle: "Saved Question Audio",
+                    BadgeText: "READY"
+                ))
               }
 
               <div class="option-list" aria-label="Answer options">

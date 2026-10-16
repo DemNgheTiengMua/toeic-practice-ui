@@ -44,33 +44,38 @@ Mọi view trong hệ thống đều tuân thủ phong cách thiết kế **"B�
 
 ## 3. Checklist chi tiết theo từng cụm (Clusters)
 
-### [ ] Cụm 0: Móng nhà & Khung Layout dùng chung (Bảo đảm tính nhất quán toàn cục)
+### [x] Cụm 0: Móng nhà & Khung Layout dùng chung (Bảo đảm tính nhất quán toàn cục)
 
-- [ ] Đồng bộ CSS từ `prototype/assets/css/` sang `src/WebMVC/wwwroot/css/`:
+- [x] Đồng bộ CSS từ `prototype/assets/css/` sang `src/WebMVC/wwwroot/css/`:
   - `tokens.css`: Hệ màu, spacing, typography variables.
-  - `base.css`: CSS reset, font stacks, layout grid.
+  - `base.css`: CSS reset, font stacks, layout grid, app-topbar band.
   - `components.css`: Buttons, badges, placards, tables, alerts, inputs.
-- [ ] Chuẩn hóa [`src/WebMVC/Views/Shared/_LearnerLayout.cshtml`](./src/WebMVC/Views/Shared/_LearnerLayout.cshtml) theo `prototype/student/dashboard.html`:
+  - `landing.css`: Landing page stylesheet for hero, preview, certificates, steps, features, cta.
+- [x] Chuẩn hóa [`src/WebMVC/Views/Shared/_LearnerLayout.cshtml`](./src/WebMVC/Views/Shared/_LearnerLayout.cshtml) theo `prototype/student/dashboard.html`:
   - `app-topbar`: Logo "extra efficient", Badge số dư credit, Button nạp credit, Thông tin tài khoản & Sign out.
   - `app-sidebar`: Cấu trúc `nav-list`, nhóm menu (`nav-list__group`), trạng thái `is-active`, SVG icons.
   - `context-bar`: Thanh trạng thái sticky (Certificate đang chọn, Target band, Progress %).
-- [ ] Chuẩn hóa [`src/WebMVC/Views/Shared/_AdminLayout.cshtml`](./src/WebMVC/Views/Shared/_AdminLayout.cshtml) theo `prototype/admin/dashboard.html`:
+- [x] Chuẩn hóa [`src/WebMVC/Views/Shared/_AdminLayout.cshtml`](./src/WebMVC/Views/Shared/_AdminLayout.cshtml) theo `prototype/admin/dashboard.html`:
   - `app-topbar`: Admin area badge, email, Sign out.
   - `app-sidebar`: Overview, Content, Users & revenue, Public site.
-- [ ] Chuẩn hóa [`src/WebMVC/Views/Shared/_Layout.cshtml`](./src/WebMVC/Views/Shared/_Layout.cshtml) cho Public / Auth.
+- [x] Chuẩn hóa [`src/WebMVC/Views/Shared/_Layout.cshtml`](./src/WebMVC/Views/Shared/_Layout.cshtml) cho Public / Auth:
+  - `app-shell`, `app-topbar` navy signage band, `app-main`.
 
 ---
 
-### [ ] Cụm 1: Public & Auth Flows
+### [x] Cụm 1: Public & Auth Flows
 
 | Razor View (`src/WebMVC/Views/`) | Prototype File (`prototype/`) | Trạng thái |
 | :------------------------------- | :---------------------------- | :--------: |
-| `Home/Index.cshtml`              | `landing.html`                |    [ ]     |
-| `Certificates/Index.cshtml`      | `certificates.html`           |    [ ]     |
-| `Pricing/Index.cshtml`           | `payment/pricing.html`        |    [ ]     |
-| `Auth/SignIn.cshtml`             | `auth/signin.html`            |    [ ]     |
-| `Auth/Register.cshtml`           | `auth/register.html`          |    [ ]     |
-| `Auth/Locked.cshtml`             | `auth/locked.html`            |    [ ]     |
+| `Home/Index.cshtml`              | `landing.html`                |    [x]     |
+| `Certificates/Index.cshtml`      | `certificates.html`           |    [x]     |
+| `Pricing/Index.cshtml`           | `payment/pricing.html`        |    [x]     |
+| `Auth/SignIn.cshtml`             | `auth/login.html`             |    [x]     |
+| `Auth/Register.cshtml`           | `auth/register.html`          |    [x]     |
+| `Auth/ForgotPassword.cshtml`     | `auth/forgot-password.html`   |    [x]     |
+| `Auth/ResetPassword.cshtml`      | `auth/reset-password`         |    [x]     |
+| `Auth/VerifyEmail.cshtml`        | `auth/verify-email`           |    [x]     |
+| `Auth/Denied.cshtml`             | `auth/denied`                 |    [x]     |
 
 ---
 

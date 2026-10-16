@@ -14,23 +14,24 @@ public sealed class SpeechSuperAiGrader : IAiGrader
 {
     private readonly ISpeechSuperClient _speechSuperClient;
     private readonly IFileStore _fileStore;
-    private readonly FakeAiGrader _fallbackGrader;
+    private readonly IAiGrader _writtenGrader;
 
     public SpeechSuperAiGrader(
         ISpeechSuperClient speechSuperClient,
-        IFileStore fileStore)
+        IFileStore fileStore,
+        ClaudeAiGrader? writtenGrader = null)
     {
         _speechSuperClient = speechSuperClient;
         _fileStore = fileStore;
-        _fallbackGrader = new FakeAiGrader();
+        _writtenGrader = (IAiGrader?)writtenGrader ?? new FakeAiGrader();
     }
 
     public async Task<AiGradingResult> GradeAsync(AiGradingRequest request, CancellationToken cancellationToken = default)
     {
-        // For written responses (no AudioPath), use fallback
+        // For written responses (no AudioPath), delegate to Claude AI grader
         if (string.IsNullOrEmpty(request.AudioPath))
         {
-            return await _fallbackGrader.GradeAsync(request, cancellationToken);
+            return await _writtenGrader.GradeAsync(request, cancellationToken);
         }
 
         // Retrieve audio stream from file store

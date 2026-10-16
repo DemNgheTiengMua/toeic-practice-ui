@@ -545,8 +545,8 @@
     "semantic_hash": "a1e0ec747b63abe2941b00c6252f53a5"
   },
   "src/WebAPI/Program.cs": {
-    "mtime": 1792143630.7963486,
-    "ast_hash": "67cc063affc0240e9da38497c0bc9603",
+    "mtime": 1792167606.8112288,
+    "ast_hash": "c8ab665bc3148dcf3dc9c53a37050acc",
     "semantic_hash": ""
   },
   "src/WebAPI/Properties/launchSettings.json": {
@@ -655,38 +655,38 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Auth/Denied.cshtml": {
-    "mtime": 1791893045.494413,
-    "ast_hash": "4dd25ce7b5c7f970fb1e54fde3d8d0a3",
+    "mtime": 1792161528.8962963,
+    "ast_hash": "89677823ee28e173cf4be8854974c396",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Auth/ForgotPassword.cshtml": {
-    "mtime": 1791951576.0030718,
-    "ast_hash": "7b5f4a2f823d4a5412f33ce0f94350de",
-    "semantic_hash": "7b5f4a2f823d4a5412f33ce0f94350de"
+    "mtime": 1792161451.9852693,
+    "ast_hash": "1b7188721f16d69c2361a59634d7de97",
+    "semantic_hash": ""
   },
   "src/WebMVC/Views/Auth/Register.cshtml": {
-    "mtime": 1791894598.699321,
-    "ast_hash": "897b3b8c530ab1d943fc45eba6f9faa2",
+    "mtime": 1792161429.9766438,
+    "ast_hash": "48185f4f1a60d570ec3d77a75b620a73",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Auth/ResetPassword.cshtml": {
-    "mtime": 1791951576.0030718,
-    "ast_hash": "657ca2d5b24af08fd6e91dda80cf0409",
-    "semantic_hash": "657ca2d5b24af08fd6e91dda80cf0409"
+    "mtime": 1792161459.752824,
+    "ast_hash": "40c4c8f7883aeb9fd2d7a761a65eda08",
+    "semantic_hash": ""
   },
   "src/WebMVC/Views/Auth/SignIn.cshtml": {
-    "mtime": 1791951576.0040781,
-    "ast_hash": "ae0988d2f11a16ec7cfb3cd18ca945f9",
-    "semantic_hash": "ae0988d2f11a16ec7cfb3cd18ca945f9"
+    "mtime": 1792161418.3380659,
+    "ast_hash": "1113e2d92ad6678bd28ac62d8fa9574d",
+    "semantic_hash": ""
   },
   "src/WebMVC/Views/Auth/VerifyEmail.cshtml": {
-    "mtime": 1791951576.0050771,
-    "ast_hash": "81cb630fc83ba6b8d1889bf5bee31da3",
-    "semantic_hash": "81cb630fc83ba6b8d1889bf5bee31da3"
+    "mtime": 1792161467.7350953,
+    "ast_hash": "07fdbbc279b4c79941ef03cba1474ed1",
+    "semantic_hash": ""
   },
   "src/WebMVC/Views/Certificates/Index.cshtml": {
-    "mtime": 1791891118.0962462,
-    "ast_hash": "a1111711016b56483fe03d3c2273907c",
+    "mtime": 1792161562.2303593,
+    "ast_hash": "00592cf0592960dde5d3197f1bf0b894",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Certificates/Unavailable.cshtml": {
@@ -700,24 +700,24 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Home/Index.cshtml": {
-    "mtime": 1791891118.5656228,
-    "ast_hash": "e17165d164f8829205784304afe411c1",
+    "mtime": 1792161334.3243372,
+    "ast_hash": "0aadfcd2be88cb0722adc77cedc92730",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Profile/Index.cshtml": {
-    "mtime": 1791911427.774366,
-    "ast_hash": "782f8adb49c9e78c1dfcc488946cfa1d",
+    "mtime": 1792161506.0164514,
+    "ast_hash": "fb010e6d433b2296b1a49300b1b2dbb2",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Profile/Password.cshtml": {
-    "mtime": 1791911428.186009,
-    "ast_hash": "d351652c3ed2cbffac89ba4afc2e2a7e",
+    "mtime": 1792161514.7108543,
+    "ast_hash": "6a3c8447a179cf7889823cb52cda0059",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Shared/Error.cshtml": {
-    "mtime": 1791830483.9073899,
-    "ast_hash": "939096be653d41fb8a147fb4ff36bfb5",
-    "semantic_hash": "939096be653d41fb8a147fb4ff36bfb5"
+    "mtime": 1792161538.55511,
+    "ast_hash": "b5c885a820cd2e237d25bb3157295b35",
+    "semantic_hash": ""
   },
   "src/WebMVC/Views/Shared/LearnerUnavailable.cshtml": {
     "mtime": 1791951576.006079,
@@ -725,13 +725,13 @@
     "semantic_hash": "2e9f84f99fb4aacc053772beee3719b1"
   },
   "src/WebMVC/Views/Shared/_Layout.cshtml": {
-    "mtime": 1791970157.3465462,
-    "ast_hash": "3b28ed93c2b90d5478de334c53a8765a",
+    "mtime": 1792166979.2975814,
+    "ast_hash": "2df4c718a23462ae1c884661fdbbbb67",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Shared/_LearnerLayout.cshtml": {
-    "mtime": 1792157907.8910575,
-    "ast_hash": "919f46ebbc5df36a3b85c1032b19495c",
+    "mtime": 1792166963.5160606,
+    "ast_hash": "7a7f8f5d97306ece2d4a2affff396083",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/_ViewImports.cshtml": {
@@ -1316,8 +1316,8 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Practice/Take.cshtml": {
-    "mtime": 1792158392.3354044,
-    "ast_hash": "8e52ad52e22c956ed3836e973ce00600",
+    "mtime": 1792166915.030024,
+    "ast_hash": "689ff8945e744a208f32559259afa2b2",
     "semantic_hash": ""
   },
   "tests/Services.Tests/PracticeServiceTests.cs": {
@@ -1381,13 +1381,13 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/SavedQuestions/Index.cshtml": {
-    "mtime": 1792158556.16179,
-    "ast_hash": "b3d7f5c6b447566a4027c8ae2f1d5b02",
+    "mtime": 1792166956.5296257,
+    "ast_hash": "3221ce92411ce917a1c2e12d9a363054",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/SavedQuestions/Review.cshtml": {
-    "mtime": 1792158574.5264642,
-    "ast_hash": "a30e75753ace401dcf88c11fc6a61035",
+    "mtime": 1792166948.5006678,
+    "ast_hash": "3a344d14412b9f5df75002567d52f7b8",
     "semantic_hash": ""
   },
   "tests/Services.Tests/SavedQuestionServiceTests.cs": {
@@ -1646,8 +1646,8 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Exams/Take.cshtml": {
-    "mtime": 1792157979.3331115,
-    "ast_hash": "fffd3a89d0036db9b45b48cff70add6b",
+    "mtime": 1792166844.872888,
+    "ast_hash": "0789e83832cadd324f455adf4db04ab7",
     "semantic_hash": ""
   },
   "tests/Services.Tests/MockExamServiceTests.cs": {
@@ -1661,8 +1661,8 @@
     "semantic_hash": ""
   },
   "tests/Services.Tests/PayOsPaymentGatewayTests.cs": {
-    "mtime": 1792023972.870168,
-    "ast_hash": "4e849a3d17ad0e81a8efe406b9dc43c1",
+    "mtime": 1792165454.0460494,
+    "ast_hash": "dcb7debd2effc3b4f86f67c2fee84eae",
     "semantic_hash": ""
   },
   "docs/payments/payos-tunnel-guide.md": {
@@ -1766,8 +1766,8 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Exams/Review.cshtml": {
-    "mtime": 1792158137.9590163,
-    "ast_hash": "472b400368bdbc9ec00926643bd2d310",
+    "mtime": 1792166940.7955983,
+    "ast_hash": "8c2c10c3c0b5485d320a3ac094e10fd9",
     "semantic_hash": ""
   },
   "tests/Services.Tests/ScoreConversionServiceTests.cs": {
@@ -1991,8 +1991,8 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Speaking/Review.cshtml": {
-    "mtime": 1792158511.6353712,
-    "ast_hash": "f4a516b3457502152d70e02596cddfc0",
+    "mtime": 1792168536.9791698,
+    "ast_hash": "ae63e880419bee19dabf2110e8b7d71c",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Speaking/Take.cshtml": {
@@ -2116,8 +2116,8 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Placement/Take.cshtml": {
-    "mtime": 1792158021.337528,
-    "ast_hash": "2ecd927d6c4dcb7baf84037baf2ae800",
+    "mtime": 1792166883.2468257,
+    "ast_hash": "0eabbcf170a89fc68e700f80acb55c3d",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Placement/TargetBand.cshtml": {
@@ -2426,13 +2426,13 @@
     "semantic_hash": ""
   },
   "src/Services/SpeechSuper/SpeechSuperAiGrader.cs": {
-    "mtime": 1792128016.4697149,
-    "ast_hash": "0cbe09ee354e3f92d262c620ed7f769e",
+    "mtime": 1792167059.4402921,
+    "ast_hash": "f0ffc51b04d7f3159889a1f8ea126a73",
     "semantic_hash": ""
   },
   "src/Services/SpeechSuper/SpeechSuperClient.cs": {
-    "mtime": 1792127996.4768715,
-    "ast_hash": "ee82d4149a6fe1093c06996110c11b06",
+    "mtime": 1792169952.093916,
+    "ast_hash": "b61845a82a5101967171e94f359b8d22",
     "semantic_hash": ""
   },
   "src/Services/SpeechSuper/SpeechSuperOptions.cs": {
@@ -2501,13 +2501,13 @@
     "semantic_hash": ""
   },
   "tests/Services.Tests/QuestionImportServiceTests.cs": {
-    "mtime": 1792136716.389045,
-    "ast_hash": "899a5e03a900c8228e2b70c5ee5e9ef3",
+    "mtime": 1792162321.8999472,
+    "ast_hash": "aabcec16d64ac0f0bc9f7ce2621364c0",
     "semantic_hash": ""
   },
   "src/Services/AiGradingProcessor.cs": {
-    "mtime": 1792139461.1384265,
-    "ast_hash": "0f8dc42341f2af22c0ebfb3e9e36098d",
+    "mtime": 1792167586.7956083,
+    "ast_hash": "49d8120e4e37cf4b9a601917415e8ce5",
     "semantic_hash": ""
   },
   "src/Services/ClaudeOptions.cs": {
@@ -2561,8 +2561,8 @@
     "semantic_hash": ""
   },
   "src/Services/AttemptEngine.cs": {
-    "mtime": 1792143666.1944747,
-    "ast_hash": "56da0301f61820cac17eaf758e9ff9e7",
+    "mtime": 1792169670.735427,
+    "ast_hash": "5a88c34c86d2f7273cac1aa653cbeafd",
     "semantic_hash": ""
   },
   "tests/Services.Tests/AttemptEngineTests.cs": {
@@ -2596,8 +2596,168 @@
     "semantic_hash": ""
   },
   "UI_STANDARDIZATION_PLAN.md": {
-    "mtime": 1792150016.8271668,
-    "ast_hash": "be0c6d3949947c2338c5f88e27913062",
+    "mtime": 1792161703.8410795,
+    "ast_hash": "f2f337259b609e3baed9f48739de549c",
+    "semantic_hash": ""
+  },
+  "docs/samples/sample-exam-ielts-4skill.json": {
+    "mtime": 1792165837.6517837,
+    "ast_hash": "61c74316c563c04d7e5ecfc0ec170914",
+    "semantic_hash": ""
+  },
+  "docs/samples/sample-exam-toeic-2skill.json": {
+    "mtime": 1792165837.648986,
+    "ast_hash": "06f556c88086e919ab2938cc569d269e",
+    "semantic_hash": ""
+  },
+  "scratch/test_prompt.py": {
+    "mtime": 1792167735.3631034,
+    "ast_hash": "18bc667ae7b54415749b5ebf2315bf07",
+    "semantic_hash": ""
+  },
+  "scratch/test_speechsuper.py": {
+    "mtime": 1792168330.3138633,
+    "ast_hash": "dcbbab2113edbfbe2110b318284fec5c",
+    "semantic_hash": ""
+  },
+  "scripts/build_sample_packages.py": {
+    "mtime": 1792165832.601956,
+    "ast_hash": "0494ead3c7a3ba4f5e5f0e8b03063acb",
+    "semantic_hash": ""
+  },
+  "scripts/generate_demo_audio.py": {
+    "mtime": 1792164951.3663213,
+    "ast_hash": "a1e1d02a87148bd0a3e82824fb2c7ce8",
+    "semantic_hash": ""
+  },
+  "scripts/send_test_webhook.py": {
+    "mtime": 1792165422.2894692,
+    "ast_hash": "c7bfd0a5867d35691e5555308bb3a4fe",
+    "semantic_hash": ""
+  },
+  "src/Services/Claude/ClaudeAiGrader.cs": {
+    "mtime": 1792167777.5577846,
+    "ast_hash": "d33b2e33b2e8f3c7cc4449bc9ffc1a56",
+    "semantic_hash": ""
+  },
+  "src/Services/Claude/ClaudeAiInsightGenerator.cs": {
+    "mtime": 1792168639.814507,
+    "ast_hash": "b4a90086496c792270165bc459ed1ad6",
+    "semantic_hash": ""
+  },
+  "src/Services/Claude/ClaudeClient.cs": {
+    "mtime": 1792167770.8394418,
+    "ast_hash": "7e6db40e5509793449e12673841f10c8",
+    "semantic_hash": ""
+  },
+  "src/WebMVC/Models/ExamAudioPlayerModel.cs": {
+    "mtime": 1792168508.9238107,
+    "ast_hash": "8b02266692dbba9d86a94bab8df5ba99",
+    "semantic_hash": ""
+  },
+  "src/WebMVC/Views/Shared/_ExamAudioPlayer.cshtml": {
+    "mtime": 1792168513.3444395,
+    "ast_hash": "a5efca85283985eceb3eaf000163c1ea",
+    "semantic_hash": ""
+  },
+  "src/WebMVC/wwwroot/js/exam-audio.js": {
+    "mtime": 1792166645.9438238,
+    "ast_hash": "884844dd999238ceaca53f43b3152e62",
+    "semantic_hash": ""
+  },
+  "App_Data/audio/imports/2/ef23c0f50f4d41808cb02706f8dfedf6.jpg": {
+    "mtime": 1792165843.3930726,
+    "ast_hash": "6145b45a08d83d0375713d76dd622a13",
+    "semantic_hash": ""
+  },
+  "App_Data/audio/imports/3/0a8eeb58c1c5487b806ef1e287b6595b.png": {
+    "mtime": 1792165860.2090762,
+    "ast_hash": "bf2b97d8351aa217100ec405ede9d512",
+    "semantic_hash": ""
+  },
+  "App_Data/audio/attempts/7/q_25_31ee907bda844071aff2857ed71cf264.mp3": {
+    "mtime": 1792168016.9604082,
+    "ast_hash": "e35a522b03697ac540846b421d915c71",
+    "semantic_hash": ""
+  },
+  "App_Data/audio/attempts/7/q_26_6aa4dbd87ad146168342840b4d1ccb4a.mp3": {
+    "mtime": 1792168016.9904523,
+    "ast_hash": "e35a522b03697ac540846b421d915c71",
+    "semantic_hash": ""
+  },
+  "App_Data/audio/imports/2/0646dbec6e5a46689e50afc39d1cf116.wav": {
+    "mtime": 1792165843.3925488,
+    "ast_hash": "800ea34119b791a1be054aafd09fc896",
+    "semantic_hash": ""
+  },
+  "App_Data/audio/imports/2/2ddef8e95064401c976274938384f156.wav": {
+    "mtime": 1792165843.3941116,
+    "ast_hash": "800ea34119b791a1be054aafd09fc896",
+    "semantic_hash": ""
+  },
+  "App_Data/audio/imports/2/d2e6015fd8ff4eb1a944c43ce66b23de.wav": {
+    "mtime": 1792165843.394789,
+    "ast_hash": "800ea34119b791a1be054aafd09fc896",
+    "semantic_hash": ""
+  },
+  "App_Data/audio/imports/3/e53e5188127049dc9d1a884587f93b93.wav": {
+    "mtime": 1792165860.2085493,
+    "ast_hash": "800ea34119b791a1be054aafd09fc896",
+    "semantic_hash": ""
+  },
+  "src/WebMVC/wwwroot/audio/ielts/cambridge18-t1-listening.mp3": {
+    "mtime": 1792164955.2787018,
+    "ast_hash": "e35a522b03697ac540846b421d915c71",
+    "semantic_hash": ""
+  },
+  "src/WebMVC/wwwroot/audio/ielts/placement-diagnostic.mp3": {
+    "mtime": 1792164955.2787018,
+    "ast_hash": "e35a522b03697ac540846b421d915c71",
+    "semantic_hash": ""
+  },
+  "src/WebMVC/wwwroot/audio/toeic/placement-p1.mp3": {
+    "mtime": 1792164955.2770784,
+    "ast_hash": "e35a522b03697ac540846b421d915c71",
+    "semantic_hash": ""
+  },
+  "src/WebMVC/wwwroot/audio/toeic/placement-p2.mp3": {
+    "mtime": 1792164955.2770784,
+    "ast_hash": "e35a522b03697ac540846b421d915c71",
+    "semantic_hash": ""
+  },
+  "src/WebMVC/wwwroot/audio/toeic/placement-quick.mp3": {
+    "mtime": 1792164955.2787018,
+    "ast_hash": "e35a522b03697ac540846b421d915c71",
+    "semantic_hash": ""
+  },
+  "src/WebMVC/wwwroot/audio/toeic/test1-p1.mp3": {
+    "mtime": 1792164955.2787018,
+    "ast_hash": "e35a522b03697ac540846b421d915c71",
+    "semantic_hash": ""
+  },
+  "src/WebMVC/wwwroot/audio/toeic/test1-p2.mp3": {
+    "mtime": 1792164955.2787018,
+    "ast_hash": "e35a522b03697ac540846b421d915c71",
+    "semantic_hash": ""
+  },
+  "src/WebMVC/wwwroot/audio/toeic/test1-p3.mp3": {
+    "mtime": 1792164955.2787018,
+    "ast_hash": "e35a522b03697ac540846b421d915c71",
+    "semantic_hash": ""
+  },
+  "src/WebMVC/wwwroot/audio/toeic/test1-p4.mp3": {
+    "mtime": 1792164955.2787018,
+    "ast_hash": "e35a522b03697ac540846b421d915c71",
+    "semantic_hash": ""
+  },
+  "src/WebMVC/wwwroot/audio/vstep/placement-diagnostic.mp3": {
+    "mtime": 1792164955.281829,
+    "ast_hash": "e35a522b03697ac540846b421d915c71",
+    "semantic_hash": ""
+  },
+  "src/WebMVC/wwwroot/audio/vstep/sample1-listening.mp3": {
+    "mtime": 1792164955.281829,
+    "ast_hash": "e35a522b03697ac540846b421d915c71",
     "semantic_hash": ""
   }
 }

@@ -3,8 +3,17 @@
     ViewData["Description"] = "This page needs a different role.";
 }
 
-<div class="container stack" style="padding-top: var(--space-6); padding-bottom: var(--space-8); max-width: 480px">
-  <h1 class="m-0 mb-1">Not allowed</h1>
-  <p class="text-muted no-margin">This page needs an administrator account. If you think that's wrong, sign out and back in.</p>
-  <div><a class="btn btn--primary" href="/">Back home</a></div>
+<div class="container" style="padding-top: var(--space-6); padding-bottom: var(--space-8); max-width: 560px">
+  <div class="card">
+    <div class="card__body">
+      <div class="state-block" role="alert">
+        <div class="state-block__icon state-block__icon--danger" aria-hidden="true">!</div>
+        <div class="state-block__title">Access restricted</div>
+        <p class="state-block__desc">
+          This area requires administrator privileges. If you believe this is an error, try signing out and signing in with an administrative account.
+        </p>
+        <a class="btn btn--primary" href="/">Return to home</a>
+      </div>
+    </div>
+  </div>
 </div>

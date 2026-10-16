@@ -1,0 +1,203 @@
+{
+  "version": "1.0",
+  "exam": {
+    "title": "TOEIC Reading Mock Form A (Text Ingest)",
+    "purpose": "mock",
+    "durationMinutes": 75,
+    "sourceName": "ETS Reading Sample 2026",
+    "description": "Standard Reading evaluation covering Part 5, Part 6, and Part 7."
+  },
+  "sections": [
+    {
+      "sectionCode": "P5",
+      "groups": [
+        {
+          "displayOrder": 1,
+          "passage": null,
+          "audioFile": null,
+          "audioStartMs": null,
+          "audioEndMs": null,
+          "imageFile": null,
+          "imageAlt": null,
+          "transcript": null,
+          "questions": [
+            {
+              "displayOrder": 1,
+              "stem": "The regional sales conference will commence promptly _____ 9:00 AM in the Grand Ballroom.",
+              "difficultyLevel": 2,
+              "questionType": "mcq",
+              "categoryCode": "grammar_prep",
+              "explanation": "The preposition 'at' is used before precise clock times.",
+              "hint": "Identify the preposition used for specific hours.",
+              "options": [
+                {
+                  "label": "A",
+                  "text": "at",
+                  "isCorrect": true,
+                  "rationale": "Correct preposition for clock times (at 9:00 AM)."
+                },
+                {
+                  "label": "B",
+                  "text": "on",
+                  "isCorrect": false,
+                  "rationale": "'On' is used with specific days or dates, not clock times."
+                },
+                {
+                  "label": "C",
+                  "text": "in",
+                  "isCorrect": false,
+                  "rationale": "'In' is used with months, years, or long periods."
+                },
+                {
+                  "label": "D",
+                  "text": "for",
+                  "isCorrect": false,
+                  "rationale": "'For' indicates duration, not starting point."
+                }
+              ]
+            },
+            {
+              "displayOrder": 2,
+              "stem": "Ms. Reynolds has _____ submitted her finalized quarterly expense report to accounting.",
+              "difficultyLevel": 2,
+              "questionType": "mcq",
+              "categoryCode": "grammar_pos",
+              "explanation": "An adverb is required between the auxiliary 'has' and past participle 'submitted'.",
+              "hint": "Choose the adverb modifying the verb.",
+              "options": [
+                {
+                  "label": "A",
+                  "text": "already",
+                  "isCorrect": true,
+                  "rationale": "'Already' fits between auxiliary and past participle."
+                },
+                {
+                  "label": "B",
+                  "text": "ready",
+                  "isCorrect": false,
+                  "rationale": "Adjective cannot modify the verb phrase here."
+                },
+                {
+                  "label": "C",
+                  "text": "readiness",
+                  "isCorrect": false,
+                  "rationale": "Noun cannot occupy this adverbial position."
+                },
+                {
+                  "label": "D",
+                  "text": "readily",
+                  "isCorrect": false,
+                  "rationale": "Semantically awkward in this context compared to 'already'."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "sectionCode": "P6",
+      "groups": [
+        {
+          "displayOrder": 2,
+          "passage": "To All Branch Employees:\nPlease be advised that the annual IT security audit will take place next Monday. All staff members must update their workstation passwords before Friday afternoon. Anyone experiencing technical difficulties should contact the helpdesk immediately.",
+          "audioFile": null,
+          "audioStartMs": null,
+          "audioEndMs": null,
+          "imageFile": null,
+          "imageAlt": null,
+          "transcript": null,
+          "questions": [
+            {
+              "displayOrder": 1,
+              "stem": "What action are employees required to take before Friday?",
+              "difficultyLevel": 3,
+              "questionType": "mcq",
+              "categoryCode": "reading_vocab",
+              "explanation": "The memo instructs all staff members to update their workstation passwords before Friday.",
+              "hint": "Look for the sentence containing 'Friday afternoon'.",
+              "options": [
+                {
+                  "label": "A",
+                  "text": "Update their workstation passwords",
+                  "isCorrect": true,
+                  "rationale": "Directly stated in the notice."
+                },
+                {
+                  "label": "B",
+                  "text": "Attend a mandatory security lecture",
+                  "isCorrect": false,
+                  "rationale": "No lecture is mentioned."
+                },
+                {
+                  "label": "C",
+                  "text": "Submit new hardware requisitions",
+                  "isCorrect": false,
+                  "rationale": "Not referenced in the text."
+                },
+                {
+                  "label": "D",
+                  "text": "Install operating system patches manually",
+                  "isCorrect": false,
+                  "rationale": "Password update is the only stated requirement."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "sectionCode": "P7",
+      "groups": [
+        {
+          "displayOrder": 3,
+          "passage": "GREENWAY LOGISTICS ANNOUNCEMENT\nGreenway Logistics is pleased to announce the opening of our new distribution center in Da Nang. This 50,000-square-meter facility features automated sorting and temperature-controlled storage, allowing us to reduce delivery times across Central Vietnam by up to 35 percent. Customer service inquiries should be routed through our regional hotline.",
+          "audioFile": null,
+          "audioStartMs": null,
+          "audioEndMs": null,
+          "imageFile": null,
+          "imageAlt": null,
+          "transcript": null,
+          "questions": [
+            {
+              "displayOrder": 1,
+              "stem": "What is the primary benefit of the new Da Nang facility?",
+              "difficultyLevel": 3,
+              "questionType": "mcq",
+              "categoryCode": "reading_inference",
+              "explanation": "The announcement states delivery times across Central Vietnam will be reduced by up to 35%.",
+              "hint": "Check the percentage reduction stated in the second sentence.",
+              "options": [
+                {
+                  "label": "A",
+                  "text": "Faster shipping across Central Vietnam",
+                  "isCorrect": true,
+                  "rationale": "Directly matches 'reduce delivery times by up to 35 percent'."
+                },
+                {
+                  "label": "B",
+                  "text": "Lower warehouse rental fees for partners",
+                  "isCorrect": false,
+                  "rationale": "No rental pricing is discussed."
+                },
+                {
+                  "label": "C",
+                  "text": "Immediate international flight connections",
+                  "isCorrect": false,
+                  "rationale": "The facility is a domestic distribution center."
+                },
+                {
+                  "label": "D",
+                  "text": "Expanded customer hotline operating hours",
+                  "isCorrect": false,
+                  "rationale": "Customer hotline is mentioned, but hours are not changed."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

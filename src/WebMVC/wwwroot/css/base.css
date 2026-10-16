@@ -108,15 +108,19 @@ a { color: var(--color-primary); text-underline-offset: 3px; }
      band and the title read as one signage system. */
   border-bottom: calc(var(--keyline) * 2) solid var(--sign-gold);
 }
-.app-topbar a { color: #ffffff; }
+.app-topbar a { color: #ffffff; text-decoration: none; }
+.app-topbar a:hover { text-decoration: underline; }
 /* The brand is lettered like the signs under it, not set as body text. Only the
    direct brand mark: the exam screens' test title lives in a group and keeps
    its own size. */
 .app-topbar > strong,
+.app-topbar a > strong,
 .app-topbar__lead > strong {
   font-family: var(--font-sign); font-size: var(--text-xl); font-weight: 700;
   text-transform: uppercase; letter-spacing: var(--tracking-sign);
   line-height: 1;
+  color: #ffffff;
+  text-decoration: none;
 }
 /* The global focus ring is sign-blue, which vanishes on the sign-blue band. */
 .app-topbar :focus-visible { outline-color: var(--sign-gold); }

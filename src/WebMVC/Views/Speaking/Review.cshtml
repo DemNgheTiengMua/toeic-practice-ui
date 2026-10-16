@@ -132,11 +132,14 @@
 
           @if (!string.IsNullOrEmpty(lowest.AudioPath))
           {
-            <div class="exam-audio text-left" style="max-width: 480px; margin: var(--space-2) 0">
-              <span class="badge badge--muted">Question @lowest.DisplayOrder</span>
-              <div style="flex: 1 1 auto">
-                <audio controls src="/speaking/audio/@r.AttemptId/@lowest.QuestionId" class="w-100"></audio>
-              </div>
+            <div class="mb-3" style="max-width: 540px;">
+              @await Html.PartialAsync("_ExamAudioPlayer", new ExamAudioPlayerModel(
+                  AudioPath: $"/speaking/audio/{r.AttemptId}/{lowest.QuestionId}",
+                  AllowReplay: true,
+                  SectionTitle: $"Question {lowest.DisplayOrder} Recording",
+                  BadgeText: "RECORDING",
+                  PlayerId: $"exam-audio-lowest-{lowest.QuestionId}"
+              ))
             </div>
           }
 
@@ -182,15 +185,14 @@
 
             @if (!string.IsNullOrEmpty(q.AudioPath))
             {
-              <div class="exam-audio text-left" style="max-width: 520px; margin: var(--space-2) 0">
-                <span class="badge badge--muted">Recording</span>
-                <div style="flex: 1 1 auto">
-                  <audio id="audio-q-@q.QuestionId" controls src="/speaking/audio/@r.AttemptId/@q.QuestionId" class="w-100"></audio>
-                </div>
-                @if (q.DurationMs.HasValue)
-                {
-                  <span class="text-xs text-muted">@Math.Round((double)q.DurationMs.Value / 1000)s</span>
-                }
+              <div class="mb-3" style="max-width: 540px;">
+                @await Html.PartialAsync("_ExamAudioPlayer", new ExamAudioPlayerModel(
+                    AudioPath: $"/speaking/audio/{r.AttemptId}/{q.QuestionId}",
+                    AllowReplay: true,
+                    SectionTitle: $"Question {q.DisplayOrder} Recording",
+                    BadgeText: "RECORDING",
+                    PlayerId: $"exam-audio-q-{q.QuestionId}"
+                ))
               </div>
             }
 
@@ -235,10 +237,11 @@
 
 <script>
   function playAudio(questionId) {
-    const el = document.getElementById('audio-q-' + questionId);
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      el.play();
+    const container = document.getElementById('exam-audio-q-' + questionId);
+    if (container) {
+      container.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const btn = container.querySelector('.exam-audio__btn-play');
+      if (btn) btn.click();
     }
   }
 </script>

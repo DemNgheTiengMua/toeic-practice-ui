@@ -50,15 +50,12 @@
           <div class="stack">
             @if (!string.IsNullOrEmpty(q.AudioPath))
             {
-              <div class="card mb-3">
-                <div class="card__body">
-                  <div class="row row--between mb-2">
-                    <span class="badge badge--info">AUDIO</span>
-                    <span class="text-xs text-muted">Listen carefully — audio plays once</span>
-                  </div>
-                  <audio controls src="@q.AudioPath" class="audio-player"></audio>
-                </div>
-              </div>
+              @await Html.PartialAsync("_ExamAudioPlayer", new ExamAudioPlayerModel(
+                  AudioPath: q.AudioPath,
+                  AllowReplay: false,
+                  SectionTitle: "Listening Audio",
+                  BadgeText: "READY"
+              ))
             }
 
             @if (!string.IsNullOrEmpty(q.Passage))
@@ -299,7 +296,7 @@
     (function () {
       var attemptId = @take.AttemptId;
       var questionId = @q.QuestionId;
-      var expiresAt = new Date('@take.ExpiresAt.ToString("O")').getTime();
+      var expiresAt = @take.ExpiresAt.ToUnixTimeMilliseconds();
       var csrfToken = document.querySelector('#anti-forgery-holder input[name="__RequestVerificationToken"]').value;
 
       var saveStatus = document.getElementById('save-status');
@@ -475,5 +472,6 @@
       });
     })();
   </script>
+  <script src="~/js/exam-audio.js"></script>
 </body>
 </html>

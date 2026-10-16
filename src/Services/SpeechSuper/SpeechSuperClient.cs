@@ -148,29 +148,84 @@ public sealed class SpeechSuperClient : ISpeechSuperClient
 
         var textJson = JsonSerializer.Serialize(textPayload);
 
-        using var content = new MultipartFormDataContent();
-        content.Add(new StringContent(textJson, Encoding.UTF8, "application/json"), "text");
-
+        if (audioStream.CanSeek) audioStream.Position = 0;
         using var memoryStream = new MemoryStream();
         await audioStream.CopyToAsync(memoryStream, cancellationToken);
         var audioBytes = memoryStream.ToArray();
 
-        var audioContent = new ByteArrayContent(audioBytes);
-        audioContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
         var sanitizedType = string.IsNullOrWhiteSpace(audioType) ? "wav" : audioType.TrimStart('.').ToLowerInvariant();
-        content.Add(audioContent, "audio", $"audio.{sanitizedType}");
+        var boundary = $"----WebKitFormBoundary{Guid.NewGuid():N}";
+
+        using var postStream = new MemoryStream();
+        var textHeader = Encoding.UTF8.GetBytes($"--{boundary}\r\nContent-Disposition: form-data; name=\"text\"\r\nContent-Type: application/json\r\n\r\n");
+        await postStream.WriteAsync(textHeader, cancellationToken);
+        var textData = Encoding.UTF8.GetBytes(textJson);
+        await postStream.WriteAsync(textData, cancellationToken);
+        await postStream.WriteAsync(Encoding.UTF8.GetBytes("\r\n"), cancellationToken);
+
+        var audioHeader = Encoding.UTF8.GetBytes($"--{boundary}\r\nContent-Disposition: form-data; name=\"audio\"; filename=\"audio.{sanitizedType}\"\r\nContent-Type: application/octet-stream\r\n\r\n");
+        await postStream.WriteAsync(audioHeader, cancellationToken);
+        await postStream.WriteAsync(audioBytes, cancellationToken);
+        await postStream.WriteAsync(Encoding.UTF8.GetBytes("\r\n"), cancellationToken);
+
+        var endBoundary = Encoding.UTF8.GetBytes($"--{boundary}--\r\n");
+        await postStream.WriteAsync(endBoundary, cancellationToken);
 
         var requestUrl = $"{_options.BaseUrl.TrimEnd('/')}/{_options.CoreType}";
-        using var requestMessage = new HttpRequestMessage(HttpMethod.Post, requestUrl)
-        {
-            Content = content
-        };
+        using var requestMessage = new HttpRequestMessage(HttpMethod.Post, requestUrl);
+        var byteContent = new ByteArrayContent(postStream.ToArray());
+        byteContent.Headers.TryAddWithoutValidation("Content-Type", $"multipart/form-data; boundary={boundary}");
+        requestMessage.Content = byteContent;
         requestMessage.Headers.Add("Request-Index", "0");
+
+        _logger?.LogInformation("Calling SpeechSuper {Url} with audio size {Size} bytes ({Type})", requestUrl, audioBytes.Length, sanitizedType);
 
         try
         {
             var response = await _httpClient.SendAsync(requestMessage, cancellationToken);
             var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
+
+            _logger?.LogInformation("SpeechSuper HTTP status {StatusCode}, body length {Len}", response.StatusCode, responseBody.Length);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger?.LogError("SpeechSuper API returned HTTP {StatusCode}: {Body}", response.StatusCode, responseBody);
+                try
+                {
+                    using var errDoc = JsonDocument.Parse(responseBody);
+                    var errRoot = errDoc.RootElement;
+                    if (errRoot.TryGetProperty("errId", out var pErrId))
+                    {
+                        var parsedErrId = pErrId.GetInt32();
+                        var parsedErrMsg = errRoot.TryGetProperty("error", out var pErr) ? pErr.GetString() : responseBody;
+                        return new SpeechSuperAssessmentResult(
+                            Success: false,
+                            ErrorMessage: parsedErrMsg,
+                            ErrId: parsedErrId,
+                            Transcription: null,
+                            OverallScore: null,
+                            PronunciationScore: null,
+                            FluencyScore: null,
+                            GrammarScore: null,
+                            VocabularyScore: null,
+                            RelevanceScore: null,
+                            RawResponseJson: responseBody);
+                    }
+                }
+                catch { }
+
+                return new SpeechSuperAssessmentResult(
+                    Success: false,
+                    ErrorMessage: $"SpeechSuper returned HTTP {(int)response.StatusCode}: {responseBody}",
+                    ErrId: (int)response.StatusCode,
+                    Transcription: null,
+                    OverallScore: null,
+                    PronunciationScore: null,
+                    FluencyScore: null,
+                    GrammarScore: null,
+                    VocabularyScore: null,
+                    RelevanceScore: null);
+            }
 
             using var doc = JsonDocument.Parse(responseBody);
             var root = doc.RootElement;

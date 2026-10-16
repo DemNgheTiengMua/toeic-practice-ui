@@ -43,3 +43,8 @@ graphify-out/202*/
 .env.*
 !.env.example
 
+# Runtime uploads and agent scratch
+App_Data/
+scratch/
+
+

@@ -4,40 +4,76 @@
     ViewData["Description"] = "Sign in to extra efficient.";
 }
 
-<div class="container stack" style="padding-top: var(--space-6); padding-bottom: var(--space-8); max-width: 480px">
-  <h1 class="m-0 mb-1">Sign in</h1>
-  <p class="text-muted no-margin">Pick up where you left off.</p>
+<div class="container" style="padding-top: var(--space-6); padding-bottom: var(--space-8)">
+  <div class="grid-2">
+    <div class="stack">
+      <h1 class="m-0 mb-1">Sign in</h1>
+      <p class="text-muted no-margin">Pick up where you left off.</p>
 
-  <form method="post" asp-action="SignIn" class="card">
-    <div class="card__body stack">
       @if (!string.IsNullOrEmpty(Model.Notice))
       {
         <div class="alert alert--success" role="status">@Model.Notice</div>
       }
       @if (!string.IsNullOrEmpty(Model.FormError))
       {
-        <p class="text-danger no-margin" role="alert">@Model.FormError</p>
+        <div class="alert alert--danger" role="alert">@Model.FormError</div>
       }
-      @Html.AntiForgeryToken()
-      <input type="hidden" asp-for="ReturnUrl">
 
-      <div>
-        <label asp-for="Email"></label>
-        <input asp-for="Email" autocomplete="email">
-        <span asp-validation-for="Email" class="text-danger"></span>
-      </div>
+      <form method="post" asp-action="SignIn" class="card">
+        <div class="card__body stack">
+          @Html.AntiForgeryToken()
+          <input type="hidden" asp-for="ReturnUrl">
 
-      <div>
-        <label asp-for="Password"></label>
-        <input asp-for="Password" autocomplete="current-password">
-        <span asp-validation-for="Password" class="text-danger"></span>
-        <p class="text-sm no-margin"><a href="/auth/forgot-password">Forgot password?</a></p>
-      </div>
+          <div class="field">
+            <label class="field__label" asp-for="Email">Email</label>
+            <input class="field__input" asp-for="Email" type="email" autocomplete="email" placeholder="you@example.com" required>
+            <span asp-validation-for="Email" class="field__error"></span>
+          </div>
 
-      <div>
-        <button type="submit" class="btn btn--primary btn--lg">Sign in</button>
-      </div>
-      <p class="text-sm text-muted no-margin">No account yet? <a href="/auth/register@(string.IsNullOrEmpty(Model.ReturnUrl) ? "" : $"?returnUrl={Uri.EscapeDataString(Model.ReturnUrl)}")">Register</a> — it's free.</p>
+          <div class="field">
+            <label class="field__label" asp-for="Password">Password</label>
+            <input class="field__input" asp-for="Password" type="password" autocomplete="current-password" required>
+            <span asp-validation-for="Password" class="field__error"></span>
+            <p class="field__hint">
+              <a href="/auth/forgot-password">Forgot your password?</a>
+            </p>
+          </div>
+
+          <label class="row" style="gap: var(--space-2); align-items: center; cursor: pointer">
+            <input type="checkbox" id="login-remember">
+            <span class="text-sm">Keep me signed in</span>
+          </label>
+        </div>
+
+        <div class="card__footer stack">
+          <button type="submit" class="btn btn--primary btn--lg w-100" style="width: 100%">
+            Sign in
+          </button>
+          <p class="text-sm text-muted m-0 text-center">
+            No account yet? <a href="/auth/register@(string.IsNullOrEmpty(Model.ReturnUrl) ? "" : $"?returnUrl={Uri.EscapeDataString(Model.ReturnUrl)}")">Sign up</a> — it's free.
+          </p>
+        </div>
+      </form>
     </div>
-  </form>
+
+    <aside class="card">
+      <div class="card__header"><strong>What is free and what costs credits</strong></div>
+      <div class="card__body stack">
+        <table class="table">
+          <caption class="visually-hidden">The actions in the app and what each one costs</caption>
+          <thead><tr><th scope="col">Action</th><th scope="col">Cost</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">Placement exam</th><td><span class="badge badge--success">Free</span></td></tr>
+            <tr><th scope="row">Practice, listening and reading</th><td><span class="badge badge--success">Free</span></td></tr>
+            <tr><th scope="row">Weakness analysis</th><td><span class="badge badge--success">Free</span></td></tr>
+            <tr><th scope="row">Start a mock exam</th><td>1 credit</td></tr>
+            <tr><th scope="row">AI grading of speaking or writing</th><td>1 credit</td></tr>
+            <tr><th scope="row">Book a mentor session</th><td>1 credit</td></tr>
+            <tr><th scope="row">Premium learning path</th><td>5 credits</td></tr>
+          </tbody>
+        </table>
+        <p class="text-xs text-muted no-margin">Credits do not expire. Start with the free tools and buy credits only when you want a mock exam or a graded answer.</p>
+      </div>
+    </aside>
+  </div>
 </div>
