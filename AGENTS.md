@@ -35,6 +35,11 @@ The backend is a .NET 10 solution (`ExtraEfficiency.slnx`) structured in six str
    - Sessions exceeding the limit, along with their answer logs, hint records, and attached insights/recommendations, are automatically pruned FIFO.
    - Learning-path practice sessions (`LearnerPathStepId IS NOT NULL`) are never pruned.
    - Unanswered in-progress sessions are cleaned up immediately when starting a new session; partially answered ones are marked `abandoned`.
+6. **Free-Response AI Grading Seam (`docs/adr/0008-ai-grading-processor-seam.md`)**:
+   - `IAiGradingProcessor` is the sole owner of asynchronous AI grading queue processing (`IX_AiGradings_Queue`).
+   - `WritingPracticeService` and `SpeakingPracticeService` orchestrate learner attempt lifecycles (start, save draft/audio, submit, review) and do not poll or process queues.
+   - `SpeakingPracticeService` and `WritingPracticeService` are completely decoupled; neither service references or depends on the other.
+   - The queue worker `AiGradingBackgroundService` resolves `IAiGradingProcessor` directly.
 
 ---
 

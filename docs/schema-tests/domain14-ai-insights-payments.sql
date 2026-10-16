@@ -91,7 +91,7 @@ END CATCH
 -- ============ ADR-0004: AiInsights ============
 -- accept: a dashboard insight names no source
 INSERT INTO AiInsights (UserId,CertId,Scope,Status,Narrative,Trend,Model,SourceFingerprint,CompletedAt)
-  VALUES (@u,@c,'dashboard','done',N'Reading is up; Part 5 slipped.','improving','claude-sonnet-5-5',
+  VALUES (@u,@c,'dashboard','done',N'Reading is up; Part 5 slipped.','improving','claude-sonnet-3.7',
           REPLICATE('a',64),SYSDATETIMEOFFSET());
 DECLARE @ins INT=SCOPE_IDENTITY();
 PRINT 'stored a dashboard insight as expected';

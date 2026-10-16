@@ -15,13 +15,14 @@ public sealed class WritingPracticeServiceTests(DatabaseFixture database)
 {
     private static string Unique(string prefix) => $"{prefix}{Guid.NewGuid():N}"[..20];
 
-    private (WritingPracticeService service, LearnerService learners, FakeAiGrader grader) CreateServices(IAiGrader? customGrader = null)
+    private (WritingPracticeService service, LearnerService learners, AiGradingProcessor gradingProcessor, FakeAiGrader grader) CreateServices(IAiGrader? customGrader = null)
     {
         var db = DbContextFactory.Create(database.ConnectionString);
         var learners = new LearnerService(db);
         var grader = new FakeAiGrader();
-        var service = new WritingPracticeService(db, learners, customGrader ?? grader);
-        return (service, learners, grader);
+        var gradingProcessor = new AiGradingProcessor(db, customGrader ?? grader);
+        var service = new WritingPracticeService(db, learners);
+        return (service, learners, gradingProcessor, grader);
     }
 
     private async Task<int> SeedLearnerAsync(string? activeCertCode = null, int startingCredits = 0)
@@ -116,7 +117,7 @@ public sealed class WritingPracticeServiceTests(DatabaseFixture database)
         var certCode = Unique("WR01");
         var (_, examId, _, _) = await SeedWritingExamFixtureAsync(certCode);
         var userId = await SeedLearnerAsync(certCode, startingCredits: 0);
-        var (service, _, _) = CreateServices();
+        var (service, _, _, _) = CreateServices();
 
         var ex = await Assert.ThrowsAsync<WritingPracticeException>(() => service.StartAttemptAsync(userId, examId));
         Assert.Equal(WritingPracticeException.InsufficientCredits, ex.Code);
@@ -132,7 +133,7 @@ public sealed class WritingPracticeServiceTests(DatabaseFixture database)
         var certCode = Unique("WR02");
         var (_, examId, q1Id, q2Id) = await SeedWritingExamFixtureAsync(certCode);
         var userId = await SeedLearnerAsync(certCode, startingCredits: 5);
-        var (service, _, _) = CreateServices();
+        var (service, _, _, _) = CreateServices();
 
         var info = await service.StartAttemptAsync(userId, examId);
         Assert.True(info.AttemptId > 0);
@@ -159,7 +160,7 @@ public sealed class WritingPracticeServiceTests(DatabaseFixture database)
         var certCode = Unique("WR03");
         var (_, examId, q1Id, _) = await SeedWritingExamFixtureAsync(certCode);
         var userId = await SeedLearnerAsync(certCode, startingCredits: 3);
-        var (service, _, _) = CreateServices();
+        var (service, _, _, _) = CreateServices();
 
         var info = await service.StartAttemptAsync(userId, examId);
         var saveResult = await service.SaveDraftAsync(userId, info.AttemptId, q1Id, "A woman is reading a book near the window.");
@@ -181,7 +182,7 @@ public sealed class WritingPracticeServiceTests(DatabaseFixture database)
         var certCode = Unique("WR04");
         var (_, examId, q1Id, q2Id) = await SeedWritingExamFixtureAsync(certCode);
         var userId = await SeedLearnerAsync(certCode, startingCredits: 3);
-        var (service, _, _) = CreateServices();
+        var (service, _, _, _) = CreateServices();
 
         var info = await service.StartAttemptAsync(userId, examId);
         await service.SaveDraftAsync(userId, info.AttemptId, q1Id, "A woman is reading a book near the window.");
@@ -221,14 +222,14 @@ public sealed class WritingPracticeServiceTests(DatabaseFixture database)
         var certCode = Unique("WR05");
         var (_, examId, q1Id, q2Id) = await SeedWritingExamFixtureAsync(certCode);
         var userId = await SeedLearnerAsync(certCode, startingCredits: 2);
-        var (service, _, _) = CreateServices();
+        var (service, _, gradingProcessor, _) = CreateServices();
 
         var info = await service.StartAttemptAsync(userId, examId);
         await service.SaveDraftAsync(userId, info.AttemptId, q1Id, "A woman is reading a book near the window.");
         await service.SaveDraftAsync(userId, info.AttemptId, q2Id, "In my opinion, working from home provides greater flexibility and boosts personal productivity significantly.");
         await service.SubmitAttemptAsync(userId, info.AttemptId);
 
-        var processed = await service.ProcessPendingGradingsAsync();
+        var processed = await gradingProcessor.ProcessPendingGradingsAsync();
         Assert.True(processed >= 2);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
@@ -255,7 +256,7 @@ public sealed class WritingPracticeServiceTests(DatabaseFixture database)
         var certCode = Unique("WR06");
         var (_, examId, q1Id, _) = await SeedWritingExamFixtureAsync(certCode);
         var userId = await SeedLearnerAsync(certCode, startingCredits: 2);
-        var (service, _, _) = CreateServices();
+        var (service, _, gradingProcessor, _) = CreateServices();
 
         var info = await service.StartAttemptAsync(userId, examId);
         // Include simulate_fail marker to trigger failure in FakeAiGrader
@@ -263,7 +264,7 @@ public sealed class WritingPracticeServiceTests(DatabaseFixture database)
         await service.SubmitAttemptAsync(userId, info.AttemptId);
 
         // Process pending -> should fail
-        await service.ProcessPendingGradingsAsync();
+        await gradingProcessor.ProcessPendingGradingsAsync();
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
         var failedGrading = await db.AiGradings.Include(g => g.FreeResponse).SingleAsync(g => g.FreeResponse.AttemptId == info.AttemptId && g.FreeResponse.QuestionId == q1Id);
@@ -298,13 +299,13 @@ public sealed class WritingPracticeServiceTests(DatabaseFixture database)
         var certCode = Unique("WR07");
         var (_, examId, q1Id, q2Id) = await SeedWritingExamFixtureAsync(certCode);
         var userId = await SeedLearnerAsync(certCode, startingCredits: 3);
-        var (service, _, _) = CreateServices();
+        var (service, _, gradingProcessor, _) = CreateServices();
 
         var info = await service.StartAttemptAsync(userId, examId);
         await service.SaveDraftAsync(userId, info.AttemptId, q1Id, "A woman is reading a book near the window.");
         await service.SaveDraftAsync(userId, info.AttemptId, q2Id, "In my opinion, working from home provides greater flexibility and boosts personal productivity significantly.");
         await service.SubmitAttemptAsync(userId, info.AttemptId);
-        await service.ProcessPendingGradingsAsync();
+        await gradingProcessor.ProcessPendingGradingsAsync();
 
         var review = await service.GetAttemptReviewAsync(userId, info.AttemptId);
 

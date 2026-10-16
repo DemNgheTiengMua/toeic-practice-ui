@@ -709,9 +709,7 @@ public sealed class MentorServiceTests(DatabaseFixture database)
         var learners = new LearnerService(dbSetup);
         var tempDir = Path.Combine(Path.GetTempPath(), "extra_eff_audio_" + Guid.NewGuid().ToString("N"));
         var fileStore = new LocalFileStore(tempDir);
-        var grader = new FakeAiGrader();
-        var writingService = new WritingPracticeService(dbSetup, learners, grader);
-        var speakingService = new SpeakingPracticeService(dbSetup, learners, fileStore, writingService);
+        var speakingService = new SpeakingPracticeService(dbSetup, learners, fileStore);
 
         var service = new MentorService(dbSetup, _clock, learners, speakingService);
 
@@ -825,9 +823,7 @@ public sealed class MentorServiceTests(DatabaseFixture database)
         var learners = new LearnerService(dbSetup);
         var tempDir = Path.Combine(Path.GetTempPath(), "extra_eff_audio_" + Guid.NewGuid().ToString("N"));
         var fileStore = new LocalFileStore(tempDir);
-        var grader = new FakeAiGrader();
-        var writingService = new WritingPracticeService(dbSetup, learners, grader);
-        var speakingService = new SpeakingPracticeService(dbSetup, learners, fileStore, writingService);
+        var speakingService = new SpeakingPracticeService(dbSetup, learners, fileStore);
 
         var service = new MentorService(dbSetup, _clock, learners, speakingService);
 

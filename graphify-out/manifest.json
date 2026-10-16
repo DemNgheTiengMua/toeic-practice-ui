@@ -90,8 +90,8 @@
     "semantic_hash": "18b70ddec05121e60ed01c445e114532"
   },
   "docs/schema-tests/domain14-ai-insights-payments.sql": {
-    "mtime": 1791748552.3361242,
-    "ast_hash": "a27e5a637271aa739ff7f9ccf7a09d25",
+    "mtime": 1792140565.3866115,
+    "ast_hash": "bb0c6c958162bbd504abe99a80e9d47c",
     "semantic_hash": ""
   },
   "docs/schema-tests/lib.sql": {
@@ -545,8 +545,8 @@
     "semantic_hash": "a1e0ec747b63abe2941b00c6252f53a5"
   },
   "src/WebAPI/Program.cs": {
-    "mtime": 1792134757.4218445,
-    "ast_hash": "6ba1fe428d0cb68e91f4f691960e9fdf",
+    "mtime": 1792140531.3488083,
+    "ast_hash": "a10ee854f412a0108c8a0fcd1bf3fa8d",
     "semantic_hash": ""
   },
   "src/WebAPI/Properties/launchSettings.json": {
@@ -565,8 +565,8 @@
     "semantic_hash": "804b473502a4c415cf75db61c56c32aa"
   },
   "src/WebAPI/appsettings.json": {
-    "mtime": 1792032595.3741424,
-    "ast_hash": "8aada109b034e021f02c2d8f6f4c1e00",
+    "mtime": 1792140497.087617,
+    "ast_hash": "18633a8eee8ece649dabec95a4b6baf3",
     "semantic_hash": ""
   },
   "src/WebMVC/Controllers/AdminController.cs": {
@@ -886,8 +886,8 @@
     "semantic_hash": ""
   },
   "docs/adr/0005-ai-providers-azure-speech-and-claude-proxy.md": {
-    "mtime": 1792127817.7699373,
-    "ast_hash": "9aa5b6f02cfc7b7e4cbd8823312894be",
+    "mtime": 1792140555.7550516,
+    "ast_hash": "be4556734768b6200982eb26ef29d1b1",
     "semantic_hash": ""
   },
   "docs/agents/domain.md": {
@@ -1341,8 +1341,8 @@
     "semantic_hash": ""
   },
   "AGENTS.md": {
-    "mtime": 1792127843.436351,
-    "ast_hash": "b54f70fc0fce2f1f3e8c63de3cd41de8",
+    "mtime": 1792140605.3685484,
+    "ast_hash": "25159865b29a3ff40daad921e95255ad",
     "semantic_hash": ""
   },
   "src/DataAccess/CompanionDbContext.Practice.cs": {
@@ -1876,13 +1876,13 @@
     "semantic_hash": ""
   },
   "src/Services/WritingPracticeService.cs": {
-    "mtime": 1792037358.9976323,
-    "ast_hash": "35de501a89290579e024e75d87eeda99",
+    "mtime": 1792139484.5272472,
+    "ast_hash": "28bf7fd0a56f507958c3f7a4e357030f",
     "semantic_hash": ""
   },
   "src/WebAPI/AiGradingBackgroundService.cs": {
-    "mtime": 1792027359.5604675,
-    "ast_hash": "796b917f2376f2cd68e3b75ebe0e8885",
+    "mtime": 1792139515.2932403,
+    "ast_hash": "6f7ed3a49905366c74789918ad557e41",
     "semantic_hash": ""
   },
   "src/WebAPI/Endpoints/WritingEndpoints.cs": {
@@ -1926,8 +1926,8 @@
     "semantic_hash": ""
   },
   "tests/Services.Tests/WritingPracticeServiceTests.cs": {
-    "mtime": 1792027359.5658665,
-    "ast_hash": "f54ad5755262ee059a673b43a010b349",
+    "mtime": 1792139710.57706,
+    "ast_hash": "6659c7922156f609a531fa12a7d4d48c",
     "semantic_hash": ""
   },
   "tests/WebMVC.Tests/WritingControllerTests.cs": {
@@ -1956,8 +1956,8 @@
     "semantic_hash": ""
   },
   "src/Services/SpeakingPracticeService.cs": {
-    "mtime": 1792039747.4694462,
-    "ast_hash": "0f460ff61db6f98584dbd73fdc25d066",
+    "mtime": 1792139504.0775428,
+    "ast_hash": "3e14926bcc9fa32134f720d2d8d3325d",
     "semantic_hash": ""
   },
   "src/WebAPI/Endpoints/SpeakingEndpoints.cs": {
@@ -2001,8 +2001,8 @@
     "semantic_hash": ""
   },
   "tests/Services.Tests/SpeakingPracticeServiceTests.cs": {
-    "mtime": 1792044953.6529922,
-    "ast_hash": "022bd35394c25e88199d97a13a917338",
+    "mtime": 1792139652.8221653,
+    "ast_hash": "b3b9095625d23a1fb6de9fdf8e69fd50",
     "semantic_hash": ""
   },
   "tests/WebMVC.Tests/SpeakingControllerTests.cs": {
@@ -2246,8 +2246,8 @@
     "semantic_hash": ""
   },
   "tests/Services.Tests/MentorServiceTests.cs": {
-    "mtime": 1792078564.3224652,
-    "ast_hash": "1a74b688e828c0f97527e0dba9947d76",
+    "mtime": 1792139558.785334,
+    "ast_hash": "e5c38cb0be4227d962f5f9c88a7b5b01",
     "semantic_hash": ""
   },
   "tests/WebMVC.Tests/AdminMentorsControllerTests.cs": {
@@ -2421,8 +2421,8 @@
     "semantic_hash": ""
   },
   "scripts/setup-ai-providers.sh": {
-    "mtime": 1792127799.9972413,
-    "ast_hash": "8394464ebbd8a308cee9ad1e83842395",
+    "mtime": 1792140544.0646605,
+    "ast_hash": "92b81526ca4043c0147dcc00b3eb763a",
     "semantic_hash": ""
   },
   "src/Services/SpeechSuper/SpeechSuperAiGrader.cs": {
@@ -2508,6 +2508,26 @@
   "2026-10-16-142849-command-messagemattpocock-skillsimplementcom.txt": {
     "mtime": 1792135736.7353873,
     "ast_hash": "582bc3da7e773ac9a30e7cfcd463065d",
+    "semantic_hash": ""
+  },
+  "src/Services/AiGradingProcessor.cs": {
+    "mtime": 1792139461.1384265,
+    "ast_hash": "0f8dc42341f2af22c0ebfb3e9e36098d",
+    "semantic_hash": ""
+  },
+  "src/Services/ClaudeOptions.cs": {
+    "mtime": 1792140478.247573,
+    "ast_hash": "dded357313109543a4ee953bab06ca59",
+    "semantic_hash": ""
+  },
+  "tests/Services.Tests/AiGradingProcessorTests.cs": {
+    "mtime": 1792139901.4820688,
+    "ast_hash": "3314a4b57a6b18889cc8e0b3d9b4dd20",
+    "semantic_hash": ""
+  },
+  "docs/adr/0008-ai-grading-processor-seam.md": {
+    "mtime": 1792140070.6065934,
+    "ast_hash": "c2af109be581a0796f5f0938acbc3bd1",
     "semantic_hash": ""
   }
 }

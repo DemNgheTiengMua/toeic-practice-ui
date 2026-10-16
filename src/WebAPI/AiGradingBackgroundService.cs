@@ -27,9 +27,9 @@ public sealed class AiGradingBackgroundService(
             try
             {
                 using var scope = serviceProvider.CreateScope();
-                var writingService = scope.ServiceProvider.GetRequiredService<IWritingPracticeService>();
+                var gradingProcessor = scope.ServiceProvider.GetRequiredService<IAiGradingProcessor>();
 
-                int processed = await writingService.ProcessPendingGradingsAsync(stoppingToken);
+                int processed = await gradingProcessor.ProcessPendingGradingsAsync(10, stoppingToken);
                 if (processed > 0)
                 {
                     logger.LogInformation("AiGradingBackgroundService processed {Count} pending grading(s).", processed);

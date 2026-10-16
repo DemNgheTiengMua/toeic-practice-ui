@@ -11,6 +11,35 @@ using System.Threading.RateLimiting;
 using WebAPI;
 using WebAPI.Endpoints;
 
+// Load .env file if present in workspace root or current directory
+var candidateDirs = new[]
+{
+    Directory.GetCurrentDirectory(),
+    Path.Combine(Directory.GetCurrentDirectory(), "..", ".."),
+    AppContext.BaseDirectory
+};
+foreach (var dir in candidateDirs)
+{
+    var envFile = Path.Combine(dir, ".env");
+    if (File.Exists(envFile))
+    {
+        foreach (var line in File.ReadAllLines(envFile))
+        {
+            var trimmed = line.Trim();
+            if (string.IsNullOrEmpty(trimmed) || trimmed.StartsWith('#')) continue;
+            var eqIdx = trimmed.IndexOf('=');
+            if (eqIdx <= 0) continue;
+            var key = trimmed[..eqIdx].Trim();
+            var val = trimmed[(eqIdx + 1)..].Trim().Trim('\'', '"');
+            if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable(key)))
+            {
+                Environment.SetEnvironmentVariable(key, val);
+            }
+        }
+        break;
+    }
+}
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddDbContext<CompanionDbContext>(options =>
@@ -185,6 +214,13 @@ speechSuperOptions.CoreType = builder.Configuration["SPEECHSUPER_CORE_TYPE"] ?? 
 builder.Services.AddSingleton(speechSuperOptions);
 builder.Services.AddHttpClient<ISpeechSuperClient, SpeechSuperClient>();
 
+var claudeOptions = builder.Configuration.GetSection(ClaudeOptions.SectionName).Get<ClaudeOptions>() ?? new ClaudeOptions();
+claudeOptions.ApiKey = builder.Configuration["CLAUDE_API_KEY"] ?? claudeOptions.ApiKey;
+claudeOptions.BaseUrl = builder.Configuration["CLAUDE_BASE_URL"] ?? claudeOptions.BaseUrl;
+claudeOptions.Model = builder.Configuration["CLAUDE_MODEL"] ?? claudeOptions.Model;
+
+builder.Services.AddSingleton(claudeOptions);
+
 var audioStoragePath = builder.Configuration["FileStore:AudioDirectory"]
     ?? Path.Combine(builder.Environment.ContentRootPath, "..", "..", "App_Data", "audio");
 builder.Services.AddSingleton<IFileStore>(new LocalFileStore(audioStoragePath));
@@ -198,6 +234,7 @@ else
 {
     builder.Services.AddSingleton<IAiGrader, FakeAiGrader>();
 }
+builder.Services.AddScoped<IAiGradingProcessor, AiGradingProcessor>();
 builder.Services.AddScoped<IWritingPracticeService, WritingPracticeService>();
 builder.Services.AddScoped<ISpeakingPracticeService, SpeakingPracticeService>();
 builder.Services.AddScoped<IPlacementService, PlacementService>();

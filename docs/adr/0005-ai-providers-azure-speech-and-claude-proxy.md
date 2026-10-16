@@ -9,8 +9,8 @@ Authentication uses `appKey`, `secretKey`, and SHA-1 request signatures over `ap
 *(Note: Azure AI Speech was originally considered in earlier drafts but superseded by SpeechSuper due to setup and access constraints).*
 
 **Claude** does the language work: rubric grading of writing and speaking (structured JSON, one call
-per response) and the aggregate insights of ADR-0004. Calls go through the HH-tech proxy endpoint, with
-`BaseUrl`, `ApiKey` and `Model` all in configuration — the default model is `claude-sonnet-5-5`. Totals,
+per response) and the aggregate insights of ADR-0004. Calls go through the HH-tech proxy endpoint (`https://hhtechapi.net`), with
+`BaseUrl`, `ApiKey` and `Model` all in configuration — the default model is `claude-sonnet-3.7`. Totals,
 scaled scores and bands are computed by our code from the returned per-criterion scores; the model is
 never asked to do arithmetic that the schema already defines.
 

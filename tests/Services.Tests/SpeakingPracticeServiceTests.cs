@@ -17,16 +17,16 @@ public sealed class SpeakingPracticeServiceTests(DatabaseFixture database)
 {
     private static string Unique(string prefix) => $"{prefix}{Guid.NewGuid():N}"[..20];
 
-    private (SpeakingPracticeService service, LearnerService learners, LocalFileStore fileStore, FakeAiGrader grader) CreateServices(IAiGrader? customGrader = null)
+    private (SpeakingPracticeService service, LearnerService learners, LocalFileStore fileStore, AiGradingProcessor gradingProcessor, FakeAiGrader grader) CreateServices(IAiGrader? customGrader = null)
     {
         var db = DbContextFactory.Create(database.ConnectionString);
         var learners = new LearnerService(db);
         var tempDir = Path.Combine(Path.GetTempPath(), "extra_efficiency_audio_tests_" + Guid.NewGuid().ToString("N"));
         var fileStore = new LocalFileStore(tempDir);
         var grader = new FakeAiGrader();
-        var writingService = new WritingPracticeService(db, learners, customGrader ?? grader);
-        var service = new SpeakingPracticeService(db, learners, fileStore, writingService);
-        return (service, learners, fileStore, grader);
+        var gradingProcessor = new AiGradingProcessor(db, customGrader ?? grader);
+        var service = new SpeakingPracticeService(db, learners, fileStore);
+        return (service, learners, fileStore, gradingProcessor, grader);
     }
 
     private async Task<int> SeedLearnerAsync(string? activeCertCode = null, int startingCredits = 0)
@@ -146,7 +146,7 @@ public sealed class SpeakingPracticeServiceTests(DatabaseFixture database)
         var certCode = Unique("SP01");
         var (_, examId, _, _) = await SeedSpeakingExamFixtureAsync(certCode);
         var userId = await SeedLearnerAsync(certCode, startingCredits: 0);
-        var (service, _, _, _) = CreateServices();
+        var (service, _, _, _, _) = CreateServices();
 
         var ex = await Assert.ThrowsAsync<SpeakingPracticeException>(() => service.StartAttemptAsync(userId, examId));
         Assert.Equal(SpeakingPracticeException.InsufficientCredits, ex.Code);
@@ -162,7 +162,7 @@ public sealed class SpeakingPracticeServiceTests(DatabaseFixture database)
         var certCode = Unique("SP02");
         var (_, examId, _, _) = await SeedSpeakingExamFixtureAsync(certCode);
         var userId = await SeedLearnerAsync(certCode, startingCredits: 5);
-        var (service, _, _, _) = CreateServices();
+        var (service, _, _, _, _) = CreateServices();
 
         var info = await service.StartAttemptAsync(userId, examId);
         Assert.True(info.AttemptId > 0);
@@ -189,7 +189,7 @@ public sealed class SpeakingPracticeServiceTests(DatabaseFixture database)
         var certCode = Unique("SP03");
         var (_, examId, q1Id, _) = await SeedSpeakingExamFixtureAsync(certCode);
         var userId = await SeedLearnerAsync(certCode, startingCredits: 3);
-        var (service, _, fileStore, _) = CreateServices();
+        var (service, _, fileStore, _, _) = CreateServices();
 
         var info = await service.StartAttemptAsync(userId, examId);
 
@@ -245,7 +245,7 @@ public sealed class SpeakingPracticeServiceTests(DatabaseFixture database)
         var (_, examId, q1Id, _) = await SeedSpeakingExamFixtureAsync(certCode);
         var ownerUserId = await SeedLearnerAsync(certCode, startingCredits: 3);
         var otherUserId = await SeedLearnerAsync(certCode, startingCredits: 3);
-        var (service, _, _, _) = CreateServices();
+        var (service, _, _, _, _) = CreateServices();
 
         var info = await service.StartAttemptAsync(ownerUserId, examId);
 
@@ -274,7 +274,7 @@ public sealed class SpeakingPracticeServiceTests(DatabaseFixture database)
         var certCode = Unique("SP05");
         var (_, examId, q1Id, q2Id) = await SeedSpeakingExamFixtureAsync(certCode);
         var userId = await SeedLearnerAsync(certCode, startingCredits: 3);
-        var (service, _, _, _) = CreateServices();
+        var (service, _, _, _, _) = CreateServices();
 
         var info = await service.StartAttemptAsync(userId, examId);
         using var stream1 = new MemoryStream(Encoding.UTF8.GetBytes("audio 1"));
@@ -317,7 +317,7 @@ public sealed class SpeakingPracticeServiceTests(DatabaseFixture database)
         var certCode = Unique("SP06");
         var (_, examId, q1Id, q2Id) = await SeedSpeakingExamFixtureAsync(certCode);
         var userId = await SeedLearnerAsync(certCode, startingCredits: 2);
-        var (service, _, _, _) = CreateServices();
+        var (service, _, _, gradingProcessor, _) = CreateServices();
 
         var info = await service.StartAttemptAsync(userId, examId);
         using var s1 = new MemoryStream(Encoding.UTF8.GetBytes("spoken answer 1"));
@@ -327,8 +327,8 @@ public sealed class SpeakingPracticeServiceTests(DatabaseFixture database)
 
         await service.SubmitAttemptAsync(userId, info.AttemptId);
 
-        // Grading runs through the same pipeline
-        var processed = await service.ProcessPendingGradingsAsync();
+        // Grading runs through the dedicated AI grading processor
+        var processed = await gradingProcessor.ProcessPendingGradingsAsync();
         Assert.True(processed >= 2);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
@@ -363,7 +363,7 @@ public sealed class SpeakingPracticeServiceTests(DatabaseFixture database)
         var certCode = Unique("SP07");
         var (_, examId, q1Id, _) = await SeedSpeakingExamFixtureAsync(certCode);
         var userId = await SeedLearnerAsync(certCode, startingCredits: 2);
-        var (service, _, _, _) = CreateServices();
+        var (service, _, _, gradingProcessor, _) = CreateServices();
 
         var info = await service.StartAttemptAsync(userId, examId);
         // Include simulate_fail marker in audio file name to trigger simulated failure
@@ -371,7 +371,7 @@ public sealed class SpeakingPracticeServiceTests(DatabaseFixture database)
         await service.SaveAudioAsync(userId, info.AttemptId, q1Id, s1, "audio/webm", "take_[simulate_fail].webm", 20000);
         await service.SubmitAttemptAsync(userId, info.AttemptId);
 
-        await service.ProcessPendingGradingsAsync();
+        await gradingProcessor.ProcessPendingGradingsAsync();
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
         var failedGrading = await db.AiGradings.Include(g => g.FreeResponse).SingleAsync(g => g.FreeResponse.AttemptId == info.AttemptId && g.FreeResponse.QuestionId == q1Id);
@@ -404,7 +404,7 @@ public sealed class SpeakingPracticeServiceTests(DatabaseFixture database)
         var certCode = Unique("SP08");
         var (_, examId, q1Id, q2Id) = await SeedSpeakingExamFixtureAsync(certCode);
         var userId = await SeedLearnerAsync(certCode, startingCredits: 3);
-        var (service, _, _, _) = CreateServices();
+        var (service, _, _, gradingProcessor, _) = CreateServices();
 
         var info = await service.StartAttemptAsync(userId, examId);
         using var s1 = new MemoryStream(Encoding.UTF8.GetBytes("spoken answer 1"));
@@ -413,7 +413,7 @@ public sealed class SpeakingPracticeServiceTests(DatabaseFixture database)
         await service.SaveAudioAsync(userId, info.AttemptId, q2Id, s2, "audio/webm", "q2.webm", 30000);
 
         await service.SubmitAttemptAsync(userId, info.AttemptId);
-        await service.ProcessPendingGradingsAsync();
+        await gradingProcessor.ProcessPendingGradingsAsync();
 
         var review = await service.GetAttemptReviewAsync(userId, info.AttemptId);
 

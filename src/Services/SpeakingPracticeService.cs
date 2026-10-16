@@ -48,15 +48,12 @@ public interface ISpeakingPracticeService
     Task<SpeakingReviewView> GetAttemptReviewAsync(int userId, int attemptId, CancellationToken cancellationToken = default);
 
     Task<FileStreamResultInfo?> GetAudioFileAsync(int userId, int attemptId, int questionId, CancellationToken cancellationToken = default);
-
-    Task<int> ProcessPendingGradingsAsync(CancellationToken cancellationToken = default);
 }
 
 public sealed class SpeakingPracticeService(
     CompanionDbContext db,
     ILearnerService learners,
-    IFileStore fileStore,
-    IWritingPracticeService writingService) : ISpeakingPracticeService
+    IFileStore fileStore) : ISpeakingPracticeService
 {
     public const int SpeakingPracticeCreditCost = 1;
 
@@ -731,8 +728,5 @@ public sealed class SpeakingPracticeService(
 
         return result;
     }
-
-    public Task<int> ProcessPendingGradingsAsync(CancellationToken cancellationToken = default)
-        => writingService.ProcessPendingGradingsAsync(cancellationToken);
 }
 

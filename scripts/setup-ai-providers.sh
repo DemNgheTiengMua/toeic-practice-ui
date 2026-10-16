@@ -233,17 +233,17 @@ stage "Claude via HH-Tech Proxy: Base URL and API Key"
 say "Claude handles language evaluation: rubric grading of writing & speaking"
 say "free responses (structured JSON) and aggregate learning insights (ADR-0004/0005)."
 say "Calls route through the HH-Tech proxy gateway."
-open_url "https://api.hh-tech.com"
+open_url "https://hhtechapi.net"
 step "Sign in to the HH-Tech proxy portal and go to your API Keys / Tokens page."
 step "Generate or copy an active API key with access to Claude models."
 
-ask CLAUDE_BASE_URL "Enter HH-Tech Base URL [default: https://api.hh-tech.com/v1]:"
-CLAUDE_BASE_URL="${CLAUDE_BASE_URL:-https://api.hh-tech.com/v1}"
+ask CLAUDE_BASE_URL "Enter HH-Tech Base URL [default: https://hhtechapi.net]:"
+CLAUDE_BASE_URL="${CLAUDE_BASE_URL:-https://hhtechapi.net}"
 
 ask_secret CLAUDE_API_KEY "Paste your Claude API Key:"
 
-ask CLAUDE_MODEL "Enter Claude model name [default: claude-sonnet-5-5]:"
-CLAUDE_MODEL="${CLAUDE_MODEL:-claude-sonnet-5-5}"
+ask CLAUDE_MODEL "Enter Claude model name [default: claude-sonnet-3.7]:"
+CLAUDE_MODEL="${CLAUDE_MODEL:-claude-sonnet-3.7}"
 
 write_env CLAUDE_BASE_URL "$CLAUDE_BASE_URL"
 write_env CLAUDE_API_KEY "$CLAUDE_API_KEY"
