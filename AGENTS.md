@@ -59,7 +59,7 @@ Before writing or changing anything where exact syntax, versions, or configurati
 - **EF Core 10**: Scaffolding flags, `HasTrigger`, keyless entities, query filters.
 - **ASP.NET Core**: JWT bearer configuration, cookie auth options, anti-forgery middleware, `ProblemDetails`, health checks.
 - **payOS API**: VietQR payload structure, webhook verification signature, status queries.
-- **Azure AI Speech**: Pronunciation assessment parameters, prosody, fluency scoring.
+- **SpeechSuper API**: Pronunciation assessment parameters, unscripted speech evaluation (`speak.eval.pro`), fluency scoring, request signature.
 - **Anthropic SDK**: Structured outputs schema, model identifiers, streaming responses.
 
 ---

@@ -1,8 +1,12 @@
 # Two AI providers, both behind interfaces
 
-**Azure AI Speech** transcribes speaking responses and scores pronunciation, fluency and prosody —
-including unscripted speech. A transcript alone cannot carry pronunciation, and `speaking-review`
-grades it, so speech-to-text without assessment is not enough.
+**SpeechSuper** transcribes speaking responses and scores pronunciation, fluency, grammar, vocabulary and prosody —
+including unscripted speech via the `speak.eval.pro` coreType. A transcript alone cannot carry pronunciation, and `speaking-review`
+grades it, so speech-to-text without assessment is not enough. SpeechSuper provides an instant 14-day trial without requiring
+an active Azure subscription or credit card, which is optimal for coursework development and project demonstration.
+Authentication uses `appKey`, `secretKey`, and SHA-1 request signatures over `api.speechsuper.com`.
+
+*(Note: Azure AI Speech was originally considered in earlier drafts but superseded by SpeechSuper due to setup and access constraints).*
 
 **Claude** does the language work: rubric grading of writing and speaking (structured JSON, one call
 per response) and the aggregate insights of ADR-0004. Calls go through the HH-tech proxy endpoint, with
@@ -22,3 +26,4 @@ owner accepted this for a coursework project.
 - "AI mentor" bookings are speaking-practice attempts through this same pipeline, not a new real-time
   conversation feature (that stays backlog) — which is what the prototype's card already promises:
   instant feedback and pronunciation analysis.
+

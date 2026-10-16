@@ -175,10 +175,28 @@ builder.Services.AddScoped<IAdminUserService, AdminUserService>();
 builder.Services.AddScoped<IScoreConversionService, ScoreConversionService>();
 builder.Services.AddScoped<IAdminExamService, AdminExamService>();
 builder.Services.AddScoped<IAdminDashboardService, AdminDashboardService>();
-builder.Services.AddSingleton<IAiGrader, FakeAiGrader>();
+var speechSuperOptions = builder.Configuration.GetSection(SpeechSuperOptions.SectionName).Get<SpeechSuperOptions>() ?? new SpeechSuperOptions();
+speechSuperOptions.AppKey = builder.Configuration["SPEECHSUPER_APP_KEY"] ?? speechSuperOptions.AppKey;
+speechSuperOptions.SecretKey = builder.Configuration["SPEECHSUPER_SECRET_KEY"] ?? speechSuperOptions.SecretKey;
+speechSuperOptions.BaseUrl = builder.Configuration["SPEECHSUPER_BASE_URL"] ?? speechSuperOptions.BaseUrl;
+speechSuperOptions.CoreType = builder.Configuration["SPEECHSUPER_CORE_TYPE"] ?? speechSuperOptions.CoreType;
+
+builder.Services.AddSingleton(speechSuperOptions);
+builder.Services.AddHttpClient<ISpeechSuperClient, SpeechSuperClient>();
+
 var audioStoragePath = builder.Configuration["FileStore:AudioDirectory"]
     ?? Path.Combine(builder.Environment.ContentRootPath, "..", "..", "App_Data", "audio");
 builder.Services.AddSingleton<IFileStore>(new LocalFileStore(audioStoragePath));
+
+var aiProvider = builder.Configuration["AI_PROVIDER"] ?? builder.Configuration["AiProviders:Provider"] ?? "fake";
+if (aiProvider.Equals("real", StringComparison.OrdinalIgnoreCase))
+{
+    builder.Services.AddSingleton<IAiGrader, SpeechSuperAiGrader>();
+}
+else
+{
+    builder.Services.AddSingleton<IAiGrader, FakeAiGrader>();
+}
 builder.Services.AddScoped<IWritingPracticeService, WritingPracticeService>();
 builder.Services.AddScoped<ISpeakingPracticeService, SpeakingPracticeService>();
 builder.Services.AddScoped<IPlacementService, PlacementService>();

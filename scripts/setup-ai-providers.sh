@@ -202,29 +202,31 @@ run_wizard() {
 
 TOTAL_STAGES=4
 
-banner "AI Providers Setup: Azure AI Speech & Claude via HH-Tech"
+banner "AI Providers Setup: SpeechSuper & Claude via HH-Tech"
 
-# ── Stage 1: Azure AI Speech ───────────────────────────────────────────────
-stage "Azure AI Speech: Credentials and Region"
-say "Azure AI Speech transcribes learner speaking responses and scores"
-say "pronunciation, fluency and prosody (ADR-0005)."
-say "We will capture your Azure Speech resource credentials."
-open_url "https://portal.azure.com/#create/Microsoft.CognitiveServicesSpeechServices"
-step "In the Azure Portal, open or create your Speech Services resource."
-step "Navigate to 'Resource Management' → 'Keys and Endpoint'."
-step "Copy Key 1 (or Key 2) and take note of your Location/Region (e.g. 'southeastasia', 'eastus')."
+# ── Stage 1: SpeechSuper ──────────────────────────────────────────────────
+stage "SpeechSuper: 14-Day Trial Credentials"
+say "SpeechSuper provides pronunciation, fluency and prosody speech"
+say "assessment (ADR-0005) with an instant 14-day free trial."
+say "We will capture your SpeechSuper AppKey and SecretKey."
+open_url "https://docs.speechsuper.com/#/"
+step "Visit https://docs.speechsuper.com/#/ or https://www.speechsuper.com to start your 14-day trial."
+step "Obtain your Application ID (appKey) and Secret Key (secretKey)."
 
-ask_secret AZURE_SPEECH_KEY "Paste your Azure Speech Key (KEY 1 or KEY 2):"
-ask AZURE_SPEECH_REGION "Enter your Azure Speech Region (e.g. southeastasia):"
-ask AZURE_SPEECH_ENDPOINT "Enter custom endpoint URL (leave blank for standard regional):"
+ask SPEECHSUPER_APP_KEY "Enter your SpeechSuper AppKey (applicationId):"
+ask_secret SPEECHSUPER_SECRET_KEY "Paste your SpeechSuper SecretKey:"
+ask SPEECHSUPER_BASE_URL "Enter SpeechSuper Base URL [default: https://api.speechsuper.com]:"
+SPEECHSUPER_BASE_URL="${SPEECHSUPER_BASE_URL:-https://api.speechsuper.com}"
 
-write_env AZURE_SPEECH_KEY "$AZURE_SPEECH_KEY"
-write_env AZURE_SPEECH_REGION "$AZURE_SPEECH_REGION"
-if [[ -n "${AZURE_SPEECH_ENDPOINT:-}" ]]; then
-  write_env AZURE_SPEECH_ENDPOINT "$AZURE_SPEECH_ENDPOINT"
-fi
-set_secret AZURE_SPEECH_KEY "$AZURE_SPEECH_KEY"
-set_var AZURE_SPEECH_REGION "$AZURE_SPEECH_REGION"
+ask SPEECHSUPER_CORE_TYPE "Enter SpeechSuper Core Type [default: speak.eval.pro]:"
+SPEECHSUPER_CORE_TYPE="${SPEECHSUPER_CORE_TYPE:-speak.eval.pro}"
+
+write_env SPEECHSUPER_APP_KEY "$SPEECHSUPER_APP_KEY"
+write_env SPEECHSUPER_SECRET_KEY "$SPEECHSUPER_SECRET_KEY"
+write_env SPEECHSUPER_BASE_URL "$SPEECHSUPER_BASE_URL"
+write_env SPEECHSUPER_CORE_TYPE "$SPEECHSUPER_CORE_TYPE"
+set_secret SPEECHSUPER_SECRET_KEY "$SPEECHSUPER_SECRET_KEY"
+set_var SPEECHSUPER_APP_KEY "$SPEECHSUPER_APP_KEY"
 
 # ── Stage 2: Claude via HH-Tech Proxy ─────────────────────────────────────
 stage "Claude via HH-Tech Proxy: Base URL and API Key"
@@ -252,7 +254,7 @@ set_secret CLAUDE_API_KEY "$CLAUDE_API_KEY"
 stage "Application Mode: AI Provider Selection"
 say "Select which AI provider implementation to activate at runtime."
 say "Options:"
-say "  - 'real': Uses live Azure Speech & Claude HH-Tech proxy endpoints"
+say "  - 'real': Uses live SpeechSuper & Claude HH-Tech proxy endpoints"
 say "  - 'fake': Uses deterministic offline fakes for zero-cost testing"
 
 ask AI_PROVIDER "Activate real AI providers? (real/fake) [default: real]:"
@@ -265,19 +267,20 @@ stage "Verification: Connectivity Probe"
 say "We can run an optional quick probe to verify connectivity to both providers."
 
 if confirm "Run connectivity test now?"; then
-  say "Testing Azure Speech endpoint..."
-  local speech_endpoint="${AZURE_SPEECH_ENDPOINT:-https://${AZURE_SPEECH_REGION}.api.cognitive.microsoft.com/sts/v1.0/issuetoken}"
+  say "Testing SpeechSuper endpoint..."
+  local speech_url="${SPEECHSUPER_BASE_URL}/${SPEECHSUPER_CORE_TYPE}"
   if command -v curl >/dev/null 2>&1; then
     local speech_status
-    speech_status=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$speech_endpoint" \
-      -H "Ocp-Apim-Subscription-Key: $AZURE_SPEECH_KEY" \
+    # Probe the SpeechSuper endpoint with HTTP POST
+    speech_status=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$speech_url" \
+      -H "Request-Index: 0" \
       --max-time 10 2>/dev/null || echo "failed")
-    if [[ "$speech_status" == "200" ]]; then
-      printf '  %s✓ Azure Speech:%s Authentication succeeded (HTTP 200 token issued)\n' "$GREEN" "$RESET"
+    if [[ "$speech_status" == "200" || "$speech_status" == "400" || "$speech_status" == "404" ]]; then
+      printf '  %s✓ SpeechSuper:%s Endpoint reached successfully (HTTP %s)\n' "$GREEN" "$RESET" "$speech_status"
     elif [[ "$speech_status" == "failed" ]]; then
-      warn "Azure Speech: Connection timed out or network error"
+      warn "SpeechSuper: Connection timed out or network error"
     else
-      warn "Azure Speech: Endpoint responded with HTTP $speech_status (check key/region)"
+      warn "SpeechSuper: Endpoint responded with HTTP $speech_status (check base URL)"
     fi
 
     say "Testing Claude HH-Tech proxy endpoint..."

@@ -340,7 +340,9 @@
   "338": "WeaknessModels.cs",
   "339": ".MapCheckoutEndpoints",
   "340": "AuthService.cs",
-  "344": ".GetSpeakingAudioStreamAsync",
+  "341": "WritingViewModels.cs",
+  "342": ".SaveAdminExamSectionAudioAsync",
+  "343": "CertificateDtos.cs",
   "346": "PaymentViewModels.cs",
   "348": "LearningPathViewModels.cs",
   "349": "PayOsPaymentGateway",
@@ -349,6 +351,5 @@
   "352": "Exams.cshtml",
   "353": "QuestionEditor.cshtml",
   "354": "LearnerContextDto",
-  "355": "Booking",
   "356": ".GetOrderDetailAsync_shows_every_payment_event_in_chronological_order"
 }

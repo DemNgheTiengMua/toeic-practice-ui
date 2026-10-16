@@ -545,8 +545,8 @@
     "semantic_hash": "a1e0ec747b63abe2941b00c6252f53a5"
   },
   "src/WebAPI/Program.cs": {
-    "mtime": 1792078564.3018384,
-    "ast_hash": "638fa383add5d6e690847df384eb0265",
+    "mtime": 1792128055.272786,
+    "ast_hash": "370f3eda85e801cf4c2c6532f659028f",
     "semantic_hash": ""
   },
   "src/WebAPI/Properties/launchSettings.json": {
@@ -886,8 +886,8 @@
     "semantic_hash": ""
   },
   "docs/adr/0005-ai-providers-azure-speech-and-claude-proxy.md": {
-    "mtime": 1791747269.0723991,
-    "ast_hash": "d01d10ccf4d6ed768fcf6f4190965134",
+    "mtime": 1792127817.7699373,
+    "ast_hash": "9aa5b6f02cfc7b7e4cbd8823312894be",
     "semantic_hash": ""
   },
   "docs/agents/domain.md": {
@@ -1341,8 +1341,8 @@
     "semantic_hash": ""
   },
   "AGENTS.md": {
-    "mtime": 1791960410.5327084,
-    "ast_hash": "965fd93f608b680fbd421314912bdb05",
+    "mtime": 1792127843.436351,
+    "ast_hash": "b54f70fc0fce2f1f3e8c63de3cd41de8",
     "semantic_hash": ""
   },
   "src/DataAccess/CompanionDbContext.Practice.cs": {
@@ -2421,8 +2421,28 @@
     "semantic_hash": ""
   },
   "scripts/setup-ai-providers.sh": {
-    "mtime": 1792087039.8118205,
-    "ast_hash": "115e2e75c866c77d9a0d6fcecca0ef09",
+    "mtime": 1792127799.9972413,
+    "ast_hash": "8394464ebbd8a308cee9ad1e83842395",
+    "semantic_hash": ""
+  },
+  "src/Services/SpeechSuper/SpeechSuperAiGrader.cs": {
+    "mtime": 1792128016.4697149,
+    "ast_hash": "0cbe09ee354e3f92d262c620ed7f769e",
+    "semantic_hash": ""
+  },
+  "src/Services/SpeechSuper/SpeechSuperClient.cs": {
+    "mtime": 1792127996.4768715,
+    "ast_hash": "ee82d4149a6fe1093c06996110c11b06",
+    "semantic_hash": ""
+  },
+  "src/Services/SpeechSuper/SpeechSuperOptions.cs": {
+    "mtime": 1792127976.0933678,
+    "ast_hash": "0683d1604f192ff520e39fc9e6991a67",
+    "semantic_hash": ""
+  },
+  "tests/Services.Tests/SpeechSuperTests.cs": {
+    "mtime": 1792128155.2522042,
+    "ast_hash": "aeafbb7cf4a79a1a7b6db656d45da8cc",
     "semantic_hash": ""
   }
 }
