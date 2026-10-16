@@ -61,8 +61,8 @@ else
   <!-- Filters bar -->
   <div class="card mt-4">
     <div class="card__body">
-      <form method="get" action="/saved-questions" class="row row--wrap" style="gap: var(--space-4); align-items: flex-end;" id="filter-form">
-        <div class="field" style="flex: 1 1 200px; margin-bottom: 0;">
+      <form method="get" action="/saved-questions" class="row row--wrap row--end" id="filter-form">
+        <div class="field mb-0">
           <label class="field__label" for="sq-source">Source</label>
           <select class="field__input" id="sq-source" name="source" onchange="this.form.submit()">
             <option value="" selected="@(string.IsNullOrEmpty(Model.CurrentSource))">All sources (@data.TotalSavedCount)</option>
@@ -73,7 +73,7 @@ else
 
         @if (data.Sections.Count > 0)
         {
-          <div class="field" style="flex: 1 1 200px; margin-bottom: 0;">
+          <div class="field mb-0">
             <label class="field__label" for="sq-section">Section</label>
             <select class="field__input" id="sq-section" name="sectionId" onchange="this.form.submit()">
               <option value="" selected="@(!Model.CurrentSectionId.HasValue)">All sections</option>
@@ -87,7 +87,7 @@ else
 
         @if (data.Categories.Count > 0)
         {
-          <div class="field" style="flex: 1 1 200px; margin-bottom: 0;">
+          <div class="field mb-0">
             <label class="field__label" for="sq-category">Question type</label>
             <select class="field__input" id="sq-category" name="categoryId" onchange="this.form.submit()">
               <option value="" selected="@(!Model.CurrentCategoryId.HasValue)">All types</option>
@@ -150,11 +150,11 @@ else
               <span class="text-sm text-muted">Saved @Dates.Format(item.SavedAt)</span>
             </div>
 
-            <p class="no-margin" style="font-size: 1.05rem; line-height: 1.5; color: var(--ink); white-space: pre-wrap;">@item.Stem</p>
+            <p class="no-margin" style="white-space: pre-wrap;">@item.Stem</p>
 
-            <div class="row row--between row--wrap" style="align-items: center;">
+            <div class="row row--between row--middle row--wrap">
               <span class="text-xs text-muted">@item.SectionCode · @item.Options.Count options</span>
-              <div class="row" style="gap: var(--space-2);">
+              <div class="row">
                 <button type="button" class="btn btn--sm review-toggle-btn" data-target="review-@item.QuestionId" aria-expanded="false" aria-controls="review-@item.QuestionId">
                   Review explanation
                 </button>
@@ -166,10 +166,10 @@ else
             </div>
 
             <!-- Review panel (expanded inline) -->
-            <div class="saved-review-panel mt-3 pt-3" id="review-@item.QuestionId" style="display: none; border-top: 1px solid var(--soft-rule);" role="region" aria-label="Question @item.QuestionId review and explanation">
+            <div class="saved-review-panel mt-3 pt-3" id="review-@item.QuestionId" style="display: none; border-top: 1px solid var(--rule-soft);" role="region" aria-label="Question @item.QuestionId review and explanation">
               @if (!string.IsNullOrEmpty(item.Passage))
               {
-                <div class="card mb-3" style="background: var(--color-surface); border: 1px solid var(--soft-rule);">
+                <div class="card mb-3">
                   <div class="card__body">
                     <p class="no-margin text-sm" style="white-space: pre-line;">@item.Passage</p>
                   </div>
@@ -179,14 +179,14 @@ else
               @if (!string.IsNullOrEmpty(item.ImagePath))
               {
                 <div class="mb-3">
-                  <img src="@item.ImagePath" alt="Question illustration" style="max-height: 240px; border: 2px solid var(--ink); display: block;" />
+                  <img src="@item.ImagePath" alt="Question illustration" class="question__image" />
                 </div>
               }
 
               @if (!string.IsNullOrEmpty(item.AudioPath))
               {
                 <div class="mb-3">
-                  <audio controls src="@item.AudioPath" style="width: 100%;"></audio>
+                  <audio controls src="@item.AudioPath" class="w-100"></audio>
                 </div>
               }
 

@@ -45,8 +45,8 @@
 
         <div class="stack" id="question-container">
           <div class="question">
-            <div class="question__meta row row--between" style="width: 100%; align-items: center;">
-              <div class="row" style="gap: var(--space-2); align-items: center; flex-wrap: wrap;">
+            <div class="question__meta row row--between row--middle w-100">
+              <div class="row row--middle row--wrap">
                 <span class="question__number">Question @q.DisplayOrder</span>
                 <span class="badge badge--muted">@session.SectionName</span>
                 @if (!string.IsNullOrEmpty(q.CategoryName))
@@ -94,14 +94,14 @@
             @if (!string.IsNullOrEmpty(q.ImagePath))
             {
               <div class="mb-4">
-                <img src="@q.ImagePath" alt="@(q.ImageAlt ?? "Question image")" class="img-fluid" style="max-height: 300px; border: 2px solid var(--ink);" />
+                <img src="@q.ImagePath" alt="@(q.ImageAlt ?? "Question image")" class="question__image" />
               </div>
             }
 
             @if (!string.IsNullOrEmpty(q.AudioPath))
             {
               <div class="audio-player mb-4">
-                <audio controls src="@q.AudioPath" style="width: 100%"></audio>
+                <audio controls src="@q.AudioPath" class="w-100"></audio>
               </div>
             }
 
@@ -209,6 +209,7 @@
   </div>
 
   <script src="~/js/icons.js"></script>
+  <script src="~/js/keyboard-nav.js"></script>
   <script>
     (function () {
       var questionId = @q.QuestionId;
@@ -471,7 +472,7 @@
 
           var nextText = data.isSessionFinished ? 'View summary' : 'Next question';
 
-          controlsRow.innerHTML = '<div class="row row--between" style="width: 100%">' +
+          controlsRow.innerHTML = '<div class="row row--between w-100">' +
             '<a class="btn btn--ghost" href="/saved-questions" target="_blank" rel="noopener">View saved bank</a>' +
             '<a class="btn btn--primary btn--lg" href="' + nextHref + '">' + nextText + '</a>' +
             '</div>';
@@ -482,7 +483,7 @@
 
           if (err.code === 'PRACTICE_SESSION_FINISHED') {
             showError('This practice session has already been finished.');
-            controlsRow.innerHTML = '<div class="row row--between" style="width: 100%">' +
+            controlsRow.innerHTML = '<div class="row row--between w-100">' +
               '<div></div>' +
               '<a class="btn btn--primary btn--lg" href="/practice/' + sessionId + '/summary">View summary</a>' +
               '</div>';
@@ -496,7 +497,7 @@
 
           if (err.code === 'PRACTICE_SESSION_NOT_FOUND') {
             showError('This practice session was not found.');
-            controlsRow.innerHTML = '<div class="row row--between" style="width: 100%">' +
+            controlsRow.innerHTML = '<div class="row row--between w-100">' +
               '<div></div>' +
               '<a class="btn btn--primary btn--lg" href="/practice">Back to practice</a>' +
               '</div>';

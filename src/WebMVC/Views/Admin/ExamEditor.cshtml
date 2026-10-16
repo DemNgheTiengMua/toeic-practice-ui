@@ -147,27 +147,27 @@
         @foreach (var s in listeningSections)
         {
           var audio = detail.Audios.FirstOrDefault(a => a.SectionId == s.SectionId);
-          <div class="upload" style="border:1px solid #ccd2d6; padding:1rem; margin-bottom:1rem;">
+          <div class="card p-3 mb-3">
             <span class="field__label"><strong>@s.SectionName</strong> (@s.SectionCode)</span>
 
             @if (audio != null)
             {
-              <div class="upload__file row row--between" style="background:#f4f5f6; padding:0.5rem 1rem; border:1px solid #ccd2d6; margin-top:0.5rem;">
+              <div class="upload__file row row--between mt-2 p-2" style="background: var(--surface-soft); border: 1px solid var(--rule-soft);">
                 <span>@audio.AudioPath — @(audio.DurationSec / 60):@(audio.DurationSec % 60 < 10 ? "0" : "")@(audio.DurationSec % 60) — @(Math.Round((double)audio.SizeBytes / (1024 * 1024), 1)) MB</span>
                 <span class="badge badge--success">Uploaded</span>
               </div>
             }
             else
             {
-              <div class="upload__file upload__file--missing row row--between" style="background:#fff3cd; padding:0.5rem 1rem; border:1px solid #ffeeba; margin-top:0.5rem;">
+              <div class="upload__file upload__file--missing row row--between mt-2 p-2" style="background: var(--surface-soft); border: 1px solid var(--rule-soft);">
                 <span>No file uploaded yet</span>
                 <span class="badge badge--warning">Missing</span>
               </div>
             }
 
-            <details style="margin-top:0.75rem;">
+            <details class="mt-2">
               <summary class="btn btn--sm btn--ghost" style="cursor:pointer; display:inline-block;">@(audio != null ? "Replace file / path" : "Upload / specify file")</summary>
-              <form method="post" action="/admin/exams/@Model.ExamId/audio" class="stack" style="margin-top:0.75rem; background:#fff; padding:1rem; border:1px solid #ccd2d6;">
+              <form method="post" action="/admin/exams/@Model.ExamId/audio" class="card card__body stack mt-2">
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="SectionId" value="@s.SectionId" />
                 <div class="field">
@@ -195,8 +195,8 @@
             <span>Uploaded @uploadedCount / @totalListening files</span>
             <span>@percent%</span>
           </div>
-          <div class="progress" style="height:8px; background:#ccd2d6; margin-top:4px;">
-            <div class="progress__bar" style="width: @percent%; height:100%; background:#0b4ea2;"></div>
+          <div class="progress mt-2">
+            <div class="progress__bar" style="width: @percent%;"></div>
           </div>
         </div>
       }

@@ -56,7 +56,7 @@
     </p>
   </div>
 
-  <div class="card" style="border: 2px solid var(--ink); border-radius: 0;">
+  <div class="card">
     <div class="card__body">
       <div class="cefr">
         <div class="cefr__head">
@@ -102,7 +102,7 @@
         @foreach (var opt in view.AvailableBands)
         {
           var isChecked = opt.Code == targetCode;
-          <label class="option @(isChecked ? "is-selected" : "")" style="cursor: pointer; border-radius: 0;">
+          <label class="option @(isChecked ? "is-selected" : "")">
             <input class="option__input js-target-radio" type="radio" name="TargetBandCode"
                    value="@opt.Code" @(isChecked ? "checked" : "")
                    data-name="@opt.Name" data-min="@opt.MinTotal" data-max="@opt.MaxTotal">
@@ -116,7 +116,7 @@
       </div>
     </section>
 
-    <div class="card" style="border: 2px solid var(--ink); border-radius: 0;">
+    <div class="card">
       <div class="card__footer">
         <div class="row" style="gap: var(--space-3);">
           <button type="submit" class="btn btn--primary">Save target level</button>

@@ -261,4 +261,23 @@
   --dur-fast:   120ms;
   --dur-base:   220ms;
   --dur-paint:  420ms;
+
+  /* --- layout measurements ------------------------------------------------ */
+  --sidebar-w: 240px;
+  --topbar-h: 58px;
+
+  /* --- legacy aliases for view compatibility ------------------------------ */
+  --soft-bg: var(--wall);
+  --color-surface-soft: var(--wall);
+  --soft-rule: var(--line-soft);
+  --rule-soft: var(--line-soft);
+  --color-rule: var(--line-soft);
+  --color-ink: var(--ink);
+  --color-keyline: var(--ink);
+  --on-ink: #ffffff;
+  --on-ink-muted: var(--color-on-ink-muted);
+  --bg-surface: var(--painted);
+  --bg-canvas: var(--wall);
+  --font-data: var(--font-mono);
+  --leading-relaxed: var(--leading-read);
 }

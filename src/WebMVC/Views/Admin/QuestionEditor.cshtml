@@ -88,8 +88,8 @@ else
 {
   @foreach (var group in groups)
   {
-    <div class="card stack" style="margin-bottom:2rem; border:2px solid #14181d;">
-      <div class="card__header row row--between" style="background:#f4f5f6;">
+    <div class="card stack mb-4">
+      <div class="card__header row row--between">
         <div>
           <strong>Group #@group.GroupId — @group.SectionName</strong>
           <span class="text-sm text-muted">(@group.Questions.Count questions)</span>
@@ -97,7 +97,7 @@ else
         <div class="row">
           @if (group.Questions.Count == 0)
           {
-            <form method="post" action="/admin/exams/@data.ExamId/groups/@group.GroupId/delete" onsubmit="return confirm('Delete this group?');" style="display:inline; margin:0;">
+            <form method="post" action="/admin/exams/@data.ExamId/groups/@group.GroupId/delete" onsubmit="return confirm('Delete this group?');" class="d-inline m-0">
               @Html.AntiForgeryToken()
               <input type="hidden" name="sectionId" value="@selectedSectionId" />
               <button type="submit" class="btn btn--sm btn--danger">Delete Group</button>
@@ -109,9 +109,9 @@ else
       <div class="card__body stack">
         @if (!string.IsNullOrEmpty(group.Passage))
         {
-          <div class="p-2" style="background:#f9f9f9; border-left:4px solid #0b4ea2;">
-            <strong>Passage:</strong>
-            <p style="white-space:pre-wrap; margin:0.5rem 0 0 0;">@group.Passage</p>
+          <div class="explain">
+            <div class="explain__title">Passage</div>
+            <p class="no-margin" style="white-space: pre-wrap;">@group.Passage</p>
           </div>
         }
         @if (!string.IsNullOrEmpty(group.ImagePath))
@@ -133,7 +133,7 @@ else
           var isMcq = q.QuestionType == Contracts.QuestionTypeDto.Mcq;
           var optionLabels = isMcq ? string.Join("/", q.Options.Select(o => o.Label)) : "";
 
-          <div class="card" style="border:1px solid #ccd2d6; margin-top:1rem;">
+          <div class="card mt-3">
             <div class="card__header row row--between">
               <strong>Question @q.DisplayOrder — @group.SectionName</strong>
               <span class="badge badge--info">@(isMcq ? $"{q.Options.Count} answers ({optionLabels})" : "Free response")</span>
@@ -245,9 +245,9 @@ else
         }
 
         <!-- Add question form for this group -->
-        <details style="margin-top:1.5rem;">
+        <details class="mt-4">
           <summary class="btn btn--sm" style="cursor:pointer; display:inline-block;">+ Add Question to Group #@group.GroupId</summary>
-          <div class="card" style="margin-top:1rem; border:1px solid #0b4ea2; padding:1rem;">
+          <div class="card mt-3 p-3">
             <form method="post" action="/admin/exams/@data.ExamId/questions">
               @Html.AntiForgeryToken()
               <input type="hidden" name="GroupId" value="@group.GroupId" />
@@ -337,9 +337,9 @@ else
   }
 
   <!-- Button to add another QuestionGroup to this section -->
-  <details style="margin-top:2rem;">
+  <details class="mt-4">
     <summary class="btn" style="cursor:pointer; display:inline-block;">+ Add New Question Group to @currentSection?.Name</summary>
-    <div class="card" style="margin-top:1rem; border:1px solid #ccd2d6; padding:1.5rem;">
+    <div class="card mt-3 p-4">
       <form method="post" action="/admin/exams/@data.ExamId/groups" class="stack">
         @Html.AntiForgeryToken()
         <input type="hidden" name="SectionId" value="@selectedSectionId" />

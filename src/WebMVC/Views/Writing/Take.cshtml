@@ -44,11 +44,11 @@
         @if (!string.IsNullOrEmpty(q.GroupImagePath))
         {
           <div class="mb-3">
-            <img src="@q.GroupImagePath" alt="@(q.GroupImageAlt ?? "Question illustration")" class="img-fluid" style="max-height: 260px; object-fit: contain; width: 100%; border: 1px solid var(--color-rule);" />
+            <img src="@q.GroupImagePath" alt="@(q.GroupImageAlt ?? "Question illustration")" class="question__image" />
           </div>
         }
 
-        <p class="question__stem" style="font-size: 1.1rem; line-height: 1.5;">@q.Stem</p>
+        <p class="question__stem">@q.Stem</p>
 
         @if (!string.IsNullOrEmpty(q.Hint))
         {

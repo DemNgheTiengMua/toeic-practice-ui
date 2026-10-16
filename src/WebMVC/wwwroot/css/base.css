@@ -222,8 +222,10 @@ html.sidebar-booting *, html.sidebar-booting *::before { transition: none !impor
 .app-main { padding: var(--space-5); min-width: 0; }
 .container { width: 100%; max-width: 1180px; margin: 0 auto; }
 .container--narrow { max-width: 460px; }
-.container--prose { max-width: 760px; }
 .container--form { max-width: 560px; }
+.container--prose { max-width: 760px; }
+.container--quiz { max-width: 820px; }
+.centered-block { margin-inline: auto; }
 
 /* ===== layout helper ===================================================== */
 .stack > * + * { margin-top: var(--space-4); }
@@ -234,74 +236,92 @@ html.sidebar-booting *, html.sidebar-booting *::before { transition: none !impor
 .row--loose { gap: var(--space-4); }
 .row--between { justify-content: space-between; }
 .row--center { justify-content: center; }
+.row--middle { align-items: center; }
+.row--end { justify-content: flex-end; }
 .row--wrap { flex-wrap: wrap; }
 
-/* Utility classes */
-.mx-auto { margin-left: auto; margin-right: auto; }
-.mb-0 { margin-bottom: 0; }
-.mb-1 { margin-bottom: var(--space-1); }
-.mb-2 { margin-bottom: var(--space-2); }
-.mb-3 { margin-bottom: var(--space-3); }
-.mt-1 { margin-top: var(--space-1); }
-.mt-2 { margin-top: var(--space-2); }
-.mt-3 { margin-top: var(--space-3); }
-.text-left { text-align: left; }
-
-/* minmax(0,1fr) stops the columns blowing past the container; the breakpoints
-   below stop them collapsing into unreadable slivers, which is what the old
-   repeat(3,1fr) did at 390px. */
 .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
 .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4); }
 .grid-4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-4); }
+
 /* Definition list grid layout */
-.dl-grid {
-  display: grid;
-  gap: var(--space-3);
-}
+.dl-grid { display: grid; gap: var(--space-3); }
+.dl-grid > div { display: grid; grid-template-columns: 160px 1fr; gap: var(--space-3); }
+.dl-grid--compact > div { grid-template-columns: 120px 1fr; }
+.dl-grid dt { color: var(--color-text-muted); }
 
-.dl-grid > div {
-  display: grid;
-  grid-template-columns: 160px 1fr;
-  gap: var(--space-3);
-}
+/* ===== Display & visibility ============================================== */
+.d-none { display: none !important; }
+.d-block { display: block !important; }
+.d-inline { display: inline !important; }
+.d-inline-block { display: inline-block !important; }
+.d-flex { display: flex !important; }
+.w-100 { width: 100% !important; }
 
-.dl-grid--compact > div {
-  grid-template-columns: 120px 1fr;
-}
+/* ===== Spacing utilities (4px scale) ===================================== */
+.m-0, .no-margin { margin: 0 !important; }
+.mx-auto { margin-left: auto; margin-right: auto; }
+.mb-0 { margin-bottom: 0 !important; }
+.mb-1 { margin-bottom: var(--space-1) !important; }
+.mb-2 { margin-bottom: var(--space-2) !important; }
+.mb-3 { margin-bottom: var(--space-3) !important; }
+.mb-4 { margin-bottom: var(--space-4) !important; }
+.mt-0 { margin-top: 0 !important; }
+.mt-1 { margin-top: var(--space-1) !important; }
+.mt-2 { margin-top: var(--space-2) !important; }
+.mt-3 { margin-top: var(--space-3) !important; }
+.mt-4 { margin-top: var(--space-4) !important; }
+.ml-1 { margin-left: var(--space-1) !important; }
+.ml-2 { margin-left: var(--space-2) !important; }
+.mr-1 { margin-right: var(--space-1) !important; }
+.mr-2 { margin-right: var(--space-2) !important; }
 
-.dl-grid dt {
-  color: var(--color-text-muted);
-}
+.p-0 { padding: 0 !important; }
+.p-1 { padding: var(--space-1) !important; }
+.p-2 { padding: var(--space-2) !important; }
+.p-3 { padding: var(--space-3) !important; }
+.p-4 { padding: var(--space-4) !important; }
+.p-5 { padding: var(--space-5) !important; }
+.pl-5 { padding-left: var(--space-5) !important; }
 
-/* Utility classes for common inline overrides */
-.m-0 { margin: 0; }
-.text-center { text-align: center; }
-.mt-1 { margin-top: var(--space-1); }
-.mt-2 { margin-top: var(--space-2); }
-.mt-3 { margin-top: var(--space-3); }
-.mt-4 { margin-top: var(--space-4); }
-.mb-1 { margin-bottom: var(--space-1); }
-.mb-3 { margin-bottom: var(--space-3); }
-.mb-4 { margin-bottom: var(--space-4); }
-.cursor-pointer { cursor: pointer; }
-.flex-col { flex-direction: column; }
-.fw-600 { font-weight: 600; }
-.pl-5 { padding-left: var(--space-5); }
-.no-margin { margin: 0; }
+.pt-0 { padding-top: 0 !important; }
+.pt-1 { padding-top: var(--space-1) !important; }
+.pt-2 { padding-top: var(--space-2) !important; }
+.pt-3 { padding-top: var(--space-3) !important; }
+.pt-4 { padding-top: var(--space-4) !important; }
 
-/* Container width variants */
-.container--narrow { max-width: 560px; }
-.container--form { max-width: 760px; }
-.container--quiz { max-width: 820px; }
-.centered-block { margin-inline: auto; }
-.no-margin { margin: 0; }
-/* ===== Text utilities ==================================================== */
-/* Text size utilities with appropriate line heights */
+.pb-0 { padding-bottom: 0 !important; }
+.pb-1 { padding-bottom: var(--space-1) !important; }
+.pb-2 { padding-bottom: var(--space-2) !important; }
+.pb-3 { padding-bottom: var(--space-3) !important; }
+.pb-4 { padding-bottom: var(--space-4) !important; }
+
+/* ===== Typography & text utilities ======================================= */
 .text-xs { font-size: var(--text-xs); line-height: var(--leading-snug); }
 .text-sm { font-size: var(--text-sm); line-height: var(--leading-snug); }
 .text-base { font-size: var(--text-base); line-height: var(--leading-body); }
 .text-lg { font-size: var(--text-lg); line-height: var(--leading-snug); }
 .text-muted { color: var(--color-text-muted); }
+.text-left { text-align: left; }
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+
+.font-mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.font-sign { font-family: var(--font-sign); }
+.font-sans { font-family: var(--font-sans); }
+.font-bold { font-weight: 700; }
+.font-semibold, .fw-600 { font-weight: 600; }
+.font-normal { font-weight: 400; }
+.uppercase { text-transform: uppercase; letter-spacing: var(--tracking-sign); }
+.tabular-nums { font-variant-numeric: tabular-nums; }
+.cursor-pointer { cursor: pointer; }
+.flex-col { flex-direction: column; }
+
+/* Text status inks (Field-is-not-lettering rule) */
+.text-danger { color: var(--color-danger); }   /* #8c0e12 */
+.text-success { color: var(--color-success); } /* #08562f */
+.text-warning { color: var(--color-warning); } /* #8a5a00 */
+.text-primary { color: var(--color-primary); } /* #0b4ea2 */
 
 /* ===== state visibility ==================================================
    This rule group is the prototype's testable spec — do not change it. */

@@ -52,11 +52,11 @@
             {
               <div class="card mb-3">
                 <div class="card__body">
-                  <div class="row row--between" style="align-items: center; margin-bottom: var(--space-2);">
+                  <div class="row row--between mb-2">
                     <span class="badge badge--info">AUDIO</span>
                     <span class="text-xs text-muted">Listen carefully — audio plays once</span>
                   </div>
-                  <audio controls src="@q.AudioPath" style="width: 100%; border: 1px solid var(--ink); border-radius: 0;"></audio>
+                  <audio controls src="@q.AudioPath" class="audio-player"></audio>
                 </div>
               </div>
             }
@@ -65,7 +65,7 @@
             {
               <div class="card mb-3">
                 <div class="card__body">
-                  <p class="no-margin" style="white-space: pre-line; line-height: var(--leading-relaxed);">@q.Passage</p>
+                  <p class="no-margin passage">@q.Passage</p>
                 </div>
               </div>
             }
@@ -73,13 +73,13 @@
             @if (!string.IsNullOrEmpty(q.ImagePath))
             {
               <div class="mb-3">
-                <img src="@q.ImagePath" alt="@(q.ImageAlt ?? "Question illustration")" class="img-fluid" style="max-height: 350px; border: 2px solid var(--ink);" />
+                <img src="@q.ImagePath" alt="@(q.ImageAlt ?? "Question illustration")" class="question__image" />
               </div>
             }
 
             <div class="question">
-              <div class="question__meta row row--between" style="align-items: center;">
-                <div class="row" style="gap: var(--space-2); align-items: center;">
+              <div class="question__meta row row--between">
+                <div class="row row--tight">
                   <span class="question__number">Question @q.DisplayOrder</span>
                   <span class="badge badge--muted">@q.SectionName</span>
                 </div>
@@ -92,7 +92,7 @@
                 </div>
               </div>
 
-              <p class="question__stem" style="font-size: var(--text-base); margin: var(--space-3) 0;">
+              <p class="question__stem">
                 @q.Stem
               </p>
 
@@ -100,7 +100,7 @@
                 @foreach (var opt in q.Options)
                 {
                   var isSelected = opt.OptionId == q.SelectedOptionId;
-                  <label class="option @(isSelected ? "is-selected" : "")" style="cursor: pointer;">
+                  <label class="option @(isSelected ? "is-selected" : "")">
                     <input class="option__input js-option-radio" type="radio" name="selectedOptionId"
                            value="@opt.OptionId" @(isSelected ? "checked" : "")>
                     <span class="option__marker">@opt.Label</span>
@@ -294,6 +294,7 @@
   </form>
 
   <script src="~/js/icons.js"></script>
+  <script src="~/js/keyboard-nav.js"></script>
   <script>
     (function () {
       var attemptId = @take.AttemptId;

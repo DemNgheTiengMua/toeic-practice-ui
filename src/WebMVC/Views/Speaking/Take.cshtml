@@ -50,14 +50,14 @@
               <span class="badge badge--muted">@q.SectionName</span>
             </div>
             
-            <p class="question__stem" style="font-size: var(--text-lg); font-weight: 500; margin-top: var(--space-2)">
+            <p class="question__stem">
               @q.Stem
             </p>
 
             @if (!string.IsNullOrEmpty(q.GroupImagePath))
             {
-              <div class="question__image-wrapper" style="margin: var(--space-3) 0">
-                <img class="question__image" src="@q.GroupImagePath" alt="@(q.GroupImageAlt ?? "Question illustration")" style="max-height: 280px; object-fit: contain; border: 1px solid var(--color-rule)">
+              <div class="question__image-wrapper my-3">
+                <img class="question__image" src="@q.GroupImagePath" alt="@(q.GroupImageAlt ?? "Question illustration")">
               </div>
             }
 
@@ -123,7 +123,7 @@
                 <div class="exam-audio text-left" style="max-width: 480px; margin: var(--space-4) auto 0">
                   <span class="badge badge--muted">Audio</span>
                   <div style="flex: 1 1 auto">
-                    <audio id="audio-player" controls style="width: 100%"></audio>
+                    <audio id="audio-player" controls class="w-100"></audio>
                   </div>
                 </div>
               </div>

@@ -22,16 +22,16 @@
     <input type="hidden" name="ExamId" value="@conv.ExamId.Value" />
   }
 
-  <div class="row row--between mb-3" style="align-items: baseline;">
+  <div class="row row--between row--baseline mb-3">
     <div>
       <h1 class="m-0 mb-1">Score conversion — @conv.CertName</h1>
       <p class="text-sm text-muted no-margin">The number of correct answers is converted to scaled scores and proficiency bands.</p>
     </div>
-    <div class="row" style="gap: var(--space-3); align-items: center;">
+    <div class="row row--middle">
       <!-- Certificate Switcher -->
-      <div class="row" style="gap: var(--space-2); align-items: center;">
-        <label for="cert-select" class="text-sm font-semibold" style="margin: 0;">Certificate:</label>
-        <select id="cert-select" class="field__input" style="width: auto; padding: 4px 8px;" onchange="if (this.value) window.location.href='/admin/score-conversion?cert=' + encodeURIComponent(this.value);">
+      <div class="row row--middle">
+        <label for="cert-select" class="text-sm font-semibold m-0">Certificate:</label>
+        <select id="cert-select" class="field__input" style="width: auto;" onchange="if (this.value) window.location.href='/admin/score-conversion?cert=' + encodeURIComponent(this.value);">
           @foreach (var c in conv.Certificates)
           {
             <option value="@c.Code" selected="@(c.Code == conv.CertCode ? "selected" : null)">@c.Code — @c.Name</option>
@@ -135,7 +135,7 @@
                        name="Bands[@curBandIdx].Code"
                        value="@band.Code"
                        readonly
-                       style="width: 120px; font-weight: 700; background-color: var(--soft-bg, #f7f9fa); cursor: not-allowed;"
+                       style="width: 120px; font-weight: 700; background: var(--surface-soft); cursor: not-allowed;"
                        aria-label="Band Code" />
               </td>
               <td>

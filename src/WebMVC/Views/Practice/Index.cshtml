@@ -24,7 +24,7 @@
 
 @if (catalog.UnfinishedSession is { } unfinished)
 {
-  <div class="alert alert--info row row--between row--wrap" role="status" style="border-left: 4px solid var(--sign-blue); background: var(--color-surface); align-items: center;">
+  <div class="alert alert--info row row--between row--middle row--wrap" role="status">
     <div>
       <strong>Unfinished practice:</strong> You have an in-progress session in <strong>@unfinished.SectionName</strong> started @Dates.FormatDate(unfinished.StartedAt).
       <div class="text-sm text-muted">@unfinished.CorrectCount of @unfinished.QuestionCount questions answered so far.</div>
@@ -96,7 +96,7 @@ else
         <div class="grid-4">
           @foreach (var sec in catalog.ListeningSections)
           {
-            <button type="submit" name="SectionId" value="@sec.SectionId" class="part-card" style="text-align: left; width: 100%; cursor: pointer;">
+            <button type="submit" name="SectionId" value="@sec.SectionId" class="part-card text-left w-100">
               <div class="part-card__header">
                 <strong>@sec.Code</strong>
                 @if (sec.AccuracyPercentage.HasValue)
@@ -124,7 +124,7 @@ else
         <div class="grid-3">
           @foreach (var sec in catalog.ReadingSections)
           {
-            <button type="submit" name="SectionId" value="@sec.SectionId" class="part-card" style="text-align: left; width: 100%; cursor: pointer;">
+            <button type="submit" name="SectionId" value="@sec.SectionId" class="part-card text-left w-100">
               <div class="part-card__header">
                 <strong>@sec.Code</strong>
                 @if (sec.AccuracyPercentage.HasValue)

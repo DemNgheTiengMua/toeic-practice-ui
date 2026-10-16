@@ -52,7 +52,7 @@
     </div>
   }
 
-  <div class="card" style="border: 2px solid var(--ink); border-radius: 0;">
+  <div class="card">
     <div class="card__body stack">
       <div class="cefr">
         <div class="cefr__head">
@@ -90,17 +90,17 @@
     var maxPossible = result.CefrBands.Count > 0 ? result.CefrBands.Max(b => b.MaxTotal) : 990;
   }
   <div class="grid-3">
-    <div class="stat" style="border: 2px solid var(--ink); border-radius: 0;">
+    <div class="stat">
       <div class="stat__label">Total score</div>
       <div class="stat__value font-mono">@result.TotalScore</div>
       <div class="stat__hint font-mono text-muted">out of @maxPossible</div>
     </div>
-    <div class="stat" style="border: 2px solid var(--ink); border-radius: 0;">
+    <div class="stat">
       <div class="stat__label">Listening</div>
       <div class="stat__value font-mono">@(listSkill?.ScaledScore ?? 0)</div>
       <div class="stat__hint font-mono text-muted">@(listSkill?.RawScore ?? 0) of @(listSkill?.TotalQuestions ?? 0) correct</div>
     </div>
-    <div class="stat" style="border: 2px solid var(--ink); border-radius: 0;">
+    <div class="stat">
       <div class="stat__label">Reading</div>
       <div class="stat__value font-mono">@(readSkill?.ScaledScore ?? 0)</div>
       <div class="stat__hint font-mono text-muted">@(readSkill?.RawScore ?? 0) of @(readSkill?.TotalQuestions ?? 0) correct</div>
@@ -115,7 +115,7 @@
     </div>
   }
 
-  <div class="card" style="border: 2px solid var(--ink); border-radius: 0;">
+  <div class="card">
     <div class="card__header"><strong>Where this puts you</strong></div>
     <div class="card__body">
       <table class="table">

@@ -56,22 +56,22 @@
           <div class="stack">
             @if (!string.IsNullOrEmpty(q.AudioPath))
             {
-              <div class="card mb-3" style="border: 2px solid var(--ink); border-radius: 0;">
+              <div class="card mb-3">
                 <div class="card__body">
-                  <div class="row row--between" style="align-items: center; margin-bottom: var(--space-2);">
+                  <div class="row row--between mb-2">
                     <span class="badge badge--info">AUDIO</span>
                     <span class="text-xs text-muted">Listen carefully</span>
                   </div>
-                  <audio controls src="@q.AudioPath" style="width: 100%; border: 1px solid var(--ink); border-radius: 0;"></audio>
+                  <audio controls src="@q.AudioPath" class="audio-player"></audio>
                 </div>
               </div>
             }
 
             @if (!string.IsNullOrEmpty(q.Passage))
             {
-              <div class="card mb-3" style="border: 2px solid var(--ink); border-radius: 0;">
+              <div class="card mb-3">
                 <div class="card__body">
-                  <p class="no-margin" style="white-space: pre-line; line-height: var(--leading-relaxed);">@q.Passage</p>
+                  <p class="no-margin passage">@q.Passage</p>
                 </div>
               </div>
             }
@@ -79,14 +79,14 @@
             @if (!string.IsNullOrEmpty(q.ImagePath))
             {
               <div class="mb-3">
-                <img src="@q.ImagePath" alt="@(q.ImageAlt ?? "Question illustration")" class="img-fluid" style="max-height: 350px; border: 2px solid var(--ink); border-radius: 0;" />
+                <img src="@q.ImagePath" alt="@(q.ImageAlt ?? "Question illustration")" class="question__image" />
               </div>
             }
 
-            <div class="question" style="border: 2px solid var(--ink); border-radius: 0; padding: var(--space-4); background: var(--bg-surface);">
-              <div class="question__meta row row--between" style="align-items: center;">
-                <div class="row" style="gap: var(--space-2); align-items: center;">
-                  <span class="question__number font-mono font-bold" style="font-size: var(--text-base);">Question @q.DisplayOrder</span>
+            <div class="question">
+              <div class="question__meta row row--between">
+                <div class="row row--tight">
+                  <span class="question__number font-mono font-bold">Question @q.DisplayOrder</span>
                   <span class="badge badge--muted">@q.SkillName · @q.SectionName</span>
                 </div>
                 <div>
@@ -98,7 +98,7 @@
                 </div>
               </div>
 
-              <p class="question__stem" style="font-size: var(--text-base); margin: var(--space-3) 0;">
+              <p class="question__stem">
                 @q.Stem
               </p>
 
@@ -106,7 +106,7 @@
                 @foreach (var opt in q.Options)
                 {
                   var isSelected = opt.OptionId == q.SelectedOptionId;
-                  <label class="option @(isSelected ? "is-selected" : "")" style="cursor: pointer; border-radius: 0;">
+                  <label class="option @(isSelected ? "is-selected" : "")">
                     <input class="option__input js-option-radio" type="radio" name="selectedOptionId"
                            value="@opt.OptionId" @(isSelected ? "checked" : "")>
                     <span class="option__marker font-mono">@opt.Label</span>
@@ -144,7 +144,7 @@
 
           <!-- Sidebar Navigator -->
           <aside class="exam-sidebar stack">
-            <div class="card" style="border: 2px solid var(--ink); border-radius: 0;">
+            <div class="card">
               <div class="card__header">
                 <div class="row row--between">
                   <strong class="text-sm">Progress</strong>
@@ -152,8 +152,8 @@
                 </div>
               </div>
               <div class="card__body stack">
-                <div class="progress" role="progressbar" aria-valuenow="@take.AnsweredCount" aria-valuemin="0" aria-valuemax="@take.TotalQuestions" style="border-radius: 0;">
-                  <div class="progress__bar" id="progress-bar" style="width: @progressPercent%; border-radius: 0;"></div>
+                <div class="progress" role="progressbar" aria-valuenow="@take.AnsweredCount" aria-valuemin="0" aria-valuemax="@take.TotalQuestions">
+                  <div class="progress__bar" id="progress-bar" style="width: @progressPercent%;"></div>
                 </div>
 
                 <div class="navigator">
@@ -181,7 +181,6 @@
                           <a href="/placement/take/@take.PlacementId?q=@cell.DisplayOrder"
                              class="@classes"
                              id="nav-cell-@cell.QuestionId"
-                             style="text-decoration: none; border-radius: 0;"
                              aria-label="Question @cell.DisplayOrder @(cell.IsAnswered ? "answered" : "unanswered")"
                              aria-current="@(cell.IsCurrent ? "true" : "false")">
                             @cell.DisplayOrder
@@ -193,39 +192,39 @@
                 </div>
 
                 <div class="text-xs stack" style="gap: var(--space-1)">
-                  <div class="row" style="align-items: center; gap: var(--space-2);">
-                    <span class="navigator__cell is-answered" style="width: 18px; height: 18px; font-size: 10px; display: inline-flex; align-items: center; justify-content: center; border-radius: 0;" aria-hidden="true">1</span> answered
+                  <div class="row row--middle row--tight">
+                    <span class="navigator__cell navigator__cell--swatch is-answered" aria-hidden="true">1</span> answered
                   </div>
-                  <div class="row" style="align-items: center; gap: var(--space-2);">
-                    <span class="navigator__cell is-unanswered" style="width: 18px; height: 18px; font-size: 10px; display: inline-flex; align-items: center; justify-content: center; border-radius: 0;" aria-hidden="true">2</span> unanswered
+                  <div class="row row--middle row--tight">
+                    <span class="navigator__cell navigator__cell--swatch is-unanswered" aria-hidden="true">2</span> unanswered
                   </div>
                 </div>
               </div>
             </div>
 
-            <p class="text-xs text-muted no-margin" role="note" style="line-height: var(--leading-relaxed);">
+            <p class="text-xs text-muted no-margin" role="note">
               The placement test is free and deducts no credits. Your result sets the starting level of your learning path.
             </p>
 
-            <button type="button" class="btn btn--danger js-open-submit-modal" style="width: 100%;">Submit test</button>
+            <button type="button" class="btn btn--danger btn--full js-open-submit-modal">Submit test</button>
           </aside>
         </div>
       </div>
     </main>
 
     <!-- Modal for Submit Confirmation -->
-    <div id="submit-modal" class="modal" role="dialog" aria-modal="true" style="display:none; position:fixed; inset:0; background:rgba(20,24,29,0.7); z-index:999; align-items:center; justify-content:center;">
-      <div class="card" style="max-width:480px; width:90%; border:2px solid var(--ink); border-radius: 0; background:var(--bg-canvas);">
-        <div class="card__header"><strong>Submit placement test?</strong></div>
-        <div class="card__body">
-          <p id="submit-modal-summary" style="margin-bottom: var(--space-3);">
+    <div id="submit-modal" class="modal-overlay" role="dialog" aria-modal="true" style="display:none;">
+      <div class="modal">
+        <div class="modal__header"><strong>Submit placement test?</strong></div>
+        <div class="modal__body stack">
+          <p id="submit-modal-summary" class="mb-3">
             You have answered <strong id="modal-answered-count">@take.AnsweredCount</strong> of <strong>@take.TotalQuestions</strong> questions.
           </p>
-          <p class="text-sm text-muted">
+          <p class="text-sm text-muted no-margin">
             Once submitted, your answers will be graded immediately and your starting CEFR band calculated.
           </p>
         </div>
-        <div class="card__footer row row--between">
+        <div class="modal__footer row row--between">
           <button type="button" class="btn" id="btn-cancel-submit">Keep answering</button>
           <form method="post" action="/placement/take/@take.PlacementId/submit" class="no-margin" id="submit-form">
             @Html.AntiForgeryToken()
@@ -236,6 +235,9 @@
       </div>
     </div>
   </div>
+
+  <script src="~/js/icons.js"></script>
+  <script src="~/js/keyboard-nav.js"></script>
 
   <script>
     (function () {

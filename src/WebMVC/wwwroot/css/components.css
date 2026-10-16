@@ -1166,7 +1166,7 @@ button.nav-list__group.has-current[aria-expanded="false"] .nav-list__count {
 
 .mentor-card__stars {
   font-size: var(--text-lg, 18px);
-  color: var(--sign-gold, #f2b705);
+  color: var(--color-warning, #8a5a00);
 }
 
 .mentor-card__bio {
@@ -1348,7 +1348,6 @@ button.nav-list__group.has-current[aria-expanded="false"] .nav-list__count {
   font-weight: 600;
   color: var(--sign-blue, #0b4ea2);
 }
-}
 
 /* ===== Certificate Picker ===== */
 .certificate-picker {
@@ -1362,16 +1361,17 @@ button.nav-list__group.has-current[aria-expanded="false"] .nav-list__count {
   flex-direction: column;
   gap: var(--space-2, 8px);
   padding: var(--space-4, 16px);
-  border: 2px solid var(--color-keyline, #c9ced6);
+  border: var(--keyline, 2px) solid var(--ink, #14181d);
+  border-radius: 0;
   background: var(--color-surface, #ffffff);
   cursor: pointer;
-  transition: all 150ms ease;
+  transition: background 120ms var(--ease-out), color 120ms var(--ease-out);
 }
 
 .certificate-card:hover {
-  border-color: var(--sign-blue, #0b4ea2);
-  background: var(--sign-blue, #0b4ea2);
-  color: var(--on-ink, #ffffff);
+  border-color: var(--ink, #14181d);
+  background: var(--ink, #14181d);
+  color: #ffffff;
 }
 
 .certificate-card__name {
@@ -1388,7 +1388,7 @@ button.nav-list__group.has-current[aria-expanded="false"] .nav-list__count {
 }
 
 .certificate-card:hover .certificate-card__skills {
-  color: var(--on-ink-muted, #8f98a3);
+  color: var(--color-on-ink-muted, #8f98a3);
 }
 
 /* === Active Certificate Display === */
@@ -1578,7 +1578,7 @@ button.cert-dropdown__item {
 }
 
 .cert-dropdown__item.is-current {
-  background: var(--sign-blue);
+  background: var(--ink);
   color: #ffffff;
 }
 
@@ -1845,4 +1845,100 @@ details > summary:focus-visible { outline: 3px solid var(--sign-blue); outline-o
 .graded-text {
   font-size: var(--text-passage); line-height: var(--leading-read);
   max-width: var(--measure); white-space: pre-line;
+}
+
+/* ===== Media & Audio Placard ===== */
+.audio-player {
+  width: 100%;
+  border: var(--keyline-soft) solid var(--ink);
+  border-radius: 0;
+  background: var(--color-surface);
+}
+
+.question__image {
+  max-height: 350px;
+  width: 100%;
+  object-fit: contain;
+  border: var(--keyline) solid var(--ink);
+  border-radius: 0;
+  background: var(--color-surface);
+}
+
+.img-fluid {
+  max-width: 100%;
+  height: auto;
+}
+
+/* ===== Button extensions ===== */
+.btn--full {
+  width: 100%;
+  justify-content: center;
+}
+
+.btn--secondary {
+  /* Inherits .btn plate styling */
+}
+
+/* ===== Explain Placard (replaces left-bar callouts) ===== */
+.explain {
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-primary-soft);
+  border: var(--keyline-soft) solid var(--color-primary-soft-border);
+  border-radius: 0;
+  font-size: var(--text-sm);
+  line-height: var(--leading-body);
+}
+
+.explain--warning {
+  background: var(--color-warning-soft);
+  border-color: var(--color-warning-soft-border);
+}
+
+.explain--neutral {
+  background: var(--color-surface);
+  border-color: var(--line-soft);
+}
+
+/* ===== QR Payment Modal (Checkout) ===== */
+.qr-modal {
+  max-width: 880px;
+  width: 100%;
+  margin: auto;
+  border: var(--keyline) solid var(--ink);
+  border-radius: 0;
+  background: var(--color-surface);
+}
+
+.qr-modal__grid {
+  display: grid;
+  grid-template-columns: minmax(300px, 1fr) minmax(360px, 1.2fr);
+  border-bottom: var(--keyline-soft) solid var(--line-soft);
+}
+
+.qr-modal__summary {
+  padding: var(--space-5);
+  background: var(--wall);
+  border-right: var(--keyline-soft) solid var(--line-soft);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.qr-modal__frame {
+  padding: 0;
+  min-height: 540px;
+  background: var(--color-surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 768px) {
+  .qr-modal__grid {
+    grid-template-columns: 1fr;
+  }
+  .qr-modal__summary {
+    border-right: 0;
+    border-bottom: var(--keyline-soft) solid var(--line-soft);
+  }
 }

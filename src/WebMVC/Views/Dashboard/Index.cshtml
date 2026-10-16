@@ -52,7 +52,7 @@ else if (Model.Activation == "failed")
       </form>
       @* Dismiss hides it for this page view only; it returns on the next visit until verified. *@
       <button type="button" class="btn btn--ghost btn--sm" aria-label="Dismiss"
-              onclick="document.getElementById('verify-reminder').hidden = true">✕</button>
+              onclick="document.getElementById('verify-reminder').hidden = true">Dismiss</button>
     </span>
   </div>
 }
@@ -61,7 +61,7 @@ else if (Model.Activation == "failed")
 
 @if (dashboard.UnfinishedPractice is { } unfinishedPractice)
 {
-  <div class="alert alert--info row row--between row--wrap mt-3" role="status" style="border-left: 4px solid var(--sign-blue); background: var(--color-surface); align-items: center;">
+  <div class="alert alert--info row row--between row--middle row--wrap mt-3" role="status">
     <div>
       <strong>Unfinished practice:</strong> You have an in-progress session in <strong>@unfinishedPractice.SectionName</strong> started @Dates.FormatDate(unfinishedPractice.StartedAt).
       <div class="text-sm text-muted">@unfinishedPractice.CorrectCount of @unfinishedPractice.QuestionCount questions answered so far. Finish to update your accuracy and weak points.</div>
@@ -72,7 +72,7 @@ else if (Model.Activation == "failed")
 
 @if (dashboard.UnfinishedAttempt is { } unfinishedAttempt)
 {
-  <div class="alert alert--warning row row--between row--wrap mt-3" role="status" style="border-left: 4px solid var(--sign-gold); background: var(--color-surface); align-items: center;">
+  <div class="alert alert--warning row row--between row--middle row--wrap mt-3" role="status">
     <div>
       <strong>Unfinished exam:</strong> You have an in-progress @PurposeLabel(unfinishedAttempt.Purpose) (<strong>@unfinishedAttempt.ExamName</strong>) started @Dates.FormatDate(unfinishedAttempt.StartedAt).
       <div class="text-sm text-muted">Complete your exam to receive your scaled score and band.</div>
