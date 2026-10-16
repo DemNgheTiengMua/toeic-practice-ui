@@ -1,0 +1,111 @@
+{
+  "$schema": "https://extra-efficiency.local/schemas/question-ingest.v1.json",
+  "version": "1.0",
+  "exam": {
+    "code": "SAMPLE-TOEIC-LISTENING-01",
+    "title": "TOEIC Listening Sample (Part 1 Photograph & Part 2 Question-Response)",
+    "purpose": "practice_drill",
+    "durationMinutes": 30,
+    "totalScore": 495
+  },
+  "sections": [
+    {
+      "sectionCode": "PART_1",
+      "groups": [
+        {
+          "passage": null,
+          "audioFile": "media/part1-photo-01.wav",
+          "audioStartMs": null,
+          "audioEndMs": null,
+          "imageFile": "media/part1-photo-01.jpg",
+          "imageAlt": "A person writing notes in a notebook at an office desk.",
+          "transcript": "(A) He is walking down the hallway. (B) He is writing in a notebook. (C) He is driving a vehicle. (D) He is closing a window.",
+          "displayOrder": 1,
+          "questions": [
+            {
+              "stem": "Look at the photograph and choose the statement that best describes what you see.",
+              "difficultyLevel": 1,
+              "questionType": "mcq",
+              "categoryCode": "LISTENING_PHOTOGRAPHS",
+              "explanation": "Statement (B) accurately describes the action shown in the photo.",
+              "hint": "Focus on the main subject's hands and activity.",
+              "displayOrder": 1,
+              "options": [
+                {
+                  "label": "A",
+                  "text": "(A) He is walking down the hallway.",
+                  "isCorrect": false,
+                  "rationale": "Incorrect action; the person is seated at a desk."
+                },
+                {
+                  "label": "B",
+                  "text": "(B) He is writing in a notebook.",
+                  "isCorrect": true,
+                  "rationale": "Directly corresponds to the action depicted in the photograph."
+                },
+                {
+                  "label": "C",
+                  "text": "(C) He is driving a vehicle.",
+                  "isCorrect": false,
+                  "rationale": "Incorrect setting and action."
+                },
+                {
+                  "label": "D",
+                  "text": "(D) He is closing a window.",
+                  "isCorrect": false,
+                  "rationale": "No window interaction is taking place."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "sectionCode": "PART_2",
+      "groups": [
+        {
+          "passage": null,
+          "audioFile": "media/part2-question-01.wav",
+          "audioStartMs": null,
+          "audioEndMs": null,
+          "imageFile": null,
+          "imageAlt": null,
+          "transcript": "Where did you leave the contract files? (A) On Mr. Davis's desk. (B) Yes, yesterday morning. (C) It was signed by both parties.",
+          "displayOrder": 2,
+          "questions": [
+            {
+              "stem": "Where did you leave the contract files?",
+              "difficultyLevel": 2,
+              "questionType": "mcq",
+              "categoryCode": "QUESTION_RESPONSE",
+              "explanation": "Question starts with 'Where', requiring a location response.",
+              "hint": "Identify the question word (Where) which asks for a place.",
+              "displayOrder": 1,
+              "options": [
+                {
+                  "label": "A",
+                  "text": "On Mr. Davis's desk.",
+                  "isCorrect": true,
+                  "rationale": "Directly answers 'Where' with a specific location."
+                },
+                {
+                  "label": "B",
+                  "text": "Yes, yesterday morning.",
+                  "isCorrect": false,
+                  "rationale": "'Yes' is inappropriate for a WH-question; also answers 'When', not 'Where'."
+                },
+                {
+                  "label": "C",
+                  "text": "It was signed by both parties.",
+                  "isCorrect": false,
+                  "rationale": "Answers a question about status, not location."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

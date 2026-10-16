@@ -1,0 +1,125 @@
+{
+  "$schema": "https://extra-efficiency.local/schemas/question-ingest.v1.json",
+  "version": "1.0",
+  "exam": {
+    "code": "SAMPLE-SPEAKING-WRITING-01",
+    "title": "Speaking and Writing Free Response Sample",
+    "purpose": "practice_drill",
+    "durationMinutes": 60,
+    "totalScore": 400
+  },
+  "sections": [
+    {
+      "sectionCode": "SPEAKING_PART_1",
+      "groups": [
+        {
+          "passage": null,
+          "audioFile": null,
+          "audioStartMs": null,
+          "audioEndMs": null,
+          "imageFile": null,
+          "imageAlt": null,
+          "transcript": null,
+          "displayOrder": 1,
+          "questions": [
+            {
+              "stem": "Describe a memorable celebration or holiday you attended. Explain why it was important to you.",
+              "difficultyLevel": 3,
+              "questionType": "free_response",
+              "categoryCode": "SPEAKING_DESCRIPTIVE",
+              "prepSeconds": 45,
+              "responseSeconds": 60,
+              "minWords": null,
+              "maxWords": null,
+              "explanation": "Speak fluently, describe the event vividly, and explain personal significance clearly.",
+              "hint": "Mention the occasion, who was there, what happened, and why you remember it fondly.",
+              "displayOrder": 1,
+              "criteria": [
+                {
+                  "code": "PRON",
+                  "name": "Pronunciation & Intonation",
+                  "maxScore": 5.0,
+                  "weight": 1.0
+                },
+                {
+                  "code": "FLUENCY",
+                  "name": "Fluency & Coherence",
+                  "maxScore": 5.0,
+                  "weight": 1.0
+                },
+                {
+                  "code": "GRAMMAR",
+                  "name": "Grammatical Accuracy",
+                  "maxScore": 5.0,
+                  "weight": 1.0
+                },
+                {
+                  "code": "VOCAB",
+                  "name": "Lexical Resource",
+                  "maxScore": 5.0,
+                  "weight": 1.0
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "sectionCode": "WRITING_PART_2",
+      "groups": [
+        {
+          "passage": "You received an email from your client requesting an update on project milestones.",
+          "audioFile": null,
+          "audioStartMs": null,
+          "audioEndMs": null,
+          "imageFile": null,
+          "imageAlt": null,
+          "transcript": null,
+          "displayOrder": 2,
+          "questions": [
+            {
+              "stem": "Write an email responding to the client. In your email, summarize current progress, explain any pending items, and propose a date for the next status meeting.",
+              "difficultyLevel": 4,
+              "questionType": "free_response",
+              "categoryCode": "BUSINESS_WRITING",
+              "prepSeconds": null,
+              "responseSeconds": 900,
+              "minWords": 100,
+              "maxWords": 200,
+              "explanation": "Use standard business email formatting, clear paragraphs, polite tone, and address all three required points.",
+              "hint": "Include greeting, update, pending tasks, proposed meeting date, and professional sign-off.",
+              "displayOrder": 1,
+              "criteria": [
+                {
+                  "code": "TASK_ACHIEVEMENT",
+                  "name": "Task Achievement & Completeness",
+                  "maxScore": 5.0,
+                  "weight": 1.0
+                },
+                {
+                  "code": "COHERENCE",
+                  "name": "Coherence & Organization",
+                  "maxScore": 5.0,
+                  "weight": 1.0
+                },
+                {
+                  "code": "VOCABULARY",
+                  "name": "Lexical Resource & Tone",
+                  "maxScore": 5.0,
+                  "weight": 1.0
+                },
+                {
+                  "code": "GRAMMAR",
+                  "name": "Grammar & Accuracy",
+                  "maxScore": 5.0,
+                  "weight": 1.0
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

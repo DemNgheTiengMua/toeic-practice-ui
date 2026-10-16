@@ -1,0 +1,117 @@
+{
+  "$schema": "https://extra-efficiency.local/schemas/question-ingest.v1.json",
+  "version": "1.0",
+  "exam": {
+    "code": "SAMPLE-TOEIC-READING-01",
+    "title": "TOEIC Reading Sample (Part 5 & Part 7)",
+    "purpose": "practice_drill",
+    "durationMinutes": 45,
+    "totalScore": 495
+  },
+  "sections": [
+    {
+      "sectionCode": "PART_5",
+      "groups": [
+        {
+          "passage": null,
+          "audioFile": null,
+          "audioStartMs": null,
+          "audioEndMs": null,
+          "imageFile": null,
+          "imageAlt": null,
+          "transcript": null,
+          "displayOrder": 1,
+          "questions": [
+            {
+              "stem": "The annual sales report will be released to shareholders _____ the end of the current fiscal year.",
+              "difficultyLevel": 2,
+              "questionType": "mcq",
+              "categoryCode": "PREPOSITION",
+              "explanation": "The preposition 'at' or 'by' denotes a deadline or specific point in time; 'at the end of' is the standard idiomatic phrase.",
+              "hint": "Identify the standard preposition pairing with 'the end of'.",
+              "displayOrder": 1,
+              "options": [
+                {
+                  "label": "A",
+                  "text": "at",
+                  "isCorrect": true,
+                  "rationale": "Correct idiom: 'at the end of [period]' specifies the point in time."
+                },
+                {
+                  "label": "B",
+                  "text": "on",
+                  "isCorrect": false,
+                  "rationale": "'On' is used with specific days or dates, not 'the end of'."
+                },
+                {
+                  "label": "C",
+                  "text": "into",
+                  "isCorrect": false,
+                  "rationale": "'Into' indicates movement or transformation, not a temporal point."
+                },
+                {
+                  "label": "D",
+                  "text": "among",
+                  "isCorrect": false,
+                  "rationale": "'Among' denotes distribution within a group, not time."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "sectionCode": "PART_7",
+      "groups": [
+        {
+          "passage": "Notice to all building tenants:\nThe main elevators in the North Tower will be undergoing scheduled maintenance this Saturday, October 20, between 8:00 AM and 2:00 PM. During this period, please use the service elevator located near the rear entrance. We apologize for any inconvenience.",
+          "audioFile": null,
+          "audioStartMs": null,
+          "audioEndMs": null,
+          "imageFile": null,
+          "imageAlt": null,
+          "transcript": null,
+          "displayOrder": 2,
+          "questions": [
+            {
+              "stem": "What is the purpose of the notice?",
+              "difficultyLevel": 3,
+              "questionType": "mcq",
+              "categoryCode": "READING_COMPREHENSION",
+              "explanation": "The notice informs tenants about elevator maintenance and alternative access.",
+              "hint": "Look at the first sentence of the notice for the main subject.",
+              "displayOrder": 1,
+              "options": [
+                {
+                  "label": "A",
+                  "text": "To announce elevator maintenance and alternative access",
+                  "isCorrect": true,
+                  "rationale": "The notice explicitly details maintenance hours and directs tenants to the service elevator."
+                },
+                {
+                  "label": "B",
+                  "text": "To notify tenants of a permanent building closure",
+                  "isCorrect": false,
+                  "rationale": "The closure is temporary and applies only to main elevators on Saturday."
+                },
+                {
+                  "label": "C",
+                  "text": "To hire new maintenance technicians",
+                  "isCorrect": false,
+                  "rationale": "No job opening is mentioned in the text."
+                },
+                {
+                  "label": "D",
+                  "text": "To reschedule a tenant meeting",
+                  "isCorrect": false,
+                  "rationale": "No meeting is mentioned in the text."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
