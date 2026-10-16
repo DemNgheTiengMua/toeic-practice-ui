@@ -4,6 +4,8 @@ using DataAccess;
 using DataAccess.Scaffold;
 using Microsoft.EntityFrameworkCore;
 
+using Services.Credits;
+
 namespace Services;
 
 /// <summary>Thrown when a learner asks to switch to a certificate that doesn't exist or is retired.</summary>
@@ -30,20 +32,17 @@ public interface ILearnerService
 /// resolves the active certificate here first and filters on its id, so a later slice adding a
 /// screen calls <see cref="GetActiveCertIdAsync"/> rather than trusting a certificate from the
 /// request.</summary>
-public sealed class LearnerService(CompanionDbContext db) : ILearnerService
+public sealed class LearnerService(CompanionDbContext db, ICreditLedger? creditLedger = null) : ILearnerService
 {
     private const int RecentCount = 5;
+    private readonly ICreditLedger _creditLedger = creditLedger ?? new CreditLedger(db);
 
     public async Task<LearnerContext> GetContextAsync(int userId, CancellationToken cancellationToken = default)
     {
         var certificates = await ActiveCertificatesAsync(cancellationToken);
         var activeId = await ResolveActiveCertIdAsync(userId, certificates, cancellationToken);
 
-        // The view has no row for an empty ledger; that is a zero balance, not a missing one.
-        var balance = await db.vw_UserCreditBalances
-            .Where(b => b.UserId == userId)
-            .Select(b => b.Balance)
-            .SingleOrDefaultAsync(cancellationToken) ?? 0;
+        var balance = await _creditLedger.GetBalanceAsync(userId, cancellationToken);
         return new LearnerContext(
             certificates.Single(c => c.CertId == activeId).Option,
             certificates.Select(c => c.Option).ToList(),

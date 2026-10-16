@@ -5,11 +5,14 @@ using DataAccess;
 using DataAccess.Scaffold;
 using Microsoft.EntityFrameworkCore;
 using static Contracts.EnumMapping;
+using Services.Credits;
 
 namespace Services;
 
-public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gateway) : IPaymentService
+public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gateway, ICreditLedger? creditLedger = null) : IPaymentService
 {
+    private readonly ICreditLedger _creditLedger = creditLedger ?? new CreditLedger(db);
+
     public async Task<CheckoutPreviewDto> GetCheckoutPreviewAsync(
         int userId,
         int packageId,
@@ -23,10 +26,7 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
             .SingleOrDefaultAsync(cancellationToken)
             ?? throw new PackageNotFoundException(packageId);
 
-        var currentBalance = await db.vw_UserCreditBalances
-            .Where(b => b.UserId == userId)
-            .Select(b => b.Balance)
-            .SingleOrDefaultAsync(cancellationToken) ?? 0;
+        var currentBalance = await _creditLedger.GetBalanceAsync(userId, cancellationToken);
 
         await ExpireStaleOrdersAsync(olderThanMinutes: 15, cancellationToken);
 
@@ -350,10 +350,7 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
             }
         }
 
-        var balance = await db.vw_UserCreditBalances
-            .Where(b => b.UserId == userId)
-            .Select(b => b.Balance)
-            .SingleOrDefaultAsync(cancellationToken) ?? 0;
+        var balance = await _creditLedger.GetBalanceAsync(userId, cancellationToken);
 
         string? checkoutUrl = null;
         if (order.Gateway == PaymentGateway.Payos.ToCode() &&
@@ -434,15 +431,7 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
         order.PaidAt = now;
         await db.SaveChangesAsync(cancellationToken);
 
-        var creditTxn = new CreditTransaction
-        {
-            UserId = order.UserId,
-            Reason = CreditReason.Purchase.ToCode(),
-            Delta = order.Package.Credits,
-            OrderId = order.OrderId,
-            CreatedAt = now
-        };
-        db.CreditTransactions.Add(creditTxn);
+        await _creditLedger.GrantPurchaseAsync(order.UserId, order.OrderId, order.Package.Credits, cancellationToken);
 
         var paymentEvent = new PaymentEvent
         {
@@ -617,17 +606,13 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
             .OrderByDescending(o => o.CreatedAt)
             .ToListAsync(cancellationToken);
 
-        var ledger = await db.CreditTransactions
-            .Include(t => t.Order)
-            .Where(t => t.UserId == userId)
-            .OrderByDescending(t => t.CreatedAt)
-            .ToListAsync(cancellationToken);
-
         var balance = summary?.Balance ?? 0;
         var creditsPurchased = summary?.CreditsPurchased ?? 0;
         var creditsUsed = summary?.CreditsUsed ?? 0;
         var amountPurchased = totals?.AmountPurchased ?? 0m;
         var paidOrderCount = totals?.PaidOrderCount ?? 0;
+
+        var ledger = await _creditLedger.GetLedgerHistoryAsync(userId, cancellationToken);
 
         return new WalletDto(
             Balance: balance,
@@ -636,13 +621,7 @@ public sealed class PaymentService(CompanionDbContext db, IPaymentGateway gatewa
             AmountPurchased: amountPurchased,
             PaidOrderCount: paidOrderCount,
             Orders: orders.Select(ToOrderDto).ToList(),
-            Ledger: ledger.Select(t => new CreditLedgerEntryDto(
-                TxnId: t.TxnId,
-                Reason: ParseWireCode<CreditReasonDto>(t.Reason),
-                Delta: t.Delta,
-                Note: t.Note,
-                CreatedAt: t.CreatedAt,
-                OrderCode: t.Order?.OrderCode)).ToList());
+            Ledger: ledger);
     }
 
     public async Task ExpireStaleOrdersAsync(

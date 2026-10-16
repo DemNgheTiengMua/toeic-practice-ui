@@ -4,6 +4,7 @@ using Contracts;
 using DataAccess;
 using DataAccess.Scaffold;
 using Microsoft.EntityFrameworkCore;
+using Services.Credits;
 
 namespace Services;
 
@@ -52,8 +53,10 @@ public sealed class MentorService(
     CompanionDbContext db,
     TimeProvider clock,
     ILearnerService? learners = null,
-    ISpeakingPracticeService? speakingPracticeService = null) : IMentorService
+    ISpeakingPracticeService? speakingPracticeService = null,
+    ICreditLedger? creditLedger = null) : IMentorService
 {
+    private readonly ICreditLedger _creditLedger = creditLedger ?? new CreditLedger(db, clock);
     public async Task<IReadOnlyList<MentorSummaryDto>> GetMentorsAsync(string? certCode = null, string? skill = null, CancellationToken cancellationToken = default)
     {
         var query = db.MentorProfiles
@@ -535,10 +538,7 @@ public sealed class MentorService(
             }
         }
 
-        var balance = await db.vw_UserCreditBalances
-            .Where(b => b.UserId == userId)
-            .Select(b => b.Balance)
-            .SingleOrDefaultAsync(cancellationToken) ?? 0;
+        var balance = await _creditLedger.GetBalanceAsync(userId, cancellationToken);
 
         if (balance < mentor.PriceCredits)
         {
@@ -621,21 +621,12 @@ public sealed class MentorService(
             throw new MentorBookingException(MentorBookingException.SlotNotAvailable, "The selected slot is no longer available.");
         }
 
-        var creditTxn = new CreditTransaction
-        {
-            UserId = userId,
-            Reason = CreditReason.MentorBooking.ToCode(),
-            Delta = -mentor.PriceCredits,
-            BookingId = booking.BookingId,
-            CreatedAt = now
-        };
-        db.CreditTransactions.Add(creditTxn);
         try
         {
-            await db.SaveChangesAsync(cancellationToken);
+            await _creditLedger.ChargeMentorBookingAsync(userId, booking.BookingId, mentor.PriceCredits, cancellationToken);
             await transaction.CommitAsync(cancellationToken);
         }
-        catch (DbUpdateException)
+        catch (CreditLedgerException ex) when (ex.Code == CreditLedgerException.InsufficientCredits)
         {
             throw new MentorBookingException(MentorBookingException.InsufficientCredits, "You do not have enough credits to book this mentor session.");
         }
@@ -685,23 +676,14 @@ public sealed class MentorService(
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
         booking.Status = BookingStatus.Cancelled.ToCode();
         booking.CancelledAt = now;
-
-        var refundTxn = new CreditTransaction
-        {
-            UserId = userId,
-            Reason = CreditReason.BookingCancel.ToCode(),
-            Delta = refundCredits,
-            BookingId = booking.BookingId,
-            CreatedAt = now
-        };
-        db.CreditTransactions.Add(refundTxn);
+        await db.SaveChangesAsync(cancellationToken);
 
         try
         {
-            await db.SaveChangesAsync(cancellationToken);
+            await _creditLedger.RefundBookingAsync(userId, booking.BookingId, refundCredits, cancellationToken);
             await transaction.CommitAsync(cancellationToken);
         }
-        catch (DbUpdateException)
+        catch (CreditLedgerException)
         {
             throw new MentorBookingException(MentorBookingException.BookingAlreadyRefunded, "This booking has already been cancelled and refunded.");
         }

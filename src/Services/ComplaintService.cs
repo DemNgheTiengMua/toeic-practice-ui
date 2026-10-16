@@ -5,6 +5,7 @@ using DataAccess;
 using DataAccess.Scaffold;
 using Microsoft.EntityFrameworkCore;
 using static Contracts.EnumMapping;
+using Services.Credits;
 
 namespace Services;
 
@@ -58,8 +59,10 @@ public interface IComplaintService
 
 public sealed class ComplaintService(
     CompanionDbContext db,
-    TimeProvider clock) : IComplaintService
+    TimeProvider clock,
+    ICreditLedger? creditLedger = null) : IComplaintService
 {
+    private readonly ICreditLedger _creditLedger = creditLedger ?? new CreditLedger(db, clock);
     public async Task<IReadOnlyList<LearnerComplaintDto>> GetLearnerComplaintsAsync(
         int userId,
         CancellationToken cancellationToken = default)
@@ -490,22 +493,8 @@ public sealed class ComplaintService(
         if (request.GrantCredits > 0)
         {
             var note = $"Complaint #{complaint.ComplaintId}: {request.Resolution.Trim()}";
-            if (note.Length > 400) note = note[..400];
-
-            var txn = new CreditTransaction
-            {
-                UserId = complaint.UserId,
-                Reason = CreditReason.AdminGrant.ToCode(),
-                Delta = request.GrantCredits,
-                AdminUserId = adminUserId,
-                Note = note,
-                CreatedAt = clock.GetUtcNow(),
-            };
-
-            db.CreditTransactions.Add(txn);
-            await db.SaveChangesAsync(cancellationToken);
-
-            complaint.ResolvedByGrantTxnId = txn.TxnId;
+            var receipt = await _creditLedger.AdjustCreditsAsync(complaint.UserId, adminUserId, request.GrantCredits, note, cancellationToken);
+            complaint.ResolvedByGrantTxnId = receipt.TxnId;
         }
 
         complaint.Status = ComplaintStatus.Resolved.ToCode();

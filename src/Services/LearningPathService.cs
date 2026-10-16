@@ -7,6 +7,7 @@ using BusinessObjects;
 using DataAccess;
 using DataAccess.Scaffold;
 using Microsoft.EntityFrameworkCore;
+using Services.Credits;
 
 namespace Services;
 
@@ -43,8 +44,10 @@ public interface ILearningPathService
 
 public sealed class LearningPathService(
     CompanionDbContext db,
-    ILearnerService learners) : ILearningPathService
+    ILearnerService learners,
+    ICreditLedger? creditLedger = null) : ILearningPathService
 {
+    private readonly ICreditLedger _creditLedger = creditLedger ?? new CreditLedger(db);
     public async Task<LearningPathSummaryView> GetActivePathAsync(int userId, CancellationToken cancellationToken = default)
     {
         var activeCertId = await learners.GetActiveCertIdAsync(userId, cancellationToken);
@@ -736,54 +739,13 @@ public sealed class LearningPathService(
             .FirstOrDefaultAsync(p => p.UserId == userId && p.CertId == activeCertId && p.Status == "active", cancellationToken)
             ?? throw new LearningPathException(LearningPathException.PathNotFound, "No active learning path found.");
 
-        // Idempotency: if already unlocked, return current path summary directly
-        var premiumReason = CreditReason.PremiumPath.ToCode();
-        bool alreadyPremium = await db.CreditTransactions
-            .AnyAsync(t => t.LearnerPathId == activePath.LearnerPathId && t.Reason == premiumReason, cancellationToken);
-        if (alreadyPremium)
-        {
-            return await GetActivePathAsync(userId, cancellationToken);
-        }
-
-        // "Block before you charge": verify balance >= 5 credits via vw_UserCreditBalances
-        var currentBalance = await db.vw_UserCreditBalances
-            .Where(b => b.UserId == userId)
-            .Select(b => b.Balance)
-            .FirstOrDefaultAsync(cancellationToken) ?? 0;
-
-        if (currentBalance < 5)
-        {
-            throw new LearningPathException(LearningPathException.InsufficientCredits, "You do not have enough credits to upgrade to premium (5 credits required).");
-        }
-
-        var debitTxn = new CreditTransaction
-        {
-            UserId = userId,
-            Reason = premiumReason,
-            Delta = -5,
-            LearnerPathId = activePath.LearnerPathId,
-            OrderId = null,
-            AttemptId = null,
-            BookingId = null,
-            AdminUserId = null,
-            CreatedAt = DateTimeOffset.UtcNow
-        };
-
         try
         {
-            db.CreditTransactions.Add(debitTxn);
-            await db.SaveChangesAsync(cancellationToken);
+            await _creditLedger.ChargePremiumPathAsync(userId, activePath.LearnerPathId, 5, cancellationToken);
         }
-        catch (DbUpdateException)
+        catch (CreditLedgerException ex) when (ex.Code == CreditLedgerException.InsufficientCredits)
         {
-            db.Entry(debitTxn).State = EntityState.Detached;
-            // Check if concurrently upgraded (UX_CreditTxn_Path)
-            bool upgraded = await db.CreditTransactions
-                .AnyAsync(t => t.LearnerPathId == activePath.LearnerPathId && t.Reason == premiumReason, cancellationToken);
-            if (!upgraded)
-            {
-                throw;
-            }
+            throw new LearningPathException(LearningPathException.InsufficientCredits, "You do not have enough credits to upgrade to premium (5 credits required).");
         }
 
         return await GetActivePathAsync(userId, cancellationToken);

@@ -8,6 +8,7 @@ using BusinessObjects;
 using DataAccess;
 using DataAccess.Scaffold;
 using Microsoft.EntityFrameworkCore;
+using Services.Credits;
 
 namespace Services;
 
@@ -53,9 +54,11 @@ public interface ISpeakingPracticeService
 public sealed class SpeakingPracticeService(
     CompanionDbContext db,
     ILearnerService learners,
-    IFileStore fileStore) : ISpeakingPracticeService
+    IFileStore fileStore,
+    ICreditLedger? creditLedger = null) : ISpeakingPracticeService
 {
     public const int SpeakingPracticeCreditCost = 1;
+    private readonly ICreditLedger _creditLedger = creditLedger ?? new CreditLedger(db);
 
     public async Task<SpeakingPracticeInstructionsView> GetInstructionsAsync(int userId, int examId, CancellationToken cancellationToken = default)
     {
@@ -67,10 +70,7 @@ public sealed class SpeakingPracticeService(
             .SingleOrDefaultAsync(cancellationToken)
             ?? throw new SpeakingPracticeException(SpeakingPracticeException.ExamNotFound, $"Speaking practice exam {examId} not found.");
 
-        var balance = await db.vw_UserCreditBalances
-            .Where(b => b.UserId == userId)
-            .Select(b => b.Balance)
-            .SingleOrDefaultAsync(cancellationToken) ?? 0;
+        var balance = await _creditLedger.GetBalanceAsync(userId, cancellationToken);
 
         var activeAttempt = await db.ExamAttempts
             .Where(a => a.UserId == userId && a.ExamId == examId && a.Status == AttemptStatus.InProgress.ToCode())
@@ -118,10 +118,7 @@ public sealed class SpeakingPracticeService(
             .SingleOrDefaultAsync(cancellationToken)
             ?? throw new SpeakingPracticeException(SpeakingPracticeException.ExamNotFound, $"Speaking practice exam {examId} not found.");
 
-        var balance = await db.vw_UserCreditBalances
-            .Where(b => b.UserId == userId)
-            .Select(b => b.Balance)
-            .SingleOrDefaultAsync(cancellationToken) ?? 0;
+        var balance = await _creditLedger.GetBalanceAsync(userId, cancellationToken);
 
         if (balance < SpeakingPracticeCreditCost)
         {
@@ -414,11 +411,7 @@ public sealed class SpeakingPracticeService(
             throw new SpeakingPracticeException(SpeakingPracticeException.AttemptNotActive, $"Attempt {attemptId} is not in progress.");
         }
 
-        var balance = await db.vw_UserCreditBalances
-            .Where(b => b.UserId == userId)
-            .Select(b => b.Balance)
-            .SingleOrDefaultAsync(cancellationToken) ?? 0;
-
+        var balance = await _creditLedger.GetBalanceAsync(userId, cancellationToken);
         if (balance < SpeakingPracticeCreditCost)
         {
             throw new SpeakingPracticeException(SpeakingPracticeException.InsufficientCredits, "You do not have enough credits to submit speaking practice.");
@@ -464,16 +457,15 @@ public sealed class SpeakingPracticeService(
 
         await db.SaveChangesAsync(cancellationToken);
 
-        // Charge 1 credit: Reason='ai_grading', Delta=-1 (trg_CreditTransactions_ChargeMatchesExamPurpose)
-        var creditTxn = new CreditTransaction
+        // Charge 1 credit via CreditLedger: Reason='ai_grading', Delta=-1
+        try
         {
-            UserId = userId,
-            Reason = CreditReason.AiGrading.ToCode(),
-            Delta = -SpeakingPracticeCreditCost,
-            AttemptId = attemptId,
-            CreatedAt = now
-        };
-        db.CreditTransactions.Add(creditTxn);
+            await _creditLedger.ChargeAiGradingAsync(userId, attemptId, SpeakingPracticeCreditCost, cancellationToken);
+        }
+        catch (CreditLedgerException ex) when (ex.Code == CreditLedgerException.InsufficientCredits)
+        {
+            throw new SpeakingPracticeException(SpeakingPracticeException.InsufficientCredits, "You do not have enough credits to submit speaking practice.");
+        }
 
         // Queue one AiGradings row per free response
         foreach (var fr in freeResponses)

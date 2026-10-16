@@ -40,6 +40,9 @@ The backend is a .NET 10 solution (`ExtraEfficiency.slnx`) structured in six str
    - `WritingPracticeService` and `SpeakingPracticeService` orchestrate learner attempt lifecycles (start, save draft/audio, submit, review) and do not poll or process queues.
    - `SpeakingPracticeService` and `WritingPracticeService` are completely decoupled; neither service references or depends on the other.
    - The queue worker `AiGradingBackgroundService` resolves `IAiGradingProcessor` directly.
+7. **Exam Sitting Lifecycle & Score Scaling Seam (`AttemptEngine`)**:
+   - `IAttemptEngine` is the sole owner of exam attempt sitting mechanics: countdown timer expiration, auto-submission, answer option validation, two-step score scaling (`ScoreScales`), and CEFR band matching (`ScoreBands`).
+   - `MockExamService` and `PlacementService` act as thin domain adapters over `IAttemptEngine`, maintaining domain-specific rules (e.g., mock exam credit deduction via `ICreditLedger` vs free diagnostic placement tests, and placement target band tracking) without duplicating sitting state machines.
 
 ---
 

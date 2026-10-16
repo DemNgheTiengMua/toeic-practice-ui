@@ -3,6 +3,7 @@ using Contracts;
 using DataAccess;
 using DataAccess.Scaffold;
 using Microsoft.EntityFrameworkCore;
+using Services.Credits;
 
 namespace Services;
 
@@ -45,8 +46,10 @@ public interface IAdminUserService
 public sealed class AdminUserService(
     CompanionDbContext db,
     IAuthService authService,
-    TimeProvider clock) : IAdminUserService
+    TimeProvider clock,
+    ICreditLedger? creditLedger = null) : IAdminUserService
 {
+    private readonly ICreditLedger _creditLedger = creditLedger ?? new CreditLedger(db, clock);
     public async Task<AdminUsersSummaryDto> GetUsersAsync(
         string? q = null,
         string? status = null,
@@ -151,10 +154,7 @@ public sealed class AdminUserService(
         user.IsLocked = isLocked;
         await db.SaveChangesAsync(cancellationToken);
 
-        var creditsLeft = await db.vw_UserCreditBalances
-            .Where(b => b.UserId == targetUserId)
-            .Select(b => b.Balance)
-            .SingleOrDefaultAsync(cancellationToken) ?? 0;
+        var creditsLeft = await _creditLedger.GetBalanceAsync(targetUserId, cancellationToken);
 
         var examsTaken = await db.ExamAttempts
             .CountAsync(a => a.UserId == targetUserId, cancellationToken);
@@ -203,35 +203,16 @@ public sealed class AdminUserService(
             throw new UserNotFoundException(targetUserId);
         }
 
-        var currentBalance = await db.vw_UserCreditBalances
-            .Where(b => b.UserId == targetUserId)
-            .Select(b => b.Balance)
-            .SingleOrDefaultAsync(cancellationToken) ?? 0;
-
-        if (delta < 0 && currentBalance + delta < 0)
+        var trimmedReason = reason.Trim();
+        try
+        {
+            var receipt = await _creditLedger.AdjustCreditsAsync(targetUserId, adminUserId, delta, trimmedReason, cancellationToken);
+            return new AdjustCreditsResultDto(receipt.TxnId, targetUserId, receipt.BalanceAfter, delta, trimmedReason);
+        }
+        catch (CreditLedgerException ex) when (ex.Code == CreditLedgerException.InsufficientCredits)
         {
             throw new AdminUserException(ApiError.Codes.InsufficientCredits, "Credit deduction cannot exceed the user's current balance.", 400);
         }
-
-        var trimmedReason = reason.Trim();
-        var txn = new CreditTransaction
-        {
-            UserId = targetUserId,
-            Reason = (delta > 0 ? CreditReason.AdminGrant : CreditReason.AdminRevoke).ToCode(),
-            Delta = delta,
-            AdminUserId = adminUserId,
-            Note = trimmedReason,
-            CreatedAt = clock.GetUtcNow(),
-        };
-
-        db.CreditTransactions.Add(txn);
-        await db.SaveChangesAsync(cancellationToken);
-
-        var newBalance = await db.vw_UserCreditBalances
-            .Where(b => b.UserId == targetUserId)
-            .Select(b => b.Balance)
-            .SingleOrDefaultAsync(cancellationToken) ?? 0;
-        return new AdjustCreditsResultDto(txn.TxnId, targetUserId, newBalance, delta, trimmedReason);
     }
 
     public async Task ResendActivationAsync(

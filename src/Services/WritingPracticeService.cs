@@ -7,6 +7,7 @@ using BusinessObjects;
 using DataAccess;
 using DataAccess.Scaffold;
 using Microsoft.EntityFrameworkCore;
+using Services.Credits;
 
 namespace Services;
 
@@ -45,9 +46,11 @@ public interface IWritingPracticeService
 
 public sealed class WritingPracticeService(
     CompanionDbContext db,
-    ILearnerService learners) : IWritingPracticeService
+    ILearnerService learners,
+    ICreditLedger? creditLedger = null) : IWritingPracticeService
 {
     public const int WritingPracticeCreditCost = 1;
+    private readonly ICreditLedger _creditLedger = creditLedger ?? new CreditLedger(db);
 
     public async Task<WritingPracticeInstructionsView> GetInstructionsAsync(int userId, int examId, CancellationToken cancellationToken = default)
     {
@@ -59,10 +62,7 @@ public sealed class WritingPracticeService(
             .SingleOrDefaultAsync(cancellationToken)
             ?? throw new WritingPracticeException(WritingPracticeException.ExamNotFound, $"Writing practice exam {examId} not found.");
 
-        var balance = await db.vw_UserCreditBalances
-            .Where(b => b.UserId == userId)
-            .Select(b => b.Balance)
-            .SingleOrDefaultAsync(cancellationToken) ?? 0;
+        var balance = await _creditLedger.GetBalanceAsync(userId, cancellationToken);
 
         var activeAttempt = await db.ExamAttempts
             .Where(a => a.UserId == userId && a.ExamId == examId && a.Status == AttemptStatus.InProgress.ToCode())
@@ -135,10 +135,7 @@ public sealed class WritingPracticeService(
         }
 
         // Check credits before starting ("block before you charge" invariant)
-        var balance = await db.vw_UserCreditBalances
-            .Where(b => b.UserId == userId)
-            .Select(b => b.Balance)
-            .SingleOrDefaultAsync(cancellationToken) ?? 0;
+        var balance = await _creditLedger.GetBalanceAsync(userId, cancellationToken);
 
         if (balance < WritingPracticeCreditCost)
         {
@@ -372,11 +369,7 @@ public sealed class WritingPracticeService(
         }
 
         // Verify credit balance before charge (block before you charge)
-        var balance = await db.vw_UserCreditBalances
-            .Where(b => b.UserId == userId)
-            .Select(b => b.Balance)
-            .SingleOrDefaultAsync(cancellationToken) ?? 0;
-
+        var balance = await _creditLedger.GetBalanceAsync(userId, cancellationToken);
         if (balance < WritingPracticeCreditCost)
         {
             throw new WritingPracticeException(WritingPracticeException.InsufficientCredits, "You do not have enough credits to submit and grade this writing attempt.");
@@ -409,16 +402,15 @@ public sealed class WritingPracticeService(
 
         await db.SaveChangesAsync(cancellationToken);
 
-        // Charge 1 credit: Reason='ai_grading', Delta=-1 (trg_CreditTransactions_ChargeMatchesExamPurpose)
-        var creditTxn = new CreditTransaction
+        // Charge 1 credit via CreditLedger: Reason='ai_grading', Delta=-1
+        try
         {
-            UserId = userId,
-            Reason = CreditReason.AiGrading.ToCode(),
-            Delta = -WritingPracticeCreditCost,
-            AttemptId = attemptId,
-            CreatedAt = now
-        };
-        db.CreditTransactions.Add(creditTxn);
+            await _creditLedger.ChargeAiGradingAsync(userId, attemptId, WritingPracticeCreditCost, cancellationToken);
+        }
+        catch (CreditLedgerException ex) when (ex.Code == CreditLedgerException.InsufficientCredits)
+        {
+            throw new WritingPracticeException(WritingPracticeException.InsufficientCredits, "You do not have enough credits to submit and grade this writing attempt.");
+        }
 
         // Queue one AiGradings row per free response
         foreach (var fr in freeResponses)

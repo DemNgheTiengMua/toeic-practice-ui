@@ -43,8 +43,22 @@ public interface IPlacementService
     Task<SaveTargetBandResult> SetTargetBandAsync(int userId, string targetBandCode, CancellationToken cancellationToken = default);
 }
 
-public sealed class PlacementService(CompanionDbContext db, ILearnerService learners) : IPlacementService
+public sealed class PlacementService(
+    CompanionDbContext db,
+    ILearnerService learners,
+    IAttemptEngine? attemptEngine = null) : IPlacementService
 {
+    private readonly IAttemptEngine _attemptEngine = attemptEngine ?? new AttemptEngine(db);
+
+    private static PlacementException MapPlacementException(AttemptEngineException ex) => ex.Code switch
+    {
+        AttemptEngineException.AttemptNotFound => new PlacementException(PlacementException.PlacementNotFound, ex.Message),
+        AttemptEngineException.AttemptNotActive => new PlacementException(PlacementException.PlacementNotActive, ex.Message),
+        AttemptEngineException.AttemptExpired => new PlacementException(PlacementException.PlacementExpired, ex.Message),
+        AttemptEngineException.AttemptNotFinished => new PlacementException(PlacementException.PlacementNotFinished, ex.Message),
+        _ => new PlacementException(ex.Code, ex.Message)
+    };
+
     public async Task<PlacementCatalogView> GetPlacementCatalogAsync(int userId, CancellationToken cancellationToken = default)
     {
         var certId = await learners.GetActiveCertIdAsync(userId, cancellationToken);
@@ -175,51 +189,7 @@ public sealed class PlacementService(CompanionDbContext db, ILearnerService lear
             }
         }
 
-        var now = DateTimeOffset.UtcNow;
-        var expiresAt = now.AddMinutes(exam.DurationMinutes);
-
-        var attempt = new ExamAttempt
-        {
-            UserId = userId,
-            ExamId = examId,
-            CertId = certId,
-            Status = AttemptStatus.InProgress.ToCode(),
-            StartedAt = now,
-            ExpiresAt = expiresAt,
-            IsAutoSubmitted = false,
-        };
-
-        db.ExamAttempts.Add(attempt);
-        await db.SaveChangesAsync(cancellationToken);
-
-        // NOTE: Placement tests are 100% free; no CreditTransactions ledger entry is ever created.
-
-        var questions = await db.Questions
-            .Where(q => q.ExamId == examId)
-            .Include(q => q.Group)
-            .Include(q => q.Section).ThenInclude(s => s.Skill)
-            .OrderBy(q => q.Section.Skill.DisplayOrder)
-            .ThenBy(q => q.Section.DisplayOrder)
-            .ThenBy(q => q.Group.DisplayOrder)
-            .ThenBy(q => q.DisplayOrder)
-            .ToListAsync(cancellationToken);
-
-        if (questions.Count > 0)
-        {
-            attempt.LastQuestionId = questions[0].QuestionId;
-            foreach (var q in questions)
-            {
-                db.AttemptAnswers.Add(new AttemptAnswer
-                {
-                    AttemptId = attempt.AttemptId,
-                    QuestionId = q.QuestionId,
-                    ExamId = examId,
-                    SelectedOptionId = null,
-                    IsCorrect = null,
-                    IsFlagged = false,
-                });
-            }
-        }
+        var attempt = await _attemptEngine.CreateAttemptAsync(userId, certId, examId, exam.DurationMinutes, cancellationToken);
 
         var placement = new PlacementTest
         {
@@ -229,7 +199,7 @@ public sealed class PlacementService(CompanionDbContext db, ILearnerService lear
             AttemptId = attempt.AttemptId,
             Status = PlacementStatus.InProgress.ToCode(),
             ExamPurpose = ExamPurpose.Placement.ToCode(),
-            TakenAt = now,
+            TakenAt = attempt.StartedAt,
             TotalScore = null,
             ResultBandCode = null,
         };
@@ -238,7 +208,7 @@ public sealed class PlacementService(CompanionDbContext db, ILearnerService lear
         await db.SaveChangesAsync(cancellationToken);
         await tx.CommitAsync(cancellationToken);
 
-        var remainingSeconds = Math.Max(0, (int)(expiresAt - now).TotalSeconds);
+        var remainingSeconds = Math.Max(0, (int)(attempt.ExpiresAt - DateTimeOffset.UtcNow).TotalSeconds);
         return new PlacementTestInfo(
             placement.PlacementId,
             attempt.AttemptId,
@@ -267,9 +237,10 @@ public sealed class PlacementService(CompanionDbContext db, ILearnerService lear
             ?? throw new PlacementException(PlacementException.PlacementNotFound, $"Exam attempt for placement test {placementId} not found.");
 
         // Auto-submit if expired
-        if (placement.Status == PlacementStatus.InProgress.ToCode() && DateTimeOffset.UtcNow >= attempt.ExpiresAt)
+        if (placement.Status == PlacementStatus.InProgress.ToCode() && attempt.Status == AttemptStatus.InProgress.ToCode() && DateTimeOffset.UtcNow >= attempt.ExpiresAt)
         {
             await SubmitPlacementInternalAsync(placementId, userId, isAutoSubmit: true, cancellationToken);
+            // Reload after auto-submit
             placement = await db.PlacementTests
                 .Include(p => p.ExamAttempt).ThenInclude(a => a!.Exam)
                 .Include(p => p.Cert)
@@ -277,97 +248,32 @@ public sealed class PlacementService(CompanionDbContext db, ILearnerService lear
             attempt = placement.ExamAttempt!;
         }
 
-        var answers = await db.AttemptAnswers
-            .Where(a => a.AttemptId == attempt.AttemptId)
-            .Include(a => a.Question).ThenInclude(q => q.Group)
-            .Include(a => a.Question).ThenInclude(q => q.Section).ThenInclude(s => s.Skill)
-            .Include(a => a.Question).ThenInclude(q => q.QuestionOptionQuestionNavigations)
-            .OrderBy(a => a.Question.Section.Skill.DisplayOrder)
-            .ThenBy(a => a.Question.Section.DisplayOrder)
-            .ThenBy(a => a.Question.Group.DisplayOrder)
-            .ThenBy(a => a.Question.DisplayOrder)
-            .ToListAsync(cancellationToken);
-
-        int totalQuestions = answers.Count;
-        int answeredCount = answers.Count(a => a.SelectedOptionId != null);
-        int flaggedCount = answers.Count(a => a.IsFlagged);
-
-        int targetIndex = 0;
-        if (questionDisplayOrder.HasValue && questionDisplayOrder.Value >= 1 && questionDisplayOrder.Value <= totalQuestions)
+        AttemptTakeView take;
+        try
         {
-            targetIndex = questionDisplayOrder.Value - 1;
+            take = await _attemptEngine.GetAttemptTakeAsync(attempt.AttemptId, userId, questionDisplayOrder, cancellationToken);
         }
-        else if (attempt.LastQuestionId.HasValue)
+        catch (AttemptEngineException ex)
         {
-            var idx = answers.FindIndex(a => a.QuestionId == attempt.LastQuestionId.Value);
-            if (idx >= 0) targetIndex = idx;
+            throw MapPlacementException(ex);
         }
-
-        var currentAnswer = totalQuestions > 0 ? answers[targetIndex] : null;
-        AttemptQuestionInfo currentQuestionInfo;
-
-        if (currentAnswer is not null)
-        {
-            var q = currentAnswer.Question;
-            var opts = q.QuestionOptionQuestionNavigations
-                .OrderBy(o => o.Label)
-                .Select(o => new AttemptOption(o.OptionId, o.Label, o.Text))
-                .ToList();
-
-            currentQuestionInfo = new AttemptQuestionInfo(
-                q.QuestionId,
-                targetIndex + 1,
-                totalQuestions,
-                q.SectionId,
-                q.Section.Code,
-                q.Section.Name,
-                q.Section.Skill.Code,
-                q.Section.Skill.Name,
-                EnumCodes.Parse<Modality>(q.Section.Modality),
-                q.Stem,
-                q.Group.ImagePath,
-                q.Group.ImageAlt,
-                q.Group.AudioPath,
-                q.Group.Transcript,
-                q.Group.Passage,
-                opts,
-                currentAnswer.SelectedOptionId,
-                currentAnswer.IsFlagged);
-        }
-        else
-        {
-            currentQuestionInfo = new AttemptQuestionInfo(
-                0, 0, 0, 0, "", "", "", "", Modality.Reading, "", null, null, null, null, null, [], null, false);
-        }
-
-        var navigator = answers.Select((a, idx) => new NavigatorItem(
-            a.QuestionId,
-            idx + 1,
-            a.Question.SectionId,
-            a.Question.Section.Code,
-            EnumCodes.Parse<Modality>(a.Question.Section.Modality),
-            a.SelectedOptionId != null,
-            a.IsFlagged,
-            idx == targetIndex)).ToList();
-
-        var remainingSeconds = Math.Max(0, (int)(attempt.ExpiresAt - DateTimeOffset.UtcNow).TotalSeconds);
 
         return new PlacementTakeView(
             placement.PlacementId,
-            attempt.AttemptId,
-            attempt.ExamId,
-            attempt.Exam.Name,
+            take.AttemptId,
+            take.ExamId,
+            take.ExamName,
             placement.Cert.Code,
             EnumCodes.Parse<PlacementStatus>(placement.Status),
-            attempt.StartedAt,
-            attempt.ExpiresAt,
-            remainingSeconds,
-            totalQuestions,
-            answeredCount,
-            flaggedCount,
-            currentQuestionInfo,
-            navigator,
-            attempt.IsAutoSubmitted);
+            take.StartedAt,
+            take.ExpiresAt,
+            take.RemainingSeconds,
+            take.TotalQuestions,
+            take.AnsweredCount,
+            take.FlaggedCount,
+            take.CurrentQuestion,
+            take.Navigator.ToList(),
+            take.IsAutoSubmitted);
     }
 
     public async Task<SaveAttemptAnswerResult> SaveAnswerAsync(
@@ -391,34 +297,28 @@ public sealed class PlacementService(CompanionDbContext db, ILearnerService lear
         var attempt = placement.ExamAttempt
             ?? throw new PlacementException(PlacementException.PlacementNotFound, $"Exam attempt for placement test {placementId} not found.");
 
-        if (DateTimeOffset.UtcNow >= attempt.ExpiresAt)
+        try
         {
-            await SubmitPlacementInternalAsync(placementId, userId, isAutoSubmit: true, cancellationToken);
+            return await _attemptEngine.SaveAnswerAsync(
+                attempt.AttemptId,
+                userId,
+                questionId,
+                selectedOptionId,
+                isFlagged,
+                onAutoSubmitted: async (attId, uId) =>
+                {
+                    await SyncPlacementAfterAttemptSubmissionAsync(placement.PlacementId, cancellationToken);
+                },
+                cancellationToken);
+        }
+        catch (AttemptEngineException ex) when (ex.Code == AttemptEngineException.AttemptExpired)
+        {
             throw new PlacementException(PlacementException.PlacementExpired, "Placement test time has expired.");
         }
-
-        var answer = await db.AttemptAnswers
-            .SingleOrDefaultAsync(a => a.AttemptId == attempt.AttemptId && a.QuestionId == questionId, cancellationToken)
-            ?? throw new PlacementException(PlacementException.QuestionNotFound, $"Question {questionId} not found in placement test.");
-
-        if (selectedOptionId.HasValue)
+        catch (AttemptEngineException ex)
         {
-            var valid = await db.QuestionOptions
-                .AnyAsync(o => o.OptionId == selectedOptionId.Value && o.QuestionId == questionId, cancellationToken);
-            if (!valid)
-            {
-                throw new PlacementException(PlacementException.InvalidOption, "Invalid option for this question.");
-            }
+            throw MapPlacementException(ex);
         }
-
-        answer.SelectedOptionId = selectedOptionId;
-        answer.IsFlagged = isFlagged;
-        attempt.LastQuestionId = questionId;
-
-        await db.SaveChangesAsync(cancellationToken);
-
-        var remainingSeconds = Math.Max(0, (int)(attempt.ExpiresAt - DateTimeOffset.UtcNow).TotalSeconds);
-        return new SaveAttemptAnswerResult(questionId, selectedOptionId, isFlagged, remainingSeconds, attempt.IsAutoSubmitted);
     }
 
     public async Task<PlacementResultView> SubmitPlacementTestAsync(int userId, int placementId, bool isAutoSubmit, CancellationToken cancellationToken = default)
@@ -620,76 +520,21 @@ public sealed class PlacementService(CompanionDbContext db, ILearnerService lear
             var attempt = placement.ExamAttempt
                 ?? throw new PlacementException(PlacementException.PlacementNotFound, $"Exam attempt for placement test {placementId} not found.");
 
-            var now = DateTimeOffset.UtcNow;
-            attempt.Status = AttemptStatus.Graded.ToCode();
-            attempt.SubmittedAt = now;
-            if (isAutoSubmit || now >= attempt.ExpiresAt)
+            AttemptGradingResult grading;
+            try
             {
-                attempt.IsAutoSubmitted = true;
+                grading = await _attemptEngine.SubmitAttemptAsync(attempt.AttemptId, userId, isAutoSubmit, cancellationToken);
             }
-
-            var answers = await db.AttemptAnswers
-                .Where(a => a.AttemptId == attempt.AttemptId)
-                .Include(a => a.Question).ThenInclude(q => q.Section).ThenInclude(s => s.Skill)
-                .Include(a => a.Question).ThenInclude(q => q.QuestionOptionQuestionNavigations)
-                .ToListAsync(cancellationToken);
-
-            foreach (var ans in answers)
+            catch (AttemptEngineException ex)
             {
-                var correctOpt = ans.Question.QuestionOptionQuestionNavigations.FirstOrDefault(o => o.IsCorrect);
-                ans.IsCorrect = ans.SelectedOptionId.HasValue && ans.SelectedOptionId.Value == correctOpt?.OptionId;
+                throw MapPlacementException(ex);
             }
-
-            var existingSkillScores = await db.AttemptSkillScores
-                .Where(s => s.AttemptId == attempt.AttemptId)
-                .ToListAsync(cancellationToken);
-            if (existingSkillScores.Count > 0)
-            {
-                db.AttemptSkillScores.RemoveRange(existingSkillScores);
-            }
-
-            var skillGroups = answers.GroupBy(a => a.Question.Section.Skill).ToList();
-            var newSkillScores = new List<AttemptSkillScore>();
-
-            foreach (var group in skillGroups)
-            {
-                var skill = group.Key;
-                int rawScore = group.Count(a => a.IsCorrect == true);
-                int scaledScore = await ComputeScaledScoreAsync(
-                    attempt.CertId, skill.SkillId, attempt.ExamId, rawScore, group.Count(), cancellationToken);
-
-                newSkillScores.Add(new AttemptSkillScore
-                {
-                    AttemptId = attempt.AttemptId,
-                    SkillId = skill.SkillId,
-                    CertId = attempt.CertId,
-                    RawScore = rawScore,
-                    ScaledScore = scaledScore,
-                });
-            }
-
-            db.AttemptSkillScores.AddRange(newSkillScores);
-
-            int totalScore = newSkillScores.Sum(s => s.ScaledScore);
-            attempt.TotalScore = totalScore;
-
-            var bands = await db.ScoreBands
-                .Where(b => b.CertId == attempt.CertId)
-                .OrderBy(b => b.MinTotal)
-                .ToListAsync(cancellationToken);
-
-            var matchingBand = bands.FirstOrDefault(b => totalScore >= b.MinTotal && totalScore <= b.MaxTotal);
-            if (matchingBand is null && bands.Count > 0)
-            {
-                matchingBand = totalScore < bands[0].MinTotal ? bands[0] : bands[^1];
-            }
-            attempt.BandCode = matchingBand?.Code;
 
             // Snapshot matching invariant: PlacementTests.TotalScore must match ExamAttempts.TotalScore
             placement.Status = PlacementStatus.Done.ToCode();
-            placement.TotalScore = totalScore;
-            placement.ResultBandCode = matchingBand?.Code;
-            placement.TakenAt = now;
+            placement.TotalScore = grading.TotalScore;
+            placement.ResultBandCode = grading.BandCode;
+            placement.TakenAt = grading.SubmittedAt;
 
             await db.SaveChangesAsync(cancellationToken);
             if (tx is not null) await tx.CommitAsync(cancellationToken);
@@ -702,48 +547,20 @@ public sealed class PlacementService(CompanionDbContext db, ILearnerService lear
         }
     }
 
-    private async Task<int> ComputeScaledScoreAsync(
-        int certId,
-        int skillId,
-        int examId,
-        int rawScore,
-        int totalQuestionsInSkill,
-        CancellationToken cancellationToken)
+    private async Task SyncPlacementAfterAttemptSubmissionAsync(int placementId, CancellationToken cancellationToken)
     {
-        // 1. Try exam-specific exact match
-        var scale = await db.ScoreScales
-            .Where(s => s.CertId == certId && s.SkillId == skillId && s.ExamId == examId && s.RawScore == rawScore)
-            .Select(s => (int?)s.ScaledScore)
-            .FirstOrDefaultAsync(cancellationToken);
+        var placement = await db.PlacementTests
+            .Include(p => p.ExamAttempt)
+            .SingleOrDefaultAsync(p => p.PlacementId == placementId, cancellationToken);
 
-        if (scale.HasValue) return scale.Value;
-
-        // 2. Try default scale (ExamId == null) exact match
-        scale = await db.ScoreScales
-            .Where(s => s.CertId == certId && s.SkillId == skillId && s.ExamId == null && s.RawScore == rawScore)
-            .Select(s => (int?)s.ScaledScore)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        if (scale.HasValue) return scale.Value;
-
-        // 3. Fallback to closest available score scale row for this skill
-        var allRows = await db.ScoreScales
-            .Where(s => s.CertId == certId && s.SkillId == skillId && (s.ExamId == examId || s.ExamId == null))
-            .OrderByDescending(s => s.ExamId)
-            .ThenBy(s => s.RawScore)
-            .ToListAsync(cancellationToken);
-
-        if (allRows.Count > 0)
+        if (placement is not null && placement.ExamAttempt is not null)
         {
-            var closest = allRows.OrderBy(r => Math.Abs(r.RawScore - rawScore)).First();
-            return closest.ScaledScore;
+            placement.Status = PlacementStatus.Done.ToCode();
+            placement.TotalScore = placement.ExamAttempt.TotalScore;
+            placement.ResultBandCode = placement.ExamAttempt.BandCode;
+            placement.TakenAt = placement.ExamAttempt.SubmittedAt ?? DateTimeOffset.UtcNow;
+            await db.SaveChangesAsync(cancellationToken);
         }
-
-        // 4. Default proportional fallback if no score scales seeded
-        if (totalQuestionsInSkill <= 0) return 5;
-        double fraction = Math.Clamp((double)rawScore / totalQuestionsInSkill, 0.0, 1.0);
-        int scaled = 5 + (int)Math.Round((fraction * 490) / 5.0) * 5;
-        return scaled;
     }
 
     private async Task<PlacementResultView> BuildPlacementResultViewAsync(

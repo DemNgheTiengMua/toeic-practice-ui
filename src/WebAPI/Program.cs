@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Services;
+using Services.Credits;
 using System.Threading.RateLimiting;
 using WebAPI;
 using WebAPI.Endpoints;
@@ -194,10 +195,12 @@ builder.Services.AddSingleton<IEmailSender>(sp => new DropFolderEmailSender(
     emailOptions.From,
     sp.GetRequiredService<ILogger<DropFolderEmailSender>>()));
 builder.Services.AddScoped<ILearnerService, LearnerService>();
+builder.Services.AddScoped<ICreditLedger, CreditLedger>();
 builder.Services.AddScoped<IPracticeService, PracticeService>();
 builder.Services.AddScoped<ISavedQuestionService, SavedQuestionService>();
 builder.Services.AddScoped<IWeaknessAnalysisService, WeaknessAnalysisService>();
 builder.Services.AddScoped<IPackageService, PackageService>();
+builder.Services.AddScoped<IAttemptEngine, AttemptEngine>();
 builder.Services.AddScoped<IMockExamService, MockExamService>();
 builder.Services.AddScoped<IAdminOrderService, AdminOrderService>();
 builder.Services.AddScoped<IAdminUserService, AdminUserService>();
