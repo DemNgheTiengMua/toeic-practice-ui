@@ -67,7 +67,8 @@ public sealed record ModuleStepInfo(
     DateTimeOffset? StartedAt,
     DateTimeOffset? CompletedAt,
     int? RefSectionId,
-    int? RefExamId);
+    int? RefExamId,
+    int? RefLessonId = null);
 
 public sealed record LearningPathModuleDetailView(
     int LearnerPathId,

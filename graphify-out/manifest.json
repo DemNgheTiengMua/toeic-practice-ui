@@ -10,8 +10,8 @@
     "semantic_hash": "8971e2adf3c51939eb3d4bfb9faaaee0"
   },
   "docs/database-schema.sql": {
-    "mtime": 1792078564.2501805,
-    "ast_hash": "f0fd1a45b4f8b74cc80d07256a3a0e7b",
+    "mtime": 1792221115.098281,
+    "ast_hash": "ca8c1713d3d191e1aa0d8cef094e83cb",
     "semantic_hash": ""
   },
   "docs/erd/export-meta.sql": {
@@ -210,8 +210,8 @@
     "semantic_hash": ""
   },
   "src/DataAccess/CompanionDbContext.cs": {
-    "mtime": 1792078564.2953098,
-    "ast_hash": "e51190852a9764033de48056beb86452",
+    "mtime": 1792219862.5582185,
+    "ast_hash": "fefd0b660fc1a8dbfe536aecdbbe8894",
     "semantic_hash": ""
   },
   "src/DataAccess/DataAccess.csproj": {
@@ -225,292 +225,292 @@
     "semantic_hash": "6f3f320f40534ad49bebe0d5073af3d9"
   },
   "src/DataAccess/Scaffold/AiGrading.cs": {
-    "mtime": 1791830556.0963953,
+    "mtime": 1792219862.5582185,
     "ast_hash": "1e2deedd75d71c12109e8ffbd84f9ca7",
     "semantic_hash": "1e2deedd75d71c12109e8ffbd84f9ca7"
   },
   "src/DataAccess/Scaffold/AiGradingScore.cs": {
-    "mtime": 1791830556.0963953,
+    "mtime": 1792219862.5582185,
     "ast_hash": "bc4f482a5515274ea596711d0e180738",
     "semantic_hash": "bc4f482a5515274ea596711d0e180738"
   },
   "src/DataAccess/Scaffold/AiInsight.cs": {
-    "mtime": 1791830556.0963953,
+    "mtime": 1792219862.5582185,
     "ast_hash": "a4474933bc3dbc071bee9e984142efae",
     "semantic_hash": "a4474933bc3dbc071bee9e984142efae"
   },
   "src/DataAccess/Scaffold/AttemptAnswer.cs": {
-    "mtime": 1791830556.0963953,
+    "mtime": 1792219862.5582185,
     "ast_hash": "6340a225a7bf0fdde963887d16fabe71",
     "semantic_hash": "6340a225a7bf0fdde963887d16fabe71"
   },
   "src/DataAccess/Scaffold/AttemptSkillScore.cs": {
-    "mtime": 1791830556.0963953,
+    "mtime": 1792219862.5582185,
     "ast_hash": "8e264f92e39a9f38e2d35329e1a1bca1",
     "semantic_hash": "8e264f92e39a9f38e2d35329e1a1bca1"
   },
   "src/DataAccess/Scaffold/Booking.cs": {
-    "mtime": 1791830556.0963953,
+    "mtime": 1792219862.5582185,
     "ast_hash": "d548a56735488e092fb012292673ef33",
     "semantic_hash": "d548a56735488e092fb012292673ef33"
   },
   "src/DataAccess/Scaffold/Certificate.cs": {
-    "mtime": 1791830556.0963953,
-    "ast_hash": "bc3c4dd7c3fc607d6c7ad6549ce7595c",
-    "semantic_hash": "bc3c4dd7c3fc607d6c7ad6549ce7595c"
+    "mtime": 1792219862.5582185,
+    "ast_hash": "91f99ee29773d5655996647ecd670ede",
+    "semantic_hash": ""
   },
   "src/DataAccess/Scaffold/Complaint.cs": {
-    "mtime": 1791830556.0963953,
+    "mtime": 1792219862.5582185,
     "ast_hash": "9437523bca59fcecfa555ff3ec4db26a",
     "semantic_hash": "9437523bca59fcecfa555ff3ec4db26a"
   },
   "src/DataAccess/Scaffold/CreditTransaction.cs": {
-    "mtime": 1791830556.0963953,
+    "mtime": 1792219862.5582185,
     "ast_hash": "f6b68bad28e3e64631656dc0d48fd301",
     "semantic_hash": "f6b68bad28e3e64631656dc0d48fd301"
   },
   "src/DataAccess/Scaffold/EmailVerificationToken.cs": {
-    "mtime": 1791830556.0963953,
+    "mtime": 1792219862.5582185,
     "ast_hash": "c34f07aa4c93bd5ffceb451eb7257109",
     "semantic_hash": "c34f07aa4c93bd5ffceb451eb7257109"
   },
   "src/DataAccess/Scaffold/Exam.cs": {
-    "mtime": 1791830556.0963953,
+    "mtime": 1792219862.5582185,
     "ast_hash": "6a862b12698cf2508024c7b9a4718314",
     "semantic_hash": "6a862b12698cf2508024c7b9a4718314"
   },
   "src/DataAccess/Scaffold/ExamAttempt.cs": {
-    "mtime": 1791830556.0963953,
+    "mtime": 1792219862.5582185,
     "ast_hash": "b85139f980310237b1bbd4cbcfad9fa0",
     "semantic_hash": "b85139f980310237b1bbd4cbcfad9fa0"
   },
   "src/DataAccess/Scaffold/ExamSectionAudio.cs": {
-    "mtime": 1791830556.0963953,
+    "mtime": 1792219862.5582185,
     "ast_hash": "cc52bd81261b075b5502400f71c37bbd",
     "semantic_hash": "cc52bd81261b075b5502400f71c37bbd"
   },
   "src/DataAccess/Scaffold/FreeResponse.cs": {
-    "mtime": 1791830556.0963953,
+    "mtime": 1792219862.5582185,
     "ast_hash": "335b418d9731089c1a9b6acadd08f1a2",
     "semantic_hash": "335b418d9731089c1a9b6acadd08f1a2"
   },
   "src/DataAccess/Scaffold/GradingCriterion.cs": {
-    "mtime": 1791830556.0963953,
+    "mtime": 1792219862.5689454,
     "ast_hash": "63a7151c80efadea85e192fb47c0ffcf",
     "semantic_hash": "63a7151c80efadea85e192fb47c0ffcf"
   },
   "src/DataAccess/Scaffold/ImportBatch.cs": {
-    "mtime": 1791830556.0963953,
+    "mtime": 1792219862.5689454,
     "ast_hash": "8cc8b4be323c5aae04a514fdaa4f673d",
     "semantic_hash": "8cc8b4be323c5aae04a514fdaa4f673d"
   },
   "src/DataAccess/Scaffold/ImportLog.cs": {
-    "mtime": 1791830556.0963953,
+    "mtime": 1792219862.5689454,
     "ast_hash": "4e4434326c58ff1e8205811692e28aed",
     "semantic_hash": "4e4434326c58ff1e8205811692e28aed"
   },
   "src/DataAccess/Scaffold/LearnerPath.cs": {
-    "mtime": 1791830556.0963953,
+    "mtime": 1792219862.5689454,
     "ast_hash": "81501749433141a5a5247689d18cf57d",
     "semantic_hash": "81501749433141a5a5247689d18cf57d"
   },
   "src/DataAccess/Scaffold/LearnerPathStep.cs": {
-    "mtime": 1791830556.0963953,
+    "mtime": 1792219862.5689454,
     "ast_hash": "4f119526c154d75e139d59e85696fd17",
     "semantic_hash": "4f119526c154d75e139d59e85696fd17"
   },
   "src/DataAccess/Scaffold/MentorPayout.cs": {
-    "mtime": 1791830556.0963953,
+    "mtime": 1792219862.5689454,
     "ast_hash": "205483dfd996a002f14c2f6f9c35b149",
     "semantic_hash": "205483dfd996a002f14c2f6f9c35b149"
   },
   "src/DataAccess/Scaffold/MentorPayoutItem.cs": {
-    "mtime": 1791830556.0963953,
+    "mtime": 1792219862.5689454,
     "ast_hash": "68bb00f284f28a692e8c5faf8811a775",
     "semantic_hash": "68bb00f284f28a692e8c5faf8811a775"
   },
   "src/DataAccess/Scaffold/MentorProfile.cs": {
-    "mtime": 1791830556.1037357,
+    "mtime": 1792219862.5689454,
     "ast_hash": "494951fdcf7a75c168412464dd3cf28c",
     "semantic_hash": "494951fdcf7a75c168412464dd3cf28c"
   },
   "src/DataAccess/Scaffold/MentorSlot.cs": {
-    "mtime": 1791830556.1037357,
+    "mtime": 1792219862.5689454,
     "ast_hash": "dbb2f3642d72365236ca1b0ca69ce528",
     "semantic_hash": "dbb2f3642d72365236ca1b0ca69ce528"
   },
   "src/DataAccess/Scaffold/Order.cs": {
-    "mtime": 1791830556.1037357,
+    "mtime": 1792219862.5689454,
     "ast_hash": "d4e7fe0ba7e584c551d5f9120d2b2f2e",
     "semantic_hash": "d4e7fe0ba7e584c551d5f9120d2b2f2e"
   },
   "src/DataAccess/Scaffold/Package.cs": {
-    "mtime": 1791830556.1037357,
+    "mtime": 1792219862.5689454,
     "ast_hash": "05605e2a176983f1f6f40ce0ed060e83",
     "semantic_hash": "05605e2a176983f1f6f40ce0ed060e83"
   },
   "src/DataAccess/Scaffold/PasswordResetToken.cs": {
-    "mtime": 1791830556.1037357,
+    "mtime": 1792219862.5689454,
     "ast_hash": "61a42450608c1c1b97a59551aad50bf9",
     "semantic_hash": "61a42450608c1c1b97a59551aad50bf9"
   },
   "src/DataAccess/Scaffold/PathModule.cs": {
-    "mtime": 1791830556.1037357,
+    "mtime": 1792219862.5689454,
     "ast_hash": "53d7e9d423f819acc58aab35ce995355",
     "semantic_hash": "53d7e9d423f819acc58aab35ce995355"
   },
   "src/DataAccess/Scaffold/PathModuleItem.cs": {
-    "mtime": 1791830556.1054046,
-    "ast_hash": "a273f9c484de8033ca5ff0a5389496a4",
-    "semantic_hash": "a273f9c484de8033ca5ff0a5389496a4"
+    "mtime": 1792219862.5689454,
+    "ast_hash": "3d736d6ec535ea10af66ea9bb89e4a08",
+    "semantic_hash": ""
   },
   "src/DataAccess/Scaffold/PathModuleTopic.cs": {
-    "mtime": 1791830556.1054046,
+    "mtime": 1792219862.5718067,
     "ast_hash": "625adaec623c98cf6c9069e4a1635247",
     "semantic_hash": "625adaec623c98cf6c9069e4a1635247"
   },
   "src/DataAccess/Scaffold/PathTemplate.cs": {
-    "mtime": 1791830556.1054046,
+    "mtime": 1792219862.5718067,
     "ast_hash": "dd0d00cf3fdb008969a3a359afd57e2f",
     "semantic_hash": "dd0d00cf3fdb008969a3a359afd57e2f"
   },
   "src/DataAccess/Scaffold/PaymentEvent.cs": {
-    "mtime": 1791830556.1054046,
+    "mtime": 1792219862.5718067,
     "ast_hash": "160cbb95eeebd919e63cf663d4874f7a",
     "semantic_hash": "160cbb95eeebd919e63cf663d4874f7a"
   },
   "src/DataAccess/Scaffold/PlacementTest.cs": {
-    "mtime": 1791830556.1054046,
+    "mtime": 1792219862.5718067,
     "ast_hash": "d659b14d792c283dfb8c976895e8e764",
     "semantic_hash": "d659b14d792c283dfb8c976895e8e764"
   },
   "src/DataAccess/Scaffold/PracticeAnswer.cs": {
-    "mtime": 1791830556.1054046,
+    "mtime": 1792219862.572683,
     "ast_hash": "6ce1bd19564bde05f84136e4198e7bb6",
     "semantic_hash": "6ce1bd19564bde05f84136e4198e7bb6"
   },
   "src/DataAccess/Scaffold/PracticeSession.cs": {
-    "mtime": 1791830556.1054046,
+    "mtime": 1792219862.572683,
     "ast_hash": "8c98ee19d8c42d4f3261c07d5d1f8abb",
     "semantic_hash": "8c98ee19d8c42d4f3261c07d5d1f8abb"
   },
   "src/DataAccess/Scaffold/Question.cs": {
-    "mtime": 1791830556.1054046,
+    "mtime": 1792219862.572683,
     "ast_hash": "f1de4db639f7ea8a26d222975697ebf5",
     "semantic_hash": "f1de4db639f7ea8a26d222975697ebf5"
   },
   "src/DataAccess/Scaffold/QuestionCategory.cs": {
-    "mtime": 1791830556.1054046,
-    "ast_hash": "c5a94d9dc7e30c0598f40635970aff4d",
-    "semantic_hash": "c5a94d9dc7e30c0598f40635970aff4d"
+    "mtime": 1792219862.572683,
+    "ast_hash": "872f2084755cafb4cefb381ec8064813",
+    "semantic_hash": ""
   },
   "src/DataAccess/Scaffold/QuestionGroup.cs": {
-    "mtime": 1791830556.1054046,
+    "mtime": 1792219862.572683,
     "ast_hash": "f1136a5aba3ac1b1cc0397e8227888b0",
     "semantic_hash": "f1136a5aba3ac1b1cc0397e8227888b0"
   },
   "src/DataAccess/Scaffold/QuestionOption.cs": {
-    "mtime": 1791830556.1054046,
+    "mtime": 1792219862.572683,
     "ast_hash": "f87582c48f9b739db2fc79203d67d844",
     "semantic_hash": "f87582c48f9b739db2fc79203d67d844"
   },
   "src/DataAccess/Scaffold/Recommendation.cs": {
-    "mtime": 1791830556.1087523,
+    "mtime": 1792219862.5738137,
     "ast_hash": "99c5a0355a1731200226d4244a23fe2d",
     "semantic_hash": "99c5a0355a1731200226d4244a23fe2d"
   },
   "src/DataAccess/Scaffold/Review.cs": {
-    "mtime": 1791830556.1087523,
+    "mtime": 1792219862.5738137,
     "ast_hash": "825bce31413a0fb0bc15941e84a9c04a",
     "semantic_hash": "825bce31413a0fb0bc15941e84a9c04a"
   },
   "src/DataAccess/Scaffold/Role.cs": {
-    "mtime": 1791830556.1087523,
+    "mtime": 1792219862.5738137,
     "ast_hash": "b109d5c12401ffee718218031411a971",
     "semantic_hash": "b109d5c12401ffee718218031411a971"
   },
   "src/DataAccess/Scaffold/SavedQuestion.cs": {
-    "mtime": 1791830556.1087523,
+    "mtime": 1792219862.5738137,
     "ast_hash": "f277ce8c23965ef9a0fad7a54eb819b8",
     "semantic_hash": "f277ce8c23965ef9a0fad7a54eb819b8"
   },
   "src/DataAccess/Scaffold/ScoreBand.cs": {
-    "mtime": 1791830556.1087523,
+    "mtime": 1792219862.5738137,
     "ast_hash": "9020122e464fe0d263fe4cd7e2054d42",
     "semantic_hash": "9020122e464fe0d263fe4cd7e2054d42"
   },
   "src/DataAccess/Scaffold/ScoreScale.cs": {
-    "mtime": 1791830556.1087523,
+    "mtime": 1792219862.5738137,
     "ast_hash": "a47ba064fe80e12e302cc43d2d82baf4",
     "semantic_hash": "a47ba064fe80e12e302cc43d2d82baf4"
   },
   "src/DataAccess/Scaffold/Section.cs": {
-    "mtime": 1791830556.1087523,
+    "mtime": 1792219862.5738137,
     "ast_hash": "cbf836a9b870691500a1f5358255a845",
     "semantic_hash": "cbf836a9b870691500a1f5358255a845"
   },
   "src/DataAccess/Scaffold/SectionCriterion.cs": {
-    "mtime": 1791830556.1087523,
+    "mtime": 1792219862.5738137,
     "ast_hash": "ae2a2b07049d13a05dce6b7a9732a55e",
     "semantic_hash": "ae2a2b07049d13a05dce6b7a9732a55e"
   },
   "src/DataAccess/Scaffold/Skill.cs": {
-    "mtime": 1791830556.1087523,
-    "ast_hash": "273ca67e0ce626882ce0f7a3a747c8e6",
-    "semantic_hash": "273ca67e0ce626882ce0f7a3a747c8e6"
+    "mtime": 1792219862.57485,
+    "ast_hash": "d6ac54546af991e8a69f4a0fb8a0b45e",
+    "semantic_hash": ""
   },
   "src/DataAccess/Scaffold/TargetBand.cs": {
-    "mtime": 1791830556.1087523,
+    "mtime": 1792219862.57485,
     "ast_hash": "861ee2ddec508a4d51463e746bb413a7",
     "semantic_hash": "861ee2ddec508a4d51463e746bb413a7"
   },
   "src/DataAccess/Scaffold/User.cs": {
-    "mtime": 1792078564.2953098,
-    "ast_hash": "6332dee83b1cf6fd5eec785dcf166366",
+    "mtime": 1792219862.57485,
+    "ast_hash": "ec43359865a0c3234afa0d797ef238c2",
     "semantic_hash": ""
   },
   "src/DataAccess/Scaffold/vw_LearnerPathIsPremium.cs": {
-    "mtime": 1791830556.1087523,
+    "mtime": 1792219862.57485,
     "ast_hash": "8e9e5682134f40a701f020660126f21c",
     "semantic_hash": "8e9e5682134f40a701f020660126f21c"
   },
   "src/DataAccess/Scaffold/vw_MentorAvgRating.cs": {
-    "mtime": 1791830556.1087523,
+    "mtime": 1792219862.57485,
     "ast_hash": "39db77aa46246b83090f8ed0ea7617a8",
     "semantic_hash": "39db77aa46246b83090f8ed0ea7617a8"
   },
   "src/DataAccess/Scaffold/vw_MentorPayoutTotal.cs": {
-    "mtime": 1791830556.1087523,
+    "mtime": 1792219862.57485,
     "ast_hash": "77869a417e5ff5476d83fe7dcedb5b1f",
     "semantic_hash": "77869a417e5ff5476d83fe7dcedb5b1f"
   },
   "src/DataAccess/Scaffold/vw_UserCategoryAccuracy.cs": {
-    "mtime": 1791830556.1087523,
+    "mtime": 1792219862.57485,
     "ast_hash": "6cac059e70f80107be9fc07bd7fe3847",
     "semantic_hash": "6cac059e70f80107be9fc07bd7fe3847"
   },
   "src/DataAccess/Scaffold/vw_UserCreditBalance.cs": {
-    "mtime": 1791830556.1087523,
+    "mtime": 1792219862.57485,
     "ast_hash": "6db5f2a9a57793671139b2a1b48b9285",
     "semantic_hash": "6db5f2a9a57793671139b2a1b48b9285"
   },
   "src/DataAccess/Scaffold/vw_UserCreditSummary.cs": {
-    "mtime": 1791830556.1087523,
+    "mtime": 1792219862.57485,
     "ast_hash": "9a390b2bc7d2b5d9320093a0751b4369",
     "semantic_hash": "9a390b2bc7d2b5d9320093a0751b4369"
   },
   "src/DataAccess/Scaffold/vw_UserPurchaseTotal.cs": {
-    "mtime": 1791830556.1087523,
+    "mtime": 1792219862.57485,
     "ast_hash": "98f438ff396e84db0791f21e1295bfad",
     "semantic_hash": "98f438ff396e84db0791f21e1295bfad"
   },
   "src/DataAccess/Scaffold/vw_UserSectionAccuracy.cs": {
-    "mtime": 1791830556.1087523,
+    "mtime": 1792219862.57485,
     "ast_hash": "7c1dd235e4bc745293ca54d996d002a5",
     "semantic_hash": "7c1dd235e4bc745293ca54d996d002a5"
   },
   "src/DataAccess/Scaffold/vw_UserSectionAccuracyAll.cs": {
-    "mtime": 1791830556.1087523,
+    "mtime": 1792219862.57485,
     "ast_hash": "e66cd7bfbee6e414f219dbbc45931495",
     "semantic_hash": "e66cd7bfbee6e414f219dbbc45931495"
   },
@@ -850,8 +850,8 @@
     "semantic_hash": ""
   },
   "CONTEXT.md": {
-    "mtime": 1791960421.365511,
-    "ast_hash": "c566f3e832e1462d284e490a2574e408",
+    "mtime": 1792220993.0768948,
+    "ast_hash": "28ee35a9bc0ce0d9c037929e09fb4143",
     "semantic_hash": ""
   },
   "DESIGN.md": {
@@ -1106,9 +1106,9 @@
     "semantic_hash": "bec6c36b7ddc30e2a46dfd8350fec37c"
   },
   "prototype/student/path-detail.html": {
-    "mtime": 1791739824.4628336,
-    "ast_hash": "dbe8ad87a7b2a992afa073b38130bd4e",
-    "semantic_hash": "dbe8ad87a7b2a992afa073b38130bd4e"
+    "mtime": 1792222740.9471464,
+    "ast_hash": "67c6263cb67d5820f16eb7451fcc0b96",
+    "semantic_hash": ""
   },
   "prototype/student/path-generated.html": {
     "mtime": 1791739824.4628336,
@@ -1191,9 +1191,9 @@
     "semantic_hash": "c94057f5197c4114b9046f8322dba642"
   },
   "prototype/student/weakness-analysis.html": {
-    "mtime": 1791739824.4699326,
-    "ast_hash": "b7caf3ea2b2a9604937527f9989a127f",
-    "semantic_hash": "b7caf3ea2b2a9604937527f9989a127f"
+    "mtime": 1792222754.8321807,
+    "ast_hash": "5133e88f6e24d2bc36ddc6901db86be6",
+    "semantic_hash": ""
   },
   "prototype/student/writing-instructions.html": {
     "mtime": 1791739824.4699326,
@@ -1736,8 +1736,8 @@
     "semantic_hash": ""
   },
   "src/BusinessObjects/Enums.cs": {
-    "mtime": 1792133078.5423996,
-    "ast_hash": "a0bb11338c51572b5e072200f3f18b49",
+    "mtime": 1792220934.7370882,
+    "ast_hash": "147cc8979df1bfc17dff137fc60dddb1",
     "semantic_hash": ""
   },
   "src/Contracts/EnumMapping.cs": {
@@ -1746,8 +1746,8 @@
     "semantic_hash": ""
   },
   "src/Contracts/Enums.cs": {
-    "mtime": 1792133078.5650744,
-    "ast_hash": "3f6354ec54847e3932078ddba093cb44",
+    "mtime": 1792220951.156921,
+    "ast_hash": "774fe621a1d2eef3166713ed7c6d80bf",
     "semantic_hash": ""
   },
   "src/WebAPI/Endpoints/AdminEndpoints.cs": {
@@ -1801,8 +1801,8 @@
     "semantic_hash": ""
   },
   "tests/Services.Tests/EnumCodesTests.cs": {
-    "mtime": 1792133078.6159375,
-    "ast_hash": "1d70e86c348349e58cf08992393fc101",
+    "mtime": 1792220965.1668966,
+    "ast_hash": "cd28af33ae42cacbe54dd5f3c1b0a497",
     "semantic_hash": ""
   },
   "docs/adr/0006-typed-domain-and-wire-enums.md": {
@@ -2081,23 +2081,23 @@
     "semantic_hash": ""
   },
   "src/BusinessObjects/LearningPathModels.cs": {
-    "mtime": 1792078564.2921913,
-    "ast_hash": "d3fd014608199e027a6c4f997bafa7e6",
+    "mtime": 1792222496.9512973,
+    "ast_hash": "937bbee9519c7dfc93752dbcb746224f",
     "semantic_hash": ""
   },
   "src/Contracts/LearningPathDtos.cs": {
-    "mtime": 1792078564.2946956,
-    "ast_hash": "d4533491916acd370aa0f5ef197d3890",
+    "mtime": 1792222506.1771748,
+    "ast_hash": "cc3b94a658af6a947cbac84bde7f572a",
     "semantic_hash": ""
   },
   "src/Services/LearningPathService.cs": {
-    "mtime": 1792142263.9542968,
-    "ast_hash": "d587c9d91182f50420ffc096cc788dd1",
+    "mtime": 1792222575.9087112,
+    "ast_hash": "4e183b537923ae3683b499e4d26cb07a",
     "semantic_hash": ""
   },
   "src/WebAPI/Endpoints/LearningPathEndpoints.cs": {
-    "mtime": 1792078564.3008385,
-    "ast_hash": "ffe65f558ca136d655aab328f934eddd",
+    "mtime": 1792222509.4434166,
+    "ast_hash": "d92549092cd136481a7dd7e7ee53f011",
     "semantic_hash": ""
   },
   "src/WebMVC/Controllers/LearningPathController.cs": {
@@ -2121,8 +2121,8 @@
     "semantic_hash": ""
   },
   "tests/Services.Tests/LearningPathServiceTests.cs": {
-    "mtime": 1792078564.3214602,
-    "ast_hash": "672dbdae6b049095bac1d74c0c8fd642",
+    "mtime": 1792222610.7737358,
+    "ast_hash": "6bc0a0a4365023d1ff66f5a0b010f738",
     "semantic_hash": ""
   },
   "tests/WebMVC.Tests/LearningPathControllerTests.cs": {
@@ -2768,6 +2768,61 @@
   "tests/WebMVC.Tests/AiNarrativeFormatterTests.cs": {
     "mtime": 1792215197.1476402,
     "ast_hash": "dc6cdf6896429818d2834a385aaedbab",
+    "semantic_hash": ""
+  },
+  "src/Contracts/LessonDtos.cs": {
+    "mtime": 1792221389.1892643,
+    "ast_hash": "5686c2aa948acda51e69d326481068e7",
+    "semantic_hash": ""
+  },
+  "src/DataAccess/Scaffold/LearnerLessonProgress.cs": {
+    "mtime": 1792219862.5689454,
+    "ast_hash": "99541cfddd864d3552cdab1cb8cd8a36",
+    "semantic_hash": ""
+  },
+  "src/DataAccess/Scaffold/Lesson.cs": {
+    "mtime": 1792219862.5689454,
+    "ast_hash": "41c226fb0d5c785fe3550dec36b747de",
+    "semantic_hash": ""
+  },
+  "src/DataAccess/Scaffold/LessonCard.cs": {
+    "mtime": 1792219862.5689454,
+    "ast_hash": "928136a48507bea4055194b84fea69fb",
+    "semantic_hash": ""
+  },
+  "src/Services/LessonService.cs": {
+    "mtime": 1792221413.0587428,
+    "ast_hash": "3bba171865a2af946621ba8a5d74ef06",
+    "semantic_hash": ""
+  },
+  "src/Services/PremiumPathService.cs": {
+    "mtime": 1792222301.9746256,
+    "ast_hash": "dc5a36d67340cdb4e0d745996212de7b",
+    "semantic_hash": ""
+  },
+  "tests/Services.Tests/LessonServiceTests.cs": {
+    "mtime": 1792221324.8030128,
+    "ast_hash": "bc39c0a921724db1c3b0215ddd8bf8ae",
+    "semantic_hash": ""
+  },
+  "tests/Services.Tests/PremiumPathServiceTests.cs": {
+    "mtime": 1792222259.922851,
+    "ast_hash": "f39eb0ff78b54fa0afc9b7b0bb047e67",
+    "semantic_hash": ""
+  },
+  ".scratch/implementation-status.md": {
+    "mtime": 1792222773.100034,
+    "ast_hash": "2cfcb3348cc7cc8ae0d2099fe81b8c2d",
+    "semantic_hash": ""
+  },
+  "docs/specs/guided-learning-system.md": {
+    "mtime": 1792219076.4504447,
+    "ast_hash": "ae50b7d840132beb0dafafeb9d8c1a1a",
+    "semantic_hash": ""
+  },
+  "prototype/student/lesson-view.html": {
+    "mtime": 1792222728.922765,
+    "ast_hash": "7d18c874aec8ef95bc9940a303f08529",
     "semantic_hash": ""
   }
 }

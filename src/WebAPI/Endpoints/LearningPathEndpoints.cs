@@ -215,6 +215,7 @@ public static class LearningPathEndpoints
                 s.StartedAt,
                 s.CompletedAt,
                 s.RefSectionId,
-                s.RefExamId)).ToList(),
+                s.RefExamId,
+                s.RefLessonId)).ToList(),
             detail.ActiveStepId);
 }
