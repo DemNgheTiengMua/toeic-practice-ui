@@ -2159,3 +2159,243 @@ details > summary:focus-visible { outline: 3px solid var(--sign-blue); outline-o
   }
 }
 
+/* ===== Dashboard Bento Layout & Mentor Boarding Pass ("Bảng hiệu phòng thi") ===== */
+.dashboard-bento {
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-bento__diagnostics {
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-bento__ledger-row {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(320px, 5fr);
+  gap: var(--space-4, 16px);
+  align-items: start;
+}
+
+.dashboard-bento__ledger,
+.dashboard-bento__mentor {
+  min-width: 0;
+}
+
+/* Mentor Boarding Pass Placard */
+.mentor-pass {
+  background: var(--color-surface, #ffffff);
+  border: var(--keyline, 2px) solid var(--ink, #14181d);
+  border-radius: 0;
+  box-shadow: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.mentor-pass__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2, 8px);
+  padding: var(--space-3, 12px) var(--space-4, 16px);
+  background: var(--ink, #14181d);
+  color: #ffffff;
+  border-bottom: var(--keyline, 2px) solid var(--ink, #14181d);
+}
+
+.mentor-pass__title {
+  margin: 0;
+  font-family: var(--font-sign, "IBM Plex Sans Condensed", sans-serif);
+  font-size: var(--text-sm, 14px);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-sign, 0.055em);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+}
+
+.mentor-pass__body {
+  display: flex;
+  flex-direction: column;
+}
+
+.mentor-pass__mentor {
+  padding: var(--space-4, 16px);
+  border-bottom: var(--keyline-soft, 1px) solid var(--line-soft, #ccd2d6);
+  background: var(--color-surface, #ffffff);
+}
+
+.mentor-pass__eyebrow {
+  font-family: var(--font-mono, "IBM Plex Mono", monospace);
+  font-size: var(--text-xs, 13px);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted, #5c6570);
+  margin-bottom: var(--space-1, 4px);
+}
+
+.mentor-pass__name {
+  font-family: var(--font-sign, "IBM Plex Sans Condensed", sans-serif);
+  font-size: var(--text-xl, 24px);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-sign, 0.055em);
+  line-height: var(--leading-tight, 1.2);
+  color: var(--ink, #14181d);
+}
+
+.mentor-pass__headline {
+  margin-top: var(--space-1, 4px);
+  font-family: var(--font-sans, "IBM Plex Sans", sans-serif);
+  font-size: var(--text-sm, 14px);
+  color: var(--color-text-muted, #5c6570);
+  line-height: var(--leading-snug, 1.4);
+}
+
+.mentor-pass__schedule {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-bottom: var(--keyline-soft, 1px) solid var(--line-soft, #ccd2d6);
+  background: var(--color-surface, #ffffff);
+}
+
+.mentor-pass__cell {
+  padding: var(--space-3, 12px) var(--space-4, 16px);
+  border-right: var(--keyline-soft, 1px) solid var(--line-soft, #ccd2d6);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.mentor-pass__cell:last-child {
+  border-right: 0;
+}
+
+.mentor-pass__label {
+  font-family: var(--font-sign, "IBM Plex Sans Condensed", sans-serif);
+  font-size: var(--text-xs, 13px);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps-sm, 0.08em);
+  color: var(--color-text-muted, #5c6570);
+}
+
+.mentor-pass__value {
+  font-family: var(--font-mono, "IBM Plex Mono", monospace);
+  font-size: var(--text-base, 16px);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink, #14181d);
+}
+
+.mentor-pass__sub {
+  font-family: var(--font-mono, "IBM Plex Mono", monospace);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-muted, #5c6570);
+}
+
+.mentor-pass__focus {
+  padding: var(--space-3, 12px) var(--space-4, 16px);
+  background: var(--wall, #eef0f1);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1, 4px);
+}
+
+.mentor-pass__focus-text {
+  margin: 0;
+  font-family: var(--font-sans, "IBM Plex Sans", sans-serif);
+  font-size: var(--text-sm, 14px);
+  font-weight: 600;
+  color: var(--ink, #14181d);
+  line-height: var(--leading-snug, 1.4);
+}
+
+.mentor-pass--invite .mentor-pass__body {
+  padding: var(--space-4, 16px);
+  gap: var(--space-2, 8px);
+}
+
+.mentor-pass__invite-title {
+  margin: 0;
+  font-family: var(--font-sign, "IBM Plex Sans Condensed", sans-serif);
+  font-size: var(--text-lg, 18px);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-sign, 0.055em);
+  color: var(--ink, #14181d);
+}
+
+.mentor-pass__invite-desc {
+  margin: 0;
+  font-family: var(--font-sans, "IBM Plex Sans", sans-serif);
+  font-size: var(--text-sm, 14px);
+  line-height: var(--leading-body, 1.6);
+  color: var(--color-text-muted, #5c6570);
+}
+
+.mentor-pass__perks {
+  margin: var(--space-2, 8px) 0 0;
+  padding: 0;
+  list-style: none;
+  border-top: var(--keyline-soft, 1px) solid var(--line-soft, #ccd2d6);
+}
+
+.mentor-pass__perks li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2, 8px);
+  padding: var(--space-2, 8px) 0;
+  border-bottom: var(--keyline-soft, 1px) solid var(--line-soft, #ccd2d6);
+  font-size: var(--text-sm, 14px);
+  color: var(--ink, #14181d);
+}
+
+.mentor-pass__perks li:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.mentor-pass__perks .icon {
+  margin-top: 2px;
+  color: var(--sign-green, #0a6b3c);
+}
+
+.mentor-pass__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2, 8px);
+  padding: var(--space-3, 12px) var(--space-4, 16px);
+  border-top: var(--keyline, 2px) solid var(--ink, #14181d);
+  background: var(--color-surface, #ffffff);
+}
+
+@media (max-width: 1024px) {
+  .dashboard-bento__ledger-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .mentor-pass__schedule {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .mentor-pass__cell {
+    border-right: 0;
+    border-bottom: var(--keyline-soft, 1px) solid var(--line-soft, #ccd2d6);
+  }
+  .mentor-pass__cell:last-child {
+    border-bottom: 0;
+  }
+}
+
+
