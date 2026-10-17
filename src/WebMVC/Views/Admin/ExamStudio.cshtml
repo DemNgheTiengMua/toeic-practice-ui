@@ -1664,13 +1664,18 @@
     fetch('/admin/exams/' + examId + '/publish', {
       method: 'POST',
       headers: {
+        'Accept': 'application/json',
         'Content-Type': 'application/json',
         'RequestVerificationToken': getCsrfToken()
       }
     })
     .then(function(res) {
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      return res.json();
+      return res.json().then(function(data) {
+        if (!res.ok || data.success === false) {
+          throw new Error(data.message || ('HTTP ' + res.status));
+        }
+        return data;
+      });
     })
     .then(function() {
       alert('Exam published successfully!');

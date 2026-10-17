@@ -417,6 +417,8 @@ public sealed class SpeakingPracticeService(
             throw new SpeakingPracticeException(SpeakingPracticeException.InsufficientCredits, "You do not have enough credits to submit speaking practice.");
         }
 
+        await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
+
         var freeResponses = await db.FreeResponses
             .Where(fr => fr.AttemptId == attemptId)
             .ToListAsync(cancellationToken);
@@ -488,6 +490,7 @@ public sealed class SpeakingPracticeService(
         }
 
         await db.SaveChangesAsync(cancellationToken);
+        await tx.CommitAsync(cancellationToken);
 
         return new SubmitSpeakingResult(
             attempt.AttemptId,

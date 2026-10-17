@@ -72,12 +72,23 @@ else if (Model.Activation == "failed")
 
 @if (dashboard.UnfinishedAttempt is { } unfinishedAttempt)
 {
+  var resumeUrl = unfinishedAttempt.Purpose == ExamPurposeDto.Placement 
+      ? $"/placement/take/{unfinishedAttempt.AttemptId}" 
+      : (unfinishedAttempt.Purpose == ExamPurposeDto.SpeakingPractice
+          ? $"/speaking/take/{unfinishedAttempt.AttemptId}"
+          : (unfinishedAttempt.Purpose == ExamPurposeDto.WritingPractice
+              ? $"/writing/take/{unfinishedAttempt.AttemptId}"
+              : $"/exams/take/{unfinishedAttempt.AttemptId}"));
+
   <div class="alert alert--warning row row--between row--middle row--wrap mt-3" role="status">
     <div>
       <strong>Unfinished exam:</strong> You have an in-progress @PurposeLabel(unfinishedAttempt.Purpose) (<strong>@unfinishedAttempt.ExamName</strong>) started @Dates.FormatDate(unfinishedAttempt.StartedAt).
       <div class="text-sm text-muted">Complete your exam to receive your scaled score and band.</div>
     </div>
-    <span class="badge badge--warning">In progress</span>
+    <div class="row row--tight" style="gap: var(--space-2); align-items: center;">
+      <span class="badge badge--warning">In progress</span>
+      <a class="btn btn--primary btn--sm" href="@resumeUrl">Resume exam ›</a>
+    </div>
   </div>
 }
 
@@ -269,7 +280,34 @@ else if (Model.Activation == "failed")
                   @foreach (var a in dashboard.RecentAttempts)
                   {
                     <tr>
-                      <td>@a.ExamName</td>
+                      <td>
+                        @if (a.Status == AttemptStatusDto.Graded)
+                        {
+                          var resUrl = a.Purpose == ExamPurposeDto.Placement 
+                              ? $"/placement/result/{a.AttemptId}" 
+                              : (a.Purpose == ExamPurposeDto.SpeakingPractice
+                                  ? $"/speaking/review/{a.AttemptId}"
+                                  : (a.Purpose == ExamPurposeDto.WritingPractice
+                                      ? $"/writing/review/{a.AttemptId}"
+                                      : $"/exams/result/{a.AttemptId}"));
+                          <a href="@resUrl"><strong>@a.ExamName</strong></a>
+                        }
+                        else if (a.Status == AttemptStatusDto.InProgress)
+                        {
+                          var takeUrl = a.Purpose == ExamPurposeDto.Placement 
+                              ? $"/placement/take/{a.AttemptId}" 
+                              : (a.Purpose == ExamPurposeDto.SpeakingPractice
+                                  ? $"/speaking/take/{a.AttemptId}"
+                                  : (a.Purpose == ExamPurposeDto.WritingPractice
+                                      ? $"/writing/take/{a.AttemptId}"
+                                      : $"/exams/take/{a.AttemptId}"));
+                          <a href="@takeUrl">@a.ExamName</a>
+                        }
+                        else
+                        {
+                          @a.ExamName
+                        }
+                      </td>
                       <td>@PurposeLabel(a.Purpose)</td>
                       <td>@Dates.FormatDate(a.StartedAt)</td>
                       <td>

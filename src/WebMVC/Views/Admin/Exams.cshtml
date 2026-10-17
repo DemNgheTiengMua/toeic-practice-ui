@@ -97,7 +97,8 @@ else
               <td>@dateDisplay</td>
               <td><span class="@statusBadgeClass">@exam.Status</span></td>
               <td>
-                <div class="row">
+                <div class="row" style="gap: 0.25rem;">
+                  <a class="btn btn--sm btn--primary" href="/admin/exams/@exam.ExamId/studio" style="border-radius: 0;">Studio</a>
                   <a class="btn btn--sm" href="/admin/exams/@exam.ExamId/edit">Edit</a>
                   <a class="btn btn--sm btn--ghost" href="/admin/exams/@exam.ExamId/questions">Questions</a>
                   @if (exam.FinishedAttemptCount == 0)

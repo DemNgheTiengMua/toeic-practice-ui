@@ -822,9 +822,9 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Certificates/Index.cshtml": {
-    "mtime": 1792161562.2303593,
-    "seen": 1792237824.4230607,
-    "ast_hash": "00592cf0592960dde5d3197f1bf0b894",
+    "mtime": 1792241495.8577254,
+    "seen": 1792241918.7276874,
+    "ast_hash": "dec7536bc6a0208f27ec76935a93160c",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Certificates/Unavailable.cshtml": {
@@ -834,9 +834,9 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Dashboard/Index.cshtml": {
-    "mtime": 1792215197.140908,
-    "seen": 1792237824.4230661,
-    "ast_hash": "c475dba576af808b56aa02fec2c880de",
+    "mtime": 1792241771.3492053,
+    "seen": 1792241918.7276933,
+    "ast_hash": "8296a7140df479ee2d6e18e2db6163b0",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Home/Index.cshtml": {
@@ -876,9 +876,9 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Shared/_LearnerLayout.cshtml": {
-    "mtime": 1792166963.5160606,
-    "seen": 1792237824.423115,
-    "ast_hash": "7a7f8f5d97306ece2d4a2affff396083",
+    "mtime": 1792241505.407707,
+    "seen": 1792241918.7277498,
+    "ast_hash": "9ed98a0bd2677a3f2782dc2ccd58c56a",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/_ViewImports.cshtml": {
@@ -1560,9 +1560,9 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Practice/SessionNotFound.cshtml": {
-    "mtime": 1791959623.7282205,
-    "seen": 1792237824.4230976,
-    "ast_hash": "6c773e7db5145cdda3a2267e8f55812a",
+    "mtime": 1792241562.7927585,
+    "seen": 1792241918.72773,
+    "ast_hash": "adb48fd49b6ad4ad441e7b5eb717b3cc",
     "semantic_hash": ""
   },
   "src/BusinessObjects/SavedQuestionModels.cs": {
@@ -1650,9 +1650,9 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/WeaknessAnalysis/Index.cshtml": {
-    "mtime": 1792078564.3178935,
-    "seen": 1792237824.4231248,
-    "ast_hash": "c686d0d6bc9349e631d6ef011cf46f23",
+    "mtime": 1792241484.809644,
+    "seen": 1792241918.7277617,
+    "ast_hash": "7f9a8b8d3bc966c69d6091720ad00bf9",
     "semantic_hash": ""
   },
   "tests/Services.Tests/WeaknessAnalysisServiceTests.cs": {
@@ -1890,9 +1890,9 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Exams/AttemptNotFound.cshtml": {
-    "mtime": 1791982645.904359,
-    "seen": 1792237824.4230714,
-    "ast_hash": "d854b5c4a0fd1f1a3c2a14c79df47903",
+    "mtime": 1792241554.0777464,
+    "seen": 1792241918.7277002,
+    "ast_hash": "d577d6ab066f7c93945f39bae9bf2d2e",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Exams/Index.cshtml": {
@@ -2034,9 +2034,9 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Controllers/AdminScoreConversionController.cs": {
-    "mtime": 1792145426.735567,
-    "seen": 1792237824.4229648,
-    "ast_hash": "ed8f58a8c7564c0c05ef25661499d56b",
+    "mtime": 1792241719.447528,
+    "seen": 1792241918.727587,
+    "ast_hash": "d6e1d27015bcef901b94bb8137a1039c",
     "semantic_hash": ""
   },
   "src/WebMVC/Models/AdminScoreConversionViewModels.cs": {
@@ -2220,9 +2220,9 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Writing/AttemptNotFound.cshtml": {
-    "mtime": 1792027359.5639887,
-    "seen": 1792237824.4231257,
-    "ast_hash": "557c304f9a58ea4d8cb719bcd45b494f",
+    "mtime": 1792241588.7754586,
+    "seen": 1792241918.727763,
+    "ast_hash": "9cc1369a3fc82b102d8f99797840277c",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Writing/Instructions.cshtml": {
@@ -2244,9 +2244,9 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Writing/Take.cshtml": {
-    "mtime": 1792158519.9132671,
-    "seen": 1792237824.42313,
-    "ast_hash": "3e2185b0cce6a8076840e5a1a6ca454b",
+    "mtime": 1792241679.5801804,
+    "seen": 1792241918.7277677,
+    "ast_hash": "3b2aac6f65c0d739356ffbe48ae23a59",
     "semantic_hash": ""
   },
   "tests/Services.Tests/WritingPracticeServiceTests.cs": {
@@ -2286,9 +2286,9 @@
     "semantic_hash": ""
   },
   "src/Services/SpeakingPracticeService.cs": {
-    "mtime": 1792142163.9563074,
-    "seen": 1792237824.4228778,
-    "ast_hash": "48833ec33ebde7a8b45ddfbf87f442ed",
+    "mtime": 1792241437.1615999,
+    "seen": 1792241918.7275274,
+    "ast_hash": "e543656c0042526fc3a1aa0464a321be",
     "semantic_hash": ""
   },
   "src/WebAPI/Endpoints/SpeakingEndpoints.cs": {
@@ -2310,9 +2310,9 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Speaking/AttemptNotFound.cshtml": {
-    "mtime": 1792037900.2056746,
-    "seen": 1792237824.423116,
-    "ast_hash": "2cc4491155199f3f5b2630eef9788fee",
+    "mtime": 1792241579.156081,
+    "seen": 1792241918.7277513,
+    "ast_hash": "74c7e8be4b78475ceccf24e44d33a112",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Speaking/Instructions.cshtml": {
@@ -2334,9 +2334,9 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Speaking/Take.cshtml": {
-    "mtime": 1792158481.6916533,
-    "seen": 1792237824.4231207,
-    "ast_hash": "b7b66557e0b0c52c13b5ff166417628c",
+    "mtime": 1792241650.114304,
+    "seen": 1792241918.7277563,
+    "ast_hash": "4e86bf3956b9b154d118abeaad92617d",
     "semantic_hash": ""
   },
   "tests/Services.Tests/SpeakingPracticeServiceTests.cs": {
@@ -2454,21 +2454,21 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Placement/Index.cshtml": {
-    "mtime": 1792158036.7075167,
-    "seen": 1792237824.4230907,
-    "ast_hash": "6f89cc1e1f16615641fc49fbec9b5216",
+    "mtime": 1792241598.2043576,
+    "seen": 1792241918.7277224,
+    "ast_hash": "96ddff43ecf39300c345f748f63b70e6",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Placement/PlacementNotFound.cshtml": {
-    "mtime": 1792158047.8866086,
-    "seen": 1792237824.4230921,
-    "ast_hash": "6cb20020ffce6ff0ccfbe5c28bc74045",
+    "mtime": 1792241571.0386882,
+    "seen": 1792241918.7277243,
+    "ast_hash": "e64cb832cca5a74c634bde30f1b4cf14",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Placement/Result.cshtml": {
-    "mtime": 1792158063.0797608,
-    "seen": 1792237824.4230933,
-    "ast_hash": "83c1161107f6e2898471a1a13e49e52d",
+    "mtime": 1792241602.3683724,
+    "seen": 1792241918.7277255,
+    "ast_hash": "cb24b528a9036d213ce8df1499a5828f",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Placement/Take.cshtml": {
@@ -2478,9 +2478,9 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Placement/TargetBand.cshtml": {
-    "mtime": 1792158080.7376513,
-    "seen": 1792237824.4230952,
-    "ast_hash": "abba8624250393c3a301ae08f9bc57b4",
+    "mtime": 1792241606.6345773,
+    "seen": 1792241918.7277277,
+    "ast_hash": "ecb051e6756c96974375dc7b763f165e",
     "semantic_hash": ""
   },
   "tests/Services.Tests/PlacementServiceTests.cs": {
@@ -2646,9 +2646,9 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Mentors/BookingDetail.cshtml": {
-    "mtime": 1792078564.3128748,
-    "seen": 1792237824.4230852,
-    "ast_hash": "104b8356687a6b9e69753d7edd8cf3bf",
+    "mtime": 1792241474.2368627,
+    "seen": 1792241918.7277157,
+    "ast_hash": "9f40600409c77cc9ee24b26cfac24e74",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Mentors/Bookings.cshtml": {
@@ -2688,9 +2688,9 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Controllers/SupportController.cs": {
-    "mtime": 1792145426.7735195,
-    "seen": 1792237824.4229934,
-    "ast_hash": "9df4446be48e2fdc8fba690a66618feb",
+    "mtime": 1792241469.8127353,
+    "seen": 1792241918.7276108,
+    "ast_hash": "426c39c2075d3ebc322df01b2c5d87a6",
     "semantic_hash": ""
   },
   "src/WebMVC/Models/ComplaintViewModels.cs": {
@@ -2754,9 +2754,9 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Controllers/AdminExamsController.cs": {
-    "mtime": 1792237091.2072108,
-    "seen": 1792237824.4229527,
-    "ast_hash": "68ff1c7ad8565cbb1c08dee1c00d8925",
+    "mtime": 1792241380.261064,
+    "seen": 1792241918.7275789,
+    "ast_hash": "0a83e56491dff99e752ade7ea7e135f2",
     "semantic_hash": ""
   },
   "src/WebMVC/Models/AdminExamViewModels.cs": {
@@ -2766,15 +2766,15 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Admin/ExamEditor.cshtml": {
-    "mtime": 1792158728.8006847,
-    "seen": 1792237824.4230347,
-    "ast_hash": "055c89c6b910f3a2aa81804ea067dc45",
+    "mtime": 1792241410.4742498,
+    "seen": 1792241918.727658,
+    "ast_hash": "847ed89d7b001c3d6fd1a8568e873c0f",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Admin/Exams.cshtml": {
-    "mtime": 1792078564.3088746,
-    "seen": 1792237824.4230368,
-    "ast_hash": "0c378acbcb9c05e6a3dae07a45eae95d",
+    "mtime": 1792241405.385797,
+    "seen": 1792241918.7276602,
+    "ast_hash": "e3bf1e0aca361c7394850ab481adee19",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Admin/QuestionEditor.cshtml": {
@@ -3516,9 +3516,9 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Admin/ExamStudio.cshtml": {
-    "mtime": 1792238676.5336432,
-    "seen": 1792239011.0251412,
-    "ast_hash": "7dcc5590341c49b3be69732c87eb7650",
+    "mtime": 1792241387.178737,
+    "seen": 1792241918.7276592,
+    "ast_hash": "76358b51324d455b50f57b53bae141fc",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Admin/_QuickIngestModal.cshtml": {

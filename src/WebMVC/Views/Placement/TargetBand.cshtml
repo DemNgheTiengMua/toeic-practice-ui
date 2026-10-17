@@ -1,5 +1,6 @@
 @model TargetBandViewModel
 @{
+    Layout = "_LearnerLayout";
     ViewData["Title"] = "Set Target Level";
     var view = Model.View;
     var currentBandCode = view.CurrentBandCode ?? "Not assessed";

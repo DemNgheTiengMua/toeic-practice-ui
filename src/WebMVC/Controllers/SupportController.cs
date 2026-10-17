@@ -12,6 +12,9 @@ public sealed class SupportController(
     CurrentUser currentUser,
     ILogger<SupportController> logger) : LearnerControllerBase(currentUser, logger)
 {
+    [HttpGet("")]
+    public IActionResult Index() => RedirectToAction(nameof(History));
+
     [HttpGet("report")]
     public async Task<IActionResult> Report(
         [FromQuery] string? category = "mentor",

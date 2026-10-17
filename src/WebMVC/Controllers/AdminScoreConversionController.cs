@@ -7,6 +7,7 @@ namespace WebMVC.Controllers;
 
 [Authorize(Policy = Roles.Admin)]
 [Route("admin/score-conversion")]
+[Route("admin/score-conversions")]
 public sealed class AdminScoreConversionController(
     IAdminScoreConversionClient api,
     CurrentUser currentUser,

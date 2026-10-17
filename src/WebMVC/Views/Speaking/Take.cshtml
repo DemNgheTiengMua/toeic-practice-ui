@@ -1,12 +1,23 @@
 @model SpeakingTakeViewModel
 @{
-    Layout = "_Layout";
+    Layout = null;
     var take = Model.Take;
     var q = take.Question;
     ViewData["Title"] = $"Speaking — Question {take.CurrentQuestionIndex} of {take.TotalQuestions}";
     ViewData["Description"] = $"Speaking practice attempt #{take.AttemptId}, question {take.CurrentQuestionIndex}.";
 }
-
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>@ViewData["Title"] — extra efficient</title>
+  <link rel="icon" href="~/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="~/css/tokens.css">
+  <link rel="stylesheet" href="~/css/base.css">
+  <link rel="stylesheet" href="~/css/components.css">
+</head>
+<body>
 <div class="app-shell">
   <header class="app-topbar">
     <div class="exam-topbar-group">
@@ -474,3 +485,5 @@
   btnRetryUpload.addEventListener('click', uploadRecording);
 })();
 </script>
+</body>
+</html>

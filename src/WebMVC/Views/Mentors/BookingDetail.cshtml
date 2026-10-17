@@ -143,7 +143,7 @@
           }
           @if (booking.MentorType == "ai")
           {
-            <a href="/speaking" class="btn btn--primary">Go to speaking practice</a>
+            <a href="/practice" class="btn btn--primary">Go to practice sessions</a>
           }
           <form method="post" action="/mentors/bookings/@booking.BookingId/cancel" class="no-margin">
             @Html.AntiForgeryToken()

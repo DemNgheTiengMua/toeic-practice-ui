@@ -188,16 +188,29 @@ public sealed class AdminExamsController(
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Publish(int id, CancellationToken cancellationToken = default)
     {
+        bool isAjax = Request.Headers.Accept.Any(a => a?.Contains("application/json", StringComparison.OrdinalIgnoreCase) == true)
+                      || string.Equals(Request.ContentType, "application/json", StringComparison.OrdinalIgnoreCase)
+                      || Request.Headers["X-Requested-With"] == "XMLHttpRequest";
+
         try
         {
             var result = await api.PublishAdminExamAsync(id, cancellationToken);
+            if (isAjax)
+            {
+                return Json(new { success = true, message = result.Message });
+            }
             TempData["Success"] = result.Message;
             return RedirectToAction(nameof(Index));
         }
         catch (ApiException ex)
         {
             logger.LogWarning(ex, "Failed to publish exam {ExamId}", id);
-            TempData["Error"] = ex.Detail ?? ex.Message;
+            var errorMsg = ex.Detail ?? ex.Message;
+            if (isAjax)
+            {
+                return StatusCode(ex.Status > 0 ? ex.Status : StatusCodes.Status400BadRequest, new { success = false, message = errorMsg });
+            }
+            TempData["Error"] = errorMsg;
             return RedirectToAction(nameof(Edit), new { id, step = 3 });
         }
     }

@@ -14,7 +14,15 @@
   <span class="breadcrumbs__item" aria-current="page">@(isEdit ? "Edit exam" : "Create new exam")</span>
 </nav>
 
-<h1>@(isEdit ? $"Edit: {Model.Name}" : "Create new exam")</h1>
+<div class="row row--between row--wrap" style="align-items: center; margin-bottom: 0.75rem; gap: 0.5rem;">
+  <h1 class="no-margin">@(isEdit ? $"Edit: {Model.Name}" : "Create new exam")</h1>
+  @if (isEdit && Model.ExamId.HasValue)
+  {
+    <a href="/admin/exams/@Model.ExamId.Value/studio" class="btn btn--primary" style="border-radius: 0; font-family: var(--font-condensed, sans-serif); text-transform: uppercase;">
+      Open in Exam Studio ›
+    </a>
+  }
+</div>
 
 <div class="stepper">
   <a href="@(isEdit ? $"/admin/exams/{Model.ExamId}/edit?step=1" : "#")" class="stepper__item @(Model.Step == 1 ? "is-current" : isEdit ? "is-done" : "")">1. Exam information</a>

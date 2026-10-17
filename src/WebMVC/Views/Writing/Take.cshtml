@@ -1,34 +1,48 @@
 @model WritingTakeViewModel
 @{
-    Layout = "_LearnerLayout";
+    Layout = null;
     var take = Model.Take;
     var q = take.Question;
     ViewData["Title"] = $"Writing — Question {take.CurrentQuestionIndex} of {take.TotalQuestions}";
     ViewData["Description"] = $"Writing attempt {take.AttemptId} on {take.ExamName}.";
 }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>@ViewData["Title"] — extra efficient</title>
+  <link rel="icon" href="~/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="~/css/tokens.css">
+  <link rel="stylesheet" href="~/css/base.css">
+  <link rel="stylesheet" href="~/css/components.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-topbar">
+      <div class="exam-topbar-group">
+        <strong>@take.ExamName</strong>
+        <span class="badge badge--info">Question @take.CurrentQuestionIndex of @take.TotalQuestions</span>
+      </div>
+      <div class="exam-topbar-group">
+        <span id="save-status-text" class="save-status save-status--saved" role="status" aria-live="polite">
+          @(q.DraftSavedAt.HasValue ? $"Saved {q.DraftSavedAt.Value:HH:mm:ss}" : "Draft ready")
+        </span>
+        <span class="timer" role="timer" aria-label="Time remaining">
+          <span class="text-sm text-muted">Time left</span>
+          <span id="timer-display" class="timer__value" data-remaining="@take.RemainingSeconds">--:--</span>
+        </span>
+      </div>
+    </header>
 
-@Html.AntiForgeryToken()
+    <main class="app-main">
+      <div class="container stack" style="max-width: 1400px; padding: var(--space-4);">
+        @Html.AntiForgeryToken()
 
-<div class="row row--between mb-3">
-  <div class="row" style="gap: var(--space-2)">
-    <strong>@take.ExamName</strong>
-    <span class="badge badge--info">Question @take.CurrentQuestionIndex of @take.TotalQuestions</span>
-  </div>
-  <div class="row" style="gap: var(--space-3)">
-    <span id="save-status-text" class="save-status save-status--saved" role="status" aria-live="polite">
-      @(q.DraftSavedAt.HasValue ? $"Saved {q.DraftSavedAt.Value:HH:mm:ss}" : "Draft ready")
-    </span>
-    <span class="timer" role="timer" aria-label="Time remaining">
-      <span class="text-sm text-muted">Time left</span>
-      <span id="timer-display" class="timer__value" data-remaining="@take.RemainingSeconds">--:--</span>
-    </span>
-  </div>
-</div>
-
-@if (!string.IsNullOrEmpty(Model.ErrorMessage))
-{
-  <div class="alert alert--danger mb-3" role="alert">@Model.ErrorMessage</div>
-}
+        @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+        {
+          <div class="alert alert--danger mb-3" role="alert">@Model.ErrorMessage</div>
+        }
 
 <div class="writing-panes">
   <!-- Left pane: Prompt -->
@@ -356,3 +370,9 @@
     updateTimer();
   })();
 </script>
+      </div>
+    </main>
+  </div>
+  <script src="~/js/icons.js"></script>
+</body>
+</html>
