@@ -6,7 +6,13 @@ using Services.Credits;
 
 namespace Services;
 
-public sealed class PremiumPathService(CompanionDbContext db, ICreditLedger creditLedger)
+public interface IPremiumPathService
+{
+    Task UnlockPathAsync(int userId, int learnerPathId);
+    Task<bool> IsPathUnlockedAsync(int userId, int learnerPathId);
+}
+
+public sealed class PremiumPathService(CompanionDbContext db, ICreditLedger creditLedger) : IPremiumPathService
 {
     public async Task UnlockPathAsync(int userId, int learnerPathId)
     {

@@ -249,6 +249,8 @@ builder.Services.AddScoped<IWritingPracticeService, WritingPracticeService>();
 builder.Services.AddScoped<ISpeakingPracticeService, SpeakingPracticeService>();
 builder.Services.AddScoped<IPlacementService, PlacementService>();
 builder.Services.AddScoped<ILearningPathService, LearningPathService>();
+builder.Services.AddScoped<ILessonService, LessonService>();
+builder.Services.AddScoped<IPremiumPathService, PremiumPathService>();
 builder.Services.AddScoped<IMentorService, MentorService>();
 builder.Services.AddScoped<IComplaintService, ComplaintService>();
 builder.Services.AddHostedService<AiGradingBackgroundService>();
@@ -336,6 +338,7 @@ app.MapSpeakingEndpoints();
 app.MapInsightEndpoints();
 app.MapPlacementEndpoints();
 app.MapLearningPathEndpoints();
+app.MapLessonEndpoints();
 app.MapMentorEndpoints();
 app.MapComplaintEndpoints();
 

@@ -8,7 +8,15 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Services;
 
-public sealed class LessonService(CompanionDbContext db)
+public interface ILessonService
+{
+    Task<LessonDetailDto?> GetLessonAsync(int lessonId, int certId);
+    Task<LessonProgressDto> GetProgressAsync(int userId, int lessonId);
+    Task RecordCardViewAsync(int userId, int lessonId, int cardId);
+    Task<LessonDetailDto?> GetLessonByCategoryAsync(int categoryId, int certId);
+}
+
+public sealed class LessonService(CompanionDbContext db) : ILessonService
 {
     public async Task<LessonDetailDto?> GetLessonAsync(int lessonId, int certId)
     {
