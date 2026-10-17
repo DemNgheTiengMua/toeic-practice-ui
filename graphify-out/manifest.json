@@ -2748,9 +2748,9 @@
     "semantic_hash": ""
   },
   "src/Services/AdminExamService.cs": {
-    "mtime": 1792237208.2308223,
-    "seen": 1792237824.4227788,
-    "ast_hash": "793c030dd8ab3ce8f9c795c7f9368ba1",
+    "mtime": 1792238577.6813588,
+    "seen": 1792239011.0249417,
+    "ast_hash": "07418271fc0e37c1242441ea85cfe65f",
     "semantic_hash": ""
   },
   "src/WebMVC/Controllers/AdminExamsController.cs": {
@@ -2922,9 +2922,9 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Controllers/MediaController.cs": {
-    "mtime": 1792236366.901131,
-    "seen": 1792237824.4229834,
-    "ast_hash": "4771782f1003057bd8b4d944d9f73a6f",
+    "mtime": 1792238832.889381,
+    "seen": 1792239011.0250833,
+    "ast_hash": "46c2b9ec9d3d6a0e07311055416d7a59",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Admin/Imports.cshtml": {
@@ -3432,9 +3432,9 @@
     "semantic_hash": ""
   },
   "src/Services/AdminLessonService.cs": {
-    "mtime": 1792232661.7667723,
-    "seen": 1792237824.4227812,
-    "ast_hash": "8597b32dfcf81b6e51ff5ef549ac701f",
+    "mtime": 1792238547.3429947,
+    "seen": 1792239011.024944,
+    "ast_hash": "397b6fcdba2102c33ea62d8883bd0b2c",
     "semantic_hash": ""
   },
   "src/Services/IAdminLessonService.cs": {
@@ -3474,15 +3474,15 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Admin/Lessons/Edit.cshtml": {
-    "mtime": 1792232965.3943326,
-    "seen": 1792237824.4230406,
-    "ast_hash": "4da497d0cc040912f4ec35f5a20834c7",
+    "mtime": 1792238609.4745083,
+    "seen": 1792239011.0251467,
+    "ast_hash": "cb0ac733630b3f9712e1a1732c4b0aa7",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Admin/Lessons/Index.cshtml": {
-    "mtime": 1792232926.196882,
-    "seen": 1792237824.423042,
-    "ast_hash": "d22c61dac7d6d7cc72ec6c37485f1c25",
+    "mtime": 1792238632.2647715,
+    "seen": 1792239011.025148,
+    "ast_hash": "894c0813cb245eaace9dcdcb896d8bbe",
     "semantic_hash": ""
   },
   "tests/Services.Tests/AdminLessonServiceTests.cs": {
@@ -3516,9 +3516,9 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Admin/ExamStudio.cshtml": {
-    "mtime": 1792237398.8186255,
-    "seen": 1792237824.4230356,
-    "ast_hash": "83daa23ea2b664843348195e79c017f2",
+    "mtime": 1792238676.5336432,
+    "seen": 1792239011.0251412,
+    "ast_hash": "7dcc5590341c49b3be69732c87eb7650",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Admin/_QuickIngestModal.cshtml": {
@@ -3531,6 +3531,12 @@
     "mtime": 1792235019.235494,
     "seen": 1792237824.4231596,
     "ast_hash": "de9571c6826a5539c2f6775e90a809c7",
+    "semantic_hash": ""
+  },
+  "tests/WebMVC.E2ETests/Journeys/AdminExamStudioTests.cs": {
+    "mtime": 1792238787.0881064,
+    "seen": 1792239011.0253215,
+    "ast_hash": "606cb90245d713bc9a05cd9ba1381ff4",
     "semantic_hash": ""
   }
 }

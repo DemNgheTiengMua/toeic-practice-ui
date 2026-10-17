@@ -316,7 +316,7 @@
       @foreach (var sec in Model.Sections)
       {
         var isComplete = sec.ExpectedQuestionCount.HasValue && sec.CurrentQuestionCount >= sec.ExpectedQuestionCount.Value;
-        var badgeColor = isComplete ? "background: #e6f4ea; color: #0a6b3c;" : "background: #fff8e1; color: #b58900;";
+        var badgeColor = isComplete ? "background: #e6f1ea; color: #0a6b3c;" : "background: #fef3d6; color: #b58900;";
 
         <div class="rail-section" data-section-id="@sec.SectionId" data-section-code="@sec.Code">
           <div class="rail-section__header" onclick="selectSection(@sec.SectionId)">
@@ -505,7 +505,7 @@
                         <div>
                           <label class="text-xs" style="font-weight: bold;">
                             Accessibility Alt Text
-                            <span class="badge text-xs" style="background: #ffebe6; color: #b31217; border-radius: 0;">* REQUIRED (CK_QGroups_ImageAlt)</span>:
+                            <span class="badge text-xs" style="background: #fbe9e9; color: #b31217; border-radius: 0;">* REQUIRED (CK_QGroups_ImageAlt)</span>:
                           </label>
                           <input type="text" class="field__input studio-autosave @(string.IsNullOrWhiteSpace(g.ImageAlt) && !string.IsNullOrWhiteSpace(g.ImagePath) ? "border-danger" : "")" data-type="group" data-id="@g.GroupId" data-field="ImageAlt" id="img-alt-@g.GroupId" value="@g.ImageAlt" placeholder="e.g. Office workers gathered around a whiteboard" style="width: 100%; font-size: 0.8rem; border-radius: 0;" />
                           <small class="text-xs text-muted">Required when an image is present so visually impaired learners can read descriptions.</small>
@@ -756,7 +756,7 @@
   <aside class="studio-panel" id="studio-right-audit" aria-label="Publish Readiness Audit">
     <div class="studio-panel__header">
       <h2>Publish Readiness</h2>
-      <span class="badge" id="audit-status-badge" style="font-family: var(--font-mono, monospace); border-radius: 0; @(Model.Audit.CanPublish ? "background: #e6f4ea; color: #0a6b3c;" : "background: #ffebe6; color: #b31217;")">
+      <span class="badge" id="audit-status-badge" style="font-family: var(--font-mono, monospace); border-radius: 0; @(Model.Audit.CanPublish ? "background: #e6f1ea; color: #0a6b3c;" : "background: #fbe9e9; color: #b31217;")">
         @(Model.Audit.CanPublish ? "PASSED" : $"{Model.Audit.BlockingErrorCount} BLOCKS")
       </span>
     </div>
@@ -1623,12 +1623,12 @@
 
         if (audit.canPublish) {
           statusBadge.textContent = 'PASSED';
-          statusBadge.style.background = '#e6f4ea';
+          statusBadge.style.background = '#e6f1ea';
           statusBadge.style.color = '#0a6b3c';
           pubBtn.disabled = false;
         } else {
           statusBadge.textContent = audit.blockingErrorCount + ' BLOCKS';
-          statusBadge.style.background = '#ffebe6';
+          statusBadge.style.background = '#fbe9e9';
           statusBadge.style.color = '#b31217';
           pubBtn.disabled = true;
         }

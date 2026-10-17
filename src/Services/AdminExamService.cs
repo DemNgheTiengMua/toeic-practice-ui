@@ -56,7 +56,7 @@ public interface IAdminExamService
     Task<(Stream Stream, string ContentType, string FileName)> ExportExamPackageAsync(int examId, string? format = "zip", CancellationToken cancellationToken = default);
 }
 
-public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock) : IAdminExamService
+public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, IFileStore? fileStore = null) : IAdminExamService
 {
     public async Task<AdminExamListSummaryDto> GetExamsAsync(string? q, string? status, int? certId, int page, int pageSize, CancellationToken cancellationToken = default)
     {
@@ -1746,7 +1746,8 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock) 
         var missingItems = new List<string>();
 
         var totalQuestions = 0;
-        var expectedTotal = exam.QuestionCount ?? 0;
+        var sectionExpectedSum = sections.Where(s => s.ExpectedQuestionCount.HasValue).Sum(s => s.ExpectedQuestionCount!.Value);
+        var expectedTotal = sectionExpectedSum > 0 ? sectionExpectedSum : (exam.QuestionCount ?? 0);
 
         foreach (var sec in sections)
         {
@@ -1756,7 +1757,6 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock) 
 
             if (sec.ExpectedQuestionCount.HasValue && sec.ExpectedQuestionCount.Value > 0)
             {
-                expectedTotal += sec.ExpectedQuestionCount.Value;
                 if (secQuestions.Count < sec.ExpectedQuestionCount.Value)
                 {
                     var diff = sec.ExpectedQuestionCount.Value - secQuestions.Count;
@@ -2177,6 +2177,27 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock) 
                 using (var entryStream = manifestEntry.Open())
                 {
                     await JsonSerializer.SerializeAsync(entryStream, manifest, ImportManifest.Json, cancellationToken);
+                }
+
+                if (fileStore != null)
+                {
+                    var mediaPaths = groups
+                        .SelectMany(g => new[] { g.AudioPath, g.ImagePath })
+                        .Where(p => !string.IsNullOrWhiteSpace(p))
+                        .Distinct();
+
+                    foreach (var path in mediaPaths)
+                    {
+                        var cleanPath = path!.TrimStart('/').Replace("media/", "");
+                        var media = await fileStore.GetMediaAsync(cleanPath, cancellationToken);
+                        if (media != null)
+                        {
+                            var entryName = Path.GetFileName(cleanPath);
+                            var mediaEntry = archive.CreateEntry($"media/{entryName}");
+                            using var mediaStream = mediaEntry.Open();
+                            await media.Stream.CopyToAsync(mediaStream, cancellationToken);
+                        }
+                    }
                 }
             }
 

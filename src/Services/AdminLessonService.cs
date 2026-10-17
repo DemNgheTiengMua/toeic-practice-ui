@@ -145,24 +145,21 @@ public sealed class AdminLessonService(
         for (int i = 0; i < request.Cards.Count; i++)
         {
             var cardDto = request.Cards[i];
-            var card = new LessonCard
-            {
-                LessonId = lesson.LessonId,
-                CertId = lesson.CertId,
-                CardType = cardDto.CardType.Trim().ToLowerInvariant(),
-                Title = cardDto.Title.Trim(),
-                ContentMarkdown = cardDto.ContentMarkdown.Trim(),
-                QuestionPrompt = string.IsNullOrWhiteSpace(cardDto.QuestionPrompt) ? null : cardDto.QuestionPrompt.Trim(),
-                OptionA = string.IsNullOrWhiteSpace(cardDto.OptionA) ? null : cardDto.OptionA.Trim(),
-                OptionB = string.IsNullOrWhiteSpace(cardDto.OptionB) ? null : cardDto.OptionB.Trim(),
-                OptionC = string.IsNullOrWhiteSpace(cardDto.OptionC) ? null : cardDto.OptionC.Trim(),
-                OptionD = string.IsNullOrWhiteSpace(cardDto.OptionD) ? null : cardDto.OptionD.Trim(),
-                CorrectOption = string.IsNullOrWhiteSpace(cardDto.CorrectOption) ? null : cardDto.CorrectOption.Trim().ToUpperInvariant(),
-                Explanation = string.IsNullOrWhiteSpace(cardDto.Explanation) ? null : cardDto.Explanation.Trim(),
-                Rationale = string.IsNullOrWhiteSpace(cardDto.Rationale) ? null : cardDto.Rationale.Trim(),
-                DisplayOrder = i,
-            };
-            db.LessonCards.Add(card);
+            db.LessonCards.Add(BuildLessonCard(
+                lesson.LessonId,
+                lesson.CertId,
+                cardDto.CardType,
+                cardDto.Title,
+                cardDto.ContentMarkdown,
+                cardDto.QuestionPrompt,
+                cardDto.OptionA,
+                cardDto.OptionB,
+                cardDto.OptionC,
+                cardDto.OptionD,
+                cardDto.CorrectOption,
+                cardDto.Explanation,
+                cardDto.Rationale,
+                i));
         }
 
         await db.SaveChangesAsync(cancellationToken);
@@ -208,24 +205,21 @@ public sealed class AdminLessonService(
         for (int i = 0; i < request.Cards.Count; i++)
         {
             var cardDto = request.Cards[i];
-            var card = new LessonCard
-            {
-                LessonId = lesson.LessonId,
-                CertId = lesson.CertId,
-                CardType = cardDto.CardType.Trim().ToLowerInvariant(),
-                Title = cardDto.Title.Trim(),
-                ContentMarkdown = cardDto.ContentMarkdown.Trim(),
-                QuestionPrompt = string.IsNullOrWhiteSpace(cardDto.QuestionPrompt) ? null : cardDto.QuestionPrompt.Trim(),
-                OptionA = string.IsNullOrWhiteSpace(cardDto.OptionA) ? null : cardDto.OptionA.Trim(),
-                OptionB = string.IsNullOrWhiteSpace(cardDto.OptionB) ? null : cardDto.OptionB.Trim(),
-                OptionC = string.IsNullOrWhiteSpace(cardDto.OptionC) ? null : cardDto.OptionC.Trim(),
-                OptionD = string.IsNullOrWhiteSpace(cardDto.OptionD) ? null : cardDto.OptionD.Trim(),
-                CorrectOption = string.IsNullOrWhiteSpace(cardDto.CorrectOption) ? null : cardDto.CorrectOption.Trim().ToUpperInvariant(),
-                Explanation = string.IsNullOrWhiteSpace(cardDto.Explanation) ? null : cardDto.Explanation.Trim(),
-                Rationale = string.IsNullOrWhiteSpace(cardDto.Rationale) ? null : cardDto.Rationale.Trim(),
-                DisplayOrder = i,
-            };
-            db.LessonCards.Add(card);
+            db.LessonCards.Add(BuildLessonCard(
+                lesson.LessonId,
+                lesson.CertId,
+                cardDto.CardType,
+                cardDto.Title,
+                cardDto.ContentMarkdown,
+                cardDto.QuestionPrompt,
+                cardDto.OptionA,
+                cardDto.OptionB,
+                cardDto.OptionC,
+                cardDto.OptionD,
+                cardDto.CorrectOption,
+                cardDto.Explanation,
+                cardDto.Rationale,
+                i));
         }
 
         await db.SaveChangesAsync(cancellationToken);
@@ -624,24 +618,21 @@ public sealed class AdminLessonService(
             for (int i = 0; i < item.Cards.Count; i++)
             {
                 var cardDto = item.Cards[i];
-                var card = new LessonCard
-                {
-                    LessonId = lesson.LessonId,
-                    CertId = certId,
-                    CardType = cardDto.Type.Trim().ToLowerInvariant(),
-                    Title = cardDto.Title.Trim(),
-                    ContentMarkdown = ReplaceMediaUrls(cardDto.ContentMarkdown.Trim()),
-                    QuestionPrompt = string.IsNullOrWhiteSpace(cardDto.QuestionPrompt) ? null : cardDto.QuestionPrompt.Trim(),
-                    OptionA = string.IsNullOrWhiteSpace(cardDto.OptionA) ? null : cardDto.OptionA.Trim(),
-                    OptionB = string.IsNullOrWhiteSpace(cardDto.OptionB) ? null : cardDto.OptionB.Trim(),
-                    OptionC = string.IsNullOrWhiteSpace(cardDto.OptionC) ? null : cardDto.OptionC.Trim(),
-                    OptionD = string.IsNullOrWhiteSpace(cardDto.OptionD) ? null : cardDto.OptionD.Trim(),
-                    CorrectOption = string.IsNullOrWhiteSpace(cardDto.CorrectOption) ? null : cardDto.CorrectOption.Trim().ToUpperInvariant(),
-                    Explanation = string.IsNullOrWhiteSpace(cardDto.Explanation) ? null : cardDto.Explanation.Trim(),
-                    Rationale = string.IsNullOrWhiteSpace(cardDto.Rationale) ? null : cardDto.Rationale.Trim(),
-                    DisplayOrder = i,
-                };
-                db.LessonCards.Add(card);
+                db.LessonCards.Add(BuildLessonCard(
+                    lesson.LessonId,
+                    certId,
+                    cardDto.Type,
+                    cardDto.Title,
+                    ReplaceMediaUrls(cardDto.ContentMarkdown.Trim()),
+                    cardDto.QuestionPrompt,
+                    cardDto.OptionA,
+                    cardDto.OptionB,
+                    cardDto.OptionC,
+                    cardDto.OptionD,
+                    cardDto.CorrectOption,
+                    cardDto.Explanation,
+                    cardDto.Rationale,
+                    i));
             }
 
             totalCardsImported += item.Cards.Count;
@@ -845,4 +836,37 @@ public sealed class AdminLessonService(
             }
         }
     }
+
+    private static LessonCard BuildLessonCard(
+        int lessonId,
+        int certId,
+        string cardType,
+        string title,
+        string contentMarkdown,
+        string? questionPrompt,
+        string? optionA,
+        string? optionB,
+        string? optionC,
+        string? optionD,
+        string? correctOption,
+        string? explanation,
+        string? rationale,
+        int displayOrder) =>
+        new()
+        {
+            LessonId = lessonId,
+            CertId = certId,
+            CardType = cardType.Trim().ToLowerInvariant(),
+            Title = title.Trim(),
+            ContentMarkdown = contentMarkdown.Trim(),
+            QuestionPrompt = string.IsNullOrWhiteSpace(questionPrompt) ? null : questionPrompt.Trim(),
+            OptionA = string.IsNullOrWhiteSpace(optionA) ? null : optionA.Trim(),
+            OptionB = string.IsNullOrWhiteSpace(optionB) ? null : optionB.Trim(),
+            OptionC = string.IsNullOrWhiteSpace(optionC) ? null : optionC.Trim(),
+            OptionD = string.IsNullOrWhiteSpace(optionD) ? null : optionD.Trim(),
+            CorrectOption = string.IsNullOrWhiteSpace(correctOption) ? null : correctOption.Trim().ToUpperInvariant(),
+            Explanation = string.IsNullOrWhiteSpace(explanation) ? null : explanation.Trim(),
+            Rationale = string.IsNullOrWhiteSpace(rationale) ? null : rationale.Trim(),
+            DisplayOrder = displayOrder,
+        };
 }

@@ -34,6 +34,10 @@
       }
     </select>
   </div>
+  <div class="field">
+    <label class="field__label" for="f-skill">Skill ID</label>
+    <input type="number" class="field__input font-mono" id="f-skill" name="skillId" value="@Model.SelectedSkillId" placeholder="e.g. 1" style="width: 100px;" />
+  </div>
   <button type="submit" class="btn">Filter</button>
   @if (Model.SelectedCertId.HasValue || Model.SelectedSkillId.HasValue)
   {
@@ -130,7 +134,7 @@ else
   <div class="card" style="border: none; margin: 0;">
     <div class="card__header row row--between" style="background: var(--color-surface, #f8f9fa); border-bottom: 2px solid var(--color-ink, #14181d);">
       <h2 style="margin: 0; font-size: 1.1rem; text-transform: uppercase;">Import Lesson Manifest or Package</h2>
-      <button type="button" class="btn btn--sm btn--ghost" onclick="document.getElementById('import-dialog').close()" style="line-height: 1;">✕</button>
+      <button type="button" class="btn btn--sm btn--ghost" onclick="document.getElementById('import-dialog').close()" style="line-height: 1;">Close</button>
     </div>
     <div class="card__body">
       <form method="post" action="/admin/lessons/upload" enctype="multipart/form-data" class="stack">

@@ -129,9 +129,9 @@
             <span class="card-type-label badge">@card.CardType.ToUpper()</span>
           </div>
           <div class="row" style="gap: var(--space-xxs);">
-            <button type="button" class="btn btn--sm btn--ghost" onclick="moveCardUp(this)" title="Move Up">↑</button>
-            <button type="button" class="btn btn--sm btn--ghost" onclick="moveCardDown(this)" title="Move Down">↓</button>
-            <button type="button" class="btn btn--sm btn--danger" onclick="removeCard(this)" title="Delete Card">✕ Remove</button>
+            <button type="button" class="btn btn--sm btn--ghost" onclick="moveCardUp(this)" title="Move Up">Up</button>
+            <button type="button" class="btn btn--sm btn--ghost" onclick="moveCardDown(this)" title="Move Down">Down</button>
+            <button type="button" class="btn btn--sm btn--danger" onclick="removeCard(this)" title="Delete Card">Remove</button>
           </div>
         </div>
 
@@ -143,7 +143,7 @@
                 <option value="rule" selected="@(card.CardType == "rule")">Rule</option>
                 <option value="pitfall" selected="@(card.CardType == "pitfall")">Pitfall</option>
                 <option value="example" selected="@(card.CardType == "example")">Example</option>
-                <option value="micro_check" selected="@(card.CardType == "micro_check")">Micro-Check (Quiz)</option>
+                <option value="micro_check" selected="@(card.CardType == "micro_check")">Micro-Check (Practice Check)</option>
               </select>
             </div>
 
@@ -234,9 +234,9 @@
         <span class="card-type-label badge">__TYPE_UPPER__</span>
       </div>
       <div class="row" style="gap: var(--space-xxs);">
-        <button type="button" class="btn btn--sm btn--ghost" onclick="moveCardUp(this)" title="Move Up">↑</button>
-        <button type="button" class="btn btn--sm btn--ghost" onclick="moveCardDown(this)" title="Move Down">↓</button>
-        <button type="button" class="btn btn--sm btn--danger" onclick="removeCard(this)" title="Delete Card">✕ Remove</button>
+        <button type="button" class="btn btn--sm btn--ghost" onclick="moveCardUp(this)" title="Move Up">Up</button>
+        <button type="button" class="btn btn--sm btn--ghost" onclick="moveCardDown(this)" title="Move Down">Down</button>
+        <button type="button" class="btn btn--sm btn--danger" onclick="removeCard(this)" title="Delete Card">Remove</button>
       </div>
     </div>
 
@@ -248,7 +248,7 @@
             <option value="rule">Rule</option>
             <option value="pitfall">Pitfall</option>
             <option value="example">Example</option>
-            <option value="micro_check">Micro-Check (Quiz)</option>
+            <option value="micro_check">Micro-Check (Practice Check)</option>
           </select>
         </div>
 
