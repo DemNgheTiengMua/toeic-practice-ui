@@ -224,7 +224,7 @@ public enum LearnerPathStepStatusDto
     [JsonStringEnumMemberName("done")] Done,
 }
 
-/// <summary>CK_PMI_Type: practice_section, mock_exam, ai_task, mentor.</summary>
+/// <summary>CK_PMI_Type: practice_section, mock_exam, ai_task, mentor, lesson.</summary>
 [JsonConverter(typeof(JsonStringEnumConverter<PathModuleItemTypeDto>))]
 public enum PathModuleItemTypeDto
 {
@@ -232,6 +232,17 @@ public enum PathModuleItemTypeDto
     [JsonStringEnumMemberName("mock_exam")] MockExam,
     [JsonStringEnumMemberName("ai_task")] AiTask,
     [JsonStringEnumMemberName("mentor")] Mentor,
+    [JsonStringEnumMemberName("lesson")] Lesson,
+}
+
+/// <summary>CK_LessonCards_CardType: rule, pitfall, example, micro_check.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<CardTypeDto>))]
+public enum CardTypeDto
+{
+    [JsonStringEnumMemberName("rule")] Rule,
+    [JsonStringEnumMemberName("pitfall")] Pitfall,
+    [JsonStringEnumMemberName("example")] Example,
+    [JsonStringEnumMemberName("micro_check")] MicroCheck,
 }
 
 /// <summary>CK_Mentor_Type: human, ai.</summary>

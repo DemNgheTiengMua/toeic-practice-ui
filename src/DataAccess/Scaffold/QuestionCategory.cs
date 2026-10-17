@@ -26,6 +26,9 @@ public partial class QuestionCategory
     public virtual Certificate Cert { get; set; } = null!;
 
     [InverseProperty("Category")]
+    public virtual ICollection<Lesson> Lessons { get; set; } = new List<Lesson>();
+
+    [InverseProperty("Category")]
     public virtual ICollection<PathModuleTopic> PathModuleTopics { get; set; } = new List<PathModuleTopic>();
 
     [InverseProperty("Category")]

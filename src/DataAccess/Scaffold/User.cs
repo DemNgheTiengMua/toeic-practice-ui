@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -83,6 +83,9 @@ public partial class User
 
     [InverseProperty("UploadedByNavigation")]
     public virtual ICollection<ImportBatch> ImportBatches { get; set; } = new List<ImportBatch>();
+
+    [InverseProperty("User")]
+    public virtual ICollection<LearnerLessonProgress> LearnerLessonProgresses { get; set; } = new List<LearnerLessonProgress>();
 
     [InverseProperty("User")]
     public virtual ICollection<LearnerPath> LearnerPaths { get; set; } = new List<LearnerPath>();

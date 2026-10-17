@@ -44,6 +44,7 @@ public sealed class EnumCodesTests
         { typeof(ComplaintStatus), typeof(ComplaintStatusDto), "CK_Complaints_Status" },
         { typeof(ImportBatchStatus), typeof(ImportBatchStatusDto), "CK_ImportBatches_Status" },
         { typeof(ImportLogLevel), typeof(ImportLogLevelDto), "CK_ImportLog_Level" },
+        { typeof(CardType), typeof(CardTypeDto), "CK_LessonCards_CardType" },
     };
 
 

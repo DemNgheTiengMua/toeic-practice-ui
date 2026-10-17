@@ -35,12 +35,18 @@ public partial class PathModuleItem
 
     public int DisplayOrder { get; set; }
 
+    public int? RefLessonId { get; set; }
+
     [ForeignKey("RefExamId, CertId")]
     [InverseProperty("PathModuleItems")]
     public virtual Exam? Exam { get; set; }
 
     [InverseProperty("PathModuleItem")]
     public virtual ICollection<LearnerPathStep> LearnerPathSteps { get; set; } = new List<LearnerPathStep>();
+
+    [ForeignKey("RefLessonId, CertId")]
+    [InverseProperty("PathModuleItems")]
+    public virtual Lesson? Lesson { get; set; }
 
     [ForeignKey("ModuleId, CertId")]
     [InverseProperty("PathModuleItemPathModules")]

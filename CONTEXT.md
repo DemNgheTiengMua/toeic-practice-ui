@@ -83,3 +83,23 @@ _Avoid_: Analysis, AI feedback, summary
 
 **Weakness analysis**:
 Per-section and per-category accuracy computed by SQL views; the numbers an insight reads, never computed by AI.
+
+### Guided learning
+
+**Learning path**:
+A structured sequence of modules for a certificate, progressing from diagnostic placement through topic mastery to full exam readiness.
+
+**Path module**:
+One themed step in a path (e.g., "Grammar Fundamentals"), containing multiple items.
+
+**Path module item**:
+One activity within a module: practice section, mock exam, AI task, mentor session, or lesson. Items unlock sequentially.
+
+**Lesson**:
+A grammar micro-learning unit in a module, comprising 6–10 swipeable cards (rules, pitfalls, examples, micro-checks) with in-card practice. Free; no credits charged.
+
+**Lesson card**:
+One swipeable screen in a lesson flow. Four types: rule (teach one grammar principle), pitfall (common mistake), example (correct usage), micro_check (1-question MCQ to verify understanding). Cards unlock in order; a micro-check must be answered correctly to advance.
+
+**Lesson progress**:
+Per-learner state for a lesson: how many cards viewed, which was last, when started/updated, how many completed. Drives "3 of 8" UI and resume-from-last behavior.

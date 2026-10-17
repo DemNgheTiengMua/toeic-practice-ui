@@ -44,6 +44,9 @@ public partial class Skill
     [InverseProperty("Skill")]
     public virtual ICollection<GradingCriterion> GradingCriteria { get; set; } = new List<GradingCriterion>();
 
+    [InverseProperty("Skill")]
+    public virtual ICollection<Lesson> Lessons { get; set; } = new List<Lesson>();
+
     [InverseProperty("SkillNavigation")]
     public virtual ICollection<MentorProfile> MentorProfileSkillNavigations { get; set; } = new List<MentorProfile>();
 
