@@ -383,5 +383,10 @@
   "381": ".Index",
   "382": "CreditLedgerException.cs",
   "383": "AuthErrorCodes.cs",
-  "386": "ClaudeOptions.cs"
+  "384": ".SaveAttemptAnswerAsync",
+  "385": "_DashboardMentorPass.cshtml",
+  "386": "ClaudeOptions.cs",
+  "387": "_DashboardMission.cshtml",
+  "388": "_DashboardWeaknessRadar.cshtml",
+  "389": "DESIGN.md"
 }
