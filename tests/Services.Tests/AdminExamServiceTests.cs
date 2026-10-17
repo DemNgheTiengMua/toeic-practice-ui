@@ -729,4 +729,96 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         Assert.Equal("Brand new replacement question", questions[0].Stem);
         Assert.Equal(1, questions[0].DisplayOrder);
     }
+
+    [Fact]
+    public async Task GetExamStudioAsync_ReturnsSectionsGroupsQuestionsAndAudit()
+    {
+        var (certId, secL, secR, _, _) = await SeedCertificateWithSectionsAsync($"STUDIO_{Guid.NewGuid():N}"[..18]);
+        var service = CreateService();
+
+        var exam = await service.CreateExamAsync(new CreateAdminExamRequest(
+            certId,
+            $"Studio Test {Guid.NewGuid():N}"[..25],
+            60,
+            ExamPurposeDto.Mock));
+
+        var grp = await service.CreateQuestionGroupAsync(exam.ExamId, new CreateQuestionGroupRequest(secR));
+        await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
+            grp.GroupId,
+            "Studio Question 1",
+            2,
+            QuestionTypeDto.Mcq,
+            Options:
+            [
+                new AdminQuestionOptionInput(null, "A", "Opt A", true, null),
+                new AdminQuestionOptionInput(null, "B", "Opt B", false, null)
+            ]));
+
+        var studio = await service.GetExamStudioAsync(exam.ExamId);
+
+        Assert.NotNull(studio);
+        Assert.Equal(exam.ExamId, studio.ExamId);
+        Assert.NotEmpty(studio.Sections);
+        Assert.NotNull(studio.Audit);
+
+        var rSection = studio.Sections.FirstOrDefault(s => s.SectionId == secR);
+        Assert.NotNull(rSection);
+        Assert.Single(rSection.Groups);
+        Assert.Single(rSection.Groups[0].Questions);
+        Assert.Equal("Studio Question 1", rSection.Groups[0].Questions[0].Stem);
+    }
+
+    [Fact]
+    public async Task ReorderSectionItemsAsync_UpdatesDisplayOrder()
+    {
+        var (certId, _, secR, _, _) = await SeedCertificateWithSectionsAsync($"REORDER_{Guid.NewGuid():N}"[..18]);
+        var service = CreateService();
+
+        var exam = await service.CreateExamAsync(new CreateAdminExamRequest(
+            certId,
+            $"Reorder Test {Guid.NewGuid():N}"[..25],
+            60,
+            ExamPurposeDto.Mock));
+
+        var grp = await service.CreateQuestionGroupAsync(exam.ExamId, new CreateQuestionGroupRequest(secR));
+        var q1 = await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
+            grp.GroupId,
+            "Question 1",
+            1,
+            QuestionTypeDto.Mcq,
+            Options:
+            [
+                new AdminQuestionOptionInput(null, "A", "A", true, null),
+                new AdminQuestionOptionInput(null, "B", "B", false, null)
+            ]));
+
+        var q2 = await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
+            grp.GroupId,
+            "Question 2",
+            1,
+            QuestionTypeDto.Mcq,
+            Options:
+            [
+                new AdminQuestionOptionInput(null, "A", "A", true, null),
+                new AdminQuestionOptionInput(null, "B", "B", false, null)
+            ]));
+
+        // Reorder q2 first, q1 second
+        var reorderReq = new ReorderSectionItemsRequest(
+            SectionId: secR,
+            Items:
+            [
+                new ReorderSectionItemEntry(null, q2.QuestionId, 1),
+                new ReorderSectionItemEntry(null, q1.QuestionId, 2)
+            ]);
+
+        await service.ReorderSectionItemsAsync(exam.ExamId, reorderReq);
+
+        var studio = await service.GetExamStudioAsync(exam.ExamId);
+        var questions = studio.Sections.First(s => s.SectionId == secR).Groups[0].Questions;
+        Assert.Equal(q2.QuestionId, questions[0].QuestionId);
+        Assert.Equal(1, questions[0].DisplayOrder);
+        Assert.Equal(q1.QuestionId, questions[1].QuestionId);
+        Assert.Equal(2, questions[1].DisplayOrder);
+    }
 }

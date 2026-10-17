@@ -427,6 +427,46 @@ public sealed class AdminExamsControllerTests
         Assert.Equal(1, commit.QuestionsCommitted);
     }
 
+    [Fact]
+    public async Task Studio_ReturnsViewResult_WithStudioModel()
+    {
+        var api = new TestApiClient();
+        var controller = CreateController(api);
+
+        var result = await controller.Studio(5, CancellationToken.None);
+
+        var view = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<ExamStudioDetailDto>(view.Model);
+        Assert.Equal(5, model.ExamId);
+        Assert.NotEmpty(model.Sections);
+    }
+
+    [Fact]
+    public async Task Reorder_CallsApi_ReturnsSuccessJson()
+    {
+        var api = new TestApiClient();
+        var controller = CreateController(api);
+
+        var request = new ReorderSectionItemsRequest(1, [new ReorderSectionItemEntry(null, 101, 1)]);
+        var result = await controller.Reorder(5, request, CancellationToken.None);
+
+        var json = Assert.IsType<JsonResult>(result);
+        Assert.NotNull(json.Value);
+    }
+
+    [Fact]
+    public async Task Audit_CallsApi_ReturnsAuditJson()
+    {
+        var api = new TestApiClient();
+        var controller = CreateController(api);
+
+        var result = await controller.Audit(5, CancellationToken.None);
+
+        var json = Assert.IsType<JsonResult>(result);
+        var audit = Assert.IsType<ExamAuditResultDto>(json.Value);
+        Assert.True(audit.CanPublish);
+    }
+
     private sealed class EmptyTempDataProvider : ITempDataProvider
     {
         public IDictionary<string, object> LoadTempData(HttpContext context) => new Dictionary<string, object>();
@@ -565,5 +605,35 @@ public sealed class AdminExamsControllerTests
 
         public Task<QuickIngestCommitResultDto> CommitQuickIngestAsync(int examId, QuickIngestCommitRequest request, CancellationToken cancellationToken = default) =>
             Task.FromResult(new QuickIngestCommitResultDto(true, request.Questions.Count, request.Questions.Count, "Success"));
+
+        public Task<ExamStudioDetailDto> GetAdminExamStudioAsync(int examId, CancellationToken cancellationToken = default) =>
+            Task.FromResult(SampleStudioDetail(examId));
+
+        public Task<ExamAuditResultDto> GetAdminExamAuditAsync(int examId, CancellationToken cancellationToken = default) =>
+            Task.FromResult(new ExamAuditResultDto(true, 1, 1, 0, 0, [], []));
+
+        public Task ReorderAdminSectionItemsAsync(int examId, ReorderSectionItemsRequest request, CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
+
+        private static ExamStudioDetailDto SampleStudioDetail(int examId) =>
+            new ExamStudioDetailDto(
+                examId, 1, "toeic", "TOEIC", "Mock Test", ExamStatusDto.Draft, ExamPurposeDto.Mock,
+                120, "Desc", "ETS", "Note", 200, 1, 0, DateTimeOffset.UtcNow, null,
+                [
+                    new ExamStudioSectionDto(1, 1, "P1", "Photographs", ModalityDto.Listening, 6, 1, 1, false, null, null,
+                    [
+                        new ExamStudioGroupDto(1, examId, 1, 1, "P1", "Photographs", ModalityDto.Listening, null, null, null, null, null, null, null, null, null, 1,
+                        [
+                            new ExamStudioQuestionDto(1, 1, examId, 1, "P1", "Photographs", 1, "P1", "Photo stem", 3, QuestionTypeDto.Mcq, "Expl", null, null, null, null, null, null, null, null, 1, null,
+                            [
+                                new ExamStudioQuestionOptionDto(1, 1, "A", "Photo A", true, null),
+                                new ExamStudioQuestionOptionDto(2, 1, "B", "Photo B", false, null)
+                            ],
+                            [], false)
+                        ])
+                    ])
+                ],
+                [], [],
+                new ExamAuditResultDto(true, 1, 1, 0, 0, [], []));
     }
 }

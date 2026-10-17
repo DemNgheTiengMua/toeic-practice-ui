@@ -1,0 +1,998 @@
+@model Contracts.ExamStudioDetailDto
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = $"Exam Studio — {Model.Name}";
+    var certCodeUpper = Model.CertCode.ToUpperInvariant();
+}
+
+<style>
+  /* Exam Studio "Bảng hiệu phòng thi" Layout */
+  .studio-container {
+    display: grid;
+    grid-template-columns: 280px 1fr 300px;
+    gap: 1rem;
+    align-items: start;
+    margin-top: 1rem;
+  }
+  @@media (max-width: 1200px) {
+    .studio-container {
+      grid-template-columns: 240px 1fr 260px;
+    }
+  }
+  @@media (max-width: 992px) {
+    .studio-container {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .studio-panel {
+    background: #ffffff;
+    border: 2px solid var(--color-ink, #14181d);
+    border-radius: 0;
+    box-shadow: none;
+    padding: 0;
+  }
+
+  .studio-panel__header {
+    background: var(--color-surface, #f8f9fa);
+    border-bottom: 2px solid var(--color-ink, #14181d);
+    padding: 0.75rem 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .studio-panel__header h2,
+  .studio-panel__header h3 {
+    margin: 0;
+    font-family: var(--font-condensed, sans-serif);
+    text-transform: uppercase;
+    font-size: 0.95rem;
+    letter-spacing: 0.05em;
+  }
+
+  .studio-panel__body {
+    padding: 1rem;
+    overflow-y: auto;
+  }
+
+  /* Left Rail */
+  .rail-section {
+    border: 1px solid var(--color-border, #ccd2d6);
+    margin-bottom: 0.75rem;
+    background: #ffffff;
+  }
+  .rail-section__header {
+    padding: 0.5rem 0.75rem;
+    background: #f0f4f8;
+    border-bottom: 1px solid var(--color-border, #ccd2d6);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.85rem;
+  }
+  .rail-section__header.is-active {
+    background: var(--color-ink, #14181d);
+    color: #ffffff;
+  }
+  .rail-section__items {
+    list-style: none;
+    margin: 0;
+    padding: 0.25rem 0;
+  }
+  .rail-item {
+    padding: 0.4rem 0.75rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.8rem;
+    border-bottom: 1px dashed #e5e5e5;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+  .rail-item:last-child {
+    border-bottom: none;
+  }
+  .rail-item:hover {
+    background: #f4f6f8;
+  }
+  .rail-item.is-selected {
+    background: var(--color-ink, #14181d);
+    color: #ffffff;
+  }
+  .rail-item__btns {
+    display: flex;
+    gap: 0.2rem;
+  }
+  .rail-btn-move {
+    background: transparent;
+    border: 1px solid #ccd2d6;
+    border-radius: 0;
+    padding: 0.1rem 0.3rem;
+    font-size: 0.7rem;
+    cursor: pointer;
+    color: inherit;
+  }
+  .rail-btn-move:hover {
+    background: #e0e0e0;
+  }
+
+  /* Center Workstation */
+  .workstation-toolbar {
+    background: #f8f9fa;
+    border-bottom: 2px solid var(--color-ink, #14181d);
+    padding: 0.75rem 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  .card-editor {
+    border: 2px solid var(--color-ink, #14181d);
+    border-radius: 0;
+    margin-bottom: 1.25rem;
+    background: #ffffff;
+  }
+  .card-editor__header {
+    background: #f8f9fa;
+    border-bottom: 1px solid var(--color-ink, #14181d);
+    padding: 0.5rem 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .card-editor.is-highlighted {
+    outline: 3px solid var(--color-warning, #f2b705);
+  }
+
+  /* Right Audit Placard */
+  .audit-checklist {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .audit-item {
+    padding: 0.6rem 0.5rem;
+    border-bottom: 1px solid #ccd2d6;
+    font-size: 0.8rem;
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-start;
+  }
+  .audit-item:last-child {
+    border-bottom: none;
+  }
+  .audit-item--error {
+    color: var(--color-danger, #b31217);
+  }
+  .audit-item--warning {
+    color: #b58900;
+  }
+  .audit-item--success {
+    color: var(--color-success, #0a6b3c);
+  }
+  .audit-jump-link {
+    cursor: pointer;
+    text-decoration: underline;
+    font-weight: 600;
+    margin-top: 0.15rem;
+    display: inline-block;
+  }
+
+  /* Audio Slicer waveform styling */
+  .audio-slicer {
+    background: #f0f4f8;
+    border: 1px solid var(--color-border, #ccd2d6);
+    padding: 0.75rem;
+    margin-bottom: 1rem;
+  }
+  .audio-slicer audio {
+    width: 100%;
+    border-radius: 0;
+    outline: none;
+    height: 36px;
+  }
+</style>
+
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+  <a href="/admin" class="breadcrumbs__item">Admin</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <a href="/admin/exams" class="breadcrumbs__item">Exams</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <span class="breadcrumbs__item" aria-current="page">Exam Studio</span>
+</nav>
+
+<!-- Studio Top Header Placard -->
+<div class="row row--between row--wrap" style="align-items: center; margin-bottom: 0.75rem; gap: 0.75rem;">
+  <div>
+    <h1 style="margin: 0; font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 1.5rem;">
+      @Model.Name
+    </h1>
+    <div class="row" style="gap: 0.75rem; align-items: center; margin-top: 0.25rem;">
+      <span class="badge" style="background: var(--color-ink, #14181d); color: #fff; border-radius: 0; font-family: var(--font-mono, monospace);">@certCodeUpper</span>
+      <span class="text-sm text-muted">@Model.CertName &bull; Duration: @Model.DurationMinutes min &bull; Purpose: @Model.Purpose</span>
+    </div>
+  </div>
+
+  <div class="row" style="gap: 0.5rem; align-items: center;">
+    <!-- Autosave status placard -->
+    <div id="autosave-status" style="font-family: var(--font-mono, monospace); font-size: 0.85rem; padding: 0.35rem 0.65rem; border: 1px solid #ccd2d6; background: #fff;">
+      Ready
+    </div>
+    <button type="button" class="btn btn--secondary btn--sm" id="btn-studio-quick-ingest" style="border-radius: 0;">
+      Quick Ingest
+    </button>
+    <a href="/admin/exams/@Model.ExamId/edit?step=1" class="btn btn--ghost btn--sm" style="border-radius: 0;">
+      Settings
+    </a>
+  </div>
+</div>
+
+<div class="studio-container">
+  <!-- ================= 1. LEFT NAVIGATION RAIL ================= -->
+  <aside class="studio-panel" id="studio-left-rail" aria-label="Sections and Questions Navigation">
+    <div class="studio-panel__header">
+      <h2>Curriculum Rail</h2>
+      <span class="text-xs" style="font-family: var(--font-mono, monospace);" id="rail-total-count">
+        @Model.ActualQuestionCount / @(Model.QuestionCount ?? Model.Sections.Sum(s => s.ExpectedQuestionCount ?? 0)) Qs
+      </span>
+    </div>
+    <div class="studio-panel__body" style="max-height: 75vh;">
+      @foreach (var sec in Model.Sections)
+      {
+        var isComplete = sec.ExpectedQuestionCount.HasValue && sec.CurrentQuestionCount >= sec.ExpectedQuestionCount.Value;
+        var badgeColor = isComplete ? "background: #e6f4ea; color: #0a6b3c;" : "background: #fff8e1; color: #b58900;";
+
+        <div class="rail-section" data-section-id="@sec.SectionId" data-section-code="@sec.Code">
+          <div class="rail-section__header" onclick="selectSection(@sec.SectionId)">
+            <span>[@sec.Code] @sec.Name</span>
+            <span class="badge text-xs" style="@badgeColor border-radius: 0; font-family: var(--font-mono, monospace);" id="sec-badge-@sec.SectionId">
+              @sec.CurrentQuestionCount / @(sec.ExpectedQuestionCount?.ToString() ?? "—")
+            </span>
+          </div>
+          <ul class="rail-section__items" id="rail-items-@sec.SectionId">
+            @{ var itemIndex = 1; }
+            @foreach (var g in sec.Groups)
+            {
+              foreach (var q in g.Questions)
+              {
+                <li class="rail-item" id="rail-item-@q.QuestionId" data-question-id="@q.QuestionId" data-group-id="@g.GroupId" data-display-order="@q.DisplayOrder" onclick="focusQuestionCard(@q.QuestionId)">
+                  <span class="rail-item__label">
+                    <strong>#@q.DisplayOrder</strong> @(string.IsNullOrWhiteSpace(q.Stem) ? "[Empty stem]" : (q.Stem.Length > 20 ? q.Stem.Substring(0, 20) + "..." : q.Stem))
+                  </span>
+                  <div class="rail-item__btns" onclick="event.stopPropagation();">
+                    <button type="button" class="rail-btn-move" title="Move Up" onclick="moveItemUp(@sec.SectionId, @q.QuestionId)">&uarr;</button>
+                    <button type="button" class="rail-btn-move" title="Move Down" onclick="moveItemDown(@sec.SectionId, @q.QuestionId)">&darr;</button>
+                  </div>
+                </li>
+                itemIndex++;
+              }
+            }
+          </ul>
+        </div>
+      }
+    </div>
+  </aside>
+
+  <!-- ================= 2. CENTER WORKSTATION ================= -->
+  <main class="studio-panel" id="studio-workstation" aria-label="Question Workstation">
+    <div class="workstation-toolbar">
+      <div class="row" style="gap: 0.5rem; align-items: center;">
+        <span style="font-weight: bold; font-family: var(--font-condensed, sans-serif); text-transform: uppercase;" id="ws-section-name">
+          @Model.Sections.FirstOrDefault()?.Name
+        </span>
+        <span class="badge" style="background: #eef; border-radius: 0;" id="ws-section-modality">
+          @Model.Sections.FirstOrDefault()?.Modality
+        </span>
+      </div>
+
+      <div class="row" style="gap: 0.5rem;">
+        <button type="button" class="btn btn--secondary btn--sm" id="btn-add-question" style="border-radius: 0;">
+          + Add Question
+        </button>
+        <button type="button" class="btn btn--secondary btn--sm" id="btn-add-cluster" style="border-radius: 0;">
+          + Add Cluster
+        </button>
+      </div>
+    </div>
+
+    <div class="studio-panel__body" style="max-height: 75vh;" id="ws-cards-container">
+      @foreach (var sec in Model.Sections)
+      {
+        <div class="section-workstation-content" id="ws-sec-@sec.SectionId" style="@(sec == Model.Sections.FirstOrDefault() ? "" : "display:none;")">
+          <!-- Section Audio Header if listening -->
+          @if (sec.Modality == Contracts.ModalityDto.Listening)
+          {
+            <div class="audio-slicer">
+              <div class="row row--between mb-2">
+                <strong class="text-sm">Master Section Audio: @(sec.MasterAudioPath ?? "Not uploaded yet")</strong>
+                <span class="text-xs text-muted" style="font-family: var(--font-mono, monospace);">
+                  @(sec.MasterAudioDurationSec.HasValue ? $"{sec.MasterAudioDurationSec} sec" : "")
+                </span>
+              </div>
+              @if (!string.IsNullOrWhiteSpace(sec.MasterAudioPath))
+              {
+                <audio controls src="@sec.MasterAudioPath" id="master-audio-@sec.SectionId"></audio>
+              }
+            </div>
+          }
+
+          @if (sec.Groups.Count == 0)
+          {
+            <div class="text-center text-muted p-4" style="border: 2px dashed #ccd2d6;" id="empty-sec-@sec.SectionId">
+              <p>No questions yet in [@sec.Code] @sec.Name.</p>
+              <button type="button" class="btn btn--secondary btn--sm" onclick="triggerQuickIngestForSection(@sec.SectionId)">
+                Use Quick Ingest to Paste Questions
+              </button>
+            </div>
+          }
+
+          @foreach (var g in sec.Groups)
+          {
+            <div class="card-editor" id="group-card-@g.GroupId" data-group-id="@g.GroupId" data-section-id="@sec.SectionId">
+              <!-- If group has passage / image / audio / transcript -->
+              <div class="card-editor__header">
+                <span style="font-weight: 600; font-size: 0.85rem;">Group #@g.DisplayOrder (@g.Questions.Count Question@(g.Questions.Count == 1 ? "" : "s"))</span>
+                <button type="button" class="btn btn--ghost btn--sm" onclick="deleteGroup(@g.GroupId, @sec.SectionId)" style="color: var(--color-danger, #b31217);">&times; Remove Group</button>
+              </div>
+
+              <div class="p-3 stack" style="gap: 0.75rem;">
+                <!-- Audio and Slicing controls -->
+                @if (sec.Modality == Contracts.ModalityDto.Listening)
+                {
+                  <div class="row row--wrap" style="gap: 0.75rem; background: #fafafa; padding: 0.5rem; border: 1px solid #e0e0e0; align-items: center;">
+                    <div style="flex: 1;">
+                      <label class="text-xs" style="font-weight: bold;">Group Audio Track / Path:</label>
+                      <input type="text" class="field__input studio-autosave" data-type="group" data-id="@g.GroupId" data-field="AudioPath" value="@g.AudioPath" placeholder="/audio/file.mp3" style="width: 100%; font-size: 0.8rem; border-radius: 0;" />
+                    </div>
+                    <div style="width: 110px;">
+                      <label class="text-xs" style="font-weight: bold;">Start (ms):</label>
+                      <input type="number" class="field__input studio-autosave" data-type="group" data-id="@g.GroupId" data-field="AudioStartMs" id="start-ms-@g.GroupId" value="@g.AudioStartMs" min="0" style="width: 100%; font-size: 0.8rem; border-radius: 0;" />
+                    </div>
+                    <div style="width: 110px;">
+                      <label class="text-xs" style="font-weight: bold;">End (ms):</label>
+                      <input type="number" class="field__input studio-autosave" data-type="group" data-id="@g.GroupId" data-field="AudioEndMs" id="end-ms-@g.GroupId" value="@g.AudioEndMs" min="0" style="width: 100%; font-size: 0.8rem; border-radius: 0;" />
+                    </div>
+                    <div class="row" style="gap: 0.25rem; align-self: flex-end;">
+                      <button type="button" class="btn btn--secondary btn--sm" onclick="markAudioStart(@sec.SectionId, @g.GroupId)" style="border-radius: 0; font-size: 0.75rem;">Mark Start</button>
+                      <button type="button" class="btn btn--secondary btn--sm" onclick="markAudioEnd(@sec.SectionId, @g.GroupId)" style="border-radius: 0; font-size: 0.75rem;">Mark End</button>
+                    </div>
+                  </div>
+                }
+
+                <!-- Passage / Image / Transcript fields if present or Part 1/6/7 -->
+                @if (sec.Code == "P1" || !string.IsNullOrWhiteSpace(g.ImagePath))
+                {
+                  <div class="row row--wrap" style="gap: 0.75rem; background: #fafafa; padding: 0.5rem; border: 1px solid #e0e0e0;">
+                    <div style="flex: 1;">
+                      <label class="text-xs" style="font-weight: bold;">Image Path:</label>
+                      <input type="text" class="field__input studio-autosave" data-type="group" data-id="@g.GroupId" data-field="ImagePath" value="@g.ImagePath" placeholder="/media/photo1.jpg" style="width: 100%; font-size: 0.8rem; border-radius: 0;" />
+                    </div>
+                    <div style="flex: 2;">
+                      <label class="text-xs" style="font-weight: bold;">Accessibility Alt Text (Required for image):</label>
+                      <input type="text" class="field__input studio-autosave" data-type="group" data-id="@g.GroupId" data-field="ImageAlt" value="@g.ImageAlt" placeholder="A man working at a laptop..." style="width: 100%; font-size: 0.8rem; border-radius: 0;" />
+                    </div>
+                  </div>
+                }
+
+                @if (sec.Code == "P6" || sec.Code == "P7" || !string.IsNullOrWhiteSpace(g.Passage))
+                {
+                  <div>
+                    <label class="text-xs" style="font-weight: bold;">Reading Passage (Use [1], [2], [3], [4] for Part 6 blanks):</label>
+                    <textarea rows="4" class="field__input studio-autosave" data-type="group" data-id="@g.GroupId" data-field="Passage" style="width: 100%; font-size: 0.85rem; border-radius: 0;" placeholder="Passage text with optional [1], [2] blanks...">@g.Passage</textarea>
+                  </div>
+                }
+
+                <!-- Questions inside this group -->
+                <div class="stack" style="gap: 0.75rem; margin-top: 0.5rem;">
+                  @foreach (var q in g.Questions)
+                  {
+                    <div class="question-card p-3" id="question-card-@q.QuestionId" data-question-id="@q.QuestionId" style="border: 1px solid var(--color-ink, #14181d); background: #ffffff;">
+                      <div class="row row--between mb-2">
+                        <strong class="text-sm">Question #@q.DisplayOrder</strong>
+                        <div class="row" style="gap: 0.5rem; align-items: center;">
+                          <label class="text-xs">Category:</label>
+                          <select class="field__input studio-autosave" data-type="question" data-id="@q.QuestionId" data-field="CategoryId" style="font-size: 0.75rem; padding: 0.2rem 0.4rem; border-radius: 0;">
+                            <option value="">-- No Category --</option>
+                            @foreach (var cat in Model.AvailableCategories)
+                            {
+                              <option value="@cat.CategoryId" selected="@(q.CategoryId == cat.CategoryId)">@cat.Name (@cat.Code)</option>
+                            }
+                          </select>
+                          <button type="button" class="btn btn--ghost btn--sm" onclick="deleteQuestion(@q.QuestionId, @sec.SectionId)" style="color: var(--color-danger, #b31217); padding: 0.1rem 0.3rem;">&times;</button>
+                        </div>
+                      </div>
+
+                      <div class="mb-2">
+                        <input type="text" class="field__input studio-autosave" data-type="question" data-id="@q.QuestionId" data-field="Stem" value="@q.Stem" placeholder="Question stem text..." style="width: 100%; font-weight: 500; border-radius: 0;" />
+                      </div>
+
+                      <!-- Options for MCQ -->
+                      @if (q.QuestionType == Contracts.QuestionTypeDto.Mcq)
+                      {
+                        <div class="stack" style="gap: 0.35rem; margin-left: 0.5rem;">
+                          @for (var oi = 0; oi < q.Options.Count; oi++)
+                          {
+                            var opt = q.Options[oi];
+                            <div class="row" style="gap: 0.5rem; align-items: center;">
+                              <label style="display: flex; align-items: center; gap: 0.25rem; font-weight: bold; width: 45px;">
+                                <input type="radio" name="opt-correct-@q.QuestionId" value="@opt.Label" checked="@opt.IsCorrect" class="studio-opt-radio" data-qid="@q.QuestionId" data-label="@opt.Label" style="accent-color: var(--color-ink, #14181d);" />
+                                @opt.Label.
+                              </label>
+                              <input type="text" class="field__input studio-opt-text" data-qid="@q.QuestionId" data-label="@opt.Label" value="@opt.Text" placeholder="Option text..." style="flex: 2; font-size: 0.85rem; border-radius: 0;" />
+                              <input type="text" class="field__input studio-opt-rationale" data-qid="@q.QuestionId" data-label="@opt.Label" value="@opt.Rationale" placeholder="Distractor rationale..." style="flex: 2; font-size: 0.8rem; color: #555; border-radius: 0;" />
+                            </div>
+                          }
+                        </div>
+                      }
+
+                      <!-- Free response controls -->
+                      @if (q.QuestionType == Contracts.QuestionTypeDto.FreeResponse)
+                      {
+                        <div class="row row--wrap" style="gap: 0.75rem; background: #fafafa; padding: 0.5rem; border: 1px solid #e0e0e0;">
+                          <div>
+                            <label class="text-xs" style="font-weight: bold;">Prep Sec:</label>
+                            <input type="number" class="field__input studio-autosave" data-type="question" data-id="@q.QuestionId" data-field="PrepSeconds" value="@q.PrepSeconds" min="0" style="width: 80px; font-size: 0.8rem; border-radius: 0;" />
+                          </div>
+                          <div>
+                            <label class="text-xs" style="font-weight: bold;">Response Sec:</label>
+                            <input type="number" class="field__input studio-autosave" data-type="question" data-id="@q.QuestionId" data-field="ResponseSeconds" value="@q.ResponseSeconds" min="1" style="width: 80px; font-size: 0.8rem; border-radius: 0;" />
+                          </div>
+                          <div>
+                            <label class="text-xs" style="font-weight: bold;">Min Words:</label>
+                            <input type="number" class="field__input studio-autosave" data-type="question" data-id="@q.QuestionId" data-field="MinWords" value="@q.MinWords" min="1" style="width: 80px; font-size: 0.8rem; border-radius: 0;" />
+                          </div>
+                          <div>
+                            <label class="text-xs" style="font-weight: bold;">Max Words:</label>
+                            <input type="number" class="field__input studio-autosave" data-type="question" data-id="@q.QuestionId" data-field="MaxWords" value="@q.MaxWords" min="1" style="width: 80px; font-size: 0.8rem; border-radius: 0;" />
+                          </div>
+                        </div>
+                      }
+
+                      <div style="margin-top: 0.5rem;">
+                        <input type="text" class="field__input studio-autosave" data-type="question" data-id="@q.QuestionId" data-field="Explanation" value="@q.Explanation" placeholder="Explanation / Pedagogical rationale..." style="width: 100%; font-size: 0.8rem; color: #444; border-radius: 0;" />
+                      </div>
+                    </div>
+                  }
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </main>
+
+  <!-- ================= 3. RIGHT PUBLISH READINESS PLACARD ================= -->
+  <aside class="studio-panel" id="studio-right-placard" aria-label="Publish Readiness Audit">
+    <div class="studio-panel__header">
+      <h3>Readiness Audit</h3>
+      <span class="badge" id="audit-status-badge" style="@(Model.Audit.CanPublish ? "background: #e6f4ea; color: #0a6b3c;" : "background: #ffebe6; color: #b31217;") border-radius: 0; font-family: var(--font-mono, monospace);">
+        @(Model.Audit.CanPublish ? "PASSED" : $"{Model.Audit.BlockingErrorCount} BLOCKS")
+      </span>
+    </div>
+
+    <div class="studio-panel__body stack" style="gap: 1rem; max-height: 75vh;">
+      <div style="font-size: 0.85rem; line-height: 1.4;">
+        <div class="row row--between">
+          <span>Questions:</span>
+          <strong style="font-family: var(--font-mono, monospace);" id="audit-q-count">@Model.Audit.TotalQuestions / @Model.Audit.ExpectedQuestions</strong>
+        </div>
+        <div class="row row--between">
+          <span>Blocking Errors:</span>
+          <strong style="font-family: var(--font-mono, monospace); color: @(Model.Audit.BlockingErrorCount > 0 ? "var(--color-danger, #b31217)" : "var(--color-success, #0a6b3c)");" id="audit-error-count">@Model.Audit.BlockingErrorCount</strong>
+        </div>
+      </div>
+
+      <div style="border-top: 1px solid var(--color-border, #ccd2d6); padding-top: 0.75rem;">
+        <h4 style="margin: 0 0 0.5rem 0; font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 0.85rem;">
+          Compliance Checklist
+        </h4>
+        <ul class="audit-checklist" id="audit-issues-list">
+          @if (Model.Audit.Issues.Count == 0 && Model.Audit.CanPublish)
+          {
+            <li class="audit-item audit-item--success">
+              <span>&#10004;</span>
+              <div>All certificate invariants satisfied. Ready to publish!</div>
+            </li>
+          }
+          @foreach (var iss in Model.Audit.Issues)
+          {
+            var itemClass = iss.Severity == "error" ? "audit-item--error" : "audit-item--warning";
+            var icon = iss.Severity == "error" ? "&#10008;" : "&#9888;";
+            <li class="audit-item @itemClass" id="audit-issue-@iss.Code">
+              <span>@Html.Raw(icon)</span>
+              <div>
+                <div>@iss.Message</div>
+                @if (!string.IsNullOrEmpty(iss.ElementTarget))
+                {
+                  <span class="audit-jump-link" onclick="jumpToAuditElement('@iss.ElementTarget')">Jump to issue &rarr;</span>
+                }
+              </div>
+            </li>
+          }
+        </ul>
+      </div>
+
+      <div style="border-top: 1px solid var(--color-border, #ccd2d6); padding-top: 0.75rem;">
+        <button type="button" class="btn btn--primary" id="btn-publish-exam" @(Model.Audit.CanPublish ? "" : "disabled") style="width: 100%; border-radius: 0; text-transform: uppercase; font-family: var(--font-condensed, sans-serif); font-weight: bold; margin-bottom: 0.5rem;">
+          Publish Exam
+        </button>
+        <button type="button" class="btn btn--secondary" id="btn-export-exam" style="width: 100%; border-radius: 0; font-size: 0.85rem;">
+          Export JSON / ZIP
+        </button>
+      </div>
+    </div>
+  </aside>
+</div>
+
+@await Html.PartialAsync("_QuickIngestModal")
+
+<script>
+(function() {
+  var examId = @Model.ExamId;
+  var currentSectionId = @(Model.Sections.FirstOrDefault()?.SectionId ?? 0);
+  var isSaving = false;
+  var saveDebounceTimer = null;
+  var statusIndicator = document.getElementById('autosave-status');
+
+  // Anti-forgery token retrieval
+  function getCsrfToken() {
+    var input = document.querySelector('input[name="__RequestVerificationToken"]');
+    return input ? input.value : '';
+  }
+
+  // --- Autosave Engine ---
+  function markSaving() {
+    isSaving = true;
+    statusIndicator.textContent = 'Saving...';
+    statusIndicator.style.color = '#0b4ea2';
+  }
+
+  function markSaved() {
+    isSaving = false;
+    var now = new Date();
+    var timeStr = now.toTimeString().split(' ')[0];
+    statusIndicator.textContent = 'Saved at ' + timeStr;
+    statusIndicator.style.color = '#0a6b3c';
+  }
+
+  function markSaveFailed(msg) {
+    isSaving = false;
+    statusIndicator.textContent = 'Save failed: ' + (msg || 'Error');
+    statusIndicator.style.color = '#b31217';
+  }
+
+  // beforeunload protection
+  window.addEventListener('beforeunload', function(e) {
+    if (isSaving) {
+      e.preventDefault();
+      e.returnValue = 'You have unsaved changes in progress. Are you sure you want to leave?';
+      return e.returnValue;
+    }
+  });
+
+  // Attach autosave listeners to inputs
+  document.querySelectorAll('.studio-autosave').forEach(function(input) {
+    input.addEventListener('input', function() {
+      clearTimeout(saveDebounceTimer);
+      markSaving();
+      saveDebounceTimer = setTimeout(function() {
+        performAutosave(input);
+      }, 1500);
+    });
+
+    input.addEventListener('blur', function() {
+      clearTimeout(saveDebounceTimer);
+      performAutosave(input);
+    });
+  });
+
+  // Option radio changes and text changes
+  document.querySelectorAll('.studio-opt-radio').forEach(function(radio) {
+    radio.addEventListener('change', function() {
+      saveQuestionOptions(parseInt(radio.getAttribute('data-qid'), 10));
+    });
+  });
+
+  document.querySelectorAll('.studio-opt-text, .studio-opt-rationale').forEach(function(optInput) {
+    optInput.addEventListener('input', function() {
+      clearTimeout(saveDebounceTimer);
+      markSaving();
+      saveDebounceTimer = setTimeout(function() {
+        saveQuestionOptions(parseInt(optInput.getAttribute('data-qid'), 10));
+      }, 1500);
+    });
+  });
+
+  function performAutosave(input) {
+    var type = input.getAttribute('data-type');
+    var id = parseInt(input.getAttribute('data-id'), 10);
+    var field = input.getAttribute('data-field');
+    var val = input.value;
+
+    if (type === 'question') {
+      saveSingleQuestion(id);
+    } else if (type === 'group') {
+      saveSingleGroup(id);
+    }
+  }
+
+  function saveSingleQuestion(questionId) {
+    var card = document.getElementById('question-card-' + questionId);
+    if (!card) return;
+
+    markSaving();
+
+    var stem = card.querySelector('[data-field="Stem"]')?.value || '';
+    var catId = card.querySelector('[data-field="CategoryId"]')?.value;
+    var expl = card.querySelector('[data-field="Explanation"]')?.value;
+    var prep = card.querySelector('[data-field="PrepSeconds"]')?.value;
+    var resp = card.querySelector('[data-field="ResponseSeconds"]')?.value;
+    var minW = card.querySelector('[data-field="MinWords"]')?.value;
+    var maxW = card.querySelector('[data-field="MaxWords"]')?.value;
+
+    var options = [];
+    card.querySelectorAll('.studio-opt-text').forEach(function(txtInput) {
+      var label = txtInput.getAttribute('data-label');
+      var isCorr = card.querySelector('.studio-opt-radio[data-label="' + label + '"]')?.checked || false;
+      var rat = card.querySelector('.studio-opt-rationale[data-label="' + label + '"]')?.value;
+      options.push({
+        label: label,
+        text: txtInput.value,
+        isCorrect: isCorr,
+        rationale: rat
+      });
+    });
+
+    var payload = {
+      stem: stem,
+      difficultyLevel: 3,
+      questionType: options.length > 0 ? 0 : 1, // 0 MCQ, 1 FreeResponse
+      explanation: expl,
+      categoryId: catId ? parseInt(catId, 10) : null,
+      prepSeconds: prep ? parseInt(prep, 10) : null,
+      responseSeconds: resp ? parseInt(resp, 10) : null,
+      minWords: minW ? parseInt(minW, 10) : null,
+      maxWords: maxW ? parseInt(maxW, 10) : null,
+      options: options.length > 0 ? options : null
+    };
+
+    fetch('/admin/exams/' + examId + '/studio/question/' + questionId, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'RequestVerificationToken': getCsrfToken()
+      },
+      body: JSON.stringify(payload)
+    })
+    .then(function(res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    })
+    .then(function() {
+      markSaved();
+      refreshAudit();
+    })
+    .catch(function(err) {
+      markSaveFailed(err.message);
+    });
+  }
+
+  function saveQuestionOptions(questionId) {
+    saveSingleQuestion(questionId);
+  }
+
+  function saveSingleGroup(groupId) {
+    var card = document.getElementById('group-card-' + groupId);
+    if (!card) return;
+
+    markSaving();
+
+    var secId = parseInt(card.getAttribute('data-section-id'), 10);
+    var audioPath = card.querySelector('[data-field="AudioPath"]')?.value;
+    var startMs = card.querySelector('[data-field="AudioStartMs"]')?.value;
+    var endMs = card.querySelector('[data-field="AudioEndMs"]')?.value;
+    var imgPath = card.querySelector('[data-field="ImagePath"]')?.value;
+    var imgAlt = card.querySelector('[data-field="ImageAlt"]')?.value;
+    var passage = card.querySelector('[data-field="Passage"]')?.value;
+
+    var payload = {
+      sectionId: secId,
+      audioPath: audioPath,
+      audioStartMs: startMs ? parseInt(startMs, 10) : null,
+      audioEndMs: endMs ? parseInt(endMs, 10) : null,
+      imagePath: imgPath,
+      imageAlt: imgAlt,
+      passage: passage
+    };
+
+    fetch('/admin/exams/' + examId + '/studio/group/' + groupId, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'RequestVerificationToken': getCsrfToken()
+      },
+      body: JSON.stringify(payload)
+    })
+    .then(function(res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    })
+    .then(function() {
+      markSaved();
+      refreshAudit();
+    })
+    .catch(function(err) {
+      markSaveFailed(err.message);
+    });
+  }
+
+  // --- Left Rail Selection & Scrolling ---
+  window.selectSection = function(sectionId) {
+    currentSectionId = sectionId;
+    document.querySelectorAll('.rail-section__header').forEach(function(h) {
+      h.classList.remove('is-active');
+    });
+    var targetSecHeader = document.querySelector('.rail-section[data-section-id="' + sectionId + '"] .rail-section__header');
+    if (targetSecHeader) targetSecHeader.classList.add('is-active');
+
+    document.querySelectorAll('.section-workstation-content').forEach(function(content) {
+      content.style.display = 'none';
+    });
+    var secContent = document.getElementById('ws-sec-@Model.Sections.FirstOrDefault()?.SectionId' ? 'ws-sec-' + sectionId : null);
+    if (secContent) {
+      secContent.style.display = 'block';
+    }
+
+    var secObj = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Sections.Select(s => new { s.SectionId, s.Name, Modality = s.Modality.ToString() })));
+    var match = secObj.find(function(s) { return s.SectionId === sectionId; });
+    if (match) {
+      document.getElementById('ws-section-name').textContent = match.Name;
+      document.getElementById('ws-section-modality').textContent = match.Modality;
+    }
+  };
+
+  window.focusQuestionCard = function(questionId) {
+    var card = document.getElementById('question-card-' + questionId);
+    if (!card) return;
+
+    var grpCard = card.closest('.card-editor');
+    if (grpCard) {
+      var secId = parseInt(grpCard.getAttribute('data-section-id'), 10);
+      if (secId && secId !== currentSectionId) {
+        selectSection(secId);
+      }
+    }
+
+    document.querySelectorAll('.rail-item').forEach(function(item) {
+      item.classList.remove('is-selected');
+    });
+    var railItem = document.getElementById('rail-item-' + questionId);
+    if (railItem) railItem.classList.add('is-selected');
+
+    document.querySelectorAll('.card-editor, .question-card').forEach(function(c) {
+      c.classList.remove('is-highlighted');
+    });
+    card.classList.add('is-highlighted');
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    var input = card.querySelector('[data-field="Stem"]');
+    if (input) input.focus();
+  };
+
+  // --- Reordering via Up/Down buttons ---
+  window.moveItemUp = function(sectionId, questionId) {
+    reorderRailItem(sectionId, questionId, -1);
+  };
+
+  window.moveItemDown = function(sectionId, questionId) {
+    reorderRailItem(sectionId, questionId, 1);
+  };
+
+  function reorderRailItem(sectionId, questionId, direction) {
+    var list = document.getElementById('rail-items-' + sectionId);
+    if (!list) return;
+
+    var items = Array.from(list.children);
+    var idx = items.findIndex(function(it) {
+      return parseInt(it.getAttribute('data-question-id'), 10) === questionId;
+    });
+
+    if (idx === -1) return;
+    var targetIdx = idx + direction;
+    if (targetIdx < 0 || targetIdx >= items.length) return;
+
+    // Swap DOM elements
+    var currentEl = items[idx];
+    var targetEl = items[targetIdx];
+
+    if (direction < 0) {
+      list.insertBefore(currentEl, targetEl);
+    } else {
+      list.insertBefore(targetEl, currentEl);
+    }
+
+    // Renumber display orders contiguously
+    var reorderedList = Array.from(list.children);
+    var payloadItems = [];
+
+    reorderedList.forEach(function(el, newIdx) {
+      var qId = parseInt(el.getAttribute('data-question-id'), 10);
+      var gId = parseInt(el.getAttribute('data-group-id'), 10);
+      var newOrder = newIdx + 1;
+      el.setAttribute('data-display-order', newOrder);
+      var labelEl = el.querySelector('strong');
+      if (labelEl) labelEl.textContent = '#' + newOrder;
+
+      payloadItems.push({
+        groupId: gId,
+        questionId: qId,
+        displayOrder: newOrder
+      });
+    });
+
+    markSaving();
+    fetch('/admin/exams/' + examId + '/reorder', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'RequestVerificationToken': getCsrfToken()
+      },
+      body: JSON.stringify({ sectionId: sectionId, items: payloadItems })
+    })
+    .then(function(res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    })
+    .then(function() {
+      markSaved();
+    })
+    .catch(function(err) {
+      markSaveFailed('Reorder failed: ' + err.message);
+    });
+  }
+
+  // --- Visual Audio Slicer Mark Start/End ---
+  window.markAudioStart = function(sectionId, groupId) {
+    var audio = document.getElementById('master-audio-' + sectionId);
+    if (!audio) return;
+    var ms = Math.floor(audio.currentTime * 1000);
+    var input = document.getElementById('start-ms-' + groupId);
+    if (input) {
+      input.value = ms;
+      saveSingleGroup(groupId);
+    }
+  };
+
+  window.markAudioEnd = function(sectionId, groupId) {
+    var audio = document.getElementById('master-audio-' + sectionId);
+    if (!audio) return;
+    var ms = Math.floor(audio.currentTime * 1000);
+    var input = document.getElementById('end-ms-' + groupId);
+    if (input) {
+      input.value = ms;
+      saveSingleGroup(groupId);
+    }
+  };
+
+  // --- Audit Placard & Jumping ---
+  window.jumpToAuditElement = function(targetId) {
+    var el = document.getElementById(targetId);
+    if (!el) return;
+
+    if (targetId.startsWith('section-link-')) {
+      var secId = parseInt(targetId.replace('section-link-', ''), 10);
+      selectSection(secId);
+      return;
+    }
+
+    var grpCard = el.closest('.card-editor');
+    if (grpCard) {
+      var secId = parseInt(grpCard.getAttribute('data-section-id'), 10);
+      if (secId && secId !== currentSectionId) {
+        selectSection(secId);
+      }
+    }
+
+    document.querySelectorAll('.card-editor, .question-card').forEach(function(c) {
+      c.classList.remove('is-highlighted');
+    });
+    el.classList.add('is-highlighted');
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+
+  function refreshAudit() {
+    fetch('/admin/exams/' + examId + '/audit')
+      .then(function(res) { return res.json(); })
+      .then(function(audit) {
+        var statusBadge = document.getElementById('audit-status-badge');
+        var qCount = document.getElementById('audit-q-count');
+        var errCount = document.getElementById('audit-error-count');
+        var pubBtn = document.getElementById('btn-publish-exam');
+        var issuesList = document.getElementById('audit-issues-list');
+
+        qCount.textContent = audit.totalQuestions + ' / ' + audit.expectedQuestions;
+        errCount.textContent = audit.blockingErrorCount;
+        errCount.style.color = audit.blockingErrorCount > 0 ? '#b31217' : '#0a6b3c';
+
+        if (audit.canPublish) {
+          statusBadge.textContent = 'PASSED';
+          statusBadge.style.background = '#e6f4ea';
+          statusBadge.style.color = '#0a6b3c';
+          pubBtn.disabled = false;
+        } else {
+          statusBadge.textContent = audit.blockingErrorCount + ' BLOCKS';
+          statusBadge.style.background = '#ffebe6';
+          statusBadge.style.color = '#b31217';
+          pubBtn.disabled = true;
+        }
+
+        issuesList.innerHTML = '';
+        if (audit.issues.length === 0 && audit.canPublish) {
+          issuesList.innerHTML = '<li class="audit-item audit-item--success"><span>&#10004;</span><div>All certificate invariants satisfied. Ready to publish!</div></li>';
+        } else {
+          audit.issues.forEach(function(iss) {
+            var li = document.createElement('li');
+            li.className = 'audit-item ' + (iss.severity === 'error' ? 'audit-item--error' : 'audit-item--warning');
+            li.id = 'audit-issue-' + iss.code;
+            var jumpHtml = iss.elementTarget ? '<span class="audit-jump-link" onclick="jumpToAuditElement(\'' + iss.elementTarget + '\')">Jump to issue &rarr;</span>' : '';
+            li.innerHTML = '<span>' + (iss.severity === 'error' ? '&#10008;' : '&#9888;') + '</span><div><div>' + iss.message + '</div>' + jumpHtml + '</div>';
+            issuesList.appendChild(li);
+          });
+        }
+      })
+      .catch(function(err) {
+        console.warn('Audit refresh failed:', err);
+      });
+  }
+
+  // --- Publish Exam Handler ---
+  document.getElementById('btn-publish-exam')?.addEventListener('click', function() {
+    var btn = this;
+    if (btn.disabled) return;
+
+    var ok = confirm('Publish this exam now? Once published, learners will be able to take it.');
+    if (!ok) return;
+
+    btn.disabled = true;
+    fetch('/admin/exams/' + examId + '/publish', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'RequestVerificationToken': getCsrfToken()
+      }
+    })
+    .then(function(res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    })
+    .then(function() {
+      alert('Exam published successfully!');
+      window.location.reload();
+    })
+    .catch(function(err) {
+      alert('Publish failed: ' + err.message);
+      btn.disabled = false;
+    });
+  });
+
+  // --- Quick Ingest Integration ---
+  var sectionsData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Sections.Select(s => new { s.SectionId, s.Code, s.Name })));
+
+  document.getElementById('btn-studio-quick-ingest')?.addEventListener('click', function() {
+    window.QuickIngestModal.open(examId, sectionsData, currentSectionId, function(res) {
+      window.location.reload();
+    });
+  });
+
+  window.triggerQuickIngestForSection = function(secId) {
+    window.QuickIngestModal.open(examId, sectionsData, secId, function(res) {
+      window.location.reload();
+    });
+  };
+})();
+</script>

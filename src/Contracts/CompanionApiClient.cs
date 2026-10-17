@@ -952,6 +952,21 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
     public Task<QuickIngestCommitResultDto> CommitQuickIngestAsync(int examId, QuickIngestCommitRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
         PostAuthorizedAsync<QuickIngestCommitRequest, QuickIngestCommitResultDto>($"api/admin/exams/{examId}/quick-ingest/commit", request, bearerToken, cancellationToken);
 
+    public Task<ExamStudioDetailDto> GetAdminExamStudioAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) =>
+        GetAuthorizedAsync<ExamStudioDetailDto>($"api/admin/exams/{examId}/studio", bearerToken, cancellationToken);
+
+    public Task<ExamAuditResultDto> GetAdminExamAuditAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) =>
+        GetAuthorizedAsync<ExamAuditResultDto>($"api/admin/exams/{examId}/audit", bearerToken, cancellationToken);
+
+    public async Task ReorderAdminSectionItemsAsync(int examId, ReorderSectionItemsRequest request, string bearerToken, CancellationToken cancellationToken = default)
+    {
+        using var message = new HttpRequestMessage(HttpMethod.Post, $"api/admin/exams/{examId}/reorder");
+        AttachBearer(message, bearerToken);
+        message.Content = JsonContent.Create(request, options: Json);
+        using var response = await http.SendAsync(message, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+    }
+
     public Task<AdminImportBatchesDto> GetAdminImportBatchesAsync(int? certId, string bearerToken, CancellationToken cancellationToken = default) =>
         GetAuthorizedAsync<AdminImportBatchesDto>(certId is { } id ? $"api/admin/imports?certId={id}" : "api/admin/imports", bearerToken, cancellationToken);
 
@@ -1429,6 +1444,15 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
 
     public Task<QuickIngestCommitResultDto> CommitQuickIngestAsync(int examId, QuickIngestCommitRequest request, CancellationToken cancellationToken = default) =>
         CommitQuickIngestAsync(examId, request, string.Empty, cancellationToken);
+
+    public Task<ExamStudioDetailDto> GetAdminExamStudioAsync(int examId, CancellationToken cancellationToken = default) =>
+        GetAdminExamStudioAsync(examId, string.Empty, cancellationToken);
+
+    public Task<ExamAuditResultDto> GetAdminExamAuditAsync(int examId, CancellationToken cancellationToken = default) =>
+        GetAdminExamAuditAsync(examId, string.Empty, cancellationToken);
+
+    public Task ReorderAdminSectionItemsAsync(int examId, ReorderSectionItemsRequest request, CancellationToken cancellationToken = default) =>
+        ReorderAdminSectionItemsAsync(examId, request, string.Empty, cancellationToken);
 
     public Task<AdminImportBatchesDto> GetAdminImportBatchesAsync(int? certId, CancellationToken cancellationToken = default) =>
         GetAdminImportBatchesAsync(certId, string.Empty, cancellationToken);

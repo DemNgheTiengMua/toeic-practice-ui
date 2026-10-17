@@ -489,4 +489,96 @@ public sealed class AdminExamsController(
             return StatusCode(ex.Status, new { message = ex.Detail ?? ex.Message, code = ex.Code });
         }
     }
+
+    [HttpGet("{id:int}/studio")]
+    public async Task<IActionResult> Studio(int id, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var studio = await api.GetAdminExamStudioAsync(id, cancellationToken);
+            return View("~/Views/Admin/ExamStudio.cshtml", studio);
+        }
+        catch (ApiException ex)
+        {
+            logger.LogError(ex, "Could not load Exam Studio for exam {ExamId}", id);
+            TempData["Error"] = ex.Detail ?? ex.Message;
+            return RedirectToAction(nameof(Index));
+        }
+    }
+
+    [HttpPost("{id:int}/reorder")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Reorder(int id, [FromBody] ReorderSectionItemsRequest request, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await api.ReorderAdminSectionItemsAsync(id, request, cancellationToken);
+            return Json(new { success = true });
+        }
+        catch (ApiException ex)
+        {
+            logger.LogWarning(ex, "Failed to reorder items for exam {ExamId}", id);
+            return StatusCode(ex.Status, new { message = ex.Detail ?? ex.Message, code = ex.Code });
+        }
+    }
+
+    [HttpGet("{id:int}/audit")]
+    public async Task<IActionResult> Audit(int id, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var audit = await api.GetAdminExamAuditAsync(id, cancellationToken);
+            return Json(audit);
+        }
+        catch (ApiException ex)
+        {
+            logger.LogWarning(ex, "Failed to audit exam {ExamId}", id);
+            return StatusCode(ex.Status, new { message = ex.Detail ?? ex.Message, code = ex.Code });
+        }
+    }
+
+    [HttpPut("{id:int}/studio/group/{groupId:int}")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> AutosaveGroup(int id, int groupId, [FromBody] UpdateQuestionGroupRequest request, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var updated = await api.UpdateAdminQuestionGroupAsync(id, groupId, request, cancellationToken);
+            return Json(updated);
+        }
+        catch (ApiException ex)
+        {
+            return StatusCode(ex.Status, new { message = ex.Detail ?? ex.Message, code = ex.Code });
+        }
+    }
+
+    [HttpPut("{id:int}/studio/question/{questionId:int}")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> AutosaveQuestion(int id, int questionId, [FromBody] UpdateQuestionRequest request, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var updated = await api.UpdateAdminQuestionAsync(questionId, request, cancellationToken);
+            return Json(updated);
+        }
+        catch (ApiException ex)
+        {
+            return StatusCode(ex.Status, new { message = ex.Detail ?? ex.Message, code = ex.Code });
+        }
+    }
+
+    [HttpPut("{id:int}/studio/meta")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> AutosaveMeta(int id, [FromBody] UpdateAdminExamRequest request, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var updated = await api.UpdateAdminExamAsync(id, request, cancellationToken);
+            return Json(updated);
+        }
+        catch (ApiException ex)
+        {
+            return StatusCode(ex.Status, new { message = ex.Detail ?? ex.Message, code = ex.Code });
+        }
+    }
 }
