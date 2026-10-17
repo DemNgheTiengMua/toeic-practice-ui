@@ -87,3 +87,22 @@ public sealed record LessonManifestCardDto(
     string? CorrectOption = null,
     string? Explanation = null,
     string? Rationale = null);
+
+public sealed record AdminLessonSkillOptionDto(
+    int SkillId,
+    int CertId,
+    string Code,
+    string Name,
+    string Modality);
+
+public sealed record AdminLessonCategoryOptionDto(
+    int CategoryId,
+    int CertId,
+    string Code,
+    string Name);
+
+public sealed record AdminLessonFormOptionsDto(
+    IReadOnlyList<AdminCertificateOptionDto> Certificates,
+    IReadOnlyList<AdminLessonSkillOptionDto> Skills,
+    IReadOnlyList<AdminLessonCategoryOptionDto> Categories);
+

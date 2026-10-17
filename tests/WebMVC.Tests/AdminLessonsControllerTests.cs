@@ -222,6 +222,27 @@ public sealed class AdminLessonsControllerTests
     }
 
     [Fact]
+    public async Task Preview_WhenLessonFound_ReturnsPreviewViewWithMappedModel()
+    {
+        var api = new TestApiClient
+        {
+            LessonDetail = SampleLessonDetail(1, "Advanced Grammar")
+        };
+        var controller = CreateController(api);
+
+        var result = await controller.Preview(1, CancellationToken.None);
+
+        var viewResult = Assert.IsType<ViewResult>(result);
+        Assert.Equal("~/Views/Admin/Lessons/Preview.cshtml", viewResult.ViewName);
+
+        var vm = Assert.IsType<LessonViewModel>(viewResult.Model);
+        Assert.Equal(1, vm.Lesson.LessonId);
+        Assert.Equal("Advanced Grammar", vm.Lesson.Title);
+        Assert.Equal(3, vm.Lesson.Cards.Count);
+        Assert.Equal(3, vm.Progress.TotalCards);
+    }
+
+    [Fact]
     public async Task Save_WhenNoCards_ReturnsEditViewWithValidationError()
     {
         var api = new TestApiClient();

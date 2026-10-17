@@ -733,6 +733,38 @@ public sealed class AdminLessonService(
         });
     }
 
+    public async Task<AdminLessonFormOptionsDto> GetFormOptionsAsync(int? certId = null, CancellationToken cancellationToken = default)
+    {
+        var certs = await db.Certificates.AsNoTracking()
+            .OrderBy(c => c.CertId)
+            .Select(c => new AdminCertificateOptionDto(c.CertId, c.Code, c.Name))
+            .ToListAsync(cancellationToken);
+
+        var skillsQuery = db.Skills.AsNoTracking();
+        if (certId.HasValue)
+        {
+            skillsQuery = skillsQuery.Where(s => s.CertId == certId.Value);
+        }
+        var skills = await skillsQuery
+            .OrderBy(s => s.CertId)
+            .ThenBy(s => s.DisplayOrder)
+            .Select(s => new AdminLessonSkillOptionDto(s.SkillId, s.CertId, s.Code, s.Name, s.Modality))
+            .ToListAsync(cancellationToken);
+
+        var catQuery = db.QuestionCategories.AsNoTracking();
+        if (certId.HasValue)
+        {
+            catQuery = catQuery.Where(c => c.CertId == certId.Value);
+        }
+        var categories = await catQuery
+            .OrderBy(c => c.CertId)
+            .ThenBy(c => c.Code)
+            .Select(c => new AdminLessonCategoryOptionDto(c.CategoryId, c.CertId, c.Code, c.Name))
+            .ToListAsync(cancellationToken);
+
+        return new AdminLessonFormOptionsDto(certs, skills, categories);
+    }
+
     private async Task ValidateUpsertAsync(AdminLessonUpsertDto request, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(request.Title))

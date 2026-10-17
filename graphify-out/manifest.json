@@ -216,9 +216,9 @@
     "semantic_hash": ""
   },
   "src/Contracts/CompanionApiClient.cs": {
-    "mtime": 1792237083.2914295,
-    "seen": 1792237824.4226067,
-    "ast_hash": "0843179afdcb6988c592af90e6171bde",
+    "mtime": 1792246449.668525,
+    "seen": 1792246982.9764457,
+    "ast_hash": "b6b14c5385ffbfc81a5200d787ed23fd",
     "semantic_hash": ""
   },
   "src/Contracts/Contracts.csproj": {
@@ -3012,9 +3012,9 @@
     "semantic_hash": ""
   },
   "src/Contracts/DomainClients.cs": {
-    "mtime": 1792236961.4197142,
-    "seen": 1792237824.4226158,
-    "ast_hash": "e4d8ed0d8afea10ac35fade8033fd8a5",
+    "mtime": 1792246432.7674577,
+    "seen": 1792246982.976452,
+    "ast_hash": "b4abe2851dd8b30c991f729d3dddb79b",
     "semantic_hash": ""
   },
   "src/WebMVC/CookieBearerHandler.cs": {
@@ -3348,9 +3348,9 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Controllers/LessonsController.cs": {
-    "mtime": 1792225980.4557984,
-    "seen": 1792237824.422982,
-    "ast_hash": "ac6150f90258f9c71b825be569376e53",
+    "mtime": 1792246757.1483123,
+    "seen": 1792246982.9767022,
+    "ast_hash": "5ba5f4a3a9091090fae9f8b2c360ee2d",
     "semantic_hash": ""
   },
   "src/WebMVC/Models/LessonViewModels.cs": {
@@ -3426,27 +3426,27 @@
     "semantic_hash": ""
   },
   "src/Contracts/AdminLessonDtos.cs": {
-    "mtime": 1792232436.9170322,
-    "seen": 1792237824.4225934,
-    "ast_hash": "b9f017ee2a874e0ba9e6ba2d07ad2009",
+    "mtime": 1792246388.9394238,
+    "seen": 1792246982.9764361,
+    "ast_hash": "5fd247549bcd612b6f4a6ab6d5efc3d9",
     "semantic_hash": ""
   },
   "src/Services/AdminLessonService.cs": {
-    "mtime": 1792238547.3429947,
-    "seen": 1792239011.024944,
-    "ast_hash": "397b6fcdba2102c33ea62d8883bd0b2c",
+    "mtime": 1792246742.2758396,
+    "seen": 1792246982.9765637,
+    "ast_hash": "d878bbe5afa12340916593a7467302ce",
     "semantic_hash": ""
   },
   "src/Services/IAdminLessonService.cs": {
-    "mtime": 1792232235.3030045,
-    "seen": 1792237824.4228244,
-    "ast_hash": "5d0f0d9d1b84626391c1f63aa60f1e5f",
+    "mtime": 1792246396.748437,
+    "seen": 1792246982.976595,
+    "ast_hash": "f3282d4dda6c8ff6343446b7987751b3",
     "semantic_hash": ""
   },
   "src/WebAPI/Endpoints/AdminLessonEndpoints.cs": {
-    "mtime": 1792232309.5122547,
-    "seen": 1792237824.4228978,
-    "ast_hash": "0e1e70fadd8f07de2e3ff9f49f4aaad4",
+    "mtime": 1792246457.447146,
+    "seen": 1792246982.9766445,
+    "ast_hash": "2c9876da1a8683b0ba41f70ba921a3d3",
     "semantic_hash": ""
   },
   "src/WebAPI/wwwroot/templates/lesson-template.json": {
@@ -3462,33 +3462,33 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Controllers/AdminLessonsController.cs": {
-    "mtime": 1792232887.3099823,
-    "seen": 1792237824.4229565,
-    "ast_hash": "395a7328edb16b58eccf8e0af0578fa9",
+    "mtime": 1792246516.0734532,
+    "seen": 1792246982.9766843,
+    "ast_hash": "f4296a3e4954138e8e346b8409528bca",
     "semantic_hash": ""
   },
   "src/WebMVC/Models/AdminLessonViewModels.cs": {
-    "mtime": 1792232829.1151836,
-    "seen": 1792237824.4230027,
-    "ast_hash": "c6c4265062cbe64f3acdecad78807497",
+    "mtime": 1792246470.5387175,
+    "seen": 1792246982.9767246,
+    "ast_hash": "09dcf13a143efa43f3cf7aac02c69b5e",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Admin/Lessons/Edit.cshtml": {
-    "mtime": 1792238609.4745083,
-    "seen": 1792239011.0251467,
-    "ast_hash": "cb0ac733630b3f9712e1a1732c4b0aa7",
+    "mtime": 1792246603.4784336,
+    "seen": 1792246982.9767687,
+    "ast_hash": "ba8ffa1f4ae9ef0778fbbbad1c8a61cb",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Admin/Lessons/Index.cshtml": {
-    "mtime": 1792238632.2647715,
-    "seen": 1792239011.025148,
-    "ast_hash": "894c0813cb245eaace9dcdcb896d8bbe",
+    "mtime": 1792246666.7225485,
+    "seen": 1792246982.9767702,
+    "ast_hash": "cb8f993aec7a736ba8e489d5745192ab",
     "semantic_hash": ""
   },
   "tests/Services.Tests/AdminLessonServiceTests.cs": {
-    "mtime": 1792232587.3872216,
-    "seen": 1792237824.423144,
-    "ast_hash": "c23fbd726c6452f4836adabb8dee4fb2",
+    "mtime": 1792246905.618521,
+    "seen": 1792246982.9768937,
+    "ast_hash": "1f28008171e6f566323588c9cb887152",
     "semantic_hash": ""
   },
   "tests/WebMVC.E2ETests/Journeys/AdminLessonsTests.cs": {
@@ -3498,9 +3498,9 @@
     "semantic_hash": ""
   },
   "tests/WebMVC.Tests/AdminLessonsControllerTests.cs": {
-    "mtime": 1792233148.1242933,
-    "seen": 1792237824.4232028,
-    "ast_hash": "b72990c7a7bbb5b52f66dabc63668cba",
+    "mtime": 1792246921.1901493,
+    "seen": 1792246982.976971,
+    "ast_hash": "dbf86aeb53ff00dcac8718f7b6f5fd21",
     "semantic_hash": ""
   },
   "src/Contracts/AdminExamStudioDtos.cs": {
@@ -3537,6 +3537,12 @@
     "mtime": 1792238787.0881064,
     "seen": 1792239011.0253215,
     "ast_hash": "606cb90245d713bc9a05cd9ba1381ff4",
+    "semantic_hash": ""
+  },
+  "src/WebMVC/Views/Admin/Lessons/Preview.cshtml": {
+    "mtime": 1792246638.8836398,
+    "seen": 1792246982.9767716,
+    "ast_hash": "ccab3b59d16ea8a691f167474861a303",
     "semantic_hash": ""
   }
 }

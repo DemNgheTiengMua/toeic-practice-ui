@@ -25,6 +25,13 @@ public static class AdminLessonEndpoints
             return Results.Ok(template);
         });
 
+        // GET /api/admin/lessons/options?certId={certId}
+        admin.MapGet("/options", async (int? certId, IAdminLessonService lessons, CancellationToken cancellationToken) =>
+        {
+            var options = await lessons.GetFormOptionsAsync(certId, cancellationToken);
+            return Results.Ok(options);
+        });
+
         // GET /api/admin/lessons/{id:int}
         admin.MapGet("/{id:int}", async (int id, IAdminLessonService lessons, CancellationToken cancellationToken) =>
         {

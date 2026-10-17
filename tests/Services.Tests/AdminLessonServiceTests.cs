@@ -133,6 +133,23 @@ public sealed class AdminLessonServiceTests(DatabaseFixture database)
     }
 
     [Fact]
+    public async Task GetFormOptionsAsync_ReturnsCertificatesSkillsAndCategories()
+    {
+        var (certId, skillId, categoryId) = await SeedCertAndSkillAsync();
+        var service = CreateService();
+
+        var options = await service.GetFormOptionsAsync(certId);
+
+        Assert.NotNull(options);
+        Assert.NotEmpty(options.Certificates);
+        Assert.Contains(options.Certificates, c => c.CertId == certId);
+        Assert.NotEmpty(options.Skills);
+        Assert.Contains(options.Skills, s => s.SkillId == skillId && s.CertId == certId);
+        Assert.NotEmpty(options.Categories);
+        Assert.Contains(options.Categories, c => c.CategoryId == categoryId && c.CertId == certId);
+    }
+
+    [Fact]
     public async Task CreateLessonAsync_ThrowsWhenCertNotFound()
     {
         var service = CreateService();

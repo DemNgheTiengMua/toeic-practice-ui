@@ -1122,6 +1122,12 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
     public Task<LessonManifestDto> GetAdminLessonTemplateAsync(string bearerToken, CancellationToken cancellationToken = default) =>
         GetAuthorizedAsync<LessonManifestDto>("api/admin/lessons/template", bearerToken, cancellationToken);
 
+    public Task<AdminLessonFormOptionsDto> GetAdminLessonFormOptionsAsync(int? certId, string bearerToken, CancellationToken cancellationToken = default)
+    {
+        var url = certId.HasValue ? $"api/admin/lessons/options?certId={certId.Value}" : "api/admin/lessons/options";
+        return GetAuthorizedAsync<AdminLessonFormOptionsDto>(url, bearerToken, cancellationToken);
+    }
+
 
 
     // Token-free forwarding methods for segregated domain client interfaces (ADR-0002)
@@ -1568,6 +1574,9 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
 
     public Task<LessonManifestDto> GetAdminLessonTemplateAsync(CancellationToken cancellationToken = default) =>
         GetAdminLessonTemplateAsync(string.Empty, cancellationToken);
+
+    public Task<AdminLessonFormOptionsDto> GetAdminLessonFormOptionsAsync(int? certId = null, CancellationToken cancellationToken = default) =>
+        GetAdminLessonFormOptionsAsync(certId, string.Empty, cancellationToken);
 
 
     private async Task<TResponse> PutAuthorizedAsync<TRequest, TResponse>(string path, TRequest body, string bearerToken, CancellationToken cancellationToken)

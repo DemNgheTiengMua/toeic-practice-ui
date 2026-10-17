@@ -35,8 +35,17 @@
     </select>
   </div>
   <div class="field">
-    <label class="field__label" for="f-skill">Skill ID</label>
-    <input type="number" class="field__input font-mono" id="f-skill" name="skillId" value="@Model.SelectedSkillId" placeholder="e.g. 1" style="width: 100px;" />
+    <label class="field__label" for="f-skill">Filter by Skill</label>
+    <select class="field__input" id="f-skill" name="skillId">
+      <option value="">All Skills</option>
+      @if (Model.Skills is not null)
+      {
+        @foreach (var s in Model.Skills.Where(sk => !Model.SelectedCertId.HasValue || sk.CertId == Model.SelectedCertId.Value))
+        {
+          <option value="@s.SkillId" selected="@(s.SkillId == Model.SelectedSkillId)">@s.Name (@s.Modality.ToUpperInvariant())</option>
+        }
+      }
+    </select>
   </div>
   <button type="submit" class="btn">Filter</button>
   @if (Model.SelectedCertId.HasValue || Model.SelectedSkillId.HasValue)
@@ -113,7 +122,7 @@ else
               <td style="text-align: center;">
                 <div class="row" style="justify-content: center; gap: var(--space-xxs);">
                   <a class="btn btn--sm" href="/admin/lessons/@lesson.LessonId/edit">Edit</a>
-                  <a class="btn btn--sm btn--ghost" href="/lessons/@lesson.LessonId" target="_blank" title="Preview learner walkthrough deck">Preview ↗</a>
+                  <a class="btn btn--sm btn--ghost" href="/admin/lessons/@lesson.LessonId/preview" target="_blank" title="Preview learner walkthrough deck">Preview ↗</a>
                   <a class="btn btn--sm btn--ghost" href="/admin/lessons/@lesson.LessonId/export" title="Export as JSON manifest">Export</a>
                   <form method="post" action="/admin/lessons/@lesson.LessonId/delete" onsubmit="return confirm('Are you sure you want to delete lesson &quot;@lesson.Title&quot;? This action cannot be undone.');" style="display:inline; margin:0;">
                     @Html.AntiForgeryToken()

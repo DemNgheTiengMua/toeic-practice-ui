@@ -11,7 +11,8 @@ public sealed record AdminLessonListViewModel(
     int? SelectedCertId,
     int? SelectedSkillId,
     string? ErrorMessage = null,
-    string? SuccessMessage = null);
+    string? SuccessMessage = null,
+    IReadOnlyList<AdminLessonSkillOptionDto>? Skills = null);
 
 public sealed class AdminLessonEditViewModel
 {
@@ -46,6 +47,10 @@ public sealed class AdminLessonEditViewModel
     public List<AdminLessonCardEditViewModel> Cards { get; set; } = new();
 
     public IReadOnlyList<AdminCertificateOptionDto> Certificates { get; set; } = Array.Empty<AdminCertificateOptionDto>();
+
+    public IReadOnlyList<AdminLessonSkillOptionDto> Skills { get; set; } = Array.Empty<AdminLessonSkillOptionDto>();
+
+    public IReadOnlyList<AdminLessonCategoryOptionDto> Categories { get; set; } = Array.Empty<AdminLessonCategoryOptionDto>();
 
     public string? ErrorMessage { get; set; }
 }

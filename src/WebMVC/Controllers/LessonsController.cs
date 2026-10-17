@@ -10,19 +10,39 @@ using WebMVC.Models;
 
 namespace WebMVC.Controllers;
 
-[Authorize(Policy = Roles.Learner)]
+[Authorize]
 public sealed class LessonsController(
     ILessonClient api,
     CurrentUser currentUser,
     ILogger<LessonsController> logger,
     ILearnerContextClient? learnerContext = null)
-    : LearnerControllerBase(currentUser, logger, learnerContext)
+    : Controller
 {
+    private readonly CurrentUser _currentUser = currentUser;
+
     [HttpGet("/lessons/{id:int}")]
     public async Task<IActionResult> Index(int id, [FromQuery] int? moduleId, CancellationToken cancellationToken)
     {
+        if (User.IsInRole(Roles.Admin))
+        {
+            return Redirect($"/admin/lessons/{id}/preview");
+        }
+
         try
         {
+            if (learnerContext is not null && LearnerShell.Get(HttpContext) is null)
+            {
+                try
+                {
+                    var shell = await learnerContext.GetLearnerContextAsync(cancellationToken);
+                    LearnerShell.Set(HttpContext, shell);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "Failed to load learner shell for lesson player");
+                }
+            }
+
             var lesson = await api.GetLessonAsync(id, cancellationToken);
             var progress = await api.GetLessonProgressAsync(id, cancellationToken);
             var model = new LessonViewModel(lesson, progress, moduleId);
@@ -45,6 +65,11 @@ public sealed class LessonsController(
     [HttpGet("/lessons/by-category/{categoryId:int}")]
     public async Task<IActionResult> ByCategory(int categoryId, [FromQuery] int? moduleId, CancellationToken cancellationToken)
     {
+        if (User.IsInRole(Roles.Admin))
+        {
+            return Redirect("/admin/lessons");
+        }
+
         try
         {
             var lesson = await api.GetLessonByCategoryAsync(categoryId, cancellationToken);
@@ -67,6 +92,11 @@ public sealed class LessonsController(
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> RecordCardView(int id, int cardId, CancellationToken cancellationToken)
     {
+        if (User.IsInRole(Roles.Admin))
+        {
+            return Json(new { success = true, preview = true });
+        }
+
         try
         {
             await api.RecordCardViewAsync(id, cardId, cancellationToken);

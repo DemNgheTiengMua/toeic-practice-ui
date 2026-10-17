@@ -28,4 +28,6 @@ public interface IAdminLessonService
     Task<LessonManifestDto> ExportLessonAsync(int lessonId, CancellationToken cancellationToken = default);
 
     LessonManifestDto GetTemplate();
+
+    Task<AdminLessonFormOptionsDto> GetFormOptionsAsync(int? certId = null, CancellationToken cancellationToken = default);
 }

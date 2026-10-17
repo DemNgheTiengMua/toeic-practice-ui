@@ -33,14 +33,24 @@ public sealed class AdminLessonsController(
     public async Task<IActionResult> Index([FromQuery] int? certId, [FromQuery] int? skillId, CancellationToken cancellationToken = default)
     {
         IReadOnlyList<AdminCertificateOptionDto> certificates = Array.Empty<AdminCertificateOptionDto>();
+        IReadOnlyList<AdminLessonSkillOptionDto> skills = Array.Empty<AdminLessonSkillOptionDto>();
         try
         {
-            var batches = await importsClient.GetAdminImportBatchesAsync(null, cancellationToken);
-            certificates = batches.Certificates;
+            var formOptions = await api.GetAdminLessonFormOptionsAsync(null, cancellationToken);
+            if (formOptions.Certificates.Count > 0)
+            {
+                certificates = formOptions.Certificates;
+            }
+            skills = formOptions.Skills;
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Could not load certificate options for admin lessons");
+            logger.LogWarning(ex, "Could not load lesson form options for admin lessons index");
+        }
+
+        if (certificates.Count == 0)
+        {
+            certificates = await LoadCertificatesAsync(cancellationToken);
         }
 
         IReadOnlyList<AdminLessonSummaryDto> lessons = Array.Empty<AdminLessonSummaryDto>();
@@ -60,7 +70,8 @@ public sealed class AdminLessonsController(
             certId,
             skillId,
             TempData["Error"] as string,
-            TempData["Success"] as string);
+            TempData["Success"] as string,
+            skills);
 
         return View("~/Views/Admin/Lessons/Index.cshtml", vm);
     }
@@ -68,16 +79,23 @@ public sealed class AdminLessonsController(
     [HttpGet("create")]
     public async Task<IActionResult> Create([FromQuery] int? certId, CancellationToken cancellationToken = default)
     {
-        var certificates = await LoadCertificatesAsync(cancellationToken);
+        var formOptions = await api.GetAdminLessonFormOptionsAsync(null, cancellationToken);
+        var certificates = formOptions.Certificates.Count > 0 ? formOptions.Certificates : await LoadCertificatesAsync(cancellationToken);
         var selectedCertId = certId ?? certificates.FirstOrDefault()?.CertId ?? 1;
+        var defaultSkillId = formOptions.Skills.FirstOrDefault(s => s.CertId == selectedCertId)?.SkillId
+            ?? formOptions.Skills.FirstOrDefault()?.SkillId
+            ?? 1;
 
         var vm = new AdminLessonEditViewModel
         {
             LessonId = 0,
             CertId = selectedCertId,
+            SkillId = defaultSkillId,
             EstimatedMinutes = 5,
             DisplayOrder = 0,
             Certificates = certificates,
+            Skills = formOptions.Skills,
+            Categories = formOptions.Categories,
             Cards = new List<AdminLessonCardEditViewModel>
             {
                 new()
@@ -96,7 +114,8 @@ public sealed class AdminLessonsController(
     [HttpGet("{id:int}/edit")]
     public async Task<IActionResult> Edit(int id, CancellationToken cancellationToken = default)
     {
-        var certificates = await LoadCertificatesAsync(cancellationToken);
+        var formOptions = await api.GetAdminLessonFormOptionsAsync(null, cancellationToken);
+        var certificates = formOptions.Certificates.Count > 0 ? formOptions.Certificates : await LoadCertificatesAsync(cancellationToken);
         AdminLessonDetailDto lesson;
         try
         {
@@ -123,6 +142,8 @@ public sealed class AdminLessonsController(
             EstimatedMinutes = lesson.EstimatedMinutes,
             DisplayOrder = lesson.DisplayOrder,
             Certificates = certificates,
+            Skills = formOptions.Skills,
+            Categories = formOptions.Categories,
             Cards = lesson.Cards.Select((c, idx) => new AdminLessonCardEditViewModel
             {
                 CardId = c.CardId,
@@ -144,6 +165,55 @@ public sealed class AdminLessonsController(
         return View("~/Views/Admin/Lessons/Edit.cshtml", vm);
     }
 
+    [HttpGet("{id:int}/preview")]
+    public async Task<IActionResult> Preview(int id, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var lesson = await api.GetAdminLessonByIdAsync(id, cancellationToken);
+            var lessonDetail = new LessonDetailDto(
+                lesson.LessonId,
+                lesson.Title,
+                lesson.Summary,
+                lesson.SkillId,
+                lesson.CategoryId,
+                lesson.EstimatedMinutes,
+                lesson.Cards.Select(c => new LessonCardDto(
+                    c.CardId,
+                    c.CardType,
+                    c.Title,
+                    c.ContentMarkdown,
+                    c.QuestionPrompt,
+                    c.OptionA,
+                    c.OptionB,
+                    c.OptionC,
+                    c.OptionD,
+                    c.CorrectOption,
+                    c.Explanation,
+                    c.DisplayOrder,
+                    c.Rationale)).ToList());
+
+            var progress = new LessonProgressDto(
+                CardsCompleted: 0,
+                TotalCards: lesson.Cards.Count,
+                IsCompleted: false,
+                LastViewedCardId: null,
+                FirstOpenedAt: null,
+                CompletedAt: null,
+                UpdatedAt: null);
+
+            ViewData["AdminLessonId"] = id;
+            var model = new LessonViewModel(lessonDetail, progress, null);
+            return View("~/Views/Admin/Lessons/Preview.cshtml", model);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to load lesson {LessonId} for preview", id);
+            TempData["Error"] = $"Could not preview lesson #{id}: {ex.Message}";
+            return RedirectToAction(nameof(Index));
+        }
+    }
+
     [HttpPost("save")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Save([FromForm] AdminLessonEditViewModel vm, CancellationToken cancellationToken = default)
@@ -155,7 +225,10 @@ public sealed class AdminLessonsController(
 
         if (!ModelState.IsValid)
         {
-            vm.Certificates = await LoadCertificatesAsync(cancellationToken);
+            var formOptions = await api.GetAdminLessonFormOptionsAsync(null, cancellationToken);
+            vm.Certificates = formOptions.Certificates.Count > 0 ? formOptions.Certificates : await LoadCertificatesAsync(cancellationToken);
+            vm.Skills = formOptions.Skills;
+            vm.Categories = formOptions.Categories;
             return View("~/Views/Admin/Lessons/Edit.cshtml", vm);
         }
 
@@ -205,14 +278,20 @@ public sealed class AdminLessonsController(
         {
             logger.LogWarning(ex, "API rejected saving lesson: {Code}", ex.Code);
             vm.ErrorMessage = ex.Detail ?? ex.Title ?? ex.Message;
-            vm.Certificates = await LoadCertificatesAsync(cancellationToken);
+            var formOptions = await api.GetAdminLessonFormOptionsAsync(null, cancellationToken);
+            vm.Certificates = formOptions.Certificates.Count > 0 ? formOptions.Certificates : await LoadCertificatesAsync(cancellationToken);
+            vm.Skills = formOptions.Skills;
+            vm.Categories = formOptions.Categories;
             return View("~/Views/Admin/Lessons/Edit.cshtml", vm);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to save lesson");
             vm.ErrorMessage = ex.Message;
-            vm.Certificates = await LoadCertificatesAsync(cancellationToken);
+            var formOptions = await api.GetAdminLessonFormOptionsAsync(null, cancellationToken);
+            vm.Certificates = formOptions.Certificates.Count > 0 ? formOptions.Certificates : await LoadCertificatesAsync(cancellationToken);
+            vm.Skills = formOptions.Skills;
+            vm.Categories = formOptions.Categories;
             return View("~/Views/Admin/Lessons/Edit.cshtml", vm);
         }
     }
