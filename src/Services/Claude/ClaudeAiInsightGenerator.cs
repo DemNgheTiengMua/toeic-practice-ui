@@ -36,29 +36,34 @@ public sealed class ClaudeAiInsightGenerator : IAiInsightGenerator
         try
         {
             var prompt = new StringBuilder();
-            prompt.AppendLine("Analyze the learner's test performance and generate an insightful, encouraging pedagogical review.");
-            prompt.AppendLine($"[CONTEXT]");
+            prompt.AppendLine("Analyze the learner's test performance and generate an insightful, highly specific pedagogical diagnostic review.");
+            prompt.AppendLine();
+            prompt.AppendLine("[LEARNER PROFILE & TARGET]");
             prompt.AppendLine($"Certificate: {request.CertName} (ID: {request.CertId})");
-            prompt.AppendLine($"Activity: {request.ActivityTitle}");
+            prompt.AppendLine($"Activity / Source: {request.ActivityTitle}");
             prompt.AppendLine($"Current Band / Score: {request.CurrentBandCode ?? "N/A"} ({request.ScaledScore})");
-            prompt.AppendLine($"Target Band: {request.TargetBandCode ?? "Not specified"} ({request.TargetBandName})");
-            prompt.AppendLine($"Accuracy: {request.CorrectCount} correct out of {request.AnsweredCount} answered (Total: {request.TotalQuestions})");
+            prompt.AppendLine($"Target Band / Goal: {request.TargetBandCode ?? "Not specified"} ({request.TargetBandName})");
+            var overallAccuracy = request.AnsweredCount > 0 ? (int)Math.Round((double)request.CorrectCount / request.AnsweredCount * 100) : 0;
+            prompt.AppendLine($"Overall Accuracy: {request.CorrectCount} correct out of {request.AnsweredCount} answered ({overallAccuracy}%) across {request.TotalQuestions} questions");
             prompt.AppendLine();
 
             if (request.CategoryAccuracies is { Count: > 0 })
             {
-                prompt.AppendLine("[ACCURACY BY QUESTION CATEGORY]");
-                foreach (var cat in request.CategoryAccuracies.Take(8))
+                var sortedCats = request.CategoryAccuracies.OrderBy(c => c.AccuracyPercentage).ToList();
+                prompt.AppendLine("[ACCURACY BY QUESTION CATEGORY - SORTED FROM WEAKEST TO STRONGEST]");
+                foreach (var cat in sortedCats.Take(10))
                 {
-                    prompt.AppendLine($"- {cat.CategoryName} ({cat.CategoryCode}): {cat.Correct}/{cat.Answered} ({cat.AccuracyPercentage}%)");
+                    var tag = cat.AccuracyPercentage < 60 ? "[CRITICAL FOCUS]" : (cat.AccuracyPercentage < 80 ? "[MODERATE GAP]" : "[SOLID STRENGTH]");
+                    prompt.AppendLine($"- {tag} {cat.CategoryName} ({cat.CategoryCode}): {cat.Correct}/{cat.Answered} ({cat.AccuracyPercentage}%)");
                 }
                 prompt.AppendLine();
             }
 
             if (request.SectionAccuracies is { Count: > 0 })
             {
-                prompt.AppendLine("[ACCURACY BY SECTION]");
-                foreach (var sec in request.SectionAccuracies.Take(8))
+                var sortedSecs = request.SectionAccuracies.OrderBy(s => s.AccuracyPercentage).ToList();
+                prompt.AppendLine("[ACCURACY BY SECTION - SORTED FROM LOWEST ACCURACY]");
+                foreach (var sec in sortedSecs.Take(8))
                 {
                     prompt.AppendLine($"- {sec.SectionName} ({sec.SectionCode}): {sec.Correct}/{sec.Answered} ({sec.AccuracyPercentage}%)");
                 }
@@ -67,18 +72,18 @@ public sealed class ClaudeAiInsightGenerator : IAiInsightGenerator
 
             prompt.AppendLine("Return a strictly valid JSON object with the following schema:");
             prompt.AppendLine("{");
-            prompt.AppendLine("  \"narrative\": \"<2 to 3 sentences summarizing performance, strengths, and specific areas requiring focus>\",");
+            prompt.AppendLine("  \"narrative\": \"<3 to 4 detailed sentences: (1) Current standing and concrete score gap to target band; (2) Top strength category/section cited by name with accuracy; (3) Primary vulnerability category cited with exact error rate and diagnosed linguistic root cause; (4) Immediate tactical focus module to drill next>\",");
             prompt.AppendLine("  \"trend\": \"Improving\" | \"Steady\" | \"Declining\",");
             prompt.AppendLine("  \"recommendations\": [");
             prompt.AppendLine("    {");
-            prompt.AppendLine("      \"text\": \"<concrete, actionable practice recommendation>\",");
+            prompt.AppendLine("      \"text\": \"<prescriptive, concrete practice directive citing the exact section/category name and specific study method>\",");
             prompt.AppendLine("      \"severity\": \"High\" | \"Medium\" | \"Low\"");
             prompt.AppendLine("    }");
             prompt.AppendLine("  ]");
             prompt.AppendLine("}");
             prompt.AppendLine("Output JSON only, no markdown formatting.");
 
-            var systemPrompt = "You are an AI diagnostic mentor in the extra efficient exam prep system. Your insights are clear, precise, and actionable, addressing what the learner did well and where the exact score gap is.";
+            var systemPrompt = "You are an elite AI diagnostic mentor in the ExtraEfficiency language test prep system. Your insights are razor-sharp, pedagogical, deeply grounded in the learner's actual numbers, and never use generic platitudes. Always cite specific categories, sections, and accuracy metrics.";
 
             var rawResult = await _claudeClient.CreateMessageAsync(
                 prompt.ToString(),

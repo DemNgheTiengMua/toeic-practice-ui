@@ -2394,9 +2394,9 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Shared/_AiInsightPanel.cshtml": {
-    "mtime": 1792215197.143658,
-    "seen": 1792237824.4231117,
-    "ast_hash": "8ec5ca04537dea01b9c61e2d7cc4ae2e",
+    "mtime": 1792244634.5133376,
+    "seen": 1792244785.6040716,
+    "ast_hash": "a64e18dcdea1d8a8a838d0008018d060",
     "semantic_hash": ""
   },
   "tests/Services.Tests/AiInsightServiceTests.cs": {
@@ -2442,9 +2442,9 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Controllers/PlacementController.cs": {
-    "mtime": 1792145619.0441518,
-    "seen": 1792237824.4229865,
-    "ast_hash": "dd24aa78a7868932afb9e1e7bb0ed1aa",
+    "mtime": 1792244583.4063792,
+    "seen": 1792244785.6039226,
+    "ast_hash": "c7108783251d1340560b36a0d9d525fd",
     "semantic_hash": ""
   },
   "src/WebMVC/Models/PlacementViewModels.cs": {
@@ -3078,9 +3078,9 @@
     "semantic_hash": ""
   },
   "src/Services/Claude/ClaudeAiInsightGenerator.cs": {
-    "mtime": 1792242195.6931896,
-    "seen": 1792242580.9383862,
-    "ast_hash": "0e3a231a4b2829f21beb9dc72d37daa8",
+    "mtime": 1792244707.6442573,
+    "seen": 1792244785.603791,
+    "ast_hash": "a48191d9cd73f172d2816fe61f7d5098",
     "semantic_hash": ""
   },
   "src/Services/Claude/ClaudeClient.cs": {

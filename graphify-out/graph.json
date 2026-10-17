@@ -22026,13 +22026,13 @@
             "callee": "LogError",
             "receiver_type": "ILogger",
             "lang": "csharp",
-            "line": "L26"
+            "line": "L27"
           }
         ]
       },
       "norm_label": ".index()",
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L15"
+      "source_location": "L16"
     },
     {
       "id": "src_webmvc_controllers_placementcontroller_webmvc_controllers_placementcontroller_result",
@@ -22052,25 +22052,25 @@
             "callee": "LogInformation",
             "receiver_type": "ILogger",
             "lang": "csharp",
-            "line": "L165"
+            "line": "L166"
           },
           {
             "callee": "LogWarning",
             "receiver_type": "ILogger",
             "lang": "csharp",
-            "line": "L170"
+            "line": "L171"
           },
           {
             "callee": "LogError",
             "receiver_type": "ILogger",
             "lang": "csharp",
-            "line": "L176"
+            "line": "L177"
           }
         ]
       },
       "norm_label": ".result()",
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L155"
+      "source_location": "L156"
     },
     {
       "id": "src_webmvc_controllers_placementcontroller_webmvc_controllers_placementcontroller_saveanswer",
@@ -22090,25 +22090,25 @@
             "callee": "Action",
             "receiver_type": "Url",
             "lang": "csharp",
-            "line": "L114"
+            "line": "L115"
           },
           {
             "callee": "LogInformation",
             "receiver_type": "ILogger",
             "lang": "csharp",
-            "line": "L119"
+            "line": "L120"
           },
           {
             "callee": "LogWarning",
             "receiver_type": "ILogger",
             "lang": "csharp",
-            "line": "L128"
+            "line": "L129"
           }
         ]
       },
       "norm_label": ".saveanswer()",
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L94"
+      "source_location": "L95"
     },
     {
       "id": "src_webmvc_controllers_placementcontroller_webmvc_controllers_placementcontroller_start",
@@ -22128,19 +22128,19 @@
             "callee": "LogWarning",
             "receiver_type": "ILogger",
             "lang": "csharp",
-            "line": "L43"
+            "line": "L44"
           },
           {
             "callee": "LogError",
             "receiver_type": "ILogger",
             "lang": "csharp",
-            "line": "L49"
+            "line": "L50"
           }
         ]
       },
       "norm_label": ".start()",
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L32"
+      "source_location": "L33"
     },
     {
       "id": "src_webmvc_controllers_placementcontroller_webmvc_controllers_placementcontroller_submit",
@@ -22160,19 +22160,19 @@
             "callee": "LogInformation",
             "receiver_type": "ILogger",
             "lang": "csharp",
-            "line": "L144"
+            "line": "L145"
           },
           {
             "callee": "LogError",
             "receiver_type": "ILogger",
             "lang": "csharp",
-            "line": "L149"
+            "line": "L150"
           }
         ]
       },
       "norm_label": ".submit()",
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L133"
+      "source_location": "L134"
     },
     {
       "id": "src_webmvc_controllers_placementcontroller_webmvc_controllers_placementcontroller_take",
@@ -22192,25 +22192,25 @@
             "callee": "LogInformation",
             "receiver_type": "ILogger",
             "lang": "csharp",
-            "line": "L77"
+            "line": "L78"
           },
           {
             "callee": "LogWarning",
             "receiver_type": "ILogger",
             "lang": "csharp",
-            "line": "L82"
+            "line": "L83"
           },
           {
             "callee": "LogError",
             "receiver_type": "ILogger",
             "lang": "csharp",
-            "line": "L88"
+            "line": "L89"
           }
         ]
       },
       "norm_label": ".take()",
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L55"
+      "source_location": "L56"
     },
     {
       "id": "src_webmvc_controllers_placementcontroller_webmvc_controllers_placementcontroller_targetband",
@@ -22230,13 +22230,19 @@
             "callee": "LogError",
             "receiver_type": "ILogger",
             "lang": "csharp",
-            "line": "L195"
+            "line": "L196"
+          },
+          {
+            "callee": "LogWarning",
+            "receiver_type": "ILogger",
+            "lang": "csharp",
+            "line": "L224"
           }
         ]
       },
       "norm_label": ".targetband()",
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L182"
+      "source_location": "L183"
     },
     {
       "id": "tests_webmvc_tests_placementcontrollertests_webmvc_tests_testapiclient_getplacementcatalogasync",
@@ -62464,7 +62470,7 @@
       },
       "norm_label": ".extractjson()",
       "source_file": "src/Services/Claude/ClaudeAiInsightGenerator.cs",
-      "source_location": "L151"
+      "source_location": "L156"
     },
     {
       "id": "src_services_claude_claudeaiinsightgenerator_services_claudeaiinsightgenerator_generateinsightasync",
@@ -62493,22 +62499,28 @@
             "line": "L39"
           },
           {
+            "callee": "Round",
+            "receiver_type": "Math",
+            "lang": "csharp",
+            "line": "L46"
+          },
+          {
             "callee": "ToString",
             "receiver_type": "StringBuilder",
             "lang": "csharp",
-            "line": "L84"
+            "line": "L89"
           },
           {
             "callee": "Parse",
             "receiver_type": "JsonDocument",
             "lang": "csharp",
-            "line": "L90"
+            "line": "L95"
           },
           {
             "callee": "Add",
             "receiver_type": "List",
             "lang": "csharp",
-            "line": "L114"
+            "line": "L119"
           }
         ]
       },
@@ -149505,7 +149517,7 @@
         "ref_token": "HttpGet"
       },
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L15",
+      "source_location": "L16",
       "weight": 1.0
     },
     {
@@ -149520,7 +149532,7 @@
         "ref_token": "HttpGet"
       },
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L155",
+      "source_location": "L156",
       "weight": 1.0
     },
     {
@@ -149535,7 +149547,7 @@
         "ref_token": "HttpGet"
       },
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L55",
+      "source_location": "L56",
       "weight": 1.0
     },
     {
@@ -149550,7 +149562,7 @@
         "ref_token": "HttpGet"
       },
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L182",
+      "source_location": "L183",
       "weight": 1.0
     },
     {
@@ -150855,7 +150867,7 @@
         "ref_token": "HttpPost"
       },
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L94",
+      "source_location": "L95",
       "weight": 1.0
     },
     {
@@ -150870,7 +150882,7 @@
         "ref_token": "HttpPost"
       },
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L32",
+      "source_location": "L33",
       "weight": 1.0
     },
     {
@@ -150885,7 +150897,7 @@
         "ref_token": "HttpPost"
       },
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L133",
+      "source_location": "L134",
       "weight": 1.0
     },
     {
@@ -150900,7 +150912,7 @@
         "ref_token": "HttpPost"
       },
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L201",
+      "source_location": "L202",
       "weight": 1.0
     },
     {
@@ -152865,7 +152877,7 @@
         "ref_token": "ValidateAntiForgeryToken"
       },
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L94",
+      "source_location": "L95",
       "weight": 1.0
     },
     {
@@ -152880,7 +152892,7 @@
         "ref_token": "ValidateAntiForgeryToken"
       },
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L32",
+      "source_location": "L33",
       "weight": 1.0
     },
     {
@@ -152895,7 +152907,7 @@
         "ref_token": "ValidateAntiForgeryToken"
       },
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L133",
+      "source_location": "L134",
       "weight": 1.0
     },
     {
@@ -152910,7 +152922,7 @@
         "ref_token": "ValidateAntiForgeryToken"
       },
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L201",
+      "source_location": "L202",
       "weight": 1.0
     },
     {
@@ -158703,7 +158715,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/Services/Claude/ClaudeAiInsightGenerator.cs",
-      "source_location": "L89",
+      "source_location": "L94",
       "weight": 1.0
     },
     {
@@ -197487,6 +197499,21 @@
       "weight": 1.0
     },
     {
+      "source": "src_webmvc_controllers_placementcontroller_webmvc_controllers_placementcontroller",
+      "target": "src_contracts_domainclients_contracts_ilearningpathclient",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "field",
+      "metadata": {
+        "ref_token": "ILearningPathClient"
+      },
+      "source_file": "src/WebMVC/Controllers/PlacementController.cs",
+      "source_location": "L13",
+      "weight": 1.0
+    },
+    {
       "source": "src_webmvc_controllers_lessonscontroller_webmvc_controllers_lessonscontroller",
       "target": "src_contracts_ilessonclient_contracts_ilessonclient",
       "relation": "references",
@@ -231681,7 +231708,7 @@
         "ref_token": "GeneratedRecommendation"
       },
       "source_file": "src/Services/Claude/ClaudeAiInsightGenerator.cs",
-      "source_location": "L147",
+      "source_location": "L152",
       "weight": 1.0
     },
     {
@@ -233676,7 +233703,7 @@
         "ref_token": "IActionResult"
       },
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L15",
+      "source_location": "L16",
       "weight": 1.0
     },
     {
@@ -233691,7 +233718,7 @@
         "ref_token": "IActionResult"
       },
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L155",
+      "source_location": "L156",
       "weight": 1.0
     },
     {
@@ -233706,7 +233733,7 @@
         "ref_token": "IActionResult"
       },
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L94",
+      "source_location": "L95",
       "weight": 1.0
     },
     {
@@ -233721,7 +233748,7 @@
         "ref_token": "IActionResult"
       },
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L32",
+      "source_location": "L33",
       "weight": 1.0
     },
     {
@@ -233736,7 +233763,7 @@
         "ref_token": "IActionResult"
       },
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L133",
+      "source_location": "L134",
       "weight": 1.0
     },
     {
@@ -233751,7 +233778,7 @@
         "ref_token": "IActionResult"
       },
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L55",
+      "source_location": "L56",
       "weight": 1.0
     },
     {
@@ -233766,7 +233793,7 @@
         "ref_token": "IActionResult"
       },
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L201",
+      "source_location": "L202",
       "weight": 1.0
     },
     {
@@ -296715,7 +296742,7 @@
         "ref_token": "CancellationToken"
       },
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L15",
+      "source_location": "L16",
       "weight": 1.0
     },
     {
@@ -296730,7 +296757,7 @@
         "ref_token": "CancellationToken"
       },
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L155",
+      "source_location": "L156",
       "weight": 1.0
     },
     {
@@ -296745,7 +296772,7 @@
         "ref_token": "CancellationToken"
       },
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L94",
+      "source_location": "L95",
       "weight": 1.0
     },
     {
@@ -296760,7 +296787,7 @@
         "ref_token": "CancellationToken"
       },
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L32",
+      "source_location": "L33",
       "weight": 1.0
     },
     {
@@ -296775,7 +296802,7 @@
         "ref_token": "CancellationToken"
       },
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L133",
+      "source_location": "L134",
       "weight": 1.0
     },
     {
@@ -296790,7 +296817,7 @@
         "ref_token": "CancellationToken"
       },
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L55",
+      "source_location": "L56",
       "weight": 1.0
     },
     {
@@ -296805,7 +296832,7 @@
         "ref_token": "CancellationToken"
       },
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L201",
+      "source_location": "L202",
       "weight": 1.0
     },
     {
@@ -305820,7 +305847,7 @@
         "ref_token": "SaveAnswerFormModel"
       },
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L94",
+      "source_location": "L95",
       "weight": 1.0
     },
     {
@@ -306150,7 +306177,7 @@
         "ref_token": "SetTargetBandFormModel"
       },
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L201",
+      "source_location": "L202",
       "weight": 1.0
     },
     {
@@ -324735,7 +324762,7 @@
         "ref_token": "Task"
       },
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L15",
+      "source_location": "L16",
       "weight": 1.0
     },
     {
@@ -324750,7 +324777,7 @@
         "ref_token": "Task"
       },
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L155",
+      "source_location": "L156",
       "weight": 1.0
     },
     {
@@ -324765,7 +324792,7 @@
         "ref_token": "Task"
       },
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L94",
+      "source_location": "L95",
       "weight": 1.0
     },
     {
@@ -324780,7 +324807,7 @@
         "ref_token": "Task"
       },
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L32",
+      "source_location": "L33",
       "weight": 1.0
     },
     {
@@ -324795,7 +324822,7 @@
         "ref_token": "Task"
       },
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L133",
+      "source_location": "L134",
       "weight": 1.0
     },
     {
@@ -324810,7 +324837,7 @@
         "ref_token": "Task"
       },
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L55",
+      "source_location": "L56",
       "weight": 1.0
     },
     {
@@ -324825,7 +324852,7 @@
         "ref_token": "Task"
       },
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L201",
+      "source_location": "L202",
       "weight": 1.0
     },
     {
@@ -370209,7 +370236,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/Services/Claude/ClaudeAiInsightGenerator.cs",
-      "source_location": "L151",
+      "source_location": "L156",
       "weight": 1.0
     },
     {
@@ -375984,18 +376011,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L133",
-      "weight": 1.0
-    },
-    {
-      "source": "src_webmvc_controllers_placementcontroller_webmvc_controllers_placementcontroller",
-      "target": "src_webmvc_controllers_placementcontroller_webmvc_controllers_placementcontroller_index",
-      "relation": "method",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L15",
+      "source_location": "L134",
       "weight": 1.0
     },
     {
@@ -376006,7 +376022,18 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L155",
+      "source_location": "L156",
+      "weight": 1.0
+    },
+    {
+      "source": "src_webmvc_controllers_placementcontroller_webmvc_controllers_placementcontroller",
+      "target": "src_webmvc_controllers_placementcontroller_webmvc_controllers_placementcontroller_index",
+      "relation": "method",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/WebMVC/Controllers/PlacementController.cs",
+      "source_location": "L16",
       "weight": 1.0
     },
     {
@@ -376017,7 +376044,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L201",
+      "source_location": "L202",
       "weight": 1.0
     },
     {
@@ -376028,7 +376055,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L32",
+      "source_location": "L33",
       "weight": 1.0
     },
     {
@@ -376039,7 +376066,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L55",
+      "source_location": "L56",
       "weight": 1.0
     },
     {
@@ -376050,7 +376077,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L94",
+      "source_location": "L95",
       "weight": 1.0
     },
     {
@@ -391533,7 +391560,7 @@
       "confidence_score": 0.8,
       "context": "call",
       "source_file": "src/Services/Claude/ClaudeAiInsightGenerator.cs",
-      "source_location": "L83",
+      "source_location": "L88",
       "weight": 1.0
     },
     {
@@ -396309,7 +396336,7 @@
       "confidence_score": 0.8,
       "context": "call",
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L21",
+      "source_location": "L22",
       "weight": 1.0
     },
     {
@@ -396321,7 +396348,7 @@
       "confidence_score": 0.8,
       "context": "call",
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L160",
+      "source_location": "L161",
       "weight": 1.0
     },
     {
@@ -396333,7 +396360,7 @@
       "confidence_score": 0.8,
       "context": "call",
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L105",
+      "source_location": "L106",
       "weight": 1.0
     },
     {
@@ -396345,7 +396372,7 @@
       "confidence_score": 0.8,
       "context": "call",
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L38",
+      "source_location": "L39",
       "weight": 1.0
     },
     {
@@ -396357,7 +396384,7 @@
       "confidence_score": 0.8,
       "context": "call",
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L139",
+      "source_location": "L140",
       "weight": 1.0
     },
     {
@@ -396369,7 +396396,7 @@
       "confidence_score": 0.8,
       "context": "call",
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L60",
+      "source_location": "L61",
       "weight": 1.0
     },
     {
@@ -396381,7 +396408,7 @@
       "confidence_score": 0.8,
       "context": "call",
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L187",
+      "source_location": "L188",
       "weight": 1.0
     },
     {
@@ -396393,7 +396420,19 @@
       "confidence_score": 0.8,
       "context": "call",
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L213",
+      "source_location": "L214",
+      "weight": 1.0
+    },
+    {
+      "source": "src_webmvc_controllers_placementcontroller_webmvc_controllers_placementcontroller_targetband",
+      "target": "src_contracts_domainclients_contracts_ilearningpathclient_generatelearningpathasync",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "context": "call",
+      "source_file": "src/WebMVC/Controllers/PlacementController.cs",
+      "source_location": "L220",
       "weight": 1.0
     },
     {
@@ -405357,7 +405396,7 @@
       "confidence_score": 0.85,
       "context": "call",
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L104",
+      "source_location": "L105",
       "weight": 1.0
     },
     {
@@ -405369,7 +405408,7 @@
       "confidence_score": 0.85,
       "context": "call",
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L129",
+      "source_location": "L130",
       "weight": 1.0
     },
     {
@@ -405381,7 +405420,7 @@
       "confidence_score": 0.85,
       "context": "call",
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L38",
+      "source_location": "L39",
       "weight": 1.0
     },
     {
@@ -405393,7 +405432,7 @@
       "confidence_score": 0.85,
       "context": "call",
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L139",
+      "source_location": "L140",
       "weight": 1.0
     },
     {
@@ -405405,7 +405444,19 @@
       "confidence_score": 0.85,
       "context": "call",
       "source_file": "src/WebMVC/Controllers/PlacementController.cs",
-      "source_location": "L213",
+      "source_location": "L214",
+      "weight": 1.0
+    },
+    {
+      "source": "src_webmvc_controllers_placementcontroller_webmvc_controllers_placementcontroller_targetband",
+      "target": "src_contracts_learningpathdtos_contracts_generatelearningpathrequest",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "context": "call",
+      "source_file": "src/WebMVC/Controllers/PlacementController.cs",
+      "source_location": "L220",
       "weight": 1.0
     },
     {
@@ -422622,5 +422673,5 @@
       "source_file": ".impeccable/surfaces/prototype.md"
     }
   ],
-  "built_at_commit": "119cf002021fc7ec370add0eae1e08a03e5287c9"
+  "built_at_commit": "3e4560c18a5d5459fc57fcfee8130ce8c62c8eaa"
 }

@@ -9,7 +9,8 @@ namespace WebMVC.Controllers;
 public sealed class PlacementController(
     IPlacementClient api,
     CurrentUser currentUser,
-    ILogger<PlacementController> logger)
+    ILogger<PlacementController> logger,
+    ILearningPathClient? learningPathClient = null)
     : LearnerControllerBase(currentUser, logger)
 {
     [HttpGet("/placement")]
@@ -211,6 +212,22 @@ public sealed class PlacementController(
         try
         {
             await api.SetTargetBandAsync(new SetTargetBandRequest(form.TargetBandCode), cancellationToken);
+
+            if (learningPathClient != null)
+            {
+                try
+                {
+                    await learningPathClient.GenerateLearningPathAsync(new GenerateLearningPathRequest(form.TargetBandCode), cancellationToken);
+                }
+                catch (ApiException ex)
+                {
+                    logger.LogWarning(ex, "Could not auto-generate learning path after setting target band");
+                }
+
+                TempData["SuccessMessage"] = "Your target level has been saved and your learning path is ready!";
+                return RedirectToAction("Index", "LearningPath");
+            }
+
             TempData["SuccessMessage"] = "Your target level has been saved.";
             return RedirectToAction(nameof(TargetBand));
         }
