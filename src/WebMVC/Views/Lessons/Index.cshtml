@@ -1,0 +1,409 @@
+@model WebMVC.Models.LessonViewModel
+@using WebMVC.Models
+@{
+    Layout = "_LearnerLayout";
+    ViewData["Title"] = "Lesson: " + Model.Lesson.Title;
+    var cards = Model.Lesson.Cards.OrderBy(c => c.DisplayOrder).ToList();
+    var totalCards = cards.Count;
+    var initialIndex = 1;
+    if (Model.Progress.LastViewedCardId.HasValue)
+    {
+        var foundIndex = cards.FindIndex(c => c.CardId == Model.Progress.LastViewedCardId.Value);
+        if (foundIndex >= 0)
+        {
+            initialIndex = foundIndex + 1;
+        }
+    }
+    var finishUrl = Model.ModuleId.HasValue 
+        ? $"/learning-path/modules/{Model.ModuleId.Value}" 
+        : "/learning-path";
+}
+
+<style>
+  .lesson-deck {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    max-width: 760px;
+    margin: 0 auto;
+    width: 100%;
+  }
+  .lesson-card {
+    border: 2px solid var(--ink);
+    background: var(--painted);
+    padding: var(--space-6);
+  }
+  .lesson-card--rule {
+    background: var(--sign-blue);
+    color: #ffffff;
+    border: 2px solid var(--ink);
+  }
+  .lesson-card--rule h2,
+  .lesson-card--rule p,
+  .lesson-card--rule strong {
+    color: #ffffff;
+  }
+  .lesson-card--rule .rule-formula {
+    background: rgba(255, 255, 255, 0.12);
+    border-left: 4px solid #ffffff;
+    padding: var(--space-3) var(--space-4);
+    margin: var(--space-3) 0;
+    font-family: var(--font-mono);
+    font-size: var(--text-base);
+  }
+  .lesson-card--pitfall {
+    background: var(--sign-gold);
+    color: var(--ink);
+    border: 2px solid var(--ink);
+  }
+  .lesson-card--pitfall h2,
+  .lesson-card--pitfall p,
+  .lesson-card--pitfall strong {
+    color: var(--ink);
+  }
+  .lesson-card--pitfall .pitfall-item {
+    background: rgba(20, 24, 29, 0.08);
+    padding: var(--space-3) var(--space-4);
+    margin-bottom: var(--space-2);
+    border-left: 4px solid var(--ink);
+  }
+  .lesson-card--example mark {
+    background: var(--sign-gold);
+    color: var(--ink);
+    padding: 0 4px;
+    font-weight: 700;
+  }
+  .micro-check-options {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin: var(--space-4) 0;
+  }
+  .micro-check-option {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--line-soft);
+    cursor: pointer;
+    background: var(--painted);
+  }
+  .micro-check-option:hover {
+    background: var(--wall);
+  }
+  .micro-check-option.is-selected {
+    border-color: var(--ink);
+    background: var(--wall);
+  }
+  .micro-check-option.is-correct {
+    border: 2px solid var(--sign-green);
+    background: var(--color-success-soft);
+  }
+  .micro-check-option.is-wrong {
+    border: 2px solid var(--sign-red);
+    background: var(--color-danger-soft);
+  }
+  .micro-check-explanation {
+    margin-top: var(--space-4);
+    padding: var(--space-4);
+    background: var(--color-primary-soft);
+    border-left: 4px solid var(--sign-blue);
+  }
+  .deck-navigation {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: var(--space-4);
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--line-soft);
+  }
+</style>
+
+<div class="row row--between" style="border: 2px solid var(--ink); background: var(--painted); padding: var(--space-3) var(--space-4); align-items: center;">
+  <div>
+    <span class="text-xs uppercase text-muted">Lesson</span>
+    <h1 class="h3 no-margin">@Model.Lesson.Title</h1>
+  </div>
+  <div class="row" style="gap: var(--space-4); align-items: center;">
+    <div>
+      <span class="text-xs uppercase text-muted">Duration</span>
+      <div class="font-mono text-sm">~@Model.Lesson.EstimatedMinutes min</div>
+    </div>
+    <div>
+      <span class="text-xs uppercase text-muted">Cost</span>
+      <span class="badge badge--success">Free</span>
+    </div>
+    <div>
+      <span class="text-xs uppercase text-muted">Progress</span>
+      <div class="font-mono text-sm" id="deckProgressLabel">Card @initialIndex of @totalCards</div>
+    </div>
+  </div>
+</div>
+
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+  <a href="/dashboard" class="breadcrumbs__item">Home</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <a href="/learning-path" class="breadcrumbs__item">My learning path</a>
+  @if (Model.ModuleId.HasValue)
+  {
+    <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+    <a href="/learning-path/modules/@Model.ModuleId.Value" class="breadcrumbs__item">Module</a>
+  }
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <span class="breadcrumbs__item" aria-current="page">@Model.Lesson.Title</span>
+</nav>
+
+@Html.AntiForgeryToken()
+
+<div class="lesson-deck">
+  <div class="row row--between" style="align-items: center;">
+    <span class="badge badge--info" id="cardTypeBadge">CARD @initialIndex OF @totalCards</span>
+    <span class="text-sm text-muted font-mono" id="cardCounter">@initialIndex / @totalCards cards</span>
+  </div>
+
+  @for (var i = 0; i < cards.Count; i++)
+  {
+    var card = cards[i];
+    var cardIndex = i + 1;
+    var isInitial = cardIndex == initialIndex;
+    var cardTypeClass = card.CardType switch
+    {
+      "rule" => "lesson-card--rule",
+      "pitfall" => "lesson-card--pitfall",
+      "example" => "lesson-card--example",
+      _ => ""
+    };
+
+    <div class="lesson-card @cardTypeClass card-slide" 
+         id="card-@cardIndex" 
+         data-card-id="@card.CardId" 
+         data-card-type="@card.CardType"
+         data-correct="@card.CorrectOption"
+         style="@(isInitial ? "" : "display: none;")">
+
+      @if (card.CardType == "rule")
+      {
+        <div class="badge mb-2" style="background: rgba(255,255,255,0.2); color: #fff;">RULE</div>
+        <h2 class="m-0 mb-3" style="color: #fff;">@card.Title</h2>
+        <div class="rule-content">
+          @Html.Raw(AiNarrativeFormatter.ToSafeHtml(card.ContentMarkdown))
+        </div>
+      }
+      else if (card.CardType == "pitfall")
+      {
+        <div class="badge badge--warning mb-2">COMMON PITFALLS & EXAM TRAPS</div>
+        <h2 class="m-0 mb-3">@card.Title</h2>
+        <div class="pitfall-content">
+          @Html.Raw(AiNarrativeFormatter.ToSafeHtml(card.ContentMarkdown))
+        </div>
+      }
+      else if (card.CardType == "example")
+      {
+        <div class="badge badge--info mb-2">WORKED EXAMPLE</div>
+        <h2 class="m-0 mb-3">@card.Title</h2>
+        <div class="example-content">
+          @Html.Raw(AiNarrativeFormatter.ToSafeHtml(card.ContentMarkdown))
+        </div>
+      }
+      else if (card.CardType == "micro_check")
+      {
+        <div class="badge badge--success mb-2">MICRO-CHECK (1 QUESTION)</div>
+        <h2 class="m-0 mb-3">@card.Title</h2>
+        @if (!string.IsNullOrWhiteSpace(card.QuestionPrompt))
+        {
+          <p class="mb-3 font-semibold">@card.QuestionPrompt</p>
+        }
+        @if (!string.IsNullOrWhiteSpace(card.ContentMarkdown))
+        {
+          <div class="mb-3">
+            @Html.Raw(AiNarrativeFormatter.ToSafeHtml(card.ContentMarkdown))
+          </div>
+        }
+        <div class="micro-check-options" id="microCheckOptions">
+          @if (!string.IsNullOrWhiteSpace(card.OptionA))
+          {
+            <label class="micro-check-option" data-opt="A">
+              <input type="radio" name="microCheck" value="A">
+              <span><strong>(A)</strong> @card.OptionA</span>
+            </label>
+          }
+          @if (!string.IsNullOrWhiteSpace(card.OptionB))
+          {
+            <label class="micro-check-option" data-opt="B">
+              <input type="radio" name="microCheck" value="B">
+              <span><strong>(B)</strong> @card.OptionB</span>
+            </label>
+          }
+          @if (!string.IsNullOrWhiteSpace(card.OptionC))
+          {
+            <label class="micro-check-option" data-opt="C">
+              <input type="radio" name="microCheck" value="C">
+              <span><strong>(C)</strong> @card.OptionC</span>
+            </label>
+          }
+          @if (!string.IsNullOrWhiteSpace(card.OptionD))
+          {
+            <label class="micro-check-option" data-opt="D">
+              <input type="radio" name="microCheck" value="D">
+              <span><strong>(D)</strong> @card.OptionD</span>
+            </label>
+          }
+        </div>
+
+        <div class="row">
+          <button type="button" class="btn btn--primary" id="btnCheckAnswer">Check answer</button>
+        </div>
+
+        <div class="micro-check-explanation" id="microCheckExplanation" style="display: none;">
+          <strong>Correct answer: (@card.CorrectOption)</strong>
+          @if (!string.IsNullOrWhiteSpace(card.Explanation))
+          {
+            <p class="text-sm mt-1 mb-0">
+              <strong>Explanation:</strong> @card.Explanation
+            </p>
+          }
+        </div>
+      }
+      else
+      {
+        <h2 class="m-0 mb-3">@card.Title</h2>
+        <div>
+          @Html.Raw(AiNarrativeFormatter.ToSafeHtml(card.ContentMarkdown))
+        </div>
+      }
+    </div>
+  }
+
+  <!-- NAVIGATION -->
+  <div class="deck-navigation">
+    <button type="button" class="btn" id="btnPrev" @(initialIndex == 1 ? "disabled" : "")>Previous card</button>
+    <div class="row" style="gap: var(--space-2);">
+      <button type="button" class="btn btn--primary" id="btnNext" style="@(initialIndex == totalCards ? "display: none;" : "")">Next card</button>
+      <a href="@finishUrl" class="btn btn--success" id="btnFinish" style="@(initialIndex == totalCards && Model.Progress.IsCompleted ? "" : "display: none;")">Finish lesson & return to path</a>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+<script>
+  (function () {
+    var lessonId = @Model.Lesson.LessonId;
+    var currentCard = @initialIndex;
+    var totalCards = @totalCards;
+    var isLessonCompleted = @(Model.Progress.IsCompleted ? "true" : "false");
+    var microCheckAnswered = isLessonCompleted;
+
+    var btnPrev = document.getElementById("btnPrev");
+    var btnNext = document.getElementById("btnNext");
+    var btnFinish = document.getElementById("btnFinish");
+    var cardTypeBadge = document.getElementById("cardTypeBadge");
+    var cardCounter = document.getElementById("cardCounter");
+    var deckProgressLabel = document.getElementById("deckProgressLabel");
+    var antiForgeryToken = document.querySelector('input[name="__RequestVerificationToken"]')?.value || "";
+
+    function recordCardProgression(cardId) {
+      if (!cardId) return;
+      fetch('/lessons/' + lessonId + '/cards/' + cardId + '/view', {
+        method: 'POST',
+        headers: {
+          'RequestVerificationToken': antiForgeryToken,
+          'Content-Type': 'application/json'
+        }
+      }).catch(function (err) {
+        console.warn('Failed to record card progression', err);
+      });
+    }
+
+    function updateCardView() {
+      for (var i = 1; i <= totalCards; i++) {
+        var el = document.getElementById("card-" + i);
+        if (el) el.style.display = (i === currentCard) ? "block" : "none";
+      }
+
+      btnPrev.disabled = (currentCard === 1);
+
+      if (currentCard === totalCards) {
+        btnNext.style.display = "none";
+        btnFinish.style.display = microCheckAnswered ? "inline-block" : "none";
+      } else {
+        btnNext.style.display = "inline-block";
+        btnFinish.style.display = "none";
+      }
+
+      var currentEl = document.getElementById("card-" + currentCard);
+      var typeText = currentEl ? (currentEl.getAttribute("data-card-type") || "CARD").toUpperCase() : "CARD";
+      cardTypeBadge.textContent = "CARD " + currentCard + ": " + typeText;
+      cardCounter.textContent = currentCard + " / " + totalCards + " cards";
+      deckProgressLabel.textContent = "Card " + currentCard + " of " + totalCards;
+    }
+
+    btnPrev.addEventListener("click", function () {
+      if (currentCard > 1) {
+        currentCard--;
+        updateCardView();
+      }
+    });
+
+    btnNext.addEventListener("click", function () {
+      if (currentCard < totalCards) {
+        currentCard++;
+        updateCardView();
+
+        var nextEl = document.getElementById("card-" + currentCard);
+        if (nextEl) {
+          var cardId = nextEl.getAttribute("data-card-id");
+          recordCardProgression(cardId);
+        }
+      }
+    });
+
+    // Micro-check interactions
+    var btnCheckAnswer = document.getElementById("btnCheckAnswer");
+    var explanation = document.getElementById("microCheckExplanation");
+    var options = document.querySelectorAll(".micro-check-option");
+
+    options.forEach(function (opt) {
+      opt.addEventListener("click", function () {
+        if (microCheckAnswered && !isLessonCompleted) return;
+        options.forEach(function (o) { o.classList.remove("is-selected"); });
+        opt.classList.add("is-selected");
+        var radio = opt.querySelector('input[type="radio"]');
+        if (radio) radio.checked = true;
+      });
+    });
+
+    if (btnCheckAnswer) {
+      btnCheckAnswer.addEventListener("click", function () {
+        var selected = document.querySelector('input[name="microCheck"]:checked');
+        if (!selected) {
+          alert("Please select an option first.");
+          return;
+        }
+
+        var microCheckCard = document.querySelector('[data-card-type="micro_check"]');
+        var correctOption = microCheckCard ? microCheckCard.getAttribute("data-correct") : "B";
+
+        microCheckAnswered = true;
+        document.querySelectorAll('input[name="microCheck"]').forEach(function (input) {
+          input.disabled = true;
+        });
+        btnCheckAnswer.disabled = true;
+
+        options.forEach(function (opt) {
+          var val = opt.getAttribute("data-opt");
+          if (val === correctOption) {
+            opt.classList.add("is-correct");
+          } else if (opt.classList.contains("is-selected")) {
+            opt.classList.add("is-wrong");
+          }
+        });
+
+        if (explanation) explanation.style.display = "block";
+        if (btnFinish) btnFinish.style.display = "inline-block";
+      });
+    }
+
+    updateCardView();
+  })();
+</script>
+}
