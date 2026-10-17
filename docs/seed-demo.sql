@@ -1343,20 +1343,74 @@ DECLARE @secP6 INT = (SELECT SectionId FROM Sections WHERE CertId = @toeicCert A
 DECLARE @speaExam INT = (SELECT ExamId FROM Exams WHERE CertId = @toeicCert AND Name = N'ETS TOEIC Speaking Practice Exam 1');
 DECLARE @catTense INT = (SELECT CategoryId FROM QuestionCategories WHERE CertId = @toeicCert AND Code = 'grammar_tense');
 
+-- Seed Guided Learning Lesson: Present Continuous Tense
+IF NOT EXISTS (SELECT 1 FROM Lessons WHERE CertId = @toeicCert AND Title = N'Present Continuous Tense')
+BEGIN
+  INSERT INTO Lessons (CertId, SkillId, CategoryId, Title, Summary, EstimatedMinutes, DisplayOrder)
+  VALUES (@toeicCert, @toeicRead, @catTense, N'Present Continuous Tense',
+          N'Master the present continuous tense for temporary and ongoing actions in TOEIC Part 5.', 5, 1);
+  DECLARE @lessonId INT = SCOPE_IDENTITY();
+
+  INSERT INTO LessonCards (LessonId, CertId, CardType, Title, ContentMarkdown, DisplayOrder) VALUES
+    (@lessonId, @toeicCert, 'rule', N'Rule: Present Continuous for Ongoing Actions',
+     N'The present continuous describes actions happening right now, at the moment of speaking, or around the current time period.' + CHAR(10) + CHAR(10) +
+     N'**Formula:** `Subject + is / am / are + Verb-ing`' + CHAR(10) + CHAR(10) +
+     N'Signals in TOEIC Part 5: **now, currently, presently, at the moment, this week**.', 0),
+
+    (@lessonId, @toeicCert, 'pitfall', N'Common Pitfalls & Exam Traps',
+     N'Watch out for stative verbs that NEVER appear in the continuous aspect on the TOEIC:' + CHAR(10) + CHAR(10) +
+     N'- **TRAP 1: Stative Verbs of Perception & Cognition**' + CHAR(10) +
+     N'WRONG: "He is knowing the answer." → CORRECT: "He knows the answer." (know, understand, believe, remember).' + CHAR(10) + CHAR(10) +
+     N'- **TRAP 2: Possession Verbs**' + CHAR(10) +
+     N'WRONG: "The firm is owning five branches." → CORRECT: "The firm owns five branches." (own, have, belong).' + CHAR(10) + CHAR(10) +
+     N'- **TRAP 3: Missing Auxiliary ''Be''**' + CHAR(10) +
+     N'WRONG: "The committee reviewing the draft now." → CORRECT: "The committee is reviewing the draft now."', 1),
+
+    (@lessonId, @toeicCert, 'example', N'Recognizing the Aspect in Context',
+     N'**Part 5 Worked Question:**' + CHAR(10) + CHAR(10) +
+     N'"Mr. Tanaka currently ------- the quarterly budget with regional supervisors in Osaka."' + CHAR(10) + CHAR(10) +
+     N'- **(A)** reviews — *Wrong: simple present does not match temporary ''currently'' modifier*' + CHAR(10) +
+     N'- **(B)** is reviewing — **Correct: singular subject ''Mr. Tanaka'' + ''currently'' signals action in progress**' + CHAR(10) +
+     N'- **(C)** reviewed — *Wrong: past tense conflicts with ongoing signal*' + CHAR(10) +
+     N'- **(D)** reviewing — *Wrong: missing auxiliary ''is''*' + CHAR(10) + CHAR(10) +
+     N'**Key Takeaway:** Whenever you spot **currently** or **at present** in Part 5, test for `is/are + -ing` first.', 2),
+
+    (@lessonId, @toeicCert, 'micro_check', N'Check Your Understanding',
+     N'Choose the correct option to complete the sentence.', 3);
+
+  DECLARE @mcCardId INT = (SELECT CardId FROM LessonCards WHERE LessonId = @lessonId AND CardType = 'micro_check');
+  UPDATE LessonCards SET
+    QuestionPrompt = N'The marketing team ------- new client proposals at the moment, so please do not disturb them.',
+    OptionA = N'evaluates',
+    OptionB = N'is evaluating',
+    OptionC = N'evaluated',
+    OptionD = N'evaluating',
+    CorrectOption = 'B',
+    Explanation = N'The time adverbial "at the moment" indicates an action in progress right now, requiring the present continuous. The collective subject "team" takes the singular verb "is evaluating".',
+    Rationale = N'(A) is simple present, (C) is simple past, and (D) is a participle lacking the required auxiliary "is".'
+  WHERE CardId = @mcCardId;
+END;
+
 IF NOT EXISTS (SELECT 1 FROM PathTemplates WHERE CertId = @toeicCert AND FromBandCode = 'B1' AND ToBandCode = 'B2')
 BEGIN
   INSERT INTO PathTemplates (CertId, FromBandCode, ToBandCode, Name)
   VALUES (@toeicCert, 'B1', 'B2', N'TOEIC B1 → B2 Intermediate to Upper-Intermediate Path');
   DECLARE @tplId INT = SCOPE_IDENTITY();
+  DECLARE @presentContinuousLesson INT = (SELECT TOP 1 LessonId FROM Lessons WHERE CertId = @toeicCert AND Title = N'Present Continuous Tense');
 
   -- Module 1: Incomplete Sentences Grammar Mastery
   INSERT INTO PathModules (TemplateId, SkillId, CertId, DisplayOrder, Title, GroupName, Description, EstimatedMinutes)
   VALUES (@tplId, @toeicRead, @toeicCert, 1, N'Module 1: Incomplete Sentences Grammar Mastery',
           N'Grammar foundations · modules 1–2',
-          N'Master high-frequency Part 5 patterns: verb tenses, voice, and agreement.', 20);
+          N'Master high-frequency Part 5 patterns: verb tenses, voice, and agreement.', 25);
   DECLARE @m1 INT = SCOPE_IDENTITY();
+  IF @presentContinuousLesson IS NOT NULL
+  BEGIN
+    INSERT INTO PathModuleItems (ModuleId, CertId, TemplateId, ItemType, RefLessonId, DisplayOrder)
+    VALUES (@m1, @toeicCert, @tplId, 'lesson', @presentContinuousLesson, 1);
+  END;
   INSERT INTO PathModuleItems (ModuleId, CertId, TemplateId, ItemType, RefSectionId, QuestionCount, DisplayOrder)
-  VALUES (@m1, @toeicCert, @tplId, 'practice_section', @secP5, 20, 1);
+  VALUES (@m1, @toeicCert, @tplId, 'practice_section', @secP5, 20, 2);
   INSERT INTO PathModuleTopics (ModuleId, Title, CategoryId, QuestionCount, DisplayOrder) VALUES
     (@m1, N'Subject-verb agreement and tenses', @catTense, 10, 1);
 
@@ -1407,7 +1461,7 @@ BEGIN
   VALUES (@learner, @toeicCert, @tplB1B2, 'B1', @placeId, 'active', DATEADD(DAY, -14, SYSDATETIMEOFFSET()));
   DECLARE @lpId INT = SCOPE_IDENTITY();
 
-  -- LearnerPathSteps: Module 1 done (85%), Module 2 in_progress (80% on item 1, in_progress on item 2), Module 3 available, Module 4 locked
+  -- LearnerPathSteps: Module 1 Lesson done (100%), Module 1 Practice done (85%), Module 2 Practice done (80%), Module 2 AI Task in_progress, Module 3 available, Module 4 locked
   ;WITH NumberedItems AS (
     SELECT i.ItemId, i.TemplateId,
            ROW_NUMBER() OVER (ORDER BY m.DisplayOrder, i.DisplayOrder) AS StepOrder
@@ -1420,23 +1474,35 @@ BEGIN
          CASE StepOrder
            WHEN 1 THEN 'done'
            WHEN 2 THEN 'done'
-           WHEN 3 THEN 'in_progress'
-           WHEN 4 THEN 'available'
+           WHEN 3 THEN 'done'
+           WHEN 4 THEN 'in_progress'
+           WHEN 5 THEN 'available'
            ELSE 'locked'
          END,
          CASE StepOrder
-           WHEN 1 THEN 85.00
-           WHEN 2 THEN 80.00
+           WHEN 1 THEN 100.00
+           WHEN 2 THEN 85.00
+           WHEN 3 THEN 80.00
            ELSE NULL
          END,
-         CASE WHEN StepOrder IN (1, 2, 3) THEN DATEADD(DAY, -12, SYSDATETIMEOFFSET()) ELSE NULL END,
+         CASE WHEN StepOrder IN (1, 2, 3, 4) THEN DATEADD(DAY, -12, SYSDATETIMEOFFSET()) ELSE NULL END,
          CASE
-           WHEN StepOrder = 1 THEN DATEADD(DAY, -10, SYSDATETIMEOFFSET())
-           WHEN StepOrder = 2 THEN DATEADD(DAY, -5, SYSDATETIMEOFFSET())
+           WHEN StepOrder = 1 THEN DATEADD(DAY, -11, SYSDATETIMEOFFSET())
+           WHEN StepOrder = 2 THEN DATEADD(DAY, -10, SYSDATETIMEOFFSET())
+           WHEN StepOrder = 3 THEN DATEADD(DAY, -5, SYSDATETIMEOFFSET())
            ELSE NULL
          END
   FROM NumberedItems
   ORDER BY StepOrder;
+
+  -- Seed LearnerLessonProgress for learner@demo.local
+  DECLARE @demoLesson INT = (SELECT TOP 1 LessonId FROM Lessons WHERE CertId = @toeicCert AND Title = N'Present Continuous Tense');
+  IF @demoLesson IS NOT NULL AND NOT EXISTS (SELECT 1 FROM LearnerLessonProgress WHERE UserId = @learner AND LessonId = @demoLesson)
+  BEGIN
+    DECLARE @lastCard INT = (SELECT TOP 1 CardId FROM LessonCards WHERE LessonId = @demoLesson ORDER BY DisplayOrder DESC);
+    INSERT INTO LearnerLessonProgress (UserId, LessonId, CertId, LastViewedCardId, CardsCompleted, TotalCards, IsCompleted, FirstOpenedAt, CompletedAt, UpdatedAt)
+    VALUES (@learner, @demoLesson, @toeicCert, @lastCard, 4, 4, 1, DATEADD(DAY, -12, SYSDATETIMEOFFSET()), DATEADD(DAY, -11, SYSDATETIMEOFFSET()), DATEADD(DAY, -11, SYSDATETIMEOFFSET()));
+  END;
 
   -- Premium Path unlock transaction (-5 credits)
   INSERT INTO CreditTransactions (UserId, Reason, Delta, LearnerPathId, CreatedAt)
