@@ -544,5 +544,70 @@ public static class AdminEndpoints
                 return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
             }
         });
+
+        admin.MapPost("/exams/{examId:int}/clusters", async (
+            int examId,
+            CreateExamClusterRequest request,
+            IAdminExamService exams,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var cluster = await exams.CreateExamClusterAsync(examId, request, cancellationToken);
+                return Results.Created($"/api/admin/exams/{examId}/groups/{cluster.GroupId}", cluster);
+            }
+            catch (AdminExamException ex)
+            {
+                return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
+            }
+        });
+
+        admin.MapPost("/exams/{examId:int}/media", async Task<IResult> (
+            int examId,
+            HttpRequest request,
+            IFileStore fileStore,
+            CancellationToken cancellationToken) =>
+        {
+            if (!request.HasFormContentType)
+            {
+                return Problem(StatusCodes.Status400BadRequest, "Expected multipart/form-data content.", ApiError.Codes.Validation);
+            }
+
+            var form = await request.ReadFormAsync(cancellationToken);
+            var file = form.Files.GetFile("file");
+            if (file is null || file.Length == 0)
+            {
+                return Problem(StatusCodes.Status400BadRequest, "Choose a file to upload.", ApiError.Codes.Validation);
+            }
+
+            var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+            var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".jpg", ".jpeg", ".png", ".svg", ".webp", ".mp3", ".wav", ".ogg", ".m4a" };
+            if (!allowed.Contains(ext))
+            {
+                return Problem(StatusCodes.Status400BadRequest, $"File format '{ext}' is not supported.", ApiError.Codes.Validation);
+            }
+
+            await using var stream = file.OpenReadStream();
+            var relativePath = await fileStore.SaveExamMediaAsync(examId, stream, ext, cancellationToken);
+            var fileName = Path.GetFileName(relativePath);
+            var result = new AdminExamMediaUploadResultDto(
+                Url: $"/media/exams/{examId}/{fileName}",
+                Path: relativePath,
+                FileName: fileName);
+
+            return Results.Ok(result);
+        }).DisableAntiforgery();
+
+        app.MapGet("/api/media/exams/{examId:int}/{fileName}", async Task<IResult> (
+            int examId,
+            string fileName,
+            IFileStore fileStore,
+            CancellationToken cancellationToken) =>
+        {
+            var info = await fileStore.GetMediaAsync($"exams/{examId}/{fileName}", cancellationToken);
+            return info is null
+                ? Results.NotFound()
+                : Results.Stream(info.Stream, info.ContentType, enableRangeProcessing: true);
+        }).RequireAuthorization();
     }
 }

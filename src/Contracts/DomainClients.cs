@@ -273,6 +273,8 @@ public interface IMediaClient
 {
     Task<(Stream Stream, string ContentType)> GetImportMediaAsync(int batchId, string fileName, CancellationToken cancellationToken = default);
     Task<(Stream Stream, string ContentType)> GetImportMediaAsync(int batchId, string fileName, string bearerToken, CancellationToken cancellationToken = default) => GetImportMediaAsync(batchId, fileName, cancellationToken);
+    Task<(Stream Stream, string ContentType)> GetExamMediaAsync(int examId, string fileName, CancellationToken cancellationToken = default);
+    Task<(Stream Stream, string ContentType)> GetExamMediaAsync(int examId, string fileName, string bearerToken, CancellationToken cancellationToken = default) => GetExamMediaAsync(examId, fileName, cancellationToken);
 }
 
 public interface IAdminPackagesClient
@@ -401,6 +403,10 @@ public interface IAdminExamsClient
     Task<ExamAuditResultDto> GetAdminExamAuditAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) => GetAdminExamAuditAsync(examId, cancellationToken);
     Task ReorderAdminSectionItemsAsync(int examId, ReorderSectionItemsRequest request, CancellationToken cancellationToken = default);
     Task ReorderAdminSectionItemsAsync(int examId, ReorderSectionItemsRequest request, string bearerToken, CancellationToken cancellationToken = default) => ReorderAdminSectionItemsAsync(examId, request, cancellationToken);
+    Task<AdminQuestionGroupDto> CreateAdminExamClusterAsync(int examId, CreateExamClusterRequest request, CancellationToken cancellationToken = default);
+    Task<AdminQuestionGroupDto> CreateAdminExamClusterAsync(int examId, CreateExamClusterRequest request, string bearerToken, CancellationToken cancellationToken = default) => CreateAdminExamClusterAsync(examId, request, cancellationToken);
+    Task<AdminExamMediaUploadResultDto> UploadAdminExamMediaAsync(int examId, Stream stream, string fileName, CancellationToken cancellationToken = default);
+    Task<AdminExamMediaUploadResultDto> UploadAdminExamMediaAsync(int examId, Stream stream, string fileName, string bearerToken, CancellationToken cancellationToken = default) => UploadAdminExamMediaAsync(examId, stream, fileName, cancellationToken);
 }
 
 public interface IAdminImportsClient

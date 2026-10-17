@@ -467,6 +467,56 @@ public sealed class AdminExamsControllerTests
         Assert.True(audit.CanPublish);
     }
 
+    [Fact]
+    public async Task CreateCluster_CallsApi_ReturnsSuccessJson()
+    {
+        var api = new TestApiClient();
+        var controller = CreateController(api);
+
+        var request = new CreateExamClusterRequest(1, QuestionCount: 3);
+        var result = await controller.CreateCluster(5, request, CancellationToken.None);
+
+        var json = Assert.IsType<JsonResult>(result);
+        Assert.NotNull(json.Value);
+    }
+
+    [Fact]
+    public async Task UploadMedia_ValidFile_ReturnsMediaUrlJson()
+    {
+        var api = new TestApiClient();
+        var controller = CreateController(api);
+
+        var file = new FormFile(new System.IO.MemoryStream(System.Text.Encoding.UTF8.GetBytes("fake audio data")), 0, 15, "file", "sample.mp3");
+        var result = await controller.UploadMedia(5, file, CancellationToken.None);
+
+        var json = Assert.IsType<JsonResult>(result);
+        Assert.NotNull(json.Value);
+    }
+
+    [Fact]
+    public async Task DeleteStudioGroup_CallsApi_ReturnsSuccess()
+    {
+        var api = new TestApiClient();
+        var controller = CreateController(api);
+
+        var result = await controller.DeleteStudioGroup(5, 1, CancellationToken.None);
+
+        var json = Assert.IsType<JsonResult>(result);
+        Assert.NotNull(json.Value);
+    }
+
+    [Fact]
+    public async Task DeleteStudioQuestion_CallsApi_ReturnsSuccess()
+    {
+        var api = new TestApiClient();
+        var controller = CreateController(api);
+
+        var result = await controller.DeleteStudioQuestion(5, 101, CancellationToken.None);
+
+        var json = Assert.IsType<JsonResult>(result);
+        Assert.NotNull(json.Value);
+    }
+
     private sealed class EmptyTempDataProvider : ITempDataProvider
     {
         public IDictionary<string, object> LoadTempData(HttpContext context) => new Dictionary<string, object>();
@@ -614,6 +664,15 @@ public sealed class AdminExamsControllerTests
 
         public Task ReorderAdminSectionItemsAsync(int examId, ReorderSectionItemsRequest request, CancellationToken cancellationToken = default) =>
             Task.CompletedTask;
+
+        public Task<AdminQuestionGroupDto> CreateAdminExamClusterAsync(int examId, CreateExamClusterRequest request, CancellationToken cancellationToken = default) =>
+            Task.FromResult(new AdminQuestionGroupDto(
+                999, examId, 1, request.SectionId, "P3", "Conversations", ModalityDto.Listening,
+                request.Passage, request.AudioPath, request.AudioStartMs, request.AudioEndMs, null, null, request.Transcript,
+                null, null, 1, []));
+
+        public Task<AdminExamMediaUploadResultDto> UploadAdminExamMediaAsync(int examId, Stream stream, string fileName, CancellationToken cancellationToken = default) =>
+            Task.FromResult(new AdminExamMediaUploadResultDto($"/media/exams/{examId}/{fileName}", $"exams/{examId}/{fileName}", fileName));
 
         private static ExamStudioDetailDto SampleStudioDetail(int examId) =>
             new ExamStudioDetailDto(

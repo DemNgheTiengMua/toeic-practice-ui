@@ -68,6 +68,15 @@ internal sealed class RecordingFileStore : IFileStore
         return Task.FromResult(path);
     }
 
+    public Task<string> SaveExamMediaAsync(int examId, Stream stream, string fileExtension, CancellationToken cancellationToken = default)
+    {
+        var path = $"exams/{examId}/{Guid.NewGuid():N}{fileExtension}";
+        using var buffer = new MemoryStream();
+        stream.CopyTo(buffer);
+        Files[path] = buffer.ToArray();
+        return Task.FromResult(path);
+    }
+
     public Task<string> SaveAudioAsync(int attemptId, int questionId, Stream stream, string contentType, string fileExtension, CancellationToken cancellationToken = default) =>
         throw new NotSupportedException();
 

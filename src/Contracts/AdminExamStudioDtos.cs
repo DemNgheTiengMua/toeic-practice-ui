@@ -64,6 +64,20 @@ public sealed record ReorderSectionItemsRequest(
     int SectionId,
     IReadOnlyList<ReorderSectionItemEntry> Items);
 
+public sealed record CreateExamClusterRequest(
+    int SectionId,
+    string? Passage = null,
+    string? Transcript = null,
+    string? AudioPath = null,
+    int? AudioStartMs = null,
+    int? AudioEndMs = null,
+    int QuestionCount = 3);
+
+public sealed record AdminExamMediaUploadResultDto(
+    string Url,
+    string Path,
+    string FileName);
+
 public sealed record ExamAuditIssueDto(
     string Code,
     string Severity, // "error" | "warning"

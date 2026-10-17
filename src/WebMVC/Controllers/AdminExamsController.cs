@@ -567,6 +567,36 @@ public sealed class AdminExamsController(
         }
     }
 
+    [HttpDelete("{id:int}/studio/group/{groupId:int}")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteStudioGroup(int id, int groupId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await api.DeleteAdminQuestionGroupAsync(id, groupId, cancellationToken);
+            return Json(new { success = true });
+        }
+        catch (ApiException ex)
+        {
+            return StatusCode(ex.Status, new { message = ex.Detail ?? ex.Message, code = ex.Code });
+        }
+    }
+
+    [HttpDelete("{id:int}/studio/question/{questionId:int}")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteStudioQuestion(int id, int questionId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await api.DeleteAdminQuestionAsync(questionId, cancellationToken);
+            return Json(new { success = true });
+        }
+        catch (ApiException ex)
+        {
+            return StatusCode(ex.Status, new { message = ex.Detail ?? ex.Message, code = ex.Code });
+        }
+    }
+
     [HttpPut("{id:int}/studio/meta")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> AutosaveMeta(int id, [FromBody] UpdateAdminExamRequest request, CancellationToken cancellationToken = default)
@@ -578,6 +608,44 @@ public sealed class AdminExamsController(
         }
         catch (ApiException ex)
         {
+            return StatusCode(ex.Status, new { message = ex.Detail ?? ex.Message, code = ex.Code });
+        }
+    }
+
+    [HttpPost("{id:int}/media")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UploadMedia(int id, IFormFile? file, CancellationToken cancellationToken = default)
+    {
+        if (file == null || file.Length == 0)
+        {
+            return BadRequest(new { message = "Choose a file to upload." });
+        }
+
+        try
+        {
+            await using var stream = file.OpenReadStream();
+            var result = await api.UploadAdminExamMediaAsync(id, stream, file.FileName, cancellationToken);
+            return Json(new { success = true, url = result.Url, path = result.Path, fileName = result.FileName });
+        }
+        catch (ApiException ex)
+        {
+            logger.LogWarning(ex, "Failed to upload media for exam {ExamId}", id);
+            return StatusCode(ex.Status, new { message = ex.Detail ?? ex.Message, code = ex.Code });
+        }
+    }
+
+    [HttpPost("{id:int}/clusters")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CreateCluster(int id, [FromBody] CreateExamClusterRequest request, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var cluster = await api.CreateAdminExamClusterAsync(id, request, cancellationToken);
+            return Json(new { success = true, cluster });
+        }
+        catch (ApiException ex)
+        {
+            logger.LogWarning(ex, "Failed to create cluster for exam {ExamId}", id);
             return StatusCode(ex.Status, new { message = ex.Detail ?? ex.Message, code = ex.Code });
         }
     }

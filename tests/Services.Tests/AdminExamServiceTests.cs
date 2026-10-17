@@ -821,4 +821,63 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         Assert.Equal(q1.QuestionId, questions[1].QuestionId);
         Assert.Equal(2, questions[1].DisplayOrder);
     }
+
+    [Fact]
+    public async Task CreateExamClusterAsync_P3Conversation_CreatesGroupAnd3ChildQuestions()
+    {
+        var (certId, secL, _, _, _) = await SeedCertificateWithSectionsAsync($"CLUSTER_{Guid.NewGuid():N}"[..18]);
+        var service = CreateService();
+
+        var exam = await service.CreateExamAsync(new CreateAdminExamRequest(
+            certId,
+            $"Cluster Test {Guid.NewGuid():N}"[..25],
+            60,
+            ExamPurposeDto.Mock));
+
+        var cluster = await service.CreateExamClusterAsync(exam.ExamId, new CreateExamClusterRequest(
+            SectionId: secL,
+            Passage: null,
+            Transcript: "M: Hello Sarah\nW: Hi Bob",
+            AudioPath: "/audio/p3-test.mp3",
+            AudioStartMs: 1000,
+            AudioEndMs: 35000,
+            QuestionCount: 3));
+
+        Assert.NotNull(cluster);
+        Assert.Equal("M: Hello Sarah\nW: Hi Bob", cluster.Transcript);
+        Assert.Equal("/audio/p3-test.mp3", cluster.AudioPath);
+        Assert.Equal(1000, cluster.AudioStartMs);
+        Assert.Equal(35000, cluster.AudioEndMs);
+        Assert.Equal(3, cluster.Questions.Count);
+        foreach (var q in cluster.Questions)
+        {
+            Assert.Equal(4, q.Options.Count);
+            Assert.Contains(q.Options, o => o.Label == "A" && o.IsCorrect);
+        }
+    }
+
+    [Fact]
+    public async Task CreateExamClusterAsync_SpeakingWriting_SetsFreeResponseAndTimers()
+    {
+        var (certId, _, _, secS, secW) = await SeedCertificateWithSectionsAsync($"SW_CLUS_{Guid.NewGuid():N}"[..18]);
+        var service = CreateService();
+
+        var exam = await service.CreateExamAsync(new CreateAdminExamRequest(
+            certId,
+            $"Speaking Cluster {Guid.NewGuid():N}"[..25],
+            30,
+            ExamPurposeDto.SpeakingPractice));
+
+        var cluster = await service.CreateExamClusterAsync(exam.ExamId, new CreateExamClusterRequest(
+            SectionId: secS,
+            QuestionCount: 1));
+
+        Assert.NotNull(cluster);
+        Assert.Single(cluster.Questions);
+        var q = cluster.Questions[0];
+        Assert.Equal(QuestionTypeDto.FreeResponse, q.QuestionType);
+        Assert.Empty(q.Options);
+        Assert.Equal(15, q.PrepSeconds);
+        Assert.Equal(45, q.ResponseSeconds);
+    }
 }

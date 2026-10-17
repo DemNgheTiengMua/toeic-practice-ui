@@ -49,6 +49,7 @@ public interface IAdminExamService
     Task<ExamStudioDetailDto> GetExamStudioAsync(int examId, CancellationToken cancellationToken = default);
     Task<ExamAuditResultDto> AuditExamPublishReadinessAsync(int examId, CancellationToken cancellationToken = default);
     Task ReorderSectionItemsAsync(int examId, ReorderSectionItemsRequest request, CancellationToken cancellationToken = default);
+    Task<AdminQuestionGroupDto> CreateExamClusterAsync(int examId, CreateExamClusterRequest request, CancellationToken cancellationToken = default);
 }
 
 public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock) : IAdminExamService
@@ -1930,6 +1931,156 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock) 
         exam.UpdatedAt = clock.GetUtcNow();
         await db.SaveChangesAsync(cancellationToken);
         await tx.CommitAsync(cancellationToken);
+    }
+
+    public async Task<AdminQuestionGroupDto> CreateExamClusterAsync(int examId, CreateExamClusterRequest request, CancellationToken cancellationToken = default)
+    {
+        var exam = await db.Exams.FirstOrDefaultAsync(e => e.ExamId == examId && !e.IsDeleted, cancellationToken);
+        if (exam == null) throw new ExamNotFoundException(examId);
+
+        var section = await db.Sections.Include(s => s.Skill).FirstOrDefaultAsync(s => s.SectionId == request.SectionId && s.CertId == exam.CertId, cancellationToken);
+        if (section == null)
+        {
+            throw new AdminExamException(ApiError.Codes.Validation, $"Section with id {request.SectionId} not found for certificate {exam.CertId}.");
+        }
+
+        var maxOrder = await db.QuestionGroups
+            .Where(g => g.ExamId == examId && g.SectionId == request.SectionId)
+            .Select(g => (int?)g.DisplayOrder)
+            .MaxAsync(cancellationToken) ?? 0;
+
+        var qMaxOrder = await db.Questions
+            .Where(q => q.ExamId == examId && q.SectionId == request.SectionId)
+            .Select(q => (int?)q.DisplayOrder)
+            .MaxAsync(cancellationToken) ?? 0;
+
+        var isP2 = string.Equals(section.Code, "P2", StringComparison.OrdinalIgnoreCase);
+        var isP1 = string.Equals(section.Code, "P1", StringComparison.OrdinalIgnoreCase);
+        var isP6 = string.Equals(section.Code, "P6", StringComparison.OrdinalIgnoreCase);
+        var isFreeResponse = section.Modality is "speaking" or "writing";
+
+        var group = new QuestionGroup
+        {
+            ExamId = examId,
+            CertId = exam.CertId,
+            SectionId = request.SectionId,
+            Passage = Normalize(request.Passage),
+            Transcript = Normalize(request.Transcript),
+            AudioPath = Normalize(request.AudioPath),
+            AudioStartMs = request.AudioStartMs,
+            AudioEndMs = request.AudioEndMs,
+            DisplayOrder = maxOrder + 1
+        };
+
+        db.QuestionGroups.Add(group);
+        await db.SaveChangesAsync(cancellationToken);
+
+        var count = Math.Clamp(request.QuestionCount, 1, 10);
+        var questions = new List<Question>();
+
+        for (var i = 0; i < count; i++)
+        {
+            var stem = isP2 ? "Mark your answer on your answer sheet."
+                : isP1 ? "Look at the photograph and choose the statement that best describes what you see in the image."
+                : isP6 ? $"Select the best word or phrase to complete blank [{i + 1}]."
+                : isFreeResponse ? "Respond to the prompt as instructed."
+                : $"Question {qMaxOrder + i + 1}";
+
+            var q = new Question
+            {
+                GroupId = group.GroupId,
+                ExamId = examId,
+                SectionId = request.SectionId,
+                SkillId = section.SkillId,
+                Stem = stem,
+                DifficultyLevel = 2,
+                QuestionType = isFreeResponse ? QuestionTypeDto.FreeResponse.ToCode() : QuestionTypeDto.Mcq.ToCode(),
+                Explanation = isP2 ? "Option A is the most appropriate response." : "Correct answer option A.",
+                PrepSeconds = isFreeResponse ? (section.Modality == "speaking" ? 15 : 60) : null,
+                ResponseSeconds = isFreeResponse ? (section.Modality == "speaking" ? 45 : 1800) : null,
+                MinWords = section.Modality == "writing" ? 150 : null,
+                MaxWords = section.Modality == "writing" ? 300 : null,
+                DisplayOrder = qMaxOrder + i + 1
+            };
+            db.Questions.Add(q);
+            questions.Add(q);
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+
+        var questionDtos = new List<AdminQuestionDto>();
+
+        foreach (var q in questions)
+        {
+            var optionsList = new List<AdminQuestionOptionDto>();
+            if (!isFreeResponse)
+            {
+                var optionLabels = isP2 ? new[] { "A", "B", "C" } : new[] { "A", "B", "C", "D" };
+                foreach (var lbl in optionLabels)
+                {
+                    var opt = new QuestionOption
+                    {
+                        QuestionId = q.QuestionId,
+                        QuestionType = q.QuestionType,
+                        Label = lbl,
+                        Text = $"Option {lbl}",
+                        IsCorrect = lbl == "A",
+                        Rationale = lbl == "A" ? "Correct response" : "Distractor response"
+                    };
+                    db.QuestionOptions.Add(opt);
+                    await db.SaveChangesAsync(cancellationToken);
+                    optionsList.Add(new AdminQuestionOptionDto(opt.OptionId, q.QuestionId, opt.Label, opt.Text, opt.IsCorrect, opt.Rationale));
+                }
+            }
+
+            questionDtos.Add(new AdminQuestionDto(
+                q.QuestionId,
+                group.GroupId,
+                examId,
+                request.SectionId,
+                section.Code,
+                section.Name,
+                section.SkillId,
+                section.Skill?.Code ?? "skill",
+                q.Stem,
+                q.DifficultyLevel,
+                EnumCodes.Parse<QuestionTypeDto>(q.QuestionType),
+                q.Explanation,
+                q.CategoryId,
+                null,
+                q.PrepSeconds,
+                q.ResponseSeconds,
+                q.MinWords,
+                q.MaxWords,
+                q.Hint,
+                q.DisplayOrder,
+                clock.GetUtcNow(),
+                optionsList,
+                HasAnswers: false));
+        }
+
+        exam.UpdatedAt = clock.GetUtcNow();
+        await db.SaveChangesAsync(cancellationToken);
+
+        return new AdminQuestionGroupDto(
+            group.GroupId,
+            group.ExamId,
+            group.CertId,
+            group.SectionId,
+            section.Code,
+            section.Name,
+            EnumCodes.Parse<ModalityDto>(section.Modality),
+            group.Passage,
+            group.AudioPath,
+            group.AudioStartMs,
+            group.AudioEndMs,
+            group.ImagePath,
+            group.ImageAlt,
+            group.Transcript,
+            group.PrepSeconds,
+            group.ResponseSeconds,
+            group.DisplayOrder,
+            questionDtos);
     }
 }
 

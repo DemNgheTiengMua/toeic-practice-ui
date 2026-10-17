@@ -967,6 +967,30 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
         await EnsureSuccessAsync(response, cancellationToken);
     }
 
+    public async Task<AdminQuestionGroupDto> CreateAdminExamClusterAsync(int examId, CreateExamClusterRequest request, string bearerToken, CancellationToken cancellationToken = default)
+    {
+        using var message = new HttpRequestMessage(HttpMethod.Post, $"api/admin/exams/{examId}/clusters");
+        AttachBearer(message, bearerToken);
+        message.Content = JsonContent.Create(request, options: Json);
+        using var response = await http.SendAsync(message, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+        return (await response.Content.ReadFromJsonAsync<AdminQuestionGroupDto>(Json, cancellationToken))!;
+    }
+
+    public async Task<AdminExamMediaUploadResultDto> UploadAdminExamMediaAsync(int examId, Stream stream, string fileName, string bearerToken, CancellationToken cancellationToken = default)
+    {
+        using var form = new MultipartFormDataContent();
+        var file = new StreamContent(stream);
+        file.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+        form.Add(file, "file", fileName);
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"api/admin/exams/{examId}/media") { Content = form };
+        AttachBearer(request, bearerToken);
+        using var response = await http.SendAsync(request, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+        return (await response.Content.ReadFromJsonAsync<AdminExamMediaUploadResultDto>(Json, cancellationToken))!;
+    }
+
     public Task<AdminImportBatchesDto> GetAdminImportBatchesAsync(int? certId, string bearerToken, CancellationToken cancellationToken = default) =>
         GetAuthorizedAsync<AdminImportBatchesDto>(certId is { } id ? $"api/admin/imports?certId={id}" : "api/admin/imports", bearerToken, cancellationToken);
 
@@ -994,6 +1018,26 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
         AttachBearer(request, bearerToken);
 
         // The response stays open for the caller to stream; it is disposed only if it is a failure.
+        var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        try
+        {
+            await EnsureSuccessAsync(response, cancellationToken);
+        }
+        catch
+        {
+            response.Dispose();
+            throw;
+        }
+
+        var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        return (stream, response.Content.Headers.ContentType?.MediaType ?? "application/octet-stream");
+    }
+
+    public async Task<(Stream Stream, string ContentType)> GetExamMediaAsync(int examId, string fileName, string bearerToken, CancellationToken cancellationToken = default)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"api/media/exams/{examId}/{Uri.EscapeDataString(fileName)}");
+        AttachBearer(request, bearerToken);
+
         var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
         try
         {
@@ -1316,6 +1360,9 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
     public Task<(Stream Stream, string ContentType)> GetImportMediaAsync(int batchId, string fileName, CancellationToken cancellationToken = default) =>
         GetImportMediaAsync(batchId, fileName, string.Empty, cancellationToken);
 
+    public Task<(Stream Stream, string ContentType)> GetExamMediaAsync(int examId, string fileName, CancellationToken cancellationToken = default) =>
+        GetExamMediaAsync(examId, fileName, string.Empty, cancellationToken);
+
     public Task<AdminPackagesSummaryDto> GetAdminPackagesAsync(CancellationToken cancellationToken = default) =>
         GetAdminPackagesAsync(string.Empty, cancellationToken);
 
@@ -1453,6 +1500,12 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
 
     public Task ReorderAdminSectionItemsAsync(int examId, ReorderSectionItemsRequest request, CancellationToken cancellationToken = default) =>
         ReorderAdminSectionItemsAsync(examId, request, string.Empty, cancellationToken);
+
+    public Task<AdminQuestionGroupDto> CreateAdminExamClusterAsync(int examId, CreateExamClusterRequest request, CancellationToken cancellationToken = default) =>
+        CreateAdminExamClusterAsync(examId, request, string.Empty, cancellationToken);
+
+    public Task<AdminExamMediaUploadResultDto> UploadAdminExamMediaAsync(int examId, Stream stream, string fileName, CancellationToken cancellationToken = default) =>
+        UploadAdminExamMediaAsync(examId, stream, fileName, string.Empty, cancellationToken);
 
     public Task<AdminImportBatchesDto> GetAdminImportBatchesAsync(int? certId, CancellationToken cancellationToken = default) =>
         GetAdminImportBatchesAsync(certId, string.Empty, cancellationToken);
