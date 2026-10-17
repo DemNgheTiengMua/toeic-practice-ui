@@ -1,2 +1,152 @@
 @model Contracts.LearnerDashboardDto
-@* Upcoming Mentor Boarding Pass — populated in Ticket #43 *@
+@inject DateTimeFormatter Dates
+@{
+    var cert = Model.Certificate;
+    var booking = Model.UpcomingBooking;
+
+    string FormatCountdown(DateTimeOffset startAt)
+    {
+        var remaining = startAt - DateTimeOffset.UtcNow;
+        if (remaining.TotalMinutes <= 0)
+        {
+            return "STARTING NOW";
+        }
+        if (remaining.TotalDays >= 1)
+        {
+            var days = (int)Math.Floor(remaining.TotalDays);
+            var hours = remaining.Hours;
+            return $"IN {days}D {hours}H";
+        }
+        if (remaining.TotalHours >= 1)
+        {
+            var hours = (int)Math.Floor(remaining.TotalHours);
+            var mins = remaining.Minutes;
+            return $"IN {hours}H {mins}M";
+        }
+        var totalMins = Math.Max(1, (int)Math.Ceiling(remaining.TotalMinutes));
+        return $"IN {totalMins}M";
+    }
+}
+
+@if (booking is not null)
+{
+    var countdownText = FormatCountdown(booking.StartAt);
+    var focusText = string.IsNullOrWhiteSpace(booking.FocusArea)
+        ? $"General {cert.Code} coaching & diagnostic review"
+        : booking.FocusArea;
+
+    <section class="mentor-pass" id="dashboard-mentor-pass" aria-labelledby="mentor-pass-heading">
+      <header class="mentor-pass__header">
+        <h2 class="mentor-pass__title" id="mentor-pass-heading">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true" focusable="false">
+            <path d="M3 5h18v16H3z"></path>
+            <path d="M3 10h18"></path>
+            <path d="M8 3v4"></path>
+            <path d="M16 3v4"></path>
+          </svg>
+          <span>Mentor Boarding Pass · @cert.Code</span>
+        </h2>
+        <div class="row row--tight">
+          <span class="badge badge--warning font-mono"
+                id="mentor-pass-countdown"
+                data-start-utc="@booking.StartAt.ToString("O")">@countdownText</span>
+          <span class="badge badge--success font-mono">Confirmed</span>
+        </div>
+      </header>
+
+      <div class="mentor-pass__body">
+        <div class="mentor-pass__mentor">
+          <div class="mentor-pass__eyebrow">
+            <span>PASS #@booking.BookingId · 1-ON-1 HUMAN MENTOR</span>
+          </div>
+          <div class="mentor-pass__name">@booking.MentorName</div>
+          @if (!string.IsNullOrWhiteSpace(booking.MentorHeadline))
+          {
+            <div class="mentor-pass__headline">@booking.MentorHeadline</div>
+          }
+        </div>
+
+        <div class="mentor-pass__schedule" role="group" aria-label="Scheduled session time">
+          <div class="mentor-pass__cell">
+            <span class="mentor-pass__label">Session Date</span>
+            <strong class="mentor-pass__value">@Dates.FormatDate(booking.StartAt)</strong>
+            <span class="mentor-pass__sub">@Dates.Format(booking.StartAt)</span>
+          </div>
+          <div class="mentor-pass__cell">
+            <span class="mentor-pass__label">Time Window</span>
+            <strong class="mentor-pass__value">@Dates.FormatCustom(booking.StartAt, "HH:mm") – @Dates.FormatCustom(booking.EndAt, "HH:mm")</strong>
+            <span class="mentor-pass__sub">Ends @Dates.Format(booking.EndAt)</span>
+          </div>
+        </div>
+
+        <div class="mentor-pass__focus">
+          <span class="mentor-pass__label">Declared Focus Area</span>
+          <p class="mentor-pass__focus-text">@focusText</p>
+        </div>
+      </div>
+
+      <footer class="mentor-pass__footer">
+        <div class="row row--tight row--wrap">
+          @if (!string.IsNullOrWhiteSpace(booking.MeetLink))
+          {
+            <a class="btn btn--primary btn--sm" href="@booking.MeetLink" target="_blank" rel="noopener">Join meeting</a>
+          }
+          else
+          {
+            <span class="badge badge--muted font-mono">MEETING LINK PENDING</span>
+          }
+          <a class="btn btn--sm" href="/mentors/bookings/@booking.BookingId">View details</a>
+        </div>
+        <a class="btn btn--ghost btn--sm" href="/mentors/bookings">My bookings ›</a>
+      </footer>
+    </section>
+}
+else
+{
+    <section class="mentor-pass mentor-pass--invite" id="dashboard-mentor-pass" aria-labelledby="mentor-pass-heading">
+      <header class="mentor-pass__header">
+        <h2 class="mentor-pass__title" id="mentor-pass-heading">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true" focusable="false">
+            <path d="M3 4h18v12H10l-4 4v-4H3z"></path>
+          </svg>
+          <span>1-on-1 Mentor Session · @cert.Code</span>
+        </h2>
+        <span class="badge badge--muted font-mono">OPEN BOARDING</span>
+      </header>
+
+      <div class="mentor-pass__body">
+        <div class="mentor-pass__eyebrow">HUMAN MENTOR COACHING · @cert.Name</div>
+        <h3 class="mentor-pass__invite-title">Book a 1-on-1 @cert.Code Mentor Session</h3>
+        <p class="mentor-pass__invite-desc">
+          No upcoming confirmed booking for <strong>@cert.Code</strong>. Pair your self-paced practice with a live 1-on-1 session to review speaking fluency, writing rubric criteria, or stubborn question traps.
+        </p>
+
+        <ul class="mentor-pass__perks">
+          <li>
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true" focusable="false">
+              <path d="M4 12l5 5L20 6"></path>
+            </svg>
+            <span>Targeted coaching on your @cert.Code weakness radar &amp; rubric scores</span>
+          </li>
+          <li>
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true" focusable="false">
+              <path d="M4 12l5 5L20 6"></path>
+            </svg>
+            <span>Scheduled slots displayed in your configured local time zone</span>
+          </li>
+          <li>
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true" focusable="false">
+              <path d="M4 12l5 5L20 6"></path>
+            </svg>
+            <span>Full credit refund when cancelled 24+ hours before the slot</span>
+          </li>
+        </ul>
+      </div>
+
+      <footer class="mentor-pass__footer">
+        <a class="btn btn--primary btn--sm" href="/mentors">Find a mentor</a>
+        <a class="btn btn--sm" href="/mentors/bookings">My bookings</a>
+      </footer>
+    </section>
+}
+

@@ -204,141 +204,153 @@ else if (Model.Activation == "failed")
   </div>
 </section>
 
-<partial name="_DashboardMission" model="dashboard" />
-<partial name="_DashboardSimulator" model="dashboard" />
-<partial name="_AiInsightPanel" model='new AiInsightPanelViewModel("dashboard", (ViewBag.Insight as AiInsightDto)?.CertId ?? 0, ViewBag.Insight as AiInsightDto, dashboard.LatestRubricHighlight, dashboard.OverallAccuracyPercent)' />
-<partial name="_DashboardWeaknessRadar" model="dashboard" />
-<partial name="_DashboardMentorPass" model="dashboard" />
+<div class="dashboard-bento">
+  <partial name="_DashboardMission" model="dashboard" />
+  <partial name="_DashboardSimulator" model="dashboard" />
 
-@if (dashboard.IsNew)
-{
-  <div class="card"><div class="card__body">
-    <div class="state-block">
-      <div class="state-block__icon" aria-hidden="true">START</div>
-      <h2 class="state-block__title">Start your @cert.Code journey</h2>
-      <p class="state-block__desc">
-        You haven't practised or sat an exam for @cert.Name yet. Your scores and recent activity
-        for @cert.Code will show here once you do.
-      </p>
-      <div class="row row--center row--loose row--wrap">
-        <a class="btn btn--primary btn--lg" href="/certificates#cert-@cert.Code.ToLowerInvariant()">See what @cert.Code tests</a>
-      </div>
-    </div>
-  </div></div>
-
-  <div class="card">
-    <div class="card__header"><strong>What's next?</strong></div>
-    <div class="card__body stack">
-      <div>
-        <strong>1. Take a placement test (free)</strong>
-        <p class="text-sm text-muted no-margin mt-1">Find your current level and get a personalised learning path.</p>
-      </div>
-      <div>
-        <strong><a href="/practice">2. Practise by section (free)</a></strong>
-        <p class="text-sm text-muted no-margin mt-1">Drill one listening or reading section with immediate feedback.</p>
-      </div>
-      <div>
-        <strong>3. Take mock exams (paid with credits)</strong>
-        <p class="text-sm text-muted no-margin mt-1">Full timed tests with a scaled score and band.</p>
-      </div>
-    </div>
+  <div class="dashboard-bento__diagnostics">
+    <partial name="_AiInsightPanel" model='new AiInsightPanelViewModel("dashboard", (ViewBag.Insight as AiInsightDto)?.CertId ?? 0, ViewBag.Insight as AiInsightDto, dashboard.LatestRubricHighlight, dashboard.OverallAccuracyPercent)' />
+    <partial name="_DashboardWeaknessRadar" model="dashboard" />
   </div>
-}
-else
-{
-  <div class="card">
-    <div class="card__header"><strong>Recent exams</strong></div>
-    <div class="card__body">
-      @if (dashboard.RecentAttempts.Count == 0)
+
+  <div class="dashboard-bento__ledger-row mt-4">
+    <div class="dashboard-bento__ledger stack">
+      @if (dashboard.IsNew)
       {
-        <p class="text-muted no-margin">No exams yet for @cert.Code.</p>
+        <div class="card"><div class="card__body">
+          <div class="state-block">
+            <div class="state-block__icon" aria-hidden="true">START</div>
+            <h2 class="state-block__title">Start your @cert.Code journey</h2>
+            <p class="state-block__desc">
+              You haven't practised or sat an exam for @cert.Name yet. Your scores and recent activity
+              for @cert.Code will show here once you do.
+            </p>
+            <div class="row row--center row--loose row--wrap">
+              <a class="btn btn--primary btn--lg" href="/certificates#cert-@cert.Code.ToLowerInvariant()">See what @cert.Code tests</a>
+            </div>
+          </div>
+        </div></div>
+
+        <div class="card">
+          <div class="card__header"><strong>What's next?</strong></div>
+          <div class="card__body stack">
+            <div>
+              <strong>1. Take a placement test (free)</strong>
+              <p class="text-sm text-muted no-margin mt-1">Find your current level and get a personalised learning path.</p>
+            </div>
+            <div>
+              <strong><a href="/practice">2. Practise by section (free)</a></strong>
+              <p class="text-sm text-muted no-margin mt-1">Drill one listening or reading section with immediate feedback.</p>
+            </div>
+            <div>
+              <strong>3. Take mock exams (paid with credits)</strong>
+              <p class="text-sm text-muted no-margin mt-1">Full timed tests with a scaled score and band.</p>
+            </div>
+          </div>
+        </div>
       }
       else
       {
-        <table class="table table--striped">
-          <caption class="visually-hidden">Your most recent @cert.Code exams, newest first</caption>
-          <thead>
-            <tr><th scope="col">Test</th><th scope="col">Type</th><th scope="col">Date</th><th scope="col">Status</th><th scope="col">Total</th><th scope="col">Band</th></tr>
-          </thead>
-          <tbody>
-            @foreach (var a in dashboard.RecentAttempts)
+        <div class="card">
+          <div class="card__header"><strong>Recent exams</strong></div>
+          <div class="card__body">
+            @if (dashboard.RecentAttempts.Count == 0)
             {
-              <tr>
-                <td>@a.ExamName</td>
-                <td>@PurposeLabel(a.Purpose)</td>
-                <td>@Dates.FormatDate(a.StartedAt)</td>
-                <td>
-                  @if (a.Status == AttemptStatusDto.InProgress)
-                  {
-                    <span class="badge badge--warning">In progress</span>
-                  }
-                  else
-                  {
-                    @AttemptStatusLabel(a.Status)
-                  }
-                </td>
-                <td><strong>@(a.TotalScore?.ToString() ?? "—")</strong></td>
-                <td>@(a.BandCode ?? "—")</td>
-              </tr>
+              <p class="text-muted no-margin">No exams yet for @cert.Code.</p>
             }
-          </tbody>
-        </table>
-      }
-    </div>
-  </div>
+            else
+            {
+              <table class="table table--striped">
+                <caption class="visually-hidden">Your most recent @cert.Code exams, newest first</caption>
+                <thead>
+                  <tr><th scope="col">Test</th><th scope="col">Type</th><th scope="col">Date</th><th scope="col">Status</th><th scope="col">Total</th><th scope="col">Band</th></tr>
+                </thead>
+                <tbody>
+                  @foreach (var a in dashboard.RecentAttempts)
+                  {
+                    <tr>
+                      <td>@a.ExamName</td>
+                      <td>@PurposeLabel(a.Purpose)</td>
+                      <td>@Dates.FormatDate(a.StartedAt)</td>
+                      <td>
+                        @if (a.Status == AttemptStatusDto.InProgress)
+                        {
+                          <span class="badge badge--warning">In progress</span>
+                        }
+                        else
+                        {
+                          @AttemptStatusLabel(a.Status)
+                        }
+                      </td>
+                      <td><strong>@(a.TotalScore?.ToString() ?? "—")</strong></td>
+                      <td>@(a.BandCode ?? "—")</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+          </div>
+        </div>
 
-  <div class="card">
-    <div class="card__header"><strong>Recent practice</strong></div>
-    <div class="card__body">
-      @if (dashboard.RecentPractice.Count == 0)
-      {
-        <p class="text-muted no-margin">No practice sessions yet for @cert.Code.</p>
-      }
-      else
-      {
-        <table class="table table--striped">
-          <caption class="visually-hidden">Your most recent @cert.Code practice sessions, newest first</caption>
-          <thead>
-            <tr><th scope="col">Section</th><th scope="col">Date</th><th scope="col">Status</th><th scope="col">Correct</th><th scope="col" style="width: 120px;">Action</th></tr>
-          </thead>
-          <tbody>
-            @foreach (var p in dashboard.RecentPractice)
+        <div class="card">
+          <div class="card__header"><strong>Recent practice</strong></div>
+          <div class="card__body">
+            @if (dashboard.RecentPractice.Count == 0)
             {
-              <tr>
-                <td>
-                  <a href="@(p.Status == PracticeStatusDto.Finished ? $"/practice/{p.SessionId}/summary" : $"/practice/{p.SessionId}")">@p.SectionName</a>
-                </td>
-                <td>@Dates.FormatDate(p.StartedAt)</td>
-                <td>
-                  @if (p.Status == PracticeStatusDto.InProgress)
-                  {
-                    <span class="badge badge--warning">In progress</span>
-                  }
-                  else
-                  {
-                    @PracticeStatusLabel(p.Status)
-                  }
-                </td>
-                <td>@p.CorrectCount / @p.QuestionCount</td>
-                <td>
-                  @if (p.Status == PracticeStatusDto.InProgress)
-                  {
-                    <a class="btn btn--sm btn--primary" href="/practice/@p.SessionId">Resume ›</a>
-                  }
-                  else if (p.Status == PracticeStatusDto.Finished)
-                  {
-                    <a class="btn btn--sm btn--ghost" href="/practice/@p.SessionId/summary">Summary</a>
-                  }
-                  else
-                  {
-                    <span class="text-muted">—</span>
-                  }
-                </td>
-              </tr>
+              <p class="text-muted no-margin">No practice sessions yet for @cert.Code.</p>
             }
-          </tbody>
-        </table>
+            else
+            {
+              <table class="table table--striped">
+                <caption class="visually-hidden">Your most recent @cert.Code practice sessions, newest first</caption>
+                <thead>
+                  <tr><th scope="col">Section</th><th scope="col">Date</th><th scope="col">Status</th><th scope="col">Correct</th><th scope="col" style="width: 120px;">Action</th></tr>
+                </thead>
+                <tbody>
+                  @foreach (var p in dashboard.RecentPractice)
+                  {
+                    <tr>
+                      <td>
+                        <a href="@(p.Status == PracticeStatusDto.Finished ? $"/practice/{p.SessionId}/summary" : $"/practice/{p.SessionId}")">@p.SectionName</a>
+                      </td>
+                      <td>@Dates.FormatDate(p.StartedAt)</td>
+                      <td>
+                        @if (p.Status == PracticeStatusDto.InProgress)
+                        {
+                          <span class="badge badge--warning">In progress</span>
+                        }
+                        else
+                        {
+                          @PracticeStatusLabel(p.Status)
+                        }
+                      </td>
+                      <td>@p.CorrectCount / @p.QuestionCount</td>
+                      <td>
+                        @if (p.Status == PracticeStatusDto.InProgress)
+                        {
+                          <a class="btn btn--sm btn--primary" href="/practice/@p.SessionId">Resume ›</a>
+                        }
+                        else if (p.Status == PracticeStatusDto.Finished)
+                        {
+                          <a class="btn btn--sm btn--ghost" href="/practice/@p.SessionId/summary">Summary</a>
+                        }
+                        else
+                        {
+                          <span class="text-muted">—</span>
+                        }
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+          </div>
+        </div>
       }
     </div>
+
+    <div class="dashboard-bento__mentor">
+      <partial name="_DashboardMentorPass" model="dashboard" />
+    </div>
   </div>
-}
+</div>
