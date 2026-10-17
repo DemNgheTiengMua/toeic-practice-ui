@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Services.Tests;
 
 [Collection(DatabaseCollection.Name)]
-public sealed class LearnerServiceTests(DatabaseFixture database)
+public sealed partial class LearnerServiceTests(DatabaseFixture database)
 {
     // The database is shared across the run, so every test seeds its own certificates under
     // unique codes and its own learner under a unique email.
@@ -48,7 +48,7 @@ public sealed class LearnerServiceTests(DatabaseFixture database)
         database.SqlAsync($"""
             DECLARE @cert INT = (SELECT CertId FROM Certificates WHERE Code = '{certCode}');
             INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt, SubmittedAt, TotalScore, BandCode)
-            VALUES ({userId}, (SELECT ExamId FROM Exams WHERE CertId = @cert), @cert, 'graded',
+            VALUES ({userId}, (SELECT TOP 1 ExamId FROM Exams WHERE CertId = @cert AND Purpose = 'mock'), @cert, 'graded',
                     '{startedAt}', DATEADD(HOUR, 2, CAST('{startedAt}' AS DATETIMEOFFSET)),
                     DATEADD(HOUR, 1, CAST('{startedAt}' AS DATETIMEOFFSET)), {total}, '{band}');
             """);
@@ -56,7 +56,7 @@ public sealed class LearnerServiceTests(DatabaseFixture database)
     private Task SeedPracticeAsync(int userId, string certCode, int correct, int count) =>
         database.SqlAsync($"""
             INSERT INTO PracticeSessions (UserId, SectionId, Modality, QuestionCount, Status, CorrectCount, FinishedAt)
-            VALUES ({userId}, (SELECT SectionId FROM Sections WHERE CertId = (SELECT CertId FROM Certificates WHERE Code = '{certCode}')),
+            VALUES ({userId}, (SELECT TOP 1 SectionId FROM Sections WHERE CertId = (SELECT CertId FROM Certificates WHERE Code = '{certCode}')),
                     'listening', {count}, 'finished', {correct}, SYSDATETIMEOFFSET());
             """);
 
@@ -64,7 +64,7 @@ public sealed class LearnerServiceTests(DatabaseFixture database)
         database.SqlAsync($"""
             DECLARE @cert INT = (SELECT CertId FROM Certificates WHERE Code = '{certCode}');
             INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt)
-            VALUES ({userId}, (SELECT ExamId FROM Exams WHERE CertId = @cert), @cert, 'in_progress',
+            VALUES ({userId}, (SELECT TOP 1 ExamId FROM Exams WHERE CertId = @cert AND Purpose = 'mock'), @cert, 'in_progress',
                     '{startedAt}', DATEADD(HOUR, 2, CAST('{startedAt}' AS DATETIMEOFFSET)));
             """);
 

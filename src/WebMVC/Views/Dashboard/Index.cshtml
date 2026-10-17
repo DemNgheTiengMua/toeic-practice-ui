@@ -81,12 +81,137 @@ else if (Model.Activation == "failed")
   </div>
 }
 
+@{
+    var readiness = dashboard.TargetReadiness;
+    var currentBandCode = readiness?.CurrentBandCode ?? dashboard.LatestResult?.BandCode;
+    var currentBandName = readiness?.CurrentBandName ?? dashboard.LatestResult?.BandName;
+    var currentScore = readiness?.CurrentTotalScore ?? dashboard.LatestResult?.TotalScore;
+    var currentSource = readiness?.CurrentSource ?? (dashboard.LatestResult is not null ? "mock" : null);
+    var completedSteps = readiness?.CompletedPathSteps ?? 0;
+    var totalSteps = readiness?.TotalPathSteps ?? 0;
+    var pathPercent = totalSteps > 0 ? (int)Math.Round((double)completedSteps / totalSteps * 100) : 0;
+}
+
+<section class="readiness-strip mt-3" aria-label="Target and readiness summary">
+  <div class="readiness-strip__cell">
+    <div class="readiness-strip__label">
+      <span>Current Standing · @cert.Code</span>
+      @if (currentSource == "mock")
+      {
+        <span class="badge badge--info">Mock</span>
+      }
+      else if (currentSource == "placement")
+      {
+        <span class="badge badge--muted">Placement</span>
+      }
+    </div>
+    @if (currentScore.HasValue || !string.IsNullOrEmpty(currentBandCode))
+    {
+      <div class="readiness-strip__value">
+        @(currentBandCode ?? "—")
+        @if (currentScore.HasValue)
+        {
+          <span class="text-base text-muted font-mono">(@currentScore.Value pts)</span>
+        }
+      </div>
+      <div class="readiness-strip__meta">
+        @(currentBandName ?? currentBandCode ?? "Graded standing")
+      </div>
+    }
+    else
+    {
+      <div class="readiness-strip__value">—</div>
+      <div class="readiness-strip__meta">
+        Uncalibrated · <a href="/placement">Take free placement exam ›</a>
+      </div>
+    }
+  </div>
+
+  <div class="readiness-strip__cell">
+    <div class="readiness-strip__label">
+      <span>Target Band</span>
+      @if (readiness?.TargetMinScore is { } targetMin && currentScore is { } curScore)
+      {
+        if (curScore >= targetMin)
+        {
+          <span class="badge badge--success">Reached</span>
+        }
+        else
+        {
+          <span class="badge badge--warning font-mono">-@(targetMin - curScore) pts</span>
+        }
+      }
+    </div>
+    @if (!string.IsNullOrEmpty(readiness?.TargetBandCode))
+    {
+      <div class="readiness-strip__value">
+        @readiness.TargetBandCode
+        @if (readiness.TargetMinScore.HasValue)
+        {
+          <span class="text-base text-muted font-mono">(@readiness.TargetMinScore.Value+ pts)</span>
+        }
+      </div>
+      <div class="readiness-strip__meta">
+        @(readiness.TargetBandName ?? readiness.TargetBandCode) · <a href="/placement/target-band">Change target ›</a>
+      </div>
+    }
+    else
+    {
+      <div class="readiness-strip__value">NOT SET</div>
+      <div class="readiness-strip__meta">
+        <a href="/placement/target-band">Set target band ›</a> · <a href="/placement">Placement ›</a>
+      </div>
+    }
+  </div>
+
+  <div class="readiness-strip__cell">
+    <div class="readiness-strip__label">
+      <span>Learning Path</span>
+      @if (totalSteps > 0)
+      {
+        <span class="badge badge--muted font-mono">@pathPercent%</span>
+      }
+    </div>
+    <div class="readiness-strip__value">
+      @completedSteps / @totalSteps <span class="text-sm text-muted font-sign uppercase">steps</span>
+    </div>
+    <div class="readiness-strip__meta">
+      @if (totalSteps > 0)
+      {
+        <div class="progress mb-1" aria-hidden="true">
+          <div class="progress__bar" style="width: @pathPercent%;"></div>
+        </div>
+        <a href="/learning-path">Continue active path ›</a>
+      }
+      else
+      {
+        <span>No active path · <a href="/learning-path">Build learning path ›</a></span>
+      }
+    </div>
+  </div>
+
+  <div class="readiness-strip__cell">
+    <div class="readiness-strip__label">
+      <span>Diagnostic Accuracy</span>
+      <span class="badge badge--muted font-mono">@cert.Code</span>
+    </div>
+    <div class="readiness-strip__value">
+      @(dashboard.OverallAccuracyPercent.HasValue ? $"{dashboard.OverallAccuracyPercent.Value}%" : "—")
+    </div>
+    <div class="readiness-strip__meta">
+      @dashboard.AttemptCount @(dashboard.AttemptCount == 1 ? "attempt" : "attempts") · @dashboard.PracticeCount @(dashboard.PracticeCount == 1 ? "practice session" : "practice sessions")
+    </div>
+  </div>
+</section>
+
+<partial name="_DashboardMission" model="dashboard" />
+<partial name="_DashboardSimulator" model="dashboard" />
+<partial name="_AiInsightPanel" model='new AiInsightPanelViewModel("dashboard", (ViewBag.Insight as AiInsightDto)?.CertId ?? 0, ViewBag.Insight as AiInsightDto, dashboard.LatestRubricHighlight, dashboard.OverallAccuracyPercent)' />
+<partial name="_DashboardWeaknessRadar" model="dashboard" />
+<partial name="_DashboardMentorPass" model="dashboard" />
+
 @if (dashboard.IsNew)
 {
-  @if (ViewBag.Insight != null)
-  {
-    <partial name="_AiInsightPanel" model='new AiInsightPanelViewModel("dashboard", (ViewBag.Insight as AiInsightDto)?.CertId ?? 0, ViewBag.Insight as AiInsightDto)' />
-  }
   <div class="card"><div class="card__body">
     <div class="state-block">
       <div class="state-block__icon" aria-hidden="true">START</div>
@@ -121,32 +246,6 @@ else if (Model.Activation == "failed")
 }
 else
 {
-  <div class="alert alert--info">
-    <strong>@dashboard.AttemptCount @(dashboard.AttemptCount == 1 ? "exam" : "exams")</strong>
-    · @dashboard.PracticeCount practice @(dashboard.PracticeCount == 1 ? "session" : "sessions") for @cert.Code
-  </div>
-
-  @if (dashboard.LatestResult is { } latest)
-  {
-    <div class="stat">
-      <div class="stat__label">Your current level</div>
-      <div class="stat__value">@latest.TotalScore</div>
-      <div class="stat__hint">
-        @(latest.BandName ?? latest.BandCode ?? "No band") · Last tested @Dates.FormatDate(latest.TakenAt)
-      </div>
-    </div>
-  }
-  else
-  {
-    <div class="stat">
-      <div class="stat__label">Your current level</div>
-      <div class="stat__value">—</div>
-      <div class="stat__hint">Finish a mock exam to get a scaled score and band.</div>
-    </div>
-  }
-
-  <partial name="_AiInsightPanel" model='new AiInsightPanelViewModel("dashboard", (ViewBag.Insight as AiInsightDto)?.CertId ?? 0, ViewBag.Insight as AiInsightDto)' />
-
   <div class="card">
     <div class="card__header"><strong>Recent exams</strong></div>
     <div class="card__body">
