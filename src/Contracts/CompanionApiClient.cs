@@ -991,6 +991,32 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
         return (await response.Content.ReadFromJsonAsync<AdminExamMediaUploadResultDto>(Json, cancellationToken))!;
     }
 
+    public async Task<(Stream Stream, string ContentType, string FileName)> ExportAdminExamAsync(int examId, string? format, string bearerToken, CancellationToken cancellationToken = default)
+    {
+        var fmt = string.IsNullOrWhiteSpace(format) ? "zip" : format.ToLowerInvariant();
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"api/admin/exams/{examId}/export?format={fmt}");
+        AttachBearer(request, bearerToken);
+
+        var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        try
+        {
+            await EnsureSuccessAsync(response, cancellationToken);
+        }
+        catch
+        {
+            response.Dispose();
+            throw;
+        }
+
+        var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        var contentType = response.Content.Headers.ContentType?.MediaType ?? (fmt == "json" ? "application/json" : "application/zip");
+        var fileName = response.Content.Headers.ContentDisposition?.FileNameStar
+            ?? response.Content.Headers.ContentDisposition?.FileName
+            ?? $"exam_{examId}_export.{(fmt == "json" ? "json" : "zip")}";
+
+        return (stream, contentType, fileName);
+    }
+
     public Task<AdminImportBatchesDto> GetAdminImportBatchesAsync(int? certId, string bearerToken, CancellationToken cancellationToken = default) =>
         GetAuthorizedAsync<AdminImportBatchesDto>(certId is { } id ? $"api/admin/imports?certId={id}" : "api/admin/imports", bearerToken, cancellationToken);
 
@@ -1506,6 +1532,9 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
 
     public Task<AdminExamMediaUploadResultDto> UploadAdminExamMediaAsync(int examId, Stream stream, string fileName, CancellationToken cancellationToken = default) =>
         UploadAdminExamMediaAsync(examId, stream, fileName, string.Empty, cancellationToken);
+
+    public Task<(Stream Stream, string ContentType, string FileName)> ExportAdminExamAsync(int examId, string? format = "zip", CancellationToken cancellationToken = default) =>
+        ExportAdminExamAsync(examId, format, string.Empty, cancellationToken);
 
     public Task<AdminImportBatchesDto> GetAdminImportBatchesAsync(int? certId, CancellationToken cancellationToken = default) =>
         GetAdminImportBatchesAsync(certId, string.Empty, cancellationToken);

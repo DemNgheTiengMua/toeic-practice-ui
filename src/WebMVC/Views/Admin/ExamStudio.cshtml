@@ -814,15 +814,20 @@
         <button type="button" class="btn btn--primary" id="btn-publish-exam" @(Model.Audit.CanPublish ? "" : "disabled") style="width: 100%; border-radius: 0; text-transform: uppercase; font-family: var(--font-condensed, sans-serif); font-weight: bold; margin-bottom: 0.5rem;">
           Publish Exam
         </button>
-        <button type="button" class="btn btn--secondary" id="btn-export-exam" style="width: 100%; border-radius: 0; font-size: 0.85rem;">
-          Export JSON / ZIP
-        </button>
+        <div style="display: flex; gap: 0.5rem; margin-top: 0.25rem;">
+          <a href="/admin/exams/@Model.ExamId/export?format=zip" class="btn btn--secondary" id="btn-export-exam" style="flex: 1; border-radius: 0; font-size: 0.8rem; text-align: center; text-decoration: none; padding: 0.45rem 0.25rem;">
+            Export ZIP
+          </a>
+          <a href="/admin/exams/@Model.ExamId/export?format=json" class="btn btn--secondary" id="btn-export-json" style="flex: 1; border-radius: 0; font-size: 0.8rem; text-align: center; text-decoration: none; padding: 0.45rem 0.25rem;">
+            Export JSON
+          </a>
+        </div>
       </div>
     </div>
   </aside>
 </div>
 
-@await Html.PartialAsync("_QuickIngestModal")
+@await Html.PartialAsync("~/Views/Admin/_QuickIngestModal.cshtml")
 
 <script>
 (function() {

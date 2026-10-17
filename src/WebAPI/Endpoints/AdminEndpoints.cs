@@ -598,6 +598,23 @@ public static class AdminEndpoints
             return Results.Ok(result);
         }).DisableAntiforgery();
 
+        admin.MapGet("/exams/{examId:int}/export", async (
+            int examId,
+            string? format,
+            IAdminExamService exams,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var (stream, contentType, fileName) = await exams.ExportExamPackageAsync(examId, format, cancellationToken);
+                return Results.File(stream, contentType, fileName);
+            }
+            catch (AdminExamException ex)
+            {
+                return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
+            }
+        });
+
         app.MapGet("/api/media/exams/{examId:int}/{fileName}", async Task<IResult> (
             int examId,
             string fileName,

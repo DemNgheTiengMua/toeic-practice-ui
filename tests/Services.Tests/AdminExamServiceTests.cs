@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.IO.Compression;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using BusinessObjects;
 using Contracts;
@@ -879,5 +882,74 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         Assert.Empty(q.Options);
         Assert.Equal(15, q.PrepSeconds);
         Assert.Equal(45, q.ResponseSeconds);
+    }
+
+    [Fact]
+    public async Task ExportExamPackageAsync_JsonFormat_ReturnsManifestStream()
+    {
+        var (certId, secL, _, _, _) = await SeedCertificateWithSectionsAsync($"EXPJ_{Guid.NewGuid():N}"[..18]);
+        var service = CreateService();
+
+        var exam = await service.CreateExamAsync(new CreateAdminExamRequest(
+            certId,
+            $"Export Test {Guid.NewGuid():N}"[..25],
+            60,
+            ExamPurposeDto.Mock));
+
+        await service.CreateExamClusterAsync(exam.ExamId, new CreateExamClusterRequest(
+            SectionId: secL,
+            Passage: "Export passage",
+            QuestionCount: 2));
+
+        var (stream, contentType, fileName) = await service.ExportExamPackageAsync(exam.ExamId, "json");
+
+        Assert.Equal("application/json", contentType);
+        Assert.EndsWith("_manifest.json", fileName);
+        Assert.NotNull(stream);
+
+        using var reader = new StreamReader(stream);
+        var json = await reader.ReadToEndAsync();
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement;
+        Assert.Equal("1.0", root.GetProperty("version").GetString());
+        Assert.Equal(exam.Name, root.GetProperty("exam").GetProperty("title").GetString());
+        Assert.True(root.GetProperty("sections").GetArrayLength() > 0);
+        var firstSec = root.GetProperty("sections")[0];
+        Assert.True(firstSec.GetProperty("groups").GetArrayLength() > 0);
+        Assert.Equal(2, firstSec.GetProperty("groups")[0].GetProperty("questions").GetArrayLength());
+    }
+
+    [Fact]
+    public async Task ExportExamPackageAsync_ZipFormat_ContainsManifestEntry()
+    {
+        var (certId, secL, _, _, _) = await SeedCertificateWithSectionsAsync($"EXPZ_{Guid.NewGuid():N}"[..18]);
+        var service = CreateService();
+
+        var exam = await service.CreateExamAsync(new CreateAdminExamRequest(
+            certId,
+            $"Export Zip {Guid.NewGuid():N}"[..25],
+            60,
+            ExamPurposeDto.Mock));
+
+        await service.CreateExamClusterAsync(exam.ExamId, new CreateExamClusterRequest(
+            SectionId: secL,
+            Passage: "Zip passage",
+            QuestionCount: 1));
+
+        var (stream, contentType, fileName) = await service.ExportExamPackageAsync(exam.ExamId, "zip");
+
+        Assert.Equal("application/zip", contentType);
+        Assert.EndsWith("_package.zip", fileName);
+        Assert.NotNull(stream);
+
+        using var archive = new ZipArchive(stream, ZipArchiveMode.Read);
+        var manifestEntry = archive.GetEntry("manifest.json");
+        Assert.NotNull(manifestEntry);
+
+        using var entryStream = manifestEntry.Open();
+        using var doc = await JsonDocument.ParseAsync(entryStream);
+        var root = doc.RootElement;
+        Assert.Equal("1.0", root.GetProperty("version").GetString());
+        Assert.Equal(exam.Name, root.GetProperty("exam").GetProperty("title").GetString());
     }
 }

@@ -649,4 +649,20 @@ public sealed class AdminExamsController(
             return StatusCode(ex.Status, new { message = ex.Detail ?? ex.Message, code = ex.Code });
         }
     }
+
+    [HttpGet("{id:int}/export")]
+    public async Task<IActionResult> Export(int id, [FromQuery] string? format = "zip", CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var (stream, contentType, fileName) = await api.ExportAdminExamAsync(id, format, cancellationToken);
+            return File(stream, contentType, fileName);
+        }
+        catch (ApiException ex)
+        {
+            logger.LogWarning(ex, "Failed to export exam {ExamId}", id);
+            TempData["Error"] = ex.Detail ?? ex.Message;
+            return RedirectToAction(nameof(Studio), new { id });
+        }
+    }
 }

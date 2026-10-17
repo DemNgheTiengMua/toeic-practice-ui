@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.IO.Compression;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using BusinessObjects;
@@ -50,6 +53,7 @@ public interface IAdminExamService
     Task<ExamAuditResultDto> AuditExamPublishReadinessAsync(int examId, CancellationToken cancellationToken = default);
     Task ReorderSectionItemsAsync(int examId, ReorderSectionItemsRequest request, CancellationToken cancellationToken = default);
     Task<AdminQuestionGroupDto> CreateExamClusterAsync(int examId, CreateExamClusterRequest request, CancellationToken cancellationToken = default);
+    Task<(Stream Stream, string ContentType, string FileName)> ExportExamPackageAsync(int examId, string? format = "zip", CancellationToken cancellationToken = default);
 }
 
 public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock) : IAdminExamService
@@ -2081,6 +2085,104 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock) 
             group.ResponseSeconds,
             group.DisplayOrder,
             questionDtos);
+    }
+
+    public async Task<(Stream Stream, string ContentType, string FileName)> ExportExamPackageAsync(int examId, string? format = "zip", CancellationToken cancellationToken = default)
+    {
+        var exam = await db.Exams.AsNoTracking()
+            .Include(e => e.Cert)
+            .FirstOrDefaultAsync(e => e.ExamId == examId && !e.IsDeleted, cancellationToken);
+
+        if (exam == null) throw new ExamNotFoundException(examId);
+
+        var groups = await db.QuestionGroups.AsNoTracking()
+            .Include(g => g.Section)
+            .Include(g => g.QuestionGroups)
+                .ThenInclude(q => q.QuestionOptionQuestionNavigations)
+            .Include(g => g.QuestionGroups)
+                .ThenInclude(q => q.Category)
+            .Where(g => g.ExamId == examId)
+            .OrderBy(g => g.DisplayOrder)
+            .ToListAsync(cancellationToken);
+
+        var manifest = new ImportManifest
+        {
+            Version = "1.0",
+            Exam = new ImportManifestExam
+            {
+                Title = exam.Name,
+                Purpose = exam.Purpose,
+                DurationMinutes = exam.DurationMinutes,
+                SourceName = exam.SourceName,
+                Description = exam.Description,
+                QuestionCount = exam.QuestionCount
+            },
+            Sections = groups
+                .GroupBy(g => g.Section)
+                .OrderBy(s => s.Key.DisplayOrder)
+                .Select(sg => new ImportManifestSection
+                {
+                    SectionCode = sg.Key.Code,
+                    Groups = sg.OrderBy(g => g.DisplayOrder).Select(g => new ImportManifestGroup
+                    {
+                        Passage = g.Passage,
+                        AudioFile = g.AudioPath,
+                        AudioStartMs = g.AudioStartMs,
+                        AudioEndMs = g.AudioEndMs,
+                        ImageFile = g.ImagePath,
+                        ImageAlt = g.ImageAlt,
+                        Transcript = g.Transcript,
+                        PrepSeconds = g.PrepSeconds,
+                        ResponseSeconds = g.ResponseSeconds,
+                        DisplayOrder = g.DisplayOrder,
+                        Questions = g.QuestionGroups.OrderBy(q => q.DisplayOrder).Select(q => new ImportManifestQuestion
+                        {
+                            Stem = q.Stem,
+                            DifficultyLevel = q.DifficultyLevel,
+                            QuestionType = q.QuestionType,
+                            CategoryCode = q.Category?.Code,
+                            Explanation = q.Explanation,
+                            Hint = q.Hint,
+                            PrepSeconds = q.PrepSeconds,
+                            ResponseSeconds = q.ResponseSeconds,
+                            MinWords = q.MinWords,
+                            MaxWords = q.MaxWords,
+                            DisplayOrder = q.DisplayOrder,
+                            Options = q.QuestionOptionQuestionNavigations.OrderBy(o => o.Label).Select(o => new ImportManifestOption
+                            {
+                                Label = o.Label,
+                                Text = o.Text,
+                                IsCorrect = o.IsCorrect,
+                                Rationale = o.Rationale
+                            }).ToList()
+                        }).ToList()
+                    }).ToList()
+                }).ToList()
+        };
+
+        var safeTitle = string.Join("_", exam.Name.Split(Path.GetInvalidFileNameChars())).Replace(" ", "_");
+
+        if (string.Equals(format, "json", StringComparison.OrdinalIgnoreCase))
+        {
+            var jsonBytes = JsonSerializer.SerializeToUtf8Bytes(manifest, ImportManifest.Json);
+            var ms = new MemoryStream(jsonBytes);
+            return (ms, "application/json", $"{safeTitle}_manifest.json");
+        }
+        else
+        {
+            var zipMs = new MemoryStream();
+            using (var archive = new ZipArchive(zipMs, ZipArchiveMode.Create, leaveOpen: true))
+            {
+                var manifestEntry = archive.CreateEntry("manifest.json");
+                using (var entryStream = manifestEntry.Open())
+                {
+                    await JsonSerializer.SerializeAsync(entryStream, manifest, ImportManifest.Json, cancellationToken);
+                }
+            }
+
+            zipMs.Position = 0;
+            return (zipMs, "application/zip", $"{safeTitle}_package.zip");
+        }
     }
 }
 

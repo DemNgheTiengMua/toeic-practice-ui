@@ -517,6 +517,48 @@ public sealed class AdminExamsControllerTests
         Assert.NotNull(json.Value);
     }
 
+    [Fact]
+    public async Task Export_ReturnsFileResult_WithZip_ByDefault()
+    {
+        var api = new TestApiClient();
+        var controller = CreateController(api);
+
+        var result = await controller.Export(5, null, CancellationToken.None);
+
+        var fileResult = Assert.IsType<FileStreamResult>(result);
+        Assert.Equal("application/zip", fileResult.ContentType);
+        Assert.Equal("test_exam.zip", fileResult.FileDownloadName);
+    }
+
+    [Fact]
+    public async Task Export_ReturnsFileResult_WithJson_WhenRequested()
+    {
+        var api = new TestApiClient();
+        var controller = CreateController(api);
+
+        var result = await controller.Export(5, "json", CancellationToken.None);
+
+        var fileResult = Assert.IsType<FileStreamResult>(result);
+        Assert.Equal("application/json", fileResult.ContentType);
+        Assert.Equal("test_exam.json", fileResult.FileDownloadName);
+    }
+
+    [Fact]
+    public async Task Export_RedirectsToStudio_WhenApiExceptionThrown()
+    {
+        var api = new TestApiClient
+        {
+            ExportException = new ApiException("NOT_FOUND", "Exam not found", 404)
+        };
+        var controller = CreateController(api);
+
+        var result = await controller.Export(999, "zip", CancellationToken.None);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(AdminExamsController.Studio), redirect.ActionName);
+        Assert.Equal(999, redirect.RouteValues?["id"]);
+    }
+
     private sealed class EmptyTempDataProvider : ITempDataProvider
     {
         public IDictionary<string, object> LoadTempData(HttpContext context) => new Dictionary<string, object>();
@@ -539,6 +581,7 @@ public sealed class AdminExamsControllerTests
 
         public ApiException? CreateExamException { get; set; }
         public ApiException? PublishException { get; set; }
+        public ApiException? ExportException { get; set; }
 
         public Task<AdminExamListSummaryDto> GetAdminExamsAsync(string? q = null, string? status = null, int? certId = null, int page = 1, int pageSize = 20, CancellationToken cancellationToken = default) =>
             Task.FromResult(Summary ?? SampleSummary());
@@ -673,6 +716,13 @@ public sealed class AdminExamsControllerTests
 
         public Task<AdminExamMediaUploadResultDto> UploadAdminExamMediaAsync(int examId, Stream stream, string fileName, CancellationToken cancellationToken = default) =>
             Task.FromResult(new AdminExamMediaUploadResultDto($"/media/exams/{examId}/{fileName}", $"exams/{examId}/{fileName}", fileName));
+
+        public Task<(Stream Stream, string ContentType, string FileName)> ExportAdminExamAsync(int examId, string? format = "zip", CancellationToken cancellationToken = default)
+        {
+            if (ExportException != null) throw ExportException;
+            var fmt = format ?? "zip";
+            return Task.FromResult(((Stream)new MemoryStream([1, 2, 3]), fmt == "json" ? "application/json" : "application/zip", $"test_exam.{fmt}"));
+        }
 
         private static ExamStudioDetailDto SampleStudioDetail(int examId) =>
             new ExamStudioDetailDto(
