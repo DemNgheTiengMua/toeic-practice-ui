@@ -66,7 +66,7 @@ else if (Model.Activation == "failed")
       <strong>Unfinished practice:</strong> You have an in-progress session in <strong>@unfinishedPractice.SectionName</strong> started @Dates.FormatDate(unfinishedPractice.StartedAt).
       <div class="text-sm text-muted">@unfinishedPractice.CorrectCount of @unfinishedPractice.QuestionCount questions answered so far. Finish to update your accuracy and weak points.</div>
     </div>
-    <a class="btn btn--primary btn--sm" href="/practice/@unfinishedPractice.SessionId">Resume practice ›</a>
+    <a class="btn btn--primary btn--sm" href="/practice/@unfinishedPractice.SessionId">Resume practice</a>
   </div>
 }
 
@@ -122,7 +122,7 @@ else if (Model.Activation == "failed")
     {
       <div class="readiness-strip__value">—</div>
       <div class="readiness-strip__meta">
-        Uncalibrated · <a href="/placement">Take free placement exam ›</a>
+        Uncalibrated · <a href="/placement">Take free placement exam</a>
       </div>
     }
   </div>
@@ -152,14 +152,14 @@ else if (Model.Activation == "failed")
         }
       </div>
       <div class="readiness-strip__meta">
-        @(readiness.TargetBandName ?? readiness.TargetBandCode) · <a href="/placement/target-band">Change target ›</a>
+        @(readiness.TargetBandName ?? readiness.TargetBandCode) · <a href="/placement/target-band">Change target</a>
       </div>
     }
     else
     {
       <div class="readiness-strip__value">NOT SET</div>
       <div class="readiness-strip__meta">
-        <a href="/placement/target-band">Set target band ›</a> · <a href="/placement">Placement ›</a>
+        <a href="/placement/target-band">Set target band</a> · <a href="/placement">Placement</a>
       </div>
     }
   </div>
@@ -181,11 +181,11 @@ else if (Model.Activation == "failed")
         <div class="progress mb-1" aria-hidden="true">
           <div class="progress__bar" style="width: @pathPercent%;"></div>
         </div>
-        <a href="/learning-path">Continue active path ›</a>
+        <a href="/learning-path">Continue active path</a>
       }
       else
       {
-        <span>No active path · <a href="/learning-path">Build learning path ›</a></span>
+        <span>No active path · <a href="/learning-path">Build learning path</a></span>
       }
     </div>
   </div>
@@ -328,7 +328,7 @@ else if (Model.Activation == "failed")
                       <td>
                         @if (p.Status == PracticeStatusDto.InProgress)
                         {
-                          <a class="btn btn--sm btn--primary" href="/practice/@p.SessionId">Resume ›</a>
+                          <a class="btn btn--sm btn--primary" href="/practice/@p.SessionId">Resume</a>
                         }
                         else if (p.Status == PracticeStatusDto.Finished)
                         {

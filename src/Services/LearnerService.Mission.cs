@@ -285,7 +285,7 @@ public sealed partial class LearnerService
                     Title: "Take Free Placement Exam",
                     Description: "Establish your baseline band and unlock a personalised learning path for this certificate.",
                     MetaLabel: "FREE DIAGNOSTIC",
-                    ActionLabel: "Take placement test",
+                    ActionLabel: "Take placement exam",
                     ActionUrl: "/placement",
                     IsCleared: false),
                 null);
@@ -369,7 +369,7 @@ public sealed partial class LearnerService
                     Severity: "info",
                     Eyebrow: $"{skillLabel.ToUpperInvariant()} PRACTICE // AI GRADING",
                     Title: $"Grading {latestSkillAttempt.ExamName}",
-                    Description: $"Your {skillLabel.ToLowerInvariant()} response for {latestSkillAttempt.ExamName} is queued for AI rubric evaluation.",
+                    Description: $"Your {skillLabel.ToLowerInvariant()} response for {latestSkillAttempt.ExamName} is queued for AI rubric grading.",
                     MetaLabel: "STATUS: GRADING QUEUED",
                     ActionLabel: "View grading status",
                     ActionUrl: $"/{skillPrefix}/pending/{latestSkillAttempt.AttemptId}",
@@ -388,7 +388,7 @@ public sealed partial class LearnerService
                     Title: $"Review {latestSkillAttempt.ExamName}",
                     Description: $"Your {skillLabel.ToLowerInvariant()} practice attempt on {latestSkillAttempt.ExamName} was graded within the last 24 hours.",
                     MetaLabel: "STATUS: GRADED",
-                    ActionLabel: "Review feedback",
+                    ActionLabel: "Review grading",
                     ActionUrl: $"/{skillPrefix}/review/{latestSkillAttempt.AttemptId}",
                     IsCleared: true);
             }

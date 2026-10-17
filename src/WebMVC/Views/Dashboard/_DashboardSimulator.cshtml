@@ -236,7 +236,7 @@
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: var(--tracking-caps-sm, .08em);
-        color: var(--sign-blue, #0b4ea2);
+        color: var(--info-ink, #08407f);
       }
       .sim-spectrum {
         padding: var(--space-4, 16px);
@@ -280,7 +280,7 @@
       }
       .sim-band-cell.is-reached {
         background: var(--color-primary-soft, #e8eef7);
-        color: var(--ink, #14181d);
+        color: var(--info-ink, #08407f);
       }
       .sim-band-cell.is-current {
         background: #14181d;
@@ -446,11 +446,11 @@
               <div class="text-xs text-muted">
                 @if (hasExplicitTarget)
                 {
-                  <span>@targetName · <a href="/placement/target-band">Change target ›</a></span>
+                  <span>@targetName · <a href="/placement/target-band">Change target</a></span>
                 }
                 else
                 {
-                  <span>Defaulted to @targetCode · <a href="/placement/target-band">Set target band ›</a></span>
+                  <span>Defaulted to @targetCode · <a href="/placement/target-band">Set target band</a></span>
                 }
               </div>
             </div>

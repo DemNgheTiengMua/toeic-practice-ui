@@ -33,13 +33,7 @@
     width: 100%;
     border-radius: 0;
     background-color: var(--sign-blue, #0b4ea2);
-    background-image: repeating-linear-gradient(
-      -45deg,
-      var(--ink, #14181d) 0,
-      var(--ink, #14181d) 10px,
-      var(--sign-gold, #f2b705) 10px,
-      var(--sign-gold, #f2b705) 20px
-    );
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28'%3E%3Crect width='28' height='28' fill='%23f2b705'/%3E%3Cpolygon points='0,0 14,0 0,14' fill='%2314181d'/%3E%3Cpolygon points='14,0 28,14 28,28 0,0' fill='%2314181d'/%3E%3Cpolygon points='0,14 0,28 14,28' fill='%2314181d'/%3E%3C/svg%3E");
     background-size: 28px 28px;
     animation: ai-stripe-march 0.6s linear infinite;
   }
@@ -81,7 +75,7 @@
     <div class="row row--between row--middle row--wrap">
       <div class="row row--middle">
         <span class="badge badge--info font-mono uppercase font-bold" style="letter-spacing: 0.04em;">AI Insight</span>
-        <strong>Diagnostic Analysis &amp; Recommendations</strong>
+        <strong>AI Diagnostic Insights &amp; Recommendations</strong>
       </div>
       <div id="ai-insight-header-badges" class="row row--middle">
         @if (Model.Scope == "dashboard" && Model.OverallAccuracyPercent.HasValue)
@@ -196,7 +190,7 @@
           <strong class="font-sign uppercase" style="letter-spacing: 0.03em;">@rubric.CriterionName</strong>
           <span class="badge badge--muted font-mono">@rubric.Score.ToString("0.##") / @rubric.MaxScore.ToString("0.##")</span>
         </div>
-        <a class="btn btn--sm btn--ghost" href="@reviewUrl">Review @rubric.SkillName attempt ›</a>
+        <a class="btn btn--sm btn--ghost" href="@reviewUrl">Review @rubric.SkillName attempt</a>
       </div>
       @if (!string.IsNullOrWhiteSpace(rubric.Comment))
       {
