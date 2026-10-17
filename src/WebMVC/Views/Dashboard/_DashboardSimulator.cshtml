@@ -1,2 +1,666 @@
 @model Contracts.LearnerDashboardDto
-@* Polymorphic Score & Band Simulator — populated in Ticket #41 *@
+@using System.Text.Json
+@if (Model.SimulatorConfig is { } sim && sim.Bands.Count > 0 && sim.Skills.Count > 0)
+{
+    var cert = Model.Certificate;
+    var initialTotal = sim.Skills.Sum(s => s.BaseScaledScore);
+    var initialBand = sim.Bands.FirstOrDefault(b => initialTotal >= b.MinTotal && initialTotal <= b.MaxTotal)
+        ?? (initialTotal < sim.Bands[0].MinTotal ? sim.Bands[0] : sim.Bands[^1]);
+
+    var targetCode = sim.TargetBandCode ?? sim.Bands[^1].Code;
+    var targetBandObj = sim.Bands.FirstOrDefault(b => string.Equals(b.Code, targetCode, StringComparison.OrdinalIgnoreCase));
+    var targetMin = sim.TargetMinScore ?? targetBandObj?.MinTotal ?? sim.Bands[^1].MinTotal;
+    var targetName = targetBandObj?.Name ?? targetCode;
+    var initialDeficit = Math.Max(0, targetMin - initialTotal);
+    var hasExplicitTarget = !string.IsNullOrEmpty(Model.TargetReadiness?.TargetBandCode);
+
+    var topLeverageSkill = sim.Skills
+        .OrderByDescending(s => s.MaxScaledScore - s.BaseScaledScore)
+        .ThenBy(s => s.SkillId)
+        .First();
+    var topHeadroom = Math.Max(0, topLeverageSkill.MaxScaledScore - topLeverageSkill.BaseScaledScore);
+
+    var bandsJson = JsonSerializer.Serialize(sim.Bands.Select(b => new
+    {
+        code = b.Code,
+        name = b.Name,
+        minTotal = b.MinTotal,
+        maxTotal = b.MaxTotal
+    }));
+
+    <style>
+      .sim-placard {
+        border: var(--keyline, 2px) solid var(--ink, #14181d);
+        border-radius: 0;
+        box-shadow: none;
+        background: var(--color-surface, #ffffff);
+      }
+      .sim-placard__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: var(--space-3, 12px);
+        padding: var(--space-3, 12px) var(--space-4, 16px);
+        background: var(--ink, #14181d);
+        color: #ffffff;
+        border-bottom: var(--keyline, 2px) solid var(--ink, #14181d);
+      }
+      .sim-placard__title {
+        margin: 0;
+        font-family: var(--font-sign);
+        font-size: var(--text-base, 16px);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: var(--tracking-sign, .055em);
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        gap: var(--space-2, 8px);
+      }
+      .sim-placard__sub {
+        font-family: var(--font-mono);
+        font-size: var(--text-xs, 13px);
+        color: var(--color-on-ink-muted, #8f98a3);
+      }
+      .sim-placard__reset {
+        background: transparent;
+        color: #ffffff;
+        border: var(--keyline-soft, 1px) solid #ffffff;
+        border-radius: 0;
+        padding: 4px var(--space-3, 12px);
+        font-family: var(--font-sign);
+        font-size: var(--text-xs, 13px);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: var(--tracking-sign, .055em);
+        cursor: pointer;
+      }
+      .sim-placard__reset:hover,
+      .sim-placard__reset:focus-visible {
+        background: var(--sign-gold, #f2b705);
+        color: var(--ink, #14181d);
+        border-color: var(--sign-gold, #f2b705);
+      }
+      .sim-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 7fr) minmax(280px, 5fr);
+        border-bottom: var(--keyline-soft, 1px) solid var(--line-soft, #ccd2d6);
+      }
+      .sim-controls {
+        padding: var(--space-4, 16px);
+        border-right: var(--keyline-soft, 1px) solid var(--line-soft, #ccd2d6);
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-4, 16px);
+      }
+      .sim-skill-row {
+        padding-bottom: var(--space-3, 12px);
+        border-bottom: var(--keyline-soft, 1px) solid var(--line-soft, #ccd2d6);
+      }
+      .sim-skill-row:last-child {
+        padding-bottom: 0;
+        border-bottom: 0;
+      }
+      .sim-skill-row__head {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: var(--space-2, 8px);
+        margin-bottom: var(--space-2, 8px);
+      }
+      .sim-skill-row__name {
+        font-family: var(--font-sign);
+        font-size: var(--text-sm, 14px);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: var(--tracking-sign, .055em);
+        color: var(--ink, #14181d);
+        display: flex;
+        align-items: center;
+        gap: var(--space-2, 8px);
+      }
+      .sim-skill-row__readout {
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums;
+        font-size: var(--text-base, 16px);
+        font-weight: 700;
+        color: var(--ink, #14181d);
+        display: flex;
+        align-items: baseline;
+        gap: var(--space-2, 8px);
+      }
+      .sim-range {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 100%;
+        height: 12px;
+        background: var(--color-track, #dfe3e6);
+        border: var(--keyline-soft, 1px) solid var(--ink, #14181d);
+        border-radius: 0;
+        box-shadow: none;
+        margin: var(--space-1, 4px) 0;
+        cursor: pointer;
+      }
+      .sim-range::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 20px;
+        height: 24px;
+        background: var(--sign-blue, #0b4ea2);
+        border: var(--keyline, 2px) solid var(--ink, #14181d);
+        border-radius: 0;
+        box-shadow: none;
+        cursor: pointer;
+      }
+      .sim-range::-moz-range-thumb {
+        width: 20px;
+        height: 24px;
+        background: var(--sign-blue, #0b4ea2);
+        border: var(--keyline, 2px) solid var(--ink, #14181d);
+        border-radius: 0;
+        box-shadow: none;
+        cursor: pointer;
+      }
+      .sim-range:focus-visible {
+        outline: 3px solid var(--sign-blue, #0b4ea2);
+        outline-offset: 2px;
+      }
+      .sim-skill-row__ticks {
+        display: flex;
+        justify-content: space-between;
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums;
+        font-size: 12px;
+        color: var(--color-text-muted, #5c6570);
+      }
+      .sim-readout {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        background: var(--wall, #eef0f1);
+      }
+      .sim-score-plate {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        border-bottom: var(--keyline-soft, 1px) solid var(--line-soft, #ccd2d6);
+        background: var(--color-surface, #ffffff);
+      }
+      .sim-score-plate__cell {
+        padding: var(--space-4, 16px);
+        border-right: var(--keyline-soft, 1px) solid var(--line-soft, #ccd2d6);
+      }
+      .sim-score-plate__cell:last-child {
+        border-right: 0;
+      }
+      .sim-score-plate__label {
+        font-family: var(--font-sign);
+        font-size: var(--text-xs, 13px);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: var(--tracking-caps-sm, .08em);
+        color: var(--color-text-muted, #5c6570);
+        margin-bottom: var(--space-1, 4px);
+      }
+      .sim-score-plate__value {
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums;
+        font-size: var(--text-2xl, 32px);
+        font-weight: 700;
+        line-height: 1.1;
+        color: var(--ink, #14181d);
+      }
+      .sim-deficit-bar {
+        padding: var(--space-3, 12px) var(--space-4, 16px);
+        border-bottom: var(--keyline-soft, 1px) solid var(--line-soft, #ccd2d6);
+        background: var(--color-surface, #ffffff);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: var(--space-2, 8px);
+      }
+      .sim-leverage-box {
+        padding: var(--space-4, 16px);
+        background: var(--color-surface, #ffffff);
+        flex: 1 1 auto;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: var(--space-1, 4px);
+      }
+      .sim-leverage-box__eyebrow {
+        font-family: var(--font-sign);
+        font-size: var(--text-xs, 13px);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: var(--tracking-caps-sm, .08em);
+        color: var(--sign-blue, #0b4ea2);
+      }
+      .sim-spectrum {
+        padding: var(--space-4, 16px);
+        background: var(--color-surface, #ffffff);
+      }
+      .sim-spectrum__head {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: var(--space-2, 8px);
+        margin-bottom: var(--space-2, 8px);
+      }
+      .sim-spectrum__label {
+        font-family: var(--font-sign);
+        font-size: var(--text-xs, 13px);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: var(--tracking-caps-sm, .08em);
+        color: var(--color-text-muted, #5c6570);
+      }
+      .sim-spectrum__track {
+        display: grid;
+        grid-template-columns: repeat(@sim.Bands.Count, minmax(0, 1fr));
+        border: var(--keyline, 2px) solid var(--ink, #14181d);
+        border-radius: 0;
+        background: var(--color-track, #dfe3e6);
+      }
+      .sim-band-cell {
+        padding: var(--space-2, 8px) var(--space-3, 12px);
+        border-right: var(--keyline-soft, 1px) solid var(--ink, #14181d);
+        background: var(--color-surface, #ffffff);
+        color: var(--ink, #14181d);
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+      }
+      .sim-band-cell:last-child {
+        border-right: 0;
+      }
+      .sim-band-cell.is-reached {
+        background: var(--color-primary-soft, #e8eef7);
+        color: var(--ink, #14181d);
+      }
+      .sim-band-cell.is-current {
+        background: #14181d;
+        color: #ffffff;
+      }
+      .sim-band-cell__top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-1, 4px);
+      }
+      .sim-band-cell__code {
+        font-family: var(--font-sign);
+        font-size: var(--text-sm, 14px);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: var(--tracking-sign, .055em);
+      }
+      .sim-band-cell__range {
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums;
+        font-size: 12px;
+        color: var(--color-text-muted, #5c6570);
+      }
+      .sim-band-cell.is-current .sim-band-cell__range,
+      .sim-band-cell.is-current .sim-band-cell__name {
+        color: #ffffff;
+      }
+      .sim-band-cell__name {
+        font-size: 12px;
+        color: var(--color-text-muted, #5c6570);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .sim-band-cell__tag {
+        font-family: var(--font-sign);
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        padding: 0 4px;
+        border: 1px solid currentColor;
+      }
+      @@media (max-width: 900px) {
+        .sim-grid {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .sim-controls {
+          border-right: 0;
+          border-bottom: var(--keyline-soft, 1px) solid var(--line-soft, #ccd2d6);
+        }
+      }
+      @@media (max-width: 640px) {
+        .sim-spectrum__track {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .sim-band-cell {
+          border-bottom: var(--keyline-soft, 1px) solid var(--ink, #14181d);
+        }
+      }
+    </style>
+
+    <section class="sim-placard mt-4"
+             id="dashboard-simulator"
+             aria-labelledby="sim-heading"
+             data-max-total="@sim.MaxTotalScore"
+             data-target-code="@targetCode"
+             data-target-min="@targetMin"
+             data-bands="@bandsJson">
+      <header class="sim-placard__header">
+        <div>
+          <h2 class="sim-placard__title" id="sim-heading">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true" focusable="false">
+              <path d="M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18z"></path>
+              <path d="M12 8a4 4 0 1 1 0 8 4 4 0 0 1 0-8z"></path>
+            </svg>
+            <span>Score &amp; Band Simulator · @cert.Code</span>
+          </h2>
+          <div class="sim-placard__sub">
+            @if (sim.CurrentTotalScore.HasValue)
+            {
+              <span>Baseline seeded from latest graded attempt (@sim.CurrentTotalScore.Value pts@(string.IsNullOrEmpty(sim.CurrentBandCode) ? "" : $" · {sim.CurrentBandCode}"))</span>
+            }
+            else
+            {
+              <span>Baseline seeded at scale midpoints (no graded attempt yet for @cert.Code)</span>
+            }
+          </div>
+        </div>
+        <button type="button" class="sim-placard__reset" id="sim-reset-btn">
+          Reset to baseline
+        </button>
+      </header>
+
+      <div class="sim-grid">
+        <div class="sim-controls">
+          @foreach (var skill in sim.Skills)
+          {
+              var headroom = Math.Max(0, skill.MaxScaledScore - skill.BaseScaledScore);
+              var midTick = skill.Step > 0
+                  ? skill.MinScaledScore + (((skill.MaxScaledScore - skill.MinScaledScore) / skill.Step / 2) * skill.Step)
+                  : (skill.MinScaledScore + skill.MaxScaledScore) / 2;
+              <div class="sim-skill-row" data-sim-skill-row="@skill.SkillId">
+                <div class="sim-skill-row__head">
+                  <label class="sim-skill-row__name" for="sim-slider-@skill.SkillId">
+                    <span class="badge badge--muted font-mono">@skill.SkillCode</span>
+                    <span>@skill.SkillName</span>
+                  </label>
+                  <div class="sim-skill-row__readout">
+                    <span>
+                      <output id="sim-skill-value-@skill.SkillId" for="sim-slider-@skill.SkillId" data-sim-skill-value="@skill.SkillId">@skill.BaseScaledScore</output>
+                      <span class="text-xs text-muted">/ @skill.MaxScaledScore pts</span>
+                    </span>
+                    <span class="badge badge--info font-mono" data-sim-skill-headroom="@skill.SkillId">+@headroom headroom</span>
+                  </div>
+                </div>
+                <input type="range"
+                       class="sim-range"
+                       id="sim-slider-@skill.SkillId"
+                       min="@skill.MinScaledScore"
+                       max="@skill.MaxScaledScore"
+                       step="@skill.Step"
+                       value="@skill.BaseScaledScore"
+                       data-sim-slider
+                       data-skill-id="@skill.SkillId"
+                       data-skill-code="@skill.SkillCode"
+                       data-skill-name="@skill.SkillName"
+                       data-base-score="@skill.BaseScaledScore"
+                       data-min-score="@skill.MinScaledScore"
+                       data-max-score="@skill.MaxScaledScore"
+                       aria-label="@skill.SkillName scaled score" />
+                <div class="sim-skill-row__ticks" aria-hidden="true">
+                  <span>MIN @skill.MinScaledScore</span>
+                  <span>MID @midTick</span>
+                  <span>MAX @skill.MaxScaledScore (STEP @skill.Step)</span>
+                </div>
+              </div>
+          }
+        </div>
+
+        <div class="sim-readout">
+          <div class="sim-score-plate">
+            <div class="sim-score-plate__cell">
+              <div class="sim-score-plate__label">Simulated Total</div>
+              <div class="sim-score-plate__value">
+                <span id="sim-total-score">@initialTotal</span>
+                <span class="text-sm text-muted font-mono">/ @sim.MaxTotalScore</span>
+              </div>
+            </div>
+            <div class="sim-score-plate__cell">
+              <div class="sim-score-plate__label">Projected Band</div>
+              <div class="sim-score-plate__value" id="sim-matched-band-code">@initialBand.Code</div>
+              <div class="text-xs text-muted mt-1" id="sim-matched-band-name">@initialBand.Name</div>
+            </div>
+          </div>
+
+          <div class="sim-deficit-bar">
+            <div>
+              <div class="text-xs font-sign uppercase font-bold text-muted">
+                Target Threshold · @targetCode (@targetMin+ pts)
+              </div>
+              <div class="text-xs text-muted">
+                @if (hasExplicitTarget)
+                {
+                  <span>@targetName · <a href="/placement/target-band">Change target ›</a></span>
+                }
+                else
+                {
+                  <span>Defaulted to @targetCode · <a href="/placement/target-band">Set target band ›</a></span>
+                }
+              </div>
+            </div>
+            <div>
+              @if (initialDeficit > 0)
+              {
+                <span class="badge badge--warning font-mono" id="sim-deficit-badge" data-deficit="@initialDeficit">
+                  -@initialDeficit pts to @targetCode
+                </span>
+              }
+              else
+              {
+                <span class="badge badge--success font-mono" id="sim-deficit-badge" data-deficit="0">
+                  TARGET @targetCode REACHED
+                </span>
+              }
+            </div>
+          </div>
+
+          <div class="sim-leverage-box" id="sim-leverage-callout">
+            <div class="sim-leverage-box__eyebrow">Highest-Leverage Skill Callout</div>
+            <p class="text-sm no-margin" id="sim-leverage-text">
+              @if (topHeadroom > 0)
+              {
+                <span>Prioritize <strong id="sim-leverage-skill">@topLeverageSkill.SkillName</strong> (<span class="font-mono font-bold" id="sim-leverage-headroom">+@topHeadroom pts</span> remaining headroom to @topLeverageSkill.MaxScaledScore) for the largest potential score gain.</span>
+              }
+              else
+              {
+                <span>All skills are set to their maximum scaled ceiling (<strong id="sim-leverage-skill">@topLeverageSkill.SkillName</strong> · <span class="font-mono font-bold" id="sim-leverage-headroom">+0 pts</span> headroom).</span>
+              }
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="sim-spectrum" role="region" aria-label="@cert.Code band continuum strip">
+        <div class="sim-spectrum__head">
+          <span class="sim-spectrum__label">Band Continuum Strip · Solid Ink Marks Active Band</span>
+          <span class="text-xs font-mono text-muted">RANGE: @sim.Bands[0].MinTotal–@sim.MaxTotalScore PTS</span>
+        </div>
+        <div class="sim-spectrum__track">
+          @foreach (var band in sim.Bands)
+          {
+              var isCurrent = string.Equals(band.Code, initialBand.Code, StringComparison.OrdinalIgnoreCase);
+              var isReached = !isCurrent && initialTotal > band.MaxTotal;
+              var isTarget = string.Equals(band.Code, targetCode, StringComparison.OrdinalIgnoreCase);
+              <div class="sim-band-cell @(isCurrent ? "is-current" : isReached ? "is-reached" : "")"
+                   data-sim-band-cell
+                   data-band-code="@band.Code"
+                   data-band-name="@band.Name"
+                   data-min-total="@band.MinTotal"
+                   data-max-total="@band.MaxTotal"
+                   aria-current="@(isCurrent ? "true" : "false")">
+                <div class="sim-band-cell__top">
+                  <span class="sim-band-cell__code">@band.Code</span>
+                  @if (isTarget)
+                  {
+                    <span class="sim-band-cell__tag">TARGET</span>
+                  }
+                </div>
+                <div class="sim-band-cell__range">@band.MinTotal–@band.MaxTotal</div>
+                <div class="sim-band-cell__name" title="@band.Name">@band.Name</div>
+              </div>
+          }
+        </div>
+      </div>
+    </section>
+
+    <script>
+      (function () {
+        "use strict";
+        var root = document.getElementById("dashboard-simulator");
+        if (!root) return;
+
+        var sliders = Array.prototype.slice.call(root.querySelectorAll("[data-sim-slider]"));
+        var bandCells = Array.prototype.slice.call(root.querySelectorAll("[data-sim-band-cell]"));
+        var totalEl = document.getElementById("sim-total-score");
+        var bandCodeEl = document.getElementById("sim-matched-band-code");
+        var bandNameEl = document.getElementById("sim-matched-band-name");
+        var deficitBadgeEl = document.getElementById("sim-deficit-badge");
+        var leverageTextEl = document.getElementById("sim-leverage-text");
+        var resetBtn = document.getElementById("sim-reset-btn");
+
+        var targetCode = root.getAttribute("data-target-code") || "";
+        var targetMin = parseInt(root.getAttribute("data-target-min") || "0", 10);
+        var bands = [];
+        try {
+          bands = JSON.parse(root.getAttribute("data-bands") || "[]");
+        } catch (e) {
+          bands = [];
+        }
+
+        function matchBand(score) {
+          if (!bands.length) return null;
+          for (var i = 0; i < bands.length; i++) {
+            if (score >= bands[i].minTotal && score <= bands[i].maxTotal) {
+              return bands[i];
+            }
+          }
+          return score < bands[0].minTotal ? bands[0] : bands[bands.length - 1];
+        }
+
+        function recalculate() {
+          var simulatedTotal = 0;
+          var bestSkill = null;
+          var bestHeadroom = -1;
+
+          for (var i = 0; i < sliders.length; i++) {
+            var s = sliders[i];
+            var skillId = s.getAttribute("data-skill-id");
+            var skillName = s.getAttribute("data-skill-name") || "";
+            var maxScaled = parseInt(s.getAttribute("data-max-score") || "0", 10);
+            var val = parseInt(s.value || "0", 10);
+            var headroom = Math.max(0, maxScaled - val);
+
+            simulatedTotal += val;
+
+            var valOut = root.querySelector('[data-sim-skill-value="' + skillId + '"]');
+            if (valOut) valOut.textContent = String(val);
+
+            var headroomOut = root.querySelector('[data-sim-skill-headroom="' + skillId + '"]');
+            if (headroomOut) headroomOut.textContent = "+" + headroom + " headroom";
+
+            if (headroom > bestHeadroom) {
+              bestHeadroom = headroom;
+              bestSkill = { name: skillName, maxScaled: maxScaled, headroom: headroom };
+            }
+          }
+
+          if (totalEl) totalEl.textContent = String(simulatedTotal);
+
+          var matched = matchBand(simulatedTotal);
+          if (matched) {
+            if (bandCodeEl) bandCodeEl.textContent = matched.code;
+            if (bandNameEl) bandNameEl.textContent = matched.name;
+          }
+
+          for (var j = 0; j < bandCells.length; j++) {
+            var cell = bandCells[j];
+            var cCode = cell.getAttribute("data-band-code");
+            var cMax = parseInt(cell.getAttribute("data-max-total") || "0", 10);
+            var isCurrent = matched && cCode === matched.code;
+            var isReached = !isCurrent && simulatedTotal > cMax;
+
+            cell.classList.toggle("is-current", Boolean(isCurrent));
+            cell.classList.toggle("is-reached", Boolean(isReached));
+            cell.setAttribute("aria-current", isCurrent ? "true" : "false");
+          }
+
+          var deficit = Math.max(0, targetMin - simulatedTotal);
+          if (deficitBadgeEl) {
+            deficitBadgeEl.setAttribute("data-deficit", String(deficit));
+            if (deficit > 0) {
+              deficitBadgeEl.className = "badge badge--warning font-mono";
+              deficitBadgeEl.textContent = "-" + deficit + " pts to " + targetCode;
+            } else {
+              deficitBadgeEl.className = "badge badge--success font-mono";
+              deficitBadgeEl.textContent = "TARGET " + targetCode + " REACHED";
+            }
+          }
+
+          if (leverageTextEl && bestSkill) {
+            leverageTextEl.textContent = "";
+            if (bestSkill.headroom > 0) {
+              leverageTextEl.appendChild(document.createTextNode("Prioritize "));
+              var strong = document.createElement("strong");
+              strong.id = "sim-leverage-skill";
+              strong.textContent = bestSkill.name;
+              leverageTextEl.appendChild(strong);
+              leverageTextEl.appendChild(document.createTextNode(" ("));
+              var span = document.createElement("span");
+              span.id = "sim-leverage-headroom";
+              span.className = "font-mono font-bold";
+              span.textContent = "+" + bestSkill.headroom + " pts";
+              leverageTextEl.appendChild(span);
+              leverageTextEl.appendChild(
+                document.createTextNode(" remaining headroom to " + bestSkill.maxScaled + ") for the largest potential score gain.")
+              );
+            } else {
+              leverageTextEl.appendChild(document.createTextNode("All skills are set to their maximum scaled ceiling ("));
+              var strongMax = document.createElement("strong");
+              strongMax.id = "sim-leverage-skill";
+              strongMax.textContent = bestSkill.name;
+              leverageTextEl.appendChild(strongMax);
+              leverageTextEl.appendChild(document.createTextNode(" · "));
+              var spanMax = document.createElement("span");
+              spanMax.id = "sim-leverage-headroom";
+              spanMax.className = "font-mono font-bold";
+              spanMax.textContent = "+0 pts";
+              leverageTextEl.appendChild(spanMax);
+              leverageTextEl.appendChild(document.createTextNode(" headroom)."));
+            }
+          }
+        }
+
+        for (var k = 0; k < sliders.length; k++) {
+          sliders[k].addEventListener("input", recalculate);
+          sliders[k].addEventListener("change", recalculate);
+        }
+
+        if (resetBtn) {
+          resetBtn.addEventListener("click", function () {
+            for (var i = 0; i < sliders.length; i++) {
+              var base = sliders[i].getAttribute("data-base-score");
+              if (base !== null) sliders[i].value = base;
+            }
+            recalculate();
+          });
+        }
+      })();
+    </script>
+}
+
