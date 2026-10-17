@@ -10,7 +10,7 @@ namespace WebMVC.Controllers;
 public sealed class AdminController(
     IAdminDashboardClient api,
     CurrentUser currentUser,
-    ILogger<AdminController>? logger = null) : Controller
+    ILogger<AdminController>? logger = null) : AdminControllerBase(currentUser, logger)
 {
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {

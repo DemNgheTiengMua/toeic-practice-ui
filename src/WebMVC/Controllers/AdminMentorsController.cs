@@ -10,7 +10,7 @@ namespace WebMVC.Controllers;
 public sealed class AdminMentorsController(
     IAdminMentorsClient api,
     CurrentUser currentUser,
-    ILogger<AdminMentorsController> logger) : Controller
+    ILogger<AdminMentorsController> logger) : AdminControllerBase(currentUser, logger)
 {
 
     [HttpGet("")]

@@ -1,17 +1,17 @@
 # Graph Report - extra_efficiency_ui  (2026-10-17)
 
 ## Corpus Check
-- 512 files · ~432,057 words
+- 512 files · ~432,427 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 34 file(s) not represented in the graph (top: .woff2 20, .css 6, .zip 3)
 
 ## Summary
-- 7343 nodes · 21350 edges · 432 communities (196 shown, 236 thin omitted)
-- Extraction: 89% EXTRACTED · 11% INFERRED · 0% AMBIGUOUS · INFERRED: 2344 edges (avg confidence: 0.85)
+- 7343 nodes · 21346 edges · 432 communities (196 shown, 236 thin omitted)
+- Extraction: 89% EXTRACTED · 11% INFERRED · 0% AMBIGUOUS · INFERRED: 2340 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `bfbed317`
+- Built from commit: `119cf002`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -344,7 +344,7 @@
 - FixedAuthentication
 - Certificates
 - database-schema.sql
-- ClaudeClient
+- .GenerateInsightAsync
 - .MapCatalogEndpoints
 - AdminControllerBase
 - CompanionApiClient
@@ -839,8 +839,8 @@ Cohesion: 0.29
 Nodes (5): Microsoft.Extensions.Http (10.0.12), net10.0, Microsoft.NET.Sdk, net10.0, Microsoft.NET.Sdk.Web
 
 ### Community 195 - "AiInsightGenerationRequest"
-Cohesion: 0.18
-Nodes (12): AiInsightGenerationRequest, AiInsightResult, FakeAiInsightGenerator, ShouldSimulateFailure, GeneratedRecommendation, IAiInsightGenerator, InsightCategoryAccuracy, InsightQuestionDetail (+4 more)
+Cohesion: 0.23
+Nodes (11): AiInsightGenerationRequest, AiInsightResult, FakeAiInsightGenerator, ShouldSimulateFailure, GeneratedRecommendation, IAiInsightGenerator, InsightCategoryAccuracy, InsightQuestionDetail (+3 more)
 
 ### Community 210 - ".GetOrdersAsync"
 Cohesion: 0.12
@@ -931,8 +931,8 @@ Cohesion: 0.06
 Nodes (28): LearnerPath, AiInsights, Cert, CertId, CreditTransactions, CurrentBandCode, LearnerPathId, LearnerPathSteps (+20 more)
 
 ### Community 246 - "AiGradingRequest"
-Cohesion: 0.19
-Nodes (4): AiCriterionScoreResult, AiGradingRequest, AiGradingResult, ClaudeAiGrader
+Cohesion: 0.17
+Nodes (5): AiCriterionScoreResult, AiGradingRequest, AiGradingResult, GradingCriterionDetail, ClaudeAiGrader
 
 ### Community 248 - "ImportManifestExam"
 Cohesion: 0.29
@@ -1104,7 +1104,7 @@ Nodes (3): TrackingAuthenticationService, SignedOut, SignedOutScheme
 
 ### Community 336 - ".GradeFreeResponseAsync_grades_targeted_single_response_by_id"
 Cohesion: 0.13
-Nodes (12): Consequences, Decision, Dedicated AI Grading Processor Seam, Status, FakeAiGrader, GradingCriterionDetail, IAiGrader, AiGradingProcessor (+4 more)
+Nodes (11): Consequences, Decision, Dedicated AI Grading Processor Seam, Status, FakeAiGrader, IAiGrader, AiGradingProcessor, IAiGradingProcessor (+3 more)
 
 ### Community 337 - "EndpointHelpers"
 Cohesion: 0.15
@@ -1158,9 +1158,9 @@ Nodes (3): Certificates, trg_Exams_PurposeKeepsContent, trg_QGroups_SkillPractic
 Cohesion: 0.36
 Nodes (6): trg_CreditTransactions_AppendOnly, trg_CreditTransactions_BookingAmounts, trg_CreditTransactions_ChargeMatchesExamPurpose, trg_CreditTransactions_NoNegativeBalance, trg_CreditTransactions_NoRewrite, trg_CreditTransactions_PurchaseMatchesOrder
 
-### Community 358 - "ClaudeClient"
-Cohesion: 0.19
-Nodes (6): ClaudeClient, IClaudeClient, ClaudeOptions, ApiKey, BaseUrl, Model
+### Community 358 - ".GenerateInsightAsync"
+Cohesion: 0.13
+Nodes (7): ClaudeAiInsightGenerator, ClaudeClient, IClaudeClient, ClaudeOptions, ApiKey, BaseUrl, Model
 
 ### Community 359 - ".MapCatalogEndpoints"
 Cohesion: 0.50
@@ -1235,9 +1235,9 @@ Nodes (7): PracticeCatalogViewModel, PracticeTakeViewModel, StartPracticeFormMod
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `CompanionDbContext` connect `CompanionDbContext` to `ImportBatch`, `AuthService`, `QuestionImportService`, `trg_Attempts_TotalMatchesSkills`, `GradingCriterion`, `.MapPracticeEndpoints`, `system`, `Certificate`, `QuestionCategory`, `AdminLessonService`, `AttemptStatus`, `.Create`, `AdminComplaintDetailDto`, `AiInsightService`, `.OnModelCreating`, `LearningPathServiceTests`, `EmailVerificationToken`, `AiInsight`, `PathModule`, `Exception`, `PremiumPathService`, `LearnerService`, `ICreditLedger`, `MockExamModels.cs`, `Exam`, `WritingPracticeService`, `AdminUserService`, `Recommendation`, `Complaint`, `.GetWeaknessAnalysisAsync`, `Question`, `MentorProfile`, `CancellationToken`, `ExamAttempt`, `SavedQuestionService.cs`, `IFileStore`, `PracticeSession`, `QuestionGroup`, `Booking`, `vw_UserSectionAccuracyAll`, `DatabaseFixture`, `PremiumPathServiceTests`, `User`, `Lesson`, `.GetActiveCertIdAsync`, `PlacementTest`, `PackageDto`, `.GradeFreeResponseAsync_grades_targeted_single_response_by_id`, `.GetOrdersAsync`, `.Problem`, `.Parse`, `CreditLedgerTests`, `.GetCatalogAsync`, `.GetDashboardMetricsAsync`, `Section`, `LearnerPath`, `FreeResponse`, `AiGrading`, `AiGradings`, `FreeResponses`, `Order`, `Skill`?**
-  _High betweenness centrality (0.151) - this node is a cross-community bridge._
+  _High betweenness centrality (0.152) - this node is a cross-community bridge._
 - **Why does `Contracts` connect `Contracts` to `AuthService`, `Contracts/Enums.cs`, `ApiError.cs`, `TestApiClient`, `AdminImportBatchesDto`, `system`, `CancellationToken`, `.MapExamEndpoints`, `system_threading_tasks`, `Checkout/Index.cshtml`, `AdminComplaintsSummaryDto`, `MockGateway.cshtml`, `TestApiClient`, `TestApiClient`, `StartPracticeFormModel`, `Roles.cs`, `AdminExamStudioDtos.cs`, `ICreditLedger`, `Support/History.cshtml`, `TestUsersApiClient`, `.MapLearnerEndpoints`, `LessonsController`, `TestApiClient`, `QuestionSaveModel`, `AdminComplaintsController`, `Checkout/Result.cshtml`, `Wallet/Index.cshtml`, `CancellationToken`, `ExamFormViewModel`, `LearningPathSummaryDto`, `MentorFormViewModel`, `Admin/Index.cshtml`, `Packages.cshtml`, `AuthServiceTests.cs`, `CheckoutController`, `PackageDto`, `AdminScoreConversionDto`, `EndpointHelpers`, `.Problem`, `TestApiClient`, `TestApiClient`, `DateTimeFormatter`, `TestApiClient`, `BusinessObjects`, `TestApiClient`, `.MapCatalogEndpoints`, `AuthErrorCodes.cs`, `CurrencyFormatter`, `PlacementDtos.cs`, `TestApiClient`, `WebAPI/Program.cs`, `ComplaintDetail.cshtml`, `Complaints.cshtml`?**
-  _High betweenness centrality (0.123) - this node is a cross-community bridge._
+  _High betweenness centrality (0.126) - this node is a cross-community bridge._
 - **Why does `BusinessObjects` connect `BusinessObjects` to `system`, `AttemptStatus`, `system_threading_tasks`, `Exception`, `Contracts`, `Modality`, `MockExamModels.cs`, `WritingPracticeService`, `.GetWeaknessAnalysisAsync`, `SavedQuestionService.cs`, `AiInsightGenerationRequest`, `AuthServiceTests.cs`, `.GetDashboardAsync`, `.GetActiveCertIdAsync`, `GatewayStatus`, `BusinessObjects/Enums.cs`, `.GetCatalogAsync`, `TestApiClient`, `.CreateService`?**
   _High betweenness centrality (0.028) - this node is a cross-community bridge._
 - **What connects `reset-and-load.sh script`, `run-all.sh script`, `net10.0` to the rest of the system?**

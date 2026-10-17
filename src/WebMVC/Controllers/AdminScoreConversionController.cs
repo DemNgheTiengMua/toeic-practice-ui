@@ -11,7 +11,7 @@ namespace WebMVC.Controllers;
 public sealed class AdminScoreConversionController(
     IAdminScoreConversionClient api,
     CurrentUser currentUser,
-    ILogger<AdminScoreConversionController> logger) : Controller
+    ILogger<AdminScoreConversionController> logger) : AdminControllerBase(currentUser, logger)
 {
 
     [HttpGet("")]

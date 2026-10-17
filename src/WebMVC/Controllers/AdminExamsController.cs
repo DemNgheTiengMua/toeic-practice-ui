@@ -16,7 +16,7 @@ namespace WebMVC.Controllers;
 public sealed class AdminExamsController(
     IAdminExamsClient api,
     CurrentUser currentUser,
-    ILogger<AdminExamsController> logger) : Controller
+    ILogger<AdminExamsController> logger) : AdminControllerBase(currentUser, logger)
 {
 
     [HttpGet("")]

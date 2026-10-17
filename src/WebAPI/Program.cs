@@ -261,6 +261,10 @@ builder.Services.AddScoped<IAiInsightService, AiInsightService>();
 builder.Services.AddHostedService<AiInsightBackgroundService>();
 
 var payOsOptions = builder.Configuration.GetSection(PayOsOptions.SectionName).Get<PayOsOptions>() ?? new PayOsOptions();
+payOsOptions.ClientId = builder.Configuration["PAYOS_CLIENT_ID"] ?? payOsOptions.ClientId;
+payOsOptions.ApiKey = builder.Configuration["PAYOS_API_KEY"] ?? payOsOptions.ApiKey;
+payOsOptions.ChecksumKey = builder.Configuration["PAYOS_CHECKSUM_KEY"] ?? payOsOptions.ChecksumKey;
+payOsOptions.WebhookUrl = builder.Configuration["PAYOS_WEBHOOK_URL"] ?? payOsOptions.WebhookUrl;
 builder.Services.AddSingleton(payOsOptions);
 builder.Services.AddSingleton<PayOsPaymentGateway>();
 

@@ -357,7 +357,7 @@
   "355": "FixedAuthentication",
   "356": "Certificates",
   "357": "database-schema.sql",
-  "358": "ClaudeClient",
+  "358": ".GenerateInsightAsync",
   "359": ".MapCatalogEndpoints",
   "360": "AdminControllerBase",
   "361": "CompanionApiClient",

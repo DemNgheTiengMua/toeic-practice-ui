@@ -10,7 +10,7 @@ namespace WebMVC.Controllers;
 public sealed class AdminOrdersController(
     IAdminOrdersClient api,
     CurrentUser currentUser,
-    ILogger<AdminOrdersController> logger) : Controller
+    ILogger<AdminOrdersController> logger) : AdminControllerBase(currentUser, logger)
 {
 
     [HttpGet("")]

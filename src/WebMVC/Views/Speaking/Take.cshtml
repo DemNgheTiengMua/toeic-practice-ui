@@ -210,12 +210,9 @@
           </div>
 
           <div class="stack">
-            <form method="post" action="/speaking/submit/@take.AttemptId" onsubmit="return confirm('Are you sure you want to finish and submit your speaking practice for AI grading? (Deducts 1 credit)');">
-              @Html.AntiForgeryToken()
-              <button class="btn btn--danger btn--full" type="submit" @(take.SavedCount == 0 ? "disabled" : "") id="btn-finish-submit">
-                Finish and submit
-              </button>
-            </form>
+            <button class="btn btn--danger btn--full" type="button" @(take.SavedCount == 0 ? "disabled" : "") id="btn-open-submit-modal">
+              Finish and submit
+            </button>
             <p class="text-xs text-muted no-margin text-center">
               Deducts 1 credit upon submission for AI evaluation. Questions without recordings are not graded.
             </p>
@@ -224,6 +221,33 @@
       </div>
     </div>
   </main>
+</div>
+
+<!-- Submit Confirmation Modal -->
+<div id="submit-modal" class="modal-overlay" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="submit-modal-title">
+  <div class="modal">
+    <div class="modal__header">
+      <h2 id="submit-modal-title" class="no-margin">Finish & Submit Speaking Practice?</h2>
+    </div>
+    <div class="modal__body stack">
+      <p class="no-margin">
+        Submitting will send your recordings for AI evaluation and deduct <strong>1 credit</strong> from your wallet.
+      </p>
+      @if (take.SavedCount < take.TotalQuestions)
+      {
+        <div class="alert alert--warning">
+          <strong>Notice:</strong> You have recorded @take.SavedCount of @take.TotalQuestions questions. Unrecorded questions will receive 0 marks.
+        </div>
+      }
+    </div>
+    <div class="modal__footer row row--between">
+      <button type="button" class="btn js-close-submit-modal">Return to practice</button>
+      <form method="post" action="/speaking/submit/@take.AttemptId" style="margin:0;">
+        @Html.AntiForgeryToken()
+        <button type="submit" class="btn btn--danger">Confirm & Submit (1 credit)</button>
+      </form>
+    </div>
+  </div>
 </div>
 
 <!-- Anti-forgery form token helper -->
@@ -479,6 +503,26 @@
       alert("All questions recorded! You can now finish and submit your attempt.");
       window.location.reload();
     }
+  }
+
+  const submitModal = document.getElementById('submit-modal');
+  const btnOpenSubmit = document.getElementById('btn-open-submit-modal');
+  const closeSubmitBtns = document.querySelectorAll('.js-close-submit-modal');
+
+  if (btnOpenSubmit) {
+    btnOpenSubmit.addEventListener('click', () => {
+      if (submitModal) submitModal.style.display = 'flex';
+    });
+  }
+  closeSubmitBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (submitModal) submitModal.style.display = 'none';
+    });
+  });
+  if (submitModal) {
+    submitModal.addEventListener('click', (e) => {
+      if (e.target === submitModal) submitModal.style.display = 'none';
+    });
   }
 
   btnSaveContinue.addEventListener('click', uploadRecording);

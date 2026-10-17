@@ -3994,25 +3994,6 @@
       "source_location": "L36"
     },
     {
-      "id": "src_services_claude_claudeaiinsightgenerator_services_claudeaiinsightgenerator",
-      "label": "ClaudeAiInsightGenerator",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 195,
-      "community_name": "AiInsightGenerationRequest",
-      "file_type": "code",
-      "metadata": {
-        "namespace": "Services",
-        "scope_chain": [
-          "s224"
-        ]
-      },
-      "norm_label": "claudeaiinsightgenerator",
-      "source_file": "src/Services/Claude/ClaudeAiInsightGenerator.cs",
-      "source_location": "L13"
-    },
-    {
       "id": "tests_services_tests_fakeaiinsightgeneratortests_services_tests_fakeaiinsightgeneratortests",
       "label": "FakeAiInsightGeneratorTests",
       "_callable": true,
@@ -5998,6 +5979,25 @@
       "norm_label": "aigradingresult",
       "source_file": "src/Services/AiGrader.cs",
       "source_location": "L31"
+    },
+    {
+      "id": "src_services_aigrader_services_gradingcriteriondetail",
+      "label": "GradingCriterionDetail",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 246,
+      "community_name": "AiGradingRequest",
+      "file_type": "code",
+      "metadata": {
+        "namespace": "Services",
+        "scope_chain": [
+          "s122"
+        ]
+      },
+      "norm_label": "gradingcriteriondetail",
+      "source_file": "src/Services/AiGrader.cs",
+      "source_location": "L23"
     },
     {
       "id": "src_services_claude_claudeaigrader_services_claudeaigrader",
@@ -10382,25 +10382,6 @@
       "source_location": "L57"
     },
     {
-      "id": "src_services_aigrader_services_gradingcriteriondetail",
-      "label": "GradingCriterionDetail",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 336,
-      "community_name": ".GradeFreeResponseAsync_grades_targeted_single_response_by_id",
-      "file_type": "code",
-      "metadata": {
-        "namespace": "Services",
-        "scope_chain": [
-          "s122"
-        ]
-      },
-      "norm_label": "gradingcriteriondetail",
-      "source_file": "src/Services/AiGrader.cs",
-      "source_location": "L23"
-    },
-    {
       "id": "src_services_aigrader_services_iaigrader",
       "label": "IAiGrader",
       "_callable": true,
@@ -11890,13 +11871,32 @@
       "source_location": "L14"
     },
     {
+      "id": "src_services_claude_claudeaiinsightgenerator_services_claudeaiinsightgenerator",
+      "label": "ClaudeAiInsightGenerator",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 358,
+      "community_name": ".GenerateInsightAsync",
+      "file_type": "code",
+      "metadata": {
+        "namespace": "Services",
+        "scope_chain": [
+          "s224"
+        ]
+      },
+      "norm_label": "claudeaiinsightgenerator",
+      "source_file": "src/Services/Claude/ClaudeAiInsightGenerator.cs",
+      "source_location": "L13"
+    },
+    {
       "id": "src_services_claude_claudeclient_services_claudeclient",
       "label": "ClaudeClient",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
       "community": 358,
-      "community_name": "ClaudeClient",
+      "community_name": ".GenerateInsightAsync",
       "file_type": "code",
       "metadata": {
         "namespace": "Services",
@@ -11915,7 +11915,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 358,
-      "community_name": "ClaudeClient",
+      "community_name": ".GenerateInsightAsync",
       "file_type": "code",
       "metadata": {
         "namespace": "Services",
@@ -11934,7 +11934,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 358,
-      "community_name": "ClaudeClient",
+      "community_name": ".GenerateInsightAsync",
       "file_type": "code",
       "metadata": {
         "namespace": "Services",
@@ -12591,7 +12591,7 @@
       },
       "norm_label": "program",
       "source_file": "src/WebAPI/Program.cs",
-      "source_location": "L352"
+      "source_location": "L356"
     },
     {
       "id": "src_webmvc_models_examaudioplayermodel_webmvc_models_examaudioplayermodel",
@@ -31561,68 +31561,6 @@
       "source_location": "L1002"
     },
     {
-      "id": "src_services_claude_claudeaiinsightgenerator_services_claudeaiinsightgenerator_extractjson",
-      "label": ".ExtractJson()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 195,
-      "community_name": "AiInsightGenerationRequest",
-      "file_type": "code",
-      "metadata": {
-        "namespace": "Services",
-        "scope_chain": [
-          "s224"
-        ]
-      },
-      "norm_label": ".extractjson()",
-      "source_file": "src/Services/Claude/ClaudeAiInsightGenerator.cs",
-      "source_location": "L135"
-    },
-    {
-      "id": "src_services_claude_claudeaiinsightgenerator_services_claudeaiinsightgenerator_generateinsightasync",
-      "label": ".GenerateInsightAsync()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 195,
-      "community_name": "AiInsightGenerationRequest",
-      "file_type": "code",
-      "metadata": {
-        "namespace": "Services",
-        "scope_chain": [
-          "s224"
-        ],
-        "unresolved_calls": [
-          {
-            "callee": "AppendLine",
-            "receiver_type": "StringBuilder",
-            "lang": "csharp",
-            "line": "L36"
-          },
-          {
-            "callee": "ToString",
-            "receiver_type": "StringBuilder",
-            "lang": "csharp",
-            "line": "L81"
-          },
-          {
-            "callee": "Parse",
-            "receiver_type": "JsonDocument",
-            "lang": "csharp",
-            "line": "L87"
-          },
-          {
-            "callee": "Add",
-            "receiver_type": "List",
-            "lang": "csharp",
-            "line": "L111"
-          }
-        ]
-      },
-      "norm_label": ".generateinsightasync()",
-      "source_file": "src/Services/Claude/ClaudeAiInsightGenerator.cs",
-      "source_location": "L26"
-    },
-    {
       "id": "tests_services_tests_fakeaiinsightgeneratortests_services_tests_fakeaiinsightgeneratortests_dashboard_scope_compares_against_previous_insight_and_detects_improving_trend",
       "label": ".Dashboard_scope_compares_against_previous_insight_and_detects_improving_trend()",
       "_callable": true,
@@ -41520,7 +41458,7 @@
       },
       "norm_label": ".extractjson()",
       "source_file": "src/Services/Claude/ClaudeAiGrader.cs",
-      "source_location": "L122"
+      "source_location": "L131"
     },
     {
       "id": "src_services_claude_claudeaigrader_services_claudeaigrader_gradeasync",
@@ -41537,46 +41475,52 @@
         ],
         "unresolved_calls": [
           {
+            "callee": "Empty",
+            "receiver_type": "Array",
+            "lang": "csharp",
+            "line": "L31"
+          },
+          {
             "callee": "AppendLine",
             "receiver_type": "StringBuilder",
             "lang": "csharp",
-            "line": "L36"
+            "line": "L37"
           },
           {
             "callee": "ToString",
             "receiver_type": "StringBuilder",
             "lang": "csharp",
-            "line": "L70"
+            "line": "L71"
           },
           {
             "callee": "Parse",
             "receiver_type": "JsonDocument",
             "lang": "csharp",
-            "line": "L77"
+            "line": "L78"
           },
           {
             "callee": "Clamp",
             "receiver_type": "Math",
             "lang": "csharp",
-            "line": "L91"
+            "line": "L92"
           },
           {
             "callee": "Add",
             "receiver_type": "List",
             "lang": "csharp",
-            "line": "L92"
+            "line": "L93"
           },
           {
             "callee": "Any",
             "receiver_type": "List",
             "lang": "csharp",
-            "line": "L99"
+            "line": "L100"
           }
         ]
       },
       "norm_label": ".gradeasync()",
       "source_file": "src/Services/Claude/ClaudeAiGrader.cs",
-      "source_location": "L25"
+      "source_location": "L22"
     },
     {
       "id": "src_services_speechsuper_speechsuperaigrader_services_speechsuperaigrader_gradeasync",
@@ -62505,12 +62449,80 @@
       "source_location": "L59"
     },
     {
+      "id": "src_services_claude_claudeaiinsightgenerator_services_claudeaiinsightgenerator_extractjson",
+      "label": ".ExtractJson()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 358,
+      "community_name": ".GenerateInsightAsync",
+      "file_type": "code",
+      "metadata": {
+        "namespace": "Services",
+        "scope_chain": [
+          "s224"
+        ]
+      },
+      "norm_label": ".extractjson()",
+      "source_file": "src/Services/Claude/ClaudeAiInsightGenerator.cs",
+      "source_location": "L151"
+    },
+    {
+      "id": "src_services_claude_claudeaiinsightgenerator_services_claudeaiinsightgenerator_generateinsightasync",
+      "label": ".GenerateInsightAsync()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 358,
+      "community_name": ".GenerateInsightAsync",
+      "file_type": "code",
+      "metadata": {
+        "namespace": "Services",
+        "scope_chain": [
+          "s224"
+        ],
+        "unresolved_calls": [
+          {
+            "callee": "Empty",
+            "receiver_type": "Array",
+            "lang": "csharp",
+            "line": "L33"
+          },
+          {
+            "callee": "AppendLine",
+            "receiver_type": "StringBuilder",
+            "lang": "csharp",
+            "line": "L39"
+          },
+          {
+            "callee": "ToString",
+            "receiver_type": "StringBuilder",
+            "lang": "csharp",
+            "line": "L84"
+          },
+          {
+            "callee": "Parse",
+            "receiver_type": "JsonDocument",
+            "lang": "csharp",
+            "line": "L90"
+          },
+          {
+            "callee": "Add",
+            "receiver_type": "List",
+            "lang": "csharp",
+            "line": "L114"
+          }
+        ]
+      },
+      "norm_label": ".generateinsightasync()",
+      "source_file": "src/Services/Claude/ClaudeAiInsightGenerator.cs",
+      "source_location": "L23"
+    },
+    {
       "id": "src_services_claude_claudeclient_services_claudeclient_createmessageasync",
       "label": ".CreateMessageAsync()",
       "_callable": true,
       "_origin": "ast",
       "community": 358,
-      "community_name": "ClaudeClient",
+      "community_name": ".GenerateInsightAsync",
       "file_type": "code",
       "metadata": {
         "namespace": "Services",
@@ -62560,7 +62572,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 358,
-      "community_name": "ClaudeClient",
+      "community_name": ".GenerateInsightAsync",
       "file_type": "code",
       "metadata": {
         "namespace": "Services",
@@ -93275,39 +93287,6 @@
       "source_location": "L112"
     },
     {
-      "id": "src_services_claude_claudeaiinsightgenerator_cs_cancellationtoken",
-      "label": "CancellationToken",
-      "_origin": "ast",
-      "community": 195,
-      "community_name": "AiInsightGenerationRequest",
-      "file_type": "code",
-      "norm_label": "cancellationtoken",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "src_services_claude_claudeaiinsightgenerator_cs_ilogger",
-      "label": "ILogger",
-      "_origin": "ast",
-      "community": 195,
-      "community_name": "AiInsightGenerationRequest",
-      "file_type": "code",
-      "norm_label": "ilogger",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "src_services_claude_claudeaiinsightgenerator_cs_task",
-      "label": "Task",
-      "_origin": "ast",
-      "community": 195,
-      "community_name": "AiInsightGenerationRequest",
-      "file_type": "code",
-      "norm_label": "task",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
       "id": "tests_services_tests_fakeaiinsightgeneratortests_cs_fact",
       "label": "Fact",
       "_origin": "ast",
@@ -118367,11 +118346,44 @@
       "source_location": "L1660"
     },
     {
+      "id": "src_services_claude_claudeaiinsightgenerator_cs_cancellationtoken",
+      "label": "CancellationToken",
+      "_origin": "ast",
+      "community": 358,
+      "community_name": ".GenerateInsightAsync",
+      "file_type": "code",
+      "norm_label": "cancellationtoken",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "src_services_claude_claudeaiinsightgenerator_cs_ilogger",
+      "label": "ILogger",
+      "_origin": "ast",
+      "community": 358,
+      "community_name": ".GenerateInsightAsync",
+      "file_type": "code",
+      "norm_label": "ilogger",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "src_services_claude_claudeaiinsightgenerator_cs_task",
+      "label": "Task",
+      "_origin": "ast",
+      "community": 358,
+      "community_name": ".GenerateInsightAsync",
+      "file_type": "code",
+      "norm_label": "task",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
       "id": "src_services_claude_claudeclient_cs_cancellationtoken",
       "label": "CancellationToken",
       "_origin": "ast",
       "community": 358,
-      "community_name": "ClaudeClient",
+      "community_name": ".GenerateInsightAsync",
       "file_type": "code",
       "norm_label": "cancellationtoken",
       "source_file": "",
@@ -118382,7 +118394,7 @@
       "label": "HttpClient",
       "_origin": "ast",
       "community": 358,
-      "community_name": "ClaudeClient",
+      "community_name": ".GenerateInsightAsync",
       "file_type": "code",
       "norm_label": "httpclient",
       "source_file": "",
@@ -118393,7 +118405,7 @@
       "label": "ILogger",
       "_origin": "ast",
       "community": 358,
-      "community_name": "ClaudeClient",
+      "community_name": ".GenerateInsightAsync",
       "file_type": "code",
       "norm_label": "ilogger",
       "source_file": "",
@@ -118404,7 +118416,7 @@
       "label": "Task",
       "_origin": "ast",
       "community": 358,
-      "community_name": "ClaudeClient",
+      "community_name": ".GenerateInsightAsync",
       "file_type": "code",
       "norm_label": "task",
       "source_file": "",
@@ -118415,7 +118427,7 @@
       "label": "ClaudeOptions.cs",
       "_origin": "ast",
       "community": 358,
-      "community_name": "ClaudeClient",
+      "community_name": ".GenerateInsightAsync",
       "file_type": "code",
       "norm_label": "claudeoptions.cs",
       "source_file": "src/Services/ClaudeOptions.cs",
@@ -118426,7 +118438,7 @@
       "label": "ApiKey",
       "_origin": "ast",
       "community": 358,
-      "community_name": "ClaudeClient",
+      "community_name": ".GenerateInsightAsync",
       "file_type": "code",
       "metadata": {
         "namespace": "Services",
@@ -118443,7 +118455,7 @@
       "label": "BaseUrl",
       "_origin": "ast",
       "community": 358,
-      "community_name": "ClaudeClient",
+      "community_name": ".GenerateInsightAsync",
       "file_type": "code",
       "metadata": {
         "namespace": "Services",
@@ -118460,7 +118472,7 @@
       "label": "Model",
       "_origin": "ast",
       "community": 358,
-      "community_name": "ClaudeClient",
+      "community_name": ".GenerateInsightAsync",
       "file_type": "code",
       "metadata": {
         "namespace": "Services",
@@ -158679,7 +158691,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/Services/Claude/ClaudeAiGrader.cs",
-      "source_location": "L76",
+      "source_location": "L77",
       "weight": 1.0
     },
     {
@@ -158691,7 +158703,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/Services/Claude/ClaudeAiInsightGenerator.cs",
-      "source_location": "L86",
+      "source_location": "L89",
       "weight": 1.0
     },
     {
@@ -195840,36 +195852,6 @@
       "weight": 1.0
     },
     {
-      "source": "src_services_claude_claudeaigrader_services_claudeaigrader",
-      "target": "src_services_aigrader_services_fakeaigrader",
-      "relation": "references",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "field",
-      "metadata": {
-        "ref_token": "FakeAiGrader"
-      },
-      "source_file": "src/Services/Claude/ClaudeAiGrader.cs",
-      "source_location": "L16",
-      "weight": 1.0
-    },
-    {
-      "source": "src_services_claude_claudeaiinsightgenerator_services_claudeaiinsightgenerator",
-      "target": "src_services_aiinsightgenerator_services_fakeaiinsightgenerator",
-      "relation": "references",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "field",
-      "metadata": {
-        "ref_token": "FakeAiInsightGenerator"
-      },
-      "source_file": "src/Services/Claude/ClaudeAiInsightGenerator.cs",
-      "source_location": "L17",
-      "weight": 1.0
-    },
-    {
       "source": "src_businessobjects_practicemodels_businessobjects_practicesessioninfo",
       "target": "src_businessobjects_enums_businessobjects_feedbackmode",
       "relation": "references",
@@ -225568,6 +225550,21 @@
       "weight": 1.0
     },
     {
+      "source": "src_services_claude_claudeaigrader_services_claudeaigrader_gradeasync",
+      "target": "src_services_aigrader_services_aicriterionscoreresult",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "generic_arg",
+      "metadata": {
+        "ref_token": "AiCriterionScoreResult"
+      },
+      "source_file": "src/Services/Claude/ClaudeAiGrader.cs",
+      "source_location": "L127",
+      "weight": 1.0
+    },
+    {
       "source": "src_services_speechsuper_speechsuperaigrader_services_speechsuperaigrader_gradeasync",
       "target": "src_services_aigrader_services_aicriterionscoreresult",
       "relation": "references",
@@ -225639,7 +225636,7 @@
         "ref_token": "AiGradingResult"
       },
       "source_file": "src/Services/Claude/ClaudeAiGrader.cs",
-      "source_location": "L25",
+      "source_location": "L22",
       "weight": 1.0
     },
     {
@@ -226344,7 +226341,7 @@
         "ref_token": "AiInsightResult"
       },
       "source_file": "src/Services/Claude/ClaudeAiInsightGenerator.cs",
-      "source_location": "L26",
+      "source_location": "L23",
       "weight": 1.0
     },
     {
@@ -231670,6 +231667,21 @@
       },
       "source_file": "src/Services/AiInsightGenerator.cs",
       "source_location": "L89",
+      "weight": 1.0
+    },
+    {
+      "source": "src_services_claude_claudeaiinsightgenerator_services_claudeaiinsightgenerator_generateinsightasync",
+      "target": "src_services_aiinsightgenerator_services_generatedrecommendation",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "generic_arg",
+      "metadata": {
+        "ref_token": "GeneratedRecommendation"
+      },
+      "source_file": "src/Services/Claude/ClaudeAiInsightGenerator.cs",
+      "source_location": "L147",
       "weight": 1.0
     },
     {
@@ -282648,7 +282660,7 @@
         "ref_token": "AiGradingRequest"
       },
       "source_file": "src/Services/Claude/ClaudeAiGrader.cs",
-      "source_location": "L25",
+      "source_location": "L22",
       "weight": 1.0
     },
     {
@@ -282843,7 +282855,7 @@
         "ref_token": "AiInsightGenerationRequest"
       },
       "source_file": "src/Services/Claude/ClaudeAiInsightGenerator.cs",
-      "source_location": "L26",
+      "source_location": "L23",
       "weight": 1.0
     },
     {
@@ -290568,7 +290580,7 @@
         "ref_token": "CancellationToken"
       },
       "source_file": "src/Services/Claude/ClaudeAiGrader.cs",
-      "source_location": "L25",
+      "source_location": "L22",
       "weight": 1.0
     },
     {
@@ -290583,7 +290595,7 @@
         "ref_token": "CancellationToken"
       },
       "source_file": "src/Services/Claude/ClaudeAiInsightGenerator.cs",
-      "source_location": "L26",
+      "source_location": "L23",
       "weight": 1.0
     },
     {
@@ -318273,7 +318285,7 @@
         "ref_token": "Task"
       },
       "source_file": "src/Services/Claude/ClaudeAiGrader.cs",
-      "source_location": "L25",
+      "source_location": "L22",
       "weight": 1.0
     },
     {
@@ -318288,7 +318300,7 @@
         "ref_token": "Task"
       },
       "source_file": "src/Services/Claude/ClaudeAiInsightGenerator.cs",
-      "source_location": "L26",
+      "source_location": "L23",
       "weight": 1.0
     },
     {
@@ -340810,6 +340822,62 @@
       "weight": 1.0
     },
     {
+      "source": "src_webmvc_controllers_admincomplaintscontroller_webmvc_controllers_admincomplaintscontroller",
+      "target": "src_webmvc_controllers_admincontrollerbase_webmvc_controllers_admincontrollerbase",
+      "relation": "inherits",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "metadata": {
+        "ref_token": "AdminControllerBase"
+      },
+      "source_file": "src/WebMVC/Controllers/AdminComplaintsController.cs",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "src_webmvc_controllers_admincontroller_webmvc_controllers_admincontroller",
+      "target": "src_webmvc_controllers_admincontrollerbase_webmvc_controllers_admincontrollerbase",
+      "relation": "inherits",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "metadata": {
+        "ref_token": "AdminControllerBase"
+      },
+      "source_file": "src/WebMVC/Controllers/AdminController.cs",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "src_webmvc_controllers_adminexamscontroller_webmvc_controllers_adminexamscontroller",
+      "target": "src_webmvc_controllers_admincontrollerbase_webmvc_controllers_admincontrollerbase",
+      "relation": "inherits",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "metadata": {
+        "ref_token": "AdminControllerBase"
+      },
+      "source_file": "src/WebMVC/Controllers/AdminExamsController.cs",
+      "source_location": "L14",
+      "weight": 1.0
+    },
+    {
+      "source": "src_webmvc_controllers_adminimportscontroller_webmvc_controllers_adminimportscontroller",
+      "target": "src_webmvc_controllers_admincontrollerbase_webmvc_controllers_admincontrollerbase",
+      "relation": "inherits",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "metadata": {
+        "ref_token": "AdminControllerBase"
+      },
+      "source_file": "src/WebMVC/Controllers/AdminImportsController.cs",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
       "source": "src_webmvc_controllers_adminlessonscontroller_webmvc_controllers_adminlessonscontroller",
       "target": "src_webmvc_controllers_admincontrollerbase_webmvc_controllers_admincontrollerbase",
       "relation": "inherits",
@@ -340821,6 +340889,76 @@
       },
       "source_file": "src/WebMVC/Controllers/AdminLessonsController.cs",
       "source_location": "L17",
+      "weight": 1.0
+    },
+    {
+      "source": "src_webmvc_controllers_adminmentorscontroller_webmvc_controllers_adminmentorscontroller",
+      "target": "src_webmvc_controllers_admincontrollerbase_webmvc_controllers_admincontrollerbase",
+      "relation": "inherits",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "metadata": {
+        "ref_token": "AdminControllerBase"
+      },
+      "source_file": "src/WebMVC/Controllers/AdminMentorsController.cs",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "src_webmvc_controllers_adminorderscontroller_webmvc_controllers_adminorderscontroller",
+      "target": "src_webmvc_controllers_admincontrollerbase_webmvc_controllers_admincontrollerbase",
+      "relation": "inherits",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "metadata": {
+        "ref_token": "AdminControllerBase"
+      },
+      "source_file": "src/WebMVC/Controllers/AdminOrdersController.cs",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "src_webmvc_controllers_adminpackagescontroller_webmvc_controllers_adminpackagescontroller",
+      "target": "src_webmvc_controllers_admincontrollerbase_webmvc_controllers_admincontrollerbase",
+      "relation": "inherits",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "metadata": {
+        "ref_token": "AdminControllerBase"
+      },
+      "source_file": "src/WebMVC/Controllers/AdminPackagesController.cs",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "src_webmvc_controllers_adminscoreconversioncontroller_webmvc_controllers_adminscoreconversioncontroller",
+      "target": "src_webmvc_controllers_admincontrollerbase_webmvc_controllers_admincontrollerbase",
+      "relation": "inherits",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "metadata": {
+        "ref_token": "AdminControllerBase"
+      },
+      "source_file": "src/WebMVC/Controllers/AdminScoreConversionController.cs",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "src_webmvc_controllers_adminuserscontroller_webmvc_controllers_adminuserscontroller",
+      "target": "src_webmvc_controllers_admincontrollerbase_webmvc_controllers_admincontrollerbase",
+      "relation": "inherits",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "metadata": {
+        "ref_token": "AdminControllerBase"
+      },
+      "source_file": "src/WebMVC/Controllers/AdminUsersController.cs",
+      "source_location": "L8",
       "weight": 1.0
     },
     {
@@ -340922,34 +341060,6 @@
       "weight": 1.0
     },
     {
-      "source": "src_webmvc_controllers_admincomplaintscontroller_webmvc_controllers_admincomplaintscontroller",
-      "target": "controller",
-      "relation": "inherits",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "metadata": {
-        "ref_token": "Controller"
-      },
-      "source_file": "src/WebMVC/Controllers/AdminComplaintsController.cs",
-      "source_location": "L8",
-      "weight": 1.0
-    },
-    {
-      "source": "src_webmvc_controllers_admincontroller_webmvc_controllers_admincontroller",
-      "target": "controller",
-      "relation": "inherits",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "metadata": {
-        "ref_token": "Controller"
-      },
-      "source_file": "src/WebMVC/Controllers/AdminController.cs",
-      "source_location": "L9",
-      "weight": 1.0
-    },
-    {
       "source": "src_webmvc_controllers_admincontrollerbase_webmvc_controllers_admincontrollerbase",
       "target": "controller",
       "relation": "inherits",
@@ -340961,104 +341071,6 @@
       },
       "source_file": "src/WebMVC/Controllers/AdminControllerBase.cs",
       "source_location": "L9",
-      "weight": 1.0
-    },
-    {
-      "source": "src_webmvc_controllers_adminexamscontroller_webmvc_controllers_adminexamscontroller",
-      "target": "controller",
-      "relation": "inherits",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "metadata": {
-        "ref_token": "Controller"
-      },
-      "source_file": "src/WebMVC/Controllers/AdminExamsController.cs",
-      "source_location": "L14",
-      "weight": 1.0
-    },
-    {
-      "source": "src_webmvc_controllers_adminimportscontroller_webmvc_controllers_adminimportscontroller",
-      "target": "controller",
-      "relation": "inherits",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "metadata": {
-        "ref_token": "Controller"
-      },
-      "source_file": "src/WebMVC/Controllers/AdminImportsController.cs",
-      "source_location": "L9",
-      "weight": 1.0
-    },
-    {
-      "source": "src_webmvc_controllers_adminmentorscontroller_webmvc_controllers_adminmentorscontroller",
-      "target": "controller",
-      "relation": "inherits",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "metadata": {
-        "ref_token": "Controller"
-      },
-      "source_file": "src/WebMVC/Controllers/AdminMentorsController.cs",
-      "source_location": "L8",
-      "weight": 1.0
-    },
-    {
-      "source": "src_webmvc_controllers_adminorderscontroller_webmvc_controllers_adminorderscontroller",
-      "target": "controller",
-      "relation": "inherits",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "metadata": {
-        "ref_token": "Controller"
-      },
-      "source_file": "src/WebMVC/Controllers/AdminOrdersController.cs",
-      "source_location": "L8",
-      "weight": 1.0
-    },
-    {
-      "source": "src_webmvc_controllers_adminpackagescontroller_webmvc_controllers_adminpackagescontroller",
-      "target": "controller",
-      "relation": "inherits",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "metadata": {
-        "ref_token": "Controller"
-      },
-      "source_file": "src/WebMVC/Controllers/AdminPackagesController.cs",
-      "source_location": "L8",
-      "weight": 1.0
-    },
-    {
-      "source": "src_webmvc_controllers_adminscoreconversioncontroller_webmvc_controllers_adminscoreconversioncontroller",
-      "target": "controller",
-      "relation": "inherits",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "metadata": {
-        "ref_token": "Controller"
-      },
-      "source_file": "src/WebMVC/Controllers/AdminScoreConversionController.cs",
-      "source_location": "L8",
-      "weight": 1.0
-    },
-    {
-      "source": "src_webmvc_controllers_adminuserscontroller_webmvc_controllers_adminuserscontroller",
-      "target": "controller",
-      "relation": "inherits",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "metadata": {
-        "ref_token": "Controller"
-      },
-      "source_file": "src/WebMVC/Controllers/AdminUsersController.cs",
-      "source_location": "L8",
       "weight": 1.0
     },
     {
@@ -359406,7 +359418,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/WebAPI/Program.cs",
-      "source_location": "L352",
+      "source_location": "L356",
       "weight": 1.0
     },
     {
@@ -370175,7 +370187,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/Services/Claude/ClaudeAiGrader.cs",
-      "source_location": "L122",
+      "source_location": "L131",
       "weight": 1.0
     },
     {
@@ -370186,7 +370198,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/Services/Claude/ClaudeAiGrader.cs",
-      "source_location": "L25",
+      "source_location": "L22",
       "weight": 1.0
     },
     {
@@ -370197,7 +370209,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/Services/Claude/ClaudeAiInsightGenerator.cs",
-      "source_location": "L135",
+      "source_location": "L151",
       "weight": 1.0
     },
     {
@@ -370208,7 +370220,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/Services/Claude/ClaudeAiInsightGenerator.cs",
-      "source_location": "L26",
+      "source_location": "L23",
       "weight": 1.0
     },
     {
@@ -391502,18 +391514,6 @@
     },
     {
       "source": "src_services_claude_claudeaigrader_services_claudeaigrader_gradeasync",
-      "target": "src_services_aigrader_services_fakeaigrader_gradeasync",
-      "relation": "calls",
-      "_origin": "ast",
-      "confidence": "INFERRED",
-      "confidence_score": 0.8,
-      "context": "call",
-      "source_file": "src/Services/Claude/ClaudeAiGrader.cs",
-      "source_location": "L30",
-      "weight": 1.0
-    },
-    {
-      "source": "src_services_claude_claudeaigrader_services_claudeaigrader_gradeasync",
       "target": "src_services_claude_claudeclient_services_iclaudeclient_createmessageasync",
       "relation": "calls",
       "_origin": "ast",
@@ -391521,19 +391521,7 @@
       "confidence_score": 0.8,
       "context": "call",
       "source_file": "src/Services/Claude/ClaudeAiGrader.cs",
-      "source_location": "L69",
-      "weight": 1.0
-    },
-    {
-      "source": "src_services_claude_claudeaiinsightgenerator_services_claudeaiinsightgenerator_generateinsightasync",
-      "target": "src_services_aiinsightgenerator_services_fakeaiinsightgenerator_generateinsightasync",
-      "relation": "calls",
-      "_origin": "ast",
-      "confidence": "INFERRED",
-      "confidence_score": 0.8,
-      "context": "call",
-      "source_file": "src/Services/Claude/ClaudeAiInsightGenerator.cs",
-      "source_location": "L30",
+      "source_location": "L70",
       "weight": 1.0
     },
     {
@@ -391545,7 +391533,7 @@
       "confidence_score": 0.8,
       "context": "call",
       "source_file": "src/Services/Claude/ClaudeAiInsightGenerator.cs",
-      "source_location": "L80",
+      "source_location": "L83",
       "weight": 1.0
     },
     {
@@ -400954,30 +400942,6 @@
       "context": "call",
       "source_file": "src/Services/CertificateService.cs",
       "source_location": "L65",
-      "weight": 1.0
-    },
-    {
-      "source": "src_services_claude_claudeaigrader_services_claudeaigrader_gradeasync",
-      "target": "src_services_aigrader_services_aicriterionscoreresult",
-      "relation": "calls",
-      "_origin": "ast",
-      "confidence": "INFERRED",
-      "confidence_score": 0.85,
-      "context": "call",
-      "source_file": "src/Services/Claude/ClaudeAiGrader.cs",
-      "source_location": "L92",
-      "weight": 1.0
-    },
-    {
-      "source": "src_services_claude_claudeaiinsightgenerator_services_claudeaiinsightgenerator_generateinsightasync",
-      "target": "src_services_aiinsightgenerator_services_generatedrecommendation",
-      "relation": "calls",
-      "_origin": "ast",
-      "confidence": "INFERRED",
-      "confidence_score": 0.85,
-      "context": "call",
-      "source_file": "src/Services/Claude/ClaudeAiInsightGenerator.cs",
-      "source_location": "L111",
       "weight": 1.0
     },
     {
@@ -422658,5 +422622,5 @@
       "source_file": ".impeccable/surfaces/prototype.md"
     }
   ],
-  "built_at_commit": "bfbed317a63090d7e3e4e6b66533c15a1fb7dc21"
+  "built_at_commit": "119cf002021fc7ec370add0eae1e08a03e5287c9"
 }

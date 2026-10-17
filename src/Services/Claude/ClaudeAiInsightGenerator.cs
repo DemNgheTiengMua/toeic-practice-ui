@@ -14,20 +14,23 @@ public sealed class ClaudeAiInsightGenerator : IAiInsightGenerator
 {
     private readonly IClaudeClient _claudeClient;
     private readonly ILogger<ClaudeAiInsightGenerator>? _logger;
-    private readonly FakeAiInsightGenerator _fallbackGenerator;
-
     public ClaudeAiInsightGenerator(IClaudeClient claudeClient, ILogger<ClaudeAiInsightGenerator>? logger = null)
     {
         _claudeClient = claudeClient;
         _logger = logger;
-        _fallbackGenerator = new FakeAiInsightGenerator();
     }
 
     public async Task<AiInsightResult> GenerateInsightAsync(AiInsightGenerationRequest request, CancellationToken cancellationToken = default)
     {
         if (request.SimulateFailure || request.ActivityTitle?.Contains(FakeAiInsightGenerator.SimulateFailMarker, StringComparison.OrdinalIgnoreCase) == true)
         {
-            return await _fallbackGenerator.GenerateInsightAsync(request, cancellationToken);
+            return new AiInsightResult(
+                Success: false,
+                FailureReason: "Simulated insight generation failure.",
+                Model: "claude-sonnet-3.7",
+                Narrative: null,
+                Trend: AiInsightTrend.Flat,
+                Recommendations: Array.Empty<GeneratedRecommendation>());
         }
 
         try
@@ -123,12 +126,25 @@ public sealed class ClaudeAiInsightGenerator : IAiInsightGenerator
                     Recommendations: recommendations);
             }
 
-            return await _fallbackGenerator.GenerateInsightAsync(request, cancellationToken);
+            _logger?.LogWarning("Claude response did not contain expected narrative: {Raw}", rawResult);
+            return new AiInsightResult(
+                Success: false,
+                FailureReason: "Claude response did not contain expected narrative.",
+                Model: "claude-sonnet-3.7",
+                Narrative: null,
+                Trend: AiInsightTrend.Flat,
+                Recommendations: Array.Empty<GeneratedRecommendation>());
         }
         catch (Exception ex)
         {
-            _logger?.LogError(ex, "Claude live insight generation failed, falling back to deterministic generator");
-            return await _fallbackGenerator.GenerateInsightAsync(request, cancellationToken);
+            _logger?.LogError(ex, "Claude live insight generation failed");
+            return new AiInsightResult(
+                Success: false,
+                FailureReason: $"Claude insight generation failed: {ex.Message}",
+                Model: "claude-sonnet-3.7",
+                Narrative: null,
+                Trend: AiInsightTrend.Flat,
+                Recommendations: Array.Empty<GeneratedRecommendation>());
         }
     }
 

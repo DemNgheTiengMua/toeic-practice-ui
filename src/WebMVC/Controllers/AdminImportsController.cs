@@ -11,7 +11,7 @@ namespace WebMVC.Controllers;
 public sealed class AdminImportsController(
     IAdminImportsClient api,
     CurrentUser currentUser,
-    ILogger<AdminImportsController> logger) : Controller
+    ILogger<AdminImportsController> logger) : AdminControllerBase(currentUser, logger)
 {
     /// <summary>Matches the API's package limit (QuestionImportService.MaxUploadBytes) plus form overhead.</summary>
     private const long MaxUploadBytes = 101L * 1024 * 1024;

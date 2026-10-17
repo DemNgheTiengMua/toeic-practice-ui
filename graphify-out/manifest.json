@@ -654,9 +654,9 @@
     "semantic_hash": "a1e0ec747b63abe2941b00c6252f53a5"
   },
   "src/WebAPI/Program.cs": {
-    "mtime": 1792234804.2832987,
-    "seen": 1792237824.4229355,
-    "ast_hash": "63838101912293dc2b38c2a3dfff7008",
+    "mtime": 1792242301.2315335,
+    "seen": 1792242580.9384756,
+    "ast_hash": "4097c4404ddd087a30bdedfd95db562e",
     "semantic_hash": ""
   },
   "src/WebAPI/Properties/launchSettings.json": {
@@ -678,15 +678,15 @@
     "semantic_hash": "804b473502a4c415cf75db61c56c32aa"
   },
   "src/WebAPI/appsettings.json": {
-    "mtime": 1792140497.087617,
-    "seen": 1792237824.4229426,
-    "ast_hash": "18633a8eee8ece649dabec95a4b6baf3",
+    "mtime": 1792242321.3608787,
+    "seen": 1792242580.9384806,
+    "ast_hash": "ffd31e59a7f1f59cbc42701ca50406c1",
     "semantic_hash": ""
   },
   "src/WebMVC/Controllers/AdminController.cs": {
-    "mtime": 1792145426.723459,
-    "seen": 1792237824.4229486,
-    "ast_hash": "ac009c3238730dc72b3e3bebe4d12d44",
+    "mtime": 1792242237.0376575,
+    "seen": 1792242580.9384842,
+    "ast_hash": "affe23aed52f139769b2120f8248ba36",
     "semantic_hash": ""
   },
   "src/WebMVC/Controllers/AuthController.cs": {
@@ -1686,9 +1686,9 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Controllers/AdminPackagesController.cs": {
-    "mtime": 1792145426.735567,
-    "seen": 1792237824.4229624,
-    "ast_hash": "ae9dc1e32bb1a229f2f7eb1edb3284fd",
+    "mtime": 1792242278.1200962,
+    "seen": 1792242580.9384928,
+    "ast_hash": "fc2cfc605fbe9e150e521c9090d8b8da",
     "semantic_hash": ""
   },
   "src/WebMVC/Controllers/PricingController.cs": {
@@ -1962,15 +1962,15 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Controllers/AdminOrdersController.cs": {
-    "mtime": 1792145426.7340422,
-    "seen": 1792237824.4229608,
-    "ast_hash": "f16548f03adca0a67de45b8bdb2ab664",
+    "mtime": 1792242287.5521834,
+    "seen": 1792242580.9384913,
+    "ast_hash": "1c266733a3bc3101c91a54bf4010faaf",
     "semantic_hash": ""
   },
   "src/WebMVC/Controllers/AdminUsersController.cs": {
-    "mtime": 1792145624.373363,
-    "seen": 1792237824.4229665,
-    "ast_hash": "8a280e2b3f83340667c4711aacae161d",
+    "mtime": 1792242262.9418495,
+    "seen": 1792242580.9384947,
+    "ast_hash": "f9296bbc17f0c8cfb0e0cdd99fc1ec45",
     "semantic_hash": ""
   },
   "src/WebMVC/Models/AdminViewModels.cs": {
@@ -2034,9 +2034,9 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Controllers/AdminScoreConversionController.cs": {
-    "mtime": 1792241719.447528,
-    "seen": 1792241918.727587,
-    "ast_hash": "d6e1d27015bcef901b94bb8137a1039c",
+    "mtime": 1792242271.4330645,
+    "seen": 1792242580.9384937,
+    "ast_hash": "2f074546c9de75dced639901f3e486c0",
     "semantic_hash": ""
   },
   "src/WebMVC/Models/AdminScoreConversionViewModels.cs": {
@@ -2244,9 +2244,9 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Writing/Take.cshtml": {
-    "mtime": 1792241679.5801804,
-    "seen": 1792241918.7277677,
-    "ast_hash": "3b2aac6f65c0d739356ffbe48ae23a59",
+    "mtime": 1792242420.7092931,
+    "seen": 1792242580.9386718,
+    "ast_hash": "888dfe4409d955c2839d46023a865df3",
     "semantic_hash": ""
   },
   "tests/Services.Tests/WritingPracticeServiceTests.cs": {
@@ -2334,9 +2334,9 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Speaking/Take.cshtml": {
-    "mtime": 1792241650.114304,
-    "seen": 1792241918.7277563,
-    "ast_hash": "4e86bf3956b9b154d118abeaad92617d",
+    "mtime": 1792242389.2902043,
+    "seen": 1792242580.9386604,
+    "ast_hash": "006fbc81a71272584140ee889f58007d",
     "semantic_hash": ""
   },
   "tests/Services.Tests/SpeakingPracticeServiceTests.cs": {
@@ -2580,9 +2580,9 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Controllers/AdminMentorsController.cs": {
-    "mtime": 1792145426.7340422,
-    "seen": 1792237824.4229586,
-    "ast_hash": "6566276439bbbac7f2e27fc7c6a2d5e4",
+    "mtime": 1792242293.8048313,
+    "seen": 1792242580.9384906,
+    "ast_hash": "6172e115ea7fb12077c8a8c6284779e3",
     "semantic_hash": ""
   },
   "src/WebMVC/Controllers/MentorsController.cs": {
@@ -2682,9 +2682,9 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Controllers/AdminComplaintsController.cs": {
-    "mtime": 1792145479.8251185,
-    "seen": 1792237824.4229465,
-    "ast_hash": "c42025b22f0d31fa21a953e2d6130d66",
+    "mtime": 1792242230.9337287,
+    "seen": 1792242580.9384832,
+    "ast_hash": "2a85bce5ab31d9e804fbbcf8e1272511",
     "semantic_hash": ""
   },
   "src/WebMVC/Controllers/SupportController.cs": {
@@ -2754,9 +2754,9 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Controllers/AdminExamsController.cs": {
-    "mtime": 1792241380.261064,
-    "seen": 1792241918.7275789,
-    "ast_hash": "0a83e56491dff99e752ade7ea7e135f2",
+    "mtime": 1792242245.9511552,
+    "seen": 1792242580.9384868,
+    "ast_hash": "5dfb43a5dc75f46d8dd824ac037495d5",
     "semantic_hash": ""
   },
   "src/WebMVC/Models/AdminExamViewModels.cs": {
@@ -2916,9 +2916,9 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Controllers/AdminImportsController.cs": {
-    "mtime": 1792145426.7307146,
-    "seen": 1792237824.4229548,
-    "ast_hash": "fd953705fe3e552658463c0cf1147047",
+    "mtime": 1792242257.277998,
+    "seen": 1792242580.9384878,
+    "ast_hash": "9243bc1cb9ebf55d7c2f6e2b4e22301e",
     "semantic_hash": ""
   },
   "src/WebMVC/Controllers/MediaController.cs": {
@@ -3072,15 +3072,15 @@
     "semantic_hash": ""
   },
   "src/Services/Claude/ClaudeAiGrader.cs": {
-    "mtime": 1792167777.5577846,
-    "seen": 1792237824.4228027,
-    "ast_hash": "d33b2e33b2e8f3c7cc4449bc9ffc1a56",
+    "mtime": 1792242176.2739706,
+    "seen": 1792242580.9383845,
+    "ast_hash": "9c4a1dd001b9e9f0f0d22028b9728a76",
     "semantic_hash": ""
   },
   "src/Services/Claude/ClaudeAiInsightGenerator.cs": {
-    "mtime": 1792168639.814507,
-    "seen": 1792237824.4228046,
-    "ast_hash": "b4a90086496c792270165bc459ed1ad6",
+    "mtime": 1792242195.6931896,
+    "seen": 1792242580.9383862,
+    "ast_hash": "0e3a231a4b2829f21beb9dc72d37daa8",
     "semantic_hash": ""
   },
   "src/Services/Claude/ClaudeClient.cs": {
@@ -3456,9 +3456,9 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Controllers/AdminControllerBase.cs": {
-    "mtime": 1792232861.7392626,
-    "seen": 1792237824.4229507,
-    "ast_hash": "ef08f94b88935a1307ae52e5972b34de",
+    "mtime": 1792242223.2589917,
+    "seen": 1792242580.9384856,
+    "ast_hash": "7aa6d411fd2ec138a823238a7c311626",
     "semantic_hash": ""
   },
   "src/WebMVC/Controllers/AdminLessonsController.cs": {

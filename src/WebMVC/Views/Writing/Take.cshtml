@@ -160,12 +160,9 @@
         <div class="row row--between">
           <div class="row" style="gap: var(--space-2)">
             <button type="button" class="btn btn--secondary" id="btn-save-draft">Save draft</button>
-            <form method="post" action="/writing/submit/@take.AttemptId" id="submit-form" style="display:inline;">
-              @Html.AntiForgeryToken()
-              <button type="submit" class="btn btn--primary" id="btn-submit-exam" onclick="return confirm('Are you sure you want to finish and submit your writing for AI grading?');">
-                Finish and submit for AI grading
-              </button>
-            </form>
+            <button type="button" class="btn btn--primary" id="btn-open-submit-modal">
+              Finish and submit for AI grading
+            </button>
           </div>
           <span class="text-xs text-muted">Question @take.CurrentQuestionIndex of @take.TotalQuestions</span>
         </div>
@@ -368,8 +365,59 @@
 
     setInterval(updateTimer, 1000);
     updateTimer();
+
+    // Submit modal wiring
+    const submitModal = document.getElementById('submit-modal');
+    const btnOpenSubmit = document.getElementById('btn-open-submit-modal');
+    const closeSubmitBtns = document.querySelectorAll('.js-close-submit-modal');
+
+    if (btnOpenSubmit) {
+      btnOpenSubmit.addEventListener('click', () => {
+        if (submitModal) submitModal.style.display = 'flex';
+      });
+    }
+    closeSubmitBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (submitModal) submitModal.style.display = 'none';
+      });
+    });
+    if (submitModal) {
+      submitModal.addEventListener('click', (e) => {
+        if (e.target === submitModal) submitModal.style.display = 'none';
+      });
+    }
   })();
 </script>
+
+<!-- Submit Confirmation Modal -->
+<div id="submit-modal" class="modal-overlay" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="submit-modal-title">
+  <div class="modal">
+    <div class="modal__header">
+      <h2 id="submit-modal-title" class="no-margin">Finish & Submit Writing for AI Grading?</h2>
+    </div>
+    <div class="modal__body stack">
+      <p class="no-margin">
+        Submitting will save your current responses and dispatch them to the AI grading engine. This action cannot be undone.
+      </p>
+      @{
+        var totalAnswered = take.Questions.Count(n => n.IsAnswered);
+      }
+      @if (totalAnswered < take.TotalQuestions)
+      {
+        <div class="alert alert--warning">
+          <strong>Notice:</strong> You have answered @totalAnswered of @take.TotalQuestions questions. Unanswered questions will receive 0 marks.
+        </div>
+      }
+    </div>
+    <div class="modal__footer row row--between">
+      <button type="button" class="btn js-close-submit-modal">Return to writing</button>
+      <form method="post" action="/writing/submit/@take.AttemptId" style="margin:0;">
+        @Html.AntiForgeryToken()
+        <button type="submit" class="btn btn--primary">Confirm & Submit</button>
+      </form>
+    </div>
+  </div>
+</div>
       </div>
     </main>
   </div>
