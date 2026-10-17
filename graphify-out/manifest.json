@@ -5,9 +5,9 @@
     "semantic_hash": "c0dbc8613af0df71f6b4c98924a68d8b"
   },
   "ExtraEfficiency.slnx": {
-    "mtime": 1791912989.1552124,
-    "ast_hash": "8971e2adf3c51939eb3d4bfb9faaaee0",
-    "semantic_hash": "8971e2adf3c51939eb3d4bfb9faaaee0"
+    "mtime": 1792227880.6404598,
+    "ast_hash": "9c896ffd212a2bdf56661d1f5b7ffeab",
+    "semantic_hash": ""
   },
   "docs/database-schema.sql": {
     "mtime": 1792221115.098281,
@@ -2858,6 +2858,41 @@
   "tests/WebMVC.Tests/LessonsControllerTests.cs": {
     "mtime": 1792226195.096953,
     "ast_hash": "76983d7f46c33dfa0e03af90364fd1ca",
+    "semantic_hash": ""
+  },
+  "tests/WebMVC.E2ETests/Journeys/AdminPortalTests.cs": {
+    "mtime": 1792227916.4105213,
+    "ast_hash": "07584f42c8b69763879233000c6d3cd5",
+    "semantic_hash": ""
+  },
+  "tests/WebMVC.E2ETests/Journeys/AuthenticationTests.cs": {
+    "mtime": 1792228552.4658442,
+    "ast_hash": "b93ca70d11ef031c61033548b53223a2",
+    "semantic_hash": ""
+  },
+  "tests/WebMVC.E2ETests/Journeys/GuidedLearningDeckTests.cs": {
+    "mtime": 1792228591.7468748,
+    "ast_hash": "a8054167fb3b4369145ce70c5855140e",
+    "semantic_hash": ""
+  },
+  "tests/WebMVC.E2ETests/Journeys/LearnerDashboardTests.cs": {
+    "mtime": 1792227911.3107915,
+    "ast_hash": "e5bc7de57a2832431b2b1aef435acf59",
+    "semantic_hash": ""
+  },
+  "tests/WebMVC.E2ETests/PlaywrightTestBase.cs": {
+    "mtime": 1792228647.188243,
+    "ast_hash": "ca6ff2b698eee38bc22c23b81dbaaee4",
+    "semantic_hash": ""
+  },
+  "tests/WebMVC.E2ETests/WebMVC.E2ETests.csproj": {
+    "mtime": 1792227874.2284944,
+    "ast_hash": "bd263f2f25bbd7971c3dfa43a45a5fc1",
+    "semantic_hash": ""
+  },
+  "docs/specs/admin-lesson-authoring-and-import.md": {
+    "mtime": 1792228372.6532054,
+    "ast_hash": "e68dc4d5f7d2841cf33f778ffb40b8e9",
     "semantic_hash": ""
   }
 }
