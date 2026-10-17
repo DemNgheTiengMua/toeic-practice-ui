@@ -21,8 +21,19 @@ public sealed record LearnerDashboard(
     IReadOnlyList<RecentAttempt> RecentAttempts,
     IReadOnlyList<RecentPractice> RecentPractice,
     RecentAttempt? UnfinishedAttempt = null,
-    RecentPractice? UnfinishedPractice = null)
+    RecentPractice? UnfinishedPractice = null,
+    TargetReadiness? TargetReadiness = null,
+    IReadOnlyList<MissionStep>? MissionSteps = null,
+    SimulatorConfig? SimulatorConfig = null,
+    IReadOnlyList<WeaknessStrip>? WeaknessStrips = null,
+    UpcomingBookingCard? UpcomingBooking = null,
+    RubricHighlight? LatestRubricHighlight = null,
+    int? OverallAccuracyPercent = null)
 {
+    public IReadOnlyList<MissionStep> MissionSteps { get; init; } = MissionSteps ?? [];
+
+    public IReadOnlyList<WeaknessStrip> WeaknessStrips { get; init; } = WeaknessStrips ?? [];
+
     /// <summary>No attempt and no practice yet for this certificate: the page shows its
     /// getting-started state instead of empty tables.</summary>
     public bool IsNew => AttemptCount == 0 && PracticeCount == 0;
@@ -47,3 +58,82 @@ public sealed record RecentPractice(
     int CorrectCount,
     int QuestionCount,
     DateTimeOffset StartedAt);
+
+public sealed record TargetReadiness(
+    string? CurrentBandCode,
+    string? CurrentBandName,
+    int? CurrentTotalScore,
+    string? CurrentSource,
+    string? TargetBandCode,
+    string? TargetBandName,
+    int? TargetMinScore,
+    int CompletedPathSteps,
+    int TotalPathSteps);
+
+public sealed record MissionStep(
+    int StepNumber,
+    string BadgeLabel,
+    string Severity,
+    string Eyebrow,
+    string Title,
+    string Description,
+    string MetaLabel,
+    string ActionLabel,
+    string ActionUrl,
+    bool IsCleared);
+
+public sealed record SimulatorSkill(
+    int SkillId,
+    string SkillCode,
+    string SkillName,
+    string Modality,
+    int BaseScaledScore,
+    int MinScaledScore,
+    int MaxScaledScore,
+    int Step);
+
+public sealed record ScoreBandThreshold(
+    string Code,
+    string Name,
+    int MinTotal,
+    int MaxTotal);
+
+public sealed record SimulatorConfig(
+    int MaxTotalScore,
+    int? CurrentTotalScore,
+    string? CurrentBandCode,
+    string? TargetBandCode,
+    int? TargetMinScore,
+    IReadOnlyList<SimulatorSkill> Skills,
+    IReadOnlyList<ScoreBandThreshold> Bands);
+
+public sealed record WeaknessStrip(
+    string Scope,
+    int Id,
+    string Code,
+    string Name,
+    string SectionName,
+    int Answered,
+    int Correct,
+    int AccuracyPercent,
+    string Tier,
+    string ActionLabel,
+    string ActionUrl);
+
+public sealed record UpcomingBookingCard(
+    int BookingId,
+    string MentorName,
+    string? MentorHeadline,
+    string? FocusArea,
+    DateTimeOffset StartAt,
+    DateTimeOffset EndAt,
+    string? MeetLink);
+
+public sealed record RubricHighlight(
+    string SkillName,
+    string CriterionName,
+    decimal Score,
+    decimal MaxScore,
+    string? Comment,
+    int AttemptId,
+    ExamPurpose Purpose);

@@ -1,0 +1,198 @@
+@model Contracts.LearnerDashboardDto
+@{
+    var cert = Model.Certificate;
+    var strips = Model.WeaknessStrips ?? [];
+    var hasTestedStrips = strips.Any(s => s.Answered > 0 && s.Tier != "UNTESTED");
+}
+
+<style>
+  .weakness-radar__meta-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--space-2, 8px) var(--space-4, 16px);
+    padding-bottom: var(--space-3, 12px);
+    margin-bottom: var(--space-3, 12px);
+    border-bottom: 1px solid var(--line-soft, #ccd2d6);
+  }
+  .weakness-radar__legend {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-2, 8px);
+  }
+  .weakness-radar__list {
+    display: flex;
+    flex-direction: column;
+    border: 2px solid var(--ink, #14181d);
+    border-radius: 0;
+    background: var(--color-surface, #ffffff);
+  }
+  .weakness-radar__row {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(180px, 1.6fr) auto;
+    align-items: center;
+    gap: var(--space-4, 16px);
+    padding: var(--space-3, 12px) var(--space-4, 16px);
+    border-bottom: 1px solid var(--line-soft, #ccd2d6);
+    border-radius: 0;
+  }
+  .weakness-radar__row:last-child {
+    border-bottom: 0;
+  }
+  .weakness-radar__info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+  }
+  .weakness-radar__eyebrow {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-2, 8px);
+  }
+  .weakness-radar__name {
+    font-family: var(--font-sign, "IBM Plex Sans Condensed", sans-serif);
+    font-size: var(--text-base, 16px);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-sign, 0.055em);
+    color: var(--ink, #14181d);
+  }
+  .weakness-radar__telemetry {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+  }
+  .weakness-radar__counts {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-2, 8px);
+  }
+  .weakness-radar__progress {
+    height: 10px;
+    border: 1px solid var(--ink, #14181d);
+    border-radius: 0;
+    background: var(--color-track, #dfe3e6);
+  }
+  @@media (max-width: 768px) {
+    .weakness-radar__row {
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--space-3, 12px);
+    }
+  }
+</style>
+
+<section class="card mt-4 weakness-radar" id="dashboard-weakness-radar" aria-label="Weakness radar accuracy matrix">
+  <div class="card__header">
+    <div class="row row--between row--middle row--wrap">
+      <div class="row row--middle">
+        <span class="badge badge--info font-mono uppercase font-bold">Weakness Radar</span>
+        <strong>Category &amp; Section Accuracy Matrix · @cert.Code</strong>
+      </div>
+      <div class="row row--middle">
+        <a class="btn btn--sm" href="/weakness-analysis">Weakness analysis</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="card__body">
+    <div class="weakness-radar__meta-bar">
+      @if (hasTestedStrips)
+      {
+        <p class="text-sm text-muted no-margin">
+          Lowest-accuracy categories and sections for <strong>@cert.Name</strong> across practice sessions and graded exams.
+        </p>
+      }
+      else
+      {
+        <p class="text-sm text-muted no-margin">
+          Starter diagnostic syllabus for <strong>@cert.Name</strong>. Complete a free practice session to calibrate your accuracy matrix.
+        </p>
+      }
+      <div class="weakness-radar__legend" aria-label="Severity tier legend">
+        <span class="badge badge--danger font-mono text-xs">CRITICAL &lt;50%</span>
+        <span class="badge badge--warning font-mono text-xs">BORDER 50–64%</span>
+        <span class="badge badge--info font-mono text-xs">STABLE 65–79%</span>
+        <span class="badge badge--success font-mono text-xs">MASTERY 80%+</span>
+      </div>
+    </div>
+
+    @if (strips.Count == 0)
+    {
+      <div class="p-4 text-center text-muted" style="border: 1px solid var(--line-soft, #ccd2d6);">
+        No sections configured for @cert.Code yet. <a href="/practice">Practice by section</a>
+      </div>
+    }
+    else
+    {
+      <div class="weakness-radar__list" role="list">
+        @foreach (var strip in strips)
+        {
+            var isUntested = strip.Tier == "UNTESTED" || strip.Answered == 0;
+            var badgeClass = strip.Tier switch
+            {
+                "CRITICAL" => "badge--danger",
+                "BORDER" => "badge--warning",
+                "STABLE" => "badge--info",
+                "MASTERY" => "badge--success",
+                _ => "badge--muted",
+            };
+            var barClass = strip.Tier switch
+            {
+                "CRITICAL" => "progress__bar--danger",
+                "BORDER" => "progress__bar--warning",
+                "MASTERY" => "progress__bar--success",
+                _ => "",
+            };
+            var scopeEyebrow = strip.Scope == "category"
+                ? $"CATEGORY · {strip.Code} · {strip.SectionName}"
+                : $"{(cert.Code == "TOEIC" ? "PART" : "SECTION")} {strip.Code}";
+
+            <div class="weakness-radar__row" role="listitem">
+              <div class="weakness-radar__info">
+                <div class="weakness-radar__eyebrow">
+                  <span class="badge @badgeClass font-mono text-xs">@strip.Tier</span>
+                  <span class="font-mono text-xs text-muted uppercase">@scopeEyebrow</span>
+                </div>
+                <strong class="weakness-radar__name">@strip.Name</strong>
+              </div>
+
+              <div class="weakness-radar__telemetry">
+                <div class="weakness-radar__counts">
+                  @if (isUntested)
+                  {
+                    <span class="font-mono text-xs text-muted uppercase">Not attempted yet</span>
+                    <span class="font-mono text-xs text-muted tabular-nums">0 / 0 correct</span>
+                  }
+                  else
+                  {
+                    <span class="font-mono font-bold text-base tabular-nums">@strip.AccuracyPercent%</span>
+                    <span class="font-mono text-xs text-muted tabular-nums">@strip.Correct / @strip.Answered correct</span>
+                  }
+                </div>
+                <div class="progress weakness-radar__progress"
+                     role="progressbar"
+                     aria-label="@strip.Name accuracy"
+                     aria-valuenow="@strip.AccuracyPercent"
+                     aria-valuemin="0"
+                     aria-valuemax="100">
+                  <div class="progress__bar @barClass" style="width: @(isUntested ? 0 : strip.AccuracyPercent)%;"></div>
+                </div>
+              </div>
+
+              <div class="weakness-radar__action">
+                <a class="btn btn--sm @(strip.Tier == "CRITICAL" || isUntested ? "btn--primary" : "")"
+                   href="@strip.ActionUrl">@strip.ActionLabel</a>
+              </div>
+            </div>
+        }
+      </div>
+    }
+  </div>
+</section>
+

@@ -8,6 +8,7 @@ _*.diff
 .playwright-mcp/
 shot-*.png
 Architecture Review*
+stitch_*
 
 # Agent scratch. .claude/ also holds a nested git worktree, so committing it
 # would nest a duplicate of the repo inside itself.

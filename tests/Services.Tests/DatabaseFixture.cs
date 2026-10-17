@@ -12,7 +12,8 @@ namespace Services.Tests;
 /// </summary>
 public sealed class DatabaseFixture : IAsyncLifetime
 {
-    private const string Database = "ExtraEfficiencyServicesTest";
+    private static readonly string Database =
+        Environment.GetEnvironmentVariable("TEST_DB_NAME") ?? "ExtraEfficiencyServicesTest";
 
     private static readonly string BaseConnectionString =
         Environment.GetEnvironmentVariable("TEST_DB_CONNECTION")
