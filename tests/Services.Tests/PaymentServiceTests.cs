@@ -526,4 +526,79 @@ public sealed class PaymentServiceTests(DatabaseFixture database)
         var newOrder = await service.CreateOrderAsync(userId, pkgId, "http://localhost:5000");
         Assert.NotNull(newOrder);
     }
+
+    [Fact]
+    public async Task HandleWebhookAsync_with_valid_signature_settles_order_and_deposits_credits()
+    {
+        var pkgId = await SeedPackageAsync("WebhookSettlementTest", 10, 190000);
+        var mockGateway = new MockPaymentGateway();
+        var service = CreateService(mockGateway);
+
+        var userId = await SeedUserAsync(isVerified: true);
+        var order = await service.CreateOrderAsync(userId, pkgId, "http://localhost:5000");
+
+        var payload = $$"""
+            {
+              "orderCode": {{order.PaymentNo}},
+              "status": "paid",
+              "gatewayTxnRef": "MOCK-{{order.PaymentNo}}"
+            }
+            """;
+
+        var result = await service.HandleWebhookAsync(payload, signature: "valid-sig");
+
+        Assert.True(result.IsValid);
+        Assert.Equal(order.PaymentNo, result.PaymentNo);
+        Assert.Equal(GatewayStatus.Paid, result.Status);
+
+        // Verify database: order is paid, payment event exists, credit transaction exists
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var updatedOrder = await db.Orders.SingleAsync(o => o.OrderId == order.OrderId);
+        Assert.Equal("paid", updatedOrder.Status);
+        Assert.NotNull(updatedOrder.PaidAt);
+
+        var webhookEvent = await db.PaymentEvents
+            .Where(e => e.OrderId == order.OrderId && e.Source == "webhook")
+            .SingleOrDefaultAsync();
+        Assert.NotNull(webhookEvent);
+        Assert.Equal("paid", webhookEvent.ReportedStatus);
+        Assert.True(webhookEvent.SignatureValid);
+        Assert.True(webhookEvent.WasApplied);
+
+        var wallet = await service.GetWalletAsync(userId);
+        Assert.Equal(10, wallet.Balance);
+        Assert.Equal(1, wallet.PaidOrderCount);
+    }
+
+    [Fact]
+    public async Task HandleWebhookAsync_with_invalid_signature_rejects_and_does_not_settle()
+    {
+        var pkgId = await SeedPackageAsync("WebhookInvalidSigTest", 10, 190000);
+        var mockGateway = new MockPaymentGateway();
+        var service = CreateService(mockGateway);
+
+        var userId = await SeedUserAsync(isVerified: true);
+        var order = await service.CreateOrderAsync(userId, pkgId, "http://localhost:5000");
+
+        var payload = $$"""
+            {
+              "orderCode": {{order.PaymentNo}},
+              "status": "paid",
+              "gatewayTxnRef": "MOCK-{{order.PaymentNo}}"
+            }
+            """;
+
+        var result = await service.HandleWebhookAsync(payload, signature: "invalid");
+
+        Assert.False(result.IsValid);
+
+        // Verify database: order remains pending, no credits deposited
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var dbOrder = await db.Orders.SingleAsync(o => o.OrderId == order.OrderId);
+        Assert.Equal("pending", dbOrder.Status);
+
+        var wallet = await service.GetWalletAsync(userId);
+        Assert.Equal(0, wallet.Balance);
+        Assert.Equal(0, wallet.PaidOrderCount);
+    }
 }

@@ -282,7 +282,7 @@ public sealed class PayOsPaymentGatewayTests
     }
 
     [Fact]
-    public async Task Post_live_simulated_webhook_for_order_3()
+    public async Task VerifyWebhookAsync_with_simulated_order_payload_and_header_signature_succeeds()
     {
         var gateway = new PayOsPaymentGateway(_options);
         var dataObj = new WebhookData
@@ -318,10 +318,10 @@ public sealed class PayOsPaymentGatewayTests
             }
             """;
 
-        using var client = new HttpClient();
-        var content = new StringContent(payload, System.Text.Encoding.UTF8, System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json"));
-        content.Headers.Add("x-signature", signature);
-        var resp = await client.PostAsync("http://localhost:5001/api/payments/webhook", content);
-        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
+        var result = await gateway.VerifyWebhookAsync(payload, signature);
+        Assert.True(result.IsValid, result.ErrorCode);
+        Assert.Equal(3, result.PaymentNo);
+        Assert.Equal(GatewayStatus.Paid, result.Status);
+        Assert.Equal("plink-3", result.GatewayTxnRef);
     }
 }
