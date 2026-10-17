@@ -55,16 +55,18 @@ public class AdminLessonsTests : PlaywrightTestBase
         await Page.Locator("textarea[name='Cards[1].QuestionPrompt']").FillAsync("The manager _______ the financial results today.");
         await Page.Locator("input[name='Cards[1].OptionA']").FillAsync("announces");
         await Page.Locator("input[name='Cards[1].OptionB']").FillAsync("is announcing");
+        await Page.Locator("input[name='Cards[1].OptionC']").FillAsync("announced");
+        await Page.Locator("input[name='Cards[1].OptionD']").FillAsync("has announced");
         await Page.Locator("select[name='Cards[1].CorrectOption']").SelectOptionAsync("B");
         await Page.Locator("textarea[name='Cards[1].Explanation']").FillAsync("The prompt indicates an action happening today.");
 
         // Submit form
-        await Page.Locator("button:has-text('Save Lesson')").ClickAsync();
+        await Page.GetByRole(AriaRole.Button, new() { Name = "Save Lesson Deck" }).ClickAsync();
 
         // Verify redirect to listing and presence of new lesson
-        await Expect(Page).ToHaveURLAsync(new Regex(@"/admin/lessons", RegexOptions.IgnoreCase));
-        await Expect(Page.Locator(".alert--success, .alert:has-text('created successfully')").First).ToBeVisibleAsync();
-        await Expect(Page.Locator($"text={lessonTitle}")).ToBeVisibleAsync();
+        await Expect(Page).ToHaveURLAsync(new Regex(@"/admin/lessons(\?certId=\d+)?$", RegexOptions.IgnoreCase));
+        await Expect(Page.Locator(".alert--success, [role='status']").First).ToBeVisibleAsync();
+        await Expect(Page.GetByText(lessonTitle, new() { Exact = true })).ToBeVisibleAsync();
     }
 
     [Test]
@@ -87,7 +89,7 @@ public class AdminLessonsTests : PlaywrightTestBase
             {
               "title": "E2E Imported Grammar Lesson",
               "skill": "reading",
-              "categoryCode": "GRAMMAR",
+              "categoryCode": "grammar_tense",
               "summary": "Imported via Playwright E2E test",
               "estimatedMinutes": 5,
               "displayOrder": 99,
@@ -122,7 +124,7 @@ public class AdminLessonsTests : PlaywrightTestBase
             // Expect completion
             await Expect(Page).ToHaveURLAsync(new Regex(@"/admin/lessons", RegexOptions.IgnoreCase));
             await Expect(Page.Locator(".alert--success, .alert:has-text('Import completed')").First).ToBeVisibleAsync();
-            await Expect(Page.Locator("text=E2E Imported Grammar Lesson")).ToBeVisibleAsync();
+            await Expect(Page.GetByText("E2E Imported Grammar Lesson", new() { Exact = true })).ToBeVisibleAsync();
         }
         finally
         {
