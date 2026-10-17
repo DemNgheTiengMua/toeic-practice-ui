@@ -66,7 +66,85 @@ public static class LearnerEndpoints
                     : null,
                 dashboard.UnfinishedPractice is { } up
                     ? new RecentPracticeDto(up.SessionId, up.SectionName, up.Status.MapTo<PracticeStatusDto>(), up.CorrectCount, up.QuestionCount, up.StartedAt)
-                    : null));
+                    : null,
+                dashboard.TargetReadiness is { } tr
+                    ? new TargetReadinessDto(
+                        tr.CurrentBandCode,
+                        tr.CurrentBandName,
+                        tr.CurrentTotalScore,
+                        tr.CurrentSource,
+                        tr.TargetBandCode,
+                        tr.TargetBandName,
+                        tr.TargetMinScore,
+                        tr.CompletedPathSteps,
+                        tr.TotalPathSteps)
+                    : null,
+                dashboard.MissionSteps.Select(m => new MissionStepDto(
+                    m.StepNumber,
+                    m.BadgeLabel,
+                    m.Severity,
+                    m.Eyebrow,
+                    m.Title,
+                    m.Description,
+                    m.MetaLabel,
+                    m.ActionLabel,
+                    m.ActionUrl,
+                    m.IsCleared)).ToList(),
+                dashboard.SimulatorConfig is { } sim
+                    ? new SimulatorConfigDto(
+                        sim.MaxTotalScore,
+                        sim.CurrentTotalScore,
+                        sim.CurrentBandCode,
+                        sim.TargetBandCode,
+                        sim.TargetMinScore,
+                        sim.Skills.Select(s => new SimulatorSkillDto(
+                            s.SkillId,
+                            s.SkillCode,
+                            s.SkillName,
+                            s.Modality,
+                            s.BaseScaledScore,
+                            s.MinScaledScore,
+                            s.MaxScaledScore,
+                            s.Step)).ToList(),
+                        sim.Bands.Select(b => new ScoreBandThresholdDto(
+                            b.Code,
+                            b.Name,
+                            b.MinTotal,
+                            b.MaxTotal)).ToList())
+                    : null,
+                dashboard.WeaknessStrips.Select(w => new WeaknessStripDto(
+                    w.Scope,
+                    w.Id,
+                    w.Code,
+                    w.Name,
+                    w.SectionName,
+                    w.Answered,
+                    w.Correct,
+                    w.AccuracyPercent,
+                    w.Tier,
+                    w.ActionLabel,
+                    w.ActionUrl)).ToList(),
+                dashboard.UpcomingBooking is { } ub
+                    ? new UpcomingBookingCardDto(
+                        ub.BookingId,
+                        ub.MentorName,
+                        ub.MentorHeadline,
+                        ub.FocusArea,
+                        ub.StartAt,
+                        ub.EndAt,
+                        ub.MeetLink)
+                    : null,
+                dashboard.LatestRubricHighlight is { } rh
+                    ? new RubricHighlightDto(
+                        rh.SkillName,
+                        rh.CriterionName,
+                        rh.Score,
+                        rh.MaxScore,
+                        rh.Comment,
+                        rh.AttemptId,
+                        rh.Purpose.MapTo<ExamPurposeDto>())
+                    : null,
+                dashboard.OverallAccuracyPercent));
         });
     }
 }

@@ -34,5 +34,6 @@ public sealed record AiInsightDto(
     DateTimeOffset CreatedAt,
     DateTimeOffset? CompletedAt,
     IReadOnlyList<RecommendationDto> Recommendations,
-    int? LearnerPathId = null
+    int? LearnerPathId = null,
+    string? FormattedNarrative = null
 );
