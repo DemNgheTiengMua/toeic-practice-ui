@@ -22,7 +22,8 @@ public sealed record LessonCardDto(
     string? OptionD,
     string? CorrectOption,
     string? Explanation,
-    int DisplayOrder
+    int DisplayOrder,
+    string? Rationale = null
 );
 
 public sealed record LessonProgressDto(

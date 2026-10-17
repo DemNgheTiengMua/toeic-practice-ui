@@ -250,6 +250,7 @@ builder.Services.AddScoped<ISpeakingPracticeService, SpeakingPracticeService>();
 builder.Services.AddScoped<IPlacementService, PlacementService>();
 builder.Services.AddScoped<ILearningPathService, LearningPathService>();
 builder.Services.AddScoped<ILessonService, LessonService>();
+builder.Services.AddScoped<IAdminLessonService, AdminLessonService>();
 builder.Services.AddScoped<IPremiumPathService, PremiumPathService>();
 builder.Services.AddScoped<IMentorService, MentorService>();
 builder.Services.AddScoped<IComplaintService, ComplaintService>();
@@ -326,6 +327,7 @@ app.UseStatusCodePages(async context =>
 app.MapAuthEndpoints();
 app.MapAdminEndpoints();
 app.MapAdminImportEndpoints();
+app.MapAdminLessonEndpoints();
 app.MapLearnerEndpoints();
 app.MapExamEndpoints();
 app.MapPracticeEndpoints();

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -44,6 +44,8 @@ public partial class LessonCard
     public string? CorrectOption { get; set; }
 
     public string? Explanation { get; set; }
+
+    public string? Rationale { get; set; }
 
     public int DisplayOrder { get; set; }
 
