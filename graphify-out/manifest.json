@@ -110,8 +110,8 @@
     "semantic_hash": ""
   },
   "docs/seed-demo.sql": {
-    "mtime": 1792078564.2517362,
-    "ast_hash": "45111c2298575b708384f0d7ff41a253",
+    "mtime": 1792216278.2090979,
+    "ast_hash": "a345269396a6a9ed535c713240e3557d",
     "semantic_hash": ""
   },
   "prototype/assets/js/icons.js": {
@@ -150,7 +150,7 @@
     "semantic_hash": ""
   },
   "src/BusinessObjects/LearnerContext.cs": {
-    "mtime": 1792210325.8328338,
+    "mtime": 1792215197.1369228,
     "ast_hash": "b4b451d8dcd6e4e55acf729861e2da46",
     "semantic_hash": ""
   },
@@ -195,7 +195,7 @@
     "semantic_hash": "bd4ea7a3fe123eee27d26f8235a686e3"
   },
   "src/Contracts/LearnerDtos.cs": {
-    "mtime": 1792210325.833366,
+    "mtime": 1792215197.1369228,
     "ast_hash": "4c897c6b768a6711c1c3534a2369aaf0",
     "semantic_hash": ""
   },
@@ -530,7 +530,7 @@
     "semantic_hash": "7083ab10df00a46cc3b33f74dbd3fc5d"
   },
   "src/Services/LearnerService.cs": {
-    "mtime": 1792210325.843396,
+    "mtime": 1792215197.1395564,
     "ast_hash": "bb7251501423d76e8361b1ff9e70305d",
     "semantic_hash": ""
   },
@@ -585,7 +585,7 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Controllers/DashboardController.cs": {
-    "mtime": 1792211433.9979925,
+    "mtime": 1792215197.140908,
     "ast_hash": "f4376ac679e536ee65b011301be6bb5a",
     "semantic_hash": ""
   },
@@ -695,7 +695,7 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Dashboard/Index.cshtml": {
-    "mtime": 1792214590.5091264,
+    "mtime": 1792215197.140908,
     "ast_hash": "c475dba576af808b56aa02fec2c880de",
     "semantic_hash": ""
   },
@@ -770,7 +770,7 @@
     "semantic_hash": "d0fb1f0ebd79c9b0d77fdb3f4b9a9f12"
   },
   "tests/Services.Tests/AuthServiceTests.cs": {
-    "mtime": 1792078564.3198936,
+    "mtime": 1792216262.0094712,
     "ast_hash": "080fa1832f00d862f5fadad5ade9fbaa",
     "semantic_hash": ""
   },
@@ -780,7 +780,7 @@
     "semantic_hash": "edd86a0e57dc24612563b24d59dee7dc"
   },
   "tests/Services.Tests/DatabaseFixture.cs": {
-    "mtime": 1792210435.123196,
+    "mtime": 1792215197.143658,
     "ast_hash": "e867bef512f2ac5ff31a10f5c1193d5a",
     "semantic_hash": ""
   },
@@ -795,7 +795,7 @@
     "semantic_hash": ""
   },
   "tests/Services.Tests/LearnerServiceTests.cs": {
-    "mtime": 1792210325.8459046,
+    "mtime": 1792215197.1476402,
     "ast_hash": "75386998312fe71c04415a069f7e9c9c",
     "semantic_hash": ""
   },
@@ -904,56 +904,6 @@
     "mtime": 1791741006.7725718,
     "ast_hash": "85409347dbf487c8a25c9dac59708b83",
     "semantic_hash": "85409347dbf487c8a25c9dac59708b83"
-  },
-  "docs/backlog.md": {
-    "mtime": 1792134970.995637,
-    "ast_hash": "ed6707210bd37f6d633e9c80e0add4d1",
-    "semantic_hash": ""
-  },
-  "docs/critique-2026-09-27-multi-certificate-ui.md": {
-    "mtime": 1790590086.8387759,
-    "ast_hash": "8003f443e337c7ea81c8cb4afd49ceec",
-    "semantic_hash": "8003f443e337c7ea81c8cb4afd49ceec"
-  },
-  "docs/schema-gaps-speaking.md": {
-    "mtime": 1791739824.4418437,
-    "ast_hash": "1c17ac775840ea96195036b22b837ebe",
-    "semantic_hash": "1c17ac775840ea96195036b22b837ebe"
-  },
-  "docs/schema-ui-audit.md": {
-    "mtime": 1791739824.4436316,
-    "ast_hash": "b6b7004c501bfb5cdf1dfea2b50d70d6",
-    "semantic_hash": "b6b7004c501bfb5cdf1dfea2b50d70d6"
-  },
-  "docs/superpowers/plans/2026-09-20-toeic-ui-prototype.md": {
-    "mtime": 1789921424.204289,
-    "ast_hash": "09f0dd8fca7c3911efa6ddb87404c4bc",
-    "semantic_hash": ""
-  },
-  "docs/superpowers/plans/2026-09-24-multi-cert-companion-schema.md": {
-    "mtime": 1790590090.989472,
-    "ast_hash": "9c9e67712b8ea0bd2322daaf97fb1f84",
-    "semantic_hash": "9c9e67712b8ea0bd2322daaf97fb1f84"
-  },
-  "docs/superpowers/plans/2026-09-27-multi-cert-ui-redesign.md": {
-    "mtime": 1790590090.989472,
-    "ast_hash": "65c4a5a031acb2006939d925f32e6e21",
-    "semantic_hash": "65c4a5a031acb2006939d925f32e6e21"
-  },
-  "docs/superpowers/specs/2026-09-20-toeic-ui-design.md": {
-    "mtime": 1789921554.4082828,
-    "ast_hash": "d0064d6e1002398a214035c5ef103d4c",
-    "semantic_hash": ""
-  },
-  "docs/superpowers/specs/2026-09-24-multi-cert-companion-design.md": {
-    "mtime": 1791739824.444724,
-    "ast_hash": "4bda1b11038549d9dba6631076d22ca1",
-    "semantic_hash": "4bda1b11038549d9dba6631076d22ca1"
-  },
-  "docs/superpowers/specs/2026-09-27-multi-cert-ui-redesign.md": {
-    "mtime": 1790590090.989472,
-    "ast_hash": "cda74e7c0b3a4d41b72a239aff5368c9",
-    "semantic_hash": "cda74e7c0b3a4d41b72a239aff5368c9"
   },
   "docs/toeic-user-flow.md": {
     "mtime": 1791739824.444724,
@@ -1831,7 +1781,7 @@
     "semantic_hash": ""
   },
   "src/WebAPI/Endpoints/LearnerEndpoints.cs": {
-    "mtime": 1792210325.843396,
+    "mtime": 1792215197.1398928,
     "ast_hash": "f60c4f8262441f3df7c99278dc6872db",
     "semantic_hash": ""
   },
@@ -2016,7 +1966,7 @@
     "semantic_hash": ""
   },
   "src/Contracts/AiInsightDtos.cs": {
-    "mtime": 1792210325.8328338,
+    "mtime": 1792215197.1369228,
     "ast_hash": "dabc9498c03c61dd4c79c5c24ce0238c",
     "semantic_hash": ""
   },
@@ -2041,12 +1991,12 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Models/AiInsightViewModels.cs": {
-    "mtime": 1792210325.843396,
+    "mtime": 1792215197.140908,
     "ast_hash": "8fe7ebfce0b21cdd7f8735196f1d94bf",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Shared/_AiInsightPanel.cshtml": {
-    "mtime": 1792214482.3463454,
+    "mtime": 1792215197.143658,
     "ast_hash": "8ec5ca04537dea01b9c61e2d7cc4ae2e",
     "semantic_hash": ""
   },
@@ -2060,13 +2010,8 @@
     "ast_hash": "0b59e75c984b30dbd154c01b884bb51d",
     "semantic_hash": ""
   },
-  "docs/speaking-practice-improvements.md": {
-    "mtime": 1792046036.9127789,
-    "ast_hash": "e5c843cdf9a7b578be9ea37f8f3f6860",
-    "semantic_hash": ""
-  },
   "tests/WebMVC.Tests/DashboardControllerTests.cs": {
-    "mtime": 1792211434.0095255,
+    "mtime": 1792215197.1487842,
     "ast_hash": "c0ae177eb9414f221bbae3afed2e4932",
     "semantic_hash": ""
   },
@@ -2406,8 +2351,8 @@
     "semantic_hash": ""
   },
   "scripts/build_seed.py": {
-    "mtime": 1792078564.291194,
-    "ast_hash": "9ca052c3421b66b87cc5afd376790dbf",
+    "mtime": 1792216282.8132126,
+    "ast_hash": "802417c8f9a884bd06235975ddb826d7",
     "semantic_hash": ""
   },
   "tests/Services.Tests/DemoSeedTests.cs": {
@@ -2550,11 +2495,6 @@
     "ast_hash": "9941f33113e4b63488eb28efba4b3eef",
     "semantic_hash": ""
   },
-  "Architecture Review \u2014 extra_efficiency_ui.html": {
-    "mtime": 1792141245.4879315,
-    "ast_hash": "958e178c47a793389c1c39f1e830a20c",
-    "semantic_hash": ""
-  },
   "GLOSSARY.md": {
     "mtime": 1792143944.2931645,
     "ast_hash": "079776bbecc6e3e6c6a454126ccd076d",
@@ -2595,11 +2535,6 @@
     "ast_hash": "99b70edc54941c35bdd8b66041d906cc",
     "semantic_hash": ""
   },
-  "UI_STANDARDIZATION_PLAN.md": {
-    "mtime": 1792161703.8410795,
-    "ast_hash": "f2f337259b609e3baed9f48739de549c",
-    "semantic_hash": ""
-  },
   "docs/samples/sample-exam-ielts-4skill.json": {
     "mtime": 1792165837.6517837,
     "ast_hash": "61c74316c563c04d7e5ecfc0ec170914",
@@ -2608,16 +2543,6 @@
   "docs/samples/sample-exam-toeic-2skill.json": {
     "mtime": 1792165837.648986,
     "ast_hash": "06f556c88086e919ab2938cc569d269e",
-    "semantic_hash": ""
-  },
-  "scratch/test_prompt.py": {
-    "mtime": 1792167735.3631034,
-    "ast_hash": "18bc667ae7b54415749b5ebf2315bf07",
-    "semantic_hash": ""
-  },
-  "scratch/test_speechsuper.py": {
-    "mtime": 1792168330.3138633,
-    "ast_hash": "dcbbab2113edbfbe2110b318284fec5c",
     "semantic_hash": ""
   },
   "scripts/build_sample_packages.py": {
@@ -2761,103 +2686,88 @@
     "semantic_hash": ""
   },
   "src/Services/LearnerService.Booking.cs": {
-    "mtime": 1792213395.911015,
+    "mtime": 1792215197.1369228,
     "ast_hash": "eb6c11bcbb4102ce1b8af02e77ae5505",
     "semantic_hash": ""
   },
   "src/Services/LearnerService.Mission.cs": {
-    "mtime": 1792214440.1876705,
+    "mtime": 1792215197.1369228,
     "ast_hash": "7282625ee3e96d22b4e94d64e928abe2",
     "semantic_hash": ""
   },
   "src/Services/LearnerService.Rubric.cs": {
-    "mtime": 1792211433.9974515,
+    "mtime": 1792215197.1369228,
     "ast_hash": "6ca0525e3856f4dd1ebd951fef42c754",
     "semantic_hash": ""
   },
   "src/Services/LearnerService.Simulator.cs": {
-    "mtime": 1792212390.426004,
+    "mtime": 1792215197.1369228,
     "ast_hash": "890032bd51bce3384e8c662688affe22",
     "semantic_hash": ""
   },
   "src/Services/LearnerService.Weakness.cs": {
-    "mtime": 1792212219.668112,
+    "mtime": 1792215197.1369228,
     "ast_hash": "dfd99a61e49e5352f8811a6591d884d5",
     "semantic_hash": ""
   },
   "src/WebMVC/Models/AiNarrativeFormatter.cs": {
-    "mtime": 1792211433.9979925,
+    "mtime": 1792215197.140908,
     "ast_hash": "103e497b8a28f296e68eaf9c2b1f6008",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Dashboard/_DashboardMentorPass.cshtml": {
-    "mtime": 1792214564.5511112,
+    "mtime": 1792215197.1425712,
     "ast_hash": "4b309fa96d81c03a7ce977c980bffb90",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Dashboard/_DashboardMission.cshtml": {
-    "mtime": 1792212473.7146192,
+    "mtime": 1792215197.1425712,
     "ast_hash": "522ab96154ca68a6ef863e0d263ca90e",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Dashboard/_DashboardSimulator.cshtml": {
-    "mtime": 1792214510.3811646,
+    "mtime": 1792215197.1430879,
     "ast_hash": "355383da4ee9e0a68abbc116a646c9c0",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Dashboard/_DashboardWeaknessRadar.cshtml": {
-    "mtime": 1792212219.668112,
+    "mtime": 1792215197.1430879,
     "ast_hash": "8ad5fcef865e7c3c7ef9fedd6844d410",
     "semantic_hash": ""
   },
   "tests/Services.Tests/LearnerServiceTests.Booking.cs": {
-    "mtime": 1792213395.9125712,
+    "mtime": 1792215197.143658,
     "ast_hash": "8511b7aa5aa6a5e89b3ea9b51ecbca03",
     "semantic_hash": ""
   },
   "tests/Services.Tests/LearnerServiceTests.Mission.cs": {
-    "mtime": 1792212473.7146192,
+    "mtime": 1792215197.143658,
     "ast_hash": "4010ae2e4fe222c94b77beacfb1c8e25",
     "semantic_hash": ""
   },
   "tests/Services.Tests/LearnerServiceTests.Readiness.cs": {
-    "mtime": 1792210325.8459046,
+    "mtime": 1792215197.1458492,
     "ast_hash": "51180527b34a7e32207ba38d4c65793b",
     "semantic_hash": ""
   },
   "tests/Services.Tests/LearnerServiceTests.Rubric.cs": {
-    "mtime": 1792211434.0079849,
+    "mtime": 1792215197.1458492,
     "ast_hash": "c1874376c2a0a4da1425650f2a36cf69",
     "semantic_hash": ""
   },
   "tests/Services.Tests/LearnerServiceTests.Simulator.cs": {
-    "mtime": 1792212390.4270499,
+    "mtime": 1792215197.1458492,
     "ast_hash": "e168f5442a7ac30af727a2bf33d1f6ea",
     "semantic_hash": ""
   },
   "tests/Services.Tests/LearnerServiceTests.Weakness.cs": {
-    "mtime": 1792212219.668656,
+    "mtime": 1792215197.1468525,
     "ast_hash": "d32695e4a8649dfa051dfe92f635b09c",
     "semantic_hash": ""
   },
   "tests/WebMVC.Tests/AiNarrativeFormatterTests.cs": {
-    "mtime": 1792211434.0079849,
+    "mtime": 1792215197.1476402,
     "ast_hash": "dc6cdf6896429818d2834a385aaedbab",
-    "semantic_hash": ""
-  },
-  "stitch_exam_signage_design_system/DESIGN.md": {
-    "mtime": 1792174000.0,
-    "ast_hash": "63a85f523a50ecb3c3d1af4fa1741258",
-    "semantic_hash": ""
-  },
-  "stitch_exam_signage_design_system/code.html": {
-    "mtime": 1792174000.0,
-    "ast_hash": "e48d7fff8f736650f300b60bdb4bfeb5",
-    "semantic_hash": ""
-  },
-  "stitch_exam_signage_design_system/screen.png": {
-    "mtime": 1792174000.0,
-    "ast_hash": "062acb4a101248f2db4ad67c50c9fdd2",
     "semantic_hash": ""
   }
 }
