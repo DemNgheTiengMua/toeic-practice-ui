@@ -34,6 +34,10 @@ public sealed class DashboardController(
         try
         {
             insight = await api.GetDashboardInsightAsync(cancellationToken: cancellationToken);
+            if (insight is not null)
+            {
+                insight = insight with { FormattedNarrative = AiNarrativeFormatter.ToSafeHtml(insight.Narrative) };
+            }
         }
         catch (Exception ex)
         {
@@ -51,6 +55,10 @@ public sealed class DashboardController(
         try
         {
             var insight = await api.GetDashboardInsightAsync(certId, cancellationToken);
+            if (insight is not null)
+            {
+                insight = insight with { FormattedNarrative = AiNarrativeFormatter.ToSafeHtml(insight.Narrative) };
+            }
             return Ok(insight);
         }
         catch (ApiException ex)

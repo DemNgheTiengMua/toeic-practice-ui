@@ -1,21 +1,76 @@
 @model WebMVC.Models.AiInsightPanelViewModel
 @using Contracts
+@using WebMVC.Models
 @{
     var insight = Model.Insight;
     var status = insight?.Status.ToWireCode() ?? "pending";
     var isDone = status == "done";
     var isFailed = status == "failed";
     var isPending = !isDone && !isFailed;
+    var formattedInitial = insight is null
+        ? string.Empty
+        : (!string.IsNullOrEmpty(insight.FormattedNarrative)
+            ? insight.FormattedNarrative
+            : AiNarrativeFormatter.ToSafeHtml(insight.Narrative));
 }
 
-@functions {
-    string FormatNarrative(string? narrative)
-    {
-        if (string.IsNullOrEmpty(narrative)) return "";
-        var encoded = System.Net.WebUtility.HtmlEncode(narrative);
-        return System.Text.RegularExpressions.Regex.Replace(encoded, @"\*\*(.+?)\*\*", "<strong>$1</strong>");
+<style>
+  @@keyframes ai-stripe-march {
+    0% { background-position: 0 0; }
+    100% { background-position: 28px 0; }
+  }
+  .ai-kinetic-bar {
+    height: 16px;
+    width: 100%;
+    border: 2px solid var(--ink, #14181d);
+    border-radius: 0;
+    box-shadow: none;
+    background-color: var(--color-surface, #ffffff);
+    overflow: hidden;
+  }
+  .ai-kinetic-bar__fill {
+    height: 100%;
+    width: 100%;
+    border-radius: 0;
+    background-color: var(--sign-blue, #0b4ea2);
+    background-image: repeating-linear-gradient(
+      -45deg,
+      var(--ink, #14181d) 0,
+      var(--ink, #14181d) 10px,
+      var(--sign-gold, #f2b705) 10px,
+      var(--sign-gold, #f2b705) 20px
+    );
+    background-size: 28px 28px;
+    animation: ai-stripe-march 0.6s linear infinite;
+  }
+  @@media (prefers-reduced-motion: reduce) {
+    .ai-kinetic-bar__fill {
+      animation: none;
     }
-}
+  }
+  .ai-insight-narrative p {
+    margin: 0 0 var(--space-3, 12px) 0;
+  }
+  .ai-insight-narrative p:last-child {
+    margin-bottom: 0;
+  }
+  .ai-insight-narrative ul,
+  .ai-insight-narrative ol {
+    margin: 0 0 var(--space-3, 12px) 0;
+    padding-left: var(--space-5, 24px);
+  }
+  .ai-insight-narrative li + li {
+    margin-top: var(--space-1, 4px);
+  }
+  .ai-insight-narrative code {
+    font-family: var(--font-mono, "IBM Plex Mono", monospace);
+    font-size: 0.9em;
+    padding: 1px 5px;
+    background: var(--surface-soft, #f3f5f7);
+    border: 1px solid var(--rule-soft, #ccd2d6);
+    border-radius: 0;
+  }
+</style>
 
 <div class="card mt-4 ai-insight-panel" id="ai-insight-panel" data-scope="@Model.Scope" data-activity-id="@Model.ActivityId" data-status="@status">
   <div id="ai-insight-csrf" style="display: none;">
@@ -26,9 +81,13 @@
     <div class="row row--between row--middle row--wrap">
       <div class="row row--middle">
         <span class="badge badge--info font-mono uppercase font-bold" style="letter-spacing: 0.04em;">AI Insight</span>
-        <strong>Diagnostic Analysis & Recommendations</strong>
+        <strong>Diagnostic Analysis &amp; Recommendations</strong>
       </div>
       <div id="ai-insight-header-badges" class="row row--middle">
+        @if (Model.Scope == "dashboard" && Model.OverallAccuracyPercent.HasValue)
+        {
+          <span class="badge badge--muted text-xs font-mono">ACCURACY: @(Model.OverallAccuracyPercent.Value)%</span>
+        }
         @if (isDone && insight?.Trend != null)
         {
           var trendBadge = insight.Trend switch
@@ -43,7 +102,7 @@
               AiInsightTrendDto.Declining => "Trend: Declining",
               _ => "Trend: Flat"
           };
-          <span class="badge @trendBadge text-xs font-mono">@trendLabel</span>
+          <span class="badge @trendBadge text-xs font-mono" id="ai-insight-trend-badge">@trendLabel</span>
         }
       </div>
     </div>
@@ -53,13 +112,16 @@
     @if (isPending)
     {
       <div class="state-block p-4" id="ai-insight-loading">
-        <div class="state-block__icon" aria-hidden="true">ANALYZING</div>
+        <div class="row row--between row--middle row--wrap mb-2" style="width: 100%;">
+          <span class="badge badge--warning font-mono uppercase font-bold" id="ai-insight-phase">PHASE 1/4 // AGGREGATING SECTION &amp; CATEGORY ACCURACY</span>
+          <span class="font-mono text-xs font-bold" id="ai-insight-elapsed" aria-live="polite">ELAPSED: 00.0s</span>
+        </div>
         <div class="state-block__title">Generating AI Insights…</div>
         <p class="state-block__desc">
           Evaluating answer patterns, luck vs. competence, and alignment with your target band. This will take just a few seconds.
         </p>
-        <div class="progress progress--centered mt-3">
-          <div class="progress__bar" style="width: 65%;"></div>
+        <div class="ai-kinetic-bar mt-3" role="progressbar" aria-label="AI insight generation in progress">
+          <div class="ai-kinetic-bar__fill"></div>
         </div>
       </div>
     }
@@ -77,8 +139,8 @@
     else if (isDone && insight != null)
     {
       <div id="ai-insight-content">
-        <div class="ai-insight-narrative" style="line-height: 1.6; font-size: 15px; white-space: pre-line; margin-bottom: var(--space-4); color: var(--ink);">
-          @Html.Raw(FormatNarrative(insight.Narrative))
+        <div class="ai-insight-narrative" style="line-height: 1.6; font-size: 15px; margin-bottom: var(--space-4); color: var(--ink);">
+          @Html.Raw(formattedInitial)
         </div>
 
         @if (insight.Recommendations is { Count: > 0 })
@@ -121,6 +183,27 @@
       </div>
     }
   </div>
+
+  @if (Model.Scope == "dashboard" && Model.RubricHighlight is { } rubric)
+  {
+    var reviewUrl = rubric.Purpose == ExamPurposeDto.SpeakingPractice
+        ? $"/speaking/review/{rubric.AttemptId}"
+        : $"/writing/review/{rubric.AttemptId}";
+    <div class="card__body" id="ai-insight-rubric-highlight" style="border-top: 2px solid var(--ink, #14181d); background: var(--surface-soft, #f3f5f7);">
+      <div class="row row--between row--middle row--wrap">
+        <div class="row row--middle">
+          <span class="badge badge--warning font-mono uppercase font-bold">Rubric Focus · @rubric.SkillName</span>
+          <strong class="font-sign uppercase" style="letter-spacing: 0.03em;">@rubric.CriterionName</strong>
+          <span class="badge badge--muted font-mono">@rubric.Score.ToString("0.##") / @rubric.MaxScore.ToString("0.##")</span>
+        </div>
+        <a class="btn btn--sm btn--ghost" href="@reviewUrl">Review @rubric.SkillName attempt ›</a>
+      </div>
+      @if (!string.IsNullOrWhiteSpace(rubric.Comment))
+      {
+        <p class="text-sm no-margin mt-2" style="color: var(--ink, #14181d);">@rubric.Comment</p>
+      }
+    </div>
+  }
 </div>
 
 <script>
@@ -133,6 +216,40 @@
     let currentStatus = panel.dataset.status;
     let pollCount = 0;
     const maxPolls = 30; // 60 seconds maximum polling bound
+    let elapsedTimerId = null;
+    let elapsedStartMs = Date.now();
+
+    const diagnosticPhases = [
+      'PHASE 1/4 // AGGREGATING SECTION & CATEGORY ACCURACY',
+      'PHASE 2/4 // EVALUATING LUCK VS. UNASSISTED COMPETENCE',
+      'PHASE 3/4 // ALIGNING TRAJECTORY AGAINST TARGET BAND',
+      'PHASE 4/4 // SYNTHESIZING REMEDIATION DIRECTIVES'
+    ];
+
+    function startKineticTimer() {
+      stopKineticTimer();
+      elapsedStartMs = Date.now();
+      elapsedTimerId = setInterval(function() {
+        const elapsedSec = (Date.now() - elapsedStartMs) / 1000;
+        const elapsedEl = document.getElementById('ai-insight-elapsed');
+        if (elapsedEl) {
+          const formattedSec = elapsedSec < 10 ? '0' + elapsedSec.toFixed(1) : elapsedSec.toFixed(1);
+          elapsedEl.textContent = `ELAPSED: ${formattedSec}s`;
+        }
+        const phaseEl = document.getElementById('ai-insight-phase');
+        if (phaseEl) {
+          const phaseIndex = Math.min(diagnosticPhases.length - 1, Math.floor(elapsedSec / 1.5) % diagnosticPhases.length);
+          phaseEl.textContent = diagnosticPhases[phaseIndex];
+        }
+      }, 100);
+    }
+
+    function stopKineticTimer() {
+      if (elapsedTimerId !== null) {
+        clearInterval(elapsedTimerId);
+        elapsedTimerId = null;
+      }
+    }
 
     function getEndpoint() {
       if (scope === 'dashboard') {
@@ -168,6 +285,7 @@
     }
 
     function renderDone(data) {
+      stopKineticTimer();
       const body = document.getElementById('ai-insight-body');
       const badges = document.getElementById('ai-insight-header-badges');
       if (!body) return;
@@ -177,7 +295,7 @@
         panel.dataset.activityId = data.certId;
       }
 
-      // Update trend badge
+      // Update trend badge while preserving accuracy badge if present
       if (badges && data.trend !== undefined && data.trend !== null) {
         let trendClass = 'badge--warning';
         let trendText = 'Trend: Flat';
@@ -189,7 +307,17 @@
           trendClass = 'badge--danger';
           trendText = 'Trend: Declining';
         }
-        badges.innerHTML = `<span class="badge ${trendClass} text-xs font-mono">${trendText}</span>`;
+        const existingTrend = document.getElementById('ai-insight-trend-badge');
+        if (existingTrend) {
+          existingTrend.className = `badge ${trendClass} text-xs font-mono`;
+          existingTrend.textContent = trendText;
+        } else {
+          const span = document.createElement('span');
+          span.id = 'ai-insight-trend-badge';
+          span.className = `badge ${trendClass} text-xs font-mono`;
+          span.textContent = trendText;
+          badges.appendChild(span);
+        }
       }
 
       let recsHtml = '';
@@ -226,10 +354,14 @@
         `;
       }
 
+      const narrativeHtml = data.formattedNarrative
+        ? data.formattedNarrative
+        : formatNarrative(data.narrative || '');
+
       body.innerHTML = `
         <div id="ai-insight-content">
-          <div class="ai-insight-narrative" style="line-height: 1.6; font-size: 15px; white-space: pre-line; margin-bottom: var(--space-4); color: var(--ink);">
-            ${formatNarrative(data.narrative || '')}
+          <div class="ai-insight-narrative" style="line-height: 1.6; font-size: 15px; margin-bottom: var(--space-4); color: var(--ink);">
+            ${narrativeHtml}
           </div>
           ${recsHtml}
           <div class="text-xs text-muted mt-3 font-mono">
@@ -240,6 +372,7 @@
     }
 
     function renderFailed(reason) {
+      stopKineticTimer();
       const body = document.getElementById('ai-insight-body');
       if (!body) return;
       panel.dataset.status = 'failed';
@@ -261,16 +394,20 @@
       panel.dataset.status = 'pending';
       body.innerHTML = `
         <div class="state-block p-4" id="ai-insight-loading">
-          <div class="state-block__icon" aria-hidden="true">ANALYZING</div>
+          <div class="row row--between row--middle row--wrap mb-2" style="width: 100%;">
+            <span class="badge badge--warning font-mono uppercase font-bold" id="ai-insight-phase">${diagnosticPhases[0]}</span>
+            <span class="font-mono text-xs font-bold" id="ai-insight-elapsed" aria-live="polite">ELAPSED: 00.0s</span>
+          </div>
           <div class="state-block__title">Generating AI Insights…</div>
           <p class="state-block__desc">
             Evaluating answer patterns, luck vs. competence, and alignment with your target band. This will take just a few seconds.
           </p>
-          <div class="progress progress--centered mt-3">
-            <div class="progress__bar" style="width: 65%;"></div>
+          <div class="ai-kinetic-bar mt-3" role="progressbar" aria-label="AI insight generation in progress">
+            <div class="ai-kinetic-bar__fill"></div>
           </div>
         </div>
       `;
+      startKineticTimer();
     }
 
     function escapeHtml(str) {
@@ -285,7 +422,10 @@
 
     function formatNarrative(str) {
       const escaped = escapeHtml(str || '');
-      return escaped.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      return escaped
+        .replace(/`([^`]+)`/g, '<code>$1</code>')
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '<em>$1</em>');
     }
 
     window.retryAiInsight = async function() {
@@ -343,6 +483,7 @@
     }
 
     if (currentStatus === 'pending' || !currentStatus) {
+      startKineticTimer();
       setTimeout(pollStatus, 1500);
     }
   })();

@@ -77,6 +77,7 @@ public sealed class DashboardControllerTests
         Assert.Equal(10, insightInViewBag.InsightId);
         Assert.Equal(AiInsightScopeDto.Dashboard, insightInViewBag.Scope);
         Assert.Equal("Performance Summary: Great overall accuracy.", insightInViewBag.Narrative);
+        Assert.Equal("<p>Performance Summary: Great overall accuracy.</p>", insightInViewBag.FormattedNarrative);
         Assert.Equal(AiInsightTrendDto.Improving, insightInViewBag.Trend);
     }
 
@@ -104,7 +105,10 @@ public sealed class DashboardControllerTests
     [Fact]
     public async Task GetDashboardInsight_returns_ok_with_dto()
     {
-        var sampleInsight = SampleInsight();
+        var sampleInsight = SampleInsight() with
+        {
+            Narrative = "**Performance Summary**: Great *overall* accuracy.\n\n- Drill `Part 5` daily\n<script>alert(1)</script>"
+        };
         var api = new TestApiClient
         {
             InsightData = sampleInsight
@@ -118,6 +122,12 @@ public sealed class DashboardControllerTests
         Assert.Equal(10, returned.InsightId);
         Assert.Equal(AiInsightScopeDto.Dashboard, returned.Scope);
         Assert.Equal(AiInsightStatusDto.Done, returned.Status);
+        Assert.NotNull(returned.FormattedNarrative);
+        Assert.Contains("<strong>Performance Summary</strong>", returned.FormattedNarrative);
+        Assert.Contains("<em>overall</em>", returned.FormattedNarrative);
+        Assert.Contains("<code>Part 5</code>", returned.FormattedNarrative);
+        Assert.DoesNotContain("<script>", returned.FormattedNarrative);
+        Assert.Contains("&lt;script&gt;alert(1)&lt;/script&gt;", returned.FormattedNarrative);
     }
 
     [Fact]
