@@ -391,6 +391,10 @@ public interface IAdminExamsClient
     Task DeleteAdminQuestionAsync(int questionId, string bearerToken, CancellationToken cancellationToken = default) => DeleteAdminQuestionAsync(questionId, cancellationToken);
     Task<AdminExamSectionAudioDto> SaveAdminExamSectionAudioAsync(int examId, SaveExamSectionAudioRequest request, CancellationToken cancellationToken = default);
     Task<AdminExamSectionAudioDto> SaveAdminExamSectionAudioAsync(int examId, SaveExamSectionAudioRequest request, string bearerToken, CancellationToken cancellationToken = default) => SaveAdminExamSectionAudioAsync(examId, request, cancellationToken);
+    Task<QuickIngestParseResultDto> ParseQuickIngestAsync(int examId, QuickIngestParseRequest request, CancellationToken cancellationToken = default);
+    Task<QuickIngestParseResultDto> ParseQuickIngestAsync(int examId, QuickIngestParseRequest request, string bearerToken, CancellationToken cancellationToken = default) => ParseQuickIngestAsync(examId, request, cancellationToken);
+    Task<QuickIngestCommitResultDto> CommitQuickIngestAsync(int examId, QuickIngestCommitRequest request, CancellationToken cancellationToken = default);
+    Task<QuickIngestCommitResultDto> CommitQuickIngestAsync(int examId, QuickIngestCommitRequest request, string bearerToken, CancellationToken cancellationToken = default) => CommitQuickIngestAsync(examId, request, cancellationToken);
 }
 
 public interface IAdminImportsClient

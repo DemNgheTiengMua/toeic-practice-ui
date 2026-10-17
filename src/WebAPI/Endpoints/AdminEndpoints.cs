@@ -469,5 +469,31 @@ public static class AdminEndpoints
                 return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
             }
         });
+
+        admin.MapPost("/exams/{examId:int}/quick-ingest/parse", (
+            int examId,
+            QuickIngestParseRequest request,
+            IExamQuickIngestService quickIngest) =>
+        {
+            var result = quickIngest.Parse(request);
+            return Results.Ok(result);
+        });
+
+        admin.MapPost("/exams/{examId:int}/quick-ingest/commit", async (
+            int examId,
+            QuickIngestCommitRequest request,
+            IAdminExamService exams,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var result = await exams.CommitQuickIngestAsync(examId, request, cancellationToken);
+                return Results.Ok(result);
+            }
+            catch (AdminExamException ex)
+            {
+                return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
+            }
+        });
     }
 }

@@ -946,6 +946,12 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
     public Task<AdminExamSectionAudioDto> SaveAdminExamSectionAudioAsync(int examId, SaveExamSectionAudioRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
         PostAuthorizedAsync<SaveExamSectionAudioRequest, AdminExamSectionAudioDto>($"api/admin/exams/{examId}/audio", request, bearerToken, cancellationToken);
 
+    public Task<QuickIngestParseResultDto> ParseQuickIngestAsync(int examId, QuickIngestParseRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
+        PostAuthorizedAsync<QuickIngestParseRequest, QuickIngestParseResultDto>($"api/admin/exams/{examId}/quick-ingest/parse", request, bearerToken, cancellationToken);
+
+    public Task<QuickIngestCommitResultDto> CommitQuickIngestAsync(int examId, QuickIngestCommitRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
+        PostAuthorizedAsync<QuickIngestCommitRequest, QuickIngestCommitResultDto>($"api/admin/exams/{examId}/quick-ingest/commit", request, bearerToken, cancellationToken);
+
     public Task<AdminImportBatchesDto> GetAdminImportBatchesAsync(int? certId, string bearerToken, CancellationToken cancellationToken = default) =>
         GetAuthorizedAsync<AdminImportBatchesDto>(certId is { } id ? $"api/admin/imports?certId={id}" : "api/admin/imports", bearerToken, cancellationToken);
 
@@ -1417,6 +1423,12 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
 
     public Task<AdminExamSectionAudioDto> SaveAdminExamSectionAudioAsync(int examId, SaveExamSectionAudioRequest request, CancellationToken cancellationToken = default) =>
         SaveAdminExamSectionAudioAsync(examId, request, string.Empty, cancellationToken);
+
+    public Task<QuickIngestParseResultDto> ParseQuickIngestAsync(int examId, QuickIngestParseRequest request, CancellationToken cancellationToken = default) =>
+        ParseQuickIngestAsync(examId, request, string.Empty, cancellationToken);
+
+    public Task<QuickIngestCommitResultDto> CommitQuickIngestAsync(int examId, QuickIngestCommitRequest request, CancellationToken cancellationToken = default) =>
+        CommitQuickIngestAsync(examId, request, string.Empty, cancellationToken);
 
     public Task<AdminImportBatchesDto> GetAdminImportBatchesAsync(int? certId, CancellationToken cancellationToken = default) =>
         GetAdminImportBatchesAsync(certId, string.Empty, cancellationToken);

@@ -451,4 +451,42 @@ public sealed class AdminExamsController(
             new AdminCertificateOptionDto(3, "vstep", "VSTEP")
         ];
     }
+
+    [HttpPost("{id:int}/quick-ingest/parse")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ParseQuickIngest(
+        int id,
+        [FromBody] QuickIngestParseRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var result = await api.ParseQuickIngestAsync(id, request, cancellationToken);
+            return Json(result);
+        }
+        catch (ApiException ex)
+        {
+            logger.LogWarning(ex, "Failed to parse quick ingest for exam {ExamId}", id);
+            return StatusCode(ex.Status, new { message = ex.Detail ?? ex.Message, code = ex.Code });
+        }
+    }
+
+    [HttpPost("{id:int}/quick-ingest/commit")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CommitQuickIngest(
+        int id,
+        [FromBody] QuickIngestCommitRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var result = await api.CommitQuickIngestAsync(id, request, cancellationToken);
+            return Json(result);
+        }
+        catch (ApiException ex)
+        {
+            logger.LogWarning(ex, "Failed to commit quick ingest for exam {ExamId}", id);
+            return StatusCode(ex.Status, new { message = ex.Detail ?? ex.Message, code = ex.Code });
+        }
+    }
 }

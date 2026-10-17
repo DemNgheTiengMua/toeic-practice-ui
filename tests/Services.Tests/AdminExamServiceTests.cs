@@ -595,4 +595,138 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         Assert.Equal(ApiError.Codes.Validation, ex.Code);
         Assert.Contains("listening", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
+
+    [Fact]
+    public async Task CommitQuickIngest_AppendMode_AppendsQuestionsWithIncrementedOrder()
+    {
+        var (certId, _, secR, _, _) = await SeedCertificateWithSectionsAsync($"QI_APP_{Guid.NewGuid():N}"[..18]);
+        var service = CreateService();
+
+        var exam = await service.CreateExamAsync(new CreateAdminExamRequest(
+            certId,
+            $"Quick Ingest Exam {Guid.NewGuid():N}"[..25],
+            60,
+            ExamPurposeDto.Mock));
+
+        var q1 = new QuickIngestParsedQuestionDto(
+            Index: 1,
+            StartLineNumber: 1,
+            EndLineNumber: 5,
+            Stem: "Initial question stem",
+            DifficultyLevel: 3,
+            Explanation: "Initial explanation",
+            CategoryCode: null,
+            Options:
+            [
+                new QuickIngestParsedOptionDto("A", "Option A", true),
+                new QuickIngestParsedOptionDto("B", "Option B", false)
+            ],
+            Issues: [],
+            IsValid: true);
+
+        var commit1 = await service.CommitQuickIngestAsync(exam.ExamId, new QuickIngestCommitRequest(
+            SectionId: secR,
+            Mode: "append",
+            Questions: [q1]));
+
+        Assert.True(commit1.Success);
+        Assert.Equal(1, commit1.QuestionsCommitted);
+
+        // Now append a second batch
+        var q2 = new QuickIngestParsedQuestionDto(
+            Index: 2,
+            StartLineNumber: 6,
+            EndLineNumber: 10,
+            Stem: "Second question stem",
+            DifficultyLevel: 4,
+            Explanation: "Second explanation",
+            CategoryCode: null,
+            Options:
+            [
+                new QuickIngestParsedOptionDto("A", "Option 2A", false),
+                new QuickIngestParsedOptionDto("B", "Option 2B", true)
+            ],
+            Issues: [],
+            IsValid: true);
+
+        var commit2 = await service.CommitQuickIngestAsync(exam.ExamId, new QuickIngestCommitRequest(
+            SectionId: secR,
+            Mode: "append",
+            Questions: [q2]));
+
+        Assert.True(commit2.Success);
+        Assert.Equal(1, commit2.QuestionsCommitted);
+
+        var examQuestions = await service.GetExamQuestionsAsync(exam.ExamId);
+        var questions = examQuestions.Groups.Where(g => g.SectionId == secR).SelectMany(g => g.Questions).OrderBy(q => q.DisplayOrder).ToList();
+        Assert.Equal(2, questions.Count);
+        Assert.Equal("Initial question stem", questions[0].Stem);
+        Assert.Equal(1, questions[0].DisplayOrder);
+        Assert.Equal("Second question stem", questions[1].Stem);
+        Assert.Equal(2, questions[1].DisplayOrder);
+    }
+
+    [Fact]
+    public async Task CommitQuickIngest_ReplaceMode_ReplacesExistingQuestionsAtomically()
+    {
+        var (certId, _, secR, _, _) = await SeedCertificateWithSectionsAsync($"QI_REP_{Guid.NewGuid():N}"[..18]);
+        var service = CreateService();
+
+        var exam = await service.CreateExamAsync(new CreateAdminExamRequest(
+            certId,
+            $"Quick Ingest Replace {Guid.NewGuid():N}"[..25],
+            60,
+            ExamPurposeDto.Mock));
+
+        var qOld = new QuickIngestParsedQuestionDto(
+            Index: 1,
+            StartLineNumber: 1,
+            EndLineNumber: 5,
+            Stem: "Old question to be replaced",
+            DifficultyLevel: 2,
+            Explanation: null,
+            CategoryCode: null,
+            Options:
+            [
+                new QuickIngestParsedOptionDto("A", "Old A", true),
+                new QuickIngestParsedOptionDto("B", "Old B", false)
+            ],
+            Issues: [],
+            IsValid: true);
+
+        await service.CommitQuickIngestAsync(exam.ExamId, new QuickIngestCommitRequest(
+            SectionId: secR,
+            Mode: "append",
+            Questions: [qOld]));
+
+        // Replace with new question
+        var qNew = new QuickIngestParsedQuestionDto(
+            Index: 1,
+            StartLineNumber: 1,
+            EndLineNumber: 5,
+            Stem: "Brand new replacement question",
+            DifficultyLevel: 3,
+            Explanation: "New explanation",
+            CategoryCode: null,
+            Options:
+            [
+                new QuickIngestParsedOptionDto("A", "New A", false),
+                new QuickIngestParsedOptionDto("B", "New B", true)
+            ],
+            Issues: [],
+            IsValid: true);
+
+        var replaceCommit = await service.CommitQuickIngestAsync(exam.ExamId, new QuickIngestCommitRequest(
+            SectionId: secR,
+            Mode: "replace",
+            Questions: [qNew]));
+
+        Assert.True(replaceCommit.Success);
+
+        var examQuestions = await service.GetExamQuestionsAsync(exam.ExamId);
+        var questions = examQuestions.Groups.Where(g => g.SectionId == secR).SelectMany(g => g.Questions).ToList();
+        Assert.Single(questions);
+        Assert.Equal("Brand new replacement question", questions[0].Stem);
+        Assert.Equal(1, questions[0].DisplayOrder);
+    }
 }

@@ -206,6 +206,7 @@ builder.Services.AddScoped<IAdminOrderService, AdminOrderService>();
 builder.Services.AddScoped<IAdminUserService, AdminUserService>();
 builder.Services.AddScoped<IScoreConversionService, ScoreConversionService>();
 builder.Services.AddScoped<IAdminExamService, AdminExamService>();
+builder.Services.AddScoped<IExamQuickIngestService, ExamQuickIngestService>();
 builder.Services.AddScoped<IQuestionImportService, QuestionImportService>();
 builder.Services.AddScoped<IAdminDashboardService, AdminDashboardService>();
 var speechSuperOptions = builder.Configuration.GetSection(SpeechSuperOptions.SectionName).Get<SpeechSuperOptions>() ?? new SpeechSuperOptions();

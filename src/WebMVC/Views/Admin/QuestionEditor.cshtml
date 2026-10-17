@@ -22,7 +22,10 @@
     <h1 class="m-0 mb-1">Write questions</h1>
     <p class="text-muted no-margin">@data.ExamName (@data.CertCode.ToUpperInvariant())</p>
   </div>
-  <a class="btn btn--ghost" href="/admin/exams/@data.ExamId/edit?step=3">Back to exam progress</a>
+  <div class="row" style="gap: 0.5rem; align-items: center;">
+    <button type="button" class="btn btn--secondary" id="btn-quick-ingest" style="border-radius: 0;">Quick Ingest</button>
+    <a class="btn btn--ghost" href="/admin/exams/@data.ExamId/edit?step=3">Back to exam progress</a>
+  </div>
 </div>
 
 @if (!string.IsNullOrEmpty(Model.ErrorMessage))
@@ -366,3 +369,12 @@ else
     </div>
   </details>
 }
+
+@await Html.PartialAsync("_QuickIngestModal")
+
+<script>
+  document.getElementById('btn-quick-ingest')?.addEventListener('click', function() {
+    var sections = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(data.AvailableSections.Select(s => new { sectionId = s.SectionId, code = s.Code, name = s.Name })));
+    window.QuickIngestModal.open(@data.ExamId, sections, @(selectedSectionId ?? 0));
+  });
+</script>

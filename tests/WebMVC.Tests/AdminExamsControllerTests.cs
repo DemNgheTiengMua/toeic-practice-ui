@@ -394,6 +394,39 @@ public sealed class AdminExamsControllerTests
         Assert.Equal(5, api.DeletedExamId);
     }
 
+    [Fact]
+    public async Task ParseQuickIngest_CallsApi_ReturnsJsonResult()
+    {
+        var api = new TestApiClient();
+        var controller = CreateController(api);
+
+        var request = new QuickIngestParseRequest("1. Stem\n*A. Yes\nB. No");
+        var result = await controller.ParseQuickIngest(5, request, CancellationToken.None);
+
+        var json = Assert.IsType<JsonResult>(result);
+        var parsed = Assert.IsType<QuickIngestParseResultDto>(json.Value);
+        Assert.True(parsed.Success);
+    }
+
+    [Fact]
+    public async Task CommitQuickIngest_CallsApi_ReturnsJsonResult()
+    {
+        var api = new TestApiClient();
+        var controller = CreateController(api);
+
+        var request = new QuickIngestCommitRequest(
+            SectionId: 1,
+            Mode: "append",
+            Questions: [new QuickIngestParsedQuestionDto(1, 1, 5, "Stem", 3, null, null, [new QuickIngestParsedOptionDto("A", "Yes", true), new QuickIngestParsedOptionDto("B", "No", false)], [], true)]);
+
+        var result = await controller.CommitQuickIngest(5, request, CancellationToken.None);
+
+        var json = Assert.IsType<JsonResult>(result);
+        var commit = Assert.IsType<QuickIngestCommitResultDto>(json.Value);
+        Assert.True(commit.Success);
+        Assert.Equal(1, commit.QuestionsCommitted);
+    }
+
     private sealed class EmptyTempDataProvider : ITempDataProvider
     {
         public IDictionary<string, object> LoadTempData(HttpContext context) => new Dictionary<string, object>();
@@ -526,5 +559,11 @@ public sealed class AdminExamsControllerTests
 
         public Task<AdminExamSectionAudioDto> SaveAdminExamSectionAudioAsync(int examId, SaveExamSectionAudioRequest request, CancellationToken cancellationToken = default) =>
             Task.FromResult<AdminExamSectionAudioDto>(null!);
+
+        public Task<QuickIngestParseResultDto> ParseQuickIngestAsync(int examId, QuickIngestParseRequest request, CancellationToken cancellationToken = default) =>
+            Task.FromResult(new QuickIngestParseResultDto(true, 1, 1, 0, [], []));
+
+        public Task<QuickIngestCommitResultDto> CommitQuickIngestAsync(int examId, QuickIngestCommitRequest request, CancellationToken cancellationToken = default) =>
+            Task.FromResult(new QuickIngestCommitResultDto(true, request.Questions.Count, request.Questions.Count, "Success"));
     }
 }
