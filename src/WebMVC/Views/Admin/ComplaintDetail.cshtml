@@ -172,7 +172,7 @@
         </div>
       </div>
 
-      <form method="post" action="/admin/complaints/@Model.Complaint.ComplaintId/resolve" class="card">
+      <form method="post" action="/admin/complaints/@Model.Complaint.ComplaintId/resolve" class="card" novalidate>
         @Html.AntiForgeryToken()
         <div class="card__header"><strong>Resolution</strong></div>
         <div class="card__body stack">
@@ -185,14 +185,16 @@
             <input id="cd-amount" type="number" class="field__input" name="credit_amount" value="1" min="1" max="10">
             <span class="field__hint">Recorded as admin_grant in the transaction log. There are no cash refunds.</span>
           </div>
-          <div class="field">
+          <div class="field" id="field-resolution">
             <label class="field__label" for="cd-resolution">Reply to learner</label>
-            <textarea id="cd-resolution" class="field__input" name="resolution" rows="3" placeholder="Explain the resolution to the learner…" required></textarea>
+            <textarea id="cd-resolution" class="field__input" name="resolution" rows="3" placeholder="Explain the resolution to the learner…" aria-describedby="error-resolution" required></textarea>
+            <span class="field__error-placard" id="error-resolution" role="alert">Please enter a reply to the learner explaining the resolution.</span>
             <span class="field__hint">Shown directly to the learner in their support history.</span>
           </div>
-          <div class="field">
+          <div class="field" id="field-notes">
             <label class="field__label" for="cd-notes">Internal notes</label>
-            <textarea id="cd-notes" class="field__input" name="internalNotes" rows="4" placeholder="Document the decision and any actions taken…" required></textarea>
+            <textarea id="cd-notes" class="field__input" name="internalNotes" rows="4" placeholder="Document the decision and any actions taken…" aria-describedby="error-notes" required></textarea>
+            <span class="field__error-placard" id="error-notes" role="alert">Please document the decision in internal notes.</span>
             <span class="field__hint">Not shown to the learner. For the admin record only.</span>
           </div>
         </div>
@@ -204,5 +206,50 @@
         </div>
       </form>
     </div>
+
+    <script>
+      (function() {
+        const form = document.querySelector('form[action*="/resolve"]');
+        if (!form) return;
+
+        const resInput = document.getElementById('cd-resolution');
+        const notesInput = document.getElementById('cd-notes');
+
+        function checkField(input) {
+          if (!input) return true;
+          const field = input.closest('.field');
+          const val = (input.value || '').trim();
+          if (!val) {
+            if (field) field.classList.add('field--error');
+            input.setAttribute('aria-invalid', 'true');
+            return false;
+          } else {
+            if (field) field.classList.remove('field--error');
+            input.removeAttribute('aria-invalid');
+            return true;
+          }
+        }
+
+        [resInput, notesInput].forEach(function(input) {
+          if (!input) return;
+          input.addEventListener('input', function() {
+            checkField(input);
+          });
+        });
+
+        form.addEventListener('submit', function(e) {
+          const resOk = checkField(resInput);
+          const notesOk = checkField(notesInput);
+          if (!resOk || !notesOk) {
+            e.preventDefault();
+            if (!resOk && resInput) {
+              resInput.focus();
+            } else if (!notesOk && notesInput) {
+              notesInput.focus();
+            }
+          }
+        });
+      })();
+    </script>
   }
 </div>

@@ -163,7 +163,23 @@
   margin-top: var(--space-1); font-size: var(--text-xs);
   color: var(--color-danger); font-weight: 600;
 }
-.field--invalid .field__input { border-color: var(--sign-red); }
+.field--invalid .field__input,
+.field--error .field__input,
+.field__input.is-invalid,
+.field__input:invalid:not(:placeholder-shown) {
+  border-color: var(--sign-red) !important;
+}
+.field__error-placard {
+  display: none;
+  color: var(--sign-red);
+  font-size: var(--text-xs);
+  font-family: var(--font-sign);
+  margin-top: var(--space-1);
+}
+.field--error .field__error-placard,
+.field--invalid .field__error-placard {
+  display: block;
+}
 
 /* ===== Answer options ===== */
 /* The option count is dynamic: Part 2 has only A/B/C, other parts A/B/C/D.
@@ -197,10 +213,12 @@
   font-family: var(--font-sign);
   font-size: var(--text-sm); font-weight: 700;
   line-height: 1;
+  pointer-events: none;
 }
 .option__text {
   flex: 1 1 auto;
   line-height: var(--leading-snug);
+  pointer-events: none;
 }
 /* The chosen answer INVERTS its marker to solid ink. Correct/wrong are excluded
    so the review screen keeps its green/red while the input is checked. */
@@ -464,11 +482,15 @@ dialog:not([open]) {
 
 .modal-overlay {
   position: fixed; inset: 0;
-  display: grid; place-items: center;
+  display: none; place-items: center;
   padding: var(--space-5);
   background: var(--color-overlay);
   z-index: var(--z-modal);
   overflow-y: auto;
+}
+.modal-overlay.modal-overlay--open,
+.modal-overlay[aria-hidden="false"] {
+  display: grid !important;
 }
 /* A dialog taller than the viewport (the ID review modal, for instance) has to
    scroll its body, or the header and footer get cut off and the buttons become
