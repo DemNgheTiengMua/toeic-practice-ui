@@ -10,6 +10,7 @@ public sealed record AdminExamListViewModel(
     string? Status,
     int? CertId,
     int Page,
+    string? Purpose = null,
     string? ErrorMessage = null,
     string? SuccessMessage = null);
 

@@ -130,4 +130,39 @@ public class AdminExamStudioTests : PlaywrightTestBase
         await Expect(Page.Locator("nav[aria-label='Admin navigation']")).ToBeVisibleAsync();
         await Expect(Page.Locator(".nav-list__item[href='/admin/orders']")).ToHaveClassAsync(new Regex(@"is-active"));
     }
+
+    [Test]
+    public async Task Should_Navigate_To_Exams_List_Filter_By_Cert_And_Purpose_And_Verify_Actions()
+    {
+        await _loginPage.GotoAsync();
+        await _loginPage.LoginAsync("admin@demo.local", "Demo1234!");
+        await Expect(Page).ToHaveURLAsync(new Regex(@"(dashboard|admin|certificates)", RegexOptions.IgnoreCase));
+
+        // Navigate to /admin/exams
+        await Page.GotoAsync($"{BaseUrl}/admin/exams");
+        await Expect(Page).ToHaveURLAsync(new Regex(@"/admin/exams", RegexOptions.IgnoreCase));
+
+        // Verify Certificate and Purpose filter dropdowns exist
+        var certSelect = Page.Locator("#f-cert");
+        var purposeSelect = Page.Locator("#f-purpose");
+        await Expect(certSelect).ToBeVisibleAsync();
+        await Expect(purposeSelect).ToBeVisibleAsync();
+
+        // Verify streamlined action buttons exist in exam table rows
+        var studioButtons = Page.Locator("a.btn--primary:has-text('Studio')");
+        await Expect(studioButtons.First).ToBeVisibleAsync();
+
+        var editInfoButtons = Page.Locator("a:has-text('Edit Info')");
+        await Expect(editInfoButtons.First).ToBeVisibleAsync();
+
+        // Filter by purpose = mock
+        await purposeSelect.SelectOptionAsync(new SelectOptionValue { Value = "mock" });
+        await Page.Locator("form.toolbar button[type='submit']").ClickAsync();
+        await Expect(Page).ToHaveURLAsync(new Regex(@"purpose=mock", RegexOptions.IgnoreCase));
+
+        // Verify filtered table results display with Studio and Edit Info
+        await Expect(Page.Locator("table.table")).ToBeVisibleAsync();
+        await Expect(Page.Locator("a.btn--primary:has-text('Studio')").First).ToBeVisibleAsync();
+        await Expect(Page.Locator("a:has-text('Edit Info')").First).ToBeVisibleAsync();
+    }
 }

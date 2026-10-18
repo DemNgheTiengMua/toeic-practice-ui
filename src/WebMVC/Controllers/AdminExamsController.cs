@@ -24,18 +24,39 @@ public sealed class AdminExamsController(
         [FromQuery] string? q,
         [FromQuery] string? status,
         [FromQuery] int? certId,
+        [FromQuery] string? purpose,
         [FromQuery] int page = 1,
         CancellationToken cancellationToken = default)
     {
         try
         {
             var summary = await api.GetAdminExamsAsync(q, status, certId, page, 20, cancellationToken);
+            if (!string.IsNullOrWhiteSpace(purpose) && !purpose.Equals("all", StringComparison.OrdinalIgnoreCase))
+            {
+                var normalizedPurpose = purpose.Trim().ToLowerInvariant();
+                var filteredExams = summary.Exams.Where(e =>
+                {
+                    return normalizedPurpose switch
+                    {
+                        "mock" => e.Purpose == ExamPurposeDto.Mock,
+                        "placement" => e.Purpose == ExamPurposeDto.Placement,
+                        "practice" => e.Purpose is ExamPurposeDto.SpeakingPractice or ExamPurposeDto.WritingPractice,
+                        "speaking_practice" => e.Purpose == ExamPurposeDto.SpeakingPractice,
+                        "writing_practice" => e.Purpose == ExamPurposeDto.WritingPractice,
+                        _ => e.Purpose.ToString().Equals(normalizedPurpose, StringComparison.OrdinalIgnoreCase)
+                    };
+                }).ToList();
+
+                summary = summary with { Exams = filteredExams, TotalCount = filteredExams.Count };
+            }
+
             var vm = new AdminExamListViewModel(
                 summary,
                 q,
                 status,
                 certId,
                 page,
+                purpose,
                 ErrorMessage: TempData["Error"] as string,
                 SuccessMessage: TempData["Success"] as string);
             return View("~/Views/Admin/Exams.cshtml", vm);
@@ -45,7 +66,7 @@ public sealed class AdminExamsController(
             logger.LogError(ex, "Could not load admin exams list");
             TempData["Error"] = "Could not load the exam list. Please try again.";
             var emptySummary = new AdminExamListSummaryDto([], 0, 1, 20, []);
-            return View("~/Views/Admin/Exams.cshtml", new AdminExamListViewModel(emptySummary, q, status, certId, page, ErrorMessage: TempData["Error"] as string));
+            return View("~/Views/Admin/Exams.cshtml", new AdminExamListViewModel(emptySummary, q, status, certId, page, purpose, ErrorMessage: TempData["Error"] as string));
         }
     }
 
