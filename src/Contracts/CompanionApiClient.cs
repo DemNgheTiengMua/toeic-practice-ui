@@ -897,15 +897,19 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
     public Task<AdminComplaintDetailDto> ResolveAdminComplaintAsync(int complaintId, ResolveComplaintRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
         PostAuthorizedAsync<ResolveComplaintRequest, AdminComplaintDetailDto>($"api/admin/complaints/{complaintId}/resolve", request, bearerToken, cancellationToken);
 
-    public Task<AdminExamListSummaryDto> GetAdminExamsAsync(string? q, string? status, int? certId, int page, int pageSize, string bearerToken, CancellationToken cancellationToken = default)
+    public Task<AdminExamListSummaryDto> GetAdminExamsAsync(string? q, string? status, int? certId, string? purpose, int page, int pageSize, string bearerToken, CancellationToken cancellationToken = default)
     {
         var query = new List<string> { $"page={page}", $"pageSize={pageSize}" };
         if (!string.IsNullOrWhiteSpace(q)) query.Add($"q={Uri.EscapeDataString(q)}");
         if (!string.IsNullOrWhiteSpace(status)) query.Add($"status={Uri.EscapeDataString(status)}");
         if (certId.HasValue) query.Add($"certId={certId.Value}");
+        if (!string.IsNullOrWhiteSpace(purpose)) query.Add($"purpose={Uri.EscapeDataString(purpose)}");
         var path = $"api/admin/exams?{string.Join("&", query)}";
         return GetAuthorizedAsync<AdminExamListSummaryDto>(path, bearerToken, cancellationToken);
     }
+
+    public Task<AdminExamListSummaryDto> GetAdminExamsAsync(string? q, string? status, int? certId, int page, int pageSize, string bearerToken, CancellationToken cancellationToken = default) =>
+        GetAdminExamsAsync(q, status, certId, null, page, pageSize, bearerToken, cancellationToken);
 
     public Task<AdminExamDetailDto> GetAdminExamByIdAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) =>
         GetAuthorizedAsync<AdminExamDetailDto>($"api/admin/exams/{examId}", bearerToken, cancellationToken);
@@ -1476,8 +1480,11 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
     public Task<AdminComplaintDetailDto> ResolveAdminComplaintAsync(int complaintId, ResolveComplaintRequest request, CancellationToken cancellationToken = default) =>
         ResolveAdminComplaintAsync(complaintId, request, string.Empty, cancellationToken);
 
+    public Task<AdminExamListSummaryDto> GetAdminExamsAsync(string? q, string? status, int? certId, string? purpose, int page, int pageSize, CancellationToken cancellationToken = default) =>
+        GetAdminExamsAsync(q, status, certId, purpose, page, pageSize, string.Empty, cancellationToken);
+
     public Task<AdminExamListSummaryDto> GetAdminExamsAsync(string? q, string? status, int? certId, int page, int pageSize, CancellationToken cancellationToken = default) =>
-        GetAdminExamsAsync(q, status, certId, page, pageSize, string.Empty, cancellationToken);
+        GetAdminExamsAsync(q, status, certId, null, page, pageSize, string.Empty, cancellationToken);
 
     public Task<AdminExamDetailDto> GetAdminExamByIdAsync(int examId, CancellationToken cancellationToken = default) =>
         GetAdminExamByIdAsync(examId, string.Empty, cancellationToken);

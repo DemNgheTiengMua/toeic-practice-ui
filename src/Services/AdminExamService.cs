@@ -31,7 +31,9 @@ public sealed class QuestionGroupNotFoundException(int groupId)
 
 public interface IAdminExamService
 {
-    Task<AdminExamListSummaryDto> GetExamsAsync(string? q, string? status, int? certId, int page, int pageSize, CancellationToken cancellationToken = default);
+    Task<AdminExamListSummaryDto> GetExamsAsync(string? q, string? status, int? certId, string? purpose, int page, int pageSize, CancellationToken cancellationToken = default);
+    Task<AdminExamListSummaryDto> GetExamsAsync(string? q, string? status, int? certId, int page, int pageSize, CancellationToken cancellationToken = default) =>
+        GetExamsAsync(q, status, certId, null, page, pageSize, cancellationToken);
     Task<AdminExamDetailDto> GetExamByIdAsync(int examId, CancellationToken cancellationToken = default);
     Task<AdminExamDetailDto> CreateExamAsync(CreateAdminExamRequest request, CancellationToken cancellationToken = default);
     Task<AdminExamDetailDto> UpdateExamAsync(int examId, UpdateAdminExamRequest request, CancellationToken cancellationToken = default);
@@ -58,7 +60,10 @@ public interface IAdminExamService
 
 public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, IFileStore? fileStore = null) : IAdminExamService
 {
-    public async Task<AdminExamListSummaryDto> GetExamsAsync(string? q, string? status, int? certId, int page, int pageSize, CancellationToken cancellationToken = default)
+    public Task<AdminExamListSummaryDto> GetExamsAsync(string? q, string? status, int? certId, int page, int pageSize, CancellationToken cancellationToken = default) =>
+        GetExamsAsync(q, status, certId, null, page, pageSize, cancellationToken);
+
+    public async Task<AdminExamListSummaryDto> GetExamsAsync(string? q, string? status, int? certId, string? purpose, int page, int pageSize, CancellationToken cancellationToken = default)
     {
         page = Math.Max(1, page);
         pageSize = Math.Clamp(pageSize, 1, 100);
@@ -88,6 +93,24 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
         if (certId.HasValue)
         {
             query = query.Where(e => e.CertId == certId.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(purpose) && !purpose.Equals("all", StringComparison.OrdinalIgnoreCase))
+        {
+            var normalized = purpose.Trim().ToLowerInvariant();
+            if (normalized == "practice")
+            {
+                query = query.Where(e => e.Purpose == "speaking_practice" || e.Purpose == "writing_practice");
+            }
+            else if (EnumCodes.TryParse<ExamPurpose>(normalized, out var parsedPurpose))
+            {
+                var code = parsedPurpose.ToCode();
+                query = query.Where(e => e.Purpose == code);
+            }
+            else
+            {
+                query = query.Where(e => e.Purpose == normalized);
+            }
         }
 
         var totalCount = await query.CountAsync(cancellationToken);
@@ -132,7 +155,7 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
             var examAudios = audiosByExam.Where(a => a.ExamId == exam.ExamId).ToList();
 
             string audioStatus;
-            if (listeningSections.Count == 0)
+            if (listeningSections.Count == 0 || exam.Purpose == "speaking_practice" || exam.Purpose == "writing_practice")
             {
                 audioStatus = "N/A";
             }

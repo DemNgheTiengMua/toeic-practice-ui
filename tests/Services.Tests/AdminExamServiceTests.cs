@@ -952,4 +952,46 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         Assert.Equal("1.0", root.GetProperty("version").GetString());
         Assert.Equal(exam.Name, root.GetProperty("exam").GetProperty("title").GetString());
     }
+
+    [Fact]
+    public async Task GetExamsAsync_FiltersByPurpose_AndScopesAudioStatus()
+    {
+        var (certId, secL, secR, secS, secW) = await SeedCertificateWithSectionsAsync($"PURP_{Guid.NewGuid():N}"[..18]);
+        var service = CreateService();
+
+        var mockExam = await service.CreateExamAsync(new CreateAdminExamRequest(
+            certId, $"Mock Exam {Guid.NewGuid():N}"[..25], 60, ExamPurposeDto.Mock));
+
+        var placementExam = await service.CreateExamAsync(new CreateAdminExamRequest(
+            certId, $"Placement Exam {Guid.NewGuid():N}"[..25], 45, ExamPurposeDto.Placement));
+
+        var speakingExam = await service.CreateExamAsync(new CreateAdminExamRequest(
+            certId, $"Speaking Exam {Guid.NewGuid():N}"[..25], 20, ExamPurposeDto.SpeakingPractice));
+
+        var writingExam = await service.CreateExamAsync(new CreateAdminExamRequest(
+            certId, $"Writing Exam {Guid.NewGuid():N}"[..25], 30, ExamPurposeDto.WritingPractice));
+
+        // 1. Filter by "mock"
+        var mockResult = await service.GetExamsAsync(q: null, status: null, certId: certId, purpose: "mock", page: 1, pageSize: 20);
+        Assert.Single(mockResult.Exams);
+        Assert.Equal(mockExam.ExamId, mockResult.Exams[0].ExamId);
+        Assert.Equal("No audio", mockResult.Exams[0].AudioStatus); // Listening section exists but no audio uploaded
+
+        // 2. Filter by "placement"
+        var placementResult = await service.GetExamsAsync(q: null, status: null, certId: certId, purpose: "placement", page: 1, pageSize: 20);
+        Assert.Single(placementResult.Exams);
+        Assert.Equal(placementExam.ExamId, placementResult.Exams[0].ExamId);
+
+        // 3. Filter by "practice" returns both speaking and writing
+        var practiceResult = await service.GetExamsAsync(q: null, status: null, certId: certId, purpose: "practice", page: 1, pageSize: 20);
+        Assert.Equal(2, practiceResult.Exams.Count);
+        Assert.Contains(practiceResult.Exams, e => e.ExamId == speakingExam.ExamId);
+        Assert.Contains(practiceResult.Exams, e => e.ExamId == writingExam.ExamId);
+
+        // Verify audioStatus scoping: Speaking and Writing practice exams are N/A
+        var speakingItem = practiceResult.Exams.Single(e => e.ExamId == speakingExam.ExamId);
+        var writingItem = practiceResult.Exams.Single(e => e.ExamId == writingExam.ExamId);
+        Assert.Equal("N/A", speakingItem.AudioStatus);
+        Assert.Equal("N/A", writingItem.AudioStatus);
+    }
 }

@@ -245,12 +245,13 @@ public static class AdminEndpoints
             string? q,
             string? status,
             int? certId,
+            string? purpose,
             int? page,
             int? pageSize,
             IAdminExamService exams,
             CancellationToken cancellationToken) =>
         {
-            var summary = await exams.GetExamsAsync(q, status, certId, page ?? 1, pageSize ?? 20, cancellationToken);
+            var summary = await exams.GetExamsAsync(q, status, certId, purpose, page ?? 1, pageSize ?? 20, cancellationToken);
             return Results.Ok(summary);
         });
 

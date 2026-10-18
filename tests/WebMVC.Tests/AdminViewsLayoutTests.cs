@@ -8,22 +8,11 @@ namespace WebMVC.Tests;
 
 public sealed class AdminViewsLayoutTests
 {
-    private static string FindRepoRoot()
-    {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir != null && !File.Exists(Path.Combine(dir.FullName, "ExtraEfficiency.slnx")))
-        {
-            dir = dir.Parent;
-        }
-
-        Assert.True(dir != null, "Could not locate solution root (ExtraEfficiency.slnx)");
-        return dir.FullName;
-    }
 
     [Fact]
     public void AdminViews_UsersAndOrders_MustDeclareAdminLayout()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = TestPathHelper.FindRepoRoot();
         var adminViewsDir = Path.Combine(repoRoot, "src", "WebMVC", "Views", "Admin");
 
         var usersView = Path.Combine(adminViewsDir, "Users.cshtml");
@@ -42,7 +31,7 @@ public sealed class AdminViewsLayoutTests
     [Fact]
     public void AdminViews_DirectoryMustContainViewStartWithAdminLayout()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = TestPathHelper.FindRepoRoot();
         var adminViewStart = Path.Combine(repoRoot, "src", "WebMVC", "Views", "Admin", "_ViewStart.cshtml");
 
         Assert.True(File.Exists(adminViewStart), "src/WebMVC/Views/Admin/_ViewStart.cshtml must exist for defense-in-depth");
@@ -54,7 +43,7 @@ public sealed class AdminViewsLayoutTests
     [Fact]
     public void QuestionEditor_View_MustBeRetired()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = TestPathHelper.FindRepoRoot();
         var questionEditorPath = Path.Combine(repoRoot, "src", "WebMVC", "Views", "Admin", "QuestionEditor.cshtml");
 
         Assert.False(File.Exists(questionEditorPath), "QuestionEditor.cshtml should be retired in favor of Exam Studio");
@@ -63,7 +52,7 @@ public sealed class AdminViewsLayoutTests
     [Fact]
     public void AdminViews_ExamsAndExamEditor_MustNotLinkToLegacyQuestionEditor()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = TestPathHelper.FindRepoRoot();
         var adminViewsDir = Path.Combine(repoRoot, "src", "WebMVC", "Views", "Admin");
 
         var examsContent = File.ReadAllText(Path.Combine(adminViewsDir, "Exams.cshtml"));

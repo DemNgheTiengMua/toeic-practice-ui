@@ -180,8 +180,8 @@
     "semantic_hash": ""
   },
   "src/Contracts/CompanionApiClient.cs": {
-    "mtime": 1792246449.668525,
-    "ast_hash": "b6b14c5385ffbfc81a5200d787ed23fd",
+    "mtime": 1792309216.0915554,
+    "ast_hash": "185c84ecef09d6fa4639361f17a90ecd",
     "semantic_hash": ""
   },
   "src/Contracts/Contracts.csproj": {
@@ -1541,8 +1541,8 @@
     "semantic_hash": ""
   },
   "tests/WebMVC.Tests/WalletControllerTests.cs": {
-    "mtime": 1792308128.1186807,
-    "ast_hash": "f6b242c184f7a3696d80fe9f7d74c1ba",
+    "mtime": 1792309288.325567,
+    "ast_hash": "daf44cc2e084594aa8eebfae34ab58a5",
     "semantic_hash": ""
   },
   "src/Services/Payment/PaymentExceptions.cs": {
@@ -1751,8 +1751,8 @@
     "semantic_hash": ""
   },
   "src/WebAPI/Endpoints/AdminEndpoints.cs": {
-    "mtime": 1792236949.8483052,
-    "ast_hash": "ff7c78dc81664b789d711a3e705eaf19",
+    "mtime": 1792309187.0893323,
+    "ast_hash": "23862919b9c44d00d20c697979304cb0",
     "semantic_hash": ""
   },
   "src/WebAPI/Endpoints/AuthEndpoints.cs": {
@@ -2291,13 +2291,13 @@
     "semantic_hash": ""
   },
   "src/Services/AdminExamService.cs": {
-    "mtime": 1792238577.6813588,
-    "ast_hash": "07418271fc0e37c1242441ea85cfe65f",
+    "mtime": 1792309178.470132,
+    "ast_hash": "032717b5699cf53fcb98338e594a389d",
     "semantic_hash": ""
   },
   "src/WebMVC/Controllers/AdminExamsController.cs": {
-    "mtime": 1792308274.0432174,
-    "ast_hash": "cd620a2958301e805cba6841115b0bfd",
+    "mtime": 1792309224.520167,
+    "ast_hash": "a1a09f5f8b018a713d30274a67a4df9e",
     "semantic_hash": ""
   },
   "src/WebMVC/Models/AdminExamViewModels.cs": {
@@ -2311,18 +2311,18 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Admin/Exams.cshtml": {
-    "mtime": 1792308320.0206387,
-    "ast_hash": "433f32c2bae2d162a47d4ff70bc8f332",
+    "mtime": 1792309250.1360009,
+    "ast_hash": "035b61a906f606d1beddcaf5fa5a4d1a",
     "semantic_hash": ""
   },
   "tests/Services.Tests/AdminExamServiceTests.cs": {
-    "mtime": 1792237250.0785482,
-    "ast_hash": "1c9fe14b00392c5b58e8da89b0462f31",
+    "mtime": 1792309364.7645378,
+    "ast_hash": "4ea5ad6170c254d73a48c6a3b2d47a6c",
     "semantic_hash": ""
   },
   "tests/WebMVC.Tests/AdminExamsControllerTests.cs": {
-    "mtime": 1792308251.5852005,
-    "ast_hash": "f89b54c6d9a9dc6abb9b271853b439f5",
+    "mtime": 1792309431.50859,
+    "ast_hash": "18e5a3b24df82b465f9d19db34f90988",
     "semantic_hash": ""
   },
   "src/Services/AdminDashboardService.cs": {
@@ -2506,8 +2506,8 @@
     "semantic_hash": ""
   },
   "src/Contracts/DomainClients.cs": {
-    "mtime": 1792246432.7674577,
-    "ast_hash": "b4abe2851dd8b30c991f729d3dddb79b",
+    "mtime": 1792309195.3426259,
+    "ast_hash": "f26b0939b1fa986731132dfb9d9aac5e",
     "semantic_hash": ""
   },
   "src/WebMVC/CookieBearerHandler.cs": {
@@ -2926,8 +2926,8 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Admin/ExamStudio.cshtml": {
-    "mtime": 1792306684.0452118,
-    "ast_hash": "9bd37028010b93095616e65971948074",
+    "mtime": 1792309258.0756993,
+    "ast_hash": "219a117604b79587aa446d3d9e212f01",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Admin/_QuickIngestModal.cshtml": {
@@ -3021,71 +3021,76 @@
     "semantic_hash": ""
   },
   "tests/WebMVC.Tests/AdminViewsLayoutTests.cs": {
-    "mtime": 1792306723.3196976,
-    "ast_hash": "957cac57b35191a25d9a16b9af0c553b",
+    "mtime": 1792309281.093328,
+    "ast_hash": "bd6a12ef80cafbb21ec4304ee622e2d1",
     "semantic_hash": ""
   },
   "AUDIT_FINDINGS.md": {
-    "mtime": 1792305425.895896,
-    "ast_hash": "24360dcf2e52d32f2974cb705d20513e",
+    "mtime": 1792309387.0709333,
+    "ast_hash": "1d19da177f34050d4d956159dd88ec63",
     "semantic_hash": ""
   },
-  "image-1.png": {
+  "tests/WebMVC.Tests/TestPathHelper.cs": {
+    "mtime": 1792309263.3557167,
+    "ast_hash": "089d9bd4a7677afe58ab6c6f28463e2a",
+    "semantic_hash": ""
+  },
+  "docs/audit/image-1.png": {
     "mtime": 1792303715.847589,
     "ast_hash": "e63e9d4daba025260044514cb1fc8e01",
     "semantic_hash": ""
   },
-  "image-10.png": {
+  "docs/audit/image-10.png": {
     "mtime": 1792304570.5724175,
     "ast_hash": "1d6caabc183c0381ee617e131b4d8137",
     "semantic_hash": ""
   },
-  "image-11.png": {
+  "docs/audit/image-11.png": {
     "mtime": 1792304827.8081176,
     "ast_hash": "5f96d11e1dfeebea78329dd954c7bc1d",
     "semantic_hash": ""
   },
-  "image-2.png": {
+  "docs/audit/image-2.png": {
     "mtime": 1792303850.897447,
     "ast_hash": "ef56e592556961e0fea617ea7ecea471",
     "semantic_hash": ""
   },
-  "image-3.png": {
+  "docs/audit/image-3.png": {
     "mtime": 1792303879.7722466,
     "ast_hash": "8279b707bf0eb875a6b6e867d50609d7",
     "semantic_hash": ""
   },
-  "image-4.png": {
+  "docs/audit/image-4.png": {
     "mtime": 1792304055.7138176,
     "ast_hash": "fc894356a6855b4871586288d2fd8725",
     "semantic_hash": ""
   },
-  "image-5.png": {
+  "docs/audit/image-5.png": {
     "mtime": 1792304074.6263487,
     "ast_hash": "372a87dd7d05de84e5de103babe29c0e",
     "semantic_hash": ""
   },
-  "image-6.png": {
+  "docs/audit/image-6.png": {
     "mtime": 1792304196.6728618,
     "ast_hash": "66ce1c8524f85ca3603b0df897ff73ea",
     "semantic_hash": ""
   },
-  "image-7.png": {
+  "docs/audit/image-7.png": {
     "mtime": 1792304315.3498137,
     "ast_hash": "5774cdd2f43a340af6ec4017ec2ae7be",
     "semantic_hash": ""
   },
-  "image-8.png": {
+  "docs/audit/image-8.png": {
     "mtime": 1792304512.029752,
     "ast_hash": "b48837e10abbe0ee9440fac6f2734d1f",
     "semantic_hash": ""
   },
-  "image-9.png": {
+  "docs/audit/image-9.png": {
     "mtime": 1792304527.7523904,
     "ast_hash": "ba0d72d5f25b52665188e22b418d63a8",
     "semantic_hash": ""
   },
-  "image.png": {
+  "docs/audit/image.png": {
     "mtime": 1792303160.3161726,
     "ast_hash": "7750140a231f1adc3276efbb2df80e5a",
     "semantic_hash": ""

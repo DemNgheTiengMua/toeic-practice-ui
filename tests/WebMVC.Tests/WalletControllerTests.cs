@@ -95,22 +95,10 @@ public sealed class WalletControllerTests
         Assert.Equal(2, model.Wallet.Ledger.Count);
     }
 
-    private static string FindRepoRoot()
-    {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir != null && !File.Exists(Path.Combine(dir.FullName, "ExtraEfficiency.slnx")))
-        {
-            dir = dir.Parent;
-        }
-
-        Assert.True(dir != null, "Could not locate solution root (ExtraEfficiency.slnx)");
-        return dir.FullName;
-    }
-
     [Fact]
     public void WalletView_InjectsDateTimeFormatter_AndUsesFormatForOrdersAndLedger()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = TestPathHelper.FindRepoRoot();
         var walletViewPath = Path.Combine(repoRoot, "src", "WebMVC", "Views", "Wallet", "Index.cshtml");
         Assert.True(File.Exists(walletViewPath), "Wallet/Index.cshtml must exist");
 

@@ -30,7 +30,7 @@ Fill in this document during your manual walkthrough. Once you record any findin
 - **Actual Behavior**: Log dates: 18 Oct 2026 05:55
 - **Ticket**: [#67](https://github.com/DemNgheTiengMua/toeic-practice-ui/issues/67)
 - **Screenshots / Console Errors (F12)**:
-  ![Log dates](image.png)
+  ![Log dates](docs/audit/image.png)
 
 ---
 
@@ -47,7 +47,7 @@ Fill in this document during your manual walkthrough. Once you record any findin
 - **Actual Behavior**: A full list, which is very hard to navigate. And it's very badly categorized, and why would you list "audio" on a reading , general task!?
 - **Ticket**: [#68](https://github.com/DemNgheTiengMua/toeic-practice-ui/issues/68)
 - **Screenshots / Console Errors (F12)**:
-  ![Confusing List](image-1.png)
+  ![Confusing List](docs/audit/image-1.png)
 
 ---
 
@@ -64,8 +64,8 @@ Fill in this document during your manual walkthrough. Once you record any findin
 - **Actual Behavior**:An unhandled exception occurred while processing the request.
 - **Ticket**: [#69](https://github.com/DemNgheTiengMua/toeic-practice-ui/issues/69)
 - **Screenshots / Console Errors (F12)**:
-  ![button list](image-3.png)
-  ![ERROR](image-2.png)
+  ![button list](docs/audit/image-3.png)
+  ![ERROR](docs/audit/image-2.png)
 
 ---
 
@@ -84,8 +84,8 @@ Fill in this document during your manual walkthrough. Once you record any findin
 - **Actual Behavior**:An unhandled exception occurred while processing the request.
 - **Ticket**: [#69](https://github.com/DemNgheTiengMua/toeic-practice-ui/issues/69)
 - **Screenshots / Console Errors (F12)**:
-  ![Entry](image-4.png)
-  ![ERROR](image-5.png)
+  ![Entry](docs/audit/image-4.png)
+  ![ERROR](docs/audit/image-5.png)
 
 ---
 
@@ -103,7 +103,7 @@ Fill in this document during your manual walkthrough. Once you record any findin
 - **Actual Behavior**: A broken mess
 - **Ticket**: [#70](https://github.com/DemNgheTiengMua/toeic-practice-ui/issues/70)
 - **Screenshots / Console Errors (F12)**:
-  ![Broken UI](image-6.png)
+  ![Broken UI](docs/audit/image-6.png)
 
 ---
 
@@ -119,7 +119,7 @@ Fill in this document during your manual walkthrough. Once you record any findin
 - **Actual Behavior**: Seperate Part for some reason, also upload for what? It's just too confusing.
 - **Ticket**: [#71](https://github.com/DemNgheTiengMua/toeic-practice-ui/issues/71)
 - **Screenshots / Console Errors (F12)**:
-  ![the Import UI](image-7.png)
+  ![the Import UI](docs/audit/image-7.png)
 
 ---
 
@@ -136,9 +136,9 @@ Fill in this document during your manual walkthrough. Once you record any findin
 - **Actual Behavior**: Header changes and the sidebar is gone.
 - **Ticket**: [#72](https://github.com/DemNgheTiengMua/toeic-practice-ui/issues/72)
 - **Screenshots / Console Errors (F12)**:
-  ![Normal, other UI](image-8.png)
-  ![Student UI with shifted UI and missing sidebar](image-9.png)
-  ![ORDERS UI with shifted UI and missing sidebar](image-10.png)
+  ![Normal, other UI](docs/audit/image-8.png)
+  ![Student UI with shifted UI and missing sidebar](docs/audit/image-9.png)
+  ![ORDERS UI with shifted UI and missing sidebar](docs/audit/image-10.png)
 
 ---
 
@@ -157,6 +157,6 @@ Fill in this document during your manual walkthrough. Once you record any findin
 - **Actual Behavior**: I have to enter path as text, manually enter duration and size, wtf
 - **Ticket**: [#73](https://github.com/DemNgheTiengMua/toeic-practice-ui/issues/73)
 - **Screenshots / Console Errors (F12)**:
-  ![weird shit](image-11.png)
+  ![weird shit](docs/audit/image-11.png)
 
 ---

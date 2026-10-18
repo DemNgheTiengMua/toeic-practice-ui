@@ -161,7 +161,7 @@ public sealed class AdminExamsControllerTests
     }
 
     [Fact]
-    public async Task Index_FiltersByPurpose_Placement_ReturnsOnlyPlacementExams()
+    public async Task Index_FiltersByPurpose_Placement_PassesPurposeToApiAndViewModel()
     {
         var api = new TestApiClient { Summary = SampleSummaryWithVariousPurposes() };
         var controller = CreateController(api);
@@ -171,13 +171,11 @@ public sealed class AdminExamsControllerTests
         var viewResult = Assert.IsType<ViewResult>(result);
         var vm = Assert.IsType<AdminExamListViewModel>(viewResult.Model);
         Assert.Equal("placement", vm.Purpose);
-        Assert.Single(vm.Summary.Exams);
-        Assert.Equal(ExamPurposeDto.Placement, vm.Summary.Exams[0].Purpose);
-        Assert.Equal("TOEIC Placement Diagnostic", vm.Summary.Exams[0].Name);
+        Assert.Equal("placement", api.LastPurposeFilter);
     }
 
     [Fact]
-    public async Task Index_FiltersByPurpose_Practice_ReturnsOnlyPracticeExams()
+    public async Task Index_FiltersByPurpose_Practice_PassesPurposeToApiAndViewModel()
     {
         var api = new TestApiClient { Summary = SampleSummaryWithVariousPurposes() };
         var controller = CreateController(api);
@@ -187,12 +185,11 @@ public sealed class AdminExamsControllerTests
         var viewResult = Assert.IsType<ViewResult>(result);
         var vm = Assert.IsType<AdminExamListViewModel>(viewResult.Model);
         Assert.Equal("practice", vm.Purpose);
-        Assert.Equal(2, vm.Summary.Exams.Count);
-        Assert.All(vm.Summary.Exams, e => Assert.True(e.Purpose is ExamPurposeDto.SpeakingPractice or ExamPurposeDto.WritingPractice));
+        Assert.Equal("practice", api.LastPurposeFilter);
     }
 
     [Fact]
-    public async Task Index_FiltersByPurpose_Mock_ReturnsOnlyMockExams()
+    public async Task Index_FiltersByPurpose_Mock_PassesPurposeToApiAndViewModel()
     {
         var api = new TestApiClient { Summary = SampleSummaryWithVariousPurposes() };
         var controller = CreateController(api);
@@ -202,8 +199,7 @@ public sealed class AdminExamsControllerTests
         var viewResult = Assert.IsType<ViewResult>(result);
         var vm = Assert.IsType<AdminExamListViewModel>(viewResult.Model);
         Assert.Equal("mock", vm.Purpose);
-        Assert.Equal(2, vm.Summary.Exams.Count);
-        Assert.All(vm.Summary.Exams, e => Assert.Equal(ExamPurposeDto.Mock, e.Purpose));
+        Assert.Equal("mock", api.LastPurposeFilter);
     }
 
     [Fact]
@@ -220,22 +216,10 @@ public sealed class AdminExamsControllerTests
         Assert.Equal(2, api.LastCertIdFilter);
     }
 
-    private static string FindRepoRoot()
-    {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir != null && !File.Exists(Path.Combine(dir.FullName, "ExtraEfficiency.slnx")))
-        {
-            dir = dir.Parent;
-        }
-
-        Assert.True(dir != null, "Could not locate solution root (ExtraEfficiency.slnx)");
-        return dir.FullName;
-    }
-
     [Fact]
     public void AdminExamsView_ContainsCertAndPurposeFilters_Badges_ScopedAudio_AndStreamlinedButtons()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = TestPathHelper.FindRepoRoot();
         var examsViewPath = Path.Combine(repoRoot, "src", "WebMVC", "Views", "Admin", "Exams.cshtml");
         Assert.True(File.Exists(examsViewPath), "Admin/Exams.cshtml must exist");
 
@@ -726,12 +710,17 @@ public sealed class AdminExamsControllerTests
         public ApiException? PublishException { get; set; }
         public ApiException? ExportException { get; set; }
         public int? LastCertIdFilter { get; set; }
+        public string? LastPurposeFilter { get; set; }
 
-        public Task<AdminExamListSummaryDto> GetAdminExamsAsync(string? q = null, string? status = null, int? certId = null, int page = 1, int pageSize = 20, CancellationToken cancellationToken = default)
+        public Task<AdminExamListSummaryDto> GetAdminExamsAsync(string? q, string? status, int? certId, string? purpose, int page = 1, int pageSize = 20, CancellationToken cancellationToken = default)
         {
             LastCertIdFilter = certId;
+            LastPurposeFilter = purpose;
             return Task.FromResult(Summary ?? SampleSummary());
         }
+
+        public Task<AdminExamListSummaryDto> GetAdminExamsAsync(string? q = null, string? status = null, int? certId = null, int page = 1, int pageSize = 20, CancellationToken cancellationToken = default) =>
+            GetAdminExamsAsync(q, status, certId, null, page, pageSize, cancellationToken);
 
         public Task<AdminExamDetailDto> GetAdminExamByIdAsync(int examId, CancellationToken cancellationToken = default) =>
             Task.FromResult(DetailToReturn ?? SampleDetail(examId));

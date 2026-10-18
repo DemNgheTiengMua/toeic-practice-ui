@@ -365,8 +365,11 @@ public interface IAdminComplaintsClient
 
 public interface IAdminExamsClient
 {
-    Task<AdminExamListSummaryDto> GetAdminExamsAsync(string? q, string? status, int? certId, int page, int pageSize, CancellationToken cancellationToken = default);
-    Task<AdminExamListSummaryDto> GetAdminExamsAsync(string? q, string? status, int? certId, int page, int pageSize, string bearerToken, CancellationToken cancellationToken = default) => GetAdminExamsAsync(q, status, certId, page, pageSize, cancellationToken);
+    Task<AdminExamListSummaryDto> GetAdminExamsAsync(string? q, string? status, int? certId, string? purpose, int page, int pageSize, CancellationToken cancellationToken = default);
+    Task<AdminExamListSummaryDto> GetAdminExamsAsync(string? q, string? status, int? certId, int page, int pageSize, CancellationToken cancellationToken = default) =>
+        GetAdminExamsAsync(q, status, certId, null, page, pageSize, cancellationToken);
+    Task<AdminExamListSummaryDto> GetAdminExamsAsync(string? q, string? status, int? certId, string? purpose, int page, int pageSize, string bearerToken, CancellationToken cancellationToken = default) => GetAdminExamsAsync(q, status, certId, purpose, page, pageSize, cancellationToken);
+    Task<AdminExamListSummaryDto> GetAdminExamsAsync(string? q, string? status, int? certId, int page, int pageSize, string bearerToken, CancellationToken cancellationToken = default) => GetAdminExamsAsync(q, status, certId, null, page, pageSize, cancellationToken);
     Task<AdminExamDetailDto> GetAdminExamByIdAsync(int examId, CancellationToken cancellationToken = default);
     Task<AdminExamDetailDto> GetAdminExamByIdAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) => GetAdminExamByIdAsync(examId, cancellationToken);
     Task<AdminExamDetailDto> CreateAdminExamAsync(CreateAdminExamRequest request, CancellationToken cancellationToken = default);

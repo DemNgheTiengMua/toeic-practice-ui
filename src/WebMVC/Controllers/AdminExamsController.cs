@@ -30,25 +30,7 @@ public sealed class AdminExamsController(
     {
         try
         {
-            var summary = await api.GetAdminExamsAsync(q, status, certId, page, 20, cancellationToken);
-            if (!string.IsNullOrWhiteSpace(purpose) && !purpose.Equals("all", StringComparison.OrdinalIgnoreCase))
-            {
-                var normalizedPurpose = purpose.Trim().ToLowerInvariant();
-                var filteredExams = summary.Exams.Where(e =>
-                {
-                    return normalizedPurpose switch
-                    {
-                        "mock" => e.Purpose == ExamPurposeDto.Mock,
-                        "placement" => e.Purpose == ExamPurposeDto.Placement,
-                        "practice" => e.Purpose is ExamPurposeDto.SpeakingPractice or ExamPurposeDto.WritingPractice,
-                        "speaking_practice" => e.Purpose == ExamPurposeDto.SpeakingPractice,
-                        "writing_practice" => e.Purpose == ExamPurposeDto.WritingPractice,
-                        _ => e.Purpose.ToString().Equals(normalizedPurpose, StringComparison.OrdinalIgnoreCase)
-                    };
-                }).ToList();
-
-                summary = summary with { Exams = filteredExams, TotalCount = filteredExams.Count };
-            }
+            var summary = await api.GetAdminExamsAsync(q, status, certId, purpose, page, 20, cancellationToken);
 
             var vm = new AdminExamListViewModel(
                 summary,

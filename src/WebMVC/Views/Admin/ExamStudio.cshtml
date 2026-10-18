@@ -1702,12 +1702,20 @@
     });
   };
 
-  // Auto-select section if sectionId is passed in URL query
+  // Auto-select section and focus question if passed in URL query
   try {
     var urlParams = new URLSearchParams(window.location.search);
     var paramSecId = parseInt(urlParams.get('sectionId'), 10);
     if (paramSecId && !isNaN(paramSecId)) {
       window.selectSection(paramSecId);
+    }
+    var paramQId = parseInt(urlParams.get('questionId'), 10);
+    if (paramQId && !isNaN(paramQId)) {
+      setTimeout(function() {
+        if (typeof window.focusQuestionCard === 'function') {
+          window.focusQuestionCard(paramQId);
+        }
+      }, 50);
     }
   } catch (e) {
     // Graceful fallback
