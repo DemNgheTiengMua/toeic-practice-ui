@@ -686,6 +686,90 @@ public sealed class AdminExamsControllerTests
         Assert.Equal(999, redirect.RouteValues?["id"]);
     }
 
+    [Fact]
+    public void ExamEditorView_ContainsMultipartFormDataAndAudioFileInput()
+    {
+        var repoRoot = TestPathHelper.FindRepoRoot();
+        var editorPath = Path.Combine(repoRoot, "src", "WebMVC", "Views", "Admin", "ExamEditor.cshtml");
+        Assert.True(File.Exists(editorPath), "Admin/ExamEditor.cshtml must exist");
+
+        var content = File.ReadAllText(editorPath);
+        Assert.Contains("enctype=\"multipart/form-data\"", content);
+        Assert.Contains("type=\"file\"", content);
+        Assert.Contains("name=\"AudioFile\"", content);
+        Assert.Contains("accept=\"audio/mpeg,audio/mp3,audio/wav,audio/*\"", content);
+        Assert.Contains("Advanced: manual metadata override", content);
+    }
+
+    [Fact]
+    public async Task SaveAudio_WithAudioFile_UploadsMediaAndSavesSectionAudio()
+    {
+        var api = new TestApiClient();
+        var controller = CreateController(api);
+
+        var contentBytes = "test audio stream content"u8.ToArray();
+        var fileMock = new FormFile(new MemoryStream(contentBytes), 0, contentBytes.Length, "AudioFile", "listening_p1.mp3")
+        {
+            Headers = new HeaderDictionary(),
+            ContentType = "audio/mpeg"
+        };
+
+        var model = new UploadAudioModel
+        {
+            SectionId = 10,
+            AudioFile = fileMock,
+            DurationSec = 45
+        };
+
+        var result = await controller.SaveAudio(42, model, CancellationToken.None);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(AdminExamsController.Edit), redirect.ActionName);
+        Assert.Equal(42, redirect.RouteValues?["id"]);
+        Assert.Equal(2, redirect.RouteValues?["step"]);
+
+        Assert.Equal(42, api.LastUploadedMediaExamId);
+        Assert.Equal("listening_p1.mp3", api.LastUploadedMediaFileName);
+
+        Assert.NotNull(api.LastSavedAudioRequest);
+        Assert.Equal(10, api.LastSavedAudioRequest!.SectionId);
+        Assert.Equal("exams/42/listening_p1.mp3", api.LastSavedAudioRequest.AudioPath);
+        Assert.Equal(45, api.LastSavedAudioRequest.DurationSec);
+        Assert.Equal(contentBytes.Length, api.LastSavedAudioRequest.SizeBytes);
+        Assert.Equal("Audio file saved successfully.", controller.TempData["Success"]);
+    }
+
+    [Fact]
+    public async Task SaveAudio_WithManualPathFallback_SavesAudioWithoutMediaUpload()
+    {
+        var api = new TestApiClient();
+        var controller = CreateController(api);
+
+        var model = new UploadAudioModel
+        {
+            SectionId = 12,
+            AudioPath = "audio/manual_file.mp3",
+            DurationSec = 150,
+            SizeBytes = 4096
+        };
+
+        var result = await controller.SaveAudio(42, model, CancellationToken.None);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(AdminExamsController.Edit), redirect.ActionName);
+        Assert.Equal(42, redirect.RouteValues?["id"]);
+        Assert.Equal(2, redirect.RouteValues?["step"]);
+
+        Assert.Null(api.LastUploadedMediaFileName);
+
+        Assert.NotNull(api.LastSavedAudioRequest);
+        Assert.Equal(12, api.LastSavedAudioRequest!.SectionId);
+        Assert.Equal("audio/manual_file.mp3", api.LastSavedAudioRequest.AudioPath);
+        Assert.Equal(150, api.LastSavedAudioRequest.DurationSec);
+        Assert.Equal(4096, api.LastSavedAudioRequest.SizeBytes);
+        Assert.Equal("Audio file saved successfully.", controller.TempData["Success"]);
+    }
+
     private sealed class EmptyTempDataProvider : ITempDataProvider
     {
         public IDictionary<string, object> LoadTempData(HttpContext context) => new Dictionary<string, object>();
@@ -711,6 +795,10 @@ public sealed class AdminExamsControllerTests
         public ApiException? ExportException { get; set; }
         public int? LastCertIdFilter { get; set; }
         public string? LastPurposeFilter { get; set; }
+        public SaveExamSectionAudioRequest? LastSavedAudioRequest { get; set; }
+        public int? LastSavedAudioExamId { get; set; }
+        public string? LastUploadedMediaFileName { get; set; }
+        public int? LastUploadedMediaExamId { get; set; }
 
         public Task<AdminExamListSummaryDto> GetAdminExamsAsync(string? q, string? status, int? certId, string? purpose, int page = 1, int pageSize = 20, CancellationToken cancellationToken = default)
         {
@@ -826,8 +914,12 @@ public sealed class AdminExamsControllerTests
             return Task.CompletedTask;
         }
 
-        public Task<AdminExamSectionAudioDto> SaveAdminExamSectionAudioAsync(int examId, SaveExamSectionAudioRequest request, CancellationToken cancellationToken = default) =>
-            Task.FromResult<AdminExamSectionAudioDto>(null!);
+        public Task<AdminExamSectionAudioDto> SaveAdminExamSectionAudioAsync(int examId, SaveExamSectionAudioRequest request, CancellationToken cancellationToken = default)
+        {
+            LastSavedAudioExamId = examId;
+            LastSavedAudioRequest = request;
+            return Task.FromResult<AdminExamSectionAudioDto>(null!);
+        }
 
         public Task<QuickIngestParseResultDto> ParseQuickIngestAsync(int examId, QuickIngestParseRequest request, CancellationToken cancellationToken = default) =>
             Task.FromResult(new QuickIngestParseResultDto(true, 1, 1, 0, [], []));
@@ -850,8 +942,12 @@ public sealed class AdminExamsControllerTests
                 request.Passage, request.AudioPath, request.AudioStartMs, request.AudioEndMs, null, null, request.Transcript,
                 null, null, 1, []));
 
-        public Task<AdminExamMediaUploadResultDto> UploadAdminExamMediaAsync(int examId, Stream stream, string fileName, CancellationToken cancellationToken = default) =>
-            Task.FromResult(new AdminExamMediaUploadResultDto($"/media/exams/{examId}/{fileName}", $"exams/{examId}/{fileName}", fileName));
+        public Task<AdminExamMediaUploadResultDto> UploadAdminExamMediaAsync(int examId, Stream stream, string fileName, CancellationToken cancellationToken = default)
+        {
+            LastUploadedMediaExamId = examId;
+            LastUploadedMediaFileName = fileName;
+            return Task.FromResult(new AdminExamMediaUploadResultDto($"/media/exams/{examId}/{fileName}", $"exams/{examId}/{fileName}", fileName));
+        }
 
         public Task<(Stream Stream, string ContentType, string FileName)> ExportAdminExamAsync(int examId, string? format = "zip", CancellationToken cancellationToken = default)
         {

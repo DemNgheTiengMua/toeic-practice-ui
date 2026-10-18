@@ -161,6 +161,21 @@ public sealed class AdminLessonsControllerTests
     }
 
     [Fact]
+    public void IndexView_ImportDialog_UsesModalOverlayWithInitialDisplayNone()
+    {
+        var repoRoot = TestPathHelper.FindRepoRoot();
+        var viewPath = Path.Combine(repoRoot, "src", "WebMVC", "Views", "Admin", "Lessons", "Index.cshtml");
+        Assert.True(File.Exists(viewPath), "Lessons/Index.cshtml must exist");
+
+        var content = File.ReadAllText(viewPath);
+        Assert.Contains("id=\"import-dialog\"", content);
+        Assert.Contains("class=\"modal-overlay\"", content);
+        Assert.Contains("style=\"display: none;\"", content);
+        Assert.DoesNotContain("<dialog id=\"import-dialog\" class=\"modal\"", content);
+        Assert.Contains("class=\"modal__close\"", content);
+    }
+
+    [Fact]
     public async Task Create_ReturnsViewWithDefaultCardAndCertificates()
     {
         var api = new TestApiClient();

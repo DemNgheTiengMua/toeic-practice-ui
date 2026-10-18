@@ -458,6 +458,10 @@
 }
 
 /* ===== Modal ===== */
+dialog:not([open]) {
+  display: none !important;
+}
+
 .modal-overlay {
   position: fixed; inset: 0;
   display: grid; place-items: center;

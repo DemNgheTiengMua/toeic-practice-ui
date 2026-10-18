@@ -18,7 +18,7 @@
   </div>
   <div class="row" style="gap: var(--space-xs);">
     <a class="btn btn--ghost" href="/admin/lessons/template" download="lesson-template.json">Download Template</a>
-    <button type="button" class="btn btn--secondary" onclick="document.getElementById('import-dialog').showModal()">Import Manifest / Package</button>
+    <button type="button" class="btn btn--secondary" onclick="document.getElementById('import-dialog').style.display='grid'">Import Manifest / Package</button>
     <a class="btn btn--primary" href="/admin/lessons/create@(Model.SelectedCertId.HasValue ? $"?certId={Model.SelectedCertId.Value}" : "")">+ New Lesson</a>
   </div>
 </div>
@@ -64,7 +64,7 @@
         <p class="state-block__desc">No guided learning walkthroughs exist for the selected filter. Create one manually or import a JSON manifest.</p>
         <div class="row" style="justify-content: center; gap: var(--space-sm);">
           <a class="btn btn--primary" href="/admin/lessons/create">+ Create New Lesson</a>
-          <button type="button" class="btn btn--secondary" onclick="document.getElementById('import-dialog').showModal()">Import Package (.zip/.json)</button>
+          <button type="button" class="btn btn--secondary" onclick="document.getElementById('import-dialog').style.display='grid'">Import Package (.zip/.json)</button>
         </div>
       </div>
     </div>
@@ -139,13 +139,13 @@ else
 }
 
 <!-- Import Modal Dialog -->
-<dialog id="import-dialog" class="modal" style="border: 2px solid var(--color-ink, #14181d); border-radius: 0; box-shadow: none; padding: 0; max-width: 580px; width: 100%;">
-  <div class="card" style="border: none; margin: 0;">
-    <div class="card__header row row--between" style="background: var(--color-surface, #f8f9fa); border-bottom: 2px solid var(--color-ink, #14181d);">
-      <h2 style="margin: 0; font-size: 1.1rem; text-transform: uppercase;">Import Lesson Manifest or Package</h2>
-      <button type="button" class="btn btn--sm btn--ghost" onclick="document.getElementById('import-dialog').close()" style="line-height: 1;">Close</button>
+<div id="import-dialog" class="modal-overlay" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="import-dialog-title">
+  <div class="modal" style="max-width: 580px;">
+    <div class="modal__header">
+      <h2 id="import-dialog-title">Import Lesson Manifest or Package</h2>
+      <button type="button" class="modal__close" onclick="document.getElementById('import-dialog').style.display='none'">Close</button>
     </div>
-    <div class="card__body">
+    <div class="modal__body">
       <form method="post" action="/admin/lessons/upload" enctype="multipart/form-data" class="stack">
         @Html.AntiForgeryToken()
         <div class="field">
@@ -175,10 +175,25 @@ else
         </div>
 
         <div class="row row--between" style="margin-top: var(--space-md); padding-top: var(--space-sm); border-top: 1px solid var(--color-rule, #ccd2d6);">
-          <button type="button" class="btn btn--ghost" onclick="document.getElementById('import-dialog').close()">Cancel</button>
+          <button type="button" class="btn btn--ghost" onclick="document.getElementById('import-dialog').style.display='none'">Cancel</button>
           <button type="submit" class="btn btn--primary">Upload &amp; Ingest</button>
         </div>
       </form>
     </div>
   </div>
-</dialog>
+</div>
+
+@section Scripts {
+<script>
+  (function() {
+    var dialog = document.getElementById('import-dialog');
+    if (dialog) {
+      dialog.addEventListener('click', function(e) {
+        if (e.target === dialog) {
+          dialog.style.display = 'none';
+        }
+      });
+    }
+  })();
+</script>
+}

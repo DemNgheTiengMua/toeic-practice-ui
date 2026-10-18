@@ -242,7 +242,25 @@ public sealed class AdminExamsController(
     {
         try
         {
-            var request = new SaveExamSectionAudioRequest(model.SectionId, model.AudioPath, model.DurationSec, model.SizeBytes);
+            var audioPath = model.AudioPath;
+            var sizeBytes = model.SizeBytes;
+            var durationSec = model.DurationSec > 0 ? model.DurationSec : 300;
+
+            if (model.AudioFile != null && model.AudioFile.Length > 0)
+            {
+                await using var stream = model.AudioFile.OpenReadStream();
+                var result = await api.UploadAdminExamMediaAsync(id, stream, model.AudioFile.FileName, cancellationToken);
+                audioPath = !string.IsNullOrWhiteSpace(result.Path) ? result.Path : result.Url;
+                sizeBytes = model.AudioFile.Length;
+            }
+
+            if (string.IsNullOrWhiteSpace(audioPath))
+            {
+                TempData["Error"] = "Please select an audio file or specify an audio path.";
+                return RedirectToAction(nameof(Edit), new { id, step = 2 });
+            }
+
+            var request = new SaveExamSectionAudioRequest(model.SectionId, audioPath, durationSec, sizeBytes);
             await api.SaveAdminExamSectionAudioAsync(id, request, cancellationToken);
             TempData["Success"] = "Audio file saved successfully.";
             return RedirectToAction(nameof(Edit), new { id, step = 2 });

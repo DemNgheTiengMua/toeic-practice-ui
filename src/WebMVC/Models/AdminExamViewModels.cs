@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using Contracts;
+using Microsoft.AspNetCore.Http;
 
 namespace WebMVC.Models;
 
@@ -125,8 +126,9 @@ public sealed class UploadAudioModel
     [Required]
     public int SectionId { get; set; }
 
-    [Required(ErrorMessage = "Audio file path is required.")]
-    public string AudioPath { get; set; } = string.Empty;
+    public IFormFile? AudioFile { get; set; }
+
+    public string? AudioPath { get; set; }
 
     [Range(1, 86400, ErrorMessage = "Duration must be greater than 0.")]
     public int DurationSec { get; set; } = 60;
