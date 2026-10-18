@@ -390,7 +390,7 @@
                 <div class="row" style="gap: 0.5rem; align-items: center;">
                   <strong style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 0.85rem;">Visual Audio Slicer</strong>
                   <span class="text-xs text-muted" id="slicer-track-label-@sec.SectionId">
-                    @(string.IsNullOrWhiteSpace(sec.MasterAudioPath) ? "No master audio loaded" : sec.MasterAudioPath)
+                    @(string.IsNullOrWhiteSpace(sec.MasterAudioPath) ? "No master audio loaded" : Contracts.MediaUrlHelper.NormalizeMediaUrl(sec.MasterAudioPath))
                   </span>
                 </div>
                 <div style="font-family: var(--font-mono, monospace); font-size: 0.8rem;" id="slicer-timer-@sec.SectionId">
@@ -398,7 +398,7 @@
                 </div>
               </div>
 
-              <audio id="slicer-audio-@sec.SectionId" src="@sec.MasterAudioPath" preload="metadata"></audio>
+              <audio id="slicer-audio-@sec.SectionId" src="@Contracts.MediaUrlHelper.NormalizeMediaUrl(sec.MasterAudioPath)" preload="metadata"></audio>
 
               <!-- Waveform / scrubber representation with tick marks -->
               <div class="audio-slicer__scrubber" id="slicer-scrubber-@sec.SectionId" onclick="onScrubberClick(event, @sec.SectionId)">
@@ -479,7 +479,7 @@
                         <div class="studio-dropzone" id="dropzone-p1-@g.GroupId" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDropFile(event, @g.GroupId, 'image')" onclick="triggerFileInput('img-input-@g.GroupId')">
                           @if (!string.IsNullOrWhiteSpace(g.ImagePath))
                           {
-                            <img src="@g.ImagePath" alt="@g.ImageAlt" id="preview-img-@g.GroupId" style="width: 100%; max-height: 120px; object-fit: contain; border: 2px solid #14181d;" />
+                            <img src="@Contracts.MediaUrlHelper.NormalizeMediaUrl(g.ImagePath)" alt="@g.ImageAlt" id="preview-img-@g.GroupId" style="width: 100%; max-height: 120px; object-fit: contain; border: 2px solid #14181d;" />
                             <div class="text-xs text-muted mt-1">Click to replace photo</div>
                           }
                           else
@@ -843,6 +843,19 @@
     return input ? input.value : '';
   }
 
+  function normalizeMediaUrl(url) {
+    if (!url) return '';
+    var trimmed = ('' + url).trim();
+    if (trimmed.startsWith('/media/') || trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('/audio/') || trimmed.startsWith('/images/')) {
+      return trimmed;
+    }
+    var clean = trimmed.replace(/^\/+/, '');
+    if (clean.startsWith('exams/') || clean.startsWith('imports/')) {
+      return '/media/' + clean;
+    }
+    return trimmed.startsWith('/') ? trimmed : '/' + trimmed;
+  }
+
   // --- Autosave Engine ---
   function markSaving() {
     isSaving = true;
@@ -1049,9 +1062,12 @@
 
     var audio = document.getElementById('slicer-audio-' + sectionId);
     var grpAudioPath = grpCard.querySelector('[data-field="AudioPath"]')?.value;
-    if (audio && grpAudioPath && audio.getAttribute('src') !== grpAudioPath) {
-      audio.src = grpAudioPath;
-      document.getElementById('slicer-track-label-' + sectionId).textContent = grpAudioPath;
+    if (audio && grpAudioPath) {
+      var normPath = normalizeMediaUrl(grpAudioPath);
+      if (audio.getAttribute('src') !== normPath) {
+        audio.src = normPath;
+        document.getElementById('slicer-track-label-' + sectionId).textContent = normPath;
+      }
     }
 
     var startVal = grpCard.querySelector('[data-field="AudioStartMs"]')?.value;
@@ -1197,6 +1213,16 @@
     if (!inputEl.files || inputEl.files.length === 0) return;
     var file = inputEl.files[0];
 
+    var durationSec = 300;
+    try {
+      var tempAudio = new Audio(URL.createObjectURL(file));
+      tempAudio.addEventListener('loadedmetadata', function() {
+        if (tempAudio.duration && !isNaN(tempAudio.duration)) {
+          durationSec = Math.round(tempAudio.duration);
+        }
+      });
+    } catch (e) { /* ignore */ }
+
     var formData = new FormData();
     formData.append('file', file);
 
@@ -1213,20 +1239,39 @@
       return res.json();
     })
     .then(function(result) {
-      markSaved();
+      var mediaUrl = normalizeMediaUrl(result.url || result.path);
       var audio = document.getElementById('slicer-audio-' + secId);
       if (audio) {
-        audio.src = result.url;
-        document.getElementById('slicer-track-label-' + secId).textContent = result.url;
+        audio.src = mediaUrl;
+        document.getElementById('slicer-track-label-' + secId).textContent = mediaUrl;
       }
       if (activeSlicerGroupId) {
         var grpCard = document.getElementById('group-card-' + activeSlicerGroupId);
         var pathInput = grpCard?.querySelector('[data-field="AudioPath"]');
         if (pathInput) {
-          pathInput.value = result.url;
+          pathInput.value = mediaUrl;
           saveSingleGroup(activeSlicerGroupId);
         }
       }
+
+      var audioFormData = new FormData();
+      audioFormData.append('SectionId', secId);
+      audioFormData.append('AudioPath', mediaUrl);
+      audioFormData.append('DurationSec', durationSec);
+      audioFormData.append('SizeBytes', file.size || 0);
+
+      return fetch('/admin/exams/' + examId + '/audio', {
+        method: 'POST',
+        headers: {
+          'RequestVerificationToken': getCsrfToken(),
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: audioFormData
+      });
+    })
+    .then(function() {
+      markSaved();
     })
     .catch(function(err) {
       markSaveFailed('Audio upload failed: ' + err.message);
@@ -1260,13 +1305,14 @@
     })
     .then(function(result) {
       markSaved();
+      var mediaUrl = normalizeMediaUrl(result.url || result.path);
       var pathInput = document.getElementById('img-path-' + groupId);
-      if (pathInput) pathInput.value = result.url;
+      if (pathInput) pathInput.value = mediaUrl;
 
       var preview = document.getElementById('preview-img-' + groupId);
       var placeholder = document.getElementById('dropzone-placeholder-' + groupId);
       if (preview) {
-        preview.src = result.url;
+        preview.src = mediaUrl;
         preview.style.display = 'block';
       }
       if (placeholder) placeholder.style.display = 'none';

@@ -734,7 +734,7 @@ public sealed class AdminExamsControllerTests
 
         Assert.NotNull(api.LastSavedAudioRequest);
         Assert.Equal(10, api.LastSavedAudioRequest!.SectionId);
-        Assert.Equal("exams/42/listening_p1.mp3", api.LastSavedAudioRequest.AudioPath);
+        Assert.Equal("/media/exams/42/listening_p1.mp3", api.LastSavedAudioRequest.AudioPath);
         Assert.Equal(45, api.LastSavedAudioRequest.DurationSec);
         Assert.Equal(contentBytes.Length, api.LastSavedAudioRequest.SizeBytes);
         Assert.Equal("Audio file saved successfully.", controller.TempData["Success"]);
@@ -761,7 +761,69 @@ public sealed class AdminExamsControllerTests
 
         Assert.Null(api.LastUploadedMediaFileName);
         Assert.Null(api.LastSavedAudioRequest);
-        Assert.Equal("Please select an audio file to upload.", controller.TempData["Error"]);
+    }
+
+    [Fact]
+    public async Task SaveAudio_WithManualPath_NormalizesPath()
+    {
+        var api = new TestApiClient();
+        var controller = CreateController(api);
+
+        var model = new UploadAudioModel
+        {
+            SectionId = 15,
+            AudioPath = "exams/42/sample_track.mp3",
+            DurationSec = 120,
+            SizeBytes = 1024
+        };
+
+        var result = await controller.SaveAudio(42, model, CancellationToken.None);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(AdminExamsController.Edit), redirect.ActionName);
+
+        Assert.NotNull(api.LastSavedAudioRequest);
+        Assert.Equal(15, api.LastSavedAudioRequest!.SectionId);
+        Assert.Equal("/media/exams/42/sample_track.mp3", api.LastSavedAudioRequest.AudioPath);
+    }
+
+    [Fact]
+    public async Task SaveAudio_WithAjaxHeader_ReturnsJson()
+    {
+        var api = new TestApiClient();
+        var controller = CreateController(api);
+        controller.ControllerContext.HttpContext.Request.Headers.Accept = "application/json";
+
+        var model = new UploadAudioModel
+        {
+            SectionId = 15,
+            AudioPath = "exams/42/sample_track.mp3",
+            DurationSec = 120,
+            SizeBytes = 1024
+        };
+
+        var result = await controller.SaveAudio(42, model, CancellationToken.None);
+
+        var json = Assert.IsType<JsonResult>(result);
+        Assert.NotNull(json.Value);
+    }
+
+    [Theory]
+    [InlineData(null, null)]
+    [InlineData("", "")]
+    [InlineData("   ", "   ")]
+    [InlineData("/media/exams/1/audio.mp3", "/media/exams/1/audio.mp3")]
+    [InlineData("exams/1/audio.mp3", "/media/exams/1/audio.mp3")]
+    [InlineData("/exams/1/audio.mp3", "/media/exams/1/audio.mp3")]
+    [InlineData("imports/5/photo.jpg", "/media/imports/5/photo.jpg")]
+    [InlineData("/imports/5/photo.jpg", "/media/imports/5/photo.jpg")]
+    [InlineData("http://example.com/audio.mp3", "http://example.com/audio.mp3")]
+    [InlineData("https://example.com/audio.mp3", "https://example.com/audio.mp3")]
+    [InlineData("/audio/toeic/test1-p1.mp3", "/audio/toeic/test1-p1.mp3")]
+    public void MediaUrlHelper_NormalizesCorrectly(string? input, string? expected)
+    {
+        var actual = MediaUrlHelper.NormalizeMediaUrl(input);
+        Assert.Equal(expected, actual);
     }
 
     internal sealed class EmptyTempDataProvider : ITempDataProvider

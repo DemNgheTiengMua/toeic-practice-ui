@@ -27,6 +27,7 @@ public sealed class MediaController(IMediaClient api, CurrentUser currentUser) :
     }
 
     [HttpGet("/media/exams/{examId:int}/{fileName}")]
+    [HttpGet("/exams/{examId:int}/{fileName}")]
     [ResponseCache(Duration = 3600, Location = ResponseCacheLocation.Client)]
     public async Task<IActionResult> Exam(int examId, string fileName, CancellationToken cancellationToken)
     {

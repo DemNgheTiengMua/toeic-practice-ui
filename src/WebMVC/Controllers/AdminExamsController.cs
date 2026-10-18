@@ -329,26 +329,52 @@ public sealed class AdminExamsController(
     {
         try
         {
-            if (model.AudioFile == null || model.AudioFile.Length == 0)
+            string audioPath;
+            long sizeBytes;
+            int durationSec;
+
+            if (model.AudioFile != null && model.AudioFile.Length > 0)
             {
+                await using var stream = model.AudioFile.OpenReadStream();
+                var result = await api.UploadAdminExamMediaAsync(id, stream, model.AudioFile.FileName, cancellationToken);
+                audioPath = MediaUrlHelper.NormalizeMediaUrl(!string.IsNullOrWhiteSpace(result.Url) ? result.Url : result.Path)!;
+                sizeBytes = model.AudioFile.Length;
+                durationSec = model.DurationSec > 0 ? model.DurationSec : 300;
+            }
+            else if (!string.IsNullOrWhiteSpace(model.AudioPath))
+            {
+                audioPath = MediaUrlHelper.NormalizeMediaUrl(model.AudioPath)!;
+                sizeBytes = model.SizeBytes > 0 ? model.SizeBytes : 0;
+                durationSec = model.DurationSec > 0 ? model.DurationSec : 300;
+            }
+            else
+            {
+                if (Request.Headers.Accept.ToString().Contains("application/json") || Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                {
+                    return BadRequest(new { message = "Please select an audio file to upload." });
+                }
                 TempData["Error"] = "Please select an audio file to upload.";
                 return RedirectToAction(nameof(Edit), new { id, step = 2 });
             }
 
-            await using var stream = model.AudioFile.OpenReadStream();
-            var result = await api.UploadAdminExamMediaAsync(id, stream, model.AudioFile.FileName, cancellationToken);
-            var audioPath = !string.IsNullOrWhiteSpace(result.Path) ? result.Path : result.Url;
-            var sizeBytes = model.AudioFile.Length;
-            var durationSec = model.DurationSec > 0 ? model.DurationSec : 300;
-
             var request = new SaveExamSectionAudioRequest(model.SectionId, audioPath, durationSec, sizeBytes);
             await api.SaveAdminExamSectionAudioAsync(id, request, cancellationToken);
+
+            if (Request.Headers.Accept.ToString().Contains("application/json") || Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+            {
+                return Json(new { success = true, audioPath, sectionId = model.SectionId, durationSec, sizeBytes });
+            }
+
             TempData["Success"] = "Audio file saved successfully.";
             return RedirectToAction(nameof(Edit), new { id, step = 2 });
         }
         catch (ApiException ex)
         {
             logger.LogWarning(ex, "Failed to save audio for exam {ExamId}", id);
+            if (Request.Headers.Accept.ToString().Contains("application/json") || Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+            {
+                return StatusCode(ex.Status, new { message = ex.Detail ?? ex.Message, code = ex.Code });
+            }
             TempData["Error"] = ex.Detail ?? ex.Message;
             return RedirectToAction(nameof(Edit), new { id, step = 2 });
         }
