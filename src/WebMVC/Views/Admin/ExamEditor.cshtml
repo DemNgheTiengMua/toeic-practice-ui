@@ -174,35 +174,19 @@
             }
 
             <details class="mt-2">
-              <summary class="btn btn--sm btn--ghost" style="cursor:pointer; display:inline-block;">@(audio != null ? "Replace file / path" : "Upload / specify file")</summary>
+              <summary class="btn btn--sm btn--ghost" style="cursor:pointer; display:inline-block;">@(audio != null ? "Replace audio file" : "Upload audio file")</summary>
               <form method="post" action="/admin/exams/@Model.ExamId/audio" enctype="multipart/form-data" class="card card__body stack mt-2">
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="SectionId" value="@s.SectionId" />
+                <input type="hidden" id="dur-@s.SectionId" name="DurationSec" value="@(audio?.DurationSec ?? 300)" />
+                <input type="hidden" id="size-@s.SectionId" name="SizeBytes" value="@(audio?.SizeBytes ?? 0)" />
                 <div class="field">
                   <label class="field__label" for="file-@s.SectionId">Select Audio File</label>
-                  <input class="field__input" type="file" id="file-@s.SectionId" name="AudioFile" accept="audio/mpeg,audio/mp3,audio/wav,audio/*" />
-                  <span class="field__hint">MP3, WAV, or MPEG audio (max 60 MB). Metadata will be extracted automatically.</span>
+                  <input class="field__input" type="file" id="file-@s.SectionId" name="AudioFile" accept="audio/mpeg,audio/mp3,audio/wav,audio/*" required />
+                  <span class="field__hint">MP3, WAV, or MPEG audio (max 60 MB). Duration and size are computed automatically upon upload.</span>
                 </div>
-                <details class="mt-2">
-                  <summary class="text-xs text-muted" style="cursor:pointer;">Advanced: manual metadata override</summary>
-                  <div class="stack mt-2">
-                    <div class="field">
-                      <label class="field__label" for="path-@s.SectionId">Audio Path / Filename</label>
-                      <input class="field__input" id="path-@s.SectionId" name="AudioPath" value="@(audio?.AudioPath ?? $"audio/{s.SectionCode.ToLowerInvariant()}.mp3")" />
-                    </div>
-                    <div class="grid-2">
-                      <div class="field">
-                        <label class="field__label" for="dur-@s.SectionId">Duration (seconds)</label>
-                        <input class="field__input" id="dur-@s.SectionId" name="DurationSec" type="number" min="1" value="@(audio?.DurationSec ?? 300)" />
-                      </div>
-                      <div class="field">
-                        <label class="field__label" for="size-@s.SectionId">Size (bytes, max 60 MB)</label>
-                        <input class="field__input" id="size-@s.SectionId" name="SizeBytes" type="number" min="1" max="62914560" value="@(audio?.SizeBytes ?? 5242880)" />
-                      </div>
-                    </div>
-                  </div>
-                </details>
-                <button type="submit" class="btn btn--sm btn--primary mt-2">Save audio</button>
+                <div class="upload-meta-preview mt-1 text-xs text-muted" id="preview-@s.SectionId" style="display:none;"></div>
+                <button type="submit" class="btn btn--sm btn--primary mt-2">Upload audio</button>
               </form>
             </details>
           </div>
@@ -317,26 +301,43 @@
         var form = input.closest('form');
         if (!form) return;
 
-        var pathInput = form.querySelector('input[name="AudioPath"]');
+        if (file.size > 62914560) {
+          alert('The selected audio file (' + (file.size / (1024 * 1024)).toFixed(1) + ' MB) exceeds the maximum allowed size of 60 MB.');
+          input.value = '';
+          return;
+        }
+
         var durInput = form.querySelector('input[name="DurationSec"]');
         var sizeInput = form.querySelector('input[name="SizeBytes"]');
+        var preview = form.querySelector('.upload-meta-preview');
 
-        if (pathInput) {
-          pathInput.value = file.name;
-        }
         if (sizeInput) {
           sizeInput.value = file.size;
+        }
+
+        var formatSize = (file.size / (1024 * 1024)).toFixed(2) + ' MB';
+        if (preview) {
+          preview.style.display = 'block';
+          preview.textContent = 'Selected: ' + file.name + ' (' + formatSize + ') — extracting duration...';
         }
 
         var objectUrl = URL.createObjectURL(file);
         var audio = new Audio(objectUrl);
         audio.addEventListener('loadedmetadata', function() {
-          if (durInput && audio.duration && !isNaN(audio.duration) && isFinite(audio.duration)) {
-            durInput.value = Math.max(1, Math.round(audio.duration));
+          var dur = 300;
+          if (audio.duration && !isNaN(audio.duration) && isFinite(audio.duration)) {
+            dur = Math.max(1, Math.round(audio.duration));
+            if (durInput) durInput.value = dur;
+          }
+          if (preview) {
+            preview.textContent = 'Selected: ' + file.name + ' (' + formatSize + ', ' + dur + 's)';
           }
           URL.revokeObjectURL(objectUrl);
         });
         audio.addEventListener('error', function() {
+          if (preview) {
+            preview.textContent = 'Selected: ' + file.name + ' (' + formatSize + ')';
+          }
           URL.revokeObjectURL(objectUrl);
         });
       });

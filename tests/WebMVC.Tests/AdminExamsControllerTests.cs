@@ -698,7 +698,8 @@ public sealed class AdminExamsControllerTests
         Assert.Contains("type=\"file\"", content);
         Assert.Contains("name=\"AudioFile\"", content);
         Assert.Contains("accept=\"audio/mpeg,audio/mp3,audio/wav,audio/*\"", content);
-        Assert.Contains("Advanced: manual metadata override", content);
+        Assert.DoesNotContain("Advanced: manual metadata override", content);
+        Assert.DoesNotContain("Audio Path / Filename", content);
     }
 
     [Fact]
@@ -740,7 +741,7 @@ public sealed class AdminExamsControllerTests
     }
 
     [Fact]
-    public async Task SaveAudio_WithManualPathFallback_SavesAudioWithoutMediaUpload()
+    public async Task SaveAudio_WithoutAudioFile_RedirectsWithError()
     {
         var api = new TestApiClient();
         var controller = CreateController(api);
@@ -748,9 +749,7 @@ public sealed class AdminExamsControllerTests
         var model = new UploadAudioModel
         {
             SectionId = 12,
-            AudioPath = "audio/manual_file.mp3",
-            DurationSec = 150,
-            SizeBytes = 4096
+            AudioFile = null
         };
 
         var result = await controller.SaveAudio(42, model, CancellationToken.None);
@@ -761,13 +760,8 @@ public sealed class AdminExamsControllerTests
         Assert.Equal(2, redirect.RouteValues?["step"]);
 
         Assert.Null(api.LastUploadedMediaFileName);
-
-        Assert.NotNull(api.LastSavedAudioRequest);
-        Assert.Equal(12, api.LastSavedAudioRequest!.SectionId);
-        Assert.Equal("audio/manual_file.mp3", api.LastSavedAudioRequest.AudioPath);
-        Assert.Equal(150, api.LastSavedAudioRequest.DurationSec);
-        Assert.Equal(4096, api.LastSavedAudioRequest.SizeBytes);
-        Assert.Equal("Audio file saved successfully.", controller.TempData["Success"]);
+        Assert.Null(api.LastSavedAudioRequest);
+        Assert.Equal("Please select an audio file to upload.", controller.TempData["Error"]);
     }
 
     private sealed class EmptyTempDataProvider : ITempDataProvider

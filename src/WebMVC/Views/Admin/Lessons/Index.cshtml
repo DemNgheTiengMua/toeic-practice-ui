@@ -193,6 +193,11 @@ else
           dialog.style.display = 'none';
         }
       });
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && dialog.style.display !== 'none') {
+          dialog.style.display = 'none';
+        }
+      });
     }
   })();
 </script>
