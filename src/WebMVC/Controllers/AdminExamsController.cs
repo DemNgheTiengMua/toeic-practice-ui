@@ -91,7 +91,28 @@ public sealed class AdminExamsController(
             }
             else
             {
-                TempData["Error"] = $"Nothing was imported: {result.ErrorCount} {(result.ErrorCount == 1 ? "problem" : "problems")} found in manifest.";
+                var errorMsg = $"Nothing was imported: {result.ErrorCount} {(result.ErrorCount == 1 ? "problem" : "problems")} found in manifest.";
+                try
+                {
+                    var detail = await importsClient.GetAdminImportBatchAsync(result.BatchId, cancellationToken);
+                    if (detail?.Logs?.Count > 0)
+                    {
+                        var issues = detail.Logs
+                            .Where(l => l.Level == ImportLogLevelDto.Error)
+                            .Take(3)
+                            .Select(l => l.RowNo.HasValue ? $"Q{l.RowNo}: {l.Message}" : l.Message);
+                        var issueList = string.Join("; ", issues);
+                        if (!string.IsNullOrWhiteSpace(issueList))
+                        {
+                            errorMsg += $" Issues: {issueList}";
+                        }
+                    }
+                }
+                catch (Exception logEx)
+                {
+                    logger.LogDebug(logEx, "Could not fetch batch {BatchId} detail logs", result.BatchId);
+                }
+                TempData["Error"] = errorMsg;
             }
 
             return RedirectToAction(nameof(Index), new { certId });
@@ -100,6 +121,18 @@ public sealed class AdminExamsController(
         {
             logger.LogWarning(ex, "Import upload refused");
             TempData["Error"] = ex.Detail ?? ex.Title ?? "The import was refused.";
+            return RedirectToAction(nameof(Index), new { certId });
+        }
+        catch (HttpRequestException ex)
+        {
+            logger.LogError(ex, "Network error during exam import upload");
+            TempData["Error"] = "Unable to reach import service. Please try again.";
+            return RedirectToAction(nameof(Index), new { certId });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Unexpected error during exam import upload");
+            TempData["Error"] = "An error occurred while importing the exam. Please try again.";
             return RedirectToAction(nameof(Index), new { certId });
         }
     }

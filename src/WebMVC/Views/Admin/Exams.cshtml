@@ -15,7 +15,7 @@
 <div class="row row--between">
   <h1>Exams</h1>
   <div class="row" style="gap: var(--space-xs);">
-    <button type="button" class="btn btn--secondary" onclick="document.getElementById('import-exam-dialog').style.display='grid'">Import Exam (.zip / .json)</button>
+    <button type="button" class="btn btn--secondary" onclick="openImportExamDialog()">Import Exam (.zip / .json)</button>
     <a class="btn btn--primary" href="/admin/exams/create">Create new exam</a>
   </div>
 </div>
@@ -71,7 +71,7 @@
         <h2 class="state-block__title">No exams yet</h2>
         <p class="state-block__desc">Create your first exam, then enter questions part by part.</p>
         <div class="row" style="gap: var(--space-xs); justify-content: center;">
-          <button type="button" class="btn btn--secondary" onclick="document.getElementById('import-exam-dialog').style.display='grid'">Import Exam (.zip / .json)</button>
+          <button type="button" class="btn btn--secondary" onclick="openImportExamDialog()">Import Exam (.zip / .json)</button>
           <a class="btn btn--primary" href="/admin/exams/create">Create new exam</a>
         </div>
       </div>
@@ -218,7 +218,7 @@ else
   <div class="modal" style="max-width: 580px;">
     <div class="modal__header">
       <h2 id="import-dialog-title">Import Exam Manifest or Package</h2>
-      <button type="button" class="modal__close" onclick="document.getElementById('import-exam-dialog').style.display='none'">Close</button>
+      <button type="button" class="modal__close" onclick="closeImportExamDialog()">Close</button>
     </div>
     <div class="modal__body">
       <p class="text-muted" style="margin-top: 0;">
@@ -245,7 +245,7 @@ else
         </div>
 
         <div class="row row--between" style="margin-top: var(--space-md); padding-top: var(--space-sm); border-top: 1px solid var(--color-rule, #ccd2d6);">
-          <button type="button" class="btn btn--ghost" onclick="document.getElementById('import-exam-dialog').style.display='none'">Cancel</button>
+          <button type="button" class="btn btn--ghost" onclick="closeImportExamDialog()">Cancel</button>
           <button type="submit" class="btn btn--primary">Validate and import</button>
         </div>
       </form>
@@ -257,17 +257,40 @@ else
 <script>
   (function() {
     var dialog = document.getElementById('import-exam-dialog');
-    if (dialog) {
-      dialog.addEventListener('click', function(e) {
-        if (e.target === dialog) {
-          dialog.style.display = 'none';
-        }
-      });
-      document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' && dialog.style.display !== 'none') {
-          dialog.style.display = 'none';
-        }
-      });
+    if (!dialog) return;
+
+    window.openImportExamDialog = function() {
+      dialog.style.display = 'grid';
+      var certSelect = document.getElementById('import-certId');
+      if (certSelect) certSelect.focus();
+    };
+
+    window.closeImportExamDialog = function() {
+      dialog.style.display = 'none';
+      if (window.location.search.toLowerCase().indexOf('import=') !== -1) {
+        var cleanSearch = window.location.search.replace(/([?&])import=[^&]*(&?)/i, function(match, p1, p2) {
+          return p2 ? p1 : '';
+        }).replace(/\?$/, '');
+        var newUrl = window.location.pathname + cleanSearch;
+        window.history.replaceState(null, '', newUrl);
+      }
+    };
+
+    dialog.addEventListener('click', function(e) {
+      if (e.target === dialog) {
+        window.closeImportExamDialog();
+      }
+    });
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && dialog.style.display !== 'none') {
+        window.closeImportExamDialog();
+      }
+    });
+
+    if (dialog.style.display === 'grid') {
+      var certSelect = document.getElementById('import-certId');
+      if (certSelect) certSelect.focus();
     }
   })();
 </script>

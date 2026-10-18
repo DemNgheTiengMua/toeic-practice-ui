@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net.Http;
 using System.Security.Claims;
 using System.Text;
 using System.Threading;
@@ -57,7 +58,7 @@ public sealed class AdminImportsControllerTests
         };
     }
 
-    private static AdminImportsController CreateImportsController(TestImportsClient importsApi)
+    private static AdminImportsController CreateImportsController()
     {
         var services = new ServiceCollection();
         services.AddRouting();
@@ -80,7 +81,7 @@ public sealed class AdminImportsControllerTests
         var httpContext = new DefaultHttpContext { User = principal, RequestServices = serviceProvider };
         var currentUser = new CurrentUser(new HttpContextAccessor { HttpContext = httpContext });
 
-        return new AdminImportsController(importsApi, currentUser, NullLogger<AdminImportsController>.Instance)
+        return new AdminImportsController(currentUser, NullLogger<AdminImportsController>.Instance)
         {
             ControllerContext = new ControllerContext
             {
@@ -104,14 +105,6 @@ public sealed class AdminImportsControllerTests
     }
 
     [Fact]
-    public void ImportsView_MustBeRetired()
-    {
-        var repoRoot = TestPathHelper.FindRepoRoot();
-        var importsViewPath = Path.Combine(repoRoot, "src", "WebMVC", "Views", "Admin", "Imports.cshtml");
-        Assert.False(File.Exists(importsViewPath), "Imports.cshtml should be retired in favor of integrated exam package import on /admin/exams");
-    }
-
-    [Fact]
     public void ExamsView_MustContain_ImportExamButtonAndModal()
     {
         var repoRoot = TestPathHelper.FindRepoRoot();
@@ -131,8 +124,7 @@ public sealed class AdminImportsControllerTests
     [Fact]
     public void AdminImportsController_Index_RedirectsToAdminExams()
     {
-        var importsApi = new TestImportsClient();
-        var controller = CreateImportsController(importsApi);
+        var controller = CreateImportsController();
 
         var result = controller.Index(certId: 2);
 
@@ -172,7 +164,7 @@ public sealed class AdminImportsControllerTests
     }
 
     [Fact]
-    public async Task AdminExamsController_Import_WhenValidationErrors_RedirectsToExamsWithError()
+    public async Task AdminExamsController_Import_WhenValidationErrors_RetrievesBatchLogsAndFormatsErrorMessage()
     {
         var examsApi = new AdminExamsControllerTests.TestApiClient();
         var importsApi = new TestImportsClient
@@ -183,8 +175,14 @@ public sealed class AdminImportsControllerTests
                 ExamId: null,
                 ExamName: null,
                 QuestionCount: 0,
-                ErrorCount: 3,
-                WarningCount: 1)
+                ErrorCount: 2,
+                WarningCount: 1),
+            BatchDetail = new AdminImportBatchDetailDto(
+                new AdminImportBatchListItemDto(43, 2, "TOEIC", "broken.json", ImportBatchStatusDto.Failed, "admin@toeic.local", DateTimeOffset.UtcNow, null, 2, 1),
+                [
+                    new AdminImportLogDto(1, 1, ImportLogLevelDto.Error, "Missing required options in Part 1", DateTimeOffset.UtcNow),
+                    new AdminImportLogDto(2, 2, ImportLogLevelDto.Error, "No correct answer marked", DateTimeOffset.UtcNow)
+                ])
         };
         var controller = CreateExamsController(examsApi, importsApi);
 
@@ -194,7 +192,49 @@ public sealed class AdminImportsControllerTests
         var redirect = Assert.IsType<RedirectToActionResult>(result);
         Assert.Equal("Index", redirect.ActionName);
         Assert.Equal(2, redirect.RouteValues?["certId"]);
-        Assert.Contains("Nothing was imported: 3 problems found in manifest.", controller.TempData["Error"]?.ToString());
+        var error = controller.TempData["Error"]?.ToString();
+        Assert.NotNull(error);
+        Assert.Contains("Nothing was imported: 2 problems found in manifest.", error);
+        Assert.Contains("Q1: Missing required options in Part 1", error);
+        Assert.Contains("Q2: No correct answer marked", error);
+    }
+
+    [Fact]
+    public async Task AdminExamsController_Import_WhenApiException_RedirectsWithError()
+    {
+        var examsApi = new AdminExamsControllerTests.TestApiClient();
+        var importsApi = new TestImportsClient
+        {
+            UploadException = new ApiException("Invalid manifest syntax", "Syntax Error", 400, "JSON parser failed at line 12")
+        };
+        var controller = CreateExamsController(examsApi, importsApi);
+
+        var file = CreateMockFormFile("syntax_error.json", "{");
+        var result = await controller.Import(certId: 1, file, CancellationToken.None);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal("Index", redirect.ActionName);
+        Assert.Equal(1, redirect.RouteValues?["certId"]);
+        Assert.Equal("JSON parser failed at line 12", controller.TempData["Error"]?.ToString());
+    }
+
+    [Fact]
+    public async Task AdminExamsController_Import_WhenHttpRequestException_RedirectsWithError()
+    {
+        var examsApi = new AdminExamsControllerTests.TestApiClient();
+        var importsApi = new TestImportsClient
+        {
+            UploadException = new HttpRequestException("Connection refused")
+        };
+        var controller = CreateExamsController(examsApi, importsApi);
+
+        var file = CreateMockFormFile("test.json", "{}");
+        var result = await controller.Import(certId: 1, file, CancellationToken.None);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal("Index", redirect.ActionName);
+        Assert.Equal(1, redirect.RouteValues?["certId"]);
+        Assert.Equal("Unable to reach import service. Please try again.", controller.TempData["Error"]?.ToString());
     }
 
     [Fact]
@@ -226,32 +266,6 @@ public sealed class AdminImportsControllerTests
         Assert.Equal("Choose a .json manifest or a .zip package to import.", controller.TempData["Error"]?.ToString());
     }
 
-    [Fact]
-    public async Task AdminImportsController_Upload_RedirectsToAdminExamsWithSuccess()
-    {
-        var importsApi = new TestImportsClient
-        {
-            Result = new AdminImportResultDto(
-                BatchId: 44,
-                Status: ImportBatchStatusDto.Done,
-                ExamId: 11,
-                ExamName: "IELTS Academic Test 2",
-                QuestionCount: 40,
-                ErrorCount: 0,
-                WarningCount: 0)
-        };
-        var controller = CreateImportsController(importsApi);
-
-        var file = CreateMockFormFile("ielts.zip", "PK...");
-        var result = await controller.Upload(certId: 2, file, CancellationToken.None);
-
-        var redirect = Assert.IsType<RedirectToActionResult>(result);
-        Assert.Equal("Index", redirect.ActionName);
-        Assert.Equal("AdminExams", redirect.ControllerName);
-        Assert.Equal(2, redirect.RouteValues?["certId"]);
-        Assert.Contains("Imported 'IELTS Academic Test 2' as a draft exam with 40 questions.", controller.TempData["Success"]?.ToString());
-    }
-
     private static IFormFile CreateMockFormFile(string fileName, string content)
     {
         var bytes = Encoding.UTF8.GetBytes(content);
@@ -262,6 +276,8 @@ public sealed class AdminImportsControllerTests
     private sealed class TestImportsClient : IAdminImportsClient
     {
         public AdminImportResultDto Result { get; set; } = new(1, ImportBatchStatusDto.Done, 1, "Test", 10, 0, 0);
+        public AdminImportBatchDetailDto? BatchDetail { get; set; }
+        public Exception? UploadException { get; set; }
         public int? UploadedCertId { get; private set; }
         public string? UploadedFileName { get; private set; }
 
@@ -269,10 +285,15 @@ public sealed class AdminImportsControllerTests
             => Task.FromResult(new AdminImportBatchesDto([], []));
 
         public Task<AdminImportBatchDetailDto> GetAdminImportBatchAsync(int batchId, CancellationToken cancellationToken = default)
-            => throw new NotImplementedException();
+        {
+            if (BatchDetail != null) return Task.FromResult(BatchDetail);
+            var batch = new AdminImportBatchListItemDto(batchId, 1, "CERT", "test.json", ImportBatchStatusDto.Failed, "admin@toeic.local", DateTimeOffset.UtcNow, null, 1, 0);
+            return Task.FromResult(new AdminImportBatchDetailDto(batch, []));
+        }
 
         public Task<AdminImportResultDto> UploadAdminImportAsync(int certId, Stream content, string fileName, CancellationToken cancellationToken = default)
         {
+            if (UploadException != null) throw UploadException;
             UploadedCertId = certId;
             UploadedFileName = fileName;
             return Task.FromResult(Result);
