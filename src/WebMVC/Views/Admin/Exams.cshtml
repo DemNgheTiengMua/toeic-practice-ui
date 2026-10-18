@@ -14,7 +14,10 @@
 
 <div class="row row--between">
   <h1>Exams</h1>
-  <a class="btn btn--primary" href="/admin/exams/create">Create new exam</a>
+  <div class="row" style="gap: var(--space-xs);">
+    <button type="button" class="btn btn--secondary" onclick="document.getElementById('import-exam-dialog').style.display='grid'">Import Exam (.zip / .json)</button>
+    <a class="btn btn--primary" href="/admin/exams/create">Create new exam</a>
+  </div>
 </div>
 
 <form method="get" action="/admin/exams" class="toolbar">
@@ -67,7 +70,10 @@
         <div class="state-block__icon" aria-hidden="true">EMPTY</div>
         <h2 class="state-block__title">No exams yet</h2>
         <p class="state-block__desc">Create your first exam, then enter questions part by part.</p>
-        <a class="btn btn--primary" href="/admin/exams/create">Create new exam</a>
+        <div class="row" style="gap: var(--space-xs); justify-content: center;">
+          <button type="button" class="btn btn--secondary" onclick="document.getElementById('import-exam-dialog').style.display='grid'">Import Exam (.zip / .json)</button>
+          <a class="btn btn--primary" href="/admin/exams/create">Create new exam</a>
+        </div>
       </div>
     </div>
   </div>
@@ -205,4 +211,64 @@ else
       </div>
     }
   </div>
+}
+
+<!-- Import Exam Modal Dialog -->
+<div id="import-exam-dialog" class="modal-overlay" style="display: @(string.Equals(Context.Request.Query["import"], "true", StringComparison.OrdinalIgnoreCase) ? "grid" : "none");" role="dialog" aria-modal="true" aria-labelledby="import-dialog-title">
+  <div class="modal" style="max-width: 580px;">
+    <div class="modal__header">
+      <h2 id="import-dialog-title">Import Exam Manifest or Package</h2>
+      <button type="button" class="modal__close" onclick="document.getElementById('import-exam-dialog').style.display='none'">Close</button>
+    </div>
+    <div class="modal__body">
+      <p class="text-muted" style="margin-top: 0;">
+        Upload a <code>.json</code> manifest for text-only exams or a <code>.zip</code> package with <code>manifest.json</code> and a <code>media/</code> folder for exams with listening audio or images. The file is validated first; upon success, a new draft exam is created.
+      </p>
+      <form method="post" action="/admin/exams/import" enctype="multipart/form-data" class="stack">
+        @Html.AntiForgeryToken()
+        <div class="field">
+          <label class="field__label" for="import-certId">Target Certificate</label>
+          <select class="field__input" id="import-certId" name="certId" required>
+            <option value="">Select Certificate</option>
+            @foreach (var cert in Model.Summary.Certificates)
+            {
+              <option value="@cert.CertId" selected="@(cert.CertId == Model.CertId)">@cert.Code — @cert.Name</option>
+            }
+          </select>
+          <div class="field__hint">The imported exam and its questions will be strictly associated with this certificate (Certificate Isolation).</div>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="import-file">Manifest (.json) or Package (.zip)</label>
+          <input class="field__input" id="import-file" name="file" type="file" accept=".json,.zip,application/json,application/zip" required />
+          <div class="field__hint">.json or .zip, up to 100 MB. Audio: .mp3, .wav. Images: .jpg, .png.</div>
+        </div>
+
+        <div class="row row--between" style="margin-top: var(--space-md); padding-top: var(--space-sm); border-top: 1px solid var(--color-rule, #ccd2d6);">
+          <button type="button" class="btn btn--ghost" onclick="document.getElementById('import-exam-dialog').style.display='none'">Cancel</button>
+          <button type="submit" class="btn btn--primary">Validate and import</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+<script>
+  (function() {
+    var dialog = document.getElementById('import-exam-dialog');
+    if (dialog) {
+      dialog.addEventListener('click', function(e) {
+        if (e.target === dialog) {
+          dialog.style.display = 'none';
+        }
+      });
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && dialog.style.display !== 'none') {
+          dialog.style.display = 'none';
+        }
+      });
+    }
+  })();
+</script>
 }

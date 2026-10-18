@@ -16,8 +16,10 @@ namespace WebMVC.Controllers;
 public sealed class AdminExamsController(
     IAdminExamsClient api,
     CurrentUser currentUser,
-    ILogger<AdminExamsController> logger) : AdminControllerBase(currentUser, logger)
+    ILogger<AdminExamsController> logger,
+    IAdminImportsClient? importsClient = null) : AdminControllerBase(currentUser, logger)
 {
+    private const long MaxUploadBytes = 101L * 1024 * 1024;
 
     [HttpGet("")]
     public async Task<IActionResult> Index(
@@ -49,6 +51,56 @@ public sealed class AdminExamsController(
             TempData["Error"] = "Could not load the exam list. Please try again.";
             var emptySummary = new AdminExamListSummaryDto([], 0, 1, 20, []);
             return View("~/Views/Admin/Exams.cshtml", new AdminExamListViewModel(emptySummary, q, status, certId, page, purpose, ErrorMessage: TempData["Error"] as string));
+        }
+    }
+
+    [HttpPost("import")]
+    [ValidateAntiForgeryToken]
+    [RequestSizeLimit(MaxUploadBytes)]
+    [RequestFormLimits(MultipartBodyLengthLimit = MaxUploadBytes)]
+    public async Task<IActionResult> Import(
+        [FromForm] int? certId,
+        IFormFile? file,
+        CancellationToken cancellationToken = default)
+    {
+        if (importsClient is null)
+        {
+            throw new InvalidOperationException("IAdminImportsClient is not configured.");
+        }
+
+        if (certId is null)
+        {
+            TempData["Error"] = "Choose the certificate the questions belong to.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        if (file is null || file.Length == 0)
+        {
+            TempData["Error"] = "Choose a .json manifest or a .zip package to import.";
+            return RedirectToAction(nameof(Index), new { certId });
+        }
+
+        try
+        {
+            await using var stream = file.OpenReadStream();
+            var result = await importsClient.UploadAdminImportAsync(certId.Value, stream, file.FileName, cancellationToken);
+
+            if (result.Status == ImportBatchStatusDto.Done)
+            {
+                TempData["Success"] = $"Imported '{result.ExamName}' as a draft exam with {result.QuestionCount} questions.";
+            }
+            else
+            {
+                TempData["Error"] = $"Nothing was imported: {result.ErrorCount} {(result.ErrorCount == 1 ? "problem" : "problems")} found in manifest.";
+            }
+
+            return RedirectToAction(nameof(Index), new { certId });
+        }
+        catch (ApiException ex)
+        {
+            logger.LogWarning(ex, "Import upload refused");
+            TempData["Error"] = ex.Detail ?? ex.Title ?? "The import was refused.";
+            return RedirectToAction(nameof(Index), new { certId });
         }
     }
 

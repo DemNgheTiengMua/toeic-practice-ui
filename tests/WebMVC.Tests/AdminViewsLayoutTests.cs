@@ -50,6 +50,15 @@ public sealed class AdminViewsLayoutTests
     }
 
     [Fact]
+    public void Imports_View_MustBeRetired()
+    {
+        var repoRoot = TestPathHelper.FindRepoRoot();
+        var importsPath = Path.Combine(repoRoot, "src", "WebMVC", "Views", "Admin", "Imports.cshtml");
+
+        Assert.False(File.Exists(importsPath), "Imports.cshtml should be retired in favor of integrated exam import on /admin/exams");
+    }
+
+    [Fact]
     public void AdminViews_ExamsAndExamEditor_MustNotLinkToLegacyQuestionEditor()
     {
         var repoRoot = TestPathHelper.FindRepoRoot();

@@ -764,13 +764,13 @@ public sealed class AdminExamsControllerTests
         Assert.Equal("Please select an audio file to upload.", controller.TempData["Error"]);
     }
 
-    private sealed class EmptyTempDataProvider : ITempDataProvider
+    internal sealed class EmptyTempDataProvider : ITempDataProvider
     {
         public IDictionary<string, object> LoadTempData(HttpContext context) => new Dictionary<string, object>();
         public void SaveTempData(HttpContext context, IDictionary<string, object> values) { }
     }
 
-    private sealed class TestApiClient : IAdminExamsClient
+    internal sealed class TestApiClient : IAdminExamsClient
     {
         public AdminExamListSummaryDto? Summary { get; set; }
         public AdminExamDetailDto? DetailToReturn { get; set; }
