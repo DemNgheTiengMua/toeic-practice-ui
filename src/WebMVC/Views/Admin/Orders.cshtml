@@ -2,6 +2,7 @@
 @model WebMVC.Models.AdminOrdersViewModel
 @inject WebMVC.DateTimeFormatter Formatter
 @{
+    Layout = "_AdminLayout";
     ViewData["Title"] = "Orders";
     ViewData["Description"] = "List and reconcile platform orders and inspection of payment event audit trails.";
     var summary = Model.Summary;

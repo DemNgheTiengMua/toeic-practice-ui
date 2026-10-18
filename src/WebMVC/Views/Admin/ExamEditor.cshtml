@@ -227,7 +227,7 @@
   <div class="card">
     <div class="card__header row row--between">
       <strong>Question entry progress</strong>
-      <a class="btn btn--sm btn--primary" href="/admin/exams/@Model.ExamId/questions">Open Question Editor</a>
+      <a class="btn btn--sm btn--primary" href="/admin/exams/@Model.ExamId/studio">Open Exam Studio</a>
     </div>
     <div class="card__body stack">
       <table class="table table--striped">
@@ -252,8 +252,8 @@
               <td>@(s.ExpectedQuestionCount.HasValue ? s.ExpectedQuestionCount.Value.ToString() : "—")</td>
               <td><span class="@badgeClass">@s.StatusText</span></td>
               <td>
-                <a class="btn btn--sm" href="/admin/exams/@Model.ExamId/questions?sectionId=@s.SectionId">
-                  @(s.IsComplete ? "Edit" : "Enter questions")
+                <a class="btn btn--sm" href="/admin/exams/@Model.ExamId/studio?sectionId=@s.SectionId">
+                  @(s.IsComplete ? "Edit in Studio" : "Enter questions")
                 </a>
               </td>
             </tr>

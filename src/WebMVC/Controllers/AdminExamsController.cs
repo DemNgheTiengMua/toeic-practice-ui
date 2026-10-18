@@ -253,30 +253,19 @@ public sealed class AdminExamsController(
     }
 
     [HttpGet("{id:int}/questions")]
-    public async Task<IActionResult> Questions(int id, [FromQuery] int? sectionId, [FromQuery] int? questionId, CancellationToken cancellationToken = default)
+    public IActionResult Questions(int id, [FromQuery] int? sectionId = null, [FromQuery] int? questionId = null)
     {
-        try
+        var routeValues = new RouteValueDictionary { { "id", id } };
+        if (sectionId.HasValue)
         {
-            var questionsData = await api.GetAdminExamQuestionsAsync(id, cancellationToken);
-            var vm = new QuestionEditorViewModel(
-                questionsData,
-                SelectedSectionId: sectionId,
-                SelectedQuestionId: questionId,
-                ErrorMessage: TempData["Error"] as string,
-                SuccessMessage: TempData["Success"] as string);
+            routeValues["sectionId"] = sectionId.Value;
+        }
+        if (questionId.HasValue)
+        {
+            routeValues["questionId"] = questionId.Value;
+        }
 
-            return View("~/Views/Admin/QuestionEditor.cshtml", vm);
-        }
-        catch (ApiException ex) when (ex.Status == 404 || ex.Code == ApiError.Codes.ExamNotFound)
-        {
-            return NotFound();
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Could not load questions for exam {ExamId}", id);
-            TempData["Error"] = "Could not load question editor.";
-            return RedirectToAction(nameof(Index));
-        }
+        return RedirectToAction(nameof(Studio), routeValues);
     }
 
     [HttpPost("{id:int}/groups")]
@@ -320,13 +309,13 @@ public sealed class AdminExamsController(
                 TempData["Success"] = "Question group created successfully.";
             }
 
-            return RedirectToAction(nameof(Questions), new { id, sectionId = model.SectionId });
+            return RedirectToAction(nameof(Studio), new { id, sectionId = model.SectionId });
         }
         catch (ApiException ex)
         {
             logger.LogWarning(ex, "Failed to save group for exam {ExamId}", id);
             TempData["Error"] = ex.Detail ?? ex.Message;
-            return RedirectToAction(nameof(Questions), new { id, sectionId = model.SectionId });
+            return RedirectToAction(nameof(Studio), new { id, sectionId = model.SectionId });
         }
     }
 
@@ -338,13 +327,13 @@ public sealed class AdminExamsController(
         {
             await api.DeleteAdminQuestionGroupAsync(id, groupId, cancellationToken);
             TempData["Success"] = "Question group deleted.";
-            return RedirectToAction(nameof(Questions), new { id, sectionId });
+            return RedirectToAction(nameof(Studio), new { id, sectionId });
         }
         catch (ApiException ex)
         {
             logger.LogWarning(ex, "Failed to delete group {GroupId} for exam {ExamId}", groupId, id);
             TempData["Error"] = ex.Detail ?? ex.Message;
-            return RedirectToAction(nameof(Questions), new { id, sectionId });
+            return RedirectToAction(nameof(Studio), new { id, sectionId });
         }
     }
 
@@ -392,7 +381,7 @@ public sealed class AdminExamsController(
 
                 await api.UpdateAdminQuestionAsync(model.QuestionId.Value, updateReq, cancellationToken);
                 TempData["Success"] = $"Question {model.DisplayOrder} saved successfully.";
-                return RedirectToAction(nameof(Questions), new { id, sectionId = model.SectionId, questionId = model.QuestionId });
+                return RedirectToAction(nameof(Studio), new { id, sectionId = model.SectionId, questionId = model.QuestionId });
             }
             else
             {
@@ -413,14 +402,14 @@ public sealed class AdminExamsController(
 
                 var created = await api.CreateAdminQuestionAsync(id, createReq, cancellationToken);
                 TempData["Success"] = $"Question {created.DisplayOrder} created successfully.";
-                return RedirectToAction(nameof(Questions), new { id, sectionId = model.SectionId, questionId = created.QuestionId });
+                return RedirectToAction(nameof(Studio), new { id, sectionId = model.SectionId, questionId = created.QuestionId });
             }
         }
         catch (ApiException ex)
         {
             logger.LogWarning(ex, "Failed to save question for exam {ExamId}", id);
             TempData["Error"] = ex.Detail ?? ex.Message;
-            return RedirectToAction(nameof(Questions), new { id, sectionId = model.SectionId, questionId = model.QuestionId });
+            return RedirectToAction(nameof(Studio), new { id, sectionId = model.SectionId, questionId = model.QuestionId });
         }
     }
 
@@ -432,13 +421,13 @@ public sealed class AdminExamsController(
         {
             await api.DeleteAdminQuestionAsync(questionId, cancellationToken);
             TempData["Success"] = "Question deleted successfully.";
-            return RedirectToAction(nameof(Questions), new { id, sectionId });
+            return RedirectToAction(nameof(Studio), new { id, sectionId });
         }
         catch (ApiException ex)
         {
             logger.LogWarning(ex, "Failed to delete question {QuestionId} for exam {ExamId}", questionId, id);
             TempData["Error"] = ex.Detail ?? ex.Message;
-            return RedirectToAction(nameof(Questions), new { id, sectionId });
+            return RedirectToAction(nameof(Studio), new { id, sectionId });
         }
     }
 

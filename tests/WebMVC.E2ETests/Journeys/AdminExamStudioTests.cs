@@ -93,4 +93,41 @@ public class AdminExamStudioTests : PlaywrightTestBase
         var jsonHref = await _studioPage.ExportJsonButton.GetAttributeAsync("href");
         Assert.That(jsonHref, Does.Contain("/export?format=json"));
     }
+
+    [Test]
+    public async Task Should_Redirect_Legacy_Questions_Route_Directly_To_Exam_Studio()
+    {
+        await _loginPage.GotoAsync();
+        await _loginPage.LoginAsync("admin@demo.local", "Demo1234!");
+        await Expect(Page).ToHaveURLAsync(new Regex(@"(dashboard|admin|certificates)", RegexOptions.IgnoreCase));
+
+        // Navigate directly to legacy /admin/exams/1/questions with query params
+        await Page.GotoAsync($"{BaseUrl}/admin/exams/1/questions?sectionId=1");
+        await Expect(Page).ToHaveURLAsync(new Regex(@"/admin/exams/1/studio\?sectionId=1", RegexOptions.IgnoreCase));
+
+        // Verify the 3-panel layout renders cleanly and no 500 occurred
+        await Expect(_studioPage.LeftRail).ToBeVisibleAsync();
+        await Expect(_studioPage.CenterWorkstation).ToBeVisibleAsync();
+        await Expect(_studioPage.RightAudit).ToBeVisibleAsync();
+    }
+
+    [Test]
+    public async Task Should_Render_Admin_Sidebar_And_Layout_On_Users_And_Orders_Pages()
+    {
+        await _loginPage.GotoAsync();
+        await _loginPage.LoginAsync("admin@demo.local", "Demo1234!");
+        await Expect(Page).ToHaveURLAsync(new Regex(@"(dashboard|admin|certificates)", RegexOptions.IgnoreCase));
+
+        // Navigate to /admin/users
+        await Page.GotoAsync($"{BaseUrl}/admin/users");
+        await Expect(Page.Locator(".app-sidebar")).ToBeVisibleAsync();
+        await Expect(Page.Locator("nav[aria-label='Admin navigation']")).ToBeVisibleAsync();
+        await Expect(Page.Locator(".nav-list__item[href='/admin/users']")).ToHaveClassAsync(new Regex(@"is-active"));
+
+        // Navigate to /admin/orders
+        await Page.GotoAsync($"{BaseUrl}/admin/orders");
+        await Expect(Page.Locator(".app-sidebar")).ToBeVisibleAsync();
+        await Expect(Page.Locator("nav[aria-label='Admin navigation']")).ToBeVisibleAsync();
+        await Expect(Page.Locator(".nav-list__item[href='/admin/orders']")).ToHaveClassAsync(new Regex(@"is-active"));
+    }
 }

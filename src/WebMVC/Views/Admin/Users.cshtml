@@ -1,6 +1,7 @@
 @model WebMVC.Models.AdminUsersViewModel
 @inject WebMVC.DateTimeFormatter Formatter
 @{
+    Layout = "_AdminLayout";
     ViewData["Title"] = "Students";
     ViewData["Description"] = "Manage students: lock/unlock, resend activation email, and adjust credit ledger.";
     var summary = Model.Summary;

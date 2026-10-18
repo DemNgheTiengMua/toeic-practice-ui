@@ -1651,13 +1651,13 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Admin/Orders.cshtml": {
-    "mtime": 1792023972.864967,
-    "ast_hash": "ee22bd92951ddc69f6c427a49f031346",
+    "mtime": 1792306462.3911707,
+    "ast_hash": "bcea47fe9cf618e92820bd767cdf572b",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Admin/Users.cshtml": {
-    "mtime": 1791988726.39949,
-    "ast_hash": "ed8d1b4aebe27b5bf69dc969c3897a74",
+    "mtime": 1792306452.2625642,
+    "ast_hash": "ea28df8716115a81a575b7d94d7797ba",
     "semantic_hash": ""
   },
   "tests/Services.Tests/AdminOrderServiceTests.cs": {
@@ -2296,8 +2296,8 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Controllers/AdminExamsController.cs": {
-    "mtime": 1792242245.9511552,
-    "ast_hash": "5dfb43a5dc75f46d8dd824ac037495d5",
+    "mtime": 1792306606.4692245,
+    "ast_hash": "6eba839b1b42e8a482a9d0509f5f8053",
     "semantic_hash": ""
   },
   "src/WebMVC/Models/AdminExamViewModels.cs": {
@@ -2306,18 +2306,13 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Admin/ExamEditor.cshtml": {
-    "mtime": 1792241410.4742498,
-    "ast_hash": "847ed89d7b001c3d6fd1a8568e873c0f",
+    "mtime": 1792306666.3942103,
+    "ast_hash": "660225fbd4b40f96225f616e06bcc5c5",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Admin/Exams.cshtml": {
-    "mtime": 1792241405.385797,
-    "ast_hash": "e3bf1e0aca361c7394850ab481adee19",
-    "semantic_hash": ""
-  },
-  "src/WebMVC/Views/Admin/QuestionEditor.cshtml": {
-    "mtime": 1792235407.424386,
-    "ast_hash": "3852ebb3dcceb875758884c21ffadbee",
+    "mtime": 1792306655.1731513,
+    "ast_hash": "0f945bf0417adb458e0620bdbfb733ac",
     "semantic_hash": ""
   },
   "tests/Services.Tests/AdminExamServiceTests.cs": {
@@ -2326,8 +2321,8 @@
     "semantic_hash": ""
   },
   "tests/WebMVC.Tests/AdminExamsControllerTests.cs": {
-    "mtime": 1792237215.6477654,
-    "ast_hash": "d4cbecc9b05502d69eabac0baa942c7a",
+    "mtime": 1792306620.4019318,
+    "ast_hash": "aa3101ac75236c98409cb9673d770370",
     "semantic_hash": ""
   },
   "src/Services/AdminDashboardService.cs": {
@@ -2931,8 +2926,8 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Admin/ExamStudio.cshtml": {
-    "mtime": 1792241387.178737,
-    "ast_hash": "76358b51324d455b50f57b53bae141fc",
+    "mtime": 1792306684.0452118,
+    "ast_hash": "9bd37028010b93095616e65971948074",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Admin/_QuickIngestModal.cshtml": {
@@ -2946,8 +2941,8 @@
     "semantic_hash": ""
   },
   "tests/WebMVC.E2ETests/Journeys/AdminExamStudioTests.cs": {
-    "mtime": 1792299507.5428376,
-    "ast_hash": "531c615627ded8854ff1ddbcf0051946",
+    "mtime": 1792307011.4024062,
+    "ast_hash": "d3b15e837891bf4ac7af2bd32d54f2ea",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Admin/Lessons/Preview.cshtml": {
@@ -3018,6 +3013,81 @@
   "docs/superpowers/specs/2026-10-18-site-wide-testing-and-triage-design.md": {
     "mtime": 1792296138.7206023,
     "ast_hash": "0d25e2f0660da9e26680ede249a0b363",
+    "semantic_hash": ""
+  },
+  "src/WebMVC/Views/Admin/_ViewStart.cshtml": {
+    "mtime": 1792306444.9361362,
+    "ast_hash": "846d9f37f8c1167512fab628966d3e09",
+    "semantic_hash": ""
+  },
+  "tests/WebMVC.Tests/AdminViewsLayoutTests.cs": {
+    "mtime": 1792306723.3196976,
+    "ast_hash": "957cac57b35191a25d9a16b9af0c553b",
+    "semantic_hash": ""
+  },
+  "AUDIT_FINDINGS.md": {
+    "mtime": 1792305425.895896,
+    "ast_hash": "24360dcf2e52d32f2974cb705d20513e",
+    "semantic_hash": ""
+  },
+  "image-1.png": {
+    "mtime": 1792303715.847589,
+    "ast_hash": "e63e9d4daba025260044514cb1fc8e01",
+    "semantic_hash": ""
+  },
+  "image-10.png": {
+    "mtime": 1792304570.5724175,
+    "ast_hash": "1d6caabc183c0381ee617e131b4d8137",
+    "semantic_hash": ""
+  },
+  "image-11.png": {
+    "mtime": 1792304827.8081176,
+    "ast_hash": "5f96d11e1dfeebea78329dd954c7bc1d",
+    "semantic_hash": ""
+  },
+  "image-2.png": {
+    "mtime": 1792303850.897447,
+    "ast_hash": "ef56e592556961e0fea617ea7ecea471",
+    "semantic_hash": ""
+  },
+  "image-3.png": {
+    "mtime": 1792303879.7722466,
+    "ast_hash": "8279b707bf0eb875a6b6e867d50609d7",
+    "semantic_hash": ""
+  },
+  "image-4.png": {
+    "mtime": 1792304055.7138176,
+    "ast_hash": "fc894356a6855b4871586288d2fd8725",
+    "semantic_hash": ""
+  },
+  "image-5.png": {
+    "mtime": 1792304074.6263487,
+    "ast_hash": "372a87dd7d05de84e5de103babe29c0e",
+    "semantic_hash": ""
+  },
+  "image-6.png": {
+    "mtime": 1792304196.6728618,
+    "ast_hash": "66ce1c8524f85ca3603b0df897ff73ea",
+    "semantic_hash": ""
+  },
+  "image-7.png": {
+    "mtime": 1792304315.3498137,
+    "ast_hash": "5774cdd2f43a340af6ec4017ec2ae7be",
+    "semantic_hash": ""
+  },
+  "image-8.png": {
+    "mtime": 1792304512.029752,
+    "ast_hash": "b48837e10abbe0ee9440fac6f2734d1f",
+    "semantic_hash": ""
+  },
+  "image-9.png": {
+    "mtime": 1792304527.7523904,
+    "ast_hash": "ba0d72d5f25b52665188e22b418d63a8",
+    "semantic_hash": ""
+  },
+  "image.png": {
+    "mtime": 1792303160.3161726,
+    "ast_hash": "7750140a231f1adc3276efbb2df80e5a",
     "semantic_hash": ""
   }
 }

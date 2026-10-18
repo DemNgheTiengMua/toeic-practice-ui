@@ -1701,5 +1701,16 @@
       window.location.reload();
     });
   };
+
+  // Auto-select section if sectionId is passed in URL query
+  try {
+    var urlParams = new URLSearchParams(window.location.search);
+    var paramSecId = parseInt(urlParams.get('sectionId'), 10);
+    if (paramSecId && !isNaN(paramSecId)) {
+      window.selectSection(paramSecId);
+    }
+  } catch (e) {
+    // Graceful fallback
+  }
 })();
 </script>

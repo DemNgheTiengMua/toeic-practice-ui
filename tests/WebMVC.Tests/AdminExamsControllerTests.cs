@@ -287,20 +287,33 @@ public sealed class AdminExamsControllerTests
     }
 
     [Fact]
-    public async Task Questions_Get_ReturnsViewWithQuestionsData()
+    public void Questions_Get_WithQueryParams_RedirectsToStudioPreservingParameters()
     {
-        var api = new TestApiClient { QuestionsToReturn = SampleQuestions(1) };
+        var api = new TestApiClient();
         var controller = CreateController(api);
 
-        var result = await controller.Questions(1, sectionId: 1, questionId: 101, CancellationToken.None);
+        var result = controller.Questions(1, sectionId: 10, questionId: 205);
 
-        var viewResult = Assert.IsType<ViewResult>(result);
-        Assert.Equal("~/Views/Admin/QuestionEditor.cshtml", viewResult.ViewName);
-        var vm = Assert.IsType<QuestionEditorViewModel>(viewResult.Model);
-        Assert.Equal(1, vm.QuestionsData.ExamId);
-        Assert.Equal(1, vm.SelectedSectionId);
-        Assert.Equal(101, vm.SelectedQuestionId);
-        Assert.Single(vm.QuestionsData.Groups);
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(AdminExamsController.Studio), redirect.ActionName);
+        Assert.Equal(1, redirect.RouteValues?["id"]);
+        Assert.Equal(10, redirect.RouteValues?["sectionId"]);
+        Assert.Equal(205, redirect.RouteValues?["questionId"]);
+    }
+
+    [Fact]
+    public void Questions_Get_WithoutQueryParams_RedirectsToStudioWithExamId()
+    {
+        var api = new TestApiClient();
+        var controller = CreateController(api);
+
+        var result = controller.Questions(42, sectionId: null, questionId: null);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(AdminExamsController.Studio), redirect.ActionName);
+        Assert.Equal(42, redirect.RouteValues?["id"]);
+        Assert.False(redirect.RouteValues?.ContainsKey("sectionId") == true && redirect.RouteValues["sectionId"] != null);
+        Assert.False(redirect.RouteValues?.ContainsKey("questionId") == true && redirect.RouteValues["questionId"] != null);
     }
 
     [Fact]
@@ -328,7 +341,7 @@ public sealed class AdminExamsControllerTests
         var result = await controller.SaveQuestion(5, model, CancellationToken.None);
 
         var redirect = Assert.IsType<RedirectToActionResult>(result);
-        Assert.Equal(nameof(AdminExamsController.Questions), redirect.ActionName);
+        Assert.Equal(nameof(AdminExamsController.Studio), redirect.ActionName);
         Assert.Equal(5, redirect.RouteValues?["id"]);
         Assert.NotNull(api.CreatedQuestionRequest);
         Assert.Equal("New Question Stem", api.CreatedQuestionRequest.Stem);
@@ -336,7 +349,7 @@ public sealed class AdminExamsControllerTests
     }
 
     [Fact]
-    public async Task SaveQuestion_Update_Success_RedirectsToQuestions()
+    public async Task SaveQuestion_Update_Success_RedirectsToStudio()
     {
         var api = new TestApiClient();
         var controller = CreateController(api);
@@ -361,7 +374,7 @@ public sealed class AdminExamsControllerTests
         var result = await controller.SaveQuestion(5, model, CancellationToken.None);
 
         var redirect = Assert.IsType<RedirectToActionResult>(result);
-        Assert.Equal(nameof(AdminExamsController.Questions), redirect.ActionName);
+        Assert.Equal(nameof(AdminExamsController.Studio), redirect.ActionName);
         Assert.Equal(5, redirect.RouteValues?["id"]);
         Assert.Equal(101, redirect.RouteValues?["questionId"]);
         Assert.NotNull(api.UpdatedQuestionRequest);
@@ -369,7 +382,7 @@ public sealed class AdminExamsControllerTests
     }
 
     [Fact]
-    public async Task DeleteQuestion_CallsApi_RedirectsToQuestions()
+    public async Task DeleteQuestion_CallsApi_RedirectsToStudio()
     {
         var api = new TestApiClient();
         var controller = CreateController(api);
@@ -377,7 +390,7 @@ public sealed class AdminExamsControllerTests
         var result = await controller.DeleteQuestion(5, 101, sectionId: 1, CancellationToken.None);
 
         var redirect = Assert.IsType<RedirectToActionResult>(result);
-        Assert.Equal(nameof(AdminExamsController.Questions), redirect.ActionName);
+        Assert.Equal(nameof(AdminExamsController.Studio), redirect.ActionName);
         Assert.Equal(101, api.DeletedQuestionId);
     }
 
