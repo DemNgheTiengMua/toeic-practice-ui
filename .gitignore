@@ -47,5 +47,7 @@ graphify-out/202*/
 # Runtime uploads and agent scratch
 App_Data/
 scratch/
+logs/
+.superpowers/
 
 

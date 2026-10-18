@@ -34,6 +34,7 @@ public abstract class PlaywrightTestBase : PageTest
         await Page.GetByRole(AriaRole.Textbox, new() { Name = "Email" }).FillAsync(email);
         await Page.GetByRole(AriaRole.Textbox, new() { Name = "Password" }).FillAsync(password);
         await Page.GetByRole(AriaRole.Button, new() { Name = "Sign in" }).ClickAsync();
+        await Expect(Page).ToHaveURLAsync(new Regex(@"(dashboard|admin|certificates)", RegexOptions.IgnoreCase));
     }
 
     /// <summary>

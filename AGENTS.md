@@ -111,8 +111,23 @@ When touching frontend code or Razor views:
 ```sh
 dotnet build                                   # Build whole solution
 dotnet test                                    # Run test suite against LocalDB
-sqlcmd -S "(localdb)\MSSQLLocalDB" -d ExtraEfficiency -I -b -i docs/database-schema.sql
-sqlcmd -S "(localdb)\MSSQLLocalDB" -d ExtraEfficiency -I -b -i docs/seed-demo.sql
+sqlcmd -S "(localdb)\MSSQLLocalDB" -d ExtraEfficiency -I -b -f 65001 -i docs/database-schema.sql
+sqlcmd -S "(localdb)\MSSQLLocalDB" -d ExtraEfficiency -I -b -f 65001 -i docs/seed-demo.sql
 dotnet run --project src/WebAPI                # http://localhost:5001
 dotnet run --project src/WebMVC                # http://localhost:5000/certificates
+scripts/crawl-env.sh fresh                     # disposable crawl env: own DB, mock payment, fake AI
 ```
+
+Demo accounts (all `Demo1234!`): `admin@demo.local`, `learner@demo.local`, `learner.fresh@demo.local`.
+
+---
+
+## 7. Fixing a crawl-finding issue
+
+Issues filed from the cross-role crawl (`docs/specs/exhaustive-cross-role-testing-and-triage.md`)
+carry exact reproduction steps against `scripts/crawl-env.sh`. Whatever tool you use, a fix is done only when:
+
+1. **Red first.** A test in `tests/Services.Tests` (real SQL Server, real triggers, schema loaded per run) reproduces the reported failure and fails before your change. If the defect lives only in WebMVC, use `tests/WebMVC.Tests`.
+2. **Green.** That test and the whole `dotnet test` pass.
+3. **Re-walk.** `scripts/crawl-env.sh fresh`, then follow the issue's reproduction steps in the browser; `scripts/crawl-env.sh errors` shows no new `fail:` entries.
+4. **Root cause in the PR.** The PR says `Fixes #N` and explains why it broke, not only what changed. Do not weaken a trigger, constraint or test to make the symptom go away; if the invariant itself is wrong, stop and ask on the issue.

@@ -38,7 +38,7 @@ public class AdminLessonsTests : PlaywrightTestBase
 
         // Fill Lesson Metadata
         await Page.Locator("#Title").FillAsync(lessonTitle);
-        await Page.Locator("#SkillId").FillAsync("2"); // Reading
+        await Page.Locator("#SkillId").SelectOptionAsync("2"); // Reading
         await Page.Locator("#EstimatedMinutes").FillAsync("6");
         await Page.Locator("#Summary").FillAsync("E2E Automated Test Lesson Deck");
 

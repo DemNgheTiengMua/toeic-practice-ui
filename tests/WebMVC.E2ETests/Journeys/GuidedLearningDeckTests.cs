@@ -1,6 +1,8 @@
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using Microsoft.Playwright;
 using NUnit.Framework;
+using WebMVC.E2ETests.Pages;
 
 namespace WebMVC.E2ETests.Journeys;
 
@@ -8,51 +10,45 @@ namespace WebMVC.E2ETests.Journeys;
 [TestFixture]
 public class GuidedLearningDeckTests : PlaywrightTestBase
 {
+    private LoginPage _loginPage = null!;
+    private DeckPlayerPage _deckPage = null!;
+
+    [SetUp]
+    public void SetupPages()
+    {
+        _loginPage = new LoginPage(Page, BaseUrl);
+        _deckPage = new DeckPlayerPage(Page, BaseUrl);
+    }
+
     [Test]
     public async Task Should_Walk_Through_All_Cards_And_Validate_MicroCheck_Question()
     {
-        await SignInAsync("learner@demo.local", "Demo1234!");
+        await _loginPage.GotoAsync();
+        await _loginPage.LoginAsync("learner@demo.local", "Demo1234!");
 
         // Open lesson 1 directly
-        await Page.GotoAsync($"{BaseUrl}/lessons/1");
+        await _deckPage.GotoAsync(1);
         await Expect(Page).ToHaveURLAsync(new Regex(@"/lessons/1"));
         await Expect(Page.Locator("h1:has-text('Present Continuous Tense')")).ToBeVisibleAsync();
 
         // Check cards container presence
-        var deckContainer = Page.Locator(".lesson-deck");
-        await Expect(deckContainer).ToBeVisibleAsync();
+        await Expect(_deckPage.DeckContainer).ToBeVisibleAsync();
 
-        // If card 4 is not already visible, click Next until Card 4 is reached
-        var card4 = Page.Locator("#card-4");
-        var nextBtn = Page.Locator("#btnNext");
-
-        for (int i = 0; i < 4; i++)
-        {
-            if (await card4.IsVisibleAsync()) break;
-            if (await nextBtn.IsVisibleAsync() && !await nextBtn.IsDisabledAsync())
-            {
-                await nextBtn.ClickAsync();
-            }
-        }
+        // Navigate forward until Card 4 (Micro-check) is reached
+        await _deckPage.NavigateToMicroCheckCardAsync();
 
         // Verify Micro-check card is visible
-        await Expect(card4).ToBeVisibleAsync();
+        await Expect(_deckPage.MicroCheckCard).ToBeVisibleAsync();
         await Expect(Page.Locator("text=Check Your Understanding")).ToBeVisibleAsync();
 
-        // Select option B: is evaluating
-        var optionB = Page.Locator("label[data-opt='B']");
-        await optionB.ClickAsync();
-
-        // Submit formative check
-        var checkAnswerBtn = Page.Locator("#btnCheckAnswer");
-        await checkAnswerBtn.ClickAsync();
+        // Select option B and submit formative check
+        await _deckPage.AnswerMicroCheckAsync("B");
 
         // Verify pedagogical explanation appears
-        var explanation = Page.Locator("#microCheckExplanation");
-        await Expect(explanation).ToBeVisibleAsync();
-        await Expect(explanation).ToContainTextAsync("at the moment");
+        await Expect(_deckPage.ExplanationContainer).ToBeVisibleAsync();
+        await Expect(_deckPage.ExplanationContainer).ToContainTextAsync("at the moment");
 
         // Verify Return to path button is present
-        await Expect(Page.Locator("#btnFinish")).ToBeVisibleAsync();
+        await Expect(_deckPage.FinishButton).ToBeVisibleAsync();
     }
 }
