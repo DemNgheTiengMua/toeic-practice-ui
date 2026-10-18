@@ -15,6 +15,23 @@ Fill in this document during your manual walkthrough. Once you record any findin
 
 ---
 
+## Triage & Resolution Summary
+
+All 8 findings reported in this log have been reproduced with automated tests, resolved across Waves 1–4, independently code-reviewed, and verified with 871 passing tests across the entire test suite:
+
+| Finding | Ticket | Status | Resolution |
+|---|---|---|---|
+| Finding #1 | [#67](https://github.com/DemNgheTiengMua/toeic-practice-ui/issues/67) | **FIXED & CLOSED** | Injected `DateTimeFormatter` in `Wallet/Index.cshtml` to format order and ledger timestamps according to user profile timezone. |
+| Finding #2 | [#68](https://github.com/DemNgheTiengMua/toeic-practice-ui/issues/68) | **FIXED & CLOSED** | Added certificate and purpose filtering toolbar on `/admin/exams`, scoped audio column to listening sections, streamlined action buttons. |
+| Finding #3 | [#69](https://github.com/DemNgheTiengMua/toeic-practice-ui/issues/69) | **FIXED & CLOSED** | Retired legacy crashing `QuestionEditor.cshtml` and redirected `/admin/exams/{id}/questions` to modern Exam Studio. |
+| Finding #4 | [#69](https://github.com/DemNgheTiengMua/toeic-practice-ui/issues/69) | **FIXED & CLOSED** | Updated Exam Edit step 3 links to point directly to Exam Studio (`/admin/exams/{id}/studio`). |
+| Finding #5 | [#70](https://github.com/DemNgheTiengMua/toeic-practice-ui/issues/70) | **FIXED & CLOSED** | Replaced uncontained `<dialog>` on `/admin/lessons` with `.modal-overlay` pattern, added Escape key dismissal, and restored clean layout. |
+| Finding #6 | [#71](https://github.com/DemNgheTiengMua/toeic-practice-ui/issues/71) | **FIXED & CLOSED** | Retired standalone `/admin/imports`, integrated exam package/manifest import modal into `/admin/exams`, added error log visibility. |
+| Finding #7 | [#72](https://github.com/DemNgheTiengMua/toeic-practice-ui/issues/72) | **FIXED & CLOSED** | Restored `_AdminLayout` on `/admin/users` and `/admin/orders` and added `_ViewStart.cshtml` defense-in-depth. |
+| Finding #8 | [#73](https://github.com/DemNgheTiengMua/toeic-practice-ui/issues/73) | **FIXED & CLOSED** | Replaced manual text/size inputs on Exam Edit step 2 with HTML5 audio file upload, automatic metadata calculation, and 60 MB limits. |
+
+---
+
 ## Finding #1
 
 - **Title / Summary**: SITE TIME MISMATCH VS ACTUAL TIME
