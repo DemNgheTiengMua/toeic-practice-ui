@@ -153,6 +153,57 @@ The sweep combines two complementary techniques:
 
 ---
 
+### 4.3 Systematic Logic Defect Detection Methodology
+
+To ensure we catch silent business logic errors (not just 500s or visual broken links), every loop incorporates four concrete verification mechanisms:
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                   LOGIC ERROR DETECTION FRAMEWORK                      │
+├────────────────────────────────────────────────────────────────────────┤
+│ 1. Direct SQL Invariant Probes                                         │
+│    • Ledger balance matches: SELECT SUM(Delta) FROM CreditTransactions │
+│    • Free diagnostic rule: Placement attempts write ZERO ledger rows   │
+│    • Session cap: Standalone practice sessions never exceed 20         │
+│    • Score snapshotting: Past exam attempts preserve band on scale edit│
+├────────────────────────────────────────────────────────────────────────┤
+│ 2. Cross-Role Consistency Verification                                 │
+│    • Admin state changes (publish/deactivate/lock/resolve) reflect     │
+│      instantly and accurately in Learner views                         │
+│    • Inactive/draft entities never leak into Learner catalogs          │
+├────────────────────────────────────────────────────────────────────────┤
+│ 3. Cross-Tenant Authorization Probes (IDOR / Data Leakage)             │
+│    • User B attempting to view User A's attemptId, orderId, or profile │
+│    • Learner attempting to access any /admin/* route (must redirect)   │
+├────────────────────────────────────────────────────────────────────────┤
+│ 4. Idempotency & Action State Transitions                              │
+│    • Double-click "Start Exam" must only debit 1 credit                │
+│    • F5 refresh after payment callback must not duplicate credits      │
+│    • Browser "Back" button after exam submit cannot re-open sitting    │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+1. **Direct SQL Database Invariant Queries**:
+   - After any transactional step (exam start, practice answer, mentor booking, checkout, placement test), query `ExtraEfficiencyCrawl` directly via `sqlcmd`:
+     - **Credit Balance Audit**: `SELECT ISNULL(SUM(Delta), 0) FROM CreditTransactions WHERE UserId = @UserId` must match the UI header to the exact integer.
+     - **Free Placement Invariant**: Confirm `CreditTransactions` has 0 records associated with placement exams.
+     - **Practice Pruning Invariant**: `SELECT COUNT(*) FROM PracticeSessions WHERE UserId = @UserId AND LearnerPathStepId IS NULL` must stay $\le 20$.
+     - **Score & Band Determinism**: Confirm raw score scales correctly via `ScoreScales` and CEFR band matches `ScoreBands`.
+2. **Cross-Role Reflection Verification**:
+   - Actions in Admin must propagate correctly to Learner:
+     - Publishing an exam in Exam Studio makes it visible in `/exams`; keeping it draft or un-audited hides it.
+     - Deactivating a package in `/admin/packages` prevents Learner from purchasing it.
+     - Locking a user in `/admin/users` causes the next request from that user to terminate the session and refuse login.
+     - Resolving a complaint in `/admin/complaints` changes the badge in Learner `/support/history`.
+3. **Cross-Tenant & Role Authorization Probes (Security & Privacy)**:
+   - Verify that an unauthenticated user or Learner cannot access `/admin/*` routes (must redirect to login or return 403 Forbidden).
+   - Insecure Direct Object Reference (IDOR) check: Generate an `attemptId` or `orderId` under `learner@demo.local`, sign in as `learner.fresh@demo.local`, and attempt to access `/exams/review/{attemptId}` or `/checkout/order/{orderId}`. Verify the platform cleanly forbids access rather than displaying another user's data.
+4. **Idempotency, Resubmission & Race Conditions**:
+   - **Double POST / Double Click**: Rapidly submitting "Start Exam", "Book Mentor", or "Pay Now" must execute idempotently (single ledger debit, single booking).
+   - **Post-Submission Navigation**: Hitting the browser Back button after completing an exam or checkout must not resubmit or cause state corruption.
+
+---
+
 ## 5. Defect Classification & Triage Pipeline
 
 All discoveries during the crawl will be captured in `scratch/findings-loop-{N}.md` and categorized:
