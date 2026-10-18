@@ -132,6 +132,36 @@ public sealed class LearningPathService(
             .OrderBy(m => m.DisplayOrder)
             .ToListAsync(cancellationToken);
 
+        var activePathLessonSteps = activePath.LearnerPathSteps
+            .Where(s => s.PathModuleItem?.ItemType == "lesson" && s.PathModuleItem.RefLessonId.HasValue)
+            .ToList();
+        if (activePathLessonSteps.Count > 0)
+        {
+            var lessonIds = activePathLessonSteps.Select(s => s.PathModuleItem.RefLessonId!.Value).Distinct().ToList();
+            var progresses = await db.LearnerLessonProgresses
+                .AsNoTracking()
+                .Where(p => p.UserId == userId && lessonIds.Contains(p.LessonId))
+                .ToDictionaryAsync(p => p.LessonId, cancellationToken);
+
+            foreach (var step in activePathLessonSteps)
+            {
+                if (progresses.TryGetValue(step.PathModuleItem.RefLessonId!.Value, out var prog))
+                {
+                    if (prog.IsCompleted)
+                    {
+                        step.Status = "done";
+                        step.CompletedAt ??= prog.CompletedAt;
+                        step.Score = null;
+                    }
+                    else if (prog.CardsCompleted > 0 && step.Status != "locked")
+                    {
+                        step.Status = "in_progress";
+                        step.StartedAt ??= prog.FirstOpenedAt;
+                    }
+                }
+            }
+        }
+
         var moduleSummaries = new List<LearningPathModuleSummary>();
         int completedModulesCount = 0;
         int totalEstimatedMins = 0;
@@ -391,10 +421,43 @@ public sealed class LearningPathService(
         var steps = await db.LearnerPathSteps
             .AsNoTracking()
             .Include(s => s.PathModuleItem)
+                .ThenInclude(pmi => pmi.Lesson)
             .Include(s => s.PracticeSessions)
             .Where(s => s.LearnerPathId == activePath.LearnerPathId && itemIds.Contains(s.PathModuleItemId))
             .OrderBy(s => s.PathModuleItem.DisplayOrder)
             .ToListAsync(cancellationToken);
+
+        var lessonIds = steps
+            .Where(s => s.PathModuleItem.RefLessonId.HasValue)
+            .Select(s => s.PathModuleItem.RefLessonId!.Value)
+            .Distinct()
+            .ToList();
+
+        if (lessonIds.Count > 0)
+        {
+            var lessonProgresses = await db.LearnerLessonProgresses
+                .AsNoTracking()
+                .Where(p => p.UserId == userId && lessonIds.Contains(p.LessonId))
+                .ToDictionaryAsync(p => p.LessonId, cancellationToken);
+
+            foreach (var s in steps)
+            {
+                if (s.PathModuleItem.RefLessonId is { } lid && lessonProgresses.TryGetValue(lid, out var prog))
+                {
+                    if (prog.IsCompleted)
+                    {
+                        s.Status = "done";
+                        s.CompletedAt ??= prog.CompletedAt;
+                        s.Score = null;
+                    }
+                    else if (prog.CardsCompleted > 0 && s.Status != "locked")
+                    {
+                        s.Status = "in_progress";
+                        s.StartedAt ??= prog.FirstOpenedAt;
+                    }
+                }
+            }
+        }
 
         bool isPremium = await db.CreditTransactions
             .AnyAsync(t => t.LearnerPathId == activePath.LearnerPathId && t.Reason == CreditReason.PremiumPath.ToCode(), cancellationToken);
@@ -485,6 +548,7 @@ public sealed class LearningPathService(
                 PathModuleItemType.MockExam => "Mock Exam Assessment",
                 PathModuleItemType.AiTask => "AI-Graded Task",
                 PathModuleItemType.Mentor => "Mentor Session",
+                PathModuleItemType.Lesson => s.PathModuleItem.Lesson?.Title ?? $"Lesson: {module.Title}",
                 _ => module.Title
             };
             return new ModuleStepInfo(
@@ -500,7 +564,8 @@ public sealed class LearningPathService(
                 s.StartedAt,
                 s.CompletedAt,
                 s.PathModuleItem.RefSectionId,
-                s.PathModuleItem.RefExamId);
+                s.PathModuleItem.RefExamId,
+                s.PathModuleItem.RefLessonId);
         }).ToList();
 
         var activeStep = steps.FirstOrDefault(s => s.Status == "in_progress" && (!s.PathModuleItem.IsPremiumOnly || isPremium))
@@ -673,6 +738,13 @@ public sealed class LearningPathService(
                 return new StartStepResult(stepId, itemType, "/practice", null, null);
             }
 
+            case PathModuleItemType.Lesson:
+            {
+                int lessonId = step.PathModuleItem.RefLessonId
+                    ?? throw new InvalidOperationException($"Lesson step {stepId} is missing RefLessonId.");
+                return new StartStepResult(stepId, itemType, $"/lessons/{lessonId}", null, null);
+            }
+
             case PathModuleItemType.Mentor:
             default:
                 return new StartStepResult(stepId, itemType, "/mentors", null, null);
@@ -683,15 +755,37 @@ public sealed class LearningPathService(
     {
         var step = await db.LearnerPathSteps
             .Include(s => s.LearnerPath)
+            .Include(s => s.PathModuleItem)
             .FirstOrDefaultAsync(s => s.StepId == stepId && s.LearnerPath.UserId == userId, cancellationToken);
 
         if (step == null) return false;
 
         if (step.Status == "done") return true;
 
+        var itemType = EnumCodes.Parse<PathModuleItemType>(step.PathModuleItem.ItemType);
+        if (itemType == PathModuleItemType.Lesson)
+        {
+            var lessonId = step.PathModuleItem.RefLessonId;
+            if (lessonId.HasValue)
+            {
+                var progress = await db.LearnerLessonProgresses
+                    .FirstOrDefaultAsync(p => p.UserId == userId && p.LessonId == lessonId.Value, cancellationToken);
+                if (progress == null || !progress.IsCompleted)
+                {
+                    return false;
+                }
+                step.StartedAt ??= progress.FirstOpenedAt;
+                step.CompletedAt = progress.CompletedAt ?? DateTimeOffset.UtcNow;
+                step.Score = null;
+            }
+        }
+        else
+        {
+            step.CompletedAt = DateTimeOffset.UtcNow;
+            step.Score = score ?? step.Score ?? 100m;
+        }
+
         step.Status = "done";
-        step.CompletedAt = DateTimeOffset.UtcNow;
-        step.Score = score ?? step.Score ?? 100m;
 
         var allSteps = await db.LearnerPathSteps
             .Include(s => s.PathModuleItem)

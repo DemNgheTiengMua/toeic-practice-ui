@@ -726,4 +726,116 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
         var newPath = await service.GeneratePathAsync(userId);
         Assert.False(newPath.IsPremium);
     }
+
+    [Fact]
+    public async Task GetModuleDetailAsync_WithLessonStep_DerivesStatusFromLearnerLessonProgress()
+    {
+        var certCode = Unique("LS");
+        var (certId, templateId, m1Id, _, _, _, secId, qId) = await SeedPathFixtureAsync(certCode);
+        var userId = await SeedLearnerAsync(certCode);
+
+        // Add a lesson to cert and a lesson item to m1
+        await database.SqlAsync($"""
+            INSERT INTO Lessons (CertId, SkillId, Title, EstimatedMinutes, DisplayOrder)
+            VALUES ({certId}, (SELECT SkillId FROM Skills WHERE CertId = {certId} AND Code = 'READ'), N'Grammar Lesson', 5, 2);
+            DECLARE @lessonId INT = SCOPE_IDENTITY();
+
+            INSERT INTO PathModuleItems (ModuleId, CertId, TemplateId, ItemType, RefLessonId, DisplayOrder)
+            VALUES ({m1Id}, {certId}, {templateId}, 'lesson', @lessonId, 2);
+            """);
+
+        var (service, _, _, db) = CreateServices();
+        var summary = await service.GeneratePathAsync(userId);
+
+        var lesson = await db.Lessons.FirstAsync(l => l.CertId == certId);
+
+        // Before any lesson progress
+        var detailBefore = await service.GetModuleDetailAsync(userId, m1Id);
+        var lessonStepBefore = detailBefore.Steps.First(s => s.ItemType == PathModuleItemType.Lesson);
+        Assert.Equal(LearnerPathStepStatus.Locked, lessonStepBefore.Status);
+        Assert.Equal("Grammar Lesson", lessonStepBefore.Title);
+
+        // Create in-progress lesson progress
+        var now = DateTimeOffset.UtcNow;
+        db.LearnerLessonProgresses.Add(new LearnerLessonProgress
+        {
+            UserId = userId,
+            LessonId = lesson.LessonId,
+            CertId = certId,
+            CardsCompleted = 2,
+            TotalCards = 4,
+            IsCompleted = false,
+            FirstOpenedAt = now,
+            UpdatedAt = now
+        });
+        await db.SaveChangesAsync();
+
+        // Unlock step by completing first step
+        var step1 = detailBefore.Steps.First(s => s.ItemType == PathModuleItemType.PracticeSection);
+        await service.CompleteStepAsync(userId, step1.StepId, 100m);
+
+        var detailAfter = await service.GetModuleDetailAsync(userId, m1Id);
+        var lessonStepAfter = detailAfter.Steps.First(s => s.ItemType == PathModuleItemType.Lesson);
+        Assert.Equal(LearnerPathStepStatus.InProgress, lessonStepAfter.Status);
+        Assert.Equal(now, lessonStepAfter.StartedAt);
+    }
+
+    [Fact]
+    public async Task CompleteStepAsync_ForLessonStep_SucceedsOnlyWhenLessonIsCompleted()
+    {
+        var certCode = Unique("LC");
+        var (certId, templateId, m1Id, _, _, _, secId, qId) = await SeedPathFixtureAsync(certCode);
+        var userId = await SeedLearnerAsync(certCode);
+
+        await database.SqlAsync($"""
+            INSERT INTO Lessons (CertId, SkillId, Title, EstimatedMinutes, DisplayOrder)
+            VALUES ({certId}, (SELECT SkillId FROM Skills WHERE CertId = {certId} AND Code = 'READ'), N'Test Lesson', 5, 2);
+            DECLARE @lessonId INT = SCOPE_IDENTITY();
+
+            INSERT INTO PathModuleItems (ModuleId, CertId, TemplateId, ItemType, RefLessonId, DisplayOrder)
+            VALUES ({m1Id}, {certId}, {templateId}, 'lesson', @lessonId, 2);
+            """);
+
+        var (service, _, _, db) = CreateServices();
+        var summary = await service.GeneratePathAsync(userId);
+        var lesson = await db.Lessons.FirstAsync(l => l.CertId == certId);
+
+        var steps = await db.LearnerPathSteps
+            .Include(s => s.PathModuleItem)
+            .Where(s => s.LearnerPathId == summary.LearnerPathId)
+            .ToListAsync();
+        var step1 = steps.First(s => s.PathModuleItem.ItemType == "practice_section");
+        var lessonStep = steps.First(s => s.PathModuleItem.ItemType == "lesson");
+
+        await service.CompleteStepAsync(userId, step1.StepId, 100m);
+
+        // Attempting to complete lesson step before lesson is completed in LearnerLessonProgress should return false
+        var completedWithoutProgress = await service.CompleteStepAsync(userId, lessonStep.StepId);
+        Assert.False(completedWithoutProgress);
+
+        // Mark lesson completed in LearnerLessonProgress
+        var now = DateTimeOffset.UtcNow;
+        var progress = new LearnerLessonProgress
+        {
+            UserId = userId,
+            LessonId = lesson.LessonId,
+            CertId = certId,
+            CardsCompleted = 4,
+            TotalCards = 4,
+            IsCompleted = true,
+            FirstOpenedAt = now.AddMinutes(-5),
+            CompletedAt = now,
+            UpdatedAt = now
+        };
+        db.LearnerLessonProgresses.Add(progress);
+        await db.SaveChangesAsync();
+
+        var completedWithProgress = await service.CompleteStepAsync(userId, lessonStep.StepId);
+        Assert.True(completedWithProgress);
+
+        await db.Entry(lessonStep).ReloadAsync();
+        Assert.Equal("done", lessonStep.Status);
+        Assert.Null(lessonStep.Score);
+        Assert.NotNull(lessonStep.CompletedAt);
+    }
 }

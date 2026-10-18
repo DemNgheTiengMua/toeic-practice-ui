@@ -981,7 +981,7 @@ CREATE TABLE PathModuleItems (
   -- M-1: carried down from the owning module so LearnerPathSteps can pin the item to its own template
   TemplateId      INT NOT NULL,
   ItemType        VARCHAR(16) NOT NULL
-    CONSTRAINT CK_PMI_Type CHECK (ItemType IN ('practice_section','mock_exam','ai_task','mentor')),
+    CONSTRAINT CK_PMI_Type CHECK (ItemType IN ('practice_section','mock_exam','ai_task','mentor','lesson')),
   RefSectionId    INT NULL,
   RefExamId       INT NULL,
   DifficultyLevel INT NULL CONSTRAINT CK_PMI_Difficulty CHECK (DifficultyLevel IS NULL OR DifficultyLevel BETWEEN 1 AND 5),
@@ -1085,6 +1085,83 @@ BEGIN
   )
     THROW 50043, 'An ai_task item may only reference a writing- or speaking-practice exam.', 1;
 END;
+GO
+-- ============ Domain 9.5: Guided Learning (Lessons) ============
+-- Issue #45: Interactive lesson walkthroughs for remediation and guided paths
+CREATE TABLE Lessons (
+  LessonId         INT IDENTITY(1,1) PRIMARY KEY,
+  CertId           INT NOT NULL REFERENCES Certificates(CertId),
+  SkillId          INT NOT NULL,
+  CategoryId       INT NULL REFERENCES QuestionCategories(CategoryId),
+  Title            NVARCHAR(160) NOT NULL,
+  Summary          NVARCHAR(500) NULL,
+  EstimatedMinutes INT NOT NULL DEFAULT 5 CONSTRAINT CK_Lessons_Est CHECK (EstimatedMinutes > 0),
+  DisplayOrder     INT NOT NULL DEFAULT 0,
+  CreatedAt        DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
+  CONSTRAINT FK_Lessons_SkillCert FOREIGN KEY (SkillId, CertId) REFERENCES Skills(SkillId, CertId),
+  CONSTRAINT UQ_Lessons_Id_Cert UNIQUE (LessonId, CertId)
+);
+GO
+CREATE TABLE LessonCards (
+  CardId          INT IDENTITY(1,1) PRIMARY KEY,
+  LessonId        INT NOT NULL,
+  CertId          INT NOT NULL,
+  CardType        VARCHAR(20) NOT NULL
+    CONSTRAINT CK_LessonCards_CardType CHECK (CardType IN ('rule', 'pitfall', 'example', 'micro_check')),
+  Title           NVARCHAR(160) NOT NULL,
+  ContentMarkdown NVARCHAR(MAX) NOT NULL,
+  QuestionPrompt  NVARCHAR(MAX) NULL,
+  OptionA         NVARCHAR(250) NULL,
+  OptionB         NVARCHAR(250) NULL,
+  OptionC         NVARCHAR(250) NULL,
+  OptionD         NVARCHAR(250) NULL,
+  CorrectOption   CHAR(1) NULL CONSTRAINT CK_LessonCards_Correct CHECK (CorrectOption IS NULL OR CorrectOption IN ('A','B','C','D')),
+  Explanation     NVARCHAR(MAX) NULL,
+  Rationale       NVARCHAR(MAX) NULL,
+  DisplayOrder    INT NOT NULL DEFAULT 0,
+  CONSTRAINT FK_LessonCards_LessonCert FOREIGN KEY (LessonId, CertId) REFERENCES Lessons(LessonId, CertId),
+  CONSTRAINT UQ_LessonCards_Id_Cert UNIQUE (CardId, CertId)
+);
+GO
+CREATE TABLE LearnerLessonProgress (
+  ProgressId        INT IDENTITY(1,1) PRIMARY KEY,
+  UserId            INT NOT NULL REFERENCES Users(UserId),
+  LessonId          INT NOT NULL,
+  CertId            INT NOT NULL,
+  LastViewedCardId  INT NULL REFERENCES LessonCards(CardId),
+  CardsCompleted    INT NOT NULL DEFAULT 0,
+  TotalCards        INT NOT NULL DEFAULT 0,
+  IsCompleted       BIT NOT NULL DEFAULT 0,
+  FirstOpenedAt     DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
+  CompletedAt       DATETIMEOFFSET NULL,
+  UpdatedAt         DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
+  CONSTRAINT FK_LLP_LessonCert FOREIGN KEY (LessonId, CertId) REFERENCES Lessons(LessonId, CertId),
+  CONSTRAINT UQ_LLP_UserLesson UNIQUE (UserId, LessonId)
+);
+GO
+-- Extend PathModuleItems to support lesson references
+ALTER TABLE PathModuleItems ADD RefLessonId INT NULL;
+GO
+-- Drop and recreate the ItemType check to include 'lesson'
+ALTER TABLE PathModuleItems DROP CONSTRAINT CK_PMI_Type;
+GO
+ALTER TABLE PathModuleItems ADD CONSTRAINT CK_PMI_Type
+  CHECK (ItemType IN ('practice_section','mock_exam','ai_task','mentor','lesson'));
+GO
+-- Drop and recreate the RefMatchesType check to include lesson case
+ALTER TABLE PathModuleItems DROP CONSTRAINT CK_PMI_RefMatchesType;
+GO
+ALTER TABLE PathModuleItems ADD CONSTRAINT CK_PMI_RefMatchesType CHECK (
+     (ItemType='practice_section' AND RefSectionId IS NOT NULL AND RefExamId IS NULL AND RefLessonId IS NULL)
+  OR (ItemType='mock_exam'        AND RefExamId    IS NOT NULL AND RefSectionId IS NULL AND RefLessonId IS NULL)
+  OR (ItemType='ai_task'          AND RefSectionId IS NULL AND RefLessonId IS NULL)
+  OR (ItemType='mentor'           AND RefSectionId IS NULL AND RefExamId IS NULL AND RefLessonId IS NULL)
+  OR (ItemType='lesson'           AND RefLessonId  IS NOT NULL AND RefSectionId IS NULL AND RefExamId IS NULL)
+);
+GO
+-- Add composite FK for lesson references (certificate isolation)
+ALTER TABLE PathModuleItems ADD CONSTRAINT FK_PMI_LessonCert
+  FOREIGN KEY (RefLessonId, CertId) REFERENCES Lessons(LessonId, CertId);
 GO
 -- ============ Domain 10: Mentor ============
 CREATE TABLE MentorProfiles (

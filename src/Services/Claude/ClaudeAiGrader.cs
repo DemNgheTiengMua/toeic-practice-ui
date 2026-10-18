@@ -13,21 +13,22 @@ public sealed class ClaudeAiGrader : IAiGrader
 {
     private readonly IClaudeClient _claudeClient;
     private readonly ILogger<ClaudeAiGrader>? _logger;
-    private readonly FakeAiGrader _fallbackGrader;
-
     public ClaudeAiGrader(IClaudeClient claudeClient, ILogger<ClaudeAiGrader>? logger = null)
     {
         _claudeClient = claudeClient;
         _logger = logger;
-        _fallbackGrader = new FakeAiGrader();
     }
 
     public async Task<AiGradingResult> GradeAsync(AiGradingRequest request, CancellationToken cancellationToken = default)
     {
-        // If request has simulated failure marker for test purposes, let fallback handle it
+        // If request has simulated failure marker for test purposes, return explicit failure
         if (request.ResponseText?.Contains(FakeAiGrader.SimulateFailMarker, StringComparison.OrdinalIgnoreCase) == true)
         {
-            return await _fallbackGrader.GradeAsync(request, cancellationToken);
+            return new AiGradingResult(
+                Success: false,
+                FailureReason: "Simulated grading failure.",
+                Model: "claude-sonnet-3.7",
+                Scores: Array.Empty<AiCriterionScoreResult>());
         }
 
         try
@@ -110,12 +111,20 @@ public sealed class ClaudeAiGrader : IAiGrader
             }
 
             _logger?.LogWarning("Claude response did not contain expected 'scores' array: {Raw}", rawResult);
-            return await _fallbackGrader.GradeAsync(request, cancellationToken);
+            return new AiGradingResult(
+                Success: false,
+                FailureReason: "Claude response did not contain expected 'scores' array.",
+                Model: "claude-sonnet-3.7",
+                Scores: Array.Empty<AiCriterionScoreResult>());
         }
         catch (Exception ex)
         {
-            _logger?.LogError(ex, "Claude live grading failed, falling back to deterministic grader");
-            return await _fallbackGrader.GradeAsync(request, cancellationToken);
+            _logger?.LogError(ex, "Claude live grading failed");
+            return new AiGradingResult(
+                Success: false,
+                FailureReason: $"Claude grading failed: {ex.Message}",
+                Model: "claude-sonnet-3.7",
+                Scores: Array.Empty<AiCriterionScoreResult>());
         }
     }
 

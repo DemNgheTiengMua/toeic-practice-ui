@@ -10,5 +10,6 @@
   <Folder Name="/tests/">
     <Project Path="tests/Services.Tests/Services.Tests.csproj" />
     <Project Path="tests/WebMVC.Tests/WebMVC.Tests.csproj" />
+    <Project Path="tests/WebMVC.E2ETests/WebMVC.E2ETests.csproj" />
   </Folder>
 </Solution>

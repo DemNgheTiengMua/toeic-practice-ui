@@ -92,7 +92,20 @@
           }
         </div>
         <div class="card__footer">
-          <a class="btn btn--primary" href="/auth/register">Start with @cert.Code</a>
+          @if (User.Identity?.IsAuthenticated == true)
+          {
+            <form method="post" action="/learner/active-certificate" style="display:inline; margin:0;">
+              @Html.AntiForgeryToken()
+              <input type="hidden" name="returnUrl" value="/dashboard" />
+              <button type="submit" name="code" value="@cert.Code" class="btn btn--primary">
+                Switch to @cert.Code
+              </button>
+            </form>
+          }
+          else
+          {
+            <a class="btn btn--primary" href="/auth/register">Start with @cert.Code</a>
+          }
         </div>
       </div>
     </section>
@@ -102,7 +115,14 @@
     <div class="card__body row row--between" style="flex-wrap: wrap; gap: var(--space-4)">
       <p class="no-margin"><strong>Not sure which one fits your goal?</strong><br>
         <span class="text-muted">Create a free account and take the placement exam — it works for every certificate.</span></p>
-      <a class="btn btn--primary btn--lg" href="/auth/register">Start for free</a>
+      @if (User.Identity?.IsAuthenticated == true)
+      {
+        <a class="btn btn--primary btn--lg" href="/placement">Take placement test</a>
+      }
+      else
+      {
+        <a class="btn btn--primary btn--lg" href="/auth/register">Start for free</a>
+      }
     </div>
   </div>
 </div>

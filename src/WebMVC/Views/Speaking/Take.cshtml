@@ -1,12 +1,23 @@
 @model SpeakingTakeViewModel
 @{
-    Layout = "_Layout";
+    Layout = null;
     var take = Model.Take;
     var q = take.Question;
     ViewData["Title"] = $"Speaking — Question {take.CurrentQuestionIndex} of {take.TotalQuestions}";
     ViewData["Description"] = $"Speaking practice attempt #{take.AttemptId}, question {take.CurrentQuestionIndex}.";
 }
-
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>@ViewData["Title"] — extra efficient</title>
+  <link rel="icon" href="~/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="~/css/tokens.css">
+  <link rel="stylesheet" href="~/css/base.css">
+  <link rel="stylesheet" href="~/css/components.css">
+</head>
+<body>
 <div class="app-shell">
   <header class="app-topbar">
     <div class="exam-topbar-group">
@@ -199,12 +210,9 @@
           </div>
 
           <div class="stack">
-            <form method="post" action="/speaking/submit/@take.AttemptId" onsubmit="return confirm('Are you sure you want to finish and submit your speaking practice for AI grading? (Deducts 1 credit)');">
-              @Html.AntiForgeryToken()
-              <button class="btn btn--danger btn--full" type="submit" @(take.SavedCount == 0 ? "disabled" : "") id="btn-finish-submit">
-                Finish and submit
-              </button>
-            </form>
+            <button class="btn btn--danger btn--full" type="button" @(take.SavedCount == 0 ? "disabled" : "") id="btn-open-submit-modal">
+              Finish and submit
+            </button>
             <p class="text-xs text-muted no-margin text-center">
               Deducts 1 credit upon submission for AI evaluation. Questions without recordings are not graded.
             </p>
@@ -213,6 +221,33 @@
       </div>
     </div>
   </main>
+</div>
+
+<!-- Submit Confirmation Modal -->
+<div id="submit-modal" class="modal-overlay" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="submit-modal-title">
+  <div class="modal">
+    <div class="modal__header">
+      <h2 id="submit-modal-title" class="no-margin">Finish & Submit Speaking Practice?</h2>
+    </div>
+    <div class="modal__body stack">
+      <p class="no-margin">
+        Submitting will send your recordings for AI evaluation and deduct <strong>1 credit</strong> from your wallet.
+      </p>
+      @if (take.SavedCount < take.TotalQuestions)
+      {
+        <div class="alert alert--warning">
+          <strong>Notice:</strong> You have recorded @take.SavedCount of @take.TotalQuestions questions. Unrecorded questions will receive 0 marks.
+        </div>
+      }
+    </div>
+    <div class="modal__footer row row--between">
+      <button type="button" class="btn js-close-submit-modal">Return to practice</button>
+      <form method="post" action="/speaking/submit/@take.AttemptId" style="margin:0;">
+        @Html.AntiForgeryToken()
+        <button type="submit" class="btn btn--danger">Confirm & Submit (1 credit)</button>
+      </form>
+    </div>
+  </div>
 </div>
 
 <!-- Anti-forgery form token helper -->
@@ -470,7 +505,44 @@
     }
   }
 
+  const submitModal = document.getElementById('submit-modal');
+  const btnOpenSubmit = document.getElementById('btn-open-submit-modal');
+  const closeSubmitBtns = document.querySelectorAll('.js-close-submit-modal');
+
+  function openModal() {
+    if (submitModal) {
+      submitModal.classList.add('modal-overlay--open');
+      submitModal.setAttribute('aria-hidden', 'false');
+    }
+  }
+
+  function closeModal() {
+    if (submitModal) {
+      submitModal.classList.remove('modal-overlay--open');
+      submitModal.setAttribute('aria-hidden', 'true');
+    }
+  }
+
+  if (btnOpenSubmit) {
+    btnOpenSubmit.addEventListener('click', openModal);
+  }
+  closeSubmitBtns.forEach(btn => {
+    btn.addEventListener('click', closeModal);
+  });
+  if (submitModal) {
+    submitModal.addEventListener('click', (e) => {
+      if (e.target === submitModal) closeModal();
+    });
+  }
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && submitModal && submitModal.classList.contains('modal-overlay--open')) {
+      closeModal();
+    }
+  });
+
   btnSaveContinue.addEventListener('click', uploadRecording);
   btnRetryUpload.addEventListener('click', uploadRecording);
 })();
 </script>
+</body>
+</html>

@@ -10,7 +10,7 @@ namespace WebMVC.Controllers;
 public sealed class AdminPackagesController(
     IAdminPackagesClient api,
     CurrentUser currentUser,
-    ILogger<AdminPackagesController> logger) : Controller
+    ILogger<AdminPackagesController> logger) : AdminControllerBase(currentUser, logger)
 {
 
     [HttpGet("")]

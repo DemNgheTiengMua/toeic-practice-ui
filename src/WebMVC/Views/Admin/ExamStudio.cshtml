@@ -1,0 +1,1724 @@
+@model Contracts.ExamStudioDetailDto
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = $"Exam Studio — {Model.Name}";
+    var certCodeUpper = Model.CertCode.ToUpperInvariant();
+}
+
+<style>
+  /* Exam Studio "Bảng hiệu phòng thi" Layout */
+  .studio-container {
+    display: grid;
+    grid-template-columns: 280px 1fr 300px;
+    gap: 1rem;
+    align-items: start;
+    margin-top: 1rem;
+  }
+  @@media (max-width: 1200px) {
+    .studio-container {
+      grid-template-columns: 240px 1fr 260px;
+    }
+  }
+  @@media (max-width: 992px) {
+    .studio-container {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .studio-panel {
+    background: #ffffff;
+    border: 2px solid var(--color-ink, #14181d);
+    border-radius: 0;
+    box-shadow: none;
+    padding: 0;
+  }
+
+  .studio-panel__header {
+    background: var(--color-surface, #f8f9fa);
+    border-bottom: 2px solid var(--color-ink, #14181d);
+    padding: 0.75rem 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .studio-panel__header h2,
+  .studio-panel__header h3 {
+    margin: 0;
+    font-family: var(--font-condensed, sans-serif);
+    text-transform: uppercase;
+    font-size: 0.95rem;
+    letter-spacing: 0.05em;
+  }
+
+  .studio-panel__body {
+    padding: 1rem;
+    overflow-y: auto;
+  }
+
+  /* Left Rail */
+  .rail-section {
+    border: 1px solid var(--color-border, #ccd2d6);
+    margin-bottom: 0.75rem;
+    background: #ffffff;
+  }
+  .rail-section__header {
+    padding: 0.5rem 0.75rem;
+    background: #f0f4f8;
+    border-bottom: 1px solid var(--color-border, #ccd2d6);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.85rem;
+  }
+  .rail-section__header.is-active {
+    background: var(--color-ink, #14181d);
+    color: #ffffff;
+  }
+  .rail-section__items {
+    list-style: none;
+    margin: 0;
+    padding: 0.25rem 0;
+  }
+  .rail-item {
+    padding: 0.4rem 0.75rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.8rem;
+    border-bottom: 1px dashed #e5e5e5;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+  .rail-item:last-child {
+    border-bottom: none;
+  }
+  .rail-item:hover {
+    background: #f4f6f8;
+  }
+  .rail-item.is-selected {
+    background: var(--color-ink, #14181d);
+    color: #ffffff;
+  }
+  .rail-item__btns {
+    display: flex;
+    gap: 0.2rem;
+  }
+  .rail-btn-move {
+    background: transparent;
+    border: 1px solid #ccd2d6;
+    border-radius: 0;
+    padding: 0.1rem 0.3rem;
+    font-size: 0.7rem;
+    cursor: pointer;
+    color: inherit;
+  }
+  .rail-btn-move:hover {
+    background: #e0e0e0;
+  }
+
+  /* Center Workstation */
+  .workstation-toolbar {
+    background: #f8f9fa;
+    border-bottom: 2px solid var(--color-ink, #14181d);
+    padding: 0.75rem 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  .card-editor {
+    border: 2px solid var(--color-ink, #14181d);
+    border-radius: 0;
+    margin-bottom: 1.25rem;
+    background: #ffffff;
+  }
+  .card-editor__header {
+    background: #f8f9fa;
+    border-bottom: 1px solid var(--color-ink, #14181d);
+    padding: 0.5rem 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .card-editor.is-highlighted {
+    outline: 3px solid var(--color-warning, #f2b705);
+  }
+
+  /* Visual Audio Slicer Widget */
+  .audio-slicer {
+    background: #f8f9fa;
+    border: 2px solid var(--color-ink, #14181d);
+    padding: 0.85rem;
+    margin-bottom: 1rem;
+  }
+  .audio-slicer__scrubber {
+    position: relative;
+    height: 36px;
+    background: #14181d;
+    cursor: pointer;
+    margin: 0.5rem 0;
+    overflow: hidden;
+  }
+  .audio-slicer__progress {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    background: var(--color-brand, #0b4ea2);
+    width: 0%;
+    pointer-events: none;
+  }
+  .audio-slicer__slice-region {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    background: rgba(242, 183, 5, 0.45);
+    border-left: 2px solid #f2b705;
+    border-right: 2px solid #f2b705;
+    pointer-events: none;
+  }
+  .audio-slicer__cursor {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #ffffff;
+    pointer-events: none;
+  }
+
+  /* Drag and drop upload dropzone */
+  .studio-dropzone {
+    border: 2px dashed #ccd2d6;
+    padding: 1.25rem;
+    text-align: center;
+    background: #fafafa;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .studio-dropzone.is-dragover {
+    border-color: var(--color-brand, #0b4ea2);
+    background: #eef4fc;
+  }
+
+  /* Right Audit Placard */
+  .audit-item {
+    padding: 0.5rem;
+    border-left: 4px solid #ccd2d6;
+    margin-bottom: 0.5rem;
+    font-size: 0.8rem;
+    background: #fdfdfd;
+    display: flex;
+    gap: 0.4rem;
+  }
+  .audit-item--error {
+    border-left-color: var(--color-danger, #b31217);
+    background: #fff5f5;
+  }
+  .audit-item--warning {
+    border-left-color: var(--color-warning, #f2b705);
+    background: #fffdf0;
+  }
+  .audit-item--success {
+    border-left-color: var(--color-success, #0a6b3c);
+    background: #f4fbf7;
+  }
+  .audit-jump-link {
+    cursor: pointer;
+    text-decoration: underline;
+    font-weight: 600;
+    color: var(--color-brand, #0b4ea2);
+  }
+
+  /* Inline blank badge preview */
+  .blank-badge {
+    display: inline-block;
+    padding: 0.1rem 0.4rem;
+    background: var(--color-ink, #14181d);
+    color: #ffffff;
+    font-family: var(--font-mono, monospace);
+    font-weight: bold;
+    font-size: 0.8rem;
+    cursor: pointer;
+    margin: 0 0.2rem;
+  }
+
+  /* Document Tabs for Part 7 */
+  .doc-tabs {
+    display: flex;
+    border-bottom: 2px solid var(--color-ink, #14181d);
+    margin-bottom: 0.5rem;
+    gap: 0.25rem;
+  }
+  .doc-tab {
+    padding: 0.4rem 0.85rem;
+    border: 2px solid var(--color-ink, #14181d);
+    border-bottom: none;
+    background: #f0f4f8;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.8rem;
+    font-family: var(--font-condensed, sans-serif);
+    text-transform: uppercase;
+  }
+  .doc-tab.is-active {
+    background: var(--color-ink, #14181d);
+    color: #ffffff;
+  }
+</style>
+
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+  <a href="/admin" class="breadcrumbs__item">Admin</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <a href="/admin/exams" class="breadcrumbs__item">Exams</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <span class="breadcrumbs__item" aria-current="page">Exam Studio</span>
+</nav>
+
+<!-- Studio Top Header Placard -->
+<div class="row row--between row--wrap" style="align-items: center; margin-bottom: 0.75rem; gap: 0.75rem;">
+  <div>
+    <h1 style="margin: 0; font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 1.5rem;">
+      @Model.Name
+    </h1>
+    <div class="row" style="gap: 0.75rem; align-items: center; margin-top: 0.25rem;">
+      <span class="badge" style="background: var(--color-ink, #14181d); color: #fff; border-radius: 0; font-family: var(--font-mono, monospace);">@certCodeUpper</span>
+      <span class="text-sm text-muted">@Model.CertName &bull; Duration: @Model.DurationMinutes min &bull; Purpose: @Model.Purpose</span>
+    </div>
+  </div>
+
+  <div class="row" style="gap: 0.5rem; align-items: center;">
+    <div id="autosave-status" style="font-family: var(--font-mono, monospace); font-size: 0.85rem; padding: 0.35rem 0.65rem; border: 1px solid #ccd2d6; background: #fff;">
+      Ready
+    </div>
+    <button type="button" class="btn btn--secondary btn--sm" id="btn-studio-quick-ingest" style="border-radius: 0;">
+      Quick Ingest
+    </button>
+    <a href="/admin/exams/@Model.ExamId/edit?step=1" class="btn btn--ghost btn--sm" style="border-radius: 0;">
+      Settings
+    </a>
+  </div>
+</div>
+
+<div class="studio-container">
+  <!-- ================= 1. LEFT NAVIGATION RAIL ================= -->
+  <aside class="studio-panel" id="studio-left-rail" aria-label="Sections and Questions Navigation">
+    <div class="studio-panel__header">
+      <h2>Curriculum Rail</h2>
+      <span class="text-xs" style="font-family: var(--font-mono, monospace);" id="rail-total-count">
+        @Model.ActualQuestionCount / @(Model.QuestionCount ?? Model.Sections.Sum(s => s.ExpectedQuestionCount ?? 0)) Qs
+      </span>
+    </div>
+    <div class="studio-panel__body" style="max-height: 75vh;">
+      @foreach (var sec in Model.Sections)
+      {
+        var isComplete = sec.ExpectedQuestionCount.HasValue && sec.CurrentQuestionCount >= sec.ExpectedQuestionCount.Value;
+        var badgeColor = isComplete ? "background: #e6f1ea; color: #0a6b3c;" : "background: #fef3d6; color: #b58900;";
+
+        <div class="rail-section" data-section-id="@sec.SectionId" data-section-code="@sec.Code">
+          <div class="rail-section__header" onclick="selectSection(@sec.SectionId)">
+            <span>[@sec.Code] @sec.Name</span>
+            <span class="badge text-xs" style="@badgeColor border-radius: 0; font-family: var(--font-mono, monospace);" id="sec-badge-@sec.SectionId">
+              @sec.CurrentQuestionCount / @(sec.ExpectedQuestionCount?.ToString() ?? "—")
+            </span>
+          </div>
+          <ul class="rail-section__items" id="rail-items-@sec.SectionId">
+            @foreach (var g in sec.Groups)
+            {
+              foreach (var q in g.Questions)
+              {
+                <li class="rail-item" id="rail-item-@q.QuestionId" data-question-id="@q.QuestionId" data-group-id="@g.GroupId" data-display-order="@q.DisplayOrder" onclick="focusQuestionCard(@q.QuestionId)">
+                  <div class="row" style="gap: 0.35rem; align-items: center; overflow: hidden;">
+                    <strong style="font-family: var(--font-mono, monospace);">#@q.DisplayOrder</strong>
+                    <span class="truncate" style="max-width: 130px;">@(string.IsNullOrWhiteSpace(q.Stem) ? "(empty stem)" : q.Stem)</span>
+                  </div>
+                  <div class="rail-item__btns" onclick="event.stopPropagation()">
+                    <button type="button" class="rail-btn-move" onclick="moveItemUp(@sec.SectionId, @q.QuestionId)" title="Move Up">&uarr;</button>
+                    <button type="button" class="rail-btn-move" onclick="moveItemDown(@sec.SectionId, @q.QuestionId)" title="Move Down">&darr;</button>
+                  </div>
+                </li>
+              }
+            }
+          </ul>
+        </div>
+      }
+    </div>
+  </aside>
+
+  <!-- ================= 2. CENTER WORKSTATION ================= -->
+  <main class="studio-panel" id="studio-workstation" aria-label="Question Workstation">
+    <div class="workstation-toolbar">
+      <div class="row" style="gap: 0.5rem; align-items: center;">
+        <span style="font-weight: bold; font-family: var(--font-condensed, sans-serif); text-transform: uppercase;" id="ws-section-name">
+          @Model.Sections.FirstOrDefault()?.Name
+        </span>
+        <span class="badge" style="background: #eef; border-radius: 0;" id="ws-section-modality">
+          @Model.Sections.FirstOrDefault()?.Modality
+        </span>
+      </div>
+
+      <div class="row" style="gap: 0.5rem;">
+        <button type="button" class="btn btn--secondary btn--sm" id="btn-add-question" style="border-radius: 0;">
+          + Add Question
+        </button>
+        <button type="button" class="btn btn--secondary btn--sm" id="btn-add-cluster" style="border-radius: 0;">
+          + Add Cluster
+        </button>
+      </div>
+    </div>
+
+    <div class="studio-panel__body" style="max-height: 75vh;" id="ws-cards-container">
+      @foreach (var sec in Model.Sections)
+      {
+        var isP1 = sec.Code == "P1";
+        var isP2 = sec.Code == "P2";
+        var isP3P4 = sec.Code == "P3" || sec.Code == "P4";
+        var isP5 = sec.Code == "P5";
+        var isP6 = sec.Code == "P6";
+        var isP7 = sec.Code == "P7";
+        var isSpeakingWriting = sec.Modality == Contracts.ModalityDto.Speaking || sec.Modality == Contracts.ModalityDto.Writing;
+
+        <div class="section-workstation-content" id="ws-sec-@sec.SectionId" style="@(sec == Model.Sections.FirstOrDefault() ? "" : "display:none;")">
+          <!-- VISUAL AUDIO SLICER FOR LISTENING SECTIONS -->
+          @if (sec.Modality == Contracts.ModalityDto.Listening)
+          {
+            <div class="audio-slicer" id="audio-slicer-sec-@sec.SectionId">
+              <div class="row row--between mb-1" style="align-items: center;">
+                <div class="row" style="gap: 0.5rem; align-items: center;">
+                  <strong style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 0.85rem;">Visual Audio Slicer</strong>
+                  <span class="text-xs text-muted" id="slicer-track-label-@sec.SectionId">
+                    @(string.IsNullOrWhiteSpace(sec.MasterAudioPath) ? "No master audio loaded" : sec.MasterAudioPath)
+                  </span>
+                </div>
+                <div style="font-family: var(--font-mono, monospace); font-size: 0.8rem;" id="slicer-timer-@sec.SectionId">
+                  00:00.000 / 00:00.000
+                </div>
+              </div>
+
+              <audio id="slicer-audio-@sec.SectionId" src="@sec.MasterAudioPath" preload="metadata"></audio>
+
+              <!-- Waveform / scrubber representation with tick marks -->
+              <div class="audio-slicer__scrubber" id="slicer-scrubber-@sec.SectionId" onclick="onScrubberClick(event, @sec.SectionId)">
+                <div class="audio-slicer__progress" id="slicer-progress-@sec.SectionId"></div>
+                <div class="audio-slicer__slice-region" id="slicer-region-@sec.SectionId" style="display: none;"></div>
+                <div class="audio-slicer__cursor" id="slicer-cursor-@sec.SectionId"></div>
+              </div>
+
+              <!-- Slicer Action Buttons -->
+              <div class="row row--between row--wrap" style="align-items: center; gap: 0.5rem;">
+                <div class="row" style="gap: 0.35rem; align-items: center;">
+                  <button type="button" class="btn btn--secondary btn--sm" onclick="toggleSlicerPlay(@sec.SectionId)" id="btn-slicer-play-@sec.SectionId" style="border-radius: 0; font-size: 0.75rem;">
+                    Play
+                  </button>
+                  <button type="button" class="btn btn--secondary btn--sm" onclick="markCurrentStart(@sec.SectionId)" style="border-radius: 0; font-size: 0.75rem; background: #eef4fc;">
+                    Mark Start
+                  </button>
+                  <button type="button" class="btn btn--secondary btn--sm" onclick="markCurrentEnd(@sec.SectionId)" style="border-radius: 0; font-size: 0.75rem; background: #eef4fc;">
+                    Mark End
+                  </button>
+                  <button type="button" class="btn btn--ghost btn--sm" onclick="previewCurrentSlice(@sec.SectionId)" style="border-radius: 0; font-size: 0.75rem;">
+                    Preview Slice
+                  </button>
+                  <button type="button" class="btn btn--ghost btn--sm" onclick="clearCurrentSlice(@sec.SectionId)" style="border-radius: 0; font-size: 0.75rem; color: #777;">
+                    Clear
+                  </button>
+                </div>
+
+                <div class="row" style="gap: 0.35rem; align-items: center;">
+                  <label class="btn btn--ghost btn--sm" style="border-radius: 0; font-size: 0.75rem; cursor: pointer; margin: 0;">
+                    Upload Audio
+                    <input type="file" accept="audio/*" style="display: none;" onchange="uploadAudioFile(this, @sec.SectionId)" />
+                  </label>
+                </div>
+              </div>
+            </div>
+          }
+
+          @if (sec.Groups.Count == 0)
+          {
+            <div class="text-center text-muted p-4" style="border: 2px dashed #ccd2d6;" id="empty-sec-@sec.SectionId">
+              <p>No questions yet in [@sec.Code] @sec.Name.</p>
+              <div class="row" style="gap: 0.5rem; justify-content: center;">
+                <button type="button" class="btn btn--primary btn--sm" onclick="createInitialCluster(@sec.SectionId, '@sec.Code')">
+                  + Add First Question
+                </button>
+                <button type="button" class="btn btn--secondary btn--sm" onclick="triggerQuickIngestForSection(@sec.SectionId)">
+                  Use Quick Ingest
+                </button>
+              </div>
+            </div>
+          }
+
+          @foreach (var g in sec.Groups)
+          {
+            <div class="card-editor" id="group-card-@g.GroupId" data-group-id="@g.GroupId" data-section-id="@sec.SectionId">
+              <div class="card-editor__header">
+                <span style="font-weight: 600; font-size: 0.85rem; font-family: var(--font-condensed, sans-serif); text-transform: uppercase;">
+                  @if (isP1) { <span>Photo Item #@g.DisplayOrder</span> }
+                  else if (isP2) { <span>Question-Response #@g.DisplayOrder</span> }
+                  else if (isP3P4) { <span>Conversation / Talk Cluster #@g.DisplayOrder (@g.Questions.Count Questions)</span> }
+                  else if (isP5) { <span>Incomplete Sentence #@g.DisplayOrder</span> }
+                  else if (isP6) { <span>Text Completion Cluster #@g.DisplayOrder (4 Blanks)</span> }
+                  else if (isP7) { <span>Reading Passage Cluster #@g.DisplayOrder (@g.Questions.Count Questions)</span> }
+                  else { <span>Group #@g.DisplayOrder (@g.Questions.Count Questions)</span> }
+                </span>
+                <button type="button" class="btn btn--ghost btn--sm" onclick="deleteStudioGroup(@g.GroupId, @sec.SectionId)" style="color: var(--color-danger, #b31217);">&times; Remove Group</button>
+              </div>
+
+              <div class="p-3 stack" style="gap: 0.75rem;">
+                <!-- TEMPLATE 1: TOEIC PART 1 PHOTOGRAPH -->
+                @if (isP1)
+                {
+                  <div style="background: #fafafa; border: 1px solid #ccd2d6; padding: 0.75rem;">
+                    <div class="row row--wrap" style="gap: 1rem; align-items: start;">
+                      <!-- Photo Upload & Thumbnail Preview -->
+                      <div style="width: 180px;">
+                        <div class="studio-dropzone" id="dropzone-p1-@g.GroupId" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDropFile(event, @g.GroupId, 'image')" onclick="triggerFileInput('img-input-@g.GroupId')">
+                          @if (!string.IsNullOrWhiteSpace(g.ImagePath))
+                          {
+                            <img src="@g.ImagePath" alt="@g.ImageAlt" id="preview-img-@g.GroupId" style="width: 100%; max-height: 120px; object-fit: contain; border: 2px solid #14181d;" />
+                            <div class="text-xs text-muted mt-1">Click to replace photo</div>
+                          }
+                          else
+                          {
+                            <div id="dropzone-placeholder-@g.GroupId">
+                              <span style="font-size: 1.5rem; display: block;">&#128247;</span>
+                              <span class="text-xs font-bold">Drag Photo Here</span>
+                              <span class="text-xs text-muted block">or click to browse</span>
+                            </div>
+                            <img id="preview-img-@g.GroupId" style="width: 100%; max-height: 120px; object-fit: contain; border: 2px solid #14181d; display: none;" />
+                          }
+                          <input type="file" id="img-input-@g.GroupId" accept="image/*" style="display: none;" onchange="uploadImageInput(this, @g.GroupId)" />
+                        </div>
+                      </div>
+
+                      <!-- Image Path and Accessibility Alt Text -->
+                      <div style="flex: 1;" class="stack" style="gap: 0.5rem;">
+                        <div>
+                          <label class="text-xs" style="font-weight: bold;">Photograph File Path:</label>
+                          <input type="text" class="field__input studio-autosave" data-type="group" data-id="@g.GroupId" data-field="ImagePath" id="img-path-@g.GroupId" value="@g.ImagePath" placeholder="/media/photo1.jpg" style="width: 100%; font-size: 0.8rem; border-radius: 0;" />
+                        </div>
+
+                        <div>
+                          <label class="text-xs" style="font-weight: bold;">
+                            Accessibility Alt Text
+                            <span class="badge text-xs" style="background: #fbe9e9; color: #b31217; border-radius: 0;">* REQUIRED (CK_QGroups_ImageAlt)</span>:
+                          </label>
+                          <input type="text" class="field__input studio-autosave @(string.IsNullOrWhiteSpace(g.ImageAlt) && !string.IsNullOrWhiteSpace(g.ImagePath) ? "border-danger" : "")" data-type="group" data-id="@g.GroupId" data-field="ImageAlt" id="img-alt-@g.GroupId" value="@g.ImageAlt" placeholder="e.g. Office workers gathered around a whiteboard" style="width: 100%; font-size: 0.8rem; border-radius: 0;" />
+                          <small class="text-xs text-muted">Required when an image is present so visually impaired learners can read descriptions.</small>
+                        </div>
+
+                        <!-- Slice millisecond inputs -->
+                        <div class="row row--wrap" style="gap: 0.5rem; align-items: center; margin-top: 0.25rem;">
+                          <div style="width: 100px;">
+                            <label class="text-xs">Start (ms):</label>
+                            <input type="number" class="field__input studio-autosave" data-type="group" data-id="@g.GroupId" data-field="AudioStartMs" id="start-ms-@g.GroupId" value="@g.AudioStartMs" min="0" style="width: 100%; font-size: 0.75rem; border-radius: 0;" />
+                          </div>
+                          <div style="width: 100px;">
+                            <label class="text-xs">End (ms):</label>
+                            <input type="number" class="field__input studio-autosave" data-type="group" data-id="@g.GroupId" data-field="AudioEndMs" id="end-ms-@g.GroupId" value="@g.AudioEndMs" min="0" style="width: 100%; font-size: 0.75rem; border-radius: 0;" />
+                          </div>
+                          <button type="button" class="btn btn--secondary btn--sm" onclick="setActiveSlicerGroup(@g.GroupId, @sec.SectionId)" style="border-radius: 0; font-size: 0.75rem; margin-top: 1.25rem;">
+                            Sync with Slicer
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                }
+
+                <!-- TEMPLATE 2: TOEIC PART 2 SPOKEN PROMPT AUDIO -->
+                @if (isP2)
+                {
+                  <div style="background: #fafafa; border: 1px solid #ccd2d6; padding: 0.75rem;">
+                    <div class="row row--wrap" style="gap: 0.75rem; align-items: center;">
+                      <div style="flex: 2;">
+                        <label class="text-xs" style="font-weight: bold;">Spoken Prompt Audio Path / Track:</label>
+                        <input type="text" class="field__input studio-autosave" data-type="group" data-id="@g.GroupId" data-field="AudioPath" value="@g.AudioPath" placeholder="/audio/p2-prompt.mp3" style="width: 100%; font-size: 0.8rem; border-radius: 0;" />
+                      </div>
+                      <div style="width: 100px;">
+                        <label class="text-xs" style="font-weight: bold;">Start (ms):</label>
+                        <input type="number" class="field__input studio-autosave" data-type="group" data-id="@g.GroupId" data-field="AudioStartMs" id="start-ms-@g.GroupId" value="@g.AudioStartMs" min="0" style="width: 100%; font-size: 0.8rem; border-radius: 0;" />
+                      </div>
+                      <div style="width: 100px;">
+                        <label class="text-xs" style="font-weight: bold;">End (ms):</label>
+                        <input type="number" class="field__input studio-autosave" data-type="group" data-id="@g.GroupId" data-field="AudioEndMs" id="end-ms-@g.GroupId" value="@g.AudioEndMs" min="0" style="width: 100%; font-size: 0.8rem; border-radius: 0;" />
+                      </div>
+                      <button type="button" class="btn btn--secondary btn--sm" onclick="setActiveSlicerGroup(@g.GroupId, @sec.SectionId)" style="border-radius: 0; font-size: 0.75rem; margin-top: 1.25rem;">
+                        Sync Slicer
+                      </button>
+                    </div>
+                  </div>
+                }
+
+                <!-- TEMPLATE 3: TOEIC PART 3 & 4 CONVERSATIONS / SHORT TALKS -->
+                @if (isP3P4)
+                {
+                  <div style="background: #fafafa; border: 1px solid #ccd2d6; padding: 0.75rem;" class="stack" style="gap: 0.5rem;">
+                    <div class="row row--wrap" style="gap: 0.75rem; align-items: center;">
+                      <div style="flex: 2;">
+                        <label class="text-xs" style="font-weight: bold;">Audio Clip Path:</label>
+                        <input type="text" class="field__input studio-autosave" data-type="group" data-id="@g.GroupId" data-field="AudioPath" value="@g.AudioPath" placeholder="/audio/cluster.mp3" style="width: 100%; font-size: 0.8rem; border-radius: 0;" />
+                      </div>
+                      <div style="width: 90px;">
+                        <label class="text-xs">Start (ms):</label>
+                        <input type="number" class="field__input studio-autosave" data-type="group" data-id="@g.GroupId" data-field="AudioStartMs" id="start-ms-@g.GroupId" value="@g.AudioStartMs" min="0" style="width: 100%; font-size: 0.75rem; border-radius: 0;" />
+                      </div>
+                      <div style="width: 90px;">
+                        <label class="text-xs">End (ms):</label>
+                        <input type="number" class="field__input studio-autosave" data-type="group" data-id="@g.GroupId" data-field="AudioEndMs" id="end-ms-@g.GroupId" value="@g.AudioEndMs" min="0" style="width: 100%; font-size: 0.75rem; border-radius: 0;" />
+                      </div>
+                      <button type="button" class="btn btn--secondary btn--sm" onclick="setActiveSlicerGroup(@g.GroupId, @sec.SectionId)" style="border-radius: 0; font-size: 0.75rem; margin-top: 1.25rem;">
+                        Sync Slicer
+                      </button>
+                    </div>
+
+                    <div>
+                      <label class="text-xs" style="font-weight: bold;">Audio Dialogue Transcript:</label>
+                      <textarea rows="3" class="field__input studio-autosave" data-type="group" data-id="@g.GroupId" data-field="Transcript" placeholder="M: Hi Sarah, have you finished the quarterly sales report?&#10;W: Not yet, I am still waiting for the regional data..." style="width: 100%; font-size: 0.8rem; border-radius: 0;">@g.Transcript</textarea>
+                    </div>
+                  </div>
+                }
+
+                <!-- TEMPLATE 5: TOEIC PART 6 TEXT COMPLETION BLANKS -->
+                @if (isP6)
+                {
+                  <div style="background: #fafafa; border: 1px solid #ccd2d6; padding: 0.75rem;" class="stack" style="gap: 0.5rem;">
+                    <div class="row row--between" style="align-items: center;">
+                      <label class="text-xs" style="font-weight: bold;">Passage Editor (Use [1], [2], [3], [4] for blanks):</label>
+                      <div class="row" style="gap: 0.25rem;">
+                        <button type="button" class="btn btn--ghost btn--sm" onclick="insertP6Blank(@g.GroupId, 1)" style="border-radius: 0; font-size: 0.75rem;">+ Blank [1]</button>
+                        <button type="button" class="btn btn--ghost btn--sm" onclick="insertP6Blank(@g.GroupId, 2)" style="border-radius: 0; font-size: 0.75rem;">+ Blank [2]</button>
+                        <button type="button" class="btn btn--ghost btn--sm" onclick="insertP6Blank(@g.GroupId, 3)" style="border-radius: 0; font-size: 0.75rem;">+ Blank [3]</button>
+                        <button type="button" class="btn btn--ghost btn--sm" onclick="insertP6Blank(@g.GroupId, 4)" style="border-radius: 0; font-size: 0.75rem;">+ Blank [4]</button>
+                      </div>
+                    </div>
+                    <textarea rows="5" class="field__input studio-autosave p6-passage-input" id="p6-passage-@g.GroupId" data-type="group" data-id="@g.GroupId" data-field="Passage" oninput="renderP6Preview(@g.GroupId)" placeholder="Dear Valued Customer,&#10;Thank you for contacting customer support. We [1] your inquiry regarding order #104. Our logistics team is currently [2] the issue..." style="width: 100%; font-size: 0.85rem; border-radius: 0;">@g.Passage</textarea>
+
+                    <!-- Live Inline Blank Preview -->
+                    <div>
+                      <span class="text-xs text-muted uppercase font-bold" style="letter-spacing: 0.05em;">Live Inline Preview:</span>
+                      <div class="p-2 mt-1" id="p6-preview-@g.GroupId" style="background: #ffffff; border: 1px solid #ccd2d6; font-size: 0.85rem; min-height: 48px; line-height: 1.6;">
+                        <!-- Rendered by renderP6Preview -->
+                      </div>
+                    </div>
+                  </div>
+                }
+
+                <!-- TEMPLATE 6: TOEIC PART 7 MULTI-PASSAGE READING -->
+                @if (isP7)
+                {
+                  <div style="background: #fafafa; border: 1px solid #ccd2d6; padding: 0.75rem;" class="stack" style="gap: 0.5rem;">
+                    <div class="row row--between" style="align-items: center;">
+                      <div class="doc-tabs" id="doc-tabs-@g.GroupId">
+                        <button type="button" class="doc-tab is-active" id="tab-btn-@g.GroupId-1" onclick="switchDocTab(@g.GroupId, 1)">Passage 1</button>
+                        <button type="button" class="doc-tab" id="tab-btn-@g.GroupId-2" onclick="switchDocTab(@g.GroupId, 2)">Passage 2</button>
+                        <button type="button" class="doc-tab" id="tab-btn-@g.GroupId-3" onclick="switchDocTab(@g.GroupId, 3)">Passage 3</button>
+                      </div>
+                      <span class="text-xs text-muted">Single, Double, or Triple Document</span>
+                    </div>
+
+                    <textarea rows="6" class="field__input studio-autosave p7-passage-input" id="p7-passage-@g.GroupId" data-type="group" data-id="@g.GroupId" data-field="Passage" placeholder="Passage 1 content... (Use '---' on a new line to separate multiple documents)" style="width: 100%; font-size: 0.85rem; border-radius: 0;">@g.Passage</textarea>
+                  </div>
+                }
+
+                <!-- QUESTIONS INSIDE THIS GROUP -->
+                <div class="stack" style="gap: 0.75rem; margin-top: 0.5rem;">
+                  @foreach (var q in g.Questions)
+                  {
+                    <div class="question-card p-3" id="question-card-@q.QuestionId" data-question-id="@q.QuestionId" style="border: 1px solid var(--color-ink, #14181d); background: #ffffff;">
+                      <div class="row row--between mb-2" style="align-items: center;">
+                        <div class="row" style="gap: 0.5rem; align-items: center;">
+                          <strong class="text-sm" style="font-family: var(--font-mono, monospace);">Question #@q.DisplayOrder</strong>
+                          @if (isP6)
+                          {
+                            <span class="badge" style="background: var(--color-ink, #14181d); color: #fff; border-radius: 0; font-family: var(--font-mono, monospace); font-size: 0.7rem;">BLANK [@q.DisplayOrder]</span>
+                          }
+                        </div>
+
+                        <div class="row" style="gap: 0.5rem; align-items: center;">
+                          <label class="text-xs">Category:</label>
+                          <select class="field__input studio-autosave" data-type="question" data-id="@q.QuestionId" data-field="CategoryId" style="font-size: 0.75rem; padding: 0.2rem 0.4rem; border-radius: 0;">
+                            <option value="">-- No Category --</option>
+                            @foreach (var cat in Model.AvailableCategories)
+                            {
+                              <option value="@cat.CategoryId" selected="@(q.CategoryId == cat.CategoryId)">@cat.Name (@cat.Code)</option>
+                            }
+                          </select>
+                          <button type="button" class="btn btn--ghost btn--sm" onclick="deleteStudioQuestion(@q.QuestionId, @sec.SectionId)" style="color: var(--color-danger, #b31217); padding: 0.1rem 0.3rem;" title="Remove Question">&times;</button>
+                        </div>
+                      </div>
+
+                      <!-- Question Stem with Helper for Part 5 -->
+                      <div class="mb-2">
+                        @if (isP5)
+                        {
+                          <div class="row row--between mb-1">
+                            <label class="text-xs font-bold">Incomplete Sentence Stem:</label>
+                            <button type="button" class="btn btn--ghost btn--sm" onclick="insertBlankInStem(@q.QuestionId)" style="border-radius: 0; font-size: 0.7rem; padding: 0.1rem 0.3rem;">
+                              + Insert Blank (_____)
+                            </button>
+                          </div>
+                        }
+                        <input type="text" class="field__input studio-autosave" data-type="question" data-id="@q.QuestionId" data-field="Stem" id="stem-@q.QuestionId" value="@q.Stem" placeholder="@(isP1 ? "Look at the photograph and choose the statement that best describes what you see in the image." : (isP2 ? "Mark your answer on your answer sheet." : "Question stem text..."))" style="width: 100%; font-weight: 500; border-radius: 0;" />
+                      </div>
+
+                      <!-- OPTIONS FOR MCQ -->
+                      @if (q.QuestionType == Contracts.QuestionTypeDto.Mcq)
+                      {
+                        var maxOpts = isP2 ? 3 : 4;
+                        var optLabels = isP2 ? new[] { "A", "B", "C" } : new[] { "A", "B", "C", "D" };
+
+                        <div class="stack" style="gap: 0.35rem; margin-left: 0.5rem;">
+                          @for (var oi = 0; oi < maxOpts; oi++)
+                          {
+                            var lbl = optLabels[oi];
+                            var existingOpt = q.Options.FirstOrDefault(o => o.Label == lbl);
+                            var isCorr = existingOpt?.IsCorrect ?? (oi == 0);
+                            var optTxt = existingOpt?.Text ?? "";
+                            var optRat = existingOpt?.Rationale ?? "";
+
+                            <div class="row" style="gap: 0.5rem; align-items: center;">
+                              <label style="display: flex; align-items: center; gap: 0.25rem; font-weight: bold; width: 45px; cursor: pointer;">
+                                <input type="radio" name="opt-correct-@q.QuestionId" value="@lbl" checked="@isCorr" class="studio-opt-radio" data-qid="@q.QuestionId" data-label="@lbl" style="accent-color: var(--color-ink, #14181d);" />
+                                @lbl.
+                              </label>
+                              <input type="text" class="field__input studio-opt-text" data-qid="@q.QuestionId" data-label="@lbl" value="@optTxt" placeholder="Option text..." style="flex: 2; font-size: 0.85rem; border-radius: 0;" />
+                              <input type="text" class="field__input studio-opt-rationale" data-qid="@q.QuestionId" data-label="@lbl" value="@optRat" placeholder="Distractor rationale..." style="flex: 2; font-size: 0.8rem; color: #555; border-radius: 0;" />
+                            </div>
+                          }
+                        </div>
+                      }
+
+                      <!-- FREE RESPONSE TIMERS & RUBRIC CRITERIA CHECKLIST -->
+                      @if (q.QuestionType == Contracts.QuestionTypeDto.FreeResponse || isSpeakingWriting)
+                      {
+                        <div style="background: #fafafa; border: 1px solid #ccd2d6; padding: 0.75rem; margin-top: 0.5rem;" class="stack" style="gap: 0.5rem;">
+                          <div class="row row--wrap" style="gap: 0.75rem;">
+                            <div>
+                              <label class="text-xs" style="font-weight: bold;">Prep Countdown (Sec):</label>
+                              <input type="number" class="field__input studio-autosave" data-type="question" data-id="@q.QuestionId" data-field="PrepSeconds" value="@(q.PrepSeconds ?? (sec.Modality == Contracts.ModalityDto.Speaking ? 15 : 60))" min="0" style="width: 90px; font-size: 0.8rem; border-radius: 0;" />
+                            </div>
+                            <div>
+                              <label class="text-xs" style="font-weight: bold;">Response Countdown (Sec):</label>
+                              <input type="number" class="field__input studio-autosave" data-type="question" data-id="@q.QuestionId" data-field="ResponseSeconds" value="@(q.ResponseSeconds ?? (sec.Modality == Contracts.ModalityDto.Speaking ? 45 : 1800))" min="1" style="width: 90px; font-size: 0.8rem; border-radius: 0;" />
+                            </div>
+                            <div>
+                              <label class="text-xs" style="font-weight: bold;">Min Words:</label>
+                              <input type="number" class="field__input studio-autosave" data-type="question" data-id="@q.QuestionId" data-field="MinWords" value="@q.MinWords" min="1" style="width: 80px; font-size: 0.8rem; border-radius: 0;" />
+                            </div>
+                            <div>
+                              <label class="text-xs" style="font-weight: bold;">Max Words:</label>
+                              <input type="number" class="field__input studio-autosave" data-type="question" data-id="@q.QuestionId" data-field="MaxWords" value="@q.MaxWords" min="1" style="width: 80px; font-size: 0.8rem; border-radius: 0;" />
+                            </div>
+                          </div>
+
+                          <!-- Rubric Criteria Checklist -->
+                          <div class="mt-2">
+                            <label class="text-xs" style="font-weight: bold; text-transform: uppercase; font-family: var(--font-condensed, sans-serif);">
+                              Certificate Rubric Criteria Checklist (GradingCriteria):
+                            </label>
+                            <div class="stack mt-1" style="gap: 0.35rem; background: #ffffff; border: 1px solid #ccd2d6; padding: 0.5rem;">
+                              @foreach (var crit in q.Criteria)
+                              {
+                                <div class="row row--between" style="align-items: center; font-size: 0.8rem;">
+                                  <label style="display: flex; align-items: center; gap: 0.35rem;">
+                                    <input type="checkbox" checked disabled style="accent-color: var(--color-ink, #14181d);" />
+                                    <span><strong>[@crit.Code]</strong> @crit.Name</span>
+                                  </label>
+                                  <span class="badge text-xs" style="background: #eef; font-family: var(--font-mono, monospace);">Max Score: @crit.MaxScore</span>
+                                </div>
+                              }
+                            </div>
+                          </div>
+                        </div>
+                      }
+
+                      <!-- Pedagogical Explanation -->
+                      <div style="margin-top: 0.5rem;">
+                        <input type="text" class="field__input studio-autosave" data-type="question" data-id="@q.QuestionId" data-field="Explanation" value="@q.Explanation" placeholder="Explanation / Pedagogical rationale..." style="width: 100%; font-size: 0.8rem; color: #444; border-radius: 0;" />
+                      </div>
+                    </div>
+                  }
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </main>
+
+  <!-- ================= 3. RIGHT READINESS AUDIT PLACARD ================= -->
+  <aside class="studio-panel" id="studio-right-audit" aria-label="Publish Readiness Audit">
+    <div class="studio-panel__header">
+      <h2>Publish Readiness</h2>
+      <span class="badge" id="audit-status-badge" style="font-family: var(--font-mono, monospace); border-radius: 0; @(Model.Audit.CanPublish ? "background: #e6f1ea; color: #0a6b3c;" : "background: #fbe9e9; color: #b31217;")">
+        @(Model.Audit.CanPublish ? "PASSED" : $"{Model.Audit.BlockingErrorCount} BLOCKS")
+      </span>
+    </div>
+
+    <div class="studio-panel__body" style="max-height: 75vh; display: flex; flex-direction: column; justify-content: space-between;">
+      <div>
+        <div class="stack" style="gap: 0.5rem; border-bottom: 2px solid var(--color-ink, #14181d); padding-bottom: 0.75rem; margin-bottom: 0.75rem;">
+          <div class="row row--between text-sm">
+            <span>Questions:</span>
+            <strong style="font-family: var(--font-mono, monospace);" id="audit-q-count">
+              @Model.Audit.TotalQuestions / @Model.Audit.ExpectedQuestions
+            </strong>
+          </div>
+          <div class="row row--between text-sm">
+            <span>Blocking Errors:</span>
+            <strong style="font-family: var(--font-mono, monospace); color: @(Model.Audit.BlockingErrorCount > 0 ? "#b31217" : "#0a6b3c");" id="audit-error-count">
+              @Model.Audit.BlockingErrorCount
+            </strong>
+          </div>
+          <div class="row row--between text-sm">
+            <span>Warnings:</span>
+            <strong style="font-family: var(--font-mono, monospace);" id="audit-warn-count">
+              @Model.Audit.WarningCount
+            </strong>
+          </div>
+        </div>
+
+        <ul class="stack" style="gap: 0.4rem; list-style: none; margin: 0; padding: 0;" id="audit-issues-list">
+          @if (Model.Audit.Issues.Count == 0 && Model.Audit.CanPublish)
+          {
+            <li class="audit-item audit-item--success">
+              <span>&#10004;</span>
+              <div>All certificate invariants satisfied. Ready to publish!</div>
+            </li>
+          }
+          @foreach (var iss in Model.Audit.Issues)
+          {
+            var itemClass = iss.Severity == "error" ? "audit-item--error" : "audit-item--warning";
+            var icon = iss.Severity == "error" ? "&#10008;" : "&#9888;";
+            <li class="audit-item @itemClass" id="audit-issue-@iss.Code">
+              <span>@Html.Raw(icon)</span>
+              <div>
+                <div>@iss.Message</div>
+                @if (!string.IsNullOrEmpty(iss.ElementTarget))
+                {
+                  <span class="audit-jump-link" onclick="jumpToAuditElement('@iss.ElementTarget')">Jump to issue &rarr;</span>
+                }
+              </div>
+            </li>
+          }
+        </ul>
+      </div>
+
+      <div style="border-top: 1px solid var(--color-border, #ccd2d6); padding-top: 0.75rem;">
+        <button type="button" class="btn btn--primary" id="btn-publish-exam" @(Model.Audit.CanPublish ? "" : "disabled") style="width: 100%; border-radius: 0; text-transform: uppercase; font-family: var(--font-condensed, sans-serif); font-weight: bold; margin-bottom: 0.5rem;">
+          Publish Exam
+        </button>
+        <div style="display: flex; gap: 0.5rem; margin-top: 0.25rem;">
+          <a href="/admin/exams/@Model.ExamId/export?format=zip" class="btn btn--secondary" id="btn-export-exam" style="flex: 1; border-radius: 0; font-size: 0.8rem; text-align: center; text-decoration: none; padding: 0.45rem 0.25rem;">
+            Export ZIP
+          </a>
+          <a href="/admin/exams/@Model.ExamId/export?format=json" class="btn btn--secondary" id="btn-export-json" style="flex: 1; border-radius: 0; font-size: 0.8rem; text-align: center; text-decoration: none; padding: 0.45rem 0.25rem;">
+            Export JSON
+          </a>
+        </div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+@await Html.PartialAsync("~/Views/Admin/_QuickIngestModal.cshtml")
+
+<script>
+(function() {
+  var examId = @Model.ExamId;
+  var currentSectionId = @(Model.Sections.FirstOrDefault()?.SectionId ?? 0);
+  var activeSlicerGroupId = null;
+  var isSaving = false;
+  var saveDebounceTimer = null;
+  var statusIndicator = document.getElementById('autosave-status');
+
+  function getCsrfToken() {
+    var input = document.querySelector('input[name="__RequestVerificationToken"]');
+    return input ? input.value : '';
+  }
+
+  // --- Autosave Engine ---
+  function markSaving() {
+    isSaving = true;
+    statusIndicator.textContent = 'Saving...';
+    statusIndicator.style.color = '#0b4ea2';
+  }
+
+  function markSaved() {
+    isSaving = false;
+    var now = new Date();
+    var timeStr = now.toTimeString().split(' ')[0];
+    statusIndicator.textContent = 'Saved at ' + timeStr;
+    statusIndicator.style.color = '#0a6b3c';
+  }
+
+  function markSaveFailed(msg) {
+    isSaving = false;
+    statusIndicator.textContent = 'Save failed: ' + (msg || 'Error');
+    statusIndicator.style.color = '#b31217';
+  }
+
+  window.addEventListener('beforeunload', function(e) {
+    if (isSaving) {
+      e.preventDefault();
+      e.returnValue = 'You have unsaved changes in progress. Are you sure you want to leave?';
+      return e.returnValue;
+    }
+  });
+
+  // Attach autosave listeners to inputs
+  function bindAutosaveInputs() {
+    document.querySelectorAll('.studio-autosave').forEach(function(input) {
+      if (input._hasAutosave) return;
+      input._hasAutosave = true;
+
+      input.addEventListener('input', function() {
+        clearTimeout(saveDebounceTimer);
+        markSaving();
+        saveDebounceTimer = setTimeout(function() {
+          performAutosave(input);
+        }, 1500);
+      });
+
+      input.addEventListener('blur', function() {
+        clearTimeout(saveDebounceTimer);
+        performAutosave(input);
+      });
+    });
+
+    document.querySelectorAll('.studio-opt-radio').forEach(function(radio) {
+      if (radio._hasAutosave) return;
+      radio._hasAutosave = true;
+      radio.addEventListener('change', function() {
+        saveSingleQuestion(parseInt(radio.getAttribute('data-qid'), 10));
+      });
+    });
+
+    document.querySelectorAll('.studio-opt-text, .studio-opt-rationale').forEach(function(optInput) {
+      if (optInput._hasAutosave) return;
+      optInput._hasAutosave = true;
+      optInput.addEventListener('input', function() {
+        clearTimeout(saveDebounceTimer);
+        markSaving();
+        saveDebounceTimer = setTimeout(function() {
+          saveSingleQuestion(parseInt(optInput.getAttribute('data-qid'), 10));
+        }, 1500);
+      });
+    });
+  }
+
+  bindAutosaveInputs();
+
+  function performAutosave(input) {
+    var type = input.getAttribute('data-type');
+    var id = parseInt(input.getAttribute('data-id'), 10);
+    if (type === 'question') {
+      saveSingleQuestion(id);
+    } else if (type === 'group') {
+      saveSingleGroup(id);
+    }
+  }
+
+  window.saveSingleQuestion = function(questionId) {
+    var card = document.getElementById('question-card-' + questionId);
+    if (!card) return;
+
+    markSaving();
+
+    var stem = card.querySelector('[data-field="Stem"]')?.value || '';
+    var catId = card.querySelector('[data-field="CategoryId"]')?.value;
+    var expl = card.querySelector('[data-field="Explanation"]')?.value;
+    var prep = card.querySelector('[data-field="PrepSeconds"]')?.value;
+    var resp = card.querySelector('[data-field="ResponseSeconds"]')?.value;
+    var minW = card.querySelector('[data-field="MinWords"]')?.value;
+    var maxW = card.querySelector('[data-field="MaxWords"]')?.value;
+
+    var options = [];
+    card.querySelectorAll('.studio-opt-text').forEach(function(txtInput) {
+      var label = txtInput.getAttribute('data-label');
+      var isCorr = card.querySelector('.studio-opt-radio[data-label="' + label + '"]')?.checked || false;
+      var rat = card.querySelector('.studio-opt-rationale[data-label="' + label + '"]')?.value;
+      options.push({
+        label: label,
+        text: txtInput.value,
+        isCorrect: isCorr,
+        rationale: rat
+      });
+    });
+
+    var payload = {
+      stem: stem,
+      difficultyLevel: 3,
+      questionType: options.length > 0 ? 0 : 1,
+      explanation: expl,
+      categoryId: catId ? parseInt(catId, 10) : null,
+      prepSeconds: prep ? parseInt(prep, 10) : null,
+      responseSeconds: resp ? parseInt(resp, 10) : null,
+      minWords: minW ? parseInt(minW, 10) : null,
+      maxWords: maxW ? parseInt(maxW, 10) : null,
+      options: options.length > 0 ? options : null
+    };
+
+    fetch('/admin/exams/' + examId + '/studio/question/' + questionId, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'RequestVerificationToken': getCsrfToken()
+      },
+      body: JSON.stringify(payload)
+    })
+    .then(function(res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    })
+    .then(function() {
+      markSaved();
+      refreshAudit();
+    })
+    .catch(function(err) {
+      markSaveFailed(err.message);
+    });
+  };
+
+  window.saveSingleGroup = function(groupId) {
+    var card = document.getElementById('group-card-' + groupId);
+    if (!card) return;
+
+    markSaving();
+
+    var secId = parseInt(card.getAttribute('data-section-id'), 10);
+    var audioPath = card.querySelector('[data-field="AudioPath"]')?.value;
+    var startMs = card.querySelector('[data-field="AudioStartMs"]')?.value;
+    var endMs = card.querySelector('[data-field="AudioEndMs"]')?.value;
+    var imgPath = card.querySelector('[data-field="ImagePath"]')?.value;
+    var imgAlt = card.querySelector('[data-field="ImageAlt"]')?.value;
+    var passage = card.querySelector('[data-field="Passage"]')?.value;
+    var transcript = card.querySelector('[data-field="Transcript"]')?.value;
+
+    var payload = {
+      sectionId: secId,
+      audioPath: audioPath,
+      audioStartMs: startMs ? parseInt(startMs, 10) : null,
+      audioEndMs: endMs ? parseInt(endMs, 10) : null,
+      imagePath: imgPath,
+      imageAlt: imgAlt,
+      passage: passage,
+      transcript: transcript
+    };
+
+    fetch('/admin/exams/' + examId + '/studio/group/' + groupId, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'RequestVerificationToken': getCsrfToken()
+      },
+      body: JSON.stringify(payload)
+    })
+    .then(function(res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    })
+    .then(function() {
+      markSaved();
+      refreshAudit();
+    })
+    .catch(function(err) {
+      markSaveFailed(err.message);
+    });
+  };
+
+  // --- Visual Audio Slicer Widget Mechanics ---
+  function formatTime(sec) {
+    if (isNaN(sec) || sec < 0) sec = 0;
+    var m = Math.floor(sec / 60);
+    var s = Math.floor(sec % 60);
+    var ms = Math.floor((sec % 1) * 1000);
+    return (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s + '.' + (ms < 100 ? (ms < 10 ? '00' : '0') : '') + ms;
+  }
+
+  window.setActiveSlicerGroup = function(groupId, sectionId) {
+    activeSlicerGroupId = groupId;
+    var grpCard = document.getElementById('group-card-' + groupId);
+    if (!grpCard) return;
+
+    var audio = document.getElementById('slicer-audio-' + sectionId);
+    var grpAudioPath = grpCard.querySelector('[data-field="AudioPath"]')?.value;
+    if (audio && grpAudioPath && audio.getAttribute('src') !== grpAudioPath) {
+      audio.src = grpAudioPath;
+      document.getElementById('slicer-track-label-' + sectionId).textContent = grpAudioPath;
+    }
+
+    var startVal = grpCard.querySelector('[data-field="AudioStartMs"]')?.value;
+    var endVal = grpCard.querySelector('[data-field="AudioEndMs"]')?.value;
+    updateSlicerRegion(sectionId, startVal ? parseInt(startVal, 10) : null, endVal ? parseInt(endVal, 10) : null);
+  };
+
+  function updateSlicerRegion(secId, startMs, endMs) {
+    var region = document.getElementById('slicer-region-' + secId);
+    var audio = document.getElementById('slicer-audio-' + secId);
+    if (!region || !audio || !audio.duration) return;
+
+    if (startMs !== null && endMs !== null && endMs > startMs) {
+      var leftPct = (startMs / 1000 / audio.duration) * 100;
+      var widthPct = ((endMs - startMs) / 1000 / audio.duration) * 100;
+      region.style.left = leftPct + '%';
+      region.style.width = widthPct + '%';
+      region.style.display = 'block';
+    } else {
+      region.style.display = 'none';
+    }
+  }
+
+  window.toggleSlicerPlay = function(secId) {
+    var audio = document.getElementById('slicer-audio-' + secId);
+    var btn = document.getElementById('btn-slicer-play-' + secId);
+    if (!audio) return;
+
+    if (audio.paused) {
+      audio.play();
+      btn.textContent = 'Pause';
+    } else {
+      audio.pause();
+      btn.textContent = 'Play';
+    }
+  };
+
+  window.onScrubberClick = function(e, secId) {
+    var scrubber = document.getElementById('slicer-scrubber-' + secId);
+    var audio = document.getElementById('slicer-audio-' + secId);
+    if (!scrubber || !audio || !audio.duration) return;
+
+    var rect = scrubber.getBoundingClientRect();
+    var x = e.clientX - rect.left;
+    var pct = Math.max(0, Math.min(1, x / rect.width));
+    audio.currentTime = pct * audio.duration;
+  };
+
+  // Attach timeupdate to slicer audio
+  document.querySelectorAll('[id^="slicer-audio-"]').forEach(function(audio) {
+    var secId = audio.id.replace('slicer-audio-', '');
+    audio.addEventListener('timeupdate', function() {
+      var timer = document.getElementById('slicer-timer-' + secId);
+      var progress = document.getElementById('slicer-progress-' + secId);
+      var cursor = document.getElementById('slicer-cursor-' + secId);
+
+      if (timer && audio.duration) {
+        timer.textContent = formatTime(audio.currentTime) + ' / ' + formatTime(audio.duration);
+      }
+      if (progress && audio.duration) {
+        var pct = (audio.currentTime / audio.duration) * 100;
+        progress.style.width = pct + '%';
+        if (cursor) cursor.style.left = pct + '%';
+      }
+    });
+
+    audio.addEventListener('ended', function() {
+      var btn = document.getElementById('btn-slicer-play-' + secId);
+      if (btn) btn.textContent = 'Play';
+    });
+  });
+
+  window.markCurrentStart = function(secId) {
+    var audio = document.getElementById('slicer-audio-' + secId);
+    if (!audio) return;
+    var ms = Math.floor(audio.currentTime * 1000);
+
+    var targetGroupId = activeSlicerGroupId || document.querySelector('#ws-sec-' + secId + ' .card-editor')?.getAttribute('data-group-id');
+    if (!targetGroupId) return;
+
+    var input = document.getElementById('start-ms-' + targetGroupId);
+    if (input) {
+      input.value = ms;
+      saveSingleGroup(parseInt(targetGroupId, 10));
+      updateSlicerRegion(secId, ms, parseInt(document.getElementById('end-ms-' + targetGroupId)?.value, 10));
+    }
+  };
+
+  window.markCurrentEnd = function(secId) {
+    var audio = document.getElementById('slicer-audio-' + secId);
+    if (!audio) return;
+    var ms = Math.floor(audio.currentTime * 1000);
+
+    var targetGroupId = activeSlicerGroupId || document.querySelector('#ws-sec-' + secId + ' .card-editor')?.getAttribute('data-group-id');
+    if (!targetGroupId) return;
+
+    var input = document.getElementById('end-ms-' + targetGroupId);
+    if (input) {
+      input.value = ms;
+      saveSingleGroup(parseInt(targetGroupId, 10));
+      updateSlicerRegion(secId, parseInt(document.getElementById('start-ms-' + targetGroupId)?.value, 10), ms);
+    }
+  };
+
+  window.previewCurrentSlice = function(secId) {
+    var targetGroupId = activeSlicerGroupId || document.querySelector('#ws-sec-' + secId + ' .card-editor')?.getAttribute('data-group-id');
+    if (!targetGroupId) return;
+
+    var startMs = parseInt(document.getElementById('start-ms-' + targetGroupId)?.value, 10);
+    var endMs = parseInt(document.getElementById('end-ms-' + targetGroupId)?.value, 10);
+    var audio = document.getElementById('slicer-audio-' + secId);
+    if (!audio || isNaN(startMs) || isNaN(endMs) || endMs <= startMs) {
+      alert('Set both Start and End ms first to preview the slice.');
+      return;
+    }
+
+    audio.currentTime = startMs / 1000;
+    audio.play();
+
+    var checkSliceEnd = function() {
+      if (audio.currentTime >= endMs / 1000) {
+        audio.pause();
+        audio.removeEventListener('timeupdate', checkSliceEnd);
+      }
+    };
+    audio.addEventListener('timeupdate', checkSliceEnd);
+  };
+
+  window.clearCurrentSlice = function(secId) {
+    var targetGroupId = activeSlicerGroupId || document.querySelector('#ws-sec-' + secId + ' .card-editor')?.getAttribute('data-group-id');
+    if (!targetGroupId) return;
+
+    var sInput = document.getElementById('start-ms-' + targetGroupId);
+    var eInput = document.getElementById('end-ms-' + targetGroupId);
+    if (sInput) sInput.value = '';
+    if (eInput) eInput.value = '';
+    updateSlicerRegion(secId, null, null);
+    saveSingleGroup(parseInt(targetGroupId, 10));
+  };
+
+  // --- Upload Audio / Media Handling ---
+  window.uploadAudioFile = function(inputEl, secId) {
+    if (!inputEl.files || inputEl.files.length === 0) return;
+    var file = inputEl.files[0];
+
+    var formData = new FormData();
+    formData.append('file', file);
+
+    markSaving();
+    fetch('/admin/exams/' + examId + '/media', {
+      method: 'POST',
+      headers: {
+        'RequestVerificationToken': getCsrfToken()
+      },
+      body: formData
+    })
+    .then(function(res) {
+      if (!res.ok) throw new Error('Upload failed');
+      return res.json();
+    })
+    .then(function(result) {
+      markSaved();
+      var audio = document.getElementById('slicer-audio-' + secId);
+      if (audio) {
+        audio.src = result.url;
+        document.getElementById('slicer-track-label-' + secId).textContent = result.url;
+      }
+      if (activeSlicerGroupId) {
+        var grpCard = document.getElementById('group-card-' + activeSlicerGroupId);
+        var pathInput = grpCard?.querySelector('[data-field="AudioPath"]');
+        if (pathInput) {
+          pathInput.value = result.url;
+          saveSingleGroup(activeSlicerGroupId);
+        }
+      }
+    })
+    .catch(function(err) {
+      markSaveFailed('Audio upload failed: ' + err.message);
+    });
+  };
+
+  window.triggerFileInput = function(id) {
+    document.getElementById(id)?.click();
+  };
+
+  window.uploadImageInput = function(inputEl, groupId) {
+    if (!inputEl.files || inputEl.files.length === 0) return;
+    uploadImageFile(inputEl.files[0], groupId);
+  };
+
+  function uploadImageFile(file, groupId) {
+    var formData = new FormData();
+    formData.append('file', file);
+
+    markSaving();
+    fetch('/admin/exams/' + examId + '/media', {
+      method: 'POST',
+      headers: {
+        'RequestVerificationToken': getCsrfToken()
+      },
+      body: formData
+    })
+    .then(function(res) {
+      if (!res.ok) throw new Error('Upload failed');
+      return res.json();
+    })
+    .then(function(result) {
+      markSaved();
+      var pathInput = document.getElementById('img-path-' + groupId);
+      if (pathInput) pathInput.value = result.url;
+
+      var preview = document.getElementById('preview-img-' + groupId);
+      var placeholder = document.getElementById('dropzone-placeholder-' + groupId);
+      if (preview) {
+        preview.src = result.url;
+        preview.style.display = 'block';
+      }
+      if (placeholder) placeholder.style.display = 'none';
+
+      saveSingleGroup(groupId);
+    })
+    .catch(function(err) {
+      markSaveFailed('Image upload failed: ' + err.message);
+    });
+  }
+
+  window.onDragOver = function(e) {
+    e.preventDefault();
+    e.currentTarget.classList.add('is-dragover');
+  };
+
+  window.onDragLeave = function(e) {
+    e.currentTarget.classList.remove('is-dragover');
+  };
+
+  window.onDropFile = function(e, groupId, type) {
+    e.preventDefault();
+    e.currentTarget.classList.remove('is-dragover');
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      uploadImageFile(e.dataTransfer.files[0], groupId);
+    }
+  };
+
+  // --- Helpers for Templates ---
+  window.insertBlankInStem = function(qid) {
+    var stemInput = document.getElementById('stem-' + qid);
+    if (!stemInput) return;
+    var start = stemInput.selectionStart || stemInput.value.length;
+    var val = stemInput.value;
+    stemInput.value = val.substring(0, start) + ' _____ ' + val.substring(start);
+    stemInput.focus();
+    saveSingleQuestion(qid);
+  };
+
+  window.insertP6Blank = function(groupId, blankNum) {
+    var ta = document.getElementById('p6-passage-' + groupId);
+    if (!ta) return;
+    var token = '[' + blankNum + ']';
+    var start = ta.selectionStart || ta.value.length;
+    var val = ta.value;
+    ta.value = val.substring(0, start) + ' ' + token + ' ' + val.substring(start);
+    ta.focus();
+    renderP6Preview(groupId);
+    saveSingleGroup(groupId);
+  };
+
+  window.renderP6Preview = function(groupId) {
+    var ta = document.getElementById('p6-passage-' + groupId);
+    var preview = document.getElementById('p6-preview-' + groupId);
+    if (!ta || !preview) return;
+
+    var text = ta.value || '';
+    var escaped = text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\n/g, '<br/>');
+
+    var rendered = escaped.replace(/\[([1-4])\]/g, function(match, p1) {
+      return '<span class="blank-badge" onclick="focusP6Question(' + groupId + ', ' + p1 + ')">[' + p1 + ']</span>';
+    });
+
+    preview.innerHTML = rendered || '<span class="text-muted italic">Type passage text above to preview blanks...</span>';
+  };
+
+  window.focusP6Question = function(groupId, blankNum) {
+    var grpCard = document.getElementById('group-card-' + groupId);
+    if (!grpCard) return;
+    var qCards = grpCard.querySelectorAll('.question-card');
+    if (qCards && qCards[blankNum - 1]) {
+      qCards[blankNum - 1].scrollIntoView({ behavior: 'smooth', block: 'center' });
+      qCards[blankNum - 1].classList.add('is-highlighted');
+      setTimeout(function() { qCards[blankNum - 1].classList.remove('is-highlighted'); }, 2000);
+    }
+  };
+
+  // Initial render of P6 previews
+  document.querySelectorAll('.p6-passage-input').forEach(function(ta) {
+    var gId = parseInt(ta.getAttribute('data-id'), 10);
+    if (gId) renderP6Preview(gId);
+  });
+
+  window.switchDocTab = function(groupId, tabIndex) {
+    var tabs = document.querySelectorAll('#doc-tabs-' + groupId + ' .doc-tab');
+    tabs.forEach(function(t, i) {
+      if (i + 1 === tabIndex) t.classList.add('is-active');
+      else t.classList.remove('is-active');
+    });
+  };
+
+  // --- Adding Questions and Clusters ---
+  document.getElementById('btn-add-question')?.addEventListener('click', function() {
+    createInitialCluster(currentSectionId, 'single');
+  });
+
+  document.getElementById('btn-add-cluster')?.addEventListener('click', function() {
+    var secCode = document.querySelector('.rail-section[data-section-id="' + currentSectionId + '"]')?.getAttribute('data-section-code');
+    var count = secCode === 'P6' ? 4 : (secCode === 'P7' ? 3 : 3);
+    createInitialCluster(currentSectionId, 'cluster', count);
+  });
+
+  window.createInitialCluster = function(secId, mode, customCount) {
+    var count = customCount || (mode === 'cluster' ? 3 : 1);
+
+    markSaving();
+    fetch('/admin/exams/' + examId + '/clusters', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'RequestVerificationToken': getCsrfToken()
+      },
+      body: JSON.stringify({
+        sectionId: secId,
+        questionCount: count
+      })
+    })
+    .then(function(res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    })
+    .then(function() {
+      markSaved();
+      window.location.reload();
+    })
+    .catch(function(err) {
+      markSaveFailed('Add failed: ' + err.message);
+    });
+  };
+
+  window.deleteStudioGroup = function(groupId, secId) {
+    var ok = confirm('Delete this group and all its questions?');
+    if (!ok) return;
+
+    markSaving();
+    fetch('/admin/exams/' + examId + '/studio/group/' + groupId, {
+      method: 'DELETE',
+      headers: {
+        'RequestVerificationToken': getCsrfToken()
+      }
+    })
+    .then(function(res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    })
+    .then(function() {
+      markSaved();
+      var el = document.getElementById('group-card-' + groupId);
+      if (el) el.remove();
+      refreshAudit();
+      window.location.reload();
+    })
+    .catch(function(err) {
+      markSaveFailed('Delete group failed: ' + err.message);
+    });
+  };
+
+  window.deleteStudioQuestion = function(questionId, secId) {
+    var ok = confirm('Delete this question?');
+    if (!ok) return;
+
+    markSaving();
+    fetch('/admin/exams/' + examId + '/studio/question/' + questionId, {
+      method: 'DELETE',
+      headers: {
+        'RequestVerificationToken': getCsrfToken()
+      }
+    })
+    .then(function(res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    })
+    .then(function() {
+      markSaved();
+      var el = document.getElementById('question-card-' + questionId);
+      if (el) el.remove();
+      var railEl = document.getElementById('rail-item-' + questionId);
+      if (railEl) railEl.remove();
+      refreshAudit();
+    })
+    .catch(function(err) {
+      markSaveFailed('Delete question failed: ' + err.message);
+    });
+  };
+
+  // --- Left Rail Selection & Scrolling ---
+  window.selectSection = function(sectionId) {
+    currentSectionId = sectionId;
+    document.querySelectorAll('.rail-section__header').forEach(function(h) {
+      h.classList.remove('is-active');
+    });
+    var targetSecHeader = document.querySelector('.rail-section[data-section-id="' + sectionId + '"] .rail-section__header');
+    if (targetSecHeader) targetSecHeader.classList.add('is-active');
+
+    document.querySelectorAll('.section-workstation-content').forEach(function(content) {
+      content.style.display = 'none';
+    });
+    var secContent = document.getElementById('ws-sec-' + sectionId);
+    if (secContent) {
+      secContent.style.display = 'block';
+    }
+
+    var secObj = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Sections.Select(s => new { s.SectionId, s.Name, Modality = s.Modality.ToString() })));
+    var match = secObj.find(function(s) { return s.SectionId === sectionId; });
+    if (match) {
+      document.getElementById('ws-section-name').textContent = match.Name;
+      document.getElementById('ws-section-modality').textContent = match.Modality;
+    }
+  };
+
+  window.focusQuestionCard = function(questionId) {
+    var card = document.getElementById('question-card-' + questionId);
+    if (!card) return;
+
+    var grpCard = card.closest('.card-editor');
+    if (grpCard) {
+      var secId = parseInt(grpCard.getAttribute('data-section-id'), 10);
+      if (secId && secId !== currentSectionId) {
+        selectSection(secId);
+      }
+    }
+
+    document.querySelectorAll('.rail-item').forEach(function(item) {
+      item.classList.remove('is-selected');
+    });
+    var railItem = document.getElementById('rail-item-' + questionId);
+    if (railItem) railItem.classList.add('is-selected');
+
+    document.querySelectorAll('.card-editor, .question-card').forEach(function(c) {
+      c.classList.remove('is-highlighted');
+    });
+    card.classList.add('is-highlighted');
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    var input = card.querySelector('[data-field="Stem"]');
+    if (input) input.focus();
+  };
+
+  // --- Reordering via Up/Down buttons ---
+  window.moveItemUp = function(sectionId, questionId) {
+    reorderRailItem(sectionId, questionId, -1);
+  };
+
+  window.moveItemDown = function(sectionId, questionId) {
+    reorderRailItem(sectionId, questionId, 1);
+  };
+
+  function reorderRailItem(sectionId, questionId, direction) {
+    var list = document.getElementById('rail-items-' + sectionId);
+    if (!list) return;
+
+    var items = Array.from(list.children);
+    var idx = items.findIndex(function(it) {
+      return parseInt(it.getAttribute('data-question-id'), 10) === questionId;
+    });
+
+    if (idx === -1) return;
+    var targetIdx = idx + direction;
+    if (targetIdx < 0 || targetIdx >= items.length) return;
+
+    var currentEl = items[idx];
+    var targetEl = items[targetIdx];
+
+    if (direction < 0) {
+      list.insertBefore(currentEl, targetEl);
+    } else {
+      list.insertBefore(targetEl, currentEl);
+    }
+
+    var reorderedList = Array.from(list.children);
+    var payloadItems = [];
+
+    reorderedList.forEach(function(el, newIdx) {
+      var qId = parseInt(el.getAttribute('data-question-id'), 10);
+      var gId = parseInt(el.getAttribute('data-group-id'), 10);
+      var newOrder = newIdx + 1;
+      el.setAttribute('data-display-order', newOrder);
+      var labelEl = el.querySelector('strong');
+      if (labelEl) labelEl.textContent = '#' + newOrder;
+
+      payloadItems.push({
+        groupId: gId,
+        questionId: qId,
+        displayOrder: newOrder
+      });
+    });
+
+    markSaving();
+    fetch('/admin/exams/' + examId + '/reorder', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'RequestVerificationToken': getCsrfToken()
+      },
+      body: JSON.stringify({ sectionId: sectionId, items: payloadItems })
+    })
+    .then(function(res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    })
+    .then(function() {
+      markSaved();
+    })
+    .catch(function(err) {
+      markSaveFailed('Reorder failed: ' + err.message);
+    });
+  }
+
+  // --- Audit Placard & Jumping ---
+  window.jumpToAuditElement = function(targetId) {
+    var el = document.getElementById(targetId);
+    if (!el) return;
+
+    if (targetId.startsWith('section-link-')) {
+      var secId = parseInt(targetId.replace('section-link-', ''), 10);
+      selectSection(secId);
+      return;
+    }
+
+    var grpCard = el.closest('.card-editor');
+    if (grpCard) {
+      var secId = parseInt(grpCard.getAttribute('data-section-id'), 10);
+      if (secId && secId !== currentSectionId) {
+        selectSection(secId);
+      }
+    }
+
+    document.querySelectorAll('.card-editor, .question-card').forEach(function(c) {
+      c.classList.remove('is-highlighted');
+    });
+    el.classList.add('is-highlighted');
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+
+  function refreshAudit() {
+    fetch('/admin/exams/' + examId + '/audit')
+      .then(function(res) { return res.json(); })
+      .then(function(audit) {
+        var statusBadge = document.getElementById('audit-status-badge');
+        var qCount = document.getElementById('audit-q-count');
+        var errCount = document.getElementById('audit-error-count');
+        var warnCount = document.getElementById('audit-warn-count');
+        var pubBtn = document.getElementById('btn-publish-exam');
+        var issuesList = document.getElementById('audit-issues-list');
+
+        qCount.textContent = audit.totalQuestions + ' / ' + audit.expectedQuestions;
+        errCount.textContent = audit.blockingErrorCount;
+        errCount.style.color = audit.blockingErrorCount > 0 ? '#b31217' : '#0a6b3c';
+        if (warnCount) warnCount.textContent = audit.warningCount;
+
+        if (audit.canPublish) {
+          statusBadge.textContent = 'PASSED';
+          statusBadge.style.background = '#e6f1ea';
+          statusBadge.style.color = '#0a6b3c';
+          pubBtn.disabled = false;
+        } else {
+          statusBadge.textContent = audit.blockingErrorCount + ' BLOCKS';
+          statusBadge.style.background = '#fbe9e9';
+          statusBadge.style.color = '#b31217';
+          pubBtn.disabled = true;
+        }
+
+        issuesList.innerHTML = '';
+        if (audit.issues.length === 0 && audit.canPublish) {
+          issuesList.innerHTML = '<li class="audit-item audit-item--success"><span>&#10004;</span><div>All certificate invariants satisfied. Ready to publish!</div></li>';
+        } else {
+          audit.issues.forEach(function(iss) {
+            var li = document.createElement('li');
+            li.className = 'audit-item ' + (iss.severity === 'error' ? 'audit-item--error' : 'audit-item--warning');
+            li.id = 'audit-issue-' + iss.code;
+            var jumpHtml = iss.elementTarget ? '<span class="audit-jump-link" onclick="jumpToAuditElement(\'' + iss.elementTarget + '\')">Jump to issue &rarr;</span>' : '';
+            li.innerHTML = '<span>' + (iss.severity === 'error' ? '&#10008;' : '&#9888;') + '</span><div><div>' + iss.message + '</div>' + jumpHtml + '</div>';
+            issuesList.appendChild(li);
+          });
+        }
+      })
+      .catch(function(err) {
+        console.warn('Audit refresh failed:', err);
+      });
+  }
+
+  // --- Publish Exam Handler ---
+  document.getElementById('btn-publish-exam')?.addEventListener('click', function() {
+    var btn = this;
+    if (btn.disabled) return;
+
+    var ok = confirm('Publish this exam now? Once published, learners will be able to take it.');
+    if (!ok) return;
+
+    btn.disabled = true;
+    fetch('/admin/exams/' + examId + '/publish', {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'RequestVerificationToken': getCsrfToken()
+      }
+    })
+    .then(function(res) {
+      return res.json().then(function(data) {
+        if (!res.ok || data.success === false) {
+          throw new Error(data.message || ('HTTP ' + res.status));
+        }
+        return data;
+      });
+    })
+    .then(function() {
+      alert('Exam published successfully!');
+      window.location.reload();
+    })
+    .catch(function(err) {
+      alert('Publish failed: ' + err.message);
+      btn.disabled = false;
+    });
+  });
+
+  // --- Quick Ingest Integration ---
+  var sectionsData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Sections.Select(s => new { s.SectionId, s.Code, s.Name })));
+
+  document.getElementById('btn-studio-quick-ingest')?.addEventListener('click', function() {
+    window.QuickIngestModal.open(examId, sectionsData, currentSectionId, function() {
+      window.location.reload();
+    });
+  });
+
+  window.triggerQuickIngestForSection = function(secId) {
+    window.QuickIngestModal.open(examId, sectionsData, secId, function() {
+      window.location.reload();
+    });
+  };
+
+  // Auto-select section and focus question if passed in URL query
+  try {
+    var urlParams = new URLSearchParams(window.location.search);
+    var paramSecId = parseInt(urlParams.get('sectionId'), 10);
+    if (paramSecId && !isNaN(paramSecId)) {
+      window.selectSection(paramSecId);
+    }
+    var paramQId = parseInt(urlParams.get('questionId'), 10);
+    if (paramQId && !isNaN(paramQId)) {
+      setTimeout(function() {
+        if (typeof window.focusQuestionCard === 'function') {
+          window.focusQuestionCard(paramQId);
+        }
+      }, 50);
+    }
+  } catch (e) {
+    // Graceful fallback
+  }
+})();
+</script>

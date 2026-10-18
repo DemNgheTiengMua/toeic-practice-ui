@@ -2,7 +2,8 @@
 @{
     Layout = "_LearnerLayout";
     var detail = Model.Detail;
-    ViewData["Title"] = $"Module {detail.ModuleIndex}: {detail.Title}";
+    var moduleHeading = Model.FormattedHeading;
+    ViewData["Title"] = moduleHeading;
     ViewData["Description"] = detail.Description ?? $"Module {detail.ModuleIndex} of your learning path.";
 }
 
@@ -35,7 +36,7 @@ else
   <div class="stack">
     <div class="row row--between" style="align-items: center;">
       <div>
-        <h1 class="m-0 mb-1">Module @detail.ModuleIndex: @detail.Title</h1>
+        <h1 class="m-0 mb-1">@moduleHeading</h1>
         <p class="text-muted no-margin">@detail.SkillName module · @detail.TotalQuestions questions · Est. @detail.EstimatedMinutes minutes · Free</p>
       </div>
       @if (detail.Status == "done")

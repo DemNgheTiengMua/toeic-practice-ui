@@ -48,11 +48,15 @@ public sealed class AuthController(IAuthClient api) : Controller
     }
 
     [HttpGet("/auth/sign-in")]
-    public IActionResult SignIn(string? returnUrl = null, bool locked = false, bool reset = false) => View(new SignInViewModel
+    public IActionResult SignIn(string? returnUrl = null, string? locked = null, string? reset = null) => View(new SignInViewModel
     {
         ReturnUrl = returnUrl,
-        FormError = locked ? "This account is locked. Contact support." : null,
-        Notice = reset ? "Password changed. Sign in with your new password." : null,
+        FormError = (locked == "1" || string.Equals(locked, "true", StringComparison.OrdinalIgnoreCase))
+            ? "This account is locked. Contact support."
+            : null,
+        Notice = (reset == "1" || string.Equals(reset, "true", StringComparison.OrdinalIgnoreCase))
+            ? "Your password has been reset successfully. Please sign in with your new password."
+            : null,
     });
 
     [HttpPost("/auth/sign-in")]

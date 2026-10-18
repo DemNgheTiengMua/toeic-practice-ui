@@ -16,7 +16,24 @@ public sealed class MediaController(IMediaClient api, CurrentUser currentUser) :
     {
         try
         {
-            var (stream, contentType) = await api.GetImportMediaAsync(batchId, fileName, cancellationToken);
+            var token = await currentUser.GetBearerTokenAsync() ?? string.Empty;
+            var (stream, contentType) = await api.GetImportMediaAsync(batchId, fileName, token, cancellationToken);
+            return File(stream, contentType, enableRangeProcessing: true);
+        }
+        catch (ApiException ex) when (ex.Status == StatusCodes.Status404NotFound)
+        {
+            return NotFound();
+        }
+    }
+
+    [HttpGet("/media/exams/{examId:int}/{fileName}")]
+    [ResponseCache(Duration = 3600, Location = ResponseCacheLocation.Client)]
+    public async Task<IActionResult> Exam(int examId, string fileName, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var token = await currentUser.GetBearerTokenAsync() ?? string.Empty;
+            var (stream, contentType) = await api.GetExamMediaAsync(examId, fileName, token, cancellationToken);
             return File(stream, contentType, enableRangeProcessing: true);
         }
         catch (ApiException ex) when (ex.Status == StatusCodes.Status404NotFound)

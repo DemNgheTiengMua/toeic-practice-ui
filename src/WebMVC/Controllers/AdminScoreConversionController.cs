@@ -7,10 +7,11 @@ namespace WebMVC.Controllers;
 
 [Authorize(Policy = Roles.Admin)]
 [Route("admin/score-conversion")]
+[Route("admin/score-conversions")]
 public sealed class AdminScoreConversionController(
     IAdminScoreConversionClient api,
     CurrentUser currentUser,
-    ILogger<AdminScoreConversionController> logger) : Controller
+    ILogger<AdminScoreConversionController> logger) : AdminControllerBase(currentUser, logger)
 {
 
     [HttpGet("")]

@@ -163,7 +163,7 @@ builder.Services.AddRateLimiter(options =>
 
         return RateLimitPartition.GetFixedWindowLimiter(partitionKey, _ => new FixedWindowRateLimiterOptions
         {
-            PermitLimit = 10,
+            PermitLimit = builder.Environment.IsDevelopment() ? 100 : 10,
             Window = TimeSpan.FromMinutes(1),
             QueueLimit = 0,
         });
@@ -206,6 +206,7 @@ builder.Services.AddScoped<IAdminOrderService, AdminOrderService>();
 builder.Services.AddScoped<IAdminUserService, AdminUserService>();
 builder.Services.AddScoped<IScoreConversionService, ScoreConversionService>();
 builder.Services.AddScoped<IAdminExamService, AdminExamService>();
+builder.Services.AddScoped<IExamQuickIngestService, ExamQuickIngestService>();
 builder.Services.AddScoped<IQuestionImportService, QuestionImportService>();
 builder.Services.AddScoped<IAdminDashboardService, AdminDashboardService>();
 var speechSuperOptions = builder.Configuration.GetSection(SpeechSuperOptions.SectionName).Get<SpeechSuperOptions>() ?? new SpeechSuperOptions();
@@ -249,6 +250,9 @@ builder.Services.AddScoped<IWritingPracticeService, WritingPracticeService>();
 builder.Services.AddScoped<ISpeakingPracticeService, SpeakingPracticeService>();
 builder.Services.AddScoped<IPlacementService, PlacementService>();
 builder.Services.AddScoped<ILearningPathService, LearningPathService>();
+builder.Services.AddScoped<ILessonService, LessonService>();
+builder.Services.AddScoped<IAdminLessonService, AdminLessonService>();
+builder.Services.AddScoped<IPremiumPathService, PremiumPathService>();
 builder.Services.AddScoped<IMentorService, MentorService>();
 builder.Services.AddScoped<IComplaintService, ComplaintService>();
 builder.Services.AddHostedService<AiGradingBackgroundService>();
@@ -257,6 +261,10 @@ builder.Services.AddScoped<IAiInsightService, AiInsightService>();
 builder.Services.AddHostedService<AiInsightBackgroundService>();
 
 var payOsOptions = builder.Configuration.GetSection(PayOsOptions.SectionName).Get<PayOsOptions>() ?? new PayOsOptions();
+payOsOptions.ClientId = builder.Configuration["PAYOS_CLIENT_ID"] ?? payOsOptions.ClientId;
+payOsOptions.ApiKey = builder.Configuration["PAYOS_API_KEY"] ?? payOsOptions.ApiKey;
+payOsOptions.ChecksumKey = builder.Configuration["PAYOS_CHECKSUM_KEY"] ?? payOsOptions.ChecksumKey;
+payOsOptions.WebhookUrl = builder.Configuration["PAYOS_WEBHOOK_URL"] ?? payOsOptions.WebhookUrl;
 builder.Services.AddSingleton(payOsOptions);
 builder.Services.AddSingleton<PayOsPaymentGateway>();
 
@@ -324,6 +332,7 @@ app.UseStatusCodePages(async context =>
 app.MapAuthEndpoints();
 app.MapAdminEndpoints();
 app.MapAdminImportEndpoints();
+app.MapAdminLessonEndpoints();
 app.MapLearnerEndpoints();
 app.MapExamEndpoints();
 app.MapPracticeEndpoints();
@@ -336,6 +345,7 @@ app.MapSpeakingEndpoints();
 app.MapInsightEndpoints();
 app.MapPlacementEndpoints();
 app.MapLearningPathEndpoints();
+app.MapLessonEndpoints();
 app.MapMentorEndpoints();
 app.MapComplaintEndpoints();
 

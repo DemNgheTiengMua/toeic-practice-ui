@@ -200,13 +200,23 @@ public enum LearnerPathStepStatus
     Done,
 }
 
-/// <summary>CK_PMI_Type: practice_section, mock_exam, ai_task, mentor.</summary>
+/// <summary>CK_PMI_Type: practice_section, mock_exam, ai_task, mentor, lesson.</summary>
 public enum PathModuleItemType
 {
     PracticeSection,
     MockExam,
     AiTask,
     Mentor,
+    Lesson,
+}
+
+/// <summary>CK_LessonCards_CardType: rule, pitfall, example, micro_check.</summary>
+public enum CardType
+{
+    Rule,
+    Pitfall,
+    Example,
+    MicroCheck,
 }
 
 /// <summary>CK_Mentor_Type: human, ai.</summary>

@@ -164,6 +164,24 @@ public class LocalFileStore : IFileStore
         return Path.Combine("imports", batchId.ToString(), safeFileName).Replace('\\', '/');
     }
 
+    public async Task<string> SaveExamMediaAsync(int examId, Stream stream, string fileExtension, CancellationToken cancellationToken = default)
+    {
+        var examDir = Path.Combine(_baseDirectory, "exams", examId.ToString());
+        Directory.CreateDirectory(examDir);
+
+        var cleanExt = fileExtension.ToLowerInvariant();
+        if (!cleanExt.StartsWith('.')) cleanExt = "." + cleanExt;
+        var safeFileName = $"{Guid.NewGuid():N}{cleanExt}";
+        var fullPath = Path.Combine(examDir, safeFileName);
+
+        using (var fileStream = new FileStream(fullPath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 4096, useAsync: true))
+        {
+            await stream.CopyToAsync(fileStream, cancellationToken);
+        }
+
+        return Path.Combine("exams", examId.ToString(), safeFileName).Replace('\\', '/');
+    }
+
     public Task<FileStreamResultInfo?> GetAudioAsync(string relativePath, CancellationToken cancellationToken = default)
     {
         var fullPath = ResolveSafeFullPath(relativePath);

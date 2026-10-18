@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading;
@@ -26,6 +27,24 @@ public sealed class AdminExamsControllerTests
             new(2, 1, "toeic", "TOEIC", "ETS 2024 — Test 6", ExamStatusDto.Draft, ExamPurposeDto.Mock, 120, 200, 186, "Part 3 missing", 0, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, "ETS 2024"),
         ],
         TotalCount: 2,
+        Page: 1,
+        PageSize: 20,
+        Certificates:
+        [
+            new(1, "toeic", "TOEIC"),
+            new(2, "ielts", "IELTS")
+        ]);
+
+    private static AdminExamListSummaryDto SampleSummaryWithVariousPurposes() => new(
+        Exams:
+        [
+            new(1, 1, "toeic", "TOEIC", "ETS 2024 — Test 1", ExamStatusDto.Published, ExamPurposeDto.Mock, 120, 200, 200, "4 parts complete", 612, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, "ETS 2024"),
+            new(2, 1, "toeic", "TOEIC", "ETS 2024 — Test 6", ExamStatusDto.Draft, ExamPurposeDto.Mock, 120, 200, 186, "Part 3 missing", 0, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, "ETS 2024"),
+            new(3, 1, "toeic", "TOEIC", "TOEIC Placement Diagnostic", ExamStatusDto.Published, ExamPurposeDto.Placement, 45, 50, 50, "N/A", 15, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, "Official"),
+            new(4, 2, "ielts", "IELTS", "IELTS Academic Writing Task 1", ExamStatusDto.Published, ExamPurposeDto.WritingPractice, 60, 2, 2, "N/A", 5, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, "Cambridge"),
+            new(5, 2, "ielts", "IELTS", "IELTS Speaking Interview", ExamStatusDto.Published, ExamPurposeDto.SpeakingPractice, 15, 3, 3, "No audio", 2, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, "Cambridge"),
+        ],
+        TotalCount: 5,
         Page: 1,
         PageSize: 20,
         Certificates:
@@ -130,7 +149,7 @@ public sealed class AdminExamsControllerTests
         var api = new TestApiClient { Summary = SampleSummary() };
         var controller = CreateController(api);
 
-        var result = await controller.Index(q: "ETS 2024", status: "published", certId: 1, page: 1, CancellationToken.None);
+        var result = await controller.Index(q: "ETS 2024", status: "published", certId: 1, purpose: null, page: 1, cancellationToken: CancellationToken.None);
 
         var viewResult = Assert.IsType<ViewResult>(result);
         Assert.Equal("~/Views/Admin/Exams.cshtml", viewResult.ViewName);
@@ -139,6 +158,101 @@ public sealed class AdminExamsControllerTests
         Assert.Equal("published", vm.Status);
         Assert.Equal(2, vm.Summary.Exams.Count);
         Assert.Equal("ETS 2024 — Test 1", vm.Summary.Exams[0].Name);
+    }
+
+    [Fact]
+    public async Task Index_FiltersByPurpose_Placement_PassesPurposeToApiAndViewModel()
+    {
+        var api = new TestApiClient { Summary = SampleSummaryWithVariousPurposes() };
+        var controller = CreateController(api);
+
+        var result = await controller.Index(q: null, status: null, certId: null, purpose: "placement", page: 1, cancellationToken: CancellationToken.None);
+
+        var viewResult = Assert.IsType<ViewResult>(result);
+        var vm = Assert.IsType<AdminExamListViewModel>(viewResult.Model);
+        Assert.Equal("placement", vm.Purpose);
+        Assert.Equal("placement", api.LastPurposeFilter);
+    }
+
+    [Fact]
+    public async Task Index_FiltersByPurpose_Practice_PassesPurposeToApiAndViewModel()
+    {
+        var api = new TestApiClient { Summary = SampleSummaryWithVariousPurposes() };
+        var controller = CreateController(api);
+
+        var result = await controller.Index(q: null, status: null, certId: null, purpose: "practice", page: 1, cancellationToken: CancellationToken.None);
+
+        var viewResult = Assert.IsType<ViewResult>(result);
+        var vm = Assert.IsType<AdminExamListViewModel>(viewResult.Model);
+        Assert.Equal("practice", vm.Purpose);
+        Assert.Equal("practice", api.LastPurposeFilter);
+    }
+
+    [Fact]
+    public async Task Index_FiltersByPurpose_Mock_PassesPurposeToApiAndViewModel()
+    {
+        var api = new TestApiClient { Summary = SampleSummaryWithVariousPurposes() };
+        var controller = CreateController(api);
+
+        var result = await controller.Index(q: null, status: null, certId: null, purpose: "mock", page: 1, cancellationToken: CancellationToken.None);
+
+        var viewResult = Assert.IsType<ViewResult>(result);
+        var vm = Assert.IsType<AdminExamListViewModel>(viewResult.Model);
+        Assert.Equal("mock", vm.Purpose);
+        Assert.Equal("mock", api.LastPurposeFilter);
+    }
+
+    [Fact]
+    public async Task Index_FiltersByCertId_PassesCertIdToApiAndViewModel()
+    {
+        var api = new TestApiClient { Summary = SampleSummary() };
+        var controller = CreateController(api);
+
+        var result = await controller.Index(q: null, status: null, certId: 2, purpose: null, page: 1, cancellationToken: CancellationToken.None);
+
+        var viewResult = Assert.IsType<ViewResult>(result);
+        var vm = Assert.IsType<AdminExamListViewModel>(viewResult.Model);
+        Assert.Equal(2, vm.CertId);
+        Assert.Equal(2, api.LastCertIdFilter);
+    }
+
+    [Fact]
+    public void AdminExamsView_ContainsCertAndPurposeFilters_Badges_ScopedAudio_AndStreamlinedButtons()
+    {
+        var repoRoot = TestPathHelper.FindRepoRoot();
+        var examsViewPath = Path.Combine(repoRoot, "src", "WebMVC", "Views", "Admin", "Exams.cshtml");
+        Assert.True(File.Exists(examsViewPath), "Admin/Exams.cshtml must exist");
+
+        var content = File.ReadAllText(examsViewPath);
+
+        // Certificate filter dropdown
+        Assert.Contains(@"name=""certId""", content);
+        Assert.Contains(@"id=""f-cert""", content);
+        Assert.Contains(@"Model.Summary.Certificates", content);
+
+        // Purpose filter dropdown
+        Assert.Contains(@"name=""purpose""", content);
+        Assert.Contains(@"id=""f-purpose""", content);
+        Assert.Contains(@"value=""mock""", content);
+        Assert.Contains(@"value=""placement""", content);
+        Assert.Contains(@"value=""practice""", content);
+
+        // Reset button checks certId and purpose
+        Assert.Contains(@"Model.CertId", content);
+        Assert.Contains(@"Model.Purpose", content);
+
+        // Certificate & Purpose badges
+        Assert.Contains("exam.CertCode", content);
+        Assert.Matches(@"badge.*font-mono", content);
+
+        // Scoped Audio column: text-muted when audio is N/A or not applicable
+        Assert.Contains(@"text-muted", content);
+
+        // Streamlined action buttons: Studio (primary), Edit Info (secondary), Delete (danger if 0 attempts)
+        Assert.Contains(@"/admin/exams/@exam.ExamId/studio", content);
+        Assert.Contains(@"Edit Info", content);
+        Assert.DoesNotMatch(@"<a class=""btn btn--sm"" href=""/admin/exams/@exam\.ExamId/edit"">Edit</a>", content);
+        Assert.Contains(@"exam.FinishedAttemptCount == 0", content);
     }
 
     [Fact]
@@ -287,20 +401,33 @@ public sealed class AdminExamsControllerTests
     }
 
     [Fact]
-    public async Task Questions_Get_ReturnsViewWithQuestionsData()
+    public void Questions_Get_WithQueryParams_RedirectsToStudioPreservingParameters()
     {
-        var api = new TestApiClient { QuestionsToReturn = SampleQuestions(1) };
+        var api = new TestApiClient();
         var controller = CreateController(api);
 
-        var result = await controller.Questions(1, sectionId: 1, questionId: 101, CancellationToken.None);
+        var result = controller.Questions(1, sectionId: 10, questionId: 205);
 
-        var viewResult = Assert.IsType<ViewResult>(result);
-        Assert.Equal("~/Views/Admin/QuestionEditor.cshtml", viewResult.ViewName);
-        var vm = Assert.IsType<QuestionEditorViewModel>(viewResult.Model);
-        Assert.Equal(1, vm.QuestionsData.ExamId);
-        Assert.Equal(1, vm.SelectedSectionId);
-        Assert.Equal(101, vm.SelectedQuestionId);
-        Assert.Single(vm.QuestionsData.Groups);
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(AdminExamsController.Studio), redirect.ActionName);
+        Assert.Equal(1, redirect.RouteValues?["id"]);
+        Assert.Equal(10, redirect.RouteValues?["sectionId"]);
+        Assert.Equal(205, redirect.RouteValues?["questionId"]);
+    }
+
+    [Fact]
+    public void Questions_Get_WithoutQueryParams_RedirectsToStudioWithExamId()
+    {
+        var api = new TestApiClient();
+        var controller = CreateController(api);
+
+        var result = controller.Questions(42, sectionId: null, questionId: null);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(AdminExamsController.Studio), redirect.ActionName);
+        Assert.Equal(42, redirect.RouteValues?["id"]);
+        Assert.False(redirect.RouteValues?.ContainsKey("sectionId") == true && redirect.RouteValues["sectionId"] != null);
+        Assert.False(redirect.RouteValues?.ContainsKey("questionId") == true && redirect.RouteValues["questionId"] != null);
     }
 
     [Fact]
@@ -328,7 +455,7 @@ public sealed class AdminExamsControllerTests
         var result = await controller.SaveQuestion(5, model, CancellationToken.None);
 
         var redirect = Assert.IsType<RedirectToActionResult>(result);
-        Assert.Equal(nameof(AdminExamsController.Questions), redirect.ActionName);
+        Assert.Equal(nameof(AdminExamsController.Studio), redirect.ActionName);
         Assert.Equal(5, redirect.RouteValues?["id"]);
         Assert.NotNull(api.CreatedQuestionRequest);
         Assert.Equal("New Question Stem", api.CreatedQuestionRequest.Stem);
@@ -336,7 +463,7 @@ public sealed class AdminExamsControllerTests
     }
 
     [Fact]
-    public async Task SaveQuestion_Update_Success_RedirectsToQuestions()
+    public async Task SaveQuestion_Update_Success_RedirectsToStudio()
     {
         var api = new TestApiClient();
         var controller = CreateController(api);
@@ -361,7 +488,7 @@ public sealed class AdminExamsControllerTests
         var result = await controller.SaveQuestion(5, model, CancellationToken.None);
 
         var redirect = Assert.IsType<RedirectToActionResult>(result);
-        Assert.Equal(nameof(AdminExamsController.Questions), redirect.ActionName);
+        Assert.Equal(nameof(AdminExamsController.Studio), redirect.ActionName);
         Assert.Equal(5, redirect.RouteValues?["id"]);
         Assert.Equal(101, redirect.RouteValues?["questionId"]);
         Assert.NotNull(api.UpdatedQuestionRequest);
@@ -369,7 +496,7 @@ public sealed class AdminExamsControllerTests
     }
 
     [Fact]
-    public async Task DeleteQuestion_CallsApi_RedirectsToQuestions()
+    public async Task DeleteQuestion_CallsApi_RedirectsToStudio()
     {
         var api = new TestApiClient();
         var controller = CreateController(api);
@@ -377,7 +504,7 @@ public sealed class AdminExamsControllerTests
         var result = await controller.DeleteQuestion(5, 101, sectionId: 1, CancellationToken.None);
 
         var redirect = Assert.IsType<RedirectToActionResult>(result);
-        Assert.Equal(nameof(AdminExamsController.Questions), redirect.ActionName);
+        Assert.Equal(nameof(AdminExamsController.Studio), redirect.ActionName);
         Assert.Equal(101, api.DeletedQuestionId);
     }
 
@@ -394,13 +521,256 @@ public sealed class AdminExamsControllerTests
         Assert.Equal(5, api.DeletedExamId);
     }
 
-    private sealed class EmptyTempDataProvider : ITempDataProvider
+    [Fact]
+    public async Task ParseQuickIngest_CallsApi_ReturnsJsonResult()
+    {
+        var api = new TestApiClient();
+        var controller = CreateController(api);
+
+        var request = new QuickIngestParseRequest("1. Stem\n*A. Yes\nB. No");
+        var result = await controller.ParseQuickIngest(5, request, CancellationToken.None);
+
+        var json = Assert.IsType<JsonResult>(result);
+        var parsed = Assert.IsType<QuickIngestParseResultDto>(json.Value);
+        Assert.True(parsed.Success);
+    }
+
+    [Fact]
+    public async Task CommitQuickIngest_CallsApi_ReturnsJsonResult()
+    {
+        var api = new TestApiClient();
+        var controller = CreateController(api);
+
+        var request = new QuickIngestCommitRequest(
+            SectionId: 1,
+            Mode: "append",
+            Questions: [new QuickIngestParsedQuestionDto(1, 1, 5, "Stem", 3, null, null, [new QuickIngestParsedOptionDto("A", "Yes", true), new QuickIngestParsedOptionDto("B", "No", false)], [], true)]);
+
+        var result = await controller.CommitQuickIngest(5, request, CancellationToken.None);
+
+        var json = Assert.IsType<JsonResult>(result);
+        var commit = Assert.IsType<QuickIngestCommitResultDto>(json.Value);
+        Assert.True(commit.Success);
+        Assert.Equal(1, commit.QuestionsCommitted);
+    }
+
+    [Fact]
+    public async Task Studio_ReturnsViewResult_WithStudioModel()
+    {
+        var api = new TestApiClient();
+        var controller = CreateController(api);
+
+        var result = await controller.Studio(5, CancellationToken.None);
+
+        var view = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<ExamStudioDetailDto>(view.Model);
+        Assert.Equal(5, model.ExamId);
+        Assert.NotEmpty(model.Sections);
+    }
+
+    [Fact]
+    public async Task Reorder_CallsApi_ReturnsSuccessJson()
+    {
+        var api = new TestApiClient();
+        var controller = CreateController(api);
+
+        var request = new ReorderSectionItemsRequest(1, [new ReorderSectionItemEntry(null, 101, 1)]);
+        var result = await controller.Reorder(5, request, CancellationToken.None);
+
+        var json = Assert.IsType<JsonResult>(result);
+        Assert.NotNull(json.Value);
+    }
+
+    [Fact]
+    public async Task Audit_CallsApi_ReturnsAuditJson()
+    {
+        var api = new TestApiClient();
+        var controller = CreateController(api);
+
+        var result = await controller.Audit(5, CancellationToken.None);
+
+        var json = Assert.IsType<JsonResult>(result);
+        var audit = Assert.IsType<ExamAuditResultDto>(json.Value);
+        Assert.True(audit.CanPublish);
+    }
+
+    [Fact]
+    public async Task CreateCluster_CallsApi_ReturnsSuccessJson()
+    {
+        var api = new TestApiClient();
+        var controller = CreateController(api);
+
+        var request = new CreateExamClusterRequest(1, QuestionCount: 3);
+        var result = await controller.CreateCluster(5, request, CancellationToken.None);
+
+        var json = Assert.IsType<JsonResult>(result);
+        Assert.NotNull(json.Value);
+    }
+
+    [Fact]
+    public async Task UploadMedia_ValidFile_ReturnsMediaUrlJson()
+    {
+        var api = new TestApiClient();
+        var controller = CreateController(api);
+
+        var file = new FormFile(new System.IO.MemoryStream(System.Text.Encoding.UTF8.GetBytes("fake audio data")), 0, 15, "file", "sample.mp3");
+        var result = await controller.UploadMedia(5, file, CancellationToken.None);
+
+        var json = Assert.IsType<JsonResult>(result);
+        Assert.NotNull(json.Value);
+    }
+
+    [Fact]
+    public async Task DeleteStudioGroup_CallsApi_ReturnsSuccess()
+    {
+        var api = new TestApiClient();
+        var controller = CreateController(api);
+
+        var result = await controller.DeleteStudioGroup(5, 1, CancellationToken.None);
+
+        var json = Assert.IsType<JsonResult>(result);
+        Assert.NotNull(json.Value);
+    }
+
+    [Fact]
+    public async Task DeleteStudioQuestion_CallsApi_ReturnsSuccess()
+    {
+        var api = new TestApiClient();
+        var controller = CreateController(api);
+
+        var result = await controller.DeleteStudioQuestion(5, 101, CancellationToken.None);
+
+        var json = Assert.IsType<JsonResult>(result);
+        Assert.NotNull(json.Value);
+    }
+
+    [Fact]
+    public async Task Export_ReturnsFileResult_WithZip_ByDefault()
+    {
+        var api = new TestApiClient();
+        var controller = CreateController(api);
+
+        var result = await controller.Export(5, null, CancellationToken.None);
+
+        var fileResult = Assert.IsType<FileStreamResult>(result);
+        Assert.Equal("application/zip", fileResult.ContentType);
+        Assert.Equal("test_exam.zip", fileResult.FileDownloadName);
+    }
+
+    [Fact]
+    public async Task Export_ReturnsFileResult_WithJson_WhenRequested()
+    {
+        var api = new TestApiClient();
+        var controller = CreateController(api);
+
+        var result = await controller.Export(5, "json", CancellationToken.None);
+
+        var fileResult = Assert.IsType<FileStreamResult>(result);
+        Assert.Equal("application/json", fileResult.ContentType);
+        Assert.Equal("test_exam.json", fileResult.FileDownloadName);
+    }
+
+    [Fact]
+    public async Task Export_RedirectsToStudio_WhenApiExceptionThrown()
+    {
+        var api = new TestApiClient
+        {
+            ExportException = new ApiException("NOT_FOUND", "Exam not found", 404)
+        };
+        var controller = CreateController(api);
+
+        var result = await controller.Export(999, "zip", CancellationToken.None);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(AdminExamsController.Studio), redirect.ActionName);
+        Assert.Equal(999, redirect.RouteValues?["id"]);
+    }
+
+    [Fact]
+    public void ExamEditorView_ContainsMultipartFormDataAndAudioFileInput()
+    {
+        var repoRoot = TestPathHelper.FindRepoRoot();
+        var editorPath = Path.Combine(repoRoot, "src", "WebMVC", "Views", "Admin", "ExamEditor.cshtml");
+        Assert.True(File.Exists(editorPath), "Admin/ExamEditor.cshtml must exist");
+
+        var content = File.ReadAllText(editorPath);
+        Assert.Contains("enctype=\"multipart/form-data\"", content);
+        Assert.Contains("type=\"file\"", content);
+        Assert.Contains("name=\"AudioFile\"", content);
+        Assert.Contains("accept=\"audio/mpeg,audio/mp3,audio/wav,audio/*\"", content);
+        Assert.DoesNotContain("Advanced: manual metadata override", content);
+        Assert.DoesNotContain("Audio Path / Filename", content);
+    }
+
+    [Fact]
+    public async Task SaveAudio_WithAudioFile_UploadsMediaAndSavesSectionAudio()
+    {
+        var api = new TestApiClient();
+        var controller = CreateController(api);
+
+        var contentBytes = "test audio stream content"u8.ToArray();
+        var fileMock = new FormFile(new MemoryStream(contentBytes), 0, contentBytes.Length, "AudioFile", "listening_p1.mp3")
+        {
+            Headers = new HeaderDictionary(),
+            ContentType = "audio/mpeg"
+        };
+
+        var model = new UploadAudioModel
+        {
+            SectionId = 10,
+            AudioFile = fileMock,
+            DurationSec = 45
+        };
+
+        var result = await controller.SaveAudio(42, model, CancellationToken.None);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(AdminExamsController.Edit), redirect.ActionName);
+        Assert.Equal(42, redirect.RouteValues?["id"]);
+        Assert.Equal(2, redirect.RouteValues?["step"]);
+
+        Assert.Equal(42, api.LastUploadedMediaExamId);
+        Assert.Equal("listening_p1.mp3", api.LastUploadedMediaFileName);
+
+        Assert.NotNull(api.LastSavedAudioRequest);
+        Assert.Equal(10, api.LastSavedAudioRequest!.SectionId);
+        Assert.Equal("exams/42/listening_p1.mp3", api.LastSavedAudioRequest.AudioPath);
+        Assert.Equal(45, api.LastSavedAudioRequest.DurationSec);
+        Assert.Equal(contentBytes.Length, api.LastSavedAudioRequest.SizeBytes);
+        Assert.Equal("Audio file saved successfully.", controller.TempData["Success"]);
+    }
+
+    [Fact]
+    public async Task SaveAudio_WithoutAudioFile_RedirectsWithError()
+    {
+        var api = new TestApiClient();
+        var controller = CreateController(api);
+
+        var model = new UploadAudioModel
+        {
+            SectionId = 12,
+            AudioFile = null
+        };
+
+        var result = await controller.SaveAudio(42, model, CancellationToken.None);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(AdminExamsController.Edit), redirect.ActionName);
+        Assert.Equal(42, redirect.RouteValues?["id"]);
+        Assert.Equal(2, redirect.RouteValues?["step"]);
+
+        Assert.Null(api.LastUploadedMediaFileName);
+        Assert.Null(api.LastSavedAudioRequest);
+        Assert.Equal("Please select an audio file to upload.", controller.TempData["Error"]);
+    }
+
+    internal sealed class EmptyTempDataProvider : ITempDataProvider
     {
         public IDictionary<string, object> LoadTempData(HttpContext context) => new Dictionary<string, object>();
         public void SaveTempData(HttpContext context, IDictionary<string, object> values) { }
     }
 
-    private sealed class TestApiClient : IAdminExamsClient
+    internal sealed class TestApiClient : IAdminExamsClient
     {
         public AdminExamListSummaryDto? Summary { get; set; }
         public AdminExamDetailDto? DetailToReturn { get; set; }
@@ -416,9 +786,23 @@ public sealed class AdminExamsControllerTests
 
         public ApiException? CreateExamException { get; set; }
         public ApiException? PublishException { get; set; }
+        public ApiException? ExportException { get; set; }
+        public int? LastCertIdFilter { get; set; }
+        public string? LastPurposeFilter { get; set; }
+        public SaveExamSectionAudioRequest? LastSavedAudioRequest { get; set; }
+        public int? LastSavedAudioExamId { get; set; }
+        public string? LastUploadedMediaFileName { get; set; }
+        public int? LastUploadedMediaExamId { get; set; }
+
+        public Task<AdminExamListSummaryDto> GetAdminExamsAsync(string? q, string? status, int? certId, string? purpose, int page = 1, int pageSize = 20, CancellationToken cancellationToken = default)
+        {
+            LastCertIdFilter = certId;
+            LastPurposeFilter = purpose;
+            return Task.FromResult(Summary ?? SampleSummary());
+        }
 
         public Task<AdminExamListSummaryDto> GetAdminExamsAsync(string? q = null, string? status = null, int? certId = null, int page = 1, int pageSize = 20, CancellationToken cancellationToken = default) =>
-            Task.FromResult(Summary ?? SampleSummary());
+            GetAdminExamsAsync(q, status, certId, null, page, pageSize, cancellationToken);
 
         public Task<AdminExamDetailDto> GetAdminExamByIdAsync(int examId, CancellationToken cancellationToken = default) =>
             Task.FromResult(DetailToReturn ?? SampleDetail(examId));
@@ -524,7 +908,67 @@ public sealed class AdminExamsControllerTests
             return Task.CompletedTask;
         }
 
-        public Task<AdminExamSectionAudioDto> SaveAdminExamSectionAudioAsync(int examId, SaveExamSectionAudioRequest request, CancellationToken cancellationToken = default) =>
-            Task.FromResult<AdminExamSectionAudioDto>(null!);
+        public Task<AdminExamSectionAudioDto> SaveAdminExamSectionAudioAsync(int examId, SaveExamSectionAudioRequest request, CancellationToken cancellationToken = default)
+        {
+            LastSavedAudioExamId = examId;
+            LastSavedAudioRequest = request;
+            return Task.FromResult<AdminExamSectionAudioDto>(null!);
+        }
+
+        public Task<QuickIngestParseResultDto> ParseQuickIngestAsync(int examId, QuickIngestParseRequest request, CancellationToken cancellationToken = default) =>
+            Task.FromResult(new QuickIngestParseResultDto(true, 1, 1, 0, [], []));
+
+        public Task<QuickIngestCommitResultDto> CommitQuickIngestAsync(int examId, QuickIngestCommitRequest request, CancellationToken cancellationToken = default) =>
+            Task.FromResult(new QuickIngestCommitResultDto(true, request.Questions.Count, request.Questions.Count, "Success"));
+
+        public Task<ExamStudioDetailDto> GetAdminExamStudioAsync(int examId, CancellationToken cancellationToken = default) =>
+            Task.FromResult(SampleStudioDetail(examId));
+
+        public Task<ExamAuditResultDto> GetAdminExamAuditAsync(int examId, CancellationToken cancellationToken = default) =>
+            Task.FromResult(new ExamAuditResultDto(true, 1, 1, 0, 0, [], []));
+
+        public Task ReorderAdminSectionItemsAsync(int examId, ReorderSectionItemsRequest request, CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
+
+        public Task<AdminQuestionGroupDto> CreateAdminExamClusterAsync(int examId, CreateExamClusterRequest request, CancellationToken cancellationToken = default) =>
+            Task.FromResult(new AdminQuestionGroupDto(
+                999, examId, 1, request.SectionId, "P3", "Conversations", ModalityDto.Listening,
+                request.Passage, request.AudioPath, request.AudioStartMs, request.AudioEndMs, null, null, request.Transcript,
+                null, null, 1, []));
+
+        public Task<AdminExamMediaUploadResultDto> UploadAdminExamMediaAsync(int examId, Stream stream, string fileName, CancellationToken cancellationToken = default)
+        {
+            LastUploadedMediaExamId = examId;
+            LastUploadedMediaFileName = fileName;
+            return Task.FromResult(new AdminExamMediaUploadResultDto($"/media/exams/{examId}/{fileName}", $"exams/{examId}/{fileName}", fileName));
+        }
+
+        public Task<(Stream Stream, string ContentType, string FileName)> ExportAdminExamAsync(int examId, string? format = "zip", CancellationToken cancellationToken = default)
+        {
+            if (ExportException != null) throw ExportException;
+            var fmt = format ?? "zip";
+            return Task.FromResult(((Stream)new MemoryStream([1, 2, 3]), fmt == "json" ? "application/json" : "application/zip", $"test_exam.{fmt}"));
+        }
+
+        private static ExamStudioDetailDto SampleStudioDetail(int examId) =>
+            new ExamStudioDetailDto(
+                examId, 1, "toeic", "TOEIC", "Mock Test", ExamStatusDto.Draft, ExamPurposeDto.Mock,
+                120, "Desc", "ETS", "Note", 200, 1, 0, DateTimeOffset.UtcNow, null,
+                [
+                    new ExamStudioSectionDto(1, 1, "P1", "Photographs", ModalityDto.Listening, 6, 1, 1, false, null, null,
+                    [
+                        new ExamStudioGroupDto(1, examId, 1, 1, "P1", "Photographs", ModalityDto.Listening, null, null, null, null, null, null, null, null, null, 1,
+                        [
+                            new ExamStudioQuestionDto(1, 1, examId, 1, "P1", "Photographs", 1, "P1", "Photo stem", 3, QuestionTypeDto.Mcq, "Expl", null, null, null, null, null, null, null, null, 1, null,
+                            [
+                                new ExamStudioQuestionOptionDto(1, 1, "A", "Photo A", true, null),
+                                new ExamStudioQuestionOptionDto(2, 1, "B", "Photo B", false, null)
+                            ],
+                            [], false)
+                        ])
+                    ])
+                ],
+                [], [],
+                new ExamAuditResultDto(true, 1, 1, 0, 0, [], []));
     }
 }

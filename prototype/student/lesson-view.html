@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lesson: Present Continuous — extra efficient</title>
+  <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/css/tokens.css">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <style>
+    /* Card Placards */
+    .lesson-deck {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+      max-width: 760px;
+      margin: 0 auto;
+    }
+    .lesson-card {
+      border: 2px solid var(--ink);
+      background: var(--painted);
+      padding: var(--space-6);
+    }
+    .lesson-card--rule {
+      background: var(--sign-blue);
+      color: #ffffff;
+      border: 2px solid var(--ink);
+    }
+    .lesson-card--rule h2,
+    .lesson-card--rule p,
+    .lesson-card--rule strong {
+      color: #ffffff;
+    }
+    .lesson-card--rule .rule-formula {
+      background: rgba(255, 255, 255, 0.12);
+      border-left: 4px solid #ffffff;
+      padding: var(--space-3) var(--space-4);
+      margin: var(--space-3) 0;
+      font-family: var(--font-mono);
+      font-size: var(--text-base);
+    }
+    .lesson-card--pitfall {
+      background: var(--sign-gold);
+      color: var(--ink);
+      border: 2px solid var(--ink);
+    }
+    .lesson-card--pitfall h2,
+    .lesson-card--pitfall p,
+    .lesson-card--pitfall strong {
+      color: var(--ink);
+    }
+    .lesson-card--pitfall .pitfall-item {
+      background: rgba(20, 24, 29, 0.08);
+      padding: var(--space-3) var(--space-4);
+      margin-bottom: var(--space-2);
+      border-left: 4px solid var(--ink);
+    }
+    .lesson-card--example mark {
+      background: var(--sign-gold);
+      color: var(--ink);
+      padding: 0 4px;
+      font-weight: 700;
+    }
+    .micro-check-options {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+      margin: var(--space-4) 0;
+    }
+    .micro-check-option {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-3) var(--space-4);
+      border: 1px solid var(--line-soft);
+      cursor: pointer;
+      background: var(--painted);
+    }
+    .micro-check-option:hover {
+      background: var(--wall);
+    }
+    .micro-check-option.is-selected {
+      border-color: var(--ink);
+      background: var(--wall);
+    }
+    .micro-check-option.is-correct {
+      border: 2px solid var(--sign-green);
+      background: var(--color-success-soft);
+    }
+    .micro-check-option.is-wrong {
+      border: 2px solid var(--sign-red);
+      background: var(--color-danger-soft);
+    }
+    .micro-check-explanation {
+      margin-top: var(--space-4);
+      padding: var(--space-4);
+      background: var(--color-primary-soft);
+      border-left: 4px solid var(--sign-blue);
+    }
+    .deck-navigation {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: var(--space-4);
+      padding-top: var(--space-4);
+      border-top: 1px solid var(--line-soft);
+    }
+  </style>
+  <script src="../assets/js/sidebar.js"></script>
+</head>
+<body data-states="loading,locked,error,success">
+  <div class="app-shell app-shell--with-sidebar">
+    <header class="app-topbar">
+      <strong>extra efficient</strong>
+      <div class="row">
+        <span class="badge badge--info">8 credits left</span>
+        <a class="btn btn--sm" href="../payment/pricing.html">Buy credits</a>
+        <a class="btn btn--ghost btn--sm" href="profile.html">Nguyễn Văn A</a>
+      </div>
+    </header>
+    <div class="app-body">
+      <aside class="app-sidebar">
+        <nav class="nav-list" aria-label="Main navigation">
+          <a class="nav-list__item" href="dashboard.html">Home</a>
+          <div class="nav-list__group">Mock exams</div>
+          <a class="nav-list__item" href="exam-list.html">Test list</a>
+          <a class="nav-list__item" href="exam-history.html">Exam history</a>
+          <div class="nav-list__group">Practice</div>
+          <a class="nav-list__item" href="practice-select.html">Practice by section</a>
+          <a class="nav-list__item" href="weakness-analysis.html">Weakness analysis</a>
+          <a class="nav-list__item" href="saved-questions.html">Saved questions</a>
+          <div class="nav-list__group">Learning</div>
+          <a class="nav-list__item is-active" href="learning-path.html">My learning path</a>
+          <a class="nav-list__item" href="mentor-list.html">Find a mentor</a>
+          <div class="nav-list__group">Account</div>
+          <a class="nav-list__item" href="../payment/wallet.html">Credit wallet</a>
+          <a class="nav-list__item" href="support-report.html">Report a problem</a>
+          <a class="nav-list__item" href="profile.html">Profile</a>
+        </nav>
+      </aside>
+      <main class="app-main">
+        <div class="context-bar">
+          <div class="context-bar__item">
+            <span class="context-bar__label">Lesson:</span>
+            <span class="context-bar__value">Present Continuous Tense</span>
+          </div>
+          <div class="context-bar__item">
+            <span class="context-bar__label">Skill:</span>
+            <span class="context-bar__value">Reading · Part 5</span>
+          </div>
+          <div class="context-bar__item">
+            <span class="context-bar__label">Progress:</span>
+            <span class="context-bar__value" id="deckProgressLabel">Card 1 of 4</span>
+          </div>
+          <div class="context-bar__item">
+            <span class="context-bar__label">Cost:</span>
+            <span class="context-bar__value">Free · 0 credits</span>
+          </div>
+        </div>
+
+        <div class="container stack">
+          <nav class="breadcrumbs" aria-label="Breadcrumb">
+            <a href="dashboard.html" class="breadcrumbs__item">Home</a>
+            <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+            <a href="learning-path.html" class="breadcrumbs__item">My learning path</a>
+            <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+            <a href="path-detail.html" class="breadcrumbs__item">Module 2</a>
+            <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+            <span class="breadcrumbs__item" aria-current="page">Lesson: Present Continuous</span>
+          </nav>
+
+          <!-- ===== loading ===== -->
+          <div class="only-loading stack">
+            <h1 class="visually-hidden">Loading lesson</h1>
+            <div class="skeleton skeleton--title"></div>
+            <div class="skeleton skeleton--block" style="height: 250px"></div>
+          </div>
+
+          <!-- ===== locked ===== -->
+          <div class="only-locked">
+            <div class="card"><div class="card__body">
+              <div class="state-block">
+                <div class="state-block__icon" aria-hidden="true">LOCKED</div>
+                <h1 class="state-block__title">Premium lesson locked</h1>
+                <p class="state-block__desc">This lesson is part of a premium learning path. Unlock the entire path to get access to all guided walkthroughs, explanations, and AI grading.</p>
+                <div class="row" style="justify-content: center; gap: var(--space-3); margin-top: var(--space-3);">
+                  <a href="path-upgrade.html" class="btn btn--primary">Unlock path (5 credits)</a>
+                  <a href="path-detail.html" class="btn">Back to module</a>
+                </div>
+              </div>
+            </div></div>
+          </div>
+
+          <!-- ===== error ===== -->
+          <div class="only-error">
+            <div class="card"><div class="card__body">
+              <div class="state-block">
+                <div class="state-block__icon" aria-hidden="true">ERROR</div>
+                <h1 class="state-block__title">Could not load lesson</h1>
+                <p class="state-block__desc">Check your network connection and try again.</p>
+                <button class="btn btn--primary" onclick="location.reload()">Try again</button>
+              </div>
+            </div></div>
+          </div>
+
+          <!-- ===== success ===== -->
+          <div class="only-success stack">
+            <div class="lesson-deck">
+              <div class="row row--between" style="align-items: center;">
+                <span class="badge badge--info" id="cardTypeBadge">CARD 1: THE RULE</span>
+                <span class="text-sm text-muted" id="cardCounter">1 / 4 cards viewed</span>
+              </div>
+
+              <!-- CARD 1: RULE -->
+              <div class="lesson-card lesson-card--rule card-slide" id="card1">
+                <h2 class="m-0 mb-2">Rule: Present Continuous for Ongoing Actions</h2>
+                <p>The present continuous describes actions happening right now, at the moment of speaking, or around the current time period.</p>
+                <div class="rule-formula">
+                  Subject + is / am / are + Verb-ing
+                </div>
+                <p class="no-margin text-sm">
+                  Signals in TOEIC Part 5: <strong>now, currently, presently, at the moment, this week</strong>.
+                </p>
+              </div>
+
+              <!-- CARD 2: PITFALL -->
+              <div class="lesson-card lesson-card--pitfall card-slide" id="card2" style="display: none;">
+                <h2 class="m-0 mb-2">Common Pitfalls & Exam Traps</h2>
+                <p class="mb-3">Watch out for stative verbs that NEVER appear in the continuous aspect on the TOEIC:</p>
+                <div class="pitfall-item">
+                  <strong>TRAP 1: Stative Verbs of Perception & Cognition</strong><br>
+                  <span class="text-sm">WRONG: "He is knowing the answer." → CORRECT: "He knows the answer." (know, understand, believe, remember).</span>
+                </div>
+                <div class="pitfall-item">
+                  <strong>TRAP 2: Possession Verbs</strong><br>
+                  <span class="text-sm">WRONG: "The firm is owning five branches." → CORRECT: "The firm owns five branches." (own, have, belong).</span>
+                </div>
+                <div class="pitfall-item">
+                  <strong>TRAP 3: Missing Auxiliary 'Be'</strong><br>
+                  <span class="text-sm">WRONG: "The committee reviewing the draft now." → CORRECT: "The committee is reviewing the draft now."</span>
+                </div>
+              </div>
+
+              <!-- CARD 3: EXAMPLE -->
+              <div class="lesson-card lesson-card--example card-slide" id="card3" style="display: none;">
+                <span class="badge badge--warning mb-2">PART 5 WORKED EXAMPLE</span>
+                <h2 class="m-0 mb-3">Recognizing the Aspect in Context</h2>
+                <div class="p-3 mb-3" style="background: var(--wall); border-left: 4px solid var(--ink); font-family: var(--font-body);">
+                  "Mr. Tanaka <mark>currently</mark> ------- the quarterly budget with regional supervisors in Osaka."
+                </div>
+                <div class="stack text-sm">
+                  <div><strong>(A)</strong> reviews — <em>Wrong: simple present does not match temporary 'currently' modifier</em></div>
+                  <div><strong>(B)</strong> is reviewing — <strong>Correct: singular subject 'Mr. Tanaka' + 'currently' signals action in progress</strong></div>
+                  <div><strong>(C)</strong> reviewed — <em>Wrong: past tense conflicts with ongoing signal</em></div>
+                  <div><strong>(D)</strong> reviewing — <em>Wrong: missing auxiliary 'is'</em></div>
+                </div>
+                <div class="p-3 mt-3 text-sm" style="background: var(--color-success-soft); border-left: 4px solid var(--sign-green);">
+                  <strong>Key Takeaway:</strong> Whenever you spot <mark>currently</mark> or <mark>at present</mark> in Part 5, test for <code>is/are + -ing</code> first.
+                </div>
+              </div>
+
+              <!-- CARD 4: MICRO-CHECK -->
+              <div class="lesson-card card-slide" id="card4" style="display: none;">
+                <span class="badge badge--success mb-2">MICRO-CHECK (1 QUESTION)</span>
+                <h2 class="m-0 mb-3">Check Your Understanding</h2>
+                <p>The marketing team ------- new client proposals at the moment, so please do not disturb them.</p>
+
+                <div class="micro-check-options" id="microCheckOptions">
+                  <label class="micro-check-option" data-opt="A">
+                    <input type="radio" name="microCheck" value="A">
+                    <span><strong>(A)</strong> evaluates</span>
+                  </label>
+                  <label class="micro-check-option" data-opt="B">
+                    <input type="radio" name="microCheck" value="B">
+                    <span><strong>(B)</strong> is evaluating</span>
+                  </label>
+                  <label class="micro-check-option" data-opt="C">
+                    <input type="radio" name="microCheck" value="C">
+                    <span><strong>(C)</strong> evaluated</span>
+                  </label>
+                  <label class="micro-check-option" data-opt="D">
+                    <input type="radio" name="microCheck" value="D">
+                    <span><strong>(D)</strong> evaluating</span>
+                  </label>
+                </div>
+
+                <div class="row">
+                  <button type="button" class="btn btn--primary" id="btnCheckAnswer">Check answer</button>
+                </div>
+
+                <div class="micro-check-explanation" id="microCheckExplanation" style="display: none;">
+                  <strong>Correct answer: (B) is evaluating</strong>
+                  <p class="text-sm mt-1 mb-0">
+                    <strong>Explanation:</strong> The time adverbial "at the moment" indicates an action in progress right now, requiring the present continuous. The collective subject "team" takes the singular verb "is evaluating".
+                  </p>
+                  <p class="text-sm text-muted mt-2 mb-0">
+                    <strong>Rationale:</strong> (A) is simple present, (C) is simple past, and (D) is a participle lacking the required auxiliary "is".
+                  </p>
+                </div>
+              </div>
+
+              <!-- NAVIGATION -->
+              <div class="deck-navigation">
+                <button type="button" class="btn" id="btnPrev" disabled>Previous card</button>
+                <div class="row" style="gap: var(--space-2);">
+                  <button type="button" class="btn btn--primary" id="btnNext">Next card</button>
+                  <a href="path-detail.html" class="btn btn--success" id="btnFinish" style="display: none;">Finish lesson & return to path</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="../assets/js/state-switch.js"></script>
+  <script src="../assets/js/icons.js"></script>
+  <script>
+    (function () {
+      var currentCard = 1;
+      var totalCards = 4;
+      var microCheckAnswered = false;
+
+      var cardTitles = [
+        "CARD 1: THE RULE",
+        "CARD 2: COMMON PITFALLS",
+        "CARD 3: WORKED EXAMPLE",
+        "CARD 4: MICRO-CHECK"
+      ];
+
+      var btnPrev = document.getElementById("btnPrev");
+      var btnNext = document.getElementById("btnNext");
+      var btnFinish = document.getElementById("btnFinish");
+      var cardTypeBadge = document.getElementById("cardTypeBadge");
+      var cardCounter = document.getElementById("cardCounter");
+      var deckProgressLabel = document.getElementById("deckProgressLabel");
+
+      function updateCardView() {
+        for (var i = 1; i <= totalCards; i++) {
+          var el = document.getElementById("card" + i);
+          if (el) el.style.display = (i === currentCard) ? "block" : "none";
+        }
+        btnPrev.disabled = (currentCard === 1);
+        if (currentCard === totalCards) {
+          btnNext.style.display = "none";
+          btnFinish.style.display = microCheckAnswered ? "inline-block" : "none";
+        } else {
+          btnNext.style.display = "inline-block";
+          btnFinish.style.display = "none";
+        }
+
+        cardTypeBadge.textContent = cardTitles[currentCard - 1];
+        cardCounter.textContent = currentCard + " / " + totalCards + " cards viewed";
+        deckProgressLabel.textContent = "Card " + currentCard + " of " + totalCards;
+      }
+
+      btnPrev.addEventListener("click", function () {
+        if (currentCard > 1) {
+          currentCard--;
+          updateCardView();
+        }
+      });
+
+      btnNext.addEventListener("click", function () {
+        if (currentCard < totalCards) {
+          currentCard++;
+          updateCardView();
+        }
+      });
+
+      // Micro check validation
+      var btnCheckAnswer = document.getElementById("btnCheckAnswer");
+      var explanation = document.getElementById("microCheckExplanation");
+      var options = document.querySelectorAll(".micro-check-option");
+
+      options.forEach(function (opt) {
+        opt.addEventListener("click", function () {
+          if (microCheckAnswered) return;
+          options.forEach(function (o) { o.classList.remove("is-selected"); });
+          opt.classList.add("is-selected");
+        });
+      });
+
+      btnCheckAnswer.addEventListener("click", function () {
+        var selected = document.querySelector('input[name="microCheck"]:checked');
+        if (!selected) {
+          alert("Please select an option first.");
+          return;
+        }
+        microCheckAnswered = true;
+        document.querySelectorAll('input[name="microCheck"]').forEach(function (input) {
+          input.disabled = true;
+        });
+        btnCheckAnswer.disabled = true;
+
+        options.forEach(function (opt) {
+          var val = opt.getAttribute("data-opt");
+          if (val === "B") {
+            opt.classList.add("is-correct");
+          } else if (opt.classList.contains("is-selected")) {
+            opt.classList.add("is-wrong");
+          }
+        });
+
+        explanation.style.display = "block";
+        btnFinish.style.display = "inline-block";
+      });
+
+      updateCardView();
+    })();
+  </script>
+</body>
+</html>

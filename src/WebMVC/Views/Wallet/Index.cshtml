@@ -1,5 +1,6 @@
 @using Contracts
 @model WebMVC.Models.WalletViewModel
+@inject WebMVC.DateTimeFormatter Formatter
 @{
     Layout = "_LearnerLayout";
     ViewData["Title"] = "Credit wallet";
@@ -104,7 +105,7 @@
                         <td>@order.PackageName (@order.Credits @(order.Credits == 1 ? "credit" : "credits"))</td>
                         <td>@CurrencyFormatter.FormatVnd(order.Amount)</td>
                         <td>@order.Gateway.ToWireCode().ToUpperInvariant()</td>
-                        <td>@order.CreatedAt.ToString("dd MMM yyyy HH:mm")</td>
+                        <td>@Formatter.Format(order.CreatedAt)</td>
                         <td>
                           <span class="@badgeClass">@displayStatus</span>
                           @if (order.Status is OrderStatusDto.Pending or OrderStatusDto.Reconciling)
@@ -147,7 +148,7 @@
                       var deltaClass = item.Delta > 0 ? "text-success" : "text-danger";
                       var deltaSign = item.Delta > 0 ? $"+{item.Delta}" : item.Delta.ToString();
                       <tr>
-                        <td>@item.CreatedAt.ToString("dd MMM yyyy HH:mm")</td>
+                        <td>@Formatter.Format(item.CreatedAt)</td>
                         <td><code>@item.Reason</code></td>
                         <td><strong class="@deltaClass">@deltaSign</strong></td>
                         <td>@(item.OrderCode ?? "—")</td>

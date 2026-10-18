@@ -1,5 +1,6 @@
 @model PlacementResultViewModel
 @{
+    Layout = "_LearnerLayout";
     ViewData["Title"] = "Placement Result";
     var result = Model.Result;
     var listSkill = result.SkillScores.FirstOrDefault(s => s.SkillCode == "LIST" || s.SkillName.Contains("Listening", StringComparison.OrdinalIgnoreCase));

@@ -24,6 +24,7 @@ public interface ICompanionApiClient :
     ISpeakingClient,
     IPlacementClient,
     ILearningPathClient,
+    ILessonClient,
     IMentorsClient,
     ISupportClient,
     IAiInsightsClient,
@@ -36,7 +37,8 @@ public interface ICompanionApiClient :
     IAdminMentorsClient,
     IAdminComplaintsClient,
     IAdminExamsClient,
-    IAdminImportsClient
+    IAdminImportsClient,
+    IAdminLessonsClient
 {
 }
 
@@ -753,6 +755,46 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
     public Task<LearningPathSummaryDto> UpgradeLearningPathAsync(string bearerToken, CancellationToken cancellationToken = default) =>
         PostAuthorizedAsync<object, LearningPathSummaryDto>("api/learner/learning-path/upgrade", new { }, bearerToken, cancellationToken);
 
+    public Task<LessonDetailDto> GetLessonAsync(int lessonId, string bearerToken, CancellationToken cancellationToken = default) =>
+        GetAuthorizedAsync<LessonDetailDto>($"api/learner/lessons/{lessonId}", bearerToken, cancellationToken);
+
+    public Task<LessonDetailDto> GetLessonAsync(int lessonId, CancellationToken cancellationToken = default) =>
+        GetLessonAsync(lessonId, string.Empty, cancellationToken);
+
+    public Task<LessonProgressDto> GetLessonProgressAsync(int lessonId, string bearerToken, CancellationToken cancellationToken = default) =>
+        GetAuthorizedAsync<LessonProgressDto>($"api/learner/lessons/{lessonId}/progress", bearerToken, cancellationToken);
+
+    public Task<LessonProgressDto> GetLessonProgressAsync(int lessonId, CancellationToken cancellationToken = default) =>
+        GetLessonProgressAsync(lessonId, string.Empty, cancellationToken);
+
+    public async Task RecordCardViewAsync(int lessonId, int cardId, string bearerToken, CancellationToken cancellationToken = default)
+    {
+        using var message = new HttpRequestMessage(HttpMethod.Post, $"api/learner/lessons/{lessonId}/cards/{cardId}/view");
+        AttachBearer(message, bearerToken);
+        using var response = await http.SendAsync(message, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+    }
+
+    public Task RecordCardViewAsync(int lessonId, int cardId, CancellationToken cancellationToken = default) =>
+        RecordCardViewAsync(lessonId, cardId, string.Empty, cancellationToken);
+
+    public Task<LessonDetailDto?> GetLessonByCategoryAsync(int categoryId, string bearerToken, CancellationToken cancellationToken = default) =>
+        GetAuthorizedAsync<LessonDetailDto?>($"api/learner/lessons/by-category/{categoryId}", bearerToken, cancellationToken);
+
+    public Task<LessonDetailDto?> GetLessonByCategoryAsync(int categoryId, CancellationToken cancellationToken = default) =>
+        GetLessonByCategoryAsync(categoryId, string.Empty, cancellationToken);
+
+    public async Task UnlockPathAsync(int learnerPathId, string bearerToken, CancellationToken cancellationToken = default)
+    {
+        using var message = new HttpRequestMessage(HttpMethod.Post, $"api/learner/learning-path/{learnerPathId}/unlock");
+        AttachBearer(message, bearerToken);
+        using var response = await http.SendAsync(message, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+    }
+
+    public Task UnlockPathAsync(int learnerPathId, CancellationToken cancellationToken = default) =>
+        UnlockPathAsync(learnerPathId, string.Empty, cancellationToken);
+
     public async Task<IReadOnlyList<MentorSummaryDto>> GetMentorsAsync(string? certCode = null, string? skill = null, CancellationToken cancellationToken = default)
     {
         var query = new List<string>();
@@ -855,15 +897,19 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
     public Task<AdminComplaintDetailDto> ResolveAdminComplaintAsync(int complaintId, ResolveComplaintRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
         PostAuthorizedAsync<ResolveComplaintRequest, AdminComplaintDetailDto>($"api/admin/complaints/{complaintId}/resolve", request, bearerToken, cancellationToken);
 
-    public Task<AdminExamListSummaryDto> GetAdminExamsAsync(string? q, string? status, int? certId, int page, int pageSize, string bearerToken, CancellationToken cancellationToken = default)
+    public Task<AdminExamListSummaryDto> GetAdminExamsAsync(string? q, string? status, int? certId, string? purpose, int page, int pageSize, string bearerToken, CancellationToken cancellationToken = default)
     {
         var query = new List<string> { $"page={page}", $"pageSize={pageSize}" };
         if (!string.IsNullOrWhiteSpace(q)) query.Add($"q={Uri.EscapeDataString(q)}");
         if (!string.IsNullOrWhiteSpace(status)) query.Add($"status={Uri.EscapeDataString(status)}");
         if (certId.HasValue) query.Add($"certId={certId.Value}");
+        if (!string.IsNullOrWhiteSpace(purpose)) query.Add($"purpose={Uri.EscapeDataString(purpose)}");
         var path = $"api/admin/exams?{string.Join("&", query)}";
         return GetAuthorizedAsync<AdminExamListSummaryDto>(path, bearerToken, cancellationToken);
     }
+
+    public Task<AdminExamListSummaryDto> GetAdminExamsAsync(string? q, string? status, int? certId, int page, int pageSize, string bearerToken, CancellationToken cancellationToken = default) =>
+        GetAdminExamsAsync(q, status, certId, null, page, pageSize, bearerToken, cancellationToken);
 
     public Task<AdminExamDetailDto> GetAdminExamByIdAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) =>
         GetAuthorizedAsync<AdminExamDetailDto>($"api/admin/exams/{examId}", bearerToken, cancellationToken);
@@ -903,6 +949,77 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
 
     public Task<AdminExamSectionAudioDto> SaveAdminExamSectionAudioAsync(int examId, SaveExamSectionAudioRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
         PostAuthorizedAsync<SaveExamSectionAudioRequest, AdminExamSectionAudioDto>($"api/admin/exams/{examId}/audio", request, bearerToken, cancellationToken);
+
+    public Task<QuickIngestParseResultDto> ParseQuickIngestAsync(int examId, QuickIngestParseRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
+        PostAuthorizedAsync<QuickIngestParseRequest, QuickIngestParseResultDto>($"api/admin/exams/{examId}/quick-ingest/parse", request, bearerToken, cancellationToken);
+
+    public Task<QuickIngestCommitResultDto> CommitQuickIngestAsync(int examId, QuickIngestCommitRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
+        PostAuthorizedAsync<QuickIngestCommitRequest, QuickIngestCommitResultDto>($"api/admin/exams/{examId}/quick-ingest/commit", request, bearerToken, cancellationToken);
+
+    public Task<ExamStudioDetailDto> GetAdminExamStudioAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) =>
+        GetAuthorizedAsync<ExamStudioDetailDto>($"api/admin/exams/{examId}/studio", bearerToken, cancellationToken);
+
+    public Task<ExamAuditResultDto> GetAdminExamAuditAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) =>
+        GetAuthorizedAsync<ExamAuditResultDto>($"api/admin/exams/{examId}/audit", bearerToken, cancellationToken);
+
+    public async Task ReorderAdminSectionItemsAsync(int examId, ReorderSectionItemsRequest request, string bearerToken, CancellationToken cancellationToken = default)
+    {
+        using var message = new HttpRequestMessage(HttpMethod.Post, $"api/admin/exams/{examId}/reorder");
+        AttachBearer(message, bearerToken);
+        message.Content = JsonContent.Create(request, options: Json);
+        using var response = await http.SendAsync(message, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+    }
+
+    public async Task<AdminQuestionGroupDto> CreateAdminExamClusterAsync(int examId, CreateExamClusterRequest request, string bearerToken, CancellationToken cancellationToken = default)
+    {
+        using var message = new HttpRequestMessage(HttpMethod.Post, $"api/admin/exams/{examId}/clusters");
+        AttachBearer(message, bearerToken);
+        message.Content = JsonContent.Create(request, options: Json);
+        using var response = await http.SendAsync(message, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+        return (await response.Content.ReadFromJsonAsync<AdminQuestionGroupDto>(Json, cancellationToken))!;
+    }
+
+    public async Task<AdminExamMediaUploadResultDto> UploadAdminExamMediaAsync(int examId, Stream stream, string fileName, string bearerToken, CancellationToken cancellationToken = default)
+    {
+        using var form = new MultipartFormDataContent();
+        var file = new StreamContent(stream);
+        file.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+        form.Add(file, "file", fileName);
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"api/admin/exams/{examId}/media") { Content = form };
+        AttachBearer(request, bearerToken);
+        using var response = await http.SendAsync(request, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+        return (await response.Content.ReadFromJsonAsync<AdminExamMediaUploadResultDto>(Json, cancellationToken))!;
+    }
+
+    public async Task<(Stream Stream, string ContentType, string FileName)> ExportAdminExamAsync(int examId, string? format, string bearerToken, CancellationToken cancellationToken = default)
+    {
+        var fmt = string.IsNullOrWhiteSpace(format) ? "zip" : format.ToLowerInvariant();
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"api/admin/exams/{examId}/export?format={fmt}");
+        AttachBearer(request, bearerToken);
+
+        var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        try
+        {
+            await EnsureSuccessAsync(response, cancellationToken);
+        }
+        catch
+        {
+            response.Dispose();
+            throw;
+        }
+
+        var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        var contentType = response.Content.Headers.ContentType?.MediaType ?? (fmt == "json" ? "application/json" : "application/zip");
+        var fileName = response.Content.Headers.ContentDisposition?.FileNameStar
+            ?? response.Content.Headers.ContentDisposition?.FileName
+            ?? $"exam_{examId}_export.{(fmt == "json" ? "json" : "zip")}";
+
+        return (stream, contentType, fileName);
+    }
 
     public Task<AdminImportBatchesDto> GetAdminImportBatchesAsync(int? certId, string bearerToken, CancellationToken cancellationToken = default) =>
         GetAuthorizedAsync<AdminImportBatchesDto>(certId is { } id ? $"api/admin/imports?certId={id}" : "api/admin/imports", bearerToken, cancellationToken);
@@ -945,6 +1062,76 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
         var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
         return (stream, response.Content.Headers.ContentType?.MediaType ?? "application/octet-stream");
     }
+
+    public async Task<(Stream Stream, string ContentType)> GetExamMediaAsync(int examId, string fileName, string bearerToken, CancellationToken cancellationToken = default)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"api/media/exams/{examId}/{Uri.EscapeDataString(fileName)}");
+        AttachBearer(request, bearerToken);
+
+        var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        try
+        {
+            await EnsureSuccessAsync(response, cancellationToken);
+        }
+        catch
+        {
+            response.Dispose();
+            throw;
+        }
+
+        var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        return (stream, response.Content.Headers.ContentType?.MediaType ?? "application/octet-stream");
+    }
+
+    public Task<IReadOnlyList<AdminLessonSummaryDto>> GetAdminLessonsAsync(int? certId, int? skillId, string bearerToken, CancellationToken cancellationToken = default)
+    {
+        var query = new List<string>();
+        if (certId.HasValue) query.Add($"certId={certId.Value}");
+        if (skillId.HasValue) query.Add($"skillId={skillId.Value}");
+        var url = query.Count > 0 ? $"api/admin/lessons?{string.Join("&", query)}" : "api/admin/lessons";
+        return GetAuthorizedAsync<IReadOnlyList<AdminLessonSummaryDto>>(url, bearerToken, cancellationToken);
+    }
+
+    public Task<AdminLessonDetailDto> GetAdminLessonByIdAsync(int lessonId, string bearerToken, CancellationToken cancellationToken = default) =>
+        GetAuthorizedAsync<AdminLessonDetailDto>($"api/admin/lessons/{lessonId}", bearerToken, cancellationToken);
+
+    public Task<AdminLessonDetailDto> CreateAdminLessonAsync(AdminLessonUpsertDto request, string bearerToken, CancellationToken cancellationToken = default) =>
+        PostAuthorizedAsync<AdminLessonUpsertDto, AdminLessonDetailDto>("api/admin/lessons", request, bearerToken, cancellationToken);
+
+    public Task<AdminLessonDetailDto> UpdateAdminLessonAsync(int lessonId, AdminLessonUpsertDto request, string bearerToken, CancellationToken cancellationToken = default) =>
+        PutAuthorizedAsync<AdminLessonUpsertDto, AdminLessonDetailDto>($"api/admin/lessons/{lessonId}", request, bearerToken, cancellationToken);
+
+    public Task DeleteAdminLessonAsync(int lessonId, string bearerToken, CancellationToken cancellationToken = default) =>
+        DeleteAuthorizedAsync($"api/admin/lessons/{lessonId}", bearerToken, cancellationToken);
+
+    public async Task<AdminLessonImportResultDto> UploadAdminLessonImportAsync(int certId, bool overwrite, Stream content, string fileName, string bearerToken, CancellationToken cancellationToken = default)
+    {
+        using var form = new MultipartFormDataContent();
+        form.Add(new StringContent(certId.ToString()), "certId");
+        form.Add(new StringContent(overwrite.ToString().ToLowerInvariant()), "overwrite");
+        var file = new StreamContent(content);
+        file.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+        form.Add(file, "file", fileName);
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"api/admin/lessons/import?certId={certId}&overwrite={overwrite.ToString().ToLowerInvariant()}") { Content = form };
+        AttachBearer(request, bearerToken);
+        using var response = await http.SendAsync(request, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+        return (await response.Content.ReadFromJsonAsync<AdminLessonImportResultDto>(Json, cancellationToken))!;
+    }
+
+    public Task<LessonManifestDto> ExportAdminLessonAsync(int lessonId, string bearerToken, CancellationToken cancellationToken = default) =>
+        GetAuthorizedAsync<LessonManifestDto>($"api/admin/lessons/{lessonId}/export", bearerToken, cancellationToken);
+
+    public Task<LessonManifestDto> GetAdminLessonTemplateAsync(string bearerToken, CancellationToken cancellationToken = default) =>
+        GetAuthorizedAsync<LessonManifestDto>("api/admin/lessons/template", bearerToken, cancellationToken);
+
+    public Task<AdminLessonFormOptionsDto> GetAdminLessonFormOptionsAsync(int? certId, string bearerToken, CancellationToken cancellationToken = default)
+    {
+        var url = certId.HasValue ? $"api/admin/lessons/options?certId={certId.Value}" : "api/admin/lessons/options";
+        return GetAuthorizedAsync<AdminLessonFormOptionsDto>(url, bearerToken, cancellationToken);
+    }
+
 
 
     // Token-free forwarding methods for segregated domain client interfaces (ADR-0002)
@@ -1209,6 +1396,9 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
     public Task<(Stream Stream, string ContentType)> GetImportMediaAsync(int batchId, string fileName, CancellationToken cancellationToken = default) =>
         GetImportMediaAsync(batchId, fileName, string.Empty, cancellationToken);
 
+    public Task<(Stream Stream, string ContentType)> GetExamMediaAsync(int examId, string fileName, CancellationToken cancellationToken = default) =>
+        GetExamMediaAsync(examId, fileName, string.Empty, cancellationToken);
+
     public Task<AdminPackagesSummaryDto> GetAdminPackagesAsync(CancellationToken cancellationToken = default) =>
         GetAdminPackagesAsync(string.Empty, cancellationToken);
 
@@ -1290,8 +1480,11 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
     public Task<AdminComplaintDetailDto> ResolveAdminComplaintAsync(int complaintId, ResolveComplaintRequest request, CancellationToken cancellationToken = default) =>
         ResolveAdminComplaintAsync(complaintId, request, string.Empty, cancellationToken);
 
+    public Task<AdminExamListSummaryDto> GetAdminExamsAsync(string? q, string? status, int? certId, string? purpose, int page, int pageSize, CancellationToken cancellationToken = default) =>
+        GetAdminExamsAsync(q, status, certId, purpose, page, pageSize, string.Empty, cancellationToken);
+
     public Task<AdminExamListSummaryDto> GetAdminExamsAsync(string? q, string? status, int? certId, int page, int pageSize, CancellationToken cancellationToken = default) =>
-        GetAdminExamsAsync(q, status, certId, page, pageSize, string.Empty, cancellationToken);
+        GetAdminExamsAsync(q, status, certId, null, page, pageSize, string.Empty, cancellationToken);
 
     public Task<AdminExamDetailDto> GetAdminExamByIdAsync(int examId, CancellationToken cancellationToken = default) =>
         GetAdminExamByIdAsync(examId, string.Empty, cancellationToken);
@@ -1332,6 +1525,30 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
     public Task<AdminExamSectionAudioDto> SaveAdminExamSectionAudioAsync(int examId, SaveExamSectionAudioRequest request, CancellationToken cancellationToken = default) =>
         SaveAdminExamSectionAudioAsync(examId, request, string.Empty, cancellationToken);
 
+    public Task<QuickIngestParseResultDto> ParseQuickIngestAsync(int examId, QuickIngestParseRequest request, CancellationToken cancellationToken = default) =>
+        ParseQuickIngestAsync(examId, request, string.Empty, cancellationToken);
+
+    public Task<QuickIngestCommitResultDto> CommitQuickIngestAsync(int examId, QuickIngestCommitRequest request, CancellationToken cancellationToken = default) =>
+        CommitQuickIngestAsync(examId, request, string.Empty, cancellationToken);
+
+    public Task<ExamStudioDetailDto> GetAdminExamStudioAsync(int examId, CancellationToken cancellationToken = default) =>
+        GetAdminExamStudioAsync(examId, string.Empty, cancellationToken);
+
+    public Task<ExamAuditResultDto> GetAdminExamAuditAsync(int examId, CancellationToken cancellationToken = default) =>
+        GetAdminExamAuditAsync(examId, string.Empty, cancellationToken);
+
+    public Task ReorderAdminSectionItemsAsync(int examId, ReorderSectionItemsRequest request, CancellationToken cancellationToken = default) =>
+        ReorderAdminSectionItemsAsync(examId, request, string.Empty, cancellationToken);
+
+    public Task<AdminQuestionGroupDto> CreateAdminExamClusterAsync(int examId, CreateExamClusterRequest request, CancellationToken cancellationToken = default) =>
+        CreateAdminExamClusterAsync(examId, request, string.Empty, cancellationToken);
+
+    public Task<AdminExamMediaUploadResultDto> UploadAdminExamMediaAsync(int examId, Stream stream, string fileName, CancellationToken cancellationToken = default) =>
+        UploadAdminExamMediaAsync(examId, stream, fileName, string.Empty, cancellationToken);
+
+    public Task<(Stream Stream, string ContentType, string FileName)> ExportAdminExamAsync(int examId, string? format = "zip", CancellationToken cancellationToken = default) =>
+        ExportAdminExamAsync(examId, format, string.Empty, cancellationToken);
+
     public Task<AdminImportBatchesDto> GetAdminImportBatchesAsync(int? certId, CancellationToken cancellationToken = default) =>
         GetAdminImportBatchesAsync(certId, string.Empty, cancellationToken);
 
@@ -1340,6 +1557,34 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
 
     public Task<AdminImportResultDto> UploadAdminImportAsync(int certId, Stream content, string fileName, CancellationToken cancellationToken = default) =>
         UploadAdminImportAsync(certId, content, fileName, string.Empty, cancellationToken);
+
+    public Task<IReadOnlyList<AdminLessonSummaryDto>> GetAdminLessonsAsync(int? certId = null, int? skillId = null, CancellationToken cancellationToken = default) =>
+        GetAdminLessonsAsync(certId, skillId, string.Empty, cancellationToken);
+
+    public Task<AdminLessonDetailDto> GetAdminLessonByIdAsync(int lessonId, CancellationToken cancellationToken = default) =>
+        GetAdminLessonByIdAsync(lessonId, string.Empty, cancellationToken);
+
+    public Task<AdminLessonDetailDto> CreateAdminLessonAsync(AdminLessonUpsertDto request, CancellationToken cancellationToken = default) =>
+        CreateAdminLessonAsync(request, string.Empty, cancellationToken);
+
+    public Task<AdminLessonDetailDto> UpdateAdminLessonAsync(int lessonId, AdminLessonUpsertDto request, CancellationToken cancellationToken = default) =>
+        UpdateAdminLessonAsync(lessonId, request, string.Empty, cancellationToken);
+
+    public Task DeleteAdminLessonAsync(int lessonId, CancellationToken cancellationToken = default) =>
+        DeleteAdminLessonAsync(lessonId, string.Empty, cancellationToken);
+
+    public Task<AdminLessonImportResultDto> UploadAdminLessonImportAsync(int certId, bool overwrite, Stream content, string fileName, CancellationToken cancellationToken = default) =>
+        UploadAdminLessonImportAsync(certId, overwrite, content, fileName, string.Empty, cancellationToken);
+
+    public Task<LessonManifestDto> ExportAdminLessonAsync(int lessonId, CancellationToken cancellationToken = default) =>
+        ExportAdminLessonAsync(lessonId, string.Empty, cancellationToken);
+
+    public Task<LessonManifestDto> GetAdminLessonTemplateAsync(CancellationToken cancellationToken = default) =>
+        GetAdminLessonTemplateAsync(string.Empty, cancellationToken);
+
+    public Task<AdminLessonFormOptionsDto> GetAdminLessonFormOptionsAsync(int? certId = null, CancellationToken cancellationToken = default) =>
+        GetAdminLessonFormOptionsAsync(certId, string.Empty, cancellationToken);
+
 
     private async Task<TResponse> PutAuthorizedAsync<TRequest, TResponse>(string path, TRequest body, string bearerToken, CancellationToken cancellationToken)
     {

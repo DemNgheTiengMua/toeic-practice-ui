@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.IO.Compression;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using BusinessObjects;
@@ -28,7 +31,9 @@ public sealed class QuestionGroupNotFoundException(int groupId)
 
 public interface IAdminExamService
 {
-    Task<AdminExamListSummaryDto> GetExamsAsync(string? q, string? status, int? certId, int page, int pageSize, CancellationToken cancellationToken = default);
+    Task<AdminExamListSummaryDto> GetExamsAsync(string? q, string? status, int? certId, string? purpose, int page, int pageSize, CancellationToken cancellationToken = default);
+    Task<AdminExamListSummaryDto> GetExamsAsync(string? q, string? status, int? certId, int page, int pageSize, CancellationToken cancellationToken = default) =>
+        GetExamsAsync(q, status, certId, null, page, pageSize, cancellationToken);
     Task<AdminExamDetailDto> GetExamByIdAsync(int examId, CancellationToken cancellationToken = default);
     Task<AdminExamDetailDto> CreateExamAsync(CreateAdminExamRequest request, CancellationToken cancellationToken = default);
     Task<AdminExamDetailDto> UpdateExamAsync(int examId, UpdateAdminExamRequest request, CancellationToken cancellationToken = default);
@@ -45,11 +50,20 @@ public interface IAdminExamService
     Task DeleteQuestionAsync(int questionId, CancellationToken cancellationToken = default);
 
     Task<AdminExamSectionAudioDto> SaveSectionAudioAsync(int examId, SaveExamSectionAudioRequest request, CancellationToken cancellationToken = default);
+    Task<QuickIngestCommitResultDto> CommitQuickIngestAsync(int examId, QuickIngestCommitRequest request, CancellationToken cancellationToken = default);
+    Task<ExamStudioDetailDto> GetExamStudioAsync(int examId, CancellationToken cancellationToken = default);
+    Task<ExamAuditResultDto> AuditExamPublishReadinessAsync(int examId, CancellationToken cancellationToken = default);
+    Task ReorderSectionItemsAsync(int examId, ReorderSectionItemsRequest request, CancellationToken cancellationToken = default);
+    Task<AdminQuestionGroupDto> CreateExamClusterAsync(int examId, CreateExamClusterRequest request, CancellationToken cancellationToken = default);
+    Task<(Stream Stream, string ContentType, string FileName)> ExportExamPackageAsync(int examId, string? format = "zip", CancellationToken cancellationToken = default);
 }
 
-public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock) : IAdminExamService
+public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, IFileStore? fileStore = null) : IAdminExamService
 {
-    public async Task<AdminExamListSummaryDto> GetExamsAsync(string? q, string? status, int? certId, int page, int pageSize, CancellationToken cancellationToken = default)
+    public Task<AdminExamListSummaryDto> GetExamsAsync(string? q, string? status, int? certId, int page, int pageSize, CancellationToken cancellationToken = default) =>
+        GetExamsAsync(q, status, certId, null, page, pageSize, cancellationToken);
+
+    public async Task<AdminExamListSummaryDto> GetExamsAsync(string? q, string? status, int? certId, string? purpose, int page, int pageSize, CancellationToken cancellationToken = default)
     {
         page = Math.Max(1, page);
         pageSize = Math.Clamp(pageSize, 1, 100);
@@ -79,6 +93,24 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock) 
         if (certId.HasValue)
         {
             query = query.Where(e => e.CertId == certId.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(purpose) && !purpose.Equals("all", StringComparison.OrdinalIgnoreCase))
+        {
+            var normalized = purpose.Trim().ToLowerInvariant();
+            if (normalized == "practice")
+            {
+                query = query.Where(e => e.Purpose == "speaking_practice" || e.Purpose == "writing_practice");
+            }
+            else if (EnumCodes.TryParse<ExamPurpose>(normalized, out var parsedPurpose))
+            {
+                var code = parsedPurpose.ToCode();
+                query = query.Where(e => e.Purpose == code);
+            }
+            else
+            {
+                query = query.Where(e => e.Purpose == normalized);
+            }
         }
 
         var totalCount = await query.CountAsync(cancellationToken);
@@ -123,7 +155,7 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock) 
             var examAudios = audiosByExam.Where(a => a.ExamId == exam.ExamId).ToList();
 
             string audioStatus;
-            if (listeningSections.Count == 0)
+            if (listeningSections.Count == 0 || exam.Purpose == "speaking_practice" || exam.Purpose == "writing_practice")
             {
                 audioStatus = "N/A";
             }
@@ -1363,4 +1395,838 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock) 
             }
         }
     }
+
+    public async Task<QuickIngestCommitResultDto> CommitQuickIngestAsync(int examId, QuickIngestCommitRequest request, CancellationToken cancellationToken = default)
+    {
+        if (request == null)
+        {
+            throw new AdminExamException(ApiError.Codes.Validation, "Commit request cannot be null.", 400);
+        }
+
+        var exam = await db.Exams.Include(e => e.Cert).FirstOrDefaultAsync(e => e.ExamId == examId && !e.IsDeleted, cancellationToken);
+        if (exam == null)
+        {
+            throw new ExamNotFoundException(examId);
+        }
+
+        var section = await db.Sections.FirstOrDefaultAsync(s => s.SectionId == request.SectionId && s.CertId == exam.CertId, cancellationToken);
+        if (section == null)
+        {
+            throw new AdminExamException("SectionNotFound", $"Section with id {request.SectionId} not found for certificate '{exam.Cert.Name}'.", 404);
+        }
+
+        if (request.Questions == null || request.Questions.Count == 0)
+        {
+            throw new AdminExamException(ApiError.Codes.Validation, "No questions provided to commit.", 400);
+        }
+
+        // Validate each question
+        for (var i = 0; i < request.Questions.Count; i++)
+        {
+            var q = request.Questions[i];
+            if (string.IsNullOrWhiteSpace(q.Stem))
+            {
+                throw new AdminExamException(ApiError.Codes.Validation, $"Question {i + 1} has an empty stem.", 400);
+            }
+            if (q.Options == null || q.Options.Count < 2)
+            {
+                throw new AdminExamException(ApiError.Codes.Validation, $"Question {i + 1} must have at least 2 options.", 400);
+            }
+            var correctCount = q.Options.Count(o => o.IsCorrect);
+            if (correctCount != 1)
+            {
+                throw new AdminExamException(ApiError.Codes.Validation, $"Question {i + 1} must have exactly one correct option (found {correctCount}).", 400);
+            }
+        }
+
+        await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
+
+        var isReplace = string.Equals(request.Mode, "replace", StringComparison.OrdinalIgnoreCase);
+        int currentDisplayOrder = 1;
+
+        if (isReplace)
+        {
+            var existingGroups = await db.QuestionGroups
+                .Include(g => g.QuestionGroups)
+                    .ThenInclude(q => q.QuestionOptionQuestionNavigations)
+                .Where(g => g.ExamId == examId && g.SectionId == request.SectionId)
+                .ToListAsync(cancellationToken);
+
+            var existingQuestionIds = existingGroups.SelectMany(g => g.QuestionGroups.Select(q => q.QuestionId)).ToList();
+
+            var hasAnswers = await db.AttemptAnswers.AnyAsync(a => existingQuestionIds.Contains(a.QuestionId), cancellationToken)
+                || await db.FreeResponses.AnyAsync(r => existingQuestionIds.Contains(r.QuestionId), cancellationToken);
+
+            if (hasAnswers)
+            {
+                throw new AdminExamException(ApiError.Codes.QuestionHasAttemptAnswers, "Cannot replace section content because completed or active learner attempts exist.", 400);
+            }
+
+            foreach (var g in existingGroups)
+            {
+                foreach (var q in g.QuestionGroups)
+                {
+                    var saved = await db.SavedQuestions.Where(s => s.QuestionId == q.QuestionId).ToListAsync(cancellationToken);
+                    if (saved.Count > 0) db.SavedQuestions.RemoveRange(saved);
+
+                    var pa = await db.PracticeAnswers.Where(p => p.QuestionId == q.QuestionId).ToListAsync(cancellationToken);
+                    if (pa.Count > 0) db.PracticeAnswers.RemoveRange(pa);
+
+                    db.QuestionOptions.RemoveRange(q.QuestionOptionQuestionNavigations);
+                    db.Questions.Remove(q);
+                }
+                db.QuestionGroups.Remove(g);
+            }
+
+            await db.SaveChangesAsync(cancellationToken);
+            currentDisplayOrder = 1;
+        }
+        else
+        {
+            var maxGroupOrder = await db.QuestionGroups
+                .Where(g => g.ExamId == examId && g.SectionId == request.SectionId)
+                .Select(g => (int?)g.DisplayOrder)
+                .MaxAsync(cancellationToken) ?? 0;
+
+            var maxQuestionOrder = await db.Questions
+                .Where(q => q.ExamId == examId && q.SectionId == request.SectionId)
+                .Select(q => (int?)q.DisplayOrder)
+                .MaxAsync(cancellationToken) ?? 0;
+
+            currentDisplayOrder = Math.Max(maxGroupOrder, maxQuestionOrder) + 1;
+        }
+
+        var categories = await db.QuestionCategories
+            .Where(c => c.CertId == exam.CertId)
+            .ToDictionaryAsync(c => c.Code, c => c.CategoryId, StringComparer.OrdinalIgnoreCase, cancellationToken);
+
+        var groupsCreated = 0;
+        var questionsCreated = 0;
+
+        foreach (var q in request.Questions)
+        {
+            var group = new QuestionGroup
+            {
+                ExamId = examId,
+                CertId = exam.CertId,
+                SectionId = request.SectionId,
+                DisplayOrder = currentDisplayOrder,
+            };
+            db.QuestionGroups.Add(group);
+            await db.SaveChangesAsync(cancellationToken);
+            groupsCreated++;
+
+            int? categoryId = null;
+            if (!string.IsNullOrWhiteSpace(q.CategoryCode) && categories.TryGetValue(q.CategoryCode, out var cid))
+            {
+                categoryId = cid;
+            }
+
+            var question = new Question
+            {
+                ExamId = examId,
+                SectionId = request.SectionId,
+                SkillId = section.SkillId,
+                GroupId = group.GroupId,
+                Stem = q.Stem.Trim(),
+                DifficultyLevel = q.DifficultyLevel is >= 1 and <= 5 ? q.DifficultyLevel : 3,
+                QuestionType = QuestionType.Mcq.ToCode(),
+                Explanation = q.Explanation?.Trim(),
+                CategoryId = categoryId,
+                DisplayOrder = currentDisplayOrder,
+            };
+            db.Questions.Add(question);
+            await db.SaveChangesAsync(cancellationToken);
+            questionsCreated++;
+
+            foreach (var opt in q.Options)
+            {
+                var option = new QuestionOption
+                {
+                    QuestionId = question.QuestionId,
+                    QuestionType = question.QuestionType,
+                    Label = opt.Label.Trim().ToUpperInvariant(),
+                    Text = opt.Text.Trim(),
+                    IsCorrect = opt.IsCorrect,
+                    Rationale = opt.Rationale?.Trim()
+                };
+                db.QuestionOptions.Add(option);
+            }
+
+            currentDisplayOrder++;
+        }
+
+        exam.UpdatedAt = clock.GetUtcNow();
+        await db.SaveChangesAsync(cancellationToken);
+
+        await tx.CommitAsync(cancellationToken);
+
+        return new QuickIngestCommitResultDto(
+            Success: true,
+            QuestionsCommitted: questionsCreated,
+            GroupsCreated: groupsCreated,
+            Message: $"Successfully committed {questionsCreated} questions to section '{section.Name}'.");
+    }
+
+    public async Task<ExamStudioDetailDto> GetExamStudioAsync(int examId, CancellationToken cancellationToken = default)
+    {
+        var exam = await db.Exams.AsNoTracking()
+            .Include(e => e.Cert)
+            .FirstOrDefaultAsync(e => e.ExamId == examId && !e.IsDeleted, cancellationToken);
+
+        if (exam == null)
+        {
+            throw new ExamNotFoundException(examId);
+        }
+
+        var sections = await db.Sections.AsNoTracking()
+            .Where(s => s.CertId == exam.CertId)
+            .OrderBy(s => s.DisplayOrder)
+            .ToListAsync(cancellationToken);
+
+        var sectionAudios = await db.ExamSectionAudios.AsNoTracking()
+            .Where(a => a.ExamId == examId)
+            .ToListAsync(cancellationToken);
+
+        var groups = await db.QuestionGroups.AsNoTracking()
+            .Include(g => g.Section)
+            .Include(g => g.QuestionGroups)
+                .ThenInclude(q => q.QuestionOptionQuestionNavigations)
+            .Include(g => g.QuestionGroups)
+                .ThenInclude(q => q.Category)
+            .Where(g => g.ExamId == examId)
+            .OrderBy(g => g.DisplayOrder)
+            .ToListAsync(cancellationToken);
+
+        var allQuestionIds = groups.SelectMany(g => g.QuestionGroups.Select(q => q.QuestionId)).ToList();
+        var answeredQuestionIds = new HashSet<int>(await db.AttemptAnswers.AsNoTracking()
+            .Where(a => allQuestionIds.Contains(a.QuestionId))
+            .Select(a => a.QuestionId)
+            .Concat(db.FreeResponses.AsNoTracking().Where(r => allQuestionIds.Contains(r.QuestionId)).Select(r => r.QuestionId))
+            .ToListAsync(cancellationToken));
+
+        var availableCategories = await db.QuestionCategories.AsNoTracking()
+            .Where(c => c.CertId == exam.CertId)
+            .OrderBy(c => c.Code)
+            .Select(c => new AdminQuestionCategoryOptionDto(c.CategoryId, c.Code, c.Name))
+            .ToListAsync(cancellationToken);
+
+        var availableCriteria = await db.GradingCriteria.AsNoTracking()
+            .Where(c => c.CertId == exam.CertId)
+            .OrderBy(c => c.DisplayOrder)
+            .Select(c => new ExamStudioCriterionDto(c.CriterionId, c.Code, c.Name, null, c.MaxScore))
+            .ToListAsync(cancellationToken);
+
+        var audit = AuditExamPublishReadinessInternal(exam, sections, sectionAudios, groups);
+
+        var sectionDtos = new List<ExamStudioSectionDto>();
+        foreach (var sec in sections)
+        {
+            var secAudio = sectionAudios.FirstOrDefault(a => a.SectionId == sec.SectionId);
+            var secGroups = groups.Where(g => g.SectionId == sec.SectionId).OrderBy(g => g.DisplayOrder).ToList();
+            var secQuestions = secGroups.SelectMany(g => g.QuestionGroups).ToList();
+
+            var groupDtos = new List<ExamStudioGroupDto>();
+            foreach (var g in secGroups)
+            {
+                var qDtos = new List<ExamStudioQuestionDto>();
+                foreach (var q in g.QuestionGroups.OrderBy(x => x.DisplayOrder))
+                {
+                    var opts = q.QuestionOptionQuestionNavigations
+                        .OrderBy(o => o.Label)
+                        .Select(o => new ExamStudioQuestionOptionDto(o.OptionId, o.QuestionId, o.Label, o.Text, o.IsCorrect, o.Rationale))
+                        .ToList();
+
+                    qDtos.Add(new ExamStudioQuestionDto(
+                        QuestionId: q.QuestionId,
+                        GroupId: q.GroupId,
+                        ExamId: q.ExamId,
+                        SectionId: q.SectionId,
+                        SectionCode: sec.Code,
+                        SectionName: sec.Name,
+                        SkillId: q.SkillId,
+                        SkillCode: sec.Code,
+                        Stem: q.Stem,
+                        DifficultyLevel: q.DifficultyLevel,
+                        QuestionType: EnumCodes.Parse<QuestionType>(q.QuestionType).MapTo<QuestionTypeDto>(),
+                        Explanation: q.Explanation,
+                        CategoryId: q.CategoryId,
+                        CategoryCode: q.Category?.Code,
+                        CategoryName: q.Category?.Name,
+                        PrepSeconds: q.PrepSeconds,
+                        ResponseSeconds: q.ResponseSeconds,
+                        MinWords: q.MinWords,
+                        MaxWords: q.MaxWords,
+                        Hint: q.Hint,
+                        DisplayOrder: q.DisplayOrder,
+                        UpdatedAt: q.UpdatedAt,
+                        Options: opts,
+                        Criteria: availableCriteria,
+                        HasAnswers: answeredQuestionIds.Contains(q.QuestionId)));
+                }
+
+                groupDtos.Add(new ExamStudioGroupDto(
+                    GroupId: g.GroupId,
+                    ExamId: g.ExamId,
+                    CertId: g.CertId,
+                    SectionId: g.SectionId,
+                    SectionCode: sec.Code,
+                    SectionName: sec.Name,
+                    Modality: EnumCodes.Parse<Modality>(sec.Modality).MapTo<ModalityDto>(),
+                    Passage: g.Passage,
+                    AudioPath: g.AudioPath,
+                    AudioStartMs: g.AudioStartMs,
+                    AudioEndMs: g.AudioEndMs,
+                    ImagePath: g.ImagePath,
+                    ImageAlt: g.ImageAlt,
+                    Transcript: g.Transcript,
+                    PrepSeconds: g.PrepSeconds,
+                    ResponseSeconds: g.ResponseSeconds,
+                    DisplayOrder: g.DisplayOrder,
+                    Questions: qDtos));
+            }
+
+            var hasAudio = secAudio != null || secGroups.Any(g => !string.IsNullOrWhiteSpace(g.AudioPath));
+            sectionDtos.Add(new ExamStudioSectionDto(
+                SectionId: sec.SectionId,
+                CertId: sec.CertId,
+                Code: sec.Code,
+                Name: sec.Name,
+                Modality: EnumCodes.Parse<Modality>(sec.Modality).MapTo<ModalityDto>(),
+                ExpectedQuestionCount: sec.ExpectedQuestionCount,
+                DisplayOrder: sec.DisplayOrder,
+                CurrentQuestionCount: secQuestions.Count,
+                HasAudio: hasAudio,
+                MasterAudioPath: secAudio?.AudioPath,
+                MasterAudioDurationSec: secAudio?.DurationSec,
+                Groups: groupDtos));
+        }
+
+        var finishedAttemptCount = await db.ExamAttempts.CountAsync(
+            a => a.ExamId == examId && (a.Status == "submitted" || a.Status == "graded"), cancellationToken);
+
+        return new ExamStudioDetailDto(
+            ExamId: exam.ExamId,
+            CertId: exam.CertId,
+            CertCode: exam.Cert.Code,
+            CertName: exam.Cert.Name,
+            Name: exam.Name,
+            Status: EnumCodes.Parse<ExamStatus>(exam.Status).MapTo<ExamStatusDto>(),
+            Purpose: EnumCodes.Parse<ExamPurpose>(exam.Purpose).MapTo<ExamPurposeDto>(),
+            DurationMinutes: exam.DurationMinutes,
+            Description: exam.Description,
+            SourceName: exam.SourceName,
+            InternalNote: exam.InternalNote,
+            QuestionCount: exam.QuestionCount,
+            ActualQuestionCount: allQuestionIds.Count,
+            FinishedAttemptCount: finishedAttemptCount,
+            CreatedAt: exam.CreatedAt,
+            UpdatedAt: exam.UpdatedAt,
+            Sections: sectionDtos,
+            AvailableCategories: availableCategories,
+            AvailableCriteria: availableCriteria,
+            Audit: audit);
+    }
+
+    public async Task<ExamAuditResultDto> AuditExamPublishReadinessAsync(int examId, CancellationToken cancellationToken = default)
+    {
+        var exam = await db.Exams.AsNoTracking()
+            .Include(e => e.Cert)
+            .FirstOrDefaultAsync(e => e.ExamId == examId && !e.IsDeleted, cancellationToken);
+
+        if (exam == null)
+        {
+            throw new ExamNotFoundException(examId);
+        }
+
+        var sections = await db.Sections.AsNoTracking()
+            .Where(s => s.CertId == exam.CertId)
+            .OrderBy(s => s.DisplayOrder)
+            .ToListAsync(cancellationToken);
+
+        var sectionAudios = await db.ExamSectionAudios.AsNoTracking()
+            .Where(a => a.ExamId == examId)
+            .ToListAsync(cancellationToken);
+
+        var groups = await db.QuestionGroups.AsNoTracking()
+            .Include(g => g.Section)
+            .Include(g => g.QuestionGroups)
+                .ThenInclude(q => q.QuestionOptionQuestionNavigations)
+            .Where(g => g.ExamId == examId)
+            .OrderBy(g => g.DisplayOrder)
+            .ToListAsync(cancellationToken);
+
+        return AuditExamPublishReadinessInternal(exam, sections, sectionAudios, groups);
+    }
+
+    private static ExamAuditResultDto AuditExamPublishReadinessInternal(
+        Exam exam,
+        List<Section> sections,
+        List<ExamSectionAudio> sectionAudios,
+        List<QuestionGroup> groups)
+    {
+        var issues = new List<ExamAuditIssueDto>();
+        var missingItems = new List<string>();
+
+        var totalQuestions = 0;
+        var sectionExpectedSum = sections.Where(s => s.ExpectedQuestionCount.HasValue).Sum(s => s.ExpectedQuestionCount!.Value);
+        var expectedTotal = sectionExpectedSum > 0 ? sectionExpectedSum : (exam.QuestionCount ?? 0);
+
+        foreach (var sec in sections)
+        {
+            var secGroups = groups.Where(g => g.SectionId == sec.SectionId).ToList();
+            var secQuestions = secGroups.SelectMany(g => g.QuestionGroups).ToList();
+            totalQuestions += secQuestions.Count;
+
+            if (sec.ExpectedQuestionCount.HasValue && sec.ExpectedQuestionCount.Value > 0)
+            {
+                if (secQuestions.Count < sec.ExpectedQuestionCount.Value)
+                {
+                    var diff = sec.ExpectedQuestionCount.Value - secQuestions.Count;
+                    var msg = $"Section [{sec.Code}] '{sec.Name}' requires {sec.ExpectedQuestionCount.Value} questions, but only has {secQuestions.Count} ({diff} missing).";
+                    issues.Add(new ExamAuditIssueDto(
+                        Code: "SEC_QUESTION_COUNT_LOW",
+                        Severity: "error",
+                        Message: msg,
+                        SectionId: sec.SectionId,
+                        SectionCode: sec.Code,
+                        ElementTarget: $"section-link-{sec.SectionId}"));
+                    missingItems.Add(msg);
+                }
+            }
+
+            if (sec.Modality == "listening")
+            {
+                var hasSecAudio = sectionAudios.Any(a => a.SectionId == sec.SectionId && !string.IsNullOrWhiteSpace(a.AudioPath));
+                var allGroupsAudio = secGroups.Count > 0 && secGroups.All(g => !string.IsNullOrWhiteSpace(g.AudioPath));
+                if (!hasSecAudio && !allGroupsAudio)
+                {
+                    var msg = $"Listening section [{sec.Code}] '{sec.Name}' is missing section audio or question group audio tracks.";
+                    issues.Add(new ExamAuditIssueDto(
+                        Code: "SEC_AUDIO_MISSING",
+                        Severity: "error",
+                        Message: msg,
+                        SectionId: sec.SectionId,
+                        SectionCode: sec.Code,
+                        ElementTarget: $"section-link-{sec.SectionId}"));
+                    missingItems.Add(msg);
+                }
+            }
+
+            foreach (var g in secGroups)
+            {
+                if (!string.IsNullOrWhiteSpace(g.ImagePath) && string.IsNullOrWhiteSpace(g.ImageAlt))
+                {
+                    issues.Add(new ExamAuditIssueDto(
+                        Code: "GRP_IMAGE_ALT_MISSING",
+                        Severity: "error",
+                        Message: $"Group #{g.DisplayOrder} in [{sec.Code}] has an image but is missing required accessibility alt text (CK_QGroups_ImageAlt).",
+                        SectionId: sec.SectionId,
+                        SectionCode: sec.Code,
+                        GroupId: g.GroupId,
+                        ElementTarget: $"group-card-{g.GroupId}"));
+                }
+
+                if (g.AudioStartMs.HasValue || g.AudioEndMs.HasValue)
+                {
+                    if (!g.AudioStartMs.HasValue || !g.AudioEndMs.HasValue || g.AudioStartMs.Value < 0 || g.AudioEndMs.Value <= g.AudioStartMs.Value)
+                    {
+                        issues.Add(new ExamAuditIssueDto(
+                            Code: "GRP_AUDIO_SLICE_INVALID",
+                            Severity: "error",
+                            Message: $"Group #{g.DisplayOrder} in [{sec.Code}] has invalid audio timestamps: start must be >= 0 and end > start (CK_QGroups_AudioSlice).",
+                            SectionId: sec.SectionId,
+                            SectionCode: sec.Code,
+                            GroupId: g.GroupId,
+                            ElementTarget: $"group-card-{g.GroupId}"));
+                    }
+                }
+
+                foreach (var q in g.QuestionGroups)
+                {
+                    if (string.IsNullOrWhiteSpace(q.Stem))
+                    {
+                        issues.Add(new ExamAuditIssueDto(
+                            Code: "Q_STEM_EMPTY",
+                            Severity: "error",
+                            Message: $"Question #{q.DisplayOrder} in [{sec.Code}] has an empty stem.",
+                            SectionId: sec.SectionId,
+                            SectionCode: sec.Code,
+                            GroupId: g.GroupId,
+                            QuestionId: q.QuestionId,
+                            ElementTarget: $"question-card-{q.QuestionId}"));
+                    }
+
+                    if (string.Equals(q.QuestionType, "mcq", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var optCount = q.QuestionOptionQuestionNavigations.Count;
+                        if (optCount < 2)
+                        {
+                            issues.Add(new ExamAuditIssueDto(
+                                Code: "Q_OPTIONS_FEW",
+                                Severity: "error",
+                                Message: $"MCQ Question #{q.DisplayOrder} in [{sec.Code}] must have at least 2 options (found {optCount}).",
+                                SectionId: sec.SectionId,
+                                SectionCode: sec.Code,
+                                GroupId: g.GroupId,
+                                QuestionId: q.QuestionId,
+                                ElementTarget: $"question-card-{q.QuestionId}"));
+                        }
+
+                        var correctCount = q.QuestionOptionQuestionNavigations.Count(o => o.IsCorrect);
+                        if (correctCount != 1)
+                        {
+                            issues.Add(new ExamAuditIssueDto(
+                                Code: "Q_OPTIONS_ONE_CORRECT",
+                                Severity: "error",
+                                Message: $"MCQ Question #{q.DisplayOrder} in [{sec.Code}] must have exactly one correct option (found {correctCount}) (UX_Options_OneCorrect).",
+                                SectionId: sec.SectionId,
+                                SectionCode: sec.Code,
+                                GroupId: g.GroupId,
+                                QuestionId: q.QuestionId,
+                                ElementTarget: $"question-card-{q.QuestionId}"));
+                        }
+                    }
+                    else if (string.Equals(q.QuestionType, "free_response", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (q.ResponseSeconds is null or <= 0)
+                        {
+                            issues.Add(new ExamAuditIssueDto(
+                                Code: "Q_FR_RESPONSE_SEC",
+                                Severity: "error",
+                                Message: $"Free response Question #{q.DisplayOrder} in [{sec.Code}] must have response seconds > 0.",
+                                SectionId: sec.SectionId,
+                                SectionCode: sec.Code,
+                                GroupId: g.GroupId,
+                                QuestionId: q.QuestionId,
+                                ElementTarget: $"question-card-{q.QuestionId}"));
+                        }
+                    }
+                }
+            }
+        }
+
+        var blockingCount = issues.Count(i => i.Severity == "error");
+        var warningCount = issues.Count(i => i.Severity == "warning");
+        var canPublish = blockingCount == 0 && totalQuestions > 0;
+
+        return new ExamAuditResultDto(
+            CanPublish: canPublish,
+            TotalQuestions: totalQuestions,
+            ExpectedQuestions: expectedTotal > 0 ? expectedTotal : totalQuestions,
+            BlockingErrorCount: blockingCount,
+            WarningCount: warningCount,
+            Issues: issues,
+            MissingItems: missingItems);
+    }
+
+    public async Task ReorderSectionItemsAsync(int examId, ReorderSectionItemsRequest request, CancellationToken cancellationToken = default)
+    {
+        if (request == null || request.Items == null || request.Items.Count == 0) return;
+
+        var exam = await db.Exams.FirstOrDefaultAsync(e => e.ExamId == examId && !e.IsDeleted, cancellationToken);
+        if (exam == null) throw new ExamNotFoundException(examId);
+
+        await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
+
+        var sorted = request.Items.OrderBy(i => i.DisplayOrder).ToList();
+        var nextOrder = 1;
+
+        foreach (var item in sorted)
+        {
+            if (item.GroupId.HasValue)
+            {
+                var grp = await db.QuestionGroups.FirstOrDefaultAsync(g => g.GroupId == item.GroupId.Value && g.ExamId == examId && g.SectionId == request.SectionId, cancellationToken);
+                if (grp != null)
+                {
+                    grp.DisplayOrder = nextOrder;
+                }
+            }
+
+            if (item.QuestionId.HasValue)
+            {
+                var q = await db.Questions.FirstOrDefaultAsync(x => x.QuestionId == item.QuestionId.Value && x.ExamId == examId && x.SectionId == request.SectionId, cancellationToken);
+                if (q != null)
+                {
+                    q.DisplayOrder = nextOrder;
+                }
+            }
+
+            nextOrder++;
+        }
+
+        exam.UpdatedAt = clock.GetUtcNow();
+        await db.SaveChangesAsync(cancellationToken);
+        await tx.CommitAsync(cancellationToken);
+    }
+
+    public async Task<AdminQuestionGroupDto> CreateExamClusterAsync(int examId, CreateExamClusterRequest request, CancellationToken cancellationToken = default)
+    {
+        var exam = await db.Exams.FirstOrDefaultAsync(e => e.ExamId == examId && !e.IsDeleted, cancellationToken);
+        if (exam == null) throw new ExamNotFoundException(examId);
+
+        var section = await db.Sections.Include(s => s.Skill).FirstOrDefaultAsync(s => s.SectionId == request.SectionId && s.CertId == exam.CertId, cancellationToken);
+        if (section == null)
+        {
+            throw new AdminExamException(ApiError.Codes.Validation, $"Section with id {request.SectionId} not found for certificate {exam.CertId}.");
+        }
+
+        var maxOrder = await db.QuestionGroups
+            .Where(g => g.ExamId == examId && g.SectionId == request.SectionId)
+            .Select(g => (int?)g.DisplayOrder)
+            .MaxAsync(cancellationToken) ?? 0;
+
+        var qMaxOrder = await db.Questions
+            .Where(q => q.ExamId == examId && q.SectionId == request.SectionId)
+            .Select(q => (int?)q.DisplayOrder)
+            .MaxAsync(cancellationToken) ?? 0;
+
+        var isP2 = string.Equals(section.Code, "P2", StringComparison.OrdinalIgnoreCase);
+        var isP1 = string.Equals(section.Code, "P1", StringComparison.OrdinalIgnoreCase);
+        var isP6 = string.Equals(section.Code, "P6", StringComparison.OrdinalIgnoreCase);
+        var isFreeResponse = section.Modality is "speaking" or "writing";
+
+        var group = new QuestionGroup
+        {
+            ExamId = examId,
+            CertId = exam.CertId,
+            SectionId = request.SectionId,
+            Passage = Normalize(request.Passage),
+            Transcript = Normalize(request.Transcript),
+            AudioPath = Normalize(request.AudioPath),
+            AudioStartMs = request.AudioStartMs,
+            AudioEndMs = request.AudioEndMs,
+            DisplayOrder = maxOrder + 1
+        };
+
+        db.QuestionGroups.Add(group);
+        await db.SaveChangesAsync(cancellationToken);
+
+        var count = Math.Clamp(request.QuestionCount, 1, 10);
+        var questions = new List<Question>();
+
+        for (var i = 0; i < count; i++)
+        {
+            var stem = isP2 ? "Mark your answer on your answer sheet."
+                : isP1 ? "Look at the photograph and choose the statement that best describes what you see in the image."
+                : isP6 ? $"Select the best word or phrase to complete blank [{i + 1}]."
+                : isFreeResponse ? "Respond to the prompt as instructed."
+                : $"Question {qMaxOrder + i + 1}";
+
+            var q = new Question
+            {
+                GroupId = group.GroupId,
+                ExamId = examId,
+                SectionId = request.SectionId,
+                SkillId = section.SkillId,
+                Stem = stem,
+                DifficultyLevel = 2,
+                QuestionType = isFreeResponse ? QuestionTypeDto.FreeResponse.ToCode() : QuestionTypeDto.Mcq.ToCode(),
+                Explanation = isP2 ? "Option A is the most appropriate response." : "Correct answer option A.",
+                PrepSeconds = isFreeResponse ? (section.Modality == "speaking" ? 15 : 60) : null,
+                ResponseSeconds = isFreeResponse ? (section.Modality == "speaking" ? 45 : 1800) : null,
+                MinWords = section.Modality == "writing" ? 150 : null,
+                MaxWords = section.Modality == "writing" ? 300 : null,
+                DisplayOrder = qMaxOrder + i + 1
+            };
+            db.Questions.Add(q);
+            questions.Add(q);
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+
+        var questionDtos = new List<AdminQuestionDto>();
+
+        foreach (var q in questions)
+        {
+            var optionsList = new List<AdminQuestionOptionDto>();
+            if (!isFreeResponse)
+            {
+                var optionLabels = isP2 ? new[] { "A", "B", "C" } : new[] { "A", "B", "C", "D" };
+                foreach (var lbl in optionLabels)
+                {
+                    var opt = new QuestionOption
+                    {
+                        QuestionId = q.QuestionId,
+                        QuestionType = q.QuestionType,
+                        Label = lbl,
+                        Text = $"Option {lbl}",
+                        IsCorrect = lbl == "A",
+                        Rationale = lbl == "A" ? "Correct response" : "Distractor response"
+                    };
+                    db.QuestionOptions.Add(opt);
+                    await db.SaveChangesAsync(cancellationToken);
+                    optionsList.Add(new AdminQuestionOptionDto(opt.OptionId, q.QuestionId, opt.Label, opt.Text, opt.IsCorrect, opt.Rationale));
+                }
+            }
+
+            questionDtos.Add(new AdminQuestionDto(
+                q.QuestionId,
+                group.GroupId,
+                examId,
+                request.SectionId,
+                section.Code,
+                section.Name,
+                section.SkillId,
+                section.Skill?.Code ?? "skill",
+                q.Stem,
+                q.DifficultyLevel,
+                EnumCodes.Parse<QuestionTypeDto>(q.QuestionType),
+                q.Explanation,
+                q.CategoryId,
+                null,
+                q.PrepSeconds,
+                q.ResponseSeconds,
+                q.MinWords,
+                q.MaxWords,
+                q.Hint,
+                q.DisplayOrder,
+                clock.GetUtcNow(),
+                optionsList,
+                HasAnswers: false));
+        }
+
+        exam.UpdatedAt = clock.GetUtcNow();
+        await db.SaveChangesAsync(cancellationToken);
+
+        return new AdminQuestionGroupDto(
+            group.GroupId,
+            group.ExamId,
+            group.CertId,
+            group.SectionId,
+            section.Code,
+            section.Name,
+            EnumCodes.Parse<ModalityDto>(section.Modality),
+            group.Passage,
+            group.AudioPath,
+            group.AudioStartMs,
+            group.AudioEndMs,
+            group.ImagePath,
+            group.ImageAlt,
+            group.Transcript,
+            group.PrepSeconds,
+            group.ResponseSeconds,
+            group.DisplayOrder,
+            questionDtos);
+    }
+
+    public async Task<(Stream Stream, string ContentType, string FileName)> ExportExamPackageAsync(int examId, string? format = "zip", CancellationToken cancellationToken = default)
+    {
+        var exam = await db.Exams.AsNoTracking()
+            .Include(e => e.Cert)
+            .FirstOrDefaultAsync(e => e.ExamId == examId && !e.IsDeleted, cancellationToken);
+
+        if (exam == null) throw new ExamNotFoundException(examId);
+
+        var groups = await db.QuestionGroups.AsNoTracking()
+            .Include(g => g.Section)
+            .Include(g => g.QuestionGroups)
+                .ThenInclude(q => q.QuestionOptionQuestionNavigations)
+            .Include(g => g.QuestionGroups)
+                .ThenInclude(q => q.Category)
+            .Where(g => g.ExamId == examId)
+            .OrderBy(g => g.DisplayOrder)
+            .ToListAsync(cancellationToken);
+
+        var manifest = new ImportManifest
+        {
+            Version = "1.0",
+            Exam = new ImportManifestExam
+            {
+                Title = exam.Name,
+                Purpose = exam.Purpose,
+                DurationMinutes = exam.DurationMinutes,
+                SourceName = exam.SourceName,
+                Description = exam.Description,
+                QuestionCount = exam.QuestionCount
+            },
+            Sections = groups
+                .GroupBy(g => g.Section)
+                .OrderBy(s => s.Key.DisplayOrder)
+                .Select(sg => new ImportManifestSection
+                {
+                    SectionCode = sg.Key.Code,
+                    Groups = sg.OrderBy(g => g.DisplayOrder).Select(g => new ImportManifestGroup
+                    {
+                        Passage = g.Passage,
+                        AudioFile = g.AudioPath,
+                        AudioStartMs = g.AudioStartMs,
+                        AudioEndMs = g.AudioEndMs,
+                        ImageFile = g.ImagePath,
+                        ImageAlt = g.ImageAlt,
+                        Transcript = g.Transcript,
+                        PrepSeconds = g.PrepSeconds,
+                        ResponseSeconds = g.ResponseSeconds,
+                        DisplayOrder = g.DisplayOrder,
+                        Questions = g.QuestionGroups.OrderBy(q => q.DisplayOrder).Select(q => new ImportManifestQuestion
+                        {
+                            Stem = q.Stem,
+                            DifficultyLevel = q.DifficultyLevel,
+                            QuestionType = q.QuestionType,
+                            CategoryCode = q.Category?.Code,
+                            Explanation = q.Explanation,
+                            Hint = q.Hint,
+                            PrepSeconds = q.PrepSeconds,
+                            ResponseSeconds = q.ResponseSeconds,
+                            MinWords = q.MinWords,
+                            MaxWords = q.MaxWords,
+                            DisplayOrder = q.DisplayOrder,
+                            Options = q.QuestionOptionQuestionNavigations.OrderBy(o => o.Label).Select(o => new ImportManifestOption
+                            {
+                                Label = o.Label,
+                                Text = o.Text,
+                                IsCorrect = o.IsCorrect,
+                                Rationale = o.Rationale
+                            }).ToList()
+                        }).ToList()
+                    }).ToList()
+                }).ToList()
+        };
+
+        var safeTitle = string.Join("_", exam.Name.Split(Path.GetInvalidFileNameChars())).Replace(" ", "_");
+
+        if (string.Equals(format, "json", StringComparison.OrdinalIgnoreCase))
+        {
+            var jsonBytes = JsonSerializer.SerializeToUtf8Bytes(manifest, ImportManifest.Json);
+            var ms = new MemoryStream(jsonBytes);
+            return (ms, "application/json", $"{safeTitle}_manifest.json");
+        }
+        else
+        {
+            var zipMs = new MemoryStream();
+            using (var archive = new ZipArchive(zipMs, ZipArchiveMode.Create, leaveOpen: true))
+            {
+                var manifestEntry = archive.CreateEntry("manifest.json");
+                using (var entryStream = manifestEntry.Open())
+                {
+                    await JsonSerializer.SerializeAsync(entryStream, manifest, ImportManifest.Json, cancellationToken);
+                }
+
+                if (fileStore != null)
+                {
+                    var mediaPaths = groups
+                        .SelectMany(g => new[] { g.AudioPath, g.ImagePath })
+                        .Where(p => !string.IsNullOrWhiteSpace(p))
+                        .Distinct();
+
+                    foreach (var path in mediaPaths)
+                    {
+                        var cleanPath = path!.TrimStart('/').Replace("media/", "");
+                        var media = await fileStore.GetMediaAsync(cleanPath, cancellationToken);
+                        if (media != null)
+                        {
+                            var entryName = Path.GetFileName(cleanPath);
+                            var mediaEntry = archive.CreateEntry($"media/{entryName}");
+                            using var mediaStream = mediaEntry.Open();
+                            await media.Stream.CopyToAsync(mediaStream, cancellationToken);
+                        }
+                    }
+                }
+            }
+
+            zipMs.Position = 0;
+            return (zipMs, "application/zip", $"{safeTitle}_package.zip");
+        }
+    }
 }
+

@@ -107,10 +107,10 @@
     {
       <div class="state-block p-4" id="ai-insight-loading">
         <div class="row row--between row--middle row--wrap mb-2" style="width: 100%;">
-          <span class="badge badge--warning font-mono uppercase font-bold" id="ai-insight-phase">PHASE 1/4 // AGGREGATING SECTION &amp; CATEGORY ACCURACY</span>
+          <span class="badge badge--warning font-mono uppercase font-bold" id="ai-insight-phase">CLAUDE AI // COGITATING…</span>
           <span class="font-mono text-xs font-bold" id="ai-insight-elapsed" aria-live="polite">ELAPSED: 00.0s</span>
         </div>
-        <div class="state-block__title">Generating AI Insights…</div>
+        <div class="state-block__title">Cogitating insights…</div>
         <p class="state-block__desc">
           Evaluating answer patterns, luck vs. competence, and alignment with your target band. This will take just a few seconds.
         </p>
@@ -213,11 +213,30 @@
     let elapsedTimerId = null;
     let elapsedStartMs = Date.now();
 
-    const diagnosticPhases = [
-      'PHASE 1/4 // AGGREGATING SECTION & CATEGORY ACCURACY',
-      'PHASE 2/4 // EVALUATING LUCK VS. UNASSISTED COMPETENCE',
-      'PHASE 3/4 // ALIGNING TRAJECTORY AGAINST TARGET BAND',
-      'PHASE 4/4 // SYNTHESIZING REMEDIATION DIRECTIVES'
+    const claudeThinkingWords = [
+      "Accomplishing", "Actioning", "Actualizing", "Architecting", "Baking", "Beaming", "Beboppin'", "Befuddling", "Billowing",
+      "Blanching", "Bloviating", "Boogieing", "Boondoggling", "Booping", "Bootstrapping", "Brewing", "Bunning", "Burrowing",
+      "Calculating", "Canoodling", "Caramelizing", "Cascading", "Catapulting", "Cerebrating", "Channeling", "Channelling",
+      "Choreographing", "Churning", "Clauding", "Coalescing", "Cogitating", "Combobulating", "Composing", "Computing",
+      "Concocting", "Considering", "Contemplating", "Cooking", "Crafting", "Creating", "Crunching", "Crystallizing",
+      "Cultivating", "Deciphering", "Deliberating", "Determining", "Dilly-dallying", "Discombobulating", "Doing", "Doodling",
+      "Drizzling", "Ebbing", "Effecting", "Elucidating", "Embellishing", "Enchanting", "Envisioning", "Evaporating",
+      "Fermenting", "Fiddle-faddling", "Finagling", "Flambéing", "Flibbertigibbeting", "Flowing", "Flummoxing", "Fluttering",
+      "Forging", "Forming", "Frolicking", "Frosting", "Gallivanting", "Galloping", "Garnishing", "Generating", "Gesticulating",
+      "Germinating", "Gitifying", "Grooving", "Gusting", "Harmonizing", "Hashing", "Hatching", "Herding", "Honking",
+      "Hullaballooing", "Hyperspacing", "Ideating", "Imagining", "Improvising", "Incubating", "Inferring", "Infusing",
+      "Ionizing", "Jitterbugging", "Julienning", "Kneading", "Leavening", "Levitating", "Lollygagging", "Manifesting",
+      "Marinating", "Meandering", "Metamorphosing", "Misting", "Moonwalking", "Moseying", "Mulling", "Mustering", "Musing",
+      "Nebulizing", "Nesting", "Newspapering", "Noodling", "Nucleating", "Orbiting", "Orchestrating", "Osmosing",
+      "Perambulating", "Percolating", "Perusing", "Philosophising", "Photosynthesizing", "Pollinating", "Pondering",
+      "Pontificating", "Pouncing", "Precipitating", "Prestidigitating", "Processing", "Proofing", "Propagating", "Puttering",
+      "Puzzling", "Quantumizing", "Razzle-dazzling", "Razzmatazzing", "Recombobulating", "Reticulating", "Roosting",
+      "Ruminating", "Sautéing", "Scampering", "Schlepping", "Scurrying", "Seasoning", "Shenaniganing", "Shimmying",
+      "Simmering", "Skedaddling", "Sketching", "Slithering", "Smooshing", "Sock-hopping", "Spelunking", "Spinning",
+      "Sprouting", "Stewing", "Sublimating", "Swirling", "Swooping", "Symbioting", "Synthesizing", "Tempering", "Thinking",
+      "Thundering", "Tinkering", "Tomfoolering", "Topsy-turvying", "Transfiguring", "Transmuting", "Twisting", "Undulating",
+      "Unfurling", "Unravelling", "Vibing", "Waddling", "Wandering", "Warping", "Whatchamacalliting", "Whirlpooling",
+      "Whirring", "Whisking", "Wibbling", "Working", "Wrangling", "Zesting", "Zigzagging"
     ];
 
     function startKineticTimer() {
@@ -230,10 +249,15 @@
           const formattedSec = elapsedSec < 10 ? '0' + elapsedSec.toFixed(1) : elapsedSec.toFixed(1);
           elapsedEl.textContent = `ELAPSED: ${formattedSec}s`;
         }
+        const wordIndex = Math.floor(elapsedSec / 1.4) % claudeThinkingWords.length;
+        const activeWord = claudeThinkingWords[wordIndex];
         const phaseEl = document.getElementById('ai-insight-phase');
         if (phaseEl) {
-          const phaseIndex = Math.min(diagnosticPhases.length - 1, Math.floor(elapsedSec / 1.5) % diagnosticPhases.length);
-          phaseEl.textContent = diagnosticPhases[phaseIndex];
+          phaseEl.textContent = `CLAUDE AI // ${activeWord.toUpperCase()}…`;
+        }
+        const titleEl = document.querySelector('#ai-insight-loading .state-block__title');
+        if (titleEl) {
+          titleEl.textContent = `${activeWord} insights…`;
         }
       }, 100);
     }
@@ -389,10 +413,10 @@
       body.innerHTML = `
         <div class="state-block p-4" id="ai-insight-loading">
           <div class="row row--between row--middle row--wrap mb-2" style="width: 100%;">
-            <span class="badge badge--warning font-mono uppercase font-bold" id="ai-insight-phase">${diagnosticPhases[0]}</span>
+            <span class="badge badge--warning font-mono uppercase font-bold" id="ai-insight-phase">CLAUDE AI // ${claudeThinkingWords[0].toUpperCase()}…</span>
             <span class="font-mono text-xs font-bold" id="ai-insight-elapsed" aria-live="polite">ELAPSED: 00.0s</span>
           </div>
-          <div class="state-block__title">Generating AI Insights…</div>
+          <div class="state-block__title">${claudeThinkingWords[0]} insights…</div>
           <p class="state-block__desc">
             Evaluating answer patterns, luck vs. competence, and alignment with your target band. This will take just a few seconds.
           </p>

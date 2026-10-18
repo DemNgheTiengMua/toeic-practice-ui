@@ -14,7 +14,15 @@
   <span class="breadcrumbs__item" aria-current="page">@(isEdit ? "Edit exam" : "Create new exam")</span>
 </nav>
 
-<h1>@(isEdit ? $"Edit: {Model.Name}" : "Create new exam")</h1>
+<div class="row row--between row--wrap" style="align-items: center; margin-bottom: 0.75rem; gap: 0.5rem;">
+  <h1 class="no-margin">@(isEdit ? $"Edit: {Model.Name}" : "Create new exam")</h1>
+  @if (isEdit && Model.ExamId.HasValue)
+  {
+    <a href="/admin/exams/@Model.ExamId.Value/studio" class="btn btn--primary" style="border-radius: 0; font-family: var(--font-condensed, sans-serif); text-transform: uppercase;">
+      Open in Exam Studio ›
+    </a>
+  }
+</div>
 
 <div class="stepper">
   <a href="@(isEdit ? $"/admin/exams/{Model.ExamId}/edit?step=1" : "#")" class="stepper__item @(Model.Step == 1 ? "is-current" : isEdit ? "is-done" : "")">1. Exam information</a>
@@ -166,25 +174,19 @@
             }
 
             <details class="mt-2">
-              <summary class="btn btn--sm btn--ghost" style="cursor:pointer; display:inline-block;">@(audio != null ? "Replace file / path" : "Upload / specify file")</summary>
-              <form method="post" action="/admin/exams/@Model.ExamId/audio" class="card card__body stack mt-2">
+              <summary class="btn btn--sm btn--ghost" style="cursor:pointer; display:inline-block;">@(audio != null ? "Replace audio file" : "Upload audio file")</summary>
+              <form method="post" action="/admin/exams/@Model.ExamId/audio" enctype="multipart/form-data" class="card card__body stack mt-2">
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="SectionId" value="@s.SectionId" />
+                <input type="hidden" id="dur-@s.SectionId" name="DurationSec" value="@(audio?.DurationSec ?? 300)" />
+                <input type="hidden" id="size-@s.SectionId" name="SizeBytes" value="@(audio?.SizeBytes ?? 0)" />
                 <div class="field">
-                  <label class="field__label" for="path-@s.SectionId">Audio Path / Filename</label>
-                  <input class="field__input" id="path-@s.SectionId" name="AudioPath" value="@(audio?.AudioPath ?? $"audio/{s.SectionCode.ToLowerInvariant()}.mp3")" required />
+                  <label class="field__label" for="file-@s.SectionId">Select Audio File</label>
+                  <input class="field__input" type="file" id="file-@s.SectionId" name="AudioFile" accept="audio/mpeg,audio/mp3,audio/wav,audio/*" required />
+                  <span class="field__hint">MP3, WAV, or MPEG audio (max 60 MB). Duration and size are computed automatically upon upload.</span>
                 </div>
-                <div class="grid-2">
-                  <div class="field">
-                    <label class="field__label" for="dur-@s.SectionId">Duration (seconds)</label>
-                    <input class="field__input" id="dur-@s.SectionId" name="DurationSec" type="number" min="1" value="@(audio?.DurationSec ?? 300)" required />
-                  </div>
-                  <div class="field">
-                    <label class="field__label" for="size-@s.SectionId">Size (bytes, max 60 MB)</label>
-                    <input class="field__input" id="size-@s.SectionId" name="SizeBytes" type="number" min="1" max="62914560" value="@(audio?.SizeBytes ?? 5242880)" required />
-                  </div>
-                </div>
-                <button type="submit" class="btn btn--sm btn--primary">Save audio</button>
+                <div class="upload-meta-preview mt-1 text-xs text-muted" id="preview-@s.SectionId" style="display:none;"></div>
+                <button type="submit" class="btn btn--sm btn--primary mt-2">Upload audio</button>
               </form>
             </details>
           </div>
@@ -219,7 +221,7 @@
   <div class="card">
     <div class="card__header row row--between">
       <strong>Question entry progress</strong>
-      <a class="btn btn--sm btn--primary" href="/admin/exams/@Model.ExamId/questions">Open Question Editor</a>
+      <a class="btn btn--sm btn--primary" href="/admin/exams/@Model.ExamId/studio">Open Exam Studio</a>
     </div>
     <div class="card__body stack">
       <table class="table table--striped">
@@ -244,8 +246,8 @@
               <td>@(s.ExpectedQuestionCount.HasValue ? s.ExpectedQuestionCount.Value.ToString() : "—")</td>
               <td><span class="@badgeClass">@s.StatusText</span></td>
               <td>
-                <a class="btn btn--sm" href="/admin/exams/@Model.ExamId/questions?sectionId=@s.SectionId">
-                  @(s.IsComplete ? "Edit" : "Enter questions")
+                <a class="btn btn--sm" href="/admin/exams/@Model.ExamId/studio?sectionId=@s.SectionId">
+                  @(s.IsComplete ? "Edit in Studio" : "Enter questions")
                 </a>
               </td>
             </tr>
@@ -287,4 +289,59 @@
       </div>
     </div>
   </div>
+}
+
+@section Scripts {
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('input[type="file"][name="AudioFile"]').forEach(function(input) {
+      input.addEventListener('change', function(e) {
+        var file = e.target.files && e.target.files[0];
+        if (!file) return;
+        var form = input.closest('form');
+        if (!form) return;
+
+        if (file.size > 62914560) {
+          alert('The selected audio file (' + (file.size / (1024 * 1024)).toFixed(1) + ' MB) exceeds the maximum allowed size of 60 MB.');
+          input.value = '';
+          return;
+        }
+
+        var durInput = form.querySelector('input[name="DurationSec"]');
+        var sizeInput = form.querySelector('input[name="SizeBytes"]');
+        var preview = form.querySelector('.upload-meta-preview');
+
+        if (sizeInput) {
+          sizeInput.value = file.size;
+        }
+
+        var formatSize = (file.size / (1024 * 1024)).toFixed(2) + ' MB';
+        if (preview) {
+          preview.style.display = 'block';
+          preview.textContent = 'Selected: ' + file.name + ' (' + formatSize + ') — extracting duration...';
+        }
+
+        var objectUrl = URL.createObjectURL(file);
+        var audio = new Audio(objectUrl);
+        audio.addEventListener('loadedmetadata', function() {
+          var dur = 300;
+          if (audio.duration && !isNaN(audio.duration) && isFinite(audio.duration)) {
+            dur = Math.max(1, Math.round(audio.duration));
+            if (durInput) durInput.value = dur;
+          }
+          if (preview) {
+            preview.textContent = 'Selected: ' + file.name + ' (' + formatSize + ', ' + dur + 's)';
+          }
+          URL.revokeObjectURL(objectUrl);
+        });
+        audio.addEventListener('error', function() {
+          if (preview) {
+            preview.textContent = 'Selected: ' + file.name + ' (' + formatSize + ')';
+          }
+          URL.revokeObjectURL(objectUrl);
+        });
+      });
+    });
+  });
+</script>
 }

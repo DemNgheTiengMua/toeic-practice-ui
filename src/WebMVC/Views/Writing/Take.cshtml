@@ -1,34 +1,48 @@
 @model WritingTakeViewModel
 @{
-    Layout = "_LearnerLayout";
+    Layout = null;
     var take = Model.Take;
     var q = take.Question;
     ViewData["Title"] = $"Writing — Question {take.CurrentQuestionIndex} of {take.TotalQuestions}";
     ViewData["Description"] = $"Writing attempt {take.AttemptId} on {take.ExamName}.";
 }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>@ViewData["Title"] — extra efficient</title>
+  <link rel="icon" href="~/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="~/css/tokens.css">
+  <link rel="stylesheet" href="~/css/base.css">
+  <link rel="stylesheet" href="~/css/components.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-topbar">
+      <div class="exam-topbar-group">
+        <strong>@take.ExamName</strong>
+        <span class="badge badge--info">Question @take.CurrentQuestionIndex of @take.TotalQuestions</span>
+      </div>
+      <div class="exam-topbar-group">
+        <span id="save-status-text" class="save-status save-status--saved" role="status" aria-live="polite">
+          @(q.DraftSavedAt.HasValue ? $"Saved {q.DraftSavedAt.Value:HH:mm:ss}" : "Draft ready")
+        </span>
+        <span class="timer" role="timer" aria-label="Time remaining">
+          <span class="text-sm text-muted">Time left</span>
+          <span id="timer-display" class="timer__value" data-remaining="@take.RemainingSeconds">--:--</span>
+        </span>
+      </div>
+    </header>
 
-@Html.AntiForgeryToken()
+    <main class="app-main">
+      <div class="container stack" style="max-width: 1400px; padding: var(--space-4);">
+        @Html.AntiForgeryToken()
 
-<div class="row row--between mb-3">
-  <div class="row" style="gap: var(--space-2)">
-    <strong>@take.ExamName</strong>
-    <span class="badge badge--info">Question @take.CurrentQuestionIndex of @take.TotalQuestions</span>
-  </div>
-  <div class="row" style="gap: var(--space-3)">
-    <span id="save-status-text" class="save-status save-status--saved" role="status" aria-live="polite">
-      @(q.DraftSavedAt.HasValue ? $"Saved {q.DraftSavedAt.Value:HH:mm:ss}" : "Draft ready")
-    </span>
-    <span class="timer" role="timer" aria-label="Time remaining">
-      <span class="text-sm text-muted">Time left</span>
-      <span id="timer-display" class="timer__value" data-remaining="@take.RemainingSeconds">--:--</span>
-    </span>
-  </div>
-</div>
-
-@if (!string.IsNullOrEmpty(Model.ErrorMessage))
-{
-  <div class="alert alert--danger mb-3" role="alert">@Model.ErrorMessage</div>
-}
+        @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+        {
+          <div class="alert alert--danger mb-3" role="alert">@Model.ErrorMessage</div>
+        }
 
 <div class="writing-panes">
   <!-- Left pane: Prompt -->
@@ -146,12 +160,9 @@
         <div class="row row--between">
           <div class="row" style="gap: var(--space-2)">
             <button type="button" class="btn btn--secondary" id="btn-save-draft">Save draft</button>
-            <form method="post" action="/writing/submit/@take.AttemptId" id="submit-form" style="display:inline;">
-              @Html.AntiForgeryToken()
-              <button type="submit" class="btn btn--primary" id="btn-submit-exam" onclick="return confirm('Are you sure you want to finish and submit your writing for AI grading?');">
-                Finish and submit for AI grading
-              </button>
-            </form>
+            <button type="button" class="btn btn--primary" id="btn-open-submit-modal">
+              Finish and submit for AI grading
+            </button>
           </div>
           <span class="text-xs text-muted">Question @take.CurrentQuestionIndex of @take.TotalQuestions</span>
         </div>
@@ -354,5 +365,75 @@
 
     setInterval(updateTimer, 1000);
     updateTimer();
+
+    // Submit modal wiring
+    const submitModal = document.getElementById('submit-modal');
+    const btnOpenSubmit = document.getElementById('btn-open-submit-modal');
+    const closeSubmitBtns = document.querySelectorAll('.js-close-submit-modal');
+
+    function openModal() {
+      if (!submitModal) return;
+      submitModal.classList.add('modal-overlay--open');
+      submitModal.setAttribute('aria-hidden', 'false');
+    }
+
+    function closeModal() {
+      if (!submitModal) return;
+      submitModal.classList.remove('modal-overlay--open');
+      submitModal.setAttribute('aria-hidden', 'true');
+    }
+
+    if (btnOpenSubmit) {
+      btnOpenSubmit.addEventListener('click', openModal);
+    }
+    closeSubmitBtns.forEach(btn => {
+      btn.addEventListener('click', closeModal);
+    });
+    if (submitModal) {
+      submitModal.addEventListener('click', (e) => {
+        if (e.target === submitModal) closeModal();
+      });
+    }
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && submitModal && submitModal.getAttribute('aria-hidden') === 'false') {
+        closeModal();
+      }
+    });
   })();
 </script>
+
+<!-- Submit Confirmation Modal -->
+<div id="submit-modal" class="modal-overlay" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="submit-modal-title">
+  <div class="modal">
+    <div class="modal__header">
+      <h2 id="submit-modal-title" class="no-margin">Finish & Submit Writing for AI Grading?</h2>
+    </div>
+    <div class="modal__body stack">
+      <p class="no-margin">
+        Submitting will save your current responses and dispatch them to the AI grading engine. This action cannot be undone.
+      </p>
+      @{
+        var totalAnswered = take.Questions.Count(n => n.IsAnswered);
+      }
+      @if (totalAnswered < take.TotalQuestions)
+      {
+        <div class="alert alert--warning">
+          <strong>Notice:</strong> You have answered @totalAnswered of @take.TotalQuestions questions. Unanswered questions will receive 0 marks.
+        </div>
+      }
+    </div>
+    <div class="modal__footer row row--between">
+      <button type="button" class="btn js-close-submit-modal">Return to writing</button>
+      <form method="post" action="/writing/submit/@take.AttemptId" style="margin:0;">
+        @Html.AntiForgeryToken()
+        <button type="submit" class="btn btn--primary">Confirm & Submit</button>
+      </form>
+    </div>
+  </div>
+</div>
+      </div>
+    </main>
+  </div>
+  <script src="~/js/icons.js"></script>
+</body>
+</html>

@@ -95,6 +95,44 @@ public sealed class WalletControllerTests
         Assert.Equal(2, model.Wallet.Ledger.Count);
     }
 
+    [Fact]
+    public void WalletView_InjectsDateTimeFormatter_AndUsesFormatForOrdersAndLedger()
+    {
+        var repoRoot = TestPathHelper.FindRepoRoot();
+        var walletViewPath = Path.Combine(repoRoot, "src", "WebMVC", "Views", "Wallet", "Index.cshtml");
+        Assert.True(File.Exists(walletViewPath), "Wallet/Index.cshtml must exist");
+
+        var content = File.ReadAllText(walletViewPath);
+
+        // Must inject DateTimeFormatter
+        Assert.Matches(@"@inject\s+WebMVC\.DateTimeFormatter\s+Formatter", content);
+
+        // Must format order and ledger timestamps through Formatter
+        Assert.Contains("@Formatter.Format(order.CreatedAt)", content);
+        Assert.Contains("@Formatter.Format(item.CreatedAt)", content);
+
+        // Must not format raw DateTimeOffset with ToString directly
+        Assert.DoesNotContain(".CreatedAt.ToString(\"dd MMM yyyy HH:mm\")", content);
+    }
+
+    [Fact]
+    public void WalletTransactionTimestamps_FormatThroughDateTimeFormatter_InConfiguredTimeZone()
+    {
+        var utcInstant = new DateTimeOffset(2026, 10, 13, 17, 0, 0, TimeSpan.Zero);
+
+        var contextHcm = new DefaultHttpContext();
+        contextHcm.Items[DateTimeFormatter.ZoneItemKey] = "Asia/Ho_Chi_Minh";
+        var formatterHcm = new DateTimeFormatter(new HttpContextAccessor { HttpContext = contextHcm });
+
+        Assert.Equal("14 Oct 2026, 00:00", formatterHcm.Format(utcInstant));
+
+        var contextTokyo = new DefaultHttpContext();
+        contextTokyo.Items[DateTimeFormatter.ZoneItemKey] = "Asia/Tokyo";
+        var formatterTokyo = new DateTimeFormatter(new HttpContextAccessor { HttpContext = contextTokyo });
+
+        Assert.Equal("14 Oct 2026, 02:00", formatterTokyo.Format(utcInstant));
+    }
+
     private sealed class FakeWalletClient(WalletDto wallet) : IWalletClient
     {
         public Task<WalletDto> GetWalletAsync(CancellationToken cancellationToken = default) =>

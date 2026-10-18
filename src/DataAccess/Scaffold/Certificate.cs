@@ -43,6 +43,9 @@ public partial class Certificate
     public virtual ICollection<LearnerPath> LearnerPaths { get; set; } = new List<LearnerPath>();
 
     [InverseProperty("Cert")]
+    public virtual ICollection<Lesson> Lessons { get; set; } = new List<Lesson>();
+
+    [InverseProperty("Cert")]
     public virtual ICollection<MentorProfile> MentorProfiles { get; set; } = new List<MentorProfile>();
 
     [InverseProperty("Cert")]

@@ -245,12 +245,13 @@ public static class AdminEndpoints
             string? q,
             string? status,
             int? certId,
+            string? purpose,
             int? page,
             int? pageSize,
             IAdminExamService exams,
             CancellationToken cancellationToken) =>
         {
-            var summary = await exams.GetExamsAsync(q, status, certId, page ?? 1, pageSize ?? 20, cancellationToken);
+            var summary = await exams.GetExamsAsync(q, status, certId, purpose, page ?? 1, pageSize ?? 20, cancellationToken);
             return Results.Ok(summary);
         });
 
@@ -469,5 +470,162 @@ public static class AdminEndpoints
                 return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
             }
         });
+
+        admin.MapPost("/exams/{examId:int}/quick-ingest/parse", (
+            int examId,
+            QuickIngestParseRequest request,
+            IExamQuickIngestService quickIngest) =>
+        {
+            var result = quickIngest.Parse(request);
+            return Results.Ok(result);
+        });
+
+        admin.MapPost("/exams/{examId:int}/quick-ingest/commit", async (
+            int examId,
+            QuickIngestCommitRequest request,
+            IAdminExamService exams,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var result = await exams.CommitQuickIngestAsync(examId, request, cancellationToken);
+                return Results.Ok(result);
+            }
+            catch (AdminExamException ex)
+            {
+                return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
+            }
+        });
+
+        admin.MapGet("/exams/{examId:int}/studio", async (
+            int examId,
+            IAdminExamService exams,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var studio = await exams.GetExamStudioAsync(examId, cancellationToken);
+                return Results.Ok(studio);
+            }
+            catch (AdminExamException ex)
+            {
+                return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
+            }
+        });
+
+        admin.MapGet("/exams/{examId:int}/audit", async (
+            int examId,
+            IAdminExamService exams,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var audit = await exams.AuditExamPublishReadinessAsync(examId, cancellationToken);
+                return Results.Ok(audit);
+            }
+            catch (AdminExamException ex)
+            {
+                return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
+            }
+        });
+
+        admin.MapPost("/exams/{examId:int}/reorder", async (
+            int examId,
+            ReorderSectionItemsRequest request,
+            IAdminExamService exams,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                await exams.ReorderSectionItemsAsync(examId, request, cancellationToken);
+                return Results.Ok(new { success = true });
+            }
+            catch (AdminExamException ex)
+            {
+                return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
+            }
+        });
+
+        admin.MapPost("/exams/{examId:int}/clusters", async (
+            int examId,
+            CreateExamClusterRequest request,
+            IAdminExamService exams,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var cluster = await exams.CreateExamClusterAsync(examId, request, cancellationToken);
+                return Results.Created($"/api/admin/exams/{examId}/groups/{cluster.GroupId}", cluster);
+            }
+            catch (AdminExamException ex)
+            {
+                return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
+            }
+        });
+
+        admin.MapPost("/exams/{examId:int}/media", async Task<IResult> (
+            int examId,
+            HttpRequest request,
+            IFileStore fileStore,
+            CancellationToken cancellationToken) =>
+        {
+            if (!request.HasFormContentType)
+            {
+                return Problem(StatusCodes.Status400BadRequest, "Expected multipart/form-data content.", ApiError.Codes.Validation);
+            }
+
+            var form = await request.ReadFormAsync(cancellationToken);
+            var file = form.Files.GetFile("file");
+            if (file is null || file.Length == 0)
+            {
+                return Problem(StatusCodes.Status400BadRequest, "Choose a file to upload.", ApiError.Codes.Validation);
+            }
+
+            var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+            var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".jpg", ".jpeg", ".png", ".svg", ".webp", ".mp3", ".wav", ".ogg", ".m4a" };
+            if (!allowed.Contains(ext))
+            {
+                return Problem(StatusCodes.Status400BadRequest, $"File format '{ext}' is not supported.", ApiError.Codes.Validation);
+            }
+
+            await using var stream = file.OpenReadStream();
+            var relativePath = await fileStore.SaveExamMediaAsync(examId, stream, ext, cancellationToken);
+            var fileName = Path.GetFileName(relativePath);
+            var result = new AdminExamMediaUploadResultDto(
+                Url: $"/media/exams/{examId}/{fileName}",
+                Path: relativePath,
+                FileName: fileName);
+
+            return Results.Ok(result);
+        }).DisableAntiforgery();
+
+        admin.MapGet("/exams/{examId:int}/export", async (
+            int examId,
+            string? format,
+            IAdminExamService exams,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var (stream, contentType, fileName) = await exams.ExportExamPackageAsync(examId, format, cancellationToken);
+                return Results.File(stream, contentType, fileName);
+            }
+            catch (AdminExamException ex)
+            {
+                return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
+            }
+        });
+
+        app.MapGet("/api/media/exams/{examId:int}/{fileName}", async Task<IResult> (
+            int examId,
+            string fileName,
+            IFileStore fileStore,
+            CancellationToken cancellationToken) =>
+        {
+            var info = await fileStore.GetMediaAsync($"exams/{examId}/{fileName}", cancellationToken);
+            return info is null
+                ? Results.NotFound()
+                : Results.Stream(info.Stream, info.ContentType, enableRangeProcessing: true);
+        }).RequireAuthorization();
     }
 }

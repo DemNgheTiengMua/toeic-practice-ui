@@ -1,0 +1,42 @@
+{
+  "lessons": [
+    {
+      "title": "Present Simple vs Present Continuous",
+      "skill": "reading",
+      "categoryCode": "grammar_tense",
+      "summary": "Master when to use present simple for habits and present continuous for ongoing actions.",
+      "estimatedMinutes": 5,
+      "displayOrder": 1,
+      "cards": [
+        {
+          "type": "rule",
+          "title": "The Core Principle",
+          "contentMarkdown": "### Present Simple vs Present Continuous\n\nUse **Present Simple** for habits, routines, and permanent states.\n\nUse **Present Continuous** for actions happening right now or temporary situations."
+        },
+        {
+          "type": "pitfall",
+          "title": "Common Traps: Stative Verbs",
+          "contentMarkdown": "### Beware of Stative Verbs!\n\nVerbs of perception, emotion, and possession (e.g., *know*, *like*, *belong*, *understand*) are rarely used in continuous tenses.\n\n- ❌ *I am knowing the answer.*\n- ✔️ *I know the answer.*"
+        },
+        {
+          "type": "example",
+          "title": "Real Exam Context",
+          "contentMarkdown": "### Workplace Scenario\n\n*\"The accounting department **audits** (Present Simple) our branch annually, but they **are auditing** (Present Continuous) this week due to regulatory changes.\"*"
+        },
+        {
+          "type": "micro_check",
+          "title": "Quick Check",
+          "contentMarkdown": "Select the correct verb form for the sentence.",
+          "questionPrompt": "Please quiet down; Ms. Vance _______ a confidential conference call with overseas investors.",
+          "optionA": "conducts",
+          "optionB": "is conducting",
+          "optionC": "conducted",
+          "optionD": "has conducted",
+          "correctOption": "B",
+          "explanation": "The prompt 'Please quiet down' indicates an action taking place at the present moment, requiring the present continuous tense ('is conducting').",
+          "rationale": "Option A is simple present (habitual, not in-progress). Options C and D are past and perfect tenses, which do not fit the urgent immediate context."
+        }
+      ]
+    }
+  ]
+}

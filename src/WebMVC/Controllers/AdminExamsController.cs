@@ -16,26 +16,31 @@ namespace WebMVC.Controllers;
 public sealed class AdminExamsController(
     IAdminExamsClient api,
     CurrentUser currentUser,
-    ILogger<AdminExamsController> logger) : Controller
+    ILogger<AdminExamsController> logger,
+    IAdminImportsClient? importsClient = null) : AdminControllerBase(currentUser, logger)
 {
+    private const long MaxUploadBytes = 101L * 1024 * 1024;
 
     [HttpGet("")]
     public async Task<IActionResult> Index(
         [FromQuery] string? q,
         [FromQuery] string? status,
         [FromQuery] int? certId,
+        [FromQuery] string? purpose,
         [FromQuery] int page = 1,
         CancellationToken cancellationToken = default)
     {
         try
         {
-            var summary = await api.GetAdminExamsAsync(q, status, certId, page, 20, cancellationToken);
+            var summary = await api.GetAdminExamsAsync(q, status, certId, purpose, page, 20, cancellationToken);
+
             var vm = new AdminExamListViewModel(
                 summary,
                 q,
                 status,
                 certId,
                 page,
+                purpose,
                 ErrorMessage: TempData["Error"] as string,
                 SuccessMessage: TempData["Success"] as string);
             return View("~/Views/Admin/Exams.cshtml", vm);
@@ -45,7 +50,90 @@ public sealed class AdminExamsController(
             logger.LogError(ex, "Could not load admin exams list");
             TempData["Error"] = "Could not load the exam list. Please try again.";
             var emptySummary = new AdminExamListSummaryDto([], 0, 1, 20, []);
-            return View("~/Views/Admin/Exams.cshtml", new AdminExamListViewModel(emptySummary, q, status, certId, page, ErrorMessage: TempData["Error"] as string));
+            return View("~/Views/Admin/Exams.cshtml", new AdminExamListViewModel(emptySummary, q, status, certId, page, purpose, ErrorMessage: TempData["Error"] as string));
+        }
+    }
+
+    [HttpPost("import")]
+    [ValidateAntiForgeryToken]
+    [RequestSizeLimit(MaxUploadBytes)]
+    [RequestFormLimits(MultipartBodyLengthLimit = MaxUploadBytes)]
+    public async Task<IActionResult> Import(
+        [FromForm] int? certId,
+        IFormFile? file,
+        CancellationToken cancellationToken = default)
+    {
+        if (importsClient is null)
+        {
+            throw new InvalidOperationException("IAdminImportsClient is not configured.");
+        }
+
+        if (certId is null)
+        {
+            TempData["Error"] = "Choose the certificate the questions belong to.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        if (file is null || file.Length == 0)
+        {
+            TempData["Error"] = "Choose a .json manifest or a .zip package to import.";
+            return RedirectToAction(nameof(Index), new { certId });
+        }
+
+        try
+        {
+            await using var stream = file.OpenReadStream();
+            var result = await importsClient.UploadAdminImportAsync(certId.Value, stream, file.FileName, cancellationToken);
+
+            if (result.Status == ImportBatchStatusDto.Done)
+            {
+                TempData["Success"] = $"Imported '{result.ExamName}' as a draft exam with {result.QuestionCount} questions.";
+            }
+            else
+            {
+                var errorMsg = $"Nothing was imported: {result.ErrorCount} {(result.ErrorCount == 1 ? "problem" : "problems")} found in manifest.";
+                try
+                {
+                    var detail = await importsClient.GetAdminImportBatchAsync(result.BatchId, cancellationToken);
+                    if (detail?.Logs?.Count > 0)
+                    {
+                        var issues = detail.Logs
+                            .Where(l => l.Level == ImportLogLevelDto.Error)
+                            .Take(3)
+                            .Select(l => l.RowNo.HasValue ? $"Q{l.RowNo}: {l.Message}" : l.Message);
+                        var issueList = string.Join("; ", issues);
+                        if (!string.IsNullOrWhiteSpace(issueList))
+                        {
+                            errorMsg += $" Issues: {issueList}";
+                        }
+                    }
+                }
+                catch (Exception logEx)
+                {
+                    logger.LogDebug(logEx, "Could not fetch batch {BatchId} detail logs", result.BatchId);
+                }
+                TempData["Error"] = errorMsg;
+            }
+
+            return RedirectToAction(nameof(Index), new { certId });
+        }
+        catch (ApiException ex)
+        {
+            logger.LogWarning(ex, "Import upload refused");
+            TempData["Error"] = ex.Detail ?? ex.Title ?? "The import was refused.";
+            return RedirectToAction(nameof(Index), new { certId });
+        }
+        catch (HttpRequestException ex)
+        {
+            logger.LogError(ex, "Network error during exam import upload");
+            TempData["Error"] = "Unable to reach import service. Please try again.";
+            return RedirectToAction(nameof(Index), new { certId });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Unexpected error during exam import upload");
+            TempData["Error"] = "An error occurred while importing the exam. Please try again.";
+            return RedirectToAction(nameof(Index), new { certId });
         }
     }
 
@@ -188,16 +276,29 @@ public sealed class AdminExamsController(
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Publish(int id, CancellationToken cancellationToken = default)
     {
+        bool isAjax = Request.Headers.Accept.Any(a => a?.Contains("application/json", StringComparison.OrdinalIgnoreCase) == true)
+                      || string.Equals(Request.ContentType, "application/json", StringComparison.OrdinalIgnoreCase)
+                      || Request.Headers["X-Requested-With"] == "XMLHttpRequest";
+
         try
         {
             var result = await api.PublishAdminExamAsync(id, cancellationToken);
+            if (isAjax)
+            {
+                return Json(new { success = true, message = result.Message });
+            }
             TempData["Success"] = result.Message;
             return RedirectToAction(nameof(Index));
         }
         catch (ApiException ex)
         {
             logger.LogWarning(ex, "Failed to publish exam {ExamId}", id);
-            TempData["Error"] = ex.Detail ?? ex.Message;
+            var errorMsg = ex.Detail ?? ex.Message;
+            if (isAjax)
+            {
+                return StatusCode(ex.Status > 0 ? ex.Status : StatusCodes.Status400BadRequest, new { success = false, message = errorMsg });
+            }
+            TempData["Error"] = errorMsg;
             return RedirectToAction(nameof(Edit), new { id, step = 3 });
         }
     }
@@ -222,11 +323,25 @@ public sealed class AdminExamsController(
 
     [HttpPost("{id:int}/audio")]
     [ValidateAntiForgeryToken]
+    [RequestSizeLimit(63L * 1024 * 1024)]
+    [RequestFormLimits(MultipartBodyLengthLimit = 63L * 1024 * 1024)]
     public async Task<IActionResult> SaveAudio(int id, [FromForm] UploadAudioModel model, CancellationToken cancellationToken = default)
     {
         try
         {
-            var request = new SaveExamSectionAudioRequest(model.SectionId, model.AudioPath, model.DurationSec, model.SizeBytes);
+            if (model.AudioFile == null || model.AudioFile.Length == 0)
+            {
+                TempData["Error"] = "Please select an audio file to upload.";
+                return RedirectToAction(nameof(Edit), new { id, step = 2 });
+            }
+
+            await using var stream = model.AudioFile.OpenReadStream();
+            var result = await api.UploadAdminExamMediaAsync(id, stream, model.AudioFile.FileName, cancellationToken);
+            var audioPath = !string.IsNullOrWhiteSpace(result.Path) ? result.Path : result.Url;
+            var sizeBytes = model.AudioFile.Length;
+            var durationSec = model.DurationSec > 0 ? model.DurationSec : 300;
+
+            var request = new SaveExamSectionAudioRequest(model.SectionId, audioPath, durationSec, sizeBytes);
             await api.SaveAdminExamSectionAudioAsync(id, request, cancellationToken);
             TempData["Success"] = "Audio file saved successfully.";
             return RedirectToAction(nameof(Edit), new { id, step = 2 });
@@ -240,30 +355,19 @@ public sealed class AdminExamsController(
     }
 
     [HttpGet("{id:int}/questions")]
-    public async Task<IActionResult> Questions(int id, [FromQuery] int? sectionId, [FromQuery] int? questionId, CancellationToken cancellationToken = default)
+    public IActionResult Questions(int id, [FromQuery] int? sectionId = null, [FromQuery] int? questionId = null)
     {
-        try
+        var routeValues = new RouteValueDictionary { { "id", id } };
+        if (sectionId.HasValue)
         {
-            var questionsData = await api.GetAdminExamQuestionsAsync(id, cancellationToken);
-            var vm = new QuestionEditorViewModel(
-                questionsData,
-                SelectedSectionId: sectionId,
-                SelectedQuestionId: questionId,
-                ErrorMessage: TempData["Error"] as string,
-                SuccessMessage: TempData["Success"] as string);
+            routeValues["sectionId"] = sectionId.Value;
+        }
+        if (questionId.HasValue)
+        {
+            routeValues["questionId"] = questionId.Value;
+        }
 
-            return View("~/Views/Admin/QuestionEditor.cshtml", vm);
-        }
-        catch (ApiException ex) when (ex.Status == 404 || ex.Code == ApiError.Codes.ExamNotFound)
-        {
-            return NotFound();
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Could not load questions for exam {ExamId}", id);
-            TempData["Error"] = "Could not load question editor.";
-            return RedirectToAction(nameof(Index));
-        }
+        return RedirectToAction(nameof(Studio), routeValues);
     }
 
     [HttpPost("{id:int}/groups")]
@@ -307,13 +411,13 @@ public sealed class AdminExamsController(
                 TempData["Success"] = "Question group created successfully.";
             }
 
-            return RedirectToAction(nameof(Questions), new { id, sectionId = model.SectionId });
+            return RedirectToAction(nameof(Studio), new { id, sectionId = model.SectionId });
         }
         catch (ApiException ex)
         {
             logger.LogWarning(ex, "Failed to save group for exam {ExamId}", id);
             TempData["Error"] = ex.Detail ?? ex.Message;
-            return RedirectToAction(nameof(Questions), new { id, sectionId = model.SectionId });
+            return RedirectToAction(nameof(Studio), new { id, sectionId = model.SectionId });
         }
     }
 
@@ -325,13 +429,13 @@ public sealed class AdminExamsController(
         {
             await api.DeleteAdminQuestionGroupAsync(id, groupId, cancellationToken);
             TempData["Success"] = "Question group deleted.";
-            return RedirectToAction(nameof(Questions), new { id, sectionId });
+            return RedirectToAction(nameof(Studio), new { id, sectionId });
         }
         catch (ApiException ex)
         {
             logger.LogWarning(ex, "Failed to delete group {GroupId} for exam {ExamId}", groupId, id);
             TempData["Error"] = ex.Detail ?? ex.Message;
-            return RedirectToAction(nameof(Questions), new { id, sectionId });
+            return RedirectToAction(nameof(Studio), new { id, sectionId });
         }
     }
 
@@ -379,7 +483,7 @@ public sealed class AdminExamsController(
 
                 await api.UpdateAdminQuestionAsync(model.QuestionId.Value, updateReq, cancellationToken);
                 TempData["Success"] = $"Question {model.DisplayOrder} saved successfully.";
-                return RedirectToAction(nameof(Questions), new { id, sectionId = model.SectionId, questionId = model.QuestionId });
+                return RedirectToAction(nameof(Studio), new { id, sectionId = model.SectionId, questionId = model.QuestionId });
             }
             else
             {
@@ -400,14 +504,14 @@ public sealed class AdminExamsController(
 
                 var created = await api.CreateAdminQuestionAsync(id, createReq, cancellationToken);
                 TempData["Success"] = $"Question {created.DisplayOrder} created successfully.";
-                return RedirectToAction(nameof(Questions), new { id, sectionId = model.SectionId, questionId = created.QuestionId });
+                return RedirectToAction(nameof(Studio), new { id, sectionId = model.SectionId, questionId = created.QuestionId });
             }
         }
         catch (ApiException ex)
         {
             logger.LogWarning(ex, "Failed to save question for exam {ExamId}", id);
             TempData["Error"] = ex.Detail ?? ex.Message;
-            return RedirectToAction(nameof(Questions), new { id, sectionId = model.SectionId, questionId = model.QuestionId });
+            return RedirectToAction(nameof(Studio), new { id, sectionId = model.SectionId, questionId = model.QuestionId });
         }
     }
 
@@ -419,13 +523,13 @@ public sealed class AdminExamsController(
         {
             await api.DeleteAdminQuestionAsync(questionId, cancellationToken);
             TempData["Success"] = "Question deleted successfully.";
-            return RedirectToAction(nameof(Questions), new { id, sectionId });
+            return RedirectToAction(nameof(Studio), new { id, sectionId });
         }
         catch (ApiException ex)
         {
             logger.LogWarning(ex, "Failed to delete question {QuestionId} for exam {ExamId}", questionId, id);
             TempData["Error"] = ex.Detail ?? ex.Message;
-            return RedirectToAction(nameof(Questions), new { id, sectionId });
+            return RedirectToAction(nameof(Studio), new { id, sectionId });
         }
     }
 
@@ -450,5 +554,219 @@ public sealed class AdminExamsController(
             new AdminCertificateOptionDto(2, "ielts", "IELTS"),
             new AdminCertificateOptionDto(3, "vstep", "VSTEP")
         ];
+    }
+
+    [HttpPost("{id:int}/quick-ingest/parse")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ParseQuickIngest(
+        int id,
+        [FromBody] QuickIngestParseRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var result = await api.ParseQuickIngestAsync(id, request, cancellationToken);
+            return Json(result);
+        }
+        catch (ApiException ex)
+        {
+            logger.LogWarning(ex, "Failed to parse quick ingest for exam {ExamId}", id);
+            return StatusCode(ex.Status, new { message = ex.Detail ?? ex.Message, code = ex.Code });
+        }
+    }
+
+    [HttpPost("{id:int}/quick-ingest/commit")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CommitQuickIngest(
+        int id,
+        [FromBody] QuickIngestCommitRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var result = await api.CommitQuickIngestAsync(id, request, cancellationToken);
+            return Json(result);
+        }
+        catch (ApiException ex)
+        {
+            logger.LogWarning(ex, "Failed to commit quick ingest for exam {ExamId}", id);
+            return StatusCode(ex.Status, new { message = ex.Detail ?? ex.Message, code = ex.Code });
+        }
+    }
+
+    [HttpGet("{id:int}/studio")]
+    public async Task<IActionResult> Studio(int id, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var studio = await api.GetAdminExamStudioAsync(id, cancellationToken);
+            return View("~/Views/Admin/ExamStudio.cshtml", studio);
+        }
+        catch (ApiException ex)
+        {
+            logger.LogError(ex, "Could not load Exam Studio for exam {ExamId}", id);
+            TempData["Error"] = ex.Detail ?? ex.Message;
+            return RedirectToAction(nameof(Index));
+        }
+    }
+
+    [HttpPost("{id:int}/reorder")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Reorder(int id, [FromBody] ReorderSectionItemsRequest request, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await api.ReorderAdminSectionItemsAsync(id, request, cancellationToken);
+            return Json(new { success = true });
+        }
+        catch (ApiException ex)
+        {
+            logger.LogWarning(ex, "Failed to reorder items for exam {ExamId}", id);
+            return StatusCode(ex.Status, new { message = ex.Detail ?? ex.Message, code = ex.Code });
+        }
+    }
+
+    [HttpGet("{id:int}/audit")]
+    public async Task<IActionResult> Audit(int id, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var audit = await api.GetAdminExamAuditAsync(id, cancellationToken);
+            return Json(audit);
+        }
+        catch (ApiException ex)
+        {
+            logger.LogWarning(ex, "Failed to audit exam {ExamId}", id);
+            return StatusCode(ex.Status, new { message = ex.Detail ?? ex.Message, code = ex.Code });
+        }
+    }
+
+    [HttpPut("{id:int}/studio/group/{groupId:int}")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> AutosaveGroup(int id, int groupId, [FromBody] UpdateQuestionGroupRequest request, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var updated = await api.UpdateAdminQuestionGroupAsync(id, groupId, request, cancellationToken);
+            return Json(updated);
+        }
+        catch (ApiException ex)
+        {
+            return StatusCode(ex.Status, new { message = ex.Detail ?? ex.Message, code = ex.Code });
+        }
+    }
+
+    [HttpPut("{id:int}/studio/question/{questionId:int}")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> AutosaveQuestion(int id, int questionId, [FromBody] UpdateQuestionRequest request, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var updated = await api.UpdateAdminQuestionAsync(questionId, request, cancellationToken);
+            return Json(updated);
+        }
+        catch (ApiException ex)
+        {
+            return StatusCode(ex.Status, new { message = ex.Detail ?? ex.Message, code = ex.Code });
+        }
+    }
+
+    [HttpDelete("{id:int}/studio/group/{groupId:int}")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteStudioGroup(int id, int groupId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await api.DeleteAdminQuestionGroupAsync(id, groupId, cancellationToken);
+            return Json(new { success = true });
+        }
+        catch (ApiException ex)
+        {
+            return StatusCode(ex.Status, new { message = ex.Detail ?? ex.Message, code = ex.Code });
+        }
+    }
+
+    [HttpDelete("{id:int}/studio/question/{questionId:int}")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteStudioQuestion(int id, int questionId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await api.DeleteAdminQuestionAsync(questionId, cancellationToken);
+            return Json(new { success = true });
+        }
+        catch (ApiException ex)
+        {
+            return StatusCode(ex.Status, new { message = ex.Detail ?? ex.Message, code = ex.Code });
+        }
+    }
+
+    [HttpPut("{id:int}/studio/meta")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> AutosaveMeta(int id, [FromBody] UpdateAdminExamRequest request, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var updated = await api.UpdateAdminExamAsync(id, request, cancellationToken);
+            return Json(updated);
+        }
+        catch (ApiException ex)
+        {
+            return StatusCode(ex.Status, new { message = ex.Detail ?? ex.Message, code = ex.Code });
+        }
+    }
+
+    [HttpPost("{id:int}/media")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UploadMedia(int id, IFormFile? file, CancellationToken cancellationToken = default)
+    {
+        if (file == null || file.Length == 0)
+        {
+            return BadRequest(new { message = "Choose a file to upload." });
+        }
+
+        try
+        {
+            await using var stream = file.OpenReadStream();
+            var result = await api.UploadAdminExamMediaAsync(id, stream, file.FileName, cancellationToken);
+            return Json(new { success = true, url = result.Url, path = result.Path, fileName = result.FileName });
+        }
+        catch (ApiException ex)
+        {
+            logger.LogWarning(ex, "Failed to upload media for exam {ExamId}", id);
+            return StatusCode(ex.Status, new { message = ex.Detail ?? ex.Message, code = ex.Code });
+        }
+    }
+
+    [HttpPost("{id:int}/clusters")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CreateCluster(int id, [FromBody] CreateExamClusterRequest request, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var cluster = await api.CreateAdminExamClusterAsync(id, request, cancellationToken);
+            return Json(new { success = true, cluster });
+        }
+        catch (ApiException ex)
+        {
+            logger.LogWarning(ex, "Failed to create cluster for exam {ExamId}", id);
+            return StatusCode(ex.Status, new { message = ex.Detail ?? ex.Message, code = ex.Code });
+        }
+    }
+
+    [HttpGet("{id:int}/export")]
+    public async Task<IActionResult> Export(int id, [FromQuery] string? format = "zip", CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var (stream, contentType, fileName) = await api.ExportAdminExamAsync(id, format, cancellationToken);
+            return File(stream, contentType, fileName);
+        }
+        catch (ApiException ex)
+        {
+            logger.LogWarning(ex, "Failed to export exam {ExamId}", id);
+            TempData["Error"] = ex.Detail ?? ex.Message;
+            return RedirectToAction(nameof(Studio), new { id });
+        }
     }
 }

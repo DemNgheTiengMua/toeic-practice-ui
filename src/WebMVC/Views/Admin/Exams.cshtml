@@ -14,13 +14,37 @@
 
 <div class="row row--between">
   <h1>Exams</h1>
-  <a class="btn btn--primary" href="/admin/exams/create">Create new exam</a>
+  <div class="row" style="gap: var(--space-xs);">
+    <button type="button" class="btn btn--secondary" onclick="openImportExamDialog()">Import Exam (.zip / .json)</button>
+    <a class="btn btn--primary" href="/admin/exams/create">Create new exam</a>
+  </div>
 </div>
 
 <form method="get" action="/admin/exams" class="toolbar">
   <div class="field toolbar__grow">
     <label class="field__label" for="q">Search by exam name</label>
     <input class="field__input" id="q" name="q" type="search" value="@Model.Query" placeholder="ETS 2024…">
+  </div>
+  <div class="field">
+    <label class="field__label" for="f-cert">Certificate</label>
+    <select class="field__input" id="f-cert" name="certId">
+      <option value="">All Certificates</option>
+      @foreach (var cert in Model.Summary.Certificates)
+      {
+        <option value="@cert.CertId" selected="@(Model.CertId == cert.CertId)">@cert.Code — @cert.Name</option>
+      }
+    </select>
+  </div>
+  <div class="field">
+    <label class="field__label" for="f-purpose">Purpose</label>
+    <select class="field__input" id="f-purpose" name="purpose">
+      <option value="" selected="@(string.IsNullOrEmpty(Model.Purpose) || Model.Purpose.Equals("all", StringComparison.OrdinalIgnoreCase))">All</option>
+      <option value="mock" selected="@("mock".Equals(Model.Purpose, StringComparison.OrdinalIgnoreCase))">Mock Exam</option>
+      <option value="placement" selected="@("placement".Equals(Model.Purpose, StringComparison.OrdinalIgnoreCase))">Placement Diagnostic</option>
+      <option value="practice" selected="@("practice".Equals(Model.Purpose, StringComparison.OrdinalIgnoreCase))">All Practice</option>
+      <option value="speaking_practice" selected="@("speaking_practice".Equals(Model.Purpose, StringComparison.OrdinalIgnoreCase))">Speaking Practice</option>
+      <option value="writing_practice" selected="@("writing_practice".Equals(Model.Purpose, StringComparison.OrdinalIgnoreCase))">Writing Practice</option>
+    </select>
   </div>
   <div class="field">
     <label class="field__label" for="f-status">Status</label>
@@ -32,7 +56,7 @@
     </select>
   </div>
   <button type="submit" class="btn">Filter</button>
-  @if (!string.IsNullOrEmpty(Model.Query) || !string.IsNullOrEmpty(Model.Status))
+  @if (!string.IsNullOrEmpty(Model.Query) || !string.IsNullOrEmpty(Model.Status) || Model.CertId.HasValue || !string.IsNullOrEmpty(Model.Purpose))
   {
     <a href="/admin/exams" class="btn btn--ghost">Reset</a>
   }
@@ -46,7 +70,10 @@
         <div class="state-block__icon" aria-hidden="true">EMPTY</div>
         <h2 class="state-block__title">No exams yet</h2>
         <p class="state-block__desc">Create your first exam, then enter questions part by part.</p>
-        <a class="btn btn--primary" href="/admin/exams/create">Create new exam</a>
+        <div class="row" style="gap: var(--space-xs); justify-content: center;">
+          <button type="button" class="btn btn--secondary" onclick="openImportExamDialog()">Import Exam (.zip / .json)</button>
+          <a class="btn btn--primary" href="/admin/exams/create">Create new exam</a>
+        </div>
       </div>
     </div>
   </div>
@@ -81,10 +108,29 @@ else
                 _ => "badge"
             };
 
+            var purposeDisplay = exam.Purpose switch
+            {
+                Contracts.ExamPurposeDto.Mock => "MOCK",
+                Contracts.ExamPurposeDto.Placement => "PLACEMENT",
+                Contracts.ExamPurposeDto.SpeakingPractice => "SPEAKING",
+                Contracts.ExamPurposeDto.WritingPractice => "WRITING",
+                _ => exam.Purpose.ToString().ToUpperInvariant()
+            };
+
+            var isAudioApplicable = exam.Purpose is not Contracts.ExamPurposeDto.WritingPractice
+                and not Contracts.ExamPurposeDto.SpeakingPractice
+                && !string.Equals(exam.AudioStatus, "N/A", StringComparison.OrdinalIgnoreCase)
+                && !string.IsNullOrWhiteSpace(exam.AudioStatus)
+                && exam.AudioStatus != "—";
+
             var dateDisplay = exam.UpdatedAt?.ToString("dd MMM yyyy") ?? exam.CreatedAt.ToString("dd MMM yyyy");
 
             <tr>
               <td>
+                <div class="row" style="gap: 0.35rem; align-items: center; margin-bottom: 0.25rem;">
+                  <span class="badge badge--info font-mono font-bold">@exam.CertCode.ToUpperInvariant()</span>
+                  <span class="badge font-mono font-bold">@purposeDisplay</span>
+                </div>
                 <strong>@exam.Name</strong>
                 @if (!string.IsNullOrEmpty(exam.SourceName))
                 {
@@ -92,14 +138,23 @@ else
                 }
               </td>
               <td>@questionDisplay</td>
-              <td>@exam.AudioStatus</td>
+              <td>
+                @if (!isAudioApplicable)
+                {
+                  <span class="text-muted">N/A</span>
+                }
+                else
+                {
+                  @exam.AudioStatus
+                }
+              </td>
               <td>@exam.FinishedAttemptCount</td>
               <td>@dateDisplay</td>
               <td><span class="@statusBadgeClass">@exam.Status</span></td>
               <td>
-                <div class="row">
-                  <a class="btn btn--sm" href="/admin/exams/@exam.ExamId/edit">Edit</a>
-                  <a class="btn btn--sm btn--ghost" href="/admin/exams/@exam.ExamId/questions">Questions</a>
+                <div class="row" style="gap: 0.25rem;">
+                  <a class="btn btn--sm btn--primary" href="/admin/exams/@exam.ExamId/studio">Studio</a>
+                  <a class="btn btn--sm" href="/admin/exams/@exam.ExamId/edit">Edit Info</a>
                   @if (exam.FinishedAttemptCount == 0)
                   {
                     <form method="post" action="/admin/exams/@exam.ExamId/delete" onsubmit="return confirm('Delete this exam?');" style="display:inline; margin:0;">
@@ -116,12 +171,16 @@ else
     </div>
     @if (totalPages > 1)
     {
+      var certParam = Model.CertId.HasValue ? $"&certId={Model.CertId.Value}" : "";
+      var purposeParam = !string.IsNullOrEmpty(Model.Purpose) ? $"&purpose={Model.Purpose}" : "";
+      var filterQuery = $"&q={Model.Query}&status={Model.Status}{certParam}{purposeParam}";
+
       <div class="card__footer">
         <div class="pagination">
           <span class="pagination__info">Showing @(((summary.Page - 1) * summary.PageSize) + 1)–@(Math.Min(summary.Page * summary.PageSize, summary.TotalCount)) of @summary.TotalCount exams</span>
           @if (summary.Page > 1)
           {
-            <a class="pagination__page" href="/admin/exams?page=@(summary.Page - 1)&q=@Model.Query&status=@Model.Status">Previous</a>
+            <a class="pagination__page" href="/admin/exams?page=@(summary.Page - 1)@filterQuery">Previous</a>
           }
           else
           {
@@ -136,13 +195,13 @@ else
             }
             else
             {
-              <a class="pagination__page" href="/admin/exams?page=@p&q=@Model.Query&status=@Model.Status">@p</a>
+              <a class="pagination__page" href="/admin/exams?page=@p@filterQuery">@p</a>
             }
           }
 
           @if (summary.Page < totalPages)
           {
-            <a class="pagination__page" href="/admin/exams?page=@(summary.Page + 1)&q=@Model.Query&status=@Model.Status">Next</a>
+            <a class="pagination__page" href="/admin/exams?page=@(summary.Page + 1)@filterQuery">Next</a>
           }
           else
           {
@@ -152,4 +211,87 @@ else
       </div>
     }
   </div>
+}
+
+<!-- Import Exam Modal Dialog -->
+<div id="import-exam-dialog" class="modal-overlay" style="display: @(string.Equals(Context.Request.Query["import"], "true", StringComparison.OrdinalIgnoreCase) ? "grid" : "none");" role="dialog" aria-modal="true" aria-labelledby="import-dialog-title">
+  <div class="modal" style="max-width: 580px;">
+    <div class="modal__header">
+      <h2 id="import-dialog-title">Import Exam Manifest or Package</h2>
+      <button type="button" class="modal__close" onclick="closeImportExamDialog()">Close</button>
+    </div>
+    <div class="modal__body">
+      <p class="text-muted" style="margin-top: 0;">
+        Upload a <code>.json</code> manifest for text-only exams or a <code>.zip</code> package with <code>manifest.json</code> and a <code>media/</code> folder for exams with listening audio or images. The file is validated first; upon success, a new draft exam is created.
+      </p>
+      <form method="post" action="/admin/exams/import" enctype="multipart/form-data" class="stack">
+        @Html.AntiForgeryToken()
+        <div class="field">
+          <label class="field__label" for="import-certId">Target Certificate</label>
+          <select class="field__input" id="import-certId" name="certId" required>
+            <option value="">Select Certificate</option>
+            @foreach (var cert in Model.Summary.Certificates)
+            {
+              <option value="@cert.CertId" selected="@(cert.CertId == Model.CertId)">@cert.Code — @cert.Name</option>
+            }
+          </select>
+          <div class="field__hint">The imported exam and its questions will be strictly associated with this certificate (Certificate Isolation).</div>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="import-file">Manifest (.json) or Package (.zip)</label>
+          <input class="field__input" id="import-file" name="file" type="file" accept=".json,.zip,application/json,application/zip" required />
+          <div class="field__hint">.json or .zip, up to 100 MB. Audio: .mp3, .wav. Images: .jpg, .png.</div>
+        </div>
+
+        <div class="row row--between" style="margin-top: var(--space-md); padding-top: var(--space-sm); border-top: 1px solid var(--color-rule, #ccd2d6);">
+          <button type="button" class="btn btn--ghost" onclick="closeImportExamDialog()">Cancel</button>
+          <button type="submit" class="btn btn--primary">Validate and import</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+<script>
+  (function() {
+    var dialog = document.getElementById('import-exam-dialog');
+    if (!dialog) return;
+
+    window.openImportExamDialog = function() {
+      dialog.style.display = 'grid';
+      var certSelect = document.getElementById('import-certId');
+      if (certSelect) certSelect.focus();
+    };
+
+    window.closeImportExamDialog = function() {
+      dialog.style.display = 'none';
+      if (window.location.search.toLowerCase().indexOf('import=') !== -1) {
+        var cleanSearch = window.location.search.replace(/([?&])import=[^&]*(&?)/i, function(match, p1, p2) {
+          return p2 ? p1 : '';
+        }).replace(/\?$/, '');
+        var newUrl = window.location.pathname + cleanSearch;
+        window.history.replaceState(null, '', newUrl);
+      }
+    };
+
+    dialog.addEventListener('click', function(e) {
+      if (e.target === dialog) {
+        window.closeImportExamDialog();
+      }
+    });
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && dialog.style.display !== 'none') {
+        window.closeImportExamDialog();
+      }
+    });
+
+    if (dialog.style.display === 'grid') {
+      var certSelect = document.getElementById('import-certId');
+      if (certSelect) certSelect.focus();
+    }
+  })();
+</script>
 }

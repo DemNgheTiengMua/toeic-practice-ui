@@ -1,0 +1,204 @@
+@model WebMVC.Models.AdminLessonListViewModel
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Lessons";
+    ViewData["Description"] = "Manage guided learning walkthroughs and pedagogical decks.";
+}
+
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+  <a href="/admin" class="breadcrumbs__item">Admin</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <span class="breadcrumbs__item" aria-current="page">Lessons</span>
+</nav>
+
+<div class="row row--between">
+  <div>
+    <h1 style="margin-bottom: var(--space-xs);">Guided Lessons</h1>
+    <p class="text-muted" style="margin: 0;">Interactive instructional decks designed to remediate foundational skill weaknesses.</p>
+  </div>
+  <div class="row" style="gap: var(--space-xs);">
+    <a class="btn btn--ghost" href="/admin/lessons/template" download="lesson-template.json">Download Template</a>
+    <button type="button" class="btn btn--secondary" onclick="document.getElementById('import-dialog').style.display='grid'">Import Manifest / Package</button>
+    <a class="btn btn--primary" href="/admin/lessons/create@(Model.SelectedCertId.HasValue ? $"?certId={Model.SelectedCertId.Value}" : "")">+ New Lesson</a>
+  </div>
+</div>
+
+<form method="get" action="/admin/lessons" class="toolbar">
+  <div class="field toolbar__grow">
+    <label class="field__label" for="f-cert">Filter by Certificate</label>
+    <select class="field__input" id="f-cert" name="certId">
+      <option value="">All Certificates</option>
+      @foreach (var cert in Model.Certificates)
+      {
+        <option value="@cert.CertId" selected="@(cert.CertId == Model.SelectedCertId)">@cert.Code — @cert.Name</option>
+      }
+    </select>
+  </div>
+  <div class="field">
+    <label class="field__label" for="f-skill">Filter by Skill</label>
+    <select class="field__input" id="f-skill" name="skillId">
+      <option value="">All Skills</option>
+      @if (Model.Skills is not null)
+      {
+        @foreach (var s in Model.Skills.Where(sk => !Model.SelectedCertId.HasValue || sk.CertId == Model.SelectedCertId.Value))
+        {
+          <option value="@s.SkillId" selected="@(s.SkillId == Model.SelectedSkillId)">@s.Name (@s.Modality.ToUpperInvariant())</option>
+        }
+      }
+    </select>
+  </div>
+  <button type="submit" class="btn">Filter</button>
+  @if (Model.SelectedCertId.HasValue || Model.SelectedSkillId.HasValue)
+  {
+    <a href="/admin/lessons" class="btn btn--ghost">Reset</a>
+  }
+</form>
+
+@if (Model.Lessons.Count == 0)
+{
+  <div class="card">
+    <div class="card__body">
+      <div class="state-block">
+        <div class="state-block__icon" aria-hidden="true">LESSONS</div>
+        <h2 class="state-block__title">No lessons found</h2>
+        <p class="state-block__desc">No guided learning walkthroughs exist for the selected filter. Create one manually or import a JSON manifest.</p>
+        <div class="row" style="justify-content: center; gap: var(--space-sm);">
+          <a class="btn btn--primary" href="/admin/lessons/create">+ Create New Lesson</a>
+          <button type="button" class="btn btn--secondary" onclick="document.getElementById('import-dialog').style.display='grid'">Import Package (.zip/.json)</button>
+        </div>
+      </div>
+    </div>
+  </div>
+}
+else
+{
+  <div class="card">
+    <div class="card__body" style="padding: 0;">
+      <table class="table table--striped" style="margin: 0;">
+        <thead>
+          <tr>
+            <th scope="col" style="width: 40px;">#</th>
+            <th scope="col">Lesson Title &amp; Summary</th>
+            <th scope="col">Certificate</th>
+            <th scope="col">Skill</th>
+            <th scope="col">Category</th>
+            <th scope="col" style="text-align: right;">Duration</th>
+            <th scope="col" style="text-align: right;">Cards</th>
+            <th scope="col" style="text-align: center;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @foreach (var lesson in Model.Lessons)
+          {
+            <tr>
+              <td class="font-mono text-muted">@lesson.DisplayOrder</td>
+              <td>
+                <div style="font-weight: 600;">@lesson.Title</div>
+                @if (!string.IsNullOrWhiteSpace(lesson.Summary))
+                {
+                  <div class="text-xs text-muted" style="max-width: 380px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    @lesson.Summary
+                  </div>
+                }
+              </td>
+              <td><span class="badge">@lesson.CertCode</span></td>
+              <td>
+                <span class="badge badge--warning">@lesson.SkillName</span>
+              </td>
+              <td>
+                @if (!string.IsNullOrWhiteSpace(lesson.CategoryName))
+                {
+                  <span class="text-sm">@lesson.CategoryName</span>
+                }
+                else
+                {
+                  <span class="text-muted text-xs">—</span>
+                }
+              </td>
+              <td style="text-align: right;" class="font-mono">@lesson.EstimatedMinutes m</td>
+              <td style="text-align: right;" class="font-mono">
+                <span class="badge badge--success">@lesson.CardCount</span>
+              </td>
+              <td style="text-align: center;">
+                <div class="row" style="justify-content: center; gap: var(--space-xxs);">
+                  <a class="btn btn--sm" href="/admin/lessons/@lesson.LessonId/edit">Edit</a>
+                  <a class="btn btn--sm btn--ghost" href="/admin/lessons/@lesson.LessonId/preview" target="_blank" title="Preview learner walkthrough deck">Preview ↗</a>
+                  <a class="btn btn--sm btn--ghost" href="/admin/lessons/@lesson.LessonId/export" title="Export as JSON manifest">Export</a>
+                  <form method="post" action="/admin/lessons/@lesson.LessonId/delete" onsubmit="return confirm('Are you sure you want to delete lesson &quot;@lesson.Title&quot;? This action cannot be undone.');" style="display:inline; margin:0;">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn--sm btn--danger">Delete</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+}
+
+<!-- Import Modal Dialog -->
+<div id="import-dialog" class="modal-overlay" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="import-dialog-title">
+  <div class="modal" style="max-width: 580px;">
+    <div class="modal__header">
+      <h2 id="import-dialog-title">Import Lesson Manifest or Package</h2>
+      <button type="button" class="modal__close" onclick="document.getElementById('import-dialog').style.display='none'">Close</button>
+    </div>
+    <div class="modal__body">
+      <form method="post" action="/admin/lessons/upload" enctype="multipart/form-data" class="stack">
+        @Html.AntiForgeryToken()
+        <div class="field">
+          <label class="field__label" for="import-certId">Target Certificate</label>
+          <select class="field__input" id="import-certId" name="certId" required>
+            <option value="">Select Certificate</option>
+            @foreach (var cert in Model.Certificates)
+            {
+              <option value="@cert.CertId" selected="@(cert.CertId == Model.SelectedCertId)">@cert.Code — @cert.Name</option>
+            }
+          </select>
+          <div class="field__hint">Lessons and cards will be strictly associated with this certificate (Certificate Isolation).</div>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="import-file">Manifest (.json) or Package (.zip)</label>
+          <input class="field__input" id="import-file" name="file" type="file" accept=".json,.zip,application/json,application/zip" required />
+          <div class="field__hint">Upload a <code>.json</code> manifest conforming to <code>lesson.schema.json</code>, or a <code>.zip</code> package containing <code>manifest.json</code> and a <code>media/</code> folder.</div>
+        </div>
+
+        <div class="field" style="margin-top: var(--space-xs);">
+          <label style="display: flex; align-items: center; gap: var(--space-xs); cursor: pointer;">
+            <input type="checkbox" name="overwrite" value="true" style="width: 18px; height: 18px; border-radius: 0;" />
+            <span><strong>Overwrite if exists</strong> (update matching lessons by title)</span>
+          </label>
+          <div class="field__hint">If checked, existing lessons with matching titles in this certificate will have their cards replaced atomically while preserving learner progress records.</div>
+        </div>
+
+        <div class="row row--between" style="margin-top: var(--space-md); padding-top: var(--space-sm); border-top: 1px solid var(--color-rule, #ccd2d6);">
+          <button type="button" class="btn btn--ghost" onclick="document.getElementById('import-dialog').style.display='none'">Cancel</button>
+          <button type="submit" class="btn btn--primary">Upload &amp; Ingest</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+<script>
+  (function() {
+    var dialog = document.getElementById('import-dialog');
+    if (dialog) {
+      dialog.addEventListener('click', function(e) {
+        if (e.target === dialog) {
+          dialog.style.display = 'none';
+        }
+      });
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && dialog.style.display !== 'none') {
+          dialog.style.display = 'none';
+        }
+      });
+    }
+  })();
+</script>
+}

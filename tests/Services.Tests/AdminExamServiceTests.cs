@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.IO.Compression;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using BusinessObjects;
 using Contracts;
@@ -594,5 +597,401 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
 
         Assert.Equal(ApiError.Codes.Validation, ex.Code);
         Assert.Contains("listening", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task CommitQuickIngest_AppendMode_AppendsQuestionsWithIncrementedOrder()
+    {
+        var (certId, _, secR, _, _) = await SeedCertificateWithSectionsAsync($"QI_APP_{Guid.NewGuid():N}"[..18]);
+        var service = CreateService();
+
+        var exam = await service.CreateExamAsync(new CreateAdminExamRequest(
+            certId,
+            $"Quick Ingest Exam {Guid.NewGuid():N}"[..25],
+            60,
+            ExamPurposeDto.Mock));
+
+        var q1 = new QuickIngestParsedQuestionDto(
+            Index: 1,
+            StartLineNumber: 1,
+            EndLineNumber: 5,
+            Stem: "Initial question stem",
+            DifficultyLevel: 3,
+            Explanation: "Initial explanation",
+            CategoryCode: null,
+            Options:
+            [
+                new QuickIngestParsedOptionDto("A", "Option A", true),
+                new QuickIngestParsedOptionDto("B", "Option B", false)
+            ],
+            Issues: [],
+            IsValid: true);
+
+        var commit1 = await service.CommitQuickIngestAsync(exam.ExamId, new QuickIngestCommitRequest(
+            SectionId: secR,
+            Mode: "append",
+            Questions: [q1]));
+
+        Assert.True(commit1.Success);
+        Assert.Equal(1, commit1.QuestionsCommitted);
+
+        // Now append a second batch
+        var q2 = new QuickIngestParsedQuestionDto(
+            Index: 2,
+            StartLineNumber: 6,
+            EndLineNumber: 10,
+            Stem: "Second question stem",
+            DifficultyLevel: 4,
+            Explanation: "Second explanation",
+            CategoryCode: null,
+            Options:
+            [
+                new QuickIngestParsedOptionDto("A", "Option 2A", false),
+                new QuickIngestParsedOptionDto("B", "Option 2B", true)
+            ],
+            Issues: [],
+            IsValid: true);
+
+        var commit2 = await service.CommitQuickIngestAsync(exam.ExamId, new QuickIngestCommitRequest(
+            SectionId: secR,
+            Mode: "append",
+            Questions: [q2]));
+
+        Assert.True(commit2.Success);
+        Assert.Equal(1, commit2.QuestionsCommitted);
+
+        var examQuestions = await service.GetExamQuestionsAsync(exam.ExamId);
+        var questions = examQuestions.Groups.Where(g => g.SectionId == secR).SelectMany(g => g.Questions).OrderBy(q => q.DisplayOrder).ToList();
+        Assert.Equal(2, questions.Count);
+        Assert.Equal("Initial question stem", questions[0].Stem);
+        Assert.Equal(1, questions[0].DisplayOrder);
+        Assert.Equal("Second question stem", questions[1].Stem);
+        Assert.Equal(2, questions[1].DisplayOrder);
+    }
+
+    [Fact]
+    public async Task CommitQuickIngest_ReplaceMode_ReplacesExistingQuestionsAtomically()
+    {
+        var (certId, _, secR, _, _) = await SeedCertificateWithSectionsAsync($"QI_REP_{Guid.NewGuid():N}"[..18]);
+        var service = CreateService();
+
+        var exam = await service.CreateExamAsync(new CreateAdminExamRequest(
+            certId,
+            $"Quick Ingest Replace {Guid.NewGuid():N}"[..25],
+            60,
+            ExamPurposeDto.Mock));
+
+        var qOld = new QuickIngestParsedQuestionDto(
+            Index: 1,
+            StartLineNumber: 1,
+            EndLineNumber: 5,
+            Stem: "Old question to be replaced",
+            DifficultyLevel: 2,
+            Explanation: null,
+            CategoryCode: null,
+            Options:
+            [
+                new QuickIngestParsedOptionDto("A", "Old A", true),
+                new QuickIngestParsedOptionDto("B", "Old B", false)
+            ],
+            Issues: [],
+            IsValid: true);
+
+        await service.CommitQuickIngestAsync(exam.ExamId, new QuickIngestCommitRequest(
+            SectionId: secR,
+            Mode: "append",
+            Questions: [qOld]));
+
+        // Replace with new question
+        var qNew = new QuickIngestParsedQuestionDto(
+            Index: 1,
+            StartLineNumber: 1,
+            EndLineNumber: 5,
+            Stem: "Brand new replacement question",
+            DifficultyLevel: 3,
+            Explanation: "New explanation",
+            CategoryCode: null,
+            Options:
+            [
+                new QuickIngestParsedOptionDto("A", "New A", false),
+                new QuickIngestParsedOptionDto("B", "New B", true)
+            ],
+            Issues: [],
+            IsValid: true);
+
+        var replaceCommit = await service.CommitQuickIngestAsync(exam.ExamId, new QuickIngestCommitRequest(
+            SectionId: secR,
+            Mode: "replace",
+            Questions: [qNew]));
+
+        Assert.True(replaceCommit.Success);
+
+        var examQuestions = await service.GetExamQuestionsAsync(exam.ExamId);
+        var questions = examQuestions.Groups.Where(g => g.SectionId == secR).SelectMany(g => g.Questions).ToList();
+        Assert.Single(questions);
+        Assert.Equal("Brand new replacement question", questions[0].Stem);
+        Assert.Equal(1, questions[0].DisplayOrder);
+    }
+
+    [Fact]
+    public async Task GetExamStudioAsync_ReturnsSectionsGroupsQuestionsAndAudit()
+    {
+        var (certId, secL, secR, _, _) = await SeedCertificateWithSectionsAsync($"STUDIO_{Guid.NewGuid():N}"[..18]);
+        var service = CreateService();
+
+        var exam = await service.CreateExamAsync(new CreateAdminExamRequest(
+            certId,
+            $"Studio Test {Guid.NewGuid():N}"[..25],
+            60,
+            ExamPurposeDto.Mock));
+
+        var grp = await service.CreateQuestionGroupAsync(exam.ExamId, new CreateQuestionGroupRequest(secR));
+        await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
+            grp.GroupId,
+            "Studio Question 1",
+            2,
+            QuestionTypeDto.Mcq,
+            Options:
+            [
+                new AdminQuestionOptionInput(null, "A", "Opt A", true, null),
+                new AdminQuestionOptionInput(null, "B", "Opt B", false, null)
+            ]));
+
+        var studio = await service.GetExamStudioAsync(exam.ExamId);
+
+        Assert.NotNull(studio);
+        Assert.Equal(exam.ExamId, studio.ExamId);
+        Assert.NotEmpty(studio.Sections);
+        Assert.NotNull(studio.Audit);
+
+        var rSection = studio.Sections.FirstOrDefault(s => s.SectionId == secR);
+        Assert.NotNull(rSection);
+        Assert.Single(rSection.Groups);
+        Assert.Single(rSection.Groups[0].Questions);
+        Assert.Equal("Studio Question 1", rSection.Groups[0].Questions[0].Stem);
+    }
+
+    [Fact]
+    public async Task ReorderSectionItemsAsync_UpdatesDisplayOrder()
+    {
+        var (certId, _, secR, _, _) = await SeedCertificateWithSectionsAsync($"REORDER_{Guid.NewGuid():N}"[..18]);
+        var service = CreateService();
+
+        var exam = await service.CreateExamAsync(new CreateAdminExamRequest(
+            certId,
+            $"Reorder Test {Guid.NewGuid():N}"[..25],
+            60,
+            ExamPurposeDto.Mock));
+
+        var grp = await service.CreateQuestionGroupAsync(exam.ExamId, new CreateQuestionGroupRequest(secR));
+        var q1 = await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
+            grp.GroupId,
+            "Question 1",
+            1,
+            QuestionTypeDto.Mcq,
+            Options:
+            [
+                new AdminQuestionOptionInput(null, "A", "A", true, null),
+                new AdminQuestionOptionInput(null, "B", "B", false, null)
+            ]));
+
+        var q2 = await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
+            grp.GroupId,
+            "Question 2",
+            1,
+            QuestionTypeDto.Mcq,
+            Options:
+            [
+                new AdminQuestionOptionInput(null, "A", "A", true, null),
+                new AdminQuestionOptionInput(null, "B", "B", false, null)
+            ]));
+
+        // Reorder q2 first, q1 second
+        var reorderReq = new ReorderSectionItemsRequest(
+            SectionId: secR,
+            Items:
+            [
+                new ReorderSectionItemEntry(null, q2.QuestionId, 1),
+                new ReorderSectionItemEntry(null, q1.QuestionId, 2)
+            ]);
+
+        await service.ReorderSectionItemsAsync(exam.ExamId, reorderReq);
+
+        var studio = await service.GetExamStudioAsync(exam.ExamId);
+        var questions = studio.Sections.First(s => s.SectionId == secR).Groups[0].Questions;
+        Assert.Equal(q2.QuestionId, questions[0].QuestionId);
+        Assert.Equal(1, questions[0].DisplayOrder);
+        Assert.Equal(q1.QuestionId, questions[1].QuestionId);
+        Assert.Equal(2, questions[1].DisplayOrder);
+    }
+
+    [Fact]
+    public async Task CreateExamClusterAsync_P3Conversation_CreatesGroupAnd3ChildQuestions()
+    {
+        var (certId, secL, _, _, _) = await SeedCertificateWithSectionsAsync($"CLUSTER_{Guid.NewGuid():N}"[..18]);
+        var service = CreateService();
+
+        var exam = await service.CreateExamAsync(new CreateAdminExamRequest(
+            certId,
+            $"Cluster Test {Guid.NewGuid():N}"[..25],
+            60,
+            ExamPurposeDto.Mock));
+
+        var cluster = await service.CreateExamClusterAsync(exam.ExamId, new CreateExamClusterRequest(
+            SectionId: secL,
+            Passage: null,
+            Transcript: "M: Hello Sarah\nW: Hi Bob",
+            AudioPath: "/audio/p3-test.mp3",
+            AudioStartMs: 1000,
+            AudioEndMs: 35000,
+            QuestionCount: 3));
+
+        Assert.NotNull(cluster);
+        Assert.Equal("M: Hello Sarah\nW: Hi Bob", cluster.Transcript);
+        Assert.Equal("/audio/p3-test.mp3", cluster.AudioPath);
+        Assert.Equal(1000, cluster.AudioStartMs);
+        Assert.Equal(35000, cluster.AudioEndMs);
+        Assert.Equal(3, cluster.Questions.Count);
+        foreach (var q in cluster.Questions)
+        {
+            Assert.Equal(4, q.Options.Count);
+            Assert.Contains(q.Options, o => o.Label == "A" && o.IsCorrect);
+        }
+    }
+
+    [Fact]
+    public async Task CreateExamClusterAsync_SpeakingWriting_SetsFreeResponseAndTimers()
+    {
+        var (certId, _, _, secS, secW) = await SeedCertificateWithSectionsAsync($"SW_CLUS_{Guid.NewGuid():N}"[..18]);
+        var service = CreateService();
+
+        var exam = await service.CreateExamAsync(new CreateAdminExamRequest(
+            certId,
+            $"Speaking Cluster {Guid.NewGuid():N}"[..25],
+            30,
+            ExamPurposeDto.SpeakingPractice));
+
+        var cluster = await service.CreateExamClusterAsync(exam.ExamId, new CreateExamClusterRequest(
+            SectionId: secS,
+            QuestionCount: 1));
+
+        Assert.NotNull(cluster);
+        Assert.Single(cluster.Questions);
+        var q = cluster.Questions[0];
+        Assert.Equal(QuestionTypeDto.FreeResponse, q.QuestionType);
+        Assert.Empty(q.Options);
+        Assert.Equal(15, q.PrepSeconds);
+        Assert.Equal(45, q.ResponseSeconds);
+    }
+
+    [Fact]
+    public async Task ExportExamPackageAsync_JsonFormat_ReturnsManifestStream()
+    {
+        var (certId, secL, _, _, _) = await SeedCertificateWithSectionsAsync($"EXPJ_{Guid.NewGuid():N}"[..18]);
+        var service = CreateService();
+
+        var exam = await service.CreateExamAsync(new CreateAdminExamRequest(
+            certId,
+            $"Export Test {Guid.NewGuid():N}"[..25],
+            60,
+            ExamPurposeDto.Mock));
+
+        await service.CreateExamClusterAsync(exam.ExamId, new CreateExamClusterRequest(
+            SectionId: secL,
+            Passage: "Export passage",
+            QuestionCount: 2));
+
+        var (stream, contentType, fileName) = await service.ExportExamPackageAsync(exam.ExamId, "json");
+
+        Assert.Equal("application/json", contentType);
+        Assert.EndsWith("_manifest.json", fileName);
+        Assert.NotNull(stream);
+
+        using var reader = new StreamReader(stream);
+        var json = await reader.ReadToEndAsync();
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement;
+        Assert.Equal("1.0", root.GetProperty("version").GetString());
+        Assert.Equal(exam.Name, root.GetProperty("exam").GetProperty("title").GetString());
+        Assert.True(root.GetProperty("sections").GetArrayLength() > 0);
+        var firstSec = root.GetProperty("sections")[0];
+        Assert.True(firstSec.GetProperty("groups").GetArrayLength() > 0);
+        Assert.Equal(2, firstSec.GetProperty("groups")[0].GetProperty("questions").GetArrayLength());
+    }
+
+    [Fact]
+    public async Task ExportExamPackageAsync_ZipFormat_ContainsManifestEntry()
+    {
+        var (certId, secL, _, _, _) = await SeedCertificateWithSectionsAsync($"EXPZ_{Guid.NewGuid():N}"[..18]);
+        var service = CreateService();
+
+        var exam = await service.CreateExamAsync(new CreateAdminExamRequest(
+            certId,
+            $"Export Zip {Guid.NewGuid():N}"[..25],
+            60,
+            ExamPurposeDto.Mock));
+
+        await service.CreateExamClusterAsync(exam.ExamId, new CreateExamClusterRequest(
+            SectionId: secL,
+            Passage: "Zip passage",
+            QuestionCount: 1));
+
+        var (stream, contentType, fileName) = await service.ExportExamPackageAsync(exam.ExamId, "zip");
+
+        Assert.Equal("application/zip", contentType);
+        Assert.EndsWith("_package.zip", fileName);
+        Assert.NotNull(stream);
+
+        using var archive = new ZipArchive(stream, ZipArchiveMode.Read);
+        var manifestEntry = archive.GetEntry("manifest.json");
+        Assert.NotNull(manifestEntry);
+
+        using var entryStream = manifestEntry.Open();
+        using var doc = await JsonDocument.ParseAsync(entryStream);
+        var root = doc.RootElement;
+        Assert.Equal("1.0", root.GetProperty("version").GetString());
+        Assert.Equal(exam.Name, root.GetProperty("exam").GetProperty("title").GetString());
+    }
+
+    [Fact]
+    public async Task GetExamsAsync_FiltersByPurpose_AndScopesAudioStatus()
+    {
+        var (certId, secL, secR, secS, secW) = await SeedCertificateWithSectionsAsync($"PURP_{Guid.NewGuid():N}"[..18]);
+        var service = CreateService();
+
+        var mockExam = await service.CreateExamAsync(new CreateAdminExamRequest(
+            certId, $"Mock Exam {Guid.NewGuid():N}"[..25], 60, ExamPurposeDto.Mock));
+
+        var placementExam = await service.CreateExamAsync(new CreateAdminExamRequest(
+            certId, $"Placement Exam {Guid.NewGuid():N}"[..25], 45, ExamPurposeDto.Placement));
+
+        var speakingExam = await service.CreateExamAsync(new CreateAdminExamRequest(
+            certId, $"Speaking Exam {Guid.NewGuid():N}"[..25], 20, ExamPurposeDto.SpeakingPractice));
+
+        var writingExam = await service.CreateExamAsync(new CreateAdminExamRequest(
+            certId, $"Writing Exam {Guid.NewGuid():N}"[..25], 30, ExamPurposeDto.WritingPractice));
+
+        // 1. Filter by "mock"
+        var mockResult = await service.GetExamsAsync(q: null, status: null, certId: certId, purpose: "mock", page: 1, pageSize: 20);
+        Assert.Single(mockResult.Exams);
+        Assert.Equal(mockExam.ExamId, mockResult.Exams[0].ExamId);
+        Assert.Equal("No audio", mockResult.Exams[0].AudioStatus); // Listening section exists but no audio uploaded
+
+        // 2. Filter by "placement"
+        var placementResult = await service.GetExamsAsync(q: null, status: null, certId: certId, purpose: "placement", page: 1, pageSize: 20);
+        Assert.Single(placementResult.Exams);
+        Assert.Equal(placementExam.ExamId, placementResult.Exams[0].ExamId);
+
+        // 3. Filter by "practice" returns both speaking and writing
+        var practiceResult = await service.GetExamsAsync(q: null, status: null, certId: certId, purpose: "practice", page: 1, pageSize: 20);
+        Assert.Equal(2, practiceResult.Exams.Count);
+        Assert.Contains(practiceResult.Exams, e => e.ExamId == speakingExam.ExamId);
+        Assert.Contains(practiceResult.Exams, e => e.ExamId == writingExam.ExamId);
+
+        // Verify audioStatus scoping: Speaking and Writing practice exams are N/A
+        var speakingItem = practiceResult.Exams.Single(e => e.ExamId == speakingExam.ExamId);
+        var writingItem = practiceResult.Exams.Single(e => e.ExamId == writingExam.ExamId);
+        Assert.Equal("N/A", speakingItem.AudioStatus);
+        Assert.Equal("N/A", writingItem.AudioStatus);
     }
 }
