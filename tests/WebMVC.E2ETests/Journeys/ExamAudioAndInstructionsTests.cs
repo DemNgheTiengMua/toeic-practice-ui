@@ -65,21 +65,28 @@ public class ExamAudioAndInstructionsTests : PlaywrightTestBase
         await Expect(footer).ToContainTextAsync("9");
     }
 
+    private static async Task ExecuteSqlAsync(string sql)
+    {
+        var rawConn = Environment.GetEnvironmentVariable("TEST_DB_CONNECTION")
+            ?? @"Server=(localdb)\MSSQLLocalDB;Database=ExtraEfficiency;Trusted_Connection=True;TrustServerCertificate=True";
+        var builder = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(rawConn);
+        if (string.IsNullOrEmpty(builder.InitialCatalog))
+        {
+            builder.InitialCatalog = "ExtraEfficiency";
+        }
+
+        await using var conn = new Microsoft.Data.SqlClient.SqlConnection(builder.ConnectionString);
+        await conn.OpenAsync();
+        await using var cmd = new Microsoft.Data.SqlClient.SqlCommand(sql, conn);
+        await cmd.ExecuteNonQueryAsync();
+    }
+
     [Test]
     public async Task Should_Render_Audio_Slice_Attributes_And_Enforce_Slice_Bounds_During_Playback()
     {
         // Issue #75: Audio slicing. The attempt question player carries slice offsets,
         // plays only the designated slice of the section's master track, and stops on time.
-        using var sqlCmd = new System.Diagnostics.Process();
-        sqlCmd.StartInfo = new System.Diagnostics.ProcessStartInfo
-        {
-            FileName = "sqlcmd",
-            Arguments = "-S \"(localdb)\\MSSQLLocalDB\" -d ExtraEfficiency -Q \"UPDATE QuestionGroups SET AudioStartMs = 200, AudioEndMs = 800 WHERE GroupId = 1;\"",
-            RedirectStandardOutput = true,
-            UseShellExecute = false
-        };
-        sqlCmd.Start();
-        await sqlCmd.WaitForExitAsync();
+        await ExecuteSqlAsync("UPDATE QuestionGroups SET AudioStartMs = 200, AudioEndMs = 800 WHERE GroupId = 1;");
 
         try
         {
@@ -121,16 +128,7 @@ public class ExamAudioAndInstructionsTests : PlaywrightTestBase
         finally
         {
             // Reset DB state
-            using var resetCmd = new System.Diagnostics.Process();
-            resetCmd.StartInfo = new System.Diagnostics.ProcessStartInfo
-            {
-                FileName = "sqlcmd",
-                Arguments = "-S \"(localdb)\\MSSQLLocalDB\" -d ExtraEfficiency -Q \"UPDATE QuestionGroups SET AudioStartMs = NULL, AudioEndMs = NULL WHERE GroupId = 1;\"",
-                RedirectStandardOutput = true,
-                UseShellExecute = false
-            };
-            resetCmd.Start();
-            await resetCmd.WaitForExitAsync();
+            await ExecuteSqlAsync("UPDATE QuestionGroups SET AudioStartMs = NULL, AudioEndMs = NULL WHERE GroupId = 1;");
         }
     }
 
