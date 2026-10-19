@@ -374,4 +374,93 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
         var reloaded = await db.ExamAttempts.SingleAsync(a => a.AttemptId == attempt.AttemptId);
         Assert.Equal(AttemptStatus.Abandoned.ToCode(), reloaded.Status);
     }
+
+    /// <summary>Gives the listening question's group the given audio and, optionally, its section a
+    /// studio-uploaded master track.</summary>
+    private async Task SetListeningAudioAsync(int examId, int q1Id, string? groupAudioPath, int? startMs, int? endMs, string? masterPath)
+    {
+        string Sql(string? s) => s is null ? "NULL" : $"N'{s}'";
+        string Num(int? n) => n?.ToString() ?? "NULL";
+        await database.SqlAsync($"""
+            UPDATE QuestionGroups SET AudioPath = {Sql(groupAudioPath)}, AudioStartMs = {Num(startMs)}, AudioEndMs = {Num(endMs)}
+            WHERE GroupId = (SELECT GroupId FROM Questions WHERE QuestionId = {q1Id});
+            """);
+        if (masterPath is not null)
+        {
+            await database.SqlAsync($"""
+                INSERT INTO ExamSectionAudio (ExamId, SectionId, CertId, AudioPath, DurationSec, SizeBytes)
+                SELECT {examId}, q.SectionId, e.CertId, N'{masterPath}', 600, 1000
+                FROM Questions q JOIN Exams e ON e.ExamId = q.ExamId WHERE q.QuestionId = {q1Id};
+                """);
+        }
+    }
+
+    [Fact]
+    public async Task GetAttemptTake_plays_the_section_master_track_limited_to_the_groups_slice()
+    {
+        var certCode = Unique("AU75");
+        var (certId, examId, q1Id, _, _, _) = await SeedExamFixtureAsync(certCode);
+        await SetListeningAudioAsync(examId, q1Id, groupAudioPath: null, startMs: 2000, endMs: 5000, masterPath: $"/media/exams/{examId}/master.mp3");
+        var userId = await SeedLearnerAsync(certCode);
+        var engine = CreateEngine();
+        var attempt = await engine.CreateAttemptAsync(userId, certId, examId, 60);
+
+        var take = await engine.GetAttemptTakeAsync(attempt.AttemptId, userId, 1);
+
+        Assert.Equal($"/media/exams/{examId}/master.mp3", take.CurrentQuestion.AudioPath);
+        Assert.Equal(2000, take.CurrentQuestion.AudioStartMs);
+        Assert.Equal(5000, take.CurrentQuestion.AudioEndMs);
+    }
+
+    [Fact]
+    public async Task GetAttemptTake_prefers_an_uploaded_section_master_over_the_groups_old_audio_file()
+    {
+        var certCode = Unique("AU75");
+        var (certId, examId, q1Id, _, _, _) = await SeedExamFixtureAsync(certCode);
+        await SetListeningAudioAsync(examId, q1Id, groupAudioPath: "/audio/toeic/test1-p1.mp3", startMs: null, endMs: null, masterPath: $"exams/{examId}/upload.mp3");
+        var userId = await SeedLearnerAsync(certCode);
+        var engine = CreateEngine();
+        var attempt = await engine.CreateAttemptAsync(userId, certId, examId, 60);
+
+        var take = await engine.GetAttemptTakeAsync(attempt.AttemptId, userId, 1);
+
+        Assert.Equal($"/media/exams/{examId}/upload.mp3", take.CurrentQuestion.AudioPath);
+        Assert.Null(take.CurrentQuestion.AudioStartMs);
+        Assert.Null(take.CurrentQuestion.AudioEndMs);
+    }
+
+    [Fact]
+    public async Task GetAttemptTake_uses_the_groups_own_audio_when_the_section_has_no_master()
+    {
+        var certCode = Unique("AU75");
+        var (certId, examId, q1Id, _, _, _) = await SeedExamFixtureAsync(certCode);
+        await SetListeningAudioAsync(examId, q1Id, groupAudioPath: "/audio/toeic/test1-p1.mp3", startMs: null, endMs: null, masterPath: null);
+        var userId = await SeedLearnerAsync(certCode);
+        var engine = CreateEngine();
+        var attempt = await engine.CreateAttemptAsync(userId, certId, examId, 60);
+
+        var take = await engine.GetAttemptTakeAsync(attempt.AttemptId, userId, 1);
+
+        Assert.Equal("/audio/toeic/test1-p1.mp3", take.CurrentQuestion.AudioPath);
+        Assert.Null(take.CurrentQuestion.AudioStartMs);
+    }
+
+    [Fact]
+    public async Task GetAttemptReview_replays_the_same_master_slice_the_learner_heard()
+    {
+        var certCode = Unique("AU75");
+        var (certId, examId, q1Id, _, _, _) = await SeedExamFixtureAsync(certCode);
+        await SetListeningAudioAsync(examId, q1Id, groupAudioPath: null, startMs: 1500, endMs: 9000, masterPath: $"/media/exams/{examId}/master.mp3");
+        var userId = await SeedLearnerAsync(certCode);
+        var engine = CreateEngine();
+        var attempt = await engine.CreateAttemptAsync(userId, certId, examId, 60);
+        await engine.SubmitAttemptAsync(attempt.AttemptId, userId, isAutoSubmit: false);
+
+        var review = await engine.GetAttemptReviewAsync(attempt.AttemptId, userId);
+
+        var listening = review.Questions.Single(q => q.QuestionId == q1Id);
+        Assert.Equal($"/media/exams/{examId}/master.mp3", listening.AudioPath);
+        Assert.Equal(1500, listening.AudioStartMs);
+        Assert.Equal(9000, listening.AudioEndMs);
+    }
 }

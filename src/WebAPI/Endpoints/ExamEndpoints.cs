@@ -65,6 +65,7 @@ public static class ExamEndpoints
                         s.SectionCode,
                         s.SectionName,
                         s.ExpectedQuestionCount,
+                        s.QuestionCount,
                         s.DurationMinutes,
                         s.DisplayOrder)).ToList()));
             }
@@ -127,6 +128,8 @@ public static class ExamEndpoints
                     qInfo.ImagePath,
                     qInfo.ImageAlt,
                     qInfo.AudioPath,
+                    qInfo.AudioStartMs,
+                    qInfo.AudioEndMs,
                     qInfo.Transcript,
                     qInfo.Passage,
                     qInfo.Options.Select(o => new AttemptOptionDto(o.OptionId, o.Label, o.Text)).ToList(),
@@ -354,6 +357,8 @@ public static class ExamEndpoints
                         q.ImagePath,
                         q.ImageAlt,
                         q.AudioPath,
+                        q.AudioStartMs,
+                        q.AudioEndMs,
                         q.Transcript,
                         q.Passage,
                         q.Explanation,

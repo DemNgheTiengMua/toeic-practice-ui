@@ -160,6 +160,20 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
         }
     }
 
+    /// <summary>Studio-uploaded master track per section of the exam (ExamSectionAudio).</summary>
+    private Task<Dictionary<int, string>> LoadSectionMasterAudioAsync(int examId, CancellationToken cancellationToken) =>
+        db.ExamSectionAudios
+            .AsNoTracking()
+            .Where(a => a.ExamId == examId)
+            .ToDictionaryAsync(a => a.SectionId, a => a.AudioPath, cancellationToken);
+
+    private static ResolvedGroupAudio? ResolveGroupAudio(QuestionGroup group, Dictionary<int, string> sectionMasters) =>
+        ExamAudio.Resolve(
+            group.AudioPath,
+            group.AudioStartMs,
+            group.AudioEndMs,
+            sectionMasters.GetValueOrDefault(group.SectionId));
+
     public async Task<AttemptTakeView> GetAttemptTakeAsync(
         int attemptId,
         int userId,
@@ -225,6 +239,8 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
                 .OrderBy(o => o.Label)
                 .Select(o => new AttemptOption(o.OptionId, o.Label, o.Text))
                 .ToList();
+            var sectionMasterAudio = await LoadSectionMasterAudioAsync(attempt.ExamId, cancellationToken);
+            var audio = ResolveGroupAudio(q.Group, sectionMasterAudio);
 
             currentQuestionInfo = new AttemptQuestionInfo(
                 q.QuestionId,
@@ -239,7 +255,9 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
                 q.Stem,
                 q.Group.ImagePath,
                 q.Group.ImageAlt,
-                q.Group.AudioPath,
+                audio?.Path,
+                audio?.StartMs,
+                audio?.EndMs,
                 q.Group.Transcript,
                 q.Group.Passage,
                 opts,
@@ -249,7 +267,7 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
         else
         {
             currentQuestionInfo = new AttemptQuestionInfo(
-                0, 0, 0, 0, "", "", "", "", Modality.Reading, "", null, null, null, null, null, [], null, false);
+                0, 0, 0, 0, "", "", "", "", Modality.Reading, "", null, null, null, null, null, null, null, [], null, false);
         }
 
         var navigator = answers.Select((a, idx) => new NavigatorItem(
@@ -676,6 +694,7 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
             .Where(b => b.CertId == attempt.CertId && b.Code == attempt.BandCode)
             .FirstOrDefaultAsync(cancellationToken);
 
+        var sectionMasterAudio = await LoadSectionMasterAudioAsync(attempt.ExamId, cancellationToken);
         var reviewQuestions = new List<AttemptReviewQuestion>();
         var navigator = new List<ReviewNavigatorItem>();
 
@@ -694,6 +713,7 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
             bool isFlagged = ans?.IsFlagged ?? false;
             bool isAnswered = selectedOptionId.HasValue;
             bool? isCorrect = isAnswered ? ans?.IsCorrect : null;
+            var audio = ResolveGroupAudio(q.Group, sectionMasterAudio);
 
             reviewQuestions.Add(new AttemptReviewQuestion(
                 q.QuestionId,
@@ -708,7 +728,9 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
                 q.Stem,
                 q.Group.ImagePath,
                 q.Group.ImageAlt,
-                q.Group.AudioPath,
+                audio?.Path,
+                audio?.StartMs,
+                audio?.EndMs,
                 q.Group.Transcript,
                 q.Group.Passage,
                 q.Explanation,

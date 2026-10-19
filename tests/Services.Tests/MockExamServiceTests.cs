@@ -438,4 +438,27 @@ public sealed class MockExamServiceTests(DatabaseFixture database)
         Assert.Equal(1, review.CorrectCount);
         Assert.Equal(0, review.IncorrectCount);
     }
+
+    [Fact]
+    public async Task GetExamInstructions_lists_only_sections_with_questions_in_this_exam_and_their_actual_counts()
+    {
+        var certCode = Unique("MC76");
+        var (certId, examId, _, _, _, _) = await SeedMockExamFixtureAsync(certCode);
+        // The certificate also has a Speaking section this exam has no questions in, and P1's
+        // certificate-wide expected count differs from the exam's real count.
+        await database.SqlAsync($"""
+            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder, DurationMinutes)
+            VALUES ({certId}, 'SPK', N'Speaking', 'speaking', 3, 20);
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder)
+            VALUES ((SELECT SkillId FROM Skills WHERE CertId = {certId} AND Code = 'SPK'), {certId}, 'speaking', 'S1', N'Read aloud', 3);
+            UPDATE Sections SET ExpectedQuestionCount = 6 WHERE CertId = {certId} AND Code = 'P1';
+            """);
+        var userId = await SeedLearnerAsync(certCode);
+        var (service, _) = CreateServices();
+
+        var instructions = await service.GetExamInstructionsAsync(userId, examId);
+
+        Assert.Equal(["P1", "P5"], instructions.Sections.Select(s => s.SectionCode));
+        Assert.All(instructions.Sections, s => Assert.Equal(1, s.QuestionCount));
+    }
 }

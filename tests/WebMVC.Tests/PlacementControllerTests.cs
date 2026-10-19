@@ -114,7 +114,7 @@ public sealed class PlacementControllerTests
     {
         var q = new AttemptQuestionDto(
             10, 1, 20, 1, "P1", "Part 1", "listening", "Listening", ModalityDto.Listening,
-            "Look at the photo.", null, null, null, null, null,
+            "Look at the photo.", null, null, null, null, null, null, null,
             [new AttemptOptionDto(1, "A", "Statement A"), new AttemptOptionDto(2, "B", "Statement B")],
             null, false);
 
@@ -140,7 +140,7 @@ public sealed class PlacementControllerTests
     [Fact]
     public async Task Take_when_completed_redirects_to_Result()
     {
-        var q = new AttemptQuestionDto(10, 1, 20, 1, "P1", "Part 1", "listening", "Listening", ModalityDto.Listening, "Stem", null, null, null, null, null, [], null, false);
+        var q = new AttemptQuestionDto(10, 1, 20, 1, "P1", "Part 1", "listening", "Listening", ModalityDto.Listening, "Stem", null, null, null, null, null, null, null, [], null, false);
         var take = new PlacementTakeViewDto(
             42, 100, 1, "TOEIC Placement Test — Standard", "TOEIC", PlacementStatusDto.Done,
             DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddMinutes(45), 0,
@@ -159,7 +159,7 @@ public sealed class PlacementControllerTests
     [Fact]
     public async Task Take_when_abandoned_redirects_to_Index()
     {
-        var q = new AttemptQuestionDto(10, 1, 20, 1, "P1", "Part 1", "listening", "Listening", ModalityDto.Listening, "Stem", null, null, null, null, null, [], null, false);
+        var q = new AttemptQuestionDto(10, 1, 20, 1, "P1", "Part 1", "listening", "Listening", ModalityDto.Listening, "Stem", null, null, null, null, null, null, null, [], null, false);
         var take = new PlacementTakeViewDto(
             42, 100, 1, "TOEIC Placement Test — Standard", "TOEIC", PlacementStatusDto.Abandoned,
             DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddMinutes(45), 0,

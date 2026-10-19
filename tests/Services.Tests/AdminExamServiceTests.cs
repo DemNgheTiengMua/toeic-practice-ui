@@ -994,4 +994,56 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         Assert.Equal("N/A", speakingItem.AudioStatus);
         Assert.Equal("N/A", writingItem.AudioStatus);
     }
+
+    [Fact]
+    public async Task Audit_blocks_publish_when_a_listening_section_master_track_is_not_sliced_per_group()
+    {
+        var (certId, secL, _, _, _) = await SeedCertificateWithSectionsAsync($"AUD75_{Guid.NewGuid():N}"[..18]);
+        var service = CreateService();
+        var exam = await service.CreateExamAsync(new CreateAdminExamRequest(
+            certId, $"Audio Audit {Guid.NewGuid():N}"[..25], 60, ExamPurposeDto.Mock));
+        var g1 = await service.CreateQuestionGroupAsync(exam.ExamId, new CreateQuestionGroupRequest(secL));
+        var g2 = await service.CreateQuestionGroupAsync(exam.ExamId, new CreateQuestionGroupRequest(secL, DisplayOrder: 2));
+        await database.SqlAsync($"""
+            INSERT INTO ExamSectionAudio (ExamId, SectionId, CertId, AudioPath, DurationSec, SizeBytes)
+            VALUES ({exam.ExamId}, {secL}, {certId}, N'/media/exams/{exam.ExamId}/master.mp3', 600, 1000);
+            """);
+
+        // Section audio alone used to pass; every cluster would play the whole master track.
+        var unsliced = await service.AuditExamPublishReadinessAsync(exam.ExamId);
+        Assert.Equal(
+            [g1.GroupId, g2.GroupId],
+            unsliced.Issues.Where(i => i.Code == "GRP_AUDIO_UNSLICED" && i.Severity == "error").Select(i => i.GroupId!.Value).Order());
+
+        await service.UpdateQuestionGroupAsync(exam.ExamId, g1.GroupId, new UpdateQuestionGroupRequest(secL, AudioStartMs: 0, AudioEndMs: 4000, DisplayOrder: 1));
+        await service.UpdateQuestionGroupAsync(exam.ExamId, g2.GroupId, new UpdateQuestionGroupRequest(secL, AudioStartMs: 4000, AudioEndMs: 9000, DisplayOrder: 2));
+
+        var sliced = await service.AuditExamPublishReadinessAsync(exam.ExamId);
+        Assert.DoesNotContain(sliced.Issues, i => i.Code is "GRP_AUDIO_UNSLICED" or "SEC_AUDIO_MISSING");
+    }
+
+    [Fact]
+    public async Task Audit_warns_when_a_section_master_track_overrides_a_groups_own_audio_file()
+    {
+        var (certId, secL, _, _, _) = await SeedCertificateWithSectionsAsync($"AUDOV_{Guid.NewGuid():N}"[..18]);
+        var service = CreateService();
+        var exam = await service.CreateExamAsync(new CreateAdminExamRequest(
+            certId, $"Audio Override {Guid.NewGuid():N}"[..25], 60, ExamPurposeDto.Mock));
+        var own = await service.CreateQuestionGroupAsync(exam.ExamId, new CreateQuestionGroupRequest(secL, AudioPath: "/audio/own-file.mp3"));
+        await database.SqlAsync($"""
+            INSERT INTO ExamSectionAudio (ExamId, SectionId, CertId, AudioPath, DurationSec, SizeBytes)
+            VALUES ({exam.ExamId}, {secL}, {certId}, N'/media/exams/{exam.ExamId}/master.mp3', 600, 1000);
+            """);
+
+        var audit = await service.AuditExamPublishReadinessAsync(exam.ExamId);
+
+        var issue = Assert.Single(audit.Issues, i => i.Code == "GRP_AUDIO_OVERRIDDEN");
+        Assert.Equal("warning", issue.Severity);
+        Assert.Equal(own.GroupId, issue.GroupId);
+
+        // A group whose own file is the master track itself (seeded exams) is not overridden.
+        await service.UpdateQuestionGroupAsync(exam.ExamId, own.GroupId, new UpdateQuestionGroupRequest(secL, AudioPath: $"/media/exams/{exam.ExamId}/master.mp3"));
+        var same = await service.AuditExamPublishReadinessAsync(exam.ExamId);
+        Assert.DoesNotContain(same.Issues, i => i.Code == "GRP_AUDIO_OVERRIDDEN");
+    }
 }

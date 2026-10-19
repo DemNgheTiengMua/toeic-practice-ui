@@ -22,6 +22,10 @@ _Avoid_: Part (except in TOEIC-specific copy)
 An authored set of questions for one certificate, with a purpose: mock, placement, speaking practice, or writing practice.
 _Avoid_: Test, paper
 
+**Audio slicing**:
+How a listening question group gets its audio. An exam section may have one **master track** uploaded in Exam Studio; when it does, every group in that section plays the master track, cut to the group's own start/end slice. A group plays its own audio file only when its section has no master track. A section with a master track and several groups needs a slice on every group, or each group would play the whole track.
+_Avoid_: Clip (for a slice), part audio
+
 ### Learning activity
 
 **Practice session**:

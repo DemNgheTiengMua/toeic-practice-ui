@@ -275,7 +275,27 @@ public interface IMediaClient
     Task<(Stream Stream, string ContentType)> GetImportMediaAsync(int batchId, string fileName, string bearerToken, CancellationToken cancellationToken = default) => GetImportMediaAsync(batchId, fileName, cancellationToken);
     Task<(Stream Stream, string ContentType)> GetExamMediaAsync(int examId, string fileName, CancellationToken cancellationToken = default);
     Task<(Stream Stream, string ContentType)> GetExamMediaAsync(int examId, string fileName, string bearerToken, CancellationToken cancellationToken = default) => GetExamMediaAsync(examId, fileName, cancellationToken);
+
+    /// <summary>Fetches a stored media file (an import batch's or an exam's) forwarding the browser's
+    /// Range header, so audio can start mid-track (slices) and seek through the proxy.</summary>
+    async Task<MediaStreamResponse> GetMediaAsync(MediaArea area, int ownerId, string fileName, string? range, string bearerToken, CancellationToken cancellationToken = default)
+    {
+        var (stream, contentType) = area == MediaArea.Imports
+            ? await GetImportMediaAsync(ownerId, fileName, bearerToken, cancellationToken)
+            : await GetExamMediaAsync(ownerId, fileName, bearerToken, cancellationToken);
+        return new MediaStreamResponse(stream, contentType, 200, null, null);
+    }
 }
+
+/// <summary>Where a media file is stored: under an import batch (ADR-0007) or under an exam (studio uploads).</summary>
+public enum MediaArea
+{
+    Imports,
+    Exams,
+}
+
+/// <summary>A media body relayed from the API: 200 with the whole file, or 206 with the requested range.</summary>
+public sealed record MediaStreamResponse(Stream Stream, string ContentType, int StatusCode, string? ContentRange, long? ContentLength);
 
 public interface IAdminPackagesClient
 {

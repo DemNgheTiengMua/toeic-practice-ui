@@ -44,7 +44,7 @@ public sealed class ExamsControllerTests
             Instructions = new MockExamInstructionsDto(
                 1, 1, "TOEIC", "ETS 2024 — Test 1", "Full test", 120, 200, 1, 8, null,
                 [
-                    new MockExamSectionInfoDto(1, "listening", "Listening", ModalityDto.Listening, "P1", "Part 1", 6, 45, 1)
+                    new MockExamSectionInfoDto(1, "listening", "Listening", ModalityDto.Listening, "P1", "Part 1", 6, 6, 45, 1)
                 ]),
         };
 
@@ -110,7 +110,7 @@ public sealed class ExamsControllerTests
     {
         var q = new AttemptQuestionDto(
             10, 1, 200, 1, "P1", "Part 1", "listening", "Listening", ModalityDto.Listening,
-            "Look at the picture.", null, null, null, null, null,
+            "Look at the picture.", null, null, null, null, null, null, null,
             [new AttemptOptionDto(1, "A", "Text A"), new AttemptOptionDto(2, "B", "Text B")],
             null, false);
 
@@ -135,7 +135,7 @@ public sealed class ExamsControllerTests
     [Fact]
     public async Task Take_when_attempt_is_graded_redirects_to_Result()
     {
-        var q = new AttemptQuestionDto(10, 1, 200, 1, "P1", "Part 1", "listening", "Listening", ModalityDto.Listening, "Stem", null, null, null, null, null, [], null, false);
+        var q = new AttemptQuestionDto(10, 1, 200, 1, "P1", "Part 1", "listening", "Listening", ModalityDto.Listening, "Stem", null, null, null, null, null, null, null, [], null, false);
         var take = new AttemptTakeDto(
             100, 1, "ETS 2024 — Test 1", "TOEIC", AttemptStatusDto.Graded,
             DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddHours(2), 0,

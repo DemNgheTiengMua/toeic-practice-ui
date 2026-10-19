@@ -138,12 +138,23 @@ public sealed class MockExamService(
             activeAttempt = null;
         }
 
-        var sections = await db.Sections
+        // Only the sections this exam has questions in, counted from the exam itself — the
+        // certificate may define sections (e.g. Speaking on TOEIC L&R) this exam never uses.
+        var questionCounts = await db.Questions
             .AsNoTracking()
-            .Where(s => s.CertId == certId)
-            .Include(s => s.Skill)
-            .OrderBy(s => s.Skill.DisplayOrder)
-            .ThenBy(s => s.DisplayOrder)
+            .Where(q => q.ExamId == examId)
+            .GroupBy(q => q.SectionId)
+            .Select(g => new { SectionId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.SectionId, x => x.Count, cancellationToken);
+        var examSectionIds = questionCounts.Keys.ToList();
+
+        var sections = (await db.Sections
+                .AsNoTracking()
+                .Where(s => s.CertId == certId && examSectionIds.Contains(s.SectionId))
+                .Include(s => s.Skill)
+                .OrderBy(s => s.Skill.DisplayOrder)
+                .ThenBy(s => s.DisplayOrder)
+                .ToListAsync(cancellationToken))
             .Select(s => new MockExamSectionInfo(
                 s.SectionId,
                 s.Skill.Code,
@@ -152,9 +163,10 @@ public sealed class MockExamService(
                 s.Code,
                 s.Name,
                 s.ExpectedQuestionCount,
+                questionCounts[s.SectionId],
                 s.Skill.DurationMinutes,
                 s.DisplayOrder))
-            .ToListAsync(cancellationToken);
+            .ToList();
 
         return new MockExamInstructionsView(
             exam.ExamId,

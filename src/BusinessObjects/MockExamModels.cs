@@ -31,6 +31,7 @@ public sealed record MockExamSectionInfo(
     string SectionCode,
     string SectionName,
     int? ExpectedQuestionCount,
+    int QuestionCount,
     int? DurationMinutes,
     int DisplayOrder);
 
@@ -75,6 +76,8 @@ public sealed record AttemptQuestionInfo(
     string? ImagePath,
     string? ImageAlt,
     string? AudioPath,
+    int? AudioStartMs,
+    int? AudioEndMs,
     string? Transcript,
     string? Passage,
     IReadOnlyList<AttemptOption> Options,
@@ -194,6 +197,8 @@ public sealed record AttemptReviewQuestion(
     string? ImagePath,
     string? ImageAlt,
     string? AudioPath,
+    int? AudioStartMs,
+    int? AudioEndMs,
     string? Transcript,
     string? Passage,
     string? Explanation,

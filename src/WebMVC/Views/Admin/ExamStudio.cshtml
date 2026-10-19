@@ -1245,15 +1245,8 @@
         audio.src = mediaUrl;
         document.getElementById('slicer-track-label-' + secId).textContent = mediaUrl;
       }
-      if (activeSlicerGroupId) {
-        var grpCard = document.getElementById('group-card-' + activeSlicerGroupId);
-        var pathInput = grpCard?.querySelector('[data-field="AudioPath"]');
-        if (pathInput) {
-          pathInput.value = mediaUrl;
-          saveSingleGroup(activeSlicerGroupId);
-        }
-      }
-
+      // The master track is the section's (ExamSectionAudio); every group plays it through its
+      // slice, so nothing is copied into a group's own AudioPath here.
       var audioFormData = new FormData();
       audioFormData.append('SectionId', secId);
       audioFormData.append('AudioPath', mediaUrl);

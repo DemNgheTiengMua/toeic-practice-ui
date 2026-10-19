@@ -91,6 +91,8 @@ public static class PlacementEndpoints
                     take.CurrentQuestion.ImagePath,
                     take.CurrentQuestion.ImageAlt,
                     take.CurrentQuestion.AudioPath,
+                    take.CurrentQuestion.AudioStartMs,
+                    take.CurrentQuestion.AudioEndMs,
                     take.CurrentQuestion.Transcript,
                     take.CurrentQuestion.Passage,
                     take.CurrentQuestion.Options.Select(o => new AttemptOptionDto(o.OptionId, o.Label, o.Text)).ToList(),

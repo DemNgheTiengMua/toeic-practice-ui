@@ -20,7 +20,8 @@
     <h1 class="m-0 mb-1">Before you begin: @instr.ExamName</h1>
     <p class="text-muted no-margin">
       Certificate: <strong>@instr.CertCode</strong> · Duration: <strong>@instr.DurationMinutes minutes</strong>
-      @(instr.QuestionCount.HasValue ? $"· Questions: {instr.QuestionCount}" : "")
+      @{ var questionTotal = instr.Sections.Count > 0 ? instr.Sections.Sum(s => s.QuestionCount) : instr.QuestionCount; }
+      @(questionTotal.HasValue ? $"· Questions: {questionTotal}" : "")
     </p>
   </div>
   <div>
@@ -67,7 +68,6 @@ else
                 <th>Skill</th>
                 <th>Section</th>
                 <th>Questions</th>
-                <th>Time</th>
               </tr>
             </thead>
             <tbody>
@@ -76,17 +76,14 @@ else
                 <tr>
                   <td>@sec.SkillName</td>
                   <td>@sec.SectionName</td>
-                  <td>@(sec.ExpectedQuestionCount.HasValue ? sec.ExpectedQuestionCount.ToString() : "—")</td>
-                  <td>@(sec.DurationMinutes.HasValue ? $"{sec.DurationMinutes} minutes" : "—")</td>
+                  <td>@sec.QuestionCount</td>
                 </tr>
               }
             </tbody>
             <tfoot>
               <tr>
-                <th>Total</th>
-                <th></th>
-                <th>@(instr.QuestionCount.HasValue ? instr.QuestionCount.ToString() : "—")</th>
-                <th>@instr.DurationMinutes minutes</th>
+                <th colspan="2">Total · @instr.DurationMinutes minutes</th>
+                <th>@questionTotal</th>
               </tr>
             </tfoot>
           </table>

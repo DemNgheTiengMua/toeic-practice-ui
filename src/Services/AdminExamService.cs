@@ -1842,6 +1842,37 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
                     }
                 }
 
+                // Learners hear what ExamAudio.Resolve picks (CONTEXT.md "Audio slicing"): with a master
+                // track, a group without a slice plays the whole track, which is only right when the
+                // section has a single group, and a group's own different file is never played.
+                var master = sectionAudios.FirstOrDefault(a => a.SectionId == sec.SectionId)?.AudioPath;
+                var hasMaster = sec.Modality == "listening" && !string.IsNullOrWhiteSpace(master);
+                if (hasMaster && !string.IsNullOrWhiteSpace(g.AudioPath)
+                    && MediaUrlHelper.NormalizeMediaUrl(g.AudioPath) != MediaUrlHelper.NormalizeMediaUrl(master))
+                {
+                    issues.Add(new ExamAuditIssueDto(
+                        Code: "GRP_AUDIO_OVERRIDDEN",
+                        Severity: "warning",
+                        Message: $"Group #{g.DisplayOrder} in [{sec.Code}] has its own audio file, but the section's master audio is played instead (any slice is applied to the master). Clear the group's audio path or remove the master audio.",
+                        SectionId: sec.SectionId,
+                        SectionCode: sec.Code,
+                        GroupId: g.GroupId,
+                        ElementTarget: $"group-card-{g.GroupId}"));
+                }
+
+                if (hasMaster && secGroups.Count > 1
+                    && ExamAudio.Resolve(g.AudioPath, g.AudioStartMs, g.AudioEndMs, master)?.StartMs is null)
+                {
+                    issues.Add(new ExamAuditIssueDto(
+                        Code: "GRP_AUDIO_UNSLICED",
+                        Severity: "error",
+                        Message: $"Group #{g.DisplayOrder} in [{sec.Code}] has no slice of the section's master audio, so learners would hear the whole track. Set its start/end in the audio slicer.",
+                        SectionId: sec.SectionId,
+                        SectionCode: sec.Code,
+                        GroupId: g.GroupId,
+                        ElementTarget: $"group-card-{g.GroupId}"));
+                }
+
                 foreach (var q in g.QuestionGroups)
                 {
                     if (string.IsNullOrWhiteSpace(q.Stem))

@@ -16,7 +16,7 @@
         <span class="text-xs text-muted font-sign">@(!allowReplay ? "Official Audio · Plays once" : "Practice Audio")</span>
       </div>
     }
-    <div class="exam-audio" @(string.IsNullOrEmpty(Model.PlayerId) ? "" : $"id=\"{Model.PlayerId}\"") data-exam-audio data-allow-replay="@(allowReplay ? "true" : "false")" data-autoplay="@(Model.AutoPlay ? "true" : "false")">
+    <div class="exam-audio" @(string.IsNullOrEmpty(Model.PlayerId) ? "" : $"id=\"{Model.PlayerId}\"") data-exam-audio data-allow-replay="@(allowReplay ? "true" : "false")" data-autoplay="@(Model.AutoPlay ? "true" : "false")" data-start-ms="@Model.StartMs" data-end-ms="@Model.EndMs">
       <!-- Hidden native audio element without browser controls -->
       <audio preload="metadata" src="@Model.AudioPath" class="exam-audio__native"></audio>
       

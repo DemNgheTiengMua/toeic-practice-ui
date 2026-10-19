@@ -7,6 +7,9 @@
  *    the audio can be played strictly ONCE. When finished, playback is permanently locked.
  * 3. In practice / review mode (data-allow-replay="true"), replay is allowed from start,
  *    but seeking during playback remains disabled.
+ * 4. Segment: data-start-ms / data-end-ms limit playback to one slice of a longer track (a
+ *    group's slice of its section's master audio). The slice behaves as the whole recording:
+ *    it starts at data-start-ms, ends at data-end-ms, and timers and progress count within it.
  */
 (function () {
   "use strict";
@@ -41,30 +44,65 @@
 
     if (!audio || !btnPlay) return;
 
-    var maxTimeSeen = 0;
+    var startMs = parseInt(playerEl.getAttribute("data-start-ms"), 10);
+    var endMs = parseInt(playerEl.getAttribute("data-end-ms"), 10);
+    var hasSegment = !isNaN(startMs) && !isNaN(endMs) && startMs >= 0 && endMs > startMs;
+    var segStart = hasSegment ? startMs / 1000 : 0;
+    var segEnd = hasSegment ? endMs / 1000 : null;
+
+    var maxTimeSeen = segStart;
     var hasEnded = false;
 
-    function updateTimeDisplay() {
-      var cur = formatTime(audio.currentTime);
-      var total = formatTime(audio.duration);
-      if (timerText) timerText.textContent = cur + " / " + total;
+    function segmentLength() {
+      return hasSegment ? segEnd - segStart : audio.duration;
+    }
 
-      if (progressBar && audio.duration > 0) {
-        var pct = (audio.currentTime / audio.duration) * 100;
+    // Moves the playhead to the start of the slice without tripping the anti-seeking guard.
+    function rewindToSegmentStart() {
+      maxTimeSeen = segStart;
+      audio.currentTime = segStart;
+    }
+
+    function updateTimeDisplay() {
+      var length = segmentLength();
+      var elapsed = Math.max(0, audio.currentTime - segStart);
+      if (hasSegment) elapsed = Math.min(elapsed, length);
+      if (timerText) timerText.textContent = formatTime(elapsed) + " / " + formatTime(length);
+
+      if (progressBar && length > 0) {
+        var pct = (elapsed / length) * 100;
         progressBar.style.width = Math.min(100, Math.max(0, pct)) + "%";
       }
     }
 
-    // Update duration once metadata is loaded
+    // Update duration once metadata is loaded; a slice starts playback at its own offset.
     audio.addEventListener("loadedmetadata", function () {
+      if (hasSegment && audio.currentTime < segStart) rewindToSegmentStart();
       updateTimeDisplay();
     });
+
+    function stopAtSegmentEnd() {
+      if (hasSegment && !hasEnded && audio.currentTime >= segEnd) {
+        finishPlayback();
+        audio.pause();
+        return true;
+      }
+      return false;
+    }
+
+    // timeupdate fires only ~4 times a second, which would let a slice run on into the next
+    // group's audio; while playing, check every frame as well.
+    function watchSegmentEnd() {
+      if (audio.paused || hasEnded || stopAtSegmentEnd()) return;
+      window.requestAnimationFrame(watchSegmentEnd);
+    }
 
     // Enforce anti-seeking invariant on timeupdate & seeking events
     audio.addEventListener("timeupdate", function () {
       if (audio.currentTime > maxTimeSeen) {
         maxTimeSeen = audio.currentTime;
       }
+      if (stopAtSegmentEnd()) return;
       updateTimeDisplay();
     });
 
@@ -77,6 +115,10 @@
 
     // Playback state changes
     audio.addEventListener("play", function () {
+      // Play pressed before metadata arrived: the slice still starts at its own offset.
+      if (hasSegment && audio.currentTime < segStart - 0.25) rewindToSegmentStart();
+      if (hasSegment) window.requestAnimationFrame(watchSegmentEnd);
+
       // Pause all other audio players on page
       document.querySelectorAll(".exam-audio__native").forEach(function (other) {
         if (other !== audio && !other.paused) {
@@ -109,8 +151,12 @@
       }
     });
 
-    // When audio completes
+    // When audio completes: the file ends, or playback reaches the end of the slice
     audio.addEventListener("ended", function () {
+      if (!hasEnded) finishPlayback();
+    });
+
+    function finishPlayback() {
       hasEnded = true;
       if (progressBar) progressBar.style.width = "100%";
       updateTimeDisplay();
@@ -141,18 +187,17 @@
         if (statusText) {
           statusText.textContent = "Playback finished · Click Replay to listen again";
         }
-        maxTimeSeen = 0;
+        maxTimeSeen = segStart;
       }
-    });
+    }
 
     // Play/Pause button click
     btnPlay.addEventListener("click", function () {
       if (!allowReplay && hasEnded) return;
 
       if (hasEnded && allowReplay) {
-        // Replay from beginning
-        audio.currentTime = 0;
-        maxTimeSeen = 0;
+        // Replay from the beginning of the recording (or of the slice)
+        rewindToSegmentStart();
         hasEnded = false;
         audio.play().catch(function (err) {
           console.warn("Audio replay prevented:", err);
