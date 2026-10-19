@@ -89,7 +89,7 @@ Harmonize the Practice interface with the **Exam Shell Architecture** establishe
   - `currentOrder`: Current question index (1-based).
   - `activeFilter`: Current filter (`all`, `incorrect`, `saved`).
 - **In-Memory Swapping**: Transitions update DOM nodes directly (stem, passage, image, audio player, options, hints, and explanation panes) with zero full-page roundtrips and zero entrance animations.
-- **Audio Continuity**: Audio element persists across question transitions. If adjacent questions share the same audio track (`audioPath`), audio playback is continuous and uninterrupted.
+- **Audio Continuity & Group Awareness**: The audio player persists across question transitions if adjacent questions belong to the same audio group (sharing `audioPath`, `audioStartMs`, and `audioEndMs`). When transitioning to a new audio source or slice, re-arm the player using the centralized Study Audio Player template (`window.createExamAudioHtml` / `mode="study"`) from ADR 0011 without duplicating raw HTML strings.
 
 ### 3. In-Place Pedagogical Evaluation Workflow
 - **Answer Checking**: When clicking "Check answer" (or pressing `Enter`/`Space`), client dispatches an AJAX POST to `/practice/{sessionId}/questions/{questionId}/answer`.
@@ -115,8 +115,9 @@ Harmonize the Practice interface with the **Exam Shell Architecture** establishe
   - `?`: Open/close Keyboard Controls Modal.
 - **Keyboard Controls Modal**: Accessible, focus-trapped dialog listing all available shortcuts and mouse gestures with flat ink styling.
 - **Audio Ear-Training Widget**:
-  - Audio player configured with `data-allow-replay="true"`.
-  - Speed selector segmented control with three flat pill buttons: `0.8x`, `1.0x`, `1.2x` setting HTML5 `audio.playbackRate`.
+  - Consumes the unified **Study Audio Player (`mode="study"`)** established in ADR 0011 and Issue #81.
+  - Must NOT re-introduce removed robotic disclaimers (`"Seeking disabled"`, `"Plays once only"`, `"Replay permitted"`).
+  - Inherits native Study Mode controls: Play/Pause toggle, interactive timeline scrubbing (click/drag), jump buttons (`↺ 5s` and `5s ↻`), speed selector segmented control (`0.8x`, `1.0x`, `1.2x`), and unconstrained replay.
 - **Status Filter Engine**:
   - Filtering updates navigator grid cell visibility without resetting current question position.
   - Empty filter states gracefully notify the learner (e.g. "No incorrect questions yet — great job!").
@@ -159,3 +160,4 @@ Harmonize the Practice interface with the **Exam Shell Architecture** establishe
 ## Further Notes
 
 - By synchronizing Practice to the Exam Shell architecture, the entire platform achieves a cohesive, premium feel while maintaining clean domain boundaries between strict formal examinations and relaxed self-paced study.
+- **Strict Dependency & Non-Regression Guard (ADR 0011 / Issue #81)**: The Practice Exam Shell builds directly upon the Study Audio Player component defined in ADR 0011 and Issue #81. Implementation of this spec MUST preserve the `mode="study"` contract, interactive timeline scrubber, ±5s jump buttons, and stripped disclaimer text. It must NOT re-introduce legacy string-concatenated audio HTML or overwrite `_ExamAudioPlayer.cshtml` with pre-ADR-0011 templates.
