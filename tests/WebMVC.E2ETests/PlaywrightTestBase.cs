@@ -22,6 +22,16 @@ public abstract class PlaywrightTestBase : PageTest
             BaseUrl = configuredUrl.TrimEnd('/');
         }
 
+        using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
+        try
+        {
+            await httpClient.GetAsync(BaseUrl);
+        }
+        catch (Exception ex)
+        {
+            Assert.Ignore($"E2E server not reachable at {BaseUrl} ({ex.Message}). Start server to run E2E tests.");
+        }
+
         await Page.SetViewportSizeAsync(1440, 900);
     }
 

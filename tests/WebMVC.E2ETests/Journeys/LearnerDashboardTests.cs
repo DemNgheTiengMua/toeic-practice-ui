@@ -20,8 +20,8 @@ public class LearnerDashboardTests : PlaywrightTestBase
         var readinessStrip = Page.Locator(".readiness-strip, [data-readiness-strip], :text('Target band')");
         await Expect(readinessStrip.First).ToBeVisibleAsync();
 
-        // Check Today's mission is displayed
-        var todaysMission = Page.Locator(":text(\"Today's mission\"), :text(\"Today's Mission\")");
+        // Check Today's mission / directive is displayed
+        var todaysMission = Page.Locator(":text(\"Today's Directive\"), :text(\"Today's directive\"), :text(\"Today's mission\"), :text(\"Today's Mission\")");
         await Expect(todaysMission.First).ToBeVisibleAsync();
 
         // Check navigation menu is functional

@@ -28,3 +28,7 @@ _Avoid_: Transaction record, receipt entity
 The deep module that encapsulates the exam sitting lifecycle: countdown timers, expiration auto-submit, answer validation and persistence, question navigation, two-step score scaling, and CEFR band scale matching.
 _Avoid_: Exam engine, test runner, attempt manager
 
+**Audio Equipment Check**:
+The diagnostic routine verifying microphone input level and speaker/headphone playback before sitting an attempt or practice session involving listening or speaking skills.
+_Avoid_: Sound settings, mic wizard, audio test screen
+

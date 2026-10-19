@@ -14,162 +14,36 @@
 @if (steps is { Count: > 0 })
 {
     var clearedCount = steps.Count(s => s.IsCleared);
-    <style>
-      .mission-board {
-        margin-top: var(--space-4, 16px);
-        background: var(--color-surface, #ffffff);
-        border: var(--keyline, 2px) solid var(--ink, #14181d);
-        border-radius: 0;
-        box-shadow: none;
-      }
-      .mission-board__header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        flex-wrap: wrap;
-        gap: var(--space-2, 8px);
-        padding: var(--space-3, 12px) var(--space-5, 24px);
-        border-bottom: var(--keyline, 2px) solid var(--ink, #14181d);
-        background: var(--color-surface, #ffffff);
-      }
-      .mission-board__title {
-        margin: 0;
-        font-family: var(--font-sign, "IBM Plex Sans Condensed", sans-serif);
-        font-size: var(--text-sm, 14px);
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: var(--tracking-sign, 0.04em);
-        color: var(--ink, #14181d);
-      }
-      .mission-grid {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-      }
-      .mission-step {
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        padding: var(--space-4, 16px) var(--space-5, 24px);
-        border-right: var(--keyline-soft, 1px) solid var(--color-border, #ccd2d6);
-        background: var(--color-surface, #ffffff);
-        min-width: 0;
-      }
-      .mission-step:last-child {
-        border-right: 0;
-      }
-      .mission-step__top {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        flex-wrap: wrap;
-        gap: var(--space-2, 8px);
-        margin-bottom: var(--space-3, 12px);
-      }
-      .mission-step__num {
-        display: inline-block;
-        padding: 2px var(--space-2, 8px);
-        background: var(--ink, #14181d);
-        border: 1px solid var(--ink, #14181d);
-        border-radius: 0;
-        color: #ffffff;
-        font-family: var(--font-mono, "IBM Plex Mono", monospace);
-        font-size: var(--text-xs, 12px);
-        font-weight: 700;
-        font-variant-numeric: tabular-nums;
-        letter-spacing: 0.04em;
-      }
-      .mission-step--cleared .mission-step__num {
-        background: var(--sign-green, #0a6b3c);
-        border-color: var(--sign-green, #0a6b3c);
-      }
-      .mission-step__eyebrow {
-        font-family: var(--font-mono, "IBM Plex Mono", monospace);
-        font-size: var(--text-xs, 12px);
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.03em;
-        color: var(--color-text-muted, #5c6570);
-        margin-bottom: var(--space-1, 4px);
-      }
-      .mission-step__title {
-        margin: 0 0 var(--space-2, 8px);
-        font-family: var(--font-sign, "IBM Plex Sans Condensed", sans-serif);
-        font-size: var(--text-lg, 18px);
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: var(--tracking-sign, 0.03em);
-        line-height: var(--leading-tight, 1.2);
-        color: var(--ink, #14181d);
-      }
-      .mission-step__desc {
-        margin: 0 0 var(--space-4, 16px);
-        font-family: var(--font-sans, "IBM Plex Sans", sans-serif);
-        font-size: var(--text-sm, 14px);
-        line-height: var(--leading-body, 1.5);
-        color: var(--color-text-muted, #5c6570);
-      }
-      .mission-step__footer {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        flex-wrap: wrap;
-        gap: var(--space-2, 8px);
-        padding-top: var(--space-3, 12px);
-        border-top: var(--keyline-soft, 1px) solid var(--color-border, #ccd2d6);
-      }
-      .mission-step__meta {
-        font-family: var(--font-mono, "IBM Plex Mono", monospace);
-        font-size: var(--text-xs, 12px);
-        font-weight: 700;
-        font-variant-numeric: tabular-nums;
-        text-transform: uppercase;
-        color: var(--ink, #14181d);
-      }
-      @@media (max-width: 1024px) {
-        .mission-grid {
-          grid-template-columns: minmax(0, 1fr);
-        }
-        .mission-step {
-          border-right: 0;
-          border-bottom: var(--keyline-soft, 1px) solid var(--color-border, #ccd2d6);
-        }
-        .mission-step:last-child {
-          border-bottom: 0;
-        }
-      }
-    </style>
-
-    <section class="mission-board" aria-labelledby="mission-heading">
-      <div class="mission-board__header">
-        <h2 class="mission-board__title" id="mission-heading">Today's Mission · @Model.Certificate.Code 3-Step Directive</h2>
+    <section class="mission-checklist" aria-labelledby="mission-heading">
+      <header class="mission-checklist__header">
+        <h2 class="mission-checklist__title" id="mission-heading">Today's Directive · @Model.Certificate.Code 3-Step Milestones</h2>
         <span class="badge @(clearedCount == steps.Count ? "badge--success" : "badge--muted") font-mono">@clearedCount / @steps.Count CLEARED</span>
-      </div>
-      <div class="mission-grid">
+      </header>
+      <div class="mission-checklist__list" role="list">
         @foreach (var step in steps)
         {
-          <article class="mission-step @(step.IsCleared ? "mission-step--cleared" : "")" data-mission-step="@step.StepNumber">
+          <article class="mission-checklist__item @(step.IsCleared ? "mission-checklist__item--cleared" : "")" data-mission-step="@step.StepNumber" role="listitem">
             <div>
-              <div class="mission-step__top">
-                <span class="mission-step__num">STEP @step.StepNumber.ToString("00")</span>
-                <div class="row">
-                  <span class="badge @SeverityBadgeClass(step.Severity)">@step.BadgeLabel</span>
+              <div class="mission-checklist__item-top">
+                <span class="mission-checklist__item-num">STEP @step.StepNumber.ToString("00")</span>
+                <div class="row row--tight" style="gap: var(--space-1, 4px);">
+                  <span class="badge @SeverityBadgeClass(step.Severity) text-xs">@step.BadgeLabel</span>
                   @if (step.IsCleared)
                   {
-                    <span class="badge badge--success">Completed</span>
+                    <span class="badge badge--success text-xs">Cleared</span>
                   }
                 </div>
               </div>
-              <div class="mission-step__eyebrow">@step.Eyebrow</div>
-              <h3 class="mission-step__title">@step.Title</h3>
-              <p class="mission-step__desc">@step.Description</p>
+              <div class="text-xs text-muted font-mono uppercase" style="letter-spacing: 0.04em;">@step.Eyebrow</div>
+              <h3 class="mission-checklist__item-title">@step.Title</h3>
+              <p class="mission-checklist__item-desc">@step.Description</p>
             </div>
-            <div class="mission-step__footer">
-              <span class="mission-step__meta">@step.MetaLabel</span>
-              <a class="btn btn--sm @(step.IsCleared ? "" : "btn--primary")" href="@step.ActionUrl">@step.ActionLabel</a>
+            <div class="mission-checklist__item-foot">
+              <span class="font-mono text-xs text-muted uppercase">@step.MetaLabel</span>
+              <a class="btn btn--sm @(step.IsCleared ? "btn--ghost" : "btn--primary")" href="@step.ActionUrl">@step.ActionLabel</a>
             </div>
           </article>
         }
       </div>
     </section>
 }
-

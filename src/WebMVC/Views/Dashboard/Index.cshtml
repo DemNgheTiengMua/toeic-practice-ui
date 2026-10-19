@@ -216,13 +216,16 @@ else if (Model.Activation == "failed")
 </section>
 
 <div class="dashboard-bento">
-  <partial name="_DashboardMission" model="dashboard" />
-  <partial name="_DashboardSimulator" model="dashboard" />
-
-  <div class="dashboard-bento__diagnostics">
-    <partial name="_AiInsightPanel" model='new AiInsightPanelViewModel("dashboard", (ViewBag.Insight as AiInsightDto)?.CertId ?? 0, ViewBag.Insight as AiInsightDto, dashboard.LatestRubricHighlight, dashboard.OverallAccuracyPercent)' />
-    <partial name="_DashboardWeaknessRadar" model="dashboard" />
+  <div class="dashboard-guidance-grid mt-4">
+    <div class="dashboard-guidance__mentor">
+      <partial name="_AiInsightPanel" model='new AiInsightPanelViewModel("dashboard", (ViewBag.Insight as AiInsightDto)?.CertId ?? 0, ViewBag.Insight as AiInsightDto, dashboard.LatestRubricHighlight, dashboard.OverallAccuracyPercent)' />
+    </div>
+    <div class="dashboard-guidance__directive">
+      <partial name="_DashboardMission" model="dashboard" />
+    </div>
   </div>
+
+  <partial name="_DashboardWeaknessRadar" model="dashboard" />
 
   <div class="dashboard-bento__ledger-row mt-4">
     <div class="dashboard-bento__ledger stack">

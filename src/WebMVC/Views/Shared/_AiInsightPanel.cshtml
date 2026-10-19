@@ -73,9 +73,17 @@
 
   <div class="card__header">
     <div class="row row--between row--middle row--wrap">
-      <div class="row row--middle">
-        <span class="badge badge--info font-mono uppercase font-bold" style="letter-spacing: 0.04em;">AI Insight</span>
-        <strong>AI Diagnostic Insights &amp; Recommendations</strong>
+      <div>
+        <div class="row row--middle" style="gap: var(--space-2, 8px);">
+          <span class="badge badge--info font-mono uppercase font-bold" style="letter-spacing: 0.04em;">@(Model.Scope == "dashboard" ? "AI Study Mentor" : "AI Insight")</span>
+          <strong>@(Model.Scope == "dashboard" ? "Personal Diagnostic Guidance" : "AI Diagnostic Insights & Recommendations")</strong>
+        </div>
+        @if (Model.Scope == "dashboard")
+        {
+          <div class="ai-insight-panel__companion-tagline">
+            Continuous diagnostic review &amp; targeted coaching — you are never studying alone.
+          </div>
+        }
       </div>
       <div id="ai-insight-header-badges" class="row row--middle">
         @if (Model.Scope == "dashboard" && Model.OverallAccuracyPercent.HasValue)
@@ -107,12 +115,12 @@
     {
       <div class="state-block p-4" id="ai-insight-loading">
         <div class="row row--between row--middle row--wrap mb-2" style="width: 100%;">
-          <span class="badge badge--warning font-mono uppercase font-bold" id="ai-insight-phase">CLAUDE AI // COGITATING…</span>
+          <span class="badge badge--warning font-mono uppercase font-bold" id="ai-insight-phase">AI MENTOR // ANALYZING PROGRESS…</span>
           <span class="font-mono text-xs font-bold" id="ai-insight-elapsed" aria-live="polite">ELAPSED: 00.0s</span>
         </div>
-        <div class="state-block__title">Cogitating insights…</div>
+        <div class="state-block__title">Analyzing your diagnostic progress…</div>
         <p class="state-block__desc">
-          Evaluating answer patterns, luck vs. competence, and alignment with your target band. This will take just a few seconds.
+          Reviewing your latest question logs, accuracy trends, and target band alignment so you have clear next steps.
         </p>
         <div class="ai-kinetic-bar mt-3" role="progressbar" aria-label="AI insight generation in progress">
           <div class="ai-kinetic-bar__fill"></div>
@@ -133,14 +141,29 @@
     else if (isDone && insight != null)
     {
       <div id="ai-insight-content">
-        <div class="ai-insight-narrative" style="line-height: 1.6; font-size: 15px; margin-bottom: var(--space-4); color: var(--ink);">
-          @Html.Raw(formattedInitial)
-        </div>
+        @if (string.IsNullOrWhiteSpace(formattedInitial))
+        {
+          <div class="ai-mentor-welcome">
+            <h3 class="ai-mentor-welcome__heading">Ready to guide your preparation</h3>
+            <p class="ai-mentor-welcome__text">
+              I am your dedicated AI study mentor. As you complete practice questions and mock exams, I will analyze your answer patterns, spot question traps, and give you step-by-step guidance to achieve your target band.
+            </p>
+            <div class="row">
+              <a class="btn btn--primary btn--sm" href="/placement">Begin Diagnostic Placement ›</a>
+            </div>
+          </div>
+        }
+        else
+        {
+          <div class="ai-insight-narrative" style="line-height: 1.6; font-size: 15px; margin-bottom: var(--space-4); color: var(--ink);">
+            @Html.Raw(formattedInitial)
+          </div>
+        }
 
         @if (insight.Recommendations is { Count: > 0 })
         {
           <div class="mt-4 pt-3" style="border-top: 1px solid var(--rule-soft);">
-            <div class="text-xs uppercase text-muted mb-2 font-bold font-sign" style="letter-spacing: 0.05em;">Recommended Next Steps:</div>
+            <div class="text-xs uppercase text-muted mb-2 font-bold font-sign" style="letter-spacing: 0.05em;">Action Directives from Your AI Mentor:</div>
             <div class="stack" style="gap: var(--space-2);">
               @foreach (var rec in insight.Recommendations)
               {

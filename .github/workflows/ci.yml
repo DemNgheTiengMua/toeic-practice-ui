@@ -45,7 +45,60 @@ jobs:
       - name: Build
         run: dotnet build --configuration Release
 
+      - name: Install Playwright Browsers
+        run: pwsh tests/WebMVC.E2ETests/bin/Release/net10.0/playwright.ps1 install chromium --with-deps
+
+      - name: Seed Database & Start Web Services
+        run: |
+          # 1. Create ExtraEfficiency database and load schema & demo seed
+          sqlcmd -S localhost,1433 -U sa -P Str0ng!Passw0rd -C -I -b -Q "CREATE DATABASE ExtraEfficiency;"
+          sqlcmd -S localhost,1433 -U sa -P Str0ng!Passw0rd -C -I -b -d ExtraEfficiency -i docs/database-schema.sql
+          sqlcmd -S localhost,1433 -U sa -P Str0ng!Passw0rd -C -I -b -d ExtraEfficiency -i docs/seed-demo.sql
+
+          # 2. Start WebAPI on port 5001
+          ASPNETCORE_ENVIRONMENT=Development \
+          ASPNETCORE_URLS="http://localhost:5001" \
+          ConnectionStrings__CompanionDb="Server=localhost,1433;Database=ExtraEfficiency;User ID=sa;Password=Str0ng!Passw0rd;TrustServerCertificate=True" \
+          Payment__Gateway=mock \
+          AI_PROVIDER=fake \
+          Logging__LogLevel__Microsoft.EntityFrameworkCore.Database.Command=Warning \
+          dotnet run --project src/WebAPI --no-build --configuration Release > api.log 2>&1 &
+
+          # 3. Wait for WebAPI to be healthy
+          for i in $(seq 1 30); do
+            if curl -s -o /dev/null -w "%{http_code}" http://localhost:5001/api/certificates | grep -q "200\|401\|404"; then
+              echo "WebAPI is up"
+              break
+            fi
+            sleep 1
+          done
+
+          # 4. Start WebMVC on port 5000
+          ASPNETCORE_ENVIRONMENT=Development \
+          ASPNETCORE_URLS="http://localhost:5000" \
+          ApiBaseUrl="http://localhost:5001" \
+          dotnet run --project src/WebMVC --no-build --configuration Release > mvc.log 2>&1 &
+
+          # 5. Wait for WebMVC to be healthy
+          for i in $(seq 1 30); do
+            if curl -s -o /dev/null -w "%{http_code}" http://localhost:5000/auth/sign-in | grep -q "200"; then
+              echo "WebMVC is up"
+              break
+            fi
+            sleep 1
+          done
+
       - name: Test
         run: dotnet test --configuration Release --no-build
         env:
           TEST_DB_CONNECTION: "Server=localhost,1433;User ID=sa;Password=Str0ng!Passw0rd;TrustServerCertificate=True"
+          E2E_BASE_URL: "http://localhost:5000"
+
+      - name: Dump Service Logs on Failure
+        if: failure()
+        run: |
+          echo "=== WebAPI Log ==="
+          cat api.log || true
+          echo "=== WebMVC Log ==="
+          cat mvc.log || true
+

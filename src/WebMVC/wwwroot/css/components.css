@@ -2185,6 +2185,171 @@ details > summary:focus-visible { outline: 3px solid var(--sign-blue); outline-o
   }
 }
 
+/* ===== Dashboard Guidance Grid & AI Mentor Companion ("Bảng hiệu phòng thi") ===== */
+.dashboard-guidance-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(320px, 5fr);
+  gap: var(--space-4, 16px);
+  align-items: stretch;
+}
+
+.dashboard-guidance__mentor,
+.dashboard-guidance__directive {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-guidance__mentor > .card,
+.dashboard-guidance__directive > .mission-board {
+  height: 100%;
+  margin-top: 0;
+}
+
+/* AI Study Mentor Styling */
+.ai-insight-panel {
+  border-left: 4px solid var(--sign-blue, #0b4ea2);
+}
+
+.ai-insight-panel__companion-tagline {
+  font-family: var(--font-sans, "IBM Plex Sans", sans-serif);
+  font-size: var(--text-xs, 12px);
+  color: var(--color-text-muted, #5c6570);
+  margin-top: 2px;
+}
+
+.ai-mentor-welcome {
+  padding: var(--space-4, 16px);
+  background: var(--surface-soft, #f3f5f7);
+  border: 1px solid var(--rule-soft, #ccd2d6);
+  border-radius: 0;
+}
+
+.ai-mentor-welcome__heading {
+  margin: 0 0 var(--space-2, 8px);
+  font-family: var(--font-sign, "IBM Plex Sans Condensed", sans-serif);
+  font-size: var(--text-lg, 18px);
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--ink, #14181d);
+}
+
+.ai-mentor-welcome__text {
+  font-size: var(--text-sm, 14px);
+  line-height: var(--leading-body, 1.5);
+  color: var(--ink, #14181d);
+  margin: 0 0 var(--space-3, 12px);
+}
+
+/* Vertical Mission Checklist (Inside Guidance Grid) */
+.mission-checklist {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--color-surface, #ffffff);
+  border: var(--keyline, 2px) solid var(--ink, #14181d);
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.mission-checklist__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2, 8px);
+  padding: var(--space-3, 12px) var(--space-4, 16px);
+  border-bottom: var(--keyline, 2px) solid var(--ink, #14181d);
+  background: var(--ink, #14181d);
+  color: #ffffff;
+}
+
+.mission-checklist__title {
+  margin: 0;
+  font-family: var(--font-sign, "IBM Plex Sans Condensed", sans-serif);
+  font-size: var(--text-sm, 14px);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-sign, 0.04em);
+  color: #ffffff;
+}
+
+.mission-checklist__list {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+}
+
+.mission-checklist__item {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: var(--space-3, 12px) var(--space-4, 16px);
+  border-bottom: var(--keyline-soft, 1px) solid var(--color-border, #ccd2d6);
+  background: var(--color-surface, #ffffff);
+}
+
+.mission-checklist__item:last-child {
+  border-bottom: 0;
+}
+
+.mission-checklist__item--cleared {
+  background: var(--surface-soft, #f7f9fa);
+}
+
+.mission-checklist__item-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2, 8px);
+  margin-bottom: var(--space-1, 4px);
+}
+
+.mission-checklist__item-num {
+  font-family: var(--font-mono, "IBM Plex Mono", monospace);
+  font-size: var(--text-xs, 12px);
+  font-weight: 700;
+  padding: 1px var(--space-2, 8px);
+  background: var(--ink, #14181d);
+  color: #ffffff;
+}
+
+.mission-checklist__item--cleared .mission-checklist__item-num {
+  background: var(--sign-green, #0a6b3c);
+}
+
+.mission-checklist__item-title {
+  margin: var(--space-1, 4px) 0;
+  font-family: var(--font-sign, "IBM Plex Sans Condensed", sans-serif);
+  font-size: var(--text-base, 16px);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--ink, #14181d);
+}
+
+.mission-checklist__item-desc {
+  font-size: var(--text-xs, 13px);
+  line-height: var(--leading-normal, 1.4);
+  color: var(--color-text-muted, #5c6570);
+  margin: 0 0 var(--space-2, 8px);
+}
+
+.mission-checklist__item-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2, 8px);
+  padding-top: var(--space-2, 8px);
+  border-top: 1px dashed var(--line-soft, #ccd2d6);
+}
+
+@media (max-width: 1024px) {
+  .dashboard-guidance-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 /* ===== Dashboard Bento Layout & Mentor Boarding Pass ("Bảng hiệu phòng thi") ===== */
 .dashboard-bento {
   display: flex;
