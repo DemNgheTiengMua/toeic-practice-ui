@@ -60,6 +60,9 @@ jobs:
             ASPNETCORE_ENVIRONMENT=Development \
             ASPNETCORE_URLS="http://localhost:5001" \
             ConnectionStrings__CompanionDb="Server=localhost,1433;Database=ExtraEfficiency;User ID=sa;Password=Str0ng!Passw0rd;TrustServerCertificate=True" \
+            Jwt__SigningKey="DuFiytO9xnewMYC1REpIt5xQIfqc7k2Ybv9JxKcUDTk=" \
+            Jwt__Issuer="extra-efficient" \
+            Jwt__Audience="extra-efficient" \
             Payment__Gateway=mock \
             AI_PROVIDER=fake \
             dotnet run --project src/WebAPI --no-build --configuration Release > api.log 2>&1 &
