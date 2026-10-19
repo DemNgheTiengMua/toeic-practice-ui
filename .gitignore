@@ -50,5 +50,7 @@ scratch/
 logs/
 .superpowers/
 .gemini/
+__pycache__/
+*.pyc
 
 

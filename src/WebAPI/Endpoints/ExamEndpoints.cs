@@ -136,6 +136,28 @@ public static class ExamEndpoints
                     qInfo.SelectedOptionId,
                     qInfo.IsFlagged);
 
+                var allQDtos = take.Questions?.Select(q => new AttemptQuestionDto(
+                    q.QuestionId,
+                    q.DisplayOrder,
+                    q.TotalQuestions,
+                    q.SectionId,
+                    q.SectionCode,
+                    q.SectionName,
+                    q.SkillCode,
+                    q.SkillName,
+                    q.Modality.MapTo<ModalityDto>(),
+                    q.Stem,
+                    q.ImagePath,
+                    q.ImageAlt,
+                    q.AudioPath,
+                    q.AudioStartMs,
+                    q.AudioEndMs,
+                    q.Transcript,
+                    q.Passage,
+                    q.Options.Select(o => new AttemptOptionDto(o.OptionId, o.Label, o.Text)).ToList(),
+                    q.SelectedOptionId,
+                    q.IsFlagged)).ToList();
+
                 return Results.Ok(new AttemptTakeDto(
                     take.AttemptId,
                     take.ExamId,
@@ -151,7 +173,8 @@ public static class ExamEndpoints
                     currentQDto,
                     take.Navigator.Select(n => new NavigatorItemDto(
                         n.QuestionId, n.DisplayOrder, n.SectionId, n.SectionCode, n.Modality.MapTo<ModalityDto>(), n.IsAnswered, n.IsFlagged, n.IsCurrent)).ToList(),
-                    take.IsAutoSubmitted));
+                    take.IsAutoSubmitted,
+                    allQDtos));
             }
             catch (MockExamException ex) when (ex.Code == MockExamException.AttemptNotFound)
             {

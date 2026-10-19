@@ -108,7 +108,8 @@ public sealed record AttemptTakeView(
     int FlaggedCount,
     AttemptQuestionInfo CurrentQuestion,
     IReadOnlyList<NavigatorItem> Navigator,
-    bool IsAutoSubmitted);
+    bool IsAutoSubmitted,
+    IReadOnlyList<AttemptQuestionInfo>? Questions = null);
 
 public sealed record SaveAttemptAnswerResult(
     int QuestionId,

@@ -232,6 +232,7 @@
           event.preventDefault();
           options[optionIndex].checked = true;
           options[optionIndex].focus();
+          options[optionIndex].dispatchEvent(new Event('change', { bubbles: true }));
           console.info('[keyboard-nav] Answer option ' + String.fromCharCode(65 + optionIndex) + ' selected');
         }
       }

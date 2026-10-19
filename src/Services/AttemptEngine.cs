@@ -229,22 +229,21 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
             if (idx >= 0) targetIndex = idx;
         }
 
-        var currentAnswer = totalQuestions > 0 ? answers[targetIndex] : null;
-        AttemptQuestionInfo currentQuestionInfo;
-
-        if (currentAnswer is not null)
+        var sectionMasterAudio = await LoadSectionMasterAudioAsync(attempt.ExamId, cancellationToken);
+        var allQuestions = new List<AttemptQuestionInfo>(totalQuestions);
+        for (int i = 0; i < totalQuestions; i++)
         {
-            var q = currentAnswer.Question;
+            var ans = answers[i];
+            var q = ans.Question;
             var opts = q.QuestionOptionQuestionNavigations
                 .OrderBy(o => o.Label)
                 .Select(o => new AttemptOption(o.OptionId, o.Label, o.Text))
                 .ToList();
-            var sectionMasterAudio = await LoadSectionMasterAudioAsync(attempt.ExamId, cancellationToken);
             var audio = ResolveGroupAudio(q.Group, sectionMasterAudio);
 
-            currentQuestionInfo = new AttemptQuestionInfo(
+            allQuestions.Add(new AttemptQuestionInfo(
                 q.QuestionId,
-                targetIndex + 1,
+                i + 1,
                 totalQuestions,
                 q.SectionId,
                 q.Section.Code,
@@ -261,14 +260,12 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
                 q.Group.Transcript,
                 q.Group.Passage,
                 opts,
-                currentAnswer.SelectedOptionId,
-                currentAnswer.IsFlagged);
+                ans.SelectedOptionId,
+                ans.IsFlagged));
         }
-        else
-        {
-            currentQuestionInfo = new AttemptQuestionInfo(
-                0, 0, 0, 0, "", "", "", "", Modality.Reading, "", null, null, null, null, null, null, null, [], null, false);
-        }
+
+        var currentQuestionInfo = totalQuestions > 0 ? allQuestions[targetIndex] : new AttemptQuestionInfo(
+            0, 0, 0, 0, "", "", "", "", Modality.Reading, "", null, null, null, null, null, null, null, [], null, false);
 
         var navigator = answers.Select((a, idx) => new NavigatorItem(
             a.QuestionId,
@@ -296,7 +293,8 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
             flaggedCount,
             currentQuestionInfo,
             navigator,
-            attempt.IsAutoSubmitted);
+            attempt.IsAutoSubmitted,
+            allQuestions);
     }
 
     public async Task<SaveAttemptAnswerResult> SaveAnswerAsync(

@@ -560,9 +560,9 @@
     "semantic_hash": "aa3cf0c3626047acc6ccd96bfeac4640"
   },
   "src/WebAPI/appsettings.Development.json": {
-    "mtime": 1791830478.8349695,
-    "ast_hash": "804b473502a4c415cf75db61c56c32aa",
-    "semantic_hash": "804b473502a4c415cf75db61c56c32aa"
+    "mtime": 1792392615.7090437,
+    "ast_hash": "a1dd66f0e3e6e07e9f72e9075219f5e8",
+    "semantic_hash": ""
   },
   "src/WebAPI/appsettings.json": {
     "mtime": 1792323499.2267916,
@@ -820,8 +820,8 @@
     "semantic_hash": ""
   },
   ".github/workflows/ci.yml": {
-    "mtime": 1792391971.8697896,
-    "ast_hash": "b9ff6bb97d520644d5fee02f2c44b442",
+    "mtime": 1792392627.3965373,
+    "ast_hash": "4c731aa21aaadf9d0f0d2495b190acca",
     "semantic_hash": ""
   },
   ".impeccable/critique/2026-09-20T17-55-17Z__prototype.md": {
@@ -1551,13 +1551,13 @@
     "semantic_hash": ""
   },
   "src/BusinessObjects/MockExamModels.cs": {
-    "mtime": 1792391793.798088,
-    "ast_hash": "87a051bce8930e8097837ccfd9637b46",
+    "mtime": 1792395490.432176,
+    "ast_hash": "3d92fe92f39330236b430accd72a6a90",
     "semantic_hash": ""
   },
   "src/Contracts/MockExamDtos.cs": {
-    "mtime": 1792391793.7996752,
-    "ast_hash": "c5ea08c7e4037b993113b68332f4a9a9",
+    "mtime": 1792395465.8464024,
+    "ast_hash": "869948eb0b2abc385ae943edf8b533c8",
     "semantic_hash": ""
   },
   "src/Services/MockExamService.cs": {
@@ -1596,8 +1596,8 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Exams/Take.cshtml": {
-    "mtime": 1792391793.804918,
-    "ast_hash": "de454f0f6ec0e4a927de53514c4d9686",
+    "mtime": 1792395862.7584095,
+    "ast_hash": "e2ea60568ba8b85ca0fb0591020f9a1f",
     "semantic_hash": ""
   },
   "tests/Services.Tests/MockExamServiceTests.cs": {
@@ -1776,8 +1776,8 @@
     "semantic_hash": ""
   },
   "src/WebAPI/Endpoints/ExamEndpoints.cs": {
-    "mtime": 1792391793.8028488,
-    "ast_hash": "c3d2683011abe2f51dc2f0331ca2f921",
+    "mtime": 1792395520.4274216,
+    "ast_hash": "dc829e6deb4d7e1c8fc1fb48f1e21e7d",
     "semantic_hash": ""
   },
   "src/WebAPI/Endpoints/LearnerEndpoints.cs": {
@@ -2486,18 +2486,18 @@
     "semantic_hash": ""
   },
   "GLOSSARY.md": {
-    "mtime": 1792391797.9085839,
-    "ast_hash": "1df5d86d33eae124d5f34d01da7c6b61",
+    "mtime": 1792410861.1421661,
+    "ast_hash": "4083d81acf7058d957ed86eec06ed1be",
     "semantic_hash": ""
   },
   "src/Services/AttemptEngine.cs": {
-    "mtime": 1792391793.8012614,
-    "ast_hash": "0df448e9179829b9e0e72efb3e9a750b",
+    "mtime": 1792395508.0926373,
+    "ast_hash": "98744b62ebf35481f14fc7003fc713f7",
     "semantic_hash": ""
   },
   "tests/Services.Tests/AttemptEngineTests.cs": {
-    "mtime": 1792391793.8090472,
-    "ast_hash": "ef44b44c958b10885ae5959fb15bba45",
+    "mtime": 1792395975.8422327,
+    "ast_hash": "451af595e1698a8eca4a76fd32a69a44",
     "semantic_hash": ""
   },
   "src/Contracts/DomainClients.cs": {
@@ -2516,8 +2516,8 @@
     "semantic_hash": ""
   },
   "src/WebMVC/wwwroot/js/keyboard-nav.js": {
-    "mtime": 1792157895.847431,
-    "ast_hash": "d5ffde2bebee82f32d979edca5c02b0e",
+    "mtime": 1792395728.8257434,
+    "ast_hash": "13d49cae808cb4ffa06721dd6191857c",
     "semantic_hash": ""
   },
   "src/WebMVC/wwwroot/js/sidebar.js": {
@@ -3101,8 +3101,8 @@
     "semantic_hash": ""
   },
   "tests/WebMVC.Tests/ExamsViewTests.cs": {
-    "mtime": 1792323499.2929108,
-    "ast_hash": "00874bf0efeceee1daa282330be940c6",
+    "mtime": 1792395934.9075365,
+    "ast_hash": "b52653924ada93fbd8174db3dbbb5684",
     "semantic_hash": ""
   },
   "tests/WebMVC.Tests/LearningPathModuleTests.cs": {
@@ -3678,6 +3678,36 @@
   "docs/superpowers/plans/2026-10-19-student-dashboard-guidance-redesign.md": {
     "mtime": 1792388063.2295346,
     "ast_hash": "761daa6487a0497815065bf886448eae",
+    "semantic_hash": ""
+  },
+  "tests/WebMVC.E2ETests/Journeys/ExamAudioAndInstructionsTests.cs": {
+    "mtime": 1792393852.483293,
+    "ast_hash": "d599e6c4707240ed18a9b20bd44a3293",
+    "semantic_hash": ""
+  },
+  "docs/adr/0010-exam-shell-and-client-side-question-swapping.md": {
+    "mtime": 1792395366.1733549,
+    "ast_hash": "f65842280e7e1285f0e064afe914db75",
+    "semantic_hash": ""
+  },
+  "docs/specs/practice-exam-shell-and-qol-alignment.md": {
+    "mtime": 1792407511.8363185,
+    "ast_hash": "03653285d58aaaacae2af7ecd388e8bf",
+    "semantic_hash": ""
+  },
+  "docs/adr/0011-audio-player-modalities-and-seeking.md": {
+    "mtime": 1792410904.4393916,
+    "ast_hash": "88e876d54526af47c42ae232bf368d2b",
+    "semantic_hash": ""
+  },
+  "docs/specs/audio-player-modalities-and-seeking.md": {
+    "mtime": 1792410935.814109,
+    "ast_hash": "bc035093c0045f366f11ef07dfcd5f82",
+    "semantic_hash": ""
+  },
+  "docs/specs/exam-studio-audio-slicing-and-playback-polish.md": {
+    "mtime": 1792410056.903986,
+    "ast_hash": "7361ea000c2aa65e8161c6c35f4e868b",
     "semantic_hash": ""
   }
 }

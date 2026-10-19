@@ -108,7 +108,8 @@ public sealed record AttemptTakeDto(
     int FlaggedCount,
     AttemptQuestionDto CurrentQuestion,
     IReadOnlyList<NavigatorItemDto> Navigator,
-    bool IsAutoSubmitted);
+    bool IsAutoSubmitted,
+    IReadOnlyList<AttemptQuestionDto>? Questions = null);
 
 public sealed record SaveAnswerRequest(
     int? SelectedOptionId,

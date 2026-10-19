@@ -463,4 +463,24 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
         Assert.Equal(1500, listening.AudioStartMs);
         Assert.Equal(9000, listening.AudioEndMs);
     }
+
+    [Fact]
+    public async Task GetAttemptTake_populates_all_questions_for_zero_reload_client_swapping()
+    {
+        var certCode = Unique("AT01");
+        var (certId, examId, q1Id, q2Id, _, _) = await SeedExamFixtureAsync(certCode);
+        var userId = await SeedLearnerAsync(certCode);
+        var engine = CreateEngine();
+        var attempt = await engine.CreateAttemptAsync(userId, certId, examId, 60);
+
+        var take = await engine.GetAttemptTakeAsync(attempt.AttemptId, userId, 1);
+
+        Assert.NotNull(take.Questions);
+        Assert.Equal(2, take.Questions.Count);
+        Assert.Equal(q1Id, take.Questions[0].QuestionId);
+        Assert.Equal(1, take.Questions[0].DisplayOrder);
+        Assert.Equal(q2Id, take.Questions[1].QuestionId);
+        Assert.Equal(2, take.Questions[1].DisplayOrder);
+        Assert.Equal(take.CurrentQuestion.QuestionId, take.Questions[0].QuestionId);
+    }
 }

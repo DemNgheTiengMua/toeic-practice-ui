@@ -3,6 +3,7 @@
     Layout = null;
     var take = Model.Take;
     var q = take.CurrentQuestion;
+    var questions = take.Questions ?? new List<AttemptQuestionDto> { q };
     var prevOrder = q.DisplayOrder > 1 ? q.DisplayOrder - 1 : (int?)null;
     var nextOrder = q.DisplayOrder < take.TotalQuestions ? q.DisplayOrder + 1 : (int?)null;
     var isLastQuestion = q.DisplayOrder >= take.TotalQuestions;
@@ -19,12 +20,12 @@
   <link rel="stylesheet" href="~/css/base.css">
   <link rel="stylesheet" href="~/css/components.css">
 </head>
-<body>
+<body class="exam-body-protected">
   <div class="app-shell">
     <header class="app-topbar">
       <div class="exam-topbar-group">
         <strong>@take.ExamName</strong>
-        <span class="badge badge--info">@q.SkillName · @q.SectionName</span>
+        <span class="badge badge--info" id="topbar-section-badge">@q.SkillName · @q.SectionName</span>
       </div>
       <div class="exam-topbar-group">
         <span id="save-status" class="save-status save-status--saved" role="status" aria-live="polite">Saved</span>
@@ -40,47 +41,59 @@
       <div class="container" style="max-width: 1200px">
         <form id="anti-forgery-holder" style="display:none;">@Html.AntiForgeryToken()</form>
 
+        <script id="exam-data" type="application/json">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(questions, new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }))</script>
+
         @if (!string.IsNullOrEmpty(Model.ErrorMessage))
         {
           <div class="alert alert--danger mb-4" role="alert">@Model.ErrorMessage</div>
         }
 
+        <!-- Exam Integrity & Disciplinary Warning Banner -->
+        <div id="integrity-warning" class="alert alert--warning mb-4" style="display:none;" role="alert">
+          <strong>Warning:</strong> Tab switching or leaving the exam screen detected (<span id="integrity-count">0</span> time(s)). This activity is recorded in the exam audit trail.
+        </div>
+
+        <!-- Offline Network Warning Banner -->
+        <div id="network-warning" class="alert alert--danger mb-4" style="display:none;" role="alert">
+          <strong>Connection offline:</strong> Network lost. Your answers are buffered safely on this device and will automatically sync when reconnected.
+        </div>
+
         <div class="exam-layout">
-          <!-- Question Content Pane -->
-          <div class="stack">
-            @if (!string.IsNullOrEmpty(q.AudioPath))
-            {
-              @await Html.PartialAsync("_ExamAudioPlayer", new ExamAudioPlayerModel(
-                  AudioPath: q.AudioPath,
-                  AllowReplay: false,
-                  SectionTitle: "Listening Audio",
-                  BadgeText: "READY",
-                  StartMs: q.AudioStartMs,
-                  EndMs: q.AudioEndMs
-              ))
-            }
+          <!-- Question Content Pane (Exam Shell Swap Target) -->
+          <div class="stack" id="question-pane">
+            <!-- Audio Player Container -->
+            <div id="exam-audio-wrapper" class="mb-3" style="@(!string.IsNullOrEmpty(q.AudioPath) ? "" : "display:none;")">
+              @if (!string.IsNullOrEmpty(q.AudioPath))
+              {
+                @await Html.PartialAsync("_ExamAudioPlayer", new ExamAudioPlayerModel(
+                    AudioPath: q.AudioPath,
+                    AllowReplay: false,
+                    SectionTitle: "Listening Audio",
+                    BadgeText: "READY",
+                    StartMs: q.AudioStartMs,
+                    EndMs: q.AudioEndMs,
+                    PlayerId: "main-exam-audio"
+                ))
+              }
+            </div>
 
-            @if (!string.IsNullOrEmpty(q.Passage))
-            {
-              <div class="card mb-3">
-                <div class="card__body">
-                  <p class="no-margin passage">@q.Passage</p>
-                </div>
+            <!-- Passage Card Container -->
+            <div id="passage-card" class="card mb-3" style="@(!string.IsNullOrEmpty(q.Passage) ? "" : "display:none;")">
+              <div class="card__body">
+                <p id="passage-text" class="no-margin passage">@q.Passage</p>
               </div>
-            }
+            </div>
 
-            @if (!string.IsNullOrEmpty(q.ImagePath))
-            {
-              <div class="mb-3">
-                <img src="@q.ImagePath" alt="@(q.ImageAlt ?? "Question illustration")" class="question__image" />
-              </div>
-            }
+            <!-- Image Container -->
+            <div id="image-container" class="mb-3" style="@(!string.IsNullOrEmpty(q.ImagePath) ? "" : "display:none;")">
+              <img id="question-image" src="@q.ImagePath" alt="@(q.ImageAlt ?? "Question illustration")" class="question__image" />
+            </div>
 
-            <div class="question">
+            <div class="question" id="question-card">
               <div class="question__meta row row--between">
                 <div class="row row--tight">
-                  <span class="question__number">Question @q.DisplayOrder</span>
-                  <span class="badge badge--muted">@q.SectionName</span>
+                  <span class="question__number" id="question-number-display">Question @q.DisplayOrder</span>
+                  <span class="badge badge--muted" id="question-section-display">@q.SectionName</span>
                 </div>
                 <div>
                   <button type="button" class="btn btn--ghost btn--sm @(q.IsFlagged ? "btn--primary" : "")" id="flag-btn"
@@ -91,11 +104,11 @@
                 </div>
               </div>
 
-              <p class="question__stem">
+              <p class="question__stem" id="question-stem-display">
                 @q.Stem
               </p>
 
-              <div class="option-list" role="radiogroup" aria-label="Answer for question @q.DisplayOrder">
+              <div class="option-list" id="option-list" role="radiogroup" aria-label="Answer for question @q.DisplayOrder">
                 @foreach (var opt in q.Options)
                 {
                   var isSelected = opt.OptionId == q.SelectedOptionId;
@@ -112,30 +125,16 @@
             <!-- Bottom Question Navigation Row -->
             <div class="row row--between mt-4" style="align-items: center;">
               <div>
-                @if (prevOrder.HasValue)
-                {
-                  <a class="btn" href="/exams/take/@take.AttemptId?q=@prevOrder">Previous</a>
-                }
-                else
-                {
-                  <button class="btn" disabled>Previous</button>
-                }
+                <button type="button" class="btn" id="btn-prev" @(prevOrder.HasValue ? "" : "disabled")>Previous</button>
               </div>
 
               <div class="row" style="gap: var(--space-3);">
-                @if (nextOrder.HasValue)
-                {
-                  <a class="btn btn--primary" href="/exams/take/@take.AttemptId?q=@nextOrder">Next question</a>
-                }
-                else
-                {
-                  <button type="button" class="btn btn--danger js-open-submit-modal">Review & Submit exam</button>
-                }
+                <button type="button" class="btn btn--primary" id="btn-next">@(isLastQuestion ? "Review & Submit exam" : "Next question")</button>
               </div>
             </div>
           </div>
 
-          <!-- Sidebar Navigator -->
+          <!-- Sidebar Navigator (Exam Shell Persistent) -->
           <aside class="exam-sidebar stack">
             <div class="card">
               <div class="card__header">
@@ -160,19 +159,20 @@
                 <strong class="text-sm">Questions (1–@take.TotalQuestions)</strong>
               </div>
               <div class="card__body stack">
-                <div class="navigator__grid" role="group" aria-label="Question Navigator">
+                <div class="navigator__grid" role="group" aria-label="Question Navigator" id="navigator-grid">
                   @foreach (var item in take.Navigator)
                   {
                     var statusClass = item.IsAnswered ? "is-answered" : "is-unanswered";
                     var markClass = item.IsFlagged ? "is-marked" : "";
                     var currentClass = item.IsCurrent ? "is-current" : "";
-                    <a href="/exams/take/@take.AttemptId?q=@item.DisplayOrder"
+                    <button type="button"
                        class="navigator__cell @statusClass @markClass @currentClass"
                        id="nav-cell-@item.QuestionId"
                        data-question-id="@item.QuestionId"
+                       data-display-order="@item.DisplayOrder"
                        title="Question @item.DisplayOrder@(item.IsAnswered ? " · Answered" : " · Unanswered")@(item.IsFlagged ? " · Flagged" : "")">
                       @item.DisplayOrder
-                    </a>
+                    </button>
                   }
                 </div>
 
@@ -190,7 +190,7 @@
               </div>
             </div>
 
-            <button type="button" class="btn btn--danger js-open-submit-modal" style="width: 100%;">
+            <button type="button" class="btn btn--danger js-open-submit-modal" id="btn-sidebar-submit" style="width: 100%;">
               Submit exam
             </button>
           </aside>
@@ -206,6 +206,10 @@
         <h2 id="submit-modal-title" class="no-margin">Submit exam?</h2>
       </div>
       <div class="modal__body stack">
+        <div id="modal-sync-pending" class="alert alert--info" style="display:none;">
+          <strong>Synchronizing latest answers…</strong> Please wait a moment while your answers are being recorded on the server.
+        </div>
+
         <div id="modal-unanswered-warning" class="alert alert--warning" style="@(take.AnsweredCount < take.TotalQuestions ? "" : "display:none;")">
           <strong>You have <span id="modal-unanswered-count">@(take.TotalQuestions - take.AnsweredCount)</span> unanswered questions.</strong>
           Unanswered questions count as incorrect, and answers cannot be changed after you submit.
@@ -236,9 +240,9 @@
       </div>
       <div class="modal__footer">
         <button type="button" class="btn js-close-submit-modal">Go back and continue</button>
-        <form method="post" action="/exams/take/@take.AttemptId/submit" style="display:inline;">
+        <form method="post" action="/exams/take/@take.AttemptId/submit" id="submit-exam-form" style="display:inline;">
           @Html.AntiForgeryToken()
-          <button type="submit" class="btn btn--danger">Submit now</button>
+          <button type="submit" class="btn btn--danger" id="btn-modal-submit-now">Submit now</button>
         </form>
       </div>
     </div>
@@ -262,7 +266,7 @@
       <div class="modal__footer">
         <button type="button" class="btn js-close-exit-modal">Stay on test</button>
         <a class="btn" href="/exams">Exit (resume later)</a>
-        <form method="post" action="/exams/take/@take.AttemptId/cancel" style="display:inline;">
+        <form method="post" action="/exams/take/@take.AttemptId/cancel" id="cancel-exam-form" style="display:inline;">
           @Html.AntiForgeryToken()
           <button type="submit" class="btn btn--danger">Cancel & abandon (lose credit)</button>
         </form>
@@ -296,26 +300,488 @@
   <script src="~/js/keyboard-nav.js"></script>
   <script>
     (function () {
+      "use strict";
+
+      // 1. Data Model & Initialization
+      var examDataEl = document.getElementById('exam-data');
+      var questions = [];
+      try {
+        questions = JSON.parse(examDataEl ? examDataEl.textContent : '[]');
+      } catch (e) {
+        console.error('Failed to parse exam payload:', e);
+      }
+
       var attemptId = @take.AttemptId;
-      var questionId = @q.QuestionId;
+      var totalQuestions = questions.length || @take.TotalQuestions;
+      var currentDisplayOrder = @q.DisplayOrder;
       var expiresAt = @take.ExpiresAt.ToUnixTimeMilliseconds();
       var csrfToken = document.querySelector('#anti-forgery-holder input[name="__RequestVerificationToken"]').value;
 
+      var questionMap = {};
+      questions.forEach(function (q) {
+        questionMap[q.displayOrder] = q;
+      });
+
+      // Local Answer & State Registry (optimistic in-memory cache)
+      var localAnswers = {};
+      questions.forEach(function (q) {
+        localAnswers[q.questionId] = {
+          selectedOptionId: q.selectedOptionId,
+          isFlagged: q.isFlagged
+        };
+      });
+
+      // Restore uncommitted answers from localStorage backup if present
+      var storageKey = 'ee_exam_pending_' + attemptId;
+      var pendingQueue = [];
+      try {
+        var rawStored = localStorage.getItem(storageKey);
+        if (rawStored) {
+          var parsed = JSON.parse(rawStored);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            pendingQueue = parsed;
+            pendingQueue.forEach(function (item) {
+              if (localAnswers[item.questionId]) {
+                localAnswers[item.questionId].selectedOptionId = item.selectedOptionId;
+                localAnswers[item.questionId].isFlagged = item.isFlagged;
+              }
+            });
+          }
+        }
+      } catch (e) {
+        console.warn('LocalStorage restore error:', e);
+      }
+
+      // UI Elements
       var saveStatus = document.getElementById('save-status');
       var timerDisplay = document.getElementById('timer-display');
       var timerBox = document.getElementById('timer-box');
+      var topbarBadge = document.getElementById('topbar-section-badge');
       var flagBtn = document.getElementById('flag-btn');
-      var currentNavCell = document.getElementById('nav-cell-' + questionId);
+      var btnPrev = document.getElementById('btn-prev');
+      var btnNext = document.getElementById('btn-next');
+      var optionList = document.getElementById('option-list');
+      var passageCard = document.getElementById('passage-card');
+      var passageText = document.getElementById('passage-text');
+      var imageContainer = document.getElementById('image-container');
+      var questionImage = document.getElementById('question-image');
+      var questionNumberDisplay = document.getElementById('question-number-display');
+      var questionSectionDisplay = document.getElementById('question-section-display');
+      var questionStemDisplay = document.getElementById('question-stem-display');
+      var audioWrapper = document.getElementById('exam-audio-wrapper');
 
       var submitModal = document.getElementById('submit-modal');
       var exitModal = document.getElementById('exit-modal');
       var timesUpModal = document.getElementById('times-up-modal');
       var autoSubmitForm = document.getElementById('auto-submit-form');
+      var submitExamForm = document.getElementById('submit-exam-form');
+      var cancelExamForm = document.getElementById('cancel-exam-form');
 
-      var isFlagged = @(q.IsFlagged ? "true" : "false");
+      var currentAudioPath = (questionMap[currentDisplayOrder] && questionMap[currentDisplayOrder].audioPath) || null;
+      var isFlushing = false;
       var isSubmitting = false;
 
-      // Timer derived strictly from server ExpiresAt
+      // 2. HTML Helper
+      function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
+
+      function generateAudioPlayerHtml(q) {
+        var startMsAttr = q.audioStartMs != null ? ' data-start-ms="' + q.audioStartMs + '"' : '';
+        var endMsAttr = q.audioEndMs != null ? ' data-end-ms="' + q.audioEndMs + '"' : '';
+        return '<div class="card mb-3 exam-audio-card">' +
+          '<div class="card__body p-3">' +
+          '<div class="row row--between mb-2">' +
+          '<span class="badge badge--info font-sign">Listening Audio</span>' +
+          '<span class="text-xs text-muted font-sign">Official Audio · Plays once</span>' +
+          '</div>' +
+          '<div class="exam-audio" data-exam-audio data-allow-replay="false" data-autoplay="false"' + startMsAttr + endMsAttr + '>' +
+          '<audio preload="metadata" src="' + escapeHtml(q.audioPath) + '" class="exam-audio__native"></audio>' +
+          '<button type="button" class="btn exam-audio__btn-play" aria-label="Play audio">' +
+          '<svg class="icon exam-audio__icon-play" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>' +
+          '<svg class="icon exam-audio__icon-pause hidden" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>' +
+          '<span class="exam-audio__btn-text">PLAY</span>' +
+          '</button>' +
+          '<span class="badge badge--info exam-audio__badge font-sign">READY</span>' +
+          '<div class="exam-audio__center">' +
+          '<div class="progress exam-audio__progress" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">' +
+          '<div class="progress__bar exam-audio__bar" style="width: 0%"></div>' +
+          '</div>' +
+          '<div class="row row--between exam-audio__meta mt-1">' +
+          '<span class="exam-audio__status">Plays once only · Seeking disabled</span>' +
+          '<span class="exam-audio__timer font-mono">00:00 / --:--</span>' +
+          '</div>' +
+          '</div>' +
+          '<div class="exam-audio__volume row row--tight">' +
+          '<button type="button" class="btn btn--ghost btn--sm exam-audio__btn-mute" aria-label="Mute or unmute audio" title="Mute or unmute">' +
+          '<svg class="icon exam-audio__icon-vol" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>' +
+          '<svg class="icon exam-audio__icon-mute hidden" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>' +
+          '</button>' +
+          '<input type="range" min="0" max="100" value="85" class="exam-audio__slider" aria-label="Audio volume" title="Audio volume">' +
+          '</div>' +
+          '</div>' +
+          '</div>' +
+          '</div>';
+      }
+
+      // 3. In-Memory 0ms Question Swapping (Exam Shell)
+      function renderQuestion(displayOrder) {
+        var q = questionMap[displayOrder];
+        if (!q) return;
+
+        currentDisplayOrder = displayOrder;
+
+        // Topbar badge & Document title
+        if (topbarBadge) topbarBadge.textContent = (q.skillName || '') + ' · ' + (q.sectionName || '');
+        document.title = '@take.ExamName — Question ' + q.displayOrder + ' — extra efficient';
+
+        // URL synchronization without history pollution
+        window.history.replaceState({ page: 'exam-shell', q: displayOrder }, '', '/exams/take/' + attemptId + '?q=' + displayOrder);
+
+        // Audio continuity invariant
+        if (q.audioPath && q.audioPath.trim().length > 0) {
+          audioWrapper.style.display = 'block';
+          if (q.audioPath !== currentAudioPath) {
+            currentAudioPath = q.audioPath;
+            audioWrapper.innerHTML = generateAudioPlayerHtml(q);
+            if (window.initExamAudio) window.initExamAudio();
+          }
+        } else {
+          audioWrapper.style.display = 'none';
+          if (currentAudioPath !== null) {
+            var activeAudio = audioWrapper.querySelector('audio');
+            if (activeAudio && !activeAudio.paused) activeAudio.pause();
+            currentAudioPath = null;
+          }
+        }
+
+        // Passage Pane
+        if (q.passage && q.passage.trim().length > 0) {
+          passageText.textContent = q.passage;
+          passageCard.style.display = 'block';
+        } else {
+          passageCard.style.display = 'none';
+        }
+
+        // Image Pane
+        if (q.imagePath && q.imagePath.trim().length > 0) {
+          questionImage.src = q.imagePath;
+          questionImage.alt = q.imageAlt || 'Question illustration';
+          imageContainer.style.display = 'block';
+        } else {
+          imageContainer.style.display = 'none';
+        }
+
+        // Question Meta & Stem
+        questionNumberDisplay.textContent = 'Question ' + q.displayOrder;
+        questionSectionDisplay.textContent = q.sectionName;
+        questionStemDisplay.textContent = q.stem;
+
+        // Flag State
+        var isFlagged = !!(localAnswers[q.questionId] && localAnswers[q.questionId].isFlagged);
+        flagBtn.setAttribute('data-flagged', isFlagged ? 'true' : 'false');
+        flagBtn.setAttribute('aria-pressed', isFlagged ? 'true' : 'false');
+        flagBtn.textContent = isFlagged ? 'Flagged for review' : 'Flag for review';
+        if (isFlagged) {
+          flagBtn.classList.add('btn--primary');
+        } else {
+          flagBtn.classList.remove('btn--primary');
+        }
+
+        // Options List (Instant render, no entrance animation)
+        var selectedOptId = localAnswers[q.questionId] ? localAnswers[q.questionId].selectedOptionId : null;
+        optionList.setAttribute('aria-label', 'Answer for question ' + q.displayOrder);
+        var optionsHtml = '';
+        (q.options || []).forEach(function (opt) {
+          var isSelected = opt.optionId === selectedOptId;
+          optionsHtml += '<label class="option ' + (isSelected ? 'is-selected' : '') + '">';
+          optionsHtml += '<input class="option__input js-option-radio" type="radio" name="selectedOptionId" value="' + opt.optionId + '" ' + (isSelected ? 'checked' : '') + '>';
+          optionsHtml += '<span class="option__marker">' + escapeHtml(opt.label) + '</span>';
+          optionsHtml += '<span class="option__text">' + escapeHtml(opt.text) + '</span>';
+          optionsHtml += '</label>';
+        });
+        optionList.innerHTML = optionsHtml;
+
+        // Rebind radio selection listeners
+        var radios = optionList.querySelectorAll('.js-option-radio');
+        radios.forEach(function (radio) {
+          radio.addEventListener('change', function () {
+            var val = parseInt(this.value, 10);
+            optionList.querySelectorAll('.option').forEach(function (lbl) { lbl.classList.remove('is-selected'); });
+            var parentLabel = radio.closest('.option');
+            if (parentLabel) parentLabel.classList.add('is-selected');
+            saveAnswer(q.questionId, val, !!(localAnswers[q.questionId] && localAnswers[q.questionId].isFlagged));
+          });
+        });
+
+        // Previous & Next navigation buttons
+        if (btnPrev) {
+          btnPrev.disabled = (displayOrder <= 1);
+        }
+        if (btnNext) {
+          if (displayOrder >= totalQuestions) {
+            btnNext.textContent = 'Review & Submit exam';
+            btnNext.className = 'btn btn--danger js-open-submit-modal';
+          } else {
+            btnNext.textContent = 'Next question';
+            btnNext.className = 'btn btn--primary';
+          }
+        }
+
+        // Navigator Grid active indicator
+        document.querySelectorAll('.navigator__cell').forEach(function (cell) {
+          cell.classList.remove('is-current');
+        });
+        var activeCell = document.getElementById('nav-cell-' + q.questionId);
+        if (activeCell) {
+          activeCell.classList.add('is-current');
+        }
+
+        window.scrollTo({ top: 0, behavior: 'instant' });
+      }
+
+      function goToQuestion(targetOrder) {
+        if (targetOrder < 1 || targetOrder > totalQuestions) return;
+        renderQuestion(targetOrder);
+      }
+
+      // 4. Progress Stats Updater
+      function updateProgressStats() {
+        var answered = 0;
+        var flagged = 0;
+        questions.forEach(function (q) {
+          var a = localAnswers[q.questionId];
+          if (a && a.selectedOptionId !== null && a.selectedOptionId !== undefined) answered++;
+          if (a && a.isFlagged) flagged++;
+        });
+        var unanswered = totalQuestions - answered;
+        var pct = Math.round((answered / Math.max(1, totalQuestions)) * 100);
+
+        var progressText = document.getElementById('progress-text');
+        var progressBar = document.getElementById('progress-bar');
+        var flaggedText = document.getElementById('sidebar-flagged-count');
+        var unansweredText = document.getElementById('sidebar-unanswered-count');
+
+        if (progressText) progressText.textContent = answered + '/' + totalQuestions + ' answered';
+        if (progressBar) progressBar.style.width = pct + '%';
+        if (flaggedText) flaggedText.textContent = flagged;
+        if (unansweredText) unansweredText.textContent = unanswered;
+
+        // Modal counters
+        var mAns = document.getElementById('modal-stat-answered');
+        var mFlag = document.getElementById('modal-stat-flagged');
+        var mUnans = document.getElementById('modal-stat-unanswered');
+        var mUnansCount = document.getElementById('modal-unanswered-count');
+        var mUnansWarn = document.getElementById('modal-unanswered-warning');
+        var mAllAns = document.getElementById('modal-all-answered');
+
+        if (mAns) mAns.textContent = answered;
+        if (mFlag) mFlag.textContent = flagged;
+        if (mUnans) mUnans.textContent = unanswered;
+        if (mUnansCount) mUnansCount.textContent = unanswered;
+        if (mUnansWarn) mUnansWarn.style.display = (unanswered > 0) ? 'block' : 'none';
+        if (mAllAns) mAllAns.style.display = (unanswered <= 0) ? 'block' : 'none';
+      }
+
+      // 5. Optimistic Answer Queue & Sync
+      function triggerFlush() {
+        if (isFlushing || pendingQueue.length === 0) {
+          if (pendingQueue.length === 0) {
+            saveStatus.textContent = 'Saved';
+            saveStatus.className = 'save-status save-status--saved';
+            var submitQueueMsg = document.getElementById('modal-sync-pending');
+            var submitNowBtn = document.getElementById('btn-modal-submit-now');
+            if (submitQueueMsg) submitQueueMsg.style.display = 'none';
+            if (submitNowBtn) submitNowBtn.disabled = false;
+          }
+          return;
+        }
+
+        isFlushing = true;
+        saveStatus.textContent = 'Saving…';
+        saveStatus.className = 'save-status save-status--saving';
+
+        var item = pendingQueue[0];
+        var body = new URLSearchParams();
+        body.append('__RequestVerificationToken', csrfToken);
+        if (item.selectedOptionId !== null && item.selectedOptionId !== undefined) {
+          body.append('SelectedOptionId', item.selectedOptionId);
+        }
+        body.append('IsFlagged', item.isFlagged ? 'true' : 'false');
+
+        fetch('/exams/take/' + attemptId + '/answers/' + item.questionId, {
+          method: 'POST',
+          keepalive: true,
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+          },
+          body: body.toString()
+        })
+        .then(function (res) {
+          if (!res.ok) {
+            return res.json().then(function (err) { throw err; });
+          }
+          return res.json();
+        })
+        .then(function (data) {
+          isFlushing = false;
+          if (data.isAutoSubmitted && data.redirectUrl) {
+            isSubmitting = true;
+            timesUpModal.style.display = 'flex';
+            window.location.href = data.redirectUrl;
+            return;
+          }
+
+          // Anti-Clock-Tampering: calibrate local timer against authoritative server remaining seconds
+          if (typeof data.remainingSeconds === 'number') {
+            expiresAt = Date.now() + (data.remainingSeconds * 1000);
+          }
+
+          // Pop processed job and persist remaining queue to storage
+          pendingQueue.shift();
+          try {
+            localStorage.setItem(storageKey, JSON.stringify(pendingQueue));
+          } catch (e) {}
+
+          triggerFlush();
+        })
+        .catch(function (err) {
+          isFlushing = false;
+          if (err && err.code === 'attempt_expired') {
+            isSubmitting = true;
+            timesUpModal.style.display = 'flex';
+            window.location.href = '/exams/result/' + attemptId;
+            return;
+          }
+
+          saveStatus.textContent = 'Sync error · Retrying';
+          saveStatus.className = 'save-status save-status--error';
+
+          item.retryCount = (item.retryCount || 0) + 1;
+          setTimeout(function () {
+            triggerFlush();
+          }, Math.min(8000, 1500 * item.retryCount));
+        });
+      }
+
+      function saveAnswer(questionId, selectedOptionId, flagged) {
+        // Immediate in-memory registration
+        localAnswers[questionId] = {
+          selectedOptionId: selectedOptionId,
+          isFlagged: flagged
+        };
+
+        // Immediate Navigator cell UI reflection
+        var cell = document.getElementById('nav-cell-' + questionId);
+        if (cell) {
+          if (selectedOptionId !== null && selectedOptionId !== undefined) {
+            cell.classList.add('is-answered');
+            cell.classList.remove('is-unanswered');
+          } else {
+            cell.classList.remove('is-answered');
+            cell.classList.add('is-unanswered');
+          }
+          if (flagged) {
+            cell.classList.add('is-marked');
+          } else {
+            cell.classList.remove('is-marked');
+          }
+        }
+
+        updateProgressStats();
+
+        // Enqueue save job (debouncing redundant requests for same question)
+        pendingQueue = pendingQueue.filter(function (job) { return job.questionId !== questionId; });
+        pendingQueue.push({
+          questionId: questionId,
+          selectedOptionId: selectedOptionId,
+          isFlagged: flagged,
+          retryCount: 0
+        });
+
+        try {
+          localStorage.setItem(storageKey, JSON.stringify(pendingQueue));
+        } catch (e) {}
+
+        triggerFlush();
+      }
+
+      // 6. Navigation Event Listeners
+      if (btnPrev) {
+        btnPrev.addEventListener('click', function () {
+          goToQuestion(currentDisplayOrder - 1);
+        });
+      }
+
+      if (btnNext) {
+        btnNext.addEventListener('click', function () {
+          if (currentDisplayOrder >= totalQuestions) {
+            openSubmitModal();
+          } else {
+            goToQuestion(currentDisplayOrder + 1);
+          }
+        });
+      }
+
+      // Navigator grid cells click handler
+      var navGrid = document.getElementById('navigator-grid');
+      if (navGrid) {
+        navGrid.addEventListener('click', function (e) {
+          var targetCell = e.target.closest('.navigator__cell');
+          if (targetCell) {
+            var targetOrder = parseInt(targetCell.getAttribute('data-display-order'), 10);
+            if (!isNaN(targetOrder)) {
+              goToQuestion(targetOrder);
+            }
+          }
+        });
+      }
+
+      // Flag toggle button
+      if (flagBtn) {
+        flagBtn.addEventListener('click', function () {
+          var currentQ = questionMap[currentDisplayOrder];
+          if (!currentQ) return;
+          var curFlagged = !!(localAnswers[currentQ.questionId] && localAnswers[currentQ.questionId].isFlagged);
+          var newFlagged = !curFlagged;
+
+          flagBtn.setAttribute('data-flagged', newFlagged ? 'true' : 'false');
+          flagBtn.setAttribute('aria-pressed', newFlagged ? 'true' : 'false');
+          flagBtn.textContent = newFlagged ? 'Flagged for review' : 'Flag for review';
+          if (newFlagged) {
+            flagBtn.classList.add('btn--primary');
+          } else {
+            flagBtn.classList.remove('btn--primary');
+          }
+
+          var curSelected = localAnswers[currentQ.questionId] ? localAnswers[currentQ.questionId].selectedOptionId : null;
+          saveAnswer(currentQ.questionId, curSelected, newFlagged);
+        });
+      }
+
+      // Initial option change listeners
+      var initialRadios = optionList.querySelectorAll('.js-option-radio');
+      initialRadios.forEach(function (radio) {
+        radio.addEventListener('change', function () {
+          var currentQ = questionMap[currentDisplayOrder];
+          if (!currentQ) return;
+          var val = parseInt(this.value, 10);
+          optionList.querySelectorAll('.option').forEach(function (lbl) { lbl.classList.remove('is-selected'); });
+          var parentLabel = radio.closest('.option');
+          if (parentLabel) parentLabel.classList.add('is-selected');
+          saveAnswer(currentQ.questionId, val, !!(localAnswers[currentQ.questionId] && localAnswers[currentQ.questionId].isFlagged));
+        });
+      });
+
+      // 7. Exam Timer Loop
       function updateTimer() {
         var now = Date.now();
         var diff = Math.max(0, Math.floor((expiresAt - now) / 1000));
@@ -350,104 +816,92 @@
       }
 
       updateTimer();
-      var timerInterval = setInterval(updateTimer, 1000);
+      setInterval(updateTimer, 1000);
 
-      // Save answer function
-      function saveAnswer(selectedOptionId, flagged) {
-        saveStatus.textContent = 'Saving…';
-        saveStatus.className = 'save-status save-status--saving';
+      // 8. Exam Integrity Guards & Non-Happy Paths
 
-        var body = new URLSearchParams();
-        body.append('__RequestVerificationToken', csrfToken);
-        if (selectedOptionId !== null && selectedOptionId !== undefined) {
-          body.append('SelectedOptionId', selectedOptionId);
-        }
-        body.append('IsFlagged', flagged ? 'true' : 'false');
-
-        fetch('/exams/take/' + attemptId + '/answers/' + questionId, {
-          method: 'POST',
-          keepalive: true,
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'X-Requested-With': 'XMLHttpRequest',
-            'Accept': 'application/json'
-          },
-          body: body.toString()
-        })
-        .then(function (res) {
-          if (!res.ok) {
-            return res.json().then(function (err) { throw err; });
-          }
-          return res.json();
-        })
-        .then(function (data) {
-          if (data.isAutoSubmitted && data.redirectUrl) {
-            timesUpModal.style.display = 'flex';
-            window.location.href = data.redirectUrl;
-            return;
-          }
-
-          saveStatus.textContent = 'Saved';
-          saveStatus.className = 'save-status save-status--saved';
-
-          if (currentNavCell) {
-            if (data.selectedOptionId !== null) {
-              currentNavCell.classList.add('is-answered');
-              currentNavCell.classList.remove('is-unanswered');
-            }
-            if (data.isFlagged) {
-              currentNavCell.classList.add('is-marked');
-            } else {
-              currentNavCell.classList.remove('is-marked');
-            }
-          }
-        })
-        .catch(function (err) {
-          saveStatus.textContent = 'Connection error';
-          saveStatus.className = 'save-status save-status--error';
-          if (err && err.code === 'attempt_expired') {
-            timesUpModal.style.display = 'flex';
-            window.location.href = '/exams/result/' + attemptId;
-          }
-        });
-      }
-
-      // Radio button selection
-      var radios = document.querySelectorAll('.js-option-radio');
-      radios.forEach(function (radio) {
-        radio.addEventListener('change', function () {
-          var val = parseInt(this.value, 10);
-          saveAnswer(val, isFlagged);
-        });
+      // History Trap: Intercept browser Back navigation and display Exit modal
+      window.history.pushState({ page: 'exam-shell', q: currentDisplayOrder }, '', window.location.href);
+      window.addEventListener('popstate', function () {
+        window.history.pushState({ page: 'exam-shell', q: currentDisplayOrder }, '', window.location.href);
+        exitModal.style.display = 'flex';
       });
 
-      // Flag toggle button
-      if (flagBtn) {
-        flagBtn.addEventListener('click', function () {
-          isFlagged = !isFlagged;
-          flagBtn.setAttribute('data-flagged', isFlagged ? 'true' : 'false');
-          flagBtn.setAttribute('aria-pressed', isFlagged ? 'true' : 'false');
-          if (isFlagged) {
-            flagBtn.classList.add('btn--primary');
-            flagBtn.textContent = 'Flagged for review';
-          } else {
-            flagBtn.classList.remove('btn--primary');
-            flagBtn.textContent = 'Flag for review';
-          }
+      // Accidental tab close / refresh protection
+      window.addEventListener('beforeunload', function (e) {
+        if (!isSubmitting) {
+          e.preventDefault();
+          e.returnValue = 'Your exam attempt is currently in progress. Leaving may cause unsaved responses to be lost.';
+          return e.returnValue;
+        }
+      });
 
-          var checkedRadio = document.querySelector('.js-option-radio:checked');
-          var selectedOptId = checkedRadio ? parseInt(checkedRadio.value, 10) : null;
-          saveAnswer(selectedOptId, isFlagged);
-        });
+      // Disable Context Menu (Right Click)
+      document.addEventListener('contextmenu', function (e) {
+        e.preventDefault();
+      });
+
+      // Disable Destructive Keyboard Shortcuts (F5, Ctrl+R, Ctrl+U, F12, Ctrl+Shift+I)
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'F5' || (e.ctrlKey && (e.key === 'r' || e.key === 'R'))) {
+          e.preventDefault();
+          return;
+        }
+        if ((e.ctrlKey && (e.key === 'u' || e.key === 'U')) ||
+            e.key === 'F12' ||
+            (e.ctrlKey && e.shiftKey && (e.key === 'i' || e.key === 'I'))) {
+          e.preventDefault();
+          return;
+        }
+      });
+
+      // Tab Switching / Focus Loss Monitoring
+      var tabSwitchCount = 0;
+      var integrityWarning = document.getElementById('integrity-warning');
+      var integrityCount = document.getElementById('integrity-count');
+
+      document.addEventListener('visibilitychange', function () {
+        if (document.hidden && !isSubmitting) {
+          tabSwitchCount++;
+          if (integrityWarning) {
+            integrityWarning.style.display = 'block';
+            if (integrityCount) integrityCount.textContent = tabSwitchCount;
+          }
+        }
+      });
+
+      // Online / Offline Detection
+      var networkWarning = document.getElementById('network-warning');
+      window.addEventListener('online', function () {
+        if (networkWarning) networkWarning.style.display = 'none';
+        triggerFlush();
+      });
+
+      window.addEventListener('offline', function () {
+        if (networkWarning) networkWarning.style.display = 'block';
+        saveStatus.textContent = 'Offline';
+        saveStatus.className = 'save-status save-status--error';
+      });
+
+      // 9. Modals Management
+      function openSubmitModal() {
+        updateProgressStats();
+        var submitQueueMsg = document.getElementById('modal-sync-pending');
+        var submitNowBtn = document.getElementById('btn-modal-submit-now');
+        if (pendingQueue.length > 0) {
+          if (submitQueueMsg) submitQueueMsg.style.display = 'block';
+          if (submitNowBtn) submitNowBtn.disabled = true;
+        } else {
+          if (submitQueueMsg) submitQueueMsg.style.display = 'none';
+          if (submitNowBtn) submitNowBtn.disabled = false;
+        }
+        submitModal.style.display = 'flex';
       }
 
-      // Modals
       var openSubmitBtns = document.querySelectorAll('.js-open-submit-modal');
       var closeSubmitBtns = document.querySelectorAll('.js-close-submit-modal');
       openSubmitBtns.forEach(function (btn) {
-        btn.addEventListener('click', function () {
-          submitModal.style.display = 'flex';
-        });
+        btn.addEventListener('click', openSubmitModal);
       });
       closeSubmitBtns.forEach(function (btn) {
         btn.addEventListener('click', function () {
@@ -472,6 +926,47 @@
         if (e.target === submitModal) submitModal.style.display = 'none';
         if (e.target === exitModal) exitModal.style.display = 'none';
       });
+
+      // Form submission cleans up storage buffer
+      if (submitExamForm) {
+        submitExamForm.addEventListener('submit', function (e) {
+          if (pendingQueue.length > 0) {
+            e.preventDefault();
+            var submitQueueMsg = document.getElementById('modal-sync-pending');
+            var submitNowBtn = document.getElementById('btn-modal-submit-now');
+            if (submitQueueMsg) submitQueueMsg.style.display = 'block';
+            if (submitNowBtn) submitNowBtn.disabled = true;
+            return;
+          }
+          isSubmitting = true;
+          try {
+            localStorage.removeItem(storageKey);
+          } catch (err) {}
+        });
+      }
+
+      if (autoSubmitForm) {
+        autoSubmitForm.addEventListener('submit', function () {
+          isSubmitting = true;
+          try {
+            localStorage.removeItem(storageKey);
+          } catch (err) {}
+        });
+      }
+
+      if (cancelExamForm) {
+        cancelExamForm.addEventListener('submit', function () {
+          isSubmitting = true;
+          try {
+            localStorage.removeItem(storageKey);
+          } catch (err) {}
+        });
+      }
+
+      // Start initial queue flush if uncommitted items restored
+      if (pendingQueue.length > 0) {
+        triggerFlush();
+      }
     })();
   </script>
   <script src="~/js/exam-audio.js"></script>
