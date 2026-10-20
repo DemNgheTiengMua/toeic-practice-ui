@@ -270,6 +270,14 @@ public sealed class ScoreConversionServiceTests(DatabaseFixture database)
 
         var attempt = await mockService.StartAttemptAsync(userId, exam.ExamId);
         await mockService.SaveAnswerAsync(userId, attempt.AttemptId, q1.QuestionId, opt1.OptionId, false);
+        await database.SqlAsync($"""
+            UPDATE ExamAttempts
+            SET StartedAt = DATEADD(minute, -31, SYSDATETIMEOFFSET()),
+                ExpiresAt = DATEADD(minute, 29, SYSDATETIMEOFFSET())
+            WHERE AttemptId = {attempt.AttemptId};
+            """);
+        var secondPhaseDb = DbContextFactory.Create(database.ConnectionString);
+        mockService = new MockExamService(secondPhaseDb, new LearnerService(secondPhaseDb));
         await mockService.SaveAnswerAsync(userId, attempt.AttemptId, q2.QuestionId, opt2.OptionId, false);
         var resultBeforeEdit = await mockService.SubmitAttemptAsync(userId, attempt.AttemptId, false);
 

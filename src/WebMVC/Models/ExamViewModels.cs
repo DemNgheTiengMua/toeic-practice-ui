@@ -18,6 +18,11 @@ public sealed record SaveAnswerFormModel(
     int? SelectedOptionId,
     bool IsFlagged);
 
+public sealed class ExamSubmitFormModel
+{
+    public List<SubmitAttemptDraftRequest> Drafts { get; set; } = [];
+}
+
 public sealed record ExamResultViewModel(
     AttemptResultDto Result,
     string? ErrorMessage = null,
@@ -30,4 +35,3 @@ public sealed record ExamHistoryViewModel(
 public sealed record ExamReviewViewModel(
     AttemptReviewDto Review,
     string? ErrorMessage = null);
-

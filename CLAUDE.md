@@ -51,11 +51,6 @@ After a schema change: edit `docs/database-schema.sql`, run
 Issues live as GitHub issues on `DemNgheTiengMua/toeic-practice-ui`, managed
 with the `gh` CLI. See `docs/agents/issue-tracker.md`.
 
-### Triage labels
-
-The five canonical triage roles, each label named after its role. See
-`docs/agents/triage-labels.md`.
-
 ### Domain docs
 
 Single-context: `CONTEXT.md` and `docs/adr/` at the repo root (created

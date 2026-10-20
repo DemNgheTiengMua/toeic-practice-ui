@@ -224,6 +224,20 @@ public sealed class ExamsControllerTests
     }
 
     [Fact]
+    public async Task SaveDraft_forwards_exam_draft_to_attempt_api()
+    {
+        var api = new TestApiClient();
+        var request = new SaveAttemptDraftRequest(42, "Current writing response");
+
+        var controller = CreateController(api);
+        var result = await controller.SaveDraft(100, request, CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(result);
+        Assert.Equal(100, api.SavedDraftAttemptId);
+        Assert.Equal(request, api.SavedDraftRequest);
+    }
+
+    [Fact]
     public async Task Submit_redirects_to_Result()
     {
         var api = new TestApiClient
@@ -237,6 +251,25 @@ public sealed class ExamsControllerTests
         var redirect = Assert.IsType<RedirectToActionResult>(result);
         Assert.Equal(nameof(ExamsController.Result), redirect.ActionName);
         Assert.Equal(100, redirect.RouteValues?["attemptId"]);
+    }
+
+    [Fact]
+    public async Task Submit_forwards_final_writing_drafts_with_the_attempt()
+    {
+        var api = new TestApiClient
+        {
+            SubmitResponse = new SubmitAttemptResponse(100, AttemptStatusDto.Graded, 800, "B2", "Independent user", DateTimeOffset.UtcNow, false),
+        };
+        var drafts = new List<SubmitAttemptDraftRequest>
+        {
+            new(42, "Latest editor content"),
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.Submit(100, CancellationToken.None, new ExamSubmitFormModel { Drafts = drafts });
+
+        Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(drafts, api.SubmittedDrafts);
     }
 
     [Fact]
@@ -384,6 +417,9 @@ public sealed class ExamsControllerTests
         public AttemptTakeDto? TakeDto { get; set; }
         public SaveAnswerResultDto? SaveResult { get; set; }
         public SubmitAttemptResponse? SubmitResponse { get; set; }
+        public IReadOnlyList<SubmitAttemptDraftRequest>? SubmittedDrafts { get; private set; }
+        public int? SavedDraftAttemptId { get; private set; }
+        public SaveAttemptDraftRequest? SavedDraftRequest { get; private set; }
         public AttemptResultDto? ResultDto { get; set; }
         public ExamHistoryDto? HistoryDto { get; set; }
         public AttemptReviewDto? ReviewDto { get; set; }
@@ -405,8 +441,26 @@ public sealed class ExamsControllerTests
         public Task<SaveAnswerResultDto> SaveAttemptAnswerAsync(int attemptId, int questionId, SaveAnswerRequest request, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<SaveAnswerResultDto>(ExceptionToThrow) : Task.FromResult(SaveResult!);
 
+        public Task<SaveAttemptDraftResponse> SaveAttemptDraftAsync(int attemptId, SaveAttemptDraftRequest request, CancellationToken cancellationToken = default) =>
+            SaveExamDraftAsync(attemptId, request);
+
+        private Task<SaveAttemptDraftResponse> SaveExamDraftAsync(int attemptId, SaveAttemptDraftRequest request)
+        {
+            if (ExceptionToThrow != null) return Task.FromException<SaveAttemptDraftResponse>(ExceptionToThrow);
+            SavedDraftAttemptId = attemptId;
+            SavedDraftRequest = request;
+            return Task.FromResult(new SaveAttemptDraftResponse(1, request.QuestionId, DateTimeOffset.UtcNow, 0));
+        }
+
         public Task<SubmitAttemptResponse> SubmitAttemptAsync(int attemptId, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<SubmitAttemptResponse>(ExceptionToThrow) : Task.FromResult(SubmitResponse!);
+
+        public Task<SubmitAttemptResponse> SubmitAttemptWithDraftsAsync(int attemptId, SubmitAttemptRequest request, CancellationToken cancellationToken = default)
+        {
+            if (ExceptionToThrow != null) return Task.FromException<SubmitAttemptResponse>(ExceptionToThrow);
+            SubmittedDrafts = request.Drafts;
+            return Task.FromResult(SubmitResponse!);
+        }
 
         public Task CancelAttemptAsync(int attemptId, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException(ExceptionToThrow) : Task.CompletedTask;
@@ -519,4 +573,3 @@ public sealed class ExamsControllerTests
         Assert.Equal(100, redirect.RouteValues?["attemptId"]);
     }
 }
-

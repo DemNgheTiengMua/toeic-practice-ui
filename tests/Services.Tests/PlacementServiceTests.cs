@@ -23,6 +23,14 @@ public sealed class PlacementServiceTests(DatabaseFixture database)
         return (service, learners);
     }
 
+    private Task AdvanceAttemptToSecondPhaseAsync(int attemptId) =>
+        database.SqlAsync($"""
+            UPDATE ExamAttempts
+            SET StartedAt = DATEADD(minute, -31, SYSDATETIMEOFFSET()),
+                ExpiresAt = DATEADD(minute, 29, SYSDATETIMEOFFSET())
+            WHERE AttemptId = {attemptId};
+            """);
+
     private async Task<int> SeedLearnerAsync(string? activeCertCode = null, int startingCredits = 0)
     {
         var email = $"{Guid.NewGuid():N}@test.local";
@@ -273,6 +281,8 @@ public sealed class PlacementServiceTests(DatabaseFixture database)
 
         // Answer Q1 correctly (Listening: raw = 1 -> scaled = 250)
         await service.SaveAnswerAsync(userId, info.PlacementId, q1Id, opt1CorrectId, isFlagged: false);
+        await AdvanceAttemptToSecondPhaseAsync(info.AttemptId);
+        service = CreateServices().service;
         // Answer Q2 correctly (Reading: raw = 1 -> scaled = 200)
         await service.SaveAnswerAsync(userId, info.PlacementId, q2Id, opt2CorrectId, isFlagged: false);
 
@@ -343,6 +353,8 @@ public sealed class PlacementServiceTests(DatabaseFixture database)
         // Take and submit placement first to establish assessed level (A2)
         var info = await service.StartPlacementTestAsync(userId, standardExamId);
         await service.SaveAnswerAsync(userId, info.PlacementId, q1Id, opt1CorrectId, isFlagged: false);
+        await AdvanceAttemptToSecondPhaseAsync(info.AttemptId);
+        service = CreateServices().service;
         await service.SaveAnswerAsync(userId, info.PlacementId, q2Id, opt2CorrectId, isFlagged: false);
         await service.SubmitPlacementTestAsync(userId, info.PlacementId, isAutoSubmit: false);
 

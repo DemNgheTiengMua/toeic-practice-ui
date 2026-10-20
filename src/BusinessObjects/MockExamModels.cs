@@ -82,7 +82,32 @@ public sealed record AttemptQuestionInfo(
     string? Passage,
     IReadOnlyList<AttemptOption> Options,
     int? SelectedOptionId,
-    bool IsFlagged);
+    bool IsFlagged,
+    string QuestionType = "mcq",
+    string? ResponseText = null,
+    DateTimeOffset? DraftSavedAt = null,
+    int? MinWords = null,
+    int? MaxWords = null,
+    int? SkillDurationMinutes = null,
+    int SkillDisplayOrder = 0);
+
+public sealed record AttemptFinalDraft(
+    int QuestionId,
+    string? ResponseText);
+
+public sealed record AttemptPhaseInfo(
+    int SkillId,
+    string SkillCode,
+    string SkillName,
+    int SkillDisplayOrder,
+    int StartOffsetSeconds,
+    int DurationSeconds);
+
+public sealed record SaveAttemptDraftResult(
+    int FreeResponseId,
+    int QuestionId,
+    DateTimeOffset SavedAt,
+    int WordCount);
 
 public sealed record NavigatorItem(
     int QuestionId,
@@ -109,7 +134,8 @@ public sealed record AttemptTakeView(
     AttemptQuestionInfo CurrentQuestion,
     IReadOnlyList<NavigatorItem> Navigator,
     bool IsAutoSubmitted,
-    IReadOnlyList<AttemptQuestionInfo>? Questions = null);
+    IReadOnlyList<AttemptQuestionInfo>? Questions = null,
+    IReadOnlyList<AttemptPhaseInfo>? Phases = null);
 
 public sealed record SaveAttemptAnswerResult(
     int QuestionId,
@@ -241,4 +267,3 @@ public sealed record AttemptReviewView(
     int FlaggedCount,
     IReadOnlyList<AttemptReviewQuestion> Questions,
     IReadOnlyList<ReviewNavigatorItem> Navigator);
-
