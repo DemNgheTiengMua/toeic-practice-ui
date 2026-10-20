@@ -416,34 +416,57 @@
         });
       }
 
-      // Track completed audio per placement attempt
+      // Track completed/progressed audio per placement attempt
       var audioPlayer = document.querySelector('.exam-audio[data-mode="exam"]');
+      var placementAudioStorageKey = 'ee_placement_audio_@take.PlacementId';
       if (audioPlayer) {
-        var placementAudioStorageKey = 'ee_placement_audio_@take.PlacementId';
-        var qAudioKey = '@(q.AudioPath ?? "")' + (@(q.AudioStartMs.HasValue ? $"':{q.AudioStartMs}-{q.AudioEndMs}'" : "''"));
-        var isPlayed = false;
+        var qAudioKey = '@(q.AudioPath ?? "")'.trim() + (@(q.AudioStartMs.HasValue || q.AudioEndMs.HasValue ? $"':{q.AudioStartMs ?? 0}-{q.AudioEndMs ?? 0}'" : "''"));
+        var stored = {};
         try {
-          var stored = JSON.parse(localStorage.getItem(placementAudioStorageKey) || '{}');
-          isPlayed = !!stored[qAudioKey];
+          stored = JSON.parse(localStorage.getItem(placementAudioStorageKey) || '{}');
         } catch (e) {}
 
-        if (isPlayed) {
-          audioPlayer.dataset.completed = 'true';
+        var progress = stored[qAudioKey];
+        if (progress) {
+          if (typeof progress === 'boolean' && progress) {
+            audioPlayer.dataset.completed = 'true';
+          } else if (progress.completed) {
+            audioPlayer.dataset.completed = 'true';
+          } else if (progress.currentTime > 0) {
+            audioPlayer.dataset.currentTime = String(progress.currentTime);
+          }
         }
 
-        audioPlayer.addEventListener('examaudioplay', function () {
-          try {
-            var stored = JSON.parse(localStorage.getItem(placementAudioStorageKey) || '{}');
-            stored[qAudioKey] = true;
-            localStorage.setItem(placementAudioStorageKey, JSON.stringify(stored));
-          } catch (e) {}
+        document.addEventListener('examaudiotimeupdate', function (e) {
+          if (qAudioKey && e.detail) {
+            try {
+              var s = JSON.parse(localStorage.getItem(placementAudioStorageKey) || '{}');
+              var cur = s[qAudioKey] || {};
+              s[qAudioKey] = {
+                completed: !!(e.detail.completed || cur.completed),
+                currentTime: Math.max(Number(cur.currentTime) || 0, Number(e.detail.currentTime) || 0)
+              };
+              localStorage.setItem(placementAudioStorageKey, JSON.stringify(s));
+            } catch (err) {}
+          }
         });
 
-        audioPlayer.addEventListener('examaudioended', function () {
+        document.addEventListener('examaudioended', function () {
+          if (qAudioKey) {
+            try {
+              var s = JSON.parse(localStorage.getItem(placementAudioStorageKey) || '{}');
+              s[qAudioKey] = { completed: true, currentTime: Number(s[qAudioKey]?.currentTime) || 0 };
+              localStorage.setItem(placementAudioStorageKey, JSON.stringify(s));
+            } catch (err) {}
+          }
+        });
+      }
+
+      var placementSubmitForm = document.getElementById('submit-form');
+      if (placementSubmitForm) {
+        placementSubmitForm.addEventListener('submit', function () {
           try {
-            var stored = JSON.parse(localStorage.getItem(placementAudioStorageKey) || '{}');
-            stored[qAudioKey] = true;
-            localStorage.setItem(placementAudioStorageKey, JSON.stringify(stored));
+            localStorage.removeItem(placementAudioStorageKey);
           } catch (e) {}
         });
       }

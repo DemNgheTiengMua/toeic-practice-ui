@@ -180,7 +180,7 @@ public class ExamAudioAndInstructionsTests : PlaywrightTestBase
     }
 
     [Test]
-    public async Task Should_Stop_Audio_And_Lock_Replay_When_Navigating_Questions_In_Exam_Mode()
+    public async Task Should_Not_Lock_Replay_When_Navigating_Away_From_Unplayed_Question()
     {
         await _loginPage.GotoAsync();
         await _loginPage.LoginAsync("learner@demo.local", "Demo1234!");
@@ -193,56 +193,94 @@ public class ExamAudioAndInstructionsTests : PlaywrightTestBase
         }
         else
         {
-            var instructionsLink = Page.Locator("a[href*='/exams/1/instructions']").First;
-            await instructionsLink.ClickAsync();
-
+            await Page.GotoAsync($"{BaseUrl}/exams/1/instructions");
             var confirmCheck = Page.Locator("#confirm-ready");
-            if (await confirmCheck.IsVisibleAsync())
-            {
-                await confirmCheck.CheckAsync();
-            }
-
-            var startButton = Page.Locator("#start-btn");
-            await startButton.ClickAsync();
+            if (await confirmCheck.IsVisibleAsync()) await confirmCheck.CheckAsync();
+            await Page.Locator("#start-btn").ClickAsync();
         }
 
-        await Expect(Page).ToHaveURLAsync(new Regex(@"/exams/take/\d+", RegexOptions.IgnoreCase));
+        // Navigate to Question 3 (listening audio test1-p3.mp3, unplayed)
+        var q3Btn = Page.Locator(".navigator__cell[data-display-order='3']").First;
+        await q3Btn.ClickAsync();
+        await Expect(Page.Locator("#question-number-display")).ToContainTextAsync("Question 3");
 
-        // Click Question 2 in navigator (Question 2 has audio in Exam 1)
-        var q2Btn = Page.Locator(".navigator__cell[data-display-order='2']").First;
-        await q2Btn.ClickAsync();
-        await Expect(Page.Locator("#question-number-display")).ToContainTextAsync("Question 2");
+        var playerQ3 = Page.Locator("#main-exam-audio, .exam-audio[data-mode='exam']").First;
+        await Expect(playerQ3).ToBeVisibleAsync();
+        await Expect(playerQ3.Locator(".exam-audio__badge")).ToHaveTextAsync("READY");
 
-        var playerQ2 = Page.Locator("#main-exam-audio, .exam-audio[data-mode='exam']").First;
-        await Expect(playerQ2).ToBeVisibleAsync();
-
-        var playBtn = playerQ2.Locator(".exam-audio__btn-play");
-        await Expect(playBtn).ToBeVisibleAsync();
-
-        // Start audio on Question 2
-        await playBtn.ClickAsync();
-        await Expect(playerQ2.Locator(".exam-audio__badge")).ToHaveTextAsync("PLAYING");
-
-        // Navigate to Question 5 (Part 5 Reading, no audio)
+        // Navigate away to Question 5 (reading) without ever playing Question 3
         var q5Btn = Page.Locator(".navigator__cell[data-display-order='5']").First;
         await q5Btn.ClickAsync();
         await Expect(Page.Locator("#question-number-display")).ToContainTextAsync("Question 5");
 
-        // Verify audio stopped and wrapper is hidden
-        var audioWrapper = Page.Locator("#exam-audio-wrapper");
-        await Expect(audioWrapper).ToBeHiddenAsync();
+        // Return to Question 3
+        await q3Btn.ClickAsync();
+        await Expect(Page.Locator("#question-number-display")).ToContainTextAsync("Question 3");
+
+        // Question 3 must remain playable and in READY state
+        await Expect(playerQ3).ToBeVisibleAsync();
+        await Expect(playerQ3.Locator(".exam-audio__badge")).ToHaveTextAsync("READY");
+        await Expect(playerQ3.Locator(".exam-audio__btn-play")).ToBeEnabledAsync();
+    }
+
+    [Test]
+    public async Task Should_Resume_From_Last_Timestamp_And_Prevent_Rewind_When_Returning_To_Partial_Audio()
+    {
+        await _loginPage.GotoAsync();
+        await _loginPage.LoginAsync("learner@demo.local", "Demo1234!");
+        await Page.GotoAsync($"{BaseUrl}/exams");
+
+        var continueLink = Page.Locator("a[href*='/exams/take/']").First;
+        if (await continueLink.IsVisibleAsync())
+        {
+            await continueLink.ClickAsync();
+        }
+        else
+        {
+            await Page.GotoAsync($"{BaseUrl}/exams/1/instructions");
+            var confirmCheck = Page.Locator("#confirm-ready");
+            if (await confirmCheck.IsVisibleAsync()) await confirmCheck.CheckAsync();
+            await Page.Locator("#start-btn").ClickAsync();
+        }
+
+        // Navigate to Question 4 (listening audio test1-p4.mp3)
+        var q4Btn = Page.Locator(".navigator__cell[data-display-order='4']").First;
+        await q4Btn.ClickAsync();
+        await Expect(Page.Locator("#question-number-display")).ToContainTextAsync("Question 4");
+
+        var playerQ4 = Page.Locator("#main-exam-audio, .exam-audio[data-mode='exam']").First;
+        var playBtn = playerQ4.Locator(".exam-audio__btn-play");
+        await playBtn.ClickAsync();
+        await Expect(playerQ4.Locator(".exam-audio__badge")).ToHaveTextAsync("PLAYING");
+
+        // Wait until it has played at least 600ms
+        await Page.WaitForFunctionAsync("() => { const a = document.querySelector('#main-exam-audio audio'); return a && a.currentTime > 0.5; }");
+        var stoppedTime = await Page.EvaluateAsync<double>("() => document.querySelector('#main-exam-audio audio').currentTime");
+        Assert.That(stoppedTime, Is.GreaterThan(0.4));
+
+        // Navigate to Question 5 (reading, no audio)
+        var q5Btn = Page.Locator(".navigator__cell[data-display-order='5']").First;
+        await q5Btn.ClickAsync();
+        await Expect(Page.Locator("#question-number-display")).ToContainTextAsync("Question 5");
+
+        // Audio must be stopped
         var anyPlaying = await Page.EvaluateAsync<bool>("() => Array.from(document.querySelectorAll('audio')).some(a => !a.paused && a.currentTime > 0)");
-        Assert.That(anyPlaying, Is.False, "Audio should stop playing when navigating to another section");
+        Assert.That(anyPlaying, Is.False);
 
-        // Navigate back to Question 2
-        await q2Btn.ClickAsync();
-        await Expect(Page.Locator("#question-number-display")).ToContainTextAsync("Question 2");
+        // Return to Question 4
+        await q4Btn.ClickAsync();
+        await Expect(Page.Locator("#question-number-display")).ToContainTextAsync("Question 4");
 
-        // Verify Question 2 is permanently locked in COMPLETED state
-        await Expect(playerQ2).ToBeVisibleAsync();
-        await Expect(playerQ2.Locator(".exam-audio__badge")).ToHaveTextAsync("COMPLETED");
-        await Expect(playerQ2.Locator(".exam-audio__btn-play")).ToBeDisabledAsync();
-        await Expect(playerQ2.Locator(".exam-audio__btn-text")).ToHaveTextAsync("COMPLETED");
+        // Must restore at the last timestamp (not 0:00)
+        await Expect(playerQ4).ToBeVisibleAsync();
+        var resumedTime = await Page.EvaluateAsync<double>("() => parseFloat(document.querySelector('#main-exam-audio').dataset.currentTime || '0')");
+        Assert.That(resumedTime, Is.GreaterThanOrEqualTo(stoppedTime - 0.1), "Audio must resume from last timestamp, not from beginning");
+
+        // Candidate can resume playback from this timestamp
+        await playBtn.ClickAsync();
+        await Expect(playerQ4.Locator(".exam-audio__badge")).ToHaveTextAsync("PLAYING");
+        var currentTimeAfterResume = await Page.EvaluateAsync<double>("() => document.querySelector('#main-exam-audio audio').currentTime");
+        Assert.That(currentTimeAfterResume, Is.GreaterThanOrEqualTo(resumedTime));
     }
 
     [Test]
@@ -278,6 +316,7 @@ public class ExamAudioAndInstructionsTests : PlaywrightTestBase
         var playBtn = playerQ2.Locator(".exam-audio__btn-play");
         await playBtn.ClickAsync();
         await Expect(playerQ2.Locator(".exam-audio__badge")).ToHaveTextAsync("PLAYING");
+        await Page.WaitForTimeoutAsync(600);
 
         // Now RELOAD (F5) the page!
         await Page.ReloadAsync();
@@ -285,10 +324,12 @@ public class ExamAudioAndInstructionsTests : PlaywrightTestBase
         // 1. Must not have any JavaScript errors
         Assert.That(errors, Is.Empty, "Page reload caused JavaScript errors: " + string.Join("; ", errors));
 
-        // 2. Audio must be locked to COMPLETED (no replay allowed)
-        var reloadedPlayer = Page.Locator("#main-exam-audio, .exam-audio[data-mode='exam']").First;
-        await Expect(reloadedPlayer.Locator(".exam-audio__badge")).ToHaveTextAsync("COMPLETED");
-        await Expect(reloadedPlayer.Locator(".exam-audio__btn-play")).ToBeDisabledAsync();
+        // 2. Audio must preserve progress across reload (not restart from scratch)
+        var reloadedPlayer = Page.Locator(".exam-audio[data-mode='exam']").First;
+        await Expect(reloadedPlayer).ToBeVisibleAsync();
+        var resumedTime = await reloadedPlayer.EvaluateAsync<double>("el => parseFloat(el.dataset.currentTime || '0')");
+        var isCompleted = await reloadedPlayer.EvaluateAsync<bool>("el => el.dataset.completed === 'true'");
+        Assert.That(isCompleted || resumedTime > 0, Is.True, "Audio must preserve playback progress across reload");
 
         // 3. Timer must NOT be frozen at --:--:--
         var timerDisplay = Page.Locator("#timer-display");

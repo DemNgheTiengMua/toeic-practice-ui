@@ -415,16 +415,35 @@
         console.warn('Audio storage read error:', e);
       }
 
-      function recordAudioStartedOrCompleted(key) {
-        if (!key) return;
-        playedAudios[key] = true;
+      function getAudioProgress(key) {
+        if (!key || !playedAudios[key]) return { completed: false, currentTime: 0 };
+        var entry = playedAudios[key];
+        if (typeof entry === 'boolean') {
+          return { completed: entry, currentTime: 0 };
+        }
+        return {
+          completed: !!entry.completed,
+          currentTime: Number(entry.currentTime) || 0
+        };
+      }
+
+      function recordAudioProgress(key, progress) {
+        if (!key || !progress) return;
+        var existing = getAudioProgress(key);
+        var completed = !!(progress.completed || existing.completed);
+        var currentTime = Math.max(existing.currentTime, Number(progress.currentTime) || 0);
+        playedAudios[key] = {
+          completed: completed,
+          currentTime: currentTime
+        };
         try {
           localStorage.setItem(audioStorageKey, JSON.stringify(playedAudios));
         } catch (e) {}
       }
 
-      // If initial question audio was already completed in this attempt, re-render it as completed
-      if (currentAudioKey && playedAudios[currentAudioKey] && audioWrapper && window.createExamAudioHtml) {
+      // If initial question audio was already completed or listened in this attempt, re-render with saved progress
+      var initialProgress = getAudioProgress(currentAudioKey);
+      if (currentAudioKey && (initialProgress.completed || initialProgress.currentTime > 0) && audioWrapper && window.createExamAudioHtml) {
         var initialQ = questionMap[currentDisplayOrder] || {
           audioPath: '@Html.Raw(q.AudioPath ?? "")',
           audioStartMs: @(q.AudioStartMs.HasValue ? q.AudioStartMs.Value.ToString() : "null"),
@@ -436,20 +455,26 @@
           startMs: initialQ.audioStartMs,
           endMs: initialQ.audioEndMs,
           playerId: 'main-exam-audio',
-          completed: true
+          completed: initialProgress.completed,
+          currentTime: initialProgress.currentTime
         });
         if (window.initExamAudio) window.initExamAudio();
       }
 
-      document.addEventListener('examaudioplay', function () {
-        if (currentAudioKey) {
-          recordAudioStartedOrCompleted(currentAudioKey);
+      document.addEventListener('examaudiotimeupdate', function (e) {
+        if (currentAudioKey && e.detail) {
+          recordAudioProgress(currentAudioKey, {
+            currentTime: e.detail.currentTime,
+            completed: e.detail.completed
+          });
         }
       });
 
       document.addEventListener('examaudioended', function () {
         if (currentAudioKey) {
-          recordAudioStartedOrCompleted(currentAudioKey);
+          recordAudioProgress(currentAudioKey, {
+            completed: true
+          });
         }
       });
 
@@ -475,22 +500,27 @@
 
         if (newAudioKey !== currentAudioKey) {
           if (currentAudioKey !== null) {
+            var stoppedList = null;
             if (window.stopExamAudio) {
-              window.stopExamAudio(audioWrapper);
+              stoppedList = window.stopExamAudio(audioWrapper);
             }
-            recordAudioStartedOrCompleted(currentAudioKey);
+            var stoppedTime = (stoppedList && stoppedList[0]) ? stoppedList[0].currentTime : 0;
+            if (stoppedTime > 0) {
+              recordAudioProgress(currentAudioKey, { currentTime: stoppedTime });
+            }
           }
 
           if (newAudioKey) {
             audioWrapper.style.display = 'block';
-            var isCompleted = !!playedAudios[newAudioKey];
+            var progress = getAudioProgress(newAudioKey);
             audioWrapper.innerHTML = window.createExamAudioHtml({
               mode: 'exam',
               audioPath: q.audioPath,
               startMs: q.audioStartMs,
               endMs: q.audioEndMs,
               playerId: 'main-exam-audio',
-              completed: isCompleted
+              completed: progress.completed,
+              currentTime: progress.currentTime
             });
             if (window.initExamAudio) window.initExamAudio();
           } else {
@@ -850,6 +880,11 @@
             isSubmitting = true;
             timesUpModal.style.display = 'flex';
             setTimeout(function () {
+              if (window.stopExamAudio) window.stopExamAudio();
+              try {
+                localStorage.removeItem(storageKey);
+                localStorage.removeItem(audioStorageKey);
+              } catch (err) {}
               autoSubmitForm.submit();
             }, 1000);
           }

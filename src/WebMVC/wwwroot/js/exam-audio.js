@@ -43,17 +43,27 @@
     var endMs = parseInt(player.dataset.endMs, 10);
     var hasSegment = Number.isInteger(startMs) && Number.isInteger(endMs) &&
       startMs >= 0 && endMs > startMs;
-    var segmentStart = hasSegment ? startMs / 1000 : 0;
+    var originalSegmentStart = hasSegment ? startMs / 1000 : 0;
+    var segmentStart = originalSegmentStart;
     var segmentEnd = hasSegment ? endMs / 1000 : null;
     var started = false;
     var completed = player.dataset.completed === "true" || player.getAttribute("data-completed") === "true";
+    var savedTime = parseFloat(player.dataset.currentTime);
+    var minPlayableTime = originalSegmentStart;
+    if (Number.isFinite(savedTime) && savedTime > originalSegmentStart) {
+      minPlayableTime = savedTime;
+    }
+    if (isExam && segmentEnd !== null && minPlayableTime >= segmentEnd - 0.25) {
+      completed = true;
+      player.dataset.completed = "true";
+    }
     var internalSeek = false;
-    var lastTimeSeen = segmentStart;
+    var lastTimeSeen = minPlayableTime;
     var pointerIsDown = false;
     var scrubWasCompleted = false;
 
     function lowerBound() {
-      return segmentStart;
+      return isExam ? minPlayableTime : originalSegmentStart;
     }
 
     function upperBound() {
@@ -65,7 +75,7 @@
 
     function duration() {
       var end = upperBound();
-      return end === null ? 0 : Math.max(0, end - lowerBound());
+      return end === null ? 0 : Math.max(0, end - originalSegmentStart);
     }
 
     function clampTime(seconds) {
@@ -76,7 +86,8 @@
 
     function updateTime() {
       var length = duration();
-      var elapsed = completed && isExam ? length : Math.max(0, audio.currentTime - lowerBound());
+      var currentPos = (audio && audio.currentTime > 0) ? audio.currentTime : minPlayableTime;
+      var elapsed = completed && isExam ? length : Math.max(0, currentPos - originalSegmentStart);
       if (length > 0) elapsed = Math.min(length, elapsed);
 
       if (timer) timer.textContent = formatTime(elapsed) + " / " + formatTime(length);
@@ -194,7 +205,11 @@
     }
 
     audio.addEventListener("loadedmetadata", function () {
-      if (hasSegment && audio.currentTime < segmentStart) seekTo(segmentStart);
+      if (minPlayableTime > originalSegmentStart) {
+        seekTo(minPlayableTime);
+      } else if (hasSegment && audio.currentTime < segmentStart) {
+        seekTo(segmentStart);
+      }
       updateTime();
       updateState();
     });
@@ -208,8 +223,20 @@
         }
       }
       lastTimeSeen = audio.currentTime;
+      if (isExam && audio.currentTime > minPlayableTime) {
+        minPlayableTime = audio.currentTime;
+      }
       if (!audio.paused && stopAtBoundary()) return;
       updateTime();
+      player.dispatchEvent(new CustomEvent("examaudiotimeupdate", {
+        bubbles: true,
+        detail: {
+          audioPath: audio.src,
+          currentTime: audio.currentTime,
+          completed: completed,
+          player: player
+        }
+      }));
     });
 
     audio.addEventListener("seeking", function () {
@@ -387,6 +414,9 @@
     if (options.completed) {
       player.dataset.completed = "true";
     }
+    if (options.currentTime != null && Number.isFinite(options.currentTime) && options.currentTime > 0) {
+      player.dataset.currentTime = String(options.currentTime);
+    }
     if (audio) audio.src = options.audioPath || "";
 
     return player.outerHTML;
@@ -401,19 +431,27 @@
       players = Array.prototype.slice.call(root.querySelectorAll(".exam-audio"));
     }
 
+    var stoppedList = [];
     players.forEach(function (player) {
       var audio = player.querySelector(".exam-audio__native");
+      var stoppedTime = 0;
+      var wasCompleted = player.dataset.completed === "true" || player.getAttribute("data-completed") === "true";
       if (audio) {
+        stoppedTime = audio.currentTime || 0;
         audio.dataset.forceStopped = "true";
         if (!audio.paused) {
           audio.pause();
         }
-        audio.currentTime = 0;
         audio.removeAttribute("src");
         audio.load();
       }
-      player.dataset.completed = "true";
+      stoppedList.push({
+        player: player,
+        currentTime: stoppedTime,
+        completed: wasCompleted
+      });
     });
+    return stoppedList;
   };
 
   if (document.readyState === "loading") {
