@@ -54,7 +54,8 @@ public sealed class WritingPracticeService(
     private readonly ICreditLedger _creditLedger = creditLedger ?? new CreditLedger(db);
 
     private static bool IsFreeDiagnostic(Exam exam) =>
-        string.Equals(exam.SourceName, FreeDiagnosticSourceName, StringComparison.Ordinal);
+        string.Equals(exam.Purpose, "placement", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(exam.SourceName, FreeDiagnosticSourceName, StringComparison.Ordinal);
 
     public async Task<WritingPracticeInstructionsView> GetInstructionsAsync(int userId, int examId, CancellationToken cancellationToken = default)
     {

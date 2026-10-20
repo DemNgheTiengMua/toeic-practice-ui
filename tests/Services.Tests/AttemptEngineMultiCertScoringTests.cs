@@ -166,4 +166,57 @@ public sealed class AttemptEngineMultiCertScoringTests(DatabaseFixture database)
             await database.DropDatabaseAsync(databaseName);
         }
     }
+
+    [Fact]
+    public async Task Resolves_Score_Bands_With_Gaps_To_Highest_Threshold_Met()
+    {
+        var databaseName = $"AttemptScoringGap_{Guid.NewGuid():N}";
+        var connectionString = await database.CreateFreshDatabaseAsync(databaseName);
+        try
+        {
+            var userEmail = $"{Guid.NewGuid():N}@test.local";
+            var fixture = await SeedFixtureAsync(connectionString, "VSTEP");
+
+            // Re-seed bands with explicit gaps: A2 (40-45), B1 (50-60), C1 (80-100)
+            await RunSqlAsync(connectionString, $"""
+                DELETE FROM ScoreBands WHERE CertId = {fixture.CertId};
+                INSERT INTO ScoreBands (CertId, Code, Name, MinTotal, MaxTotal, DisplayOrder) VALUES
+                  ({fixture.CertId}, 'A2', N'A2', 40, 45, 1),
+                  ({fixture.CertId}, 'B1', N'B1', 50, 60, 2),
+                  ({fixture.CertId}, 'C1', N'C1', 80, 100, 3);
+                """);
+
+            await RunSqlAsync(connectionString, $"""
+                INSERT INTO Users (RoleId, Email, PasswordHash, FullName)
+                VALUES ((SELECT RoleId FROM Roles WHERE Code = 'learner'), '{userEmail}', 0x01, N'Gap Learner');
+                """);
+            int userId;
+            await using (var userDb = DbContextFactory.Create(connectionString))
+            {
+                userId = await userDb.Users.Where(u => u.Email == userEmail).Select(u => u.UserId).SingleAsync();
+            }
+
+            // Intermediate score 48 falls between A2 (max 45) and B1 (min 50)
+            await RunSqlAsync(connectionString, $"""
+                INSERT INTO ScoreScales (CertId, SkillId, ExamId, RawScore, ScaledScore) VALUES
+                  ({fixture.CertId}, {fixture.ListeningSkillId}, {fixture.ExamId}, 1, 48),
+                  ({fixture.CertId}, {fixture.ReadingSkillId}, {fixture.ExamId}, 1, 48);
+                """);
+
+            await using var engineDb = DbContextFactory.Create(connectionString);
+            var engine = new AttemptEngine(engineDb);
+            var attempt = await engine.CreateAttemptAsync(userId, fixture.CertId, fixture.ExamId, 60);
+            await engine.SaveAnswerAsync(attempt.AttemptId, userId, fixture.ListeningQuestionId, fixture.ListeningCorrectOptionId, false);
+            await engine.SaveAnswerAsync(attempt.AttemptId, userId, fixture.ReadingQuestionId, fixture.ReadingCorrectOptionId, false);
+
+            var result = await engine.SubmitAttemptAsync(attempt.AttemptId, userId, isAutoSubmit: false);
+
+            Assert.Equal(48, result.TotalScore);
+            Assert.Equal("A2", result.BandCode);
+        }
+        finally
+        {
+            await database.DropDatabaseAsync(databaseName);
+        }
+    }
 }

@@ -461,7 +461,9 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
             var matchingBand = bands.FirstOrDefault(b => totalScore >= b.MinTotal && totalScore <= b.MaxTotal);
             if (matchingBand is null && bands.Count > 0)
             {
-                matchingBand = totalScore < bands[0].MinTotal ? bands[0] : bands[^1];
+                matchingBand = totalScore < bands[0].MinTotal
+                    ? bands[0]
+                    : (bands.LastOrDefault(b => totalScore >= b.MinTotal) ?? bands[^1]);
             }
             attempt.BandCode = matchingBand?.Code;
 
