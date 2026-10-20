@@ -105,27 +105,10 @@ else
       It starts when preparation ends and stops when speaking time ends. You can stop early and review your recording before saving it. Once saved, you move to the next question.
     </div>
 
-    <!-- Microphone test card -->
-    <div class="card" id="mic-test-card">
-      <div class="card__header"><strong>Microphone check</strong></div>
-      <div class="card__body stack">
-        <p class="no-margin">Say your name and today's date out loud. Play it back to make sure your voice is loud and clear.</p>
-        <div class="exam-audio">
-          <span class="badge badge--muted">Test clip</span>
-          <div style="flex: 1 1 auto">
-            <div class="progress" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="5" aria-label="Playback position">
-              <div class="progress__bar" id="mic-progress" style="width: 0%"></div>
-            </div>
-            <p class="exam-audio__status m-0 mt-2" id="mic-status">Ready to test microphone</p>
-          </div>
-          <div class="row">
-            <button class="btn btn--sm" type="button" id="btn-record-test">Record test clip</button>
-            <button class="btn btn--sm" type="button" id="btn-play-test" disabled>Play back</button>
-          </div>
-        </div>
-        <p class="text-xs text-muted no-margin">The test clip stays on your device, is not saved to the server, and is not graded.</p>
-      </div>
-    </div>
+    <partial name="_AudioEquipmentCheck" model='new WebMVC.Models.AudioEquipmentCheckModel(
+        ShowInput: true,
+        ShowOutput: false,
+        Title: "Audio equipment check")' />
 
     <div class="card">
       <div class="card__header"><strong>Important notes</strong></div>
@@ -161,67 +144,5 @@ else
       if (btn) btn.disabled = !this.checked;
     });
 
-    // Browser audio test clip implementation
-    (function() {
-      let mediaRecorder = null;
-      let audioChunks = [];
-      let testAudio = null;
-      const recBtn = document.getElementById('btn-record-test');
-      const playBtn = document.getElementById('btn-play-test');
-      const statusText = document.getElementById('mic-status');
-      const progressBar = document.getElementById('mic-progress');
-
-      if (!recBtn) return;
-
-      recBtn.addEventListener('click', async function() {
-        if (mediaRecorder && mediaRecorder.state === 'recording') {
-          mediaRecorder.stop();
-          recBtn.textContent = 'Record test clip';
-          return;
-        }
-
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          audioChunks = [];
-          mediaRecorder = new MediaRecorder(stream);
-          mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
-          mediaRecorder.onstop = () => {
-            const blob = new Blob(audioChunks, { type: 'audio/webm' });
-            testAudio = new Audio(URL.createObjectURL(blob));
-            if (playBtn) playBtn.disabled = false;
-            if (statusText) statusText.textContent = 'Test recording ready to play';
-            if (progressBar) progressBar.style.width = '100%';
-            stream.getTracks().forEach(track => track.stop());
-          };
-
-          mediaRecorder.start();
-          recBtn.textContent = 'Stop recording (max 5s)';
-          if (statusText) statusText.textContent = 'Recording… say something';
-          if (progressBar) progressBar.style.width = '50%';
-
-          setTimeout(() => {
-            if (mediaRecorder && mediaRecorder.state === 'recording') {
-              mediaRecorder.stop();
-              recBtn.textContent = 'Record test clip';
-            }
-          }, 5000);
-        } catch (err) {
-          if (statusText) statusText.textContent = 'Microphone access denied or not available.';
-        }
-      });
-
-      if (playBtn) {
-        playBtn.addEventListener('click', function() {
-          if (testAudio) {
-            testAudio.currentTime = 0;
-            testAudio.play();
-            if (statusText) statusText.textContent = 'Playing test clip…';
-            testAudio.onended = () => {
-              if (statusText) statusText.textContent = 'Playback finished.';
-            };
-          }
-        });
-      }
-    })();
   </script>
 }

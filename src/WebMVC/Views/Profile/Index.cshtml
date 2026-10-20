@@ -68,6 +68,11 @@
     </form>
 
     <div class="stack">
+      @if (isLearner)
+      {
+        <partial name="_AudioEquipmentCheck" model='new WebMVC.Models.AudioEquipmentCheckModel(Title: "Audio & Equipment")' />
+      }
+
       <div class="card">
         <div class="card__header"><strong>Credit wallet</strong></div>
         <div class="card__body stack">

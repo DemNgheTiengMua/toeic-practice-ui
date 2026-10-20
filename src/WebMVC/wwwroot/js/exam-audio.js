@@ -307,10 +307,23 @@
     if (forwardButton) forwardButton.addEventListener("click", function () { skip(5); });
 
     if (volumeSlider) {
-      audio.volume = Number(volumeSlider.value) / 100;
+      var audioPreferences = window.EeAudio ? window.EeAudio.readPreferences() : null;
+      if (audioPreferences) {
+        volumeSlider.value = String(Math.round(audioPreferences.volume * 100));
+        audio.volume = audioPreferences.volume;
+        audio.muted = audioPreferences.muted;
+        if (volumeIcon) volumeIcon.classList.toggle("hidden", audio.muted);
+        if (muteIcon) muteIcon.classList.toggle("hidden", !audio.muted);
+        if (muteButton) muteButton.setAttribute("aria-label", audio.muted ? "Unmute audio" : "Mute audio");
+      } else {
+        audio.volume = Number(volumeSlider.value) / 100;
+      }
       volumeSlider.addEventListener("input", function () {
         audio.volume = Number(volumeSlider.value) / 100;
         audio.muted = audio.volume === 0;
+        if (window.EeAudio) {
+          window.EeAudio.savePreferences({ volume: audio.volume, muted: audio.muted });
+        }
         if (volumeIcon) volumeIcon.classList.toggle("hidden", audio.muted);
         if (muteIcon) muteIcon.classList.toggle("hidden", !audio.muted);
         if (muteButton) muteButton.setAttribute("aria-label", audio.muted ? "Unmute audio" : "Mute audio");
@@ -320,12 +333,17 @@
     if (muteButton) {
       muteButton.addEventListener("click", function () {
         audio.muted = !audio.muted;
+        if (window.EeAudio) {
+          window.EeAudio.savePreferences({ muted: audio.muted });
+        }
         if (volumeIcon) volumeIcon.classList.toggle("hidden", audio.muted);
         if (muteIcon) muteIcon.classList.toggle("hidden", !audio.muted);
         if (volumeSlider && !audio.muted && Number(volumeSlider.value) === 0) volumeSlider.value = "85";
         if (muteButton) muteButton.setAttribute("aria-label", audio.muted ? "Unmute audio" : "Mute audio");
       });
     }
+
+    if (window.EeAudio) window.EeAudio.applyOutput(audio);
 
     updateTime();
     updateState();

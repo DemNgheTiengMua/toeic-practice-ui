@@ -28,6 +28,9 @@
       <span class="save-status save-status--saved" id="save-status-text" role="status" aria-live="polite">
         @take.SavedCount of @take.TotalQuestions saved
       </span>
+      @await Html.PartialAsync("_AudioEmergencySwitcher", new AudioEquipmentCheckModel(
+          ShowInput: true,
+          ShowOutput: false))
       <span class="timer" role="timer" aria-label="Time remaining in the exam">
         <span class="text-sm text-muted">Exam time remaining</span>
         <span class="timer__value" id="test-timer-val">--:--</span>
@@ -253,6 +256,7 @@
 <!-- Anti-forgery form token helper -->
 <form id="antiforgery-form" style="display:none">@Html.AntiForgeryToken()</form>
 
+<script src="~/js/ee-audio.js"></script>
 <script>
 (function() {
   const attemptId = @take.AttemptId;
@@ -391,7 +395,9 @@
     updateSpeakUI();
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: window.EeAudio ? window.EeAudio.inputConstraints() : true
+      });
       mediaRecorder = new MediaRecorder(stream);
       mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
       mediaRecorder.onstop = () => {

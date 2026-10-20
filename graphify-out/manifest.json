@@ -804,9 +804,9 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Certificates/Index.cshtml": {
-    "mtime": 1792471938.572654,
-    "seen": 1792480040.2901628,
-    "ast_hash": "eb542b53993769509b8ef2294cb2f7f6",
+    "mtime": 1792486570.0301416,
+    "seen": 1792494347.5699582,
+    "ast_hash": "bf06df9d1fca9dabcb557079deb8ec41",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Certificates/Unavailable.cshtml": {
@@ -822,15 +822,15 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Home/Index.cshtml": {
-    "mtime": 1792471938.584765,
-    "seen": 1792480040.2901628,
-    "ast_hash": "c3d550dd5c3197df9653f0d13d38d810",
+    "mtime": 1792486570.0357108,
+    "seen": 1792494347.5729682,
+    "ast_hash": "ac7c0bd5b165228308fd15846b39507c",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Profile/Index.cshtml": {
-    "mtime": 1792471938.5987623,
-    "seen": 1792480040.2901628,
-    "ast_hash": "ace9f4191113b0554daee902cdf01eec",
+    "mtime": 1792487606.6347468,
+    "seen": 1792494347.5759654,
+    "ast_hash": "9cb6d5cdb8cc891f155f24fdbc4c1620",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Profile/Password.cshtml": {
@@ -858,9 +858,9 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Shared/_LearnerLayout.cshtml": {
-    "mtime": 1792471938.604769,
-    "seen": 1792480040.2901628,
-    "ast_hash": "9ed98a0bd2677a3f2782dc2ccd58c56a",
+    "mtime": 1792487542.8407335,
+    "seen": 1792494347.5779703,
+    "ast_hash": "97323103304b62fa2ee930a295bd83e9",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/_ViewImports.cshtml": {
@@ -1458,20 +1458,20 @@
     "semantic_hash": ""
   },
   "src/BusinessObjects/PracticeModels.cs": {
-    "mtime": 1792484092.5493705,
-    "seen": 1792484957.2814076,
+    "mtime": 1792486570.018394,
+    "seen": 1792494347.5089562,
     "ast_hash": "c0b95bfa7ce7c0b31357c235dd462ae5",
     "semantic_hash": ""
   },
   "src/Contracts/PracticeDtos.cs": {
-    "mtime": 1792484092.5893612,
-    "seen": 1792484957.2903972,
+    "mtime": 1792486570.020599,
+    "seen": 1792494347.5159562,
     "ast_hash": "0d3c5d22e9ee21a38ee230e24b1901e5",
     "semantic_hash": ""
   },
   "src/Services/PracticeService.cs": {
-    "mtime": 1792484092.6283674,
-    "seen": 1792484957.3173985,
+    "mtime": 1792486570.0231123,
+    "seen": 1792494347.5419588,
     "ast_hash": "10500d2e839577e7166b58b1ff736504",
     "semantic_hash": ""
   },
@@ -1488,26 +1488,26 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Practice/Index.cshtml": {
-    "mtime": 1792471938.5957625,
-    "seen": 1792480040.2901628,
-    "ast_hash": "4fff6db4508c07d1f0931936350db3e2",
+    "mtime": 1792488548.3207507,
+    "seen": 1792494347.5759654,
+    "ast_hash": "589f9244cb4e241d95091a7328a4835b",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Practice/Summary.cshtml": {
-    "mtime": 1792484001.7219007,
-    "seen": 1792484957.365405,
+    "mtime": 1792486570.0392313,
+    "seen": 1792494347.5759654,
     "ast_hash": "f784073bffeb82ffe951dc081aab37f4",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Practice/Take.cshtml": {
-    "mtime": 1792483918.233424,
-    "seen": 1792484957.365405,
-    "ast_hash": "3c6a1191860816ef368b444759118022",
+    "mtime": 1792487579.1678452,
+    "seen": 1792494347.5759654,
+    "ast_hash": "9606933d2e3cc1273074c0cababa2ee5",
     "semantic_hash": ""
   },
   "tests/Services.Tests/PracticeServiceTests.cs": {
-    "mtime": 1792484013.220009,
-    "seen": 1792484957.3834047,
+    "mtime": 1792486570.0586305,
+    "seen": 1792494347.5889878,
     "ast_hash": "d27abfe7ecc8227600dba7c7827c2cfe",
     "semantic_hash": ""
   },
@@ -1566,14 +1566,14 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/SavedQuestions/Index.cshtml": {
-    "mtime": 1792483937.1875968,
-    "seen": 1792484957.366402,
+    "mtime": 1792486570.0438244,
+    "seen": 1792494347.5769598,
     "ast_hash": "0db547c5f5f6ecd31b7bca20b0523887",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/SavedQuestions/Review.cshtml": {
-    "mtime": 1792483936.2786021,
-    "seen": 1792484957.366402,
+    "mtime": 1792486570.045822,
+    "seen": 1792494347.5769598,
     "ast_hash": "f9869b1e5bd47462b639c828289c8eea",
     "semantic_hash": ""
   },
@@ -1686,9 +1686,9 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Pricing/Index.cshtml": {
-    "mtime": 1792471938.5977628,
-    "seen": 1792480040.2901628,
-    "ast_hash": "ec1c32308fa354119f0361762f16c3d1",
+    "mtime": 1792486570.0417545,
+    "seen": 1792494347.5759654,
+    "ast_hash": "40fd6e18cb697194aa1d9b5585e99b29",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Pricing/PricingUnavailable.cshtml": {
@@ -1872,9 +1872,9 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Exams/Instructions.cshtml": {
-    "mtime": 1792471938.5807693,
-    "seen": 1792480040.2901628,
-    "ast_hash": "954b83b0c0314911d5f7b3147a50832e",
+    "mtime": 1792487538.6268747,
+    "seen": 1792494347.5729682,
+    "ast_hash": "e1e8fa17bea7d422c46ee16094bba755",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Exams/Result.cshtml": {
@@ -1884,9 +1884,9 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Exams/Take.cshtml": {
-    "mtime": 1792483884.586242,
-    "seen": 1792484957.3614082,
-    "ast_hash": "067b593e4b79d59882b29686c8e630a4",
+    "mtime": 1792487572.5823922,
+    "seen": 1792494347.5729682,
+    "ast_hash": "8a9c0d24fa0a29e1d61affd6ea5dd58c",
     "semantic_hash": ""
   },
   "tests/Services.Tests/MockExamServiceTests.cs": {
@@ -2028,8 +2028,8 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Exams/Review.cshtml": {
-    "mtime": 1792483919.0364125,
-    "seen": 1792484957.3614082,
+    "mtime": 1792486570.0321527,
+    "seen": 1792494347.5729682,
     "ast_hash": "db9f09a2bc44d612f1d7567a2ebf72a2",
     "semantic_hash": ""
   },
@@ -2112,8 +2112,8 @@
     "semantic_hash": ""
   },
   "src/WebAPI/Endpoints/PracticeEndpoints.cs": {
-    "mtime": 1792484092.6713614,
-    "seen": 1792484957.3234012,
+    "mtime": 1792486570.0256321,
+    "seen": 1792494347.5479643,
     "ast_hash": "36aafed845497a09b615a48424aad6fa",
     "semantic_hash": ""
   },
@@ -2286,9 +2286,9 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Speaking/Instructions.cshtml": {
-    "mtime": 1792471938.6067636,
-    "seen": 1792480040.2901628,
-    "ast_hash": "fb57377e99de89d9bf47d9d34d9719bf",
+    "mtime": 1792487539.9918654,
+    "seen": 1792494347.5779703,
+    "ast_hash": "49296b1eacc9ef314c2ae656c9f51cf6",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Speaking/Pending.cshtml": {
@@ -2298,15 +2298,15 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Speaking/Review.cshtml": {
-    "mtime": 1792483919.9177358,
-    "seen": 1792484957.369407,
+    "mtime": 1792486570.0498312,
+    "seen": 1792494347.5779703,
     "ast_hash": "e38136c25851ab0a11f2e675d06559b8",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Speaking/Take.cshtml": {
-    "mtime": 1792471938.608645,
-    "seen": 1792480040.2901628,
-    "ast_hash": "1492a9c262267cdd9cd7ca1a7c4da1ad",
+    "mtime": 1792487574.5622866,
+    "seen": 1792494347.5779703,
+    "ast_hash": "6290d9142ff4e50e40e94d7a2f40f837",
     "semantic_hash": ""
   },
   "tests/Services.Tests/SpeakingPracticeServiceTests.cs": {
@@ -2442,8 +2442,8 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Placement/Take.cshtml": {
-    "mtime": 1792483917.530395,
-    "seen": 1792484957.3644054,
+    "mtime": 1792486570.037218,
+    "seen": 1792494347.5759654,
     "ast_hash": "77c7711f07491b28ea88b4c11fa3896a",
     "semantic_hash": ""
   },
@@ -2790,9 +2790,9 @@
     "semantic_hash": ""
   },
   "tests/Services.Tests/DemoSeedTests.cs": {
-    "mtime": 1792471938.6446774,
-    "seen": 1792480040.2901628,
-    "ast_hash": "374497932a76c864aedeab720bfb356a",
+    "mtime": 1792486570.055634,
+    "seen": 1792494347.5849714,
+    "ast_hash": "a27e0bb07db54e504d5d1211b9b9fd92",
     "semantic_hash": ""
   },
   "src/WebMVC/wwwroot/img/part1-sample.svg": {
@@ -3048,21 +3048,21 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Models/ExamAudioPlayerModel.cs": {
-    "mtime": 1792483747.8901908,
-    "seen": 1792484957.3404095,
+    "mtime": 1792486570.027631,
+    "seen": 1792494347.5599556,
     "ast_hash": "fd6408abb663149c4bda97643041123e",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Shared/_ExamAudioPlayer.cshtml": {
-    "mtime": 1792483759.8126526,
-    "seen": 1792484957.367401,
+    "mtime": 1792486570.0468216,
+    "seen": 1792494347.5779703,
     "ast_hash": "cb8f0a3c5879919824eb3667444c78af",
     "semantic_hash": ""
   },
   "src/WebMVC/wwwroot/js/exam-audio.js": {
-    "mtime": 1792484574.064088,
-    "seen": 1792484957.3744006,
-    "ast_hash": "0bee3b64329d50814e53b767026d6e8f",
+    "mtime": 1792487606.5847185,
+    "seen": 1792494347.5809677,
+    "ast_hash": "28eb155c4ccb94f309d9f0db63e87f08",
     "semantic_hash": ""
   },
   "src/WebMVC/wwwroot/audio/ielts/cambridge18-t1-listening.mp3": {
@@ -3138,9 +3138,9 @@
     "semantic_hash": ""
   },
   "src/Services/LearnerService.Mission.cs": {
-    "mtime": 1792471938.4880495,
-    "seen": 1792480040.2891653,
-    "ast_hash": "7282625ee3e96d22b4e94d64e928abe2",
+    "mtime": 1792486570.0221026,
+    "seen": 1792494347.537957,
+    "ast_hash": "2fb10505446c368d566400db3b509b0b",
     "semantic_hash": ""
   },
   "src/Services/LearnerService.Rubric.cs": {
@@ -3198,9 +3198,9 @@
     "semantic_hash": ""
   },
   "tests/Services.Tests/LearnerServiceTests.Mission.cs": {
-    "mtime": 1792471938.647679,
-    "seen": 1792480040.2901628,
-    "ast_hash": "4010ae2e4fe222c94b77beacfb1c8e25",
+    "mtime": 1792486570.0566297,
+    "seen": 1792494347.585968,
+    "ast_hash": "0a09816c1d315ef05a526cb9fcb56e79",
     "semantic_hash": ""
   },
   "tests/Services.Tests/LearnerServiceTests.Readiness.cs": {
@@ -3336,9 +3336,9 @@
     "semantic_hash": ""
   },
   "tests/WebMVC.E2ETests/Journeys/AdminPortalTests.cs": {
-    "mtime": 1792471938.6650915,
-    "seen": 1792480040.2901628,
-    "ast_hash": "4d85c5698ba2a4c110734e16d5678f2a",
+    "mtime": 1792486570.0606308,
+    "seen": 1792494347.5909624,
+    "ast_hash": "d4c4d602f84e7febf74045e18e242daf",
     "semantic_hash": ""
   },
   "tests/WebMVC.E2ETests/Journeys/AuthenticationTests.cs": {
@@ -3360,9 +3360,9 @@
     "semantic_hash": ""
   },
   "tests/WebMVC.E2ETests/PlaywrightTestBase.cs": {
-    "mtime": 1792471938.6711092,
-    "seen": 1792480040.2901628,
-    "ast_hash": "10780a504cefb3ca5e98024b9acbc8b6",
+    "mtime": 1792486570.0641527,
+    "seen": 1792494347.592968,
+    "ast_hash": "c8a9167f7ec552b6523dfe7da2156344",
     "semantic_hash": ""
   },
   "tests/WebMVC.E2ETests/WebMVC.E2ETests.csproj": {
@@ -3474,9 +3474,9 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Admin/ExamStudio.cshtml": {
-    "mtime": 1792480671.6177874,
-    "seen": 1792480717.0344827,
-    "ast_hash": "b223b28a2559a4eba4c20df1613baea6",
+    "mtime": 1792486570.028632,
+    "seen": 1792494347.5659566,
+    "ast_hash": "3b7f27c46a9e8bb9796bea38527e83a0",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Admin/_QuickIngestModal.cshtml": {
@@ -3492,9 +3492,9 @@
     "semantic_hash": ""
   },
   "tests/WebMVC.E2ETests/Journeys/AdminExamStudioTests.cs": {
-    "mtime": 1792471938.6631136,
-    "seen": 1792480040.2901628,
-    "ast_hash": "6aaad1846f537e55183021b6ad795827",
+    "mtime": 1792486570.0596304,
+    "seen": 1792494347.5909624,
+    "ast_hash": "4d62a8ed4f27f02c252970d8b936dfe2",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Admin/Lessons/Preview.cshtml": {
@@ -4386,9 +4386,9 @@
     "semantic_hash": ""
   },
   "tests/WebMVC.E2ETests/Journeys/ExamAudioAndInstructionsTests.cs": {
-    "mtime": 1792484845.4496913,
-    "seen": 1792484957.3874042,
-    "ast_hash": "ab016f41dcc67975ccde40793acc4256",
+    "mtime": 1792494162.4070878,
+    "seen": 1792494347.5909624,
+    "ast_hash": "e9f633b0ee9c807196ca0f0f86e24fc9",
     "semantic_hash": ""
   },
   "docs/adr/0010-exam-shell-and-client-side-question-swapping.md": {
@@ -4488,9 +4488,39 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Shared/_ExamAudioPlayerMarkup.cshtml": {
-    "mtime": 1792483783.4245086,
-    "seen": 1792484957.367401,
+    "mtime": 1792486570.04783,
+    "seen": 1792494347.5779703,
     "ast_hash": "5ddf53132c010e677a9b79cd69bfc3d8",
+    "semantic_hash": ""
+  },
+  "src/WebMVC/Models/AudioEquipmentCheckModel.cs": {
+    "mtime": 1792487449.7454393,
+    "seen": 1792494347.5599556,
+    "ast_hash": "53363812ff3ce245ba5e8ac8551a50c0",
+    "semantic_hash": ""
+  },
+  "src/WebMVC/Views/Shared/_AudioEmergencySwitcher.cshtml": {
+    "mtime": 1792487667.3505628,
+    "seen": 1792494347.5779703,
+    "ast_hash": "3769b37e60a88e7f848d1fca66a0cf72",
+    "semantic_hash": ""
+  },
+  "src/WebMVC/Views/Shared/_AudioEquipmentCheck.cshtml": {
+    "mtime": 1792487794.3530757,
+    "seen": 1792494347.5779703,
+    "ast_hash": "63f126c83e50795f5beacbb1ee5ae6d7",
+    "semantic_hash": ""
+  },
+  "src/WebMVC/wwwroot/js/ee-audio.js": {
+    "mtime": 1792494149.81438,
+    "seen": 1792494347.5809677,
+    "ast_hash": "8c4ce512e099117f041d8ec35aa37dbd",
+    "semantic_hash": ""
+  },
+  "docs/specs/cross-role-defect-remediation.md": {
+    "mtime": 1792486569.95394,
+    "seen": 1792494347.6219814,
+    "ast_hash": "abaad050ee5d21e7a7b59949f261dd28",
     "semantic_hash": ""
   }
 }
