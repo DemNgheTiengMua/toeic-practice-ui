@@ -144,4 +144,167 @@ public class ExamAudioAndInstructionsTests : PlaywrightTestBase
         await Expect(Page.Locator("button:has-text('Mark End')").First).ToBeVisibleAsync();
         await Expect(Page.Locator("button:has-text('Preview Slice')").First).ToBeVisibleAsync();
     }
+
+    [Test]
+    public async Task Should_Stage_Start_Without_Saving_And_Render_The_Start_Marker()
+    {
+        var studio = await OpenExamStudioWithAudioAsync();
+        try
+        {
+            var saveRequests = new List<IRequest>();
+            Page.Request += (_, request) =>
+            {
+                if (request.Method == "PUT" && request.Url.Contains("/studio/group/", StringComparison.Ordinal))
+                {
+                    saveRequests.Add(request);
+                }
+            };
+
+            var audio = Page.Locator($"#slicer-audio-{studio.SectionId}");
+            await Page.Locator($"#btn-slicer-play-{studio.SectionId}").ClickAsync();
+            await Page.WaitForTimeoutAsync(250);
+            await audio.EvaluateAsync("el => el.currentTime = Math.max(el.currentTime, 0.25)");
+            await Page.Locator($"button[onclick='markCurrentStart({studio.SectionId})']").ClickAsync();
+            await Page.WaitForTimeoutAsync(250);
+
+            var status = Page.Locator($"#slicer-status-{studio.SectionId}");
+            await Expect(status).ToContainTextAsync("Start marked:");
+            await Expect(status).ToContainTextAsync("click Mark End to save");
+            await Expect(Page.Locator($"#slicer-start-marker-{studio.SectionId}")).ToHaveCSSAsync("display", "block");
+            Assert.That(await Page.Locator($"#start-ms-{studio.GroupId}").InputValueAsync(), Is.Not.Empty);
+            Assert.That(saveRequests, Is.Empty, "Mark Start must not send a group save request.");
+
+            var topStatus = await Page.Locator("#autosave-status").InnerTextAsync();
+            Assert.That(topStatus, Does.Not.Contain("Save failed"));
+            Assert.That(await audio.EvaluateAsync<bool>("el => !el.paused"), Is.True);
+        }
+        finally
+        {
+            await ExecuteSqlAsync("UPDATE QuestionGroups SET AudioStartMs = NULL, AudioEndMs = NULL WHERE GroupId = 1;");
+        }
+    }
+
+    [Test]
+    public async Task Should_Save_Both_Slice_Bounds_When_End_Is_Marked_And_Clear_Them()
+    {
+        var studio = await OpenExamStudioWithAudioAsync();
+        try
+        {
+            var audio = Page.Locator($"#slicer-audio-{studio.SectionId}");
+            await Page.Locator($"#btn-slicer-play-{studio.SectionId}").ClickAsync();
+            await Page.WaitForTimeoutAsync(250);
+            await audio.EvaluateAsync("el => el.currentTime = Math.max(el.currentTime, 0.25)");
+            await Page.Locator($"button[onclick='markCurrentStart({studio.SectionId})']").ClickAsync();
+
+            var startMs = int.Parse(await Page.Locator($"#start-ms-{studio.GroupId}").InputValueAsync());
+            await audio.EvaluateAsync("(el, start) => { el.pause(); el.currentTime = Math.max(el.currentTime, start / 1000 + 0.5); }", startMs);
+            var saveResponseTask = Page.WaitForResponseAsync(response =>
+                response.Request.Method == "PUT" &&
+                response.Url.Contains($"/studio/group/{studio.GroupId}", StringComparison.Ordinal));
+            await Page.Locator($"button[onclick='markCurrentEnd({studio.SectionId})']").ClickAsync();
+            var response = await saveResponseTask;
+
+            Assert.That(response.Status, Is.EqualTo(200));
+            Assert.That(response.Request.PostData, Does.Contain("\"audioStartMs\""));
+            Assert.That(response.Request.PostData, Does.Contain("\"audioEndMs\""));
+            await Expect(Page.Locator($"#slicer-status-{studio.SectionId}")).ToHaveTextAsync("Saved");
+
+            var clearResponseTask = Page.WaitForResponseAsync(clearResponse =>
+                clearResponse.Request.Method == "PUT" &&
+                clearResponse.Url.Contains($"/studio/group/{studio.GroupId}", StringComparison.Ordinal));
+            await Page.Locator($"button[onclick='clearCurrentSlice({studio.SectionId})']").ClickAsync();
+            var clearResponse = await clearResponseTask;
+
+            Assert.That(clearResponse.Status, Is.EqualTo(200));
+            Assert.That(clearResponse.Request.PostData, Does.Contain("\"audioStartMs\":null"));
+            Assert.That(clearResponse.Request.PostData, Does.Contain("\"audioEndMs\":null"));
+            await Expect(Page.Locator($"#start-ms-{studio.GroupId}")).ToHaveValueAsync(string.Empty);
+            await Expect(Page.Locator($"#end-ms-{studio.GroupId}")).ToHaveValueAsync(string.Empty);
+            await Expect(Page.Locator($"#slicer-status-{studio.SectionId}")).ToHaveTextAsync("Saved");
+        }
+        finally
+        {
+            await ExecuteSqlAsync("UPDATE QuestionGroups SET AudioStartMs = NULL, AudioEndMs = NULL WHERE GroupId = 1;");
+        }
+    }
+
+    [Test]
+    public async Task Should_Show_Inline_Error_And_Not_Save_When_End_Bounds_Are_Invalid()
+    {
+        var studio = await OpenExamStudioWithAudioAsync();
+        try
+        {
+            var saveRequests = new List<IRequest>();
+            Page.Request += (_, request) =>
+            {
+                if (request.Method == "PUT" && request.Url.Contains("/studio/group/", StringComparison.Ordinal))
+                {
+                    saveRequests.Add(request);
+                }
+            };
+
+            var audio = Page.Locator($"#slicer-audio-{studio.SectionId}");
+            await audio.EvaluateAsync("el => { el.pause(); el.currentTime = 0; }");
+            var markEnd = Page.Locator($"button[onclick='markCurrentEnd({studio.SectionId})']");
+            var status = Page.Locator($"#slicer-status-{studio.SectionId}");
+
+            await markEnd.ClickAsync();
+            await Expect(status).ToHaveTextAsync("End time must be after Start time (00:00)");
+
+            await Page.Locator($"#start-ms-{studio.GroupId}").FillAsync("1500");
+            await markEnd.ClickAsync();
+            await Expect(status).ToHaveTextAsync("End time must be after Start time (00:01)");
+            Assert.That(saveRequests, Is.Empty, "Invalid slice bounds must not send a group save request.");
+        }
+        finally
+        {
+            await ExecuteSqlAsync("UPDATE QuestionGroups SET AudioStartMs = NULL, AudioEndMs = NULL WHERE GroupId = 1;");
+        }
+    }
+
+    [Test]
+    public async Task Should_Pause_Slicer_Audio_When_Another_Question_Is_Selected()
+    {
+        var studio = await OpenExamStudioWithAudioAsync();
+        try
+        {
+            var audio = Page.Locator($"#slicer-audio-{studio.SectionId}");
+            await Page.Locator($"#btn-slicer-play-{studio.SectionId}").ClickAsync();
+            await Page.WaitForFunctionAsync($"() => !document.getElementById('slicer-audio-{studio.SectionId}').paused");
+            Assert.That(await audio.EvaluateAsync<bool>("el => !el.paused"), Is.True);
+
+            var railQuestions = Page.Locator(".rail-item");
+            Assert.That(await railQuestions.CountAsync(), Is.GreaterThan(1));
+            await railQuestions.Nth(1).ClickAsync();
+
+            Assert.That(await audio.EvaluateAsync<bool>("el => el.paused"), Is.True);
+            await Expect(Page.Locator($"#btn-slicer-play-{studio.SectionId}")).ToHaveTextAsync("Play");
+        }
+        finally
+        {
+            await ExecuteSqlAsync("UPDATE QuestionGroups SET AudioStartMs = NULL, AudioEndMs = NULL WHERE GroupId = 1;");
+        }
+    }
+
+    private async Task<(int SectionId, int GroupId)> OpenExamStudioWithAudioAsync()
+    {
+        await ExecuteSqlAsync("UPDATE QuestionGroups SET AudioStartMs = NULL, AudioEndMs = NULL WHERE GroupId = 1;");
+        await _loginPage.GotoAsync();
+        await _loginPage.LoginAsync("admin@demo.local", "Demo1234!");
+        await Expect(Page).ToHaveURLAsync(new Regex(@"(Dashboard|admin|certificates)", RegexOptions.IgnoreCase));
+
+        await Page.GotoAsync($"{BaseUrl}/admin/exams/1/studio");
+        await Expect(Page).ToHaveURLAsync(new Regex(@"/admin/exams/1/studio", RegexOptions.IgnoreCase));
+
+        var slicer = Page.Locator(".audio-slicer").First;
+        await Expect(slicer).ToBeVisibleAsync();
+        var slicerId = await slicer.GetAttributeAsync("id");
+        var sectionId = int.Parse(Regex.Match(slicerId!, @"audio-slicer-sec-(\d+)").Groups[1].Value);
+        var audio = Page.Locator($"#slicer-audio-{sectionId}");
+        await audio.EvaluateAsync("el => new Promise((resolve, reject) => { if (el.readyState >= 1) return resolve(); el.addEventListener('loadedmetadata', resolve, { once: true }); el.addEventListener('error', () => reject(new Error('Master audio failed to load')), { once: true }); })");
+
+        var groupCard = Page.Locator($"#ws-sec-{sectionId} .card-editor").First;
+        var groupId = int.Parse((await groupCard.GetAttributeAsync("data-group-id"))!);
+        return (sectionId, groupId);
+    }
 }
