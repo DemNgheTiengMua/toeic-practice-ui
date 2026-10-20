@@ -382,7 +382,9 @@ public sealed class PracticeService(
             group.AudioPath,
             group.ImagePath,
             group.ImageAlt,
-            isSaved);
+            isSaved,
+            group.AudioStartMs,
+            group.AudioEndMs);
     }
 
     public async Task<string?> RevealHintAsync(int userId, int sessionId, int questionId, CancellationToken cancellationToken = default)
@@ -564,6 +566,8 @@ public sealed class PracticeService(
             .AsNoTracking()
             .Include(pa => pa.Question)
                 .ThenInclude(q => q.Category)
+            .Include(pa => pa.Question)
+                .ThenInclude(q => q.Group)
             .Where(pa => pa.SessionId == sessionId)
             .OrderBy(pa => pa.DisplayOrder)
             .ToListAsync(cancellationToken);
@@ -594,7 +598,11 @@ public sealed class PracticeService(
                 correctOpt?.Text,
                 a.IsCorrect,
                 a.HintUsed,
-                q.Explanation);
+                q.Explanation,
+                q.Group.AudioPath,
+                q.Group.AudioStartMs,
+                q.Group.AudioEndMs,
+                q.Group.Transcript);
         }).ToList();
 
         var total = answers.Count;

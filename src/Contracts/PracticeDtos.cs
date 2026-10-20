@@ -67,7 +67,9 @@ public sealed record PracticeQuestionDto(
     string? AudioPath,
     string? ImagePath,
     string? ImageAlt,
-    bool IsSaved = false);
+    bool IsSaved = false,
+    int? AudioStartMs = null,
+    int? AudioEndMs = null);
 
 public sealed record SubmitPracticeAnswerRequest(int? SelectedOptionId);
 
@@ -92,7 +94,11 @@ public sealed record QuestionOutcomeDto(
     string? CorrectOptionText,
     bool? IsCorrect,
     bool HintUsed,
-    string? Explanation);
+    string? Explanation,
+    string? AudioPath = null,
+    int? AudioStartMs = null,
+    int? AudioEndMs = null,
+    string? Transcript = null);
 
 public sealed record PracticeSummaryDto(
     int SessionId,

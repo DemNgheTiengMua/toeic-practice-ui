@@ -92,6 +92,7 @@ public class ExamAudioAndInstructionsTests : PlaywrightTestBase
             // Locate Question 1 audio player
             var player = Page.Locator(".exam-audio[data-start-ms='200']").First;
             await Expect(player).ToBeVisibleAsync();
+            await Expect(player).ToHaveAttributeAsync("data-mode", "study");
 
             // Verify slice attributes
             await Expect(player).ToHaveAttributeAsync("data-start-ms", "200");
@@ -101,12 +102,32 @@ public class ExamAudioAndInstructionsTests : PlaywrightTestBase
             var src = await audioNative.GetAttributeAsync("src");
             Assert.That(src, Does.Contain("test1-p1.mp3"));
 
+            // Study-mode timeline and skip controls remain inside the group's slice.
+            var progress = player.Locator(".exam-audio__progress");
+            await Expect(progress).ToHaveCSSAsync("cursor", "pointer");
+            await Expect(player.Locator(".exam-audio__btn-rewind")).ToBeVisibleAsync();
+            await Expect(player.Locator(".exam-audio__btn-forward")).ToBeVisibleAsync();
+            await audioNative.EvaluateAsync("el => new Promise(resolve => { if (Number.isFinite(el.duration) && el.duration > 0) return resolve(); el.addEventListener('loadedmetadata', resolve, { once: true }); })");
+            var bounds = await progress.BoundingBoxAsync();
+            Assert.That(bounds, Is.Not.Null);
+            await progress.ClickAsync(new LocatorClickOptions
+            {
+                Position = new Position { X = bounds!.Width / 2, Y = bounds.Height / 2 }
+            });
+            var seekTime = await audioNative.EvaluateAsync<double>("el => el.currentTime");
+            Assert.That(seekTime, Is.GreaterThan(0.35));
+            Assert.That(seekTime, Is.LessThan(0.65));
+            await player.Locator(".exam-audio__btn-forward").ClickAsync();
+            var forwardTime = await audioNative.EvaluateAsync<double>("el => el.currentTime");
+            Assert.That(forwardTime, Is.LessThanOrEqualTo(0.8));
+            await player.Locator(".exam-audio__btn-rewind").ClickAsync();
+            var rewindTime = await audioNative.EvaluateAsync<double>("el => el.currentTime");
+            Assert.That(rewindTime, Is.GreaterThanOrEqualTo(0.19));
+            Assert.That(rewindTime, Is.LessThanOrEqualTo(0.21));
+
             // Play the audio slice
             var playBtn = player.Locator(".exam-audio__btn-play");
             await playBtn.ClickAsync();
-
-            // Wait for segment playback to conclude (600ms slice)
-            await Page.WaitForTimeoutAsync(1000);
 
             // Verify playback stopped at or near the segment end
             var status = player.Locator(".exam-audio__status");
@@ -121,6 +142,77 @@ public class ExamAudioAndInstructionsTests : PlaywrightTestBase
             // Reset DB state
             await ExecuteSqlAsync("UPDATE QuestionGroups SET AudioStartMs = NULL, AudioEndMs = NULL WHERE GroupId = 1;");
         }
+    }
+
+    [Test]
+    public async Task Should_Keep_Exam_Audio_Continuous_And_Lock_Seeking_After_Playback()
+    {
+        await _loginPage.GotoAsync();
+        await _loginPage.LoginAsync("learner@demo.local", "Demo1234!");
+        await Page.GotoAsync($"{BaseUrl}/exams/review/2");
+
+        var sourcePlayer = Page.Locator(".exam-audio[data-mode='study']").First;
+        await Expect(sourcePlayer).ToBeVisibleAsync();
+        await sourcePlayer.EvaluateAsync("source => { const player = source.cloneNode(true); player.id = 'exam-mode-e2e'; player.dataset.mode = 'exam'; player.dataset.allowReplay = 'false'; player.dataset.startMs = '200'; player.dataset.endMs = '800'; player.removeAttribute('data-initialized'); player.querySelector('.exam-audio__btn-rewind')?.remove(); player.querySelector('.exam-audio__btn-forward')?.remove(); player.querySelector('.exam-audio__progress').setAttribute('tabindex', '-1'); source.after(player); window.initExamAudio(); }");
+
+        var examPlayer = Page.Locator("#exam-mode-e2e");
+        var audio = examPlayer.Locator(".exam-audio__native");
+        await audio.EvaluateAsync("el => new Promise(resolve => { if (Number.isFinite(el.duration) && el.duration > 0) return resolve(); el.addEventListener('loadedmetadata', resolve, { once: true }); })");
+
+        var progress = examPlayer.Locator(".exam-audio__progress");
+        await Expect(progress).ToHaveAttributeAsync("tabindex", "-1");
+        await Expect(progress).ToHaveCSSAsync("pointer-events", "none");
+        await Expect(examPlayer.Locator(".exam-audio__btn-rewind")).ToHaveCountAsync(0);
+        await Expect(examPlayer.Locator(".exam-audio__btn-forward")).ToHaveCountAsync(0);
+
+        var playButton = examPlayer.Locator(".exam-audio__btn-play");
+        await playButton.ClickAsync();
+        await Expect(playButton).ToBeDisabledAsync();
+        await Expect(examPlayer.Locator(".exam-audio__badge")).ToHaveTextAsync("PLAYING");
+
+        await audio.EvaluateAsync("el => el.pause()");
+        await Page.WaitForFunctionAsync("() => !document.querySelector('#exam-mode-e2e .exam-audio__native').paused");
+
+        await Expect(examPlayer.Locator(".exam-audio__status")).ToContainTextAsync("Audio completed");
+        await Expect(examPlayer.Locator(".exam-audio__badge")).ToHaveTextAsync("COMPLETED");
+        await Expect(playButton).ToBeDisabledAsync();
+        Assert.That(await audio.EvaluateAsync<double>("el => el.currentTime"), Is.InRange(0.79, 0.9));
+    }
+
+    [Test]
+    public async Task Should_Render_Study_Audio_In_Practice_Summary()
+    {
+        await _loginPage.GotoAsync();
+        await _loginPage.LoginAsync("learner.fresh@demo.local", "Demo1234!");
+        await Page.GotoAsync($"{BaseUrl}/practice");
+
+        await Page.Locator("#pr-count").SelectOptionAsync("10");
+        var firstListeningSection = Page.Locator("form#practice-form section").First
+            .Locator("button[name='SectionId']").First;
+        await Expect(firstListeningSection).ToBeVisibleAsync();
+        await firstListeningSection.ClickAsync();
+        await Expect(Page.Locator("#answer-form")).ToBeVisibleAsync();
+
+        for (var question = 0; question < 10; question++)
+        {
+            var nextPage = Page.WaitForURLAsync(new Regex(@"/practice/\d+(?:\?q=\d+|/summary)$", RegexOptions.IgnoreCase));
+            await Page.Locator("#answer-form button[name='Action'][value='skip']").ClickAsync();
+            await nextPage;
+            if (Page.Url.EndsWith("/summary", StringComparison.OrdinalIgnoreCase))
+            {
+                break;
+            }
+
+            await Expect(Page.Locator("#answer-form")).ToBeVisibleAsync();
+        }
+
+        await Expect(Page).ToHaveURLAsync(new Regex(@"/practice/\d+/summary", RegexOptions.IgnoreCase));
+
+        var summaryPlayer = Page.Locator("tbody .exam-audio[data-mode='study']").First;
+        await Expect(summaryPlayer).ToBeVisibleAsync();
+        await Expect(summaryPlayer.Locator(".exam-audio__btn-rewind")).ToBeVisibleAsync();
+        await Expect(summaryPlayer.Locator(".exam-audio__btn-forward")).ToBeVisibleAsync();
+        await Expect(summaryPlayer.Locator("audio.exam-audio__native")).ToHaveAttributeAsync("src", new Regex(@"/audio/.+"));
     }
 
     [Test]

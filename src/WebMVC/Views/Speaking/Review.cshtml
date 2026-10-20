@@ -138,7 +138,8 @@
                   AllowReplay: true,
                   SectionTitle: $"Question {lowest.DisplayOrder} Recording",
                   BadgeText: "RECORDING",
-                  PlayerId: $"exam-audio-lowest-{lowest.QuestionId}"
+                  PlayerId: $"exam-audio-lowest-{lowest.QuestionId}",
+                  Mode: "study"
               ))
             </div>
           }
@@ -191,7 +192,8 @@
                     AllowReplay: true,
                     SectionTitle: $"Question {q.DisplayOrder} Recording",
                     BadgeText: "RECORDING",
-                    PlayerId: $"exam-audio-q-{q.QuestionId}"
+                    PlayerId: $"exam-audio-q-{q.QuestionId}",
+                    Mode: "study"
                 ))
               </div>
             }
