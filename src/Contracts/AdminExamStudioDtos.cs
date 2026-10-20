@@ -112,7 +112,8 @@ public sealed record ExamStudioCriterionDto(
     string Code,
     string Name,
     string? Description,
-    decimal MaxScore);
+    decimal MaxScore,
+    int SkillId = 0);
 
 public sealed record ExamStudioQuestionDto(
     int QuestionId,
