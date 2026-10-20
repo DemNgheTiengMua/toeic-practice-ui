@@ -457,8 +457,7 @@ public class ExamAudioAndInstructionsTests : PlaywrightTestBase
             Assert.That(match.Success, Is.True, "The active exam link must include its attempt ID.");
             var attemptId = int.Parse(match.Groups["attemptId"].Value);
             await ResetAttemptForListeningAsync(attemptId);
-            await continueLink.ClickAsync();
-            await Expect(Page).ToHaveURLAsync(new Regex($@"/exams/take/{attemptId}(?:\?|$)"));
+            await LoadAttemptAtFirstQuestionAsync(attemptId);
             return attemptId;
         }
 
@@ -474,9 +473,15 @@ public class ExamAudioAndInstructionsTests : PlaywrightTestBase
         Assert.That(newAttemptMatch.Success, Is.True, "Starting an exam must open its attempt.");
         var newAttemptId = int.Parse(newAttemptMatch.Groups["attemptId"].Value);
         await ResetAttemptForListeningAsync(newAttemptId);
-        await Page.ReloadAsync();
-        await Expect(Page.Locator("#question-number-display")).ToContainTextAsync("Question 1");
+        await LoadAttemptAtFirstQuestionAsync(newAttemptId);
         return newAttemptId;
+    }
+
+    private async Task LoadAttemptAtFirstQuestionAsync(int attemptId)
+    {
+        await Page.GotoAsync($"{BaseUrl}/exams/take/{attemptId}?q=1");
+        await Expect(Page).ToHaveURLAsync(new Regex($@"/exams/take/{attemptId}\?q=1"));
+        await Expect(Page.Locator("#question-number-display")).ToContainTextAsync("Question 1");
     }
 
     private static async Task ResetAttemptForListeningAsync(int attemptId)
@@ -508,14 +513,23 @@ public class ExamAudioAndInstructionsTests : PlaywrightTestBase
 
     private async Task NavigateForwardToQuestionAsync(int targetOrder)
     {
-        for (var displayOrder = 1; displayOrder < targetOrder; displayOrder++)
+        var questionNumber = Page.Locator("#question-number-display");
+        var currentQuestionText = await questionNumber.InnerTextAsync();
+        var currentQuestionMatch = Regex.Match(currentQuestionText, @"Question\s+(?<order>\d+)");
+        Assert.That(currentQuestionMatch.Success, Is.True,
+            $"Could not determine the current question from '{currentQuestionText}'.");
+        var currentOrder = int.Parse(currentQuestionMatch.Groups["order"].Value);
+
+        Assert.That(targetOrder, Is.GreaterThanOrEqualTo(currentOrder),
+            $"Cannot navigate forward to Question {targetOrder} while currently on Question {currentOrder}.");
+        for (var displayOrder = currentOrder; displayOrder < targetOrder; displayOrder++)
         {
-            await Expect(Page.Locator("#question-number-display"))
+            await Expect(questionNumber)
                 .ToContainTextAsync($"Question {displayOrder}");
             var nextButton = Page.Locator("#btn-next");
             await Expect(nextButton).ToBeEnabledAsync();
             await nextButton.ClickAsync();
-            await Expect(Page.Locator("#question-number-display"))
+            await Expect(questionNumber)
                 .ToContainTextAsync($"Question {displayOrder + 1}");
         }
     }
