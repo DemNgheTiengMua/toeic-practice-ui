@@ -334,6 +334,72 @@ public class ExamAudioAndInstructionsTests : PlaywrightTestBase
     }
 
     [Test]
+    public async Task Should_Stop_Audio_And_Lock_Replay_When_Navigating_Questions_In_Exam_Mode()
+    {
+        await _loginPage.GotoAsync();
+        await _loginPage.LoginAsync("learner@demo.local", "Demo1234!");
+        await Page.GotoAsync($"{BaseUrl}/exams");
+
+        var continueLink = Page.Locator("a[href*='/exams/take/']").First;
+        if (await continueLink.IsVisibleAsync())
+        {
+            await continueLink.ClickAsync();
+        }
+        else
+        {
+            var instructionsLink = Page.Locator("a[href*='/exams/1/instructions']").First;
+            await instructionsLink.ClickAsync();
+
+            var confirmCheck = Page.Locator("#confirm-ready");
+            if (await confirmCheck.IsVisibleAsync())
+            {
+                await confirmCheck.CheckAsync();
+            }
+
+            var startButton = Page.Locator("#start-btn");
+            await startButton.ClickAsync();
+        }
+
+        await Expect(Page).ToHaveURLAsync(new Regex(@"/exams/take/\d+", RegexOptions.IgnoreCase));
+
+        // Click Question 2 in navigator (Question 2 has audio in Exam 1)
+        var q2Btn = Page.Locator(".navigator__cell[data-display-order='2']").First;
+        await q2Btn.ClickAsync();
+        await Expect(Page.Locator("#question-number-display")).ToContainTextAsync("Question 2");
+
+        var playerQ2 = Page.Locator("#main-exam-audio, .exam-audio[data-mode='exam']").First;
+        await Expect(playerQ2).ToBeVisibleAsync();
+
+        var playBtn = playerQ2.Locator(".exam-audio__btn-play");
+        await Expect(playBtn).ToBeVisibleAsync();
+
+        // Start audio on Question 2
+        await playBtn.ClickAsync();
+        await Expect(playerQ2.Locator(".exam-audio__badge")).ToHaveTextAsync("PLAYING");
+
+        // Navigate to Question 5 (Part 5 Reading, no audio)
+        var q5Btn = Page.Locator(".navigator__cell[data-display-order='5']").First;
+        await q5Btn.ClickAsync();
+        await Expect(Page.Locator("#question-number-display")).ToContainTextAsync("Question 5");
+
+        // Verify audio stopped and wrapper is hidden
+        var audioWrapper = Page.Locator("#exam-audio-wrapper");
+        await Expect(audioWrapper).ToBeHiddenAsync();
+        var anyPlaying = await Page.EvaluateAsync<bool>("() => Array.from(document.querySelectorAll('audio')).some(a => !a.paused && a.currentTime > 0)");
+        Assert.That(anyPlaying, Is.False, "Audio should stop playing when navigating to another section");
+
+        // Navigate back to Question 2
+        await q2Btn.ClickAsync();
+        await Expect(Page.Locator("#question-number-display")).ToContainTextAsync("Question 2");
+
+        // Verify Question 2 is permanently locked in COMPLETED state
+        await Expect(playerQ2).ToBeVisibleAsync();
+        await Expect(playerQ2.Locator(".exam-audio__badge")).ToHaveTextAsync("COMPLETED");
+        await Expect(playerQ2.Locator(".exam-audio__btn-play")).ToBeDisabledAsync();
+        await Expect(playerQ2.Locator(".exam-audio__btn-text")).ToHaveTextAsync("COMPLETED");
+    }
+
+    [Test]
     public async Task Should_Render_Study_Audio_In_Practice_Summary()
     {
         await _loginPage.GotoAsync();

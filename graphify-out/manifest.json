@@ -1884,9 +1884,9 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Exams/Take.cshtml": {
-    "mtime": 1792487572.5823922,
-    "seen": 1792494347.5729682,
-    "ast_hash": "8a9c0d24fa0a29e1d61affd6ea5dd58c",
+    "mtime": 1792495240.6649263,
+    "seen": 1792495319.6421404,
+    "ast_hash": "705123c6341934fb464a95404400dca4",
     "semantic_hash": ""
   },
   "tests/Services.Tests/MockExamServiceTests.cs": {
@@ -2442,9 +2442,9 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Placement/Take.cshtml": {
-    "mtime": 1792486570.037218,
-    "seen": 1792494347.5759654,
-    "ast_hash": "77c7711f07491b28ea88b4c11fa3896a",
+    "mtime": 1792495141.2726445,
+    "seen": 1792495319.6451244,
+    "ast_hash": "ff8b08721df0c9fb3cf71638731a27e3",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Placement/TargetBand.cshtml": {
@@ -3060,9 +3060,9 @@
     "semantic_hash": ""
   },
   "src/WebMVC/wwwroot/js/exam-audio.js": {
-    "mtime": 1792487606.5847185,
-    "seen": 1792494347.5809677,
-    "ast_hash": "28eb155c4ccb94f309d9f0db63e87f08",
+    "mtime": 1792495262.3136394,
+    "seen": 1792495319.6541283,
+    "ast_hash": "a1c309806d893e66130b41ccf52a1b25",
     "semantic_hash": ""
   },
   "src/WebMVC/wwwroot/audio/ielts/cambridge18-t1-listening.mp3": {
@@ -4386,9 +4386,9 @@
     "semantic_hash": ""
   },
   "tests/WebMVC.E2ETests/Journeys/ExamAudioAndInstructionsTests.cs": {
-    "mtime": 1792494162.4070878,
-    "seen": 1792494347.5909624,
-    "ast_hash": "e9f633b0ee9c807196ca0f0f86e24fc9",
+    "mtime": 1792495242.8053863,
+    "seen": 1792495319.6651304,
+    "ast_hash": "59b5f7831a80341257151ee5013dc025",
     "semantic_hash": ""
   },
   "docs/adr/0010-exam-shell-and-client-side-question-swapping.md": {

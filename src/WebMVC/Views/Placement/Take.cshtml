@@ -414,6 +414,38 @@
           submitModal.style.display = 'none';
         });
       }
+
+      // Track completed audio per placement attempt
+      var audioPlayer = document.querySelector('.exam-audio[data-mode="exam"]');
+      if (audioPlayer) {
+        var placementAudioStorageKey = 'ee_placement_audio_@take.PlacementId';
+        var qAudioKey = '@(q.AudioPath ?? "")' + (@(q.AudioStartMs.HasValue ? $"':{q.AudioStartMs}-{q.AudioEndMs}'" : "''"));
+        var isPlayed = false;
+        try {
+          var stored = JSON.parse(localStorage.getItem(placementAudioStorageKey) || '{}');
+          isPlayed = !!stored[qAudioKey];
+        } catch (e) {}
+
+        if (isPlayed) {
+          audioPlayer.dataset.completed = 'true';
+        }
+
+        audioPlayer.addEventListener('examaudioplay', function () {
+          try {
+            var stored = JSON.parse(localStorage.getItem(placementAudioStorageKey) || '{}');
+            stored[qAudioKey] = true;
+            localStorage.setItem(placementAudioStorageKey, JSON.stringify(stored));
+          } catch (e) {}
+        });
+
+        audioPlayer.addEventListener('examaudioended', function () {
+          try {
+            var stored = JSON.parse(localStorage.getItem(placementAudioStorageKey) || '{}');
+            stored[qAudioKey] = true;
+            localStorage.setItem(placementAudioStorageKey, JSON.stringify(stored));
+          } catch (e) {}
+        });
+      }
     })();
   </script>
   <script src="~/js/exam-audio.js"></script>
