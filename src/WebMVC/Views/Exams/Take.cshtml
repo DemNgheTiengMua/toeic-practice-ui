@@ -8,6 +8,8 @@
     var nextOrder = q.DisplayOrder < take.TotalQuestions ? q.DisplayOrder + 1 : (int?)null;
     var isLastQuestion = q.DisplayOrder >= take.TotalQuestions;
     var progressPercent = (int)Math.Round((double)take.AnsweredCount / Math.Max(1, take.TotalQuestions) * 100);
+    var hasListening = questions.Any(item => item.Modality == ModalityDto.Listening);
+    var hasSpeaking = questions.Any(item => item.Modality == ModalityDto.Speaking);
 }
 <!DOCTYPE html>
 <html lang="en">
@@ -33,6 +35,12 @@
           <span class="text-sm text-muted">Time remaining</span>
           <span id="timer-display" class="timer__value">--:--:--</span>
         </span>
+        @if (hasListening || hasSpeaking)
+        {
+          @await Html.PartialAsync("_AudioEmergencySwitcher", new AudioEquipmentCheckModel(
+              ShowInput: hasSpeaking,
+              ShowOutput: hasListening))
+        }
         <button type="button" class="btn btn--ghost btn--sm" id="btn-open-exit-modal">Exit</button>
       </div>
     </header>
@@ -303,6 +311,7 @@
   </form>
 
   <script src="~/js/icons.js"></script>
+  <script src="~/js/ee-audio.js"></script>
   <script src="~/js/exam-audio.js"></script>
   <script src="~/js/keyboard-nav.js"></script>
   <script>

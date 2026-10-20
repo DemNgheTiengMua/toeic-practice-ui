@@ -1,0 +1,73 @@
+@model WebMVC.Models.AudioEquipmentCheckModel
+@{
+    var componentClass = Model.Compact ? "audio-equipment audio-equipment--compact" : "audio-equipment";
+    var componentId = "audio-check-" + Guid.NewGuid().ToString("N");
+}
+
+<section class="card @componentClass" data-audio-equipment data-show-input="@(Model.ShowInput ? "true" : "false")" data-show-output="@(Model.ShowOutput ? "true" : "false")">
+  <div class="card__header"><strong>@(Model.Title ?? "Audio & Equipment")</strong></div>
+  <div class="card__body stack">
+    <p class="text-sm text-muted no-margin">Device choices and volume are stored only in this browser. Equipment checks are advisory; you can continue if your browser cannot inspect a device.</p>
+    <div class="alert alert--warning audio-equipment__fallback" data-audio-role="fallback" role="status" hidden></div>
+    <div class="alert alert--danger audio-equipment__error" data-audio-role="error" role="alert" hidden></div>
+
+    @if (Model.ShowOutput)
+    {
+      <div class="audio-equipment__panel" data-audio-role="output-panel">
+        <h3 class="audio-equipment__heading">Speaker / headphone check</h3>
+        <div class="grid-2">
+          <div class="field">
+            <label class="field__label" for="@(componentId)-output">Audio output device</label>
+            <select class="field__input" id="@(componentId)-output" data-audio-role="output-device">
+              <option value="default">System default</option>
+            </select>
+            <div class="field__hint" data-audio-role="output-support"></div>
+          </div>
+          <div class="field">
+            <label class="field__label" for="@(componentId)-volume">Preferred volume</label>
+            <div class="audio-equipment__volume">
+              <button type="button" class="btn btn--ghost btn--sm" data-audio-action="toggle-mute" aria-label="Mute audio">Mute</button>
+              <input class="audio-equipment__volume-slider" id="@(componentId)-volume" data-audio-role="volume" type="range" min="0" max="100" value="85" aria-label="Preferred audio volume">
+              <span class="font-mono" data-audio-role="volume-value">85%</span>
+            </div>
+          </div>
+        </div>
+        <div class="row row--middle mt-2">
+          <button type="button" class="btn btn--sm btn--primary" data-audio-action="speaker-test">Play sound</button>
+          <span class="badge badge--muted font-sign" data-audio-role="speaker-status" role="status" aria-live="polite">READY</span>
+        </div>
+      </div>
+    }
+
+    @if (Model.ShowInput)
+    {
+      <div class="audio-equipment__panel" data-audio-role="input-panel">
+        <h3 class="audio-equipment__heading">Microphone check</h3>
+        <div class="field">
+          <label class="field__label" for="@(componentId)-input">Microphone device</label>
+          <select class="field__input" id="@(componentId)-input" data-audio-role="input-device">
+            <option value="default">System default</option>
+          </select>
+        </div>
+        <div class="audio-equipment__meter-wrap">
+          <div class="audio-equipment__meter" role="meter" aria-label="Microphone input level" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <span data-audio-role="meter-level"></span>
+            <i class="audio-equipment__tick audio-equipment__tick--voice" aria-hidden="true"></i>
+            <i class="audio-equipment__tick audio-equipment__tick--loud" aria-hidden="true"></i>
+          </div>
+          <span class="font-mono" data-audio-role="meter-db">-∞ dBFS</span>
+          <span class="badge badge--muted font-sign" data-audio-role="mic-status" role="status" aria-live="polite">NO SIGNAL</span>
+        </div>
+        <div class="row row--middle mt-2">
+          <button type="button" class="btn btn--sm" data-audio-action="mic-check">Start microphone check</button>
+          <button type="button" class="btn btn--sm btn--secondary" data-audio-action="echo-test">3-second echo test</button>
+        </div>
+        <p class="text-xs text-muted no-margin" data-audio-role="mic-help">Microphone access starts only when you run a check. The stream is stopped when the check ends.</p>
+      </div>
+    }
+    @if (Model.Compact)
+    {
+      <p class="text-xs text-muted no-margin">A microphone change applies to the next recording; the current answer and exam timer continue uninterrupted.</p>
+    }
+  </div>
+</section>

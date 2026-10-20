@@ -65,6 +65,160 @@ public class ExamAudioAndInstructionsTests : PlaywrightTestBase
         await Expect(footer).ToContainTextAsync("9");
     }
 
+    [Test]
+    public async Task Should_Save_Audio_Device_Preferences_In_Browser_And_Show_Conditional_Checks()
+    {
+        await Page.AddInitScriptAsync("""
+            const mediaDevices = navigator.mediaDevices;
+            if (mediaDevices) {
+              Object.defineProperty(mediaDevices, "enumerateDevices", {
+                configurable: true,
+                value: async () => [
+                  { deviceId: "fake-microphone", kind: "audioinput", label: "Test microphone" },
+                  { deviceId: "fake-speaker", kind: "audiooutput", label: "Test speaker" }
+                ]
+              });
+            }
+            Object.defineProperty(HTMLMediaElement.prototype, "setSinkId", {
+              configurable: true,
+              value: async function (deviceId) {
+                this.dataset.testSinkId = deviceId;
+                window.lastAudioSinkId = deviceId;
+              }
+            });
+            """);
+        await _loginPage.GotoAsync();
+        await _loginPage.LoginAsync("learner@demo.local", "Demo1234!");
+
+        await Page.GotoAsync($"{BaseUrl}/profile");
+        var profileCheck = Page.Locator("main [data-audio-equipment]").First;
+        await Expect(profileCheck).ToBeVisibleAsync();
+        await profileCheck.Locator("[data-audio-role='input-device']").SelectOptionAsync("fake-microphone");
+        await profileCheck.Locator("[data-audio-role='output-device']").SelectOptionAsync("fake-speaker");
+        await profileCheck.Locator("[data-audio-role='volume']").EvaluateAsync("el => { el.value = '62'; el.dispatchEvent(new Event('change', { bubbles: true })); }");
+        await profileCheck.Locator("[data-audio-action='speaker-test']").ClickAsync();
+        await Expect(profileCheck.Locator("[data-audio-role='speaker-status']")).ToContainTextAsync("CHECK COMPLETE");
+        Assert.That(await Page.EvaluateAsync<string>("() => window.lastAudioSinkId"), Is.EqualTo("fake-speaker"));
+        await profileCheck.Locator("[data-audio-action='toggle-mute']").ClickAsync();
+        Assert.That(await Page.EvaluateAsync<string>("() => JSON.parse(localStorage.getItem('ee_audio_device_preferences')).inputDeviceId"), Is.EqualTo("fake-microphone"));
+        Assert.That(await Page.EvaluateAsync<string>("() => JSON.parse(localStorage.getItem('ee_audio_device_preferences')).outputDeviceId"), Is.EqualTo("fake-speaker"));
+        Assert.That(await Page.EvaluateAsync<double>("() => JSON.parse(localStorage.getItem('ee_audio_device_preferences')).volume"), Is.EqualTo(0.62).Within(0.001));
+        Assert.That(await Page.EvaluateAsync<bool>("() => JSON.parse(localStorage.getItem('ee_audio_device_preferences')).muted"), Is.True);
+
+        await Page.GotoAsync($"{BaseUrl}/exams/1/instructions");
+        var examCheck = Page.Locator("[data-audio-equipment]").First;
+        await Expect(examCheck).ToBeVisibleAsync();
+        await Expect(examCheck).ToHaveAttributeAsync("data-show-output", "true");
+        await Expect(examCheck).ToHaveAttributeAsync("data-show-input", "false");
+
+        await Page.GotoAsync($"{BaseUrl}/practice");
+        var practiceCheck = Page.Locator("[data-audio-equipment]").First;
+        await Expect(practiceCheck).ToBeVisibleAsync();
+        await Expect(practiceCheck).ToHaveAttributeAsync("data-show-output", "true");
+        await Expect(practiceCheck).ToHaveAttributeAsync("data-show-input", "false");
+    }
+
+    [Test]
+    public async Task Should_Play_Three_Second_Echo_And_Release_Microphone()
+    {
+        await Page.AddInitScriptAsync("""
+            const mediaDevices = navigator.mediaDevices;
+            Object.defineProperty(mediaDevices, "enumerateDevices", {
+              configurable: true,
+              value: async () => [
+                { deviceId: "fake-speaker", kind: "audiooutput", label: "Test speaker" }
+              ]
+            });
+            Object.defineProperty(mediaDevices, "getUserMedia", {
+              configurable: true,
+              value: async () => {
+                const context = new AudioContext();
+                const destination = context.createMediaStreamDestination();
+                const oscillator = context.createOscillator();
+                oscillator.connect(destination);
+                oscillator.start();
+                window.echoInputTrack = destination.stream.getAudioTracks()[0];
+                destination.stream.getAudioTracks().forEach(track => {
+                  track.addEventListener("ended", () => {
+                    oscillator.stop();
+                    context.close();
+                  }, { once: true });
+                });
+                return destination.stream;
+              }
+            });
+            Object.defineProperty(HTMLMediaElement.prototype, "setSinkId", {
+              configurable: true,
+              value: async function (deviceId) { this.dataset.testSinkId = deviceId; }
+            });
+            const nativePlay = HTMLMediaElement.prototype.play;
+            HTMLMediaElement.prototype.play = function () {
+              const echo = this instanceof HTMLAudioElement && this.src.startsWith("blob:");
+              if (echo) {
+                window.echoPlaybackMuted = this.muted;
+                window.echoPlaybackVolume = this.volume;
+                window.echoPlaybackSinkId = this.dataset.testSinkId;
+                this.addEventListener("ended", () => window.echoPlaybackEnded = true, { once: true });
+                this.addEventListener("error", () => {
+                  window.echoPlaybackError = this.error && this.error.message;
+                }, { once: true });
+              }
+              const playback = nativePlay.call(this);
+              if (echo) {
+                playback.then(
+                  () => window.echoPlaybackStarted = true,
+                  error => window.echoPlaybackError = error.message);
+              }
+              return playback;
+            };
+            const createObjectURL = URL.createObjectURL.bind(URL);
+            const revokeObjectURL = URL.revokeObjectURL.bind(URL);
+            URL.createObjectURL = blob => {
+              window.echoBlobMimeType = blob.type;
+              window.echoObjectUrl = createObjectURL(blob);
+              return window.echoObjectUrl;
+            };
+            URL.revokeObjectURL = url => {
+              if (url === window.echoObjectUrl) window.echoObjectUrlRevoked = true;
+              return revokeObjectURL(url);
+            };
+            """);
+        await _loginPage.GotoAsync();
+        await _loginPage.LoginAsync("learner@demo.local", "Demo1234!");
+        await Page.GotoAsync($"{BaseUrl}/profile");
+
+        var profileCheck = Page.Locator("main [data-audio-equipment]").First;
+        Assert.That(await Page.Locator("audio").CountAsync(), Is.Zero,
+            "The profile page must not render a static audio element before the echo test.");
+        Assert.That(await Page.Locator("main").InnerTextAsync(),
+            Does.Not.Contain("Failed to load because no supported source was found."));
+        await profileCheck.Locator("[data-audio-role='output-device']").SelectOptionAsync("fake-speaker");
+        await profileCheck.Locator("[data-audio-action='toggle-mute']").ClickAsync();
+        await profileCheck.Locator("[data-audio-action='echo-test']").ClickAsync();
+        await Expect(profileCheck.Locator("[data-audio-role='mic-status']")).ToHaveTextAsync(
+            "READY",
+            new() { Timeout = 15000 });
+
+        var blobType = await Page.EvaluateAsync<string>("() => window.echoBlobMimeType");
+        Assert.That(blobType, Does.StartWith("audio/"));
+        Assert.That(await Page.EvaluateAsync<string>("() => document.createElement('audio').canPlayType(window.echoBlobMimeType)"), Is.Not.Empty);
+        Assert.That(await Page.EvaluateAsync<bool>("() => window.echoPlaybackStarted"), Is.True);
+        Assert.That(await Page.EvaluateAsync<bool>("() => window.echoPlaybackEnded"), Is.True);
+        Assert.That(await Page.EvaluateAsync<bool>("() => window.echoPlaybackMuted"), Is.False);
+        Assert.That(await Page.EvaluateAsync<double>("() => window.echoPlaybackVolume"), Is.EqualTo(0.85).Within(0.01));
+        Assert.That(await Page.EvaluateAsync<string>("() => window.echoPlaybackSinkId"), Is.EqualTo("fake-speaker"));
+        Assert.That(await Page.EvaluateAsync<string>("() => window.echoPlaybackError"), Is.Null.Or.Empty);
+        Assert.That(await Page.EvaluateAsync<bool>("() => window.echoObjectUrlRevoked"), Is.True);
+        Assert.That(await Page.EvaluateAsync<string>("() => window.echoInputTrack.readyState"), Is.EqualTo("ended"));
+        Assert.That(await Page.EvaluateAsync<bool>("() => JSON.parse(localStorage.getItem('ee_audio_device_preferences')).muted"), Is.True);
+        Assert.That(await Page.Locator("audio").CountAsync(), Is.Zero,
+            "Echo playback must use a detached dynamic Audio instance.");
+        Assert.That(await Page.Locator("main").InnerTextAsync(),
+            Does.Not.Contain("Failed to load because no supported source was found."));
+        await Expect(profileCheck.Locator("[data-audio-role='mic-help']"))
+            .ToContainTextAsync("Microphone access is off");
+    }
+
     private static async Task ExecuteSqlAsync(string sql)
     {
         await using var conn = await OpenAppDatabaseAsync();
