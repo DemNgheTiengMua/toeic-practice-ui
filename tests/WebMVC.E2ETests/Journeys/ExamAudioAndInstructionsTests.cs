@@ -515,7 +515,10 @@ public class ExamAudioAndInstructionsTests : PlaywrightTestBase
     {
         var questionNumber = Page.Locator("#question-number-display");
         var currentQuestionText = await questionNumber.InnerTextAsync();
-        var currentQuestionMatch = Regex.Match(currentQuestionText, @"Question\s+(?<order>\d+)");
+        var currentQuestionMatch = Regex.Match(
+            currentQuestionText,
+            @"(?:\bquestion\b\s*#?\s*)?(?<order>\d+)",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
         Assert.That(currentQuestionMatch.Success, Is.True,
             $"Could not determine the current question from '{currentQuestionText}'.");
         var currentOrder = int.Parse(currentQuestionMatch.Groups["order"].Value);
