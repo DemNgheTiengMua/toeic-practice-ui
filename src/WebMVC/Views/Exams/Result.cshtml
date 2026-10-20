@@ -3,6 +3,7 @@
 @{
     Layout = "_LearnerLayout";
     var res = Model.Result;
+    var isGradingPending = res.Status == Contracts.AttemptStatusDto.Submitted;
     ViewData["Title"] = $"Results — {res.ExamName}";
     ViewData["Description"] = $"Mock exam results for {res.ExamName}.";
 
@@ -13,7 +14,6 @@
         ? $"{hours}h {minutes}m {seconds}s"
         : $"{minutes}m {seconds}s";
 }
-
 <nav class="breadcrumbs" aria-label="Breadcrumb">
   <a href="/dashboard" class="breadcrumbs__item">Home</a>
   <span class="breadcrumbs__separator" aria-hidden="true">›</span>
@@ -29,11 +29,16 @@
       Completed @Dates.Format(res.SubmittedAt) · Time taken: <strong>@durationStr</strong>
     </p>
   </div>
+
   <div class="row" style="gap: var(--space-2);">
-    <a class="btn btn--primary" href="/exams/review/@res.AttemptId">Review answers</a>
+    @if (!isGradingPending)
+    {
+      <a class="btn btn--primary" href="/exams/review/@res.AttemptId">Review answers</a>
+    }
     <a class="btn" href="/exams/history">Exam history</a>
     <a class="btn btn--ghost" href="/exams">All exams</a>
   </div>
+
 </div>
 
 @if (!string.IsNullOrEmpty(Model.ErrorMessage))
@@ -44,7 +49,13 @@
 @if (res.IsAutoSubmitted)
 {
   <div class="alert alert--warning" role="status">
-    <strong>Time is up.</strong> The exam was submitted automatically when your deadline expired and graded on the questions you answered.
+    <strong>Time is up.</strong> The exam was submitted automatically when your deadline expired.
+  </div>
+}
+@if (isGradingPending)
+{
+  <div class="alert alert--info" role="status">
+    <strong>AI grading is in progress.</strong> Your free responses are saved. This page refreshes automatically when grading is complete; the score shown is for scored multiple-choice sections.
   </div>
 }
 
@@ -138,3 +149,8 @@
     </table>
   </div>
 </div>
+
+@if (isGradingPending)
+{
+  <script>window.setTimeout(function () { window.location.reload(); }, 5000);</script>
+}

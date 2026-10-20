@@ -1,4 +1,5 @@
 using Contracts;
+using BusinessObjects;
 using Microsoft.AspNetCore.Mvc;
 using Services;
 using static WebAPI.Endpoints.EndpointHelpers;
@@ -134,7 +135,14 @@ public static class ExamEndpoints
                     qInfo.Passage,
                     qInfo.Options.Select(o => new AttemptOptionDto(o.OptionId, o.Label, o.Text)).ToList(),
                     qInfo.SelectedOptionId,
-                    qInfo.IsFlagged);
+                    qInfo.IsFlagged,
+                    qInfo.QuestionType,
+                    qInfo.ResponseText,
+                    qInfo.DraftSavedAt,
+                    qInfo.MinWords,
+                    qInfo.MaxWords,
+                    qInfo.SkillDurationMinutes,
+                    qInfo.SkillDisplayOrder);
 
                 var allQDtos = take.Questions?.Select(q => new AttemptQuestionDto(
                     q.QuestionId,
@@ -156,7 +164,14 @@ public static class ExamEndpoints
                     q.Passage,
                     q.Options.Select(o => new AttemptOptionDto(o.OptionId, o.Label, o.Text)).ToList(),
                     q.SelectedOptionId,
-                    q.IsFlagged)).ToList();
+                    q.IsFlagged,
+                    q.QuestionType,
+                    q.ResponseText,
+                    q.DraftSavedAt,
+                    q.MinWords,
+                    q.MaxWords,
+                    q.SkillDurationMinutes,
+                    q.SkillDisplayOrder)).ToList();
 
                 return Results.Ok(new AttemptTakeDto(
                     take.AttemptId,
@@ -174,13 +189,61 @@ public static class ExamEndpoints
                     take.Navigator.Select(n => new NavigatorItemDto(
                         n.QuestionId, n.DisplayOrder, n.SectionId, n.SectionCode, n.Modality.MapTo<ModalityDto>(), n.IsAnswered, n.IsFlagged, n.IsCurrent)).ToList(),
                     take.IsAutoSubmitted,
-                    allQDtos));
+                    allQDtos,
+                    take.Phases?.Select(phase => new AttemptPhaseDto(
+                        phase.SkillId,
+                        phase.SkillCode,
+                        phase.SkillName,
+                        phase.SkillDisplayOrder,
+                        phase.StartOffsetSeconds,
+                        phase.DurationSeconds)).ToList()));
             }
             catch (MockExamException ex) when (ex.Code == MockExamException.AttemptNotFound)
             {
                 return Problem(StatusCodes.Status404NotFound, "Attempt not found", ApiError.Codes.AttemptNotFound, ex.Message);
             }
             catch (MockExamException ex) when (ex.Code == MockExamException.AttemptNotActive)
+            {
+                return Problem(StatusCodes.Status400BadRequest, "Attempt not active", ApiError.Codes.AttemptNotActive, ex.Message);
+            }
+        });
+
+        learner.MapPost("/attempts/{attemptId:int}/draft", async Task<IResult> (
+            int attemptId,
+            SaveAttemptDraftRequest request,
+            HttpContext http,
+            IMockExamService mockExamService,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var result = await mockExamService.SaveDraftAsync(
+                    CurrentUserId(http),
+                    attemptId,
+                    request.QuestionId,
+                    request.ResponseText,
+                    cancellationToken);
+                return Results.Ok(new SaveAttemptDraftResponse(
+                    result.FreeResponseId,
+                    result.QuestionId,
+                    result.SavedAt,
+                    result.WordCount));
+            }
+            catch (MockExamException ex) when (ex.Code == MockExamException.AttemptNotFound)
+            {
+                return Problem(StatusCodes.Status404NotFound, "Attempt not found", ApiError.Codes.AttemptNotFound, ex.Message);
+            }
+            catch (MockExamException ex) when (ex.Code == MockExamException.QuestionNotFound)
+            {
+                return Problem(StatusCodes.Status404NotFound, "Draft not found", ApiError.Codes.QuestionNotFound, ex.Message);
+            }
+            catch (MockExamException ex) when (ex.Code == MockExamException.AttemptExpired)
+            {
+                return Problem(StatusCodes.Status400BadRequest, "Exam deadline expired", ApiError.Codes.AttemptExpired, ex.Message);
+            }
+            catch (MockExamException ex) when (
+                ex.Code == MockExamException.AttemptNotActive ||
+                ex.Code == AttemptEngineException.WrongPhase)
             {
                 return Problem(StatusCodes.Status400BadRequest, "Attempt not active", ApiError.Codes.AttemptNotActive, ex.Message);
             }
@@ -221,6 +284,10 @@ public static class ExamEndpoints
             {
                 return Problem(StatusCodes.Status400BadRequest, "Attempt not active", ApiError.Codes.AttemptNotActive, ex.Message);
             }
+            catch (MockExamException ex) when (ex.Code == AttemptEngineException.WrongPhase)
+            {
+                return Problem(StatusCodes.Status400BadRequest, "Question not available yet", ApiError.Codes.AttemptNotActive, ex.Message);
+            }
         });
 
         learner.MapPost("/attempts/{attemptId:int}/submit", async Task<IResult> (
@@ -242,6 +309,41 @@ public static class ExamEndpoints
             catch (MockExamException ex) when (ex.Code == MockExamException.AttemptNotActive)
             {
                 return Problem(StatusCodes.Status400BadRequest, "Attempt not active", ApiError.Codes.AttemptNotActive, ex.Message);
+            }
+        });
+
+        learner.MapPost("/attempts/{attemptId:int}/submit-with-drafts", async Task<IResult> (
+            int attemptId,
+            [FromBody] SubmitAttemptRequest request,
+            HttpContext http,
+            IMockExamService mockExamService,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var finalDrafts = request.Drafts
+                    .Select(d => new AttemptFinalDraft(d.QuestionId, d.ResponseText))
+                    .ToList();
+                var res = await mockExamService.SubmitAttemptAsync(
+                    CurrentUserId(http),
+                    attemptId,
+                    isAutoSubmit: false,
+                    cancellationToken,
+                    finalDrafts);
+                return Results.Ok(new SubmitAttemptResponse(
+                    res.AttemptId, res.Status.MapTo<AttemptStatusDto>(), res.TotalScore, res.BandCode, res.BandName, res.SubmittedAt, res.IsAutoSubmitted));
+            }
+            catch (MockExamException ex) when (ex.Code == MockExamException.AttemptNotFound)
+            {
+                return Problem(StatusCodes.Status404NotFound, "Attempt not found", ApiError.Codes.AttemptNotFound, ex.Message);
+            }
+            catch (MockExamException ex) when (ex.Code == MockExamException.AttemptNotActive)
+            {
+                return Problem(StatusCodes.Status400BadRequest, "Attempt not active", ApiError.Codes.AttemptNotActive, ex.Message);
+            }
+            catch (MockExamException ex) when (ex.Code == MockExamException.QuestionNotFound)
+            {
+                return Problem(StatusCodes.Status404NotFound, "Question not found", ApiError.Codes.QuestionNotFound, ex.Message);
             }
         });
 

@@ -79,7 +79,9 @@ public sealed class ExamsController(
         {
             var take = await api.GetAttemptTakeAsync(attemptId, q, cancellationToken);
 
-            if (take.Status == AttemptStatusDto.Graded || take.IsAutoSubmitted)
+            if (take.Status == AttemptStatusDto.Graded ||
+                take.Status == AttemptStatusDto.Submitted ||
+                take.IsAutoSubmitted)
             {
                 return RedirectToAction(nameof(Result), new { attemptId });
             }
@@ -144,13 +146,45 @@ public sealed class ExamsController(
         }
     }
 
-    [HttpPost("/exams/take/{attemptId:int}/submit")]
+    [HttpPost("/exams/take/{attemptId:int}/draft")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Submit(int attemptId, CancellationToken cancellationToken)
+    public async Task<IActionResult> SaveDraft(
+        int attemptId,
+        [FromBody] SaveAttemptDraftRequest request,
+        CancellationToken cancellationToken)
     {
         try
         {
-            await api.SubmitAttemptAsync(attemptId, cancellationToken);
+            var result = await api.SaveAttemptDraftAsync(attemptId, request, cancellationToken);
+            return Ok(result);
+        }
+        catch (ApiException ex)
+        {
+            logger.LogWarning(ex, "Failed to save exam draft for attempt {AttemptId}, question {QuestionId}", attemptId, request.QuestionId);
+            return StatusCode(ex.Status, new { code = ex.Code, message = ex.Detail ?? ex.Message });
+        }
+    }
+
+    [HttpPost("/exams/take/{attemptId:int}/submit")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Submit(
+        int attemptId,
+        CancellationToken cancellationToken,
+        [FromForm] ExamSubmitFormModel? form = null)
+    {
+        try
+        {
+            if (form?.Drafts.Count > 0)
+            {
+                await api.SubmitAttemptWithDraftsAsync(
+                    attemptId,
+                    new SubmitAttemptRequest(form.Drafts),
+                    cancellationToken);
+            }
+            else
+            {
+                await api.SubmitAttemptAsync(attemptId, cancellationToken);
+            }
             return RedirectToAction(nameof(Result), new { attemptId });
         }
         catch (ApiException ex) when (ex.Code == ApiError.Codes.AttemptExpired || ex.Code == ApiError.Codes.AttemptNotActive)
@@ -192,13 +226,16 @@ public sealed class ExamsController(
             var result = await api.GetAttemptResultAsync(attemptId, cancellationToken);
 
             AiInsightDto? insight = null;
-            try
+            if (result.Status == AttemptStatusDto.Graded)
             {
-                insight = await api.GetExamInsightAsync(attemptId, cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                logger.LogWarning(ex, "Could not pre-fetch AI insight for attempt {AttemptId}", attemptId);
+                try
+                {
+                    insight = await api.GetExamInsightAsync(attemptId, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "Could not pre-fetch AI insight for attempt {AttemptId}", attemptId);
+                }
             }
 
             return View(new ExamResultViewModel(result, TempData["ErrorMessage"] as string, insight));
@@ -290,4 +327,3 @@ public sealed class ExamsController(
         }
     }
 }
-

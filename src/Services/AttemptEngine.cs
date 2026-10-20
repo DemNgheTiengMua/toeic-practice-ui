@@ -18,6 +18,7 @@ public class AttemptEngineException(string code, string message) : Exception(mes
     public const string QuestionNotFound = "question_not_found";
     public const string InvalidOption = "invalid_option";
     public const string AttemptNotFinished = "attempt_not_finished";
+    public const string WrongPhase = "wrong_phase";
 
     public string Code { get; } = code;
 }
@@ -55,11 +56,19 @@ public interface IAttemptEngine
         Func<int, int, Task>? onAutoSubmitted = null,
         CancellationToken cancellationToken = default);
 
+    Task<SaveAttemptDraftResult> SaveDraftAsync(
+        int attemptId,
+        int userId,
+        int questionId,
+        string? responseText,
+        CancellationToken cancellationToken = default);
+
     Task<AttemptGradingResult> SubmitAttemptAsync(
         int attemptId,
         int userId,
         bool isAutoSubmit,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        IReadOnlyList<AttemptFinalDraft>? finalDrafts = null);
 
     Task<AttemptResultView> GetAttemptResultAsync(
         int attemptId,
@@ -92,6 +101,13 @@ public interface IAttemptEngine
 
 public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
 {
+    private sealed record AttemptSkillPhaseSource(
+        int SkillId,
+        string Code,
+        string Name,
+        int DisplayOrder,
+        int? DurationMinutes);
+
     public async Task<ExamAttempt> CreateAttemptAsync(
         int userId,
         int certId,
@@ -137,15 +153,33 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
                 attempt.LastQuestionId = questions[0].QuestionId;
                 foreach (var q in questions)
                 {
-                    db.AttemptAnswers.Add(new AttemptAnswer
+                    if (q.QuestionType == QuestionType.Mcq.ToCode())
                     {
-                        AttemptId = attempt.AttemptId,
-                        QuestionId = q.QuestionId,
-                        ExamId = examId,
-                        SelectedOptionId = null,
-                        IsCorrect = null,
-                        IsFlagged = false
-                    });
+                        db.AttemptAnswers.Add(new AttemptAnswer
+                        {
+                            AttemptId = attempt.AttemptId,
+                            QuestionId = q.QuestionId,
+                            ExamId = examId,
+                            SelectedOptionId = null,
+                            IsCorrect = null,
+                            IsFlagged = false
+                        });
+                    }
+                    else if (q.QuestionType == QuestionType.FreeResponse.ToCode())
+                    {
+                        db.FreeResponses.Add(new FreeResponse
+                        {
+                            AttemptId = attempt.AttemptId,
+                            QuestionId = q.QuestionId,
+                            ExamId = examId,
+                            SkillId = q.SkillId,
+                            QuestionType = QuestionType.FreeResponse.ToCode(),
+                            ResponseText = string.Empty,
+                            Status = FreeResponseStatus.Draft.ToCode(),
+                            SubmittedAt = null,
+                            DraftSavedAt = now
+                        });
+                    }
                 }
             }
 
@@ -202,19 +236,30 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
                 .SingleAsync(a => a.AttemptId == attemptId && a.UserId == userId, cancellationToken);
         }
 
-        var answers = await db.AttemptAnswers
-            .Where(a => a.AttemptId == attemptId)
-            .Include(a => a.Question).ThenInclude(q => q.Group)
-            .Include(a => a.Question).ThenInclude(q => q.Section).ThenInclude(s => s.Skill)
-            .Include(a => a.Question).ThenInclude(q => q.QuestionOptionQuestionNavigations)
-            .OrderBy(a => a.Question.Section.Skill.DisplayOrder)
-            .ThenBy(a => a.Question.Section.DisplayOrder)
-            .ThenBy(a => a.Question.Group.DisplayOrder)
-            .ThenBy(a => a.Question.DisplayOrder)
+        var questions = await db.Questions
+            .Where(q => q.ExamId == attempt.ExamId)
+            .Include(q => q.Group)
+            .Include(q => q.Section).ThenInclude(s => s.Skill)
+            .Include(q => q.QuestionOptionQuestionNavigations)
+            .OrderBy(q => q.Section.Skill.DisplayOrder)
+            .ThenBy(q => q.Section.DisplayOrder)
+            .ThenBy(q => q.Group.DisplayOrder)
+            .ThenBy(q => q.DisplayOrder)
             .ToListAsync(cancellationToken);
 
-        int totalQuestions = answers.Count;
-        int answeredCount = answers.Count(a => a.SelectedOptionId != null);
+        var answers = await db.AttemptAnswers
+            .Where(a => a.AttemptId == attemptId)
+            .ToListAsync(cancellationToken);
+        var answersByQuestion = answers.ToDictionary(a => a.QuestionId);
+        var freeResponses = await db.FreeResponses
+            .Where(r => r.AttemptId == attemptId)
+            .ToDictionaryAsync(r => r.QuestionId, cancellationToken);
+
+        int totalQuestions = questions.Count;
+        int answeredCount = questions.Count(q =>
+            q.QuestionType == QuestionType.Mcq.ToCode()
+                ? answersByQuestion.TryGetValue(q.QuestionId, out var answer) && answer.SelectedOptionId.HasValue
+                : freeResponses.TryGetValue(q.QuestionId, out var response) && !string.IsNullOrWhiteSpace(response.ResponseText));
         int flaggedCount = answers.Count(a => a.IsFlagged);
 
         // Determine current question
@@ -225,7 +270,7 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
         }
         else if (attempt.LastQuestionId.HasValue)
         {
-            var idx = answers.FindIndex(a => a.QuestionId == attempt.LastQuestionId.Value);
+            var idx = questions.FindIndex(q => q.QuestionId == attempt.LastQuestionId.Value);
             if (idx >= 0) targetIndex = idx;
         }
 
@@ -233,8 +278,9 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
         var allQuestions = new List<AttemptQuestionInfo>(totalQuestions);
         for (int i = 0; i < totalQuestions; i++)
         {
-            var ans = answers[i];
-            var q = ans.Question;
+            var q = questions[i];
+            answersByQuestion.TryGetValue(q.QuestionId, out var ans);
+            freeResponses.TryGetValue(q.QuestionId, out var response);
             var opts = q.QuestionOptionQuestionNavigations
                 .OrderBy(o => o.Label)
                 .Select(o => new AttemptOption(o.OptionId, o.Label, o.Text))
@@ -260,24 +306,51 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
                 q.Group.Transcript,
                 q.Group.Passage,
                 opts,
-                ans.SelectedOptionId,
-                ans.IsFlagged));
+                ans?.SelectedOptionId,
+                ans?.IsFlagged ?? false,
+                q.QuestionType,
+                response?.ResponseText,
+                response?.DraftSavedAt,
+                q.MinWords,
+                q.MaxWords,
+                q.Section.Skill.DurationMinutes,
+                q.Section.Skill.DisplayOrder));
         }
 
         var currentQuestionInfo = totalQuestions > 0 ? allQuestions[targetIndex] : new AttemptQuestionInfo(
             0, 0, 0, 0, "", "", "", "", Modality.Reading, "", null, null, null, null, null, null, null, [], null, false);
 
-        var navigator = answers.Select((a, idx) => new NavigatorItem(
-            a.QuestionId,
+        var navigator = questions.Select((q, idx) =>
+        {
+            answersByQuestion.TryGetValue(q.QuestionId, out var answer);
+            freeResponses.TryGetValue(q.QuestionId, out var response);
+            return new NavigatorItem(
+            q.QuestionId,
             idx + 1,
-            a.Question.SectionId,
-            a.Question.Section.Code,
-            EnumCodes.Parse<Modality>(a.Question.Section.Modality),
-            a.SelectedOptionId != null,
-            a.IsFlagged,
-            idx == targetIndex)).ToList();
+            q.SectionId,
+            q.Section.Code,
+            EnumCodes.Parse<Modality>(q.Section.Modality),
+            q.QuestionType == QuestionType.Mcq.ToCode()
+                ? answer?.SelectedOptionId != null
+                : !string.IsNullOrWhiteSpace(response?.ResponseText),
+            answer?.IsFlagged ?? false,
+            idx == targetIndex);
+        }).ToList();
 
         var remainingSeconds = Math.Max(0, (int)(attempt.ExpiresAt - DateTimeOffset.UtcNow).TotalSeconds);
+        var phaseGroups = questions
+            .GroupBy(question => question.Section.SkillId)
+            .Select(group => new AttemptSkillPhaseSource(
+                group.Key,
+                group.First().Section.Skill.Code,
+                group.First().Section.Skill.Name,
+                group.First().Section.Skill.DisplayOrder,
+                group.First().Section.Skill.DurationMinutes))
+            .OrderBy(skill => skill.DisplayOrder)
+            .ToList();
+        var phases = BuildAttemptPhases(
+            phaseGroups,
+            Math.Max(1, (int)(attempt.ExpiresAt - attempt.StartedAt).TotalSeconds));
 
         return new AttemptTakeView(
             attempt.AttemptId,
@@ -294,7 +367,8 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
             currentQuestionInfo,
             navigator,
             attempt.IsAutoSubmitted,
-            allQuestions);
+            allQuestions,
+            phases);
     }
 
     public async Task<SaveAttemptAnswerResult> SaveAnswerAsync(
@@ -326,6 +400,8 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
             throw new AttemptEngineException(AttemptEngineException.AttemptExpired, "Exam time has expired and your exam was auto-submitted.");
         }
 
+        await EnsureQuestionInActivePhaseAsync(attempt, questionId, cancellationToken);
+
         var answer = await db.AttemptAnswers
             .SingleOrDefaultAsync(a => a.AttemptId == attemptId && a.QuestionId == questionId, cancellationToken)
             ?? throw new AttemptEngineException(AttemptEngineException.QuestionNotFound, $"Question {questionId} not found in attempt.");
@@ -350,11 +426,147 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
         return new SaveAttemptAnswerResult(questionId, selectedOptionId, isFlagged, remainingSeconds, attempt.IsAutoSubmitted);
     }
 
+    public async Task<SaveAttemptDraftResult> SaveDraftAsync(
+        int attemptId,
+        int userId,
+        int questionId,
+        string? responseText,
+        CancellationToken cancellationToken = default)
+    {
+        var attempt = await db.ExamAttempts
+            .SingleOrDefaultAsync(a => a.AttemptId == attemptId && a.UserId == userId, cancellationToken)
+            ?? throw new AttemptEngineException(AttemptEngineException.AttemptNotFound, $"Attempt {attemptId} not found.");
+
+        if (attempt.Status != AttemptStatus.InProgress.ToCode())
+        {
+            throw new AttemptEngineException(AttemptEngineException.AttemptNotActive, "Exam attempt is not in progress.");
+        }
+
+        if (DateTimeOffset.UtcNow >= attempt.ExpiresAt)
+        {
+            await SubmitAttemptAsync(attempt.AttemptId, userId, isAutoSubmit: true, cancellationToken);
+            throw new AttemptEngineException(AttemptEngineException.AttemptExpired, "Exam time has expired and your exam was auto-submitted.");
+        }
+
+        await EnsureQuestionInActivePhaseAsync(attempt, questionId, cancellationToken);
+
+        var freeResponse = await db.FreeResponses
+            .SingleOrDefaultAsync(response =>
+                response.AttemptId == attemptId &&
+                response.QuestionId == questionId &&
+                response.Status == FreeResponseStatus.Draft.ToCode(),
+                cancellationToken)
+            ?? throw new AttemptEngineException(AttemptEngineException.QuestionNotFound, $"Free-response question {questionId} not found in attempt.");
+
+        var savedAt = DateTimeOffset.UtcNow;
+        freeResponse.ResponseText = responseText ?? string.Empty;
+        freeResponse.DraftSavedAt = savedAt;
+        attempt.LastQuestionId = questionId;
+        await db.SaveChangesAsync(cancellationToken);
+
+        var words = freeResponse.ResponseText
+            .Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)
+            .Length;
+        return new SaveAttemptDraftResult(freeResponse.FreeResponseId, questionId, savedAt, words);
+    }
+
+    private async Task EnsureQuestionInActivePhaseAsync(
+        ExamAttempt attempt,
+        int questionId,
+        CancellationToken cancellationToken)
+    {
+        var questionSkill = await db.Questions
+            .Where(question => question.QuestionId == questionId && question.ExamId == attempt.ExamId)
+            .Select(question => new
+            {
+                question.Section.SkillId,
+                question.Section.Skill.DisplayOrder
+            })
+            .SingleOrDefaultAsync(cancellationToken)
+            ?? throw new AttemptEngineException(AttemptEngineException.QuestionNotFound, $"Question {questionId} not found in attempt.");
+
+        var skillRows = await db.Questions
+            .Where(question => question.ExamId == attempt.ExamId)
+            .Select(question => new
+            {
+                question.Section.SkillId,
+                question.Section.Skill.Code,
+                question.Section.Skill.Name,
+                question.Section.Skill.DisplayOrder,
+                question.Section.Skill.DurationMinutes
+            })
+            .Distinct()
+            .OrderBy(skill => skill.DisplayOrder)
+            .ToListAsync(cancellationToken);
+        var skills = skillRows
+            .Select(skill => new AttemptSkillPhaseSource(
+                skill.SkillId,
+                skill.Code,
+                skill.Name,
+                skill.DisplayOrder,
+                skill.DurationMinutes))
+            .ToList();
+        var phases = BuildAttemptPhases(
+            skills,
+            Math.Max(1, (int)(attempt.ExpiresAt - attempt.StartedAt).TotalSeconds));
+        var elapsedSeconds = Math.Max(0, (int)(DateTimeOffset.UtcNow - attempt.StartedAt).TotalSeconds);
+        var activePhase = phases.LastOrDefault(phase => elapsedSeconds >= phase.StartOffsetSeconds);
+        if (activePhase is null || elapsedSeconds >= activePhase.StartOffsetSeconds + activePhase.DurationSeconds ||
+            activePhase.SkillId != questionSkill.SkillId)
+        {
+            throw new AttemptEngineException(AttemptEngineException.WrongPhase, "This question is not available in the current exam phase.");
+        }
+    }
+
+    private static IReadOnlyList<AttemptPhaseInfo> BuildAttemptPhases(
+        IReadOnlyList<AttemptSkillPhaseSource> skills,
+        int totalSeconds)
+    {
+        if (skills.Count == 0)
+        {
+            return [];
+        }
+
+        var positiveWeights = skills
+            .Select(skill => (int?)skill.DurationMinutes)
+            .Where(duration => duration > 0)
+            .Select(duration => duration!.Value)
+            .ToList();
+        var fallbackWeight = positiveWeights.Count > 0
+            ? positiveWeights.Average()
+            : 1d;
+        var weights = skills
+            .Select(skill => skill.DurationMinutes is int duration && duration > 0 ? duration : fallbackWeight)
+            .ToList();
+        var totalWeight = weights.Sum();
+        var allocatedSeconds = 0;
+        var phases = new List<AttemptPhaseInfo>(skills.Count);
+
+        for (var index = 0; index < skills.Count; index++)
+        {
+            var skill = skills[index];
+            var durationSeconds = index == skills.Count - 1
+                ? totalSeconds - allocatedSeconds
+                : (int)Math.Floor(totalSeconds * weights[index] / totalWeight);
+            phases.Add(new AttemptPhaseInfo(
+                skill.SkillId,
+                skill.Code,
+                skill.Name,
+                skill.DisplayOrder,
+                allocatedSeconds,
+                durationSeconds));
+            allocatedSeconds += durationSeconds;
+        }
+
+        return phases;
+    }
+
     public async Task<AttemptGradingResult> SubmitAttemptAsync(
         int attemptId,
         int userId,
         bool isAutoSubmit,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        IReadOnlyList<AttemptFinalDraft>? finalDrafts = null)
     {
         var tx = db.Database.CurrentTransaction is null
             ? await db.Database.BeginTransactionAsync(cancellationToken)
@@ -395,8 +607,6 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
             }
 
             var now = DateTimeOffset.UtcNow;
-            attempt.Status = AttemptStatus.Graded.ToCode();
-            attempt.SubmittedAt = now;
             if (isAutoSubmit || now >= attempt.ExpiresAt)
             {
                 attempt.IsAutoSubmitted = true;
@@ -405,14 +615,19 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
             var answers = await db.AttemptAnswers
                 .Where(a => a.AttemptId == attemptId)
                 .Include(a => a.Question).ThenInclude(q => q.Section).ThenInclude(s => s.Skill)
-                .Include(a => a.Question).ThenInclude(q => q.QuestionOptionQuestionNavigations)
                 .ToListAsync(cancellationToken);
+            var correctOptionsByQuestion = await db.QuestionOptions
+                .Where(option =>
+                    option.IsCorrect &&
+                    answers.Select(answer => answer.QuestionId).Contains(option.QuestionId))
+                .ToDictionaryAsync(option => option.QuestionId, cancellationToken);
 
             // Score each answer
             foreach (var ans in answers)
             {
-                var correctOpt = ans.Question.QuestionOptionQuestionNavigations.FirstOrDefault(o => o.IsCorrect);
-                ans.IsCorrect = ans.SelectedOptionId.HasValue && ans.SelectedOptionId.Value == correctOpt?.OptionId;
+                ans.IsCorrect = ans.SelectedOptionId.HasValue &&
+                    correctOptionsByQuestion.TryGetValue(ans.QuestionId, out var correctOption) &&
+                    ans.SelectedOptionId.Value == correctOption.OptionId;
             }
 
             // Clean any existing skill scores for idempotent resubmits
@@ -447,7 +662,6 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
             db.AttemptSkillScores.AddRange(newSkillScores);
 
             int totalScore = newSkillScores.Sum(s => s.ScaledScore);
-            attempt.TotalScore = totalScore;
 
             var bands = await db.ScoreBands
                 .Where(b => b.CertId == attempt.CertId)
@@ -459,7 +673,68 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
             {
                 matchingBand = totalScore < bands[0].MinTotal ? bands[0] : bands[^1];
             }
-            attempt.BandCode = matchingBand?.Code;
+
+            var freeResponses = await db.FreeResponses
+                .Where(r => r.AttemptId == attemptId)
+                .ToListAsync(cancellationToken);
+
+            if (finalDrafts is { Count: > 0 })
+            {
+                if (finalDrafts.Select(d => d.QuestionId).Distinct().Count() != finalDrafts.Count)
+                {
+                    throw new AttemptEngineException(AttemptEngineException.QuestionNotFound, "A final response draft was submitted more than once.");
+                }
+
+                foreach (var finalDraft in finalDrafts)
+                {
+                    var freeResponse = freeResponses.SingleOrDefault(r => r.QuestionId == finalDraft.QuestionId);
+                    if (freeResponse is null)
+                    {
+                        var question = await db.Questions
+                            .SingleOrDefaultAsync(q =>
+                                q.QuestionId == finalDraft.QuestionId
+                                && q.ExamId == attempt.ExamId
+                                && q.QuestionType == QuestionType.FreeResponse.ToCode(),
+                                cancellationToken)
+                            ?? throw new AttemptEngineException(
+                                AttemptEngineException.QuestionNotFound,
+                                $"Free-response question {finalDraft.QuestionId} was not found for this attempt.");
+
+                        freeResponse = new FreeResponse
+                        {
+                            AttemptId = attemptId,
+                            QuestionId = question.QuestionId,
+                            ExamId = attempt.ExamId,
+                            SkillId = question.SkillId,
+                            QuestionType = QuestionType.FreeResponse.ToCode(),
+                            ResponseText = finalDraft.ResponseText ?? string.Empty,
+                            Status = FreeResponseStatus.Draft.ToCode(),
+                            DraftSavedAt = now,
+                            SubmittedAt = null
+                        };
+                        freeResponses.Add(freeResponse);
+                        db.FreeResponses.Add(freeResponse);
+                    }
+                    else
+                    {
+                        freeResponse.ResponseText = finalDraft.ResponseText ?? string.Empty;
+                        freeResponse.DraftSavedAt = now;
+                    }
+                }
+            }
+
+            foreach (var response in freeResponses)
+            {
+                if (response.Status == FreeResponseStatus.Draft.ToCode())
+                {
+                    response.Status = FreeResponseStatus.PendingAi.ToCode();
+                    response.SubmittedAt = now;
+                }
+            }
+
+            // Persist responses before changing attempt status: the database trigger rejects
+            // attempts being submitted while any response remains a draft.
+            await db.SaveChangesAsync(cancellationToken);
 
             // Snapshot matching invariant: PlacementTests.TotalScore must match ExamAttempts.TotalScore
             var linkedPlacements = await db.PlacementTests
@@ -472,6 +747,35 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
                 placement.TotalScore = totalScore;
                 placement.ResultBandCode = matchingBand?.Code;
                 placement.TakenAt = now;
+            }
+
+            var hasFreeResponses = freeResponses.Count > 0;
+            attempt.Status = hasFreeResponses
+                ? AttemptStatus.Submitted.ToCode()
+                : AttemptStatus.Graded.ToCode();
+            attempt.SubmittedAt = now;
+            attempt.TotalScore = totalScore;
+            attempt.BandCode = matchingBand?.Code;
+
+            if (freeResponses.Count > 0)
+            {
+                var responseIds = freeResponses.Select(r => r.FreeResponseId).ToList();
+                var existingGradingIds = await db.AiGradings
+                    .Where(g => responseIds.Contains(g.FreeResponseId))
+                    .Select(g => g.FreeResponseId)
+                    .ToListAsync(cancellationToken);
+
+                foreach (var response in freeResponses.Where(r => !existingGradingIds.Contains(r.FreeResponseId)))
+                {
+                    db.AiGradings.Add(new AiGrading
+                    {
+                        FreeResponseId = response.FreeResponseId,
+                        SkillId = response.SkillId,
+                        Status = AiGradingStatus.Pending.ToCode(),
+                        AttemptCount = 1,
+                        RequestedAt = now
+                    });
+                }
             }
 
             await db.SaveChangesAsync(cancellationToken);
@@ -553,9 +857,10 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
             attempt = grading.Attempt;
         }
 
-        if (attempt.Status != AttemptStatus.Graded.ToCode())
+        if (attempt.Status != AttemptStatus.Graded.ToCode() &&
+            attempt.Status != AttemptStatus.Submitted.ToCode())
         {
-            throw new AttemptEngineException(AttemptEngineException.AttemptNotFinished, "Exam attempt is not finished.");
+            throw new AttemptEngineException(AttemptEngineException.AttemptNotFinished, "Exam attempt has not been submitted.");
         }
 
         if (attempt.Exam == null)

@@ -180,12 +180,18 @@ public sealed class AiGradingProcessor(
 
                 if (!anyPending)
                 {
-                    var attempt = await db.ExamAttempts.FindAsync(new object[] { fr.AttemptId }, cancellationToken);
+                    var attempt = await db.ExamAttempts
+                        .Include(a => a.Exam)
+                        .SingleOrDefaultAsync(a => a.AttemptId == fr.AttemptId, cancellationToken);
                     if (attempt != null && attempt.Status != AttemptStatus.Graded.ToCode())
                     {
                         attempt.Status = AttemptStatus.Graded.ToCode();
-                        attempt.TotalScore = null; // UI-45 / trg_Attempts_NoBandForSpeakingPractice (50041)
-                        attempt.BandCode = null;   // UI-38 / trg_Attempts_NoBandForSpeakingPractice (50032)
+                        if (attempt.Exam.Purpose == ExamPurpose.SpeakingPractice.ToCode() ||
+                            attempt.Exam.Purpose == ExamPurpose.WritingPractice.ToCode())
+                        {
+                            attempt.TotalScore = null;
+                            attempt.BandCode = null;
+                        }
                         await db.SaveChangesAsync(cancellationToken);
                     }
                 }

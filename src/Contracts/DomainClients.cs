@@ -121,8 +121,12 @@ public interface IMockExamsClient
     Task<AttemptTakeDto> GetAttemptTakeAsync(int attemptId, int? q, string bearerToken, CancellationToken cancellationToken = default) => GetAttemptTakeAsync(attemptId, q, cancellationToken);
     Task<SaveAnswerResultDto> SaveAttemptAnswerAsync(int attemptId, int questionId, SaveAnswerRequest request, CancellationToken cancellationToken = default);
     Task<SaveAnswerResultDto> SaveAttemptAnswerAsync(int attemptId, int questionId, SaveAnswerRequest request, string bearerToken, CancellationToken cancellationToken = default) => SaveAttemptAnswerAsync(attemptId, questionId, request, cancellationToken);
+    Task<SaveAttemptDraftResponse> SaveAttemptDraftAsync(int attemptId, SaveAttemptDraftRequest request, CancellationToken cancellationToken = default);
+    Task<SaveAttemptDraftResponse> SaveAttemptDraftAsync(int attemptId, SaveAttemptDraftRequest request, string bearerToken, CancellationToken cancellationToken = default) => SaveAttemptDraftAsync(attemptId, request, cancellationToken);
     Task<SubmitAttemptResponse> SubmitAttemptAsync(int attemptId, CancellationToken cancellationToken = default);
     Task<SubmitAttemptResponse> SubmitAttemptAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) => SubmitAttemptAsync(attemptId, cancellationToken);
+    Task<SubmitAttemptResponse> SubmitAttemptWithDraftsAsync(int attemptId, SubmitAttemptRequest request, CancellationToken cancellationToken = default);
+    Task<SubmitAttemptResponse> SubmitAttemptWithDraftsAsync(int attemptId, SubmitAttemptRequest request, string bearerToken, CancellationToken cancellationToken = default) => SubmitAttemptWithDraftsAsync(attemptId, request, cancellationToken);
     Task CancelAttemptAsync(int attemptId, CancellationToken cancellationToken = default);
     Task CancelAttemptAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) => CancelAttemptAsync(attemptId, cancellationToken);
     Task<AttemptResultDto> GetAttemptResultAsync(int attemptId, CancellationToken cancellationToken = default);
@@ -474,4 +478,3 @@ public interface IAdminLessonsClient
         Task.FromResult(new AdminLessonFormOptionsDto(Array.Empty<AdminCertificateOptionDto>(), Array.Empty<AdminLessonSkillOptionDto>(), Array.Empty<AdminLessonCategoryOptionDto>()));
     Task<AdminLessonFormOptionsDto> GetAdminLessonFormOptionsAsync(int? certId, string bearerToken, CancellationToken cancellationToken = default) => GetAdminLessonFormOptionsAsync(certId, cancellationToken);
 }
-
