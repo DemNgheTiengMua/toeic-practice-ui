@@ -88,9 +88,9 @@ public sealed record AttemptQuestionInfo(
     int? MaxWords = null,
     int? PrepSeconds = null,
     int? ResponseSeconds = null,
-    string? Hint = null,
-    string? SampleResponse = null,
-    string? ResponseText = null);
+    string? ResponseText = null,
+    string? ResponseAudioPath = null,
+    int? ResponseDurationMs = null);
 
 public sealed record NavigatorItem(
     int QuestionId,
@@ -124,8 +124,7 @@ public sealed record SaveAttemptAnswerResult(
     int? SelectedOptionId,
     bool IsFlagged,
     int RemainingSeconds,
-    bool IsAutoSubmitted,
-    string? ResponseText = null);
+    bool IsAutoSubmitted);
 
 public sealed record AttemptSkillScoreItem(
     int SkillId,

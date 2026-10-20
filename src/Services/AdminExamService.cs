@@ -929,6 +929,16 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
             await db.SaveChangesAsync(cancellationToken);
         }
 
+        if (request.QuestionType == QuestionTypeDto.FreeResponse && request.CriterionIds != null)
+        {
+            await SaveSectionCriteriaAsync(
+                group.SectionId,
+                group.Section.SkillId,
+                group.CertId,
+                request.CriterionIds,
+                cancellationToken);
+        }
+
         group.Exam.UpdatedAt = clock.GetUtcNow();
         await db.SaveChangesAsync(cancellationToken);
 
@@ -1095,6 +1105,16 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
             if (question.QuestionOptionQuestionNavigations.Count > 0)
             {
                 db.QuestionOptions.RemoveRange(question.QuestionOptionQuestionNavigations);
+            }
+
+            if (request.CriterionIds != null)
+            {
+                await SaveSectionCriteriaAsync(
+                    question.SectionId,
+                    question.SkillId,
+                    question.Group.CertId,
+                    request.CriterionIds,
+                    cancellationToken);
             }
         }
 
@@ -1307,6 +1327,48 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
     }
 
     private static string? Normalize(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private async Task SaveSectionCriteriaAsync(
+        int sectionId,
+        int skillId,
+        int certId,
+        IReadOnlyList<int> criterionIds,
+        CancellationToken cancellationToken)
+    {
+        var requestedIds = criterionIds.Distinct().ToHashSet();
+        if (requestedIds.Count != criterionIds.Count)
+        {
+            throw new AdminExamException(ApiError.Codes.Validation, "Rubric criteria must not contain duplicates.");
+        }
+
+        var validIds = await db.GradingCriteria
+            .Where(c => requestedIds.Contains(c.CriterionId) && c.CertId == certId && c.SkillId == skillId)
+            .Select(c => c.CriterionId)
+            .ToListAsync(cancellationToken);
+        if (validIds.Count != requestedIds.Count)
+        {
+            throw new AdminExamException(ApiError.Codes.Validation, "Rubric criteria must belong to the question's certificate and skill.");
+        }
+
+        var existing = await db.SectionCriteria
+            .Where(sc => sc.SectionId == sectionId)
+            .ToListAsync(cancellationToken);
+        var validIdSet = validIds.ToHashSet();
+        db.SectionCriteria.RemoveRange(existing.Where(sc => !validIdSet.Contains(sc.CriterionId)));
+
+        foreach (var criterionId in validIds)
+        {
+            if (existing.All(sc => sc.CriterionId != criterionId))
+            {
+                db.SectionCriteria.Add(new SectionCriterion
+                {
+                    SectionId = sectionId,
+                    CriterionId = criterionId,
+                    SkillId = skillId
+                });
+            }
+        }
+    }
 
     private static void ValidateQuestionInputs(string stem, int difficulty, QuestionTypeDto type, int? prepSeconds, int? responseSeconds, int? minWords, int? maxWords, string? hint, IReadOnlyList<AdminQuestionOptionInput>? options)
     {
@@ -1614,10 +1676,14 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
         var availableCriteria = await db.GradingCriteria.AsNoTracking()
             .Where(c => c.CertId == exam.CertId)
             .OrderBy(c => c.DisplayOrder)
-            .Select(c => new ExamStudioCriterionDto(c.CriterionId, c.Code, c.Name, null, c.MaxScore))
+            .Select(c => new ExamStudioCriterionDto(c.CriterionId, c.Code, c.Name, null, c.MaxScore, c.SkillId))
             .ToListAsync(cancellationToken);
 
-        var audit = AuditExamPublishReadinessInternal(exam, sections, sectionAudios, groups);
+        var sectionCriteria = await db.SectionCriteria.AsNoTracking()
+            .Where(sc => sections.Select(s => s.SectionId).Contains(sc.SectionId))
+            .ToListAsync(cancellationToken);
+
+        var audit = AuditExamPublishReadinessInternal(exam, sections, sectionAudios, groups, sectionCriteria);
 
         var sectionDtos = new List<ExamStudioSectionDto>();
         foreach (var sec in sections)
@@ -1661,7 +1727,10 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
                         DisplayOrder: q.DisplayOrder,
                         UpdatedAt: q.UpdatedAt,
                         Options: opts,
-                        Criteria: availableCriteria,
+                        Criteria: availableCriteria
+                            .Where(c => c.SkillId == q.SkillId
+                                && sectionCriteria.Any(sc => sc.SectionId == q.SectionId && sc.CriterionId == c.CriterionId))
+                            .ToList(),
                         HasAnswers: answeredQuestionIds.Contains(q.QuestionId)));
                 }
 
@@ -1756,14 +1825,20 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
             .OrderBy(g => g.DisplayOrder)
             .ToListAsync(cancellationToken);
 
-        return AuditExamPublishReadinessInternal(exam, sections, sectionAudios, groups);
+        var sectionIds = sections.Select(s => s.SectionId).ToHashSet();
+        var sectionCriteria = await db.SectionCriteria.AsNoTracking()
+            .Where(sc => sectionIds.Contains(sc.SectionId))
+            .ToListAsync(cancellationToken);
+
+        return AuditExamPublishReadinessInternal(exam, sections, sectionAudios, groups, sectionCriteria);
     }
 
     private static ExamAuditResultDto AuditExamPublishReadinessInternal(
         Exam exam,
         List<Section> sections,
         List<ExamSectionAudio> sectionAudios,
-        List<QuestionGroup> groups)
+        List<QuestionGroup> groups,
+        List<SectionCriterion> sectionCriteria)
     {
         var issues = new List<ExamAuditIssueDto>();
         var missingItems = new List<string>();
@@ -1920,12 +1995,52 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
                     }
                     else if (string.Equals(q.QuestionType, "free_response", StringComparison.OrdinalIgnoreCase))
                     {
+                        if (!sectionCriteria.Any(sc => sc.SectionId == sec.SectionId && sc.SkillId == q.SkillId))
+                        {
+                            issues.Add(new ExamAuditIssueDto(
+                                Code: "Q_FR_CRITERIA_MISSING",
+                                Severity: "error",
+                                Message: $"Free response Question #{q.DisplayOrder} in [{sec.Code}] must have at least one rubric criterion assigned to its section.",
+                                SectionId: sec.SectionId,
+                                SectionCode: sec.Code,
+                                GroupId: g.GroupId,
+                                QuestionId: q.QuestionId,
+                                ElementTarget: $"question-card-{q.QuestionId}"));
+                        }
+
                         if (q.ResponseSeconds is null or <= 0)
                         {
                             issues.Add(new ExamAuditIssueDto(
                                 Code: "Q_FR_RESPONSE_SEC",
                                 Severity: "error",
                                 Message: $"Free response Question #{q.DisplayOrder} in [{sec.Code}] must have response seconds > 0.",
+                                SectionId: sec.SectionId,
+                                SectionCode: sec.Code,
+                                GroupId: g.GroupId,
+                                QuestionId: q.QuestionId,
+                                ElementTarget: $"question-card-{q.QuestionId}"));
+                        }
+
+                        if (sec.Modality == "writing"
+                            && (q.MinWords is null or <= 0 || q.MaxWords is null or <= 0 || q.MaxWords < q.MinWords))
+                        {
+                            issues.Add(new ExamAuditIssueDto(
+                                Code: "Q_FR_WORD_BOUNDS",
+                                Severity: "error",
+                                Message: $"Free response Writing question #{q.DisplayOrder} in [{sec.Code}] must have positive minimum and maximum word counts, with max >= min.",
+                                SectionId: sec.SectionId,
+                                SectionCode: sec.Code,
+                                GroupId: g.GroupId,
+                                QuestionId: q.QuestionId,
+                                ElementTarget: $"question-card-{q.QuestionId}"));
+                        }
+
+                        if (sec.Modality == "speaking" && q.PrepSeconds is null or <= 0)
+                        {
+                            issues.Add(new ExamAuditIssueDto(
+                                Code: "Q_FR_PREP_SEC",
+                                Severity: "error",
+                                Message: $"Free response Speaking question #{q.DisplayOrder} in [{sec.Code}] must have preparation seconds > 0.",
                                 SectionId: sec.SectionId,
                                 SectionCode: sec.Code,
                                 GroupId: g.GroupId,
@@ -2260,4 +2375,3 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
         }
     }
 }
-

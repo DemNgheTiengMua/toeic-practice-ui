@@ -1046,4 +1046,73 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         var same = await service.AuditExamPublishReadinessAsync(exam.ExamId);
         Assert.DoesNotContain(same.Issues, i => i.Code == "GRP_AUDIO_OVERRIDDEN");
     }
+
+    [Fact]
+    public async Task FreeResponseQuestions_SaveSectionRubric_AndAuditWordBounds()
+    {
+        var (certId, _, secR, _, secW) = await SeedCertificateWithSectionsAsync($"RUB_{Guid.NewGuid():N}"[..18]);
+        var service = CreateService();
+        var exam = await service.CreateExamAsync(new CreateAdminExamRequest(
+            certId, $"Rubric Audit {Guid.NewGuid():N}"[..25], 60, ExamPurposeDto.WritingPractice));
+        var writingGroup = await service.CreateQuestionGroupAsync(exam.ExamId, new CreateQuestionGroupRequest(secW));
+
+        await database.SqlAsync($"""
+            DECLARE @skillId INT = (SELECT SkillId FROM Sections WHERE SectionId = {secW});
+            INSERT INTO GradingCriteria (CertId, SkillId, Code, Name, MaxScore, Weight, DisplayOrder)
+            VALUES ({certId}, @skillId, 'TASK', N'Task achievement', 9, 1, 1);
+            """);
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var criterionId = await db.GradingCriteria
+            .Where(c => c.CertId == certId && c.Code == "TASK")
+            .Select(c => c.CriterionId)
+            .SingleAsync();
+
+        var freeResponse = await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
+            writingGroup.GroupId,
+            "Write a response to the prompt.",
+            3,
+            QuestionTypeDto.FreeResponse,
+            ResponseSeconds: 1200));
+
+        var incompleteAudit = await service.AuditExamPublishReadinessAsync(exam.ExamId);
+        Assert.Contains(incompleteAudit.Issues, i => i.Code == "Q_FR_CRITERIA_MISSING" && i.QuestionId == freeResponse.QuestionId);
+        Assert.Contains(incompleteAudit.Issues, i => i.Code == "Q_FR_WORD_BOUNDS" && i.QuestionId == freeResponse.QuestionId);
+
+        await service.UpdateQuestionAsync(freeResponse.QuestionId, new UpdateQuestionRequest(
+            GroupId: null,
+            Stem: freeResponse.Stem,
+            DifficultyLevel: freeResponse.DifficultyLevel,
+            QuestionType: QuestionTypeDto.FreeResponse,
+            ResponseSeconds: 1200,
+            MinWords: 100,
+            MaxWords: 250,
+            CriterionIds: [criterionId]));
+
+        var studio = await service.GetExamStudioAsync(exam.ExamId);
+        var studioQuestion = Assert.Single(studio.Sections
+            .SelectMany(s => s.Groups)
+            .SelectMany(g => g.Questions));
+        Assert.Contains(studioQuestion.Criteria, c => c.CriterionId == criterionId);
+        Assert.Contains(studio.AvailableCriteria, c => c.CriterionId == criterionId && c.SkillId == studioQuestion.SkillId);
+
+        var completedAudit = await service.AuditExamPublishReadinessAsync(exam.ExamId);
+        Assert.DoesNotContain(completedAudit.Issues, i => i.Code is "Q_FR_CRITERIA_MISSING" or "Q_FR_WORD_BOUNDS");
+
+        var mcqExam = await service.CreateExamAsync(new CreateAdminExamRequest(
+            certId, $"Rubric MCQ {Guid.NewGuid():N}"[..25], 60, ExamPurposeDto.Mock));
+        var readingGroup = await service.CreateQuestionGroupAsync(mcqExam.ExamId, new CreateQuestionGroupRequest(secR));
+        var mcq = await service.CreateQuestionAsync(mcqExam.ExamId, new CreateQuestionRequest(
+            readingGroup.GroupId,
+            "Choose the correct answer.",
+            2,
+            QuestionTypeDto.Mcq,
+            Options:
+            [
+                new AdminQuestionOptionInput(null, "A", "Correct", true, null),
+                new AdminQuestionOptionInput(null, "B", "Incorrect", false, null)
+            ]));
+        var afterMcqAudit = await service.AuditExamPublishReadinessAsync(mcqExam.ExamId);
+        Assert.DoesNotContain(afterMcqAudit.Issues, i => i.Code == "Q_FR_CRITERIA_MISSING" && i.QuestionId == mcq.QuestionId);
+    }
 }

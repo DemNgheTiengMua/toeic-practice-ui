@@ -88,9 +88,9 @@ public sealed record AttemptQuestionDto(
     int? MaxWords = null,
     int? PrepSeconds = null,
     int? ResponseSeconds = null,
-    string? Hint = null,
-    string? SampleResponse = null,
-    string? ResponseText = null);
+    string? ResponseText = null,
+    string? ResponseAudioPath = null,
+    int? ResponseDurationMs = null);
 
 public sealed record NavigatorItemDto(
     int QuestionId,
@@ -129,8 +129,7 @@ public sealed record SaveAnswerResultDto(
     int? SelectedOptionId,
     bool IsFlagged,
     int RemainingSeconds,
-    bool IsAutoSubmitted,
-    string? ResponseText = null);
+    bool IsAutoSubmitted);
 
 public sealed record SubmitAttemptResponse(
     int AttemptId,

@@ -342,9 +342,12 @@ public sealed class SpeakingPracticeService(
         }
 
         var question = await db.Questions
-            .Where(q => q.QuestionId == questionId && q.ExamId == attempt.ExamId && q.QuestionType == QuestionType.FreeResponse.ToCode())
+            .Where(q => q.QuestionId == questionId
+                && q.ExamId == attempt.ExamId
+                && q.QuestionType == QuestionType.FreeResponse.ToCode()
+                && q.Section.Modality == Modality.Speaking.ToCode())
             .SingleOrDefaultAsync(cancellationToken)
-            ?? throw new SpeakingPracticeException(SpeakingPracticeException.QuestionNotFound, $"Question {questionId} not found in this exam.");
+            ?? throw new SpeakingPracticeException(SpeakingPracticeException.QuestionNotFound, $"Speaking question {questionId} not found in this exam.");
 
         var ext = Path.GetExtension(fileName) ?? ".webm";
         if (fileName?.Contains(FakeAiGrader.SimulateFailMarker, StringComparison.OrdinalIgnoreCase) == true)
@@ -724,4 +727,3 @@ public sealed class SpeakingPracticeService(
         return result;
     }
 }
-

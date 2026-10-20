@@ -36,6 +36,8 @@ public sealed class AiGradingProcessor(
     ILogger<AiGradingProcessor>? logger = null,
     IAttemptEngine? attemptEngine = null) : IAiGradingProcessor
 {
+    private readonly IAttemptEngine _attemptEngine = attemptEngine ?? new AttemptEngine(db);
+
     public async Task<int> ProcessPendingGradingsAsync(int batchSize = 10, CancellationToken cancellationToken = default)
     {
         if (batchSize <= 0) batchSize = 10;
@@ -183,21 +185,26 @@ public sealed class AiGradingProcessor(
 
                 if (!anyPending)
                 {
-                    if (fr.Attempt.Exam.Purpose == ExamPurpose.Mock.ToCode())
+                    var purpose = fr.Attempt.Exam.Purpose;
+                    if (purpose == ExamPurpose.Mock.ToCode())
                     {
-                        if (attemptEngine is null)
-                        {
-                            throw new InvalidOperationException("Mock exam grading requires the attempt engine to calculate final scaled scores.");
-                        }
-
-                        await attemptEngine.FinalizeAiGradedAttemptAsync(fr.AttemptId, cancellationToken);
+                        await _attemptEngine.FinalizeAiGradedAttemptAsync(fr.AttemptId, cancellationToken);
                     }
-                    else if (fr.Attempt.Status != AttemptStatus.Graded.ToCode())
+                    else
                     {
-                        fr.Attempt.Status = AttemptStatus.Graded.ToCode();
-                        fr.Attempt.TotalScore = null;
-                        fr.Attempt.BandCode = null;
-                        await db.SaveChangesAsync(cancellationToken);
+                        var attempt = await db.ExamAttempts.FindAsync(new object[] { fr.AttemptId }, cancellationToken);
+                        if (attempt != null && attempt.Status != AttemptStatus.Graded.ToCode())
+                        {
+                            attempt.Status = AttemptStatus.Graded.ToCode();
+                            if (purpose == ExamPurpose.SpeakingPractice.ToCode()
+                                || purpose == ExamPurpose.WritingPractice.ToCode())
+                            {
+                                attempt.TotalScore = null;
+                                attempt.BandCode = null;
+                            }
+
+                            await db.SaveChangesAsync(cancellationToken);
+                        }
                     }
                 }
 

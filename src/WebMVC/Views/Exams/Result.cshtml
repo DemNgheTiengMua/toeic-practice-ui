@@ -5,6 +5,9 @@
     var res = Model.Result;
     ViewData["Title"] = $"Results — {res.ExamName}";
     ViewData["Description"] = $"Mock exam results for {res.ExamName}.";
+    var isGraded = res.Status == Contracts.AttemptStatusDto.Graded;
+    var isAwaitingGrading = res.Status == Contracts.AttemptStatusDto.Submitted;
+    var pendingFreeResponses = Math.Max(0, res.FreeResponseCount - res.GradedFreeResponseCount - res.FailedFreeResponseCount);
 
     var hours = res.DurationSeconds / 3600;
     var minutes = (res.DurationSeconds % 3600) / 60;
@@ -30,7 +33,7 @@
     </p>
   </div>
   <div class="row" style="gap: var(--space-2);">
-    @if (res.Status == Contracts.AttemptStatusDto.Graded)
+    @if (isGraded)
     {
       <a class="btn btn--primary" href="/exams/review/@res.AttemptId">Review answers</a>
     }
@@ -47,27 +50,22 @@
 @if (res.IsAutoSubmitted)
 {
   <div class="alert alert--warning" role="status">
-    <strong>Time is up.</strong> The exam was submitted automatically when your deadline expired.
+    <strong>Time is up.</strong> The exam was submitted automatically when your deadline expired and graded on the questions you answered.
   </div>
 }
 
-@if (res.Status == Contracts.AttemptStatusDto.Submitted)
+@if (isAwaitingGrading)
 {
-  var pendingResponses = Math.Max(0, res.FreeResponseCount - res.GradedFreeResponseCount - res.FailedFreeResponseCount);
-  <section class="card" id="ai-grading-status"
-           data-status-url="@Url.Action("GradingStatus", "Exams", new { attemptId = res.AttemptId })"
-           data-pending="@pendingResponses">
-    <div class="card__header"><strong>AI grading in progress</strong></div>
-    <div class="card__body" aria-live="polite">
-      <p id="ai-grading-message" class="m-0">
-        Objective skill scores are available below. Writing or speaking responses are being graded asynchronously.
-      </p>
-      <p class="text-sm text-muted mt-2 mb-0" id="ai-grading-counts">
-        @res.GradedFreeResponseCount of @res.FreeResponseCount free responses graded
-        @if (res.FailedFreeResponseCount > 0)
-        {
-          <span> · @res.FailedFreeResponseCount could not be graded</span>
-        }
+  <section id="grading-status-card"
+           class="card mt-4"
+           role="status"
+           aria-live="polite"
+           data-status-url="/exams/result/@res.AttemptId/status"
+           style="border: 2px solid #14181d; border-radius: 0; box-shadow: none;">
+    <div class="card__body">
+      <strong id="grading-status-title">AI grading in progress</strong>
+      <p id="grading-status-message" class="text-sm no-margin mt-1">
+        Objective skill scores are available below. @pendingFreeResponses free response(s) are waiting for grading.
       </p>
     </div>
   </section>
@@ -76,13 +74,11 @@
 <!-- Score Hero -->
 <div class="score-hero">
   <div class="score-hero__total">
-    <div class="score-hero__total-value">
-      @(res.Status == Contracts.AttemptStatusDto.Graded ? res.TotalScore.ToString() : "Pending")
-    </div>
+    <div class="score-hero__total-value">@(isGraded ? res.TotalScore.ToString() : "—")</div>
     <div class="score-hero__total-label">
-      @(res.Status == Contracts.AttemptStatusDto.Graded ? $"Total scaled score · {res.CertCode}" : "Final composite score pending AI grading")
+      @(isGraded ? $"Total scaled score · {res.CertCode}" : "Composite score pending AI grading")
     </div>
-    @if (res.Status == Contracts.AttemptStatusDto.Graded && res.ScoreDelta.HasValue)
+    @if (isGraded && res.ScoreDelta.HasValue)
     {
       <p class="score-hero__delta" role="status">
         <span class="score-hero__delta-value">@(res.ScoreDelta.Value >= 0 ? $"+{res.ScoreDelta.Value}" : res.ScoreDelta.Value.ToString())</span>
@@ -96,63 +92,12 @@
     <div class="score-hero__section">
       <div class="score-hero__section-value">@skill.ScaledScore</div>
       <div class="text-sm text-muted">@skill.SkillName</div>
-      <p class="text-xs text-muted m-0 mt-1">@skill.RawScore/@skill.TotalQuestions correct</p>
+      <p class="text-xs text-muted m-0 mt-1">@skill.RawScore / @skill.TotalQuestions</p>
     </div>
   }
 </div>
 
-@if (res.Status == Contracts.AttemptStatusDto.Submitted)
-{
-  <script>
-    (function () {
-      var statusCard = document.getElementById('ai-grading-status');
-      if (!statusCard) return;
-
-      var statusUrl = statusCard.dataset.statusUrl;
-      var message = document.getElementById('ai-grading-message');
-      var counts = document.getElementById('ai-grading-counts');
-      var timer;
-
-      function poll() {
-        fetch(statusUrl, { headers: { 'Accept': 'application/json' } })
-          .then(function (response) {
-            if (!response.ok) throw new Error('Could not refresh grading status.');
-            return response.json();
-          })
-          .then(function (data) {
-            var pending = Math.max(0, data.freeResponseCount - data.gradedFreeResponseCount - data.failedFreeResponseCount);
-            counts.textContent = data.gradedFreeResponseCount + ' of ' + data.freeResponseCount + ' free responses graded'
-              + (data.failedFreeResponseCount > 0 ? ' · ' + data.failedFreeResponseCount + ' could not be graded' : '');
-
-            if (data.status === 'graded') {
-              window.location.reload();
-              return;
-            }
-
-            if (pending === 0 && data.failedFreeResponseCount > 0) {
-              message.textContent = 'AI grading could not finish for one or more responses. Objective scores remain available; the final composite score is unavailable.';
-              statusCard.querySelector('.card__header strong').textContent = 'AI grading needs attention';
-              return;
-            }
-
-            message.textContent = 'Objective skill scores are available below. Writing or speaking responses are being graded asynchronously.';
-            timer = window.setTimeout(poll, 4000);
-          })
-          .catch(function () {
-            message.textContent = 'Could not refresh grading status. Retrying shortly.';
-            timer = window.setTimeout(poll, 8000);
-          });
-      }
-
-      timer = window.setTimeout(poll, 4000);
-      window.addEventListener('beforeunload', function () {
-        if (timer) window.clearTimeout(timer);
-      });
-    })();
-  </script>
-}
-
-@if (!string.IsNullOrEmpty(res.BandCode))
+@if (isGraded && !string.IsNullOrEmpty(res.BandCode))
 {
   <div class="card">
     <div class="card__header"><strong>Proficiency Level / Score Band</strong></div>
@@ -168,7 +113,10 @@
 }
 
 <!-- AI Insight Panel (Ticket #20) -->
-<partial name="_AiInsightPanel" model='new WebMVC.Models.AiInsightPanelViewModel("attempt", res.AttemptId, Model.Insight)' />
+@if (isGraded)
+{
+  <partial name="_AiInsightPanel" model='new WebMVC.Models.AiInsightPanelViewModel("attempt", res.AttemptId, Model.Insight)' />
+}
 
 <!-- Breakdown by Skill Table -->
 <div class="card mt-4">
@@ -202,7 +150,7 @@
           <th>Total</th>
           <th>@res.SkillScores.Sum(s => s.RawScore)</th>
           <th>@res.SkillScores.Sum(s => s.TotalQuestions)</th>
-          <th><strong>@(res.Status == Contracts.AttemptStatusDto.Graded ? res.TotalScore.ToString() : "Pending")</strong></th>
+          <th><strong>@res.TotalScore</strong></th>
           <th>
             @{
               var totalRaw = res.SkillScores.Sum(s => s.RawScore);
@@ -216,3 +164,51 @@
     </table>
   </div>
 </div>
+
+@if (isAwaitingGrading)
+{
+  <script>
+    (function () {
+      "use strict";
+      var card = document.getElementById("grading-status-card");
+      if (!card) return;
+
+      var message = document.getElementById("grading-status-message");
+      var title = document.getElementById("grading-status-title");
+      var intervalId;
+
+      async function refreshGradingStatus() {
+        try {
+          var response = await fetch(card.dataset.statusUrl, {
+            credentials: "same-origin",
+            headers: { "Accept": "application/json" },
+            cache: "no-store"
+          });
+          if (!response.ok) throw new Error("Status request failed.");
+
+          var status = await response.json();
+          if (status.isGraded) {
+            window.clearInterval(intervalId);
+            window.location.reload();
+            return;
+          }
+
+          var pending = Math.max(0, status.freeResponseCount - status.gradedFreeResponseCount - status.failedFreeResponseCount);
+          if (status.failedFreeResponseCount > 0 && pending === 0) {
+            title.textContent = "Some responses could not be graded";
+            message.textContent = status.failedFreeResponseCount + " response(s) need grading service attention. Objective skill scores remain available below.";
+            window.clearInterval(intervalId);
+            return;
+          }
+
+          message.textContent = "Objective skill scores are available below. " + pending + " free response(s) are waiting for grading.";
+        } catch (error) {
+          message.textContent = "Unable to refresh grading status. The page will try again shortly.";
+        }
+      }
+
+      intervalId = window.setInterval(refreshGradingStatus, 3000);
+      refreshGradingStatus();
+    })();
+  </script>
+}

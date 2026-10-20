@@ -140,9 +140,9 @@ public static class ExamEndpoints
                     qInfo.MaxWords,
                     qInfo.PrepSeconds,
                     qInfo.ResponseSeconds,
-                    qInfo.Hint,
-                    qInfo.SampleResponse,
-                    qInfo.ResponseText);
+                    qInfo.ResponseText,
+                    qInfo.ResponseAudioPath,
+                    qInfo.ResponseDurationMs);
 
                 var allQDtos = take.Questions?.Select(q => new AttemptQuestionDto(
                     q.QuestionId,
@@ -170,9 +170,9 @@ public static class ExamEndpoints
                     q.MaxWords,
                     q.PrepSeconds,
                     q.ResponseSeconds,
-                    q.Hint,
-                    q.SampleResponse,
-                    q.ResponseText)).ToList();
+                    q.ResponseText,
+                    q.ResponseAudioPath,
+                    q.ResponseDurationMs)).ToList();
 
                 return Results.Ok(new AttemptTakeDto(
                     take.AttemptId,
@@ -221,12 +221,7 @@ public static class ExamEndpoints
                     cancellationToken,
                     request.ResponseText);
                 return Results.Ok(new SaveAnswerResultDto(
-                    res.QuestionId,
-                    res.SelectedOptionId,
-                    res.IsFlagged,
-                    res.RemainingSeconds,
-                    res.IsAutoSubmitted,
-                    res.ResponseText));
+                    res.QuestionId, res.SelectedOptionId, res.IsFlagged, res.RemainingSeconds, res.IsAutoSubmitted));
             }
             catch (MockExamException ex) when (ex.Code == MockExamException.AttemptExpired)
             {
