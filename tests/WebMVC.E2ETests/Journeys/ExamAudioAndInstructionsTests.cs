@@ -246,6 +246,62 @@ public class ExamAudioAndInstructionsTests : PlaywrightTestBase
     }
 
     [Test]
+    public async Task Should_Survive_Page_Reload_Without_Softlock_And_Keep_Audio_Locked()
+    {
+        var errors = new List<string>();
+        Page.PageError += (_, err) => errors.Add($"PageError: {err}");
+        Page.Console += (_, msg) => {
+            if (msg.Type == "error") errors.Add($"ConsoleError: {msg.Text}");
+        };
+        await _loginPage.GotoAsync();
+        await _loginPage.LoginAsync("learner@demo.local", "Demo1234!");
+        await Page.GotoAsync($"{BaseUrl}/exams");
+
+        var continueLink = Page.Locator("a[href*='/exams/take/']").First;
+        if (await continueLink.IsVisibleAsync())
+        {
+            await continueLink.ClickAsync();
+        }
+        else
+        {
+            await Page.GotoAsync($"{BaseUrl}/exams/1/instructions");
+            var confirmCheck = Page.Locator("#confirm-ready");
+            if (await confirmCheck.IsVisibleAsync()) await confirmCheck.CheckAsync();
+            await Page.Locator("#start-btn").ClickAsync();
+        }
+
+        // Navigate to Question 2 (listening)
+        var q2Btn = Page.Locator(".navigator__cell[data-display-order='2']").First;
+        await q2Btn.ClickAsync();
+
+        var playerQ2 = Page.Locator("#main-exam-audio, .exam-audio[data-mode='exam']").First;
+        var playBtn = playerQ2.Locator(".exam-audio__btn-play");
+        await playBtn.ClickAsync();
+        await Expect(playerQ2.Locator(".exam-audio__badge")).ToHaveTextAsync("PLAYING");
+
+        // Now RELOAD (F5) the page!
+        await Page.ReloadAsync();
+
+        // 1. Must not have any JavaScript errors
+        Assert.That(errors, Is.Empty, "Page reload caused JavaScript errors: " + string.Join("; ", errors));
+
+        // 2. Audio must be locked to COMPLETED (no replay allowed)
+        var reloadedPlayer = Page.Locator("#main-exam-audio, .exam-audio[data-mode='exam']").First;
+        await Expect(reloadedPlayer.Locator(".exam-audio__badge")).ToHaveTextAsync("COMPLETED");
+        await Expect(reloadedPlayer.Locator(".exam-audio__btn-play")).ToBeDisabledAsync();
+
+        // 3. Timer must NOT be frozen at --:--:--
+        var timerDisplay = Page.Locator("#timer-display");
+        await Expect(timerDisplay).Not.ToHaveTextAsync("--:--:--");
+
+        // 4. Exit modal button must work (not softlocked)
+        var exitBtn = Page.Locator("#btn-open-exit-modal");
+        await exitBtn.ClickAsync();
+        var exitModal = Page.Locator("#exit-modal");
+        await Expect(exitModal).ToBeVisibleAsync();
+    }
+
+    [Test]
     public async Task Should_Render_Study_Audio_In_Practice_Summary()
     {
         await _loginPage.GotoAsync();

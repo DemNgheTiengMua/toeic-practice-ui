@@ -303,10 +303,21 @@
   </form>
 
   <script src="~/js/icons.js"></script>
+  <script src="~/js/exam-audio.js"></script>
   <script src="~/js/keyboard-nav.js"></script>
   <script>
     (function () {
       "use strict";
+
+      function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
 
       // 1. Data Model & Initialization
       var examDataEl = document.getElementById('exam-data');
@@ -413,8 +424,12 @@
       }
 
       // If initial question audio was already completed in this attempt, re-render it as completed
-      if (currentAudioKey && playedAudios[currentAudioKey]) {
-        var initialQ = questionMap[currentDisplayOrder];
+      if (currentAudioKey && playedAudios[currentAudioKey] && audioWrapper && window.createExamAudioHtml) {
+        var initialQ = questionMap[currentDisplayOrder] || {
+          audioPath: '@Html.Raw(q.AudioPath ?? "")',
+          audioStartMs: @(q.AudioStartMs.HasValue ? q.AudioStartMs.Value.ToString() : "null"),
+          audioEndMs: @(q.AudioEndMs.HasValue ? q.AudioEndMs.Value.ToString() : "null")
+        };
         audioWrapper.innerHTML = window.createExamAudioHtml({
           mode: 'exam',
           audioPath: initialQ.audioPath,
@@ -426,13 +441,13 @@
         if (window.initExamAudio) window.initExamAudio();
       }
 
-      audioWrapper.addEventListener('examaudioplay', function () {
+      document.addEventListener('examaudioplay', function () {
         if (currentAudioKey) {
           recordAudioStartedOrCompleted(currentAudioKey);
         }
       });
 
-      audioWrapper.addEventListener('examaudioended', function () {
+      document.addEventListener('examaudioended', function () {
         if (currentAudioKey) {
           recordAudioStartedOrCompleted(currentAudioKey);
         }
@@ -1001,6 +1016,5 @@
       }
     })();
   </script>
-  <script src="~/js/exam-audio.js"></script>
 </body>
 </html>
