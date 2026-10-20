@@ -142,7 +142,9 @@ public static class PracticeEndpoints
                     q.AudioPath,
                     q.ImagePath,
                     q.ImageAlt,
-                    q.IsSaved));
+                    q.IsSaved,
+                    q.AudioStartMs,
+                    q.AudioEndMs));
             }
             catch (PracticeException ex) when (ex.Code == PracticeException.SessionNotFound)
             {
@@ -256,7 +258,11 @@ public static class PracticeEndpoints
                         q.CorrectOptionText,
                         q.IsCorrect,
                         q.HintUsed,
-                        q.Explanation)).ToList()));
+                        q.Explanation,
+                        q.AudioPath,
+                        q.AudioStartMs,
+                        q.AudioEndMs,
+                        q.Transcript)).ToList()));
             }
             catch (PracticeException ex) when (ex.Code == PracticeException.SessionNotFound)
             {

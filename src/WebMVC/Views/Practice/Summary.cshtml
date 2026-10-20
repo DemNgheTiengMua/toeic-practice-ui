@@ -121,6 +121,26 @@
                 <span class="badge badge--muted text-xs mb-1 d-inline-block">@q.CategoryName</span>
               }
               <div class="question-stem text-sm" style="line-height: 1.6; color: var(--ink); white-space: pre-wrap;">@q.Stem</div>
+              @if (Model.Modality == Contracts.ModalityDto.Listening && !string.IsNullOrWhiteSpace(q.AudioPath))
+              {
+                <div class="mt-2">
+                  @await Html.PartialAsync("_ExamAudioPlayer", new WebMVC.Models.ExamAudioPlayerModel(
+                      AudioPath: q.AudioPath,
+                      AllowReplay: true,
+                      SectionTitle: "Question audio",
+                      StartMs: q.AudioStartMs,
+                      EndMs: q.AudioEndMs,
+                      Mode: "study"
+                  ))
+                </div>
+                @if (!string.IsNullOrWhiteSpace(q.Transcript))
+                {
+                  <details class="mt-2">
+                    <summary class="text-xs font-semibold text-primary" style="cursor: pointer;">Show transcript</summary>
+                    <p class="text-sm no-margin mt-1" style="white-space: pre-wrap;">@q.Transcript</p>
+                  </details>
+                }
+              }
             </td>
             <td>
               @if (q.IsCorrect == true)

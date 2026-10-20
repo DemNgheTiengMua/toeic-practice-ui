@@ -245,6 +245,20 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         // Q3: skip (SelectedOptionId = null)
         await practice.SubmitAnswerAsync(userId, session.SessionId, qIds[2], new SubmitPracticeAnswerInput(null));
 
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            var groupId = await db.Questions
+                .Where(q => q.QuestionId == qIds[0])
+                .Select(q => q.GroupId)
+                .SingleAsync();
+            var group = await db.QuestionGroups.SingleAsync(g => g.GroupId == groupId);
+            group.AudioPath = "/audio/practice-dialogue.mp3";
+            group.AudioStartMs = 200;
+            group.AudioEndMs = 800;
+            group.Transcript = "A short practice transcript.";
+            await db.SaveChangesAsync();
+        }
+
         var summary = await practice.GetSummaryAsync(userId, session.SessionId);
 
         Assert.Equal(3, summary.TotalQuestions);
@@ -260,6 +274,10 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         Assert.Equal(3, summary.Questions.Count);
         Assert.True(summary.Questions[0].IsCorrect);
         Assert.True(summary.Questions[0].HintUsed);
+        Assert.Equal("/audio/practice-dialogue.mp3", summary.Questions[0].AudioPath);
+        Assert.Equal(200, summary.Questions[0].AudioStartMs);
+        Assert.Equal(800, summary.Questions[0].AudioEndMs);
+        Assert.Equal("A short practice transcript.", summary.Questions[0].Transcript);
         Assert.False(summary.Questions[1].IsCorrect);
         Assert.False(summary.Questions[1].HintUsed);
         Assert.Null(summary.Questions[2].IsCorrect); // Skipped

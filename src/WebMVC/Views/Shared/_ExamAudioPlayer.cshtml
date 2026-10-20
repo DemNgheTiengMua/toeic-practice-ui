@@ -1,67 +1,23 @@
 @model WebMVC.Models.ExamAudioPlayerModel
 @{
-    var allowReplay = Model.AllowReplay;
-    var badgeText = Model.BadgeText ?? "READY";
-    var defaultStatus = !allowReplay 
-        ? "Plays once only · Seeking disabled" 
-        : "Replay permitted · Seeking disabled";
+    var mode = Model.Mode ?? (Model.AllowReplay ? "study" : "exam");
+    if (mode is not ("exam" or "study"))
+    {
+        throw new ArgumentOutOfRangeException(nameof(Model.Mode), "Audio player mode must be 'exam' or 'study'.");
+    }
 }
 
-<div class="card mb-3 exam-audio-card">
-  <div class="card__body p-3">
-    @if (!string.IsNullOrEmpty(Model.SectionTitle))
-    {
-      <div class="row row--between mb-2">
-        <span class="badge badge--info font-sign">@Model.SectionTitle</span>
-        <span class="text-xs text-muted font-sign">@(!allowReplay ? "Official Audio · Plays once" : "Practice Audio")</span>
-      </div>
-    }
-    <div class="exam-audio" @(string.IsNullOrEmpty(Model.PlayerId) ? "" : $"id=\"{Model.PlayerId}\"") data-exam-audio data-allow-replay="@(allowReplay ? "true" : "false")" data-autoplay="@(Model.AutoPlay ? "true" : "false")" data-start-ms="@Model.StartMs" data-end-ms="@Model.EndMs">
-      <!-- Hidden native audio element without browser controls -->
-      <audio preload="metadata" src="@Model.AudioPath" class="exam-audio__native"></audio>
-      
-      <!-- Primary Action: Play/Pause button styled with 2px ink border -->
-      <button type="button" class="btn exam-audio__btn-play" aria-label="Play audio">
-        <svg class="icon exam-audio__icon-play" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M8 5v14l11-7z"/>
-        </svg>
-        <svg class="icon exam-audio__icon-pause hidden" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
-        </svg>
-        <span class="exam-audio__btn-text">PLAY</span>
-      </button>
-
-      <!-- Status Placard Badge -->
-      <span class="badge badge--info exam-audio__badge font-sign">@badgeText</span>
-
-      <!-- Center Pane: Non-interactive Progress Track & Live Mono Timers -->
-      <div class="exam-audio__center">
-        <!-- Progress bar strictly non-clickable (no seeking) -->
-        <div class="progress exam-audio__progress" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
-          <div class="progress__bar exam-audio__bar" style="width: 0%"></div>
-        </div>
-        
-        <div class="row row--between exam-audio__meta mt-1">
-          <span class="exam-audio__status">@defaultStatus</span>
-          <span class="exam-audio__timer font-mono">00:00 / --:--</span>
-        </div>
-      </div>
-
-      <!-- Right Pane: Flat Volume Slider & Mute Toggle -->
-      <div class="exam-audio__volume row row--tight">
-        <button type="button" class="btn btn--ghost btn--sm exam-audio__btn-mute" aria-label="Mute or unmute audio" title="Mute or unmute">
-          <svg class="icon exam-audio__icon-vol" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
-          </svg>
-          <svg class="icon exam-audio__icon-mute hidden" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-            <line x1="23" y1="9" x2="17" y2="15"></line>
-            <line x1="17" y1="9" x2="23" y2="15"></line>
-          </svg>
-        </button>
-        <input type="range" min="0" max="100" value="85" class="exam-audio__slider" aria-label="Audio volume" title="Audio volume">
-      </div>
-    </div>
-  </div>
-</div>
+@if (Model.TemplateOnly)
+{
+  <template id="exam-audio-template">
+    @await Html.PartialAsync("_ExamAudioPlayerMarkup", Model with { Mode = mode, TemplateOnly = false })
+  </template>
+}
+else
+{
+  @if (!string.IsNullOrEmpty(Model.SectionTitle))
+  {
+    <div class="exam-audio__title font-sign">@Model.SectionTitle</div>
+  }
+  @await Html.PartialAsync("_ExamAudioPlayerMarkup", Model with { Mode = mode, TemplateOnly = false })
+}
