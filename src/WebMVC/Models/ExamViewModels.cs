@@ -16,7 +16,8 @@ public sealed record ExamTakeViewModel(
 
 public sealed record SaveAnswerFormModel(
     int? SelectedOptionId,
-    bool IsFlagged);
+    bool IsFlagged,
+    string? ResponseText = null);
 
 public sealed record ExamResultViewModel(
     AttemptResultDto Result,
@@ -30,4 +31,3 @@ public sealed record ExamHistoryViewModel(
 public sealed record ExamReviewViewModel(
     AttemptReviewDto Review,
     string? ErrorMessage = null);
-
