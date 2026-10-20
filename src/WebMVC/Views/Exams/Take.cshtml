@@ -383,7 +383,61 @@
       var submitExamForm = document.getElementById('submit-exam-form');
       var cancelExamForm = document.getElementById('cancel-exam-form');
 
-      var currentAudioPath = (questionMap[currentDisplayOrder] && questionMap[currentDisplayOrder].audioPath) || null;
+      function getQuestionAudioKey(item) {
+        if (!item || !item.audioPath || !item.audioPath.trim()) return null;
+        var key = item.audioPath.trim();
+        if (item.audioStartMs != null || item.audioEndMs != null) {
+          key += ':' + (item.audioStartMs || 0) + '-' + (item.audioEndMs || 0);
+        }
+        return key;
+      }
+
+      var currentAudioKey = getQuestionAudioKey(questionMap[currentDisplayOrder]);
+      var audioStorageKey = 'ee_exam_audio_' + attemptId;
+      var playedAudios = {};
+      try {
+        var rawStoredAudios = localStorage.getItem(audioStorageKey);
+        if (rawStoredAudios) {
+          playedAudios = JSON.parse(rawStoredAudios) || {};
+        }
+      } catch (e) {
+        console.warn('Audio storage read error:', e);
+      }
+
+      function recordAudioStartedOrCompleted(key) {
+        if (!key) return;
+        playedAudios[key] = true;
+        try {
+          localStorage.setItem(audioStorageKey, JSON.stringify(playedAudios));
+        } catch (e) {}
+      }
+
+      // If initial question audio was already completed in this attempt, re-render it as completed
+      if (currentAudioKey && playedAudios[currentAudioKey]) {
+        var initialQ = questionMap[currentDisplayOrder];
+        audioWrapper.innerHTML = window.createExamAudioHtml({
+          mode: 'exam',
+          audioPath: initialQ.audioPath,
+          startMs: initialQ.audioStartMs,
+          endMs: initialQ.audioEndMs,
+          playerId: 'main-exam-audio',
+          completed: true
+        });
+        if (window.initExamAudio) window.initExamAudio();
+      }
+
+      audioWrapper.addEventListener('examaudioplay', function () {
+        if (currentAudioKey) {
+          recordAudioStartedOrCompleted(currentAudioKey);
+        }
+      });
+
+      audioWrapper.addEventListener('examaudioended', function () {
+        if (currentAudioKey) {
+          recordAudioStartedOrCompleted(currentAudioKey);
+        }
+      });
+
       var isFlushing = false;
       var isSubmitting = false;
 
@@ -401,27 +455,36 @@
         // URL synchronization without history pollution
         window.history.replaceState({ page: 'exam-shell', q: displayOrder }, '', '/exams/take/' + attemptId + '?q=' + displayOrder);
 
-        // Audio continuity invariant
-        if (q.audioPath && q.audioPath.trim().length > 0) {
-          audioWrapper.style.display = 'block';
-          if (q.audioPath !== currentAudioPath) {
-            currentAudioPath = q.audioPath;
+        // Audio continuity & isolation
+        var newAudioKey = getQuestionAudioKey(q);
+
+        if (newAudioKey !== currentAudioKey) {
+          if (currentAudioKey !== null) {
+            if (window.stopExamAudio) {
+              window.stopExamAudio(audioWrapper);
+            }
+            recordAudioStartedOrCompleted(currentAudioKey);
+          }
+
+          if (newAudioKey) {
+            audioWrapper.style.display = 'block';
+            var isCompleted = !!playedAudios[newAudioKey];
             audioWrapper.innerHTML = window.createExamAudioHtml({
               mode: 'exam',
               audioPath: q.audioPath,
               startMs: q.audioStartMs,
               endMs: q.audioEndMs,
-              playerId: 'main-exam-audio'
+              playerId: 'main-exam-audio',
+              completed: isCompleted
             });
             if (window.initExamAudio) window.initExamAudio();
+          } else {
+            audioWrapper.style.display = 'none';
+            audioWrapper.innerHTML = '';
           }
-        } else {
-          audioWrapper.style.display = 'none';
-          if (currentAudioPath !== null) {
-            var activeAudio = audioWrapper.querySelector('audio');
-            if (activeAudio && !activeAudio.paused) activeAudio.pause();
-            currentAudioPath = null;
-          }
+          currentAudioKey = newAudioKey;
+        } else if (newAudioKey) {
+          audioWrapper.style.display = 'block';
         }
 
         // Passage Pane
@@ -901,27 +964,33 @@
             if (submitNowBtn) submitNowBtn.disabled = true;
             return;
           }
+          if (window.stopExamAudio) window.stopExamAudio();
           isSubmitting = true;
           try {
             localStorage.removeItem(storageKey);
+            localStorage.removeItem(audioStorageKey);
           } catch (err) {}
         });
       }
 
       if (autoSubmitForm) {
         autoSubmitForm.addEventListener('submit', function () {
+          if (window.stopExamAudio) window.stopExamAudio();
           isSubmitting = true;
           try {
             localStorage.removeItem(storageKey);
+            localStorage.removeItem(audioStorageKey);
           } catch (err) {}
         });
       }
 
       if (cancelExamForm) {
         cancelExamForm.addEventListener('submit', function () {
+          if (window.stopExamAudio) window.stopExamAudio();
           isSubmitting = true;
           try {
             localStorage.removeItem(storageKey);
+            localStorage.removeItem(audioStorageKey);
           } catch (err) {}
         });
       }

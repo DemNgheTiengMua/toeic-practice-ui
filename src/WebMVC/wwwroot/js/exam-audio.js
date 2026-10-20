@@ -46,7 +46,7 @@
     var segmentStart = hasSegment ? startMs / 1000 : 0;
     var segmentEnd = hasSegment ? endMs / 1000 : null;
     var started = false;
-    var completed = false;
+    var completed = player.dataset.completed === "true" || player.getAttribute("data-completed") === "true";
     var internalSeek = false;
     var lastTimeSeen = segmentStart;
     var pointerIsDown = false;
@@ -76,12 +76,12 @@
 
     function updateTime() {
       var length = duration();
-      var elapsed = Math.max(0, audio.currentTime - lowerBound());
+      var elapsed = completed && isExam ? length : Math.max(0, audio.currentTime - lowerBound());
       if (length > 0) elapsed = Math.min(length, elapsed);
 
       if (timer) timer.textContent = formatTime(elapsed) + " / " + formatTime(length);
       if (progressBar) {
-        var percent = length > 0 ? Math.min(100, Math.max(0, elapsed / length * 100)) : 0;
+        var percent = length > 0 ? Math.min(100, Math.max(0, elapsed / length * 100)) : (completed && isExam ? 100 : 0);
         progressBar.style.width = percent + "%";
         progress.setAttribute("aria-valuenow", String(Math.round(percent)));
       }
@@ -149,10 +149,18 @@
     function finishPlayback() {
       if (completed) return;
       completed = true;
+      player.dataset.completed = "true";
       if (hasSegment) audio.currentTime = segmentEnd;
       updateTime();
       updateState();
-      if (!audio.paused) audio.pause();
+      if (!audio.paused) {
+        audio.dataset.forceStopped = "true";
+        audio.pause();
+      }
+      player.dispatchEvent(new CustomEvent("examaudioended", {
+        bubbles: true,
+        detail: { audioPath: audio.src, player: player }
+      }));
     }
 
     function stopAtBoundary() {
@@ -221,10 +229,14 @@
 
     audio.addEventListener("play", function () {
       document.querySelectorAll("audio").forEach(function (other) {
-        if (other !== audio && !other.paused) other.pause();
+        if (other !== audio && !other.paused) {
+          other.dataset.forceStopped = "true";
+          other.pause();
+        }
       });
 
       if (completed && isExam) {
+        audio.dataset.forceStopped = "true";
         audio.pause();
         return;
       }
@@ -234,10 +246,18 @@
       if (!isExam) completed = false;
       started = true;
       updateState();
+      player.dispatchEvent(new CustomEvent("examaudioplay", {
+        bubbles: true,
+        detail: { audioPath: audio.src, player: player }
+      }));
       window.requestAnimationFrame(watchBoundary);
     });
 
     audio.addEventListener("pause", function () {
+      if (audio.dataset.forceStopped === "true") {
+        updateState();
+        return;
+      }
       if (isExam && started && !completed && !audio.ended) {
         audio.play().catch(function (error) {
           console.warn("Continuous exam audio could not resume:", error);
@@ -364,9 +384,36 @@
     else player.dataset.startMs = String(options.startMs);
     if (options.endMs == null) player.removeAttribute("data-end-ms");
     else player.dataset.endMs = String(options.endMs);
+    if (options.completed) {
+      player.dataset.completed = "true";
+    }
     if (audio) audio.src = options.audioPath || "";
 
     return player.outerHTML;
+  };
+
+  window.stopExamAudio = function (playerOrContainer) {
+    var root = playerOrContainer || document;
+    var players = [];
+    if (root.classList && root.classList.contains("exam-audio")) {
+      players = [root];
+    } else if (root.querySelectorAll) {
+      players = Array.prototype.slice.call(root.querySelectorAll(".exam-audio"));
+    }
+
+    players.forEach(function (player) {
+      var audio = player.querySelector(".exam-audio__native");
+      if (audio) {
+        audio.dataset.forceStopped = "true";
+        if (!audio.paused) {
+          audio.pause();
+        }
+        audio.currentTime = 0;
+        audio.removeAttribute("src");
+        audio.load();
+      }
+      player.dataset.completed = "true";
+    });
   };
 
   if (document.readyState === "loading") {
