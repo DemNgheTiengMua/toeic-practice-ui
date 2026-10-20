@@ -84,7 +84,7 @@ public class AdminPortalTests : PlaywrightTestBase
         // Issue #82: learner-only targets (checkout, learner dashboard, active-certificate
         // switch) send an admin to /auth/denied, so public pages must not offer them to admins.
         await SignInAsync("admin@demo.local", "Demo1234!");
-        var learnerOnly = "a[href^='/checkout'], a[href^='/dashboard'], form[action='/learner/active-certificate']";
+        var learnerOnly = "a[href^='/checkout'], a[href^='/dashboard'], a[href^='/placement'], form[action='/learner/active-certificate']";
 
         foreach (var path in new[] { "/pricing", "/", "/certificates" })
         {
