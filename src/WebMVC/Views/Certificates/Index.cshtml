@@ -1,3 +1,4 @@
+@inject CurrentUser CurrentUser
 @model IReadOnlyList<Contracts.CertificateDto>
 @{
     ViewData["Title"] = "Certificates";
@@ -92,7 +93,8 @@
           }
         </div>
         <div class="card__footer">
-          @if (User.Identity?.IsAuthenticated == true)
+          @* Switching the active certificate is a learner action (admins have none). *@
+          @if (User.Identity?.IsAuthenticated == true && !CurrentUser.IsAdmin)
           {
             <form method="post" action="/learner/active-certificate" style="display:inline; margin:0;">
               @Html.AntiForgeryToken()

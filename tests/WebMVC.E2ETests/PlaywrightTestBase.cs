@@ -48,6 +48,25 @@ public abstract class PlaywrightTestBase : PageTest
     }
 
     /// <summary>
+    /// Opens the database the running app uses (TEST_DB_CONNECTION, catalog defaulting to
+    /// ExtraEfficiency), for tests that arrange or check rows directly.
+    /// </summary>
+    protected static async Task<Microsoft.Data.SqlClient.SqlConnection> OpenAppDatabaseAsync()
+    {
+        var rawConn = Environment.GetEnvironmentVariable("TEST_DB_CONNECTION")
+            ?? @"Server=(localdb)\MSSQLLocalDB;Database=ExtraEfficiency;Trusted_Connection=True;TrustServerCertificate=True";
+        var builder = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(rawConn);
+        if (string.IsNullOrEmpty(builder.InitialCatalog))
+        {
+            builder.InitialCatalog = "ExtraEfficiency";
+        }
+
+        var conn = new Microsoft.Data.SqlClient.SqlConnection(builder.ConnectionString);
+        await conn.OpenAsync();
+        return conn;
+    }
+
+    /// <summary>
     /// Helper to sign out cleanly.
     /// </summary>
     protected async Task SignOutAsync()

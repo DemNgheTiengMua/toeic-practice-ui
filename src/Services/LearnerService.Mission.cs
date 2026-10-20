@@ -419,7 +419,7 @@ public sealed partial class LearnerService
                 Description: $"Practice {skillLabel.ToLowerInvariant()} under timed conditions with AI rubric grading on {publishedSkillExam.Name}.",
                 MetaLabel: $"DURATION: {publishedSkillExam.DurationMinutes} MIN",
                 ActionLabel: $"Start {skillLabel.ToLowerInvariant()}",
-                ActionUrl: $"/{skillPrefix}/instructions/{publishedSkillExam.ExamId}",
+                ActionUrl: $"/{skillPrefix}/{publishedSkillExam.ExamId}/instructions",
                 IsCleared: false);
         }
 

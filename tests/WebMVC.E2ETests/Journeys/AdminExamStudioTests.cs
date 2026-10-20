@@ -165,4 +165,85 @@ public class AdminExamStudioTests : PlaywrightTestBase
         await Expect(Page.Locator("a.btn--primary:has-text('Studio')").First).ToBeVisibleAsync();
         await Expect(Page.Locator("a:has-text('Edit Info')").First).ToBeVisibleAsync();
     }
+
+    [Test]
+    public async Task Should_Store_The_Real_Duration_Of_Uploaded_Section_Audio()
+    {
+        // Issue #82: the duration probe used to race the upload, so most tracks were stored as 300 s.
+        // VSTEP Sample Test 1 (exam 10, listening section 21) is used by no other journey; its
+        // original section audio row is restored afterwards.
+        const int examId = 10, sectionId = 21, seconds = 12;
+        await using var db = await OpenAppDatabaseAsync();
+        var original = await ReadSectionAudioAsync(db, examId, sectionId);
+
+        try
+        {
+            // A small local file decodes faster than it uploads, which hides the race. Delay
+            // loadedmetadata by 1.5 s (under the studio's 3 s probe timeout) to play a slow decode
+            // of a large recording: the upload then finishes first, as it does in practice.
+            await Page.AddInitScriptAsync("""
+                const add = EventTarget.prototype.addEventListener;
+                EventTarget.prototype.addEventListener = function (type, listener, options) {
+                  if (type === 'loadedmetadata' && this instanceof HTMLMediaElement && typeof listener === 'function') {
+                    const slow = function (e) { setTimeout(() => listener.call(this, e), 1500); };
+                    return add.call(this, type, slow, options);
+                  }
+                  return add.call(this, type, listener, options);
+                };
+                """);
+            await SignInAsync("admin@demo.local", "Demo1234!");
+            await Page.GotoAsync($"{BaseUrl}/admin/exams/{examId}/studio");
+            await Page.Locator($"input[type='file'][onchange*='uploadAudioFile(this, {sectionId})']").SetInputFilesAsync(
+                new FilePayload { Name = "e2e-12s.wav", MimeType = "audio/wav", Buffer = SilentWav(seconds) });
+
+            (string Path, int DurationSec)? stored = null;
+            for (var i = 0; i < 40 && (stored is null || stored.Value.Path == original?.Path); i++)
+            {
+                await Task.Delay(250);
+                stored = await ReadSectionAudioAsync(db, examId, sectionId);
+            }
+
+            Assert.That(stored?.Path, Is.Not.EqualTo(original?.Path), "section audio was not replaced");
+            Assert.That(stored!.Value.DurationSec, Is.EqualTo(seconds));
+        }
+        finally
+        {
+            if (original is { } row)
+            {
+                await using var restore = new Microsoft.Data.SqlClient.SqlCommand(
+                    "UPDATE ExamSectionAudio SET AudioPath = @path, DurationSec = @duration WHERE ExamId = @exam AND SectionId = @section", db);
+                restore.Parameters.AddWithValue("@path", row.Path);
+                restore.Parameters.AddWithValue("@duration", row.DurationSec);
+                restore.Parameters.AddWithValue("@exam", examId);
+                restore.Parameters.AddWithValue("@section", sectionId);
+                await restore.ExecuteNonQueryAsync();
+            }
+        }
+    }
+
+    private static async Task<(string Path, int DurationSec)?> ReadSectionAudioAsync(
+        Microsoft.Data.SqlClient.SqlConnection db, int examId, int sectionId)
+    {
+        await using var cmd = new Microsoft.Data.SqlClient.SqlCommand(
+            "SELECT AudioPath, DurationSec FROM ExamSectionAudio WHERE ExamId = @exam AND SectionId = @section", db);
+        cmd.Parameters.AddWithValue("@exam", examId);
+        cmd.Parameters.AddWithValue("@section", sectionId);
+        await using var reader = await cmd.ExecuteReaderAsync();
+        return await reader.ReadAsync() ? (reader.GetString(0), reader.GetInt32(1)) : null;
+    }
+
+    /// <summary>A silent 8 kHz, 8-bit mono PCM WAV of exactly the given length.</summary>
+    private static byte[] SilentWav(int seconds)
+    {
+        const int rate = 8000;
+        var samples = seconds * rate;
+        using var ms = new System.IO.MemoryStream();
+        using var w = new System.IO.BinaryWriter(ms);
+        w.Write("RIFF"u8); w.Write(36 + samples); w.Write("WAVE"u8);
+        w.Write("fmt "u8); w.Write(16); w.Write((short)1); w.Write((short)1);
+        w.Write(rate); w.Write(rate); w.Write((short)1); w.Write((short)8);
+        w.Write("data"u8); w.Write(samples);
+        w.Write(Enumerable.Repeat((byte)128, samples).ToArray());
+        return ms.ToArray();
+    }
 }

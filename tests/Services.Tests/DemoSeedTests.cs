@@ -21,7 +21,8 @@ public sealed class DemoSeedTests(DatabaseFixture fixture)
             await fixture.SqlCmdFileToDatabaseAsync(dbName, seedPath);
 
             // Connect and verify invariants
-            var connStr = fixture.ConnectionString.Replace("Database=ExtraEfficiencyServicesTest", $"Database={dbName}");
+            // Point at the fresh database by name, whatever the fixture's own (TEST_DB_NAME) is.
+            var connStr = new SqlConnectionStringBuilder(fixture.ConnectionString) { InitialCatalog = dbName }.ConnectionString;
             await using var conn = new SqlConnection(connStr);
             await conn.OpenAsync();
 
