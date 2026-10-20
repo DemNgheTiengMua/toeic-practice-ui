@@ -1,3 +1,4 @@
+@inject CurrentUser CurrentUser
 @model IReadOnlyList<Contracts.CertificateDto>
 @{
     ViewData["Title"] = "Certificates";
@@ -92,7 +93,8 @@
           }
         </div>
         <div class="card__footer">
-          @if (User.Identity?.IsAuthenticated == true)
+          @* Switching the active certificate is a learner action (admins have none). *@
+          @if (CurrentUser.IsSignedIn && !CurrentUser.IsAdmin)
           {
             <form method="post" action="/learner/active-certificate" style="display:inline; margin:0;">
               @Html.AntiForgeryToken()
@@ -102,7 +104,7 @@
               </button>
             </form>
           }
-          else
+          else if (!CurrentUser.IsSignedIn)
           {
             <a class="btn btn--primary" href="/auth/register">Start with @cert.Code</a>
           }
@@ -115,11 +117,11 @@
     <div class="card__body row row--between" style="flex-wrap: wrap; gap: var(--space-4)">
       <p class="no-margin"><strong>Not sure which one fits your goal?</strong><br>
         <span class="text-muted">Create a free account and take the placement exam — it works for every certificate.</span></p>
-      @if (User.Identity?.IsAuthenticated == true)
+      @if (CurrentUser.IsSignedIn && !CurrentUser.IsAdmin)
       {
         <a class="btn btn--primary btn--lg" href="/placement">Take placement test</a>
       }
-      else
+      else if (!CurrentUser.IsSignedIn)
       {
         <a class="btn btn--primary btn--lg" href="/auth/register">Start for free</a>
       }

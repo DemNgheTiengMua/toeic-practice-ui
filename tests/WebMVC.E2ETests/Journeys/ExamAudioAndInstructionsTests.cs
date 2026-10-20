@@ -67,16 +67,7 @@ public class ExamAudioAndInstructionsTests : PlaywrightTestBase
 
     private static async Task ExecuteSqlAsync(string sql)
     {
-        var rawConn = Environment.GetEnvironmentVariable("TEST_DB_CONNECTION")
-            ?? @"Server=(localdb)\MSSQLLocalDB;Database=ExtraEfficiency;Trusted_Connection=True;TrustServerCertificate=True";
-        var builder = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(rawConn);
-        if (string.IsNullOrEmpty(builder.InitialCatalog))
-        {
-            builder.InitialCatalog = "ExtraEfficiency";
-        }
-
-        await using var conn = new Microsoft.Data.SqlClient.SqlConnection(builder.ConnectionString);
-        await conn.OpenAsync();
+        await using var conn = await OpenAppDatabaseAsync();
         await using var cmd = new Microsoft.Data.SqlClient.SqlCommand(sql, conn);
         await cmd.ExecuteNonQueryAsync();
     }

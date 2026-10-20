@@ -254,7 +254,7 @@ public sealed partial class LearnerServiceTests
         // 1. Published exam with no recent attempt -> recommends starting exam
         var initial = await CreateService().GetDashboardAsync(userId);
         var step2Start = initial.MissionSteps[1];
-        Assert.Equal($"/speaking/instructions/{speakingExamId}", step2Start.ActionUrl);
+        Assert.Equal($"/speaking/{speakingExamId}/instructions", step2Start.ActionUrl);
         Assert.False(step2Start.IsCleared);
 
         // 2. In-progress attempt -> prompts to resume
@@ -284,8 +284,21 @@ public sealed partial class LearnerServiceTests
         await database.SqlAsync($"UPDATE ExamAttempts SET Status = 'graded', StartedAt = DATEADD(HOUR, -36, SYSDATETIMEOFFSET()), SubmittedAt = DATEADD(HOUR, -30, SYSDATETIMEOFFSET()) WHERE UserId = {userId};");
         var olderGraded = await CreateService().GetDashboardAsync(userId);
         var step2Restart = olderGraded.MissionSteps[1];
-        Assert.Equal($"/speaking/instructions/{speakingExamId}", step2Restart.ActionUrl);
+        Assert.Equal($"/speaking/{speakingExamId}/instructions", step2Restart.ActionUrl);
         Assert.False(step2Restart.IsCleared);
+    }
+
+    [Fact]
+    public async Task Mission_step2_starts_a_writing_exam_at_its_instructions_route()
+    {
+        var code = Unique("MW");
+        await SeedTwoSectionCertificateAsync(code);
+        var userId = await SeedLearnerAsync(code);
+        var writingExamId = await SeedSkillPracticeExamAsync(code, "writing_practice", $"Writing Task {code}");
+
+        var dashboard = await CreateService().GetDashboardAsync(userId);
+
+        Assert.Equal($"/writing/{writingExamId}/instructions", dashboard.MissionSteps[1].ActionUrl);
     }
 
     [Fact]
@@ -314,7 +327,7 @@ public sealed partial class LearnerServiceTests
 
         // Other learner's TOEIC weakness & speaking attempt did not leak to mine
         Assert.Equal("/placement", toeicDash.MissionSteps[0].ActionUrl);
-        Assert.Equal($"/speaking/instructions/{toeicSpkExamId}", toeicDash.MissionSteps[1].ActionUrl);
+        Assert.Equal($"/speaking/{toeicSpkExamId}/instructions", toeicDash.MissionSteps[1].ActionUrl);
 
         // Current learner's 3 saved questions on TOEIC appear on Step 3
         var toeicStep3 = toeicDash.MissionSteps[2];

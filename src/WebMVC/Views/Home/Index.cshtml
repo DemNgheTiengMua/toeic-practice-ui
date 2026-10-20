@@ -223,7 +223,7 @@
       <p>Focus on what matters. Reach your target with confidence.</p>
       @if (CurrentUser.IsSignedIn)
       {
-        <a href="/dashboard">Dashboard</a>
+        <a href="@(CurrentUser.IsAdmin ? "/admin" : "/dashboard")">Dashboard</a>
       }
       else
       {

@@ -1209,19 +1209,46 @@
   };
 
   // --- Upload Audio / Media Handling ---
+  // Reads an audio file's length in whole seconds from its metadata, off-DOM. Resolves null when
+  // the browser cannot decode it or takes longer than timeoutMs; the object URL is always revoked.
+  function probeAudioDurationSec(file, timeoutMs) {
+    return new Promise(function(resolve) {
+      var url;
+      var timer;
+      var probe = new Audio();
+      function done(seconds) {
+        clearTimeout(timer);
+        probe.removeAttribute('src');
+        if (url) URL.revokeObjectURL(url);
+        resolve(seconds);
+      }
+      try {
+        url = URL.createObjectURL(file);
+      } catch (e) {
+        resolve(null);
+        return;
+      }
+      timer = setTimeout(function() { done(null); }, timeoutMs);
+      probe.preload = 'metadata';
+      probe.addEventListener('loadedmetadata', function() {
+        var d = probe.duration;
+        done(isFinite(d) && d > 0 ? Math.max(1, Math.round(d)) : null);
+      }, { once: true });
+      probe.addEventListener('error', function() { done(null); }, { once: true });
+      probe.src = url;
+    });
+  }
+
+  // Used only when the probe cannot read the file (DurationSec must be > 0).
+  var FALLBACK_AUDIO_DURATION_SEC = 300;
+
   window.uploadAudioFile = function(inputEl, secId) {
     if (!inputEl.files || inputEl.files.length === 0) return;
     var file = inputEl.files[0];
 
-    var durationSec = 300;
-    try {
-      var tempAudio = new Audio(URL.createObjectURL(file));
-      tempAudio.addEventListener('loadedmetadata', function() {
-        if (tempAudio.duration && !isNaN(tempAudio.duration)) {
-          durationSec = Math.round(tempAudio.duration);
-        }
-      });
-    } catch (e) { /* ignore */ }
+    // Probe while the file uploads; the section audio record is posted only once both are done,
+    // so it stores the recording's real length.
+    var durationProbe = probeAudioDurationSec(file, 3000);
 
     var formData = new FormData();
     formData.append('file', file);
@@ -1236,9 +1263,11 @@
     })
     .then(function(res) {
       if (!res.ok) throw new Error('Upload failed');
-      return res.json();
+      return Promise.all([res.json(), durationProbe]);
     })
-    .then(function(result) {
+    .then(function(uploaded) {
+      var result = uploaded[0];
+      var durationSec = uploaded[1] || FALLBACK_AUDIO_DURATION_SEC;
       var mediaUrl = normalizeMediaUrl(result.url || result.path);
       var audio = document.getElementById('slicer-audio-' + secId);
       if (audio) {

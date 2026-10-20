@@ -77,4 +77,22 @@ public class AdminPortalTests : PlaywrightTestBase
         var dialog = Page.Locator("#import-exam-dialog");
         await Expect(dialog).ToBeVisibleAsync();
     }
+
+    [Test]
+    public async Task Should_Not_Show_Learner_Only_Actions_To_Admin_On_Public_Pages()
+    {
+        // Issue #82: learner-only targets (checkout, learner dashboard, active-certificate
+        // switch) send an admin to /auth/denied, so public pages must not offer them to admins.
+        await SignInAsync("admin@demo.local", "Demo1234!");
+        var learnerOnly = "a[href^='/checkout'], a[href^='/dashboard'], a[href^='/placement'], form[action='/learner/active-certificate']";
+
+        foreach (var path in new[] { "/pricing", "/", "/certificates" })
+        {
+            await Page.GotoAsync($"{BaseUrl}{path}");
+            Assert.That(await Page.Locator(learnerOnly).CountAsync(), Is.Zero, $"learner-only action on {path}");
+        }
+
+        await Page.GotoAsync($"{BaseUrl}/pricing");
+        await Expect(Page.Locator("a[href='/admin/packages']").First).ToBeVisibleAsync();
+    }
 }

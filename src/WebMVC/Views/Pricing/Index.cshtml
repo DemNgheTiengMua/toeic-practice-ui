@@ -1,3 +1,4 @@
+@inject CurrentUser CurrentUser
 @using Contracts
 @using WebMVC.Controllers
 @model IReadOnlyList<Contracts.PackageDto>
@@ -83,7 +84,14 @@ else
                 <li>@feature</li>
               }
             </ul>
-            <a class="btn@(pkg.IsFeatured ? " btn--primary" : "")" href="/checkout?packageId=@pkg.PackageId">Choose this package</a>
+            @if (CurrentUser.IsAdmin)
+            {
+              <a class="btn" href="/admin/packages">Manage packages</a>
+            }
+            else
+            {
+              <a class="btn@(pkg.IsFeatured ? " btn--primary" : "")" href="/checkout?packageId=@pkg.PackageId">Choose this package</a>
+            }
           </div>
         }
       </div>
