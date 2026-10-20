@@ -221,7 +221,8 @@ public sealed record CreateQuestionRequest(
     int? MaxWords = null,
     string? Hint = null,
     int DisplayOrder = 0,
-    IReadOnlyList<AdminQuestionOptionInput>? Options = null);
+    IReadOnlyList<AdminQuestionOptionInput>? Options = null,
+    IReadOnlyList<int>? CriterionIds = null);
 
 public sealed record UpdateQuestionRequest(
     int? GroupId,
@@ -236,7 +237,8 @@ public sealed record UpdateQuestionRequest(
     int? MaxWords = null,
     string? Hint = null,
     int DisplayOrder = 0,
-    IReadOnlyList<AdminQuestionOptionInput>? Options = null);
+    IReadOnlyList<AdminQuestionOptionInput>? Options = null,
+    IReadOnlyList<int>? CriterionIds = null);
 
 public sealed record SaveExamSectionAudioRequest(
     int SectionId,
