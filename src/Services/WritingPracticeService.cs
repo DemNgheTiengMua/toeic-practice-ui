@@ -50,7 +50,11 @@ public sealed class WritingPracticeService(
     ICreditLedger? creditLedger = null) : IWritingPracticeService
 {
     public const int WritingPracticeCreditCost = 1;
+    public const string FreeDiagnosticSourceName = "Free diagnostic benchmark";
     private readonly ICreditLedger _creditLedger = creditLedger ?? new CreditLedger(db);
+
+    private static bool IsFreeDiagnostic(Exam exam) =>
+        string.Equals(exam.SourceName, FreeDiagnosticSourceName, StringComparison.Ordinal);
 
     public async Task<WritingPracticeInstructionsView> GetInstructionsAsync(int userId, int examId, CancellationToken cancellationToken = default)
     {
@@ -94,7 +98,7 @@ public sealed class WritingPracticeService(
             exam.Description,
             exam.DurationMinutes,
             exam.QuestionCount ?? 0,
-            WritingPracticeCreditCost,
+            IsFreeDiagnostic(exam) ? 0 : WritingPracticeCreditCost,
             balance,
             activeAttempt?.AttemptId,
             sections);
@@ -135,9 +139,8 @@ public sealed class WritingPracticeService(
         }
 
         // Check credits before starting ("block before you charge" invariant)
-        var balance = await _creditLedger.GetBalanceAsync(userId, cancellationToken);
-
-        if (balance < WritingPracticeCreditCost)
+        if (!IsFreeDiagnostic(exam)
+            && await _creditLedger.GetBalanceAsync(userId, cancellationToken) < WritingPracticeCreditCost)
         {
             throw new WritingPracticeException(WritingPracticeException.InsufficientCredits, "You do not have enough credits to start writing practice.");
         }
@@ -368,9 +371,11 @@ public sealed class WritingPracticeService(
             throw new WritingPracticeException(WritingPracticeException.AttemptNotActive, "Attempt is not in progress.");
         }
 
+        var isFreeDiagnostic = IsFreeDiagnostic(attempt.Exam);
+
         // Verify credit balance before charge (block before you charge)
-        var balance = await _creditLedger.GetBalanceAsync(userId, cancellationToken);
-        if (balance < WritingPracticeCreditCost)
+        if (!isFreeDiagnostic
+            && await _creditLedger.GetBalanceAsync(userId, cancellationToken) < WritingPracticeCreditCost)
         {
             throw new WritingPracticeException(WritingPracticeException.InsufficientCredits, "You do not have enough credits to submit and grade this writing attempt.");
         }
@@ -402,14 +407,17 @@ public sealed class WritingPracticeService(
 
         await db.SaveChangesAsync(cancellationToken);
 
-        // Charge 1 credit via CreditLedger: Reason='ai_grading', Delta=-1
-        try
+        // Diagnostic writing is part of the free placement loop; paid practice is charged once.
+        if (!isFreeDiagnostic)
         {
-            await _creditLedger.ChargeAiGradingAsync(userId, attemptId, WritingPracticeCreditCost, cancellationToken);
-        }
-        catch (CreditLedgerException ex) when (ex.Code == CreditLedgerException.InsufficientCredits)
-        {
-            throw new WritingPracticeException(WritingPracticeException.InsufficientCredits, "You do not have enough credits to submit and grade this writing attempt.");
+            try
+            {
+                await _creditLedger.ChargeAiGradingAsync(userId, attemptId, WritingPracticeCreditCost, cancellationToken);
+            }
+            catch (CreditLedgerException ex) when (ex.Code == CreditLedgerException.InsufficientCredits)
+            {
+                throw new WritingPracticeException(WritingPracticeException.InsufficientCredits, "You do not have enough credits to submit and grade this writing attempt.");
+            }
         }
 
         // Queue one AiGradings row per free response
@@ -628,4 +636,3 @@ public sealed class WritingPracticeService(
             questionItems);
     }
 }
-
