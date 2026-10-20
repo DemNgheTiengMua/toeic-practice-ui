@@ -33,7 +33,8 @@ public interface IAiGradingProcessor
 public sealed class AiGradingProcessor(
     CompanionDbContext db,
     IAiGrader aiGrader,
-    ILogger<AiGradingProcessor>? logger = null) : IAiGradingProcessor
+    ILogger<AiGradingProcessor>? logger = null,
+    IAttemptEngine? attemptEngine = null) : IAiGradingProcessor
 {
     public async Task<int> ProcessPendingGradingsAsync(int batchSize = 10, CancellationToken cancellationToken = default)
     {
@@ -45,6 +46,7 @@ public sealed class AiGradingProcessor(
                     .ThenInclude(q => q.Section)
             .Include(g => g.FreeResponse)
                 .ThenInclude(fr => fr.Attempt)
+                    .ThenInclude(a => a.Exam)
             .Where(g => g.Status == AiGradingStatus.Pending.ToCode())
             .OrderBy(g => g.RequestedAt)
             .Take(batchSize)
@@ -70,6 +72,7 @@ public sealed class AiGradingProcessor(
                     .ThenInclude(q => q.Section)
             .Include(g => g.FreeResponse)
                 .ThenInclude(fr => fr.Attempt)
+                    .ThenInclude(a => a.Exam)
             .Where(g => g.FreeResponseId == freeResponseId && g.Status == AiGradingStatus.Pending.ToCode())
             .SingleOrDefaultAsync(cancellationToken);
 
@@ -180,12 +183,20 @@ public sealed class AiGradingProcessor(
 
                 if (!anyPending)
                 {
-                    var attempt = await db.ExamAttempts.FindAsync(new object[] { fr.AttemptId }, cancellationToken);
-                    if (attempt != null && attempt.Status != AttemptStatus.Graded.ToCode())
+                    if (fr.Attempt.Exam.Purpose == ExamPurpose.Mock.ToCode())
                     {
-                        attempt.Status = AttemptStatus.Graded.ToCode();
-                        attempt.TotalScore = null; // UI-45 / trg_Attempts_NoBandForSpeakingPractice (50041)
-                        attempt.BandCode = null;   // UI-38 / trg_Attempts_NoBandForSpeakingPractice (50032)
+                        if (attemptEngine is null)
+                        {
+                            throw new InvalidOperationException("Mock exam grading requires the attempt engine to calculate final scaled scores.");
+                        }
+
+                        await attemptEngine.FinalizeAiGradedAttemptAsync(fr.AttemptId, cancellationToken);
+                    }
+                    else if (fr.Attempt.Status != AttemptStatus.Graded.ToCode())
+                    {
+                        fr.Attempt.Status = AttemptStatus.Graded.ToCode();
+                        fr.Attempt.TotalScore = null;
+                        fr.Attempt.BandCode = null;
                         await db.SaveChangesAsync(cancellationToken);
                     }
                 }

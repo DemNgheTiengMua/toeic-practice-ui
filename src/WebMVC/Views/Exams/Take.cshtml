@@ -122,16 +122,34 @@
                 @q.Stem
               </p>
 
-              <div class="option-list" id="option-list" role="radiogroup" aria-label="Answer for question @q.DisplayOrder">
-                @foreach (var opt in q.Options)
+              <div class="option-list" id="option-list" role="@(q.QuestionType == "free_response" ? "group" : "radiogroup")" aria-label="Answer for question @q.DisplayOrder">
+                @if (q.QuestionType == "free_response")
                 {
-                  var isSelected = opt.OptionId == q.SelectedOptionId;
-                  <label class="option @(isSelected ? "is-selected" : "")">
-                    <input class="option__input js-option-radio" type="radio" name="selectedOptionId"
-                           value="@opt.OptionId" @(isSelected ? "checked" : "")>
-                    <span class="option__marker">@opt.Label</span>
-                    <span class="option__text">@opt.Text</span>
-                  </label>
+                  <label for="free-response-text" class="form-label">Your response</label>
+                  @if (!string.IsNullOrWhiteSpace(q.Hint))
+                  {
+                    <p class="text-sm text-muted">@q.Hint</p>
+                  }
+                  <textarea id="free-response-text" class="form-control" rows="12"
+                            aria-label="Your written response for question @q.DisplayOrder"
+                            data-min-words="@q.MinWords" data-max-words="@q.MaxWords">@q.ResponseText</textarea>
+                  @if (q.MinWords.HasValue || q.MaxWords.HasValue)
+                  {
+                    <p class="text-xs text-muted">Word limit: @(q.MinWords?.ToString() ?? "—")–@(q.MaxWords?.ToString() ?? "—") words</p>
+                  }
+                }
+                else
+                {
+                  @foreach (var opt in q.Options)
+                  {
+                    var isSelected = opt.OptionId == q.SelectedOptionId;
+                    <label class="option @(isSelected ? "is-selected" : "")">
+                      <input class="option__input js-option-radio" type="radio" name="selectedOptionId"
+                             value="@opt.OptionId" @(isSelected ? "checked" : "")>
+                      <span class="option__marker">@opt.Label</span>
+                      <span class="option__text">@opt.Text</span>
+                    </label>
+                  }
                 }
               </div>
             </div>
@@ -353,7 +371,8 @@
       questions.forEach(function (q) {
         localAnswers[q.questionId] = {
           selectedOptionId: q.selectedOptionId,
-          isFlagged: q.isFlagged
+          isFlagged: q.isFlagged,
+          responseText: q.responseText || ''
         };
       });
 
@@ -370,6 +389,7 @@
               if (localAnswers[item.questionId]) {
                 localAnswers[item.questionId].selectedOptionId = item.selectedOptionId;
                 localAnswers[item.questionId].isFlagged = item.isFlagged;
+                localAnswers[item.questionId].responseText = item.responseText || '';
               }
             });
           }
@@ -578,14 +598,26 @@
         var selectedOptId = localAnswers[q.questionId] ? localAnswers[q.questionId].selectedOptionId : null;
         optionList.setAttribute('aria-label', 'Answer for question ' + q.displayOrder);
         var optionsHtml = '';
-        (q.options || []).forEach(function (opt) {
-          var isSelected = opt.optionId === selectedOptId;
-          optionsHtml += '<label class="option ' + (isSelected ? 'is-selected' : '') + '">';
-          optionsHtml += '<input class="option__input js-option-radio" type="radio" name="selectedOptionId" value="' + opt.optionId + '" ' + (isSelected ? 'checked' : '') + '>';
-          optionsHtml += '<span class="option__marker">' + escapeHtml(opt.label) + '</span>';
-          optionsHtml += '<span class="option__text">' + escapeHtml(opt.text) + '</span>';
-          optionsHtml += '</label>';
-        });
+        if (q.questionType === 'free_response') {
+          var responseText = localAnswers[q.questionId] ? localAnswers[q.questionId].responseText : (q.responseText || '');
+          optionsHtml = '<label for="free-response-text" class="form-label">Your response</label>';
+          if (q.hint) optionsHtml += '<p class="text-sm text-muted">' + escapeHtml(q.hint) + '</p>';
+          optionsHtml += '<textarea id="free-response-text" class="form-control" rows="12" aria-label="Your written response for question ' + q.displayOrder + '" data-min-words="' + (q.minWords || '') + '" data-max-words="' + (q.maxWords || '') + '">' + escapeHtml(responseText) + '</textarea>';
+          if (q.minWords || q.maxWords) {
+            optionsHtml += '<p class="text-xs text-muted">Word limit: ' + (q.minWords || '—') + '–' + (q.maxWords || '—') + ' words</p>';
+          }
+          optionList.setAttribute('role', 'group');
+        } else {
+          (q.options || []).forEach(function (opt) {
+            var isSelected = opt.optionId === selectedOptId;
+            optionsHtml += '<label class="option ' + (isSelected ? 'is-selected' : '') + '">';
+            optionsHtml += '<input class="option__input js-option-radio" type="radio" name="selectedOptionId" value="' + opt.optionId + '" ' + (isSelected ? 'checked' : '') + '>';
+            optionsHtml += '<span class="option__marker">' + escapeHtml(opt.label) + '</span>';
+            optionsHtml += '<span class="option__text">' + escapeHtml(opt.text) + '</span>';
+            optionsHtml += '</label>';
+          });
+          optionList.setAttribute('role', 'radiogroup');
+        }
         optionList.innerHTML = optionsHtml;
 
         // Rebind radio selection listeners
@@ -596,9 +628,15 @@
             optionList.querySelectorAll('.option').forEach(function (lbl) { lbl.classList.remove('is-selected'); });
             var parentLabel = radio.closest('.option');
             if (parentLabel) parentLabel.classList.add('is-selected');
-            saveAnswer(q.questionId, val, !!(localAnswers[q.questionId] && localAnswers[q.questionId].isFlagged));
+            saveAnswer(q.questionId, val, !!(localAnswers[q.questionId] && localAnswers[q.questionId].isFlagged), localAnswers[q.questionId] && localAnswers[q.questionId].responseText);
           });
         });
+        var responseEditor = optionList.querySelector('#free-response-text');
+        if (responseEditor) {
+          responseEditor.addEventListener('input', function () {
+            saveAnswer(q.questionId, null, !!(localAnswers[q.questionId] && localAnswers[q.questionId].isFlagged), responseEditor.value);
+          });
+        }
 
         // Previous & Next navigation buttons
         if (btnPrev) {
@@ -637,7 +675,7 @@
         var flagged = 0;
         questions.forEach(function (q) {
           var a = localAnswers[q.questionId];
-          if (a && a.selectedOptionId !== null && a.selectedOptionId !== undefined) answered++;
+          if (a && ((a.selectedOptionId !== null && a.selectedOptionId !== undefined) || (a.responseText && a.responseText.trim().length > 0))) answered++;
           if (a && a.isFlagged) flagged++;
         });
         var unanswered = totalQuestions - answered;
@@ -694,6 +732,9 @@
           body.append('SelectedOptionId', item.selectedOptionId);
         }
         body.append('IsFlagged', item.isFlagged ? 'true' : 'false');
+        if (item.responseText !== null && item.responseText !== undefined) {
+          body.append('ResponseText', item.responseText);
+        }
 
         fetch('/exams/take/' + attemptId + '/answers/' + item.questionId, {
           method: 'POST',
@@ -752,17 +793,20 @@
         });
       }
 
-      function saveAnswer(questionId, selectedOptionId, flagged) {
+      function saveAnswer(questionId, selectedOptionId, flagged, responseText) {
         // Immediate in-memory registration
         localAnswers[questionId] = {
           selectedOptionId: selectedOptionId,
-          isFlagged: flagged
+          isFlagged: flagged,
+          responseText: responseText === undefined
+            ? ((localAnswers[questionId] && localAnswers[questionId].responseText) || '')
+            : responseText
         };
 
         // Immediate Navigator cell UI reflection
         var cell = document.getElementById('nav-cell-' + questionId);
         if (cell) {
-          if (selectedOptionId !== null && selectedOptionId !== undefined) {
+          if ((selectedOptionId !== null && selectedOptionId !== undefined) || (localAnswers[questionId].responseText && localAnswers[questionId].responseText.trim().length > 0)) {
             cell.classList.add('is-answered');
             cell.classList.remove('is-unanswered');
           } else {
@@ -783,6 +827,7 @@
         pendingQueue.push({
           questionId: questionId,
           selectedOptionId: selectedOptionId,
+          responseText: localAnswers[questionId].responseText,
           isFlagged: flagged,
           retryCount: 0
         });
@@ -843,7 +888,8 @@
           }
 
           var curSelected = localAnswers[currentQ.questionId] ? localAnswers[currentQ.questionId].selectedOptionId : null;
-          saveAnswer(currentQ.questionId, curSelected, newFlagged);
+          var curResponse = localAnswers[currentQ.questionId] ? localAnswers[currentQ.questionId].responseText : '';
+          saveAnswer(currentQ.questionId, curSelected, newFlagged, curResponse);
         });
       }
 
@@ -857,9 +903,17 @@
           optionList.querySelectorAll('.option').forEach(function (lbl) { lbl.classList.remove('is-selected'); });
           var parentLabel = radio.closest('.option');
           if (parentLabel) parentLabel.classList.add('is-selected');
-          saveAnswer(currentQ.questionId, val, !!(localAnswers[currentQ.questionId] && localAnswers[currentQ.questionId].isFlagged));
+          saveAnswer(currentQ.questionId, val, !!(localAnswers[currentQ.questionId] && localAnswers[currentQ.questionId].isFlagged), localAnswers[currentQ.questionId] && localAnswers[currentQ.questionId].responseText);
         });
       });
+      var initialResponseEditor = optionList.querySelector('#free-response-text');
+      if (initialResponseEditor) {
+        initialResponseEditor.addEventListener('input', function () {
+          var currentQ = questionMap[currentDisplayOrder];
+          if (!currentQ) return;
+          saveAnswer(currentQ.questionId, null, !!(localAnswers[currentQ.questionId] && localAnswers[currentQ.questionId].isFlagged), initialResponseEditor.value);
+        });
+      }
 
       // 7. Exam Timer Loop
       function updateTimer() {

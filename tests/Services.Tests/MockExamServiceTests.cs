@@ -122,6 +122,75 @@ public sealed class MockExamServiceTests(DatabaseFixture database)
         return (cert.CertId, exam.ExamId, q1.QuestionId, q2.QuestionId, opt1.OptionId, opt2.OptionId);
     }
 
+    private async Task<(int certId, int examId, int listeningSkillId, int writingSkillId, int listeningQuestionId, int writingQuestionId, int correctOptionId)> SeedHybridMockExamFixtureAsync(string certCode)
+    {
+        await database.SqlAsync($"""
+            INSERT INTO Certificates (Code, Name, IsActive) VALUES ('{certCode}', N'Cert {certCode}', 1);
+            DECLARE @cert INT = SCOPE_IDENTITY();
+
+            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder) VALUES
+              (@cert, 'LIST', N'Listening', 'listening', 1),
+              (@cert, 'WRITE', N'Writing', 'writing', 2);
+            DECLARE @listeningSkill INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'LIST');
+            DECLARE @writingSkill INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'WRITE');
+
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder) VALUES
+              (@listeningSkill, @cert, 'listening', 'L1', N'Listening', 1),
+              (@writingSkill, @cert, 'writing', 'W1', N'Writing', 1);
+            DECLARE @listeningSection INT = (SELECT SectionId FROM Sections WHERE CertId = @cert AND Code = 'L1');
+            DECLARE @writingSection INT = (SELECT SectionId FROM Sections WHERE CertId = @cert AND Code = 'W1');
+
+            INSERT INTO ScoreBands (CertId, Code, Name, MinTotal, MaxTotal, DisplayOrder) VALUES
+              (@cert, 'LOW', N'Low', 0, 99, 1),
+              (@cert, 'HIGH', N'High', 100, 200, 2);
+
+            INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose)
+            VALUES (@cert, N'Hybrid mock {certCode}', 'published', 60, 'mock');
+            DECLARE @exam INT = SCOPE_IDENTITY();
+
+            INSERT INTO ScoreScales (CertId, SkillId, ExamId, RawScore, ScaledScore) VALUES
+              (@cert, @listeningSkill, @exam, 0, 20),
+              (@cert, @listeningSkill, @exam, 1, 80),
+              (@cert, @writingSkill, @exam, 0, 10),
+              (@cert, @writingSkill, @exam, 1, 90);
+
+            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @listeningSection, 1);
+            DECLARE @listeningGroup INT = SCOPE_IDENTITY();
+            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder)
+            VALUES (@listeningGroup, @exam, @listeningSection, @listeningSkill, N'Choose the correct answer.', 1, 'mcq', 1);
+            DECLARE @listeningQuestion INT = SCOPE_IDENTITY();
+            INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect)
+            VALUES (@listeningQuestion, 'mcq', 'A', N'Correct answer', 1);
+
+            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @writingSection, 2);
+            DECLARE @writingGroup INT = SCOPE_IDENTITY();
+            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, MinWords, MaxWords, DisplayOrder)
+            VALUES (@writingGroup, @exam, @writingSection, @writingSkill, N'Write a short response.', 1, 'free_response', 3, 100, 2);
+
+            INSERT INTO GradingCriteria (CertId, SkillId, Code, Name, MaxScore, Weight, DisplayOrder)
+            VALUES (@cert, @writingSkill, 'CONTENT', N'Content', 10, 1, 1);
+            DECLARE @criterion INT = SCOPE_IDENTITY();
+            INSERT INTO SectionCriteria (SectionId, CriterionId, SkillId, MaxScore)
+            VALUES (@writingSection, @criterion, @writingSkill, 10);
+            """);
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var cert = await db.Certificates.SingleAsync(c => c.Code == certCode);
+        var exam = await db.Exams.SingleAsync(e => e.CertId == cert.CertId);
+        var skills = await db.Skills.Where(s => s.CertId == cert.CertId).ToDictionaryAsync(s => s.Code, s => s.SkillId);
+        var questions = await db.Questions.Where(q => q.ExamId == exam.ExamId).OrderBy(q => q.DisplayOrder).ToListAsync();
+        var correctOption = await db.QuestionOptions.SingleAsync(o => o.QuestionId == questions[0].QuestionId && o.IsCorrect);
+
+        return (
+            cert.CertId,
+            exam.ExamId,
+            skills["LIST"],
+            skills["WRITE"],
+            questions[0].QuestionId,
+            questions[1].QuestionId,
+            correctOption.OptionId);
+    }
+
     [Fact]
     public async Task StartAttempt_WhenInsufficientCredits_ThrowsInsufficientCreditsBeforeCharge()
     {
@@ -189,6 +258,88 @@ public sealed class MockExamServiceTests(DatabaseFixture database)
         await using var db = DbContextFactory.Create(database.ConnectionString);
         var balance = await db.vw_UserCreditBalances.Where(b => b.UserId == userId).Select(b => b.Balance).SingleAsync();
         Assert.Equal(2, balance); // only charged once
+    }
+
+    [Fact]
+    public async Task HybridMock_SubmissionQueuesFreeResponsesAndFinalizesCompositeAfterAiGrading()
+    {
+        var certCode = Unique("HYM");
+        var fixture = await SeedHybridMockExamFixtureAsync(certCode);
+        var userId = await SeedLearnerAsync(certCode, startingCredits: 3);
+        var (service, _) = CreateServices();
+
+        var attempt = await service.StartAttemptAsync(userId, fixture.examId);
+        var resumedAttempt = await service.StartAttemptAsync(userId, fixture.examId);
+        Assert.Equal(attempt.AttemptId, resumedAttempt.AttemptId);
+
+        var take = await service.GetAttemptTakeAsync(userId, attempt.AttemptId, questionDisplayOrder: 2);
+        Assert.Equal("free_response", take.CurrentQuestion.QuestionType);
+        Assert.Equal(string.Empty, take.CurrentQuestion.ResponseText);
+
+        await service.SaveAnswerAsync(
+            userId,
+            attempt.AttemptId,
+            fixture.listeningQuestionId,
+            fixture.correctOptionId,
+            isFlagged: false);
+        await service.SaveAnswerAsync(
+            userId,
+            attempt.AttemptId,
+            fixture.writingQuestionId,
+            selectedOptionId: null,
+            isFlagged: false,
+            responseText: "This is a composed response with several useful words.");
+
+        var interimResult = await service.SubmitAttemptAsync(userId, attempt.AttemptId, isAutoSubmit: false);
+        Assert.Equal(AttemptStatus.Submitted, interimResult.Status);
+        Assert.Null(interimResult.BandCode);
+        Assert.Equal(1, interimResult.FreeResponseCount);
+        Assert.Equal(0, interimResult.GradedFreeResponseCount);
+        Assert.Single(interimResult.SkillScores);
+        Assert.Equal("LIST", interimResult.SkillScores[0].SkillCode);
+
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            var response = await db.FreeResponses.SingleAsync(fr => fr.AttemptId == attempt.AttemptId);
+            Assert.Equal("pending_ai", response.Status);
+            Assert.NotNull(response.SubmittedAt);
+            Assert.Equal("This is a composed response with several useful words.", response.ResponseText);
+
+            var grading = await db.AiGradings
+                .Include(g => g.FreeResponse)
+                .SingleAsync(g => g.FreeResponseId == response.FreeResponseId);
+            Assert.Equal("pending", grading.Status);
+            Assert.Equal(attempt.AttemptId, grading.FreeResponse.AttemptId);
+            Assert.Equal(fixture.examId, grading.FreeResponse.ExamId);
+
+            var balance = await db.vw_UserCreditBalances
+                .Where(b => b.UserId == userId)
+                .Select(b => b.Balance)
+                .SingleAsync();
+            Assert.Equal(2, balance);
+        }
+
+        await using (var gradingDb = DbContextFactory.Create(database.ConnectionString))
+        {
+            var engine = new AttemptEngine(gradingDb);
+            var processor = new AiGradingProcessor(gradingDb, new FakeAiGrader(), attemptEngine: engine);
+            Assert.Equal(1, await processor.ProcessPendingGradingsAsync());
+        }
+
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            var grading = await db.AiGradings
+                .Include(g => g.FreeResponse)
+                .SingleAsync(g => g.FreeResponse.AttemptId == attempt.AttemptId);
+            Assert.True(grading.Status == "done", grading.FailureReason);
+        }
+
+        var finalResult = await service.GetAttemptResultAsync(userId, attempt.AttemptId);
+        Assert.Equal(AttemptStatus.Graded, finalResult.Status);
+        Assert.Equal(1, finalResult.GradedFreeResponseCount);
+        Assert.Equal(2, finalResult.SkillScores.Count);
+        Assert.Equal("HIGH", finalResult.BandCode);
+        Assert.True(finalResult.TotalScore > 0);
     }
 
     [Fact]

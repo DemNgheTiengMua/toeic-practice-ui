@@ -18,6 +18,7 @@ public class AttemptEngineException(string code, string message) : Exception(mes
     public const string QuestionNotFound = "question_not_found";
     public const string InvalidOption = "invalid_option";
     public const string AttemptNotFinished = "attempt_not_finished";
+    public const string InvalidGradingRubric = "invalid_grading_rubric";
 
     public string Code { get; } = code;
 }
@@ -53,7 +54,8 @@ public interface IAttemptEngine
         int? selectedOptionId,
         bool isFlagged,
         Func<int, int, Task>? onAutoSubmitted = null,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        string? responseText = null);
 
     Task<AttemptGradingResult> SubmitAttemptAsync(
         int attemptId,
@@ -65,6 +67,8 @@ public interface IAttemptEngine
         int attemptId,
         int userId,
         CancellationToken cancellationToken = default);
+
+    Task FinalizeAiGradedAttemptAsync(int attemptId, CancellationToken cancellationToken = default);
 
     Task<AttemptReviewView> GetAttemptReviewAsync(
         int attemptId,
@@ -146,6 +150,22 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
                         IsCorrect = null,
                         IsFlagged = false
                     });
+
+                    if (q.QuestionType == QuestionType.FreeResponse.ToCode())
+                    {
+                        db.FreeResponses.Add(new FreeResponse
+                        {
+                            AttemptId = attempt.AttemptId,
+                            QuestionId = q.QuestionId,
+                            ExamId = examId,
+                            SkillId = q.SkillId,
+                            QuestionType = QuestionType.FreeResponse.ToCode(),
+                            ResponseText = string.Empty,
+                            Status = FreeResponseStatus.Draft.ToCode(),
+                            SubmittedAt = null,
+                            DraftSavedAt = now
+                        });
+                    }
                 }
             }
 
@@ -181,6 +201,7 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
         CancellationToken cancellationToken = default)
     {
         var attempt = await db.ExamAttempts
+            .AsNoTracking()
             .Include(a => a.Exam)
             .Include(a => a.Cert)
             .SingleOrDefaultAsync(a => a.AttemptId == attemptId && a.UserId == userId, cancellationToken)
@@ -213,8 +234,16 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
             .ThenBy(a => a.Question.DisplayOrder)
             .ToListAsync(cancellationToken);
 
+        var freeResponses = await db.FreeResponses
+            .AsNoTracking()
+            .Where(fr => fr.AttemptId == attemptId)
+            .ToDictionaryAsync(fr => fr.QuestionId, cancellationToken);
+
         int totalQuestions = answers.Count;
-        int answeredCount = answers.Count(a => a.SelectedOptionId != null);
+        int answeredCount = answers.Count(a =>
+            a.Question.QuestionType == QuestionType.FreeResponse.ToCode()
+                ? freeResponses.TryGetValue(a.QuestionId, out var response) && !string.IsNullOrWhiteSpace(response.ResponseText)
+                : a.SelectedOptionId != null);
         int flaggedCount = answers.Count(a => a.IsFlagged);
 
         // Determine current question
@@ -261,7 +290,15 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
                 q.Group.Passage,
                 opts,
                 ans.SelectedOptionId,
-                ans.IsFlagged));
+                ans.IsFlagged,
+                q.QuestionType,
+                q.MinWords,
+                q.MaxWords,
+                q.PrepSeconds,
+                q.ResponseSeconds,
+                q.Hint,
+                q.Explanation,
+                freeResponses.GetValueOrDefault(q.QuestionId)?.ResponseText));
         }
 
         var currentQuestionInfo = totalQuestions > 0 ? allQuestions[targetIndex] : new AttemptQuestionInfo(
@@ -273,7 +310,9 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
             a.Question.SectionId,
             a.Question.Section.Code,
             EnumCodes.Parse<Modality>(a.Question.Section.Modality),
-            a.SelectedOptionId != null,
+            a.Question.QuestionType == QuestionType.FreeResponse.ToCode()
+                ? freeResponses.TryGetValue(a.QuestionId, out var response) && !string.IsNullOrWhiteSpace(response.ResponseText)
+                : a.SelectedOptionId != null,
             a.IsFlagged,
             idx == targetIndex)).ToList();
 
@@ -304,7 +343,8 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
         int? selectedOptionId,
         bool isFlagged,
         Func<int, int, Task>? onAutoSubmitted = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        string? responseText = null)
     {
         var attempt = await db.ExamAttempts
             .SingleOrDefaultAsync(a => a.AttemptId == attemptId && a.UserId == userId, cancellationToken)
@@ -327,10 +367,40 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
         }
 
         var answer = await db.AttemptAnswers
+            .Include(a => a.Question)
             .SingleOrDefaultAsync(a => a.AttemptId == attemptId && a.QuestionId == questionId, cancellationToken)
             ?? throw new AttemptEngineException(AttemptEngineException.QuestionNotFound, $"Question {questionId} not found in attempt.");
 
-        if (selectedOptionId.HasValue)
+        if (answer.Question.QuestionType == QuestionType.FreeResponse.ToCode())
+        {
+            if (selectedOptionId.HasValue)
+            {
+                throw new AttemptEngineException(AttemptEngineException.InvalidOption, "Free-response questions do not accept multiple-choice options.");
+            }
+
+            var response = await db.FreeResponses
+                .SingleOrDefaultAsync(fr => fr.AttemptId == attemptId && fr.QuestionId == questionId, cancellationToken);
+            if (response is null)
+            {
+                response = new FreeResponse
+                {
+                    AttemptId = attemptId,
+                    QuestionId = questionId,
+                    ExamId = attempt.ExamId,
+                    SkillId = answer.Question.SkillId,
+                    QuestionType = QuestionType.FreeResponse.ToCode(),
+                    Status = FreeResponseStatus.Draft.ToCode(),
+                    SubmittedAt = null
+                };
+                db.FreeResponses.Add(response);
+            }
+
+            response.ResponseText = responseText ?? string.Empty;
+            response.Status = FreeResponseStatus.Draft.ToCode();
+            response.SubmittedAt = null;
+            response.DraftSavedAt = DateTimeOffset.UtcNow;
+        }
+        else if (selectedOptionId.HasValue)
         {
             var valid = await db.QuestionOptions
                 .AnyAsync(o => o.OptionId == selectedOptionId.Value && o.QuestionId == questionId, cancellationToken);
@@ -347,7 +417,7 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
         await db.SaveChangesAsync(cancellationToken);
 
         var remainingSeconds = Math.Max(0, (int)(attempt.ExpiresAt - DateTimeOffset.UtcNow).TotalSeconds);
-        return new SaveAttemptAnswerResult(questionId, selectedOptionId, isFlagged, remainingSeconds, attempt.IsAutoSubmitted);
+        return new SaveAttemptAnswerResult(questionId, selectedOptionId, isFlagged, remainingSeconds, attempt.IsAutoSubmitted, responseText);
     }
 
     public async Task<AttemptGradingResult> SubmitAttemptAsync(
@@ -389,18 +459,85 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
                     attempt.IsAutoSubmitted);
             }
 
+            if (attempt.Status == AttemptStatus.Submitted.ToCode())
+            {
+                var submittedScores = await db.AttemptSkillScores
+                    .Where(s => s.AttemptId == attemptId)
+                    .ToListAsync(cancellationToken);
+                var submittedAnswers = await db.AttemptAnswers
+                    .Where(a => a.AttemptId == attemptId)
+                    .ToListAsync(cancellationToken);
+
+                if (tx is not null) await tx.RollbackAsync(cancellationToken);
+
+                return new AttemptGradingResult(
+                    attempt,
+                    attempt.TotalScore ?? 0,
+                    attempt.BandCode,
+                    submittedScores,
+                    submittedAnswers,
+                    attempt.SubmittedAt ?? DateTimeOffset.UtcNow,
+                    attempt.IsAutoSubmitted);
+            }
+
             if (attempt.Status == AttemptStatus.Abandoned.ToCode())
             {
                 throw new AttemptEngineException(AttemptEngineException.AttemptNotActive, "This attempt was abandoned.");
             }
 
             var now = DateTimeOffset.UtcNow;
-            attempt.Status = AttemptStatus.Graded.ToCode();
+
+            if (attempt.Exam.Purpose == ExamPurpose.Mock.ToCode())
+            {
+                var freeResponses = await db.FreeResponses
+                    .Where(fr => fr.AttemptId == attemptId)
+                    .ToListAsync(cancellationToken);
+
+                foreach (var response in freeResponses)
+                {
+                    if (response.Status == FreeResponseStatus.Draft.ToCode())
+                    {
+                        response.Status = FreeResponseStatus.PendingAi.ToCode();
+                        response.SubmittedAt = now;
+                    }
+                }
+
+                if (freeResponses.Any(fr => fr.Status == FreeResponseStatus.PendingAi.ToCode()))
+                {
+                    await db.SaveChangesAsync(cancellationToken);
+
+                    foreach (var response in freeResponses.Where(fr => fr.Status == FreeResponseStatus.PendingAi.ToCode()))
+                    {
+                        var hasGrading = await db.AiGradings
+                            .AnyAsync(g => g.FreeResponseId == response.FreeResponseId, cancellationToken);
+                        if (!hasGrading)
+                        {
+                            db.AiGradings.Add(new AiGrading
+                            {
+                                FreeResponseId = response.FreeResponseId,
+                                SkillId = response.SkillId,
+                                Status = AiGradingStatus.Pending.ToCode(),
+                                AttemptCount = 1,
+                                RequestedAt = now
+                            });
+                        }
+                    }
+                }
+            }
+
             attempt.SubmittedAt = now;
             if (isAutoSubmit || now >= attempt.ExpiresAt)
             {
                 attempt.IsAutoSubmitted = true;
             }
+
+            var hasPendingMockResponses = attempt.Exam.Purpose == ExamPurpose.Mock.ToCode()
+                && await db.FreeResponses.AnyAsync(
+                    fr => fr.AttemptId == attemptId && fr.Status != FreeResponseStatus.Graded.ToCode(),
+                    cancellationToken);
+            attempt.Status = hasPendingMockResponses
+                ? AttemptStatus.Submitted.ToCode()
+                : AttemptStatus.Graded.ToCode();
 
             var answers = await db.AttemptAnswers
                 .Where(a => a.AttemptId == attemptId)
@@ -408,8 +545,11 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
                 .Include(a => a.Question).ThenInclude(q => q.QuestionOptionQuestionNavigations)
                 .ToListAsync(cancellationToken);
 
-            // Score each answer
-            foreach (var ans in answers)
+            var objectiveAnswers = answers
+                .Where(ans => ans.Question.QuestionType == QuestionType.Mcq.ToCode())
+                .ToList();
+
+            foreach (var ans in objectiveAnswers)
             {
                 var correctOpt = ans.Question.QuestionOptionQuestionNavigations.FirstOrDefault(o => o.IsCorrect);
                 ans.IsCorrect = ans.SelectedOptionId.HasValue && ans.SelectedOptionId.Value == correctOpt?.OptionId;
@@ -424,10 +564,9 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
                 db.AttemptSkillScores.RemoveRange(existingSkillScores);
             }
 
-            var skillGroups = answers.GroupBy(a => a.Question.Section.Skill).ToList();
             var newSkillScores = new List<AttemptSkillScore>();
 
-            foreach (var group in skillGroups)
+            foreach (var group in objectiveAnswers.GroupBy(a => a.Question.Section.Skill))
             {
                 var skill = group.Key;
                 int rawScore = group.Count(a => a.IsCorrect == true);
@@ -443,41 +582,39 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
                     ScaledScore = scaledScore
                 });
             }
-
             db.AttemptSkillScores.AddRange(newSkillScores);
 
-            var certCode = await db.Certificates
-                .Where(c => c.CertId == attempt.CertId)
-                .Select(c => c.Code)
-                .SingleAsync(cancellationToken);
-            int totalScore = AggregateTotalScore(certCode, newSkillScores);
-            attempt.TotalScore = totalScore;
-
-            var bands = await db.ScoreBands
-                .Where(b => b.CertId == attempt.CertId)
-                .OrderBy(b => b.MinTotal)
-                .ToListAsync(cancellationToken);
-
-            var matchingBand = bands.FirstOrDefault(b => totalScore >= b.MinTotal && totalScore <= b.MaxTotal);
-            if (matchingBand is null && bands.Count > 0)
+            int totalScore = 0;
+            if (hasPendingMockResponses)
             {
-                matchingBand = totalScore < bands[0].MinTotal
-                    ? bands[0]
-                    : (bands.LastOrDefault(b => totalScore >= b.MinTotal) ?? bands[^1]);
+                attempt.TotalScore = null;
+                attempt.BandCode = null;
             }
-            attempt.BandCode = matchingBand?.Code;
+            else
+            {
+                var certCode = await db.Certificates
+                    .Where(c => c.CertId == attempt.CertId)
+                    .Select(c => c.Code)
+                    .SingleAsync(cancellationToken);
+                totalScore = AggregateTotalScore(certCode, newSkillScores);
+                attempt.TotalScore = totalScore;
+                attempt.BandCode = await FindBandCodeAsync(attempt.CertId, totalScore, cancellationToken);
+            }
 
             // Snapshot matching invariant: PlacementTests.TotalScore must match ExamAttempts.TotalScore
-            var linkedPlacements = await db.PlacementTests
-                .Where(p => p.AttemptId == attempt.AttemptId && p.Status == PlacementStatus.InProgress.ToCode())
-                .ToListAsync(cancellationToken);
-
-            foreach (var placement in linkedPlacements)
+            if (!hasPendingMockResponses)
             {
-                placement.Status = PlacementStatus.Done.ToCode();
-                placement.TotalScore = totalScore;
-                placement.ResultBandCode = matchingBand?.Code;
-                placement.TakenAt = now;
+                var linkedPlacements = await db.PlacementTests
+                    .Where(p => p.AttemptId == attempt.AttemptId && p.Status == PlacementStatus.InProgress.ToCode())
+                    .ToListAsync(cancellationToken);
+
+                foreach (var placement in linkedPlacements)
+                {
+                    placement.Status = PlacementStatus.Done.ToCode();
+                    placement.TotalScore = totalScore;
+                    placement.ResultBandCode = attempt.BandCode;
+                    placement.TakenAt = now;
+                }
             }
 
             await db.SaveChangesAsync(cancellationToken);
@@ -496,6 +633,124 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
         {
             if (tx is not null) await tx.DisposeAsync();
         }
+    }
+
+    public async Task FinalizeAiGradedAttemptAsync(int attemptId, CancellationToken cancellationToken = default)
+    {
+        var attempt = await db.ExamAttempts
+            .Include(a => a.Exam)
+            .SingleOrDefaultAsync(a => a.AttemptId == attemptId, cancellationToken)
+            ?? throw new AttemptEngineException(AttemptEngineException.AttemptNotFound, $"Attempt {attemptId} not found.");
+
+        if (attempt.Exam.Purpose != ExamPurpose.Mock.ToCode())
+        {
+            if (attempt.Status != AttemptStatus.Graded.ToCode())
+            {
+                attempt.Status = AttemptStatus.Graded.ToCode();
+                attempt.TotalScore = null;
+                attempt.BandCode = null;
+                await db.SaveChangesAsync(cancellationToken);
+            }
+            return;
+        }
+
+        if (attempt.Status == AttemptStatus.Graded.ToCode()) return;
+        if (attempt.Status != AttemptStatus.Submitted.ToCode())
+        {
+            throw new AttemptEngineException(AttemptEngineException.AttemptNotActive, "The mock attempt must be submitted before AI grading can be finalized.");
+        }
+
+        var freeResponses = await db.FreeResponses
+            .Where(fr => fr.AttemptId == attemptId)
+            .Include(fr => fr.Question).ThenInclude(q => q.Section)
+            .Include(fr => fr.AiGradingFreeResponse)
+            .ToListAsync(cancellationToken);
+
+        if (freeResponses.Count == 0
+            || freeResponses.Any(fr => fr.Status != FreeResponseStatus.Graded.ToCode()
+                || fr.AiGradingFreeResponse?.Status != AiGradingStatus.Done.ToCode()))
+        {
+            throw new AttemptEngineException(AttemptEngineException.AttemptNotFinished, "All free responses must finish AI grading before the mock result can be finalized.");
+        }
+
+        var answers = await db.AttemptAnswers
+            .Where(a => a.AttemptId == attemptId)
+            .Include(a => a.Question).ThenInclude(q => q.Section).ThenInclude(s => s.Skill)
+            .Include(a => a.Question).ThenInclude(q => q.QuestionOptionQuestionNavigations)
+            .ToListAsync(cancellationToken);
+
+        var existingScores = await db.AttemptSkillScores
+            .Where(s => s.AttemptId == attemptId)
+            .ToListAsync(cancellationToken);
+        db.AttemptSkillScores.RemoveRange(existingScores);
+
+        var responsePointsBySkill = new Dictionary<int, decimal>();
+        foreach (var response in freeResponses)
+        {
+            var sectionCriteria = await db.SectionCriteria
+                .Where(sc => sc.SectionId == response.Question.SectionId)
+                .Include(sc => sc.GradingCriterion)
+                .ToListAsync(cancellationToken);
+
+            var maxScore = sectionCriteria.Count > 0
+                ? sectionCriteria.Sum(sc => sc.MaxScore ?? sc.GradingCriterion.MaxScore)
+                : await db.GradingCriteria
+                    .Where(c => c.SkillId == response.SkillId)
+                    .SumAsync(c => (decimal?)c.MaxScore, cancellationToken) ?? 0m;
+
+            if (maxScore <= 0m)
+            {
+                throw new AttemptEngineException(
+                    AttemptEngineException.InvalidGradingRubric,
+                    $"Free-response question {response.QuestionId} has no positive rubric maximum.");
+            }
+
+            var responseFraction = Math.Clamp((response.AiGradingFreeResponse!.OverallScaled ?? 0m) / maxScore, 0m, 1m);
+            responsePointsBySkill[response.SkillId] = responsePointsBySkill.GetValueOrDefault(response.SkillId) + responseFraction;
+        }
+
+        foreach (var answer in answers.Where(a => a.Question.QuestionType == QuestionType.Mcq.ToCode()))
+        {
+            var correctOption = answer.Question.QuestionOptionQuestionNavigations.FirstOrDefault(o => o.IsCorrect);
+            answer.IsCorrect = answer.SelectedOptionId.HasValue && answer.SelectedOptionId.Value == correctOption?.OptionId;
+        }
+
+        var newSkillScores = new List<AttemptSkillScore>();
+        foreach (var group in answers.GroupBy(a => a.Question.Section.Skill))
+        {
+            var skill = group.Key;
+            var objectiveAnswers = group.Where(a => a.Question.QuestionType == QuestionType.Mcq.ToCode()).ToList();
+            var objectiveRawScore = objectiveAnswers.Count(a => a.IsCorrect == true);
+            var rawScore = objectiveRawScore + responsePointsBySkill.GetValueOrDefault(skill.SkillId);
+            var rawScoreInteger = (int)Math.Round(rawScore, MidpointRounding.AwayFromZero);
+            var scaledScore = await ComputeScaledScoreAsync(
+                attempt.CertId,
+                skill.SkillId,
+                attempt.ExamId,
+                rawScore,
+                group.Count(),
+                cancellationToken);
+
+            newSkillScores.Add(new AttemptSkillScore
+            {
+                AttemptId = attempt.AttemptId,
+                SkillId = skill.SkillId,
+                CertId = attempt.CertId,
+                RawScore = rawScoreInteger,
+                ScaledScore = scaledScore
+            });
+        }
+
+        db.AttemptSkillScores.AddRange(newSkillScores);
+        var certCode = await db.Certificates
+            .Where(c => c.CertId == attempt.CertId)
+            .Select(c => c.Code)
+            .SingleAsync(cancellationToken);
+        var totalScore = AggregateTotalScore(certCode, newSkillScores);
+        attempt.TotalScore = totalScore;
+        attempt.BandCode = await FindBandCodeAsync(attempt.CertId, totalScore, cancellationToken);
+        attempt.Status = AttemptStatus.Graded.ToCode();
+        await db.SaveChangesAsync(cancellationToken);
     }
 
     public async Task<int> ComputeScaledScoreAsync(
@@ -548,6 +803,93 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
             MidpointRounding.AwayFromZero) * step;
     }
 
+    private async Task<int> ComputeScaledScoreAsync(
+        int certId,
+        int skillId,
+        int examId,
+        decimal rawScore,
+        int totalQuestionsInSkill,
+        CancellationToken cancellationToken)
+    {
+        if (rawScore == decimal.Truncate(rawScore))
+        {
+            return await ComputeScaledScoreAsync(
+                certId,
+                skillId,
+                examId,
+                (int)rawScore,
+                totalQuestionsInSkill,
+                cancellationToken);
+        }
+
+        var scaleRows = await db.ScoreScales
+            .Where(s => s.CertId == certId && s.SkillId == skillId && s.ExamId == examId)
+            .OrderBy(s => s.RawScore)
+            .ToListAsync(cancellationToken);
+        if (scaleRows.Count == 0)
+        {
+            scaleRows = await db.ScoreScales
+                .Where(s => s.CertId == certId && s.SkillId == skillId && s.ExamId == null)
+                .OrderBy(s => s.RawScore)
+                .ToListAsync(cancellationToken);
+        }
+
+        if (scaleRows.Count > 0)
+        {
+            var lower = scaleRows.LastOrDefault(row => row.RawScore <= rawScore);
+            var upper = scaleRows.FirstOrDefault(row => row.RawScore >= rawScore);
+            decimal scaled = lower is null
+                ? scaleRows[0].ScaledScore
+                : upper is null
+                    ? scaleRows[^1].ScaledScore
+                    : lower.RawScore == upper.RawScore
+                        ? lower.ScaledScore
+                        : lower.ScaledScore
+                            + (rawScore - lower.RawScore)
+                            * (upper.ScaledScore - lower.ScaledScore)
+                            / (upper.RawScore - lower.RawScore);
+
+            var certCode = await db.Certificates
+                .Where(c => c.CertId == certId)
+                .Select(c => c.Code)
+                .SingleAsync(cancellationToken);
+            var step = GetFallbackScale(certCode).Step;
+            return (int)Math.Round(scaled / step, MidpointRounding.AwayFromZero) * step;
+        }
+
+        var fallbackCertCode = await db.Certificates
+            .Where(c => c.CertId == certId)
+            .Select(c => c.Code)
+            .SingleAsync(cancellationToken);
+        var (minimum, maximum, fallbackStep) = GetFallbackScale(fallbackCertCode);
+        if (totalQuestionsInSkill <= 0) return minimum;
+        var fraction = Math.Clamp((double)rawScore / totalQuestionsInSkill, 0.0, 1.0);
+        return minimum + (int)Math.Round(
+            (fraction * (maximum - minimum)) / fallbackStep,
+            MidpointRounding.AwayFromZero) * fallbackStep;
+    }
+
+    private async Task<string?> FindBandCodeAsync(
+        int certId,
+        int totalScore,
+        CancellationToken cancellationToken)
+    {
+        var bands = await db.ScoreBands
+            .Where(b => b.CertId == certId)
+            .OrderBy(b => b.MinTotal)
+            .ToListAsync(cancellationToken);
+
+        var matchingBand = bands.FirstOrDefault(b => totalScore >= b.MinTotal && totalScore <= b.MaxTotal);
+        if (matchingBand is null && bands.Count > 0)
+        {
+            matchingBand = totalScore < bands[0].MinTotal
+                ? bands[0]
+                : bands.LastOrDefault(b => totalScore >= b.MinTotal) ?? bands[^1];
+        }
+
+        return matchingBand?.Code;
+    }
+
     private static (int Minimum, int Maximum, int Step) GetFallbackScale(string? certCode) =>
         certCode?.ToUpperInvariant() switch
         {
@@ -577,6 +919,7 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
         CancellationToken cancellationToken = default)
     {
         var attempt = await db.ExamAttempts
+            .AsNoTracking()
             .Include(a => a.Exam)
             .Include(a => a.Cert)
             .SingleOrDefaultAsync(a => a.AttemptId == attemptId && a.UserId == userId, cancellationToken)
@@ -588,7 +931,8 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
             attempt = grading.Attempt;
         }
 
-        if (attempt.Status != AttemptStatus.Graded.ToCode())
+        if (attempt.Status != AttemptStatus.Graded.ToCode()
+            && attempt.Status != AttemptStatus.Submitted.ToCode())
         {
             throw new AttemptEngineException(AttemptEngineException.AttemptNotFinished, "Exam attempt is not finished.");
         }
@@ -639,6 +983,16 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
             ? attempt.TotalScore.Value - prevScore.Value
             : null;
 
+        var gradingStates = await db.AiGradings
+            .AsNoTracking()
+            .Where(g => g.FreeResponse.AttemptId == attemptId)
+            .Select(g => g.Status)
+            .ToListAsync(cancellationToken);
+        var freeResponseCount = await db.FreeResponses
+            .CountAsync(fr => fr.AttemptId == attemptId, cancellationToken);
+        var gradedFreeResponseCount = gradingStates.Count(status => status == AiGradingStatus.Done.ToCode());
+        var failedFreeResponseCount = gradingStates.Count(status => status == AiGradingStatus.Failed.ToCode());
+
         int durationSeconds = (int)Math.Max(0, ((attempt.SubmittedAt ?? DateTimeOffset.UtcNow) - attempt.StartedAt).TotalSeconds);
 
         return new AttemptResultView(
@@ -658,7 +1012,10 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
             band?.Name,
             scoreItems,
             prevScore,
-            scoreDelta);
+            scoreDelta,
+            freeResponseCount,
+            gradedFreeResponseCount,
+            failedFreeResponseCount);
     }
 
     public async Task<AttemptReviewView> GetAttemptReviewAsync(

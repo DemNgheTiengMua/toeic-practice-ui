@@ -134,7 +134,15 @@ public static class ExamEndpoints
                     qInfo.Passage,
                     qInfo.Options.Select(o => new AttemptOptionDto(o.OptionId, o.Label, o.Text)).ToList(),
                     qInfo.SelectedOptionId,
-                    qInfo.IsFlagged);
+                    qInfo.IsFlagged,
+                    qInfo.QuestionType,
+                    qInfo.MinWords,
+                    qInfo.MaxWords,
+                    qInfo.PrepSeconds,
+                    qInfo.ResponseSeconds,
+                    qInfo.Hint,
+                    qInfo.SampleResponse,
+                    qInfo.ResponseText);
 
                 var allQDtos = take.Questions?.Select(q => new AttemptQuestionDto(
                     q.QuestionId,
@@ -156,7 +164,15 @@ public static class ExamEndpoints
                     q.Passage,
                     q.Options.Select(o => new AttemptOptionDto(o.OptionId, o.Label, o.Text)).ToList(),
                     q.SelectedOptionId,
-                    q.IsFlagged)).ToList();
+                    q.IsFlagged,
+                    q.QuestionType,
+                    q.MinWords,
+                    q.MaxWords,
+                    q.PrepSeconds,
+                    q.ResponseSeconds,
+                    q.Hint,
+                    q.SampleResponse,
+                    q.ResponseText)).ToList();
 
                 return Results.Ok(new AttemptTakeDto(
                     take.AttemptId,
@@ -197,9 +213,20 @@ public static class ExamEndpoints
             try
             {
                 var res = await mockExamService.SaveAnswerAsync(
-                    CurrentUserId(http), attemptId, questionId, request.SelectedOptionId, request.IsFlagged, cancellationToken);
+                    CurrentUserId(http),
+                    attemptId,
+                    questionId,
+                    request.SelectedOptionId,
+                    request.IsFlagged,
+                    cancellationToken,
+                    request.ResponseText);
                 return Results.Ok(new SaveAnswerResultDto(
-                    res.QuestionId, res.SelectedOptionId, res.IsFlagged, res.RemainingSeconds, res.IsAutoSubmitted));
+                    res.QuestionId,
+                    res.SelectedOptionId,
+                    res.IsFlagged,
+                    res.RemainingSeconds,
+                    res.IsAutoSubmitted,
+                    res.ResponseText));
             }
             catch (MockExamException ex) when (ex.Code == MockExamException.AttemptExpired)
             {
@@ -293,7 +320,10 @@ public static class ExamEndpoints
                     r.SkillScores.Select(s => new AttemptSkillScoreDto(
                         s.SkillId, s.SkillCode, s.SkillName, s.Modality.MapTo<ModalityDto>(), s.RawScore, s.ScaledScore, s.TotalQuestions)).ToList(),
                     r.PreviousAttemptScore,
-                    r.ScoreDelta));
+                    r.ScoreDelta,
+                    r.FreeResponseCount,
+                    r.GradedFreeResponseCount,
+                    r.FailedFreeResponseCount));
             }
             catch (MockExamException ex) when (ex.Code == MockExamException.AttemptNotFound)
             {

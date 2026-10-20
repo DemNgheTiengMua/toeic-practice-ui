@@ -82,7 +82,15 @@ public sealed record AttemptQuestionInfo(
     string? Passage,
     IReadOnlyList<AttemptOption> Options,
     int? SelectedOptionId,
-    bool IsFlagged);
+    bool IsFlagged,
+    string QuestionType = "mcq",
+    int? MinWords = null,
+    int? MaxWords = null,
+    int? PrepSeconds = null,
+    int? ResponseSeconds = null,
+    string? Hint = null,
+    string? SampleResponse = null,
+    string? ResponseText = null);
 
 public sealed record NavigatorItem(
     int QuestionId,
@@ -116,7 +124,8 @@ public sealed record SaveAttemptAnswerResult(
     int? SelectedOptionId,
     bool IsFlagged,
     int RemainingSeconds,
-    bool IsAutoSubmitted);
+    bool IsAutoSubmitted,
+    string? ResponseText = null);
 
 public sealed record AttemptSkillScoreItem(
     int SkillId,
@@ -144,7 +153,10 @@ public sealed record AttemptResultView(
     string? BandName,
     IReadOnlyList<AttemptSkillScoreItem> SkillScores,
     int? PreviousAttemptScore,
-    int? ScoreDelta);
+    int? ScoreDelta,
+    int FreeResponseCount = 0,
+    int GradedFreeResponseCount = 0,
+    int FailedFreeResponseCount = 0);
 
 public sealed record ScoreBandItem(
     string Code,
@@ -241,4 +253,3 @@ public sealed record AttemptReviewView(
     int FlaggedCount,
     IReadOnlyList<AttemptReviewQuestion> Questions,
     IReadOnlyList<ReviewNavigatorItem> Navigator);
-
