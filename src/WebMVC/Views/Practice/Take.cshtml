@@ -32,6 +32,12 @@
         <div class="progress" style="width: 160px">
           <div class="progress__bar" style="width: @progressPercent%"></div>
         </div>
+        @if (session.Modality == ModalityDto.Listening)
+        {
+          @await Html.PartialAsync("_AudioEmergencySwitcher", new AudioEquipmentCheckModel(
+              ShowInput: false,
+              ShowOutput: true))
+        }
         <a class="btn btn--ghost btn--sm" href="/practice">Exit</a>
       </div>
     </header>
@@ -215,6 +221,7 @@
   </div>
 
   <script src="~/js/icons.js"></script>
+  <script src="~/js/ee-audio.js"></script>
   <script src="~/js/exam-audio.js"></script>
   <script src="~/js/keyboard-nav.js"></script>
   <script>

@@ -661,7 +661,14 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
 
             db.AttemptSkillScores.AddRange(newSkillScores);
 
-            int totalScore = newSkillScores.Sum(s => s.ScaledScore);
+
+            var certCode = await db.Certificates
+                .Where(c => c.CertId == attempt.CertId)
+                .Select(c => c.Code)
+                .SingleAsync(cancellationToken);
+            int totalScore = AggregateTotalScore(certCode, newSkillScores);
+            attempt.TotalScore = totalScore;
+
 
             var bands = await db.ScoreBands
                 .Where(b => b.CertId == attempt.CertId)
@@ -671,7 +678,9 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
             var matchingBand = bands.FirstOrDefault(b => totalScore >= b.MinTotal && totalScore <= b.MaxTotal);
             if (matchingBand is null && bands.Count > 0)
             {
-                matchingBand = totalScore < bands[0].MinTotal ? bands[0] : bands[^1];
+                matchingBand = totalScore < bands[0].MinTotal
+                    ? bands[0]
+                    : (bands.LastOrDefault(b => totalScore >= b.MinTotal) ?? bands[^1]);
             }
 
             var freeResponses = await db.FreeResponses
@@ -834,10 +843,39 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
         }
 
         // 4. Default proportional fallback if no score scales seeded
-        if (totalQuestionsInSkill <= 0) return 5;
+        var certCode = await db.Certificates
+            .Where(c => c.CertId == certId)
+            .Select(c => c.Code)
+            .FirstOrDefaultAsync(cancellationToken);
+        var (minimum, maximum, step) = GetFallbackScale(certCode);
+        if (totalQuestionsInSkill <= 0) return minimum;
         double fraction = Math.Clamp((double)rawScore / totalQuestionsInSkill, 0.0, 1.0);
-        int scaled = 5 + (int)Math.Round((fraction * 490) / 5.0) * 5;
-        return scaled;
+        return minimum + (int)Math.Round(
+            (fraction * (maximum - minimum)) / step,
+            MidpointRounding.AwayFromZero) * step;
+    }
+
+    private static (int Minimum, int Maximum, int Step) GetFallbackScale(string? certCode) =>
+        certCode?.ToUpperInvariant() switch
+        {
+            "IELTS" => (10, 90, 5),
+            "VSTEP" => (10, 100, 1),
+            _ => (5, 495, 5)
+        };
+
+    private static int AggregateTotalScore(
+        string certCode,
+        IReadOnlyCollection<AttemptSkillScore> skillScores)
+    {
+        if (skillScores.Count == 0) return 0;
+
+        var average = skillScores.Average(score => (double)score.ScaledScore);
+        return certCode.ToUpperInvariant() switch
+        {
+            "IELTS" => (int)Math.Round(average / 5.0, MidpointRounding.AwayFromZero) * 5,
+            "VSTEP" => (int)Math.Round(average, MidpointRounding.AwayFromZero),
+            _ => skillScores.Sum(score => score.ScaledScore)
+        };
     }
 
     public async Task<AttemptResultView> GetAttemptResultAsync(

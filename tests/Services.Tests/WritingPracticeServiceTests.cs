@@ -128,6 +128,32 @@ public sealed class WritingPracticeServiceTests(DatabaseFixture database)
     }
 
     [Fact]
+    public async Task FreeDiagnosticWriting_Can_Start_And_Submit_Without_Credits_Or_LedgerEntries()
+    {
+        var certCode = Unique("WRFD");
+        var (_, examId, q1Id, _) = await SeedWritingExamFixtureAsync(certCode);
+        var userId = await SeedLearnerAsync(certCode);
+        await database.SqlAsync($"""
+            UPDATE Exams
+            SET SourceName = N'{WritingPracticeService.FreeDiagnosticSourceName}'
+            WHERE ExamId = {examId};
+            """);
+        var (service, _, _, _) = CreateServices();
+
+        var instructions = await service.GetInstructionsAsync(userId, examId);
+        Assert.Equal(0, instructions.CreditCost);
+        Assert.Equal(0, instructions.CreditBalance);
+
+        var attempt = await service.StartAttemptAsync(userId, examId);
+        await service.SaveDraftAsync(userId, attempt.AttemptId, q1Id, "A clear diagnostic writing response.");
+        await service.SubmitAttemptAsync(userId, attempt.AttemptId);
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var transactions = await db.CreditTransactions.Where(t => t.UserId == userId).ToListAsync();
+        Assert.Empty(transactions);
+    }
+
+    [Fact]
     public async Task StartAttempt_creates_in_progress_attempt_and_drafts_without_charging_credits()
     {
         var certCode = Unique("WR02");

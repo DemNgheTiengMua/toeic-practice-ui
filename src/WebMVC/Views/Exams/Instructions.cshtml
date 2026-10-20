@@ -91,6 +91,14 @@ else
       </div>
     }
 
+    @if (instr.Sections.Any(s => s.Modality is ModalityDto.Listening or ModalityDto.Speaking))
+    {
+      <partial name="_AudioEquipmentCheck" model='new WebMVC.Models.AudioEquipmentCheckModel(
+          ShowInput: instr.Sections.Any(s => s.Modality == ModalityDto.Speaking),
+          ShowOutput: instr.Sections.Any(s => s.Modality == ModalityDto.Listening),
+          Title: "Audio equipment check")' />
+    }
+
     <div class="card">
       <div class="card__header"><strong>Important instructions</strong></div>
       <div class="card__body">

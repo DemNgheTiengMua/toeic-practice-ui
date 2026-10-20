@@ -26,6 +26,114 @@ public sealed class DemoSeedTests(DatabaseFixture fixture)
             await using var conn = new SqlConnection(connStr);
             await conn.OpenAsync();
 
+            async Task<int> CountAsync(string query)
+            {
+                await using var command = conn.CreateCommand();
+                command.CommandText = query;
+                return Convert.ToInt32(await command.ExecuteScalarAsync());
+            }
+
+            Assert.Equal(2, await CountAsync("""
+                SELECT COUNT(*) FROM Exams
+                WHERE (Name='IELTS-DIAG-01' AND Purpose='placement' AND DurationMinutes=60 AND QuestionCount=10)
+                   OR (Name='VSTEP-DIAG-01' AND Purpose='placement' AND DurationMinutes=45 AND QuestionCount=10)
+                """));
+            Assert.Equal(20, await CountAsync("""
+                SELECT COUNT(*) FROM Questions q
+                JOIN Exams e ON e.ExamId=q.ExamId
+                WHERE e.Name IN ('IELTS-DIAG-01','VSTEP-DIAG-01') AND e.Purpose='placement' AND q.QuestionType='mcq'
+                """));
+            Assert.Equal(80, await CountAsync("""
+                SELECT COUNT(*) FROM QuestionOptions o
+                JOIN Questions q ON q.QuestionId=o.QuestionId
+                JOIN Exams e ON e.ExamId=q.ExamId
+                WHERE e.Name IN ('IELTS-DIAG-01','VSTEP-DIAG-01')
+                  AND q.QuestionType='mcq' AND o.Rationale IS NOT NULL
+                """));
+            Assert.Equal(2, await CountAsync("""
+                SELECT COUNT(*) FROM ExamSectionAudio a
+                JOIN Exams e ON e.ExamId=a.ExamId
+                WHERE e.Name IN ('IELTS-DIAG-01','VSTEP-DIAG-01')
+                """));
+            Assert.Equal(8, await CountAsync("""
+                SELECT COUNT(*) FROM QuestionGroups g
+                JOIN Exams e ON e.ExamId=g.ExamId
+                WHERE e.Name IN ('IELTS-DIAG-01','VSTEP-DIAG-01')
+                  AND g.AudioStartMs IS NOT NULL AND g.AudioEndMs IS NOT NULL AND g.Transcript IS NOT NULL
+                """));
+            Assert.Equal(2, await CountAsync("""
+                SELECT COUNT(*) FROM Exams
+                WHERE Name IN ('IELTS-DIAG-01 Writing Extension','VSTEP-DIAG-01 Writing Extension')
+                  AND Purpose='writing_practice' AND SourceName='Free diagnostic benchmark'
+                """));
+            Assert.Equal(4, await CountAsync("""
+                SELECT COUNT(*) FROM Questions q
+                JOIN Exams e ON e.ExamId=q.ExamId
+                WHERE e.Name IN ('IELTS-DIAG-01 Writing Extension','VSTEP-DIAG-01 Writing Extension')
+                  AND q.QuestionType='free_response' AND q.MinWords IS NOT NULL
+                """));
+            Assert.Equal(8, await CountAsync("""
+                SELECT COUNT(*) FROM GradingCriteria c
+                JOIN Exams e ON e.CertId=c.CertId
+                JOIN Skills s ON s.SkillId=c.SkillId AND s.CertId=e.CertId AND s.Code='WRIT'
+                WHERE e.Name IN ('IELTS-DIAG-01 Writing Extension','VSTEP-DIAG-01 Writing Extension')
+                """));
+            Assert.Equal(2, await CountAsync("""
+                SELECT COUNT(*) FROM PathTemplates
+                WHERE Name IN ('IELTS Diagnostic Remedial Sprint','VSTEP Diagnostic Remedial Sprint')
+                """));
+            Assert.Equal(8, await CountAsync("""
+                SELECT COUNT(*) FROM Lessons
+                WHERE Title IN (
+                  'IELTS Listening: Follow Signposts and Corrections',
+                  'IELTS Reading: Paraphrase Claims and Match Evidence',
+                  'IELTS Task 1: Select and Describe Trends',
+                  'IELTS Writing: Coherence, Cohesion, and Position',
+                  'VSTEP Listening: Catch Purpose, Time, and Changes',
+                  'VSTEP Reading: Locate Paraphrases and References',
+                  'VSTEP Writing: Organise a Formal Email',
+                  'VSTEP Writing: Build and Support an Argument')
+                """));
+            Assert.Equal(32, await CountAsync("""
+                SELECT COUNT(*) FROM LessonCards c
+                JOIN Lessons l ON l.LessonId=c.LessonId
+                WHERE l.Title IN (
+                  'IELTS Listening: Follow Signposts and Corrections',
+                  'IELTS Reading: Paraphrase Claims and Match Evidence',
+                  'IELTS Task 1: Select and Describe Trends',
+                  'IELTS Writing: Coherence, Cohesion, and Position',
+                  'VSTEP Listening: Catch Purpose, Time, and Changes',
+                  'VSTEP Reading: Locate Paraphrases and References',
+                  'VSTEP Writing: Organise a Formal Email',
+                  'VSTEP Writing: Build and Support an Argument')
+                """));
+            Assert.Equal(8, await CountAsync("""
+                SELECT COUNT(*) FROM Lessons l
+                WHERE l.Title IN (
+                  'IELTS Listening: Follow Signposts and Corrections',
+                  'IELTS Reading: Paraphrase Claims and Match Evidence',
+                  'IELTS Task 1: Select and Describe Trends',
+                  'IELTS Writing: Coherence, Cohesion, and Position',
+                  'VSTEP Listening: Catch Purpose, Time, and Changes',
+                  'VSTEP Reading: Locate Paraphrases and References',
+                  'VSTEP Writing: Organise a Formal Email',
+                  'VSTEP Writing: Build and Support an Argument')
+                  AND (SELECT COUNT(*) FROM LessonCards c WHERE c.LessonId=l.LessonId)=4
+                  AND (SELECT COUNT(DISTINCT CardType) FROM LessonCards c WHERE c.LessonId=l.LessonId)=4
+                """));
+            Assert.Equal(8, await CountAsync("""
+                SELECT COUNT(*) FROM PathModules m
+                JOIN PathTemplates t ON t.TemplateId=m.TemplateId AND t.CertId=m.CertId
+                WHERE t.Name IN ('IELTS Diagnostic Remedial Sprint','VSTEP Diagnostic Remedial Sprint')
+                """));
+            Assert.Equal(4, await CountAsync("""
+                SELECT COUNT(*) FROM PathModuleItems i
+                JOIN PathModules m ON m.ModuleId=i.ModuleId
+                JOIN PathTemplates t ON t.TemplateId=m.TemplateId AND t.CertId=m.CertId
+                WHERE t.Name IN ('IELTS Diagnostic Remedial Sprint','VSTEP Diagnostic Remedial Sprint')
+                  AND i.ItemType='ai_task' AND i.IsPremiumOnly=0
+                """));
+
             // 1. Verify demo accounts
             await using (var cmd = conn.CreateCommand())
             {
