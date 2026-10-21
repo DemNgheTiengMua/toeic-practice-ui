@@ -305,12 +305,19 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
         var userId = await SeedLearnerAsync(certCode);
         var attempt = await CreateEngine().CreateAttemptAsync(userId, certId, examId, 120);
         var engine = CreateEngine();
+        await database.SqlAsync($"""
+            UPDATE ExamAttempts
+            SET StartedAt = DATEADD(minute, -90, SYSDATETIMEOFFSET()),
+                ExpiresAt = DATEADD(minute, 30, SYSDATETIMEOFFSET())
+            WHERE AttemptId = {attempt.AttemptId};
+            """);
 
-        await engine.SubmitAttemptAsync(
+        await engine.SaveDraftAsync(
             attempt.AttemptId,
             userId,
-            isAutoSubmit: false,
-            finalDrafts: [new AttemptFinalDraft(freeResponseQuestionId, "A complete written response.")]);
+            freeResponseQuestionId,
+            "A complete written response.");
+        await engine.SubmitAttemptAsync(attempt.AttemptId, userId, isAutoSubmit: false);
         var submitted = await engine.GetAttemptResultAsync(attempt.AttemptId, userId);
         Assert.Equal(AttemptStatus.Submitted, submitted.Status);
         Assert.Equal(200, submitted.TotalScore);
