@@ -838,4 +838,29 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
         Assert.Null(lessonStep.Score);
         Assert.NotNull(lessonStep.CompletedAt);
     }
+    [Fact]
+    public async Task GeneratePathAsync_WithArchiveExisting_ResetsPreviousActivePath()
+    {
+        var certCode = Unique("LPARCH");
+        await SeedPathFixtureAsync(certCode);
+        var userId = await SeedLearnerAsync(certCode);
+        var (service, learners, _, db) = CreateServices();
+
+        // First path creation
+        var firstPath = await service.GeneratePathAsync(userId);
+        Assert.NotNull(firstPath);
+
+        var activeBefore = await db.LearnerPaths.SingleAsync(p => p.LearnerPathId == firstPath.LearnerPathId);
+        Assert.Equal("active", activeBefore.Status);
+
+        // Generate again with archiveExisting: true
+        var secondPath = await service.GeneratePathAsync(userId, archiveExisting: true);
+        Assert.NotEqual(firstPath.LearnerPathId, secondPath.LearnerPathId);
+
+        await db.Entry(activeBefore).ReloadAsync();
+        Assert.Equal("reset", activeBefore.Status);
+
+        var activeAfter = await db.LearnerPaths.SingleAsync(p => p.LearnerPathId == secondPath.LearnerPathId);
+        Assert.Equal("active", activeAfter.Status);
+    }
 }

@@ -50,7 +50,19 @@ public sealed record PlacementTakeViewDto(
     int FlaggedCount,
     AttemptQuestionDto CurrentQuestion,
     IReadOnlyList<NavigatorItemDto> Navigator,
-    bool IsAutoSubmitted);
+    bool IsAutoSubmitted,
+    IReadOnlyList<AttemptQuestionDto>? Questions = null,
+    IReadOnlyList<AttemptPhaseDto>? Phases = null);
+
+public sealed record SavePlacementDraftRequestDto(
+    int QuestionId,
+    string? ResponseText);
+
+public sealed record SavePlacementDraftResponseDto(
+    int FreeResponseId,
+    int QuestionId,
+    DateTimeOffset SavedAt,
+    int WordCount);
 
 public sealed record SubmitPlacementTestRequest(
     bool IsAutoSubmit = false);
@@ -89,7 +101,24 @@ public sealed record PlacementResultViewDto(
     List<PlacementSkillScoreInfoDto> SkillScores,
     string? WeakerSkillName,
     string? BandNote,
-    bool IsAutoSubmitted = false);
+    bool IsAutoSubmitted = false,
+    int FreeResponseCount = 0,
+    int GradedFreeResponseCount = 0,
+    int FailedFreeResponseCount = 0,
+    bool IsGraded = true);
+
+public sealed record PlacementGradingStatusDto(
+    int PlacementId,
+    int AttemptId,
+    bool IsGraded,
+    int FreeResponseCount,
+    int GradedFreeResponseCount,
+    int FailedFreeResponseCount,
+    int? TotalScore,
+    string? BandCode,
+    string? BandName,
+    IReadOnlyList<PlacementSkillScoreInfoDto> SkillScores,
+    string StageDescriptor);
 
 public sealed record TargetBandOptionDto(
     string Code,

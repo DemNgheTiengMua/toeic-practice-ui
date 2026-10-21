@@ -48,7 +48,9 @@ public sealed record PlacementTakeView(
     int FlaggedCount,
     AttemptQuestionInfo CurrentQuestion,
     List<NavigatorItem> Navigator,
-    bool IsAutoSubmitted);
+    bool IsAutoSubmitted,
+    IReadOnlyList<AttemptQuestionInfo>? Questions = null,
+    IReadOnlyList<AttemptPhaseInfo>? Phases = null);
 
 public sealed record PlacementSkillScoreInfo(
     int SkillId,
@@ -84,7 +86,24 @@ public sealed record PlacementResultView(
     List<PlacementSkillScoreInfo> SkillScores,
     string? WeakerSkillName,
     string? BandNote,
-    bool IsAutoSubmitted = false);
+    bool IsAutoSubmitted = false,
+    int FreeResponseCount = 0,
+    int GradedFreeResponseCount = 0,
+    int FailedFreeResponseCount = 0,
+    bool IsGraded = true);
+
+public sealed record PlacementGradingStatusView(
+    int PlacementId,
+    int AttemptId,
+    bool IsGraded,
+    int FreeResponseCount,
+    int GradedFreeResponseCount,
+    int FailedFreeResponseCount,
+    int? TotalScore,
+    string? BandCode,
+    string? BandName,
+    IReadOnlyList<PlacementSkillScoreInfo> SkillScores,
+    string StageDescriptor);
 
 public sealed record TargetBandOption(
     string Code,

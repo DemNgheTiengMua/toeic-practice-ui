@@ -31,7 +31,7 @@ public static class LearningPathEndpoints
         {
             try
             {
-                var view = await service.GeneratePathAsync(CurrentUserId(http), request?.TargetBandCode, cancellationToken);
+                var view = await service.GeneratePathAsync(CurrentUserId(http), request?.TargetBandCode, cancellationToken, request?.ArchiveExisting ?? false);
                 return Results.Ok(ToSummaryDto(view));
             }
             catch (LearningPathException ex) when (ex.Code == LearningPathException.PathAlreadyActive)

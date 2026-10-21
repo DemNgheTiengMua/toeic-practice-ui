@@ -32,7 +32,11 @@ public interface IPlacementService
 
     Task<PlacementTakeView> GetPlacementTakeAsync(int userId, int placementId, int? questionDisplayOrder, CancellationToken cancellationToken = default);
 
-    Task<SaveAttemptAnswerResult> SaveAnswerAsync(int userId, int placementId, int questionId, int? selectedOptionId, bool isFlagged, CancellationToken cancellationToken = default);
+    Task<SaveAttemptAnswerResult> SaveAnswerAsync(int userId, int placementId, int questionId, int? selectedOptionId, bool isFlagged, CancellationToken cancellationToken = default, string? responseText = null);
+
+    Task<SaveAttemptDraftResult> SaveDraftAsync(int userId, int placementId, int questionId, string? responseText, CancellationToken cancellationToken = default);
+
+    Task<PlacementGradingStatusView> GetGradingStatusAsync(int userId, int placementId, CancellationToken cancellationToken = default);
 
     Task<PlacementResultView> SubmitPlacementTestAsync(int userId, int placementId, bool isAutoSubmit, CancellationToken cancellationToken = default);
 
@@ -273,7 +277,9 @@ public sealed class PlacementService(
             take.FlaggedCount,
             take.CurrentQuestion,
             take.Navigator.ToList(),
-            take.IsAutoSubmitted);
+            take.IsAutoSubmitted,
+            take.Questions,
+            take.Phases);
     }
 
     public async Task<SaveAttemptAnswerResult> SaveAnswerAsync(
@@ -282,7 +288,8 @@ public sealed class PlacementService(
         int questionId,
         int? selectedOptionId,
         bool isFlagged,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        string? responseText = null)
     {
         var placement = await db.PlacementTests
             .Include(p => p.ExamAttempt)
@@ -309,7 +316,8 @@ public sealed class PlacementService(
                 {
                     await SyncPlacementAfterAttemptSubmissionAsync(placement.PlacementId, cancellationToken);
                 },
-                cancellationToken);
+                cancellationToken,
+                responseText);
         }
         catch (AttemptEngineException ex) when (ex.Code == AttemptEngineException.AttemptExpired)
         {
@@ -319,6 +327,107 @@ public sealed class PlacementService(
         {
             throw MapPlacementException(ex);
         }
+    }
+
+    public async Task<SaveAttemptDraftResult> SaveDraftAsync(
+        int userId,
+        int placementId,
+        int questionId,
+        string? responseText,
+        CancellationToken cancellationToken = default)
+    {
+        var placement = await db.PlacementTests
+            .Include(p => p.ExamAttempt)
+            .SingleOrDefaultAsync(p => p.PlacementId == placementId && p.UserId == userId, cancellationToken)
+            ?? throw new PlacementException(PlacementException.PlacementNotFound, $"Placement test {placementId} not found.");
+
+        if (placement.Status != PlacementStatus.InProgress.ToCode())
+        {
+            throw new PlacementException(PlacementException.PlacementNotActive, "Placement test is not in progress.");
+        }
+
+        var attempt = placement.ExamAttempt
+            ?? throw new PlacementException(PlacementException.PlacementNotFound, $"Exam attempt for placement test {placementId} not found.");
+
+        try
+        {
+            return await _attemptEngine.SaveDraftAsync(attempt.AttemptId, userId, questionId, responseText, cancellationToken);
+        }
+        catch (AttemptEngineException ex)
+        {
+            throw MapPlacementException(ex);
+        }
+    }
+
+    public async Task<PlacementGradingStatusView> GetGradingStatusAsync(int userId, int placementId, CancellationToken cancellationToken = default)
+    {
+        var placement = await db.PlacementTests
+            .Include(p => p.ExamAttempt)
+            .Include(p => p.Cert)
+            .SingleOrDefaultAsync(p => p.PlacementId == placementId && p.UserId == userId, cancellationToken)
+            ?? throw new PlacementException(PlacementException.PlacementNotFound, $"Placement test {placementId} not found.");
+
+        var attempt = placement.ExamAttempt
+            ?? await db.ExamAttempts.SingleOrDefaultAsync(a => a.AttemptId == placement.AttemptId, cancellationToken)
+            ?? throw new PlacementException(PlacementException.PlacementNotFound, $"Exam attempt for placement test {placementId} not found.");
+
+        var (freeResponseCount, gradedFreeResponseCount, failedFreeResponseCount, isGraded) =
+            await GetAttemptGradingCountsAsync(attempt.AttemptId, attempt.Status, cancellationToken);
+
+        var skillScores = await db.AttemptSkillScores
+            .Where(s => s.AttemptId == attempt.AttemptId)
+            .Include(s => s.Skill)
+            .OrderBy(s => s.Skill.DisplayOrder)
+            .ToListAsync(cancellationToken);
+
+        var answers = await db.AttemptAnswers
+            .Where(a => a.AttemptId == attempt.AttemptId)
+            .Include(a => a.Question).ThenInclude(q => q.Section)
+            .ToListAsync(cancellationToken);
+
+        var skillInfos = skillScores.Select(sc =>
+        {
+            int totalInSkill = answers.Count(a => a.Question.Section.SkillId == sc.SkillId);
+            return new PlacementSkillScoreInfo(
+                sc.SkillId,
+                sc.Skill.Code,
+                sc.Skill.Name,
+                sc.RawScore,
+                totalInSkill,
+                sc.ScaledScore,
+                attempt.BandCode);
+        }).ToList();
+
+        string stageDescriptor;
+        if (isGraded)
+        {
+            stageDescriptor = "Complete";
+        }
+        else if (gradedFreeResponseCount == 0)
+        {
+            stageDescriptor = "Evaluating grammar structure...";
+        }
+        else if (gradedFreeResponseCount < freeResponseCount)
+        {
+            stageDescriptor = "Checking coherence & task achievement...";
+        }
+        else
+        {
+            stageDescriptor = "Compiling mentor report...";
+        }
+
+        return new PlacementGradingStatusView(
+            placement.PlacementId,
+            attempt.AttemptId,
+            isGraded,
+            freeResponseCount,
+            gradedFreeResponseCount,
+            failedFreeResponseCount,
+            attempt.TotalScore,
+            attempt.BandCode,
+            null,
+            skillInfos,
+            stageDescriptor);
     }
 
     public async Task<PlacementResultView> SubmitPlacementTestAsync(int userId, int placementId, bool isAutoSubmit, CancellationToken cancellationToken = default)
@@ -651,6 +760,9 @@ public sealed class PlacementService(
             ? Math.Max(1, (int)(attempt.SubmittedAt.Value - attempt.StartedAt).TotalMinutes)
             : attempt.Exam.DurationMinutes;
 
+        var (freeResponseCount, gradedFreeResponseCount, failedFreeResponseCount, isGraded) =
+            await GetAttemptGradingCountsAsync(attempt.AttemptId, attempt.Status, cancellationToken);
+
         return new PlacementResultView(
             placement.PlacementId,
             attempt.AttemptId,
@@ -667,6 +779,31 @@ public sealed class PlacementService(
             skillInfos,
             weakerSkillName,
             bandNote,
-            attempt.IsAutoSubmitted);
+            attempt.IsAutoSubmitted,
+            freeResponseCount,
+            gradedFreeResponseCount,
+            failedFreeResponseCount,
+            isGraded);
+    }
+    private async Task<(int Total, int Graded, int Failed, bool IsGraded)> GetAttemptGradingCountsAsync(
+        int attemptId,
+        string attemptStatus,
+        CancellationToken cancellationToken)
+    {
+        var gradingStates = await db.AiGradings
+            .AsNoTracking()
+            .Where(g => g.FreeResponse.AttemptId == attemptId)
+            .Select(g => g.Status)
+            .ToListAsync(cancellationToken);
+
+        var total = await db.FreeResponses
+            .CountAsync(fr => fr.AttemptId == attemptId, cancellationToken);
+        var graded = gradingStates.Count(s => s == AiGradingStatus.Done.ToCode());
+        var failed = gradingStates.Count(s => s == AiGradingStatus.Failed.ToCode());
+        var isGraded = attemptStatus == AttemptStatus.Graded.ToCode()
+            || total == 0
+            || (graded + failed >= total && total > 0);
+
+        return (total, graded, failed, isGraded);
     }
 }

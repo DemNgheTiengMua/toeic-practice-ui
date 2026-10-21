@@ -757,6 +757,12 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
     public Task<SaveAnswerResultDto> SavePlacementAnswerAsync(int placementId, int questionId, SaveAnswerRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
         PostAuthorizedAsync<SaveAnswerRequest, SaveAnswerResultDto>($"api/learner/placement/take/{placementId}/answers/{questionId}", request, bearerToken, cancellationToken);
 
+    public Task<SavePlacementDraftResponseDto> SavePlacementDraftAsync(int placementId, SavePlacementDraftRequestDto request, string bearerToken, CancellationToken cancellationToken = default) =>
+        PostAuthorizedAsync<SavePlacementDraftRequestDto, SavePlacementDraftResponseDto>($"api/learner/placement/take/{placementId}/draft", request, bearerToken, cancellationToken);
+
+    public Task<PlacementGradingStatusDto> GetPlacementGradingStatusAsync(int placementId, string bearerToken, CancellationToken cancellationToken = default) =>
+        GetAuthorizedAsync<PlacementGradingStatusDto>($"api/learner/placement/result/{placementId}/status", bearerToken, cancellationToken);
+
     public Task<PlacementResultViewDto> SubmitPlacementTestAsync(int placementId, SubmitPlacementTestRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
         PostAuthorizedAsync<SubmitPlacementTestRequest, PlacementResultViewDto>($"api/learner/placement/take/{placementId}/submit", request, bearerToken, cancellationToken);
 
@@ -1389,6 +1395,12 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
 
     public Task<SaveAnswerResultDto> SavePlacementAnswerAsync(int placementId, int questionId, SaveAnswerRequest request, CancellationToken cancellationToken = default) =>
         SavePlacementAnswerAsync(placementId, questionId, request, string.Empty, cancellationToken);
+
+    public Task<SavePlacementDraftResponseDto> SavePlacementDraftAsync(int placementId, SavePlacementDraftRequestDto request, CancellationToken cancellationToken = default) =>
+        SavePlacementDraftAsync(placementId, request, string.Empty, cancellationToken);
+
+    public Task<PlacementGradingStatusDto> GetPlacementGradingStatusAsync(int placementId, CancellationToken cancellationToken = default) =>
+        GetPlacementGradingStatusAsync(placementId, string.Empty, cancellationToken);
 
     public Task<PlacementResultViewDto> SubmitPlacementTestAsync(int placementId, SubmitPlacementTestRequest request, CancellationToken cancellationToken = default) =>
         SubmitPlacementTestAsync(placementId, request, string.Empty, cancellationToken);

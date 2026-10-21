@@ -107,7 +107,8 @@ public sealed record StartStepResultDto(
     int? AttemptId);
 
 public sealed record GenerateLearningPathRequest(
-    string? TargetBandCode = null);
+    string? TargetBandCode = null,
+    bool ArchiveExisting = false);
 
 public sealed record ResetLearningPathResultDto(
     bool Success);

@@ -10,7 +10,8 @@ public sealed class PlacementController(
     IPlacementClient api,
     CurrentUser currentUser,
     ILogger<PlacementController> logger,
-    ILearningPathClient? learningPathClient = null)
+    ILearningPathClient? learningPathClient = null,
+    IAiInsightsClient? insightsClient = null)
     : LearnerControllerBase(currentUser, logger)
 {
     [HttpGet("/placement")]
@@ -102,7 +103,7 @@ public sealed class PlacementController(
     {
         try
         {
-            var request = new SaveAnswerRequest(form.SelectedOptionId, form.IsFlagged);
+            var request = new SaveAnswerRequest(form.SelectedOptionId, form.IsFlagged, form.ResponseText);
             var result = await api.SavePlacementAnswerAsync(placementId, questionId, request, cancellationToken);
 
             return Json(new
@@ -128,6 +129,25 @@ public sealed class PlacementController(
         {
             logger.LogWarning(ex, "Failed to save answer for placement test {PlacementId}, question {QuestionId}", placementId, questionId);
             return StatusCode(ex.Status, new { error = ex.Detail ?? ex.Message, code = ex.Code });
+        }
+    }
+
+    [HttpPost("/placement/take/{placementId:int}/draft")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SaveDraft(
+        int placementId,
+        [FromBody] SavePlacementDraftRequestDto request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await api.SavePlacementDraftAsync(placementId, request, cancellationToken);
+            return Ok(result);
+        }
+        catch (ApiException ex)
+        {
+            logger.LogWarning(ex, "Failed to save placement draft for placement {PlacementId}, question {QuestionId}", placementId, request.QuestionId);
+            return StatusCode(ex.Status, new { code = ex.Code, message = ex.Detail ?? ex.Message });
         }
     }
 
@@ -159,7 +179,21 @@ public sealed class PlacementController(
         try
         {
             var result = await api.GetPlacementResultAsync(placementId, cancellationToken);
-            return View(new PlacementResultViewModel(result, TempData["ErrorMessage"] as string));
+
+            AiInsightDto? insight = null;
+            if (result.IsGraded && insightsClient != null)
+            {
+                try
+                {
+                    insight = await insightsClient.GetExamInsightAsync(result.AttemptId, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "Could not pre-fetch AI insight for placement attempt {AttemptId}", result.AttemptId);
+                }
+            }
+
+            return View(new PlacementResultViewModel(result, TempData["ErrorMessage"] as string, insight));
         }
         catch (ApiException ex) when (ex.Code == ApiError.Codes.PlacementNotFinished)
         {
@@ -177,6 +211,21 @@ public sealed class PlacementController(
             logger.LogError(ex, "Failed to load result for placement test {PlacementId}", placementId);
             TempData["ShellError"] = "Could not load placement test results.";
             return RedirectToAction(nameof(Index));
+        }
+    }
+
+    [HttpGet("/placement/result/{placementId:int}/status")]
+    public async Task<IActionResult> Status(int placementId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var status = await api.GetPlacementGradingStatusAsync(placementId, cancellationToken);
+            return Json(status);
+        }
+        catch (ApiException ex)
+        {
+            logger.LogWarning(ex, "Failed to get placement grading status for placement {PlacementId}", placementId);
+            return StatusCode(ex.Status, new { code = ex.Code, message = ex.Detail ?? ex.Message });
         }
     }
 
@@ -217,7 +266,7 @@ public sealed class PlacementController(
             {
                 try
                 {
-                    await learningPathClient.GenerateLearningPathAsync(new GenerateLearningPathRequest(form.TargetBandCode), cancellationToken);
+                    await learningPathClient.GenerateLearningPathAsync(new GenerateLearningPathRequest(form.TargetBandCode, ArchiveExisting: true), cancellationToken);
                 }
                 catch (ApiException ex)
                 {

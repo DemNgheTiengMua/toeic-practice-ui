@@ -97,7 +97,18 @@ public static class PlacementEndpoints
                     take.CurrentQuestion.Passage,
                     take.CurrentQuestion.Options.Select(o => new AttemptOptionDto(o.OptionId, o.Label, o.Text)).ToList(),
                     take.CurrentQuestion.SelectedOptionId,
-                    take.CurrentQuestion.IsFlagged);
+                    take.CurrentQuestion.IsFlagged,
+                    take.CurrentQuestion.QuestionType,
+                    take.CurrentQuestion.MinWords,
+                    take.CurrentQuestion.MaxWords,
+                    take.CurrentQuestion.PrepSeconds,
+                    take.CurrentQuestion.ResponseSeconds,
+                    take.CurrentQuestion.ResponseText,
+                    take.CurrentQuestion.ResponseAudioPath,
+                    take.CurrentQuestion.ResponseDurationMs,
+                    take.CurrentQuestion.DraftSavedAt,
+                    take.CurrentQuestion.SkillDurationMinutes,
+                    take.CurrentQuestion.SkillDisplayOrder);
 
                 var navigator = take.Navigator.Select(n => new NavigatorItemDto(
                     n.QuestionId,
@@ -108,6 +119,47 @@ public static class PlacementEndpoints
                     n.IsAnswered,
                     n.IsFlagged,
                     n.IsCurrent)).ToList();
+
+                var allQDtos = take.Questions?.Select(q => new AttemptQuestionDto(
+                    q.QuestionId,
+                    q.DisplayOrder,
+                    q.TotalQuestions,
+                    q.SectionId,
+                    q.SectionCode,
+                    q.SectionName,
+                    q.SkillCode,
+                    q.SkillName,
+                    q.Modality.MapTo<ModalityDto>(),
+                    q.Stem,
+                    q.ImagePath,
+                    q.ImageAlt,
+                    q.AudioPath,
+                    q.AudioStartMs,
+                    q.AudioEndMs,
+                    q.Transcript,
+                    q.Passage,
+                    q.Options.Select(o => new AttemptOptionDto(o.OptionId, o.Label, o.Text)).ToList(),
+                    q.SelectedOptionId,
+                    q.IsFlagged,
+                    q.QuestionType,
+                    q.MinWords,
+                    q.MaxWords,
+                    q.PrepSeconds,
+                    q.ResponseSeconds,
+                    q.ResponseText,
+                    q.ResponseAudioPath,
+                    q.ResponseDurationMs,
+                    q.DraftSavedAt,
+                    q.SkillDurationMinutes,
+                    q.SkillDisplayOrder)).ToList();
+
+                var phaseDtos = take.Phases?.Select(p => new AttemptPhaseDto(
+                    p.SkillId,
+                    p.SkillCode,
+                    p.SkillName,
+                    p.SkillDisplayOrder,
+                    p.StartOffsetSeconds,
+                    p.DurationSeconds)).ToList();
 
                 return Results.Ok(new PlacementTakeViewDto(
                     take.PlacementId,
@@ -124,7 +176,9 @@ public static class PlacementEndpoints
                     take.FlaggedCount,
                     currentQ,
                     navigator,
-                    take.IsAutoSubmitted));
+                    take.IsAutoSubmitted,
+                    allQDtos,
+                    phaseDtos));
             }
             catch (PlacementException ex) when (ex.Code == PlacementException.PlacementNotFound)
             {
@@ -153,7 +207,8 @@ public static class PlacementEndpoints
                     questionId,
                     request.SelectedOptionId,
                     request.IsFlagged,
-                    cancellationToken);
+                    cancellationToken,
+                    request.ResponseText);
 
                 return Results.Ok(new SaveAnswerResultDto(
                     result.QuestionId,
@@ -183,6 +238,80 @@ public static class PlacementEndpoints
                 return Problem(StatusCodes.Status400BadRequest, "Invalid option", ApiError.Codes.Validation, ex.Message);
             }
         });
+
+                // Save Placement Draft
+        learner.MapPost("/placement/take/{placementId:int}/draft", async Task<IResult> (
+            int placementId,
+            [FromBody] SavePlacementDraftRequestDto request,
+            HttpContext http,
+            IPlacementService placementService,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var result = await placementService.SaveDraftAsync(
+                    CurrentUserId(http),
+                    placementId,
+                    request.QuestionId,
+                    request.ResponseText,
+                    cancellationToken);
+
+                return Results.Ok(new SavePlacementDraftResponseDto(
+                    result.FreeResponseId,
+                    result.QuestionId,
+                    result.SavedAt,
+                    result.WordCount));
+            }
+            catch (PlacementException ex) when (ex.Code == PlacementException.PlacementNotFound)
+            {
+                return Problem(StatusCodes.Status404NotFound, "Placement test not found", ApiError.Codes.PlacementNotFound, ex.Message);
+            }
+            catch (PlacementException ex) when (ex.Code == PlacementException.PlacementNotActive)
+            {
+                return Problem(StatusCodes.Status400BadRequest, "Placement test not active", ApiError.Codes.PlacementNotActive, ex.Message);
+            }
+            catch (PlacementException ex) when (ex.Code == PlacementException.PlacementExpired)
+            {
+                return Problem(StatusCodes.Status410Gone, "Placement test expired", ApiError.Codes.PlacementExpired, ex.Message);
+            }
+        });
+
+        // Placement Grading Status
+        learner.MapGet("/placement/result/{placementId:int}/status", async Task<IResult> (
+            int placementId,
+            HttpContext http,
+            IPlacementService placementService,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var status = await placementService.GetGradingStatusAsync(CurrentUserId(http), placementId, cancellationToken);
+                return Results.Ok(new PlacementGradingStatusDto(
+                    status.PlacementId,
+                    status.AttemptId,
+                    status.IsGraded,
+                    status.FreeResponseCount,
+                    status.GradedFreeResponseCount,
+                    status.FailedFreeResponseCount,
+                    status.TotalScore,
+                    status.BandCode,
+                    status.BandName,
+                    status.SkillScores.Select(s => new PlacementSkillScoreInfoDto(
+                        s.SkillId,
+                        s.SkillCode,
+                        s.SkillName,
+                        s.RawScore,
+                        s.TotalQuestions,
+                        s.ScaledScore,
+                        s.BandCode)).ToList(),
+                    status.StageDescriptor));
+            }
+            catch (PlacementException ex) when (ex.Code == PlacementException.PlacementNotFound)
+            {
+                return Problem(StatusCodes.Status404NotFound, "Placement test not found", ApiError.Codes.PlacementNotFound, ex.Message);
+            }
+        });
+
 
         // Submit Placement Test
         learner.MapPost("/placement/take/{placementId:int}/submit", async Task<IResult> (
@@ -285,5 +414,9 @@ public static class PlacementEndpoints
             result.SkillScores.Select(s => new PlacementSkillScoreInfoDto(s.SkillId, s.SkillCode, s.SkillName, s.RawScore, s.TotalQuestions, s.ScaledScore, s.BandCode)).ToList(),
             result.WeakerSkillName,
             result.BandNote,
-            result.IsAutoSubmitted);
+            result.IsAutoSubmitted,
+            result.FreeResponseCount,
+            result.GradedFreeResponseCount,
+            result.FailedFreeResponseCount,
+            result.IsGraded);
 }

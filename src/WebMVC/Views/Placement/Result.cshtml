@@ -5,6 +5,7 @@
     var result = Model.Result;
     var listSkill = result.SkillScores.FirstOrDefault(s => s.SkillCode == "LIST" || s.SkillName.Contains("Listening", StringComparison.OrdinalIgnoreCase));
     var readSkill = result.SkillScores.FirstOrDefault(s => s.SkillCode == "READ" || s.SkillName.Contains("Reading", StringComparison.OrdinalIgnoreCase));
+    var isAwaitingGrading = !result.IsGraded;
 }
 
 <div class="context-bar">
@@ -53,19 +54,35 @@
     </div>
   }
 
+  @if (isAwaitingGrading)
+  {
+    <section id="grading-status-card"
+             class="card"
+             role="status"
+             aria-live="polite"
+             data-status-url="/placement/result/@result.PlacementId/status">
+      <div class="card__body">
+        <strong id="grading-status-title">AI grading in progress</strong>
+        <p id="grading-status-message" class="text-sm no-margin mt-1">
+          Evaluating grammar structure and task achievement... Objective skill scores are available below.
+        </p>
+      </div>
+    </section>
+  }
+
   <div class="card">
     <div class="card__body stack">
       <div class="cefr">
         <div class="cefr__head">
-          <span class="cefr__current font-mono">@result.ResultBandCode</span>
-          <span>@result.TotalScore points · @result.ResultBandName level</span>
+          <span class="cefr__current font-mono">@(result.IsGraded ? result.ResultBandCode : "—")</span>
+          <span>@(result.IsGraded ? $"{result.TotalScore} points · {result.ResultBandName} level" : "Composite score pending AI grading")</span>
         </div>
         <div class="cefr__track" role="img" aria-label="Current band @result.ResultBandCode, score @result.TotalScore">
           @foreach (var band in result.CefrBands)
           {
             var classes = "cefr__band";
-            if (band.IsCurrent) classes += " is-current";
-            else if (band.IsReached) classes += " is-reached";
+            if (result.IsGraded && band.IsCurrent) classes += " is-current";
+            else if (result.IsGraded && band.IsReached) classes += " is-reached";
 
             var label = band.Code == "below_A1" ? "<A1" : band.Code;
             <span class="@classes font-mono">@label</span>
@@ -77,7 +94,7 @@
             <span class="cefr__tick font-mono">@band.MinTotal</span>
           }
         </div>
-        @if (!string.IsNullOrEmpty(result.BandNote))
+        @if (result.IsGraded && !string.IsNullOrEmpty(result.BandNote))
         {
           <p class="cefr__note">
             @result.BandNote
@@ -93,7 +110,7 @@
   <div class="grid-3">
     <div class="stat">
       <div class="stat__label">Total score</div>
-      <div class="stat__value font-mono">@result.TotalScore</div>
+      <div class="stat__value font-mono">@(result.IsGraded ? result.TotalScore.ToString() : "—")</div>
       <div class="stat__hint font-mono text-muted">out of @maxPossible</div>
     </div>
     <div class="stat">
@@ -108,12 +125,30 @@
     </div>
   </div>
 
-  @if (!string.IsNullOrEmpty(result.WeakerSkillName))
+  @if (result.IsGraded && !string.IsNullOrEmpty(result.WeakerSkillName))
   {
     <div class="alert alert--info">
       <strong>@result.WeakerSkillName is your weaker section.</strong>
       Your learning path will focus on areas where you have the largest score opportunity.
     </div>
+  }
+
+  <!-- Day-1 Quick-Win Challenge CTA -->
+  <div class="card card--callout">
+    <div class="card__body stack">
+      <div class="row row--between row--middle">
+        <div>
+          <h2 class="h3 m-0 mb-1">Your Diagnostic Baseline is Ready</h2>
+          <p class="text-muted no-margin">Kickstart your personalized remediation loop with a quick 5-minute targeted drill based on your placement weak areas.</p>
+        </div>
+        <a href="/learning-path" class="btn btn--primary btn--lg" id="day-1-challenge-cta">Start 5-Minute Challenge</a>
+      </div>
+    </div>
+  </div>
+
+  @if (result.IsGraded && Model.Insight != null)
+  {
+    <partial name="_AiInsightPanel" model='new WebMVC.Models.AiInsightPanelViewModel("attempt", result.AttemptId, Model.Insight)' />
   }
 
   <div class="card">
@@ -136,7 +171,7 @@
               <th scope="row">@s.SkillName</th>
               <td class="font-mono">@s.RawScore / @s.TotalQuestions</td>
               <td class="font-mono">@s.ScaledScore</td>
-              <td><span class="badge badge--muted font-mono">@(s.BandCode ?? result.ResultBandCode)</span></td>
+              <td><span class="badge badge--muted font-mono">@(s.BandCode ?? (result.IsGraded ? result.ResultBandCode : "Pending"))</span></td>
             </tr>
           }
         </tbody>
@@ -150,3 +185,52 @@
     </div>
   </div>
 </div>
+
+@if (isAwaitingGrading)
+{
+  <script>
+    (function () {
+      "use strict";
+      var card = document.getElementById("grading-status-card");
+      if (!card) return;
+
+      var message = document.getElementById("grading-status-message");
+      var title = document.getElementById("grading-status-title");
+      var intervalId;
+
+      async function refreshGradingStatus() {
+        try {
+          var response = await fetch(card.dataset.statusUrl, {
+            credentials: "same-origin",
+            headers: { "Accept": "application/json" },
+            cache: "no-store"
+          });
+          if (!response.ok) throw new Error("Status request failed.");
+
+          var status = await response.json();
+          if (status.isGraded) {
+            window.clearInterval(intervalId);
+            window.location.reload();
+            return;
+          }
+
+          var descriptor = status.stageDescriptor || "Evaluating responses...";
+          var pending = Math.max(0, status.freeResponseCount - status.gradedFreeResponseCount - status.failedFreeResponseCount);
+          if (status.failedFreeResponseCount > 0 && pending === 0) {
+            title.textContent = "Some responses could not be graded";
+            message.textContent = status.failedFreeResponseCount + " response(s) need grading service attention. Objective skill scores remain available below.";
+            window.clearInterval(intervalId);
+            return;
+          }
+
+          message.textContent = descriptor + " (" + status.gradedFreeResponseCount + "/" + status.freeResponseCount + " completed). Objective skill scores are available below.";
+        } catch (error) {
+          message.textContent = "Unable to refresh grading status. The page will try again shortly.";
+        }
+      }
+
+      intervalId = window.setInterval(refreshGradingStatus, 3000);
+      refreshGradingStatus();
+    })();
+  </script>
+}

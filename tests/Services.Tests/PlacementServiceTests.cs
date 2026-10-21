@@ -527,4 +527,62 @@ public sealed class PlacementServiceTests(DatabaseFixture database)
             service.GetPlacementResultAsync(userId, info.PlacementId));
         Assert.Equal(PlacementException.PlacementNotFinished, ex.Code);
     }
+    private async Task<(int certId, int examId, int writingQId)> SeedHybridPlacementFixtureAsync(string certCode)
+    {
+        await database.SqlAsync($"""
+            INSERT INTO Certificates (Code, Name, IsActive) VALUES ('{certCode}', N'Cert {certCode}', 1);
+            DECLARE @cert INT = SCOPE_IDENTITY();
+
+            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder) VALUES
+              (@cert, 'WRIT', N'Writing', 'writing', 1);
+            DECLARE @sW INT = SCOPE_IDENTITY();
+
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder) VALUES
+              (@sW, @cert, 'writing', 'W1', N'Writing Section', 1);
+            DECLARE @secW INT = SCOPE_IDENTITY();
+
+            INSERT INTO ScoreBands (CertId, Code, Name, MinTotal, MaxTotal, DisplayOrder) VALUES
+              (@cert, 'A1', N'Beginner', 0, 200, 1),
+              (@cert, 'B2', N'Upper intermediate', 201, 990, 2);
+
+            INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose, Description, QuestionCount) VALUES
+              (@cert, N'Hybrid Placement Test', 'published', 30, 'placement', N'Includes free response writing.', 1);
+            DECLARE @exam INT = SCOPE_IDENTITY();
+
+            INSERT INTO ScoreScales (CertId, SkillId, ExamId, RawScore, ScaledScore) VALUES
+              (@cert, @sW, @exam, 0, 100),
+              (@cert, @sW, @exam, 1, 200);
+
+            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @secW, 1);
+            DECLARE @grp INT = SCOPE_IDENTITY();
+
+            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder)
+            VALUES (@grp, @exam, @secW, @sW, N'Diagnostic writing prompt', 1, 'free_response', 1);
+            """);
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var cert = await db.Certificates.SingleAsync(c => c.Code == certCode);
+        var exam = await db.Exams.SingleAsync(e => e.CertId == cert.CertId && e.Name == "Hybrid Placement Test");
+        var q = await db.Questions.SingleAsync(q => q.ExamId == exam.ExamId);
+        return (cert.CertId, exam.ExamId, q.QuestionId);
+    }
+
+    [Fact]
+    public async Task SaveDraftAsync_SavesDraft_AndGetGradingStatusAsync_ReportsStatus()
+    {
+        var certCode = Unique("PC16");
+        var (_, examId, writingQId) = await SeedHybridPlacementFixtureAsync(certCode);
+        var userId = await SeedLearnerAsync(certCode);
+        var (service, _) = CreateServices();
+
+        var info = await service.StartPlacementTestAsync(userId, examId);
+
+        var draftResponse = await service.SaveDraftAsync(userId, info.PlacementId, writingQId, "Here is my diagnostic writing response text.");
+        Assert.Equal(writingQId, draftResponse.QuestionId);
+        Assert.Equal(7, draftResponse.WordCount);
+
+        var status = await service.GetGradingStatusAsync(userId, info.PlacementId);
+        Assert.Equal(info.PlacementId, status.PlacementId);
+        Assert.NotNull(status.StageDescriptor);
+    }
 }

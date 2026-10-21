@@ -579,6 +579,12 @@ public sealed class PlacementControllerTests
         public Task<PlacementTakeViewDto> GetPlacementTakeAsync(int placementId, int? questionDisplayOrder = null, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<PlacementTakeViewDto>(ExceptionToThrow) : Task.FromResult(PlacementTake!);
 
+        public Task<SavePlacementDraftResponseDto> SavePlacementDraftAsync(int placementId, SavePlacementDraftRequestDto request, CancellationToken cancellationToken = default) =>
+            ExceptionToThrow != null ? Task.FromException<SavePlacementDraftResponseDto>(ExceptionToThrow) : Task.FromResult(new SavePlacementDraftResponseDto(placementId, request.QuestionId, DateTimeOffset.UtcNow, request.ResponseText?.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length ?? 0));
+
+        public Task<PlacementGradingStatusDto> GetPlacementGradingStatusAsync(int placementId, CancellationToken cancellationToken = default) =>
+            ExceptionToThrow != null ? Task.FromException<PlacementGradingStatusDto>(ExceptionToThrow) : Task.FromResult(new PlacementGradingStatusDto(placementId, 1, true, 0, 0, 0, 800, "B2", "Vantage", Array.Empty<PlacementSkillScoreInfoDto>(), "Complete"));
+
         public Task<SaveAnswerResultDto> SavePlacementAnswerAsync(int placementId, int questionId, SaveAnswerRequest request, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<SaveAnswerResultDto>(ExceptionToThrow) : Task.FromResult(SaveAnswerResult!);
 

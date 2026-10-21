@@ -186,9 +186,23 @@ public sealed class AiGradingProcessor(
                 if (!anyPending)
                 {
                     var purpose = fr.Attempt.Exam.Purpose;
-                    if (purpose == ExamPurpose.Mock.ToCode())
+                    if (purpose == ExamPurpose.Mock.ToCode() || purpose == ExamPurpose.Placement.ToCode())
                     {
                         await _attemptEngine.FinalizeAiGradedAttemptAsync(fr.AttemptId, cancellationToken);
+                        if (purpose == ExamPurpose.Placement.ToCode())
+                        {
+                            var placement = await db.PlacementTests.FirstOrDefaultAsync(p => p.AttemptId == fr.AttemptId, cancellationToken);
+                            if (placement != null)
+                            {
+                                var finalizedAttempt = await db.ExamAttempts.FindAsync(new object[] { fr.AttemptId }, cancellationToken);
+                                if (finalizedAttempt != null)
+                                {
+                                    placement.TotalScore = finalizedAttempt.TotalScore;
+                                    placement.ResultBandCode = finalizedAttempt.BandCode;
+                                    await db.SaveChangesAsync(cancellationToken);
+                                }
+                            }
+                        }
                     }
                     else
                     {

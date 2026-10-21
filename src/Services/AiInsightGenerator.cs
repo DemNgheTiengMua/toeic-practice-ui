@@ -30,7 +30,9 @@ public record AiInsightGenerationRequest(
     int AttemptCount = 1,
     bool SimulateFailure = false,
     PreviousInsightSummary? PreviousInsight = null,
-    int? LearnerPathId = null
+    int? LearnerPathId = null,
+    IReadOnlyList<ErrorFingerprint>? ErrorFingerprints = null,
+    IReadOnlyList<WritingEvidence>? WritingEvidences = null
 );
 
 public record PreviousInsightSummary(
@@ -38,6 +40,31 @@ public record PreviousInsightSummary(
     string? Narrative,
     AiInsightTrend? Trend,
     DateTimeOffset CreatedAt
+);
+
+public record ErrorFingerprint(
+    string Stem,
+    string? ChosenOptionText,
+    string? CorrectOptionText,
+    string? Explanation,
+    bool WasFlagged,
+    string? CategoryName = null
+);
+
+public record WritingEvidence(
+    int QuestionId,
+    string Stem,
+    string? ResponseText,
+    int WordCount,
+    IReadOnlyList<WritingRubricScore> Scores,
+    string? AiComments
+);
+
+public record WritingRubricScore(
+    string CriterionName,
+    decimal Score,
+    decimal MaxScore,
+    string? Comment
 );
 
 public record InsightQuestionDetail(
@@ -294,6 +321,18 @@ public class FakeAiInsightGenerator : IAiInsightGenerator
             + $"**Competence vs. Luck**: {luckAnalysis}\n\n"
             + $"**Target Band Alignment**: {targetBandText}";
 
+        if (request.ErrorFingerprints is { Count: > 0 })
+        {
+            var fp = request.ErrorFingerprints[0];
+            narrative += $"\n\n**Error Diagnostics**: Analysis of error trap on \"{fp.Stem}\": You chose \"{fp.ChosenOptionText}\" while correct was \"{fp.CorrectOptionText}\". {fp.Explanation}";
+        }
+
+        if (request.WritingEvidences is { Count: > 0 })
+        {
+            var we = request.WritingEvidences[0];
+            narrative += $"\n\n**Writing Evaluation**: Prompt \"{we.Stem}\" ({we.WordCount} words): Your response \"{we.ResponseText}\". {we.AiComments}";
+        }
+
         return Task.FromResult(new AiInsightResult(
             Success: true,
             FailureReason: null,
@@ -485,6 +524,18 @@ public class FakeAiInsightGenerator : IAiInsightGenerator
             + $"**Progress & Trend**: {trendComparison}\n\n"
             + $"**Section Breakdown**: {sectionAnalysis}\n\n"
             + $"**Target Band Alignment**: {targetBandText}";
+
+        if (request.ErrorFingerprints is { Count: > 0 })
+        {
+            var fp = request.ErrorFingerprints[0];
+            narrative += $"\n\n**Error Diagnostics**: Analysis of error trap on \"{fp.Stem}\": You chose \"{fp.ChosenOptionText}\" while correct was \"{fp.CorrectOptionText}\". {fp.Explanation}";
+        }
+
+        if (request.WritingEvidences is { Count: > 0 })
+        {
+            var we = request.WritingEvidences[0];
+            narrative += $"\n\n**Writing Evaluation**: Prompt \"{we.Stem}\" ({we.WordCount} words): Your response \"{we.ResponseText}\". {we.AiComments}";
+        }
 
         return Task.FromResult(new AiInsightResult(
             Success: true,

@@ -878,4 +878,40 @@ public sealed class AiInsightServiceTests(DatabaseFixture database)
                 Recommendations: recommendations));
         }
     }
+    [Fact]
+    public async Task ExtractErrorFingerprints_PrioritizesFlaggedErrors_AndLowestCategoryAccuracy()
+    {
+        var certCode = Unique("INSERR");
+        var userId = await SeedLearnerAsync(certCode);
+        var (service, _) = CreateService();
+
+        var q1 = new Question { QuestionId = 1, Stem = "Question 1 stem", CategoryId = 10, Explanation = "Exp 1" };
+        var q2 = new Question { QuestionId = 2, Stem = "Question 2 stem", CategoryId = 20, Explanation = "Exp 2" };
+
+        var opt1 = new QuestionOption { OptionId = 101, QuestionId = 1, Text = "Opt 1 Wrong", IsCorrect = false };
+        var opt1Correct = new QuestionOption { OptionId = 102, QuestionId = 1, Text = "Opt 1 Correct", IsCorrect = true };
+        var opt2 = new QuestionOption { OptionId = 201, QuestionId = 2, Text = "Opt 2 Wrong", IsCorrect = false };
+        var opt2Correct = new QuestionOption { OptionId = 202, QuestionId = 2, Text = "Opt 2 Correct", IsCorrect = true };
+
+        var answers = new List<AttemptAnswer>
+        {
+            new AttemptAnswer { QuestionId = 1, SelectedOptionId = 101, IsCorrect = false, IsFlagged = true, Question = q1 },
+            new AttemptAnswer { QuestionId = 2, SelectedOptionId = 201, IsCorrect = false, IsFlagged = false, Question = q2 }
+        };
+
+        var allOptions = new List<QuestionOption> { opt1, opt1Correct, opt2, opt2Correct };
+        var catAccuracyRows = new List<vw_UserCategoryAccuracy>
+        {
+            new vw_UserCategoryAccuracy { UserId = userId, CategoryId = 20, Answered = 10, Correct = 2 },
+            new vw_UserCategoryAccuracy { UserId = userId, CategoryId = 10, Answered = 10, Correct = 8 }
+        };
+
+        var fingerprints = service.ExtractErrorFingerprints(answers, allOptions, catAccuracyRows);
+        Assert.Equal(2, fingerprints.Count);
+        // Flagged error should be first
+        Assert.True(fingerprints[0].WasFlagged);
+        Assert.Equal("Question 1 stem", fingerprints[0].Stem);
+        Assert.Equal("Opt 1 Wrong", fingerprints[0].ChosenOptionText);
+        Assert.Equal("Opt 1 Correct", fingerprints[0].CorrectOptionText);
+    }
 }

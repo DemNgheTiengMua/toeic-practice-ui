@@ -70,6 +70,47 @@ public sealed class ClaudeAiInsightGenerator : IAiInsightGenerator
                 prompt.AppendLine();
             }
 
+            if (request.ErrorFingerprints is { Count: > 0 })
+            {
+                prompt.AppendLine("[QUALITATIVE ERROR FINGERPRINTS & SECOND-GUESSING SIGNALS]");
+                foreach (var fp in request.ErrorFingerprints)
+                {
+                    var hesitation = fp.WasFlagged ? " [FLAGGED / HESITATION DETECTED]" : "";
+                    prompt.AppendLine($"- Stem: \"{fp.Stem}\"{hesitation}");
+                    prompt.AppendLine($"  Learner Chose: \"{fp.ChosenOptionText}\"");
+                    prompt.AppendLine($"  Correct Answer: \"{fp.CorrectOptionText}\"");
+                    if (!string.IsNullOrEmpty(fp.CategoryName))
+                        prompt.AppendLine($"  Category: {fp.CategoryName}");
+                    if (!string.IsNullOrEmpty(fp.Explanation))
+                        prompt.AppendLine($"  Trap Rationale: {fp.Explanation}");
+                }
+                prompt.AppendLine();
+            }
+
+            if (request.WritingEvidences is { Count: > 0 })
+            {
+                prompt.AppendLine("[LEARNER WRITING EXCERPTS & RUBRIC EVALUATION]");
+                foreach (var we in request.WritingEvidences)
+                {
+                    prompt.AppendLine($"- Prompt: \"{we.Stem}\" ({we.WordCount} words)");
+                    if (!string.IsNullOrEmpty(we.ResponseText))
+                    {
+                        var snippet = we.ResponseText.Length > 300 ? we.ResponseText[..300] + "..." : we.ResponseText;
+                        prompt.AppendLine($"  Learner Excerpt: \"{snippet}\"");
+                    }
+                    if (we.Scores.Count > 0)
+                    {
+                        var scoreList = string.Join(", ", we.Scores.Select(s => $"{s.CriterionName}: {s.Score}/{s.MaxScore}"));
+                        prompt.AppendLine($"  Rubric Scores: {scoreList}");
+                    }
+                    if (!string.IsNullOrEmpty(we.AiComments))
+                    {
+                        prompt.AppendLine($"  Examiner Comments: {we.AiComments}");
+                    }
+                }
+                prompt.AppendLine();
+            }
+
             prompt.AppendLine("Return a strictly valid JSON object with the following schema:");
             prompt.AppendLine("{");
             prompt.AppendLine("  \"narrative\": \"<3 to 4 detailed sentences: (1) Current standing and concrete score gap to target band; (2) Top strength category/section cited by name with accuracy; (3) Primary vulnerability category cited with exact error rate and diagnosed linguistic root cause; (4) Immediate tactical focus module to drill next>\",");

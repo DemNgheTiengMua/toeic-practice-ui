@@ -13,6 +13,9 @@
         .GroupBy(n => new { n.SectionId, n.SectionCode, n.Modality })
         .OrderBy(g => g.Min(x => x.DisplayOrder))
         .ToList();
+
+    var qAudioKey = (q.AudioPath ?? "") + (q.AudioStartMs.HasValue || q.AudioEndMs.HasValue ? $":{q.AudioStartMs ?? 0}-{q.AudioEndMs ?? 0}" : "");
+    var phases = take.Phases ?? new List<AttemptPhaseDto>();
 }
 <!DOCTYPE html>
 <html lang="en">
@@ -24,6 +27,14 @@
   <link rel="stylesheet" href="~/css/tokens.css">
   <link rel="stylesheet" href="~/css/base.css">
   <link rel="stylesheet" href="~/css/components.css">
+  <style>
+    .phase-progress { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); border: 2px solid #14181d; margin-bottom: var(--space-4); }
+    .phase-progress__item { display: flex; justify-content: space-between; gap: var(--space-3); padding: var(--space-3); border-right: 1px solid #ccd2d6; }
+    .phase-progress__item:last-child { border-right: 0; }
+    .phase-progress__item[aria-current="step"] { background: #14181d; color: #fff; }
+    .phase-progress__timer { font-family: "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums; }
+    .writing-editor { border: 2px solid #14181d; border-radius: 0; width: 100%; padding: 0.75rem; font-family: inherit; font-size: 1rem; resize: vertical; box-sizing: border-box; }
+  </style>
 </head>
 <body>
   <div class="app-shell">
@@ -49,6 +60,19 @@
         @if (!string.IsNullOrEmpty(Model.ErrorMessage))
         {
           <div class="alert alert--danger mb-4" role="alert">@Model.ErrorMessage</div>
+        }
+
+        @if (phases.Count > 1)
+        {
+          <section id="phase-progress" class="phase-progress" aria-label="Exam phases">
+            @foreach (var phase in phases)
+            {
+              <div class="phase-progress__item" data-phase-skill="@phase.SkillCode" aria-current="@(q.SkillCode == phase.SkillCode ? "step" : "false")">
+                <strong>@phase.SkillName</strong>
+                <span class="phase-progress__timer" data-phase-timer="@phase.SkillCode">--:--</span>
+              </div>
+            }
+          </section>
         }
 
         <div class="exam-layout">
@@ -102,18 +126,35 @@
                 @q.Stem
               </p>
 
-              <div class="option-list" role="radiogroup" aria-label="Answer for question @q.DisplayOrder">
-                @foreach (var opt in q.Options)
-                {
-                  var isSelected = opt.OptionId == q.SelectedOptionId;
-                  <label class="option @(isSelected ? "is-selected" : "")">
-                    <input class="option__input js-option-radio" type="radio" name="selectedOptionId"
-                           value="@opt.OptionId" @(isSelected ? "checked" : "")>
-                    <span class="option__marker font-mono">@opt.Label</span>
-                    <span class="option__text">@opt.Text</span>
-                  </label>
-                }
-              </div>
+              @if (q.QuestionType == "free_response" || q.QuestionType == "writing")
+              {
+                <div id="writing-response-pane" class="stack mt-3">
+                  <label for="writing-editor"><strong>Your response</strong></label>
+                  <textarea id="writing-editor" class="writing-editor" aria-describedby="writing-counts" data-question-id="@q.QuestionId" rows="8">@q.ResponseText</textarea>
+                  <div id="writing-counts" class="row row--between text-sm text-muted">
+                    <span><strong id="word-count">0</strong> words</span>
+                    <span><strong id="character-count">0</strong> characters</span>
+                  </div>
+                  <div class="row" style="gap: var(--space-2);">
+                    <button type="button" class="btn btn--secondary" id="btn-save-writing-draft">Save draft</button>
+                  </div>
+                </div>
+              }
+              else
+              {
+                <div class="option-list" role="radiogroup" aria-label="Answer for question @q.DisplayOrder">
+                  @foreach (var opt in q.Options)
+                  {
+                    var isSelected = opt.OptionId == q.SelectedOptionId;
+                    <label class="option @(isSelected ? "is-selected" : "")">
+                      <input class="option__input js-option-radio" type="radio" name="selectedOptionId"
+                             value="@opt.OptionId" @(isSelected ? "checked" : "")>
+                      <span class="option__marker font-mono">@opt.Label</span>
+                      <span class="option__text">@opt.Text</span>
+                    </label>
+                  }
+                </div>
+              }
             </div>
 
             <!-- Navigation Row -->
@@ -162,7 +203,10 @@
                     var itemsInGrp = grp.OrderBy(x => x.DisplayOrder).ToList();
                     var minOrd = itemsInGrp.First().DisplayOrder;
                     var maxOrd = itemsInGrp.Last().DisplayOrder;
-                    var title = grp.Key.Modality == ModalityDto.Listening ? "Listening" : "Reading";
+                    var title = grp.Key.Modality == ModalityDto.Listening ? "Listening"
+                              : grp.Key.Modality == ModalityDto.Reading ? "Reading"
+                              : grp.Key.Modality == ModalityDto.Writing ? "Writing"
+                              : grp.Key.Modality.ToString();
 
                     <div class="navigator__part">
                       <div class="navigator__part-head row row--between">
@@ -259,6 +303,101 @@
       const modalAnsweredCount = document.getElementById('modal-answered-count');
       const navCell = document.getElementById('nav-cell-' + questionId);
 
+      // --- Writing Draft Management ---
+      const writingEditor = document.getElementById('writing-editor');
+      const wordCountEl = document.getElementById('word-count');
+      const characterCountEl = document.getElementById('character-count');
+      const saveDraftBtn = document.getElementById('btn-save-writing-draft');
+      let draftSaveTimeout = null;
+      let draftDirty = false;
+
+      function updateWritingCounts() {
+        if (!writingEditor) return;
+        const text = writingEditor.value || '';
+        const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+        if (wordCountEl) wordCountEl.textContent = words;
+        if (characterCountEl) characterCountEl.textContent = text.length;
+      }
+
+      async function saveDraftNow() {
+        if (!writingEditor) return true;
+        if (draftSaveTimeout) clearTimeout(draftSaveTimeout);
+        const text = writingEditor.value;
+        if (saveStatusEl) {
+          saveStatusEl.textContent = 'Saving draft…';
+          saveStatusEl.className = 'save-status';
+        }
+
+        try {
+          const res = await fetch(`/placement/take/${placementId}/draft`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'RequestVerificationToken': antiForgeryToken
+            },
+            body: JSON.stringify({
+              questionId: questionId,
+              responseText: text
+            })
+          });
+
+          if (!res.ok) {
+            throw new Error('Save draft failed with status ' + res.status);
+          }
+
+          draftDirty = false;
+          if (saveStatusEl) {
+            saveStatusEl.textContent = 'Draft saved';
+            saveStatusEl.className = 'save-status save-status--saved';
+          }
+
+          if (text.trim().length > 0 && navCell) {
+            navCell.classList.add('is-answered');
+            navCell.classList.remove('is-unanswered');
+          }
+          return true;
+        } catch (err) {
+          console.error(err);
+          if (saveStatusEl) {
+            saveStatusEl.textContent = 'Save error';
+            saveStatusEl.className = 'save-status save-status--error';
+          }
+          return false;
+        }
+      }
+
+      if (writingEditor) {
+        updateWritingCounts();
+        writingEditor.addEventListener('input', () => {
+          draftDirty = true;
+          updateWritingCounts();
+          if (saveStatusEl) {
+            saveStatusEl.textContent = 'Draft not saved';
+            saveStatusEl.className = 'save-status';
+          }
+          if (draftSaveTimeout) clearTimeout(draftSaveTimeout);
+          draftSaveTimeout = setTimeout(saveDraftNow, 3000);
+        });
+      }
+
+      if (saveDraftBtn) {
+        saveDraftBtn.addEventListener('click', () => {
+          saveDraftNow();
+        });
+      }
+
+      // Flush draft when clicking navigation links
+      document.querySelectorAll('a[href^="/placement/take/"]').forEach(link => {
+        link.addEventListener('click', async function (e) {
+          if (draftDirty && writingEditor) {
+            e.preventDefault();
+            const href = this.getAttribute('href');
+            await saveDraftNow();
+            window.location.href = href;
+          }
+        });
+      });
+
       // --- Countdown Timer ---
       function formatTime(totalSec) {
         if (totalSec <= 0) return '00:00';
@@ -284,12 +423,15 @@
 
       updateTimerDisplay();
 
-      const timerInterval = setInterval(() => {
+      const timerInterval = setInterval(async () => {
         remainingSeconds--;
         if (remainingSeconds <= 0) {
           clearInterval(timerInterval);
           updateTimerDisplay();
           // Auto submit when time runs out
+          if (draftDirty && writingEditor) {
+            await saveDraftNow();
+          }
           const autoInput = document.getElementById('is-auto-submit-input');
           if (autoInput) autoInput.value = 'true';
           document.getElementById('submit-form')?.submit();
@@ -420,7 +562,7 @@
       var audioPlayer = document.querySelector('.exam-audio[data-mode="exam"]');
       var placementAudioStorageKey = 'ee_placement_audio_@take.PlacementId';
       if (audioPlayer) {
-        var qAudioKey = '@(q.AudioPath ?? "")'.trim() + (@(q.AudioStartMs.HasValue || q.AudioEndMs.HasValue ? $"':{q.AudioStartMs ?? 0}-{q.AudioEndMs ?? 0}'" : "''"));
+        var qAudioKey = '@qAudioKey';
         var stored = {};
         try {
           stored = JSON.parse(localStorage.getItem(placementAudioStorageKey) || '{}');
@@ -464,7 +606,13 @@
 
       var placementSubmitForm = document.getElementById('submit-form');
       if (placementSubmitForm) {
-        placementSubmitForm.addEventListener('submit', function () {
+        placementSubmitForm.addEventListener('submit', async function (e) {
+          if (draftDirty && writingEditor) {
+            e.preventDefault();
+            await saveDraftNow();
+            placementSubmitForm.submit();
+            return;
+          }
           try {
             localStorage.removeItem(placementAudioStorageKey);
           } catch (e) {}

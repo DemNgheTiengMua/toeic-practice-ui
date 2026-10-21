@@ -642,7 +642,7 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
                 attempt.IsAutoSubmitted = true;
             }
 
-            var freeResponses = attempt.Exam.Purpose == ExamPurpose.Mock.ToCode()
+            var freeResponses = attempt.Exam.Purpose == ExamPurpose.Mock.ToCode() || attempt.Exam.Purpose == ExamPurpose.Placement.ToCode()
                 ? await db.FreeResponses.Where(fr => fr.AttemptId == attemptId).ToListAsync(cancellationToken)
                 : [];
             if (finalDrafts is { Count: > 0 })
@@ -856,10 +856,10 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
                 ?? throw new AttemptEngineException(AttemptEngineException.AttemptNotFound, $"Attempt {attemptId} not found.");
 
             if (attempt.Status == AttemptStatus.Graded.ToCode()) return;
-            if (attempt.Exam.Purpose != ExamPurpose.Mock.ToCode()
+            if ((attempt.Exam.Purpose != ExamPurpose.Mock.ToCode() && attempt.Exam.Purpose != ExamPurpose.Placement.ToCode())
                 || attempt.Status != AttemptStatus.Submitted.ToCode())
             {
-                throw new AttemptEngineException(AttemptEngineException.AttemptNotActive, "Only a submitted mock attempt can be finalized after AI grading.");
+                throw new AttemptEngineException(AttemptEngineException.AttemptNotActive, "Only a submitted mock or placement attempt can be finalized after AI grading.");
             }
 
             var freeResponses = await db.FreeResponses
@@ -872,7 +872,7 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
                 || freeResponses.Any(fr => fr.Status != FreeResponseStatus.Graded.ToCode()
                     || fr.AiGradingFreeResponse?.Status != AiGradingStatus.Done.ToCode()))
             {
-                throw new AttemptEngineException(AttemptEngineException.AttemptNotFinished, "All free responses must finish AI grading before the mock result can be finalized.");
+                throw new AttemptEngineException(AttemptEngineException.AttemptNotFinished, "All free responses must finish AI grading before the result can be finalized.");
             }
 
             var answers = await db.AttemptAnswers

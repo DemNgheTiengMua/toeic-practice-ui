@@ -29,7 +29,7 @@ public interface ILearningPathService
 {
     Task<LearningPathSummaryView> GetActivePathAsync(int userId, CancellationToken cancellationToken = default);
 
-    Task<LearningPathSummaryView> GeneratePathAsync(int userId, string? targetBandCode = null, CancellationToken cancellationToken = default);
+    Task<LearningPathSummaryView> GeneratePathAsync(int userId, string? targetBandCode = null, CancellationToken cancellationToken = default, bool archiveExisting = false);
 
     Task<LearningPathModuleDetailView> GetModuleDetailAsync(int userId, int moduleId, CancellationToken cancellationToken = default);
 
@@ -131,6 +131,33 @@ public sealed class LearningPathService(
             .Where(m => m.TemplateId == activePath.TemplateId)
             .OrderBy(m => m.DisplayOrder)
             .ToListAsync(cancellationToken);
+
+        var stepItemOrder = activePath.LearnerPathSteps
+            .OrderBy(s => s.StepId)
+            .Select(s => s.PathModuleItemId)
+            .ToList();
+
+        if (stepItemOrder.Count > 0)
+        {
+            var itemToModuleMap = templateModules
+                .SelectMany(m => m.PathModuleItemPathModules.Select(i => new { i.ItemId, m.ModuleId }))
+                .ToDictionary(x => x.ItemId, x => x.ModuleId);
+
+            var moduleOrder = new Dictionary<int, int>();
+            int orderIndex = 0;
+            foreach (var itemId in stepItemOrder)
+            {
+                if (itemToModuleMap.TryGetValue(itemId, out var modId) && !moduleOrder.ContainsKey(modId))
+                {
+                    moduleOrder[modId] = orderIndex++;
+                }
+            }
+
+            templateModules = templateModules
+                .OrderBy(m => moduleOrder.TryGetValue(m.ModuleId, out var ord) ? ord : m.DisplayOrder)
+                .ThenBy(m => m.DisplayOrder)
+                .ToList();
+        }
 
         var activePathLessonSteps = activePath.LearnerPathSteps
             .Where(s => s.PathModuleItem?.ItemType == "lesson" && s.PathModuleItem.RefLessonId.HasValue)
@@ -256,7 +283,7 @@ public sealed class LearningPathService(
             NextModuleId: nextModuleId);
     }
 
-    public async Task<LearningPathSummaryView> GeneratePathAsync(int userId, string? targetBandCode = null, CancellationToken cancellationToken = default)
+    public async Task<LearningPathSummaryView> GeneratePathAsync(int userId, string? targetBandCode = null, CancellationToken cancellationToken = default, bool archiveExisting = false)
     {
         var activeCertId = await learners.GetActiveCertIdAsync(userId, cancellationToken);
 
@@ -264,7 +291,15 @@ public sealed class LearningPathService(
             .FirstOrDefaultAsync(p => p.UserId == userId && p.CertId == activeCertId && p.Status == "active", cancellationToken);
         if (existingActive != null)
         {
-            throw new LearningPathException(LearningPathException.PathAlreadyActive, "An active learning path already exists for this certificate.");
+            if (archiveExisting)
+            {
+                existingActive.Status = "reset";
+                await db.SaveChangesAsync(cancellationToken);
+            }
+            else
+            {
+                throw new LearningPathException(LearningPathException.PathAlreadyActive, "An active learning path already exists for this certificate.");
+            }
         }
 
         var latestPlacement = await db.PlacementTests
@@ -362,6 +397,51 @@ public sealed class LearningPathService(
             .Where(m => m.TemplateId == template.TemplateId)
             .OrderBy(m => m.DisplayOrder)
             .ToListAsync(cancellationToken);
+
+        var certSectionIds = await db.Sections
+            .AsNoTracking()
+            .Where(s => s.CertId == activeCertId)
+            .Select(s => s.SectionId)
+            .ToListAsync(cancellationToken);
+
+        var weakSectionRows = await db.vw_UserSectionAccuracyAlls
+            .AsNoTracking()
+            .Where(w => w.UserId == userId && certSectionIds.Contains(w.SectionId))
+            .ToListAsync(cancellationToken);
+
+        var weakSections = weakSectionRows
+            .OrderBy(w => (double)(w.Correct ?? 0) / Math.Max(1, w.Answered ?? 1))
+            .Select(w => w.SectionId)
+            .ToList();
+
+        if (weakSections.Count > 0)
+        {
+            var moduleItemSectionIds = await db.PathModuleItems
+                .AsNoTracking()
+                .Where(pmi => pmi.TemplateId == template.TemplateId && pmi.RefSectionId.HasValue)
+                .Select(pmi => new { pmi.ItemId, SectionId = pmi.RefSectionId!.Value })
+                .ToListAsync(cancellationToken);
+
+            var itemSectionMap = moduleItemSectionIds.ToDictionary(x => x.ItemId, x => x.SectionId);
+
+            modules = modules
+                .OrderBy(m =>
+                {
+                    var itemIds = m.PathModuleItemPathModules.Select(i => i.ItemId).ToList();
+                    var minRank = 999;
+                    foreach (var id in itemIds)
+                    {
+                        if (itemSectionMap.TryGetValue(id, out var secId))
+                        {
+                            var rank = weakSections.IndexOf(secId);
+                            if (rank >= 0 && rank < minRank) minRank = rank;
+                        }
+                    }
+                    return minRank;
+                })
+                .ThenBy(m => m.DisplayOrder)
+                .ToList();
+        }
 
         var allItems = modules
             .SelectMany(m => m.PathModuleItemPathModules.OrderBy(i => i.DisplayOrder))

@@ -1,6 +1,4 @@
 {
-  "0": "CompanionApiClient",
-  "1": "AuthService",
   "2": "StartPracticeSessionInput",
   "3": "Users Table",
   "6": ".SignInAsync",
@@ -227,7 +225,6 @@
   "418": "color",
   "419": "Brand Consistency Checklist",
   "420": "CIP Mockup Prompt Engineering",
-  "421": "fetch-background.py",
   "425": "ComplaintService.cs",
   "429": "Design Principles",
   "430": "Design Principles",

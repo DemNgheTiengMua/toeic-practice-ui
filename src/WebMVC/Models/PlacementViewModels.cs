@@ -12,7 +12,8 @@ public sealed record PlacementTakeViewModel(
 
 public sealed record PlacementResultViewModel(
     PlacementResultViewDto Result,
-    string? ErrorMessage = null);
+    string? ErrorMessage = null,
+    AiInsightDto? Insight = null);
 
 public sealed record TargetBandViewModel(
     TargetBandViewDto View,
