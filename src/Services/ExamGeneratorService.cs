@@ -65,16 +65,19 @@ public sealed class ExamGeneratorService(
             throw new AdminExamException(ApiError.Codes.Validation, $"Invalid exam purpose '{blueprint.Purpose}'. Allowed: mock, placement, speaking_practice, writing_practice.", 400);
         }
 
-        if (blueprint.Sections is not { Count: > 0 })
-        {
-            throw new AdminExamException(ApiError.Codes.Validation, "Blueprint must specify at least one section.", 400);
-        }
-
         // Validate Certificate Isolation: sections must strictly belong to the certificate
         var certSections = await db.Sections
             .AsNoTracking()
             .Where(s => s.CertId == cert.CertId)
+            .OrderBy(s => s.DisplayOrder)
             .ToListAsync(cancellationToken);
+
+        if (blueprint.Sections is not { Count: > 0 })
+        {
+            var defaultSection = certSections.FirstOrDefault()
+                ?? throw new AdminExamException(ApiError.Codes.Validation, $"No sections configured for certificate '{cert.Code}'.", 400);
+            blueprint = blueprint with { Sections = [new ExamBlueprintSectionDto(defaultSection.Code, 2)] };
+        }
 
         var certCategories = await db.QuestionCategories
             .AsNoTracking()
@@ -163,11 +166,14 @@ public sealed class ExamGeneratorService(
         var examId = importResult.ExamId.Value;
         var exam = await db.Exams.SingleAsync(e => e.ExamId == examId, cancellationToken);
 
-        if (!string.IsNullOrWhiteSpace(targetStatus) &&
-            targetStatus.Equals(ExamStatus.Published.ToCode(), StringComparison.OrdinalIgnoreCase))
+        if (!string.IsNullOrWhiteSpace(targetStatus))
         {
-            exam.Status = ExamStatus.Published.ToCode();
-            await db.SaveChangesAsync(cancellationToken);
+            var normalizedStatus = targetStatus.Trim().ToLowerInvariant();
+            if (normalizedStatus == ExamStatus.Published.ToCode() || normalizedStatus == ExamStatus.Hidden.ToCode())
+            {
+                exam.Status = normalizedStatus;
+                await db.SaveChangesAsync(cancellationToken);
+            }
         }
 
         return new ExamGenerationResultDto(
@@ -239,8 +245,8 @@ public sealed class ExamGeneratorService(
             3. Option labels must be unique within each question (A, B, C, D).
             4. Each option must have non-empty "text" and a non-empty "rationale".
             5. Question stems must be complete and non-empty. Difficulty level must be an integer between 1 and 5.
-            6. For reading comprehension sections (e.g. P6, P7), the group must supply a non-empty "passage".
-            7. For listening sections (e.g. P1, P2, P3, P4), the group must supply a non-empty "transcript".
+            6. For reading comprehension sections (e.g. P6, P7, PAS, R4), the group must supply a non-empty "passage".
+            7. For listening sections (e.g. P1, P2, P3, P4, REC, L3), the group must supply an audio script in "transcript" with explicit dialogue speaker turns (e.g. 'Speaker 1: ...\nSpeaker 2: ...' or announcer prompt) and environmental staging cues.
             8. Category codes must match the valid category codes provided.
             """;
     }
@@ -255,7 +261,16 @@ public sealed class ExamGeneratorService(
         sb.AppendLine($"Generate a complete standardized exam package for certificate: {cert.Name} (Code: {cert.Code}).");
         sb.AppendLine($"Title: {(!string.IsNullOrWhiteSpace(blueprint.Title) ? blueprint.Title : $"{cert.Code} Standardized Practice Form")}");
         sb.AppendLine($"Exam Purpose: {blueprint.Purpose ?? "mock"}");
+        if (!string.IsNullOrWhiteSpace(blueprint.Skill))
+        {
+            sb.AppendLine($"Target Skill: {blueprint.Skill}");
+        }
         sb.AppendLine($"Target CEFR Band: {blueprint.TargetBand ?? "B2"}");
+        if (blueprint.TargetBandDistribution is { Count: > 0 })
+        {
+            var dist = string.Join(", ", blueprint.TargetBandDistribution.Select(kv => $"{kv.Key}: {kv.Value:P0}"));
+            sb.AppendLine($"Target CEFR Band Distribution: {dist}");
+        }
         sb.AppendLine($"Default Difficulty Level: {blueprint.DifficultyLevel ?? 3} (1=easiest to 5=hardest)");
         if (blueprint.DurationMinutes.HasValue && blueprint.DurationMinutes.Value > 0)
         {

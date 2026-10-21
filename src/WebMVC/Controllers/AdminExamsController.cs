@@ -168,6 +168,13 @@ public sealed class AdminExamsController(
                     return RedirectToAction(nameof(Index), new { certId });
                 }
 
+                var defaultSectionCode = certCode.Trim().ToUpperInvariant() switch
+                {
+                    "IELTS" => "PAS",
+                    "VSTEP" => "R4",
+                    _ => "P5"
+                };
+
                 blueprint = new ExamBlueprintDto(
                     CertCode: certCode,
                     Title: title,
@@ -175,7 +182,7 @@ public sealed class AdminExamsController(
                     Status: status ?? "draft",
                     TargetBand: targetBand,
                     DifficultyLevel: difficultyLevel ?? 3,
-                    Sections: [new ExamBlueprintSectionDto("P5", 2)]);
+                    Sections: [new ExamBlueprintSectionDto(defaultSectionCode, 2)]);
             }
 
             var result = await api.GenerateAdminExamAsync(blueprint, cancellationToken);

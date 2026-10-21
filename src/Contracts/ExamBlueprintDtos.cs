@@ -22,7 +22,9 @@ public sealed record ExamBlueprintDto(
     string? Purpose = "mock",
     string? Status = "draft",
     int? DurationMinutes = null,
+    string? Skill = null,
     string? TargetBand = null,
+    IReadOnlyDictionary<string, double>? TargetBandDistribution = null,
     int? DifficultyLevel = null,
     string? Description = null,
     IReadOnlyList<ExamBlueprintSectionDto>? Sections = null);

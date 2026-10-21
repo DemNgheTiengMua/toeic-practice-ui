@@ -382,4 +382,39 @@ public sealed class GenerativeExamServiceTests(DatabaseFixture database)
         Assert.Equal(AttemptStatus.Graded.ToCode(), grading.Attempt.Status);
         Assert.Equal(2, grading.Answers.Count(a => a.IsCorrect == true));
     }
+
+    [Fact]
+    public async Task GenerateAndIngestExamAsync_WithSkillAndTargetBandDistribution_PassesPromptRequirementsAndDefaultsSections()
+    {
+        var env = await SeedEnvironmentAsync();
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var fakeClaude = new TestClaudeClient
+        {
+            Responder = (userPrompt, systemPrompt) =>
+            {
+                Assert.Contains("Target Skill: reading", userPrompt);
+                Assert.Contains("Target CEFR Band Distribution: B1: 30%, B2: 70%", userPrompt);
+                Assert.Contains("audio script in \"transcript\" with explicit dialogue speaker turns", systemPrompt!);
+                return SampleValidManifest("Distribution Exam");
+            }
+        };
+
+        var importService = new QuestionImportService(db, new RecordingFileStore(), TimeProvider.System);
+        var generator = new ExamGeneratorService(db, importService, fakeClaude);
+
+        var blueprint = new ExamBlueprintDto(
+            CertCode: env.CertCode,
+            Title: "Distribution Exam",
+            Purpose: "mock",
+            Status: "hidden",
+            Skill: "reading",
+            TargetBandDistribution: new Dictionary<string, double> { ["B1"] = 0.3, ["B2"] = 0.7 },
+            Sections: null);
+
+        var result = await generator.GenerateAndIngestExamAsync(blueprint, env.AdminId);
+
+        Assert.NotNull(result);
+        Assert.Equal("hidden", result.Status);
+        Assert.Equal(2, result.QuestionCount);
+    }
 }

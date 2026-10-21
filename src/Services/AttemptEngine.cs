@@ -418,54 +418,14 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
 
         if (answer is null)
         {
-            var freeResponse = await db.FreeResponses
-                .Include(r => r.Question)
-                .SingleOrDefaultAsync(r => r.AttemptId == attemptId && r.QuestionId == questionId, cancellationToken)
-                ?? throw new AttemptEngineException(AttemptEngineException.QuestionNotFound, $"Question {questionId} not found in attempt.");
-
-            if (selectedOptionId.HasValue)
-            {
-                throw new AttemptEngineException(AttemptEngineException.InvalidOption, "Free-response questions do not accept multiple-choice options.");
-            }
-
-            freeResponse.ResponseText = responseText ?? string.Empty;
-            freeResponse.DraftSavedAt = DateTimeOffset.UtcNow;
-            attempt.LastQuestionId = questionId;
-            await db.SaveChangesAsync(cancellationToken);
-
-            var remaining = Math.Max(0, (int)(attempt.ExpiresAt - DateTimeOffset.UtcNow).TotalSeconds);
-            return new SaveAttemptAnswerResult(questionId, null, isFlagged, remaining, attempt.IsAutoSubmitted);
+            return await SaveFreeResponseInternalAsync(
+                attempt, attemptId, questionId, selectedOptionId, responseText, isFlagged, null, cancellationToken);
         }
 
         if (answer.Question.QuestionType == QuestionType.FreeResponse.ToCode())
         {
-            if (selectedOptionId.HasValue)
-            {
-                throw new AttemptEngineException(AttemptEngineException.InvalidOption, "Free-response questions do not accept multiple-choice options.");
-            }
-
-            var response = await db.FreeResponses
-                .SingleOrDefaultAsync(fr => fr.AttemptId == attemptId && fr.QuestionId == questionId, cancellationToken);
-            if (response is null)
-            {
-                response = new FreeResponse
-                {
-                    AttemptId = attemptId,
-                    QuestionId = questionId,
-                    ExamId = answer.ExamId,
-                    SkillId = answer.Question.SkillId,
-                    QuestionType = answer.Question.QuestionType,
-                    Status = FreeResponseStatus.Draft.ToCode(),
-                    SubmittedAt = null
-                };
-                db.FreeResponses.Add(response);
-            }
-
-            response.ResponseText = responseText ?? string.Empty;
-            response.Status = FreeResponseStatus.Draft.ToCode();
-            response.SubmittedAt = null;
-            response.DraftSavedAt = DateTimeOffset.UtcNow;
-            answer.SelectedOptionId = null;
+            return await SaveFreeResponseInternalAsync(
+                attempt, attemptId, questionId, selectedOptionId, responseText, isFlagged, answer, cancellationToken);
         }
         else
         {
@@ -1448,5 +1408,59 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
 
         attempt.Status = AttemptStatus.Abandoned.ToCode();
         await db.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task<SaveAttemptAnswerResult> SaveFreeResponseInternalAsync(
+        ExamAttempt attempt,
+        int attemptId,
+        int questionId,
+        int? selectedOptionId,
+        string? responseText,
+        bool isFlagged,
+        AttemptAnswer? answer,
+        CancellationToken cancellationToken)
+    {
+        if (selectedOptionId.HasValue)
+        {
+            throw new AttemptEngineException(AttemptEngineException.InvalidOption, "Free-response questions do not accept multiple-choice options.");
+        }
+
+        var response = await db.FreeResponses
+            .Include(r => r.Question)
+            .SingleOrDefaultAsync(fr => fr.AttemptId == attemptId && fr.QuestionId == questionId, cancellationToken);
+
+        if (response is null)
+        {
+            if (answer is null)
+            {
+                throw new AttemptEngineException(AttemptEngineException.QuestionNotFound, $"Question {questionId} not found in attempt.");
+            }
+
+            response = new FreeResponse
+            {
+                AttemptId = attemptId,
+                QuestionId = questionId,
+                ExamId = answer.ExamId,
+                SkillId = answer.Question.SkillId,
+                QuestionType = answer.Question.QuestionType,
+                Status = FreeResponseStatus.Draft.ToCode(),
+                SubmittedAt = null
+            };
+            db.FreeResponses.Add(response);
+        }
+
+        response.ResponseText = responseText ?? string.Empty;
+        response.Status = FreeResponseStatus.Draft.ToCode();
+        response.DraftSavedAt = DateTimeOffset.UtcNow;
+        if (answer is not null)
+        {
+            answer.SelectedOptionId = null;
+        }
+
+        attempt.LastQuestionId = questionId;
+        await db.SaveChangesAsync(cancellationToken);
+
+        var remaining = Math.Max(0, (int)(attempt.ExpiresAt - DateTimeOffset.UtcNow).TotalSeconds);
+        return new SaveAttemptAnswerResult(questionId, null, isFlagged, remaining, attempt.IsAutoSubmitted);
     }
 }
