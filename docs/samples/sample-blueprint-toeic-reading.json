@@ -1,0 +1,24 @@
+{
+  "certCode": "TOEIC",
+  "title": "TOEIC Reading Generated Practice Form 1",
+  "purpose": "mock",
+  "status": "draft",
+  "durationMinutes": 75,
+  "targetBand": "B2",
+  "difficultyLevel": 3,
+  "description": "Standard generated reading evaluation covering Part 5 and Part 6.",
+  "sections": [
+    {
+      "sectionCode": "P5",
+      "questionCount": 4,
+      "difficultyLevel": 2,
+      "categoryCode": "grammar_prep"
+    },
+    {
+      "sectionCode": "P6",
+      "questionCount": 4,
+      "difficultyLevel": 3,
+      "categoryCode": "reading_vocab"
+    }
+  ]
+}

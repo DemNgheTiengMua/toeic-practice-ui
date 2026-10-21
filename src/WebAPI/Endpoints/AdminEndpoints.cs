@@ -271,6 +271,23 @@ public static class AdminEndpoints
             }
         });
 
+        admin.MapPost("/exams/generate", async (
+            ExamBlueprintDto request,
+            HttpContext http,
+            IExamGeneratorService generator,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var result = await generator.GenerateAndIngestExamAsync(request, CurrentUserId(http), cancellationToken);
+                return Results.Ok(result);
+            }
+            catch (AdminExamException ex)
+            {
+                return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
+            }
+        });
+
         admin.MapGet("/exams/{examId:int}", async (
             int examId,
             IAdminExamService exams,

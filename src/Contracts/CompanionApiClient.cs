@@ -1053,6 +1053,9 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
         return (stream, contentType, fileName);
     }
 
+    public Task<ExamGenerationResultDto> GenerateAdminExamAsync(ExamBlueprintDto blueprint, string bearerToken, CancellationToken cancellationToken = default) =>
+        PostAuthorizedAsync<ExamBlueprintDto, ExamGenerationResultDto>("api/admin/exams/generate", blueprint, bearerToken, cancellationToken);
+
     public Task<AdminImportBatchesDto> GetAdminImportBatchesAsync(int? certId, string bearerToken, CancellationToken cancellationToken = default) =>
         GetAuthorizedAsync<AdminImportBatchesDto>(certId is { } id ? $"api/admin/imports?certId={id}" : "api/admin/imports", bearerToken, cancellationToken);
 
@@ -1623,6 +1626,9 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
 
     public Task<(Stream Stream, string ContentType, string FileName)> ExportAdminExamAsync(int examId, string? format = "zip", CancellationToken cancellationToken = default) =>
         ExportAdminExamAsync(examId, format, string.Empty, cancellationToken);
+
+    public Task<ExamGenerationResultDto> GenerateAdminExamAsync(ExamBlueprintDto blueprint, CancellationToken cancellationToken = default) =>
+        GenerateAdminExamAsync(blueprint, string.Empty, cancellationToken);
 
     public Task<AdminImportBatchesDto> GetAdminImportBatchesAsync(int? certId, CancellationToken cancellationToken = default) =>
         GetAdminImportBatchesAsync(certId, string.Empty, cancellationToken);

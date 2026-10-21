@@ -234,6 +234,13 @@ public sealed class MockExamServiceTests(DatabaseFixture database)
             fixture.listeningQuestionId,
             fixture.listeningOptionId,
             isFlagged: false);
+        await database.SqlAsync($"""
+            UPDATE ExamAttempts
+            SET StartedAt = DATEADD(minute, -35, SYSDATETIMEOFFSET()),
+                ExpiresAt = DATEADD(minute, 25, SYSDATETIMEOFFSET())
+            WHERE AttemptId = {attempt.AttemptId};
+            """);
+        (service, _) = CreateServices();
         const string responseText = "A clear response with enough detail.";
         await service.SaveAnswerAsync(
             userId,

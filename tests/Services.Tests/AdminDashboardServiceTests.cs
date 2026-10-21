@@ -109,8 +109,8 @@ public sealed class AdminDashboardServiceTests(DatabaseFixture database)
                     INSERT INTO Certificates (Code, Name, Description, IsActive) VALUES ('toeic', 'TOEIC', 'Desc', 1);
                     INSERT INTO Users (RoleId, Email, PasswordHash, FullName, IsLocked, EmailVerifiedAt, IsDeleted, CreatedAt)
                     VALUES
-                      ((SELECT RoleId FROM Roles WHERE Code='learner'), 'learner@test.local', 0x01, N'Learner', 0, '{now}', 0, '{now}'),
-                      ((SELECT RoleId FROM Roles WHERE Code='admin'), 'admin@test.local', 0x01, N'Admin', 0, '{now}', 0, '{now}');
+                      ((SELECT RoleId FROM Roles WHERE Code='learner'), 'learner@test.local', 0x01, N'Learner', 0, '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 0, '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}'),
+                      ((SELECT RoleId FROM Roles WHERE Code='admin'), 'admin@test.local', 0x01, N'Admin', 0, '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 0, '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}');
 
                     DECLARE @UserId INT = (SELECT UserId FROM Users WHERE Email='learner@test.local');
                     DECLARE @AdminId INT = (SELECT UserId FROM Users WHERE Email='admin@test.local');
@@ -122,7 +122,7 @@ public sealed class AdminDashboardServiceTests(DatabaseFixture database)
 
                     -- 2. Mock exam attempt & mock_exam_start debit (-10) this month (5th of Oct)
                     INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose, Description, QuestionCount, IsDeleted, CreatedAt)
-                    VALUES (@CertId, 'Mock 1', 'published', 120, 'mock', 'Desc', 200, 0, '{now}');
+                    VALUES (@CertId, 'Mock 1', 'published', 120, 'mock', 'Desc', 200, 0, '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}');
                     DECLARE @ExamId INT = SCOPE_IDENTITY();
 
                     INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt)
@@ -187,7 +187,7 @@ public sealed class AdminDashboardServiceTests(DatabaseFixture database)
                 await db.Database.ExecuteSqlRawAsync($"""
                     INSERT INTO Roles (Code, Name) VALUES ('learner', 'Learner');
                     INSERT INTO Users (RoleId, Email, PasswordHash, FullName, IsLocked, EmailVerifiedAt, IsDeleted, CreatedAt)
-                    VALUES ((SELECT RoleId FROM Roles WHERE Code='learner'), 'rev@test.local', 0x01, N'Rev User', 0, '{now}', 0, '{now}');
+                    VALUES ((SELECT RoleId FROM Roles WHERE Code='learner'), 'rev@test.local', 0x01, N'Rev User', 0, '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 0, '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}');
                     DECLARE @UserId INT = SCOPE_IDENTITY();
 
                     INSERT INTO Packages (Name, Credits, Price, IsActive, IsFeatured, Features, DisplayOrder)
@@ -204,7 +204,7 @@ public sealed class AdminDashboardServiceTests(DatabaseFixture database)
 
                     -- Order 3: Pending this month (not paid -> excluded)
                     INSERT INTO Orders (UserId, PackageId, Status, Amount, OrderCode, PaymentNo, Gateway, CreatedAt, PaidAt)
-                    VALUES (@UserId, @PkgId, 'pending', 99000, 'DH-20261015-0003', 10003, 'payos', '{now}', NULL);
+                    VALUES (@UserId, @PkgId, 'pending', 99000, 'DH-20261015-0003', 10003, 'payos', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', NULL);
 
                     -- Order 4: Paid in PREVIOUS month (September -> excluded)
                     INSERT INTO Orders (UserId, PackageId, Status, Amount, OrderCode, PaymentNo, Gateway, CreatedAt, PaidAt)
@@ -244,18 +244,18 @@ public sealed class AdminDashboardServiceTests(DatabaseFixture database)
                     DECLARE @CertId INT = SCOPE_IDENTITY();
 
                     INSERT INTO Users (RoleId, Email, PasswordHash, FullName, IsLocked, EmailVerifiedAt, IsDeleted, CreatedAt)
-                    VALUES ((SELECT RoleId FROM Roles WHERE Code='learner'), 'taker@test.local', 0x01, N'Exam Taker', 0, '{now}', 0, '{now}');
+                    VALUES ((SELECT RoleId FROM Roles WHERE Code='learner'), 'taker@test.local', 0x01, N'Exam Taker', 0, '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 0, '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}');
                     DECLARE @UserId INT = SCOPE_IDENTITY();
 
                     -- Create 6 exams
                     INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose, Description, QuestionCount, IsDeleted, CreatedAt)
                     VALUES
-                      (@CertId, 'Exam A (3 attempts, avg 800)', 'published', 120, 'mock', 'Desc', 200, 0, '{now}'),
-                      (@CertId, 'Exam B (4 attempts, avg 650)', 'published', 120, 'mock', 'Desc', 200, 0, '{now}'),
-                      (@CertId, 'Exam C (2 attempts, avg 700)', 'published', 120, 'mock', 'Desc', 200, 0, '{now}'),
-                      (@CertId, 'Exam D (5 attempts, avg 900)', 'published', 120, 'mock', 'Desc', 200, 0, '{now}'),
-                      (@CertId, 'Exam E (1 attempt, avg 500)', 'published', 120, 'mock', 'Desc', 200, 0, '{now}'),
-                      (@CertId, 'Exam F (0 completed attempts)', 'published', 120, 'mock', 'Desc', 200, 0, '{now}');
+                      (@CertId, 'Exam A (3 attempts, avg 800)', 'published', 120, 'mock', 'Desc', 200, 0, '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}'),
+                      (@CertId, 'Exam B (4 attempts, avg 650)', 'published', 120, 'mock', 'Desc', 200, 0, '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}'),
+                      (@CertId, 'Exam C (2 attempts, avg 700)', 'published', 120, 'mock', 'Desc', 200, 0, '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}'),
+                      (@CertId, 'Exam D (5 attempts, avg 900)', 'published', 120, 'mock', 'Desc', 200, 0, '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}'),
+                      (@CertId, 'Exam E (1 attempt, avg 500)', 'published', 120, 'mock', 'Desc', 200, 0, '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}'),
+                      (@CertId, 'Exam F (0 completed attempts)', 'published', 120, 'mock', 'Desc', 200, 0, '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}');
 
                     DECLARE @ExamA INT = (SELECT ExamId FROM Exams WHERE Name = 'Exam A (3 attempts, avg 800)');
                     DECLARE @ExamB INT = (SELECT ExamId FROM Exams WHERE Name = 'Exam B (4 attempts, avg 650)');
@@ -267,43 +267,43 @@ public sealed class AdminDashboardServiceTests(DatabaseFixture database)
                     -- Exam D: 5 graded attempts (scores 900, 900, 900, 900, 900)
                     INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt, TotalScore)
                     VALUES
-                      (@UserId, @ExamD, @CertId, 'graded', '{now}', '{now}', 900),
-                      (@UserId, @ExamD, @CertId, 'graded', '{now}', '{now}', 900),
-                      (@UserId, @ExamD, @CertId, 'graded', '{now}', '{now}', 900),
-                      (@UserId, @ExamD, @CertId, 'graded', '{now}', '{now}', 900),
-                      (@UserId, @ExamD, @CertId, 'graded', '{now}', '{now}', 900);
+                      (@UserId, @ExamD, @CertId, 'graded', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 900),
+                      (@UserId, @ExamD, @CertId, 'graded', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 900),
+                      (@UserId, @ExamD, @CertId, 'graded', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 900),
+                      (@UserId, @ExamD, @CertId, 'graded', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 900),
+                      (@UserId, @ExamD, @CertId, 'graded', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 900);
 
                     -- Exam B: 4 graded attempts (scores 600, 700, 600, 700) -> avg 650
                     INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt, TotalScore)
                     VALUES
-                      (@UserId, @ExamB, @CertId, 'graded', '{now}', '{now}', 600),
-                      (@UserId, @ExamB, @CertId, 'graded', '{now}', '{now}', 700),
-                      (@UserId, @ExamB, @CertId, 'graded', '{now}', '{now}', 600),
-                      (@UserId, @ExamB, @CertId, 'graded', '{now}', '{now}', 700);
+                      (@UserId, @ExamB, @CertId, 'graded', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 600),
+                      (@UserId, @ExamB, @CertId, 'graded', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 700),
+                      (@UserId, @ExamB, @CertId, 'graded', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 600),
+                      (@UserId, @ExamB, @CertId, 'graded', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 700);
 
                     -- Exam A: 3 attempts (2 graded 750, 850; 1 submitted 800) -> avg 800
                     INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt, TotalScore)
                     VALUES
-                      (@UserId, @ExamA, @CertId, 'graded', '{now}', '{now}', 750),
-                      (@UserId, @ExamA, @CertId, 'graded', '{now}', '{now}', 850),
-                      (@UserId, @ExamA, @CertId, 'submitted', '{now}', '{now}', 800);
+                      (@UserId, @ExamA, @CertId, 'graded', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 750),
+                      (@UserId, @ExamA, @CertId, 'graded', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 850),
+                      (@UserId, @ExamA, @CertId, 'submitted', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 800);
 
                     -- Exam C: 2 attempts (avg 700)
                     INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt, TotalScore)
                     VALUES
-                      (@UserId, @ExamC, @CertId, 'graded', '{now}', '{now}', 650),
-                      (@UserId, @ExamC, @CertId, 'graded', '{now}', '{now}', 750);
+                      (@UserId, @ExamC, @CertId, 'graded', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 650),
+                      (@UserId, @ExamC, @CertId, 'graded', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 750);
 
                     -- Exam E: 1 attempt (avg 500)
                     INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt, TotalScore)
                     VALUES
-                      (@UserId, @ExamE, @CertId, 'graded', '{now}', '{now}', 500);
+                      (@UserId, @ExamE, @CertId, 'graded', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 500);
 
                     -- Exam F: in_progress and abandoned (not completed -> not counted)
                     INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt, TotalScore)
                     VALUES
-                      (@UserId, @ExamF, @CertId, 'in_progress', '{now}', '{now}', NULL),
-                      (@UserId, @ExamF, @CertId, 'abandoned', '{now}', '{now}', NULL);
+                      (@UserId, @ExamF, @CertId, 'in_progress', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', NULL),
+                      (@UserId, @ExamF, @CertId, 'abandoned', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', NULL);
                     """);
             }
 
@@ -366,9 +366,9 @@ public sealed class AdminDashboardServiceTests(DatabaseFixture database)
 
                     INSERT INTO Users (RoleId, Email, PasswordHash, FullName, IsLocked, EmailVerifiedAt, IsDeleted, CreatedAt)
                     VALUES
-                      ((SELECT RoleId FROM Roles WHERE Code='learner'), 'learner1@test.local', 0x01, N'Alert User 1', 0, '{now}', 0, '{now}'),
-                      ((SELECT RoleId FROM Roles WHERE Code='learner'), 'learner2@test.local', 0x01, N'Alert User 2', 0, '{now}', 0, '{now}'),
-                      ((SELECT RoleId FROM Roles WHERE Code='learner'), 'learner3@test.local', 0x01, N'Alert User 3', 0, '{now}', 0, '{now}');
+                      ((SELECT RoleId FROM Roles WHERE Code='learner'), 'learner1@test.local', 0x01, N'Alert User 1', 0, '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 0, '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}'),
+                      ((SELECT RoleId FROM Roles WHERE Code='learner'), 'learner2@test.local', 0x01, N'Alert User 2', 0, '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 0, '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}'),
+                      ((SELECT RoleId FROM Roles WHERE Code='learner'), 'learner3@test.local', 0x01, N'Alert User 3', 0, '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 0, '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}');
 
                     DECLARE @UserId1 INT = (SELECT UserId FROM Users WHERE Email='learner1@test.local');
                     DECLARE @UserId2 INT = (SELECT UserId FROM Users WHERE Email='learner2@test.local');
@@ -381,10 +381,10 @@ public sealed class AdminDashboardServiceTests(DatabaseFixture database)
                     -- 1. Exams: 2 draft exams, 1 published, 1 draft deleted (deleted must be excluded)
                     INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose, Description, QuestionCount, IsDeleted, CreatedAt)
                     VALUES
-                      (@CertId, 'Draft 1', 'draft', 120, 'mock', 'Desc', 200, 0, '{now}'),
-                      (@CertId, 'Draft 2', 'draft', 120, 'mock', 'Desc', 200, 0, '{now}'),
-                      (@CertId, 'Published 1', 'published', 120, 'mock', 'Desc', 200, 0, '{now}'),
-                      (@CertId, 'Draft Deleted', 'draft', 120, 'mock', 'Desc', 200, 1, '{now}');
+                      (@CertId, 'Draft 1', 'draft', 120, 'mock', 'Desc', 200, 0, '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}'),
+                      (@CertId, 'Draft 2', 'draft', 120, 'mock', 'Desc', 200, 0, '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}'),
+                      (@CertId, 'Published 1', 'published', 120, 'mock', 'Desc', 200, 0, '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}'),
+                      (@CertId, 'Draft Deleted', 'draft', 120, 'mock', 'Desc', 200, 1, '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}');
                     DECLARE @ExamId INT = (SELECT ExamId FROM Exams WHERE Name='Published 1');
 
                     -- 2. Orders: 2 stale pending (> 30 min, distinct users for UX_Orders_OnePendingPerUser), 1 fresh pending (< 30 min), 1 paid
@@ -397,7 +397,7 @@ public sealed class AdminDashboardServiceTests(DatabaseFixture database)
 
                     -- 3. Attempts for complaints FK
                     INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt)
-                    VALUES (@UserId1, @ExamId, @CertId, 'graded', '{now}', '{now}');
+                    VALUES (@UserId1, @ExamId, @CertId, 'graded', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}');
                     DECLARE @AttemptId INT = SCOPE_IDENTITY();
 
                     -- 4. Complaints: 1 open, 1 reviewing, 1 resolved (resolved must be excluded, Type matches subject AttemptId)
@@ -445,8 +445,8 @@ public sealed class AdminDashboardServiceTests(DatabaseFixture database)
 
                     INSERT INTO Users (RoleId, Email, PasswordHash, FullName, IsLocked, EmailVerifiedAt, IsDeleted, CreatedAt)
                     VALUES
-                      ((SELECT RoleId FROM Roles WHERE Code='learner'), 'leap@test.local', 0x01, N'Leap User', 0, '{now}', 0, '{now}'),
-                      ((SELECT RoleId FROM Roles WHERE Code='admin'), 'admin@test.local', 0x01, N'Admin', 0, '{now}', 0, '{now}');
+                      ((SELECT RoleId FROM Roles WHERE Code='learner'), 'leap@test.local', 0x01, N'Leap User', 0, '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 0, '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}'),
+                      ((SELECT RoleId FROM Roles WHERE Code='admin'), 'admin@test.local', 0x01, N'Admin', 0, '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', 0, '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}');
                     DECLARE @UserId INT = (SELECT UserId FROM Users WHERE Email='leap@test.local');
                     DECLARE @AdminId INT = (SELECT UserId FROM Users WHERE Email='admin@test.local');
 
@@ -455,16 +455,16 @@ public sealed class AdminDashboardServiceTests(DatabaseFixture database)
                     VALUES (@UserId, @AdminId, 'admin_grant', 50, N'Fund account', '{now.AddDays(-2):yyyy-MM-dd HH:mm:ss.fffffff zzz}');
 
                     INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose, Description, QuestionCount, IsDeleted, CreatedAt)
-                    VALUES (@CertId, 'Leap Exam', 'published', 120, 'mock', 'Desc', 200, 0, '{now}');
+                    VALUES (@CertId, 'Leap Exam', 'published', 120, 'mock', 'Desc', 200, 0, '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}');
                     DECLARE @ExamId INT = SCOPE_IDENTITY();
 
                     INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt)
-                    VALUES (@UserId, @ExamId, @CertId, 'graded', '{now}', '{now}');
+                    VALUES (@UserId, @ExamId, @CertId, 'graded', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}', '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}');
                     DECLARE @AttemptId INT = SCOPE_IDENTITY();
 
                     -- Debit 29 credits on Feb 29
                     INSERT INTO CreditTransactions (UserId, AttemptId, Reason, Delta, CreatedAt)
-                    VALUES (@UserId, @AttemptId, 'mock_exam_start', -29, '{now}');
+                    VALUES (@UserId, @AttemptId, 'mock_exam_start', -29, '{now:yyyy-MM-dd HH:mm:ss.fffffff zzz}');
                     """);
             }
 

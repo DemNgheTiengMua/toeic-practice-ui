@@ -414,8 +414,28 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
 
         var answer = await db.AttemptAnswers
             .Include(a => a.Question)
-            .SingleOrDefaultAsync(a => a.AttemptId == attemptId && a.QuestionId == questionId, cancellationToken)
-            ?? throw new AttemptEngineException(AttemptEngineException.QuestionNotFound, $"Question {questionId} not found in attempt.");
+            .SingleOrDefaultAsync(a => a.AttemptId == attemptId && a.QuestionId == questionId, cancellationToken);
+
+        if (answer is null)
+        {
+            var freeResponse = await db.FreeResponses
+                .Include(r => r.Question)
+                .SingleOrDefaultAsync(r => r.AttemptId == attemptId && r.QuestionId == questionId, cancellationToken)
+                ?? throw new AttemptEngineException(AttemptEngineException.QuestionNotFound, $"Question {questionId} not found in attempt.");
+
+            if (selectedOptionId.HasValue)
+            {
+                throw new AttemptEngineException(AttemptEngineException.InvalidOption, "Free-response questions do not accept multiple-choice options.");
+            }
+
+            freeResponse.ResponseText = responseText ?? string.Empty;
+            freeResponse.DraftSavedAt = DateTimeOffset.UtcNow;
+            attempt.LastQuestionId = questionId;
+            await db.SaveChangesAsync(cancellationToken);
+
+            var remaining = Math.Max(0, (int)(attempt.ExpiresAt - DateTimeOffset.UtcNow).TotalSeconds);
+            return new SaveAttemptAnswerResult(questionId, null, isFlagged, remaining, attempt.IsAutoSubmitted);
+        }
 
         if (answer.Question.QuestionType == QuestionType.FreeResponse.ToCode())
         {
@@ -884,7 +904,7 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
 
             var freeResponses = await db.FreeResponses
                 .Where(fr => fr.AttemptId == attemptId)
-                .Include(fr => fr.Question).ThenInclude(q => q.Section)
+                .Include(fr => fr.Question).ThenInclude(q => q.Section).ThenInclude(s => s.Skill)
                 .Include(fr => fr.AiGradingFreeResponse)
                 .ToListAsync(cancellationToken);
 
@@ -900,6 +920,9 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
                 .Include(a => a.Question).ThenInclude(q => q.Section).ThenInclude(s => s.Skill)
                 .Include(a => a.Question).ThenInclude(q => q.QuestionOptionQuestionNavigations)
                 .ToListAsync(cancellationToken);
+
+            attempt.TotalScore = null;
+            await db.SaveChangesAsync(cancellationToken);
 
             var existingScores = await db.AttemptSkillScores
                 .Where(s => s.AttemptId == attemptId)
@@ -932,18 +955,29 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
                 answer.IsCorrect = answer.SelectedOptionId.HasValue && answer.SelectedOptionId.Value == correctOption?.OptionId;
             }
 
+            var skills = answers.Select(a => a.Question.Section.Skill)
+                .Concat(freeResponses.Select(fr => fr.Question.Section.Skill))
+                .DistinctBy(s => s.SkillId)
+                .ToList();
+
             var newSkillScores = new List<AttemptSkillScore>();
-            foreach (var group in answers.GroupBy(a => a.Question.Section.Skill))
+            foreach (var skill in skills)
             {
-                var skill = group.Key;
-                var objectiveAnswers = group.Where(a => a.Question.QuestionType == QuestionType.Mcq.ToCode()).ToList();
+                var objectiveAnswers = answers.Where(a => a.Question.Section.SkillId == skill.SkillId && a.Question.QuestionType == QuestionType.Mcq.ToCode()).ToList();
+                var freeResponsesInSkill = freeResponses.Where(fr => fr.SkillId == skill.SkillId).ToList();
+                var totalQuestionsInSkill = objectiveAnswers.Count + freeResponsesInSkill.Count;
+                if (totalQuestionsInSkill == 0) continue;
+
+                var hasScales = await db.ScoreScales.AnyAsync(s => s.CertId == attempt.CertId && s.SkillId == skill.SkillId, cancellationToken);
+                if (objectiveAnswers.Count == 0 && !hasScales) continue;
+
                 var rawScore = objectiveAnswers.Count(a => a.IsCorrect == true) + responsePointsBySkill.GetValueOrDefault(skill.SkillId);
                 var scaledScore = await ComputeScaledScoreAsync(
                     attempt.CertId,
                     skill.SkillId,
                     attempt.ExamId,
                     rawScore,
-                    group.Count(),
+                    totalQuestionsInSkill,
                     cancellationToken);
 
                 newSkillScores.Add(new AttemptSkillScore
@@ -957,6 +991,8 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
             }
 
             db.AttemptSkillScores.AddRange(newSkillScores);
+            await db.SaveChangesAsync(cancellationToken);
+
             var certCode = await db.Certificates
                 .Where(c => c.CertId == attempt.CertId)
                 .Select(c => c.Code)

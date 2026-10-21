@@ -223,7 +223,7 @@ public sealed class AiGradingProcessor(
         {
             logger?.LogError(ex, "Unexpected error while grading FreeResponseId {FreeResponseId} (GradingId {GradingId})", fr.FreeResponseId, grading.GradingId);
             grading.Status = AiGradingStatus.Failed.ToCode();
-            grading.FailureReason = ex.Message;
+            grading.FailureReason = (ex.InnerException?.Message ?? ex.Message);
             grading.CompletedAt = DateTimeOffset.UtcNow;
             try
             {

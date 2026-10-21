@@ -826,6 +826,74 @@ public sealed class AdminExamsControllerTests
         Assert.Equal(expected, actual);
     }
 
+    [Fact]
+    public async Task Generate_WithBlueprintJson_RedirectsToStudioWithSuccessMessage()
+    {
+        var api = new TestApiClient();
+        var controller = CreateController(api);
+        var json = """{ "certCode": "TOEIC", "title": "AI Mock Form", "sections": [{ "sectionCode": "P5", "questionCount": 2 }] }""";
+
+        var result = await controller.Generate(
+            certCode: null,
+            title: null,
+            purpose: null,
+            status: null,
+            targetBand: null,
+            difficultyLevel: null,
+            blueprintJson: json,
+            certId: 1);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(AdminExamsController.Studio), redirect.ActionName);
+        Assert.Equal(99, redirect.RouteValues?["id"]);
+        Assert.Contains("Generated exam", controller.TempData["Success"]?.ToString());
+        Assert.NotNull(api.LastGeneratedBlueprint);
+        Assert.Equal("TOEIC", api.LastGeneratedBlueprint.CertCode);
+    }
+
+    [Fact]
+    public async Task Generate_WithFormFields_ConstructsBlueprintAndRedirectsToStudio()
+    {
+        var api = new TestApiClient();
+        var controller = CreateController(api);
+
+        var result = await controller.Generate(
+            certCode: "TOEIC",
+            title: "Quick Form",
+            purpose: "mock",
+            status: "published",
+            targetBand: "B2",
+            difficultyLevel: 3,
+            blueprintJson: null,
+            certId: 1);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(AdminExamsController.Studio), redirect.ActionName);
+        Assert.Equal(99, redirect.RouteValues?["id"]);
+        Assert.Equal("published", api.LastGeneratedBlueprint?.Status);
+    }
+
+    [Fact]
+    public async Task Generate_WhenMissingCertCode_RedirectsToIndexWithError()
+    {
+        var api = new TestApiClient();
+        var controller = CreateController(api);
+
+        var result = await controller.Generate(
+            certCode: null,
+            title: "Form",
+            purpose: "mock",
+            status: "draft",
+            targetBand: null,
+            difficultyLevel: null,
+            blueprintJson: null,
+            certId: 1);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(AdminExamsController.Index), redirect.ActionName);
+        Assert.Contains("target certificate", controller.TempData["Error"]?.ToString());
+    }
+
     internal sealed class EmptyTempDataProvider : ITempDataProvider
     {
         public IDictionary<string, object> LoadTempData(HttpContext context) => new Dictionary<string, object>();
@@ -1003,6 +1071,22 @@ public sealed class AdminExamsControllerTests
             LastUploadedMediaExamId = examId;
             LastUploadedMediaFileName = fileName;
             return Task.FromResult(new AdminExamMediaUploadResultDto($"/media/exams/{examId}/{fileName}", $"exams/{examId}/{fileName}", fileName));
+        }
+
+        public ExamBlueprintDto? LastGeneratedBlueprint { get; private set; }
+        public Exception? GenerateException { get; set; }
+        public Task<ExamGenerationResultDto> GenerateAdminExamAsync(ExamBlueprintDto blueprint, CancellationToken cancellationToken = default)
+        {
+            if (GenerateException != null) throw GenerateException;
+            LastGeneratedBlueprint = blueprint;
+            return Task.FromResult(new ExamGenerationResultDto(
+                ExamId: 99,
+                CertId: 1,
+                CertCode: blueprint.CertCode,
+                ExamName: blueprint.Title ?? "Generated Test",
+                Status: blueprint.Status ?? "draft",
+                Purpose: blueprint.Purpose ?? "mock",
+                QuestionCount: 4));
         }
 
         public Task<(Stream Stream, string ContentType, string FileName)> ExportAdminExamAsync(int examId, string? format = "zip", CancellationToken cancellationToken = default)
