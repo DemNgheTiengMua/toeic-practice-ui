@@ -130,6 +130,202 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
     }
 
     [Fact]
+    public async Task CreateAttempt_Seeds_Mcq_Answers_And_FreeResponse_Drafts_Separately()
+    {
+        var certCode = Unique("ATTE");
+        var (certId, examId, q1Id, q2Id, _, _) = await SeedExamFixtureAsync(certCode);
+        var freeResponseQuestionId = await AddWritingQuestionAsync(certId, examId);
+        var userId = await SeedLearnerAsync(certCode);
+        var engine = CreateEngine();
+
+        var attempt = await engine.CreateAttemptAsync(userId, certId, examId, 120);
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var answers = await db.AttemptAnswers.Where(a => a.AttemptId == attempt.AttemptId).ToListAsync();
+        var drafts = await db.FreeResponses.Where(r => r.AttemptId == attempt.AttemptId).ToListAsync();
+
+        Assert.Equal(new[] { q1Id, q2Id }.OrderBy(id => id), answers.Select(a => a.QuestionId).OrderBy(id => id));
+        var draft = Assert.Single(drafts);
+        Assert.Equal(freeResponseQuestionId, draft.QuestionId);
+        Assert.Equal(FreeResponseStatus.Draft.ToCode(), draft.Status);
+        Assert.Equal(string.Empty, draft.ResponseText);
+        Assert.Null(draft.SubmittedAt);
+        Assert.NotNull(draft.DraftSavedAt);
+    }
+
+    [Fact]
+    public async Task GetAttemptTake_Includes_FreeResponse_Prompt_Draft_And_Word_Limits()
+    {
+        var certCode = Unique("ATTE");
+        var (certId, examId, _, _, _, _) = await SeedExamFixtureAsync(certCode);
+        var freeResponseQuestionId = await AddWritingQuestionAsync(certId, examId);
+        var userId = await SeedLearnerAsync(certCode);
+        var engine = CreateEngine();
+        var attempt = await engine.CreateAttemptAsync(userId, certId, examId, 120);
+
+        var take = await engine.GetAttemptTakeAsync(attempt.AttemptId, userId, null);
+
+        Assert.Equal(3, take.TotalQuestions);
+        var question = Assert.Single(take.Questions!, q => q.QuestionId == freeResponseQuestionId);
+        Assert.Equal(QuestionType.FreeResponse.ToCode(), question.QuestionType);
+        Assert.Equal(string.Empty, question.ResponseText);
+        Assert.Equal(10, question.MinWords);
+        Assert.Equal(100, question.MaxWords);
+        Assert.Contains(take.Navigator, item => item.QuestionId == freeResponseQuestionId && !item.IsAnswered);
+        var phases = take.Phases!;
+        Assert.Equal(new[] { "LIST", "READ", "WRIT" }, phases.Select(phase => phase.SkillCode));
+        Assert.Equal(120 * 60, phases.Sum(phase => phase.DurationSeconds));
+        Assert.Equal(0, phases[0].StartOffsetSeconds);
+        Assert.Equal(phases[0].DurationSeconds, phases[1].StartOffsetSeconds);
+        Assert.Equal(phases[1].StartOffsetSeconds + phases[1].DurationSeconds, phases[2].StartOffsetSeconds);
+    }
+
+    [Fact]
+    public async Task SaveDraft_OnlyAllowsActivePhase_AndPersistsDraftText()
+    {
+        var certCode = Unique("ATTE");
+        var (certId, examId, _, _, _, _) = await SeedExamFixtureAsync(certCode);
+        var freeResponseQuestionId = await AddWritingQuestionAsync(certId, examId);
+        var userId = await SeedLearnerAsync(certCode);
+        var engine = CreateEngine();
+        var attempt = await engine.CreateAttemptAsync(userId, certId, examId, 120);
+
+        var wrongPhase = await Assert.ThrowsAsync<AttemptEngineException>(() =>
+            engine.SaveDraftAsync(attempt.AttemptId, userId, freeResponseQuestionId, "First draft."));
+        Assert.Equal(AttemptEngineException.WrongPhase, wrongPhase.Code);
+
+        var startedAt = DateTimeOffset.UtcNow.AddMinutes(-90);
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            var activeAttempt = await db.ExamAttempts.SingleAsync(a => a.AttemptId == attempt.AttemptId);
+            activeAttempt.StartedAt = startedAt;
+            activeAttempt.ExpiresAt = startedAt.AddMinutes(120);
+            await db.SaveChangesAsync();
+        }
+
+        var result = await CreateEngine().SaveDraftAsync(
+            attempt.AttemptId,
+            userId,
+            freeResponseQuestionId,
+            "A saved exam response with several words.");
+
+        Assert.Equal(freeResponseQuestionId, result.QuestionId);
+        Assert.Equal(7, result.WordCount);
+        await using var resultDb = DbContextFactory.Create(database.ConnectionString);
+        var response = await resultDb.FreeResponses.SingleAsync(r =>
+            r.AttemptId == attempt.AttemptId && r.QuestionId == freeResponseQuestionId);
+        Assert.Equal("A saved exam response with several words.", response.ResponseText);
+        Assert.Equal(result.SavedAt, response.DraftSavedAt);
+        Assert.Equal(freeResponseQuestionId,
+            await resultDb.ExamAttempts.Where(a => a.AttemptId == attempt.AttemptId).Select(a => a.LastQuestionId).SingleAsync());
+    }
+
+    [Fact]
+    public async Task SubmitAttempt_Flushes_Final_Drafts_And_Queues_Ai_Gradings()
+    {
+        var certCode = Unique("ATTE");
+        var (certId, examId, _, _, _, _) = await SeedExamFixtureAsync(certCode);
+        var freeResponseQuestionId = await AddWritingQuestionAsync(certId, examId);
+        var userId = await SeedLearnerAsync(certCode);
+        var attempt = await CreateEngine().CreateAttemptAsync(userId, certId, examId, 120);
+
+        await using (var draftDb = DbContextFactory.Create(database.ConnectionString))
+        {
+            var writingService = new WritingPracticeService(draftDb, new LearnerService(draftDb));
+            await writingService.SaveDraftAsync(userId, attempt.AttemptId, freeResponseQuestionId, "Background autosaved text.");
+        }
+
+        var engine = CreateEngine();
+        var finalText = "Last-second text from the active writing editor.";
+        var result = await engine.SubmitAttemptAsync(
+            attempt.AttemptId,
+            userId,
+            isAutoSubmit: true,
+            finalDrafts: [new AttemptFinalDraft(freeResponseQuestionId, finalText)]);
+
+        Assert.True(result.IsAutoSubmitted);
+        Assert.Equal(AttemptStatus.Submitted.ToCode(), result.Attempt.Status);
+        var pendingResult = await engine.GetAttemptResultAsync(attempt.AttemptId, userId);
+        Assert.Equal(AttemptStatus.Submitted, pendingResult.Status);
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var response = await db.FreeResponses.SingleAsync(r =>
+            r.AttemptId == attempt.AttemptId && r.QuestionId == freeResponseQuestionId);
+        Assert.Equal(finalText, response.ResponseText);
+        Assert.Equal(FreeResponseStatus.PendingAi.ToCode(), response.Status);
+        Assert.NotNull(response.SubmittedAt);
+        Assert.NotNull(response.DraftSavedAt);
+
+        var grading = await db.AiGradings.SingleAsync(g => g.FreeResponseId == response.FreeResponseId);
+        Assert.Equal(AiGradingStatus.Pending.ToCode(), grading.Status);
+    }
+
+    [Fact]
+    public async Task AiGradingCompletion_Preserves_Hybrid_Exam_Objective_Score()
+    {
+        var certCode = Unique("ATTE");
+        var (certId, examId, _, _, _, _) = await SeedExamFixtureAsync(certCode);
+        var freeResponseQuestionId = await AddWritingQuestionAsync(certId, examId);
+        var userId = await SeedLearnerAsync(certCode);
+        var attempt = await CreateEngine().CreateAttemptAsync(userId, certId, examId, 120);
+        var engine = CreateEngine();
+        await database.SqlAsync($"""
+            UPDATE ExamAttempts
+            SET StartedAt = DATEADD(minute, -90, SYSDATETIMEOFFSET()),
+                ExpiresAt = DATEADD(minute, 30, SYSDATETIMEOFFSET())
+            WHERE AttemptId = {attempt.AttemptId};
+            """);
+
+        await engine.SaveDraftAsync(
+            attempt.AttemptId,
+            userId,
+            freeResponseQuestionId,
+            "A complete written response.");
+        await engine.SubmitAttemptAsync(attempt.AttemptId, userId, isAutoSubmit: false);
+        var submitted = await engine.GetAttemptResultAsync(attempt.AttemptId, userId);
+        Assert.Equal(AttemptStatus.Submitted, submitted.Status);
+        Assert.Equal(200, submitted.TotalScore);
+
+        await using (var gradingDb = DbContextFactory.Create(database.ConnectionString))
+        {
+            var processor = new AiGradingProcessor(gradingDb, new FakeAiGrader());
+            var freeResponseId = await gradingDb.FreeResponses
+                .Where(response => response.AttemptId == attempt.AttemptId)
+                .Select(response => response.FreeResponseId)
+                .SingleAsync();
+            Assert.True(await processor.GradeFreeResponseAsync(freeResponseId));
+        }
+
+        await using var resultDb = DbContextFactory.Create(database.ConnectionString);
+        var completed = await new AttemptEngine(resultDb).GetAttemptResultAsync(attempt.AttemptId, userId);
+        Assert.Equal(AttemptStatus.Graded, completed.Status);
+        Assert.Equal(200, completed.TotalScore);
+        Assert.Equal(FreeResponseStatus.Graded.ToCode(),
+            await resultDb.FreeResponses.Where(response => response.AttemptId == attempt.AttemptId)
+                .Select(response => response.Status).SingleAsync());
+    }
+
+    [Fact]
+    public async Task CreateAttempt_Seeds_The_Diagnostic_Benchmark_Hybrid_Question_Set()
+    {
+        var seedDemoPath = Path.Combine(DatabaseFixture.RepoRootPath, "docs", "seed-demo.sql");
+        await database.SqlCmdFileToDatabaseAsync("ExtraEfficiencyServicesTest", seedDemoPath);
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var exam = await db.Exams.SingleAsync(e => e.Name == "Diagnostic Benchmark 45M");
+        var certId = exam.CertId;
+        var examId = exam.ExamId;
+        var userId = await SeedLearnerAsync("TOEIC");
+
+        var attempt = await CreateEngine().CreateAttemptAsync(userId, certId, examId, exam.DurationMinutes);
+
+        await using var resultDb = DbContextFactory.Create(database.ConnectionString);
+        Assert.Equal(30, await resultDb.AttemptAnswers.CountAsync(a => a.AttemptId == attempt.AttemptId));
+        Assert.Equal(2, await resultDb.FreeResponses.CountAsync(r => r.AttemptId == attempt.AttemptId));
+        var take = await new AttemptEngine(resultDb).GetAttemptTakeAsync(attempt.AttemptId, userId, null);
+        Assert.Equal(32, take.TotalQuestions);
+    }
+
+    [Fact]
     public async Task SaveAnswer_Updates_Answer_And_LastQuestionId()
     {
         var certCode = Unique("ATTE");
