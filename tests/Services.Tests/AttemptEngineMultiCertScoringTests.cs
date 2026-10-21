@@ -27,6 +27,15 @@ public sealed class AttemptEngineMultiCertScoringTests(DatabaseFixture database)
         await command.ExecuteNonQueryAsync();
     }
 
+    // Both fixture skills have no duration weight, so a 60-minute attempt splits evenly.
+    private static Task StartReadingPhaseAsync(string connectionString, int attemptId) =>
+        RunSqlAsync(connectionString, $"""
+            UPDATE ExamAttempts
+            SET StartedAt = DATEADD(second, -1801, SYSDATETIMEOFFSET()),
+                ExpiresAt = DATEADD(second, 1799, SYSDATETIMEOFFSET())
+            WHERE AttemptId = {attemptId};
+            """);
+
     private async Task<ScoringFixture> SeedFixtureAsync(string connectionString, string certCode)
     {
         await RunSqlAsync(connectionString, $"""
@@ -152,9 +161,12 @@ public sealed class AttemptEngineMultiCertScoringTests(DatabaseFixture database)
 
                 var attempt = await engine.CreateAttemptAsync(userId, fixture.CertId, fixture.ExamId, 60);
                 await engine.SaveAnswerAsync(attempt.AttemptId, userId, fixture.ListeningQuestionId, fixture.ListeningCorrectOptionId, false);
-                await engine.SaveAnswerAsync(attempt.AttemptId, userId, fixture.ReadingQuestionId, fixture.ReadingCorrectOptionId, false);
+                await StartReadingPhaseAsync(connectionString, attempt.AttemptId);
+                await using var readingDb = DbContextFactory.Create(connectionString);
+                var readingEngine = new AttemptEngine(readingDb);
+                await readingEngine.SaveAnswerAsync(attempt.AttemptId, userId, fixture.ReadingQuestionId, fixture.ReadingCorrectOptionId, false);
 
-                var result = await engine.SubmitAttemptAsync(attempt.AttemptId, userId, isAutoSubmit: false);
+                var result = await readingEngine.SubmitAttemptAsync(attempt.AttemptId, userId, isAutoSubmit: false);
 
                 Assert.Equal(expectedScore.Total, result.TotalScore);
                 Assert.Equal(expectedScore.Band, result.BandCode);
@@ -207,9 +219,12 @@ public sealed class AttemptEngineMultiCertScoringTests(DatabaseFixture database)
             var engine = new AttemptEngine(engineDb);
             var attempt = await engine.CreateAttemptAsync(userId, fixture.CertId, fixture.ExamId, 60);
             await engine.SaveAnswerAsync(attempt.AttemptId, userId, fixture.ListeningQuestionId, fixture.ListeningCorrectOptionId, false);
-            await engine.SaveAnswerAsync(attempt.AttemptId, userId, fixture.ReadingQuestionId, fixture.ReadingCorrectOptionId, false);
+            await StartReadingPhaseAsync(connectionString, attempt.AttemptId);
+            await using var readingDb = DbContextFactory.Create(connectionString);
+            var readingEngine = new AttemptEngine(readingDb);
+            await readingEngine.SaveAnswerAsync(attempt.AttemptId, userId, fixture.ReadingQuestionId, fixture.ReadingCorrectOptionId, false);
 
-            var result = await engine.SubmitAttemptAsync(attempt.AttemptId, userId, isAutoSubmit: false);
+            var result = await readingEngine.SubmitAttemptAsync(attempt.AttemptId, userId, isAutoSubmit: false);
 
             Assert.Equal(48, result.TotalScore);
             Assert.Equal("A2", result.BandCode);

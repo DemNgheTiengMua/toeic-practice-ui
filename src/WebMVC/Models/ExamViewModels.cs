@@ -19,6 +19,11 @@ public sealed record SaveAnswerFormModel(
     bool IsFlagged,
     string? ResponseText = null);
 
+public sealed class ExamSubmitFormModel
+{
+    public List<SubmitAttemptDraftRequest> Drafts { get; set; } = [];
+}
+
 public sealed record ExamResultViewModel(
     AttemptResultDto Result,
     string? ErrorMessage = null,

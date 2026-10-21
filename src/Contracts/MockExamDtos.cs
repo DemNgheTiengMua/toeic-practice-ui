@@ -90,7 +90,10 @@ public sealed record AttemptQuestionDto(
     int? ResponseSeconds = null,
     string? ResponseText = null,
     string? ResponseAudioPath = null,
-    int? ResponseDurationMs = null);
+    int? ResponseDurationMs = null,
+    DateTimeOffset? DraftSavedAt = null,
+    int? SkillDurationMinutes = null,
+    int SkillDisplayOrder = 0);
 
 public sealed record NavigatorItemDto(
     int QuestionId,
@@ -117,7 +120,26 @@ public sealed record AttemptTakeDto(
     AttemptQuestionDto CurrentQuestion,
     IReadOnlyList<NavigatorItemDto> Navigator,
     bool IsAutoSubmitted,
-    IReadOnlyList<AttemptQuestionDto>? Questions = null);
+    IReadOnlyList<AttemptQuestionDto>? Questions = null,
+    IReadOnlyList<AttemptPhaseDto>? Phases = null);
+
+public sealed record AttemptPhaseDto(
+    int SkillId,
+    string SkillCode,
+    string SkillName,
+    int SkillDisplayOrder,
+    int StartOffsetSeconds,
+    int DurationSeconds);
+
+public sealed record SaveAttemptDraftRequest(
+    int QuestionId,
+    string? ResponseText);
+
+public sealed record SaveAttemptDraftResponse(
+    int FreeResponseId,
+    int QuestionId,
+    DateTimeOffset SavedAt,
+    int WordCount);
 
 public sealed record SaveAnswerRequest(
     int? SelectedOptionId,
@@ -139,6 +161,13 @@ public sealed record SubmitAttemptResponse(
     string? BandName,
     DateTimeOffset SubmittedAt,
     bool IsAutoSubmitted);
+
+public sealed record SubmitAttemptDraftRequest(
+    int QuestionId,
+    string? ResponseText);
+
+public sealed record SubmitAttemptRequest(
+    IReadOnlyList<SubmitAttemptDraftRequest> Drafts);
 
 public sealed record AttemptSkillScoreDto(
     int SkillId,

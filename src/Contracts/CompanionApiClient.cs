@@ -398,9 +398,41 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
         return (await response.Content.ReadFromJsonAsync<SaveAnswerResultDto>(Json, cancellationToken))!;
     }
 
+    public async Task<SaveAttemptDraftResponse> SaveAttemptDraftAsync(
+        int attemptId,
+        SaveAttemptDraftRequest request,
+        string bearerToken,
+        CancellationToken cancellationToken = default)
+    {
+        using var message = new HttpRequestMessage(HttpMethod.Post, $"api/learner/attempts/{attemptId}/draft")
+        {
+            Content = JsonContent.Create(request, options: Json),
+        };
+        AttachBearer(message, bearerToken);
+        using var response = await http.SendAsync(message, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+        return (await response.Content.ReadFromJsonAsync<SaveAttemptDraftResponse>(Json, cancellationToken))!;
+    }
+
     public async Task<SubmitAttemptResponse> SubmitAttemptAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default)
     {
         using var message = new HttpRequestMessage(HttpMethod.Post, $"api/learner/attempts/{attemptId}/submit");
+        AttachBearer(message, bearerToken);
+        using var response = await http.SendAsync(message, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+        return (await response.Content.ReadFromJsonAsync<SubmitAttemptResponse>(Json, cancellationToken))!;
+    }
+
+    public async Task<SubmitAttemptResponse> SubmitAttemptWithDraftsAsync(
+        int attemptId,
+        SubmitAttemptRequest request,
+        string bearerToken,
+        CancellationToken cancellationToken = default)
+    {
+        using var message = new HttpRequestMessage(HttpMethod.Post, $"api/learner/attempts/{attemptId}/submit-with-drafts")
+        {
+            Content = JsonContent.Create(request, options: Json),
+        };
         AttachBearer(message, bearerToken);
         using var response = await http.SendAsync(message, cancellationToken);
         await EnsureSuccessAsync(response, cancellationToken);
@@ -1265,8 +1297,20 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
     public Task<SaveAnswerResultDto> SaveAttemptAnswerAsync(int attemptId, int questionId, SaveAnswerRequest request, CancellationToken cancellationToken = default) =>
         SaveAttemptAnswerAsync(attemptId, questionId, request, string.Empty, cancellationToken);
 
+    public Task<SaveAttemptDraftResponse> SaveAttemptDraftAsync(
+        int attemptId,
+        SaveAttemptDraftRequest request,
+        CancellationToken cancellationToken = default) =>
+        SaveAttemptDraftAsync(attemptId, request, string.Empty, cancellationToken);
+
     public Task<SubmitAttemptResponse> SubmitAttemptAsync(int attemptId, CancellationToken cancellationToken = default) =>
         SubmitAttemptAsync(attemptId, string.Empty, cancellationToken);
+
+    public Task<SubmitAttemptResponse> SubmitAttemptWithDraftsAsync(
+        int attemptId,
+        SubmitAttemptRequest request,
+        CancellationToken cancellationToken = default) =>
+        SubmitAttemptWithDraftsAsync(attemptId, request, string.Empty, cancellationToken);
 
     public Task CancelAttemptAsync(int attemptId, CancellationToken cancellationToken = default) =>
         CancelAttemptAsync(attemptId, string.Empty, cancellationToken);

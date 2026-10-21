@@ -44,7 +44,14 @@ public interface IMockExamService
         CancellationToken cancellationToken = default,
         string? responseText = null);
 
-    Task<AttemptResultView> SubmitAttemptAsync(int userId, int attemptId, bool isAutoSubmit, CancellationToken cancellationToken = default);
+    Task<SaveAttemptDraftResult> SaveDraftAsync(int userId, int attemptId, int questionId, string? responseText, CancellationToken cancellationToken = default);
+
+    Task<AttemptResultView> SubmitAttemptAsync(
+        int userId,
+        int attemptId,
+        bool isAutoSubmit,
+        CancellationToken cancellationToken = default,
+        IReadOnlyList<AttemptFinalDraft>? finalDrafts = null);
 
     Task CancelAttemptAsync(int userId, int attemptId, CancellationToken cancellationToken = default);
 
@@ -296,15 +303,33 @@ public sealed class MockExamService(
         }
     }
 
-    public async Task<AttemptResultView> SubmitAttemptAsync(
+    public async Task<SaveAttemptDraftResult> SaveDraftAsync(
         int userId,
         int attemptId,
-        bool isAutoSubmit,
+        int questionId,
+        string? responseText,
         CancellationToken cancellationToken = default)
     {
         try
         {
-            await _attemptEngine.SubmitAttemptAsync(attemptId, userId, isAutoSubmit, cancellationToken);
+            return await _attemptEngine.SaveDraftAsync(attemptId, userId, questionId, responseText, cancellationToken);
+        }
+        catch (AttemptEngineException ex)
+        {
+            throw MapException(ex);
+        }
+    }
+
+    public async Task<AttemptResultView> SubmitAttemptAsync(
+        int userId,
+        int attemptId,
+        bool isAutoSubmit,
+        CancellationToken cancellationToken = default,
+        IReadOnlyList<AttemptFinalDraft>? finalDrafts = null)
+    {
+        try
+        {
+            await _attemptEngine.SubmitAttemptAsync(attemptId, userId, isAutoSubmit, cancellationToken, finalDrafts);
             return await _attemptEngine.GetAttemptResultAsync(attemptId, userId, cancellationToken);
         }
         catch (AttemptEngineException ex)

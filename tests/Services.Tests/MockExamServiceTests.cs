@@ -23,6 +23,14 @@ public sealed class MockExamServiceTests(DatabaseFixture database)
         return (service, learners);
     }
 
+    private Task AdvanceAttemptToSecondPhaseAsync(int attemptId) =>
+        database.SqlAsync($"""
+            UPDATE ExamAttempts
+            SET StartedAt = DATEADD(minute, -31, SYSDATETIMEOFFSET()),
+                ExpiresAt = DATEADD(minute, 29, SYSDATETIMEOFFSET())
+            WHERE AttemptId = {attemptId};
+            """);
+
     private async Task<int> SeedLearnerAsync(string? activeCertCode = null, int startingCredits = 0)
     {
         var email = $"{Guid.NewGuid():N}@test.local";
@@ -436,6 +444,8 @@ public sealed class MockExamServiceTests(DatabaseFixture database)
 
         // Answer Q1 correctly (Listening) and Q2 correctly (Reading)
         await service.SaveAnswerAsync(userId, attempt.AttemptId, q1Id, opt1CorrectId, isFlagged: false);
+        await AdvanceAttemptToSecondPhaseAsync(attempt.AttemptId);
+        service = CreateServices().service;
         await service.SaveAnswerAsync(userId, attempt.AttemptId, q2Id, opt2CorrectId, isFlagged: false);
 
         var result = await service.SubmitAttemptAsync(userId, attempt.AttemptId, isAutoSubmit: false);

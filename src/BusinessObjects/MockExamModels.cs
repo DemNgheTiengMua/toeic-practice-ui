@@ -90,7 +90,28 @@ public sealed record AttemptQuestionInfo(
     int? ResponseSeconds = null,
     string? ResponseText = null,
     string? ResponseAudioPath = null,
-    int? ResponseDurationMs = null);
+    int? ResponseDurationMs = null,
+    DateTimeOffset? DraftSavedAt = null,
+    int? SkillDurationMinutes = null,
+    int SkillDisplayOrder = 0);
+
+public sealed record AttemptFinalDraft(
+    int QuestionId,
+    string? ResponseText);
+
+public sealed record AttemptPhaseInfo(
+    int SkillId,
+    string SkillCode,
+    string SkillName,
+    int SkillDisplayOrder,
+    int StartOffsetSeconds,
+    int DurationSeconds);
+
+public sealed record SaveAttemptDraftResult(
+    int FreeResponseId,
+    int QuestionId,
+    DateTimeOffset SavedAt,
+    int WordCount);
 
 public sealed record NavigatorItem(
     int QuestionId,
@@ -117,7 +138,8 @@ public sealed record AttemptTakeView(
     AttemptQuestionInfo CurrentQuestion,
     IReadOnlyList<NavigatorItem> Navigator,
     bool IsAutoSubmitted,
-    IReadOnlyList<AttemptQuestionInfo>? Questions = null);
+    IReadOnlyList<AttemptQuestionInfo>? Questions = null,
+    IReadOnlyList<AttemptPhaseInfo>? Phases = null);
 
 public sealed record SaveAttemptAnswerResult(
     int QuestionId,
