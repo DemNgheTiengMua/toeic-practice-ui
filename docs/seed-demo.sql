@@ -1027,7 +1027,7 @@ BEGIN
 END;
 
 -- 2. IELTS Placement: Cambridge IELTS — Placement Diagnostic
-IF NOT EXISTS (SELECT 1 FROM Exams WHERE CertId = @ieltsCert AND Name = N'Cambridge IELTS — Placement Diagnostic')
+IF NOT EXISTS (SELECT 1 FROM Exams WHERE CertId = @ieltsCert AND Name IN (N'Cambridge IELTS — Placement Diagnostic', N'IELTS-DIAG-01'))
 BEGIN
   INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose, Description, SourceName, QuestionCount)
   VALUES (@ieltsCert, N'Cambridge IELTS — Placement Diagnostic', 'published', 45, 'placement',
@@ -1197,7 +1197,7 @@ BEGIN
 END;
 
 -- 2. VSTEP Placement: VSTEP Placement Test — Diagnostic
-IF NOT EXISTS (SELECT 1 FROM Exams WHERE CertId = @vstepCert AND Name = N'VSTEP Placement Test — Diagnostic')
+IF NOT EXISTS (SELECT 1 FROM Exams WHERE CertId = @vstepCert AND Name IN (N'VSTEP Placement Test — Diagnostic', N'VSTEP-DIAG-01'))
 BEGIN
   INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose, Description, SourceName, QuestionCount)
   VALUES (@vstepCert, N'VSTEP Placement Test — Diagnostic', 'published', 45, 'placement',
@@ -3547,4 +3547,561 @@ PRINT '17. 3-Skill Diagnostic Benchmark and dynamic path template seeded';
 GO
 
 PRINT 'All demo data seeded successfully.';
+GO
+
+-- ============================================================================
+-- 18. IELTS and VSTEP diagnostic benchmarks, free writing extensions, and paths
+-- ============================================================================
+DECLARE @diagIeltsCert INT = (SELECT CertId FROM Certificates WHERE Code = 'IELTS');
+DECLARE @diagVstepCert INT = (SELECT CertId FROM Certificates WHERE Code = 'VSTEP');
+
+DECLARE @diagIeltsList INT = (SELECT SkillId FROM Skills WHERE CertId = @diagIeltsCert AND Code = 'LIST');
+DECLARE @diagIeltsRead INT = (SELECT SkillId FROM Skills WHERE CertId = @diagIeltsCert AND Code = 'READ');
+DECLARE @diagIeltsWrit INT = (SELECT SkillId FROM Skills WHERE CertId = @diagIeltsCert AND Code = 'WRIT');
+DECLARE @diagVstepList INT = (SELECT SkillId FROM Skills WHERE CertId = @diagVstepCert AND Code = 'LIST');
+DECLARE @diagVstepRead INT = (SELECT SkillId FROM Skills WHERE CertId = @diagVstepCert AND Code = 'READ');
+DECLARE @diagVstepWrit INT = (SELECT SkillId FROM Skills WHERE CertId = @diagVstepCert AND Code = 'WRIT');
+
+DECLARE @diagIeltsListeningSection INT = (SELECT SectionId FROM Sections WHERE CertId = @diagIeltsCert AND Code = 'REC');
+DECLARE @diagIeltsReadingSection INT = (SELECT SectionId FROM Sections WHERE CertId = @diagIeltsCert AND Code = 'PAS');
+DECLARE @diagIeltsTask1Section INT = (SELECT SectionId FROM Sections WHERE CertId = @diagIeltsCert AND Code = 'T1');
+DECLARE @diagIeltsTask2Section INT = (SELECT SectionId FROM Sections WHERE CertId = @diagIeltsCert AND Code = 'T2');
+DECLARE @diagVstepListeningSection INT = (SELECT SectionId FROM Sections WHERE CertId = @diagVstepCert AND Code = 'L3');
+DECLARE @diagVstepReadingSection INT = (SELECT SectionId FROM Sections WHERE CertId = @diagVstepCert AND Code = 'R4');
+DECLARE @diagVstepEmailSection INT = (SELECT SectionId FROM Sections WHERE CertId = @diagVstepCert AND Code = 'W1');
+DECLARE @diagVstepEssaySection INT = (SELECT SectionId FROM Sections WHERE CertId = @diagVstepCert AND Code = 'W2');
+
+IF @diagIeltsCert IS NULL OR @diagVstepCert IS NULL
+   OR @diagIeltsList IS NULL OR @diagIeltsRead IS NULL OR @diagIeltsWrit IS NULL
+   OR @diagVstepList IS NULL OR @diagVstepRead IS NULL OR @diagVstepWrit IS NULL
+   OR @diagIeltsListeningSection IS NULL OR @diagIeltsReadingSection IS NULL
+   OR @diagIeltsTask1Section IS NULL OR @diagIeltsTask2Section IS NULL
+   OR @diagVstepListeningSection IS NULL OR @diagVstepReadingSection IS NULL
+   OR @diagVstepEmailSection IS NULL OR @diagVstepEssaySection IS NULL
+  THROW 50050, 'IELTS/VSTEP diagnostic seed requires the complete certificate catalog.', 1;
+
+-- Upgrade the earlier two-question placeholders in place; certificate-scoped lookup keeps
+-- existing exam IDs and all related references stable without assuming identity values.
+UPDATE Exams
+SET Name = N'IELTS-DIAG-01',
+    DurationMinutes = 60,
+    QuestionCount = 10,
+    Description = N'Free IELTS baseline benchmark: Listening and Academic Reading, followed by a separately graded free diagnostic Writing extension.'
+WHERE CertId = @diagIeltsCert
+  AND Name IN (N'Cambridge IELTS — Placement Diagnostic', N'IELTS-DIAG-01');
+
+IF NOT EXISTS (SELECT 1 FROM Exams WHERE CertId = @diagIeltsCert AND Name = N'IELTS-DIAG-01')
+  INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose, Description, SourceName, QuestionCount)
+  VALUES (@diagIeltsCert, N'IELTS-DIAG-01', 'published', 60, 'placement',
+          N'Free IELTS baseline benchmark: Listening and Academic Reading, followed by a separately graded free diagnostic Writing extension.',
+          N'IELTS diagnostic benchmark', 10);
+DECLARE @diagIeltsExam INT = (SELECT ExamId FROM Exams WHERE CertId = @diagIeltsCert AND Name = N'IELTS-DIAG-01');
+
+UPDATE Exams
+SET Name = N'VSTEP-DIAG-01',
+    DurationMinutes = 45,
+    QuestionCount = 10,
+    Description = N'Free VSTEP baseline benchmark: Listening and Reading, followed by a separately graded free diagnostic Writing extension.'
+WHERE CertId = @diagVstepCert
+  AND Name IN (N'VSTEP Placement Test — Diagnostic', N'VSTEP-DIAG-01');
+
+IF NOT EXISTS (SELECT 1 FROM Exams WHERE CertId = @diagVstepCert AND Name = N'VSTEP-DIAG-01')
+  INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose, Description, SourceName, QuestionCount)
+  VALUES (@diagVstepCert, N'VSTEP-DIAG-01', 'published', 45, 'placement',
+          N'Free VSTEP baseline benchmark: Listening and Reading, followed by a separately graded free diagnostic Writing extension.',
+          N'VSTEP diagnostic benchmark', 10);
+DECLARE @diagVstepExam INT = (SELECT ExamId FROM Exams WHERE CertId = @diagVstepCert AND Name = N'VSTEP-DIAG-01');
+
+-- Separate writing_practice exams use the existing free-response lifecycle and IELTS/VSTEP
+-- GradingCriteria. The source marker makes these diagnostic attempts free without changing schema.
+IF NOT EXISTS (SELECT 1 FROM Exams WHERE CertId = @diagIeltsCert AND Name = N'IELTS-DIAG-01 Writing Extension')
+  INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose, Description, SourceName, QuestionCount)
+  VALUES (@diagIeltsCert, N'IELTS-DIAG-01 Writing Extension', 'published', 60, 'writing_practice',
+          N'Free diagnostic extension: IELTS Academic Task 1 trend report and Task 2 opinion essay, graded against the four IELTS writing criteria.',
+          N'Free diagnostic benchmark', 2);
+DECLARE @diagIeltsWritingExam INT =
+    (SELECT ExamId FROM Exams WHERE CertId = @diagIeltsCert AND Name = N'IELTS-DIAG-01 Writing Extension');
+
+IF NOT EXISTS (SELECT 1 FROM Exams WHERE CertId = @diagVstepCert AND Name = N'VSTEP-DIAG-01 Writing Extension')
+  INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose, Description, SourceName, QuestionCount)
+  VALUES (@diagVstepCert, N'VSTEP-DIAG-01 Writing Extension', 'published', 45, 'writing_practice',
+          N'Free diagnostic extension: formal email response and a developed opinion essay, graded against the four VSTEP writing criteria.',
+          N'Free diagnostic benchmark', 2);
+DECLARE @diagVstepWritingExam INT =
+    (SELECT ExamId FROM Exams WHERE CertId = @diagVstepCert AND Name = N'VSTEP-DIAG-01 Writing Extension');
+
+IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @diagIeltsWritingExam AND SectionId = @diagIeltsTask1Section AND DisplayOrder = 1)
+  INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, Passage)
+  VALUES (@diagIeltsWritingExam, @diagIeltsCert, @diagIeltsTask1Section, 1,
+          N'The line chart shows the percentage of households with access to three energy sources in a European country from 2010 to 2020: solar rose from 10% to 50%, wind from 20% to 35%, and coal fell from 60% to 25%.');
+IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @diagIeltsWritingExam AND DisplayOrder = 1)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, MinWords, MaxWords, DisplayOrder)
+  SELECT g.GroupId, @diagIeltsWritingExam, @diagIeltsTask1Section, @diagIeltsWrit,
+         N'Summarise the main trends, select the most important features, and make relevant comparisons. Write at least 150 words.',
+         3, 'free_response',
+         N'Assessment focus: a clear overview, accurate comparisons, selective data, and a coherent progression from 2010 to 2020.',
+         150, 220, 1
+  FROM QuestionGroups g
+  WHERE g.ExamId = @diagIeltsWritingExam AND g.SectionId = @diagIeltsTask1Section AND g.DisplayOrder = 1;
+
+IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @diagIeltsWritingExam AND SectionId = @diagIeltsTask2Section AND DisplayOrder = 2)
+  INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, Passage)
+  VALUES (@diagIeltsWritingExam, @diagIeltsCert, @diagIeltsTask2Section, 2,
+          N'Some people believe that universities should focus on practical job skills, while others think academic knowledge is more important. Discuss both views and give your own opinion.');
+IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @diagIeltsWritingExam AND DisplayOrder = 2)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, MinWords, MaxWords, DisplayOrder)
+  SELECT g.GroupId, @diagIeltsWritingExam, @diagIeltsTask2Section, @diagIeltsWrit,
+         N'Discuss both views and give your own opinion. Support your position with reasons and relevant examples. Write at least 250 words.',
+         4, 'free_response',
+         N'Assessment focus: address both views, state a consistent position, develop supported ideas, and control paragraph cohesion.',
+         250, 350, 2
+  FROM QuestionGroups g
+  WHERE g.ExamId = @diagIeltsWritingExam AND g.SectionId = @diagIeltsTask2Section AND g.DisplayOrder = 2;
+
+IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @diagVstepWritingExam AND SectionId = @diagVstepEmailSection AND DisplayOrder = 1)
+  INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, Passage)
+  VALUES (@diagVstepWritingExam, @diagVstepCert, @diagVstepEmailSection, 1,
+          N'You have received an email from the coordinator of a local community project. Reply to explain which weekend activity you can join, ask for the meeting details, and suggest one way to prepare.');
+IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @diagVstepWritingExam AND DisplayOrder = 1)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, MinWords, MaxWords, DisplayOrder)
+  SELECT g.GroupId, @diagVstepWritingExam, @diagVstepEmailSection, @diagVstepWrit,
+         N'Write a polite email reply covering all three points. Use an appropriate greeting, clear paragraphs, and a suitable closing. Write 120–150 words.',
+         3, 'free_response',
+         N'Assessment focus: fulfil every communicative purpose, maintain an appropriate formal register, and organize a clear email.',
+         120, 150, 1
+  FROM QuestionGroups g
+  WHERE g.ExamId = @diagVstepWritingExam AND g.SectionId = @diagVstepEmailSection AND g.DisplayOrder = 1;
+
+IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @diagVstepWritingExam AND SectionId = @diagVstepEssaySection AND DisplayOrder = 2)
+  INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, Passage)
+  VALUES (@diagVstepWritingExam, @diagVstepCert, @diagVstepEssaySection, 2,
+          N'Some people think that cities should invest more in public parks than in shopping centres. Do you agree or disagree? Give reasons and examples.');
+IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @diagVstepWritingExam AND DisplayOrder = 2)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, MinWords, MaxWords, DisplayOrder)
+  SELECT g.GroupId, @diagVstepWritingExam, @diagVstepEssaySection, @diagVstepWrit,
+         N'Write an opinion essay with a clear position, two developed reasons, and relevant examples. Write 250–300 words.',
+         4, 'free_response',
+         N'Assessment focus: build a logical argument, explain examples, use cohesive paragraphs, and maintain accurate language.',
+         250, 300, 2
+  FROM QuestionGroups g
+  WHERE g.ExamId = @diagVstepWritingExam AND g.SectionId = @diagVstepEssaySection AND g.DisplayOrder = 2;
+
+-- Each scored benchmark has five Listening and five Reading questions. The existing two seed
+-- questions remain; eight additional questions add listening slices, academic reading, and a
+-- matching-style item. Every option, including each distractor, has a review rationale.
+DECLARE @diagQuestions TABLE (
+  SeedId INT IDENTITY(1,1) PRIMARY KEY,
+  CertId INT NOT NULL, ExamId INT NOT NULL, SectionId INT NOT NULL, SkillId INT NOT NULL,
+  GroupOrder INT NOT NULL, QuestionOrder INT NOT NULL,
+  AudioPath NVARCHAR(400) NULL, AudioStartMs INT NULL, AudioEndMs INT NULL,
+  Transcript NVARCHAR(MAX) NULL, Passage NVARCHAR(MAX) NULL,
+  Stem NVARCHAR(MAX) NOT NULL, Explanation NVARCHAR(MAX) NOT NULL, CorrectLabel VARCHAR(4) NOT NULL,
+  AText NVARCHAR(MAX) NOT NULL, ARationale NVARCHAR(MAX) NOT NULL,
+  BText NVARCHAR(MAX) NOT NULL, BRationale NVARCHAR(MAX) NOT NULL,
+  CText NVARCHAR(MAX) NOT NULL, CRationale NVARCHAR(MAX) NOT NULL,
+  DText NVARCHAR(MAX) NOT NULL, DRationale NVARCHAR(MAX) NOT NULL
+);
+
+INSERT INTO @diagQuestions
+  (CertId, ExamId, SectionId, SkillId, GroupOrder, QuestionOrder, AudioPath, AudioStartMs, AudioEndMs,
+   Transcript, Passage, Stem, Explanation, CorrectLabel,
+   AText, ARationale, BText, BRationale, CText, CRationale, DText, DRationale)
+VALUES
+(@diagIeltsCert,@diagIeltsExam,@diagIeltsListeningSection,@diagIeltsList,2,3,'/audio/ielts/placement-diagnostic.mp3',30000,60000,
+ N'Applicant: I can attend the laboratory induction on Tuesday. Is the 10 o''clock session still available?
+Coordinator: It is full, but there are two places in the 2:30 session. Please bring your student card.',
+ NULL,N'Which induction session can the applicant attend?',
+ N'The 10 o''clock session is full; the coordinator offers two places in the 2:30 session.', 'B',
+ N'The 10 o''clock session',N'This repeats the applicant''s first choice, but the coordinator says it is full.',
+ N'The 2:30 session',N'This is the alternative session with two available places.',
+ N'The Tuesday evening session',N'No evening session is mentioned in the recording.',
+ N'Any session without a student card',N'The card is something to bring, not a condition for choosing a session.'),
+(@diagIeltsCert,@diagIeltsExam,@diagIeltsListeningSection,@diagIeltsList,3,4,'/audio/ielts/placement-diagnostic.mp3',60000,90000,
+ N'Tutor: Your draft is well researched. Before Friday, reorganise the second section around the comparison rather than the dates.
+Student: Should I add another source?
+Tutor: Not yet. Make the contrast clearer first.',
+ NULL,N'What does the tutor advise the student to do first?',
+ N'The tutor explicitly prioritizes reorganising the section to make the comparison clearer.', 'C',
+ N'Add another source',N'The tutor says not to add a source yet.',
+ N'Correct every date',N'The advice is about the comparison, not date accuracy.',
+ N'Reorganise the section around the comparison',N'This paraphrases the tutor''s instruction to make the contrast clearer.',
+ N'Submit the draft on Thursday',N'The tutor gives a Friday deadline and no Thursday submission instruction.'),
+(@diagIeltsCert,@diagIeltsExam,@diagIeltsListeningSection,@diagIeltsList,4,5,'/audio/ielts/placement-diagnostic.mp3',90000,120000,
+ N'Guide: The north gallery is closed for lighting work this morning. The sculpture collection has moved upstairs, beside the reading room.
+Visitor: Is the café affected?
+Guide: No, it opens at the usual time.',
+ NULL,N'Where can visitors now find the sculpture collection?',
+ N'The guide says the collection has moved upstairs beside the reading room.', 'A',
+ N'Upstairs beside the reading room',N'This is the new location stated by the guide.',
+ N'In the closed north gallery',N'The gallery is closed and no longer holds the collection.',
+ N'Inside the café',N'The café is unaffected and is not the collection location.',
+ N'Outside the building',N'No outdoor relocation is mentioned.'),
+(@diagIeltsCert,@diagIeltsExam,@diagIeltsListeningSection,@diagIeltsList,5,6,'/audio/ielts/placement-diagnostic.mp3',120000,150000,
+ N'Researcher: We expected the survey to finish in May, but the final interviews were delayed.
+Manager: Does that change the publication date?
+Researcher: By only one week. The report should be ready in early July, not late June.',
+ NULL,N'What changed because of the delayed interviews?',
+ N'The report is now expected in early July rather than late June, a one-week shift.', 'D',
+ N'The survey will be cancelled',N'The researcher says only the timeline changed.',
+ N'The interviews ended one month early',N'The interviews were delayed, not completed early.',
+ N'The report will be ready in May',N'May was the expected survey completion, not the report date.',
+ N'The report is expected one week later',N'This captures the stated shift to early July.'),
+(@diagIeltsCert,@diagIeltsExam,@diagIeltsReadingSection,@diagIeltsRead,3,7,NULL,NULL,NULL,NULL,
+ N'Urban tree cover can reduce surface temperatures during heatwaves. A city study found the greatest cooling in streets where mature trees shaded continuous sections of pavement; isolated trees produced smaller local effects.',
+ N'Which condition produced the greatest cooling in the study?',
+ N'The passage contrasts continuous shade from mature trees with the smaller effects of isolated trees.', 'A',
+ N'Mature trees shading continuous pavement',N'This matches the reported condition with the greatest cooling.',
+ N'Newly planted trees in parks',N'Neither newly planted trees nor parks are identified as the strongest condition.',
+ N'Isolated trees beside buildings',N'The passage says isolated trees produced smaller effects.',
+ N'Any street with a wide road',N'Road width is not identified as a factor.'),
+(@diagIeltsCert,@diagIeltsExam,@diagIeltsReadingSection,@diagIeltsRead,4,8,NULL,NULL,NULL,NULL,
+ N'In a survey of 1,200 commuters, 48% travelled by bus in 2018, compared with 30% by rail and 22% by bicycle. By 2024, rail had risen to 41%, cycling to 25%, while bus use had fallen to 34%.',
+ N'Which option correctly matches the 2024 transport mode with its share? (Matching)',
+ N'Rail is matched with 41%; the other options pair the wrong mode and percentage.', 'C',
+ N'Bus — 41%',N'41% is the rail figure; bus use fell to 34%.',
+ N'Bicycle — 34%',N'Cycling is reported at 25%, not 34%.',
+ N'Rail — 41%',N'This correctly matches the mode to the 2024 percentage.',
+ N'Bus — 25%',N'25% is the bicycle share, while bus use was 34%.'),
+(@diagIeltsCert,@diagIeltsExam,@diagIeltsReadingSection,@diagIeltsRead,5,9,NULL,NULL,NULL,NULL,
+ N'The archive digitised its fragile maps first, not because they were the most requested items, but because repeated handling was causing irreversible damage. Popularity rankings were therefore set aside in the initial phase.',
+ N'Why were the maps digitised first?',
+ N'The passage says preservation needs, rather than popularity, determined the order.', 'D',
+ N'They had the highest online readership',N'The passage explicitly distinguishes preservation from popularity.',
+ N'They were inexpensive to replace',N'The maps are described as fragile and at risk of irreversible damage.',
+ N'They contained no historical information',N'The passage does not say this.',
+ N'To prevent damage from repeated handling',N'This is the stated preservation reason.'),
+(@diagIeltsCert,@diagIeltsExam,@diagIeltsReadingSection,@diagIeltsRead,6,10,NULL,NULL,NULL,NULL,
+ N'A field experiment compared two restoration sites. Site A received more rain but recovered slowly because compacted soil restricted drainage. Site B received less rain; after its soil was loosened, native plants spread quickly.',
+ N'What can be inferred about the restoration at Site B?',
+ N'The comparison suggests soil condition supported recovery even with less rainfall.', 'B',
+ N'More rainfall alone guarantees rapid recovery',N'Site A had more rainfall but recovered slowly.',
+ N'Improved soil drainage may support plant recovery',N'Site B recovered quickly after the compacted soil problem was addressed.',
+ N'Native plants cannot grow in dry conditions',N'Native plants spread at the site receiving less rain.',
+ N'Site A had no compacted soil',N'The passage identifies compacted soil at Site A.'),
+(@diagVstepCert,@diagVstepExam,@diagVstepListeningSection,@diagVstepList,2,3,'/audio/vstep/placement-diagnostic.mp3',30000,60000,
+ N'Lecturer: The field trip leaves from the main gate at 7:15 on Saturday. Please arrive fifteen minutes early because the bus cannot wait.
+Student: Do we need to bring lunch?
+Lecturer: Yes, and wear shoes suitable for walking.',
+ NULL,N'When should students arrive at the main gate?',
+ N'The trip leaves at 7:15 and students must arrive fifteen minutes earlier, at 7:00.', 'A',
+ N'7:00 on Saturday',N'Arriving fifteen minutes before the 7:15 departure means 7:00.',
+ N'7:15 on Sunday',N'The trip is on Saturday, not Sunday.',
+ N'7:30 on Saturday',N'This is after departure and contradicts the instruction.',
+ N'8:15 on Saturday',N'The departure is at 7:15, so this is an hour too late.'),
+(@diagVstepCert,@diagVstepExam,@diagVstepListeningSection,@diagVstepList,3,4,'/audio/vstep/placement-diagnostic.mp3',60000,90000,
+ N'Office staff: The language club meeting has moved from Room 204 to Room 118 because the projector in 204 is being repaired.
+Student: Is the time still 3 p.m.?
+Office staff: Yes, the schedule is unchanged.',
+ NULL,N'Why has the language club changed rooms?',
+ N'The projector in Room 204 is being repaired; the meeting time remains unchanged.', 'D',
+ N'The club meeting has been cancelled',N'The staff confirms that only the room changed.',
+ N'Room 118 has a better projector',N'The reason given is repair work in Room 204.',
+ N'The meeting time has changed',N'The time remains 3 p.m.',
+ N'The projector in Room 204 needs repair',N'This is the reason stated by the office staff.'),
+(@diagVstepCert,@diagVstepExam,@diagVstepListeningSection,@diagVstepList,4,5,'/audio/vstep/placement-diagnostic.mp3',90000,120000,
+ N'Announcer: The community clean-up will take place on 18 June, not 16 June as printed on the first notice. Volunteers should register at the library desk by 5 p.m. on Friday.',
+ NULL,N'What should volunteers do by Friday?',
+ N'The announcer asks volunteers to register at the library desk by 5 p.m.', 'B',
+ N'Clean the library on 16 June',N'The event date was corrected to 18 June; the task is registration.',
+ N'Register at the library desk',N'This is the action and location stated in the announcement.',
+ N'Bring the first notice to the event',N'No instruction to bring a notice is given.',
+ N'Arrive at the clean-up by 5 p.m.',N'5 p.m. Friday is the registration deadline, not the event time.'),
+(@diagVstepCert,@diagVstepExam,@diagVstepListeningSection,@diagVstepList,5,6,'/audio/vstep/placement-diagnostic.mp3',120000,150000,
+ N'Student: I cannot attend the computer workshop on Wednesday.
+Advisor: The Friday group still has spaces. You can transfer online before noon tomorrow; there is no extra fee.
+Student: I will do that tonight.',
+ NULL,N'How can the student change workshop groups?',
+ N'The advisor says to transfer online before noon tomorrow; the student plans to do it tonight.', 'C',
+ N'Pay for a new registration at the office',N'The advisor says there is no extra fee.',
+ N'Ask the student group to change its date',N'The advisor offers a different group, not a date change.',
+ N'Transfer online before noon tomorrow',N'This is the required process and deadline.',
+ N'Wait until the Friday workshop begins',N'The transfer must be made before noon tomorrow.'),
+(@diagVstepCert,@diagVstepExam,@diagVstepReadingSection,@diagVstepRead,3,7,NULL,NULL,NULL,NULL,
+ N'A town library introduced a book-delivery service for older residents who cannot travel easily. Volunteers collect requested titles twice a week and leave them at each resident''s home. The service is free, but readers must register by phone.',
+ N'Who is the delivery service mainly designed to help?',
+ N'The first sentence identifies older residents with limited ability to travel.', 'A',
+ N'Older residents who cannot travel easily',N'This restates the group named in the passage.',
+ N'Volunteers who want free books',N'Volunteers deliver the books; they are not the intended readers.',
+ N'Visitors who have not joined the library',N'The passage says users need to register, but does not identify visitors as the target group.',
+ N'People who live outside the town',N'The service is described for residents of the town.'),
+(@diagVstepCert,@diagVstepExam,@diagVstepReadingSection,@diagVstepRead,4,8,NULL,NULL,NULL,NULL,
+ N'The college offers evening classes in basic accounting, workplace communication, and computer skills. Learners may enrol in one course at a time. Applications close on 30 September, and classes begin two weeks later.',
+ N'Which option correctly matches a course with its start date? (Matching)',
+ N'Classes begin two weeks after applications close on 30 September, so the start is in October.', 'C',
+ N'Computer skills — 30 September',N'30 September is the application deadline, not the class start date.',
+ N'Accounting — one week after applications close',N'The passage states a two-week interval.',
+ N'Workplace communication — two weeks after 30 September',N'This correctly matches the course schedule stated in the notice.',
+ N'All courses — the application deadline',N'The deadline is for applying; classes begin later.'),
+(@diagVstepCert,@diagVstepExam,@diagVstepReadingSection,@diagVstepRead,5,9,NULL,NULL,NULL,NULL,
+ N'Although the sports centre extended its opening hours, attendance did not rise during the first month. Managers later learned that the last bus left before the new closing time. They are discussing a revised shuttle schedule with the transport office.',
+ N'Why did attendance probably fail to increase?',
+ N'The last bus left before the centre closed, making the extended hours difficult to use.', 'D',
+ N'The sports centre reduced its opening hours',N'The centre extended, rather than reduced, its hours.',
+ N'The transport office closed permanently',N'The passage says a schedule is being discussed, not that the office closed.',
+ N'There were no activities at the centre',N'No information about activities is provided.',
+ N'Public transport was unavailable at closing time',N'The last bus left before the new closing time.'),
+(@diagVstepCert,@diagVstepExam,@diagVstepReadingSection,@diagVstepRead,6,10,NULL,NULL,NULL,NULL,
+ N'An adult-learning programme originally met every Saturday. After many learners reported shift-work conflicts, the organiser added a Wednesday evening class. The Saturday class remains available for those who prefer it.',
+ N'What was the main reason for adding a Wednesday class?',
+ N'The additional class responds to learners'' reported work schedules while keeping the original option.', 'B',
+ N'The Saturday class was too expensive',N'No course fee is mentioned.',
+ N'To accommodate learners with shift-work conflicts',N'This is the stated reason for adding an evening alternative.',
+ N'The organiser wanted to remove the Saturday class',N'The passage says Saturday remains available.',
+ N'The programme changed to online teaching',N'Both options are described as classes; online delivery is not mentioned.');
+
+DECLARE @diagSeedId INT = 1;
+DECLARE @diagSeedCount INT = (SELECT COUNT(*) FROM @diagQuestions);
+DECLARE @diagQCert INT, @diagQExam INT, @diagQSection INT, @diagQSkill INT;
+DECLARE @diagQGroupOrder INT, @diagQOrder INT, @diagQAudio NVARCHAR(400);
+DECLARE @diagQStart INT, @diagQEnd INT, @diagQTranscript NVARCHAR(MAX), @diagQPassage NVARCHAR(MAX);
+DECLARE @diagQStem NVARCHAR(MAX), @diagQExplanation NVARCHAR(MAX), @diagQCorrect VARCHAR(4);
+DECLARE @diagQA NVARCHAR(MAX), @diagQAR NVARCHAR(MAX), @diagQB NVARCHAR(MAX), @diagQBR NVARCHAR(MAX);
+DECLARE @diagQC NVARCHAR(MAX), @diagQCR NVARCHAR(MAX), @diagQD NVARCHAR(MAX), @diagQDR NVARCHAR(MAX);
+DECLARE @diagQGroupId INT, @diagQId INT;
+
+WHILE @diagSeedId <= @diagSeedCount
+BEGIN
+  SELECT @diagQCert=CertId, @diagQExam=ExamId, @diagQSection=SectionId, @diagQSkill=SkillId,
+         @diagQGroupOrder=GroupOrder, @diagQOrder=QuestionOrder, @diagQAudio=AudioPath,
+         @diagQStart=AudioStartMs, @diagQEnd=AudioEndMs, @diagQTranscript=Transcript, @diagQPassage=Passage,
+         @diagQStem=Stem, @diagQExplanation=Explanation, @diagQCorrect=CorrectLabel,
+         @diagQA=AText, @diagQAR=ARationale, @diagQB=BText, @diagQBR=BRationale,
+         @diagQC=CText, @diagQCR=CRationale, @diagQD=DText, @diagQDR=DRationale
+  FROM @diagQuestions WHERE SeedId = @diagSeedId;
+
+  IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @diagQExam AND DisplayOrder = @diagQOrder)
+    INSERT INTO QuestionGroups
+      (ExamId, CertId, SectionId, DisplayOrder, AudioPath, AudioStartMs, AudioEndMs, Transcript, Passage)
+    VALUES
+      (@diagQExam, @diagQCert, @diagQSection, @diagQGroupOrder, @diagQAudio, @diagQStart, @diagQEnd, @diagQTranscript, @diagQPassage);
+
+  SELECT @diagQGroupId = GroupId
+  FROM QuestionGroups
+  WHERE ExamId = @diagQExam AND SectionId = @diagQSection AND DisplayOrder = @diagQGroupOrder;
+
+  IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @diagQExam AND DisplayOrder = @diagQOrder)
+    INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+    VALUES (@diagQGroupId, @diagQExam, @diagQSection, @diagQSkill, @diagQStem, 3, 'mcq', @diagQExplanation, @diagQOrder);
+
+  SELECT @diagQId = QuestionId FROM Questions WHERE ExamId = @diagQExam AND DisplayOrder = @diagQOrder;
+  INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect, Rationale)
+  SELECT @diagQId, 'mcq', o.Label, o.OptionText, IIF(o.Label = @diagQCorrect, 1, 0), o.Rationale
+  FROM (VALUES ('A',@diagQA,@diagQAR),('B',@diagQB,@diagQBR),('C',@diagQC,@diagQCR),('D',@diagQD,@diagQDR))
+       o(Label, OptionText, Rationale)
+  WHERE NOT EXISTS (SELECT 1 FROM QuestionOptions existing WHERE existing.QuestionId = @diagQId AND existing.Label = o.Label);
+
+  UPDATE existing
+  SET Rationale = o.Rationale,
+      IsCorrect = IIF(o.Label = @diagQCorrect, 1, 0)
+  FROM QuestionOptions existing
+  JOIN (VALUES ('A',@diagQAR),('B',@diagQBR),('C',@diagQCR),('D',@diagQDR)) o(Label, Rationale)
+    ON o.Label = existing.Label
+  WHERE existing.QuestionId = @diagQId;
+
+  SET @diagSeedId += 1;
+END;
+
+-- Complete rationales for the two questions that were part of the original placeholders.
+UPDATE o SET Rationale = CASE o.Label
+  WHEN 'A' THEN N'12:00 PM is not the Friday closing time; the recording specifies 1:00 PM.'
+  WHEN 'B' THEN N'Correct: the housing office closes at 1:00 PM on Fridays.'
+  WHEN 'C' THEN N'4:00 PM applies Monday through Thursday, not Friday.'
+  WHEN 'D' THEN N'5:00 PM is never given as a closing time.'
+END
+FROM QuestionOptions o JOIN Questions q ON q.QuestionId=o.QuestionId
+WHERE q.ExamId=@diagIeltsExam AND q.DisplayOrder=1;
+UPDATE o SET Rationale = CASE o.Label
+  WHEN 'A' THEN N'Wind is not the source identified as the majority of new capacity.'
+  WHEN 'B' THEN N'Correct: solar photovoltaics accounted for three-quarters of new installations.'
+  WHEN 'C' THEN N'Hydroelectricity is not named in the passage.'
+  WHEN 'D' THEN N'Geothermal energy is not named in the passage.'
+END
+FROM QuestionOptions o JOIN Questions q ON q.QuestionId=o.QuestionId
+WHERE q.ExamId=@diagIeltsExam AND q.DisplayOrder=2;
+UPDATE o SET Rationale = CASE o.Label
+  WHEN 'A' THEN N'The lecturer asks students to submit through the faculty portal, not on paper.'
+  WHEN 'B' THEN N'Correct: students should submit their proposals through the faculty portal.'
+  WHEN 'C' THEN N'Emailing the teaching assistant is not the stated submission route.'
+  WHEN 'D' THEN N'The deadline is Friday at 5 PM, not during Monday class.'
+END
+FROM QuestionOptions o JOIN Questions q ON q.QuestionId=o.QuestionId
+WHERE q.ExamId=@diagVstepExam AND q.DisplayOrder=1;
+UPDATE o SET Rationale = CASE o.Label
+  WHEN 'A' THEN N'The passage describes support for radiology, not replacing doctors.'
+  WHEN 'B' THEN N'Correct: AI provides diagnostic assistance for radiology scans.'
+  WHEN 'C' THEN N'The passage discusses interpreting scans, not manufacturing equipment.'
+  WHEN 'D' THEN N'Billing is not mentioned as an AI function.'
+END
+FROM QuestionOptions o JOIN Questions q ON q.QuestionId=o.QuestionId
+WHERE q.ExamId=@diagVstepExam AND q.DisplayOrder=2;
+
+UPDATE ExamSectionAudio
+SET AudioPath = '/audio/ielts/placement-diagnostic.mp3', DurationSec = 600, SizeBytes = 9600000
+WHERE ExamId=@diagIeltsExam AND SectionId=@diagIeltsListeningSection;
+IF NOT EXISTS (SELECT 1 FROM ExamSectionAudio WHERE ExamId=@diagIeltsExam AND SectionId=@diagIeltsListeningSection)
+  INSERT INTO ExamSectionAudio (ExamId,SectionId,CertId,AudioPath,DurationSec,SizeBytes)
+  VALUES (@diagIeltsExam,@diagIeltsListeningSection,@diagIeltsCert,'/audio/ielts/placement-diagnostic.mp3',600,9600000);
+UPDATE ExamSectionAudio
+SET AudioPath = '/audio/vstep/placement-diagnostic.mp3', DurationSec = 600, SizeBytes = 9600000
+WHERE ExamId=@diagVstepExam AND SectionId=@diagVstepListeningSection;
+IF NOT EXISTS (SELECT 1 FROM ExamSectionAudio WHERE ExamId=@diagVstepExam AND SectionId=@diagVstepListeningSection)
+  INSERT INTO ExamSectionAudio (ExamId,SectionId,CertId,AudioPath,DurationSec,SizeBytes)
+  VALUES (@diagVstepExam,@diagVstepListeningSection,@diagVstepCert,'/audio/vstep/placement-diagnostic.mp3',600,9600000);
+
+-- Make the listening and reading raw-score conversions cover every attainable score.
+UPDATE ScoreScales SET ScaledScore = CASE RawScore WHEN 0 THEN 40 WHEN 1 THEN 50 END
+WHERE CertId=@diagIeltsCert AND ExamId=@diagIeltsExam AND RawScore IN (0,1);
+UPDATE ScoreScales SET ScaledScore = CASE RawScore WHEN 0 THEN 40 WHEN 1 THEN 50 END
+WHERE CertId=@diagVstepCert AND ExamId=@diagVstepExam AND RawScore IN (0,1);
+INSERT INTO ScoreScales (CertId,SkillId,ExamId,RawScore,ScaledScore)
+SELECT @diagIeltsCert,s.SkillId,@diagIeltsExam,r.RawScore,40+(r.RawScore*10)
+FROM (VALUES (@diagIeltsList),(@diagIeltsRead)) s(SkillId)
+CROSS JOIN (VALUES (2),(3),(4),(5)) r(RawScore)
+WHERE NOT EXISTS (SELECT 1 FROM ScoreScales x WHERE x.CertId=@diagIeltsCert AND x.SkillId=s.SkillId AND x.ExamId=@diagIeltsExam AND x.RawScore=r.RawScore);
+INSERT INTO ScoreScales (CertId,SkillId,ExamId,RawScore,ScaledScore)
+SELECT @diagVstepCert,s.SkillId,@diagVstepExam,r.RawScore,40+(r.RawScore*10)
+FROM (VALUES (@diagVstepList),(@diagVstepRead)) s(SkillId)
+CROSS JOIN (VALUES (2),(3),(4),(5)) r(RawScore)
+WHERE NOT EXISTS (SELECT 1 FROM ScoreScales x WHERE x.CertId=@diagVstepCert AND x.SkillId=s.SkillId AND x.ExamId=@diagVstepExam AND x.RawScore=r.RawScore);
+
+DECLARE @diagLessons TABLE (
+  SeedId INT IDENTITY(1,1) PRIMARY KEY,
+  CertId INT NOT NULL, SkillId INT NOT NULL, Title NVARCHAR(160) NOT NULL,
+  Summary NVARCHAR(500) NOT NULL, ModuleOrder INT NOT NULL, PracticeSectionId INT NOT NULL,
+  RuleContent NVARCHAR(MAX) NOT NULL, PitfallContent NVARCHAR(MAX) NOT NULL, ExampleContent NVARCHAR(MAX) NOT NULL,
+  QuizPrompt NVARCHAR(MAX) NOT NULL, OptionA NVARCHAR(250) NOT NULL, OptionB NVARCHAR(250) NOT NULL,
+  OptionC NVARCHAR(250) NOT NULL, OptionD NVARCHAR(250) NOT NULL, CorrectOption CHAR(1) NOT NULL,
+  QuizExplanation NVARCHAR(MAX) NOT NULL
+);
+INSERT INTO @diagLessons
+  (CertId,SkillId,Title,Summary,ModuleOrder,PracticeSectionId,RuleContent,PitfallContent,ExampleContent,
+   QuizPrompt,OptionA,OptionB,OptionC,OptionD,CorrectOption,QuizExplanation)
+VALUES
+(@diagIeltsCert,@diagIeltsList,N'IELTS Listening: Follow Signposts and Corrections',N'Track the speaker''s purpose, changes, and final answer rather than matching isolated words.',1,@diagIeltsListeningSection,
+ N'Listen for discourse markers such as “actually”, “instead”, and “not ... but ...”. The corrected or qualified detail often carries the answer.',
+ N'A distractor may repeat a word from the question while giving an outdated time, location, or choice. Confirm the relationship, not just the keyword.',
+ N'“We planned to meet at ten; actually, the lab is free at half past two” makes 2:30 the available time.',
+ N'A speaker says, “The first room is full; instead, meet us in Room 12.” Which room is available?',
+ N'The first room',N'Room 12',N'Both rooms',N'No room is available','B',
+ N'“Instead” introduces the replacement location; the first room is explicitly full.'),
+(@diagIeltsCert,@diagIeltsRead,N'IELTS Reading: Paraphrase Claims and Match Evidence',N'Connect question wording to synonyms, references, and evidence across academic passages.',2,@diagIeltsReadingSection,
+ N'Underline the idea in the question, predict a synonym, then locate evidence before choosing. For matching, verify both sides of the pair.',
+ N'A familiar noun can appear in a sentence that contradicts the question. A shared keyword alone does not prove a match.',
+ N'“The intervention reduced delays” can support “the measure improved punctuality” when the surrounding evidence confirms the same result.',
+ N'The passage says “use fell from 48% to 34%”. Which paraphrase is supported?',
+ N'Use increased to 48%',N'Use declined to 34%',N'Use remained unchanged',N'Use stopped completely','B',
+ N'A fall to 34% is a decline; the other options change the direction or magnitude.'),
+(@diagIeltsCert,@diagIeltsWrit,N'IELTS Task 1: Select and Describe Trends',N'Write a concise overview, group key features, and compare data without listing every figure.',3,@diagIeltsTask1Section,
+ N'After the introduction, state the two or three dominant trends in an overview. Support them with selected, accurate figures and comparisons.',
+ N'Do not describe every year separately or add causes and opinions that the chart does not provide.',
+ N'“Solar rose from 10% to 50%, while coal fell from 60% to 25%” highlights the principal contrast with start and end values.',
+ N'What should the Task 1 overview primarily do?',
+ N'Explain why each change happened',N'List every data point',N'Summarise the main patterns and comparisons',N'Give a personal opinion','C',
+ N'The overview reports prominent patterns; causes and opinions are not inferred from chart data.'),
+(@diagIeltsCert,@diagIeltsWrit,N'IELTS Writing: Coherence, Cohesion, and Position',N'Build a clear Task 2 position with purposeful paragraphs and controlled linking.',4,@diagIeltsTask2Section,
+ N'Answer every part of the prompt, state a consistent position, and give each body paragraph one main claim supported by explanation or an example.',
+ N'Linking words cannot repair paragraphs that contain unrelated ideas. Avoid memorised phrases that do not express a real relationship.',
+ N'A paragraph can progress from claim → reason → specific example → link back to the question.',
+ N'Which paragraph plan best supports a clear Task 2 argument?',
+ N'One paragraph with several unrelated claims',N'Claim, explanation, and relevant example',N'Only a list of linking words',N'A conclusion with new arguments','B',
+ N'A developed paragraph connects one claim to its reasoning and evidence.'),
+(@diagVstepCert,@diagVstepList,N'VSTEP Listening: Catch Purpose, Time, and Changes',N'Identify the speaker''s main purpose and distinguish confirmed details from corrected plans.',1,@diagVstepListeningSection,
+ N'Note who is speaking, why, and what action is required. Listen for dates, deadlines, and changes signalled by “because”, “but”, or “not”.',
+ N'Do not choose the first date or room you hear if the speaker later corrects it.',
+ N'“It was planned for the 16th, but it will take place on the 18th” confirms 18 June.',
+ N'A notice corrects an event from 16 June to 18 June. Which date should volunteers use?',
+ N'16 June',N'18 June',N'Both dates',N'The date is cancelled','B',
+ N'The later correction replaces the earlier printed date.'),
+(@diagVstepCert,@diagVstepRead,N'VSTEP Reading: Locate Paraphrases and References',N'Scan for names, dates, and synonyms, then check pronouns and nearby evidence.',2,@diagVstepReadingSection,
+ N'Scan for a distinctive detail, read its surrounding sentence, and connect paraphrases such as “cannot travel easily” with “limited mobility”.',
+ N'A nearby pronoun can refer to a different person or object than the closest noun. Check meaning across the sentence.',
+ N'“The last bus left before closing” supports the inference that late visitors lacked transport home.',
+ N'“Applicants must register by phone” means applicants should ...',
+ N'Call to complete registration',N'Visit without registering',N'Pay at the library',N'Wait until classes begin','A',
+ N'Registering by phone is equivalent to calling to complete registration.'),
+(@diagVstepCert,@diagVstepWrit,N'VSTEP Writing: Organise a Formal Email',N'Use an appropriate greeting, answer every point, request or suggest details, and close politely.',3,@diagVstepEmailSection,
+ N'Plan the email in four moves: greeting and purpose, response to each required point, any request or suggestion, and an appropriate closing.',
+ N'A friendly tone does not mean omitting the requested information or using chat abbreviations in a formal email.',
+ N'Dear Project Coordinator, I can join the Saturday clean-up. Could you confirm the meeting point? I will bring gloves. Kind regards, ...',
+ N'What should a complete reply do first after a suitable greeting?',
+ N'Answer the prompt''s required points clearly',N'Add an unrelated story',N'Use informal abbreviations',N'End without a closing','A',
+ N'Task fulfilment requires responding to the requested information before adding unrelated content.'),
+(@diagVstepCert,@diagVstepWrit,N'VSTEP Writing: Build and Support an Argument',N'State a position, develop reasons, and connect each example to the argument.',4,@diagVstepEssaySection,
+ N'Use an introduction with a clear position, body paragraphs with one reason each, and a conclusion that reinforces the argument.',
+ N'A list of examples without explaining their relevance does not develop an argument.',
+ N'Claim: parks improve public health. Reason: they provide safe exercise space. Example: residents can walk daily without travelling far.',
+ N'Which sequence best develops one body-paragraph idea?',
+ N'Example, unrelated claim, conclusion',N'Claim, explanation, relevant example',N'Three linking words only',N'New position, then copied prompt','B',
+ N'A claim supported by an explanation and relevant example forms a developed argument.');
+
+DECLARE @diagLessonIndex INT=1, @diagLessonCount INT=(SELECT COUNT(*) FROM @diagLessons);
+DECLARE @diagLessonCert INT, @diagLessonSkill INT, @diagLessonTitle NVARCHAR(160), @diagLessonSummary NVARCHAR(500);
+DECLARE @diagModuleOrder INT, @diagPracticeSection INT, @diagRule NVARCHAR(MAX), @diagPitfall NVARCHAR(MAX), @diagExample NVARCHAR(MAX);
+DECLARE @diagQuiz NVARCHAR(MAX), @diagOptA NVARCHAR(250), @diagOptB NVARCHAR(250), @diagOptC NVARCHAR(250), @diagOptD NVARCHAR(250);
+DECLARE @diagCorrect CHAR(1), @diagQuizExplanation NVARCHAR(MAX), @diagLessonId INT, @diagTemplateId INT, @diagModuleId INT;
+DECLARE @diagWritingExam INT;
+
+WHILE @diagLessonIndex <= @diagLessonCount
+BEGIN
+  SELECT @diagLessonCert=CertId,@diagLessonSkill=SkillId,@diagLessonTitle=Title,@diagLessonSummary=Summary,
+         @diagModuleOrder=ModuleOrder,@diagPracticeSection=PracticeSectionId,@diagRule=RuleContent,
+         @diagPitfall=PitfallContent,@diagExample=ExampleContent,@diagQuiz=QuizPrompt,
+         @diagOptA=OptionA,@diagOptB=OptionB,@diagOptC=OptionC,@diagOptD=OptionD,
+         @diagCorrect=CorrectOption,@diagQuizExplanation=QuizExplanation
+  FROM @diagLessons WHERE SeedId=@diagLessonIndex;
+
+  IF NOT EXISTS (SELECT 1 FROM Lessons WHERE CertId=@diagLessonCert AND Title=@diagLessonTitle)
+    INSERT INTO Lessons (CertId,SkillId,Title,Summary,EstimatedMinutes,DisplayOrder)
+    VALUES (@diagLessonCert,@diagLessonSkill,@diagLessonTitle,@diagLessonSummary,12,@diagModuleOrder);
+  SELECT @diagLessonId=LessonId FROM Lessons WHERE CertId=@diagLessonCert AND Title=@diagLessonTitle;
+
+  INSERT INTO LessonCards
+    (LessonId,CertId,CardType,Title,ContentMarkdown,DisplayOrder,QuestionPrompt,OptionA,OptionB,OptionC,OptionD,CorrectOption,Explanation)
+  SELECT @diagLessonId,@diagLessonCert,c.CardType,c.Title,c.ContentMarkdown,c.DisplayOrder,
+         c.QuestionPrompt,c.OptionA,c.OptionB,c.OptionC,c.OptionD,c.CorrectOption,c.Explanation
+  FROM (VALUES
+    ('rule',N'Rule',@diagRule,0,CAST(NULL AS NVARCHAR(MAX)),CAST(NULL AS NVARCHAR(250)),CAST(NULL AS NVARCHAR(250)),CAST(NULL AS NVARCHAR(250)),CAST(NULL AS NVARCHAR(250)),CAST(NULL AS CHAR(1)),CAST(NULL AS NVARCHAR(MAX))),
+    ('pitfall',N'Pitfall',@diagPitfall,1,CAST(NULL AS NVARCHAR(MAX)),CAST(NULL AS NVARCHAR(250)),CAST(NULL AS NVARCHAR(250)),CAST(NULL AS NVARCHAR(250)),CAST(NULL AS NVARCHAR(250)),CAST(NULL AS CHAR(1)),CAST(NULL AS NVARCHAR(MAX))),
+    ('example',N'Worked example',@diagExample,2,CAST(NULL AS NVARCHAR(MAX)),CAST(NULL AS NVARCHAR(250)),CAST(NULL AS NVARCHAR(250)),CAST(NULL AS NVARCHAR(250)),CAST(NULL AS NVARCHAR(250)),CAST(NULL AS CHAR(1)),CAST(NULL AS NVARCHAR(MAX))),
+    ('micro_check',N'Micro-check',@diagQuiz,3,@diagQuiz,@diagOptA,@diagOptB,@diagOptC,@diagOptD,@diagCorrect,@diagQuizExplanation)
+  ) c(CardType,Title,ContentMarkdown,DisplayOrder,QuestionPrompt,OptionA,OptionB,OptionC,OptionD,CorrectOption,Explanation)
+  WHERE NOT EXISTS (SELECT 1 FROM LessonCards old WHERE old.LessonId=@diagLessonId AND old.DisplayOrder=c.DisplayOrder);
+
+  IF @diagLessonCert=@diagIeltsCert
+  BEGIN
+    IF NOT EXISTS (SELECT 1 FROM PathTemplates WHERE CertId=@diagLessonCert AND Name=N'IELTS Diagnostic Remedial Sprint')
+      INSERT INTO PathTemplates (CertId,FromBandCode,ToBandCode,Name)
+      VALUES (@diagLessonCert,'B1','B2',N'IELTS Diagnostic Remedial Sprint');
+    SELECT @diagTemplateId=TemplateId FROM PathTemplates WHERE CertId=@diagLessonCert AND Name=N'IELTS Diagnostic Remedial Sprint';
+    SET @diagWritingExam=@diagIeltsWritingExam;
+  END
+  ELSE
+  BEGIN
+    IF NOT EXISTS (SELECT 1 FROM PathTemplates WHERE CertId=@diagLessonCert AND Name=N'VSTEP Diagnostic Remedial Sprint')
+      INSERT INTO PathTemplates (CertId,FromBandCode,ToBandCode,Name)
+      VALUES (@diagLessonCert,'B1','B2',N'VSTEP Diagnostic Remedial Sprint');
+    SELECT @diagTemplateId=TemplateId FROM PathTemplates WHERE CertId=@diagLessonCert AND Name=N'VSTEP Diagnostic Remedial Sprint';
+    SET @diagWritingExam=@diagVstepWritingExam;
+  END;
+
+  IF NOT EXISTS (SELECT 1 FROM PathModules WHERE CertId=@diagLessonCert AND TemplateId=@diagTemplateId AND DisplayOrder=@diagModuleOrder)
+    INSERT INTO PathModules (TemplateId,SkillId,CertId,DisplayOrder,Title,Description,EstimatedMinutes)
+    VALUES (@diagTemplateId,@diagLessonSkill,@diagLessonCert,@diagModuleOrder,@diagLessonTitle,@diagLessonSummary,25);
+  SELECT @diagModuleId=ModuleId FROM PathModules WHERE CertId=@diagLessonCert AND TemplateId=@diagTemplateId AND DisplayOrder=@diagModuleOrder;
+
+  IF NOT EXISTS (SELECT 1 FROM PathModuleItems WHERE ModuleId=@diagModuleId AND ItemType='lesson' AND DisplayOrder=1)
+    INSERT INTO PathModuleItems (ModuleId,CertId,TemplateId,ItemType,RefLessonId,DisplayOrder)
+    VALUES (@diagModuleId,@diagLessonCert,@diagTemplateId,'lesson',@diagLessonId,1);
+  IF NOT EXISTS (SELECT 1 FROM PathModuleItems WHERE ModuleId=@diagModuleId AND ItemType='practice_section' AND DisplayOrder=2)
+    INSERT INTO PathModuleItems (ModuleId,CertId,TemplateId,ItemType,RefSectionId,QuestionCount,DisplayOrder)
+    VALUES (@diagModuleId,@diagLessonCert,@diagTemplateId,'practice_section',@diagPracticeSection,5,2);
+  IF @diagLessonSkill=@diagIeltsWrit OR @diagLessonSkill=@diagVstepWrit
+    IF NOT EXISTS (SELECT 1 FROM PathModuleItems WHERE ModuleId=@diagModuleId AND ItemType='ai_task' AND DisplayOrder=3)
+      INSERT INTO PathModuleItems (ModuleId,CertId,TemplateId,ItemType,RefExamId,IsPremiumOnly,DisplayOrder)
+      VALUES (@diagModuleId,@diagLessonCert,@diagTemplateId,'ai_task',@diagWritingExam,0,3);
+
+  SET @diagLessonIndex+=1;
+END;
+
+PRINT '18. IELTS/VSTEP diagnostic benchmarks, free writing extensions, and remedial paths seeded';
 GO

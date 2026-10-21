@@ -559,7 +559,7 @@ BEGIN
     THROW 50041, 'A speaking- or writing-practice attempt cannot carry a total score.', 1;
 END;
 GO
--- Review Focus #2: TotalScore must equal SUM of scaled skill scores (when both present)
+-- TotalScore uses the certificate's aggregation rule when skill scores are present.
 CREATE TRIGGER trg_Attempts_TotalMatchesSkills
 ON AttemptSkillScores AFTER INSERT, UPDATE, DELETE AS
 BEGIN
@@ -567,11 +567,23 @@ BEGIN
   IF EXISTS (
     SELECT a.AttemptId
     FROM ExamAttempts a
+    JOIN Certificates c ON c.CertId = a.CertId
+    CROSS APPLY (
+      SELECT
+        SUM(s.ScaledScore) AS SumScore,
+        AVG(CONVERT(DECIMAL(10,4), s.ScaledScore)) AS AverageScore
+      FROM AttemptSkillScores s
+      WHERE s.AttemptId = a.AttemptId
+    ) scores
     WHERE a.TotalScore IS NOT NULL
       AND a.AttemptId IN (SELECT AttemptId FROM inserted UNION SELECT AttemptId FROM deleted)
-      AND a.TotalScore <> (SELECT ISNULL(SUM(ScaledScore),0) FROM AttemptSkillScores s WHERE s.AttemptId=a.AttemptId)
+      AND a.TotalScore <> CASE c.Code
+        WHEN 'IELTS' THEN CONVERT(INT, FLOOR((COALESCE(scores.AverageScore, 0) + 2.5) / 5.0) * 5)
+        WHEN 'VSTEP' THEN CONVERT(INT, ROUND(COALESCE(scores.AverageScore, 0), 0))
+        ELSE COALESCE(scores.SumScore, 0)
+      END
   )
-    THROW 50011, 'TotalScore must equal the sum of scaled skill scores.', 1;
+    THROW 50011, 'TotalScore does not match the certificate score aggregation rule.', 1;
 END;
 GO
 -- same check when TotalScore itself changes
@@ -580,12 +592,25 @@ ON ExamAttempts AFTER UPDATE AS
 BEGIN
   SET NOCOUNT ON;
   IF UPDATE(TotalScore) AND EXISTS (
-    SELECT i.AttemptId FROM inserted i
+    SELECT i.AttemptId
+    FROM inserted i
+    JOIN Certificates c ON c.CertId = i.CertId
+    CROSS APPLY (
+      SELECT
+        SUM(s.ScaledScore) AS SumScore,
+        AVG(CONVERT(DECIMAL(10,4), s.ScaledScore)) AS AverageScore
+      FROM AttemptSkillScores s
+      WHERE s.AttemptId = i.AttemptId
+    ) scores
     WHERE i.TotalScore IS NOT NULL
       AND EXISTS (SELECT 1 FROM AttemptSkillScores s WHERE s.AttemptId=i.AttemptId)
-      AND i.TotalScore <> (SELECT ISNULL(SUM(ScaledScore),0) FROM AttemptSkillScores s WHERE s.AttemptId=i.AttemptId)
+      AND i.TotalScore <> CASE c.Code
+        WHEN 'IELTS' THEN CONVERT(INT, FLOOR((COALESCE(scores.AverageScore, 0) + 2.5) / 5.0) * 5)
+        WHEN 'VSTEP' THEN CONVERT(INT, ROUND(COALESCE(scores.AverageScore, 0), 0))
+        ELSE COALESCE(scores.SumScore, 0)
+      END
   )
-    THROW 50011, 'TotalScore must equal the sum of scaled skill scores.', 1;
+    THROW 50011, 'TotalScore does not match the certificate score aggregation rule.', 1;
 END;
 GO
 -- M-6: an attempt cannot reach 'graded' while any of its free responses is still 'pending_ai'

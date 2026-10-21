@@ -58,6 +58,16 @@
 }
 else
 {
+  @if (catalog.ListeningSections.Count > 0)
+  {
+    <div class="mt-4">
+      <partial name="_AudioEquipmentCheck" model='new WebMVC.Models.AudioEquipmentCheckModel(
+          ShowInput: false,
+          ShowOutput: true,
+          Title: "Listening practice audio check")' />
+    </div>
+  }
+
   <form method="post" action="/practice/start" id="practice-form">
     @Html.AntiForgeryToken()
     <div class="card">

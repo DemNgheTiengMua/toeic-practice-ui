@@ -772,6 +772,96 @@ dialog:not([open]) {
   border-radius: 0;
   cursor: pointer;
 }
+.audio-equipment {
+  border: 2px solid var(--ink);
+  border-radius: 0;
+  box-shadow: none;
+}
+.audio-equipment [hidden] {
+  display: none !important;
+}
+.audio-equipment__panel {
+  display: grid;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+}
+.audio-equipment__heading {
+  margin: 0;
+  font-family: var(--font-sign);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  letter-spacing: var(--tracking-sign);
+  text-transform: uppercase;
+}
+.audio-equipment__volume,
+.audio-equipment__meter-wrap {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.audio-equipment__volume-slider {
+  width: min(100%, 220px);
+  accent-color: var(--sign-blue);
+}
+.audio-equipment__meter {
+  position: relative;
+  flex: 1 1 auto;
+  height: 18px;
+  overflow: hidden;
+  border: 2px solid var(--ink);
+  background: var(--color-track);
+}
+.audio-equipment__meter [data-audio-role="meter-level"] {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: var(--color-text-muted);
+  transition: width 75ms linear, background-color 75ms linear;
+}
+.audio-equipment__meter--voice [data-audio-role="meter-level"] {
+  background: var(--sign-green);
+}
+.audio-equipment__meter--loud [data-audio-role="meter-level"] {
+  background: var(--sign-red);
+}
+.audio-equipment__tick {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--ink);
+}
+.audio-equipment__tick--voice { left: 25%; }
+.audio-equipment__tick--loud { left: 90%; background: var(--sign-red); }
+.audio-equipment__meter-wrap [data-audio-role="meter-db"] {
+  min-width: 64px;
+  text-align: right;
+}
+.audio-equipment--compact {
+  margin: 0;
+}
+.audio-equipment-dialog {
+  max-width: 680px;
+}
+.audio-equipment-dialog .audio-equipment {
+  border: 0;
+}
+.audio-equipment-dialog .audio-equipment > .card__header {
+  display: none;
+}
+.audio-equipment-dialog .audio-equipment > .card__body {
+  padding: 0;
+}
+@media (max-width: 640px) {
+  .audio-equipment__volume,
+  .audio-equipment__meter-wrap {
+    flex-wrap: wrap;
+  }
+  .audio-equipment__meter {
+    flex-basis: 100%;
+  }
+}
 @media (max-width: 640px) {
   .exam-audio {
     flex-wrap: wrap;
@@ -2632,4 +2722,3 @@ details > summary:focus-visible { outline: 3px solid var(--sign-blue); outline-o
     border-bottom: 0;
   }
 }
-
