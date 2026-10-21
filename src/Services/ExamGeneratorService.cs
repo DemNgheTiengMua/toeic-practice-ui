@@ -268,7 +268,7 @@ public sealed class ExamGeneratorService(
         sb.AppendLine($"Target CEFR Band: {blueprint.TargetBand ?? "B2"}");
         if (blueprint.TargetBandDistribution is { Count: > 0 })
         {
-            var dist = string.Join(", ", blueprint.TargetBandDistribution.Select(kv => $"{kv.Key}: {kv.Value:P0}"));
+            var dist = string.Join(", ", blueprint.TargetBandDistribution.Select(kv => $"{kv.Key}: {(int)Math.Round(kv.Value * 100, MidpointRounding.AwayFromZero)}%"));
             sb.AppendLine($"Target CEFR Band Distribution: {dist}");
         }
         sb.AppendLine($"Default Difficulty Level: {blueprint.DifficultyLevel ?? 3} (1=easiest to 5=hardest)");

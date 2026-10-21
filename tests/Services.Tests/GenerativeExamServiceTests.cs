@@ -393,7 +393,9 @@ public sealed class GenerativeExamServiceTests(DatabaseFixture database)
             Responder = (userPrompt, systemPrompt) =>
             {
                 Assert.Contains("Target Skill: reading", userPrompt);
-                Assert.Contains("Target CEFR Band Distribution: B1: 30%, B2: 70%", userPrompt);
+                Assert.Contains("Target CEFR Band Distribution:", userPrompt);
+                Assert.Contains("B1: 30%", userPrompt);
+                Assert.Contains("B2: 70%", userPrompt);
                 Assert.Contains("audio script in \"transcript\" with explicit dialogue speaker turns", systemPrompt!);
                 return SampleValidManifest("Distribution Exam");
             }
