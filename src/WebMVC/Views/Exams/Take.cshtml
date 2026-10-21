@@ -154,7 +154,6 @@
                   </label>
                 }
               </div>
-
               <div id="writing-response-pane" class="stack mt-3" style="@(q.QuestionType == "free_response" ? "" : "display:none;")">
                 <label for="writing-editor"><strong>Your response</strong></label>
                 <textarea id="writing-editor" class="writing-editor" aria-describedby="writing-counts" data-question-id="@q.QuestionId">@q.ResponseText</textarea>
@@ -164,6 +163,7 @@
                 </div>
                 <button type="button" class="btn btn--secondary" id="btn-save-writing-draft">Save draft</button>
               </div>
+              <div id="free-response-container" class="stack" style="display:none; margin-top: 1rem;"></div>
             </div>
 
             <!-- Bottom Question Navigation Row -->
@@ -389,7 +389,10 @@
       questions.forEach(function (q) {
         localAnswers[q.questionId] = {
           selectedOptionId: q.selectedOptionId,
-          isFlagged: q.isFlagged
+          isFlagged: q.isFlagged,
+          responseText: q.responseText || '',
+          responseAudioPath: q.responseAudioPath || null,
+          responseDurationMs: q.responseDurationMs || null
         };
       });
 
@@ -416,6 +419,9 @@
               if (localAnswers[item.questionId]) {
                 localAnswers[item.questionId].selectedOptionId = item.selectedOptionId;
                 localAnswers[item.questionId].isFlagged = item.isFlagged;
+                if (typeof item.responseText === 'string') {
+                  localAnswers[item.questionId].responseText = item.responseText;
+                }
               }
             });
           }
@@ -433,6 +439,7 @@
       var btnPrev = document.getElementById('btn-prev');
       var btnNext = document.getElementById('btn-next');
       var optionList = document.getElementById('option-list');
+      var freeResponseContainer = document.getElementById('free-response-container');
       var passageCard = document.getElementById('passage-card');
       var passageText = document.getElementById('passage-text');
       var imageContainer = document.getElementById('image-container');
@@ -604,6 +611,191 @@
 
       var isFlushing = false;
       var isSubmitting = false;
+      var activeRecorder = null;
+      var activeRecordingStream = null;
+      var activeAudioChunks = [];
+      var activeAudioTimer = null;
+      var prepTimer = null;
+      var activeRecordingStartedAt = 0;
+      var isSpeakingPreparing = false;
+      var isSpeakingRecording = false;
+      var isAudioUploading = false;
+
+      function renderFreeResponse(q) {
+        var answer = localAnswers[q.questionId] || {};
+        var isSpeaking = (q.modality || '').toLowerCase() === 'speaking';
+        optionList.style.display = 'none';
+        freeResponseContainer.style.display = 'block';
+
+        if (!isSpeaking) {
+          var minWords = Number(q.minWords) || 0;
+          var maxWords = Number(q.maxWords) || 0;
+          freeResponseContainer.innerHTML =
+            '<label class="field__label" for="free-response-text">Written response</label>' +
+            '<p class="text-sm text-muted">Word limit: ' + minWords + '–' + maxWords + ' words.</p>' +
+            '<textarea id="free-response-text" class="field__input" rows="12" maxlength="20000" aria-describedby="free-response-word-count"></textarea>' +
+            '<p id="free-response-word-count" class="text-sm text-muted" aria-live="polite"></p>';
+          var responseInput = document.getElementById('free-response-text');
+          var wordCount = document.getElementById('free-response-word-count');
+          responseInput.value = answer.responseText || '';
+
+          function updateWordCount() {
+            var trimmed = responseInput.value.trim();
+            var count = trimmed ? trimmed.split(/\s+/).length : 0;
+            wordCount.textContent = count + ' words' +
+              (minWords || maxWords ? ' · required ' + minWords + '–' + maxWords : '');
+          }
+
+          responseInput.addEventListener('input', function () {
+            updateWordCount();
+            saveAnswer(q.questionId, null, !!(localAnswers[q.questionId] && localAnswers[q.questionId].isFlagged), responseInput.value);
+          });
+          updateWordCount();
+          return;
+        }
+
+        var existingAudio = answer.responseAudioPath;
+        freeResponseContainer.innerHTML =
+          '<p class="text-sm">Preparation time: ' + (Number(q.prepSeconds) || 0) + ' seconds · ' +
+            'Response time: ' + (Number(q.responseSeconds) || 0) + ' seconds.</p>' +
+          '<p id="speaking-recording-status" class="text-sm" aria-live="polite">' +
+            (existingAudio ? 'A saved recording is attached. Record again to replace it.' : 'No recording saved yet.') +
+          '</p>' +
+          '<div class="row" style="gap:.5rem; flex-wrap:wrap;">' +
+            '<button type="button" id="speaking-record-start" class="btn btn--primary">Start recording</button>' +
+            '<button type="button" id="speaking-record-stop" class="btn" style="display:none;">Stop recording</button>' +
+          '</div>';
+        var startButton = document.getElementById('speaking-record-start');
+        var stopButton = document.getElementById('speaking-record-stop');
+        var status = document.getElementById('speaking-recording-status');
+
+        startButton.addEventListener('click', function () {
+          startMockSpeakingCapture(q, status, startButton, stopButton);
+        });
+        stopButton.addEventListener('click', function () {
+          stopMockSpeakingCapture();
+        });
+      }
+
+      async function startMockSpeakingCapture(q, status, startButton, stopButton) {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || typeof MediaRecorder === 'undefined') {
+          status.textContent = 'This browser does not support audio recording.';
+          return;
+        }
+
+        startButton.disabled = true;
+        isSpeakingPreparing = true;
+        status.textContent = 'Requesting microphone access…';
+        try {
+          activeRecordingStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          var prepSeconds = Number(q.prepSeconds) || 0;
+          if (prepSeconds > 0) {
+            var remainingPrep = prepSeconds;
+            status.textContent = 'Preparation time: ' + remainingPrep + ' seconds.';
+            await new Promise(function (resolve) {
+              prepTimer = window.setInterval(function () {
+                remainingPrep--;
+                if (remainingPrep <= 0) {
+                  window.clearInterval(prepTimer);
+                  prepTimer = null;
+                  resolve();
+                } else {
+                  status.textContent = 'Preparation time: ' + remainingPrep + ' seconds.';
+                }
+              }, 1000);
+            });
+          }
+
+          isSpeakingPreparing = false;
+          activeAudioChunks = [];
+          activeRecorder = new MediaRecorder(activeRecordingStream);
+          activeRecorder.addEventListener('dataavailable', function (event) {
+            if (event.data && event.data.size > 0) activeAudioChunks.push(event.data);
+          });
+          activeRecorder.addEventListener('stop', function () {
+            uploadMockSpeakingRecording(q, status, startButton, stopButton);
+          }, { once: true });
+          activeRecorder.start();
+          activeRecordingStartedAt = Date.now();
+          isSpeakingRecording = true;
+          startButton.style.display = 'none';
+          stopButton.style.display = '';
+          status.textContent = 'Recording…';
+          var responseSeconds = Number(q.responseSeconds) || 0;
+          if (responseSeconds > 0) {
+            activeAudioTimer = window.setTimeout(stopMockSpeakingCapture, responseSeconds * 1000);
+          }
+        } catch (error) {
+          isSpeakingPreparing = false;
+          if (activeRecordingStream) {
+            activeRecordingStream.getTracks().forEach(function (track) { track.stop(); });
+            activeRecordingStream = null;
+          }
+          if (prepTimer) {
+            window.clearInterval(prepTimer);
+            prepTimer = null;
+          }
+          startButton.disabled = false;
+          status.textContent = 'Microphone access failed. Check browser permissions and try again.';
+        }
+      }
+
+      function stopMockSpeakingCapture() {
+        if (activeAudioTimer) {
+          window.clearTimeout(activeAudioTimer);
+          activeAudioTimer = null;
+        }
+        if (prepTimer) {
+          window.clearInterval(prepTimer);
+          prepTimer = null;
+        }
+        if (activeRecorder && activeRecorder.state !== 'inactive') {
+          activeRecorder.stop();
+        }
+      }
+
+      async function uploadMockSpeakingRecording(q, status, startButton, stopButton) {
+        isSpeakingRecording = false;
+        isAudioUploading = true;
+        if (activeRecordingStream) {
+          activeRecordingStream.getTracks().forEach(function (track) { track.stop(); });
+          activeRecordingStream = null;
+        }
+        stopButton.style.display = 'none';
+        status.textContent = 'Uploading recording…';
+        var blob = new Blob(activeAudioChunks, { type: activeAudioChunks[0] ? activeAudioChunks[0].type : 'audio/webm' });
+        var durationMs = Math.max(1, Date.now() - activeRecordingStartedAt);
+
+        try {
+          var tokenInput = document.querySelector('#anti-forgery-holder input[name="__RequestVerificationToken"]');
+          var formData = new FormData();
+          formData.append('attemptId', attemptId);
+          formData.append('questionId', q.questionId);
+          formData.append('audioFile', blob, 'recording.webm');
+          formData.append('durationMs', durationMs);
+          formData.append('__RequestVerificationToken', tokenInput ? tokenInput.value : '');
+          var response = await fetch('/speaking/upload-audio', { method: 'POST', body: formData });
+          if (!response.ok) {
+            throw new Error('Audio upload failed (' + response.status + ').');
+          }
+
+          var state = localAnswers[q.questionId] || {};
+          state.responseAudioPath = 'saved';
+          state.responseDurationMs = durationMs;
+          localAnswers[q.questionId] = state;
+          status.textContent = 'Recording saved. Record again to replace it.';
+          saveAnswer(q.questionId, null, !!state.isFlagged, state.responseText || '');
+          updateProgressStats();
+        } catch (error) {
+          status.textContent = 'Recording could not be saved. Check your connection and record again.';
+          startButton.style.display = '';
+        } finally {
+          isAudioUploading = false;
+          startButton.disabled = false;
+          activeRecorder = null;
+          activeAudioChunks = [];
+        }
+      }
 
       function countWords(text) {
         var trimmed = (text || '').trim();
@@ -858,6 +1050,7 @@
 
         // Options List (Instant render, no entrance animation)
         var selectedOptId = localAnswers[q.questionId] ? localAnswers[q.questionId].selectedOptionId : null;
+        var isFreeResponse = (q.questionType || '').toLowerCase() === 'free_response';
         optionList.setAttribute('aria-label', 'Answer for question ' + q.displayOrder);
         var optionsHtml = '';
         (q.options || []).forEach(function (opt) {
@@ -869,8 +1062,7 @@
           optionsHtml += '</label>';
         });
         optionList.innerHTML = optionsHtml;
-        var isFreeResponse = q.questionType === 'free_response';
-        optionList.style.display = isFreeResponse ? 'none' : 'block';
+        optionList.style.display = isFreeResponse ? 'none' : '';
         writingPane.style.display = isFreeResponse ? 'flex' : 'none';
         if (isFreeResponse) {
           var draft = responseDrafts[q.questionId];
@@ -890,6 +1082,12 @@
             saveAnswer(q.questionId, val, !!(localAnswers[q.questionId] && localAnswers[q.questionId].isFlagged));
           });
         });
+        if (isFreeResponse) {
+          renderFreeResponse(q);
+        } else {
+          freeResponseContainer.style.display = 'none';
+          freeResponseContainer.innerHTML = '';
+        }
 
         // Previous & Next navigation buttons
         // Navigator Grid active indicator
@@ -907,12 +1105,21 @@
 
       function goToQuestion(targetOrder) {
         if (targetOrder < 1 || targetOrder > totalQuestions) return;
+        if (isSpeakingPreparing || isSpeakingRecording || isAudioUploading) {
+          saveStatus.textContent = isAudioUploading
+            ? 'Wait for the recording to finish uploading.'
+            : (isSpeakingPreparing ? 'Wait for preparation to finish before changing questions.' : 'Stop the recording before changing questions.');
+          saveStatus.className = 'save-status save-status--error';
+          return;
+        }
+
         var targetQuestion = questionMap[targetOrder];
         var phase = phases[activePhaseIndex];
         var currentQuestion = questionMap[currentDisplayOrder];
         if (!targetQuestion || !phase || targetQuestion.skillCode !== phase.skillCode) return;
         if (phase.skillCode === 'LIST' && targetOrder !== currentDisplayOrder + 1) return;
-        if (currentQuestion && currentQuestion.questionType === 'free_response' && responseDrafts[currentQuestion.questionId].dirty) {
+        var currentDraft = currentQuestion && responseDrafts[currentQuestion.questionId];
+        if (currentQuestion && currentQuestion.questionType === 'free_response' && currentDraft && currentDraft.dirty) {
           saveDraft(currentQuestion.questionId);
         }
         renderQuestion(targetOrder);
@@ -952,9 +1159,11 @@
         var flagged = 0;
         questions.forEach(function (q) {
           var a = localAnswers[q.questionId];
+          var draft = responseDrafts[q.questionId];
           var hasResponse = q.questionType === 'free_response'
-            ? !!(responseDrafts[q.questionId] && responseDrafts[q.questionId].text.trim())
-            : a && a.selectedOptionId !== null && a.selectedOptionId !== undefined;
+            ? !!((draft && draft.text.trim()) ||
+                (a && ((a.responseText || '').trim() || a.responseAudioPath)))
+            : !!(a && a.selectedOptionId !== null && a.selectedOptionId !== undefined);
           if (hasResponse) answered++;
           if (a && a.isFlagged) flagged++;
 
@@ -1017,6 +1226,7 @@
         if (item.selectedOptionId !== null && item.selectedOptionId !== undefined) {
           body.append('SelectedOptionId', item.selectedOptionId);
         }
+        body.append('ResponseText', item.responseText || '');
         body.append('IsFlagged', item.isFlagged ? 'true' : 'false');
 
         fetch('/exams/take/' + attemptId + '/answers/' + item.questionId, {
@@ -1076,17 +1286,24 @@
         });
       }
 
-      function saveAnswer(questionId, selectedOptionId, flagged) {
+      function saveAnswer(questionId, selectedOptionId, flagged, responseText) {
         // Immediate in-memory registration
+        var previousAnswer = localAnswers[questionId] || {};
         localAnswers[questionId] = {
           selectedOptionId: selectedOptionId,
-          isFlagged: flagged
+          isFlagged: flagged,
+          responseText: typeof responseText === 'string' ? responseText : (previousAnswer.responseText || ''),
+          responseAudioPath: previousAnswer.responseAudioPath || null,
+          responseDurationMs: previousAnswer.responseDurationMs || null
         };
 
         // Immediate Navigator cell UI reflection
         var cell = document.getElementById('nav-cell-' + questionId);
         if (cell) {
-          if (selectedOptionId !== null && selectedOptionId !== undefined) {
+          var isAnswered = (selectedOptionId !== null && selectedOptionId !== undefined)
+            || (localAnswers[questionId].responseText.trim().length > 0)
+            || !!localAnswers[questionId].responseAudioPath;
+          if (isAnswered) {
             cell.classList.add('is-answered');
             cell.classList.remove('is-unanswered');
           } else {
@@ -1107,6 +1324,7 @@
         pendingQueue.push({
           questionId: questionId,
           selectedOptionId: selectedOptionId,
+          responseText: localAnswers[questionId].responseText,
           isFlagged: flagged,
           retryCount: 0
         });
@@ -1296,6 +1514,13 @@
 
       // 9. Modals Management
       function openSubmitModal() {
+        if (isSpeakingPreparing || isSpeakingRecording || isAudioUploading) {
+          saveStatus.textContent = isAudioUploading
+            ? 'Wait for the recording to finish uploading before submitting.'
+            : (isSpeakingPreparing ? 'Wait for preparation to finish before submitting.' : 'Stop and save the recording before submitting.');
+          saveStatus.className = 'save-status save-status--error';
+          return;
+        }
         updateProgressStats();
         var submitQueueMsg = document.getElementById('modal-sync-pending');
         var submitNowBtn = document.getElementById('btn-modal-submit-now');
@@ -1342,6 +1567,14 @@
       if (submitExamForm) {
         submitExamForm.addEventListener('submit', function (e) {
           if (isSubmitting) return;
+          if (isSpeakingPreparing || isSpeakingRecording || isAudioUploading) {
+            e.preventDefault();
+            saveStatus.textContent = isAudioUploading
+              ? 'Wait for the recording to finish uploading before submitting.'
+              : (isSpeakingPreparing ? 'Wait for preparation to finish before submitting.' : 'Stop and save the recording before submitting.');
+            saveStatus.className = 'save-status save-status--error';
+            return;
+          }
           e.preventDefault();
           prepareFinalDraftFields(submitExamForm);
 
@@ -1356,7 +1589,7 @@
               submitExamForm.submit();
               return;
             }
-
+            if (Date.now() >= expiresAt) return;
             if (Date.now() >= expiresAt) return;
             var submitQueueMsg = document.getElementById('modal-sync-pending');
             if (submitQueueMsg) submitQueueMsg.style.display = 'block';
@@ -1395,6 +1628,7 @@
       }
 
       // Start initial queue flush if uncommitted items restored
+      renderQuestion(currentDisplayOrder);
       if (pendingQueue.length > 0) {
         triggerFlush();
       }

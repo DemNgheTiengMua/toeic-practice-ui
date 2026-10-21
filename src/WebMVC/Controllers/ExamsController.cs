@@ -79,9 +79,7 @@ public sealed class ExamsController(
         {
             var take = await api.GetAttemptTakeAsync(attemptId, q, cancellationToken);
 
-            if (take.Status == AttemptStatusDto.Graded ||
-                take.Status == AttemptStatusDto.Submitted ||
-                take.IsAutoSubmitted)
+            if (take.Status is AttemptStatusDto.Submitted or AttemptStatusDto.Graded || take.IsAutoSubmitted)
             {
                 return RedirectToAction(nameof(Result), new { attemptId });
             }
@@ -117,7 +115,7 @@ public sealed class ExamsController(
     {
         try
         {
-            var request = new SaveAnswerRequest(form.SelectedOptionId, form.IsFlagged);
+            var request = new SaveAnswerRequest(form.SelectedOptionId, form.IsFlagged, form.ResponseText);
             var result = await api.SaveAttemptAnswerAsync(attemptId, questionId, request, cancellationToken);
 
             return Json(new
@@ -251,6 +249,30 @@ public sealed class ExamsController(
             logger.LogError(ex, "Failed to load result for attempt {AttemptId}", attemptId);
             TempData["ShellError"] = "Could not load exam results.";
             return RedirectToAction(nameof(Index));
+        }
+    }
+
+    [HttpGet("/exams/result/{attemptId:int}/status")]
+    public async Task<IActionResult> ResultStatus(int attemptId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await api.GetAttemptResultAsync(attemptId, cancellationToken);
+            return Json(new
+            {
+                status = result.Status.ToString(),
+                isGraded = result.Status == AttemptStatusDto.Graded,
+                totalScore = result.TotalScore,
+                bandCode = result.BandCode,
+                freeResponseCount = result.FreeResponseCount,
+                gradedFreeResponseCount = result.GradedFreeResponseCount,
+                failedFreeResponseCount = result.FailedFreeResponseCount
+            });
+        }
+        catch (ApiException ex)
+        {
+            logger.LogWarning(ex, "Failed to poll grading status for attempt {AttemptId}", attemptId);
+            return StatusCode(ex.Status, new { code = ex.Code, message = ex.Detail ?? ex.Message });
         }
     }
 

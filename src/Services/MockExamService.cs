@@ -35,7 +35,14 @@ public interface IMockExamService
 
     Task<AttemptTakeView> GetAttemptTakeAsync(int userId, int attemptId, int? questionDisplayOrder, CancellationToken cancellationToken = default);
 
-    Task<SaveAttemptAnswerResult> SaveAnswerAsync(int userId, int attemptId, int questionId, int? selectedOptionId, bool isFlagged, CancellationToken cancellationToken = default);
+    Task<SaveAttemptAnswerResult> SaveAnswerAsync(
+        int userId,
+        int attemptId,
+        int questionId,
+        int? selectedOptionId,
+        bool isFlagged,
+        CancellationToken cancellationToken = default,
+        string? responseText = null);
 
     Task<SaveAttemptDraftResult> SaveDraftAsync(int userId, int attemptId, int questionId, string? responseText, CancellationToken cancellationToken = default);
 
@@ -275,11 +282,20 @@ public sealed class MockExamService(
         int questionId,
         int? selectedOptionId,
         bool isFlagged,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        string? responseText = null)
     {
         try
         {
-            return await _attemptEngine.SaveAnswerAsync(attemptId, userId, questionId, selectedOptionId, isFlagged, null, cancellationToken);
+            return await _attemptEngine.SaveAnswerAsync(
+                attemptId,
+                userId,
+                questionId,
+                selectedOptionId,
+                isFlagged,
+                null,
+                cancellationToken,
+                responseText);
         }
         catch (AttemptEngineException ex)
         {

@@ -16,7 +16,8 @@ public sealed record ExamTakeViewModel(
 
 public sealed record SaveAnswerFormModel(
     int? SelectedOptionId,
-    bool IsFlagged);
+    bool IsFlagged,
+    string? ResponseText = null);
 
 public sealed class ExamSubmitFormModel
 {

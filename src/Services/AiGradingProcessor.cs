@@ -33,8 +33,11 @@ public interface IAiGradingProcessor
 public sealed class AiGradingProcessor(
     CompanionDbContext db,
     IAiGrader aiGrader,
-    ILogger<AiGradingProcessor>? logger = null) : IAiGradingProcessor
+    ILogger<AiGradingProcessor>? logger = null,
+    IAttemptEngine? attemptEngine = null) : IAiGradingProcessor
 {
+    private readonly IAttemptEngine _attemptEngine = attemptEngine ?? new AttemptEngine(db);
+
     public async Task<int> ProcessPendingGradingsAsync(int batchSize = 10, CancellationToken cancellationToken = default)
     {
         if (batchSize <= 0) batchSize = 10;
@@ -45,6 +48,7 @@ public sealed class AiGradingProcessor(
                     .ThenInclude(q => q.Section)
             .Include(g => g.FreeResponse)
                 .ThenInclude(fr => fr.Attempt)
+                    .ThenInclude(a => a.Exam)
             .Where(g => g.Status == AiGradingStatus.Pending.ToCode())
             .OrderBy(g => g.RequestedAt)
             .Take(batchSize)
@@ -70,6 +74,7 @@ public sealed class AiGradingProcessor(
                     .ThenInclude(q => q.Section)
             .Include(g => g.FreeResponse)
                 .ThenInclude(fr => fr.Attempt)
+                    .ThenInclude(a => a.Exam)
             .Where(g => g.FreeResponseId == freeResponseId && g.Status == AiGradingStatus.Pending.ToCode())
             .SingleOrDefaultAsync(cancellationToken);
 
@@ -180,19 +185,26 @@ public sealed class AiGradingProcessor(
 
                 if (!anyPending)
                 {
-                    var attempt = await db.ExamAttempts
-                        .Include(a => a.Exam)
-                        .SingleOrDefaultAsync(a => a.AttemptId == fr.AttemptId, cancellationToken);
-                    if (attempt != null && attempt.Status != AttemptStatus.Graded.ToCode())
+                    var purpose = fr.Attempt.Exam.Purpose;
+                    if (purpose == ExamPurpose.Mock.ToCode())
                     {
-                        attempt.Status = AttemptStatus.Graded.ToCode();
-                        if (attempt.Exam.Purpose == ExamPurpose.SpeakingPractice.ToCode() ||
-                            attempt.Exam.Purpose == ExamPurpose.WritingPractice.ToCode())
+                        await _attemptEngine.FinalizeAiGradedAttemptAsync(fr.AttemptId, cancellationToken);
+                    }
+                    else
+                    {
+                        var attempt = await db.ExamAttempts.FindAsync(new object[] { fr.AttemptId }, cancellationToken);
+                        if (attempt != null && attempt.Status != AttemptStatus.Graded.ToCode())
                         {
-                            attempt.TotalScore = null;
-                            attempt.BandCode = null;
+                            attempt.Status = AttemptStatus.Graded.ToCode();
+                            if (purpose == ExamPurpose.SpeakingPractice.ToCode()
+                                || purpose == ExamPurpose.WritingPractice.ToCode())
+                            {
+                                attempt.TotalScore = null;
+                                attempt.BandCode = null;
+                            }
+
+                            await db.SaveChangesAsync(cancellationToken);
                         }
-                        await db.SaveChangesAsync(cancellationToken);
                     }
                 }
 

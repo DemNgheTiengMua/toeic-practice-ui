@@ -84,10 +84,14 @@ public sealed record AttemptQuestionDto(
     int? SelectedOptionId,
     bool IsFlagged,
     string QuestionType = "mcq",
-    string? ResponseText = null,
-    DateTimeOffset? DraftSavedAt = null,
     int? MinWords = null,
     int? MaxWords = null,
+    int? PrepSeconds = null,
+    int? ResponseSeconds = null,
+    string? ResponseText = null,
+    string? ResponseAudioPath = null,
+    int? ResponseDurationMs = null,
+    DateTimeOffset? DraftSavedAt = null,
     int? SkillDurationMinutes = null,
     int SkillDisplayOrder = 0);
 
@@ -139,7 +143,8 @@ public sealed record SaveAttemptDraftResponse(
 
 public sealed record SaveAnswerRequest(
     int? SelectedOptionId,
-    bool IsFlagged);
+    bool IsFlagged,
+    string? ResponseText = null);
 
 public sealed record SaveAnswerResultDto(
     int QuestionId,
@@ -190,7 +195,10 @@ public sealed record AttemptResultDto(
     string? BandName,
     IReadOnlyList<AttemptSkillScoreDto> SkillScores,
     int? PreviousAttemptScore,
-    int? ScoreDelta);
+    int? ScoreDelta,
+    int FreeResponseCount = 0,
+    int GradedFreeResponseCount = 0,
+    int FailedFreeResponseCount = 0);
 
 public sealed record ScoreBandItemDto(
     string Code,
