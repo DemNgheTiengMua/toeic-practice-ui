@@ -146,7 +146,16 @@ public static class ExamEndpoints
                     qInfo.ResponseDurationMs,
                     qInfo.DraftSavedAt,
                     qInfo.SkillDurationMinutes,
-                    qInfo.SkillDisplayOrder);
+                    qInfo.SkillDisplayOrder,
+                    qInfo.SelectedOptionIds,
+                    qInfo.MaxSelections,
+                    qInfo.AllowNumber,
+                    qInfo.AcceptedAnswersJson,
+                    qInfo.RequiredKeywords,
+                    qInfo.LayoutType,
+                    qInfo.RequirePassage,
+                    qInfo.NavigationMode,
+                    qInfo.ToolsConfigJson);
 
                 var allQDtos = take.Questions?.Select(q => new AttemptQuestionDto(
                     q.QuestionId,
@@ -179,7 +188,16 @@ public static class ExamEndpoints
                     q.ResponseDurationMs,
                     q.DraftSavedAt,
                     q.SkillDurationMinutes,
-                    q.SkillDisplayOrder)).ToList();
+                    q.SkillDisplayOrder,
+                    q.SelectedOptionIds,
+                    q.MaxSelections,
+                    q.AllowNumber,
+                    q.AcceptedAnswersJson,
+                    q.RequiredKeywords,
+                    q.LayoutType,
+                    q.RequirePassage,
+                    q.NavigationMode,
+                    q.ToolsConfigJson)).ToList();
 
                 return Results.Ok(new AttemptTakeDto(
                     take.AttemptId,

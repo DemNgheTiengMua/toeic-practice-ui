@@ -29,6 +29,331 @@
     .phase-progress__item[aria-current="step"] { background: #14181d; color: #fff; }
     .phase-progress__timer { font-family: "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums; }
     .writing-editor { width: 100%; min-height: 18rem; border: 2px solid #14181d; border-radius: 0; box-shadow: none; padding: var(--space-3); font: inherit; }
+
+    /* Split-Screen 100vh Viewport */
+    .exam-layout--split {
+      display: grid !important;
+      grid-template-columns: 1fr 1fr !important;
+      gap: 1.5rem !important;
+      height: calc(100vh - 165px) !important;
+      min-height: 480px;
+      overflow: hidden !important;
+    }
+    .exam-layout--split #split-stimulus-pane {
+      display: block !important;
+      height: 100% !important;
+      overflow: hidden !important;
+    }
+    .exam-layout--split #question-pane {
+      height: 100% !important;
+      overflow-y: auto !important;
+      padding-right: 0.5rem !important;
+    }
+    .exam-layout--split .exam-sidebar {
+      display: none !important;
+    }
+
+    /* Timer Warnings & Red Flashing */
+    @@keyframes timer-pulse-red {
+      0%, 100% { background-color: #b31217; color: #ffffff; }
+      50% { background-color: #ffffff; color: #b31217; }
+    }
+    .timer--warn-flash {
+      border: 2px solid #b31217 !important;
+      animation: timer-pulse-red 1.5s infinite ease-in-out;
+    }
+    .timer-alert-placard {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: #b31217;
+      color: #ffffff;
+      padding: 0.25rem 0.65rem;
+      border: 2px solid #14181d;
+      font-family: "IBM Plex Sans Condensed", sans-serif;
+      font-weight: 700;
+      font-size: 0.8rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      animation: timer-pulse-red 2s infinite ease-in-out;
+    }
+
+    /* Accessibility Font Scaling */
+    body.font-size-standard { font-size: 16px; }
+    body.font-size-large { font-size: 18.4px; }
+    body.font-size-xlarge { font-size: 20.8px; }
+
+    /* Accessibility High Contrast Themes */
+    body[data-theme="inverted"] {
+      background-color: #14181d !important;
+      color: #f0f2f5 !important;
+    }
+    body[data-theme="inverted"] .app-topbar,
+    body[data-theme="inverted"] .card,
+    body[data-theme="inverted"] .modal,
+    body[data-theme="inverted"] .question,
+    body[data-theme="inverted"] .bottom-question-palette {
+      background-color: #1c2127 !important;
+      color: #f0f2f5 !important;
+      border-color: #4b5563 !important;
+    }
+    body[data-theme="inverted"] .option {
+      background-color: #242a32 !important;
+      color: #f0f2f5 !important;
+      border-color: #4b5563 !important;
+    }
+    body[data-theme="inverted"] .option.is-selected {
+      background-color: #ffffff !important;
+      color: #14181d !important;
+    }
+    body[data-theme="inverted"] .palette-chip--unanswered {
+      background-color: #1c2127 !important;
+      color: #f0f2f5 !important;
+      border-color: #4b5563 !important;
+    }
+    body[data-theme="inverted"] .palette-chip--answered {
+      background-color: #374151 !important;
+      color: #ffffff !important;
+      border-color: #9ca3af !important;
+    }
+    body[data-theme="inverted"] .palette-chip--current {
+      background-color: #ffffff !important;
+      color: #14181d !important;
+      border-color: #ffffff !important;
+    }
+
+    body[data-theme="high-contrast"] {
+      background-color: #000000 !important;
+      color: #ffff00 !important;
+    }
+    body[data-theme="high-contrast"] .app-topbar,
+    body[data-theme="high-contrast"] .card,
+    body[data-theme="high-contrast"] .modal,
+    body[data-theme="high-contrast"] .question,
+    body[data-theme="high-contrast"] .bottom-question-palette,
+    body[data-theme="high-contrast"] input,
+    body[data-theme="high-contrast"] select,
+    body[data-theme="high-contrast"] textarea {
+      background-color: #000000 !important;
+      color: #ffff00 !important;
+      border-color: #ffff00 !important;
+    }
+    body[data-theme="high-contrast"] .option {
+      background-color: #000000 !important;
+      color: #ffff00 !important;
+      border-color: #ffff00 !important;
+    }
+    body[data-theme="high-contrast"] .option.is-selected {
+      background-color: #ffff00 !important;
+      color: #000000 !important;
+    }
+    body[data-theme="high-contrast"] .btn--primary {
+      background-color: #ffff00 !important;
+      color: #000000 !important;
+      border-color: #ffff00 !important;
+    }
+    body[data-theme="high-contrast"] .btn--ghost {
+      color: #ffff00 !important;
+      border-color: #ffff00 !important;
+    }
+    body[data-theme="high-contrast"] .palette-chip--unanswered {
+      background-color: #000000 !important;
+      color: #ffff00 !important;
+      border-color: #ffff00 !important;
+    }
+    body[data-theme="high-contrast"] .palette-chip--answered {
+      background-color: #222200 !important;
+      color: #ffff00 !important;
+      border-color: #ffff00 !important;
+    }
+    body[data-theme="high-contrast"] .palette-chip--current {
+      background-color: #ffff00 !important;
+      color: #000000 !important;
+      border-color: #ffff00 !important;
+    }
+
+    /* Bottom Question Palette */
+    .bottom-question-palette {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #ffffff;
+      border-top: 2px solid #14181d;
+      z-index: 100;
+      padding: 0.4rem 1.5rem;
+      box-shadow: none;
+    }
+    .palette-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+    .palette-legend {
+      display: flex;
+      gap: 0.75rem;
+      font-size: 0.75rem;
+      white-space: nowrap;
+    }
+    .palette-legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    .chip-swatch {
+      width: 12px;
+      height: 12px;
+      display: inline-block;
+      border: 1px solid #14181d;
+    }
+    .chip-swatch--unanswered { background: #ffffff; border-color: #ccd2d6; }
+    .chip-swatch--answered { background: #e9ecef; border-color: #14181d; font-weight: 700; }
+    .chip-swatch--current { background: #14181d; border-color: #14181d; }
+    .chip-swatch--flagged { background: #f2b705; border-color: #14181d; }
+
+    .palette-chips-track {
+      display: flex;
+      gap: 0.35rem;
+      overflow-x: auto;
+      padding: 0.2rem 0;
+      width: 100%;
+    }
+    .palette-chip {
+      min-width: 36px;
+      height: 36px;
+      border: 1px solid #ccd2d6;
+      background: #ffffff;
+      color: #14181d;
+      font-family: "IBM Plex Mono", monospace;
+      font-weight: 600;
+      font-size: 0.85rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      position: relative;
+      border-radius: 0;
+      box-shadow: none;
+      padding: 0 0.35rem;
+      flex-shrink: 0;
+    }
+    .palette-chip:hover {
+      border-color: #14181d;
+    }
+    .palette-chip--unanswered {
+      border: 1px solid #ccd2d6;
+      background: #ffffff;
+      color: #14181d;
+    }
+    .palette-chip--answered {
+      border: 2px solid #14181d;
+      background: #e9ecef;
+      color: #14181d;
+      font-weight: 700;
+    }
+    .palette-chip--current {
+      border: 2px solid #14181d !important;
+      background: #14181d !important;
+      color: #ffffff !important;
+      font-weight: 700;
+    }
+    .palette-chip--flagged::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 0;
+      height: 0;
+      border-style: solid;
+      border-width: 0 8px 8px 0;
+      border-color: transparent #f2b705 transparent transparent;
+    }
+
+    /* Highlighter & Notes Engine */
+    .ee-token {
+      display: inline;
+      position: relative;
+    }
+    .ee-token--highlighted {
+      background-color: #f2b705 !important;
+      color: #14181d !important;
+    }
+    .ee-note-pin {
+      display: inline-block;
+      cursor: pointer;
+      background: #14181d;
+      color: #ffffff;
+      font-size: 0.7rem;
+      padding: 0.1rem 0.25rem;
+      margin-left: 0.2rem;
+      font-family: "IBM Plex Mono", monospace;
+      font-weight: 700;
+      border: 1px solid #14181d;
+      vertical-align: middle;
+    }
+    .highlighter-popover {
+      position: absolute;
+      z-index: 1000;
+      display: flex;
+      gap: 0.25rem;
+      background: #ffffff;
+      border: 2px solid #14181d;
+      padding: 0.25rem;
+      box-shadow: none;
+    }
+
+    /* Question Component Widgets */
+    .option--checkbox input[type="checkbox"] {
+      width: 1.15rem;
+      height: 1.15rem;
+      accent-color: #14181d;
+    }
+    .completion-input {
+      font-family: "IBM Plex Sans", sans-serif;
+      font-size: 1rem;
+      border: 2px solid #14181d;
+      border-radius: 0;
+      box-shadow: none;
+      padding: 0.5rem 0.75rem;
+      width: 100%;
+      max-width: 480px;
+    }
+    .chip-item {
+      display: inline-block;
+      border: 2px solid #14181d;
+      background: #ffffff;
+      color: #14181d;
+      padding: 0.35rem 0.75rem;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      user-select: none;
+    }
+    .chip-item:hover {
+      background: #e9ecef;
+    }
+    .chip-item.is-placed {
+      opacity: 0.35;
+      pointer-events: none;
+    }
+    .drop-zone {
+      min-height: 54px;
+      border: 2px dashed #14181d;
+      background: #fafbfc;
+      padding: 0.5rem 0.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .drop-zone.is-hovered {
+      background: #e3ebf6;
+      border-color: #0b4ea2;
+    }
+    body.exam-body-protected {
+      padding-bottom: 85px;
+    }
   </style>
 </head>
 <body class="exam-body-protected">
@@ -45,6 +370,9 @@
         }
       </div>
       <div class="exam-topbar-group">
+        <div id="timer-alert-placard" class="timer-alert-placard" style="display:none;" role="alert">
+          <span id="timer-alert-message"></span>
+        </div>
         <span id="save-status" class="save-status save-status--saved" role="status" aria-live="polite">Saved</span>
         <span id="timer-box" class="timer" role="timer" aria-label="Time remaining">
           <span class="text-sm text-muted">Time remaining</span>
@@ -56,6 +384,14 @@
               ShowInput: hasSpeaking,
               ShowOutput: hasListening))
         }
+        <div class="volume-slider-group" style="display: inline-flex; align-items: center; gap: 0.35rem; border: 1px solid #ccd2d6; padding: 0.2rem 0.5rem; background: #fff;" title="Ã‚m lÆ°á»£ng bÃ i thi (Volume)">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+          <input type="range" id="exam-volume-slider" min="0" max="1" step="0.05" value="1" aria-label="Audio Volume" style="width: 65px; accent-color: #0b4ea2; cursor: pointer;">
+          <span id="exam-volume-pct" style="font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; min-width: 32px;">100%</span>
+        </div>
+        <button type="button" class="btn btn--ghost btn--sm" id="btn-open-accessibility-modal" title="Trá»£ nÄƒng & Giao diá»‡n">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-weight: 700;">Aa</span> Cá»¡ chá»¯ & TÆ°Æ¡ng pháº£n
+        </button>
         <button type="button" class="btn btn--ghost btn--sm" id="btn-open-exit-modal">Exit</button>
       </div>
     </header>
@@ -97,7 +433,18 @@
           }
         </section>
 
-        <div class="exam-layout">
+        <div class="exam-layout" id="exam-main-layout">
+          <!-- Left Stimulus / Passage Pane (active in 100vh Split Screen mode) -->
+          <div id="split-stimulus-pane" class="exam-split-left" style="display:none;">
+            <div class="card" style="height: 100%; border: 2px solid #14181d; border-radius: 0; box-shadow: none; display: flex; flex-direction: column;">
+              <div class="card__header" style="border-bottom: 2px solid #14181d; background: #fafbfc; padding: 0.75rem 1rem;">
+                <strong style="font-family: 'IBM Plex Sans Condensed', sans-serif; text-transform: uppercase;">ÄOáº N VÄ‚N / TÃ€I LIá»†U (READING PASSAGE & STIMULUS)</strong>
+              </div>
+              <div class="card__body" id="split-passage-scroll" style="flex: 1; overflow-y: auto; padding: 1.25rem;">
+                <div id="split-passage-text" class="passage ee-tokenized-text"></div>
+              </div>
+            </div>
+          </div>
           <!-- Question Content Pane (Exam Shell Swap Target) -->
           <div class="stack" id="question-pane">
             <!-- Audio Player Container -->
@@ -149,7 +496,7 @@
                 </div>
               </div>
 
-              <p class="question__stem" id="question-stem-display">
+              <p class="question__stem ee-tokenized-text" id="question-stem-display">
                 @q.Stem
               </p>
 
@@ -165,6 +512,9 @@
                   </label>
                 }
               </div>
+              <!-- Dynamic 11-Component Widgets (multi_select, inline_completion, dropdown, drag_drop) -->
+              <div id="component-widget-container" class="stack mt-3" style="display:none;"></div>
+
               <div id="writing-response-pane" class="stack mt-3" style="@(q.QuestionType == "free_response" ? "" : "display:none;")">
                 <label for="writing-editor"><strong>Your response</strong></label>
                 <textarea id="writing-editor" class="writing-editor" aria-describedby="writing-counts" data-question-id="@q.QuestionId">@q.ResponseText</textarea>
@@ -353,6 +703,95 @@
     @Html.AntiForgeryToken()
     <div class="exam-draft-submit-fields"></div>
   </form>
+
+  <!-- Bottom Question Palette (FULL_SANDBOX) -->
+  <nav class="bottom-question-palette" id="bottom-question-palette" aria-label="Question Palette">
+    <div class="palette-container">
+      <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; margin-bottom: 0.2rem;">
+        <strong style="font-family: 'IBM Plex Sans Condensed', sans-serif; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;">Báº¢NG CÃ‚U Há»ŽI (QUESTIONS 1â€“@take.TotalQuestions)</strong>
+        <div class="palette-legend">
+          <span class="palette-legend-item"><span class="chip-swatch chip-swatch--unanswered"></span> ChÆ°a lÃ m</span>
+          <span class="palette-legend-item"><span class="chip-swatch chip-swatch--answered"></span> ÄÃ£ lÃ m</span>
+          <span class="palette-legend-item"><span class="chip-swatch chip-swatch--current"></span> Äang lÃ m</span>
+          <span class="palette-legend-item"><span class="chip-swatch chip-swatch--flagged"></span> Gáº¯n cá»</span>
+        </div>
+      </div>
+      <div class="palette-chips-track" id="bottom-palette-chips">
+        @foreach (var item in take.Navigator)
+        {
+          var stateClass = item.IsCurrent ? "palette-chip--current" : (item.IsAnswered ? "palette-chip--answered" : "palette-chip--unanswered");
+          var flagClass = item.IsFlagged ? "palette-chip--flagged" : "";
+          <button type="button" class="palette-chip @stateClass @flagClass"
+                  id="bottom-chip-@item.QuestionId"
+                  data-question-id="@item.QuestionId"
+                  data-display-order="@item.DisplayOrder"
+                  title="CÃ¢u @item.DisplayOrder@(item.IsAnswered ? " Â· ÄÃ£ lÃ m" : "")@(item.IsFlagged ? " Â· Gáº¯n cá»" : "")">
+            @item.DisplayOrder
+          </button>
+        }
+      </div>
+    </div>
+  </nav>
+
+  <!-- Accessibility Theme & Font Size Modal -->
+  <div id="accessibility-modal" class="modal-overlay" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="accessibility-modal-title">
+    <div class="modal" style="max-width: 480px; border: 2px solid #14181d; border-radius: 0; box-shadow: none;">
+      <div class="modal__header" style="border-bottom: 2px solid #14181d;">
+        <h2 id="accessibility-modal-title" class="no-margin" style="font-family: 'IBM Plex Sans Condensed', sans-serif; text-transform: uppercase;">CÃ i Ä‘áº·t trá»£ nÄƒng & Giao diá»‡n</h2>
+      </div>
+      <div class="modal__body stack" style="gap: 1.25rem;">
+        <div>
+          <label class="text-sm text-bold" style="font-family: 'IBM Plex Sans Condensed', sans-serif; text-transform: uppercase; display: block; margin-bottom: 0.5rem;">Cá»¡ chá»¯ (Font Size)</label>
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem;">
+            <button type="button" class="btn js-font-size-btn" data-size="standard" style="border-radius: 0; font-weight: 700;">Standard (100%)</button>
+            <button type="button" class="btn js-font-size-btn" data-size="large" style="border-radius: 0; font-weight: 700;">Large (115%)</button>
+            <button type="button" class="btn js-font-size-btn" data-size="xlarge" style="border-radius: 0; font-weight: 700;">Extra Large (130%)</button>
+          </div>
+        </div>
+        <div>
+          <label class="text-sm text-bold" style="font-family: 'IBM Plex Sans Condensed', sans-serif; text-transform: uppercase; display: block; margin-bottom: 0.5rem;">Äá»™ tÆ°Æ¡ng pháº£n (Contrast Theme)</label>
+          <div class="stack" style="gap: 0.5rem;">
+            <button type="button" class="btn js-theme-btn" data-theme="standard" style="border-radius: 0; text-align: left; padding: 0.5rem 0.75rem; font-weight: 700;">
+              Chá»¯ Ä‘en ná»n tráº¯ng (Standard: Black on White)
+            </button>
+            <button type="button" class="btn js-theme-btn" data-theme="inverted" style="border-radius: 0; text-align: left; padding: 0.5rem 0.75rem; font-weight: 700;">
+              Chá»¯ tráº¯ng ná»n Ä‘en (Inverted: White on Black)
+            </button>
+            <button type="button" class="btn js-theme-btn" data-theme="high-contrast" style="border-radius: 0; text-align: left; padding: 0.5rem 0.75rem; font-weight: 700;">
+              Chá»¯ vÃ ng ná»n Ä‘en (High Contrast: Yellow on Black)
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="modal__footer" style="border-top: 1px solid #ccd2d6;">
+        <button type="button" class="btn btn--primary" id="btn-close-accessibility-modal">HoÃ n táº¥t (Apply & Close)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Floating Highlighter Popover -->
+  <div id="highlighter-popover" class="highlighter-popover" style="display:none;" role="toolbar" aria-label="Highlighter Toolbar">
+    <button type="button" class="btn btn--sm js-hl-action" data-action="highlight" style="background: #f2b705; color: #14181d; border: 2px solid #14181d; font-weight: 700;">TÃ´ sÃ¡ng</button>
+    <button type="button" class="btn btn--sm js-hl-action" data-action="note" style="background: #ffffff; color: #14181d; border: 2px solid #14181d; font-weight: 700;">Ghi chÃº</button>
+    <button type="button" class="btn btn--sm js-hl-action" data-action="clear" style="background: #b31217; color: #ffffff; border: 2px solid #14181d; font-weight: 700;">XÃ³a</button>
+  </div>
+
+  <!-- Sticky Note Modal -->
+  <div id="sticky-note-modal" class="modal-overlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="sticky-note-title">
+    <div class="modal" style="max-width: 440px; border: 2px solid #14181d; border-radius: 0; box-shadow: none;">
+      <div class="modal__header" style="border-bottom: 2px solid #14181d;">
+        <h3 id="sticky-note-title" class="no-margin" style="font-family:'IBM Plex Sans Condensed', sans-serif; text-transform:uppercase;">ThÃªm ghi chÃº bÃ i thi</h3>
+      </div>
+      <div class="modal__body stack" style="gap: 0.75rem;">
+        <p class="text-xs text-muted mb-1" id="sticky-note-quote" style="font-style: italic; border-left: 2px solid #f2b705; padding-left: 0.5rem;"></p>
+        <textarea id="sticky-note-input" class="input" rows="3" placeholder="Nháº­p ghi chÃº cá»§a báº¡n táº¡i Ä‘Ã¢y..." style="width:100%; border:2px solid #14181d; border-radius:0; font-family:'IBM Plex Sans', sans-serif;"></textarea>
+      </div>
+      <div class="modal__footer" style="border-top: 1px solid #ccd2d6;">
+        <button type="button" class="btn btn--ghost" id="btn-cancel-note">Há»§y</button>
+        <button type="button" class="btn btn--primary" id="btn-save-note">LÆ°u ghi chÃº</button>
+      </div>
+    </div>
+  </div>
 
   <script src="~/js/icons.js"></script>
   <script src="~/js/ee-audio.js"></script>
@@ -980,6 +1419,527 @@
         }
       }
 
+      // Accessibility & Volume Initialization
+      function initAccessibility() {
+        var savedSize = localStorage.getItem('ee_exam_font_size') || 'standard';
+        var savedTheme = localStorage.getItem('ee_exam_theme') || 'standard';
+
+        function applySize(size) {
+          document.body.classList.remove('font-size-standard', 'font-size-large', 'font-size-xlarge');
+          document.body.classList.add('font-size-' + size);
+          localStorage.setItem('ee_exam_font_size', size);
+          document.querySelectorAll('.js-font-size-btn').forEach(function (b) {
+            b.classList.toggle('btn--primary', b.getAttribute('data-size') === size);
+          });
+        }
+
+        function applyTheme(theme) {
+          document.body.setAttribute('data-theme', theme);
+          localStorage.setItem('ee_exam_theme', theme);
+          document.querySelectorAll('.js-theme-btn').forEach(function (b) {
+            b.classList.toggle('btn--primary', b.getAttribute('data-theme') === theme);
+          });
+        }
+
+        applySize(savedSize);
+        applyTheme(savedTheme);
+
+        document.querySelectorAll('.js-font-size-btn').forEach(function (b) {
+          b.addEventListener('click', function () {
+            applySize(b.getAttribute('data-size'));
+          });
+        });
+
+        document.querySelectorAll('.js-theme-btn').forEach(function (b) {
+          b.addEventListener('click', function () {
+            applyTheme(b.getAttribute('data-theme'));
+          });
+        });
+
+        var btnOpen = document.getElementById('btn-open-accessibility-modal');
+        var btnClose = document.getElementById('btn-close-accessibility-modal');
+        var accModal = document.getElementById('accessibility-modal');
+        if (btnOpen && accModal) {
+          btnOpen.addEventListener('click', function () {
+            accModal.style.display = 'flex';
+          });
+        }
+        if (btnClose && accModal) {
+          btnClose.addEventListener('click', function () {
+            accModal.style.display = 'none';
+          });
+        }
+      }
+
+      function initVolume() {
+        var slider = document.getElementById('exam-volume-slider');
+        var pct = document.getElementById('exam-volume-pct');
+        var savedVol = localStorage.getItem('ee_exam_volume');
+        var vol = savedVol !== null ? parseFloat(savedVol) : 1.0;
+
+        if (slider) {
+          slider.value = vol;
+          if (pct) pct.textContent = Math.round(vol * 100) + '%';
+          slider.addEventListener('input', function () {
+            var currentVol = parseFloat(slider.value);
+            if (pct) pct.textContent = Math.round(currentVol * 100) + '%';
+            document.querySelectorAll('audio').forEach(function (a) {
+              a.volume = currentVol;
+            });
+            localStorage.setItem('ee_exam_volume', currentVol.toString());
+          });
+        }
+      }
+
+      // Tokenized Text Highlighter & Notes Engine
+      var candidateNotes = [];
+      try {
+        candidateNotes = JSON.parse(candidateNotesJson || '[]');
+        if (!Array.isArray(candidateNotes)) candidateNotes = [];
+      } catch (e) {
+        candidateNotes = [];
+      }
+
+      var currentSelectionMeta = null;
+      var highlighterPopover = document.getElementById('highlighter-popover');
+      var stickyNoteModal = document.getElementById('sticky-note-modal');
+      var stickyNoteInput = document.getElementById('sticky-note-input');
+      var stickyNoteQuote = document.getElementById('sticky-note-quote');
+      var btnSaveNote = document.getElementById('btn-save-note');
+      var btnCancelNote = document.getElementById('btn-cancel-note');
+      var componentContainer = document.getElementById('component-widget-container');
+
+      function parseToolsConfig(jsonStr) {
+        if (!jsonStr) return {};
+        try {
+          return JSON.parse(jsonStr);
+        } catch (e) {
+          return {};
+        }
+      }
+
+      function renderTokenizedText(container, rawText, sectionId, questionId, targetType) {
+        if (!container) return;
+        if (!rawText) {
+          container.innerHTML = '';
+          return;
+        }
+        var words = rawText.split(/\s+/).filter(Boolean);
+        var html = '';
+        words.forEach(function (word, idx) {
+          html += '<span class="ee-token" data-token-idx="' + idx + '" data-section-id="' + sectionId + '" data-question-id="' + questionId + '" data-target="' + targetType + '">' + escapeHtml(word) + '</span> ';
+        });
+        container.innerHTML = html;
+        applyHighlightsForTarget(container, sectionId, targetType);
+      }
+
+      function applyHighlightsForTarget(container, sectionId, targetType) {
+        if (!container) return;
+        var tokens = container.querySelectorAll('.ee-token');
+        tokens.forEach(function (tok) {
+          tok.classList.remove('ee-token--highlighted');
+          var existingPin = tok.querySelector('.ee-note-pin');
+          if (existingPin) existingPin.remove();
+        });
+
+        candidateNotes.forEach(function (note) {
+          if (note.target === targetType && (String(note.sectionId) === String(sectionId) || !note.sectionId)) {
+            for (var i = note.startToken; i <= note.endToken; i++) {
+              var tokenEl = container.querySelector('.ee-token[data-token-idx="' + i + '"]');
+              if (tokenEl) {
+                tokenEl.classList.add('ee-token--highlighted');
+                if (i === note.endToken && note.note && note.note.trim()) {
+                  var pin = document.createElement('span');
+                  pin.className = 'ee-note-pin';
+                  pin.textContent = 'ðŸ“';
+                  pin.title = note.note;
+                  (function (savedNote) {
+                    pin.addEventListener('click', function (e) {
+                      e.stopPropagation();
+                      alert('Ghi chÃº (Note): ' + savedNote);
+                    });
+                  })(note.note);
+                  tokenEl.appendChild(pin);
+                }
+              }
+            }
+          }
+        });
+      }
+
+      function applyAllHighlights() {
+        var curQ = questionMap[currentDisplayOrder];
+        if (!curQ) return;
+        var splitPassage = document.getElementById('split-passage-text');
+        var standardPassage = document.getElementById('passage-text');
+        if (splitPassage && splitPassage.offsetParent !== null) {
+          applyHighlightsForTarget(splitPassage, curQ.sectionId, 'passage');
+        } else if (standardPassage) {
+          applyHighlightsForTarget(standardPassage, curQ.sectionId, 'passage');
+        }
+        if (questionStemDisplay) {
+          applyHighlightsForTarget(questionStemDisplay, curQ.sectionId, 'stem');
+        }
+      }
+
+      function addHighlight(meta, noteText) {
+        var hl = {
+          id: 'hl_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+          sectionId: meta.sectionId,
+          questionId: meta.questionId,
+          target: meta.target,
+          startToken: meta.startToken,
+          endToken: meta.endToken,
+          text: meta.text,
+          note: noteText || ''
+        };
+        candidateNotes.push(hl);
+        candidateNotesJson = JSON.stringify(candidateNotes);
+        applyAllHighlights();
+        scheduleSync(false);
+      }
+
+      function removeHighlight(meta) {
+        candidateNotes = candidateNotes.filter(function (h) {
+          var sameTarget = h.target === meta.target && String(h.sectionId) === String(meta.sectionId);
+          var overlaps = !(h.endToken < meta.startToken || h.startToken > meta.endToken);
+          return !(sameTarget && overlaps);
+        });
+        candidateNotesJson = JSON.stringify(candidateNotes);
+        applyAllHighlights();
+        scheduleSync(false);
+      }
+
+      function handleHighlighterSelection(e) {
+        var sel = window.getSelection();
+        if (!sel || sel.isCollapsed || sel.rangeCount === 0) {
+          if (highlighterPopover && !highlighterPopover.contains(e.target)) {
+            highlighterPopover.style.display = 'none';
+          }
+          return;
+        }
+
+        var range = sel.getRangeAt(0);
+        var container = range.commonAncestorContainer;
+        if (container.nodeType === 3) container = container.parentElement;
+        var tokenizedContainer = container.closest('.ee-tokenized-text');
+        if (!tokenizedContainer) {
+          if (highlighterPopover) highlighterPopover.style.display = 'none';
+          return;
+        }
+
+        var tokensInContainer = Array.from(tokenizedContainer.querySelectorAll('.ee-token'));
+        var selectedTokens = tokensInContainer.filter(function (tok) {
+          return sel.containsNode(tok, true);
+        });
+
+        if (selectedTokens.length === 0) {
+          if (highlighterPopover) highlighterPopover.style.display = 'none';
+          return;
+        }
+
+        var startIdx = parseInt(selectedTokens[0].getAttribute('data-token-idx'), 10);
+        var endIdx = parseInt(selectedTokens[selectedTokens.length - 1].getAttribute('data-token-idx'), 10);
+        var secId = selectedTokens[0].getAttribute('data-section-id');
+        var qId = selectedTokens[0].getAttribute('data-question-id');
+        var target = selectedTokens[0].getAttribute('data-target');
+
+        currentSelectionMeta = {
+          sectionId: secId,
+          questionId: qId,
+          target: target,
+          startToken: Math.min(startIdx, endIdx),
+          endToken: Math.max(startIdx, endIdx),
+          text: sel.toString().trim()
+        };
+
+        var rect = range.getBoundingClientRect();
+        if (highlighterPopover) {
+          highlighterPopover.style.left = (rect.left + window.scrollX) + 'px';
+          highlighterPopover.style.top = (rect.top + window.scrollY - 40) + 'px';
+          highlighterPopover.style.display = 'flex';
+        }
+      }
+
+      document.addEventListener('mouseup', handleHighlighterSelection);
+
+      document.querySelectorAll('.js-hl-action').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          if (!currentSelectionMeta) return;
+          var action = btn.getAttribute('data-action');
+          if (action === 'highlight') {
+            addHighlight(currentSelectionMeta, '');
+            if (highlighterPopover) highlighterPopover.style.display = 'none';
+            window.getSelection()?.removeAllRanges();
+          } else if (action === 'note') {
+            if (stickyNoteModal && stickyNoteQuote && stickyNoteInput) {
+              stickyNoteQuote.textContent = '"' + currentSelectionMeta.text + '"';
+              stickyNoteInput.value = '';
+              stickyNoteModal.style.display = 'flex';
+              stickyNoteInput.focus();
+            }
+            if (highlighterPopover) highlighterPopover.style.display = 'none';
+          } else if (action === 'clear') {
+            removeHighlight(currentSelectionMeta);
+            if (highlighterPopover) highlighterPopover.style.display = 'none';
+            window.getSelection()?.removeAllRanges();
+          }
+        });
+      });
+
+      if (btnSaveNote) {
+        btnSaveNote.addEventListener('click', function () {
+          if (currentSelectionMeta && stickyNoteInput) {
+            var noteText = stickyNoteInput.value.trim();
+            addHighlight(currentSelectionMeta, noteText);
+            stickyNoteModal.style.display = 'none';
+            window.getSelection()?.removeAllRanges();
+          }
+        });
+      }
+      if (btnCancelNote) {
+        btnCancelNote.addEventListener('click', function () {
+          stickyNoteModal.style.display = 'none';
+        });
+      }
+
+      // 11 Interactive Question Component Widgets
+      function renderComponentWidget(q) {
+        if (!componentContainer) return;
+        var isFreeResponse = (q.questionType || '').toLowerCase() === 'free_response';
+        var isMcq = !q.questionType || q.questionType === 'mcq' || q.questionType === 'mcq_3';
+
+        if (isFreeResponse) {
+          optionList.style.display = 'none';
+          componentContainer.style.display = 'none';
+          componentContainer.innerHTML = '';
+          return;
+        }
+
+        if (isMcq) {
+          componentContainer.style.display = 'none';
+          componentContainer.innerHTML = '';
+          optionList.style.display = '';
+          return;
+        }
+
+        optionList.style.display = 'none';
+        componentContainer.style.display = 'block';
+
+        var answer = localAnswers[q.questionId] || {};
+        var type = (q.questionType || '').toLowerCase();
+
+        if (type === 'multi_select') {
+          var maxSel = q.maxSelections || 2;
+          var selectedIds = [];
+          try {
+            if (answer.selectedOptionIdsJson) {
+              selectedIds = JSON.parse(answer.selectedOptionIdsJson);
+            } else if (q.selectedOptionIds) {
+              selectedIds = q.selectedOptionIds.slice();
+            }
+          } catch (e) {
+            selectedIds = [];
+          }
+
+          var html = '<div class="multi-select-widget stack" style="gap: var(--space-2);">';
+          html += '<div class="alert alert--info py-1 px-2" style="font-size: 0.85rem; font-weight: 600; border-radius: 0; box-shadow: none;">';
+          html += 'CHá»ŒN Tá»I ÄA ' + maxSel + ' ÄÃP ÃN (SELECT UP TO ' + maxSel + ' ANSWERS): ÄÃ£ chá»n <span id="ms-count-' + q.questionId + '">' + selectedIds.length + '</span>/' + maxSel;
+          html += '</div>';
+          html += '<div class="option-list" role="group" aria-label="Multiple choice options for question ' + q.displayOrder + '">';
+
+          (q.options || []).forEach(function (opt) {
+            var isChecked = selectedIds.indexOf(opt.optionId) !== -1;
+            var isDisabled = !isChecked && selectedIds.length >= maxSel;
+            html += '<label class="option option--checkbox ' + (isChecked ? 'is-selected' : '') + '" style="' + (isDisabled ? 'opacity: 0.6; cursor: not-allowed;' : '') + '">';
+            html += '<input type="checkbox" class="option__input js-option-checkbox" value="' + opt.optionId + '" ' + (isChecked ? 'checked' : '') + ' ' + (isDisabled ? 'disabled' : '') + '>';
+            html += '<span class="option__marker">' + escapeHtml(opt.label) + '</span>';
+            html += '<span class="option__text">' + escapeHtml(opt.text) + '</span>';
+            html += '</label>';
+          });
+
+          html += '</div></div>';
+          componentContainer.innerHTML = html;
+
+          var checkboxes = componentContainer.querySelectorAll('.js-option-checkbox');
+          checkboxes.forEach(function (cb) {
+            cb.addEventListener('change', function () {
+              var optId = parseInt(cb.value, 10);
+              var idx = selectedIds.indexOf(optId);
+              if (cb.checked) {
+                if (idx === -1 && selectedIds.length < maxSel) {
+                  selectedIds.push(optId);
+                } else if (idx === -1 && selectedIds.length >= maxSel) {
+                  cb.checked = false;
+                  return;
+                }
+              } else {
+                if (idx !== -1) {
+                  selectedIds.splice(idx, 1);
+                }
+              }
+
+              var countEl = document.getElementById('ms-count-' + q.questionId);
+              if (countEl) countEl.textContent = selectedIds.length;
+
+              checkboxes.forEach(function (otherCb) {
+                var otherId = parseInt(otherCb.value, 10);
+                var otherChecked = selectedIds.indexOf(otherId) !== -1;
+                var parentLabel = otherCb.closest('.option');
+                if (parentLabel) {
+                  parentLabel.classList.toggle('is-selected', otherChecked);
+                }
+                if (!otherChecked) {
+                  otherCb.disabled = selectedIds.length >= maxSel;
+                  if (parentLabel) parentLabel.style.opacity = selectedIds.length >= maxSel ? '0.6' : '';
+                  if (parentLabel) parentLabel.style.cursor = selectedIds.length >= maxSel ? 'not-allowed' : '';
+                }
+              });
+
+              var json = JSON.stringify(selectedIds);
+              saveAnswer(q.questionId, selectedIds[0] || null, !!(localAnswers[q.questionId] && localAnswers[q.questionId].isFlagged), null, json);
+            });
+          });
+        } else if (type === 'inline_completion') {
+          var maxWords = q.maxWords;
+          var allowNumber = q.allowNumber !== false;
+          var curText = answer.responseText || '';
+
+          var html = '<div class="inline-completion-widget stack" style="gap: var(--space-2);">';
+          html += '<div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">';
+          html += '<span class="badge badge--neutral" style="font-family: \'IBM Plex Mono\', monospace; border-radius: 0; box-shadow: none;">' + (maxWords ? 'Tá»I ÄA ' + maxWords + ' Tá»ª' : 'ÄIá»€N Tá»ª') + '</span>';
+          html += '<span class="badge badge--neutral" style="font-family: \'IBM Plex Mono\', monospace; border-radius: 0; box-shadow: none;">' + (allowNumber ? 'CHá»® VÃ€ Sá»' : 'CHá»ˆ CHá»® (NO NUMBERS)') + '</span>';
+          html += '</div>';
+          html += '<div class="mt-2">';
+          html += '<input type="text" class="completion-input js-completion-input" value="' + escapeHtml(curText) + '" placeholder="Nháº­p cÃ¢u tráº£ lá»i..." autocomplete="off" spellcheck="false">';
+          html += '<div class="text-xs text-muted mt-1">';
+          html += 'Sá»‘ tá»«: <strong class="js-comp-word-count">' + (curText.trim() ? curText.trim().split(/\s+/).length : 0) + '</strong>' + (maxWords ? ' / ' + maxWords + ' tá»« tá»‘i Ä‘a' : '') + '<span class="js-comp-warning ml-2" style="color: #b31217; display: none;"></span>';
+          html += '</div></div></div>';
+          componentContainer.innerHTML = html;
+
+          var inputEl = componentContainer.querySelector('.js-completion-input');
+          var wordCountEl = componentContainer.querySelector('.js-comp-word-count');
+          var warningEl = componentContainer.querySelector('.js-comp-warning');
+
+          inputEl.addEventListener('input', function () {
+            var val = inputEl.value;
+            if (!allowNumber && /\d/.test(val)) {
+              val = val.replace(/\d/g, '');
+              inputEl.value = val;
+            }
+            var words = val.trim() ? val.trim().split(/\s+/).length : 0;
+            if (wordCountEl) wordCountEl.textContent = words;
+            if (maxWords && words > maxWords) {
+              if (warningEl) {
+                warningEl.textContent = ' (VÆ°á»£t quÃ¡ sá»‘ tá»« cho phÃ©p)';
+                warningEl.style.display = 'inline';
+              }
+            } else {
+              if (warningEl) warningEl.style.display = 'none';
+            }
+            saveAnswer(q.questionId, null, !!(localAnswers[q.questionId] && localAnswers[q.questionId].isFlagged), val, null);
+          });
+        } else if (type === 'dropdown') {
+          var selectedOptId = answer.selectedOptionId;
+          var html = '<div class="dropdown-widget stack" style="gap: var(--space-2);">';
+          html += '<label class="text-sm text-bold">Chá»n Ä‘Ã¡p Ã¡n phÃ¹ há»£p tá»« danh sÃ¡ch bÃªn dÆ°á»›i:</label>';
+          html += '<select class="completion-input js-dropdown-select" style="max-width: 480px; background: #fff; cursor: pointer;">';
+          html += '<option value="">-- Chá»n Ä‘Ã¡p Ã¡n / Select Option --</option>';
+          (q.options || []).forEach(function (opt) {
+            var isSel = opt.optionId === selectedOptId;
+            html += '<option value="' + opt.optionId + '" ' + (isSel ? 'selected' : '') + '>' + escapeHtml(opt.label) + '. ' + escapeHtml(opt.text) + '</option>';
+          });
+          html += '</select></div>';
+          componentContainer.innerHTML = html;
+
+          var selectEl = componentContainer.querySelector('.js-dropdown-select');
+          selectEl.addEventListener('change', function () {
+            var val = parseInt(selectEl.value, 10);
+            var chosenId = !isNaN(val) ? val : null;
+            saveAnswer(q.questionId, chosenId, !!(localAnswers[q.questionId] && localAnswers[q.questionId].isFlagged), null, null);
+          });
+        } else if (type === 'drag_drop') {
+          var selectedOptId = answer.selectedOptionId;
+          var placedOption = (q.options || []).find(function (o) { return o.OptionId === selectedOptId || o.optionId === selectedOptId; });
+
+          var html = '<div class="drag-drop-widget stack" style="gap: var(--space-3);">';
+          html += '<div>';
+          html += '<span class="text-xs uppercase text-muted" style="font-family: \'IBM Plex Sans Condensed\', sans-serif; font-weight: 700; letter-spacing: 0.05em; display: block; margin-bottom: 0.5rem;">NGÃ‚N HÃ€NG Tá»ª / WORD BANK (Báº¥m hoáº·c kÃ©o tháº£):</span>';
+          html += '<div class="word-bank-chips" style="display: flex; flex-wrap: wrap; gap: 0.5rem; border: 2px dashed #14181d; padding: 0.75rem; background: #fbfcfd;">';
+          (q.options || []).forEach(function (opt) {
+            var isPlaced = placedOption && (placedOption.optionId === opt.optionId || placedOption.OptionId === opt.optionId);
+            html += '<button type="button" class="chip-item js-drag-chip ' + (isPlaced ? 'is-placed' : '') + '" draggable="true" data-option-id="' + opt.optionId + '" data-label="' + escapeHtml(opt.label) + '" data-text="' + escapeHtml(opt.text) + '">';
+            html += '<strong style="font-family: \'IBM Plex Mono\', monospace; margin-right: 0.35rem;">' + escapeHtml(opt.label) + '</strong>' + escapeHtml(opt.text);
+            html += '</button>';
+          });
+          html += '</div></div>';
+
+          html += '<div>';
+          html += '<span class="text-xs uppercase text-muted" style="font-family: \'IBM Plex Sans Condensed\', sans-serif; font-weight: 700; letter-spacing: 0.05em; display: block; margin-bottom: 0.5rem;">Vá»Š TRÃ Äáº¶T ÄÃP ÃN / DROP ZONE:</span>';
+          html += '<div class="drop-zone js-drop-zone">';
+          if (placedOption) {
+            html += '<div class="placed-chip-content" style="display: flex; align-items: center; gap: 0.5rem; font-weight: 700;">';
+            html += '<span class="badge badge--info" style="border-radius: 0; box-shadow: none;">' + escapeHtml(placedOption.label) + '</span>';
+            html += '<span>' + escapeHtml(placedOption.text) + '</span>';
+            html += '</div>';
+            html += '<button type="button" class="btn btn--ghost btn--sm js-remove-placed" style="color: #b31217; font-weight: 700;">âœ• XÃ³a</button>';
+          } else {
+            html += '<span class="text-muted text-sm js-drop-placeholder">KÃ©o tháº£ tá»« vÃ o Ä‘Ã¢y hoáº·c báº¥m vÃ o tá»« á»Ÿ trÃªn</span>';
+          }
+          html += '</div></div></div>';
+          componentContainer.innerHTML = html;
+
+          var chips = componentContainer.querySelectorAll('.js-drag-chip');
+          var dropZone = componentContainer.querySelector('.js-drop-zone');
+          var removeBtn = componentContainer.querySelector('.js-remove-placed');
+
+          function placeChip(optId) {
+            saveAnswer(q.questionId, optId, !!(localAnswers[q.questionId] && localAnswers[q.questionId].isFlagged), null, null);
+            renderComponentWidget(q);
+          }
+
+          function clearChip() {
+            saveAnswer(q.questionId, null, !!(localAnswers[q.questionId] && localAnswers[q.questionId].isFlagged), null, null);
+            renderComponentWidget(q);
+          }
+
+          chips.forEach(function (chip) {
+            chip.addEventListener('click', function () {
+              if (chip.classList.contains('is-placed')) return;
+              var optId = parseInt(chip.getAttribute('data-option-id'), 10);
+              placeChip(optId);
+            });
+            chip.addEventListener('dragstart', function (e) {
+              e.dataTransfer.setData('text/plain', chip.getAttribute('data-option-id'));
+            });
+          });
+
+          if (dropZone) {
+            dropZone.addEventListener('dragover', function (e) {
+              e.preventDefault();
+              dropZone.classList.add('is-hovered');
+            });
+            dropZone.addEventListener('dragleave', function () {
+              dropZone.classList.remove('is-hovered');
+            });
+            dropZone.addEventListener('drop', function (e) {
+              e.preventDefault();
+              dropZone.classList.remove('is-hovered');
+              var optId = parseInt(e.dataTransfer.getData('text/plain'), 10);
+              if (!isNaN(optId)) {
+                placeChip(optId);
+              }
+            });
+          }
+
+          if (removeBtn) {
+            removeBtn.addEventListener('click', function () {
+              clearChip();
+            });
+          }
+        }
+      }
+
       // 3. In-Memory 0ms Question Swapping (Exam Shell)
       function renderQuestion(displayOrder) {
         var q = questionMap[displayOrder];
@@ -1134,7 +2094,8 @@
         var phase = phases[activePhaseIndex];
         var currentQuestion = questionMap[currentDisplayOrder];
         if (!targetQuestion || !phase || targetQuestion.skillCode !== phase.skillCode) return;
-        if (phase.skillCode === 'LIST' && targetOrder !== currentDisplayOrder + 1) return;
+        var isOneWay = currentQuestion && (currentQuestion.navigationMode === 'AUDIO_DRIVEN');
+        if (isOneWay && phase.skillCode === 'LIST' && targetOrder !== currentDisplayOrder + 1) return;
         var currentDraft = currentQuestion && responseDrafts[currentQuestion.questionId];
         if (currentQuestion && currentQuestion.questionType === 'free_response' && currentDraft && currentDraft.dirty) {
           saveDraft(currentQuestion.questionId);

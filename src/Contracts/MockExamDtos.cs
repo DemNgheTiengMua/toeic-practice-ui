@@ -93,7 +93,16 @@ public sealed record AttemptQuestionDto(
     int? ResponseDurationMs = null,
     DateTimeOffset? DraftSavedAt = null,
     int? SkillDurationMinutes = null,
-    int SkillDisplayOrder = 0);
+    int SkillDisplayOrder = 0,
+    IReadOnlyList<int>? SelectedOptionIds = null,
+    int? MaxSelections = null,
+    bool AllowNumber = true,
+    string? AcceptedAnswersJson = null,
+    string? RequiredKeywords = null,
+    string? LayoutType = null,
+    bool RequirePassage = false,
+    string? NavigationMode = null,
+    string? ToolsConfigJson = null);
 
 public sealed record NavigatorItemDto(
     int QuestionId,

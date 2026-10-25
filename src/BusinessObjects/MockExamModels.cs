@@ -98,7 +98,11 @@ public sealed record AttemptQuestionInfo(
     int? MaxSelections = null,
     bool AllowNumber = true,
     string? AcceptedAnswersJson = null,
-    string? RequiredKeywords = null);
+    string? RequiredKeywords = null,
+    string? LayoutType = null,
+    bool RequirePassage = false,
+    string? NavigationMode = null,
+    string? ToolsConfigJson = null);
 
 public sealed record AttemptFinalDraft(
     int QuestionId,
