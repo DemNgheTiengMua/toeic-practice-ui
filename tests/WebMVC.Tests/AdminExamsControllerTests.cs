@@ -1004,6 +1004,70 @@ public sealed class AdminExamsControllerTests
         Assert.Equal(2, api.UpdatedQuestionGroupRequest.UnitNumber);
     }
 
+    [Fact]
+    public async Task AutosaveQuestion_WhenSuccessful_ReturnsJsonUpdatedDto()
+    {
+        var api = new TestApiClient();
+        var controller = CreateController(api);
+        var request = new UpdateQuestionRequest(
+            GroupId: 76,
+            Stem: "Updated stem",
+            DifficultyLevel: 2,
+            QuestionType: QuestionTypeDto.Mcq,
+            Explanation: "Use 'before' directly in front of a day of the week to denote a deadline.",
+            Options: [
+                new AdminQuestionOptionInput(270, "A", "before", true, null),
+                new AdminQuestionOptionInput(271, "B", "prior", false, null)
+            ]);
+
+        var result = await controller.AutosaveQuestion(17, 89, request, CancellationToken.None);
+
+        var jsonResult = Assert.IsType<JsonResult>(result);
+        var dto = Assert.IsType<AdminQuestionDto>(jsonResult.Value);
+        Assert.Equal(89, dto.QuestionId);
+        Assert.Equal("Updated stem", dto.Stem);
+        Assert.Equal("Use 'before' directly in front of a day of the week to denote a deadline.", dto.Explanation);
+        Assert.NotNull(api.UpdatedQuestionRequest);
+        Assert.Equal(2, api.UpdatedQuestionRequest.Options?.Count);
+    }
+
+    [Fact]
+    public async Task AutosaveQuestion_WhenApiThrowsApiException_ReturnsStatusCodeWithError()
+    {
+        var api = new TestApiClient
+        {
+            UpdateQuestionException = new ApiException("Validation", "Option labels must be unique.", 400, "Option labels must be unique.")
+        };
+        var controller = CreateController(api);
+        var request = new UpdateQuestionRequest(
+            GroupId: 76,
+            Stem: "Stem",
+            DifficultyLevel: 2,
+            QuestionType: QuestionTypeDto.Mcq);
+
+        var result = await controller.AutosaveQuestion(17, 89, request, CancellationToken.None);
+
+        var statusResult = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(400, statusResult.StatusCode);
+    }
+
+    [Fact]
+    public async Task AutosaveGroup_WhenSuccessful_ReturnsJsonUpdatedDto()
+    {
+        var api = new TestApiClient();
+        var controller = CreateController(api);
+        var request = new UpdateQuestionGroupRequest(
+            SectionId: 28,
+            Passage: "New passage",
+            UnitNumber: 2);
+
+        var result = await controller.AutosaveGroup(17, 76, request, CancellationToken.None);
+
+        var jsonResult = Assert.IsType<JsonResult>(result);
+        Assert.NotNull(api.UpdatedQuestionGroupRequest);
+        Assert.Equal(2, api.UpdatedQuestionGroupRequest.UnitNumber);
+    }
+
     internal sealed class EmptyTempDataProvider : ITempDataProvider
     {
         public IDictionary<string, object> LoadTempData(HttpContext context) => new Dictionary<string, object>();
@@ -1029,6 +1093,8 @@ public sealed class AdminExamsControllerTests
         public ApiException? CreateExamException { get; set; }
         public ApiException? PublishException { get; set; }
         public ApiException? ExportException { get; set; }
+        public ApiException? UpdateQuestionException { get; set; }
+        public ApiException? UpdateGroupException { get; set; }
         public int? LastCertIdFilter { get; set; }
         public string? LastPurposeFilter { get; set; }
         public SaveExamSectionAudioRequest? LastSavedAudioRequest { get; set; }
@@ -1080,13 +1146,16 @@ public sealed class AdminExamsControllerTests
         public Task<AdminQuestionGroupDto> CreateAdminQuestionGroupAsync(int examId, CreateQuestionGroupRequest request, CancellationToken cancellationToken = default)
         {
             CreatedQuestionGroupRequest = request;
-            return Task.FromResult<AdminQuestionGroupDto>(null!);
+            return Task.FromResult(new AdminQuestionGroupDto(
+                1001, examId, 1, request.SectionId, "SEC", "Section", ModalityDto.Reading, request.Passage, request.AudioPath, request.AudioStartMs, request.AudioEndMs, request.ImagePath, request.ImageAlt, request.Transcript, request.PrepSeconds, request.ResponseSeconds, request.DisplayOrder, [], request.UnitNumber));
         }
 
         public Task<AdminQuestionGroupDto> UpdateAdminQuestionGroupAsync(int examId, int groupId, UpdateQuestionGroupRequest request, CancellationToken cancellationToken = default)
         {
+            if (UpdateGroupException != null) throw UpdateGroupException;
             UpdatedQuestionGroupRequest = request;
-            return Task.FromResult<AdminQuestionGroupDto>(null!);
+            return Task.FromResult(new AdminQuestionGroupDto(
+                groupId, examId, 1, request.SectionId, "SEC", "Section", ModalityDto.Reading, request.Passage, request.AudioPath, request.AudioStartMs, request.AudioEndMs, request.ImagePath, request.ImageAlt, request.Transcript, request.PrepSeconds, request.ResponseSeconds, request.DisplayOrder, [], request.UnitNumber));
         }
 
         public Task DeleteAdminQuestionGroupAsync(int examId, int groupId, CancellationToken cancellationToken = default) =>
@@ -1123,6 +1192,7 @@ public sealed class AdminExamsControllerTests
 
         public Task<AdminQuestionDto> UpdateAdminQuestionAsync(int questionId, UpdateQuestionRequest request, CancellationToken cancellationToken = default)
         {
+            if (UpdateQuestionException != null) throw UpdateQuestionException;
             UpdatedQuestionRequest = request;
             return Task.FromResult(new AdminQuestionDto(
                 questionId,

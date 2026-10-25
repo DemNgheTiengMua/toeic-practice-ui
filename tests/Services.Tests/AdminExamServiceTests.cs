@@ -521,6 +521,51 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
     }
 
     [Fact]
+    public async Task UpdateQuestion_WhenDisplayOrderIsZeroOrNotProvided_PreservesExistingDisplayOrderAndUpdatesExplanation()
+    {
+        var (certId, _, secR, _, _) = await SeedCertificateWithSectionsAsync($"UQ_{Guid.NewGuid():N}"[..18]);
+        var service = CreateService();
+
+        var exam = await service.CreateExamAsync(new CreateAdminExamRequest(
+            certId, $"UQ Exam {Guid.NewGuid():N}"[..25], 60, ExamPurposeDto.Mock));
+
+        var grp = await service.CreateQuestionGroupAsync(exam.ExamId, new CreateQuestionGroupRequest(secR, DisplayOrder: 1));
+
+        var q = await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
+            grp.GroupId,
+            "Initial stem",
+            2,
+            QuestionTypeDto.Mcq,
+            Explanation: "Initial explanation",
+            DisplayOrder: 5,
+            Options:
+            [
+                new AdminQuestionOptionInput(null, "A", "Option A", true, null),
+                new AdminQuestionOptionInput(null, "B", "Option B", false, null)
+            ]));
+
+        Assert.Equal(5, q.DisplayOrder);
+        Assert.Equal("Initial explanation", q.Explanation);
+
+        // Update with DisplayOrder = 0 (default in DTO when not explicitly provided)
+        var updated = await service.UpdateQuestionAsync(q.QuestionId, new UpdateQuestionRequest(
+            grp.GroupId,
+            "Initial stem",
+            2,
+            QuestionTypeDto.Mcq,
+            Explanation: "Use 'before' directly in front of a day of the week to denote a deadline.",
+            DisplayOrder: 0,
+            Options:
+            [
+                new AdminQuestionOptionInput(null, "A", "Option A", true, null),
+                new AdminQuestionOptionInput(null, "B", "Option B", false, null)
+            ]));
+
+        Assert.Equal(5, updated.DisplayOrder);
+        Assert.Equal("Use 'before' directly in front of a day of the week to denote a deadline.", updated.Explanation);
+    }
+
+    [Fact]
     public async Task UpdateExam_BlockedWhenChangingCertificateWithExistingContent()
     {
         var (cert1Id, _, sec1R, _, _) = await SeedCertificateWithSectionsAsync($"C1_{Guid.NewGuid():N}"[..18]);

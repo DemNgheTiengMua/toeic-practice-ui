@@ -1311,11 +1311,13 @@
       var totalQuestions = questions.length || @take.TotalQuestions;
       var currentDisplayOrder = @q.DisplayOrder;
       var activeUnitNumber = @take.ActiveUnitNumber;
+      var activeGroupId = @(take.ActiveGroupId.HasValue ? take.ActiveGroupId.Value.ToString() : "null");
       var expiresAt = @take.ExpiresAt.ToUnixTimeMilliseconds();
       var attemptStartedAt = @take.StartedAt.ToUnixTimeMilliseconds();
       var csrfToken = document.querySelector('#anti-forgery-holder input[name="__RequestVerificationToken"]').value;
       var currentAudioOffsetMs = @take.LastAudioOffsetMs;
       var candidateNotesJson = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(take.CandidateNotesJson ?? ""));
+      var notesDirty = false;
 
       var questionMap = {};
       questions.forEach(function (q) {
@@ -2035,25 +2037,50 @@
 
         var btnSubmitVerification = document.getElementById('btn-submit-speaking-verification');
         if (btnSubmitVerification) {
-          btnSubmitVerification.onclick = function () {
-            btnSubmitVerification.disabled = true;
-            btnSubmitVerification.textContent = 'Đang nộp bài...';
-            var submitForm = document.getElementById('submit-exam-form') || document.getElementById('auto-submit-form');
-            if (submitForm) {
-              submitForm.submit();
-            } else {
-              var form = document.createElement('form');
-              form.method = 'POST';
-              form.action = '/exams/take/' + attemptId + '/submit';
-              var tokenInput = document.createElement('input');
-              tokenInput.type = 'hidden';
-              tokenInput.name = '__RequestVerificationToken';
-              tokenInput.value = csrfToken;
-              form.appendChild(tokenInput);
-              document.body.appendChild(form);
-              form.submit();
-            }
-          };
+          var maxSpeakingOrder = qs.reduce(function (max, it) { return Math.max(max, it.displayOrder); }, 0);
+          var nextSectionQ = questions.find(function (it) { return it.displayOrder > maxSpeakingOrder; });
+
+          if (nextSectionQ) {
+            btnSubmitVerification.textContent = 'Tiếp tục sang phần thi tiếp theo →';
+            btnSubmitVerification.className = 'btn btn--primary';
+            btnSubmitVerification.onclick = function () {
+              verificationScreen.style.display = 'none';
+              var nextPhaseIdx = getQuestionPhaseIndex(nextSectionQ);
+              if (nextPhaseIdx >= 0) activePhaseIndex = nextPhaseIdx;
+              cleanupSpeakingPacer();
+              fetch('/exams/take/' + attemptId + '/transition/skill', {
+                method: 'POST',
+                headers: {
+                  'RequestVerificationToken': csrfToken,
+                  'Content-Type': 'application/json'
+                }
+              }).finally(function () {
+                goToQuestion(nextSectionQ.displayOrder);
+              });
+            };
+          } else {
+            btnSubmitVerification.textContent = 'Nộp phần thi Nói để chấm AI';
+            btnSubmitVerification.className = 'btn btn--danger';
+            btnSubmitVerification.onclick = function () {
+              btnSubmitVerification.disabled = true;
+              btnSubmitVerification.textContent = 'Đang nộp bài...';
+              var submitForm = document.getElementById('submit-exam-form') || document.getElementById('auto-submit-form');
+              if (submitForm) {
+                submitForm.submit();
+              } else {
+                var form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '/exams/take/' + attemptId + '/submit';
+                var tokenInput = document.createElement('input');
+                tokenInput.type = 'hidden';
+                tokenInput.name = '__RequestVerificationToken';
+                tokenInput.value = csrfToken;
+                form.appendChild(tokenInput);
+                document.body.appendChild(form);
+                form.submit();
+              }
+            };
+          }
         }
       }
 
@@ -2769,6 +2796,7 @@
         };
         candidateNotes.push(hl);
         candidateNotesJson = JSON.stringify(candidateNotes);
+        notesDirty = true;
         applyAllHighlights();
         scheduleSync(false);
       }
@@ -2780,6 +2808,7 @@
           return !(sameTarget && overlaps);
         });
         candidateNotesJson = JSON.stringify(candidateNotes);
+        notesDirty = true;
         applyAllHighlights();
         scheduleSync(false);
       }
@@ -2922,6 +2951,10 @@
           if (btnPrev) btnPrev.style.display = 'none';
           if (btnNext) btnNext.style.display = 'none';
           if (pacerContainer) pacerContainer.style.display = 'block';
+          if (q.responseAudioPath || (localAnswers[q.questionId] && localAnswers[q.questionId].responseAudioPath)) {
+            transitionAfterSpeakingItem(q);
+            return;
+          }
           startSpeakingPacerStateMachine(q);
         } else {
           if (pacerContainer) pacerContainer.style.display = 'none';
@@ -3406,11 +3439,18 @@
           });
         });
         if (isFreeResponse) {
-          renderFreeResponse(q);
+          var isSpeaking = (q.modality || '').toLowerCase() === 'speaking';
+          if (isSpeaking) {
+            renderFreeResponse(q);
+          } else {
+            freeResponseContainer.style.display = 'none';
+            freeResponseContainer.innerHTML = '';
+          }
         } else {
           freeResponseContainer.style.display = 'none';
           freeResponseContainer.innerHTML = '';
         }
+        renderComponentWidget(q);
 
         // Previous & Next navigation buttons
         // Navigator Grid active indicator
@@ -3560,8 +3600,8 @@
       }
 
       function triggerSync() {
-        if (isFlushing || pendingQueue.length === 0) {
-          if (pendingQueue.length === 0) {
+        if (isFlushing || (pendingQueue.length === 0 && !notesDirty)) {
+          if (pendingQueue.length === 0 && !notesDirty) {
             saveStatus.textContent = 'Saved';
             saveStatus.className = 'save-status save-status--saved';
             var submitQueueMsg = document.getElementById('modal-sync-pending');
@@ -3571,6 +3611,9 @@
           }
           return;
         }
+
+        var wasNotesDirty = notesDirty;
+        notesDirty = false;
 
         isFlushing = true;
         saveStatus.textContent = 'Saving…';
@@ -3631,7 +3674,7 @@
           var networkWarning = document.getElementById('network-warning');
           if (networkWarning) networkWarning.style.display = 'none';
 
-          if (pendingQueue.length > 0) {
+          if (pendingQueue.length > 0 || notesDirty) {
             scheduleSync(false);
           } else {
             saveStatus.textContent = 'Saved';
@@ -3644,6 +3687,9 @@
         })
         .catch(function (err) {
           isFlushing = false;
+          if (wasNotesDirty) {
+            notesDirty = true;
+          }
           if (err && err.code === 'attempt_expired') {
             isSubmitting = true;
             timesUpModal.style.display = 'flex';
@@ -3958,7 +4004,7 @@
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'RequestVerificationToken': antiForgeryToken
+              'RequestVerificationToken': csrfToken
             },
             body: JSON.stringify({ targetGroupId: pendingTargetGroupId })
           })
@@ -3968,13 +4014,8 @@
           })
           .then(function (data) {
             activeGroupId = data.activeGroupId;
-            if (data.remainingSeconds !== undefined) {
-              remainingSeconds = data.remainingSeconds;
-              if (data.phaseDeadlineAt) {
-                phaseDeadlineAt = new Date(data.phaseDeadlineAt).getTime();
-              } else {
-                phaseDeadlineAt = Date.now() + (remainingSeconds * 1000);
-              }
+            if (typeof data.remainingSeconds === 'number') {
+              expiresAt = Date.now() + (data.remainingSeconds * 1000);
             }
             btnConfirmGroupLock.disabled = false;
             btnConfirmGroupLock.textContent = 'Xác nhận chuyển và khóa (Confirm & Proceed)';
@@ -4285,7 +4326,7 @@
         updateProgressStats();
         var submitQueueMsg = document.getElementById('modal-sync-pending');
         var submitNowBtn = document.getElementById('btn-modal-submit-now');
-        if (pendingQueue.length > 0) {
+        if (pendingQueue.length > 0 || notesDirty) {
           if (submitQueueMsg) submitQueueMsg.style.display = 'block';
           if (submitNowBtn) submitNowBtn.disabled = true;
         } else {
@@ -4340,7 +4381,7 @@
           prepareFinalDraftFields(submitExamForm);
 
           function submitWhenAnswersAreSynced() {
-            if (pendingQueue.length === 0 && !isFlushing) {
+            if (pendingQueue.length === 0 && !notesDirty && !isFlushing) {
               if (window.stopExamAudio) window.stopExamAudio();
               isSubmitting = true;
               try {
@@ -4358,7 +4399,7 @@
             setTimeout(submitWhenAnswersAreSynced, 100);
           }
 
-          if (pendingQueue.length > 0 || isFlushing) {
+          if (pendingQueue.length > 0 || notesDirty || isFlushing) {
             var submitNowBtn = document.getElementById('btn-modal-submit-now');
             if (submitNowBtn) submitNowBtn.disabled = true;
           }
@@ -4387,6 +4428,9 @@
           } catch (err) {}
         });
       }
+
+      initAccessibility();
+      initVolume();
 
       // Start initial queue flush if uncommitted items restored
       renderQuestion(currentDisplayOrder);

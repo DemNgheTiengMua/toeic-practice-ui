@@ -22,6 +22,10 @@
     var firstSkillKey = skills.FirstOrDefault()?.Key ?? "";
 }
 
+<div id="studio-csrf-holder" style="display:none;">
+  @Html.AntiForgeryToken()
+</div>
+
 <style>
   /* Exam Studio "Bảng hiệu phòng thi" Layout */
   .studio-container {
@@ -737,7 +741,7 @@
 
           @foreach (var g in sec.Groups)
           {
-            <div class="card-editor" id="group-card-@g.GroupId" data-group-id="@g.GroupId" data-section-id="@sec.SectionId" data-unit-number="@g.UnitNumber">
+            <div class="card-editor" id="group-card-@g.GroupId" data-group-id="@g.GroupId" data-section-id="@sec.SectionId" data-unit-number="@g.UnitNumber" data-display-order="@g.DisplayOrder">
               <div class="card-editor__header">
                 <div class="row" style="gap: 0.5rem; align-items: center;">
                   @if (sec.UnitCount > 1)
@@ -905,7 +909,7 @@
                         };
                         allowedList.Add(currentTypeCode);
 
-                        <div class="question-card p-3" id="question-card-@q.QuestionId" data-question-id="@q.QuestionId" data-section-id="@sec.SectionId" data-question-type="@currentTypeCode" style="border: 2px solid var(--color-ink, #14181d); background: #ffffff; border-radius: 0; box-shadow: none;">
+                        <div class="question-card p-3" id="question-card-@q.QuestionId" data-question-id="@q.QuestionId" data-section-id="@sec.SectionId" data-question-type="@currentTypeCode" data-difficulty="@q.DifficultyLevel" data-display-order="@q.DisplayOrder" style="border: 2px solid var(--color-ink, #14181d); background: #ffffff; border-radius: 0; box-shadow: none;">
                           <div class="row row--between mb-2" style="align-items: center;">
                             <div class="row" style="gap: 0.5rem; align-items: center;">
                               <strong class="text-sm" style="font-family: var(--font-mono, monospace);">Question #@q.DisplayOrder</strong>
@@ -1063,7 +1067,7 @@
                                 var optTxt = existingOpt?.Text ?? "";
                                 var optRat = existingOpt?.Rationale ?? "";
 
-                                <div class="row studio-opt-row-single" data-label="@lbl" style="gap: 0.5rem; align-items: center;">
+                                <div class="row studio-opt-row-drag" data-label="@lbl" style="gap: 0.5rem; align-items: center;">
                                   <span style="font-weight: bold; width: 45px; font-family: var(--font-mono, monospace);">Slot @lbl</span>
                                   <input type="text" class="field__input studio-opt-text" data-qid="@q.QuestionId" data-label="@lbl" value="@optTxt" placeholder="Match value / target item..." style="flex: 2; font-size: 0.82rem; border-radius: 0;" />
                                   <input type="text" class="field__input studio-opt-rationale" data-qid="@q.QuestionId" data-label="@lbl" value="@optRat" placeholder="Matching rationale..." style="flex: 2; font-size: 0.78rem; color: #555; border-radius: 0;" />
@@ -1282,7 +1286,8 @@
   });
 
   function getCsrfToken() {
-    var input = document.querySelector('input[name="__RequestVerificationToken"]');
+    var input = document.querySelector('#studio-csrf-holder input[name="__RequestVerificationToken"]')
+      || document.querySelector('input[name="__RequestVerificationToken"]');
     return input ? input.value : '';
   }
 
@@ -1433,31 +1438,56 @@
 
     var options = [];
     if (questionTypeStr === 'multi_select') {
-      card.querySelectorAll('.studio-opt-row-multi').forEach(function(row) {
-        var label = row.getAttribute('data-label');
-        var txtInput = row.querySelector('.studio-opt-text');
-        var isCorrCheck = row.querySelector('.studio-opt-checkbox');
-        var ratInput = row.querySelector('.studio-opt-rationale');
-        options.push({
-          label: label,
-          text: txtInput ? txtInput.value : '',
-          isCorrect: isCorrCheck ? isCorrCheck.checked : false,
-          rationale: ratInput ? ratInput.value : null
+      var multiPanel = card.querySelector('.component-multi-select');
+      if (multiPanel) {
+        multiPanel.querySelectorAll('.studio-opt-row-multi').forEach(function(row) {
+          var label = row.getAttribute('data-label');
+          var txtInput = row.querySelector('.studio-opt-text');
+          var isCorrCheck = row.querySelector('.studio-opt-checkbox');
+          var ratInput = row.querySelector('.studio-opt-rationale');
+          options.push({
+            label: label,
+            text: txtInput ? txtInput.value : '',
+            isCorrect: isCorrCheck ? isCorrCheck.checked : false,
+            rationale: ratInput ? ratInput.value : null
+          });
         });
-      });
-    } else if (questionTypeStr === 'mcq' || questionTypeStr === 'mcq_3' || questionTypeStr === 'dropdown' || questionTypeStr === 'drag_drop') {
-      card.querySelectorAll('.studio-opt-row-single').forEach(function(row) {
-        var label = row.getAttribute('data-label');
-        var txtInput = row.querySelector('.studio-opt-text');
-        var isCorrRadio = row.querySelector('.studio-opt-radio');
-        var ratInput = row.querySelector('.studio-opt-rationale');
-        options.push({
-          label: label,
-          text: txtInput ? txtInput.value : '',
-          isCorrect: isCorrRadio ? isCorrRadio.checked : false,
-          rationale: ratInput ? ratInput.value : null
+      }
+    } else if (questionTypeStr === 'mcq' || questionTypeStr === 'mcq_3' || questionTypeStr === 'dropdown') {
+      var mcqPanel = card.querySelector('.component-mcq');
+      if (mcqPanel) {
+        mcqPanel.querySelectorAll('.studio-opt-row-single').forEach(function(row) {
+          var label = row.getAttribute('data-label');
+          var txtInput = row.querySelector('.studio-opt-text');
+          var isCorrRadio = row.querySelector('.studio-opt-radio');
+          var ratInput = row.querySelector('.studio-opt-rationale');
+          options.push({
+            label: label,
+            text: txtInput ? txtInput.value : '',
+            isCorrect: isCorrRadio ? isCorrRadio.checked : false,
+            rationale: ratInput ? ratInput.value : null
+          });
         });
-      });
+      }
+    } else if (questionTypeStr === 'drag_drop') {
+      var dragPanel = card.querySelector('.component-drag-drop');
+      if (dragPanel) {
+        dragPanel.querySelectorAll('.studio-opt-row-drag, .studio-opt-row-single').forEach(function(row) {
+          var label = row.getAttribute('data-label');
+          var txtInput = row.querySelector('.studio-opt-text');
+          var isCorrRadio = row.querySelector('.studio-opt-radio');
+          var ratInput = row.querySelector('.studio-opt-rationale');
+          var textVal = txtInput ? txtInput.value.trim() : '';
+          if (textVal) {
+            options.push({
+              label: label,
+              text: textVal,
+              isCorrect: isCorrRadio ? isCorrRadio.checked : false,
+              rationale: ratInput ? ratInput.value : null
+            });
+          }
+        });
+      }
     }
 
     var criterionIds = [];
@@ -1468,9 +1498,17 @@
     var isFreeResponse = questionTypeStr === 'free_response';
     var isInline = questionTypeStr === 'inline_completion';
 
+    var diffLevel = parseInt(card.getAttribute('data-difficulty'), 10);
+    if (!diffLevel || isNaN(diffLevel) || diffLevel < 1 || diffLevel > 5) diffLevel = 3;
+
+    var dispOrder = parseInt(card.getAttribute('data-display-order'), 10) || 1;
+    var grpId = parseInt(card.closest('.card-editor')?.dataset.groupId, 10) || null;
+
     var payload = {
+      groupId: grpId,
+      displayOrder: dispOrder,
       stem: stem,
-      difficultyLevel: 3,
+      difficultyLevel: diffLevel,
       questionType: questionTypeStr,
       explanation: expl,
       categoryId: catId ? parseInt(catId, 10) : null,
@@ -1495,8 +1533,17 @@
       },
       body: JSON.stringify(payload)
     })
-    .then(function(res) {
-      if (!res.ok) throw new Error('HTTP ' + res.status);
+    .then(async function(res) {
+      if (!res.ok) {
+        var errDetail = 'HTTP ' + res.status;
+        try {
+          var data = await res.json();
+          if (data && (data.message || data.title || data.detail)) {
+            errDetail = data.message || data.title || data.detail;
+          }
+        } catch (_) {}
+        throw new Error(errDetail);
+      }
       return res.json();
     })
     .then(function() {
@@ -1579,9 +1626,11 @@
     var transcript = card.querySelector('[data-field="Transcript"]')?.value;
     var unitSelect = card.querySelector('[data-field="UnitNumber"]');
     var unitNumber = unitSelect ? parseInt(unitSelect.value, 10) : parseInt(card.getAttribute('data-unit-number') || '1', 10);
+    var dispOrder = parseInt(card.getAttribute('data-display-order'), 10) || 1;
 
     var payload = {
       sectionId: secId,
+      displayOrder: dispOrder,
       audioPath: audioPath,
       audioStartMs: startMs ? parseInt(startMs, 10) : null,
       audioEndMs: endMs ? parseInt(endMs, 10) : null,
@@ -1600,8 +1649,17 @@
       },
       body: JSON.stringify(payload)
     })
-    .then(function(res) {
-      if (!res.ok) throw new Error('HTTP ' + res.status);
+    .then(async function(res) {
+      if (!res.ok) {
+        var errDetail = 'HTTP ' + res.status;
+        try {
+          var data = await res.json();
+          if (data && (data.message || data.title || data.detail)) {
+            errDetail = data.message || data.title || data.detail;
+          }
+        } catch (_) {}
+        throw new Error(errDetail);
+      }
       return res.json();
     })
     .then(function() {

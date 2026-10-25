@@ -717,7 +717,10 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
         group.Transcript = Normalize(request.Transcript);
         group.PrepSeconds = request.PrepSeconds;
         group.ResponseSeconds = request.ResponseSeconds;
-        group.DisplayOrder = request.DisplayOrder;
+        if (request.DisplayOrder > 0)
+        {
+            group.DisplayOrder = request.DisplayOrder;
+        }
         group.UnitNumber = request.UnitNumber > 0 ? request.UnitNumber : 1;
 
         exam.UpdatedAt = clock.GetUtcNow();
@@ -997,7 +1000,10 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
         question.AcceptedAnswersJson = Normalize(request.AcceptedAnswersJson);
         question.RequiredKeywords = Normalize(request.RequiredKeywords);
         question.Hint = Normalize(request.Hint);
-        question.DisplayOrder = request.DisplayOrder;
+        if (request.DisplayOrder > 0)
+        {
+            question.DisplayOrder = request.DisplayOrder;
+        }
         question.UpdatedAt = clock.GetUtcNow();
 
         if (request.QuestionType != QuestionTypeDto.FreeResponse && request.Options != null)

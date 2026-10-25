@@ -163,19 +163,21 @@
           <div class="stack" id="question-pane">
             <!-- Audio Player Container with Practice QoL 5s Rewind & Transcript Toggle -->
             <div id="practice-audio-wrapper" class="mb-3" style="@(!string.IsNullOrEmpty(q.AudioPath) ? "" : "display:none;")">
-              @if (!string.IsNullOrEmpty(q.AudioPath))
-              {
-                @await Html.PartialAsync("_ExamAudioPlayer", new ExamAudioPlayerModel(
-                    AudioPath: q.AudioPath,
-                    AllowReplay: true,
-                    SectionTitle: "Practice Audio",
-                    BadgeText: "READY",
-                    StartMs: q.AudioStartMs,
-                    EndMs: q.AudioEndMs,
-                    PlayerId: "main-practice-audio",
-                    Mode: "study"
-                ))
-              }
+              <div id="practice-audio-player-host">
+                @if (!string.IsNullOrEmpty(q.AudioPath))
+                {
+                  @await Html.PartialAsync("_ExamAudioPlayer", new ExamAudioPlayerModel(
+                      AudioPath: q.AudioPath,
+                      AllowReplay: true,
+                      SectionTitle: "Practice Audio",
+                      BadgeText: "READY",
+                      StartMs: q.AudioStartMs,
+                      EndMs: q.AudioEndMs,
+                      PlayerId: "main-practice-audio",
+                      Mode: "study"
+                  ))
+                }
+              </div>
               <div class="row mt-2" style="gap: var(--space-2); align-items: center;" id="audio-qol-controls">
                 <button type="button" class="btn btn--secondary btn--sm" id="btn-audio-rewind-5s" title="Tua lại 5 giây / Rewind 5 seconds" style="font-family: 'IBM Plex Mono', monospace; font-weight: 700;">
                   [-5s]
@@ -589,6 +591,8 @@
       var submitBtn = document.getElementById("submit-btn");
 
       var audioWrapper = document.getElementById("practice-audio-wrapper");
+
+      var audioPlayerHost = document.getElementById("practice-audio-player-host");
       var btnAudioRewind5s = document.getElementById("btn-audio-rewind-5s");
       var btnToggleTranscript = document.getElementById("btn-toggle-transcript");
       var transcriptDrawer = document.getElementById("transcript-drawer");
@@ -814,9 +818,10 @@
             }
             if (needsReload) {
               try {
-                if (window.stopExamAudio) window.stopExamAudio(audioWrapper);
+                var audioTarget = audioPlayerHost || audioWrapper;
+                if (window.stopExamAudio) window.stopExamAudio(audioTarget);
                 if (window.createExamAudioHtml) {
-                  audioWrapper.innerHTML = window.createExamAudioHtml({
+                  audioTarget.innerHTML = window.createExamAudioHtml({
                     audioPath: q.audioPath,
                     mode: "study",
                     startMs: q.audioStartMs,
@@ -1633,7 +1638,7 @@
 
       // Controls Modal toggles
       function openModal() {
-        if (controlsModal) controlsModal.style.display = "";
+        if (controlsModal) controlsModal.style.display = "flex";
       }
       function closeModal() {
         if (controlsModal) controlsModal.style.display = "none";
