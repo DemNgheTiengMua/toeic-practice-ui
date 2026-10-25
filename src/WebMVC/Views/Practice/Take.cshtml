@@ -3,529 +3,1210 @@
     Layout = null;
     var session = Model.Session;
     var q = Model.Question;
+    var questions = Model.Questions ?? new List<PracticeQuestionDto> { q };
+    var navigator = Model.Navigator ?? questions.Select(x => new PracticeNavigatorItemDto(
+        x.QuestionId,
+        x.DisplayOrder,
+        x.SelectedOptionId.HasValue || x.IsCorrect.HasValue,
+        x.IsCorrect,
+        x.IsSaved,
+        x.DisplayOrder == q.DisplayOrder
+    )).ToList();
+
     var isFinished = session.Status == PracticeStatusDto.Finished;
-    var isAnswered = q.SelectedOptionId.HasValue || q.IsCorrect.HasValue;
-    var isReviewMode = isFinished || isAnswered;
-    var isSkipped = isFinished && !isAnswered;
-    var progressPercent = (int)Math.Round((double)q.DisplayOrder / q.TotalQuestions * 100);
+    var totalCount = questions.Count;
+    var answeredCount = questions.Count(x => x.SelectedOptionId.HasValue || x.IsCorrect.HasValue);
+    var correctCount = questions.Count(x => x.IsCorrect == true);
+    var incorrectCount = questions.Count(x => x.IsCorrect == false);
+    var skippedCount = questions.Count(x => isFinished && !x.SelectedOptionId.HasValue && !x.IsCorrect.HasValue);
+    var unansweredCount = Math.Max(0, totalCount - answeredCount);
+    var savedCount = questions.Count(x => x.IsSaved);
+    var accuracyPercent = answeredCount > 0 ? (int)Math.Round((double)correctCount / answeredCount * 100) : 0;
+    var progressPercent = totalCount > 0 ? (int)Math.Round((double)answeredCount / totalCount * 100) : 0;
+    var hasListening = session.Modality == ModalityDto.Listening || questions.Any(x => !string.IsNullOrEmpty(x.AudioPath));
+    var isCurrentAnswered = q.SelectedOptionId.HasValue || q.IsCorrect.HasValue;
+    var isCurrentSkipped = isFinished && !isCurrentAnswered;
 }
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Practice @session.SectionName — extra efficient</title>
+  <title>Practice @session.SectionName — Question @q.DisplayOrder — extra efficient</title>
   <link rel="icon" href="~/img/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="~/css/tokens.css">
   <link rel="stylesheet" href="~/css/base.css">
   <link rel="stylesheet" href="~/css/components.css">
 </head>
-<body>
+<body class="exam-body-protected">
   <div class="app-shell">
     <header class="app-topbar">
       <div class="exam-topbar-group">
         <strong>Practice @session.SectionName</strong>
         <span class="badge badge--muted">No time limit</span>
+        <span class="badge badge--info" id="topbar-accuracy-badge">Accuracy: <strong id="topbar-accuracy-val">@(answeredCount > 0 ? $"{accuracyPercent}%" : "--%")</strong></span>
       </div>
       <div class="exam-topbar-group">
-        <span class="text-sm text-muted">Question @q.DisplayOrder / @q.TotalQuestions</span>
-        <div class="progress" style="width: 160px">
-          <div class="progress__bar" style="width: @progressPercent%"></div>
-        </div>
-        @if (session.Modality == ModalityDto.Listening)
+        <span id="save-status" class="save-status save-status--saved" role="status" aria-live="polite">Saved</span>
+        <button type="button" class="btn btn--ghost btn--sm" id="btn-controls-modal" title="Keyboard controls (?)">Controls ?</button>
+        @if (hasListening)
         {
           @await Html.PartialAsync("_AudioEmergencySwitcher", new AudioEquipmentCheckModel(
               ShowInput: false,
               ShowOutput: true))
         }
-        <a class="btn btn--ghost btn--sm" href="/practice">Exit</a>
+        <a class="btn btn--ghost btn--sm" href="/practice" id="btn-exit">Exit</a>
       </div>
     </header>
-    <main class="app-main">
-      <div class="container" style="max-width: 820px">
-        <form id="anti-forgery-holder" style="display:none;">@Html.AntiForgeryToken()</form>
-        @if (!string.IsNullOrEmpty(Model.ErrorMessage))
-        {
-          <div class="alert alert--danger mb-4" role="alert">@Model.ErrorMessage</div>
-        }
 
-        <div class="stack" id="question-container">
-          <div class="question">
-            <div class="question__meta row row--between row--middle w-100">
-              <div class="row row--middle row--wrap">
-                <span class="question__number">Question @q.DisplayOrder</span>
-                <span class="badge badge--muted">@session.SectionName</span>
-                @if (!string.IsNullOrEmpty(q.CategoryName))
-                {
-                  <span class="badge badge--muted">@q.CategoryName</span>
-                }
-                @if (q.IsCorrect == true)
-                {
-                  <span class="badge badge--success" id="status-badge">Accuracy</span>
-                }
-                else if (q.IsCorrect == false)
-                {
-                  <span class="badge badge--danger" id="status-badge">Incorrect</span>
-                }
-                else if (isSkipped)
-                {
-                  <span class="badge badge--muted" id="status-badge">Skipped</span>
-                }
-                else
-                {
-                  <span class="badge" id="status-badge" style="display: none;"></span>
-                }
-                <span class="badge badge--muted" id="hint-meta-badge" style="@(q.HintUsed ? "" : "display: none;")">Hint used</span>
-              </div>
-              <div>
-                <button type="button" class="btn btn--ghost btn--sm" id="save-toggle-btn"
-                        data-question-id="@q.QuestionId"
-                        data-is-saved="@(q.IsSaved ? "true" : "false")"
-                        title="@(q.IsSaved ? "Question saved to your bank. Click to remove." : "Save this question to your bank.")"
-                        aria-pressed="@(q.IsSaved ? "true" : "false")">
-                  @(q.IsSaved ? "Saved" : "Save question")
-                </button>
+    <main class="app-main">
+      <div class="container" style="max-width: 1200px">
+        <form id="anti-forgery-holder" style="display:none;">@Html.AntiForgeryToken()</form>
+
+        <script id="practice-data" type="application/json">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(questions, new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }))</script>
+
+        <div id="ajax-error-alert" class="alert alert--danger mb-4" style="display: none;" role="alert"></div>
+
+        <div class="exam-layout">
+          <!-- Left Question Pane (0ms In-Memory Swapping) -->
+          <div class="stack" id="question-pane">
+            <!-- Audio Player Container -->
+            <div id="practice-audio-wrapper" class="mb-3" style="@(!string.IsNullOrEmpty(q.AudioPath) ? "" : "display:none;")">
+              @if (!string.IsNullOrEmpty(q.AudioPath))
+              {
+                @await Html.PartialAsync("_ExamAudioPlayer", new ExamAudioPlayerModel(
+                    AudioPath: q.AudioPath,
+                    AllowReplay: true,
+                    SectionTitle: "Practice Audio",
+                    BadgeText: "READY",
+                    StartMs: q.AudioStartMs,
+                    EndMs: q.AudioEndMs,
+                    PlayerId: "main-practice-audio",
+                    Mode: "study"
+                ))
+              }
+            </div>
+            @await Html.PartialAsync("_ExamAudioPlayer", new ExamAudioPlayerModel(
+                AudioPath: string.Empty,
+                Mode: "study",
+                TemplateOnly: true
+            ))
+
+            <!-- Passage Card Container -->
+            <div id="passage-card" class="card mb-3" style="@(!string.IsNullOrEmpty(q.Passage) ? "" : "display:none;")">
+              <div class="card__body">
+                <p id="passage-text" class="no-margin passage" style="white-space: pre-line">@q.Passage</p>
               </div>
             </div>
 
-            @if (!string.IsNullOrEmpty(q.Passage))
-            {
-              <div class="card mb-4">
-                <div class="card__body">
-                  <p class="no-margin" style="white-space: pre-line">@q.Passage</p>
+            <!-- Image Container -->
+            <div id="image-container" class="mb-3" style="@(!string.IsNullOrEmpty(q.ImagePath) ? "" : "display:none;")">
+              <img id="question-image" src="@q.ImagePath" alt="@(q.ImageAlt ?? "Question illustration")" class="question__image" />
+            </div>
+
+            <!-- Question Card -->
+            <div class="question" id="question-card">
+              <div class="question__meta row row--between">
+                <div class="row row--tight" style="align-items: center; flex-wrap: wrap;">
+                  <span class="question__number" id="question-number-display">Question @q.DisplayOrder</span>
+                  <span class="badge badge--muted" id="question-section-display">@session.SectionName</span>
+                  <span class="badge badge--muted" id="question-category-display" style="@(!string.IsNullOrEmpty(q.CategoryName) ? "" : "display:none;")">@q.CategoryName</span>
+                  @if (q.IsCorrect == true)
+                  {
+                    <span class="badge badge--success" id="status-badge">Accuracy · Correct</span>
+                  }
+                  else if (q.IsCorrect == false)
+                  {
+                    <span class="badge badge--danger" id="status-badge">Incorrect</span>
+                  }
+                  else if (isCurrentSkipped)
+                  {
+                    <span class="badge badge--muted" id="status-badge">Skipped</span>
+                  }
+                  else
+                  {
+                    <span class="badge" id="status-badge" style="display: none;"></span>
+                  }
+                  <span class="badge badge--muted" id="hint-meta-badge" style="@(q.HintUsed ? "" : "display: none;")">Hint used</span>
+                </div>
+                <div>
+                  <button type="button" class="btn btn--ghost btn--sm @(q.IsSaved ? "btn--primary" : "")" id="save-toggle-btn"
+                          data-question-id="@q.QuestionId"
+                          data-is-saved="@(q.IsSaved ? "true" : "false")"
+                          aria-pressed="@(q.IsSaved ? "true" : "false")"
+                          title="@(q.IsSaved ? "Question saved to bank. Click to remove." : "Save this question to your bank.")">
+                    @(q.IsSaved ? "Saved" : "Save question")
+                  </button>
                 </div>
               </div>
-            }
 
-            @if (!string.IsNullOrEmpty(q.ImagePath))
-            {
-              <div class="mb-4">
-                <img src="@q.ImagePath" alt="@(q.ImageAlt ?? "Question image")" class="question__image" />
-              </div>
-            }
+              <p class="question__stem" id="question-stem-display">@q.Stem</p>
 
-            @if (!string.IsNullOrEmpty(q.AudioPath))
-            {
-              @await Html.PartialAsync("_ExamAudioPlayer", new ExamAudioPlayerModel(
-                  AudioPath: q.AudioPath,
-                  AllowReplay: isReviewMode,
-                  SectionTitle: "Practice Audio",
-                  BadgeText: "READY",
-                  StartMs: q.AudioStartMs,
-                  EndMs: q.AudioEndMs,
-                  Mode: "study"
-              ))
-            }
-
-            <p class="question__stem">@q.Stem</p>
-
-            @if (isReviewMode)
-            {
-              <div class="option-list" aria-label="Answer for question @q.DisplayOrder">
+              <div class="option-list" id="option-list" role="radiogroup" aria-label="Answer for question @q.DisplayOrder">
                 @foreach (var opt in q.Options)
                 {
                   var isSelected = opt.OptionId == q.SelectedOptionId;
                   var isCorrectOpt = opt.OptionId == q.CorrectOptionId;
-                  var optClass = isCorrectOpt ? "option option--correct" : (isSelected ? "option option--wrong" : "option");
+                  var optClass = "option";
+                  if (isCurrentAnswered)
+                  {
+                    if (isCorrectOpt) optClass += " option--correct";
+                    else if (isSelected && q.IsCorrect == false) optClass += " option--wrong";
+                  }
+                  else if (isSelected)
+                  {
+                    optClass += " is-selected";
+                  }
 
-                  <div class="@optClass">
+                  <label class="@optClass" id="opt-label-@opt.OptionId">
+                    <input class="option__input js-option-radio" type="radio" name="selectedOptionId"
+                           value="@opt.OptionId" @(isSelected ? "checked" : "") @(isCurrentAnswered ? "disabled" : "")>
                     <span class="option__marker">@opt.Label</span>
                     <span class="option__text">@opt.Text</span>
-                    @if (isCorrectOpt && isSelected)
+                    @if (isCurrentAnswered)
                     {
-                      <span class="badge badge--success">Your answer · correct</span>
+                      if (isCorrectOpt && isSelected)
+                      {
+                        <span class="badge badge--success">Your answer · correct</span>
+                      }
+                      else if (isCorrectOpt)
+                      {
+                        <span class="badge badge--success">Correct answer</span>
+                      }
+                      else if (isSelected)
+                      {
+                        <span class="badge badge--danger">Your answer</span>
+                      }
                     }
-                    else if (isCorrectOpt)
+                  </label>
+                }
+              </div>
+
+              <!-- Hint Box -->
+              <div class="hint mt-4" id="hint-box" style="@(q.HintUsed && !string.IsNullOrEmpty(q.Hint) ? "" : "display: none;")" role="note">
+                <span class="hint__label">Hint</span>
+                <span id="hint-text">@(q.Hint ?? "")</span>
+              </div>
+
+              <!-- Explanation Container -->
+              <div id="explanation-container">
+                @if (isCurrentAnswered && !string.IsNullOrEmpty(q.Explanation))
+                {
+                  <div class="explain mt-4">
+                    <div class="explain__title">Explanation</div>
+                    <p class="no-margin">@q.Explanation</p>
+                    @if (!string.IsNullOrEmpty(q.Transcript))
                     {
-                      <span class="badge badge--success">Correct answer</span>
-                    }
-                    else if (isSelected)
-                    {
-                      <span class="badge badge--danger">Your answer</span>
+                      <div class="explain__transcript mt-2">
+                        <strong>Transcript:</strong> @q.Transcript
+                      </div>
                     }
                   </div>
                 }
               </div>
 
-              @if (!string.IsNullOrEmpty(q.Explanation))
-              {
-                <div class="explain mt-4">
-                  <div class="explain__title">Explanation</div>
-                  <p class="no-margin">@q.Explanation</p>
-                  @if (!string.IsNullOrEmpty(q.Transcript))
-                  {
-                    <div class="explain__transcript mt-2">
-                      <strong>Transcript:</strong> @q.Transcript
-                    </div>
-                  }
+              <!-- Bottom Action Navigation Row -->
+              <div class="row row--between mt-4" style="align-items: center;" id="bottom-action-row">
+                <div class="row" style="gap: var(--space-2); align-items: center; flex-wrap: wrap;">
+                  <button type="button" class="btn" id="btn-prev" @(q.DisplayOrder > 1 ? "" : "disabled")>Previous</button>
+                  <button type="button" class="btn btn--ghost" id="btn-skip" style="@(isCurrentAnswered ? "display:none;" : "")">Skip</button>
+                  <button type="button" class="btn btn--ghost" id="show-hint-btn" style="@(q.HintUsed || isCurrentAnswered ? "display:none;" : "")">Show hint (H)</button>
+                  <span class="text-xs text-muted" id="hint-used-msg" style="@(q.HintUsed ? "" : "display: none;")">Hint used · noted in summary</span>
                 </div>
-              }
 
-              <div class="row row--between mt-4">
-                <div class="row">
-                  @if (isFinished)
-                  {
-                    <a class="btn btn--ghost" href="/practice/@session.SessionId/summary">Back to summary</a>
-                  }
-                  <a class="btn btn--ghost" href="/saved-questions" target="_blank" rel="noopener">View saved bank</a>
+                <div class="row" style="gap: var(--space-2); align-items: center;">
+                  <button type="button" class="btn btn--primary btn--lg" id="submit-btn">
+                    @(isCurrentAnswered ? (q.DisplayOrder >= totalCount ? "View summary" : "Next question") : "Check answer")
+                  </button>
                 </div>
-                @if (q.DisplayOrder < q.TotalQuestions)
-                {
-                  <a class="btn btn--primary btn--lg" href="/practice/@session.SessionId?q=@(q.DisplayOrder + 1)">Next question</a>
-                }
-                else
-                {
-                  <a class="btn btn--primary btn--lg" href="/practice/@session.SessionId/summary">View summary</a>
-                }
               </div>
-            }
-            else
-            {
-              <form method="post" action="/practice/@session.SessionId/questions/@q.QuestionId/answer?displayOrder=@q.DisplayOrder" id="answer-form">
-                @Html.AntiForgeryToken()
-                <div class="option-list" role="radiogroup" aria-label="Answer for question @q.DisplayOrder" id="option-list">
-                  @foreach (var opt in q.Options)
-                  {
-                    <label class="option" id="opt-label-@opt.OptionId">
-                      <input class="option__input" type="radio" name="SelectedOptionId" value="@opt.OptionId" required>
-                      <span class="option__marker">@opt.Label</span>
-                      <span class="option__text">@opt.Text</span>
-                    </label>
-                  }
-                </div>
-
-                <div class="hint mt-4" id="hint-box" style="@(q.HintUsed ? "" : "display: none;")" role="note">
-                  <span class="hint__label">Hint</span>
-                  <span id="hint-text">@(q.Hint ?? "")</span>
-                </div>
-
-                <div id="explanation-container"></div>
-
-                <div class="row row--between mt-4" id="controls-row">
-                  <div class="row">
-                    <button type="submit" name="Action" value="skip" class="btn btn--ghost" formnovalidate>Skip this question</button>
-                    @if (!q.HintUsed)
-                    {
-                      <button class="btn btn--ghost" type="button" id="show-hint-btn">Show hint</button>
-                    }
-                    <span class="text-xs text-muted" id="hint-used-msg" style="@(q.HintUsed ? "" : "display: none;")">Hint used · it is noted in your summary</span>
-                  </div>
-                  <button type="submit" class="btn btn--primary btn--lg" id="submit-btn">Check answer</button>
-                </div>
-              </form>
-            }
+            </div>
           </div>
+
+          <!-- Right Sidebar (Exam Shell Persistent) -->
+          <aside class="exam-sidebar stack">
+            <div class="card">
+              <div class="card__header">
+                <div class="row row--between">
+                  <strong class="text-sm">Practice Progress</strong>
+                  <span class="text-xs text-muted" id="progress-text">@answeredCount/@totalCount answered</span>
+                </div>
+              </div>
+              <div class="card__body stack">
+                <div class="row row--between mb-2">
+                  <span class="text-xs text-muted">Accuracy</span>
+                  <strong class="text-sm font-mono" id="sidebar-accuracy-display">@(answeredCount > 0 ? $"{accuracyPercent}% ({correctCount}/{answeredCount})" : "0% (0/0)")</strong>
+                </div>
+                <div class="progress" role="progressbar" aria-valuenow="@answeredCount" aria-valuemin="0" aria-valuemax="@totalCount">
+                  <div class="progress__bar" id="progress-bar" style="width: @progressPercent%"></div>
+                </div>
+                <div class="row row--between text-xs text-muted mt-2">
+                  <span>Correct: <strong id="sidebar-correct-count" style="color: var(--sign-green);">@correctCount</strong></span>
+                  <span>Incorrect: <strong id="sidebar-incorrect-count" style="color: var(--sign-red);">@incorrectCount</strong></span>
+                  <span>Skipped: <strong id="sidebar-skipped-count">@skippedCount</strong></span>
+                  <span>Unanswered: <strong id="sidebar-unanswered-count">@unansweredCount</strong></span>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card__header">
+                <strong class="text-sm">Questions (1–@totalCount)</strong>
+              </div>
+              <div class="card__body stack">
+                <!-- Navigator Filters -->
+                <div class="row mb-2" style="gap: var(--space-1);" id="navigator-filters">
+                  <button type="button" class="btn btn--xs btn--primary" data-filter="all" id="filter-all">All (<span id="filter-all-count">@totalCount</span>)</button>
+                  <button type="button" class="btn btn--xs btn--ghost" data-filter="incorrect" id="filter-incorrect">Incorrect (<span id="filter-incorrect-count">@incorrectCount</span>)</button>
+                  <button type="button" class="btn btn--xs btn--ghost" data-filter="saved" id="filter-saved">Saved (<span id="filter-saved-count">@savedCount</span>)</button>
+                </div>
+
+                <div id="filter-empty-msg" class="text-xs text-muted mb-2" style="display:none; padding: var(--space-2) 0;">
+                  No questions match this filter.
+                </div>
+
+                <!-- Questions Grid (1-N) -->
+                <div class="navigator__grid" role="group" aria-label="Question Navigator" id="navigator-grid">
+                  @foreach (var item in navigator)
+                  {
+                    var statusClass = "is-unanswered";
+                    if (item.IsCorrect == true) statusClass = "is-correct";
+                    else if (item.IsCorrect == false) statusClass = "is-incorrect";
+                    else if (isFinished && !item.IsAnswered) statusClass = "is-skipped";
+
+                    var markClass = item.IsSaved ? "is-marked" : "";
+                    var currentClass = item.IsCurrent ? "is-current" : "";
+
+                    <button type="button"
+                            class="navigator__cell @statusClass @markClass @currentClass"
+                            id="nav-cell-@item.QuestionId"
+                            data-question-id="@item.QuestionId"
+                            data-display-order="@item.DisplayOrder"
+                            title="Question @item.DisplayOrder@(item.IsCorrect == true ? " · Correct" : (item.IsCorrect == false ? " · Incorrect" : ""))@(item.IsSaved ? " · Saved" : "")">
+                      @item.DisplayOrder
+                    </button>
+                  }
+                </div>
+
+                <!-- Swatch Legend -->
+                <div class="text-xs stack mt-2" style="gap: var(--space-1)">
+                  <div class="row" style="align-items: center; gap: var(--space-2);">
+                    <span class="navigator__cell navigator__cell--swatch is-correct" aria-hidden="true">1</span> Correct
+                  </div>
+                  <div class="row" style="align-items: center; gap: var(--space-2);">
+                    <span class="navigator__cell navigator__cell--swatch is-incorrect" aria-hidden="true">2</span> Incorrect
+                  </div>
+                  <div class="row" style="align-items: center; gap: var(--space-2);">
+                    <span class="navigator__cell navigator__cell--swatch is-marked" aria-hidden="true">3</span> Saved to bank
+                  </div>
+                  <div class="row" style="align-items: center; gap: var(--space-2);">
+                    <span class="navigator__cell navigator__cell--swatch is-unanswered" aria-hidden="true">4</span> Unanswered
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <a href="/practice/@session.SessionId/summary" class="btn btn--primary" id="btn-sidebar-finish" style="width: 100%;">
+              View summary
+            </a>
+          </aside>
         </div>
       </div>
     </main>
   </div>
 
+  <!-- Keyboard Controls Helper Modal -->
+  <div id="controls-modal" class="modal-overlay" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="controls-modal-title">
+    <div class="modal" style="max-width: 520px;">
+      <div class="modal__header row row--between">
+        <h2 id="controls-modal-title" class="no-margin text-lg font-sign">Keyboard Controls</h2>
+        <button type="button" class="modal__close" id="btn-close-controls-modal" aria-label="Close modal">&times;</button>
+      </div>
+      <div class="modal__body stack">
+        <p class="text-sm text-muted no-margin">Speed up your drilling workflow using single-key shortcuts:</p>
+        <table class="table" style="width: 100%; border-collapse: collapse;">
+          <thead>
+            <tr>
+              <th style="text-align: left; padding: var(--space-2);">Key</th>
+              <th style="text-align: left; padding: var(--space-2);">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="padding: var(--space-2);"><kbd class="kbd font-mono">1</kbd> <kbd class="kbd font-mono">2</kbd> <kbd class="kbd font-mono">3</kbd> <kbd class="kbd font-mono">4</kbd></td>
+              <td style="padding: var(--space-2);">Select option A, B, C, or D</td>
+            </tr>
+            <tr>
+              <td style="padding: var(--space-2);"><kbd class="kbd font-mono">Enter</kbd> or <kbd class="kbd font-mono">Space</kbd></td>
+              <td style="padding: var(--space-2);">Check answer / Next question</td>
+            </tr>
+            <tr>
+              <td style="padding: var(--space-2);"><kbd class="kbd font-mono">H</kbd></td>
+              <td style="padding: var(--space-2);">Show hint</td>
+            </tr>
+            <tr>
+              <td style="padding: var(--space-2);"><kbd class="kbd font-mono">S</kbd></td>
+              <td style="padding: var(--space-2);">Save question to your bank</td>
+            </tr>
+            <tr>
+              <td style="padding: var(--space-2);"><kbd class="kbd font-mono">K</kbd></td>
+              <td style="padding: var(--space-2);">Skip question</td>
+            </tr>
+            <tr>
+              <td style="padding: var(--space-2);"><kbd class="kbd font-mono">N</kbd> / <kbd class="kbd font-mono">P</kbd></td>
+              <td style="padding: var(--space-2);">Next / Previous question</td>
+            </tr>
+            <tr>
+              <td style="padding: var(--space-2);"><kbd class="kbd font-mono">?</kbd></td>
+              <td style="padding: var(--space-2);">Toggle this shortcuts helper</td>
+            </tr>
+            <tr>
+              <td style="padding: var(--space-2);"><kbd class="kbd font-mono">Esc</kbd></td>
+              <td style="padding: var(--space-2);">Close this modal</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="modal__footer row row--end">
+        <button type="button" class="btn btn--primary" id="btn-modal-got-it">Got it</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>
+
   <script src="~/js/icons.js"></script>
   <script src="~/js/ee-audio.js"></script>
   <script src="~/js/exam-audio.js"></script>
-  <script src="~/js/keyboard-nav.js"></script>
   <script>
     (function () {
-      var questionId = @q.QuestionId;
+      "use strict";
+
       var sessionId = @session.SessionId;
-      var displayOrder = @q.DisplayOrder;
-      var totalQuestions = @q.TotalQuestions;
+      var totalQuestions = @totalCount;
+      var isSessionFinished = @(isFinished ? "true" : "false");
 
-      var tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
-      var csrfToken = tokenInput ? tokenInput.value : '';
+      var dataEl = document.getElementById("practice-data");
+      var localQuestions = dataEl ? JSON.parse(dataEl.textContent) : [];
 
-      // Save question toggle handler (works in both Take and Review modes)
-      var saveToggleBtn = document.getElementById('save-toggle-btn');
-      if (saveToggleBtn) {
-        saveToggleBtn.addEventListener('click', function () {
-          var isCurrentlySaved = saveToggleBtn.getAttribute('data-is-saved') === 'true';
-          saveToggleBtn.disabled = true;
+      // In-memory state dictionary keyed by questionId
+      var localState = {};
+      localQuestions.forEach(function (q) {
+        var isAns = q.selectedOptionId != null || q.isCorrect != null;
+        localState[q.questionId] = {
+          questionId: q.questionId,
+          displayOrder: q.displayOrder,
+          selectedOptionId: q.selectedOptionId,
+          isCorrect: q.isCorrect,
+          isAnswered: isAns,
+          isSkipped: isSessionFinished && !isAns,
+          hintUsed: q.hintUsed,
+          hint: q.hint,
+          isSaved: q.isSaved,
+          explanation: q.explanation,
+          transcript: q.transcript,
+          correctOptionId: q.correctOptionId
+        };
+      });
 
-          var formData = new URLSearchParams();
-          formData.append('__RequestVerificationToken', csrfToken);
-          formData.append('currentlySaved', isCurrentlySaved ? 'true' : 'false');
+      var initialOrder = @q.DisplayOrder;
+      var currentOrder = initialOrder > 0 ? initialOrder : 1;
+      var activeFilter = "all";
 
-          fetch('/saved-questions/' + questionId + '/toggle', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/x-www-form-urlencoded',
-              'RequestVerificationToken': csrfToken,
-              'X-Requested-With': 'XMLHttpRequest',
-              'Accept': 'application/json'
-            },
-            body: formData.toString()
-          })
-          .then(function (res) {
-            if (!res.ok) throw new Error('Toggle failed');
-            return res.json();
-          })
-          .then(function (resData) {
-            saveToggleBtn.disabled = false;
-            var newSaved = resData.isSaved;
-            saveToggleBtn.setAttribute('data-is-saved', newSaved ? 'true' : 'false');
-            saveToggleBtn.setAttribute('aria-pressed', newSaved ? 'true' : 'false');
-            saveToggleBtn.textContent = newSaved ? 'Saved' : 'Save question';
-            saveToggleBtn.title = newSaved ? 'Question saved to your bank. Click to remove.' : 'Save this question to your bank.';
-          })
-          .catch(function (err) {
-            console.error('Save toggle error', err);
-            saveToggleBtn.disabled = false;
-          });
-        });
+      var csrfToken = "";
+      var tokenInp = document.querySelector('input[name="__RequestVerificationToken"]');
+      if (tokenInp) csrfToken = tokenInp.value;
+
+      // DOM Elements
+      var qNumberDisplay = document.getElementById("question-number-display");
+      var qCategoryDisplay = document.getElementById("question-category-display");
+      var statusBadge = document.getElementById("status-badge");
+      var hintMetaBadge = document.getElementById("hint-meta-badge");
+      var saveToggleBtn = document.getElementById("save-toggle-btn");
+      var qStemDisplay = document.getElementById("question-stem-display");
+      var optionList = document.getElementById("option-list");
+      var hintBox = document.getElementById("hint-box");
+      var hintText = document.getElementById("hint-text");
+      var explanationContainer = document.getElementById("explanation-container");
+      var btnPrev = document.getElementById("btn-prev");
+      var btnSkip = document.getElementById("btn-skip");
+      var showHintBtn = document.getElementById("show-hint-btn");
+      var hintUsedMsg = document.getElementById("hint-used-msg");
+      var submitBtn = document.getElementById("submit-btn");
+
+      var audioWrapper = document.getElementById("practice-audio-wrapper");
+      var passageCard = document.getElementById("passage-card");
+      var passageText = document.getElementById("passage-text");
+      var imageContainer = document.getElementById("image-container");
+      var questionImage = document.getElementById("question-image");
+
+      var sidebarAccuracyDisplay = document.getElementById("sidebar-accuracy-display");
+      var topbarAccuracyVal = document.getElementById("topbar-accuracy-val");
+      var progressBar = document.getElementById("progress-bar");
+      var progressText = document.getElementById("progress-text");
+      var sidebarCorrectCount = document.getElementById("sidebar-correct-count");
+      var sidebarIncorrectCount = document.getElementById("sidebar-incorrect-count");
+      var sidebarSkippedCount = document.getElementById("sidebar-skipped-count");
+      var sidebarUnansweredCount = document.getElementById("sidebar-unanswered-count");
+
+      var filterAllCount = document.getElementById("filter-all-count");
+      var filterIncorrectCount = document.getElementById("filter-incorrect-count");
+      var filterSavedCount = document.getElementById("filter-saved-count");
+      var filterEmptyMsg = document.getElementById("filter-empty-msg");
+
+      var controlsModal = document.getElementById("controls-modal");
+      var btnControlsModal = document.getElementById("btn-controls-modal");
+      var btnCloseControlsModal = document.getElementById("btn-close-controls-modal");
+      var btnModalGotIt = document.getElementById("btn-modal-got-it");
+
+      function showToast(message) {
+        var container = document.getElementById("toast-container");
+        if (!container) return;
+        var toast = document.createElement("div");
+        toast.className = "toast";
+        toast.textContent = message;
+        container.appendChild(toast);
+        setTimeout(function () {
+          toast.style.transition = "opacity 300ms ease-out";
+          toast.style.opacity = "0";
+          setTimeout(function () {
+            if (toast.parentNode) toast.parentNode.removeChild(toast);
+          }, 300);
+        }, 2200);
       }
 
-      var form = document.getElementById('answer-form');
-      if (!form) return;
-
-      var showHintBtn = document.getElementById('show-hint-btn');
-      var hintBox = document.getElementById('hint-box');
-      var hintText = document.getElementById('hint-text');
-      var hintUsedMsg = document.getElementById('hint-used-msg');
-      var hintMetaBadge = document.getElementById('hint-meta-badge');
-      var statusBadge = document.getElementById('status-badge');
-      var submitBtn = document.getElementById('submit-btn');
-      var explanationContainer = document.getElementById('explanation-container');
-      var controlsRow = document.getElementById('controls-row');
-
       function showError(message) {
-        var errEl = document.getElementById('ajax-error-alert');
-        if (!errEl) {
-          errEl = document.createElement('div');
-          errEl.id = 'ajax-error-alert';
-          errEl.className = 'alert alert--danger mb-4';
-          errEl.setAttribute('role', 'alert');
-          var main = document.querySelector('main .container');
-          if (main) {
-            main.insertBefore(errEl, main.firstChild);
-          }
+        var errEl = document.getElementById("ajax-error-alert");
+        if (errEl) {
+          errEl.textContent = message;
+          errEl.style.display = "";
+          errEl.scrollIntoView({ behavior: "smooth", block: "center" });
         }
-        errEl.textContent = message;
-        errEl.style.display = '';
-        errEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
 
       function clearError() {
-        var errEl = document.getElementById('ajax-error-alert');
-        if (errEl) {
-          errEl.style.display = 'none';
-        }
+        var errEl = document.getElementById("ajax-error-alert");
+        if (errEl) errEl.style.display = "none";
       }
 
-      if (showHintBtn) {
-        showHintBtn.addEventListener('click', function () {
-          clearError();
-          showHintBtn.disabled = true;
-          fetch('/practice/' + sessionId + '/questions/' + questionId + '/hint', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/x-www-form-urlencoded',
-              'RequestVerificationToken': csrfToken,
-              'X-Requested-With': 'XMLHttpRequest',
-              'Accept': 'application/json'
-            },
-            body: '__RequestVerificationToken=' + encodeURIComponent(csrfToken)
-          })
-          .then(function (res) {
-            if (!res.ok) {
-              return res.json().then(function (errData) {
-                var err = new Error(errData.error || ('Server returned HTTP ' + res.status));
-                err.code = errData.code;
-                throw err;
-              }).catch(function (fallback) {
-                if (fallback.code) throw fallback;
-                throw new Error('Server returned HTTP ' + res.status);
-              });
-            }
-            return res.json();
-          })
-          .then(function (data) {
-            if (data.hint) {
-              hintText.textContent = data.hint;
-              hintBox.style.display = '';
-              showHintBtn.style.display = 'none';
-              hintUsedMsg.style.display = '';
-              hintMetaBadge.style.display = '';
-            } else {
-              showHintBtn.disabled = false;
-            }
-          })
-          .catch(function (err) {
-            console.error('Failed to reveal hint', err);
-            showHintBtn.disabled = false;
-            if (err.code === 'PRACTICE_SESSION_FINISHED') {
-              showError('This practice session has already been finished.');
-              return;
-            }
-            showError(err.code ? err.message : 'Could not load hint. Your connection may be unstable. Please try again.');
-          });
+      function getCurrentQuestion() {
+        return localQuestions.find(function (q) { return q.displayOrder === currentOrder; }) || localQuestions[0];
+      }
+
+      function updateAccuracyAndStats() {
+        var answered = 0;
+        var correct = 0;
+        var incorrect = 0;
+        var skipped = 0;
+        var saved = 0;
+
+        localQuestions.forEach(function (q) {
+          var s = localState[q.questionId];
+          if (s) {
+            if (s.isAnswered) answered++;
+            if (s.isCorrect === true) correct++;
+            if (s.isCorrect === false) incorrect++;
+            if (s.isSkipped) skipped++;
+            if (s.isSaved) saved++;
+          }
         });
+
+        var unanswered = Math.max(0, totalQuestions - answered);
+        var accPct = answered > 0 ? Math.round((correct / answered) * 100) : 0;
+        var progPct = totalQuestions > 0 ? Math.round((answered / totalQuestions) * 100) : 0;
+
+        if (sidebarAccuracyDisplay) {
+          sidebarAccuracyDisplay.textContent = answered > 0 ? (accPct + "% (" + correct + "/" + answered + ")") : "0% (0/0)";
+        }
+        if (topbarAccuracyVal) {
+          topbarAccuracyVal.textContent = answered > 0 ? (accPct + "%") : "--%";
+        }
+        if (progressBar) {
+          progressBar.style.width = progPct + "%";
+          var pbParent = progressBar.closest('.progress');
+          if (pbParent) pbParent.setAttribute("aria-valuenow", String(answered));
+        }
+        if (progressText) {
+          progressText.textContent = answered + "/" + totalQuestions + " answered";
+        }
+        if (sidebarCorrectCount) sidebarCorrectCount.textContent = String(correct);
+        if (sidebarIncorrectCount) sidebarIncorrectCount.textContent = String(incorrect);
+        if (sidebarSkippedCount) sidebarSkippedCount.textContent = String(skipped);
+        if (sidebarUnansweredCount) sidebarUnansweredCount.textContent = String(unanswered);
+
+        if (filterAllCount) filterAllCount.textContent = String(totalQuestions);
+        if (filterIncorrectCount) filterIncorrectCount.textContent = String(incorrect);
+        if (filterSavedCount) filterSavedCount.textContent = String(saved);
       }
 
-      form.addEventListener('submit', function (e) {
-        var submitter = e.submitter;
-        if (submitter && submitter.value === 'skip') {
-          // Let standard skip post happen
-          return;
+      function renderQuestion(order) {
+        clearError();
+        var q = localQuestions.find(function (item) { return item.displayOrder === order; });
+        if (!q) return;
+
+        currentOrder = order;
+        var s = localState[q.questionId] || {};
+
+        // 1. Meta row
+        if (qNumberDisplay) qNumberDisplay.textContent = "Question " + q.displayOrder;
+        if (qCategoryDisplay) {
+          if (q.categoryName) {
+            qCategoryDisplay.textContent = q.categoryName;
+            qCategoryDisplay.style.display = "";
+          } else {
+            qCategoryDisplay.style.display = "none";
+          }
         }
 
-        var checkedInput = form.querySelector('input[name="SelectedOptionId"]:checked');
-        if (!checkedInput) {
-          return; // Let browser HTML5 validation handle missing radio
+        // Status badge
+        if (statusBadge) {
+          if (s.isCorrect === true) {
+            statusBadge.className = "badge badge--success";
+            statusBadge.textContent = "Accuracy · Correct";
+            statusBadge.style.display = "";
+          } else if (s.isCorrect === false) {
+            statusBadge.className = "badge badge--danger";
+            statusBadge.textContent = "Incorrect";
+            statusBadge.style.display = "";
+          } else if (s.isSkipped) {
+            statusBadge.className = "badge badge--muted";
+            statusBadge.textContent = "Skipped";
+            statusBadge.style.display = "";
+          } else {
+            statusBadge.style.display = "none";
+          }
         }
 
-        e.preventDefault();
+        if (hintMetaBadge) {
+          hintMetaBadge.style.display = s.hintUsed ? "" : "none";
+        }
+
+        // Save button
+        if (saveToggleBtn) {
+          saveToggleBtn.setAttribute("data-question-id", String(q.questionId));
+          saveToggleBtn.setAttribute("data-is-saved", s.isSaved ? "true" : "false");
+          saveToggleBtn.setAttribute("aria-pressed", s.isSaved ? "true" : "false");
+          saveToggleBtn.textContent = s.isSaved ? "Saved" : "Save question";
+          saveToggleBtn.className = "btn btn--ghost btn--sm " + (s.isSaved ? "btn--primary" : "");
+          saveToggleBtn.title = s.isSaved ? "Question saved to bank. Click to remove." : "Save this question to your bank.";
+        }
+
+        // 2. Passage Card
+        if (passageCard && passageText) {
+          if (q.passage) {
+            passageText.textContent = q.passage;
+            passageCard.style.display = "";
+          } else {
+            passageCard.style.display = "none";
+          }
+        }
+
+        // 3. Image Container
+        if (imageContainer && questionImage) {
+          if (q.imagePath) {
+            questionImage.src = q.imagePath;
+            questionImage.alt = q.imageAlt || "Question illustration";
+            imageContainer.style.display = "";
+          } else {
+            imageContainer.style.display = "none";
+          }
+        }
+
+        // 4. Audio Continuity
+        if (audioWrapper) {
+          if (q.audioPath) {
+            var currentAudioEl = audioWrapper.querySelector(".exam-audio");
+            var needsReload = true;
+            if (currentAudioEl) {
+              var prevSrc = currentAudioEl.querySelector(".exam-audio__native")?.getAttribute("src");
+              var prevStart = currentAudioEl.dataset.startMs;
+              var prevEnd = currentAudioEl.dataset.endMs;
+              var sameSrc = prevSrc === q.audioPath;
+              var sameStart = (prevStart == null && q.audioStartMs == null) || (String(prevStart) === String(q.audioStartMs));
+              var sameEnd = (prevEnd == null && q.audioEndMs == null) || (String(prevEnd) === String(q.audioEndMs));
+              if (sameSrc && sameStart && sameEnd) {
+                needsReload = false;
+              }
+            }
+            if (needsReload) {
+              try {
+                if (window.stopExamAudio) window.stopExamAudio(audioWrapper);
+                if (window.createExamAudioHtml) {
+                  audioWrapper.innerHTML = window.createExamAudioHtml({
+                    audioPath: q.audioPath,
+                    mode: "study",
+                    startMs: q.audioStartMs,
+                    endMs: q.audioEndMs,
+                    playerId: "main-practice-audio"
+                  });
+                  if (window.initExamAudio) window.initExamAudio();
+                }
+              } catch (e) {
+                console.warn("Audio re-arm error:", e);
+              }
+            }
+            audioWrapper.style.display = "";
+          } else {
+            if (window.stopExamAudio) window.stopExamAudio(audioWrapper);
+            audioWrapper.style.display = "none";
+          }
+        }
+
+        // 5. Question Stem
+        if (qStemDisplay) qStemDisplay.textContent = q.stem;
+
+        // 6. Option List
+        if (optionList) {
+          optionList.innerHTML = "";
+          var isAnswered = s.isAnswered;
+
+          q.options.forEach(function (opt) {
+            var isSelected = opt.optionId === s.selectedOptionId;
+            var isCorrectOpt = s.correctOptionId != null && opt.optionId === s.correctOptionId;
+
+            var optClass = "option";
+            if (isAnswered) {
+              if (isCorrectOpt) optClass += " option--correct";
+              else if (isSelected && !s.isCorrect) optClass += " option--wrong";
+            } else if (isSelected) {
+              optClass += " is-selected";
+            }
+
+            var lbl = document.createElement("label");
+            lbl.className = optClass;
+            lbl.id = "opt-label-" + opt.optionId;
+
+            var radio = document.createElement("input");
+            radio.className = "option__input js-option-radio";
+            radio.type = "radio";
+            radio.name = "selectedOptionId";
+            radio.value = String(opt.optionId);
+            if (isSelected) radio.checked = true;
+            if (isAnswered) radio.disabled = true;
+
+            radio.addEventListener("change", function () {
+              if (!isAnswered) {
+                s.selectedOptionId = opt.optionId;
+                optionList.querySelectorAll(".option").forEach(function (el) {
+                  el.classList.remove("is-selected");
+                });
+                lbl.classList.add("is-selected");
+                updateSubmitButtonState();
+              }
+            });
+
+            var marker = document.createElement("span");
+            marker.className = "option__marker";
+            marker.textContent = opt.label;
+
+            var txt = document.createElement("span");
+            txt.className = "option__text";
+            txt.textContent = opt.text;
+
+            lbl.appendChild(radio);
+            lbl.appendChild(marker);
+            lbl.appendChild(txt);
+
+            if (isAnswered) {
+              if (isCorrectOpt && isSelected) {
+                var cBadge = document.createElement("span");
+                cBadge.className = "badge badge--success";
+                cBadge.textContent = "Your answer · correct";
+                lbl.appendChild(cBadge);
+              } else if (isCorrectOpt) {
+                var corBadge = document.createElement("span");
+                corBadge.className = "badge badge--success";
+                corBadge.textContent = "Correct answer";
+                lbl.appendChild(corBadge);
+              } else if (isSelected) {
+                var wBadge = document.createElement("span");
+                wBadge.className = "badge badge--danger";
+                wBadge.textContent = "Your answer";
+                lbl.appendChild(wBadge);
+              }
+            }
+
+            optionList.appendChild(lbl);
+          });
+        }
+
+        // 7. Hint Box
+        if (hintBox && hintText) {
+          if (s.hintUsed && s.hint) {
+            hintText.textContent = s.hint;
+            hintBox.style.display = "";
+          } else {
+            hintBox.style.display = "none";
+          }
+        }
+
+        // 8. Explanation
+        if (explanationContainer) {
+          explanationContainer.innerHTML = "";
+          if (s.isAnswered && s.explanation) {
+            var expCard = document.createElement("div");
+            expCard.className = "explain mt-4";
+            var expTitle = document.createElement("div");
+            expTitle.className = "explain__title";
+            expTitle.textContent = "Explanation";
+            expCard.appendChild(expTitle);
+
+            var expP = document.createElement("p");
+            expP.className = "no-margin";
+            expP.textContent = s.explanation;
+            expCard.appendChild(expP);
+
+            if (s.transcript) {
+              var trDiv = document.createElement("div");
+              trDiv.className = "explain__transcript mt-2";
+              var trStrong = document.createElement("strong");
+              trStrong.textContent = "Transcript: ";
+              trDiv.appendChild(trStrong);
+              trDiv.appendChild(document.createTextNode(s.transcript));
+              expCard.appendChild(trDiv);
+            }
+            explanationContainer.appendChild(expCard);
+          }
+        }
+
+        // 9. Buttons & Bottom Nav
+        if (btnPrev) btnPrev.disabled = currentOrder <= 1;
+
+        if (btnSkip) btnSkip.style.display = s.isAnswered ? "none" : "";
+        if (showHintBtn) showHintBtn.style.display = (s.hintUsed || s.isAnswered) ? "none" : "";
+        if (hintUsedMsg) hintUsedMsg.style.display = s.hintUsed ? "" : "none";
+
+        updateSubmitButtonState();
+        updateNavigatorCells();
+        updateAccuracyAndStats();
+
+        // 10. URL History replace (zero reload)
+        try {
+          var targetUrl = "/practice/" + sessionId + "?q=" + currentOrder;
+          if (window.location.pathname + window.location.search !== targetUrl) {
+            window.history.replaceState({ order: currentOrder }, "", targetUrl);
+          }
+        } catch (e) {}
+      }
+
+      function updateSubmitButtonState() {
+        if (!submitBtn) return;
+        var q = getCurrentQuestion();
+        var s = localState[q.questionId] || {};
+
+        if (s.isAnswered) {
+          submitBtn.disabled = false;
+          if (currentOrder >= totalQuestions) {
+            submitBtn.textContent = "View summary";
+            submitBtn.className = "btn btn--primary btn--lg";
+          } else {
+            submitBtn.textContent = "Next question";
+            submitBtn.className = "btn btn--primary btn--lg";
+          }
+        } else {
+          submitBtn.textContent = "Check answer";
+          submitBtn.className = "btn btn--primary btn--lg";
+          submitBtn.disabled = !s.selectedOptionId;
+        }
+      }
+
+      function updateNavigatorCells() {
+        localQuestions.forEach(function (q) {
+          var s = localState[q.questionId] || {};
+          var cell = document.getElementById("nav-cell-" + q.questionId);
+          if (!cell) return;
+
+          cell.classList.remove("is-current", "is-correct", "is-incorrect", "is-unanswered", "is-skipped", "is-marked");
+
+          if (q.displayOrder === currentOrder) cell.classList.add("is-current");
+
+          if (s.isCorrect === true) cell.classList.add("is-correct");
+          else if (s.isCorrect === false) cell.classList.add("is-incorrect");
+          else if (s.isSkipped) cell.classList.add("is-skipped");
+          else cell.classList.add("is-unanswered");
+
+          if (s.isSaved) cell.classList.add("is-marked");
+        });
+
+        applyFilter(activeFilter);
+      }
+
+      function applyFilter(filter) {
+        activeFilter = filter;
+        document.querySelectorAll("#navigator-filters button").forEach(function (btn) {
+          btn.classList.toggle("btn--primary", btn.dataset.filter === filter);
+          btn.classList.toggle("btn--ghost", btn.dataset.filter !== filter);
+        });
+
+        var visibleCount = 0;
+        localQuestions.forEach(function (q) {
+          var s = localState[q.questionId] || {};
+          var cell = document.getElementById("nav-cell-" + q.questionId);
+          if (!cell) return;
+
+          var match = true;
+          if (filter === "incorrect") match = s.isCorrect === false;
+          else if (filter === "saved") match = s.isSaved === true;
+
+          cell.style.display = match ? "" : "none";
+          if (match) visibleCount++;
+        });
+
+        if (filterEmptyMsg) {
+          if (visibleCount === 0) {
+            if (filter === "incorrect") filterEmptyMsg.textContent = "No incorrect questions yet — great job!";
+            else if (filter === "saved") filterEmptyMsg.textContent = "No questions bookmarked yet. Press S to save.";
+            else filterEmptyMsg.textContent = "No questions match this filter.";
+            filterEmptyMsg.style.display = "";
+          } else {
+            filterEmptyMsg.style.display = "none";
+          }
+        }
+      }
+
+      function checkAnswer() {
+        var q = getCurrentQuestion();
+        var s = localState[q.questionId];
+        if (!s || s.isAnswered || !s.selectedOptionId) return;
+
         clearError();
         submitBtn.disabled = true;
 
-        var selectedOptionId = parseInt(checkedInput.value, 10);
         var formData = new URLSearchParams();
-        formData.append('__RequestVerificationToken', csrfToken);
-        formData.append('SelectedOptionId', selectedOptionId);
+        formData.append("__RequestVerificationToken", csrfToken);
+        formData.append("SelectedOptionId", s.selectedOptionId);
 
-        fetch('/practice/' + sessionId + '/questions/' + questionId + '/answer?displayOrder=' + displayOrder, {
-          method: 'POST',
+        fetch("/practice/" + sessionId + "/questions/" + q.questionId + "/answer?displayOrder=" + q.displayOrder, {
+          method: "POST",
           headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'RequestVerificationToken': csrfToken,
-            'X-Requested-With': 'XMLHttpRequest',
-            'Accept': 'application/json'
+            "Content-Type": "application/x-www-form-urlencoded",
+            "RequestVerificationToken": csrfToken,
+            "X-Requested-With": "XMLHttpRequest",
+            "Accept": "application/json"
           },
           body: formData.toString()
         })
         .then(function (res) {
           if (!res.ok) {
             return res.json().then(function (errData) {
-              var err = new Error(errData.error || ('Server returned HTTP ' + res.status));
+              var err = new Error(errData.error || ("Server returned HTTP " + res.status));
               err.code = errData.code;
-              err.status = res.status;
               throw err;
             }).catch(function (fallback) {
-              if (fallback.code || fallback.status) throw fallback;
-              var err = new Error('Server returned HTTP ' + res.status);
-              err.status = res.status;
-              throw err;
+              if (fallback.code) throw fallback;
+              throw new Error("Server returned HTTP " + res.status);
             });
           }
           return res.json();
         })
         .then(function (data) {
-          // Disable all radio buttons
-          var allRadios = form.querySelectorAll('input[type="radio"]');
-          for (var i = 0; i < allRadios.length; i++) {
-            allRadios[i].disabled = true;
-          }
+          s.isAnswered = true;
+          s.isCorrect = data.isCorrect;
+          s.correctOptionId = data.correctOptionId;
+          s.explanation = data.explanation;
+          s.transcript = data.transcript;
+          if (data.isSaved) s.isSaved = true;
+          if (data.isSessionFinished) isSessionFinished = true;
 
-          var allLabels = form.querySelectorAll('.option');
-          for (var j = 0; j < allLabels.length; j++) {
-            var lbl = allLabels[j];
-            var inp = lbl.querySelector('input');
-            var optId = inp ? parseInt(inp.value, 10) : null;
-
-            if (optId === data.correctOptionId) {
-              lbl.classList.add('option--correct');
-              var correctBadge = document.createElement('span');
-              correctBadge.className = 'badge badge--success';
-              correctBadge.textContent = (optId === data.selectedOptionId) ? 'Your answer · correct' : 'Correct answer';
-              lbl.appendChild(correctBadge);
-            } else if (optId === data.selectedOptionId && !data.isCorrect) {
-              lbl.classList.add('option--wrong');
-              var wrongBadge = document.createElement('span');
-              wrongBadge.className = 'badge badge--danger';
-              wrongBadge.textContent = 'Your answer';
-              lbl.appendChild(wrongBadge);
-            }
-          }
-
-          // Update status badge
-          if (data.isCorrect) {
-            statusBadge.className = 'badge badge--success';
-            statusBadge.textContent = 'Accuracy';
-            statusBadge.style.display = '';
-          } else {
-            statusBadge.className = 'badge badge--danger';
-            statusBadge.textContent = 'Incorrect';
-            statusBadge.style.display = '';
-          }
-
-          // Show explanation
-          if (data.explanation) {
-            var explainDiv = document.createElement('div');
-            explainDiv.className = 'explain mt-4';
-            var titleDiv = document.createElement('div');
-            titleDiv.className = 'explain__title';
-            titleDiv.textContent = 'Explanation';
-            explainDiv.appendChild(titleDiv);
-
-            var pDesc = document.createElement('p');
-            pDesc.className = 'no-margin';
-            pDesc.textContent = data.explanation;
-            explainDiv.appendChild(pDesc);
-
-            if (data.transcript) {
-              var trDiv = document.createElement('div');
-              trDiv.className = 'explain__transcript mt-2';
-              trDiv.innerHTML = '<strong>Transcript:</strong> ' + data.transcript;
-              explainDiv.appendChild(trDiv);
-            }
-
-            explanationContainer.appendChild(explainDiv);
-          }
-
-          // Update save button if question was auto-saved (e.g. incorrect answer)
-          if (saveToggleBtn && data.isSaved) {
-            saveToggleBtn.setAttribute('data-is-saved', 'true');
-            saveToggleBtn.setAttribute('aria-pressed', 'true');
-            saveToggleBtn.textContent = 'Saved';
-            saveToggleBtn.title = 'Question saved to your bank. Click to remove.';
-          }
-
-          // Replace controls with Next button
-          var nextHref = data.isSessionFinished
-            ? ('/practice/' + sessionId + '/summary')
-            : ('/practice/' + sessionId + '?q=' + (data.nextQuestionDisplayOrder || (displayOrder + 1)));
-
-          var nextText = data.isSessionFinished ? 'View summary' : 'Next question';
-
-          controlsRow.innerHTML = '<div class="row row--between w-100">' +
-            '<a class="btn btn--ghost" href="/saved-questions" target="_blank" rel="noopener">View saved bank</a>' +
-            '<a class="btn btn--primary btn--lg" href="' + nextHref + '">' + nextText + '</a>' +
-            '</div>';
+          renderQuestion(currentOrder);
         })
         .catch(function (err) {
-          console.error('Failed to submit answer', err);
+          console.error("Failed to submit answer", err);
           submitBtn.disabled = false;
-
-          if (err.code === 'PRACTICE_SESSION_FINISHED') {
-            showError('This practice session has already been finished.');
-            controlsRow.innerHTML = '<div class="row row--between w-100">' +
-              '<div></div>' +
-              '<a class="btn btn--primary btn--lg" href="/practice/' + sessionId + '/summary">View summary</a>' +
-              '</div>';
-            return;
-          }
-
-          if (err.code === 'PRACTICE_INVALID_OPTION') {
-            showError('The selected option is invalid for this question. Please select a valid option.');
-            return;
-          }
-
-          if (err.code === 'PRACTICE_SESSION_NOT_FOUND') {
-            showError('This practice session was not found.');
-            controlsRow.innerHTML = '<div class="row row--between w-100">' +
-              '<div></div>' +
-              '<a class="btn btn--primary btn--lg" href="/practice">Back to practice</a>' +
-              '</div>';
-            return;
-          }
-
-          if (err.code && err.message) {
-            showError(err.message);
-            return;
-          }
-
-          showError('Your answer could not be saved. Your network connection may be unstable. Please try again.');
+          showError(err.message || "Your answer could not be verified. Please check connection and try again.");
         });
+      }
+
+      function skipQuestion() {
+        var q = getCurrentQuestion();
+        var s = localState[q.questionId];
+        if (!s || s.isAnswered) return;
+
+        clearError();
+        if (btnSkip) btnSkip.disabled = true;
+
+        var formData = new URLSearchParams();
+        formData.append("__RequestVerificationToken", csrfToken);
+        formData.append("Action", "skip");
+
+        fetch("/practice/" + sessionId + "/questions/" + q.questionId + "/answer?displayOrder=" + q.displayOrder, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "RequestVerificationToken": csrfToken,
+            "X-Requested-With": "XMLHttpRequest",
+            "Accept": "application/json"
+          },
+          body: formData.toString()
+        })
+        .then(function (res) {
+          if (!res.ok) throw new Error("Skip failed");
+          return res.json();
+        })
+        .then(function (data) {
+          s.isAnswered = true;
+          s.isSkipped = true;
+          s.correctOptionId = data.correctOptionId;
+          s.explanation = data.explanation;
+          s.transcript = data.transcript;
+          if (data.isSessionFinished) isSessionFinished = true;
+
+          if (currentOrder < totalQuestions) {
+            renderQuestion(currentOrder + 1);
+          } else {
+            renderQuestion(currentOrder);
+          }
+        })
+        .catch(function (err) {
+          console.error("Skip error:", err);
+          if (btnSkip) btnSkip.disabled = false;
+          showError("Could not skip question. Please try again.");
+        });
+      }
+
+      function revealHint() {
+        var q = getCurrentQuestion();
+        var s = localState[q.questionId];
+        if (!s || s.hintUsed || s.isAnswered) return;
+
+        clearError();
+        if (showHintBtn) showHintBtn.disabled = true;
+
+        fetch("/practice/" + sessionId + "/questions/" + q.questionId + "/hint", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "RequestVerificationToken": csrfToken,
+            "X-Requested-With": "XMLHttpRequest",
+            "Accept": "application/json"
+          },
+          body: "__RequestVerificationToken=" + encodeURIComponent(csrfToken)
+        })
+        .then(function (res) {
+          if (!res.ok) throw new Error("Hint fetch failed");
+          return res.json();
+        })
+        .then(function (data) {
+          s.hintUsed = true;
+          s.hint = data.hint;
+          renderQuestion(currentOrder);
+        })
+        .catch(function (err) {
+          console.error("Hint error:", err);
+          if (showHintBtn) showHintBtn.disabled = false;
+          showError("Could not reveal hint. Please try again.");
+        });
+      }
+
+      function toggleSaveQuestion() {
+        var q = getCurrentQuestion();
+        var s = localState[q.questionId];
+        if (!s) return;
+
+        var isCurrentlySaved = s.isSaved;
+        if (saveToggleBtn) saveToggleBtn.disabled = true;
+
+        var formData = new URLSearchParams();
+        formData.append("__RequestVerificationToken", csrfToken);
+        formData.append("currentlySaved", isCurrentlySaved ? "true" : "false");
+
+        fetch("/saved-questions/" + q.questionId + "/toggle", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "RequestVerificationToken": csrfToken,
+            "X-Requested-With": "XMLHttpRequest",
+            "Accept": "application/json"
+          },
+          body: formData.toString()
+        })
+        .then(function (res) {
+          if (!res.ok) throw new Error("Toggle saved failed");
+          return res.json();
+        })
+        .then(function (resData) {
+          if (saveToggleBtn) saveToggleBtn.disabled = false;
+          s.isSaved = resData.isSaved;
+          renderQuestion(currentOrder);
+          showToast(resData.isSaved ? "Question saved to your bank" : "Question removed from your bank");
+        })
+        .catch(function (err) {
+          console.error("Save toggle error:", err);
+          if (saveToggleBtn) saveToggleBtn.disabled = false;
+          showError("Could not update bookmark. Please try again.");
+        });
+      }
+
+      // Event Listeners
+      if (btnPrev) {
+        btnPrev.addEventListener("click", function () {
+          if (currentOrder > 1) renderQuestion(currentOrder - 1);
+        });
+      }
+
+      if (submitBtn) {
+        submitBtn.addEventListener("click", function () {
+          var q = getCurrentQuestion();
+          var s = localState[q.questionId];
+          if (s && s.isAnswered) {
+            if (currentOrder < totalQuestions) {
+              renderQuestion(currentOrder + 1);
+            } else {
+              window.location.href = "/practice/" + sessionId + "/summary";
+            }
+          } else {
+            checkAnswer();
+          }
+        });
+      }
+
+      if (btnSkip) btnSkip.addEventListener("click", skipQuestion);
+      if (showHintBtn) showHintBtn.addEventListener("click", revealHint);
+      if (saveToggleBtn) saveToggleBtn.addEventListener("click", toggleSaveQuestion);
+
+      // Navigator grid delegation
+      var navGrid = document.getElementById("navigator-grid");
+      if (navGrid) {
+        navGrid.addEventListener("click", function (e) {
+          var target = e.target.closest(".navigator__cell");
+          if (!target || !target.dataset.displayOrder) return;
+          var order = parseInt(target.dataset.displayOrder, 10);
+          if (order > 0) renderQuestion(order);
+        });
+      }
+
+      // Filter tabs delegation
+      var filtersContainer = document.getElementById("navigator-filters");
+      if (filtersContainer) {
+        filtersContainer.addEventListener("click", function (e) {
+          var target = e.target.closest("button[data-filter]");
+          if (!target) return;
+          applyFilter(target.dataset.filter);
+        });
+      }
+
+      // Controls Modal toggles
+      function openModal() {
+        if (controlsModal) controlsModal.style.display = "";
+      }
+      function closeModal() {
+        if (controlsModal) controlsModal.style.display = "none";
+      }
+
+      if (btnControlsModal) btnControlsModal.addEventListener("click", openModal);
+      if (btnCloseControlsModal) btnCloseControlsModal.addEventListener("click", closeModal);
+      if (btnModalGotIt) btnModalGotIt.addEventListener("click", closeModal);
+      if (controlsModal) {
+        controlsModal.addEventListener("click", function (e) {
+          if (e.target === controlsModal) closeModal();
+        });
+      }
+
+      // Keyboard navigation
+      document.addEventListener("keydown", function (e) {
+        var isModalOpen = controlsModal && controlsModal.style.display !== "none";
+        if (isModalOpen) {
+          if (e.key === "Escape" || e.key === "?") {
+            e.preventDefault();
+            closeModal();
+          }
+          return;
+        }
+
+        var activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : "";
+        if (activeTag === "input" || activeTag === "textarea" || activeTag === "select") return;
+        if ((e.key === "Enter" || e.key === " ") && (activeTag === "button" || activeTag === "a")) return;
+
+        if (e.key === "Escape") {
+          closeModal();
+          return;
+        }
+
+        if (e.key === "?") {
+          e.preventDefault();
+          openModal();
+          return;
+        }
+
+        // Option selection: 1 - 4
+        if (e.key === "1" || e.key === "2" || e.key === "3" || e.key === "4") {
+          var q = getCurrentQuestion();
+          var s = localState[q.questionId];
+          if (!s || s.isAnswered) return;
+          var index = parseInt(e.key, 10) - 1;
+          if (index >= 0 && index < q.options.length) {
+            e.preventDefault();
+            var opt = q.options[index];
+            s.selectedOptionId = opt.optionId;
+            var radio = document.querySelector('input.js-option-radio[value="' + opt.optionId + '"]');
+            if (radio) {
+              radio.checked = true;
+              optionList.querySelectorAll(".option").forEach(function (el) { el.classList.remove("is-selected"); });
+              radio.closest(".option").classList.add("is-selected");
+              updateSubmitButtonState();
+            }
+          }
+          return;
+        }
+
+        // Enter or Space: Check Answer if unanswered, Next if answered
+        if (e.key === "Enter" || e.key === " ") {
+          var q = getCurrentQuestion();
+          var s = localState[q.questionId];
+          if (!s) return;
+
+          e.preventDefault();
+          if (!s.isAnswered) {
+            checkAnswer();
+          } else {
+            if (currentOrder < totalQuestions) {
+              renderQuestion(currentOrder + 1);
+            } else {
+              window.location.href = "/practice/" + sessionId + "/summary";
+            }
+          }
+          return;
+        }
+
+        // H: Hint
+        if (e.key === "h" || e.key === "H") {
+          e.preventDefault();
+          revealHint();
+          return;
+        }
+
+        // S: Save
+        if (e.key === "s" || e.key === "S") {
+          e.preventDefault();
+          toggleSaveQuestion();
+          return;
+        }
+
+        // K: Skip
+        if (e.key === "k" || e.key === "K") {
+          e.preventDefault();
+          skipQuestion();
+          return;
+        }
+
+        // N: Next
+        if (e.key === "n" || e.key === "N") {
+          e.preventDefault();
+          if (currentOrder < totalQuestions) renderQuestion(currentOrder + 1);
+          return;
+        }
+
+        // P: Prev
+        if (e.key === "p" || e.key === "P") {
+          e.preventDefault();
+          if (currentOrder > 1) renderQuestion(currentOrder - 1);
+          return;
+        }
       });
+
+      // Initial render on page load
+      renderQuestion(currentOrder);
     })();
   </script>
 </body>

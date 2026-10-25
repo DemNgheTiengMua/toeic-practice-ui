@@ -352,6 +352,19 @@
     if (rewindButton) rewindButton.addEventListener("click", function () { skip(-5); });
     if (forwardButton) forwardButton.addEventListener("click", function () { skip(5); });
 
+    var speedButtons = player.querySelectorAll(".exam-audio__speed-btn");
+    if (speedButtons.length > 0) {
+      speedButtons.forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var speed = parseFloat(btn.dataset.speed) || 1.0;
+          audio.playbackRate = speed;
+          speedButtons.forEach(function (b) {
+            b.classList.toggle("is-active", b === btn);
+          });
+        });
+      });
+    }
+
     if (volumeSlider) {
       var audioPreferences = window.EeAudio ? window.EeAudio.readPreferences() : null;
       if (audioPreferences) {

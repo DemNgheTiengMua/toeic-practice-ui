@@ -83,6 +83,14 @@ public sealed record GradedAnswerDto(
     int? NextQuestionDisplayOrder,
     bool IsSaved = false);
 
+public sealed record PracticeNavigatorItemDto(
+    int QuestionId,
+    int DisplayOrder,
+    bool IsAnswered,
+    bool? IsCorrect,
+    bool IsSaved,
+    bool IsCurrent);
+
 public sealed record QuestionOutcomeDto(
     int DisplayOrder,
     int QuestionId,

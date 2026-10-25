@@ -373,6 +373,48 @@
   border-color: var(--sign-blue);
 }
 
+.navigator__cell.is-correct {
+  background: var(--sign-green, #0a6b3c);
+  border-color: var(--sign-green, #0a6b3c);
+  color: #ffffff;
+  font-weight: 700;
+}
+.navigator__cell.is-incorrect {
+  background: var(--sign-red, #b31217);
+  border-color: var(--sign-red, #b31217);
+  color: #ffffff;
+  font-weight: 700;
+}
+.navigator__cell.is-skipped {
+  background: var(--color-track, #e6ebed);
+  border-color: var(--color-border, #ccd2d6);
+  color: var(--color-text-muted, #59636e);
+}
+
+/* Toast Notification (Bảng hiệu phòng thi) */
+.toast-container {
+  position: fixed;
+  bottom: var(--space-4);
+  right: var(--space-4);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  pointer-events: none;
+}
+.toast {
+  pointer-events: auto;
+  background: #14181d;
+  color: #ffffff;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid #14181d;
+  border-radius: 0;
+  font-family: var(--font-sign, "IBM Plex Sans Condensed", sans-serif);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  box-shadow: none;
+}
+
 /* ===== Skeleton ===== */
 /* ===== Loading skeleton ===== */
 /* A pulsing placeholder that indicates content is loading. The pulse is gentle
@@ -658,6 +700,33 @@ dialog:not([open]) {
   font-weight: 700;
   white-space: nowrap;
   flex-shrink: 0;
+}
+
+.exam-audio__speed {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #14181d;
+  flex-shrink: 0;
+}
+.exam-audio__speed-btn {
+  padding: 4px 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  border: none;
+  border-radius: 0;
+  background: var(--color-surface);
+  color: var(--ink);
+  cursor: pointer;
+  line-height: 1;
+}
+.exam-audio__speed-btn:not(:last-child) {
+  border-right: 1px solid #14181d;
+}
+.exam-audio__speed-btn.is-active,
+.exam-audio__speed-btn:hover {
+  background: #14181d;
+  color: #ffffff;
 }
 .exam-audio__btn-play:hover:not(:disabled) {
   background: var(--sign-blue);

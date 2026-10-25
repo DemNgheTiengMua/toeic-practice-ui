@@ -15,7 +15,12 @@ public sealed class StartPracticeFormModel
     public string FeedbackMode { get; set; } = "immediate";
 }
 
-public sealed record PracticeTakeViewModel(PracticeSessionDto Session, PracticeQuestionDto Question, string? ErrorMessage = null);
+public sealed record PracticeTakeViewModel(
+    PracticeSessionDto Session,
+    PracticeQuestionDto Question,
+    string? ErrorMessage = null,
+    IReadOnlyList<PracticeQuestionDto>? Questions = null,
+    IReadOnlyList<PracticeNavigatorItemDto>? Navigator = null);
 
 public sealed class SubmitAnswerFormModel
 {

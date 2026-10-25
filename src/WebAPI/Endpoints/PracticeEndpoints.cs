@@ -112,6 +112,45 @@ public static class PracticeEndpoints
             }
         });
 
+        practice.MapGet("/sessions/{sessionId:int}/questions", async Task<IResult> (
+            int sessionId,
+            HttpContext http,
+            IPracticeService practiceService,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var questions = await practiceService.GetSessionQuestionsAsync(CurrentUserId(http), sessionId, cancellationToken);
+                return Results.Ok(questions.Select(q => new PracticeQuestionDto(
+                    q.SessionId,
+                    q.SectionName,
+                    q.QuestionId,
+                    q.DisplayOrder,
+                    q.TotalQuestions,
+                    q.Stem,
+                    q.CategoryName,
+                    q.Hint,
+                    q.HintUsed,
+                    q.Options.Select(o => new PracticeOptionDto(o.OptionId, o.Label, o.Text)).ToList(),
+                    q.SelectedOptionId,
+                    q.IsCorrect,
+                    q.CorrectOptionId,
+                    q.Explanation,
+                    q.Transcript,
+                    q.Passage,
+                    q.AudioPath,
+                    q.ImagePath,
+                    q.ImageAlt,
+                    q.IsSaved,
+                    q.AudioStartMs,
+                    q.AudioEndMs)).ToList());
+            }
+            catch (PracticeException ex) when (ex.Code == PracticeException.SessionNotFound)
+            {
+                return Problem(StatusCodes.Status404NotFound, "Session not found", ApiError.Codes.PracticeSessionNotFound, ex.Message);
+            }
+        });
+
         practice.MapGet("/sessions/{sessionId:int}/questions/{displayOrder:int}", async Task<IResult> (
             int sessionId,
             int displayOrder,

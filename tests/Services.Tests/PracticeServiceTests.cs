@@ -415,4 +415,87 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         Assert.Equal(PracticeStatus.InProgress, catalog.UnfinishedSession.Status);
         Assert.Equal(secId, catalog.UnfinishedSession.SectionId);
     }
+
+    [Fact]
+    public async Task GetSessionQuestions_returns_all_questions_with_anti_cheat_rules_and_saved_state()
+    {
+        var certCode = Unique("SQ");
+        var (_, secId, _, qIds, correctOpts, _) = await SeedCertificateWithQuestionsAsync(certCode);
+        var userId = await SeedLearnerAsync(certCode);
+        var (practice, _) = CreateServices();
+
+        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId, 3));
+
+        // Answer question 1
+        await practice.SubmitAnswerAsync(userId, session.SessionId, qIds[0], new SubmitPracticeAnswerInput(correctOpts[0]));
+
+        // Question 2: save to bank
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            db.SavedQuestions.Add(new DataAccess.Scaffold.SavedQuestion
+            {
+                UserId = userId,
+                QuestionId = qIds[1],
+                Source = "manual",
+                SavedAt = DateTimeOffset.UtcNow
+            });
+            await db.SaveChangesAsync();
+        }
+
+        // Question 3 remains unanswered
+
+        var questions = await practice.GetSessionQuestionsAsync(userId, session.SessionId);
+
+        Assert.Equal(3, questions.Count);
+        Assert.Equal(qIds[0], questions[0].QuestionId);
+        Assert.Equal(qIds[1], questions[1].QuestionId);
+        Assert.Equal(qIds[2], questions[2].QuestionId);
+
+        // Anti-cheat policy verification:
+        // Question 1 was answered -> correctOptionId & explanation released
+        Assert.True(questions[0].IsCorrect);
+        Assert.NotNull(questions[0].CorrectOptionId);
+        Assert.NotNull(questions[0].Explanation);
+
+        // Question 2 was not answered, but saved -> correctOptionId & explanation withheld, IsSaved = true
+        Assert.Null(questions[1].CorrectOptionId);
+        Assert.Null(questions[1].Explanation);
+        Assert.True(questions[1].IsSaved);
+
+        // Question 3 was not answered -> correctOptionId & explanation withheld, IsSaved = false
+        Assert.Null(questions[2].CorrectOptionId);
+        Assert.Null(questions[2].Explanation);
+        Assert.False(questions[2].IsSaved);
+    }
+
+    [Fact]
+    public async Task SubmitAnswer_out_of_order_does_not_finish_session_when_questions_remain()
+    {
+        var certCode = Unique("NO");
+        var (_, secId, _, qIds, correctOpts, _) = await SeedCertificateWithQuestionsAsync(certCode);
+        var userId = await SeedLearnerAsync(certCode);
+        var (practice, _) = CreateServices();
+
+        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId, 3));
+
+        // Jump directly to Question 3 (the last question) and answer it
+        var resultQ3 = await practice.SubmitAnswerAsync(userId, session.SessionId, qIds[2], new SubmitPracticeAnswerInput(correctOpts[2]));
+
+        // Session must NOT be finished yet because Q1 and Q2 remain unanswered
+        Assert.False(resultQ3.IsSessionFinished);
+
+        var sessionInfo = await practice.GetSessionInfoAsync(userId, session.SessionId);
+        Assert.Equal(PracticeStatus.InProgress, sessionInfo.Status);
+
+        // Now answering Question 1 and Question 2 should succeed without SessionAlreadyFinished
+        var resultQ1 = await practice.SubmitAnswerAsync(userId, session.SessionId, qIds[0], new SubmitPracticeAnswerInput(correctOpts[0]));
+        Assert.False(resultQ1.IsSessionFinished);
+
+        var resultQ2 = await practice.SubmitAnswerAsync(userId, session.SessionId, qIds[1], new SubmitPracticeAnswerInput(correctOpts[1]));
+        // Now all questions are answered -> session finishes!
+        Assert.True(resultQ2.IsSessionFinished);
+
+        var finalSessionInfo = await practice.GetSessionInfoAsync(userId, session.SessionId);
+        Assert.Equal(PracticeStatus.Finished, finalSessionInfo.Status);
+    }
 }

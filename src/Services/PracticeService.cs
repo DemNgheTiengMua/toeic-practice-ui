@@ -34,6 +34,8 @@ public interface IPracticeService
     Task<GradedPracticeAnswerResult> SubmitAnswerAsync(int userId, int sessionId, int questionId, SubmitPracticeAnswerInput input, CancellationToken cancellationToken = default);
 
     Task<PracticeSummary> GetSummaryAsync(int userId, int sessionId, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<PracticeQuestionView>> GetSessionQuestionsAsync(int userId, int sessionId, CancellationToken cancellationToken = default);
 }
 
 public sealed class PracticeService(
@@ -42,6 +44,90 @@ public sealed class PracticeService(
     Microsoft.Extensions.Configuration.IConfiguration? config = null) : IPracticeService
 {
     public const int DefaultMaxSavedSessionsPerCertificate = 20;
+
+    public async Task<IReadOnlyList<PracticeQuestionView>> GetSessionQuestionsAsync(int userId, int sessionId, CancellationToken cancellationToken = default)
+    {
+        var session = await db.PracticeSessions
+            .AsNoTracking()
+            .Include(s => s.Section)
+            .Where(s => s.SessionId == sessionId && s.UserId == userId)
+            .SingleOrDefaultAsync(cancellationToken)
+            ?? throw new PracticeException(PracticeException.SessionNotFound, $"Practice session {sessionId} was not found.");
+
+        var answers = await db.PracticeAnswers
+            .AsNoTracking()
+            .Include(pa => pa.Question)
+                .ThenInclude(q => q.Group)
+            .Include(pa => pa.Question)
+                .ThenInclude(q => q.Category)
+            .Include(pa => pa.Question)
+                .ThenInclude(q => q.QuestionOptionQuestionNavigations)
+            .Where(pa => pa.SessionId == sessionId)
+            .OrderBy(pa => pa.DisplayOrder)
+            .ToListAsync(cancellationToken);
+
+        var isFinished = session.Status == PracticeStatus.Finished.ToCode();
+        var questionIds = answers.Select(a => a.QuestionId).ToList();
+
+        var savedQuestionIds = await db.SavedQuestions
+            .AsNoTracking()
+            .Where(sq => sq.UserId == userId && questionIds.Contains(sq.QuestionId))
+            .Select(sq => sq.QuestionId)
+            .ToHashSetAsync(cancellationToken);
+
+        var result = new List<PracticeQuestionView>(answers.Count);
+        foreach (var answer in answers)
+        {
+            var q = answer.Question;
+            var group = q.Group;
+            var isAnswered = answer.SelectedOptionId.HasValue || answer.IsCorrect.HasValue;
+
+            var allOptions = q.QuestionOptionQuestionNavigations
+                .OrderBy(o => o.Label)
+                .Select(o => new PracticeQuestionOption(o.OptionId, o.Label, o.Text))
+                .ToList();
+
+            int? correctOptionId = null;
+            string? explanation = null;
+            string? transcript = null;
+
+            if (isAnswered || isFinished)
+            {
+                correctOptionId = q.QuestionOptionQuestionNavigations.FirstOrDefault(o => o.IsCorrect)?.OptionId;
+                explanation = q.Explanation;
+                transcript = group.Transcript;
+            }
+
+            var hintText = answer.HintUsed ? q.Hint : null;
+            var isSaved = savedQuestionIds.Contains(q.QuestionId);
+
+            result.Add(new PracticeQuestionView(
+                sessionId,
+                session.Section.Name,
+                q.QuestionId,
+                answer.DisplayOrder,
+                session.QuestionCount,
+                q.Stem,
+                q.Category?.Name,
+                hintText,
+                answer.HintUsed,
+                allOptions,
+                answer.SelectedOptionId,
+                answer.IsCorrect,
+                correctOptionId,
+                explanation,
+                transcript,
+                group.Passage,
+                group.AudioPath,
+                group.ImagePath,
+                group.ImageAlt,
+                isSaved,
+                group.AudioStartMs,
+                group.AudioEndMs));
+        }
+
+        return result;
+    }
 
     /// <summary>The maximum number of recent standalone practice sessions (and their associated answer logs)
     /// retained per learner per certificate. Older sessions exceeding this limit are pruned to keep storage
@@ -457,8 +543,10 @@ public sealed class PracticeService(
             .CountAsync(pa => pa.SessionId == sessionId && pa.IsCorrect == true, cancellationToken);
         answer.Session.CorrectCount = correctCount;
 
-        // Check if this was the last question in the session
-        var isLast = answer.DisplayOrder >= answer.Session.QuestionCount;
+        // Check if all questions in the session have been evaluated
+        var hasRemaining = await db.PracticeAnswers
+            .AnyAsync(pa => pa.SessionId == sessionId && pa.AnswerId != answer.AnswerId && pa.SelectedOptionId == null && pa.IsCorrect == null, cancellationToken);
+        var isLast = !hasRemaining;
         if (isLast)
         {
             answer.Session.Status = PracticeStatus.Finished.ToCode();
@@ -533,7 +621,23 @@ public sealed class PracticeService(
                 .AnyAsync(sq => sq.UserId == userId && sq.QuestionId == questionId, cancellationToken);
         }
 
-        int? nextDisplayOrder = isLast ? null : answer.DisplayOrder + 1;
+        int? nextDisplayOrder = null;
+        if (!isLast)
+        {
+            var nextUnanswered = await db.PracticeAnswers
+                .Where(pa => pa.SessionId == sessionId && pa.AnswerId != answer.AnswerId && pa.DisplayOrder > answer.DisplayOrder && pa.SelectedOptionId == null && pa.IsCorrect == null)
+                .OrderBy(pa => pa.DisplayOrder)
+                .Select(pa => (int?)pa.DisplayOrder)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            nextDisplayOrder = nextUnanswered ?? await db.PracticeAnswers
+                .Where(pa => pa.SessionId == sessionId && pa.AnswerId != answer.AnswerId && pa.SelectedOptionId == null && pa.IsCorrect == null)
+                .OrderBy(pa => pa.DisplayOrder)
+                .Select(pa => (int?)pa.DisplayOrder)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            nextDisplayOrder ??= (answer.DisplayOrder < answer.Session.QuestionCount ? answer.DisplayOrder + 1 : 1);
+        }
 
         return new GradedPracticeAnswerResult(
             answer.IsCorrect,

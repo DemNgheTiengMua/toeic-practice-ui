@@ -194,6 +194,12 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
     public Task<PracticeQuestionDto> GetPracticeQuestionAsync(int sessionId, int displayOrder, string bearerToken, CancellationToken cancellationToken = default) =>
         GetAuthorizedAsync<PracticeQuestionDto>($"api/learner/practice/sessions/{sessionId}/questions/{displayOrder}", bearerToken, cancellationToken);
 
+    public async Task<IReadOnlyList<PracticeQuestionDto>> GetPracticeSessionQuestionsAsync(int sessionId, string bearerToken, CancellationToken cancellationToken = default)
+    {
+        var list = await GetAuthorizedAsync<List<PracticeQuestionDto>>($"api/learner/practice/sessions/{sessionId}/questions", bearerToken, cancellationToken);
+        return list ?? (IReadOnlyList<PracticeQuestionDto>)[];
+    }
+
     public async Task<RevealHintResponse> RevealPracticeHintAsync(int sessionId, int questionId, string bearerToken, CancellationToken cancellationToken = default)
     {
         using var message = new HttpRequestMessage(HttpMethod.Post, $"api/learner/practice/sessions/{sessionId}/questions/{questionId}/hint");
@@ -1242,6 +1248,9 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
 
     public Task<PracticeQuestionDto> GetPracticeQuestionAsync(int sessionId, int displayOrder, CancellationToken cancellationToken = default) =>
         GetPracticeQuestionAsync(sessionId, displayOrder, string.Empty, cancellationToken);
+
+    public Task<IReadOnlyList<PracticeQuestionDto>> GetPracticeSessionQuestionsAsync(int sessionId, CancellationToken cancellationToken = default) =>
+        GetPracticeSessionQuestionsAsync(sessionId, string.Empty, cancellationToken);
 
     public Task<RevealHintResponse> RevealPracticeHintAsync(int sessionId, int questionId, CancellationToken cancellationToken = default) =>
         RevealPracticeHintAsync(sessionId, questionId, string.Empty, cancellationToken);

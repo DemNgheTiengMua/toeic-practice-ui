@@ -70,6 +70,43 @@ public sealed class PracticeControllerTests
     }
 
     [Fact]
+    public async Task Take_with_active_session_populates_full_session_questions_and_navigator()
+    {
+        var q1 = new PracticeQuestionDto(
+            42, "Part 5", 101, 1, 2, "Question 1", "Grammar", null, false,
+            [new PracticeOptionDto(1, "A", "Opt A"), new PracticeOptionDto(2, "B", "Opt B")],
+            1, true, 1, "Explanation 1", null, null, null, null, null, false);
+        var q2 = new PracticeQuestionDto(
+            42, "Part 5", 102, 2, 2, "Question 2", "Vocab", null, false,
+            [new PracticeOptionDto(3, "A", "Opt A"), new PracticeOptionDto(4, "B", "Opt B")],
+            null, null, null, null, null, null, null, null, null, true);
+
+        var api = new TestApiClient
+        {
+            Session = new PracticeSessionDto(
+                42, 5, "P5", "Part 5", ModalityDto.Reading, 2, PracticeStatusDto.InProgress, 1, QuestionSourceDto.All, FeedbackModeDto.Immediate, DateTimeOffset.UtcNow, null),
+            SessionQuestions = [q1, q2],
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.Take(42, 2, CancellationToken.None);
+
+        var viewResult = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<PracticeTakeViewModel>(viewResult.Model);
+        Assert.NotNull(model.Questions);
+        Assert.Equal(2, model.Questions.Count);
+        Assert.Equal(102, model.Question.QuestionId);
+        Assert.NotNull(model.Navigator);
+        Assert.Equal(2, model.Navigator.Count);
+        Assert.True(model.Navigator[0].IsAnswered);
+        Assert.True(model.Navigator[0].IsCorrect);
+        Assert.False(model.Navigator[0].IsCurrent);
+        Assert.False(model.Navigator[1].IsAnswered);
+        Assert.True(model.Navigator[1].IsSaved);
+        Assert.True(model.Navigator[1].IsCurrent);
+    }
+
+    [Fact]
     public async Task Take_with_active_session_returns_question_view()
     {
         var api = new TestApiClient
@@ -304,6 +341,7 @@ public sealed class PracticeControllerTests
         public PracticeCatalogDto? Catalog { get; set; }
         public PracticeSessionDto? Session { get; set; }
         public PracticeQuestionDto? Question { get; set; }
+        public IReadOnlyList<PracticeQuestionDto>? SessionQuestions { get; set; }
         public RevealHintResponse? HintResponse { get; set; }
         public GradedAnswerDto? GradedResult { get; set; }
         public PracticeSummaryDto? Summary { get; set; }
@@ -321,6 +359,9 @@ public sealed class PracticeControllerTests
 
         public Task<PracticeQuestionDto> GetPracticeQuestionAsync(int sessionId, int displayOrder, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<PracticeQuestionDto>(ExceptionToThrow) : Task.FromResult(Question!);
+
+        public Task<IReadOnlyList<PracticeQuestionDto>> GetPracticeSessionQuestionsAsync(int sessionId, CancellationToken cancellationToken = default) =>
+            ExceptionToThrow != null ? Task.FromException<IReadOnlyList<PracticeQuestionDto>>(ExceptionToThrow) : Task.FromResult(SessionQuestions ?? (Question != null ? (IReadOnlyList<PracticeQuestionDto>)[Question] : []));
 
         public Task<RevealHintResponse> RevealPracticeHintAsync(int sessionId, int questionId, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<RevealHintResponse>(ExceptionToThrow) : Task.FromResult(HintResponse!);

@@ -57,10 +57,45 @@ public sealed class PracticeController(
                 return RedirectToAction(nameof(Summary), new { sessionId });
             }
 
-            var displayOrder = q.GetValueOrDefault(0);
-            var question = await api.GetPracticeQuestionAsync(sessionId, displayOrder, cancellationToken);
+            var questions = await api.GetPracticeSessionQuestionsAsync(sessionId, cancellationToken);
 
-            return View(new PracticeTakeViewModel(session, question, TempData["ErrorMessage"] as string));
+            PracticeQuestionDto question;
+            var displayOrder = q.GetValueOrDefault(0);
+
+            if (questions != null && questions.Count > 0)
+            {
+                if (displayOrder <= 0)
+                {
+                    question = questions.FirstOrDefault(x => x.SelectedOptionId == null && x.IsCorrect == null)
+                               ?? questions[0];
+                }
+                else
+                {
+                    question = questions.FirstOrDefault(x => x.DisplayOrder == displayOrder)
+                               ?? questions[0];
+                }
+            }
+            else
+            {
+                question = await api.GetPracticeQuestionAsync(sessionId, displayOrder, cancellationToken);
+                questions = [question];
+            }
+
+            var navigator = questions.Select(item => new PracticeNavigatorItemDto(
+                item.QuestionId,
+                item.DisplayOrder,
+                item.SelectedOptionId.HasValue || item.IsCorrect.HasValue,
+                item.IsCorrect,
+                item.IsSaved,
+                item.DisplayOrder == question.DisplayOrder
+            )).ToList();
+
+            return View(new PracticeTakeViewModel(
+                session,
+                question,
+                TempData["ErrorMessage"] as string,
+                questions,
+                navigator));
         }
         catch (ApiException ex) when (ex.Status == 404 || ex.Code == ApiError.Codes.PracticeSessionNotFound || ex.Code == ApiError.Codes.PracticeQuestionNotFound)
         {

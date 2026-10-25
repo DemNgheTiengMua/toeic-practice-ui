@@ -51,6 +51,15 @@
     </button>
   }
 
+  @if (allowReplay)
+  {
+    <div class="exam-audio__speed" role="group" aria-label="Playback speed">
+      <button type="button" class="btn btn--xs exam-audio__speed-btn" data-speed="0.8">0.8x</button>
+      <button type="button" class="btn btn--xs exam-audio__speed-btn is-active" data-speed="1.0">1.0x</button>
+      <button type="button" class="btn btn--xs exam-audio__speed-btn" data-speed="1.2">1.2x</button>
+    </div>
+  }
+
   <div class="exam-audio__volume">
     <button type="button" class="btn btn--ghost btn--sm exam-audio__btn-mute" aria-label="Mute audio" title="Mute audio">
       <svg class="icon exam-audio__icon-vol" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
