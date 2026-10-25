@@ -56,4 +56,27 @@ public sealed class PracticeViewTests
         Assert.DoesNotContain("Plays once only", html);
         Assert.DoesNotContain("Replay permitted", html);
     }
+[Fact]
+    public void Take_View_Contains_Practice_QoL_Audio_Rewind_Transcript_And_Explanation_Accordion()
+    {
+        var repoRoot = TestPathHelper.FindRepoRoot();
+        var viewPath = Path.Combine(repoRoot, "src", "WebMVC", "Views", "Practice", "Take.cshtml");
+
+        Assert.True(File.Exists(viewPath), "Take.cshtml must exist");
+        var html = File.ReadAllText(viewPath);
+
+        // 1. Practice QoL audio rewind 5s button
+        Assert.Contains("id=\"btn-audio-rewind-5s\"", html);
+
+        // 2. Transcript drawer toggle and drawer container
+        Assert.Contains("id=\"btn-toggle-transcript\"", html);
+        Assert.Contains("id=\"transcript-drawer\"", html);
+
+        // 3. Dynamic 11-Component Widgets container
+        Assert.Contains("id=\"component-container\"", html);
+
+        // 4. Detailed explanation / rationale accordion
+        Assert.Contains("id=\"explanation-container\"", html);
+        Assert.Contains("accordion-explanation", html);
+    }
 }

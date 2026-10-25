@@ -37,6 +37,97 @@
   <link rel="stylesheet" href="~/css/tokens.css">
   <link rel="stylesheet" href="~/css/base.css">
   <link rel="stylesheet" href="~/css/components.css">
+  <style>
+    /* Question Component Widgets & Practice QoL Styles */
+    .option--checkbox input[type="checkbox"] {
+      width: 1.15rem;
+      height: 1.15rem;
+      accent-color: #14181d;
+    }
+    .completion-input {
+      font-family: "IBM Plex Sans", sans-serif;
+      font-size: 1rem;
+      border: 2px solid #14181d;
+      border-radius: 0;
+      box-shadow: none;
+      padding: 0.5rem 0.75rem;
+      width: 100%;
+      max-width: 480px;
+      background: #ffffff;
+    }
+    .chip-item {
+      display: inline-block;
+      border: 2px solid #14181d;
+      border-radius: 0;
+      background: #ffffff;
+      color: #14181d;
+      padding: 0.35rem 0.75rem;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      user-select: none;
+      box-shadow: none;
+    }
+    .chip-item:hover {
+      background: #e9ecef;
+    }
+    .chip-item.is-placed {
+      opacity: 0.35;
+      pointer-events: none;
+    }
+    .drop-zone {
+      min-height: 54px;
+      border: 2px dashed #14181d;
+      border-radius: 0;
+      background: #fafbfc;
+      padding: 0.5rem 0.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .drop-zone.is-hovered {
+      background: #e3ebf6;
+      border-color: #0b4ea2;
+    }
+    .accordion-explanation {
+      border: 2px solid #14181d;
+      border-radius: 0;
+      background: #ffffff;
+      box-shadow: none;
+    }
+    .accordion-explanation__header {
+      width: 100%;
+      padding: var(--space-3);
+      border: none;
+      border-radius: 0;
+      background: #f4f6f8;
+      cursor: pointer;
+      font-family: 'IBM Plex Sans Condensed', sans-serif;
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 0.95rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .accordion-explanation__header:hover {
+      background: #e9ecef;
+    }
+    .accordion-explanation__body {
+      padding: var(--space-3);
+      border-top: 1px solid #ccd2d6;
+    }
+    .transcript-drawer {
+      border: 2px solid #14181d;
+      border-radius: 0;
+      box-shadow: none;
+      background: #fbfcfd;
+      padding: var(--space-3);
+    }
+    body.exam-body-protected {
+      padding-bottom: 85px;
+    }
+  </style>
 </head>
 <body class="exam-body-protected">
   <div class="app-shell">
@@ -70,7 +161,7 @@
         <div class="exam-layout">
           <!-- Left Question Pane (0ms In-Memory Swapping) -->
           <div class="stack" id="question-pane">
-            <!-- Audio Player Container -->
+            <!-- Audio Player Container with Practice QoL 5s Rewind & Transcript Toggle -->
             <div id="practice-audio-wrapper" class="mb-3" style="@(!string.IsNullOrEmpty(q.AudioPath) ? "" : "display:none;")">
               @if (!string.IsNullOrEmpty(q.AudioPath))
               {
@@ -85,6 +176,18 @@
                     Mode: "study"
                 ))
               }
+              <div class="row mt-2" style="gap: var(--space-2); align-items: center;" id="audio-qol-controls">
+                <button type="button" class="btn btn--secondary btn--sm" id="btn-audio-rewind-5s" title="Tua lại 5 giây / Rewind 5 seconds" style="font-family: 'IBM Plex Mono', monospace; font-weight: 700;">
+                  [⏪ 5s]
+                </button>
+                <button type="button" class="btn btn--ghost btn--sm" id="btn-toggle-transcript" aria-expanded="false" style="@(!string.IsNullOrEmpty(q.Transcript) ? "" : "display:none;") font-family: 'IBM Plex Sans Condensed', sans-serif; font-weight: 700; text-transform: uppercase;">
+                  [Xem Lời thoại / Transcript]
+                </button>
+              </div>
+              <div id="transcript-drawer" class="transcript-drawer mt-2" style="display: none;">
+                <span class="text-xs uppercase text-muted font-sign" style="display:block; margin-bottom: 0.25rem; font-weight:700;">Transcript / Lời thoại:</span>
+                <p id="transcript-drawer-text" class="no-margin" style="white-space: pre-line; font-size: 0.95rem;">@(q.Transcript ?? "")</p>
+              </div>
             </div>
             @await Html.PartialAsync("_ExamAudioPlayer", new ExamAudioPlayerModel(
                 AudioPath: string.Empty,
@@ -142,7 +245,8 @@
 
               <p class="question__stem" id="question-stem-display">@q.Stem</p>
 
-              <div class="option-list" id="option-list" role="radiogroup" aria-label="Answer for question @q.DisplayOrder">
+              <!-- Option List for MCQ and MCQ_3 -->
+              <div class="option-list" id="option-list" role="radiogroup" aria-label="Answer for question @q.DisplayOrder" style="@(q.QuestionType != "mcq" && q.QuestionType != "mcq_3" && !string.IsNullOrEmpty(q.QuestionType) ? "display:none;" : "")">
                 @foreach (var opt in q.Options)
                 {
                   var isSelected = opt.OptionId == q.SelectedOptionId;
@@ -182,25 +286,44 @@
                 }
               </div>
 
+              <!-- Dynamic 11-Component Widgets (multi_select, inline_completion, dropdown, drag_drop) -->
+              <div id="component-container" class="stack mt-3" style="display:none;"></div>
+
               <!-- Hint Box -->
               <div class="hint mt-4" id="hint-box" style="@(q.HintUsed && !string.IsNullOrEmpty(q.Hint) ? "" : "display: none;")" role="note">
                 <span class="hint__label">Hint</span>
                 <span id="hint-text">@(q.Hint ?? "")</span>
               </div>
 
-              <!-- Explanation Container -->
-              <div id="explanation-container">
-                @if (isCurrentAnswered && !string.IsNullOrEmpty(q.Explanation))
+              <!-- Explanation / Rationale Accordion (Practice QoL) -->
+              <div id="explanation-container" class="mt-4">
+                @if (isCurrentAnswered && (!string.IsNullOrEmpty(q.Explanation) || !string.IsNullOrEmpty(q.AcceptedAnswersJson) || !string.IsNullOrEmpty(q.Transcript)))
                 {
-                  <div class="explain mt-4">
-                    <div class="explain__title">Explanation</div>
-                    <p class="no-margin">@q.Explanation</p>
-                    @if (!string.IsNullOrEmpty(q.Transcript))
-                    {
-                      <div class="explain__transcript mt-2">
-                        <strong>Transcript:</strong> @q.Transcript
-                      </div>
-                    }
+                  <div class="accordion-explanation" id="accordion-explanation">
+                    <button type="button" class="accordion-explanation__header" id="btn-toggle-explanation" aria-expanded="true">
+                      <span>[Xem Lời giải chi tiết / Explanation & Rationale]</span>
+                      <span id="exp-chevron">▲</span>
+                    </button>
+                    <div class="accordion-explanation__body" id="explanation-body">
+                      @if (!string.IsNullOrEmpty(q.Explanation))
+                      {
+                        <div class="font-sign uppercase text-xs mb-1" style="font-weight:700;">Giải thích chi tiết:</div>
+                        <p class="no-margin" style="white-space: pre-line;">@q.Explanation</p>
+                      }
+                      @if (!string.IsNullOrEmpty(q.AcceptedAnswersJson))
+                      {
+                        <div class="mt-3">
+                          <span class="font-sign uppercase text-xs text-muted" style="display:block; margin-bottom: 0.25rem; font-weight:700;">Đáp án chấp nhận / Accepted answers:</span>
+                          <code class="font-mono" style="padding: 0.25rem 0.5rem; background: #f4f6f8; border: 1px solid #ccd2d6; display: inline-block;">@q.AcceptedAnswersJson</code>
+                        </div>
+                      }
+                      @if (!string.IsNullOrEmpty(q.Transcript))
+                      {
+                        <div class="explain__transcript mt-3 pt-2" style="border-top: 1px dashed #ccd2d6;">
+                          <strong class="font-sign uppercase text-xs">Transcript:</strong> <span style="white-space: pre-line;">@q.Transcript</span>
+                        </div>
+                      }
+                    </div>
                   </div>
                 }
               </div>
@@ -317,7 +440,7 @@
 
   <!-- Keyboard Controls Helper Modal -->
   <div id="controls-modal" class="modal-overlay" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="controls-modal-title">
-    <div class="modal" style="max-width: 520px;">
+    <div class="modal" style="max-width: 520px; border-radius: 0; border: 2px solid #14181d;">
       <div class="modal__header row row--between">
         <h2 id="controls-modal-title" class="no-margin text-lg font-sign">Keyboard Controls</h2>
         <button type="button" class="modal__close" id="btn-close-controls-modal" aria-label="Close modal">&times;</button>
@@ -334,7 +457,7 @@
           <tbody>
             <tr>
               <td style="padding: var(--space-2);"><kbd class="kbd font-mono">1</kbd> <kbd class="kbd font-mono">2</kbd> <kbd class="kbd font-mono">3</kbd> <kbd class="kbd font-mono">4</kbd></td>
-              <td style="padding: var(--space-2);">Select option A, B, C, or D</td>
+              <td style="padding: var(--space-2);">Select option A, B, C, or D (MCQ)</td>
             </tr>
             <tr>
               <td style="padding: var(--space-2);"><kbd class="kbd font-mono">Enter</kbd> or <kbd class="kbd font-mono">Space</kbd></td>
@@ -390,14 +513,42 @@
       var dataEl = document.getElementById("practice-data");
       var localQuestions = dataEl ? JSON.parse(dataEl.textContent) : [];
 
+      function escapeHtml(str) {
+        if (!str) return "";
+        return String(str)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
+
       // In-memory state dictionary keyed by questionId
       var localState = {};
       localQuestions.forEach(function (q) {
         var isAns = q.selectedOptionId != null || q.isCorrect != null;
+        var qType = (q.questionType || 'mcq').toLowerCase();
+        var selectedIds = [];
+        if (q.selectedOptionIds && q.selectedOptionIds.length > 0) {
+          selectedIds = q.selectedOptionIds.slice();
+        } else if (q.selectedOptionIdsJson) {
+          try { selectedIds = JSON.parse(q.selectedOptionIdsJson); } catch (e) { selectedIds = []; }
+        }
+
         localState[q.questionId] = {
           questionId: q.questionId,
           displayOrder: q.displayOrder,
+          questionType: qType,
+          maxSelections: q.maxSelections,
+          allowNumber: q.allowNumber !== false,
+          acceptedAnswersJson: q.acceptedAnswersJson,
+          requiredKeywords: q.requiredKeywords,
+          minWords: q.minWords,
+          maxWords: q.maxWords,
           selectedOptionId: q.selectedOptionId,
+          selectedOptionIds: selectedIds,
+          selectedOptionIdsJson: q.selectedOptionIdsJson || (selectedIds.length > 0 ? JSON.stringify(selectedIds) : null),
+          responseText: q.responseText || '',
           isCorrect: q.isCorrect,
           isAnswered: isAns,
           isSkipped: isSessionFinished && !isAns,
@@ -406,7 +557,8 @@
           isSaved: q.isSaved,
           explanation: q.explanation,
           transcript: q.transcript,
-          correctOptionId: q.correctOptionId
+          correctOptionId: q.correctOptionId,
+          correctOptionIds: q.correctOptionIds ? q.correctOptionIds.slice() : []
         };
       });
 
@@ -426,6 +578,7 @@
       var saveToggleBtn = document.getElementById("save-toggle-btn");
       var qStemDisplay = document.getElementById("question-stem-display");
       var optionList = document.getElementById("option-list");
+      var componentContainer = document.getElementById("component-container");
       var hintBox = document.getElementById("hint-box");
       var hintText = document.getElementById("hint-text");
       var explanationContainer = document.getElementById("explanation-container");
@@ -436,6 +589,11 @@
       var submitBtn = document.getElementById("submit-btn");
 
       var audioWrapper = document.getElementById("practice-audio-wrapper");
+      var btnAudioRewind5s = document.getElementById("btn-audio-rewind-5s");
+      var btnToggleTranscript = document.getElementById("btn-toggle-transcript");
+      var transcriptDrawer = document.getElementById("transcript-drawer");
+      var transcriptDrawerText = document.getElementById("transcript-drawer-text");
+
       var passageCard = document.getElementById("passage-card");
       var passageText = document.getElementById("passage-text");
       var imageContainer = document.getElementById("image-container");
@@ -540,6 +698,30 @@
         if (filterSavedCount) filterSavedCount.textContent = String(saved);
       }
 
+      // Practice QoL 5s Rewind
+      if (btnAudioRewind5s) {
+        btnAudioRewind5s.addEventListener("click", function () {
+          if (!audioWrapper) return;
+          var audioEl = audioWrapper.querySelector("audio");
+          if (audioEl) {
+            var currentAudio = audioWrapper.querySelector(".exam-audio");
+            var startMs = currentAudio && currentAudio.dataset.startMs ? parseInt(currentAudio.dataset.startMs, 10) : 0;
+            var minSec = startMs > 0 ? (startMs / 1000) : 0;
+            audioEl.currentTime = Math.max(minSec, audioEl.currentTime - 5);
+          }
+        });
+      }
+
+      // Practice QoL Transcript Toggle
+      if (btnToggleTranscript) {
+        btnToggleTranscript.addEventListener("click", function () {
+          if (!transcriptDrawer) return;
+          var isExpanded = transcriptDrawer.style.display !== "none";
+          transcriptDrawer.style.display = isExpanded ? "none" : "";
+          btnToggleTranscript.setAttribute("aria-expanded", isExpanded ? "false" : "true");
+        });
+      }
+
       function renderQuestion(order) {
         clearError();
         var q = localQuestions.find(function (item) { return item.displayOrder === order; });
@@ -547,6 +729,7 @@
 
         currentOrder = order;
         var s = localState[q.questionId] || {};
+        var type = (s.questionType || 'mcq').toLowerCase();
 
         // 1. Meta row
         if (qNumberDisplay) qNumberDisplay.textContent = "Question " + q.displayOrder;
@@ -613,7 +796,7 @@
           }
         }
 
-        // 4. Audio Continuity
+        // 4. Audio Continuity & QoL Controls
         if (audioWrapper) {
           if (q.audioPath) {
             var currentAudioEl = audioWrapper.querySelector(".exam-audio");
@@ -647,6 +830,17 @@
               }
             }
             audioWrapper.style.display = "";
+
+            // QoL audio transcript button
+            if (btnToggleTranscript && transcriptDrawer && transcriptDrawerText) {
+              if (q.transcript) {
+                btnToggleTranscript.style.display = "";
+                transcriptDrawerText.textContent = q.transcript;
+              } else {
+                btnToggleTranscript.style.display = "none";
+                transcriptDrawer.style.display = "none";
+              }
+            }
           } else {
             if (window.stopExamAudio) window.stopExamAudio(audioWrapper);
             audioWrapper.style.display = "none";
@@ -656,79 +850,91 @@
         // 5. Question Stem
         if (qStemDisplay) qStemDisplay.textContent = q.stem;
 
-        // 6. Option List
-        if (optionList) {
-          optionList.innerHTML = "";
-          var isAnswered = s.isAnswered;
+        // 6. Interactive 11-Component Inputs
+        var isAnswered = s.isAnswered;
 
-          q.options.forEach(function (opt) {
-            var isSelected = opt.optionId === s.selectedOptionId;
-            var isCorrectOpt = s.correctOptionId != null && opt.optionId === s.correctOptionId;
+        if (type === "mcq" || type === "mcq_3") {
+          if (optionList) optionList.style.display = "";
+          if (componentContainer) componentContainer.style.display = "none";
 
-            var optClass = "option";
-            if (isAnswered) {
-              if (isCorrectOpt) optClass += " option--correct";
-              else if (isSelected && !s.isCorrect) optClass += " option--wrong";
-            } else if (isSelected) {
-              optClass += " is-selected";
-            }
+          if (optionList) {
+            optionList.innerHTML = "";
+            q.options.forEach(function (opt) {
+              var isSelected = opt.optionId === s.selectedOptionId;
+              var isCorrectOpt = s.correctOptionId != null && opt.optionId === s.correctOptionId;
 
-            var lbl = document.createElement("label");
-            lbl.className = optClass;
-            lbl.id = "opt-label-" + opt.optionId;
-
-            var radio = document.createElement("input");
-            radio.className = "option__input js-option-radio";
-            radio.type = "radio";
-            radio.name = "selectedOptionId";
-            radio.value = String(opt.optionId);
-            if (isSelected) radio.checked = true;
-            if (isAnswered) radio.disabled = true;
-
-            radio.addEventListener("change", function () {
-              if (!isAnswered) {
-                s.selectedOptionId = opt.optionId;
-                optionList.querySelectorAll(".option").forEach(function (el) {
-                  el.classList.remove("is-selected");
-                });
-                lbl.classList.add("is-selected");
-                updateSubmitButtonState();
-              }
-            });
-
-            var marker = document.createElement("span");
-            marker.className = "option__marker";
-            marker.textContent = opt.label;
-
-            var txt = document.createElement("span");
-            txt.className = "option__text";
-            txt.textContent = opt.text;
-
-            lbl.appendChild(radio);
-            lbl.appendChild(marker);
-            lbl.appendChild(txt);
-
-            if (isAnswered) {
-              if (isCorrectOpt && isSelected) {
-                var cBadge = document.createElement("span");
-                cBadge.className = "badge badge--success";
-                cBadge.textContent = "Your answer · correct";
-                lbl.appendChild(cBadge);
-              } else if (isCorrectOpt) {
-                var corBadge = document.createElement("span");
-                corBadge.className = "badge badge--success";
-                corBadge.textContent = "Correct answer";
-                lbl.appendChild(corBadge);
+              var optClass = "option";
+              if (isAnswered) {
+                if (isCorrectOpt) optClass += " option--correct";
+                else if (isSelected && !s.isCorrect) optClass += " option--wrong";
               } else if (isSelected) {
-                var wBadge = document.createElement("span");
-                wBadge.className = "badge badge--danger";
-                wBadge.textContent = "Your answer";
-                lbl.appendChild(wBadge);
+                optClass += " is-selected";
               }
-            }
 
-            optionList.appendChild(lbl);
-          });
+              var lbl = document.createElement("label");
+              lbl.className = optClass;
+              lbl.id = "opt-label-" + opt.optionId;
+
+              var radio = document.createElement("input");
+              radio.className = "option__input js-option-radio";
+              radio.type = "radio";
+              radio.name = "selectedOptionId";
+              radio.value = String(opt.optionId);
+              if (isSelected) radio.checked = true;
+              if (isAnswered) radio.disabled = true;
+
+              radio.addEventListener("change", function () {
+                if (!isAnswered) {
+                  s.selectedOptionId = opt.optionId;
+                  optionList.querySelectorAll(".option").forEach(function (el) {
+                    el.classList.remove("is-selected");
+                  });
+                  lbl.classList.add("is-selected");
+                  updateSubmitButtonState();
+                }
+              });
+
+              var marker = document.createElement("span");
+              marker.className = "option__marker";
+              marker.textContent = opt.label;
+
+              var txt = document.createElement("span");
+              txt.className = "option__text";
+              txt.textContent = opt.text;
+
+              lbl.appendChild(radio);
+              lbl.appendChild(marker);
+              lbl.appendChild(txt);
+
+              if (isAnswered) {
+                if (isCorrectOpt && isSelected) {
+                  var cBadge = document.createElement("span");
+                  cBadge.className = "badge badge--success";
+                  cBadge.textContent = "Your answer · correct";
+                  lbl.appendChild(cBadge);
+                } else if (isCorrectOpt) {
+                  var corBadge = document.createElement("span");
+                  corBadge.className = "badge badge--success";
+                  corBadge.textContent = "Correct answer";
+                  lbl.appendChild(corBadge);
+                } else if (isSelected) {
+                  var wBadge = document.createElement("span");
+                  wBadge.className = "badge badge--danger";
+                  wBadge.textContent = "Your answer";
+                  lbl.appendChild(wBadge);
+                }
+              }
+
+              optionList.appendChild(lbl);
+            });
+          }
+        } else {
+          // Non-MCQ Component Widgets
+          if (optionList) optionList.style.display = "none";
+          if (componentContainer) {
+            componentContainer.style.display = "block";
+            renderComponentWidget(q, s);
+          }
         }
 
         // 7. Hint Box
@@ -741,38 +947,11 @@
           }
         }
 
-        // 8. Explanation
-        if (explanationContainer) {
-          explanationContainer.innerHTML = "";
-          if (s.isAnswered && s.explanation) {
-            var expCard = document.createElement("div");
-            expCard.className = "explain mt-4";
-            var expTitle = document.createElement("div");
-            expTitle.className = "explain__title";
-            expTitle.textContent = "Explanation";
-            expCard.appendChild(expTitle);
-
-            var expP = document.createElement("p");
-            expP.className = "no-margin";
-            expP.textContent = s.explanation;
-            expCard.appendChild(expP);
-
-            if (s.transcript) {
-              var trDiv = document.createElement("div");
-              trDiv.className = "explain__transcript mt-2";
-              var trStrong = document.createElement("strong");
-              trStrong.textContent = "Transcript: ";
-              trDiv.appendChild(trStrong);
-              trDiv.appendChild(document.createTextNode(s.transcript));
-              expCard.appendChild(trDiv);
-            }
-            explanationContainer.appendChild(expCard);
-          }
-        }
+        // 8. Practice QoL Explanation Accordion
+        renderExplanation(s, q);
 
         // 9. Buttons & Bottom Nav
         if (btnPrev) btnPrev.disabled = currentOrder <= 1;
-
         if (btnSkip) btnSkip.style.display = s.isAnswered ? "none" : "";
         if (showHintBtn) showHintBtn.style.display = (s.hintUsed || s.isAnswered) ? "none" : "";
         if (hintUsedMsg) hintUsedMsg.style.display = s.hintUsed ? "" : "none";
@@ -790,10 +969,351 @@
         } catch (e) {}
       }
 
+      function renderComponentWidget(q, s) {
+        if (!componentContainer) return;
+        var type = (s.questionType || 'mcq').toLowerCase();
+        var isAnswered = s.isAnswered;
+
+        if (type === "multi_select") {
+          var maxSel = s.maxSelections || 2;
+          var selectedIds = s.selectedOptionIds || [];
+
+          var html = '<div class="multi-select-widget stack" style="gap: var(--space-2);">';
+          html += '<div class="alert alert--info py-1 px-2" style="font-size: 0.85rem; font-weight: 600; border-radius: 0; box-shadow: none;">';
+          html += 'CHỌN TỐI ĐA ' + maxSel + ' ĐÁP ÁN (SELECT UP TO ' + maxSel + ' ANSWERS): Đã chọn <span id="ms-count-' + q.questionId + '">' + selectedIds.length + '</span>/' + maxSel;
+          html += '</div>';
+          html += '<div class="option-list" role="group" aria-label="Multiple choice options for question ' + q.displayOrder + '">';
+
+          var correctSet = new Set(s.correctOptionIds || []);
+          if (s.correctOptionId) correctSet.add(s.correctOptionId);
+
+          (q.options || []).forEach(function (opt) {
+            var isChecked = selectedIds.indexOf(opt.optionId) !== -1;
+            var isCorrectOpt = isAnswered && correctSet.has(opt.optionId);
+            var isWrongOpt = isAnswered && isChecked && !isCorrectOpt;
+
+            var optClass = "option option--checkbox";
+            if (isAnswered) {
+              if (isCorrectOpt) optClass += " option--correct";
+              else if (isWrongOpt) optClass += " option--wrong";
+            } else if (isChecked) {
+              optClass += " is-selected";
+            }
+
+            var isDisabled = isAnswered || (!isChecked && selectedIds.length >= maxSel);
+
+            html += '<label class="' + optClass + '" style="' + (isDisabled && !isAnswered ? 'opacity: 0.6; cursor: not-allowed;' : '') + '">';
+            html += '<input type="checkbox" class="option__input js-option-checkbox" value="' + opt.optionId + '" ' + (isChecked ? 'checked' : '') + ' ' + (isDisabled ? 'disabled' : '') + '>';
+            html += '<span class="option__marker">' + escapeHtml(opt.label) + '</span>';
+            html += '<span class="option__text">' + escapeHtml(opt.text) + '</span>';
+
+            if (isAnswered) {
+              if (isCorrectOpt && isChecked) {
+                html += '<span class="badge badge--success">Your answer · correct</span>';
+              } else if (isCorrectOpt) {
+                html += '<span class="badge badge--success">Correct answer</span>';
+              } else if (isChecked) {
+                html += '<span class="badge badge--danger">Your answer</span>';
+              }
+            }
+
+            html += '</label>';
+          });
+
+          html += '</div></div>';
+          componentContainer.innerHTML = html;
+
+          if (!isAnswered) {
+            var checkboxes = componentContainer.querySelectorAll('.js-option-checkbox');
+            checkboxes.forEach(function (cb) {
+              cb.addEventListener('change', function () {
+                var optId = parseInt(cb.value, 10);
+                var idx = selectedIds.indexOf(optId);
+                if (cb.checked) {
+                  if (idx === -1 && selectedIds.length < maxSel) {
+                    selectedIds.push(optId);
+                  } else if (idx === -1 && selectedIds.length >= maxSel) {
+                    cb.checked = false;
+                    return;
+                  }
+                } else {
+                  if (idx !== -1) selectedIds.splice(idx, 1);
+                }
+
+                s.selectedOptionIds = selectedIds;
+                s.selectedOptionId = selectedIds[0] || null;
+                s.selectedOptionIdsJson = JSON.stringify(selectedIds);
+
+                var countEl = document.getElementById('ms-count-' + q.questionId);
+                if (countEl) countEl.textContent = selectedIds.length;
+
+                checkboxes.forEach(function (otherCb) {
+                  var otherId = parseInt(otherCb.value, 10);
+                  var otherChecked = selectedIds.indexOf(otherId) !== -1;
+                  var parentLabel = otherCb.closest('.option');
+                  if (parentLabel) parentLabel.classList.toggle('is-selected', otherChecked);
+                  if (!otherChecked) {
+                    otherCb.disabled = selectedIds.length >= maxSel;
+                    if (parentLabel) parentLabel.style.opacity = selectedIds.length >= maxSel ? '0.6' : '';
+                    if (parentLabel) parentLabel.style.cursor = selectedIds.length >= maxSel ? 'not-allowed' : '';
+                  }
+                });
+
+                updateSubmitButtonState();
+              });
+            });
+          }
+        } else if (type === "inline_completion") {
+          var maxWords = s.maxWords;
+          var allowNumber = s.allowNumber !== false;
+          var curText = s.responseText || '';
+
+          var html = '<div class="inline-completion-widget stack" style="gap: var(--space-2);">';
+          html += '<div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">';
+          html += '<span class="badge badge--neutral" style="font-family: \'IBM Plex Mono\', monospace; border-radius: 0; box-shadow: none;">' + (maxWords ? 'TỐI ĐA ' + maxWords + ' TỪ' : 'ĐIỀN TỪ') + '</span>';
+          html += '<span class="badge badge--neutral" style="font-family: \'IBM Plex Mono\', monospace; border-radius: 0; box-shadow: none;">' + (allowNumber ? 'CHỮ VÀ SỐ' : 'CHỈ CHỮ (NO NUMBERS)') + '</span>';
+          html += '</div>';
+          html += '<div class="mt-2">';
+          html += '<input type="text" class="completion-input js-completion-input" value="' + escapeHtml(curText) + '" placeholder="Nhập câu trả lời..." autocomplete="off" spellcheck="false" ' + (isAnswered ? 'disabled' : '') + '>';
+          html += '<div class="text-xs text-muted mt-1">';
+          html += 'Số từ: <strong class="js-comp-word-count">' + (curText.trim() ? curText.trim().split(/\s+/).length : 0) + '</strong>' + (maxWords ? ' / ' + maxWords + ' từ tối đa' : '') + '<span class="js-comp-warning ml-2" style="color: #b31217; display: none;"></span>';
+          html += '</div></div></div>';
+          componentContainer.innerHTML = html;
+
+          var inputEl = componentContainer.querySelector('.js-completion-input');
+          var wordCountEl = componentContainer.querySelector('.js-comp-word-count');
+          var warningEl = componentContainer.querySelector('.js-comp-warning');
+
+          if (!isAnswered && inputEl) {
+            inputEl.addEventListener('input', function () {
+              var val = inputEl.value;
+              if (!allowNumber && /\d/.test(val)) {
+                val = val.replace(/\d/g, '');
+                inputEl.value = val;
+              }
+              s.responseText = val;
+              var words = val.trim() ? val.trim().split(/\s+/).length : 0;
+              if (wordCountEl) wordCountEl.textContent = words;
+              if (maxWords && words > maxWords) {
+                if (warningEl) {
+                  warningEl.textContent = ' (Vượt quá số từ cho phép)';
+                  warningEl.style.display = 'inline';
+                }
+              } else {
+                if (warningEl) warningEl.style.display = 'none';
+              }
+              updateSubmitButtonState();
+            });
+          }
+        } else if (type === "dropdown") {
+          var selectedOptId = s.selectedOptionId;
+          var html = '<div class="dropdown-widget stack" style="gap: var(--space-2);">';
+          html += '<label class="text-sm font-sign uppercase" style="font-weight:700;">Chọn đáp án phù hợp từ danh sách bên dưới:</label>';
+          html += '<select class="completion-input js-dropdown-select" style="max-width: 480px; background: #fff; cursor: pointer;" ' + (isAnswered ? 'disabled' : '') + '>';
+          html += '<option value="">-- Chọn đáp án / Select Option --</option>';
+          (q.options || []).forEach(function (opt) {
+            var isSel = opt.optionId === selectedOptId;
+            html += '<option value="' + opt.optionId + '" ' + (isSel ? 'selected' : '') + '>' + escapeHtml(opt.label) + '. ' + escapeHtml(opt.text) + '</option>';
+          });
+          html += '</select></div>';
+          componentContainer.innerHTML = html;
+
+          var selectEl = componentContainer.querySelector('.js-dropdown-select');
+          if (!isAnswered && selectEl) {
+            selectEl.addEventListener('change', function () {
+              var val = parseInt(selectEl.value, 10);
+              s.selectedOptionId = !isNaN(val) ? val : null;
+              updateSubmitButtonState();
+            });
+          }
+        } else if (type === "drag_drop") {
+          var selectedOptId = s.selectedOptionId;
+          var placedOption = (q.options || []).find(function (o) { return o.optionId === selectedOptId || o.OptionId === selectedOptId; });
+
+          var html = '<div class="drag-drop-widget stack" style="gap: var(--space-3);">';
+          html += '<div>';
+          html += '<span class="text-xs uppercase text-muted font-sign" style="font-weight: 700; letter-spacing: 0.05em; display: block; margin-bottom: 0.5rem;">NGÂN HÀNG TỪ / WORD BANK (Bấm hoặc kéo thả):</span>';
+          html += '<div class="word-bank-chips" style="display: flex; flex-wrap: wrap; gap: 0.5rem; border: 2px dashed #14181d; padding: 0.75rem; background: #fbfcfd;">';
+          (q.options || []).forEach(function (opt) {
+            var isPlaced = placedOption && (placedOption.optionId === opt.optionId || placedOption.OptionId === opt.optionId);
+            html += '<button type="button" class="chip-item js-drag-chip ' + (isPlaced ? 'is-placed' : '') + '" draggable="' + (!isAnswered ? 'true' : 'false') + '" data-option-id="' + opt.optionId + '" ' + (isAnswered ? 'disabled' : '') + '>';
+            html += '<strong style="font-family: \'IBM Plex Mono\', monospace; margin-right: 0.35rem;">' + escapeHtml(opt.label) + '</strong>' + escapeHtml(opt.text);
+            html += '</button>';
+          });
+          html += '</div></div>';
+
+          html += '<div>';
+          html += '<span class="text-xs uppercase text-muted font-sign" style="font-weight: 700; letter-spacing: 0.05em; display: block; margin-bottom: 0.5rem;">VỊ TRÍ ĐẶT ĐÁP ÁN / DROP ZONE:</span>';
+          html += '<div class="drop-zone js-drop-zone">';
+          if (placedOption) {
+            html += '<div class="placed-chip-content" style="display: flex; align-items: center; gap: 0.5rem; font-weight: 700;">';
+            html += '<span class="badge badge--info" style="border-radius: 0; box-shadow: none;">' + escapeHtml(placedOption.label) + '</span>';
+            html += '<span>' + escapeHtml(placedOption.text) + '</span>';
+            html += '</div>';
+            if (!isAnswered) {
+              html += '<button type="button" class="btn btn--ghost btn--sm js-remove-placed" style="color: #b31217; font-weight: 700;">✕ Xóa</button>';
+            }
+          } else {
+            html += '<span class="text-muted text-sm js-drop-placeholder">' + (!isAnswered ? 'Kéo thả từ vào đây hoặc bấm vào từ ở trên' : 'Không có lựa chọn') + '</span>';
+          }
+          html += '</div></div></div>';
+          componentContainer.innerHTML = html;
+
+          if (!isAnswered) {
+            var chips = componentContainer.querySelectorAll('.js-drag-chip');
+            var dropZone = componentContainer.querySelector('.js-drop-zone');
+            var removeBtn = componentContainer.querySelector('.js-remove-placed');
+
+            function placeChip(optId) {
+              s.selectedOptionId = optId;
+              renderComponentWidget(q, s);
+              updateSubmitButtonState();
+            }
+
+            function clearChip() {
+              s.selectedOptionId = null;
+              renderComponentWidget(q, s);
+              updateSubmitButtonState();
+            }
+
+            chips.forEach(function (chip) {
+              chip.addEventListener('click', function () {
+                var optId = parseInt(chip.getAttribute('data-option-id'), 10);
+                placeChip(optId);
+              });
+              chip.addEventListener('dragstart', function (e) {
+                var optId = chip.getAttribute('data-option-id');
+                e.dataTransfer.setData('text/plain', optId);
+              });
+            });
+
+            if (dropZone) {
+              dropZone.addEventListener('dragover', function (e) {
+                e.preventDefault();
+                dropZone.classList.add('is-hovered');
+              });
+              dropZone.addEventListener('dragleave', function () {
+                dropZone.classList.remove('is-hovered');
+              });
+              dropZone.addEventListener('drop', function (e) {
+                e.preventDefault();
+                dropZone.classList.remove('is-hovered');
+                var optId = parseInt(e.dataTransfer.getData('text/plain'), 10);
+                if (!isNaN(optId)) placeChip(optId);
+              });
+            }
+
+            if (removeBtn) {
+              removeBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                clearChip();
+              });
+            }
+          }
+        }
+      }
+
+      function renderExplanation(s, q) {
+        if (!explanationContainer) return;
+        explanationContainer.innerHTML = "";
+
+        if (s.isAnswered && (s.explanation || s.acceptedAnswersJson || s.transcript)) {
+          var wrap = document.createElement("div");
+          wrap.className = "accordion-explanation";
+          wrap.id = "accordion-explanation";
+
+          var headerBtn = document.createElement("button");
+          headerBtn.type = "button";
+          headerBtn.className = "accordion-explanation__header";
+          headerBtn.id = "btn-toggle-explanation";
+          headerBtn.setAttribute("aria-expanded", "true");
+
+          var headerTitle = document.createElement("span");
+          headerTitle.textContent = "[Xem Lời giải chi tiết / Explanation & Rationale]";
+          var chevron = document.createElement("span");
+          chevron.id = "exp-chevron";
+          chevron.textContent = "▲";
+
+          headerBtn.appendChild(headerTitle);
+          headerBtn.appendChild(chevron);
+          wrap.appendChild(headerBtn);
+
+          var bodyDiv = document.createElement("div");
+          bodyDiv.className = "accordion-explanation__body";
+          bodyDiv.id = "explanation-body";
+
+          if (s.explanation) {
+            var expTitle = document.createElement("div");
+            expTitle.className = "font-sign uppercase text-xs mb-1";
+            expTitle.style.fontWeight = "700";
+            expTitle.textContent = "Giải thích chi tiết / Rationale:";
+            bodyDiv.appendChild(expTitle);
+
+            var expP = document.createElement("p");
+            expP.className = "no-margin";
+            expP.style.whiteSpace = "pre-line";
+            expP.textContent = s.explanation;
+            bodyDiv.appendChild(expP);
+          }
+
+          if (s.acceptedAnswersJson) {
+            var accDiv = document.createElement("div");
+            accDiv.className = "mt-3";
+            var accTitle = document.createElement("span");
+            accTitle.className = "font-sign uppercase text-xs text-muted";
+            accTitle.style.display = "block";
+            accTitle.style.marginBottom = "0.25rem";
+            accTitle.style.fontWeight = "700";
+            accTitle.textContent = "Đáp án chấp nhận / Accepted answers:";
+            accDiv.appendChild(accTitle);
+
+            var codeEl = document.createElement("code");
+            codeEl.className = "font-mono";
+            codeEl.style.padding = "0.25rem 0.5rem";
+            codeEl.style.background = "#f4f6f8";
+            codeEl.style.border = "1px solid #ccd2d6";
+            codeEl.style.display = "inline-block";
+            codeEl.textContent = s.acceptedAnswersJson;
+            accDiv.appendChild(codeEl);
+            bodyDiv.appendChild(accDiv);
+          }
+
+          if (s.transcript) {
+            var trDiv = document.createElement("div");
+            trDiv.className = "explain__transcript mt-3 pt-2";
+            trDiv.style.borderTop = "1px dashed #ccd2d6";
+
+            var trStrong = document.createElement("strong");
+            trStrong.className = "font-sign uppercase text-xs";
+            trStrong.textContent = "Transcript: ";
+            trDiv.appendChild(trStrong);
+
+            var trSpan = document.createElement("span");
+            trSpan.style.whiteSpace = "pre-line";
+            trSpan.textContent = s.transcript;
+            trDiv.appendChild(trSpan);
+
+            bodyDiv.appendChild(trDiv);
+          }
+
+          wrap.appendChild(bodyDiv);
+
+          headerBtn.addEventListener("click", function () {
+            var isOpen = bodyDiv.style.display !== "none";
+            bodyDiv.style.display = isOpen ? "none" : "";
+            chevron.textContent = isOpen ? "▼" : "▲";
+            headerBtn.setAttribute("aria-expanded", isOpen ? "false" : "true");
+          });
+
+          explanationContainer.appendChild(wrap);
+        }
+      }
+
       function updateSubmitButtonState() {
         if (!submitBtn) return;
         var q = getCurrentQuestion();
         var s = localState[q.questionId] || {};
+        var type = (s.questionType || 'mcq').toLowerCase();
 
         if (s.isAnswered) {
           submitBtn.disabled = false;
@@ -807,7 +1327,16 @@
         } else {
           submitBtn.textContent = "Check answer";
           submitBtn.className = "btn btn--primary btn--lg";
-          submitBtn.disabled = !s.selectedOptionId;
+
+          var hasInput = false;
+          if (type === "mcq" || type === "mcq_3" || type === "dropdown" || type === "drag_drop") {
+            hasInput = s.selectedOptionId != null;
+          } else if (type === "multi_select") {
+            hasInput = s.selectedOptionIds && s.selectedOptionIds.length > 0;
+          } else if (type === "inline_completion") {
+            hasInput = s.responseText && s.responseText.trim().length > 0;
+          }
+          submitBtn.disabled = !hasInput;
         }
       }
 
@@ -868,14 +1397,25 @@
       function checkAnswer() {
         var q = getCurrentQuestion();
         var s = localState[q.questionId];
-        if (!s || s.isAnswered || !s.selectedOptionId) return;
+        if (!s || s.isAnswered) return;
 
         clearError();
         submitBtn.disabled = true;
 
         var formData = new URLSearchParams();
         formData.append("__RequestVerificationToken", csrfToken);
-        formData.append("SelectedOptionId", s.selectedOptionId);
+        if (s.selectedOptionId != null) {
+          formData.append("SelectedOptionId", s.selectedOptionId);
+        }
+        if (s.responseText) {
+          formData.append("ResponseText", s.responseText);
+        }
+        if (s.selectedOptionIds && s.selectedOptionIds.length > 0) {
+          formData.append("SelectedOptionIdsJson", JSON.stringify(s.selectedOptionIds));
+          s.selectedOptionIds.forEach(function (id) {
+            formData.append("SelectedOptionIds", id);
+          });
+        }
 
         fetch("/practice/" + sessionId + "/questions/" + q.questionId + "/answer?displayOrder=" + q.displayOrder, {
           method: "POST",
@@ -903,9 +1443,12 @@
         .then(function (data) {
           s.isAnswered = true;
           s.isCorrect = data.isCorrect;
+          s.selectedOptionId = data.selectedOptionId;
           s.correctOptionId = data.correctOptionId;
+          s.correctOptionIds = data.correctOptionIds || [];
           s.explanation = data.explanation;
           s.transcript = data.transcript;
+          s.acceptedAnswersJson = data.acceptedAnswersJson;
           if (data.isSaved) s.isSaved = true;
           if (data.isSessionFinished) isSessionFinished = true;
 
@@ -948,8 +1491,10 @@
           s.isAnswered = true;
           s.isSkipped = true;
           s.correctOptionId = data.correctOptionId;
+          s.correctOptionIds = data.correctOptionIds || [];
           s.explanation = data.explanation;
           s.transcript = data.transcript;
+          s.acceptedAnswersJson = data.acceptedAnswersJson;
           if (data.isSessionFinished) isSessionFinished = true;
 
           if (currentOrder < totalQuestions) {
@@ -1129,11 +1674,14 @@
           return;
         }
 
-        // Option selection: 1 - 4
+        // Option selection: 1 - 4 for MCQ
         if (e.key === "1" || e.key === "2" || e.key === "3" || e.key === "4") {
           var q = getCurrentQuestion();
           var s = localState[q.questionId];
           if (!s || s.isAnswered) return;
+          var type = (s.questionType || 'mcq').toLowerCase();
+          if (type !== 'mcq' && type !== 'mcq_3') return;
+
           var index = parseInt(e.key, 10) - 1;
           if (index >= 0 && index < q.options.length) {
             e.preventDefault();

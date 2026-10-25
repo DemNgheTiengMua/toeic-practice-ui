@@ -208,7 +208,8 @@ public static class PlacementEndpoints
                     request.SelectedOptionId,
                     request.IsFlagged,
                     cancellationToken,
-                    request.ResponseText);
+                    request.ResponseText,
+                    request.SelectedOptionIdsJson);
 
                 return Results.Ok(new SaveAnswerResultDto(
                     result.QuestionId,
