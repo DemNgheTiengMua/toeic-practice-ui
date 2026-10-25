@@ -55,7 +55,8 @@ public interface IAttemptEngine
         bool isFlagged,
         Func<int, int, Task>? onAutoSubmitted = null,
         CancellationToken cancellationToken = default,
-        string? responseText = null);
+        string? responseText = null,
+        string? selectedOptionIdsJson = null);
 
     Task<SaveAttemptDraftResult> SaveDraftAsync(
         int attemptId,
@@ -156,7 +157,7 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
                 attempt.LastQuestionId = questions[0].QuestionId;
                 foreach (var q in questions)
                 {
-                    if (q.QuestionType == QuestionType.Mcq.ToCode())
+                    if (q.QuestionType != QuestionType.FreeResponse.ToCode())
                     {
                         db.AttemptAnswers.Add(new AttemptAnswer
                         {
@@ -168,7 +169,7 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
                             IsFlagged = false
                         });
                     }
-                    else if (q.QuestionType == QuestionType.FreeResponse.ToCode())
+                    else
                     {
                         db.FreeResponses.Add(new FreeResponse
                         {
@@ -261,10 +262,9 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
 
         int totalQuestions = questions.Count;
         int answeredCount = questions.Count(q =>
-            q.QuestionType == QuestionType.Mcq.ToCode()
-                ? answersByQuestion.TryGetValue(q.QuestionId, out var answer) && answer.SelectedOptionId.HasValue
-                : freeResponses.TryGetValue(q.QuestionId, out var response)
-                    && (!string.IsNullOrWhiteSpace(response.ResponseText) || !string.IsNullOrWhiteSpace(response.AudioPath)));
+            q.QuestionType == QuestionType.FreeResponse.ToCode()
+                ? freeResponses.TryGetValue(q.QuestionId, out var response) && (!string.IsNullOrWhiteSpace(response.ResponseText) || !string.IsNullOrWhiteSpace(response.AudioPath))
+                : answersByQuestion.TryGetValue(q.QuestionId, out var answer) && (answer.SelectedOptionId.HasValue || !string.IsNullOrWhiteSpace(answer.ResponseText) || !string.IsNullOrWhiteSpace(answer.SelectedOptionIdsJson)));
         int flaggedCount = answers.Count(a => a.IsFlagged);
 
         // Determine current question
@@ -318,12 +318,17 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
                 q.MaxWords,
                 q.PrepSeconds,
                 q.ResponseSeconds,
-                response?.ResponseText,
+                response?.ResponseText ?? ans?.ResponseText,
                 response?.AudioPath,
                 response?.DurationMs,
                 response?.DraftSavedAt,
                 q.Section.Skill.DurationMinutes,
-                q.Section.Skill.DisplayOrder));
+                q.Section.Skill.DisplayOrder,
+                ans?.SelectedOptionIdsJson != null ? ParseOptionIds(ans.SelectedOptionIdsJson).ToList() : null,
+                q.MaxSelections,
+                q.AllowNumber,
+                q.AcceptedAnswersJson,
+                q.RequiredKeywords));
         }
 
         var currentQuestionInfo = totalQuestions > 0 ? allQuestions[targetIndex] : new AttemptQuestionInfo(
@@ -339,9 +344,9 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
             q.SectionId,
             q.Section.Code,
             EnumCodes.Parse<Modality>(q.Section.Modality),
-            q.QuestionType == QuestionType.Mcq.ToCode()
-                ? answer?.SelectedOptionId != null
-                : !string.IsNullOrWhiteSpace(response?.ResponseText) || !string.IsNullOrWhiteSpace(response?.AudioPath),
+            q.QuestionType == QuestionType.FreeResponse.ToCode()
+                ? (!string.IsNullOrWhiteSpace(response?.ResponseText) || !string.IsNullOrWhiteSpace(response?.AudioPath))
+                : (answer?.SelectedOptionId != null || !string.IsNullOrWhiteSpace(answer?.ResponseText) || !string.IsNullOrWhiteSpace(answer?.SelectedOptionIdsJson)),
             answer?.IsFlagged ?? false,
             idx == targetIndex);
         }).ToList();
@@ -388,7 +393,8 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
         bool isFlagged,
         Func<int, int, Task>? onAutoSubmitted = null,
         CancellationToken cancellationToken = default,
-        string? responseText = null)
+        string? responseText = null,
+        string? selectedOptionIdsJson = null)
     {
         var attempt = await db.ExamAttempts
             .SingleOrDefaultAsync(a => a.AttemptId == attemptId && a.UserId == userId, cancellationToken)
@@ -429,7 +435,7 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
         }
         else
         {
-            if (!string.IsNullOrWhiteSpace(responseText))
+            if (!string.IsNullOrWhiteSpace(responseText) && (answer.Question.QuestionType == QuestionType.Mcq.ToCode() || answer.Question.QuestionType == QuestionType.Mcq_3.ToCode()))
             {
                 throw new AttemptEngineException(AttemptEngineException.InvalidOption, "Multiple-choice questions do not accept free-response text.");
             }
@@ -445,6 +451,18 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
             }
 
             answer.SelectedOptionId = selectedOptionId;
+            answer.SelectedOptionIdsJson = selectedOptionIdsJson;
+            answer.ResponseText = responseText;
+
+            var options = await db.QuestionOptions
+                .Where(o => o.QuestionId == questionId)
+                .ToListAsync(cancellationToken);
+            answer.IsCorrect = EvaluateObjectiveAnswer(
+                answer.Question,
+                options,
+                selectedOptionId,
+                selectedOptionIdsJson,
+                responseText);
         }
 
         answer.IsFlagged = isFlagged;
@@ -714,18 +732,22 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
                 .Where(a => a.AttemptId == attemptId)
                 .Include(a => a.Question).ThenInclude(q => q.Section).ThenInclude(s => s.Skill)
                 .ToListAsync(cancellationToken);
-            var correctOptionsByQuestion = await db.QuestionOptions
-                .Where(option =>
-                    option.IsCorrect &&
-                    answers.Select(answer => answer.QuestionId).Contains(option.QuestionId))
-                .ToDictionaryAsync(option => option.QuestionId, cancellationToken);
+            var questionIds = answers.Select(answer => answer.QuestionId).Distinct().ToList();
+            var optionsByQuestion = (await db.QuestionOptions
+                .Where(option => questionIds.Contains(option.QuestionId))
+                .ToListAsync(cancellationToken))
+                .ToLookup(option => option.QuestionId);
 
-            // Score each answer
-            foreach (var ans in answers.Where(a => a.Question.QuestionType == QuestionType.Mcq.ToCode()))
+            // Score each objective answer
+            foreach (var ans in answers.Where(a => a.Question.QuestionType != QuestionType.FreeResponse.ToCode()))
             {
-                ans.IsCorrect = ans.SelectedOptionId.HasValue &&
-                    correctOptionsByQuestion.TryGetValue(ans.QuestionId, out var correctOption) &&
-                    ans.SelectedOptionId.Value == correctOption.OptionId;
+                var opts = optionsByQuestion[ans.QuestionId];
+                ans.IsCorrect = EvaluateObjectiveAnswer(
+                    ans.Question,
+                    opts,
+                    ans.SelectedOptionId,
+                    ans.SelectedOptionIdsJson,
+                    ans.ResponseText);
             }
 
             // Clean any existing skill scores for idempotent resubmits
@@ -738,7 +760,7 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
             }
 
             var skillGroups = answers
-                .Where(a => a.Question.QuestionType == QuestionType.Mcq.ToCode())
+                .Where(a => a.Question.QuestionType != QuestionType.FreeResponse.ToCode())
                 .GroupBy(a => a.Question.Section.Skill)
                 .ToList();
             var newSkillScores = new List<AttemptSkillScore>();
@@ -746,9 +768,27 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
             foreach (var group in skillGroups)
             {
                 var skill = group.Key;
-                int rawScore = group.Count(a => a.IsCorrect == true);
-                int scaledScore = await ComputeScaledScoreAsync(
-                    attempt.CertId, skill.SkillId, attempt.ExamId, rawScore, group.Count(), cancellationToken);
+                var sectionGroups = group.GroupBy(a => a.Question.Section).ToList();
+                int rawScore;
+                int scaledScore;
+
+                bool hasVaryingWeights = sectionGroups.Any(sg => sg.Key.ScoreWeight != sectionGroups[0].Key.ScoreWeight);
+                if (hasVaryingWeights)
+                {
+                    decimal totalWeight = sectionGroups.Sum(sg => sg.Key.ScoreWeight > 0 ? sg.Key.ScoreWeight : 1.0m);
+                    decimal weightedSectionRaw = sectionGroups.Sum(sg =>
+                        (decimal)sg.Count(a => a.IsCorrect == true) * (sg.Key.ScoreWeight > 0 ? sg.Key.ScoreWeight : 1.0m)) / totalWeight;
+
+                    rawScore = (int)Math.Round(weightedSectionRaw, MidpointRounding.AwayFromZero);
+                    scaledScore = await ComputeScaledScoreAsync(
+                        attempt.CertId, skill.SkillId, attempt.ExamId, weightedSectionRaw, group.Count(), cancellationToken);
+                }
+                else
+                {
+                    rawScore = group.Count(a => a.IsCorrect == true);
+                    scaledScore = await ComputeScaledScoreAsync(
+                        attempt.CertId, skill.SkillId, attempt.ExamId, rawScore, group.Count(), cancellationToken);
+                }
 
                 newSkillScores.Add(new AttemptSkillScore
                 {
@@ -909,10 +949,15 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
                 responsePointsBySkill[response.SkillId] = responsePointsBySkill.GetValueOrDefault(response.SkillId) + fraction;
             }
 
-            foreach (var answer in answers.Where(a => a.Question.QuestionType == QuestionType.Mcq.ToCode()))
+            foreach (var answer in answers.Where(a => a.Question.QuestionType != QuestionType.FreeResponse.ToCode()))
             {
-                var correctOption = answer.Question.QuestionOptionQuestionNavigations.FirstOrDefault(o => o.IsCorrect);
-                answer.IsCorrect = answer.SelectedOptionId.HasValue && answer.SelectedOptionId.Value == correctOption?.OptionId;
+                var opts = answer.Question.QuestionOptionQuestionNavigations;
+                answer.IsCorrect = EvaluateObjectiveAnswer(
+                    answer.Question,
+                    opts,
+                    answer.SelectedOptionId,
+                    answer.SelectedOptionIdsJson,
+                    answer.ResponseText);
             }
 
             var skills = answers.Select(a => a.Question.Section.Skill)
@@ -923,22 +968,59 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
             var newSkillScores = new List<AttemptSkillScore>();
             foreach (var skill in skills)
             {
-                var objectiveAnswers = answers.Where(a => a.Question.Section.SkillId == skill.SkillId && a.Question.QuestionType == QuestionType.Mcq.ToCode()).ToList();
+                var objectiveAnswers = answers.Where(a => a.Question.Section.SkillId == skill.SkillId && a.Question.QuestionType != QuestionType.FreeResponse.ToCode()).ToList();
                 var freeResponsesInSkill = freeResponses.Where(fr => fr.SkillId == skill.SkillId).ToList();
                 var totalQuestionsInSkill = objectiveAnswers.Count + freeResponsesInSkill.Count;
                 if (totalQuestionsInSkill == 0) continue;
 
                 var hasScales = await db.ScoreScales.AnyAsync(s => s.CertId == attempt.CertId && s.SkillId == skill.SkillId, cancellationToken);
-                if (objectiveAnswers.Count == 0 && !hasScales) continue;
+                if (objectiveAnswers.Count == 0 && !hasScales && freeResponsesInSkill.Count == 0) continue;
 
-                var rawScore = objectiveAnswers.Count(a => a.IsCorrect == true) + responsePointsBySkill.GetValueOrDefault(skill.SkillId);
-                var scaledScore = await ComputeScaledScoreAsync(
-                    attempt.CertId,
-                    skill.SkillId,
-                    attempt.ExamId,
-                    rawScore,
-                    totalQuestionsInSkill,
-                    cancellationToken);
+                int scaledScore;
+                decimal rawScore;
+
+                if (freeResponsesInSkill.Count > 0 && objectiveAnswers.Count == 0)
+                {
+                    // Pure free response skill (e.g. IELTS Writing Task 1 + Task 2)
+                    var frSections = freeResponsesInSkill.Select(fr => fr.Question.Section).DistinctBy(s => s.SectionId).ToList();
+                    decimal totalWeight = frSections.Sum(s => s.ScoreWeight > 0 ? s.ScoreWeight : 1.0m);
+                    decimal weightedSectionSum = 0m;
+
+                    foreach (var fr in freeResponsesInSkill)
+                    {
+                        var secWeight = fr.Question.Section.ScoreWeight > 0 ? fr.Question.Section.ScoreWeight : 1.0m;
+                        var frScore = fr.AiGradingFreeResponse?.OverallScaled ?? 0m;
+                        weightedSectionSum += frScore * secWeight;
+                    }
+
+                    decimal weightedScore = totalWeight > 0 ? weightedSectionSum / totalWeight : 0m;
+                    rawScore = weightedScore;
+
+                    var certRule = await db.Certificates
+                        .Where(c => c.CertId == attempt.CertId)
+                        .Select(c => c.ScoreAggregationRule)
+                        .FirstOrDefaultAsync(cancellationToken);
+
+                    if (string.Equals(certRule, "avg_half_step", StringComparison.OrdinalIgnoreCase))
+                    {
+                        scaledScore = RoundHalfStep((double)weightedScore);
+                    }
+                    else
+                    {
+                        scaledScore = (int)Math.Round(weightedScore, MidpointRounding.AwayFromZero);
+                    }
+                }
+                else
+                {
+                    rawScore = objectiveAnswers.Count(a => a.IsCorrect == true) + responsePointsBySkill.GetValueOrDefault(skill.SkillId);
+                    scaledScore = await ComputeScaledScoreAsync(
+                        attempt.CertId,
+                        skill.SkillId,
+                        attempt.ExamId,
+                        rawScore,
+                        totalQuestionsInSkill,
+                        cancellationToken);
+                }
 
                 newSkillScores.Add(new AttemptSkillScore
                 {
@@ -1028,7 +1110,28 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
             _ => (5, 495, 5)
         };
 
-    private static int AggregateTotalScore(
+    public static int RoundHalfStep(double average)
+    {
+        // IELTS official rounding:
+        // if decimal is < 0.25 -> .0; >= 0.25 and < 0.75 -> .5; >= 0.75 -> next whole band
+        if (average > 10.0)
+        {
+            double band = average / 10.0;
+            double floor = Math.Floor(band);
+            double rem = band - floor;
+            double roundedBand = rem < 0.25 ? floor : rem < 0.75 ? floor + 0.5 : floor + 1.0;
+            return (int)Math.Round(roundedBand * 10.0);
+        }
+        else
+        {
+            double floor = Math.Floor(average);
+            double rem = average - floor;
+            double roundedBand = rem < 0.25 ? floor : rem < 0.75 ? floor + 0.5 : floor + 1.0;
+            return (int)Math.Round(roundedBand * 10.0);
+        }
+    }
+
+    public static int AggregateTotalScore(
         string? scoreAggregationRule,
         IReadOnlyCollection<AttemptSkillScore> skillScores)
     {
@@ -1037,11 +1140,228 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
         var average = skillScores.Average(score => (double)score.ScaledScore);
         return scoreAggregationRule?.ToLowerInvariant() switch
         {
-            "avg_half_step" => (int)Math.Round(average / 5.0, MidpointRounding.AwayFromZero) * 5,
+            "avg_half_step" => RoundHalfStep(average),
             "avg_whole" => (int)Math.Round(average, MidpointRounding.AwayFromZero),
             "independent" => 0,
             _ => skillScores.Sum(score => score.ScaledScore)
         };
+    }
+
+    public static bool EvaluateObjectiveAnswer(
+        Question question,
+        IEnumerable<QuestionOption> options,
+        int? selectedOptionId,
+        string? selectedOptionIdsJson,
+        string? responseText)
+    {
+        var qType = question.QuestionType?.ToLowerInvariant() ?? QuestionType.Mcq.ToCode();
+
+        switch (qType)
+        {
+            case "mcq":
+            case "mcq_3":
+            {
+                if (!selectedOptionId.HasValue) return false;
+                return options.Any(o => o.OptionId == selectedOptionId.Value && o.IsCorrect);
+            }
+
+            case "multi_select":
+            {
+                var selectedIds = ParseOptionIds(selectedOptionIdsJson, selectedOptionId);
+                var correctIds = options.Where(o => o.IsCorrect).Select(o => o.OptionId).ToHashSet();
+                if (correctIds.Count == 0) return false;
+                return selectedIds.SetEquals(correctIds);
+            }
+
+            case "inline_completion":
+            {
+                return EvaluateTextCompletion(question, options, responseText);
+            }
+
+            case "dropdown":
+            case "drag_drop":
+            {
+                if (selectedOptionId.HasValue && options.Any(o => o.OptionId == selectedOptionId.Value && o.IsCorrect))
+                {
+                    return true;
+                }
+
+                if (!string.IsNullOrWhiteSpace(responseText))
+                {
+                    return EvaluateTextCompletion(question, options, responseText);
+                }
+
+                return false;
+            }
+
+            default:
+                return false;
+        }
+    }
+
+    public static HashSet<int> ParseOptionIds(string? selectedOptionIdsJson, int? fallbackOptionId = null)
+    {
+        var set = new HashSet<int>();
+        if (!string.IsNullOrWhiteSpace(selectedOptionIdsJson))
+        {
+            var trimmed = selectedOptionIdsJson.Trim();
+            if (trimmed.StartsWith("[") && trimmed.EndsWith("]"))
+            {
+                try
+                {
+                    var list = System.Text.Json.JsonSerializer.Deserialize<List<int>>(trimmed);
+                    if (list != null)
+                    {
+                        foreach (var id in list) set.Add(id);
+                        return set;
+                    }
+                }
+                catch
+                {
+                    // Fallback to split if invalid JSON
+                }
+            }
+
+            var parts = trimmed.Trim('[', ']').Split([',', ';', ' '], StringSplitOptions.RemoveEmptyEntries);
+            foreach (var p in parts)
+            {
+                if (int.TryParse(p.Trim(), out var parsedId))
+                {
+                    set.Add(parsedId);
+                }
+            }
+        }
+
+        if (set.Count == 0 && fallbackOptionId.HasValue)
+        {
+            set.Add(fallbackOptionId.Value);
+        }
+
+        return set;
+    }
+
+    public static bool EvaluateTextCompletion(
+        Question question,
+        IEnumerable<QuestionOption> options,
+        string? responseText)
+    {
+        if (string.IsNullOrWhiteSpace(responseText)) return false;
+
+        var normalizedCandidate = System.Text.RegularExpressions.Regex.Replace(responseText.Trim(), @"\s+", " ");
+
+        if (!question.AllowNumber && System.Text.RegularExpressions.Regex.IsMatch(normalizedCandidate, @"\d"))
+        {
+            return false;
+        }
+
+        var words = normalizedCandidate.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (question.MaxWords.HasValue && words.Length > question.MaxWords.Value)
+        {
+            return false;
+        }
+
+        if (!string.IsNullOrWhiteSpace(question.RequiredKeywords))
+        {
+            var keywords = ParseKeywords(question.RequiredKeywords);
+            foreach (var kw in keywords)
+            {
+                if (string.IsNullOrWhiteSpace(kw)) continue;
+                if (!ContainsKeywordStem(normalizedCandidate, kw.Trim()))
+                {
+                    return false;
+                }
+            }
+        }
+
+        var accepted = ParseAcceptedAnswers(question.AcceptedAnswersJson);
+        foreach (var opt in options.Where(o => o.IsCorrect))
+        {
+            if (!string.IsNullOrWhiteSpace(opt.Text))
+            {
+                accepted.Add(opt.Text.Trim());
+            }
+        }
+
+        foreach (var acc in accepted)
+        {
+            var normalizedAcc = System.Text.RegularExpressions.Regex.Replace(acc.Trim(), @"\s+", " ");
+            if (string.Equals(normalizedCandidate, normalizedAcc, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public static List<string> ParseKeywords(string requiredKeywords)
+    {
+        var list = new List<string>();
+        var trimmed = requiredKeywords.Trim();
+        if (trimmed.StartsWith("[") && trimmed.EndsWith("]"))
+        {
+            try
+            {
+                var parsed = System.Text.Json.JsonSerializer.Deserialize<List<string>>(trimmed);
+                if (parsed != null) return parsed.Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
+            }
+            catch { }
+        }
+        return trimmed.Split([',', ';'], StringSplitOptions.RemoveEmptyEntries)
+                      .Select(k => k.Trim())
+                      .Where(k => !string.IsNullOrWhiteSpace(k))
+                      .ToList();
+    }
+
+    public static bool ContainsKeywordStem(string text, string keyword)
+    {
+        if (string.IsNullOrWhiteSpace(keyword)) return true;
+        keyword = keyword.Trim().ToLowerInvariant();
+        var lowerText = text.ToLowerInvariant();
+
+        if (lowerText.Contains(keyword)) return true;
+
+        var stem = StripSuffixes(keyword);
+        if (stem.Length >= 3 && lowerText.Contains(stem)) return true;
+
+        var candidateWords = lowerText.Split([' ', ',', '.', '!', '?', ';', ':'], StringSplitOptions.RemoveEmptyEntries);
+        foreach (var w in candidateWords)
+        {
+            if (w.Contains(stem) || StripSuffixes(w) == stem) return true;
+        }
+
+        return false;
+    }
+
+    private static string StripSuffixes(string word)
+    {
+        if (word.EndsWith("ing") && word.Length > 5) return word[..^3];
+        if (word.EndsWith("tion") && word.Length > 6) return word[..^4];
+        if (word.EndsWith("ment") && word.Length > 6) return word[..^4];
+        if (word.EndsWith("ed") && word.Length > 4) return word[..^2];
+        if (word.EndsWith("es") && word.Length > 4) return word[..^2];
+        if (word.EndsWith("s") && word.Length > 3) return word[..^1];
+        return word;
+    }
+
+    public static List<string> ParseAcceptedAnswers(string? acceptedAnswersJson)
+    {
+        var list = new List<string>();
+        if (string.IsNullOrWhiteSpace(acceptedAnswersJson)) return list;
+        var trimmed = acceptedAnswersJson.Trim();
+        if (trimmed.StartsWith("[") && trimmed.EndsWith("]"))
+        {
+            try
+            {
+                var parsed = System.Text.Json.JsonSerializer.Deserialize<List<string>>(trimmed);
+                if (parsed != null) return parsed.Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
+            }
+            catch { }
+        }
+        return trimmed.Split([',', ';', '|'], StringSplitOptions.RemoveEmptyEntries)
+                      .Select(a => a.Trim())
+                      .Where(a => !string.IsNullOrWhiteSpace(a))
+                      .ToList();
     }
 
     private async Task<int> ComputeScaledScoreAsync(

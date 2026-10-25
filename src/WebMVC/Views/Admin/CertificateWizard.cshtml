@@ -36,8 +36,11 @@
   <button type="button" class="stepper__item @(Model.Step == 2 ? "is-current" : Model.Step > 2 ? "is-done" : "")" onclick="goToStep(2)" style="flex: 1; text-align: left; padding: 0.75rem 1rem; border: none; cursor: pointer; border-radius: 0; font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-weight: 700; background: @(Model.Step == 2 ? "var(--color-ink, #14181d)" : "#fff"); color: @(Model.Step == 2 ? "#fff" : "var(--color-ink, #14181d)");">
     2. Skills &amp; Timing Policies
   </button>
-  <button type="button" class="stepper__item @(Model.Step == 3 ? "is-current" : "")" onclick="goToStep(3)" style="flex: 1; text-align: left; padding: 0.75rem 1rem; border: none; cursor: pointer; border-radius: 0; font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-weight: 700; background: @(Model.Step == 3 ? "var(--color-ink, #14181d)" : "#fff"); color: @(Model.Step == 3 ? "#fff" : "var(--color-ink, #14181d)");">
+  <button type="button" class="stepper__item @(Model.Step == 3 ? "is-current" : Model.Step > 3 ? "is-done" : "")" onclick="goToStep(3)" style="flex: 1; text-align: left; padding: 0.75rem 1rem; border: none; cursor: pointer; border-radius: 0; font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-weight: 700; background: @(Model.Step == 3 ? "var(--color-ink, #14181d)" : "#fff"); color: @(Model.Step == 3 ? "#fff" : "var(--color-ink, #14181d)");">
     3. Section Blueprint &amp; Tools
+  </button>
+  <button type="button" class="stepper__item @(Model.Step == 4 ? "is-current" : "")" onclick="goToStep(4)" style="flex: 1; text-align: left; padding: 0.75rem 1rem; border: none; cursor: pointer; border-radius: 0; font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-weight: 700; background: @(Model.Step == 4 ? "var(--color-ink, #14181d)" : "#fff"); color: @(Model.Step == 4 ? "#fff" : "var(--color-ink, #14181d)");">
+    4. Scoring Rules &amp; Live Preview
   </button>
 </div>
 
@@ -428,13 +431,236 @@
           <button type="button" class="btn" onclick="goToStep(2)" style="border-radius: 0; font-family: var(--font-condensed, sans-serif); text-transform: uppercase;">
             ‹ Back to Step 2
           </button>
-          <button type="submit" class="btn btn--primary" style="border-radius: 0; font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 1rem; padding: 0.75rem 2rem;">
-            Save &amp; Persist Certificate Blueprint
+          <button type="button" class="btn btn--primary" onclick="goToStep(4)" style="border-radius: 0; font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 1rem; padding: 0.75rem 2rem;">
+            Next: Scoring Rules &amp; Live Preview ›
           </button>
         </div>
       </div>
     </div>
   </div>
+
+  <!-- ==================== STEP 4: SCORING RULES & LIVE PREVIEW ==================== -->
+  <div id="step-4" class="wizard-step" style="display: @(Model.Step == 4 ? "block" : "none");">
+    <div class="card" style="border: 2px solid var(--color-ink, #14181d); border-radius: 0; box-shadow: none; margin-bottom: 1.5rem;">
+      <div class="card__header" style="background: var(--color-ink, #14181d); color: #fff; padding: 0.75rem 1rem; font-family: var(--font-condensed, sans-serif); text-transform: uppercase;">
+        <strong>Step 4: Scoring Rules &amp; Live Preview Calculator</strong>
+      </div>
+      <div class="card__body" style="padding: 1.25rem;">
+        <p class="text-sm text-muted" style="margin-top: 0; margin-bottom: 1.5rem;">
+          Configure how scores aggregate across skills, calibrate section multipliers (e.g. IELTS Writing Task 2 weight = 2.0), and test your scoring model in real-time.
+        </p>
+
+        <!-- Scoring Aggregation Rule Dropdown -->
+        <div style="background: #fafafa; border: 2px solid var(--color-ink, #14181d); padding: 1.25rem; margin-bottom: 1.5rem;">
+          <h3 style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; margin-top: 0; margin-bottom: 0.5rem; letter-spacing: 0.05em;">
+            Overall Score Aggregation Rule
+          </h3>
+          <p class="text-xs text-muted" style="margin-top: 0; margin-bottom: 1rem;">
+            Governs how skill scores combine into the final attempt score and match against official CEFR/Band badges.
+          </p>
+
+          <div style="max-width: 600px;">
+            <select class="field__input" id="step4ScoreRuleSelect" onchange="syncStep4ScoreRule(this.value)" style="border: 2px solid var(--color-ink, #14181d); border-radius: 0; font-family: var(--font-mono, monospace); font-weight: 700; width: 100%; padding: 0.6rem;">
+              <option value="sum" selected="@(Model.ScoreAggregationRule == "sum")">Sum of skill scores — e.g. TOEIC 10–990</option>
+              <option value="avg_half_step" selected="@(Model.ScoreAggregationRule == "avg_half_step")">Average rounded to nearest 0.5 band — e.g. IELTS 0–9.0 / VSTEP 0–10.0</option>
+              <option value="avg_whole" selected="@(Model.ScoreAggregationRule == "avg_whole")">Average rounded to nearest whole number — e.g. VSTEP 0–10</option>
+              <option value="independent" selected="@(Model.ScoreAggregationRule == "independent")">Report each skill independently — e.g. TOEIC S&amp;W 0–200</option>
+            </select>
+            <div id="step4ScoreRuleHelp" style="font-size: 0.8rem; margin-top: 0.5rem; color: var(--color-ink, #14181d); font-family: var(--font-mono, monospace);">
+              @if (Model.ScoreAggregationRule == "avg_half_step")
+              {
+                <span>Official rounding: decimal &lt; 0.25 ➔ .0; &gt;= 0.25 &amp; &lt; 0.75 ➔ .5; &gt;= 0.75 ➔ next whole band.</span>
+              }
+              else if (Model.ScoreAggregationRule == "sum")
+              {
+                <span>Sum rule: all skill scaled scores add up directly (e.g. Listening + Reading).</span>
+              }
+              else if (Model.ScoreAggregationRule == "avg_whole")
+              {
+                <span>Whole rounding: average of skill scores rounded to nearest whole integer.</span>
+              }
+              else
+              {
+                <span>Independent rule: each skill is evaluated and displayed separately.</span>
+              }
+            </div>
+          </div>
+        </div>
+
+        <!-- Section Weights Configurator -->
+        <div style="background: #fff; border: 2px solid var(--color-ink, #14181d); padding: 1.25rem; margin-bottom: 1.5rem;">
+          <h3 style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; margin-top: 0; margin-bottom: 0.5rem; letter-spacing: 0.05em;">
+            Relative Section Multipliers &amp; Weights
+          </h3>
+          <p class="text-xs text-muted" style="margin-top: 0; margin-bottom: 1rem;">
+            When a skill has multiple sections, the skill score equals the weighted average: <code>sum(sectionScore * weight) / sum(weight)</code>.
+          </p>
+
+          <div id="step4WeightsContainer">
+            @for (int sIdx = 0; sIdx < Model.Skills.Count; sIdx++)
+            {
+              var sk = Model.Skills[sIdx];
+              <div class="step4-skill-weight-box" data-skill-idx="@sIdx" style="margin-bottom: 1.25rem; border: 1px solid var(--color-border, #ccd2d6); padding: 1rem; background: #fafafa;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; border-bottom: 2px solid var(--color-ink, #14181d); padding-bottom: 0.5rem;">
+                  <strong style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 1rem;">
+                    Skill #@(sIdx + 1): @sk.Name (@sk.Code)
+                  </strong>
+                  <span class="badge" style="background: var(--color-ink, #14181d); color: #fff; border-radius: 0; font-family: var(--font-mono, monospace); font-size: 0.75rem;">
+                    @sk.Sections.Count Section@(sk.Sections.Count == 1 ? "" : "s")
+                  </span>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 0.75rem;">
+                  @for (int secIdx = 0; secIdx < sk.Sections.Count; secIdx++)
+                  {
+                    var sec = sk.Sections[secIdx];
+                    <div style="border: 1px solid var(--color-ink, #14181d); padding: 0.75rem; background: #fff;">
+                      <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <span style="font-weight: 700; font-family: var(--font-condensed, sans-serif);">@sec.Name</span>
+                        <code style="font-size: 0.75rem;">@sec.Code</code>
+                      </div>
+                      <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
+                        <label style="font-size: 0.75rem; font-family: var(--font-condensed, sans-serif); text-transform: uppercase;">Score Weight:</label>
+                        <input type="number" step="0.1" min="0.1" max="10.0"
+                               class="field__input step4-weight-input"
+                               data-skill-idx="@sIdx"
+                               data-sec-idx="@secIdx"
+                               value="@sec.ScoreWeight"
+                               onchange="syncStep4WeightToStep3(@sIdx, @secIdx, this.value); updateLiveScorePreview();"
+                               style="width: 90px; border: 2px solid var(--color-ink, #14181d); border-radius: 0; font-family: var(--font-mono, monospace); font-weight: 700; text-align: center;">
+                      </div>
+                      <div style="font-size: 0.7rem; color: #666; margin-top: 0.25rem;">
+                        Expected items: <strong>@(sec.ExpectedQuestionCount ?? 10)</strong>
+                      </div>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Interactive Live Score Preview Calculator Placard -->
+        <div class="card" style="border: 2px solid var(--color-ink, #14181d); border-radius: 0; box-shadow: none; background: #fff; margin-bottom: 1.5rem;">
+          <div class="card__header" style="background: #0b4ea2; color: #fff; padding: 0.75rem 1rem; display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; letter-spacing: 0.05em;">
+              BẢNG HIỆU PHÒNG THI &bull; LIVE SCORE PREVIEW CALCULATOR
+            </strong>
+            <span class="badge" style="background: #fff; color: #0b4ea2; border-radius: 0; font-family: var(--font-mono, monospace); font-weight: 700;">
+              REAL-TIME SANDBOX
+            </span>
+          </div>
+          <div class="card__body" style="padding: 1.25rem;">
+            <p class="text-xs text-muted" style="margin-top: 0; margin-bottom: 1.25rem;">
+              Adjust candidate sample scores below to immediately simulate scaled skill calculations, section weighting, total score aggregation, and proficiency band matching.
+            </p>
+
+            <div style="display: grid; grid-template-columns: 3fr 2fr; gap: 1.5rem;">
+              <!-- Left: Inputs -->
+              <div id="liveCalculatorInputs">
+                <!-- Dynamically populated or rendered -->
+                @for (int sIdx = 0; sIdx < Model.Skills.Count; sIdx++)
+                {
+                  var sk = Model.Skills[sIdx];
+                  <div class="calc-skill-row" data-calc-skill-idx="@sIdx" style="border: 1px solid var(--color-border, #ccd2d6); padding: 0.75rem; margin-bottom: 0.75rem; background: #fafafa;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                      <strong style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 0.85rem;">@sk.Name (@sk.Code)</strong>
+                      <span class="calc-skill-preview-badge" data-calc-skill-badge="@sIdx" style="font-family: var(--font-mono, monospace); font-weight: 700; font-size: 0.85rem; color: #0b4ea2;">
+                        --
+                      </span>
+                    </div>
+
+                    @if (sk.Sections.Count > 1)
+                    {
+                      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.5rem;">
+                        @for (int secIdx = 0; secIdx < sk.Sections.Count; secIdx++)
+                        {
+                          var sec = sk.Sections[secIdx];
+                          var defaultSample = Math.Max(1, (sec.ExpectedQuestionCount ?? 10) * 3 / 4);
+                          <div style="background: #fff; border: 1px solid var(--color-ink, #14181d); padding: 0.5rem;">
+                            <div style="display: flex; justify-content: space-between; font-size: 0.7rem; margin-bottom: 0.25rem;">
+                              <span>@sec.Code (w: <span class="calc-sec-weight-label" data-skill-idx="@sIdx" data-sec-idx="@secIdx">@sec.ScoreWeight</span>)</span>
+                              <span class="text-muted">max: @(sec.ExpectedQuestionCount ?? 10)</span>
+                            </div>
+                            <input type="number" min="0" max="@(sec.ExpectedQuestionCount ?? 100)"
+                                   class="field__input calc-sec-input"
+                                   data-calc-skill="@sIdx"
+                                   data-calc-sec="@secIdx"
+                                   value="@defaultSample"
+                                   oninput="updateLiveScorePreview()"
+                                   style="width: 100%; border: 1px solid var(--color-ink, #14181d); border-radius: 0; font-family: var(--font-mono, monospace); font-weight: 700; padding: 0.35rem; text-align: center;">
+                          </div>
+                        }
+                      </div>
+                    }
+                    else
+                    {
+                      var firstSec = sk.Sections.FirstOrDefault();
+                      var expectedMax = firstSec?.ExpectedQuestionCount ?? 40;
+                      var defaultSample = expectedMax * 3 / 4;
+                      <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <span style="font-size: 0.75rem; font-family: var(--font-condensed, sans-serif); text-transform: uppercase;">Sample Correct:</span>
+                        <input type="number" min="0" max="@expectedMax"
+                               class="field__input calc-skill-single-input"
+                               data-calc-skill="@sIdx"
+                               data-max-q="@expectedMax"
+                               value="@defaultSample"
+                               oninput="updateLiveScorePreview()"
+                               style="width: 100px; border: 2px solid var(--color-ink, #14181d); border-radius: 0; font-family: var(--font-mono, monospace); font-weight: 700; text-align: center;">
+                        <span class="text-xs text-muted">/ @expectedMax questions</span>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+
+              <!-- Right: Live Placard Outputs -->
+              <div style="display: flex; flex-direction: column; justify-content: space-between;">
+                <div style="border: 2px solid var(--color-ink, #14181d); padding: 1.25rem; background: var(--color-ink, #14181d); color: #fff;">
+                  <div style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 0.8rem; letter-spacing: 0.1em; opacity: 0.8; margin-bottom: 0.25rem;">
+                    OVERALL ESTIMATED SCORE
+                  </div>
+                  <div id="liveTotalScoreDisplay" style="font-family: var(--font-mono, monospace); font-size: 3rem; font-weight: 700; line-height: 1; color: #f2b705; margin-bottom: 0.5rem;">
+                    --
+                  </div>
+
+                  <div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 0.75rem; margin-top: 0.75rem;">
+                    <div style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 0.75rem; opacity: 0.8; margin-bottom: 0.35rem;">
+                      MATCHED PROFICIENCY BAND
+                    </div>
+                    <div id="liveBandBadgeDisplay" style="display: inline-block; background: #0a6b3c; color: #fff; padding: 0.35rem 0.75rem; font-family: var(--font-mono, monospace); font-weight: 700; font-size: 1.1rem; letter-spacing: 0.05em;">
+                      CALCULATING...
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Skill summary table -->
+                <div style="border: 1px solid var(--color-border, #ccd2d6); padding: 0.75rem; margin-top: 1rem; background: #fafafa;">
+                  <div style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 0.75rem; font-weight: 700; margin-bottom: 0.5rem;">
+                    Skill Breakdown Summary
+                  </div>
+                  <div id="liveSkillsSummaryTable" style="font-family: var(--font-mono, monospace); font-size: 0.8rem;">
+                    <!-- dynamically rendered -->
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Navigation Buttons -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; padding-top: 1rem; border-top: 2px solid var(--color-ink, #14181d);">
+          <button type="button" class="btn" onclick="goToStep(3)" style="border-radius: 0; font-family: var(--font-condensed, sans-serif); text-transform: uppercase;">
+            ‹ Back to Step 3
+          </button>
+          <button type="submit" class="btn btn--primary" style="border-radius: 0; font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 1.05rem; padding: 0.8rem 2.5rem; background: #0a6b3c; border-color: #0a6b3c;">
+            ✔ Save &amp; Persist Certificate Blueprint
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </form>
 
 <script>
@@ -589,4 +815,187 @@
       </div>`;
     list.insertAdjacentHTML('beforeend', html);
   }
+
+  function syncStep4ScoreRule(rule) {
+    var primarySelect = document.getElementById('scoreRule');
+    if (primarySelect) primarySelect.value = rule;
+    var step4Select = document.getElementById('step4ScoreRuleSelect');
+    if (step4Select) step4Select.value = rule;
+
+    var help = document.getElementById('step4ScoreRuleHelp');
+    if (help) {
+      if (rule === 'avg_half_step') {
+        help.textContent = 'Official rounding: decimal < 0.25 ➔ .0; >= 0.25 & < 0.75 ➔ .5; >= 0.75 ➔ next whole band.';
+      } else if (rule === 'sum') {
+        help.textContent = 'Sum rule: all skill scaled scores add up directly (e.g. Listening + Reading).';
+      } else if (rule === 'avg_whole') {
+        help.textContent = 'Whole rounding: average of skill scores rounded to nearest whole integer.';
+      } else {
+        help.textContent = 'Independent rule: each skill is evaluated and displayed separately.';
+      }
+    }
+    updateLiveScorePreview();
+  }
+
+  function syncStep4WeightToStep3(sIdx, secIdx, val) {
+    var inputInStep3 = document.querySelector(`input[name="Skills[${sIdx}].Sections[${secIdx}].ScoreWeight"]`);
+    if (inputInStep3) inputInStep3.value = val;
+
+    // update weight label in calculator
+    var label = document.querySelector(`.calc-sec-weight-label[data-skill-idx="${sIdx}"][data-sec-idx="${secIdx}"]`);
+    if (label) label.textContent = val;
+  }
+
+  function roundHalfStepIelts(val) {
+    if (val > 10.0) {
+      var band = val / 10.0;
+      var floor = Math.floor(band);
+      var rem = band - floor;
+      var rounded = rem < 0.25 ? floor : (rem < 0.75 ? floor + 0.5 : floor + 1.0);
+      return Math.round(rounded * 10);
+    } else {
+      var floor = Math.floor(val);
+      var rem = val - floor;
+      var rounded = rem < 0.25 ? floor : (rem < 0.75 ? floor + 0.5 : floor + 1.0);
+      return Math.round(rounded * 10);
+    }
+  }
+
+  function updateLiveScorePreview() {
+    var ruleSelect = document.getElementById('step4ScoreRuleSelect') || document.getElementById('scoreRule');
+    var rule = ruleSelect ? ruleSelect.value : 'sum';
+
+    var skillRows = document.querySelectorAll('.calc-skill-row');
+    var skillScaledScores = [];
+    var summaryHtml = '';
+
+    skillRows.forEach(function(row) {
+      var sIdx = row.getAttribute('data-calc-skill-idx');
+      var skillNameEl = row.querySelector('strong');
+      var skillName = skillNameEl ? skillNameEl.textContent : 'Skill';
+
+      var secInputs = row.querySelectorAll('.calc-sec-input');
+      var scaled = 0;
+      var rawDisplay = 0;
+
+      if (secInputs.length > 0) {
+        var weightedSum = 0;
+        var totalWeight = 0;
+        secInputs.forEach(function(inp) {
+          var secIdx = inp.getAttribute('data-calc-sec');
+          var weightInput = document.querySelector(`.step4-weight-input[data-skill-idx="${sIdx}"][data-sec-idx="${secIdx}"]`);
+          var weight = weightInput ? parseFloat(weightInput.value) || 1.0 : 1.0;
+          var val = parseFloat(inp.value) || 0;
+          weightedSum += val * weight;
+          totalWeight += weight;
+        });
+
+        var weightedRaw = totalWeight > 0 ? (weightedSum / totalWeight) : 0;
+        rawDisplay = weightedRaw;
+
+        if (rule === 'avg_half_step') {
+          scaled = roundHalfStepIelts(weightedRaw);
+        } else if (rule === 'avg_whole') {
+          scaled = Math.round(weightedRaw);
+        } else {
+          // Default proportional
+          scaled = Math.round(weightedRaw * 10);
+        }
+      } else {
+        var singleInput = row.querySelector('.calc-skill-single-input');
+        var val = singleInput ? parseFloat(singleInput.value) || 0 : 0;
+        var maxQ = singleInput ? parseFloat(singleInput.getAttribute('data-max-q')) || 40 : 40;
+        rawDisplay = val;
+
+        if (rule === 'avg_half_step') {
+          // Proportional to 9.0 (stored as 10-90)
+          var bandVal = (val / maxQ) * 9.0;
+          scaled = roundHalfStepIelts(bandVal);
+        } else if (rule === 'avg_whole') {
+          scaled = Math.round((val / maxQ) * 100);
+        } else {
+          // TOEIC sum: ~495 per skill
+          scaled = Math.round((val / maxQ) * 495 / 5) * 5;
+        }
+      }
+
+      skillScaledScores.push(scaled);
+
+      var badge = row.querySelector('.calc-skill-preview-badge');
+      if (badge) {
+        if (rule === 'avg_half_step') {
+          badge.textContent = 'Scaled: ' + (scaled / 10).toFixed(1);
+        } else {
+          badge.textContent = 'Scaled: ' + scaled;
+        }
+      }
+
+      summaryHtml += '<div style="display: flex; justify-content: space-between; padding: 0.2rem 0; border-bottom: 1px dotted #ccc;">'
+        + '<span>' + skillName + '</span>'
+        + '<strong>' + (rule === 'avg_half_step' ? (scaled / 10).toFixed(1) : scaled) + '</strong>'
+        + '</div>';
+    });
+
+    var summaryEl = document.getElementById('liveSkillsSummaryTable');
+    if (summaryEl) summaryEl.innerHTML = summaryHtml;
+
+    // Aggregate total
+    var total = 0;
+    if (skillScaledScores.length > 0) {
+      if (rule === 'sum') {
+        total = skillScaledScores.reduce(function(a, b) { return a + b; }, 0);
+      } else if (rule === 'avg_half_step') {
+        var avg = skillScaledScores.reduce(function(a, b) { return a + b; }, 0) / skillScaledScores.length;
+        total = roundHalfStepIelts(avg);
+      } else if (rule === 'avg_whole') {
+        var avg = skillScaledScores.reduce(function(a, b) { return a + b; }, 0) / skillScaledScores.length;
+        total = Math.round(avg);
+      } else {
+        total = 0;
+      }
+    }
+
+    var totalEl = document.getElementById('liveTotalScoreDisplay');
+    if (totalEl) {
+      if (rule === 'avg_half_step') {
+        totalEl.textContent = (total / 10).toFixed(1);
+      } else if (rule === 'independent') {
+        totalEl.textContent = 'SEPARATE';
+      } else {
+        totalEl.textContent = total;
+      }
+    }
+
+    // Band matching
+    var bandEl = document.getElementById('liveBandBadgeDisplay');
+    if (bandEl) {
+      if (rule === 'avg_half_step') {
+        var bandNum = (total / 10).toFixed(1);
+        if (total >= 85) bandEl.textContent = 'C2 • BAND ' + bandNum;
+        else if (total >= 70) bandEl.textContent = 'C1 • BAND ' + bandNum;
+        else if (total >= 55) bandEl.textContent = 'B2 • BAND ' + bandNum;
+        else if (total >= 40) bandEl.textContent = 'B1 • BAND ' + bandNum;
+        else bandEl.textContent = 'A2 • BAND ' + bandNum;
+      } else if (rule === 'sum') {
+        if (total >= 905) bandEl.textContent = 'GOLD • 905–990';
+        else if (total >= 785) bandEl.textContent = 'BLUE • 785–900';
+        else if (total >= 605) bandEl.textContent = 'GREEN • 605–780';
+        else if (total >= 405) bandEl.textContent = 'BROWN • 405–600';
+        else bandEl.textContent = 'ORANGE • 10–400';
+      } else if (rule === 'avg_whole') {
+        if (total >= 85) bandEl.textContent = 'C1 • ADVANCED';
+        else if (total >= 60) bandEl.textContent = 'B2 • VANTAGE';
+        else if (total >= 40) bandEl.textContent = 'B1 • THRESHOLD';
+        else bandEl.textContent = 'A2 • ELEMENTARY';
+      } else {
+        bandEl.textContent = 'INDEPENDENT SKILLS';
+      }
+    }
+  }
+
+  // Initialize live preview on load
+  document.addEventListener('DOMContentLoaded', function() {
+    updateLiveScorePreview();
+  });
+
 </script>

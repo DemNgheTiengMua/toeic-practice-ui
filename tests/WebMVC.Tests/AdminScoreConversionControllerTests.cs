@@ -141,5 +141,8 @@ public sealed class AdminScoreConversionControllerTests
 
         public Task<AdminScoreConversionDto> UpdateAdminScoreConversionAsync(int certId, UpdateScoreConversionRequest request, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<AdminScoreConversionDto>(ExceptionToThrow) : Task.FromResult(UpdatedDto!);
+
+        public Task<ScorePreviewResultDto> CalculateScorePreviewAsync(ScorePreviewRequestDto request, CancellationToken cancellationToken = default) =>
+            Task.FromResult(new ScorePreviewResultDto(request.ScoreAggregationRule, [], 0, null, null));
     }
 }

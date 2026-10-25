@@ -42,7 +42,8 @@ public interface IMockExamService
         int? selectedOptionId,
         bool isFlagged,
         CancellationToken cancellationToken = default,
-        string? responseText = null);
+        string? responseText = null,
+        string? selectedOptionIdsJson = null);
 
     Task<SaveAttemptDraftResult> SaveDraftAsync(int userId, int attemptId, int questionId, string? responseText, CancellationToken cancellationToken = default);
 
@@ -283,7 +284,8 @@ public sealed class MockExamService(
         int? selectedOptionId,
         bool isFlagged,
         CancellationToken cancellationToken = default,
-        string? responseText = null)
+        string? responseText = null,
+        string? selectedOptionIdsJson = null)
     {
         try
         {
@@ -295,7 +297,8 @@ public sealed class MockExamService(
                 isFlagged,
                 null,
                 cancellationToken,
-                responseText);
+                responseText,
+                selectedOptionIdsJson);
         }
         catch (AttemptEngineException ex)
         {

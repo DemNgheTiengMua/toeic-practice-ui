@@ -9,7 +9,8 @@ namespace WebMVC.Controllers;
 public sealed class AdminCertificatesController(
     CurrentUser currentUser,
     IAdminCertificatesClient api,
-    ILogger<AdminCertificatesController> logger)
+    ILogger<AdminCertificatesController> logger,
+    IAdminScoreConversionClient? scoreConversionClient = null)
     : AdminControllerBase(currentUser, logger)
 {
     [HttpGet("/admin/certificates")]
@@ -26,7 +27,7 @@ public sealed class AdminCertificatesController(
         var vm = new CertificateWizardViewModel
         {
             Presets = presets,
-            Step = Math.Clamp(step, 1, 3)
+            Step = Math.Clamp(step, 1, 4)
         };
 
         if (certId.HasValue && certId.Value > 0)
@@ -90,6 +91,25 @@ public sealed class AdminCertificatesController(
         {
             model.ErrorMessage = ex.Message;
             return View("Wizard", model);
+        }
+    }
+
+    [HttpPost("/admin/certificates/score-preview")]
+    public async Task<IActionResult> ScorePreview([FromBody] ScorePreviewRequestDto request, CancellationToken cancellationToken)
+    {
+        if (scoreConversionClient is null)
+        {
+            return BadRequest(new { error = "Score conversion client is not configured." });
+        }
+
+        try
+        {
+            var result = await scoreConversionClient.CalculateScorePreviewAsync(request, await BearerAsync(), cancellationToken);
+            return Json(result);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { error = ex.Message });
         }
     }
 

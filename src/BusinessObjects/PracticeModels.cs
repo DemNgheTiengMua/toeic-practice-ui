@@ -119,7 +119,10 @@ public sealed record PracticeQuestionView(
     int? AudioStartMs = null,
     int? AudioEndMs = null);
 
-public sealed record SubmitPracticeAnswerInput(int? SelectedOptionId);
+public sealed record SubmitPracticeAnswerInput(
+    int? SelectedOptionId,
+    string? ResponseText = null,
+    string? SelectedOptionIdsJson = null);
 
 public sealed record GradedPracticeAnswerResult(
     bool? IsCorrect,

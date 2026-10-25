@@ -240,6 +240,16 @@ public static class AdminEndpoints
             }
         });
 
+        admin.MapPost("/score-conversion/preview", async (
+            ScorePreviewRequestDto requestDto,
+            IScoreConversionService scoreConversionService,
+            CancellationToken cancellationToken) =>
+        {
+            var request = ToScorePreviewRequest(requestDto);
+            var result = await scoreConversionService.CalculateScorePreviewAsync(request, cancellationToken);
+            return Results.Ok(ToScorePreviewResultDto(result));
+        });
+
         // ---- Admin Exam & Question Editor endpoints ----
         admin.MapGet("/exams", async (
             string? q,

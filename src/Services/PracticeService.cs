@@ -528,11 +528,32 @@ public sealed class PracticeService(
                 ?? throw new PracticeException(PracticeException.InvalidOption, $"Option {optionId} does not belong to question {questionId}.");
 
             answer.SelectedOptionId = optionId;
-            answer.IsCorrect = option.IsCorrect;
+            answer.ResponseText = input.ResponseText;
+            answer.SelectedOptionIdsJson = input.SelectedOptionIdsJson;
+            answer.IsCorrect = AttemptEngine.EvaluateObjectiveAnswer(
+                q,
+                allOptions,
+                optionId,
+                input.SelectedOptionIdsJson,
+                input.ResponseText);
+        }
+        else if (!string.IsNullOrWhiteSpace(input.ResponseText) || !string.IsNullOrWhiteSpace(input.SelectedOptionIdsJson))
+        {
+            answer.SelectedOptionId = null;
+            answer.ResponseText = input.ResponseText;
+            answer.SelectedOptionIdsJson = input.SelectedOptionIdsJson;
+            answer.IsCorrect = AttemptEngine.EvaluateObjectiveAnswer(
+                q,
+                allOptions,
+                null,
+                input.SelectedOptionIdsJson,
+                input.ResponseText);
         }
         else
         {
             answer.SelectedOptionId = null;
+            answer.ResponseText = null;
+            answer.SelectedOptionIdsJson = null;
             answer.IsCorrect = null;
         }
 
