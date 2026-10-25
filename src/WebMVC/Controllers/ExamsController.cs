@@ -7,7 +7,8 @@ namespace WebMVC.Controllers;
 public sealed class ExamsController(
     IMockExamsClient api,
     CurrentUser currentUser,
-    ILogger<ExamsController> logger)
+    ILogger<ExamsController> logger,
+    ISpeakingClient? speakingApi = null)
     : LearnerControllerBase(currentUser, logger)
 {
     [HttpGet("/exams")]
@@ -265,6 +266,71 @@ public sealed class ExamsController(
         catch (ApiException ex)
         {
             logger.LogWarning(ex, "Failed to save exam draft for attempt {AttemptId}, question {QuestionId}", attemptId, request.QuestionId);
+            return StatusCode(ex.Status, new { code = ex.Code, message = ex.Detail ?? ex.Message });
+        }
+    }
+
+    [HttpPost("/exams/take/{attemptId:int}/upload-audio")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UploadSpeakingAudio(
+        int attemptId,
+        [FromForm] int questionId,
+        [FromForm] IFormFile? audioFile,
+        [FromForm] int? durationMs,
+        CancellationToken cancellationToken)
+    {
+        if (audioFile is null || audioFile.Length == 0)
+        {
+            return BadRequest(new { code = ApiError.Codes.Validation, message = "Audio file cannot be empty." });
+        }
+
+        try
+        {
+            var client = speakingApi ?? (api as ISpeakingClient);
+            if (client is null)
+            {
+                return StatusCode(StatusCodes.Status501NotImplemented, new { message = "Speaking service not configured." });
+            }
+
+            using var stream = audioFile.OpenReadStream();
+            var result = await client.UploadSpeakingAudioAsync(
+                attemptId,
+                questionId,
+                stream,
+                audioFile.FileName,
+                audioFile.ContentType,
+                durationMs,
+                cancellationToken);
+
+            return Ok(result);
+        }
+        catch (ApiException ex)
+        {
+            logger.LogWarning(ex, "Failed to upload speaking audio for attempt {AttemptId}, question {QuestionId}", attemptId, questionId);
+            return StatusCode(ex.Status, new { code = ex.Code, message = ex.Detail ?? ex.Message });
+        }
+    }
+
+    [HttpGet("/exams/take/{attemptId:int}/questions/{questionId:int}/audio")]
+    public async Task<IActionResult> GetSpeakingAudio(
+        int attemptId,
+        int questionId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var client = speakingApi ?? (api as ISpeakingClient);
+            if (client is null)
+            {
+                return StatusCode(StatusCodes.Status501NotImplemented, new { message = "Speaking service not configured." });
+            }
+
+            var (stream, contentType, fileName) = await client.GetSpeakingAudioStreamAsync(attemptId, questionId, cancellationToken);
+            return File(stream, contentType, fileName, enableRangeProcessing: true);
+        }
+        catch (ApiException ex)
+        {
+            logger.LogWarning(ex, "Failed to retrieve audio stream for attempt {AttemptId}, question {QuestionId}", attemptId, questionId);
             return StatusCode(ex.Status, new { code = ex.Code, message = ex.Detail ?? ex.Message });
         }
     }

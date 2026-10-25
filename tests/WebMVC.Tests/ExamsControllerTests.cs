@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using Contracts;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
@@ -469,7 +469,7 @@ public sealed class ExamsControllerTests
         Assert.Equal("Pre-fetched exam insight", model.Insight.Narrative);
     }
 
-    private static ExamsController CreateController(TestApiClient api)
+    private static ExamsController CreateController(TestApiClient api, ISpeakingClient? speakingApi = null)
     {
         var identity = new ClaimsIdentity(AuthClaims.For(7, "learner@test.local", Roles.Learner, "Learner"), "Cookies");
         var principal = new ClaimsPrincipal(identity);
@@ -484,7 +484,7 @@ public sealed class ExamsControllerTests
         var httpContext = new DefaultHttpContext { User = principal, RequestServices = serviceProvider };
         var currentUser = new CurrentUser(new HttpContextAccessor { HttpContext = httpContext });
 
-        var controller = new ExamsController(api, currentUser, NullLogger<ExamsController>.Instance)
+        var controller = new ExamsController(api, currentUser, NullLogger<ExamsController>.Instance, speakingApi)
         {
             ControllerContext = new ControllerContext
             {
@@ -512,6 +512,42 @@ public sealed class ExamsControllerTests
     {
         public IDictionary<string, object> LoadTempData(HttpContext context) => new Dictionary<string, object>();
         public void SaveTempData(HttpContext context, IDictionary<string, object> values) { }
+    }
+
+
+    private sealed class TestSpeakingClient : ISpeakingClient
+    {
+        public UploadSpeakingAudioResponse? UploadResult { get; set; }
+        public (Stream Stream, string ContentType, string FileName)? AudioStreamResult { get; set; }
+        public int? UploadedAttemptId { get; set; }
+        public int? UploadedQuestionId { get; set; }
+        public string? UploadedFileName { get; set; }
+        public int? UploadedDurationMs { get; set; }
+
+        public Task<UploadSpeakingAudioResponse> UploadSpeakingAudioAsync(
+            int attemptId, int questionId, Stream audioStream, string fileName, string contentType, int? durationMs, CancellationToken cancellationToken = default)
+        {
+            UploadedAttemptId = attemptId;
+            UploadedQuestionId = questionId;
+            UploadedFileName = fileName;
+            UploadedDurationMs = durationMs;
+            return Task.FromResult(UploadResult ?? new UploadSpeakingAudioResponse(1, questionId, "/audio/speaking-test.webm", durationMs, DateTimeOffset.UtcNow));
+        }
+
+        public Task<(Stream Stream, string ContentType, string FileName)> GetSpeakingAudioStreamAsync(
+            int attemptId, int questionId, CancellationToken cancellationToken = default)
+        {
+            if (AudioStreamResult.HasValue) return Task.FromResult(AudioStreamResult.Value);
+            return Task.FromResult((Stream: (Stream)new MemoryStream([1, 2, 3]), ContentType: "audio/webm", FileName: "test.webm"));
+        }
+
+        public Task<SpeakingInstructionsDto> GetSpeakingInstructionsAsync(int examId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<StartSpeakingAttemptResponse> StartSpeakingAttemptAsync(int examId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<SpeakingTakeDto> GetSpeakingTakeAsync(int attemptId, int? questionId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<SubmitSpeakingResponse> SubmitSpeakingAttemptAsync(int attemptId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<SpeakingGradingPendingDto> GetSpeakingGradingPendingAsync(int attemptId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task RetrySpeakingGradingAsync(int attemptId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<SpeakingReviewDto> GetSpeakingReviewAsync(int attemptId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
     }
 
     private sealed class TestApiClient : IMockExamsClient
@@ -994,4 +1030,90 @@ public sealed class ExamsControllerTests
         Assert.Contains(1, model.Take.CurrentQuestion.SelectedOptionIds!);
         Assert.Contains("highlighter", model.Take.CurrentQuestion.ToolsConfigJson);
     }
+    [Fact]
+    public async Task Take_with_system_paced_auto_returns_model_with_speaking_pacer_metadata()
+    {
+        var q = new AttemptQuestionDto(
+            15, 1, 11, 1, "SP1", "Speaking Part 1", "speaking", "Speaking", ModalityDto.Speaking,
+            "Read a text aloud.", null, null, null, null, null, null, null,
+            [],
+            null, false, "free_response", null, null,
+            PrepSeconds: 45,
+            ResponseSeconds: 45,
+            NavigationMode: "SYSTEM_PACED_AUTO"
+        );
+
+        var take = new AttemptTakeDto(
+            105, 1, "TOEIC Speaking Test 1", "TOEIC_SW", AttemptStatusDto.InProgress,
+            DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddMinutes(20), 1200,
+            11, 1, 0, q,
+            [new NavigatorItemDto(15, 1, 1, "SP1", ModalityDto.Speaking, true, false, true)],
+            false);
+
+        var api = new TestApiClient { TakeDto = take };
+        var controller = CreateController(api);
+        var result = await controller.Take(105, null, CancellationToken.None);
+
+        var viewResult = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<ExamTakeViewModel>(viewResult.Model);
+        Assert.Equal(105, model.Take.AttemptId);
+        Assert.Equal("SYSTEM_PACED_AUTO", model.Take.CurrentQuestion.NavigationMode);
+        Assert.Equal(45, model.Take.CurrentQuestion.PrepSeconds);
+        Assert.Equal(45, model.Take.CurrentQuestion.ResponseSeconds);
+    }
+
+    [Fact]
+    public async Task UploadSpeakingAudio_with_empty_file_returns_bad_request()
+    {
+        var api = new TestApiClient();
+        var speakingApi = new TestSpeakingClient();
+        var controller = CreateController(api, speakingApi);
+
+        var result = await controller.UploadSpeakingAudio(105, 15, null, 15000, CancellationToken.None);
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.NotNull(badRequest.Value);
+    }
+
+    [Fact]
+    public async Task UploadSpeakingAudio_with_valid_file_forwards_to_speaking_client_and_returns_ok()
+    {
+        var api = new TestApiClient();
+        var speakingApi = new TestSpeakingClient();
+        var controller = CreateController(api, speakingApi);
+
+        var fileBytes = System.Text.Encoding.UTF8.GetBytes("fake audio bytes");
+        var stream = new MemoryStream(fileBytes);
+        var formFile = new FormFile(stream, 0, fileBytes.Length, "audioFile", "recording.webm")
+        {
+            Headers = new HeaderDictionary(),
+            ContentType = "audio/webm"
+        };
+
+        var result = await controller.UploadSpeakingAudio(105, 15, formFile, 25000, CancellationToken.None);
+
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var response = Assert.IsType<UploadSpeakingAudioResponse>(okResult.Value);
+        Assert.Equal(15, response.QuestionId);
+        Assert.Equal(105, speakingApi.UploadedAttemptId);
+        Assert.Equal(15, speakingApi.UploadedQuestionId);
+        Assert.Equal("recording.webm", speakingApi.UploadedFileName);
+        Assert.Equal(25000, speakingApi.UploadedDurationMs);
+    }
+
+    [Fact]
+    public async Task GetSpeakingAudio_returns_file_stream_result()
+    {
+        var api = new TestApiClient();
+        var speakingApi = new TestSpeakingClient();
+        var controller = CreateController(api, speakingApi);
+
+        var result = await controller.GetSpeakingAudio(105, 15, CancellationToken.None);
+
+        var fileResult = Assert.IsType<FileStreamResult>(result);
+        Assert.Equal("audio/webm", fileResult.ContentType);
+        Assert.Equal("test.webm", fileResult.FileDownloadName);
+        Assert.True(fileResult.EnableRangeProcessing);
+    }
 }
+

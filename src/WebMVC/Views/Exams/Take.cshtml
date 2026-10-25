@@ -55,6 +55,139 @@
       color: #4b5563;
     }
 
+    /* Automated Speaking Pacer & Verification Screen (DESIGN.md Bảng hiệu phòng thi) */
+    .speaking-pacer-container {
+      margin-top: 1rem;
+      border: 2px solid #14181d;
+      border-radius: 0;
+      box-shadow: none;
+      background: #fafbfc;
+      padding: 1.25rem;
+    }
+    .speaking-pacer-placard {
+      padding: 0.75rem 1rem;
+      border: 2px solid #14181d;
+      border-radius: 0;
+      box-shadow: none;
+      font-family: "IBM Plex Sans Condensed", sans-serif;
+      font-weight: 700;
+      font-size: 1.1rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .speaking-pacer-placard--prep {
+      background: #0b4ea2;
+      color: #ffffff;
+      border-color: #14181d;
+    }
+    .speaking-pacer-placard--recording {
+      background: #b31217;
+      color: #ffffff;
+      border-color: #14181d;
+      animation: rec-banner-pulse 1.2s infinite ease-in-out;
+    }
+    @@keyframes rec-banner-pulse {
+      0%, 100% { background-color: #b31217; color: #ffffff; }
+      50% { background-color: #7a0c10; color: #ffffff; }
+    }
+    .speaking-pacer-placard .rec-dot {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      background-color: #ffffff;
+      border: 2px solid #14181d;
+      border-radius: 0;
+      margin-right: 0.5rem;
+      vertical-align: middle;
+      animation: rec-pulse 0.8s infinite alternate;
+    }
+    @@keyframes rec-pulse {
+      0% { opacity: 1; transform: scale(1); }
+      100% { opacity: 0.2; transform: scale(0.85); }
+    }
+    .speaking-timer-val {
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 1.25rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .speaking-pacer-bar {
+      height: 8px;
+      border: 2px solid #14181d;
+      border-radius: 0;
+      background: #e2e8f0;
+      overflow: hidden;
+      margin-top: 0.5rem;
+    }
+    .speaking-pacer-bar__fill {
+      height: 100%;
+      background: #0b4ea2;
+      transition: width 0.2s linear;
+    }
+    .speaking-pacer-bar__fill--rec {
+      background: #b31217;
+    }
+    .audio-level-meter-box {
+      margin-top: 0.75rem;
+      border: 2px solid #14181d;
+      border-radius: 0;
+      background: #ffffff;
+      padding: 0.5rem 0.75rem;
+    }
+    .audio-level-meter {
+      height: 10px;
+      background: #e2e8f0;
+      border: 1px solid #14181d;
+      border-radius: 0;
+      overflow: hidden;
+      margin-top: 0.35rem;
+    }
+    .audio-level-bar {
+      height: 100%;
+      width: 0%;
+      background: #0a6b3c;
+      transition: width 0.05s ease-out;
+    }
+
+    /* Verification Screen */
+    .speaking-verification-screen {
+      border: 2px solid #14181d;
+      border-radius: 0;
+      box-shadow: none;
+      background: #ffffff;
+      padding: 1.5rem;
+    }
+    .speaking-verification-card {
+      border: 2px solid #14181d;
+      border-radius: 0;
+      padding: 1rem;
+      background: #fafbfc;
+      margin-bottom: 1rem;
+    }
+    .status-badge--recorded {
+      background: #0a6b3c !important;
+      color: #ffffff !important;
+      border: 2px solid #14181d !important;
+      border-radius: 0 !important;
+      font-family: "IBM Plex Mono", monospace !important;
+      font-weight: 700;
+      padding: 0.25rem 0.6rem;
+      font-size: 0.85rem;
+    }
+    .status-badge--missing {
+      background: #b31217 !important;
+      color: #ffffff !important;
+      border: 2px solid #14181d !important;
+      border-radius: 0 !important;
+      font-family: "IBM Plex Mono", monospace !important;
+      font-weight: 700;
+      padding: 0.25rem 0.6rem;
+      font-size: 0.85rem;
+    }
+
     /* On-Screen Cut/Paste/Undo/Redo Toolbar */
     .writing-onscreen-toolbar .btn--sm {
       padding: 0.25rem 0.65rem;
@@ -686,6 +819,69 @@
               <!-- Dynamic 11-Component Widgets (multi_select, inline_completion, dropdown, drag_drop) -->
               <div id="component-widget-container" class="stack mt-3" style="display:none;"></div>
 
+              <!-- Automated Speaking Pacer Workspace Container (SYSTEM_PACED_AUTO) -->
+              <div id="speaking-pacer-container" class="speaking-pacer-container stack" style="@(q.NavigationMode == "SYSTEM_PACED_AUTO" ? "" : "display:none;")">
+                <!-- Step 1: Prep Countdown Placard -->
+                <div id="speaking-prep-placard" class="speaking-pacer-placard speaking-pacer-placard--prep">
+                  <span>CHUẨN BỊ TRẢ LỜI: <span id="speaking-prep-timer" class="speaking-timer-val">@(q.PrepSeconds ?? 15)s</span></span>
+                  <span class="badge" style="background:#ffffff; color:#0b4ea2; border:1px solid #14181d; font-family:'IBM Plex Sans Condensed',sans-serif; text-transform:uppercase;">Chuẩn bị</span>
+                </div>
+                <div id="speaking-prep-bar-box" class="speaking-pacer-bar">
+                  <div id="speaking-prep-bar" class="speaking-pacer-bar__fill" style="width: 100%;"></div>
+                </div>
+
+                <!-- Step 3: Recording Countdown Placard (hidden during prep) -->
+                <div id="speaking-record-placard" class="speaking-pacer-placard speaking-pacer-placard--recording" style="display:none;">
+                  <span><span class="rec-dot"></span>ĐANG THU ÂM: <span id="speaking-record-timer" class="speaking-timer-val">@(q.ResponseSeconds ?? 30)s</span></span>
+                  <span class="badge" style="background:#ffffff; color:#b31217; border:1px solid #14181d; font-family:'IBM Plex Sans Condensed',sans-serif; text-transform:uppercase;">Ghi âm</span>
+                </div>
+                <div id="speaking-record-bar-box" class="speaking-pacer-bar" style="display:none;">
+                  <div id="speaking-record-bar" class="speaking-pacer-bar__fill speaking-pacer-bar__fill--rec" style="width: 100%;"></div>
+                </div>
+
+                <!-- Live Audio Level Meter -->
+                <div id="audio-level-container" class="audio-level-meter-box" style="display:none;">
+                  <div class="row row--between text-xs font-bold" style="font-family:'IBM Plex Sans Condensed',sans-serif; text-transform:uppercase;">
+                    <span>Mức âm lượng micro</span>
+                    <span id="audio-level-text" style="font-family:'IBM Plex Mono',monospace;">0%</span>
+                  </div>
+                  <div class="audio-level-meter" id="audio-level-meter">
+                    <div id="audio-level-bar" class="audio-level-bar" style="width: 0%;"></div>
+                  </div>
+                </div>
+
+                <!-- Step 4: Auto-Upload Status Placard -->
+                <div id="speaking-upload-placard" class="alert alert--info mt-2" style="display:none; border:2px solid #14181d; border-radius:0; font-family:'IBM Plex Sans Condensed',sans-serif; font-weight:700;">
+                  Đang lưu bản thu âm và tự động chuyển câu hỏi tiếp theo...
+                </div>
+              </div>
+
+              <!-- Post-Section Recorded Audio Verification Screen (#speaking-verification-screen) -->
+              <div id="speaking-verification-screen" class="speaking-verification-screen stack" style="display:none;">
+                <div class="row row--between" style="border-bottom: 2px solid #14181d; padding-bottom: 0.75rem; align-items: center;">
+                  <h2 class="no-margin" style="font-family:'IBM Plex Sans Condensed',sans-serif; text-transform:uppercase; font-size:1.25rem;">
+                    BẢNG XÁC NHẬN BẢN GHI ÂM PHẦN THI NÓI (SPEAKING AUDIO VERIFICATION)
+                  </h2>
+                  <span class="badge badge--muted" id="speaking-verification-count-badge" style="border:1px solid #14181d; font-family:'IBM Plex Mono',monospace;">0 items</span>
+                </div>
+                <p class="text-sm text-muted mt-2 mb-3">
+                  Tất cả các câu hỏi trong phần thi Nói đã hoàn thành. Hãy kiểm tra lại các đoạn ghi âm của bạn dưới đây trước khi nộp bài để chấm điểm AI.
+                </p>
+
+                <div id="speaking-verification-items" class="stack" style="gap: 1rem;">
+                  <!-- Dynamic items populated via JS -->
+                </div>
+
+                <div class="row row--between mt-4" style="align-items: center; border-top: 2px solid #14181d; padding-top: 1rem;">
+                  <span class="text-xs text-muted" style="font-style:italic;">
+                    Sau khi bấm nộp, phần thi sẽ được khóa và chuyển thẳng vào hàng đợi chấm điểm AI.
+                  </span>
+                  <button type="button" class="btn btn--danger" id="btn-submit-speaking-verification" style="font-family:'IBM Plex Sans Condensed',sans-serif; text-transform:uppercase; font-weight:700; border-radius:0; border:2px solid #14181d; padding:0.6rem 1.25rem;">
+                    Nộp phần thi Nói để chấm AI
+                  </button>
+                </div>
+              </div>
+
               <div id="writing-response-pane" class="stack mt-3" style="@(q.QuestionType == "free_response" ? "" : "display:none;")">
                 <!-- On-Screen Cut/Paste/Undo/Redo Toolbar -->
                 <div id="writing-onscreen-toolbar" class="writing-onscreen-toolbar row mb-2" style="gap: 0.5rem; display: none;">
@@ -713,12 +909,12 @@
             <!-- Bottom Question Navigation Row -->
             <div class="row row--between mt-4" style="align-items: center;">
               <div>
-                <button type="button" class="btn" id="btn-prev" @(prevOrder.HasValue ? "" : "disabled") style="@(q.NavigationMode == "AUDIO_DRIVEN" ? "display:none;" : "")">Previous</button>
+                <button type="button" class="btn" id="btn-prev" @(prevOrder.HasValue ? "" : "disabled") style="@(q.NavigationMode == "AUDIO_DRIVEN" || q.NavigationMode == "SYSTEM_PACED_AUTO" ? "display:none;" : "")">Previous</button>
               </div>
 
               <div class="row" style="gap: var(--space-3); align-items: center;">
                 <button type="button" class="btn btn--secondary" id="btn-open-review-screen" style="display:none;">Bảng xem lại (Review Screen)</button>
-                <button type="button" class="btn btn--primary" id="btn-next">@(isLastQuestion ? "Review & Submit exam" : "Next question")</button>
+                <button type="button" class="btn btn--primary" id="btn-next" style="@(q.NavigationMode == "SYSTEM_PACED_AUTO" ? "display:none;" : "")">@(isLastQuestion ? "Review & Submit exam" : "Next question")</button>
               </div>
             </div>
           </div>
@@ -1400,6 +1596,390 @@
       var isSpeakingPreparing = false;
       var isSpeakingRecording = false;
       var isAudioUploading = false;
+      var speakingPacerTimer = null;
+      var speakingPacerAudioCtx = null;
+      var speakingPacerAnalyser = null;
+      var speakingPacerAnimFrame = null;
+      var recordedSpeakingClips = {};
+
+      function isSystemPacedAuto(q) {
+        return !!(q && (q.navigationMode === 'SYSTEM_PACED_AUTO' || q.navigationMode === 'SystemPacedAuto'));
+      }
+
+      function playBeepCue() {
+        try {
+          var AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (!AudioCtx) return;
+          var ctx = new AudioCtx();
+          var osc = ctx.createOscillator();
+          var gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(1000, ctx.currentTime);
+          gain.gain.setValueAtTime(0.3, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.3);
+        } catch (e) {
+          console.warn('AudioContext beep cue failed:', e);
+        }
+      }
+
+      function cleanupSpeakingPacer() {
+        if (speakingPacerTimer) {
+          clearInterval(speakingPacerTimer);
+          speakingPacerTimer = null;
+        }
+        if (speakingPacerAnimFrame) {
+          cancelAnimationFrame(speakingPacerAnimFrame);
+          speakingPacerAnimFrame = null;
+        }
+        if (speakingPacerAudioCtx && speakingPacerAudioCtx.state !== 'closed') {
+          try { speakingPacerAudioCtx.close(); } catch (e) {}
+          speakingPacerAudioCtx = null;
+        }
+        if (activeRecorder && activeRecorder.state !== 'inactive') {
+          try { activeRecorder.stop(); } catch (e) {}
+          activeRecorder = null;
+        }
+        if (activeRecordingStream) {
+          try {
+            activeRecordingStream.getTracks().forEach(function (t) { t.stop(); });
+          } catch (e) {}
+          activeRecordingStream = null;
+        }
+        isSpeakingPreparing = false;
+        isSpeakingRecording = false;
+        isAudioUploading = false;
+      }
+
+      function startSpeakingPacerStateMachine(q) {
+        cleanupSpeakingPacer();
+
+        var pacerContainer = document.getElementById('speaking-pacer-container');
+        var prepPlacard = document.getElementById('speaking-prep-placard');
+        var prepTimer = document.getElementById('speaking-prep-timer');
+        var prepBar = document.getElementById('speaking-prep-bar');
+        var prepBarBox = document.getElementById('speaking-prep-bar-box');
+        var recordPlacard = document.getElementById('speaking-record-placard');
+        var recordTimer = document.getElementById('speaking-record-timer');
+        var recordBar = document.getElementById('speaking-record-bar');
+        var recordBarBox = document.getElementById('speaking-record-bar-box');
+        var levelContainer = document.getElementById('audio-level-container');
+        var levelBar = document.getElementById('audio-level-bar');
+        var levelText = document.getElementById('audio-level-text');
+        var uploadPlacard = document.getElementById('speaking-upload-placard');
+
+        if (!pacerContainer) return;
+        pacerContainer.style.display = 'block';
+
+        var totalPrep = (q.prepSeconds != null && q.prepSeconds > 0) ? q.prepSeconds : 15;
+        var totalResponse = (q.responseSeconds != null && q.responseSeconds > 0) ? q.responseSeconds : 30;
+
+        // Step 1: Prep Countdown
+        isSpeakingPreparing = true;
+        isSpeakingRecording = false;
+        isAudioUploading = false;
+
+        if (prepPlacard) prepPlacard.style.display = 'flex';
+        if (prepBarBox) prepBarBox.style.display = 'block';
+        if (prepTimer) prepTimer.textContent = totalPrep + 's';
+        if (prepBar) prepBar.style.width = '100%';
+
+        if (recordPlacard) recordPlacard.style.display = 'none';
+        if (recordBarBox) recordBarBox.style.display = 'none';
+        if (levelContainer) levelContainer.style.display = 'none';
+        if (uploadPlacard) uploadPlacard.style.display = 'none';
+
+        var remainingPrep = totalPrep;
+        speakingPacerTimer = setInterval(function () {
+          remainingPrep--;
+          if (prepTimer) prepTimer.textContent = Math.max(0, remainingPrep) + 's';
+          if (prepBar) prepBar.style.width = Math.max(0, (remainingPrep / totalPrep) * 100) + '%';
+
+          if (remainingPrep <= 0) {
+            clearInterval(speakingPacerTimer);
+            speakingPacerTimer = null;
+            isSpeakingPreparing = false;
+
+            // Step 2: Audible Beep Cue
+            playBeepCue();
+
+            // Step 3: Recording Countdown
+            startSpeakingPacerRecording(q, totalResponse);
+          }
+        }, 1000);
+      }
+
+      function startSpeakingPacerRecording(q, totalResponse) {
+        var prepPlacard = document.getElementById('speaking-prep-placard');
+        var prepBarBox = document.getElementById('speaking-prep-bar-box');
+        var recordPlacard = document.getElementById('speaking-record-placard');
+        var recordTimer = document.getElementById('speaking-record-timer');
+        var recordBar = document.getElementById('speaking-record-bar');
+        var recordBarBox = document.getElementById('speaking-record-bar-box');
+        var levelContainer = document.getElementById('audio-level-container');
+        var levelBar = document.getElementById('audio-level-bar');
+        var levelText = document.getElementById('audio-level-text');
+
+        isSpeakingRecording = true;
+        if (prepPlacard) prepPlacard.style.display = 'none';
+        if (prepBarBox) prepBarBox.style.display = 'none';
+
+        if (recordPlacard) recordPlacard.style.display = 'flex';
+        if (recordBarBox) recordBarBox.style.display = 'block';
+        if (recordTimer) recordTimer.textContent = totalResponse + 's';
+        if (recordBar) recordBar.style.width = '100%';
+        if (levelContainer) levelContainer.style.display = 'block';
+
+        activeRecordingStartedAt = Date.now();
+        activeAudioChunks = [];
+
+        var streamPromise = (navigator.mediaDevices && navigator.mediaDevices.getUserMedia)
+          ? navigator.mediaDevices.getUserMedia({ audio: true })
+          : Promise.reject(new Error('MediaDevices unavailable'));
+
+        streamPromise.then(function (stream) {
+          activeRecordingStream = stream;
+          try {
+            var AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (AudioCtx) {
+              speakingPacerAudioCtx = new AudioCtx();
+              var srcNode = speakingPacerAudioCtx.createMediaStreamSource(stream);
+              speakingPacerAnalyser = speakingPacerAudioCtx.createAnalyser();
+              speakingPacerAnalyser.fftSize = 256;
+              srcNode.connect(speakingPacerAnalyser);
+              var freqArr = new Uint8Array(speakingPacerAnalyser.frequencyBinCount);
+
+              function pumpLevel() {
+                if (!isSpeakingRecording || !speakingPacerAnalyser) return;
+                speakingPacerAnalyser.getByteFrequencyData(freqArr);
+                var total = 0;
+                for (var i = 0; i < freqArr.length; i++) total += freqArr[i];
+                var pct = Math.min(100, Math.round(((total / freqArr.length) / 128) * 100));
+                if (levelBar) levelBar.style.width = pct + '%';
+                if (levelText) levelText.textContent = pct + '%';
+                speakingPacerAnimFrame = requestAnimationFrame(pumpLevel);
+              }
+              speakingPacerAnimFrame = requestAnimationFrame(pumpLevel);
+            }
+          } catch (e) {
+            console.warn('Audio level meter init failed:', e);
+          }
+
+          if (typeof MediaRecorder !== 'undefined') {
+            activeRecorder = new MediaRecorder(stream);
+            activeRecorder.ondataavailable = function (evt) {
+              if (evt.data && evt.data.size > 0) activeAudioChunks.push(evt.data);
+            };
+            activeRecorder.onstop = function () {
+              finishSpeakingPacerRecording(q);
+            };
+            activeRecorder.start();
+          }
+        }).catch(function (err) {
+          console.warn('Microphone error in speaking pacer:', err);
+        });
+
+        var remainingRec = totalResponse;
+        speakingPacerTimer = setInterval(function () {
+          remainingRec--;
+          if (recordTimer) recordTimer.textContent = Math.max(0, remainingRec) + 's';
+          if (recordBar) recordBar.style.width = Math.max(0, (remainingRec / totalResponse) * 100) + '%';
+
+          if (remainingRec <= 0) {
+            clearInterval(speakingPacerTimer);
+            speakingPacerTimer = null;
+            // Step 4: Stop Recording and Advance
+            stopSpeakingPacerRecording(q);
+          }
+        }, 1000);
+      }
+
+      function stopSpeakingPacerRecording(q) {
+        isSpeakingRecording = false;
+        if (speakingPacerAnimFrame) {
+          cancelAnimationFrame(speakingPacerAnimFrame);
+          speakingPacerAnimFrame = null;
+        }
+        if (speakingPacerAudioCtx && speakingPacerAudioCtx.state !== 'closed') {
+          try { speakingPacerAudioCtx.close(); } catch (e) {}
+          speakingPacerAudioCtx = null;
+        }
+        if (activeRecorder && activeRecorder.state !== 'inactive') {
+          activeRecorder.stop();
+        } else {
+          finishSpeakingPacerRecording(q);
+        }
+      }
+
+      function finishSpeakingPacerRecording(q) {
+        if (activeRecordingStream) {
+          try { activeRecordingStream.getTracks().forEach(function (t) { t.stop(); }); } catch (e) {}
+          activeRecordingStream = null;
+        }
+
+        var uploadPlacard = document.getElementById('speaking-upload-placard');
+        if (uploadPlacard) uploadPlacard.style.display = 'block';
+        isAudioUploading = true;
+
+        var blob = activeAudioChunks.length > 0
+          ? new Blob(activeAudioChunks, { type: activeAudioChunks[0].type || 'audio/webm' })
+          : new Blob([new Uint8Array(50)], { type: 'audio/webm' });
+
+        var blobUrl = URL.createObjectURL(blob);
+        var durationMs = Math.max(1000, Date.now() - (activeRecordingStartedAt || (Date.now() - 1000)));
+
+        recordedSpeakingClips[q.questionId] = {
+          questionId: q.questionId,
+          displayOrder: q.displayOrder,
+          stem: q.stem,
+          blobUrl: blobUrl,
+          blob: blob,
+          durationMs: durationMs,
+          isRecorded: true
+        };
+
+        var formData = new FormData();
+        formData.append('attemptId', attemptId);
+        formData.append('questionId', q.questionId);
+        formData.append('audioFile', blob, 'speaking-q' + q.questionId + '.webm');
+        formData.append('durationMs', durationMs);
+        formData.append('__RequestVerificationToken', csrfToken);
+
+        fetch('/exams/take/' + attemptId + '/upload-audio', {
+          method: 'POST',
+          body: formData
+        }).then(function (res) {
+          if (!res.ok) {
+            return fetch('/speaking/upload-audio', { method: 'POST', body: formData });
+          }
+          return res;
+        }).then(function (res) {
+          return res.json();
+        }).then(function (data) {
+          var state = localAnswers[q.questionId] || {};
+          state.responseAudioPath = (data && data.audioPath) ? data.audioPath : blobUrl;
+          state.responseDurationMs = durationMs;
+          localAnswers[q.questionId] = state;
+          saveAnswer(q.questionId, null, !!state.isFlagged, state.responseText || '');
+          updateProgressStats();
+        }).catch(function (err) {
+          console.warn('Speaking upload error:', err);
+          var state = localAnswers[q.questionId] || {};
+          state.responseAudioPath = blobUrl;
+          state.responseDurationMs = durationMs;
+          localAnswers[q.questionId] = state;
+          saveAnswer(q.questionId, null, !!state.isFlagged, state.responseText || '');
+          updateProgressStats();
+        }).finally(function () {
+          isAudioUploading = false;
+          activeRecorder = null;
+          activeAudioChunks = [];
+          transitionAfterSpeakingItem(q);
+        });
+      }
+
+      function transitionAfterSpeakingItem(q) {
+        var sectionSpeakingQuestions = questions.filter(function (item) {
+          return item.sectionId === q.sectionId && (item.navigationMode === 'SYSTEM_PACED_AUTO' || (item.modality || '').toLowerCase() === 'speaking');
+        });
+        if (sectionSpeakingQuestions.length === 0) {
+          sectionSpeakingQuestions = questions.filter(function (item) {
+            return item.navigationMode === 'SYSTEM_PACED_AUTO';
+          });
+        }
+
+        var currentIdx = sectionSpeakingQuestions.findIndex(function (item) {
+          return item.questionId === q.questionId;
+        });
+
+        var isLast = (currentIdx === -1) || (currentIdx >= sectionSpeakingQuestions.length - 1);
+
+        if (!isLast) {
+          var nextQ = sectionSpeakingQuestions[currentIdx + 1];
+          goToQuestion(nextQ.displayOrder);
+        } else {
+          renderSpeakingVerificationScreen(sectionSpeakingQuestions);
+        }
+      }
+
+      function renderSpeakingVerificationScreen(speakingQuestions) {
+        cleanupSpeakingPacer();
+
+        var pacerContainer = document.getElementById('speaking-pacer-container');
+        if (pacerContainer) pacerContainer.style.display = 'none';
+
+        var verificationScreen = document.getElementById('speaking-verification-screen');
+        var verificationItems = document.getElementById('speaking-verification-items');
+        var countBadge = document.getElementById('speaking-verification-count-badge');
+        if (!verificationScreen || !verificationItems) return;
+
+        verificationScreen.style.display = 'block';
+
+        if (btnPrev) btnPrev.style.display = 'none';
+        if (btnNext) btnNext.style.display = 'none';
+
+        var qs = speakingQuestions && speakingQuestions.length > 0
+          ? speakingQuestions
+          : questions.filter(function (it) { return it.navigationMode === 'SYSTEM_PACED_AUTO' || (it.modality || '').toLowerCase() === 'speaking'; });
+
+        if (countBadge) countBadge.textContent = qs.length + ' câu hỏi (items)';
+
+        var itemsHtml = '';
+        qs.forEach(function (sq) {
+          var clip = recordedSpeakingClips[sq.questionId];
+          var ans = localAnswers[sq.questionId];
+          var audioUrl = clip ? clip.blobUrl : (ans ? ans.responseAudioPath : null);
+          var hasRecording = !!audioUrl;
+
+          itemsHtml += '<div class="speaking-verification-card" data-question-id="' + sq.questionId + '">';
+          itemsHtml += '<div class="row row--between mb-2" style="align-items: center;">';
+          itemsHtml += '<strong style="font-family:\'IBM Plex Sans Condensed\',sans-serif; text-transform:uppercase; font-size:1rem;">Câu ' + sq.displayOrder + ' / ' + totalQuestions + '</strong>';
+          if (hasRecording) {
+            itemsHtml += '<span class="badge status-badge--recorded">Đã ghi âm [✓]</span>';
+          } else {
+            itemsHtml += '<span class="badge status-badge--missing">Chưa có ghi âm [!]</span>';
+          }
+          itemsHtml += '</div>';
+
+          itemsHtml += '<p class="text-sm text-muted mb-2">' + escapeHtml(sq.stem || 'Phần trả lời nói') + '</p>';
+
+          if (hasRecording) {
+            itemsHtml += '<audio controls src="' + escapeHtml(audioUrl) + '" style="width: 100%; border: 1px solid #14181d; border-radius: 0; background: #fff;"></audio>';
+          } else {
+            itemsHtml += '<div class="text-xs text-muted" style="font-style: italic; padding: 0.5rem; background: #fff; border: 1px dashed #ccd2d6;">Chưa có bản ghi âm cho câu hỏi này.</div>';
+          }
+
+          itemsHtml += '</div>';
+        });
+
+        verificationItems.innerHTML = itemsHtml;
+
+        var btnSubmitVerification = document.getElementById('btn-submit-speaking-verification');
+        if (btnSubmitVerification) {
+          btnSubmitVerification.onclick = function () {
+            btnSubmitVerification.disabled = true;
+            btnSubmitVerification.textContent = 'Đang nộp bài...';
+            var submitForm = document.getElementById('submit-exam-form') || document.getElementById('auto-submit-form');
+            if (submitForm) {
+              submitForm.submit();
+            } else {
+              var form = document.createElement('form');
+              form.method = 'POST';
+              form.action = '/exams/take/' + attemptId + '/submit';
+              var tokenInput = document.createElement('input');
+              tokenInput.type = 'hidden';
+              tokenInput.name = '__RequestVerificationToken';
+              tokenInput.value = csrfToken;
+              form.appendChild(tokenInput);
+              document.body.appendChild(form);
+              form.submit();
+            }
+          };
+        }
+      }
 
       function renderFreeResponse(q) {
         var answer = localAnswers[q.questionId] || {};
@@ -1899,14 +2479,16 @@
             || isGroupLockedPrev
             || currentPhaseQuestionIndex <= 0
             || getQuestionPhaseIndex(currentQuestion) !== activePhaseIndex;
-          if (isAudioDriven) {
+          if (isAudioDriven || isSystemPacedAuto(currentQuestion)) {
             btnPrev.style.display = 'none';
           } else {
             btnPrev.style.display = '';
           }
         }
 
-        if (btnNext && phase && currentQuestion) {
+        if (btnNext && currentQuestion && isSystemPacedAuto(currentQuestion)) {
+          btnNext.style.display = 'none';
+        } else if (btnNext && phase && currentQuestion) {
           var lastInPhase = currentPhaseQuestionIndex === currentPhaseQuestions.length - 1;
           var isFinalQuestion = currentDisplayOrder === totalQuestions;
 
@@ -2222,7 +2804,25 @@
       // 11 Interactive Question Component Widgets
       function renderComponentWidget(q) {
         if (!componentContainer) return;
-        var isFreeResponse = (q.questionType || '').toLowerCase() === 'free_response';
+        var isPacedAuto = isSystemPacedAuto(q);
+        var pacerContainer = document.getElementById('speaking-pacer-container');
+        var verificationScreen = document.getElementById('speaking-verification-screen');
+        if (verificationScreen) verificationScreen.style.display = 'none';
+
+        if (isPacedAuto) {
+          if (optionList) optionList.style.display = 'none';
+          if (writingPane) writingPane.style.display = 'none';
+          if (freeResponseContainer) freeResponseContainer.style.display = 'none';
+          if (btnPrev) btnPrev.style.display = 'none';
+          if (btnNext) btnNext.style.display = 'none';
+          if (pacerContainer) pacerContainer.style.display = 'block';
+          startSpeakingPacerStateMachine(q);
+        } else {
+          if (pacerContainer) pacerContainer.style.display = 'none';
+          cleanupSpeakingPacer();
+        }
+
+                var isFreeResponse = (q.questionType || '').toLowerCase() === 'free_response';
         var isMcq = !q.questionType || q.questionType === 'mcq' || q.questionType === 'mcq_3';
 
         if (isFreeResponse) {
@@ -2711,7 +3311,11 @@
           return;
         }
 
-        var targetQuestion = questionMap[targetOrder];
+        if (isSystemPacedAuto(currentQuestion)) {
+          // Manual navigation disabled during automated speaking flow
+          return;
+        }
+                var targetQuestion = questionMap[targetOrder];
         var phase = phases[activePhaseIndex];
         var currentQuestion = questionMap[currentDisplayOrder];
         if (!targetQuestion || !phase || targetQuestion.skillCode !== phase.skillCode) return;
@@ -3404,6 +4008,7 @@
         paletteChipsTrack.addEventListener('click', function (e) {
           var targetChip = e.target.closest('.palette-chip');
           if (targetChip && !targetChip.disabled && !targetChip.classList.contains('palette-chip--disabled')) {
+            if (isSystemPacedAuto(questionMap[currentDisplayOrder])) return;
             var targetOrder = parseInt(targetChip.getAttribute('data-display-order'), 10);
             if (!isNaN(targetOrder)) {
               var currentQ = questionMap[currentDisplayOrder];
@@ -3421,6 +4026,7 @@
         navGrid.addEventListener('click', function (e) {
           var targetCell = e.target.closest('.navigator__cell');
           if (targetCell) {
+            if (isSystemPacedAuto(questionMap[currentDisplayOrder])) return;
             var targetOrder = parseInt(targetCell.getAttribute('data-display-order'), 10);
             if (!isNaN(targetOrder)) {
               goToQuestion(targetOrder);

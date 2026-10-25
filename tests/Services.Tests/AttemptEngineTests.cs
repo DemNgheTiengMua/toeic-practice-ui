@@ -104,6 +104,37 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
         return (cert.CertId, exam.ExamId, q1.QuestionId, q2.QuestionId, opt1.OptionId, opt2.OptionId);
     }
 
+    private async Task<int> AddSpeakingQuestionAsync(int certId, int examId)
+    {
+        await database.SqlAsync($"""
+            DECLARE @cert INT = {certId};
+            DECLARE @exam INT = {examId};
+            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder, DurationMinutes)
+            VALUES (@cert, 'SPEA', N'Speaking', 'speaking', 4, 20);
+            DECLARE @skill INT = SCOPE_IDENTITY();
+
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder, NavigationMode)
+            VALUES (@skill, @cert, 'speaking', 'SPK', N'Speaking Pacer Section', 1, 'SYSTEM_PACED_AUTO');
+            DECLARE @section INT = SCOPE_IDENTITY();
+
+            INSERT INTO GradingCriteria (CertId, SkillId, Code, Name, MaxScore, Weight, DisplayOrder)
+            VALUES (@cert, @skill, 'PRON', N'Pronunciation', 5.0, 1.0, 1);
+
+            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder)
+            VALUES (@exam, @cert, @section, 4);
+            DECLARE @group INT = SCOPE_IDENTITY();
+
+            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, PrepSeconds, ResponseSeconds, DisplayOrder)
+            VALUES (@group, @exam, @section, @skill, N'Read the text aloud.', 1, 'free_response', 45, 45, 4);
+            """);
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        return await db.Questions
+            .Where(q => q.ExamId == examId && q.Section.Modality == "speaking")
+            .Select(q => q.QuestionId)
+            .SingleAsync();
+    }
+
     private async Task<int> AddWritingQuestionAsync(int certId, int examId)
     {
         await database.SqlAsync($"""
@@ -815,4 +846,67 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
         Assert.Equal(2, take.Questions[1].DisplayOrder);
         Assert.Equal(take.CurrentQuestion.QuestionId, take.Questions[0].QuestionId);
     }
+
+    [Fact]
+    public async Task SaveSpeakingAudio_and_submit_queues_ai_grading_cleanly()
+    {
+        var certCode = Unique("ATSP");
+        var (certId, examId, _, _, _, _) = await SeedExamFixtureAsync(certCode);
+        var speakingQuestionId = await AddSpeakingQuestionAsync(certId, examId);
+        var userId = await SeedLearnerAsync(certCode);
+        var engine = CreateEngine();
+        var attempt = await engine.CreateAttemptAsync(userId, certId, examId, 120);
+
+        // 1. Save speaking audio via Stream overload
+        using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes("spoken test recording content"));
+        var audioResult = await engine.SaveSpeakingAudioAsync(
+            attempt.AttemptId,
+            speakingQuestionId,
+            userId,
+            stream,
+            "audio/webm",
+            "q4_spoken.webm",
+            28000);
+
+        Assert.Equal(speakingQuestionId, audioResult.QuestionId);
+        Assert.Equal(28000, audioResult.DurationMs);
+        Assert.False(string.IsNullOrWhiteSpace(audioResult.AudioPath));
+
+        await using (var checkDb = DbContextFactory.Create(database.ConnectionString))
+        {
+            var frDraft = await checkDb.FreeResponses.SingleAsync(r => r.AttemptId == attempt.AttemptId && r.QuestionId == speakingQuestionId);
+            Assert.Equal("draft", frDraft.Status);
+            Assert.Equal(audioResult.AudioPath, frDraft.AudioPath);
+            Assert.Equal(28000, frDraft.DurationMs);
+            Assert.NotNull(frDraft.DraftSavedAt);
+            Assert.Null(frDraft.SubmittedAt);
+        }
+
+        // 2. Submit attempt
+        await engine.SubmitAttemptAsync(attempt.AttemptId, userId, isAutoSubmit: false);
+
+        // 3. Verify attempt status and queued AiGradings
+        await using (var gradingDb = DbContextFactory.Create(database.ConnectionString))
+        {
+            var att = await gradingDb.ExamAttempts.SingleAsync(a => a.AttemptId == attempt.AttemptId);
+            Assert.Equal("submitted", att.Status);
+
+            var fr = await gradingDb.FreeResponses.SingleAsync(r => r.AttemptId == attempt.AttemptId && r.QuestionId == speakingQuestionId);
+            Assert.Equal("pending_ai", fr.Status);
+            Assert.NotNull(fr.SubmittedAt);
+
+            var grading = await gradingDb.AiGradings.SingleOrDefaultAsync(g => g.FreeResponseId == fr.FreeResponseId);
+            Assert.NotNull(grading);
+            Assert.Equal("pending", grading.Status);
+
+            // 4. Drain queue with AiGradingProcessor (sole owner of queue processing per Invariant #6)
+            var processor = new AiGradingProcessor(gradingDb, new FakeAiGrader());
+            var processed = await processor.ProcessPendingGradingsAsync(10);
+            Assert.True(processed >= 1);
+
+            var finishedGrading = await gradingDb.AiGradings.SingleAsync(g => g.FreeResponseId == fr.FreeResponseId);
+            Assert.Equal("done", finishedGrading.Status);
+        }
+    }
 }
+
