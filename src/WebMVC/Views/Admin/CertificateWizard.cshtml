@@ -668,6 +668,9 @@
     if (step === 3) {
       syncStep3FromSkills();
     }
+    if (step === 4) {
+      syncStep4FromSections();
+    }
     document.querySelectorAll('.wizard-step').forEach(function(el) { el.style.display = 'none'; });
     var target = document.getElementById('step-' + step);
     if (target) {
@@ -745,6 +748,185 @@
       }
     });
   }
+
+  function syncStep4FromSections() {
+    var ruleSelect = document.getElementById('scoreRule');
+    var rule = ruleSelect ? ruleSelect.value : 'sum';
+    var step4RuleSelect = document.getElementById('step4ScoreRuleSelect');
+    if (step4RuleSelect) {
+      step4RuleSelect.value = rule;
+      syncStep4ScoreRule(rule);
+    }
+
+    var skillCards = document.querySelectorAll('#skillsContainer .skill-card');
+    var weightsContainer = document.getElementById('step4WeightsContainer');
+    var calcInputs = document.getElementById('liveCalculatorInputs');
+
+    if (!weightsContainer || !calcInputs) return;
+
+    var weightsHtml = '';
+    var calcHtml = '';
+
+    skillCards.forEach(function(skillCard, sIdx) {
+      var nameInp = skillCard.querySelector(`input[name="Skills[${sIdx}].Name"]`) || skillCard.querySelector(`input[name$=".Name"]`);
+      var codeInp = skillCard.querySelector(`input[name="Skills[${sIdx}].Code"]`) || skillCard.querySelector(`input[name$=".Code"]`);
+      var skillName = nameInp && nameInp.value ? nameInp.value : `Skill ${sIdx + 1}`;
+      var skillCode = codeInp && codeInp.value ? codeInp.value : `SKILL_${sIdx + 1}`;
+
+      var secGroup = document.querySelector(`.skill-sections-group[data-skill-idx="${sIdx}"]`);
+      var secCards = secGroup ? secGroup.querySelectorAll('.section-card') : [];
+
+      var sections = [];
+      secCards.forEach(function(secCard, secIdx) {
+        var secNameInp = secCard.querySelector(`input[name="Skills[${sIdx}].Sections[${secIdx}].Name"]`) || secCard.querySelector(`input[name$=".Name"]`);
+        var secCodeInp = secCard.querySelector(`input[name="Skills[${sIdx}].Sections[${secIdx}].Code"]`) || secCard.querySelector(`input[name$=".Code"]`);
+        var weightInp = secCard.querySelector(`input[name="Skills[${sIdx}].Sections[${secIdx}].ScoreWeight"]`) || secCard.querySelector(`input[name$=".ScoreWeight"]`);
+        var itemsInp = secCard.querySelector(`input[name="Skills[${sIdx}].Sections[${secIdx}].ExpectedQuestionCount"]`) || secCard.querySelector(`input[name$=".ExpectedQuestionCount"]`);
+
+        sections.push({
+          secIdx: secIdx,
+          name: secNameInp && secNameInp.value ? secNameInp.value : `Section ${secIdx + 1}`,
+          code: secCodeInp && secCodeInp.value ? secCodeInp.value : `SEC_${secIdx + 1}`,
+          weight: weightInp && weightInp.value ? weightInp.value : '1.0',
+          items: itemsInp && itemsInp.value ? parseInt(itemsInp.value, 10) || 10 : 10
+        });
+      });
+
+      if (sections.length === 0) {
+        sections.push({
+          secIdx: 0,
+          name: 'Section 1',
+          code: 'SEC1',
+          weight: '1.0',
+          items: 10
+        });
+      }
+
+      weightsHtml += `
+        <div class="step4-skill-weight-box" data-skill-idx="${sIdx}" style="margin-bottom: 1.25rem; border: 1px solid var(--color-border, #ccd2d6); padding: 1rem; background: #fafafa;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; border-bottom: 2px solid var(--color-ink, #14181d); padding-bottom: 0.5rem;">
+            <strong style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 1rem;">
+              Skill #${sIdx + 1}: ${skillName} (${skillCode})
+            </strong>
+            <span class="badge" style="background: var(--color-ink, #14181d); color: #fff; border-radius: 0; font-family: var(--font-mono, monospace); font-size: 0.75rem;">
+              ${sections.length} Section${sections.length === 1 ? '' : 's'}
+            </span>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 0.75rem;">`;
+
+      sections.forEach(function(sec) {
+        weightsHtml += `
+            <div style="border: 1px solid var(--color-ink, #14181d); padding: 0.75rem; background: #fff;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                <span style="font-weight: 700; font-family: var(--font-condensed, sans-serif);">${sec.name}</span>
+                <code style="font-size: 0.75rem;">${sec.code}</code>
+              </div>
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
+                <label style="font-size: 0.75rem; font-family: var(--font-condensed, sans-serif); text-transform: uppercase;">Score Weight:</label>
+                <input type="number" step="0.1" min="0.1" max="10.0"
+                       class="field__input step4-weight-input"
+                       data-skill-idx="${sIdx}"
+                       data-sec-idx="${sec.secIdx}"
+                       value="${sec.weight}"
+                       onchange="syncStep4WeightToStep3(${sIdx}, ${sec.secIdx}, this.value); updateLiveScorePreview();"
+                       style="width: 90px; border: 2px solid var(--color-ink, #14181d); border-radius: 0; font-family: var(--font-mono, monospace); font-weight: 700; text-align: center;">
+              </div>
+              <div style="font-size: 0.7rem; color: #666; margin-top: 0.25rem;">
+                Expected items: <strong>${sec.items}</strong>
+              </div>
+            </div>`;
+      });
+
+      weightsHtml += `
+          </div>
+        </div>`;
+
+      calcHtml += `
+        <div class="calc-skill-row" data-calc-skill-idx="${sIdx}" style="border: 1px solid var(--color-border, #ccd2d6); padding: 0.75rem; margin-bottom: 0.75rem; background: #fafafa;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <strong style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 0.85rem;">${skillName} (${skillCode})</strong>
+            <span class="calc-skill-preview-badge" data-calc-skill-badge="${sIdx}" style="font-family: var(--font-mono, monospace); font-weight: 700; font-size: 0.85rem; color: #0b4ea2;">
+              --
+            </span>
+          </div>`;
+
+      if (sections.length > 1) {
+        calcHtml += `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.5rem;">`;
+        sections.forEach(function(sec) {
+          var defaultSample = Math.max(1, Math.round(sec.items * 0.75));
+          calcHtml += `
+            <div style="background: #fff; border: 1px solid var(--color-ink, #14181d); padding: 0.5rem;">
+              <div style="display: flex; justify-content: space-between; font-size: 0.7rem; margin-bottom: 0.25rem;">
+                <span>${sec.code} (w: <span class="calc-sec-weight-label" data-skill-idx="${sIdx}" data-sec-idx="${sec.secIdx}">${sec.weight}</span>)</span>
+                <span class="text-muted">max: ${sec.items}</span>
+              </div>
+              <input type="number" min="0" max="${sec.items}"
+                     class="field__input calc-sec-input"
+                     data-calc-skill="${sIdx}"
+                     data-calc-sec="${sec.secIdx}"
+                     value="${defaultSample}"
+                     oninput="updateLiveScorePreview()"
+                     style="width: 100%; border: 1px solid var(--color-ink, #14181d); border-radius: 0; font-family: var(--font-mono, monospace); font-weight: 700; padding: 0.35rem; text-align: center;">
+            </div>`;
+        });
+        calcHtml += `</div>`;
+      } else {
+        var firstSec = sections[0];
+        var defaultSample = Math.max(1, Math.round(firstSec.items * 0.75));
+        calcHtml += `
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span style="font-size: 0.75rem; font-family: var(--font-condensed, sans-serif); text-transform: uppercase;">Sample Correct:</span>
+            <input type="number" min="0" max="${firstSec.items}"
+                   class="field__input calc-skill-single-input"
+                   data-calc-skill="${sIdx}"
+                   data-max-q="${firstSec.items}"
+                   value="${defaultSample}"
+                   oninput="updateLiveScorePreview()"
+                   style="width: 100px; border: 2px solid var(--color-ink, #14181d); border-radius: 0; font-family: var(--font-mono, monospace); font-weight: 700; text-align: center;">
+            <span class="text-xs text-muted">/ ${firstSec.items} questions</span>
+          </div>`;
+      }
+
+      calcHtml += `</div>`;
+    });
+
+    weightsContainer.innerHTML = weightsHtml;
+    calcInputs.innerHTML = calcHtml;
+
+    updateLiveScorePreview();
+  }
+
+  function reindexAllFormFields() {
+    var skillCards = document.querySelectorAll('#skillsContainer .skill-card');
+    skillCards.forEach(function(skillCard, sIdx) {
+      skillCard.setAttribute('data-skill-idx', sIdx);
+      var dispInp = skillCard.querySelector(`input[name$=".DisplayOrder"]`);
+      if (dispInp) dispInp.value = sIdx + 1;
+
+      skillCard.querySelectorAll('input, select, textarea').forEach(function(inp) {
+        if (inp.name) {
+          inp.name = inp.name.replace(/Skills\[\d+\]/, `Skills[${sIdx}]`);
+        }
+      });
+
+      var group = document.querySelector(`.skill-sections-group[data-skill-idx="${sIdx}"]`);
+      if (group) {
+        var secCards = group.querySelectorAll('.section-card');
+        secCards.forEach(function(secCard, secIdx) {
+          secCard.setAttribute('data-section-idx', secIdx);
+          var secDispInp = secCard.querySelector(`input[name$=".DisplayOrder"]`);
+          if (secDispInp) secDispInp.value = secIdx + 1;
+
+          secCard.querySelectorAll('input, select, textarea').forEach(function(inp) {
+            if (inp.name) {
+              inp.name = inp.name.replace(/Skills\[\d+\]\.Sections\[\d+\]/, `Skills[${sIdx}].Sections[${secIdx}]`);
+            }
+          });
+        });
+      }
+    });
+  }
+
 
   function addSkill() {
     var container = document.getElementById('skillsContainer');
@@ -1191,9 +1373,19 @@
     }
   }
 
+  // Form submission: ensure sequential field indexing
+  document.getElementById('wizardForm')?.addEventListener('submit', function() {
+    reindexAllFormFields();
+  });
+
   // Initialize live preview on load
   document.addEventListener('DOMContentLoaded', function() {
-    updateLiveScorePreview();
+    var curStep = parseInt(document.getElementById('currentStep')?.value || '1', 10);
+    if (curStep === 4) {
+      syncStep4FromSections();
+    } else {
+      updateLiveScorePreview();
+    }
   });
 
 </script>
