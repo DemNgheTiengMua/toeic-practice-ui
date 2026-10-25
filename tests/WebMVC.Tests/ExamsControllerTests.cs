@@ -286,6 +286,59 @@ public sealed class ExamsControllerTests
     }
 
     [Fact]
+    public async Task TransitionUnit_With_Body_Payload_Transitions_Unit_And_Returns_Json()
+    {
+        var api = new TestApiClient
+        {
+            TransitionResponse = new AttemptTransitionResponse(100, 1, 2, null, null, 1800, AttemptStatusDto.InProgress, false)
+        };
+        var controller = CreateController(api);
+
+        var result = await controller.TransitionUnit(100, new TransitionUnitRequest(2), null, CancellationToken.None);
+
+        var json = Assert.IsType<JsonResult>(result);
+        var transition = Assert.IsType<AttemptTransitionResponse>(json.Value);
+        Assert.Equal(100, transition.AttemptId);
+        Assert.Equal(2, transition.ActiveUnitNumber);
+        Assert.NotNull(api.LastTransitionUnit);
+        Assert.Equal(100, api.LastTransitionUnit.Value.attemptId);
+        Assert.Equal(2, api.LastTransitionUnit.Value.request.TargetUnitNumber);
+    }
+
+    [Fact]
+    public async Task TransitionUnit_With_Form_TargetUnitNumber_Transitions_Unit()
+    {
+        var api = new TestApiClient
+        {
+            TransitionResponse = new AttemptTransitionResponse(100, 1, 2, null, null, 1800, AttemptStatusDto.InProgress, false)
+        };
+        var controller = CreateController(api);
+
+        var result = await controller.TransitionUnit(100, null, 2, CancellationToken.None);
+
+        var json = Assert.IsType<JsonResult>(result);
+        var transition = Assert.IsType<AttemptTransitionResponse>(json.Value);
+        Assert.Equal(2, transition.ActiveUnitNumber);
+        Assert.NotNull(api.LastTransitionUnit);
+        Assert.Equal(2, api.LastTransitionUnit.Value.request.TargetUnitNumber);
+    }
+
+    [Fact]
+    public async Task TransitionUnit_When_Api_Throws_Returns_StatusCode_Error()
+    {
+        var api = new TestApiClient
+        {
+            ExceptionToThrow = new ApiException("Cannot navigate back to a locked unit.", "WRONG_PHASE", 400)
+        };
+        var controller = CreateController(api);
+
+        var result = await controller.TransitionUnit(100, new TransitionUnitRequest(1), null, CancellationToken.None);
+
+        var objResult = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(400, objResult.StatusCode);
+    }
+
+    [Fact]
     public async Task Result_returns_view_with_result_data()
     {
         var resDto = new AttemptResultDto(
@@ -466,8 +519,14 @@ public sealed class ExamsControllerTests
         public Task<AttemptTransitionResponse> TransitionSkillAsync(int attemptId, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<AttemptTransitionResponse>(ExceptionToThrow) : Task.FromResult(TransitionResponse ?? new AttemptTransitionResponse(attemptId, 1, 1, null, null, 1800, AttemptStatusDto.InProgress, false));
 
-        public Task<AttemptTransitionResponse> TransitionUnitAsync(int attemptId, TransitionUnitRequest request, CancellationToken cancellationToken = default) =>
-            ExceptionToThrow != null ? Task.FromException<AttemptTransitionResponse>(ExceptionToThrow) : Task.FromResult(TransitionResponse ?? new AttemptTransitionResponse(attemptId, 1, request.TargetUnitNumber, null, null, 1800, AttemptStatusDto.InProgress, false));
+        public (int attemptId, TransitionUnitRequest request)? LastTransitionUnit { get; set; }
+        public Task<AttemptTransitionResponse> TransitionUnitAsync(int attemptId, TransitionUnitRequest request, CancellationToken cancellationToken = default)
+        {
+            LastTransitionUnit = (attemptId, request);
+            return ExceptionToThrow != null
+                ? Task.FromException<AttemptTransitionResponse>(ExceptionToThrow)
+                : Task.FromResult(TransitionResponse ?? new AttemptTransitionResponse(attemptId, 1, request.TargetUnitNumber, null, null, 1800, AttemptStatusDto.InProgress, false));
+        }
 
         public Task<AttemptTransitionResponse> TransitionGroupAsync(int attemptId, TransitionGroupRequest request, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<AttemptTransitionResponse>(ExceptionToThrow) : Task.FromResult(TransitionResponse ?? new AttemptTransitionResponse(attemptId, 1, 1, request.TargetGroupId, null, 600, AttemptStatusDto.InProgress, false));

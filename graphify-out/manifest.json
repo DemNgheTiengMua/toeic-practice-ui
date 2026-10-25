@@ -1541,13 +1541,13 @@
     "semantic_hash": ""
   },
   "src/BusinessObjects/MockExamModels.cs": {
-    "mtime": 1792939915.1371174,
-    "ast_hash": "076400eaa7706d985e755c924bcc3b90",
+    "mtime": 1792941829.896661,
+    "ast_hash": "9fafb67426fa0158d8d5225b7f15c935",
     "semantic_hash": ""
   },
   "src/Contracts/MockExamDtos.cs": {
-    "mtime": 1792939906.6496625,
-    "ast_hash": "4a60c03d25067f8735651c5c75a95d3e",
+    "mtime": 1792941837.8681855,
+    "ast_hash": "ca7431335343161880a2a19a0cb77481",
     "semantic_hash": ""
   },
   "src/Services/MockExamService.cs": {
@@ -1556,8 +1556,8 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Controllers/ExamsController.cs": {
-    "mtime": 1792939346.205358,
-    "ast_hash": "e1a9bf858767651ba43037efca131558",
+    "mtime": 1792941902.3235316,
+    "ast_hash": "128bd559888e265ac64b7ff354313b02",
     "semantic_hash": ""
   },
   "src/WebMVC/Models/ExamViewModels.cs": {
@@ -1586,8 +1586,8 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Exams/Take.cshtml": {
-    "mtime": 1792940895.7007031,
-    "ast_hash": "e8d66683f931666c32256ac5866b567f",
+    "mtime": 1792942396.609697,
+    "ast_hash": "bfeacd926078b643d1d37e8f6469cdd3",
     "semantic_hash": ""
   },
   "tests/Services.Tests/MockExamServiceTests.cs": {
@@ -1596,8 +1596,8 @@
     "semantic_hash": ""
   },
   "tests/WebMVC.Tests/ExamsControllerTests.cs": {
-    "mtime": 1792941041.5047452,
-    "ast_hash": "f5dcb3c6c95d19256b00cdedbc329a1e",
+    "mtime": 1792942580.0614984,
+    "ast_hash": "94ae39122cf3181042d536f794bcf67f",
     "semantic_hash": ""
   },
   "tests/Services.Tests/PayOsPaymentGatewayTests.cs": {
@@ -1766,8 +1766,8 @@
     "semantic_hash": ""
   },
   "src/WebAPI/Endpoints/ExamEndpoints.cs": {
-    "mtime": 1792939943.5584717,
-    "ast_hash": "89a115ecc30005349394fc5cb9fa3fe5",
+    "mtime": 1792941861.0823,
+    "ast_hash": "1c4df1ff29f1b5ab09f5463a1b520c5a",
     "semantic_hash": ""
   },
   "src/WebAPI/Endpoints/LearnerEndpoints.cs": {
@@ -2481,8 +2481,8 @@
     "semantic_hash": ""
   },
   "src/Services/AttemptEngine.cs": {
-    "mtime": 1792939928.1649399,
-    "ast_hash": "f032ab054e36dc61dd2c85e70ab5221a",
+    "mtime": 1792941849.146098,
+    "ast_hash": "ba11fa126f3dc39732d41449657b1582",
     "semantic_hash": ""
   },
   "tests/Services.Tests/AttemptEngineTests.cs": {
@@ -3091,8 +3091,8 @@
     "semantic_hash": ""
   },
   "tests/WebMVC.Tests/ExamsViewTests.cs": {
-    "mtime": 1792941266.2498834,
-    "ast_hash": "2368f8c43b9b1b7e33ab1c3104ddb6de",
+    "mtime": 1792942521.3874326,
+    "ast_hash": "aa5cb13ec6e8b3d6264af1c4b438616d",
     "semantic_hash": ""
   },
   "tests/WebMVC.Tests/LearningPathModuleTests.cs": {

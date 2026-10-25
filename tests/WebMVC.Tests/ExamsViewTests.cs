@@ -115,4 +115,140 @@ public sealed class ExamsViewTests
         Assert.Contains("ee-token", html);
         Assert.Contains("candidateNotes", html);
     }
+
+    [Fact]
+    public void Take_View_Contains_Masked_Stimulus_And_Option_Count_Invariants()
+    {
+        var repoRoot = TestPathHelper.FindRepoRoot();
+        var viewPath = Path.Combine(repoRoot, "src", "WebMVC", "Views", "Exams", "Take.cshtml");
+
+        Assert.True(File.Exists(viewPath), "Take.cshtml must exist");
+        var html = File.ReadAllText(viewPath);
+
+        // 1. Masked styling classes
+        Assert.Contains(".option-list--masked", html);
+        Assert.Contains(".option--masked", html);
+
+        // 2. HideOptionText & OptionCount bindings
+        Assert.Contains("option-list--masked", html);
+        Assert.Contains("q.HideOptionText", html);
+        Assert.Contains("q.OptionCount", html);
+        Assert.Contains("hideOptText", html);
+        Assert.Contains("optCount", html);
+
+        // 3. Option marker placard is preserved while option text is conditionally hidden
+        Assert.Contains("option__marker", html);
+        Assert.Contains("@if (!q.HideOptionText)", html);
+        Assert.Contains("if (!hideOptText)", html);
+
+        // 4. RequireImage styling and display
+        Assert.Contains("q.RequireImage", html);
+        Assert.Contains("id=\"image-container\"", html);
+    }
+
+    [Fact]
+    public void Take_View_Contains_Clustered_Audio_Cards_Invariants()
+    {
+        var repoRoot = TestPathHelper.FindRepoRoot();
+        var viewPath = Path.Combine(repoRoot, "src", "WebMVC", "Views", "Exams", "Take.cshtml");
+
+        Assert.True(File.Exists(viewPath), "Take.cshtml must exist");
+        var html = File.ReadAllText(viewPath);
+
+        // 1. Clustered audio container and card items
+        Assert.Contains("id=\"cluster-card-container\"", html);
+        Assert.Contains(".cluster-card-container", html);
+        Assert.Contains(".cluster-item", html);
+        Assert.Contains("q.ClusterSize == 3", html);
+        Assert.Contains("isCluster", html);
+
+        // 2. Independent radio and flag inputs per question in cluster
+        Assert.Contains("js-cluster-radio", html);
+        Assert.Contains("js-cluster-flag-btn", html);
+        Assert.Contains("cluster_opt_", html);
+        Assert.Contains("data-question-id", html);
+    }
+
+    [Fact]
+    public void Take_View_Contains_Audio_Driven_Restrictions_And_One_Way_Pacing_Invariants()
+    {
+        var repoRoot = TestPathHelper.FindRepoRoot();
+        var viewPath = Path.Combine(repoRoot, "src", "WebMVC", "Views", "Exams", "Take.cshtml");
+
+        Assert.True(File.Exists(viewPath), "Take.cshtml must exist");
+        var html = File.ReadAllText(viewPath);
+
+        // 1. AUDIO_DRIVEN mode checks
+        Assert.Contains("AUDIO_DRIVEN", html);
+        Assert.Contains("isAudioDriven", html);
+
+        // 2. Previous button disabled/hidden in audio-driven mode
+        Assert.Contains("btnPrev.style.display = 'none'", html);
+        Assert.Contains("btnPrev.disabled = !phase", html);
+
+        // 3. Jumping backward blocked in goToQuestion
+        Assert.Contains("if (isOneWay && targetOrder < currentDisplayOrder) return;", html);
+
+        // 4. Backward cells disabled in bottom palette and navigator
+        Assert.Contains("isBackInAudio", html);
+        Assert.Contains("palette-chip--disabled", html);
+    }
+
+    [Fact]
+    public void Take_View_Contains_Reading_Review_Screen_Modal_And_Filters()
+    {
+        var repoRoot = TestPathHelper.FindRepoRoot();
+        var viewPath = Path.Combine(repoRoot, "src", "WebMVC", "Views", "Exams", "Take.cshtml");
+
+        Assert.True(File.Exists(viewPath), "Take.cshtml must exist");
+        var html = File.ReadAllText(viewPath);
+
+        // 1. Review Screen Modal markup and button
+        Assert.Contains("id=\"review-screen-modal\"", html);
+        Assert.Contains("id=\"btn-open-review-screen\"", html);
+
+        // 2. Statistics displays
+        Assert.Contains("id=\"review-stat-answered\"", html);
+        Assert.Contains("id=\"review-stat-flagged\"", html);
+        Assert.Contains("id=\"review-stat-unanswered\"", html);
+
+        // 3. 3 Quick-Action Buttons
+        Assert.Contains("id=\"btn-review-first-unanswered\"", html);
+        Assert.Contains("id=\"btn-review-only-unanswered\"", html);
+        Assert.Contains("id=\"btn-review-only-flagged\"", html);
+        Assert.Contains("id=\"btn-review-show-all\"", html);
+
+        // 4. Questions Grid List and navigation
+        Assert.Contains("id=\"review-questions-list\"", html);
+        Assert.Contains("review-item-card", html);
+        Assert.Contains("renderReviewQuestions", html);
+    }
+
+    [Fact]
+    public void Take_View_Contains_Adaptive_Stage_Unit_Locking_Modal_And_Transition()
+    {
+        var repoRoot = TestPathHelper.FindRepoRoot();
+        var viewPath = Path.Combine(repoRoot, "src", "WebMVC", "Views", "Exams", "Take.cshtml");
+
+        Assert.True(File.Exists(viewPath), "Take.cshtml must exist");
+        var html = File.ReadAllText(viewPath);
+
+        // 1. UNIT_LOCKED_SANDBOX checks
+        Assert.Contains("UNIT_LOCKED_SANDBOX", html);
+        Assert.Contains("activeUnitNumber", html);
+        Assert.Contains("isUnitLocked", html);
+
+        // 2. Unit Lock Confirmation Modal and warning text
+        Assert.Contains("id=\"unit-lock-modal\"", html);
+        Assert.Contains("Sau khi xác nhận, Giai đoạn 1 sẽ bị khóa vĩnh viễn và bạn không thể quay lại.", html);
+        Assert.Contains("id=\"btn-confirm-unit-lock\"", html);
+
+        // 3. Transition call to endpoint
+        Assert.Contains("/exams/attempts/' + attemptId + '/transition-unit", html);
+        Assert.Contains("targetUnitNumber: 2", html);
+
+        // 4. Finish Unit 1 button on final question
+        Assert.Contains("Hoàn thành Giai đoạn 1 (Finish Unit 1)", html);
+        Assert.Contains("js-open-unit-lock-modal", html);
+    }
 }

@@ -102,7 +102,13 @@ public sealed record AttemptQuestionInfo(
     string? LayoutType = null,
     bool RequirePassage = false,
     string? NavigationMode = null,
-    string? ToolsConfigJson = null);
+    string? ToolsConfigJson = null,
+    bool HideOptionText = false,
+    int OptionCount = 4,
+    int ClusterSize = 1,
+    bool RequireImage = false,
+    int UnitNumber = 1,
+    int? GroupId = null);
 
 public sealed record AttemptFinalDraft(
     int QuestionId,
