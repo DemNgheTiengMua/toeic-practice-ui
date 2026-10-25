@@ -25,9 +25,9 @@ GO
 -- ---------- TOEIC ----------
 IF NOT EXISTS (SELECT 1 FROM Certificates WHERE Code = 'TOEIC')
 BEGIN
-  INSERT INTO Certificates (Code, Name, Description, IsActive) VALUES
+  INSERT INTO Certificates (Code, Name, Description, IsActive, ScoreAggregationRule, PresetCode) VALUES
     ('TOEIC', N'TOEIC Listening & Reading',
-     N'The standard workplace English test. 200 multiple-choice questions, about 2 hours, scored 10–990. Practice speaking and writing separately with AI-graded tasks.', 1);
+     N'The standard workplace English test. 200 multiple-choice questions, about 2 hours, scored 10–990. Practice speaking and writing separately with AI-graded tasks.', 1, 'sum', 'toeic_lr_std');
 END;
 GO
 
@@ -57,67 +57,67 @@ DECLARE @toeicWrit INT = (SELECT SkillId FROM Skills WHERE CertId = @toeic AND C
 
 -- Listening Sections: P1, P2, P3, P4
 IF NOT EXISTS (SELECT 1 FROM Sections WHERE CertId = @toeic AND Code = 'P1')
-  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder)
-  VALUES (@toeicList, @toeic, 'listening', 'P1', N'Photographs', 4, 6, 1);
+  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder, NavigationMode, HideOptionText, RequireAudio, RequireImage)
+  VALUES (@toeicList, @toeic, 'listening', 'P1', N'Photographs', 4, 6, 1, 'AUDIO_DRIVEN', 1, 1, 1);
 
 IF NOT EXISTS (SELECT 1 FROM Sections WHERE CertId = @toeic AND Code = 'P2')
-  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder)
-  VALUES (@toeicList, @toeic, 'listening', 'P2', N'Question-Response', 3, 25, 2);
+  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder, NavigationMode, HideOptionText, RequireAudio)
+  VALUES (@toeicList, @toeic, 'listening', 'P2', N'Question-Response', 3, 25, 2, 'AUDIO_DRIVEN', 1, 1);
 
 IF NOT EXISTS (SELECT 1 FROM Sections WHERE CertId = @toeic AND Code = 'P3')
-  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder)
-  VALUES (@toeicList, @toeic, 'listening', 'P3', N'Conversations', 4, 39, 3);
+  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder, NavigationMode, ClusterSize, RequireAudio)
+  VALUES (@toeicList, @toeic, 'listening', 'P3', N'Conversations', 4, 39, 3, 'AUDIO_DRIVEN', 3, 1);
 
 IF NOT EXISTS (SELECT 1 FROM Sections WHERE CertId = @toeic AND Code = 'P4')
-  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder)
-  VALUES (@toeicList, @toeic, 'listening', 'P4', N'Talks', 4, 30, 4);
+  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder, NavigationMode, ClusterSize, RequireAudio)
+  VALUES (@toeicList, @toeic, 'listening', 'P4', N'Talks', 4, 30, 4, 'AUDIO_DRIVEN', 3, 1);
 
 -- Reading Sections: P5, P6, P7
 IF NOT EXISTS (SELECT 1 FROM Sections WHERE CertId = @toeic AND Code = 'P5')
-  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder)
-  VALUES (@toeicRead, @toeic, 'reading', 'P5', N'Incomplete Sentences', 4, 30, 1);
+  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder, NavigationMode)
+  VALUES (@toeicRead, @toeic, 'reading', 'P5', N'Incomplete Sentences', 4, 30, 1, 'FULL_SANDBOX');
 
 IF NOT EXISTS (SELECT 1 FROM Sections WHERE CertId = @toeic AND Code = 'P6')
-  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder)
-  VALUES (@toeicRead, @toeic, 'reading', 'P6', N'Text Completion', 4, 16, 2);
+  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder, NavigationMode, RequirePassage)
+  VALUES (@toeicRead, @toeic, 'reading', 'P6', N'Text Completion', 4, 16, 2, 'FULL_SANDBOX', 1);
 
 IF NOT EXISTS (SELECT 1 FROM Sections WHERE CertId = @toeic AND Code = 'P7')
-  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder)
-  VALUES (@toeicRead, @toeic, 'reading', 'P7', N'Reading Comprehension', 4, 54, 3);
+  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder, NavigationMode, RequirePassage)
+  VALUES (@toeicRead, @toeic, 'reading', 'P7', N'Reading Comprehension', 4, 54, 3, 'FULL_SANDBOX', 1);
 
 -- Speaking Sections: S1 - S5
 IF NOT EXISTS (SELECT 1 FROM Sections WHERE CertId = @toeic AND Code = 'S1')
-  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder)
-  VALUES (@toeicSpea, @toeic, 'speaking', 'S1', N'Read a text aloud', NULL, 2, 1);
+  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder, NavigationMode, AllowedComponentTypesJson)
+  VALUES (@toeicSpea, @toeic, 'speaking', 'S1', N'Read a text aloud', 4, 2, 1, 'SYSTEM_PACED_AUTO', '["free_response"]');
 
 IF NOT EXISTS (SELECT 1 FROM Sections WHERE CertId = @toeic AND Code = 'S2')
-  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder)
-  VALUES (@toeicSpea, @toeic, 'speaking', 'S2', N'Describe a picture', NULL, 2, 2);
+  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder, NavigationMode, RequireImage, AllowedComponentTypesJson)
+  VALUES (@toeicSpea, @toeic, 'speaking', 'S2', N'Describe a picture', 4, 2, 2, 'SYSTEM_PACED_AUTO', 1, '["free_response"]');
 
 IF NOT EXISTS (SELECT 1 FROM Sections WHERE CertId = @toeic AND Code = 'S3')
-  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder)
-  VALUES (@toeicSpea, @toeic, 'speaking', 'S3', N'Respond to questions', NULL, 3, 3);
+  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder, NavigationMode, AllowedComponentTypesJson)
+  VALUES (@toeicSpea, @toeic, 'speaking', 'S3', N'Respond to questions', 4, 3, 3, 'SYSTEM_PACED_AUTO', '["free_response"]');
 
 IF NOT EXISTS (SELECT 1 FROM Sections WHERE CertId = @toeic AND Code = 'S4')
-  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder)
-  VALUES (@toeicSpea, @toeic, 'speaking', 'S4', N'Respond using information provided', NULL, 3, 4);
+  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder, NavigationMode, AllowedComponentTypesJson)
+  VALUES (@toeicSpea, @toeic, 'speaking', 'S4', N'Respond using information provided', 4, 3, 4, 'SYSTEM_PACED_AUTO', '["free_response"]');
 
 IF NOT EXISTS (SELECT 1 FROM Sections WHERE CertId = @toeic AND Code = 'S5')
-  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder)
-  VALUES (@toeicSpea, @toeic, 'speaking', 'S5', N'Express an opinion', NULL, 1, 5);
+  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder, NavigationMode, AllowedComponentTypesJson)
+  VALUES (@toeicSpea, @toeic, 'speaking', 'S5', N'Express an opinion', 4, 1, 5, 'SYSTEM_PACED_AUTO', '["free_response"]');
 
 -- Writing Sections: W1 - W3
 IF NOT EXISTS (SELECT 1 FROM Sections WHERE CertId = @toeic AND Code = 'W1')
-  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder)
-  VALUES (@toeicWrit, @toeic, 'writing', 'W1', N'Write a sentence based on a picture', NULL, 5, 1);
+  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder, NavigationMode, RequireImage, RequiredKeywordCount, AllowedComponentTypesJson)
+  VALUES (@toeicWrit, @toeic, 'writing', 'W1', N'Write a sentence based on a picture', 4, 5, 1, 'HYBRID_GROUP_LOCKED', 1, 2, '["free_response"]');
 
 IF NOT EXISTS (SELECT 1 FROM Sections WHERE CertId = @toeic AND Code = 'W2')
-  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder)
-  VALUES (@toeicWrit, @toeic, 'writing', 'W2', N'Respond to a written request', NULL, 2, 2);
+  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder, NavigationMode, AllowedComponentTypesJson)
+  VALUES (@toeicWrit, @toeic, 'writing', 'W2', N'Respond to a written request', 4, 2, 2, 'HYBRID_GROUP_LOCKED', '["free_response"]');
 
 IF NOT EXISTS (SELECT 1 FROM Sections WHERE CertId = @toeic AND Code = 'W3')
-  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder)
-  VALUES (@toeicWrit, @toeic, 'writing', 'W3', N'Write an opinion essay', NULL, 1, 3);
+  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder, NavigationMode, ScoreWeight, AllowedComponentTypesJson)
+  VALUES (@toeicWrit, @toeic, 'writing', 'W3', N'Write an opinion essay', 4, 1, 3, 'HYBRID_GROUP_LOCKED', 2.0, '["free_response"]');
 
 -- ScoreBands
 IF NOT EXISTS (SELECT 1 FROM ScoreBands WHERE CertId = @toeic AND Code = 'below_A1')
@@ -148,9 +148,9 @@ GO
 -- ---------- IELTS ----------
 IF NOT EXISTS (SELECT 1 FROM Certificates WHERE Code = 'IELTS')
 BEGIN
-  INSERT INTO Certificates (Code, Name, Description, IsActive) VALUES
+  INSERT INTO Certificates (Code, Name, Description, IsActive, ScoreAggregationRule, PresetCode) VALUES
     ('IELTS', N'IELTS Academic & General',
-     N'The four-skill test for study, migration and work abroad. Scored in 0.5 steps from 0.0 to 9.0, with a separate band for each skill.', 1);
+     N'The four-skill test for study, migration and work abroad. Scored in 0.5 steps from 0.0 to 9.0, with a separate band for each skill.', 1, 'avg_half_step', 'ielts_academic');
 END;
 GO
 
@@ -178,24 +178,24 @@ DECLARE @ieltsWrit INT = (SELECT SkillId FROM Skills WHERE CertId = @ielts AND C
 DECLARE @ieltsSpea INT = (SELECT SkillId FROM Skills WHERE CertId = @ielts AND Code = 'SPEA');
 
 IF NOT EXISTS (SELECT 1 FROM Sections WHERE CertId = @ielts AND Code = 'REC')
-  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder)
-  VALUES (@ieltsList, @ielts, 'listening', 'REC', N'Four recordings: everyday conversation to academic lecture', 4, 40, 1);
+  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder, NavigationMode, TimerPolicyJson, RequireAudio)
+  VALUES (@ieltsList, @ielts, 'listening', 'REC', N'Four recordings: everyday conversation to academic lecture', 4, 40, 1, 'AUDIO_DRIVEN', '{"timerMode":"AUDIO_PLUS_CHECK","reviewSeconds":120}', 1);
 
 IF NOT EXISTS (SELECT 1 FROM Sections WHERE CertId = @ielts AND Code = 'PAS')
-  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder)
-  VALUES (@ieltsRead, @ielts, 'reading', 'PAS', N'Three long passages with a mix of question types', 4, 40, 1);
+  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder, NavigationMode, LayoutType, RequirePassage)
+  VALUES (@ieltsRead, @ielts, 'reading', 'PAS', N'Three long passages with a mix of question types', 4, 40, 1, 'FULL_SANDBOX', 'SPLIT_HORIZONTAL', 1);
 
 IF NOT EXISTS (SELECT 1 FROM Sections WHERE CertId = @ielts AND Code = 'T1')
-  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder)
-  VALUES (@ieltsWrit, @ielts, 'writing', 'T1', N'Task 1 — describe a chart (150 words)', NULL, 1, 1);
+  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder, NavigationMode, LayoutType, ScoreWeight, AllowedComponentTypesJson)
+  VALUES (@ieltsWrit, @ielts, 'writing', 'T1', N'Task 1 — describe a chart (150 words)', 4, 1, 1, 'FULL_SANDBOX', 'SPLIT_HORIZONTAL', 1.0, '["free_response"]');
 
 IF NOT EXISTS (SELECT 1 FROM Sections WHERE CertId = @ielts AND Code = 'T2')
-  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder)
-  VALUES (@ieltsWrit, @ielts, 'writing', 'T2', N'Task 2 — write an essay (250 words)', NULL, 1, 2);
+  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder, NavigationMode, LayoutType, ScoreWeight, AllowedComponentTypesJson)
+  VALUES (@ieltsWrit, @ielts, 'writing', 'T2', N'Task 2 — write an essay (250 words)', 4, 1, 2, 'FULL_SANDBOX', 'SPLIT_HORIZONTAL', 2.0, '["free_response"]');
 
 IF NOT EXISTS (SELECT 1 FROM Sections WHERE CertId = @ielts AND Code = 'INT')
-  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder)
-  VALUES (@ieltsSpea, @ielts, 'speaking', 'INT', N'Interview, cue-card talk and discussion', NULL, 3, 1);
+  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder, NavigationMode, AllowedComponentTypesJson)
+  VALUES (@ieltsSpea, @ielts, 'speaking', 'INT', N'Interview, cue-card talk and discussion', 4, 3, 1, 'SYSTEM_PACED_AUTO', '["free_response"]');
 
 IF NOT EXISTS (SELECT 1 FROM ScoreBands WHERE CertId = @ielts AND Code = 'B1')
   INSERT INTO ScoreBands (CertId, Code, Name, MinTotal, MaxTotal, DisplayOrder)
@@ -217,9 +217,9 @@ GO
 -- ---------- VSTEP ----------
 IF NOT EXISTS (SELECT 1 FROM Certificates WHERE Code = 'VSTEP')
 BEGIN
-  INSERT INTO Certificates (Code, Name, Description, IsActive) VALUES
+  INSERT INTO Certificates (Code, Name, Description, IsActive, ScoreAggregationRule, PresetCode) VALUES
     ('VSTEP', N'VSTEP — the Vietnamese national test',
-     N'The national English proficiency test used by Vietnamese universities and employers. Four skills, reported on a 0–10 scale mapped to CEFR levels A2 to C1.', 1);
+     N'The national English proficiency test used by Vietnamese universities and employers. Four skills, reported on a 0–10 scale mapped to CEFR levels A2 to C1.', 1, 'avg_whole', 'vstep');
 END;
 GO
 
@@ -247,24 +247,24 @@ DECLARE @vstepWrit INT = (SELECT SkillId FROM Skills WHERE CertId = @vstep AND C
 DECLARE @vstepSpea INT = (SELECT SkillId FROM Skills WHERE CertId = @vstep AND Code = 'SPEA');
 
 IF NOT EXISTS (SELECT 1 FROM Sections WHERE CertId = @vstep AND Code = 'L3')
-  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder)
-  VALUES (@vstepList, @vstep, 'listening', 'L3', N'Three parts, played once, with conversations and talks', 4, 35, 1);
+  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder, NavigationMode, RequireAudio)
+  VALUES (@vstepList, @vstep, 'listening', 'L3', N'Three parts, played once, with conversations and talks', 4, 35, 1, 'AUDIO_DRIVEN', 1);
 
 IF NOT EXISTS (SELECT 1 FROM Sections WHERE CertId = @vstep AND Code = 'R4')
-  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder)
-  VALUES (@vstepRead, @vstep, 'reading', 'R4', N'Four passages, 40 multiple-choice questions', 4, 40, 1);
+  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder, NavigationMode, LayoutType, RequirePassage)
+  VALUES (@vstepRead, @vstep, 'reading', 'R4', N'Four passages, 40 multiple-choice questions', 4, 40, 1, 'FULL_SANDBOX', 'SPLIT_HORIZONTAL', 1);
 
 IF NOT EXISTS (SELECT 1 FROM Sections WHERE CertId = @vstep AND Code = 'W1')
-  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder)
-  VALUES (@vstepWrit, @vstep, 'writing', 'W1', N'A letter or email', NULL, 1, 1);
+  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder, NavigationMode, LayoutType, ScoreWeight, AllowedComponentTypesJson)
+  VALUES (@vstepWrit, @vstep, 'writing', 'W1', N'A letter or email', 4, 1, 1, 'FULL_SANDBOX', 'SPLIT_HORIZONTAL', 1.0, '["free_response"]');
 
 IF NOT EXISTS (SELECT 1 FROM Sections WHERE CertId = @vstep AND Code = 'W2')
-  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder)
-  VALUES (@vstepWrit, @vstep, 'writing', 'W2', N'An essay', NULL, 1, 2);
+  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder, NavigationMode, LayoutType, ScoreWeight, AllowedComponentTypesJson)
+  VALUES (@vstepWrit, @vstep, 'writing', 'W2', N'An essay', 4, 1, 2, 'FULL_SANDBOX', 'SPLIT_HORIZONTAL', 2.0, '["free_response"]');
 
 IF NOT EXISTS (SELECT 1 FROM Sections WHERE CertId = @vstep AND Code = 'S3')
-  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder)
-  VALUES (@vstepSpea, @vstep, 'speaking', 'S3', N'Social interaction, description and discussion', NULL, 3, 1);
+  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder, NavigationMode, AllowedComponentTypesJson)
+  VALUES (@vstepSpea, @vstep, 'speaking', 'S3', N'Social interaction, description and discussion', 4, 3, 1, 'SYSTEM_PACED_AUTO', '["free_response"]');
 
 IF NOT EXISTS (SELECT 1 FROM ScoreBands WHERE CertId = @vstep AND Code = 'A2')
   INSERT INTO ScoreBands (CertId, Code, Name, MinTotal, MaxTotal, DisplayOrder)
@@ -4104,4 +4104,211 @@ BEGIN
 END;
 
 PRINT '18. IELTS/VSTEP diagnostic benchmarks, free writing extensions, and remedial paths seeded';
+GO
+
+-- ============================================================================
+-- 19. Representative 11-Component Question Catalog & Official Blueprint Presets
+-- ============================================================================
+
+-- ---------- TOEIC CAT ----------
+IF NOT EXISTS (SELECT 1 FROM Certificates WHERE Code = 'TOEIC_CAT')
+BEGIN
+  INSERT INTO Certificates (Code, Name, Description, IsActive, ScoreAggregationRule, PresetCode) VALUES
+    ('TOEIC_CAT', N'TOEIC Multi-Stage Adaptive CAT',
+     N'Computerized adaptive TOEIC test with 2-stage reading units and audio-paced listening.', 1, 'sum', 'toeic_lr_cat');
+END;
+
+DECLARE @toeicCat INT = (SELECT CertId FROM Certificates WHERE Code = 'TOEIC_CAT');
+
+IF NOT EXISTS (SELECT 1 FROM Skills WHERE CertId = @toeicCat AND Code = 'LIST')
+  INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder, DurationMinutes)
+  VALUES (@toeicCat, 'LIST', N'Listening', 'listening', 1, 45);
+
+IF NOT EXISTS (SELECT 1 FROM Skills WHERE CertId = @toeicCat AND Code = 'READ')
+  INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder, DurationMinutes)
+  VALUES (@toeicCat, 'READ', N'Reading', 'reading', 2, 45);
+
+DECLARE @catList INT = (SELECT SkillId FROM Skills WHERE CertId = @toeicCat AND Code = 'LIST');
+DECLARE @catRead INT = (SELECT SkillId FROM Skills WHERE CertId = @toeicCat AND Code = 'READ');
+
+IF NOT EXISTS (SELECT 1 FROM Sections WHERE CertId = @toeicCat AND Code = 'P1_CAT')
+  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder, NavigationMode, HideOptionText, RequireAudio, UnitCount)
+  VALUES (@catList, @toeicCat, 'listening', 'P1_CAT', N'Photographs (Adaptive)', 4, 6, 1, 'AUDIO_DRIVEN', 1, 1, 1);
+
+IF NOT EXISTS (SELECT 1 FROM Sections WHERE CertId = @toeicCat AND Code = 'P2_CAT')
+  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder, NavigationMode, HideOptionText, RequireAudio, UnitCount)
+  VALUES (@catList, @toeicCat, 'listening', 'P2_CAT', N'Question-Response (Adaptive)', 3, 25, 2, 'AUDIO_DRIVEN', 1, 1, 1);
+
+IF NOT EXISTS (SELECT 1 FROM Sections WHERE CertId = @toeicCat AND Code = 'P5_CAT')
+  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder, NavigationMode, UnitCount)
+  VALUES (@catRead, @toeicCat, 'reading', 'P5_CAT', N'Incomplete Sentences (Stage 1 & 2)', 4, 20, 1, 'UNIT_LOCKED_SANDBOX', 2);
+
+IF NOT EXISTS (SELECT 1 FROM Sections WHERE CertId = @toeicCat AND Code = 'P7_CAT')
+  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder, NavigationMode, RequirePassage, UnitCount)
+  VALUES (@catRead, @toeicCat, 'reading', 'P7_CAT', N'Reading Comprehension (Adaptive)', 4, 25, 2, 'UNIT_LOCKED_SANDBOX', 1, 2);
+
+IF NOT EXISTS (SELECT 1 FROM ScoreBands WHERE CertId = @toeicCat AND Code = 'CAT_B1')
+  INSERT INTO ScoreBands (CertId, Code, Name, MinTotal, MaxTotal, DisplayOrder)
+  VALUES (@toeicCat, 'CAT_B1', N'Intermediate', 400, 695, 1);
+
+IF NOT EXISTS (SELECT 1 FROM ScoreBands WHERE CertId = @toeicCat AND Code = 'CAT_B2')
+  INSERT INTO ScoreBands (CertId, Code, Name, MinTotal, MaxTotal, DisplayOrder)
+  VALUES (@toeicCat, 'CAT_B2', N'Professional', 700, 990, 2);
+
+-- ---------- TOEIC S&W ----------
+IF NOT EXISTS (SELECT 1 FROM Certificates WHERE Code = 'TOEIC_SW')
+BEGIN
+  INSERT INTO Certificates (Code, Name, Description, IsActive, ScoreAggregationRule, PresetCode) VALUES
+    ('TOEIC_SW', N'TOEIC Speaking & Writing',
+     N'Authentic ETS workplace speaking and writing assessment with automated timers and on-screen tools.', 1, 'sum', 'toeic_sw');
+END;
+
+DECLARE @toeicSw INT = (SELECT CertId FROM Certificates WHERE Code = 'TOEIC_SW');
+
+IF NOT EXISTS (SELECT 1 FROM Skills WHERE CertId = @toeicSw AND Code = 'SPEA')
+  INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder, DurationMinutes)
+  VALUES (@toeicSw, 'SPEA', N'Speaking', 'speaking', 1, 20);
+
+IF NOT EXISTS (SELECT 1 FROM Skills WHERE CertId = @toeicSw AND Code = 'WRIT')
+  INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder, DurationMinutes)
+  VALUES (@toeicSw, 'WRIT', N'Writing', 'writing', 2, 60);
+
+DECLARE @swSpea INT = (SELECT SkillId FROM Skills WHERE CertId = @toeicSw AND Code = 'SPEA');
+DECLARE @swWrit INT = (SELECT SkillId FROM Skills WHERE CertId = @toeicSw AND Code = 'WRIT');
+
+IF NOT EXISTS (SELECT 1 FROM Sections WHERE CertId = @toeicSw AND Code = 'SW_S1')
+  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder, NavigationMode, AllowedComponentTypesJson)
+  VALUES (@swSpea, @toeicSw, 'speaking', 'SW_S1', N'Read Aloud', 4, 2, 1, 'SYSTEM_PACED_AUTO', '["free_response"]');
+
+IF NOT EXISTS (SELECT 1 FROM Sections WHERE CertId = @toeicSw AND Code = 'SW_S2')
+  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder, NavigationMode, RequireImage, AllowedComponentTypesJson)
+  VALUES (@swSpea, @toeicSw, 'speaking', 'SW_S2', N'Describe a Picture', 4, 2, 2, 'SYSTEM_PACED_AUTO', 1, '["free_response"]');
+
+IF NOT EXISTS (SELECT 1 FROM Sections WHERE CertId = @toeicSw AND Code = 'SW_W1')
+  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder, NavigationMode, RequireImage, RequiredKeywordCount, AllowedComponentTypesJson)
+  VALUES (@swWrit, @toeicSw, 'writing', 'SW_W1', N'Write a sentence based on a picture', 4, 5, 1, 'HYBRID_GROUP_LOCKED', 1, 2, '["free_response"]');
+
+IF NOT EXISTS (SELECT 1 FROM Sections WHERE CertId = @toeicSw AND Code = 'SW_W3')
+  INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder, NavigationMode, ScoreWeight, AllowedComponentTypesJson)
+  VALUES (@swWrit, @toeicSw, 'writing', 'SW_W3', N'Write an opinion essay', 4, 1, 2, 'HYBRID_GROUP_LOCKED', 2.0, '["free_response"]');
+
+IF NOT EXISTS (SELECT 1 FROM ScoreBands WHERE CertId = @toeicSw AND Code = 'SW_B1')
+  INSERT INTO ScoreBands (CertId, Code, Name, MinTotal, MaxTotal, DisplayOrder)
+  VALUES (@toeicSw, 'SW_B1', N'Basic Working', 160, 250, 1);
+
+IF NOT EXISTS (SELECT 1 FROM ScoreBands WHERE CertId = @toeicSw AND Code = 'SW_B2')
+  INSERT INTO ScoreBands (CertId, Code, Name, MinTotal, MaxTotal, DisplayOrder)
+  VALUES (@toeicSw, 'SW_B2', N'Advanced Working', 260, 400, 2);
+
+-- ---------- Representative 11-Component Exam ----------
+IF NOT EXISTS (SELECT 1 FROM Exams WHERE CertId = @toeicCat AND Name = N'TOEIC CAT Benchmark Test 1')
+BEGIN
+  INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose, DeliveryMode, ExamFamily, Description, QuestionCount)
+  VALUES (@toeicCat, N'TOEIC CAT Benchmark Test 1', 'published', 90, 'mock', 'strict_exam', 'TOEIC',
+          N'Representative multi-component exam showcasing all 11 standardized question items across adaptive units.', 11);
+END;
+
+DECLARE @catExam INT = (SELECT ExamId FROM Exams WHERE CertId = @toeicCat AND Name = N'TOEIC CAT Benchmark Test 1');
+DECLARE @secP5Cat INT = (SELECT SectionId FROM Sections WHERE CertId = @toeicCat AND Code = 'P5_CAT');
+DECLARE @secP7Cat INT = (SELECT SectionId FROM Sections WHERE CertId = @toeicCat AND Code = 'P7_CAT');
+
+-- Question Group Unit 1 (Stage 1)
+IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @catExam AND UnitNumber = 1)
+BEGIN
+  INSERT INTO QuestionGroups (ExamId, CertId, SectionId, UnitNumber, Passage, DisplayOrder)
+  VALUES (@catExam, @toeicCat, @secP5Cat, 1, N'Unit 1 foundational stage for incomplete sentences and completion items.', 1);
+END;
+DECLARE @grpUnit1 INT = (SELECT GroupId FROM QuestionGroups WHERE ExamId = @catExam AND UnitNumber = 1 AND SectionId = @secP5Cat);
+
+-- Question Group Unit 2 (Stage 2 Adaptive)
+IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @catExam AND UnitNumber = 2)
+BEGIN
+  INSERT INTO QuestionGroups (ExamId, CertId, SectionId, UnitNumber, Passage, DisplayOrder)
+  VALUES (@catExam, @toeicCat, @secP7Cat, 2, N'The corporate merger announced yesterday between Apex Technologies and Horizon Logistics will create the region''s largest supply chain network. Analysts project a 15% reduction in freight overhead over the upcoming fiscal quarters.', 2);
+END;
+DECLARE @grpUnit2 INT = (SELECT GroupId FROM QuestionGroups WHERE ExamId = @catExam AND UnitNumber = 2 AND SectionId = @secP7Cat);
+
+-- 1. MCQ (4 options)
+IF NOT EXISTS (SELECT 1 FROM Questions WHERE GroupId = @grpUnit1 AND DisplayOrder = 1)
+BEGIN
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder)
+  VALUES (@grpUnit1, @catExam, @secP5Cat, @catRead, N'The quarterly budget report must be submitted _____ Friday at 5:00 PM.', 2, 'mcq', 1);
+  DECLARE @q1 INT = SCOPE_IDENTITY();
+  INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
+    (@q1, 'mcq', 'A', N'before', 1),
+    (@q1, 'mcq', 'B', N'prior', 0),
+    (@q1, 'mcq', 'C', N'advance', 0),
+    (@q1, 'mcq', 'D', N'ahead', 0);
+END;
+
+-- 2. MCQ 3-option
+IF NOT EXISTS (SELECT 1 FROM Questions WHERE GroupId = @grpUnit1 AND DisplayOrder = 2)
+BEGIN
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder)
+  VALUES (@grpUnit1, @catExam, @secP5Cat, @catRead, N'Where did Ms. Chen leave the presentation handouts?', 2, 'mcq_3', 2);
+  DECLARE @q2 INT = SCOPE_IDENTITY();
+  INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
+    (@q2, 'mcq_3', 'A', N'On the conference table', 1),
+    (@q2, 'mcq_3', 'B', N'Yes, yesterday', 0),
+    (@q2, 'mcq_3', 'C', N'To meet the client', 0);
+END;
+
+-- 3. Multi-Select (Checkbox with max selections)
+IF NOT EXISTS (SELECT 1 FROM Questions WHERE GroupId = @grpUnit1 AND DisplayOrder = 3)
+BEGIN
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, MaxSelections, DisplayOrder)
+  VALUES (@grpUnit1, @catExam, @secP5Cat, @catRead, N'Select TWO benefits resulting from the newly installed automated inventory system:', 3, 'multi_select', 2, 3);
+  DECLARE @q3 INT = SCOPE_IDENTITY();
+  INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
+    (@q3, 'multi_select', 'A', N'Decreased fulfillment errors', 1),
+    (@q3, 'multi_select', 'B', N'Real-time stock level visibility', 1),
+    (@q3, 'multi_select', 'C', N'Immediate relocation to another province', 0),
+    (@q3, 'multi_select', 'D', N'Elimination of electricity costs', 0);
+END;
+
+-- 4. Inline Text Completion
+IF NOT EXISTS (SELECT 1 FROM Questions WHERE GroupId = @grpUnit1 AND DisplayOrder = 4)
+BEGIN
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, MaxWords, AllowNumber, AcceptedAnswersJson, DisplayOrder)
+  VALUES (@grpUnit1, @catExam, @secP5Cat, @catRead, N'The express shuttle departs every [blank] minutes from terminal two.', 2, 'inline_completion', 1, 1, '["15","fifteen"]', 4);
+END;
+
+-- 5. Dropdown Matching
+IF NOT EXISTS (SELECT 1 FROM Questions WHERE GroupId = @grpUnit1 AND DisplayOrder = 5)
+BEGIN
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder)
+  VALUES (@grpUnit1, @catExam, @secP5Cat, @catRead, N'Choose the best connective word to complete the sentence clause.', 3, 'dropdown', 5);
+  DECLARE @q5 INT = SCOPE_IDENTITY();
+  INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
+    (@q5, 'dropdown', 'A', N'consequently', 1),
+    (@q5, 'dropdown', 'B', N'otherwise', 0),
+    (@q5, 'dropdown', 'C', N'nevertheless', 0);
+END;
+
+-- 6. Drag-and-Drop Labelling
+IF NOT EXISTS (SELECT 1 FROM Questions WHERE GroupId = @grpUnit1 AND DisplayOrder = 6)
+BEGIN
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder)
+  VALUES (@grpUnit1, @catExam, @secP5Cat, @catRead, N'Drag the appropriate department heading to the organizational slot.', 3, 'drag_drop', 6);
+  DECLARE @q6 INT = SCOPE_IDENTITY();
+  INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
+    (@q6, 'drag_drop', 'A', N'Quality Assurance', 1),
+    (@q6, 'drag_drop', 'B', N'Investor Relations', 0),
+    (@q6, 'drag_drop', 'C', N'Facilities Maintenance', 0);
+END;
+
+-- 7. Split-Screen Passage MCQ (Unit 2 Stage 2)
+IF NOT EXISTS (SELECT 1 FROM Questions WHERE GroupId = @grpUnit2 AND DisplayOrder = 7)
+BEGIN
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder)
+  VALUES (@grpUnit2, @catExam, @secP7Cat, @catRead, N'What is mentioned as a key benefit of the Apex-Horizon merger?', 3, 'mcq', 7);
+  DECLARE @q7 INT = SCOPE_IDENTITY();
+  INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
+    (@q7, 'mcq', 'A', N'Reduced shipping overhead costs', 1),
+    (@q7, 'mcq', 'B', N'Higher retail retail shelf prices', 0),
+    (@q7, 'mcq', 'C', N'Cancellation of overseas contracts', 0),
+    (@q7, 'mcq', 'D', N'Downsizing regional warehouses', 0);
+END;
+
+PRINT '19. Representative 11-Component Question Catalog & Official Multi-Stage Blueprint Seeds';
 GO

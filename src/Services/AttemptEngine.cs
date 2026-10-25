@@ -762,11 +762,11 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
 
             db.AttemptSkillScores.AddRange(newSkillScores);
 
-            var certCode = await db.Certificates
+            var cert = await db.Certificates
                 .Where(c => c.CertId == attempt.CertId)
-                .Select(c => c.Code)
+                .Select(c => new { c.Code, c.ScoreAggregationRule })
                 .SingleAsync(cancellationToken);
-            var totalScore = AggregateTotalScore(certCode, newSkillScores);
+            var totalScore = AggregateTotalScore(cert.ScoreAggregationRule, newSkillScores);
             attempt.TotalScore = totalScore;
             string? matchingBandCode = null;
             if (!hasPendingMockResponses)
@@ -953,11 +953,11 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
             db.AttemptSkillScores.AddRange(newSkillScores);
             await db.SaveChangesAsync(cancellationToken);
 
-            var certCode = await db.Certificates
+            var cert = await db.Certificates
                 .Where(c => c.CertId == attempt.CertId)
-                .Select(c => c.Code)
+                .Select(c => new { c.Code, c.ScoreAggregationRule })
                 .SingleAsync(cancellationToken);
-            var totalScore = AggregateTotalScore(certCode, newSkillScores);
+            var totalScore = AggregateTotalScore(cert.ScoreAggregationRule, newSkillScores);
             attempt.TotalScore = totalScore;
             attempt.BandCode = await FindBandCodeAsync(attempt.CertId, totalScore, cancellationToken);
             attempt.Status = AttemptStatus.Graded.ToCode();
@@ -1029,16 +1029,17 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
         };
 
     private static int AggregateTotalScore(
-        string certCode,
+        string? scoreAggregationRule,
         IReadOnlyCollection<AttemptSkillScore> skillScores)
     {
         if (skillScores.Count == 0) return 0;
 
         var average = skillScores.Average(score => (double)score.ScaledScore);
-        return certCode.ToUpperInvariant() switch
+        return scoreAggregationRule?.ToLowerInvariant() switch
         {
-            "IELTS" => (int)Math.Round(average / 5.0, MidpointRounding.AwayFromZero) * 5,
-            "VSTEP" => (int)Math.Round(average, MidpointRounding.AwayFromZero),
+            "avg_half_step" => (int)Math.Round(average / 5.0, MidpointRounding.AwayFromZero) * 5,
+            "avg_whole" => (int)Math.Round(average, MidpointRounding.AwayFromZero),
+            "independent" => 0,
             _ => skillScores.Sum(score => score.ScaledScore)
         };
     }

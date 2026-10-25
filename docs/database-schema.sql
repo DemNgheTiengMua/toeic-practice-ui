@@ -6,11 +6,14 @@ SET ANSI_NULLS ON;
 GO
 -- ============ Domain 2: Catalog ============
 CREATE TABLE Certificates (
-  CertId       INT IDENTITY(1,1) PRIMARY KEY,
-  Code         VARCHAR(20)  NOT NULL,
-  Name         NVARCHAR(120) NOT NULL,
-  Description  NVARCHAR(500) NULL,
-  IsActive     BIT NOT NULL DEFAULT 1,
+  CertId               INT IDENTITY(1,1) PRIMARY KEY,
+  Code                 VARCHAR(20)  NOT NULL,
+  Name                 NVARCHAR(120) NOT NULL,
+  Description          NVARCHAR(500) NULL,
+  IsActive             BIT NOT NULL DEFAULT 1,
+  ScoreAggregationRule NVARCHAR(30) NOT NULL CONSTRAINT DF_Certificates_ScoreAggregationRule DEFAULT 'sum'
+    CONSTRAINT CK_Certificates_ScoreAggregationRule CHECK (ScoreAggregationRule IN ('sum', 'avg_half_step', 'avg_whole', 'independent')),
+  PresetCode           NVARCHAR(50) NULL,
   CONSTRAINT UQ_Certificates_Code UNIQUE (Code)
 );
 GO
@@ -32,18 +35,33 @@ CREATE TABLE Skills (
 );
 GO
 CREATE TABLE Sections (
-  SectionId    INT IDENTITY(1,1) PRIMARY KEY,
-  SkillId      INT NOT NULL,
-  CertId       INT NOT NULL,
+  SectionId                 INT IDENTITY(1,1) PRIMARY KEY,
+  SkillId                   INT NOT NULL,
+  CertId                    INT NOT NULL,
   -- M-18: carried down from the owning skill so PracticeSessions can pin listening/reading-only
-  Modality     VARCHAR(10) NOT NULL
+  Modality                  VARCHAR(10) NOT NULL
     CONSTRAINT CK_Sections_Modality CHECK (Modality IN ('listening','reading','speaking','writing')),
-  Code         VARCHAR(20) NOT NULL,
-  Name         NVARCHAR(120) NOT NULL,
-  OptionCount  INT NULL CONSTRAINT CK_Sections_OptionCount CHECK (OptionCount IS NULL OR OptionCount BETWEEN 2 AND 6),
+  Code                      VARCHAR(20) NOT NULL,
+  Name                      NVARCHAR(120) NOT NULL,
+  ScoreWeight               DECIMAL(5,2) NOT NULL CONSTRAINT DF_Sections_ScoreWeight DEFAULT 1.0,
+  NavigationMode            NVARCHAR(30) NOT NULL CONSTRAINT DF_Sections_NavigationMode DEFAULT 'FULL_SANDBOX'
+    CONSTRAINT CK_Sections_NavigationMode CHECK (NavigationMode IN ('FULL_SANDBOX', 'UNIT_LOCKED_SANDBOX', 'AUDIO_DRIVEN', 'SYSTEM_PACED_AUTO', 'HYBRID_GROUP_LOCKED')),
+  TimerPolicyJson           NVARCHAR(MAX) NULL,
+  LayoutType                NVARCHAR(30) NOT NULL CONSTRAINT DF_Sections_LayoutType DEFAULT 'STANDARD_VERTICAL',
+  OptionCount               INT NOT NULL CONSTRAINT DF_Sections_OptionCount DEFAULT 4
+    CONSTRAINT CK_Sections_OptionCount CHECK (OptionCount BETWEEN 2 AND 6),
+  ClusterSize               INT NOT NULL CONSTRAINT DF_Sections_ClusterSize DEFAULT 1,
+  UnitCount                 INT NOT NULL CONSTRAINT DF_Sections_UnitCount DEFAULT 1,
+  HideOptionText            BIT NOT NULL CONSTRAINT DF_Sections_HideOptionText DEFAULT 0,
+  RequirePassage            BIT NOT NULL CONSTRAINT DF_Sections_RequirePassage DEFAULT 0,
+  RequireAudio              BIT NOT NULL CONSTRAINT DF_Sections_RequireAudio DEFAULT 0,
+  RequireImage              BIT NOT NULL CONSTRAINT DF_Sections_RequireImage DEFAULT 0,
+  RequiredKeywordCount      INT NOT NULL CONSTRAINT DF_Sections_RequiredKeywordCount DEFAULT 0,
+  AllowedComponentTypesJson NVARCHAR(MAX) NULL,
+  ToolsConfigJson           NVARCHAR(MAX) NULL,
   -- UI-18: fixed per-Part question count ("Part 3 — 39 questions", editor progress "25 / 39")
-  ExpectedQuestionCount INT NULL CONSTRAINT CK_Sections_ExpectedCount CHECK (ExpectedQuestionCount IS NULL OR ExpectedQuestionCount > 0),
-  DisplayOrder INT NOT NULL DEFAULT 0,
+  ExpectedQuestionCount     INT NULL CONSTRAINT CK_Sections_ExpectedCount CHECK (ExpectedQuestionCount IS NULL OR ExpectedQuestionCount > 0),
+  DisplayOrder              INT NOT NULL DEFAULT 0,
   CONSTRAINT UQ_Sections_Skill_Code UNIQUE (SkillId, Code),
   -- composite FK pins the section's cert to its skill's cert (isolation, enforced because CertId is NOT NULL):
   CONSTRAINT FK_Sections_SkillCert FOREIGN KEY (SkillId, CertId) REFERENCES Skills(SkillId, CertId),
@@ -167,6 +185,9 @@ CREATE TABLE Exams (
   -- UI-38: so is writing practice (writing-instructions / exam-writing / writing-review)
   Purpose         VARCHAR(20) NOT NULL CONSTRAINT DF_Exams_Purpose DEFAULT 'mock'
     CONSTRAINT CK_Exams_Purpose CHECK (Purpose IN ('mock','placement','speaking_practice','writing_practice')),
+  DeliveryMode    NVARCHAR(30) NOT NULL CONSTRAINT DF_Exams_DeliveryMode DEFAULT 'strict_exam'
+    CONSTRAINT CK_Exams_DeliveryMode CHECK (DeliveryMode IN ('strict_exam', 'practice')),
+  ExamFamily      NVARCHAR(50) NULL,
   Description     NVARCHAR(500) NULL,     -- UI-3: placement card copy ("Adaptive across both sections…")
   SourceName      NVARCHAR(120) NULL,     -- UI-4: exam editor "Test set / source" (e.g. ETS 2024)
   InternalNote    NVARCHAR(1000) NULL,    -- UI-4: exam editor note, admin only
@@ -217,6 +238,7 @@ CREATE TABLE QuestionGroups (
   ExamId       INT NOT NULL,
   CertId       INT NOT NULL,
   SectionId    INT NOT NULL,
+  UnitNumber   INT NOT NULL CONSTRAINT DF_QGroups_UnitNumber DEFAULT 1,
   Passage      NVARCHAR(MAX) NULL,
   AudioPath    NVARCHAR(400) NULL,
   -- UI-6: a Part's audio is one uploaded file (ExamSectionAudio); the group's slice of it lets
@@ -254,8 +276,8 @@ CREATE TABLE Questions (
   SkillId         INT NOT NULL,
   Stem            NVARCHAR(MAX) NOT NULL,
   DifficultyLevel INT NOT NULL CONSTRAINT CK_Questions_Difficulty CHECK (DifficultyLevel BETWEEN 1 AND 5),
-  QuestionType    VARCHAR(14) NOT NULL
-    CONSTRAINT CK_Questions_Type CHECK (QuestionType IN ('mcq','free_response')),
+  QuestionType    VARCHAR(30) NOT NULL
+    CONSTRAINT CK_Questions_Type CHECK (QuestionType IN ('mcq', 'mcq_3', 'multi_select', 'inline_completion', 'dropdown', 'drag_drop', 'free_response')),
   Explanation     NVARCHAR(MAX) NULL,
   -- UI-8: "Grammar type" (practice summary), "inference questions" (weakness analysis)
   CategoryId      INT NULL CONSTRAINT FK_Questions_Category REFERENCES QuestionCategories(CategoryId),
@@ -265,18 +287,22 @@ CREATE TABLE Questions (
   -- UI-39: exam-writing word counter "142 / 150-300 words"; free response only
   MinWords        INT NULL,
   MaxWords        INT NULL,
+  MaxSelections   INT NULL,
+  AllowNumber     BIT NOT NULL CONSTRAINT DF_Questions_AllowNumber DEFAULT 1,
+  AcceptedAnswersJson NVARCHAR(MAX) NULL,
+  RequiredKeywords    NVARCHAR(MAX) NULL,
   -- UI-42: practice-take "Show hint" (a nudge, not the answer; Explanation stays the after-answer why)
   Hint            NVARCHAR(1000) NULL,
   DisplayOrder    INT NOT NULL DEFAULT 0,
   UpdatedAt       DATETIMEOFFSET NULL,    -- UI-4: question editor "Last saved: 19:42"
   CONSTRAINT CK_Questions_Words CHECK (
        (MinWords IS NULL AND MaxWords IS NULL)
-    OR (QuestionType = 'free_response'
+    OR (QuestionType IN ('free_response', 'inline_completion')
         AND (MinWords IS NULL OR MinWords > 0)
         AND (MaxWords IS NULL OR MaxWords >= ISNULL(MinWords, 1)))
   ),
   CONSTRAINT CK_Questions_Timing CHECK (
-       (QuestionType = 'mcq' AND PrepSeconds IS NULL AND ResponseSeconds IS NULL)
+       (QuestionType <> 'free_response' AND PrepSeconds IS NULL AND ResponseSeconds IS NULL)
     OR (QuestionType = 'free_response'
         AND (PrepSeconds IS NULL OR PrepSeconds >= 0)
         AND (ResponseSeconds IS NULL OR ResponseSeconds > 0))
@@ -297,9 +323,9 @@ GO
 CREATE TABLE QuestionOptions (
   OptionId     INT IDENTITY(1,1) PRIMARY KEY,
   QuestionId   INT NOT NULL REFERENCES Questions(QuestionId),
-  -- M-7: options only belong to MCQ questions
-  QuestionType VARCHAR(14) NOT NULL
-    CONSTRAINT CK_Options_QuestionType CHECK (QuestionType = 'mcq'),
+  -- M-7: options only belong to objective / choice questions
+  QuestionType VARCHAR(30) NOT NULL
+    CONSTRAINT CK_Options_QuestionType CHECK (QuestionType IN ('mcq', 'mcq_3', 'multi_select', 'inline_completion', 'dropdown', 'drag_drop')),
   Label        VARCHAR(4) NOT NULL,
   Text         NVARCHAR(MAX) NOT NULL,
   IsCorrect    BIT NOT NULL DEFAULT 0,
@@ -314,7 +340,7 @@ CREATE TABLE QuestionOptions (
   -- M-8: at most one correct option per question enforced below via UX_Options_OneCorrect
 );
 GO
-CREATE UNIQUE INDEX UX_Options_OneCorrect ON QuestionOptions(QuestionId) WHERE IsCorrect = 1;
+CREATE UNIQUE INDEX UX_Options_OneCorrect ON QuestionOptions(QuestionId) WHERE IsCorrect = 1 AND QuestionType <> 'multi_select';
 GO
 CREATE TABLE ImportBatches (
   BatchId     INT IDENTITY(1,1) PRIMARY KEY,
@@ -403,8 +429,10 @@ CREATE TABLE PracticeAnswers (
   QuestionId       INT NOT NULL REFERENCES Questions(QuestionId),
   -- Low: carried down so a question must belong to the session's own section
   SectionId        INT NOT NULL,
-  SelectedOptionId INT NULL,
-  IsCorrect        BIT NULL,
+  SelectedOptionId      INT NULL,
+  ResponseText          NVARCHAR(MAX) NULL,
+  SelectedOptionIdsJson NVARCHAR(MAX) NULL,
+  IsCorrect             BIT NULL,
   HintUsed         BIT NOT NULL CONSTRAINT DF_PracticeAnswers_HintUsed DEFAULT 0,  -- UI-42: summary "2 with a hint"
   DisplayOrder     INT NOT NULL DEFAULT 0,
   CONSTRAINT UQ_PracticeAnswers UNIQUE (SessionId, QuestionId),
@@ -432,8 +460,15 @@ CREATE TABLE ExamAttempts (
   UserId          INT NOT NULL REFERENCES Users(UserId),
   ExamId          INT NOT NULL REFERENCES Exams(ExamId),
   -- H-5: carried down from the exam so children can be pinned to the same certificate
-  CertId          INT NOT NULL REFERENCES Certificates(CertId),
-  Status          VARCHAR(12) NOT NULL DEFAULT 'in_progress'
+  CertId              INT NOT NULL REFERENCES Certificates(CertId),
+  ActiveSkillId       INT NULL CONSTRAINT FK_Attempts_ActiveSkill REFERENCES Skills(SkillId),
+  ActiveUnitNumber    INT NOT NULL CONSTRAINT DF_Attempts_ActiveUnitNumber DEFAULT 1,
+  ActiveGroupId       INT NULL CONSTRAINT FK_Attempts_ActiveGroup REFERENCES QuestionGroups(GroupId),
+  AuthorizationCode   NVARCHAR(64) NULL,
+  PhaseDeadlineAt     DATETIME2 NULL,
+  LastAudioOffsetMs   INT NOT NULL CONSTRAINT DF_Attempts_LastAudioOffsetMs DEFAULT 0,
+  CandidateNotesJson  NVARCHAR(MAX) NULL,
+  Status              VARCHAR(12) NOT NULL DEFAULT 'in_progress'
     CONSTRAINT CK_Attempts_Status CHECK (Status IN ('in_progress','submitted','graded','abandoned')),
   StartedAt       DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
   ExpiresAt       DATETIMEOFFSET NOT NULL,          -- server-authoritative
@@ -476,8 +511,10 @@ CREATE TABLE AttemptAnswers (
   QuestionId       INT NOT NULL REFERENCES Questions(QuestionId),
   -- H-5: carried down from the attempt so the question must belong to the attempt's own exam
   ExamId           INT NOT NULL,
-  SelectedOptionId INT NULL,
-  IsCorrect        BIT NULL,
+  SelectedOptionId      INT NULL,
+  ResponseText          NVARCHAR(MAX) NULL,
+  SelectedOptionIdsJson NVARCHAR(MAX) NULL,
+  IsCorrect             BIT NULL,
   -- UI-16: "Flag for review", "Flag 7", review filter "Only flagged questions"
   IsFlagged        BIT NOT NULL CONSTRAINT DF_AttemptAnswers_IsFlagged DEFAULT 0,
   CONSTRAINT UQ_AttemptAnswers UNIQUE (AttemptId, QuestionId),
@@ -498,7 +535,7 @@ CREATE TABLE FreeResponses (
   -- M-3: carried down from the question so AiGradings must name that question's own skill
   SkillId        INT NOT NULL,
   -- M-7: pins the question to be a free_response question (a CHECK can't reach Questions)
-  QuestionType   VARCHAR(14) NOT NULL
+  QuestionType   VARCHAR(30) NOT NULL
     CONSTRAINT CK_FreeResp_QuestionType CHECK (QuestionType = 'free_response'),
   ResponseText   NVARCHAR(MAX) NULL,
   AudioPath      NVARCHAR(400) NULL,
@@ -577,9 +614,10 @@ BEGIN
     ) scores
     WHERE a.TotalScore IS NOT NULL
       AND a.AttemptId IN (SELECT AttemptId FROM inserted UNION SELECT AttemptId FROM deleted)
-      AND a.TotalScore <> CASE c.Code
-        WHEN 'IELTS' THEN CONVERT(INT, FLOOR((COALESCE(scores.AverageScore, 0) + 2.5) / 5.0) * 5)
-        WHEN 'VSTEP' THEN CONVERT(INT, ROUND(COALESCE(scores.AverageScore, 0), 0))
+      AND c.ScoreAggregationRule <> 'independent'
+      AND a.TotalScore <> CASE c.ScoreAggregationRule
+        WHEN 'avg_half_step' THEN CONVERT(INT, FLOOR((COALESCE(scores.AverageScore, 0) + 2.5) / 5.0) * 5)
+        WHEN 'avg_whole' THEN CONVERT(INT, ROUND(COALESCE(scores.AverageScore, 0), 0))
         ELSE COALESCE(scores.SumScore, 0)
       END
   )
@@ -604,9 +642,10 @@ BEGIN
     ) scores
     WHERE i.TotalScore IS NOT NULL
       AND EXISTS (SELECT 1 FROM AttemptSkillScores s WHERE s.AttemptId=i.AttemptId)
-      AND i.TotalScore <> CASE c.Code
-        WHEN 'IELTS' THEN CONVERT(INT, FLOOR((COALESCE(scores.AverageScore, 0) + 2.5) / 5.0) * 5)
-        WHEN 'VSTEP' THEN CONVERT(INT, ROUND(COALESCE(scores.AverageScore, 0), 0))
+      AND c.ScoreAggregationRule <> 'independent'
+      AND i.TotalScore <> CASE c.ScoreAggregationRule
+        WHEN 'avg_half_step' THEN CONVERT(INT, FLOOR((COALESCE(scores.AverageScore, 0) + 2.5) / 5.0) * 5)
+        WHEN 'avg_whole' THEN CONVERT(INT, ROUND(COALESCE(scores.AverageScore, 0), 0))
         ELSE COALESCE(scores.SumScore, 0)
       END
   )
