@@ -90,6 +90,14 @@ public sealed class QuestionSaveModel
 
     public int DisplayOrder { get; set; }
 
+    public int? MaxSelections { get; set; }
+
+    public bool AllowNumber { get; set; } = true;
+
+    public string? AcceptedAnswersJson { get; set; }
+
+    public string? RequiredKeywords { get; set; }
+
     // MCQ Options
     public List<QuestionOptionInputModel> Options { get; set; } = [];
 
@@ -119,6 +127,7 @@ public sealed class QuestionGroupSaveModel
     public int? PrepSeconds { get; set; }
     public int? ResponseSeconds { get; set; }
     public int DisplayOrder { get; set; }
+    public int UnitNumber { get; set; } = 1;
 }
 
 public sealed class UploadAudioModel

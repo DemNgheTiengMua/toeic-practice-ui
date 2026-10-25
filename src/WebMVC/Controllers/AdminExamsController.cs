@@ -481,7 +481,8 @@ public sealed class AdminExamsController(
                     model.Transcript,
                     model.PrepSeconds,
                     model.ResponseSeconds,
-                    model.DisplayOrder);
+                    model.DisplayOrder,
+                    model.UnitNumber);
                 await api.UpdateAdminQuestionGroupAsync(id, model.GroupId.Value, updateReq, cancellationToken);
                 TempData["Success"] = "Question group updated successfully.";
             }
@@ -498,7 +499,8 @@ public sealed class AdminExamsController(
                     model.Transcript,
                     model.PrepSeconds,
                     model.ResponseSeconds,
-                    model.DisplayOrder);
+                    model.DisplayOrder,
+                    model.UnitNumber);
                 await api.CreateAdminQuestionGroupAsync(id, createReq, cancellationToken);
                 TempData["Success"] = "Question group created successfully.";
             }
@@ -539,11 +541,12 @@ public sealed class AdminExamsController(
         {
 
             var optionInputs = new List<AdminQuestionOptionInput>();
-            if (model.QuestionType == QuestionTypeDto.Mcq && model.Options.Count > 0)
+            if (model.QuestionType != QuestionTypeDto.FreeResponse && model.Options.Count > 0)
             {
                 foreach (var opt in model.Options)
                 {
-                    var isCorrect = !string.IsNullOrWhiteSpace(model.CorrectOptionLabel)
+                    var isCorrect = (model.QuestionType == QuestionTypeDto.Mcq || model.QuestionType == QuestionTypeDto.Mcq_3)
+                        && !string.IsNullOrWhiteSpace(model.CorrectOptionLabel)
                         ? string.Equals(opt.Label?.Trim(), model.CorrectOptionLabel.Trim(), StringComparison.OrdinalIgnoreCase)
                         : opt.IsCorrect;
 
@@ -571,7 +574,12 @@ public sealed class AdminExamsController(
                     model.MaxWords,
                     model.Hint,
                     model.DisplayOrder,
-                    optionInputs);
+                    optionInputs,
+                    null,
+                    model.MaxSelections,
+                    model.AllowNumber,
+                    model.AcceptedAnswersJson,
+                    model.RequiredKeywords);
 
                 await api.UpdateAdminQuestionAsync(model.QuestionId.Value, updateReq, cancellationToken);
                 TempData["Success"] = $"Question {model.DisplayOrder} saved successfully.";
@@ -592,7 +600,12 @@ public sealed class AdminExamsController(
                     model.MaxWords,
                     model.Hint,
                     model.DisplayOrder,
-                    optionInputs);
+                    optionInputs,
+                    null,
+                    model.MaxSelections,
+                    model.AllowNumber,
+                    model.AcceptedAnswersJson,
+                    model.RequiredKeywords);
 
                 var created = await api.CreateAdminQuestionAsync(id, createReq, cancellationToken);
                 TempData["Success"] = $"Question {created.DisplayOrder} created successfully.";
