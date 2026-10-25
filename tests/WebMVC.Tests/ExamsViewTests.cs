@@ -367,4 +367,57 @@ public sealed class ExamsViewTests
         Assert.Contains("/exams/attempts/' + attemptId + '/transition-group", html);
         Assert.Contains("targetGroupId: pendingTargetGroupId", html);
     }
+
+    [Fact]
+    public void Take_View_Contains_Speaking_Pacer_State_Machine_And_Verification_Screen_Invariants()
+    {
+        var repoRoot = TestPathHelper.FindRepoRoot();
+        var viewPath = Path.Combine(repoRoot, "src", "WebMVC", "Views", "Exams", "Take.cshtml");
+
+        Assert.True(File.Exists(viewPath), "Take.cshtml must exist");
+        var html = File.ReadAllText(viewPath);
+
+        // 1. NavigationMode SYSTEM_PACED_AUTO check & navigation suppression
+        Assert.Contains("SYSTEM_PACED_AUTO", html);
+        Assert.Contains("q.NavigationMode == \"SYSTEM_PACED_AUTO\"", html);
+        Assert.Contains("isSystemPacedAuto", html);
+
+        // 2. Prep Countdown placard, timer and visual progress bar
+        Assert.Contains("id=\"speaking-pacer-container\"", html);
+        Assert.Contains("id=\"speaking-prep-placard\"", html);
+        Assert.Contains("id=\"speaking-prep-timer\"", html);
+        Assert.Contains("id=\"speaking-prep-bar\"", html);
+        Assert.Contains("CHUẨN BỊ TRẢ LỜI:", html);
+
+        // 3. Audible beep cue using Web Audio API (1000Hz for 300ms)
+        Assert.Contains("playBeepCue", html);
+        Assert.Contains("AudioContext", html);
+        Assert.Contains("1000", html);
+        Assert.Contains("0.3", html);
+
+        // 4. Recording Countdown placard, flashing indicator & audio level meter
+        Assert.Contains("id=\"speaking-record-placard\"", html);
+        Assert.Contains("id=\"speaking-record-timer\"", html);
+        Assert.Contains("id=\"speaking-record-bar\"", html);
+        Assert.Contains("ĐANG THU ÂM:", html);
+        Assert.Contains("id=\"audio-level-container\"", html);
+        Assert.Contains("id=\"audio-level-meter\"", html);
+        Assert.Contains("id=\"audio-level-bar\"", html);
+        Assert.Contains("createAnalyser", html);
+
+        // 5. Background upload endpoint call
+        Assert.Contains("/exams/take/' + attemptId + '/upload-audio", html);
+
+        // 6. Post-Section Recorded Audio Verification Screen & Playback
+        Assert.Contains("id=\"speaking-verification-screen\"", html);
+        Assert.Contains("id=\"speaking-verification-items\"", html);
+        Assert.Contains("renderSpeakingVerificationScreen", html);
+        Assert.Contains("audio controls", html);
+        Assert.Contains("Đã ghi âm [✓]", html);
+        Assert.Contains("Chưa có ghi âm [!]", html);
+
+        // 7. Final Submission CTA
+        Assert.Contains("id=\"btn-submit-speaking-verification\"", html);
+        Assert.Contains("Nộp phần thi Nói để chấm AI", html);
+    }
 }
