@@ -484,6 +484,18 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
         return (await response.Content.ReadFromJsonAsync<AdminScoreConversionDto>(Json, cancellationToken))!;
     }
 
+    public async Task<ScorePreviewResultDto> CalculateScorePreviewAsync(ScorePreviewRequestDto request, string bearerToken, CancellationToken cancellationToken = default)
+    {
+        using var message = new HttpRequestMessage(HttpMethod.Post, "api/admin/score-conversion/preview")
+        {
+            Content = JsonContent.Create(request, options: Json),
+        };
+        AttachBearer(message, bearerToken);
+        using var response = await http.SendAsync(message, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+        return (await response.Content.ReadFromJsonAsync<ScorePreviewResultDto>(Json, cancellationToken))!;
+    }
+
     public Task<AdminOrdersSummaryDto> GetAdminOrdersAsync(string? q, string? status, string? gateway, int page, int pageSize, string bearerToken, CancellationToken cancellationToken = default)
     {
         var query = new List<string> { $"page={page}", $"pageSize={pageSize}" };
@@ -1535,6 +1547,9 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
 
     public Task<AdminScoreConversionDto> UpdateAdminScoreConversionAsync(int certId, UpdateScoreConversionRequest request, CancellationToken cancellationToken = default) =>
         UpdateAdminScoreConversionAsync(certId, request, string.Empty, cancellationToken);
+
+    public Task<ScorePreviewResultDto> CalculateScorePreviewAsync(ScorePreviewRequestDto request, CancellationToken cancellationToken = default) =>
+        CalculateScorePreviewAsync(request, string.Empty, cancellationToken);
 
     public Task<AdminOrdersSummaryDto> GetAdminOrdersAsync(string? q, string? status, string? gateway, int page, int pageSize, CancellationToken cancellationToken = default) =>
         GetAdminOrdersAsync(q, status, gateway, page, pageSize, string.Empty, cancellationToken);

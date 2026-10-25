@@ -14,7 +14,7 @@ namespace WebMVC.Tests;
 
 public sealed class AdminCertificatesControllerTests
 {
-    private static AdminCertificatesController CreateController(IAdminCertificatesClient api)
+    private static AdminCertificatesController CreateController(IAdminCertificatesClient api, IAdminScoreConversionClient? scoreConversionClient = null)
     {
         var identity = new ClaimsIdentity(AuthClaims.For(1, "admin@toeic.local", Roles.Admin, "Admin"), "Cookies");
         var principal = new ClaimsPrincipal(identity);
@@ -32,7 +32,8 @@ public sealed class AdminCertificatesControllerTests
         return new AdminCertificatesController(
             currentUser,
             api,
-            NullLogger<AdminCertificatesController>.Instance)
+            NullLogger<AdminCertificatesController>.Instance,
+            scoreConversionClient)
         {
             ControllerContext = new ControllerContext
             {
@@ -277,5 +278,60 @@ public sealed class AdminCertificatesControllerTests
         var jsonResult = Assert.IsType<JsonResult>(result);
         var presets = Assert.IsAssignableFrom<IReadOnlyList<CertificateBlueprintPresetDto>>(jsonResult.Value);
         Assert.Equal(2, presets.Count);
+    }
+
+    private sealed class TestAdminScoreConversionClient : IAdminScoreConversionClient
+    {
+        public Task<AdminScoreConversionDto> GetAdminScoreConversionAsync(string? certCode, int? examId, CancellationToken cancellationToken = default) =>
+            Task.FromResult(new AdminScoreConversionDto(1, "IELTS", "IELTS", [], null, null, [], []));
+
+        public Task<AdminScoreConversionDto> UpdateAdminScoreConversionAsync(int certId, UpdateScoreConversionRequest request, CancellationToken cancellationToken = default) =>
+            Task.FromResult(new AdminScoreConversionDto(certId, "IELTS", "IELTS", [], null, null, [], []));
+
+        public Task<ScorePreviewResultDto> CalculateScorePreviewAsync(ScorePreviewRequestDto request, CancellationToken cancellationToken = default) =>
+            Task.FromResult(new ScorePreviewResultDto(
+                request.ScoreAggregationRule,
+                request.Skills.Select(s => new SkillScorePreviewResultDto(s.SkillId, s.SkillCode, s.RawScore ?? 0m, 65, null)).ToList(),
+                65,
+                "BAND_6.5",
+                "Competent User Plus"));
+    }
+
+    [Fact]
+    public async Task Wizard_GET_Clamps_Step_To_4()
+    {
+        var api = new TestAdminCertificatesClient();
+        var controller = CreateController(api);
+
+        var resultStep4 = await controller.Wizard(null, null, 4, CancellationToken.None);
+        var viewResult4 = Assert.IsType<ViewResult>(resultStep4);
+        var vm4 = Assert.IsType<CertificateWizardViewModel>(viewResult4.Model);
+        Assert.Equal(4, vm4.Step);
+
+        var resultStep5 = await controller.Wizard(null, null, 5, CancellationToken.None);
+        var viewResult5 = Assert.IsType<ViewResult>(resultStep5);
+        var vm5 = Assert.IsType<CertificateWizardViewModel>(viewResult5.Model);
+        Assert.Equal(4, vm5.Step);
+    }
+
+    [Fact]
+    public async Task ScorePreview_POST_Returns_Json_Score_Preview_Result()
+    {
+        var api = new TestAdminCertificatesClient();
+        var scoreClient = new TestAdminScoreConversionClient();
+        var controller = CreateController(api, scoreClient);
+
+        var request = new ScorePreviewRequestDto(
+            CertId: 1,
+            CertCode: "IELTS",
+            ScoreAggregationRule: "avg_half_step",
+            Skills: [new SkillScoreInputDto(1, "LIST", 65m, null)]);
+
+        var result = await controller.ScorePreview(request, CancellationToken.None);
+        var jsonResult = Assert.IsType<JsonResult>(result);
+        var preview = Assert.IsType<ScorePreviewResultDto>(jsonResult.Value);
+        Assert.Equal("avg_half_step", preview.ScoreAggregationRule);
+        Assert.Equal(65, preview.TotalScore);
+        Assert.Equal("BAND_6.5", preview.BandCode);
     }
 }

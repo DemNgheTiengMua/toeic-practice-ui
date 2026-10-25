@@ -325,4 +325,45 @@ public sealed class ScoreConversionServiceTests(DatabaseFixture database)
         Assert.Equal("HIGH", attemptInHistory.BandCode);
         Assert.Equal(800, attemptInHistory.TotalScore);
     }
+
+    [Fact]
+    public async Task GetScoreConversion_Dynamically_Sizes_MaxQuestions_From_ExpectedQuestionCount()
+    {
+        var certCode = Unique("DYNQ");
+        var (certId, skillId) = await SeedCertificateAndSkillAsync(certCode);
+
+        // Add section with ExpectedQuestionCount = 45 (e.g. TOEIC CAT blueprint)
+        await database.SqlAsync($"""
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder, ExpectedQuestionCount)
+            VALUES ({skillId}, {certId}, 'listening', 'SEC_CAT', N'Section CAT', 1, 45);
+            """);
+
+        var service = CreateService();
+        var view = await service.GetScoreConversionAsync(certCode);
+
+        var skillGroup = view.SkillScales.Single(s => s.SkillId == skillId);
+        Assert.Equal(45, skillGroup.MaxQuestions);
+    }
+
+    [Fact]
+    public async Task CalculateScorePreviewAsync_Loads_Bands_And_Computes_Preview()
+    {
+        var certCode = Unique("PREV");
+        var (certId, skillId) = await SeedCertificateAndSkillAsync(certCode);
+
+        var service = CreateService();
+        var request = new ScorePreviewRequest(
+            CertId: certId,
+            CertCode: certCode,
+            ScoreAggregationRule: "sum",
+            Skills:
+            [
+                new SkillScoreInput(skillId, "LIST", 100m, null)
+            ]
+        );
+
+        var result = await service.CalculateScorePreviewAsync(request);
+        Assert.True(result.TotalScore > 0);
+        Assert.NotNull(result.BandCode);
+    }
 }

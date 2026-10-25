@@ -32,7 +32,7 @@ public interface IPlacementService
 
     Task<PlacementTakeView> GetPlacementTakeAsync(int userId, int placementId, int? questionDisplayOrder, CancellationToken cancellationToken = default);
 
-    Task<SaveAttemptAnswerResult> SaveAnswerAsync(int userId, int placementId, int questionId, int? selectedOptionId, bool isFlagged, CancellationToken cancellationToken = default, string? responseText = null);
+    Task<SaveAttemptAnswerResult> SaveAnswerAsync(int userId, int placementId, int questionId, int? selectedOptionId, bool isFlagged, CancellationToken cancellationToken = default, string? responseText = null, string? selectedOptionIdsJson = null);
 
     Task<SaveAttemptDraftResult> SaveDraftAsync(int userId, int placementId, int questionId, string? responseText, CancellationToken cancellationToken = default);
 
@@ -289,7 +289,8 @@ public sealed class PlacementService(
         int? selectedOptionId,
         bool isFlagged,
         CancellationToken cancellationToken = default,
-        string? responseText = null)
+        string? responseText = null,
+        string? selectedOptionIdsJson = null)
     {
         var placement = await db.PlacementTests
             .Include(p => p.ExamAttempt)
@@ -317,7 +318,8 @@ public sealed class PlacementService(
                     await SyncPlacementAfterAttemptSubmissionAsync(placement.PlacementId, cancellationToken);
                 },
                 cancellationToken,
-                responseText);
+                responseText,
+                selectedOptionIdsJson);
         }
         catch (AttemptEngineException ex) when (ex.Code == AttemptEngineException.AttemptExpired)
         {
