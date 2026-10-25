@@ -155,7 +155,13 @@ public static class ExamEndpoints
                     qInfo.LayoutType,
                     qInfo.RequirePassage,
                     qInfo.NavigationMode,
-                    qInfo.ToolsConfigJson);
+                    qInfo.ToolsConfigJson,
+                    qInfo.HideOptionText,
+                    qInfo.OptionCount,
+                    qInfo.ClusterSize,
+                    qInfo.RequireImage,
+                    qInfo.UnitNumber,
+                    qInfo.GroupId);
 
                 var allQDtos = take.Questions?.Select(q => new AttemptQuestionDto(
                     q.QuestionId,
@@ -197,7 +203,13 @@ public static class ExamEndpoints
                     q.LayoutType,
                     q.RequirePassage,
                     q.NavigationMode,
-                    q.ToolsConfigJson)).ToList();
+                    q.ToolsConfigJson,
+                    q.HideOptionText,
+                    q.OptionCount,
+                    q.ClusterSize,
+                    q.RequireImage,
+                    q.UnitNumber,
+                    q.GroupId)).ToList();
 
                 return Results.Ok(new AttemptTakeDto(
                     take.AttemptId,

@@ -338,6 +338,7 @@ public sealed class ExamsController(
     }
 
     [HttpPost("/exams/take/{attemptId:int}/transition/unit")]
+    [HttpPost("/exams/attempts/{attemptId:int}/transition-unit")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> TransitionUnit(
         int attemptId,

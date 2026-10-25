@@ -354,6 +354,94 @@
     body.exam-body-protected {
       padding-bottom: 85px;
     }
+
+    /* Masked Options Placards (HideOptionText, OptionCount) */
+    .option-list--masked {
+      display: flex !important;
+      flex-direction: row !important;
+      gap: 0.75rem !important;
+      margin-top: 1rem !important;
+      flex-wrap: wrap !important;
+    }
+    .option--masked {
+      flex: 1 1 0 !important;
+      min-width: 60px !important;
+      max-width: 120px !important;
+      justify-content: center !important;
+      align-items: center !important;
+      text-align: center !important;
+      padding: 0.85rem 1rem !important;
+      border: 2px solid #14181d !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+      cursor: pointer !important;
+      background: #ffffff !important;
+    }
+    .option--masked .option__marker {
+      font-family: "IBM Plex Mono", monospace !important;
+      font-weight: 700 !important;
+      font-size: 1.125rem !important;
+      pointer-events: none !important;
+    }
+    .option--masked.is-selected {
+      background: #14181d !important;
+      color: #ffffff !important;
+    }
+    .option--masked.is-selected .option__marker {
+      color: #ffffff !important;
+    }
+
+    /* Clustered Audio Cards (ClusterSize = 3) */
+    .cluster-card-container {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+    .cluster-item {
+      border: 2px solid #14181d;
+      background: #fafbfc;
+      padding: 1.25rem;
+      border-radius: 0;
+    }
+    .cluster-item .question__number {
+      font-family: "IBM Plex Mono", monospace;
+      font-weight: 700;
+      font-size: 1rem;
+    }
+    .cluster-item .question__stem {
+      margin: 0.5rem 0 1rem 0;
+      font-size: 1rem;
+      line-height: 1.45;
+    }
+
+    /* Bottom palette disabled states */
+    .palette-chip--disabled {
+      opacity: 0.35 !important;
+      cursor: not-allowed !important;
+      pointer-events: none !important;
+    }
+    .palette-chip--locked {
+      display: none !important;
+    }
+
+    /* Review Screen Modal Items */
+    .review-item-card {
+      background: #ffffff;
+      border: 1px solid #ccd2d6;
+      padding: 0.75rem;
+      text-align: left;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      border-radius: 0;
+      box-shadow: none;
+      transition: none;
+    }
+    .review-item-card:hover {
+      border-color: #14181d;
+      background: #f0f4f8;
+    }
   </style>
 </head>
 <body class="exam-body-protected">
@@ -477,12 +565,12 @@
             </div>
 
             <!-- Image Container -->
-            <div id="image-container" class="mb-3" style="@(!string.IsNullOrEmpty(q.ImagePath) ? "" : "display:none;")">
+            <div id="image-container" class="mb-3" style="@(!string.IsNullOrEmpty(q.ImagePath) ? "" : "display:none;") @(q.RequireImage ? "border: 2px solid #14181d; background: #fff; padding: 0.5rem; text-align: center;" : "")">
               <img id="question-image" src="@q.ImagePath" alt="@(q.ImageAlt ?? "Question illustration")" class="question__image" />
             </div>
 
             <div class="question" id="question-card">
-              <div class="question__meta row row--between">
+              <div class="question__meta row row--between" id="question-meta-bar" style="@(q.ClusterSize == 3 ? "display:none;" : "")">
                 <div class="row row--tight">
                   <span class="question__number" id="question-number-display">Question @q.DisplayOrder</span>
                   <span class="badge badge--muted" id="question-section-display">@q.SectionName</span>
@@ -496,20 +584,58 @@
                 </div>
               </div>
 
-              <p class="question__stem ee-tokenized-text" id="question-stem-display">
+              <p class="question__stem ee-tokenized-text" id="question-stem-display" style="@(q.ClusterSize == 3 || (q.HideOptionText && q.OptionCount == 3) ? "display:none;" : "")">
                 @q.Stem
               </p>
 
-              <div class="option-list" id="option-list" role="radiogroup" aria-label="Answer for question @q.DisplayOrder" style="@(q.QuestionType == "free_response" ? "display:none;" : "")">
-                @foreach (var opt in q.Options)
+              <div class="option-list @(q.HideOptionText ? "option-list--masked" : "")" id="option-list" role="radiogroup" aria-label="Answer for question @q.DisplayOrder" style="@(q.QuestionType == "free_response" || q.ClusterSize == 3 ? "display:none;" : "")">
+                @{
+                  var initialOpts = q.HideOptionText && q.OptionCount > 0 ? q.Options.Take(q.OptionCount) : q.Options;
+                }
+                @foreach (var opt in initialOpts)
                 {
                   var isSelected = opt.OptionId == q.SelectedOptionId;
-                  <label class="option @(isSelected ? "is-selected" : "")">
+                  <label class="option @(isSelected ? "is-selected" : "") @(q.HideOptionText ? "option--masked" : "")">
                     <input class="option__input js-option-radio" type="radio" name="selectedOptionId"
                            value="@opt.OptionId" @(isSelected ? "checked" : "")>
                     <span class="option__marker">@opt.Label</span>
-                    <span class="option__text">@opt.Text</span>
+                    @if (!q.HideOptionText)
+                    {
+                      <span class="option__text">@opt.Text</span>
+                    }
                   </label>
+                }
+              </div>
+
+              <!-- Clustered Audio Cards Container (ClusterSize == 3) -->
+              <div id="cluster-card-container" class="cluster-card-container" style="@(q.ClusterSize == 3 ? "" : "display:none;")">
+                @if (q.ClusterSize == 3)
+                {
+                  var clusterQs = questions.Where(item => (q.GroupId.HasValue && item.GroupId == q.GroupId) || (item.SectionId == q.SectionId && ((item.DisplayOrder - 1) / 3) == ((q.DisplayOrder - 1) / 3))).ToList();
+                  if (!clusterQs.Any()) { clusterQs = new List<AttemptQuestionDto> { q }; }
+                  @foreach (var cq in clusterQs)
+                  {
+                    <div class="cluster-item" data-question-id="@cq.QuestionId">
+                      <div class="row row--between mb-1" style="align-items: center;">
+                        <span class="question__number">Question @cq.DisplayOrder</span>
+                        <button type="button" class="btn btn--ghost btn--sm js-cluster-flag-btn @(cq.IsFlagged ? "btn--primary" : "")" data-question-id="@cq.QuestionId" data-flagged="@(cq.IsFlagged ? "true" : "false")">
+                          @(cq.IsFlagged ? "Flagged for review" : "Flag for review")
+                        </button>
+                      </div>
+                      <p class="question__stem ee-tokenized-text">@cq.Stem</p>
+                      <div class="option-list" role="radiogroup" aria-label="Answer for question @cq.DisplayOrder">
+                        @foreach (var opt in cq.Options)
+                        {
+                          var isSelected = opt.OptionId == cq.SelectedOptionId;
+                          <label class="option @(isSelected ? "is-selected" : "")">
+                            <input class="option__input js-cluster-radio" type="radio" name="cluster_opt_@cq.QuestionId" value="@opt.OptionId" data-question-id="@cq.QuestionId" @(isSelected ? "checked" : "")>
+                            <span class="option__marker">@opt.Label</span>
+                            <span class="option__text">@opt.Text</span>
+                          </label>
+                        }
+                      </div>
+                    </div>
+                  }
                 }
               </div>
               <!-- Dynamic 11-Component Widgets (multi_select, inline_completion, dropdown, drag_drop) -->
@@ -530,10 +656,11 @@
             <!-- Bottom Question Navigation Row -->
             <div class="row row--between mt-4" style="align-items: center;">
               <div>
-                <button type="button" class="btn" id="btn-prev" @(prevOrder.HasValue ? "" : "disabled")>Previous</button>
+                <button type="button" class="btn" id="btn-prev" @(prevOrder.HasValue ? "" : "disabled") style="@(q.NavigationMode == "AUDIO_DRIVEN" ? "display:none;" : "")">Previous</button>
               </div>
 
-              <div class="row" style="gap: var(--space-3);">
+              <div class="row" style="gap: var(--space-3); align-items: center;">
+                <button type="button" class="btn btn--secondary" id="btn-open-review-screen" style="display:none;">Bảng xem lại (Review Screen)</button>
                 <button type="button" class="btn btn--primary" id="btn-next">@(isLastQuestion ? "Review & Submit exam" : "Next question")</button>
               </div>
             </div>
@@ -572,11 +699,12 @@
                     var markClass = item.IsFlagged ? "is-marked" : "";
                     var currentClass = item.IsCurrent ? "is-current" : "";
                     <button type="button"
-                       class="navigator__cell @statusClass @markClass @currentClass"
+                       class="navigator__cell @statusClass @markClass @currentClass @(item.IsLocked ? "is-locked" : "")"
                        id="nav-cell-@item.QuestionId"
                        data-question-id="@item.QuestionId"
                        data-display-order="@item.DisplayOrder"
-                       title="Question @item.DisplayOrder@(item.IsAnswered ? " · Answered" : " · Unanswered")@(item.IsFlagged ? " · Flagged" : "")">
+                       @(item.IsLocked ? "disabled" : "")
+                       title="Question @item.DisplayOrder@(item.IsAnswered ? " · Answered" : " · Unanswered")@(item.IsFlagged ? " · Flagged" : "")@(item.IsLocked ? " · Locked" : "")">
                       @item.DisplayOrder
                     </button>
                   }
@@ -793,6 +921,90 @@
     </div>
   </div>
 
+  <!-- Reading Review Screen Modal (#review-screen-modal) -->
+  <div id="review-screen-modal" class="modal-overlay" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="review-screen-title">
+    <div class="modal" style="max-width: 800px; width: 90%; border: 2px solid #14181d; border-radius: 0; box-shadow: none;">
+      <div class="modal__header" style="border-bottom: 2px solid #14181d; display: flex; justify-content: space-between; align-items: center; background: #fafbfc; padding: 0.75rem 1rem;">
+        <h2 id="review-screen-title" class="no-margin" style="font-family: 'IBM Plex Sans Condensed', sans-serif; text-transform: uppercase; font-size: 1.25rem;">
+          BẢNG XEM LẠI PHẦN THI ĐỌC (READING REVIEW SCREEN)
+        </h2>
+        <button type="button" class="btn btn--ghost btn--sm js-close-review-modal" aria-label="Close review screen">✕</button>
+      </div>
+      <div class="modal__body stack" style="gap: 1.25rem; max-height: 70vh; overflow-y: auto; padding: 1.25rem;">
+        <!-- Stats Summary -->
+        <div class="grid-3" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+          <div class="stat" style="border: 2px solid #14181d; padding: 0.75rem; background: #fff;">
+            <div class="stat__label" style="font-family: 'IBM Plex Sans Condensed', sans-serif; text-transform: uppercase; font-size: 0.75rem;">Đã trả lời (Answered)</div>
+            <div class="stat__value" id="review-stat-answered" style="font-family: 'IBM Plex Mono', monospace; font-size: 1.5rem; font-weight: 700;">0</div>
+          </div>
+          <div class="stat" style="border: 2px solid #14181d; padding: 0.75rem; background: #fff;">
+            <div class="stat__label" style="font-family: 'IBM Plex Sans Condensed', sans-serif; text-transform: uppercase; font-size: 0.75rem;">Đánh dấu (Flagged)</div>
+            <div class="stat__value" id="review-stat-flagged" style="font-family: 'IBM Plex Mono', monospace; font-size: 1.5rem; font-weight: 700; color: #b28500;">0</div>
+          </div>
+          <div class="stat" style="border: 2px solid #14181d; padding: 0.75rem; background: #fff;">
+            <div class="stat__label" style="font-family: 'IBM Plex Sans Condensed', sans-serif; text-transform: uppercase; font-size: 0.75rem;">Chưa trả lời (Unanswered)</div>
+            <div class="stat__value" id="review-stat-unanswered" style="font-family: 'IBM Plex Mono', monospace; font-size: 1.5rem; font-weight: 700; color: #b31217;">0</div>
+          </div>
+        </div>
+
+        <!-- 3 Quick-Action Buttons -->
+        <div class="row" style="gap: 0.75rem; flex-wrap: wrap;">
+          <button type="button" class="btn btn--primary btn--sm" id="btn-review-first-unanswered">
+            Jump to First Unanswered
+          </button>
+          <button type="button" class="btn btn--secondary btn--sm" id="btn-review-only-unanswered">
+            Review Only Unanswered
+          </button>
+          <button type="button" class="btn btn--secondary btn--sm" id="btn-review-only-flagged">
+            Review Only Flagged
+          </button>
+          <button type="button" class="btn btn--ghost btn--sm" id="btn-review-show-all">
+            Show All
+          </button>
+        </div>
+
+        <!-- Questions Grid List -->
+        <div id="review-questions-list" style="border: 2px solid #14181d; display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 1px; background: #ccd2d6;">
+        </div>
+
+        <!-- Unit 1 completion action -->
+        <div id="review-unit-transition-container" style="display:none; border-top: 2px solid #14181d; padding-top: 1rem;">
+          <button type="button" class="btn btn--primary" id="btn-review-finish-unit" style="width: 100%;">
+            Hoàn thành Giai đoạn 1 (Finish Unit 1)
+          </button>
+        </div>
+      </div>
+      <div class="modal__footer" style="border-top: 2px solid #14181d; display: flex; justify-content: flex-end; gap: 0.75rem; padding: 0.75rem 1rem;">
+        <button type="button" class="btn js-close-review-modal">Quay lại bài làm (Return)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Adaptive Stage Unit Locking Confirmation Modal (#unit-lock-modal) -->
+  <div id="unit-lock-modal" class="modal-overlay" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="unit-lock-modal-title">
+    <div class="modal" style="max-width: 550px; border: 2px solid #14181d; border-radius: 0; box-shadow: none;">
+      <div class="modal__header" style="border-bottom: 2px solid #14181d; background: #fafbfc; padding: 1rem 1.25rem;">
+        <h2 id="unit-lock-modal-title" class="no-margin" style="font-family: 'IBM Plex Sans Condensed', sans-serif; text-transform: uppercase; font-size: 1.25rem; color: #b31217;">
+          XÁC NHẬN KHÓA GIAI ĐOẠN (LOCK UNIT CONFIRMATION)
+        </h2>
+      </div>
+      <div class="modal__body stack" style="gap: 1rem; padding: 1.25rem;">
+        <div class="alert alert--danger" style="border: 2px solid #b31217; border-radius: 0; box-shadow: none; font-weight: 500;">
+          Sau khi xác nhận, Giai đoạn 1 sẽ bị khóa vĩnh viễn và bạn không thể quay lại.
+        </div>
+        <p class="no-margin" style="font-size: 0.9375rem;">
+          Bạn đã hoàn thành các câu hỏi trong Giai đoạn 1 (Unit 1). Hệ thống sẽ khóa toàn bộ câu trả lời của Giai đoạn này và mở khóa bài thi thích ứng Giai đoạn 2 (Unit 2).
+        </p>
+      </div>
+      <div class="modal__footer" style="border-top: 2px solid #14181d; padding: 1rem 1.25rem; display: flex; justify-content: flex-end; gap: 0.75rem;">
+        <button type="button" class="btn js-close-unit-lock-modal">Hủy (Cancel)</button>
+        <button type="button" class="btn btn--danger" id="btn-confirm-unit-lock">
+          Xác nhận khóa và tiếp tục (Confirm &amp; Proceed)
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script src="~/js/icons.js"></script>
   <script src="~/js/ee-audio.js"></script>
   <script src="~/js/exam-audio.js"></script>
@@ -825,6 +1037,7 @@
       var attemptId = @take.AttemptId;
       var totalQuestions = questions.length || @take.TotalQuestions;
       var currentDisplayOrder = @q.DisplayOrder;
+      var activeUnitNumber = @take.ActiveUnitNumber;
       var expiresAt = @take.ExpiresAt.ToUnixTimeMilliseconds();
       var attemptStartedAt = @take.StartedAt.ToUnixTimeMilliseconds();
       var csrfToken = document.querySelector('#anti-forgery-holder input[name="__RequestVerificationToken"]').value;
@@ -908,6 +1121,23 @@
       var wordRangeDisplay = document.getElementById('word-range');
       var saveDraftButton = document.getElementById('btn-save-writing-draft');
       var flaggedFilterButton = document.getElementById('flagged-filter-btn');
+
+      var clusterContainer = document.getElementById('cluster-card-container');
+      var questionMetaBar = document.getElementById('question-meta-bar');
+      var reviewScreenModal = document.getElementById('review-screen-modal');
+      var unitLockModal = document.getElementById('unit-lock-modal');
+      var btnOpenReviewScreen = document.getElementById('btn-open-review-screen');
+      var btnReviewFirstUnanswered = document.getElementById('btn-review-first-unanswered');
+      var btnReviewOnlyUnanswered = document.getElementById('btn-review-only-unanswered');
+      var btnReviewOnlyFlagged = document.getElementById('btn-review-only-flagged');
+      var btnReviewShowAll = document.getElementById('btn-review-show-all');
+      var reviewQuestionsList = document.getElementById('review-questions-list');
+      var reviewStatAnswered = document.getElementById('review-stat-answered');
+      var reviewStatFlagged = document.getElementById('review-stat-flagged');
+      var reviewStatUnanswered = document.getElementById('review-stat-unanswered');
+      var reviewUnitTransitionContainer = document.getElementById('review-unit-transition-container');
+      var btnReviewFinishUnit = document.getElementById('btn-review-finish-unit');
+      var btnConfirmUnitLock = document.getElementById('btn-confirm-unit-lock');
 
       var submitModal = document.getElementById('submit-modal');
       var exitModal = document.getElementById('exit-modal');
@@ -1377,6 +1607,8 @@
         var currentPhaseQuestionIndex = currentPhaseQuestions.findIndex(function (question) {
           return question.displayOrder === currentDisplayOrder;
         });
+        var isAudioDriven = currentQuestion && (currentQuestion.navigationMode === 'AUDIO_DRIVEN');
+        var isUnitLockedSandbox = currentQuestion && (currentQuestion.navigationMode === 'UNIT_LOCKED_SANDBOX');
 
         document.querySelectorAll('#navigator-grid .navigator__cell[data-question-id]').forEach(function (cell) {
           var question = questions.find(function (item) {
@@ -1384,26 +1616,67 @@
           });
           var samePhase = question && phase && question.skillCode === phase.skillCode;
           var answer = question ? localAnswers[question.questionId] : null;
-          cell.hidden = !!(flaggedOnly && (!answer || !answer.isFlagged));
-          cell.disabled = !samePhase || (isListening && question.displayOrder !== currentDisplayOrder);
+          var isUnitLocked = isUnitLockedSandbox && question && (question.unitNumber || 1) !== activeUnitNumber;
+          var isBackInAudio = isAudioDriven && question && question.displayOrder < currentDisplayOrder;
+
+          cell.hidden = !!(flaggedOnly && (!answer || !answer.isFlagged)) || isUnitLocked;
+          cell.disabled = !samePhase || (isListening && question.displayOrder !== currentDisplayOrder) || isBackInAudio || isUnitLocked;
+        });
+
+        // Update bottom palette chips
+        document.querySelectorAll('#bottom-palette-chips .palette-chip').forEach(function (chip) {
+          var order = Number(chip.getAttribute('data-display-order'));
+          var question = questionMap[order];
+          var samePhase = question && phase && question.skillCode === phase.skillCode;
+          var isUnitLocked = isUnitLockedSandbox && question && (question.unitNumber || 1) !== activeUnitNumber;
+          var isBackInAudio = isAudioDriven && order < currentDisplayOrder;
+
+          chip.hidden = isUnitLocked;
+          chip.disabled = !samePhase || isBackInAudio || isUnitLocked;
+          if (isBackInAudio || isUnitLocked) {
+            chip.classList.add('palette-chip--disabled');
+          } else {
+            chip.classList.remove('palette-chip--disabled');
+          }
         });
 
         if (flaggedFilterButton) {
-          flaggedFilterButton.disabled = !isReading;
+          flaggedFilterButton.disabled = !isReading && !isUnitLockedSandbox;
           flaggedFilterButton.textContent = flaggedOnly ? 'Show all questions' : 'Show flagged';
           flaggedFilterButton.setAttribute('aria-pressed', flaggedOnly ? 'true' : 'false');
         }
 
+        if (btnOpenReviewScreen) {
+          btnOpenReviewScreen.style.display = (isReading || isUnitLockedSandbox) ? 'inline-block' : 'none';
+        }
+
         if (btnPrev) {
+          var isOneWay = isAudioDriven || isListening;
           btnPrev.disabled = !phase
-            || isListening
+            || isOneWay
             || currentPhaseQuestionIndex <= 0
             || getQuestionPhaseIndex(currentQuestion) !== activePhaseIndex;
+          if (isAudioDriven) {
+            btnPrev.style.display = 'none';
+          } else {
+            btnPrev.style.display = '';
+          }
         }
+
         if (btnNext && phase && currentQuestion) {
           var lastInPhase = currentPhaseQuestionIndex === currentPhaseQuestions.length - 1;
           var isFinalQuestion = currentDisplayOrder === totalQuestions;
-          if (isFinalQuestion) {
+
+          // Check if on final question of Unit 1 in UNIT_LOCKED_SANDBOX
+          var unit1Questions = currentPhaseQuestions.filter(function (q) { return (q.unitNumber || 1) === 1; });
+          var isLastInUnit1 = isUnitLockedSandbox && activeUnitNumber === 1 && unit1Questions.length > 0 &&
+            currentQuestion.questionId === unit1Questions[unit1Questions.length - 1].questionId;
+
+          if (isLastInUnit1) {
+            btnNext.textContent = 'Hoàn thành Giai đoạn 1 (Finish Unit 1)';
+            btnNext.className = 'btn btn--primary js-open-unit-lock-modal';
+            btnNext.disabled = false;
+          } else if (isFinalQuestion) {
             btnNext.textContent = 'Review & Submit exam';
             btnNext.className = 'btn btn--danger js-open-submit-modal';
             btnNext.disabled = false;
@@ -2008,38 +2281,137 @@
           imageContainer.style.display = 'none';
         }
 
-        // Question Meta & Stem
-        questionNumberDisplay.textContent = 'Question ' + q.displayOrder;
-        questionSectionDisplay.textContent = q.sectionName;
-        questionStemDisplay.textContent = q.stem;
+        var isFreeResponse = (q.questionType || '').toLowerCase() === 'free_response';
+        var isCluster = q.clusterSize === 3;
+        var hideOptText = !!q.hideOptionText;
+        var optCount = q.optionCount || 4;
 
-        // Flag State
-        var isFlagged = !!(localAnswers[q.questionId] && localAnswers[q.questionId].isFlagged);
-        flagBtn.parentElement.style.display = q.questionType === 'free_response' ? 'none' : '';
-        flagBtn.setAttribute('data-flagged', isFlagged ? 'true' : 'false');
-        flagBtn.setAttribute('aria-pressed', isFlagged ? 'true' : 'false');
-        flagBtn.textContent = isFlagged ? 'Flagged for review' : 'Flag for review';
-        if (isFlagged) {
-          flagBtn.classList.add('btn--primary');
-        } else {
-          flagBtn.classList.remove('btn--primary');
+        // Image Prominence for RequireImage
+        if (q.requireImage) {
+          imageContainer.style.border = '2px solid #14181d';
+          imageContainer.style.background = '#fff';
+          imageContainer.style.padding = '0.5rem';
+          imageContainer.style.textAlign = 'center';
         }
 
-        // Options List (Instant render, no entrance animation)
-        var selectedOptId = localAnswers[q.questionId] ? localAnswers[q.questionId].selectedOptionId : null;
-        var isFreeResponse = (q.questionType || '').toLowerCase() === 'free_response';
-        optionList.setAttribute('aria-label', 'Answer for question ' + q.displayOrder);
-        var optionsHtml = '';
-        (q.options || []).forEach(function (opt) {
-          var isSelected = opt.optionId === selectedOptId;
-          optionsHtml += '<label class="option ' + (isSelected ? 'is-selected' : '') + '">';
-          optionsHtml += '<input class="option__input js-option-radio" type="radio" name="selectedOptionId" value="' + opt.optionId + '" ' + (isSelected ? 'checked' : '') + '>';
-          optionsHtml += '<span class="option__marker">' + escapeHtml(opt.label) + '</span>';
-          optionsHtml += '<span class="option__text">' + escapeHtml(opt.text) + '</span>';
-          optionsHtml += '</label>';
-        });
-        optionList.innerHTML = optionsHtml;
-        optionList.style.display = isFreeResponse ? 'none' : '';
+        // Clustered Questions Card Handling (ClusterSize == 3)
+        if (isCluster) {
+          if (questionMetaBar) questionMetaBar.style.display = 'none';
+          questionStemDisplay.style.display = 'none';
+          optionList.style.display = 'none';
+          if (clusterContainer) clusterContainer.style.display = 'flex';
+
+          var clusterQuestions = questions.filter(function (item) {
+            return (q.groupId && item.groupId === q.groupId) ||
+              (item.sectionId === q.sectionId && Math.floor((item.displayOrder - 1) / 3) === Math.floor((q.displayOrder - 1) / 3));
+          });
+          if (clusterQuestions.length === 0) clusterQuestions = [q];
+
+          var clusterHtml = '';
+          clusterQuestions.forEach(function (cq) {
+            var cAns = localAnswers[cq.questionId];
+            var cSelOptId = cAns ? cAns.selectedOptionId : cq.selectedOptionId;
+            var cIsFlagged = !!(cAns ? cAns.isFlagged : cq.isFlagged);
+            clusterHtml += '<div class="cluster-item" data-question-id="' + cq.questionId + '">';
+            clusterHtml += '<div class="row row--between mb-1" style="align-items: center;">';
+            clusterHtml += '<span class="question__number">Question ' + cq.displayOrder + '</span>';
+            clusterHtml += '<button type="button" class="btn btn--ghost btn--sm js-cluster-flag-btn ' + (cIsFlagged ? 'btn--primary' : '') + '" data-question-id="' + cq.questionId + '" data-flagged="' + (cIsFlagged ? 'true' : 'false') + '">';
+            clusterHtml += (cIsFlagged ? 'Flagged for review' : 'Flag for review') + '</button>';
+            clusterHtml += '</div>';
+            clusterHtml += '<p class="question__stem ee-tokenized-text">' + escapeHtml(cq.stem) + '</p>';
+            clusterHtml += '<div class="option-list" role="radiogroup" aria-label="Answer for question ' + cq.displayOrder + '">';
+            (cq.options || []).forEach(function (opt) {
+              var isSelected = opt.optionId === cSelOptId;
+              clusterHtml += '<label class="option ' + (isSelected ? 'is-selected' : '') + '">';
+              clusterHtml += '<input class="option__input js-cluster-radio" type="radio" name="cluster_opt_' + cq.questionId + '" value="' + opt.optionId + '" data-question-id="' + cq.questionId + '" ' + (isSelected ? 'checked' : '') + '>';
+              clusterHtml += '<span class="option__marker">' + escapeHtml(opt.label) + '</span>';
+              clusterHtml += '<span class="option__text">' + escapeHtml(opt.text) + '</span>';
+              clusterHtml += '</label>';
+            });
+            clusterHtml += '</div></div>';
+          });
+
+          if (clusterContainer) {
+            clusterContainer.innerHTML = clusterHtml;
+            clusterContainer.querySelectorAll('.js-cluster-radio').forEach(function (radio) {
+              radio.addEventListener('change', function () {
+                var qId = Number(this.getAttribute('data-question-id'));
+                var val = parseInt(this.value, 10);
+                var parentCluster = this.closest('.cluster-item');
+                if (parentCluster) {
+                  parentCluster.querySelectorAll('.option').forEach(function (lbl) { lbl.classList.remove('is-selected'); });
+                }
+                var parentLabel = this.closest('.option');
+                if (parentLabel) parentLabel.classList.add('is-selected');
+                var isFl = !!(localAnswers[qId] && localAnswers[qId].isFlagged);
+                saveAnswer(qId, val, isFl);
+              });
+            });
+            clusterContainer.querySelectorAll('.js-cluster-flag-btn').forEach(function (fBtn) {
+              fBtn.addEventListener('click', function () {
+                var qId = Number(this.getAttribute('data-question-id'));
+                var isFl = this.getAttribute('data-flagged') === 'true';
+                var newFl = !isFl;
+                this.setAttribute('data-flagged', newFl ? 'true' : 'false');
+                this.classList.toggle('btn--primary', newFl);
+                this.textContent = newFl ? 'Flagged for review' : 'Flag for review';
+                var curAns = localAnswers[qId];
+                saveAnswer(qId, curAns ? curAns.selectedOptionId : null, newFl);
+              });
+            });
+          }
+        } else {
+          if (questionMetaBar) questionMetaBar.style.display = '';
+          if (clusterContainer) {
+            clusterContainer.style.display = 'none';
+            clusterContainer.innerHTML = '';
+          }
+
+          // Question Meta & Stem
+          questionNumberDisplay.textContent = 'Question ' + q.displayOrder;
+          questionSectionDisplay.textContent = q.sectionName;
+          if (hideOptText && optCount === 3) {
+            questionStemDisplay.textContent = '';
+            questionStemDisplay.style.display = 'none';
+          } else {
+            questionStemDisplay.textContent = q.stem;
+            questionStemDisplay.style.display = '';
+          }
+
+          // Flag State
+          var isFlagged = !!(localAnswers[q.questionId] && localAnswers[q.questionId].isFlagged);
+          flagBtn.parentElement.style.display = isFreeResponse ? 'none' : '';
+          flagBtn.setAttribute('data-flagged', isFlagged ? 'true' : 'false');
+          flagBtn.setAttribute('aria-pressed', isFlagged ? 'true' : 'false');
+          flagBtn.textContent = isFlagged ? 'Flagged for review' : 'Flag for review';
+          if (isFlagged) {
+            flagBtn.classList.add('btn--primary');
+          } else {
+            flagBtn.classList.remove('btn--primary');
+          }
+
+          // Options List (Instant render, masked options if configured)
+          var selectedOptId = localAnswers[q.questionId] ? localAnswers[q.questionId].selectedOptionId : null;
+          optionList.setAttribute('aria-label', 'Answer for question ' + q.displayOrder);
+          optionList.className = 'option-list' + (hideOptText ? ' option-list--masked' : '');
+          var optsToRender = q.options || [];
+          if (hideOptText && optCount > 0) {
+            optsToRender = optsToRender.slice(0, optCount);
+          }
+          var optionsHtml = '';
+          optsToRender.forEach(function (opt) {
+            var isSelected = opt.optionId === selectedOptId;
+            optionsHtml += '<label class="option ' + (isSelected ? 'is-selected ' : '') + (hideOptText ? 'option--masked ' : '') + '">';
+            optionsHtml += '<input class="option__input js-option-radio" type="radio" name="selectedOptionId" value="' + opt.optionId + '" ' + (isSelected ? 'checked' : '') + '>';
+            optionsHtml += '<span class="option__marker">' + escapeHtml(opt.label) + '</span>';
+            if (!hideOptText) {
+              optionsHtml += '<span class="option__text">' + escapeHtml(opt.text) + '</span>';
+            }
+            optionsHtml += '</label>';
+          });
+          optionList.innerHTML = optionsHtml;
+          optionList.style.display = isFreeResponse ? 'none' : '';
+        }
         writingPane.style.display = isFreeResponse ? 'flex' : 'none';
         if (isFreeResponse) {
           var draft = responseDrafts[q.questionId];
@@ -2095,7 +2467,14 @@
         var currentQuestion = questionMap[currentDisplayOrder];
         if (!targetQuestion || !phase || targetQuestion.skillCode !== phase.skillCode) return;
         var isOneWay = currentQuestion && (currentQuestion.navigationMode === 'AUDIO_DRIVEN');
-        if (isOneWay && phase.skillCode === 'LIST' && targetOrder !== currentDisplayOrder + 1) return;
+        if (isOneWay && targetOrder < currentDisplayOrder) return;
+        if (isOneWay && phase.skillCode === 'LIST' && targetOrder < currentDisplayOrder) return;
+
+        // Strict Unit Locked Sandbox routing
+        if (targetQuestion.navigationMode === 'UNIT_LOCKED_SANDBOX') {
+          var targetUnit = targetQuestion.unitNumber || 1;
+          if (targetUnit !== activeUnitNumber) return;
+        }
         var currentDraft = currentQuestion && responseDrafts[currentQuestion.questionId];
         if (currentQuestion && currentQuestion.questionType === 'free_response' && currentDraft && currentDraft.dirty) {
           saveDraft(currentQuestion.questionId);
@@ -2359,16 +2738,262 @@
       // 6. Navigation Event Listeners
       if (btnPrev) {
         btnPrev.addEventListener('click', function () {
+          var currentQ = questionMap[currentDisplayOrder];
+          if (currentQ && currentQ.clusterSize === 3) {
+            var clusterQs = questions.filter(function (item) {
+              return (currentQ.groupId && item.groupId === currentQ.groupId) ||
+                (item.sectionId === currentQ.sectionId && Math.floor((item.displayOrder - 1) / 3) === Math.floor((currentQ.displayOrder - 1) / 3));
+            });
+            if (clusterQs.length > 0) {
+              goToQuestion(clusterQs[0].displayOrder - 1);
+              return;
+            }
+          }
           goToQuestion(currentDisplayOrder - 1);
         });
       }
 
       if (btnNext) {
         btnNext.addEventListener('click', function () {
+          if (btnNext.classList.contains('js-open-unit-lock-modal')) {
+            openUnitLockModal();
+            return;
+          }
           if (currentDisplayOrder >= totalQuestions) {
             openSubmitModal();
+            return;
+          }
+          var currentQ = questionMap[currentDisplayOrder];
+          if (currentQ && currentQ.clusterSize === 3) {
+            var clusterQs = questions.filter(function (item) {
+              return (currentQ.groupId && item.groupId === currentQ.groupId) ||
+                (item.sectionId === currentQ.sectionId && Math.floor((item.displayOrder - 1) / 3) === Math.floor((currentQ.displayOrder - 1) / 3));
+            });
+            if (clusterQs.length > 0) {
+              goToQuestion(clusterQs[clusterQs.length - 1].displayOrder + 1);
+              return;
+            }
+          }
+          goToQuestion(currentDisplayOrder + 1);
+        });
+      }
+
+      // 7. Reading Review Screen Modal & Multi-Stage Adaptive CAT Routing
+      function openReviewScreenModal() {
+        if (!reviewScreenModal) return;
+        updateReviewScreenStats();
+        renderReviewQuestions('all');
+        if (reviewUnitTransitionContainer) {
+          var currentQ = questionMap[currentDisplayOrder];
+          var isUnitLockedSandbox = currentQ && currentQ.navigationMode === 'UNIT_LOCKED_SANDBOX';
+          reviewUnitTransitionContainer.style.display = (isUnitLockedSandbox && activeUnitNumber === 1) ? 'block' : 'none';
+        }
+        reviewScreenModal.style.display = 'flex';
+      }
+
+      function closeReviewScreenModal() {
+        if (reviewScreenModal) reviewScreenModal.style.display = 'none';
+      }
+
+      function updateReviewScreenStats() {
+        var phase = phases[activePhaseIndex];
+        var phaseQs = phase ? phase.questions : questions;
+        var currentQ = questionMap[currentDisplayOrder];
+        if (currentQ && currentQ.navigationMode === 'UNIT_LOCKED_SANDBOX') {
+          phaseQs = phaseQs.filter(function (q) { return (q.unitNumber || 1) === activeUnitNumber; });
+        }
+        var answered = 0;
+        var flagged = 0;
+        phaseQs.forEach(function (q) {
+          var a = localAnswers[q.questionId];
+          var hasResponse = (a && a.selectedOptionId !== null && a.selectedOptionId !== undefined)
+            || (a && ((a.responseText || '').trim().length > 0 || a.responseAudioPath));
+          if (hasResponse) answered++;
+          if (a && a.isFlagged) flagged++;
+        });
+        var unanswered = phaseQs.length - answered;
+        if (reviewStatAnswered) reviewStatAnswered.textContent = answered;
+        if (reviewStatFlagged) reviewStatFlagged.textContent = flagged;
+        if (reviewStatUnanswered) reviewStatUnanswered.textContent = unanswered;
+      }
+
+      function renderReviewQuestions(filterMode) {
+        if (!reviewQuestionsList) return;
+        var phase = phases[activePhaseIndex];
+        var phaseQs = phase ? phase.questions : questions;
+        var currentQ = questionMap[currentDisplayOrder];
+        if (currentQ && currentQ.navigationMode === 'UNIT_LOCKED_SANDBOX') {
+          phaseQs = phaseQs.filter(function (q) { return (q.unitNumber || 1) === activeUnitNumber; });
+        }
+
+        var filtered = phaseQs;
+        if (filterMode === 'unanswered') {
+          filtered = phaseQs.filter(function (q) {
+            var a = localAnswers[q.questionId];
+            return !a || (a.selectedOptionId === null && (!a.responseText || !a.responseText.trim()) && !a.responseAudioPath);
+          });
+        } else if (filterMode === 'flagged') {
+          filtered = phaseQs.filter(function (q) {
+            var a = localAnswers[q.questionId];
+            return !!(a && a.isFlagged);
+          });
+        }
+
+        var html = '';
+        filtered.forEach(function (q) {
+          var a = localAnswers[q.questionId];
+          var isAns = (a && a.selectedOptionId !== null && a.selectedOptionId !== undefined)
+            || (a && ((a.responseText || '').trim().length > 0 || a.responseAudioPath));
+          var isFl = !!(a && a.isFlagged);
+          html += '<button type="button" class="review-item-card" data-display-order="' + q.displayOrder + '">';
+          html += '<div style="display:flex; justify-content:space-between; align-items:center;">';
+          html += '<strong style="font-family:\'IBM Plex Mono\', monospace; font-size:0.9rem;">Q' + q.displayOrder + '</strong>';
+          if (isFl) {
+            html += '<span class="badge" style="background:#f2b705; color:#14181d; font-size:0.7rem; font-weight:700;">🚩 FLAGGED</span>';
+          }
+          html += '</div>';
+          html += '<span style="font-size:0.75rem; font-family:\'IBM Plex Sans Condensed\', sans-serif; text-transform:uppercase; color:' + (isAns ? '#0a6b3c' : '#b31217') + '; font-weight:700;">' + (isAns ? 'ĐÃ TRẢ LỜI' : 'CHƯA TRẢ LỜI') + '</span>';
+          html += '</button>';
+        });
+        if (filtered.length === 0) {
+          html = '<div style="grid-column: 1 / -1; padding: 1.5rem; text-align:center; background:#fff; color:#555;">Không có câu hỏi nào phù hợp với bộ lọc.</div>';
+        }
+        reviewQuestionsList.innerHTML = html;
+      }
+
+      if (btnOpenReviewScreen) {
+        btnOpenReviewScreen.addEventListener('click', openReviewScreenModal);
+      }
+      document.querySelectorAll('.js-close-review-modal').forEach(function (btn) {
+        btn.addEventListener('click', closeReviewScreenModal);
+      });
+
+      if (reviewQuestionsList) {
+        reviewQuestionsList.addEventListener('click', function (e) {
+          var card = e.target.closest('.review-item-card');
+          if (card) {
+            var order = parseInt(card.getAttribute('data-display-order'), 10);
+            if (!isNaN(order)) {
+              closeReviewScreenModal();
+              goToQuestion(order);
+            }
+          }
+        });
+      }
+
+      if (btnReviewFirstUnanswered) {
+        btnReviewFirstUnanswered.addEventListener('click', function () {
+          var phase = phases[activePhaseIndex];
+          var phaseQs = phase ? phase.questions : questions;
+          var currentQ = questionMap[currentDisplayOrder];
+          if (currentQ && currentQ.navigationMode === 'UNIT_LOCKED_SANDBOX') {
+            phaseQs = phaseQs.filter(function (q) { return (q.unitNumber || 1) === activeUnitNumber; });
+          }
+          var firstUnanswered = phaseQs.find(function (q) {
+            var a = localAnswers[q.questionId];
+            return !a || (a.selectedOptionId === null && (!a.responseText || !a.responseText.trim()) && !a.responseAudioPath);
+          });
+          if (firstUnanswered) {
+            closeReviewScreenModal();
+            goToQuestion(firstUnanswered.displayOrder);
           } else {
-            goToQuestion(currentDisplayOrder + 1);
+            alert('Tất cả câu hỏi trong phần này đã được trả lời!');
+          }
+        });
+      }
+
+      if (btnReviewOnlyUnanswered) {
+        btnReviewOnlyUnanswered.addEventListener('click', function () {
+          renderReviewQuestions('unanswered');
+        });
+      }
+
+      if (btnReviewOnlyFlagged) {
+        btnReviewOnlyFlagged.addEventListener('click', function () {
+          renderReviewQuestions('flagged');
+        });
+      }
+
+      if (btnReviewShowAll) {
+        btnReviewShowAll.addEventListener('click', function () {
+          renderReviewQuestions('all');
+        });
+      }
+
+      // Unit Lock Modal handlers
+      function openUnitLockModal() {
+        closeReviewScreenModal();
+        if (unitLockModal) unitLockModal.style.display = 'flex';
+      }
+
+      function closeUnitLockModal() {
+        if (unitLockModal) unitLockModal.style.display = 'none';
+      }
+
+      if (btnReviewFinishUnit) {
+        btnReviewFinishUnit.addEventListener('click', openUnitLockModal);
+      }
+
+      document.querySelectorAll('.js-close-unit-lock-modal').forEach(function (btn) {
+        btn.addEventListener('click', closeUnitLockModal);
+      });
+
+      if (btnConfirmUnitLock) {
+        btnConfirmUnitLock.addEventListener('click', function () {
+          btnConfirmUnitLock.disabled = true;
+          btnConfirmUnitLock.textContent = 'Đang khóa Giai đoạn 1...';
+          scheduleSync(true);
+
+          fetch('/exams/attempts/' + attemptId + '/transition-unit', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'RequestVerificationToken': csrfToken
+            },
+            body: JSON.stringify({ targetUnitNumber: 2 })
+          })
+          .then(function (res) {
+            if (!res.ok) {
+              return fetch('/exams/take/' + attemptId + '/transition/unit', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'RequestVerificationToken': csrfToken
+                },
+                body: JSON.stringify({ targetUnitNumber: 2 })
+              });
+            }
+            return res;
+          })
+          .then(function (res) {
+            if (!res.ok) throw new Error('Transition failed');
+            return res.json();
+          })
+          .then(function (data) {
+            window.location.href = '/exams/take/' + attemptId;
+          })
+          .catch(function (err) {
+            console.error('Unit transition error:', err);
+            alert('Không thể chuyển giai đoạn. Vui lòng thử lại.');
+            btnConfirmUnitLock.disabled = false;
+            btnConfirmUnitLock.textContent = 'Xác nhận khóa và tiếp tục (Confirm & Proceed)';
+          });
+        });
+      }
+
+      // Bottom question palette click handler
+      var paletteChipsTrack = document.getElementById('bottom-palette-chips');
+      if (paletteChipsTrack) {
+        paletteChipsTrack.addEventListener('click', function (e) {
+          var targetChip = e.target.closest('.palette-chip');
+          if (targetChip && !targetChip.disabled && !targetChip.classList.contains('palette-chip--disabled')) {
+            var targetOrder = parseInt(targetChip.getAttribute('data-display-order'), 10);
+            if (!isNaN(targetOrder)) {
+              var currentQ = questionMap[currentDisplayOrder];
+              var isOneWay = currentQ && currentQ.navigationMode === 'AUDIO_DRIVEN';
+              if (isOneWay && targetOrder < currentDisplayOrder) return;
+              goToQuestion(targetOrder);
+            }
           }
         });
       }

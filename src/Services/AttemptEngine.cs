@@ -443,7 +443,13 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
                 q.Section.LayoutType,
                 q.Section.RequirePassage,
                 q.Section.NavigationMode,
-                q.Section.ToolsConfigJson));
+                q.Section.ToolsConfigJson,
+                q.Section.HideOptionText,
+                q.Section.OptionCount > 0 ? q.Section.OptionCount : 4,
+                q.Section.ClusterSize > 0 ? q.Section.ClusterSize : 1,
+                q.Section.RequireImage,
+                q.Group.UnitNumber,
+                q.GroupId));
         }
 
         var currentQuestionInfo = totalQuestions > 0 ? allQuestions[targetIndex] : new AttemptQuestionInfo(
