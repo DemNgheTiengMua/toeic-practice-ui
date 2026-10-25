@@ -439,7 +439,11 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
                 q.MaxSelections,
                 q.AllowNumber,
                 q.AcceptedAnswersJson,
-                q.RequiredKeywords));
+                q.RequiredKeywords,
+                q.Section.LayoutType,
+                q.Section.RequirePassage,
+                q.Section.NavigationMode,
+                q.Section.ToolsConfigJson));
         }
 
         var currentQuestionInfo = totalQuestions > 0 ? allQuestions[targetIndex] : new AttemptQuestionInfo(

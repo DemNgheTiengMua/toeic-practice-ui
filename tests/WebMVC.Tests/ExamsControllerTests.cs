@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Contracts;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
@@ -832,5 +832,48 @@ public sealed class ExamsControllerTests
         var viewResult = Assert.IsType<ViewResult>(result);
         var model = Assert.IsType<ExamResumeViewModel>(viewResult.Model);
         Assert.Contains("No active exam sitting was found", model.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task Take_with_split_screen_and_component_metadata_returns_model_with_sandbox_properties()
+    {
+        var q = new AttemptQuestionDto(
+            10, 1, 200, 1, "P7", "Reading Passage 1", "reading", "Reading", ModalityDto.Reading,
+            "What is the main topic of the passage?", "Full passage text here...", null, null, null, null, null, null,
+            [new AttemptOptionDto(1, "A", "Option A"), new AttemptOptionDto(2, "B", "Option B")],
+            null, false, "multi_select", 1, null, null,
+            SelectedOptionIds: [1],
+            MaxSelections: 2,
+            AllowNumber: true,
+            AcceptedAnswersJson: "[\"answer1\"]",
+            RequiredKeywords: "keyword1,keyword2",
+            LayoutType: "SPLIT_HORIZONTAL",
+            RequirePassage: true,
+            NavigationMode: "FULL_SANDBOX",
+            ToolsConfigJson: "{\"highlighter\":true,\"notes\":true}"
+        );
+
+        var take = new AttemptTakeDto(
+            100, 1, "IELTS Academic Test 1", "IELTS", AttemptStatusDto.InProgress,
+            DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddHours(2), 7200,
+            40, 1, 0, q,
+            [new NavigatorItemDto(10, 1, 1, "P7", ModalityDto.Reading, true, false, true)],
+            false);
+
+        var api = new TestApiClient { TakeDto = take };
+        var controller = CreateController(api);
+        var result = await controller.Take(100, null, CancellationToken.None);
+
+        var viewResult = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<ExamTakeViewModel>(viewResult.Model);
+        Assert.Equal(100, model.Take.AttemptId);
+        Assert.Equal("SPLIT_HORIZONTAL", model.Take.CurrentQuestion.LayoutType);
+        Assert.True(model.Take.CurrentQuestion.RequirePassage);
+        Assert.Equal("FULL_SANDBOX", model.Take.CurrentQuestion.NavigationMode);
+        Assert.Equal(2, model.Take.CurrentQuestion.MaxSelections);
+        Assert.True(model.Take.CurrentQuestion.AllowNumber);
+        Assert.NotNull(model.Take.CurrentQuestion.SelectedOptionIds);
+        Assert.Contains(1, model.Take.CurrentQuestion.SelectedOptionIds!);
+        Assert.Contains("highlighter", model.Take.CurrentQuestion.ToolsConfigJson);
     }
 }

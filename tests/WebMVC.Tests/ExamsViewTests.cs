@@ -59,4 +59,60 @@ public sealed class ExamsViewTests
         Assert.Contains("contextmenu", html);
         Assert.Contains("visibilitychange", html);
     }
+
+    [Fact]
+    public void Take_View_Contains_SplitScreen_TopControlBar_Palette_Highlighter_And_ComponentWidgets_Invariants()
+    {
+        var repoRoot = TestPathHelper.FindRepoRoot();
+        var viewPath = Path.Combine(repoRoot, "src", "WebMVC", "Views", "Exams", "Take.cshtml");
+
+        Assert.True(File.Exists(viewPath), "Take.cshtml must exist");
+        var html = File.ReadAllText(viewPath);
+
+        // 1. Split-Screen Viewport dual-pane layout & independent scrollbars
+        Assert.Contains(".exam-layout--split", html);
+        Assert.Contains("id=\"split-stimulus-pane\"", html);
+        Assert.Contains("id=\"split-passage-scroll\"", html);
+        Assert.Contains("id=\"split-passage-text\"", html);
+
+        // 2. Top Control Bar: Red countdown flash placard, volume slider, accessibility modal
+        Assert.Contains("keyframes timer-pulse-red", html);
+        Assert.Contains(".timer--warn-flash", html);
+        Assert.Contains(".timer-alert-placard", html);
+        Assert.Contains("id=\"exam-volume-slider\"", html);
+        Assert.Contains("id=\"exam-volume-pct\"", html);
+        Assert.Contains("id=\"accessibility-modal\"", html);
+        Assert.Contains("data-size=\"standard\"", html);
+        Assert.Contains("data-size=\"large\"", html);
+        Assert.Contains("data-size=\"xlarge\"", html);
+        Assert.Contains("data-theme=\"standard\"", html);
+        Assert.Contains("data-theme=\"inverted\"", html);
+        Assert.Contains("data-theme=\"high-contrast\"", html);
+
+        // 3. Question Component Widgets Container and Renderers
+        Assert.Contains("id=\"component-widget-container\"", html);
+        Assert.Contains("renderComponentWidget", html);
+        Assert.Contains("multi-select-widget", html);
+        Assert.Contains("inline-completion-widget", html);
+        Assert.Contains("dropdown-widget", html);
+        Assert.Contains("drag-drop-widget", html);
+
+        // 4. Bottom Question Palette with 4 status states
+        Assert.Contains("id=\"bottom-question-palette\"", html);
+        Assert.Contains("id=\"bottom-palette-chips\"", html);
+        Assert.Contains("palette-chip--unanswered", html);
+        Assert.Contains("palette-chip--answered", html);
+        Assert.Contains("palette-chip--current", html);
+        Assert.Contains("palette-chip--flagged", html);
+
+        // 5. Tokenized Text Highlighter and Notes Engine
+        Assert.Contains("id=\"highlighter-popover\"", html);
+        Assert.Contains("data-action=\"highlight\"", html);
+        Assert.Contains("data-action=\"note\"", html);
+        Assert.Contains("data-action=\"clear\"", html);
+        Assert.Contains("id=\"sticky-note-modal\"", html);
+        Assert.Contains("renderTokenizedText", html);
+        Assert.Contains("ee-token", html);
+        Assert.Contains("candidateNotes", html);
+    }
 }
