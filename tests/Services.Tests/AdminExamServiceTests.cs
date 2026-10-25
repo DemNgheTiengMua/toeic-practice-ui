@@ -1115,4 +1115,242 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         var afterMcqAudit = await service.AuditExamPublishReadinessAsync(mcqExam.ExamId);
         Assert.DoesNotContain(afterMcqAudit.Issues, i => i.Code == "Q_FR_CRITERIA_MISSING" && i.QuestionId == mcq.QuestionId);
     }
+    [Fact]
+    public async Task GetExamStudioAsync_PopulatesDynamicSectionBlueprintModels()
+    {
+        var certCode = $"BP_{Guid.NewGuid():N}"[..18];
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+
+        var cert = new Certificate { Code = certCode, Name = $"Cert {certCode}", IsActive = true };
+        db.Certificates.Add(cert);
+        await db.SaveChangesAsync();
+
+        var skill = new Skill { CertId = cert.CertId, Code = $"SK_{cert.CertId}", Name = "Reading", Modality = "reading", DisplayOrder = 1 };
+        db.Skills.Add(skill);
+        await db.SaveChangesAsync();
+
+        var section = new Section
+        {
+            SkillId = skill.SkillId,
+            CertId = cert.CertId,
+            Modality = "reading",
+            Code = "SEC_BP",
+            Name = "Blueprint Section",
+            DisplayOrder = 1,
+            ExpectedQuestionCount = 10,
+            OptionCount = 4,
+            ClusterSize = 3,
+            UnitCount = 2,
+            HideOptionText = true,
+            RequirePassage = true,
+            RequireAudio = false,
+            RequireImage = true,
+            RequiredKeywordCount = 3,
+            AllowedComponentTypesJson = @"[""mcq"",""multi_select"",""inline_completion""]",
+            LayoutType = "SPLIT_HORIZONTAL",
+            NavigationMode = "UNIT_LOCKED_SANDBOX",
+            TimerPolicyJson = @"{""perSectionSec"":1800}",
+            ToolsConfigJson = @"{""calculator"":false}"
+        };
+        db.Sections.Add(section);
+        await db.SaveChangesAsync();
+
+        var service = CreateService();
+
+        var exam = await service.CreateExamAsync(new CreateAdminExamRequest(
+            cert.CertId,
+            $"Blueprint Exam {Guid.NewGuid():N}"[..25],
+            60,
+            ExamPurposeDto.Mock));
+
+        var studio = await service.GetExamStudioAsync(exam.ExamId);
+        var secDto = Assert.Single(studio.Sections);
+
+        Assert.Equal("SEC_BP", secDto.Code);
+        Assert.Equal(10, secDto.ExpectedQuestionCount);
+        Assert.Equal(4, secDto.OptionCount);
+        Assert.Equal(3, secDto.ClusterSize);
+        Assert.Equal(2, secDto.UnitCount);
+        Assert.True(secDto.HideOptionText);
+        Assert.True(secDto.RequirePassage);
+        Assert.False(secDto.RequireAudio);
+        Assert.True(secDto.RequireImage);
+        Assert.Equal(3, secDto.RequiredKeywordCount);
+        Assert.Equal("SPLIT_HORIZONTAL", secDto.LayoutType);
+        Assert.Equal("UNIT_LOCKED_SANDBOX", secDto.NavigationMode);
+        Assert.Equal(@"{""perSectionSec"":1800}", secDto.TimerPolicyJson);
+        Assert.Equal(@"{""calculator"":false}", secDto.ToolsConfigJson);
+        Assert.Equal("Reading", secDto.SkillName);
+    }
+
+    [Fact]
+    public async Task AuthoringQuestionComponentTypes_PersistsAllFieldsAndOptions()
+    {
+        var (certId, _, secR, _, secW) = await SeedCertificateWithSectionsAsync($"AUTH_{Guid.NewGuid():N}"[..18]);
+        var service = CreateService();
+
+        var exam = await service.CreateExamAsync(new CreateAdminExamRequest(
+            certId,
+            $"Authoring Exam {Guid.NewGuid():N}"[..25],
+            60,
+            ExamPurposeDto.Mock));
+
+        var grp = await service.CreateQuestionGroupAsync(exam.ExamId, new CreateQuestionGroupRequest(secR, UnitNumber: 2));
+        Assert.Equal(2, grp.UnitNumber);
+
+        // 1. MCQ 3
+        var qMcq3 = await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
+            grp.GroupId,
+            "MCQ 3 Stem",
+            2,
+            QuestionTypeDto.Mcq_3,
+            Options:
+            [
+                new AdminQuestionOptionInput(null, "A", "Opt A", true, "Correct rationale"),
+                new AdminQuestionOptionInput(null, "B", "Opt B", false, "Distractor B"),
+                new AdminQuestionOptionInput(null, "C", "Opt C", false, "Distractor C")
+            ]));
+        Assert.Equal(QuestionTypeDto.Mcq_3, qMcq3.QuestionType);
+        Assert.Equal(3, qMcq3.Options.Count);
+
+        // 2. MultiSelect with MaxSelections
+        var qMulti = await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
+            grp.GroupId,
+            "MultiSelect Stem",
+            3,
+            QuestionTypeDto.MultiSelect,
+            MaxSelections: 2,
+            Options:
+            [
+                new AdminQuestionOptionInput(null, "A", "Opt A", true, null),
+                new AdminQuestionOptionInput(null, "B", "Opt B", true, null),
+                new AdminQuestionOptionInput(null, "C", "Opt C", false, null),
+                new AdminQuestionOptionInput(null, "D", "Opt D", false, null)
+            ]));
+        Assert.Equal(QuestionTypeDto.MultiSelect, qMulti.QuestionType);
+        Assert.Equal(2, qMulti.MaxSelections);
+        Assert.Equal(2, qMulti.Options.Count(o => o.IsCorrect));
+
+        // 3. InlineCompletion with AcceptedAnswersJson and AllowNumber
+        var qInline = await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
+            grp.GroupId,
+            "Inline Stem",
+            3,
+            QuestionTypeDto.InlineCompletion,
+            AcceptedAnswersJson: @"[""center"",""centre""]",
+            AllowNumber: false,
+            MaxWords: 2));
+        Assert.Equal(QuestionTypeDto.InlineCompletion, qInline.QuestionType);
+        Assert.Equal(@"[""center"",""centre""]", qInline.AcceptedAnswersJson);
+        Assert.False(qInline.AllowNumber);
+        Assert.Equal(2, qInline.MaxWords);
+
+        // 4. FreeResponse with RequiredKeywords
+        var grpW = await service.CreateQuestionGroupAsync(exam.ExamId, new CreateQuestionGroupRequest(secW));
+        var qFree = await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
+            grpW.GroupId,
+            "Free Response Essay",
+            3,
+            QuestionTypeDto.FreeResponse,
+            PrepSeconds: 30,
+            ResponseSeconds: 1200,
+            MinWords: 150,
+            MaxWords: 300,
+            RequiredKeywords: "climate, renewable, energy"));
+        Assert.Equal(QuestionTypeDto.FreeResponse, qFree.QuestionType);
+        Assert.Equal("climate, renewable, energy", qFree.RequiredKeywords);
+        Assert.Equal(150, qFree.MinWords);
+        Assert.Equal(300, qFree.MaxWords);
+
+        // Reload via GetExamStudioAsync
+        var studio = await service.GetExamStudioAsync(exam.ExamId);
+        var allQs = studio.Sections.SelectMany(s => s.Groups).SelectMany(g => g.Questions).ToList();
+        Assert.Contains(allQs, q => q.QuestionType == QuestionTypeDto.Mcq_3 && q.Options.Count == 3);
+        Assert.Contains(allQs, q => q.QuestionType == QuestionTypeDto.MultiSelect && q.MaxSelections == 2);
+        Assert.Contains(allQs, q => q.QuestionType == QuestionTypeDto.InlineCompletion && q.AcceptedAnswersJson == @"[""center"",""centre""]");
+        Assert.Contains(allQs, q => q.QuestionType == QuestionTypeDto.FreeResponse && q.RequiredKeywords == "climate, renewable, energy");
+    }
+
+    [Fact]
+    public async Task AuditExamPublishReadiness_DynamicBlueprintValidation()
+    {
+        var certCode = $"AUD_{Guid.NewGuid():N}"[..18];
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+
+        var cert = new Certificate { Code = certCode, Name = $"Cert {certCode}", IsActive = true };
+        db.Certificates.Add(cert);
+        await db.SaveChangesAsync();
+
+        var skill = new Skill { CertId = cert.CertId, Code = $"SK_{cert.CertId}", Name = "Reading", Modality = "reading", DisplayOrder = 1 };
+        db.Skills.Add(skill);
+        await db.SaveChangesAsync();
+
+        var section = new Section
+        {
+            SkillId = skill.SkillId,
+            CertId = cert.CertId,
+            Modality = "reading",
+            Code = "SEC_AUD",
+            Name = "Audit Section",
+            DisplayOrder = 1,
+            ExpectedQuestionCount = 2,
+            OptionCount = 2,
+            ClusterSize = 2,
+            RequirePassage = true,
+            RequireImage = true,
+            AllowedComponentTypesJson = @"[""mcq""]"
+        };
+        db.Sections.Add(section);
+        await db.SaveChangesAsync();
+
+        var service = CreateService();
+
+        var exam = await service.CreateExamAsync(new CreateAdminExamRequest(
+            cert.CertId,
+            $"Audit Test Exam {Guid.NewGuid():N}"[..25],
+            60,
+            ExamPurposeDto.Mock));
+
+        // 1. Cluster size mismatch (requires 2 questions per cluster, but only 1 added)
+        // AND RequirePassage missing, AND RequireImage missing
+        var grp = await service.CreateQuestionGroupAsync(exam.ExamId, new CreateQuestionGroupRequest(section.SectionId));
+        await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
+            grp.GroupId,
+            "Question 1",
+            2,
+            QuestionTypeDto.Mcq,
+            Options:
+            [
+                new AdminQuestionOptionInput(null, "A", "Opt A", true, null),
+                new AdminQuestionOptionInput(null, "B", "Opt B", false, null)
+            ]));
+
+        var audit1 = await service.AuditExamPublishReadinessAsync(exam.ExamId);
+        Assert.False(audit1.CanPublish);
+        Assert.Contains(audit1.Issues, i => i.Code == "SEC_QUESTION_COUNT_LOW");
+        Assert.Contains(audit1.Issues, i => i.Code == "GRP_CLUSTER_SIZE_MISMATCH");
+        Assert.Contains(audit1.Issues, i => i.Code == "GRP_PASSAGE_MISSING");
+        Assert.Contains(audit1.Issues, i => i.Code == "GRP_IMAGE_MISSING");
+
+        // 2. Fix group: add passage, image, image alt, and 2nd question
+        await service.UpdateQuestionGroupAsync(exam.ExamId, grp.GroupId, new UpdateQuestionGroupRequest(
+            section.SectionId,
+            Passage: "Reading passage stimulus text here.",
+            ImagePath: "/media/photo.jpg",
+            ImageAlt: "Photo of office workers"));
+
+        await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
+            grp.GroupId,
+            "Question 2",
+            2,
+            QuestionTypeDto.Mcq,
+            Options:
+            [
+                new AdminQuestionOptionInput(null, "A", "Opt A", true, null),
+                new AdminQuestionOptionInput(null, "B", "Opt B", false, null)
+            ]));
+
+        var audit2 = await service.AuditExamPublishReadinessAsync(exam.ExamId);
+        Assert.True(audit2.CanPublish, string.Join("; ", audit2.Issues.Select(i => i.Message)));
+    }
 }

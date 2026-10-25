@@ -894,6 +894,60 @@ public sealed class AdminExamsControllerTests
         Assert.Contains("target certificate", controller.TempData["Error"]?.ToString());
     }
 
+    [Fact]
+    public async Task SaveQuestion_PassesAllExpandedComponentPropertiesToApi()
+    {
+        var api = new TestApiClient();
+        var controller = CreateController(api);
+
+        var model = new QuestionSaveModel
+        {
+            GroupId = 1,
+            SectionId = 1,
+            Stem = "Inline question stem",
+            DifficultyLevel = 3,
+            QuestionType = QuestionTypeDto.InlineCompletion,
+            DisplayOrder = 1,
+            MaxSelections = 2,
+            AllowNumber = false,
+            AcceptedAnswersJson = @"[""answer1"",""answer2""]",
+            RequiredKeywords = "keyword1, keyword2"
+        };
+
+        var result = await controller.SaveQuestion(5, model, CancellationToken.None);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(AdminExamsController.Studio), redirect.ActionName);
+        Assert.NotNull(api.CreatedQuestionRequest);
+        Assert.Equal(QuestionTypeDto.InlineCompletion, api.CreatedQuestionRequest.QuestionType);
+        Assert.Equal(2, api.CreatedQuestionRequest.MaxSelections);
+        Assert.False(api.CreatedQuestionRequest.AllowNumber);
+        Assert.Equal(@"[""answer1"",""answer2""]", api.CreatedQuestionRequest.AcceptedAnswersJson);
+        Assert.Equal("keyword1, keyword2", api.CreatedQuestionRequest.RequiredKeywords);
+    }
+
+    [Fact]
+    public async Task SaveGroup_PassesUnitNumberToApi()
+    {
+        var api = new TestApiClient();
+        var controller = CreateController(api);
+
+        var model = new QuestionGroupSaveModel
+        {
+            GroupId = 10,
+            SectionId = 2,
+            DisplayOrder = 1,
+            UnitNumber = 2
+        };
+
+        var result = await controller.SaveGroup(5, model, CancellationToken.None);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(AdminExamsController.Studio), redirect.ActionName);
+        Assert.NotNull(api.UpdatedQuestionGroupRequest);
+        Assert.Equal(2, api.UpdatedQuestionGroupRequest.UnitNumber);
+    }
+
     internal sealed class EmptyTempDataProvider : ITempDataProvider
     {
         public IDictionary<string, object> LoadTempData(HttpContext context) => new Dictionary<string, object>();
@@ -909,6 +963,8 @@ public sealed class AdminExamsControllerTests
 
         public CreateAdminExamRequest? CreatedExamRequest { get; set; }
         public UpdateAdminExamRequest? UpdatedExamRequest { get; set; }
+        public CreateQuestionGroupRequest? CreatedQuestionGroupRequest { get; set; }
+        public UpdateQuestionGroupRequest? UpdatedQuestionGroupRequest { get; set; }
         public CreateQuestionRequest? CreatedQuestionRequest { get; set; }
         public UpdateQuestionRequest? UpdatedQuestionRequest { get; set; }
         public int? DeletedExamId { get; set; }
@@ -965,11 +1021,17 @@ public sealed class AdminExamsControllerTests
         public Task<AdminExamQuestionsDto> GetAdminExamQuestionsAsync(int examId, CancellationToken cancellationToken = default) =>
             Task.FromResult(QuestionsToReturn ?? SampleQuestions(examId));
 
-        public Task<AdminQuestionGroupDto> CreateAdminQuestionGroupAsync(int examId, CreateQuestionGroupRequest request, CancellationToken cancellationToken = default) =>
-            Task.FromResult<AdminQuestionGroupDto>(null!);
+        public Task<AdminQuestionGroupDto> CreateAdminQuestionGroupAsync(int examId, CreateQuestionGroupRequest request, CancellationToken cancellationToken = default)
+        {
+            CreatedQuestionGroupRequest = request;
+            return Task.FromResult<AdminQuestionGroupDto>(null!);
+        }
 
-        public Task<AdminQuestionGroupDto> UpdateAdminQuestionGroupAsync(int examId, int groupId, UpdateQuestionGroupRequest request, CancellationToken cancellationToken = default) =>
-            Task.FromResult<AdminQuestionGroupDto>(null!);
+        public Task<AdminQuestionGroupDto> UpdateAdminQuestionGroupAsync(int examId, int groupId, UpdateQuestionGroupRequest request, CancellationToken cancellationToken = default)
+        {
+            UpdatedQuestionGroupRequest = request;
+            return Task.FromResult<AdminQuestionGroupDto>(null!);
+        }
 
         public Task DeleteAdminQuestionGroupAsync(int examId, int groupId, CancellationToken cancellationToken = default) =>
             Task.CompletedTask;

@@ -138,7 +138,11 @@ public sealed record AdminQuestionDto(
     int DisplayOrder,
     DateTimeOffset? UpdatedAt,
     IReadOnlyList<AdminQuestionOptionDto> Options,
-    bool HasAnswers);
+    bool HasAnswers,
+    int? MaxSelections = null,
+    bool AllowNumber = true,
+    string? AcceptedAnswersJson = null,
+    string? RequiredKeywords = null);
 
 public sealed record AdminQuestionGroupDto(
     int GroupId,
@@ -158,7 +162,8 @@ public sealed record AdminQuestionGroupDto(
     int? PrepSeconds,
     int? ResponseSeconds,
     int DisplayOrder,
-    IReadOnlyList<AdminQuestionDto> Questions);
+    IReadOnlyList<AdminQuestionDto> Questions,
+    int UnitNumber = 1);
 
 public sealed record AdminSectionOptionDto(
     int SectionId,
@@ -193,7 +198,8 @@ public sealed record CreateQuestionGroupRequest(
     string? Transcript = null,
     int? PrepSeconds = null,
     int? ResponseSeconds = null,
-    int DisplayOrder = 0);
+    int DisplayOrder = 0,
+    int UnitNumber = 1);
 
 public sealed record UpdateQuestionGroupRequest(
     int SectionId,
@@ -206,7 +212,8 @@ public sealed record UpdateQuestionGroupRequest(
     string? Transcript = null,
     int? PrepSeconds = null,
     int? ResponseSeconds = null,
-    int DisplayOrder = 0);
+    int DisplayOrder = 0,
+    int UnitNumber = 1);
 
 public sealed record CreateQuestionRequest(
     int GroupId,
@@ -222,7 +229,11 @@ public sealed record CreateQuestionRequest(
     string? Hint = null,
     int DisplayOrder = 0,
     IReadOnlyList<AdminQuestionOptionInput>? Options = null,
-    IReadOnlyList<int>? CriterionIds = null);
+    IReadOnlyList<int>? CriterionIds = null,
+    int? MaxSelections = null,
+    bool AllowNumber = true,
+    string? AcceptedAnswersJson = null,
+    string? RequiredKeywords = null);
 
 public sealed record UpdateQuestionRequest(
     int? GroupId,
@@ -238,7 +249,11 @@ public sealed record UpdateQuestionRequest(
     string? Hint = null,
     int DisplayOrder = 0,
     IReadOnlyList<AdminQuestionOptionInput>? Options = null,
-    IReadOnlyList<int>? CriterionIds = null);
+    IReadOnlyList<int>? CriterionIds = null,
+    int? MaxSelections = null,
+    bool AllowNumber = true,
+    string? AcceptedAnswersJson = null,
+    string? RequiredKeywords = null);
 
 public sealed record SaveExamSectionAudioRequest(
     int SectionId,
