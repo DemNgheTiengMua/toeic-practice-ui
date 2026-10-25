@@ -425,6 +425,7 @@ public sealed class ExamsControllerTests
         public AttemptReviewDto? ReviewDto { get; set; }
         public AiInsightDto? InsightDto { get; set; }
         public bool RetryInsightCalled { get; set; }
+        public AttemptTransitionResponse? TransitionResponse { get; set; }
 
         public Task<MockExamListViewDto> GetMockExamsAsync(CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<MockExamListViewDto>(ExceptionToThrow) : Task.FromResult(MockExamsCatalog!);
@@ -461,6 +462,18 @@ public sealed class ExamsControllerTests
             SubmittedDrafts = request.Drafts;
             return Task.FromResult(SubmitResponse!);
         }
+
+        public Task<AttemptTransitionResponse> TransitionSkillAsync(int attemptId, CancellationToken cancellationToken = default) =>
+            ExceptionToThrow != null ? Task.FromException<AttemptTransitionResponse>(ExceptionToThrow) : Task.FromResult(TransitionResponse ?? new AttemptTransitionResponse(attemptId, 1, 1, null, null, 1800, AttemptStatusDto.InProgress, false));
+
+        public Task<AttemptTransitionResponse> TransitionUnitAsync(int attemptId, TransitionUnitRequest request, CancellationToken cancellationToken = default) =>
+            ExceptionToThrow != null ? Task.FromException<AttemptTransitionResponse>(ExceptionToThrow) : Task.FromResult(TransitionResponse ?? new AttemptTransitionResponse(attemptId, 1, request.TargetUnitNumber, null, null, 1800, AttemptStatusDto.InProgress, false));
+
+        public Task<AttemptTransitionResponse> TransitionGroupAsync(int attemptId, TransitionGroupRequest request, CancellationToken cancellationToken = default) =>
+            ExceptionToThrow != null ? Task.FromException<AttemptTransitionResponse>(ExceptionToThrow) : Task.FromResult(TransitionResponse ?? new AttemptTransitionResponse(attemptId, 1, 1, request.TargetGroupId, null, 600, AttemptStatusDto.InProgress, false));
+
+        public Task<AttemptTransitionResponse> StartAudioReviewAsync(int attemptId, CancellationToken cancellationToken = default) =>
+            ExceptionToThrow != null ? Task.FromException<AttemptTransitionResponse>(ExceptionToThrow) : Task.FromResult(TransitionResponse ?? new AttemptTransitionResponse(attemptId, 1, 1, null, DateTimeOffset.UtcNow.AddSeconds(120), 120, AttemptStatusDto.InProgress, false));
 
         public Task CancelAttemptAsync(int attemptId, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException(ExceptionToThrow) : Task.CompletedTask;

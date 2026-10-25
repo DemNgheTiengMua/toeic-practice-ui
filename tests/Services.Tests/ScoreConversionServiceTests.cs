@@ -273,7 +273,9 @@ public sealed class ScoreConversionServiceTests(DatabaseFixture database)
         await database.SqlAsync($"""
             UPDATE ExamAttempts
             SET StartedAt = DATEADD(minute, -31, SYSDATETIMEOFFSET()),
-                ExpiresAt = DATEADD(minute, 29, SYSDATETIMEOFFSET())
+                ExpiresAt = DATEADD(minute, 29, SYSDATETIMEOFFSET()),
+                ActiveSkillId = {readSkill.SkillId},
+                PhaseDeadlineAt = DATEADD(minute, 30, GETUTCDATE())
             WHERE AttemptId = {attempt.AttemptId};
             """);
         var secondPhaseDb = DbContextFactory.Create(database.ConnectionString);

@@ -129,6 +129,14 @@ public interface IMockExamsClient
     Task<SubmitAttemptResponse> SubmitAttemptAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) => SubmitAttemptAsync(attemptId, cancellationToken);
     Task<SubmitAttemptResponse> SubmitAttemptWithDraftsAsync(int attemptId, SubmitAttemptRequest request, CancellationToken cancellationToken = default);
     Task<SubmitAttemptResponse> SubmitAttemptWithDraftsAsync(int attemptId, SubmitAttemptRequest request, string bearerToken, CancellationToken cancellationToken = default) => SubmitAttemptWithDraftsAsync(attemptId, request, cancellationToken);
+    Task<AttemptTransitionResponse> TransitionSkillAsync(int attemptId, CancellationToken cancellationToken = default);
+    Task<AttemptTransitionResponse> TransitionSkillAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) => TransitionSkillAsync(attemptId, cancellationToken);
+    Task<AttemptTransitionResponse> TransitionUnitAsync(int attemptId, TransitionUnitRequest request, CancellationToken cancellationToken = default);
+    Task<AttemptTransitionResponse> TransitionUnitAsync(int attemptId, TransitionUnitRequest request, string bearerToken, CancellationToken cancellationToken = default) => TransitionUnitAsync(attemptId, request, cancellationToken);
+    Task<AttemptTransitionResponse> TransitionGroupAsync(int attemptId, TransitionGroupRequest request, CancellationToken cancellationToken = default);
+    Task<AttemptTransitionResponse> TransitionGroupAsync(int attemptId, TransitionGroupRequest request, string bearerToken, CancellationToken cancellationToken = default) => TransitionGroupAsync(attemptId, request, cancellationToken);
+    Task<AttemptTransitionResponse> StartAudioReviewAsync(int attemptId, CancellationToken cancellationToken = default);
+    Task<AttemptTransitionResponse> StartAudioReviewAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) => StartAudioReviewAsync(attemptId, cancellationToken);
     Task CancelAttemptAsync(int attemptId, CancellationToken cancellationToken = default);
     Task CancelAttemptAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) => CancelAttemptAsync(attemptId, cancellationToken);
     Task<AttemptResultDto> GetAttemptResultAsync(int attemptId, CancellationToken cancellationToken = default);

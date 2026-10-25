@@ -115,6 +115,35 @@ public interface IAttemptEngine
         int attemptId,
         int userId,
         CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<SaveAttemptAnswerResult>> SaveBatchAnswersAsync(
+        int attemptId,
+        int userId,
+        IReadOnlyList<BatchAnswerItem> answers,
+        Func<int, int, Task>? onAutoSubmitted = null,
+        CancellationToken cancellationToken = default);
+
+    Task<AttemptTransitionResult> TransitionToNextSkillAsync(
+        int attemptId,
+        int? userId = null,
+        CancellationToken cancellationToken = default);
+
+    Task<AttemptTransitionResult> TransitionUnitAsync(
+        int attemptId,
+        int targetUnitNumber,
+        int? userId = null,
+        CancellationToken cancellationToken = default);
+
+    Task<AttemptTransitionResult> TransitionGroupAsync(
+        int attemptId,
+        int targetGroupId,
+        int? userId = null,
+        CancellationToken cancellationToken = default);
+
+    Task<AttemptTransitionResult> CompleteAudioAndStartReviewAsync(
+        int attemptId,
+        int? userId = null,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
@@ -144,21 +173,6 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
             var (requiresAudio, requiresMic) = await InspectPreflightRequirementsAsync(examId, cancellationToken);
             var requiresPreflight = requiresAudio || requiresMic;
 
-            var attempt = new ExamAttempt
-            {
-                UserId = userId,
-                ExamId = examId,
-                CertId = certId,
-                Status = AttemptStatus.InProgress.ToCode(),
-                StartedAt = now,
-                ExpiresAt = expiresAt,
-                IsAutoSubmitted = false,
-                PreflightVerifiedAt = requiresPreflight ? null : now
-            };
-
-            db.ExamAttempts.Add(attempt);
-            await db.SaveChangesAsync(cancellationToken);
-
             var questions = await db.Questions
                 .Where(q => q.ExamId == examId)
                 .Include(q => q.Group)
@@ -168,6 +182,55 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
                 .ThenBy(q => q.Group.DisplayOrder)
                 .ThenBy(q => q.DisplayOrder)
                 .ToListAsync(cancellationToken);
+
+            var firstSkill = questions
+                .Select(q => q.Section.Skill)
+                .OrderBy(s => s.DisplayOrder)
+                .FirstOrDefault();
+
+            var firstSection = questions.FirstOrDefault()?.Section;
+            var firstGroup = questions.FirstOrDefault()?.Group;
+
+            int? activeSkillId = firstSkill?.SkillId;
+            int activeUnitNumber = 1;
+            int? activeGroupId = null;
+            if (firstSection != null && string.Equals(firstSection.NavigationMode, "HYBRID_GROUP_LOCKED", StringComparison.OrdinalIgnoreCase))
+            {
+                activeGroupId = firstGroup?.GroupId;
+            }
+
+            DateTime? phaseDeadlineAt = null;
+            if (firstSection != null && string.Equals(firstSection.NavigationMode, "HYBRID_GROUP_LOCKED", StringComparison.OrdinalIgnoreCase) && firstGroup?.ResponseSeconds.HasValue == true)
+            {
+                phaseDeadlineAt = now.UtcDateTime.AddSeconds(firstGroup.ResponseSeconds.Value);
+            }
+            else if (firstSkill?.DurationMinutes is int skillDur && skillDur > 0)
+            {
+                phaseDeadlineAt = now.UtcDateTime.AddMinutes(skillDur);
+            }
+            else
+            {
+                phaseDeadlineAt = expiresAt.UtcDateTime;
+            }
+
+            var attempt = new ExamAttempt
+            {
+                UserId = userId,
+                ExamId = examId,
+                CertId = certId,
+                Status = AttemptStatus.InProgress.ToCode(),
+                StartedAt = now,
+                ExpiresAt = expiresAt,
+                ActiveSkillId = activeSkillId,
+                ActiveUnitNumber = activeUnitNumber,
+                ActiveGroupId = activeGroupId,
+                PhaseDeadlineAt = phaseDeadlineAt,
+                IsAutoSubmitted = false,
+                PreflightVerifiedAt = requiresPreflight ? null : now
+            };
+
+            db.ExamAttempts.Add(attempt);
+            await db.SaveChangesAsync(cancellationToken);
 
             if (questions.Count > 0)
             {
@@ -356,24 +419,36 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
         var currentQuestionInfo = totalQuestions > 0 ? allQuestions[targetIndex] : new AttemptQuestionInfo(
             0, 0, 0, 0, "", "", "", "", Modality.Reading, "", null, null, null, null, null, null, null, [], null, false);
 
+        var effectiveDeadline = ResolveEffectiveDeadline(attempt);
+        var remainingSeconds = Math.Max(0, (int)(effectiveDeadline - DateTimeOffset.UtcNow).TotalSeconds);
+        var phaseDeadline = ToUtcOffset(attempt.PhaseDeadlineAt);
+        var isPhaseExpired = phaseDeadline.HasValue && DateTimeOffset.UtcNow >= phaseDeadline.Value;
+
         var navigator = questions.Select((q, idx) =>
         {
             answersByQuestion.TryGetValue(q.QuestionId, out var answer);
             freeResponses.TryGetValue(q.QuestionId, out var response);
+            var isLocked = isPhaseExpired
+                || (attempt.ActiveSkillId.HasValue && q.Section.SkillId != attempt.ActiveSkillId.Value)
+                || (q.Group.UnitNumber != attempt.ActiveUnitNumber)
+                || (string.Equals(q.Section.NavigationMode, "HYBRID_GROUP_LOCKED", StringComparison.OrdinalIgnoreCase)
+                    && attempt.ActiveGroupId.HasValue
+                    && q.GroupId != attempt.ActiveGroupId.Value);
+
             return new NavigatorItem(
-            q.QuestionId,
-            idx + 1,
-            q.SectionId,
-            q.Section.Code,
-            EnumCodes.Parse<Modality>(q.Section.Modality),
-            q.QuestionType == QuestionType.FreeResponse.ToCode()
-                ? (!string.IsNullOrWhiteSpace(response?.ResponseText) || !string.IsNullOrWhiteSpace(response?.AudioPath))
-                : (answer?.SelectedOptionId != null || !string.IsNullOrWhiteSpace(answer?.ResponseText) || !string.IsNullOrWhiteSpace(answer?.SelectedOptionIdsJson)),
-            answer?.IsFlagged ?? false,
-            idx == targetIndex);
+                q.QuestionId,
+                idx + 1,
+                q.SectionId,
+                q.Section.Code,
+                EnumCodes.Parse<Modality>(q.Section.Modality),
+                q.QuestionType == QuestionType.FreeResponse.ToCode()
+                    ? (!string.IsNullOrWhiteSpace(response?.ResponseText) || !string.IsNullOrWhiteSpace(response?.AudioPath))
+                    : (answer?.SelectedOptionId != null || !string.IsNullOrWhiteSpace(answer?.ResponseText) || !string.IsNullOrWhiteSpace(answer?.SelectedOptionIdsJson)),
+                answer?.IsFlagged ?? false,
+                idx == targetIndex,
+                IsLocked: isLocked);
         }).ToList();
 
-        var remainingSeconds = Math.Max(0, (int)(attempt.ExpiresAt - DateTimeOffset.UtcNow).TotalSeconds);
         var phaseGroups = questions
             .GroupBy(question => question.Section.SkillId)
             .Select(group => new AttemptSkillPhaseSource(
@@ -404,7 +479,12 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
             navigator,
             attempt.IsAutoSubmitted,
             allQuestions,
-            phases);
+            phases,
+            ActiveSkillId: attempt.ActiveSkillId,
+            ActiveUnitNumber: attempt.ActiveUnitNumber,
+            ActiveGroupId: attempt.ActiveGroupId,
+            PhaseDeadlineAt: phaseDeadline,
+            IsSkillLocked: isPhaseExpired);
     }
 
     public async Task<SaveAttemptAnswerResult> SaveAnswerAsync(
@@ -444,7 +524,7 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
             throw new AttemptEngineException(AttemptEngineException.AttemptExpired, "Exam time has expired and your exam was auto-submitted.");
         }
 
-        await EnsureQuestionInActivePhaseAsync(attempt, questionId, cancellationToken);
+        await ValidateQuestionSittingStateAsync(attempt, questionId, cancellationToken);
 
         var answer = await db.AttemptAnswers
             .Include(a => a.Question)
@@ -498,7 +578,8 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
 
         await db.SaveChangesAsync(cancellationToken);
 
-        var remainingSeconds = Math.Max(0, (int)(attempt.ExpiresAt - DateTimeOffset.UtcNow).TotalSeconds);
+        var effectiveDeadline = ResolveEffectiveDeadline(attempt);
+        var remainingSeconds = Math.Max(0, (int)(effectiveDeadline - DateTimeOffset.UtcNow).TotalSeconds);
         return new SaveAttemptAnswerResult(questionId, selectedOptionId, isFlagged, remainingSeconds, attempt.IsAutoSubmitted);
     }
 
@@ -529,7 +610,7 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
             throw new AttemptEngineException(AttemptEngineException.AttemptExpired, "Exam time has expired and your exam was auto-submitted.");
         }
 
-        await EnsureQuestionInActivePhaseAsync(attempt, questionId, cancellationToken);
+        await ValidateQuestionSittingStateAsync(attempt, questionId, cancellationToken);
 
         var freeResponse = await db.FreeResponses
             .SingleOrDefaultAsync(response =>
@@ -551,53 +632,62 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
         return new SaveAttemptDraftResult(freeResponse.FreeResponseId, questionId, savedAt, words);
     }
 
-    private async Task EnsureQuestionInActivePhaseAsync(
+    private async Task ValidateQuestionSittingStateAsync(
         ExamAttempt attempt,
         int questionId,
         CancellationToken cancellationToken)
     {
-        var questionSkill = await db.Questions
-            .Where(question => question.QuestionId == questionId && question.ExamId == attempt.ExamId)
-            .Select(question => new
+        var phaseDeadline = ToUtcOffset(attempt.PhaseDeadlineAt);
+        if (phaseDeadline.HasValue && DateTimeOffset.UtcNow >= phaseDeadline.Value)
+        {
+            throw new AttemptEngineException(
+                AttemptEngineException.AttemptExpired,
+                "Exam phase time has expired.");
+        }
+
+        var question = await db.Questions
+            .Where(q => q.QuestionId == questionId && q.ExamId == attempt.ExamId)
+            .Select(q => new
             {
-                question.Section.SkillId,
-                question.Section.Skill.DisplayOrder
+                q.SkillId,
+                q.GroupId,
+                q.SectionId,
+                UnitNumber = q.Group.UnitNumber,
+                NavigationMode = q.Section.NavigationMode
             })
             .SingleOrDefaultAsync(cancellationToken)
             ?? throw new AttemptEngineException(AttemptEngineException.QuestionNotFound, $"Question {questionId} not found in attempt.");
 
-        var skillRows = await db.Questions
-            .Where(question => question.ExamId == attempt.ExamId)
-            .Select(question => new
-            {
-                question.Section.SkillId,
-                question.Section.Skill.Code,
-                question.Section.Skill.Name,
-                question.Section.Skill.DisplayOrder,
-                question.Section.Skill.DurationMinutes
-            })
-            .Distinct()
-            .OrderBy(skill => skill.DisplayOrder)
-            .ToListAsync(cancellationToken);
-        var skills = skillRows
-            .Select(skill => new AttemptSkillPhaseSource(
-                skill.SkillId,
-                skill.Code,
-                skill.Name,
-                skill.DisplayOrder,
-                skill.DurationMinutes))
-            .ToList();
-        var phases = BuildAttemptPhases(
-            skills,
-            Math.Max(1, (int)(attempt.ExpiresAt - attempt.StartedAt).TotalSeconds));
-        var elapsedSeconds = Math.Max(0, (int)(DateTimeOffset.UtcNow - attempt.StartedAt).TotalSeconds);
-        var activePhase = phases.LastOrDefault(phase => elapsedSeconds >= phase.StartOffsetSeconds);
-        if (activePhase is null || elapsedSeconds >= activePhase.StartOffsetSeconds + activePhase.DurationSeconds ||
-            activePhase.SkillId != questionSkill.SkillId)
+        if (attempt.ActiveSkillId.HasValue && question.SkillId != attempt.ActiveSkillId.Value)
         {
-            throw new AttemptEngineException(AttemptEngineException.WrongPhase, "This question is not available in the current exam phase.");
+            throw new AttemptEngineException(
+                AttemptEngineException.WrongPhase,
+                "This question is not in the active exam skill.");
+        }
+
+        if (question.UnitNumber != attempt.ActiveUnitNumber)
+        {
+            throw new AttemptEngineException(
+                AttemptEngineException.WrongPhase,
+                "This question belongs to a locked unit.");
+        }
+
+        if (string.Equals(question.NavigationMode, "HYBRID_GROUP_LOCKED", StringComparison.OrdinalIgnoreCase))
+        {
+            if (attempt.ActiveGroupId.HasValue && question.GroupId != attempt.ActiveGroupId.Value)
+            {
+                throw new AttemptEngineException(
+                    AttemptEngineException.WrongPhase,
+                    "This question belongs to a locked question group.");
+            }
         }
     }
+
+    private Task EnsureQuestionInActivePhaseAsync(
+        ExamAttempt attempt,
+        int questionId,
+        CancellationToken cancellationToken) =>
+        ValidateQuestionSittingStateAsync(attempt, questionId, cancellationToken);
 
     private static IReadOnlyList<AttemptPhaseInfo> BuildAttemptPhases(
         IReadOnlyList<AttemptSkillPhaseSource> skills,
@@ -1821,6 +1911,32 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
             // The candidate timer starts upon passing the preflight onboarding gate!
             attempt.StartedAt = now;
             attempt.ExpiresAt = now.AddMinutes(attempt.Exam.DurationMinutes);
+
+            var firstSkill = await db.Questions
+                .Where(q => q.ExamId == attempt.ExamId && q.Section.SkillId == attempt.ActiveSkillId)
+                .Select(q => q.Section.Skill)
+                .FirstOrDefaultAsync(cancellationToken);
+            var firstSection = await db.Questions
+                .Where(q => q.ExamId == attempt.ExamId && q.Section.SkillId == attempt.ActiveSkillId)
+                .Select(q => q.Section)
+                .FirstOrDefaultAsync(cancellationToken);
+            var firstGroup = attempt.ActiveGroupId.HasValue
+                ? await db.QuestionGroups.SingleOrDefaultAsync(g => g.GroupId == attempt.ActiveGroupId.Value, cancellationToken)
+                : null;
+
+            if (firstSection != null && string.Equals(firstSection.NavigationMode, "HYBRID_GROUP_LOCKED", StringComparison.OrdinalIgnoreCase) && firstGroup?.ResponseSeconds.HasValue == true)
+            {
+                attempt.PhaseDeadlineAt = now.UtcDateTime.AddSeconds(firstGroup.ResponseSeconds.Value);
+            }
+            else if (firstSkill?.DurationMinutes is int skillDur && skillDur > 0)
+            {
+                attempt.PhaseDeadlineAt = now.UtcDateTime.AddMinutes(skillDur);
+            }
+            else
+            {
+                attempt.PhaseDeadlineAt = attempt.ExpiresAt.UtcDateTime;
+            }
+
             await db.SaveChangesAsync(cancellationToken);
         }
 
@@ -1976,7 +2092,345 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
         attempt.LastQuestionId = questionId;
         await db.SaveChangesAsync(cancellationToken);
 
-        var remaining = Math.Max(0, (int)(attempt.ExpiresAt - DateTimeOffset.UtcNow).TotalSeconds);
+        var effectiveDeadline = ResolveEffectiveDeadline(attempt);
+        var remaining = Math.Max(0, (int)(effectiveDeadline - DateTimeOffset.UtcNow).TotalSeconds);
         return new SaveAttemptAnswerResult(questionId, null, isFlagged, remaining, attempt.IsAutoSubmitted);
+    }
+
+    public async Task<IReadOnlyList<SaveAttemptAnswerResult>> SaveBatchAnswersAsync(
+        int attemptId,
+        int userId,
+        IReadOnlyList<BatchAnswerItem> answers,
+        Func<int, int, Task>? onAutoSubmitted = null,
+        CancellationToken cancellationToken = default)
+    {
+        var attempt = await db.ExamAttempts
+            .SingleOrDefaultAsync(a => a.AttemptId == attemptId && a.UserId == userId, cancellationToken)
+            ?? throw new AttemptEngineException(AttemptEngineException.AttemptNotFound, $"Attempt {attemptId} not found.");
+
+        if (attempt.Status != AttemptStatus.InProgress.ToCode())
+        {
+            throw new AttemptEngineException(AttemptEngineException.AttemptNotActive, "Exam attempt is not in progress.");
+        }
+
+        if (attempt.PreflightVerifiedAt == null)
+        {
+            await EnsurePreflightVerifiedAsync(attempt, cancellationToken);
+        }
+
+        if (DateTimeOffset.UtcNow >= attempt.ExpiresAt)
+        {
+            await SubmitAttemptAsync(attempt.AttemptId, userId, isAutoSubmit: true, cancellationToken);
+            if (onAutoSubmitted != null)
+            {
+                await onAutoSubmitted(attempt.AttemptId, userId);
+            }
+            throw new AttemptEngineException(AttemptEngineException.AttemptExpired, "Exam time has expired and your exam was auto-submitted.");
+        }
+
+        var phaseDeadline = ToUtcOffset(attempt.PhaseDeadlineAt);
+        if (phaseDeadline.HasValue && DateTimeOffset.UtcNow >= phaseDeadline.Value)
+        {
+            throw new AttemptEngineException(AttemptEngineException.AttemptExpired, "Exam phase time has expired.");
+        }
+
+        var results = new List<SaveAttemptAnswerResult>(answers.Count);
+        foreach (var item in answers)
+        {
+            var res = await SaveAnswerAsync(
+                attemptId,
+                userId,
+                item.QuestionId,
+                item.SelectedOptionId,
+                item.IsFlagged,
+                onAutoSubmitted,
+                cancellationToken,
+                item.ResponseText,
+                item.SelectedOptionIdsJson);
+            results.Add(res);
+        }
+
+        return results;
+    }
+
+    public async Task<AttemptTransitionResult> TransitionToNextSkillAsync(
+        int attemptId,
+        int? userId = null,
+        CancellationToken cancellationToken = default)
+    {
+        var attempt = await db.ExamAttempts
+            .Include(a => a.Exam)
+            .SingleOrDefaultAsync(a => a.AttemptId == attemptId && (userId == null || a.UserId == userId), cancellationToken)
+            ?? throw new AttemptEngineException(AttemptEngineException.AttemptNotFound, $"Attempt {attemptId} not found.");
+
+        if (attempt.Status != AttemptStatus.InProgress.ToCode())
+        {
+            throw new AttemptEngineException(AttemptEngineException.AttemptNotActive, "Exam attempt is not in progress.");
+        }
+
+        var examSkills = await db.Questions
+            .Where(q => q.ExamId == attempt.ExamId)
+            .Select(q => q.Section.Skill)
+            .Distinct()
+            .OrderBy(s => s.DisplayOrder)
+            .ToListAsync(cancellationToken);
+
+        int currentIndex = -1;
+        if (attempt.ActiveSkillId.HasValue)
+        {
+            currentIndex = examSkills.FindIndex(s => s.SkillId == attempt.ActiveSkillId.Value);
+        }
+
+        int nextIndex = currentIndex + 1;
+        if (nextIndex >= examSkills.Count)
+        {
+            var grading = await SubmitAttemptAsync(attempt.AttemptId, attempt.UserId, isAutoSubmit: false, cancellationToken);
+            return new AttemptTransitionResult(
+                attempt.AttemptId,
+                attempt.ActiveSkillId,
+                attempt.ActiveUnitNumber,
+                attempt.ActiveGroupId,
+                ToUtcOffset(attempt.PhaseDeadlineAt),
+                0,
+                EnumCodes.Parse<AttemptStatus>(grading.Attempt.Status));
+        }
+
+        var nextSkill = examSkills[nextIndex];
+        attempt.ActiveSkillId = nextSkill.SkillId;
+        attempt.ActiveUnitNumber = 1;
+
+        var firstSectionAndGroup = await db.Questions
+            .Where(q => q.ExamId == attempt.ExamId && q.Section.SkillId == nextSkill.SkillId)
+            .OrderBy(q => q.Section.DisplayOrder)
+            .ThenBy(q => q.Group.DisplayOrder)
+            .ThenBy(q => q.DisplayOrder)
+            .Select(q => new
+            {
+                q.Section,
+                q.Group,
+                q.QuestionId
+            })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (firstSectionAndGroup != null && string.Equals(firstSectionAndGroup.Section.NavigationMode, "HYBRID_GROUP_LOCKED", StringComparison.OrdinalIgnoreCase))
+        {
+            attempt.ActiveGroupId = firstSectionAndGroup.Group.GroupId;
+        }
+        else
+        {
+            attempt.ActiveGroupId = null;
+        }
+
+        var now = DateTimeOffset.UtcNow;
+        if (firstSectionAndGroup != null && string.Equals(firstSectionAndGroup.Section.NavigationMode, "HYBRID_GROUP_LOCKED", StringComparison.OrdinalIgnoreCase) && firstSectionAndGroup.Group.ResponseSeconds.HasValue)
+        {
+            attempt.PhaseDeadlineAt = now.UtcDateTime.AddSeconds(firstSectionAndGroup.Group.ResponseSeconds.Value);
+        }
+        else if (nextSkill.DurationMinutes is int dur && dur > 0)
+        {
+            attempt.PhaseDeadlineAt = now.UtcDateTime.AddMinutes(dur);
+        }
+        else
+        {
+            attempt.PhaseDeadlineAt = attempt.ExpiresAt.UtcDateTime;
+        }
+
+        if (firstSectionAndGroup != null)
+        {
+            attempt.LastQuestionId = firstSectionAndGroup.QuestionId;
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+
+        var effectiveDeadline = ResolveEffectiveDeadline(attempt);
+        var remainingSeconds = Math.Max(0, (int)(effectiveDeadline - now).TotalSeconds);
+
+        return new AttemptTransitionResult(
+            attempt.AttemptId,
+            attempt.ActiveSkillId,
+            attempt.ActiveUnitNumber,
+            attempt.ActiveGroupId,
+            ToUtcOffset(attempt.PhaseDeadlineAt),
+            remainingSeconds,
+            EnumCodes.Parse<AttemptStatus>(attempt.Status));
+    }
+
+    public async Task<AttemptTransitionResult> TransitionUnitAsync(
+        int attemptId,
+        int targetUnitNumber,
+        int? userId = null,
+        CancellationToken cancellationToken = default)
+    {
+        var attempt = await db.ExamAttempts
+            .SingleOrDefaultAsync(a => a.AttemptId == attemptId && (userId == null || a.UserId == userId), cancellationToken)
+            ?? throw new AttemptEngineException(AttemptEngineException.AttemptNotFound, $"Attempt {attemptId} not found.");
+
+        if (attempt.Status != AttemptStatus.InProgress.ToCode())
+        {
+            throw new AttemptEngineException(AttemptEngineException.AttemptNotActive, "Exam attempt is not in progress.");
+        }
+
+        if (targetUnitNumber <= attempt.ActiveUnitNumber)
+        {
+            throw new AttemptEngineException(AttemptEngineException.WrongPhase, "Cannot navigate back to a locked unit.");
+        }
+
+        attempt.ActiveUnitNumber = targetUnitNumber;
+
+        var firstUnitQuestionId = await db.Questions
+            .Where(q => q.ExamId == attempt.ExamId && q.Section.SkillId == attempt.ActiveSkillId && q.Group.UnitNumber == targetUnitNumber)
+            .OrderBy(q => q.Section.DisplayOrder)
+            .ThenBy(q => q.Group.DisplayOrder)
+            .ThenBy(q => q.DisplayOrder)
+            .Select(q => (int?)q.QuestionId)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (firstUnitQuestionId.HasValue)
+        {
+            attempt.LastQuestionId = firstUnitQuestionId.Value;
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+
+        var effectiveDeadline = ResolveEffectiveDeadline(attempt);
+        var remainingSeconds = Math.Max(0, (int)(effectiveDeadline - DateTimeOffset.UtcNow).TotalSeconds);
+
+        return new AttemptTransitionResult(
+            attempt.AttemptId,
+            attempt.ActiveSkillId,
+            attempt.ActiveUnitNumber,
+            attempt.ActiveGroupId,
+            ToUtcOffset(attempt.PhaseDeadlineAt),
+            remainingSeconds,
+            EnumCodes.Parse<AttemptStatus>(attempt.Status));
+    }
+
+    public async Task<AttemptTransitionResult> TransitionGroupAsync(
+        int attemptId,
+        int targetGroupId,
+        int? userId = null,
+        CancellationToken cancellationToken = default)
+    {
+        var attempt = await db.ExamAttempts
+            .SingleOrDefaultAsync(a => a.AttemptId == attemptId && (userId == null || a.UserId == userId), cancellationToken)
+            ?? throw new AttemptEngineException(AttemptEngineException.AttemptNotFound, $"Attempt {attemptId} not found.");
+
+        if (attempt.Status != AttemptStatus.InProgress.ToCode())
+        {
+            throw new AttemptEngineException(AttemptEngineException.AttemptNotActive, "Exam attempt is not in progress.");
+        }
+
+        var targetGroup = await db.QuestionGroups
+            .Include(g => g.Section)
+            .SingleOrDefaultAsync(g => g.GroupId == targetGroupId && g.ExamId == attempt.ExamId, cancellationToken)
+            ?? throw new AttemptEngineException(AttemptEngineException.QuestionNotFound, $"Question group {targetGroupId} not found.");
+
+        if (attempt.ActiveSkillId.HasValue && targetGroup.Section.SkillId != attempt.ActiveSkillId.Value)
+        {
+            throw new AttemptEngineException(AttemptEngineException.WrongPhase, "Target group belongs to a different skill.");
+        }
+
+        attempt.ActiveGroupId = targetGroupId;
+
+        int subTimerSeconds = targetGroup.ResponseSeconds
+            ?? await db.Questions.Where(q => q.GroupId == targetGroupId && q.ResponseSeconds.HasValue).Select(q => q.ResponseSeconds!.Value).FirstOrDefaultAsync(cancellationToken);
+        if (subTimerSeconds <= 0)
+        {
+            subTimerSeconds = 600;
+        }
+
+        attempt.PhaseDeadlineAt = DateTimeOffset.UtcNow.UtcDateTime.AddSeconds(subTimerSeconds);
+
+        var firstGroupQuestionId = await db.Questions
+            .Where(q => q.GroupId == targetGroupId)
+            .OrderBy(q => q.DisplayOrder)
+            .Select(q => (int?)q.QuestionId)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (firstGroupQuestionId.HasValue)
+        {
+            attempt.LastQuestionId = firstGroupQuestionId.Value;
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+
+        var effectiveDeadline = ResolveEffectiveDeadline(attempt);
+        var remainingSeconds = Math.Max(0, (int)(effectiveDeadline - DateTimeOffset.UtcNow).TotalSeconds);
+
+        return new AttemptTransitionResult(
+            attempt.AttemptId,
+            attempt.ActiveSkillId,
+            attempt.ActiveUnitNumber,
+            attempt.ActiveGroupId,
+            ToUtcOffset(attempt.PhaseDeadlineAt),
+            remainingSeconds,
+            EnumCodes.Parse<AttemptStatus>(attempt.Status));
+    }
+
+    public async Task<AttemptTransitionResult> CompleteAudioAndStartReviewAsync(
+        int attemptId,
+        int? userId = null,
+        CancellationToken cancellationToken = default)
+    {
+        var attempt = await db.ExamAttempts
+            .SingleOrDefaultAsync(a => a.AttemptId == attemptId && (userId == null || a.UserId == userId), cancellationToken)
+            ?? throw new AttemptEngineException(AttemptEngineException.AttemptNotFound, $"Attempt {attemptId} not found.");
+
+        if (attempt.Status != AttemptStatus.InProgress.ToCode())
+        {
+            throw new AttemptEngineException(AttemptEngineException.AttemptNotActive, "Exam attempt is not in progress.");
+        }
+
+        var section = await db.Questions
+            .Where(q => q.ExamId == attempt.ExamId && (attempt.ActiveSkillId == null || q.Section.SkillId == attempt.ActiveSkillId.Value))
+            .Select(q => q.Section)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        int checkTimeSec = 120;
+        if (section?.TimerPolicyJson != null)
+        {
+            try
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(section.TimerPolicyJson);
+                if (doc.RootElement.TryGetProperty("reviewSeconds", out var revProp) && revProp.TryGetInt32(out var rev))
+                {
+                    checkTimeSec = rev;
+                }
+                else if (doc.RootElement.TryGetProperty("checkTimeSec", out var chkProp) && chkProp.TryGetInt32(out var chk))
+                {
+                    checkTimeSec = chk;
+                }
+            }
+            catch
+            {
+                // fallback to default
+            }
+        }
+
+        attempt.PhaseDeadlineAt = DateTimeOffset.UtcNow.UtcDateTime.AddSeconds(checkTimeSec);
+        await db.SaveChangesAsync(cancellationToken);
+
+        var effectiveDeadline = ResolveEffectiveDeadline(attempt);
+        var remainingSeconds = Math.Max(0, (int)(effectiveDeadline - DateTimeOffset.UtcNow).TotalSeconds);
+
+        return new AttemptTransitionResult(
+            attempt.AttemptId,
+            attempt.ActiveSkillId,
+            attempt.ActiveUnitNumber,
+            attempt.ActiveGroupId,
+            ToUtcOffset(attempt.PhaseDeadlineAt),
+            remainingSeconds,
+            EnumCodes.Parse<AttemptStatus>(attempt.Status));
+    }
+
+    private static DateTimeOffset? ToUtcOffset(DateTime? dt) =>
+        dt.HasValue ? new DateTimeOffset(DateTime.SpecifyKind(dt.Value, DateTimeKind.Utc), TimeSpan.Zero) : null;
+
+    private static DateTimeOffset ResolveEffectiveDeadline(ExamAttempt attempt)
+    {
+        var phaseDeadline = ToUtcOffset(attempt.PhaseDeadlineAt);
+        return phaseDeadline.HasValue && phaseDeadline.Value < attempt.ExpiresAt
+            ? phaseDeadline.Value
+            : attempt.ExpiresAt;
     }
 }
