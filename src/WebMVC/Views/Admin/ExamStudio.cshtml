@@ -528,7 +528,7 @@
       var isFirstSec = sec == firstSection;
       var isComplete = sec.ExpectedQuestionCount.HasValue && sec.CurrentQuestionCount == sec.ExpectedQuestionCount.Value;
       var hasOver = sec.ExpectedQuestionCount.HasValue && sec.CurrentQuestionCount > sec.ExpectedQuestionCount.Value;
-      var indicator = isComplete ? "✓" : (hasOver ? "!" : "");
+      var indicator = isComplete ? "[ĐỦ]" : (hasOver ? "!" : "");
 
       <button type="button" class="studio-section-tab @(isFirstSec ? "is-active" : "")" id="tab-sec-@sec.SectionId" data-section-id="@sec.SectionId" data-skill-key="@skillKey" onclick="selectSection(@sec.SectionId)" style="@(skillKey == firstSkillKey ? "" : "display: none;")">
         <span>[@sec.Code] @sec.Name</span>

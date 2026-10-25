@@ -478,7 +478,8 @@ public sealed class AttemptEngine(CompanionDbContext db, IFileStore? fileStore =
                 q.Section.ClusterSize > 0 ? q.Section.ClusterSize : 1,
                 q.Section.RequireImage,
                 q.Group.UnitNumber,
-                q.GroupId));
+                q.GroupId,
+                q.Section.TimerPolicyJson));
         }
 
         var currentQuestionInfo = totalQuestions > 0 ? allQuestions[targetIndex] : new AttemptQuestionInfo(

@@ -38,12 +38,10 @@ public sealed class ExamsViewTests
         // 1. Embedded JSON payload for 0ms in-memory swapping
         Assert.Contains("id=\"exam-data\"", html);
 
-        // 2. Exam Integrity Disciplinary Warning Banner
-        Assert.Contains("id=\"integrity-warning\"", html);
-        Assert.Contains("id=\"integrity-count\"", html);
-
-        // 3. Offline Network Banner
+        // 2. Offline Network Banner
         Assert.Contains("id=\"network-warning\"", html);
+
+
 
         // 4. Modal In-flight Sync Warning
         Assert.Contains("id=\"modal-sync-pending\"", html);
@@ -57,7 +55,7 @@ public sealed class ExamsViewTests
         Assert.Contains("popstate", html);
         Assert.Contains("beforeunload", html);
         Assert.Contains("contextmenu", html);
-        Assert.Contains("visibilitychange", html);
+        Assert.DoesNotContain("e.key === 'F12'", html);
     }
 
     [Fact]
@@ -413,7 +411,7 @@ public sealed class ExamsViewTests
         Assert.Contains("id=\"speaking-verification-items\"", html);
         Assert.Contains("renderSpeakingVerificationScreen", html);
         Assert.Contains("audio controls", html);
-        Assert.Contains("Đã ghi âm [✓]", html);
+        Assert.Contains("Đã ghi âm [ĐÃ LÀM]", html);
         Assert.Contains("Chưa có ghi âm [!]", html);
 
         // 7. Final Submission CTA

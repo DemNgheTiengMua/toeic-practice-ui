@@ -95,6 +95,7 @@ public sealed class AdminCertificatesController(
     }
 
     [HttpPost("/admin/certificates/score-preview")]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> ScorePreview([FromBody] ScorePreviewRequestDto request, CancellationToken cancellationToken)
     {
         if (scoreConversionClient is null)

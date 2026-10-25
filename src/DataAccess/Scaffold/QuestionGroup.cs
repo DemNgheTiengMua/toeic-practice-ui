@@ -10,6 +10,7 @@ namespace DataAccess.Scaffold;
 [Index("SectionId", Name = "IX_QGroups_Section")]
 [Index("GroupId", "ExamId", Name = "UQ_QGroups_Id_Exam", IsUnique = true)]
 [Index("GroupId", "SectionId", Name = "UQ_QGroups_Id_Section", IsUnique = true)]
+[Index("GroupId", "CertId", Name = "UQ_QGroups_Id_Cert", IsUnique = true)]
 public partial class QuestionGroup
 {
     [Key]
