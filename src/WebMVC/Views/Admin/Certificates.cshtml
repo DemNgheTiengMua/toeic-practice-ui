@@ -1,0 +1,101 @@
+@model WebMVC.Models.AdminCertificateListViewModel
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Certificates";
+}
+
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+  <a href="/admin" class="breadcrumbs__item">Admin</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <span class="breadcrumbs__item" aria-current="page">Certificates</span>
+</nav>
+
+<div class="row row--between" style="align-items: center; margin-bottom: 1rem;">
+  <div>
+    <h1 class="no-margin" style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; letter-spacing: 0.05em;">Certificates &amp; Blueprints</h1>
+    <p class="text-sm text-muted no-margin" style="margin-top: 0.25rem;">Standardized testing certificates, 6-axis sitting rules, and authoring blueprint configurations.</p>
+  </div>
+  <div>
+    <a class="btn btn--primary" href="/admin/certificates/wizard" style="border-radius: 0; font-family: var(--font-condensed, sans-serif); text-transform: uppercase;">
+      + New Certificate Wizard
+    </a>
+  </div>
+</div>
+
+@if (Model.Certificates.Count == 0)
+{
+  <div class="card" style="border: 2px solid var(--color-ink, #14181d); border-radius: 0; box-shadow: none;">
+    <div class="card__body">
+      <div class="state-block" style="text-align: center; padding: 3rem 1rem;">
+        <h3 style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase;">No certificates found</h3>
+        <p class="text-muted">Launch the wizard to configure your first standardized or custom certificate.</p>
+        <a href="/admin/certificates/wizard" class="btn btn--primary" style="border-radius: 0; margin-top: 1rem;">Launch Certificate Wizard</a>
+      </div>
+    </div>
+  </div>
+}
+else
+{
+  <div class="card" style="border: 2px solid var(--color-ink, #14181d); border-radius: 0; box-shadow: none; overflow: hidden;">
+    <table class="table" style="width: 100%; border-collapse: collapse; font-family: var(--font-sans, sans-serif);">
+      <thead>
+        <tr style="background: var(--color-ink, #14181d); color: #fff; font-family: var(--font-condensed, sans-serif); text-transform: uppercase; letter-spacing: 0.04em;">
+          <th style="padding: 0.75rem 1rem; text-align: left;">Code</th>
+          <th style="padding: 0.75rem 1rem; text-align: left;">Certificate Name</th>
+          <th style="padding: 0.75rem 1rem; text-align: left;">Blueprint Preset</th>
+          <th style="padding: 0.75rem 1rem; text-align: left;">Score Rule</th>
+          <th style="padding: 0.75rem 1rem; text-align: center;">Structure</th>
+          <th style="padding: 0.75rem 1rem; text-align: center;">Exams</th>
+          <th style="padding: 0.75rem 1rem; text-align: center;">Status</th>
+          <th style="padding: 0.75rem 1rem; text-align: right;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        @foreach (var c in Model.Certificates)
+        {
+          <tr style="border-bottom: 1px solid var(--color-border, #ccd2d6);">
+            <td style="padding: 0.75rem 1rem; font-family: var(--font-mono, monospace); font-weight: 700;">
+              @c.Code
+            </td>
+            <td style="padding: 0.75rem 1rem;">
+              <strong style="display: block;">@c.Name</strong>
+              @if (!string.IsNullOrEmpty(c.Description))
+              {
+                <span class="text-sm text-muted" style="display: block; max-width: 420px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">@c.Description</span>
+              }
+            </td>
+            <td style="padding: 0.75rem 1rem;">
+              <span class="badge" style="border: 1px solid var(--color-ink, #14181d); border-radius: 0; font-family: var(--font-mono, monospace); font-size: 0.8rem; background: #fff; color: var(--color-ink, #14181d);">
+                @(c.PresetCode ?? "custom")
+              </span>
+            </td>
+            <td style="padding: 0.75rem 1rem; font-family: var(--font-mono, monospace); font-size: 0.85rem;">
+              @c.ScoreAggregationRule
+            </td>
+            <td style="padding: 0.75rem 1rem; text-align: center; font-family: var(--font-mono, monospace);">
+              <span>@c.SkillsCount skills</span> / <span>@c.SectionsCount sections</span>
+            </td>
+            <td style="padding: 0.75rem 1rem; text-align: center; font-family: var(--font-mono, monospace);">
+              @c.ExamsCount
+            </td>
+            <td style="padding: 0.75rem 1rem; text-align: center;">
+              @if (c.IsActive)
+              {
+                <span class="badge" style="background: #0a6b3c; color: #fff; border-radius: 0; font-family: var(--font-condensed, sans-serif); text-transform: uppercase;">Active</span>
+              }
+              else
+              {
+                <span class="badge" style="background: #ccd2d6; color: #14181d; border-radius: 0; font-family: var(--font-condensed, sans-serif); text-transform: uppercase;">Inactive</span>
+              }
+            </td>
+            <td style="padding: 0.75rem 1rem; text-align: right;">
+              <a href="/admin/certificates/wizard?certId=@c.CertId" class="btn btn--sm" style="border-radius: 0; border: 1px solid var(--color-ink, #14181d);">
+                Edit Blueprint ›
+              </a>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+}

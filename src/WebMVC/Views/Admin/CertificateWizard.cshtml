@@ -1,0 +1,592 @@
+@model WebMVC.Models.CertificateWizardViewModel
+@{
+    Layout = "_AdminLayout";
+    var isEdit = Model.CertId.HasValue && Model.CertId.Value > 0;
+    ViewData["Title"] = isEdit ? $"Edit Certificate: {Model.Name}" : "Certificate Blueprint Wizard";
+}
+
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+  <a href="/admin" class="breadcrumbs__item">Admin</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <a href="/admin/certificates" class="breadcrumbs__item">Certificates</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <span class="breadcrumbs__item" aria-current="page">@(isEdit ? "Edit Certificate" : "Certificate Wizard")</span>
+</nav>
+
+<div class="row row--between row--wrap" style="align-items: center; margin-bottom: 1rem; gap: 0.5rem;">
+  <div>
+    <h1 class="no-margin" style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; letter-spacing: 0.05em;">
+      @(isEdit ? $"Edit: {Model.Name}" : "Certificate Blueprint Wizard")
+    </h1>
+    <p class="text-sm text-muted no-margin" style="margin-top: 0.25rem;">Configure the 6 rule axes, timing policies, sitting mechanics, and section authoring blueprints.</p>
+  </div>
+  @if (isEdit)
+  {
+    <span class="badge" style="background: var(--color-ink, #14181d); color: #fff; border-radius: 0; font-family: var(--font-mono, monospace);">
+      ID: @Model.CertId
+    </span>
+  }
+</div>
+
+<!-- Stepper Navigation -->
+<div class="stepper" style="display: flex; gap: 2px; margin-bottom: 1.5rem; background: var(--color-border, #ccd2d6); border: 2px solid var(--color-ink, #14181d);">
+  <button type="button" class="stepper__item @(Model.Step == 1 ? "is-current" : Model.Step > 1 ? "is-done" : "")" onclick="goToStep(1)" style="flex: 1; text-align: left; padding: 0.75rem 1rem; border: none; cursor: pointer; border-radius: 0; font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-weight: 700; background: @(Model.Step == 1 ? "var(--color-ink, #14181d)" : "#fff"); color: @(Model.Step == 1 ? "#fff" : "var(--color-ink, #14181d)");">
+    1. Starting Blueprint Preset
+  </button>
+  <button type="button" class="stepper__item @(Model.Step == 2 ? "is-current" : Model.Step > 2 ? "is-done" : "")" onclick="goToStep(2)" style="flex: 1; text-align: left; padding: 0.75rem 1rem; border: none; cursor: pointer; border-radius: 0; font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-weight: 700; background: @(Model.Step == 2 ? "var(--color-ink, #14181d)" : "#fff"); color: @(Model.Step == 2 ? "#fff" : "var(--color-ink, #14181d)");">
+    2. Skills &amp; Timing Policies
+  </button>
+  <button type="button" class="stepper__item @(Model.Step == 3 ? "is-current" : "")" onclick="goToStep(3)" style="flex: 1; text-align: left; padding: 0.75rem 1rem; border: none; cursor: pointer; border-radius: 0; font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-weight: 700; background: @(Model.Step == 3 ? "var(--color-ink, #14181d)" : "#fff"); color: @(Model.Step == 3 ? "#fff" : "var(--color-ink, #14181d)");">
+    3. Section Blueprint &amp; Tools
+  </button>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+  <div class="alert alert--danger" style="border: 2px solid #b31217; border-radius: 0; box-shadow: none; margin-bottom: 1.5rem; background: #fff; color: #b31217; font-weight: 600;">
+    <strong>Error:</strong> @Model.ErrorMessage
+  </div>
+}
+
+<form id="wizardForm" method="post" action="/admin/certificates/wizard">
+  @Html.AntiForgeryToken()
+  <input type="hidden" id="certId" name="CertId" value="@Model.CertId" />
+  <input type="hidden" id="presetCode" name="PresetCode" value="@Model.PresetCode" />
+  <input type="hidden" id="currentStep" name="Step" value="@Model.Step" />
+
+  <!-- ==================== STEP 1: PRESET SELECTION ==================== -->
+  <div id="step-1" class="wizard-step" style="display: @(Model.Step == 1 ? "block" : "none");">
+    <div class="card" style="border: 2px solid var(--color-ink, #14181d); border-radius: 0; box-shadow: none; margin-bottom: 1.5rem;">
+      <div class="card__header" style="background: var(--color-ink, #14181d); color: #fff; padding: 0.75rem 1rem; font-family: var(--font-condensed, sans-serif); text-transform: uppercase;">
+        <strong>Step 1: Select an Official Blueprint Preset</strong>
+      </div>
+      <div class="card__body" style="padding: 1.25rem;">
+        <p class="text-sm text-muted" style="margin-top: 0; margin-bottom: 1rem;">
+          Selecting a preset pre-configures 100% of skills, sections, expected item counts, allowed question components, timing policies, screen layouts, and candidate tools.
+        </p>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+          @foreach (var preset in Model.Presets)
+          {
+            var isSelected = string.Equals(Model.PresetCode, preset.PresetCode, StringComparison.OrdinalIgnoreCase);
+            <div class="preset-card @(isSelected ? "is-selected" : "")" onclick="selectPreset('@preset.PresetCode')" style="border: 2px solid var(--color-ink, #14181d); padding: 1rem; cursor: pointer; background: @(isSelected ? "var(--color-ink, #14181d)" : "#fff"); color: @(isSelected ? "#fff" : "var(--color-ink, #14181d)"); display: flex; flex-direction: column; justify-content: space-between;">
+              <div>
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+                  <strong style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 1.1rem;">@preset.Name</strong>
+                  <span class="badge" style="border: 1px solid @(isSelected ? "#fff" : "var(--color-ink, #14181d)"); border-radius: 0; font-family: var(--font-mono, monospace); font-size: 0.75rem; background: @(isSelected ? "#fff" : "transparent"); color: @(isSelected ? "var(--color-ink, #14181d)" : "inherit");">
+                    @preset.PresetCode
+                  </span>
+                </div>
+                <p style="font-size: 0.85rem; line-height: 1.4; margin: 0 0 0.75rem 0; opacity: 0.9;">
+                  @preset.Description
+                </p>
+              </div>
+              <div style="font-family: var(--font-mono, monospace); font-size: 0.8rem; border-top: 1px solid @(isSelected ? "#fff" : "var(--color-border, #ccd2d6)"); padding-top: 0.5rem;">
+                <span>Rule: <strong>@preset.ScoreAggregationRule</strong></span> &bull; 
+                <span>Skills: <strong>@preset.Skills.Count</strong></span>
+              </div>
+            </div>
+          }
+        </div>
+
+        <!-- Certificate Identity Fields -->
+        <div style="border-top: 2px solid var(--color-border, #ccd2d6); padding-top: 1.25rem;">
+          <h3 style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; margin-top: 0;">Certificate Identity</h3>
+          
+          <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1rem; margin-bottom: 1rem;">
+            <div class="field">
+              <label class="field__label" for="certCode" style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase;">Certificate Code *</label>
+              <input class="field__input" id="certCode" name="Code" value="@Model.Code" required maxlength="20" style="border: 2px solid var(--color-ink, #14181d); border-radius: 0; font-family: var(--font-mono, monospace); font-weight: 700;" placeholder="e.g. IELTS, TOEIC">
+              <span class="field__hint">Short unique identifier (alphanumeric).</span>
+            </div>
+
+            <div class="field">
+              <label class="field__label" for="certName" style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase;">Certificate Name *</label>
+              <input class="field__input" id="certName" name="Name" value="@Model.Name" required maxlength="120" style="border: 2px solid var(--color-ink, #14181d); border-radius: 0;" placeholder="e.g. IELTS Academic &amp; General">
+              <span class="field__hint">Official name displayed to candidates and instructors.</span>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+            <div class="field">
+              <label class="field__label" for="certDesc" style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase;">Description</label>
+              <input class="field__input" id="certDesc" name="Description" value="@Model.Description" style="border: 2px solid var(--color-ink, #14181d); border-radius: 0;" placeholder="Brief summary of certificate purpose and scope.">
+            </div>
+
+            <div class="field">
+              <label class="field__label" for="scoreRule" style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase;">Score Aggregation Rule *</label>
+              <select class="field__input" id="scoreRule" name="ScoreAggregationRule" required style="border: 2px solid var(--color-ink, #14181d); border-radius: 0; font-family: var(--font-mono, monospace);">
+                <option value="sum" selected="@(Model.ScoreAggregationRule == "sum")">sum (TOEIC standard sum 10–990)</option>
+                <option value="avg_half_step" selected="@(Model.ScoreAggregationRule == "avg_half_step")">avg_half_step (IELTS 0.5-step band)</option>
+                <option value="avg_whole" selected="@(Model.ScoreAggregationRule == "avg_whole")">avg_whole (VSTEP whole band 0–10)</option>
+                <option value="independent" selected="@(Model.ScoreAggregationRule == "independent")">independent (Distinct skill scores)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field" style="margin-top: 0.5rem;">
+            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+              <input type="checkbox" id="isActive" name="IsActive" value="true" checked="@(Model.IsActive)" style="width: 1.25rem; height: 1.25rem; accent-color: var(--color-ink, #14181d);">
+              <span style="font-weight: 600;">Active Certificate (Available in candidate test-taking rooms and authoring studio)</span>
+            </label>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; margin-top: 1.5rem;">
+          <button type="button" class="btn btn--primary" onclick="goToStep(2)" style="border-radius: 0; font-family: var(--font-condensed, sans-serif); text-transform: uppercase; padding: 0.6rem 1.5rem;">
+            Continue to Step 2: Skills &amp; Timing ›
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== STEP 2: SKILLS & TIMING ==================== -->
+  <div id="step-2" class="wizard-step" style="display: @(Model.Step == 2 ? "block" : "none");">
+    <div class="card" style="border: 2px solid var(--color-ink, #14181d); border-radius: 0; box-shadow: none; margin-bottom: 1.5rem;">
+      <div class="card__header" style="background: var(--color-ink, #14181d); color: #fff; padding: 0.75rem 1rem; font-family: var(--font-condensed, sans-serif); text-transform: uppercase; display: flex; justify-content: space-between; align-items: center;">
+        <strong>Step 2: Structure Skills &amp; Timing Policies</strong>
+        <button type="button" class="btn btn--sm" onclick="addSkill()" style="background: #fff; color: var(--color-ink, #14181d); border: none; border-radius: 0; font-family: var(--font-condensed, sans-serif); text-transform: uppercase;">
+          + Add Skill
+        </button>
+      </div>
+      <div class="card__body" style="padding: 1.25rem;">
+        <p class="text-sm text-muted" style="margin-top: 0; margin-bottom: 1.25rem;">
+          Configure macro-skill sequence, durations, and timing policies. Candidates complete skills in the defined order during full-length sittings.
+        </p>
+
+        <div id="skillsContainer" style="display: flex; flex-direction: column; gap: 1rem;">
+          @for (var sIdx = 0; sIdx < Model.Skills.Count; sIdx++)
+          {
+            var skill = Model.Skills[sIdx];
+            <div class="skill-card" data-skill-idx="@sIdx" style="border: 2px solid var(--color-ink, #14181d); padding: 1rem; background: #fafafa;">
+              <input type="hidden" name="Skills[@sIdx].SkillId" value="@skill.SkillId" />
+              <input type="hidden" name="Skills[@sIdx].DisplayOrder" value="@(skill.DisplayOrder > 0 ? skill.DisplayOrder : sIdx + 1)" />
+
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                <span class="badge" style="background: var(--color-ink, #14181d); color: #fff; border-radius: 0; font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 0.85rem; padding: 0.25rem 0.5rem;">
+                  Skill #@(sIdx + 1)
+                </span>
+                <button type="button" class="btn btn--sm btn--danger" onclick="removeSkill(@sIdx)" style="border-radius: 0; padding: 0.2rem 0.5rem;">Remove</button>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 2fr 1.5fr 1fr; gap: 0.75rem;">
+                <div class="field">
+                  <label class="field__label" style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 0.8rem;">Skill Code</label>
+                  <input class="field__input" name="Skills[@sIdx].Code" value="@skill.Code" required maxlength="20" style="border: 2px solid var(--color-ink, #14181d); border-radius: 0; font-family: var(--font-mono, monospace);">
+                </div>
+                <div class="field">
+                  <label class="field__label" style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 0.8rem;">Skill Name</label>
+                  <input class="field__input" name="Skills[@sIdx].Name" value="@skill.Name" required maxlength="120" style="border: 2px solid var(--color-ink, #14181d); border-radius: 0;">
+                </div>
+                <div class="field">
+                  <label class="field__label" style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 0.8rem;">Modality</label>
+                  <select class="field__input" name="Skills[@sIdx].Modality" style="border: 2px solid var(--color-ink, #14181d); border-radius: 0; font-family: var(--font-mono, monospace);">
+                    <option value="Listening" selected="@(skill.Modality == Contracts.ModalityDto.Listening)">Listening</option>
+                    <option value="Reading" selected="@(skill.Modality == Contracts.ModalityDto.Reading)">Reading</option>
+                    <option value="Writing" selected="@(skill.Modality == Contracts.ModalityDto.Writing)">Writing</option>
+                    <option value="Speaking" selected="@(skill.Modality == Contracts.ModalityDto.Speaking)">Speaking</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label class="field__label" style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 0.8rem;">Duration (Min)</label>
+                  <input class="field__input" type="number" name="Skills[@sIdx].DurationMinutes" value="@skill.DurationMinutes" min="1" max="300" style="border: 2px solid var(--color-ink, #14181d); border-radius: 0; font-family: var(--font-mono, monospace);">
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+
+        <div style="display: flex; justify-content: space-between; margin-top: 1.5rem;">
+          <button type="button" class="btn" onclick="goToStep(1)" style="border-radius: 0; font-family: var(--font-condensed, sans-serif); text-transform: uppercase;">
+            ‹ Back to Step 1
+          </button>
+          <button type="button" class="btn btn--primary" onclick="goToStep(3)" style="border-radius: 0; font-family: var(--font-condensed, sans-serif); text-transform: uppercase; padding: 0.6rem 1.5rem;">
+            Continue to Step 3: Section Blueprints ›
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== STEP 3: SECTION BLUEPRINTS & TOOLS ==================== -->
+  <div id="step-3" class="wizard-step" style="display: @(Model.Step == 3 ? "block" : "none");">
+    <div class="card" style="border: 2px solid var(--color-ink, #14181d); border-radius: 0; box-shadow: none; margin-bottom: 1.5rem;">
+      <div class="card__header" style="background: var(--color-ink, #14181d); color: #fff; padding: 0.75rem 1rem; font-family: var(--font-condensed, sans-serif); text-transform: uppercase;">
+        <strong>Step 3: Section Behavior, Screen Layout, Authoring Slots &amp; Tools</strong>
+      </div>
+      <div class="card__body" style="padding: 1.25rem;">
+        <p class="text-sm text-muted" style="margin-top: 0; margin-bottom: 1.25rem;">
+          Configure candidate navigation mechanics, authoring slot constraints, screen split layouts, and candidate toolbars. Zero raw JSON editing required.
+        </p>
+
+        <div id="sectionsContainer" style="display: flex; flex-direction: column; gap: 1.5rem;">
+          @for (var sIdx = 0; sIdx < Model.Skills.Count; sIdx++)
+          {
+            var skill = Model.Skills[sIdx];
+            <div class="skill-sections-group" data-skill-idx="@sIdx" style="border: 2px solid var(--color-ink, #14181d); padding: 1rem; background: #fff;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--color-ink, #14181d);">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                  <span class="badge" style="background: #0b4ea2; color: #fff; border-radius: 0; font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 0.9rem;">
+                    @skill.Name (@skill.Code)
+                  </span>
+                  <span class="text-sm text-muted">@skill.Sections.Count section(s) configured</span>
+                </div>
+                <button type="button" class="btn btn--sm" onclick="addSection(@sIdx)" style="border-radius: 0; border: 1px solid var(--color-ink, #14181d); font-family: var(--font-condensed, sans-serif); text-transform: uppercase;">
+                  + Add Section
+                </button>
+              </div>
+
+              <div class="sections-list" data-skill-idx="@sIdx" style="display: flex; flex-direction: column; gap: 1rem;">
+                @for (var secIdx = 0; secIdx < skill.Sections.Count; secIdx++)
+                {
+                  var sec = skill.Sections[secIdx];
+                  <div class="section-card" data-section-idx="@secIdx" style="border: 1px solid var(--color-ink, #14181d); padding: 1rem; background: #fafafa;">
+                    <input type="hidden" name="Skills[@sIdx].Sections[@secIdx].SectionId" value="@sec.SectionId" />
+                    <input type="hidden" name="Skills[@sIdx].Sections[@secIdx].DisplayOrder" value="@(sec.DisplayOrder > 0 ? sec.DisplayOrder : secIdx + 1)" />
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                      <strong>Section #@(secIdx + 1): @sec.Name (@sec.Code)</strong>
+                      <button type="button" class="btn btn--sm btn--danger" onclick="removeSection(@sIdx, @secIdx)" style="border-radius: 0; padding: 0.15rem 0.4rem; font-size: 0.75rem;">Remove Section</button>
+                    </div>
+
+                    <!-- Row 1: Codes & Weights -->
+                    <div style="display: grid; grid-template-columns: 1fr 2fr 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
+                      <div class="field">
+                        <label class="field__label" style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 0.75rem;">Section Code</label>
+                        <input class="field__input" name="Skills[@sIdx].Sections[@secIdx].Code" value="@sec.Code" required maxlength="20" style="border: 1px solid var(--color-ink, #14181d); border-radius: 0; font-family: var(--font-mono, monospace);">
+                      </div>
+                      <div class="field">
+                        <label class="field__label" style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 0.75rem;">Section Name</label>
+                        <input class="field__input" name="Skills[@sIdx].Sections[@secIdx].Name" value="@sec.Name" required maxlength="120" style="border: 1px solid var(--color-ink, #14181d); border-radius: 0;">
+                      </div>
+                      <div class="field">
+                        <label class="field__label" style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 0.75rem;">Score Weight</label>
+                        <input class="field__input" type="number" step="0.1" min="0.1" max="10.0" name="Skills[@sIdx].Sections[@secIdx].ScoreWeight" value="@sec.ScoreWeight" style="border: 1px solid var(--color-ink, #14181d); border-radius: 0; font-family: var(--font-mono, monospace);">
+                      </div>
+                      <div class="field">
+                        <label class="field__label" style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 0.75rem;">Expected Items</label>
+                        <input class="field__input" type="number" min="1" max="200" name="Skills[@sIdx].Sections[@secIdx].ExpectedQuestionCount" value="@sec.ExpectedQuestionCount" style="border: 1px solid var(--color-ink, #14181d); border-radius: 0; font-family: var(--font-mono, monospace);">
+                      </div>
+                    </div>
+
+                    <!-- Row 2: Navigation Mode & Screen Layout -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
+                      <div class="field">
+                        <label class="field__label" style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 0.75rem;">Navigation Behavior</label>
+                        <select class="field__input" name="Skills[@sIdx].Sections[@secIdx].NavigationMode" style="border: 1px solid var(--color-ink, #14181d); border-radius: 0; font-family: var(--font-mono, monospace);">
+                          <option value="FullSandbox" selected="@(sec.NavigationMode == Contracts.NavigationModeDto.FullSandbox)">FULL_SANDBOX (Free back &amp; forth navigation)</option>
+                          <option value="AudioDriven" selected="@(sec.NavigationMode == Contracts.NavigationModeDto.AudioDriven)">AUDIO_DRIVEN (Synced to playback / One-way)</option>
+                          <option value="UnitLockedSandbox" selected="@(sec.NavigationMode == Contracts.NavigationModeDto.UnitLockedSandbox)">UNIT_LOCKED_SANDBOX (Two-stage adaptive units)</option>
+                          <option value="SystemPacedAuto" selected="@(sec.NavigationMode == Contracts.NavigationModeDto.SystemPacedAuto)">SYSTEM_PACED_AUTO (Prep ➔ Beep ➔ Record)</option>
+                          <option value="HybridGroupLocked" selected="@(sec.NavigationMode == Contracts.NavigationModeDto.HybridGroupLocked)">HYBRID_GROUP_LOCKED (Shared pool + essay lock)</option>
+                        </select>
+                      </div>
+                      <div class="field">
+                        <label class="field__label" style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 0.75rem;">Screen Layout</label>
+                        <select class="field__input" name="Skills[@sIdx].Sections[@secIdx].LayoutType" style="border: 1px solid var(--color-ink, #14181d); border-radius: 0; font-family: var(--font-mono, monospace);">
+                          <option value="StandardVertical" selected="@(sec.LayoutType == Contracts.LayoutTypeDto.StandardVertical)">STANDARD_VERTICAL (Full width single column)</option>
+                          <option value="SplitHorizontal" selected="@(sec.LayoutType == Contracts.LayoutTypeDto.SplitHorizontal)">SPLIT_HORIZONTAL (Passage left, Questions right)</option>
+                          <option value="MediaCard" selected="@(sec.LayoutType == Contracts.LayoutTypeDto.MediaCard)">MEDIA_CARD (Image/audio card prominent)</option>
+                          <option value="Cluster3" selected="@(sec.LayoutType == Contracts.LayoutTypeDto.Cluster3)">CLUSTER3 (Questions grouped in 3s)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <!-- Row 3: Timing Policy & Review Seconds -->
+                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
+                      <div class="field">
+                        <label class="field__label" style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 0.75rem;">Section Timing Policy</label>
+                        <select class="field__input" name="Skills[@sIdx].Sections[@secIdx].TimerMode" style="border: 1px solid var(--color-ink, #14181d); border-radius: 0; font-family: var(--font-mono, monospace);">
+                          <option value="SECTION_SHARED" selected="@(sec.TimerMode == "SECTION_SHARED")">SECTION_SHARED (Shared countdown timer for whole section)</option>
+                          <option value="AUDIO_PLUS_CHECK" selected="@(sec.TimerMode == "AUDIO_PLUS_CHECK")">AUDIO_PLUS_CHECK (Audio duration + post-audio review countdown)</option>
+                          <option value="ITEM_FIXED" selected="@(sec.TimerMode == "ITEM_FIXED")">ITEM_FIXED (Per-item timed prep and recording)</option>
+                        </select>
+                      </div>
+                      <div class="field">
+                        <label class="field__label" style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 0.75rem;">Post-Audio Review (Sec)</label>
+                        <input class="field__input" type="number" min="0" max="600" name="Skills[@sIdx].Sections[@secIdx].ReviewSeconds" value="@sec.ReviewSeconds" placeholder="e.g. 120" style="border: 1px solid var(--color-ink, #14181d); border-radius: 0; font-family: var(--font-mono, monospace);">
+                      </div>
+                    </div>
+
+                    <!-- Row 4: Slot Blueprint Parameters -->
+                    <div style="background: #eee; padding: 0.75rem; margin-bottom: 0.75rem; border: 1px solid var(--color-border, #ccd2d6);">
+                      <div style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 0.75rem; font-weight: 700; margin-bottom: 0.5rem;">
+                        Authoring Slot Blueprint &amp; Constraints
+                      </div>
+                      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin-bottom: 0.5rem;">
+                        <div class="field">
+                          <label class="field__label" style="font-size: 0.7rem;">Default Option Count</label>
+                          <input class="field__input" type="number" min="2" max="6" name="Skills[@sIdx].Sections[@secIdx].OptionCount" value="@sec.OptionCount" style="border: 1px solid var(--color-ink, #14181d); border-radius: 0; font-family: var(--font-mono, monospace);">
+                        </div>
+                        <div class="field">
+                          <label class="field__label" style="font-size: 0.7rem;">Cluster Size</label>
+                          <input class="field__input" type="number" min="1" max="10" name="Skills[@sIdx].Sections[@secIdx].ClusterSize" value="@sec.ClusterSize" style="border: 1px solid var(--color-ink, #14181d); border-radius: 0; font-family: var(--font-mono, monospace);">
+                        </div>
+                        <div class="field">
+                          <label class="field__label" style="font-size: 0.7rem;">Adaptive Unit Count</label>
+                          <input class="field__input" type="number" min="1" max="5" name="Skills[@sIdx].Sections[@secIdx].UnitCount" value="@sec.UnitCount" style="border: 1px solid var(--color-ink, #14181d); border-radius: 0; font-family: var(--font-mono, monospace);">
+                        </div>
+                        <div class="field">
+                          <label class="field__label" style="font-size: 0.7rem;">Req Keyword Count</label>
+                          <input class="field__input" type="number" min="0" max="10" name="Skills[@sIdx].Sections[@secIdx].RequiredKeywordCount" value="@sec.RequiredKeywordCount" style="border: 1px solid var(--color-ink, #14181d); border-radius: 0; font-family: var(--font-mono, monospace);">
+                        </div>
+                      </div>
+
+                      <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; margin-top: 0.5rem;">
+                        <label style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.8rem; cursor: pointer;">
+                          <input type="checkbox" name="Skills[@sIdx].Sections[@secIdx].HideOptionText" value="true" checked="@(sec.HideOptionText)">
+                          <span>Hide Option Text (A-C / A-D placards only)</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.8rem; cursor: pointer;">
+                          <input type="checkbox" name="Skills[@sIdx].Sections[@secIdx].RequirePassage" value="true" checked="@(sec.RequirePassage)">
+                          <span>Require Passage Stimulus</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.8rem; cursor: pointer;">
+                          <input type="checkbox" name="Skills[@sIdx].Sections[@secIdx].RequireAudio" value="true" checked="@(sec.RequireAudio)">
+                          <span>Require Audio File</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.8rem; cursor: pointer;">
+                          <input type="checkbox" name="Skills[@sIdx].Sections[@secIdx].RequireImage" value="true" checked="@(sec.RequireImage)">
+                          <span>Require Image Prompt</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    <!-- Row 5: Allowed Components & Candidate Tools -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                      <!-- Allowed Question Components -->
+                      <div style="background: #fff; border: 1px solid var(--color-ink, #14181d); padding: 0.6rem;">
+                        <div style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 0.75rem; font-weight: 700; margin-bottom: 0.35rem;">
+                          Allowed Question Components
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.35rem; font-size: 0.75rem;">
+                          <label style="display: flex; align-items: center; gap: 0.25rem;">
+                            <input type="checkbox" name="Skills[@sIdx].Sections[@secIdx].ComponentMcq" value="true" checked="@(sec.ComponentMcq)">
+                            <span>Single Choice (4-opt)</span>
+                          </label>
+                          <label style="display: flex; align-items: center; gap: 0.25rem;">
+                            <input type="checkbox" name="Skills[@sIdx].Sections[@secIdx].ComponentMcq3" value="true" checked="@(sec.ComponentMcq3)">
+                            <span>Single Choice (3-opt)</span>
+                          </label>
+                          <label style="display: flex; align-items: center; gap: 0.25rem;">
+                            <input type="checkbox" name="Skills[@sIdx].Sections[@secIdx].ComponentMultiSelect" value="true" checked="@(sec.ComponentMultiSelect)">
+                            <span>Multi-Select Checkbox</span>
+                          </label>
+                          <label style="display: flex; align-items: center; gap: 0.25rem;">
+                            <input type="checkbox" name="Skills[@sIdx].Sections[@secIdx].ComponentInlineCompletion" value="true" checked="@(sec.ComponentInlineCompletion)">
+                            <span>Inline Text Completion</span>
+                          </label>
+                          <label style="display: flex; align-items: center; gap: 0.25rem;">
+                            <input type="checkbox" name="Skills[@sIdx].Sections[@secIdx].ComponentDropdown" value="true" checked="@(sec.ComponentDropdown)">
+                            <span>Dropdown Matching</span>
+                          </label>
+                          <label style="display: flex; align-items: center; gap: 0.25rem;">
+                            <input type="checkbox" name="Skills[@sIdx].Sections[@secIdx].ComponentDragDrop" value="true" checked="@(sec.ComponentDragDrop)">
+                            <span>Drag-and-Drop</span>
+                          </label>
+                          <label style="display: flex; align-items: center; gap: 0.25rem;">
+                            <input type="checkbox" name="Skills[@sIdx].Sections[@secIdx].ComponentFreeResponse" value="true" checked="@(sec.ComponentFreeResponse)">
+                            <span>Free Response (AI Graded)</span>
+                          </label>
+                        </div>
+                      </div>
+
+                      <!-- Candidate Tools Toolbar -->
+                      <div style="background: #fff; border: 1px solid var(--color-ink, #14181d); padding: 0.6rem;">
+                        <div style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 0.75rem; font-weight: 700; margin-bottom: 0.35rem;">
+                          Candidate Sitting Room Tools
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 0.35rem; font-size: 0.75rem;">
+                          <label style="display: flex; align-items: center; gap: 0.25rem;">
+                            <input type="checkbox" name="Skills[@sIdx].Sections[@secIdx].ToolHighlighter" value="true" checked="@(sec.ToolHighlighter)">
+                            <span>Text Highlighter &amp; Notes Tool</span>
+                          </label>
+                          <label style="display: flex; align-items: center; gap: 0.25rem;">
+                            <input type="checkbox" name="Skills[@sIdx].Sections[@secIdx].ToolWordCount" value="true" checked="@(sec.ToolWordCount)">
+                            <span>Live Word Counter</span>
+                          </label>
+                          <label style="display: flex; align-items: center; gap: 0.25rem;">
+                            <input type="checkbox" name="Skills[@sIdx].Sections[@secIdx].ToolDisableSpellcheck" value="true" checked="@(sec.ToolDisableSpellcheck)">
+                            <span>Disable Browser Spellcheck</span>
+                          </label>
+                          <label style="display: flex; align-items: center; gap: 0.25rem;">
+                            <input type="checkbox" name="Skills[@sIdx].Sections[@secIdx].ToolCutPaste" value="true" checked="@(sec.ToolCutPaste)">
+                            <span>Block Keyboard Copy/Paste (Require on-screen buttons)</span>
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; padding-top: 1rem; border-top: 2px solid var(--color-ink, #14181d);">
+          <button type="button" class="btn" onclick="goToStep(2)" style="border-radius: 0; font-family: var(--font-condensed, sans-serif); text-transform: uppercase;">
+            ‹ Back to Step 2
+          </button>
+          <button type="submit" class="btn btn--primary" style="border-radius: 0; font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 1rem; padding: 0.75rem 2rem;">
+            Save &amp; Persist Certificate Blueprint
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</form>
+
+<script>
+  function goToStep(step) {
+    document.querySelectorAll('.wizard-step').forEach(function(el) { el.style.display = 'none'; });
+    var target = document.getElementById('step-' + step);
+    if (target) {
+      target.style.display = 'block';
+    }
+    document.getElementById('currentStep').value = step;
+    var items = document.querySelectorAll('.stepper__item');
+    items.forEach(function(item, idx) {
+      item.classList.remove('is-current');
+      if (idx + 1 === step) {
+        item.classList.add('is-current');
+        item.style.background = 'var(--color-ink, #14181d)';
+        item.style.color = '#fff';
+      } else {
+        item.style.background = '#fff';
+        item.style.color = 'var(--color-ink, #14181d)';
+      }
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function selectPreset(presetCode) {
+    var url = new URL(window.location.href);
+    url.searchParams.set('preset', presetCode);
+    url.searchParams.set('step', '1');
+    window.location.href = url.toString();
+  }
+
+  function addSkill() {
+    var container = document.getElementById('skillsContainer');
+    var idx = container.querySelectorAll('.skill-card').length;
+    var html = `
+      <div class="skill-card" data-skill-idx="${idx}" style="border: 2px solid var(--color-ink, #14181d); padding: 1rem; background: #fafafa;">
+        <input type="hidden" name="Skills[${idx}].DisplayOrder" value="${idx + 1}" />
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+          <span class="badge" style="background: var(--color-ink, #14181d); color: #fff; border-radius: 0; font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 0.85rem; padding: 0.25rem 0.5rem;">
+            Skill #${idx + 1}
+          </span>
+          <button type="button" class="btn btn--sm btn--danger" onclick="removeSkill(${idx})" style="border-radius: 0; padding: 0.2rem 0.5rem;">Remove</button>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 2fr 1.5fr 1fr; gap: 0.75rem;">
+          <div class="field">
+            <label class="field__label" style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 0.8rem;">Skill Code</label>
+            <input class="field__input" name="Skills[${idx}].Code" value="SKILL_${idx + 1}" required maxlength="20" style="border: 2px solid var(--color-ink, #14181d); border-radius: 0; font-family: var(--font-mono, monospace);">
+          </div>
+          <div class="field">
+            <label class="field__label" style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 0.8rem;">Skill Name</label>
+            <input class="field__input" name="Skills[${idx}].Name" value="New Skill ${idx + 1}" required maxlength="120" style="border: 2px solid var(--color-ink, #14181d); border-radius: 0;">
+          </div>
+          <div class="field">
+            <label class="field__label" style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 0.8rem;">Modality</label>
+            <select class="field__input" name="Skills[${idx}].Modality" style="border: 2px solid var(--color-ink, #14181d); border-radius: 0; font-family: var(--font-mono, monospace);">
+              <option value="Listening">Listening</option>
+              <option value="Reading">Reading</option>
+              <option value="Writing">Writing</option>
+              <option value="Speaking">Speaking</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field__label" style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 0.8rem;">Duration (Min)</label>
+            <input class="field__input" type="number" name="Skills[${idx}].DurationMinutes" value="30" min="1" max="300" style="border: 2px solid var(--color-ink, #14181d); border-radius: 0; font-family: var(--font-mono, monospace);">
+          </div>
+        </div>
+      </div>`;
+    container.insertAdjacentHTML('beforeend', html);
+  }
+
+  function removeSkill(idx) {
+    var card = document.querySelector(`.skill-card[data-skill-idx="${idx}"]`);
+    if (card) card.remove();
+  }
+
+  function removeSection(sIdx, secIdx) {
+    var card = document.querySelector(`.skill-sections-group[data-skill-idx="${sIdx}"] .section-card[data-section-idx="${secIdx}"]`);
+    if (card) card.remove();
+  }
+
+  function addSection(sIdx) {
+    var list = document.querySelector(`.sections-list[data-skill-idx="${sIdx}"]`);
+    if (!list) return;
+    var secIdx = list.querySelectorAll('.section-card').length;
+    var html = `
+      <div class="section-card" data-section-idx="${secIdx}" style="border: 1px solid var(--color-ink, #14181d); padding: 1rem; background: #fafafa;">
+        <input type="hidden" name="Skills[${sIdx}].Sections[${secIdx}].DisplayOrder" value="${secIdx + 1}" />
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+          <strong>Section #${secIdx + 1}: New Section</strong>
+          <button type="button" class="btn btn--sm btn--danger" onclick="removeSection(${sIdx}, ${secIdx})" style="border-radius: 0; padding: 0.15rem 0.4rem; font-size: 0.75rem;">Remove Section</button>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 2fr 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
+          <div class="field">
+            <label class="field__label" style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 0.75rem;">Section Code</label>
+            <input class="field__input" name="Skills[${sIdx}].Sections[${secIdx}].Code" value="SEC_${secIdx + 1}" required maxlength="20" style="border: 1px solid var(--color-ink, #14181d); border-radius: 0; font-family: var(--font-mono, monospace);">
+          </div>
+          <div class="field">
+            <label class="field__label" style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 0.75rem;">Section Name</label>
+            <input class="field__input" name="Skills[${sIdx}].Sections[${secIdx}].Name" value="New Section ${secIdx + 1}" required maxlength="120" style="border: 1px solid var(--color-ink, #14181d); border-radius: 0;">
+          </div>
+          <div class="field">
+            <label class="field__label" style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 0.75rem;">Score Weight</label>
+            <input class="field__input" type="number" step="0.1" min="0.1" max="10.0" name="Skills[${sIdx}].Sections[${secIdx}].ScoreWeight" value="1.0" style="border: 1px solid var(--color-ink, #14181d); border-radius: 0; font-family: var(--font-mono, monospace);">
+          </div>
+          <div class="field">
+            <label class="field__label" style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 0.75rem;">Expected Items</label>
+            <input class="field__input" type="number" min="1" max="200" name="Skills[${sIdx}].Sections[${secIdx}].ExpectedQuestionCount" value="10" style="border: 1px solid var(--color-ink, #14181d); border-radius: 0; font-family: var(--font-mono, monospace);">
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
+          <div class="field">
+            <label class="field__label" style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 0.75rem;">Navigation Behavior</label>
+            <select class="field__input" name="Skills[${sIdx}].Sections[${secIdx}].NavigationMode" style="border: 1px solid var(--color-ink, #14181d); border-radius: 0; font-family: var(--font-mono, monospace);">
+              <option value="FullSandbox" selected>FULL_SANDBOX (Free back &amp; forth navigation)</option>
+              <option value="AudioDriven">AUDIO_DRIVEN (Synced to playback / One-way)</option>
+              <option value="UnitLockedSandbox">UNIT_LOCKED_SANDBOX (Two-stage adaptive units)</option>
+              <option value="SystemPacedAuto">SYSTEM_PACED_AUTO (Prep ➔ Beep ➔ Record)</option>
+              <option value="HybridGroupLocked">HYBRID_GROUP_LOCKED (Shared pool + essay lock)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field__label" style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 0.75rem;">Screen Layout</label>
+            <select class="field__input" name="Skills[${sIdx}].Sections[${secIdx}].LayoutType" style="border: 1px solid var(--color-ink, #14181d); border-radius: 0; font-family: var(--font-mono, monospace);">
+              <option value="StandardVertical" selected>STANDARD_VERTICAL (Full width single column)</option>
+              <option value="SplitHorizontal">SPLIT_HORIZONTAL (Passage left, Questions right)</option>
+              <option value="MediaCard">MEDIA_CARD (Image/audio card prominent)</option>
+              <option value="Cluster3">CLUSTER3 (Questions grouped in 3s)</option>
+            </select>
+          </div>
+        </div>
+        <div style="background: #eee; padding: 0.75rem; margin-bottom: 0.75rem; border: 1px solid var(--color-border, #ccd2d6);">
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin-bottom: 0.5rem;">
+            <div class="field">
+              <label class="field__label" style="font-size: 0.7rem;">Default Option Count</label>
+              <input class="field__input" type="number" min="2" max="6" name="Skills[${sIdx}].Sections[${secIdx}].OptionCount" value="4" style="border: 1px solid var(--color-ink, #14181d); border-radius: 0; font-family: var(--font-mono, monospace);">
+            </div>
+            <div class="field">
+              <label class="field__label" style="font-size: 0.7rem;">Cluster Size</label>
+              <input class="field__input" type="number" min="1" max="10" name="Skills[${sIdx}].Sections[${secIdx}].ClusterSize" value="1" style="border: 1px solid var(--color-ink, #14181d); border-radius: 0; font-family: var(--font-mono, monospace);">
+            </div>
+            <div class="field">
+              <label class="field__label" style="font-size: 0.7rem;">Adaptive Unit Count</label>
+              <input class="field__input" type="number" min="1" max="5" name="Skills[${sIdx}].Sections[${secIdx}].UnitCount" value="1" style="border: 1px solid var(--color-ink, #14181d); border-radius: 0; font-family: var(--font-mono, monospace);">
+            </div>
+            <div class="field">
+              <label class="field__label" style="font-size: 0.7rem;">Req Keyword Count</label>
+              <input class="field__input" type="number" min="0" max="10" name="Skills[${sIdx}].Sections[${secIdx}].RequiredKeywordCount" value="0" style="border: 1px solid var(--color-ink, #14181d); border-radius: 0; font-family: var(--font-mono, monospace);">
+            </div>
+          </div>
+        </div>
+      </div>`;
+    list.insertAdjacentHTML('beforeend', html);
+  }
+</script>
