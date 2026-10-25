@@ -2555,6 +2555,8 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
             .OrderBy(g => g.DisplayOrder)
             .ToListAsync(cancellationToken);
 
+        var isZip = string.Equals(format, "zip", StringComparison.OrdinalIgnoreCase);
+
         var manifest = new ImportManifest
         {
             Version = "1.0",
@@ -2562,6 +2564,7 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
             {
                 Title = exam.Name,
                 Purpose = exam.Purpose,
+                DeliveryMode = exam.DeliveryMode,
                 DurationMinutes = exam.DurationMinutes,
                 SourceName = exam.SourceName,
                 Description = exam.Description,
@@ -2573,39 +2576,73 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
                 .Select(sg => new ImportManifestSection
                 {
                     SectionCode = sg.Key.Code,
-                    Groups = sg.OrderBy(g => g.DisplayOrder).Select(g => new ImportManifestGroup
+                    Groups = sg.OrderBy(g => g.DisplayOrder).Select(g =>
                     {
-                        Passage = g.Passage,
-                        AudioFile = g.AudioPath,
-                        AudioStartMs = g.AudioStartMs,
-                        AudioEndMs = g.AudioEndMs,
-                        ImageFile = g.ImagePath,
-                        ImageAlt = g.ImageAlt,
-                        Transcript = g.Transcript,
-                        PrepSeconds = g.PrepSeconds,
-                        ResponseSeconds = g.ResponseSeconds,
-                        DisplayOrder = g.DisplayOrder,
-                        Questions = g.QuestionGroups.OrderBy(q => q.DisplayOrder).Select(q => new ImportManifestQuestion
+                        string? audioRel = null;
+                        string? imageRel = null;
+                        if (!string.IsNullOrWhiteSpace(g.AudioPath))
                         {
-                            Stem = q.Stem,
-                            DifficultyLevel = q.DifficultyLevel,
-                            QuestionType = q.QuestionType,
-                            CategoryCode = q.Category?.Code,
-                            Explanation = q.Explanation,
-                            Hint = q.Hint,
-                            PrepSeconds = q.PrepSeconds,
-                            ResponseSeconds = q.ResponseSeconds,
-                            MinWords = q.MinWords,
-                            MaxWords = q.MaxWords,
-                            DisplayOrder = q.DisplayOrder,
-                            Options = q.QuestionOptionQuestionNavigations.OrderBy(o => o.Label).Select(o => new ImportManifestOption
+                            audioRel = $"media/{Path.GetFileName(g.AudioPath)}";
+                        }
+                        if (!string.IsNullOrWhiteSpace(g.ImagePath))
+                        {
+                            imageRel = $"media/{Path.GetFileName(g.ImagePath)}";
+                        }
+
+                        return new ImportManifestGroup
+                        {
+                            UnitNumber = g.UnitNumber,
+                            Passage = g.Passage,
+                            AudioFile = isZip ? audioRel : null,
+                            AudioStartMs = g.AudioStartMs,
+                            AudioEndMs = g.AudioEndMs,
+                            ImageFile = isZip ? imageRel : null,
+                            ImageAlt = g.ImageAlt,
+                            Transcript = g.Transcript,
+                            PrepSeconds = g.PrepSeconds,
+                            ResponseSeconds = g.ResponseSeconds,
+                            DisplayOrder = g.DisplayOrder,
+                            Questions = g.QuestionGroups.OrderBy(q => q.DisplayOrder).Select(q =>
                             {
-                                Label = o.Label,
-                                Text = o.Text,
-                                IsCorrect = o.IsCorrect,
-                                Rationale = o.Rationale
+                                List<string>? acceptedAnswers = null;
+                                if (!string.IsNullOrWhiteSpace(q.AcceptedAnswersJson))
+                                {
+                                    acceptedAnswers = AttemptEngine.ParseAcceptedAnswers(q.AcceptedAnswersJson);
+                                }
+
+                                List<string>? requiredKeywords = null;
+                                if (!string.IsNullOrWhiteSpace(q.RequiredKeywords))
+                                {
+                                    requiredKeywords = AttemptEngine.ParseKeywords(q.RequiredKeywords);
+                                }
+
+                                return new ImportManifestQuestion
+                                {
+                                    Stem = q.Stem,
+                                    DifficultyLevel = q.DifficultyLevel,
+                                    QuestionType = q.QuestionType,
+                                    CategoryCode = q.Category?.Code,
+                                    Explanation = q.Explanation,
+                                    Hint = q.Hint,
+                                    PrepSeconds = q.PrepSeconds,
+                                    ResponseSeconds = q.ResponseSeconds,
+                                    MinWords = q.MinWords,
+                                    MaxWords = q.MaxWords,
+                                    DisplayOrder = q.DisplayOrder,
+                                    MaxSelections = q.MaxSelections,
+                                    AllowNumber = q.AllowNumber,
+                                    AcceptedAnswers = acceptedAnswers,
+                                    RequiredKeywords = requiredKeywords,
+                                    Options = q.QuestionOptionQuestionNavigations.Count == 0 ? null : q.QuestionOptionQuestionNavigations.OrderBy(o => o.Label).Select(o => new ImportManifestOption
+                                    {
+                                        Label = o.Label,
+                                        Text = o.Text,
+                                        IsCorrect = o.IsCorrect,
+                                        Rationale = o.Rationale
+                                    }).ToList()
+                                };
                             }).ToList()
-                        }).ToList()
+                        };
                     }).ToList()
                 }).ToList()
         };
@@ -2638,7 +2675,11 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
 
                     foreach (var path in mediaPaths)
                     {
-                        var cleanPath = path!.TrimStart('/').Replace("media/", "");
+                        var cleanPath = path!.TrimStart('/');
+                        if (cleanPath.StartsWith("media/", StringComparison.OrdinalIgnoreCase))
+                        {
+                            cleanPath = cleanPath["media/".Length..];
+                        }
                         var media = await fileStore.GetMediaAsync(cleanPath, cancellationToken);
                         if (media != null)
                         {

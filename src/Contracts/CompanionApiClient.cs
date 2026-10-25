@@ -1078,6 +1078,31 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
         return (stream, contentType, fileName);
     }
 
+    public async Task<(Stream Stream, string ContentType, string FileName)> GetManifestTemplateAsync(int certId, string bearerToken, CancellationToken cancellationToken = default)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"api/admin/exams/manifest-template?certId={certId}");
+        AttachBearer(request, bearerToken);
+
+        var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        try
+        {
+            await EnsureSuccessAsync(response, cancellationToken);
+        }
+        catch
+        {
+            response.Dispose();
+            throw;
+        }
+
+        var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        var contentType = response.Content.Headers.ContentType?.MediaType ?? "application/json";
+        var fileName = response.Content.Headers.ContentDisposition?.FileNameStar
+            ?? response.Content.Headers.ContentDisposition?.FileName
+            ?? $"manifest_template_{certId}.json";
+
+        return (stream, contentType, fileName);
+    }
+
     public Task<ExamGenerationResultDto> GenerateAdminExamAsync(ExamBlueprintDto blueprint, string bearerToken, CancellationToken cancellationToken = default) =>
         PostAuthorizedAsync<ExamBlueprintDto, ExamGenerationResultDto>("api/admin/exams/generate", blueprint, bearerToken, cancellationToken);
 
@@ -1679,6 +1704,9 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
 
     public Task<(Stream Stream, string ContentType, string FileName)> ExportAdminExamAsync(int examId, string? format = "zip", CancellationToken cancellationToken = default) =>
         ExportAdminExamAsync(examId, format, string.Empty, cancellationToken);
+
+    public Task<(Stream Stream, string ContentType, string FileName)> GetManifestTemplateAsync(int certId, CancellationToken cancellationToken = default) =>
+        GetManifestTemplateAsync(certId, string.Empty, cancellationToken);
 
     public Task<ExamGenerationResultDto> GenerateAdminExamAsync(ExamBlueprintDto blueprint, CancellationToken cancellationToken = default) =>
         GenerateAdminExamAsync(blueprint, string.Empty, cancellationToken);

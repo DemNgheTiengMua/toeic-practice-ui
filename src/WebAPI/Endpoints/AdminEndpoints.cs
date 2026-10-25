@@ -643,6 +643,22 @@ public static class AdminEndpoints
             }
         });
 
+        admin.MapGet("/exams/manifest-template", async (
+            int certId,
+            IQuestionImportService imports,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var (stream, contentType, fileName) = await imports.GenerateManifestTemplateAsync(certId, cancellationToken);
+                return Results.File(stream, contentType, fileName);
+            }
+            catch (AdminExamException ex)
+            {
+                return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
+            }
+        });
+
         // ---- Certificate Blueprint & Wizard Endpoints ----
         admin.MapGet("/certificates", async (ICertificateService certificates, CancellationToken cancellationToken) =>
         {

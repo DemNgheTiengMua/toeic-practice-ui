@@ -180,8 +180,8 @@
     "semantic_hash": ""
   },
   "src/Contracts/CompanionApiClient.cs": {
-    "mtime": 1792914062.5860763,
-    "ast_hash": "a3274ea3bef8c8f262a41036f49499f0",
+    "mtime": 1792930116.3404348,
+    "ast_hash": "7cc781a822452a46dad131088e4fa747",
     "semantic_hash": ""
   },
   "src/Contracts/Contracts.csproj": {
@@ -1741,8 +1741,8 @@
     "semantic_hash": ""
   },
   "src/WebAPI/Endpoints/AdminEndpoints.cs": {
-    "mtime": 1792914062.5903401,
-    "ast_hash": "e0102f955ab4adb228996462c2a96178",
+    "mtime": 1792930136.5631263,
+    "ast_hash": "03253ffa32b9f3570fb50ab1da18cc1f",
     "semantic_hash": ""
   },
   "src/WebAPI/Endpoints/AuthEndpoints.cs": {
@@ -2276,23 +2276,23 @@
     "semantic_hash": ""
   },
   "src/Contracts/AdminExamDtos.cs": {
-    "mtime": 1792914740.6150045,
-    "ast_hash": "f5435718257e9ef59a965ee281e6fa2f",
+    "mtime": 1792916806.1442747,
+    "ast_hash": "6111f12daa419c5f3c75435d53eb43f2",
     "semantic_hash": ""
   },
   "src/Services/AdminExamService.cs": {
-    "mtime": 1792915930.1508992,
-    "ast_hash": "1eaa68b23b8e18ee2caac094327efe25",
+    "mtime": 1792929988.046357,
+    "ast_hash": "bf69e63a464422ba62ffbb015f4ddced",
     "semantic_hash": ""
   },
   "src/WebMVC/Controllers/AdminExamsController.cs": {
-    "mtime": 1792914865.2998774,
-    "ast_hash": "191057794a0174bc37015f9d2e7bd623",
+    "mtime": 1792930183.3217785,
+    "ast_hash": "323347ea821b0fbce8705118762f215e",
     "semantic_hash": ""
   },
   "src/WebMVC/Models/AdminExamViewModels.cs": {
-    "mtime": 1792914823.0732841,
-    "ast_hash": "514656c784e3c0bfe16d302c7ff6aeb3",
+    "mtime": 1792916806.1474793,
+    "ast_hash": "0f1d838b44f3a61b92276e07dab5274d",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Admin/ExamEditor.cshtml": {
@@ -2301,18 +2301,18 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Admin/Exams.cshtml": {
-    "mtime": 1792899162.1760063,
-    "ast_hash": "a0860ac3bbb9eba7cf53518b41f2b696",
+    "mtime": 1792930216.2690885,
+    "ast_hash": "707bd6bf8ff3e2e1231e948661509955",
     "semantic_hash": ""
   },
   "tests/Services.Tests/AdminExamServiceTests.cs": {
-    "mtime": 1792916145.199818,
+    "mtime": 1792916806.1491005,
     "ast_hash": "bad5c24a16f09f580b141c646f7b7b8a",
     "semantic_hash": ""
   },
   "tests/WebMVC.Tests/AdminExamsControllerTests.cs": {
-    "mtime": 1792916278.7772987,
-    "ast_hash": "f7ad6b03a059494c15280a9f9310d444",
+    "mtime": 1792930437.7127323,
+    "ast_hash": "ba25a753df64fb26ab063a24c1c60181",
     "semantic_hash": ""
   },
   "src/Services/AdminDashboardService.cs": {
@@ -2401,18 +2401,18 @@
     "semantic_hash": ""
   },
   "src/Services/QuestionImportManifest.cs": {
-    "mtime": 1792909968.2408419,
-    "ast_hash": "9ec6406e8ec7629b09fd106c70c17647",
+    "mtime": 1792929766.786754,
+    "ast_hash": "9d4991055ecc3d3d92b6fce934af5815",
     "semantic_hash": ""
   },
   "src/Services/QuestionImportService.cs": {
-    "mtime": 1792910581.7715037,
-    "ast_hash": "87259fb5799c21515de938893ec3da2a",
+    "mtime": 1792930046.7913241,
+    "ast_hash": "767d4937619d237a545ba41c92d6a865",
     "semantic_hash": ""
   },
   "src/WebAPI/Endpoints/AdminImportEndpoints.cs": {
-    "mtime": 1792136656.9035468,
-    "ast_hash": "19c3897a905465d92a877d180cd92646",
+    "mtime": 1792930145.2024834,
+    "ast_hash": "bf64e97905087218c65fd0064d025cfa",
     "semantic_hash": ""
   },
   "src/WebMVC/Controllers/AdminImportsController.cs": {
@@ -2426,8 +2426,8 @@
     "semantic_hash": ""
   },
   "tests/Services.Tests/QuestionImportServiceTests.cs": {
-    "mtime": 1792910673.8946779,
-    "ast_hash": "66f760d8c72f92eadb209d5fdd07e7ff",
+    "mtime": 1792930335.7865975,
+    "ast_hash": "c1a6c14c0593623a9feef5444effa605",
     "semantic_hash": ""
   },
   "src/Services/AiGradingProcessor.cs": {
@@ -2491,8 +2491,8 @@
     "semantic_hash": ""
   },
   "src/Contracts/DomainClients.cs": {
-    "mtime": 1792914062.5860763,
-    "ast_hash": "661c6212fac617c612d0eee186761dff",
+    "mtime": 1792930071.7323985,
+    "ast_hash": "7306e34604edd6105876c144cb739b9f",
     "semantic_hash": ""
   },
   "src/WebMVC/CookieBearerHandler.cs": {
@@ -2901,8 +2901,8 @@
     "semantic_hash": ""
   },
   "src/Contracts/AdminExamStudioDtos.cs": {
-    "mtime": 1792914723.100911,
-    "ast_hash": "7040b27f9a0da2e3853235fd222856f6",
+    "mtime": 1792916806.1453743,
+    "ast_hash": "33c390d77958f3999835e7ad8890de20",
     "semantic_hash": ""
   },
   "src/Services/ExamQuickIngestService.cs": {
@@ -2911,7 +2911,7 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Admin/ExamStudio.cshtml": {
-    "mtime": 1792915798.071131,
+    "mtime": 1792916806.1480742,
     "ast_hash": "98f940477ca73797060e067da3508af4",
     "semantic_hash": ""
   },
