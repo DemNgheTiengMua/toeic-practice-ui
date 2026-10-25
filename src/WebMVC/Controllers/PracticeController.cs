@@ -140,8 +140,11 @@ public sealed class PracticeController(
         {
             var isSkip = form.Action == "skip";
             var selectedOptionId = isSkip ? null : form.SelectedOptionId;
+            var responseText = isSkip ? null : form.ResponseText;
+            var selectedOptionIdsJson = isSkip ? null : form.SelectedOptionIdsJson;
+            var selectedOptionIds = isSkip ? null : form.SelectedOptionIds;
             var result = await api.SubmitPracticeAnswerAsync(
-                sessionId, questionId, new SubmitPracticeAnswerRequest(selectedOptionId), cancellationToken);
+                sessionId, questionId, new SubmitPracticeAnswerRequest(selectedOptionId, responseText, selectedOptionIdsJson, selectedOptionIds), cancellationToken);
 
             if (IsAjaxRequest())
             {
@@ -154,6 +157,11 @@ public sealed class PracticeController(
                     transcript = result.Transcript,
                     isSessionFinished = result.IsSessionFinished,
                     nextQuestionDisplayOrder = result.NextQuestionDisplayOrder,
+                    isSaved = result.IsSaved,
+                    acceptedAnswersJson = result.AcceptedAnswersJson,
+                    correctOptionIds = result.CorrectOptionIds,
+                    responseText = result.ResponseText,
+                    selectedOptionIdsJson = result.SelectedOptionIdsJson,
                 });
             }
 

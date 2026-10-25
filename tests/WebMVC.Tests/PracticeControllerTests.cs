@@ -300,6 +300,48 @@ public sealed class PracticeControllerTests
         Assert.Equal("Pre-fetched insight", insightInViewBag.Narrative);
     }
 
+
+    [Fact]
+    public async Task Answer_ajax_post_multi_component_returns_json_with_evaluation_and_metadata()
+    {
+        var api = new TestApiClient
+        {
+            GradedResult = new GradedAnswerDto(
+                IsCorrect: true,
+                SelectedOptionId: null,
+                CorrectOptionId: null,
+                Explanation: "Explanation text",
+                Transcript: "Transcript text",
+                IsSessionFinished: false,
+                NextQuestionDisplayOrder: 2,
+                IsSaved: false,
+                AcceptedAnswersJson: "[\"accepted\"]",
+                CorrectOptionIds: [10, 11],
+                ResponseText: "accepted",
+                SelectedOptionIdsJson: "[10, 11]"),
+        };
+
+        var controller = CreateController(api);
+        controller.ControllerContext.HttpContext.Request.Headers["X-Requested-With"] = "XMLHttpRequest";
+
+        var result = await controller.Answer(
+            42, 101,
+            new SubmitAnswerFormModel
+            {
+                ResponseText = "accepted",
+                SelectedOptionIds = [10, 11],
+            },
+            1,
+            CancellationToken.None);
+
+        var json = Assert.IsType<JsonResult>(result);
+        Assert.NotNull(json.Value);
+        var isCorrectProp = json.Value.GetType().GetProperty("isCorrect")?.GetValue(json.Value);
+        Assert.Equal(true, isCorrectProp);
+        var acceptedProp = json.Value.GetType().GetProperty("acceptedAnswersJson")?.GetValue(json.Value);
+        Assert.Equal("[\"accepted\"]", acceptedProp);
+    }
+
     private static PracticeController CreateController(TestApiClient api)
     {
         var identity = new ClaimsIdentity(AuthClaims.For(7, "learner@test.local", Roles.Learner, "Learner"), "Cookies");
@@ -359,6 +401,9 @@ public sealed class PracticeControllerTests
 
         public Task<PracticeQuestionDto> GetPracticeQuestionAsync(int sessionId, int displayOrder, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<PracticeQuestionDto>(ExceptionToThrow) : Task.FromResult(Question!);
+
+        public Task<PracticeSessionTakeDto> GetPracticeSessionTakeAsync(int sessionId, int? displayOrder = null, CancellationToken cancellationToken = default) =>
+            ExceptionToThrow != null ? Task.FromException<PracticeSessionTakeDto>(ExceptionToThrow) : Task.FromResult(new PracticeSessionTakeDto(Session!, Question!, SessionQuestions ?? (Question != null ? [Question] : []), []));
 
         public Task<IReadOnlyList<PracticeQuestionDto>> GetPracticeSessionQuestionsAsync(int sessionId, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<IReadOnlyList<PracticeQuestionDto>>(ExceptionToThrow) : Task.FromResult(SessionQuestions ?? (Question != null ? (IReadOnlyList<PracticeQuestionDto>)[Question] : []));

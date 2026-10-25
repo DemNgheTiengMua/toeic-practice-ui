@@ -244,7 +244,8 @@ public sealed record SaveAttemptDraftResponse(
 public sealed record SaveAnswerRequest(
     int? SelectedOptionId,
     bool IsFlagged,
-    string? ResponseText = null);
+    string? ResponseText = null,
+    string? SelectedOptionIdsJson = null);
 
 public sealed record SaveAnswerResultDto(
     int QuestionId,

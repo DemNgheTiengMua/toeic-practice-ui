@@ -498,4 +498,277 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         var finalSessionInfo = await practice.GetSessionInfoAsync(userId, session.SessionId);
         Assert.Equal(PracticeStatus.Finished, finalSessionInfo.Status);
     }
+[Fact]
+    public async Task SubmitAnswer_evaluates_multi_select_accurately()
+    {
+        var certCode = Unique("MS");
+        int secId;
+        int q1Id, q2Id;
+        int opt1AId, opt1BId, opt1CId;
+        int opt2AId, opt2BId;
+
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            var cert = new Certificate { Code = certCode, Name = $"Cert {certCode}", IsActive = true };
+            db.Certificates.Add(cert);
+            await db.SaveChangesAsync();
+
+            var skill = new Skill { CertId = cert.CertId, Code = "READ", Name = "Reading", Modality = "reading", DisplayOrder = 1 };
+            db.Skills.Add(skill);
+            await db.SaveChangesAsync();
+
+            var sec = new Section { CertId = cert.CertId, SkillId = skill.SkillId, Modality = "reading", Code = "P7", Name = "Multi Select Section", DisplayOrder = 1, OptionCount = 4 };
+            db.Sections.Add(sec);
+            await db.SaveChangesAsync();
+            secId = sec.SectionId;
+
+            var exam = new Exam { CertId = cert.CertId, Name = $"Exam {certCode}", Status = "published", DurationMinutes = 60, Purpose = "mock" };
+            db.Exams.Add(exam);
+            await db.SaveChangesAsync();
+
+            var grp = new QuestionGroup { ExamId = exam.ExamId, CertId = cert.CertId, SectionId = sec.SectionId, DisplayOrder = 1 };
+            db.QuestionGroups.Add(grp);
+            await db.SaveChangesAsync();
+
+            var q1 = new Question
+            {
+                GroupId = grp.GroupId,
+                ExamId = exam.ExamId,
+                SectionId = sec.SectionId,
+                SkillId = skill.SkillId,
+                Stem = "Select all correct options - Q1",
+                DifficultyLevel = 3,
+                QuestionType = "multi_select",
+                MaxSelections = 2,
+                Hint = "Check both options",
+                Explanation = "Options A and B are correct for Q1",
+                DisplayOrder = 1
+            };
+            var q2 = new Question
+            {
+                GroupId = grp.GroupId,
+                ExamId = exam.ExamId,
+                SectionId = sec.SectionId,
+                SkillId = skill.SkillId,
+                Stem = "Select all correct options - Q2",
+                DifficultyLevel = 3,
+                QuestionType = "multi_select",
+                MaxSelections = 2,
+                Hint = "Check both options",
+                Explanation = "Options A and B are correct for Q2",
+                DisplayOrder = 2
+            };
+            db.Questions.AddRange(q1, q2);
+            await db.SaveChangesAsync();
+            q1Id = q1.QuestionId;
+            q2Id = q2.QuestionId;
+
+            var o1A = new QuestionOption { QuestionId = q1.QuestionId, QuestionType = "multi_select", Label = "A", Text = "Opt 1A", IsCorrect = true };
+            var o1B = new QuestionOption { QuestionId = q1.QuestionId, QuestionType = "multi_select", Label = "B", Text = "Opt 1B", IsCorrect = true };
+            var o1C = new QuestionOption { QuestionId = q1.QuestionId, QuestionType = "multi_select", Label = "C", Text = "Opt 1C", IsCorrect = false };
+
+            var o2A = new QuestionOption { QuestionId = q2.QuestionId, QuestionType = "multi_select", Label = "A", Text = "Opt 2A", IsCorrect = true };
+            var o2B = new QuestionOption { QuestionId = q2.QuestionId, QuestionType = "multi_select", Label = "B", Text = "Opt 2B", IsCorrect = true };
+
+            db.QuestionOptions.AddRange(o1A, o1B, o1C, o2A, o2B);
+            await db.SaveChangesAsync();
+
+            opt1AId = o1A.OptionId;
+            opt1BId = o1B.OptionId;
+            opt1CId = o1C.OptionId;
+            opt2AId = o2A.OptionId;
+            opt2BId = o2B.OptionId;
+        }
+
+        var userId = await SeedLearnerAsync(certCode);
+        var (practice, _) = CreateServices();
+
+        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId, 2));
+
+        // Question 1: Submit incomplete (only opt1AId) -> IsCorrect = false
+        var partialResult = await practice.SubmitAnswerAsync(userId, session.SessionId, q1Id,
+            new SubmitPracticeAnswerInput(SelectedOptionIds: new List<int> { opt1AId }));
+        Assert.False(partialResult.IsCorrect);
+        Assert.NotNull(partialResult.CorrectOptionIds);
+        Assert.Contains(opt1AId, partialResult.CorrectOptionIds);
+        Assert.Contains(opt1BId, partialResult.CorrectOptionIds);
+        Assert.Equal("Options A and B are correct for Q1", partialResult.Explanation);
+
+        // Question 2: Submit complete (opt2AId and opt2BId) -> IsCorrect = true
+        var correctResult = await practice.SubmitAnswerAsync(userId, session.SessionId, q2Id,
+            new SubmitPracticeAnswerInput(SelectedOptionIds: new List<int> { opt2AId, opt2BId }));
+        Assert.True(correctResult.IsCorrect);
+        Assert.NotNull(correctResult.CorrectOptionIds);
+        Assert.Contains(opt2AId, correctResult.CorrectOptionIds);
+        Assert.Contains(opt2BId, correctResult.CorrectOptionIds);
+        Assert.True(correctResult.IsSessionFinished);
+    }
+
+    [Fact]
+    public async Task SubmitAnswer_evaluates_inline_completion_accurately()
+    {
+        var certCode = Unique("IC");
+        int secId;
+        int q1Id, q2Id;
+
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            var cert = new Certificate { Code = certCode, Name = $"Cert {certCode}", IsActive = true };
+            db.Certificates.Add(cert);
+            await db.SaveChangesAsync();
+
+            var skill = new Skill { CertId = cert.CertId, Code = "READ", Name = "Reading", Modality = "reading", DisplayOrder = 1 };
+            db.Skills.Add(skill);
+            await db.SaveChangesAsync();
+
+            var sec = new Section { CertId = cert.CertId, SkillId = skill.SkillId, Modality = "reading", Code = "P6", Name = "Completion Section", DisplayOrder = 1 };
+            db.Sections.Add(sec);
+            await db.SaveChangesAsync();
+            secId = sec.SectionId;
+
+            var exam = new Exam { CertId = cert.CertId, Name = $"Exam {certCode}", Status = "published", DurationMinutes = 60, Purpose = "mock" };
+            db.Exams.Add(exam);
+            await db.SaveChangesAsync();
+
+            var grp = new QuestionGroup { ExamId = exam.ExamId, CertId = cert.CertId, SectionId = sec.SectionId, DisplayOrder = 1 };
+            db.QuestionGroups.Add(grp);
+            await db.SaveChangesAsync();
+
+            var q1 = new Question
+            {
+                GroupId = grp.GroupId,
+                ExamId = exam.ExamId,
+                SectionId = sec.SectionId,
+                SkillId = skill.SkillId,
+                Stem = "Fill in the blank for Q1",
+                DifficultyLevel = 3,
+                QuestionType = "inline_completion",
+                AcceptedAnswersJson = "[\"development\", \"software development\"]",
+                AllowNumber = false,
+                MaxWords = 2,
+                Hint = "Noun form",
+                Explanation = "The correct answer is development",
+                DisplayOrder = 1
+            };
+            var q2 = new Question
+            {
+                GroupId = grp.GroupId,
+                ExamId = exam.ExamId,
+                SectionId = sec.SectionId,
+                SkillId = skill.SkillId,
+                Stem = "Fill in the blank for Q2",
+                DifficultyLevel = 3,
+                QuestionType = "inline_completion",
+                AcceptedAnswersJson = "[\"apple\", \"apples\"]",
+                AllowNumber = false,
+                MaxWords = 1,
+                Hint = "A fruit",
+                Explanation = "The fruit is apple",
+                DisplayOrder = 2
+            };
+            db.Questions.AddRange(q1, q2);
+            await db.SaveChangesAsync();
+            q1Id = q1.QuestionId;
+            q2Id = q2.QuestionId;
+        }
+
+        var userId = await SeedLearnerAsync(certCode);
+        var (practice, _) = CreateServices();
+
+        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId, 2));
+
+        // Q1: Whitespace & case insensitive match -> IsCorrect = true
+        var res1 = await practice.SubmitAnswerAsync(userId, session.SessionId, q1Id,
+            new SubmitPracticeAnswerInput(ResponseText: "  DEVELOPMENT  "));
+        Assert.True(res1.IsCorrect);
+        Assert.Equal("[\"development\", \"software development\"]", res1.AcceptedAnswersJson);
+        Assert.Equal("The correct answer is development", res1.Explanation);
+
+        // Q2: Incorrect word -> IsCorrect = false
+        var res2 = await practice.SubmitAnswerAsync(userId, session.SessionId, q2Id,
+            new SubmitPracticeAnswerInput(ResponseText: "banana"));
+        Assert.False(res2.IsCorrect);
+        Assert.Equal("[\"apple\", \"apples\"]", res2.AcceptedAnswersJson);
+        Assert.True(res2.IsSessionFinished);
+    }
+
+    [Fact]
+    public async Task GetSessionTakeAsync_returns_component_metadata()
+    {
+        var certCode = Unique("TK");
+        int secId;
+        int qId;
+
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            var cert = new Certificate { Code = certCode, Name = $"Cert {certCode}", IsActive = true };
+            db.Certificates.Add(cert);
+            await db.SaveChangesAsync();
+
+            var skill = new Skill { CertId = cert.CertId, Code = "READ", Name = "Reading", Modality = "reading", DisplayOrder = 1 };
+            db.Skills.Add(skill);
+            await db.SaveChangesAsync();
+
+            var sec = new Section { CertId = cert.CertId, SkillId = skill.SkillId, Modality = "reading", Code = "P6", Name = "Take Section", DisplayOrder = 1 };
+            db.Sections.Add(sec);
+            await db.SaveChangesAsync();
+            secId = sec.SectionId;
+
+            var exam = new Exam { CertId = cert.CertId, Name = $"Exam {certCode}", Status = "published", DurationMinutes = 60, Purpose = "mock" };
+            db.Exams.Add(exam);
+            await db.SaveChangesAsync();
+
+            var grp = new QuestionGroup { ExamId = exam.ExamId, CertId = cert.CertId, SectionId = sec.SectionId, DisplayOrder = 1 };
+            db.QuestionGroups.Add(grp);
+            await db.SaveChangesAsync();
+
+            var q = new Question
+            {
+                GroupId = grp.GroupId,
+                ExamId = exam.ExamId,
+                SectionId = sec.SectionId,
+                SkillId = skill.SkillId,
+                Stem = "Take Question Stem",
+                DifficultyLevel = 3,
+                QuestionType = "inline_completion",
+                AcceptedAnswersJson = "[\"solution\"]",
+                AllowNumber = false,
+                MaxWords = 1,
+                Hint = "Hint text",
+                Explanation = "Detailed solution",
+                DisplayOrder = 1
+            };
+            db.Questions.Add(q);
+            await db.SaveChangesAsync();
+            qId = q.QuestionId;
+        }
+
+        var userId = await SeedLearnerAsync(certCode);
+        var (practice, _) = CreateServices();
+
+        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId, 1));
+        var take = await practice.GetSessionTakeAsync(userId, session.SessionId);
+
+        Assert.NotNull(take);
+        Assert.Equal(session.SessionId, take.Session.SessionId);
+        Assert.Single(take.Questions);
+        Assert.Single(take.Navigator);
+
+        var currentQ = take.Question;
+        Assert.Equal(qId, currentQ.QuestionId);
+        Assert.Equal("inline_completion", currentQ.QuestionType);
+        Assert.Equal("[\"solution\"]", currentQ.AcceptedAnswersJson);
+        Assert.False(currentQ.AllowNumber);
+        Assert.Equal(1, currentQ.MaxWords);
+        // Anti-cheat: not answered yet -> explanation hidden
+        Assert.Null(currentQ.Explanation);
+
+        // Submit answer
+        await practice.SubmitAnswerAsync(userId, session.SessionId, qId, new SubmitPracticeAnswerInput(ResponseText: "solution"));
+
+        // Refetch take
+        var takeAfter = await practice.GetSessionTakeAsync(userId, session.SessionId);
+        Assert.True(takeAfter.Question.IsCorrect);
+        Assert.Equal("Detailed solution", takeAfter.Question.Explanation);
+    }
 }

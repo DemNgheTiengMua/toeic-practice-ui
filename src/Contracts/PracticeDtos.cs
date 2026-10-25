@@ -69,9 +69,24 @@ public sealed record PracticeQuestionDto(
     string? ImageAlt,
     bool IsSaved = false,
     int? AudioStartMs = null,
-    int? AudioEndMs = null);
+    int? AudioEndMs = null,
+    string QuestionType = "mcq",
+    int? MaxSelections = null,
+    bool AllowNumber = true,
+    string? AcceptedAnswersJson = null,
+    string? RequiredKeywords = null,
+    int? MinWords = null,
+    int? MaxWords = null,
+    string? ResponseText = null,
+    IReadOnlyList<int>? SelectedOptionIds = null,
+    string? SelectedOptionIdsJson = null,
+    IReadOnlyList<int>? CorrectOptionIds = null);
 
-public sealed record SubmitPracticeAnswerRequest(int? SelectedOptionId);
+public sealed record SubmitPracticeAnswerRequest(
+    int? SelectedOptionId,
+    string? ResponseText = null,
+    string? SelectedOptionIdsJson = null,
+    IReadOnlyList<int>? SelectedOptionIds = null);
 
 public sealed record GradedAnswerDto(
     bool? IsCorrect,
@@ -81,7 +96,11 @@ public sealed record GradedAnswerDto(
     string? Transcript,
     bool IsSessionFinished,
     int? NextQuestionDisplayOrder,
-    bool IsSaved = false);
+    bool IsSaved = false,
+    string? AcceptedAnswersJson = null,
+    IReadOnlyList<int>? CorrectOptionIds = null,
+    string? ResponseText = null,
+    string? SelectedOptionIdsJson = null);
 
 public sealed record PracticeNavigatorItemDto(
     int QuestionId,
@@ -106,7 +125,17 @@ public sealed record QuestionOutcomeDto(
     string? AudioPath = null,
     int? AudioStartMs = null,
     int? AudioEndMs = null,
-    string? Transcript = null);
+    string? Transcript = null,
+    string QuestionType = "mcq",
+    string? ResponseText = null,
+    string? SelectedOptionIdsJson = null,
+    string? AcceptedAnswersJson = null);
+
+public sealed record PracticeSessionTakeDto(
+    PracticeSessionDto Session,
+    PracticeQuestionDto Question,
+    IReadOnlyList<PracticeQuestionDto> Questions,
+    IReadOnlyList<PracticeNavigatorItemDto> Navigator);
 
 public sealed record PracticeSummaryDto(
     int SessionId,

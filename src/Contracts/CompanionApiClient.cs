@@ -195,6 +195,9 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
     public Task<PracticeQuestionDto> GetPracticeQuestionAsync(int sessionId, int displayOrder, string bearerToken, CancellationToken cancellationToken = default) =>
         GetAuthorizedAsync<PracticeQuestionDto>($"api/learner/practice/sessions/{sessionId}/questions/{displayOrder}", bearerToken, cancellationToken);
 
+    public Task<PracticeSessionTakeDto> GetPracticeSessionTakeAsync(int sessionId, int? displayOrder, string bearerToken, CancellationToken cancellationToken = default) =>
+        GetAuthorizedAsync<PracticeSessionTakeDto>($"api/learner/practice/sessions/{sessionId}/take" + (displayOrder.HasValue ? $"?q={displayOrder.Value}" : ""), bearerToken, cancellationToken);
+
     public async Task<IReadOnlyList<PracticeQuestionDto>> GetPracticeSessionQuestionsAsync(int sessionId, string bearerToken, CancellationToken cancellationToken = default)
     {
         var list = await GetAuthorizedAsync<List<PracticeQuestionDto>>($"api/learner/practice/sessions/{sessionId}/questions", bearerToken, cancellationToken);
@@ -1368,6 +1371,9 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
 
     public Task<PracticeQuestionDto> GetPracticeQuestionAsync(int sessionId, int displayOrder, CancellationToken cancellationToken = default) =>
         GetPracticeQuestionAsync(sessionId, displayOrder, string.Empty, cancellationToken);
+
+    public Task<PracticeSessionTakeDto> GetPracticeSessionTakeAsync(int sessionId, int? displayOrder = null, CancellationToken cancellationToken = default) =>
+        GetPracticeSessionTakeAsync(sessionId, displayOrder, string.Empty, cancellationToken);
 
     public Task<IReadOnlyList<PracticeQuestionDto>> GetPracticeSessionQuestionsAsync(int sessionId, CancellationToken cancellationToken = default) =>
         GetPracticeSessionQuestionsAsync(sessionId, string.Empty, cancellationToken);
