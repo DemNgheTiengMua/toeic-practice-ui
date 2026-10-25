@@ -36,3 +36,7 @@ public sealed record ExamHistoryViewModel(
 public sealed record ExamReviewViewModel(
     AttemptReviewDto Review,
     string? ErrorMessage = null);
+
+public sealed record ExamPreflightViewModel(
+    PreflightStatusDto Preflight,
+    string? ErrorMessage = null);

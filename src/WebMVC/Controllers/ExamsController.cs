@@ -56,6 +56,11 @@ public sealed class ExamsController(
         try
         {
             var response = await api.StartMockExamAsync(id, cancellationToken);
+            var preflight = await api.GetPreflightStatusAsync(response.AttemptId, cancellationToken);
+            if (preflight.RequiresPreflight && !preflight.IsVerified)
+            {
+                return RedirectToAction(nameof(Preflight), new { id, attemptId = response.AttemptId });
+            }
             return RedirectToAction(nameof(Take), new { attemptId = response.AttemptId });
         }
         catch (ApiException ex) when (ex.Code == ApiError.Codes.InsufficientCredits)
@@ -72,11 +77,107 @@ public sealed class ExamsController(
         }
     }
 
+    [HttpGet("/exams/{id:int}/preflight")]
+    [HttpGet("/exams/preflight/{attemptId:int}")]
+    public async Task<IActionResult> Preflight(int? id, [FromQuery] int? attemptId, CancellationToken cancellationToken)
+    {
+        var effectiveAttemptId = attemptId ?? (RouteData.Values.TryGetValue("attemptId", out var raw) && int.TryParse(raw?.ToString(), out var parsed) ? parsed : (int?)null);
+
+        if (!effectiveAttemptId.HasValue && id.HasValue)
+        {
+            try
+            {
+                var instructions = await api.GetMockExamInstructionsAsync(id.Value, cancellationToken);
+                effectiveAttemptId = instructions.ActiveAttemptId;
+            }
+            catch (ApiException)
+            {
+            }
+        }
+
+        if (!effectiveAttemptId.HasValue)
+        {
+            TempData["ShellError"] = "Exam attempt not found.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        try
+        {
+            var preflight = await api.GetPreflightStatusAsync(effectiveAttemptId.Value, cancellationToken);
+            return View("Preflight", new ExamPreflightViewModel(preflight, TempData["ErrorMessage"] as string));
+        }
+        catch (ApiException ex) when (ex.Status == 404 || ex.Code == ApiError.Codes.AttemptNotFound)
+        {
+            logger.LogWarning(ex, "Attempt {AttemptId} not found for preflight", effectiveAttemptId.Value);
+            Response.StatusCode = 404;
+            return View("AttemptNotFound");
+        }
+        catch (ApiException ex)
+        {
+            logger.LogError(ex, "Failed to load preflight for attempt {AttemptId}", effectiveAttemptId.Value);
+            TempData["ShellError"] = "Could not load preflight checklist.";
+            return RedirectToAction(nameof(Index));
+        }
+    }
+
+    [HttpPost("/exams/preflight/{attemptId:int}/verify")]
+    [HttpPost("/exams/{id:int}/preflight/verify")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> VerifyPreflight(int? id, int? attemptId, [FromQuery] int? qAttemptId, CancellationToken cancellationToken)
+    {
+        var effectiveAttemptId = attemptId ?? qAttemptId ?? (id.HasValue && RouteData.Values.TryGetValue("attemptId", out var raw) && int.TryParse(raw?.ToString(), out var parsed) ? parsed : (int?)null);
+        if (!effectiveAttemptId.HasValue)
+        {
+            return BadRequest();
+        }
+
+        try
+        {
+            await api.VerifyPreflightAsync(effectiveAttemptId.Value, cancellationToken);
+            return RedirectToAction(nameof(Take), new { attemptId = effectiveAttemptId.Value });
+        }
+        catch (ApiException ex)
+        {
+            logger.LogError(ex, "Failed to verify preflight for attempt {AttemptId}", effectiveAttemptId.Value);
+            TempData["ErrorMessage"] = ex.Detail ?? "Failed to verify preflight checks. Please try again.";
+            return RedirectToAction(nameof(Preflight), new { id, attemptId = effectiveAttemptId.Value });
+        }
+    }
+
+    [HttpGet("/exams/{id:int}/take")]
+    public async Task<IActionResult> TakeExam(int id, [FromQuery] int? attemptId, [FromQuery] int? q, CancellationToken cancellationToken)
+    {
+        if (attemptId.HasValue)
+        {
+            return await Take(attemptId.Value, q, cancellationToken);
+        }
+
+        try
+        {
+            var instructions = await api.GetMockExamInstructionsAsync(id, cancellationToken);
+            if (instructions.ActiveAttemptId.HasValue)
+            {
+                return await Take(instructions.ActiveAttemptId.Value, q, cancellationToken);
+            }
+        }
+        catch (ApiException)
+        {
+        }
+
+        return RedirectToAction(nameof(Instructions), new { id });
+    }
+
     [HttpGet("/exams/take/{attemptId:int}")]
     public async Task<IActionResult> Take(int attemptId, [FromQuery] int? q, CancellationToken cancellationToken)
     {
         try
         {
+            var preflight = await api.GetPreflightStatusAsync(attemptId, cancellationToken);
+            if (preflight.RequiresPreflight && !preflight.IsVerified)
+            {
+                return RedirectToAction(nameof(Preflight), new { id = preflight.ExamId, attemptId });
+            }
+
             var take = await api.GetAttemptTakeAsync(attemptId, q, cancellationToken);
 
             if (take.Status is AttemptStatusDto.Submitted or AttemptStatusDto.Graded || take.IsAutoSubmitted)
@@ -85,6 +186,11 @@ public sealed class ExamsController(
             }
 
             return View(new ExamTakeViewModel(take, TempData["ErrorMessage"] as string));
+        }
+        catch (ApiException ex) when (ex.Code == ApiError.Codes.PreflightRequired)
+        {
+            logger.LogInformation("Attempt {AttemptId} redirected to preflight verification", attemptId);
+            return RedirectToAction(nameof(Preflight), new { attemptId });
         }
         catch (ApiException ex) when (ex.Code == ApiError.Codes.AttemptExpired)
         {

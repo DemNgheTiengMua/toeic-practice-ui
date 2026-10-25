@@ -483,6 +483,21 @@ public sealed class ExamsControllerTests
             RetryInsightCalled = true;
             return Task.CompletedTask;
         }
+
+        public PreflightStatusDto? PreflightDto { get; set; }
+        public bool VerifyPreflightCalled { get; set; }
+
+        public Task<PreflightStatusDto> GetPreflightStatusAsync(int attemptId, CancellationToken cancellationToken = default) =>
+            ExceptionToThrow != null
+                ? Task.FromException<PreflightStatusDto>(ExceptionToThrow)
+                : Task.FromResult(PreflightDto ?? new PreflightStatusDto(attemptId, 1, "Mock Exam", "TOEIC", "TOEIC", 120, false, false, false, true, DateTimeOffset.UtcNow, []));
+
+        public Task<PreflightStatusDto> VerifyPreflightAsync(int attemptId, CancellationToken cancellationToken = default)
+        {
+            if (ExceptionToThrow != null) return Task.FromException<PreflightStatusDto>(ExceptionToThrow);
+            VerifyPreflightCalled = true;
+            return Task.FromResult(PreflightDto ?? new PreflightStatusDto(attemptId, 1, "Mock Exam", "TOEIC", "TOEIC", 120, true, true, false, true, DateTimeOffset.UtcNow, []));
+        }
     }
 
     [Fact]
@@ -568,6 +583,115 @@ public sealed class ExamsControllerTests
         var controller = CreateController(api);
         var result = await controller.Review(100, CancellationToken.None);
 
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(ExamsController.Take), redirect.ActionName);
+        Assert.Equal(100, redirect.RouteValues?["attemptId"]);
+    }
+
+    [Fact]
+    public async Task Start_when_preflight_required_and_unverified_redirects_to_Preflight()
+    {
+        var api = new TestApiClient
+        {
+            StartResponse = new StartMockExamResponse(100, 1, AttemptStatusDto.InProgress, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddHours(2), 7200, false),
+            PreflightDto = new PreflightStatusDto(100, 1, "Speaking Mock", "IELTS", "IELTS Academic", 120, true, true, true, false, null, ["/audio/1.mp3"])
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.Start(1, CancellationToken.None);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(ExamsController.Preflight), redirect.ActionName);
+        Assert.Equal(100, redirect.RouteValues?["attemptId"]);
+    }
+
+    [Fact]
+    public async Task Take_when_preflight_required_and_unverified_redirects_to_Preflight()
+    {
+        var api = new TestApiClient
+        {
+            PreflightDto = new PreflightStatusDto(100, 1, "Speaking Mock", "IELTS", "IELTS Academic", 120, true, true, true, false, null, ["/audio/1.mp3"])
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.Take(100, null, CancellationToken.None);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(ExamsController.Preflight), redirect.ActionName);
+        Assert.Equal(100, redirect.RouteValues?["attemptId"]);
+    }
+
+    [Fact]
+    public async Task Take_when_preflight_verified_allows_access_to_sitting_view()
+    {
+        var currentQ = new AttemptQuestionDto(
+            1, 1, 1, 1, "P1", "Part 1", "listening", "Listening", ModalityDto.Listening,
+            "Question stem", null, null, null, null, null, null, null,
+            [new AttemptOptionDto(1, "A", "Option A")], null, false, "multiple_choice",
+            null, null, null, null, null, null, null, null, null, 0);
+
+        var api = new TestApiClient
+        {
+            PreflightDto = new PreflightStatusDto(100, 1, "Listening Mock", "TOEIC", "TOEIC", 120, true, true, false, true, DateTimeOffset.UtcNow, ["/audio/1.mp3"]),
+            TakeDto = new AttemptTakeDto(100, 1, "Listening Mock", "TOEIC", AttemptStatusDto.InProgress, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddHours(2), 7200, 1, 0, 0, currentQ, [], false)
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.Take(100, null, CancellationToken.None);
+
+        var viewResult = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<ExamTakeViewModel>(viewResult.Model);
+        Assert.Equal(100, model.Take.AttemptId);
+    }
+
+    [Fact]
+    public async Task Take_when_api_throws_PreflightRequired_redirects_to_Preflight()
+    {
+        var api = new TestApiClient
+        {
+            PreflightDto = new PreflightStatusDto(100, 1, "Listening Mock", "TOEIC", "TOEIC", 120, false, false, false, true, DateTimeOffset.UtcNow, []),
+            ExceptionToThrow = new ApiException(ApiError.Codes.PreflightRequired, "Preflight verification required", 400)
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.Take(100, null, CancellationToken.None);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(ExamsController.Preflight), redirect.ActionName);
+        Assert.Equal(100, redirect.RouteValues?["attemptId"]);
+    }
+
+    [Fact]
+    public async Task Preflight_returns_view_with_preflight_model()
+    {
+        var api = new TestApiClient
+        {
+            PreflightDto = new PreflightStatusDto(100, 1, "Speaking Mock", "IELTS", "IELTS Academic", 120, true, true, true, false, null, ["/audio/track1.mp3"])
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.Preflight(1, 100, CancellationToken.None);
+
+        var viewResult = Assert.IsType<ViewResult>(result);
+        Assert.Equal("Preflight", viewResult.ViewName);
+        var model = Assert.IsType<ExamPreflightViewModel>(viewResult.Model);
+        Assert.Equal(100, model.Preflight.AttemptId);
+        Assert.True(model.Preflight.RequiresMicrophone);
+        Assert.Single(model.Preflight.AudioUrls);
+    }
+
+    [Fact]
+    public async Task VerifyPreflight_calls_api_and_redirects_to_Take()
+    {
+        var api = new TestApiClient
+        {
+            PreflightDto = new PreflightStatusDto(100, 1, "Speaking Mock", "IELTS", "IELTS Academic", 120, true, true, true, true, DateTimeOffset.UtcNow, ["/audio/track1.mp3"])
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.VerifyPreflight(1, 100, null, CancellationToken.None);
+
+        Assert.True(api.VerifyPreflightCalled);
         var redirect = Assert.IsType<RedirectToActionResult>(result);
         Assert.Equal(nameof(ExamsController.Take), redirect.ActionName);
         Assert.Equal(100, redirect.RouteValues?["attemptId"]);

@@ -469,6 +469,7 @@ public partial class CompanionDbContext : DbContext
             entity.Property(e => e.PhaseDeadlineAt).HasColumnType("datetime2");
             entity.Property(e => e.LastAudioOffsetMs).HasDefaultValue(0);
             entity.Property(e => e.CandidateNotesJson);
+            entity.Property(e => e.PreflightVerifiedAt);
 
             entity.HasOne(d => d.ActiveSkill).WithMany()
                 .HasForeignKey(d => d.ActiveSkillId)

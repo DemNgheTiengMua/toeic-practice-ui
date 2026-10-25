@@ -468,6 +468,7 @@ CREATE TABLE ExamAttempts (
   PhaseDeadlineAt     DATETIME2 NULL,
   LastAudioOffsetMs   INT NOT NULL CONSTRAINT DF_Attempts_LastAudioOffsetMs DEFAULT 0,
   CandidateNotesJson  NVARCHAR(MAX) NULL,
+  PreflightVerifiedAt DATETIMEOFFSET NULL,
   Status              VARCHAR(12) NOT NULL DEFAULT 'in_progress'
     CONSTRAINT CK_Attempts_Status CHECK (Status IN ('in_progress','submitted','graded','abandoned')),
   StartedAt       DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
