@@ -141,6 +141,10 @@ public interface IMockExamsClient
     Task<AiInsightDto> GetExamInsightAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) => GetExamInsightAsync(attemptId, cancellationToken);
     Task RetryExamInsightAsync(int attemptId, CancellationToken cancellationToken = default);
     Task RetryExamInsightAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) => RetryExamInsightAsync(attemptId, cancellationToken);
+    Task<PreflightStatusDto> GetPreflightStatusAsync(int attemptId, CancellationToken cancellationToken = default);
+    Task<PreflightStatusDto> GetPreflightStatusAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) => GetPreflightStatusAsync(attemptId, cancellationToken);
+    Task<PreflightStatusDto> VerifyPreflightAsync(int attemptId, CancellationToken cancellationToken = default);
+    Task<PreflightStatusDto> VerifyPreflightAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) => VerifyPreflightAsync(attemptId, cancellationToken);
 }
 
 public interface IWritingClient
@@ -267,6 +271,10 @@ public interface IAiInsightsClient
     Task<AiInsightDto> GetExamInsightAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) => GetExamInsightAsync(attemptId, cancellationToken);
     Task RetryExamInsightAsync(int attemptId, CancellationToken cancellationToken = default);
     Task RetryExamInsightAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) => RetryExamInsightAsync(attemptId, cancellationToken);
+    Task<PreflightStatusDto> GetPreflightStatusAsync(int attemptId, CancellationToken cancellationToken = default);
+    Task<PreflightStatusDto> GetPreflightStatusAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) => GetPreflightStatusAsync(attemptId, cancellationToken);
+    Task<PreflightStatusDto> VerifyPreflightAsync(int attemptId, CancellationToken cancellationToken = default);
+    Task<PreflightStatusDto> VerifyPreflightAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) => VerifyPreflightAsync(attemptId, cancellationToken);
     Task RetryInsightAsync(int insightId, CancellationToken cancellationToken = default);
     Task RetryInsightAsync(int insightId, string bearerToken, CancellationToken cancellationToken = default) => RetryInsightAsync(insightId, cancellationToken);
     Task<AiInsightDto> GetDashboardInsightAsync(int? certId = null, CancellationToken cancellationToken = default);

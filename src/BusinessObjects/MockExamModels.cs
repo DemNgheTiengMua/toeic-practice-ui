@@ -146,6 +146,20 @@ public sealed record AttemptTakeView(
     IReadOnlyList<AttemptQuestionInfo>? Questions = null,
     IReadOnlyList<AttemptPhaseInfo>? Phases = null);
 
+public sealed record PreflightStatusView(
+    int AttemptId,
+    int ExamId,
+    string ExamName,
+    string CertCode,
+    string CertName,
+    int DurationMinutes,
+    bool RequiresPreflight,
+    bool RequiresAudio,
+    bool RequiresMicrophone,
+    bool IsVerified,
+    DateTimeOffset? VerifiedAt,
+    IReadOnlyList<string> AudioUrls);
+
 public sealed record SaveAttemptAnswerResult(
     int QuestionId,
     int? SelectedOptionId,

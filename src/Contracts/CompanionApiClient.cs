@@ -463,6 +463,18 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
     public Task<AttemptReviewDto> GetAttemptReviewAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) =>
         GetAuthorizedAsync<AttemptReviewDto>($"api/learner/attempts/{attemptId}/review", bearerToken, cancellationToken);
 
+    public Task<PreflightStatusDto> GetPreflightStatusAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) =>
+        GetAuthorizedAsync<PreflightStatusDto>($"api/learner/attempts/{attemptId}/preflight", bearerToken, cancellationToken);
+
+    public async Task<PreflightStatusDto> VerifyPreflightAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default)
+    {
+        using var message = new HttpRequestMessage(HttpMethod.Post, $"api/learner/attempts/{attemptId}/preflight/verify");
+        AttachBearer(message, bearerToken);
+        using var response = await http.SendAsync(message, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+        return (await response.Content.ReadFromJsonAsync<PreflightStatusDto>(Json, cancellationToken))!;
+    }
+
     public Task<AdminScoreConversionDto> GetAdminScoreConversionAsync(string? certCode, int? examId, string bearerToken, CancellationToken cancellationToken = default)
     {
         var query = new List<string>();
@@ -1401,6 +1413,12 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
 
     public Task<AttemptReviewDto> GetAttemptReviewAsync(int attemptId, CancellationToken cancellationToken = default) =>
         GetAttemptReviewAsync(attemptId, string.Empty, cancellationToken);
+
+    public Task<PreflightStatusDto> GetPreflightStatusAsync(int attemptId, CancellationToken cancellationToken = default) =>
+        GetPreflightStatusAsync(attemptId, string.Empty, cancellationToken);
+
+    public Task<PreflightStatusDto> VerifyPreflightAsync(int attemptId, CancellationToken cancellationToken = default) =>
+        VerifyPreflightAsync(attemptId, string.Empty, cancellationToken);
 
     public Task<WritingInstructionsDto> GetWritingInstructionsAsync(int examId, CancellationToken cancellationToken = default) =>
         GetWritingInstructionsAsync(examId, string.Empty, cancellationToken);

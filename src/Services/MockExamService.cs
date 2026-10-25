@@ -21,6 +21,7 @@ public class MockExamException(string code, string message) : Exception(message)
     public const string InvalidOption = "invalid_option";
     public const string QuestionNotFound = "question_not_found";
     public const string AttemptNotFinished = "attempt_not_finished";
+    public const string PreflightRequired = "preflight_required";
 
     public string Code { get; } = code;
 }
@@ -61,6 +62,8 @@ public interface IMockExamService
     Task<ExamHistoryView> GetExamHistoryAsync(int userId, CancellationToken cancellationToken = default);
 
     Task<AttemptReviewView> GetAttemptReviewAsync(int userId, int attemptId, CancellationToken cancellationToken = default);
+    Task<PreflightStatusView> GetPreflightStatusAsync(int userId, int attemptId, CancellationToken cancellationToken = default);
+    Task<PreflightStatusView> VerifyPreflightAsync(int userId, int attemptId, CancellationToken cancellationToken = default);
 }
 
 public sealed class MockExamService(
@@ -475,6 +478,29 @@ public sealed class MockExamService(
         try
         {
             return await _attemptEngine.GetAttemptReviewAsync(attemptId, userId, cancellationToken);
+        }
+        catch (AttemptEngineException ex)
+        {
+            throw MapException(ex);
+        }
+    }
+    public async Task<PreflightStatusView> GetPreflightStatusAsync(int userId, int attemptId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await _attemptEngine.GetPreflightStatusAsync(attemptId, userId, cancellationToken);
+        }
+        catch (AttemptEngineException ex)
+        {
+            throw MapException(ex);
+        }
+    }
+
+    public async Task<PreflightStatusView> VerifyPreflightAsync(int userId, int attemptId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await _attemptEngine.VerifyPreflightAsync(attemptId, userId, cancellationToken);
         }
         catch (AttemptEngineException ex)
         {

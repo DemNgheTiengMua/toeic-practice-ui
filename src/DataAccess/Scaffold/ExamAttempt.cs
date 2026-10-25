@@ -37,6 +37,8 @@ public partial class ExamAttempt
 
     public string? CandidateNotesJson { get; set; }
 
+    public DateTimeOffset? PreflightVerifiedAt { get; set; }
+
     [StringLength(12)]
     [Unicode(false)]
     public string Status { get; set; } = null!;

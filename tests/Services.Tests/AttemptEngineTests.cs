@@ -354,6 +354,7 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
         var userId = await SeedLearnerAsync("TOEIC");
 
         var attempt = await CreateEngine().CreateAttemptAsync(userId, certId, examId, exam.DurationMinutes);
+        await CreateEngine().VerifyPreflightAsync(attempt.AttemptId, userId);
 
         await using var resultDb = DbContextFactory.Create(database.ConnectionString);
         Assert.Equal(30, await resultDb.AttemptAnswers.CountAsync(a => a.AttemptId == attempt.AttemptId));
@@ -651,6 +652,7 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
         var engine = CreateEngine();
         var attempt = await engine.CreateAttemptAsync(userId, certId, examId, 60);
 
+        await engine.VerifyPreflightAsync(attempt.AttemptId, userId);
         var take = await engine.GetAttemptTakeAsync(attempt.AttemptId, userId, 1);
 
         Assert.Equal($"/media/exams/{examId}/master.mp3", take.CurrentQuestion.AudioPath);
@@ -668,6 +670,7 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
         var engine = CreateEngine();
         var attempt = await engine.CreateAttemptAsync(userId, certId, examId, 60);
 
+        await engine.VerifyPreflightAsync(attempt.AttemptId, userId);
         var take = await engine.GetAttemptTakeAsync(attempt.AttemptId, userId, 1);
 
         Assert.Equal($"/media/exams/{examId}/upload.mp3", take.CurrentQuestion.AudioPath);
@@ -685,6 +688,7 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
         var engine = CreateEngine();
         var attempt = await engine.CreateAttemptAsync(userId, certId, examId, 60);
 
+        await engine.VerifyPreflightAsync(attempt.AttemptId, userId);
         var take = await engine.GetAttemptTakeAsync(attempt.AttemptId, userId, 1);
 
         Assert.Equal("/audio/toeic/test1-p1.mp3", take.CurrentQuestion.AudioPath);
@@ -719,6 +723,7 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
         var engine = CreateEngine();
         var attempt = await engine.CreateAttemptAsync(userId, certId, examId, 60);
 
+        await engine.VerifyPreflightAsync(attempt.AttemptId, userId);
         var take = await engine.GetAttemptTakeAsync(attempt.AttemptId, userId, 1);
 
         Assert.NotNull(take.Questions);

@@ -214,6 +214,76 @@ public static class ExamEndpoints
             {
                 return Problem(StatusCodes.Status400BadRequest, "Attempt not active", ApiError.Codes.AttemptNotActive, ex.Message);
             }
+            catch (MockExamException ex) when (ex.Code == MockExamException.PreflightRequired)
+            {
+                return Problem(StatusCodes.Status400BadRequest, "Preflight verification required", ApiError.Codes.PreflightRequired, ex.Message);
+            }
+        });
+
+                learner.MapGet("/attempts/{attemptId:int}/preflight", async Task<IResult> (
+            int attemptId,
+            HttpContext http,
+            IMockExamService mockExamService,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var status = await mockExamService.GetPreflightStatusAsync(CurrentUserId(http), attemptId, cancellationToken);
+                return Results.Ok(new PreflightStatusDto(
+                    status.AttemptId,
+                    status.ExamId,
+                    status.ExamName,
+                    status.CertCode,
+                    status.CertName,
+                    status.DurationMinutes,
+                    status.RequiresPreflight,
+                    status.RequiresAudio,
+                    status.RequiresMicrophone,
+                    status.IsVerified,
+                    status.VerifiedAt,
+                    status.AudioUrls));
+            }
+            catch (MockExamException ex) when (ex.Code == MockExamException.AttemptNotFound)
+            {
+                return Problem(StatusCodes.Status404NotFound, "Attempt not found", ApiError.Codes.AttemptNotFound, ex.Message);
+            }
+            catch (MockExamException ex) when (ex.Code == MockExamException.AttemptNotActive)
+            {
+                return Problem(StatusCodes.Status400BadRequest, "Attempt not active", ApiError.Codes.AttemptNotActive, ex.Message);
+            }
+        });
+
+        learner.MapPost("/attempts/{attemptId:int}/preflight/verify", async Task<IResult> (
+            int attemptId,
+            HttpContext http,
+            IMockExamService mockExamService,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var status = await mockExamService.VerifyPreflightAsync(CurrentUserId(http), attemptId, cancellationToken);
+                return Results.Ok(new PreflightStatusDto(
+                    status.AttemptId,
+                    status.ExamId,
+                    status.ExamName,
+                    status.CertCode,
+                    status.CertName,
+                    status.DurationMinutes,
+                    status.RequiresPreflight,
+                    status.RequiresAudio,
+                    status.RequiresMicrophone,
+                    status.IsVerified,
+                    status.VerifiedAt,
+                    status.AudioUrls));
+            }
+            catch (MockExamException ex) when (ex.Code == MockExamException.AttemptNotFound)
+            {
+                return Problem(StatusCodes.Status404NotFound, "Attempt not found", ApiError.Codes.AttemptNotFound, ex.Message);
+            }
+            catch (MockExamException ex) when (ex.Code == MockExamException.AttemptNotActive)
+            {
+                return Problem(StatusCodes.Status400BadRequest, "Attempt not active", ApiError.Codes.AttemptNotActive, ex.Message);
+            }
         });
 
         learner.MapPost("/attempts/{attemptId:int}/draft", async Task<IResult> (
@@ -254,6 +324,10 @@ public static class ExamEndpoints
                 ex.Code == AttemptEngineException.WrongPhase)
             {
                 return Problem(StatusCodes.Status400BadRequest, "Attempt not active", ApiError.Codes.AttemptNotActive, ex.Message);
+            }
+            catch (MockExamException ex) when (ex.Code == MockExamException.PreflightRequired)
+            {
+                return Problem(StatusCodes.Status400BadRequest, "Preflight verification required", ApiError.Codes.PreflightRequired, ex.Message);
             }
         });
 
@@ -301,6 +375,10 @@ public static class ExamEndpoints
             catch (MockExamException ex) when (ex.Code == AttemptEngineException.WrongPhase)
             {
                 return Problem(StatusCodes.Status400BadRequest, "Question not available yet", ApiError.Codes.AttemptNotActive, ex.Message);
+            }
+            catch (MockExamException ex) when (ex.Code == MockExamException.PreflightRequired)
+            {
+                return Problem(StatusCodes.Status400BadRequest, "Preflight verification required", ApiError.Codes.PreflightRequired, ex.Message);
             }
         });
 
