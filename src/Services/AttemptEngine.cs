@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using BusinessObjects;
@@ -144,6 +145,18 @@ public interface IAttemptEngine
         int attemptId,
         int? userId = null,
         CancellationToken cancellationToken = default);
+
+    Task<SittingSyncResult> SaveSittingSyncAsync(
+        int attemptId,
+        SittingSyncRequest request,
+        int? userId = null,
+        Func<int, int, Task>? onAutoSubmitted = null,
+        CancellationToken cancellationToken = default);
+
+    Task<AttemptResumeView> ResumeAttemptByCodeAsync(
+        string authorizationCode,
+        int userId,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
@@ -213,11 +226,18 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
                 phaseDeadlineAt = expiresAt.UtcDateTime;
             }
 
+            string authorizationCode;
+            do
+            {
+                authorizationCode = GenerateAuthorizationCode();
+            } while (await db.ExamAttempts.AnyAsync(a => a.AuthorizationCode == authorizationCode, cancellationToken));
+
             var attempt = new ExamAttempt
             {
                 UserId = userId,
                 ExamId = examId,
                 CertId = certId,
+                AuthorizationCode = authorizationCode,
                 Status = AttemptStatus.InProgress.ToCode(),
                 StartedAt = now,
                 ExpiresAt = expiresAt,
@@ -323,6 +343,12 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
                 .Include(a => a.Exam)
                 .Include(a => a.Cert)
                 .SingleAsync(a => a.AttemptId == attemptId && a.UserId == userId, cancellationToken);
+        }
+
+        if (attempt.Status == AttemptStatus.InProgress.ToCode() && string.IsNullOrWhiteSpace(attempt.AuthorizationCode))
+        {
+            attempt.AuthorizationCode = GenerateAuthorizationCode();
+            await db.SaveChangesAsync(cancellationToken);
         }
 
         var questions = await db.Questions
@@ -484,7 +510,10 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
             ActiveUnitNumber: attempt.ActiveUnitNumber,
             ActiveGroupId: attempt.ActiveGroupId,
             PhaseDeadlineAt: phaseDeadline,
-            IsSkillLocked: isPhaseExpired);
+            IsSkillLocked: isPhaseExpired,
+            AuthorizationCode: attempt.AuthorizationCode,
+            LastAudioOffsetMs: attempt.LastAudioOffsetMs,
+            CandidateNotesJson: attempt.CandidateNotesJson);
     }
 
     public async Task<SaveAttemptAnswerResult> SaveAnswerAsync(
@@ -2421,6 +2450,174 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
             ToUtcOffset(attempt.PhaseDeadlineAt),
             remainingSeconds,
             EnumCodes.Parse<AttemptStatus>(attempt.Status));
+    }
+
+    public static string GenerateAuthorizationCode()
+    {
+        const string chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+        return $"EX-{RandomNumberGenerator.GetString(chars, 6)}";
+    }
+
+    public async Task<SittingSyncResult> SaveSittingSyncAsync(
+        int attemptId,
+        SittingSyncRequest request,
+        int? userId = null,
+        Func<int, int, Task>? onAutoSubmitted = null,
+        CancellationToken cancellationToken = default)
+    {
+        var attempt = await db.ExamAttempts
+            .Include(a => a.Exam)
+            .SingleOrDefaultAsync(a => a.AttemptId == attemptId && (userId == null || a.UserId == userId), cancellationToken)
+            ?? throw new AttemptEngineException(AttemptEngineException.AttemptNotFound, $"Attempt {attemptId} not found.");
+
+        if (attempt.Status != AttemptStatus.InProgress.ToCode())
+        {
+            throw new AttemptEngineException(AttemptEngineException.AttemptNotActive, "Exam attempt is not in progress.");
+        }
+
+        if (attempt.PreflightVerifiedAt == null)
+        {
+            await EnsurePreflightVerifiedAsync(attempt, cancellationToken);
+        }
+
+        if (DateTimeOffset.UtcNow >= attempt.ExpiresAt)
+        {
+            await SubmitAttemptAsync(attempt.AttemptId, attempt.UserId, isAutoSubmit: true, cancellationToken);
+            if (onAutoSubmitted != null)
+            {
+                await onAutoSubmitted(attempt.AttemptId, attempt.UserId);
+            }
+            throw new AttemptEngineException(AttemptEngineException.AttemptExpired, "Exam time has expired and your exam was auto-submitted.");
+        }
+
+        var phaseDeadline = ToUtcOffset(attempt.PhaseDeadlineAt);
+        if (phaseDeadline.HasValue && DateTimeOffset.UtcNow >= phaseDeadline.Value)
+        {
+            throw new AttemptEngineException(AttemptEngineException.AttemptExpired, "Exam phase time has expired.");
+        }
+
+        int savedCount = 0;
+        if (request.Answers != null && request.Answers.Count > 0)
+        {
+            foreach (var ans in request.Answers)
+            {
+                await SaveAnswerAsync(
+                    attempt.AttemptId,
+                    attempt.UserId,
+                    ans.QuestionId,
+                    ans.SelectedOptionId,
+                    ans.IsFlagged,
+                    onAutoSubmitted,
+                    cancellationToken,
+                    ans.ResponseText,
+                    ans.SelectedOptionIdsJson);
+                savedCount++;
+            }
+        }
+
+        if (request.LastAudioOffsetMs.HasValue && request.LastAudioOffsetMs.Value >= 0)
+        {
+            attempt.LastAudioOffsetMs = request.LastAudioOffsetMs.Value;
+        }
+
+        if (request.CandidateNotesJson != null)
+        {
+            attempt.CandidateNotesJson = request.CandidateNotesJson;
+        }
+
+        if (request.LastQuestionId.HasValue && (request.Answers == null || request.Answers.Count == 0))
+        {
+            attempt.LastQuestionId = request.LastQuestionId.Value;
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+
+        var effectiveDeadline = ResolveEffectiveDeadline(attempt);
+        var remainingSeconds = Math.Max(0, (int)(effectiveDeadline - DateTimeOffset.UtcNow).TotalSeconds);
+
+        return new SittingSyncResult(
+            attempt.AttemptId,
+            remainingSeconds,
+            attempt.IsAutoSubmitted,
+            attempt.ActiveSkillId,
+            attempt.ActiveUnitNumber,
+            attempt.ActiveGroupId,
+            phaseDeadline,
+            attempt.LastAudioOffsetMs,
+            savedCount);
+    }
+
+    public async Task<AttemptResumeView> ResumeAttemptByCodeAsync(
+        string authorizationCode,
+        int userId,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(authorizationCode))
+        {
+            throw new AttemptEngineException(AttemptEngineException.AttemptNotFound, "Authorization code is required.");
+        }
+
+        var normalizedCode = authorizationCode.Trim().ToUpperInvariant();
+        var attempt = await db.ExamAttempts
+            .Include(a => a.Exam)
+            .SingleOrDefaultAsync(a => a.AuthorizationCode == normalizedCode && a.UserId == userId, cancellationToken)
+            ?? throw new AttemptEngineException(AttemptEngineException.AttemptNotFound, $"No exam attempt found for authorization code '{authorizationCode}'.");
+
+        if (attempt.Status != AttemptStatus.InProgress.ToCode())
+        {
+            throw new AttemptEngineException(AttemptEngineException.AttemptNotActive, "This exam attempt is no longer in progress.");
+        }
+
+        if (DateTimeOffset.UtcNow >= attempt.ExpiresAt)
+        {
+            await SubmitAttemptAsync(attempt.AttemptId, userId, isAutoSubmit: true, cancellationToken);
+            throw new AttemptEngineException(AttemptEngineException.AttemptExpired, "Exam time has expired and your exam was auto-submitted.");
+        }
+
+        var answers = await db.AttemptAnswers
+            .Where(a => a.AttemptId == attempt.AttemptId)
+            .ToDictionaryAsync(a => a.QuestionId, cancellationToken);
+
+        var freeResponses = await db.FreeResponses
+            .Where(fr => fr.AttemptId == attempt.AttemptId)
+            .ToDictionaryAsync(fr => fr.QuestionId, cancellationToken);
+
+        var questionIds = await db.Questions
+            .Where(q => q.ExamId == attempt.ExamId)
+            .OrderBy(q => q.DisplayOrder)
+            .Select(q => q.QuestionId)
+            .ToListAsync(cancellationToken);
+
+        var answerSheet = questionIds.Select(qId =>
+        {
+            answers.TryGetValue(qId, out var ans);
+            freeResponses.TryGetValue(qId, out var fr);
+            return new AttemptAnswerSheetItem(
+                qId,
+                ans?.SelectedOptionId,
+                ans?.SelectedOptionIdsJson,
+                fr?.ResponseText ?? ans?.ResponseText,
+                ans?.IsFlagged ?? false);
+        }).ToList();
+
+        var effectiveDeadline = ResolveEffectiveDeadline(attempt);
+        var remainingSeconds = Math.Max(0, (int)(effectiveDeadline - DateTimeOffset.UtcNow).TotalSeconds);
+        var phaseDeadline = ToUtcOffset(attempt.PhaseDeadlineAt);
+
+        return new AttemptResumeView(
+            attempt.AttemptId,
+            attempt.ExamId,
+            attempt.AuthorizationCode ?? normalizedCode,
+            attempt.ActiveSkillId,
+            attempt.ActiveUnitNumber,
+            attempt.ActiveGroupId,
+            attempt.LastQuestionId,
+            attempt.LastAudioOffsetMs,
+            attempt.CandidateNotesJson,
+            remainingSeconds,
+            attempt.ExpiresAt,
+            phaseDeadline,
+            answerSheet);
     }
 
     private static DateTimeOffset? ToUtcOffset(DateTime? dt) =>

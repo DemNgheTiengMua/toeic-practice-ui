@@ -37,6 +37,12 @@
       <div class="exam-topbar-group">
         <strong>@take.ExamName</strong>
         <span class="badge badge--info" id="topbar-section-badge">@q.SkillName · @q.SectionName</span>
+        @if (!string.IsNullOrEmpty(take.AuthorizationCode))
+        {
+          <span class="badge badge--neutral" id="auth-code-placard" style="font-family: 'IBM Plex Mono', monospace; font-weight: 700; letter-spacing: 0.05em; border: 2px solid #14181d; background: #fff; color: #14181d; border-radius: 0; box-shadow: none;" title="Mã dự thi dùng để khôi phục bài thi khi gặp sự cố">
+            MÃ DỰ THI: @take.AuthorizationCode
+          </span>
+        }
       </div>
       <div class="exam-topbar-group">
         <span id="save-status" class="save-status save-status--saved" role="status" aria-live="polite">Saved</span>
@@ -72,8 +78,13 @@
         </div>
 
         <!-- Offline Network Warning Banner -->
-        <div id="network-warning" class="alert alert--danger mb-4" style="display:none;" role="alert">
-          <strong>Connection offline:</strong> Network lost. Your answers are buffered safely on this device and will automatically sync when reconnected.
+        <div id="network-warning" class="alert alert--danger mb-4" style="display:none; border: 2px solid #b31217; border-radius: 0; box-shadow: none; font-family: 'IBM Plex Sans', sans-serif;" role="alert">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <strong style="font-family: 'IBM Plex Sans Condensed', sans-serif; text-transform: uppercase; color: #b31217; font-size: 1rem;">
+              MẤT KẾT NỐI MẠNG (CONNECTION OFFLINE):
+            </strong>
+            <span>Câu trả lời của bạn đã được lưu tạm an toàn trong máy. Hệ thống sẽ tự động đồng bộ ngay khi có mạng trở lại.</span>
+          </div>
         </div>
 
         <section id="phase-progress" class="phase-progress" aria-label="Exam phases">
@@ -378,6 +389,8 @@
       var expiresAt = @take.ExpiresAt.ToUnixTimeMilliseconds();
       var attemptStartedAt = @take.StartedAt.ToUnixTimeMilliseconds();
       var csrfToken = document.querySelector('#anti-forgery-holder input[name="__RequestVerificationToken"]').value;
+      var currentAudioOffsetMs = @take.LastAudioOffsetMs;
+      var candidateNotesJson = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(take.CandidateNotesJson ?? ""));
 
       var questionMap = {};
       questions.forEach(function (q) {
@@ -389,6 +402,7 @@
       questions.forEach(function (q) {
         localAnswers[q.questionId] = {
           selectedOptionId: q.selectedOptionId,
+          selectedOptionIdsJson: q.selectedOptionIds != null ? JSON.stringify(q.selectedOptionIds) : null,
           isFlagged: q.isFlagged,
           responseText: q.responseText || '',
           responseAudioPath: q.responseAudioPath || null,
@@ -593,6 +607,9 @@
       }
 
       document.addEventListener('examaudiotimeupdate', function (e) {
+        if (e.detail && typeof e.detail.currentTime === 'number') {
+          currentAudioOffsetMs = Math.round(e.detail.currentTime * 1000);
+        }
         if (currentAudioKey && e.detail) {
           recordAudioProgress(currentAudioKey, {
             currentTime: e.detail.currentTime,
@@ -1202,8 +1219,26 @@
         if (mAllAns) mAllAns.style.display = (unanswered <= 0) ? 'block' : 'none';
       }
 
-      // 5. Optimistic Answer Queue & Sync
+      // 5. Debounced Auto-Sync & LocalStorage Recovery Seam
+      var syncDebounceTimer = null;
+
+      function scheduleSync(immediate) {
+        if (syncDebounceTimer) {
+          clearTimeout(syncDebounceTimer);
+          syncDebounceTimer = null;
+        }
+        if (immediate) {
+          triggerSync();
+        } else {
+          syncDebounceTimer = setTimeout(triggerSync, 500);
+        }
+      }
+
       function triggerFlush() {
+        scheduleSync(true);
+      }
+
+      function triggerSync() {
         if (isFlushing || pendingQueue.length === 0) {
           if (pendingQueue.length === 0) {
             saveStatus.textContent = 'Saved';
@@ -1220,24 +1255,32 @@
         saveStatus.textContent = 'Saving…';
         saveStatus.className = 'save-status save-status--saving';
 
-        var item = pendingQueue[0];
-        var body = new URLSearchParams();
-        body.append('__RequestVerificationToken', csrfToken);
-        if (item.selectedOptionId !== null && item.selectedOptionId !== undefined) {
-          body.append('SelectedOptionId', item.selectedOptionId);
-        }
-        body.append('ResponseText', item.responseText || '');
-        body.append('IsFlagged', item.isFlagged ? 'true' : 'false');
+        var syncItems = pendingQueue.slice();
+        var payload = {
+          answers: syncItems.map(function (item) {
+            return {
+              questionId: item.questionId,
+              selectedOptionId: (item.selectedOptionId !== null && item.selectedOptionId !== undefined) ? item.selectedOptionId : null,
+              selectedOptionIdsJson: item.selectedOptionIdsJson || null,
+              responseText: item.responseText || null,
+              isFlagged: !!item.isFlagged
+            };
+          }),
+          lastAudioOffsetMs: currentAudioOffsetMs,
+          candidateNotesJson: candidateNotesJson || null,
+          lastQuestionId: (questionMap[currentDisplayOrder] ? questionMap[currentDisplayOrder].questionId : null)
+        };
 
-        fetch('/exams/take/' + attemptId + '/answers/' + item.questionId, {
+        fetch('/exams/attempts/' + attemptId + '/sync', {
           method: 'POST',
           keepalive: true,
           headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
+            'Content-Type': 'application/json',
+            'RequestVerificationToken': csrfToken,
             'X-Requested-With': 'XMLHttpRequest',
             'Accept': 'application/json'
           },
-          body: body.toString()
+          body: JSON.stringify(payload)
         })
         .then(function (res) {
           if (!res.ok) {
@@ -1254,18 +1297,29 @@
             return;
           }
 
-          // Anti-Clock-Tampering: calibrate local timer against authoritative server remaining seconds
           if (typeof data.remainingSeconds === 'number') {
             expiresAt = Date.now() + (data.remainingSeconds * 1000);
           }
 
-          // Pop processed job and persist remaining queue to storage
-          pendingQueue.shift();
+          var syncedQIds = syncItems.map(function (x) { return x.questionId; });
+          pendingQueue = pendingQueue.filter(function (x) { return syncedQIds.indexOf(x.questionId) === -1; });
           try {
             localStorage.setItem(storageKey, JSON.stringify(pendingQueue));
           } catch (e) {}
 
-          triggerFlush();
+          var networkWarning = document.getElementById('network-warning');
+          if (networkWarning) networkWarning.style.display = 'none';
+
+          if (pendingQueue.length > 0) {
+            scheduleSync(false);
+          } else {
+            saveStatus.textContent = 'Saved';
+            saveStatus.className = 'save-status save-status--saved';
+            var submitQueueMsg = document.getElementById('modal-sync-pending');
+            var submitNowBtn = document.getElementById('btn-modal-submit-now');
+            if (submitQueueMsg) submitQueueMsg.style.display = 'none';
+            if (submitNowBtn) submitNowBtn.disabled = false;
+          }
         })
         .catch(function (err) {
           isFlushing = false;
@@ -1276,21 +1330,24 @@
             return;
           }
 
-          saveStatus.textContent = 'Sync error · Retrying';
+          var networkWarning = document.getElementById('network-warning');
+          if (networkWarning) networkWarning.style.display = 'block';
+
+          saveStatus.textContent = 'Sync offline · Đã lưu tạm';
           saveStatus.className = 'save-status save-status--error';
 
-          item.retryCount = (item.retryCount || 0) + 1;
           setTimeout(function () {
-            triggerFlush();
-          }, Math.min(8000, 1500 * item.retryCount));
+            scheduleSync(true);
+          }, 4000);
         });
       }
 
-      function saveAnswer(questionId, selectedOptionId, flagged, responseText) {
+      function saveAnswer(questionId, selectedOptionId, flagged, responseText, selectedOptionIdsJson) {
         // Immediate in-memory registration
         var previousAnswer = localAnswers[questionId] || {};
         localAnswers[questionId] = {
           selectedOptionId: selectedOptionId,
+          selectedOptionIdsJson: typeof selectedOptionIdsJson === 'string' ? selectedOptionIdsJson : (previousAnswer.selectedOptionIdsJson || null),
           isFlagged: flagged,
           responseText: typeof responseText === 'string' ? responseText : (previousAnswer.responseText || ''),
           responseAudioPath: previousAnswer.responseAudioPath || null,
@@ -1302,6 +1359,7 @@
         if (cell) {
           var isAnswered = (selectedOptionId !== null && selectedOptionId !== undefined)
             || (localAnswers[questionId].responseText.trim().length > 0)
+            || (localAnswers[questionId].selectedOptionIdsJson != null && localAnswers[questionId].selectedOptionIdsJson.length > 2)
             || !!localAnswers[questionId].responseAudioPath;
           if (isAnswered) {
             cell.classList.add('is-answered');
@@ -1324,6 +1382,7 @@
         pendingQueue.push({
           questionId: questionId,
           selectedOptionId: selectedOptionId,
+          selectedOptionIdsJson: localAnswers[questionId].selectedOptionIdsJson,
           responseText: localAnswers[questionId].responseText,
           isFlagged: flagged,
           retryCount: 0
@@ -1333,7 +1392,7 @@
           localStorage.setItem(storageKey, JSON.stringify(pendingQueue));
         } catch (e) {}
 
-        triggerFlush();
+        scheduleSync(false); // 500ms debounce
       }
 
       // 6. Navigation Event Listeners
@@ -1503,12 +1562,12 @@
       var networkWarning = document.getElementById('network-warning');
       window.addEventListener('online', function () {
         if (networkWarning) networkWarning.style.display = 'none';
-        triggerFlush();
+        scheduleSync(true);
       });
 
       window.addEventListener('offline', function () {
         if (networkWarning) networkWarning.style.display = 'block';
-        saveStatus.textContent = 'Offline';
+        saveStatus.textContent = 'Offline · Đã lưu tạm';
         saveStatus.className = 'save-status save-status--error';
       });
 

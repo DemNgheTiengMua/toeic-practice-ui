@@ -511,6 +511,25 @@ public sealed class ExamsControllerTests
             VerifyPreflightCalled = true;
             return Task.FromResult(PreflightDto ?? new PreflightStatusDto(attemptId, 1, "Mock Exam", "TOEIC", "TOEIC", 120, true, true, false, true, DateTimeOffset.UtcNow, []));
         }
+
+        public SittingSyncDto? SyncDto { get; set; }
+        public AttemptResumeDto? ResumeDto { get; set; }
+        public SittingSyncRequestDto? LastSyncRequest { get; private set; }
+        public ResumeAttemptRequest? LastResumeRequest { get; private set; }
+
+        public Task<SittingSyncDto> SaveSittingSyncAsync(int attemptId, SittingSyncRequestDto request, CancellationToken cancellationToken = default)
+        {
+            if (ExceptionToThrow != null) return Task.FromException<SittingSyncDto>(ExceptionToThrow);
+            LastSyncRequest = request;
+            return Task.FromResult(SyncDto ?? new SittingSyncDto(attemptId, 1800, false, null, 1, null, null, request.LastAudioOffsetMs ?? 0, request.Answers?.Count ?? 0));
+        }
+
+        public Task<AttemptResumeDto> ResumeAttemptByCodeAsync(ResumeAttemptRequest request, CancellationToken cancellationToken = default)
+        {
+            if (ExceptionToThrow != null) return Task.FromException<AttemptResumeDto>(ExceptionToThrow);
+            LastResumeRequest = request;
+            return Task.FromResult(ResumeDto ?? new AttemptResumeDto(1, 1, request.AuthorizationCode, null, 1, null, null, 0, null, 1800, DateTimeOffset.UtcNow.AddMinutes(30), null, []));
+        }
     }
 
     [Fact]
@@ -708,5 +727,110 @@ public sealed class ExamsControllerTests
         var redirect = Assert.IsType<RedirectToActionResult>(result);
         Assert.Equal(nameof(ExamsController.Take), redirect.ActionName);
         Assert.Equal(100, redirect.RouteValues?["attemptId"]);
+    }
+
+    [Fact]
+    public async Task Sync_returns_json_with_remaining_seconds_and_status()
+    {
+        var api = new TestApiClient
+        {
+            SyncDto = new SittingSyncDto(100, 1500, false, 1, 1, null, null, 12000, 2)
+        };
+
+        var controller = CreateController(api);
+        var request = new SittingSyncRequestDto(
+            Answers: [new BatchAnswerItemDto(1, 10, false, null, null)],
+            LastAudioOffsetMs: 12000);
+
+        var result = await controller.Sync(100, request, CancellationToken.None);
+
+        var json = Assert.IsType<JsonResult>(result);
+        Assert.NotNull(json.Value);
+        var propMap = json.Value.GetType().GetProperties().ToDictionary(p => p.Name, p => p.GetValue(json.Value));
+        Assert.Equal(100, propMap["attemptId"]);
+        Assert.Equal(1500, propMap["remainingSeconds"]);
+        Assert.Equal(false, propMap["isAutoSubmitted"]);
+        Assert.Equal(12000, propMap["lastAudioOffsetMs"]);
+        Assert.Equal(2, propMap["answersSavedCount"]);
+    }
+
+    [Fact]
+    public async Task Sync_when_attempt_expired_returns_json_with_redirect()
+    {
+        var api = new TestApiClient
+        {
+            ExceptionToThrow = new ApiException(ApiError.Codes.AttemptExpired, "Attempt expired", 400)
+        };
+
+        var controller = CreateController(api);
+        var request = new SittingSyncRequestDto(Answers: []);
+
+        var result = await controller.Sync(100, request, CancellationToken.None);
+
+        var json = Assert.IsType<JsonResult>(result);
+        var propMap = json.Value!.GetType().GetProperties().ToDictionary(p => p.Name, p => p.GetValue(json.Value));
+        Assert.Equal(true, propMap["isAutoSubmitted"]);
+        Assert.NotNull(propMap["redirectUrl"]);
+    }
+
+    [Fact]
+    public void Resume_Get_returns_view_with_model()
+    {
+        var api = new TestApiClient();
+        var controller = CreateController(api);
+
+        var result = controller.Resume();
+
+        var viewResult = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<ExamResumeViewModel>(viewResult.Model);
+        Assert.Null(model.AuthorizationCode);
+    }
+
+    [Fact]
+    public async Task Resume_Post_when_valid_code_redirects_to_Take()
+    {
+        var api = new TestApiClient
+        {
+            ResumeDto = new AttemptResumeDto(105, 1, "EX-ABCDEF", 1, 1, null, null, 0, null, 1800, DateTimeOffset.UtcNow.AddMinutes(30), null, [])
+        };
+
+        var controller = CreateController(api);
+        var form = new ExamResumeFormModel { AuthorizationCode = "ex-abcdef" };
+
+        var result = await controller.Resume(form, CancellationToken.None);
+
+        Assert.Equal("EX-ABCDEF", api.LastResumeRequest?.AuthorizationCode);
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(ExamsController.Take), redirect.ActionName);
+        Assert.Equal(105, redirect.RouteValues?["attemptId"]);
+    }
+
+    [Fact]
+    public async Task Resume_Post_when_empty_code_returns_view_with_error()
+    {
+        var api = new TestApiClient();
+        var controller = CreateController(api);
+
+        var result = await controller.Resume(new ExamResumeFormModel { AuthorizationCode = "" }, CancellationToken.None);
+
+        var viewResult = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<ExamResumeViewModel>(viewResult.Model);
+        Assert.NotNull(model.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task Resume_Post_when_code_not_found_returns_view_with_error()
+    {
+        var api = new TestApiClient
+        {
+            ExceptionToThrow = new ApiException(ApiError.Codes.AttemptNotFound, "Attempt not found", 404)
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.Resume(new ExamResumeFormModel { AuthorizationCode = "EX-NOTFOUND" }, CancellationToken.None);
+
+        var viewResult = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<ExamResumeViewModel>(viewResult.Model);
+        Assert.Contains("No active exam sitting was found", model.ErrorMessage);
     }
 }
