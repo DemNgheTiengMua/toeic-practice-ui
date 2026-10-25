@@ -555,6 +555,36 @@ public sealed class AdminExamsControllerTests
     }
 
     [Fact]
+    public async Task GetQuickIngestSample_CallsApi_ReturnsJsonResult()
+    {
+        var api = new TestApiClient();
+        var controller = CreateController(api);
+
+        var result = await controller.GetQuickIngestSample(10, CancellationToken.None);
+
+        var json = Assert.IsType<JsonResult>(result);
+        var sample = Assert.IsType<QuickIngestSampleTemplateDto>(json.Value);
+        Assert.NotNull(sample);
+        Assert.Equal("1. A", sample.Template);
+    }
+
+    [Fact]
+    public async Task GenerateSectionQuestions_CallsApi_ReturnsJsonResult()
+    {
+        var api = new TestApiClient();
+        var controller = CreateController(api);
+
+        var result = await controller.GenerateSectionQuestions(5, 10, new SectionGenerateRequest(2), CancellationToken.None);
+
+        var json = Assert.IsType<JsonResult>(result);
+        var gen = Assert.IsType<SectionGenerationResultDto>(json.Value);
+        Assert.NotNull(gen);
+        Assert.Equal(5, gen.ExamId);
+        Assert.Equal(10, gen.SectionId);
+        Assert.Equal(2, gen.QuestionsGenerated);
+    }
+
+    [Fact]
     public async Task Studio_ReturnsViewResult_WithStudioModel()
     {
         var api = new TestApiClient();
@@ -1138,6 +1168,12 @@ public sealed class AdminExamsControllerTests
 
         public Task<QuickIngestCommitResultDto> CommitQuickIngestAsync(int examId, QuickIngestCommitRequest request, CancellationToken cancellationToken = default) =>
             Task.FromResult(new QuickIngestCommitResultDto(true, request.Questions.Count, request.Questions.Count, "Success"));
+
+        public Task<QuickIngestSampleTemplateDto> GetQuickIngestSampleTemplateAsync(int sectionId, CancellationToken cancellationToken = default) =>
+            Task.FromResult(new QuickIngestSampleTemplateDto("1. A", "Blueprint Template"));
+
+        public Task<SectionGenerationResultDto> GenerateSectionQuestionsAsync(int examId, int sectionId, SectionGenerateRequest? request, CancellationToken cancellationToken = default) =>
+            Task.FromResult(new SectionGenerationResultDto(examId, sectionId, request?.QuestionCount ?? 2, 1, "Generated"));
 
         public Task<ExamStudioDetailDto> GetAdminExamStudioAsync(int examId, CancellationToken cancellationToken = default) =>
             Task.FromResult(SampleStudioDetail(examId));

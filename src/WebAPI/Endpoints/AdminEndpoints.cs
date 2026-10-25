@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using BusinessObjects;
 using Contracts;
 using Services;
@@ -498,13 +499,50 @@ public static class AdminEndpoints
             }
         });
 
-        admin.MapPost("/exams/{examId:int}/quick-ingest/parse", (
+        admin.MapPost("/exams/{examId:int}/quick-ingest/parse", async (
             int examId,
             QuickIngestParseRequest request,
-            IExamQuickIngestService quickIngest) =>
+            IExamQuickIngestService quickIngest,
+            CancellationToken cancellationToken) =>
         {
-            var result = quickIngest.Parse(request);
+            var result = await quickIngest.ParseStagingAsync(request, cancellationToken);
             return Results.Ok(result);
+        });
+
+        admin.MapGet("/sections/{sectionId:int}/quick-ingest/sample", async (
+            int sectionId,
+            IExamQuickIngestService quickIngest,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var template = await quickIngest.GetSampleTemplateAsync(sectionId, cancellationToken);
+                return Results.Ok(new QuickIngestSampleTemplateDto(template, "Section Blueprint Tailored Template"));
+            }
+            catch (AdminExamException ex)
+            {
+                return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
+            }
+        });
+
+        admin.MapPost("/exams/{examId:int}/sections/{sectionId:int}/ai-generate", async (
+            int examId,
+            int sectionId,
+            SectionGenerateRequest? request,
+            IExamGeneratorService generator,
+            HttpContext http,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var adminUserId = CurrentUserId(http);
+                var result = await generator.GenerateSectionQuestionsAsync(examId, sectionId, adminUserId, request?.QuestionCount, cancellationToken);
+                return Results.Ok(result);
+            }
+            catch (AdminExamException ex)
+            {
+                return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
+            }
         });
 
         admin.MapPost("/exams/{examId:int}/quick-ingest/commit", async (

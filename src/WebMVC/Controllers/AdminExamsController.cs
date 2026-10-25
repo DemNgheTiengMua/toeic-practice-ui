@@ -699,6 +699,43 @@ public sealed class AdminExamsController(
         }
     }
 
+    [HttpGet("sections/{sectionId:int}/quick-ingest/sample")]
+    public async Task<IActionResult> GetQuickIngestSample(
+        int sectionId,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var result = await api.GetQuickIngestSampleTemplateAsync(sectionId, cancellationToken);
+            return Json(result);
+        }
+        catch (ApiException ex)
+        {
+            logger.LogWarning(ex, "Failed to get quick ingest sample template for section {SectionId}", sectionId);
+            return StatusCode(ex.Status, new { message = ex.Detail ?? ex.Message, code = ex.Code });
+        }
+    }
+
+    [HttpPost("{id:int}/sections/{sectionId:int}/ai-generate")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> GenerateSectionQuestions(
+        int id,
+        int sectionId,
+        [FromBody] SectionGenerateRequest? request,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var result = await api.GenerateSectionQuestionsAsync(id, sectionId, request, cancellationToken);
+            return Json(result);
+        }
+        catch (ApiException ex)
+        {
+            logger.LogWarning(ex, "Failed to generate AI questions for exam {ExamId} section {SectionId}", id, sectionId);
+            return StatusCode(ex.Status, new { message = ex.Detail ?? ex.Message, code = ex.Code });
+        }
+    }
+
     [HttpGet("{id:int}/studio")]
     public async Task<IActionResult> Studio(int id, CancellationToken cancellationToken = default)
     {

@@ -32,7 +32,20 @@ public sealed record QuickIngestParsedQuestionDto(
     string? CategoryCode,
     IReadOnlyList<QuickIngestParsedOptionDto> Options,
     IReadOnlyList<QuickIngestIssueDto> Issues,
-    bool IsValid);
+    bool IsValid,
+    string QuestionType = "mcq",
+    string? Passage = null,
+    string? Transcript = null,
+    int? MaxWords = null,
+    int? MaxSelections = null,
+    string? AcceptedAnswersJson = null,
+    string? RequiredKeywords = null,
+    string? Hint = null,
+    int? GroupNumber = null,
+    int? PrepSeconds = null,
+    int? ResponseSeconds = null,
+    int? MinWords = null,
+    bool AllowNumber = true);
 
 public sealed record QuickIngestParseResultDto(
     bool Success,
@@ -51,6 +64,20 @@ public sealed record QuickIngestCommitResultDto(
     bool Success,
     int QuestionsCommitted,
     int GroupsCreated,
+    string Message);
+
+public sealed record QuickIngestSampleTemplateDto(
+    string Template,
+    string FormatDescription);
+
+public sealed record SectionGenerateRequest(
+    int? QuestionCount = null);
+
+public sealed record SectionGenerationResultDto(
+    int ExamId,
+    int SectionId,
+    int QuestionsGenerated,
+    int GroupsGenerated,
     string Message);
 
 // --- Reorder and Audit DTOs ---

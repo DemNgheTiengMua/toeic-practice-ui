@@ -1013,6 +1013,12 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
     public Task<QuickIngestCommitResultDto> CommitQuickIngestAsync(int examId, QuickIngestCommitRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
         PostAuthorizedAsync<QuickIngestCommitRequest, QuickIngestCommitResultDto>($"api/admin/exams/{examId}/quick-ingest/commit", request, bearerToken, cancellationToken);
 
+    public Task<QuickIngestSampleTemplateDto> GetQuickIngestSampleTemplateAsync(int sectionId, string bearerToken, CancellationToken cancellationToken = default) =>
+        GetAuthorizedAsync<QuickIngestSampleTemplateDto>($"api/admin/sections/{sectionId}/quick-ingest/sample", bearerToken, cancellationToken);
+
+    public Task<SectionGenerationResultDto> GenerateSectionQuestionsAsync(int examId, int sectionId, SectionGenerateRequest? request, string bearerToken, CancellationToken cancellationToken = default) =>
+        PostAuthorizedAsync<SectionGenerateRequest?, SectionGenerationResultDto>($"api/admin/exams/{examId}/sections/{sectionId}/ai-generate", request ?? new SectionGenerateRequest(), bearerToken, cancellationToken);
+
     public Task<ExamStudioDetailDto> GetAdminExamStudioAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) =>
         GetAuthorizedAsync<ExamStudioDetailDto>($"api/admin/exams/{examId}/studio", bearerToken, cancellationToken);
 
@@ -1686,6 +1692,12 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
 
     public Task<QuickIngestCommitResultDto> CommitQuickIngestAsync(int examId, QuickIngestCommitRequest request, CancellationToken cancellationToken = default) =>
         CommitQuickIngestAsync(examId, request, string.Empty, cancellationToken);
+
+    public Task<QuickIngestSampleTemplateDto> GetQuickIngestSampleTemplateAsync(int sectionId, CancellationToken cancellationToken = default) =>
+        GetQuickIngestSampleTemplateAsync(sectionId, string.Empty, cancellationToken);
+
+    public Task<SectionGenerationResultDto> GenerateSectionQuestionsAsync(int examId, int sectionId, SectionGenerateRequest? request, CancellationToken cancellationToken = default) =>
+        GenerateSectionQuestionsAsync(examId, sectionId, request, string.Empty, cancellationToken);
 
     public Task<ExamStudioDetailDto> GetAdminExamStudioAsync(int examId, CancellationToken cancellationToken = default) =>
         GetAdminExamStudioAsync(examId, string.Empty, cancellationToken);
