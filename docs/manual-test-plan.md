@@ -1,379 +1,427 @@
-# Exam System Rebuild: Comprehensive Manual Test Plan
-**Target Spec:** [#106](https://github.com/DemNgheTiengMua/toeic-practice-ui/issues/106) (Exam System Rebuild: 6-Axis Certificate Wizard, 11-Component Authoring & IELTS/TOEIC/VSTEP Engine)  
-**Covered Tickets:** [#107](https://github.com/DemNgheTiengMua/toeic-practice-ui/issues/107) through [#121](https://github.com/DemNgheTiengMua/toeic-practice-ui/issues/121) (Steps 01 to 15)  
-**Branch:** `feat/exam-system-rebuild-106`  
-**Test Design System:** "Bảng hiệu phòng thi" (`DESIGN.md` — 0 border-radius, 2px ink borders `#14181d`, IBM Plex typography, flat signage palette)
+# Comprehensive Manual Test Plan — Exam System Rebuild (#106, Steps 01–15)
+
+This manual test plan is **100% grounded in the real UI labels, routes, and seeded database rows** (`docs/seed-demo.sql` on `(localdb)\MSSQLLocalDB` / `ExtraEfficiency`). Every button label, dropdown option text, checkbox label, URL, Exam ID, Question stem, and answer key matches the live application verbatim.
 
 ---
 
-## 1. Test Environment Setup & Credentials
+## 0. Environment Startup & Seeded Reference Data
 
-### 1.1 Local Launch
-In separate terminal windows:
-```bash
-# Terminal 1: Start WebAPI (Port 5001)
-dotnet run --project src/WebAPI
+### 0.1 Start Services
+Open two PowerShell terminals at `D:\Study\PRN3\Project\extra_efficiency_ui`:
 
-# Terminal 2: Start WebMVC (Port 5000)
-dotnet run --project src/WebMVC
-```
-*Optional disposable database reset:* `scripts/crawl-env.sh fresh`
+1. **Terminal 1 (WebAPI — Port 5001)**:
+   ```powershell
+   dotnet run --project src/WebAPI
+   ```
+2. **Terminal 2 (WebMVC — Port 5000)**:
+   ```powershell
+   dotnet run --project src/WebMVC
+   ```
 
-### 1.2 Demo Accounts (`Demo1234!`)
-- **Administrator:** `admin@demo.local`
-- **Learner (Existing History):** `learner@demo.local`
-- **Fresh Learner (Zero History):** `learner.fresh@demo.local`
+### 0.2 Demo Accounts (Password for all: `Demo1234!`)
+- **Admin**: `admin@demo.local` (`Demo1234!`)
+- **Learner (with 8 credits & history)**: `learner@demo.local` (`Demo1234!`)
+- **Fresh Learner**: `learner.fresh@demo.local` (`Demo1234!`)
 
----
+### 0.3 Seeded Certificates in Database (`Certificates` Table)
+| CertId | Code | Name | PresetCode | ScoreAggregationRule |
+| :--- | :--- | :--- | :--- | :--- |
+| `1` | `TOEIC` | `TOEIC Listening & Reading` | `toeic_lr_std` | `sum` |
+| `2` | `IELTS` | `IELTS Academic & General` | `ielts_academic` | `avg_half_step` |
+| `3` | `VSTEP` | `VSTEP — the Vietnamese national test` | `vstep` | `avg_whole` |
+| `4` | `TOEIC_CAT` | `TOEIC Multi-Stage Adaptive CAT` | `toeic_lr_cat` | `sum` |
+| `5` | `TOEIC_SW` | `TOEIC Speaking & Writing` | `toeic_sw` | `sum` |
 
-## 2. Test Execution Scenarios
+> **IMPORTANT:** Because `TOEIC`, `IELTS`, `VSTEP`, `TOEIC_CAT`, and `TOEIC_SW` already exist in the database, clicking a preset card in the Certificate Wizard pre-fills that preset's code (`IELTS`, `TOEIC`, etc.). When saving a **new** certificate via the Wizard, change **Certificate Code \*** to a unique code (e.g., `IELTS_ACAD_2` or `CUSTOM_ENG`) so it does not collide with an existing certificate code.
 
-### Scenario 1: Certificate Wizard & Preset Instantiation
-**Covered Steps:** Step 01 ([#107](https://github.com/DemNgheTiengMua/toeic-practice-ui/issues/107)), Step 02 ([#116](https://github.com/DemNgheTiengMua/toeic-practice-ui/issues/116)), Step 03 ([#120](https://github.com/DemNgheTiengMua/toeic-practice-ui/issues/120))  
-**Role:** Administrator (`admin@demo.local`)  
-**Route:** `http://localhost:5000/admin/certificates/wizard`
-
-#### Steps:
-1. Navigate to `/admin/certificates/wizard`.
-2. **Step 1 — Preset Picker:**
-   - Click on the **IELTS (Academic/GT)** preset card.
-   - Verify all fields pre-populate: Code: `IELTS_ACAD`, Name: `IELTS Academic`, Description pre-filled.
-   - Click through **TOEIC CBT**, **TOEIC CAT**, **TOEIC S&W**, and **VSTEP** cards; observe skills and sections adapt dynamically in one click.
-   - Select **Blank Custom Certificate**. Enter:
-     - Certificate Code: `CUSTOM_ENG`
-     - Name: `Custom Proficiency Certificate`
-3. **Step 2 — Skills & Durations:**
-   - Configure 3 skills:
-     - `Listening`: 30 mins, Policy: *Audio playback duration + extra review countdown*
-     - `Reading`: 60 mins, Policy: *Shared timer for the whole skill*
-     - `Writing`: 60 mins, Policy: *Shared timer for the whole skill*
-4. **Step 3 — Section 6-Axis Blueprint & Tools:**
-   - For `Listening Section 1`:
-     - Navigation Mode: `AUDIO_DRIVEN`
-     - Stimulus: Check `RequireAudio`
-     - Option Count: `4`
-     - Cluster Size: `1`
-   - For `Reading Section 1`:
-     - Layout: `SPLIT_HORIZONTAL`
-     - Navigation Mode: `FULL_SANDBOX`
-     - Candidate Tools: Check `Text Highlighter & Notes`
-     - Allowed Components: Check `mcq`, `multi_select`, `inline_completion`, `dropdown`
-   - For `Writing Section 1 (Task 1)` & `Section 2 (Task 2)`:
-     - Layout: `SPLIT_HORIZONTAL`
-     - Candidate Tools: Check `Live Word Counter & Disable Spellcheck`
-5. **Step 4 — Scoring Rules & Live Preview Calculator:**
-   - Select Score Aggregation: `Average rounded to nearest 0.5 band (avg_half_step)`
-   - Set Writing Task 1 weight = `1.0`, Task 2 weight = `2.0`
-   - In the **Live Score Preview Placard**:
-     - Input sample skill scores: Listening: `6.0`, Reading: `6.5`, Writing: Task 1: `6.0`, Task 2: `7.0` (Weighted Writing = `(6.0*1 + 7.0*2)/3 = 6.67 -> 6.5`)
-     - Verify Overall Preview dynamically calculates: `(6.0 + 6.5 + 6.5)/3 = 6.33 -> 6.5` with matched badge.
-6. Click **[LƯU CẤU HÌNH CHỨNG CHỈ]**.
-
-#### Pass Criteria:
-- Certificate is persisted without raw JSON errors.
-- Redirects to `/admin/certificates` displaying `CUSTOM_ENG` in the active catalog table.
+### 0.4 Seeded Mock Exams Used in This Plan (`Exams` Table)
+| ExamId | Certificate | Exam Name | Purpose | Seeded Questions & Mechanics |
+| :--- | :--- | :--- | :--- | :--- |
+| `1` | `TOEIC` | `ETS 2024 — Test 1` | `mock` | **9 questions** across `P1` (`AUDIO_DRIVEN`, `HideOptionText`, 4 options A–D), `P2` (`AUDIO_DRIVEN`, `HideOptionText`, 3 options A–C), `P3` & `P4` (`AUDIO_DRIVEN`, `ClusterSize = 3`), `P5`, `P6`, `P7` (`FULL_SANDBOX`, Highlighter & Notes). |
+| `6` | `IELTS` | `Cambridge IELTS 18 — Academic Test 1` | `mock` | **2 questions**: `Q21` in `REC` (`AUDIO_DRIVEN`, `AUDIO_PLUS_CHECK` with 120s post-audio review), `Q22` in `PAS` (`FULL_SANDBOX`, `SPLIT_HORIZONTAL` 50/50 split-screen, Highlighter & Notes). |
+| `10` | `VSTEP` | `VSTEP Sample Test 1` | `mock` | **2 questions**: `Q29` in `L3` (`AUDIO_DRIVEN`), `Q30` in `R4` (`FULL_SANDBOX`, `SPLIT_HORIZONTAL`, Highlighter & Notes). |
+| `17` | `TOEIC_CAT` | `TOEIC CAT Benchmark Test 1` | `mock` | **7 questions** (`Q89`–`Q95`) across **Unit 1 (`P5_CAT`)** and **Unit 2 (`P7_CAT`)** with `UNIT_LOCKED_SANDBOX` and all 6 objective component types (`mcq`, `mcq_3`, `multi_select`, `inline_completion`, `dropdown`, `drag_drop`). |
+| `18` | `TOEIC_SW` | `TOEIC Speaking & Writing Mock Test 1` | `mock` | **3 questions**: `Q1` in `SW_S1` (`SYSTEM_PACED_AUTO`, 5s prep / 5s record), `Q2` in `SW_W1` (`HYBRID_GROUP_LOCKED`, mandatory keywords `conference, yesterday`, On-Screen Cut/Paste toolbar), `Q3` in `SW_W3` (`HYBRID_GROUP_LOCKED` opinion essay). |
 
 ---
 
-### Scenario 2: Dynamic Exam Studio Authoring & Pre-Publish Audit
-**Covered Steps:** Step 04 ([#117](https://github.com/DemNgheTiengMua/toeic-practice-ui/issues/117))  
-**Role:** Administrator (`admin@demo.local`)  
-**Route:** `http://localhost:5000/admin/exams`
+## Phase 1: Admin Authoring & Configuration (`admin@demo.local`)
 
-#### Steps:
-1. On `/admin/exams`, click **[Tạo Đề Thi Mới]**.
-2. Select Certificate: `Custom Proficiency Certificate` (`CUSTOM_ENG`).
-3. Set Exam Title: `Custom Benchmark Exam 01`, Delivery Mode: `strict_exam`.
-4. Open the created exam in Exam Studio: `/admin/exams/{id}/studio`.
-5. **Verify Dynamic Studio Scaffolding:**
-   - Top navigation bar renders top-level Skill tabs (`Listening`, `Reading`, `Writing`) matching `CUSTOM_ENG`.
-   - Nested section tabs display live completion counts (e.g., `Task 1 (0/1)`).
-   - Reading tab automatically presents split-pane stimulus on the left and question editor on the right (`SPLIT_HORIZONTAL`).
-   - Question type dropdown in Reading is strictly filtered to the allowed types (`mcq`, `multi_select`, `inline_completion`, `dropdown`).
-6. **Pre-Publish Checklist Verification:**
-   - Observe the **Pre-Publish Readiness Checklist** drawer: all incomplete sections show yellow/red `[!]` badges.
-   - Click a missing requirement link; verify it switches tabs and focuses directly on the incomplete slot.
-   - Attempt to click **[Xuất bản Đề thi]**; verify publication is safely blocked with a modal explaining missing blueprint requirements.
-
-#### Pass Criteria:
-- Exam Studio dynamically adapts tabs and inputs without hardcoding `CertCode`.
-- Readiness audit prevents premature publishing.
+Sign in at `http://localhost:5000/auth/signin` with `admin@demo.local` / `Demo1234!`.
 
 ---
 
-### Scenario 3: Batch Manifest Import & Dynamic Template Download
-**Covered Steps:** Step 05 ([#118](https://github.com/DemNgheTiengMua/toeic-practice-ui/issues/118))  
-**Role:** Administrator (`admin@demo.local`)  
-**Route:** `http://localhost:5000/admin/exams`
+### Scenario 1 — 4-Step Certificate Blueprint Wizard & Live Score Calculator (Steps 02 & 03 / #108, #109)
 
-#### Steps:
-1. In `/admin/exams`, click **[Nạp gói đề thi (.zip/.json)]**.
-2. In the modal, select Certificate: `CUSTOM_ENG`.
-3. Click **[Tải file mẫu (.json)]**.
-4. Open the downloaded `manifest-template.json` in a text editor:
-   - Verify `certCode: "CUSTOM_ENG"` is pre-filled.
-   - Verify sections contain the exact allowed question components and cluster sizes defined in Scenario 1.
-5. In the Import modal, upload an existing test package (e.g. `docs/samples/toeic-sample-package.zip`).
-6. Click **[Tiến hành nạp đề]**.
+1. **Open Certificate List**:
+   - Navigate to `http://localhost:5000/admin/certificates`.
+   - Verify the 5 seeded certificates (`TOEIC`, `IELTS`, `VSTEP`, `TOEIC_CAT`, `TOEIC_SW`) appear in the table.
+   - Click the top-right button **`+ Create Certificate Wizard`** (routes to `http://localhost:5000/admin/certificates/wizard`).
 
-#### Pass Criteria:
-- Dynamic manifest template downloads cleanly with correct section codes.
-- Batch import parses and validates questions against blueprint constraints, logging 0 errors.
+2. **Step 1 (`1. Blueprint Preset & Identity`)**:
+   - Under **Official Exam Blueprint Presets**, click the card **`IELTS Academic`** (`4 skills • avg_half_step • 0.5-band`).
+   - Verify the fields below auto-populate:
+     - **Certificate Code \***: Change from `IELTS` to **`IELTS_PRO`** (must be unique!).
+     - **Certificate Name \***: Change to **`IELTS Academic Pro Blueprint`**.
+     - **Description**: Keep the pre-filled description.
+     - **Score Aggregation Rule \***: Verify **`avg_half_step (IELTS 0.5-step band)`** is selected.
+     - **Active Certificate (Available in candidate test-taking rooms and authoring studio)**: Checked.
+   - Click **`Continue to Step 2: Skills & Timing ›`**.
 
----
+3. **Step 2 (`2. Skills & Timing`)**:
+   - Verify 4 skill rows are populated from the preset:
+     1. Skill Code: `LIST` | Skill Name: `Listening` | Modality: `Listening` | Duration (Min): `30`
+     2. Skill Code: `READ` | Skill Name: `Reading` | Modality: `Reading` | Duration (Min): `60`
+     3. Skill Code: `WRIT` | Skill Name: `Writing` | Modality: `Writing` | Duration (Min): `60`
+     4. Skill Code: `SPEA` | Skill Name: `Speaking` | Modality: `Speaking` | Duration (Min): `14`
+   - *(Optional test)*: Click **`+ Add Skill`** in the top-right of the card header to see a 5th skill row appear, then click **`Remove`** on that 5th row.
+   - Click **`Continue to Step 3: Section Blueprints ›`**.
 
-### Scenario 4: Section-Aware Quick Ingest & AI Section Fill
-**Covered Steps:** Step 06 ([#121](https://github.com/DemNgheTiengMua/toeic-practice-ui/issues/121))  
-**Role:** Administrator (`admin@demo.local`)  
-**Route:** `http://localhost:5000/admin/exams/{id}/studio`
+4. **Step 3 (`3. Section Blueprints & Tools`)**:
+   - Verify 4 skill groups appear (`Listening (LIST)`, `Reading (READ)`, `Writing (WRIT)`, `Speaking (SPEA)`), and every section card displays all 5 configuration rows:
+     - **Listening (`LIST`) — Section #1 (`REC`)**:
+       - **Row 1**: `Section Code`: `REC` | `Section Name`: `Four recordings: everyday conversation to academic lecture` | `Score Weight`: `1` | `Expected Items`: `40`
+       - **Row 2**: `Navigation Behavior`: **`AUDIO_DRIVEN (Synced to playback / One-way)`** | `Screen Layout`: **`SPLIT_HORIZONTAL (Passage left, Questions right)`**
+       - **Row 3**: `Section Timing Policy`: **`AUDIO_PLUS_CHECK (Audio duration + post-audio review countdown)`** | `Post-Audio Review (Sec)`: `120`
+       - **Row 4 (`Authoring Slot Blueprint & Constraints`)**: `Default Option Count`: `4` | `Cluster Size`: `1` | `Adaptive Unit Count`: `1` | `Req Keyword Count`: `0` | Checkbox **`Require Audio File`** is checked.
+       - **Row 5**: Under **Allowed Question Components**, check **`Single Choice (4-opt)`** and **`Inline Text Completion`**. Under **Candidate Sitting Room Tools**, verify **`Text Highlighter & Notes Tool`** is checked.
+     - **Reading (`READ`) — Section #1 (`PAS`)**:
+       - **Row 2**: `Navigation Behavior`: **`FULL_SANDBOX (Free back & forth navigation)`** | `Screen Layout`: **`SPLIT_HORIZONTAL (Passage left, Questions right)`**
+       - **Row 3**: `Section Timing Policy`: **`SECTION_SHARED (Shared countdown timer for whole section)`**
+       - **Row 4**: Checkbox **`Require Passage Stimulus`** is checked.
+       - **Row 5**: Under **Allowed Question Components**, check **`Single Choice (4-opt)`**, **`Multi-Select Checkbox`**, **`Inline Text Completion`**, and **`Dropdown Matching`**. Under **Candidate Sitting Room Tools**, verify **`Text Highlighter & Notes Tool`** is checked.
+     - **Writing (`WRIT`) — Section #1 (`T1`) & Section #2 (`T2`)**:
+       - Verify `T1` has `Score Weight`: `1` and `T2` has `Score Weight`: `2`.
+       - Verify both have `Screen Layout`: **`SPLIT_HORIZONTAL (Passage left, Questions right)`**, **Allowed Question Components**: **`Free Response (AI Graded)`**, and **Candidate Sitting Room Tools**: **`Live Word Counter`** and **`Disable Browser Spellcheck`** checked.
+     - **Speaking (`SPEA`) — Section #1 (`INT`)**:
+       - Verify `Navigation Behavior`: **`SYSTEM_PACED_AUTO (Prep ➔ Beep ➔ Record)`** and `Section Timing Policy`: **`ITEM_FIXED (Per-item timed prep and recording)`**.
+   - Click **`Next: Scoring Rules & Live Preview ›`**.
 
-#### Steps:
-1. In Exam Studio, select `Reading Section 1`.
-2. Click **[Nạp nhanh / Quick Ingest]** from the section header.
-3. Observe the modal placard:
-   - Notice that instructions and placeholders adapt to Reading's allowed components (`inline_completion`, `multi_select`, etc.).
-4. Click **[Nạp mẫu thử của phần này]**.
-   - Input populates with valid passage and multi-component items.
-5. Click **[Kiểm tra & Xem trước]**:
-   - Staging table renders parsed questions with green `[READY]` badges.
-6. Test Blueprint Mismatch Detection:
-   - Introduce an invalid option (e.g., choice `E` when `OptionCount = 4`).
-   - Click **[Kiểm tra & Xem trước]**; verify row displays red `[MISMATCH]` badge with explanatory text.
-7. Revert to valid text and click **[Lưu vào phần thi]**.
-
-#### Pass Criteria:
-- Modal instructions adapt dynamically to the active section.
-- Blueprint mismatches are caught before database commit.
-- Questions appear immediately in the studio slots upon saving.
-
----
-
-### Scenario 5: Preflight Onboarding Gate (Audio & Microphone Check)
-**Covered Steps:** Step 07 ([#108](https://github.com/DemNgheTiengMua/toeic-practice-ui/issues/108))  
-**Role:** Candidate (`learner@demo.local`)  
-**Route:** `http://localhost:5000/exams/{id}/take`
-
-#### Steps:
-1. Log in as `learner@demo.local`.
-2. Navigate to an exam with Listening or Speaking (e.g. IELTS or TOEIC CBT/S&W).
-3. Click **[Bắt đầu thi]**:
-   - Verify candidate is intercepted and redirected to `/exams/{id}/preflight?attemptId=...`.
-   - Verify attempt timer has NOT started yet.
-4. **Audio Pre-Buffering Test:**
-   - Observe audio buffering bar reach 100%.
-   - Click "Kiểm tra loa" to hear test oscillator tone.
-5. **Microphone Check (if Speaking exam):**
-   - Click **[Ghi âm thử (3s)]** and speak a short sample sentence.
-   - Click **[Nghe lại]** to verify audio playback.
-   - Select **"Có, nghe rõ"** on the clarity confirmation prompt.
-6. Observe the **[VÀO PHÒNG THI]** button unlock from disabled state.
-7. Click **[VÀO PHÒNG THI]**; verify redirection into sitting room `/take`.
-
-#### Pass Criteria:
-- Direct access to `/take` is strictly blocked until preflight passes.
-- Audio and mic checks unlock the exam cleanly without consuming exam sitting time.
+5. **Step 4 (`4. Scoring Rules & Live Preview`)**:
+   - Under **Relative Section Multipliers & Weights**, verify all 4 skills (`SKILL #1: LISTENING (LIST)`, `SKILL #2: READING (READ)`, `SKILL #3: WRITING (WRIT)`, `SKILL #4: SPEAKING (SPEA)`) and all 5 sections (`REC`, `PAS`, `T1`, `T2`, `INT`) are displayed!
+   - Under **`BẢNG HIỆU PHÒNG THI • LIVE SCORE PREVIEW CALCULATOR`**, adjust the **`SAMPLE CORRECT:`** inputs:
+     - Set `LISTENING (LIST)` (`REC`) to `30` (`/ 40 questions`).
+     - Set `READING (READ)` (`PAS`) to `30` (`/ 40 questions`).
+     - Set `WRITING (WRIT)` (`T1` and `T2`) to `1` (`/ 1 questions`).
+     - Set `SPEAKING (SPEA)` (`INT`) to `2` (`/ 3 questions`).
+   - Verify **`OVERALL ESTIMATED SCORE`**, **`MATCHED PROFICIENCY BAND`**, and **`Skill Breakdown Summary`** recalculate live in the dark scoreboard panel.
+   - Click **`[LƯU] Save & Persist Certificate Blueprint`**.
+   - Verify you are redirected to `http://localhost:5000/admin/certificates` with the green banner:
+     `Certificate 'IELTS Academic Pro Blueprint' (IELTS_PRO) saved with 4 skills and 5 sections.`
 
 ---
 
-### Scenario 6: Sitting State Machine, Locks & Crash Recovery
-**Covered Steps:** Step 08 ([#109](https://github.com/DemNgheTiengMua/toeic-practice-ui/issues/109)), Step 09 ([#110](https://github.com/DemNgheTiengMua/toeic-practice-ui/issues/110))  
-**Role:** Candidate (`learner@demo.local`)  
-**Route:** `http://localhost:5000/exams/take/{attemptId}`
+### Scenario 2 — Score Conversion & CEFR Band Table Editor (`ScoreConversion.cshtml`) (Step 03 / #109)
 
-#### Steps:
-1. In the active sitting room, note the **Authorization Code** in the top header (e.g., `MÃ DỰ THI: EX-9B2F4A`).
-2. Answer several questions (single choice, text input).
-3. **Simulate Tab Close / Crash:**
-   - Try to close or reload the browser tab: verify `beforeunload` warning modal fires: *"Bạn có chắc muốn rời khỏi phòng thi?"*.
-   - Confirm tab closure.
-4. **Crash Recovery Flow:**
-   - Open a fresh browser window and navigate to `/exams/resume`.
-   - Enter `EX-9B2F4A` and submit.
-   - Verify immediate restoration to `/exams/take/{attemptId}` with:
-     - Exact active skill and question.
-     - Previously selected answers restored.
-     - Server-authoritative timer continuing accurately from wall-clock deadline.
-5. **Simulate Network Drop & Offline Buffer:**
-   - In browser DevTools (F12) ➔ Network tab ➔ set throttling to **Offline**.
-   - Select an answer on question 3.
-   - Verify red offline banner appears: *"MẤT KẾT NỐI MẠNG. Dữ liệu đang được lưu tạm trên thiết bị..."*.
-   - Switch DevTools back to **Online**.
-   - Verify banner auto-dismisses and responses sync to server within 500ms.
-
-#### Pass Criteria:
-- Attempts resume cleanly via authorization code with zero answer loss.
-- Offline buffering prevents lost responses during network drops.
+1. Navigate to `http://localhost:5000/admin/score-conversion?cert=TOEIC_CAT`.
+2. Verify:
+   - The **Certificate:** dropdown at top-right shows `TOEIC_CAT — TOEIC Multi-Stage Adaptive CAT`.
+   - Two skill conversion cards appear: **`Listening (LIST)`** and **`Reading (READ)`** with `Correct answers (Raw)` and `Scaled Score` inputs.
+   - The **`Proficiency Bands / CEFR Reference (TOEIC_CAT)`** table shows `CAT_B1` (`Intermediate`, `400`–`695`) and `CAT_B2` (`Professional`, `700`–`990`).
+3. Scroll down to **`BẢNG HIỆU PHÒNG THI • LIVE SCORE PREVIEW SANDBOX`**:
+   - Change the `Listening (LIST)` input to `5` and `Reading (READ)` input to `5`.
+   - Verify **`SIMULATED TOTAL SCORE`** updates to `1050` (or `850` for raw `5` + `4`) and **`MATCHED PROFICIENCY BAND`** updates in real time.
+4. Click **`Save table`** and verify the green success alert appears.
 
 ---
 
-### Scenario 7: Split-Screen Workspace, Highlighter & 11 Interactive Components
-**Covered Steps:** Step 10 ([#111](https://github.com/DemNgheTiengMua/toeic-practice-ui/issues/111))  
-**Role:** Candidate (`learner@demo.local`)  
-**Route:** `http://localhost:5000/exams/take/{attemptId}` (IELTS or VSTEP Reading)
+### Scenario 3 — Unified 3-Column Exam Authoring Studio & Autosave (Step 04 / #110)
 
-#### Steps:
-1. Enter an IELTS or VSTEP Reading section (`LayoutType = SPLIT_HORIZONTAL`).
-2. **Split Screen Verification:**
-   - Verify 100vh dual-pane split view:
-     - Left pane: Reading passage with independent vertical scrollbar.
-     - Right pane: Questions with independent vertical scrollbar.
-3. **Top Bar & Accessibility:**
-   - Click the accessibility button in the top control bar.
-   - Toggle font sizes: `Standard` ➔ `Large` ➔ `Extra Large`. Verify text scales smoothly.
-   - Toggle high contrast: `Inverted (White on Black)` ➔ `Yellow on Black`. Verify instant repaint with 0 page reload.
-4. **Tokenized Highlighter & Notes:**
-   - In the reading passage, select a sentence with the mouse and right-click.
-   - Click **[Tô sáng (Highlight)]**; verify text highlights in Sign Gold (`#f2b705`).
-   - Select another phrase, click **[Ghi chú (Note)]**, type "Key fact", and save.
-   - Toggle font size to Extra Large and Inverted contrast: **verify highlights and notes do not drift or shift**.
-5. **Interactive Component Widgets:**
-   - `mcq` & `mcq_3`: Select choices; verify solid ink `#14181d` inversion.
-   - `multi_select`: If `MaxSelections = 2`, select 2 options; verify 3rd option is blocked from selection.
-   - `inline_completion`: Type answers into blanks; verify `MaxWords` count badge updates live.
-   - `dropdown`: Select matching options from dropdowns.
-   - `drag_drop`: Click word bank chips into drop zones.
-
-#### Pass Criteria:
-- Dual-pane scrollbars operate independently.
-- Highlights remain mathematically anchored to word tokens.
-- All component widgets capture and autosave responses.
+1. Navigate to `http://localhost:5000/admin/exams`.
+2. In the exams table, locate **`TOEIC CAT Benchmark Test 1`** (`ExamId = 17`, Certificate `TOEIC_CAT`) or **`ETS 2024 — Test 1`** (`ExamId = 1`, Certificate `TOEIC`) and click **`Studio`** (or navigate directly to `http://localhost:5000/admin/exams/17/studio`).
+3. Verify the **3-Column Authoring Studio** layout:
+   - **Left Panel (`Blueprint Outline`)**:
+     - Shows `Skills & Sections` tree:
+       - `Listening` (`P1_CAT — Photographs (Adaptive)`, `P2_CAT — Question-Response (Adaptive)`)
+       - `Reading` (`P5_CAT — Incomplete Sentences (Stage 1 & 2)`, `P7_CAT — Reading Comprehension (Adaptive)`)
+   - **Center Panel (`Authoring Workstation`)**:
+     - Header shows section title, badge `Nav: UNIT_LOCKED_SANDBOX`, badge `Layout: STANDARD_VERTICAL`, and buttons **`+ Quick Ingest`** and **`+ Add Cluster / Group`**.
+   - **Right Panel (`Publish Readiness`)**:
+     - Shows `Questions: 7 / 11` (or current count), `Blocking Errors`, `Warnings`, and buttons **`Publish Exam`**, **`Export ZIP`**, and **`Export JSON`**.
+4. **Test All 6 Objective Question Component Panels in `P5_CAT`**:
+   - Click **`P5_CAT — Incomplete Sentences (Stage 1 & 2)`** in the left outline.
+   - Scroll through `Question #1` to `Question #6` inside **`Group / Cluster #1`**:
+     - **Question #1 (`Q89`)**: `Component Type` is **`MCQ (4-Option)`** (`mcq`). Shows 4 radio rows (`A`, `B`, `C`, `D`) with option text and rationale inputs.
+     - **Question #2 (`Q90`)**: `Component Type` is **`MCQ (3-Option)`** (`mcq_3`). Shows 3 radio rows (`A`, `B`, `C`).
+     - **Question #3 (`Q91`)**: `Component Type` is **`Multi-Select Checkbox`** (`multi_select`). Shows **`Max Selections:`** (`2`) and checkboxes `A`, `B` checked.
+     - **Question #4 (`Q92`)**: `Component Type` is **`Inline Text Completion`** (`inline_completion`). Shows **`Accepted Answers (pipe-separated | or JSON array):`** (`["15","fifteen"]`), **`Max Words:`** (`1`), and checkbox **`Allow Numeric Digits`**.
+     - **Question #5 (`Q93`)**: `Component Type` is **`Dropdown Matching`** (`dropdown`). Shows options `A` (`consequently`), `B` (`otherwise`), `C` (`nevertheless`).
+     - **Question #6 (`Q94`)**: `Component Type` is **`Drag-and-Drop`** (`drag_drop`). Shows **`Target / Choice Associations:`** (`Slot A`, `Slot B`, `Slot C`).
+5. **Test Debounced Autosave (`1500ms`)**:
+   - In **Question #1 (`Q89`)**, edit the **`Explanation / pedagogical rationale`** textarea at the bottom of the card and type:
+     ```text
+     Use 'before' directly in front of a day of the week to denote a deadline.
+     ```
+   - Watch the top-right status indicator (`#autosave-status`): it changes to **`Saving...`** (in blue) and after 1.5 seconds changes to **`Saved at HH:MM:SS`** (in green).
 
 ---
 
-### Scenario 8: Audio Pacing, Cluster Cards & Multi-Stage CAT Unit Locking
-**Covered Steps:** Step 11 ([#113](https://github.com/DemNgheTiengMua/toeic-practice-ui/issues/113))  
-**Role:** Candidate (`learner@demo.local`)  
-**Route:** `http://localhost:5000/exams/take/{attemptId}` (TOEIC CBT or TOEIC CAT)
+### Scenario 4 — Section-Aware Quick Ingest Modal (`_QuickIngestModal.cshtml`) (Step 05 / #111)
 
-#### Steps:
-1. **TOEIC Part 1 (Masked Photo):**
-   - Verify photograph displays prominently.
-   - Options show only `(A)`, `(B)`, `(C)`, `(D)` radio buttons with masked text.
-2. **TOEIC Part 2 (Audio-Only 3 Options):**
-   - Verify only 3 options `(A)`, `(B)`, `(C)` render; option text is masked.
-3. **TOEIC Part 3/4 (Cluster Cards):**
-   - Verify 3 questions render simultaneously on one card synchronized to the audio track.
-4. **One-Way Audio Progression:**
-   - Verify "Previous" button is hidden/disabled during `AUDIO_DRIVEN` sections.
-5. **Adaptive CAT Unit Locking (TOEIC CAT Reading):**
-   - Complete questions in **Unit 1**.
-   - Click **[Xem lại / Review Screen]**; test quick-filters: *Chỉ xem câu chưa làm*, *Chỉ xem câu đánh dấu*.
-   - Click **[Hoàn thành Phần 1]**:
-     - Confirmation modal appears: *"Giai đoạn 1 sẽ bị khóa vĩnh viễn..."*.
-     - Click **[Xác nhận]**.
-     - Verify Unit 1 questions become locked (disabled) and **Unit 2** questions load.
-
-#### Pass Criteria:
-- Option masking and 3-option counts match official TOEIC rules.
-- Unit 1 permanently locks upon transition to Unit 2.
-
----
-
-### Scenario 9: Controlled Writing Workspace & Lemma Keyword Detection
-**Covered Steps:** Step 12 ([#112](https://github.com/DemNgheTiengMua/toeic-practice-ui/issues/112))  
-**Role:** Candidate (`learner@demo.local`)  
-**Route:** `http://localhost:5000/exams/take/{attemptId}` (TOEIC Writing or IELTS Writing)
-
-#### Steps:
-1. **Academic Writing Mode (IELTS Writing):**
-   - In Task 1 / Task 2 editor:
-     - Verify red squiggle spellcheck is disabled (`spellcheck="false"`).
-     - Type an essay: observe `#live-word-count` update on every keystroke.
-     - Observe minimum word threshold indicator (`Tối thiểu: 150 từ`).
-2. **Strict Toolbar & Clipboard Blocking (TOEIC Writing):**
-   - On photo-sentence task:
-     - Try pressing `Ctrl+C`, `Ctrl+X`, `Ctrl+V` on the keyboard: verify native clipboard is blocked.
-     - Select text and use on-screen buttons `[Cắt]`, `[Dán]`, `[Hoàn tác]`, `[Làm lại]`: verify text manipulation succeeds via on-screen toolbar.
-3. **Lemma Keyword Stem Matching (TOEIC Writing Q1–5):**
-   - Observe required keyword badges (e.g. `[photograph] [yesterday]`).
-   - Type: *"The tourists were photographing the museum yesterday."*
-   - Observe `[photograph]` badge turn green `[Đã dùng]` via inflectional lemma matching (`photographing` ➔ `photograph`).
-4. **Hybrid Sub-Timer Lockout:**
-   - Advance from Q1–5 pool to Q6:
-     - Irreversible lock confirmation modal fires.
-     - Confirming locks Q1–5 and starts dedicated 10-minute timer for Q6.
-
-#### Pass Criteria:
-- Keyboard copy/paste blocked when configured; on-screen toolbar functional.
-- Required keyword badges match dynamically on inflected stems.
-- Individual timers activate with zero rollover.
+1. Stay in `http://localhost:5000/admin/exams/17/studio` on section **`P5_CAT — Incomplete Sentences (Stage 1 & 2)`**.
+2. Click the **`+ Quick Ingest`** button in the center workstation header.
+3. Verify the modal **`Section-Aware Quick Ingest & Staging Box`** opens:
+   - **Target Section:** dropdown has **`[P5_CAT] Incomplete Sentences (Stage 1 & 2)`** selected.
+   - **Mode:** radio buttons **`Append`** (checked) and **`Replace section`**.
+4. **Test Sample Loader & Live Pre-flight Blueprint Validation**:
+   - Click the **`Load Section Sample`** button.
+   - Verify the scratchpad textarea (`Paste Questions Text or JSON:`) populates with sample questions and automatically runs **`Pre-flight Blueprint Validation`**, rendering the **`Pre-Flight Blueprint Preview`** table with green **`READY`** badges.
+5. **Test Blueprint Mismatch Detection (Error Highlight)**:
+   - In the **`Target Section:`** dropdown inside the modal, switch to **`[P2_CAT] Question-Response (Adaptive)`** (which enforces `3 Options (A-C)` and `Audio-Only Spoken Keys`).
+   - Replace the textarea content with a 4-option question (which violates `P2_CAT`'s 3-option blueprint):
+     ```text
+     1. When will the maintenance crew arrive?
+     *A. At 2:00 PM
+     B. In the main lobby
+     C. Yes, they did
+     D. Tomorrow morning
+     ```
+   - Click **`Pre-flight Blueprint Validation`**.
+   - Verify the preview row shows a red **`MISMATCH`** badge explaining that Option D is not allowed in a 3-option section, and **`Commit Questions to Section`** is disabled!
+6. **Test Valid Commit**:
+   - Switch **`Target Section:`** back to **`[P5_CAT] Incomplete Sentences (Stage 1 & 2)`**.
+   - Click **`Pre-flight Blueprint Validation`**.
+   - Verify the summary badge turns green: `✔ 1 question(s) fully conform to section blueprint. Ready to commit.`
+   - Click **`Commit Questions to Section`**. Verify the modal commits and reloads the studio with the new question added.
 
 ---
 
-### Scenario 10: Automated Speaking Pacer & Audio Verification
-**Covered Steps:** Step 13 ([#114](https://github.com/DemNgheTiengMua/toeic-practice-ui/issues/114))  
-**Role:** Candidate (`learner@demo.local`)  
-**Route:** `http://localhost:5000/exams/take/{attemptId}` (TOEIC Speaking or VSTEP Speaking)
+### Scenario 5 — Visual Audio Timestamp Slicer & Export ZIP/JSON (Step 06 / #112)
 
-#### Steps:
-1. Enter a `SYSTEM_PACED_AUTO` Speaking section.
-2. Verify manual "Next" / "Previous" navigation buttons are completely hidden.
-3. **Automated State Machine Walk:**
-   - **Phase 1 (Prep):** Observe countdown placard: *"CHUẨN BỊ TRẢ LỜI: 15s"*.
-   - **Phase 2 (Beep):** When countdown reaches `00:00`, listen for the clear synthetic 1000Hz audio beep tone.
-   - **Phase 3 (Record):** Immediately transitions to *"ĐANG THU ÂM: 30s"* with flashing red recording indicator and live audio level meter responding to your microphone.
-   - **Phase 4 (Auto-Advance):** When recording reaches `00:00`, recording stops, uploads in background, and automatically advances to the next speaking question.
-4. **Post-Section Audio Verification Screen:**
-   - After final question recording finishes, verify automatic transition to the **Speaking Verification Screen**.
-   - Verify list of all recorded questions with audio players.
-   - Click play on recorded items to confirm playback.
-   - Click **[Nộp bài nói để chấm AI]**.
-
-#### Pass Criteria:
-- Hands-free `Prep ➔ Beep ➔ Record ➔ Advance` cycle executes automatically without clicks.
-- Post-speaking verification screen allows candidate review before submitting.
+1. Navigate to `http://localhost:5000/admin/exams/1/studio` (`ETS 2024 — Test 1`).
+2. In the left **`Blueprint Outline`**, click **`P3 — Conversations`** (under `Listening`).
+3. In the center workstation, locate the **`Section Master Audio & Visual Timestamp Slicer`** box:
+   - Verify the **`Section Audio URL / Path`** input contains `/audio/toeic/test1-p3.mp3` (or click **`Upload Audio`** to upload any `.mp3`/`.wav`).
+   - Below the `<audio>` player, locate the **`Timestamp Slicer Queue (Click group, then mark during playback):`** table.
+   - Click the row for **`Group #1`** in the slicer table (it highlights).
+   - Play the audio player (or scrub the playhead to a few seconds in) and click **`[ [ Set Start ]`**, advance a few seconds, and click **`[ Set End ] ]`**.
+   - Verify the **`Start (ms)`** and **`End (ms)`** fields in the **`Group / Cluster #1`** card below update with the exact millisecond timestamps, and **`Save Timestamps`** persists them.
+4. **Test Export Package**:
+   - In the right **`Publish Readiness`** panel, click **`Export JSON`** (`/admin/exams/1/export?format=json`) and verify a JSON manifest downloads.
+   - Click **`Export ZIP`** (`/admin/exams/1/export?format=zip`) and verify a `.zip` archive downloads.
 
 ---
 
-### Scenario 11: Practice Drilling (Mode B) & Deterministic Weakness Analysis
-**Covered Steps:** Step 14 ([#119](https://github.com/DemNgheTiengMua/toeic-practice-ui/issues/119))  
-**Role:** Learner (`learner@demo.local`)  
-**Route:** `http://localhost:5000/practice`
+## Phase 2: Candidate Exam Sitting Room (`learner@demo.local`)
 
-#### Steps:
-1. Navigate to `/practice` and start a practice drilling session on a Listening or Reading section containing multi-component questions.
-2. **Practice QoL Controls:**
-   - Click play on audio track; click the **[⏪ 5s]** button to verify seeking 5 seconds backward.
-   - Click **[Xem Lời thoại / Transcript]**; verify transcript drawer expands.
-3. **11-Component Answering & Rationale:**
-   - Answer an `inline_completion` question and click **[Kiểm tra đáp án]**.
-   - Verify accepted alternatives and explanation accordion expand with detailed rationale.
-4. **Weakness Analysis Alignment:**
-   - Complete and submit the practice session.
-   - Navigate to `/weakness-analysis`:
-     - Verify that answered multi-component practice items accurately contribute to the category and section accuracy percentages (`vw_UserCategoryAccuracy` & `vw_UserSectionAccuracyAll`).
+Sign out of Admin (or open an Incognito window) and sign in at `http://localhost:5000/auth/signin` as **`learner@demo.local`** / **`Demo1234!`**.
 
-#### Pass Criteria:
-- 5s audio rewind and transcript toggles function properly.
-- Explanations render post-answer.
-- Accuracy views aggregate non-MCQ items correctly.
+> **How to switch certificates as a Learner:**
+> Navigate to `http://localhost:5000/certificates`, scroll to the desired certificate card (`TOEIC`, `IELTS`, `VSTEP`, `TOEIC_CAT`, or `TOEIC_SW`), and click **`Switch to <CODE>`**.
 
 ---
 
-### Scenario 12: End-to-End Score Calibration & Result Breakdown
-**Covered Steps:** Step 15 ([#115](https://github.com/DemNgheTiengMua/toeic-practice-ui/issues/115))  
-**Role:** Candidate (`learner@demo.local`)  
-**Route:** `http://localhost:5000/exams/attempts/{attemptId}/result`
+### Scenario 6 — Pre-Flight Equipment Gate, Audio Pre-Buffering & Authorization Code Recovery (Step 07 / #113)
 
-#### Steps:
-1. Submit an exam sitting across each official preset:
-   - **IELTS on Computer:** Verify 0–9.0 band report with half-step rounding (`6.0`, `6.5`, `7.0`) and weighted writing calculation.
-   - **TOEIC Standard CBT:** Verify 10–990 scaled score sum (Listening + Reading).
-   - **TOEIC Adaptive CAT:** Verify combined score from Unit 1 + Unit 2.
-   - **TOEIC S&W:** Verify independent 0–200 reporting for Speaking and Writing without artificial sum.
-   - **VSTEP:** Verify 0–10 scaled band with whole-number rounding.
-2. Review the score report placard:
-   - Verify CEFR badge alignment (e.g. C1, B2, B1).
-   - Verify section breakdown and diagnostic skill charts render cleanly per `DESIGN.md`.
-
-#### Pass Criteria:
-- All official certificate presets produce authentic score scales and CEFR bands.
-- No NaN, null, or out-of-range scores appear on the final report.
+1. **Switch Active Certificate to `TOEIC`**:
+   - Go to `http://localhost:5000/certificates` and click **`Switch to TOEIC`**.
+2. **Start Mock Exam (`ETS 2024 — Test 1`, `ExamId = 1`)**:
+   - Navigate to `http://localhost:5000/exams/1/instructions`.
+   - Check the box **`I have read the instructions and am ready to begin`**.
+   - Click **`Start test — uses 1 credit`**.
+3. **Verify Pre-Flight Readiness Check (`/exams/1/preflight?attemptId=...`)**:
+   - Verify you are routed to **`Pre-Flight Readiness Check: ETS 2024 — Test 1`**.
+   - **STEP 1 (`Audio Asset Pre-Buffering`)**: Verify the progress bar buffers the exam audio tracks (`100%`) and the badge updates to **`100% BUFFERED`** (or **`READY (NO AUDIO)`** if no audio tracks).
+   - **STEP 2 (`Speaker & Headphone Sound Check`)**: Click **`Play Test Chime`** and verify the chime plays and status shows **`TEST READY`**.
+   - Verify the bottom notice turns green (`All Pre-flight Requirements Satisfied`) and the **`Start Test →`** button becomes enabled.
+   - Click **`Start Test →`** to enter the sitting room (`/exams/take/{attemptId}`).
+4. **Verify Topbar Placards, Accessibility Modal & Volume Slider (Step 12 / #118)**:
+   - On the top bar of the sitting room, locate the badge **`MÃ DỰ THI: EX-XXXXXX`** (`#auth-code-placard`). **Copy this `EX-XXXXXX` code!**
+   - Click **`Aa Cỡ chữ & Tương phản`** (`#btn-open-accessibility-modal`) on the top bar:
+     - Click **`Large (115%)`** and **`Extra Large (130%)`**, then back to **`Standard (100%)`**.
+     - Click **`Chữ trắng nền đen (Inverted: White on Black)`**, then **`Chữ vàng nền đen (High Contrast: Yellow on Black)`**, then back to **`Chữ đen nền trắng (Standard: Black on White)`**.
+     - Click **`Hoàn tất (Apply & Close)`**.
+   - Drag the topbar volume slider (`#exam-volume-slider`) and verify the percentage label (`100%`) updates and persists in `localStorage`.
+5. **Test Session Recovery via Authorization Code (`/exams/resume`)**:
+   - Click **`Exit`** on the top-right of the sitting room, then click **`Exit (resume later)`** in the modal to return to `/exams`.
+   - On `http://localhost:5000/exams`, click the top-right button **`Khôi phục phiên thi`** (routes to `http://localhost:5000/exams/resume`).
+   - Paste your **`EX-XXXXXX`** code into **`MÃ DỰ THI CỦA BẠN (AUTHORIZATION CODE)`** and click **`Tiếp tục làm bài (Resume)`**.
+   - Verify you are returned directly to `/exams/take/{attemptId}` at the exact question and remaining timer!
 
 ---
 
-## 3. Defect & Regression Checklist
-- [ ] No `fail:` or unhandled exception entries in terminal console logs during all 12 scenarios.
-- [ ] All forms, tables, and placards strictly respect `border-radius: 0`, `box-shadow: none`, and 2px ink borders.
-- [ ] No raw unicode/emoji glyphs in exam sitting, wizard, or practice views.
-- [ ] Composite foreign keys preserve Certificate Isolation across all created attempts and sections.
+### Scenario 7 — TOEIC Listening & Reading Mechanics: Masked Options (`A–D` / `A–C`) & 3-Question Clusters (Step 08 / #114)
+
+While inside the active attempt for **`ETS 2024 — Test 1`** (`ExamId = 1`):
+
+1. **Question 1 (`P1 — Photographs`, `AUDIO_DRIVEN`, `HideOptionText = true`, `OptionCount = 4`)**:
+   - Verify the question stem is hidden/masked for audio-only listening and the 4 choices render as horizontalplacards **`A`**, **`B`**, **`C`**, **`D`** (`option--masked`) with no printed option text.
+   - Verify the **`Previous`** button is hidden (`AUDIO_DRIVEN` one-way navigation).
+   - Click placard **`C`** (correct answer: *"A woman is writing on a whiteboard."*). Verify it inverts to solid ink (`#14181d`) with white text.
+   - Click **`Next question`**.
+2. **Question 2 (`P2 — Question-Response`, `AUDIO_DRIVEN`, `HideOptionText = true`, `OptionCount = 3`)**:
+   - Verify only **3 horizontal placards** (**`A`**, **`B`**, **`C`**) render — **Option D is not rendered**.
+   -Verify backward navigation to Question 1 in the bottom palette (`#bottom-question-palette`) is disabled (`palette-chip--disabled`).
+   - Click placard **`B`** (correct answer: *"On the conference room table."*) and click **`Next question`**.
+3. **Question 3 (`P3 — Conversations`, `AUDIO_DRIVEN`, `ClusterSize = 3`)**:
+   - Verify the **`#cluster-card-container`** renders the conversation cluster card with full stem and 4 options (`A`–`D`).
+   - Select **`B`** (`By tomorrow noon`) and click **`Next question`**.
+
+---
+
+### Scenario 8 — Multi-Stage Adaptive CAT (`UNIT_LOCKED_SANDBOX`) & All 6 Interactive Question Widgets (Steps 08, 09, 11 / #114, #115, #117)
+
+1. **Switch Active Certificate to `TOEIC_CAT`**:
+   - Navigate to `http://localhost:5000/certificates` and click **`Switch to TOEIC_CAT`**.
+2. **Start `TOEIC CAT Benchmark Test 1` (`ExamId = 17`)**:
+   - Navigate to `http://localhost:5000/exams/17/instructions`.
+   - Check **`I have read the instructions and am ready to begin`** and click **`Start test — uses 1 credit`**.
+   - On the Pre-Flight page, click **`Start Test →`**.
+3. **Answer All 6 Component Types in Unit 1 (`P5_CAT`, Questions 1–6)**:
+   - Verify in the right **Questions (1–7)** grid and bottom **BẢNG CÂU HỎI** palette that **Questions 1–6** (Unit 1) are unlocked, while **Question 7** (Unit 2) is hidden/locked (`is-locked`).
+   - **Question 1 (`Q89`, `mcq` 4-option)**:
+     - Stem: *"The quarterly budget report must be submitted _____ Friday at 5:00 PM."*
+     - Select **`A`** (`before`) and click **`Next question`**.
+   - **Question 2 (`Q90`, `mcq_3` 3-option)**:
+     - Stem: *"Where did Ms. Chen leave the presentation handouts?"*
+     - Verify 3 options (`A`, `B`, `C`) appear. Select **`A`** (`On the conference table`) and click **`Next question`**.
+   - **Question 3 (`Q91`, `multi_select`, `MaxSelections = 2`)**:
+     - Stem: *"Select TWO benefits resulting from the newly installed automated inventory system:"*
+     - Check **`A`** (`Decreased fulfillment errors`) and **`B`** (`Real-time stock level visibility`).
+     - Try checking **`C`** (`Immediate relocation to another province`) — verify the UI prevents selecting more than 2 checkboxes!
+     - Click **`Next question`**.
+   - **Question 4 (`Q92`, `inline_completion`)**:
+     - Stem: *"The express shuttle departs every [blank] minutes from terminal two."*
+     - In the inline text input (`.completion-input`), type **`15`** (or **`fifteen`**).
+     - Click **`Next question`**.
+   - **Question 5 (`Q93`, `dropdown`)**:
+     - Stem: *"Choose the best connective word to complete the sentence clause."*
+     - In the `<select>` dropdown widget, select **`A: consequently`**.
+     - Click **`Next question`**.
+   - **Question 6 (`Q94`, `drag_drop`)**:
+     - Stem: *"Drag the appropriate department heading to the organizational slot."*
+     - Drag the chip **`Quality Assurance`** (or click the chip and click the dashed drop zone `.drop-zone`) to place it into the slot.
+4. **Test Reading Review Screen Modal (`#review-screen-modal`)**:
+   - Before finishing Unit 1, click **`Bảng xem lại (Review Screen)`** (`#btn-open-review-screen`) next to the Next button.
+   - Verify the modal **`BẢNG XEM LẠI PHẦN THI ĐỌC (READING REVIEW SCREEN)`** opens with:
+     - 3 stat boxes: **`Đã trả lời (Answered)`** (`6`), **`Đánh dấu (Flagged)`** (`0`), **`Chưa trả lời (Unanswered)`** (`0`).
+     - Quick-action filter buttons: **`Jump to First Unanswered`**, **`Review Only Unanswered`**, **`Review Only Flagged`**, **`Show All`**.
+   - Click **`Quay lại bài làm (Return)`**.
+5. **Test Irreversible Adaptive Unit Transition (`Unit 1` ➔ `Unit 2`)**:
+   - On Question 6 (the last question of Unit 1), notice the primary button reads **`Hoàn thành Giai đoạn 1 (Finish Unit 1)`**. Click it!
+   - Verify the confirmation modal **`XÁC NHẬN KHÓA GIAI ĐOẠN (LOCK UNIT CONFIRMATION)`** (`#unit-lock-modal`) opens with the red warning:
+     *"Sau khi xác nhận, Giai đoạn 1 sẽ bị khóa vĩnh viễn và bạn không thể quay lại."*
+   - Click **`Xác nhận khóa và tiếp tục (Confirm & Proceed)`**.
+   - Verify you advance to **Question 7 (`Q95`, Unit 2, `P7_CAT`)** and **Questions 1–6 (Unit 1)** are now permanently locked!
+6. **Answer Question 7 & Submit Exam**:
+   - Stem: *"What is mentioned as a key benefit of the Apex-Horizon merger?"*
+   - Select **`A`** (`Reduced shipping overhead costs`).
+   - Click **`Review & Submit exam`**, then in the **`Submit exam?`** modal click **`Submit now`**.
+   - Verify the result page displays **7/7 correct**, Scaled Score **`850`**, and Band **`CAT_B2`** (`Professional`).
+   - Click **`Review answers`** (`/exams/review/{attemptId}`) and verify all 7 questions show green **`Correct answer`** badges.
+
+---
+
+### Scenario 9 — IELTS 50/50 Split-Screen Layout (`SPLIT_HORIZONTAL`) & Tokenized Text Highlighter + Sticky Notes (Steps 09 & 11 / #115, #117)
+
+1. **Switch Active Certificate to `IELTS`**:
+   - Navigate to `http://localhost:5000/certificates` and click **`Switch to IELTS`**.
+2. **Start `Cambridge IELTS 18 — Academic Test 1` (`ExamId = 6`)**:
+   - Navigate to `http://localhost:5000/exams/6/instructions`.
+   - Check **`I have read the instructions and am ready to begin`** and click **`Start test — uses 1 credit`**.
+   - Complete the Pre-Flight check and click **`Start Test →`**.
+3. **Test Tokenized Text Highlighter & Sticky Notes (`#highlighter-popover` & `#sticky-note-modal`)**:
+   - On **Question 1 (`Q21`, `REC`)** or **Question 2 (`Q22`, `PAS`)**, use your mouse to select/drag across several words in the question stem or reading passage (`.ee-tokenized-text`).
+   - Verify the floating toolbar (`#highlighter-popover`) appears directly above your selection with 3 buttons:
+     - **`Tô sáng`** (Sign Gold `#f2b705`)
+     - **`Ghi chú`** (White)
+     - **`Xóa`** (Sign Red `#b31217`)
+   - Click **`Tô sáng`**: verify the selected words turn Sign Gold (`.ee-token--highlighted`).
+   - Select another phrase and click **`Ghi chú`**:
+     - Verify the modal **`Thêm ghi chú bài thi`** (`#sticky-note-modal`) opens showing your quoted text (`#sticky-note-quote`).
+     - In the textarea (`Nhập ghi chú của bạn tại đây...`), type:
+       ```text
+       Key evidence for urban heat reduction: 2.8 degrees C.
+       ```
+     - Click **`Lưu ghi chú`**.
+     - Verify a **`[NOTE]`** pin badge (`.ee-note-pin`) appears at the end of the highlighted phrase. Click the **`[NOTE]`** pin to view your saved note.
+   - Refresh the browser page (`F5`): verify the gold highlights and `[NOTE]` pin persist via `CandidateNotesJson`!
+4. **Verify 50/50 Split-Screen Layout on Reading (`PAS`)**:
+   - When on **Question 2 (`Q22`, `PAS`)**, verify `#exam-main-layout` switches to `.exam-layout--split` (`50% / 50%` two-column split screen) with **`ĐOẠN VĂN / TÀI LIỆU (READING PASSAGE & STIMULUS)`** scrolling independently on the left and the question pane on the right.
+
+---
+
+### Scenario 10 — Automated Speaking Pacer (`SYSTEM_PACED_AUTO`), Hybrid Writing Group Lock (`HYBRID_GROUP_LOCKED`), Mandatory Keywords & On-Screen Cut/Paste Toolbar (Steps 10 & 11 / #116, #117)
+
+1. **Switch Active Certificate to `TOEIC_SW`**:
+   - Navigate to `http://localhost:5000/certificates` and click **`Switch to TOEIC_SW`**.
+2. **Start `TOEIC Speaking & Writing Mock Test 1` (`ExamId = 18`)**:
+   - Navigate to `http://localhost:5000/exams/18/instructions`.
+   - Check **`I have read the instructions and am ready to begin`** and click **`Start test — uses 1 credit`**.
+3. **Verify Interactive Microphone Pre-Flight Check (`STEP 3` in `Preflight.cshtml`)**:
+   - Because `TOEIC_SW` includes Speaking, verify **`STEP 3: Interactive Microphone & Voice Quality Check`** appears on the Pre-Flight page.
+   - Click **`Record 3s Sample`** and speak `"The quick brown fox jumps over the lazy dog."` into your microphone.
+   - Watch the **`Microphone Live Level Meter`** (`#mic-meter-fill`) move and badge show **`VOICE DETECTED`**.
+   - After 3 seconds, the sample plays back and displays **`CLARITY CONFIRMATION: Is your voice recording clear, audible, and free of excessive static?`**.
+   - Click **`Yes, Audio is Clear`**. Verify the badge turns green (**`MIC VERIFIED`**) and **`Start Test →`** unlocks. Click **`Start Test →`**.
+4. **Test Automated Speaking Pacer (`Question 1`, `SW_S1`, `SYSTEM_PACED_AUTO`)**:
+   - Upon entering the sitting room on **Question 1**, verify:
+     - Both **`Previous`** and **`Next question`** buttons are hidden (`SYSTEM_PACED_AUTO`).
+     - **Step 1 (Prep Countdown)**: Blue placard **`CHUẨN BỊ TRẢ LỜI: 5s`** (`#speaking-prep-placard`) counts down from `5s` to `0s`.
+     - **Step 2 (Audible Beep)**: At `0s`, an 880Hz beep tone plays automatically.
+     - **Step 3 (Recording Countdown)**: Red pulsing placard **`ĐANG THU ÂM: 5s`** (`#speaking-record-placard`) appears along with the **`Mức âm lượng micro`** live meter (`#audio-level-container`), counting down from `5s` to `0s`.
+     - **Step 4 (Auto-Upload & Verification Screen)**: At `0s`, **`Đang lưu bản thu âm và tự động chuyển câu hỏi tiếp theo...`** appears, uploads the recording, and displays **`BẢNG XÁC NHẬN BẢN GHI ÂM PHẦN THI NÓI (SPEAKING AUDIO VERIFICATION)`** (`#speaking-verification-screen`) showing **`Câu 1 / 3`** with green badge **`Đã ghi âm [ĐÃ LÀM]`** and an `<audio controls>` player to replay your voice.
+5. **Test Writing Mandatory Keyword Badges, Live Word Counter & On-Screen Cut/Paste Toolbar (`Question 2`, `SW_W1`, `HYBRID_GROUP_LOCKED`)**:
+   - Navigate to **Question 2** (`SW_W1 — Write a sentence based on a picture`).
+   - Verify:
+     - **Mandatory Keyword Badges (`Từ khóa bắt buộc:`)**: Two dashed badges **`conference`** and **`yesterday`** (`badge--pending`) appear above the response editor.
+     - **On-Screen Cut/Paste/Undo/Redo Toolbar (`#writing-onscreen-toolbar`)**: Four buttons appear above the textarea: **`Cắt (Cut)`**, **`Dán (Paste)`**, **`Hoàn tác (Undo)`**, **`Làm lại (Redo)`**.
+     - **Minimum Word Counter (`#min-words-badge`)**: Shows **`Tối thiểu: 5 từ`** in red with **`(Chưa đạt số từ tối thiểu)`**.
+   - In the **`Your response`** textarea (`#writing-editor`), type:
+     ```text
+     The team attended the international conference yesterday afternoon.
+     ```
+   - Verify:
+     - Both **`conference`** and **`yesterday`** badges immediately turn solid Sign Green (`#0a6b3c`, `badge--used`)!
+     - **`Số từ:`** updates to **`8`**, **`Tối thiểu: 5 từ`** turns green, and the under-length warning disappears!
+     - Select the word `international` in the textarea, click **`Cắt (Cut)`**, move the cursor, and click **`Dán (Paste)`** or **`Hoàn tác (Undo)`** to verify the on-screen editing toolbar works.
+6. **Test Irreversible Hybrid Group Lock (`Question 2` ➔ `Question 3`, `#group-lock-modal`)**:
+   - Click **`Next question`** to move from Question 2 (`SW_W1`, Group 2) to Question 3 (`SW_W3`, Group 3).
+   - Verify the confirmation modal **`XÁC NHẬN CHUYỂN PHẦN THI (GROUP LOCK CONFIRMATION)`** (`#group-lock-modal`) appears with the red warning:
+     *"Xác nhận chuyển sang câu tiếp theo: Phần hiện tại sẽ bị khóa vĩnh viễn và thời gian còn lại sẽ không được bảo lưu."*
+   - Click **`Xác nhận chuyển và khóa (Confirm & Proceed)`**.
+   - Verify you advance to **Question 3 (`SW_W3 — Write an opinion essay`)** and the **`Previous`** button is now disabled so you cannot return to the locked group!
+
+---
+
+## Phase 3: Practice Mode QoL & AI Grading Reliability
+
+### Scenario 11 — Practice Mode QoL: `[-5s]` Audio Rewind, Transcript Drawer, Explanation Accordion & Keyboard Shortcuts (Step 13 / #119)
+
+1. **Switch Active Certificate to `TOEIC`**:
+   - Navigate to `http://localhost:5000/certificates` and click **`Switch to TOEIC`**.
+2. **Start a Listening Practice Drill**:
+   - Navigate to `http://localhost:5000/practice`.
+   - Leave **`Questions per session`** at `20 questions`, **`Question source`** at `All exams`, and **`Feedback type`** at `Show the answer right after each question`.
+   - Under **`Listening`**, click the card **`P3`** (`Conversations`).
+3. **Verify Practice QoL Controls in `Practice/Take.cshtml`**:
+   - **Audio `[-5s]` Rewind Button**: Below the audio player, click **`[-5s]`** (`#btn-audio-rewind-5s`) during playback and verify the audio playhead rewinds 5 seconds (clamped to the question's `StartMs`).
+   - **Collapsible Transcript Drawer**: Click **`[Xem Lời thoại / Transcript]`** (`#btn-toggle-transcript`) and verify the **`Transcript / Lời thoại:`** drawer (`#transcript-drawer`) expands and collapses.
+   - **Keyboard Shortcuts Modal (`?`)**: Click **`Controls ?`** (`#btn-controls-modal`) on the top bar (or press `?` on your keyboard) to open the **`Keyboard Controls`** modal (`1`–`4`, `Enter`/`Space`, `H`, `S`, `K`, `N`/`P`). Click **`Got it`**.
+   - **Hint (`H`) & Save Question (`S`)**: Press `H` (or click **`Show hint (H)`**) to reveal the hint box; press `S` (or click **`Save question`**) to bookmark the question to your saved bank.
+   - **Check Answer & Explanation Accordion**: Press `2` (Option B) and press `Enter` (or click **`Check answer`**). Verify the **`[Xem Lời giải chi tiết / Explanation & Rationale]`** accordion (`#accordion-explanation`) appears and toggles open/closed when clicked.
+   - **Sidebar Navigator Filters**: In the right sidebar under **`Questions (1–N)`**, click **`All`**, **`Incorrect`**, and **`Saved`** filter pills to filter the question grid.
+
+---
+
+### Scenario 12 — Multi-Component Practice Drilling (`TOEIC_CAT` `P5_CAT`) (Step 13 / #119)
+
+1. Navigate to `http://localhost:5000/certificates` and click **`Switch to TOEIC_CAT`**.
+2. Navigate to `http://localhost:5000/practice`.
+3. Under **`Reading`**, click the card **`P5_CAT`** (`Incomplete Sentences (Stage 1 & 2)` — `6 questions available`).
+4. Drill through the 6 questions and verify immediate grading works for every component type in Practice mode:
+   - **Q1 (`mcq`)**: Select `A` (`before`) → Click **`Check answer`** → **`Accuracy · Correct`**.
+   - **Q2 (`mcq_3`)**: Select `A` (`On the conference table`) → Click **`Check answer`** → **`Accuracy · Correct`**.
+   - **Q3 (`multi_select`)**: Check `A` and `B` → Click **`Check answer`** → **`Accuracy · Correct`**.
+   - **Q4 (`inline_completion`)**: Type `15` → Click **`Check answer`** → **`Accuracy · Correct`** (and verify the **`Đáp án chấp nhận / Accepted answers:`** `["15","fifteen"]` displays in the explanation accordion).
+   - **Q5 (`dropdown`)**: Select `A: consequently` → Click **`Check answer`** → **`Accuracy · Correct`**.
+   - **Q6 (`drag_drop`)**: Place `Quality Assurance` into the drop zone → Click **`Check answer`** → **`Accuracy · Correct`**.
+
+---
+
+### Scenario 13 — Asynchronous AI Grading Queue & Background Worker Verification (Step 14 / #120)
+
+1. Submit your **`TOEIC Speaking & Writing Mock Test 1`** attempt (`ExamId = 18` from Scenario 10) or start & submit **`ETS TOEIC Writing Practice Test 1`** at `http://localhost:5000/writing/5/instructions`.
+2. Watch **Terminal 1 (`WebAPI`)**:
+   - Within 2 seconds, `AiGradingBackgroundService` picks up the `pending` row from `IX_AiGradings_Queue`, grades the response against the certificate's `GradingCriteria` (`GRAM`, `ORG`, `PRON`, `FLU`), writes `AiCriterionScores`, and transitions the attempt from `submitted` to `graded`.
+3. Refresh the attempt result/review page in the browser and verify the per-criterion AI rubric breakdown and overall scaled score are displayed.

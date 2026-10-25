@@ -2331,13 +2331,13 @@
       function isCutPasteRestricted(q) {
         if (!q) return false;
         var cfg = parseToolsConfig(q.toolsConfigJson);
-        return cfg.allowKeyboardCutPaste === false || cfg.showOnScreenCutPaste === true || cfg.onScreenCutPasteOnly === true;
+        return cfg.cutPaste === true || cfg.allowKeyboardCutPaste === false || cfg.showOnScreenCutPaste === true || cfg.onScreenCutPasteOnly === true;
       }
 
       function updateWritingEditorTools(q) {
         if (!writingEditor) return;
         var cfg = parseToolsConfig(q ? q.toolsConfigJson : null);
-        var disableSpellCheck = cfg.disableSpellCheck !== false;
+        var disableSpellCheck = cfg.disableSpellCheck !== false && cfg.disableSpellcheck !== false;
         writingEditor.setAttribute('spellcheck', disableSpellCheck ? 'false' : 'true');
         writingEditor.setAttribute('autocorrect', disableSpellCheck ? 'off' : 'on');
         writingEditor.setAttribute('autocomplete', disableSpellCheck ? 'off' : 'on');
@@ -2348,7 +2348,7 @@
           writingOnscreenToolbar.style.display = isRestricted ? 'flex' : 'none';
         }
 
-        var showWordCount = cfg.showWordCount !== false;
+        var showWordCount = cfg.showWordCount !== false && cfg.wordCount !== false;
         var writingCounts = document.getElementById('writing-counts');
         if (writingCounts) {
           writingCounts.style.display = showWordCount ? 'flex' : 'none';
@@ -2795,8 +2795,8 @@
 
         var curQ = questionMap[currentDisplayOrder];
         var cfg = parseToolsConfig(curQ ? curQ.toolsConfigJson : null);
-        var allowHl = cfg.allowHighlight === true;
-        var allowNotes = cfg.allowNotes === true;
+        var allowHl = cfg.allowHighlight === true || cfg.highlighter === true;
+        var allowNotes = cfg.allowNotes === true || cfg.notes === true;
         if (!allowHl && !allowNotes) {
           if (highlighterPopover) highlighterPopover.style.display = 'none';
           return;
@@ -2859,7 +2859,7 @@
           if (container && container.closest('.ee-tokenized-text')) {
             var curQ = questionMap[currentDisplayOrder];
             var cfg = parseToolsConfig(curQ ? curQ.toolsConfigJson : null);
-            if (cfg.allowHighlight === true || cfg.allowNotes === true) {
+            if (cfg.allowHighlight === true || cfg.highlighter === true || cfg.allowNotes === true || cfg.notes === true) {
               e.preventDefault();
               handleHighlighterSelection(e);
             }

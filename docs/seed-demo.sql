@@ -4310,5 +4310,97 @@ BEGIN
     (@q7, 'mcq', 'D', N'Downsizing regional warehouses', 0);
 END;
 
+-- Enrich seeded sections with ToolsConfigJson and AllowedComponentTypesJson for Sitting Room tools
+UPDATE Sections
+SET ToolsConfigJson = N'{"highlighter":true,"notes":true,"allowHighlight":true,"allowNotes":true}'
+WHERE Code IN ('REC', 'PAS', 'L3', 'R4', 'P7', 'P7_CAT') AND ToolsConfigJson IS NULL;
+
+UPDATE Sections
+SET ToolsConfigJson = N'{"wordCount":true,"disableSpellcheck":true,"showWordCount":true,"disableSpellCheck":true}'
+WHERE Code IN ('T1', 'T2') AND ToolsConfigJson IS NULL;
+
+UPDATE Sections
+SET ToolsConfigJson = N'{"wordCount":true,"disableSpellcheck":true,"cutPaste":true,"showWordCount":true,"disableSpellCheck":true,"allowKeyboardCutPaste":false,"showOnScreenCutPaste":true}'
+WHERE Code IN ('W1', 'W2', 'W3', 'SW_W1', 'SW_W3') AND ToolsConfigJson IS NULL;
+
+UPDATE Sections
+SET AllowedComponentTypesJson = N'["mcq","mcq_3","multi_select","inline_completion","dropdown","drag_drop"]'
+WHERE Code = 'P5_CAT' AND AllowedComponentTypesJson IS NULL;
+
+-- Populate mandatory keywords on TOEIC Writing W1 question
+UPDATE Questions
+SET RequiredKeywords = N'conference, yesterday'
+WHERE QuestionType = 'free_response' AND Stem LIKE N'%conference / yesterday%' AND RequiredKeywords IS NULL;
+
+-- Seed a full Mock Exam for TOEIC_SW (Speaking Pacer + Writing Hybrid Group Lock + Keyword Badges + On-Screen Cut/Paste)
+IF NOT EXISTS (SELECT 1 FROM Exams WHERE CertId = @toeicSw AND Name = N'TOEIC Speaking & Writing Mock Test 1')
+BEGIN
+  INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose, DeliveryMode, ExamFamily, Description, QuestionCount)
+  VALUES (@toeicSw, N'TOEIC Speaking & Writing Mock Test 1', 'published', 80, 'mock', 'strict_exam', 'TOEIC',
+          N'Full TOEIC S&W mock sitting with SYSTEM_PACED_AUTO speaking pacer, HYBRID_GROUP_LOCKED writing, mandatory keywords, and on-screen Cut/Paste toolbar.', 3);
+END;
+
+DECLARE @swExam INT = (SELECT ExamId FROM Exams WHERE CertId = @toeicSw AND Name = N'TOEIC Speaking & Writing Mock Test 1');
+DECLARE @secSwS1 INT = (SELECT SectionId FROM Sections WHERE CertId = @toeicSw AND Code = 'SW_S1');
+DECLARE @secSwW1 INT = (SELECT SectionId FROM Sections WHERE CertId = @toeicSw AND Code = 'SW_W1');
+DECLARE @secSwW3 INT = (SELECT SectionId FROM Sections WHERE CertId = @toeicSw AND Code = 'SW_W3');
+
+IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @swExam AND SectionId = @secSwS1 AND DisplayOrder = 1)
+  INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@swExam, @toeicSw, @secSwS1, 1);
+DECLARE @grpSwS1 INT = (SELECT GroupId FROM QuestionGroups WHERE ExamId = @swExam AND SectionId = @secSwS1 AND DisplayOrder = 1);
+
+IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @swExam AND SectionId = @secSwW1 AND DisplayOrder = 2)
+  INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, ImagePath, ImageAlt)
+  VALUES (@swExam, @toeicSw, @secSwW1, 2, N'/images/toeic/test1-p1-q1.jpg', N'Conference meeting room');
+DECLARE @grpSwW1 INT = (SELECT GroupId FROM QuestionGroups WHERE ExamId = @swExam AND SectionId = @secSwW1 AND DisplayOrder = 2);
+
+IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @swExam AND SectionId = @secSwW3 AND DisplayOrder = 3)
+  INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@swExam, @toeicSw, @secSwW3, 3);
+DECLARE @grpSwW3 INT = (SELECT GroupId FROM QuestionGroups WHERE ExamId = @swExam AND SectionId = @secSwW3 AND DisplayOrder = 3);
+
+IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @swExam AND DisplayOrder = 1)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, PrepSeconds, ResponseSeconds, DisplayOrder)
+  VALUES (@grpSwS1, @swExam, @secSwS1, @swSpea, N'Read the announcement aloud: Welcome to the annual Global Tech Conference. Please pick up your registration badge at the front desk.', 2, 'free_response', 5, 5, 1);
+
+IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @swExam AND DisplayOrder = 2)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, RequiredKeywords, MinWords, MaxWords, ResponseSeconds, DisplayOrder)
+  VALUES (@grpSwW1, @swExam, @secSwW1, @swWrit, N'Write ONE sentence based on the picture using the two mandatory keywords: conference / yesterday.', 2, 'free_response', N'conference, yesterday', 5, 35, 480, 2);
+
+IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @swExam AND DisplayOrder = 3)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, MinWords, MaxWords, ResponseSeconds, DisplayOrder)
+  VALUES (@grpSwW3, @swExam, @secSwW3, @swWrit, N'Write an opinion essay explaining whether remote work improves employee productivity.', 3, 'free_response', 15, 300, 1800, 3);
+
+-- Seed ScoreScales for TOEIC_CAT and TOEIC_SW
+IF NOT EXISTS (SELECT 1 FROM ScoreScales WHERE CertId = @toeicCat AND SkillId = @catList)
+  INSERT INTO ScoreScales (CertId, SkillId, ExamId, RawScore, ScaledScore) VALUES
+    (@toeicCat, @catList, NULL, 0, 200), (@toeicCat, @catList, NULL, 1, 250), (@toeicCat, @catList, NULL, 2, 300),
+    (@toeicCat, @catList, NULL, 3, 350), (@toeicCat, @catList, NULL, 4, 400), (@toeicCat, @catList, NULL, 5, 450),
+    (@toeicCat, @catList, NULL, 6, 475), (@toeicCat, @catList, NULL, 7, 495);
+
+IF NOT EXISTS (SELECT 1 FROM ScoreScales WHERE CertId = @toeicCat AND SkillId = @catRead)
+  INSERT INTO ScoreScales (CertId, SkillId, ExamId, RawScore, ScaledScore) VALUES
+    (@toeicCat, @catRead, NULL, 0, 200), (@toeicCat, @catRead, NULL, 1, 275), (@toeicCat, @catRead, NULL, 2, 350),
+    (@toeicCat, @catRead, NULL, 3, 425), (@toeicCat, @catRead, NULL, 4, 500), (@toeicCat, @catRead, NULL, 5, 600),
+    (@toeicCat, @catRead, NULL, 6, 700), (@toeicCat, @catRead, NULL, 7, 850);
+
+IF NOT EXISTS (SELECT 1 FROM ScoreScales WHERE CertId = @toeicSw AND SkillId = @swSpea)
+  INSERT INTO ScoreScales (CertId, SkillId, ExamId, RawScore, ScaledScore) VALUES
+    (@toeicSw, @swSpea, NULL, 0, 50), (@toeicSw, @swSpea, NULL, 1, 160), (@toeicSw, @swSpea, NULL, 2, 200);
+
+IF NOT EXISTS (SELECT 1 FROM ScoreScales WHERE CertId = @toeicSw AND SkillId = @swWrit)
+  INSERT INTO ScoreScales (CertId, SkillId, ExamId, RawScore, ScaledScore) VALUES
+    (@toeicSw, @swWrit, NULL, 0, 50), (@toeicSw, @swWrit, NULL, 1, 130), (@toeicSw, @swWrit, NULL, 2, 200);
+
+-- Seed GradingCriteria for TOEIC_SW so AI Grading Processor scores ExamId 18 cleanly
+IF NOT EXISTS (SELECT 1 FROM GradingCriteria WHERE CertId = @toeicSw AND SkillId = @swSpea AND Code = 'PRON')
+  INSERT INTO GradingCriteria (CertId, SkillId, Code, Name, MaxScore, Weight, DisplayOrder) VALUES
+    (@toeicSw, @swSpea, 'PRON', N'Pronunciation & Intonation', 5.0, 1.0, 1),
+    (@toeicSw, @swSpea, 'FLU', N'Fluency & Delivery', 5.0, 1.0, 2);
+
+IF NOT EXISTS (SELECT 1 FROM GradingCriteria WHERE CertId = @toeicSw AND SkillId = @swWrit AND Code = 'GRAM')
+  INSERT INTO GradingCriteria (CertId, SkillId, Code, Name, MaxScore, Weight, DisplayOrder) VALUES
+    (@toeicSw, @swWrit, 'GRAM', N'Grammar & Keyword Usage', 5.0, 1.0, 1),
+    (@toeicSw, @swWrit, 'ORG', N'Organization & Development', 5.0, 1.0, 2);
+
 PRINT '19. Representative 11-Component Question Catalog & Official Multi-Stage Blueprint Seeds';
 GO
