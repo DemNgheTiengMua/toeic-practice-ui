@@ -312,7 +312,11 @@ public sealed class AdminCertificatesController(
 
                 // Build ToolsConfigJson
                 var tools = new Dictionary<string, bool>();
-                if (sec.ToolHighlighter) tools["highlighter"] = true;
+                if (sec.ToolHighlighter)
+                {
+                    tools["highlighter"] = true;
+                    tools["notes"] = true;
+                }
                 if (sec.ToolNotes) tools["notes"] = true;
                 if (sec.ToolWordCount) tools["wordCount"] = true;
                 if (sec.ToolDisableSpellcheck) tools["disableSpellcheck"] = true;

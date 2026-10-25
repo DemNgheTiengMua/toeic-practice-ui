@@ -665,6 +665,9 @@
 
 <script>
   function goToStep(step) {
+    if (step === 3) {
+      syncStep3FromSkills();
+    }
     document.querySelectorAll('.wizard-step').forEach(function(el) { el.style.display = 'none'; });
     var target = document.getElementById('step-' + step);
     if (target) {
@@ -691,6 +694,56 @@
     url.searchParams.set('preset', presetCode);
     url.searchParams.set('step', '1');
     window.location.href = url.toString();
+  }
+
+  function syncStep3FromSkills() {
+    var skillCards = document.querySelectorAll('#skillsContainer .skill-card');
+    var secContainer = document.getElementById('sectionsContainer');
+    if (!secContainer) return;
+
+    var existingGroups = secContainer.querySelectorAll('.skill-sections-group');
+    var activeSkillIndices = new Set();
+
+    skillCards.forEach(function(card) {
+      var sIdx = card.getAttribute('data-skill-idx');
+      activeSkillIndices.add(sIdx);
+      var nameInp = card.querySelector(`input[name="Skills[${sIdx}].Name"]`);
+      var codeInp = card.querySelector(`input[name="Skills[${sIdx}].Code"]`);
+      var name = nameInp ? nameInp.value : `Skill ${parseInt(sIdx) + 1}`;
+      var code = codeInp ? codeInp.value : `SKILL_${parseInt(sIdx) + 1}`;
+
+      var group = secContainer.querySelector(`.skill-sections-group[data-skill-idx="${sIdx}"]`);
+      if (!group) {
+        var groupHtml = `
+          <div class="skill-sections-group" data-skill-idx="${sIdx}" style="border: 2px solid var(--color-ink, #14181d); padding: 1rem; background: #fff;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--color-ink, #14181d);">
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span class="badge skill-badge-${sIdx}" style="background: #0b4ea2; color: #fff; border-radius: 0; font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 0.9rem;">
+                  ${name} (${code})
+                </span>
+                <span class="text-sm text-muted count-badge-${sIdx}">0 section(s) configured</span>
+              </div>
+              <button type="button" class="btn btn--sm" onclick="addSection(${sIdx})" style="border-radius: 0; border: 1px solid var(--color-ink, #14181d); font-family: var(--font-condensed, sans-serif); text-transform: uppercase;">
+                + Add Section
+              </button>
+            </div>
+            <div class="sections-list" data-skill-idx="${sIdx}" style="display: flex; flex-direction: column; gap: 1rem;">
+            </div>
+          </div>`;
+        secContainer.insertAdjacentHTML('beforeend', groupHtml);
+        addSection(sIdx);
+      } else {
+        var badge = group.querySelector(`.skill-badge-${sIdx}`) || group.querySelector('.badge');
+        if (badge) badge.textContent = `${name} (${code})`;
+      }
+    });
+
+    existingGroups.forEach(function(group) {
+      var sIdx = group.getAttribute('data-skill-idx');
+      if (!activeSkillIndices.has(sIdx)) {
+        group.remove();
+      }
+    });
   }
 
   function addSkill() {
@@ -739,7 +792,20 @@
 
   function removeSection(sIdx, secIdx) {
     var card = document.querySelector(`.skill-sections-group[data-skill-idx="${sIdx}"] .section-card[data-section-idx="${secIdx}"]`);
-    if (card) card.remove();
+    if (card) {
+      card.remove();
+      updateSectionCount(sIdx);
+    }
+  }
+
+  function updateSectionCount(sIdx) {
+    var list = document.querySelector(`.sections-list[data-skill-idx="${sIdx}"]`);
+    var group = document.querySelector(`.skill-sections-group[data-skill-idx="${sIdx}"]`);
+    if (list && group) {
+      var count = list.querySelectorAll('.section-card').length;
+      var badge = group.querySelector('.count-badge-' + sIdx) || group.querySelector('.text-muted');
+      if (badge) badge.textContent = `${count} section(s) configured`;
+    }
   }
 
   function addSection(sIdx) {
@@ -753,6 +819,7 @@
           <strong>Section #${secIdx + 1}: New Section</strong>
           <button type="button" class="btn btn--sm btn--danger" onclick="removeSection(${sIdx}, ${secIdx})" style="border-radius: 0; padding: 0.15rem 0.4rem; font-size: 0.75rem;">Remove Section</button>
         </div>
+        <!-- Row 1: Codes & Weights -->
         <div style="display: grid; grid-template-columns: 1fr 2fr 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
           <div class="field">
             <label class="field__label" style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 0.75rem;">Section Code</label>
@@ -771,6 +838,7 @@
             <input class="field__input" type="number" min="1" max="200" name="Skills[${sIdx}].Sections[${secIdx}].ExpectedQuestionCount" value="10" style="border: 1px solid var(--color-ink, #14181d); border-radius: 0; font-family: var(--font-mono, monospace);">
           </div>
         </div>
+        <!-- Row 2: Navigation Mode & Screen Layout -->
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
           <div class="field">
             <label class="field__label" style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 0.75rem;">Navigation Behavior</label>
@@ -792,7 +860,26 @@
             </select>
           </div>
         </div>
+        <!-- Row 3: Timing Policy & Review Seconds -->
+        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
+          <div class="field">
+            <label class="field__label" style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 0.75rem;">Section Timing Policy</label>
+            <select class="field__input" name="Skills[${sIdx}].Sections[${secIdx}].TimerMode" style="border: 1px solid var(--color-ink, #14181d); border-radius: 0; font-family: var(--font-mono, monospace);">
+              <option value="SECTION_SHARED" selected>SECTION_SHARED (Shared countdown timer for whole section)</option>
+              <option value="AUDIO_PLUS_CHECK">AUDIO_PLUS_CHECK (Audio duration + post-audio review countdown)</option>
+              <option value="ITEM_FIXED">ITEM_FIXED (Per-item timed prep and recording)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field__label" style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 0.75rem;">Post-Audio Review (Sec)</label>
+            <input class="field__input" type="number" min="0" max="600" name="Skills[${sIdx}].Sections[${secIdx}].ReviewSeconds" placeholder="e.g. 120" style="border: 1px solid var(--color-ink, #14181d); border-radius: 0; font-family: var(--font-mono, monospace);">
+          </div>
+        </div>
+        <!-- Row 4: Slot Blueprint Parameters -->
         <div style="background: #eee; padding: 0.75rem; margin-bottom: 0.75rem; border: 1px solid var(--color-border, #ccd2d6);">
+          <div style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 0.75rem; font-weight: 700; margin-bottom: 0.5rem;">
+            Authoring Slot Blueprint &amp; Constraints
+          </div>
           <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin-bottom: 0.5rem;">
             <div class="field">
               <label class="field__label" style="font-size: 0.7rem;">Default Option Count</label>
@@ -811,9 +898,91 @@
               <input class="field__input" type="number" min="0" max="10" name="Skills[${sIdx}].Sections[${secIdx}].RequiredKeywordCount" value="0" style="border: 1px solid var(--color-ink, #14181d); border-radius: 0; font-family: var(--font-mono, monospace);">
             </div>
           </div>
+          <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; margin-top: 0.5rem;">
+            <label style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.8rem; cursor: pointer;">
+              <input type="checkbox" name="Skills[${sIdx}].Sections[${secIdx}].HideOptionText" value="true">
+              <span>Hide Option Text (A-C / A-D placards only)</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.8rem; cursor: pointer;">
+              <input type="checkbox" name="Skills[${sIdx}].Sections[${secIdx}].RequirePassage" value="true">
+              <span>Require Passage Stimulus</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.8rem; cursor: pointer;">
+              <input type="checkbox" name="Skills[${sIdx}].Sections[${secIdx}].RequireAudio" value="true">
+              <span>Require Audio File</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.8rem; cursor: pointer;">
+              <input type="checkbox" name="Skills[${sIdx}].Sections[${secIdx}].RequireImage" value="true">
+              <span>Require Image Prompt</span>
+            </label>
+          </div>
+        </div>
+        <!-- Row 5: Allowed Components & Candidate Tools -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <!-- Allowed Question Components -->
+          <div style="background: #fff; border: 1px solid var(--color-ink, #14181d); padding: 0.6rem;">
+            <div style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 0.75rem; font-weight: 700; margin-bottom: 0.35rem;">
+              Allowed Question Components
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.35rem; font-size: 0.75rem;">
+              <label style="display: flex; align-items: center; gap: 0.25rem;">
+                <input type="checkbox" name="Skills[${sIdx}].Sections[${secIdx}].ComponentMcq" value="true" checked>
+                <span>Single Choice (4-opt)</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.25rem;">
+                <input type="checkbox" name="Skills[${sIdx}].Sections[${secIdx}].ComponentMcq3" value="true">
+                <span>Single Choice (3-opt)</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.25rem;">
+                <input type="checkbox" name="Skills[${sIdx}].Sections[${secIdx}].ComponentMultiSelect" value="true">
+                <span>Multi-Select Checkbox</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.25rem;">
+                <input type="checkbox" name="Skills[${sIdx}].Sections[${secIdx}].ComponentInlineCompletion" value="true">
+                <span>Inline Text Completion</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.25rem;">
+                <input type="checkbox" name="Skills[${sIdx}].Sections[${secIdx}].ComponentDropdown" value="true">
+                <span>Dropdown Matching</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.25rem;">
+                <input type="checkbox" name="Skills[${sIdx}].Sections[${secIdx}].ComponentDragDrop" value="true">
+                <span>Drag-and-Drop</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.25rem;">
+                <input type="checkbox" name="Skills[${sIdx}].Sections[${secIdx}].ComponentFreeResponse" value="true">
+                <span>Free Response (AI Graded)</span>
+              </label>
+            </div>
+          </div>
+          <!-- Candidate Tools Toolbar -->
+          <div style="background: #fff; border: 1px solid var(--color-ink, #14181d); padding: 0.6rem;">
+            <div style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 0.75rem; font-weight: 700; margin-bottom: 0.35rem;">
+              Candidate Sitting Room Tools
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 0.35rem; font-size: 0.75rem;">
+              <label style="display: flex; align-items: center; gap: 0.25rem;">
+                <input type="checkbox" name="Skills[${sIdx}].Sections[${secIdx}].ToolHighlighter" value="true">
+                <span>Text Highlighter &amp; Notes Tool</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.25rem;">
+                <input type="checkbox" name="Skills[${sIdx}].Sections[${secIdx}].ToolWordCount" value="true">
+                <span>Live Word Counter</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.25rem;">
+                <input type="checkbox" name="Skills[${sIdx}].Sections[${secIdx}].ToolDisableSpellcheck" value="true">
+                <span>Disable Browser Spellcheck</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.25rem;">
+                <input type="checkbox" name="Skills[${sIdx}].Sections[${secIdx}].ToolCutPaste" value="true">
+                <span>Block Keyboard Copy/Paste (Require on-screen buttons)</span>
+              </label>
+            </div>
+          </div>
         </div>
       </div>`;
     list.insertAdjacentHTML('beforeend', html);
+    updateSectionCount(sIdx);
   }
 
   function syncStep4ScoreRule(rule) {
