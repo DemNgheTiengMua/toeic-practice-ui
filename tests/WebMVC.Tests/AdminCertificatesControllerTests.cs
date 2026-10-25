@@ -112,6 +112,7 @@ public sealed class AdminCertificatesControllerTests
         var result = await controller.Index(CancellationToken.None);
 
         var viewResult = Assert.IsType<ViewResult>(result);
+        Assert.Equal("~/Views/Admin/Certificates.cshtml", viewResult.ViewName);
         var vm = Assert.IsType<AdminCertificateListViewModel>(viewResult.Model);
         Assert.Equal(2, vm.Certificates.Count);
         Assert.Equal("TOEIC", vm.Certificates[0].Code);
@@ -126,6 +127,7 @@ public sealed class AdminCertificatesControllerTests
         var result = await controller.Wizard(null, null, 1, CancellationToken.None);
 
         var viewResult = Assert.IsType<ViewResult>(result);
+        Assert.Equal("~/Views/Admin/CertificateWizard.cshtml", viewResult.ViewName);
         var vm = Assert.IsType<CertificateWizardViewModel>(viewResult.Model);
         Assert.Equal("IELTS", vm.Code);
         Assert.Equal("ielts_academic", vm.PresetCode);
@@ -263,6 +265,7 @@ public sealed class AdminCertificatesControllerTests
         var result = await controller.SaveWizard(model, CancellationToken.None);
 
         var viewResult = Assert.IsType<ViewResult>(result);
+        Assert.Equal("~/Views/Admin/CertificateWizard.cshtml", viewResult.ViewName);
         var vm = Assert.IsType<CertificateWizardViewModel>(viewResult.Model);
         Assert.Equal("Skill code is missing", vm.ErrorMessage);
     }
