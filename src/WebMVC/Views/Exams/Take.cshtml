@@ -30,6 +30,43 @@
     .phase-progress__timer { font-family: "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums; }
     .writing-editor { width: 100%; min-height: 18rem; border: 2px solid #14181d; border-radius: 0; box-shadow: none; padding: var(--space-3); font: inherit; }
 
+    /* Mandatory Keyword Badges */
+    .keyword-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.2rem 0.55rem;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 0.825rem;
+      font-weight: 600;
+      border: 2px solid #14181d;
+      border-radius: 0;
+      background: #ffffff;
+      color: #14181d;
+      transition: all 0.15s ease-in-out;
+    }
+    .keyword-badge.badge--used {
+      background: #0a6b3c !important;
+      color: #ffffff !important;
+      border-color: #14181d !important;
+    }
+    .keyword-badge.badge--pending {
+      background: #f8fafc;
+      border: 2px dashed #14181d;
+      color: #4b5563;
+    }
+
+    /* On-Screen Cut/Paste/Undo/Redo Toolbar */
+    .writing-onscreen-toolbar .btn--sm {
+      padding: 0.25rem 0.65rem;
+      font-size: 0.825rem;
+      font-family: "IBM Plex Sans Condensed", sans-serif;
+      font-weight: 700;
+      text-transform: uppercase;
+      border-radius: 0;
+      border: 2px solid #14181d;
+      box-shadow: none;
+    }
+
     /* Split-Screen 100vh Viewport */
     .exam-layout--split {
       display: grid !important;
@@ -588,6 +625,14 @@
                 @q.Stem
               </p>
 
+              <!-- Mandatory Prompt Keyword Badges -->
+              <div id="required-keywords-area" class="required-keywords-area mt-2 mb-2" style="@(!string.IsNullOrWhiteSpace(q.RequiredKeywords) ? "" : "display:none;")">
+                <div class="row" style="align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                  <span class="text-sm font-bold" style="font-family: 'IBM Plex Sans Condensed', sans-serif; text-transform: uppercase; letter-spacing: 0.04em;">Từ khóa bắt buộc:</span>
+                  <div id="required-keywords-list" class="row row--wrap" style="gap: 0.35rem; display: inline-flex;"></div>
+                </div>
+              </div>
+
               <div class="option-list @(q.HideOptionText ? "option-list--masked" : "")" id="option-list" role="radiogroup" aria-label="Answer for question @q.DisplayOrder" style="@(q.QuestionType == "free_response" || q.ClusterSize == 3 ? "display:none;" : "")">
                 @{
                   var initialOpts = q.HideOptionText && q.OptionCount > 0 ? q.Options.Take(q.OptionCount) : q.Options;
@@ -642,11 +687,23 @@
               <div id="component-widget-container" class="stack mt-3" style="display:none;"></div>
 
               <div id="writing-response-pane" class="stack mt-3" style="@(q.QuestionType == "free_response" ? "" : "display:none;")">
+                <!-- On-Screen Cut/Paste/Undo/Redo Toolbar -->
+                <div id="writing-onscreen-toolbar" class="writing-onscreen-toolbar row mb-2" style="gap: 0.5rem; display: none;">
+                  <button type="button" class="btn btn--secondary btn--sm" id="btn-writing-cut" title="Cắt">Cắt (Cut)</button>
+                  <button type="button" class="btn btn--secondary btn--sm" id="btn-writing-paste" title="Dán">Dán (Paste)</button>
+                  <button type="button" class="btn btn--secondary btn--sm" id="btn-writing-undo" title="Hoàn tác">Hoàn tác (Undo)</button>
+                  <button type="button" class="btn btn--secondary btn--sm" id="btn-writing-redo" title="Làm lại">Làm lại (Redo)</button>
+                </div>
+
                 <label for="writing-editor"><strong>Your response</strong></label>
-                <textarea id="writing-editor" class="writing-editor" aria-describedby="writing-counts" data-question-id="@q.QuestionId">@q.ResponseText</textarea>
-                <div id="writing-counts" class="row row--between text-sm">
-                  <span><strong id="word-count">0</strong> words <span id="word-range"></span></span>
-                  <span><strong id="character-count">0</strong> characters</span>
+                <textarea id="writing-editor" class="writing-editor" aria-describedby="writing-counts" data-question-id="@q.QuestionId" spellcheck="false" autocorrect="off" autocomplete="off" autocapitalize="off">@q.ResponseText</textarea>
+                <div id="writing-counts" class="row row--between text-sm" style="align-items: center; margin-top: 0.5rem;">
+                  <div class="row" style="gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+                    <span>Số từ: <strong id="live-word-count">0</strong> <span id="word-count" style="display:none;">0</span> <span id="word-range"></span></span>
+                    <span id="min-words-badge" class="badge" style="display:none; font-family:'IBM Plex Mono',monospace; font-size:0.8rem; border:1px solid #14181d;">Tối thiểu: 0 từ</span>
+                    <span id="under-length-warning" class="text-xs font-bold" style="display:none; color:#b31217; font-family:'IBM Plex Sans Condensed',sans-serif; text-transform:uppercase;">(Chưa đạt số từ tối thiểu)</span>
+                  </div>
+                  <span><strong id="character-count">0</strong> ký tự</span>
                 </div>
                 <button type="button" class="btn btn--secondary" id="btn-save-writing-draft">Save draft</button>
               </div>
@@ -980,6 +1037,31 @@
     </div>
   </div>
 
+  <!-- Hybrid Group-Lock Irreversible Confirmation Modal (#group-lock-modal) -->
+  <div id="group-lock-modal" class="modal-overlay" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="group-lock-modal-title">
+    <div class="modal" style="max-width: 550px; border: 2px solid #14181d; border-radius: 0; box-shadow: none;">
+      <div class="modal__header" style="border-bottom: 2px solid #14181d; background: #fafbfc; padding: 1rem 1.25rem;">
+        <h2 id="group-lock-modal-title" class="no-margin" style="font-family: 'IBM Plex Sans Condensed', sans-serif; text-transform: uppercase; font-size: 1.25rem; color: #b31217;">
+          XÁC NHẬN CHUYỂN PHẦN THI (GROUP LOCK CONFIRMATION)
+        </h2>
+      </div>
+      <div class="modal__body stack" style="gap: 1rem; padding: 1.25rem;">
+        <div class="alert alert--danger" style="border: 2px solid #b31217; border-radius: 0; box-shadow: none; font-weight: 500;">
+          Xác nhận chuyển sang câu tiếp theo: Phần hiện tại sẽ bị khóa vĩnh viễn và thời gian còn lại sẽ không được bảo lưu.
+        </div>
+        <p class="no-margin" style="font-size: 0.9375rem;">
+          Bạn sẽ không thể quay lại xem hoặc sửa đổi các câu trả lời trong nhóm này sau khi đã xác nhận chuyển tiếp.
+        </p>
+      </div>
+      <div class="modal__footer" style="border-top: 2px solid #14181d; padding: 1rem 1.25rem; display: flex; justify-content: flex-end; gap: 0.75rem;">
+        <button type="button" class="btn js-close-group-lock-modal">Hủy (Cancel)</button>
+        <button type="button" class="btn btn--danger" id="btn-confirm-group-lock">
+          Xác nhận chuyển và khóa (Confirm &amp; Proceed)
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Adaptive Stage Unit Locking Confirmation Modal (#unit-lock-modal) -->
   <div id="unit-lock-modal" class="modal-overlay" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="unit-lock-modal-title">
     <div class="modal" style="max-width: 550px; border: 2px solid #14181d; border-radius: 0; box-shadow: none;">
@@ -1126,6 +1208,18 @@
       var questionMetaBar = document.getElementById('question-meta-bar');
       var reviewScreenModal = document.getElementById('review-screen-modal');
       var unitLockModal = document.getElementById('unit-lock-modal');
+      var groupLockModal = document.getElementById('group-lock-modal');
+      var btnConfirmGroupLock = document.getElementById('btn-confirm-group-lock');
+      var writingOnscreenToolbar = document.getElementById('writing-onscreen-toolbar');
+      var btnWritingCut = document.getElementById('btn-writing-cut');
+      var btnWritingPaste = document.getElementById('btn-writing-paste');
+      var btnWritingUndo = document.getElementById('btn-writing-undo');
+      var btnWritingRedo = document.getElementById('btn-writing-redo');
+      var liveWordCount = document.getElementById('live-word-count');
+      var minWordsBadge = document.getElementById('min-words-badge');
+      var underLengthWarning = document.getElementById('under-length-warning');
+      var requiredKeywordsArea = document.getElementById('required-keywords-area');
+      var requiredKeywordsList = document.getElementById('required-keywords-list');
       var btnOpenReviewScreen = document.getElementById('btn-open-review-screen');
       var btnReviewFirstUnanswered = document.getElementById('btn-review-first-unanswered');
       var btnReviewOnlyUnanswered = document.getElementById('btn-review-only-unanswered');
@@ -1488,19 +1582,164 @@
         return trimmed ? trimmed.split(/\s+/).length : 0;
       }
 
+      function stripSuffixes(word) {
+        if (!word) return '';
+        if (word.endsWith('ations') && word.length > 7) return word.slice(0, -6);
+        if (word.endsWith('ation') && word.length > 6) return word.slice(0, -5);
+        if (word.endsWith('tion') && word.length > 6) return word.slice(0, -4);
+        if (word.endsWith('ment') && word.length > 6) return word.slice(0, -4);
+        if (word.endsWith('ing') && word.length > 5) return word.slice(0, -3);
+        if (word.endsWith('ed') && word.length > 4) return word.slice(0, -2);
+        if (word.endsWith('es') && word.length > 4) return word.slice(0, -2);
+        if (word.endsWith('s') && word.length > 3) return word.slice(0, -1);
+        if (word.endsWith('e') && word.length > 4) return word.slice(0, -1);
+        return word;
+      }
+
+      function containsKeywordStem(text, keyword) {
+        if (!keyword) return true;
+        var kw = keyword.trim().toLowerCase();
+        var lower = (text || '').toLowerCase();
+        if (lower.indexOf(kw) !== -1) return true;
+        var stem = stripSuffixes(kw);
+        if (stem.length >= 3 && lower.indexOf(stem) !== -1) return true;
+        var words = lower.split(/[\s,.\!?;\:]+/).filter(Boolean);
+        for (var i = 0; i < words.length; i++) {
+          var w = words[i];
+          if (w.indexOf(stem) !== -1 || stripSuffixes(w) === stem) return true;
+        }
+        return false;
+      }
+
+      function parseKeywordList(keywordsStr) {
+        if (!keywordsStr) return [];
+        var trimmed = keywordsStr.trim();
+        if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+          try {
+            var arr = JSON.parse(trimmed);
+            if (Array.isArray(arr)) return arr.filter(Boolean);
+          } catch (e) {}
+        }
+        return trimmed.split(/[,;]+/).map(function (k) { return k.trim(); }).filter(Boolean);
+      }
+
+      function updateRequiredKeywordsMatch(q, text) {
+        if (!requiredKeywordsList || !q || !q.requiredKeywords) return;
+        var badges = requiredKeywordsList.querySelectorAll('.keyword-badge');
+        badges.forEach(function (badge) {
+          var kw = badge.getAttribute('data-keyword') || '';
+          var matched = containsKeywordStem(text, kw);
+          if (matched) {
+            badge.className = 'keyword-badge badge--used';
+            badge.setAttribute('title', 'Đã sử dụng');
+          } else {
+            badge.className = 'keyword-badge badge--pending';
+            badge.setAttribute('title', 'Chưa sử dụng');
+          }
+        });
+      }
+
+      function renderRequiredKeywords(q) {
+        if (!requiredKeywordsArea || !requiredKeywordsList) return;
+        var kws = parseKeywordList(q ? q.requiredKeywords : null);
+        if (kws.length === 0) {
+          requiredKeywordsArea.style.display = 'none';
+          requiredKeywordsList.innerHTML = '';
+          return;
+        }
+        requiredKeywordsArea.style.display = '';
+        var html = '';
+        kws.forEach(function (kw) {
+          html += '<span class="keyword-badge badge--pending" data-keyword="' + escapeHtml(kw) + '">' + escapeHtml(kw) + '</span>';
+        });
+        requiredKeywordsList.innerHTML = html;
+        var text = (writingEditor ? writingEditor.value : '') || '';
+        updateRequiredKeywordsMatch(q, text);
+      }
+
+      var internalClipboard = '';
+      var undoStack = [];
+      var redoStack = [];
+      var isTrackingUndo = true;
+
+      function pushUndoState() {
+        if (!writingEditor || !isTrackingUndo) return;
+        var currentText = writingEditor.value;
+        if (undoStack.length === 0 || undoStack[undoStack.length - 1] !== currentText) {
+          undoStack.push(currentText);
+          if (undoStack.length > 50) undoStack.shift();
+          redoStack = [];
+        }
+      }
+
+      function isCutPasteRestricted(q) {
+        if (!q) return false;
+        var cfg = parseToolsConfig(q.toolsConfigJson);
+        return cfg.allowKeyboardCutPaste === false || cfg.showOnScreenCutPaste === true || cfg.onScreenCutPasteOnly === true;
+      }
+
+      function updateWritingEditorTools(q) {
+        if (!writingEditor) return;
+        var cfg = parseToolsConfig(q ? q.toolsConfigJson : null);
+        var disableSpellCheck = cfg.disableSpellCheck !== false;
+        writingEditor.setAttribute('spellcheck', disableSpellCheck ? 'false' : 'true');
+        writingEditor.setAttribute('autocorrect', disableSpellCheck ? 'off' : 'on');
+        writingEditor.setAttribute('autocomplete', disableSpellCheck ? 'off' : 'on');
+        writingEditor.setAttribute('autocapitalize', disableSpellCheck ? 'off' : 'on');
+
+        var isRestricted = isCutPasteRestricted(q);
+        if (writingOnscreenToolbar) {
+          writingOnscreenToolbar.style.display = isRestricted ? 'flex' : 'none';
+        }
+
+        var showWordCount = cfg.showWordCount !== false;
+        var writingCounts = document.getElementById('writing-counts');
+        if (writingCounts) {
+          writingCounts.style.display = showWordCount ? 'flex' : 'none';
+        }
+      }
+
       function updateWritingCounters(question) {
         if (!writingEditor || !question) return;
         var responseText = writingEditor.value || '';
         var words = countWords(responseText);
+        if (liveWordCount) liveWordCount.textContent = words;
         if (wordCountDisplay) wordCountDisplay.textContent = words;
         if (characterCountDisplay) characterCountDisplay.textContent = responseText.length;
+
+        var minWords = Number(question.minWords) || 0;
+        var maxWords = Number(question.maxWords) || 0;
+
         if (wordRangeDisplay) {
-          var minimum = question.minWords ? question.minWords + ' minimum' : '';
-          var maximum = question.maxWords ? question.maxWords + ' maximum' : '';
+          var minimum = minWords ? minWords + ' minimum' : '';
+          var maximum = maxWords ? maxWords + ' maximum' : '';
           wordRangeDisplay.textContent = minimum && maximum
             ? ' (' + minimum + ', ' + maximum + ')'
             : minimum || maximum ? ' (' + (minimum || maximum) + ')' : '';
         }
+
+        if (minWordsBadge) {
+          if (minWords > 0) {
+            minWordsBadge.style.display = 'inline-flex';
+            minWordsBadge.textContent = 'Tối thiểu: ' + minWords + ' từ';
+            if (words < minWords) {
+              minWordsBadge.style.background = '#fef2f2';
+              minWordsBadge.style.color = '#b31217';
+              minWordsBadge.style.borderColor = '#b31217';
+              if (underLengthWarning) underLengthWarning.style.display = 'inline-flex';
+            } else {
+              minWordsBadge.style.background = '#f0fdf4';
+              minWordsBadge.style.color = '#0a6b3c';
+              minWordsBadge.style.borderColor = '#0a6b3c';
+              if (underLengthWarning) underLengthWarning.style.display = 'none';
+            }
+          } else {
+            minWordsBadge.style.display = 'none';
+            if (underLengthWarning) underLengthWarning.style.display = 'none';
+          }
+        }
+
+        updateRequiredKeywordsMatch(question, responseText);
       }
 
       function markDraftDirty(questionId) {
@@ -1508,6 +1747,7 @@
         if (!draft) return;
         draft.text = writingEditor.value;
         draft.dirty = true;
+        pushUndoState();
         updateWritingCounters(questionMap[currentDisplayOrder]);
         updateProgressStats();
         saveStatus.textContent = 'Draft not saved';
@@ -1652,8 +1892,11 @@
 
         if (btnPrev) {
           var isOneWay = isAudioDriven || isListening;
+          var prevQ = currentPhaseQuestionIndex > 0 ? currentPhaseQuestions[currentPhaseQuestionIndex - 1] : null;
+          var isGroupLockedPrev = currentQuestion && currentQuestion.navigationMode === 'HYBRID_GROUP_LOCKED' && prevQ && prevQ.groupId !== currentQuestion.groupId;
           btnPrev.disabled = !phase
             || isOneWay
+            || isGroupLockedPrev
             || currentPhaseQuestionIndex <= 0
             || getQuestionPhaseIndex(currentQuestion) !== activePhaseIndex;
           if (isAudioDriven) {
@@ -2417,7 +2660,13 @@
           var draft = responseDrafts[q.questionId];
           writingEditor.value = draft ? draft.text : '';
           writingEditor.setAttribute('data-question-id', q.questionId);
+          undoStack = [writingEditor.value];
+          redoStack = [];
+          updateWritingEditorTools(q);
+          renderRequiredKeywords(q);
           updateWritingCounters(q);
+        } else {
+          renderRequiredKeywords(q);
         }
 
         // Rebind radio selection listeners
@@ -2468,6 +2717,9 @@
         if (!targetQuestion || !phase || targetQuestion.skillCode !== phase.skillCode) return;
         var isOneWay = currentQuestion && (currentQuestion.navigationMode === 'AUDIO_DRIVEN');
         if (isOneWay && targetOrder < currentDisplayOrder) return;
+        if (currentQuestion && currentQuestion.navigationMode === 'HYBRID_GROUP_LOCKED') {
+          if (activeGroupId && targetQuestion.groupId !== activeGroupId) return;
+        }
         if (isOneWay && phase.skillCode === 'LIST' && targetOrder < currentDisplayOrder) return;
 
         // Strict Unit Locked Sandbox routing
@@ -2764,6 +3016,15 @@
             return;
           }
           var currentQ = questionMap[currentDisplayOrder];
+          var nextQ = questionMap[currentDisplayOrder + 1];
+          if (currentQ && nextQ && currentQ.navigationMode === 'HYBRID_GROUP_LOCKED' && currentQ.groupId !== nextQ.groupId) {
+            var cfg = parseToolsConfig(currentQ.toolsConfigJson);
+            if (cfg.confirmOnNext !== false) {
+              openGroupLockModal(nextQ.groupId, currentDisplayOrder + 1);
+              return;
+            }
+          }
+          var currentQ = questionMap[currentDisplayOrder];
           if (currentQ && currentQ.clusterSize === 3) {
             var clusterQs = questions.filter(function (item) {
               return (currentQ.groupId && item.groupId === currentQ.groupId) ||
@@ -2937,6 +3198,162 @@
       document.querySelectorAll('.js-close-unit-lock-modal').forEach(function (btn) {
         btn.addEventListener('click', closeUnitLockModal);
       });
+
+      var pendingTargetGroupId = null;
+      var pendingTargetDisplayOrder = null;
+
+      function openGroupLockModal(targetGroupId, targetDisplayOrder) {
+        pendingTargetGroupId = targetGroupId;
+        pendingTargetDisplayOrder = targetDisplayOrder;
+        if (groupLockModal) groupLockModal.style.display = 'flex';
+      }
+
+      function closeGroupLockModal() {
+        pendingTargetGroupId = null;
+        pendingTargetDisplayOrder = null;
+        if (groupLockModal) groupLockModal.style.display = 'none';
+      }
+
+      document.querySelectorAll('.js-close-group-lock-modal').forEach(function (btn) {
+        btn.addEventListener('click', closeGroupLockModal);
+      });
+
+      if (btnConfirmGroupLock) {
+        btnConfirmGroupLock.addEventListener('click', function () {
+          if (!pendingTargetGroupId) return;
+          btnConfirmGroupLock.disabled = true;
+          btnConfirmGroupLock.textContent = 'Đang chuyển...';
+          scheduleSync(true);
+
+          fetch('/exams/attempts/' + attemptId + '/transition-group', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'RequestVerificationToken': antiForgeryToken
+            },
+            body: JSON.stringify({ targetGroupId: pendingTargetGroupId })
+          })
+          .then(function (res) {
+            if (!res.ok) throw new Error('Transition failed');
+            return res.json();
+          })
+          .then(function (data) {
+            activeGroupId = data.activeGroupId;
+            if (data.remainingSeconds !== undefined) {
+              remainingSeconds = data.remainingSeconds;
+              if (data.phaseDeadlineAt) {
+                phaseDeadlineAt = new Date(data.phaseDeadlineAt).getTime();
+              } else {
+                phaseDeadlineAt = Date.now() + (remainingSeconds * 1000);
+              }
+            }
+            btnConfirmGroupLock.disabled = false;
+            btnConfirmGroupLock.textContent = 'Xác nhận chuyển và khóa (Confirm & Proceed)';
+            var nextOrderToNav = pendingTargetDisplayOrder;
+            closeGroupLockModal();
+            goToQuestion(nextOrderToNav);
+          })
+          .catch(function (err) {
+            btnConfirmGroupLock.disabled = false;
+            btnConfirmGroupLock.textContent = 'Xác nhận chuyển và khóa (Confirm & Proceed)';
+            alert('Không thể chuyển nhóm câu hỏi: ' + (err.message || 'Lỗi hệ thống'));
+          });
+        });
+      }
+
+      if (writingEditor) {
+        writingEditor.addEventListener('keydown', function (e) {
+          var currentQ = questionMap[currentDisplayOrder];
+          if (isCutPasteRestricted(currentQ)) {
+            if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C' || e.key === 'x' || e.key === 'X' || e.key === 'v' || e.key === 'V')) {
+              e.preventDefault();
+              e.stopPropagation();
+              return false;
+            }
+          }
+        });
+
+        writingEditor.addEventListener('cut', function (e) {
+          var currentQ = questionMap[currentDisplayOrder];
+          if (isCutPasteRestricted(currentQ)) {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+          }
+        });
+
+        writingEditor.addEventListener('copy', function (e) {
+          var currentQ = questionMap[currentDisplayOrder];
+          if (isCutPasteRestricted(currentQ)) {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+          }
+        });
+
+        writingEditor.addEventListener('paste', function (e) {
+          var currentQ = questionMap[currentDisplayOrder];
+          if (isCutPasteRestricted(currentQ)) {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+          }
+        });
+      }
+
+      if (btnWritingCut) {
+        btnWritingCut.addEventListener('click', function () {
+          if (!writingEditor) return;
+          var start = writingEditor.selectionStart;
+          var end = writingEditor.selectionEnd;
+          if (start === end) return;
+          pushUndoState();
+          internalClipboard = writingEditor.value.substring(start, end);
+          writingEditor.value = writingEditor.value.substring(0, start) + writingEditor.value.substring(end);
+          writingEditor.selectionStart = writingEditor.selectionEnd = start;
+          markDraftDirty(writingEditor.getAttribute('data-question-id'));
+          writingEditor.focus();
+        });
+      }
+
+      if (btnWritingPaste) {
+        btnWritingPaste.addEventListener('click', function () {
+          if (!writingEditor || !internalClipboard) return;
+          var start = writingEditor.selectionStart;
+          var end = writingEditor.selectionEnd;
+          pushUndoState();
+          writingEditor.value = writingEditor.value.substring(0, start) + internalClipboard + writingEditor.value.substring(end);
+          writingEditor.selectionStart = writingEditor.selectionEnd = start + internalClipboard.length;
+          markDraftDirty(writingEditor.getAttribute('data-question-id'));
+          writingEditor.focus();
+        });
+      }
+
+      if (btnWritingUndo) {
+        btnWritingUndo.addEventListener('click', function () {
+          if (!writingEditor || undoStack.length === 0) return;
+          isTrackingUndo = false;
+          redoStack.push(writingEditor.value);
+          var prev = undoStack.pop();
+          writingEditor.value = prev;
+          isTrackingUndo = true;
+          markDraftDirty(writingEditor.getAttribute('data-question-id'));
+          writingEditor.focus();
+        });
+      }
+
+      if (btnWritingRedo) {
+        btnWritingRedo.addEventListener('click', function () {
+          if (!writingEditor || redoStack.length === 0) return;
+          isTrackingUndo = false;
+          undoStack.push(writingEditor.value);
+          var next = redoStack.pop();
+          writingEditor.value = next;
+          isTrackingUndo = true;
+          markDraftDirty(writingEditor.getAttribute('data-question-id'));
+          writingEditor.focus();
+        });
+      }
 
       if (btnConfirmUnitLock) {
         btnConfirmUnitLock.addEventListener('click', function () {

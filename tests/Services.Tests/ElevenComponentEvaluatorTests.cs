@@ -288,4 +288,77 @@ public sealed class ElevenComponentEvaluatorTests
         Assert.Equal("BAND_6.5", result.BandCode);
         Assert.Equal("Competent Plus", result.BandName);
     }
+
+
+    [Fact]
+    public void EvaluateWritingResponse_Flags_UnderLength_When_Below_MinWords()
+    {
+        // IELTS Task 1: MinWords = 150
+        var qTask1 = new Question
+        {
+            QuestionType = "free_response",
+            MinWords = 150,
+            MaxWords = 300
+        };
+
+        // 100 words -> UnderLength
+        var shortEssay = string.Join(" ", Enumerable.Repeat("word", 100));
+        var evalShort = AttemptEngine.EvaluateWritingResponse(qTask1, shortEssay);
+        Assert.Equal(100, evalShort.WordCount);
+        Assert.True(evalShort.IsUnderLength);
+        Assert.NotNull(evalShort.Feedback);
+        Assert.Contains("IsUnderLength=true", evalShort.Feedback);
+        Assert.Contains("MinWords=150", evalShort.Feedback);
+
+        // 160 words -> Not under length
+        var adequateEssay = string.Join(" ", Enumerable.Repeat("word", 160));
+        var evalAdequate = AttemptEngine.EvaluateWritingResponse(qTask1, adequateEssay);
+        Assert.Equal(160, evalAdequate.WordCount);
+        Assert.False(evalAdequate.IsUnderLength);
+
+        // IELTS Task 2: MinWords = 250
+        var qTask2 = new Question
+        {
+            QuestionType = "free_response",
+            MinWords = 250
+        };
+
+        var task2Short = string.Join(" ", Enumerable.Repeat("word", 240));
+        var evalTask2Short = AttemptEngine.EvaluateWritingResponse(qTask2, task2Short);
+        Assert.True(evalTask2Short.IsUnderLength);
+
+        var task2Pass = string.Join(" ", Enumerable.Repeat("word", 260));
+        var evalTask2Pass = AttemptEngine.EvaluateWritingResponse(qTask2, task2Pass);
+        Assert.False(evalTask2Pass.IsUnderLength);
+    }
+
+    [Fact]
+    public void EvaluateWritingResponse_Detects_RequiredKeywords_With_Lemmatization()
+    {
+        var q = new Question
+        {
+            QuestionType = "free_response",
+            MinWords = 10,
+            RequiredKeywords = "photograph, yesterday"
+        };
+
+        // Contains lemma forms: "photographed" and "yesterday"
+        var validResponse = "We took several photographed memories yesterday in the park.";
+        var evalValid = AttemptEngine.EvaluateWritingResponse(q, validResponse);
+        Assert.True(evalValid.HasRequiredKeywords);
+        Assert.Empty(evalValid.MissingKeywords);
+
+        // Missing "photograph"
+        var invalidResponse = "We went to the park yesterday afternoon.";
+        var evalInvalid = AttemptEngine.EvaluateWritingResponse(q, invalidResponse);
+        Assert.False(evalInvalid.HasRequiredKeywords);
+        Assert.Single(evalInvalid.MissingKeywords);
+        Assert.Equal("photograph", evalInvalid.MissingKeywords[0]);
+        Assert.Contains("MissingRequiredKeywords=[photograph]", evalInvalid.Feedback);
+
+        // Suffix stripping lemmas
+        Assert.True(AttemptEngine.ContainsKeywordStem("developing software is fun", "develop"));
+        Assert.True(AttemptEngine.ContainsKeywordStem("project management meeting", "manage"));
+        Assert.True(AttemptEngine.ContainsKeywordStem("medical examinations conducted", "examine"));
+    }
 }

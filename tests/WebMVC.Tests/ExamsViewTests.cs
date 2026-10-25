@@ -251,4 +251,120 @@ public sealed class ExamsViewTests
         Assert.Contains("Hoàn thành Giai đoạn 1 (Finish Unit 1)", html);
         Assert.Contains("js-open-unit-lock-modal", html);
     }
+
+    [Fact]
+    public void Take_View_Contains_Writing_Editor_Live_Word_Counter_And_Spellcheck_Invariants()
+    {
+        var repoRoot = TestPathHelper.FindRepoRoot();
+        var viewPath = Path.Combine(repoRoot, "src", "WebMVC", "Views", "Exams", "Take.cshtml");
+
+        Assert.True(File.Exists(viewPath), "Take.cshtml must exist");
+        var html = File.ReadAllText(viewPath);
+
+        // 1. Plain text editor textarea with spellcheck, autocorrect, autocomplete, autocapitalize disabled
+        Assert.Contains("id=\"writing-editor\"", html);
+        Assert.Contains("spellcheck=\"false\"", html);
+        Assert.Contains("autocorrect=\"off\"", html);
+        Assert.Contains("autocomplete=\"off\"", html);
+        Assert.Contains("autocapitalize=\"off\"", html);
+
+        // 2. Live word counter updating dynamically
+        Assert.Contains("id=\"live-word-count\"", html);
+        Assert.Contains("id=\"writing-counts\"", html);
+        Assert.Contains("countWords", html);
+        Assert.Contains("updateWritingCounters", html);
+
+        // 3. Minimum words threshold badge and under-length warning indicator
+        Assert.Contains("id=\"min-words-badge\"", html);
+        Assert.Contains("Tối thiểu: 0 từ", html);
+        Assert.Contains("id=\"under-length-warning\"", html);
+        Assert.Contains("(Chưa đạt số từ tối thiểu)", html);
+        Assert.Contains("minWords", html);
+    }
+
+    [Fact]
+    public void Take_View_Contains_Restricted_Clipboard_And_OnScreen_CutPaste_Toolbar_Invariants()
+    {
+        var repoRoot = TestPathHelper.FindRepoRoot();
+        var viewPath = Path.Combine(repoRoot, "src", "WebMVC", "Views", "Exams", "Take.cshtml");
+
+        Assert.True(File.Exists(viewPath), "Take.cshtml must exist");
+        var html = File.ReadAllText(viewPath);
+
+        // 1. On-screen editing toolbar markup & buttons
+        Assert.Contains("id=\"writing-onscreen-toolbar\"", html);
+        Assert.Contains("id=\"btn-writing-cut\"", html);
+        Assert.Contains("id=\"btn-writing-paste\"", html);
+        Assert.Contains("id=\"btn-writing-undo\"", html);
+        Assert.Contains("id=\"btn-writing-redo\"", html);
+        Assert.Contains("Cắt (Cut)", html);
+        Assert.Contains("Dán (Paste)", html);
+        Assert.Contains("Hoàn tác (Undo)", html);
+        Assert.Contains("Làm lại (Redo)", html);
+
+        // 2. Clipboard and undo/redo state management
+        Assert.Contains("internalClipboard", html);
+        Assert.Contains("undoStack", html);
+        Assert.Contains("redoStack", html);
+        Assert.Contains("pushUndoState", html);
+
+        // 3. Shortcut interception & keyboard suppression
+        Assert.Contains("isCutPasteRestricted", html);
+        Assert.Contains("allowKeyboardCutPaste", html);
+        Assert.Contains("showOnScreenCutPaste", html);
+        Assert.Contains("writingEditor.addEventListener('keydown'", html);
+        Assert.Contains("writingEditor.addEventListener('cut'", html);
+        Assert.Contains("writingEditor.addEventListener('copy'", html);
+        Assert.Contains("writingEditor.addEventListener('paste'", html);
+    }
+
+    [Fact]
+    public void Take_View_Contains_Required_Keywords_Badges_And_Live_Lemma_Detection_Invariants()
+    {
+        var repoRoot = TestPathHelper.FindRepoRoot();
+        var viewPath = Path.Combine(repoRoot, "src", "WebMVC", "Views", "Exams", "Take.cshtml");
+
+        Assert.True(File.Exists(viewPath), "Take.cshtml must exist");
+        var html = File.ReadAllText(viewPath);
+
+        // 1. Required keywords area and badge container
+        Assert.Contains("id=\"required-keywords-area\"", html);
+        Assert.Contains("id=\"required-keywords-list\"", html);
+        Assert.Contains("Từ khóa bắt buộc:", html);
+
+        // 2. Keyword badge CSS classes
+        Assert.Contains(".keyword-badge", html);
+        Assert.Contains("badge--used", html);
+        Assert.Contains("badge--pending", html);
+
+        // 3. Lemma checker and live detection
+        Assert.Contains("containsKeywordStem", html);
+        Assert.Contains("stripSuffixes", html);
+        Assert.Contains("renderRequiredKeywords", html);
+        Assert.Contains("updateRequiredKeywordsMatch", html);
+    }
+
+    [Fact]
+    public void Take_View_Contains_Hybrid_Group_Locked_Confirmation_Modal_And_Transition_Invariants()
+    {
+        var repoRoot = TestPathHelper.FindRepoRoot();
+        var viewPath = Path.Combine(repoRoot, "src", "WebMVC", "Views", "Exams", "Take.cshtml");
+
+        Assert.True(File.Exists(viewPath), "Take.cshtml must exist");
+        var html = File.ReadAllText(viewPath);
+
+        // 1. NavigationMode HYBRID_GROUP_LOCKED check
+        Assert.Contains("HYBRID_GROUP_LOCKED", html);
+        Assert.Contains("activeGroupId", html);
+
+        // 2. Group Lock Confirmation Modal & required exact warning text
+        Assert.Contains("id=\"group-lock-modal\"", html);
+        Assert.Contains("Xác nhận chuyển sang câu tiếp theo: Phần hiện tại sẽ bị khóa vĩnh viễn và thời gian còn lại sẽ không được bảo lưu.", html);
+        Assert.Contains("id=\"btn-confirm-group-lock\"", html);
+        Assert.Contains("js-close-group-lock-modal", html);
+
+        // 3. Transition call to endpoint
+        Assert.Contains("/exams/attempts/' + attemptId + '/transition-group", html);
+        Assert.Contains("targetGroupId: pendingTargetGroupId", html);
+    }
 }

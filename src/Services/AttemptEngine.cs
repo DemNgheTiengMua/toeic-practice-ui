@@ -35,6 +35,14 @@ public record AttemptGradingResult(
     DateTimeOffset SubmittedAt,
     bool IsAutoSubmitted);
 
+public sealed record WritingEvaluationResult(
+    int WordCount,
+    bool IsUnderLength,
+    int? MinWords,
+    bool HasRequiredKeywords,
+    IReadOnlyList<string> MissingKeywords,
+    string? Feedback);
+
 public interface IAttemptEngine
 {
     Task<ExamAttempt> CreateAttemptAsync(
@@ -157,6 +165,8 @@ public interface IAttemptEngine
         string authorizationCode,
         int userId,
         CancellationToken cancellationToken = default);
+
+    WritingEvaluationResult EvaluateWriting(Question question, string? responseText);
 }
 
 public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
@@ -1044,6 +1054,9 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
         }
     }
 
+    public WritingEvaluationResult EvaluateWriting(Question question, string? responseText) =>
+        EvaluateWritingResponse(question, responseText);
+
     public async Task FinalizeAiGradedAttemptAsync(int attemptId, CancellationToken cancellationToken = default)
     {
         var tx = db.Database.CurrentTransaction is null
@@ -1067,7 +1080,7 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
             var freeResponses = await db.FreeResponses
                 .Where(fr => fr.AttemptId == attemptId)
                 .Include(fr => fr.Question).ThenInclude(q => q.Section).ThenInclude(s => s.Skill)
-                .Include(fr => fr.AiGradingFreeResponse)
+                .Include(fr => fr.AiGradingFreeResponse).ThenInclude(g => g!.AiGradingScores)
                 .ToListAsync(cancellationToken);
 
             if (freeResponses.Count == 0
@@ -1090,6 +1103,42 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
                 .Where(s => s.AttemptId == attemptId)
                 .ToListAsync(cancellationToken);
             db.AttemptSkillScores.RemoveRange(existingScores);
+
+            foreach (var response in freeResponses)
+            {
+                var eval = EvaluateWritingResponse(response.Question, response.ResponseText);
+                if (eval.IsUnderLength && response.AiGradingFreeResponse != null)
+                {
+                    foreach (var s in response.AiGradingFreeResponse.AiGradingScores)
+                    {
+                        if (string.IsNullOrWhiteSpace(s.Comment))
+                        {
+                            s.Comment = "IsUnderLength=true; Length penalty applied.";
+                        }
+                        else if (!s.Comment.Contains("IsUnderLength"))
+                        {
+                            s.Comment = $"{s.Comment} [IsUnderLength=true]";
+                        }
+                    }
+
+                    var hasExistingRec = await db.Recommendations
+                        .AnyAsync(r => r.GradingId == response.AiGradingFreeResponse.GradingId && r.Text.Contains("IsUnderLength"), cancellationToken);
+                    if (!hasExistingRec)
+                    {
+                        db.Recommendations.Add(new Recommendation
+                        {
+                            UserId = attempt.UserId,
+                            CertId = attempt.CertId,
+                            AttemptId = attempt.AttemptId,
+                            GradingId = response.AiGradingFreeResponse.GradingId,
+                            SkillId = response.SkillId,
+                            Severity = "minor",
+                            Text = $"IsUnderLength=true: Bài viết có {eval.WordCount} từ, dưới mức tối thiểu {response.Question.MinWords} từ.",
+                            CreatedAt = DateTimeOffset.UtcNow
+                        });
+                    }
+                }
+            }
 
             var responsePointsBySkill = new Dictionary<int, decimal>();
             foreach (var response in freeResponses)
@@ -1402,6 +1451,52 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
         return set;
     }
 
+    public static WritingEvaluationResult EvaluateWritingResponse(Question question, string? responseText)
+    {
+        var text = responseText ?? string.Empty;
+        var words = text.Split(new[] { ' ', '\r', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+        int wordCount = words.Length;
+
+        bool isUnderLength = question.MinWords.HasValue && question.MinWords.Value > 0 && wordCount < question.MinWords.Value;
+
+        var missingKeywords = new List<string>();
+        bool hasRequiredKeywords = true;
+
+        if (!string.IsNullOrWhiteSpace(question.RequiredKeywords))
+        {
+            var keywords = ParseKeywords(question.RequiredKeywords);
+            foreach (var kw in keywords)
+            {
+                if (string.IsNullOrWhiteSpace(kw)) continue;
+                if (!ContainsKeywordStem(text, kw))
+                {
+                    missingKeywords.Add(kw.Trim());
+                }
+            }
+            hasRequiredKeywords = missingKeywords.Count == 0;
+        }
+
+        var feedbackParts = new List<string>();
+        if (isUnderLength)
+        {
+            feedbackParts.Add($"IsUnderLength=true; WordCount={wordCount}; MinWords={question.MinWords}; Length penalty applied.");
+        }
+        if (!hasRequiredKeywords)
+        {
+            feedbackParts.Add($"MissingRequiredKeywords=[{string.Join(", ", missingKeywords)}]");
+        }
+
+        string? feedback = feedbackParts.Count > 0 ? string.Join(" | ", feedbackParts) : null;
+
+        return new WritingEvaluationResult(
+            wordCount,
+            isUnderLength,
+            question.MinWords,
+            hasRequiredKeywords,
+            missingKeywords,
+            feedback);
+    }
+
     public static bool EvaluateTextCompletion(
         Question question,
         IEnumerable<QuestionOption> options,
@@ -1497,12 +1592,15 @@ public sealed class AttemptEngine(CompanionDbContext db) : IAttemptEngine
 
     private static string StripSuffixes(string word)
     {
-        if (word.EndsWith("ing") && word.Length > 5) return word[..^3];
+        if (word.EndsWith("ations") && word.Length > 7) return word[..^6];
+        if (word.EndsWith("ation") && word.Length > 6) return word[..^5];
         if (word.EndsWith("tion") && word.Length > 6) return word[..^4];
         if (word.EndsWith("ment") && word.Length > 6) return word[..^4];
+        if (word.EndsWith("ing") && word.Length > 5) return word[..^3];
         if (word.EndsWith("ed") && word.Length > 4) return word[..^2];
         if (word.EndsWith("es") && word.Length > 4) return word[..^2];
         if (word.EndsWith("s") && word.Length > 3) return word[..^1];
+        if (word.EndsWith("e") && word.Length > 4) return word[..^1];
         return word;
     }
 
