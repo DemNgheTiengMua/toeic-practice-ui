@@ -25,4 +25,15 @@ public interface IExamGeneratorService
         int adminUserId,
         string? targetStatus = null,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Generates questions for a specific section within an existing exam, driven by that
+    /// section's 6-axis blueprint (ExpectedQuestionCount, OptionCount, ClusterSize, AllowedComponentTypesJson, RequiredKeywordCount).
+    /// </summary>
+    Task<SectionGenerationResultDto> GenerateSectionQuestionsAsync(
+        int examId,
+        int sectionId,
+        int adminUserId,
+        int? questionCount = null,
+        CancellationToken cancellationToken = default);
 }
