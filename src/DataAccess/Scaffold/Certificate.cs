@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -23,6 +23,12 @@ public partial class Certificate
     public string? Description { get; set; }
 
     public bool IsActive { get; set; }
+
+    [StringLength(30)]
+    public string ScoreAggregationRule { get; set; } = "sum";
+
+    [StringLength(50)]
+    public string? PresetCode { get; set; }
 
     [InverseProperty("Cert")]
     public virtual ICollection<AiInsight> AiInsights { get; set; } = new List<AiInsight>();

@@ -45,6 +45,8 @@ public sealed class EnumCodesTests
         { typeof(ImportBatchStatus), typeof(ImportBatchStatusDto), "CK_ImportBatches_Status" },
         { typeof(ImportLogLevel), typeof(ImportLogLevelDto), "CK_ImportLog_Level" },
         { typeof(CardType), typeof(CardTypeDto), "CK_LessonCards_CardType" },
+        { typeof(ScoreAggregationRule), typeof(ScoreAggregationRuleDto), "CK_Certificates_ScoreAggregationRule" },
+        { typeof(DeliveryMode), typeof(DeliveryModeDto), "CK_Exams_DeliveryMode" },
     };
 
 
@@ -56,7 +58,7 @@ public sealed class EnumCodesTests
         var schema = File.ReadAllText(Path.Combine(RepoRoot(), "docs", "database-schema.sql"));
         var match = Regex.Match(schema, $@"CONSTRAINT {constraint} CHECK \(\w+ IN\s*\((?<codes>[^)]*)\)");
         Assert.True(match.Success, $"{constraint} not found in docs/database-schema.sql");
-        var schemaCodes = Regex.Matches(match.Groups["codes"].Value, "'([a-z_]+)'").Select(m => m.Groups[1].Value).Order();
+        var schemaCodes = Regex.Matches(match.Groups["codes"].Value, "'([a-z0-9_]+)'").Select(m => m.Groups[1].Value).Order();
 
         var enumCodes = Enum.GetValues(domain).Cast<Enum>().Select(Code).Order();
 

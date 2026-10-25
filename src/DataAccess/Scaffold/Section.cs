@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -30,7 +30,36 @@ public partial class Section
     [StringLength(120)]
     public string Name { get; set; } = null!;
 
-    public int? OptionCount { get; set; }
+    [Column(TypeName = "decimal(5, 2)")]
+    public decimal ScoreWeight { get; set; } = 1.0m;
+
+    [StringLength(30)]
+    public string NavigationMode { get; set; } = "FULL_SANDBOX";
+
+    public string? TimerPolicyJson { get; set; }
+
+    [StringLength(30)]
+    public string LayoutType { get; set; } = "STANDARD_VERTICAL";
+
+    public int OptionCount { get; set; } = 4;
+
+    public int ClusterSize { get; set; } = 1;
+
+    public int UnitCount { get; set; } = 1;
+
+    public bool HideOptionText { get; set; }
+
+    public bool RequirePassage { get; set; }
+
+    public bool RequireAudio { get; set; }
+
+    public bool RequireImage { get; set; }
+
+    public int RequiredKeywordCount { get; set; }
+
+    public string? AllowedComponentTypesJson { get; set; }
+
+    public string? ToolsConfigJson { get; set; }
 
     public int? ExpectedQuestionCount { get; set; }
 

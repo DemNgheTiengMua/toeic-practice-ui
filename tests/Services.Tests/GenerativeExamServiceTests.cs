@@ -91,7 +91,7 @@ public sealed class GenerativeExamServiceTests(DatabaseFixture database)
             DECLARE @s2 INT = (SELECT SkillId FROM Skills WHERE CertId = @c2 AND Code = 'WRIT');
 
             INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, DisplayOrder) VALUES
-              (@s2, @c2, 'writing', 'T1', N'Task 1 Writing', NULL, 1);
+              (@s2, @c2, 'writing', 'T1', N'Task 1 Writing', 4, 1);
             """);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);

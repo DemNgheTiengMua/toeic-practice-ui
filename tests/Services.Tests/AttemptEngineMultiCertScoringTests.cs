@@ -42,8 +42,9 @@ public sealed class AttemptEngineMultiCertScoringTests(DatabaseFixture database)
             IF NOT EXISTS (SELECT 1 FROM Roles WHERE Code = 'learner')
               INSERT INTO Roles (Code, Name) VALUES ('learner', N'Learner');
 
-            INSERT INTO Certificates (Code, Name, IsActive)
-            VALUES ('{certCode}', N'{certCode}', 1);
+            INSERT INTO Certificates (Code, Name, IsActive, ScoreAggregationRule)
+            VALUES ('{certCode}', N'{certCode}', 1,
+              CASE '{certCode}' WHEN 'IELTS' THEN 'avg_half_step' WHEN 'VSTEP' THEN 'avg_whole' ELSE 'sum' END);
             DECLARE @cert INT = SCOPE_IDENTITY();
 
             INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder) VALUES

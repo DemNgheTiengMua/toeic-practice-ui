@@ -16,12 +16,56 @@ public enum ModalityDto
     [JsonStringEnumMemberName("writing")] Writing,
 }
 
-/// <summary>CK_Questions_Type: mcq, free_response.</summary>
+/// <summary>CK_Questions_Type: mcq, mcq_3, multi_select, inline_completion, dropdown, drag_drop, free_response.</summary>
 [JsonConverter(typeof(JsonStringEnumConverter<QuestionTypeDto>))]
 public enum QuestionTypeDto
 {
     [JsonStringEnumMemberName("mcq")] Mcq,
+    [JsonStringEnumMemberName("mcq_3")] Mcq_3,
+    [JsonStringEnumMemberName("multi_select")] MultiSelect,
+    [JsonStringEnumMemberName("inline_completion")] InlineCompletion,
+    [JsonStringEnumMemberName("dropdown")] Dropdown,
+    [JsonStringEnumMemberName("drag_drop")] DragDrop,
     [JsonStringEnumMemberName("free_response")] FreeResponse,
+}
+
+/// <summary>CK_Certificates_ScoreAggregationRule: sum, avg_half_step, avg_whole, independent.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<ScoreAggregationRuleDto>))]
+public enum ScoreAggregationRuleDto
+{
+    [JsonStringEnumMemberName("sum")] Sum,
+    [JsonStringEnumMemberName("avg_half_step")] AvgHalfStep,
+    [JsonStringEnumMemberName("avg_whole")] AvgWhole,
+    [JsonStringEnumMemberName("independent")] Independent,
+}
+
+/// <summary>CK_Exams_DeliveryMode: strict_exam, practice.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<DeliveryModeDto>))]
+public enum DeliveryModeDto
+{
+    [JsonStringEnumMemberName("strict_exam")] StrictExam,
+    [JsonStringEnumMemberName("practice")] Practice,
+}
+
+/// <summary>CK_Sections_NavigationMode: FULL_SANDBOX, UNIT_LOCKED_SANDBOX, AUDIO_DRIVEN, SYSTEM_PACED_AUTO, HYBRID_GROUP_LOCKED.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<NavigationModeDto>))]
+public enum NavigationModeDto
+{
+    [JsonStringEnumMemberName("FULL_SANDBOX")] FullSandbox,
+    [JsonStringEnumMemberName("UNIT_LOCKED_SANDBOX")] UnitLockedSandbox,
+    [JsonStringEnumMemberName("AUDIO_DRIVEN")] AudioDriven,
+    [JsonStringEnumMemberName("SYSTEM_PACED_AUTO")] SystemPacedAuto,
+    [JsonStringEnumMemberName("HYBRID_GROUP_LOCKED")] HybridGroupLocked,
+}
+
+/// <summary>Sections LayoutType.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<LayoutTypeDto>))]
+public enum LayoutTypeDto
+{
+    [JsonStringEnumMemberName("STANDARD_VERTICAL")] StandardVertical,
+    [JsonStringEnumMemberName("SPLIT_HORIZONTAL")] SplitHorizontal,
+    [JsonStringEnumMemberName("MEDIA_CARD")] MediaCard,
+    [JsonStringEnumMemberName("CLUSTER_3")] Cluster3,
 }
 
 /// <summary>CK_Exams_Status: draft, published, hidden.</summary>
