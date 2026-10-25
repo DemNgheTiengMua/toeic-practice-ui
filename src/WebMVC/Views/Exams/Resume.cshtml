@@ -1,0 +1,75 @@
+@model ExamResumeViewModel
+@{
+    Layout = "_LearnerLayout";
+    ViewData["Title"] = "Khôi phục bài thi — Extra Efficiency";
+    ViewData["Description"] = "Khôi phục phiên làm bài thi bằng mã dự thi đã cấp.";
+}
+
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+  <a href="/dashboard" class="breadcrumbs__item">Trang chủ</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <a href="/exams" class="breadcrumbs__item">Bài thi</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <span class="breadcrumbs__item" aria-current="page">Khôi phục phiên thi</span>
+</nav>
+
+<div class="container container--sm" style="max-width: 680px; margin: 2rem auto;">
+  <div class="card" style="border: 2px solid #14181d; border-radius: 0; box-shadow: none;">
+    <div class="card__header" style="background: #14181d; color: #fff; padding: 1rem 1.5rem; border-bottom: 2px solid #14181d; border-radius: 0;">
+      <div style="font-family: 'IBM Plex Sans Condensed', sans-serif; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.1em; color: #f2b705; text-transform: uppercase;">
+        PHÒNG THI TRỰC TUYẾN · ONLINE EXAMINATION ROOM
+      </div>
+      <h1 style="font-family: 'IBM Plex Sans Condensed', sans-serif; font-size: 1.5rem; font-weight: 700; margin: 0.25rem 0 0; text-transform: uppercase; color: #fff;">
+        Khôi phục bài thi đang làm dở
+      </h1>
+    </div>
+
+    <div class="card__body" style="padding: 1.5rem;">
+      @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+      {
+        <div class="alert alert--danger mb-4" style="border: 2px solid #b31217; border-radius: 0; box-shadow: none; font-family: 'IBM Plex Sans', sans-serif;" role="alert">
+          <strong>LỖI (ERROR):</strong> @Model.ErrorMessage
+        </div>
+      }
+
+      <div class="notice-box mb-4" style="background: #f8f9fa; border: 1px solid #ccd2d6; border-left: 4px solid #0b4ea2; padding: 1rem; border-radius: 0;">
+        <p style="margin: 0 0 0.5rem; font-size: 0.95rem; line-height: 1.5;">
+          Khi bắt đầu bài thi, một <strong>Mã dự thi (Authorization Code)</strong> định dạng <code>EX-XXXXXX</code> đã được hiển thị trên thanh tiêu đề bài thi.
+        </p>
+        <p style="margin: 0; font-size: 0.9rem; color: #555;">
+          Nếu máy tính bị ngắt điện, mất mạng hoặc bạn vô tình đóng trình duyệt, hãy nhập mã dự thi để tiếp tục phiên thi tại đúng câu hỏi, thời gian và câu trả lời đã lưu.
+        </p>
+      </div>
+
+      <form method="post" action="/exams/resume">
+        @Html.AntiForgeryToken()
+
+        <div class="form-group mb-4">
+          <label for="AuthorizationCode" style="display: block; font-family: 'IBM Plex Sans Condensed', sans-serif; font-weight: 700; text-transform: uppercase; font-size: 0.9rem; margin-bottom: 0.5rem; letter-spacing: 0.05em;">
+            MÃ DỰ THI CỦA BẠN (AUTHORIZATION CODE)
+          </label>
+          <input
+            type="text"
+            id="AuthorizationCode"
+            name="AuthorizationCode"
+            value="@Model.AuthorizationCode"
+            placeholder="EX-XXXXXX"
+            maxlength="20"
+            required
+            autocomplete="off"
+            autofocus
+            style="width: 100%; font-family: 'IBM Plex Mono', monospace; font-size: 1.35rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; text-align: center; padding: 0.75rem 1rem; border: 2px solid #14181d; border-radius: 0; box-shadow: none; outline: none; background: #fff;" />
+        </div>
+
+        <div style="display: flex; gap: 1rem; justify-content: flex-end; align-items: center; border-top: 1px solid #ccd2d6; padding-top: 1.25rem;">
+          <a href="/exams" class="btn btn--ghost" style="border: 2px solid #14181d; border-radius: 0; box-shadow: none; text-transform: uppercase; font-weight: 700;">
+            Quay lại
+          </a>
+          <button type="submit" class="btn btn--primary" style="border: 2px solid #14181d; border-radius: 0; box-shadow: none; background: #0b4ea2; color: #fff; text-transform: uppercase; font-weight: 700; padding: 0.65rem 1.5rem;">
+            Tiếp tục làm bài (Resume)
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

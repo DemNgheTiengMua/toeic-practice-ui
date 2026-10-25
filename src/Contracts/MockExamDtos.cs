@@ -140,7 +140,59 @@ public sealed record AttemptTakeDto(
     int ActiveUnitNumber = 1,
     int? ActiveGroupId = null,
     DateTimeOffset? PhaseDeadlineAt = null,
-    bool IsSkillLocked = false);
+    bool IsSkillLocked = false,
+    string? AuthorizationCode = null,
+    int LastAudioOffsetMs = 0,
+    string? CandidateNotesJson = null);
+
+public sealed record SittingSyncRequestDto(
+    IReadOnlyList<BatchAnswerItemDto>? Answers = null,
+    int? LastAudioOffsetMs = null,
+    string? CandidateNotesJson = null,
+    int? LastQuestionId = null);
+
+public sealed record BatchAnswerItemDto(
+    int QuestionId,
+    int? SelectedOptionId = null,
+    bool IsFlagged = false,
+    string? ResponseText = null,
+    string? SelectedOptionIdsJson = null);
+
+public sealed record SittingSyncDto(
+    int AttemptId,
+    int RemainingSeconds,
+    bool IsAutoSubmitted,
+    int? ActiveSkillId,
+    int ActiveUnitNumber,
+    int? ActiveGroupId,
+    DateTimeOffset? PhaseDeadlineAt,
+    int LastAudioOffsetMs,
+    int AnswersSavedCount);
+
+public sealed record ResumeAttemptRequest(
+    string AuthorizationCode);
+
+public sealed record AttemptAnswerSheetItemDto(
+    int QuestionId,
+    int? SelectedOptionId,
+    string? SelectedOptionIdsJson,
+    string? ResponseText,
+    bool IsFlagged);
+
+public sealed record AttemptResumeDto(
+    int AttemptId,
+    int ExamId,
+    string AuthorizationCode,
+    int? ActiveSkillId,
+    int ActiveUnitNumber,
+    int? ActiveGroupId,
+    int? LastQuestionId,
+    int LastAudioOffsetMs,
+    string? CandidateNotesJson,
+    int RemainingSeconds,
+    DateTimeOffset ExpiresAt,
+    DateTimeOffset? PhaseDeadlineAt,
+    IReadOnlyList<AttemptAnswerSheetItemDto> AnswerSheet);
 
 public sealed record AttemptPhaseDto(
     int SkillId,

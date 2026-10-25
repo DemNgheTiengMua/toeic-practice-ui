@@ -524,4 +524,97 @@ public sealed class ExamsController(
             return RedirectToAction(nameof(Index));
         }
     }
+
+    [HttpPost("/exams/attempts/{attemptId:int}/sync")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Sync(
+        int attemptId,
+        [FromBody] SittingSyncRequestDto request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await api.SaveSittingSyncAsync(attemptId, request, cancellationToken);
+            return Json(new
+            {
+                attemptId = result.AttemptId,
+                remainingSeconds = result.RemainingSeconds,
+                isAutoSubmitted = result.IsAutoSubmitted,
+                activeSkillId = result.ActiveSkillId,
+                activeUnitNumber = result.ActiveUnitNumber,
+                activeGroupId = result.ActiveGroupId,
+                phaseDeadlineAt = result.PhaseDeadlineAt,
+                lastAudioOffsetMs = result.LastAudioOffsetMs,
+                answersSavedCount = result.AnswersSavedCount,
+                redirectUrl = result.IsAutoSubmitted ? Url.Action(nameof(Result), new { attemptId }) : null
+            });
+        }
+        catch (ApiException ex) when (ex.Code == ApiError.Codes.AttemptExpired)
+        {
+            return Json(new
+            {
+                isAutoSubmitted = true,
+                redirectUrl = Url.Action(nameof(Result), new { attemptId })
+            });
+        }
+        catch (ApiException ex)
+        {
+            return StatusCode(ex.Status, new { error = ex.Detail ?? ex.Message, code = ex.Code });
+        }
+    }
+
+    [HttpGet("/exams/resume")]
+    public IActionResult Resume()
+    {
+        return View(new ExamResumeViewModel(AuthorizationCode: null, ErrorMessage: TempData["ResumeError"] as string));
+    }
+
+    [HttpPost("/exams/resume")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Resume(
+        [FromForm] ExamResumeFormModel form,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(form?.AuthorizationCode))
+        {
+            return View(new ExamResumeViewModel(
+                AuthorizationCode: form?.AuthorizationCode,
+                ErrorMessage: "Please enter your authorization code."));
+        }
+
+        var code = form.AuthorizationCode.Trim().ToUpperInvariant();
+
+        try
+        {
+            var request = new ResumeAttemptRequest(code);
+            var resumeDto = await api.ResumeAttemptByCodeAsync(request, cancellationToken);
+
+            return RedirectToAction(nameof(Take), new { attemptId = resumeDto.AttemptId });
+        }
+        catch (ApiException ex) when (ex.Code == ApiError.Codes.AttemptNotFound)
+        {
+            return View(new ExamResumeViewModel(
+                AuthorizationCode: form.AuthorizationCode,
+                ErrorMessage: "No active exam sitting was found with this authorization code. Please verify and try again."));
+        }
+        catch (ApiException ex) when (ex.Code == ApiError.Codes.AttemptExpired)
+        {
+            return View(new ExamResumeViewModel(
+                AuthorizationCode: form.AuthorizationCode,
+                ErrorMessage: "The examination time for this sitting has expired."));
+        }
+        catch (ApiException ex) when (ex.Code == ApiError.Codes.AttemptNotActive)
+        {
+            return View(new ExamResumeViewModel(
+                AuthorizationCode: form.AuthorizationCode,
+                ErrorMessage: "This exam sitting has already been submitted or completed."));
+        }
+        catch (ApiException ex)
+        {
+            logger.LogError(ex, "Failed to resume attempt with code {Code}", form.AuthorizationCode);
+            return View(new ExamResumeViewModel(
+                AuthorizationCode: form.AuthorizationCode,
+                ErrorMessage: ex.Detail ?? "Unable to resume examination. Please try again."));
+        }
+    }
 }

@@ -92,6 +92,17 @@ public interface IMockExamService
         int userId,
         int attemptId,
         CancellationToken cancellationToken = default);
+
+    Task<SittingSyncResult> SaveSittingSyncAsync(
+        int userId,
+        int attemptId,
+        SittingSyncRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<AttemptResumeView> ResumeAttemptByCodeAsync(
+        string authorizationCode,
+        int userId,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed class MockExamService(
@@ -607,6 +618,41 @@ public sealed class MockExamService(
         try
         {
             return await _attemptEngine.CompleteAudioAndStartReviewAsync(attemptId, userId, cancellationToken);
+        }
+        catch (AttemptEngineException ex)
+        {
+            throw MapException(ex);
+        }
+    }
+
+    public async Task<SittingSyncResult> SaveSittingSyncAsync(
+        int userId,
+        int attemptId,
+        SittingSyncRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await _attemptEngine.SaveSittingSyncAsync(
+                attemptId,
+                request,
+                userId,
+                cancellationToken: cancellationToken);
+        }
+        catch (AttemptEngineException ex)
+        {
+            throw MapException(ex);
+        }
+    }
+
+    public async Task<AttemptResumeView> ResumeAttemptByCodeAsync(
+        string authorizationCode,
+        int userId,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await _attemptEngine.ResumeAttemptByCodeAsync(authorizationCode, userId, cancellationToken);
         }
         catch (AttemptEngineException ex)
         {

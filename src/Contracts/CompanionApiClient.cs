@@ -517,6 +517,12 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
         return (await response.Content.ReadFromJsonAsync<PreflightStatusDto>(Json, cancellationToken))!;
     }
 
+    public Task<SittingSyncDto> SaveSittingSyncAsync(int attemptId, SittingSyncRequestDto request, string bearerToken, CancellationToken cancellationToken = default) =>
+        PostAuthorizedAsync<SittingSyncRequestDto, SittingSyncDto>($"api/learner/attempts/{attemptId}/sync", request, bearerToken, cancellationToken);
+
+    public Task<AttemptResumeDto> ResumeAttemptByCodeAsync(ResumeAttemptRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
+        PostAuthorizedAsync<ResumeAttemptRequest, AttemptResumeDto>("api/learner/attempts/resume", request, bearerToken, cancellationToken);
+
     public Task<AdminScoreConversionDto> GetAdminScoreConversionAsync(string? certCode, int? examId, string bearerToken, CancellationToken cancellationToken = default)
     {
         var query = new List<string>();
@@ -1473,6 +1479,12 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
 
     public Task<PreflightStatusDto> VerifyPreflightAsync(int attemptId, CancellationToken cancellationToken = default) =>
         VerifyPreflightAsync(attemptId, string.Empty, cancellationToken);
+
+    public Task<SittingSyncDto> SaveSittingSyncAsync(int attemptId, SittingSyncRequestDto request, CancellationToken cancellationToken = default) =>
+        SaveSittingSyncAsync(attemptId, request, string.Empty, cancellationToken);
+
+    public Task<AttemptResumeDto> ResumeAttemptByCodeAsync(ResumeAttemptRequest request, CancellationToken cancellationToken = default) =>
+        ResumeAttemptByCodeAsync(request, string.Empty, cancellationToken);
 
     public Task<WritingInstructionsDto> GetWritingInstructionsAsync(int examId, CancellationToken cancellationToken = default) =>
         GetWritingInstructionsAsync(examId, string.Empty, cancellationToken);

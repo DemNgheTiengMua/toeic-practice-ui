@@ -153,6 +153,10 @@ public interface IMockExamsClient
     Task<PreflightStatusDto> GetPreflightStatusAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) => GetPreflightStatusAsync(attemptId, cancellationToken);
     Task<PreflightStatusDto> VerifyPreflightAsync(int attemptId, CancellationToken cancellationToken = default);
     Task<PreflightStatusDto> VerifyPreflightAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) => VerifyPreflightAsync(attemptId, cancellationToken);
+    Task<SittingSyncDto> SaveSittingSyncAsync(int attemptId, SittingSyncRequestDto request, CancellationToken cancellationToken = default);
+    Task<SittingSyncDto> SaveSittingSyncAsync(int attemptId, SittingSyncRequestDto request, string bearerToken, CancellationToken cancellationToken = default) => SaveSittingSyncAsync(attemptId, request, cancellationToken);
+    Task<AttemptResumeDto> ResumeAttemptByCodeAsync(ResumeAttemptRequest request, CancellationToken cancellationToken = default);
+    Task<AttemptResumeDto> ResumeAttemptByCodeAsync(ResumeAttemptRequest request, string bearerToken, CancellationToken cancellationToken = default) => ResumeAttemptByCodeAsync(request, cancellationToken);
 }
 
 public interface IWritingClient
@@ -283,6 +287,10 @@ public interface IAiInsightsClient
     Task<PreflightStatusDto> GetPreflightStatusAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) => GetPreflightStatusAsync(attemptId, cancellationToken);
     Task<PreflightStatusDto> VerifyPreflightAsync(int attemptId, CancellationToken cancellationToken = default);
     Task<PreflightStatusDto> VerifyPreflightAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) => VerifyPreflightAsync(attemptId, cancellationToken);
+    Task<SittingSyncDto> SaveSittingSyncAsync(int attemptId, SittingSyncRequestDto request, CancellationToken cancellationToken = default);
+    Task<SittingSyncDto> SaveSittingSyncAsync(int attemptId, SittingSyncRequestDto request, string bearerToken, CancellationToken cancellationToken = default) => SaveSittingSyncAsync(attemptId, request, cancellationToken);
+    Task<AttemptResumeDto> ResumeAttemptByCodeAsync(ResumeAttemptRequest request, CancellationToken cancellationToken = default);
+    Task<AttemptResumeDto> ResumeAttemptByCodeAsync(ResumeAttemptRequest request, string bearerToken, CancellationToken cancellationToken = default) => ResumeAttemptByCodeAsync(request, cancellationToken);
     Task RetryInsightAsync(int insightId, CancellationToken cancellationToken = default);
     Task RetryInsightAsync(int insightId, string bearerToken, CancellationToken cancellationToken = default) => RetryInsightAsync(insightId, cancellationToken);
     Task<AiInsightDto> GetDashboardInsightAsync(int? certId = null, CancellationToken cancellationToken = default);
