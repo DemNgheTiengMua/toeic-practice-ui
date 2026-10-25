@@ -565,6 +565,44 @@ public static class ExamEndpoints
             }
         });
 
+        learner.MapPost("/attempts/{attemptId:int}/transition-group", async Task<IResult> (
+            int attemptId,
+            [FromBody] TransitionGroupRequest request,
+            HttpContext http,
+            IMockExamService mockExamService,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var res = await mockExamService.TransitionGroupAsync(CurrentUserId(http), attemptId, request.TargetGroupId, cancellationToken);
+                return Results.Ok(new AttemptTransitionResponse(
+                    res.AttemptId,
+                    res.ActiveSkillId,
+                    res.ActiveUnitNumber,
+                    res.ActiveGroupId,
+                    res.PhaseDeadlineAt,
+                    res.RemainingSeconds,
+                    res.Status.MapTo<AttemptStatusDto>(),
+                    res.Status == AttemptStatus.Graded || res.Status == AttemptStatus.Submitted));
+            }
+            catch (MockExamException ex) when (ex.Code == MockExamException.AttemptNotFound)
+            {
+                return Problem(StatusCodes.Status404NotFound, "Attempt not found", ApiError.Codes.AttemptNotFound, ex.Message);
+            }
+            catch (MockExamException ex) when (ex.Code == MockExamException.AttemptNotActive)
+            {
+                return Problem(StatusCodes.Status400BadRequest, "Attempt not active", ApiError.Codes.AttemptNotActive, ex.Message);
+            }
+            catch (MockExamException ex) when (ex.Code == MockExamException.QuestionNotFound)
+            {
+                return Problem(StatusCodes.Status404NotFound, "Question group not found", ApiError.Codes.QuestionNotFound, ex.Message);
+            }
+            catch (MockExamException ex)
+            {
+                return Problem(StatusCodes.Status400BadRequest, "Transition failed", ApiError.Codes.Validation, ex.Message);
+            }
+        });
+
         learner.MapPost("/attempts/{attemptId:int}/transition/group", async Task<IResult> (
             int attemptId,
             [FromBody] TransitionGroupRequest request,

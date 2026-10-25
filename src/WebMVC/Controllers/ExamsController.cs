@@ -359,6 +359,7 @@ public sealed class ExamsController(
     }
 
     [HttpPost("/exams/take/{attemptId:int}/transition/group")]
+    [HttpPost("/exams/attempts/{attemptId:int}/transition-group")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> TransitionGroup(
         int attemptId,

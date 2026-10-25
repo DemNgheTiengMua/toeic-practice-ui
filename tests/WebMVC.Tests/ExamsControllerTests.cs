@@ -339,6 +339,59 @@ public sealed class ExamsControllerTests
     }
 
     [Fact]
+    public async Task TransitionGroup_With_Body_Payload_Transitions_Group_And_Returns_Json()
+    {
+        var api = new TestApiClient
+        {
+            TransitionResponse = new AttemptTransitionResponse(100, 1, 1, 5, null, 600, AttemptStatusDto.InProgress, false)
+        };
+        var controller = CreateController(api);
+
+        var result = await controller.TransitionGroup(100, new TransitionGroupRequest(5), null, CancellationToken.None);
+
+        var json = Assert.IsType<JsonResult>(result);
+        var transition = Assert.IsType<AttemptTransitionResponse>(json.Value);
+        Assert.Equal(100, transition.AttemptId);
+        Assert.Equal(5, transition.ActiveGroupId);
+        Assert.NotNull(api.LastTransitionGroup);
+        Assert.Equal(100, api.LastTransitionGroup.Value.attemptId);
+        Assert.Equal(5, api.LastTransitionGroup.Value.request.TargetGroupId);
+    }
+
+    [Fact]
+    public async Task TransitionGroup_With_Form_TargetGroupId_Transitions_Group()
+    {
+        var api = new TestApiClient
+        {
+            TransitionResponse = new AttemptTransitionResponse(100, 1, 1, 6, null, 600, AttemptStatusDto.InProgress, false)
+        };
+        var controller = CreateController(api);
+
+        var result = await controller.TransitionGroup(100, null, 6, CancellationToken.None);
+
+        var json = Assert.IsType<JsonResult>(result);
+        var transition = Assert.IsType<AttemptTransitionResponse>(json.Value);
+        Assert.Equal(6, transition.ActiveGroupId);
+        Assert.NotNull(api.LastTransitionGroup);
+        Assert.Equal(6, api.LastTransitionGroup.Value.request.TargetGroupId);
+    }
+
+    [Fact]
+    public async Task TransitionGroup_When_Api_Throws_Returns_StatusCode_Error()
+    {
+        var api = new TestApiClient
+        {
+            ExceptionToThrow = new ApiException("Question group belongs to a locked phase.", "WRONG_PHASE", 400)
+        };
+        var controller = CreateController(api);
+
+        var result = await controller.TransitionGroup(100, new TransitionGroupRequest(2), null, CancellationToken.None);
+
+        var objResult = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(400, objResult.StatusCode);
+    }
+
+    [Fact]
     public async Task Result_returns_view_with_result_data()
     {
         var resDto = new AttemptResultDto(
@@ -528,8 +581,14 @@ public sealed class ExamsControllerTests
                 : Task.FromResult(TransitionResponse ?? new AttemptTransitionResponse(attemptId, 1, request.TargetUnitNumber, null, null, 1800, AttemptStatusDto.InProgress, false));
         }
 
-        public Task<AttemptTransitionResponse> TransitionGroupAsync(int attemptId, TransitionGroupRequest request, CancellationToken cancellationToken = default) =>
-            ExceptionToThrow != null ? Task.FromException<AttemptTransitionResponse>(ExceptionToThrow) : Task.FromResult(TransitionResponse ?? new AttemptTransitionResponse(attemptId, 1, 1, request.TargetGroupId, null, 600, AttemptStatusDto.InProgress, false));
+        public (int attemptId, TransitionGroupRequest request)? LastTransitionGroup { get; set; }
+        public Task<AttemptTransitionResponse> TransitionGroupAsync(int attemptId, TransitionGroupRequest request, CancellationToken cancellationToken = default)
+        {
+            LastTransitionGroup = (attemptId, request);
+            return ExceptionToThrow != null
+                ? Task.FromException<AttemptTransitionResponse>(ExceptionToThrow)
+                : Task.FromResult(TransitionResponse ?? new AttemptTransitionResponse(attemptId, 1, 1, request.TargetGroupId, null, 600, AttemptStatusDto.InProgress, false));
+        }
 
         public Task<AttemptTransitionResponse> StartAudioReviewAsync(int attemptId, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<AttemptTransitionResponse>(ExceptionToThrow) : Task.FromResult(TransitionResponse ?? new AttemptTransitionResponse(attemptId, 1, 1, null, DateTimeOffset.UtcNow.AddSeconds(120), 120, AttemptStatusDto.InProgress, false));
