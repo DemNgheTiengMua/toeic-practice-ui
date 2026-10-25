@@ -50,6 +50,7 @@ builder.Services.AddScoped<IAdminComplaintsClient>(sp => sp.GetRequiredService<I
 builder.Services.AddScoped<IAdminExamsClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
 builder.Services.AddScoped<IAdminImportsClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
 builder.Services.AddScoped<IAdminLessonsClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
+builder.Services.AddScoped<IAdminCertificatesClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
 
 // Cookie lifetime matches the token's single lifetime; there is no sliding renewal because
 // there is no refresh token. SecurePolicy: SameAsRequest because local dev and the grading
