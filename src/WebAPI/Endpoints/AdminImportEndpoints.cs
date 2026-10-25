@@ -15,6 +15,22 @@ public static class AdminImportEndpoints
         admin.MapGet("", async (int? certId, IQuestionImportService imports, CancellationToken cancellationToken) =>
             Results.Ok(await imports.GetBatchesAsync(certId, cancellationToken)));
 
+        admin.MapGet("/manifest-template", async (
+            int certId,
+            IQuestionImportService imports,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var (stream, contentType, fileName) = await imports.GenerateManifestTemplateAsync(certId, cancellationToken);
+                return Results.File(stream, contentType, fileName);
+            }
+            catch (AdminExamException ex)
+            {
+                return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
+            }
+        });
+
         admin.MapGet("/{batchId:int}", async (int batchId, IQuestionImportService imports, CancellationToken cancellationToken) =>
         {
             try

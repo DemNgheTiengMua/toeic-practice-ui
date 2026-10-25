@@ -874,4 +874,26 @@ public sealed class AdminExamsController(
             return RedirectToAction(nameof(Studio), new { id });
         }
     }
+
+    [HttpGet("manifest-template")]
+    public async Task<IActionResult> ManifestTemplate([FromQuery] int certId, CancellationToken cancellationToken = default)
+    {
+        if (certId <= 0)
+        {
+            TempData["Error"] = "Select a certificate to download its manifest template.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        try
+        {
+            var (stream, contentType, fileName) = await api.GetManifestTemplateAsync(certId, cancellationToken);
+            return File(stream, contentType, fileName);
+        }
+        catch (ApiException ex)
+        {
+            logger.LogWarning(ex, "Failed to download manifest template for cert {CertId}", certId);
+            TempData["Error"] = ex.Detail ?? ex.Message ?? "Failed to download manifest template.";
+            return RedirectToAction(nameof(Index), new { certId });
+        }
+    }
 }

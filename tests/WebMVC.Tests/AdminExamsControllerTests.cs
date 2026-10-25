@@ -687,6 +687,32 @@ public sealed class AdminExamsControllerTests
     }
 
     [Fact]
+    public async Task ManifestTemplate_ReturnsFileResult_WhenCertIdValid()
+    {
+        var api = new TestApiClient();
+        var controller = CreateController(api);
+
+        var result = await controller.ManifestTemplate(1, CancellationToken.None);
+
+        var fileResult = Assert.IsType<FileStreamResult>(result);
+        Assert.Equal("application/json", fileResult.ContentType);
+        Assert.Equal("manifest_template_1.json", fileResult.FileDownloadName);
+    }
+
+    [Fact]
+    public async Task ManifestTemplate_RedirectsToIndex_WhenCertIdInvalid()
+    {
+        var api = new TestApiClient();
+        var controller = CreateController(api);
+
+        var result = await controller.ManifestTemplate(0, CancellationToken.None);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(AdminExamsController.Index), redirect.ActionName);
+        Assert.Contains("Select a certificate", controller.TempData["Error"]?.ToString());
+    }
+
+    [Fact]
     public void ExamEditorView_ContainsMultipartFormDataAndAudioFileInput()
     {
         var repoRoot = TestPathHelper.FindRepoRoot();
@@ -1156,6 +1182,11 @@ public sealed class AdminExamsControllerTests
             if (ExportException != null) throw ExportException;
             var fmt = format ?? "zip";
             return Task.FromResult(((Stream)new MemoryStream([1, 2, 3]), fmt == "json" ? "application/json" : "application/zip", $"test_exam.{fmt}"));
+        }
+
+        public Task<(Stream Stream, string ContentType, string FileName)> GetManifestTemplateAsync(int certId, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(((Stream)new MemoryStream(System.Text.Encoding.UTF8.GetBytes("{}")), "application/json", $"manifest_template_{certId}.json"));
         }
 
         private static ExamStudioDetailDto SampleStudioDetail(int examId) =>
