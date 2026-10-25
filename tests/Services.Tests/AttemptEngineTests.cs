@@ -134,10 +134,20 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
 
     private Task AdvanceAttemptToSecondPhaseAsync(int attemptId) =>
         database.SqlAsync($"""
-            UPDATE ExamAttempts
-            SET StartedAt = DATEADD(minute, -31, SYSDATETIMEOFFSET()),
-                ExpiresAt = DATEADD(minute, 29, SYSDATETIMEOFFSET())
-            WHERE AttemptId = {attemptId};
+            UPDATE a
+            SET a.StartedAt = DATEADD(minute, -31, SYSDATETIMEOFFSET()),
+                a.ExpiresAt = DATEADD(minute, 29, SYSDATETIMEOFFSET()),
+                a.ActiveSkillId = (
+                    SELECT TOP 1 s.SkillId
+                    FROM Skills s
+                    JOIN Sections sec ON sec.SkillId = s.SkillId
+                    JOIN Questions q ON q.SectionId = sec.SectionId
+                    WHERE q.ExamId = a.ExamId AND s.SkillId <> a.ActiveSkillId
+                    ORDER BY s.DisplayOrder
+                ),
+                a.PhaseDeadlineAt = DATEADD(minute, 30, GETUTCDATE())
+            FROM ExamAttempts a
+            WHERE a.AttemptId = {attemptId};
             """);
 
     [Fact]
@@ -237,6 +247,9 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
             var activeAttempt = await db.ExamAttempts.SingleAsync(a => a.AttemptId == attempt.AttemptId);
             activeAttempt.StartedAt = startedAt;
             activeAttempt.ExpiresAt = startedAt.AddMinutes(120);
+            var writingQ = await db.Questions.SingleAsync(q => q.QuestionId == freeResponseQuestionId);
+            activeAttempt.ActiveSkillId = writingQ.SkillId;
+            activeAttempt.PhaseDeadlineAt = DateTimeOffset.UtcNow.UtcDateTime.AddMinutes(30);
             await db.SaveChangesAsync();
         }
 
@@ -306,10 +319,13 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
         var attempt = await CreateEngine().CreateAttemptAsync(userId, certId, examId, 120);
         var engine = CreateEngine();
         await database.SqlAsync($"""
-            UPDATE ExamAttempts
-            SET StartedAt = DATEADD(minute, -90, SYSDATETIMEOFFSET()),
-                ExpiresAt = DATEADD(minute, 30, SYSDATETIMEOFFSET())
-            WHERE AttemptId = {attempt.AttemptId};
+            UPDATE a
+            SET a.StartedAt = DATEADD(minute, -90, SYSDATETIMEOFFSET()),
+                a.ExpiresAt = DATEADD(minute, 30, SYSDATETIMEOFFSET()),
+                a.ActiveSkillId = (SELECT SkillId FROM Questions WHERE QuestionId = {freeResponseQuestionId}),
+                a.PhaseDeadlineAt = DATEADD(minute, 30, GETUTCDATE())
+            FROM ExamAttempts a
+            WHERE a.AttemptId = {attempt.AttemptId};
             """);
 
         await engine.SaveDraftAsync(

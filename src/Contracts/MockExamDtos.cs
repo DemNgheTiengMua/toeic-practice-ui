@@ -103,7 +103,21 @@ public sealed record NavigatorItemDto(
     ModalityDto Modality,
     bool IsAnswered,
     bool IsFlagged,
-    bool IsCurrent);
+    bool IsCurrent,
+    bool IsLocked = false);
+
+public sealed record TransitionUnitRequest(int TargetUnitNumber);
+public sealed record TransitionGroupRequest(int TargetGroupId);
+
+public sealed record AttemptTransitionResponse(
+    int AttemptId,
+    int? ActiveSkillId,
+    int ActiveUnitNumber,
+    int? ActiveGroupId,
+    DateTimeOffset? PhaseDeadlineAt,
+    int RemainingSeconds,
+    AttemptStatusDto Status,
+    bool IsSubmitted);
 
 public sealed record AttemptTakeDto(
     int AttemptId,
@@ -121,7 +135,12 @@ public sealed record AttemptTakeDto(
     IReadOnlyList<NavigatorItemDto> Navigator,
     bool IsAutoSubmitted,
     IReadOnlyList<AttemptQuestionDto>? Questions = null,
-    IReadOnlyList<AttemptPhaseDto>? Phases = null);
+    IReadOnlyList<AttemptPhaseDto>? Phases = null,
+    int? ActiveSkillId = null,
+    int ActiveUnitNumber = 1,
+    int? ActiveGroupId = null,
+    DateTimeOffset? PhaseDeadlineAt = null,
+    bool IsSkillLocked = false);
 
 public sealed record AttemptPhaseDto(
     int SkillId,

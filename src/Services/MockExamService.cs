@@ -64,6 +64,34 @@ public interface IMockExamService
     Task<AttemptReviewView> GetAttemptReviewAsync(int userId, int attemptId, CancellationToken cancellationToken = default);
     Task<PreflightStatusView> GetPreflightStatusAsync(int userId, int attemptId, CancellationToken cancellationToken = default);
     Task<PreflightStatusView> VerifyPreflightAsync(int userId, int attemptId, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<SaveAttemptAnswerResult>> SaveBatchAnswersAsync(
+        int userId,
+        int attemptId,
+        IReadOnlyList<BatchAnswerItem> answers,
+        CancellationToken cancellationToken = default);
+
+    Task<AttemptTransitionResult> TransitionToNextSkillAsync(
+        int userId,
+        int attemptId,
+        CancellationToken cancellationToken = default);
+
+    Task<AttemptTransitionResult> TransitionUnitAsync(
+        int userId,
+        int attemptId,
+        int targetUnitNumber,
+        CancellationToken cancellationToken = default);
+
+    Task<AttemptTransitionResult> TransitionGroupAsync(
+        int userId,
+        int attemptId,
+        int targetGroupId,
+        CancellationToken cancellationToken = default);
+
+    Task<AttemptTransitionResult> CompleteAudioAndStartReviewAsync(
+        int userId,
+        int attemptId,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed class MockExamService(
@@ -501,6 +529,84 @@ public sealed class MockExamService(
         try
         {
             return await _attemptEngine.VerifyPreflightAsync(attemptId, userId, cancellationToken);
+        }
+        catch (AttemptEngineException ex)
+        {
+            throw MapException(ex);
+        }
+    }
+
+    public async Task<IReadOnlyList<SaveAttemptAnswerResult>> SaveBatchAnswersAsync(
+        int userId,
+        int attemptId,
+        IReadOnlyList<BatchAnswerItem> answers,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await _attemptEngine.SaveBatchAnswersAsync(attemptId, userId, answers, null, cancellationToken);
+        }
+        catch (AttemptEngineException ex)
+        {
+            throw MapException(ex);
+        }
+    }
+
+    public async Task<AttemptTransitionResult> TransitionToNextSkillAsync(
+        int userId,
+        int attemptId,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await _attemptEngine.TransitionToNextSkillAsync(attemptId, userId, cancellationToken);
+        }
+        catch (AttemptEngineException ex)
+        {
+            throw MapException(ex);
+        }
+    }
+
+    public async Task<AttemptTransitionResult> TransitionUnitAsync(
+        int userId,
+        int attemptId,
+        int targetUnitNumber,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await _attemptEngine.TransitionUnitAsync(attemptId, targetUnitNumber, userId, cancellationToken);
+        }
+        catch (AttemptEngineException ex)
+        {
+            throw MapException(ex);
+        }
+    }
+
+    public async Task<AttemptTransitionResult> TransitionGroupAsync(
+        int userId,
+        int attemptId,
+        int targetGroupId,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await _attemptEngine.TransitionGroupAsync(attemptId, targetGroupId, userId, cancellationToken);
+        }
+        catch (AttemptEngineException ex)
+        {
+            throw MapException(ex);
+        }
+    }
+
+    public async Task<AttemptTransitionResult> CompleteAudioAndStartReviewAsync(
+        int userId,
+        int attemptId,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await _attemptEngine.CompleteAudioAndStartReviewAsync(attemptId, userId, cancellationToken);
         }
         catch (AttemptEngineException ex)
         {

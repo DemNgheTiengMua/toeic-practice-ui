@@ -322,6 +322,76 @@ public sealed class ExamsController(
         }
     }
 
+    [HttpPost("/exams/take/{attemptId:int}/transition/skill")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> TransitionSkill(int attemptId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await api.TransitionSkillAsync(attemptId, cancellationToken);
+            return Json(result);
+        }
+        catch (ApiException ex)
+        {
+            return StatusCode(ex.Status, new { error = ex.Detail ?? ex.Message, code = ex.Code });
+        }
+    }
+
+    [HttpPost("/exams/take/{attemptId:int}/transition/unit")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> TransitionUnit(
+        int attemptId,
+        [FromBody] TransitionUnitRequest? body,
+        [FromForm] int? targetUnitNumber,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var unit = body?.TargetUnitNumber ?? targetUnitNumber ?? 1;
+            var result = await api.TransitionUnitAsync(attemptId, new TransitionUnitRequest(unit), cancellationToken);
+            return Json(result);
+        }
+        catch (ApiException ex)
+        {
+            return StatusCode(ex.Status, new { error = ex.Detail ?? ex.Message, code = ex.Code });
+        }
+    }
+
+    [HttpPost("/exams/take/{attemptId:int}/transition/group")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> TransitionGroup(
+        int attemptId,
+        [FromBody] TransitionGroupRequest? body,
+        [FromForm] int? targetGroupId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var group = body?.TargetGroupId ?? targetGroupId ?? 0;
+            var result = await api.TransitionGroupAsync(attemptId, new TransitionGroupRequest(group), cancellationToken);
+            return Json(result);
+        }
+        catch (ApiException ex)
+        {
+            return StatusCode(ex.Status, new { error = ex.Detail ?? ex.Message, code = ex.Code });
+        }
+    }
+
+    [HttpPost("/exams/take/{attemptId:int}/audio-review/start")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> StartAudioReview(int attemptId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await api.StartAudioReviewAsync(attemptId, cancellationToken);
+            return Json(result);
+        }
+        catch (ApiException ex)
+        {
+            return StatusCode(ex.Status, new { error = ex.Detail ?? ex.Message, code = ex.Code });
+        }
+    }
+
     [HttpGet("/exams/result/{attemptId:int}")]
     public async Task<IActionResult> Result(int attemptId, CancellationToken cancellationToken)
     {

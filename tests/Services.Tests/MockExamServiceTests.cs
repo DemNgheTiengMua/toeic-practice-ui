@@ -25,10 +25,20 @@ public sealed class MockExamServiceTests(DatabaseFixture database)
 
     private Task AdvanceAttemptToSecondPhaseAsync(int attemptId) =>
         database.SqlAsync($"""
-            UPDATE ExamAttempts
-            SET StartedAt = DATEADD(minute, -31, SYSDATETIMEOFFSET()),
-                ExpiresAt = DATEADD(minute, 29, SYSDATETIMEOFFSET())
-            WHERE AttemptId = {attemptId};
+            UPDATE a
+            SET a.StartedAt = DATEADD(minute, -31, SYSDATETIMEOFFSET()),
+                a.ExpiresAt = DATEADD(minute, 29, SYSDATETIMEOFFSET()),
+                a.ActiveSkillId = (
+                    SELECT TOP 1 s.SkillId
+                    FROM Skills s
+                    JOIN Sections sec ON sec.SkillId = s.SkillId
+                    JOIN Questions q ON q.SectionId = sec.SectionId
+                    WHERE q.ExamId = a.ExamId AND s.SkillId <> a.ActiveSkillId
+                    ORDER BY s.DisplayOrder
+                ),
+                a.PhaseDeadlineAt = DATEADD(minute, 30, GETUTCDATE())
+            FROM ExamAttempts a
+            WHERE a.AttemptId = {attemptId};
             """);
 
     private async Task<int> SeedLearnerAsync(string? activeCertCode = null, int startingCredits = 0)
@@ -234,12 +244,7 @@ public sealed class MockExamServiceTests(DatabaseFixture database)
             fixture.listeningQuestionId,
             fixture.listeningOptionId,
             isFlagged: false);
-        await database.SqlAsync($"""
-            UPDATE ExamAttempts
-            SET StartedAt = DATEADD(minute, -35, SYSDATETIMEOFFSET()),
-                ExpiresAt = DATEADD(minute, 25, SYSDATETIMEOFFSET())
-            WHERE AttemptId = {attempt.AttemptId};
-            """);
+        await AdvanceAttemptToSecondPhaseAsync(attempt.AttemptId);
         (service, _) = CreateServices();
         const string responseText = "A clear response with enough detail.";
         await service.SaveAnswerAsync(

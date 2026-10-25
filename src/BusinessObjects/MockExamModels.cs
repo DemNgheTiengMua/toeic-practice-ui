@@ -118,6 +118,22 @@ public sealed record SaveAttemptDraftResult(
     DateTimeOffset SavedAt,
     int WordCount);
 
+public sealed record BatchAnswerItem(
+    int QuestionId,
+    int? SelectedOptionId,
+    bool IsFlagged,
+    string? ResponseText = null,
+    string? SelectedOptionIdsJson = null);
+
+public sealed record AttemptTransitionResult(
+    int AttemptId,
+    int? ActiveSkillId,
+    int ActiveUnitNumber,
+    int? ActiveGroupId,
+    DateTimeOffset? PhaseDeadlineAt,
+    int RemainingSeconds,
+    AttemptStatus Status);
+
 public sealed record NavigatorItem(
     int QuestionId,
     int DisplayOrder,
@@ -126,7 +142,8 @@ public sealed record NavigatorItem(
     Modality Modality,
     bool IsAnswered,
     bool IsFlagged,
-    bool IsCurrent);
+    bool IsCurrent,
+    bool IsLocked = false);
 
 public sealed record AttemptTakeView(
     int AttemptId,
@@ -144,7 +161,12 @@ public sealed record AttemptTakeView(
     IReadOnlyList<NavigatorItem> Navigator,
     bool IsAutoSubmitted,
     IReadOnlyList<AttemptQuestionInfo>? Questions = null,
-    IReadOnlyList<AttemptPhaseInfo>? Phases = null);
+    IReadOnlyList<AttemptPhaseInfo>? Phases = null,
+    int? ActiveSkillId = null,
+    int ActiveUnitNumber = 1,
+    int? ActiveGroupId = null,
+    DateTimeOffset? PhaseDeadlineAt = null,
+    bool IsSkillLocked = false);
 
 public sealed record PreflightStatusView(
     int AttemptId,

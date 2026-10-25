@@ -446,6 +446,48 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
         return (await response.Content.ReadFromJsonAsync<SubmitAttemptResponse>(Json, cancellationToken))!;
     }
 
+    public async Task<AttemptTransitionResponse> TransitionSkillAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default)
+    {
+        using var message = new HttpRequestMessage(HttpMethod.Post, $"api/learner/attempts/{attemptId}/transition/skill");
+        AttachBearer(message, bearerToken);
+        using var response = await http.SendAsync(message, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+        return (await response.Content.ReadFromJsonAsync<AttemptTransitionResponse>(Json, cancellationToken))!;
+    }
+
+    public async Task<AttemptTransitionResponse> TransitionUnitAsync(int attemptId, TransitionUnitRequest request, string bearerToken, CancellationToken cancellationToken = default)
+    {
+        using var message = new HttpRequestMessage(HttpMethod.Post, $"api/learner/attempts/{attemptId}/transition/unit")
+        {
+            Content = JsonContent.Create(request, options: Json),
+        };
+        AttachBearer(message, bearerToken);
+        using var response = await http.SendAsync(message, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+        return (await response.Content.ReadFromJsonAsync<AttemptTransitionResponse>(Json, cancellationToken))!;
+    }
+
+    public async Task<AttemptTransitionResponse> TransitionGroupAsync(int attemptId, TransitionGroupRequest request, string bearerToken, CancellationToken cancellationToken = default)
+    {
+        using var message = new HttpRequestMessage(HttpMethod.Post, $"api/learner/attempts/{attemptId}/transition/group")
+        {
+            Content = JsonContent.Create(request, options: Json),
+        };
+        AttachBearer(message, bearerToken);
+        using var response = await http.SendAsync(message, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+        return (await response.Content.ReadFromJsonAsync<AttemptTransitionResponse>(Json, cancellationToken))!;
+    }
+
+    public async Task<AttemptTransitionResponse> StartAudioReviewAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default)
+    {
+        using var message = new HttpRequestMessage(HttpMethod.Post, $"api/learner/attempts/{attemptId}/audio-review/start");
+        AttachBearer(message, bearerToken);
+        using var response = await http.SendAsync(message, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+        return (await response.Content.ReadFromJsonAsync<AttemptTransitionResponse>(Json, cancellationToken))!;
+    }
+
     public async Task CancelAttemptAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default)
     {
         using var message = new HttpRequestMessage(HttpMethod.Post, $"api/learner/attempts/{attemptId}/cancel");
@@ -1401,6 +1443,18 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
         SubmitAttemptRequest request,
         CancellationToken cancellationToken = default) =>
         SubmitAttemptWithDraftsAsync(attemptId, request, string.Empty, cancellationToken);
+
+    public Task<AttemptTransitionResponse> TransitionSkillAsync(int attemptId, CancellationToken cancellationToken = default) =>
+        TransitionSkillAsync(attemptId, string.Empty, cancellationToken);
+
+    public Task<AttemptTransitionResponse> TransitionUnitAsync(int attemptId, TransitionUnitRequest request, CancellationToken cancellationToken = default) =>
+        TransitionUnitAsync(attemptId, request, string.Empty, cancellationToken);
+
+    public Task<AttemptTransitionResponse> TransitionGroupAsync(int attemptId, TransitionGroupRequest request, CancellationToken cancellationToken = default) =>
+        TransitionGroupAsync(attemptId, request, string.Empty, cancellationToken);
+
+    public Task<AttemptTransitionResponse> StartAudioReviewAsync(int attemptId, CancellationToken cancellationToken = default) =>
+        StartAudioReviewAsync(attemptId, string.Empty, cancellationToken);
 
     public Task CancelAttemptAsync(int attemptId, CancellationToken cancellationToken = default) =>
         CancelAttemptAsync(attemptId, string.Empty, cancellationToken);

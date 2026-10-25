@@ -10,8 +10,8 @@
     "semantic_hash": ""
   },
   "docs/database-schema.sql": {
-    "mtime": 1792933055.9609563,
-    "ast_hash": "429e0786c0f1545b7c342d17e84a73db",
+    "mtime": 1792934873.8459735,
+    "ast_hash": "42dcecc9dd13e1d9b160fa8b02b74322",
     "semantic_hash": ""
   },
   "docs/erd/export-meta.sql": {
@@ -155,8 +155,8 @@
     "semantic_hash": ""
   },
   "src/Contracts/ApiError.cs": {
-    "mtime": 1792933083.274864,
-    "ast_hash": "1fbead697936c0f78d1c2ca0fb6d43fb",
+    "mtime": 1792934873.888779,
+    "ast_hash": "6d74fd4d2758875de38bb4431d0050a8",
     "semantic_hash": ""
   },
   "src/Contracts/AuthClaims.cs": {
@@ -180,8 +180,8 @@
     "semantic_hash": ""
   },
   "src/Contracts/CompanionApiClient.cs": {
-    "mtime": 1792933175.3732436,
-    "ast_hash": "a27746444f0a895e0512da65cb2a099f",
+    "mtime": 1792935762.1945698,
+    "ast_hash": "058182cf387fa460575fd7369eed6148",
     "semantic_hash": ""
   },
   "src/Contracts/Contracts.csproj": {
@@ -210,8 +210,8 @@
     "semantic_hash": ""
   },
   "src/DataAccess/CompanionDbContext.cs": {
-    "mtime": 1792933071.2638671,
-    "ast_hash": "56df34a4dcf5e40e4eee19254ff7a4f9",
+    "mtime": 1792934873.8908556,
+    "ast_hash": "1c9d469aa60570454d7236548e7e7cfd",
     "semantic_hash": ""
   },
   "src/DataAccess/DataAccess.csproj": {
@@ -280,8 +280,8 @@
     "semantic_hash": ""
   },
   "src/DataAccess/Scaffold/ExamAttempt.cs": {
-    "mtime": 1792933063.5342834,
-    "ast_hash": "913ef8fb354f26a2284a85f396bfed39",
+    "mtime": 1792934873.8908556,
+    "ast_hash": "8705879866516f24d5a4021920d96d6f",
     "semantic_hash": ""
   },
   "src/DataAccess/Scaffold/ExamSectionAudio.cs": {
@@ -1541,28 +1541,28 @@
     "semantic_hash": ""
   },
   "src/BusinessObjects/MockExamModels.cs": {
-    "mtime": 1792933097.0740187,
-    "ast_hash": "bf9dc11dc3eb850221ef067b21c34f82",
+    "mtime": 1792935672.9746501,
+    "ast_hash": "619a24e8230e0431a80d781231270a41",
     "semantic_hash": ""
   },
   "src/Contracts/MockExamDtos.cs": {
-    "mtime": 1792933119.3330092,
-    "ast_hash": "07fe9f48693ed88f197eefcfd775f19c",
+    "mtime": 1792935688.229,
+    "ast_hash": "dbda7c4489940b5bdd2fc09a8f77c99a",
     "semantic_hash": ""
   },
   "src/Services/MockExamService.cs": {
-    "mtime": 1792933628.82974,
-    "ast_hash": "17613f57d6c25a1256356c217fe1c4ec",
+    "mtime": 1792935976.729392,
+    "ast_hash": "e0a0707c6ad33e74ede7cf3d9f8f7845",
     "semantic_hash": ""
   },
   "src/WebMVC/Controllers/ExamsController.cs": {
-    "mtime": 1792933804.8063054,
-    "ast_hash": "bc8557737fdf9687227073b64fe33957",
+    "mtime": 1792936151.2830756,
+    "ast_hash": "9b81afac9b58638d383e6e251ebd9692",
     "semantic_hash": ""
   },
   "src/WebMVC/Models/ExamViewModels.cs": {
-    "mtime": 1792933763.4651005,
-    "ast_hash": "70cc44200c0ee499907bc7067f792a32",
+    "mtime": 1792934873.892868,
+    "ast_hash": "2ffcf90cda3a533d222bbe97ea093c86",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Exams/AttemptNotFound.cshtml": {
@@ -1591,13 +1591,13 @@
     "semantic_hash": ""
   },
   "tests/Services.Tests/MockExamServiceTests.cs": {
-    "mtime": 1792910581.7866125,
-    "ast_hash": "f26deba9bb441efe7bab5690626ce7f8",
+    "mtime": 1792937074.7001812,
+    "ast_hash": "ef7ee9be1c69ed8b969edd6a06edd7f6",
     "semantic_hash": ""
   },
   "tests/WebMVC.Tests/ExamsControllerTests.cs": {
-    "mtime": 1792934034.760319,
-    "ast_hash": "91436d48e03e7aa16a976bbdc35e1806",
+    "mtime": 1792936212.1504095,
+    "ast_hash": "2bf426fbff4f213add06f798bf5d9a6f",
     "semantic_hash": ""
   },
   "tests/Services.Tests/PayOsPaymentGatewayTests.cs": {
@@ -1711,8 +1711,8 @@
     "semantic_hash": ""
   },
   "tests/Services.Tests/ScoreConversionServiceTests.cs": {
-    "mtime": 1792914062.5930243,
-    "ast_hash": "10fb478cec6a38ca70a5bd31b889e61f",
+    "mtime": 1792937062.373541,
+    "ast_hash": "b0929ae19bdb6586b6c378c01fd02d56",
     "semantic_hash": ""
   },
   "tests/WebMVC.Tests/AdminScoreConversionControllerTests.cs": {
@@ -1766,8 +1766,8 @@
     "semantic_hash": ""
   },
   "src/WebAPI/Endpoints/ExamEndpoints.cs": {
-    "mtime": 1792933738.3257437,
-    "ast_hash": "ec3898cde7765c53881bc1261528c13b",
+    "mtime": 1792936068.6207135,
+    "ast_hash": "b36118bee06e7488d1f02778be6aebce",
     "semantic_hash": ""
   },
   "src/WebAPI/Endpoints/LearnerEndpoints.cs": {
@@ -2061,8 +2061,8 @@
     "semantic_hash": ""
   },
   "tests/Services.Tests/PlacementServiceTests.cs": {
-    "mtime": 1792910581.7876184,
-    "ast_hash": "44c7dccad2f96ae5c1c046aba55abb12",
+    "mtime": 1792936306.2806566,
+    "ast_hash": "30379a6176fff0e7b751b5dd9567ea70",
     "semantic_hash": ""
   },
   "tests/WebMVC.Tests/PlacementControllerTests.cs": {
@@ -2481,18 +2481,18 @@
     "semantic_hash": ""
   },
   "src/Services/AttemptEngine.cs": {
-    "mtime": 1792933875.8020842,
-    "ast_hash": "4521194129588c5f9825c67c209e52e0",
+    "mtime": 1792937038.5746734,
+    "ast_hash": "145c4606e32fee3dbe63874eec8185c1",
     "semantic_hash": ""
   },
   "tests/Services.Tests/AttemptEngineTests.cs": {
-    "mtime": 1792934507.4229486,
-    "ast_hash": "7899952f0e68d70b2913dfdc50d9bcb8",
+    "mtime": 1792936273.955449,
+    "ast_hash": "a9c9d1dc5186c0756f2cd09bbfc656bb",
     "semantic_hash": ""
   },
   "src/Contracts/DomainClients.cs": {
-    "mtime": 1792933134.0250428,
-    "ast_hash": "30b2bbd1105dc7c69a1e47dcfaef5f26",
+    "mtime": 1792935733.0588174,
+    "ast_hash": "85e85a7496b19cd733818f531409a60e",
     "semantic_hash": ""
   },
   "src/WebMVC/CookieBearerHandler.cs": {
@@ -3857,8 +3857,8 @@
     "semantic_hash": ""
   },
   "tests/Services.Tests/AttemptEngineMultiCertScoringTests.cs": {
-    "mtime": 1792910673.8936267,
-    "ast_hash": "b22297f006f725313c5ae2c4215d5972",
+    "mtime": 1792937088.839711,
+    "ast_hash": "19229822a44537b09d8a722814fde2c2",
     "semantic_hash": ""
   },
   "tests/Services.Tests/GenerativeExamServiceTests.cs": {
@@ -4437,13 +4437,18 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Exams/Preflight.cshtml": {
-    "mtime": 1792933962.544341,
-    "ast_hash": "2518d4fafb1fc35ebac2a85e3315dc81",
+    "mtime": 1792934873.892868,
+    "ast_hash": "fc6ca399e7d54b8749e37051e843de69",
     "semantic_hash": ""
   },
   "tests/Services.Tests/PreflightGateTests.cs": {
-    "mtime": 1792934275.434572,
-    "ast_hash": "29f21f1518211d6903006ad1fe768edc",
+    "mtime": 1792934873.8938677,
+    "ast_hash": "7b7497a7f2dbe67db829925748ea7133",
+    "semantic_hash": ""
+  },
+  "tests/Services.Tests/SittingStateMachineTests.cs": {
+    "mtime": 1792936495.0202413,
+    "ast_hash": "1b37976ca2e79d66a5dad10be496d42c",
     "semantic_hash": ""
   }
 }
