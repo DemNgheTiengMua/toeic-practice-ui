@@ -263,7 +263,8 @@ CREATE TABLE QuestionGroups (
   CONSTRAINT FK_QGroups_SectionCert FOREIGN KEY (SectionId, CertId) REFERENCES Sections(SectionId, CertId),
   -- composite targets so Questions can carry ExamId/SectionId down from its group (H-5 / Low):
   CONSTRAINT UQ_QGroups_Id_Exam    UNIQUE (GroupId, ExamId),
-  CONSTRAINT UQ_QGroups_Id_Section UNIQUE (GroupId, SectionId)
+  CONSTRAINT UQ_QGroups_Id_Section UNIQUE (GroupId, SectionId),
+  CONSTRAINT UQ_QGroups_Id_Cert    UNIQUE (GroupId, CertId)
 );
 GO
 CREATE TABLE Questions (
@@ -461,9 +462,9 @@ CREATE TABLE ExamAttempts (
   ExamId          INT NOT NULL REFERENCES Exams(ExamId),
   -- H-5: carried down from the exam so children can be pinned to the same certificate
   CertId              INT NOT NULL REFERENCES Certificates(CertId),
-  ActiveSkillId       INT NULL CONSTRAINT FK_Attempts_ActiveSkill REFERENCES Skills(SkillId),
+  ActiveSkillId       INT NULL,
   ActiveUnitNumber    INT NOT NULL CONSTRAINT DF_Attempts_ActiveUnitNumber DEFAULT 1,
-  ActiveGroupId       INT NULL CONSTRAINT FK_Attempts_ActiveGroup REFERENCES QuestionGroups(GroupId),
+  ActiveGroupId       INT NULL,
   AuthorizationCode   NVARCHAR(64) NULL,
   PhaseDeadlineAt     DATETIME2 NULL,
   LastAudioOffsetMs   INT NOT NULL CONSTRAINT DF_Attempts_LastAudioOffsetMs DEFAULT 0,
@@ -482,6 +483,8 @@ CREATE TABLE ExamAttempts (
   BandCode        VARCHAR(20) NULL,                 -- snapshot at grading
   -- H-5: ExamId's CertId must be the attempt's own (pins the carried-down value)
   CONSTRAINT FK_Attempts_ExamCert FOREIGN KEY (ExamId, CertId) REFERENCES Exams(ExamId, CertId),
+  CONSTRAINT FK_Attempts_ActiveSkill FOREIGN KEY (ActiveSkillId, CertId) REFERENCES Skills(SkillId, CertId),
+  CONSTRAINT FK_Attempts_ActiveGroup FOREIGN KEY (ActiveGroupId, CertId) REFERENCES QuestionGroups(GroupId, CertId),
   -- composite target so CreditTransactions can prove the charged user owns the attempt (H-1):
   CONSTRAINT UQ_Attempts_Id_User UNIQUE (AttemptId, UserId),
   -- H-5: composite targets so AttemptAnswers/FreeResponses/AttemptSkillScores can pin containment

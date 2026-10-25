@@ -446,6 +446,7 @@ public sealed class ExamsController(
     }
 
     [HttpPost("/exams/take/{attemptId:int}/audio-review/start")]
+    [HttpPost("/exams/attempts/{attemptId:int}/start-audio-review")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> StartAudioReview(int attemptId, CancellationToken cancellationToken)
     {

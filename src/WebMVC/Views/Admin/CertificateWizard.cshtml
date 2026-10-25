@@ -654,7 +654,7 @@
             ‹ Back to Step 3
           </button>
           <button type="submit" class="btn btn--primary" style="border-radius: 0; font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 1.05rem; padding: 0.8rem 2.5rem; background: #0a6b3c; border-color: #0a6b3c;">
-            ✔ Save &amp; Persist Certificate Blueprint
+            [LƯU] Save &amp; Persist Certificate Blueprint
           </button>
         </div>
       </div>
@@ -990,6 +990,35 @@
       } else {
         bandEl.textContent = 'INDEPENDENT SKILLS';
       }
+    }
+    var csrfToken = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+    if (csrfToken && skillScaledScores.length > 0) {
+      clearTimeout(window.__scorePreviewTimeout);
+      window.__scorePreviewTimeout = setTimeout(function() {
+        var certIdVal = parseInt(document.getElementById('certId')?.value, 10) || null;
+        var codeVal = document.querySelector('input[name="Code"]')?.value || null;
+        var skillsPayload = [];
+        skillRows.forEach(function(row) {
+          var sIdx = row.getAttribute('data-calc-skill-idx');
+          var skillCode = document.querySelector('input[name="Skills[' + sIdx + '].Code"]')?.value || ('SKILL_' + sIdx);
+          var singleInput = row.querySelector('.calc-skill-single-input');
+          var rawVal = singleInput ? parseFloat(singleInput.value) || 0 : 0;
+          skillsPayload.push({ skillId: 0, skillCode: skillCode, rawScore: rawVal });
+        });
+        fetch('/admin/certificates/score-preview', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'RequestVerificationToken': csrfToken
+          },
+          body: JSON.stringify({
+            certId: certIdVal,
+            certCode: codeVal,
+            scoreAggregationRule: rule,
+            skills: skillsPayload
+          })
+        }).catch(function() {});
+      }, 300);
     }
   }
 

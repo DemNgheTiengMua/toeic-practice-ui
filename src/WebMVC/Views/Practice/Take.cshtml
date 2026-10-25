@@ -178,7 +178,7 @@
               }
               <div class="row mt-2" style="gap: var(--space-2); align-items: center;" id="audio-qol-controls">
                 <button type="button" class="btn btn--secondary btn--sm" id="btn-audio-rewind-5s" title="Tua lại 5 giây / Rewind 5 seconds" style="font-family: 'IBM Plex Mono', monospace; font-weight: 700;">
-                  [⏪ 5s]
+                  [-5s]
                 </button>
                 <button type="button" class="btn btn--ghost btn--sm" id="btn-toggle-transcript" aria-expanded="false" style="@(!string.IsNullOrEmpty(q.Transcript) ? "" : "display:none;") font-family: 'IBM Plex Sans Condensed', sans-serif; font-weight: 700; text-transform: uppercase;">
                   [Xem Lời thoại / Transcript]
@@ -302,7 +302,7 @@
                   <div class="accordion-explanation" id="accordion-explanation">
                     <button type="button" class="accordion-explanation__header" id="btn-toggle-explanation" aria-expanded="true">
                       <span>[Xem Lời giải chi tiết / Explanation & Rationale]</span>
-                      <span id="exp-chevron">▲</span>
+                      <span id="exp-chevron">[-]</span>
                     </button>
                     <div class="accordion-explanation__body" id="explanation-body">
                       @if (!string.IsNullOrEmpty(q.Explanation))
@@ -1151,7 +1151,7 @@
             html += '<span>' + escapeHtml(placedOption.text) + '</span>';
             html += '</div>';
             if (!isAnswered) {
-              html += '<button type="button" class="btn btn--ghost btn--sm js-remove-placed" style="color: #b31217; font-weight: 700;">✕ Xóa</button>';
+              html += '<button type="button" class="btn btn--ghost btn--sm js-remove-placed" style="color: #b31217; font-weight: 700;">[X] Xóa</button>';
             }
           } else {
             html += '<span class="text-muted text-sm js-drop-placeholder">' + (!isAnswered ? 'Kéo thả từ vào đây hoặc bấm vào từ ở trên' : 'Không có lựa chọn') + '</span>';
@@ -1232,7 +1232,7 @@
           headerTitle.textContent = "[Xem Lời giải chi tiết / Explanation & Rationale]";
           var chevron = document.createElement("span");
           chevron.id = "exp-chevron";
-          chevron.textContent = "▲";
+          chevron.textContent = "[-]";
 
           headerBtn.appendChild(headerTitle);
           headerBtn.appendChild(chevron);
@@ -1301,7 +1301,7 @@
           headerBtn.addEventListener("click", function () {
             var isOpen = bodyDiv.style.display !== "none";
             bodyDiv.style.display = isOpen ? "none" : "";
-            chevron.textContent = isOpen ? "▼" : "▲";
+            chevron.textContent = isOpen ? "[+]" : "[-]";
             headerBtn.setAttribute("aria-expanded", isOpen ? "false" : "true");
           });
 

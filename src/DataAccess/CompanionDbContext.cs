@@ -472,11 +472,13 @@ public partial class CompanionDbContext : DbContext
             entity.Property(e => e.PreflightVerifiedAt);
 
             entity.HasOne(d => d.ActiveSkill).WithMany()
-                .HasForeignKey(d => d.ActiveSkillId)
+                .HasPrincipalKey(p => new { p.SkillId, p.CertId })
+                .HasForeignKey(d => new { d.ActiveSkillId, d.CertId })
                 .HasConstraintName("FK_Attempts_ActiveSkill");
 
             entity.HasOne(d => d.ActiveGroup).WithMany()
-                .HasForeignKey(d => d.ActiveGroupId)
+                .HasPrincipalKey(p => new { p.GroupId, p.CertId })
+                .HasForeignKey(d => new { d.ActiveGroupId, d.CertId })
                 .HasConstraintName("FK_Attempts_ActiveGroup");
 
             entity.HasOne(d => d.Cert).WithMany(p => p.ExamAttempts)
@@ -1077,6 +1079,8 @@ public partial class CompanionDbContext : DbContext
             entity.ToTable(tb => tb.HasTrigger("trg_QGroups_SkillPracticeOneModality"));
 
             entity.Property(e => e.UnitNumber).HasDefaultValue(1);
+
+            entity.HasIndex(e => new { e.GroupId, e.CertId }, "UQ_QGroups_Id_Cert").IsUnique();
 
             entity.HasOne(d => d.Exam).WithMany(p => p.QuestionGroups)
                 .HasPrincipalKey(p => new { p.ExamId, p.CertId })

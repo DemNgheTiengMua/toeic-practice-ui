@@ -161,7 +161,8 @@ public static class ExamEndpoints
                     qInfo.ClusterSize,
                     qInfo.RequireImage,
                     qInfo.UnitNumber,
-                    qInfo.GroupId);
+                    qInfo.GroupId,
+                    qInfo.TimerPolicyJson);
 
                 var allQDtos = take.Questions?.Select(q => new AttemptQuestionDto(
                     q.QuestionId,
@@ -209,7 +210,8 @@ public static class ExamEndpoints
                     q.ClusterSize,
                     q.RequireImage,
                     q.UnitNumber,
-                    q.GroupId)).ToList();
+                    q.GroupId,
+                    q.TimerPolicyJson)).ToList();
 
                 return Results.Ok(new AttemptTakeDto(
                     take.AttemptId,

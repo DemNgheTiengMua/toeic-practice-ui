@@ -655,7 +655,7 @@
     </header>
 
     <main class="app-main">
-      <div class="container" style="max-width: 1200px">
+      <div class="container exam-sitting-container" style="max-width: 1200px">
         <form id="anti-forgery-holder" style="display:none;">@Html.AntiForgeryToken()</form>
 
         <script id="exam-data" type="application/json">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(questions, new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }))</script>
@@ -665,11 +665,6 @@
         {
           <div class="alert alert--danger mb-4" role="alert">@Model.ErrorMessage</div>
         }
-
-        <!-- Exam Integrity & Disciplinary Warning Banner -->
-        <div id="integrity-warning" class="alert alert--warning mb-4" style="display:none;" role="alert">
-          <strong>Warning:</strong> Tab switching or leaving the exam screen detected (<span id="integrity-count">0</span> time(s)). This activity is recorded in the exam audit trail.
-        </div>
 
         <!-- Offline Network Warning Banner -->
         <div id="network-warning" class="alert alert--danger mb-4" style="display:none; border: 2px solid #b31217; border-radius: 0; box-shadow: none; font-family: 'IBM Plex Sans', sans-serif;" role="alert">
@@ -1181,7 +1176,7 @@
         <h2 id="review-screen-title" class="no-margin" style="font-family: 'IBM Plex Sans Condensed', sans-serif; text-transform: uppercase; font-size: 1.25rem;">
           BẢNG XEM LẠI PHẦN THI ĐỌC (READING REVIEW SCREEN)
         </h2>
-        <button type="button" class="btn btn--ghost btn--sm js-close-review-modal" aria-label="Close review screen">✕</button>
+        <button type="button" class="btn btn--ghost btn--sm js-close-review-modal" aria-label="Close review screen">[X]</button>
       </div>
       <div class="modal__body stack" style="gap: 1.25rem; max-height: 70vh; overflow-y: auto; padding: 1.25rem;">
         <!-- Stats Summary -->
@@ -1577,13 +1572,94 @@
         }
       });
 
+      var hasStartedAudioReview = false;
+      var audioReviewTimer = null;
+
+      function getAudioReviewSeconds(q) {
+        if (!q) return 0;
+        if (q.timerPolicyJson) {
+          try {
+            var p = JSON.parse(q.timerPolicyJson);
+            if (p.timerMode === 'AUDIO_PLUS_CHECK' || p.timerMode === 'AudioDriven' || p.checkTimeSec > 0 || p.reviewSeconds > 0) {
+              return p.reviewSeconds || p.checkTimeSec || 120;
+            }
+          } catch (e) {}
+        }
+        if (q.navigationMode === 'AUDIO_PLUS_CHECK') {
+          return 120;
+        }
+        return 0;
+      }
+
+      function checkAndStartAudioReview() {
+        var curQ = questionMap[currentDisplayOrder];
+        if (!curQ || hasStartedAudioReview) return;
+        var reviewSec = getAudioReviewSeconds(curQ);
+        if (reviewSec > 0) {
+          hasStartedAudioReview = true;
+          startAudioReviewWindow(reviewSec);
+        }
+      }
+
+      function startAudioReviewWindow(initialSeconds) {
+        var timerAlert = document.getElementById('timer-alert-placard');
+        var timerAlertMsg = document.getElementById('timer-alert-message');
+        if (timerAlert && timerAlertMsg) {
+          timerAlertMsg.textContent = 'THỜI GIAN KIỂM TRA LẠI (POST-AUDIO REVIEW)';
+          timerAlert.style.display = 'inline-flex';
+        }
+
+        var reviewRemaining = initialSeconds || 120;
+        var csrfToken = document.querySelector('#anti-forgery-holder input[name="__RequestVerificationToken"]')?.value || '';
+
+        fetch('/exams/take/' + attemptId + '/audio-review/start', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'RequestVerificationToken': csrfToken
+          }
+        }).then(function (res) {
+          if (res.ok) return res.json();
+        }).then(function (data) {
+          if (data && typeof data.remainingSeconds === 'number' && data.remainingSeconds > 0) {
+            reviewRemaining = data.remainingSeconds;
+          }
+        }).catch(function (err) {
+          console.warn('Audio review start error:', err);
+        });
+
+        if (audioReviewTimer) clearInterval(audioReviewTimer);
+        audioReviewTimer = setInterval(function () {
+          reviewRemaining--;
+          if (timerAlertMsg) {
+            var m = Math.floor(Math.max(0, reviewRemaining) / 60);
+            var s = Math.max(0, reviewRemaining) % 60;
+            var timeStr = (m < 10 ? '0' + m : '' + m) + ':' + (s < 10 ? '0' + s : '' + s);
+            timerAlertMsg.textContent = 'THỜI GIAN KIỂM TRA LẠI (POST-AUDIO REVIEW) · ' + timeStr;
+          }
+          if (reviewRemaining <= 0) {
+            clearInterval(audioReviewTimer);
+            if (timerAlertMsg) {
+              timerAlertMsg.textContent = 'HẾT THỜI GIAN KIỂM TRA LẠI';
+            }
+          }
+        }, 1000);
+      }
+
       document.addEventListener('examaudioended', function () {
         if (currentAudioKey) {
           recordAudioProgress(currentAudioKey, {
             completed: true
           });
         }
+        checkAndStartAudioReview();
       });
+
+      if (audioWrapper) {
+        audioWrapper.addEventListener('ended', function () {
+          checkAndStartAudioReview();
+        }, true);
+      }
 
       var isFlushing = false;
       var isSubmitting = false;
@@ -1938,7 +2014,7 @@
           itemsHtml += '<div class="row row--between mb-2" style="align-items: center;">';
           itemsHtml += '<strong style="font-family:\'IBM Plex Sans Condensed\',sans-serif; text-transform:uppercase; font-size:1rem;">Câu ' + sq.displayOrder + ' / ' + totalQuestions + '</strong>';
           if (hasRecording) {
-            itemsHtml += '<span class="badge status-badge--recorded">Đã ghi âm [✓]</span>';
+            itemsHtml += '<span class="badge status-badge--recorded">Đã ghi âm [ĐÃ LÀM]</span>';
           } else {
             itemsHtml += '<span class="badge status-badge--missing">Chưa có ghi âm [!]</span>';
           }
@@ -2335,7 +2411,7 @@
         if (draftSaveTimeout) clearTimeout(draftSaveTimeout);
         draftSaveTimeout = setTimeout(function () {
           saveDraft(questionId);
-        }, 3000);
+        }, 500);
       }
 
       function saveDraft(questionId) {
@@ -2649,7 +2725,7 @@
                 if (i === note.endToken && note.note && note.note.trim()) {
                   var pin = document.createElement('span');
                   pin.className = 'ee-note-pin';
-                  pin.textContent = 'ðŸ“';
+                  pin.textContent = '[NOTE]';
                   pin.title = note.note;
                   (function (savedNote) {
                     pin.addEventListener('click', function (e) {
@@ -2717,6 +2793,15 @@
           return;
         }
 
+        var curQ = questionMap[currentDisplayOrder];
+        var cfg = parseToolsConfig(curQ ? curQ.toolsConfigJson : null);
+        var allowHl = cfg.allowHighlight === true;
+        var allowNotes = cfg.allowNotes === true;
+        if (!allowHl && !allowNotes) {
+          if (highlighterPopover) highlighterPopover.style.display = 'none';
+          return;
+        }
+
         var range = sel.getRangeAt(0);
         var container = range.commonAncestorContainer;
         if (container.nodeType === 3) container = container.parentElement;
@@ -2725,6 +2810,11 @@
           if (highlighterPopover) highlighterPopover.style.display = 'none';
           return;
         }
+
+        var btnHl = highlighterPopover ? highlighterPopover.querySelector('[data-action="highlight"]') : null;
+        var btnNote = highlighterPopover ? highlighterPopover.querySelector('[data-action="note"]') : null;
+        if (btnHl) btnHl.style.display = allowHl ? '' : 'none';
+        if (btnNote) btnNote.style.display = allowNotes ? '' : 'none';
 
         var tokensInContainer = Array.from(tokenizedContainer.querySelectorAll('.ee-token'));
         var selectedTokens = tokensInContainer.filter(function (tok) {
@@ -2760,6 +2850,22 @@
       }
 
       document.addEventListener('mouseup', handleHighlighterSelection);
+      document.addEventListener('contextmenu', function (e) {
+        var sel = window.getSelection();
+        if (sel && !sel.isCollapsed && sel.rangeCount > 0) {
+          var range = sel.getRangeAt(0);
+          var container = range.commonAncestorContainer;
+          if (container.nodeType === 3) container = container.parentElement;
+          if (container && container.closest('.ee-tokenized-text')) {
+            var curQ = questionMap[currentDisplayOrder];
+            var cfg = parseToolsConfig(curQ ? curQ.toolsConfigJson : null);
+            if (cfg.allowHighlight === true || cfg.allowNotes === true) {
+              e.preventDefault();
+              handleHighlighterSelection(e);
+            }
+          }
+        }
+      });
 
       document.querySelectorAll('.js-hl-action').forEach(function (btn) {
         btn.addEventListener('click', function () {
@@ -3107,12 +3213,31 @@
           audioWrapper.style.display = 'block';
         }
 
-        // Passage Pane
-        if (q.passage && q.passage.trim().length > 0) {
-          passageText.textContent = q.passage;
-          passageCard.style.display = 'block';
+        // Passage Pane & Split-Screen Viewport
+        var isSplitMode = (q.layoutType === 'SPLIT_HORIZONTAL' || q.requirePassage) && q.passage && q.passage.trim().length > 0;
+        var sittingContainer = document.querySelector('.exam-sitting-container');
+        var examLayout = document.getElementById('exam-main-layout');
+        var splitStimulusPane = document.getElementById('split-stimulus-pane');
+        var splitPassageText = document.getElementById('split-passage-text');
+
+        if (isSplitMode) {
+          if (splitStimulusPane) splitStimulusPane.style.display = 'block';
+          if (examLayout) examLayout.classList.add('exam-layout--split');
+          if (sittingContainer) sittingContainer.classList.add('exam-layout--split');
+          if (splitPassageText) {
+            renderTokenizedText(splitPassageText, q.passage, q.sectionId, q.questionId, 'passage');
+          }
+          if (passageCard) passageCard.style.display = 'none';
         } else {
-          passageCard.style.display = 'none';
+          if (splitStimulusPane) splitStimulusPane.style.display = 'none';
+          if (examLayout) examLayout.classList.remove('exam-layout--split');
+          if (sittingContainer) sittingContainer.classList.remove('exam-layout--split');
+          if (q.passage && q.passage.trim().length > 0) {
+            passageText.textContent = q.passage;
+            passageCard.style.display = 'block';
+          } else {
+            passageCard.style.display = 'none';
+          }
         }
 
         // Image Pane
@@ -3714,7 +3839,7 @@
           html += '<div style="display:flex; justify-content:space-between; align-items:center;">';
           html += '<strong style="font-family:\'IBM Plex Mono\', monospace; font-size:0.9rem;">Q' + q.displayOrder + '</strong>';
           if (isFl) {
-            html += '<span class="badge" style="background:#f2b705; color:#14181d; font-size:0.7rem; font-weight:700;">🚩 FLAGGED</span>';
+            html += '<span class="badge" style="background:#f2b705; color:#14181d; font-size:0.7rem; font-weight:700;">[FLAG] FLAGGED</span>';
           }
           html += '</div>';
           html += '<span style="font-size:0.75rem; font-family:\'IBM Plex Sans Condensed\', sans-serif; text-transform:uppercase; color:' + (isAns ? '#0a6b3c' : '#b31217') + '; font-weight:700;">' + (isAns ? 'ĐÃ TRẢ LỜI' : 'CHƯA TRẢ LỜI') + '</span>';
@@ -4133,39 +4258,7 @@
         }
       });
 
-      // Disable Context Menu (Right Click)
-      document.addEventListener('contextmenu', function (e) {
-        e.preventDefault();
-      });
 
-      // Disable Destructive Keyboard Shortcuts (F5, Ctrl+R, Ctrl+U, F12, Ctrl+Shift+I)
-      document.addEventListener('keydown', function (e) {
-        if (e.key === 'F5' || (e.ctrlKey && (e.key === 'r' || e.key === 'R'))) {
-          e.preventDefault();
-          return;
-        }
-        if ((e.ctrlKey && (e.key === 'u' || e.key === 'U')) ||
-            e.key === 'F12' ||
-            (e.ctrlKey && e.shiftKey && (e.key === 'i' || e.key === 'I'))) {
-          e.preventDefault();
-          return;
-        }
-      });
-
-      // Tab Switching / Focus Loss Monitoring
-      var tabSwitchCount = 0;
-      var integrityWarning = document.getElementById('integrity-warning');
-      var integrityCount = document.getElementById('integrity-count');
-
-      document.addEventListener('visibilitychange', function () {
-        if (document.hidden && !isSubmitting) {
-          tabSwitchCount++;
-          if (integrityWarning) {
-            integrityWarning.style.display = 'block';
-            if (integrityCount) integrityCount.textContent = tabSwitchCount;
-          }
-        }
-      });
 
       // Online / Offline Detection
       var networkWarning = document.getElementById('network-warning');

@@ -108,7 +108,8 @@ public sealed record AttemptQuestionDto(
     int ClusterSize = 1,
     bool RequireImage = false,
     int UnitNumber = 1,
-    int? GroupId = null);
+    int? GroupId = null,
+    string? TimerPolicyJson = null);
 
 public sealed record NavigatorItemDto(
     int QuestionId,
