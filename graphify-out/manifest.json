@@ -1586,8 +1586,8 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Exams/Take.cshtml": {
-    "mtime": 1792963642.7901795,
-    "ast_hash": "72fcaaa3f96f8ca82094db15a0635b63",
+    "mtime": 1792979359.0503123,
+    "ast_hash": "8c2c396c0bd25fd6ff0ca4b46bef76df",
     "semantic_hash": ""
   },
   "tests/Services.Tests/MockExamServiceTests.cs": {
@@ -2926,8 +2926,8 @@
     "semantic_hash": ""
   },
   "tests/WebMVC.E2ETests/Journeys/AdminExamStudioTests.cs": {
-    "mtime": 1792476525.1269233,
-    "ast_hash": "4d62a8ed4f27f02c252970d8b936dfe2",
+    "mtime": 1792978920.0453298,
+    "ast_hash": "8a48b4470cfa4b7f50e28dde4aee3a7b",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Admin/Lessons/Preview.cshtml": {
@@ -3671,8 +3671,8 @@
     "semantic_hash": ""
   },
   "tests/WebMVC.E2ETests/Journeys/ExamAudioAndInstructionsTests.cs": {
-    "mtime": 1792899162.1896958,
-    "ast_hash": "7f904d35e8d4fbcf7b1ccf7500f73268",
+    "mtime": 1792978920.0453298,
+    "ast_hash": "bbfb3093511713eddc1c71719697aa88",
     "semantic_hash": ""
   },
   "docs/adr/0010-exam-shell-and-client-side-question-swapping.md": {
@@ -4472,8 +4472,118 @@
     "semantic_hash": ""
   },
   "docs/manual-test-run-report.md": {
-    "mtime": 1792964572.9084709,
-    "ast_hash": "d81630e2dfc91a7f5f4e055435fa5c92",
+    "mtime": 1792979943.3392398,
+    "ast_hash": "d7d9b2adae7a76a0642e2f253be08770",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/cat_exam_results.png": {
+    "mtime": 1792979848.067814,
+    "ast_hash": "50b6f2812214945f7e502d6bf5568ec8",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/cat_stage1_q1_mcq.png": {
+    "mtime": 1792979757.0385175,
+    "ast_hash": "db926b9b014f42400ca9b470469fd1c9",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/cat_stage1_q4_inline_completion.png": {
+    "mtime": 1792979767.3100226,
+    "ast_hash": "e1141ca1ef963225d81dd3ce0268f6f0",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/cat_stage1_q6_drag_drop.png": {
+    "mtime": 1792979776.871956,
+    "ast_hash": "18cc5335965c8aeec6bdab6f7d97eb41",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/cat_stage2_locked_q7.png": {
+    "mtime": 1792979820.62265,
+    "ast_hash": "175dc73c5b03271473b7749f1bb27e9f",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/cat_unit_transition_modal.png": {
+    "mtime": 1792979789.667657,
+    "ast_hash": "a5a3c4dc43577a0f4eb6ce27616d40fb",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/exam_sitting_question1_masked_p1.png": {
+    "mtime": 1792979636.0337422,
+    "ast_hash": "7f250e469b29ec3d48f73db7f9bdfed5",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/exam_sitting_question2_p2_3options.png": {
+    "mtime": 1792979661.5854864,
+    "ast_hash": "cbcc398500530573dd6b20073ca680b9",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/exam_sitting_question3_clustered_card.png": {
+    "mtime": 1792979674.7189212,
+    "ast_hash": "bb8e089114a7e3cb71817f52b494bbc6",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/practice_answer_explanation.png": {
+    "mtime": 1792979893.610807,
+    "ast_hash": "ed8ceb6144f5ca111da6a4e716902356",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/practice_mode_qol.png": {
+    "mtime": 1792979877.1419885,
+    "ast_hash": "df821e8781ecf1d0ef3bed45d4c931c1",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/practice_summary.png": {
+    "mtime": 1792979903.825611,
+    "ast_hash": "b405a0e3a77f8802ac0f390e2a82f836",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/preflight_gate.png": {
+    "mtime": 1792979621.2326171,
+    "ast_hash": "789428e8cdcff972b43c0fcb8e8b56f3",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/quick_ingest_modal.png": {
+    "mtime": 1792979537.3472624,
+    "ast_hash": "9217971feb39a753b9b15304fe50bb13",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/quick_ingest_sample_loaded.png": {
+    "mtime": 1792979545.3350286,
+    "ast_hash": "e3c140adb306f9890171413a46c861d5",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/studio_overview.png": {
+    "mtime": 1792979447.0747488,
+    "ast_hash": "387b1333b70c29e98a7309a818429135",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/upload_state_after_audio.png": {
+    "mtime": 1792979522.7456772,
+    "ast_hash": "affa7e639dea517c74b521ae25ee610e",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/upload_state_after_image.png": {
+    "mtime": 1792979494.6385193,
+    "ast_hash": "fe0b6598809c55c9e71fbcfc5e5833c7",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/upload_state_before_image.png": {
+    "mtime": 1792979483.9878764,
+    "ast_hash": "387b1333b70c29e98a7309a818429135",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/wizard_step1.png": {
+    "mtime": 1792979244.8529215,
+    "ast_hash": "99032f881a5edc803266fa2295401a6a",
+    "semantic_hash": ""
+  },
+  "image.jpg": {
+    "mtime": 1792324363.2680407,
+    "ast_hash": "224664d9d7ceed7d9da3836cfeaae7f3",
+    "semantic_hash": ""
+  },
+  "audio.mp3": {
+    "mtime": 1792164955.2787018,
+    "ast_hash": "e35a522b03697ac540846b421d915c71",
     "semantic_hash": ""
   }
 }
