@@ -5,7 +5,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using BusinessObjects;
 using DataAccess;
-using DataAccess.Scaffold;
+using BusinessObjects.Entities;
+using BusinessObjects.Views;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 

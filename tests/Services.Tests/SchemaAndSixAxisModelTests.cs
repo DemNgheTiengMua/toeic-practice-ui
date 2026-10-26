@@ -1,6 +1,7 @@
 using System.Text.Json;
 using DataAccess;
-using DataAccess.Scaffold;
+using BusinessObjects.Entities;
+using BusinessObjects.Views;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Xunit;

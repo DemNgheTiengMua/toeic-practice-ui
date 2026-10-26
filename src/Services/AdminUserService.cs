@@ -1,7 +1,8 @@
 using BusinessObjects;
 using Contracts;
 using DataAccess;
-using DataAccess.Scaffold;
+using BusinessObjects.Entities;
+using BusinessObjects.Views;
 using Microsoft.EntityFrameworkCore;
 using Services.Credits;
 

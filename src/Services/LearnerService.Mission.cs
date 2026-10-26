@@ -135,9 +135,9 @@ public sealed partial class LearnerService
         int certId,
         List<MissionSectionRow> receptiveSections,
         Dictionary<int, MissionSectionRow> sectionById,
-        List<DataAccess.Scaffold.vw_UserSectionAccuracyAll> sectionAccRows,
+        List<vw_UserSectionAccuracyAll> sectionAccRows,
         Dictionary<int, MissionCategoryRow> categoryById,
-        List<DataAccess.Scaffold.vw_UserCategoryAccuracy> categoryAccRows,
+        List<vw_UserCategoryAccuracy> categoryAccRows,
         List<(int CategoryId, int SectionId)> categorySectionLinks,
         HashSet<int> clearedSectionIdsToday,
         CancellationToken cancellationToken)
@@ -315,7 +315,7 @@ public sealed partial class LearnerService
         int certId,
         int? step1SectionId,
         List<MissionSectionRow> receptiveSections,
-        List<DataAccess.Scaffold.vw_UserSectionAccuracyAll> sectionAccRows,
+        List<vw_UserSectionAccuracyAll> sectionAccRows,
         HashSet<int> clearedSectionIdsToday,
         CancellationToken cancellationToken)
     {

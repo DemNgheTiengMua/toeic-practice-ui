@@ -96,7 +96,7 @@ public sealed class LessonService(CompanionDbContext db) : ILessonService
                 .Select(l => new { l.CertId })
                 .SingleAsync();
 
-            progress = new DataAccess.Scaffold.LearnerLessonProgress
+            progress = new LearnerLessonProgress
             {
                 UserId = userId,
                 LessonId = lessonId,

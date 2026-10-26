@@ -120,7 +120,8 @@ builder.Services.AddAuthorizationBuilder()
     .AddPolicy(Roles.Learner, policy => policy.RequireRole(Roles.Learner));
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<CurrentUser>();
-builder.Services.AddScoped<DateTimeFormatter>();
+builder.Services.AddScoped<WebMVC.Formatters.DateTimeFormatter>();
+builder.Services.AddScoped<WebMVC.DateTimeFormatter>();
 
 var app = builder.Build();
 

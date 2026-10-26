@@ -32,6 +32,7 @@ public abstract class LearnerControllerBase(CurrentUser currentUser, ILogger log
             {
                 var shell = await client.GetLearnerContextAsync(HttpContext.RequestAborted);
                 LearnerShell.Set(HttpContext, shell);
+                ViewData["LearnerShell"] = shell;
             }
         }
         // AUTH_LOCKED / AUTH_REQUIRED propagate to the sign-out middleware in Program.cs.
@@ -44,14 +45,4 @@ public abstract class LearnerControllerBase(CurrentUser currentUser, ILogger log
 
         await next();
     }
-}
-
-/// <summary>Where the learner layout finds the shell context the base controller loaded.</summary>
-public static class LearnerShell
-{
-    private const string Key = "learner-shell";
-
-    public static void Set(HttpContext http, LearnerContextDto context) => http.Items[Key] = context;
-
-    public static LearnerContextDto? Get(HttpContext http) => http.Items[Key] as LearnerContextDto;
 }

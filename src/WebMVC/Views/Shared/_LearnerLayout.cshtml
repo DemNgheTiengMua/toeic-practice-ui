@@ -1,7 +1,5 @@
-@using WebMVC.Controllers
-@inject CurrentUser CurrentUser
 @{
-    var shell = LearnerShell.Get(Context);
+    var shell = ViewData["LearnerShell"] as LearnerContextDto ?? Context.Items["learner-shell"] as LearnerContextDto;
     var path = Context.Request.Path.Value ?? "/";
     var returnUrl = path + Context.Request.QueryString;
     string NavClass(string href)
@@ -28,6 +26,7 @@
   <link rel="stylesheet" href="~/css/tokens.css">
   <link rel="stylesheet" href="~/css/base.css">
   <link rel="stylesheet" href="~/css/components.css">
+  @await RenderSectionAsync("Styles", required: false)
   <script src="~/js/sidebar.js"></script>
 </head>
 <body>
@@ -42,7 +41,7 @@
         }
         <form method="post" action="/auth/sign-out" class="no-margin">
           @Html.AntiForgeryToken()
-          <button type="submit" class="btn btn--ghost btn--sm">Sign out (@(CurrentUser.FullName ?? CurrentUser.Email))</button>
+          <button type="submit" class="btn btn--ghost btn--sm">Sign out (@(User.GetDisplayName()))</button>
         </form>
       </div>
     </header>

@@ -3,7 +3,8 @@ using System.Text;
 using System.Text.Json.Nodes;
 using BusinessObjects;
 using Contracts;
-using DataAccess.Scaffold;
+using BusinessObjects.Entities;
+using BusinessObjects.Views;
 using Microsoft.EntityFrameworkCore;
 
 namespace Services.Tests;

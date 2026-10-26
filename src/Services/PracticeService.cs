@@ -1,7 +1,8 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using BusinessObjects;
 using DataAccess;
-using DataAccess.Scaffold;
+using BusinessObjects.Entities;
+using BusinessObjects.Views;
 using Microsoft.EntityFrameworkCore;
 
 namespace Services;

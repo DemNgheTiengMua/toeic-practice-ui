@@ -1,6 +1,7 @@
 using BusinessObjects;
 using Contracts;
-using DataAccess.Scaffold;
+using BusinessObjects.Entities;
+using BusinessObjects.Views;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 

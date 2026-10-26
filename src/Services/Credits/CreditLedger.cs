@@ -2,7 +2,8 @@ using BusinessObjects;
 using Contracts;
 using static Contracts.EnumMapping;
 using DataAccess;
-using DataAccess.Scaffold;
+using BusinessObjects.Entities;
+using BusinessObjects.Views;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 

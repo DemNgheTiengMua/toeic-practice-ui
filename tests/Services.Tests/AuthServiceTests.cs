@@ -57,7 +57,7 @@ public sealed class AuthServiceTests(DatabaseFixture database)
         // Framework password hasher: format v1 marker in the decoded payload, and the password verifies.
         var base64 = Convert.ToBase64String(row.PasswordHash);
         Assert.Equal(0x01, Convert.FromBase64String(base64)[0]);
-        var hasher = new PasswordHasher<DataAccess.Scaffold.User>();
+        var hasher = new PasswordHasher<User>();
         Assert.Equal(
             PasswordVerificationResult.Success,
             hasher.VerifyHashedPassword(row, base64, "s3cret-pass"));

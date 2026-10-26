@@ -1,6 +1,7 @@
 using BusinessObjects;
 using DataAccess;
-using DataAccess.Scaffold;
+using BusinessObjects.Entities;
+using BusinessObjects.Views;
 using Microsoft.EntityFrameworkCore;
 
 namespace Services.Tests;
@@ -432,7 +433,7 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         // Question 2: save to bank
         await using (var db = DbContextFactory.Create(database.ConnectionString))
         {
-            db.SavedQuestions.Add(new DataAccess.Scaffold.SavedQuestion
+            db.SavedQuestions.Add(new SavedQuestion
             {
                 UserId = userId,
                 QuestionId = qIds[1],

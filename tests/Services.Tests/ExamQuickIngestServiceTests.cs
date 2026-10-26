@@ -1,7 +1,8 @@
 using System;
 using System.Linq;
 using Contracts;
-using DataAccess.Scaffold;
+using BusinessObjects.Entities;
+using BusinessObjects.Views;
 using Services;
 using Xunit;
 
