@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -29,7 +29,7 @@ public partial class Question
 
     public int DifficultyLevel { get; set; }
 
-    [StringLength(14)]
+    [StringLength(30)]
     [Unicode(false)]
     public string QuestionType { get; set; } = null!;
 
@@ -44,6 +44,14 @@ public partial class Question
     public int? MinWords { get; set; }
 
     public int? MaxWords { get; set; }
+
+    public int? MaxSelections { get; set; }
+
+    public bool AllowNumber { get; set; } = true;
+
+    public string? AcceptedAnswersJson { get; set; }
+
+    public string? RequiredKeywords { get; set; }
 
     [StringLength(1000)]
     public string? Hint { get; set; }

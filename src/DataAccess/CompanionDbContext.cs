@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using DataAccess.Scaffold;
 using Microsoft.EntityFrameworkCore;
@@ -222,6 +222,9 @@ public partial class CompanionDbContext : DbContext
         {
             entity.HasKey(e => e.AnswerId).HasName("PK__AttemptA__D48250049EDA465F");
 
+            entity.Property(e => e.ResponseText);
+            entity.Property(e => e.SelectedOptionIdsJson);
+
             entity.HasOne(d => d.Attempt).WithMany(p => p.AttemptAnswerAttempts)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__AttemptAn__Attem__0F2D40CE");
@@ -313,6 +316,8 @@ public partial class CompanionDbContext : DbContext
             entity.HasKey(e => e.CertId).HasName("PK__Certific__E5BD38C52927F6C0");
 
             entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.ScoreAggregationRule).HasMaxLength(30).HasDefaultValue("sum");
+            entity.Property(e => e.PresetCode).HasMaxLength(50);
         });
 
         modelBuilder.Entity<Complaint>(entity =>
@@ -435,6 +440,8 @@ public partial class CompanionDbContext : DbContext
 
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysdatetimeoffset())");
             entity.Property(e => e.Purpose).HasDefaultValue("mock", "DF_Exams_Purpose");
+            entity.Property(e => e.DeliveryMode).HasMaxLength(30).HasDefaultValue("strict_exam");
+            entity.Property(e => e.ExamFamily).HasMaxLength(50);
             entity.Property(e => e.Status).HasDefaultValue("draft");
 
             entity.HasOne(d => d.Cert).WithMany(p => p.Exams)
@@ -457,6 +464,22 @@ public partial class CompanionDbContext : DbContext
 
             entity.Property(e => e.StartedAt).HasDefaultValueSql("(sysdatetimeoffset())");
             entity.Property(e => e.Status).HasDefaultValue("in_progress");
+            entity.Property(e => e.ActiveUnitNumber).HasDefaultValue(1);
+            entity.Property(e => e.AuthorizationCode).HasMaxLength(64);
+            entity.Property(e => e.PhaseDeadlineAt).HasColumnType("datetime2");
+            entity.Property(e => e.LastAudioOffsetMs).HasDefaultValue(0);
+            entity.Property(e => e.CandidateNotesJson);
+            entity.Property(e => e.PreflightVerifiedAt);
+
+            entity.HasOne(d => d.ActiveSkill).WithMany()
+                .HasPrincipalKey(p => new { p.SkillId, p.CertId })
+                .HasForeignKey(d => new { d.ActiveSkillId, d.CertId })
+                .HasConstraintName("FK_Attempts_ActiveSkill");
+
+            entity.HasOne(d => d.ActiveGroup).WithMany()
+                .HasPrincipalKey(p => new { p.GroupId, p.CertId })
+                .HasForeignKey(d => new { d.ActiveGroupId, d.CertId })
+                .HasConstraintName("FK_Attempts_ActiveGroup");
 
             entity.HasOne(d => d.Cert).WithMany(p => p.ExamAttempts)
                 .OnDelete(DeleteBehavior.ClientSetNull)
@@ -511,6 +534,7 @@ public partial class CompanionDbContext : DbContext
 
             entity.HasIndex(e => e.SubmittedAt, "IX_FreeResponses_Pending").HasFilter("([Status]='pending_ai')");
 
+            entity.Property(e => e.QuestionType).HasMaxLength(30);
             entity.Property(e => e.Status).HasDefaultValue("pending_ai");
             entity.Property(e => e.SubmittedAt).HasDefaultValueSql("(sysdatetimeoffset())");
 
@@ -945,6 +969,9 @@ public partial class CompanionDbContext : DbContext
         {
             entity.HasKey(e => e.AnswerId).HasName("PK__Practice__D48250043F262F2D");
 
+            entity.Property(e => e.ResponseText);
+            entity.Property(e => e.SelectedOptionIdsJson);
+
             entity.HasOne(d => d.Question).WithMany(p => p.PracticeAnswerQuestions)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__PracticeA__Quest__6CD828CA");
@@ -1005,6 +1032,12 @@ public partial class CompanionDbContext : DbContext
 
             entity.HasIndex(e => e.CategoryId, "IX_Questions_Category").HasFilter("([CategoryId] IS NOT NULL)");
 
+            entity.Property(e => e.QuestionType).HasMaxLength(30);
+            entity.Property(e => e.AllowNumber).HasDefaultValue(true);
+            entity.Property(e => e.MaxSelections);
+            entity.Property(e => e.AcceptedAnswersJson);
+            entity.Property(e => e.RequiredKeywords);
+
             entity.HasOne(d => d.Category).WithMany(p => p.Questions).HasConstraintName("FK_Questions_Category");
 
             entity.HasOne(d => d.Group).WithMany(p => p.QuestionGroups)
@@ -1045,6 +1078,10 @@ public partial class CompanionDbContext : DbContext
 
             entity.ToTable(tb => tb.HasTrigger("trg_QGroups_SkillPracticeOneModality"));
 
+            entity.Property(e => e.UnitNumber).HasDefaultValue(1);
+
+            entity.HasIndex(e => new { e.GroupId, e.CertId }, "UQ_QGroups_Id_Cert").IsUnique();
+
             entity.HasOne(d => d.Exam).WithMany(p => p.QuestionGroups)
                 .HasPrincipalKey(p => new { p.ExamId, p.CertId })
                 .HasForeignKey(d => new { d.ExamId, d.CertId })
@@ -1062,9 +1099,11 @@ public partial class CompanionDbContext : DbContext
         {
             entity.HasKey(e => e.OptionId).HasName("PK__Question__92C7A1FFB8F0027D");
 
+            entity.Property(e => e.QuestionType).HasMaxLength(30);
+
             entity.HasIndex(e => e.QuestionId, "UX_Options_OneCorrect")
                 .IsUnique()
-                .HasFilter("([IsCorrect]=(1))");
+                .HasFilter("([IsCorrect]=(1) AND [QuestionType]<>'multi_select')");
 
             entity.HasOne(d => d.Question).WithOne(p => p.QuestionOptionQuestion)
                 .OnDelete(DeleteBehavior.ClientSetNull)
@@ -1192,6 +1231,21 @@ public partial class CompanionDbContext : DbContext
         modelBuilder.Entity<Section>(entity =>
         {
             entity.HasKey(e => e.SectionId).HasName("PK__Sections__80EF0872ACBB3BA8");
+
+            entity.Property(e => e.ScoreWeight).HasPrecision(5, 2).HasDefaultValue(1.0m);
+            entity.Property(e => e.NavigationMode).HasMaxLength(30).HasDefaultValue("FULL_SANDBOX");
+            entity.Property(e => e.TimerPolicyJson);
+            entity.Property(e => e.LayoutType).HasMaxLength(30).HasDefaultValue("STANDARD_VERTICAL");
+            entity.Property(e => e.OptionCount).HasDefaultValue(4);
+            entity.Property(e => e.ClusterSize).HasDefaultValue(1);
+            entity.Property(e => e.UnitCount).HasDefaultValue(1);
+            entity.Property(e => e.HideOptionText).HasDefaultValue(false);
+            entity.Property(e => e.RequirePassage).HasDefaultValue(false);
+            entity.Property(e => e.RequireAudio).HasDefaultValue(false);
+            entity.Property(e => e.RequireImage).HasDefaultValue(false);
+            entity.Property(e => e.RequiredKeywordCount).HasDefaultValue(0);
+            entity.Property(e => e.AllowedComponentTypesJson);
+            entity.Property(e => e.ToolsConfigJson);
 
             entity.HasOne(d => d.Skill).WithMany(p => p.SectionSkills)
                 .HasPrincipalKey(p => new { p.SkillId, p.CertId })

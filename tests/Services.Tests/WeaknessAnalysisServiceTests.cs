@@ -398,4 +398,127 @@ public sealed class WeaknessAnalysisServiceTests(DatabaseFixture database)
         Assert.Single(viewB.Recommendations);
         Assert.Equal("Reco in Cert B", viewB.Recommendations[0].Text);
     }
+[Fact]
+    public async Task WeaknessAnalysis_includes_practice_multi_select_and_inline_completion()
+    {
+        var certCode = Unique("NC");
+        int secId, catId, q1Id, q2Id;
+
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            var cert = new Certificate { Code = certCode, Name = $"Cert {certCode}", IsActive = true };
+            db.Certificates.Add(cert);
+            await db.SaveChangesAsync();
+
+            var cat = new QuestionCategory { CertId = cert.CertId, Code = Unique("NCAT"), Name = "Mixed Objective Cat" };
+            db.QuestionCategories.Add(cat);
+            await db.SaveChangesAsync();
+            catId = cat.CategoryId;
+
+            var skill = new Skill { CertId = cert.CertId, Code = "READ", Name = "Reading", Modality = "reading", DisplayOrder = 1 };
+            db.Skills.Add(skill);
+            await db.SaveChangesAsync();
+
+            var sec = new Section { CertId = cert.CertId, SkillId = skill.SkillId, Modality = "reading", Code = "P6", Name = "Mixed Sec", DisplayOrder = 1, OptionCount = 4 };
+            db.Sections.Add(sec);
+            await db.SaveChangesAsync();
+            secId = sec.SectionId;
+
+            var exam = new Exam { CertId = cert.CertId, Name = $"Exam {certCode}", Status = "published", DurationMinutes = 60, Purpose = "mock" };
+            db.Exams.Add(exam);
+            await db.SaveChangesAsync();
+
+            var grp = new QuestionGroup { ExamId = exam.ExamId, CertId = cert.CertId, SectionId = sec.SectionId, DisplayOrder = 1 };
+            db.QuestionGroups.Add(grp);
+            await db.SaveChangesAsync();
+
+            var q1 = new Question
+            {
+                GroupId = grp.GroupId,
+                ExamId = exam.ExamId,
+                SectionId = sec.SectionId,
+                SkillId = skill.SkillId,
+                CategoryId = cat.CategoryId,
+                Stem = "Multi select q1",
+                DifficultyLevel = 2,
+                QuestionType = "multi_select",
+                DisplayOrder = 1
+            };
+            var q2 = new Question
+            {
+                GroupId = grp.GroupId,
+                ExamId = exam.ExamId,
+                SectionId = sec.SectionId,
+                SkillId = skill.SkillId,
+                CategoryId = cat.CategoryId,
+                Stem = "Inline completion q2",
+                DifficultyLevel = 3,
+                QuestionType = "inline_completion",
+                DisplayOrder = 2
+            };
+            db.Questions.AddRange(q1, q2);
+            await db.SaveChangesAsync();
+            q1Id = q1.QuestionId;
+            q2Id = q2.QuestionId;
+        }
+
+        var userId = await SeedLearnerAsync(certCode);
+        var (service, _) = CreateServices();
+
+        // Seed a finished practice session with 2 answers (1 correct, 1 incorrect)
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            var session = new PracticeSession
+            {
+                UserId = userId,
+                SectionId = secId,
+                Modality = "reading",
+                QuestionSource = "all",
+                FeedbackMode = "immediate",
+                Status = "finished",
+                QuestionCount = 2,
+                CorrectCount = 1,
+                StartedAt = DateTimeOffset.UtcNow.AddHours(-1),
+                FinishedAt = DateTimeOffset.UtcNow.AddMinutes(-30)
+            };
+            db.PracticeSessions.Add(session);
+            await db.SaveChangesAsync();
+
+            var pa1 = new PracticeAnswer
+            {
+                SessionId = session.SessionId,
+                QuestionId = q1Id,
+                SectionId = secId,
+                DisplayOrder = 1,
+                IsCorrect = true
+            };
+            var pa2 = new PracticeAnswer
+            {
+                SessionId = session.SessionId,
+                QuestionId = q2Id,
+                SectionId = secId,
+                DisplayOrder = 2,
+                IsCorrect = false
+            };
+            db.PracticeAnswers.AddRange(pa1, pa2);
+            await db.SaveChangesAsync();
+        }
+
+        var view = await service.GetWeaknessAnalysisAsync(userId);
+        Assert.True(view.HasData);
+        Assert.Equal(2, view.TotalAnswered);
+        Assert.Equal(1, view.TotalCorrect);
+        Assert.Equal(1, view.CompletedPracticeCount);
+
+        var sectionStats = Assert.Single(view.Sections);
+        Assert.Equal(2, sectionStats.Answered);
+        Assert.Equal(1, sectionStats.Correct);
+        Assert.Equal(50, sectionStats.AccuracyPercentage);
+
+        var missedCat = Assert.Single(view.FrequentlyMissedCategories);
+        Assert.Equal(catId, missedCat.CategoryId);
+        Assert.Equal(2, missedCat.Answered);
+        Assert.Equal(1, missedCat.Correct);
+        Assert.Equal(50, missedCat.AccuracyPercentage);
+    }
 }

@@ -53,3 +53,46 @@ public sealed record UpdateScoreConversionRequest(
     int? ExamId,
     IReadOnlyList<UpdateScoreScaleEntryDto> Scales,
     IReadOnlyList<UpdateScoreBandEntryDto> Bands);
+
+public sealed record SectionScoreInputDto(
+    int? SectionId,
+    string? SectionCode,
+    int? SkillId,
+    decimal RawScore,
+    decimal ScoreWeight = 1.0m,
+    int? MaxQuestions = null);
+
+public sealed record SkillScoreInputDto(
+    int? SkillId,
+    string? SkillCode,
+    decimal? RawScore,
+    IReadOnlyList<SectionScoreInputDto>? Sections = null);
+
+public sealed record ScorePreviewRequestDto(
+    int? CertId,
+    string? CertCode,
+    string ScoreAggregationRule,
+    IReadOnlyList<SkillScoreInputDto> Skills,
+    IReadOnlyList<UpdateScoreScaleEntryDto>? CustomScales = null,
+    IReadOnlyList<UpdateScoreBandEntryDto>? CustomBands = null);
+
+public sealed record SectionScorePreviewResultDto(
+    int? SectionId,
+    string? SectionCode,
+    decimal RawScore,
+    decimal ScoreWeight,
+    decimal ScaledScore);
+
+public sealed record SkillScorePreviewResultDto(
+    int? SkillId,
+    string? SkillCode,
+    decimal RawScore,
+    int ScaledScore,
+    IReadOnlyList<SectionScorePreviewResultDto>? Sections = null);
+
+public sealed record ScorePreviewResultDto(
+    string ScoreAggregationRule,
+    IReadOnlyList<SkillScorePreviewResultDto> SkillScores,
+    int TotalScore,
+    string? BandCode,
+    string? BandName);

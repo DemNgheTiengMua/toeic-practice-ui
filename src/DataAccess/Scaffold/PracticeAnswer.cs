@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -20,6 +20,10 @@ public partial class PracticeAnswer
     public int SectionId { get; set; }
 
     public int? SelectedOptionId { get; set; }
+
+    public string? ResponseText { get; set; }
+
+    public string? SelectedOptionIdsJson { get; set; }
 
     public bool? IsCorrect { get; set; }
 

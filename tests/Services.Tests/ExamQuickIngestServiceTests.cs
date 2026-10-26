@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using Contracts;
+using DataAccess.Scaffold;
 using Services;
 using Xunit;
 
@@ -178,7 +179,6 @@ public sealed class ExamQuickIngestServiceTests
 
         var result = _parser.Parse(new QuickIngestParseRequest(raw));
 
-        // When there is no stem before options
         Assert.False(result.Success);
         var q = result.Questions[0];
         Assert.False(q.IsValid);
@@ -230,5 +230,308 @@ public sealed class ExamQuickIngestServiceTests
 
         Assert.False(result.Success);
         Assert.Contains(result.GlobalIssues, i => i.Severity == "error" && i.Message.Contains("JSON"));
+    }
+
+    // ================= STEP 06 NEW MULTI-FORMAT & BLUEPRINT TESTS =================
+
+    [Fact]
+    public void RapidAnswerKey_ParsesCleanlyAndGeneratesOptions()
+    {
+        var raw = """
+            1. A
+            TRANSCRIPT: Where is the nearest bus stop?
+            2. C
+            TRANSCRIPT: When does the flight to Tokyo depart?
+            3. B
+            EXPLANATION: Choice B directly answers the question.
+            """;
+
+        var result = _parser.Parse(new QuickIngestParseRequest(raw));
+
+        Assert.True(result.Success);
+        Assert.Equal(3, result.TotalQuestions);
+        Assert.Equal(3, result.ValidQuestions);
+
+        var q1 = result.Questions[0];
+        Assert.Equal(1, q1.Index);
+        Assert.Equal("A", q1.Options.Single(o => o.IsCorrect).Label);
+        Assert.Equal("Where is the nearest bus stop?", q1.Transcript);
+
+        var q2 = result.Questions[1];
+        Assert.Equal(2, q2.Index);
+        Assert.Equal("C", q2.Options.Single(o => o.IsCorrect).Label);
+
+        var q3 = result.Questions[2];
+        Assert.Equal(3, q3.Index);
+        Assert.Equal("B", q3.Options.Single(o => o.IsCorrect).Label);
+        Assert.Equal("Choice B directly answers the question.", q3.Explanation);
+    }
+
+    [Fact]
+    public void ClusteredPassageMode_GroupsQuestionsAndAttachesPassage()
+    {
+        var raw = """
+            PASSAGE: GreenLeaf Logistics has announced an expansion of its refrigerated courier services to meet rising demand from organic food producers. The fleet will add 25 electric delivery vans by the end of Q3.
+
+            1. What is the main purpose of the announcement?
+            *A. To announce service expansion
+            B. To advertise job openings
+            C. To explain rate increases
+            D. To report financial earnings
+
+            2. How many new vehicles will be added?
+            A. 10
+            B. 15
+            *C. 25
+            D. 50
+            """;
+
+        var result = _parser.Parse(new QuickIngestParseRequest(raw));
+
+        Assert.True(result.Success);
+        Assert.Equal(2, result.TotalQuestions);
+
+        Assert.All(result.Questions, q =>
+        {
+            Assert.NotNull(q.Passage);
+            Assert.Contains("GreenLeaf Logistics", q.Passage);
+        });
+
+        Assert.Equal("A", result.Questions[0].Options.Single(o => o.IsCorrect).Label);
+        Assert.Equal("C", result.Questions[1].Options.Single(o => o.IsCorrect).Label);
+    }
+
+    [Fact]
+    public void InlineCompletionMode_ParsesAcceptedVariantsAndMaxWords()
+    {
+        var raw = """
+            1. What time does the botanical garden open each day?
+            ANSWER: 9:00 AM | 9 AM | 9am
+            MAX_WORDS: 2
+
+            2. What document is required for free admission?
+            ANSWER: student ID | university identification | valid ID
+            MAX_WORDS: 2
+            """;
+
+        var result = _parser.Parse(new QuickIngestParseRequest(raw));
+
+        Assert.True(result.Success);
+        Assert.Equal(2, result.TotalQuestions);
+
+        var q1 = result.Questions[0];
+        Assert.Equal("inline_completion", q1.QuestionType);
+        Assert.Equal(2, q1.MaxWords);
+        Assert.NotNull(q1.AcceptedAnswersJson);
+        Assert.Contains("9:00 AM", q1.AcceptedAnswersJson);
+
+        var q2 = result.Questions[1];
+        Assert.Equal("inline_completion", q2.QuestionType);
+        Assert.Contains("student ID", q2.AcceptedAnswersJson);
+    }
+
+    [Fact]
+    public void MultiSelectMode_AllowsMultipleCorrectOptions()
+    {
+        var raw = """
+            1. Which documents must researchers submit before October 15?
+            *A. Safety audit
+            B. Financial budget
+            *C. Equipment inventory
+            D. Travel reimbursement
+            ANSWER: A, C
+            MAX_SELECTIONS: 2
+            """;
+
+        var result = _parser.Parse(new QuickIngestParseRequest(raw));
+
+        Assert.True(result.Success);
+        Assert.Single(result.Questions);
+
+        var q = result.Questions[0];
+        Assert.Equal("multi_select", q.QuestionType);
+        Assert.Equal(2, q.MaxSelections);
+        Assert.Equal(2, q.Options.Count(o => o.IsCorrect));
+        Assert.True(q.Options.Single(o => o.Label == "A").IsCorrect);
+        Assert.True(q.Options.Single(o => o.Label == "C").IsCorrect);
+        Assert.False(q.Options.Single(o => o.Label == "B").IsCorrect);
+    }
+
+    [Fact]
+    public void KeywordFreeResponseMode_ParsesMandatoryKeywords()
+    {
+        var raw = """
+            PROMPT: Write a sentence based on the photograph using the two keywords provided.
+            KEYWORDS: photograph, yesterday
+            MIN_WORDS: 5
+            MAX_WORDS: 30
+
+            PROMPT: Write a sentence based on the photograph using the two keywords provided.
+            KEYWORDS: airport, luggage
+            MIN_WORDS: 5
+            MAX_WORDS: 30
+            """;
+
+        var result = _parser.Parse(new QuickIngestParseRequest(raw));
+
+        Assert.True(result.Success);
+        Assert.Equal(2, result.TotalQuestions);
+
+        var q1 = result.Questions[0];
+        Assert.Equal("free_response", q1.QuestionType);
+        Assert.Equal("photograph, yesterday", q1.RequiredKeywords);
+        Assert.Equal(5, q1.MinWords);
+        Assert.Equal(30, q1.MaxWords);
+
+        var q2 = result.Questions[1];
+        Assert.Equal("free_response", q2.QuestionType);
+        Assert.Equal("airport, luggage", q2.RequiredKeywords);
+    }
+
+    [Fact]
+    public void BlueprintValidation_RejectsOptionBeyondOptionCount()
+    {
+        // TOEIC Part 2 Section has OptionCount = 3 (A, B, C)
+        var section = new Section
+        {
+            SectionId = 10,
+            Name = "Question-Response",
+            Code = "P2",
+            Modality = "listening",
+            OptionCount = 3,
+            AllowedComponentTypesJson = "[\"mcq_3\",\"mcq\"]"
+        };
+
+        var raw = """
+            1. Where is the meeting?
+            A. In the lobby
+            B. At 3 PM
+            C. Yes, I did
+            D. Next Friday
+            ANSWER: D
+            """;
+
+        var parsed = _parser.Parse(new QuickIngestParseRequest(raw));
+        var validated = ExamQuickIngestService.ValidateAgainstSectionBlueprint(parsed, section);
+
+        Assert.False(validated.Success);
+        Assert.Single(validated.Questions);
+        var q = validated.Questions[0];
+        Assert.False(q.IsValid);
+        Assert.Contains(q.Issues, i => i.Message.Contains("Option 'D' exceeds section allowed OptionCount"));
+    }
+
+    [Fact]
+    public void BlueprintValidation_RejectsUnallowedComponentType()
+    {
+        // Section allows only MCQ
+        var section = new Section
+        {
+            SectionId = 20,
+            Name = "Incomplete Sentences",
+            Code = "P5",
+            Modality = "reading",
+            OptionCount = 4,
+            AllowedComponentTypesJson = "[\"mcq\"]"
+        };
+
+        var raw = """
+            PROMPT: Write an essay about global warming.
+            KEYWORDS: climate, emissions
+            """;
+
+        var parsed = _parser.Parse(new QuickIngestParseRequest(raw));
+        var validated = ExamQuickIngestService.ValidateAgainstSectionBlueprint(parsed, section);
+
+        Assert.False(validated.Success);
+        Assert.Single(validated.Questions);
+        var q = validated.Questions[0];
+        Assert.False(q.IsValid);
+        Assert.Contains(q.Issues, i => i.Message.Contains("is not allowed in section"));
+    }
+
+    [Fact]
+    public void BlueprintValidation_RejectsKeywordCountMismatch()
+    {
+        // Section requires exactly 2 keywords (e.g. TOEIC Writing Q1-5)
+        var section = new Section
+        {
+            SectionId = 30,
+            Name = "Write a Sentence",
+            Code = "W1",
+            Modality = "writing",
+            RequiredKeywordCount = 2,
+            AllowedComponentTypesJson = "[\"free_response\"]"
+        };
+
+        var raw = """
+            PROMPT: Write a sentence based on the picture.
+            KEYWORDS: only_one_keyword
+            """;
+
+        var parsed = _parser.Parse(new QuickIngestParseRequest(raw));
+        var validated = ExamQuickIngestService.ValidateAgainstSectionBlueprint(parsed, section);
+
+        Assert.False(validated.Success);
+        Assert.Single(validated.Questions);
+        var q = validated.Questions[0];
+        Assert.False(q.IsValid);
+        Assert.Contains(q.Issues, i => i.Message.Contains("requires 2 keyword(s), but found 1"));
+    }
+
+    [Fact]
+    public void BlueprintValidation_RejectsMissingPassageWhenRequired()
+    {
+        var section = new Section
+        {
+            SectionId = 40,
+            Name = "Reading Passage",
+            Code = "P7",
+            Modality = "reading",
+            RequirePassage = true,
+            AllowedComponentTypesJson = "[\"mcq\"]"
+        };
+
+        var raw = """
+            1. What is the topic?
+            *A. First option
+            B. Second option
+            """;
+
+        var parsed = _parser.Parse(new QuickIngestParseRequest(raw));
+        var validated = ExamQuickIngestService.ValidateAgainstSectionBlueprint(parsed, section);
+
+        Assert.False(validated.Success);
+        var q = validated.Questions[0];
+        Assert.False(q.IsValid);
+        Assert.Contains(q.Issues, i => i.Message.Contains("requires a reading passage"));
+    }
+
+    [Fact]
+    public void SampleTemplateGenerator_ReturnsAppropriateBlueprintSyntax()
+    {
+        // 1. Keyword mode
+        var secKeywords = new Section { RequiredKeywordCount = 2, Modality = "writing" };
+        var t1 = ExamQuickIngestService.GenerateSectionSampleTemplate(secKeywords);
+        Assert.Contains("KEYWORDS:", t1);
+        Assert.Contains("PROMPT:", t1);
+
+        // 2. Inline completion mode
+        var secCompletion = new Section { AllowedComponentTypesJson = "[\"inline_completion\"]", Modality = "reading" };
+        var t2 = ExamQuickIngestService.GenerateSectionSampleTemplate(secCompletion);
+        Assert.Contains("MAX_WORDS:", t2);
+        Assert.Contains("ANSWER:", t2);
+        Assert.Contains("|", t2);
+
+        // 3. 3-option audio mode
+        var secAudio3 = new Section { OptionCount = 3, Modality = "listening" };
+        var t3 = ExamQuickIngestService.GenerateSectionSampleTemplate(secAudio3);
+        Assert.Contains("1. A", t3);
+        Assert.Contains("TRANSCRIPT:", t3);
+
+        // 4. Passage mode
+        var secPassage = new Section { RequirePassage = true, OptionCount = 4, Modality = "reading" };
+        var t4 = ExamQuickIngestService.GenerateSectionSampleTemplate(secPassage);
+        Assert.Contains("PASSAGE:", t4);
     }
 }

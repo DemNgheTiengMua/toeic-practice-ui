@@ -66,6 +66,7 @@ public sealed record ApiError(string Code, string Title, int Status, string? Det
         public const string AttemptNotFound = "ATTEMPT_NOT_FOUND";
         public const string AttemptNotActive = "ATTEMPT_NOT_ACTIVE";
         public const string AttemptNotFinished = "ATTEMPT_NOT_FINISHED";
+        public const string PreflightRequired = "preflight_required";
 
         public const string ScoreConversionInvalid = "SCORE_CONVERSION_INVALID";
 

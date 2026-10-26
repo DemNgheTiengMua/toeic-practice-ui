@@ -93,7 +93,23 @@ public sealed record AttemptQuestionInfo(
     int? ResponseDurationMs = null,
     DateTimeOffset? DraftSavedAt = null,
     int? SkillDurationMinutes = null,
-    int SkillDisplayOrder = 0);
+    int SkillDisplayOrder = 0,
+    IReadOnlyList<int>? SelectedOptionIds = null,
+    int? MaxSelections = null,
+    bool AllowNumber = true,
+    string? AcceptedAnswersJson = null,
+    string? RequiredKeywords = null,
+    string? LayoutType = null,
+    bool RequirePassage = false,
+    string? NavigationMode = null,
+    string? ToolsConfigJson = null,
+    bool HideOptionText = false,
+    int OptionCount = 4,
+    int ClusterSize = 1,
+    bool RequireImage = false,
+    int UnitNumber = 1,
+    int? GroupId = null,
+    string? TimerPolicyJson = null);
 
 public sealed record AttemptFinalDraft(
     int QuestionId,
@@ -113,6 +129,22 @@ public sealed record SaveAttemptDraftResult(
     DateTimeOffset SavedAt,
     int WordCount);
 
+public sealed record BatchAnswerItem(
+    int QuestionId,
+    int? SelectedOptionId,
+    bool IsFlagged,
+    string? ResponseText = null,
+    string? SelectedOptionIdsJson = null);
+
+public sealed record AttemptTransitionResult(
+    int AttemptId,
+    int? ActiveSkillId,
+    int ActiveUnitNumber,
+    int? ActiveGroupId,
+    DateTimeOffset? PhaseDeadlineAt,
+    int RemainingSeconds,
+    AttemptStatus Status);
+
 public sealed record NavigatorItem(
     int QuestionId,
     int DisplayOrder,
@@ -121,7 +153,8 @@ public sealed record NavigatorItem(
     Modality Modality,
     bool IsAnswered,
     bool IsFlagged,
-    bool IsCurrent);
+    bool IsCurrent,
+    bool IsLocked = false);
 
 public sealed record AttemptTakeView(
     int AttemptId,
@@ -139,7 +172,68 @@ public sealed record AttemptTakeView(
     IReadOnlyList<NavigatorItem> Navigator,
     bool IsAutoSubmitted,
     IReadOnlyList<AttemptQuestionInfo>? Questions = null,
-    IReadOnlyList<AttemptPhaseInfo>? Phases = null);
+    IReadOnlyList<AttemptPhaseInfo>? Phases = null,
+    int? ActiveSkillId = null,
+    int ActiveUnitNumber = 1,
+    int? ActiveGroupId = null,
+    DateTimeOffset? PhaseDeadlineAt = null,
+    bool IsSkillLocked = false,
+    string? AuthorizationCode = null,
+    int LastAudioOffsetMs = 0,
+    string? CandidateNotesJson = null);
+
+public sealed record SittingSyncRequest(
+    IReadOnlyList<BatchAnswerItem>? Answers = null,
+    int? LastAudioOffsetMs = null,
+    string? CandidateNotesJson = null,
+    int? LastQuestionId = null);
+
+public sealed record SittingSyncResult(
+    int AttemptId,
+    int RemainingSeconds,
+    bool IsAutoSubmitted,
+    int? ActiveSkillId,
+    int ActiveUnitNumber,
+    int? ActiveGroupId,
+    DateTimeOffset? PhaseDeadlineAt,
+    int LastAudioOffsetMs,
+    int AnswersSavedCount);
+
+public sealed record AttemptAnswerSheetItem(
+    int QuestionId,
+    int? SelectedOptionId,
+    string? SelectedOptionIdsJson,
+    string? ResponseText,
+    bool IsFlagged);
+
+public sealed record AttemptResumeView(
+    int AttemptId,
+    int ExamId,
+    string AuthorizationCode,
+    int? ActiveSkillId,
+    int ActiveUnitNumber,
+    int? ActiveGroupId,
+    int? LastQuestionId,
+    int LastAudioOffsetMs,
+    string? CandidateNotesJson,
+    int RemainingSeconds,
+    DateTimeOffset ExpiresAt,
+    DateTimeOffset? PhaseDeadlineAt,
+    IReadOnlyList<AttemptAnswerSheetItem> AnswerSheet);
+
+public sealed record PreflightStatusView(
+    int AttemptId,
+    int ExamId,
+    string ExamName,
+    string CertCode,
+    string CertName,
+    int DurationMinutes,
+    bool RequiresPreflight,
+    bool RequiresAudio,
+    bool RequiresMicrophone,
+    bool IsVerified,
+    DateTimeOffset? VerifiedAt,
+    IReadOnlyList<string> AudioUrls);
 
 public sealed record SaveAttemptAnswerResult(
     int QuestionId,

@@ -14,11 +14,51 @@ public enum Modality
     Writing,
 }
 
-/// <summary>CK_Questions_Type: mcq, free_response.</summary>
+/// <summary>CK_Questions_Type: mcq, mcq_3, multi_select, inline_completion, dropdown, drag_drop, free_response.</summary>
 public enum QuestionType
 {
     Mcq,
+    Mcq_3,
+    MultiSelect,
+    InlineCompletion,
+    Dropdown,
+    DragDrop,
     FreeResponse,
+}
+
+/// <summary>CK_Certificates_ScoreAggregationRule: sum, avg_half_step, avg_whole, independent.</summary>
+public enum ScoreAggregationRule
+{
+    Sum,
+    AvgHalfStep,
+    AvgWhole,
+    Independent,
+}
+
+/// <summary>CK_Exams_DeliveryMode: strict_exam, practice.</summary>
+public enum DeliveryMode
+{
+    StrictExam,
+    Practice,
+}
+
+/// <summary>CK_Sections_NavigationMode: FULL_SANDBOX, UNIT_LOCKED_SANDBOX, AUDIO_DRIVEN, SYSTEM_PACED_AUTO, HYBRID_GROUP_LOCKED.</summary>
+public enum NavigationMode
+{
+    FullSandbox,
+    UnitLockedSandbox,
+    AudioDriven,
+    SystemPacedAuto,
+    HybridGroupLocked,
+}
+
+/// <summary>Sections LayoutType.</summary>
+public enum LayoutType
+{
+    StandardVertical,
+    SplitHorizontal,
+    MediaCard,
+    Cluster3,
 }
 
 /// <summary>CK_Exams_Status: draft, published, hidden.</summary>

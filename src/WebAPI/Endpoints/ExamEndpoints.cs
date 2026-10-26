@@ -146,7 +146,23 @@ public static class ExamEndpoints
                     qInfo.ResponseDurationMs,
                     qInfo.DraftSavedAt,
                     qInfo.SkillDurationMinutes,
-                    qInfo.SkillDisplayOrder);
+                    qInfo.SkillDisplayOrder,
+                    qInfo.SelectedOptionIds,
+                    qInfo.MaxSelections,
+                    qInfo.AllowNumber,
+                    qInfo.AcceptedAnswersJson,
+                    qInfo.RequiredKeywords,
+                    qInfo.LayoutType,
+                    qInfo.RequirePassage,
+                    qInfo.NavigationMode,
+                    qInfo.ToolsConfigJson,
+                    qInfo.HideOptionText,
+                    qInfo.OptionCount,
+                    qInfo.ClusterSize,
+                    qInfo.RequireImage,
+                    qInfo.UnitNumber,
+                    qInfo.GroupId,
+                    qInfo.TimerPolicyJson);
 
                 var allQDtos = take.Questions?.Select(q => new AttemptQuestionDto(
                     q.QuestionId,
@@ -179,7 +195,23 @@ public static class ExamEndpoints
                     q.ResponseDurationMs,
                     q.DraftSavedAt,
                     q.SkillDurationMinutes,
-                    q.SkillDisplayOrder)).ToList();
+                    q.SkillDisplayOrder,
+                    q.SelectedOptionIds,
+                    q.MaxSelections,
+                    q.AllowNumber,
+                    q.AcceptedAnswersJson,
+                    q.RequiredKeywords,
+                    q.LayoutType,
+                    q.RequirePassage,
+                    q.NavigationMode,
+                    q.ToolsConfigJson,
+                    q.HideOptionText,
+                    q.OptionCount,
+                    q.ClusterSize,
+                    q.RequireImage,
+                    q.UnitNumber,
+                    q.GroupId,
+                    q.TimerPolicyJson)).ToList();
 
                 return Results.Ok(new AttemptTakeDto(
                     take.AttemptId,
@@ -195,7 +227,7 @@ public static class ExamEndpoints
                     take.FlaggedCount,
                     currentQDto,
                     take.Navigator.Select(n => new NavigatorItemDto(
-                        n.QuestionId, n.DisplayOrder, n.SectionId, n.SectionCode, n.Modality.MapTo<ModalityDto>(), n.IsAnswered, n.IsFlagged, n.IsCurrent)).ToList(),
+                        n.QuestionId, n.DisplayOrder, n.SectionId, n.SectionCode, n.Modality.MapTo<ModalityDto>(), n.IsAnswered, n.IsFlagged, n.IsCurrent, n.IsLocked)).ToList(),
                     take.IsAutoSubmitted,
                     allQDtos,
                     take.Phases?.Select(phase => new AttemptPhaseDto(
@@ -204,7 +236,85 @@ public static class ExamEndpoints
                         phase.SkillName,
                         phase.SkillDisplayOrder,
                         phase.StartOffsetSeconds,
-                        phase.DurationSeconds)).ToList()));
+                        phase.DurationSeconds)).ToList(),
+                    take.ActiveSkillId,
+                    take.ActiveUnitNumber,
+                    take.ActiveGroupId,
+                    take.PhaseDeadlineAt,
+                    take.IsSkillLocked,
+                    take.AuthorizationCode,
+                    take.LastAudioOffsetMs,
+                    take.CandidateNotesJson));
+            }
+            catch (MockExamException ex) when (ex.Code == MockExamException.AttemptNotFound)
+            {
+                return Problem(StatusCodes.Status404NotFound, "Attempt not found", ApiError.Codes.AttemptNotFound, ex.Message);
+            }
+            catch (MockExamException ex) when (ex.Code == MockExamException.AttemptNotActive)
+            {
+                return Problem(StatusCodes.Status400BadRequest, "Attempt not active", ApiError.Codes.AttemptNotActive, ex.Message);
+            }
+            catch (MockExamException ex) when (ex.Code == MockExamException.PreflightRequired)
+            {
+                return Problem(StatusCodes.Status400BadRequest, "Preflight verification required", ApiError.Codes.PreflightRequired, ex.Message);
+            }
+        });
+
+                learner.MapGet("/attempts/{attemptId:int}/preflight", async Task<IResult> (
+            int attemptId,
+            HttpContext http,
+            IMockExamService mockExamService,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var status = await mockExamService.GetPreflightStatusAsync(CurrentUserId(http), attemptId, cancellationToken);
+                return Results.Ok(new PreflightStatusDto(
+                    status.AttemptId,
+                    status.ExamId,
+                    status.ExamName,
+                    status.CertCode,
+                    status.CertName,
+                    status.DurationMinutes,
+                    status.RequiresPreflight,
+                    status.RequiresAudio,
+                    status.RequiresMicrophone,
+                    status.IsVerified,
+                    status.VerifiedAt,
+                    status.AudioUrls));
+            }
+            catch (MockExamException ex) when (ex.Code == MockExamException.AttemptNotFound)
+            {
+                return Problem(StatusCodes.Status404NotFound, "Attempt not found", ApiError.Codes.AttemptNotFound, ex.Message);
+            }
+            catch (MockExamException ex) when (ex.Code == MockExamException.AttemptNotActive)
+            {
+                return Problem(StatusCodes.Status400BadRequest, "Attempt not active", ApiError.Codes.AttemptNotActive, ex.Message);
+            }
+        });
+
+        learner.MapPost("/attempts/{attemptId:int}/preflight/verify", async Task<IResult> (
+            int attemptId,
+            HttpContext http,
+            IMockExamService mockExamService,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var status = await mockExamService.VerifyPreflightAsync(CurrentUserId(http), attemptId, cancellationToken);
+                return Results.Ok(new PreflightStatusDto(
+                    status.AttemptId,
+                    status.ExamId,
+                    status.ExamName,
+                    status.CertCode,
+                    status.CertName,
+                    status.DurationMinutes,
+                    status.RequiresPreflight,
+                    status.RequiresAudio,
+                    status.RequiresMicrophone,
+                    status.IsVerified,
+                    status.VerifiedAt,
+                    status.AudioUrls));
             }
             catch (MockExamException ex) when (ex.Code == MockExamException.AttemptNotFound)
             {
@@ -255,6 +365,10 @@ public static class ExamEndpoints
             {
                 return Problem(StatusCodes.Status400BadRequest, "Attempt not active", ApiError.Codes.AttemptNotActive, ex.Message);
             }
+            catch (MockExamException ex) when (ex.Code == MockExamException.PreflightRequired)
+            {
+                return Problem(StatusCodes.Status400BadRequest, "Preflight verification required", ApiError.Codes.PreflightRequired, ex.Message);
+            }
         });
 
         learner.MapPost("/attempts/{attemptId:int}/answers/{questionId:int}", async Task<IResult> (
@@ -301,6 +415,10 @@ public static class ExamEndpoints
             catch (MockExamException ex) when (ex.Code == AttemptEngineException.WrongPhase)
             {
                 return Problem(StatusCodes.Status400BadRequest, "Question not available yet", ApiError.Codes.AttemptNotActive, ex.Message);
+            }
+            catch (MockExamException ex) when (ex.Code == MockExamException.PreflightRequired)
+            {
+                return Problem(StatusCodes.Status400BadRequest, "Preflight verification required", ApiError.Codes.PreflightRequired, ex.Message);
             }
         });
 
@@ -379,6 +497,285 @@ public static class ExamEndpoints
             catch (MockExamException ex) when (ex.Code == MockExamException.AttemptNotActive)
             {
                 return Problem(StatusCodes.Status400BadRequest, "Attempt not active", ApiError.Codes.AttemptNotActive, ex.Message);
+            }
+        });
+
+        learner.MapPost("/attempts/{attemptId:int}/transition/skill", async Task<IResult> (
+            int attemptId,
+            HttpContext http,
+            IMockExamService mockExamService,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var res = await mockExamService.TransitionToNextSkillAsync(CurrentUserId(http), attemptId, cancellationToken);
+                return Results.Ok(new AttemptTransitionResponse(
+                    res.AttemptId,
+                    res.ActiveSkillId,
+                    res.ActiveUnitNumber,
+                    res.ActiveGroupId,
+                    res.PhaseDeadlineAt,
+                    res.RemainingSeconds,
+                    res.Status.MapTo<AttemptStatusDto>(),
+                    res.Status == AttemptStatus.Graded || res.Status == AttemptStatus.Submitted));
+            }
+            catch (MockExamException ex) when (ex.Code == MockExamException.AttemptNotFound)
+            {
+                return Problem(StatusCodes.Status404NotFound, "Attempt not found", ApiError.Codes.AttemptNotFound, ex.Message);
+            }
+            catch (MockExamException ex) when (ex.Code == MockExamException.AttemptNotActive)
+            {
+                return Problem(StatusCodes.Status400BadRequest, "Attempt not active", ApiError.Codes.AttemptNotActive, ex.Message);
+            }
+            catch (MockExamException ex)
+            {
+                return Problem(StatusCodes.Status400BadRequest, "Transition failed", ApiError.Codes.Validation, ex.Message);
+            }
+        });
+
+        learner.MapPost("/attempts/{attemptId:int}/transition/unit", async Task<IResult> (
+            int attemptId,
+            [FromBody] TransitionUnitRequest request,
+            HttpContext http,
+            IMockExamService mockExamService,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var res = await mockExamService.TransitionUnitAsync(CurrentUserId(http), attemptId, request.TargetUnitNumber, cancellationToken);
+                return Results.Ok(new AttemptTransitionResponse(
+                    res.AttemptId,
+                    res.ActiveSkillId,
+                    res.ActiveUnitNumber,
+                    res.ActiveGroupId,
+                    res.PhaseDeadlineAt,
+                    res.RemainingSeconds,
+                    res.Status.MapTo<AttemptStatusDto>(),
+                    res.Status == AttemptStatus.Graded || res.Status == AttemptStatus.Submitted));
+            }
+            catch (MockExamException ex) when (ex.Code == MockExamException.AttemptNotFound)
+            {
+                return Problem(StatusCodes.Status404NotFound, "Attempt not found", ApiError.Codes.AttemptNotFound, ex.Message);
+            }
+            catch (MockExamException ex) when (ex.Code == MockExamException.AttemptNotActive)
+            {
+                return Problem(StatusCodes.Status400BadRequest, "Attempt not active", ApiError.Codes.AttemptNotActive, ex.Message);
+            }
+            catch (MockExamException ex)
+            {
+                return Problem(StatusCodes.Status400BadRequest, "Transition failed", ApiError.Codes.Validation, ex.Message);
+            }
+        });
+
+        learner.MapPost("/attempts/{attemptId:int}/transition-group", async Task<IResult> (
+            int attemptId,
+            [FromBody] TransitionGroupRequest request,
+            HttpContext http,
+            IMockExamService mockExamService,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var res = await mockExamService.TransitionGroupAsync(CurrentUserId(http), attemptId, request.TargetGroupId, cancellationToken);
+                return Results.Ok(new AttemptTransitionResponse(
+                    res.AttemptId,
+                    res.ActiveSkillId,
+                    res.ActiveUnitNumber,
+                    res.ActiveGroupId,
+                    res.PhaseDeadlineAt,
+                    res.RemainingSeconds,
+                    res.Status.MapTo<AttemptStatusDto>(),
+                    res.Status == AttemptStatus.Graded || res.Status == AttemptStatus.Submitted));
+            }
+            catch (MockExamException ex) when (ex.Code == MockExamException.AttemptNotFound)
+            {
+                return Problem(StatusCodes.Status404NotFound, "Attempt not found", ApiError.Codes.AttemptNotFound, ex.Message);
+            }
+            catch (MockExamException ex) when (ex.Code == MockExamException.AttemptNotActive)
+            {
+                return Problem(StatusCodes.Status400BadRequest, "Attempt not active", ApiError.Codes.AttemptNotActive, ex.Message);
+            }
+            catch (MockExamException ex) when (ex.Code == MockExamException.QuestionNotFound)
+            {
+                return Problem(StatusCodes.Status404NotFound, "Question group not found", ApiError.Codes.QuestionNotFound, ex.Message);
+            }
+            catch (MockExamException ex)
+            {
+                return Problem(StatusCodes.Status400BadRequest, "Transition failed", ApiError.Codes.Validation, ex.Message);
+            }
+        });
+
+        learner.MapPost("/attempts/{attemptId:int}/transition/group", async Task<IResult> (
+            int attemptId,
+            [FromBody] TransitionGroupRequest request,
+            HttpContext http,
+            IMockExamService mockExamService,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var res = await mockExamService.TransitionGroupAsync(CurrentUserId(http), attemptId, request.TargetGroupId, cancellationToken);
+                return Results.Ok(new AttemptTransitionResponse(
+                    res.AttemptId,
+                    res.ActiveSkillId,
+                    res.ActiveUnitNumber,
+                    res.ActiveGroupId,
+                    res.PhaseDeadlineAt,
+                    res.RemainingSeconds,
+                    res.Status.MapTo<AttemptStatusDto>(),
+                    res.Status == AttemptStatus.Graded || res.Status == AttemptStatus.Submitted));
+            }
+            catch (MockExamException ex) when (ex.Code == MockExamException.AttemptNotFound)
+            {
+                return Problem(StatusCodes.Status404NotFound, "Attempt not found", ApiError.Codes.AttemptNotFound, ex.Message);
+            }
+            catch (MockExamException ex) when (ex.Code == MockExamException.AttemptNotActive)
+            {
+                return Problem(StatusCodes.Status400BadRequest, "Attempt not active", ApiError.Codes.AttemptNotActive, ex.Message);
+            }
+            catch (MockExamException ex) when (ex.Code == MockExamException.QuestionNotFound)
+            {
+                return Problem(StatusCodes.Status404NotFound, "Question group not found", ApiError.Codes.QuestionNotFound, ex.Message);
+            }
+            catch (MockExamException ex)
+            {
+                return Problem(StatusCodes.Status400BadRequest, "Transition failed", ApiError.Codes.Validation, ex.Message);
+            }
+        });
+
+        learner.MapPost("/attempts/{attemptId:int}/audio-review/start", async Task<IResult> (
+            int attemptId,
+            HttpContext http,
+            IMockExamService mockExamService,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var res = await mockExamService.CompleteAudioAndStartReviewAsync(CurrentUserId(http), attemptId, cancellationToken);
+                return Results.Ok(new AttemptTransitionResponse(
+                    res.AttemptId,
+                    res.ActiveSkillId,
+                    res.ActiveUnitNumber,
+                    res.ActiveGroupId,
+                    res.PhaseDeadlineAt,
+                    res.RemainingSeconds,
+                    res.Status.MapTo<AttemptStatusDto>(),
+                    res.Status == AttemptStatus.Graded || res.Status == AttemptStatus.Submitted));
+            }
+            catch (MockExamException ex) when (ex.Code == MockExamException.AttemptNotFound)
+            {
+                return Problem(StatusCodes.Status404NotFound, "Attempt not found", ApiError.Codes.AttemptNotFound, ex.Message);
+            }
+            catch (MockExamException ex) when (ex.Code == MockExamException.AttemptNotActive)
+            {
+                return Problem(StatusCodes.Status400BadRequest, "Attempt not active", ApiError.Codes.AttemptNotActive, ex.Message);
+            }
+            catch (MockExamException ex)
+            {
+                return Problem(StatusCodes.Status400BadRequest, "Audio review transition failed", ApiError.Codes.Validation, ex.Message);
+            }
+        });
+
+        learner.MapPost("/attempts/{attemptId:int}/sync", async Task<IResult> (
+            int attemptId,
+            [FromBody] SittingSyncRequestDto requestDto,
+            HttpContext http,
+            IMockExamService mockExamService,
+            CancellationToken ct) =>
+        {
+            var userId = CurrentUserId(http);
+            try
+            {
+                var domainRequest = new SittingSyncRequest(
+                    requestDto.Answers?.Select(a => new BatchAnswerItem(
+                        a.QuestionId,
+                        a.SelectedOptionId,
+                        a.IsFlagged,
+                        a.ResponseText,
+                        a.SelectedOptionIdsJson)).ToList(),
+                    requestDto.LastAudioOffsetMs,
+                    requestDto.CandidateNotesJson,
+                    requestDto.LastQuestionId);
+
+                var result = await mockExamService.SaveSittingSyncAsync(userId, attemptId, domainRequest, ct);
+
+                return Results.Ok(new SittingSyncDto(
+                    result.AttemptId,
+                    result.RemainingSeconds,
+                    result.IsAutoSubmitted,
+                    result.ActiveSkillId,
+                    result.ActiveUnitNumber,
+                    result.ActiveGroupId,
+                    result.PhaseDeadlineAt,
+                    result.LastAudioOffsetMs,
+                    result.AnswersSavedCount));
+            }
+            catch (MockExamException ex) when (ex.Code == MockExamException.AttemptNotFound)
+            {
+                return Problem(StatusCodes.Status404NotFound, "Attempt not found", ApiError.Codes.AttemptNotFound, ex.Message);
+            }
+            catch (MockExamException ex) when (ex.Code == MockExamException.AttemptNotActive)
+            {
+                return Problem(StatusCodes.Status400BadRequest, "Attempt not active", ApiError.Codes.AttemptNotActive, ex.Message);
+            }
+            catch (MockExamException ex) when (ex.Code == MockExamException.AttemptExpired)
+            {
+                return Problem(StatusCodes.Status400BadRequest, "Attempt expired", ApiError.Codes.AttemptExpired, ex.Message);
+            }
+            catch (MockExamException ex) when (ex.Code == AttemptEngineException.WrongPhase)
+            {
+                return Problem(StatusCodes.Status400BadRequest, "Wrong phase", "wrong_phase", ex.Message);
+            }
+            catch (MockExamException ex) when (ex.Code == MockExamException.PreflightRequired)
+            {
+                return Problem(StatusCodes.Status400BadRequest, "Preflight verification required", ApiError.Codes.PreflightRequired, ex.Message);
+            }
+        });
+
+        learner.MapPost("/attempts/resume", async Task<IResult> (
+            [FromBody] ResumeAttemptRequest request,
+            HttpContext http,
+            IMockExamService mockExamService,
+            CancellationToken ct) =>
+        {
+            var userId = CurrentUserId(http);
+            try
+            {
+                var result = await mockExamService.ResumeAttemptByCodeAsync(request.AuthorizationCode, userId, ct);
+
+                var dto = new AttemptResumeDto(
+                    result.AttemptId,
+                    result.ExamId,
+                    result.AuthorizationCode,
+                    result.ActiveSkillId,
+                    result.ActiveUnitNumber,
+                    result.ActiveGroupId,
+                    result.LastQuestionId,
+                    result.LastAudioOffsetMs,
+                    result.CandidateNotesJson,
+                    result.RemainingSeconds,
+                    result.ExpiresAt,
+                    result.PhaseDeadlineAt,
+                    result.AnswerSheet.Select(a => new AttemptAnswerSheetItemDto(
+                        a.QuestionId,
+                        a.SelectedOptionId,
+                        a.SelectedOptionIdsJson,
+                        a.ResponseText,
+                        a.IsFlagged)).ToList());
+
+                return Results.Ok(dto);
+            }
+            catch (MockExamException ex) when (ex.Code == MockExamException.AttemptNotFound)
+            {
+                return Problem(StatusCodes.Status404NotFound, "Attempt not found", ApiError.Codes.AttemptNotFound, ex.Message);
+            }
+            catch (MockExamException ex) when (ex.Code == MockExamException.AttemptNotActive)
+            {
+                return Problem(StatusCodes.Status400BadRequest, "Attempt not active", ApiError.Codes.AttemptNotActive, ex.Message);
+            }
+            catch (MockExamException ex) when (ex.Code == MockExamException.AttemptExpired)
+            {
+                return Problem(StatusCodes.Status400BadRequest, "Attempt expired", ApiError.Codes.AttemptExpired, ex.Message);
             }
         });
 

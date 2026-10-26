@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -21,6 +21,23 @@ public partial class ExamAttempt
     public int ExamId { get; set; }
 
     public int CertId { get; set; }
+
+    public int? ActiveSkillId { get; set; }
+
+    public int ActiveUnitNumber { get; set; } = 1;
+
+    public int? ActiveGroupId { get; set; }
+
+    [StringLength(64)]
+    public string? AuthorizationCode { get; set; }
+
+    public DateTime? PhaseDeadlineAt { get; set; }
+
+    public int LastAudioOffsetMs { get; set; }
+
+    public string? CandidateNotesJson { get; set; }
+
+    public DateTimeOffset? PreflightVerifiedAt { get; set; }
 
     [StringLength(12)]
     [Unicode(false)]
@@ -94,4 +111,10 @@ public partial class ExamAttempt
     [ForeignKey("UserId")]
     [InverseProperty("ExamAttempts")]
     public virtual User User { get; set; } = null!;
+
+    [ForeignKey("ActiveSkillId")]
+    public virtual Skill? ActiveSkill { get; set; }
+
+    [ForeignKey("ActiveGroupId")]
+    public virtual QuestionGroup? ActiveGroup { get; set; }
 }

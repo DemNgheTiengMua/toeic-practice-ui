@@ -468,106 +468,16 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
             throw new ExamNotFoundException(examId);
         }
 
-        var missingItems = new List<string>();
-
-        var groups = await db.QuestionGroups
-            .Include(g => g.QuestionGroups)
-                .ThenInclude(q => q.QuestionOptionQuestionNavigations)
-            .Where(g => g.ExamId == examId)
-            .ToListAsync(cancellationToken);
-
-        var totalQuestions = groups.Sum(g => g.QuestionGroups.Count);
-        if (groups.Count == 0 || totalQuestions == 0)
+        var audit = await AuditExamPublishReadinessAsync(examId, cancellationToken);
+        if (!audit.CanPublish || audit.BlockingErrorCount > 0)
         {
-            missingItems.Add("Exam must have at least one question group and question.");
-        }
-
-        if (exam.QuestionCount.HasValue && totalQuestions < exam.QuestionCount.Value)
-        {
-            missingItems.Add($"Exam requires at least {exam.QuestionCount.Value} questions, but only has {totalQuestions}.");
-        }
-
-        foreach (var q in groups.SelectMany(g => g.QuestionGroups))
-        {
-            if (string.IsNullOrWhiteSpace(q.Stem))
-            {
-                missingItems.Add($"Question {q.DisplayOrder}: Stem is required.");
-            }
-
-            if (q.QuestionType == "mcq")
-            {
-                var options = q.QuestionOptionQuestionNavigations.ToList();
-                if (options.Count < 2)
-                {
-                    missingItems.Add($"Question {q.DisplayOrder}: MCQ must have at least 2 options.");
-                }
-
-                if (options.Count(o => o.IsCorrect) != 1)
-                {
-                    missingItems.Add($"Question {q.DisplayOrder}: MCQ must have exactly 1 correct option.");
-                }
-
-                if (options.Any(o => string.IsNullOrWhiteSpace(o.Text)))
-                {
-                    missingItems.Add($"Question {q.DisplayOrder}: All options must have text.");
-                }
-            }
-            else if (q.QuestionType == "free_response")
-            {
-                if (q.QuestionOptionQuestionNavigations.Count > 0)
-                {
-                    missingItems.Add($"Question {q.DisplayOrder}: Free response cannot have options.");
-                }
-
-                if (q.ResponseSeconds.HasValue && q.ResponseSeconds.Value <= 0)
-                {
-                    missingItems.Add($"Question {q.DisplayOrder}: ResponseSeconds must be greater than 0.");
-                }
-            }
-        }
-
-        var certSections = await db.Sections.AsNoTracking()
-            .Where(s => s.CertId == exam.CertId)
-            .ToListAsync(cancellationToken);
-
-        var relevantSections = exam.Purpose switch
-        {
-            "speaking_practice" => certSections.Where(s => s.Modality == "speaking"),
-            "writing_practice" => certSections.Where(s => s.Modality == "writing"),
-            _ => certSections
-        };
-
-        foreach (var sec in relevantSections)
-        {
-            var secQuestions = groups.Where(g => g.SectionId == sec.SectionId).Sum(g => g.QuestionGroups.Count);
-            if (sec.ExpectedQuestionCount.HasValue && secQuestions < sec.ExpectedQuestionCount.Value)
-            {
-                missingItems.Add($"Section '{sec.Name}' requires {sec.ExpectedQuestionCount.Value} questions, but only has {secQuestions}.");
-            }
-        }
-
-        var groupSectionIds = groups.Select(g => g.SectionId).Distinct().ToList();
-        var listeningSections = await db.Sections.AsNoTracking()
-            .Where(s => groupSectionIds.Contains(s.SectionId) && s.Modality == "listening")
-            .ToListAsync(cancellationToken);
-
-        var sectionAudios = await db.ExamSectionAudios.AsNoTracking()
-            .Where(a => a.ExamId == examId)
-            .ToListAsync(cancellationToken);
-
-        foreach (var ls in listeningSections)
-        {
-            var hasSectionAudio = sectionAudios.Any(a => a.SectionId == ls.SectionId && !string.IsNullOrWhiteSpace(a.AudioPath));
-            var allGroupsHaveAudio = groups.Where(g => g.SectionId == ls.SectionId).All(g => !string.IsNullOrWhiteSpace(g.AudioPath));
-            if (!hasSectionAudio && !allGroupsHaveAudio)
-            {
-                missingItems.Add($"Missing audio for listening section '{ls.Name}'.");
-            }
-        }
-
-        if (missingItems.Count > 0)
-        {
-            throw new AdminExamException(ApiError.Codes.ExamIncomplete, string.Join("; ", missingItems), 400);
+            var errs = audit.Issues
+                .Where(i => i.Severity == "error")
+                .Select(i => i.Message)
+                .Concat(audit.MissingItems)
+                .Distinct()
+                .ToList();
+            throw new AdminExamException(ApiError.Codes.ExamIncomplete, string.Join("; ", errs), 400);
         }
 
         exam.Status = ExamStatus.Published.ToCode();
@@ -677,7 +587,12 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
                     o.Text,
                     o.IsCorrect,
                     o.Rationale)).ToList(),
-                answeredQuestionIds.Contains(q.QuestionId))).ToList()
+                answeredQuestionIds.Contains(q.QuestionId),
+                MaxSelections: q.MaxSelections,
+                AllowNumber: q.AllowNumber,
+                AcceptedAnswersJson: q.AcceptedAnswersJson,
+                RequiredKeywords: q.RequiredKeywords)).ToList(),
+            UnitNumber: g.UnitNumber
         )).ToList();
 
         var availableSections = await db.Sections.AsNoTracking()
@@ -738,7 +653,8 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
             Transcript = Normalize(request.Transcript),
             PrepSeconds = request.PrepSeconds,
             ResponseSeconds = request.ResponseSeconds,
-            DisplayOrder = request.DisplayOrder
+            DisplayOrder = request.DisplayOrder,
+            UnitNumber = request.UnitNumber > 0 ? request.UnitNumber : 1
         };
 
         db.QuestionGroups.Add(group);
@@ -763,7 +679,8 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
             group.PrepSeconds,
             group.ResponseSeconds,
             group.DisplayOrder,
-            Array.Empty<AdminQuestionDto>());
+            Array.Empty<AdminQuestionDto>(),
+            group.UnitNumber);
     }
 
     public async Task<AdminQuestionGroupDto> UpdateQuestionGroupAsync(int examId, int groupId, UpdateQuestionGroupRequest request, CancellationToken cancellationToken = default)
@@ -800,7 +717,11 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
         group.Transcript = Normalize(request.Transcript);
         group.PrepSeconds = request.PrepSeconds;
         group.ResponseSeconds = request.ResponseSeconds;
-        group.DisplayOrder = request.DisplayOrder;
+        if (request.DisplayOrder > 0)
+        {
+            group.DisplayOrder = request.DisplayOrder;
+        }
+        group.UnitNumber = request.UnitNumber > 0 ? request.UnitNumber : 1;
 
         exam.UpdatedAt = clock.GetUtcNow();
         await db.SaveChangesAsync(cancellationToken);
@@ -823,7 +744,8 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
             group.PrepSeconds,
             group.ResponseSeconds,
             group.DisplayOrder,
-            Array.Empty<AdminQuestionDto>());
+            Array.Empty<AdminQuestionDto>(),
+            group.UnitNumber);
     }
 
     public async Task DeleteQuestionGroupAsync(int examId, int groupId, CancellationToken cancellationToken = default)
@@ -875,7 +797,20 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
             throw new QuestionGroupNotFoundException(request.GroupId);
         }
 
-        ValidateQuestionInputs(request.Stem, request.DifficultyLevel, request.QuestionType, request.PrepSeconds, request.ResponseSeconds, request.MinWords, request.MaxWords, request.Hint, request.Options);
+        if (!string.IsNullOrWhiteSpace(group.Section.AllowedComponentTypesJson))
+        {
+            try
+            {
+                var allowed = JsonSerializer.Deserialize<List<string>>(group.Section.AllowedComponentTypesJson);
+                if (allowed != null && allowed.Count > 0 && !allowed.Contains(request.QuestionType.ToCode(), StringComparer.OrdinalIgnoreCase))
+                {
+                    throw new AdminExamException(ApiError.Codes.Validation, $"Question type '{request.QuestionType.ToCode()}' is not allowed in section '{group.Section.Name}'.");
+                }
+            }
+            catch (JsonException) { }
+        }
+
+        ValidateQuestionInputs(request.Stem, request.DifficultyLevel, request.QuestionType, request.PrepSeconds, request.ResponseSeconds, request.MinWords, request.MaxWords, request.Hint, request.Options, request.MaxSelections, request.AllowNumber, request.AcceptedAnswersJson, request.RequiredKeywords);
 
         if (request.CategoryId.HasValue)
         {
@@ -901,6 +836,10 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
             ResponseSeconds = request.ResponseSeconds,
             MinWords = request.MinWords,
             MaxWords = request.MaxWords,
+            MaxSelections = request.MaxSelections,
+            AllowNumber = request.AllowNumber,
+            AcceptedAnswersJson = Normalize(request.AcceptedAnswersJson),
+            RequiredKeywords = Normalize(request.RequiredKeywords),
             Hint = Normalize(request.Hint),
             DisplayOrder = request.DisplayOrder,
             UpdatedAt = clock.GetUtcNow()
@@ -910,7 +849,7 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
         await db.SaveChangesAsync(cancellationToken);
 
         var createdOptions = new List<QuestionOption>();
-        if (request.QuestionType == QuestionTypeDto.Mcq && request.Options != null)
+        if (request.QuestionType != QuestionTypeDto.FreeResponse && request.Options != null)
         {
             foreach (var opt in request.Options)
             {
@@ -965,7 +904,11 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
             question.DisplayOrder,
             question.UpdatedAt,
             createdOptions.Select(o => new AdminQuestionOptionDto(o.OptionId, o.QuestionId, o.Label, o.Text, o.IsCorrect, o.Rationale)).ToList(),
-            HasAnswers: false);
+            HasAnswers: false,
+            MaxSelections: question.MaxSelections,
+            AllowNumber: question.AllowNumber,
+            AcceptedAnswersJson: question.AcceptedAnswersJson,
+            RequiredKeywords: question.RequiredKeywords);
     }
 
     public async Task<AdminQuestionDto> UpdateQuestionAsync(int questionId, UpdateQuestionRequest request, CancellationToken cancellationToken = default)
@@ -981,7 +924,20 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
             throw new QuestionNotFoundException(questionId);
         }
 
-        ValidateQuestionInputs(request.Stem, request.DifficultyLevel, request.QuestionType, request.PrepSeconds, request.ResponseSeconds, request.MinWords, request.MaxWords, request.Hint, request.Options);
+        if (!string.IsNullOrWhiteSpace(question.Group.Section.AllowedComponentTypesJson))
+        {
+            try
+            {
+                var allowed = JsonSerializer.Deserialize<List<string>>(question.Group.Section.AllowedComponentTypesJson);
+                if (allowed != null && allowed.Count > 0 && !allowed.Contains(request.QuestionType.ToCode(), StringComparer.OrdinalIgnoreCase))
+                {
+                    throw new AdminExamException(ApiError.Codes.Validation, $"Question type '{request.QuestionType.ToCode()}' is not allowed in section '{question.Group.Section.Name}'.");
+                }
+            }
+            catch (JsonException) { }
+        }
+
+        ValidateQuestionInputs(request.Stem, request.DifficultyLevel, request.QuestionType, request.PrepSeconds, request.ResponseSeconds, request.MinWords, request.MaxWords, request.Hint, request.Options, request.MaxSelections, request.AllowNumber, request.AcceptedAnswersJson, request.RequiredKeywords);
 
         var hasAnswers = await db.AttemptAnswers.AnyAsync(a => a.QuestionId == questionId, cancellationToken)
             || await db.FreeResponses.AnyAsync(r => r.QuestionId == questionId, cancellationToken);
@@ -1039,11 +995,18 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
         question.ResponseSeconds = request.ResponseSeconds;
         question.MinWords = request.MinWords;
         question.MaxWords = request.MaxWords;
+        question.MaxSelections = request.MaxSelections;
+        question.AllowNumber = request.AllowNumber;
+        question.AcceptedAnswersJson = Normalize(request.AcceptedAnswersJson);
+        question.RequiredKeywords = Normalize(request.RequiredKeywords);
         question.Hint = Normalize(request.Hint);
-        question.DisplayOrder = request.DisplayOrder;
+        if (request.DisplayOrder > 0)
+        {
+            question.DisplayOrder = request.DisplayOrder;
+        }
         question.UpdatedAt = clock.GetUtcNow();
 
-        if (request.QuestionType == QuestionTypeDto.Mcq && request.Options != null)
+        if (request.QuestionType != QuestionTypeDto.FreeResponse && request.Options != null)
         {
             var incomingOptionLabels = request.Options.Select(o => o.Label.Trim().ToUpperInvariant()).ToHashSet();
             var optionsToRemove = question.QuestionOptionQuestionNavigations
@@ -1067,13 +1030,16 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
                 db.QuestionOptions.Remove(opt);
             }
 
-            // Save option removals & prevent UX_Options_OneCorrect duplicate key errors by clearing outgoing correct option first
-            var currentlyCorrect = question.QuestionOptionQuestionNavigations.FirstOrDefault(o => o.IsCorrect);
-            var incomingCorrectLabel = request.Options.First(o => o.IsCorrect).Label.Trim().ToUpperInvariant();
-            if (currentlyCorrect != null && !currentlyCorrect.Label.Equals(incomingCorrectLabel, StringComparison.OrdinalIgnoreCase))
+            // Save option removals & prevent UX_Options_OneCorrect duplicate key errors by clearing outgoing correct option first (for non multi_select)
+            if (request.QuestionType != QuestionTypeDto.MultiSelect)
             {
-                currentlyCorrect.IsCorrect = false;
-                await db.SaveChangesAsync(cancellationToken);
+                var currentlyCorrect = question.QuestionOptionQuestionNavigations.FirstOrDefault(o => o.IsCorrect);
+                var incomingCorrect = request.Options.FirstOrDefault(o => o.IsCorrect);
+                if (currentlyCorrect != null && incomingCorrect != null && !currentlyCorrect.Label.Equals(incomingCorrect.Label.Trim(), StringComparison.OrdinalIgnoreCase))
+                {
+                    currentlyCorrect.IsCorrect = false;
+                    await db.SaveChangesAsync(cancellationToken);
+                }
             }
 
             foreach (var optInput in request.Options)
@@ -1082,6 +1048,7 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
                 var existingOpt = question.QuestionOptionQuestionNavigations.FirstOrDefault(o => o.Label == label);
                 if (existingOpt != null)
                 {
+                    existingOpt.QuestionType = question.QuestionType;
                     existingOpt.Text = optInput.Text.Trim();
                     existingOpt.IsCorrect = optInput.IsCorrect;
                     existingOpt.Rationale = Normalize(optInput.Rationale);
@@ -1155,7 +1122,11 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
             question.DisplayOrder,
             question.UpdatedAt,
             finalOptions,
-            hasAnswers);
+            hasAnswers,
+            MaxSelections: question.MaxSelections,
+            AllowNumber: question.AllowNumber,
+            AcceptedAnswersJson: question.AcceptedAnswersJson,
+            RequiredKeywords: question.RequiredKeywords);
     }
 
     public async Task DeleteQuestionAsync(int questionId, CancellationToken cancellationToken = default)
@@ -1370,7 +1341,20 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
         }
     }
 
-    private static void ValidateQuestionInputs(string stem, int difficulty, QuestionTypeDto type, int? prepSeconds, int? responseSeconds, int? minWords, int? maxWords, string? hint, IReadOnlyList<AdminQuestionOptionInput>? options)
+    private static void ValidateQuestionInputs(
+        string stem,
+        int difficulty,
+        QuestionTypeDto type,
+        int? prepSeconds,
+        int? responseSeconds,
+        int? minWords,
+        int? maxWords,
+        string? hint,
+        IReadOnlyList<AdminQuestionOptionInput>? options,
+        int? maxSelections,
+        bool allowNumber,
+        string? acceptedAnswersJson,
+        string? requiredKeywords)
     {
         if (string.IsNullOrWhiteSpace(stem))
         {
@@ -1387,49 +1371,23 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
             throw new AdminExamException(ApiError.Codes.Validation, "Hint must not exceed 1000 characters.");
         }
 
-        if (type == QuestionTypeDto.Mcq)
+        if (type != QuestionTypeDto.FreeResponse)
         {
             if (prepSeconds.HasValue || responseSeconds.HasValue)
             {
-                throw new AdminExamException(ApiError.Codes.Validation, "PrepSeconds and ResponseSeconds must be null for MCQ questions.");
-            }
-
-            if (minWords.HasValue || maxWords.HasValue)
-            {
-                throw new AdminExamException(ApiError.Codes.Validation, "MinWords and MaxWords must be null for MCQ questions.");
-            }
-
-            if (options == null || options.Count < 2)
-            {
-                throw new AdminExamException(ApiError.Codes.Validation, "MCQ questions must have at least 2 options.");
-            }
-
-            var correctCount = options.Count(o => o.IsCorrect);
-            if (correctCount != 1)
-            {
-                throw new AdminExamException(ApiError.Codes.Validation, "MCQ questions must have exactly 1 correct option.");
-            }
-
-            foreach (var opt in options)
-            {
-                if (string.IsNullOrWhiteSpace(opt.Label))
-                {
-                    throw new AdminExamException(ApiError.Codes.Validation, "Option label is required.");
-                }
-
-                if (string.IsNullOrWhiteSpace(opt.Text))
-                {
-                    throw new AdminExamException(ApiError.Codes.Validation, "Option text is required.");
-                }
-            }
-
-            var uniqueLabels = options.Select(o => o.Label.Trim().ToUpperInvariant()).Distinct().Count();
-            if (uniqueLabels != options.Count)
-            {
-                throw new AdminExamException(ApiError.Codes.Validation, "Option labels must be unique.");
+                throw new AdminExamException(ApiError.Codes.Validation, $"PrepSeconds and ResponseSeconds must be null for {type} questions.");
             }
         }
-        else if (type == QuestionTypeDto.FreeResponse)
+
+        if (type != QuestionTypeDto.FreeResponse && type != QuestionTypeDto.InlineCompletion)
+        {
+            if (minWords.HasValue || maxWords.HasValue)
+            {
+                throw new AdminExamException(ApiError.Codes.Validation, $"MinWords and MaxWords must be null for {type} questions.");
+            }
+        }
+
+        if (type == QuestionTypeDto.FreeResponse)
         {
             if (options != null && options.Count > 0)
             {
@@ -1456,178 +1414,92 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
                 throw new AdminExamException(ApiError.Codes.Validation, "MaxWords must be greater than or equal to MinWords.");
             }
         }
-    }
-
-    public async Task<QuickIngestCommitResultDto> CommitQuickIngestAsync(int examId, QuickIngestCommitRequest request, CancellationToken cancellationToken = default)
-    {
-        if (request == null)
+        else if (type is QuestionTypeDto.Mcq or QuestionTypeDto.Mcq_3)
         {
-            throw new AdminExamException(ApiError.Codes.Validation, "Commit request cannot be null.", 400);
-        }
-
-        var exam = await db.Exams.Include(e => e.Cert).FirstOrDefaultAsync(e => e.ExamId == examId && !e.IsDeleted, cancellationToken);
-        if (exam == null)
-        {
-            throw new ExamNotFoundException(examId);
-        }
-
-        var section = await db.Sections.FirstOrDefaultAsync(s => s.SectionId == request.SectionId && s.CertId == exam.CertId, cancellationToken);
-        if (section == null)
-        {
-            throw new AdminExamException("SectionNotFound", $"Section with id {request.SectionId} not found for certificate '{exam.Cert.Name}'.", 404);
-        }
-
-        if (request.Questions == null || request.Questions.Count == 0)
-        {
-            throw new AdminExamException(ApiError.Codes.Validation, "No questions provided to commit.", 400);
-        }
-
-        // Validate each question
-        for (var i = 0; i < request.Questions.Count; i++)
-        {
-            var q = request.Questions[i];
-            if (string.IsNullOrWhiteSpace(q.Stem))
+            if (options == null || options.Count < 2)
             {
-                throw new AdminExamException(ApiError.Codes.Validation, $"Question {i + 1} has an empty stem.", 400);
+                throw new AdminExamException(ApiError.Codes.Validation, $"{type} questions must have at least 2 options.");
             }
-            if (q.Options == null || q.Options.Count < 2)
-            {
-                throw new AdminExamException(ApiError.Codes.Validation, $"Question {i + 1} must have at least 2 options.", 400);
-            }
-            var correctCount = q.Options.Count(o => o.IsCorrect);
+
+            var correctCount = options.Count(o => o.IsCorrect);
             if (correctCount != 1)
             {
-                throw new AdminExamException(ApiError.Codes.Validation, $"Question {i + 1} must have exactly one correct option (found {correctCount}).", 400);
+                throw new AdminExamException(ApiError.Codes.Validation, $"{type} questions must have exactly 1 correct option.");
             }
+
+            ValidateOptionEntries(options);
         }
-
-        await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
-
-        var isReplace = string.Equals(request.Mode, "replace", StringComparison.OrdinalIgnoreCase);
-        int currentDisplayOrder = 1;
-
-        if (isReplace)
+        else if (type == QuestionTypeDto.MultiSelect)
         {
-            var existingGroups = await db.QuestionGroups
-                .Include(g => g.QuestionGroups)
-                    .ThenInclude(q => q.QuestionOptionQuestionNavigations)
-                .Where(g => g.ExamId == examId && g.SectionId == request.SectionId)
-                .ToListAsync(cancellationToken);
-
-            var existingQuestionIds = existingGroups.SelectMany(g => g.QuestionGroups.Select(q => q.QuestionId)).ToList();
-
-            var hasAnswers = await db.AttemptAnswers.AnyAsync(a => existingQuestionIds.Contains(a.QuestionId), cancellationToken)
-                || await db.FreeResponses.AnyAsync(r => existingQuestionIds.Contains(r.QuestionId), cancellationToken);
-
-            if (hasAnswers)
+            if (options == null || options.Count < 2)
             {
-                throw new AdminExamException(ApiError.Codes.QuestionHasAttemptAnswers, "Cannot replace section content because completed or active learner attempts exist.", 400);
+                throw new AdminExamException(ApiError.Codes.Validation, "Multi-select questions must have at least 2 options.");
             }
 
-            foreach (var g in existingGroups)
+            var correctCount = options.Count(o => o.IsCorrect);
+            if (correctCount < 1)
             {
-                foreach (var q in g.QuestionGroups)
-                {
-                    var saved = await db.SavedQuestions.Where(s => s.QuestionId == q.QuestionId).ToListAsync(cancellationToken);
-                    if (saved.Count > 0) db.SavedQuestions.RemoveRange(saved);
-
-                    var pa = await db.PracticeAnswers.Where(p => p.QuestionId == q.QuestionId).ToListAsync(cancellationToken);
-                    if (pa.Count > 0) db.PracticeAnswers.RemoveRange(pa);
-
-                    db.QuestionOptions.RemoveRange(q.QuestionOptionQuestionNavigations);
-                    db.Questions.Remove(q);
-                }
-                db.QuestionGroups.Remove(g);
+                throw new AdminExamException(ApiError.Codes.Validation, "Multi-select questions must have at least 1 correct option.");
             }
 
-            await db.SaveChangesAsync(cancellationToken);
-            currentDisplayOrder = 1;
+            if (maxSelections.HasValue && maxSelections.Value < 2)
+            {
+                throw new AdminExamException(ApiError.Codes.Validation, "MaxSelections must be at least 2 when specified.");
+            }
+
+            ValidateOptionEntries(options);
         }
-        else
+        else if (type == QuestionTypeDto.InlineCompletion)
         {
-            var maxGroupOrder = await db.QuestionGroups
-                .Where(g => g.ExamId == examId && g.SectionId == request.SectionId)
-                .Select(g => (int?)g.DisplayOrder)
-                .MaxAsync(cancellationToken) ?? 0;
+            if (minWords.HasValue && minWords.Value <= 0)
+            {
+                throw new AdminExamException(ApiError.Codes.Validation, "MinWords must be greater than 0.");
+            }
 
-            var maxQuestionOrder = await db.Questions
-                .Where(q => q.ExamId == examId && q.SectionId == request.SectionId)
-                .Select(q => (int?)q.DisplayOrder)
-                .MaxAsync(cancellationToken) ?? 0;
+            if (maxWords.HasValue && maxWords.Value < (minWords ?? 1))
+            {
+                throw new AdminExamException(ApiError.Codes.Validation, "MaxWords must be greater than or equal to MinWords.");
+            }
 
-            currentDisplayOrder = Math.Max(maxGroupOrder, maxQuestionOrder) + 1;
+            if (options != null && options.Count > 0)
+            {
+                ValidateOptionEntries(options);
+            }
         }
-
-        var categories = await db.QuestionCategories
-            .Where(c => c.CertId == exam.CertId)
-            .ToDictionaryAsync(c => c.Code, c => c.CategoryId, StringComparer.OrdinalIgnoreCase, cancellationToken);
-
-        var groupsCreated = 0;
-        var questionsCreated = 0;
-
-        foreach (var q in request.Questions)
+        else if (type is QuestionTypeDto.Dropdown or QuestionTypeDto.DragDrop)
         {
-            var group = new QuestionGroup
+            if (options != null && options.Count > 0)
             {
-                ExamId = examId,
-                CertId = exam.CertId,
-                SectionId = request.SectionId,
-                DisplayOrder = currentDisplayOrder,
-            };
-            db.QuestionGroups.Add(group);
-            await db.SaveChangesAsync(cancellationToken);
-            groupsCreated++;
+                ValidateOptionEntries(options);
+            }
+        }
+    }
 
-            int? categoryId = null;
-            if (!string.IsNullOrWhiteSpace(q.CategoryCode) && categories.TryGetValue(q.CategoryCode, out var cid))
+    private static void ValidateOptionEntries(IReadOnlyList<AdminQuestionOptionInput> options)
+    {
+        foreach (var opt in options)
+        {
+            if (string.IsNullOrWhiteSpace(opt.Label))
             {
-                categoryId = cid;
+                throw new AdminExamException(ApiError.Codes.Validation, "Option label is required.");
             }
 
-            var question = new Question
+            if (string.IsNullOrWhiteSpace(opt.Text))
             {
-                ExamId = examId,
-                SectionId = request.SectionId,
-                SkillId = section.SkillId,
-                GroupId = group.GroupId,
-                Stem = q.Stem.Trim(),
-                DifficultyLevel = q.DifficultyLevel is >= 1 and <= 5 ? q.DifficultyLevel : 3,
-                QuestionType = QuestionType.Mcq.ToCode(),
-                Explanation = q.Explanation?.Trim(),
-                CategoryId = categoryId,
-                DisplayOrder = currentDisplayOrder,
-            };
-            db.Questions.Add(question);
-            await db.SaveChangesAsync(cancellationToken);
-            questionsCreated++;
-
-            foreach (var opt in q.Options)
-            {
-                var option = new QuestionOption
-                {
-                    QuestionId = question.QuestionId,
-                    QuestionType = question.QuestionType,
-                    Label = opt.Label.Trim().ToUpperInvariant(),
-                    Text = opt.Text.Trim(),
-                    IsCorrect = opt.IsCorrect,
-                    Rationale = opt.Rationale?.Trim()
-                };
-                db.QuestionOptions.Add(option);
+                throw new AdminExamException(ApiError.Codes.Validation, "Option text is required.");
             }
-
-            currentDisplayOrder++;
         }
 
-        exam.UpdatedAt = clock.GetUtcNow();
-        await db.SaveChangesAsync(cancellationToken);
+        var uniqueLabels = options.Select(o => o.Label.Trim().ToUpperInvariant()).Distinct().Count();
+        if (uniqueLabels != options.Count)
+        {
+            throw new AdminExamException(ApiError.Codes.Validation, "Option labels must be unique.");
+        }
+    }
 
-        await tx.CommitAsync(cancellationToken);
-
-        return new QuickIngestCommitResultDto(
-            Success: true,
-            QuestionsCommitted: questionsCreated,
-            GroupsCreated: groupsCreated,
-            Message: $"Successfully committed {questionsCreated} questions to section '{section.Name}'.");
+    public Task<QuickIngestCommitResultDto> CommitQuickIngestAsync(int examId, QuickIngestCommitRequest request, CancellationToken cancellationToken = default)
+    {
+        return new ExamQuickIngestService(db, clock).CommitStagedAsync(examId, request, cancellationToken);
     }
 
     public async Task<ExamStudioDetailDto> GetExamStudioAsync(int examId, CancellationToken cancellationToken = default)
@@ -1642,6 +1514,7 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
         }
 
         var sections = await db.Sections.AsNoTracking()
+            .Include(s => s.Skill)
             .Where(s => s.CertId == exam.CertId)
             .OrderBy(s => s.DisplayOrder)
             .ToListAsync(cancellationToken);
@@ -1711,7 +1584,7 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
                         SectionCode: sec.Code,
                         SectionName: sec.Name,
                         SkillId: q.SkillId,
-                        SkillCode: sec.Code,
+                        SkillCode: sec.Skill?.Code ?? sec.Code,
                         Stem: q.Stem,
                         DifficultyLevel: q.DifficultyLevel,
                         QuestionType: EnumCodes.Parse<QuestionType>(q.QuestionType).MapTo<QuestionTypeDto>(),
@@ -1731,7 +1604,11 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
                             .Where(c => c.SkillId == q.SkillId
                                 && sectionCriteria.Any(sc => sc.SectionId == q.SectionId && sc.CriterionId == c.CriterionId))
                             .ToList(),
-                        HasAnswers: answeredQuestionIds.Contains(q.QuestionId)));
+                        HasAnswers: answeredQuestionIds.Contains(q.QuestionId),
+                        MaxSelections: q.MaxSelections,
+                        AllowNumber: q.AllowNumber,
+                        AcceptedAnswersJson: q.AcceptedAnswersJson,
+                        RequiredKeywords: q.RequiredKeywords));
                 }
 
                 groupDtos.Add(new ExamStudioGroupDto(
@@ -1752,7 +1629,8 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
                     PrepSeconds: g.PrepSeconds,
                     ResponseSeconds: g.ResponseSeconds,
                     DisplayOrder: g.DisplayOrder,
-                    Questions: qDtos));
+                    Questions: qDtos,
+                    UnitNumber: g.UnitNumber));
             }
 
             var hasAudio = secAudio != null || secGroups.Any(g => !string.IsNullOrWhiteSpace(g.AudioPath));
@@ -1768,7 +1646,23 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
                 HasAudio: hasAudio,
                 MasterAudioPath: MediaUrlHelper.NormalizeMediaUrl(secAudio?.AudioPath),
                 MasterAudioDurationSec: secAudio?.DurationSec,
-                Groups: groupDtos));
+                Groups: groupDtos,
+                OptionCount: sec.OptionCount,
+                ClusterSize: sec.ClusterSize,
+                UnitCount: sec.UnitCount,
+                HideOptionText: sec.HideOptionText,
+                RequirePassage: sec.RequirePassage,
+                RequireAudio: sec.RequireAudio,
+                RequireImage: sec.RequireImage,
+                RequiredKeywordCount: sec.RequiredKeywordCount,
+                AllowedComponentTypesJson: sec.AllowedComponentTypesJson,
+                LayoutType: sec.LayoutType,
+                NavigationMode: sec.NavigationMode,
+                TimerPolicyJson: sec.TimerPolicyJson,
+                ToolsConfigJson: sec.ToolsConfigJson,
+                SkillId: sec.SkillId,
+                SkillCode: sec.Skill?.Code ?? sec.Code,
+                SkillName: sec.Skill?.Name ?? sec.Name));
         }
 
         var finishedAttemptCount = await db.ExamAttempts.CountAsync(
@@ -1843,15 +1737,45 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
         var issues = new List<ExamAuditIssueDto>();
         var missingItems = new List<string>();
 
-        var totalQuestions = 0;
-        var sectionExpectedSum = sections.Where(s => s.ExpectedQuestionCount.HasValue).Sum(s => s.ExpectedQuestionCount!.Value);
+        var relevantSections = exam.Purpose switch
+        {
+            "speaking_practice" => sections.Where(s => s.Modality == "speaking").ToList(),
+            "writing_practice" => sections.Where(s => s.Modality == "writing").ToList(),
+            _ => sections
+        };
+
+        var relevantSectionIds = relevantSections.Select(s => s.SectionId).ToHashSet();
+        var relevantGroups = groups.Where(g => relevantSectionIds.Contains(g.SectionId)).ToList();
+        var totalQuestions = relevantGroups.Sum(g => g.QuestionGroups.Count);
+
+        var sectionExpectedSum = relevantSections.Where(s => s.ExpectedQuestionCount.HasValue).Sum(s => s.ExpectedQuestionCount!.Value);
         var expectedTotal = sectionExpectedSum > 0 ? sectionExpectedSum : (exam.QuestionCount ?? 0);
 
-        foreach (var sec in sections)
+        if (groups.Count == 0 || totalQuestions == 0)
+        {
+            var msg = "Exam must have at least one question group and question.";
+            issues.Add(new ExamAuditIssueDto(
+                Code: "EXAM_EMPTY",
+                Severity: "error",
+                Message: msg));
+            missingItems.Add(msg);
+        }
+
+        if (exam.QuestionCount.HasValue && totalQuestions < exam.QuestionCount.Value)
+        {
+            var diff = exam.QuestionCount.Value - totalQuestions;
+            var msg = $"Exam requires at least {exam.QuestionCount.Value} questions, but only has {totalQuestions} ({diff} missing).";
+            issues.Add(new ExamAuditIssueDto(
+                Code: "EXAM_QUESTION_COUNT_LOW",
+                Severity: "error",
+                Message: msg));
+            missingItems.Add(msg);
+        }
+
+        foreach (var sec in relevantSections)
         {
             var secGroups = groups.Where(g => g.SectionId == sec.SectionId).ToList();
             var secQuestions = secGroups.SelectMany(g => g.QuestionGroups).ToList();
-            totalQuestions += secQuestions.Count;
 
             if (sec.ExpectedQuestionCount.HasValue && sec.ExpectedQuestionCount.Value > 0)
             {
@@ -1870,7 +1794,67 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
                 }
             }
 
-            if (sec.Modality == "listening")
+            if (sec.ClusterSize > 1 && secGroups.Count > 0)
+            {
+                foreach (var g in secGroups)
+                {
+                    if (g.QuestionGroups.Count != sec.ClusterSize)
+                    {
+                        var msg = $"Group #{g.DisplayOrder} in [{sec.Code}] requires {sec.ClusterSize} questions per cluster, but has {g.QuestionGroups.Count}.";
+                        issues.Add(new ExamAuditIssueDto(
+                            Code: "GRP_CLUSTER_SIZE_MISMATCH",
+                            Severity: "error",
+                            Message: msg,
+                            SectionId: sec.SectionId,
+                            SectionCode: sec.Code,
+                            GroupId: g.GroupId,
+                            ElementTarget: $"group-card-{g.GroupId}"));
+                        missingItems.Add(msg);
+                    }
+                }
+            }
+
+            if (sec.RequirePassage && secGroups.Count > 0)
+            {
+                foreach (var g in secGroups)
+                {
+                    if (string.IsNullOrWhiteSpace(g.Passage))
+                    {
+                        var msg = $"Group #{g.DisplayOrder} in [{sec.Code}] requires a stimulus passage (RequirePassage is enabled).";
+                        issues.Add(new ExamAuditIssueDto(
+                            Code: "GRP_PASSAGE_MISSING",
+                            Severity: "error",
+                            Message: msg,
+                            SectionId: sec.SectionId,
+                            SectionCode: sec.Code,
+                            GroupId: g.GroupId,
+                            ElementTarget: $"group-card-{g.GroupId}"));
+                        missingItems.Add(msg);
+                    }
+                }
+            }
+
+            if (sec.RequireImage && secGroups.Count > 0)
+            {
+                foreach (var g in secGroups)
+                {
+                    if (string.IsNullOrWhiteSpace(g.ImagePath))
+                    {
+                        var msg = $"Group #{g.DisplayOrder} in [{sec.Code}] requires an image stimulus (RequireImage is enabled).";
+                        issues.Add(new ExamAuditIssueDto(
+                            Code: "GRP_IMAGE_MISSING",
+                            Severity: "error",
+                            Message: msg,
+                            SectionId: sec.SectionId,
+                            SectionCode: sec.Code,
+                            GroupId: g.GroupId,
+                            ElementTarget: $"group-card-{g.GroupId}"));
+                        missingItems.Add(msg);
+                    }
+                }
+            }
+
+            if (sec.RequireAudio || (sec.Modality == "listening" && (secGroups.Count > 0 || (sec.ExpectedQuestionCount.HasValue && sec.ExpectedQuestionCount.Value > 0))))
             {
                 var hasSecAudio = sectionAudios.Any(a => a.SectionId == sec.SectionId && !string.IsNullOrWhiteSpace(a.AudioPath));
                 var allGroupsAudio = secGroups.Count > 0 && secGroups.All(g => !string.IsNullOrWhiteSpace(g.AudioPath));
@@ -1886,6 +1870,16 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
                         ElementTarget: $"section-link-{sec.SectionId}"));
                     missingItems.Add(msg);
                 }
+            }
+
+            List<string>? allowedTypes = null;
+            if (!string.IsNullOrWhiteSpace(sec.AllowedComponentTypesJson))
+            {
+                try
+                {
+                    allowedTypes = JsonSerializer.Deserialize<List<string>>(sec.AllowedComponentTypesJson);
+                }
+                catch { }
             }
 
             foreach (var g in secGroups)
@@ -1917,9 +1911,6 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
                     }
                 }
 
-                // Learners hear what ExamAudio.Resolve picks (CONTEXT.md "Audio slicing"): with a master
-                // track, a group without a slice plays the whole track, which is only right when the
-                // section has a single group, and a group's own different file is never played.
                 var master = sectionAudios.FirstOrDefault(a => a.SectionId == sec.SectionId)?.AudioPath;
                 var hasMaster = sec.Modality == "listening" && !string.IsNullOrWhiteSpace(master);
                 if (hasMaster && !string.IsNullOrWhiteSpace(g.AudioPath)
@@ -1963,7 +1954,41 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
                             ElementTarget: $"question-card-{q.QuestionId}"));
                     }
 
-                    if (string.Equals(q.QuestionType, "mcq", StringComparison.OrdinalIgnoreCase))
+                    if (allowedTypes != null && allowedTypes.Count > 0 && !allowedTypes.Contains(q.QuestionType, StringComparer.OrdinalIgnoreCase))
+                    {
+                        var msg = $"Question #{q.DisplayOrder} in [{sec.Code}] has type '{q.QuestionType}', which is not allowed by the section blueprint (allowed: {sec.AllowedComponentTypesJson}).";
+                        issues.Add(new ExamAuditIssueDto(
+                            Code: "Q_TYPE_NOT_ALLOWED",
+                            Severity: "error",
+                            Message: msg,
+                            SectionId: sec.SectionId,
+                            SectionCode: sec.Code,
+                            GroupId: g.GroupId,
+                            QuestionId: q.QuestionId,
+                            ElementTarget: $"question-card-{q.QuestionId}"));
+                        missingItems.Add(msg);
+                    }
+
+                    if (sec.RequiredKeywordCount > 0 && string.Equals(q.QuestionType, "free_response", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var kwList = string.IsNullOrWhiteSpace(q.RequiredKeywords) ? new List<string>() : AttemptEngine.ParseKeywords(q.RequiredKeywords);
+                        if (kwList.Count < sec.RequiredKeywordCount)
+                        {
+                            var msg = $"Question #{q.DisplayOrder} in [{sec.Code}] requires at least {sec.RequiredKeywordCount} keywords (found {kwList.Count}).";
+                            issues.Add(new ExamAuditIssueDto(
+                                Code: "Q_KEYWORDS_MISSING",
+                                Severity: "error",
+                                Message: msg,
+                                SectionId: sec.SectionId,
+                                SectionCode: sec.Code,
+                                GroupId: g.GroupId,
+                                QuestionId: q.QuestionId,
+                                ElementTarget: $"question-card-{q.QuestionId}"));
+                            missingItems.Add(msg);
+                        }
+                    }
+
+                    if (string.Equals(q.QuestionType, "mcq", StringComparison.OrdinalIgnoreCase) || string.Equals(q.QuestionType, "mcq_3", StringComparison.OrdinalIgnoreCase))
                     {
                         var optCount = q.QuestionOptionQuestionNavigations.Count;
                         if (optCount < 2)
@@ -1971,7 +1996,21 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
                             issues.Add(new ExamAuditIssueDto(
                                 Code: "Q_OPTIONS_FEW",
                                 Severity: "error",
-                                Message: $"MCQ Question #{q.DisplayOrder} in [{sec.Code}] must have at least 2 options (found {optCount}).",
+                                Message: $"{q.QuestionType.ToUpperInvariant()} Question #{q.DisplayOrder} in [{sec.Code}] must have at least 2 options (found {optCount}).",
+                                SectionId: sec.SectionId,
+                                SectionCode: sec.Code,
+                                GroupId: g.GroupId,
+                                QuestionId: q.QuestionId,
+                                ElementTarget: $"question-card-{q.QuestionId}"));
+                        }
+
+                        if (sec.OptionCount > 0 && optCount != sec.OptionCount)
+                        {
+                            var msg = $"Question #{q.DisplayOrder} in [{sec.Code}] has {optCount} options (blueprint expects {sec.OptionCount}).";
+                            issues.Add(new ExamAuditIssueDto(
+                                Code: "Q_OPTIONS_COUNT_MISMATCH",
+                                Severity: "warning",
+                                Message: msg,
                                 SectionId: sec.SectionId,
                                 SectionCode: sec.Code,
                                 GroupId: g.GroupId,
@@ -1985,7 +2024,69 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
                             issues.Add(new ExamAuditIssueDto(
                                 Code: "Q_OPTIONS_ONE_CORRECT",
                                 Severity: "error",
-                                Message: $"MCQ Question #{q.DisplayOrder} in [{sec.Code}] must have exactly one correct option (found {correctCount}) (UX_Options_OneCorrect).",
+                                Message: $"{q.QuestionType.ToUpperInvariant()} Question #{q.DisplayOrder} in [{sec.Code}] must have exactly one correct option (found {correctCount}) (UX_Options_OneCorrect).",
+                                SectionId: sec.SectionId,
+                                SectionCode: sec.Code,
+                                GroupId: g.GroupId,
+                                QuestionId: q.QuestionId,
+                                ElementTarget: $"question-card-{q.QuestionId}"));
+                        }
+                    }
+                    else if (string.Equals(q.QuestionType, "multi_select", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var optCount = q.QuestionOptionQuestionNavigations.Count;
+                        if (optCount < 2)
+                        {
+                            issues.Add(new ExamAuditIssueDto(
+                                Code: "Q_OPTIONS_FEW",
+                                Severity: "error",
+                                Message: $"Multi-select Question #{q.DisplayOrder} in [{sec.Code}] must have at least 2 options (found {optCount}).",
+                                SectionId: sec.SectionId,
+                                SectionCode: sec.Code,
+                                GroupId: g.GroupId,
+                                QuestionId: q.QuestionId,
+                                ElementTarget: $"question-card-{q.QuestionId}"));
+                        }
+
+                        var correctCount = q.QuestionOptionQuestionNavigations.Count(o => o.IsCorrect);
+                        if (correctCount < 1)
+                        {
+                            issues.Add(new ExamAuditIssueDto(
+                                Code: "Q_OPTIONS_NONE_CORRECT",
+                                Severity: "error",
+                                Message: $"Multi-select Question #{q.DisplayOrder} in [{sec.Code}] must have at least one correct option.",
+                                SectionId: sec.SectionId,
+                                SectionCode: sec.Code,
+                                GroupId: g.GroupId,
+                                QuestionId: q.QuestionId,
+                                ElementTarget: $"question-card-{q.QuestionId}"));
+                        }
+                    }
+                    else if (string.Equals(q.QuestionType, "inline_completion", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var hasAccepted = !string.IsNullOrWhiteSpace(q.AcceptedAnswersJson) || q.QuestionOptionQuestionNavigations.Any(o => o.IsCorrect);
+                        if (!hasAccepted)
+                        {
+                            issues.Add(new ExamAuditIssueDto(
+                                Code: "Q_ACCEPTED_ANSWERS_MISSING",
+                                Severity: "error",
+                                Message: $"Inline completion Question #{q.DisplayOrder} in [{sec.Code}] must have at least one accepted answer.",
+                                SectionId: sec.SectionId,
+                                SectionCode: sec.Code,
+                                GroupId: g.GroupId,
+                                QuestionId: q.QuestionId,
+                                ElementTarget: $"question-card-{q.QuestionId}"));
+                        }
+                    }
+                    else if (string.Equals(q.QuestionType, "dropdown", StringComparison.OrdinalIgnoreCase) || string.Equals(q.QuestionType, "drag_drop", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var hasAnswers = !string.IsNullOrWhiteSpace(q.AcceptedAnswersJson) || q.QuestionOptionQuestionNavigations.Any(o => o.IsCorrect);
+                        if (!hasAnswers)
+                        {
+                            issues.Add(new ExamAuditIssueDto(
+                                Code: "Q_OPTIONS_NONE_CORRECT",
+                                Severity: "error",
+                                Message: $"{q.QuestionType} Question #{q.DisplayOrder} in [{sec.Code}] must have at least one correct option or accepted answer.",
                                 SectionId: sec.SectionId,
                                 SectionCode: sec.Code,
                                 GroupId: g.GroupId,
@@ -2127,10 +2228,8 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
             .Select(q => (int?)q.DisplayOrder)
             .MaxAsync(cancellationToken) ?? 0;
 
-        var isP2 = string.Equals(section.Code, "P2", StringComparison.OrdinalIgnoreCase);
-        var isP1 = string.Equals(section.Code, "P1", StringComparison.OrdinalIgnoreCase);
-        var isP6 = string.Equals(section.Code, "P6", StringComparison.OrdinalIgnoreCase);
-        var isFreeResponse = section.Modality is "speaking" or "writing";
+        var isFreeResponse = section.Modality is "speaking" or "writing"
+            || (section.AllowedComponentTypesJson != null && section.AllowedComponentTypesJson.Contains("free_response") && !section.AllowedComponentTypesJson.Contains("mcq"));
 
         var group = new QuestionGroup
         {
@@ -2142,22 +2241,38 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
             AudioPath = Normalize(request.AudioPath),
             AudioStartMs = request.AudioStartMs,
             AudioEndMs = request.AudioEndMs,
-            DisplayOrder = maxOrder + 1
+            DisplayOrder = maxOrder + 1,
+            UnitNumber = request.UnitNumber > 0 ? request.UnitNumber : 1
         };
 
         db.QuestionGroups.Add(group);
         await db.SaveChangesAsync(cancellationToken);
 
-        var count = Math.Clamp(request.QuestionCount, 1, 10);
+        var count = request.QuestionCount > 0 ? Math.Clamp(request.QuestionCount, 1, 10) : (section.ClusterSize > 0 ? section.ClusterSize : 3);
         var questions = new List<Question>();
 
         for (var i = 0; i < count; i++)
         {
-            var stem = isP2 ? "Mark your answer on your answer sheet."
-                : isP1 ? "Look at the photograph and choose the statement that best describes what you see in the image."
-                : isP6 ? $"Select the best word or phrase to complete blank [{i + 1}]."
-                : isFreeResponse ? "Respond to the prompt as instructed."
-                : $"Question {qMaxOrder + i + 1}";
+            string stem;
+            if (section.RequireImage)
+            {
+                stem = "Look at the photograph and choose the statement that best describes what you see in the image.";
+            }
+            else if (section.HideOptionText)
+            {
+                stem = "Mark your answer on your answer sheet.";
+            }
+            else if (isFreeResponse)
+            {
+                stem = "Respond to the prompt as instructed.";
+            }
+            else
+            {
+                stem = $"Question {qMaxOrder + i + 1}";
+            }
+
+            var qType = isFreeResponse ? QuestionTypeDto.FreeResponse
+                : (section.OptionCount == 3 ? QuestionTypeDto.Mcq_3 : QuestionTypeDto.Mcq);
 
             var q = new Question
             {
@@ -2167,8 +2282,8 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
                 SkillId = section.SkillId,
                 Stem = stem,
                 DifficultyLevel = 2,
-                QuestionType = isFreeResponse ? QuestionTypeDto.FreeResponse.ToCode() : QuestionTypeDto.Mcq.ToCode(),
-                Explanation = isP2 ? "Option A is the most appropriate response." : "Correct answer option A.",
+                QuestionType = qType.ToCode(),
+                Explanation = section.HideOptionText ? "Option A is the most appropriate response." : "Correct answer option A.",
                 PrepSeconds = isFreeResponse ? (section.Modality == "speaking" ? 15 : 60) : null,
                 ResponseSeconds = isFreeResponse ? (section.Modality == "speaking" ? 45 : 1800) : null,
                 MinWords = section.Modality == "writing" ? 150 : null,
@@ -2188,7 +2303,7 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
             var optionsList = new List<AdminQuestionOptionDto>();
             if (!isFreeResponse)
             {
-                var optionLabels = isP2 ? new[] { "A", "B", "C" } : new[] { "A", "B", "C", "D" };
+                var optionLabels = section.OptionCount == 3 ? new[] { "A", "B", "C" } : new[] { "A", "B", "C", "D" };
                 foreach (var lbl in optionLabels)
                 {
                     var opt = new QuestionOption
@@ -2229,7 +2344,11 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
                 q.DisplayOrder,
                 clock.GetUtcNow(),
                 optionsList,
-                HasAnswers: false));
+                HasAnswers: false,
+                MaxSelections: q.MaxSelections,
+                AllowNumber: q.AllowNumber,
+                AcceptedAnswersJson: q.AcceptedAnswersJson,
+                RequiredKeywords: q.RequiredKeywords));
         }
 
         exam.UpdatedAt = clock.GetUtcNow();
@@ -2253,7 +2372,8 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
             group.PrepSeconds,
             group.ResponseSeconds,
             group.DisplayOrder,
-            questionDtos);
+            questionDtos,
+            group.UnitNumber);
     }
 
     public async Task<(Stream Stream, string ContentType, string FileName)> ExportExamPackageAsync(int examId, string? format = "zip", CancellationToken cancellationToken = default)
@@ -2274,6 +2394,8 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
             .OrderBy(g => g.DisplayOrder)
             .ToListAsync(cancellationToken);
 
+        var isZip = string.Equals(format, "zip", StringComparison.OrdinalIgnoreCase);
+
         var manifest = new ImportManifest
         {
             Version = "1.0",
@@ -2281,6 +2403,7 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
             {
                 Title = exam.Name,
                 Purpose = exam.Purpose,
+                DeliveryMode = exam.DeliveryMode,
                 DurationMinutes = exam.DurationMinutes,
                 SourceName = exam.SourceName,
                 Description = exam.Description,
@@ -2292,39 +2415,73 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
                 .Select(sg => new ImportManifestSection
                 {
                     SectionCode = sg.Key.Code,
-                    Groups = sg.OrderBy(g => g.DisplayOrder).Select(g => new ImportManifestGroup
+                    Groups = sg.OrderBy(g => g.DisplayOrder).Select(g =>
                     {
-                        Passage = g.Passage,
-                        AudioFile = g.AudioPath,
-                        AudioStartMs = g.AudioStartMs,
-                        AudioEndMs = g.AudioEndMs,
-                        ImageFile = g.ImagePath,
-                        ImageAlt = g.ImageAlt,
-                        Transcript = g.Transcript,
-                        PrepSeconds = g.PrepSeconds,
-                        ResponseSeconds = g.ResponseSeconds,
-                        DisplayOrder = g.DisplayOrder,
-                        Questions = g.QuestionGroups.OrderBy(q => q.DisplayOrder).Select(q => new ImportManifestQuestion
+                        string? audioRel = null;
+                        string? imageRel = null;
+                        if (!string.IsNullOrWhiteSpace(g.AudioPath))
                         {
-                            Stem = q.Stem,
-                            DifficultyLevel = q.DifficultyLevel,
-                            QuestionType = q.QuestionType,
-                            CategoryCode = q.Category?.Code,
-                            Explanation = q.Explanation,
-                            Hint = q.Hint,
-                            PrepSeconds = q.PrepSeconds,
-                            ResponseSeconds = q.ResponseSeconds,
-                            MinWords = q.MinWords,
-                            MaxWords = q.MaxWords,
-                            DisplayOrder = q.DisplayOrder,
-                            Options = q.QuestionOptionQuestionNavigations.OrderBy(o => o.Label).Select(o => new ImportManifestOption
+                            audioRel = $"media/{Path.GetFileName(g.AudioPath)}";
+                        }
+                        if (!string.IsNullOrWhiteSpace(g.ImagePath))
+                        {
+                            imageRel = $"media/{Path.GetFileName(g.ImagePath)}";
+                        }
+
+                        return new ImportManifestGroup
+                        {
+                            UnitNumber = g.UnitNumber,
+                            Passage = g.Passage,
+                            AudioFile = isZip ? audioRel : null,
+                            AudioStartMs = g.AudioStartMs,
+                            AudioEndMs = g.AudioEndMs,
+                            ImageFile = isZip ? imageRel : null,
+                            ImageAlt = g.ImageAlt,
+                            Transcript = g.Transcript,
+                            PrepSeconds = g.PrepSeconds,
+                            ResponseSeconds = g.ResponseSeconds,
+                            DisplayOrder = g.DisplayOrder,
+                            Questions = g.QuestionGroups.OrderBy(q => q.DisplayOrder).Select(q =>
                             {
-                                Label = o.Label,
-                                Text = o.Text,
-                                IsCorrect = o.IsCorrect,
-                                Rationale = o.Rationale
+                                List<string>? acceptedAnswers = null;
+                                if (!string.IsNullOrWhiteSpace(q.AcceptedAnswersJson))
+                                {
+                                    acceptedAnswers = AttemptEngine.ParseAcceptedAnswers(q.AcceptedAnswersJson);
+                                }
+
+                                List<string>? requiredKeywords = null;
+                                if (!string.IsNullOrWhiteSpace(q.RequiredKeywords))
+                                {
+                                    requiredKeywords = AttemptEngine.ParseKeywords(q.RequiredKeywords);
+                                }
+
+                                return new ImportManifestQuestion
+                                {
+                                    Stem = q.Stem,
+                                    DifficultyLevel = q.DifficultyLevel,
+                                    QuestionType = q.QuestionType,
+                                    CategoryCode = q.Category?.Code,
+                                    Explanation = q.Explanation,
+                                    Hint = q.Hint,
+                                    PrepSeconds = q.PrepSeconds,
+                                    ResponseSeconds = q.ResponseSeconds,
+                                    MinWords = q.MinWords,
+                                    MaxWords = q.MaxWords,
+                                    DisplayOrder = q.DisplayOrder,
+                                    MaxSelections = q.MaxSelections,
+                                    AllowNumber = q.AllowNumber,
+                                    AcceptedAnswers = acceptedAnswers,
+                                    RequiredKeywords = requiredKeywords,
+                                    Options = q.QuestionOptionQuestionNavigations.Count == 0 ? null : q.QuestionOptionQuestionNavigations.OrderBy(o => o.Label).Select(o => new ImportManifestOption
+                                    {
+                                        Label = o.Label,
+                                        Text = o.Text,
+                                        IsCorrect = o.IsCorrect,
+                                        Rationale = o.Rationale
+                                    }).ToList()
+                                };
                             }).ToList()
-                        }).ToList()
+                        };
                     }).ToList()
                 }).ToList()
         };
@@ -2357,7 +2514,11 @@ public sealed class AdminExamService(CompanionDbContext db, TimeProvider clock, 
 
                     foreach (var path in mediaPaths)
                     {
-                        var cleanPath = path!.TrimStart('/').Replace("media/", "");
+                        var cleanPath = path!.TrimStart('/');
+                        if (cleanPath.StartsWith("media/", StringComparison.OrdinalIgnoreCase))
+                        {
+                            cleanPath = cleanPath["media/".Length..];
+                        }
                         var media = await fileStore.GetMediaAsync(cleanPath, cancellationToken);
                         if (media != null)
                         {

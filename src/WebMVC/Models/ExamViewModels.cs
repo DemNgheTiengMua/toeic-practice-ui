@@ -36,3 +36,16 @@ public sealed record ExamHistoryViewModel(
 public sealed record ExamReviewViewModel(
     AttemptReviewDto Review,
     string? ErrorMessage = null);
+
+public sealed record ExamPreflightViewModel(
+    PreflightStatusDto Preflight,
+    string? ErrorMessage = null);
+
+public sealed record ExamResumeViewModel(
+    string? AuthorizationCode = null,
+    string? ErrorMessage = null);
+
+public sealed class ExamResumeFormModel
+{
+    public string AuthorizationCode { get; set; } = string.Empty;
+}

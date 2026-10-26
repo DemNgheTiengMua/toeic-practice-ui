@@ -151,4 +151,23 @@ public sealed class AdminViewsLayoutTests
         Assert.Contains("Escape", content);
         Assert.Contains("submitModal", content);
     }
+
+    [Fact]
+    public void AdminViews_CertificatesAndWizard_MustDeclareAdminLayout()
+    {
+        var repoRoot = TestPathHelper.FindRepoRoot();
+        var adminViewsDir = Path.Combine(repoRoot, "src", "WebMVC", "Views", "Admin");
+
+        var certsView = Path.Combine(adminViewsDir, "Certificates.cshtml");
+        var wizardView = Path.Combine(adminViewsDir, "CertificateWizard.cshtml");
+
+        Assert.True(File.Exists(certsView), "Certificates.cshtml must exist");
+        Assert.True(File.Exists(wizardView), "CertificateWizard.cshtml must exist");
+
+        var certsContent = File.ReadAllText(certsView);
+        var wizardContent = File.ReadAllText(wizardView);
+
+        Assert.Matches(@"Layout\s*=\s*""_AdminLayout"";?", certsContent);
+        Assert.Matches(@"Layout\s*=\s*""_AdminLayout"";?", wizardContent);
+    }
 }

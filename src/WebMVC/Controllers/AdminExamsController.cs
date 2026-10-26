@@ -481,7 +481,8 @@ public sealed class AdminExamsController(
                     model.Transcript,
                     model.PrepSeconds,
                     model.ResponseSeconds,
-                    model.DisplayOrder);
+                    model.DisplayOrder,
+                    model.UnitNumber);
                 await api.UpdateAdminQuestionGroupAsync(id, model.GroupId.Value, updateReq, cancellationToken);
                 TempData["Success"] = "Question group updated successfully.";
             }
@@ -498,7 +499,8 @@ public sealed class AdminExamsController(
                     model.Transcript,
                     model.PrepSeconds,
                     model.ResponseSeconds,
-                    model.DisplayOrder);
+                    model.DisplayOrder,
+                    model.UnitNumber);
                 await api.CreateAdminQuestionGroupAsync(id, createReq, cancellationToken);
                 TempData["Success"] = "Question group created successfully.";
             }
@@ -539,11 +541,12 @@ public sealed class AdminExamsController(
         {
 
             var optionInputs = new List<AdminQuestionOptionInput>();
-            if (model.QuestionType == QuestionTypeDto.Mcq && model.Options.Count > 0)
+            if (model.QuestionType != QuestionTypeDto.FreeResponse && model.Options.Count > 0)
             {
                 foreach (var opt in model.Options)
                 {
-                    var isCorrect = !string.IsNullOrWhiteSpace(model.CorrectOptionLabel)
+                    var isCorrect = (model.QuestionType == QuestionTypeDto.Mcq || model.QuestionType == QuestionTypeDto.Mcq_3)
+                        && !string.IsNullOrWhiteSpace(model.CorrectOptionLabel)
                         ? string.Equals(opt.Label?.Trim(), model.CorrectOptionLabel.Trim(), StringComparison.OrdinalIgnoreCase)
                         : opt.IsCorrect;
 
@@ -571,7 +574,12 @@ public sealed class AdminExamsController(
                     model.MaxWords,
                     model.Hint,
                     model.DisplayOrder,
-                    optionInputs);
+                    optionInputs,
+                    null,
+                    model.MaxSelections,
+                    model.AllowNumber,
+                    model.AcceptedAnswersJson,
+                    model.RequiredKeywords);
 
                 await api.UpdateAdminQuestionAsync(model.QuestionId.Value, updateReq, cancellationToken);
                 TempData["Success"] = $"Question {model.DisplayOrder} saved successfully.";
@@ -592,7 +600,12 @@ public sealed class AdminExamsController(
                     model.MaxWords,
                     model.Hint,
                     model.DisplayOrder,
-                    optionInputs);
+                    optionInputs,
+                    null,
+                    model.MaxSelections,
+                    model.AllowNumber,
+                    model.AcceptedAnswersJson,
+                    model.RequiredKeywords);
 
                 var created = await api.CreateAdminQuestionAsync(id, createReq, cancellationToken);
                 TempData["Success"] = $"Question {created.DisplayOrder} created successfully.";
@@ -682,6 +695,43 @@ public sealed class AdminExamsController(
         catch (ApiException ex)
         {
             logger.LogWarning(ex, "Failed to commit quick ingest for exam {ExamId}", id);
+            return StatusCode(ex.Status, new { message = ex.Detail ?? ex.Message, code = ex.Code });
+        }
+    }
+
+    [HttpGet("sections/{sectionId:int}/quick-ingest/sample")]
+    public async Task<IActionResult> GetQuickIngestSample(
+        int sectionId,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var result = await api.GetQuickIngestSampleTemplateAsync(sectionId, cancellationToken);
+            return Json(result);
+        }
+        catch (ApiException ex)
+        {
+            logger.LogWarning(ex, "Failed to get quick ingest sample template for section {SectionId}", sectionId);
+            return StatusCode(ex.Status, new { message = ex.Detail ?? ex.Message, code = ex.Code });
+        }
+    }
+
+    [HttpPost("{id:int}/sections/{sectionId:int}/ai-generate")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> GenerateSectionQuestions(
+        int id,
+        int sectionId,
+        [FromBody] SectionGenerateRequest? request,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var result = await api.GenerateSectionQuestionsAsync(id, sectionId, request, cancellationToken);
+            return Json(result);
+        }
+        catch (ApiException ex)
+        {
+            logger.LogWarning(ex, "Failed to generate AI questions for exam {ExamId} section {SectionId}", id, sectionId);
             return StatusCode(ex.Status, new { message = ex.Detail ?? ex.Message, code = ex.Code });
         }
     }
@@ -859,6 +909,28 @@ public sealed class AdminExamsController(
             logger.LogWarning(ex, "Failed to export exam {ExamId}", id);
             TempData["Error"] = ex.Detail ?? ex.Message;
             return RedirectToAction(nameof(Studio), new { id });
+        }
+    }
+
+    [HttpGet("manifest-template")]
+    public async Task<IActionResult> ManifestTemplate([FromQuery] int certId, CancellationToken cancellationToken = default)
+    {
+        if (certId <= 0)
+        {
+            TempData["Error"] = "Select a certificate to download its manifest template.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        try
+        {
+            var (stream, contentType, fileName) = await api.GetManifestTemplateAsync(certId, cancellationToken);
+            return File(stream, contentType, fileName);
+        }
+        catch (ApiException ex)
+        {
+            logger.LogWarning(ex, "Failed to download manifest template for cert {CertId}", certId);
+            TempData["Error"] = ex.Detail ?? ex.Message ?? "Failed to download manifest template.";
+            return RedirectToAction(nameof(Index), new { certId });
         }
     }
 }

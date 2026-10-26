@@ -32,7 +32,20 @@ public sealed record QuickIngestParsedQuestionDto(
     string? CategoryCode,
     IReadOnlyList<QuickIngestParsedOptionDto> Options,
     IReadOnlyList<QuickIngestIssueDto> Issues,
-    bool IsValid);
+    bool IsValid,
+    string QuestionType = "mcq",
+    string? Passage = null,
+    string? Transcript = null,
+    int? MaxWords = null,
+    int? MaxSelections = null,
+    string? AcceptedAnswersJson = null,
+    string? RequiredKeywords = null,
+    string? Hint = null,
+    int? GroupNumber = null,
+    int? PrepSeconds = null,
+    int? ResponseSeconds = null,
+    int? MinWords = null,
+    bool AllowNumber = true);
 
 public sealed record QuickIngestParseResultDto(
     bool Success,
@@ -53,6 +66,20 @@ public sealed record QuickIngestCommitResultDto(
     int GroupsCreated,
     string Message);
 
+public sealed record QuickIngestSampleTemplateDto(
+    string Template,
+    string FormatDescription);
+
+public sealed record SectionGenerateRequest(
+    int? QuestionCount = null);
+
+public sealed record SectionGenerationResultDto(
+    int ExamId,
+    int SectionId,
+    int QuestionsGenerated,
+    int GroupsGenerated,
+    string Message);
+
 // --- Reorder and Audit DTOs ---
 
 public sealed record ReorderSectionItemEntry(
@@ -71,7 +98,8 @@ public sealed record CreateExamClusterRequest(
     string? AudioPath = null,
     int? AudioStartMs = null,
     int? AudioEndMs = null,
-    int QuestionCount = 3);
+    int QuestionCount = 3,
+    int UnitNumber = 1);
 
 public sealed record AdminExamMediaUploadResultDto(
     string Url,
@@ -140,7 +168,11 @@ public sealed record ExamStudioQuestionDto(
     DateTimeOffset? UpdatedAt,
     IReadOnlyList<ExamStudioQuestionOptionDto> Options,
     IReadOnlyList<ExamStudioCriterionDto> Criteria,
-    bool HasAnswers);
+    bool HasAnswers,
+    int? MaxSelections = null,
+    bool AllowNumber = true,
+    string? AcceptedAnswersJson = null,
+    string? RequiredKeywords = null);
 
 public sealed record ExamStudioGroupDto(
     int GroupId,
@@ -160,7 +192,8 @@ public sealed record ExamStudioGroupDto(
     int? PrepSeconds,
     int? ResponseSeconds,
     int DisplayOrder,
-    IReadOnlyList<ExamStudioQuestionDto> Questions);
+    IReadOnlyList<ExamStudioQuestionDto> Questions,
+    int UnitNumber = 1);
 
 public sealed record ExamStudioSectionDto(
     int SectionId,
@@ -174,7 +207,23 @@ public sealed record ExamStudioSectionDto(
     bool HasAudio,
     string? MasterAudioPath,
     int? MasterAudioDurationSec,
-    IReadOnlyList<ExamStudioGroupDto> Groups);
+    IReadOnlyList<ExamStudioGroupDto> Groups,
+    int OptionCount = 4,
+    int ClusterSize = 1,
+    int UnitCount = 1,
+    bool HideOptionText = false,
+    bool RequirePassage = false,
+    bool RequireAudio = false,
+    bool RequireImage = false,
+    int RequiredKeywordCount = 0,
+    string? AllowedComponentTypesJson = null,
+    string LayoutType = "STANDARD_VERTICAL",
+    string NavigationMode = "FULL_SANDBOX",
+    string? TimerPolicyJson = null,
+    string? ToolsConfigJson = null,
+    int SkillId = 0,
+    string? SkillCode = null,
+    string? SkillName = null);
 
 public sealed record ExamStudioDetailDto(
     int ExamId,

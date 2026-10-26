@@ -43,7 +43,7 @@ public sealed class QuestionImportServiceTests(DatabaseFixture database)
             INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, DisplayOrder) VALUES
               (@l, @c, 'listening', 'P1', N'Photographs', 4, 1), (@l, @c, 'listening', 'P2', N'Question-Response', 3, 2),
               (@r, @c, 'reading', 'P5', N'Incomplete Sentences', 4, 1), (@r, @c, 'reading', 'P7', N'Reading Comprehension', 4, 2),
-              (@s, @c, 'speaking', 'S3', N'Respond to questions', NULL, 1), (@w, @c, 'writing', 'W2', N'Respond to a written request', NULL, 1);
+              (@s, @c, 'speaking', 'S3', N'Respond to questions', 4, 1), (@w, @c, 'writing', 'W2', N'Respond to a written request', 4, 1);
             INSERT INTO QuestionCategories (CertId, Code, Name) VALUES
               (@c, 'grammar_prep', N'Preposition'), (@c, 'reading_inference', N'Inference'),
               (@c, 'listening_photo', N'Photographs'), (@c, 'listening_detail', N'Detail');
@@ -493,5 +493,340 @@ public sealed class QuestionImportServiceTests(DatabaseFixture database)
             Assert.Equal(ImportBatchStatusDto.Done, res4.Status);
             Assert.True(res4.QuestionCount > 0);
         }
+    }
+
+    [Fact]
+    public async Task Blueprint_validation_rejects_unauthorized_question_type()
+    {
+        var (certId, adminId) = await SeedAsync();
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            var sec = await db.Sections.FirstAsync(s => s.CertId == certId && s.Code == "P5");
+            sec.AllowedComponentTypesJson = "[\"mcq\"]";
+            await db.SaveChangesAsync();
+        }
+
+        var manifest = Sample("sample-reading-mcq.json");
+        var q = FirstQuestion(manifest);
+        q["questionType"] = "multi_select";
+        q["maxSelections"] = 2;
+
+        var result = await ImportJsonAsync(CreateService(), certId, adminId, manifest);
+
+        Assert.Equal(ImportBatchStatusDto.Failed, result.Status);
+        var errors = (await LogsAsync(result.BatchId)).Where(l => l.Level == "error").Select(l => l.Message).ToList();
+        Assert.Contains(errors, m => m.Contains("Question type 'multi_select' is not allowed in section 'P5'"));
+    }
+
+    [Fact]
+    public async Task Blueprint_validation_rejects_missing_required_keywords()
+    {
+        var (certId, adminId) = await SeedAsync();
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            var sec = await db.Sections.FirstAsync(s => s.CertId == certId && s.Code == "W2");
+            sec.RequiredKeywordCount = 2;
+            await db.SaveChangesAsync();
+        }
+
+        var manifest = Sample("sample-free-response.json");
+        // W2 is the second section
+        var q = manifest["sections"]![1]!["groups"]![0]!["questions"]![0]!;
+        q["requiredKeywords"] = new JsonArray("only_one_keyword");
+
+        var result = await ImportJsonAsync(CreateService(), certId, adminId, manifest);
+
+        Assert.Equal(ImportBatchStatusDto.Failed, result.Status);
+        var errors = (await LogsAsync(result.BatchId)).Where(l => l.Level == "error").Select(l => l.Message).ToList();
+        Assert.Contains(errors, m => m.Contains("requires at least 2 required keywords"));
+    }
+
+    [Fact]
+    public async Task Blueprint_validation_rejects_option_count_mismatch()
+    {
+        var (certId, adminId) = await SeedAsync();
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            var sec = await db.Sections.FirstAsync(s => s.CertId == certId && s.Code == "P5");
+            sec.OptionCount = 4;
+            await db.SaveChangesAsync();
+        }
+
+        var manifest = Sample("sample-reading-mcq.json");
+        var q = FirstQuestion(manifest);
+        // Remove option D to leave only 3 options
+        var opts = q["options"]!.AsArray();
+        opts.RemoveAt(3);
+
+        var result = await ImportJsonAsync(CreateService(), certId, adminId, manifest);
+
+        Assert.Equal(ImportBatchStatusDto.Failed, result.Status);
+        var errors = (await LogsAsync(result.BatchId)).Where(l => l.Level == "error").Select(l => l.Message).ToList();
+        Assert.Contains(errors, m => m.Contains("expects 4 options for mcq questions, but found 3"));
+    }
+
+    [Fact]
+    public async Task Blueprint_validation_rejects_cluster_size_mismatch()
+    {
+        var (certId, adminId) = await SeedAsync();
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            var sec = await db.Sections.FirstAsync(s => s.CertId == certId && s.Code == "P7");
+            sec.ClusterSize = 3;
+            await db.SaveChangesAsync();
+        }
+
+        var manifest = Sample("sample-reading-mcq.json");
+        // P7 is section index 1, having 1 question currently
+        var result = await ImportJsonAsync(CreateService(), certId, adminId, manifest);
+
+        Assert.Equal(ImportBatchStatusDto.Failed, result.Status);
+        var errors = (await LogsAsync(result.BatchId)).Where(l => l.Level == "error").Select(l => l.Message).ToList();
+        Assert.Contains(errors, m => m.Contains("requires 3 questions per group cluster, but found 1"));
+    }
+
+    [Fact]
+    public async Task Multi_select_validation_enforces_max_selections_and_correct_options()
+    {
+        var (certId, adminId) = await SeedAsync();
+        var manifest = Sample("sample-reading-mcq.json");
+        var q = FirstQuestion(manifest);
+        q["questionType"] = "multi_select";
+        // 1. Missing maxSelections
+        var res1 = await ImportJsonAsync(CreateService(), certId, adminId, manifest, "no-max-sel.json");
+        Assert.Equal(ImportBatchStatusDto.Failed, res1.Status);
+        Assert.Contains(await LogsAsync(res1.BatchId), l => l.Message.Contains("multi_select questions must specify maxSelections of at least 2"));
+
+        // 2. More correct options than maxSelections
+        q["maxSelections"] = 2;
+        q["options"]![0]!["isCorrect"] = true;
+        q["options"]![1]!["isCorrect"] = true;
+        q["options"]![2]!["isCorrect"] = true; // 3 correct options with maxSelections: 2
+        var res2 = await ImportJsonAsync(CreateService(), certId, adminId, manifest, "too-many-correct.json");
+        Assert.Equal(ImportBatchStatusDto.Failed, res2.Status);
+        Assert.Contains(await LogsAsync(res2.BatchId), l => l.Message.Contains("cannot have more correct options than maxSelections"));
+    }
+
+    [Fact]
+    public async Task Inline_completion_validation_enforces_accepted_answers_and_word_limits()
+    {
+        var (certId, adminId) = await SeedAsync();
+        var manifest = Sample("sample-reading-mcq.json");
+        var q = FirstQuestion(manifest);
+        q["questionType"] = "inline_completion";
+        q["options"] = new JsonArray(); // empty options
+
+        // 1. Missing acceptedAnswers
+        var res1 = await ImportJsonAsync(CreateService(), certId, adminId, manifest, "no-accepted.json");
+        Assert.Equal(ImportBatchStatusDto.Failed, res1.Status);
+        Assert.Contains(await LogsAsync(res1.BatchId), l => l.Message.Contains("inline_completion questions must specify acceptedAnswers"));
+
+        // 2. MaxWords < MinWords
+        q["acceptedAnswers"] = new JsonArray("valid_answer");
+        q["minWords"] = 5;
+        q["maxWords"] = 2;
+        var res2 = await ImportJsonAsync(CreateService(), certId, adminId, manifest, "bad-words.json");
+        Assert.Equal(ImportBatchStatusDto.Failed, res2.Status);
+        Assert.Contains(await LogsAsync(res2.BatchId), l => l.Message.Contains("maxWords must be at least minWords"));
+    }
+
+    [Fact]
+    public async Task GenerateManifestTemplateAsync_returns_structured_blueprint_template()
+    {
+        var (certId, _) = await SeedAsync();
+        var service = CreateService();
+
+        var (stream, contentType, fileName) = await service.GenerateManifestTemplateAsync(certId);
+
+        Assert.Equal("application/json", contentType);
+        Assert.EndsWith("_manifest_template.json", fileName);
+        Assert.True(stream.Length > 0);
+
+        using var reader = new StreamReader(stream, Encoding.UTF8);
+        var json = await reader.ReadToEndAsync();
+        var manifest = System.Text.Json.JsonSerializer.Deserialize<ImportManifest>(json, ImportManifest.Json);
+
+        Assert.NotNull(manifest);
+        Assert.NotNull(manifest.Exam);
+        Assert.Equal("strict_exam", manifest.Exam.DeliveryMode);
+        Assert.NotNull(manifest.Sections);
+        Assert.Equal(6, manifest.Sections.Count);
+
+        // Sections must match seeded codes: P1, P2, P5, P7, S3, W2
+        var codes = manifest.Sections.Select(s => s.SectionCode).ToList();
+        Assert.Contains("P1", codes);
+        Assert.Contains("P2", codes);
+        Assert.Contains("P5", codes);
+        Assert.Contains("P7", codes);
+        Assert.Contains("S3", codes);
+        Assert.Contains("W2", codes);
+
+        // P2 has OptionCount = 3, so its placeholder question should have 3 options
+        var p2 = manifest.Sections.First(s => s.SectionCode == "P2");
+        Assert.Equal(3, p2.Groups![0].Questions![0].Options!.Count);
+
+        // W2 is writing (free_response)
+        var w2 = manifest.Sections.First(s => s.SectionCode == "W2");
+        Assert.Equal("free_response", w2.Groups![0].Questions![0].QuestionType);
+        Assert.NotNull(w2.Groups![0].Questions![0].MinWords);
+    }
+
+    [Fact]
+    public async Task Lossless_roundtrip_export_and_reimport_preserves_all_11_component_fields()
+    {
+        var (certId, adminId) = await SeedAsync();
+        var service = CreateService();
+
+        // 1. Create a rich manifest with multi_select, inline_completion, free_response, unitNumber, deliveryMode
+        var manifestJson = $$"""
+        {
+          "version": "1.0",
+          "exam": {
+            "title": "Lossless Component Roundtrip Test",
+            "purpose": "mock",
+            "deliveryMode": "practice",
+            "durationMinutes": 90,
+            "sourceName": "Unit Test 118",
+            "description": "Validates lossless roundtrip export & import",
+            "questionCount": 3
+          },
+          "sections": [
+            {
+              "sectionCode": "P5",
+              "groups": [
+                {
+                  "unitNumber": 2,
+                  "passage": "A test passage for unit 2.",
+                  "displayOrder": 1,
+                  "questions": [
+                    {
+                      "stem": "Which TWO factors contributed to the success?",
+                      "difficultyLevel": 3,
+                      "questionType": "multi_select",
+                      "maxSelections": 2,
+                      "explanation": "Factors A and C are documented.",
+                      "hint": "Check multiple points.",
+                      "displayOrder": 1,
+                      "options": [
+                        { "label": "A", "text": "Factor A", "isCorrect": true, "rationale": "Correct A" },
+                        { "label": "B", "text": "Factor B", "isCorrect": false, "rationale": "Incorrect B" },
+                        { "label": "C", "text": "Factor C", "isCorrect": true, "rationale": "Correct C" },
+                        { "label": "D", "text": "Factor D", "isCorrect": false, "rationale": "Incorrect D" }
+                      ]
+                    },
+                    {
+                      "stem": "The company was established in _____.",
+                      "difficultyLevel": 2,
+                      "questionType": "inline_completion",
+                      "allowNumber": true,
+                      "maxWords": 2,
+                      "acceptedAnswers": ["1984", "nineteen eighty-four"],
+                      "explanation": "Founded in 1984.",
+                      "hint": "Year of founding.",
+                      "displayOrder": 2
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "sectionCode": "W2",
+              "groups": [
+                {
+                  "unitNumber": 1,
+                  "displayOrder": 2,
+                  "questions": [
+                    {
+                      "stem": "Write a response to the client inquiry.",
+                      "difficultyLevel": 4,
+                      "questionType": "free_response",
+                      "responseSeconds": 900,
+                      "minWords": 100,
+                      "maxWords": 200,
+                      "requiredKeywords": ["service", "guarantee"],
+                      "explanation": "Address all client questions.",
+                      "hint": "Be professional.",
+                      "displayOrder": 1,
+                      "criteria": [
+                        { "code": "GRAM" },
+                        { "code": "VOCAB" }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+        """;
+
+        var initialResult = await service.ImportManifestAsync(adminId, certId, manifestJson);
+        Assert.Equal(ImportBatchStatusDto.Done, initialResult.Status);
+        Assert.NotNull(initialResult.ExamId);
+        var originalExamId = initialResult.ExamId.Value;
+
+        // 2. Export exam to JSON
+        var (exportStream, exportType, exportFileName) = await service.ExportExamPackageAsync(originalExamId, "json");
+        Assert.Equal("application/json", exportType);
+        Assert.True(exportStream.Length > 0);
+
+        using var exportReader = new StreamReader(exportStream, Encoding.UTF8);
+        var exportedJson = await exportReader.ReadToEndAsync();
+
+        // 3. Re-import the exported manifest with a renamed title
+        var exportedNode = JsonNode.Parse(exportedJson)!;
+        exportedNode["exam"]!["title"] = "Lossless Component Roundtrip Test - Reimported";
+
+        var reimportResult = await ImportJsonAsync(service, certId, adminId, exportedNode, "reimported_manifest.json");
+        Assert.Equal(ImportBatchStatusDto.Done, reimportResult.Status);
+        Assert.Equal(0, reimportResult.ErrorCount);
+        Assert.NotNull(reimportResult.ExamId);
+        var reimportedExamId = reimportResult.ExamId.Value;
+
+        // 4. Assert all database rows are losslessly preserved
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var reimportedExam = await db.Exams.SingleAsync(e => e.ExamId == reimportedExamId);
+        Assert.Equal("practice", reimportedExam.DeliveryMode);
+        Assert.Equal(90, reimportedExam.DurationMinutes);
+
+        var groups = await db.QuestionGroups.Include(g => g.QuestionGroups)
+            .ThenInclude(q => q.QuestionOptionQuestionNavigations)
+            .Where(g => g.ExamId == reimportedExamId).OrderBy(g => g.DisplayOrder).ToListAsync();
+
+        Assert.Equal(2, groups.Count);
+        Assert.Equal(2, groups[0].UnitNumber);
+        Assert.Equal("A test passage for unit 2.", groups[0].Passage);
+
+        var p5Questions = groups[0].QuestionGroups.OrderBy(q => q.DisplayOrder).ToList();
+        Assert.Equal(2, p5Questions.Count);
+
+        // Verify Multi-Select
+        var multiSelectQ = p5Questions[0];
+        Assert.Equal("multi_select", multiSelectQ.QuestionType);
+        Assert.Equal(2, multiSelectQ.MaxSelections);
+        Assert.Equal(4, multiSelectQ.QuestionOptionQuestionNavigations.Count);
+        Assert.Equal(2, multiSelectQ.QuestionOptionQuestionNavigations.Count(o => o.IsCorrect));
+
+        // Verify Inline Completion
+        var completionQ = p5Questions[1];
+        Assert.Equal("inline_completion", completionQ.QuestionType);
+        Assert.True(completionQ.AllowNumber);
+        Assert.Equal(2, completionQ.MaxWords);
+        Assert.NotNull(completionQ.AcceptedAnswersJson);
+        var parsedAccepted = AttemptEngine.ParseAcceptedAnswers(completionQ.AcceptedAnswersJson);
+        Assert.Contains("1984", parsedAccepted);
+        Assert.Contains("nineteen eighty-four", parsedAccepted);
+
+        // Verify Free Response
+        var w2Questions = groups[1].QuestionGroups.OrderBy(q => q.DisplayOrder).ToList();
+        var freeResponseQ = w2Questions[0];
+        Assert.Equal("free_response", freeResponseQ.QuestionType);
+        Assert.Equal(100, freeResponseQ.MinWords);
+        Assert.Equal(200, freeResponseQ.MaxWords);
+        Assert.Equal(900, freeResponseQ.ResponseSeconds);
+        Assert.NotNull(freeResponseQ.RequiredKeywords);
+        var parsedKeywords = AttemptEngine.ParseKeywords(freeResponseQ.RequiredKeywords);
+        Assert.Contains("service", parsedKeywords);
+        Assert.Contains("guarantee", parsedKeywords);
     }
 }

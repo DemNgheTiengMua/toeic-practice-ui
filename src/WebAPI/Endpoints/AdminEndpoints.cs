@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using BusinessObjects;
 using Contracts;
 using Services;
@@ -238,6 +239,16 @@ public static class AdminEndpoints
             {
                 return Problem(StatusCodes.Status400BadRequest, "Score conversion invalid", ApiError.Codes.ScoreConversionInvalid, ex.Message);
             }
+        });
+
+        admin.MapPost("/score-conversion/preview", async (
+            ScorePreviewRequestDto requestDto,
+            IScoreConversionService scoreConversionService,
+            CancellationToken cancellationToken) =>
+        {
+            var request = ToScorePreviewRequest(requestDto);
+            var result = await scoreConversionService.CalculateScorePreviewAsync(request, cancellationToken);
+            return Results.Ok(ToScorePreviewResultDto(result));
         });
 
         // ---- Admin Exam & Question Editor endpoints ----
@@ -488,13 +499,50 @@ public static class AdminEndpoints
             }
         });
 
-        admin.MapPost("/exams/{examId:int}/quick-ingest/parse", (
+        admin.MapPost("/exams/{examId:int}/quick-ingest/parse", async (
             int examId,
             QuickIngestParseRequest request,
-            IExamQuickIngestService quickIngest) =>
+            IExamQuickIngestService quickIngest,
+            CancellationToken cancellationToken) =>
         {
-            var result = quickIngest.Parse(request);
+            var result = await quickIngest.ParseStagingAsync(request, cancellationToken);
             return Results.Ok(result);
+        });
+
+        admin.MapGet("/sections/{sectionId:int}/quick-ingest/sample", async (
+            int sectionId,
+            IExamQuickIngestService quickIngest,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var template = await quickIngest.GetSampleTemplateAsync(sectionId, cancellationToken);
+                return Results.Ok(new QuickIngestSampleTemplateDto(template, "Section Blueprint Tailored Template"));
+            }
+            catch (AdminExamException ex)
+            {
+                return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
+            }
+        });
+
+        admin.MapPost("/exams/{examId:int}/sections/{sectionId:int}/ai-generate", async (
+            int examId,
+            int sectionId,
+            SectionGenerateRequest? request,
+            IExamGeneratorService generator,
+            HttpContext http,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var adminUserId = CurrentUserId(http);
+                var result = await generator.GenerateSectionQuestionsAsync(examId, sectionId, adminUserId, request?.QuestionCount, cancellationToken);
+                return Results.Ok(result);
+            }
+            catch (AdminExamException ex)
+            {
+                return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
+            }
         });
 
         admin.MapPost("/exams/{examId:int}/quick-ingest/commit", async (
@@ -630,6 +678,64 @@ public static class AdminEndpoints
             catch (AdminExamException ex)
             {
                 return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
+            }
+        });
+
+        admin.MapGet("/exams/manifest-template", async (
+            int certId,
+            IQuestionImportService imports,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var (stream, contentType, fileName) = await imports.GenerateManifestTemplateAsync(certId, cancellationToken);
+                return Results.File(stream, contentType, fileName);
+            }
+            catch (AdminExamException ex)
+            {
+                return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
+            }
+        });
+
+        // ---- Certificate Blueprint & Wizard Endpoints ----
+        admin.MapGet("/certificates", async (ICertificateService certificates, CancellationToken cancellationToken) =>
+        {
+            var list = await certificates.GetAdminCertificatesAsync(cancellationToken);
+            return Results.Ok(list);
+        });
+
+        admin.MapGet("/certificates/presets", (ICertificateService certificates) =>
+        {
+            var presets = certificates.GetOfficialPresets();
+            return Results.Ok(presets);
+        });
+
+        admin.MapGet("/certificates/{certId:int}/blueprint", async (int certId, ICertificateService certificates, CancellationToken cancellationToken) =>
+        {
+            var blueprint = await certificates.GetCertificateBlueprintAsync(certId, cancellationToken);
+            return blueprint is not null ? Results.Ok(blueprint) : Results.NotFound();
+        });
+
+        admin.MapGet("/certificates/by-code/{code}/blueprint", async (string code, ICertificateService certificates, CancellationToken cancellationToken) =>
+        {
+            var blueprint = await certificates.GetCertificateBlueprintAsync(code, cancellationToken);
+            return blueprint is not null ? Results.Ok(blueprint) : Results.NotFound();
+        });
+
+        admin.MapPost("/certificates/wizard", async (SaveCertificateWizardRequest request, ICertificateService certificates, CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var result = await certificates.SaveCertificateWizardAsync(request, cancellationToken);
+                return Results.Ok(result);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return Results.NotFound(new { message = ex.Message });
+            }
+            catch (ArgumentException ex)
+            {
+                return Problem(StatusCodes.Status400BadRequest, "Validation error", ApiError.Codes.Validation, ex.Message);
             }
         });
 

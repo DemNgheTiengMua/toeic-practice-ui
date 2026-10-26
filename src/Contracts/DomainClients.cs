@@ -52,6 +52,8 @@ public interface IPracticeClient
     Task<PracticeSessionDto> GetPracticeSessionInfoAsync(int sessionId, string bearerToken, CancellationToken cancellationToken = default) => GetPracticeSessionInfoAsync(sessionId, cancellationToken);
     Task<PracticeQuestionDto> GetPracticeQuestionAsync(int sessionId, int displayOrder, CancellationToken cancellationToken = default);
     Task<PracticeQuestionDto> GetPracticeQuestionAsync(int sessionId, int displayOrder, string bearerToken, CancellationToken cancellationToken = default) => GetPracticeQuestionAsync(sessionId, displayOrder, cancellationToken);
+    Task<PracticeSessionTakeDto> GetPracticeSessionTakeAsync(int sessionId, int? displayOrder = null, CancellationToken cancellationToken = default) => Task.FromResult(new PracticeSessionTakeDto(null!, null!, [], []));
+    Task<PracticeSessionTakeDto> GetPracticeSessionTakeAsync(int sessionId, int? displayOrder, string bearerToken, CancellationToken cancellationToken = default) => GetPracticeSessionTakeAsync(sessionId, displayOrder, cancellationToken);
     Task<IReadOnlyList<PracticeQuestionDto>> GetPracticeSessionQuestionsAsync(int sessionId, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<PracticeQuestionDto>>([]);
     Task<IReadOnlyList<PracticeQuestionDto>> GetPracticeSessionQuestionsAsync(int sessionId, string bearerToken, CancellationToken cancellationToken = default) => GetPracticeSessionQuestionsAsync(sessionId, cancellationToken);
     Task<RevealHintResponse> RevealPracticeHintAsync(int sessionId, int questionId, CancellationToken cancellationToken = default);
@@ -129,6 +131,14 @@ public interface IMockExamsClient
     Task<SubmitAttemptResponse> SubmitAttemptAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) => SubmitAttemptAsync(attemptId, cancellationToken);
     Task<SubmitAttemptResponse> SubmitAttemptWithDraftsAsync(int attemptId, SubmitAttemptRequest request, CancellationToken cancellationToken = default);
     Task<SubmitAttemptResponse> SubmitAttemptWithDraftsAsync(int attemptId, SubmitAttemptRequest request, string bearerToken, CancellationToken cancellationToken = default) => SubmitAttemptWithDraftsAsync(attemptId, request, cancellationToken);
+    Task<AttemptTransitionResponse> TransitionSkillAsync(int attemptId, CancellationToken cancellationToken = default);
+    Task<AttemptTransitionResponse> TransitionSkillAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) => TransitionSkillAsync(attemptId, cancellationToken);
+    Task<AttemptTransitionResponse> TransitionUnitAsync(int attemptId, TransitionUnitRequest request, CancellationToken cancellationToken = default);
+    Task<AttemptTransitionResponse> TransitionUnitAsync(int attemptId, TransitionUnitRequest request, string bearerToken, CancellationToken cancellationToken = default) => TransitionUnitAsync(attemptId, request, cancellationToken);
+    Task<AttemptTransitionResponse> TransitionGroupAsync(int attemptId, TransitionGroupRequest request, CancellationToken cancellationToken = default);
+    Task<AttemptTransitionResponse> TransitionGroupAsync(int attemptId, TransitionGroupRequest request, string bearerToken, CancellationToken cancellationToken = default) => TransitionGroupAsync(attemptId, request, cancellationToken);
+    Task<AttemptTransitionResponse> StartAudioReviewAsync(int attemptId, CancellationToken cancellationToken = default);
+    Task<AttemptTransitionResponse> StartAudioReviewAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) => StartAudioReviewAsync(attemptId, cancellationToken);
     Task CancelAttemptAsync(int attemptId, CancellationToken cancellationToken = default);
     Task CancelAttemptAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) => CancelAttemptAsync(attemptId, cancellationToken);
     Task<AttemptResultDto> GetAttemptResultAsync(int attemptId, CancellationToken cancellationToken = default);
@@ -141,6 +151,14 @@ public interface IMockExamsClient
     Task<AiInsightDto> GetExamInsightAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) => GetExamInsightAsync(attemptId, cancellationToken);
     Task RetryExamInsightAsync(int attemptId, CancellationToken cancellationToken = default);
     Task RetryExamInsightAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) => RetryExamInsightAsync(attemptId, cancellationToken);
+    Task<PreflightStatusDto> GetPreflightStatusAsync(int attemptId, CancellationToken cancellationToken = default);
+    Task<PreflightStatusDto> GetPreflightStatusAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) => GetPreflightStatusAsync(attemptId, cancellationToken);
+    Task<PreflightStatusDto> VerifyPreflightAsync(int attemptId, CancellationToken cancellationToken = default);
+    Task<PreflightStatusDto> VerifyPreflightAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) => VerifyPreflightAsync(attemptId, cancellationToken);
+    Task<SittingSyncDto> SaveSittingSyncAsync(int attemptId, SittingSyncRequestDto request, CancellationToken cancellationToken = default);
+    Task<SittingSyncDto> SaveSittingSyncAsync(int attemptId, SittingSyncRequestDto request, string bearerToken, CancellationToken cancellationToken = default) => SaveSittingSyncAsync(attemptId, request, cancellationToken);
+    Task<AttemptResumeDto> ResumeAttemptByCodeAsync(ResumeAttemptRequest request, CancellationToken cancellationToken = default);
+    Task<AttemptResumeDto> ResumeAttemptByCodeAsync(ResumeAttemptRequest request, string bearerToken, CancellationToken cancellationToken = default) => ResumeAttemptByCodeAsync(request, cancellationToken);
 }
 
 public interface IWritingClient
@@ -267,6 +285,14 @@ public interface IAiInsightsClient
     Task<AiInsightDto> GetExamInsightAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) => GetExamInsightAsync(attemptId, cancellationToken);
     Task RetryExamInsightAsync(int attemptId, CancellationToken cancellationToken = default);
     Task RetryExamInsightAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) => RetryExamInsightAsync(attemptId, cancellationToken);
+    Task<PreflightStatusDto> GetPreflightStatusAsync(int attemptId, CancellationToken cancellationToken = default);
+    Task<PreflightStatusDto> GetPreflightStatusAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) => GetPreflightStatusAsync(attemptId, cancellationToken);
+    Task<PreflightStatusDto> VerifyPreflightAsync(int attemptId, CancellationToken cancellationToken = default);
+    Task<PreflightStatusDto> VerifyPreflightAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) => VerifyPreflightAsync(attemptId, cancellationToken);
+    Task<SittingSyncDto> SaveSittingSyncAsync(int attemptId, SittingSyncRequestDto request, CancellationToken cancellationToken = default);
+    Task<SittingSyncDto> SaveSittingSyncAsync(int attemptId, SittingSyncRequestDto request, string bearerToken, CancellationToken cancellationToken = default) => SaveSittingSyncAsync(attemptId, request, cancellationToken);
+    Task<AttemptResumeDto> ResumeAttemptByCodeAsync(ResumeAttemptRequest request, CancellationToken cancellationToken = default);
+    Task<AttemptResumeDto> ResumeAttemptByCodeAsync(ResumeAttemptRequest request, string bearerToken, CancellationToken cancellationToken = default) => ResumeAttemptByCodeAsync(request, cancellationToken);
     Task RetryInsightAsync(int insightId, CancellationToken cancellationToken = default);
     Task RetryInsightAsync(int insightId, string bearerToken, CancellationToken cancellationToken = default) => RetryInsightAsync(insightId, cancellationToken);
     Task<AiInsightDto> GetDashboardInsightAsync(int? certId = null, CancellationToken cancellationToken = default);
@@ -327,6 +353,9 @@ public interface IAdminScoreConversionClient
     Task<AdminScoreConversionDto> GetAdminScoreConversionAsync(string? certCode, int? examId, string bearerToken, CancellationToken cancellationToken = default) => GetAdminScoreConversionAsync(certCode, examId, cancellationToken);
     Task<AdminScoreConversionDto> UpdateAdminScoreConversionAsync(int certId, UpdateScoreConversionRequest request, CancellationToken cancellationToken = default);
     Task<AdminScoreConversionDto> UpdateAdminScoreConversionAsync(int certId, UpdateScoreConversionRequest request, string bearerToken, CancellationToken cancellationToken = default) => UpdateAdminScoreConversionAsync(certId, request, cancellationToken);
+
+    Task<ScorePreviewResultDto> CalculateScorePreviewAsync(ScorePreviewRequestDto request, CancellationToken cancellationToken = default);
+    Task<ScorePreviewResultDto> CalculateScorePreviewAsync(ScorePreviewRequestDto request, string bearerToken, CancellationToken cancellationToken = default) => CalculateScorePreviewAsync(request, cancellationToken);
 }
 
 public interface IAdminOrdersClient
@@ -430,6 +459,13 @@ public interface IAdminExamsClient
     Task<QuickIngestParseResultDto> ParseQuickIngestAsync(int examId, QuickIngestParseRequest request, string bearerToken, CancellationToken cancellationToken = default) => ParseQuickIngestAsync(examId, request, cancellationToken);
     Task<QuickIngestCommitResultDto> CommitQuickIngestAsync(int examId, QuickIngestCommitRequest request, CancellationToken cancellationToken = default);
     Task<QuickIngestCommitResultDto> CommitQuickIngestAsync(int examId, QuickIngestCommitRequest request, string bearerToken, CancellationToken cancellationToken = default) => CommitQuickIngestAsync(examId, request, cancellationToken);
+    Task<QuickIngestSampleTemplateDto> GetQuickIngestSampleTemplateAsync(int sectionId, CancellationToken cancellationToken = default) =>
+        Task.FromResult(new QuickIngestSampleTemplateDto(string.Empty, string.Empty));
+    Task<QuickIngestSampleTemplateDto> GetQuickIngestSampleTemplateAsync(int sectionId, string bearerToken, CancellationToken cancellationToken = default) => GetQuickIngestSampleTemplateAsync(sectionId, cancellationToken);
+    Task<SectionGenerationResultDto> GenerateSectionQuestionsAsync(int examId, int sectionId, SectionGenerateRequest? request, CancellationToken cancellationToken = default) =>
+        Task.FromResult(new SectionGenerationResultDto(examId, sectionId, 0, 0, string.Empty));
+    Task<SectionGenerationResultDto> GenerateSectionQuestionsAsync(int examId, int sectionId, SectionGenerateRequest? request, string bearerToken, CancellationToken cancellationToken = default) => GenerateSectionQuestionsAsync(examId, sectionId, request, cancellationToken);
+
     Task<ExamStudioDetailDto> GetAdminExamStudioAsync(int examId, CancellationToken cancellationToken = default);
     Task<ExamStudioDetailDto> GetAdminExamStudioAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) => GetAdminExamStudioAsync(examId, cancellationToken);
     Task<ExamAuditResultDto> GetAdminExamAuditAsync(int examId, CancellationToken cancellationToken = default);
@@ -442,6 +478,8 @@ public interface IAdminExamsClient
     Task<AdminExamMediaUploadResultDto> UploadAdminExamMediaAsync(int examId, Stream stream, string fileName, string bearerToken, CancellationToken cancellationToken = default) => UploadAdminExamMediaAsync(examId, stream, fileName, cancellationToken);
     Task<(Stream Stream, string ContentType, string FileName)> ExportAdminExamAsync(int examId, string? format = "zip", CancellationToken cancellationToken = default);
     Task<(Stream Stream, string ContentType, string FileName)> ExportAdminExamAsync(int examId, string? format, string bearerToken, CancellationToken cancellationToken = default) => ExportAdminExamAsync(examId, format, cancellationToken);
+    Task<(Stream Stream, string ContentType, string FileName)> GetManifestTemplateAsync(int certId, CancellationToken cancellationToken = default);
+    Task<(Stream Stream, string ContentType, string FileName)> GetManifestTemplateAsync(int certId, string bearerToken, CancellationToken cancellationToken = default) => GetManifestTemplateAsync(certId, cancellationToken);
     Task<ExamGenerationResultDto> GenerateAdminExamAsync(ExamBlueprintDto blueprint, CancellationToken cancellationToken = default);
     Task<ExamGenerationResultDto> GenerateAdminExamAsync(ExamBlueprintDto blueprint, string bearerToken, CancellationToken cancellationToken = default) => GenerateAdminExamAsync(blueprint, cancellationToken);
 }
@@ -485,4 +523,22 @@ public interface IAdminLessonsClient
     Task<AdminLessonFormOptionsDto> GetAdminLessonFormOptionsAsync(int? certId = null, CancellationToken cancellationToken = default) =>
         Task.FromResult(new AdminLessonFormOptionsDto(Array.Empty<AdminCertificateOptionDto>(), Array.Empty<AdminLessonSkillOptionDto>(), Array.Empty<AdminLessonCategoryOptionDto>()));
     Task<AdminLessonFormOptionsDto> GetAdminLessonFormOptionsAsync(int? certId, string bearerToken, CancellationToken cancellationToken = default) => GetAdminLessonFormOptionsAsync(certId, cancellationToken);
+}
+
+public interface IAdminCertificatesClient
+{
+    Task<IReadOnlyList<AdminCertificateSummaryDto>> GetAdminCertificatesAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<AdminCertificateSummaryDto>> GetAdminCertificatesAsync(string bearerToken, CancellationToken cancellationToken = default) => GetAdminCertificatesAsync(cancellationToken);
+
+    Task<IReadOnlyList<CertificateBlueprintPresetDto>> GetPresetsAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<CertificateBlueprintPresetDto>> GetPresetsAsync(string bearerToken, CancellationToken cancellationToken = default) => GetPresetsAsync(cancellationToken);
+
+    Task<CertificateBlueprintDetailDto?> GetCertificateBlueprintAsync(int certId, CancellationToken cancellationToken = default);
+    Task<CertificateBlueprintDetailDto?> GetCertificateBlueprintAsync(int certId, string bearerToken, CancellationToken cancellationToken = default) => GetCertificateBlueprintAsync(certId, cancellationToken);
+
+    Task<CertificateBlueprintDetailDto?> GetCertificateBlueprintByCodeAsync(string code, CancellationToken cancellationToken = default);
+    Task<CertificateBlueprintDetailDto?> GetCertificateBlueprintByCodeAsync(string code, string bearerToken, CancellationToken cancellationToken = default) => GetCertificateBlueprintByCodeAsync(code, cancellationToken);
+
+    Task<SaveCertificateWizardResultDto> SaveCertificateWizardAsync(SaveCertificateWizardRequest request, CancellationToken cancellationToken = default);
+    Task<SaveCertificateWizardResultDto> SaveCertificateWizardAsync(SaveCertificateWizardRequest request, string bearerToken, CancellationToken cancellationToken = default) => SaveCertificateWizardAsync(request, cancellationToken);
 }

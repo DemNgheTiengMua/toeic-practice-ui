@@ -117,9 +117,24 @@ public sealed record PracticeQuestionView(
     string? ImageAlt,
     bool IsSaved = false,
     int? AudioStartMs = null,
-    int? AudioEndMs = null);
+    int? AudioEndMs = null,
+    string QuestionType = "mcq",
+    int? MaxSelections = null,
+    bool AllowNumber = true,
+    string? AcceptedAnswersJson = null,
+    string? RequiredKeywords = null,
+    int? MinWords = null,
+    int? MaxWords = null,
+    string? ResponseText = null,
+    IReadOnlyList<int>? SelectedOptionIds = null,
+    string? SelectedOptionIdsJson = null,
+    IReadOnlyList<int>? CorrectOptionIds = null);
 
-public sealed record SubmitPracticeAnswerInput(int? SelectedOptionId);
+public sealed record SubmitPracticeAnswerInput(
+    int? SelectedOptionId = null,
+    string? ResponseText = null,
+    string? SelectedOptionIdsJson = null,
+    IReadOnlyList<int>? SelectedOptionIds = null);
 
 public sealed record GradedPracticeAnswerResult(
     bool? IsCorrect,
@@ -129,7 +144,11 @@ public sealed record GradedPracticeAnswerResult(
     string? Transcript,
     bool IsSessionFinished,
     int? NextQuestionDisplayOrder,
-    bool IsSaved = false);
+    bool IsSaved = false,
+    string? AcceptedAnswersJson = null,
+    IReadOnlyList<int>? CorrectOptionIds = null,
+    string? ResponseText = null,
+    string? SelectedOptionIdsJson = null);
 
 public sealed record QuestionOutcome(
     int DisplayOrder,
@@ -146,7 +165,25 @@ public sealed record QuestionOutcome(
     string? AudioPath = null,
     int? AudioStartMs = null,
     int? AudioEndMs = null,
-    string? Transcript = null);
+    string? Transcript = null,
+    string QuestionType = "mcq",
+    string? ResponseText = null,
+    string? SelectedOptionIdsJson = null,
+    string? AcceptedAnswersJson = null);
+
+public sealed record PracticeNavigatorItem(
+    int QuestionId,
+    int DisplayOrder,
+    bool IsAnswered,
+    bool? IsCorrect,
+    bool IsSaved,
+    bool IsCurrent);
+
+public sealed record PracticeSessionTake(
+    PracticeSessionInfo Session,
+    PracticeQuestionView Question,
+    IReadOnlyList<PracticeQuestionView> Questions,
+    IReadOnlyList<PracticeNavigatorItem> Navigator);
 
 public sealed record PracticeSummary(
     int SessionId,

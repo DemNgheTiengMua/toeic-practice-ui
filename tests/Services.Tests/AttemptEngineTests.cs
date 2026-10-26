@@ -104,6 +104,37 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
         return (cert.CertId, exam.ExamId, q1.QuestionId, q2.QuestionId, opt1.OptionId, opt2.OptionId);
     }
 
+    private async Task<int> AddSpeakingQuestionAsync(int certId, int examId)
+    {
+        await database.SqlAsync($"""
+            DECLARE @cert INT = {certId};
+            DECLARE @exam INT = {examId};
+            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder, DurationMinutes)
+            VALUES (@cert, 'SPEA', N'Speaking', 'speaking', 4, 20);
+            DECLARE @skill INT = SCOPE_IDENTITY();
+
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder, NavigationMode)
+            VALUES (@skill, @cert, 'speaking', 'SPK', N'Speaking Pacer Section', 1, 'SYSTEM_PACED_AUTO');
+            DECLARE @section INT = SCOPE_IDENTITY();
+
+            INSERT INTO GradingCriteria (CertId, SkillId, Code, Name, MaxScore, Weight, DisplayOrder)
+            VALUES (@cert, @skill, 'PRON', N'Pronunciation', 5.0, 1.0, 1);
+
+            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder)
+            VALUES (@exam, @cert, @section, 4);
+            DECLARE @group INT = SCOPE_IDENTITY();
+
+            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, PrepSeconds, ResponseSeconds, DisplayOrder)
+            VALUES (@group, @exam, @section, @skill, N'Read the text aloud.', 1, 'free_response', 45, 45, 4);
+            """);
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        return await db.Questions
+            .Where(q => q.ExamId == examId && q.Section.Modality == "speaking")
+            .Select(q => q.QuestionId)
+            .SingleAsync();
+    }
+
     private async Task<int> AddWritingQuestionAsync(int certId, int examId)
     {
         await database.SqlAsync($"""
@@ -116,6 +147,9 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
             INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder)
             VALUES (@skill, @cert, 'writing', 'WR', N'Writing', 1);
             DECLARE @section INT = SCOPE_IDENTITY();
+
+            INSERT INTO GradingCriteria (CertId, SkillId, Code, Name, MaxScore, Weight, DisplayOrder)
+            VALUES (@cert, @skill, 'TASK', N'Task Achievement', 9.0, 1.0, 1);
 
             INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder)
             VALUES (@exam, @cert, @section, 3);
@@ -134,10 +168,20 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
 
     private Task AdvanceAttemptToSecondPhaseAsync(int attemptId) =>
         database.SqlAsync($"""
-            UPDATE ExamAttempts
-            SET StartedAt = DATEADD(minute, -31, SYSDATETIMEOFFSET()),
-                ExpiresAt = DATEADD(minute, 29, SYSDATETIMEOFFSET())
-            WHERE AttemptId = {attemptId};
+            UPDATE a
+            SET a.StartedAt = DATEADD(minute, -31, SYSDATETIMEOFFSET()),
+                a.ExpiresAt = DATEADD(minute, 29, SYSDATETIMEOFFSET()),
+                a.ActiveSkillId = (
+                    SELECT TOP 1 s.SkillId
+                    FROM Skills s
+                    JOIN Sections sec ON sec.SkillId = s.SkillId
+                    JOIN Questions q ON q.SectionId = sec.SectionId
+                    WHERE q.ExamId = a.ExamId AND s.SkillId <> a.ActiveSkillId
+                    ORDER BY s.DisplayOrder
+                ),
+                a.PhaseDeadlineAt = DATEADD(minute, 30, GETUTCDATE())
+            FROM ExamAttempts a
+            WHERE a.AttemptId = {attemptId};
             """);
 
     [Fact]
@@ -237,6 +281,9 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
             var activeAttempt = await db.ExamAttempts.SingleAsync(a => a.AttemptId == attempt.AttemptId);
             activeAttempt.StartedAt = startedAt;
             activeAttempt.ExpiresAt = startedAt.AddMinutes(120);
+            var writingQ = await db.Questions.SingleAsync(q => q.QuestionId == freeResponseQuestionId);
+            activeAttempt.ActiveSkillId = writingQ.SkillId;
+            activeAttempt.PhaseDeadlineAt = DateTimeOffset.UtcNow.UtcDateTime.AddMinutes(30);
             await db.SaveChangesAsync();
         }
 
@@ -306,10 +353,15 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
         var attempt = await CreateEngine().CreateAttemptAsync(userId, certId, examId, 120);
         var engine = CreateEngine();
         await database.SqlAsync($"""
-            UPDATE ExamAttempts
-            SET StartedAt = DATEADD(minute, -90, SYSDATETIMEOFFSET()),
-                ExpiresAt = DATEADD(minute, 30, SYSDATETIMEOFFSET())
-            WHERE AttemptId = {attempt.AttemptId};
+            DECLARE @skillId INT = (SELECT SkillId FROM Questions WHERE QuestionId = {freeResponseQuestionId});
+
+            UPDATE a
+            SET a.StartedAt = DATEADD(minute, -90, SYSDATETIMEOFFSET()),
+                a.ExpiresAt = DATEADD(minute, 30, SYSDATETIMEOFFSET()),
+                a.ActiveSkillId = @skillId,
+                a.PhaseDeadlineAt = DATEADD(minute, 30, GETUTCDATE())
+            FROM ExamAttempts a
+            WHERE a.AttemptId = {attempt.AttemptId};
             """);
 
         await engine.SaveDraftAsync(
@@ -335,10 +387,70 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
         await using var resultDb = DbContextFactory.Create(database.ConnectionString);
         var completed = await new AttemptEngine(resultDb).GetAttemptResultAsync(attempt.AttemptId, userId);
         Assert.Equal(AttemptStatus.Graded, completed.Status);
-        Assert.Equal(200, completed.TotalScore);
+        Assert.Equal(204, completed.TotalScore);
+        Assert.Equal(100, completed.SkillScores.Single(s => s.SkillCode == "LIST").ScaledScore);
+        Assert.Equal(100, completed.SkillScores.Single(s => s.SkillCode == "READ").ScaledScore);
+        Assert.Equal(4, completed.SkillScores.Single(s => s.SkillCode == "WRIT").ScaledScore);
         Assert.Equal(FreeResponseStatus.Graded.ToCode(),
             await resultDb.FreeResponses.Where(response => response.AttemptId == attempt.AttemptId)
                 .Select(response => response.Status).SingleAsync());
+    }
+
+    [Fact]
+    public async Task FinalizeAiGradedAttempt_UnderLength_Writing_Records_Penalty_Flag_And_Weighted_Score()
+    {
+        var certCode = Unique("ATTE");
+        var (certId, examId, _, _, _, _) = await SeedExamFixtureAsync(certCode);
+        var freeResponseQuestionId = await AddWritingQuestionAsync(certId, examId);
+        var userId = await SeedLearnerAsync(certCode);
+        var attempt = await CreateEngine().CreateAttemptAsync(userId, certId, examId, 120);
+        var engine = CreateEngine();
+        await database.SqlAsync($"""
+            UPDATE a
+            SET a.StartedAt = DATEADD(minute, -90, SYSDATETIMEOFFSET()),
+                a.ExpiresAt = DATEADD(minute, 30, SYSDATETIMEOFFSET()),
+                a.ActiveSkillId = (SELECT SkillId FROM Questions WHERE QuestionId = {freeResponseQuestionId}),
+                a.PhaseDeadlineAt = DATEADD(minute, 30, GETUTCDATE())
+            FROM ExamAttempts a
+            WHERE a.AttemptId = {attempt.AttemptId};
+            """);
+
+        // Submit under-length essay (3 words < MinWords 10)
+        await engine.SaveDraftAsync(
+            attempt.AttemptId,
+            userId,
+            freeResponseQuestionId,
+            "Short essay text.");
+        await engine.SubmitAttemptAsync(attempt.AttemptId, userId, isAutoSubmit: false);
+
+        await using (var gradingDb = DbContextFactory.Create(database.ConnectionString))
+        {
+            var processor = new AiGradingProcessor(gradingDb, new FakeAiGrader());
+            var freeResponseId = await gradingDb.FreeResponses
+                .Where(response => response.AttemptId == attempt.AttemptId)
+                .Select(response => response.FreeResponseId)
+                .SingleAsync();
+            Assert.True(await processor.GradeFreeResponseAsync(freeResponseId));
+        }
+
+        await using var resultDb = DbContextFactory.Create(database.ConnectionString);
+        var completed = await new AttemptEngine(resultDb).GetAttemptResultAsync(attempt.AttemptId, userId);
+        Assert.Equal(AttemptStatus.Graded, completed.Status);
+
+        // Verify diagnostic length penalty flag recorded in AiGradingScores.Comment
+        var fr = await resultDb.FreeResponses.SingleAsync(r => r.AttemptId == attempt.AttemptId);
+        var grading = await resultDb.AiGradings.SingleAsync(g => g.FreeResponseId == fr.FreeResponseId);
+        var scores = await resultDb.AiGradingScores
+            .Where(s => s.GradingId == grading.GradingId)
+            .ToListAsync();
+        Assert.NotEmpty(scores);
+        Assert.All(scores, s => Assert.Contains("IsUnderLength=true", s.Comment));
+
+        // Verify diagnostic length penalty Recommendation with warning severity
+        var recommendations = await resultDb.Recommendations
+            .Where(r => r.AttemptId == attempt.AttemptId)
+            .ToListAsync();
+        Assert.Contains(recommendations, r => r.Severity == "minor" && r.Text.Contains("IsUnderLength=true"));
     }
 
     [Fact]
@@ -354,6 +466,7 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
         var userId = await SeedLearnerAsync("TOEIC");
 
         var attempt = await CreateEngine().CreateAttemptAsync(userId, certId, examId, exam.DurationMinutes);
+        await CreateEngine().VerifyPreflightAsync(attempt.AttemptId, userId);
 
         await using var resultDb = DbContextFactory.Create(database.ConnectionString);
         Assert.Equal(30, await resultDb.AttemptAnswers.CountAsync(a => a.AttemptId == attempt.AttemptId));
@@ -651,6 +764,7 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
         var engine = CreateEngine();
         var attempt = await engine.CreateAttemptAsync(userId, certId, examId, 60);
 
+        await engine.VerifyPreflightAsync(attempt.AttemptId, userId);
         var take = await engine.GetAttemptTakeAsync(attempt.AttemptId, userId, 1);
 
         Assert.Equal($"/media/exams/{examId}/master.mp3", take.CurrentQuestion.AudioPath);
@@ -668,6 +782,7 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
         var engine = CreateEngine();
         var attempt = await engine.CreateAttemptAsync(userId, certId, examId, 60);
 
+        await engine.VerifyPreflightAsync(attempt.AttemptId, userId);
         var take = await engine.GetAttemptTakeAsync(attempt.AttemptId, userId, 1);
 
         Assert.Equal($"/media/exams/{examId}/upload.mp3", take.CurrentQuestion.AudioPath);
@@ -685,6 +800,7 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
         var engine = CreateEngine();
         var attempt = await engine.CreateAttemptAsync(userId, certId, examId, 60);
 
+        await engine.VerifyPreflightAsync(attempt.AttemptId, userId);
         var take = await engine.GetAttemptTakeAsync(attempt.AttemptId, userId, 1);
 
         Assert.Equal("/audio/toeic/test1-p1.mp3", take.CurrentQuestion.AudioPath);
@@ -719,6 +835,7 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
         var engine = CreateEngine();
         var attempt = await engine.CreateAttemptAsync(userId, certId, examId, 60);
 
+        await engine.VerifyPreflightAsync(attempt.AttemptId, userId);
         var take = await engine.GetAttemptTakeAsync(attempt.AttemptId, userId, 1);
 
         Assert.NotNull(take.Questions);
@@ -729,4 +846,67 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
         Assert.Equal(2, take.Questions[1].DisplayOrder);
         Assert.Equal(take.CurrentQuestion.QuestionId, take.Questions[0].QuestionId);
     }
+
+    [Fact]
+    public async Task SaveSpeakingAudio_and_submit_queues_ai_grading_cleanly()
+    {
+        var certCode = Unique("ATSP");
+        var (certId, examId, _, _, _, _) = await SeedExamFixtureAsync(certCode);
+        var speakingQuestionId = await AddSpeakingQuestionAsync(certId, examId);
+        var userId = await SeedLearnerAsync(certCode);
+        var engine = CreateEngine();
+        var attempt = await engine.CreateAttemptAsync(userId, certId, examId, 120);
+
+        // 1. Save speaking audio via Stream overload
+        using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes("spoken test recording content"));
+        var audioResult = await engine.SaveSpeakingAudioAsync(
+            attempt.AttemptId,
+            speakingQuestionId,
+            userId,
+            stream,
+            "audio/webm",
+            "q4_spoken.webm",
+            28000);
+
+        Assert.Equal(speakingQuestionId, audioResult.QuestionId);
+        Assert.Equal(28000, audioResult.DurationMs);
+        Assert.False(string.IsNullOrWhiteSpace(audioResult.AudioPath));
+
+        await using (var checkDb = DbContextFactory.Create(database.ConnectionString))
+        {
+            var frDraft = await checkDb.FreeResponses.SingleAsync(r => r.AttemptId == attempt.AttemptId && r.QuestionId == speakingQuestionId);
+            Assert.Equal("draft", frDraft.Status);
+            Assert.Equal(audioResult.AudioPath, frDraft.AudioPath);
+            Assert.Equal(28000, frDraft.DurationMs);
+            Assert.NotNull(frDraft.DraftSavedAt);
+            Assert.Null(frDraft.SubmittedAt);
+        }
+
+        // 2. Submit attempt
+        await engine.SubmitAttemptAsync(attempt.AttemptId, userId, isAutoSubmit: false);
+
+        // 3. Verify attempt status and queued AiGradings
+        await using (var gradingDb = DbContextFactory.Create(database.ConnectionString))
+        {
+            var att = await gradingDb.ExamAttempts.SingleAsync(a => a.AttemptId == attempt.AttemptId);
+            Assert.Equal("submitted", att.Status);
+
+            var fr = await gradingDb.FreeResponses.SingleAsync(r => r.AttemptId == attempt.AttemptId && r.QuestionId == speakingQuestionId);
+            Assert.Equal("pending_ai", fr.Status);
+            Assert.NotNull(fr.SubmittedAt);
+
+            var grading = await gradingDb.AiGradings.SingleOrDefaultAsync(g => g.FreeResponseId == fr.FreeResponseId);
+            Assert.NotNull(grading);
+            Assert.Equal("pending", grading.Status);
+
+            // 4. Drain queue with AiGradingProcessor (sole owner of queue processing per Invariant #6)
+            var processor = new AiGradingProcessor(gradingDb, new FakeAiGrader());
+            var processed = await processor.ProcessPendingGradingsAsync(10);
+            Assert.True(processed >= 1);
+
+            var finishedGrading = await gradingDb.AiGradings.SingleAsync(g => g.FreeResponseId == fr.FreeResponseId);
+            Assert.Equal("done", finishedGrading.Status);
+        }
+    }
 }
+

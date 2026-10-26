@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using BusinessObjects;
 using DataAccess;
 using DataAccess.Scaffold;
@@ -36,6 +36,7 @@ public interface IPracticeService
     Task<PracticeSummary> GetSummaryAsync(int userId, int sessionId, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<PracticeQuestionView>> GetSessionQuestionsAsync(int userId, int sessionId, CancellationToken cancellationToken = default);
+    Task<PracticeSessionTake> GetSessionTakeAsync(int userId, int sessionId, int? displayOrder = null, CancellationToken cancellationToken = default);
 }
 
 public sealed class PracticeService(
@@ -123,7 +124,18 @@ public sealed class PracticeService(
                 group.ImageAlt,
                 isSaved,
                 group.AudioStartMs,
-                group.AudioEndMs));
+                group.AudioEndMs,
+                q.QuestionType ?? "mcq",
+                q.MaxSelections,
+                q.AllowNumber,
+                q.AcceptedAnswersJson,
+                q.RequiredKeywords,
+                q.MinWords,
+                q.MaxWords,
+                answer.ResponseText,
+                AttemptEngine.ParseOptionIds(answer.SelectedOptionIdsJson, answer.SelectedOptionId).ToList(),
+                answer.SelectedOptionIdsJson,
+                (isAnswered || isFinished) ? q.QuestionOptionQuestionNavigations.Where(o => o.IsCorrect).Select(o => o.OptionId).ToList() : new List<int>()));
         }
 
         return result;
@@ -156,7 +168,7 @@ public sealed class PracticeService(
 
         var questionCounts = await db.Questions
             .AsNoTracking()
-            .Where(q => q.Section.CertId == activeCertId && q.QuestionType == QuestionType.Mcq.ToCode())
+            .Where(q => q.Section.CertId == activeCertId && q.QuestionType != QuestionType.FreeResponse.ToCode() && q.QuestionType != "writing" && q.QuestionType != "speaking")
             .GroupBy(q => q.SectionId)
             .Select(g => new { SectionId = g.Key, Count = g.Count() })
             .ToDictionaryAsync(g => g.SectionId, g => g.Count, cancellationToken);
@@ -247,7 +259,7 @@ public sealed class PracticeService(
 
         var query = db.Questions
             .AsNoTracking()
-            .Where(q => q.SectionId == section.SectionId && q.QuestionType == QuestionType.Mcq.ToCode() && db.QuestionOptions.Any(o => o.QuestionId == q.QuestionId));
+            .Where(q => q.SectionId == section.SectionId && q.QuestionType != QuestionType.FreeResponse.ToCode() && q.QuestionType != "writing" && q.QuestionType != "speaking" && (q.AcceptedAnswersJson != null || db.QuestionOptions.Any(o => o.QuestionId == q.QuestionId)));
 
         if (input.QuestionSource == QuestionSource.WrongBefore)
         {
@@ -470,7 +482,18 @@ public sealed class PracticeService(
             group.ImageAlt,
             isSaved,
             group.AudioStartMs,
-            group.AudioEndMs);
+            group.AudioEndMs,
+            q.QuestionType ?? "mcq",
+            q.MaxSelections,
+            q.AllowNumber,
+            q.AcceptedAnswersJson,
+            q.RequiredKeywords,
+            q.MinWords,
+            q.MaxWords,
+            answer.ResponseText,
+            AttemptEngine.ParseOptionIds(answer.SelectedOptionIdsJson, answer.SelectedOptionId).ToList(),
+            answer.SelectedOptionIdsJson,
+            (isAnswered || isFinished) ? allOptions.Where(o => o.IsCorrect).Select(o => o.OptionId).ToList() : new List<int>());
     }
 
     public async Task<string?> RevealHintAsync(int userId, int sessionId, int questionId, CancellationToken cancellationToken = default)
@@ -522,17 +545,64 @@ public sealed class PracticeService(
 
         int? correctOptionId = allOptions.FirstOrDefault(o => o.IsCorrect)?.OptionId;
 
+        var optionIdsJson = input.SelectedOptionIdsJson;
+        if (string.IsNullOrWhiteSpace(optionIdsJson) && input.SelectedOptionIds is { Count: > 0 })
+        {
+            optionIdsJson = System.Text.Json.JsonSerializer.Serialize(input.SelectedOptionIds);
+        }
+
         if (input.SelectedOptionId is { } optionId)
         {
             var option = allOptions.FirstOrDefault(o => o.OptionId == optionId)
                 ?? throw new PracticeException(PracticeException.InvalidOption, $"Option {optionId} does not belong to question {questionId}.");
 
             answer.SelectedOptionId = optionId;
-            answer.IsCorrect = option.IsCorrect;
+            if (input.SelectedOptionIds is { Count: > 0 })
+            {
+                foreach (var optId in input.SelectedOptionIds)
+                {
+                    if (!allOptions.Any(o => o.OptionId == optId))
+                    {
+                        throw new PracticeException(PracticeException.InvalidOption, $"Option {optId} does not belong to question {questionId}.");
+                    }
+                }
+            }
+            answer.ResponseText = input.ResponseText;
+            answer.SelectedOptionIdsJson = optionIdsJson;
+            answer.IsCorrect = AttemptEngine.EvaluateObjectiveAnswer(
+                q,
+                allOptions,
+                optionId,
+                optionIdsJson,
+                input.ResponseText);
+        }
+        else if (!string.IsNullOrWhiteSpace(input.ResponseText) || !string.IsNullOrWhiteSpace(optionIdsJson))
+        {
+            answer.SelectedOptionId = null;
+            if (input.SelectedOptionIds is { Count: > 0 })
+            {
+                foreach (var optId in input.SelectedOptionIds)
+                {
+                    if (!allOptions.Any(o => o.OptionId == optId))
+                    {
+                        throw new PracticeException(PracticeException.InvalidOption, $"Option {optId} does not belong to question {questionId}.");
+                    }
+                }
+            }
+            answer.ResponseText = input.ResponseText;
+            answer.SelectedOptionIdsJson = optionIdsJson;
+            answer.IsCorrect = AttemptEngine.EvaluateObjectiveAnswer(
+                q,
+                allOptions,
+                null,
+                optionIdsJson,
+                input.ResponseText);
         }
         else
         {
             answer.SelectedOptionId = null;
+            answer.ResponseText = null;
+            answer.SelectedOptionIdsJson = null;
             answer.IsCorrect = null;
         }
 
@@ -647,7 +717,11 @@ public sealed class PracticeService(
             q.Group.Transcript,
             isLast,
             nextDisplayOrder,
-            isSaved);
+            isSaved,
+            q.AcceptedAnswersJson,
+            allOptions.Where(o => o.IsCorrect).Select(o => o.OptionId).ToList(),
+            answer.ResponseText,
+            answer.SelectedOptionIdsJson);
     }
 
     public async Task<PracticeSummary> GetSummaryAsync(int userId, int sessionId, CancellationToken cancellationToken = default)
@@ -706,11 +780,15 @@ public sealed class PracticeService(
                 q.Group.AudioPath,
                 q.Group.AudioStartMs,
                 q.Group.AudioEndMs,
-                q.Group.Transcript);
+                q.Group.Transcript,
+                q.QuestionType ?? "mcq",
+                a.ResponseText,
+                a.SelectedOptionIdsJson,
+                q.AcceptedAnswersJson);
         }).ToList();
 
         var total = answers.Count;
-        var answered = answers.Count(a => a.SelectedOptionId.HasValue);
+        var answered = answers.Count(a => a.SelectedOptionId.HasValue || a.IsCorrect.HasValue);
         var correct = answers.Count(a => a.IsCorrect == true);
         var incorrect = answered - correct;
         var skipped = total - answered;
@@ -797,5 +875,37 @@ public sealed class PracticeService(
         }
 
         await db.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<PracticeSessionTake> GetSessionTakeAsync(int userId, int sessionId, int? displayOrder = null, CancellationToken cancellationToken = default)
+    {
+        var session = await GetSessionInfoAsync(userId, sessionId, cancellationToken);
+        var questions = await GetSessionQuestionsAsync(userId, sessionId, cancellationToken);
+
+        if (questions.Count == 0)
+        {
+            throw new PracticeException(PracticeException.SessionNotFound, $"No questions found in session {sessionId}.");
+        }
+
+        PracticeQuestionView currentQuestion;
+        if (displayOrder.HasValue && displayOrder.Value > 0)
+        {
+            currentQuestion = questions.FirstOrDefault(q => q.DisplayOrder == displayOrder.Value) ?? questions[0];
+        }
+        else
+        {
+            currentQuestion = questions.FirstOrDefault(q => q.SelectedOptionId == null && q.IsCorrect == null) ?? questions[0];
+        }
+
+        var navigator = questions.Select(item => new PracticeNavigatorItem(
+            item.QuestionId,
+            item.DisplayOrder,
+            item.SelectedOptionId.HasValue || item.IsCorrect.HasValue,
+            item.IsCorrect,
+            item.IsSaved,
+            item.DisplayOrder == currentQuestion.DisplayOrder
+        )).ToList();
+
+        return new PracticeSessionTake(session, currentQuestion, questions, navigator);
     }
 }

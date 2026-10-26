@@ -30,10 +30,20 @@ public sealed class AttemptEngineMultiCertScoringTests(DatabaseFixture database)
     // Both fixture skills have no duration weight, so a 60-minute attempt splits evenly.
     private static Task StartReadingPhaseAsync(string connectionString, int attemptId) =>
         RunSqlAsync(connectionString, $"""
-            UPDATE ExamAttempts
-            SET StartedAt = DATEADD(second, -1801, SYSDATETIMEOFFSET()),
-                ExpiresAt = DATEADD(second, 1799, SYSDATETIMEOFFSET())
-            WHERE AttemptId = {attemptId};
+            UPDATE a
+            SET a.StartedAt = DATEADD(second, -1801, SYSDATETIMEOFFSET()),
+                a.ExpiresAt = DATEADD(second, 1799, SYSDATETIMEOFFSET()),
+                a.ActiveSkillId = (
+                    SELECT TOP 1 s.SkillId
+                    FROM Skills s
+                    JOIN Sections sec ON sec.SkillId = s.SkillId
+                    JOIN Questions q ON q.SectionId = sec.SectionId
+                    WHERE q.ExamId = a.ExamId AND s.SkillId <> a.ActiveSkillId
+                    ORDER BY s.DisplayOrder
+                ),
+                a.PhaseDeadlineAt = DATEADD(minute, 30, GETUTCDATE())
+            FROM ExamAttempts a
+            WHERE a.AttemptId = {attemptId};
             """);
 
     private async Task<ScoringFixture> SeedFixtureAsync(string connectionString, string certCode)
@@ -42,8 +52,9 @@ public sealed class AttemptEngineMultiCertScoringTests(DatabaseFixture database)
             IF NOT EXISTS (SELECT 1 FROM Roles WHERE Code = 'learner')
               INSERT INTO Roles (Code, Name) VALUES ('learner', N'Learner');
 
-            INSERT INTO Certificates (Code, Name, IsActive)
-            VALUES ('{certCode}', N'{certCode}', 1);
+            INSERT INTO Certificates (Code, Name, IsActive, ScoreAggregationRule)
+            VALUES ('{certCode}', N'{certCode}', 1,
+              CASE '{certCode}' WHEN 'IELTS' THEN 'avg_half_step' WHEN 'VSTEP' THEN 'avg_whole' ELSE 'sum' END);
             DECLARE @cert INT = SCOPE_IDENTITY();
 
             INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder) VALUES

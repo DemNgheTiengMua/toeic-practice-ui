@@ -38,7 +38,8 @@ public interface ICompanionApiClient :
     IAdminComplaintsClient,
     IAdminExamsClient,
     IAdminImportsClient,
-    IAdminLessonsClient
+    IAdminLessonsClient,
+    IAdminCertificatesClient
 {
 }
 
@@ -193,6 +194,9 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
 
     public Task<PracticeQuestionDto> GetPracticeQuestionAsync(int sessionId, int displayOrder, string bearerToken, CancellationToken cancellationToken = default) =>
         GetAuthorizedAsync<PracticeQuestionDto>($"api/learner/practice/sessions/{sessionId}/questions/{displayOrder}", bearerToken, cancellationToken);
+
+    public Task<PracticeSessionTakeDto> GetPracticeSessionTakeAsync(int sessionId, int? displayOrder, string bearerToken, CancellationToken cancellationToken = default) =>
+        GetAuthorizedAsync<PracticeSessionTakeDto>($"api/learner/practice/sessions/{sessionId}/take" + (displayOrder.HasValue ? $"?q={displayOrder.Value}" : ""), bearerToken, cancellationToken);
 
     public async Task<IReadOnlyList<PracticeQuestionDto>> GetPracticeSessionQuestionsAsync(int sessionId, string bearerToken, CancellationToken cancellationToken = default)
     {
@@ -445,6 +449,48 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
         return (await response.Content.ReadFromJsonAsync<SubmitAttemptResponse>(Json, cancellationToken))!;
     }
 
+    public async Task<AttemptTransitionResponse> TransitionSkillAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default)
+    {
+        using var message = new HttpRequestMessage(HttpMethod.Post, $"api/learner/attempts/{attemptId}/transition/skill");
+        AttachBearer(message, bearerToken);
+        using var response = await http.SendAsync(message, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+        return (await response.Content.ReadFromJsonAsync<AttemptTransitionResponse>(Json, cancellationToken))!;
+    }
+
+    public async Task<AttemptTransitionResponse> TransitionUnitAsync(int attemptId, TransitionUnitRequest request, string bearerToken, CancellationToken cancellationToken = default)
+    {
+        using var message = new HttpRequestMessage(HttpMethod.Post, $"api/learner/attempts/{attemptId}/transition/unit")
+        {
+            Content = JsonContent.Create(request, options: Json),
+        };
+        AttachBearer(message, bearerToken);
+        using var response = await http.SendAsync(message, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+        return (await response.Content.ReadFromJsonAsync<AttemptTransitionResponse>(Json, cancellationToken))!;
+    }
+
+    public async Task<AttemptTransitionResponse> TransitionGroupAsync(int attemptId, TransitionGroupRequest request, string bearerToken, CancellationToken cancellationToken = default)
+    {
+        using var message = new HttpRequestMessage(HttpMethod.Post, $"api/learner/attempts/{attemptId}/transition/group")
+        {
+            Content = JsonContent.Create(request, options: Json),
+        };
+        AttachBearer(message, bearerToken);
+        using var response = await http.SendAsync(message, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+        return (await response.Content.ReadFromJsonAsync<AttemptTransitionResponse>(Json, cancellationToken))!;
+    }
+
+    public async Task<AttemptTransitionResponse> StartAudioReviewAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default)
+    {
+        using var message = new HttpRequestMessage(HttpMethod.Post, $"api/learner/attempts/{attemptId}/audio-review/start");
+        AttachBearer(message, bearerToken);
+        using var response = await http.SendAsync(message, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+        return (await response.Content.ReadFromJsonAsync<AttemptTransitionResponse>(Json, cancellationToken))!;
+    }
+
     public async Task CancelAttemptAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default)
     {
         using var message = new HttpRequestMessage(HttpMethod.Post, $"api/learner/attempts/{attemptId}/cancel");
@@ -461,6 +507,24 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
 
     public Task<AttemptReviewDto> GetAttemptReviewAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) =>
         GetAuthorizedAsync<AttemptReviewDto>($"api/learner/attempts/{attemptId}/review", bearerToken, cancellationToken);
+
+    public Task<PreflightStatusDto> GetPreflightStatusAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) =>
+        GetAuthorizedAsync<PreflightStatusDto>($"api/learner/attempts/{attemptId}/preflight", bearerToken, cancellationToken);
+
+    public async Task<PreflightStatusDto> VerifyPreflightAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default)
+    {
+        using var message = new HttpRequestMessage(HttpMethod.Post, $"api/learner/attempts/{attemptId}/preflight/verify");
+        AttachBearer(message, bearerToken);
+        using var response = await http.SendAsync(message, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+        return (await response.Content.ReadFromJsonAsync<PreflightStatusDto>(Json, cancellationToken))!;
+    }
+
+    public Task<SittingSyncDto> SaveSittingSyncAsync(int attemptId, SittingSyncRequestDto request, string bearerToken, CancellationToken cancellationToken = default) =>
+        PostAuthorizedAsync<SittingSyncRequestDto, SittingSyncDto>($"api/learner/attempts/{attemptId}/sync", request, bearerToken, cancellationToken);
+
+    public Task<AttemptResumeDto> ResumeAttemptByCodeAsync(ResumeAttemptRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
+        PostAuthorizedAsync<ResumeAttemptRequest, AttemptResumeDto>("api/learner/attempts/resume", request, bearerToken, cancellationToken);
 
     public Task<AdminScoreConversionDto> GetAdminScoreConversionAsync(string? certCode, int? examId, string bearerToken, CancellationToken cancellationToken = default)
     {
@@ -481,6 +545,18 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
         using var response = await http.SendAsync(message, cancellationToken);
         await EnsureSuccessAsync(response, cancellationToken);
         return (await response.Content.ReadFromJsonAsync<AdminScoreConversionDto>(Json, cancellationToken))!;
+    }
+
+    public async Task<ScorePreviewResultDto> CalculateScorePreviewAsync(ScorePreviewRequestDto request, string bearerToken, CancellationToken cancellationToken = default)
+    {
+        using var message = new HttpRequestMessage(HttpMethod.Post, "api/admin/score-conversion/preview")
+        {
+            Content = JsonContent.Create(request, options: Json),
+        };
+        AttachBearer(message, bearerToken);
+        using var response = await http.SendAsync(message, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+        return (await response.Content.ReadFromJsonAsync<ScorePreviewResultDto>(Json, cancellationToken))!;
     }
 
     public Task<AdminOrdersSummaryDto> GetAdminOrdersAsync(string? q, string? status, string? gateway, int page, int pageSize, string bearerToken, CancellationToken cancellationToken = default)
@@ -1000,6 +1076,12 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
     public Task<QuickIngestCommitResultDto> CommitQuickIngestAsync(int examId, QuickIngestCommitRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
         PostAuthorizedAsync<QuickIngestCommitRequest, QuickIngestCommitResultDto>($"api/admin/exams/{examId}/quick-ingest/commit", request, bearerToken, cancellationToken);
 
+    public Task<QuickIngestSampleTemplateDto> GetQuickIngestSampleTemplateAsync(int sectionId, string bearerToken, CancellationToken cancellationToken = default) =>
+        GetAuthorizedAsync<QuickIngestSampleTemplateDto>($"api/admin/sections/{sectionId}/quick-ingest/sample", bearerToken, cancellationToken);
+
+    public Task<SectionGenerationResultDto> GenerateSectionQuestionsAsync(int examId, int sectionId, SectionGenerateRequest? request, string bearerToken, CancellationToken cancellationToken = default) =>
+        PostAuthorizedAsync<SectionGenerateRequest?, SectionGenerationResultDto>($"api/admin/exams/{examId}/sections/{sectionId}/ai-generate", request ?? new SectionGenerateRequest(), bearerToken, cancellationToken);
+
     public Task<ExamStudioDetailDto> GetAdminExamStudioAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) =>
         GetAuthorizedAsync<ExamStudioDetailDto>($"api/admin/exams/{examId}/studio", bearerToken, cancellationToken);
 
@@ -1061,6 +1143,31 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
         var fileName = response.Content.Headers.ContentDisposition?.FileNameStar
             ?? response.Content.Headers.ContentDisposition?.FileName
             ?? $"exam_{examId}_export.{(fmt == "json" ? "json" : "zip")}";
+
+        return (stream, contentType, fileName);
+    }
+
+    public async Task<(Stream Stream, string ContentType, string FileName)> GetManifestTemplateAsync(int certId, string bearerToken, CancellationToken cancellationToken = default)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"api/admin/exams/manifest-template?certId={certId}");
+        AttachBearer(request, bearerToken);
+
+        var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        try
+        {
+            await EnsureSuccessAsync(response, cancellationToken);
+        }
+        catch
+        {
+            response.Dispose();
+            throw;
+        }
+
+        var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        var contentType = response.Content.Headers.ContentType?.MediaType ?? "application/json";
+        var fileName = response.Content.Headers.ContentDisposition?.FileNameStar
+            ?? response.Content.Headers.ContentDisposition?.FileName
+            ?? $"manifest_template_{certId}.json";
 
         return (stream, contentType, fileName);
     }
@@ -1210,6 +1317,22 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
         return GetAuthorizedAsync<AdminLessonFormOptionsDto>(url, bearerToken, cancellationToken);
     }
 
+    public Task<IReadOnlyList<AdminCertificateSummaryDto>> GetAdminCertificatesAsync(string bearerToken, CancellationToken cancellationToken = default) =>
+        GetAuthorizedAsync<IReadOnlyList<AdminCertificateSummaryDto>>("api/admin/certificates", bearerToken, cancellationToken);
+
+    public Task<IReadOnlyList<CertificateBlueprintPresetDto>> GetPresetsAsync(string bearerToken, CancellationToken cancellationToken = default) =>
+        GetAuthorizedAsync<IReadOnlyList<CertificateBlueprintPresetDto>>("api/admin/certificates/presets", bearerToken, cancellationToken);
+
+    public Task<CertificateBlueprintDetailDto?> GetCertificateBlueprintAsync(int certId, string bearerToken, CancellationToken cancellationToken = default) =>
+        GetAuthorizedAsync<CertificateBlueprintDetailDto?>($"api/admin/certificates/{certId}/blueprint", bearerToken, cancellationToken);
+
+    public Task<CertificateBlueprintDetailDto?> GetCertificateBlueprintByCodeAsync(string code, string bearerToken, CancellationToken cancellationToken = default) =>
+        GetAuthorizedAsync<CertificateBlueprintDetailDto?>($"api/admin/certificates/by-code/{Uri.EscapeDataString(code)}/blueprint", bearerToken, cancellationToken);
+
+    public Task<SaveCertificateWizardResultDto> SaveCertificateWizardAsync(SaveCertificateWizardRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
+        PostAuthorizedAsync<SaveCertificateWizardRequest, SaveCertificateWizardResultDto>("api/admin/certificates/wizard", request, bearerToken, cancellationToken);
+
+
 
 
     // Token-free forwarding methods for segregated domain client interfaces (ADR-0002)
@@ -1248,6 +1371,9 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
 
     public Task<PracticeQuestionDto> GetPracticeQuestionAsync(int sessionId, int displayOrder, CancellationToken cancellationToken = default) =>
         GetPracticeQuestionAsync(sessionId, displayOrder, string.Empty, cancellationToken);
+
+    public Task<PracticeSessionTakeDto> GetPracticeSessionTakeAsync(int sessionId, int? displayOrder = null, CancellationToken cancellationToken = default) =>
+        GetPracticeSessionTakeAsync(sessionId, displayOrder, string.Empty, cancellationToken);
 
     public Task<IReadOnlyList<PracticeQuestionDto>> GetPracticeSessionQuestionsAsync(int sessionId, CancellationToken cancellationToken = default) =>
         GetPracticeSessionQuestionsAsync(sessionId, string.Empty, cancellationToken);
@@ -1330,6 +1456,18 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
         CancellationToken cancellationToken = default) =>
         SubmitAttemptWithDraftsAsync(attemptId, request, string.Empty, cancellationToken);
 
+    public Task<AttemptTransitionResponse> TransitionSkillAsync(int attemptId, CancellationToken cancellationToken = default) =>
+        TransitionSkillAsync(attemptId, string.Empty, cancellationToken);
+
+    public Task<AttemptTransitionResponse> TransitionUnitAsync(int attemptId, TransitionUnitRequest request, CancellationToken cancellationToken = default) =>
+        TransitionUnitAsync(attemptId, request, string.Empty, cancellationToken);
+
+    public Task<AttemptTransitionResponse> TransitionGroupAsync(int attemptId, TransitionGroupRequest request, CancellationToken cancellationToken = default) =>
+        TransitionGroupAsync(attemptId, request, string.Empty, cancellationToken);
+
+    public Task<AttemptTransitionResponse> StartAudioReviewAsync(int attemptId, CancellationToken cancellationToken = default) =>
+        StartAudioReviewAsync(attemptId, string.Empty, cancellationToken);
+
     public Task CancelAttemptAsync(int attemptId, CancellationToken cancellationToken = default) =>
         CancelAttemptAsync(attemptId, string.Empty, cancellationToken);
 
@@ -1341,6 +1479,18 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
 
     public Task<AttemptReviewDto> GetAttemptReviewAsync(int attemptId, CancellationToken cancellationToken = default) =>
         GetAttemptReviewAsync(attemptId, string.Empty, cancellationToken);
+
+    public Task<PreflightStatusDto> GetPreflightStatusAsync(int attemptId, CancellationToken cancellationToken = default) =>
+        GetPreflightStatusAsync(attemptId, string.Empty, cancellationToken);
+
+    public Task<PreflightStatusDto> VerifyPreflightAsync(int attemptId, CancellationToken cancellationToken = default) =>
+        VerifyPreflightAsync(attemptId, string.Empty, cancellationToken);
+
+    public Task<SittingSyncDto> SaveSittingSyncAsync(int attemptId, SittingSyncRequestDto request, CancellationToken cancellationToken = default) =>
+        SaveSittingSyncAsync(attemptId, request, string.Empty, cancellationToken);
+
+    public Task<AttemptResumeDto> ResumeAttemptByCodeAsync(ResumeAttemptRequest request, CancellationToken cancellationToken = default) =>
+        ResumeAttemptByCodeAsync(request, string.Empty, cancellationToken);
 
     public Task<WritingInstructionsDto> GetWritingInstructionsAsync(int examId, CancellationToken cancellationToken = default) =>
         GetWritingInstructionsAsync(examId, string.Empty, cancellationToken);
@@ -1519,6 +1669,9 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
     public Task<AdminScoreConversionDto> UpdateAdminScoreConversionAsync(int certId, UpdateScoreConversionRequest request, CancellationToken cancellationToken = default) =>
         UpdateAdminScoreConversionAsync(certId, request, string.Empty, cancellationToken);
 
+    public Task<ScorePreviewResultDto> CalculateScorePreviewAsync(ScorePreviewRequestDto request, CancellationToken cancellationToken = default) =>
+        CalculateScorePreviewAsync(request, string.Empty, cancellationToken);
+
     public Task<AdminOrdersSummaryDto> GetAdminOrdersAsync(string? q, string? status, string? gateway, int page, int pageSize, CancellationToken cancellationToken = default) =>
         GetAdminOrdersAsync(q, status, gateway, page, pageSize, string.Empty, cancellationToken);
 
@@ -1630,6 +1783,12 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
     public Task<QuickIngestCommitResultDto> CommitQuickIngestAsync(int examId, QuickIngestCommitRequest request, CancellationToken cancellationToken = default) =>
         CommitQuickIngestAsync(examId, request, string.Empty, cancellationToken);
 
+    public Task<QuickIngestSampleTemplateDto> GetQuickIngestSampleTemplateAsync(int sectionId, CancellationToken cancellationToken = default) =>
+        GetQuickIngestSampleTemplateAsync(sectionId, string.Empty, cancellationToken);
+
+    public Task<SectionGenerationResultDto> GenerateSectionQuestionsAsync(int examId, int sectionId, SectionGenerateRequest? request, CancellationToken cancellationToken = default) =>
+        GenerateSectionQuestionsAsync(examId, sectionId, request, string.Empty, cancellationToken);
+
     public Task<ExamStudioDetailDto> GetAdminExamStudioAsync(int examId, CancellationToken cancellationToken = default) =>
         GetAdminExamStudioAsync(examId, string.Empty, cancellationToken);
 
@@ -1647,6 +1806,9 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
 
     public Task<(Stream Stream, string ContentType, string FileName)> ExportAdminExamAsync(int examId, string? format = "zip", CancellationToken cancellationToken = default) =>
         ExportAdminExamAsync(examId, format, string.Empty, cancellationToken);
+
+    public Task<(Stream Stream, string ContentType, string FileName)> GetManifestTemplateAsync(int certId, CancellationToken cancellationToken = default) =>
+        GetManifestTemplateAsync(certId, string.Empty, cancellationToken);
 
     public Task<ExamGenerationResultDto> GenerateAdminExamAsync(ExamBlueprintDto blueprint, CancellationToken cancellationToken = default) =>
         GenerateAdminExamAsync(blueprint, string.Empty, cancellationToken);
@@ -1686,6 +1848,22 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
 
     public Task<AdminLessonFormOptionsDto> GetAdminLessonFormOptionsAsync(int? certId = null, CancellationToken cancellationToken = default) =>
         GetAdminLessonFormOptionsAsync(certId, string.Empty, cancellationToken);
+
+    public Task<IReadOnlyList<AdminCertificateSummaryDto>> GetAdminCertificatesAsync(CancellationToken cancellationToken = default) =>
+        GetAdminCertificatesAsync(string.Empty, cancellationToken);
+
+    public Task<IReadOnlyList<CertificateBlueprintPresetDto>> GetPresetsAsync(CancellationToken cancellationToken = default) =>
+        GetPresetsAsync(string.Empty, cancellationToken);
+
+    public Task<CertificateBlueprintDetailDto?> GetCertificateBlueprintAsync(int certId, CancellationToken cancellationToken = default) =>
+        GetCertificateBlueprintAsync(certId, string.Empty, cancellationToken);
+
+    public Task<CertificateBlueprintDetailDto?> GetCertificateBlueprintByCodeAsync(string code, CancellationToken cancellationToken = default) =>
+        GetCertificateBlueprintByCodeAsync(code, string.Empty, cancellationToken);
+
+    public Task<SaveCertificateWizardResultDto> SaveCertificateWizardAsync(SaveCertificateWizardRequest request, CancellationToken cancellationToken = default) =>
+        SaveCertificateWizardAsync(request, string.Empty, cancellationToken);
+
 
 
     private async Task<TResponse> PutAuthorizedAsync<TRequest, TResponse>(string path, TRequest body, string bearerToken, CancellationToken cancellationToken)

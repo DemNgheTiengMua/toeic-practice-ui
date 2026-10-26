@@ -21,7 +21,10 @@
       Each mock exam uses <strong>1 credit</strong>.
     </p>
   </div>
-  <div>
+  <div style="display: flex; gap: 0.75rem; align-items: center;">
+    <a href="/exams/resume" class="btn btn--outline btn--sm" style="border: 2px solid #14181d; border-radius: 0; font-weight: 700; text-transform: uppercase;">
+      Khôi phục phiên thi
+    </a>
     <span class="badge @(hasCredits ? "badge--info" : "badge--warning")">
       @catalog.CreditBalance @(catalog.CreditBalance == 1 ? "credit" : "credits") left
     </span>

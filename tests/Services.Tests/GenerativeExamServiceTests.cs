@@ -91,7 +91,7 @@ public sealed class GenerativeExamServiceTests(DatabaseFixture database)
             DECLARE @s2 INT = (SELECT SkillId FROM Skills WHERE CertId = @c2 AND Code = 'WRIT');
 
             INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, DisplayOrder) VALUES
-              (@s2, @c2, 'writing', 'T1', N'Task 1 Writing', NULL, 1);
+              (@s2, @c2, 'writing', 'T1', N'Task 1 Writing', 4, 1);
             """);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
@@ -418,5 +418,97 @@ public sealed class GenerativeExamServiceTests(DatabaseFixture database)
         Assert.NotNull(result);
         Assert.Equal("hidden", result.Status);
         Assert.Equal(2, result.QuestionCount);
+    }
+
+
+    [Fact]
+    public async Task GenerateSectionQuestionsAsync_BuildsBlueprintPromptAndInsertsQuestions()
+    {
+        var env = await SeedEnvironmentAsync();
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+
+        var exam = new Exam
+        {
+            CertId = env.CertId,
+                        Name = "Section Gen Test Exam",
+            Purpose = ExamPurpose.Mock.ToCode(),
+            Status = ExamStatus.Draft.ToCode(),
+            DurationMinutes = 60
+        };
+        db.Exams.Add(exam);
+        await db.SaveChangesAsync();
+
+        var sec = await db.Sections.FirstAsync(s => s.CertId == env.CertId && s.Code == "P5");
+        sec.OptionCount = 4;
+        sec.RequirePassage = false;
+        sec.ExpectedQuestionCount = 5;
+        await db.SaveChangesAsync();
+
+        var fakeClaude = new TestClaudeClient
+        {
+            Responder = (userPrompt, systemPrompt) =>
+            {
+                Assert.Contains("P5", userPrompt);
+                Assert.Contains("Option count: 4", userPrompt);
+                Assert.Contains("OptionCount: 4", systemPrompt!);
+
+                return """
+                    ```json
+                    {
+                      "groups": [
+                        {
+                          "passage": null,
+                          "transcript": null,
+                          "questions": [
+                            {
+                              "stem": "Generated question 1",
+                              "difficultyLevel": 3,
+                              "questionType": "mcq",
+                              "categoryCode": "grammar_prep",
+                              "explanation": "Valid expl",
+                              "options": [
+                                { "label": "A", "text": "Opt A", "isCorrect": true, "rationale": "Correct" },
+                                { "label": "B", "text": "Opt B", "isCorrect": false, "rationale": "Wrong" },
+                                { "label": "C", "text": "Opt C", "isCorrect": false, "rationale": "Wrong" },
+                                { "label": "D", "text": "Opt D", "isCorrect": false, "rationale": "Wrong" }
+                              ]
+                            },
+                            {
+                              "stem": "Generated question 2",
+                              "difficultyLevel": 4,
+                              "questionType": "mcq",
+                              "categoryCode": "grammar_prep",
+                              "explanation": "Valid expl 2",
+                              "options": [
+                                { "label": "A", "text": "Opt A", "isCorrect": false, "rationale": "Wrong" },
+                                { "label": "B", "text": "Opt B", "isCorrect": true, "rationale": "Correct" },
+                                { "label": "C", "text": "Opt C", "isCorrect": false, "rationale": "Wrong" },
+                                { "label": "D", "text": "Opt D", "isCorrect": false, "rationale": "Wrong" }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                    ```
+                    """;
+            }
+        };
+
+        var importService = new QuestionImportService(db, new RecordingFileStore(), TimeProvider.System);
+        var generator = new ExamGeneratorService(db, importService, fakeClaude);
+
+        var result = await generator.GenerateSectionQuestionsAsync(exam.ExamId, sec.SectionId, env.AdminId, questionCount: 2);
+
+        Assert.NotNull(result);
+        Assert.Equal(exam.ExamId, result.ExamId);
+        Assert.Equal(sec.SectionId, result.SectionId);
+        Assert.Equal(2, result.QuestionsGenerated);
+        Assert.Equal(1, result.GroupsGenerated);
+
+        var questions = await db.Questions.Where(q => q.ExamId == exam.ExamId && q.SectionId == sec.SectionId).ToListAsync();
+        Assert.Equal(2, questions.Count);
+        Assert.Contains(questions, q => q.Stem == "Generated question 1");
+        Assert.Contains(questions, q => q.Stem == "Generated question 2");
     }
 }

@@ -132,6 +132,53 @@ public sealed class ExamGeneratorService(
         return await IngestManifestAsync(cert.CertId, manifestJson, adminUserId, status, cancellationToken);
     }
 
+    public async Task<SectionGenerationResultDto> GenerateSectionQuestionsAsync(
+        int examId,
+        int sectionId,
+        int adminUserId,
+        int? questionCount = null,
+        CancellationToken cancellationToken = default)
+    {
+        var exam = await db.Exams
+            .Include(e => e.Cert)
+            .SingleOrDefaultAsync(e => e.ExamId == examId && !e.IsDeleted, cancellationToken)
+            ?? throw new ExamNotFoundException(examId);
+
+        var section = await db.Sections
+            .SingleOrDefaultAsync(s => s.SectionId == sectionId && s.CertId == exam.CertId, cancellationToken)
+            ?? throw new AdminExamException(ApiError.Codes.Validation, $"Section with ID {sectionId} not found for certificate '{exam.Cert.Name}'.", 404);
+
+        var existingCount = await db.Questions
+            .CountAsync(q => q.ExamId == examId && q.SectionId == sectionId, cancellationToken);
+
+        var countToGenerate = questionCount.GetValueOrDefault();
+        if (countToGenerate <= 0)
+        {
+            countToGenerate = Math.Max(1, (section.ExpectedQuestionCount ?? 5) - existingCount);
+        }
+
+        var certCategories = await db.QuestionCategories
+            .AsNoTracking()
+            .Where(c => c.CertId == exam.CertId)
+            .ToListAsync(cancellationToken);
+
+        var systemPrompt = BuildSectionSystemPrompt(section);
+        var userPrompt = BuildSectionUserPrompt(exam, section, countToGenerate, certCategories);
+
+        logger?.LogInformation("Generating {Count} questions for exam {ExamId} section {SectionCode} via Claude",
+            countToGenerate, exam.ExamId, section.Code);
+
+        var rawClaudeResponse = await claudeClient.CreateMessageAsync(
+            userPrompt,
+            systemPrompt,
+            maxTokens: 4000,
+            cancellationToken);
+
+        var json = ExtractJson(rawClaudeResponse);
+
+        return await IngestSectionQuestionsJsonAsync(exam, section, json, cancellationToken);
+    }
+
     public async Task<ExamGenerationResultDto> IngestManifestAsync(
         int certId,
         string manifestJson,
@@ -188,6 +235,193 @@ public sealed class ExamGeneratorService(
             RawManifestJson: manifestJson);
     }
 
+    private async Task<SectionGenerationResultDto> IngestSectionQuestionsJsonAsync(
+        Exam exam,
+        Section section,
+        string json,
+        CancellationToken cancellationToken)
+    {
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement;
+
+        JsonElement groupsElement;
+        if (root.ValueKind == JsonValueKind.Object && root.TryGetProperty("groups", out var gProp) && gProp.ValueKind == JsonValueKind.Array)
+        {
+            groupsElement = gProp;
+        }
+        else if (root.ValueKind == JsonValueKind.Object && root.TryGetProperty("sections", out var sProp) && sProp.ValueKind == JsonValueKind.Array)
+        {
+            var firstSec = sProp.EnumerateArray().FirstOrDefault();
+            if (firstSec.TryGetProperty("groups", out var secGProp))
+            {
+                groupsElement = secGProp;
+            }
+            else
+            {
+                throw new AdminExamException(ApiError.Codes.Validation, "Invalid AI response JSON: missing 'groups' array.", 400);
+            }
+        }
+        else if (root.ValueKind == JsonValueKind.Array)
+        {
+            groupsElement = root;
+        }
+        else
+        {
+            throw new AdminExamException(ApiError.Codes.Validation, "Invalid AI response JSON: expected array or object with 'groups'.", 400);
+        }
+
+        var categories = await db.QuestionCategories
+            .Where(c => c.CertId == exam.CertId)
+            .ToDictionaryAsync(c => c.Code, c => c.CategoryId, StringComparer.OrdinalIgnoreCase, cancellationToken);
+
+        var maxGroupOrder = await db.QuestionGroups
+            .Where(g => g.ExamId == exam.ExamId && g.SectionId == section.SectionId)
+            .Select(g => (int?)g.DisplayOrder)
+            .MaxAsync(cancellationToken) ?? 0;
+
+        var maxQuestionOrder = await db.Questions
+            .Where(q => q.ExamId == exam.ExamId && q.SectionId == section.SectionId)
+            .Select(q => (int?)q.DisplayOrder)
+            .MaxAsync(cancellationToken) ?? 0;
+
+        var currentDisplayOrder = Math.Max(maxGroupOrder, maxQuestionOrder) + 1;
+
+        var groupsCreated = 0;
+        var questionsCreated = 0;
+
+        foreach (var groupEl in groupsElement.EnumerateArray())
+        {
+            string? passage = groupEl.TryGetProperty("passage", out var pProp) && pProp.ValueKind == JsonValueKind.String ? pProp.GetString() : null;
+            string? transcript = groupEl.TryGetProperty("transcript", out var tProp) && tProp.ValueKind == JsonValueKind.String ? tProp.GetString() : null;
+
+            var group = new QuestionGroup
+            {
+                ExamId = exam.ExamId,
+                CertId = exam.CertId,
+                SectionId = section.SectionId,
+                DisplayOrder = currentDisplayOrder,
+                Passage = passage,
+                Transcript = transcript,
+                UnitNumber = 1
+            };
+
+            db.QuestionGroups.Add(group);
+            await db.SaveChangesAsync(cancellationToken);
+            groupsCreated++;
+
+            if (groupEl.TryGetProperty("questions", out var questionsEl) && questionsEl.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var qEl in questionsEl.EnumerateArray())
+                {
+                    var stem = qEl.TryGetProperty("stem", out var stmProp) ? stmProp.GetString() ?? string.Empty : string.Empty;
+                    var difficulty = qEl.TryGetProperty("difficultyLevel", out var diffProp) && diffProp.TryGetInt32(out var diffVal) ? diffVal : 3;
+                    var explanation = qEl.TryGetProperty("explanation", out var expProp) ? expProp.GetString() : null;
+                    var categoryCode = qEl.TryGetProperty("categoryCode", out var catProp) ? catProp.GetString() : null;
+                    var qType = qEl.TryGetProperty("questionType", out var qtProp) ? qtProp.GetString()?.ToLowerInvariant() ?? "mcq" : "mcq";
+                    var hint = qEl.TryGetProperty("hint", out var hProp) ? hProp.GetString() : null;
+                    var maxWords = qEl.TryGetProperty("maxWords", out var mwProp) && mwProp.TryGetInt32(out var mw) ? (int?)mw : null;
+                    var minWords = qEl.TryGetProperty("minWords", out var minwProp) && minwProp.TryGetInt32(out var minw) ? (int?)minw : null;
+                    var maxSelections = qEl.TryGetProperty("maxSelections", out var msProp) && msProp.TryGetInt32(out var ms) ? (int?)ms : null;
+                    var prepSec = qEl.TryGetProperty("prepSeconds", out var psProp) && psProp.TryGetInt32(out var ps) ? (int?)ps : null;
+                    var respSec = qEl.TryGetProperty("responseSeconds", out var rsProp) && rsProp.TryGetInt32(out var rs) ? (int?)rs : null;
+                    var requiredKeywords = qEl.TryGetProperty("requiredKeywords", out var rkProp) ? rkProp.GetString() : null;
+
+                    string? acceptedAnswersJson = null;
+                    if (qEl.TryGetProperty("acceptedAnswers", out var aaProp))
+                    {
+                        if (aaProp.ValueKind == JsonValueKind.Array)
+                        {
+                            var list = aaProp.EnumerateArray().Select(x => x.GetString()).Where(x => !string.IsNullOrWhiteSpace(x)).ToList();
+                            acceptedAnswersJson = JsonSerializer.Serialize(list);
+                        }
+                        else if (aaProp.ValueKind == JsonValueKind.String)
+                        {
+                            acceptedAnswersJson = aaProp.GetString();
+                        }
+                    }
+
+                    int? categoryId = null;
+                    if (!string.IsNullOrWhiteSpace(categoryCode) && categories.TryGetValue(categoryCode, out var cid))
+                    {
+                        categoryId = cid;
+                    }
+
+                    if (section.OptionCount == 3 && qType == "mcq")
+                    {
+                        qType = "mcq_3";
+                    }
+
+                    var question = new Question
+                    {
+                        ExamId = exam.ExamId,
+                        SectionId = section.SectionId,
+                        SkillId = section.SkillId,
+                        GroupId = group.GroupId,
+                        Stem = !string.IsNullOrWhiteSpace(stem) ? stem.Trim() : $"Generated Question {questionsCreated + 1}",
+                        DifficultyLevel = difficulty is >= 1 and <= 5 ? difficulty : 3,
+                        QuestionType = qType,
+                        Explanation = explanation?.Trim(),
+                        CategoryId = categoryId,
+                        PrepSeconds = prepSec,
+                        ResponseSeconds = respSec,
+                        MinWords = minWords,
+                        MaxWords = maxWords,
+                        MaxSelections = maxSelections,
+                        AllowNumber = true,
+                        AcceptedAnswersJson = acceptedAnswersJson,
+                        RequiredKeywords = requiredKeywords?.Trim(),
+                        Hint = hint?.Trim(),
+                        DisplayOrder = currentDisplayOrder
+                    };
+
+                    db.Questions.Add(question);
+                    await db.SaveChangesAsync(cancellationToken);
+                    questionsCreated++;
+
+                    if (qEl.TryGetProperty("options", out var optionsEl) && optionsEl.ValueKind == JsonValueKind.Array)
+                    {
+                        var optIdx = 0;
+                        foreach (var optEl in optionsEl.EnumerateArray())
+                        {
+                            if (optIdx >= section.OptionCount && (qType == "mcq" || qType == "mcq_3"))
+                            {
+                                break;
+                            }
+
+                            var label = optEl.TryGetProperty("label", out var lProp) ? lProp.GetString() ?? ((char)('A' + optIdx)).ToString() : ((char)('A' + optIdx)).ToString();
+                            var optText = optEl.TryGetProperty("text", out var otProp) ? otProp.GetString() ?? string.Empty : string.Empty;
+                            var isCorrect = optEl.TryGetProperty("isCorrect", out var icProp) && icProp.GetBoolean();
+                            var rationale = optEl.TryGetProperty("rationale", out var rProp) ? rProp.GetString() : null;
+
+                            db.QuestionOptions.Add(new QuestionOption
+                            {
+                                QuestionId = question.QuestionId,
+                                QuestionType = question.QuestionType,
+                                Label = label.Trim().ToUpperInvariant(),
+                                Text = optText.Trim(),
+                                IsCorrect = isCorrect,
+                                Rationale = rationale?.Trim()
+                            });
+                            optIdx++;
+                        }
+                    }
+
+                    currentDisplayOrder++;
+                }
+            }
+        }
+
+        exam.UpdatedAt = DateTimeOffset.UtcNow;
+        await db.SaveChangesAsync(cancellationToken);
+
+        return new SectionGenerationResultDto(
+            ExamId: exam.ExamId,
+            SectionId: section.SectionId,
+            QuestionsGenerated: questionsCreated,
+            GroupsGenerated: groupsCreated,
+            Message: $"Successfully generated {questionsCreated} questions in {groupsCreated} groups for section '{section.Name}'.");
+    }
+
     private static string BuildSystemPrompt()
     {
         return """
@@ -240,14 +474,16 @@ public sealed class ExamGeneratorService(
               }
 
             Strict validation constraints:
-            1. Every MCQ question must have at least 2 options (standard: 4 options with labels A, B, C, D).
-            2. Exactly ONE option must have "isCorrect": true per MCQ question.
-            3. Option labels must be unique within each question (A, B, C, D).
-            4. Each option must have non-empty "text" and a non-empty "rationale".
-            5. Question stems must be complete and non-empty. Difficulty level must be an integer between 1 and 5.
-            6. For reading comprehension sections (e.g. P6, P7, PAS, R4), the group must supply a non-empty "passage".
-            7. For listening sections (e.g. P1, P2, P3, P4, REC, L3), the group must supply an audio script in "transcript" with explicit dialogue speaker turns (e.g. 'Speaker 1: ...\nSpeaker 2: ...' or announcer prompt) and environmental staging cues.
-            8. Category codes must match the valid category codes provided.
+            1. Respect OptionCount for each section: if OptionCount=3, author exactly 3 options (A, B, C); if OptionCount=4, author 4 options (A, B, C, D).
+            2. For MCQ questions, exactly ONE option must have "isCorrect": true.
+            3. For multi_select questions, author at least 2 correct options and include "maxSelections".
+            4. For inline_completion questions, provide "acceptedAnswers" array of strings and "maxWords".
+            5. For free_response questions with RequiredKeywordCount > 0, provide "requiredKeywords" with the exact count of comma-separated words.
+            6. Each option must have non-empty "text" and a non-empty "rationale".
+            7. Question stems must be complete and non-empty. Difficulty level must be an integer between 1 and 5.
+            8. For reading comprehension sections requiring passage, the group must supply a non-empty "passage".
+            9. For listening sections, the group must supply an audio script in "transcript" with explicit dialogue speaker turns.
+            10. Category codes must match the valid category codes provided.
             """;
     }
 
@@ -278,12 +514,23 @@ public sealed class ExamGeneratorService(
         }
 
         sb.AppendLine();
-        sb.AppendLine("Sections to generate:");
+        sb.AppendLine("Sections to generate (respect each section's blueprint):");
         foreach (var sec in blueprint.Sections!)
         {
             var matchSec = certSections.First(s => s.Code.Equals(sec.SectionCode.Trim(), StringComparison.OrdinalIgnoreCase));
             sb.AppendLine($"- Section Code: '{matchSec.Code}' ({matchSec.Name}, Modality: {matchSec.Modality})");
             sb.AppendLine($"  Questions to author: {sec.QuestionCount}");
+            sb.AppendLine($"  OptionCount: {matchSec.OptionCount}");
+            sb.AppendLine($"  ClusterSize: {matchSec.ClusterSize}");
+            sb.AppendLine($"  RequirePassage: {matchSec.RequirePassage}");
+            if (!string.IsNullOrWhiteSpace(matchSec.AllowedComponentTypesJson))
+            {
+                sb.AppendLine($"  Allowed Component Types: {matchSec.AllowedComponentTypesJson}");
+            }
+            if (matchSec.RequiredKeywordCount > 0)
+            {
+                sb.AppendLine($"  Required Keyword Count: {matchSec.RequiredKeywordCount}");
+            }
             if (sec.DifficultyLevel.HasValue)
             {
                 sb.AppendLine($"  Target Difficulty: {sec.DifficultyLevel.Value}");
@@ -307,6 +554,94 @@ public sealed class ExamGeneratorService(
 
         sb.AppendLine();
         sb.AppendLine("Generate the manifest JSON now. Output ONLY valid JSON inside ```json ... ```.");
+        return sb.ToString();
+    }
+
+    private static string BuildSectionSystemPrompt(Section section)
+    {
+        return $$"""
+            You are an expert exam author specializing in standardized tests.
+            Your task is to generate questions for section '{{section.Code}}' ({{section.Name}}, Modality: {{section.Modality}}).
+
+            Blueprint constraints:
+            - OptionCount: {{section.OptionCount}} (author exactly {{section.OptionCount}} options for MCQ questions: {{(section.OptionCount == 3 ? "A, B, C" : "A, B, C, D")}}).
+            - ClusterSize: {{section.ClusterSize}}
+            - RequirePassage: {{section.RequirePassage}}
+            - RequiredKeywordCount: {{section.RequiredKeywordCount}}
+            - AllowedComponentTypes: {{section.AllowedComponentTypesJson ?? "[\"mcq\"]"}}
+
+            Output JSON schema:
+            ```json
+            {
+              "groups": [
+                {
+                  "passage": "Reading passage if required, else null",
+                  "transcript": "Audio dialogue or cue if required, else null",
+                  "questions": [
+                    {
+                      "stem": "Question stem text...",
+                      "difficultyLevel": 3,
+                      "questionType": "{{(section.OptionCount == 3 ? "mcq_3" : "mcq")}}",
+                      "categoryCode": "valid_category_code",
+                      "explanation": "Pedagogical explanation...",
+                      "hint": "Optional hint...",
+                      "maxWords": 2,
+                      "maxSelections": 2,
+                      "acceptedAnswers": ["accepted answer 1", "accepted answer 2"],
+                      "requiredKeywords": "word1, word2",
+                      "prepSeconds": 15,
+                      "responseSeconds": 60,
+                      "minWords": 150,
+                      "options": [
+                        { "label": "A", "text": "Option text", "isCorrect": true, "rationale": "Rationale" },
+                        { "label": "B", "text": "Option text", "isCorrect": false, "rationale": "Rationale" }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+            ```
+
+            Respond strictly with valid JSON inside a ```json ... ``` code block.
+            """;
+    }
+
+    private static string BuildSectionUserPrompt(
+        Exam exam,
+        Section section,
+        int countToGenerate,
+        List<QuestionCategory> categories)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine($"Generate {countToGenerate} pedagogically rigorous questions for section '{section.Code}' ({section.Name}) in exam '{exam.Name}'.");
+        sb.AppendLine($"Certificate: {exam.Cert.Name} ({exam.Cert.Code})");
+        sb.AppendLine($"Modality: {section.Modality}");
+        sb.AppendLine($"Target question count: {countToGenerate}");
+        sb.AppendLine($"Option count: {section.OptionCount}");
+        sb.AppendLine($"Cluster size: {section.ClusterSize}");
+        sb.AppendLine($"Require passage: {section.RequirePassage}");
+        if (section.RequiredKeywordCount > 0)
+        {
+            sb.AppendLine($"Mandatory keywords per question: exactly {section.RequiredKeywordCount} comma-separated words in 'requiredKeywords'.");
+        }
+        if (!string.IsNullOrWhiteSpace(section.AllowedComponentTypesJson))
+        {
+            sb.AppendLine($"Allowed component types: {section.AllowedComponentTypesJson}");
+        }
+
+        if (categories.Count > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine("Valid category codes:");
+            foreach (var cat in categories.Take(12))
+            {
+                sb.AppendLine($"- {cat.Code}: {cat.Name}");
+            }
+        }
+
+        sb.AppendLine();
+        sb.AppendLine("Generate the section questions JSON now inside ```json ... ```.");
         return sb.ToString();
     }
 

@@ -467,9 +467,9 @@ public class ExamAudioAndInstructionsTests : PlaywrightTestBase
         var startButton = Page.Locator("#start-btn");
         await Expect(startButton).ToBeEnabledAsync();
         await startButton.ClickAsync();
-        await Expect(Page).ToHaveURLAsync(new Regex(@"/exams/take/\d+"));
+        await Expect(Page).ToHaveURLAsync(new Regex(@"/exams/(?:take|preflight)/|attemptId="));
 
-        var newAttemptMatch = Regex.Match(new Uri(Page.Url).AbsolutePath, @"/exams/take/(?<attemptId>\d+)");
+        var newAttemptMatch = Regex.Match(Page.Url, @"(?:/exams/take/|/exams/preflight/|attemptId=)(?<attemptId>\d+)");
         Assert.That(newAttemptMatch.Success, Is.True, "Starting an exam must open its attempt.");
         var newAttemptId = int.Parse(newAttemptMatch.Groups["attemptId"].Value);
         await ResetAttemptForListeningAsync(newAttemptId);
@@ -491,6 +491,7 @@ public class ExamAudioAndInstructionsTests : PlaywrightTestBase
         command.CommandText = """
             UPDATE attempt
             SET StartedAt = SYSDATETIMEOFFSET(),
+                PreflightVerifiedAt = SYSDATETIMEOFFSET(),
                 ExpiresAt = DATEADD(minute, exam.DurationMinutes, SYSDATETIMEOFFSET()),
                 LastQuestionId = (
                     SELECT TOP (1) question.QuestionId
@@ -560,20 +561,12 @@ public class ExamAudioAndInstructionsTests : PlaywrightTestBase
             .Locator("button[name='SectionId']").First;
         await Expect(firstListeningSection).ToBeVisibleAsync();
         await firstListeningSection.ClickAsync();
-        await Expect(Page.Locator("#answer-form")).ToBeVisibleAsync();
+        await Expect(Page).ToHaveURLAsync(new Regex(@"/practice/\d+", RegexOptions.IgnoreCase));
 
-        for (var question = 0; question < 10; question++)
-        {
-            var nextPage = Page.WaitForURLAsync(new Regex(@"/practice/\d+(?:\?q=\d+|/summary)$", RegexOptions.IgnoreCase));
-            await Page.Locator("#answer-form button[name='Action'][value='skip']").ClickAsync();
-            await nextPage;
-            if (Page.Url.EndsWith("/summary", StringComparison.OrdinalIgnoreCase))
-            {
-                break;
-            }
-
-            await Expect(Page.Locator("#answer-form")).ToBeVisibleAsync();
-        }
+        // Finish session via sidebar button to view summary
+        var finishBtn = Page.Locator("#btn-sidebar-finish");
+        await Expect(finishBtn).ToBeVisibleAsync();
+        await finishBtn.ClickAsync();
 
         await Expect(Page).ToHaveURLAsync(new Regex(@"/practice/\d+/summary", RegexOptions.IgnoreCase));
 

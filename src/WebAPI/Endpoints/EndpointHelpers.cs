@@ -58,6 +58,43 @@ public static class EndpointHelpers
         return Results.Ok(new AuthTokenResponse(token.Token, token.ExpiresAt, ToDto(user)));
     }
 
+    public static ScorePreviewRequest ToScorePreviewRequest(ScorePreviewRequestDto dto) =>
+        new(
+            dto.CertId,
+            dto.CertCode,
+            dto.ScoreAggregationRule,
+            dto.Skills.Select(s => new SkillScoreInput(
+                s.SkillId,
+                s.SkillCode,
+                s.RawScore,
+                s.Sections?.Select(sec => new SectionScoreInput(
+                    sec.SectionId,
+                    sec.SectionCode,
+                    sec.SkillId,
+                    sec.RawScore,
+                    sec.ScoreWeight,
+                    sec.MaxQuestions)).ToList())).ToList(),
+            dto.CustomScales?.Select(cs => new UpdateScoreScaleEntry(cs.SkillId, cs.RawScore, cs.ScaledScore)).ToList(),
+            dto.CustomBands?.Select(cb => new UpdateScoreBandEntry(cb.BandId, cb.Code, cb.Name, cb.MinTotal, cb.MaxTotal, cb.DisplayOrder)).ToList());
+
+    public static ScorePreviewResultDto ToScorePreviewResultDto(ScorePreviewResult result) =>
+        new(
+            result.ScoreAggregationRule,
+            result.SkillScores.Select(ss => new SkillScorePreviewResultDto(
+                ss.SkillId,
+                ss.SkillCode,
+                ss.RawScore,
+                ss.ScaledScore,
+                ss.Sections?.Select(sec => new SectionScorePreviewResultDto(
+                    sec.SectionId,
+                    sec.SectionCode,
+                    sec.RawScore,
+                    sec.ScoreWeight,
+                    sec.ScaledScore)).ToList())).ToList(),
+            result.TotalScore,
+            result.BandCode,
+            result.BandName);
+
     public static AuthUserDto ToDto(AuthUser user) =>
         new(user.UserId, user.Email, user.FullName, user.Role, user.EmailVerified);
 

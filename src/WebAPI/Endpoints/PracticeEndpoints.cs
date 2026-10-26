@@ -112,6 +112,41 @@ public static class PracticeEndpoints
             }
         });
 
+        practice.MapGet("/sessions/{sessionId:int}/take", async Task<IResult> (
+            int sessionId,
+            [Microsoft.AspNetCore.Mvc.FromQuery] int? q,
+            HttpContext http,
+            IPracticeService practiceService,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var take = await practiceService.GetSessionTakeAsync(CurrentUserId(http), sessionId, q, cancellationToken);
+                static PracticeOptionDto ToOptionDto(PracticeQuestionOption o) => new(o.OptionId, o.Label, o.Text);
+                static PracticeQuestionDto ToQuestionDto(PracticeQuestionView qv) => new(
+                    qv.SessionId, qv.SectionName, qv.QuestionId, qv.DisplayOrder, qv.TotalQuestions,
+                    qv.Stem, qv.CategoryName, qv.Hint, qv.HintUsed, qv.Options.Select(ToOptionDto).ToList(),
+                    qv.SelectedOptionId, qv.IsCorrect, qv.CorrectOptionId, qv.Explanation, qv.Transcript,
+                    qv.Passage, qv.AudioPath, qv.ImagePath, qv.ImageAlt, qv.IsSaved, qv.AudioStartMs, qv.AudioEndMs,
+                    qv.QuestionType, qv.MaxSelections, qv.AllowNumber, qv.AcceptedAnswersJson, qv.RequiredKeywords,
+                    qv.MinWords, qv.MaxWords, qv.ResponseText, qv.SelectedOptionIds, qv.SelectedOptionIdsJson, qv.CorrectOptionIds);
+
+                return Results.Ok(new PracticeSessionTakeDto(
+                    new PracticeSessionDto(
+                        take.Session.SessionId, take.Session.SectionId, take.Session.SectionCode, take.Session.SectionName,
+                        take.Session.Modality.MapTo<ModalityDto>(), take.Session.QuestionCount, take.Session.Status.MapTo<PracticeStatusDto>(),
+                        take.Session.CorrectCount, take.Session.QuestionSource.MapTo<QuestionSourceDto>(), take.Session.FeedbackMode.MapTo<FeedbackModeDto>(),
+                        take.Session.StartedAt, take.Session.FinishedAt),
+                    ToQuestionDto(take.Question),
+                    take.Questions.Select(ToQuestionDto).ToList(),
+                    take.Navigator.Select(n => new PracticeNavigatorItemDto(n.QuestionId, n.DisplayOrder, n.IsAnswered, n.IsCorrect, n.IsSaved, n.IsCurrent)).ToList()));
+            }
+            catch (PracticeException ex) when (ex.Code == PracticeException.SessionNotFound)
+            {
+                return Problem(StatusCodes.Status404NotFound, "Session not found", ApiError.Codes.PracticeSessionNotFound, ex.Message);
+            }
+        });
+
         practice.MapGet("/sessions/{sessionId:int}/questions", async Task<IResult> (
             int sessionId,
             HttpContext http,
@@ -143,7 +178,18 @@ public static class PracticeEndpoints
                     q.ImageAlt,
                     q.IsSaved,
                     q.AudioStartMs,
-                    q.AudioEndMs)).ToList());
+                    q.AudioEndMs,
+                    q.QuestionType,
+                    q.MaxSelections,
+                    q.AllowNumber,
+                    q.AcceptedAnswersJson,
+                    q.RequiredKeywords,
+                    q.MinWords,
+                    q.MaxWords,
+                    q.ResponseText,
+                    q.SelectedOptionIds,
+                    q.SelectedOptionIdsJson,
+                    q.CorrectOptionIds)).ToList());
             }
             catch (PracticeException ex) when (ex.Code == PracticeException.SessionNotFound)
             {
@@ -183,7 +229,18 @@ public static class PracticeEndpoints
                     q.ImageAlt,
                     q.IsSaved,
                     q.AudioStartMs,
-                    q.AudioEndMs));
+                    q.AudioEndMs,
+                    q.QuestionType,
+                    q.MaxSelections,
+                    q.AllowNumber,
+                    q.AcceptedAnswersJson,
+                    q.RequiredKeywords,
+                    q.MinWords,
+                    q.MaxWords,
+                    q.ResponseText,
+                    q.SelectedOptionIds,
+                    q.SelectedOptionIdsJson,
+                    q.CorrectOptionIds));
             }
             catch (PracticeException ex) when (ex.Code == PracticeException.SessionNotFound)
             {
@@ -232,7 +289,11 @@ public static class PracticeEndpoints
             try
             {
                 var result = await practiceService.SubmitAnswerAsync(
-                    CurrentUserId(http), sessionId, questionId, new SubmitPracticeAnswerInput(request.SelectedOptionId), cancellationToken);
+                    CurrentUserId(http),
+                    sessionId,
+                    questionId,
+                    new SubmitPracticeAnswerInput(request.SelectedOptionId, request.ResponseText, request.SelectedOptionIdsJson, request.SelectedOptionIds),
+                    cancellationToken);
                 return Results.Ok(new GradedAnswerDto(
                     result.IsCorrect,
                     result.SelectedOptionId,
@@ -241,7 +302,11 @@ public static class PracticeEndpoints
                     result.Transcript,
                     result.IsSessionFinished,
                     result.NextQuestionDisplayOrder,
-                    result.IsSaved));
+                    result.IsSaved,
+                    result.AcceptedAnswersJson,
+                    result.CorrectOptionIds,
+                    result.ResponseText,
+                    result.SelectedOptionIdsJson));
             }
             catch (PracticeException ex) when (ex.Code == PracticeException.SessionNotFound)
             {

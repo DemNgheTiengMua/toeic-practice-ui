@@ -7,7 +7,8 @@ namespace WebMVC.Controllers;
 public sealed class ExamsController(
     IMockExamsClient api,
     CurrentUser currentUser,
-    ILogger<ExamsController> logger)
+    ILogger<ExamsController> logger,
+    ISpeakingClient? speakingApi = null)
     : LearnerControllerBase(currentUser, logger)
 {
     [HttpGet("/exams")]
@@ -56,6 +57,11 @@ public sealed class ExamsController(
         try
         {
             var response = await api.StartMockExamAsync(id, cancellationToken);
+            var preflight = await api.GetPreflightStatusAsync(response.AttemptId, cancellationToken);
+            if (preflight.RequiresPreflight && !preflight.IsVerified)
+            {
+                return RedirectToAction(nameof(Preflight), new { id, attemptId = response.AttemptId });
+            }
             return RedirectToAction(nameof(Take), new { attemptId = response.AttemptId });
         }
         catch (ApiException ex) when (ex.Code == ApiError.Codes.InsufficientCredits)
@@ -72,11 +78,107 @@ public sealed class ExamsController(
         }
     }
 
+    [HttpGet("/exams/{id:int}/preflight")]
+    [HttpGet("/exams/preflight/{attemptId:int}")]
+    public async Task<IActionResult> Preflight(int? id, [FromQuery] int? attemptId, CancellationToken cancellationToken)
+    {
+        var effectiveAttemptId = attemptId ?? (RouteData.Values.TryGetValue("attemptId", out var raw) && int.TryParse(raw?.ToString(), out var parsed) ? parsed : (int?)null);
+
+        if (!effectiveAttemptId.HasValue && id.HasValue)
+        {
+            try
+            {
+                var instructions = await api.GetMockExamInstructionsAsync(id.Value, cancellationToken);
+                effectiveAttemptId = instructions.ActiveAttemptId;
+            }
+            catch (ApiException)
+            {
+            }
+        }
+
+        if (!effectiveAttemptId.HasValue)
+        {
+            TempData["ShellError"] = "Exam attempt not found.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        try
+        {
+            var preflight = await api.GetPreflightStatusAsync(effectiveAttemptId.Value, cancellationToken);
+            return View("Preflight", new ExamPreflightViewModel(preflight, TempData["ErrorMessage"] as string));
+        }
+        catch (ApiException ex) when (ex.Status == 404 || ex.Code == ApiError.Codes.AttemptNotFound)
+        {
+            logger.LogWarning(ex, "Attempt {AttemptId} not found for preflight", effectiveAttemptId.Value);
+            Response.StatusCode = 404;
+            return View("AttemptNotFound");
+        }
+        catch (ApiException ex)
+        {
+            logger.LogError(ex, "Failed to load preflight for attempt {AttemptId}", effectiveAttemptId.Value);
+            TempData["ShellError"] = "Could not load preflight checklist.";
+            return RedirectToAction(nameof(Index));
+        }
+    }
+
+    [HttpPost("/exams/preflight/{attemptId:int}/verify")]
+    [HttpPost("/exams/{id:int}/preflight/verify")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> VerifyPreflight(int? id, int? attemptId, [FromQuery] int? qAttemptId, CancellationToken cancellationToken)
+    {
+        var effectiveAttemptId = attemptId ?? qAttemptId ?? (id.HasValue && RouteData.Values.TryGetValue("attemptId", out var raw) && int.TryParse(raw?.ToString(), out var parsed) ? parsed : (int?)null);
+        if (!effectiveAttemptId.HasValue)
+        {
+            return BadRequest();
+        }
+
+        try
+        {
+            await api.VerifyPreflightAsync(effectiveAttemptId.Value, cancellationToken);
+            return RedirectToAction(nameof(Take), new { attemptId = effectiveAttemptId.Value });
+        }
+        catch (ApiException ex)
+        {
+            logger.LogError(ex, "Failed to verify preflight for attempt {AttemptId}", effectiveAttemptId.Value);
+            TempData["ErrorMessage"] = ex.Detail ?? "Failed to verify preflight checks. Please try again.";
+            return RedirectToAction(nameof(Preflight), new { id, attemptId = effectiveAttemptId.Value });
+        }
+    }
+
+    [HttpGet("/exams/{id:int}/take")]
+    public async Task<IActionResult> TakeExam(int id, [FromQuery] int? attemptId, [FromQuery] int? q, CancellationToken cancellationToken)
+    {
+        if (attemptId.HasValue)
+        {
+            return await Take(attemptId.Value, q, cancellationToken);
+        }
+
+        try
+        {
+            var instructions = await api.GetMockExamInstructionsAsync(id, cancellationToken);
+            if (instructions.ActiveAttemptId.HasValue)
+            {
+                return await Take(instructions.ActiveAttemptId.Value, q, cancellationToken);
+            }
+        }
+        catch (ApiException)
+        {
+        }
+
+        return RedirectToAction(nameof(Instructions), new { id });
+    }
+
     [HttpGet("/exams/take/{attemptId:int}")]
     public async Task<IActionResult> Take(int attemptId, [FromQuery] int? q, CancellationToken cancellationToken)
     {
         try
         {
+            var preflight = await api.GetPreflightStatusAsync(attemptId, cancellationToken);
+            if (preflight.RequiresPreflight && !preflight.IsVerified)
+            {
+                return RedirectToAction(nameof(Preflight), new { id = preflight.ExamId, attemptId });
+            }
+
             var take = await api.GetAttemptTakeAsync(attemptId, q, cancellationToken);
 
             if (take.Status is AttemptStatusDto.Submitted or AttemptStatusDto.Graded || take.IsAutoSubmitted)
@@ -85,6 +187,11 @@ public sealed class ExamsController(
             }
 
             return View(new ExamTakeViewModel(take, TempData["ErrorMessage"] as string));
+        }
+        catch (ApiException ex) when (ex.Code == ApiError.Codes.PreflightRequired)
+        {
+            logger.LogInformation("Attempt {AttemptId} redirected to preflight verification", attemptId);
+            return RedirectToAction(nameof(Preflight), new { attemptId });
         }
         catch (ApiException ex) when (ex.Code == ApiError.Codes.AttemptExpired)
         {
@@ -163,6 +270,71 @@ public sealed class ExamsController(
         }
     }
 
+    [HttpPost("/exams/take/{attemptId:int}/upload-audio")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UploadSpeakingAudio(
+        int attemptId,
+        [FromForm] int questionId,
+        [FromForm] IFormFile? audioFile,
+        [FromForm] int? durationMs,
+        CancellationToken cancellationToken)
+    {
+        if (audioFile is null || audioFile.Length == 0)
+        {
+            return BadRequest(new { code = ApiError.Codes.Validation, message = "Audio file cannot be empty." });
+        }
+
+        try
+        {
+            var client = speakingApi ?? (api as ISpeakingClient);
+            if (client is null)
+            {
+                return StatusCode(StatusCodes.Status501NotImplemented, new { message = "Speaking service not configured." });
+            }
+
+            using var stream = audioFile.OpenReadStream();
+            var result = await client.UploadSpeakingAudioAsync(
+                attemptId,
+                questionId,
+                stream,
+                audioFile.FileName,
+                audioFile.ContentType,
+                durationMs,
+                cancellationToken);
+
+            return Ok(result);
+        }
+        catch (ApiException ex)
+        {
+            logger.LogWarning(ex, "Failed to upload speaking audio for attempt {AttemptId}, question {QuestionId}", attemptId, questionId);
+            return StatusCode(ex.Status, new { code = ex.Code, message = ex.Detail ?? ex.Message });
+        }
+    }
+
+    [HttpGet("/exams/take/{attemptId:int}/questions/{questionId:int}/audio")]
+    public async Task<IActionResult> GetSpeakingAudio(
+        int attemptId,
+        int questionId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var client = speakingApi ?? (api as ISpeakingClient);
+            if (client is null)
+            {
+                return StatusCode(StatusCodes.Status501NotImplemented, new { message = "Speaking service not configured." });
+            }
+
+            var (stream, contentType, fileName) = await client.GetSpeakingAudioStreamAsync(attemptId, questionId, cancellationToken);
+            return File(stream, contentType, fileName, enableRangeProcessing: true);
+        }
+        catch (ApiException ex)
+        {
+            logger.LogWarning(ex, "Failed to retrieve audio stream for attempt {AttemptId}, question {QuestionId}", attemptId, questionId);
+            return StatusCode(ex.Status, new { code = ex.Code, message = ex.Detail ?? ex.Message });
+        }
+    }
+
     [HttpPost("/exams/take/{attemptId:int}/submit")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Submit(
@@ -213,6 +385,79 @@ public sealed class ExamsController(
             logger.LogError(ex, "Failed to cancel attempt {AttemptId}", attemptId);
             TempData["ErrorMessage"] = ex.Detail ?? "Could not cancel the exam.";
             return RedirectToAction(nameof(Index));
+        }
+    }
+
+    [HttpPost("/exams/take/{attemptId:int}/transition/skill")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> TransitionSkill(int attemptId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await api.TransitionSkillAsync(attemptId, cancellationToken);
+            return Json(result);
+        }
+        catch (ApiException ex)
+        {
+            return StatusCode(ex.Status, new { error = ex.Detail ?? ex.Message, code = ex.Code });
+        }
+    }
+
+    [HttpPost("/exams/take/{attemptId:int}/transition/unit")]
+    [HttpPost("/exams/attempts/{attemptId:int}/transition-unit")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> TransitionUnit(
+        int attemptId,
+        [FromBody] TransitionUnitRequest? body,
+        [FromForm] int? targetUnitNumber,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var unit = body?.TargetUnitNumber ?? targetUnitNumber ?? 1;
+            var result = await api.TransitionUnitAsync(attemptId, new TransitionUnitRequest(unit), cancellationToken);
+            return Json(result);
+        }
+        catch (ApiException ex)
+        {
+            return StatusCode(ex.Status, new { error = ex.Detail ?? ex.Message, code = ex.Code });
+        }
+    }
+
+    [HttpPost("/exams/take/{attemptId:int}/transition/group")]
+    [HttpPost("/exams/attempts/{attemptId:int}/transition-group")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> TransitionGroup(
+        int attemptId,
+        [FromBody] TransitionGroupRequest? body,
+        [FromForm] int? targetGroupId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var group = body?.TargetGroupId ?? targetGroupId ?? 0;
+            var result = await api.TransitionGroupAsync(attemptId, new TransitionGroupRequest(group), cancellationToken);
+            return Json(result);
+        }
+        catch (ApiException ex)
+        {
+            return StatusCode(ex.Status, new { error = ex.Detail ?? ex.Message, code = ex.Code });
+        }
+    }
+
+    [HttpPost("/exams/take/{attemptId:int}/audio-review/start")]
+    [HttpPost("/exams/attempts/{attemptId:int}/start-audio-review")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> StartAudioReview(int attemptId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await api.StartAudioReviewAsync(attemptId, cancellationToken);
+            return Json(result);
+        }
+        catch (ApiException ex)
+        {
+            return StatusCode(ex.Status, new { error = ex.Detail ?? ex.Message, code = ex.Code });
         }
     }
 
@@ -346,6 +591,99 @@ public sealed class ExamsController(
             logger.LogError(ex, "Failed to load review for attempt {AttemptId}", attemptId);
             TempData["ShellError"] = "Could not load exam review.";
             return RedirectToAction(nameof(Index));
+        }
+    }
+
+    [HttpPost("/exams/attempts/{attemptId:int}/sync")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Sync(
+        int attemptId,
+        [FromBody] SittingSyncRequestDto request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await api.SaveSittingSyncAsync(attemptId, request, cancellationToken);
+            return Json(new
+            {
+                attemptId = result.AttemptId,
+                remainingSeconds = result.RemainingSeconds,
+                isAutoSubmitted = result.IsAutoSubmitted,
+                activeSkillId = result.ActiveSkillId,
+                activeUnitNumber = result.ActiveUnitNumber,
+                activeGroupId = result.ActiveGroupId,
+                phaseDeadlineAt = result.PhaseDeadlineAt,
+                lastAudioOffsetMs = result.LastAudioOffsetMs,
+                answersSavedCount = result.AnswersSavedCount,
+                redirectUrl = result.IsAutoSubmitted ? Url.Action(nameof(Result), new { attemptId }) : null
+            });
+        }
+        catch (ApiException ex) when (ex.Code == ApiError.Codes.AttemptExpired)
+        {
+            return Json(new
+            {
+                isAutoSubmitted = true,
+                redirectUrl = Url.Action(nameof(Result), new { attemptId })
+            });
+        }
+        catch (ApiException ex)
+        {
+            return StatusCode(ex.Status, new { error = ex.Detail ?? ex.Message, code = ex.Code });
+        }
+    }
+
+    [HttpGet("/exams/resume")]
+    public IActionResult Resume()
+    {
+        return View(new ExamResumeViewModel(AuthorizationCode: null, ErrorMessage: TempData["ResumeError"] as string));
+    }
+
+    [HttpPost("/exams/resume")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Resume(
+        [FromForm] ExamResumeFormModel form,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(form?.AuthorizationCode))
+        {
+            return View(new ExamResumeViewModel(
+                AuthorizationCode: form?.AuthorizationCode,
+                ErrorMessage: "Please enter your authorization code."));
+        }
+
+        var code = form.AuthorizationCode.Trim().ToUpperInvariant();
+
+        try
+        {
+            var request = new ResumeAttemptRequest(code);
+            var resumeDto = await api.ResumeAttemptByCodeAsync(request, cancellationToken);
+
+            return RedirectToAction(nameof(Take), new { attemptId = resumeDto.AttemptId });
+        }
+        catch (ApiException ex) when (ex.Code == ApiError.Codes.AttemptNotFound)
+        {
+            return View(new ExamResumeViewModel(
+                AuthorizationCode: form.AuthorizationCode,
+                ErrorMessage: "No active exam sitting was found with this authorization code. Please verify and try again."));
+        }
+        catch (ApiException ex) when (ex.Code == ApiError.Codes.AttemptExpired)
+        {
+            return View(new ExamResumeViewModel(
+                AuthorizationCode: form.AuthorizationCode,
+                ErrorMessage: "The examination time for this sitting has expired."));
+        }
+        catch (ApiException ex) when (ex.Code == ApiError.Codes.AttemptNotActive)
+        {
+            return View(new ExamResumeViewModel(
+                AuthorizationCode: form.AuthorizationCode,
+                ErrorMessage: "This exam sitting has already been submitted or completed."));
+        }
+        catch (ApiException ex)
+        {
+            logger.LogError(ex, "Failed to resume attempt with code {Code}", form.AuthorizationCode);
+            return View(new ExamResumeViewModel(
+                AuthorizationCode: form.AuthorizationCode,
+                ErrorMessage: ex.Detail ?? "Unable to resume examination. Please try again."));
         }
     }
 }
