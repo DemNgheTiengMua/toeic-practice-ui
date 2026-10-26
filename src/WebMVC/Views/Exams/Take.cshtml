@@ -3201,6 +3201,7 @@
         if (!q) return;
 
         currentDisplayOrder = displayOrder;
+        if (questionNumberDisplay) questionNumberDisplay.textContent = 'Question ' + q.displayOrder;
 
         // Topbar badge & Document title
         if (topbarBadge) topbarBadge.textContent = (q.skillName || '') + ' · ' + (q.sectionName || '');
