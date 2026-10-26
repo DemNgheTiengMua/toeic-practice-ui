@@ -56,6 +56,7 @@ public class AdminExamStudioTests : PlaywrightTestBase
 
         // Load sample template into scratchpad
         await _studioPage.QuickIngestSampleButton.ClickAsync();
+        await Expect(_studioPage.QuickIngestRawTextArea).Not.ToHaveValueAsync("", new() { Timeout = 10000 });
         var rawText = await _studioPage.QuickIngestRawTextArea.InputValueAsync();
         Assert.That(rawText, Is.Not.Empty, "Sample template button should populate raw text textarea.");
 
