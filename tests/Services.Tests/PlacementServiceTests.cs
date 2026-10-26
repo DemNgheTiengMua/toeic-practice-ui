@@ -24,6 +24,48 @@ public sealed class PlacementServiceTests(DatabaseFixture database)
         return (service, learners);
     }
 
+    [Fact]
+    public async Task Placement_preflight_verifies_linked_attempt_and_keeps_diagnostic_free()
+    {
+        var certCode = Unique("PF");
+        var (_, examId, _, _, _, _, _) = await SeedPlacementFixtureAsync(certCode);
+        var userId = await SeedLearnerAsync(certCode);
+        await database.SqlAsync($"UPDATE QuestionGroups SET AudioPath = '/audio/placement-preflight.mp3' WHERE ExamId = {examId};");
+        var (service, _) = CreateServices();
+        var info = await service.StartPlacementTestAsync(userId, examId);
+
+        var pending = await service.GetPlacementPreflightStatusAsync(userId, info.PlacementId);
+        Assert.Equal(info.AttemptId, pending.AttemptId);
+        Assert.True(pending.RequiresAudio);
+        Assert.False(pending.IsVerified);
+        var blocked = await Assert.ThrowsAsync<PlacementException>(() => service.GetPlacementTakeAsync(userId, info.PlacementId, null));
+        Assert.Equal(AttemptEngineException.PreflightRequired, blocked.Code);
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        await new AttemptEngine(db).VerifyPreflightAsync(info.AttemptId, userId);
+        var (verifiedService, _) = CreateServices();
+        var verified = await verifiedService.GetPlacementPreflightStatusAsync(userId, info.PlacementId);
+        Assert.True(verified.IsVerified);
+        var take = await verifiedService.GetPlacementTakeAsync(userId, info.PlacementId, null);
+        Assert.Equal(info.PlacementId, take.PlacementId);
+        Assert.False(await db.CreditTransactions.AnyAsync(t => t.UserId == userId));
+    }
+
+    [Fact]
+    public async Task Placement_preflight_does_not_expose_another_learners_attempt()
+    {
+        var certCode = Unique("PF");
+        var (_, examId, _, _, _, _, _) = await SeedPlacementFixtureAsync(certCode);
+        var userId = await SeedLearnerAsync(certCode);
+        var otherUserId = await SeedLearnerAsync(certCode);
+        var (service, _) = CreateServices();
+        var info = await service.StartPlacementTestAsync(userId, examId);
+
+        var error = await Assert.ThrowsAsync<PlacementException>(() =>
+            service.GetPlacementPreflightStatusAsync(otherUserId, info.PlacementId));
+        Assert.Equal(PlacementException.PlacementNotFound, error.Code);
+    }
+
     private Task AdvanceAttemptToSecondPhaseAsync(int attemptId) =>
         database.SqlAsync($"""
             UPDATE a

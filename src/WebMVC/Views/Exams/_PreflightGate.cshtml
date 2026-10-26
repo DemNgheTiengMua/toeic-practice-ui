@@ -1,0 +1,21 @@
+@model ExamPreflightViewModel
+<!-- Gate Summary & Proceed Action -->
+<section class="preflight-gate card placard">
+  <div class="row row--between row--middle">
+    <div>
+      <div id="gate-pending-notice" class="preflight-notice alert alert--warning no-margin" role="status">
+        <strong>Pre-flight Checks Pending:</strong> Complete required audio pre-buffering and equipment checks above before entering the exam room.
+      </div>
+      <div id="gate-ready-notice" class="preflight-ready-notice alert alert--success no-margin" role="status">
+        <strong>All Pre-flight Requirements Satisfied:</strong> Your equipment and exam assets are 100% verified. You may now start the test.
+      </div>
+    </div>
+
+    <form id="verify-preflight-form" method="post" action="@Model.VerifyUrl">
+      @Html.AntiForgeryToken()
+      <button type="submit" id="start-test-btn" class="preflight-start btn btn--primary btn--lg" disabled>
+        Start Test →
+      </button>
+    </form>
+  </div>
+</section>

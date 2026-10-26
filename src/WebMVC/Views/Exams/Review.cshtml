@@ -1,15 +1,10 @@
 @model ExamReviewViewModel
-@inject WebMVC.DateTimeFormatter Dates
 @{
     Layout = "_LearnerLayout";
     var rev = Model.Review;
     ViewData["Title"] = $"Review — {rev.ExamName}";
     ViewData["Description"] = $"Mock exam detailed answer review for {rev.ExamName}.";
 
-    var distinctParts = rev.Questions
-        .GroupBy(q => new { q.SectionCode, q.SectionName })
-        .Select(g => new { Code = g.Key.SectionCode, Name = g.Key.SectionName, Count = g.Count() })
-        .ToList();
 }
 
 <nav class="breadcrumbs" aria-label="Breadcrumb">
@@ -32,9 +27,9 @@
       <strong>@rev.TotalScore points</strong>
       @if (rev.SkillScores.Count > 0)
       {
-        <span>· @string.Join(" · ", rev.SkillScores.Select(s => $"{s.SkillCode} {s.ScaledScore}"))</span>
+        <span>· @Model.SkillScoresDisplay</span>
       }
-      · Completed on @Dates.Format(rev.SubmittedAt)
+      · Completed on @Model.SubmittedAtDisplay
     </p>
   </div>
   <div class="row row--tight">
@@ -50,7 +45,7 @@
       <label class="field__label" for="review-part-select">Part / Section</label>
       <select class="field__input" id="review-part-select">
         <option value="all">All @rev.TotalQuestions questions</option>
-        @foreach (var part in distinctParts)
+        @foreach (var part in Model.Sections)
         {
           <option value="@part.Code">@part.Code — @part.Name (@part.Count)</option>
         }
@@ -80,15 +75,15 @@
 <div class="exam-layout">
   <!-- Main Questions Column -->
   <div class="stack" id="questions-container" style="flex: 1; min-width: 0;">
-    @foreach (var q in rev.Questions)
+    @foreach (var item in Model.Questions)
     {
-      var statusKey = q.IsCorrect == true ? "correct" : (q.IsCorrect == false ? "incorrect" : "blank");
+      var q = item.Question;
       <div class="card question-item"
            id="question-card-@q.QuestionId"
            data-question-id="@q.QuestionId"
            data-order="@q.DisplayOrder"
            data-part="@q.SectionCode"
-           data-status="@statusKey"
+           data-status="@item.Status"
            data-flagged="@(q.IsFlagged ? "true" : "false")">
         <div class="card__body">
           <!-- Question Meta Header -->
@@ -119,15 +114,7 @@
           <!-- Audio player if present -->
           @if (!string.IsNullOrEmpty(q.AudioPath))
           {
-            @await Html.PartialAsync("_ExamAudioPlayer", new ExamAudioPlayerModel(
-                AudioPath: q.AudioPath,
-                AllowReplay: true,
-                SectionTitle: "Review Question Audio",
-                BadgeText: "READY",
-                StartMs: q.AudioStartMs,
-                EndMs: q.AudioEndMs,
-                Mode: "study"
-            ))
+            <partial name="_ExamAudioPlayer" model="item.AudioPlayer" />
           }
 
           <!-- Passage if present -->
@@ -155,23 +142,21 @@
 
           <!-- Options -->
           <div class="option-list mb-3" role="group" aria-label="Answers for Question @q.DisplayOrder">
-            @foreach (var opt in q.Options)
+            @foreach (var option in item.Options)
             {
-              var isSelected = opt.OptionId == q.SelectedOptionId;
-              var isCorrectOpt = opt.IsCorrect;
-              var optClass = isCorrectOpt ? "option--correct" : (isSelected ? "option--wrong" : "");
-              <div class="option @optClass @(isSelected ? "option--selected" : "")">
+              var opt = option.Option;
+              <div class="option @option.CssClass @(option.IsSelected ? "option--selected" : "")">
                 <span class="option__marker">@opt.Label</span>
                 <span class="option__text">@opt.Text</span>
-                @if (isCorrectOpt && isSelected)
+                @if (opt.IsCorrect && option.IsSelected)
                 {
                   <span class="badge badge--success">Your answer · Correct</span>
                 }
-                else if (isCorrectOpt)
+                else if (opt.IsCorrect)
                 {
                   <span class="badge badge--success">Correct answer</span>
                 }
-                else if (isSelected)
+                else if (option.IsSelected)
                 {
                   <span class="badge badge--danger">Your answer</span>
                 }
@@ -224,16 +209,15 @@
       </div>
       <div class="card__body stack">
         <div class="navigator__grid" role="group" aria-label="Question Navigator">
-          @foreach (var nav in rev.Navigator)
+          @foreach (var cell in Model.Navigator)
           {
-            var statusClass = nav.IsAnswered ? "is-answered" : "is-unanswered";
-            var markClass = nav.IsFlagged ? "is-marked" : "";
+            var nav = cell.Item;
             <a href="#question-card-@nav.QuestionId"
-               class="navigator__cell @statusClass @markClass"
+               class="navigator__cell @cell.CssClass"
                id="nav-cell-@nav.QuestionId"
                data-target-id="@nav.QuestionId"
                data-order="@nav.DisplayOrder"
-               title="Question @nav.DisplayOrder@(nav.IsAnswered ? " · Answered" : " · Unanswered")@(nav.IsFlagged ? " · Flagged" : "")@(nav.IsCorrect == true ? " · Correct" : (nav.IsCorrect == false ? " · Incorrect" : ""))">
+               title="@cell.Title">
               @nav.DisplayOrder
             </a>
           }
@@ -255,64 +239,4 @@
   </aside>
 </div>
 
-<script>
-  (function () {
-    "use strict";
-    var partSelect = document.getElementById("review-part-select");
-    var filterSelect = document.getElementById("review-filter-select");
-    var questions = document.querySelectorAll(".question-item");
-    var navCells = document.querySelectorAll(".navigator__cell[data-target-id]");
-    var emptyBlock = document.getElementById("no-filtered-results");
-
-    function applyFilters() {
-      var selectedPart = partSelect ? partSelect.value : "all";
-      var selectedFilter = filterSelect ? filterSelect.value : "all";
-      var visibleCount = 0;
-
-      questions.forEach(function (card) {
-        var part = card.getAttribute("data-part");
-        var status = card.getAttribute("data-status");
-        var flagged = card.getAttribute("data-flagged") === "true";
-        var qId = card.getAttribute("data-question-id");
-
-        var matchesPart = (selectedPart === "all" || part === selectedPart);
-        var matchesStatus = true;
-        if (selectedFilter === "incorrect") matchesStatus = (status === "incorrect");
-        else if (selectedFilter === "blank") matchesStatus = (status === "blank");
-        else if (selectedFilter === "flagged") matchesStatus = flagged;
-        else if (selectedFilter === "correct") matchesStatus = (status === "correct");
-
-        var isVisible = matchesPart && matchesStatus;
-        card.style.display = isVisible ? "" : "none";
-        if (isVisible) visibleCount++;
-
-        var cell = document.getElementById("nav-cell-" + qId);
-        if (cell) {
-          cell.style.opacity = isVisible ? "1" : "0.25";
-        }
-      });
-
-      if (emptyBlock) {
-        emptyBlock.style.display = visibleCount === 0 ? "" : "none";
-      }
-    }
-
-    if (partSelect) partSelect.addEventListener("change", applyFilters);
-    if (filterSelect) filterSelect.addEventListener("change", applyFilters);
-
-    navCells.forEach(function (cell) {
-      cell.addEventListener("click", function (e) {
-        var targetId = cell.getAttribute("data-target-id");
-        var targetCard = document.getElementById("question-card-target-" + targetId) || document.getElementById("question-card-" + targetId);
-        if (targetCard) {
-          e.preventDefault();
-          targetCard.scrollIntoView({ behavior: "smooth", block: "start" });
-          targetCard.style.outline = "2px solid var(--sign-blue, #0b4ea2)";
-          setTimeout(function () {
-            targetCard.style.outline = "";
-          }, 1500);
-        }
-      });
-    });
-  })();
-</script>
+<script src="~/js/exams/completed-review.js" asp-append-version="true"></script>

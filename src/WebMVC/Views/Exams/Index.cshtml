@@ -4,7 +4,6 @@
     ViewData["Title"] = "Exams";
     ViewData["Description"] = "Full mock exams with timing, scoring, and score conversion.";
     var catalog = Model.Catalog;
-    var hasCredits = catalog.CreditBalance > 0;
 }
 
 <nav class="breadcrumbs" aria-label="Breadcrumb">
@@ -25,7 +24,7 @@
     <a href="/exams/resume" class="btn btn--outline btn--sm" style="border: 2px solid #14181d; border-radius: 0; font-weight: 700; text-transform: uppercase;">
       Khôi phục phiên thi
     </a>
-    <span class="badge @(hasCredits ? "badge--info" : "badge--warning")">
+    <span class="badge @(Model.HasCredits ? "badge--info" : "badge--warning")">
       @catalog.CreditBalance @(catalog.CreditBalance == 1 ? "credit" : "credits") left
     </span>
   </div>
@@ -40,7 +39,7 @@
   <div class="alert alert--success" role="status">@successMsg</div>
 }
 
-@if (!hasCredits)
+@if (!Model.HasCredits)
 {
   <div class="alert alert--warning">
     <strong>You are out of credits.</strong>
@@ -114,7 +113,7 @@ else
                 Cancel exam
               </button>
             }
-            else if (hasCredits)
+            else if (Model.HasCredits)
             {
               <a class="btn btn--primary" href="/exams/@exam.ExamId/instructions">
                 @(exam.CompletedAttemptScore.HasValue ? "Retake" : "Start test")
@@ -158,34 +157,5 @@ else
 </div>
 
 @section Scripts {
-<script>
-  (function () {
-    var modal = document.getElementById('cancel-modal');
-    var form = document.getElementById('cancel-form');
-    var cancelBtns = document.querySelectorAll('.js-cancel-exam-btn');
-    var closeBtns = document.querySelectorAll('.js-close-cancel-modal');
-
-    cancelBtns.forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        var attemptId = btn.getAttribute('data-attempt-id');
-        var examName = btn.getAttribute('data-exam-name');
-        document.getElementById('cancel-modal-desc').textContent = examName + ' · The exam will not be graded and will not appear in your completed tests.';
-        form.action = '/exams/take/' + attemptId + '/cancel';
-        modal.style.display = 'flex';
-      });
-    });
-
-    closeBtns.forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        modal.style.display = 'none';
-      });
-    });
-
-    window.addEventListener('click', function (e) {
-      if (e.target === modal) {
-        modal.style.display = 'none';
-      }
-    });
-  })();
-</script>
+<script src="~/js/exams/index.js" asp-append-version="true"></script>
 }

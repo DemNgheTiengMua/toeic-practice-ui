@@ -1,0 +1,600 @@
+.phase-progress { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); border: 2px solid #14181d; margin-bottom: var(--space-4); }
+.phase-progress__item { display: flex; justify-content: space-between; gap: var(--space-3); padding: var(--space-3); border-right: 1px solid #ccd2d6; }
+.phase-progress__item:last-child { border-right: 0; }
+.phase-progress__item[aria-current="step"] { background: #14181d; color: #fff; }
+.phase-progress__timer { font-family: "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums; }
+.writing-editor { width: 100%; min-height: 18rem; border: 2px solid #14181d; border-radius: 0; box-shadow: none; padding: var(--space-3); font: inherit; }
+
+/* Mandatory Keyword Badges */
+.keyword-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.825rem;
+  font-weight: 600;
+  border: 2px solid #14181d;
+  border-radius: 0;
+  background: #ffffff;
+  color: #14181d;
+  transition: all 0.15s ease-in-out;
+}
+.keyword-badge.badge--used {
+  background: #0a6b3c !important;
+  color: #ffffff !important;
+  border-color: #14181d !important;
+}
+.keyword-badge.badge--pending {
+  background: #f8fafc;
+  border: 2px dashed #14181d;
+  color: #4b5563;
+}
+
+/* Automated Speaking Pacer & Verification Screen (DESIGN.md Bảng hiệu phòng thi) */
+.speaking-pacer-container {
+  margin-top: 1rem;
+  border: 2px solid #14181d;
+  border-radius: 0;
+  box-shadow: none;
+  background: #fafbfc;
+  padding: 1.25rem;
+}
+.speaking-pacer-placard {
+  padding: 0.75rem 1rem;
+  border: 2px solid #14181d;
+  border-radius: 0;
+  box-shadow: none;
+  font-family: "IBM Plex Sans Condensed", sans-serif;
+  font-weight: 700;
+  font-size: 1.1rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.speaking-pacer-placard--prep {
+  background: #0b4ea2;
+  color: #ffffff;
+  border-color: #14181d;
+}
+.speaking-pacer-placard--recording {
+  background: #b31217;
+  color: #ffffff;
+  border-color: #14181d;
+  animation: rec-banner-pulse 1.2s infinite ease-in-out;
+}
+@keyframes rec-banner-pulse {
+  0%, 100% { background-color: #b31217; color: #ffffff; }
+  50% { background-color: #7a0c10; color: #ffffff; }
+}
+.speaking-pacer-placard .rec-dot {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  background-color: #ffffff;
+  border: 2px solid #14181d;
+  border-radius: 0;
+  margin-right: 0.5rem;
+  vertical-align: middle;
+  animation: rec-pulse 0.8s infinite alternate;
+}
+@keyframes rec-pulse {
+  0% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0.2; transform: scale(0.85); }
+}
+.speaking-timer-val {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.speaking-pacer-bar {
+  height: 8px;
+  border: 2px solid #14181d;
+  border-radius: 0;
+  background: #e2e8f0;
+  overflow: hidden;
+  margin-top: 0.5rem;
+}
+.speaking-pacer-bar__fill {
+  height: 100%;
+  background: #0b4ea2;
+  transition: width 0.2s linear;
+}
+.speaking-pacer-bar__fill--rec {
+  background: #b31217;
+}
+.audio-level-meter-box {
+  margin-top: 0.75rem;
+  border: 2px solid #14181d;
+  border-radius: 0;
+  background: #ffffff;
+  padding: 0.5rem 0.75rem;
+}
+.audio-level-meter {
+  height: 10px;
+  background: #e2e8f0;
+  border: 1px solid #14181d;
+  border-radius: 0;
+  overflow: hidden;
+  margin-top: 0.35rem;
+}
+.audio-level-bar {
+  height: 100%;
+  width: 0%;
+  background: #0a6b3c;
+  transition: width 0.05s ease-out;
+}
+
+/* Verification Screen */
+.speaking-verification-screen {
+  border: 2px solid #14181d;
+  border-radius: 0;
+  box-shadow: none;
+  background: #ffffff;
+  padding: 1.5rem;
+}
+.speaking-verification-card {
+  border: 2px solid #14181d;
+  border-radius: 0;
+  padding: 1rem;
+  background: #fafbfc;
+  margin-bottom: 1rem;
+}
+.status-badge--recorded {
+  background: #0a6b3c !important;
+  color: #ffffff !important;
+  border: 2px solid #14181d !important;
+  border-radius: 0 !important;
+  font-family: "IBM Plex Mono", monospace !important;
+  font-weight: 700;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.85rem;
+}
+.status-badge--missing {
+  background: #b31217 !important;
+  color: #ffffff !important;
+  border: 2px solid #14181d !important;
+  border-radius: 0 !important;
+  font-family: "IBM Plex Mono", monospace !important;
+  font-weight: 700;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.85rem;
+}
+
+/* On-Screen Cut/Paste/Undo/Redo Toolbar */
+.writing-onscreen-toolbar .btn--sm {
+  padding: 0.25rem 0.65rem;
+  font-size: 0.825rem;
+  font-family: "IBM Plex Sans Condensed", sans-serif;
+  font-weight: 700;
+  text-transform: uppercase;
+  border-radius: 0;
+  border: 2px solid #14181d;
+  box-shadow: none;
+}
+
+/* Split-Screen 100vh Viewport */
+.exam-layout--split,
+#exam-main-layout.exam-layout--split {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 1.5rem !important;
+  height: calc(100vh - 165px) !important;
+  min-height: 480px;
+  overflow: hidden !important;
+}
+.exam-layout--split #split-stimulus-pane,
+#exam-main-layout.exam-layout--split #split-stimulus-pane {
+  display: block !important;
+  height: 100% !important;
+  overflow: hidden !important;
+}
+.exam-layout--split #question-pane,
+#exam-main-layout.exam-layout--split #question-pane {
+  height: 100% !important;
+  overflow-y: auto !important;
+  padding-right: 0.5rem !important;
+}
+.exam-layout--split .exam-sidebar,
+#exam-main-layout.exam-layout--split .exam-sidebar {
+  display: none !important;
+}
+
+/* Timer Warnings & Red Flashing */
+@keyframes timer-pulse-red {
+  0%, 100% { background-color: #b31217; color: #ffffff; }
+  50% { background-color: #ffffff; color: #b31217; }
+}
+.timer--warn-flash {
+  border: 2px solid #b31217 !important;
+  animation: timer-pulse-red 1.5s infinite ease-in-out;
+}
+.timer-alert-placard {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #b31217;
+  color: #ffffff;
+  padding: 0.25rem 0.65rem;
+  border: 2px solid #14181d;
+  font-family: "IBM Plex Sans Condensed", sans-serif;
+  font-weight: 700;
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  animation: timer-pulse-red 2s infinite ease-in-out;
+}
+
+/* Accessibility Font Scaling */
+body.font-size-standard { font-size: 16px; }
+body.font-size-large { font-size: 18.4px; }
+body.font-size-xlarge { font-size: 20.8px; }
+
+/* Accessibility High Contrast Themes */
+body[data-theme="inverted"] {
+  background-color: #14181d !important;
+  color: #f0f2f5 !important;
+}
+body[data-theme="inverted"] .app-topbar,
+body[data-theme="inverted"] .card,
+body[data-theme="inverted"] .modal,
+body[data-theme="inverted"] .question,
+body[data-theme="inverted"] .bottom-question-palette {
+  background-color: #1c2127 !important;
+  color: #f0f2f5 !important;
+  border-color: #4b5563 !important;
+}
+body[data-theme="inverted"] .option {
+  background-color: #242a32 !important;
+  color: #f0f2f5 !important;
+  border-color: #4b5563 !important;
+}
+body[data-theme="inverted"] .option.is-selected {
+  background-color: #ffffff !important;
+  color: #14181d !important;
+}
+body[data-theme="inverted"] .palette-chip--unanswered {
+  background-color: #1c2127 !important;
+  color: #f0f2f5 !important;
+  border-color: #4b5563 !important;
+}
+body[data-theme="inverted"] .palette-chip--answered {
+  background-color: #374151 !important;
+  color: #ffffff !important;
+  border-color: #9ca3af !important;
+}
+body[data-theme="inverted"] .palette-chip--current {
+  background-color: #ffffff !important;
+  color: #14181d !important;
+  border-color: #ffffff !important;
+}
+
+body[data-theme="high-contrast"] {
+  background-color: #000000 !important;
+  color: #ffff00 !important;
+}
+body[data-theme="high-contrast"] .app-topbar,
+body[data-theme="high-contrast"] .card,
+body[data-theme="high-contrast"] .modal,
+body[data-theme="high-contrast"] .question,
+body[data-theme="high-contrast"] .bottom-question-palette,
+body[data-theme="high-contrast"] input,
+body[data-theme="high-contrast"] select,
+body[data-theme="high-contrast"] textarea {
+  background-color: #000000 !important;
+  color: #ffff00 !important;
+  border-color: #ffff00 !important;
+}
+body[data-theme="high-contrast"] .option {
+  background-color: #000000 !important;
+  color: #ffff00 !important;
+  border-color: #ffff00 !important;
+}
+body[data-theme="high-contrast"] .option.is-selected {
+  background-color: #ffff00 !important;
+  color: #000000 !important;
+}
+body[data-theme="high-contrast"] .btn--primary {
+  background-color: #ffff00 !important;
+  color: #000000 !important;
+  border-color: #ffff00 !important;
+}
+body[data-theme="high-contrast"] .btn--ghost {
+  color: #ffff00 !important;
+  border-color: #ffff00 !important;
+}
+body[data-theme="high-contrast"] .palette-chip--unanswered {
+  background-color: #000000 !important;
+  color: #ffff00 !important;
+  border-color: #ffff00 !important;
+}
+body[data-theme="high-contrast"] .palette-chip--answered {
+  background-color: #222200 !important;
+  color: #ffff00 !important;
+  border-color: #ffff00 !important;
+}
+body[data-theme="high-contrast"] .palette-chip--current {
+  background-color: #ffff00 !important;
+  color: #000000 !important;
+  border-color: #ffff00 !important;
+}
+
+/* Bottom Question Palette */
+.bottom-question-palette {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #ffffff;
+  border-top: 2px solid #14181d;
+  z-index: 100;
+  padding: 0.4rem 1.5rem;
+  box-shadow: none;
+}
+.palette-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.palette-legend {
+  display: flex;
+  gap: 0.75rem;
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+.palette-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.chip-swatch {
+  width: 12px;
+  height: 12px;
+  display: inline-block;
+  border: 1px solid #14181d;
+}
+.chip-swatch--unanswered { background: #ffffff; border-color: #ccd2d6; }
+.chip-swatch--answered { background: #e9ecef; border-color: #14181d; font-weight: 700; }
+.chip-swatch--current { background: #14181d; border-color: #14181d; }
+.chip-swatch--flagged { background: #f2b705; border-color: #14181d; }
+
+.palette-chips-track {
+  display: flex;
+  gap: 0.35rem;
+  overflow-x: auto;
+  padding: 0.2rem 0;
+  width: 100%;
+}
+.palette-chip {
+  min-width: 36px;
+  height: 36px;
+  border: 1px solid #ccd2d6;
+  background: #ffffff;
+  color: #14181d;
+  font-family: "IBM Plex Mono", monospace;
+  font-weight: 600;
+  font-size: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0 0.35rem;
+  flex-shrink: 0;
+}
+.palette-chip:hover {
+  border-color: #14181d;
+}
+.palette-chip--unanswered {
+  border: 1px solid #ccd2d6;
+  background: #ffffff;
+  color: #14181d;
+}
+.palette-chip--answered {
+  border: 2px solid #14181d;
+  background: #e9ecef;
+  color: #14181d;
+  font-weight: 700;
+}
+.palette-chip--current {
+  border: 2px solid #14181d !important;
+  background: #14181d !important;
+  color: #ffffff !important;
+  font-weight: 700;
+}
+.palette-chip--flagged::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 0 8px 8px 0;
+  border-color: transparent #f2b705 transparent transparent;
+}
+
+/* Highlighter & Notes Engine */
+.ee-token {
+  display: inline;
+  position: relative;
+}
+.ee-token--highlighted {
+  background-color: #f2b705 !important;
+  color: #14181d !important;
+}
+.ee-note-pin {
+  display: inline-block;
+  cursor: pointer;
+  background: #14181d;
+  color: #ffffff;
+  font-size: 0.7rem;
+  padding: 0.1rem 0.25rem;
+  margin-left: 0.2rem;
+  font-family: "IBM Plex Mono", monospace;
+  font-weight: 700;
+  border: 1px solid #14181d;
+  vertical-align: middle;
+}
+.highlighter-popover {
+  position: absolute;
+  z-index: 1000;
+  display: flex;
+  gap: 0.25rem;
+  background: #ffffff;
+  border: 2px solid #14181d;
+  padding: 0.25rem;
+  box-shadow: none;
+}
+
+/* Question Component Widgets */
+.option--checkbox input[type="checkbox"] {
+  width: 1.15rem;
+  height: 1.15rem;
+  accent-color: #14181d;
+}
+.completion-input {
+  font-family: "IBM Plex Sans", sans-serif;
+  font-size: 1rem;
+  border: 2px solid #14181d;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0.5rem 0.75rem;
+  width: 100%;
+  max-width: 480px;
+}
+.chip-item {
+  display: inline-block;
+  border: 2px solid #14181d;
+  background: #ffffff;
+  color: #14181d;
+  padding: 0.35rem 0.75rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  user-select: none;
+}
+.chip-item:hover {
+  background: #e9ecef;
+}
+.chip-item.is-placed {
+  opacity: 0.35;
+  pointer-events: none;
+}
+.drop-zone {
+  min-height: 54px;
+  border: 2px dashed #14181d;
+  background: #fafbfc;
+  padding: 0.5rem 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.drop-zone.is-hovered {
+  background: #e3ebf6;
+  border-color: #0b4ea2;
+}
+body.exam-body-protected {
+  padding-bottom: 85px;
+}
+
+/* Masked Options Placards (HideOptionText, OptionCount) */
+.option-list--masked {
+  display: flex !important;
+  flex-direction: row !important;
+  gap: 0.75rem !important;
+  margin-top: 1rem !important;
+  flex-wrap: wrap !important;
+}
+.option--masked {
+  flex: 1 1 0 !important;
+  min-width: 60px !important;
+  max-width: 120px !important;
+  justify-content: center !important;
+  align-items: center !important;
+  text-align: center !important;
+  padding: 0.85rem 1rem !important;
+  border: 2px solid #14181d !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  cursor: pointer !important;
+  background: #ffffff !important;
+}
+.option--masked .option__marker {
+  font-family: "IBM Plex Mono", monospace !important;
+  font-weight: 700 !important;
+  font-size: 1.125rem !important;
+  pointer-events: none !important;
+}
+.option--masked.is-selected {
+  background: #14181d !important;
+  color: #ffffff !important;
+}
+.option--masked.is-selected .option__marker {
+  color: #ffffff !important;
+}
+
+/* Clustered Audio Cards (ClusterSize = 3) */
+.cluster-card-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+.cluster-item {
+  border: 2px solid #14181d;
+  background: #fafbfc;
+  padding: 1.25rem;
+  border-radius: 0;
+}
+.cluster-item .question__number {
+  font-family: "IBM Plex Mono", monospace;
+  font-weight: 700;
+  font-size: 1rem;
+}
+.cluster-item .question__stem {
+  margin: 0.5rem 0 1rem 0;
+  font-size: 1rem;
+  line-height: 1.45;
+}
+
+/* Bottom palette disabled states */
+.palette-chip--disabled {
+  opacity: 0.35 !important;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+}
+.palette-chip--locked,
+.palette-chip[hidden],
+.navigator__cell[hidden],
+.navigator__cell.is-locked,
+[hidden] {
+  display: none !important;
+}
+.btn--danger.js-open-submit-modal {
+  white-space: nowrap !important;
+}
+
+/* Review Screen Modal Items */
+.review-item-card {
+  background: #ffffff;
+  border: 1px solid #ccd2d6;
+  padding: 0.75rem;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  border-radius: 0;
+  box-shadow: none;
+  transition: none;
+}
+.review-item-card:hover {
+  border-color: #14181d;
+  background: #f0f4f8;
+}

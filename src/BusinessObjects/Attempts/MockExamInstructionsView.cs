@@ -1,0 +1,16 @@
+using System.Collections.Generic;
+
+namespace BusinessObjects;
+
+public sealed record MockExamInstructionsView(
+    int ExamId,
+    int CertId,
+    string CertCode,
+    string ExamName,
+    string? Description,
+    int DurationMinutes,
+    int? QuestionCount,
+    int CreditCost,
+    int CreditBalance,
+    int? ActiveAttemptId,
+    IReadOnlyList<MockExamSectionInfo> Sections);

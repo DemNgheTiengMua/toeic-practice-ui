@@ -1,0 +1,40 @@
+@model ExamTakeViewModel
+@{
+    var take = Model.Display;
+    var q = take.Question;
+}
+<header class="app-topbar">
+  <div class="exam-topbar-group">
+    <strong>@take.ExamName</strong>
+    <span class="badge badge--info" id="topbar-section-badge">@q.SkillName · @q.SectionName</span>
+    @if (take.HasAuthorizationCode)
+    {
+      <span class="badge badge--neutral" id="auth-code-placard" style="font-family: 'IBM Plex Mono', monospace; font-weight: 700; letter-spacing: 0.05em; border: 2px solid #14181d; background: #fff; color: #14181d; border-radius: 0; box-shadow: none;" title="Authorization code for session recovery">
+        EXAM CODE: @take.AuthorizationCode
+      </span>
+    }
+  </div>
+  <div class="exam-topbar-group">
+    <div id="timer-alert-placard" class="timer-alert-placard" style="display:none;" role="alert">
+      <span id="timer-alert-message"></span>
+    </div>
+    <span id="save-status" class="save-status save-status--saved" role="status" aria-live="polite">Saved</span>
+    <span id="timer-box" class="timer" role="timer" aria-label="Time remaining">
+      <span class="text-sm text-muted">Time remaining</span>
+      <span id="timer-display" class="timer__value">--:--:--</span>
+    </span>
+    @if (take.AudioEquipment != null)
+    {
+      <partial name="_AudioEmergencySwitcher" model="take.AudioEquipment" />
+    }
+    <div class="volume-slider-group" style="display: inline-flex; align-items: center; gap: 0.35rem; border: 1px solid #ccd2d6; padding: 0.2rem 0.5rem; background: #fff;" title="Exam Audio Volume">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+      <input type="range" id="exam-volume-slider" min="0" max="1" step="0.05" value="1" aria-label="Audio Volume" style="width: 65px; accent-color: #0b4ea2; cursor: pointer;">
+      <span id="exam-volume-pct" style="font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; min-width: 32px;">100%</span>
+    </div>
+    <button type="button" class="btn btn--ghost btn--sm" id="btn-open-accessibility-modal" title="Accessibility & Theme Settings">
+      <span style="font-family: 'IBM Plex Mono', monospace; font-weight: 700;">Aa</span> Font & Contrast
+    </button>
+    <button type="button" class="btn btn--ghost btn--sm" id="btn-open-exit-modal">Exit</button>
+  </div>
+</header>

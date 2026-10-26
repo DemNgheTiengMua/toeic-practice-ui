@@ -3,9 +3,8 @@
     Layout = "_LearnerLayout";
     ViewData["Title"] = "Placement Result";
     var result = Model.Result;
-    var listSkill = result.SkillScores.FirstOrDefault(s => s.SkillCode == "LIST" || s.SkillName.Contains("Listening", StringComparison.OrdinalIgnoreCase));
-    var readSkill = result.SkillScores.FirstOrDefault(s => s.SkillCode == "READ" || s.SkillName.Contains("Reading", StringComparison.OrdinalIgnoreCase));
-    var isAwaitingGrading = !result.IsGraded;
+    var listSkill = Model.Listening;
+    var readSkill = Model.Reading;
 }
 
 <div class="context-bar">
@@ -41,7 +40,7 @@
     <div>
       <h1 class="m-0 mb-1">Your placement result</h1>
       <p class="text-muted no-margin">
-        Taken @result.TakenAt.ToString("d MMMM yyyy") · @result.TotalQuestions questions · @result.DurationMinutes minutes
+        Taken @Model.TakenAtDisplay · @result.TotalQuestions questions · @result.DurationMinutes minutes
       </p>
     </div>
     <span class="badge badge--success">Free</span>
@@ -54,7 +53,7 @@
     </div>
   }
 
-  @if (isAwaitingGrading)
+  @if (Model.IsAwaitingGrading)
   {
     <section id="grading-status-card"
              class="card"
@@ -75,17 +74,12 @@
       <div class="cefr">
         <div class="cefr__head">
           <span class="cefr__current font-mono">@(result.IsGraded ? result.ResultBandCode : "—")</span>
-          <span>@(result.IsGraded ? $"{result.TotalScore} points · {result.ResultBandName} level" : "Composite score pending AI grading")</span>
+          <span>@Model.ScoreSummary</span>
         </div>
         <div class="cefr__track" role="img" aria-label="Current band @result.ResultBandCode, score @result.TotalScore">
-          @foreach (var band in result.CefrBands)
+          @foreach (var band in Model.Bands)
           {
-            var classes = "cefr__band";
-            if (result.IsGraded && band.IsCurrent) classes += " is-current";
-            else if (result.IsGraded && band.IsReached) classes += " is-reached";
-
-            var label = band.Code == "below_A1" ? "<A1" : band.Code;
-            <span class="@classes font-mono">@label</span>
+            <span class="@band.CssClass font-mono">@band.Label</span>
           }
         </div>
         <div class="cefr__scale" aria-hidden="true">
@@ -104,14 +98,11 @@
     </div>
   </div>
 
-  @{
-    var maxPossible = result.CefrBands.Count > 0 ? result.CefrBands.Max(b => b.MaxTotal) : 990;
-  }
   <div class="grid-3">
     <div class="stat">
       <div class="stat__label">Total score</div>
-      <div class="stat__value font-mono">@(result.IsGraded ? result.TotalScore.ToString() : "—")</div>
-      <div class="stat__hint font-mono text-muted">out of @maxPossible</div>
+      <div class="stat__value font-mono">@Model.TotalScoreDisplay</div>
+      <div class="stat__hint font-mono text-muted">out of @Model.MaximumScore</div>
     </div>
     <div class="stat">
       <div class="stat__label">Listening</div>
@@ -148,7 +139,7 @@
 
   @if (result.IsGraded && Model.Insight != null)
   {
-    <partial name="_AiInsightPanel" model='new WebMVC.Models.AiInsightPanelViewModel("attempt", result.AttemptId, Model.Insight)' />
+    <partial name="_AiInsightPanel" model="Model.InsightPanel" />
   }
 
   <div class="card">
@@ -186,51 +177,7 @@
   </div>
 </div>
 
-@if (isAwaitingGrading)
+@if (Model.IsAwaitingGrading)
 {
-  <script>
-    (function () {
-      "use strict";
-      var card = document.getElementById("grading-status-card");
-      if (!card) return;
-
-      var message = document.getElementById("grading-status-message");
-      var title = document.getElementById("grading-status-title");
-      var intervalId;
-
-      async function refreshGradingStatus() {
-        try {
-          var response = await fetch(card.dataset.statusUrl, {
-            credentials: "same-origin",
-            headers: { "Accept": "application/json" },
-            cache: "no-store"
-          });
-          if (!response.ok) throw new Error("Status request failed.");
-
-          var status = await response.json();
-          if (status.isGraded) {
-            window.clearInterval(intervalId);
-            window.location.reload();
-            return;
-          }
-
-          var descriptor = status.stageDescriptor || "Evaluating responses...";
-          var pending = Math.max(0, status.freeResponseCount - status.gradedFreeResponseCount - status.failedFreeResponseCount);
-          if (status.failedFreeResponseCount > 0 && pending === 0) {
-            title.textContent = "Some responses could not be graded";
-            message.textContent = status.failedFreeResponseCount + " response(s) need grading service attention. Objective skill scores remain available below.";
-            window.clearInterval(intervalId);
-            return;
-          }
-
-          message.textContent = descriptor + " (" + status.gradedFreeResponseCount + "/" + status.freeResponseCount + " completed). Objective skill scores are available below.";
-        } catch (error) {
-          message.textContent = "Unable to refresh grading status. The page will try again shortly.";
-        }
-      }
-
-      intervalId = window.setInterval(refreshGradingStatus, 3000);
-      refreshGradingStatus();
-    })();
-  </script>
+  <script src="~/js/placement/result.js" asp-append-version="true"></script>
 }

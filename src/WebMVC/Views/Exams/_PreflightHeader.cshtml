@@ -1,0 +1,38 @@
+@model ExamPreflightViewModel
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+  <a href="/dashboard" class="breadcrumbs__item">Home</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <a href="/exams" class="breadcrumbs__item">Test List</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <a href="@Model.InstructionsUrl" class="breadcrumbs__item">@Model.Preflight.ExamName</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <span class="breadcrumbs__item" aria-current="page">Pre-flight Verification</span>
+</nav>
+
+<div class="preflight-heading placard mb-4">
+  <div class="row row--between row--middle">
+    <div>
+      <div class="row row--middle gap-2 mb-1">
+        <span class="badge badge--info font-sign">@Model.Preflight.CertCode</span>
+        <span class="badge font-sign">ATTEMPT #@Model.Preflight.AttemptId</span>
+        @if (Model.Preflight.RequiresMicrophone)
+        {
+          <span class="badge badge--warning font-sign">SPEAKING EXAM</span>
+        }
+      </div>
+      <h1 class="preflight-title m-0 mb-1">
+        Pre-Flight Readiness Check: @Model.Preflight.ExamName
+      </h1>
+      <p class="text-sm text-muted no-margin">
+        Certificate: <strong>@Model.Preflight.CertName</strong> · Duration: <strong class="font-mono">@Model.Preflight.DurationMinutes min</strong> ·
+        All audio assets and input devices must be verified before the exam sitting begins.
+      </p>
+    </div>
+    <div class="text-right">
+      <div class="font-sign text-xs text-muted">GATE STATUS</div>
+      <span id="gate-status-badge" class="preflight-status badge @Model.VerificationBadgeClass font-sign">
+        @Model.GateStatusLabel
+      </span>
+    </div>
+  </div>
+</div>

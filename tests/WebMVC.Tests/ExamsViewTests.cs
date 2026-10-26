@@ -1,4 +1,7 @@
 using System.IO;
+using System.Text.Json;
+using Contracts;
+using WebMVC.Models;
 using System.Text.RegularExpressions;
 using Xunit;
 
@@ -33,7 +36,7 @@ public sealed class ExamsViewTests
         var viewPath = Path.Combine(repoRoot, "src", "WebMVC", "Views", "Exams", "Take.cshtml");
 
         Assert.True(File.Exists(viewPath), "Take.cshtml must exist");
-        var html = File.ReadAllText(viewPath);
+        var html = ReadTakeSource(repoRoot);
 
         // 1. Embedded JSON payload for 0ms in-memory swapping
         Assert.Contains("id=\"exam-data\"", html);
@@ -65,7 +68,7 @@ public sealed class ExamsViewTests
         var viewPath = Path.Combine(repoRoot, "src", "WebMVC", "Views", "Exams", "Take.cshtml");
 
         Assert.True(File.Exists(viewPath), "Take.cshtml must exist");
-        var html = File.ReadAllText(viewPath);
+        var html = ReadTakeSource(repoRoot);
 
         // 1. Split-Screen Viewport dual-pane layout & independent scrollbars
         Assert.Contains(".exam-layout--split", html);
@@ -121,7 +124,7 @@ public sealed class ExamsViewTests
         var viewPath = Path.Combine(repoRoot, "src", "WebMVC", "Views", "Exams", "Take.cshtml");
 
         Assert.True(File.Exists(viewPath), "Take.cshtml must exist");
-        var html = File.ReadAllText(viewPath);
+        var html = ReadTakeSource(repoRoot);
 
         // 1. Masked styling classes
         Assert.Contains(".option-list--masked", html);
@@ -130,7 +133,7 @@ public sealed class ExamsViewTests
         // 2. HideOptionText & OptionCount bindings
         Assert.Contains("option-list--masked", html);
         Assert.Contains("q.HideOptionText", html);
-        Assert.Contains("q.OptionCount", html);
+        Assert.Contains("@foreach (var opt in q.Options)", html);
         Assert.Contains("hideOptText", html);
         Assert.Contains("optCount", html);
 
@@ -151,13 +154,13 @@ public sealed class ExamsViewTests
         var viewPath = Path.Combine(repoRoot, "src", "WebMVC", "Views", "Exams", "Take.cshtml");
 
         Assert.True(File.Exists(viewPath), "Take.cshtml must exist");
-        var html = File.ReadAllText(viewPath);
+        var html = ReadTakeSource(repoRoot);
 
         // 1. Clustered audio container and card items
         Assert.Contains("id=\"cluster-card-container\"", html);
         Assert.Contains(".cluster-card-container", html);
         Assert.Contains(".cluster-item", html);
-        Assert.Contains("q.ClusterSize == 3", html);
+        Assert.Contains("q.IsCluster", html);
         Assert.Contains("isCluster", html);
 
         // 2. Independent radio and flag inputs per question in cluster
@@ -174,18 +177,18 @@ public sealed class ExamsViewTests
         var viewPath = Path.Combine(repoRoot, "src", "WebMVC", "Views", "Exams", "Take.cshtml");
 
         Assert.True(File.Exists(viewPath), "Take.cshtml must exist");
-        var html = File.ReadAllText(viewPath);
+        var html = ReadTakeSource(repoRoot);
 
         // 1. AUDIO_DRIVEN mode checks
         Assert.Contains("AUDIO_DRIVEN", html);
         Assert.Contains("isAudioDriven", html);
 
         // 2. Previous button disabled/hidden in audio-driven mode
-        Assert.Contains("btnPrev.style.display = 'none'", html);
-        Assert.Contains("btnPrev.disabled = !phase", html);
+        Assert.Contains("sitting.btnPrev.style.display = 'none'", html);
+        Assert.Contains("sitting.btnPrev.disabled = !phase", html);
 
         // 3. Jumping backward blocked in goToQuestion
-        Assert.Contains("if (isOneWay && targetOrder < currentDisplayOrder) return;", html);
+        Assert.Contains("if (isOneWay && targetOrder < sitting.currentDisplayOrder) return;", html);
 
         // 4. Backward cells disabled in bottom palette and navigator
         Assert.Contains("isBackInAudio", html);
@@ -199,7 +202,7 @@ public sealed class ExamsViewTests
         var viewPath = Path.Combine(repoRoot, "src", "WebMVC", "Views", "Exams", "Take.cshtml");
 
         Assert.True(File.Exists(viewPath), "Take.cshtml must exist");
-        var html = File.ReadAllText(viewPath);
+        var html = ReadTakeSource(repoRoot);
 
         // 1. Review Screen Modal markup and button
         Assert.Contains("id=\"review-screen-modal\"", html);
@@ -229,7 +232,7 @@ public sealed class ExamsViewTests
         var viewPath = Path.Combine(repoRoot, "src", "WebMVC", "Views", "Exams", "Take.cshtml");
 
         Assert.True(File.Exists(viewPath), "Take.cshtml must exist");
-        var html = File.ReadAllText(viewPath);
+        var html = ReadTakeSource(repoRoot);
 
         // 1. UNIT_LOCKED_SANDBOX checks
         Assert.Contains("UNIT_LOCKED_SANDBOX", html);
@@ -238,15 +241,15 @@ public sealed class ExamsViewTests
 
         // 2. Unit Lock Confirmation Modal and warning text
         Assert.Contains("id=\"unit-lock-modal\"", html);
-        Assert.Contains("Sau khi xác nhận, Giai đoạn 1 sẽ bị khóa vĩnh viễn và bạn không thể quay lại.", html);
+        Assert.Contains("Once confirmed, Stage 1 will be permanently locked and you cannot return to it.", html);
         Assert.Contains("id=\"btn-confirm-unit-lock\"", html);
 
         // 3. Transition call to endpoint
-        Assert.Contains("/exams/attempts/' + attemptId + '/transition-unit", html);
+        Assert.Contains("/exams/attempts/' + sitting.attemptId + '/transition-unit", html);
         Assert.Contains("targetUnitNumber: 2", html);
 
         // 4. Finish Unit 1 button on final question
-        Assert.Contains("Hoàn thành Giai đoạn 1 (Finish Unit 1)", html);
+        Assert.Contains("Finish Stage 1 & Proceed to Stage 2", html);
         Assert.Contains("js-open-unit-lock-modal", html);
     }
 
@@ -257,7 +260,7 @@ public sealed class ExamsViewTests
         var viewPath = Path.Combine(repoRoot, "src", "WebMVC", "Views", "Exams", "Take.cshtml");
 
         Assert.True(File.Exists(viewPath), "Take.cshtml must exist");
-        var html = File.ReadAllText(viewPath);
+        var html = ReadTakeSource(repoRoot);
 
         // 1. Plain text editor textarea with spellcheck, autocorrect, autocomplete, autocapitalize disabled
         Assert.Contains("id=\"writing-editor\"", html);
@@ -274,9 +277,9 @@ public sealed class ExamsViewTests
 
         // 3. Minimum words threshold badge and under-length warning indicator
         Assert.Contains("id=\"min-words-badge\"", html);
-        Assert.Contains("Tối thiểu: 0 từ", html);
+        Assert.Contains("Minimum: 0 words", html);
         Assert.Contains("id=\"under-length-warning\"", html);
-        Assert.Contains("(Chưa đạt số từ tối thiểu)", html);
+        Assert.Contains("(Below minimum word limit)", html);
         Assert.Contains("minWords", html);
     }
 
@@ -287,7 +290,7 @@ public sealed class ExamsViewTests
         var viewPath = Path.Combine(repoRoot, "src", "WebMVC", "Views", "Exams", "Take.cshtml");
 
         Assert.True(File.Exists(viewPath), "Take.cshtml must exist");
-        var html = File.ReadAllText(viewPath);
+        var html = ReadTakeSource(repoRoot);
 
         // 1. On-screen editing toolbar markup & buttons
         Assert.Contains("id=\"writing-onscreen-toolbar\"", html);
@@ -295,10 +298,10 @@ public sealed class ExamsViewTests
         Assert.Contains("id=\"btn-writing-paste\"", html);
         Assert.Contains("id=\"btn-writing-undo\"", html);
         Assert.Contains("id=\"btn-writing-redo\"", html);
-        Assert.Contains("Cắt (Cut)", html);
-        Assert.Contains("Dán (Paste)", html);
-        Assert.Contains("Hoàn tác (Undo)", html);
-        Assert.Contains("Làm lại (Redo)", html);
+        Assert.Contains("Cut", html);
+        Assert.Contains("Paste", html);
+        Assert.Contains("Undo", html);
+        Assert.Contains("Redo", html);
 
         // 2. Clipboard and undo/redo state management
         Assert.Contains("internalClipboard", html);
@@ -310,10 +313,10 @@ public sealed class ExamsViewTests
         Assert.Contains("isCutPasteRestricted", html);
         Assert.Contains("allowKeyboardCutPaste", html);
         Assert.Contains("showOnScreenCutPaste", html);
-        Assert.Contains("writingEditor.addEventListener('keydown'", html);
-        Assert.Contains("writingEditor.addEventListener('cut'", html);
-        Assert.Contains("writingEditor.addEventListener('copy'", html);
-        Assert.Contains("writingEditor.addEventListener('paste'", html);
+        Assert.Contains("sitting.writingEditor.addEventListener('keydown'", html);
+        Assert.Contains("sitting.writingEditor.addEventListener('cut'", html);
+        Assert.Contains("sitting.writingEditor.addEventListener('copy'", html);
+        Assert.Contains("sitting.writingEditor.addEventListener('paste'", html);
     }
 
     [Fact]
@@ -323,12 +326,12 @@ public sealed class ExamsViewTests
         var viewPath = Path.Combine(repoRoot, "src", "WebMVC", "Views", "Exams", "Take.cshtml");
 
         Assert.True(File.Exists(viewPath), "Take.cshtml must exist");
-        var html = File.ReadAllText(viewPath);
+        var html = ReadTakeSource(repoRoot);
 
         // 1. Required keywords area and badge container
         Assert.Contains("id=\"required-keywords-area\"", html);
         Assert.Contains("id=\"required-keywords-list\"", html);
-        Assert.Contains("Từ khóa bắt buộc:", html);
+        Assert.Contains("Mandatory Keywords:", html);
 
         // 2. Keyword badge CSS classes
         Assert.Contains(".keyword-badge", html);
@@ -349,7 +352,7 @@ public sealed class ExamsViewTests
         var viewPath = Path.Combine(repoRoot, "src", "WebMVC", "Views", "Exams", "Take.cshtml");
 
         Assert.True(File.Exists(viewPath), "Take.cshtml must exist");
-        var html = File.ReadAllText(viewPath);
+        var html = ReadTakeSource(repoRoot);
 
         // 1. NavigationMode HYBRID_GROUP_LOCKED check
         Assert.Contains("HYBRID_GROUP_LOCKED", html);
@@ -357,13 +360,13 @@ public sealed class ExamsViewTests
 
         // 2. Group Lock Confirmation Modal & required exact warning text
         Assert.Contains("id=\"group-lock-modal\"", html);
-        Assert.Contains("Xác nhận chuyển sang câu tiếp theo: Phần hiện tại sẽ bị khóa vĩnh viễn và thời gian còn lại sẽ không được bảo lưu.", html);
+        Assert.Contains("Confirm transition to next question: Current section will be locked permanently and remaining time will not carry over.", html);
         Assert.Contains("id=\"btn-confirm-group-lock\"", html);
         Assert.Contains("js-close-group-lock-modal", html);
 
         // 3. Transition call to endpoint
-        Assert.Contains("/exams/attempts/' + attemptId + '/transition-group", html);
-        Assert.Contains("targetGroupId: pendingTargetGroupId", html);
+        Assert.Contains("/exams/attempts/' + sitting.attemptId + '/transition-group", html);
+        Assert.Contains("targetGroupId: sitting.pendingTargetGroupId", html);
     }
 
     [Fact]
@@ -373,11 +376,11 @@ public sealed class ExamsViewTests
         var viewPath = Path.Combine(repoRoot, "src", "WebMVC", "Views", "Exams", "Take.cshtml");
 
         Assert.True(File.Exists(viewPath), "Take.cshtml must exist");
-        var html = File.ReadAllText(viewPath);
+        var html = ReadTakeSource(repoRoot);
 
         // 1. NavigationMode SYSTEM_PACED_AUTO check & navigation suppression
         Assert.Contains("SYSTEM_PACED_AUTO", html);
-        Assert.Contains("q.NavigationMode == \"SYSTEM_PACED_AUTO\"", html);
+        Assert.Contains("q.IsSystemPacedAuto", html);
         Assert.Contains("isSystemPacedAuto", html);
 
         // 2. Prep Countdown placard, timer and visual progress bar
@@ -385,7 +388,7 @@ public sealed class ExamsViewTests
         Assert.Contains("id=\"speaking-prep-placard\"", html);
         Assert.Contains("id=\"speaking-prep-timer\"", html);
         Assert.Contains("id=\"speaking-prep-bar\"", html);
-        Assert.Contains("CHUẨN BỊ TRẢ LỜI:", html);
+        Assert.Contains("PREPARATION TIME:", html);
 
         // 3. Audible beep cue using Web Audio API (1000Hz for 300ms)
         Assert.Contains("playBeepCue", html);
@@ -397,25 +400,191 @@ public sealed class ExamsViewTests
         Assert.Contains("id=\"speaking-record-placard\"", html);
         Assert.Contains("id=\"speaking-record-timer\"", html);
         Assert.Contains("id=\"speaking-record-bar\"", html);
-        Assert.Contains("ĐANG THU ÂM:", html);
+        Assert.Contains("RECORDING IN PROGRESS:", html);
         Assert.Contains("id=\"audio-level-container\"", html);
         Assert.Contains("id=\"audio-level-meter\"", html);
         Assert.Contains("id=\"audio-level-bar\"", html);
         Assert.Contains("createAnalyser", html);
 
         // 5. Background upload endpoint call
-        Assert.Contains("/exams/take/' + attemptId + '/upload-audio", html);
+        Assert.Contains("/exams/take/' + sitting.attemptId + '/upload-audio", html);
 
         // 6. Post-Section Recorded Audio Verification Screen & Playback
         Assert.Contains("id=\"speaking-verification-screen\"", html);
         Assert.Contains("id=\"speaking-verification-items\"", html);
         Assert.Contains("renderSpeakingVerificationScreen", html);
         Assert.Contains("audio controls", html);
-        Assert.Contains("Đã ghi âm [ĐÃ LÀM]", html);
-        Assert.Contains("Chưa có ghi âm [!]", html);
+        Assert.Contains("Recorded [DONE]", html);
+        Assert.Contains("No recording [!]", html);
 
         // 7. Final Submission CTA
         Assert.Contains("id=\"btn-submit-speaking-verification\"", html);
-        Assert.Contains("Nộp phần thi Nói để chấm AI", html);
+        Assert.Contains("Submit Speaking Phase for AI Grading", html);
+    }
+
+    [Fact]
+    public void Take_View_DoesNotContain_Mojibake_And_Enforces_Scenario7_And_SplitScreen_Invariants()
+    {
+        var repoRoot = TestPathHelper.FindRepoRoot();
+        var viewPath = Path.Combine(repoRoot, "src", "WebMVC", "Views", "Exams", "Take.cshtml");
+
+        Assert.True(File.Exists(viewPath), "Take.cshtml must exist");
+        var html = ReadTakeSource(repoRoot);
+
+        // 1. Zero Mojibake / double-encoded UTF-8 sequences
+        string[] mojibakePatterns = ["Ã‚", "Ã¡", "Ã\xa0", "Ã£", "Ã©", "Ã¨", "Ã³", "Ã²", "Ãº", "Ã¹", "áº", "á»", "Æ°", "Äƒ", "Ä‘"];
+        foreach (var pat in mojibakePatterns)
+        {
+            Assert.DoesNotContain(pat, html);
+        }
+
+        // Clean Vietnamese placarding
+        Assert.Contains("Font & Contrast", html);
+        Assert.Contains("READING PASSAGE & STIMULUS", html);
+        Assert.Contains("QUESTION PALETTE", html);
+        Assert.Contains("Unanswered", html);
+        Assert.Contains("Answered", html);
+        Assert.Contains("Current", html);
+        Assert.Contains("Flagged", html);
+        Assert.Contains("MAX", html);
+        Assert.Contains("LETTERS & NUMBERS", html);
+        Assert.Contains("Type your answer here...", html);
+
+        // 2. Scenario 7: Clustered questions clean option list suppression
+        Assert.Contains("if (q.clusterSize === 3)", html);
+        Assert.Contains("sitting.optionList.style.display = 'none'", html);
+        Assert.Contains("sitting.optionList.innerHTML = ''", html);
+
+        // 3. Stage 2 Question 7: Split screen only grids exam-main-layout, keeping sitting-container fluid
+        Assert.Contains("#exam-main-layout.exam-layout--split", html);
+        Assert.DoesNotContain("sittingContainer.classList.add('exam-layout--split')", html);
+        Assert.Contains("sittingContainer.style.maxWidth = '100%'", html);
+        Assert.Contains("btn--danger.js-open-submit-modal", html);
+        Assert.Contains("white-space: nowrap", html);
+
+        // 4. Adaptive Stage Unit Locking: Future unit hidden, past units permanently locked
+        Assert.Contains("isFutureUnit", html);
+        Assert.Contains("palette-chip--locked", html);
+        Assert.Contains("palette-chip--disabled", html);
+    }
+
+    [Fact]
+    public void Take_Shell_Keeps_Executable_Assets_External_And_Data_In_Json_Islands()
+    {
+        var repoRoot = TestPathHelper.FindRepoRoot();
+        var viewsDirectory = Path.Combine(repoRoot, "src", "WebMVC", "Views", "Exams");
+        var view = File.ReadAllText(Path.Combine(viewsDirectory, "Take.cshtml"));
+        Assert.Contains("<partial name=\"_Take", view);
+        foreach (var file in Directory.GetFiles(viewsDirectory, "*Take*.cshtml"))
+        {
+            var markup = File.ReadAllText(file);
+            Assert.DoesNotMatch(@"<style\b", markup);
+            Assert.DoesNotMatch(@"<script\b(?![^>]*(?:\bsrc=|type=""application/json""))", markup);
+            Assert.DoesNotContain("JsonSerializer", markup);
+            Assert.DoesNotMatch(@"\.(?:GroupBy|Select|Where|OrderBy|Take|Sum|Max|FirstOrDefault)\s*\(", markup);
+            Assert.DoesNotMatch(@"new\s+\w+(?:Dto|Model)\s*\(", markup);
+        }
+        Assert.Contains("id=\"sitting-data\" type=\"application/json\"", view);
+        var assets = Regex.Matches(view, @"(?:src|href)=""~/(?<asset>(?:js|css)/exams/[^""]+)""")
+            .Select(match => match.Groups["asset"].Value).ToArray();
+        Assert.Contains("css/exams/take.css", assets);
+        var scripts = assets.Where(asset => asset.EndsWith(".js")).ToArray();
+        Assert.True(scripts.Length > 1, "Sitting behavior must load its cohesive modules.");
+        Assert.Equal("js/exams/context.js", scripts[0]);
+        Assert.Equal("js/exams/shell.js", scripts[^1]);
+        Assert.Equal(scripts.Length, scripts.Distinct().Count());
+        foreach (var asset in assets)
+        {
+            var source = File.ReadAllText(Path.Combine(repoRoot, "src", "WebMVC", "wwwroot", asset));
+            Assert.DoesNotContain("@Html", source);
+            Assert.DoesNotContain("@take", source);
+            Assert.DoesNotContain("@q.", source);
+        }
+    }
+
+    [Fact]
+    public void Take_Model_Prepares_Fallbacks_Masked_Options_And_Progress()
+    {
+        var take = TakeFixture();
+        var model = new ExamTakeViewModel(take, "");
+        var display = model.Display;
+
+        Assert.False(model.HasErrorMessage);
+        Assert.Equal(33, display.ProgressPercent);
+        Assert.Equal(2, display.UnansweredCount);
+        Assert.Equal(3, display.Question.Options.Count);
+        Assert.True(display.Question.Options[1].IsSelected);
+        Assert.True(display.Question.HideStem);
+        Assert.Equal(15, display.Question.PrepSeconds);
+        Assert.Equal(30, display.Question.ResponseSeconds);
+        Assert.Empty(display.Phases);
+        Assert.True(display.AudioEquipment?.ShowOutput);
+        Assert.False(display.AudioEquipment?.ShowInput);
+        Assert.Equal("Question 2 · Answered · Flagged · Locked", display.Navigator[0].NavigatorTitle);
+        using var questions = JsonDocument.Parse(display.QuestionsJson);
+        Assert.Equal(1, questions.RootElement.GetArrayLength());
+        Assert.Equal(12, questions.RootElement[0].GetProperty("questionId").GetInt32());
+    }
+
+    [Fact]
+    public void Take_Model_Preserves_Cluster_Membership_And_Unmasked_Cluster_Option_Count()
+    {
+        var take = TakeFixture();
+        var current = take.CurrentQuestion with { ClusterSize = 3 };
+        var display = new ExamTakeViewModel(take with
+        {
+            CurrentQuestion = current,
+            Questions = [current with { QuestionId = 11, DisplayOrder = 1 }, current,
+                current with { QuestionId = 13, DisplayOrder = 3 }, current with { QuestionId = 14, DisplayOrder = 4 }]
+        }).Display;
+
+        Assert.Equal(new[] { 11, 12, 13 }, display.ClusterQuestions.Select(q => q.QuestionId));
+        Assert.All(display.ClusterQuestions, q => Assert.Equal(4, q.Options.Count));
+        var fallback = new ExamTakeViewModel(take with { CurrentQuestion = current, Questions = [] }).Display;
+        Assert.Equal(12, Assert.Single(fallback.ClusterQuestions).QuestionId);
+    }
+
+    [Fact]
+    public void Take_Model_Json_Islands_Escape_Script_Endings_And_RoundTrip_Content()
+    {
+        const string content = "</script><script>alert('exam')</script> & tiếng Việt";
+        var take = TakeFixture();
+        var current = take.CurrentQuestion with { Stem = content, AudioPath = content };
+        var display = new ExamTakeViewModel(take with { ExamName = content, CandidateNotesJson = content, CurrentQuestion = current }).Display;
+
+        Assert.DoesNotContain("</script", display.QuestionsJson, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("</script", display.SittingJson, StringComparison.OrdinalIgnoreCase);
+        using var payload = JsonDocument.Parse(display.SittingJson);
+        Assert.Equal(content, payload.RootElement.GetProperty("examName").GetString());
+        Assert.Equal(content, payload.RootElement.GetProperty("candidateNotesJson").GetString());
+        Assert.Equal(content, payload.RootElement.GetProperty("currentQuestion").GetProperty("audioPath").GetString());
+        Assert.Equal(take.ExpiresAt.ToUnixTimeMilliseconds(), payload.RootElement.GetProperty("expiresAt").GetInt64());
+    }
+
+    private static AttemptTakeDto TakeFixture()
+    {
+        var question = new AttemptQuestionDto(12, 2, 3, 7, "P2", "Section 2", "LIST", "Listening", ModalityDto.Listening,
+            "Choose a response.", null, null, null, null, null, null, null,
+            [new(1, "A", "First"), new(2, "B", "Second"), new(3, "C", "Third"), new(4, "D", "Fourth")],
+            2, true, HideOptionText: true, OptionCount: 3);
+        var start = new DateTimeOffset(2026, 10, 26, 8, 0, 0, TimeSpan.Zero);
+        return new AttemptTakeDto(42, 5, "Exam", "TOEIC", AttemptStatusDto.InProgress, start, start.AddHours(1),
+            3600, 3, 1, 1, question, [new(12, 2, 7, "P2", ModalityDto.Listening, true, true, true, IsLocked: true)], false);
+    }
+
+    private static string ReadTakeSource(string repoRoot)
+    {
+        var viewsDirectory = Path.Combine(repoRoot, "src", "WebMVC", "Views", "Exams");
+        string ReadMarkup(string name)
+        {
+            var markup = File.ReadAllText(Path.Combine(viewsDirectory, name + ".cshtml"));
+            return Regex.Replace(markup, @"<partial\s+name=""(?<name>_Take[^""]+)""[^>]*/>",
+                match => ReadMarkup(match.Groups["name"].Value));
+        }
+
+        var view = ReadMarkup("Take");
+        var sources = Regex.Matches(view, @"(?:src|href)=""~/(?<asset>(?:js|css)/exams/[^""]+)""")
+            .Select(match => File.ReadAllText(Path.Combine(repoRoot, "src", "WebMVC", "wwwroot", match.Groups["asset"].Value)));
+        return view + Environment.NewLine + string.Join(Environment.NewLine, sources);
     }
 }

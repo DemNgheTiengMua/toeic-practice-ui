@@ -1,21 +1,9 @@
 @model ExamResultViewModel
-@inject DateTimeFormatter Dates
 @{
     Layout = "_LearnerLayout";
     var res = Model.Result;
-    var isGradingPending = res.Status == Contracts.AttemptStatusDto.Submitted;
     ViewData["Title"] = $"Results — {res.ExamName}";
     ViewData["Description"] = $"Mock exam results for {res.ExamName}.";
-    var isGraded = res.Status == Contracts.AttemptStatusDto.Graded;
-    var isAwaitingGrading = res.Status == Contracts.AttemptStatusDto.Submitted;
-    var pendingFreeResponses = Math.Max(0, res.FreeResponseCount - res.GradedFreeResponseCount - res.FailedFreeResponseCount);
-
-    var hours = res.DurationSeconds / 3600;
-    var minutes = (res.DurationSeconds % 3600) / 60;
-    var seconds = res.DurationSeconds % 60;
-    var durationStr = hours > 0
-        ? $"{hours}h {minutes}m {seconds}s"
-        : $"{minutes}m {seconds}s";
 }
 <nav class="breadcrumbs" aria-label="Breadcrumb">
   <a href="/dashboard" class="breadcrumbs__item">Home</a>
@@ -29,12 +17,12 @@
   <div>
     <h1 class="m-0 mb-1">Results — @res.ExamName</h1>
     <p class="text-sm text-muted no-margin">
-      Completed @Dates.Format(res.SubmittedAt) · Time taken: <strong>@durationStr</strong>
+      Completed @Model.SubmittedAtDisplay · Time taken: <strong>@Model.DurationDisplay</strong>
     </p>
   </div>
 
   <div class="row" style="gap: var(--space-2);">
-    @if (isGraded)
+    @if (Model.IsGraded)
     {
       <a class="btn btn--primary" href="/exams/review/@res.AttemptId">Review answers</a>
     }
@@ -55,14 +43,14 @@
     <strong>Time is up.</strong> The exam was submitted automatically when your deadline expired.
   </div>
 }
-@if (isGradingPending)
+@if (Model.IsAwaitingGrading)
 {
   <div class="alert alert--info" role="status">
     <strong>AI grading is in progress.</strong> Your free responses are saved. This page refreshes automatically when grading is complete; the score shown is for scored multiple-choice sections.
   </div>
 }
 
-@if (isAwaitingGrading)
+@if (Model.IsAwaitingGrading)
 {
   <section id="grading-status-card"
            class="card mt-4"
@@ -73,7 +61,7 @@
     <div class="card__body">
       <strong id="grading-status-title">AI grading in progress</strong>
       <p id="grading-status-message" class="text-sm no-margin mt-1">
-        Objective skill scores are available below. @pendingFreeResponses free response(s) are waiting for grading.
+        Objective skill scores are available below. @Model.PendingFreeResponses free response(s) are waiting for grading.
       </p>
     </div>
   </section>
@@ -82,14 +70,14 @@
 <!-- Score Hero -->
 <div class="score-hero">
   <div class="score-hero__total">
-    <div class="score-hero__total-value">@(isGraded ? res.TotalScore.ToString() : "—")</div>
+    <div class="score-hero__total-value">@Model.TotalScoreDisplay</div>
     <div class="score-hero__total-label">
-      @(isGraded ? $"Total scaled score · {res.CertCode}" : "Composite score pending AI grading")
+      @Model.TotalScoreLabel
     </div>
-    @if (isGraded && res.ScoreDelta.HasValue)
+    @if (Model.IsGraded && res.ScoreDelta.HasValue)
     {
       <p class="score-hero__delta" role="status">
-        <span class="score-hero__delta-value">@(res.ScoreDelta.Value >= 0 ? $"+{res.ScoreDelta.Value}" : res.ScoreDelta.Value.ToString())</span>
+        <span class="score-hero__delta-value">@Model.ScoreDeltaDisplay</span>
         <span class="score-hero__delta-label">vs. previous attempt</span>
       </p>
     }
@@ -105,7 +93,7 @@
   }
 </div>
 
-@if (isGraded && !string.IsNullOrEmpty(res.BandCode))
+@if (Model.IsGraded && !string.IsNullOrEmpty(res.BandCode))
 {
   <div class="card">
     <div class="card__header"><strong>Proficiency Level / Score Band</strong></div>
@@ -121,9 +109,9 @@
 }
 
 <!-- AI Insight Panel (Ticket #20) -->
-@if (isGraded)
+@if (Model.IsGraded)
 {
-  <partial name="_AiInsightPanel" model='new WebMVC.Models.AiInsightPanelViewModel("attempt", res.AttemptId, Model.Insight)' />
+  <partial name="_AiInsightPanel" model="Model.InsightPanel" />
 }
 
 <!-- Breakdown by Skill Table -->
@@ -141,31 +129,26 @@
         </tr>
       </thead>
       <tbody>
-        @foreach (var skill in res.SkillScores)
+        @foreach (var item in Model.Skills)
         {
-          var pct = skill.TotalQuestions > 0 ? (int)Math.Round((double)skill.RawScore / skill.TotalQuestions * 100) : 0;
+          var skill = item.Score;
           <tr>
             <td><strong>@skill.SkillName</strong></td>
             <td>@skill.RawScore</td>
             <td>@skill.TotalQuestions</td>
             <td><strong>@skill.ScaledScore</strong></td>
-            <td>@pct%</td>
+            <td>@item.AccuracyPercent%</td>
           </tr>
         }
       </tbody>
       <tfoot>
         <tr>
           <th>Total</th>
-          <th>@res.SkillScores.Sum(s => s.RawScore)</th>
-          <th>@res.SkillScores.Sum(s => s.TotalQuestions)</th>
+          <th>@Model.TotalRawScore</th>
+          <th>@Model.TotalQuestions</th>
           <th><strong>@res.TotalScore</strong></th>
           <th>
-            @{
-              var totalRaw = res.SkillScores.Sum(s => s.RawScore);
-              var totalQuestions = res.SkillScores.Sum(s => s.TotalQuestions);
-              var totalPct = totalQuestions > 0 ? (int)Math.Round((double)totalRaw / totalQuestions * 100) : 0;
-            }
-            @totalPct%
+            @Model.AccuracyPercent%
           </th>
         </tr>
       </tfoot>
@@ -173,50 +156,7 @@
   </div>
 </div>
 
-@if (isAwaitingGrading)
+@if (Model.IsAwaitingGrading)
 {
-  <script>
-    (function () {
-      "use strict";
-      var card = document.getElementById("grading-status-card");
-      if (!card) return;
-
-      var message = document.getElementById("grading-status-message");
-      var title = document.getElementById("grading-status-title");
-      var intervalId;
-
-      async function refreshGradingStatus() {
-        try {
-          var response = await fetch(card.dataset.statusUrl, {
-            credentials: "same-origin",
-            headers: { "Accept": "application/json" },
-            cache: "no-store"
-          });
-          if (!response.ok) throw new Error("Status request failed.");
-
-          var status = await response.json();
-          if (status.isGraded) {
-            window.clearInterval(intervalId);
-            window.location.reload();
-            return;
-          }
-
-          var pending = Math.max(0, status.freeResponseCount - status.gradedFreeResponseCount - status.failedFreeResponseCount);
-          if (status.failedFreeResponseCount > 0 && pending === 0) {
-            title.textContent = "Some responses could not be graded";
-            message.textContent = status.failedFreeResponseCount + " response(s) need grading service attention. Objective skill scores remain available below.";
-            window.clearInterval(intervalId);
-            return;
-          }
-
-          message.textContent = "Objective skill scores are available below. " + pending + " free response(s) are waiting for grading.";
-        } catch (error) {
-          message.textContent = "Unable to refresh grading status. The page will try again shortly.";
-        }
-      }
-
-      intervalId = window.setInterval(refreshGradingStatus, 3000);
-      refreshGradingStatus();
-    })();
-  </script>
+  <script src="~/js/exams/result.js" asp-append-version="true"></script>
 }

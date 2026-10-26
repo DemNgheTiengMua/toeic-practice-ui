@@ -1,0 +1,187 @@
+using Contracts;
+using BusinessObjects;
+
+namespace WebAPI.Endpoints;
+
+public static partial class ExamEndpoints
+{
+    private static AttemptTakeDto ToAttemptTakeDto(AttemptTakeView take)
+    {
+        var qInfo = take.CurrentQuestion;
+        var currentQDto = new AttemptQuestionDto(
+            qInfo.QuestionId,
+            qInfo.DisplayOrder,
+            qInfo.TotalQuestions,
+            qInfo.SectionId,
+            qInfo.SectionCode,
+            qInfo.SectionName,
+            qInfo.SkillCode,
+            qInfo.SkillName,
+            qInfo.Modality.MapTo<ModalityDto>(),
+            qInfo.Stem,
+            qInfo.ImagePath,
+            qInfo.ImageAlt,
+            qInfo.AudioPath,
+            qInfo.AudioStartMs,
+            qInfo.AudioEndMs,
+            qInfo.Transcript,
+            qInfo.Passage,
+            qInfo.Options.Select(o => new AttemptOptionDto(o.OptionId, o.Label, o.Text)).ToList(),
+            qInfo.SelectedOptionId,
+            qInfo.IsFlagged,
+            qInfo.QuestionType,
+            qInfo.MinWords,
+            qInfo.MaxWords,
+            qInfo.PrepSeconds,
+            qInfo.ResponseSeconds,
+            qInfo.ResponseText,
+            qInfo.ResponseAudioPath,
+            qInfo.ResponseDurationMs,
+            qInfo.DraftSavedAt,
+            qInfo.SkillDurationMinutes,
+            qInfo.SkillDisplayOrder,
+            qInfo.SelectedOptionIds,
+            qInfo.MaxSelections,
+            qInfo.AllowNumber,
+            qInfo.AcceptedAnswersJson,
+            qInfo.RequiredKeywords,
+            qInfo.LayoutType,
+            qInfo.RequirePassage,
+            qInfo.NavigationMode,
+            qInfo.ToolsConfigJson,
+            qInfo.HideOptionText,
+            qInfo.OptionCount,
+            qInfo.ClusterSize,
+            qInfo.RequireImage,
+            qInfo.UnitNumber,
+            qInfo.GroupId,
+            qInfo.TimerPolicyJson);
+
+        var allQDtos = take.Questions?.Select(q => new AttemptQuestionDto(
+            q.QuestionId,
+            q.DisplayOrder,
+            q.TotalQuestions,
+            q.SectionId,
+            q.SectionCode,
+            q.SectionName,
+            q.SkillCode,
+            q.SkillName,
+            q.Modality.MapTo<ModalityDto>(),
+            q.Stem,
+            q.ImagePath,
+            q.ImageAlt,
+            q.AudioPath,
+            q.AudioStartMs,
+            q.AudioEndMs,
+            q.Transcript,
+            q.Passage,
+            q.Options.Select(o => new AttemptOptionDto(o.OptionId, o.Label, o.Text)).ToList(),
+            q.SelectedOptionId,
+            q.IsFlagged,
+            q.QuestionType,
+            q.MinWords,
+            q.MaxWords,
+            q.PrepSeconds,
+            q.ResponseSeconds,
+            q.ResponseText,
+            q.ResponseAudioPath,
+            q.ResponseDurationMs,
+            q.DraftSavedAt,
+            q.SkillDurationMinutes,
+            q.SkillDisplayOrder,
+            q.SelectedOptionIds,
+            q.MaxSelections,
+            q.AllowNumber,
+            q.AcceptedAnswersJson,
+            q.RequiredKeywords,
+            q.LayoutType,
+            q.RequirePassage,
+            q.NavigationMode,
+            q.ToolsConfigJson,
+            q.HideOptionText,
+            q.OptionCount,
+            q.ClusterSize,
+            q.RequireImage,
+            q.UnitNumber,
+            q.GroupId,
+            q.TimerPolicyJson)).ToList();
+
+        return new AttemptTakeDto(
+            take.AttemptId,
+            take.ExamId,
+            take.ExamName,
+            take.CertCode,
+            take.Status.MapTo<AttemptStatusDto>(),
+            take.StartedAt,
+            take.ExpiresAt,
+            take.RemainingSeconds,
+            take.TotalQuestions,
+            take.AnsweredCount,
+            take.FlaggedCount,
+            currentQDto,
+            take.Navigator.Select(n => new NavigatorItemDto(
+                n.QuestionId, n.DisplayOrder, n.SectionId, n.SectionCode, n.Modality.MapTo<ModalityDto>(), n.IsAnswered, n.IsFlagged, n.IsCurrent, n.IsLocked)).ToList(),
+            take.IsAutoSubmitted,
+            allQDtos,
+            take.Phases?.Select(phase => new AttemptPhaseDto(
+                phase.SkillId,
+                phase.SkillCode,
+                phase.SkillName,
+                phase.SkillDisplayOrder,
+                phase.StartOffsetSeconds,
+                phase.DurationSeconds)).ToList(),
+            take.ActiveSkillId,
+            take.ActiveUnitNumber,
+            take.ActiveGroupId,
+            take.PhaseDeadlineAt,
+            take.IsSkillLocked,
+            take.AuthorizationCode,
+            take.LastAudioOffsetMs,
+            take.CandidateNotesJson);
+    }
+
+    private static SittingSyncDto ToSittingSyncDto(SittingSyncResult result) =>
+        new SittingSyncDto(
+            result.AttemptId,
+            result.RemainingSeconds,
+            result.IsAutoSubmitted,
+            result.ActiveSkillId,
+            result.ActiveUnitNumber,
+            result.ActiveGroupId,
+            result.PhaseDeadlineAt,
+            result.LastAudioOffsetMs,
+            result.AnswersSavedCount);
+
+    private static SittingSyncRequest ToSittingSyncRequest(SittingSyncRequestDto requestDto) =>
+        new SittingSyncRequest(
+            requestDto.Answers?.Select(a => new BatchAnswerItem(
+                a.QuestionId,
+                a.SelectedOptionId,
+                a.IsFlagged,
+                a.ResponseText,
+                a.SelectedOptionIdsJson)).ToList(),
+            requestDto.LastAudioOffsetMs,
+            requestDto.CandidateNotesJson,
+            requestDto.LastQuestionId);
+
+    private static AttemptResumeDto ToAttemptResumeDto(AttemptResumeView result) =>
+        new AttemptResumeDto(
+            result.AttemptId,
+            result.ExamId,
+            result.AuthorizationCode,
+            result.ActiveSkillId,
+            result.ActiveUnitNumber,
+            result.ActiveGroupId,
+            result.LastQuestionId,
+            result.LastAudioOffsetMs,
+            result.CandidateNotesJson,
+            result.RemainingSeconds,
+            result.ExpiresAt,
+            result.PhaseDeadlineAt,
+            result.AnswerSheet.Select(a => new AttemptAnswerSheetItemDto(
+                a.QuestionId,
+                a.SelectedOptionId,
+                a.SelectedOptionIdsJson,
+                a.ResponseText,
+                a.IsFlagged)).ToList());
+}

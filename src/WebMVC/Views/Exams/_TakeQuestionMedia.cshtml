@@ -1,0 +1,25 @@
+@model ExamTakeViewModel
+@{
+    var take = Model.Display;
+    var q = take.Question;
+}
+<!-- Audio Player Container -->
+<div id="exam-audio-wrapper" class="mb-3" style="@(take.InitialAudio != null ? "" : "display:none;")">
+  @if (take.InitialAudio != null)
+  {
+    <partial name="_ExamAudioPlayer" model="take.InitialAudio" />
+  }
+</div>
+<partial name="_ExamAudioPlayer" model="take.AudioTemplate" />
+
+<!-- Passage Card Container -->
+<div id="passage-card" class="card mb-3" style="@(q.HasPassage ? "" : "display:none;")">
+  <div class="card__body">
+    <p id="passage-text" class="no-margin passage">@q.Passage</p>
+  </div>
+</div>
+
+<!-- Image Container -->
+<div id="image-container" class="mb-3" style="@(q.HasImage ? "" : "display:none;") @(q.RequireImage ? "border: 2px solid #14181d; background: #fff; padding: 0.5rem; text-align: center;" : "")">
+  <img id="question-image" src="@q.ImagePath" alt="@q.ImageAlt" class="question__image" />
+</div>

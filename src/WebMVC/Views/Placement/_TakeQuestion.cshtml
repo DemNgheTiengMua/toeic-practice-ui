@@ -1,0 +1,70 @@
+@model PlacementTakeViewModel
+@if (Model.AudioPlayer is not null)
+{
+  <partial name="_ExamAudioPlayer" model="Model.AudioPlayer" />
+}
+
+@if (Model.HasPassage)
+{
+  <div class="card mb-3">
+    <div class="card__body">
+      <p class="no-margin passage">@Model.Question.Passage</p>
+    </div>
+  </div>
+}
+
+@if (Model.HasImage)
+{
+  <div class="mb-3">
+    <img src="@Model.Question.ImagePath" alt="@Model.ImageAlt" class="question__image" />
+  </div>
+}
+
+<div class="question">
+  <div class="question__meta row row--between">
+    <div class="row row--tight">
+      <span class="question__number font-mono font-bold">Question @Model.Question.DisplayOrder</span>
+      <span class="badge badge--muted">@Model.Question.SkillName · @Model.Question.SectionName</span>
+    </div>
+    <div>
+      <button type="button" class="btn btn--ghost btn--sm @Model.FlagButtonClass" id="flag-btn"
+              aria-pressed="@Model.FlagPressed"
+              data-flagged="@Model.FlagPressed">
+        @Model.FlagLabel
+      </button>
+    </div>
+  </div>
+
+  <p class="question__stem">
+    @Model.Question.Stem
+  </p>
+
+  @if (Model.IsWriting)
+  {
+    <div id="writing-response-pane" class="stack mt-3">
+      <label for="writing-editor"><strong>Your response</strong></label>
+      <textarea id="writing-editor" class="writing-editor" aria-describedby="writing-counts" data-question-id="@Model.Question.QuestionId" rows="8">@Model.Question.ResponseText</textarea>
+      <div id="writing-counts" class="row row--between text-sm text-muted">
+        <span><strong id="word-count">0</strong> words</span>
+        <span><strong id="character-count">0</strong> characters</span>
+      </div>
+      <div class="row take-gap-2">
+        <button type="button" class="btn btn--secondary" id="btn-save-writing-draft">Save draft</button>
+      </div>
+    </div>
+  }
+  else
+  {
+    <div class="option-list" role="radiogroup" aria-label="Answer for question @Model.Question.DisplayOrder">
+      @foreach (var opt in Model.Options)
+      {
+        <label class="option @opt.CssClass">
+          <input class="option__input js-option-radio" type="radio" name="selectedOptionId"
+                 value="@opt.OptionId" checked="@opt.IsSelected">
+          <span class="option__marker font-mono">@opt.Label</span>
+          <span class="option__text">@opt.Text</span>
+        </label>
+      }
+    </div>
+  }
+</div>

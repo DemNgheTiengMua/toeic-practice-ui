@@ -1,0 +1,31 @@
+.preflight-heading { border: 2px solid var(--ink); padding: var(--space-4); background: var(--color-surface); }
+.preflight-title { font-family: var(--font-sign); text-transform: uppercase; letter-spacing: var(--tracking-sign); }
+.preflight-status { font-size: var(--text-sm); }
+.preflight-panel { border: 2px solid var(--ink); border-radius: 0; box-shadow: none; }
+.preflight-panel-header { background: var(--color-surface); border-bottom: 2px solid var(--ink); padding: var(--space-3) var(--space-4); }
+.preflight-step { background: var(--ink); color: #fff; }
+.preflight-label { letter-spacing: var(--tracking-sign); text-transform: uppercase; }
+.preflight-panel-body { padding: var(--space-4); }
+.preflight-buffer-track { height: 12px; border: 1px solid var(--ink); background: var(--color-track); }
+.preflight-device { border: 2px solid var(--ink); border-radius: 0; }
+.preflight-volume { display: flex; align-items: center; gap: var(--space-2); }
+.preflight-volume-slider { flex: 1; }
+.preflight-mic-guide { border: 1px solid var(--sign-blue); background: #f0f6ff; padding: var(--space-3); border-radius: 0; }
+.preflight-guide-list { padding-left: var(--space-4); }
+.preflight-meter { position: relative; height: 20px; border: 2px solid var(--ink); background: var(--color-track); overflow: hidden; }
+.preflight-meter-fill { display: block; width: 0%; height: 100%; background: var(--sign-green); transition: width 60ms linear; }
+.preflight-meter-voice { position: absolute; top: 0; bottom: 0; left: 25%; width: 2px; background: var(--ink); }
+.preflight-meter-loud { position: absolute; top: 0; bottom: 0; left: 90%; width: 2px; background: var(--sign-red); }
+.preflight-sample-task { border: 1px solid var(--ink); background: var(--color-track); padding: var(--space-3); border-radius: 0; }
+.preflight-sample-prompt { font-style: italic; background: #fff; border: 1px solid var(--color-border); padding: var(--space-2) var(--space-3); }
+.preflight-initially-hidden { display: none; }
+.preflight-sample-review { border-top: 1px solid var(--color-border); display: none; }
+.preflight-clarity { border: 1px solid var(--sign-gold); background: #fffdf0; padding: var(--space-3); border-radius: 0; }
+.preflight-mic-success { display: none; border-radius: 0; }
+.preflight-gate { border: 2px solid var(--ink); border-radius: 0; box-shadow: none; background: var(--color-surface); padding: var(--space-4); }
+.preflight-notice { border-radius: 0; }
+.preflight-ready-notice { border-radius: 0; display: none; }
+.preflight-start { min-width: 200px; font-weight: 700; }
+.preflight-mic-guide-title { text-transform: uppercase; color: var(--sign-blue); }
+#buffer-progress-bar { width: 0%; }
+#buffer-progress-bar.preflight-buffer-complete { width: 100%; }

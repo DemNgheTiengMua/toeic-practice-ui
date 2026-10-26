@@ -396,7 +396,7 @@ public sealed class ExamsControllerTests
     {
         var resDto = new AttemptResultDto(
             100, 1, "ETS 2024 — Test 1", 1, "TOEIC", "TOEIC", AttemptStatusDto.Graded,
-            DateTimeOffset.UtcNow.AddHours(-2), DateTimeOffset.UtcNow, 7200, false,
+            new DateTimeOffset(2026, 10, 25, 21, 30, 0, TimeSpan.Zero), new DateTimeOffset(2026, 10, 25, 23, 30, 0, TimeSpan.Zero), 7200, false,
             750, "B1", "Threshold user",
             [new AttemptSkillScoreDto(1, "listening", "Listening", ModalityDto.Listening, 80, 400, 100)],
             700, 50);
@@ -404,12 +404,21 @@ public sealed class ExamsControllerTests
         var api = new TestApiClient { ResultDto = resDto };
 
         var controller = CreateController(api);
+        controller.HttpContext.Items[DateTimeFormatter.ZoneItemKey] = "Asia/Tokyo";
         var result = await controller.Result(100, CancellationToken.None);
 
         var viewResult = Assert.IsType<ViewResult>(result);
         var model = Assert.IsType<ExamResultViewModel>(viewResult.Model);
         Assert.Equal(750, model.Result.TotalScore);
         Assert.Equal(50, model.Result.ScoreDelta);
+        Assert.Equal("26 Oct 2026, 08:30", model.SubmittedAtDisplay);
+        Assert.Equal("2h 0m 0s", model.DurationDisplay);
+        Assert.Equal(80, model.TotalRawScore);
+        Assert.Equal(100, model.TotalQuestions);
+        Assert.Equal(80, model.AccuracyPercent);
+        Assert.Equal(80, Assert.Single(model.Skills).AccuracyPercent);
+        Assert.True(model.IsGraded);
+        Assert.False(model.IsAwaitingGrading);
     }
 
     [Fact]
@@ -484,7 +493,7 @@ public sealed class ExamsControllerTests
         var httpContext = new DefaultHttpContext { User = principal, RequestServices = serviceProvider };
         var currentUser = new CurrentUser(new HttpContextAccessor { HttpContext = httpContext });
 
-        var controller = new ExamsController(api, currentUser, NullLogger<ExamsController>.Instance, speakingApi)
+        var controller = new ExamsController(api, currentUser, NullLogger<ExamsController>.Instance, new WebMVC.Formatters.DateTimeFormatter(new HttpContextAccessor { HttpContext = httpContext }), speakingApi)
         {
             ControllerContext = new ControllerContext
             {
@@ -705,6 +714,10 @@ public sealed class ExamsControllerTests
         var model = Assert.IsType<ExamHistoryViewModel>(viewResult.Model);
         Assert.Equal(1, model.History.TotalAttempts);
         Assert.Equal(750, model.History.BestScore);
+        Assert.Equal(135, Assert.Single(model.ChartPoints).Height);
+        Assert.True(Assert.Single(model.ChartPoints).IsBest);
+        Assert.Equal("cefr__band is-current", Assert.Single(model.Bands).CssClass);
+        Assert.NotEmpty(Assert.Single(model.Attempts).SubmittedAtDisplay);
     }
 
     [Fact]
@@ -864,6 +877,47 @@ public sealed class ExamsControllerTests
         Assert.Equal(100, model.Preflight.AttemptId);
         Assert.True(model.Preflight.RequiresMicrophone);
         Assert.Single(model.Preflight.AudioUrls);
+    }
+
+    [Fact]
+    public async Task Preflight_for_placement_preserves_placement_destination_in_verification_form()
+    {
+        var controller = CreateController(new TestApiClient());
+
+        var result = await controller.Preflight(null, 100, CancellationToken.None, placementId: 42);
+
+        var model = Assert.IsType<ExamPreflightViewModel>(Assert.IsType<ViewResult>(result).Model);
+        Assert.Equal("/exams/preflight/100/verify?placementId=42", model.VerifyUrl);
+        Assert.Equal("/placement", model.InstructionsUrl);
+    }
+
+    [Fact]
+    public async Task VerifyPreflight_for_placement_returns_to_placement_sitting()
+    {
+        var api = new TestApiClient();
+        var controller = CreateController(api);
+
+        var result = await controller.VerifyPreflight(null, 100, null, CancellationToken.None, placementId: 42);
+
+        Assert.True(api.VerifyPreflightCalled);
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(PlacementController.Take), redirect.ActionName);
+        Assert.Equal("Placement", redirect.ControllerName);
+        Assert.Equal(42, redirect.RouteValues?["placementId"]);
+    }
+
+    [Fact]
+    public async Task VerifyPreflight_failure_preserves_placement_destination_for_retry()
+    {
+        var api = new TestApiClient { ExceptionToThrow = new ApiException("FAIL", "Verification failed", 500) };
+        var controller = CreateController(api);
+
+        var result = await controller.VerifyPreflight(null, 100, null, CancellationToken.None, placementId: 42);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(ExamsController.Preflight), redirect.ActionName);
+        Assert.Equal(100, redirect.RouteValues?["attemptId"]);
+        Assert.Equal(42, redirect.RouteValues?["placementId"]);
     }
 
     [Fact]

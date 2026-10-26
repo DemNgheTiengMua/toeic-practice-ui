@@ -3,11 +3,7 @@
     Layout = "_LearnerLayout";
     ViewData["Title"] = "Set Target Level";
     var view = Model.View;
-    var currentBandCode = view.CurrentBandCode ?? "Not assessed";
-    var currentScore = view.CurrentTotalScore ?? 0;
-    var targetCode = view.TargetBandCode ?? view.AvailableBands.FirstOrDefault(b => !b.IsCurrent)?.Code ?? "B2";
-    var targetBand = view.AvailableBands.FirstOrDefault(b => b.Code == targetCode);
-    var pointsNeeded = targetBand != null && currentScore > 0 ? Math.Max(0, targetBand.MinTotal - currentScore) : 0;
+
 }
 
 <div class="context-bar">
@@ -25,7 +21,7 @@
   </div>
 </div>
 
-<div class="container stack">
+<div class="container stack" id="target-band-page" data-current-score="@Model.CurrentScore">
   <nav class="breadcrumbs" aria-label="Breadcrumb">
     <a href="/dashboard" class="breadcrumbs__item">Home</a>
     <span class="breadcrumbs__separator" aria-hidden="true">›</span>
@@ -61,18 +57,13 @@
     <div class="card__body">
       <div class="cefr">
         <div class="cefr__head">
-          <span class="cefr__current font-mono">@(view.CurrentBandCode ?? "Start") to <span id="cefr-target-display">@targetCode</span></span>
-          <span>@(currentScore > 0 ? $"{currentScore} points now · " : "")<span id="cefr-needed-display">@(targetBand != null ? $"{targetBand.MinTotal} needed" : "")</span></span>
+          <span class="cefr__current font-mono">@(view.CurrentBandCode ?? "Start") to <span id="cefr-target-display">@Model.TargetCode</span></span>
+          <span>@(Model.CurrentScore > 0 ? $"{Model.CurrentScore} points now · " : "")<span id="cefr-needed-display">@Model.NeededDisplay</span></span>
         </div>
         <div class="cefr__track" role="img" aria-label="Target level tracking">
-          @foreach (var band in view.CefrBands)
+          @foreach (var band in Model.Bands)
           {
-            var classes = "cefr__band";
-            if (band.IsCurrent) classes += " is-current";
-            else if (band.IsReached) classes += " is-reached";
-
-            var label = band.Code == "below_A1" ? "<A1" : band.Code;
-            <span class="@classes font-mono" id="cefr-band-@band.Code">@label</span>
+            <span class="@band.CssClass font-mono" id="cefr-band-@band.Code">@band.Label</span>
           }
         </div>
         <div class="cefr__scale" aria-hidden="true">
@@ -82,9 +73,9 @@
           }
         </div>
         <p class="cefr__note" id="cefr-note-display">
-          @if (pointsNeeded > 0)
+          @if (Model.PointsNeeded > 0)
           {
-            <span>Points to target: @pointsNeeded points gap from your starting placement score.</span>
+            <span>Points to target: @Model.PointsNeeded points gap from your starting placement score.</span>
           }
           else
           {
@@ -102,7 +93,7 @@
       <div class="option-list" role="radiogroup" aria-label="Target level">
         @foreach (var opt in view.AvailableBands)
         {
-          var isChecked = opt.Code == targetCode;
+          var isChecked = opt.Code == Model.TargetCode;
           <label class="option @(isChecked ? "is-selected" : "")">
             <input class="option__input js-target-radio" type="radio" name="TargetBandCode"
                    value="@opt.Code" @(isChecked ? "checked" : "")
@@ -132,26 +123,4 @@
   </form>
 </div>
 
-<script>
-  document.querySelectorAll('.js-target-radio').forEach(radio => {
-    radio.addEventListener('change', function () {
-      document.querySelectorAll('.option').forEach(l => l.classList.remove('is-selected'));
-      this.closest('.option')?.classList.add('is-selected');
-
-      const code = this.value;
-      const min = parseInt(this.getAttribute('data-min'), 10) || 0;
-      const targetDisplay = document.getElementById('cefr-target-display');
-      if (targetDisplay) targetDisplay.textContent = code;
-
-      const neededDisplay = document.getElementById('cefr-needed-display');
-      if (neededDisplay) neededDisplay.textContent = min + ' needed';
-
-      const currentScore = @currentScore;
-      const noteDisplay = document.getElementById('cefr-note-display');
-      if (noteDisplay && currentScore > 0) {
-        const gap = Math.max(0, min - currentScore);
-        noteDisplay.textContent = `Points to target: ${gap} points gap from your starting placement score.`;
-      }
-    });
-  });
-</script>
+<script src="~/js/placement/target-band.js" asp-append-version="true"></script>

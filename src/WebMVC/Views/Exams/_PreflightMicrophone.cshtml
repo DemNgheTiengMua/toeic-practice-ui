@@ -1,0 +1,98 @@
+@model ExamPreflightViewModel
+<section class="preflight-panel card" id="mic-check-card">
+  <div class="preflight-panel-header card__header">
+    <div class="row row--between row--middle">
+      <div class="row row--middle gap-2">
+        <span class="preflight-step badge font-sign">STEP 3</span>
+        <strong class="preflight-label font-sign">
+          Interactive Microphone & Voice Quality Check
+        </strong>
+      </div>
+      <span id="mic-status-badge" class="badge @Model.VerificationBadgeClass font-sign" role="status" aria-live="polite">
+        @Model.MicrophoneStatusLabel
+      </span>
+    </div>
+  </div>
+  <div class="preflight-panel-body card__body stack gap-3">
+    <!-- Positioning Guide -->
+    <div class="preflight-mic-guide alert alert--info">
+      <strong class="preflight-mic-guide-title font-sign">Microphone Positioning Guide:</strong>
+      <ul class="preflight-guide-list text-sm mt-1 mb-0">
+        <li>Position your headset or lapel microphone <strong>2 to 3 cm</strong> from the corner of your mouth.</li>
+        <li>Do not breathe directly into the microphone capsule.</li>
+        <li>Maintain a steady, normal speaking voice during all responses.</li>
+      </ul>
+    </div>
+
+    <div class="field">
+      <label class="field__label font-sign" for="mic-select">Microphone input device</label>
+      <select class="preflight-device field__input" id="mic-select">
+        <option value="default">System default microphone</option>
+      </select>
+    </div>
+
+    <!-- Live Level Meter -->
+    <div>
+      <div class="row row--between mb-1">
+        <span class="text-xs font-sign text-muted uppercase">Microphone Live Level Meter</span>
+        <span id="meter-db-text" class="font-mono text-xs">-inf dBFS</span>
+      </div>
+      <div class="preflight-meter audio-equipment__meter">
+        <span id="mic-meter-fill" class="preflight-meter-fill"></span>
+        <i class="preflight-meter-voice audio-equipment__tick audio-equipment__tick--voice" title="Voice threshold (-45 dBFS)" aria-hidden="true"></i>
+        <i class="preflight-meter-loud audio-equipment__tick audio-equipment__tick--loud" title="Clipping threshold (-6 dBFS)" aria-hidden="true"></i>
+      </div>
+      <div class="row row--between mt-1 text-xs text-muted">
+        <span>Left tick = Voice detect (-45 dBFS)</span>
+        <span id="mic-signal-label" class="badge badge--muted font-sign">NO SIGNAL</span>
+        <span>Right tick = Overload (-6 dBFS)</span>
+      </div>
+    </div>
+
+    <!-- Interactive Voice Sample Recording -->
+    <div class="preflight-sample-task card">
+      <div class="stack gap-2">
+        <div>
+          <strong class="font-sign text-sm text-uppercase">Sample Recording Task:</strong>
+          <p class="preflight-sample-prompt text-sm mt-1 mb-0">
+            "The quick brown fox jumps over the lazy dog."
+          </p>
+        </div>
+
+        <div class="row row--middle gap-3 mt-1">
+          <button type="button" id="btn-start-sample" class="btn btn--sm btn--primary">
+            Record 3s Sample
+          </button>
+          <span id="sample-countdown" class="preflight-initially-hidden font-mono text-sm">3s</span>
+          <span id="sample-status-text" class="text-xs text-muted">Press to record and verify microphone clarity.</span>
+        </div>
+
+        <!-- Recorded Sample Playback & Clarity Prompt -->
+        <div id="sample-review-panel" class="preflight-sample-review stack gap-2 mt-2 pt-2">
+          <div class="row row--between row--middle">
+            <span class="text-sm"><strong>Review Sample:</strong> Audio recorded successfully.</span>
+            <button type="button" id="btn-replay-sample" class="btn btn--ghost btn--sm">
+              Replay Audio
+            </button>
+          </div>
+
+          <div class="preflight-clarity alert alert--warning">
+            <p class="text-sm no-margin font-sign"><strong>CLARITY CONFIRMATION:</strong> Is your voice recording clear, audible, and free of excessive static?</p>
+            <div class="row gap-2 mt-2">
+              <button type="button" id="btn-mic-confirm-yes" class="btn btn--sm btn--primary">
+                Yes, Audio is Clear
+              </button>
+              <button type="button" id="btn-mic-confirm-no" class="btn btn--sm btn--secondary">
+                No, Re-test
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div id="mic-confirmed-success" class="preflight-mic-success alert alert--success mt-2" role="status">
+          <strong>Microphone Verified!</strong> Your sample audio is clear. The microphone check is complete.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

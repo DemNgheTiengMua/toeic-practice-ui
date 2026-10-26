@@ -4,7 +4,7 @@
     var instr = Model.Instructions;
     ViewData["Title"] = $"Instructions — {instr.ExamName}";
     ViewData["Description"] = $"Mock exam instructions for {instr.ExamName}.";
-    var hasCredits = instr.CreditBalance >= instr.CreditCost;
+
 }
 
 <nav class="breadcrumbs" aria-label="Breadcrumb">
@@ -20,12 +20,11 @@
     <h1 class="m-0 mb-1">Before you begin: @instr.ExamName</h1>
     <p class="text-muted no-margin">
       Certificate: <strong>@instr.CertCode</strong> · Duration: <strong>@instr.DurationMinutes minutes</strong>
-      @{ var questionTotal = instr.Sections.Count > 0 ? instr.Sections.Sum(s => s.QuestionCount) : instr.QuestionCount; }
-      @(questionTotal.HasValue ? $"· Questions: {questionTotal}" : "")
+      @(Model.QuestionTotal.HasValue ? $"· Questions: {Model.QuestionTotal}" : "")
     </p>
   </div>
   <div>
-    <span class="badge @(hasCredits ? "badge--info" : "badge--warning")">
+    <span class="badge @(Model.HasCredits ? "badge--info" : "badge--warning")">
       @instr.CreditBalance @(instr.CreditBalance == 1 ? "credit" : "credits") left
     </span>
   </div>
@@ -36,7 +35,7 @@
   <div class="alert alert--danger" role="alert">@Model.ErrorMessage</div>
 }
 
-@if (!hasCredits)
+@if (!Model.HasCredits)
 {
   <div class="card">
     <div class="card__body">
@@ -83,7 +82,7 @@ else
             <tfoot>
               <tr>
                 <th colspan="2">Total · @instr.DurationMinutes minutes</th>
-                <th>@questionTotal</th>
+                <th>@Model.QuestionTotal</th>
               </tr>
             </tfoot>
           </table>
@@ -91,12 +90,9 @@ else
       </div>
     }
 
-    @if (instr.Sections.Any(s => s.Modality is ModalityDto.Listening or ModalityDto.Speaking))
+    @if (Model.NeedsAudioCheck)
     {
-      <partial name="_AudioEquipmentCheck" model='new WebMVC.Models.AudioEquipmentCheckModel(
-          ShowInput: instr.Sections.Any(s => s.Modality == ModalityDto.Speaking),
-          ShowOutput: instr.Sections.Any(s => s.Modality == ModalityDto.Listening),
-          Title: "Audio equipment check")' />
+      <partial name="_AudioEquipmentCheck" model="Model.AudioCheck" />
     }
 
     <div class="card">
@@ -106,7 +102,7 @@ else
           <li>Answers are saved automatically as you make each selection.</li>
           <li>Countdown is strictly tracked against the server clock. Closing the browser does not pause the timer.</li>
           <li>When time expires, the attempt will automatically submit and be scored on the questions you answered.</li>
-          <li>Starting this exam will deduct <strong>@instr.CreditCost credit</strong> from your wallet. You will have @(instr.CreditBalance - instr.CreditCost) credits left.</li>
+          <li>Starting this exam will deduct <strong>@instr.CreditCost credit</strong> from your wallet. You will have @Model.CreditsAfterStart credits left.</li>
           <li>Make sure your device audio is connected and functioning before starting.</li>
         </ul>
       </div>
@@ -129,16 +125,6 @@ else
   </div>
 
   @section Scripts {
-  <script>
-    (function () {
-      var check = document.getElementById('confirm-ready');
-      var startBtn = document.getElementById('start-btn');
-      if (check && startBtn) {
-        check.addEventListener('change', function () {
-          startBtn.disabled = !check.checked;
-        });
-      }
-    })();
-  </script>
+  <script src="~/js/exams/instructions.js" asp-append-version="true"></script>
   }
 }

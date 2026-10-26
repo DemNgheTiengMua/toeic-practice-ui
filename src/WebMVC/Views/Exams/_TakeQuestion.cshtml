@@ -1,0 +1,71 @@
+@model ExamTakeViewModel
+@{
+    var take = Model.Display;
+    var q = take.Question;
+}
+<!-- Question Content Pane (Exam Shell Swap Target) -->
+<div class="stack" id="question-pane">
+  <partial name="_TakeQuestionMedia" model="Model" />
+  <div class="question" id="question-card">
+    <div class="question__meta row row--between" id="question-meta-bar" style="@(q.IsCluster ? "display:none;" : "")">
+      <div class="row row--tight">
+        <span class="question__number" id="question-number-display">Question @q.DisplayOrder</span>
+        <span class="badge badge--muted" id="question-section-display">@q.SectionName</span>
+      </div>
+      <div>
+        <button type="button" class="btn btn--ghost btn--sm @q.FlagClass" id="flag-btn"
+                aria-pressed="@q.FlagState"
+                data-flagged="@q.FlagState">
+          @q.FlagLabel
+        </button>
+      </div>
+    </div>
+
+    <p class="question__stem ee-tokenized-text" id="question-stem-display" style="@(q.HideStem ? "display:none;" : "")">
+      @q.Stem
+    </p>
+
+    <!-- Mandatory Prompt Keyword Badges -->
+    <div id="required-keywords-area" class="required-keywords-area mt-2 mb-2" style="@(q.HasRequiredKeywords ? "" : "display:none;")">
+      <div class="row" style="align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+        <span class="text-sm font-bold" style="font-family: 'IBM Plex Sans Condensed', sans-serif; text-transform: uppercase; letter-spacing: 0.04em;">Mandatory Keywords:</span>
+        <div id="required-keywords-list" class="row row--wrap" style="gap: 0.35rem; display: inline-flex;"></div>
+      </div>
+    </div>
+
+    <div class="option-list @(q.HideOptionText ? "option-list--masked" : "")" id="option-list" role="radiogroup" aria-label="Answer for question @q.DisplayOrder" style="@(q.IsFreeResponse || q.IsCluster ? "display:none;" : "")">
+      @foreach (var opt in q.Options)
+      {
+        <label class="option @(opt.IsSelected ? "is-selected" : "") @(q.HideOptionText ? "option--masked" : "")">
+          <input class="option__input js-option-radio" type="radio" name="selectedOptionId"
+                 value="@opt.OptionId" @(opt.IsSelected ? "checked" : "")>
+          <span class="option__marker">@opt.Label</span>
+          @if (!q.HideOptionText)
+          {
+            <span class="option__text">@opt.Text</span>
+          }
+        </label>
+      }
+    </div>
+
+    <partial name="_TakeClusters" model="Model" />
+    <!-- Dynamic 11-Component Widgets (multi_select, inline_completion, dropdown, drag_drop) -->
+    <div id="component-widget-container" class="stack mt-3" style="display:none;"></div>
+
+    <partial name="_TakeSpeaking" model="Model" />
+    <partial name="_TakeWriting" model="Model" />
+    <div id="free-response-container" class="stack" style="display:none; margin-top: 1rem;"></div>
+  </div>
+
+  <!-- Bottom Question Navigation Row -->
+  <div class="row row--between mt-4" style="align-items: center;">
+    <div>
+      <button type="button" class="btn" id="btn-prev" @(q.CanGoPrevious ? "" : "disabled") style="@(q.HidePrevious ? "display:none;" : "")">Previous</button>
+    </div>
+
+    <div class="row" style="gap: var(--space-3); align-items: center;">
+      <button type="button" class="btn btn--secondary" id="btn-open-review-screen" style="display:none;">Review Screen</button>
+      <button type="button" class="btn btn--primary" id="btn-next" style="@(q.IsSystemPacedAuto ? "display:none;" : "")">@q.NextLabel</button>
+    </div>
+  </div>
+</div>

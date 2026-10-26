@@ -1,0 +1,13 @@
+@model PlacementTakeViewModel
+@if (Model.ShowPhases)
+{
+  <section id="phase-progress" class="phase-progress" aria-label="Exam phases">
+    @foreach (var phase in Model.Phases)
+    {
+      <div class="phase-progress__item" data-phase-skill="@phase.SkillCode" aria-current="@phase.AriaCurrent">
+        <strong>@phase.SkillName</strong>
+        <span class="phase-progress__timer" data-phase-timer="@phase.SkillCode">--:--</span>
+      </div>
+    }
+  </section>
+}

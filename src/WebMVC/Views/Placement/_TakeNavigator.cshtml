@@ -1,0 +1,56 @@
+@model PlacementTakeViewModel
+<!-- Sidebar Navigator -->
+<aside class="exam-sidebar stack">
+  <div class="card">
+    <div class="card__header">
+      <div class="row row--between">
+        <strong class="text-sm">Progress</strong>
+        <span class="text-xs text-muted" id="progress-text">@Model.Take.AnsweredCount/@Model.Take.TotalQuestions answered</span>
+      </div>
+    </div>
+    <div class="card__body stack">
+      <div class="progress" role="progressbar" aria-valuenow="@Model.Take.AnsweredCount" aria-valuemin="0" aria-valuemax="@Model.Take.TotalQuestions">
+        <div class="progress__bar" id="progress-bar"></div>
+      </div>
+
+      <div class="navigator">
+        @foreach (var grp in Model.NavigatorGroups)
+        {
+          <div class="navigator__part">
+            <div class="navigator__part-head row row--between">
+              <span>@grp.Title</span>
+              <span class="navigator__range font-mono text-xs">@grp.RangeLabel</span>
+            </div>
+            <div class="navigator__grid" role="group" aria-label="@grp.AriaLabel">
+              @foreach (var cell in grp.Items)
+              {
+                <a href="@cell.Url"
+                   class="@cell.CssClass"
+                   id="nav-cell-@cell.QuestionId"
+                   aria-label="@cell.AriaLabel"
+                   aria-current="@cell.AriaCurrent">
+                  @cell.DisplayOrder
+                </a>
+              }
+            </div>
+          </div>
+        }
+      </div>
+
+      <div class="text-xs stack take-gap-1">
+        <div class="row row--middle row--tight">
+          <span class="navigator__cell navigator__cell--swatch is-answered" aria-hidden="true">1</span> answered
+        </div>
+        <div class="row row--middle row--tight">
+          <span class="navigator__cell navigator__cell--swatch is-unanswered" aria-hidden="true">2</span> unanswered
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p class="text-xs text-muted no-margin" role="note">
+    The placement test is free and deducts no credits. Your result sets the starting level of your learning path.
+  </p>
+
+  <button type="button" class="btn btn--danger btn--full js-open-submit-modal">Submit test</button>
+</aside>

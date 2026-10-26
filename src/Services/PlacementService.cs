@@ -11,43 +11,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Services;
 
-public class PlacementException(string code, string message) : Exception(message)
-{
-    public const string ExamNotFound = "exam_not_found";
-    public const string PlacementNotFound = "placement_not_found";
-    public const string PlacementNotActive = "placement_not_active";
-    public const string PlacementExpired = "placement_expired";
-    public const string PlacementNotFinished = "placement_not_finished";
-    public const string QuestionNotFound = "question_not_found";
-    public const string InvalidOption = "invalid_option";
-    public const string TargetBandInvalid = "target_band_invalid";
-
-    public string Code { get; } = code;
-}
-
-public interface IPlacementService
-{
-    Task<PlacementCatalogView> GetPlacementCatalogAsync(int userId, CancellationToken cancellationToken = default);
-
-    Task<PlacementTestInfo> StartPlacementTestAsync(int userId, int examId, CancellationToken cancellationToken = default);
-
-    Task<PlacementTakeView> GetPlacementTakeAsync(int userId, int placementId, int? questionDisplayOrder, CancellationToken cancellationToken = default);
-
-    Task<SaveAttemptAnswerResult> SaveAnswerAsync(int userId, int placementId, int questionId, int? selectedOptionId, bool isFlagged, CancellationToken cancellationToken = default, string? responseText = null, string? selectedOptionIdsJson = null);
-
-    Task<SaveAttemptDraftResult> SaveDraftAsync(int userId, int placementId, int questionId, string? responseText, CancellationToken cancellationToken = default);
-
-    Task<PlacementGradingStatusView> GetGradingStatusAsync(int userId, int placementId, CancellationToken cancellationToken = default);
-
-    Task<PlacementResultView> SubmitPlacementTestAsync(int userId, int placementId, bool isAutoSubmit, CancellationToken cancellationToken = default);
-
-    Task<PlacementResultView> GetPlacementResultAsync(int userId, int placementId, CancellationToken cancellationToken = default);
-
-    Task<TargetBandView> GetTargetBandViewAsync(int userId, CancellationToken cancellationToken = default);
-
-    Task<SaveTargetBandResult> SetTargetBandAsync(int userId, string targetBandCode, CancellationToken cancellationToken = default);
-}
-
 public sealed class PlacementService(
     CompanionDbContext db,
     ILearnerService learners,
@@ -223,6 +186,24 @@ public sealed class PlacementService(
             attempt.ExpiresAt,
             remainingSeconds,
             attempt.IsAutoSubmitted);
+    }
+
+    public async Task<PreflightStatusView> GetPlacementPreflightStatusAsync(int userId, int placementId, CancellationToken cancellationToken = default)
+    {
+        var attemptId = await db.PlacementTests
+            .Where(p => p.PlacementId == placementId && p.UserId == userId)
+            .Select(p => p.AttemptId)
+            .SingleOrDefaultAsync(cancellationToken)
+            ?? throw new PlacementException(PlacementException.PlacementNotFound, $"Placement test {placementId} not found.");
+
+        try
+        {
+            return await _attemptEngine.GetPreflightStatusAsync(attemptId, userId, cancellationToken);
+        }
+        catch (AttemptEngineException ex)
+        {
+            throw MapPlacementException(ex);
+        }
     }
 
     public async Task<PlacementTakeView> GetPlacementTakeAsync(int userId, int placementId, int? questionDisplayOrder, CancellationToken cancellationToken = default)

@@ -109,6 +109,32 @@ public sealed class PlacementControllerTests
         Assert.Equal("Something broke", controller.TempData["ErrorMessage"]);
     }
 
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public async Task Take_with_unverified_equipment_redirects_to_shared_preflight(bool audio, bool microphone)
+    {
+        var api = new TestApiClient
+        {
+            Preflight = new PreflightStatusDto(100, 1, "Placement", "TOEIC", "TOEIC", 45,
+                true, audio, microphone, false, null, []),
+            PlacementTake = new PlacementTakeViewDto(42, 100, 1, "Placement", "TOEIC", PlacementStatusDto.InProgress,
+                DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddMinutes(45), 2700, 1, 0, 1,
+                new AttemptQuestionDto(10, 1, 20, 1, "P1", "Part 1", "listening", "Listening", ModalityDto.Listening,
+                    "Stem", null, null, null, null, null, null, null, [], null, false), [], false)
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.Take(42, null, CancellationToken.None);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(ExamsController.Preflight), redirect.ActionName);
+        Assert.Equal("Exams", redirect.ControllerName);
+        Assert.Equal(100, redirect.RouteValues?["attemptId"]);
+        Assert.Equal(42, redirect.RouteValues?["placementId"]);
+        Assert.True(api.PreflightRequested);
+    }
+
     [Fact]
     public async Task Take_with_active_placement_returns_view()
     {
@@ -346,7 +372,7 @@ public sealed class PlacementControllerTests
         {
             PlacementResult = new PlacementResultViewDto(
                 42, 100, 1, "TOEIC", "TOEIC Placement Test — Standard",
-                DateTimeOffset.UtcNow, 30, 20, 750, "B1", "Intermediate",
+                new DateTimeOffset(2026, 10, 25, 23, 30, 0, TimeSpan.Zero), 30, 20, 750, "B1", "Intermediate",
                 [
                     new CefrBandInfoDto("A2", "Elementary", 225, 545, true, false, false),
                     new CefrBandInfoDto("B1", "Intermediate", 550, 780, true, true, false),
@@ -361,6 +387,7 @@ public sealed class PlacementControllerTests
         };
 
         var controller = CreateController(api);
+        controller.HttpContext.Items[DateTimeFormatter.ZoneItemKey] = "Asia/Tokyo";
         var result = await controller.Result(42, CancellationToken.None);
 
         var viewResult = Assert.IsType<ViewResult>(result);
@@ -369,6 +396,11 @@ public sealed class PlacementControllerTests
         Assert.Equal(750, model.Result.TotalScore);
         Assert.Equal("B1", model.Result.ResultBandCode);
         Assert.Equal("Reading", model.Result.WeakerSkillName);
+        Assert.Equal("26 October 2026", model.TakenAtDisplay);
+        Assert.Equal(940, model.MaximumScore);
+        Assert.Equal(380, model.Listening?.ScaledScore);
+        Assert.Equal(370, model.Reading?.ScaledScore);
+        Assert.Equal("cefr__band is-current", model.Bands[1].CssClass);
     }
 
     [Fact]
@@ -528,7 +560,7 @@ public sealed class PlacementControllerTests
         var httpContext = new DefaultHttpContext { User = principal, RequestServices = serviceProvider };
         var currentUser = new CurrentUser(new HttpContextAccessor { HttpContext = httpContext });
 
-        var controller = new PlacementController(api, currentUser, NullLogger<PlacementController>.Instance)
+        var controller = new PlacementController(api, currentUser, NullLogger<PlacementController>.Instance, new WebMVC.Formatters.DateTimeFormatter(new HttpContextAccessor { HttpContext = httpContext }))
         {
             ControllerContext = new ControllerContext
             {
@@ -564,6 +596,16 @@ public sealed class PlacementControllerTests
         public PlacementCatalogViewDto? PlacementCatalog { get; set; }
         public PlacementTestInfoDto? StartPlacementResponse { get; set; }
         public PlacementTakeViewDto? PlacementTake { get; set; }
+        public PreflightStatusDto? Preflight { get; set; }
+        public bool PreflightRequested { get; private set; }
+
+        public Task<PreflightStatusDto> GetPlacementPreflightStatusAsync(int placementId, CancellationToken cancellationToken = default)
+        {
+            PreflightRequested = true;
+            return ExceptionToThrow != null ? Task.FromException<PreflightStatusDto>(ExceptionToThrow)
+                : Task.FromResult(Preflight ?? new PreflightStatusDto(100, 1, "Placement", "TOEIC", "TOEIC", 45,
+                    false, false, false, true, DateTimeOffset.UtcNow, []));
+        }
         public SaveAnswerResultDto? SaveAnswerResult { get; set; }
         public PlacementResultViewDto? PlacementResult { get; set; }
         public TargetBandViewDto? TargetBandView { get; set; }
@@ -576,8 +618,14 @@ public sealed class PlacementControllerTests
         public Task<PlacementTestInfoDto> StartPlacementTestAsync(StartPlacementTestRequest request, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<PlacementTestInfoDto>(ExceptionToThrow) : Task.FromResult(StartPlacementResponse!);
 
-        public Task<PlacementTakeViewDto> GetPlacementTakeAsync(int placementId, int? questionDisplayOrder = null, CancellationToken cancellationToken = default) =>
-            ExceptionToThrow != null ? Task.FromException<PlacementTakeViewDto>(ExceptionToThrow) : Task.FromResult(PlacementTake!);
+        public Task<PlacementTakeViewDto> GetPlacementTakeAsync(int placementId, int? questionDisplayOrder = null, CancellationToken cancellationToken = default)
+        {
+            if (Preflight is { RequiresPreflight: true, IsVerified: false })
+            {
+                return Task.FromException<PlacementTakeViewDto>(new ApiException(ApiError.Codes.PreflightRequired, "Preflight required", 400));
+            }
+            return ExceptionToThrow != null ? Task.FromException<PlacementTakeViewDto>(ExceptionToThrow) : Task.FromResult(PlacementTake!);
+        }
 
         public Task<SavePlacementDraftResponseDto> SavePlacementDraftAsync(int placementId, SavePlacementDraftRequestDto request, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<SavePlacementDraftResponseDto>(ExceptionToThrow) : Task.FromResult(new SavePlacementDraftResponseDto(placementId, request.QuestionId, DateTimeOffset.UtcNow, request.ResponseText?.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length ?? 0));

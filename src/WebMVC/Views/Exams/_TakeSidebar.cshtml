@@ -1,0 +1,63 @@
+@model ExamTakeViewModel
+@{
+    var take = Model.Display;
+}
+<!-- Sidebar Navigator (Exam Shell Persistent) -->
+<aside class="exam-sidebar stack">
+  <div class="card">
+    <div class="card__header">
+      <div class="row row--between">
+        <strong class="text-sm">Exam Progress</strong>
+        <span class="text-xs text-muted" id="progress-text">@take.AnsweredCount/@take.TotalQuestions answered</span>
+      </div>
+    </div>
+    <div class="card__body stack">
+      <div class="progress" role="progressbar" aria-valuenow="@take.AnsweredCount" aria-valuemin="0" aria-valuemax="@take.TotalQuestions">
+        <div class="progress__bar" id="progress-bar" style="width: @take.ProgressPercent%"></div>
+      </div>
+      <div class="row row--between text-xs text-muted">
+        <span>Flagged: <strong id="sidebar-flagged-count">@take.FlaggedCount</strong></span>
+        <span>Unanswered: <strong id="sidebar-unanswered-count">@take.UnansweredCount</strong></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card__header">
+      <strong class="text-sm">Questions (1–@take.TotalQuestions)</strong>
+      <button type="button" class="btn btn--ghost btn--sm" id="flagged-filter-btn" disabled>Show flagged</button>
+    </div>
+    <div class="card__body stack">
+      <div class="navigator__grid" role="group" aria-label="Question Navigator" id="navigator-grid">
+        @foreach (var item in take.Navigator)
+        {
+          <button type="button"
+             class="navigator__cell @item.NavigatorClass"
+             id="nav-cell-@item.QuestionId"
+             data-question-id="@item.QuestionId"
+             data-display-order="@item.DisplayOrder"
+             @(item.IsLocked ? "disabled" : "")
+             title="@item.NavigatorTitle">
+            @item.DisplayOrder
+          </button>
+        }
+      </div>
+
+      <div class="text-xs stack mt-2" style="gap: var(--space-1)">
+        <div class="row" style="align-items: center; gap: var(--space-2);">
+          <span class="navigator__cell navigator__cell--swatch is-answered" aria-hidden="true">1</span> Answered
+        </div>
+        <div class="row" style="align-items: center; gap: var(--space-2);">
+          <span class="navigator__cell navigator__cell--swatch is-marked" aria-hidden="true">2</span> Flagged for review
+        </div>
+        <div class="row" style="align-items: center; gap: var(--space-2);">
+          <span class="navigator__cell navigator__cell--swatch is-unanswered" aria-hidden="true">3</span> Unanswered
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <button type="button" class="btn btn--danger js-open-submit-modal" id="btn-sidebar-submit" style="width: 100%;">
+    Submit exam
+  </button>
+</aside>

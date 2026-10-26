@@ -1,0 +1,67 @@
+@model ExamTakeViewModel
+@{
+    var take = Model.Display;
+    var q = take.Question;
+}
+<!-- Automated Speaking Pacer Workspace Container (SYSTEM_PACED_AUTO) -->
+<div id="speaking-pacer-container" class="speaking-pacer-container stack" style="@(q.IsSystemPacedAuto ? "" : "display:none;")">
+  <!-- Step 1: Prep Countdown Placard -->
+  <div id="speaking-prep-placard" class="speaking-pacer-placard speaking-pacer-placard--prep">
+    <span>PREPARATION TIME: <span id="speaking-prep-timer" class="speaking-timer-val">@(q.PrepSeconds)s</span></span>
+    <span class="badge" style="background:#ffffff; color:#0b4ea2; border:1px solid #14181d; font-family:'IBM Plex Sans Condensed',sans-serif; text-transform:uppercase;">Preparation</span>
+  </div>
+  <div id="speaking-prep-bar-box" class="speaking-pacer-bar">
+    <div id="speaking-prep-bar" class="speaking-pacer-bar__fill" style="width: 100%;"></div>
+  </div>
+
+  <!-- Step 3: Recording Countdown Placard (hidden during prep) -->
+  <div id="speaking-record-placard" class="speaking-pacer-placard speaking-pacer-placard--recording" style="display:none;">
+    <span><span class="rec-dot"></span>RECORDING IN PROGRESS: <span id="speaking-record-timer" class="speaking-timer-val">@(q.ResponseSeconds)s</span></span>
+    <span class="badge" style="background:#ffffff; color:#b31217; border:1px solid #14181d; font-family:'IBM Plex Sans Condensed',sans-serif; text-transform:uppercase;">Recording</span>
+  </div>
+  <div id="speaking-record-bar-box" class="speaking-pacer-bar" style="display:none;">
+    <div id="speaking-record-bar" class="speaking-pacer-bar__fill speaking-pacer-bar__fill--rec" style="width: 100%;"></div>
+  </div>
+
+  <!-- Live Audio Level Meter -->
+  <div id="audio-level-container" class="audio-level-meter-box" style="display:none;">
+    <div class="row row--between text-xs font-bold" style="font-family:'IBM Plex Sans Condensed',sans-serif; text-transform:uppercase;">
+      <span>Microphone input level</span>
+      <span id="audio-level-text" style="font-family:'IBM Plex Mono',monospace;">0%</span>
+    </div>
+    <div class="audio-level-meter" id="audio-level-meter">
+      <div id="audio-level-bar" class="audio-level-bar" style="width: 0%;"></div>
+    </div>
+  </div>
+
+  <!-- Step 4: Auto-Upload Status Placard -->
+  <div id="speaking-upload-placard" class="alert alert--info mt-2" style="display:none; border:2px solid #14181d; border-radius:0; font-family:'IBM Plex Sans Condensed',sans-serif; font-weight:700;">
+    Saving recording and advancing to next question...
+  </div>
+</div>
+
+<!-- Post-Section Recorded Audio Verification Screen (#speaking-verification-screen) -->
+<div id="speaking-verification-screen" class="speaking-verification-screen stack" style="display:none;">
+  <div class="row row--between" style="border-bottom: 2px solid #14181d; padding-bottom: 0.75rem; align-items: center;">
+    <h2 class="no-margin" style="font-family:'IBM Plex Sans Condensed',sans-serif; text-transform:uppercase; font-size:1.25rem;">
+      SPEAKING AUDIO VERIFICATION
+    </h2>
+    <span class="badge badge--muted" id="speaking-verification-count-badge" style="border:1px solid #14181d; font-family:'IBM Plex Mono',monospace;">0 items</span>
+  </div>
+  <p class="text-sm text-muted mt-2 mb-3">
+    All questions in the Speaking section are complete. Please review your audio recordings below before submitting for AI scoring.
+  </p>
+
+  <div id="speaking-verification-items" class="stack" style="gap: 1rem;">
+    <!-- Dynamic items populated via JS -->
+  </div>
+
+  <div class="row row--between mt-4" style="align-items: center; border-top: 2px solid #14181d; padding-top: 1rem;">
+    <span class="text-xs text-muted" style="font-style:italic;">
+      Once submitted, your recordings will be locked and queued for AI scoring.
+    </span>
+    <button type="button" class="btn btn--danger" id="btn-submit-speaking-verification" style="font-family:'IBM Plex Sans Condensed',sans-serif; text-transform:uppercase; font-weight:700; border-radius:0; border:2px solid #14181d; padding:0.6rem 1.25rem;">
+      Submit Speaking Phase for AI Grading
+    </button>
+  </div>
+</div>

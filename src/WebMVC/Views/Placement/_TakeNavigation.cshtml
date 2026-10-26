@@ -1,0 +1,25 @@
+@model PlacementTakeViewModel
+<!-- Navigation Row -->
+<div class="row row--between row--middle mt-4">
+  <div>
+    @if (Model.PreviousUrl is not null)
+    {
+      <a class="btn" href="@Model.PreviousUrl">Previous</a>
+    }
+    else
+    {
+      <button class="btn" disabled>Previous</button>
+    }
+  </div>
+
+  <div class="row take-gap-3">
+    @if (Model.NextUrl is not null)
+    {
+      <a class="btn btn--primary" href="@Model.NextUrl">Next question</a>
+    }
+    else
+    {
+      <button type="button" class="btn btn--danger js-open-submit-modal">Review & Submit test</button>
+    }
+  </div>
+</div>

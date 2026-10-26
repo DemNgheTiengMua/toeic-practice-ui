@@ -65,7 +65,7 @@ public sealed class ApiException : HttpRequestException
     public int Status { get; }
 }
 
-public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
+public sealed partial class CompanionApiClient(HttpClient http) : ICompanionApiClient
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
@@ -375,157 +375,6 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
     public Task<WalletDto> GetWalletAsync(string bearerToken, CancellationToken cancellationToken = default) =>
         GetAuthorizedAsync<WalletDto>("api/learner/wallet", bearerToken, cancellationToken);
 
-    public Task<MockExamListViewDto> GetMockExamsAsync(string bearerToken, CancellationToken cancellationToken = default) =>
-        GetAuthorizedAsync<MockExamListViewDto>("api/learner/exams", bearerToken, cancellationToken);
-
-    public Task<MockExamInstructionsDto> GetMockExamInstructionsAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) =>
-        GetAuthorizedAsync<MockExamInstructionsDto>($"api/learner/exams/{examId}/instructions", bearerToken, cancellationToken);
-
-    public async Task<StartMockExamResponse> StartMockExamAsync(int examId, string bearerToken, CancellationToken cancellationToken = default)
-    {
-        using var message = new HttpRequestMessage(HttpMethod.Post, $"api/learner/exams/{examId}/start");
-        AttachBearer(message, bearerToken);
-        using var response = await http.SendAsync(message, cancellationToken);
-        await EnsureSuccessAsync(response, cancellationToken);
-        return (await response.Content.ReadFromJsonAsync<StartMockExamResponse>(Json, cancellationToken))!;
-    }
-
-    public Task<AttemptTakeDto> GetAttemptTakeAsync(int attemptId, int? q, string bearerToken, CancellationToken cancellationToken = default)
-    {
-        var path = q.HasValue ? $"api/learner/attempts/{attemptId}?q={q.Value}" : $"api/learner/attempts/{attemptId}";
-        return GetAuthorizedAsync<AttemptTakeDto>(path, bearerToken, cancellationToken);
-    }
-
-    public async Task<SaveAnswerResultDto> SaveAttemptAnswerAsync(int attemptId, int questionId, SaveAnswerRequest request, string bearerToken, CancellationToken cancellationToken = default)
-    {
-        using var message = new HttpRequestMessage(HttpMethod.Post, $"api/learner/attempts/{attemptId}/answers/{questionId}")
-        {
-            Content = JsonContent.Create(request, options: Json),
-        };
-        AttachBearer(message, bearerToken);
-        using var response = await http.SendAsync(message, cancellationToken);
-        await EnsureSuccessAsync(response, cancellationToken);
-        return (await response.Content.ReadFromJsonAsync<SaveAnswerResultDto>(Json, cancellationToken))!;
-    }
-
-    public async Task<SaveAttemptDraftResponse> SaveAttemptDraftAsync(
-        int attemptId,
-        SaveAttemptDraftRequest request,
-        string bearerToken,
-        CancellationToken cancellationToken = default)
-    {
-        using var message = new HttpRequestMessage(HttpMethod.Post, $"api/learner/attempts/{attemptId}/draft")
-        {
-            Content = JsonContent.Create(request, options: Json),
-        };
-        AttachBearer(message, bearerToken);
-        using var response = await http.SendAsync(message, cancellationToken);
-        await EnsureSuccessAsync(response, cancellationToken);
-        return (await response.Content.ReadFromJsonAsync<SaveAttemptDraftResponse>(Json, cancellationToken))!;
-    }
-
-    public async Task<SubmitAttemptResponse> SubmitAttemptAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default)
-    {
-        using var message = new HttpRequestMessage(HttpMethod.Post, $"api/learner/attempts/{attemptId}/submit");
-        AttachBearer(message, bearerToken);
-        using var response = await http.SendAsync(message, cancellationToken);
-        await EnsureSuccessAsync(response, cancellationToken);
-        return (await response.Content.ReadFromJsonAsync<SubmitAttemptResponse>(Json, cancellationToken))!;
-    }
-
-    public async Task<SubmitAttemptResponse> SubmitAttemptWithDraftsAsync(
-        int attemptId,
-        SubmitAttemptRequest request,
-        string bearerToken,
-        CancellationToken cancellationToken = default)
-    {
-        using var message = new HttpRequestMessage(HttpMethod.Post, $"api/learner/attempts/{attemptId}/submit-with-drafts")
-        {
-            Content = JsonContent.Create(request, options: Json),
-        };
-        AttachBearer(message, bearerToken);
-        using var response = await http.SendAsync(message, cancellationToken);
-        await EnsureSuccessAsync(response, cancellationToken);
-        return (await response.Content.ReadFromJsonAsync<SubmitAttemptResponse>(Json, cancellationToken))!;
-    }
-
-    public async Task<AttemptTransitionResponse> TransitionSkillAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default)
-    {
-        using var message = new HttpRequestMessage(HttpMethod.Post, $"api/learner/attempts/{attemptId}/transition/skill");
-        AttachBearer(message, bearerToken);
-        using var response = await http.SendAsync(message, cancellationToken);
-        await EnsureSuccessAsync(response, cancellationToken);
-        return (await response.Content.ReadFromJsonAsync<AttemptTransitionResponse>(Json, cancellationToken))!;
-    }
-
-    public async Task<AttemptTransitionResponse> TransitionUnitAsync(int attemptId, TransitionUnitRequest request, string bearerToken, CancellationToken cancellationToken = default)
-    {
-        using var message = new HttpRequestMessage(HttpMethod.Post, $"api/learner/attempts/{attemptId}/transition/unit")
-        {
-            Content = JsonContent.Create(request, options: Json),
-        };
-        AttachBearer(message, bearerToken);
-        using var response = await http.SendAsync(message, cancellationToken);
-        await EnsureSuccessAsync(response, cancellationToken);
-        return (await response.Content.ReadFromJsonAsync<AttemptTransitionResponse>(Json, cancellationToken))!;
-    }
-
-    public async Task<AttemptTransitionResponse> TransitionGroupAsync(int attemptId, TransitionGroupRequest request, string bearerToken, CancellationToken cancellationToken = default)
-    {
-        using var message = new HttpRequestMessage(HttpMethod.Post, $"api/learner/attempts/{attemptId}/transition/group")
-        {
-            Content = JsonContent.Create(request, options: Json),
-        };
-        AttachBearer(message, bearerToken);
-        using var response = await http.SendAsync(message, cancellationToken);
-        await EnsureSuccessAsync(response, cancellationToken);
-        return (await response.Content.ReadFromJsonAsync<AttemptTransitionResponse>(Json, cancellationToken))!;
-    }
-
-    public async Task<AttemptTransitionResponse> StartAudioReviewAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default)
-    {
-        using var message = new HttpRequestMessage(HttpMethod.Post, $"api/learner/attempts/{attemptId}/audio-review/start");
-        AttachBearer(message, bearerToken);
-        using var response = await http.SendAsync(message, cancellationToken);
-        await EnsureSuccessAsync(response, cancellationToken);
-        return (await response.Content.ReadFromJsonAsync<AttemptTransitionResponse>(Json, cancellationToken))!;
-    }
-
-    public async Task CancelAttemptAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default)
-    {
-        using var message = new HttpRequestMessage(HttpMethod.Post, $"api/learner/attempts/{attemptId}/cancel");
-        AttachBearer(message, bearerToken);
-        using var response = await http.SendAsync(message, cancellationToken);
-        await EnsureSuccessAsync(response, cancellationToken);
-    }
-
-    public Task<AttemptResultDto> GetAttemptResultAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) =>
-        GetAuthorizedAsync<AttemptResultDto>($"api/learner/attempts/{attemptId}/result", bearerToken, cancellationToken);
-
-    public Task<ExamHistoryDto> GetExamHistoryAsync(string bearerToken, CancellationToken cancellationToken = default) =>
-        GetAuthorizedAsync<ExamHistoryDto>("api/learner/exams/history", bearerToken, cancellationToken);
-
-    public Task<AttemptReviewDto> GetAttemptReviewAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) =>
-        GetAuthorizedAsync<AttemptReviewDto>($"api/learner/attempts/{attemptId}/review", bearerToken, cancellationToken);
-
-    public Task<PreflightStatusDto> GetPreflightStatusAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) =>
-        GetAuthorizedAsync<PreflightStatusDto>($"api/learner/attempts/{attemptId}/preflight", bearerToken, cancellationToken);
-
-    public async Task<PreflightStatusDto> VerifyPreflightAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default)
-    {
-        using var message = new HttpRequestMessage(HttpMethod.Post, $"api/learner/attempts/{attemptId}/preflight/verify");
-        AttachBearer(message, bearerToken);
-        using var response = await http.SendAsync(message, cancellationToken);
-        await EnsureSuccessAsync(response, cancellationToken);
-        return (await response.Content.ReadFromJsonAsync<PreflightStatusDto>(Json, cancellationToken))!;
-    }
-
-    public Task<SittingSyncDto> SaveSittingSyncAsync(int attemptId, SittingSyncRequestDto request, string bearerToken, CancellationToken cancellationToken = default) =>
-        PostAuthorizedAsync<SittingSyncRequestDto, SittingSyncDto>($"api/learner/attempts/{attemptId}/sync", request, bearerToken, cancellationToken);
-
-    public Task<AttemptResumeDto> ResumeAttemptByCodeAsync(ResumeAttemptRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
-        PostAuthorizedAsync<ResumeAttemptRequest, AttemptResumeDto>("api/learner/attempts/resume", request, bearerToken, cancellationToken);
-
     public Task<AdminScoreConversionDto> GetAdminScoreConversionAsync(string? certCode, int? examId, string bearerToken, CancellationToken cancellationToken = default)
     {
         var query = new List<string>();
@@ -697,17 +546,6 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
         await EnsureSuccessAsync(response, cancellationToken);
     }
 
-    public Task<AiInsightDto> GetExamInsightAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default) =>
-        GetAuthorizedAsync<AiInsightDto>($"api/learner/insights/exam/{attemptId}", bearerToken, cancellationToken);
-
-    public async Task RetryExamInsightAsync(int attemptId, string bearerToken, CancellationToken cancellationToken = default)
-    {
-        using var message = new HttpRequestMessage(HttpMethod.Post, $"api/learner/insights/exam/{attemptId}/retry");
-        AttachBearer(message, bearerToken);
-        using var response = await http.SendAsync(message, cancellationToken);
-        await EnsureSuccessAsync(response, cancellationToken);
-    }
-
     public async Task RetryInsightAsync(int insightId, string bearerToken, CancellationToken cancellationToken = default)
     {
         using var message = new HttpRequestMessage(HttpMethod.Post, $"api/learner/insights/{insightId}/retry");
@@ -821,41 +659,6 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
         var fileName = response.Content.Headers.ContentDisposition?.FileName?.Trim('"') ?? $"audio_{attemptId}_{questionId}.webm";
         return (stream, contentType, fileName);
     }
-
-    public Task<PlacementCatalogViewDto> GetPlacementCatalogAsync(string bearerToken, CancellationToken cancellationToken = default) =>
-        GetAuthorizedAsync<PlacementCatalogViewDto>("api/learner/placement", bearerToken, cancellationToken);
-
-    public Task<PlacementTestInfoDto> StartPlacementTestAsync(StartPlacementTestRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
-        PostAuthorizedAsync<StartPlacementTestRequest, PlacementTestInfoDto>("api/learner/placement/start", request, bearerToken, cancellationToken);
-
-    public Task<PlacementTakeViewDto> GetPlacementTakeAsync(int placementId, int? questionDisplayOrder, string bearerToken, CancellationToken cancellationToken = default)
-    {
-        var url = questionDisplayOrder.HasValue
-            ? $"api/learner/placement/take/{placementId}?q={questionDisplayOrder.Value}"
-            : $"api/learner/placement/take/{placementId}";
-        return GetAuthorizedAsync<PlacementTakeViewDto>(url, bearerToken, cancellationToken);
-    }
-
-    public Task<SaveAnswerResultDto> SavePlacementAnswerAsync(int placementId, int questionId, SaveAnswerRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
-        PostAuthorizedAsync<SaveAnswerRequest, SaveAnswerResultDto>($"api/learner/placement/take/{placementId}/answers/{questionId}", request, bearerToken, cancellationToken);
-
-    public Task<SavePlacementDraftResponseDto> SavePlacementDraftAsync(int placementId, SavePlacementDraftRequestDto request, string bearerToken, CancellationToken cancellationToken = default) =>
-        PostAuthorizedAsync<SavePlacementDraftRequestDto, SavePlacementDraftResponseDto>($"api/learner/placement/take/{placementId}/draft", request, bearerToken, cancellationToken);
-
-    public Task<PlacementGradingStatusDto> GetPlacementGradingStatusAsync(int placementId, string bearerToken, CancellationToken cancellationToken = default) =>
-        GetAuthorizedAsync<PlacementGradingStatusDto>($"api/learner/placement/result/{placementId}/status", bearerToken, cancellationToken);
-
-    public Task<PlacementResultViewDto> SubmitPlacementTestAsync(int placementId, SubmitPlacementTestRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
-        PostAuthorizedAsync<SubmitPlacementTestRequest, PlacementResultViewDto>($"api/learner/placement/take/{placementId}/submit", request, bearerToken, cancellationToken);
-
-    public Task<PlacementResultViewDto> GetPlacementResultAsync(int placementId, string bearerToken, CancellationToken cancellationToken = default) =>
-        GetAuthorizedAsync<PlacementResultViewDto>($"api/learner/placement/result/{placementId}", bearerToken, cancellationToken);
-
-    public Task<TargetBandViewDto> GetTargetBandViewAsync(string bearerToken, CancellationToken cancellationToken = default) =>
-        GetAuthorizedAsync<TargetBandViewDto>("api/learner/target-band", bearerToken, cancellationToken);
-
-    public Task<SetTargetBandResultDto> SetTargetBandAsync(SetTargetBandRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
-        PostAuthorizedAsync<SetTargetBandRequest, SetTargetBandResultDto>("api/learner/target-band", request, bearerToken, cancellationToken);
 
     public Task<LearningPathSummaryDto> GetLearningPathAsync(string bearerToken, CancellationToken cancellationToken = default) =>
         GetAuthorizedAsync<LearningPathSummaryDto>("api/learner/learning-path", bearerToken, cancellationToken);
@@ -1426,72 +1229,6 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
     public Task<WalletDto> GetWalletAsync(CancellationToken cancellationToken = default) =>
         GetWalletAsync(string.Empty, cancellationToken);
 
-    public Task<MockExamListViewDto> GetMockExamsAsync(CancellationToken cancellationToken = default) =>
-        GetMockExamsAsync(string.Empty, cancellationToken);
-
-    public Task<MockExamInstructionsDto> GetMockExamInstructionsAsync(int examId, CancellationToken cancellationToken = default) =>
-        GetMockExamInstructionsAsync(examId, string.Empty, cancellationToken);
-
-    public Task<StartMockExamResponse> StartMockExamAsync(int examId, CancellationToken cancellationToken = default) =>
-        StartMockExamAsync(examId, string.Empty, cancellationToken);
-
-    public Task<AttemptTakeDto> GetAttemptTakeAsync(int attemptId, int? q, CancellationToken cancellationToken = default) =>
-        GetAttemptTakeAsync(attemptId, q, string.Empty, cancellationToken);
-
-    public Task<SaveAnswerResultDto> SaveAttemptAnswerAsync(int attemptId, int questionId, SaveAnswerRequest request, CancellationToken cancellationToken = default) =>
-        SaveAttemptAnswerAsync(attemptId, questionId, request, string.Empty, cancellationToken);
-
-    public Task<SaveAttemptDraftResponse> SaveAttemptDraftAsync(
-        int attemptId,
-        SaveAttemptDraftRequest request,
-        CancellationToken cancellationToken = default) =>
-        SaveAttemptDraftAsync(attemptId, request, string.Empty, cancellationToken);
-
-    public Task<SubmitAttemptResponse> SubmitAttemptAsync(int attemptId, CancellationToken cancellationToken = default) =>
-        SubmitAttemptAsync(attemptId, string.Empty, cancellationToken);
-
-    public Task<SubmitAttemptResponse> SubmitAttemptWithDraftsAsync(
-        int attemptId,
-        SubmitAttemptRequest request,
-        CancellationToken cancellationToken = default) =>
-        SubmitAttemptWithDraftsAsync(attemptId, request, string.Empty, cancellationToken);
-
-    public Task<AttemptTransitionResponse> TransitionSkillAsync(int attemptId, CancellationToken cancellationToken = default) =>
-        TransitionSkillAsync(attemptId, string.Empty, cancellationToken);
-
-    public Task<AttemptTransitionResponse> TransitionUnitAsync(int attemptId, TransitionUnitRequest request, CancellationToken cancellationToken = default) =>
-        TransitionUnitAsync(attemptId, request, string.Empty, cancellationToken);
-
-    public Task<AttemptTransitionResponse> TransitionGroupAsync(int attemptId, TransitionGroupRequest request, CancellationToken cancellationToken = default) =>
-        TransitionGroupAsync(attemptId, request, string.Empty, cancellationToken);
-
-    public Task<AttemptTransitionResponse> StartAudioReviewAsync(int attemptId, CancellationToken cancellationToken = default) =>
-        StartAudioReviewAsync(attemptId, string.Empty, cancellationToken);
-
-    public Task CancelAttemptAsync(int attemptId, CancellationToken cancellationToken = default) =>
-        CancelAttemptAsync(attemptId, string.Empty, cancellationToken);
-
-    public Task<AttemptResultDto> GetAttemptResultAsync(int attemptId, CancellationToken cancellationToken = default) =>
-        GetAttemptResultAsync(attemptId, string.Empty, cancellationToken);
-
-    public Task<ExamHistoryDto> GetExamHistoryAsync(CancellationToken cancellationToken = default) =>
-        GetExamHistoryAsync(string.Empty, cancellationToken);
-
-    public Task<AttemptReviewDto> GetAttemptReviewAsync(int attemptId, CancellationToken cancellationToken = default) =>
-        GetAttemptReviewAsync(attemptId, string.Empty, cancellationToken);
-
-    public Task<PreflightStatusDto> GetPreflightStatusAsync(int attemptId, CancellationToken cancellationToken = default) =>
-        GetPreflightStatusAsync(attemptId, string.Empty, cancellationToken);
-
-    public Task<PreflightStatusDto> VerifyPreflightAsync(int attemptId, CancellationToken cancellationToken = default) =>
-        VerifyPreflightAsync(attemptId, string.Empty, cancellationToken);
-
-    public Task<SittingSyncDto> SaveSittingSyncAsync(int attemptId, SittingSyncRequestDto request, CancellationToken cancellationToken = default) =>
-        SaveSittingSyncAsync(attemptId, request, string.Empty, cancellationToken);
-
-    public Task<AttemptResumeDto> ResumeAttemptByCodeAsync(ResumeAttemptRequest request, CancellationToken cancellationToken = default) =>
-        ResumeAttemptByCodeAsync(request, string.Empty, cancellationToken);
-
     public Task<WritingInstructionsDto> GetWritingInstructionsAsync(int examId, CancellationToken cancellationToken = default) =>
         GetWritingInstructionsAsync(examId, string.Empty, cancellationToken);
 
@@ -1543,36 +1280,6 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
     public Task<(Stream Stream, string ContentType, string FileName)> GetSpeakingAudioStreamAsync(int attemptId, int questionId, CancellationToken cancellationToken = default) =>
         GetSpeakingAudioStreamAsync(attemptId, questionId, string.Empty, cancellationToken);
 
-    public Task<PlacementCatalogViewDto> GetPlacementCatalogAsync(CancellationToken cancellationToken = default) =>
-        GetPlacementCatalogAsync(string.Empty, cancellationToken);
-
-    public Task<PlacementTestInfoDto> StartPlacementTestAsync(StartPlacementTestRequest request, CancellationToken cancellationToken = default) =>
-        StartPlacementTestAsync(request, string.Empty, cancellationToken);
-
-    public Task<PlacementTakeViewDto> GetPlacementTakeAsync(int placementId, int? questionDisplayOrder, CancellationToken cancellationToken = default) =>
-        GetPlacementTakeAsync(placementId, questionDisplayOrder, string.Empty, cancellationToken);
-
-    public Task<SaveAnswerResultDto> SavePlacementAnswerAsync(int placementId, int questionId, SaveAnswerRequest request, CancellationToken cancellationToken = default) =>
-        SavePlacementAnswerAsync(placementId, questionId, request, string.Empty, cancellationToken);
-
-    public Task<SavePlacementDraftResponseDto> SavePlacementDraftAsync(int placementId, SavePlacementDraftRequestDto request, CancellationToken cancellationToken = default) =>
-        SavePlacementDraftAsync(placementId, request, string.Empty, cancellationToken);
-
-    public Task<PlacementGradingStatusDto> GetPlacementGradingStatusAsync(int placementId, CancellationToken cancellationToken = default) =>
-        GetPlacementGradingStatusAsync(placementId, string.Empty, cancellationToken);
-
-    public Task<PlacementResultViewDto> SubmitPlacementTestAsync(int placementId, SubmitPlacementTestRequest request, CancellationToken cancellationToken = default) =>
-        SubmitPlacementTestAsync(placementId, request, string.Empty, cancellationToken);
-
-    public Task<PlacementResultViewDto> GetPlacementResultAsync(int placementId, CancellationToken cancellationToken = default) =>
-        GetPlacementResultAsync(placementId, string.Empty, cancellationToken);
-
-    public Task<TargetBandViewDto> GetTargetBandViewAsync(CancellationToken cancellationToken = default) =>
-        GetTargetBandViewAsync(string.Empty, cancellationToken);
-
-    public Task<SetTargetBandResultDto> SetTargetBandAsync(SetTargetBandRequest request, CancellationToken cancellationToken = default) =>
-        SetTargetBandAsync(request, string.Empty, cancellationToken);
-
     public Task<LearningPathSummaryDto> GetLearningPathAsync(CancellationToken cancellationToken = default) =>
         GetLearningPathAsync(string.Empty, cancellationToken);
 
@@ -1620,12 +1327,6 @@ public sealed class CompanionApiClient(HttpClient http) : ICompanionApiClient
 
     public Task RetryPracticeInsightAsync(int sessionId, CancellationToken cancellationToken = default) =>
         RetryPracticeInsightAsync(sessionId, string.Empty, cancellationToken);
-
-    public Task<AiInsightDto> GetExamInsightAsync(int attemptId, CancellationToken cancellationToken = default) =>
-        GetExamInsightAsync(attemptId, string.Empty, cancellationToken);
-
-    public Task RetryExamInsightAsync(int attemptId, CancellationToken cancellationToken = default) =>
-        RetryExamInsightAsync(attemptId, string.Empty, cancellationToken);
 
     public Task RetryInsightAsync(int insightId, CancellationToken cancellationToken = default) =>
         RetryInsightAsync(insightId, string.Empty, cancellationToken);

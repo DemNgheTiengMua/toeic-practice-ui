@@ -1,0 +1,31 @@
+@model ExamTakeViewModel
+@{
+    var take = Model.Display;
+}
+<!-- Bottom Question Palette (FULL_SANDBOX) -->
+<nav class="bottom-question-palette" id="bottom-question-palette" aria-label="Question Palette">
+  <div class="palette-container">
+    <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; margin-bottom: 0.2rem;">
+      <strong style="font-family: 'IBM Plex Sans Condensed', sans-serif; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;">QUESTION PALETTE (QUESTIONS 1–@take.TotalQuestions)</strong>
+      <div class="palette-legend">
+        <span class="palette-legend-item"><span class="chip-swatch chip-swatch--unanswered"></span> Unanswered</span>
+        <span class="palette-legend-item"><span class="chip-swatch chip-swatch--answered"></span> Answered</span>
+        <span class="palette-legend-item"><span class="chip-swatch chip-swatch--current"></span> Current</span>
+        <span class="palette-legend-item"><span class="chip-swatch chip-swatch--flagged"></span> Flagged</span>
+      </div>
+    </div>
+    <div class="palette-chips-track" id="bottom-palette-chips">
+      @foreach (var item in take.Navigator)
+      {
+        <button type="button" class="palette-chip @item.PaletteClass"
+                id="bottom-chip-@item.QuestionId"
+                data-question-id="@item.QuestionId"
+                data-display-order="@item.DisplayOrder"
+                @(item.IsLocked ? "disabled" : "")
+                title="@item.PaletteTitle">
+          @item.DisplayOrder
+        </button>
+      }
+    </div>
+  </div>
+</nav>

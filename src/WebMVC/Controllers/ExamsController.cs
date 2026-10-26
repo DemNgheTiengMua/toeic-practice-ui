@@ -1,6 +1,7 @@
 using Contracts;
 using Microsoft.AspNetCore.Mvc;
 using WebMVC.Models;
+using WebMVC.Mappers;
 
 namespace WebMVC.Controllers;
 
@@ -8,6 +9,7 @@ public sealed class ExamsController(
     IMockExamsClient api,
     CurrentUser currentUser,
     ILogger<ExamsController> logger,
+    WebMVC.Formatters.DateTimeFormatter dates,
     ISpeakingClient? speakingApi = null)
     : LearnerControllerBase(currentUser, logger)
 {
@@ -80,7 +82,7 @@ public sealed class ExamsController(
 
     [HttpGet("/exams/{id:int}/preflight")]
     [HttpGet("/exams/preflight/{attemptId:int}")]
-    public async Task<IActionResult> Preflight(int? id, [FromQuery] int? attemptId, CancellationToken cancellationToken)
+    public async Task<IActionResult> Preflight(int? id, [FromQuery] int? attemptId, CancellationToken cancellationToken, [FromQuery] int? placementId = null)
     {
         var effectiveAttemptId = attemptId ?? (RouteData.Values.TryGetValue("attemptId", out var raw) && int.TryParse(raw?.ToString(), out var parsed) ? parsed : (int?)null);
 
@@ -105,7 +107,7 @@ public sealed class ExamsController(
         try
         {
             var preflight = await api.GetPreflightStatusAsync(effectiveAttemptId.Value, cancellationToken);
-            return View("Preflight", new ExamPreflightViewModel(preflight, TempData["ErrorMessage"] as string));
+            return View("Preflight", new ExamPreflightViewModel(preflight, TempData["ErrorMessage"] as string, placementId));
         }
         catch (ApiException ex) when (ex.Status == 404 || ex.Code == ApiError.Codes.AttemptNotFound)
         {
@@ -124,7 +126,7 @@ public sealed class ExamsController(
     [HttpPost("/exams/preflight/{attemptId:int}/verify")]
     [HttpPost("/exams/{id:int}/preflight/verify")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> VerifyPreflight(int? id, int? attemptId, [FromQuery] int? qAttemptId, CancellationToken cancellationToken)
+    public async Task<IActionResult> VerifyPreflight(int? id, int? attemptId, [FromQuery] int? qAttemptId, CancellationToken cancellationToken, [FromQuery] int? placementId = null)
     {
         var effectiveAttemptId = attemptId ?? qAttemptId ?? (id.HasValue && RouteData.Values.TryGetValue("attemptId", out var raw) && int.TryParse(raw?.ToString(), out var parsed) ? parsed : (int?)null);
         if (!effectiveAttemptId.HasValue)
@@ -135,13 +137,15 @@ public sealed class ExamsController(
         try
         {
             await api.VerifyPreflightAsync(effectiveAttemptId.Value, cancellationToken);
-            return RedirectToAction(nameof(Take), new { attemptId = effectiveAttemptId.Value });
+            return placementId.HasValue
+                ? RedirectToAction(nameof(PlacementController.Take), "Placement", new { placementId })
+                : RedirectToAction(nameof(Take), new { attemptId = effectiveAttemptId.Value });
         }
         catch (ApiException ex)
         {
             logger.LogError(ex, "Failed to verify preflight for attempt {AttemptId}", effectiveAttemptId.Value);
             TempData["ErrorMessage"] = ex.Detail ?? "Failed to verify preflight checks. Please try again.";
-            return RedirectToAction(nameof(Preflight), new { id, attemptId = effectiveAttemptId.Value });
+            return RedirectToAction(nameof(Preflight), new { id, attemptId = effectiveAttemptId.Value, placementId });
         }
     }
 
@@ -481,7 +485,7 @@ public sealed class ExamsController(
                 }
             }
 
-            return View(new ExamResultViewModel(result, TempData["ErrorMessage"] as string, insight));
+            return View(AttemptViewModelMapper.Result(result, dates, TempData["ErrorMessage"] as string, insight));
         }
         catch (ApiException ex) when (ex.Status == 404 || ex.Code == ApiError.Codes.AttemptNotFound)
         {
@@ -556,7 +560,7 @@ public sealed class ExamsController(
         try
         {
             var history = await api.GetExamHistoryAsync(cancellationToken);
-            return View(new ExamHistoryViewModel(history, TempData["ErrorMessage"] as string));
+            return View(AttemptViewModelMapper.History(history, dates, TempData["ErrorMessage"] as string));
         }
         catch (ApiException ex)
         {
@@ -572,7 +576,7 @@ public sealed class ExamsController(
         try
         {
             var review = await api.GetAttemptReviewAsync(attemptId, cancellationToken);
-            return View(new ExamReviewViewModel(review, TempData["ErrorMessage"] as string));
+            return View(AttemptViewModelMapper.Review(review, dates, TempData["ErrorMessage"] as string));
         }
         catch (ApiException ex) when (ex.Status == 404 || ex.Code == ApiError.Codes.AttemptNotFound)
         {

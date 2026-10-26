@@ -1,0 +1,43 @@
+@model ExamPreflightViewModel
+<!-- Step 1: Audio Asset Pre-buffering -->
+<section class="preflight-panel card">
+  <div class="preflight-panel-header card__header">
+    <div class="row row--between row--middle">
+      <div class="row row--middle gap-2">
+        <span class="preflight-step badge font-sign">STEP 1</span>
+        <strong class="preflight-label font-sign">
+          Audio Asset Pre-Buffering
+        </strong>
+      </div>
+      <span id="audio-buffer-badge" class="badge badge--warning font-sign" role="status" aria-live="polite">
+        @Model.BufferStatusLabel
+      </span>
+    </div>
+  </div>
+  <div class="preflight-panel-body card__body stack gap-3">
+    <p class="text-sm text-muted no-margin">
+      To prevent playback stutters, network lag, or buffering delays during time-critical sections, 100% of exam audio tracks must be buffered to your device before the test begins.
+    </p>
+
+    <div>
+      <div class="row row--between mb-1">
+        <span class="text-xs font-sign text-muted uppercase">Buffering Progress</span>
+        <span id="buffer-percentage" class="font-mono text-xs">@Model.BufferPercentageLabel</span>
+      </div>
+      <div class="preflight-buffer-track progress">
+        <div id="buffer-progress-bar" class="progress__bar @Model.BufferProgressClass" role="progressbar"  aria-valuenow="@Model.InitialBufferPercent" aria-valuemin="0" aria-valuemax="100"></div>
+      </div>
+      <div class="row row--between mt-1 text-xs text-muted">
+        <span id="buffer-details">@Model.BufferDetails</span>
+        <span class="font-mono text-xs">Network: <strong id="buffer-net-status">Active</strong></span>
+      </div>
+    </div>
+
+    <div id="buffer-error-alert" class="alert alert--danger" role="alert" hidden>
+      <strong>Network Buffering Warning:</strong> <span id="buffer-error-msg">One or more audio tracks could not be pre-buffered.</span>
+      <div class="mt-2">
+        <button type="button" id="btn-retry-buffer" class="btn btn--sm btn--primary">Retry Audio Buffering</button>
+      </div>
+    </div>
+  </div>
+</section>

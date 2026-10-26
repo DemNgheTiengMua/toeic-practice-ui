@@ -1,0 +1,33 @@
+@model ExamTakeViewModel
+@{
+    var take = Model.Display;
+    var q = take.Question;
+}
+<!-- Clustered Audio Cards Container (ClusterSize == 3) -->
+<div id="cluster-card-container" class="cluster-card-container" style="@(q.IsCluster ? "" : "display:none;")">
+  @if (q.IsCluster)
+  {
+    @foreach (var cq in take.ClusterQuestions)
+    {
+      <div class="cluster-item" data-question-id="@cq.QuestionId">
+        <div class="row row--between mb-1" style="align-items: center;">
+          <span class="question__number">Question @cq.DisplayOrder</span>
+          <button type="button" class="btn btn--ghost btn--sm js-cluster-flag-btn @cq.FlagClass" data-question-id="@cq.QuestionId" data-flagged="@cq.FlagState">
+            @cq.FlagLabel
+          </button>
+        </div>
+        <p class="question__stem ee-tokenized-text">@cq.Stem</p>
+        <div class="option-list" role="radiogroup" aria-label="Answer for question @cq.DisplayOrder">
+          @foreach (var opt in cq.Options)
+          {
+            <label class="option @(opt.IsSelected ? "is-selected" : "")">
+              <input class="option__input js-cluster-radio" type="radio" name="cluster_opt_@cq.QuestionId" value="@opt.OptionId" data-question-id="@cq.QuestionId" @(opt.IsSelected ? "checked" : "")>
+              <span class="option__marker">@opt.Label</span>
+              <span class="option__text">@opt.Text</span>
+            </label>
+          }
+        </div>
+      </div>
+    }
+  }
+</div>

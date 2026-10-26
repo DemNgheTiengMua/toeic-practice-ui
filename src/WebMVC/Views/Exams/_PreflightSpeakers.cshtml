@@ -1,0 +1,46 @@
+@model ExamPreflightViewModel
+<!-- Step 2: Speaker & Headphone Check -->
+<section class="preflight-panel card" data-audio-equipment data-show-input="false" data-show-output="true">
+  <div class="preflight-panel-header card__header">
+    <div class="row row--between row--middle">
+      <div class="row row--middle gap-2">
+        <span class="preflight-step badge font-sign">STEP 2</span>
+        <strong class="preflight-label font-sign">
+          Speaker & Headphone Sound Check
+        </strong>
+      </div>
+      <span class="badge badge--success font-sign">READY</span>
+    </div>
+  </div>
+  <div class="preflight-panel-body card__body stack gap-3">
+    <p class="text-sm text-muted no-margin">
+      Verify that you can hear clear audio through your headphones or external speakers. Adjust the volume to a comfortable level.
+    </p>
+
+    <div class="grid-2 gap-4">
+      <div class="field">
+        <label class="field__label font-sign" for="output-select">Audio output device</label>
+        <select class="preflight-device field__input" id="output-select" data-audio-role="output-device">
+          <option value="default">System default</option>
+        </select>
+        <div class="field__hint text-xs text-muted mt-1" data-audio-role="output-support">Output routing supported.</div>
+      </div>
+
+      <div class="field">
+        <label class="field__label font-sign" for="volume-range">Preferred volume</label>
+        <div class="preflight-volume audio-equipment__volume">
+          <button type="button" class="btn btn--ghost btn--sm" data-audio-action="toggle-mute" aria-label="Mute audio">Mute</button>
+          <input class="preflight-volume-slider audio-equipment__volume-slider" id="volume-range" data-audio-role="volume" type="range" min="0" max="100" value="85" aria-label="Volume">
+          <span class="font-mono text-sm" data-audio-role="volume-value">85%</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="row row--middle gap-3 pt-2">
+      <button type="button" class="btn btn--sm btn--primary" data-audio-action="speaker-test">
+        Play Test Chime
+      </button>
+      <span class="badge badge--muted font-sign" data-audio-role="speaker-status" role="status" aria-live="polite">TEST READY</span>
+    </div>
+  </div>
+</section>

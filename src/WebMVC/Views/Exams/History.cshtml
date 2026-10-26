@@ -1,5 +1,4 @@
 @model ExamHistoryViewModel
-@inject WebMVC.DateTimeFormatter Dates
 @{
     Layout = "_LearnerLayout";
     var h = Model.History;
@@ -69,12 +68,9 @@ else
             <span class="text-sm text-muted">@h.BestScoreBandName · @(h.BestScore) best score</span>
           </div>
           <div class="cefr__track" role="img" aria-label="Current CEFR level: @h.BestScoreBandCode">
-            @foreach (var band in h.CefrBands)
+            @foreach (var band in Model.Bands)
             {
-              var isCurrent = band.Code == h.BestScoreBandCode;
-              var isReached = h.BestScore.HasValue && h.BestScore.Value >= band.MinTotal;
-              var cls = isCurrent ? "is-current" : (isReached ? "is-reached" : "");
-              <span class="cefr__band @cls">@band.Code</span>
+              <span class="@band.CssClass">@band.Label</span>
             }
           </div>
           <div class="cefr__scale" aria-hidden="true">
@@ -95,18 +91,11 @@ else
     <div class="card__header"><strong>Score Progress</strong></div>
     <div class="card__body">
       <div class="chart">
-        @{
-          var maxScoreCeiling = h.CefrBands.Count > 0
-              ? Math.Max(1, h.CefrBands.Max(b => b.MaxTotal))
-              : Math.Max(1, h.BestScore ?? 100);
-        }
-        @foreach (var att in h.Attempts.OrderBy(a => a.SubmittedAt).TakeLast(10))
+        @foreach (var att in Model.ChartPoints)
         {
-          var isBest = att.TotalScore == h.BestScore;
-          var barHeight = Math.Max(20, (int)Math.Round((double)att.TotalScore / (double)maxScoreCeiling * 140));
           <div class="chart__col">
-            <div class="chart__bar @(isBest ? "chart__bar--marked" : "")" style="height: @(barHeight)px" title="@att.ExamName: @att.TotalScore pts"></div>
-            <div class="chart__value">@(isBest ? Html.Raw($"<strong>{att.TotalScore}</strong>") : att.TotalScore.ToString())</div>
+            <div class="chart__bar @(att.IsBest ? "chart__bar--marked" : "")" style="height: @(att.Height)px" title="@att.ExamName: @att.TotalScore pts"></div>
+            <div class="chart__value">@if (att.IsBest) { <strong>@att.TotalScore</strong> } else { @att.TotalScore }</div>
           </div>
         }
       </div>
@@ -134,10 +123,11 @@ else
           </tr>
         </thead>
         <tbody>
-          @foreach (var att in h.Attempts)
+          @foreach (var item in Model.Attempts)
           {
+            var att = item.Attempt;
             <tr>
-              <td>@Dates.Format(att.SubmittedAt)</td>
+              <td>@item.SubmittedAtDisplay</td>
               <td>
                 <strong>@att.ExamName</strong>
                 <span class="badge badge--info">@att.CertCode</span>
@@ -146,7 +136,7 @@ else
                 @if (att.SkillScores.Count > 0)
                 {
                   <span class="text-sm">
-                    @string.Join(" · ", att.SkillScores.Select(s => $"{s.SkillCode} {s.ScaledScore}"))
+                    @item.SkillScoresDisplay
                   </span>
                 }
                 else

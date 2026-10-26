@@ -1,0 +1,15 @@
+@model PlacementTakeViewModel
+<header class="app-topbar">
+  <div class="exam-topbar-group">
+    <strong>Placement Test</strong>
+    <span class="badge badge--info">Question @Model.Question.DisplayOrder of @Model.Take.TotalQuestions</span>
+  </div>
+  <div class="exam-topbar-group">
+    <span id="save-status" class="save-status save-status--saved" role="status" aria-live="polite">Saved</span>
+    <span id="timer-box" class="timer" role="timer" aria-label="Time remaining">
+      <span class="text-sm text-muted">Time remaining</span>
+      <span id="timer-display" class="timer__value font-mono">--:--</span>
+    </span>
+    <a href="/placement" class="btn btn--ghost btn--sm" id="btn-exit">Exit</a>
+  </div>
+</header>

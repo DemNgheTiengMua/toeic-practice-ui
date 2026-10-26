@@ -2,6 +2,7 @@ using Contracts;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using WebMVC.Models;
+using WebMVC.Mappers;
 
 namespace WebMVC.Controllers;
 
@@ -10,6 +11,7 @@ public sealed class PlacementController(
     IPlacementClient api,
     CurrentUser currentUser,
     ILogger<PlacementController> logger,
+    WebMVC.Formatters.DateTimeFormatter dates,
     ILearningPathClient? learningPathClient = null,
     IAiInsightsClient? insightsClient = null)
     : LearnerControllerBase(currentUser, logger)
@@ -59,7 +61,16 @@ public sealed class PlacementController(
     {
         try
         {
-            var take = await api.GetPlacementTakeAsync(placementId, q, cancellationToken);
+            PlacementTakeViewDto take;
+            try
+            {
+                take = await api.GetPlacementTakeAsync(placementId, q, cancellationToken);
+            }
+            catch (ApiException ex) when (ex.Code == ApiError.Codes.PreflightRequired)
+            {
+                var preflight = await api.GetPlacementPreflightStatusAsync(placementId, cancellationToken);
+                return RedirectToAction(nameof(ExamsController.Preflight), "Exams", new { attemptId = preflight.AttemptId, placementId });
+            }
 
             if (take.Status == PlacementStatusDto.Done || take.IsAutoSubmitted)
             {
@@ -193,7 +204,7 @@ public sealed class PlacementController(
                 }
             }
 
-            return View(new PlacementResultViewModel(result, TempData["ErrorMessage"] as string, insight));
+            return View(AttemptViewModelMapper.PlacementResult(result, dates, TempData["ErrorMessage"] as string, insight));
         }
         catch (ApiException ex) when (ex.Code == ApiError.Codes.PlacementNotFinished)
         {
@@ -235,7 +246,7 @@ public sealed class PlacementController(
         try
         {
             var targetView = await api.GetTargetBandViewAsync(cancellationToken);
-            return View(new TargetBandViewModel(
+            return View(AttemptViewModelMapper.TargetBand(
                 targetView,
                 TempData["ErrorMessage"] as string,
                 TempData["SuccessMessage"] as string));

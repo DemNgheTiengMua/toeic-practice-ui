@@ -1,0 +1,26 @@
+@model ExamTakeViewModel
+@{
+    var take = Model.Display;
+    var q = take.Question;
+}
+<div id="writing-response-pane" class="stack mt-3" style="@(q.IsFreeResponse ? "" : "display:none;")">
+  <!-- On-Screen Cut/Paste/Undo/Redo Toolbar -->
+  <div id="writing-onscreen-toolbar" class="writing-onscreen-toolbar row mb-2" style="gap: 0.5rem; display: none;">
+    <button type="button" class="btn btn--secondary btn--sm" id="btn-writing-cut" title="Cut">Cut</button>
+    <button type="button" class="btn btn--secondary btn--sm" id="btn-writing-paste" title="Paste">Paste</button>
+    <button type="button" class="btn btn--secondary btn--sm" id="btn-writing-undo" title="Undo">Undo</button>
+    <button type="button" class="btn btn--secondary btn--sm" id="btn-writing-redo" title="Redo">Redo</button>
+  </div>
+
+  <label for="writing-editor"><strong>Your response</strong></label>
+  <textarea id="writing-editor" class="writing-editor" aria-describedby="writing-counts" data-question-id="@q.QuestionId" spellcheck="false" autocorrect="off" autocomplete="off" autocapitalize="off">@q.ResponseText</textarea>
+  <div id="writing-counts" class="row row--between text-sm" style="align-items: center; margin-top: 0.5rem;">
+    <div class="row" style="gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+      <span>Word count: <strong id="live-word-count">0</strong> <span id="word-count" style="display:none;">0</span> <span id="word-range"></span></span>
+      <span id="min-words-badge" class="badge" style="display:none; font-family:'IBM Plex Mono',monospace; font-size:0.8rem; border:1px solid #14181d;">Minimum: 0 words</span>
+      <span id="under-length-warning" class="text-xs font-bold" style="display:none; color:#b31217; font-family:'IBM Plex Sans Condensed',sans-serif; text-transform:uppercase;">(Below minimum word limit)</span>
+    </div>
+    <span><strong id="character-count">0</strong> characters</span>
+  </div>
+  <button type="button" class="btn btn--secondary" id="btn-save-writing-draft">Save draft</button>
+</div>

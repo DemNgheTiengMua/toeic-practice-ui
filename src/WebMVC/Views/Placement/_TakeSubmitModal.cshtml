@@ -1,0 +1,23 @@
+@model PlacementTakeViewModel
+<!-- Modal for Submit Confirmation -->
+<div id="submit-modal" class="modal-overlay take-submit-modal" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modal__header"><strong>Submit placement test?</strong></div>
+    <div class="modal__body stack">
+      <p id="submit-modal-summary" class="mb-3">
+        You have answered <strong id="modal-answered-count">@Model.Take.AnsweredCount</strong> of <strong>@Model.Take.TotalQuestions</strong> questions.
+      </p>
+      <p class="text-sm text-muted no-margin">
+        Once submitted, your answers will be graded immediately and your starting CEFR band calculated.
+      </p>
+    </div>
+    <div class="modal__footer row row--between">
+      <button type="button" class="btn" id="btn-cancel-submit">Keep answering</button>
+      <form method="post" action="@Model.SubmitUrl" class="no-margin" id="submit-form">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="isAutoSubmit" id="is-auto-submit-input" value="false" />
+        <button type="submit" class="btn btn--danger" id="btn-confirm-submit">Yes, submit test</button>
+      </form>
+    </div>
+  </div>
+</div>
