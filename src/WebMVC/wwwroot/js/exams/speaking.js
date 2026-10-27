@@ -357,9 +357,10 @@
         btnSubmitVerification.textContent = 'Continue to Next Phase →';
         btnSubmitVerification.className = 'btn btn--primary';
         btnSubmitVerification.onclick = function () {
-          var nextPhaseIdx = sitting.getQuestionPhaseIndex(nextSectionQ);
-          if (nextPhaseIdx >= 0) sitting.activePhaseIndex = nextPhaseIdx;
           sitting.cleanupSpeakingPacer();
+          // Do NOT set activePhaseIndex here: the transition endpoint is the only phase mutator
+          // (ticket d01). A rejected transition used to leave the shell in Writing while the
+          // server was still in Speaking, which made phase gating refuse every navigation.
           // The overlay is only hidden once the server accepted the phase change, so a rejected
           // transition leaves the candidate on a usable screen with the error visible (ticket d03).
           sitting.advanceToNextSkill(function () {

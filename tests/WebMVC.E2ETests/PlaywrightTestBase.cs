@@ -33,6 +33,11 @@ public abstract class PlaywrightTestBase : PageTest
         }
 
         await Page.SetViewportSizeAsync(1440, 900);
+
+        // The sitting room confirms irreversible skill advances with window.confirm. Auto-accept by
+        // default so journeys exercise the post-confirmation path; a test that needs to assert the
+        // prompt itself can register its own handler, which runs after this one.
+        Page.Dialog += async (_, dialog) => await dialog.AcceptAsync();
     }
 
     /// <summary>

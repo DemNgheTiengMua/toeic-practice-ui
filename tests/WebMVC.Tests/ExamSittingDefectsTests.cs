@@ -1,6 +1,4 @@
-using System.IO;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using Contracts;
 using WebMVC.Models;
 using Xunit;
@@ -8,9 +6,19 @@ using Xunit;
 namespace WebMVC.Tests;
 
 /// <summary>
-/// Regression tests for the sitting-room navigation and tooling defects recorded in
-/// docs/specs/sitting-room-navigation-and-practice-qol-defects.md (tickets d01, d04, d05).
+/// Regression tests for the sitting-room phase state the shell consumes
+/// (docs/specs/sitting-room-navigation-and-practice-qol-defects.md, ticket d01).
 /// </summary>
+/// <remarks>
+/// Deliberately narrow. The presentation layer's only job here is to hand the browser an
+/// authoritative phase snapshot. The shell behaviours these defects were about — advancing at the
+/// last question of a skill, not rewinding on a timer tick, tokenizing stems for the highlighter,
+/// locked-palette announcements — are covered by
+/// WebMVC.E2ETests/Journeys/SittingAndPracticeQolTests.cs, which drives a real browser. The
+/// source-grep tests that used to live here asserted on substrings of concatenated .js/.cshtml
+/// files: they passed while every one of those defects was live, so they were removed rather than
+/// kept as false assurance.
+/// </remarks>
 public sealed class ExamSittingDefectsTests
 {
     private static AttemptTakeDto TwoSkillTake()
@@ -58,91 +66,45 @@ public sealed class ExamSittingDefectsTests
         Assert.Equal(DateTimeOffset.Parse("2026-10-27T08:45:00+00:00").ToUnixTimeMilliseconds(), deadline.GetInt64());
     }
 
+    /// <summary>
+    /// The navigator drives which questions the shell lets a candidate enter, so a question from a
+    /// skill the server is not currently serving must be reported locked, not merely unanswered
+    /// (ticket d05).
+    /// </summary>
     [Fact]
-    public void Sitting_Shell_Never_Derives_Phase_From_Wall_Clock()
+    public void Navigator_Marks_Non_Active_Skill_Questions_As_Locked()
     {
-        var source = ReadSittingSource();
+        var display = new ExamTakeViewModel(TwoSkillTake()).Display;
 
-        // The 1-second timer must not reassign the active phase or re-render the current question:
-        // the server's ActiveSkillId/PhaseDeadlineAt is the only phase authority (ticket d01).
-        var renderPhaseProgress = ExtractFunctionBody(source, "renderPhaseProgress");
-        Assert.DoesNotContain("renderQuestion(", renderPhaseProgress, StringComparison.Ordinal);
-        Assert.DoesNotContain("activePhaseIndex =", renderPhaseProgress, StringComparison.Ordinal);
+        var activeSkillItem = display.Navigator.Single(item => item.DisplayOrder == 1);
+        var otherSkillItem = display.Navigator.Single(item => item.DisplayOrder == 2);
 
-        var updateTimer = ExtractFunctionBody(source, "updateTimer");
-        Assert.DoesNotContain("activePhaseIndex =", updateTimer, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void Phase_Advance_Control_Replaces_The_Dead_Next_Phase_Button()
-    {
-        var source = ReadSittingSource();
-
-        // ticket d02: a candidate on the last question of a skill must get an enabled advance action,
-        // never a permanently disabled "next phase starts when time expires" placeholder.
-        Assert.DoesNotContain("NEXT PHASE STARTS WHEN TIME EXPIRES", source, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("js-open-skill-advance", source, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void Every_Tokenized_Text_Container_Is_Filled_Through_The_Tokenizer()
-    {
-        var source = ReadSittingSource();
-
-        // ticket d04: the tokenized marker must only be produced by the code path that emits tokens.
-        Assert.DoesNotContain("question__stem ee-tokenized-text", source, StringComparison.Ordinal);
-
-        var renderQuestion = ExtractFunctionBody(source, "renderQuestion");
-        Assert.Contains("renderTokenizedText", renderQuestion, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void Locked_Palette_Chips_Expose_An_Accessible_Reason()
-    {
-        var repoRoot = TestPathHelper.FindRepoRoot();
-        var palette = File.ReadAllText(Path.Combine(repoRoot, "src", "WebMVC", "Views", "Exams", "_TakePalette.cshtml"));
-
-        // ticket d05: hover-only title text is not an accessible explanation.
-        Assert.Contains("aria-disabled", palette, StringComparison.Ordinal);
-        Assert.Contains("aria-describedby", palette, StringComparison.Ordinal);
-        Assert.Contains("palette-chip--locked", palette, StringComparison.Ordinal);
-    }
-
-    private static string ReadSittingSource()
-    {
-        var repoRoot = TestPathHelper.FindRepoRoot();
-        var jsDirectory = Path.Combine(repoRoot, "src", "WebMVC", "wwwroot", "js", "exams");
-        var scriptPaths = new[] { "phases.js", "navigation.js", "annotations.js", "shell.js", "context.js", "speaking.js" }
-            .Select(name => Path.Combine(jsDirectory, name))
-            .Where(File.Exists)
-            .ToList();
-
-        Assert.NotEmpty(scriptPaths);
-        return string.Join(Environment.NewLine, scriptPaths.Select(File.ReadAllText));
+        Assert.False(activeSkillItem.IsLocked);
+        Assert.True(otherSkillItem.IsLocked,
+            "A question belonging to a skill the server is not serving must be locked.");
     }
 
     /// <summary>
-    /// Extracts the body of an assigned function (e.g. "sitting.renderPhaseProgress = function (...) { ... };").
-    /// Bodies are brace-balanced so nested callbacks stay inside the returned slice.
+    /// A two-skill sitting must describe both phases, in order, with contiguous offsets — the
+    /// advance control (ticket d02) resolves the next skill from this list.
     /// </summary>
-    private static string ExtractFunctionBody(string source, string memberName)
+    [Fact]
+    public void Phases_Describe_Each_Skill_In_Order_With_Contiguous_Offsets()
     {
-        var match = Regex.Match(source, @"\." + Regex.Escape(memberName) + @"\s*=\s*function[^{]*\{");
-        Assert.True(match.Success, $"Could not locate the '{memberName}' function in the sitting scripts");
+        var display = new ExamTakeViewModel(TwoSkillTake()).Display;
 
-        var start = match.Index + match.Length;
-        var depth = 1;
-        for (var i = start; i < source.Length; i++)
-        {
-            if (source[i] == '{') depth++;
-            else if (source[i] == '}')
-            {
-                depth--;
-                if (depth == 0) return source[start..i];
-            }
-        }
+        using var payload = JsonDocument.Parse(display.PhasesJson);
+        var phases = payload.RootElement.EnumerateArray().ToList();
 
-        Assert.Fail($"Unbalanced braces while reading '{memberName}'");
-        return string.Empty;
+        Assert.Equal(2, phases.Count);
+        Assert.Equal("LIST", phases[0].GetProperty("skillCode").GetString());
+        Assert.Equal("READ", phases[1].GetProperty("skillCode").GetString());
+        Assert.Equal(
+            phases[0].GetProperty("startOffsetSeconds").GetInt32() + phases[0].GetProperty("durationSeconds").GetInt32(),
+            phases[1].GetProperty("startOffsetSeconds").GetInt32());
+
+        // Exactly one phase is marked current, and it is the one the server reports as active.
+        Assert.Equal("step", display.Phases[0].CurrentStep);
+        Assert.Equal("false", display.Phases[1].CurrentStep);
     }
 }

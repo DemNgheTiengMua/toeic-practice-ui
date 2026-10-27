@@ -16,14 +16,16 @@
 
   // Accepts epoch milliseconds, a numeric string, or an ISO timestamp and returns epoch ms.
   // The sitting payload and the transition endpoint use different shapes for the same instant.
-  function toEpochMs(value) {
+  // A null/empty value returns null, which callers treat as "no deadline" — not as "keep the old".
+  sitting.parseDeadlineToEpochMs = function (value) {
     if (value === null || value === undefined || value === '') return null;
     if (typeof value === 'number') return isFinite(value) ? value : null;
     var numeric = Number(value);
     if (!isNaN(numeric) && /^\d+$/.test(String(value).trim())) return numeric;
     var parsed = Date.parse(value);
     return isNaN(parsed) ? null : parsed;
-  }
+  };
+  var toEpochMs = sitting.parseDeadlineToEpochMs;
 
   sitting.initializeContext = function () {
     // 1. Data Model & Initialization

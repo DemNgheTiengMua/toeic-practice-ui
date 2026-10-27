@@ -11,6 +11,11 @@
   };
   sitting.renderTokenizedText = function (container, rawText, sectionId, questionId, targetType) {
     if (!container) return;
+    // The tokenizer owns the marker class: every container it fills is annotatable by definition,
+    // and the highlighter gate (handleHighlighterSelection) looks for exactly this class. Doing it
+    // here means callers cannot emit tokens without also making them reachable — cluster stems are
+    // built as bare <p> elements and were previously unreachable (ticket d04).
+    container.classList.add('ee-tokenized-text');
     if (!rawText) {
       container.innerHTML = '';
       return;
@@ -18,6 +23,9 @@
     var words = rawText.split(/\s+/).filter(Boolean);
     var html = '';
     words.forEach(function (word, idx) {
+      // Safe by construction: every word goes through escapeHtml, and the three interpolated
+      // attributes are a server-typed int, a second int, and a literal we control ('stem' or
+      // 'passage'). No candidate- or admin-authored string reaches this innerHTML unescaped.
       html += '<span class="ee-token" data-token-idx="' + idx + '" data-section-id="' + sectionId + '" data-question-id="' + questionId + '" data-target="' + targetType + '">' + sitting.escapeHtml(word) + '</span> ';
     });
     container.innerHTML = html;

@@ -25,8 +25,9 @@
                 id="bottom-chip-@item.QuestionId"
                 data-question-id="@item.QuestionId"
                 data-display-order="@item.DisplayOrder"
+                aria-label="@item.PaletteTitle"
                 aria-disabled="@(item.IsLocked ? "true" : "false")"
-                aria-describedby="palette-locked-reason"
+                @(item.IsLocked ? "aria-describedby=palette-locked-reason" : "")
                 @(item.IsLocked ? "disabled" : "")
                 title="@item.PaletteTitle">
           @item.DisplayOrder
