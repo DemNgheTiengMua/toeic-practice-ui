@@ -37,6 +37,7 @@
   <link rel="stylesheet" href="~/css/tokens.css">
   <link rel="stylesheet" href="~/css/base.css">
   <link rel="stylesheet" href="~/css/components.css">
+  <link rel="stylesheet" href="~/css/calm.css">
   <style>
     /* Question Component Widgets & Practice QoL Styles */
     .option--checkbox input[type="checkbox"] {
@@ -178,11 +179,12 @@
                   ))
                 }
               </div>
-              <div class="row mt-2" style="gap: var(--space-2); align-items: center;" id="audio-qol-controls">
+              <div class="row mt-2" id="practice-audio-toolbar" style="gap: var(--space-2); align-items: center; border-top: 1px solid #ccd2d6; padding-top: 0.5rem;">
+                <span class="text-xs uppercase text-muted font-sign" style="font-weight:700; letter-spacing:0.04em;">Audio tools</span>
                 <button type="button" class="btn btn--secondary btn--sm" id="btn-audio-rewind-5s" title="Tua lại 5 giây / Rewind 5 seconds" style="font-family: 'IBM Plex Mono', monospace; font-weight: 700;">
                   [-5s]
                 </button>
-                <button type="button" class="btn btn--ghost btn--sm" id="btn-toggle-transcript" aria-expanded="false" style="@(!string.IsNullOrEmpty(q.Transcript) ? "" : "display:none;") font-family: 'IBM Plex Sans Condensed', sans-serif; font-weight: 700; text-transform: uppercase;">
+                <button type="button" class="btn btn--ghost btn--sm" id="btn-toggle-transcript" aria-expanded="false" aria-controls="transcript-drawer" style="@(!string.IsNullOrEmpty(q.Transcript) ? "" : "display:none;") font-family: 'IBM Plex Sans Condensed', sans-serif; font-weight: 700; text-transform: uppercase;">
                   [Xem Lời thoại / Transcript]
                 </button>
               </div>
@@ -380,7 +382,7 @@
               </div>
               <div class="card__body stack">
                 <!-- Navigator Filters -->
-                <div class="row mb-2" style="gap: var(--space-1);" id="navigator-filters">
+                <div class="row mb-2" style="gap: var(--space-1); flex-wrap: wrap;" id="navigator-filters">
                   <button type="button" class="btn btn--xs btn--primary" data-filter="all" id="filter-all">All (<span id="filter-all-count">@totalCount</span>)</button>
                   <button type="button" class="btn btn--xs btn--ghost" data-filter="incorrect" id="filter-incorrect">Incorrect (<span id="filter-incorrect-count">@incorrectCount</span>)</button>
                   <button type="button" class="btn btn--xs btn--ghost" data-filter="saved" id="filter-saved">Saved (<span id="filter-saved-count">@savedCount</span>)</button>
@@ -858,12 +860,17 @@
         // 6. Interactive 11-Component Inputs
         var isAnswered = s.isAnswered;
 
+        // Clear both hosts before the new question renders so a previous question's controls can
+        // never survive as hidden-but-focusable DOM, and a stale radio can't look like a current
+        // answer (ticket d08).
+        if (optionList) optionList.innerHTML = "";
+        if (componentContainer) componentContainer.innerHTML = "";
+
         if (type === "mcq" || type === "mcq_3") {
           if (optionList) optionList.style.display = "";
           if (componentContainer) componentContainer.style.display = "none";
 
           if (optionList) {
-            optionList.innerHTML = "";
             q.options.forEach(function (opt) {
               var isSelected = opt.optionId === s.selectedOptionId;
               var isCorrectOpt = s.correctOptionId != null && opt.optionId === s.correctOptionId;
@@ -948,6 +955,7 @@
             hintText.textContent = s.hint;
             hintBox.style.display = "";
           } else {
+            hintText.textContent = "";
             hintBox.style.display = "none";
           }
         }
@@ -958,8 +966,16 @@
         // 9. Buttons & Bottom Nav
         if (btnPrev) btnPrev.disabled = currentOrder <= 1;
         if (btnSkip) btnSkip.style.display = s.isAnswered ? "none" : "";
-        if (showHintBtn) showHintBtn.style.display = (s.hintUsed || s.isAnswered) ? "none" : "";
-        if (hintUsedMsg) hintUsedMsg.style.display = s.hintUsed ? "" : "none";
+        if (showHintBtn) {
+          // Re-enable: revealHint disables while the request is in flight, and a phase change
+          // must not leave the control dead for the rest of the session (ticket d06).
+          showHintBtn.disabled = false;
+          showHintBtn.style.display = (s.hintUsed || s.isAnswered) ? "none" : "";
+        }
+        if (hintUsedMsg) {
+          // Only claim a hint was used when the question actually has hint text to show.
+          hintUsedMsg.style.display = (s.hintUsed && s.hint) ? "" : "none";
+        }
 
         updateSubmitButtonState();
         updateNavigatorCells();

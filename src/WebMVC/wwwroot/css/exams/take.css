@@ -564,12 +564,12 @@ body.exam-body-protected {
 }
 
 /* Bottom palette disabled states */
+.palette-chip--locked,
 .palette-chip--disabled {
   opacity: 0.35 !important;
   cursor: not-allowed !important;
   pointer-events: none !important;
 }
-.palette-chip--locked,
 .palette-chip[hidden],
 .navigator__cell[hidden],
 .navigator__cell.is-locked,

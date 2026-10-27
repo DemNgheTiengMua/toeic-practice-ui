@@ -357,18 +357,13 @@
         btnSubmitVerification.textContent = 'Continue to Next Phase →';
         btnSubmitVerification.className = 'btn btn--primary';
         btnSubmitVerification.onclick = function () {
-          verificationScreen.style.display = 'none';
           var nextPhaseIdx = sitting.getQuestionPhaseIndex(nextSectionQ);
           if (nextPhaseIdx >= 0) sitting.activePhaseIndex = nextPhaseIdx;
           sitting.cleanupSpeakingPacer();
-          fetch('/exams/take/' + sitting.attemptId + '/transition/skill', {
-            method: 'POST',
-            headers: {
-              'RequestVerificationToken': sitting.csrfToken,
-              'Content-Type': 'application/json'
-            }
-          }).finally(function () {
-            sitting.goToQuestion(nextSectionQ.displayOrder);
+          // The overlay is only hidden once the server accepted the phase change, so a rejected
+          // transition leaves the candidate on a usable screen with the error visible (ticket d03).
+          sitting.advanceToNextSkill(function () {
+            verificationScreen.style.display = 'none';
           });
         };
       } else {

@@ -14,6 +14,17 @@
       .replace(/'/g, '&#39;');
   };
 
+  // Accepts epoch milliseconds, a numeric string, or an ISO timestamp and returns epoch ms.
+  // The sitting payload and the transition endpoint use different shapes for the same instant.
+  function toEpochMs(value) {
+    if (value === null || value === undefined || value === '') return null;
+    if (typeof value === 'number') return isFinite(value) ? value : null;
+    var numeric = Number(value);
+    if (!isNaN(numeric) && /^\d+$/.test(String(value).trim())) return numeric;
+    var parsed = Date.parse(value);
+    return isNaN(parsed) ? null : parsed;
+  }
+
   sitting.initializeContext = function () {
     // 1. Data Model & Initialization
     sitting.examDataEl = document.getElementById('exam-data');
@@ -33,6 +44,10 @@
     sitting.currentDisplayOrder = sitting.sittingData.displayOrder;
     sitting.activeUnitNumber = sitting.sittingData.activeUnitNumber;
     sitting.activeGroupId = sitting.sittingData.activeGroupId;
+    sitting.activeSkillId = sitting.sittingData.activeSkillId;
+    // Normalise to epoch ms: sitting-data ships milliseconds, the transition endpoint ships an
+    // ISO string, and the phase countdown must compare one shape.
+    sitting.phaseDeadlineAt = toEpochMs(sitting.sittingData.phaseDeadlineAt);
     sitting.expiresAt = sitting.sittingData.expiresAt;
     sitting.attemptStartedAt = sitting.sittingData.attemptStartedAt;
     sitting.csrfToken = document.querySelector('#anti-forgery-holder input[name="__RequestVerificationToken"]').value;
@@ -165,7 +180,11 @@
         questions: sitting.questions.filter(function (question) { return question.skillCode === phase.skillCode; })
       };
     });
-    sitting.activePhaseIndex = -1;
+    // The server's ActiveSkillId is the only phase authority; the wall clock never picks the phase.
+    sitting.activePhaseIndex = sitting.activeSkillId
+      ? sitting.phases.findIndex(function (phase) { return phase.skillId === sitting.activeSkillId; })
+      : 0;
+    if (sitting.activePhaseIndex < 0) sitting.activePhaseIndex = 0;
     sitting.flaggedOnly = false;
     sitting.draftSaveTimeout = null;
     sitting.draftSaveInFlight = {};

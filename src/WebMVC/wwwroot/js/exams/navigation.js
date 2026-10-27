@@ -47,11 +47,11 @@
       } else {
         chip.classList.remove('palette-chip--disabled');
       }
-      if (isFutureUnit) {
-        chip.classList.add('palette-chip--locked');
-      } else {
-        chip.classList.remove('palette-chip--locked');
-      }
+      // A chip that cannot be entered must read as locked even when the reason is the phase
+      // boundary rather than a future adaptive unit (ticket d05).
+      var isGated = chip.disabled || isFutureUnit;
+      chip.classList.toggle('palette-chip--locked', isGated);
+      chip.setAttribute('aria-disabled', isGated ? 'true' : 'false');
     });
 
     if (sitting.flaggedFilterButton) {
@@ -100,9 +100,14 @@
         sitting.btnNext.className = 'btn btn--danger js-open-submit-modal';
         sitting.btnNext.disabled = false;
       } else if (lastInPhase) {
-        sitting.btnNext.textContent = 'Next phase starts when time expires';
-        sitting.btnNext.className = 'btn';
-        sitting.btnNext.disabled = true;
+        // The candidate finished the skill's last question: offer an explicit advance instead of
+        // idling until the clock expires (ticket d02). The transition endpoint is the only mutator.
+        var nextPhase = sitting.phases[sitting.activePhaseIndex + 1];
+        sitting.btnNext.textContent = nextPhase
+          ? 'Finish ' + (phase.skillName || 'this skill') + ' & start ' + (nextPhase.skillName || 'next skill')
+          : 'Review & Submit exam';
+        sitting.btnNext.className = 'btn btn--primary js-open-skill-advance';
+        sitting.btnNext.disabled = false;
       } else {
         sitting.btnNext.textContent = 'Next question';
         sitting.btnNext.className = 'btn btn--primary';
@@ -242,7 +247,7 @@
         clusterHtml += '<button type="button" class="btn btn--ghost btn--sm js-cluster-flag-btn ' + (cIsFlagged ? 'btn--primary' : '') + '" data-question-id="' + cq.questionId + '" data-flagged="' + (cIsFlagged ? 'true' : 'false') + '">';
         clusterHtml += (cIsFlagged ? 'Flagged for review' : 'Flag for review') + '</button>';
         clusterHtml += '</div>';
-        clusterHtml += '<p class="question__stem ee-tokenized-text">' + sitting.escapeHtml(cq.stem) + '</p>';
+        clusterHtml += '<p class="question__stem" data-cluster-stem="' + cq.questionId + '"></p>';
         clusterHtml += '<div class="option-list" role="radiogroup" aria-label="Answer for question ' + cq.displayOrder + '">';
         (cq.options || []).forEach(function (opt) {
           var isSelected = opt.optionId === cSelOptId;
@@ -257,6 +262,16 @@
 
       if (sitting.clusterContainer) {
         sitting.clusterContainer.innerHTML = clusterHtml;
+        // Cluster stems are tokenized after injection so they carry real .ee-token spans,
+        // exactly like the split passage (ticket d04).
+        sitting.clusterContainer.querySelectorAll('[data-cluster-stem]').forEach(function (stemEl) {
+          var clusterQuestion = sitting.questions.find(function (item) {
+            return item.questionId === Number(stemEl.getAttribute('data-cluster-stem'));
+          });
+          if (clusterQuestion) {
+            sitting.renderTokenizedText(stemEl, clusterQuestion.stem, clusterQuestion.sectionId, clusterQuestion.questionId, 'stem');
+          }
+        });
         sitting.clusterContainer.querySelectorAll('.js-cluster-radio').forEach(function (radio) {
           radio.addEventListener('change', function () {
             var qId = Number(this.getAttribute('data-question-id'));
@@ -298,7 +313,9 @@
         sitting.questionStemDisplay.textContent = '';
         sitting.questionStemDisplay.style.display = 'none';
       } else {
-        sitting.questionStemDisplay.textContent = q.stem;
+        // Tokenize the stem through the same helper the split passage uses, so the highlighter
+        // and sticky-note tools can address words here too (ticket d04).
+        sitting.renderTokenizedText(sitting.questionStemDisplay, q.stem, q.sectionId, q.questionId, 'stem');
         sitting.questionStemDisplay.style.display = '';
       }
 
@@ -505,6 +522,10 @@
 
     if (sitting.btnNext) {
       sitting.btnNext.addEventListener('click', function () {
+        if (sitting.btnNext.classList.contains('js-open-skill-advance')) {
+          sitting.advanceToNextSkill();
+          return;
+        }
         if (sitting.btnNext.classList.contains('js-open-unit-lock-modal')) {
           sitting.openUnitLockModal();
           return;
