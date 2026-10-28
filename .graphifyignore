@@ -1,0 +1,39 @@
+# Paths excluded from the knowledge graph.
+#
+# .agents/ holds 255 agent-skill files (5 MB). Indexed, it contributed 2,442 of
+# 9,600 nodes — a quarter of the graph was tooling docs, not this codebase.
+.agents/
+
+# Local secrets. `env` is not gitignored yet (see the P0 note in the audit) and
+# graph.json IS committed, so indexing it would copy live API keys into a
+# tracked file.
+env
+.env
+.env.*
+
+# Build output and runtime state
+bin/
+obj/
+App_Data/
+logs/
+.vs/
+mail-drop/
+
+# The graph's own output
+graphify-out/
+
+# Loose binaries and a historical diff at the repo root
+audio.mp3
+image.jpg
+*.diff
+
+# Demo audio: 11 mp3 tracks transcribed by Whisper would cost more than the
+# code graph is worth, and they carry no structural information.
+*.mp3
+*.wav
+src/WebMVC/wwwroot/audio/
+
+# Audit screenshots: 37 PNGs of UI bugs, captured for a bug report, not source.
+docs/audit/
+*.png
+*.jpg

@@ -51,8 +51,16 @@ A learner's spoken or written answer in an attempt, graded by AI rather than by 
 
 ### Scoring
 
-**Raw score**, **Scaled score**, **Band**:
-Raw is correct answers; scaled is raw converted per exam (admin-editable); band is the certificate's fixed standard level for a scaled score (not editable), snapshotted onto results.
+**Raw score**:
+The points a learner earns in one skill before conversion to the reporting scale.
+
+**Scaled score**:
+A skill's raw score converted onto its certificate's reporting scale. The certificate defines the default conversion; a single exam may carry its own conversion, which overrides that default for sittings of that exam.
+_Avoid_: Converted score
+
+**Band**:
+A named level a learner reaches from their total scaled score (e.g. B2, TOEIC Blue 785–900). Bands are part of the certificate's editable definition and are what learning paths and recommendations target.
+_Avoid_: Grade, level, tier, rank
 
 ### Money
 
