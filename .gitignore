@@ -39,10 +39,16 @@ src/WebMVC/WebMVC.csproj.user
 graphify-out/cache/
 graphify-out/202*/
 
+# Generated graph visualisations (graph.json, the source of truth, stays tracked)
+graphify-out/*.html
+
 # Local secrets & environment configuration
 .env
 .env.*
 !.env.example
+# Some tooling writes the key file as `env` (no dot); it holds the same live keys
+# as .env and must never be committed. Tracked template: .env.example only.
+/env
 
 # Runtime uploads and agent scratch
 App_Data/

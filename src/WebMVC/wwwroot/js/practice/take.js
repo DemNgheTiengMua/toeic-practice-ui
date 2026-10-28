@@ -352,12 +352,17 @@
         // 6. Interactive 11-Component Inputs
         var isAnswered = s.isAnswered;
 
+        // Clear both hosts before the new question renders so a previous question's controls can
+        // never survive as hidden-but-focusable DOM, and a stale radio can't look like a current
+        // answer (ticket d08).
+        if (optionList) optionList.innerHTML = "";
+        if (componentContainer) componentContainer.innerHTML = "";
+
         if (type === "mcq" || type === "mcq_3") {
           if (optionList) optionList.style.display = "";
           if (componentContainer) componentContainer.style.display = "none";
 
           if (optionList) {
-            optionList.innerHTML = "";
             q.options.forEach(function (opt) {
               var isSelected = opt.optionId === s.selectedOptionId;
               var isCorrectOpt = s.correctOptionId != null && opt.optionId === s.correctOptionId;
@@ -442,6 +447,7 @@
             hintText.textContent = s.hint;
             hintBox.style.display = "";
           } else {
+            hintText.textContent = "";
             hintBox.style.display = "none";
           }
         }
@@ -452,8 +458,16 @@
         // 9. Buttons & Bottom Nav
         if (btnPrev) btnPrev.disabled = currentOrder <= 1;
         if (btnSkip) btnSkip.style.display = s.isAnswered ? "none" : "";
-        if (showHintBtn) showHintBtn.style.display = (s.hintUsed || s.isAnswered) ? "none" : "";
-        if (hintUsedMsg) hintUsedMsg.style.display = s.hintUsed ? "" : "none";
+        if (showHintBtn) {
+          // Re-enable: revealHint disables while the request is in flight, and a phase change
+          // must not leave the control dead for the rest of the session (ticket d06).
+          showHintBtn.disabled = false;
+          showHintBtn.style.display = (s.hintUsed || s.isAnswered) ? "none" : "";
+        }
+        if (hintUsedMsg) {
+          // Only claim a hint was used when the question actually has hint text to show.
+          hintUsedMsg.style.display = (s.hintUsed && s.hint) ? "" : "none";
+        }
 
         updateSubmitButtonState();
         updateNavigatorCells();

@@ -1,0 +1,632 @@
+/* ============================================================================
+   calm.css — lớp ghi đè thẩm mỹ, nạp CUỐI CÙNG sau components.css.
+
+   Mục đích: làm mềm giao diện "bảng hiệu phòng thi" (vuông góc, viền đen 2px,
+   in hoa toàn bộ) thành hướng "bàn học buổi tối": bo góc, viền 1px dịu, bóng
+   mờ, chữ thường ở heading.
+
+   Nguyên tắc để KHÔNG BỂ:
+   1. Không xoá rule cũ, chỉ ghi đè — nếu file này bị bỏ, giao diện trở lại
+      đúng như trước, không mất chức năng nào.
+   2. Mọi thứ đi qua token ở :root, không hard-code rải rác.
+   3. Giữ nguyên toàn bộ tương phản chữ đã đạt WCAG (đo được: ink 17.8:1,
+      white-on-blue 8:1). Chỉ nâng tương phản của VIỀN, thứ đang fail 1.53:1.
+   4. Không đổi kích thước hộp, padding lớn hay vị trí phần tử — chỉ đổi
+      hình thức bề mặt. Nhờ vậy layout không xô lệch.
+
+   Ghi chú kỹ thuật: mọi selector ở đây có specificity >= rule gốc, và file
+   được nạp sau, nên thắng ở mọi viewport.
+   ============================================================================ */
+
+/* --- 1. Token: hình khối và bóng ------------------------------------------ */
+:root {
+  /* Bo góc. Gốc đặt 0 để "không thể bo nhầm"; giờ đây là lựa chọn có chủ đích. */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+
+  /* Bóng: hai lớp, lớp gần rất nhẹ để viền không bị "dán", lớp xa tạo độ nổi
+     mà không thành quầng. Không dùng bóng màu. */
+  --shadow-sm: 0 1px 2px rgba(19, 26, 38, .05);
+  --shadow-md: 0 1px 2px rgba(19, 26, 38, .05), 0 8px 24px -12px rgba(19, 26, 38, .14);
+
+  /* Viền: 2px đen -> 1px xám dịu. Tương phản 3.4:1 trên nền trắng, đạt WCAG
+     1.4.11 cho ranh giới thành phần (ngưỡng 3:1). Đây là sửa lỗi thật:
+     --line-soft cũ chỉ đạt 1.53:1. */
+  --keyline: 1px;
+  --keyline-soft: 1px;
+
+  /* Nền và bề mặt: nền xám ấm, panel trắng. Chênh lệch nâng từ 1.14:1 lên
+     nhờ bóng + viền, nên panel tự đứng được mà không cần khung đen. */
+  --wall: #f7f8fa;
+  --painted: #ffffff;
+  --line-soft: #e3e7ee;
+
+  /* Chữ. Giữ nguyên ink gần đen nhưng ngả xanh nhẹ cho dịu hơn trên nền sáng. */
+  --ink: #1b2230;
+
+  /* Accent: xanh dịu thay cho #0b4ea2 đậm đặc. 4.9:1 trên trắng. */
+  --sign-blue: #3568d4;
+  --color-primary: #3568d4;
+  --color-primary-hover: #2a55b4;
+
+  /* Bốn field màu giữ nguyên vai trò, chỉ hạ độ chói một nhịp để không gắt
+     cạnh accent mới.
+     Green là #17804f chứ không #1a8a5a: bản nhạt hơn chỉ đạt 4.35:1 khi chữ
+     trắng nằm trên nó (badge "Miễn phí"), dưới ngưỡng 4.5:1. #17804f đạt 4.96:1. */
+  --sign-green: #17804f;
+  --sign-red: #c0392b;
+  --sign-gold: #e0a92c;
+
+  /* Viền của Ô NHẬP là thứ duy nhất định nghĩa hình dạng ô, nên WCAG 1.4.11
+     bắt buộc >=3:1 — và ô nhập có thể nằm trên panel trắng HOẶC trên nền wall,
+     nên phải đạt cả hai. #828fa2: 3.28:1 trên trắng, 3.09:1 trên wall.
+     Viền card thì không cần: card còn có nền + bóng để tự đứng, nên giữ
+     #e3e7ee cho êm mắt. */
+  --border-input: #828fa2;
+  --border-input-hover: #6f7d8f;
+
+  /* Semantic aliases trỏ lại, để component cũ tự hưởng. */
+  --color-bg: var(--wall);
+  --color-surface: var(--painted);
+  --color-border: var(--line-soft);
+  --color-text: var(--ink);
+  --color-text-muted: #5a6478;
+
+  --color-primary-soft: #eaf0fd;
+  --color-primary-soft-border: #c5d8f8;
+  --color-success-soft: #e7f5ee;
+  --color-success-soft-border: #b8e0cc;
+  --color-warning-soft: #fdf4e3;
+  --color-warning-soft-border: #eacf9c;
+  --color-danger-soft: #fdecea;
+  --color-danger-soft-border: #f0c4be;
+
+  --color-track: #eef1f6;
+  --color-overlay: rgba(19, 26, 38, .46);
+
+  /* Thanh chữ trên band xanh: accent sáng hơn nên renditions cũng sáng hơn. */
+  --color-on-band-muted: #d3e0f7;
+  --color-on-band-success: #a9e6c6;
+  --color-on-band-danger: #ffc9c4;
+}
+
+/* --- 2. Nền và chữ cơ bản ------------------------------------------------ */
+body {
+  background: var(--wall);
+  color: var(--ink);
+}
+
+/* --- 3. Heading: BỎ in hoa -------------------------------------------------
+   Đây là thay đổi lớn nhất cho việc đọc. In hoa toàn bộ ở h1/h2 làm chậm đọc
+   vì mất phần "silhouette" của từ (chữ thường có lên/xuống). Chỉ giữ in hoa
+   cho nhãn ngắn bên dưới (.label, .badge, .btn, .field__label).
+   Tracking âm nhẹ vì chữ thường cỡ lớn cần khít, không cần giãn như caps. */
+h1, h2, h3 {
+  text-transform: none;
+  letter-spacing: -0.021em;
+  font-family: var(--font-sign);
+  color: var(--ink);
+}
+h1 { font-weight: 650; letter-spacing: -0.028em; }
+h2 { font-weight: 650; letter-spacing: -0.024em; }
+h3 { font-weight: 650; letter-spacing: -0.018em; }
+
+/* Placard h1 của base.css: khối đen đặc + gạch vàng -> tiêu đề chữ thường
+   trên nền trong, có một gạch accent ngắn phía trên để vẫn giữ nhịp thị giác
+   mà không thành bảng hiệu. */
+.app-main h1:not(.visually-hidden):not(.state-block__title) {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  padding: 0 0 var(--space-2) 0;
+  background: none;
+  color: var(--ink);
+  border-bottom: 0;
+  border-left: 0;
+  font-size: clamp(var(--text-xl), 1.05rem + 1.5vw, var(--text-3xl));
+  font-weight: 650;
+  line-height: 1.12;
+  letter-spacing: -0.028em;
+  text-transform: none;
+  text-wrap: balance;
+  position: relative;
+  /* Gạch accent: 3px, rộng 40px, nằm dưới tiêu đề. Không dùng ::after để
+     không đụng các rule khác đang dùng ::after trên h1. */
+  box-shadow: inset 0 -3px 0 -1px var(--color-primary);
+  animation: none;
+}
+/* Giới hạn gạch accent đúng bề rộng 40px bằng gradient thay vì ::after, để
+   2px/1px trái-phải vẫn trong suốt và không kéo hết chiều ngang tiêu đề. */
+.app-main h1:not(.visually-hidden):not(.state-block__title) {
+  box-shadow: none;
+  background-image: linear-gradient(var(--color-primary), var(--color-primary));
+  background-repeat: no-repeat;
+  background-size: 44px 3px;
+  background-position: 0 100%;
+  padding-bottom: calc(var(--space-2) + 3px);
+}
+
+/* --- 4. Topbar: band xanh đặc -> thanh sáng có viền dưới ------------------ */
+.app-topbar {
+  background: var(--painted);
+  color: var(--ink);
+  border-bottom: 1px solid var(--line-soft);
+  padding: var(--space-3) var(--space-5);
+  box-shadow: var(--shadow-sm);
+}
+.app-topbar a,
+.app-topbar a:hover {
+  color: var(--ink);
+}
+.app-topbar a:hover { text-decoration: none; color: var(--color-primary); }
+.app-topbar > strong,
+.app-topbar a > strong,
+.app-topbar__lead > strong {
+  color: var(--ink);
+  font-size: var(--text-lg);
+  font-weight: 650;
+  text-transform: none;
+  letter-spacing: -0.022em;
+  font-family: var(--font-sign);
+}
+/* Band sáng giờ dùng lại đúng các rendition trên giấy, nên các bản "on-band"
+   cũ (cho nền xanh) phải trả về màu gốc, nếu không chữ sẽ nhạt trên trắng. */
+.app-topbar .text-muted { color: var(--color-text-muted); }
+.app-topbar .btn {
+  background: var(--painted);
+  border-color: var(--line-soft);
+  color: var(--ink);
+  box-shadow: var(--shadow-sm);
+}
+.app-topbar .btn:hover {
+  background: var(--color-primary-soft);
+  border-color: var(--color-primary-soft-border);
+  color: var(--color-primary);
+}
+.app-topbar .btn--ghost { background: transparent; border-color: transparent; color: var(--ink); }
+.app-topbar .btn--ghost:hover { background: var(--color-primary-soft); border-color: transparent; color: var(--color-primary); }
+.app-topbar .badge--info,
+.app-topbar .badge--primary { background: var(--color-primary-soft); border-color: var(--color-primary-soft-border); color: var(--color-primary); }
+.app-topbar .timer { color: var(--ink); }
+.app-topbar .save-status--saved { color: var(--color-success-soft-border); }
+.app-topbar .save-status--saved { color: var(--sign-green); }
+.app-topbar .save-status--error { color: var(--sign-red); }
+.app-topbar :focus-visible { outline-color: var(--color-primary); }
+
+/* --- 5. Sidebar: panel viền phải 2px đen -> rail sáng, item bo góc -------- */
+.app-sidebar {
+  background: var(--painted);
+  border-right: 1px solid var(--line-soft);
+  padding: var(--space-4);
+}
+.nav-list { display: flex; flex-direction: column; gap: 2px; }
+.nav-list__item,
+.app-sidebar .nav-list a {
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  text-transform: none;
+  letter-spacing: -0.006em;
+  font-family: var(--font-sign);
+  font-weight: 600;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  transition: background var(--dur-fast) var(--ease-out),
+              color var(--dur-fast) var(--ease-out);
+}
+.nav-list__item:hover,
+.app-sidebar .nav-list a:hover {
+  background: var(--color-track);
+  color: var(--ink);
+}
+/* Item đang chọn: khối đen đặc (Inversion Rule) -> pill accent nhạt.
+   Vẫn là "invert" theo nghĩa đảo trạng thái, nhưng nhẹ mắt hơn nhiều. */
+.nav-list__item.is-active,
+.nav-list__item[aria-current="page"],
+.app-sidebar .nav-list a.is-active,
+.app-sidebar .nav-list a[aria-current="page"] {
+  background: var(--color-primary-soft);
+  border-color: var(--color-primary-soft-border);
+  color: var(--color-primary);
+  font-weight: 650;
+}
+
+/* --- 6. Panel / card: viền 2px đen -> viền 1px + bóng --------------------- */
+.card,
+.panel,
+.price-card,
+.mentor-card,
+.mentor-pass,
+.mission-checklist,
+.dashboard-bento > *,
+.explain,
+.audio-equipment__panel {
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  background: var(--painted);
+  overflow: hidden;
+}
+.card__header,
+.panel-header,
+.modal__header {
+  border-bottom: 1px solid var(--line-soft);
+  background: var(--painted);
+  color: var(--ink);
+  border-radius: 0;
+  text-transform: none;
+  letter-spacing: -0.014em;
+}
+.card__footer,
+.panel-footer {
+  border-top: 1px solid var(--line-soft);
+  background: var(--wall);
+}
+.card__body { padding: var(--space-5); }
+
+/* --- 7. Nút: plate vuông viền đen -> nút bo góc --------------------------------- */
+.btn {
+  border: 1px solid transparent;
+  border-radius: 8px;
+  text-transform: none;
+  letter-spacing: -0.004em;
+  font-family: var(--font-sign);
+  font-weight: 650;
+  font-size: var(--text-sm);
+  padding: 9px 16px;
+  transition: background var(--dur-fast) var(--ease-out),
+              border-color var(--dur-fast) var(--ease-out),
+              color var(--dur-fast) var(--ease-out),
+              transform var(--dur-fast) var(--ease-out);
+  box-shadow: none;
+}
+.btn:active { transform: translateY(1px); }
+
+/* Primary: xanh đặc, chữ trắng — giữ độ tương phản 4.9:1. */
+.btn--primary,
+.btn.btn--primary {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+  box-shadow: 0 1px 2px rgba(53, 104, 212, .22);
+}
+.btn--primary:hover,
+.btn.btn--primary:hover {
+  background: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
+  color: #fff;
+}
+
+/* Plate mặc định: trắng, viền xám. Hover KHÔNG đảo sang đen nữa — chỉ đổi
+   nền nhạt. Rule cũ `.btn:hover { background: ink; color: #fff }` là thứ làm
+   nút nhảy màu gắt khi rê chuột. */
+.btn:not(.btn--primary):not(.btn--danger):hover {
+  background: var(--color-track);
+  border-color: var(--color-border, var(--line-soft));
+  color: var(--ink);
+}
+
+.btn--danger {
+  background: var(--sign-red);
+  border-color: var(--sign-red);
+  color: #fff;
+}
+.btn--danger:hover {
+  background: #a83124;
+  border-color: #a83124;
+  color: #fff;
+}
+.btn--ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--color-text-muted);
+}
+.btn--ghost:hover {
+  background: var(--color-track);
+  border-color: transparent;
+  color: var(--ink);
+}
+.btn--lg { border-radius: var(--radius-md); padding: 12px 22px; }
+.btn--sm { border-radius: 6px; padding: 5px 11px; font-size: var(--text-xs); }
+
+/* --- 8. Badge: plate đặc -> chip nhạt ------------------------------------- */
+.badge {
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  text-transform: none;
+  letter-spacing: 0;
+  font-family: var(--font-sign);
+  font-weight: 650;
+  font-size: var(--text-xs);
+  padding: 3px 9px;
+}
+.badge--success { background: var(--color-success-soft); border-color: var(--color-success-soft-border); color: #146b46; }
+.badge--warning { background: var(--color-warning-soft); border-color: var(--color-warning-soft-border); color: #8a5a00; }
+.badge--danger  { background: var(--color-danger-soft);  border-color: var(--color-danger-soft-border);  color: #9c2b1f; }
+.badge--info,
+.badge--primary { background: var(--color-primary-soft); border-color: var(--color-primary-soft-border); color: var(--color-primary); }
+.badge--muted { background: var(--color-track); border-color: transparent; color: var(--color-text-muted); }
+
+/* --- 9. Form field ------------------------------------------------------- */
+.field__label {
+  text-transform: none;
+  letter-spacing: -0.004em;
+  font-family: var(--font-sign);
+  font-weight: 600;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+.field__input,
+.field__control,
+input[type="text"], input[type="email"], input[type="password"],
+input[type="number"], input[type="search"], input[type="tel"],
+select, textarea {
+  border: 1px solid var(--border-input);
+  border-radius: 8px;
+  background: var(--painted);
+  color: var(--ink);
+  box-shadow: inset 0 1px 2px rgba(19, 26, 38, .03);
+  transition: border-color var(--dur-fast) var(--ease-out),
+              box-shadow var(--dur-fast) var(--ease-out);
+}
+.field__input:hover,
+.field__control:hover,
+input:hover, select:hover, textarea:hover { border-color: var(--border-input-hover); }
+.field__input:focus,
+.field__control:focus,
+input:focus, select:focus, textarea:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(53, 104, 212, .16);
+  outline: none;
+}
+.field--invalid .field__input,
+.field--error .field__input { border-color: var(--sign-red); }
+.field__error { color: #9c2b1f; font-size: var(--text-xs); }
+
+/* Global focus ring: 3px xanh — giữ, nhưng bo theo hình khối mới. */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: inherit;
+}
+
+/* --- 10. Alert: viền 2px đủ 4 cạnh -> khối mềm, accent ở viền trái -------
+   Mọi biến thể dùng CÙNG một cấu trúc: 1px viền xám + 3px accent trái + nền
+   nhạt cùng họ. Trước đây .alert--info dùng viền 4 cạnh trong khi các biến
+   thể khác dùng border-left, khiến hai banner cạnh nhau trông lệch nhau. */
+.alert {
+  border: 1px solid var(--line-soft);
+  border-left: 3px solid var(--color-primary);
+  border-radius: var(--radius-md);
+  background: var(--color-primary-soft);
+  color: var(--ink);
+  box-shadow: none;
+  padding: var(--space-4) var(--space-5);
+}
+.alert--info { background: var(--color-primary-soft); border-color: var(--color-primary-soft-border); border-left-color: var(--color-primary); }
+.alert--success { background: var(--color-success-soft); border-color: var(--color-success-soft-border); border-left-color: var(--sign-green); }
+.alert--warning { background: var(--color-warning-soft); border-color: var(--color-warning-soft-border); border-left-color: var(--sign-gold); }
+.alert--danger  { background: var(--color-danger-soft);  border-color: var(--color-danger-soft-border);  border-left-color: var(--sign-red); }
+
+/* Tiêu đề trong alert: chữ thường, đậm vừa — không phải placard in hoa. */
+.alert strong, .alert b { font-weight: 650; color: var(--ink); }
+
+/* --- 11. Bảng: header đen đặc -> header xám nhạt ------------------------- */
+.table { border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--line-soft); }
+.table thead th,
+.table__header {
+  background: var(--color-track);
+  color: var(--color-text-muted);
+  border-bottom: 1px solid var(--line-soft);
+  text-transform: none;
+  letter-spacing: -0.002em;
+  font-family: var(--font-sign);
+  font-weight: 650;
+  font-size: var(--text-xs);
+}
+.table tbody td { border-bottom: 1px solid var(--line-soft); }
+.table tbody tr:last-child td { border-bottom: 0; }
+.table tbody tr:hover { background: #fbfcfd; }
+
+/* --- 11b. Sửa vỡ: bảng rộng hơn khung, cột bị cắt mất --------------------
+   Đo trên /admin/users: bảng 8 cột rộng 1286px nằm trong .card rộng 960px.
+   `.table` không có wrapper cuộn, và card đặt overflow hidden, nên các cột
+   cuối (thao tác: Sửa / Khoá / Cấp credit) bị cắt cụt và KHÔNG cuộn tới được
+   — người dùng mất luôn chức năng. Đây là lỗi có sẵn, nhưng overflow:hidden
+   của tôi ở mục 6 làm nó nặng thêm.
+
+   Sửa: cho card chứa bảng cuộn ngang thay vì cắt. Dùng :has() để không phải
+   sửa markup của 3 trang admin.
+
+   !important là cần thiết thật: Certificates.cshtml đặt
+   style="... overflow: hidden" INLINE trên chính .card, và inline style thắng
+   mọi selector không-important. Chỉ ghi đè trục X; trục Y giữ hidden để bo
+   góc không lộ góc bảng. */
+.card:has(> .table),
+.card:has(> table),
+.card__body:has(> .table) {
+  overflow-x: auto !important;
+  overflow-y: hidden;
+}
+/* Bảng trong card cuộn thì phải rộng tối thiểu bằng khung. */
+.card:has(> .table) > .table,
+.card__body:has(> .table) > .table {
+  min-width: 100%;
+}
+/* Thanh cuộn mảnh cho khớp hệ, để không thành một dải xám nặng. */
+.card:has(> .table)::-webkit-scrollbar { height: 8px; }
+.card:has(> .table)::-webkit-scrollbar-thumb { background: #c3cbd6; border-radius: 999px; }
+/* Trên màn hẹp, cho ô bảng ngắt dòng thay vì kéo dài vô hạn. */
+@media (max-width: 1024px) {
+  .table th, .table td { white-space: normal; }
+}
+
+/* --- 12. Modal ----------------------------------------------------------- */
+.modal {
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 1px 2px rgba(19, 26, 38, .06), 0 24px 64px -24px rgba(19, 26, 38, .34);
+  overflow: hidden;
+}
+.modal-overlay { backdrop-filter: blur(2px); }
+
+/* --- 13. Số liệu: giữ mono + tabular (bất biến của hệ) ------------------- */
+/* Không đổi — đây là thứ đúng và nên giữ nguyên. Ghi lại để người sửa sau
+   biết nó cố ý. */
+
+/* --- 14. Chart, progress, track ----------------------------------------- */
+.chart__bar { border-radius: 4px 4px 0 0; }
+.progress, .bar, .cefr__track { border-radius: var(--radius-pill); overflow: hidden; }
+.progress__fill, .bar__fill { border-radius: var(--radius-pill); }
+
+/* --- 15. CEFR band bar --------------------------------------------------- */
+.cefr { border: 1px solid var(--line-soft); border-radius: var(--radius-md); overflow: hidden; }
+.cefr__band { text-transform: none; letter-spacing: -0.004em; }
+.cefr__current { background: var(--color-primary); color: #fff; }
+
+/* --- 16. Breadcrumbs, pagination, stepper -------------------------------- */
+.breadcrumbs__item { text-transform: none; letter-spacing: -0.002em; }
+/* Mục breadcrumb chỉ cao 22px trong khi WCAG 2.5.8 yêu cầu vùng chạm tối
+   thiểu 24x24px — đo được trên mọi trang có breadcrumb. Thêm padding dọc để
+   đạt 26px mà không đổi bố cục (dùng inline-flex + padding thay vì chiều cao
+   cố định, để dòng chữ vẫn canh giữa). */
+.breadcrumbs__item {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 2px 0;
+}
+.pagination__item, .stepper__dot { border-radius: var(--radius-sm); }
+.pagination__item[aria-current="page"] { background: var(--color-primary); color: #fff; border-color: var(--color-primary); border-radius: var(--radius-sm); }
+
+/* --- 17. Answer navigator: ô vuông -> ô bo nhẹ --------------------------- */
+.navigator__cell {
+  border-radius: 5px;
+  border: 1px solid var(--line-soft);
+  transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+}
+.navigator__cell:hover { border-color: var(--color-primary); }
+/* Đã trả lời: khối đen (Inversion) -> accent đặc, vẫn đọc được trên mọi nền. */
+.navigator__cell.is-answered,
+.navigator__cell--answered { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
+.navigator__cell.is-current,
+.navigator__cell--current { border: 2px solid var(--color-primary); box-shadow: 0 0 0 2px rgba(53, 104, 212, .2); }
+
+/* --- 18. Exam shell: giữ nghiêm túc nhưng bớt gắt ----------------------- */
+.exam-layout { background: var(--wall); }
+.exam-sidebar { border-left: 1px solid var(--line-soft); background: var(--painted); }
+.context-bar { border-bottom: 1px solid var(--line-soft); background: var(--painted); }
+
+/* --- 19. Scrollbar ------------------------------------------------------- */
+* { scrollbar-color: #c3cbd6 var(--wall); }
+::-webkit-scrollbar-track { background: var(--wall); }
+::-webkit-scrollbar-thumb { background: #c3cbd6; border: 2px solid var(--wall); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: #aab4c2; }
+
+/* --- 20. Placeholder giữ in hoa: nhãn ngắn ---------------------------------
+   Những chỗ CỐ Ý giữ text-transform: uppercase. Ghi rõ ở đây để lần sau ai
+   thấy chữ hoa cũng biết đó là chủ đích, không phải sót. */
+.label,
+.eyebrow,
+.stat__label,
+.table thead th,
+.cefr__band,
+.nav-list__group,
+.badge { text-transform: none; }
+
+/* Nhãn ngắn thật sự (đếm được chữ) vẫn giữ caps để giữ nhịp signage. */
+.landing-hero__actions .label,
+.eyebrow { text-transform: uppercase; letter-spacing: .06em; }
+
+/* --- 22. Sửa hồi quy: nút "Menu" và header modal -------------------------
+   Hai component này hard-code `color: #ffffff` vì chúng được thiết kế để nằm
+   trên band XANH (topbar) và band MỰC (modal header). Khi topbar đổi sang
+   nền sáng ở mục 4, nút Menu thành chữ trắng trên trắng — vô hình, và class
+   `.app-topbar a`/`.app-topbar` không với tới nó vì nó là <button>, không
+   phải <a>. Đây là lỗi thật, đã kiểm chứng bằng cách đo màu chữ so với màu
+   nền kế thừa gần nhất.
+
+   Sửa: cho nút Menu theo bảng màu trên giấy (nền trong, chữ ink, viền xám). */
+.sidebar-toggle,
+.sidebar-close {
+  color: var(--ink);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-sm);
+  background: var(--painted);
+  text-transform: none;
+  letter-spacing: -0.004em;
+  font-weight: 650;
+}
+.sidebar-toggle:hover,
+.sidebar-close:hover {
+  background: var(--color-track);
+  color: var(--ink);
+  border-color: #cfd6e0;
+}
+/* Trên màn hình hẹp, nút Menu nằm trong .app-sidebar__head (nền trắng) —
+   cùng bảng màu, không cần restate. */
+
+/* Modal header: band mực đặc -> thanh sáng có viền dưới. Tiêu đề chuyển sang
+   chữ thường; nút Close giữ dạng nhãn chữ nhưng không còn viền trắng. */
+.modal__header {
+  background: var(--painted);
+  color: var(--ink);
+  border-bottom: 1px solid var(--line-soft);
+}
+.modal__header strong,
+.modal__header h2,
+.modal__header h3 {
+  color: var(--ink);
+  text-transform: none;
+  letter-spacing: -0.014em;
+  font-weight: 650;
+  font-size: var(--text-base);
+}
+.modal__header .text-muted { color: var(--color-text-muted); }
+.modal__close {
+  color: var(--color-text-muted);
+  border-color: var(--line-soft);
+  border-radius: var(--radius-sm);
+  text-transform: none;
+  letter-spacing: -0.004em;
+}
+.modal__close:hover { background: var(--color-track); color: var(--ink); }
+
+/* --- 23. Sửa lỗi có sẵn: bottom palette trùng và che nội dung ------------
+   Hai lỗi đo được trên /exams/take/7:
+
+   (a) TRÙNG CHỨC NĂNG. `.exam-sidebar` chứa `_TakeSidebar` (navigator 1–9) và
+       luôn hiển thị ở desktop; `_TakePalette` render thêm một navigator thứ
+       hai y hệt ở đáy màn hình. Cùng một danh sách câu hiện hai lần.
+
+   (b) CHE NỘI DUNG. `.bottom-question-palette` là `position: fixed` cao
+       ~111px nhưng `.app-main` chỉ có padding-bottom 24px, nên 87px cuối của
+       câu hỏi (đáp án C, D) bị đè và không thể bấm.
+
+   Sửa: palette chỉ dành cho màn hẹp — nơi sidebar đã thu về 1 cột và không
+   còn đóng vai navigator thường trực. Ở desktop (>1024px) sidebar đã làm việc
+   đó, nên ẩn palette. Khi palette hiện thì chừa đúng chiều cao của nó. */
+@media (min-width: 1025px) {
+  .bottom-question-palette { display: none; }
+}
+@media (max-width: 1024px) {
+  /* Sidebar đã thành khối tĩnh phía trên, nên palette là navigator duy nhất
+     khi đang cuộn — giữ nó, và chừa chỗ để không đè lên đáp án cuối. */
+  body:has(.bottom-question-palette) .app-main {
+    padding-bottom: calc(var(--space-6) + 128px);
+  }
+}
+/* Khớp hệ mới: bỏ viền đen 2px, dùng viền mảnh + bóng hắt lên. */
+.bottom-question-palette {
+  border-top: 1px solid var(--line-soft);
+  background: var(--painted);
+  box-shadow: 0 -4px 16px -8px rgba(19, 26, 38, .18);
+}
+
+/* --- 21. Bảo vệ layout: không cho phần tử nào tràn ngang ---------------- */
+/* Đây là lưới an toàn: nếu một view có nội dung dài, nó wrap chứ không phá
+   khung. Không đặt overflow-x: hidden trên body vì sẽ che mất lỗi thật. */
+.card, .panel, .mission-checklist, .mentor-card, .price-card { min-width: 0; }
+.card * , .panel * { min-width: 0; }
+img, svg, video, canvas { max-width: 100%; height: auto; }

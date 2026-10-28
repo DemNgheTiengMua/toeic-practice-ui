@@ -493,6 +493,17 @@ public class ExamAudioAndInstructionsTests : PlaywrightTestBase
             SET StartedAt = SYSDATETIMEOFFSET(),
                 PreflightVerifiedAt = SYSDATETIMEOFFSET(),
                 ExpiresAt = DATEADD(minute, exam.DurationMinutes, SYSDATETIMEOFFSET()),
+                ActiveSkillId = (
+                    SELECT TOP (1) question.SkillId
+                    FROM Questions AS question
+                    INNER JOIN Sections AS section ON section.SectionId = question.SectionId
+                    INNER JOIN Skills AS skill ON skill.SkillId = section.SkillId
+                    INNER JOIN QuestionGroups AS questionGroup ON questionGroup.GroupId = question.GroupId
+                    WHERE question.ExamId = attempt.ExamId
+                    ORDER BY skill.DisplayOrder, section.DisplayOrder, questionGroup.DisplayOrder, question.DisplayOrder
+                ),
+                ActiveUnitNumber = 1,
+                ActiveGroupId = NULL,
                 LastQuestionId = (
                     SELECT TOP (1) question.QuestionId
                     FROM Questions AS question

@@ -12,15 +12,22 @@
         <span class="palette-legend-item"><span class="chip-swatch chip-swatch--answered"></span> Answered</span>
         <span class="palette-legend-item"><span class="chip-swatch chip-swatch--current"></span> Current</span>
         <span class="palette-legend-item"><span class="chip-swatch chip-swatch--flagged"></span> Flagged</span>
+        <span class="palette-legend-item"><span class="chip-swatch chip-swatch--locked"></span> Locked</span>
       </div>
     </div>
+    <p id="palette-locked-reason" class="text-xs text-muted" style="margin: 0 0 0.35rem;">
+      Locked questions belong to another skill, a later adaptive stage, or a group you have already left.
+    </p>
     <div class="palette-chips-track" id="bottom-palette-chips">
       @foreach (var item in take.Navigator)
       {
-        <button type="button" class="palette-chip @item.PaletteClass"
+        <button type="button" class="palette-chip @item.PaletteClass @(item.IsLocked ? "palette-chip--locked" : "")"
                 id="bottom-chip-@item.QuestionId"
                 data-question-id="@item.QuestionId"
                 data-display-order="@item.DisplayOrder"
+                aria-label="@item.PaletteTitle"
+                aria-disabled="@(item.IsLocked ? "true" : "false")"
+                @(item.IsLocked ? "aria-describedby=palette-locked-reason" : "")
                 @(item.IsLocked ? "disabled" : "")
                 title="@item.PaletteTitle">
           @item.DisplayOrder

@@ -563,18 +563,32 @@ body.exam-body-protected {
   line-height: 1.45;
 }
 
-/* Bottom palette disabled states */
+/* Bottom palette disabled states. A locked chip must stay visible and read as gated — hiding it
+   removes the only signal a candidate has about questions in another skill (ticket d05). */
+.palette-chip--locked,
 .palette-chip--disabled {
   opacity: 0.35 !important;
   cursor: not-allowed !important;
   pointer-events: none !important;
 }
-.palette-chip--locked,
 .palette-chip[hidden],
 .navigator__cell[hidden],
 .navigator__cell.is-locked,
 [hidden] {
   display: none !important;
+}
+/* The bottom palette duplicates the sidebar navigator, and at desktop width the sidebar is
+   always visible and already owns that job. Keep the palette for narrow viewports only. This rule
+   belongs here rather than in a restyle sheet: it is sitting-room behaviour, and tests and
+   accessibility contracts depend on it. */
+@media (min-width: 1025px) {
+  .bottom-question-palette { display: none; }
+}
+@media (max-width: 1024px) {
+  /* Palette is the only navigator while scrolling a narrow layout, so reserve room for it. */
+  body:has(.bottom-question-palette) .app-main {
+    padding-bottom: calc(var(--space-6) + 128px);
+  }
 }
 .btn--danger.js-open-submit-modal {
   white-space: nowrap !important;
