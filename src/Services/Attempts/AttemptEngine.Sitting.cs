@@ -98,16 +98,53 @@ public sealed partial class AttemptEngine
                 : answersByQuestion.TryGetValue(q.QuestionId, out var answer) && (answer.SelectedOptionId.HasValue || !string.IsNullOrWhiteSpace(answer.ResponseText) || !string.IsNullOrWhiteSpace(answer.SelectedOptionIdsJson)));
         int flaggedCount = answers.Count(a => a.IsFlagged);
 
-        // Determine current question
-        int targetIndex = 0;
+        // Determine authoritative saved question index within the active phase/unit/group
+        int savedIndex = -1;
+        if (attempt.LastQuestionId.HasValue)
+        {
+            savedIndex = questions.FindIndex(q => q.QuestionId == attempt.LastQuestionId.Value);
+        }
+
+        if (savedIndex < 0 || IsPhaseOrUnitOrGroupLocked(attempt, questions[savedIndex]))
+        {
+            savedIndex = questions.FindIndex(q => !IsPhaseOrUnitOrGroupLocked(attempt, q));
+            if (savedIndex < 0) savedIndex = 0;
+        }
+
+        int minAllowedAudioIndex = savedIndex >= 0 && savedIndex < totalQuestions
+            ? GetFirstClusterIndex(questions, savedIndex)
+            : 0;
+
+        int targetIndex = savedIndex >= 0 ? savedIndex : 0;
         if (questionDisplayOrder.HasValue && questionDisplayOrder.Value >= 1 && questionDisplayOrder.Value <= totalQuestions)
         {
-            targetIndex = questionDisplayOrder.Value - 1;
-        }
-        else if (attempt.LastQuestionId.HasValue)
-        {
-            var idx = questions.FindIndex(q => q.QuestionId == attempt.LastQuestionId.Value);
-            if (idx >= 0) targetIndex = idx;
+            int requestedIndex = questionDisplayOrder.Value - 1;
+            var requestedQuestion = questions[requestedIndex];
+            var currentSavedQuestion = savedIndex >= 0 && savedIndex < totalQuestions ? questions[savedIndex] : requestedQuestion;
+
+            bool phaseOrGroupLocked = IsPhaseOrUnitOrGroupLocked(attempt, requestedQuestion);
+            bool blockedBySystemPaced = string.Equals(currentSavedQuestion.Section.NavigationMode, "SYSTEM_PACED_AUTO", StringComparison.OrdinalIgnoreCase)
+                && requestedIndex != savedIndex;
+            bool blockedByOneWayAudio = string.Equals(currentSavedQuestion.Section.NavigationMode, "AUDIO_DRIVEN", StringComparison.OrdinalIgnoreCase)
+                && requestedIndex < minAllowedAudioIndex;
+
+            if (!phaseOrGroupLocked && !blockedBySystemPaced && !blockedByOneWayAudio)
+            {
+                targetIndex = requestedIndex;
+                if (attempt.Status == AttemptStatus.InProgress.ToCode()
+                    && targetIndex > savedIndex
+                    && string.Equals(requestedQuestion.Section.NavigationMode, "AUDIO_DRIVEN", StringComparison.OrdinalIgnoreCase))
+                {
+                    attempt.LastQuestionId = requestedQuestion.QuestionId;
+                    await db.SaveChangesAsync(cancellationToken);
+                    savedIndex = targetIndex;
+                    minAllowedAudioIndex = GetFirstClusterIndex(questions, savedIndex);
+                }
+            }
+            else if (!attempt.ActiveSkillId.HasValue)
+            {
+                targetIndex = requestedIndex;
+            }
         }
 
         var sectionMasterAudio = await LoadSectionMasterAudioAsync(attempt.ExamId, cancellationToken);
@@ -186,11 +223,11 @@ public sealed partial class AttemptEngine
             answersByQuestion.TryGetValue(q.QuestionId, out var answer);
             freeResponses.TryGetValue(q.QuestionId, out var response);
             var isLocked = isPhaseExpired
-                || (attempt.ActiveSkillId.HasValue && q.Section.SkillId != attempt.ActiveSkillId.Value)
-                || (q.Group.UnitNumber != attempt.ActiveUnitNumber)
-                || (string.Equals(q.Section.NavigationMode, "HYBRID_GROUP_LOCKED", StringComparison.OrdinalIgnoreCase)
-                    && attempt.ActiveGroupId.HasValue
-                    && q.GroupId != attempt.ActiveGroupId.Value);
+                || IsPhaseOrUnitOrGroupLocked(attempt, q)
+                || (string.Equals(q.Section.NavigationMode, "SYSTEM_PACED_AUTO", StringComparison.OrdinalIgnoreCase)
+                    && idx != targetIndex)
+                || (string.Equals(q.Section.NavigationMode, "AUDIO_DRIVEN", StringComparison.OrdinalIgnoreCase)
+                    && idx < GetFirstClusterIndex(questions, targetIndex));
 
             return new NavigatorItem(
                 q.QuestionId,
@@ -245,6 +282,30 @@ public sealed partial class AttemptEngine
             AuthorizationCode: attempt.AuthorizationCode,
             LastAudioOffsetMs: attempt.LastAudioOffsetMs,
             CandidateNotesJson: attempt.CandidateNotesJson);
+    }
+
+    private static bool IsPhaseOrUnitOrGroupLocked(ExamAttempt attempt, Question q) =>
+        (attempt.ActiveSkillId.HasValue && q.Section.SkillId != attempt.ActiveSkillId.Value)
+        || (q.Group.UnitNumber != attempt.ActiveUnitNumber)
+        || (string.Equals(q.Section.NavigationMode, "HYBRID_GROUP_LOCKED", StringComparison.OrdinalIgnoreCase)
+            && attempt.ActiveGroupId.HasValue
+            && q.GroupId != attempt.ActiveGroupId.Value);
+
+    private static int GetFirstClusterIndex(IReadOnlyList<Question> questions, int currentIndex)
+    {
+        if (currentIndex <= 0 || currentIndex >= questions.Count) return Math.Max(0, currentIndex);
+        var current = questions[currentIndex];
+        if (current.Section.ClusterSize != 3) return currentIndex;
+
+        for (int i = 0; i < currentIndex; i++)
+        {
+            var candidate = questions[i];
+            if (candidate.GroupId == current.GroupId && candidate.SectionId == current.SectionId)
+            {
+                return i;
+            }
+        }
+        return currentIndex;
     }
 
     private static IReadOnlyList<AttemptPhaseInfo> BuildAttemptPhases(

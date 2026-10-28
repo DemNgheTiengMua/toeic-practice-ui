@@ -7,12 +7,6 @@
   <div class="exam-topbar-group">
     <strong>@take.ExamName</strong>
     <span class="badge badge--info" id="topbar-section-badge">@q.SkillName · @q.SectionName</span>
-    @if (take.HasAuthorizationCode)
-    {
-      <span class="badge badge--neutral" id="auth-code-placard" style="font-family: 'IBM Plex Mono', monospace; font-weight: 700; letter-spacing: 0.05em; border: 2px solid #14181d; background: #fff; color: #14181d; border-radius: 0; box-shadow: none;" title="Authorization code for session recovery">
-        EXAM CODE: @take.AuthorizationCode
-      </span>
-    }
   </div>
   <div class="exam-topbar-group">
     <div id="timer-alert-placard" class="timer-alert-placard" style="display:none;" role="alert">

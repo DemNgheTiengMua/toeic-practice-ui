@@ -411,6 +411,11 @@
     }
 
     sitting.updateNavigationForPhase();
+    if (sitting.initializedPositionSync && typeof sitting.scheduleSync === 'function') {
+      sitting.positionDirty = true;
+      sitting.scheduleSync(true);
+    }
+    sitting.initializedPositionSync = true;
     window.scrollTo({ top: 0, behavior: 'instant' });
   };
   sitting.goToQuestion = function (targetOrder) {
@@ -423,13 +428,13 @@
       return;
     }
 
+    var targetQuestion = sitting.questionMap[targetOrder];
+    var phase = sitting.phases[sitting.activePhaseIndex];
+    var currentQuestion = sitting.questionMap[sitting.currentDisplayOrder];
     if (sitting.isSystemPacedAuto(currentQuestion)) {
       // Manual navigation disabled during automated speaking flow
       return;
     }
-            var targetQuestion = sitting.questionMap[targetOrder];
-    var phase = sitting.phases[sitting.activePhaseIndex];
-    var currentQuestion = sitting.questionMap[sitting.currentDisplayOrder];
     if (!targetQuestion || !phase || targetQuestion.skillCode !== phase.skillCode) return;
     var isOneWay = currentQuestion && (currentQuestion.navigationMode === 'AUDIO_DRIVEN');
     if (isOneWay && targetOrder < sitting.currentDisplayOrder) return;

@@ -443,4 +443,44 @@ public sealed class SittingStateMachineTests(DatabaseFixture database)
         Assert.True(take2.Navigator[0].IsLocked);
         Assert.False(take2.Navigator[1].IsLocked);
     }
+
+    [Fact]
+    public async Task GetAttemptTake_Blocks_Url_Tampering_For_Locked_Phase_And_OneWay_AudioDriven_Questions()
+    {
+        var certCode = Unique("SSM8");
+        var (certId, examId, _, _, q1Id, _, _, _) = await SeedTwoSkillExamAsync(certCode);
+        var userId = await SeedLearnerAsync(certCode);
+
+        // Add a second Listening question and mark Listening section as AUDIO_DRIVEN
+        await database.SqlAsync($"""
+            DECLARE @secL INT = (SELECT SectionId FROM Questions WHERE QuestionId = {q1Id});
+            DECLARE @gL INT = (SELECT GroupId FROM Questions WHERE QuestionId = {q1Id});
+            DECLARE @sL INT = (SELECT SkillId FROM Questions WHERE QuestionId = {q1Id});
+            UPDATE Sections SET NavigationMode = 'AUDIO_DRIVEN' WHERE SectionId = @secL;
+
+            UPDATE Questions SET DisplayOrder = 3 WHERE ExamId = {examId} AND QuestionId <> {q1Id};
+            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder)
+            VALUES (@gL, {examId}, @secL, @sL, N'Listening Q2', 1, 'mcq', 2);
+            DECLARE @qL2 INT = SCOPE_IDENTITY();
+            INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
+              (@qL2, 'mcq', 'A', N'Opt A', 1),
+              (@qL2, 'mcq', 'B', N'Opt B', 0);
+            """);
+
+        var engine = CreateEngine();
+        var attempt = await engine.CreateAttemptAsync(userId, certId, examId, 75);
+
+        // 1. Tampering ?q=3 (Reading skill while Listening is active) must stay on Question 1
+        var blockedPhaseJump = await engine.GetAttemptTakeAsync(attempt.AttemptId, userId, questionDisplayOrder: 3);
+        Assert.Equal(1, blockedPhaseJump.CurrentQuestion.DisplayOrder);
+
+        // 2. Advancing to Question 2 in AUDIO_DRIVEN locks Question 1; tampering ?q=1 must stay on Question 2
+        var advancedToQ2 = await engine.GetAttemptTakeAsync(attempt.AttemptId, userId, questionDisplayOrder: 2);
+        Assert.Equal(2, advancedToQ2.CurrentQuestion.DisplayOrder);
+        Assert.True(advancedToQ2.Navigator[0].IsLocked);
+        Assert.False(advancedToQ2.Navigator[1].IsLocked);
+
+        var blockedRewindToQ1 = await engine.GetAttemptTakeAsync(attempt.AttemptId, userId, questionDisplayOrder: 1);
+        Assert.Equal(2, blockedRewindToQ1.CurrentQuestion.DisplayOrder);
+    }
 }

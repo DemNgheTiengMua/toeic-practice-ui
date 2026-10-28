@@ -16,8 +16,8 @@
     sitting.scheduleSync(true);
   };
   sitting.triggerSync = function () {
-    if (sitting.isFlushing || (sitting.pendingQueue.length === 0 && !sitting.notesDirty)) {
-      if (sitting.pendingQueue.length === 0 && !sitting.notesDirty) {
+    if (sitting.isFlushing || (sitting.pendingQueue.length === 0 && !sitting.notesDirty && !sitting.positionDirty)) {
+      if (sitting.pendingQueue.length === 0 && !sitting.notesDirty && !sitting.positionDirty) {
         sitting.saveStatus.textContent = 'Saved';
         sitting.saveStatus.className = 'save-status save-status--saved';
         var submitQueueMsg = document.getElementById('modal-sync-pending');
@@ -29,7 +29,9 @@
     }
 
     var wasNotesDirty = sitting.notesDirty;
+    var wasPositionDirty = sitting.positionDirty;
     sitting.notesDirty = false;
+    sitting.positionDirty = false;
 
     sitting.isFlushing = true;
     sitting.saveStatus.textContent = 'Saving…';
@@ -77,8 +79,8 @@
         return;
       }
 
-      if (typeof data.remainingSeconds === 'number') {
-        sitting.expiresAt = Date.now() + (data.remainingSeconds * 1000);
+      if (data.phaseDeadlineAt !== undefined) {
+        sitting.phaseDeadlineAt = sitting.parseDeadlineToEpochMs(data.phaseDeadlineAt);
       }
 
       var syncedQIds = syncItems.map(function (x) { return x.questionId; });
@@ -90,7 +92,7 @@
       var networkWarning = document.getElementById('network-warning');
       if (networkWarning) networkWarning.style.display = 'none';
 
-      if (sitting.pendingQueue.length > 0 || sitting.notesDirty) {
+      if (sitting.pendingQueue.length > 0 || sitting.notesDirty || sitting.positionDirty) {
         sitting.scheduleSync(false);
       } else {
         sitting.saveStatus.textContent = 'Saved';
@@ -105,6 +107,9 @@
       sitting.isFlushing = false;
       if (wasNotesDirty) {
         sitting.notesDirty = true;
+      }
+      if (wasPositionDirty) {
+        sitting.positionDirty = true;
       }
       if (err && err.code === 'attempt_expired') {
         sitting.isSubmitting = true;

@@ -252,9 +252,34 @@ public sealed partial class AttemptEngine
             attempt.CandidateNotesJson = request.CandidateNotesJson;
         }
 
-        if (request.LastQuestionId.HasValue && (request.Answers == null || request.Answers.Count == 0))
+        if (request.LastQuestionId.HasValue)
         {
-            attempt.LastQuestionId = request.LastQuestionId.Value;
+            var orderedQuestions = await db.Questions
+                .Where(q => q.ExamId == attempt.ExamId)
+                .Include(q => q.Group)
+                .Include(q => q.Section).ThenInclude(s => s.Skill)
+                .OrderBy(q => q.Section.Skill.DisplayOrder)
+                .ThenBy(q => q.Section.DisplayOrder)
+                .ThenBy(q => q.Group.DisplayOrder)
+                .ThenBy(q => q.DisplayOrder)
+                .ToListAsync(cancellationToken);
+
+            var targetIdx = orderedQuestions.FindIndex(q => q.QuestionId == request.LastQuestionId.Value);
+            if (targetIdx >= 0 && !IsPhaseOrUnitOrGroupLocked(attempt, orderedQuestions[targetIdx]))
+            {
+                var currentIdx = attempt.LastQuestionId.HasValue
+                    ? orderedQuestions.FindIndex(q => q.QuestionId == attempt.LastQuestionId.Value)
+                    : -1;
+                var targetQuestion = orderedQuestions[targetIdx];
+                var isBackwardInAudio = string.Equals(targetQuestion.Section.NavigationMode, "AUDIO_DRIVEN", StringComparison.OrdinalIgnoreCase)
+                    && currentIdx >= 0
+                    && targetIdx < GetFirstClusterIndex(orderedQuestions, currentIdx);
+
+                if (!isBackwardInAudio)
+                {
+                    attempt.LastQuestionId = request.LastQuestionId.Value;
+                }
+            }
         }
 
         await db.SaveChangesAsync(cancellationToken);

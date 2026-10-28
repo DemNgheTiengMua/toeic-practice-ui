@@ -190,6 +190,11 @@ public sealed class ExamsController(
                 return RedirectToAction(nameof(Result), new { attemptId });
             }
 
+            if (q.HasValue && take.CurrentQuestion is not null && take.CurrentQuestion.DisplayOrder > 0 && take.CurrentQuestion.DisplayOrder != q.Value)
+            {
+                return RedirectToAction(nameof(Take), new { attemptId, q = take.CurrentQuestion.DisplayOrder });
+            }
+
             return View(new ExamTakeViewModel(take, TempData["ErrorMessage"] as string));
         }
         catch (ApiException ex) when (ex.Code == ApiError.Codes.PreflightRequired)
