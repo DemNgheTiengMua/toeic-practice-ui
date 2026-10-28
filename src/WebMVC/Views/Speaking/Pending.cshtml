@@ -14,7 +14,7 @@
   <span class="breadcrumbs__item" aria-current="page">Grading in progress</span>
 </nav>
 
-<div class="context-bar mb-4">
+<div class="context-bar mb-4" data-attempt-id="@p.AttemptId">
   <div class="context-bar__item">
     <span class="context-bar__label">Certificate:</span>
     <span class="context-bar__value">@p.CertCode</span>
@@ -86,11 +86,7 @@ else
           </ol>
 
           <div class="progress mx-auto" style="max-width: 320px; margin-top: var(--space-4)">
-            @{
-              var pct = p.TotalResponses > 0 ? Math.Round((double)p.GradedResponses / p.TotalResponses * 100) : 50;
-              if (pct < 20) pct = 20;
-            }
-            <div class="progress__bar" id="progress-bar" style="width: @pct%;"></div>
+            <div class="progress__bar" id="progress-bar" style="width: @Model.ProgressPercent%;"></div>
           </div>
         </div>
       </div>
@@ -101,40 +97,5 @@ else
     </div>
   </div>
 
-  <script>
-    (function() {
-      const attemptId = @p.AttemptId;
-
-      async function pollStatus() {
-        try {
-          const resp = await fetch(`/speaking/status/${attemptId}`);
-          if (resp.ok) {
-            const data = await resp.json();
-            if (data.attemptStatus === 'graded' || data.attemptStatus === 2) {
-              window.location.href = `/speaking/review/${attemptId}`;
-              return;
-            }
-            if (data.canRetry || data.failedResponses > 0) {
-              window.location.reload();
-              return;
-            }
-            const desc = document.getElementById('timer-display');
-            if (desc) {
-              desc.textContent = `Processing questions (${data.gradedResponses} of ${data.totalResponses} complete)…`;
-            }
-            if (data.totalResponses > 0) {
-              const pct = Math.max(20, Math.round((data.gradedResponses / data.totalResponses) * 100));
-              const bar = document.getElementById('progress-bar');
-              if (bar) bar.style.width = pct + '%';
-            }
-          }
-        } catch (err) {
-          // Keep polling
-        }
-        setTimeout(pollStatus, 2000);
-      }
-
-      setTimeout(pollStatus, 2000);
-    })();
-  </script>
+  <script src="~/js/speaking/pending.js" asp-append-version="true"></script>
 }

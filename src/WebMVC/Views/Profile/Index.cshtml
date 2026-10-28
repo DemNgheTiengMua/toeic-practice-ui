@@ -1,7 +1,6 @@
-@inject CurrentUser CurrentUser
-@model ProfileViewModel
+@model ProfilePageViewModel
 @{
-    var isLearner = !CurrentUser.IsAdmin;
+    var isLearner = !Model.IsAdmin;
     Layout = isLearner ? "_LearnerLayout" : "_AdminLayout";
     ViewData["Title"] = "My profile";
     ViewData["Description"] = "Your profile and time zone.";
@@ -22,55 +21,22 @@
     <p class="text-muted no-margin">How we address you, and the zone every date and time renders in.</p>
   </div>
 
-  @if (!string.IsNullOrEmpty(Model.SuccessMessage))
+  @if (!string.IsNullOrEmpty(Model.Form.SuccessMessage))
   {
-    <div class="alert alert--success" role="status">@Model.SuccessMessage</div>
+    <div class="alert alert--success" role="status">@Model.Form.SuccessMessage</div>
   }
-  @if (!string.IsNullOrEmpty(Model.FormError))
+  @if (!string.IsNullOrEmpty(Model.Form.FormError))
   {
-    <div class="alert alert--danger" role="alert">@Model.FormError</div>
+    <div class="alert alert--danger" role="alert">@Model.Form.FormError</div>
   }
 
   <div class="grid-2">
-    <form method="post" asp-action="Index" class="card">
-      <div class="card__header"><strong>Basic information</strong></div>
-      <div class="card__body stack">
-        @Html.AntiForgeryToken()
-
-        <div class="field">
-          <label class="field__label" asp-for="FullName">Full name</label>
-          <input class="field__input" asp-for="FullName" autocomplete="name" required>
-          <span asp-validation-for="FullName" class="field__error"></span>
-        </div>
-
-        <div class="field">
-          <label class="field__label" asp-for="Phone">Phone number</label>
-          <input class="field__input" asp-for="Phone" autocomplete="tel">
-          <span asp-validation-for="Phone" class="field__error"></span>
-        </div>
-
-        <div class="field">
-          <label class="field__label" asp-for="TimeZoneId">Time zone</label>
-          <select class="field__input" asp-for="TimeZoneId">
-            @foreach (var zone in Model.TimeZoneOptions)
-            {
-              <option value="@zone">@zone.Replace("_", " ")</option>
-            }
-          </select>
-          <span asp-validation-for="TimeZoneId" class="field__error"></span>
-          <div class="field__hint">All exam timestamps, bookings, and reports use this timezone.</div>
-        </div>
-      </div>
-
-      <div class="card__footer">
-        <button type="submit" class="btn btn--primary">Save changes</button>
-      </div>
-    </form>
+    @await Html.PartialAsync("_IndexForm", Model.Form)
 
     <div class="stack">
       @if (isLearner)
       {
-        <partial name="_AudioEquipmentCheck" model='new WebMVC.Models.AudioEquipmentCheckModel(Title: "Audio & Equipment")' />
+        <partial name="_AudioEquipmentCheck" model="Model.Equipment" />
       }
 
       <div class="card">

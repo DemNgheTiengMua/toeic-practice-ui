@@ -67,9 +67,10 @@ public sealed record PlacementTakeViewModel(
                         $"/placement/take/{take.PlacementId}?q={item.DisplayOrder}",
                         "navigator__cell" + (item.IsCurrent ? " is-current" : "")
                             + (item.IsAnswered ? " is-answered" : " is-unanswered")
-                            + (item.IsFlagged ? " is-flagged" : ""),
+                            + (item.IsFlagged ? " is-marked" : "") + (item.IsLocked ? " is-locked" : ""),
                         $"Question {item.DisplayOrder} {(item.IsAnswered ? "answered" : "unanswered")}",
-                        item.IsCurrent ? "true" : "false")).ToArray());
+                        item.IsCurrent ? "true" : "false",
+                        item.IsLocked)).ToArray());
             }).ToArray();
 
     private static string BuildPageData(PlacementTakeViewDto take)
@@ -97,5 +98,5 @@ public sealed record PlacementTakeViewModel(
     public sealed record NavigatorGroupDisplay(
         string Title, string RangeLabel, string AriaLabel, IReadOnlyList<NavigatorCellDisplay> Items);
     public sealed record NavigatorCellDisplay(
-        int QuestionId, int DisplayOrder, string Url, string CssClass, string AriaLabel, string AriaCurrent);
+        int QuestionId, int DisplayOrder, string Url, string CssClass, string AriaLabel, string AriaCurrent, bool IsLocked);
 }

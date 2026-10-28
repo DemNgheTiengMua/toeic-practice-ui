@@ -1,5 +1,4 @@
 @model WebMVC.Models.MentorBookingDetailViewModel
-@inject WebMVC.DateTimeFormatter Dates
 @{
     Layout = "_LearnerLayout";
     var booking = Model.Booking;
@@ -71,7 +70,7 @@
           {
             <div>
               <dt>Time</dt>
-              <dd class="m-0"><strong>@Dates.FormatCustom(booking.StartAt.Value, "dddd, MMM d — h:mm tt")</strong></dd>
+              <dd class="m-0"><strong>@Model.Dates[booking.StartAt.Value].Session</strong></dd>
             </div>
           }
           @if (!string.IsNullOrWhiteSpace(booking.FocusArea))
@@ -113,7 +112,7 @@
           {
             <div>
               <dt>Time</dt>
-              <dd class="m-0"><strong>@Dates.FormatCustom(booking.StartAt.Value, "dddd, MMM d — h:mm tt")</strong></dd>
+              <dd class="m-0"><strong>@Model.Dates[booking.StartAt.Value].Session</strong></dd>
             </div>
           }
           @if (!string.IsNullOrWhiteSpace(booking.MeetLink))
@@ -132,7 +131,7 @@
           }
           <div>
             <dt>Booked on</dt>
-            <dd class="m-0">@Dates.Format(booking.CreatedAt)</dd>
+            <dd class="m-0">@Model.Dates[booking.CreatedAt].Full</dd>
           </div>
         </dl>
 
@@ -176,7 +175,7 @@
           {
             <div>
               <dt>Was scheduled</dt>
-              <dd class="m-0">@Dates.FormatCustom(booking.StartAt.Value, "dddd, MMM d — h:mm tt")</dd>
+              <dd class="m-0">@Model.Dates[booking.StartAt.Value].Session</dd>
             </div>
           }
           @if (!string.IsNullOrWhiteSpace(booking.FocusArea))
@@ -209,7 +208,7 @@
             }
             <div>
               <dt>Submitted</dt>
-              <dd class="m-0">@Dates.Format(booking.Review.CreatedAt)</dd>
+              <dd class="m-0">@Model.Dates[booking.Review.CreatedAt].Full</dd>
             </div>
           </dl>
         </div></div>
@@ -273,14 +272,14 @@
           {
             <div>
               <dt>Was scheduled</dt>
-              <dd class="m-0">@Dates.FormatCustom(booking.StartAt.Value, "dddd, MMM d — h:mm tt")</dd>
+              <dd class="m-0">@Model.Dates[booking.StartAt.Value].Session</dd>
             </div>
           }
           @if (booking.CancelledAt.HasValue)
           {
             <div>
               <dt>Cancelled at</dt>
-              <dd class="m-0">@Dates.Format(booking.CancelledAt.Value)</dd>
+              <dd class="m-0">@Model.Dates[booking.CancelledAt.Value].Full</dd>
             </div>
           }
         </dl>

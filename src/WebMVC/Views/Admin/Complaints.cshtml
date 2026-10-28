@@ -5,15 +5,6 @@
     ViewData["Title"] = "Complaints";
     ViewData["Description"] = "Learner complaints and dispute resolution.";
 
-    string FormatType(ComplaintTypeDto type) => type switch
-    {
-        ComplaintTypeDto.MentorNoShow => "Mentor no-show",
-        ComplaintTypeDto.MentorQuality => "Mentor quality",
-        ComplaintTypeDto.GradingIssue => "Grading issue",
-        ComplaintTypeDto.TechnicalError => "Technical error",
-        ComplaintTypeDto.PaymentIssue => "Payment issue",
-        _ => type.ToString(),
-    };
 
     var currentStatus = string.IsNullOrWhiteSpace(Model.Status) ? "all" : Model.Status.ToLowerInvariant();
 }
@@ -42,12 +33,12 @@
     <div class="stat">
       <div class="stat__label">Oldest pending</div>
       <div class="stat__value">
-        @(Model.Summary.OldestPendingCreatedAt?.ToString("dd MMM") ?? "—")
+        @Model.OldestDate
       </div>
       <div class="stat__hint">
         @if (Model.Summary.OldestPendingId.HasValue && Model.Summary.OldestPendingType.HasValue)
         {
-          <span>#C-@Model.Summary.OldestPendingId.Value · @FormatType(Model.Summary.OldestPendingType.Value)</span>
+          <span>#C-@Model.Summary.OldestPendingId.Value · @Model.OldestType</span>
         }
         else
         {
@@ -105,7 +96,7 @@
               <tr>
                 <td>#C-@c.ComplaintId</td>
                 <td>@c.LearnerName</td>
-                <td>@FormatType(c.Type)</td>
+                <td>@Model.TypeLabels[c.ComplaintId]</td>
                 <td>@c.SubjectSummary</td>
                 <td>
                   @if (c.Status == ComplaintStatusDto.Open)
@@ -121,7 +112,7 @@
                     <span class="badge badge--success">Resolved</span>
                   }
                 </td>
-                <td>@c.CreatedAt.ToString("dd MMM yyyy")</td>
+                <td>@Model.Dates[c.CreatedAt].Date</td>
                 <td>
                   @if (c.Status == ComplaintStatusDto.Resolved)
                   {
@@ -141,7 +132,7 @@
       {
         <div class="card__footer">
           <div class="pagination">
-            <span class="pagination__info">Showing @(((Model.Summary.Page - 1) * Model.Summary.PageSize) + 1)–@(Math.Min(Model.Summary.Page * Model.Summary.PageSize, Model.Summary.TotalCount)) of @Model.Summary.TotalCount complaints</span>
+            <span class="pagination__info">Showing @Model.FirstRow–@Model.LastRow of @Model.Summary.TotalCount complaints</span>
             @if (Model.Summary.Page > 1)
             {
               <a class="pagination__page" href="/admin/complaints?page=@(Model.Summary.Page - 1)&q=@Model.Query&status=@Model.Status">Previous</a>

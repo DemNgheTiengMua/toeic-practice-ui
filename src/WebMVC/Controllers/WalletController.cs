@@ -10,13 +10,17 @@ public sealed class WalletController(
     ILogger<WalletController> logger)
     : LearnerControllerBase(currentUser, logger)
 {
+    private DateTimeFormatter Dates => HttpContext.RequestServices?.GetService(typeof(DateTimeFormatter)) as DateTimeFormatter
+        ?? new(new HttpContextAccessor { HttpContext = HttpContext });
+
+
     [HttpGet("/wallet")]
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
         try
         {
             var wallet = await api.GetWalletAsync(cancellationToken);
-            return View(new WalletViewModel(wallet));
+            return View((new WalletViewModel(wallet)).WithDates(Dates));
         }
         catch (ApiException ex)
         {

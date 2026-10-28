@@ -3,7 +3,7 @@
     Layout = "_AdminLayout";
     ViewData["Title"] = "Exams";
     var summary = Model.Summary;
-    var totalPages = Math.Max(1, (int)Math.Ceiling((double)summary.TotalCount / summary.PageSize));
+    var totalPages = Model.TotalPages;
 }
 
 <nav class="breadcrumbs" aria-label="Breadcrumb">
@@ -97,41 +97,14 @@ else
           </tr>
         </thead>
         <tbody>
-          @foreach (var exam in summary.Exams)
+          @foreach (var row in Model.Rows)
           {
-            var questionDisplay = exam.QuestionCount.HasValue
-                ? $"{exam.ActualQuestionCount}/{exam.QuestionCount.Value}"
-                : $"{exam.ActualQuestionCount}";
-
-            var statusBadgeClass = exam.Status switch
-            {
-                Contracts.ExamStatusDto.Published => "badge badge--success",
-                Contracts.ExamStatusDto.Draft => "badge badge--warning",
-                _ => "badge"
-            };
-
-            var purposeDisplay = exam.Purpose switch
-            {
-                Contracts.ExamPurposeDto.Mock => "MOCK",
-                Contracts.ExamPurposeDto.Placement => "PLACEMENT",
-                Contracts.ExamPurposeDto.SpeakingPractice => "SPEAKING",
-                Contracts.ExamPurposeDto.WritingPractice => "WRITING",
-                _ => exam.Purpose.ToString().ToUpperInvariant()
-            };
-
-            var isAudioApplicable = exam.Purpose is not Contracts.ExamPurposeDto.WritingPractice
-                and not Contracts.ExamPurposeDto.SpeakingPractice
-                && !string.Equals(exam.AudioStatus, "N/A", StringComparison.OrdinalIgnoreCase)
-                && !string.IsNullOrWhiteSpace(exam.AudioStatus)
-                && exam.AudioStatus != "—";
-
-            var dateDisplay = exam.UpdatedAt?.ToString("dd MMM yyyy") ?? exam.CreatedAt.ToString("dd MMM yyyy");
-
+            var exam = row.Exam;
             <tr>
               <td>
                 <div class="row" style="gap: 0.35rem; align-items: center; margin-bottom: 0.25rem;">
-                  <span class="badge badge--info font-mono font-bold">@exam.CertCode.ToUpperInvariant()</span>
-                  <span class="badge font-mono font-bold">@purposeDisplay</span>
+                  <span class="badge badge--info font-mono font-bold">@row.CertificateCode</span>
+                  <span class="badge font-mono font-bold">@row.PurposeDisplay</span>
                 </div>
                 <strong>@exam.Name</strong>
                 @if (!string.IsNullOrEmpty(exam.SourceName))
@@ -139,9 +112,9 @@ else
                   <span class="text-xs text-muted block">@exam.SourceName · @exam.CertName</span>
                 }
               </td>
-              <td>@questionDisplay</td>
+              <td>@row.QuestionDisplay</td>
               <td>
-                @if (!isAudioApplicable)
+                @if (!row.IsAudioApplicable)
                 {
                   <span class="text-muted">N/A</span>
                 }
@@ -151,8 +124,8 @@ else
                 }
               </td>
               <td>@exam.FinishedAttemptCount</td>
-              <td>@dateDisplay</td>
-              <td><span class="@statusBadgeClass">@exam.Status</span></td>
+              <td>@row.DateDisplay</td>
+              <td><span class="@row.StatusBadgeClass">@exam.Status</span></td>
               <td>
                 <div class="row" style="gap: 0.25rem;">
                   <a class="btn btn--sm btn--primary" href="/admin/exams/@exam.ExamId/studio">Studio</a>
@@ -173,13 +146,11 @@ else
     </div>
     @if (totalPages > 1)
     {
-      var certParam = Model.CertId.HasValue ? $"&certId={Model.CertId.Value}" : "";
-      var purposeParam = !string.IsNullOrEmpty(Model.Purpose) ? $"&purpose={Model.Purpose}" : "";
-      var filterQuery = $"&q={Model.Query}&status={Model.Status}{certParam}{purposeParam}";
+      var filterQuery = Model.FilterQuery;
 
       <div class="card__footer">
         <div class="pagination">
-          <span class="pagination__info">Showing @(((summary.Page - 1) * summary.PageSize) + 1)–@(Math.Min(summary.Page * summary.PageSize, summary.TotalCount)) of @summary.TotalCount exams</span>
+          <span class="pagination__info">Showing @Model.FirstRow–@Model.LastRow of @summary.TotalCount exams</span>
           @if (summary.Page > 1)
           {
             <a class="pagination__page" href="/admin/exams?page=@(summary.Page - 1)@filterQuery">Previous</a>
@@ -216,206 +187,11 @@ else
 }
 
 <!-- Import Exam Modal Dialog -->
-<div id="import-exam-dialog" class="modal-overlay" style="display: @(string.Equals(Context.Request.Query["import"], "true", StringComparison.OrdinalIgnoreCase) ? "grid" : "none");" role="dialog" aria-modal="true" aria-labelledby="import-dialog-title">
-  <div class="modal" style="max-width: 580px;">
-    <div class="modal__header">
-      <h2 id="import-dialog-title">Import Exam Manifest or Package</h2>
-      <button type="button" class="modal__close" onclick="closeImportExamDialog()">Close</button>
-    </div>
-    <div class="modal__body">
-      <p class="text-muted" style="margin-top: 0;">
-        Upload a <code>.json</code> manifest for text-only exams or a <code>.zip</code> package with <code>manifest.json</code> and a <code>media/</code> folder for exams with listening audio or images. The file is validated first; upon success, a new draft exam is created.
-      </p>
-      <form method="post" action="/admin/exams/import" enctype="multipart/form-data" class="stack">
-        @Html.AntiForgeryToken()
-        <div class="field">
-          <label class="field__label" for="import-certId">Target Certificate</label>
-          <select class="field__input" id="import-certId" name="certId" required>
-            <option value="">Select Certificate</option>
-            @foreach (var cert in Model.Summary.Certificates)
-            {
-              <option value="@cert.CertId" selected="@(cert.CertId == Model.CertId)">@cert.Code — @cert.Name</option>
-            }
-          </select>
-          <div class="field__hint">The imported exam and its questions will be strictly associated with this certificate (Certificate Isolation).</div>
-        </div>
-
-        <div class="field">
-          <label class="field__label" for="import-file">Manifest (.json) or Package (.zip)</label>
-          <input class="field__input" id="import-file" name="file" type="file" accept=".json,.zip,application/json,application/zip" required />
-          <div class="field__hint">.json or .zip, up to 100 MB. Audio: .mp3, .wav. Images: .jpg, .png.</div>
-        </div>
-
-        <div class="row row--between" style="margin-top: var(--space-md); padding-top: var(--space-sm); border-top: 1px solid var(--color-rule, #ccd2d6);">
-          <button type="button" class="btn btn--ghost" onclick="closeImportExamDialog()">Cancel</button>
-          <div style="display: flex; gap: 8px;">
-            <a href="#" class="btn btn--secondary" id="btn-download-manifest-template" onclick="downloadManifestTemplate(event)">Download Template (.json)</a>
-            <button type="submit" class="btn btn--primary">Validate and import</button>
-          </div>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
+@await Html.PartialAsync("~/Views/Admin/_ExamImportDialog.cshtml", Model)
 
 <!-- Generate Exam Modal Dialog -->
-<div id="generate-exam-dialog" class="modal-overlay" style="display: @(string.Equals(Context.Request.Query["generate"], "true", StringComparison.OrdinalIgnoreCase) ? "grid" : "none");" role="dialog" aria-modal="true" aria-labelledby="generate-dialog-title">
-  <div class="modal" style="max-width: 640px;">
-    <div class="modal__header">
-      <h2 id="generate-dialog-title">Generate Exam with Claude Sonnet 3.7</h2>
-      <button type="button" class="modal__close" onclick="closeGenerateExamDialog()">Close</button>
-    </div>
-    <div class="modal__body">
-      <p class="text-muted" style="margin-top: 0;">
-        Author a complete standardized exam package using Claude Sonnet 3.7. Configure your target blueprint or provide custom blueprint JSON.
-      </p>
-      <form method="post" action="/admin/exams/generate" class="stack">
-        @Html.AntiForgeryToken()
-        <div class="field">
-          <label class="field__label" for="gen-certCode">Target Certificate</label>
-          <select class="field__input" id="gen-certCode" name="certCode" required>
-            <option value="">Select Certificate</option>
-            @foreach (var cert in Model.Summary.Certificates)
-            {
-              <option value="@cert.Code" selected="@(cert.CertId == Model.CertId)">@cert.Code — @cert.Name</option>
-            }
-          </select>
-          <div class="field__hint">The blueprint and questions will strictly conform to this certificate's sections and categories.</div>
-        </div>
-
-        <div class="field">
-          <label class="field__label" for="gen-title">Exam Title (Optional)</label>
-          <input class="field__input" id="gen-title" name="title" type="text" placeholder="e.g. TOEIC Reading Form B (Generated)" />
-        </div>
-
-        <div class="row" style="gap: var(--space-sm);">
-          <div class="field" style="flex: 1;">
-            <label class="field__label" for="gen-status">Initial Status</label>
-            <select class="field__input" id="gen-status" name="status">
-              <option value="draft" selected>Draft (for review in studio)</option>
-              <option value="published">Published (immediately live)</option>
-            </select>
-          </div>
-          <div class="field" style="flex: 1;">
-            <label class="field__label" for="gen-targetBand">Target CEFR Band</label>
-            <select class="field__input" id="gen-targetBand" name="targetBand">
-              <option value="B1">B1 (Intermediate)</option>
-              <option value="B2" selected>B2 (Upper Intermediate)</option>
-              <option value="C1">C1 (Advanced)</option>
-            </select>
-          </div>
-          <div class="field" style="flex: 1;">
-            <label class="field__label" for="gen-difficulty">Difficulty Level</label>
-            <select class="field__input" id="gen-difficulty" name="difficultyLevel">
-              <option value="1">1 (Introductory)</option>
-              <option value="2">2 (Elementary)</option>
-              <option value="3" selected>3 (Standard)</option>
-              <option value="4">4 (Challenging)</option>
-              <option value="5">5 (Advanced Mastery)</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="field">
-          <label class="field__label" for="gen-blueprintJson">Custom Blueprint JSON (Optional override)</label>
-          <textarea class="field__input" id="gen-blueprintJson" name="blueprintJson" rows="4" style="font-family: var(--font-mono, 'IBM Plex Mono', Consolas, monospace); font-size: var(--text-sm, 13px);" placeholder='{ "certCode": "TOEIC", "sections": [{ "sectionCode": "P5", "questionCount": 5 }] }'></textarea>
-          <div class="field__hint">If provided, this JSON blueprint overrides the simple controls above.</div>
-        </div>
-
-        <div class="row row--between" style="margin-top: var(--space-md); padding-top: var(--space-sm); border-top: 1px solid var(--color-rule, #ccd2d6);">
-          <button type="button" class="btn btn--ghost" onclick="closeGenerateExamDialog()">Cancel</button>
-          <button type="submit" class="btn btn--primary" id="btn-submit-generate">Generate and Ingest</button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
+@await Html.PartialAsync("~/Views/Admin/_ExamGenerateDialog.cshtml", Model)
 
 @section Scripts {
-<script>
-  (function() {
-    var dialog = document.getElementById('import-exam-dialog');
-    if (!dialog) return;
-
-    window.openImportExamDialog = function() {
-      dialog.style.display = 'grid';
-      var certSelect = document.getElementById('import-certId');
-      if (certSelect) certSelect.focus();
-    };
-
-    window.closeImportExamDialog = function() {
-      dialog.style.display = 'none';
-      if (window.location.search.toLowerCase().indexOf('import=') !== -1) {
-        var cleanSearch = window.location.search.replace(/([?&])import=[^&]*(&?)/i, function(match, p1, p2) {
-          return p2 ? p1 : '';
-        }).replace(/\?$/, '');
-        var newUrl = window.location.pathname + cleanSearch;
-        window.history.replaceState(null, '', newUrl);
-      }
-    };
-
-    window.downloadManifestTemplate = function(e) {
-      if (e) e.preventDefault();
-      var certSelect = document.getElementById('import-certId');
-      if (!certSelect || !certSelect.value) {
-        alert('Please select a target certificate first.');
-        return;
-      }
-      window.location.href = '/admin/exams/manifest-template?certId=' + certSelect.value;
-    };
-
-    dialog.addEventListener('click', function(e) {
-      if (e.target === dialog) {
-        window.closeImportExamDialog();
-      }
-    });
-
-    document.addEventListener('keydown', function(e) {
-      if (e.key === 'Escape' && dialog.style.display !== 'none') {
-        window.closeImportExamDialog();
-      }
-    });
-
-    if (dialog.style.display === 'grid') {
-      var certSelect = document.getElementById('import-certId');
-      if (certSelect) certSelect.focus();
-    }
-    var genDialog = document.getElementById('generate-exam-dialog');
-    if (genDialog) {
-      window.openGenerateExamDialog = function() {
-        genDialog.style.display = 'grid';
-        var certCodeSelect = document.getElementById('gen-certCode');
-        if (certCodeSelect) certCodeSelect.focus();
-      };
-
-      window.closeGenerateExamDialog = function() {
-        genDialog.style.display = 'none';
-        if (window.location.search.toLowerCase().indexOf('generate=') !== -1) {
-          var cleanSearch = window.location.search.replace(/([?&])generate=[^&]*(&?)/i, function(match, p1, p2) {
-            return p2 ? p1 : '';
-          }).replace(/\?$/, '');
-          var newUrl = window.location.pathname + cleanSearch;
-          window.history.replaceState(null, '', newUrl);
-        }
-      };
-
-      genDialog.addEventListener('click', function(e) {
-        if (e.target === genDialog) {
-          window.closeGenerateExamDialog();
-        }
-      });
-
-      document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' && genDialog.style.display !== 'none') {
-          window.closeGenerateExamDialog();
-        }
-      });
-
-      if (genDialog.style.display === 'grid') {
-        var certCodeSelect = document.getElementById('gen-certCode');
-        if (certCodeSelect) certCodeSelect.focus();
-      }
-    }
-  })();
-</script>
+<script src="~/js/admin/exams.js" asp-append-version="true"></script>
 }

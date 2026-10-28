@@ -1,39 +1,15 @@
-@model Contracts.LearnerDashboardDto
-@inject DateTimeFormatter Dates
+@model DashboardPresentation
 @{
-    var cert = Model.Certificate;
-    var booking = Model.UpcomingBooking;
+    var cert = Model.Dashboard.Certificate;
+    var booking = Model.Dashboard.UpcomingBooking;
 
-    string FormatCountdown(DateTimeOffset startAt)
-    {
-        var remaining = startAt - DateTimeOffset.UtcNow;
-        if (remaining.TotalMinutes <= 0)
-        {
-            return "STARTING NOW";
-        }
-        if (remaining.TotalDays >= 1)
-        {
-            var days = (int)Math.Floor(remaining.TotalDays);
-            var hours = remaining.Hours;
-            return $"IN {days}D {hours}H";
-        }
-        if (remaining.TotalHours >= 1)
-        {
-            var hours = (int)Math.Floor(remaining.TotalHours);
-            var mins = remaining.Minutes;
-            return $"IN {hours}H {mins}M";
-        }
-        var totalMins = Math.Max(1, (int)Math.Ceiling(remaining.TotalMinutes));
-        return $"IN {totalMins}M";
-    }
+
 }
 
 @if (booking is not null)
 {
-    var countdownText = FormatCountdown(booking.StartAt);
-    var focusText = string.IsNullOrWhiteSpace(booking.FocusArea)
-        ? $"General {cert.Code} coaching & diagnostic review"
-        : booking.FocusArea;
+    var countdownText = Model.Countdown;
+    var focusText = Model.Focus;
 
     <section class="mentor-pass" id="dashboard-mentor-pass" aria-labelledby="mentor-pass-heading">
       <header class="mentor-pass__header">
@@ -69,13 +45,13 @@
         <div class="mentor-pass__schedule" role="group" aria-label="Scheduled session time">
           <div class="mentor-pass__cell">
             <span class="mentor-pass__label">Session Date</span>
-            <strong class="mentor-pass__value">@Dates.FormatDate(booking.StartAt)</strong>
-            <span class="mentor-pass__sub">@Dates.Format(booking.StartAt)</span>
+            <strong class="mentor-pass__value">@Model.Dates[booking.StartAt].Date</strong>
+            <span class="mentor-pass__sub">@Model.Dates[booking.StartAt].Full</span>
           </div>
           <div class="mentor-pass__cell">
             <span class="mentor-pass__label">Time Window</span>
-            <strong class="mentor-pass__value">@Dates.FormatCustom(booking.StartAt, "HH:mm") – @Dates.FormatCustom(booking.EndAt, "HH:mm")</strong>
-            <span class="mentor-pass__sub">Ends @Dates.Format(booking.EndAt)</span>
+            <strong class="mentor-pass__value">@Model.Dates[booking.StartAt].Time – @Model.Dates[booking.EndAt].Time</strong>
+            <span class="mentor-pass__sub">Ends @Model.Dates[booking.EndAt].Full</span>
           </div>
         </div>
 

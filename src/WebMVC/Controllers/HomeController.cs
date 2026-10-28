@@ -8,7 +8,8 @@ public class HomeController : Controller
 {
     public IActionResult Index()
     {
-        return View();
+        var user = new CurrentUser(new HttpContextAccessor { HttpContext = HttpContext });
+        return View(new HomeViewModel(user.IsSignedIn, user.IsAdmin));
     }
 
     [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]

@@ -16,6 +16,7 @@
   <link rel="stylesheet" href="~/css/tokens.css">
   <link rel="stylesheet" href="~/css/base.css">
   <link rel="stylesheet" href="~/css/components.css">
+  <link rel="stylesheet" href="~/css/writing/take.css" asp-append-version="true">
 </head>
 <body>
   <div class="app-shell">
@@ -36,7 +37,7 @@
     </header>
 
     <main class="app-main">
-      <div class="container stack" style="max-width: 1400px; padding: var(--space-4);">
+      <div class="writing-container container stack">
         @Html.AntiForgeryToken()
 
         @if (!string.IsNullOrEmpty(Model.ErrorMessage))
@@ -44,132 +45,7 @@
           <div class="alert alert--danger mb-3" role="alert">@Model.ErrorMessage</div>
         }
 
-<div class="writing-panes">
-  <!-- Left pane: Prompt -->
-  <div class="writing-panes__prompt stack">
-    <div class="card">
-      <div class="card__header">
-        <div class="row row--between">
-          <span class="question__number">Question @take.CurrentQuestionIndex</span>
-          <span class="badge badge--muted">@q.SectionName</span>
-        </div>
-      </div>
-      <div class="card__body stack">
-        @if (!string.IsNullOrEmpty(q.GroupImagePath))
-        {
-          <div class="mb-3">
-            <img src="@q.GroupImagePath" alt="@(q.GroupImageAlt ?? "Question illustration")" class="question__image" />
-          </div>
-        }
-
-        <p class="question__stem">@q.Stem</p>
-
-        @if (!string.IsNullOrEmpty(q.Hint))
-        {
-          <div class="alert alert--info text-sm">
-            <strong>Hint:</strong> @q.Hint
-          </div>
-        }
-
-        <div class="grid-2 mt-3">
-          @if (q.ResponseSeconds.HasValue)
-          {
-            <div class="stat">
-              <div class="stat__label">Recommended time</div>
-              <div class="stat__value">@(q.ResponseSeconds.Value / 60) min</div>
-            </div>
-          }
-          <div class="stat">
-            <div class="stat__label">Target length</div>
-            <div class="stat__value">
-              @if (q.MinWords.HasValue && q.MaxWords.HasValue)
-              {
-                <span>@q.MinWords–@q.MaxWords</span>
-              }
-              else if (q.MinWords.HasValue)
-              {
-                <span>@q.MinWords+</span>
-              }
-              else if (q.MaxWords.HasValue)
-              {
-                <span>≤@q.MaxWords</span>
-              }
-              else
-              {
-                <span>Open</span>
-              }
-            </div>
-            <div class="stat__hint">words</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Right pane: Answer Editor -->
-  <div class="stack">
-    <div class="card">
-      <div class="card__header">
-        <div class="row row--between">
-          <strong>Your answer</strong>
-          <span class="text-xs text-muted">No spell check, as on test day</span>
-        </div>
-      </div>
-      <div class="card__body stack">
-        <label class="visually-hidden" for="writing-editor">Your writing response</label>
-        <textarea
-          id="writing-editor"
-          class="answer-sheet"
-          rows="14"
-          spellcheck="false"
-          placeholder="Type your response here..."
-          data-attempt-id="@take.AttemptId"
-          data-question-id="@q.QuestionId"
-          data-min-words="@(q.MinWords ?? 0)"
-          data-max-words="@(q.MaxWords ?? 0)">@(q.ResponseText ?? "")</textarea>
-
-        <!-- Live Word Meter -->
-        <div class="word-meter" id="word-meter-container">
-          <div class="word-meter__readout">
-            <span id="word-count" class="word-meter__count">0</span>
-            <span id="word-status" class="word-meter__state">words</span>
-          </div>
-          <div class="word-meter__track">
-            @if (q.MinWords.HasValue && q.MinWords.Value > 0)
-            {
-              <div class="word-meter__tick" style="left: 70%" aria-hidden="true">
-                <span class="word-meter__tick-label">min @q.MinWords</span>
-              </div>
-            }
-            else if (q.MaxWords.HasValue && q.MaxWords.Value > 0)
-            {
-              <div class="word-meter__tick" style="left: 85%" aria-hidden="true">
-                <span class="word-meter__tick-label">max @q.MaxWords</span>
-              </div>
-            }
-            <div id="word-meter-fill" class="word-meter__fill" style="width: 0%"></div>
-          </div>
-        </div>
-
-        <p class="text-xs text-muted no-margin">
-          Writing under the minimum, or over the maximum, costs marks in AI grading but is still accepted.
-        </p>
-      </div>
-
-      <div class="card__footer">
-        <div class="row row--between">
-          <div class="row" style="gap: var(--space-2)">
-            <button type="button" class="btn btn--secondary" id="btn-save-draft">Save draft</button>
-            <button type="button" class="btn btn--primary" id="btn-open-submit-modal">
-              Finish and submit for AI grading
-            </button>
-          </div>
-          <span class="text-xs text-muted">Question @take.CurrentQuestionIndex of @take.TotalQuestions</span>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+@await Html.PartialAsync("_TakeEditor", Model)
 
 <!-- Question Navigator -->
 <div class="mt-4">
@@ -178,7 +54,7 @@
       <div class="row row--between">
         <strong class="text-sm">Questions navigator</strong>
         <span class="text-xs text-muted">
-          @take.Questions.Count(n => n.IsAnswered) of @take.TotalQuestions answered
+          @Model.AnsweredCount of @take.TotalQuestions answered
         </span>
       </div>
     </div>
@@ -186,11 +62,10 @@
       <div class="navigator navigator--strip" role="group" aria-label="Questions list">
         @foreach (var nav in take.Questions)
         {
-          var cls = nav.IsCurrent ? "is-current" : (nav.IsAnswered ? "is-answered" : "is-unanswered");
           <a href="/writing/take/@take.AttemptId?q=@nav.QuestionId"
-             class="navigator__cell @cls"
+             class="navigator__cell @Model.NavigatorClasses[nav.QuestionId]"
              aria-label="Question @nav.DisplayOrder (@(nav.IsAnswered ? "Answered" : "Unanswered"))"
-             onclick="return handleNavClick(event, '@nav.QuestionId');">
+             data-question-id="@nav.QuestionId">
             @nav.DisplayOrder
           </a>
         }
@@ -199,208 +74,7 @@
   </div>
 </div>
 
-<script>
-  (function() {
-    const editor = document.getElementById('writing-editor');
-    const wordCountSpan = document.getElementById('word-count');
-    const wordStatusSpan = document.getElementById('word-status');
-    const wordMeterFill = document.getElementById('word-meter-fill');
-    const saveStatusText = document.getElementById('save-status-text');
-    const btnSaveDraft = document.getElementById('btn-save-draft');
 
-    if (!editor) return;
-
-    const attemptId = parseInt(editor.getAttribute('data-attempt-id'), 10);
-    const questionId = parseInt(editor.getAttribute('data-question-id'), 10);
-    const minWords = parseInt(editor.getAttribute('data-min-words'), 10) || 0;
-    const maxWords = parseInt(editor.getAttribute('data-max-words'), 10) || 0;
-
-    function countWords(str) {
-      if (!str) return 0;
-      const tokens = str.trim().split(/\s+/);
-      return tokens.length === 1 && tokens[0] === '' ? 0 : tokens.length;
-    }
-
-    function updateWordMeter() {
-      const words = countWords(editor.value);
-      wordCountSpan.textContent = words;
-
-      const wordMeterContainer = document.getElementById('word-meter-container');
-      let pct = 0;
-      let statusDesc = 'words';
-
-      if (minWords > 0) {
-        if (words < minWords) {
-          const under = minWords - words;
-          statusDesc = `words · ${under} under the ${minWords}-word minimum`;
-          pct = Math.min(70, Math.round((words / minWords) * 70));
-          if (wordMeterContainer) wordMeterContainer.className = 'word-meter';
-        } else if (maxWords > 0 && words > maxWords) {
-          const over = words - maxWords;
-          statusDesc = `words · ${over} over the ${maxWords}-word maximum`;
-          pct = 100;
-          if (wordMeterContainer) wordMeterContainer.className = 'word-meter word-meter--over';
-        } else {
-          statusDesc = `words · the ${minWords}-word minimum is met`;
-          pct = maxWords > 0
-            ? 70 + Math.min(30, Math.round(((words - minWords) / (maxWords - minWords)) * 30))
-            : 85;
-          if (wordMeterContainer) wordMeterContainer.className = 'word-meter word-meter--met';
-        }
-      } else if (maxWords > 0) {
-        if (words > maxWords) {
-          const over = words - maxWords;
-          statusDesc = `words · ${over} over the ${maxWords}-word maximum`;
-          pct = 100;
-          if (wordMeterContainer) wordMeterContainer.className = 'word-meter word-meter--over';
-        } else {
-          statusDesc = `words · within ${maxWords}-word limit`;
-          pct = Math.round((words / maxWords) * 100);
-          if (wordMeterContainer) wordMeterContainer.className = 'word-meter word-meter--met';
-        }
-      }
-
-      wordStatusSpan.textContent = statusDesc;
-      wordMeterFill.style.width = pct + '%';
-    }
-
-    editor.addEventListener('input', updateWordMeter);
-    updateWordMeter();
-
-    // Auto-save logic
-    let isSaving = false;
-    let dirty = false;
-    let saveTimeout = null;
-
-    editor.addEventListener('input', function() {
-      dirty = true;
-      if (saveTimeout) clearTimeout(saveTimeout);
-      saveTimeout = setTimeout(saveDraft, 4000);
-    });
-
-    async function saveDraft() {
-      if (isSaving || !dirty) return true;
-      isSaving = true;
-      saveStatusText.textContent = 'Saving…';
-
-      try {
-        const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
-        const token = tokenInput ? tokenInput.value : '';
-
-        const resp = await fetch('/writing/save-draft', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'RequestVerificationToken': token
-          },
-          body: JSON.stringify({
-            attemptId: attemptId,
-            questionId: questionId,
-            responseText: editor.value
-          })
-        });
-
-        if (resp.ok) {
-          const d = new Date();
-          const timeStr = d.toTimeString().split(' ')[0];
-          saveStatusText.textContent = `Saved ${timeStr}`;
-          dirty = false;
-          return true;
-        } else {
-          saveStatusText.textContent = 'Save failed';
-          return false;
-        }
-      } catch (err) {
-        saveStatusText.textContent = 'Save failed';
-        return false;
-      } finally {
-        isSaving = false;
-      }
-    }
-
-    btnSaveDraft.addEventListener('click', saveDraft);
-
-    // Prevent draft loss on submit: await save before proceeding
-    const submitForm = document.getElementById('submit-form');
-    if (submitForm) {
-      submitForm.addEventListener('submit', async function(e) {
-        if (dirty) {
-          e.preventDefault();
-          btnSaveDraft.disabled = true;
-          const submitBtn = document.getElementById('btn-submit-exam');
-          if (submitBtn) submitBtn.disabled = true;
-          await saveDraft();
-          submitForm.submit();
-        }
-      });
-    }
-
-    // Prevent draft loss on question navigation
-    window.handleNavClick = function(e, targetQId) {
-      if (dirty) {
-        e.preventDefault();
-        saveDraft().then(function() {
-          window.location.href = '@Url.Action("Take", "Writing", new { attemptId = take.AttemptId })?q=' + targetQId;
-        });
-        return false;
-      }
-      return true;
-    };
-
-    // Timer countdown
-    const timerDisplay = document.getElementById('timer-display');
-    let remaining = parseInt(timerDisplay?.getAttribute('data-remaining') || '0', 10);
-
-    function updateTimer() {
-      if (!timerDisplay) return;
-      if (remaining <= 0) {
-        timerDisplay.textContent = '00:00';
-        return;
-      }
-      const m = Math.floor(remaining / 60);
-      const s = remaining % 60;
-      timerDisplay.textContent = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-      remaining--;
-    }
-
-    setInterval(updateTimer, 1000);
-    updateTimer();
-
-    // Submit modal wiring
-    const submitModal = document.getElementById('submit-modal');
-    const btnOpenSubmit = document.getElementById('btn-open-submit-modal');
-    const closeSubmitBtns = document.querySelectorAll('.js-close-submit-modal');
-
-    function openModal() {
-      if (!submitModal) return;
-      submitModal.classList.add('modal-overlay--open');
-      submitModal.setAttribute('aria-hidden', 'false');
-    }
-
-    function closeModal() {
-      if (!submitModal) return;
-      submitModal.classList.remove('modal-overlay--open');
-      submitModal.setAttribute('aria-hidden', 'true');
-    }
-
-    if (btnOpenSubmit) {
-      btnOpenSubmit.addEventListener('click', openModal);
-    }
-    closeSubmitBtns.forEach(btn => {
-      btn.addEventListener('click', closeModal);
-    });
-    if (submitModal) {
-      submitModal.addEventListener('click', (e) => {
-        if (e.target === submitModal) closeModal();
-      });
-    }
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && submitModal && submitModal.getAttribute('aria-hidden') === 'false') {
-        closeModal();
-      }
-    });
-  })();
-</script>
 
 <!-- Submit Confirmation Modal -->
 <div id="submit-modal" class="modal-overlay" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="submit-modal-title">
@@ -412,21 +86,18 @@
       <p class="no-margin">
         Submitting will save your current responses and dispatch them to the AI grading engine. This action cannot be undone.
       </p>
-      @{
-        var totalAnswered = take.Questions.Count(n => n.IsAnswered);
-      }
-      @if (totalAnswered < take.TotalQuestions)
+      @if (Model.AnsweredCount < take.TotalQuestions)
       {
         <div class="alert alert--warning">
-          <strong>Notice:</strong> You have answered @totalAnswered of @take.TotalQuestions questions. Unanswered questions will receive 0 marks.
+          <strong>Notice:</strong> You have answered @Model.AnsweredCount of @take.TotalQuestions questions. Unanswered questions will receive 0 marks.
         </div>
       }
     </div>
     <div class="modal__footer row row--between">
       <button type="button" class="btn js-close-submit-modal">Return to writing</button>
-      <form method="post" action="/writing/submit/@take.AttemptId" style="margin:0;">
+      <form id="submit-form" method="post" action="/writing/submit/@take.AttemptId" class="writing-submit-form">
         @Html.AntiForgeryToken()
-        <button type="submit" class="btn btn--primary">Confirm & Submit</button>
+        <button id="btn-submit-exam" type="submit" class="btn btn--primary">Confirm & Submit</button>
       </form>
     </div>
   </div>
@@ -435,5 +106,6 @@
     </main>
   </div>
   <script src="~/js/icons.js"></script>
+  <script src="~/js/writing/take.js" asp-append-version="true"></script>
 </body>
 </html>

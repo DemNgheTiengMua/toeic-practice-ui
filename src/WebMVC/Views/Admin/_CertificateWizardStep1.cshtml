@@ -1,0 +1,87 @@
+@model WebMVC.Models.CertificateWizardPageViewModel
+  <!-- ==================== STEP 1: PRESET SELECTION ==================== -->
+  <div id="step-1" class="wizard-step" style="display: @(Model.Form.Step == 1 ? "block" : "none");">
+    <div class="card" style="border: 2px solid var(--color-ink, #14181d); border-radius: 0; box-shadow: none; margin-bottom: 1.5rem;">
+      <div class="card__header" style="background: var(--color-ink, #14181d); color: #fff; padding: 0.75rem 1rem; font-family: var(--font-condensed, sans-serif); text-transform: uppercase;">
+        <strong>Step 1: Select an Official Blueprint Preset</strong>
+      </div>
+      <div class="card__body" style="padding: 1.25rem;">
+        <p class="text-sm text-muted" style="margin-top: 0; margin-bottom: 1rem;">
+          Selecting a preset pre-configures 100% of skills, sections, expected item counts, allowed question components, timing policies, screen layouts, and candidate tools.
+        </p>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+          @foreach (var preset in Model.Form.Presets)
+          {
+            var isSelected = string.Equals(Model.Form.PresetCode, preset.PresetCode, StringComparison.OrdinalIgnoreCase);
+            <div class="preset-card @(isSelected ? "is-selected" : "")" onclick="selectPreset('@preset.PresetCode')" style="border: 2px solid var(--color-ink, #14181d); padding: 1rem; cursor: pointer; background: @(isSelected ? "var(--color-ink, #14181d)" : "#fff"); color: @(isSelected ? "#fff" : "var(--color-ink, #14181d)"); display: flex; flex-direction: column; justify-content: space-between;">
+              <div>
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+                  <strong style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 1.1rem;">@preset.Name</strong>
+                  <span class="badge" style="border: 1px solid @(isSelected ? "#fff" : "var(--color-ink, #14181d)"); border-radius: 0; font-family: var(--font-mono, monospace); font-size: 0.75rem; background: @(isSelected ? "#fff" : "transparent"); color: @(isSelected ? "var(--color-ink, #14181d)" : "inherit");">
+                    @preset.PresetCode
+                  </span>
+                </div>
+                <p style="font-size: 0.85rem; line-height: 1.4; margin: 0 0 0.75rem 0; opacity: 0.9;">
+                  @preset.Description
+                </p>
+              </div>
+              <div style="font-family: var(--font-mono, monospace); font-size: 0.8rem; border-top: 1px solid @(isSelected ? "#fff" : "var(--color-border, #ccd2d6)"); padding-top: 0.5rem;">
+                <span>Rule: <strong>@preset.ScoreAggregationRule</strong></span> &bull;
+                <span>Skills: <strong>@preset.Skills.Count</strong></span>
+              </div>
+            </div>
+          }
+        </div>
+
+        <!-- Certificate Identity Fields -->
+        <div style="border-top: 2px solid var(--color-border, #ccd2d6); padding-top: 1.25rem;">
+          <h3 style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; margin-top: 0;">Certificate Identity</h3>
+
+          <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1rem; margin-bottom: 1rem;">
+            <div class="field">
+              <label class="field__label" for="certCode" style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase;">Certificate Code *</label>
+              <input class="field__input" id="certCode" name="Code" value="@Model.Form.Code" required maxlength="20" style="border: 2px solid var(--color-ink, #14181d); border-radius: 0; font-family: var(--font-mono, monospace); font-weight: 700;" placeholder="e.g. IELTS, TOEIC">
+              <span class="field__hint">Short unique identifier (alphanumeric).</span>
+            </div>
+
+            <div class="field">
+              <label class="field__label" for="certName" style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase;">Certificate Name *</label>
+              <input class="field__input" id="certName" name="Name" value="@Model.Form.Name" required maxlength="120" style="border: 2px solid var(--color-ink, #14181d); border-radius: 0;" placeholder="e.g. IELTS Academic &amp; General">
+              <span class="field__hint">Official name displayed to candidates and instructors.</span>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+            <div class="field">
+              <label class="field__label" for="certDesc" style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase;">Description</label>
+              <input class="field__input" id="certDesc" name="Description" value="@Model.Form.Description" style="border: 2px solid var(--color-ink, #14181d); border-radius: 0;" placeholder="Brief summary of certificate purpose and scope.">
+            </div>
+
+            <div class="field">
+              <label class="field__label" for="scoreRule" style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase;">Score Aggregation Rule *</label>
+              <select class="field__input" id="scoreRule" name="ScoreAggregationRule" required style="border: 2px solid var(--color-ink, #14181d); border-radius: 0; font-family: var(--font-mono, monospace);">
+                <option value="sum" selected="@(Model.Form.ScoreAggregationRule == "sum")">sum (TOEIC standard sum 10–990)</option>
+                <option value="avg_half_step" selected="@(Model.Form.ScoreAggregationRule == "avg_half_step")">avg_half_step (IELTS 0.5-step band)</option>
+                <option value="avg_whole" selected="@(Model.Form.ScoreAggregationRule == "avg_whole")">avg_whole (VSTEP whole band 0–10)</option>
+                <option value="independent" selected="@(Model.Form.ScoreAggregationRule == "independent")">independent (Distinct skill scores)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field" style="margin-top: 0.5rem;">
+            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+              <input type="checkbox" id="isActive" name="IsActive" value="true" checked="@(Model.Form.IsActive)" style="width: 1.25rem; height: 1.25rem; accent-color: var(--color-ink, #14181d);">
+              <span style="font-weight: 600;">Active Certificate (Available in candidate test-taking rooms and authoring studio)</span>
+            </label>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; margin-top: 1.5rem;">
+          <button type="button" class="btn btn--primary" onclick="goToStep(2)" style="border-radius: 0; font-family: var(--font-condensed, sans-serif); text-transform: uppercase; padding: 0.6rem 1.5rem;">
+            Continue to Step 2: Skills &amp; Timing ›
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>

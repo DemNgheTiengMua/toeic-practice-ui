@@ -9,15 +9,6 @@ using PayOS.Models.Webhooks;
 
 namespace Services;
 
-public sealed class PayOsOptions
-{
-    public const string SectionName = "Payment:PayOS";
-    public string ClientId { get; set; } = "";
-    public string ApiKey { get; set; } = "";
-    public string ChecksumKey { get; set; } = "";
-    public string? WebhookUrl { get; set; }
-}
-
 public sealed class PayOsPaymentGateway : IPaymentGateway
 {
 

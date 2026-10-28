@@ -1,0 +1,62 @@
+@model PracticeTakeViewModel
+@{
+}
+  <!-- Keyboard Controls Helper Modal -->
+  <div id="controls-modal" class="modal-overlay" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="controls-modal-title">
+    <div class="modal" style="max-width: 520px; border-radius: 0; border: 2px solid #14181d;">
+      <div class="modal__header row row--between">
+        <h2 id="controls-modal-title" class="no-margin text-lg font-sign">Keyboard Controls</h2>
+        <button type="button" class="modal__close" id="btn-close-controls-modal" aria-label="Close modal">&times;</button>
+      </div>
+      <div class="modal__body stack">
+        <p class="text-sm text-muted no-margin">Speed up your drilling workflow using single-key shortcuts:</p>
+        <table class="table" style="width: 100%; border-collapse: collapse;">
+          <thead>
+            <tr>
+              <th style="text-align: left; padding: var(--space-2);">Key</th>
+              <th style="text-align: left; padding: var(--space-2);">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="padding: var(--space-2);"><kbd class="kbd font-mono">1</kbd> <kbd class="kbd font-mono">2</kbd> <kbd class="kbd font-mono">3</kbd> <kbd class="kbd font-mono">4</kbd></td>
+              <td style="padding: var(--space-2);">Select option A, B, C, or D (MCQ)</td>
+            </tr>
+            <tr>
+              <td style="padding: var(--space-2);"><kbd class="kbd font-mono">Enter</kbd> or <kbd class="kbd font-mono">Space</kbd></td>
+              <td style="padding: var(--space-2);">Check answer / Next question</td>
+            </tr>
+            <tr>
+              <td style="padding: var(--space-2);"><kbd class="kbd font-mono">H</kbd></td>
+              <td style="padding: var(--space-2);">Show hint</td>
+            </tr>
+            <tr>
+              <td style="padding: var(--space-2);"><kbd class="kbd font-mono">S</kbd></td>
+              <td style="padding: var(--space-2);">Save question to your bank</td>
+            </tr>
+            <tr>
+              <td style="padding: var(--space-2);"><kbd class="kbd font-mono">K</kbd></td>
+              <td style="padding: var(--space-2);">Skip question</td>
+            </tr>
+            <tr>
+              <td style="padding: var(--space-2);"><kbd class="kbd font-mono">N</kbd> / <kbd class="kbd font-mono">P</kbd></td>
+              <td style="padding: var(--space-2);">Next / Previous question</td>
+            </tr>
+            <tr>
+              <td style="padding: var(--space-2);"><kbd class="kbd font-mono">?</kbd></td>
+              <td style="padding: var(--space-2);">Toggle this shortcuts helper</td>
+            </tr>
+            <tr>
+              <td style="padding: var(--space-2);"><kbd class="kbd font-mono">Esc</kbd></td>
+              <td style="padding: var(--space-2);">Close this modal</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="modal__footer row row--end">
+        <button type="button" class="btn btn--primary" id="btn-modal-got-it">Got it</button>
+      </div>
+    </div>
+  </div>
+
+

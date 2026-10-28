@@ -1,8 +1,7 @@
-@model Contracts.PracticeSummaryDto
-@inject WebMVC.DateTimeFormatter Dates
+@model PracticeSummaryViewModel
 @{
     Layout = "_LearnerLayout";
-    ViewData["Title"] = $"Practice summary — {Model.SectionName}";
+    ViewData["Title"] = $"Practice summary — {Model.Summary.SectionName}";
     ViewData["Description"] = "Results and review of your practice session.";
 }
 
@@ -18,7 +17,7 @@
   <div>
     <h1 class="m-0 mb-1">Practice session summary</h1>
     <p class="text-sm text-muted no-margin">
-      @Model.SectionName · @Model.TotalQuestions questions · @Dates.Format(Model.StartedAt)
+      @Model.Summary.SectionName · @Model.Summary.TotalQuestions questions · @Model.StartedAtDisplay
     </p>
   </div>
   <div class="row">
@@ -31,20 +30,20 @@
 <div class="grid-3 mt-4">
   <div class="stat">
     <div class="stat__label">Correct</div>
-    <div class="stat__value text-success">@Model.CorrectCount</div>
+    <div class="stat__value text-success">@Model.Summary.CorrectCount</div>
     <div class="stat__hint">
-      out of @Model.AnsweredCount answered · @Model.AccuracyPercentage% accuracy
-      @if (Model.CorrectWithHintCount > 0)
+      out of @Model.Summary.AnsweredCount answered · @Model.Summary.AccuracyPercentage% accuracy
+      @if (Model.Summary.CorrectWithHintCount > 0)
       {
-        <span>· @Model.CorrectWithHintCount with a hint</span>
+        <span>· @Model.Summary.CorrectWithHintCount with a hint</span>
       }
     </div>
   </div>
   <div class="stat">
     <div class="stat__label">Incorrect</div>
-    <div class="stat__value text-danger">@Model.IncorrectCount</div>
+    <div class="stat__value text-danger">@Model.Summary.IncorrectCount</div>
     <div class="stat__hint">
-      @if (Model.IncorrectCount > 0)
+      @if (Model.Summary.IncorrectCount > 0)
       {
         <span>saved to your <a href="/saved-questions" class="font-semibold text-primary">saved questions bank</a></span>
       }
@@ -56,26 +55,26 @@
   </div>
   <div class="stat">
     <div class="stat__label">Skipped</div>
-    <div class="stat__value">@Model.SkippedCount</div>
+    <div class="stat__value">@Model.Summary.SkippedCount</div>
     <div class="stat__hint">not counted in accuracy rate</div>
   </div>
 </div>
 
-@if (Model.HintUsedCount > 0)
+@if (Model.Summary.HintUsedCount > 0)
 {
   <div class="alert alert--info mt-4">
-    You used a hint on <strong>@Model.HintUsedCount</strong> of @Model.TotalQuestions questions
-    (@Model.CorrectWithHintCount correct with a hint). Try the next set without hints to see your true baseline!
+    You used a hint on <strong>@Model.Summary.HintUsedCount</strong> of @Model.Summary.TotalQuestions questions
+    (@Model.Summary.CorrectWithHintCount correct with a hint). Try the next set without hints to see your true baseline!
   </div>
 }
 
-<partial name="_AiInsightPanel" model='new WebMVC.Models.AiInsightPanelViewModel("practice_session", Model.SessionId, ViewBag.Insight as Contracts.AiInsightDto)' />
+<partial name="_AiInsightPanel" model='Model.InsightPanel' />
 
 <div class="card mt-4">
   <div class="card__header">
     <div class="row row--between row--wrap">
       <strong>Questions review</strong>
-      <span class="text-sm text-muted">@Model.Questions.Count questions (@Model.CorrectCount correct, @Model.IncorrectCount incorrect, @Model.SkippedCount skipped)</span>
+      <span class="text-sm text-muted">@Model.Summary.Questions.Count questions (@Model.Summary.CorrectCount correct, @Model.Summary.IncorrectCount incorrect, @Model.Summary.SkippedCount skipped)</span>
     </div>
   </div>
   <div class="card__body p-0">
@@ -90,7 +89,7 @@
         </tr>
       </thead>
       <tbody>
-        @foreach (var q in Model.Questions)
+        @foreach (var q in Model.Summary.Questions)
         {
           <tr>
             <td>
@@ -112,7 +111,7 @@
                 {
                   <span class="badge badge--warning text-xs">Hint used</span>
                 }
-                <a href="/practice/@Model.SessionId?q=@q.DisplayOrder" class="text-xs font-semibold text-primary mt-1">Read in test ›</a>
+                <a href="/practice/@Model.Summary.SessionId?q=@q.DisplayOrder" class="text-xs font-semibold text-primary mt-1">Read in test ›</a>
               </div>
             </td>
             <td>
@@ -121,17 +120,10 @@
                 <span class="badge badge--muted text-xs mb-1 d-inline-block">@q.CategoryName</span>
               }
               <div class="question-stem text-sm" style="line-height: 1.6; color: var(--ink); white-space: pre-wrap;">@q.Stem</div>
-              @if (Model.Modality == Contracts.ModalityDto.Listening && !string.IsNullOrWhiteSpace(q.AudioPath))
+              @if (Model.Summary.Modality == Contracts.ModalityDto.Listening && !string.IsNullOrWhiteSpace(q.AudioPath))
               {
                 <div class="mt-2">
-                  @await Html.PartialAsync("_ExamAudioPlayer", new WebMVC.Models.ExamAudioPlayerModel(
-                      AudioPath: q.AudioPath,
-                      AllowReplay: true,
-                      SectionTitle: "Question audio",
-                      StartMs: q.AudioStartMs,
-                      EndMs: q.AudioEndMs,
-                      Mode: "study"
-                  ))
+                  @await Html.PartialAsync("_ExamAudioPlayer", Model.QuestionAudio[q.QuestionId])
                 </div>
                 @if (!string.IsNullOrWhiteSpace(q.Transcript))
                 {

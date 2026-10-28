@@ -1,0 +1,41 @@
+@model WebMVC.Models.ExamStudioViewModel
+@{
+    var skills = Model.Skills;
+    var firstSection = Model.FirstSection;
+    var firstSkillKey = Model.FirstSkillKey;
+}
+<!-- ================= TOP NAVIGATION: SKILL TABS & SECTION TABS ================= -->
+<div class="studio-nav-bar" id="studio-nav-bar">
+  <!-- 1. Top-Level Skill Tabs -->
+  <div class="studio-skill-tabs" id="skill-tabs-container">
+    @foreach (var sk in skills)
+    {
+      var isFirstSkill = sk.Key == firstSkillKey;
+      <button type="button" class="studio-skill-tab @(isFirstSkill ? "is-active" : "")" data-skill-key="@sk.Key" onclick="selectSkill('@sk.Key')">
+        <span>@sk.Name</span>
+        <span class="badge text-xs" style="font-family: var(--font-mono, monospace); background: rgba(0,0,0,0.1); border-radius: 0;">
+          @sk.TotalQuestions / @sk.ExpectedQuestions Qs
+        </span>
+      </button>
+    }
+  </div>
+
+  <!-- 2. Nested Section/Part Tabs with Live Completion Indicators -->
+  <div class="studio-section-tabs" id="section-tabs-container">
+    @foreach (var sec in Model.Detail.Sections)
+    {
+      var state = Model.SectionStates[sec.SectionId];
+      var skillKey = state.SkillKey;
+      var isFirstSec = sec == firstSection;
+      var isComplete = state.IsComplete;
+      var indicator = state.Indicator;
+
+      <button type="button" class="studio-section-tab @(isFirstSec ? "is-active" : "")" id="tab-sec-@sec.SectionId" data-section-id="@sec.SectionId" data-skill-key="@skillKey" onclick="selectSection(@sec.SectionId)" style="@(skillKey == firstSkillKey ? "" : "display: none;")">
+        <span>[@sec.Code] @sec.Name</span>
+        <span class="badge text-xs" id="tab-badge-@sec.SectionId" style="font-family: var(--font-mono, monospace); border-radius: 0; @(isComplete ? "background: #e6f1ea; color: #0a6b3c;" : "background: #fef3d6; color: #b58900;")">
+          @sec.CurrentQuestionCount/@Model.SectionStates[sec.SectionId].ExpectedCount @indicator
+        </span>
+      </button>
+    }
+  </div>
+</div>

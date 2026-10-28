@@ -19,7 +19,7 @@ public sealed class PlacementSittingViewTests
 
         Assert.Contains("~/js/placement/take.js", view);
         Assert.Contains("~/css/placement/take.css", view);
-        Assert.Contains("type=\"application/json\" id=\"placement-take-data\"", view);
+        Assert.Contains("type=\"application/json\" id=\"placement-take-data\"", markup);
         Assert.DoesNotMatch(@"<style\b|\bstyle\s*=|\bon(?:click|change|submit|load)\s*=", markup);
         Assert.DoesNotMatch(@"@(inject|functions)\b|\bnew\s+|\b(?:Math|JsonSerializer)\.|\.(?:GroupBy|Select|Where|OrderBy|TakeLast|Sum|Max|FirstOrDefault)\s*\(", markup);
         foreach (Match script in Regex.Matches(markup, @"<script\b(?<attributes>[^>]*)>(?<body>[\s\S]*?)</script>"))
@@ -67,7 +67,7 @@ public sealed class PlacementSittingViewTests
         var question = Question() with { SelectedOptionId = 12, IsFlagged = true };
         var take = Take(question, navigator:
         [
-            new(20, 3, 2, "R1", ModalityDto.Reading, false, false, false),
+            new(20, 3, 2, "R1", ModalityDto.Reading, false, false, false, true),
             new(11, 2, 1, "L1", ModalityDto.Listening, false, true, false),
             new(10, 1, 1, "L1", ModalityDto.Listening, true, true, true)
         ]) with { Phases = [new(1, "listening", "Listening", 1, 0, 600), new(2, "reading", "Reading", 2, 600, 600)] };
@@ -79,12 +79,15 @@ public sealed class PlacementSittingViewTests
         Assert.Equal("1–2", listening.RangeLabel);
         Assert.Equal("Questions 1 to 2", listening.AriaLabel);
         Assert.Equal([1, 2], listening.Items.Select(item => item.DisplayOrder));
-        Assert.Equal("navigator__cell is-current is-answered is-flagged", listening.Items[0].CssClass);
+        Assert.Equal("navigator__cell is-current is-answered is-marked", listening.Items[0].CssClass);
         Assert.Equal("Question 1 answered", listening.Items[0].AriaLabel);
         Assert.Equal("true", listening.Items[0].AriaCurrent);
         Assert.Equal("/placement/take/42?q=1", listening.Items[0].Url);
-        Assert.Equal("navigator__cell is-unanswered is-flagged", listening.Items[1].CssClass);
+        Assert.Equal("navigator__cell is-unanswered is-marked", listening.Items[1].CssClass);
+        Assert.False(listening.Items[1].IsLocked);
         Assert.Equal("Reading", model.NavigatorGroups[1].Title);
+        Assert.True(model.NavigatorGroups[1].Items[0].IsLocked);
+        Assert.Contains("is-locked", model.NavigatorGroups[1].Items[0].CssClass);
         Assert.False(model.Options[0].IsSelected);
         Assert.True(model.Options[1].IsSelected);
         Assert.Equal("is-selected", model.Options[1].CssClass);
@@ -141,18 +144,32 @@ public sealed class PlacementSittingViewTests
     {
         var root = TestPathHelper.FindRepoRoot();
         var script = File.ReadAllText(Path.Combine(root, "src", "WebMVC", "wwwroot", "js", "placement", "take.js"));
-        Assert.Contains("JSON.parse(document.getElementById('placement-take-data').textContent)", script);
-        Assert.Contains("/placement/take/${placementId}/draft", script);
-        Assert.Contains("/placement/take/${placementId}/answers/${questionId}", script);
-        Assert.Contains("body.append('__RequestVerificationToken', antiForgeryToken)", script);
+        Assert.Contains("JSON.parse(dataIsland().textContent)", script);
+        Assert.Contains("/placement/take/${config.placementId}/draft", script);
+        Assert.Contains("/placement/take/${config.placementId}/answers/${config.questionId}", script);
+        Assert.Contains("RequestVerificationToken: token", script);
         Assert.Contains("responseText: text", script);
         Assert.Contains("await saveDraftNow()", script);
-        Assert.Contains("autoInput.value = 'true'", script);
+        Assert.Contains("#is-auto-submit-input", script);
         Assert.Contains("examaudiotimeupdate", script);
         Assert.Contains("examaudioended", script);
-        Assert.Contains("'ee_placement_audio_' + placementId", script);
+        Assert.Contains("ee_placement_audio_", script);
         Assert.DoesNotContain("@take.", script);
         Assert.DoesNotContain("@q", script);
+        Assert.Contains("/placement/take/${config.placementId}/fragment", script);
+        Assert.Contains("history.pushState", script);
+        Assert.Contains("is-marked", script);
+        var components = File.ReadAllText(Path.Combine(root, "src", "WebMVC", "wwwroot", "css", "components.css"));
+        Assert.Contains(".navigator__cell.is-marked", components);
+
+        var navigator = File.ReadAllText(Path.Combine(root, "src", "WebMVC", "Views", "Placement", "_TakeNavigator.cshtml"));
+        Assert.Contains("cell.IsLocked", navigator);
+        Assert.Contains("aria-disabled=\"true\"", navigator);
+
+        var mapper = File.ReadAllText(Path.Combine(root, "src", "WebAPI", "Endpoints", "PlacementEndpoints.DtoMapping.cs"));
+        Assert.Contains("n.IsLocked", mapper);
+        var sitting = File.ReadAllText(Path.Combine(root, "src", "WebAPI", "Endpoints", "PlacementEndpoints.Sitting.cs"));
+        Assert.Equal(2, Regex.Matches(sitting, "AttemptEngineException.WrongPhase").Count);
     }
 
     private static AttemptQuestionDto Question() => new(

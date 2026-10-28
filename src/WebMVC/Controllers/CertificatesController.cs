@@ -13,7 +13,8 @@ public sealed class CertificatesController(ILogger<CertificatesController> logge
         try
         {
             var certificates = await api.GetCertificatesAsync(cancellationToken: cancellationToken);
-            return View(certificates);
+            var user = new CurrentUser(new HttpContextAccessor { HttpContext = HttpContext });
+            return View(new WebMVC.Models.CertificateCatalogViewModel(certificates, user.IsSignedIn, user.IsAdmin));
         }
         catch (ApiException ex)
         {

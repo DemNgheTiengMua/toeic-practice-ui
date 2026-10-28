@@ -1,5 +1,4 @@
 @model WebMVC.Models.MentorSlotsViewModel
-@inject WebMVC.DateTimeFormatter Formatter
 @{
     Layout = "_AdminLayout";
     ViewData["Title"] = $"Slots — {Model.Mentor.DisplayName}";
@@ -90,8 +89,8 @@
                 <tr>
                   <td><code>#@slot.SlotId</code></td>
                   <td>
-                    <strong>@Formatter.Format(slot.StartAt)</strong>
-                    <br><small class="text-muted">to @Formatter.Format(slot.EndAt)</small>
+                    <strong>@Model.Dates[slot.StartAt].Full</strong>
+                    <br><small class="text-muted">to @Model.Dates[slot.EndAt].Full</small>
                   </td>
                   <td>
                     @if (slot.Status == "open")

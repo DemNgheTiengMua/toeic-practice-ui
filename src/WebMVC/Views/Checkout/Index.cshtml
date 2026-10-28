@@ -47,7 +47,7 @@ else if (preview?.OpenOrder is not null)
           <div class="state-block__icon" aria-hidden="true">PENDING</div>
           <h1 class="state-block__title">You have an unfinished order</h1>
           <p class="state-block__desc">
-            Order <strong>@open.OrderCode</strong> · @open.PackageName package · @CurrencyFormatter.FormatVnd(open.Amount) · created at @open.CreatedAt.ToString("HH:mm"). This order is still valid, so a new one cannot be created yet.
+            Order <strong>@open.OrderCode</strong> · @open.PackageName package · @Model.OpenOrderAmount · created at @Model.OpenOrderTime. This order is still valid, so a new one cannot be created yet.
           </p>
         </div>
         <div class="alert alert--warning">
@@ -60,7 +60,7 @@ else if (preview?.OpenOrder is not null)
           <button type="button" class="btn btn--primary" id="btn-resume-qr"
                   data-ordercode="@open.OrderCode"
                   data-packagename="@open.PackageName"
-                  data-amount="@CurrencyFormatter.FormatVnd(open.Amount)"
+                  data-amount="@Model.OpenOrderAmount"
                   data-credits="@open.Credits"
                   data-checkouturl="@open.CheckoutUrl">
             Scan VietQR to Pay
@@ -120,7 +120,7 @@ else if (preview is not null)
           <div class="card__body stack">
             <div class="row row--between">
               <span>@preview.PackageName</span>
-              <strong>@CurrencyFormatter.FormatVnd(preview.Price)</strong>
+              <strong>@Model.Price</strong>
             </div>
             <div class="row row--between">
               <span class="text-muted">Credits added</span>
@@ -137,15 +137,15 @@ else if (preview is not null)
             <hr>
             <div class="row row--between">
               <strong>Total</strong>
-              <strong class="text-lg">@CurrencyFormatter.FormatVnd(preview.Price)</strong>
+              <strong class="text-lg">@Model.Price</strong>
             </div>
           </div>
           <div class="card__footer stack--tight">
-            <form id="checkout-form" method="post" action="/checkout">
+            <form id="checkout-form" data-package-name="@Model.PackageName" data-amount="@Model.Price" data-credits="@Model.Credits" method="post" action="/checkout">
               @Html.AntiForgeryToken()
               <input type="hidden" name="packageId" value="@preview.PackageId">
               <button type="submit" class="btn btn--primary btn--lg" style="width: 100%;">
-                Pay @CurrencyFormatter.FormatVnd(preview.Price)
+                Pay @Model.Price
               </button>
             </form>
             <a class="btn btn--ghost" href="/pricing" style="width: 100%; text-align: center;">Choose another package</a>
@@ -157,252 +157,11 @@ else if (preview is not null)
 
 @if (preview is not null)
 {
-    <!-- QR Payment Modal Dialog with Order Details Panel -->
-    <div id="embedded-payment-modal" class="modal-overlay" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="qr-modal-title">
-      <div class="modal qr-modal">
-        
-        <div class="modal__header row row--between">
-          <div class="row row--tight">
-            <strong id="qr-modal-title">
-              VietQR Payment — payOS
-            </strong>
-          </div>
-          <button type="button" class="btn btn--sm btn--ghost" id="btn-close-embedded">
-            Close
-          </button>
-        </div>
-
-        <div class="qr-modal__grid">
-          
-          <!-- Left Column: Order Summary & Instructions -->
-          <div class="qr-modal__summary">
-            <div class="stack">
-              <div class="row row--between">
-                <span class="font-sign uppercase text-xs font-bold text-muted">
-                  Order Details
-                </span>
-                <span class="badge badge--warning">WAITING PAYMENT</span>
-              </div>
-
-              <div class="card p-3 mt-2 stack--tight">
-                <div class="row row--between text-sm">
-                  <span class="text-muted">Order code:</span>
-                  <strong class="font-mono" id="modal-order-code">DH-0000</strong>
-                </div>
-                <div class="row row--between text-sm">
-                  <span class="text-muted">Package:</span>
-                  <strong id="modal-package-name">Credit Package</strong>
-                </div>
-                <div class="row row--between text-sm">
-                  <span class="text-muted">Credits added:</span>
-                  <strong class="text-success" id="modal-credits">+0 credits</strong>
-                </div>
-                <hr style="margin: 0.5rem 0; border: none; border-top: 1px solid var(--line-soft);">
-                <div class="row row--between">
-                  <strong>Total amount:</strong>
-                  <strong class="font-mono text-primary text-lg" id="modal-amount">0 đ</strong>
-                </div>
-              </div>
-
-              <div class="mt-2">
-                <div class="font-sign uppercase text-xs font-bold text-muted mb-2">
-                  Payment Instructions
-                </div>
-                <ol class="text-sm pl-5" style="margin: 0; line-height: 1.6;">
-                  <li>Open your mobile banking app (Vietcombank, MB Bank, Techcombank, etc.) or e-wallet.</li>
-                  <li>Select <strong>Scan QR (Quét mã QR)</strong>.</li>
-                  <li>Scan the <strong>VietQR</strong> code on the right.</li>
-                  <li>Confirm the transfer. Your credits are credited immediately!</li>
-                </ol>
-              </div>
-
-              <div class="alert alert--success mt-2">
-                <strong>Auto-sync:</strong> Do not close this window while paying. Once transferred, this screen automatically updates.
-              </div>
-            </div>
-
-            <div class="mt-3 text-xs text-muted">
-              Having trouble scanning? You can also open the official hosted checkout page directly.
-            </div>
-          </div>
-
-          <!-- Right Column: payOS VietQR iframe container -->
-          <div class="qr-modal__frame">
-            <div id="embedded-payment-container" class="w-100" style="height: 540px; min-height: 540px;"></div>
-          </div>
-
-        </div>
-
-        <div class="modal__footer row row--between">
-          <form id="modal-cancel-form" method="post" action="/checkout/cancel" class="no-margin">
-            @Html.AntiForgeryToken()
-            <input type="hidden" name="orderCode" id="modal-cancel-orderCode" value="" />
-            <input type="hidden" name="returnUrl" value="/checkout@(preview != null ? $"?packageId={preview.PackageId}" : "")" />
-            <button type="submit" class="btn btn--danger btn--sm" onclick="return confirm('Cancel this payment order?');">
-              Cancel order
-            </button>
-          </form>
-          <a id="btn-direct-checkout" href="#" target="_blank" rel="noopener noreferrer" class="btn btn--sm">
-            Open payOS hosted page
-          </a>
-        </div>
-
-      </div>
-    </div>
+    @await Html.PartialAsync("_PaymentModal", Model)
 }
 
 @section Scripts {
-  <style>
-    @("@media") (max-width: 768px) {
-      .qr-modal-grid { grid-template-columns: 1fr !important; }
-    }
-  </style>
+  <link rel="stylesheet" href="~/css/checkout/index.css" asp-append-version="true" />
   <script src="https://cdn.payos.vn/payos-checkout/v1/stable/payos-initialize.js"></script>
-  <script>
-    document.addEventListener("DOMContentLoaded", function () {
-      var form = document.getElementById("checkout-form");
-      var embeddedModal = document.getElementById("embedded-payment-modal");
-      var btnClose = document.getElementById("btn-close-embedded");
-      var directLink = document.getElementById("btn-direct-checkout");
-      var modalCancelOrderCode = document.getElementById("modal-cancel-orderCode");
-      var btnResume = document.getElementById("btn-resume-qr");
-      var payosInstance = null;
-
-      function closeModal() {
-        if (payosInstance) {
-          try { payosInstance.exit(); } catch (e) {}
-        }
-        var container = document.getElementById("embedded-payment-container");
-        if (container) container.innerHTML = "";
-        if (embeddedModal) embeddedModal.style.display = "none";
-        var submitBtn = form ? form.querySelector("button[type='submit']") : null;
-        if (submitBtn) submitBtn.disabled = false;
-      }
-
-      function openQrModal(order) {
-        var codeEl = document.getElementById("modal-order-code");
-        var pkgEl = document.getElementById("modal-package-name");
-        var amtEl = document.getElementById("modal-amount");
-        var credEl = document.getElementById("modal-credits");
-
-        if (codeEl) codeEl.textContent = order.orderCode || "";
-        if (pkgEl) pkgEl.textContent = order.packageName || "Credit Package";
-        if (amtEl) amtEl.textContent = order.amount || "";
-        if (credEl) credEl.textContent = "+" + (order.credits || "0") + " credits";
-        if (modalCancelOrderCode) modalCancelOrderCode.value = order.orderCode || "";
-        if (directLink) directLink.href = order.checkoutUrl || "#";
-
-        if (window.PayOSCheckout && typeof window.PayOSCheckout.usePayOS === "function" && order.checkoutUrl) {
-          var container = document.getElementById("embedded-payment-container");
-          if (container) container.innerHTML = "";
-          if (embeddedModal) embeddedModal.style.display = "flex";
-
-          var config = {
-            RETURN_URL: window.location.origin + "/payment/result?orderCode=" + encodeURIComponent(order.orderCode),
-            ELEMENT_ID: "embedded-payment-container",
-            CHECKOUT_URL: order.checkoutUrl,
-            embedded: true,
-            onSuccess: function (event) {
-              window.location.href = "/payment/result?orderCode=" + encodeURIComponent(order.orderCode);
-            },
-            onCancel: function (event) {
-              console.log("payOS onCancel:", event);
-            },
-            onExit: function (event) {
-              console.log("payOS onExit:", event);
-              closeModal();
-            }
-          };
-
-          try {
-            payosInstance = PayOSCheckout.usePayOS(config);
-            payosInstance.open();
-          } catch (popupErr) {
-            console.warn("PayOS embedded open failed, redirecting to hosted checkout:", popupErr);
-            window.location.href = order.checkoutUrl;
-          }
-        } else if (order.checkoutUrl) {
-          window.location.href = order.checkoutUrl;
-        }
-      }
-
-      if (btnClose) {
-        btnClose.addEventListener("click", closeModal);
-      }
-
-      if (btnResume) {
-        btnResume.addEventListener("click", function () {
-          openQrModal({
-            orderCode: btnResume.getAttribute("data-ordercode"),
-            packageName: btnResume.getAttribute("data-packagename"),
-            amount: btnResume.getAttribute("data-amount"),
-            credits: btnResume.getAttribute("data-credits"),
-            checkoutUrl: btnResume.getAttribute("data-checkouturl")
-          });
-        });
-
-        // If URL has ?openQr=1, auto-trigger the resume modal
-        var urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get("openQr") === "1") {
-          btnResume.click();
-        }
-      }
-
-      if (form) {
-        form.addEventListener("submit", async function (e) {
-          e.preventDefault();
-          var submitBtn = form.querySelector("button[type='submit']");
-          if (submitBtn) submitBtn.disabled = true;
-
-          try {
-            var tokenInput = form.querySelector("input[name='__RequestVerificationToken']");
-            var packageIdInput = form.querySelector("input[name='packageId']");
-            var formData = new FormData();
-            formData.append("packageId", packageIdInput ? packageIdInput.value : "");
-            if (tokenInput) formData.append("__RequestVerificationToken", tokenInput.value);
-
-            var res = await fetch("/checkout", {
-              method: "POST",
-              headers: {
-                "Accept": "application/json",
-                "X-Requested-With": "XMLHttpRequest"
-              },
-              body: formData
-            });
-
-            if (!res.ok) {
-              var errData = null;
-              try { errData = await res.json(); } catch (_) {}
-              if (errData && errData.message) {
-                alert(errData.message);
-              } else {
-                alert("Could not create payment order. Please refresh and try again.");
-              }
-              if (submitBtn) submitBtn.disabled = false;
-              return;
-            }
-
-            var data = await res.json();
-            if (data.gateway === "payos" && data.checkoutUrl) {
-              openQrModal({
-                orderCode: data.orderCode,
-                packageName: "@(preview?.PackageName ?? "Credit Package")",
-                amount: "@(preview != null ? CurrencyFormatter.FormatVnd(preview.Price) : "")",
-                credits: "@(preview?.Credits ?? 0)",
-                checkoutUrl: data.checkoutUrl
-              });
-            } else if (data.checkoutUrl) {
-              window.location.href = data.checkoutUrl;
-            } else {
-              if (submitBtn) submitBtn.disabled = false;
-            }
-          } catch (err) {
-            console.error("Checkout submission failed", err);
-            alert("An unexpected error occurred. Please try again.");
-            if (submitBtn) submitBtn.disabled = false;
-          }
-        });
-      }
-    });
-  </script>
+  <script src="~/js/checkout/index.js" asp-append-version="true"></script>
 }

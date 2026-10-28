@@ -1,0 +1,236 @@
+@model WebMVC.Models.StudioQuestionViewModel
+@{
+    var q = Model.Question;
+    var sec = Model.Section;
+    var currentTypeCode = Model.TypeCode;
+    var allowedList = Model.AllowedTypes;
+}
+                        <div class="question-card p-3" id="question-card-@q.QuestionId" data-question-id="@q.QuestionId" data-section-id="@sec.SectionId" data-question-type="@currentTypeCode" data-difficulty="@q.DifficultyLevel" data-display-order="@q.DisplayOrder" style="border: 2px solid var(--color-ink, #14181d); background: #ffffff; border-radius: 0; box-shadow: none;">
+                          <div class="row row--between mb-2" style="align-items: center;">
+                            <div class="row" style="gap: 0.5rem; align-items: center;">
+                              <strong class="text-sm" style="font-family: var(--font-mono, monospace);">Question #@q.DisplayOrder</strong>
+                              @if (sec.RequirePassage)
+                              {
+                                <span class="badge" style="background: var(--color-ink, #14181d); color: #fff; border-radius: 0; font-family: var(--font-mono, monospace); font-size: 0.7rem;">BLANK [@q.DisplayOrder]</span>
+                              }
+                            </div>
+
+                            <div class="row" style="gap: 0.5rem; align-items: center;">
+                              <label class="text-xs" for="question-type-@q.QuestionId">Type:</label>
+                              <select class="field__input studio-question-type" id="question-type-@q.QuestionId" data-qid="@q.QuestionId" data-saved-type="@currentTypeCode" style="font-size: 0.75rem; padding: 0.2rem 0.4rem; border-radius: 0; border: 1px solid var(--color-ink, #14181d);">
+                                @if (allowedList.Contains("mcq"))
+                                {
+                                  <option value="mcq" selected="@(currentTypeCode == "mcq")">MCQ (4 options)</option>
+                                }
+                                @if (allowedList.Contains("mcq_3"))
+                                {
+                                  <option value="mcq_3" selected="@(currentTypeCode == "mcq_3")">MCQ (3 options)</option>
+                                }
+                                @if (allowedList.Contains("multi_select"))
+                                {
+                                  <option value="multi_select" selected="@(currentTypeCode == "multi_select")">Multi-Select</option>
+                                }
+                                @if (allowedList.Contains("inline_completion"))
+                                {
+                                  <option value="inline_completion" selected="@(currentTypeCode == "inline_completion")">Inline Blank / Fill</option>
+                                }
+                                @if (allowedList.Contains("dropdown"))
+                                {
+                                  <option value="dropdown" selected="@(currentTypeCode == "dropdown")">Dropdown Choice</option>
+                                }
+                                @if (allowedList.Contains("drag_drop"))
+                                {
+                                  <option value="drag_drop" selected="@(currentTypeCode == "drag_drop")">Drag & Drop Matching</option>
+                                }
+                                @if (allowedList.Contains("free_response"))
+                                {
+                                  <option value="free_response" selected="@(currentTypeCode == "free_response")">Free Response (AI Rubric)</option>
+                                }
+                              </select>
+
+                              <label class="text-xs">Category:</label>
+                              <select class="field__input studio-autosave" data-type="question" data-id="@q.QuestionId" data-field="CategoryId" style="font-size: 0.75rem; padding: 0.2rem 0.4rem; border-radius: 0;">
+                                <option value="">-- No Category --</option>
+                                @foreach (var cat in Model.AvailableCategories)
+                                {
+                                  <option value="@cat.CategoryId" selected="@(q.CategoryId == cat.CategoryId)">@cat.Name (@cat.Code)</option>
+                                }
+                              </select>
+                              <button type="button" class="btn btn--ghost btn--sm" onclick="deleteStudioQuestion(@q.QuestionId, @sec.SectionId)" style="color: var(--color-danger, #b31217); padding: 0.1rem 0.3rem;" title="Remove Question">&times;</button>
+                            </div>
+                          </div>
+
+                          <!-- Question Stem -->
+                          <div class="mb-2">
+                            <div class="row row--between mb-1">
+                              <label class="text-xs font-bold">Stem / Prompt Text:</label>
+                              <button type="button" class="btn btn--ghost btn--sm" onclick="insertBlankInStem(@q.QuestionId)" style="border-radius: 0; font-size: 0.7rem; padding: 0.1rem 0.3rem;">
+                                + Insert Blank (_____)
+                              </button>
+                            </div>
+                            <input type="text" class="field__input studio-autosave" data-type="question" data-id="@q.QuestionId" data-field="Stem" id="stem-@q.QuestionId" value="@q.Stem" placeholder="Question stem text..." style="width: 100%; font-weight: 500; border-radius: 0;" />
+                          </div>
+
+                          <!-- 1. COMPONENT PANEL: MCQ & MCQ 3 & DROPDOWN -->
+
+                          <div class="component-panel component-mcq" style="display: @(Model.IsRadioType ? "block" : "none");">
+                            @if (sec.HideOptionText)
+                            {
+                              <div class="text-xs text-muted mb-1" style="font-style: italic;">Note: Option text is hidden for learner view (spoken prompt).</div>
+                            }
+                            <div class="stack" style="gap: 0.35rem; margin-left: 0.25rem;">
+                              @foreach (var option in Model.RadioOptions)
+                              {
+                                var lbl = option.Label;
+                                var isCorr = option.IsCorrect;
+                                var optTxt = option.Text;
+                                var optRat = option.Rationale;
+
+                                <div class="row studio-opt-row-single" data-label="@lbl" style="gap: 0.5rem; align-items: center;">
+                                  <label style="display: flex; align-items: center; gap: 0.25rem; font-weight: bold; width: 45px; cursor: pointer;">
+                                    <input type="radio" name="opt-correct-@q.QuestionId" value="@lbl" checked="@isCorr" class="studio-opt-radio" data-qid="@q.QuestionId" data-label="@lbl" style="accent-color: var(--color-ink, #14181d);" />
+                                    @lbl.
+                                  </label>
+                                  <input type="text" class="field__input studio-opt-text" data-qid="@q.QuestionId" data-label="@lbl" value="@optTxt" placeholder="Option text..." style="flex: 2; font-size: 0.82rem; border-radius: 0;" />
+                                  <input type="text" class="field__input studio-opt-rationale" data-qid="@q.QuestionId" data-label="@lbl" value="@optRat" placeholder="Distractor rationale..." style="flex: 2; font-size: 0.78rem; color: #555; border-radius: 0;" />
+                                </div>
+                              }
+                            </div>
+                          </div>
+
+                          <!-- 2. COMPONENT PANEL: MULTI-SELECT -->
+                          <div class="component-panel component-multi-select" style="display: @(currentTypeCode == "multi_select" ? "block" : "none"); background: #fdfdfd; border: 1px solid #ccd2d6; padding: 0.5rem;">
+                            <div class="row mb-2" style="gap: 1rem; align-items: center;">
+                              <label class="text-xs font-bold">Max Selections Allowed:</label>
+                              <input type="number" class="field__input studio-autosave" data-type="question" data-id="@q.QuestionId" data-field="MaxSelections" value="@(q.MaxSelections ?? 2)" min="1" max="10" style="width: 80px; font-size: 0.8rem; border-radius: 0;" />
+                              <span class="text-xs text-muted">Check all correct options:</span>
+                            </div>
+                            <div class="stack" style="gap: 0.35rem;">
+                              @foreach (var option in Model.Options)
+                              {
+                                var lbl = option.Label;
+                                var isCorr = option.IsMultiCorrect;
+                                var optTxt = option.Text;
+                                var optRat = option.Rationale;
+
+                                <div class="row studio-opt-row-multi" data-label="@lbl" style="gap: 0.5rem; align-items: center;">
+                                  <label style="display: flex; align-items: center; gap: 0.25rem; font-weight: bold; width: 45px; cursor: pointer;">
+                                    <input type="checkbox" value="@lbl" checked="@isCorr" class="studio-opt-checkbox" data-qid="@q.QuestionId" data-label="@lbl" style="accent-color: var(--color-ink, #14181d);" />
+                                    @lbl.
+                                  </label>
+                                  <input type="text" class="field__input studio-opt-text" data-qid="@q.QuestionId" data-label="@lbl" value="@optTxt" placeholder="Option text..." style="flex: 2; font-size: 0.82rem; border-radius: 0;" />
+                                  <input type="text" class="field__input studio-opt-rationale" data-qid="@q.QuestionId" data-label="@lbl" value="@optRat" placeholder="Distractor rationale..." style="flex: 2; font-size: 0.78rem; color: #555; border-radius: 0;" />
+                                </div>
+                              }
+                            </div>
+                          </div>
+
+                          <!-- 3. COMPONENT PANEL: INLINE COMPLETION -->
+                          <div class="component-panel component-inline-completion" style="display: @(currentTypeCode == "inline_completion" ? "block" : "none"); background: #fdfdfd; border: 1px solid #ccd2d6; padding: 0.5rem;">
+                            <div class="stack" style="gap: 0.5rem;">
+                              <div>
+                                <label class="text-xs font-bold">Accepted Answers (comma-separated variants or JSON list):</label>
+                                <input type="text" class="field__input studio-autosave" data-type="question" data-id="@q.QuestionId" data-field="AcceptedAnswersJson" value="@q.AcceptedAnswersJson" placeholder="e.g. center, centre, middle" style="width: 100%; font-size: 0.82rem; border-radius: 0;" />
+                              </div>
+                              <div class="row row--wrap" style="gap: 1rem; align-items: center;">
+                                <label style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.8rem; cursor: pointer;">
+                                  <input type="checkbox" class="studio-autosave" data-type="question" data-id="@q.QuestionId" data-field="AllowNumber" checked="@q.AllowNumber" style="accent-color: var(--color-ink, #14181d);" />
+                                  <span>Allow numeric digits and words (e.g., '5' and 'five')</span>
+                                </label>
+                                <div class="row" style="gap: 0.35rem; align-items: center;">
+                                  <label class="text-xs font-bold">Max Words:</label>
+                                  <input type="number" class="field__input studio-autosave" data-type="question" data-id="@q.QuestionId" data-field="MaxWords" value="@(q.MaxWords ?? 1)" min="1" max="10" style="width: 70px; font-size: 0.8rem; border-radius: 0;" />
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <!-- 4. COMPONENT PANEL: DRAG & DROP -->
+                          <div class="component-panel component-drag-drop" style="display: @(currentTypeCode == "drag_drop" ? "block" : "none"); background: #fdfdfd; border: 1px solid #ccd2d6; padding: 0.5rem;">
+                            <div class="text-xs font-bold mb-1">Target / Choice Associations:</div>
+                            <div class="stack" style="gap: 0.35rem;">
+                              @foreach (var option in Model.Options)
+                              {
+                                var lbl = option.Label;
+                                var isCorr = option.IsCorrect;
+                                var optTxt = option.Text;
+                                var optRat = option.Rationale;
+
+                                <div class="row studio-opt-row-drag" data-label="@lbl" style="gap: 0.5rem; align-items: center;">
+                                  <span style="font-weight: bold; width: 45px; font-family: var(--font-mono, monospace);">Slot @lbl</span>
+                                  <input type="text" class="field__input studio-opt-text" data-qid="@q.QuestionId" data-label="@lbl" value="@optTxt" placeholder="Match value / target item..." style="flex: 2; font-size: 0.82rem; border-radius: 0;" />
+                                  <input type="text" class="field__input studio-opt-rationale" data-qid="@q.QuestionId" data-label="@lbl" value="@optRat" placeholder="Matching rationale..." style="flex: 2; font-size: 0.78rem; color: #555; border-radius: 0;" />
+                                </div>
+                              }
+                            </div>
+                          </div>
+
+                          <!-- 5. COMPONENT PANEL: FREE RESPONSE (SPEAKING / WRITING) -->
+                          <div class="component-panel component-free-response" style="display: @(currentTypeCode == "free_response" ? "block" : "none"); background: #fafafa; border: 1px solid #ccd2d6; padding: 0.75rem; margin-top: 0.5rem;">
+                            <div class="row row--wrap" style="gap: 0.75rem;">
+                              <div>
+                                <label class="text-xs" for="prep-@q.QuestionId" style="font-weight: bold;">Prep Seconds:</label>
+                                <input type="number" id="prep-@q.QuestionId" class="field__input studio-autosave" data-type="question" data-id="@q.QuestionId" data-field="PrepSeconds" value="@(q.PrepSeconds ?? (sec.Modality == Contracts.ModalityDto.Speaking ? 15 : 60))" min="1" style="width: 90px; font-size: 0.8rem; border-radius: 0;" />
+                              </div>
+                              <div>
+                                <label class="text-xs" for="response-@q.QuestionId" style="font-weight: bold;">Response Seconds:</label>
+                                <input type="number" id="response-@q.QuestionId" class="field__input studio-autosave" data-type="question" data-id="@q.QuestionId" data-field="ResponseSeconds" value="@(q.ResponseSeconds ?? (sec.Modality == Contracts.ModalityDto.Speaking ? 45 : 1800))" min="1" style="width: 90px; font-size: 0.8rem; border-radius: 0;" />
+                              </div>
+                              @if (sec.Modality == Contracts.ModalityDto.Writing || currentTypeCode == "free_response")
+                              {
+                                <div>
+                                  <label class="text-xs" for="min-words-@q.QuestionId" style="font-weight: bold;">Min Words:</label>
+                                  <input type="number" id="min-words-@q.QuestionId" class="field__input studio-autosave" data-type="question" data-id="@q.QuestionId" data-field="MinWords" value="@q.MinWords" min="1" style="width: 90px; font-size: 0.8rem; border-radius: 0;" />
+                                </div>
+                                <div>
+                                  <label class="text-xs" for="max-words-@q.QuestionId" style="font-weight: bold;">Max Words:</label>
+                                  <input type="number" id="max-words-@q.QuestionId" class="field__input studio-autosave" data-type="question" data-id="@q.QuestionId" data-field="MaxWords" value="@q.MaxWords" min="1" style="width: 90px; font-size: 0.8rem; border-radius: 0;" />
+                                </div>
+                              }
+                            </div>
+
+                            @if (sec.RequiredKeywordCount > 0 || !string.IsNullOrWhiteSpace(q.RequiredKeywords))
+                            {
+                              <div class="mt-2">
+                                <label class="text-xs" style="font-weight: bold;">
+                                  Required Keywords (comma-separated)
+                                  <span class="badge text-xs" style="background: #eef; border-radius: 0;">Min @sec.RequiredKeywordCount required</span>:
+                                </label>
+                                <input type="text" class="field__input studio-autosave" data-type="question" data-id="@q.QuestionId" data-field="RequiredKeywords" value="@q.RequiredKeywords" placeholder="e.g. environment, sustainability, future" style="width: 100%; font-size: 0.8rem; border-radius: 0;" />
+                              </div>
+                            }
+
+                            <div class="mt-2">
+                              <label class="text-xs" for="hint-@q.QuestionId" style="display: block; font-weight: bold;">Learner guidance / Hint:</label>
+                              <textarea id="hint-@q.QuestionId" rows="2" class="field__input studio-autosave" data-type="question" data-id="@q.QuestionId" data-field="Hint" placeholder="Instructions or guidance for the learner..." style="width: 100%; border-radius: 0; font-size: 0.8rem;">@q.Hint</textarea>
+                            </div>
+
+                            <!-- Rubric Criteria Checklist -->
+                            <div class="mt-2">
+                              <label class="text-xs" style="font-weight: bold; text-transform: uppercase; font-family: var(--font-condensed, sans-serif);">
+                                Rubric Criteria (evaluated by AI Mentor):
+                              </label>
+                              <div class="stack mt-1" style="gap: 0.35rem; background: #ffffff; border: 1px solid #ccd2d6; padding: 0.5rem; border-radius: 0;">
+                                @foreach (var crit in Model.Criteria)
+                                {
+                                  var isAssigned = crit.IsAssigned;
+                                  <label class="row row--between" style="align-items: center; font-size: 0.8rem; gap: 0.5rem;">
+                                    <span style="display: flex; align-items: center; gap: 0.35rem;">
+                                      <input type="checkbox" class="studio-criterion-checkbox" data-qid="@q.QuestionId" data-criterion-id="@crit.Criterion.CriterionId" checked="@isAssigned" style="accent-color: var(--color-ink, #14181d);" />
+                                      <span><strong>[@crit.Criterion.Code]</strong> @crit.Criterion.Name</span>
+                                    </span>
+                                    <span class="badge text-xs" style="background: #eef; font-family: var(--font-mono, monospace); border-radius: 0;">Max Score: @crit.Criterion.MaxScore</span>
+                                  </label>
+                                }
+                              </div>
+                            </div>
+                          </div>
+
+                          <!-- Pedagogical Explanation / Rationale -->
+                          <div style="margin-top: 0.5rem;">
+                            <label class="text-xs" for="explanation-@q.QuestionId" data-role="explanation-label">
+                              @(currentTypeCode == "free_response" ? "Sample response / answer guidance" : "Explanation / pedagogical rationale")
+                            </label>
+                            <textarea rows="2" class="field__input studio-autosave" data-type="question" data-id="@q.QuestionId" data-field="Explanation" id="explanation-@q.QuestionId" placeholder="Explanation, sample response, or answer guidance..." style="width: 100%; font-size: 0.8rem; color: #444; border-radius: 0;">@q.Explanation</textarea>
+                          </div>
+                        </div>

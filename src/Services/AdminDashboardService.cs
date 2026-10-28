@@ -7,11 +7,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Services;
 
-public interface IAdminDashboardService
-{
-    Task<AdminDashboardDto> GetDashboardMetricsAsync(CancellationToken cancellationToken = default);
-}
-
 public sealed class AdminDashboardService(CompanionDbContext db, TimeProvider clock) : IAdminDashboardService
 {
     public async Task<AdminDashboardDto> GetDashboardMetricsAsync(CancellationToken cancellationToken = default)

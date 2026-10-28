@@ -1,91 +1,11 @@
-@model Contracts.LearnerDashboardDto
+@model DashboardPresentation
 @{
-    var cert = Model.Certificate;
-    var strips = Model.WeaknessStrips ?? [];
-    var hasTestedStrips = strips.Any(s => s.Answered > 0 && s.Tier != "UNTESTED");
+    var cert = Model.Dashboard.Certificate;
+    var strips = Model.Strips;
+    var hasTestedStrips = Model.HasTestedStrips;
 }
 
-<style>
-  .weakness-radar__meta-bar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: var(--space-2, 8px) var(--space-4, 16px);
-    padding-bottom: var(--space-3, 12px);
-    margin-bottom: var(--space-3, 12px);
-    border-bottom: 1px solid var(--line-soft, #ccd2d6);
-  }
-  .weakness-radar__legend {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: var(--space-2, 8px);
-  }
-  .weakness-radar__list {
-    display: flex;
-    flex-direction: column;
-    border: 2px solid var(--ink, #14181d);
-    border-radius: 0;
-    background: var(--color-surface, #ffffff);
-  }
-  .weakness-radar__row {
-    display: grid;
-    grid-template-columns: minmax(0, 1.4fr) minmax(180px, 1.6fr) auto;
-    align-items: center;
-    gap: var(--space-4, 16px);
-    padding: var(--space-3, 12px) var(--space-4, 16px);
-    border-bottom: 1px solid var(--line-soft, #ccd2d6);
-    border-radius: 0;
-  }
-  .weakness-radar__row:last-child {
-    border-bottom: 0;
-  }
-  .weakness-radar__info {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    min-width: 0;
-  }
-  .weakness-radar__eyebrow {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: var(--space-2, 8px);
-  }
-  .weakness-radar__name {
-    font-family: var(--font-sign, "IBM Plex Sans Condensed", sans-serif);
-    font-size: var(--text-base, 16px);
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: var(--tracking-sign, 0.055em);
-    color: var(--ink, #14181d);
-  }
-  .weakness-radar__telemetry {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    min-width: 0;
-  }
-  .weakness-radar__counts {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: var(--space-2, 8px);
-  }
-  .weakness-radar__progress {
-    height: 10px;
-    border: 1px solid var(--ink, #14181d);
-    border-radius: 0;
-    background: var(--color-track, #dfe3e6);
-  }
-  @@media (max-width: 768px) {
-    .weakness-radar__row {
-      grid-template-columns: minmax(0, 1fr);
-      gap: var(--space-3, 12px);
-    }
-  }
-</style>
+<link rel="stylesheet" href="~/css/dashboard/weakness-radar.css" asp-append-version="true" />
 
 <section class="card mt-4 weakness-radar" id="dashboard-weakness-radar" aria-label="Weakness radar accuracy matrix">
   <div class="card__header">
@@ -131,27 +51,14 @@
     else
     {
       <div class="weakness-radar__list" role="list">
-        @foreach (var strip in strips)
+        @foreach (var item in strips)
         {
-            var isUntested = strip.Tier == "UNTESTED" || strip.Answered == 0;
-            var badgeClass = strip.Tier switch
-            {
-                "CRITICAL" => "badge--danger",
-                "BORDER" => "badge--warning",
-                "STABLE" => "badge--info",
-                "MASTERY" => "badge--success",
-                _ => "badge--muted",
-            };
-            var barClass = strip.Tier switch
-            {
-                "CRITICAL" => "progress__bar--danger",
-                "BORDER" => "progress__bar--warning",
-                "MASTERY" => "progress__bar--success",
-                _ => "",
-            };
-            var scopeEyebrow = strip.Scope == "category"
-                ? $"CATEGORY · {strip.Code} · {strip.SectionName}"
-                : $"{(cert.Code == "TOEIC" ? "PART" : "SECTION")} {strip.Code}";
+            var source = item;
+            var strip = item.Strip;
+            var isUntested = source.IsUntested;
+            var badgeClass = source.BadgeClass;
+            var barClass = source.BarClass;
+            var scopeEyebrow = source.ScopeEyebrow;
 
             <div class="weakness-radar__row" role="listitem">
               <div class="weakness-radar__info">

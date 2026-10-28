@@ -73,7 +73,7 @@ public sealed class PricingControllerTests
         var result = await controller.Index(CancellationToken.None);
 
         var viewResult = Assert.IsType<ViewResult>(result);
-        var model = Assert.IsAssignableFrom<IReadOnlyList<PackageDto>>(viewResult.Model);
+        var model = Assert.IsType<WebMVC.Models.PricingViewModel>(viewResult.Model).Packages;
         Assert.Equal(3, model.Count);
         Assert.Equal("Exam Prep", model.Single(p => p.IsFeatured).Name);
     }

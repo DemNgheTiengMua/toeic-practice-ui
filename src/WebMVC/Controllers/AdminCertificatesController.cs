@@ -52,7 +52,7 @@ public sealed class AdminCertificatesController(
                     DurationMinutes = s.DurationMinutes,
                     Sections = s.Sections.Select(MapDetailSectionToViewModel).ToList()
                 }).ToList();
-                return View("~/Views/Admin/CertificateWizard.cshtml", vm);
+                return View("~/Views/Admin/CertificateWizard.cshtml", new CertificateWizardPageViewModel(vm));
             }
         }
 
@@ -65,7 +65,7 @@ public sealed class AdminCertificatesController(
             PopulateFromPreset(vm, chosenPreset);
         }
 
-        return View("~/Views/Admin/CertificateWizard.cshtml", vm);
+        return View("~/Views/Admin/CertificateWizard.cshtml", new CertificateWizardPageViewModel(vm));
     }
 
     [HttpPost("/admin/certificates/wizard")]
@@ -85,12 +85,12 @@ public sealed class AdminCertificatesController(
         catch (ApiException ex)
         {
             model.ErrorMessage = ex.Detail ?? ex.Message;
-            return View("~/Views/Admin/CertificateWizard.cshtml", model);
+            return View("~/Views/Admin/CertificateWizard.cshtml", new CertificateWizardPageViewModel(model));
         }
         catch (Exception ex)
         {
             model.ErrorMessage = ex.Message;
-            return View("~/Views/Admin/CertificateWizard.cshtml", model);
+            return View("~/Views/Admin/CertificateWizard.cshtml", new CertificateWizardPageViewModel(model));
         }
     }
 

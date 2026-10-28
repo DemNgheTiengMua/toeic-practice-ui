@@ -1,0 +1,82 @@
+@model WebMVC.Models.ExamEditorViewModel
+@{ var isEdit = Model.IsEdit; var detail = Model.Form.Detail; var presentation = Model.Presentation; }
+<!-- ===== Step 3: Question entry progress ===== -->
+@if (Model.Form.Step == 3 && isEdit && detail != null)
+{
+  var allComplete = presentation.AllComplete;
+  var listeningMissing = presentation.ListeningMissing;
+  var totalEntered = presentation.TotalEntered;
+  var required = presentation.Required;
+
+  <div class="card">
+    <div class="card__header row row--between">
+      <strong>Question entry progress</strong>
+      <a class="btn btn--sm btn--primary" href="/admin/exams/@Model.Form.ExamId/studio">Open Exam Studio</a>
+    </div>
+    <div class="card__body stack">
+      <table class="table table--striped">
+        <thead>
+          <tr>
+            <th scope="col">Part</th>
+            <th scope="col">Modality</th>
+            <th scope="col">Entered</th>
+            <th scope="col">Target</th>
+            <th scope="col">Status</th>
+            <th scope="col">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @foreach (var s in detail.SectionProgress)
+          {
+            var badgeClass = presentation.BadgeClasses[s.SectionId];
+            <tr>
+              <td><strong>@s.SectionName</strong> <span class="text-xs text-muted">(@s.SectionCode)</span></td>
+              <td>@s.Modality</td>
+              <td>@s.QuestionCount</td>
+              <td>@presentation.ExpectedCounts[s.SectionId]</td>
+              <td><span class="@badgeClass">@s.StatusText</span></td>
+              <td>
+                <a class="btn btn--sm" href="/admin/exams/@Model.Form.ExamId/studio?sectionId=@s.SectionId">
+                  @(s.IsComplete ? "Edit in Studio" : "Enter questions")
+                </a>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+
+      @if (!allComplete || (detail.QuestionCount.HasValue && totalEntered < detail.QuestionCount.Value))
+      {
+        <div class="alert alert--warning">
+          @if (listeningMissing > 0)
+          {
+            <span>Missing audio for @listeningMissing listening parts. </span>
+          }
+          @if (detail.QuestionCount.HasValue && totalEntered < detail.QuestionCount.Value)
+          {
+            <span>Exam requires @detail.QuestionCount.Value questions (currently @totalEntered). </span>
+          }
+          <span>The exam cannot be published until all questions and required audio are complete.</span>
+        </div>
+      }
+      else
+      {
+        <div class="alert alert--success">
+          All questions and required audio files are complete. The exam is ready to publish!
+        </div>
+      }
+    </div>
+    <div class="card__footer row row--between">
+      <a class="btn btn--ghost" href="/admin/exams/@Model.Form.ExamId/edit?step=2">‹ Back to audio upload</a>
+      <div class="row">
+        <a class="btn" href="/admin/exams">Back to exam list</a>
+        <form method="post" action="/admin/exams/@Model.Form.ExamId/publish" style="display:inline; margin:0;">
+          @Html.AntiForgeryToken()
+          <button type="submit" class="btn btn--primary" @(!allComplete || (detail.QuestionCount.HasValue && totalEntered < detail.QuestionCount.Value) ? "disabled" : "")>
+            Publish exam
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+}

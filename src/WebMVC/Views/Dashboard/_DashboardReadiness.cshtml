@@ -1,0 +1,125 @@
+@model DashboardViewModel
+@{ var dashboard = Model.Dashboard; var cert = dashboard.Certificate; }
+@{
+    var readiness = dashboard.TargetReadiness;
+    var currentBandCode = Model.Presentation.CurrentBandCode;
+    var currentBandName = Model.Presentation.CurrentBandName;
+    var currentScore = Model.Presentation.CurrentScore;
+    var currentSource = Model.Presentation.CurrentSource;
+    var completedSteps = Model.Presentation.CompletedSteps;
+    var totalSteps = Model.Presentation.TotalSteps;
+    var pathPercent = Model.Presentation.PathPercent;
+}
+
+<section class="readiness-strip mt-3" aria-label="Target and readiness summary">
+  <div class="readiness-strip__cell">
+    <div class="readiness-strip__label">
+      <span>Current Standing · @cert.Code</span>
+      @if (currentSource == "mock")
+      {
+        <span class="badge badge--info">Mock</span>
+      }
+      else if (currentSource == "placement")
+      {
+        <span class="badge badge--muted">Placement</span>
+      }
+    </div>
+    @if (currentScore.HasValue || !string.IsNullOrEmpty(currentBandCode))
+    {
+      <div class="readiness-strip__value">
+        @(currentBandCode ?? "—")
+        @if (currentScore.HasValue)
+        {
+          <span class="text-base text-muted font-mono">(@currentScore.Value pts)</span>
+        }
+      </div>
+      <div class="readiness-strip__meta">
+        @(currentBandName ?? currentBandCode ?? "Graded standing")
+      </div>
+    }
+    else
+    {
+      <div class="readiness-strip__value">—</div>
+      <div class="readiness-strip__meta">
+        Uncalibrated · <a href="/placement">Take free placement exam</a>
+      </div>
+    }
+  </div>
+
+  <div class="readiness-strip__cell">
+    <div class="readiness-strip__label">
+      <span>Target Band</span>
+      @if (Model.Presentation.TargetDeficit is { } deficit)
+      {
+        if (deficit == 0)
+        {
+          <span class="badge badge--success">Reached</span>
+        }
+        else
+        {
+          <span class="badge badge--warning font-mono">-@deficit pts</span>
+        }
+      }
+    </div>
+    @if (!string.IsNullOrEmpty(readiness?.TargetBandCode))
+    {
+      <div class="readiness-strip__value">
+        @readiness.TargetBandCode
+        @if (readiness.TargetMinScore.HasValue)
+        {
+          <span class="text-base text-muted font-mono">(@readiness.TargetMinScore.Value+ pts)</span>
+        }
+      </div>
+      <div class="readiness-strip__meta">
+        @(readiness.TargetBandName ?? readiness.TargetBandCode) · <a href="/placement/target-band">Change target</a>
+      </div>
+    }
+    else
+    {
+      <div class="readiness-strip__value">NOT SET</div>
+      <div class="readiness-strip__meta">
+        <a href="/placement/target-band">Set target band</a> · <a href="/placement">Placement</a>
+      </div>
+    }
+  </div>
+
+  <div class="readiness-strip__cell">
+    <div class="readiness-strip__label">
+      <span>Learning Path</span>
+      @if (totalSteps > 0)
+      {
+        <span class="badge badge--muted font-mono">@pathPercent%</span>
+      }
+    </div>
+    <div class="readiness-strip__value">
+      @completedSteps / @totalSteps <span class="text-sm text-muted font-sign uppercase">steps</span>
+    </div>
+    <div class="readiness-strip__meta">
+      @if (totalSteps > 0)
+      {
+        <div class="progress mb-1" aria-hidden="true">
+          <div class="progress__bar" style="width: @pathPercent%;"></div>
+        </div>
+        <a href="/learning-path">Continue active path</a>
+      }
+      else
+      {
+        <span>No active path · <a href="/learning-path">Build learning path</a></span>
+      }
+    </div>
+  </div>
+
+  <div class="readiness-strip__cell">
+    <div class="readiness-strip__label">
+      <span>Diagnostic Accuracy</span>
+      <span class="badge badge--muted font-mono">@cert.Code</span>
+    </div>
+    <div class="readiness-strip__value">
+      @(dashboard.OverallAccuracyPercent.HasValue ? $"{dashboard.OverallAccuracyPercent.Value}%" : "—")
+    </div>
+    <div class="readiness-strip__meta">
+      @dashboard.AttemptCount @(dashboard.AttemptCount == 1 ? "attempt" : "attempts") · @dashboard.PracticeCount @(dashboard.PracticeCount == 1 ? "practice session" : "practice sessions")
+    </div>
+  </div>
+</section>
+

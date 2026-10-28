@@ -242,7 +242,14 @@ public sealed class AdminExamsControllerTests
         Assert.Contains(@"Model.Purpose", content);
 
         // Certificate & Purpose badges
-        Assert.Contains("exam.CertCode", content);
+        Assert.Contains("row.CertificateCode", content);
+        var rows = SampleSummaryWithVariousPurposes().Exams.Select(exam => new AdminExamRowViewModel(exam)).ToArray();
+        Assert.Equal("TOEIC", rows[0].CertificateCode);
+        Assert.Equal("badge badge--success", rows[0].StatusBadgeClass);
+        Assert.Equal("badge badge--warning", rows[1].StatusBadgeClass);
+        Assert.Equal("PLACEMENT", rows[2].PurposeDisplay);
+        Assert.False(rows[3].IsAudioApplicable);
+        Assert.False(rows[4].IsAudioApplicable);
         Assert.Matches(@"badge.*font-mono", content);
 
         // Scoped Audio column: text-muted when audio is N/A or not applicable
@@ -265,7 +272,7 @@ public sealed class AdminExamsControllerTests
 
         var viewResult = Assert.IsType<ViewResult>(result);
         Assert.Equal("~/Views/Admin/ExamEditor.cshtml", viewResult.ViewName);
-        var vm = Assert.IsType<ExamFormViewModel>(viewResult.Model);
+        var vm = Assert.IsType<ExamEditorViewModel>(viewResult.Model).Form;
         Assert.Equal(1, vm.CertId);
         Assert.Equal(1, vm.Step);
         Assert.False(vm.ExamId.HasValue);
@@ -318,7 +325,7 @@ public sealed class AdminExamsControllerTests
 
         var viewResult = Assert.IsType<ViewResult>(result);
         Assert.Equal("~/Views/Admin/ExamEditor.cshtml", viewResult.ViewName);
-        var vm = Assert.IsType<ExamFormViewModel>(viewResult.Model);
+        var vm = Assert.IsType<ExamEditorViewModel>(viewResult.Model).Form;
         Assert.Equal("An exam with this name already exists for this certificate.", vm.ErrorMessage);
     }
 
@@ -332,7 +339,7 @@ public sealed class AdminExamsControllerTests
 
         var viewResult = Assert.IsType<ViewResult>(result);
         Assert.Equal("~/Views/Admin/ExamEditor.cshtml", viewResult.ViewName);
-        var vm = Assert.IsType<ExamFormViewModel>(viewResult.Model);
+        var vm = Assert.IsType<ExamEditorViewModel>(viewResult.Model).Form;
         Assert.Equal(7, vm.ExamId);
         Assert.Equal(3, vm.Step);
         Assert.NotNull(vm.Detail);
@@ -593,9 +600,66 @@ public sealed class AdminExamsControllerTests
         var result = await controller.Studio(5, CancellationToken.None);
 
         var view = Assert.IsType<ViewResult>(result);
-        var model = Assert.IsType<ExamStudioDetailDto>(view.Model);
-        Assert.Equal(5, model.ExamId);
-        Assert.NotEmpty(model.Sections);
+        var model = Assert.IsType<ExamStudioViewModel>(view.Model);
+        Assert.Equal(5, model.Detail.ExamId);
+        Assert.NotEmpty(model.Detail.Sections);
+        Assert.Equal("Listening", Assert.Single(model.Skills).Key);
+        Assert.Equal(1, model.Skills[0].TotalQuestions);
+        Assert.Equal(6, model.Skills[0].ExpectedQuestions);
+        Assert.Equal(200, model.RequiredQuestions);
+        Assert.False(model.SectionStates[1].IsComplete);
+        Assert.True(model.SectionStates[1].HasAudioStimulus);
+        var question = model.Questions[1];
+        Assert.Equal("mcq", question.TypeCode);
+        Assert.Equal(4, question.RadioOptions.Count);
+        Assert.Equal("Photo A", question.RadioOptions[0].Text);
+        Assert.True(question.RadioOptions[0].IsCorrect);
+        Assert.False(question.RadioOptions[1].IsCorrect);
+        using var config = System.Text.Json.JsonDocument.Parse(model.ConfigurationJson);
+        Assert.Equal(5, config.RootElement.GetProperty("ExamId").GetInt32());
+        Assert.Equal(1, config.RootElement.GetProperty("CurrentSectionId").GetInt32());
+        Assert.Equal("Listening", config.RootElement.GetProperty("Sections")[0].GetProperty("Modality").GetString());
+    }
+
+    [Theory]
+    [InlineData("not-json")]
+    [InlineData("[null]")]
+    public async Task StudioPresentation_InvalidAllowedComponents_KeepsExistingQuestionEditable(string components)
+    {
+        var detail = await new TestApiClient().GetAdminExamStudioAsync(5);
+        var section = detail.Sections[0] with { AllowedComponentTypesJson = components };
+        var question = section.Groups[0].Questions[0] with { QuestionType = QuestionTypeDto.Mcq_3 };
+        var model = new StudioQuestionViewModel(question, section, [], []);
+
+        Assert.Contains("mcq", model.AllowedTypes);
+        Assert.Contains("free_response", model.AllowedTypes);
+        Assert.Contains("mcq_3", model.AllowedTypes);
+        Assert.Equal(new[] { "A", "B", "C" }, model.RadioOptions.Select(o => o.Label));
+        Assert.Equal("Photo B", model.RadioOptions[1].Text);
+        Assert.False(model.RadioOptions[1].IsCorrect);
+    }
+
+    [Fact]
+    public async Task StudioPresentation_GroupsBySkill_AndIncludesOnlyRelevantRubricCriteria()
+    {
+        var detail = await new TestApiClient().GetAdminExamStudioAsync(5);
+        var section = detail.Sections[0] with { SkillId = 10, SkillName = "Reading", SkillCode = "R" };
+        var second = section with { SectionId = 2, CurrentQuestionCount = 2, ExpectedQuestionCount = 2, Groups = [] };
+        var grouped = new ExamStudioViewModel(detail with { Sections = [section, second] });
+        var skill = Assert.Single(grouped.Skills);
+        Assert.Equal("10", skill.Key);
+        Assert.Equal("Reading", skill.Name);
+        Assert.Equal(3, skill.TotalQuestions);
+        Assert.Equal(8, skill.ExpectedQuestions);
+        Assert.True(grouped.SectionStates[2].IsComplete);
+        Assert.Equal("[ĐỦ]", grouped.SectionStates[2].Indicator);
+
+        var assigned = new ExamStudioCriterionDto(1, "A", "Accuracy", null, 5, 10);
+        var irrelevant = new ExamStudioCriterionDto(2, "F", "Fluency", null, 5, 99);
+        var question = section.Groups[0].Questions[0] with { Criteria = [assigned] };
+        var model = new StudioQuestionViewModel(question, section, [], [assigned, irrelevant]);
+        Assert.True(Assert.Single(model.Criteria).IsAssigned);
+        Assert.Equal(1, model.Criteria[0].Criterion.CriterionId);
     }
 
     [Fact]
@@ -749,7 +813,7 @@ public sealed class AdminExamsControllerTests
         var editorPath = Path.Combine(repoRoot, "src", "WebMVC", "Views", "Admin", "ExamEditor.cshtml");
         Assert.True(File.Exists(editorPath), "Admin/ExamEditor.cshtml must exist");
 
-        var content = File.ReadAllText(editorPath);
+        var content = AdminAuthoringPresentationTests.ReadComposedView("ExamEditor");
         Assert.Contains("enctype=\"multipart/form-data\"", content);
         Assert.Contains("type=\"file\"", content);
         Assert.Contains("name=\"AudioFile\"", content);

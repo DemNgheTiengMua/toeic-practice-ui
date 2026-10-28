@@ -1,5 +1,4 @@
 @model WebMVC.Models.AdminUsersViewModel
-@inject WebMVC.DateTimeFormatter Formatter
 @{
     Layout = "_AdminLayout";
     ViewData["Title"] = "Students";
@@ -84,7 +83,7 @@ else
               <td>
                 @if (user.LastLoginAt.HasValue)
                 {
-                  @Formatter.Format(user.LastLoginAt.Value)
+                  @Model.Dates[user.LastLoginAt.Value].Full
                 }
                 else
                 {
@@ -142,7 +141,7 @@ else
     {
       <div class="card__footer">
         <div class="pagination">
-          <span class="pagination__info">Showing @(((summary.Page - 1) * summary.PageSize) + 1)–@(Math.Min(summary.Page * summary.PageSize, summary.TotalCount)) of @summary.TotalCount students</span>
+          <span class="pagination__info">Showing @Model.FirstRow–@Model.LastRow of @summary.TotalCount students</span>
           @if (summary.Page > 1)
           {
             <a class="pagination__page" href="/admin/users?page=@(summary.Page - 1)&q=@Model.Query&status=@Model.Status">Previous</a>

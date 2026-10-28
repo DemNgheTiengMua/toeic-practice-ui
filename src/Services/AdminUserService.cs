@@ -8,42 +8,6 @@ using Services.Credits;
 
 namespace Services;
 
-public class AdminUserException(string code, string message, int status = 400) : Exception(message)
-{
-    public string Code => code;
-    public int Status => status;
-}
-
-public sealed class UserNotFoundException(int userId)
-    : AdminUserException(ApiError.Codes.UserNotFound, $"User with id {userId} not found.", 404);
-
-public interface IAdminUserService
-{
-    Task<AdminUsersSummaryDto> GetUsersAsync(
-        string? q = null,
-        string? status = null,
-        int page = 1,
-        int pageSize = 20,
-        CancellationToken cancellationToken = default);
-
-    Task<AdminUserDto> SetLockAsync(
-        int adminUserId,
-        int targetUserId,
-        bool isLocked,
-        CancellationToken cancellationToken = default);
-
-    Task<AdjustCreditsResultDto> AdjustCreditsAsync(
-        int adminUserId,
-        int targetUserId,
-        int delta,
-        string reason,
-        CancellationToken cancellationToken = default);
-
-    Task ResendActivationAsync(
-        int targetUserId,
-        CancellationToken cancellationToken = default);
-}
-
 public sealed class AdminUserService(
     CompanionDbContext db,
     IAuthService authService,

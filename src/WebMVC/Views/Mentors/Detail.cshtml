@@ -1,5 +1,4 @@
 @model WebMVC.Models.MentorDetailViewModel
-@inject WebMVC.DateTimeFormatter Dates
 @{
     Layout = "_LearnerLayout";
     var mentor = Model.Detail.Mentor;
@@ -81,7 +80,7 @@
                 {
                   <p class="text-muted no-margin" style="white-space: pre-line;">@review.Text</p>
                 }
-                <span class="text-xs text-muted">@Dates.FormatDate(review.CreatedAt)</span>
+                <span class="text-xs text-muted">@Model.Dates[review.CreatedAt].Date</span>
               </div>
             }
           }
@@ -133,7 +132,7 @@
               @for (var i = 0; i < Model.Detail.AvailableSlots.Count; i++)
               {
                 var slot = Model.Detail.AvailableSlots[i];
-                var formattedDate = Dates.FormatCustom(slot.StartAt, "dddd, MMM d — h:mm tt");
+                var formattedDate = Model.Dates[slot.StartAt].Session;
                 <label class="option">
                   <input class="option__input" type="radio" name="slotId" value="@slot.SlotId" @(i == 0 ? "checked" : "")>
                   <span class="option__marker">@(i + 1)</span>

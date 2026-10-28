@@ -24,13 +24,25 @@
             <div class="navigator__grid" role="group" aria-label="@grp.AriaLabel">
               @foreach (var cell in grp.Items)
               {
-                <a href="@cell.Url"
-                   class="@cell.CssClass"
-                   id="nav-cell-@cell.QuestionId"
-                   aria-label="@cell.AriaLabel"
-                   aria-current="@cell.AriaCurrent">
-                  @cell.DisplayOrder
-                </a>
+                @if (cell.IsLocked)
+                {
+                  <span class="@cell.CssClass"
+                        id="nav-cell-@cell.QuestionId"
+                        aria-label="@cell.AriaLabel · Locked until this phase"
+                        aria-disabled="true">
+                    @cell.DisplayOrder
+                  </span>
+                }
+                else
+                {
+                  <a href="@cell.Url"
+                     class="@cell.CssClass"
+                     id="nav-cell-@cell.QuestionId"
+                     aria-label="@cell.AriaLabel"
+                     aria-current="@cell.AriaCurrent">
+                    @cell.DisplayOrder
+                  </a>
+                }
               }
             </div>
           </div>

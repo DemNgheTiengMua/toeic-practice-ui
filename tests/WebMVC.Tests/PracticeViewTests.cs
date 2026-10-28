@@ -13,7 +13,7 @@ public sealed class PracticeViewTests
         var viewPath = Path.Combine(repoRoot, "src", "WebMVC", "Views", "Practice", "Take.cshtml");
 
         Assert.True(File.Exists(viewPath), "Take.cshtml must exist");
-        var html = File.ReadAllText(viewPath);
+        var html = File.ReadAllText(viewPath) + string.Concat(Directory.GetFiles(Path.GetDirectoryName(viewPath)!, "_Take*.cshtml").Select(File.ReadAllText));
 
         // 1. Two-column Exam Shell layout
         Assert.Contains("exam-layout", html);
@@ -63,7 +63,7 @@ public sealed class PracticeViewTests
         var viewPath = Path.Combine(repoRoot, "src", "WebMVC", "Views", "Practice", "Take.cshtml");
 
         Assert.True(File.Exists(viewPath), "Take.cshtml must exist");
-        var html = File.ReadAllText(viewPath);
+        var html = File.ReadAllText(viewPath) + string.Concat(Directory.GetFiles(Path.GetDirectoryName(viewPath)!, "_Take*.cshtml").Select(File.ReadAllText));
 
         // 1. Practice QoL audio rewind 5s button
         Assert.Contains("id=\"btn-audio-rewind-5s\"", html);

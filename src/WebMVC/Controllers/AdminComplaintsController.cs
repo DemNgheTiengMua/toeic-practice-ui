@@ -12,6 +12,10 @@ public sealed class AdminComplaintsController(
     CurrentUser currentUser,
     ILogger<AdminComplaintsController> logger) : AdminControllerBase(currentUser, logger)
 {
+    private DateTimeFormatter Dates => HttpContext.RequestServices?.GetService(typeof(DateTimeFormatter)) as DateTimeFormatter
+        ?? new(new HttpContextAccessor { HttpContext = HttpContext });
+
+
 
     [HttpGet("")]
     public async Task<IActionResult> Index(
@@ -24,14 +28,14 @@ public sealed class AdminComplaintsController(
         {
             var summary = await api.GetAdminComplaintsAsync(q, status, page, 20, cancellationToken);
             var vm = new AdminComplaintsViewModel(summary, q, status, page);
-            return View("~/Views/Admin/Complaints.cshtml", vm);
+            return View("~/Views/Admin/Complaints.cshtml", (vm).WithDates(Dates));
         }
         catch (HttpRequestException ex)
         {
             logger.LogError(ex, "Could not load complaints list");
             TempData["Error"] = "Could not load the complaints list. Please try again.";
             var emptySummary = new AdminComplaintsSummaryDto([], 0, 1, 20, 0, 0, null, null, null);
-            return View("~/Views/Admin/Complaints.cshtml", new AdminComplaintsViewModel(emptySummary, q, status, page));
+            return View("~/Views/Admin/Complaints.cshtml", (new AdminComplaintsViewModel(emptySummary, q, status, page)).WithDates(Dates));
         }
     }
 
@@ -47,7 +51,7 @@ public sealed class AdminComplaintsController(
             }
 
             var vm = new AdminComplaintDetailViewModel(detail);
-            return View("~/Views/Admin/ComplaintDetail.cshtml", vm);
+            return View("~/Views/Admin/ComplaintDetail.cshtml", (vm).WithDates(Dates));
         }
         catch (ApiException ex) when (ex.Code == ApiError.Codes.ComplaintNotFound || ex.Status == 404)
         {

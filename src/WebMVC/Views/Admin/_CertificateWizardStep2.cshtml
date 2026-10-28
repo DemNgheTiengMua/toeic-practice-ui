@@ -1,0 +1,68 @@
+@model WebMVC.Models.CertificateWizardPageViewModel
+  <!-- ==================== STEP 2: SKILLS & TIMING ==================== -->
+  <div id="step-2" class="wizard-step" style="display: @(Model.Form.Step == 2 ? "block" : "none");">
+    <div class="card" style="border: 2px solid var(--color-ink, #14181d); border-radius: 0; box-shadow: none; margin-bottom: 1.5rem;">
+      <div class="card__header" style="background: var(--color-ink, #14181d); color: #fff; padding: 0.75rem 1rem; font-family: var(--font-condensed, sans-serif); text-transform: uppercase; display: flex; justify-content: space-between; align-items: center;">
+        <strong>Step 2: Structure Skills &amp; Timing Policies</strong>
+        <button type="button" class="btn btn--sm" onclick="addSkill()" style="background: #fff; color: var(--color-ink, #14181d); border: none; border-radius: 0; font-family: var(--font-condensed, sans-serif); text-transform: uppercase;">
+          + Add Skill
+        </button>
+      </div>
+      <div class="card__body" style="padding: 1.25rem;">
+        <p class="text-sm text-muted" style="margin-top: 0; margin-bottom: 1.25rem;">
+          Configure macro-skill sequence, durations, and timing policies. Candidates complete skills in the defined order during full-length sittings.
+        </p>
+
+        <div id="skillsContainer" style="display: flex; flex-direction: column; gap: 1rem;">
+          @for (var sIdx = 0; sIdx < Model.Form.Skills.Count; sIdx++)
+          {
+            var skill = Model.Form.Skills[sIdx];
+            <div class="skill-card" data-skill-idx="@sIdx" style="border: 2px solid var(--color-ink, #14181d); padding: 1rem; background: #fafafa;">
+              <input type="hidden" name="Skills[@sIdx].SkillId" value="@skill.SkillId" />
+              <input type="hidden" name="Skills[@sIdx].DisplayOrder" value="@(skill.DisplayOrder > 0 ? skill.DisplayOrder : sIdx + 1)" />
+
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                <span class="badge" style="background: var(--color-ink, #14181d); color: #fff; border-radius: 0; font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 0.85rem; padding: 0.25rem 0.5rem;">
+                  Skill #@(sIdx + 1)
+                </span>
+                <button type="button" class="btn btn--sm btn--danger" onclick="removeSkill(@sIdx)" style="border-radius: 0; padding: 0.2rem 0.5rem;">Remove</button>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 2fr 1.5fr 1fr; gap: 0.75rem;">
+                <div class="field">
+                  <label class="field__label" style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 0.8rem;">Skill Code</label>
+                  <input class="field__input" name="Skills[@sIdx].Code" value="@skill.Code" required maxlength="20" style="border: 2px solid var(--color-ink, #14181d); border-radius: 0; font-family: var(--font-mono, monospace);">
+                </div>
+                <div class="field">
+                  <label class="field__label" style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 0.8rem;">Skill Name</label>
+                  <input class="field__input" name="Skills[@sIdx].Name" value="@skill.Name" required maxlength="120" style="border: 2px solid var(--color-ink, #14181d); border-radius: 0;">
+                </div>
+                <div class="field">
+                  <label class="field__label" style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 0.8rem;">Modality</label>
+                  <select class="field__input" name="Skills[@sIdx].Modality" style="border: 2px solid var(--color-ink, #14181d); border-radius: 0; font-family: var(--font-mono, monospace);">
+                    <option value="Listening" selected="@(skill.Modality == Contracts.ModalityDto.Listening)">Listening</option>
+                    <option value="Reading" selected="@(skill.Modality == Contracts.ModalityDto.Reading)">Reading</option>
+                    <option value="Writing" selected="@(skill.Modality == Contracts.ModalityDto.Writing)">Writing</option>
+                    <option value="Speaking" selected="@(skill.Modality == Contracts.ModalityDto.Speaking)">Speaking</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label class="field__label" style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 0.8rem;">Duration (Min)</label>
+                  <input class="field__input" type="number" name="Skills[@sIdx].DurationMinutes" value="@skill.DurationMinutes" min="1" max="300" style="border: 2px solid var(--color-ink, #14181d); border-radius: 0; font-family: var(--font-mono, monospace);">
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+
+        <div style="display: flex; justify-content: space-between; margin-top: 1.5rem;">
+          <button type="button" class="btn" onclick="goToStep(1)" style="border-radius: 0; font-family: var(--font-condensed, sans-serif); text-transform: uppercase;">
+            ‹ Back to Step 1
+          </button>
+          <button type="button" class="btn btn--primary" onclick="goToStep(3)" style="border-radius: 0; font-family: var(--font-condensed, sans-serif); text-transform: uppercase; padding: 0.6rem 1.5rem;">
+            Continue to Step 3: Section Blueprints ›
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>

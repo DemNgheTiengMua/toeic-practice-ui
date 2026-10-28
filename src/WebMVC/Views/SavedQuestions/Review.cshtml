@@ -1,5 +1,4 @@
 @model WebMVC.Models.SavedQuestionReviewViewModel
-@inject WebMVC.DateTimeFormatter Dates
 @{
     Layout = "_LearnerLayout";
     var q = Model.Question;
@@ -24,7 +23,7 @@
       {
         <span>· @q.CategoryName</span>
       }
-      · Saved @Dates.Format(q.SavedAt)
+      · Saved @Model.SavedAtDisplay
     </p>
   </div>
   <div class="row">
@@ -72,13 +71,7 @@
 
     @if (!string.IsNullOrEmpty(q.AudioPath))
     {
-      @await Html.PartialAsync("_ExamAudioPlayer", new ExamAudioPlayerModel(
-          AudioPath: q.AudioPath,
-          AllowReplay: true,
-          SectionTitle: "Saved Question Audio",
-          BadgeText: "READY",
-          Mode: "study"
-      ))
+      @await Html.PartialAsync("_ExamAudioPlayer", Model.Audio)
     }
 
     <p class="question__stem">@q.Stem</p>

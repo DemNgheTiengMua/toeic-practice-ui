@@ -12,6 +12,10 @@ public sealed class SupportController(
     CurrentUser currentUser,
     ILogger<SupportController> logger) : LearnerControllerBase(currentUser, logger)
 {
+    private DateTimeFormatter Dates => HttpContext.RequestServices?.GetService(typeof(DateTimeFormatter)) as DateTimeFormatter
+        ?? new(new HttpContextAccessor { HttpContext = HttpContext });
+
+
     [HttpGet("")]
     public IActionResult Index() => RedirectToAction(nameof(History));
 
@@ -34,7 +38,7 @@ public sealed class SupportController(
             : (safeCategory == "exam" ? "grading_issue" : safeCategory == "payment" ? "payment_issue" : "mentor_no_show");
         var eligible = await api.GetEligibleSubjectsAsync(cancellationToken);
         var vm = new SupportReportViewModel(eligible, safeCategory, safeType, bookingId, attemptId, orderId);
-        return View("~/Views/Support/Report.cshtml", vm);
+        return View("~/Views/Support/Report.cshtml", (vm).WithDates(Dates));
     }
 
     [HttpPost("report")]
@@ -55,7 +59,7 @@ public sealed class SupportController(
             var vm = new SupportReportViewModel(
                 eligible, category, type, bookingId, attemptId, orderId, reason,
                 "Please describe the problem before sending.");
-            return View("~/Views/Support/Report.cshtml", vm);
+            return View("~/Views/Support/Report.cshtml", (vm).WithDates(Dates));
         }
 
         if (reason.Trim().Length > 4000)
@@ -64,7 +68,7 @@ public sealed class SupportController(
             var vm = new SupportReportViewModel(
                 eligible, category, type, bookingId, attemptId, orderId, reason,
                 "Please keep your description under 4000 characters.");
-            return View("~/Views/Support/Report.cshtml", vm);
+            return View("~/Views/Support/Report.cshtml", (vm).WithDates(Dates));
         }
 
         if (string.IsNullOrWhiteSpace(type) || !EnumMapping.TryParseWireCode<ComplaintTypeDto>(type, out var typeDto))
@@ -73,7 +77,7 @@ public sealed class SupportController(
             var vm = new SupportReportViewModel(
                 eligible, category, type, bookingId, attemptId, orderId, reason,
                 "Please choose what happened.");
-            return View("~/Views/Support/Report.cshtml", vm);
+            return View("~/Views/Support/Report.cshtml", (vm).WithDates(Dates));
         }
 
         // Validate subject choice
@@ -89,7 +93,7 @@ public sealed class SupportController(
                 var vm = new SupportReportViewModel(
                     eligible, category, type, bookingId, attemptId, orderId, reason,
                     "Please choose a session before sending.");
-                return View("~/Views/Support/Report.cshtml", vm);
+                return View("~/Views/Support/Report.cshtml", (vm).WithDates(Dates));
             }
             finalBookingId = bookingId.Value;
         }
@@ -101,7 +105,7 @@ public sealed class SupportController(
                 var vm = new SupportReportViewModel(
                     eligible, category, type, bookingId, attemptId, orderId, reason,
                     "Please choose an exam before sending.");
-                return View("~/Views/Support/Report.cshtml", vm);
+                return View("~/Views/Support/Report.cshtml", (vm).WithDates(Dates));
             }
             finalAttemptId = attemptId.Value;
         }
@@ -113,7 +117,7 @@ public sealed class SupportController(
                 var vm = new SupportReportViewModel(
                     eligible, category, type, bookingId, attemptId, orderId, reason,
                     "Please choose an order before sending.");
-                return View("~/Views/Support/Report.cshtml", vm);
+                return View("~/Views/Support/Report.cshtml", (vm).WithDates(Dates));
             }
             finalOrderId = orderId.Value;
         }
@@ -132,7 +136,7 @@ public sealed class SupportController(
             var vm = new SupportReportViewModel(
                 eligible, category, type, bookingId, attemptId, orderId, reason,
                 ex.Detail ?? ex.Title ?? ex.Message);
-            return View("~/Views/Support/Report.cshtml", vm);
+            return View("~/Views/Support/Report.cshtml", (vm).WithDates(Dates));
         }
     }
 
@@ -141,6 +145,6 @@ public sealed class SupportController(
     {
         var complaints = await api.GetLearnerComplaintsAsync(cancellationToken);
         var vm = new SupportHistoryViewModel(complaints);
-        return View("~/Views/Support/History.cshtml", vm);
+        return View("~/Views/Support/History.cshtml", (vm).WithDates(Dates));
     }
 }

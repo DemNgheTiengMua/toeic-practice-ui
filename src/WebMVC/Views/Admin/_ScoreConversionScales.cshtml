@@ -1,0 +1,46 @@
+@model WebMVC.Models.AdminScoreConversionViewModel
+@{ var conv = Model.Conversion; int scaleIndex = 0; }
+  <!-- Score Scales by Skill -->
+  <div class="grid-2 mb-4">
+    @foreach (var skillGroup in conv.SkillScales)
+    {
+      <div class="card">
+        <div class="card__header">
+          <strong>@skillGroup.SkillName (@skillGroup.SkillCode)</strong>
+        </div>
+        <div class="card__body" style="max-height: 520px; overflow-y: auto;">
+          <table class="table table--striped">
+            <thead>
+              <tr>
+                <th scope="col" style="width: 50%;">Correct answers (Raw)</th>
+                <th scope="col" style="width: 50%;">Scaled Score</th>
+              </tr>
+            </thead>
+            <tbody>
+              @foreach (var row in skillGroup.Scales)
+              {
+                var curIdx = scaleIndex++;
+                <tr>
+                  <td>
+                    <strong>@row.RawScore</strong>
+                    <input type="hidden" name="Scales[@curIdx].SkillId" value="@row.SkillId" />
+                    <input type="hidden" name="Scales[@curIdx].RawScore" value="@row.RawScore" />
+                  </td>
+                  <td>
+                    <input class="field__input"
+                           type="number"
+                           name="Scales[@curIdx].ScaledScore"
+                           value="@row.ScaledScore"
+                           min="0"
+                           required
+                           style="width: 120px;"
+                           aria-label="@skillGroup.SkillName score for @row.RawScore correct answers" />
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+  </div>

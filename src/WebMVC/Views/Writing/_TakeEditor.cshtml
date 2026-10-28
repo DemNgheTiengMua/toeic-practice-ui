@@ -1,0 +1,132 @@
+@model WritingTakeViewModel
+@{
+    var take = Model.Take;
+    var q = take.Question;
+}
+<div class="writing-panes">
+  <!-- Left pane: Prompt -->
+  <div class="writing-panes__prompt stack">
+    <div class="card">
+      <div class="card__header">
+        <div class="row row--between">
+          <span class="question__number">Question @take.CurrentQuestionIndex</span>
+          <span class="badge badge--muted">@q.SectionName</span>
+        </div>
+      </div>
+      <div class="card__body stack">
+        @if (!string.IsNullOrEmpty(q.GroupImagePath))
+        {
+          <div class="mb-3">
+            <img src="@q.GroupImagePath" alt="@(q.GroupImageAlt ?? "Question illustration")" class="question__image" />
+          </div>
+        }
+
+        <p class="question__stem">@q.Stem</p>
+
+        @if (!string.IsNullOrEmpty(q.Hint))
+        {
+          <div class="alert alert--info text-sm">
+            <strong>Hint:</strong> @q.Hint
+          </div>
+        }
+
+        <div class="grid-2 mt-3">
+          @if (q.ResponseSeconds.HasValue)
+          {
+            <div class="stat">
+              <div class="stat__label">Recommended time</div>
+              <div class="stat__value">@(q.ResponseSeconds.Value / 60) min</div>
+            </div>
+          }
+          <div class="stat">
+            <div class="stat__label">Target length</div>
+            <div class="stat__value">
+              @if (q.MinWords.HasValue && q.MaxWords.HasValue)
+              {
+                <span>@q.MinWords–@q.MaxWords</span>
+              }
+              else if (q.MinWords.HasValue)
+              {
+                <span>@q.MinWords+</span>
+              }
+              else if (q.MaxWords.HasValue)
+              {
+                <span>≤@q.MaxWords</span>
+              }
+              else
+              {
+                <span>Open</span>
+              }
+            </div>
+            <div class="stat__hint">words</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right pane: Answer Editor -->
+  <div class="stack">
+    <div class="card">
+      <div class="card__header">
+        <div class="row row--between">
+          <strong>Your answer</strong>
+          <span class="text-xs text-muted">No spell check, as on test day</span>
+        </div>
+      </div>
+      <div class="card__body stack">
+        <label class="visually-hidden" for="writing-editor">Your writing response</label>
+        <textarea
+          id="writing-editor"
+          class="answer-sheet"
+          rows="14"
+          spellcheck="false"
+          placeholder="Type your response here..."
+          data-attempt-id="@take.AttemptId"
+          data-question-id="@q.QuestionId"
+          data-min-words="@(q.MinWords ?? 0)"
+          data-max-words="@(q.MaxWords ?? 0)">@(q.ResponseText ?? "")</textarea>
+
+        <!-- Live Word Meter -->
+        <div class="word-meter" id="word-meter-container">
+          <div class="word-meter__readout">
+            <span id="word-count" class="word-meter__count">0</span>
+            <span id="word-status" class="word-meter__state">words</span>
+          </div>
+          <div class="word-meter__track">
+            @if (q.MinWords.HasValue && q.MinWords.Value > 0)
+            {
+              <div class="writing-minimum-tick word-meter__tick" aria-hidden="true">
+                <span class="word-meter__tick-label">min @q.MinWords</span>
+              </div>
+            }
+            else if (q.MaxWords.HasValue && q.MaxWords.Value > 0)
+            {
+              <div class="writing-maximum-tick word-meter__tick" aria-hidden="true">
+                <span class="word-meter__tick-label">max @q.MaxWords</span>
+              </div>
+            }
+            <div id="word-meter-fill" class="writing-meter-empty word-meter__fill"></div>
+          </div>
+        </div>
+
+        <p class="text-xs text-muted no-margin">
+          Writing under the minimum, or over the maximum, costs marks in AI grading but is still accepted.
+        </p>
+      </div>
+
+      <div class="card__footer">
+        <div class="row row--between">
+          <div class="writing-actions row">
+            <button type="button" class="btn btn--secondary" id="btn-save-draft">Save draft</button>
+            <button type="button" class="btn btn--primary" id="btn-open-submit-modal">
+              Finish and submit for AI grading
+            </button>
+          </div>
+          <span class="text-xs text-muted">Question @take.CurrentQuestionIndex of @take.TotalQuestions</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+

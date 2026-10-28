@@ -1,0 +1,94 @@
+@model WebMVC.Models.CheckoutViewModel
+@{ var preview = Model.Preview; }
+    <!-- QR Payment Modal Dialog with Order Details Panel -->
+    <div id="embedded-payment-modal" class="modal-overlay" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="qr-modal-title">
+      <div class="modal qr-modal">
+        
+        <div class="modal__header row row--between">
+          <div class="row row--tight">
+            <strong id="qr-modal-title">
+              VietQR Payment — payOS
+            </strong>
+          </div>
+          <button type="button" class="btn btn--sm btn--ghost" id="btn-close-embedded">
+            Close
+          </button>
+        </div>
+
+        <div class="qr-modal__grid">
+          
+          <!-- Left Column: Order Summary & Instructions -->
+          <div class="qr-modal__summary">
+            <div class="stack">
+              <div class="row row--between">
+                <span class="font-sign uppercase text-xs font-bold text-muted">
+                  Order Details
+                </span>
+                <span class="badge badge--warning">WAITING PAYMENT</span>
+              </div>
+
+              <div class="card p-3 mt-2 stack--tight">
+                <div class="row row--between text-sm">
+                  <span class="text-muted">Order code:</span>
+                  <strong class="font-mono" id="modal-order-code">DH-0000</strong>
+                </div>
+                <div class="row row--between text-sm">
+                  <span class="text-muted">Package:</span>
+                  <strong id="modal-package-name">Credit Package</strong>
+                </div>
+                <div class="row row--between text-sm">
+                  <span class="text-muted">Credits added:</span>
+                  <strong class="text-success" id="modal-credits">+0 credits</strong>
+                </div>
+                <hr style="margin: 0.5rem 0; border: none; border-top: 1px solid var(--line-soft);">
+                <div class="row row--between">
+                  <strong>Total amount:</strong>
+                  <strong class="font-mono text-primary text-lg" id="modal-amount">0 ₫</strong>
+                </div>
+              </div>
+
+              <div class="mt-2">
+                <div class="font-sign uppercase text-xs font-bold text-muted mb-2">
+                  Payment Instructions
+                </div>
+                <ol class="text-sm pl-5" style="margin: 0; line-height: 1.6;">
+                  <li>Open your mobile banking app (Vietcombank, MB Bank, Techcombank, etc.) or e-wallet.</li>
+                  <li>Select <strong>Scan QR (Quét mã QR)</strong>.</li>
+                  <li>Scan the <strong>VietQR</strong> code on the right.</li>
+                  <li>Confirm the transfer. Your credits are credited immediately!</li>
+                </ol>
+              </div>
+
+              <div class="alert alert--success mt-2">
+                <strong>Auto-sync:</strong> Do not close this window while paying. Once transferred, this screen automatically updates.
+              </div>
+            </div>
+
+            <div class="mt-3 text-xs text-muted">
+              Having trouble scanning? You can also open the official hosted checkout page directly.
+            </div>
+          </div>
+
+          <!-- Right Column: payOS VietQR iframe container -->
+          <div class="qr-modal__frame">
+            <div id="embedded-payment-container" class="w-100" style="height: 540px; min-height: 540px;"></div>
+          </div>
+
+        </div>
+
+        <div class="modal__footer row row--between">
+          <form id="modal-cancel-form" method="post" action="/checkout/cancel" class="no-margin">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="orderCode" id="modal-cancel-orderCode" value="" />
+            <input type="hidden" name="returnUrl" value="/checkout@(preview != null ? $"?packageId={preview.PackageId}" : "")" />
+            <button type="submit" class="btn btn--danger btn--sm" onclick="return confirm('Cancel this payment order?');">
+              Cancel order
+            </button>
+          </form>
+          <a id="btn-direct-checkout" href="#" target="_blank" rel="noopener noreferrer" class="btn btn--sm">
+            Open payOS hosted page
+          </a>
+        </div>
+
+      </div>
+    </div>

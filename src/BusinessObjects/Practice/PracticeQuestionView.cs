@@ -1,0 +1,38 @@
+using System.ComponentModel.DataAnnotations;
+
+namespace BusinessObjects;
+
+public sealed record PracticeQuestionView(
+    int SessionId,
+    string SectionName,
+    int QuestionId,
+    int DisplayOrder,
+    int TotalQuestions,
+    string Stem,
+    string? CategoryName,
+    string? Hint,
+    bool HintUsed,
+    IReadOnlyList<PracticeQuestionOption> Options,
+    int? SelectedOptionId,
+    bool? IsCorrect,
+    int? CorrectOptionId,
+    string? Explanation,
+    string? Transcript,
+    string? Passage,
+    string? AudioPath,
+    string? ImagePath,
+    string? ImageAlt,
+    bool IsSaved = false,
+    int? AudioStartMs = null,
+    int? AudioEndMs = null,
+    string QuestionType = "mcq",
+    int? MaxSelections = null,
+    bool AllowNumber = true,
+    string? AcceptedAnswersJson = null,
+    string? RequiredKeywords = null,
+    int? MinWords = null,
+    int? MaxWords = null,
+    string? ResponseText = null,
+    IReadOnlyList<int>? SelectedOptionIds = null,
+    string? SelectedOptionIdsJson = null,
+    IReadOnlyList<int>? CorrectOptionIds = null);

@@ -13,6 +13,9 @@ public sealed class DashboardController(
     ILogger<DashboardController> logger)
     : LearnerControllerBase(currentUser, logger)
 {
+    private DateTimeFormatter Dates => HttpContext.RequestServices?.GetService(typeof(DateTimeFormatter)) as DateTimeFormatter
+        ?? new(new HttpContextAccessor { HttpContext = HttpContext });
+
     /// <param name="activation">"sent" or "failed" after the reminder's Resend button.</param>
     public async Task<IActionResult> Index(string? activation, CancellationToken cancellationToken)
     {
@@ -46,7 +49,10 @@ public sealed class DashboardController(
         }
         ViewBag.Insight = insight;
 
-        return View(new DashboardViewModel(CurrentUser, dashboard, emailVerified, activation));
+        return View(new DashboardViewModel(CurrentUser, dashboard, emailVerified, activation)
+        {
+            Presentation = new DashboardPresentation(dashboard, Dates, insight, DateTimeOffset.UtcNow)
+        });
     }
 
     [HttpGet("/learner/insights/dashboard")]

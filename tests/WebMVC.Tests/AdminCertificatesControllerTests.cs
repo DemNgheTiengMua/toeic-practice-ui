@@ -128,7 +128,7 @@ public sealed class AdminCertificatesControllerTests
 
         var viewResult = Assert.IsType<ViewResult>(result);
         Assert.Equal("~/Views/Admin/CertificateWizard.cshtml", viewResult.ViewName);
-        var vm = Assert.IsType<CertificateWizardViewModel>(viewResult.Model);
+        var vm = Assert.IsType<CertificateWizardPageViewModel>(viewResult.Model).Form;
         Assert.Equal("IELTS", vm.Code);
         Assert.Equal("ielts_academic", vm.PresetCode);
         Assert.Equal("avg_half_step", vm.ScoreAggregationRule);
@@ -145,7 +145,7 @@ public sealed class AdminCertificatesControllerTests
         var result = await controller.Wizard("toeic_sw", null, 1, CancellationToken.None);
 
         var viewResult = Assert.IsType<ViewResult>(result);
-        var vm = Assert.IsType<CertificateWizardViewModel>(viewResult.Model);
+        var vm = Assert.IsType<CertificateWizardPageViewModel>(viewResult.Model).Form;
         Assert.Equal("TOEIC_SW", vm.Code);
         Assert.Equal("toeic_sw", vm.PresetCode);
         Assert.Equal("independent", vm.ScoreAggregationRule);
@@ -180,7 +180,7 @@ public sealed class AdminCertificatesControllerTests
         var result = await controller.Wizard(null, 42, 1, CancellationToken.None);
 
         var viewResult = Assert.IsType<ViewResult>(result);
-        var vm = Assert.IsType<CertificateWizardViewModel>(viewResult.Model);
+        var vm = Assert.IsType<CertificateWizardPageViewModel>(viewResult.Model).Form;
         Assert.Equal(42, vm.CertId);
         Assert.Equal("EDIT42", vm.Code);
         Assert.Equal("Edit Test 42", vm.Name);
@@ -266,7 +266,7 @@ public sealed class AdminCertificatesControllerTests
 
         var viewResult = Assert.IsType<ViewResult>(result);
         Assert.Equal("~/Views/Admin/CertificateWizard.cshtml", viewResult.ViewName);
-        var vm = Assert.IsType<CertificateWizardViewModel>(viewResult.Model);
+        var vm = Assert.IsType<CertificateWizardPageViewModel>(viewResult.Model).Form;
         Assert.Equal("Skill code is missing", vm.ErrorMessage);
     }
 
@@ -308,12 +308,12 @@ public sealed class AdminCertificatesControllerTests
 
         var resultStep4 = await controller.Wizard(null, null, 4, CancellationToken.None);
         var viewResult4 = Assert.IsType<ViewResult>(resultStep4);
-        var vm4 = Assert.IsType<CertificateWizardViewModel>(viewResult4.Model);
+        var vm4 = Assert.IsType<CertificateWizardPageViewModel>(viewResult4.Model).Form;
         Assert.Equal(4, vm4.Step);
 
         var resultStep5 = await controller.Wizard(null, null, 5, CancellationToken.None);
         var viewResult5 = Assert.IsType<ViewResult>(resultStep5);
-        var vm5 = Assert.IsType<CertificateWizardViewModel>(viewResult5.Model);
+        var vm5 = Assert.IsType<CertificateWizardPageViewModel>(viewResult5.Model).Form;
         Assert.Equal(4, vm5.Step);
     }
 

@@ -195,12 +195,25 @@ public sealed partial class AttemptEngine
             db.FreeResponses.Add(response);
         }
 
+        if (answer is null)
+        {
+            answer = new AttemptAnswer
+            {
+                AttemptId = attemptId,
+                QuestionId = questionId,
+                ExamId = attempt.ExamId,
+                IsFlagged = isFlagged
+            };
+            db.AttemptAnswers.Add(answer);
+        }
+
         response.ResponseText = responseText ?? string.Empty;
         response.Status = FreeResponseStatus.Draft.ToCode();
         response.DraftSavedAt = DateTimeOffset.UtcNow;
         if (answer is not null)
         {
             answer.SelectedOptionId = null;
+            answer.IsFlagged = isFlagged;
         }
 
         attempt.LastQuestionId = questionId;

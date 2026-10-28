@@ -40,7 +40,7 @@
       <option value="">All Skills</option>
       @if (Model.Skills is not null)
       {
-        @foreach (var s in Model.Skills.Where(sk => !Model.SelectedCertId.HasValue || sk.CertId == Model.SelectedCertId.Value))
+        @foreach (var s in Model.FilteredSkills)
         {
           <option value="@s.SkillId" selected="@(s.SkillId == Model.SelectedSkillId)">@s.Name (@s.Modality.ToUpperInvariant())</option>
         }
@@ -184,21 +184,5 @@ else
 </div>
 
 @section Scripts {
-<script>
-  (function() {
-    var dialog = document.getElementById('import-dialog');
-    if (dialog) {
-      dialog.addEventListener('click', function(e) {
-        if (e.target === dialog) {
-          dialog.style.display = 'none';
-        }
-      });
-      document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' && dialog.style.display !== 'none') {
-          dialog.style.display = 'none';
-        }
-      });
-    }
-  })();
-</script>
+<script src="~/js/admin/lessons/index.js" asp-append-version="true"></script>
 }

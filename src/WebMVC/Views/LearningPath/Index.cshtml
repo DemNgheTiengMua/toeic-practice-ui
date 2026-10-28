@@ -60,18 +60,12 @@ else
     <div class="card"><div class="card__body stack">
       <div class="row row--between">
         <strong class="text-sm">Path progress</strong>
-        @{
-            int remainingHours = summary.RemainingMinutes / 60;
-            int remainingMins = summary.RemainingMinutes % 60;
-            string timeLeft = remainingHours > 0 ? $"{remainingHours}h {remainingMins:D2}m left" : $"{remainingMins}m left";
-        }
-        <span class="text-sm text-muted">@summary.CompletedModules of @summary.TotalModules modules done · @timeLeft</span>
+
+        <span class="text-sm text-muted">@summary.CompletedModules of @summary.TotalModules modules done · @Model.TimeLeft</span>
       </div>
-      @{
-          int progressPct = summary.TotalModules > 0 ? (int)Math.Round((double)summary.CompletedModules / summary.TotalModules * 100) : 0;
-      }
+
       <div class="progress" role="progressbar" aria-valuenow="@summary.CompletedModules" aria-valuemin="0" aria-valuemax="@summary.TotalModules" aria-label="Learning path progress">
-        <div class="progress__bar" style="width: @(progressPct)%"></div>
+        <div class="progress__bar" style="width: @Model.ProgressPercent%"></div>
       </div>
       <div class="cefr">
         <div class="cefr__head">
@@ -108,7 +102,7 @@ else
       @await Html.PartialAsync("_AiInsightPanel", Model.InsightPanel)
     }
 
-    @foreach (var group in summary.Modules.GroupBy(m => m.GroupName ?? "Learning modules"))
+    @foreach (var group in Model.ModuleGroups)
     {
       <section>
         <h2 class="section-group__title">@group.Key</h2>

@@ -1,0 +1,9 @@
+.recording-progress { max-width: 320px; }
+.recording-progress-empty { width: 0%; }
+.recording-preview { max-width: 480px; margin: var(--space-4) auto 0; }
+.recording-player { flex: 1 1 auto; }
+.recording-upload-progress { width: 65%; }
+.recording-hint { display: none; }
+.recording-legend { gap: var(--space-1); }
+.recording-submit-form { margin:0; }
+.recording-token-form { display:none; }

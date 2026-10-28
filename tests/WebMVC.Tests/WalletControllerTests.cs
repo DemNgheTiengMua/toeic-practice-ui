@@ -96,7 +96,7 @@ public sealed class WalletControllerTests
     }
 
     [Fact]
-    public void WalletView_InjectsDateTimeFormatter_AndUsesFormatForOrdersAndLedger()
+    public void WalletView_UsesPreparedDatesForOrdersAndLedger()
     {
         var repoRoot = TestPathHelper.FindRepoRoot();
         var walletViewPath = Path.Combine(repoRoot, "src", "WebMVC", "Views", "Wallet", "Index.cshtml");
@@ -104,12 +104,12 @@ public sealed class WalletControllerTests
 
         var content = File.ReadAllText(walletViewPath);
 
-        // Must inject DateTimeFormatter
-        Assert.Matches(@"@inject\s+WebMVC\.DateTimeFormatter\s+Formatter", content);
+        // Views bind dates prepared by the controller.
+        Assert.DoesNotContain("@inject", content);
 
-        // Must format order and ledger timestamps through Formatter
-        Assert.Contains("@Formatter.Format(order.CreatedAt)", content);
-        Assert.Contains("@Formatter.Format(item.CreatedAt)", content);
+        // Order and ledger dates come from the request timezone formatter.
+        Assert.Contains("@Model.Dates[order.CreatedAt].Full", content);
+        Assert.Contains("@Model.Dates[item.CreatedAt].Full", content);
 
         // Must not format raw DateTimeOffset with ToString directly
         Assert.DoesNotContain(".CreatedAt.ToString(\"dd MMM yyyy HH:mm\")", content);

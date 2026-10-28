@@ -3,10 +3,10 @@
 @using WebMVC.Models
 @{
     var insight = Model.Insight;
-    var status = insight?.Status.ToWireCode() ?? "pending";
-    var isDone = status == "done";
-    var isFailed = status == "failed";
-    var isPending = !isDone && !isFailed;
+    var status = Model.Status;
+    var isDone = Model.IsDone;
+    var isFailed = Model.IsFailed;
+    var isPending = Model.IsPending;
     var formattedInitial = Model.FormattedNarrative;
 }
 
@@ -38,19 +38,7 @@
         }
         @if (isDone && insight?.Trend != null)
         {
-          var trendBadge = insight.Trend switch
-          {
-              AiInsightTrendDto.Improving => "badge--success",
-              AiInsightTrendDto.Declining => "badge--danger",
-              _ => "badge--warning"
-          };
-          var trendLabel = insight.Trend switch
-          {
-              AiInsightTrendDto.Improving => "Trend: Improving",
-              AiInsightTrendDto.Declining => "Trend: Declining",
-              _ => "Trend: Flat"
-          };
-          <span class="badge @trendBadge text-xs font-mono" id="ai-insight-trend-badge">@trendLabel</span>
+          <span class="badge @Model.TrendBadge text-xs font-mono" id="ai-insight-trend-badge">@Model.TrendLabel</span>
         }
       </div>
     </div>
@@ -113,21 +101,9 @@
             <div class="stack" style="gap: var(--space-2);">
               @foreach (var rec in insight.Recommendations)
               {
-                var sevBadge = rec.Severity switch
-                {
-                    RecommendationSeverityDto.Major => "badge--danger",
-                    RecommendationSeverityDto.Minor => "badge--warning",
-                    _ => "badge--info"
-                };
-                var sevLabel = rec.Severity switch
-                {
-                    RecommendationSeverityDto.Major => "Priority",
-                    RecommendationSeverityDto.Minor => "Focus",
-                    _ => "Tip"
-                };
                 <div class="row row--between row--baseline p-2" style="background: var(--surface-soft); border: 1px solid var(--rule-soft);">
                   <div class="row row--baseline">
-                    <span class="badge @sevBadge text-xs">@sevLabel</span>
+                    <span class="badge @Model.RecommendationBadges[rec.RecId] text-xs">@Model.RecommendationLabels[rec.RecId]</span>
                     <span class="text-sm">@rec.Text</span>
                   </div>
                   @if (!string.IsNullOrEmpty(rec.TargetBandCode))
@@ -149,17 +125,14 @@
 
   @if (Model.Scope == "dashboard" && Model.RubricHighlight is { } rubric)
   {
-    var reviewUrl = rubric.Purpose == ExamPurposeDto.SpeakingPractice
-        ? $"/speaking/review/{rubric.AttemptId}"
-        : $"/writing/review/{rubric.AttemptId}";
     <div class="card__body" id="ai-insight-rubric-highlight" style="border-top: 2px solid var(--ink, #14181d); background: var(--surface-soft, #f3f5f7);">
       <div class="row row--between row--middle row--wrap">
         <div class="row row--middle">
           <span class="badge badge--warning font-mono uppercase font-bold">Rubric Focus · @rubric.SkillName</span>
           <strong class="font-sign uppercase" style="letter-spacing: 0.03em;">@rubric.CriterionName</strong>
-          <span class="badge badge--muted font-mono">@rubric.Score.ToString("0.##") / @rubric.MaxScore.ToString("0.##")</span>
+          <span class="badge badge--muted font-mono">@Model.RubricScoreDisplay / @Model.RubricMaxScoreDisplay</span>
         </div>
-        <a class="btn btn--sm btn--ghost" href="@reviewUrl">Review @rubric.SkillName attempt</a>
+        <a class="btn btn--sm btn--ghost" href="@Model.RubricReviewUrl">Review @rubric.SkillName attempt</a>
       </div>
       @if (!string.IsNullOrWhiteSpace(rubric.Comment))
       {

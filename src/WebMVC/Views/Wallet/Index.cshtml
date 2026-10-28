@@ -1,12 +1,11 @@
 @using Contracts
 @model WebMVC.Models.WalletViewModel
-@inject WebMVC.DateTimeFormatter Formatter
 @{
     Layout = "_LearnerLayout";
     ViewData["Title"] = "Credit wallet";
     ViewData["Description"] = "Overview of your credit balance, purchases, and ledger history.";
     var wallet = Model.Wallet;
-    var hasTransactions = wallet.Orders.Count > 0 || wallet.Ledger.Count > 0;
+    var hasTransactions = Model.HasTransactions;
 }
 
 <nav class="breadcrumbs" aria-label="Breadcrumb">
@@ -34,7 +33,7 @@
     </div>
     <div class="stat">
       <div class="stat__label">Total purchased</div>
-      <div class="stat__value">@CurrencyFormatter.FormatVnd(wallet.AmountPurchased)</div>
+      <div class="stat__value">@Model.AmountPurchased</div>
       <div class="stat__hint">@wallet.PaidOrderCount @(wallet.PaidOrderCount == 1 ? "paid order" : "paid orders") · @wallet.CreditsPurchased credits</div>
     </div>
   </div>
@@ -75,21 +74,6 @@
                 <tbody>
                   @foreach (var order in wallet.Orders)
                   {
-                      var badgeClass = order.Status switch
-                      {
-                          OrderStatusDto.Paid => "badge badge--success",
-                          OrderStatusDto.Reconciling => "badge badge--warning",
-                          OrderStatusDto.Failed => "badge badge--danger",
-                          _ => "badge"
-                      };
-                      var displayStatus = order.Status switch
-                      {
-                          OrderStatusDto.Paid => "Paid",
-                          OrderStatusDto.Reconciling => "Reconciling",
-                          OrderStatusDto.Failed => "Failed",
-                          OrderStatusDto.Expired => "Expired",
-                          _ => "Pending"
-                      };
 
                       <tr>
                         <td>
@@ -103,11 +87,11 @@
                           }
                         </td>
                         <td>@order.PackageName (@order.Credits @(order.Credits == 1 ? "credit" : "credits"))</td>
-                        <td>@CurrencyFormatter.FormatVnd(order.Amount)</td>
+                        <td>@Model.Amounts[order.OrderId]</td>
                         <td>@order.Gateway.ToWireCode().ToUpperInvariant()</td>
-                        <td>@Formatter.Format(order.CreatedAt)</td>
+                        <td>@Model.Dates[order.CreatedAt].Full</td>
                         <td>
-                          <span class="@badgeClass">@displayStatus</span>
+                          <span class="@Model.StatusClasses[order.OrderId]">@Model.StatusLabels[order.OrderId]</span>
                           @if (order.Status is OrderStatusDto.Pending or OrderStatusDto.Reconciling)
                           {
                             <a href="/checkout?packageId=@order.PackageId&openQr=1" class="btn btn--sm btn--primary" style="padding: 2px 8px; font-size: 0.75rem; margin-left: 0.5rem; vertical-align: middle;">Pay QR</a>
@@ -145,12 +129,10 @@
                 <tbody>
                   @foreach (var item in wallet.Ledger)
                   {
-                      var deltaClass = item.Delta > 0 ? "text-success" : "text-danger";
-                      var deltaSign = item.Delta > 0 ? $"+{item.Delta}" : item.Delta.ToString();
                       <tr>
-                        <td>@Formatter.Format(item.CreatedAt)</td>
+                        <td>@Model.Dates[item.CreatedAt].Full</td>
                         <td><code>@item.Reason</code></td>
-                        <td><strong class="@deltaClass">@deltaSign</strong></td>
+                        <td><strong class="@Model.LedgerDeltaClasses[item.TxnId]">@Model.LedgerDeltaLabels[item.TxnId]</strong></td>
                         <td>@(item.OrderCode ?? "—")</td>
                         <td>@(item.Note ?? "—")</td>
                       </tr>

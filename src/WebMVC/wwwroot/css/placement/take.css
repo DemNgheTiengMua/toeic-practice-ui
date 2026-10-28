@@ -9,3 +9,5 @@
 .take-gap-1 { gap: var(--space-1); }
 .take-gap-2 { gap: var(--space-2); }
 .take-gap-3 { gap: var(--space-3); }
+
+.navigator__cell.is-locked { cursor: not-allowed; opacity: 0.55; }

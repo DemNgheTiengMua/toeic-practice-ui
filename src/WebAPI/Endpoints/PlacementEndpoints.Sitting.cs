@@ -96,6 +96,10 @@ public static partial class PlacementEndpoints
             {
                 return Problem(StatusCodes.Status400BadRequest, "Invalid option", ApiError.Codes.Validation, ex.Message);
             }
+            catch (PlacementException ex) when (ex.Code == AttemptEngineException.WrongPhase)
+            {
+                return Problem(StatusCodes.Status400BadRequest, "Question not available yet", ApiError.Codes.AttemptNotActive, ex.Message);
+            }
         });
 
         learner.MapPost("/placement/take/{placementId:int}/draft", async Task<IResult> (
@@ -127,6 +131,10 @@ public static partial class PlacementEndpoints
             catch (PlacementException ex) when (ex.Code == PlacementException.PlacementExpired)
             {
                 return Problem(StatusCodes.Status410Gone, "Placement test expired", ApiError.Codes.PlacementExpired, ex.Message);
+            }
+            catch (PlacementException ex) when (ex.Code == AttemptEngineException.WrongPhase)
+            {
+                return Problem(StatusCodes.Status400BadRequest, "Question not available yet", ApiError.Codes.AttemptNotActive, ex.Message);
             }
         });
     }

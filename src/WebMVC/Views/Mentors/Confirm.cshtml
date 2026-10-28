@@ -1,5 +1,4 @@
 @model WebMVC.Models.MentorConfirmViewModel
-@inject WebMVC.DateTimeFormatter Dates
 @{
     Layout = "_LearnerLayout";
     var mentor = Model.Mentor;
@@ -95,7 +94,7 @@
               }
               else if (Model.SelectedSlot != null)
               {
-                <strong>@Dates.FormatCustom(Model.SelectedSlot.StartAt, "dddd, MMM d — h:mm tt")</strong>
+                <strong>@Model.Dates[Model.SelectedSlot.StartAt].Session</strong>
               }
               else
               {

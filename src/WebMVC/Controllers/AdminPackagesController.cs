@@ -19,13 +19,13 @@ public sealed class AdminPackagesController(
         try
         {
             var summary = await api.GetAdminPackagesAsync(cancellationToken);
-            return View("~/Views/Admin/Packages.cshtml", summary);
+            return View("~/Views/Admin/Packages.cshtml", new AdminPackagesViewModel(summary));
         }
         catch (HttpRequestException ex)
         {
             logger.LogError(ex, "Could not load admin packages");
             TempData["Error"] = "Could not load the package list. Please try again.";
-            return View("~/Views/Admin/Packages.cshtml", new AdminPackagesSummaryDto([], 0, 0, 0, 0));
+            return View("~/Views/Admin/Packages.cshtml", new AdminPackagesViewModel(new AdminPackagesSummaryDto([], 0, 0, 0, 0)));
         }
     }
 

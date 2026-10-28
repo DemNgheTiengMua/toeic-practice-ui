@@ -79,7 +79,8 @@ public static partial class PlacementEndpoints
             n.Modality.MapTo<ModalityDto>(),
             n.IsAnswered,
             n.IsFlagged,
-            n.IsCurrent)).ToList();
+            n.IsCurrent,
+            n.IsLocked)).ToList();
 
         var allQDtos = take.Questions?.Select(q => new AttemptQuestionDto(
             q.QuestionId,

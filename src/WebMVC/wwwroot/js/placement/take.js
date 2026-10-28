@@ -1,336 +1,240 @@
 (function () {
-      const config = JSON.parse(document.getElementById('placement-take-data').textContent);
-      const placementId = config.placementId;
-      const questionId = config.questionId;
-      let remainingSeconds = config.remainingSeconds;
-      let isFlagged = config.isFlagged;
-      const totalQuestions = config.totalQuestions;
-      let answeredCount = config.answeredCount;
+  "use strict";
 
-      const antiForgeryToken = document.querySelector('#anti-forgery-holder input[name="__RequestVerificationToken"]')?.value || '';
-      const saveStatusEl = document.getElementById('save-status');
-      const timerDisplayEl = document.getElementById('timer-display');
-      const timerBoxEl = document.getElementById('timer-box');
-      const flagBtn = document.getElementById('flag-btn');
-      const progressBar = document.getElementById('progress-bar');
-      const progressText = document.getElementById('progress-text');
-      if (progressBar) progressBar.style.width = config.progressPercent + '%';
-      const modalAnsweredCount = document.getElementById('modal-answered-count');
-      const navCell = document.getElementById('nav-cell-' + questionId);
+  const dynamic = document.getElementById("placement-take-dynamic");
+  const dataIsland = () => document.getElementById("placement-take-data");
+  let config = JSON.parse(dataIsland().textContent);
+  let remainingSeconds = config.remainingSeconds;
+  let isFlagged = config.isFlagged;
+  let answeredCount = config.answeredCount;
+  let draftDirty = false;
+  let draftSaveTimeout = null;
+  let draftRequest = null;
 
-      // --- Writing Draft Management ---
-      const writingEditor = document.getElementById('writing-editor');
-      const wordCountEl = document.getElementById('word-count');
-      const characterCountEl = document.getElementById('character-count');
-      const saveDraftBtn = document.getElementById('btn-save-writing-draft');
-      let draftSaveTimeout = null;
-      let draftDirty = false;
+  const token = document.querySelector("#anti-forgery-holder input[name='__RequestVerificationToken']")?.value || "";
+  const q = selector => document.querySelector(selector);
+  const qa = selector => Array.from(document.querySelectorAll(selector));
+  const saveStatus = () => q("#save-status");
+  const writingEditor = () => q("#writing-editor");
+  const currentNavCell = () => q("#nav-cell-" + config.questionId);
 
-      function updateWritingCounts() {
-        if (!writingEditor) return;
-        const text = writingEditor.value || '';
-        const words = text.trim() ? text.trim().split(/\s+/).length : 0;
-        if (wordCountEl) wordCountEl.textContent = words;
-        if (characterCountEl) characterCountEl.textContent = text.length;
+  function formatTime(seconds) {
+    if (seconds <= 0) return "00:00";
+    return String(Math.floor(seconds / 60)).padStart(2, "0") + ":" + String(seconds % 60).padStart(2, "0");
+  }
+
+  function updateTimer() {
+    const display = q("#timer-display");
+    if (display) display.textContent = formatTime(remainingSeconds);
+    const box = q("#timer-box");
+    if (box) {
+      box.classList.toggle("timer--warning", remainingSeconds <= 300 && remainingSeconds > 120);
+      box.classList.toggle("timer--critical", remainingSeconds <= 120);
+    }
+  }
+
+  function updateWritingCounts() {
+    const editor = writingEditor();
+    if (!editor) return;
+    const text = editor.value || "";
+    const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+    const wordCount = q("#word-count");
+    const characterCount = q("#character-count");
+    if (wordCount) wordCount.textContent = words;
+    if (characterCount) characterCount.textContent = text.length;
+  }
+
+  function updateProgress() {
+    const text = q("#progress-text");
+    const bar = q("#progress-bar");
+    const modal = q("#modal-answered-count");
+    if (text) text.textContent = `${answeredCount}/${config.totalQuestions} answered`;
+    if (modal) modal.textContent = answeredCount;
+    if (bar) bar.style.width = Math.round(answeredCount / Math.max(1, config.totalQuestions) * 100) + "%";
+  }
+
+  function setStatus(text, className) {
+    const element = saveStatus();
+    if (element) { element.textContent = text; element.className = className; }
+  }
+
+  async function saveDraftNow() {
+    const editor = writingEditor();
+    if (!editor) return true;
+    if (draftSaveTimeout) clearTimeout(draftSaveTimeout);
+    const text = editor.value;
+    setStatus("Saving draft…", "save-status");
+    draftRequest = fetch(`/placement/take/${config.placementId}/draft`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", RequestVerificationToken: token },
+      body: JSON.stringify({ questionId: config.questionId, responseText: text })
+    }).then(async response => {
+      if (!response.ok) throw new Error("Save draft failed with status " + response.status);
+      draftDirty = false;
+      setStatus("Draft saved", "save-status save-status--saved");
+      if (text.trim()) {
+        currentNavCell()?.classList.add("is-answered");
+        currentNavCell()?.classList.remove("is-unanswered");
       }
+      return true;
+    }).catch(error => {
+      console.error(error);
+      setStatus("Save error", "save-status save-status--error");
+      return false;
+    }).finally(() => { draftRequest = null; });
+    return draftRequest;
+  }
 
-      async function saveDraftNow() {
-        if (!writingEditor) return true;
-        if (draftSaveTimeout) clearTimeout(draftSaveTimeout);
-        const text = writingEditor.value;
-        if (saveStatusEl) {
-          saveStatusEl.textContent = 'Saving draftâ€¦';
-          saveStatusEl.className = 'save-status';
-        }
+  function restorePlacementAudio() {
+    const player = q('.exam-audio[data-mode="exam"]');
+    if (!player) return;
+    let stored = {};
+    try { stored = JSON.parse(localStorage.getItem("ee_placement_audio_" + config.placementId) || "{}"); } catch (_) { }
+    const progress = stored[config.audioKey];
+    if (!progress) return;
+    if (progress.completed) player.dataset.completed = "true";
+    if (progress.currentTime > 0) player.dataset.currentTime = String(progress.currentTime);
+  }
 
-        try {
-          const res = await fetch(`/placement/take/${placementId}/draft`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'RequestVerificationToken': antiForgeryToken
-            },
-            body: JSON.stringify({
-              questionId: questionId,
-              responseText: text
-            })
-          });
+  document.addEventListener("examaudiotimeupdate", event => {
+    if (!config.audioKey || !event.detail) return;
+    try {
+      const key = "ee_placement_audio_" + config.placementId;
+      const stored = JSON.parse(localStorage.getItem(key) || "{}");
+      const current = stored[config.audioKey] || {};
+      stored[config.audioKey] = {
+        completed: !!(event.detail.completed || current.completed),
+        currentTime: Math.max(Number(current.currentTime) || 0, Number(event.detail.currentTime) || 0)
+      };
+      localStorage.setItem(key, JSON.stringify(stored));
+    } catch (_) { }
+  });
 
-          if (!res.ok) {
-            throw new Error('Save draft failed with status ' + res.status);
-          }
+  document.addEventListener("examaudioended", event => {
+    if (!config.audioKey) return;
+    try {
+      const key = "ee_placement_audio_" + config.placementId;
+      const stored = JSON.parse(localStorage.getItem(key) || "{}");
+      stored[config.audioKey] = { completed: true, currentTime: Number(stored[config.audioKey]?.currentTime) || 0 };
+      localStorage.setItem(key, JSON.stringify(stored));
+    } catch (_) { }
+  });
 
-          draftDirty = false;
-          if (saveStatusEl) {
-            saveStatusEl.textContent = 'Draft saved';
-            saveStatusEl.className = 'save-status save-status--saved';
-          }
+  async function navigate(href) {
+    const target = new URL(href, window.location.origin);
+    const targetQuestion = target.searchParams.get("q");
+    if (!targetQuestion || draftDirty && !(await saveDraftNow())) return;
+    const response = await fetch(`/placement/take/${config.placementId}/fragment?q=${encodeURIComponent(targetQuestion)}`, {
+      headers: { Accept: "text/html" }
+    });
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      if (body.redirectUrl) window.location.href = body.redirectUrl;
+      setStatus("Save error", "save-status save-status--error");
+      return;
+    }
+    dynamic.innerHTML = await response.text();
+    config = JSON.parse(dataIsland().textContent);
+    remainingSeconds = config.remainingSeconds;
+    isFlagged = config.isFlagged;
+    answeredCount = config.answeredCount;
+    draftDirty = false;
+    updateTimer();
+    updateWritingCounts();
+    window.history.pushState({}, "", `/placement/take/${config.placementId}?q=${targetQuestion}`);
+    document.title = `Placement Test - Question ${targetQuestion} - extra efficient`;
+    window.initExamAudio?.();
+    restorePlacementAudio();
+  }
 
-          if (text.trim().length > 0 && navCell) {
-            navCell.classList.add('is-answered');
-            navCell.classList.remove('is-unanswered');
-          }
-          return true;
-        } catch (err) {
-          console.error(err);
-          if (saveStatusEl) {
-            saveStatusEl.textContent = 'Save error';
-            saveStatusEl.className = 'save-status save-status--error';
-          }
-          return false;
-        }
-      }
+  document.addEventListener("click", event => {
+    const link = event.target.closest("a[href^='/placement/take/']");
+    if (link && link.closest("#placement-take-dynamic")) {
+      event.preventDefault();
+      navigate(link.href);
+      return;
+    }
+    const flag = event.target.closest("#flag-btn");
+    if (flag) {
+      isFlagged = !isFlagged;
+      flag.dataset.flagged = String(isFlagged);
+      flag.setAttribute("aria-pressed", String(isFlagged));
+      flag.textContent = isFlagged ? "Flagged for review" : "Flag for review";
+      flag.classList.toggle("btn--primary", isFlagged);
+      sendAnswer(q(".js-option-radio:checked")?.value || null, isFlagged);
+      return;
+    }
+    const saveDraft = event.target.closest("#btn-save-writing-draft");
+    if (saveDraft) saveDraftNow();
+    const openModal = event.target.closest(".js-open-submit-modal");
+    if (openModal) q("#submit-modal")?.style.setProperty("display", "flex");
+    if (event.target.closest("#btn-cancel-submit")) q("#submit-modal")?.style.setProperty("display", "none");
+  });
 
-      if (writingEditor) {
-        updateWritingCounts();
-        writingEditor.addEventListener('input', () => {
-          draftDirty = true;
-          updateWritingCounts();
-          if (saveStatusEl) {
-            saveStatusEl.textContent = 'Draft not saved';
-            saveStatusEl.className = 'save-status';
-          }
-          if (draftSaveTimeout) clearTimeout(draftSaveTimeout);
-          draftSaveTimeout = setTimeout(saveDraftNow, 3000);
-        });
-      }
+  document.addEventListener("input", event => {
+    if (!event.target.matches("#writing-editor")) return;
+    draftDirty = true;
+    updateWritingCounts();
+    setStatus("Draft not saved", "save-status");
+    if (draftSaveTimeout) clearTimeout(draftSaveTimeout);
+    draftSaveTimeout = setTimeout(saveDraftNow, 3000);
+  });
 
-      if (saveDraftBtn) {
-        saveDraftBtn.addEventListener('click', () => {
-          saveDraftNow();
-        });
-      }
+  document.addEventListener("change", event => {
+    if (!event.target.matches(".js-option-radio")) return;
+    qa(".option").forEach(option => option.classList.remove("is-selected"));
+    event.target.closest(".option")?.classList.add("is-selected");
+    const cell = currentNavCell();
+    if (!cell?.classList.contains("is-answered")) answeredCount++;
+    updateProgress();
+    sendAnswer(event.target.value, isFlagged);
+  });
 
-      // Flush draft when clicking navigation links
-      document.querySelectorAll('a[href^="/placement/take/"]').forEach(link => {
-        link.addEventListener('click', async function (e) {
-          if (draftDirty && writingEditor) {
-            e.preventDefault();
-            const href = this.getAttribute('href');
-            await saveDraftNow();
-            window.location.href = href;
-          }
-        });
+  async function sendAnswer(selectedOptionId, flagged) {
+    setStatus("Saving…", "save-status");
+    const body = new URLSearchParams();
+    if (selectedOptionId != null) body.append("selectedOptionId", selectedOptionId);
+    body.append("isFlagged", flagged ? "true" : "false");
+    body.append("__RequestVerificationToken", token);
+    try {
+      const response = await fetch(`/placement/take/${config.placementId}/answers/${config.questionId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded", RequestVerificationToken: token },
+        body: body.toString()
       });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error("Save answer failed with status " + response.status);
+      setStatus("Saved", "save-status save-status--saved");
+      if (typeof data.remainingSeconds === "number") { remainingSeconds = data.remainingSeconds; updateTimer(); }
+      const cell = currentNavCell();
+      if (data.selectedOptionId != null) { cell?.classList.add("is-answered"); cell?.classList.remove("is-unanswered"); }
+      cell?.classList.toggle("is-marked", !!data.isFlagged);
+    } catch (error) {
+      console.error(error);
+      setStatus("Save error", "save-status save-status--error");
+    }
+  }
 
-      // --- Countdown Timer ---
-      function formatTime(totalSec) {
-        if (totalSec <= 0) return '00:00';
-        const mins = Math.floor(totalSec / 60);
-        const secs = totalSec % 60;
-        return String(mins).padStart(2, '0') + ':' + String(secs).padStart(2, '0');
-      }
+  setInterval(async () => {
+    remainingSeconds--;
+    updateTimer();
+    if (remainingSeconds <= 0) {
+      if (draftDirty) await saveDraftNow();
+      q("#is-auto-submit-input") && (q("#is-auto-submit-input").value = "true");
+      q("#submit-form")?.submit();
+    }
+  }, 1000);
 
-      function updateTimerDisplay() {
-        if (!timerDisplayEl) return;
-        timerDisplayEl.textContent = formatTime(remainingSeconds);
+  q("#submit-form")?.addEventListener("submit", async event => {
+    if (draftDirty) {
+      event.preventDefault();
+      if (await saveDraftNow()) event.target.submit();
+    } else {
+      try { localStorage.removeItem("ee_placement_audio_" + config.placementId); } catch (_) { }
+    }
+  });
 
-        if (remainingSeconds <= 120) {
-          timerBoxEl?.classList.remove('timer--warning');
-          timerBoxEl?.classList.add('timer--critical');
-        } else if (remainingSeconds <= 300) {
-          timerBoxEl?.classList.add('timer--warning');
-          timerBoxEl?.classList.remove('timer--critical');
-        } else {
-          timerBoxEl?.classList.remove('timer--warning', 'timer--critical');
-        }
-      }
-
-      updateTimerDisplay();
-
-      const timerInterval = setInterval(async () => {
-        remainingSeconds--;
-        if (remainingSeconds <= 0) {
-          clearInterval(timerInterval);
-          updateTimerDisplay();
-          // Auto submit when time runs out
-          if (draftDirty && writingEditor) {
-            await saveDraftNow();
-          }
-          const autoInput = document.getElementById('is-auto-submit-input');
-          if (autoInput) autoInput.value = 'true';
-          document.getElementById('submit-form')?.submit();
-        } else {
-          updateTimerDisplay();
-        }
-      }, 1000);
-
-      // --- Save Answer via AJAX ---
-      async function sendAnswer(selectedOptionId, flagged) {
-        if (!saveStatusEl) return;
-        saveStatusEl.textContent = 'Savingâ€¦';
-        saveStatusEl.className = 'save-status';
-
-        try {
-          const body = new URLSearchParams();
-          if (selectedOptionId !== null && selectedOptionId !== undefined) {
-            body.append('selectedOptionId', selectedOptionId);
-          }
-          body.append('isFlagged', flagged ? 'true' : 'false');
-          body.append('__RequestVerificationToken', antiForgeryToken);
-
-          const res = await fetch(`/placement/take/${placementId}/answers/${questionId}`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/x-www-form-urlencoded',
-              'RequestVerificationToken': antiForgeryToken
-            },
-            body: body.toString()
-          });
-
-          if (!res.ok) {
-            throw new Error('Save answer failed with status ' + res.status);
-          }
-
-          const data = await res.json();
-          if (data.redirectUrl) {
-            window.location.href = data.redirectUrl;
-            return;
-          }
-
-          saveStatusEl.textContent = 'Saved';
-          saveStatusEl.className = 'save-status save-status--saved';
-
-          // Update remaining seconds if returned
-          if (typeof data.remainingSeconds === 'number') {
-            remainingSeconds = data.remainingSeconds;
-            updateTimerDisplay();
-          }
-
-          // Update navigator cell appearance
-          if (navCell) {
-            if (data.selectedOptionId !== null) {
-              navCell.classList.add('is-answered');
-              navCell.classList.remove('is-unanswered');
-            }
-            if (data.isFlagged) {
-              navCell.classList.add('is-flagged');
-            } else {
-              navCell.classList.remove('is-flagged');
-            }
-          }
-        } catch (err) {
-          console.error(err);
-          saveStatusEl.textContent = 'Save error';
-          saveStatusEl.className = 'save-status save-status--error';
-        }
-      }
-
-      // Option selection change
-      const optionInputs = document.querySelectorAll('.js-option-radio');
-      optionInputs.forEach(input => {
-        input.addEventListener('change', function () {
-          document.querySelectorAll('.option').forEach(l => l.classList.remove('is-selected'));
-          this.closest('.option')?.classList.add('is-selected');
-
-          const wasAnswered = navCell?.classList.contains('is-answered');
-          if (!wasAnswered) {
-            answeredCount++;
-            if (progressText) progressText.textContent = `${answeredCount}/${totalQuestions} answered`;
-            if (modalAnsweredCount) modalAnsweredCount.textContent = answeredCount;
-            const pct = Math.round((answeredCount / Math.max(1, totalQuestions)) * 100);
-            if (progressBar) progressBar.style.width = pct + '%';
-          }
-
-          sendAnswer(this.value, isFlagged);
-        });
-      });
-
-      // Flag for review button
-      if (flagBtn) {
-        flagBtn.addEventListener('click', function () {
-          isFlagged = !isFlagged;
-          this.setAttribute('data-flagged', isFlagged ? 'true' : 'false');
-          this.setAttribute('aria-pressed', isFlagged ? 'true' : 'false');
-          this.textContent = isFlagged ? 'Flagged for review' : 'Flag for review';
-          if (isFlagged) {
-            this.classList.add('btn--primary');
-          } else {
-            this.classList.remove('btn--primary');
-          }
-
-          const currentSelected = document.querySelector('.js-option-radio:checked')?.value || null;
-          sendAnswer(currentSelected, isFlagged);
-        });
-      }
-
-      // Submit Confirmation Modal
-      const submitModal = document.getElementById('submit-modal');
-      const openSubmitBtns = document.querySelectorAll('.js-open-submit-modal');
-      const cancelSubmitBtn = document.getElementById('btn-cancel-submit');
-
-      openSubmitBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-          if (submitModal) {
-            submitModal.style.display = 'flex';
-          }
-        });
-      });
-
-      if (cancelSubmitBtn && submitModal) {
-        cancelSubmitBtn.addEventListener('click', () => {
-          submitModal.style.display = 'none';
-        });
-      }
-
-      // Track completed/progressed audio per placement attempt
-      var audioPlayer = document.querySelector('.exam-audio[data-mode="exam"]');
-      var placementAudioStorageKey = 'ee_placement_audio_' + placementId;
-      if (audioPlayer) {
-        var qAudioKey = config.audioKey;
-        var stored = {};
-        try {
-          stored = JSON.parse(localStorage.getItem(placementAudioStorageKey) || '{}');
-        } catch (e) {}
-
-        var progress = stored[qAudioKey];
-        if (progress) {
-          if (typeof progress === 'boolean' && progress) {
-            audioPlayer.dataset.completed = 'true';
-          } else if (progress.completed) {
-            audioPlayer.dataset.completed = 'true';
-          } else if (progress.currentTime > 0) {
-            audioPlayer.dataset.currentTime = String(progress.currentTime);
-          }
-        }
-
-        document.addEventListener('examaudiotimeupdate', function (e) {
-          if (qAudioKey && e.detail) {
-            try {
-              var s = JSON.parse(localStorage.getItem(placementAudioStorageKey) || '{}');
-              var cur = s[qAudioKey] || {};
-              s[qAudioKey] = {
-                completed: !!(e.detail.completed || cur.completed),
-                currentTime: Math.max(Number(cur.currentTime) || 0, Number(e.detail.currentTime) || 0)
-              };
-              localStorage.setItem(placementAudioStorageKey, JSON.stringify(s));
-            } catch (err) {}
-          }
-        });
-
-        document.addEventListener('examaudioended', function () {
-          if (qAudioKey) {
-            try {
-              var s = JSON.parse(localStorage.getItem(placementAudioStorageKey) || '{}');
-              s[qAudioKey] = { completed: true, currentTime: Number(s[qAudioKey]?.currentTime) || 0 };
-              localStorage.setItem(placementAudioStorageKey, JSON.stringify(s));
-            } catch (err) {}
-          }
-        });
-      }
-
-      var placementSubmitForm = document.getElementById('submit-form');
-      if (placementSubmitForm) {
-        placementSubmitForm.addEventListener('submit', async function (e) {
-          if (draftDirty && writingEditor) {
-            e.preventDefault();
-            await saveDraftNow();
-            placementSubmitForm.submit();
-            return;
-          }
-          try {
-            localStorage.removeItem(placementAudioStorageKey);
-          } catch (e) {}
-        });
-      }
-    })();
+  updateTimer();
+  updateWritingCounts();
+  restorePlacementAudio();
+})();

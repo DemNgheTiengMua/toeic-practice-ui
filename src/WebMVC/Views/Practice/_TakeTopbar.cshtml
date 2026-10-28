@@ -1,0 +1,21 @@
+@model PracticeTakeViewModel
+@{
+    var session = Model.Take.Session;
+    var hasListening = Model.Take.HasListening;
+}
+    <header class="app-topbar">
+      <div class="exam-topbar-group">
+        <strong>Practice @session.SectionName</strong>
+        <span class="badge badge--muted">No time limit</span>
+        <span class="badge badge--info" id="topbar-accuracy-badge">Accuracy: <strong id="topbar-accuracy-val">@Model.Take.TopbarAccuracyDisplay</strong></span>
+      </div>
+      <div class="exam-topbar-group">
+        <span id="save-status" class="save-status save-status--saved" role="status" aria-live="polite">Saved</span>
+        <button type="button" class="btn btn--ghost btn--sm" id="btn-controls-modal" title="Keyboard controls (?)">Controls ?</button>
+        @if (hasListening)
+        {
+          @await Html.PartialAsync("_AudioEmergencySwitcher", Model.Take.AudioCheck)
+        }
+        <a class="btn btn--ghost btn--sm" href="/practice" id="btn-exit">Exit</a>
+      </div>
+    </header>

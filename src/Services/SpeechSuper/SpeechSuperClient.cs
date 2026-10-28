@@ -11,39 +11,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Services;
 
-public record SpeechSuperAssessmentResult(
-    bool Success,
-    string? ErrorMessage,
-    int? ErrId,
-    string? Transcription,
-    decimal? OverallScore,
-    decimal? PronunciationScore,
-    decimal? FluencyScore,
-    decimal? GrammarScore,
-    decimal? VocabularyScore,
-    decimal? RelevanceScore,
-    IReadOnlyList<SpeechSuperSentence>? Sentences = null,
-    string? RawResponseJson = null
-);
-
-public record SpeechSuperSentence(
-    string Sentence,
-    decimal? Pronunciation,
-    int? Start,
-    int? End
-);
-
-public interface ISpeechSuperClient
-{
-    Task<SpeechSuperAssessmentResult> AssessAsync(
-        Stream audioStream,
-        string audioType,
-        string? questionPrompt = null,
-        string? refText = null,
-        string? userId = null,
-        CancellationToken cancellationToken = default);
-}
-
 public sealed class SpeechSuperClient : ISpeechSuperClient
 {
     private readonly HttpClient _httpClient;

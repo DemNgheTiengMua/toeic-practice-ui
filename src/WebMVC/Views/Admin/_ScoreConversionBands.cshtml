@@ -1,0 +1,82 @@
+@model WebMVC.Models.AdminScoreConversionViewModel
+@{ var conv = Model.Conversion; int bandIndex = 0; }
+  <!-- Score Bands / CEFR Reference Table -->
+  <div class="card mb-4">
+    <div class="card__header">
+      <div class="row row--between">
+        <strong>Proficiency Bands / CEFR Reference (@conv.CertCode)</strong>
+        <span class="text-xs text-muted">Ranges must be non-overlapping and monotonic</span>
+      </div>
+    </div>
+    <div class="card__body">
+      <p class="text-sm text-muted m-0 mb-3">
+        Edit band score thresholds for this certificate. Ranges must not overlap.
+      </p>
+      <table class="table table--striped">
+        <thead>
+          <tr>
+            <th scope="col">Code</th>
+            <th scope="col">Band Name</th>
+            <th scope="col">Min Total</th>
+            <th scope="col">Max Total</th>
+            <th scope="col">Order</th>
+          </tr>
+        </thead>
+        <tbody>
+          @foreach (var band in conv.Bands)
+          {
+            var curBandIdx = bandIndex++;
+            <tr>
+              <td>
+                <input type="hidden" name="Bands[@curBandIdx].BandId" value="@band.BandId" />
+                <input class="field__input"
+                       type="text"
+                       name="Bands[@curBandIdx].Code"
+                       value="@band.Code"
+                       readonly
+                       style="width: 120px; font-weight: 700; background: var(--surface-soft); cursor: not-allowed;"
+                       aria-label="Band Code" />
+              </td>
+              <td>
+                <input class="field__input"
+                       type="text"
+                       name="Bands[@curBandIdx].Name"
+                       value="@band.Name"
+                       required
+                       style="width: 220px;"
+                       aria-label="Band Name" />
+              </td>
+              <td>
+                <input class="field__input"
+                       type="number"
+                       name="Bands[@curBandIdx].MinTotal"
+                       value="@band.MinTotal"
+                       min="0"
+                       required
+                       style="width: 100px;"
+                       aria-label="Min Total Score" />
+              </td>
+              <td>
+                <input class="field__input"
+                       type="number"
+                       name="Bands[@curBandIdx].MaxTotal"
+                       value="@band.MaxTotal"
+                       min="0"
+                       required
+                       style="width: 100px;"
+                       aria-label="Max Total Score" />
+              </td>
+              <td>
+                <input class="field__input"
+                       type="number"
+                       name="Bands[@curBandIdx].DisplayOrder"
+                       value="@band.DisplayOrder"
+                       style="width: 70px;"
+                       aria-label="Display Order" />
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>

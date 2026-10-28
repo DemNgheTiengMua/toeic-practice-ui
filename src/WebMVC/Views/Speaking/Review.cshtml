@@ -94,7 +94,7 @@
                 <td>
                   @if (!string.IsNullOrEmpty(q.AudioPath))
                   {
-                    <button class="btn btn--sm" type="button" onclick="playAudio('@q.QuestionId')" aria-label="Play recording for question @q.DisplayOrder">
+                    <button class="btn btn--sm" type="button" data-play-question-id="@q.QuestionId" aria-label="Play recording for question @q.DisplayOrder">
                       Play
                     </button>
                   }
@@ -237,13 +237,4 @@
   </div>
 </div>
 
-<script>
-  function playAudio(questionId) {
-    const container = document.getElementById('exam-audio-q-' + questionId);
-    if (container) {
-      container.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      const btn = container.querySelector('.exam-audio__btn-play');
-      if (btn) btn.click();
-    }
-  }
-</script>
+<script src="~/js/speaking/review.js" asp-append-version="true"></script>

@@ -1,5 +1,4 @@
-@inject CurrentUser CurrentUser
-@model IReadOnlyList<Contracts.CertificateDto>
+@model WebMVC.Models.CertificateCatalogViewModel
 @{
     ViewData["Title"] = "Certificates";
     ViewData["Description"] = "TOEIC, IELTS and VSTEP on extra efficient — test structure, score bands and what you can practice for each certificate.";
@@ -20,7 +19,7 @@
     </p>
   </div>
 
-  @foreach (var cert in Model)
+  @foreach (var cert in Model.Certificates)
   {
     <section class="stack" aria-labelledby="cert-@cert.Code.ToLowerInvariant()">
       <h2 id="cert-@cert.Code.ToLowerInvariant()" class="section-group__title">@cert.Code — @cert.Name</h2>
@@ -42,7 +41,7 @@
                   }
                   @if (skill.Sections.Count > 0)
                   {
-                    var total = skill.Sections.Sum(s => s.ExpectedQuestionCount ?? 0);
+                    var total = Model.QuestionCounts[(cert.Code, skill.Code)];
                     if (total > 0)
                     {
                       <text> · @total questions</text>
@@ -94,7 +93,7 @@
         </div>
         <div class="card__footer">
           @* Switching the active certificate is a learner action (admins have none). *@
-          @if (CurrentUser.IsSignedIn && !CurrentUser.IsAdmin)
+          @if (Model.IsSignedIn && !Model.IsAdmin)
           {
             <form method="post" action="/learner/active-certificate" style="display:inline; margin:0;">
               @Html.AntiForgeryToken()
@@ -104,7 +103,7 @@
               </button>
             </form>
           }
-          else if (!CurrentUser.IsSignedIn)
+          else if (!Model.IsSignedIn)
           {
             <a class="btn btn--primary" href="/auth/register">Start with @cert.Code</a>
           }
@@ -117,11 +116,11 @@
     <div class="card__body row row--between" style="flex-wrap: wrap; gap: var(--space-4)">
       <p class="no-margin"><strong>Not sure which one fits your goal?</strong><br>
         <span class="text-muted">Create a free account and take the placement exam — it works for every certificate.</span></p>
-      @if (CurrentUser.IsSignedIn && !CurrentUser.IsAdmin)
+      @if (Model.IsSignedIn && !Model.IsAdmin)
       {
         <a class="btn btn--primary btn--lg" href="/placement">Take placement test</a>
       }
-      else if (!CurrentUser.IsSignedIn)
+      else if (!Model.IsSignedIn)
       {
         <a class="btn btn--primary btn--lg" href="/auth/register">Start for free</a>
       }

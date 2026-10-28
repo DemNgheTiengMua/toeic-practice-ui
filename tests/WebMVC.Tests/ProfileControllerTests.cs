@@ -93,7 +93,7 @@ public sealed class ProfileControllerTests
         Assert.False(authService.SignedOut);
 
         var view = Assert.IsType<ViewResult>(result);
-        var returnedModel = Assert.IsType<ChangePasswordViewModel>(view.Model);
+        var returnedModel = Assert.IsType<PasswordPageViewModel>(view.Model).Form;
         Assert.Equal("Account locked", returnedModel.FormError);
     }
 
@@ -115,7 +115,7 @@ public sealed class ProfileControllerTests
         Assert.False(authService.SignedOut);
 
         var view = Assert.IsType<ViewResult>(result);
-        var returnedModel = Assert.IsType<ChangePasswordViewModel>(view.Model);
+        var returnedModel = Assert.IsType<PasswordPageViewModel>(view.Model).Form;
         Assert.Equal("Too many attempts. Please wait a moment before trying again.", returnedModel.FormError);
     }
 
@@ -137,7 +137,7 @@ public sealed class ProfileControllerTests
         Assert.False(authService.SignedOut);
 
         var view = Assert.IsType<ViewResult>(result);
-        var returnedModel = Assert.IsType<ChangePasswordViewModel>(view.Model);
+        var returnedModel = Assert.IsType<PasswordPageViewModel>(view.Model).Form;
         Assert.Equal("The current password is incorrect.", returnedModel.FormError);
     }
 
@@ -152,7 +152,7 @@ public sealed class ProfileControllerTests
 
         Assert.False(authService.SignedOut);
         var view = Assert.IsType<ViewResult>(result);
-        Assert.Same(model, view.Model);
+        Assert.Same(model, Assert.IsType<PasswordPageViewModel>(view.Model).Form);
     }
 
     private sealed class EmptyTempDataProvider : ITempDataProvider

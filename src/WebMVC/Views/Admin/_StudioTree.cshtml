@@ -1,0 +1,62 @@
+@model WebMVC.Models.ExamStudioViewModel
+@{
+    var skills = Model.Skills;
+    var firstSection = Model.FirstSection;
+}
+  <!-- ================= 1. LEFT NAVIGATION RAIL ================= -->
+  <aside class="studio-panel" id="studio-left-rail" aria-label="Sections and Questions Navigation">
+    <div class="studio-panel__header">
+      <h2>Curriculum Rail</h2>
+      <span class="text-xs" style="font-family: var(--font-mono, monospace);" id="rail-total-count">
+        @Model.Detail.ActualQuestionCount / @(Model.RequiredQuestions) Qs
+      </span>
+    </div>
+    <div class="studio-panel__body" style="max-height: 75vh;">
+      @foreach (var sk in skills)
+      {
+        <div class="rail-skill-group" id="rail-skill-group-@sk.Key">
+          <div class="rail-skill-heading">
+            <span>@sk.Name</span>
+            <span style="font-family: var(--font-mono, monospace);">@sk.TotalQuestions / @sk.ExpectedQuestions</span>
+          </div>
+
+          @foreach (var sec in sk.Sections)
+          {
+            var isComplete = Model.SectionStates[sec.SectionId].IsComplete;
+            var badgeColor = Model.SectionStates[sec.SectionId].BadgeStyle;
+
+            <div class="rail-section" id="rail-sec-@sec.SectionId" data-section-id="@sec.SectionId" data-section-code="@sec.Code">
+              <div class="rail-section__header @(sec == firstSection ? "is-active" : "")" onclick="selectSection(@sec.SectionId)">
+                <span>[@sec.Code] @sec.Name</span>
+                <span class="badge text-xs" style="@badgeColor border-radius: 0; font-family: var(--font-mono, monospace);" id="sec-badge-@sec.SectionId">
+                  @sec.CurrentQuestionCount / @Model.SectionStates[sec.SectionId].ExpectedCount
+                </span>
+              </div>
+              <ul class="rail-section__items" id="rail-items-@sec.SectionId">
+                @foreach (var g in sec.Groups)
+                {
+                  foreach (var q in g.Questions)
+                  {
+                    <li class="rail-item" id="rail-item-@q.QuestionId" data-question-id="@q.QuestionId" data-group-id="@g.GroupId" data-display-order="@q.DisplayOrder" onclick="focusQuestionCard(@q.QuestionId)">
+                      <div class="row" style="gap: 0.35rem; align-items: center; overflow: hidden;">
+                        @if (sec.UnitCount > 1)
+                        {
+                          <span class="unit-badge">U@g.UnitNumber</span>
+                        }
+                        <strong style="font-family: var(--font-mono, monospace);">#@q.DisplayOrder</strong>
+                        <span class="truncate" style="max-width: 120px;">@(string.IsNullOrWhiteSpace(q.Stem) ? "(empty stem)" : q.Stem)</span>
+                      </div>
+                      <div class="rail-item__btns" onclick="event.stopPropagation()">
+                        <button type="button" class="rail-btn-move" onclick="moveItemUp(@sec.SectionId, @q.QuestionId)" title="Move Up">&uarr;</button>
+                        <button type="button" class="rail-btn-move" onclick="moveItemDown(@sec.SectionId, @q.QuestionId)" title="Move Down">&darr;</button>
+                      </div>
+                    </li>
+                  }
+                }
+              </ul>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </aside>

@@ -1,22 +1,15 @@
-@model Contracts.LearnerDashboardDto
+@model DashboardPresentation
 @{
-    var steps = Model.MissionSteps;
-    string SeverityBadgeClass(string severity) => severity switch
-    {
-        "danger" => "badge--danger",
-        "warning" => "badge--warning",
-        "success" => "badge--success",
-        "info" => "badge--info",
-        _ => "badge--muted",
-    };
+    var steps = Model.Dashboard.MissionSteps;
+
 }
 
 @if (steps is { Count: > 0 })
 {
-    var clearedCount = steps.Count(s => s.IsCleared);
+    var clearedCount = Model.ClearedMissions;
     <section class="mission-checklist" aria-labelledby="mission-heading">
       <header class="mission-checklist__header">
-        <h2 class="mission-checklist__title" id="mission-heading">Today's Directive · @Model.Certificate.Code 3-Step Milestones</h2>
+        <h2 class="mission-checklist__title" id="mission-heading">Today's Directive · @Model.Dashboard.Certificate.Code 3-Step Milestones</h2>
         <span class="badge @(clearedCount == steps.Count ? "badge--success" : "badge--muted") font-mono">@clearedCount / @steps.Count CLEARED</span>
       </header>
       <div class="mission-checklist__list" role="list">
@@ -27,7 +20,7 @@
               <div class="mission-checklist__item-top">
                 <span class="mission-checklist__item-num">STEP @step.StepNumber.ToString("00")</span>
                 <div class="row row--tight" style="gap: var(--space-1, 4px);">
-                  <span class="badge @SeverityBadgeClass(step.Severity) text-xs">@step.BadgeLabel</span>
+                  <span class="badge @Model.MissionBadges[step.StepNumber] text-xs">@step.BadgeLabel</span>
                   @if (step.IsCleared)
                   {
                     <span class="badge badge--success text-xs">Cleared</span>

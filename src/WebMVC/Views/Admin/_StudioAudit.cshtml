@@ -1,0 +1,74 @@
+@model WebMVC.Models.ExamStudioViewModel
+  <!-- ================= 3. RIGHT READINESS AUDIT PLACARD ================= -->
+  <aside class="studio-panel" id="studio-right-audit" aria-label="Publish Readiness Audit">
+    <div class="studio-panel__header">
+      <h2>Publish Readiness</h2>
+      <span class="badge" id="audit-status-badge" style="font-family: var(--font-mono, monospace); border-radius: 0; @Model.AuditBadgeStyle">
+        @Model.AuditStatusText
+      </span>
+    </div>
+
+    <div class="studio-panel__body" style="max-height: 75vh; display: flex; flex-direction: column; justify-content: space-between;">
+      <div>
+        <div class="stack" style="gap: 0.5rem; border-bottom: 2px solid var(--color-ink, #14181d); padding-bottom: 0.75rem; margin-bottom: 0.75rem;">
+          <div class="row row--between text-sm">
+            <span>Questions:</span>
+            <strong style="font-family: var(--font-mono, monospace);" id="audit-q-count">
+              @Model.Detail.Audit.TotalQuestions / @Model.Detail.Audit.ExpectedQuestions
+            </strong>
+          </div>
+          <div class="row row--between text-sm">
+            <span>Blocking Errors:</span>
+            <strong style="font-family: var(--font-mono, monospace); color: @(Model.Detail.Audit.BlockingErrorCount > 0 ? "#b31217" : "#0a6b3c");" id="audit-error-count">
+              @Model.Detail.Audit.BlockingErrorCount
+            </strong>
+          </div>
+          <div class="row row--between text-sm">
+            <span>Warnings:</span>
+            <strong style="font-family: var(--font-mono, monospace);" id="audit-warn-count">
+              @Model.Detail.Audit.WarningCount
+            </strong>
+          </div>
+        </div>
+
+        <ul class="stack" style="gap: 0.4rem; list-style: none; margin: 0; padding: 0;" id="audit-issues-list">
+          @if (Model.AuditIssues.Count == 0 && Model.Detail.Audit.CanPublish)
+          {
+            <li class="audit-item audit-item--success">
+              <span>&#10004;</span>
+              <div>All certificate invariants satisfied. Ready to publish!</div>
+            </li>
+          }
+          @foreach (var iss in Model.AuditIssues)
+          {
+            var itemClass = iss.ItemClass;
+            var icon = iss.Icon;
+            <li class="audit-item @itemClass" id="audit-issue-@iss.Issue.Code">
+              <span>@Html.Raw(icon)</span>
+              <div>
+                <div>@iss.Issue.Message</div>
+                @if (!string.IsNullOrEmpty(iss.Issue.ElementTarget))
+                {
+                  <span class="audit-jump-link" onclick="jumpToAuditElement('@iss.Issue.ElementTarget')">Jump to issue &rarr;</span>
+                }
+              </div>
+            </li>
+          }
+        </ul>
+      </div>
+
+      <div style="border-top: 1px solid var(--color-border, #ccd2d6); padding-top: 0.75rem;">
+        <button type="button" class="btn btn--primary" id="btn-publish-exam" @(Model.Detail.Audit.CanPublish ? "" : "disabled") style="width: 100%; border-radius: 0; text-transform: uppercase; font-family: var(--font-condensed, sans-serif); font-weight: bold; margin-bottom: 0.5rem;">
+          Publish Exam
+        </button>
+        <div style="display: flex; gap: 0.5rem; margin-top: 0.25rem;">
+          <a href="/admin/exams/@Model.Detail.ExamId/export?format=zip" class="btn btn--secondary" id="btn-export-exam" style="flex: 1; border-radius: 0; font-size: 0.8rem; text-align: center; text-decoration: none; padding: 0.45rem 0.25rem;">
+            Export ZIP
+          </a>
+          <a href="/admin/exams/@Model.Detail.ExamId/export?format=json" class="btn btn--secondary" id="btn-export-json" style="flex: 1; border-radius: 0; font-size: 0.8rem; text-align: center; text-decoration: none; padding: 0.45rem 0.25rem;">
+            Export JSON
+          </a>
+        </div>
+      </div>
+    </div>
+  </aside>

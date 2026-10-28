@@ -1,0 +1,97 @@
+@model AdminLessonEditViewModel
+<template id="card-template">
+  <div class="card card-item" data-index="__INDEX__" style="border: 2px solid var(--color-ink, #14181d);">
+    <input type="hidden" class="card-id" name="Cards[__INDEX__].CardId" value="" />
+    <input type="hidden" class="card-order" name="Cards[__INDEX__].DisplayOrder" value="__INDEX__" />
+
+    <div class="card__header row row--between" style="background: var(--color-surface, #f8f9fa); border-bottom: 1px solid var(--color-rule, #ccd2d6); padding: var(--space-xs) var(--space-sm);">
+      <div class="row" style="align-items: center; gap: var(--space-xs);">
+        <span class="card-badge font-mono badge badge--primary">Card #<span class="card-num">__NUM__</span></span>
+        <span class="card-type-label badge">__TYPE_UPPER__</span>
+      </div>
+      <div class="row" style="gap: var(--space-xxs);">
+        <button type="button" class="btn btn--sm btn--ghost" onclick="moveCardUp(this)" title="Move Up">Up</button>
+        <button type="button" class="btn btn--sm btn--ghost" onclick="moveCardDown(this)" title="Move Down">Down</button>
+        <button type="button" class="btn btn--sm btn--danger" onclick="removeCard(this)" title="Delete Card">Remove</button>
+      </div>
+    </div>
+
+    <div class="card__body stack" style="gap: var(--space-sm);">
+      <div class="grid-2">
+        <div class="field">
+          <label class="field__label">Card Type <span class="text-danger">*</span></label>
+          <select class="field__input card-type-select" name="Cards[__INDEX__].CardType" onchange="onCardTypeChanged(this)" required>
+            <option value="rule">Rule</option>
+            <option value="pitfall">Pitfall</option>
+            <option value="example">Example</option>
+            <option value="micro_check">Micro-Check (Practice Check)</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label class="field__label">Card Title <span class="text-danger">*</span></label>
+          <input class="field__input" name="Cards[__INDEX__].Title" type="text" maxlength="160" value="__TITLE__" required placeholder="e.g. Core Principle" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field__label">Content (GitHub-Flavored Markdown) <span class="text-danger">*</span></label>
+        <textarea class="field__input font-mono" name="Cards[__INDEX__].ContentMarkdown" rows="4" required placeholder="Write card body with **bold terms**, bullet lists, and code blocks...">__CONTENT__</textarea>
+      </div>
+
+      <div class="micro-check-fields stack" style="display: none; background: #fdfdfd; padding: var(--space-sm); border: 1px dashed var(--color-ink, #14181d); margin-top: var(--space-xs);">
+        <h3 style="margin-top: 0; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-ink, #14181d);">Micro-Check Question Configuration</h3>
+
+        <div class="field">
+          <label class="field__label">Question Prompt <span class="text-danger">*</span></label>
+          <textarea class="field__input" name="Cards[__INDEX__].QuestionPrompt" rows="2" placeholder="e.g. Which of the following sentences correctly applies the rule?"></textarea>
+        </div>
+
+        <div class="grid-2">
+          <div class="field">
+            <label class="field__label">Option A <span class="text-danger">*</span></label>
+            <input class="field__input" name="Cards[__INDEX__].OptionA" type="text" maxlength="250" placeholder="Option A text" />
+          </div>
+          <div class="field">
+            <label class="field__label">Option B <span class="text-danger">*</span></label>
+            <input class="field__input" name="Cards[__INDEX__].OptionB" type="text" maxlength="250" placeholder="Option B text" />
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="field">
+            <label class="field__label">Option C <span class="text-danger">*</span></label>
+            <input class="field__input" name="Cards[__INDEX__].OptionC" type="text" maxlength="250" placeholder="Option C text" />
+          </div>
+          <div class="field">
+            <label class="field__label">Option D <span class="text-danger">*</span></label>
+            <input class="field__input" name="Cards[__INDEX__].OptionD" type="text" maxlength="250" placeholder="Option D text" />
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="field">
+            <label class="field__label">Correct Option <span class="text-danger">*</span></label>
+            <select class="field__input font-mono" name="Cards[__INDEX__].CorrectOption">
+              <option value="">Select Correct Option</option>
+              <option value="A">Option A</option>
+              <option value="B">Option B</option>
+              <option value="C">Option C</option>
+              <option value="D">Option D</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label class="field__label">Distractor Rationale</label>
+            <input class="field__input" name="Cards[__INDEX__].Rationale" type="text" placeholder="Why incorrect options are wrong..." />
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="field__label">Explanation <span class="text-danger">*</span></label>
+          <textarea class="field__input" name="Cards[__INDEX__].Explanation" rows="2" placeholder="Full explanation displayed when learner confirms their answer..."></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>

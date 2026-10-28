@@ -69,7 +69,7 @@ public sealed class AdminPackagesControllerTests
         var result = await controller.Index(CancellationToken.None);
 
         var viewResult = Assert.IsType<ViewResult>(result);
-        var model = Assert.IsType<AdminPackagesSummaryDto>(viewResult.Model);
+        var model = Assert.IsType<AdminPackagesViewModel>(viewResult.Model).Summary;
         Assert.Equal(3, model.Packages.Count);
         Assert.Equal(2, model.PackagesOnSale);
         Assert.Equal(1, model.FeaturedCount);

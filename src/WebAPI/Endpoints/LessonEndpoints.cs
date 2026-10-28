@@ -4,7 +4,7 @@ using static WebAPI.Endpoints.EndpointHelpers;
 
 namespace WebAPI.Endpoints;
 
-public static class LessonEndpoints
+public static partial class LessonEndpoints
 {
     public static void MapLessonEndpoints(this IEndpointRouteBuilder app)
     {
@@ -32,83 +32,5 @@ public static class LessonEndpoints
         direct.MapPost("/lessons/{id:int}/cards/{cardId:int}/view", RecordCardViewAsync);
         direct.MapGet("/lessons/by-category/{categoryId:int}", GetLessonByCategoryAsync);
         direct.MapPost("/learning-path/{pathId:int}/unlock", UnlockPathAsync);
-    }
-
-    private static async Task<IResult> GetLessonAsync(
-        int id,
-        HttpContext http,
-        ILearnerService learners,
-        ILessonService lessons,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            var certId = await learners.GetActiveCertIdAsync(CurrentUserId(http), cancellationToken);
-            var lesson = await lessons.GetLessonAsync(id, certId);
-            if (lesson is null)
-            {
-                return Problem(StatusCodes.Status404NotFound, "Lesson not found", ApiError.Codes.LessonNotFound);
-            }
-            return Results.Ok(lesson);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return Problem(StatusCodes.Status404NotFound, "Lesson not found", ApiError.Codes.LessonNotFound, ex.Message);
-        }
-    }
-
-    private static async Task<IResult> GetLessonProgressAsync(
-        int id,
-        HttpContext http,
-        ILessonService lessons)
-    {
-        var progress = await lessons.GetProgressAsync(CurrentUserId(http), id);
-        return Results.Ok(progress);
-    }
-
-    private static async Task<IResult> RecordCardViewAsync(
-        int id,
-        int cardId,
-        HttpContext http,
-        ILessonService lessons)
-    {
-        await lessons.RecordCardViewAsync(CurrentUserId(http), id, cardId);
-        return Results.Ok(new { success = true });
-    }
-
-    private static async Task<IResult> GetLessonByCategoryAsync(
-        int categoryId,
-        HttpContext http,
-        ILearnerService learners,
-        ILessonService lessons,
-        CancellationToken cancellationToken)
-    {
-        var certId = await learners.GetActiveCertIdAsync(CurrentUserId(http), cancellationToken);
-        var lesson = await lessons.GetLessonByCategoryAsync(categoryId, certId);
-        if (lesson is null)
-        {
-            return Problem(StatusCodes.Status404NotFound, "Lesson not found for category", ApiError.Codes.LessonNotFound);
-        }
-        return Results.Ok(lesson);
-    }
-
-    private static async Task<IResult> UnlockPathAsync(
-        int pathId,
-        HttpContext http,
-        IPremiumPathService premiumPaths)
-    {
-        try
-        {
-            await premiumPaths.UnlockPathAsync(CurrentUserId(http), pathId);
-            return Results.Ok(new { success = true });
-        }
-        catch (InvalidOperationException ex) when (ex.Message.Contains("Insufficient credits", StringComparison.OrdinalIgnoreCase))
-        {
-            return Problem(StatusCodes.Status400BadRequest, "Insufficient credits", ApiError.Codes.InsufficientCredits, ex.Message);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return Problem(StatusCodes.Status400BadRequest, "Cannot unlock path", ApiError.Codes.Unexpected, ex.Message);
-        }
     }
 }

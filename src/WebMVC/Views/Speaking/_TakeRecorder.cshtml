@@ -1,0 +1,85 @@
+@model SpeakingTakeViewModel
+@{
+    var take = Model.Take;
+    var q = take.Question;
+}
+          <div class="card">
+            <div class="card__header">
+              <div class="row row--between">
+                <strong>Your answer</strong>
+                @if (q.DraftSavedAt.HasValue && !string.IsNullOrEmpty(q.AudioPath))
+                {
+                  <span class="badge badge--success">Saved @q.DraftSavedAt.Value.ToString("HH:mm:ss")</span>
+                }
+              </div>
+            </div>
+            <div class="card__body">
+
+              <!-- PREPARE STATE -->
+              <div class="state-block" id="block-prepare">
+                <div class="state-block__icon" aria-hidden="true">PREPARE</div>
+                <div class="state-block__title">Recording starts when preparation ends</div>
+                <p class="state-block__desc">Look at the prompt and plan your response. You are not being recorded yet.</p>
+                <span class="timer" role="timer" aria-label="Preparation time left">
+                  <span class="text-sm text-muted">Starts in</span>
+                  <span class="timer__value" id="prep-timer">00:@(q.PrepSeconds.ToString("D2"))</span>
+                </span>
+                <div class="recording-progress progress mx-auto mt-4">
+                  <div class="recording-progress-empty progress__bar" id="prep-progress"></div>
+                </div>
+              </div>
+
+              <!-- RECORDING STATE -->
+              <div class="state-block d-none" id="block-recording">
+                <div class="state-block__icon state-block__icon--danger" role="status">RECORDING</div>
+                <div class="state-block__title">Speak now</div>
+                <p class="state-block__desc">Speak into your microphone clearly. Recording stops automatically when speaking time ends.</p>
+                <span class="timer timer--critical" role="timer" aria-label="Speaking time left">
+                  <span class="text-sm">Time to speak</span>
+                  <span class="timer__value" id="speak-timer">00:@(q.ResponseSeconds.ToString("D2"))</span>
+                </span>
+                <div class="recording-progress progress mx-auto mt-4">
+                  <div class="recording-progress-empty progress__bar progress__bar--danger" id="speak-progress"></div>
+                </div>
+              </div>
+
+              <!-- RECORDED / PREVIEW STATE -->
+              <div class="state-block d-none" id="block-recorded">
+                <div class="state-block__icon state-block__icon--success" aria-hidden="true">RECORDED</div>
+                <div class="state-block__title" id="recorded-title">Answer recorded</div>
+                <p class="state-block__desc" id="recorded-desc">Listen to your recording before saving it. Saving advances to the next question.</p>
+                <div class="recording-preview exam-audio text-left">
+                  <span class="badge badge--muted">Audio</span>
+                  <div class="recording-player">
+                    <audio id="audio-player" controls class="w-100"></audio>
+                  </div>
+                </div>
+              </div>
+
+              <!-- SAVING STATE -->
+              <div class="state-block d-none" id="block-saving">
+                <div class="state-block__icon" aria-hidden="true">UPLOADING</div>
+                <div class="state-block__title">Saving your recording…</div>
+                <p class="state-block__desc">Uploading your audio file to secure storage. Do not close the window.</p>
+                <div class="recording-progress progress mx-auto mt-4">
+                  <div class="recording-upload-progress progress__bar"></div>
+                </div>
+              </div>
+
+            </div>
+            <div class="card__footer">
+              <div class="row row--between">
+                <div class="row" id="control-buttons">
+                  <button class="btn btn--primary" id="btn-start-now" type="button">Start recording now</button>
+                  <button class="btn btn--danger d-none" id="btn-stop-now" type="button">Stop recording</button>
+                  <button class="btn btn--primary d-none" id="btn-save-continue" type="button">Save and continue</button>
+                  <button class="btn d-none" id="btn-record-again" type="button">Record again</button>
+                  <button class="btn btn--primary d-none" id="btn-retry-upload" type="button">Retry upload</button>
+                </div>
+                <p class="recording-hint text-xs text-muted no-margin" id="record-again-hint">
+                  Recording again replaces this take.
+                </p>
+              </div>
+            </div>
+          </div>
+

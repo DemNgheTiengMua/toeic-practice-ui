@@ -1,0 +1,144 @@
+@using Contracts
+@model WebMVC.Models.AdminOrdersViewModel
+@{ var selected = Model.SelectedOrder; }
+@if (selected is not null)
+{
+  <div class="modal-overlay modal-overlay--open" role="dialog" aria-modal="true" aria-hidden="false" aria-labelledby="order-detail-title">
+    <div class="modal" style="max-width: 800px; width: 90%;">
+      <div class="modal__header row row--between">
+        <div>
+          <h2 id="order-detail-title">Order <code>@selected.Order.OrderCode</code></h2>
+          <p class="text-muted">
+            @selected.Order.UserEmail
+            @if (!string.IsNullOrEmpty(selected.Order.UserFullName))
+            {
+              <span>(@selected.Order.UserFullName)</span>
+            }
+            — @selected.Order.PackageName (@Model.SelectedAmount)
+          </p>
+        </div>
+        <a class="btn btn--sm btn--ghost" href="/admin/orders?q=@Model.Query&status=@Model.Status&gateway=@Model.Gateway">Close</a>
+      </div>
+      <div class="modal__body stack">
+        <div class="grid-2">
+          <div>
+            <strong>Gateway:</strong> @selected.Order.Gateway.ToWireCode().ToUpperInvariant()<br>
+            <strong>Payment No:</strong> <code>@selected.Order.PaymentNo</code><br>
+            <strong>Txn Reference:</strong> @(selected.Order.GatewayTxnRef ?? "—")<br>
+          </div>
+          <div>
+            <strong>Status:</strong>
+            @switch (selected.Order.Status)
+            {
+              case OrderStatusDto.Paid:
+                <span class="badge badge--success">Paid</span>
+                break;
+              case OrderStatusDto.Reconciling:
+                <span class="badge badge--warning">Reconciling</span>
+                break;
+              case OrderStatusDto.Pending:
+                <span class="badge">Pending</span>
+                break;
+              case OrderStatusDto.Failed:
+                <span class="badge badge--danger">Failed</span>
+                break;
+              case OrderStatusDto.Expired:
+                <span class="badge">Expired</span>
+                break;
+              default:
+                <span class="badge">@selected.Order.Status.ToWireCode()</span>
+                break;
+            }
+            <br>
+            <strong>Created:</strong> @Model.Dates[selected.Order.CreatedAt].Full<br>
+            @if (selected.Order.PaidAt.HasValue)
+            {
+              <strong>Paid at:</strong> @Model.Dates[selected.Order.PaidAt.Value].Full<br>
+            }
+          </div>
+        </div>
+
+        <h3>Payment Events Timeline</h3>
+        <p class="text-sm text-muted">Audit trail of all webhooks, return redirects, status queries, and cancellations in chronological order.</p>
+
+        @if (selected.Events.Count == 0)
+        {
+          <p class="text-muted">No payment events recorded for this order.</p>
+        }
+        else
+        {
+          <table class="table table--striped">
+            <thead>
+              <tr>
+                <th scope="col">Time</th>
+                <th scope="col">Source</th>
+                <th scope="col">Reported status</th>
+                <th scope="col">Verified</th>
+                <th scope="col">Applied</th>
+                <th scope="col">Note</th>
+              </tr>
+            </thead>
+            <tbody>
+              @foreach (var ev in selected.Events)
+              {
+                <tr>
+                  <td>@Model.Dates[ev.CreatedAt].Full</td>
+                  <td><code>@ev.Source</code></td>
+                  <td>
+                    @if (ev.ReportedStatus is not null)
+                    {
+                      <span class="badge">@ev.ReportedStatus</span>
+                    }
+                    else
+                    {
+                      <span>—</span>
+                    }
+                  </td>
+                  <td>
+                    @if (ev.SignatureValid)
+                    {
+                      <span class="badge badge--success">Valid</span>
+                    }
+                    else if (ev.Source == PaymentEventSourceDto.Webhook)
+                    {
+                      <span class="badge badge--danger">Invalid</span>
+                    }
+                    else
+                    {
+                      <span class="text-muted">N/A</span>
+                    }
+                  </td>
+                  <td>
+                    @if (ev.WasApplied)
+                    {
+                      <span class="badge badge--success">Yes</span>
+                    }
+                    else
+                    {
+                      <span class="text-muted">No</span>
+                    }
+                  </td>
+                  <td>@(ev.Note ?? "—")</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </div>
+      <div class="modal__footer row row--between">
+        @if (selected.Order.Status is OrderStatusDto.Reconciling or OrderStatusDto.Pending)
+        {
+          <form method="post" action="/admin/orders/@selected.Order.OrderId/reconcile" class="no-margin">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn--primary">Reconcile status with gateway</button>
+          </form>
+        }
+        else
+        {
+          <div></div>
+        }
+        <a class="btn btn--ghost" href="/admin/orders?q=@Model.Query&status=@Model.Status&gateway=@Model.Gateway">Close</a>
+      </div>
+    </div>
+  </div>
+}

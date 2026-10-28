@@ -10,6 +10,9 @@ public sealed class MentorsController(
     ILogger<MentorsController> logger)
     : LearnerControllerBase(currentUser, logger)
 {
+    private DateTimeFormatter Dates => HttpContext.RequestServices?.GetService(typeof(DateTimeFormatter)) as DateTimeFormatter
+        ?? new(new HttpContextAccessor { HttpContext = HttpContext });
+
     [HttpGet("/mentors")]
     public async Task<IActionResult> Index([FromQuery] string? skill, CancellationToken cancellationToken)
     {
@@ -34,7 +37,7 @@ public sealed class MentorsController(
         try
         {
             var detail = await api.GetMentorDetailAsync(mentorId, cancellationToken);
-            return View(new MentorDetailViewModel(detail));
+            return View(new MentorDetailViewModel(detail).PrepareDates(Dates));
         }
         catch (ApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
@@ -73,7 +76,7 @@ public sealed class MentorsController(
                         detail.Mentor,
                         null,
                         balance,
-                        ErrorMessage: "The selected time slot is no longer available. Please choose another slot.");
+                        ErrorMessage: "The selected time slot is no longer available. Please choose another slot.").PrepareDates(Dates);
                     return View(vm);
                 }
             }
@@ -81,7 +84,7 @@ public sealed class MentorsController(
             var viewModel = new MentorConfirmViewModel(
                 detail.Mentor,
                 selectedSlot,
-                balance);
+                balance).PrepareDates(Dates);
 
             return View(viewModel);
         }
@@ -133,7 +136,7 @@ public sealed class MentorsController(
                 balance,
                 focusArea,
                 examId,
-                ErrorMessage: $"Not enough credits. A mentor session costs {detail.Mentor.PriceCredits} credit(s) and you have {balance}. Nothing was deducted."));
+                ErrorMessage: $"Not enough credits. A mentor session costs {detail.Mentor.PriceCredits} credit(s) and you have {balance}. Nothing was deducted.").PrepareDates(Dates));
         }
         catch (ApiException ex) when (ex.Code == ApiError.Codes.SlotNotAvailable)
         {
@@ -147,7 +150,7 @@ public sealed class MentorsController(
                 balance,
                 focusArea,
                 examId,
-                ErrorMessage: "Booking failed. The time slot may no longer be available. No credit was deducted. Pick a different slot."));
+                ErrorMessage: "Booking failed. The time slot may no longer be available. No credit was deducted. Pick a different slot.").PrepareDates(Dates));
         }
         catch (ApiException ex)
         {
@@ -162,7 +165,7 @@ public sealed class MentorsController(
                 balance,
                 focusArea,
                 examId,
-                ErrorMessage: ex.Detail ?? "Booking failed. Please try again."));
+                ErrorMessage: ex.Detail ?? "Booking failed. Please try again.").PrepareDates(Dates));
         }
     }
 
@@ -172,12 +175,12 @@ public sealed class MentorsController(
         try
         {
             var bookings = await api.GetLearnerBookingsAsync(cancellationToken);
-            return View(new LearnerBookingsViewModel(bookings));
+            return View(new LearnerBookingsViewModel(bookings).PrepareDates(Dates));
         }
         catch (ApiException ex)
         {
             logger.LogError(ex, "Failed to load learner bookings");
-            return View(new LearnerBookingsViewModel([], "Could not load bookings. Please try again."));
+            return View(new LearnerBookingsViewModel([], "Could not load bookings. Please try again.").PrepareDates(Dates));
         }
     }
 
@@ -190,7 +193,7 @@ public sealed class MentorsController(
             return View(new MentorBookingDetailViewModel(
                 booking,
                 SuccessMessage: TempData["ShellSuccess"] as string,
-                ErrorMessage: TempData["ShellError"] as string));
+                ErrorMessage: TempData["ShellError"] as string).PrepareDates(Dates));
         }
         catch (ApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
         {

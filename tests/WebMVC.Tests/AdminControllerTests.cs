@@ -78,7 +78,7 @@ public sealed class AdminControllerTests
         var result = await controller.Index(CancellationToken.None);
 
         var viewResult = Assert.IsType<ViewResult>(result);
-        var model = Assert.IsType<AdminDashboardDto>(viewResult.Model);
+        var model = Assert.IsType<WebMVC.Models.AdminDashboardViewModel>(viewResult.Model).Dashboard;
 
         Assert.Equal(1284, model.ActiveLearnersCount);
         Assert.Equal(47, model.NewLearners7DaysCount);
@@ -105,7 +105,7 @@ public sealed class AdminControllerTests
         var result = await controller.Index(CancellationToken.None);
 
         var viewResult = Assert.IsType<ViewResult>(result);
-        var model = Assert.IsType<AdminDashboardDto>(viewResult.Model);
+        var model = Assert.IsType<WebMVC.Models.AdminDashboardViewModel>(viewResult.Model).Dashboard;
 
         Assert.Equal(0, model.ActiveLearnersCount);
         Assert.Equal(0, model.NewLearners7DaysCount);
@@ -128,7 +128,7 @@ public sealed class AdminControllerTests
         var result = await controller.Index(CancellationToken.None);
 
         var viewResult = Assert.IsType<ViewResult>(result);
-        var model = Assert.IsType<AdminDashboardDto>(viewResult.Model);
+        var model = Assert.IsType<WebMVC.Models.AdminDashboardViewModel>(viewResult.Model).Dashboard;
 
         Assert.Equal(0, model.ActiveLearnersCount);
         Assert.Equal(0m, model.RevenueThisMonthVnd);
@@ -145,7 +145,7 @@ public sealed class AdminControllerTests
         var result = await controller.Index(CancellationToken.None);
 
         var viewResult = Assert.IsType<ViewResult>(result);
-        var model = Assert.IsType<AdminDashboardDto>(viewResult.Model);
+        var model = Assert.IsType<WebMVC.Models.AdminDashboardViewModel>(viewResult.Model).Dashboard;
 
         Assert.Equal(0, model.ActiveLearnersCount);
         Assert.Equal(0m, model.RevenueThisMonthVnd);

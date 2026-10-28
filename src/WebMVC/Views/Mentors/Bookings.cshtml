@@ -1,5 +1,4 @@
 @model WebMVC.Models.LearnerBookingsViewModel
-@inject WebMVC.DateTimeFormatter Dates
 @{
     Layout = "_LearnerLayout";
     ViewData["Title"] = "My Bookings";
@@ -84,13 +83,13 @@
                 @if (b.StartAt.HasValue)
                 {
                   <p class="text-muted no-margin">
-                    <strong>Time:</strong> @Dates.FormatCustom(b.StartAt.Value, "dddd, MMM d — h:mm tt")
+                    <strong>Time:</strong> @Model.Dates[b.StartAt.Value].Session
                   </p>
                 }
                 else
                 {
                   <p class="text-muted no-margin">
-                    <strong>Booked on:</strong> @Dates.Format(b.CreatedAt)
+                    <strong>Booked on:</strong> @Model.Dates[b.CreatedAt].Full
                   </p>
                 }
 

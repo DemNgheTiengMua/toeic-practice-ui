@@ -30,9 +30,10 @@ public sealed class WeaknessAnalysisController(
             {
                 logger.LogWarning(ex, "Could not pre-fetch AI insight for weakness analysis");
             }
-            ViewBag.Insight = insight;
-
-            return View(new WeaknessAnalysisViewModel(data, TempData["ErrorMessage"] as string, TempData["SuccessMessage"] as string));
+            return View(new WeaknessAnalysisViewModel(data, TempData["ErrorMessage"] as string, TempData["SuccessMessage"] as string)
+            {
+                InsightPanel = new("dashboard", insight?.CertId ?? 0, insight)
+            });
         }
         catch (ApiException ex)
         {

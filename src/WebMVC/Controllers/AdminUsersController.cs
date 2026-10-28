@@ -12,6 +12,10 @@ public sealed class AdminUsersController(
     CurrentUser currentUser,
     ILogger<AdminUsersController> logger) : AdminControllerBase(currentUser, logger)
 {
+    private DateTimeFormatter Dates => HttpContext.RequestServices?.GetService(typeof(DateTimeFormatter)) as DateTimeFormatter
+        ?? new(new HttpContextAccessor { HttpContext = HttpContext });
+
+
 
     [HttpGet("")]
     public async Task<IActionResult> Index(
@@ -32,14 +36,14 @@ public sealed class AdminUsersController(
             }
 
             var vm = new AdminUsersViewModel(summary, q, status, page, adjustUser);
-            return View("~/Views/Admin/Users.cshtml", vm);
+            return View("~/Views/Admin/Users.cshtml", (vm).WithDates(Dates));
         }
         catch (HttpRequestException ex)
         {
             logger.LogError(ex, "Could not load admin students list");
             TempData["Error"] = "Could not load the students list. Please try again.";
             var emptySummary = new AdminUsersSummaryDto([], 0, 1, 20, 0, 0, 0);
-            return View("~/Views/Admin/Users.cshtml", new AdminUsersViewModel(emptySummary, q, status, page));
+            return View("~/Views/Admin/Users.cshtml", (new AdminUsersViewModel(emptySummary, q, status, page)).WithDates(Dates));
         }
     }
 

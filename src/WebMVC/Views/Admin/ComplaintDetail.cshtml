@@ -5,15 +5,6 @@
     ViewData["Title"] = $"Complaint #C-{Model.Complaint.ComplaintId}";
     ViewData["Description"] = "Complaint detail and admin resolution.";
 
-    string FormatType(ComplaintTypeDto type) => type switch
-    {
-        ComplaintTypeDto.MentorNoShow => "Mentor no-show",
-        ComplaintTypeDto.MentorQuality => "Mentor quality",
-        ComplaintTypeDto.GradingIssue => "Grading issue",
-        ComplaintTypeDto.TechnicalError => "Technical error",
-        ComplaintTypeDto.PaymentIssue => "Payment issue",
-        _ => type.ToString(),
-    };
 
     var isResolved = Model.Complaint.Status == ComplaintStatusDto.Resolved;
 }
@@ -67,7 +58,7 @@
           </div>
           <div>
             <dt class="text-muted">Resolved by</dt>
-            <dd class="m-0 fw-600">@(Model.Complaint.ResolvedByUserName ?? "Admin") · @Model.Complaint.ResolvedAt?.ToString("dd MMM yyyy, HH:mm")</dd>
+            <dd class="m-0 fw-600">@(Model.Complaint.ResolvedByUserName ?? "Admin") · @Model.ResolvedAt</dd>
           </div>
           <div>
             <dt class="text-muted">Credit issued</dt>
@@ -148,7 +139,7 @@
             </div>
             <div>
               <dt class="text-muted">Type</dt>
-              <dd class="m-0">@FormatType(Model.Complaint.Type)</dd>
+              <dd class="m-0">@Model.TypeLabel</dd>
             </div>
             <div>
               <dt class="text-muted">Related to</dt>
@@ -162,7 +153,7 @@
             </div>
             <div>
               <dt class="text-muted">Submitted</dt>
-              <dd class="m-0">@Model.Complaint.CreatedAt.ToString("dd MMM yyyy, HH:mm")</dd>
+              <dd class="m-0">@Model.CreatedAt</dd>
             </div>
             <div>
               <dt class="text-muted">Description</dt>
@@ -207,49 +198,6 @@
       </form>
     </div>
 
-    <script>
-      (function() {
-        const form = document.querySelector('form[action*="/resolve"]');
-        if (!form) return;
-
-        const resInput = document.getElementById('cd-resolution');
-        const notesInput = document.getElementById('cd-notes');
-
-        function checkField(input) {
-          if (!input) return true;
-          const field = input.closest('.field');
-          const val = (input.value || '').trim();
-          if (!val) {
-            if (field) field.classList.add('field--error');
-            input.setAttribute('aria-invalid', 'true');
-            return false;
-          } else {
-            if (field) field.classList.remove('field--error');
-            input.removeAttribute('aria-invalid');
-            return true;
-          }
-        }
-
-        [resInput, notesInput].forEach(function(input) {
-          if (!input) return;
-          input.addEventListener('input', function() {
-            checkField(input);
-          });
-        });
-
-        form.addEventListener('submit', function(e) {
-          const resOk = checkField(resInput);
-          const notesOk = checkField(notesInput);
-          if (!resOk || !notesOk) {
-            e.preventDefault();
-            if (!resOk && resInput) {
-              resInput.focus();
-            } else if (!notesOk && notesInput) {
-              notesInput.focus();
-            }
-          }
-        });
-      })();
-    </script>
+    <script src="~/js/admin/complaints/detail.js" asp-append-version="true"></script>
   }
 </div>

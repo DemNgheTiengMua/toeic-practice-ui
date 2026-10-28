@@ -104,6 +104,30 @@ public sealed class PlacementController(
         }
     }
 
+    [HttpGet("/placement/take/{placementId:int}/fragment")]
+    public async Task<IActionResult> TakeFragment(int placementId, [FromQuery] int? q, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var take = await api.GetPlacementTakeAsync(placementId, q, cancellationToken);
+            if (take.Status == PlacementStatusDto.Done || take.IsAutoSubmitted)
+            {
+                return StatusCode(StatusCodes.Status409Conflict, new { redirectUrl = Url.Action(nameof(Result), new { placementId }) });
+            }
+
+            return PartialView("_TakeDynamic", new PlacementTakeViewModel(take));
+        }
+        catch (ApiException ex) when (ex.Code == ApiError.Codes.PreflightRequired)
+        {
+            return StatusCode(StatusCodes.Status409Conflict, new { redirectUrl = Url.Action(nameof(ExamsController.Preflight), "Exams", new { placementId }) });
+        }
+        catch (ApiException ex)
+        {
+            logger.LogWarning(ex, "Failed to load placement fragment {PlacementId}", placementId);
+            return StatusCode(ex.Status, new { code = ex.Code, message = ex.Detail ?? ex.Message });
+        }
+    }
+
     [HttpPost("/placement/take/{placementId:int}/answers/{questionId:int}")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> SaveAnswer(

@@ -221,7 +221,7 @@ public sealed class AdminExamsController(
             SuccessMessage = TempData["Success"] as string
         };
 
-        return View("~/Views/Admin/ExamEditor.cshtml", vm);
+        return View("~/Views/Admin/ExamEditor.cshtml", new ExamEditorViewModel(vm));
     }
 
     [HttpPost("create")]
@@ -231,7 +231,7 @@ public sealed class AdminExamsController(
         if (!ModelState.IsValid)
         {
             model.Certificates = await LoadCertificatesAsync(cancellationToken);
-            return View("~/Views/Admin/ExamEditor.cshtml", model);
+            return View("~/Views/Admin/ExamEditor.cshtml", new ExamEditorViewModel(model));
         }
 
         try
@@ -256,7 +256,7 @@ public sealed class AdminExamsController(
             logger.LogWarning(ex, "Failed to create exam");
             model.Certificates = await LoadCertificatesAsync(cancellationToken);
             model.ErrorMessage = ex.Detail ?? ex.Message;
-            return View("~/Views/Admin/ExamEditor.cshtml", model);
+            return View("~/Views/Admin/ExamEditor.cshtml", new ExamEditorViewModel(model));
         }
     }
 
@@ -288,7 +288,7 @@ public sealed class AdminExamsController(
                 SuccessMessage = TempData["Success"] as string
             };
 
-            return View("~/Views/Admin/ExamEditor.cshtml", vm);
+            return View("~/Views/Admin/ExamEditor.cshtml", new ExamEditorViewModel(vm));
         }
         catch (ApiException ex) when (ex.Status == 404 || ex.Code == ApiError.Codes.ExamNotFound)
         {
@@ -309,7 +309,7 @@ public sealed class AdminExamsController(
         if (!ModelState.IsValid)
         {
             model.Certificates = await LoadCertificatesAsync(cancellationToken);
-            return View("~/Views/Admin/ExamEditor.cshtml", model);
+            return View("~/Views/Admin/ExamEditor.cshtml", new ExamEditorViewModel(model));
         }
 
         try
@@ -742,7 +742,7 @@ public sealed class AdminExamsController(
         try
         {
             var studio = await api.GetAdminExamStudioAsync(id, cancellationToken);
-            return View("~/Views/Admin/ExamStudio.cshtml", studio);
+            return View("~/Views/Admin/ExamStudio.cshtml", new ExamStudioViewModel(studio));
         }
         catch (ApiException ex)
         {

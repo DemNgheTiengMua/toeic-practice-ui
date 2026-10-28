@@ -32,7 +32,7 @@
       <div class="card__body stack">
         <div class="field">
           <label class="field__label" for="sr-category">What is this about?</label>
-          <select class="field__input" id="sr-category" name="category" onchange="updateFormCategories()">
+          <select class="field__input" id="sr-category" data-current-type="@(Model.Type ?? "mentor_no_show")" name="category" onchange="updateFormCategories()">
             <option value="mentor" selected="@(Model.Category == "mentor" ? "selected" : null)">A mentor session</option>
             <option value="exam" selected="@(Model.Category == "exam" ? "selected" : null)">An exam or its grading</option>
             <option value="payment" selected="@(Model.Category == "payment" ? "selected" : null)">A payment</option>
@@ -56,9 +56,8 @@
             }
             @foreach (var b in Model.EligibleSubjects.Bookings)
             {
-              var time = b.ScheduledAt?.ToString("dd MMM yyyy, HH:mm") ?? "Scheduled";
               <option value="@b.BookingId" selected="@(Model.BookingId == b.BookingId ? "selected" : null)">
-                Booking #@b.BookingId — @b.MentorName (@time, @b.Status)
+                @Model.BookingLabels[b.BookingId]
               </option>
             }
           </select>
@@ -75,9 +74,8 @@
             }
             @foreach (var a in Model.EligibleSubjects.Attempts)
             {
-              var score = a.TotalScore.HasValue ? $", score {a.TotalScore}" : "";
               <option value="@a.AttemptId" selected="@(Model.AttemptId == a.AttemptId ? "selected" : null)">
-                Exam #@a.AttemptId — @a.ExamTitle (@a.StartedAt.ToString("dd MMM yyyy, HH:mm")@score)
+                @Model.AttemptLabels[a.AttemptId]
               </option>
             }
           </select>
@@ -95,7 +93,7 @@
             @foreach (var o in Model.EligibleSubjects.Orders)
             {
               <option value="@o.OrderId" selected="@(Model.OrderId == o.OrderId ? "selected" : null)">
-                Order @o.OrderCode — @o.PackageName (@o.Amount.ToString("N0") ₫, @o.Status)
+                @Model.OrderLabels[o.OrderId]
               </option>
             }
           </select>
@@ -125,51 +123,4 @@
   </div>
 </div>
 
-<script>
-  var currentType = "@Html.Raw(System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(Model.Type ?? "mentor_no_show"))";
-
-  function updateFormCategories() {
-    var cat = document.getElementById("sr-category").value;
-    var typeSelect = document.getElementById("sr-type");
-    typeSelect.innerHTML = "";
-
-    var bookingField = document.getElementById("field-booking");
-    var attemptField = document.getElementById("field-attempt");
-    var orderField = document.getElementById("field-order");
-
-    bookingField.style.display = "none";
-    attemptField.style.display = "none";
-    orderField.style.display = "none";
-
-    if (cat === "mentor") {
-      bookingField.style.display = "";
-      addOption(typeSelect, "mentor_no_show", "The mentor did not show up", currentType);
-      addOption(typeSelect, "mentor_quality", "The session quality was poor", currentType);
-    } else if (cat === "exam") {
-      attemptField.style.display = "";
-      addOption(typeSelect, "grading_issue", "An issue with grading or scoring", currentType);
-      addOption(typeSelect, "technical_error", "Technical error during exam", currentType);
-    } else if (cat === "payment") {
-      orderField.style.display = "";
-      addOption(typeSelect, "payment_issue", "A payment or credit issue", currentType);
-    }
-  }
-
-  function addOption(select, value, text, selectedVal) {
-    var opt = document.createElement("option");
-    opt.value = value;
-    opt.textContent = text;
-    if (value === selectedVal) opt.selected = true;
-    select.appendChild(opt);
-  }
-
-  document.addEventListener("DOMContentLoaded", function () {
-    var typeSelect = document.getElementById("sr-type");
-    if (typeSelect) {
-      typeSelect.addEventListener("change", function () {
-        currentType = this.value;
-      });
-    }
-    updateFormCategories();
-  });
-</script>
+<script src="~/js/support/report.js" asp-append-version="true"></script>

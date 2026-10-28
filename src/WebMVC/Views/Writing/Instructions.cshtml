@@ -4,7 +4,6 @@
     var instr = Model.Instructions;
     ViewData["Title"] = $"Writing Instructions — {instr.ExamName}";
     ViewData["Description"] = $"Writing practice instructions for {instr.ExamName}.";
-    var hasCredits = instr.CreditBalance >= instr.CreditCost;
 }
 
 <nav class="breadcrumbs" aria-label="Breadcrumb">
@@ -23,7 +22,7 @@
     </p>
   </div>
   <div>
-    <span class="badge @(hasCredits ? "badge--info" : "badge--warning")">
+    <span class="badge @(Model.HasCredits ? "badge--info" : "badge--warning")">
       @instr.CreditBalance @(instr.CreditBalance == 1 ? "credit" : "credits") left
     </span>
   </div>
@@ -34,7 +33,7 @@
   <div class="alert alert--danger" role="alert">@Model.ErrorMessage</div>
 }
 
-@if (!hasCredits)
+@if (!Model.HasCredits)
 {
   <div class="card">
     <div class="card__body">
@@ -123,10 +122,5 @@ else
     </form>
   </div>
 
-  <script>
-    document.getElementById('confirm-ready')?.addEventListener('change', function() {
-      const btn = document.getElementById('btn-start');
-      if (btn) btn.disabled = !this.checked;
-    });
-  </script>
+  <script src="~/js/writing/instructions.js" asp-append-version="true"></script>
 }

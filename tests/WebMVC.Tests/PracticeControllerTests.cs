@@ -96,6 +96,10 @@ public sealed class PracticeControllerTests
         Assert.NotNull(model.Questions);
         Assert.Equal(2, model.Questions.Count);
         Assert.Equal(102, model.Question.QuestionId);
+        Assert.Equal(1, model.Take.AnsweredCount);
+        Assert.Equal(100, model.Take.AccuracyPercent);
+        Assert.Equal(50, model.Take.ProgressPercent);
+        Assert.Equal(1, model.Take.SavedCount);
         Assert.NotNull(model.Navigator);
         Assert.Equal(2, model.Navigator.Count);
         Assert.True(model.Navigator[0].IsAnswered);
@@ -209,7 +213,7 @@ public sealed class PracticeControllerTests
         var result = await controller.Summary(42, CancellationToken.None);
 
         var viewResult = Assert.IsType<ViewResult>(result);
-        var model = Assert.IsType<PracticeSummaryDto>(viewResult.Model);
+        var model = Assert.IsType<PracticeSummaryViewModel>(viewResult.Model).Summary;
         Assert.Equal(79, model.AccuracyPercentage);
         Assert.Equal(1, model.SkippedCount);
     }
@@ -277,7 +281,7 @@ public sealed class PracticeControllerTests
     }
 
     [Fact]
-    public async Task Summary_prefetches_insight_into_viewbag()
+    public async Task Summary_prefetches_insight_into_display_model()
     {
         var sampleInsight = new AiInsightDto(
             1, 7, 1, AiInsightScopeDto.PracticeSession, 42, null,
@@ -296,7 +300,7 @@ public sealed class PracticeControllerTests
         var result = await controller.Summary(42, CancellationToken.None);
 
         var viewResult = Assert.IsType<ViewResult>(result);
-        var insightInViewBag = Assert.IsType<AiInsightDto>(viewResult.ViewData["Insight"]);
+        var insightInViewBag = Assert.IsType<AiInsightDto>(Assert.IsType<PracticeSummaryViewModel>(viewResult.Model).InsightPanel.Insight);
         Assert.Equal("Pre-fetched insight", insightInViewBag.Narrative);
     }
 
@@ -357,7 +361,7 @@ public sealed class PracticeControllerTests
         var httpContext = new DefaultHttpContext { User = principal, RequestServices = serviceProvider };
         var currentUser = new CurrentUser(new HttpContextAccessor { HttpContext = httpContext });
 
-        var controller = new PracticeController(api, currentUser, NullLogger<PracticeController>.Instance)
+        var controller = new PracticeController(api, currentUser, NullLogger<PracticeController>.Instance, new WebMVC.Formatters.DateTimeFormatter(new HttpContextAccessor()))
         {
             ControllerContext = new ControllerContext
             {

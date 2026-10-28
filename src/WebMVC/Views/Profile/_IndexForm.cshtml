@@ -1,0 +1,35 @@
+@model ProfileViewModel
+    <form method="post" asp-action="Index" class="card">
+      <div class="card__header"><strong>Basic information</strong></div>
+      <div class="card__body stack">
+        @Html.AntiForgeryToken()
+
+        <div class="field">
+          <label class="field__label" asp-for="FullName">Full name</label>
+          <input class="field__input" asp-for="FullName" autocomplete="name" required>
+          <span asp-validation-for="FullName" class="field__error"></span>
+        </div>
+
+        <div class="field">
+          <label class="field__label" asp-for="Phone">Phone number</label>
+          <input class="field__input" asp-for="Phone" autocomplete="tel">
+          <span asp-validation-for="Phone" class="field__error"></span>
+        </div>
+
+        <div class="field">
+          <label class="field__label" asp-for="TimeZoneId">Time zone</label>
+          <select class="field__input" asp-for="TimeZoneId">
+            @foreach (var zone in Model.TimeZoneOptions)
+            {
+              <option value="@zone">@zone.Replace("_", " ")</option>
+            }
+          </select>
+          <span asp-validation-for="TimeZoneId" class="field__error"></span>
+          <div class="field__hint">All exam timestamps, bookings, and reports use this timezone.</div>
+        </div>
+      </div>
+
+      <div class="card__footer">
+        <button type="submit" class="btn btn--primary">Save changes</button>
+      </div>
+    </form>

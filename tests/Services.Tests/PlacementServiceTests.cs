@@ -621,6 +621,23 @@ public sealed class PlacementServiceTests(DatabaseFixture database)
     }
 
     [Fact]
+    public async Task SaveAnswer_FreeResponse_PersistsFlagAcrossReload()
+    {
+        var certCode = Unique("PC16FLAG");
+        var (_, examId, writingQId) = await SeedHybridPlacementFixtureAsync(certCode);
+        var userId = await SeedLearnerAsync(certCode);
+        var (service, _) = CreateServices();
+
+        var info = await service.StartPlacementTestAsync(userId, examId);
+        var result = await service.SaveAnswerAsync(userId, info.PlacementId, writingQId, null, isFlagged: true, responseText: "A flagged writing response.");
+
+        Assert.True(result.IsFlagged);
+        var take = await service.GetPlacementTakeAsync(userId, info.PlacementId, 1);
+        Assert.True(take.CurrentQuestion.IsFlagged);
+        Assert.True(take.Navigator.Single().IsFlagged);
+    }
+
+    [Fact]
     public async Task SaveDraftAsync_SavesDraft_AndGetGradingStatusAsync_ReportsStatus()
     {
         var certCode = Unique("PC16");

@@ -6,47 +6,6 @@ using System.Threading.Tasks;
 
 namespace Services;
 
-public record AiGradingRequest(
-    int FreeResponseId,
-    int SkillId,
-    int CertId,
-    string QuestionStem,
-    int? MinWords,
-    int? MaxWords,
-    string ResponseText,
-    IReadOnlyList<GradingCriterionDetail> Criteria,
-    int AttemptCount = 1,
-    string? AudioPath = null,
-    int? DurationMs = null
-);
-
-public record GradingCriterionDetail(
-    int CriterionId,
-    string Code,
-    string Name,
-    decimal MaxScore,
-    decimal Weight
-);
-
-public record AiGradingResult(
-    bool Success,
-    string? FailureReason,
-    string? Model,
-    IReadOnlyList<AiCriterionScoreResult> Scores,
-    string? Transcript = null
-);
-
-public record AiCriterionScoreResult(
-    int CriterionId,
-    decimal Score,
-    string? Comment
-);
-
-public interface IAiGrader
-{
-    Task<AiGradingResult> GradeAsync(AiGradingRequest request, CancellationToken cancellationToken = default);
-}
-
 /// <summary>
 /// Deterministic fake grader for offline execution and testing.
 /// Scores responses against criteria within [0, MaxScore] bounds.

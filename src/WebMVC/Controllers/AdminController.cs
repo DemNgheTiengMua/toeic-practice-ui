@@ -17,13 +17,13 @@ public sealed class AdminController(
         try
         {
             var dashboard = await api.GetAdminDashboardAsync(cancellationToken);
-            return View(dashboard ?? AdminDashboardDto.Empty);
+            return View(new WebMVC.Models.AdminDashboardViewModel(dashboard ?? AdminDashboardDto.Empty));
         }
         catch (HttpRequestException ex)
         {
             logger?.LogError(ex, "Could not load admin dashboard metrics");
             TempData["Error"] = "Could not load the dashboard metrics. Please try again.";
-            return View(AdminDashboardDto.Empty);
+            return View(new WebMVC.Models.AdminDashboardViewModel(AdminDashboardDto.Empty));
         }
     }
 }

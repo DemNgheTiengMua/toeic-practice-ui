@@ -40,7 +40,7 @@
         <div class="field">
           <label class="field__label" for="pkg-price">Price (₫)</label>
           <input class="field__input" id="pkg-price" name="Price" type="number" min="0" step="1000" value="@((long)Model.Price)" required>
-          <span class="field__hint" id="pkg-unit-hint">Unit price: @(Model.Credits > 0 ? (Model.Price / Model.Credits).ToString("#,##0") : "0") ₫/credit</span>
+          <span class="field__hint" id="pkg-unit-hint">Unit price: @Model.UnitPrice ₫/credit</span>
           <span asp-validation-for="Price" class="text-xs text-danger"></span>
         </div>
       </div>
@@ -86,21 +86,5 @@
 </div>
 
 @section Scripts {
-<script>
-  (function() {
-    var inputCredits = document.getElementById('pkg-credits');
-    var inputPrice = document.getElementById('pkg-price');
-    var unitHint = document.getElementById('pkg-unit-hint');
-
-    function updateHint() {
-      var credits = parseInt(inputCredits.value, 10) || 1;
-      var price = parseFloat(inputPrice.value) || 0;
-      var unit = Math.round(price / (credits > 0 ? credits : 1));
-      unitHint.textContent = 'Unit price: ' + unit.toLocaleString('en-US') + ' ₫/credit';
-    }
-
-    inputCredits.addEventListener('input', updateHint);
-    inputPrice.addEventListener('input', updateHint);
-  })();
-</script>
+<script src="~/js/admin/packages/form.js" asp-append-version="true"></script>
 }

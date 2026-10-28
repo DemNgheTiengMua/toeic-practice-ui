@@ -10,6 +10,10 @@ public sealed class CheckoutController(
     ILogger<CheckoutController> logger)
     : LearnerControllerBase(currentUser, logger)
 {
+    private DateTimeFormatter Dates => HttpContext.RequestServices?.GetService(typeof(DateTimeFormatter)) as DateTimeFormatter
+        ?? new(new HttpContextAccessor { HttpContext = HttpContext });
+
+
     [HttpGet("/checkout")]
     public async Task<IActionResult> Index([FromQuery] int packageId, CancellationToken cancellationToken)
     {
@@ -27,12 +31,12 @@ public sealed class CheckoutController(
         try
         {
             var preview = await api.GetCheckoutPreviewAsync(packageId, cancellationToken);
-            return View(new CheckoutViewModel(preview, ErrorMessage: TempData["ErrorMessage"] as string));
+            return View((new CheckoutViewModel(preview, ErrorMessage: TempData["ErrorMessage"] as string)).WithDates(Dates));
         }
         catch (ApiException ex) when (ex.Code == ApiError.Codes.EmailNotVerified)
         {
             logger.LogInformation("Unverified learner attempted checkout");
-            return View(new CheckoutViewModel(null, IsBlockedUnverified: true));
+            return View((new CheckoutViewModel(null, IsBlockedUnverified: true)).WithDates(Dates));
         }
         catch (ApiException ex) when (ex.Code == ApiError.Codes.PackageNotFound)
         {
@@ -72,7 +76,7 @@ public sealed class CheckoutController(
             {
                 return StatusCode(StatusCodes.Status403Forbidden, new { error = "EMAIL_NOT_VERIFIED", message = "Email verification required" });
             }
-            return View("Index", new CheckoutViewModel(null, IsBlockedUnverified: true));
+            return View("Index", (new CheckoutViewModel(null, IsBlockedUnverified: true)).WithDates(Dates));
         }
         catch (ApiException ex) when (ex.Code == ApiError.Codes.OrderAlreadyOpen)
         {
@@ -169,7 +173,7 @@ public sealed class CheckoutController(
         try
         {
             var result = await api.HandleReturnAsync(new HandleReturnRequest(orderCode), cancellationToken);
-            return View(new PaymentResultViewModel(result));
+            return View(new PaymentResultViewModel(result).WithDates(Dates));
         }
         catch (ApiException ex)
         {
@@ -185,7 +189,7 @@ public sealed class CheckoutController(
                 CreatedAt: DateTimeOffset.UtcNow,
                 PaidAt: null,
                 CurrentBalance: 0,
-                Message: "Could not read the order status."), LoadFailed: true));
+                Message: "Could not read the order status."), LoadFailed: true).WithDates(Dates));
         }
     }
 }

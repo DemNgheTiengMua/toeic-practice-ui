@@ -1,5 +1,4 @@
 @model PracticeCatalogViewModel
-@inject DateTimeFormatter Dates
 @{
     Layout = "_LearnerLayout";
     ViewData["Title"] = "Practice by section";
@@ -26,7 +25,7 @@
 {
   <div class="alert alert--info row row--between row--middle row--wrap" role="status">
     <div>
-      <strong>Unfinished practice:</strong> You have an in-progress session in <strong>@unfinished.SectionName</strong> started @Dates.FormatDate(unfinished.StartedAt).
+      <strong>Unfinished practice:</strong> You have an in-progress session in <strong>@unfinished.SectionName</strong> started @Model.UnfinishedStartedAtDisplay.
       <div class="text-sm text-muted">@unfinished.CorrectCount of @unfinished.QuestionCount questions answered so far.</div>
     </div>
     <a class="btn btn--primary btn--sm" href="/practice/@unfinished.SessionId">Resume drill ›</a>
@@ -61,10 +60,7 @@ else
   @if (catalog.ListeningSections.Count > 0)
   {
     <div class="mt-4">
-      <partial name="_AudioEquipmentCheck" model='new WebMVC.Models.AudioEquipmentCheckModel(
-          ShowInput: false,
-          ShowOutput: true,
-          Title: "Listening practice audio check")' />
+      <partial name="_AudioEquipmentCheck" model='Model.AudioCheck' />
     </div>
   }
 
@@ -158,12 +154,12 @@ else
 
   @if (catalog.OtherSections.Count > 0)
   {
-    @foreach (var group in catalog.OtherSections.GroupBy(s => s.SkillName))
+    @foreach (var group in Model.OtherSectionGroups)
     {
       <section class="mt-4">
-        <h2 class="section-group__title">@group.Key</h2>
+        <h2 class="section-group__title">@group.Name</h2>
         <div class="grid-2">
-          @foreach (var sec in group)
+          @foreach (var sec in group.Sections)
           {
             <div class="part-card" style="opacity: 0.85">
               <div class="part-card__header">
@@ -175,7 +171,7 @@ else
             </div>
           }
           <div class="card">
-            <div class="card__header"><strong>How @group.Key differs</strong></div>
+            <div class="card__header"><strong>How @group.Name differs</strong></div>
             <div class="card__body">
               <p class="text-sm no-margin">
                 You record or write answers and an AI grades them against rubrics after submission. Free practice drills are available for listening and reading (MCQ) sections.

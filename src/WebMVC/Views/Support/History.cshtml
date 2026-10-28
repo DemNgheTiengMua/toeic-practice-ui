@@ -5,15 +5,6 @@
     ViewData["Title"] = "My reports";
     ViewData["Description"] = "Track the problems you have reported and our replies.";
 
-    string FormatType(ComplaintTypeDto type) => type switch
-    {
-        ComplaintTypeDto.MentorNoShow => "Mentor did not show up",
-        ComplaintTypeDto.MentorQuality => "Mentor quality issue",
-        ComplaintTypeDto.GradingIssue => "Grading issue",
-        ComplaintTypeDto.TechnicalError => "Technical error",
-        ComplaintTypeDto.PaymentIssue => "Payment issue",
-        _ => type.ToString(),
-    };
 }
 
 <div class="stack">
@@ -63,7 +54,7 @@
         <div class="card">
           <div class="card__header row row--between">
             <div>
-              <strong>@FormatType(c.Type)</strong>
+              <strong>@Model.TypeLabels[c.ComplaintId]</strong>
               @if (c.Status == ComplaintStatusDto.Open)
               {
                 <span class="badge badge--warning">Open</span>
@@ -78,10 +69,10 @@
               }
             </div>
             <span class="text-sm text-muted">
-              @c.CreatedAt.ToString("dd MMM yyyy")
+              @Model.Dates[c.CreatedAt].Date
               @if (c.ResolvedAt.HasValue)
               {
-                <span> · resolved @c.ResolvedAt.Value.ToString("dd MMM yyyy")</span>
+                <span> · resolved @Model.Dates[c.ResolvedAt.Value].Date</span>
               }
             </span>
           </div>

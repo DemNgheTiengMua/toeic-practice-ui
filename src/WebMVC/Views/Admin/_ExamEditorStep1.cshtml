@@ -1,0 +1,93 @@
+@model WebMVC.Models.ExamEditorViewModel
+@{ var isEdit = Model.IsEdit; var detail = Model.Form.Detail; var presentation = Model.Presentation; }
+<!-- ===== Step 1: Exam information ===== -->
+@if (Model.Form.Step == 1)
+{
+  <div class="card">
+    <div class="card__header"><strong>Exam information</strong></div>
+    <form method="post" action="@(isEdit ? $"/admin/exams/{Model.Form.ExamId}/edit" : "/admin/exams/create")">
+      @Html.AntiForgeryToken()
+      <input type="hidden" name="Step" value="1" />
+      @if (isEdit)
+      {
+        <input type="hidden" name="ExamId" value="@Model.Form.ExamId" />
+      }
+
+      <div class="card__body stack">
+        <div class="field">
+          <label class="field__label" for="CertId">Certificate</label>
+          <select class="field__input" id="CertId" name="CertId" required>
+            <option value="">Select a certificate</option>
+            @foreach (var c in Model.Form.Certificates)
+            {
+              <option value="@c.CertId" selected="@(c.CertId == Model.Form.CertId)">@Model.CertificateLabels[c.CertId]</option>
+            }
+          </select>
+          <span class="field__hint">Skills and sections load based on your selection</span>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="Name">Exam name</label>
+          <input class="field__input" id="Name" name="Name" value="@Model.Form.Name" required placeholder="ETS 2024 — Test 4">
+          <span class="field__hint">The name shown to learners in the exam list.</span>
+        </div>
+
+        <div class="grid-2">
+          <div class="field">
+            <label class="field__label" for="SourceName">Exam set / source</label>
+            <input class="field__input" id="SourceName" name="SourceName" value="@Model.Form.SourceName" placeholder="ETS 2024">
+          </div>
+          <div class="field">
+            <label class="field__label" for="Status">Status</label>
+            <select class="field__input" id="Status" name="Status">
+              <option value="Draft" selected="@(Model.Form.Status == Contracts.ExamStatusDto.Draft)">Draft</option>
+              <option value="Published" selected="@(Model.Form.Status == Contracts.ExamStatusDto.Published)">Published</option>
+              <option value="Hidden" selected="@(Model.Form.Status == Contracts.ExamStatusDto.Hidden)">Hidden</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid-3">
+          <div class="field">
+            <label class="field__label" for="Purpose">Purpose</label>
+            <select class="field__input" id="Purpose" name="Purpose">
+              <option value="Mock" selected="@(Model.Form.Purpose == Contracts.ExamPurposeDto.Mock)">Mock Exam</option>
+              <option value="Placement" selected="@(Model.Form.Purpose == Contracts.ExamPurposeDto.Placement)">Placement Test</option>
+              <option value="SpeakingPractice" selected="@(Model.Form.Purpose == Contracts.ExamPurposeDto.SpeakingPractice)">Speaking Practice</option>
+              <option value="WritingPractice" selected="@(Model.Form.Purpose == Contracts.ExamPurposeDto.WritingPractice)">Writing Practice</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field__label" for="DurationMinutes">Duration (minutes)</label>
+            <input class="field__input" id="DurationMinutes" name="DurationMinutes" type="number" min="1" value="@Model.Form.DurationMinutes" required>
+          </div>
+          <div class="field">
+            <label class="field__label" for="QuestionCount">Required Question Count</label>
+            <input class="field__input" id="QuestionCount" name="QuestionCount" type="number" min="1" value="@Model.Form.QuestionCount" placeholder="e.g. 200">
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="Description">Public Description</label>
+          <textarea class="field__input" id="Description" name="Description" rows="2" placeholder="Description shown to learners…">@Model.Form.Description</textarea>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="InternalNote">Internal note (admin only)</label>
+          <textarea class="field__input" id="InternalNote" name="InternalNote" rows="3" placeholder="Exam notes for administrators…">@Model.Form.InternalNote</textarea>
+        </div>
+      </div>
+
+      <div class="card__footer row row--between">
+        <a class="btn btn--ghost" href="/admin/exams">Cancel</a>
+        <div class="row">
+          <button type="submit" class="btn btn--primary">@(isEdit ? "Save exam information" : "Save & Continue: upload audio")</button>
+          @if (isEdit)
+          {
+            <a class="btn" href="/admin/exams/@Model.Form.ExamId/edit?step=2">Next: Upload audio ›</a>
+          }
+        </div>
+      </div>
+    </form>
+  </div>
+}

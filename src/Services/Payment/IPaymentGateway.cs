@@ -1,32 +1,6 @@
 using BusinessObjects;
 namespace Services;
 
-public sealed record PaymentGatewayOrderInfo(
-    long PaymentNo,
-    string OrderCode,
-    decimal Amount,
-    string Description,
-    string ReturnUrl,
-    string CancelUrl);
-
-public sealed record PaymentGatewayLinkResult(
-    string CheckoutUrl,
-    string? GatewayTxnRef);
-
-public sealed record WebhookVerificationResult(
-    bool IsValid,
-    long PaymentNo,
-    string? GatewayTxnRef,
-    GatewayStatus Status,
-    string? ErrorCode,
-    string RawPayload);
-
-public sealed record GatewayPaymentStatus(
-    GatewayStatus Status,
-    string? GatewayTxnRef,
-    string? ErrorCode,
-    string RawPayload);
-
 public interface IPaymentGateway
 {
     PaymentGateway GatewayName { get; }

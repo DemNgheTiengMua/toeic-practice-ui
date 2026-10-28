@@ -1,0 +1,72 @@
+@model WebMVC.Models.AdminExamListViewModel
+<div id="generate-exam-dialog" class="modal-overlay" style="display: @(string.Equals(Context.Request.Query["generate"], "true", StringComparison.OrdinalIgnoreCase) ? "grid" : "none");" role="dialog" aria-modal="true" aria-labelledby="generate-dialog-title">
+  <div class="modal" style="max-width: 640px;">
+    <div class="modal__header">
+      <h2 id="generate-dialog-title">Generate Exam with Claude Sonnet 3.7</h2>
+      <button type="button" class="modal__close" onclick="closeGenerateExamDialog()">Close</button>
+    </div>
+    <div class="modal__body">
+      <p class="text-muted" style="margin-top: 0;">
+        Author a complete standardized exam package using Claude Sonnet 3.7. Configure your target blueprint or provide custom blueprint JSON.
+      </p>
+      <form method="post" action="/admin/exams/generate" class="stack">
+        @Html.AntiForgeryToken()
+        <div class="field">
+          <label class="field__label" for="gen-certCode">Target Certificate</label>
+          <select class="field__input" id="gen-certCode" name="certCode" required>
+            <option value="">Select Certificate</option>
+            @foreach (var cert in Model.Summary.Certificates)
+            {
+              <option value="@cert.Code" selected="@(cert.CertId == Model.CertId)">@cert.Code — @cert.Name</option>
+            }
+          </select>
+          <div class="field__hint">The blueprint and questions will strictly conform to this certificate's sections and categories.</div>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="gen-title">Exam Title (Optional)</label>
+          <input class="field__input" id="gen-title" name="title" type="text" placeholder="e.g. TOEIC Reading Form B (Generated)" />
+        </div>
+
+        <div class="row" style="gap: var(--space-sm);">
+          <div class="field" style="flex: 1;">
+            <label class="field__label" for="gen-status">Initial Status</label>
+            <select class="field__input" id="gen-status" name="status">
+              <option value="draft" selected>Draft (for review in studio)</option>
+              <option value="published">Published (immediately live)</option>
+            </select>
+          </div>
+          <div class="field" style="flex: 1;">
+            <label class="field__label" for="gen-targetBand">Target CEFR Band</label>
+            <select class="field__input" id="gen-targetBand" name="targetBand">
+              <option value="B1">B1 (Intermediate)</option>
+              <option value="B2" selected>B2 (Upper Intermediate)</option>
+              <option value="C1">C1 (Advanced)</option>
+            </select>
+          </div>
+          <div class="field" style="flex: 1;">
+            <label class="field__label" for="gen-difficulty">Difficulty Level</label>
+            <select class="field__input" id="gen-difficulty" name="difficultyLevel">
+              <option value="1">1 (Introductory)</option>
+              <option value="2">2 (Elementary)</option>
+              <option value="3" selected>3 (Standard)</option>
+              <option value="4">4 (Challenging)</option>
+              <option value="5">5 (Advanced Mastery)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="gen-blueprintJson">Custom Blueprint JSON (Optional override)</label>
+          <textarea class="field__input" id="gen-blueprintJson" name="blueprintJson" rows="4" style="font-family: var(--font-mono, 'IBM Plex Mono', Consolas, monospace); font-size: var(--text-sm, 13px);" placeholder='{ "certCode": "TOEIC", "sections": [{ "sectionCode": "P5", "questionCount": 5 }] }'></textarea>
+          <div class="field__hint">If provided, this JSON blueprint overrides the simple controls above.</div>
+        </div>
+
+        <div class="row row--between" style="margin-top: var(--space-md); padding-top: var(--space-sm); border-top: 1px solid var(--color-rule, #ccd2d6);">
+          <button type="button" class="btn btn--ghost" onclick="closeGenerateExamDialog()">Cancel</button>
+          <button type="submit" class="btn btn--primary" id="btn-submit-generate">Generate and Ingest</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

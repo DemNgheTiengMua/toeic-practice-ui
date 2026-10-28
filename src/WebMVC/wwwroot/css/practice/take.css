@@ -1,0 +1,89 @@
+    /* Question Component Widgets & Practice QoL Styles */
+    .option--checkbox input[type="checkbox"] {
+      width: 1.15rem;
+      height: 1.15rem;
+      accent-color: #14181d;
+    }
+    .completion-input {
+      font-family: "IBM Plex Sans", sans-serif;
+      font-size: 1rem;
+      border: 2px solid #14181d;
+      border-radius: 0;
+      box-shadow: none;
+      padding: 0.5rem 0.75rem;
+      width: 100%;
+      max-width: 480px;
+      background: #ffffff;
+    }
+    .chip-item {
+      display: inline-block;
+      border: 2px solid #14181d;
+      border-radius: 0;
+      background: #ffffff;
+      color: #14181d;
+      padding: 0.35rem 0.75rem;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      user-select: none;
+      box-shadow: none;
+    }
+    .chip-item:hover {
+      background: #e9ecef;
+    }
+    .chip-item.is-placed {
+      opacity: 0.35;
+      pointer-events: none;
+    }
+    .drop-zone {
+      min-height: 54px;
+      border: 2px dashed #14181d;
+      border-radius: 0;
+      background: #fafbfc;
+      padding: 0.5rem 0.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .drop-zone.is-hovered {
+      background: #e3ebf6;
+      border-color: #0b4ea2;
+    }
+    .accordion-explanation {
+      border: 2px solid #14181d;
+      border-radius: 0;
+      background: #ffffff;
+      box-shadow: none;
+    }
+    .accordion-explanation__header {
+      width: 100%;
+      padding: var(--space-3);
+      border: none;
+      border-radius: 0;
+      background: #f4f6f8;
+      cursor: pointer;
+      font-family: 'IBM Plex Sans Condensed', sans-serif;
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 0.95rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .accordion-explanation__header:hover {
+      background: #e9ecef;
+    }
+    .accordion-explanation__body {
+      padding: var(--space-3);
+      border-top: 1px solid #ccd2d6;
+    }
+    .transcript-drawer {
+      border: 2px solid #14181d;
+      border-radius: 0;
+      box-shadow: none;
+      background: #fbfcfd;
+      padding: var(--space-3);
+    }
+    body.exam-body-protected {
+      padding-bottom: 85px;
+    }

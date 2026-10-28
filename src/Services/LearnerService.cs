@@ -9,26 +9,6 @@ using Services.Credits;
 
 namespace Services;
 
-/// <summary>Thrown when a learner asks to switch to a certificate that doesn't exist or is retired.</summary>
-public sealed class CertificateUnavailableException(string code)
-    : Exception($"Certificate '{code}' is not available.")
-{
-    public string CertificateCode { get; } = code;
-}
-
-public interface ILearnerService
-{
-    Task<LearnerContext> GetContextAsync(int userId, CancellationToken cancellationToken = default);
-
-    Task SwitchCertificateAsync(int userId, string certificateCode, CancellationToken cancellationToken = default);
-
-    Task<LearnerDashboard> GetDashboardAsync(int userId, CancellationToken cancellationToken = default);
-
-    /// <summary>The certificate id every learner query filters on. Later slices (practice, attempts,
-    /// history, weakness analysis) call this instead of taking a certificate from the request.</summary>
-    Task<int> GetActiveCertIdAsync(int userId, CancellationToken cancellationToken = default);
-}
-
 /// <summary>The learner's active certificate and everything scoped by it. Every learner query
 /// resolves the active certificate here first and filters on its id, so a later slice adding a
 /// screen calls <see cref="GetActiveCertIdAsync"/> rather than trusting a certificate from the
@@ -232,7 +212,6 @@ public sealed partial class LearnerService(CompanionDbContext db, ICreditLedger?
     public async Task<int> GetActiveCertIdAsync(int userId, CancellationToken cancellationToken = default) =>
         await ResolveActiveCertIdAsync(userId, await ActiveCertificatesAsync(cancellationToken), cancellationToken);
 
-    private sealed record ActiveCertificate(int CertId, CertificateOption Option);
 
     private async Task<List<ActiveCertificate>> ActiveCertificatesAsync(CancellationToken cancellationToken)
     {

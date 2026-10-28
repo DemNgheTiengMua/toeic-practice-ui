@@ -1,4 +1,4 @@
-@inject CurrentUser CurrentUser
+@model WebMVC.Models.HomeViewModel
 @{
     Layout = null;
     ViewData["Title"] = "extra efficient — Practice your way";
@@ -32,9 +32,9 @@
         <a href="#features">Features</a>
       </div>
       <div class="landing-nav__actions">
-        @if (CurrentUser.IsSignedIn)
+        @if (Model.IsSignedIn)
         {
-          <a class="landing-login" href="@(CurrentUser.IsAdmin ? "/admin" : "/dashboard")">Dashboard</a>
+          <a class="landing-login" href="@(Model.IsAdmin ? "/admin" : "/dashboard")">Dashboard</a>
           <form method="post" action="/auth/sign-out" class="no-margin" style="display:inline">
             @Html.AntiForgeryToken()
             <button type="submit" class="btn btn--plate btn--sm">Sign out</button>
@@ -43,7 +43,7 @@
         else
         {
           <a class="landing-login" href="/auth/sign-in">Log in</a>
-          <a class="btn btn--plate" href="/auth/register">Create account</a>
+          <a class="btn btn--plate" href="/auth/register">Create accounts</a>
         }
       </div>
     </nav>
@@ -221,9 +221,9 @@
         <span>extra efficient</span>
       </a>
       <p>Focus on what matters. Reach your target with confidence.</p>
-      @if (CurrentUser.IsSignedIn)
+      @if (Model.IsSignedIn)
       {
-        <a href="@(CurrentUser.IsAdmin ? "/admin" : "/dashboard")">Dashboard</a>
+        <a href="@(Model.IsAdmin ? "/admin" : "/dashboard")">Dashboard</a>
       }
       else
       {

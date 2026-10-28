@@ -1,0 +1,110 @@
+@model LessonViewModel
+@{ var cards = Model.Cards; var initialIndex = Model.InitialIndex; }
+  @for (var i = 0; i < cards.Count; i++)
+  {
+    var presentation = cards[i];
+    var card = presentation.Card;
+    var cardIndex = presentation.Index;
+    var isInitial = cardIndex == initialIndex;
+    var cardTypeClass = presentation.CssClass;
+
+    <div class="lesson-card @cardTypeClass card-slide"
+         id="card-@cardIndex"
+         data-card-id="@card.CardId"
+         data-card-type="@card.CardType"
+         data-correct="@card.CorrectOption"
+         style="@(isInitial ? "" : "display: none;")">
+
+      @if (card.CardType == "rule")
+      {
+        <div class="badge mb-2" style="background: rgba(255,255,255,0.2); color: #fff;">RULE</div>
+        <h2 class="m-0 mb-3" style="color: #fff;">@card.Title</h2>
+        <div class="rule-content">
+          @Html.Raw(presentation.ContentHtml)
+        </div>
+      }
+      else if (card.CardType == "pitfall")
+      {
+        <div class="badge badge--warning mb-2">COMMON PITFALLS & EXAM TRAPS</div>
+        <h2 class="m-0 mb-3">@card.Title</h2>
+        <div class="pitfall-content">
+          @Html.Raw(presentation.ContentHtml)
+        </div>
+      }
+      else if (card.CardType == "example")
+      {
+        <div class="badge badge--info mb-2">WORKED EXAMPLE</div>
+        <h2 class="m-0 mb-3">@card.Title</h2>
+        <div class="example-content">
+          @Html.Raw(presentation.ContentHtml)
+        </div>
+      }
+      else if (card.CardType == "micro_check")
+      {
+        <div class="badge badge--success mb-2">MICRO-CHECK (1 QUESTION)</div>
+        <h2 class="m-0 mb-3">@card.Title</h2>
+        @if (!string.IsNullOrWhiteSpace(card.QuestionPrompt))
+        {
+          <p class="mb-3 font-semibold">@card.QuestionPrompt</p>
+        }
+        @if (!string.IsNullOrWhiteSpace(card.ContentMarkdown))
+        {
+          <div class="mb-3">
+            @Html.Raw(presentation.ContentHtml)
+          </div>
+        }
+        <div class="micro-check-options" id="microCheckOptions">
+          @if (!string.IsNullOrWhiteSpace(card.OptionA))
+          {
+            <label class="micro-check-option" data-opt="A">
+              <input type="radio" name="microCheck" value="A">
+              <span><strong>(A)</strong> @card.OptionA</span>
+            </label>
+          }
+          @if (!string.IsNullOrWhiteSpace(card.OptionB))
+          {
+            <label class="micro-check-option" data-opt="B">
+              <input type="radio" name="microCheck" value="B">
+              <span><strong>(B)</strong> @card.OptionB</span>
+            </label>
+          }
+          @if (!string.IsNullOrWhiteSpace(card.OptionC))
+          {
+            <label class="micro-check-option" data-opt="C">
+              <input type="radio" name="microCheck" value="C">
+              <span><strong>(C)</strong> @card.OptionC</span>
+            </label>
+          }
+          @if (!string.IsNullOrWhiteSpace(card.OptionD))
+          {
+            <label class="micro-check-option" data-opt="D">
+              <input type="radio" name="microCheck" value="D">
+              <span><strong>(D)</strong> @card.OptionD</span>
+            </label>
+          }
+        </div>
+
+        <div class="row">
+          <button type="button" class="btn btn--primary" id="btnCheckAnswer">Check answer</button>
+        </div>
+
+        <div class="micro-check-explanation" id="microCheckExplanation" style="display: none;">
+          <strong>Correct answer: (@card.CorrectOption)</strong>
+          @if (!string.IsNullOrWhiteSpace(card.Explanation))
+          {
+            <p class="text-sm mt-1 mb-0">
+              <strong>Explanation:</strong> @card.Explanation
+            </p>
+          }
+        </div>
+      }
+      else
+      {
+        <h2 class="m-0 mb-3">@card.Title</h2>
+        <div>
+          @Html.Raw(presentation.ContentHtml)
+        </div>
+      }
+    </div>
+  }
+

@@ -12,6 +12,10 @@ public sealed class AdminOrdersController(
     CurrentUser currentUser,
     ILogger<AdminOrdersController> logger) : AdminControllerBase(currentUser, logger)
 {
+    private DateTimeFormatter Dates => HttpContext.RequestServices?.GetService(typeof(DateTimeFormatter)) as DateTimeFormatter
+        ?? new(new HttpContextAccessor { HttpContext = HttpContext });
+
+
 
     [HttpGet("")]
     public async Task<IActionResult> Index(
@@ -40,14 +44,14 @@ public sealed class AdminOrdersController(
             }
 
             var vm = new AdminOrdersViewModel(summary, q, status, gateway, page, selectedOrder);
-            return View("~/Views/Admin/Orders.cshtml", vm);
+            return View("~/Views/Admin/Orders.cshtml", (vm).WithDates(Dates));
         }
         catch (HttpRequestException ex)
         {
             logger.LogError(ex, "Could not load admin orders list");
             TempData["Error"] = "Could not load the orders list. Please try again.";
             var emptySummary = new AdminOrdersSummaryDto([], 0, 1, 20, 0, 0, 0, 0);
-            return View("~/Views/Admin/Orders.cshtml", new AdminOrdersViewModel(emptySummary, q, status, gateway, page));
+            return View("~/Views/Admin/Orders.cshtml", (new AdminOrdersViewModel(emptySummary, q, status, gateway, page)).WithDates(Dates));
         }
     }
 

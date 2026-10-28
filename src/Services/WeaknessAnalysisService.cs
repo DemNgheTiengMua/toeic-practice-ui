@@ -11,19 +11,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Services;
 
-public class RecommendationNotFoundException(int recId)
-    : Exception($"Recommendation {recId} was not found.")
-{
-    public int RecId { get; } = recId;
-}
-
-public interface IWeaknessAnalysisService
-{
-    Task<WeaknessAnalysisView> GetWeaknessAnalysisAsync(int userId, CancellationToken cancellationToken = default);
-
-    Task<bool> ResolveRecommendationAsync(int userId, int recId, CancellationToken cancellationToken = default);
-}
-
 public sealed class WeaknessAnalysisService(
     CompanionDbContext db,
     ILearnerService learners) : IWeaknessAnalysisService

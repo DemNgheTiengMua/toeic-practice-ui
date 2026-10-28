@@ -1,0 +1,94 @@
+@model PracticeTakeViewModel
+@{
+    var session = Model.Take.Session;
+    var questions = Model.Take.Questions;
+    var navigator = Model.Take.Navigator;
+    var totalCount = Model.Take.TotalCount;
+    var answeredCount = Model.Take.AnsweredCount;
+    var correctCount = Model.Take.CorrectCount;
+    var incorrectCount = Model.Take.IncorrectCount;
+    var skippedCount = Model.Take.SkippedCount;
+    var unansweredCount = Model.Take.UnansweredCount;
+    var savedCount = Model.Take.SavedCount;
+    var progressPercent = Model.Take.ProgressPercent;
+}
+          <!-- Right Sidebar (Exam Shell Persistent) -->
+          <aside class="exam-sidebar stack">
+            <div class="card">
+              <div class="card__header">
+                <div class="row row--between">
+                  <strong class="text-sm">Practice Progress</strong>
+                  <span class="text-xs text-muted" id="progress-text">@answeredCount/@totalCount answered</span>
+                </div>
+              </div>
+              <div class="card__body stack">
+                <div class="row row--between mb-2">
+                  <span class="text-xs text-muted">Accuracy</span>
+                  <strong class="text-sm font-mono" id="sidebar-accuracy-display">@Model.Take.SidebarAccuracyDisplay</strong>
+                </div>
+                <div class="progress" role="progressbar" aria-valuenow="@answeredCount" aria-valuemin="0" aria-valuemax="@totalCount">
+                  <div class="progress__bar" id="progress-bar" style="width: @progressPercent%"></div>
+                </div>
+                <div class="row row--between text-xs text-muted mt-2">
+                  <span>Correct: <strong id="sidebar-correct-count" style="color: var(--sign-green);">@correctCount</strong></span>
+                  <span>Incorrect: <strong id="sidebar-incorrect-count" style="color: var(--sign-red);">@incorrectCount</strong></span>
+                  <span>Skipped: <strong id="sidebar-skipped-count">@skippedCount</strong></span>
+                  <span>Unanswered: <strong id="sidebar-unanswered-count">@unansweredCount</strong></span>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card__header">
+                <strong class="text-sm">Questions (1–@totalCount)</strong>
+              </div>
+              <div class="card__body stack">
+                <!-- Navigator Filters -->
+                <div class="row mb-2" style="gap: var(--space-1);" id="navigator-filters">
+                  <button type="button" class="btn btn--xs btn--primary" data-filter="all" id="filter-all">All (<span id="filter-all-count">@totalCount</span>)</button>
+                  <button type="button" class="btn btn--xs btn--ghost" data-filter="incorrect" id="filter-incorrect">Incorrect (<span id="filter-incorrect-count">@incorrectCount</span>)</button>
+                  <button type="button" class="btn btn--xs btn--ghost" data-filter="saved" id="filter-saved">Saved (<span id="filter-saved-count">@savedCount</span>)</button>
+                </div>
+
+                <div id="filter-empty-msg" class="text-xs text-muted mb-2" style="display:none; padding: var(--space-2) 0;">
+                  No questions match this filter.
+                </div>
+
+                <!-- Questions Grid (1-N) -->
+                <div class="navigator__grid" role="group" aria-label="Question Navigator" id="navigator-grid">
+                  @foreach (var cell in Model.Take.NavigatorCells)
+                  {
+                    var item = cell.Item;
+                    <button type="button"
+                            class="navigator__cell @cell.CssClass"
+                            id="nav-cell-@item.QuestionId"
+                            data-question-id="@item.QuestionId"
+                            data-display-order="@item.DisplayOrder"
+                            title="@cell.Title">
+                      @item.DisplayOrder
+                    </button>
+                  }
+                </div>
+
+                <!-- Swatch Legend -->
+                <div class="text-xs stack mt-2" style="gap: var(--space-1)">
+                  <div class="row" style="align-items: center; gap: var(--space-2);">
+                    <span class="navigator__cell navigator__cell--swatch is-correct" aria-hidden="true">1</span> Correct
+                  </div>
+                  <div class="row" style="align-items: center; gap: var(--space-2);">
+                    <span class="navigator__cell navigator__cell--swatch is-incorrect" aria-hidden="true">2</span> Incorrect
+                  </div>
+                  <div class="row" style="align-items: center; gap: var(--space-2);">
+                    <span class="navigator__cell navigator__cell--swatch is-marked" aria-hidden="true">3</span> Saved to bank
+                  </div>
+                  <div class="row" style="align-items: center; gap: var(--space-2);">
+                    <span class="navigator__cell navigator__cell--swatch is-unanswered" aria-hidden="true">4</span> Unanswered
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <a href="/practice/@session.SessionId/summary" class="btn btn--primary" id="btn-sidebar-finish" style="width: 100%;">
+              View summary
+            </a>
+          </aside>

@@ -1,9 +1,8 @@
-@inject CurrentUser CurrentUser
 @using Contracts
 @using WebMVC.Controllers
-@model IReadOnlyList<Contracts.PackageDto>
+@model WebMVC.Models.PricingViewModel
 @{
-    var isLearner = LearnerShell.Get(Context) is not null;
+    var isLearner = Model.HasLearnerShell;
     Layout = isLearner ? "_LearnerLayout" : "_Layout";
     ViewData["Title"] = "Buy credits";
     ViewData["Description"] = "Credit packages for exams, AI grading, and mentor sessions.";
@@ -36,19 +35,18 @@ else
 
   @if (isLearner)
   {
-      var shell = LearnerShell.Get(Context)!;
       <div class="card">
         <div class="card__header"><strong>Your credit usage</strong></div>
         <div class="card__body stack--tight">
           <div class="row row--between text-sm">
-            <span>You have <strong>@shell.CreditBalance @(shell.CreditBalance == 1 ? "credit" : "credits")</strong> remaining</span>
+            <span>You have <strong>@Model.CreditBalance @(Model.CreditBalance == 1 ? "credit" : "credits")</strong> remaining</span>
           </div>
           <p class="text-sm text-muted no-margin mt-1">Mock exams, AI gradings, mentor sessions. Credits do not expire.</p>
         </div>
       </div>
   }
 
-  @if (Model.Count == 0)
+  @if (Model.Packages.Count == 0)
   {
       <div class="card">
         <div class="card__body">
@@ -62,7 +60,7 @@ else
   else
   {
       <div class="grid-3">
-        @foreach (var pkg in Model)
+        @foreach (var pkg in Model.Packages)
         {
           <div class="price-card@(pkg.IsFeatured ? " price-card--featured" : "")">
             @if (pkg.IsFeatured)
@@ -76,15 +74,15 @@ else
             {
               <div class="price-card__name">@pkg.Name</div>
             }
-            <div class="price-card__amount">@CurrencyFormatter.FormatVnd(pkg.Price)</div>
-            <div class="price-card__unit">@pkg.Credits @(pkg.Credits == 1 ? "credit" : "credits") — @CurrencyFormatter.FormatUnitPrice(pkg.Price, pkg.Credits)</div>
+            <div class="price-card__amount">@Model.Prices[pkg.PackageId]</div>
+            <div class="price-card__unit">@pkg.Credits @(pkg.Credits == 1 ? "credit" : "credits") — @Model.UnitPrices[pkg.PackageId]</div>
             <ul class="price-card__list">
               @foreach (var feature in pkg.FeatureList)
               {
                 <li>@feature</li>
               }
             </ul>
-            @if (CurrentUser.IsAdmin)
+            @if (Model.IsAdmin)
             {
               <a class="btn" href="/admin/packages">Manage packages</a>
             }

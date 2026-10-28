@@ -1,34 +1,11 @@
 @model DashboardViewModel
-@inject DateTimeFormatter Dates
 @{
     Layout = "_LearnerLayout";
     ViewData["Title"] = "Dashboard";
     ViewData["Description"] = "Your learning dashboard.";
     var dashboard = Model.Dashboard;
     var cert = dashboard.Certificate;
-    string PurposeLabel(ExamPurposeDto purpose) => purpose switch
-    {
-        ExamPurposeDto.Mock => "Mock exam",
-        ExamPurposeDto.Placement => "Placement test",
-        ExamPurposeDto.SpeakingPractice => "Speaking practice",
-        ExamPurposeDto.WritingPractice => "Writing practice",
-        _ => purpose.ToWireCode(),
-    };
-    string AttemptStatusLabel(AttemptStatusDto status) => status switch
-    {
-        AttemptStatusDto.InProgress => "In progress",
-        AttemptStatusDto.Submitted => "Submitted",
-        AttemptStatusDto.Graded => "Graded",
-        AttemptStatusDto.Abandoned => "Cancelled",
-        _ => status.ToWireCode(),
-    };
-    string PracticeStatusLabel(PracticeStatusDto status) => status switch
-    {
-        PracticeStatusDto.InProgress => "In progress",
-        PracticeStatusDto.Finished => "Finished",
-        PracticeStatusDto.Abandoned => "Cancelled",
-        _ => status.ToWireCode(),
-    };
+
 }
 
 @if (Model.Activation == "sent")
@@ -63,7 +40,7 @@ else if (Model.Activation == "failed")
 {
   <div class="alert alert--info row row--between row--middle row--wrap mt-3" role="status">
     <div>
-      <strong>Unfinished practice:</strong> You have an in-progress session in <strong>@unfinishedPractice.SectionName</strong> started @Dates.FormatDate(unfinishedPractice.StartedAt).
+      <strong>Unfinished practice:</strong> You have an in-progress session in <strong>@unfinishedPractice.SectionName</strong> started @Model.Presentation.Dates[unfinishedPractice.StartedAt].Date.
       <div class="text-sm text-muted">@unfinishedPractice.CorrectCount of @unfinishedPractice.QuestionCount questions answered so far. Finish to update your accuracy and weak points.</div>
     </div>
     <a class="btn btn--primary btn--sm" href="/practice/@unfinishedPractice.SessionId">Resume practice</a>
@@ -72,17 +49,11 @@ else if (Model.Activation == "failed")
 
 @if (dashboard.UnfinishedAttempt is { } unfinishedAttempt)
 {
-  var resumeUrl = unfinishedAttempt.Purpose == ExamPurposeDto.Placement 
-      ? $"/placement/take/{unfinishedAttempt.AttemptId}" 
-      : (unfinishedAttempt.Purpose == ExamPurposeDto.SpeakingPractice
-          ? $"/speaking/take/{unfinishedAttempt.AttemptId}"
-          : (unfinishedAttempt.Purpose == ExamPurposeDto.WritingPractice
-              ? $"/writing/take/{unfinishedAttempt.AttemptId}"
-              : $"/exams/take/{unfinishedAttempt.AttemptId}"));
+  var resumeUrl = Model.Presentation.AttemptLinks[unfinishedAttempt.AttemptId].Resume;
 
   <div class="alert alert--warning row row--between row--middle row--wrap mt-3" role="status">
     <div>
-      <strong>Unfinished exam:</strong> You have an in-progress @PurposeLabel(unfinishedAttempt.Purpose) (<strong>@unfinishedAttempt.ExamName</strong>) started @Dates.FormatDate(unfinishedAttempt.StartedAt).
+      <strong>Unfinished exam:</strong> You have an in-progress @Model.Presentation.PurposeLabels[unfinishedAttempt.Purpose] (<strong>@unfinishedAttempt.ExamName</strong>) started @Model.Presentation.Dates[unfinishedAttempt.StartedAt].Date.
       <div class="text-sm text-muted">Complete your exam to receive your scaled score and band.</div>
     </div>
     <div class="row row--tight" style="gap: var(--space-2); align-items: center;">
@@ -92,306 +63,25 @@ else if (Model.Activation == "failed")
   </div>
 }
 
-@{
-    var readiness = dashboard.TargetReadiness;
-    var currentBandCode = readiness?.CurrentBandCode ?? dashboard.LatestResult?.BandCode;
-    var currentBandName = readiness?.CurrentBandName ?? dashboard.LatestResult?.BandName;
-    var currentScore = readiness?.CurrentTotalScore ?? dashboard.LatestResult?.TotalScore;
-    var currentSource = readiness?.CurrentSource ?? (dashboard.LatestResult is not null ? "mock" : null);
-    var completedSteps = readiness?.CompletedPathSteps ?? 0;
-    var totalSteps = readiness?.TotalPathSteps ?? 0;
-    var pathPercent = totalSteps > 0 ? (int)Math.Round((double)completedSteps / totalSteps * 100) : 0;
-}
-
-<section class="readiness-strip mt-3" aria-label="Target and readiness summary">
-  <div class="readiness-strip__cell">
-    <div class="readiness-strip__label">
-      <span>Current Standing · @cert.Code</span>
-      @if (currentSource == "mock")
-      {
-        <span class="badge badge--info">Mock</span>
-      }
-      else if (currentSource == "placement")
-      {
-        <span class="badge badge--muted">Placement</span>
-      }
-    </div>
-    @if (currentScore.HasValue || !string.IsNullOrEmpty(currentBandCode))
-    {
-      <div class="readiness-strip__value">
-        @(currentBandCode ?? "—")
-        @if (currentScore.HasValue)
-        {
-          <span class="text-base text-muted font-mono">(@currentScore.Value pts)</span>
-        }
-      </div>
-      <div class="readiness-strip__meta">
-        @(currentBandName ?? currentBandCode ?? "Graded standing")
-      </div>
-    }
-    else
-    {
-      <div class="readiness-strip__value">—</div>
-      <div class="readiness-strip__meta">
-        Uncalibrated · <a href="/placement">Take free placement exam</a>
-      </div>
-    }
-  </div>
-
-  <div class="readiness-strip__cell">
-    <div class="readiness-strip__label">
-      <span>Target Band</span>
-      @if (readiness?.TargetMinScore is { } targetMin && currentScore is { } curScore)
-      {
-        if (curScore >= targetMin)
-        {
-          <span class="badge badge--success">Reached</span>
-        }
-        else
-        {
-          <span class="badge badge--warning font-mono">-@(targetMin - curScore) pts</span>
-        }
-      }
-    </div>
-    @if (!string.IsNullOrEmpty(readiness?.TargetBandCode))
-    {
-      <div class="readiness-strip__value">
-        @readiness.TargetBandCode
-        @if (readiness.TargetMinScore.HasValue)
-        {
-          <span class="text-base text-muted font-mono">(@readiness.TargetMinScore.Value+ pts)</span>
-        }
-      </div>
-      <div class="readiness-strip__meta">
-        @(readiness.TargetBandName ?? readiness.TargetBandCode) · <a href="/placement/target-band">Change target</a>
-      </div>
-    }
-    else
-    {
-      <div class="readiness-strip__value">NOT SET</div>
-      <div class="readiness-strip__meta">
-        <a href="/placement/target-band">Set target band</a> · <a href="/placement">Placement</a>
-      </div>
-    }
-  </div>
-
-  <div class="readiness-strip__cell">
-    <div class="readiness-strip__label">
-      <span>Learning Path</span>
-      @if (totalSteps > 0)
-      {
-        <span class="badge badge--muted font-mono">@pathPercent%</span>
-      }
-    </div>
-    <div class="readiness-strip__value">
-      @completedSteps / @totalSteps <span class="text-sm text-muted font-sign uppercase">steps</span>
-    </div>
-    <div class="readiness-strip__meta">
-      @if (totalSteps > 0)
-      {
-        <div class="progress mb-1" aria-hidden="true">
-          <div class="progress__bar" style="width: @pathPercent%;"></div>
-        </div>
-        <a href="/learning-path">Continue active path</a>
-      }
-      else
-      {
-        <span>No active path · <a href="/learning-path">Build learning path</a></span>
-      }
-    </div>
-  </div>
-
-  <div class="readiness-strip__cell">
-    <div class="readiness-strip__label">
-      <span>Diagnostic Accuracy</span>
-      <span class="badge badge--muted font-mono">@cert.Code</span>
-    </div>
-    <div class="readiness-strip__value">
-      @(dashboard.OverallAccuracyPercent.HasValue ? $"{dashboard.OverallAccuracyPercent.Value}%" : "—")
-    </div>
-    <div class="readiness-strip__meta">
-      @dashboard.AttemptCount @(dashboard.AttemptCount == 1 ? "attempt" : "attempts") · @dashboard.PracticeCount @(dashboard.PracticeCount == 1 ? "practice session" : "practice sessions")
-    </div>
-  </div>
-</section>
+@await Html.PartialAsync("_DashboardReadiness", Model)
 
 <div class="dashboard-bento">
   <div class="dashboard-guidance-grid mt-4">
     <div class="dashboard-guidance__mentor">
-      <partial name="_AiInsightPanel" model='new AiInsightPanelViewModel("dashboard", (ViewBag.Insight as AiInsightDto)?.CertId ?? 0, ViewBag.Insight as AiInsightDto, dashboard.LatestRubricHighlight, dashboard.OverallAccuracyPercent)' />
+      <partial name="_AiInsightPanel" model="Model.Presentation.InsightPanel" />
     </div>
     <div class="dashboard-guidance__directive">
-      <partial name="_DashboardMission" model="dashboard" />
+      <partial name="_DashboardMission" model="Model.Presentation" />
     </div>
   </div>
 
-  <partial name="_DashboardWeaknessRadar" model="dashboard" />
+  <partial name="_DashboardWeaknessRadar" model="Model.Presentation" />
 
   <div class="dashboard-bento__ledger-row mt-4">
-    <div class="dashboard-bento__ledger stack">
-      @if (dashboard.IsNew)
-      {
-        <div class="card"><div class="card__body">
-          <div class="state-block">
-            <div class="state-block__icon" aria-hidden="true">START</div>
-            <h2 class="state-block__title">Start your @cert.Code journey</h2>
-            <p class="state-block__desc">
-              You haven't practised or sat an exam for @cert.Name yet. Your scores and recent activity
-              for @cert.Code will show here once you do.
-            </p>
-            <div class="row row--center row--loose row--wrap">
-              <a class="btn btn--primary btn--lg" href="/certificates#cert-@cert.Code.ToLowerInvariant()">See what @cert.Code tests</a>
-            </div>
-          </div>
-        </div></div>
-
-        <div class="card">
-          <div class="card__header"><strong>What's next?</strong></div>
-          <div class="card__body stack">
-            <div>
-              <strong>1. Take a placement test (free)</strong>
-              <p class="text-sm text-muted no-margin mt-1">Find your current level and get a personalised learning path.</p>
-            </div>
-            <div>
-              <strong><a href="/practice">2. Practise by section (free)</a></strong>
-              <p class="text-sm text-muted no-margin mt-1">Drill one listening or reading section with immediate feedback.</p>
-            </div>
-            <div>
-              <strong>3. Take mock exams (paid with credits)</strong>
-              <p class="text-sm text-muted no-margin mt-1">Full timed tests with a scaled score and band.</p>
-            </div>
-          </div>
-        </div>
-      }
-      else
-      {
-        <div class="card">
-          <div class="card__header"><strong>Recent exams</strong></div>
-          <div class="card__body">
-            @if (dashboard.RecentAttempts.Count == 0)
-            {
-              <p class="text-muted no-margin">No exams yet for @cert.Code.</p>
-            }
-            else
-            {
-              <table class="table table--striped">
-                <caption class="visually-hidden">Your most recent @cert.Code exams, newest first</caption>
-                <thead>
-                  <tr><th scope="col">Test</th><th scope="col">Type</th><th scope="col">Date</th><th scope="col">Status</th><th scope="col">Total</th><th scope="col">Band</th></tr>
-                </thead>
-                <tbody>
-                  @foreach (var a in dashboard.RecentAttempts)
-                  {
-                    <tr>
-                      <td>
-                        @if (a.Status == AttemptStatusDto.Graded)
-                        {
-                          var resUrl = a.Purpose == ExamPurposeDto.Placement 
-                              ? $"/placement/result/{a.AttemptId}" 
-                              : (a.Purpose == ExamPurposeDto.SpeakingPractice
-                                  ? $"/speaking/review/{a.AttemptId}"
-                                  : (a.Purpose == ExamPurposeDto.WritingPractice
-                                      ? $"/writing/review/{a.AttemptId}"
-                                      : $"/exams/result/{a.AttemptId}"));
-                          <a href="@resUrl"><strong>@a.ExamName</strong></a>
-                        }
-                        else if (a.Status == AttemptStatusDto.InProgress)
-                        {
-                          var takeUrl = a.Purpose == ExamPurposeDto.Placement 
-                              ? $"/placement/take/{a.AttemptId}" 
-                              : (a.Purpose == ExamPurposeDto.SpeakingPractice
-                                  ? $"/speaking/take/{a.AttemptId}"
-                                  : (a.Purpose == ExamPurposeDto.WritingPractice
-                                      ? $"/writing/take/{a.AttemptId}"
-                                      : $"/exams/take/{a.AttemptId}"));
-                          <a href="@takeUrl">@a.ExamName</a>
-                        }
-                        else
-                        {
-                          @a.ExamName
-                        }
-                      </td>
-                      <td>@PurposeLabel(a.Purpose)</td>
-                      <td>@Dates.FormatDate(a.StartedAt)</td>
-                      <td>
-                        @if (a.Status == AttemptStatusDto.InProgress)
-                        {
-                          <span class="badge badge--warning">In progress</span>
-                        }
-                        else
-                        {
-                          @AttemptStatusLabel(a.Status)
-                        }
-                      </td>
-                      <td><strong>@(a.TotalScore?.ToString() ?? "—")</strong></td>
-                      <td>@(a.BandCode ?? "—")</td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            }
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card__header"><strong>Recent practice</strong></div>
-          <div class="card__body">
-            @if (dashboard.RecentPractice.Count == 0)
-            {
-              <p class="text-muted no-margin">No practice sessions yet for @cert.Code.</p>
-            }
-            else
-            {
-              <table class="table table--striped">
-                <caption class="visually-hidden">Your most recent @cert.Code practice sessions, newest first</caption>
-                <thead>
-                  <tr><th scope="col">Section</th><th scope="col">Date</th><th scope="col">Status</th><th scope="col">Correct</th><th scope="col" style="width: 120px;">Action</th></tr>
-                </thead>
-                <tbody>
-                  @foreach (var p in dashboard.RecentPractice)
-                  {
-                    <tr>
-                      <td>
-                        <a href="@(p.Status == PracticeStatusDto.Finished ? $"/practice/{p.SessionId}/summary" : $"/practice/{p.SessionId}")">@p.SectionName</a>
-                      </td>
-                      <td>@Dates.FormatDate(p.StartedAt)</td>
-                      <td>
-                        @if (p.Status == PracticeStatusDto.InProgress)
-                        {
-                          <span class="badge badge--warning">In progress</span>
-                        }
-                        else
-                        {
-                          @PracticeStatusLabel(p.Status)
-                        }
-                      </td>
-                      <td>@p.CorrectCount / @p.QuestionCount</td>
-                      <td>
-                        @if (p.Status == PracticeStatusDto.InProgress)
-                        {
-                          <a class="btn btn--sm btn--primary" href="/practice/@p.SessionId">Resume</a>
-                        }
-                        else if (p.Status == PracticeStatusDto.Finished)
-                        {
-                          <a class="btn btn--sm btn--ghost" href="/practice/@p.SessionId/summary">Summary</a>
-                        }
-                        else
-                        {
-                          <span class="text-muted">—</span>
-                        }
-                      </td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            }
-          </div>
-        </div>
-      }
-    </div>
+    @await Html.PartialAsync("_DashboardActivity", Model)
 
     <div class="dashboard-bento__mentor">
-      <partial name="_DashboardMentorPass" model="dashboard" />
+      <partial name="_DashboardMentorPass" model="Model.Presentation" />
     </div>
   </div>
 </div>

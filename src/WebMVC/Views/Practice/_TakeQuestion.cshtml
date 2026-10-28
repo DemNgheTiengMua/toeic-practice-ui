@@ -1,0 +1,142 @@
+@model PracticeTakeViewModel
+@{
+    var session = Model.Take.Session;
+    var q = Model.Take.Question;
+    var totalCount = Model.Take.TotalCount;
+    var isCurrentAnswered = Model.Take.IsCurrentAnswered;
+    var isCurrentSkipped = Model.Take.IsCurrentSkipped;
+}
+          <!-- Left Question Pane (0ms In-Memory Swapping) -->
+          <div class="stack" id="question-pane">
+            <!-- Audio Player Container with Practice QoL 5s Rewind & Transcript Toggle -->
+            <div id="practice-audio-wrapper" class="mb-3" style="@(!string.IsNullOrEmpty(q.AudioPath) ? "" : "display:none;")">
+              <div id="practice-audio-player-host">
+                @if (!string.IsNullOrEmpty(q.AudioPath))
+                {
+                  @await Html.PartialAsync("_ExamAudioPlayer", Model.Take.Audio)
+                }
+              </div>
+              <div class="row mt-2" style="gap: var(--space-2); align-items: center;" id="audio-qol-controls">
+                <button type="button" class="btn btn--secondary btn--sm" id="btn-audio-rewind-5s" title="Tua lại 5 giây / Rewind 5 seconds" style="font-family: 'IBM Plex Mono', monospace; font-weight: 700;">
+                  [-5s]
+                </button>
+                <button type="button" class="btn btn--ghost btn--sm" id="btn-toggle-transcript" aria-expanded="false" style="@(!string.IsNullOrEmpty(q.Transcript) ? "" : "display:none;") font-family: 'IBM Plex Sans Condensed', sans-serif; font-weight: 700; text-transform: uppercase;">
+                  [Xem Lời thoại / Transcript]
+                </button>
+              </div>
+              @await Html.PartialAsync("_TakeTranscript", Model)
+            </div>
+            @await Html.PartialAsync("_ExamAudioPlayer", Model.Take.AudioTemplate)
+
+            <!-- Passage Card Container -->
+            <div id="passage-card" class="card mb-3" style="@(!string.IsNullOrEmpty(q.Passage) ? "" : "display:none;")">
+              <div class="card__body">
+                <p id="passage-text" class="no-margin passage" style="white-space: pre-line">@q.Passage</p>
+              </div>
+            </div>
+
+            <!-- Image Container -->
+            <div id="image-container" class="mb-3" style="@(!string.IsNullOrEmpty(q.ImagePath) ? "" : "display:none;")">
+              <img id="question-image" src="@q.ImagePath" alt="@(q.ImageAlt ?? "Question illustration")" class="question__image" />
+            </div>
+
+            <!-- Question Card -->
+            <div class="question" id="question-card">
+              <div class="question__meta row row--between">
+                <div class="row row--tight" style="align-items: center; flex-wrap: wrap;">
+                  <span class="question__number" id="question-number-display">Question @q.DisplayOrder</span>
+                  <span class="badge badge--muted" id="question-section-display">@session.SectionName</span>
+                  <span class="badge badge--muted" id="question-category-display" style="@(!string.IsNullOrEmpty(q.CategoryName) ? "" : "display:none;")">@q.CategoryName</span>
+                  @if (q.IsCorrect == true)
+                  {
+                    <span class="badge badge--success" id="status-badge">Accuracy · Correct</span>
+                  }
+                  else if (q.IsCorrect == false)
+                  {
+                    <span class="badge badge--danger" id="status-badge">Incorrect</span>
+                  }
+                  else if (isCurrentSkipped)
+                  {
+                    <span class="badge badge--muted" id="status-badge">Skipped</span>
+                  }
+                  else
+                  {
+                    <span class="badge" id="status-badge" style="display: none;"></span>
+                  }
+                  <span class="badge badge--muted" id="hint-meta-badge" style="@(q.HintUsed ? "" : "display: none;")">Hint used</span>
+                </div>
+                <div>
+                  <button type="button" class="btn btn--ghost btn--sm @(q.IsSaved ? "btn--primary" : "")" id="save-toggle-btn"
+                          data-question-id="@q.QuestionId"
+                          data-is-saved="@(q.IsSaved ? "true" : "false")"
+                          aria-pressed="@(q.IsSaved ? "true" : "false")"
+                          title="@(q.IsSaved ? "Question saved to bank. Click to remove." : "Save this question to your bank.")">
+                    @(q.IsSaved ? "Saved" : "Save question")
+                  </button>
+                </div>
+              </div>
+
+              <p class="question__stem" id="question-stem-display">@q.Stem</p>
+
+              <!-- Option List for MCQ and MCQ_3 -->
+              <div class="option-list" id="option-list" role="radiogroup" aria-label="Answer for question @q.DisplayOrder" style="@(q.QuestionType != "mcq" && q.QuestionType != "mcq_3" && !string.IsNullOrEmpty(q.QuestionType) ? "display:none;" : "")">
+                @foreach (var option in Model.Take.Options)
+                {
+                  var opt = option.Option;
+                  var isSelected = option.IsSelected;
+                  var isCorrectOpt = option.IsCorrect;
+                  <label class="@option.CssClass" id="opt-label-@opt.OptionId">
+                    <input class="option__input js-option-radio" type="radio" name="selectedOptionId"
+                           value="@opt.OptionId" @(isSelected ? "checked" : "") @(isCurrentAnswered ? "disabled" : "")>
+                    <span class="option__marker">@opt.Label</span>
+                    <span class="option__text">@opt.Text</span>
+                    @if (isCurrentAnswered)
+                    {
+                      if (isCorrectOpt && isSelected)
+                      {
+                        <span class="badge badge--success">Your answer · correct</span>
+                      }
+                      else if (isCorrectOpt)
+                      {
+                        <span class="badge badge--success">Correct answer</span>
+                      }
+                      else if (isSelected)
+                      {
+                        <span class="badge badge--danger">Your answer</span>
+                      }
+                    }
+                  </label>
+                }
+              </div>
+
+              <!-- Dynamic 11-Component Widgets (multi_select, inline_completion, dropdown, drag_drop) -->
+              <div id="component-container" class="stack mt-3" style="display:none;"></div>
+
+              <!-- Hint Box -->
+              <div class="hint mt-4" id="hint-box" style="@(q.HintUsed && !string.IsNullOrEmpty(q.Hint) ? "" : "display: none;")" role="note">
+                <span class="hint__label">Hint</span>
+                <span id="hint-text">@(q.Hint ?? "")</span>
+              </div>
+
+              <!-- Explanation / Rationale Accordion (Practice QoL) -->
+              @await Html.PartialAsync("_TakeExplanation", Model)
+
+              <!-- Bottom Action Navigation Row -->
+              <div class="row row--between mt-4" style="align-items: center;" id="bottom-action-row">
+                <div class="row" style="gap: var(--space-2); align-items: center; flex-wrap: wrap;">
+                  <button type="button" class="btn" id="btn-prev" @(q.DisplayOrder > 1 ? "" : "disabled")>Previous</button>
+                  <button type="button" class="btn btn--ghost" id="btn-skip" style="@(isCurrentAnswered ? "display:none;" : "")">Skip</button>
+                  <button type="button" class="btn btn--ghost" id="show-hint-btn" style="@(q.HintUsed || isCurrentAnswered ? "display:none;" : "")">Show hint (H)</button>
+                  <span class="text-xs text-muted" id="hint-used-msg" style="@(q.HintUsed ? "" : "display: none;")">Hint used · noted in summary</span>
+                </div>
+
+                <div class="row" style="gap: var(--space-2); align-items: center;">
+                  <button type="button" class="btn btn--primary btn--lg" id="submit-btn">
+                    @(isCurrentAnswered ? (q.DisplayOrder >= totalCount ? "View summary" : "Next question") : "Check answer")
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+

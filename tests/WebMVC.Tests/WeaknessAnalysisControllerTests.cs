@@ -69,7 +69,7 @@ public sealed class WeaknessAnalysisControllerTests
     }
 
     [Fact]
-    public async Task Index_prefetches_dashboard_insight_into_viewbag()
+    public async Task Index_prefetches_dashboard_insight_into_display_model()
     {
         var sampleInsight = new AiInsightDto(
             10, 7, 1, AiInsightScopeDto.Dashboard, null, null,
@@ -87,7 +87,7 @@ public sealed class WeaknessAnalysisControllerTests
         var result = await controller.Index(CancellationToken.None);
 
         var viewResult = Assert.IsType<ViewResult>(result);
-        var insightInViewBag = Assert.IsType<AiInsightDto>(viewResult.ViewData["Insight"]);
+        var insightInViewBag = Assert.IsType<AiInsightDto>(Assert.IsType<WeaknessAnalysisViewModel>(viewResult.Model).InsightPanel.Insight);
         Assert.Equal(10, insightInViewBag.InsightId);
         Assert.Equal("Diagnostic overview", insightInViewBag.Narrative);
     }
@@ -107,7 +107,7 @@ public sealed class WeaknessAnalysisControllerTests
         var viewResult = Assert.IsType<ViewResult>(result);
         var model = Assert.IsType<WeaknessAnalysisViewModel>(viewResult.Model);
         Assert.True(model.Data.HasData);
-        Assert.Null(viewResult.ViewData["Insight"]);
+        Assert.Null(Assert.IsType<WeaknessAnalysisViewModel>(viewResult.Model).InsightPanel.Insight);
     }
 
     [Fact]

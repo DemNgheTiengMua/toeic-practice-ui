@@ -56,16 +56,12 @@ else
     <div class="card"><div class="card__body stack">
       <div class="row row--between">
         <strong class="text-sm">Module progress</strong>
-        @{
-            int remaining = Math.Max(0, detail.TotalQuestions - detail.AnsweredQuestions);
-        }
-        <span class="text-sm text-muted">@detail.AnsweredQuestions of @detail.TotalQuestions questions · @remaining left</span>
+
+        <span class="text-sm text-muted">@detail.AnsweredQuestions of @detail.TotalQuestions questions · @Model.RemainingQuestions left</span>
       </div>
-      @{
-          int progressPct = detail.TotalQuestions > 0 ? (int)Math.Round((double)detail.AnsweredQuestions / detail.TotalQuestions * 100) : 0;
-      }
+
       <div class="progress" role="progressbar" aria-valuenow="@detail.AnsweredQuestions" aria-valuemin="0" aria-valuemax="@detail.TotalQuestions" aria-label="Module progress">
-        <div class="progress__bar" style="width: @(progressPct)%"></div>
+        <div class="progress__bar" style="width: @Model.ProgressPercent%"></div>
       </div>
       <div class="row" style="gap: var(--space-3); margin-top: var(--space-2);">
         @if (detail.ActiveStepId is { } stepId)
@@ -161,18 +157,19 @@ else
       </section>
     }
 
-    @if (detail.Steps.Any(s => s.ItemType != PathModuleItemTypeDto.PracticeSection))
+    @if (Model.AdditionalSteps.Count > 0)
     {
-      @foreach (var step in detail.Steps.Where(s => s.ItemType != PathModuleItemTypeDto.PracticeSection))
+      @foreach (var presentation in Model.AdditionalSteps)
       {
+        var step = presentation.Step;
         <section>
-          <h2 class="section-group__title">@(step.ItemType == PathModuleItemTypeDto.AiTask ? "AI-graded task" : step.ItemType == PathModuleItemTypeDto.MockExam ? "Mock exam assessment" : "Mentor session")</h2>
+          <h2 class="section-group__title">@presentation.Heading</h2>
           <div class="card"><div class="card__body">
             <div class="row row--between" style="align-items: center;">
               <div>
                 <strong>@step.Title</strong>
                 <p class="text-sm text-muted no-margin mt-1">
-                  @(step.ItemType == PathModuleItemTypeDto.AiTask ? "AI writing/speaking task · graded with notes per criterion" : "Full timed mock exam")
+                  @presentation.Description
                 </p>
               </div>
               <div class="row row--tight" style="align-items: center; gap: var(--space-2);">

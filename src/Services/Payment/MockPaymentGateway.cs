@@ -4,13 +4,6 @@ using System.Text.Json;
 
 namespace Services;
 
-public interface IMockPaymentGateway : IPaymentGateway
-{
-    void SetOutcome(long paymentNo, GatewayStatus status, string? errorCode = null);
-    bool IsCancelled(long paymentNo);
-    IReadOnlyCollection<long> CancelledPaymentNos { get; }
-}
-
 public sealed class MockPaymentGateway : IMockPaymentGateway
 {
     public PaymentGateway GatewayName => PaymentGateway.Mock;

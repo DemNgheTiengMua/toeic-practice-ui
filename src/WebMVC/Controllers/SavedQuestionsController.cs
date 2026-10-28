@@ -7,7 +7,8 @@ namespace WebMVC.Controllers;
 public sealed class SavedQuestionsController(
     ISavedQuestionsClient api,
     CurrentUser currentUser,
-    ILogger<SavedQuestionsController> logger)
+    ILogger<SavedQuestionsController> logger,
+    WebMVC.Formatters.DateTimeFormatter dates)
     : LearnerControllerBase(currentUser, logger)
 {
     private bool IsAjaxRequest =>
@@ -25,7 +26,10 @@ public sealed class SavedQuestionsController(
         try
         {
             var data = await api.GetSavedQuestionsAsync(source, sectionId, categoryId, cancellationToken);
-            return View(new SavedQuestionsIndexViewModel(data, source, sectionId, categoryId, TempData["ErrorMessage"] as string));
+            return View(new SavedQuestionsIndexViewModel(data, source, sectionId, categoryId, TempData["ErrorMessage"] as string)
+            {
+                SavedAtDisplays = data.Questions.ToDictionary(q => q.QuestionId, q => dates.Format(q.SavedAt))
+            });
         }
         catch (ApiException ex)
         {
@@ -47,7 +51,10 @@ public sealed class SavedQuestionsController(
                 return Json(question);
             }
 
-            return View(new SavedQuestionReviewViewModel(question, TempData["ErrorMessage"] as string));
+            return View(new SavedQuestionReviewViewModel(question, TempData["ErrorMessage"] as string)
+            {
+                SavedAtDisplay = dates.Format(question.SavedAt)
+            });
         }
         catch (ApiException ex) when (ex.Status == 404 || ex.Code == ApiError.Codes.SavedQuestionNotFound)
         {

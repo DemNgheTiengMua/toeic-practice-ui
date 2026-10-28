@@ -1,0 +1,136 @@
+@model AdminLessonEditViewModel
+@{ var isNew = Model.LessonId == 0; }
+  <!-- Section 2: Walkthrough Cards -->
+  <div class="row row--between" style="align-items: center; margin-top: var(--space-md);">
+    <div>
+      <h2 style="margin: 0; text-transform: uppercase; font-size: 1.2rem;">2. Walkthrough Cards</h2>
+      <p class="text-muted text-sm" style="margin: 0;">Cards are presented sequentially to the learner. Rearrange or configure each card type below.</p>
+    </div>
+    <div class="row" style="gap: var(--space-xxs);">
+      <button type="button" class="btn btn--sm" onclick="addCard('rule')">+ Rule</button>
+      <button type="button" class="btn btn--sm" onclick="addCard('pitfall')">+ Pitfall</button>
+      <button type="button" class="btn btn--sm" onclick="addCard('example')">+ Example</button>
+      <button type="button" class="btn btn--sm btn--secondary" onclick="addCard('micro_check')">+ Micro-Check</button>
+    </div>
+  </div>
+
+  <div id="cards-container" class="stack" style="gap: var(--space-md);">
+    @for (int i = 0; i < Model.Cards.Count; i++)
+    {
+      var card = Model.Cards[i];
+      var isMicroCheck = card.IsMicroCheck;
+
+      <div class="card card-item" data-index="@i" style="border: 2px solid var(--color-ink, #14181d);">
+        <input type="hidden" class="card-id" name="Cards[@i].CardId" value="@card.CardId" />
+        <input type="hidden" class="card-order" name="Cards[@i].DisplayOrder" value="@i" />
+
+        <div class="card__header row row--between" style="background: var(--color-surface, #f8f9fa); border-bottom: 1px solid var(--color-rule, #ccd2d6); padding: var(--space-xs) var(--space-sm);">
+          <div class="row" style="align-items: center; gap: var(--space-xs);">
+            <span class="card-badge font-mono badge badge--primary">Card #<span class="card-num">@(i + 1)</span></span>
+            <span class="card-type-label badge">@card.TypeLabel</span>
+          </div>
+          <div class="row" style="gap: var(--space-xxs);">
+            <button type="button" class="btn btn--sm btn--ghost" onclick="moveCardUp(this)" title="Move Up">Up</button>
+            <button type="button" class="btn btn--sm btn--ghost" onclick="moveCardDown(this)" title="Move Down">Down</button>
+            <button type="button" class="btn btn--sm btn--danger" onclick="removeCard(this)" title="Delete Card">Remove</button>
+          </div>
+        </div>
+
+        <div class="card__body stack" style="gap: var(--space-sm);">
+          <div class="grid-2">
+            <div class="field">
+              <label class="field__label">Card Type <span class="text-danger">*</span></label>
+              <select class="field__input card-type-select" name="Cards[@i].CardType" onchange="onCardTypeChanged(this)" required>
+                <option value="rule" selected="@(card.CardType == "rule")">Rule</option>
+                <option value="pitfall" selected="@(card.CardType == "pitfall")">Pitfall</option>
+                <option value="example" selected="@(card.CardType == "example")">Example</option>
+                <option value="micro_check" selected="@(card.CardType == "micro_check")">Micro-Check (Practice Check)</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label class="field__label">Card Title <span class="text-danger">*</span></label>
+              <input class="field__input" name="Cards[@i].Title" type="text" maxlength="160" value="@card.Title" required placeholder="e.g. Core Principle or Common Pitfall" />
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="field__label">Content (GitHub-Flavored Markdown) <span class="text-danger">*</span></label>
+            <textarea class="field__input font-mono" name="Cards[@i].ContentMarkdown" rows="4" required placeholder="Write card body with **bold terms**, bullet lists, and code blocks...">@card.ContentMarkdown</textarea>
+          </div>
+
+          <!-- Micro-Check Specific Container -->
+          <div class="micro-check-fields stack" style="display: @(isMicroCheck ? "block" : "none"); background: #fdfdfd; padding: var(--space-sm); border: 1px dashed var(--color-ink, #14181d); margin-top: var(--space-xs);">
+            <h3 style="margin-top: 0; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-ink, #14181d);">Micro-Check Question Configuration</h3>
+
+            <div class="field">
+              <label class="field__label">Question Prompt <span class="text-danger">*</span></label>
+              <textarea class="field__input" name="Cards[@i].QuestionPrompt" rows="2" placeholder="e.g. Which of the following sentences correctly applies the rule?">@card.QuestionPrompt</textarea>
+            </div>
+
+            <div class="grid-2">
+              <div class="field">
+                <label class="field__label">Option A <span class="text-danger">*</span></label>
+                <input class="field__input" name="Cards[@i].OptionA" type="text" maxlength="250" value="@card.OptionA" placeholder="Option A text" />
+              </div>
+              <div class="field">
+                <label class="field__label">Option B <span class="text-danger">*</span></label>
+                <input class="field__input" name="Cards[@i].OptionB" type="text" maxlength="250" value="@card.OptionB" placeholder="Option B text" />
+              </div>
+            </div>
+
+            <div class="grid-2">
+              <div class="field">
+                <label class="field__label">Option C <span class="text-danger">*</span></label>
+                <input class="field__input" name="Cards[@i].OptionC" type="text" maxlength="250" value="@card.OptionC" placeholder="Option C text" />
+              </div>
+              <div class="field">
+                <label class="field__label">Option D <span class="text-danger">*</span></label>
+                <input class="field__input" name="Cards[@i].OptionD" type="text" maxlength="250" value="@card.OptionD" placeholder="Option D text" />
+              </div>
+            </div>
+
+            <div class="grid-2">
+              <div class="field">
+                <label class="field__label">Correct Option <span class="text-danger">*</span></label>
+                <select class="field__input font-mono" name="Cards[@i].CorrectOption">
+                  <option value="">Select Correct Option</option>
+                  <option value="A" selected="@(string.Equals(card.CorrectOption, "A", StringComparison.OrdinalIgnoreCase))">Option A</option>
+                  <option value="B" selected="@(string.Equals(card.CorrectOption, "B", StringComparison.OrdinalIgnoreCase))">Option B</option>
+                  <option value="C" selected="@(string.Equals(card.CorrectOption, "C", StringComparison.OrdinalIgnoreCase))">Option C</option>
+                  <option value="D" selected="@(string.Equals(card.CorrectOption, "D", StringComparison.OrdinalIgnoreCase))">Option D</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label class="field__label">Distractor Rationale</label>
+                <input class="field__input" name="Cards[@i].Rationale" type="text" value="@card.Rationale" placeholder="Why incorrect options are wrong..." />
+              </div>
+            </div>
+
+            <div class="field">
+              <label class="field__label">Explanation <span class="text-danger">*</span></label>
+              <textarea class="field__input" name="Cards[@i].Explanation" rows="2" placeholder="Full explanation displayed when learner confirms their answer...">@card.Explanation</textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+
+  <div class="row row--between" style="margin-top: var(--space-lg); padding-top: var(--space-md); border-top: 2px solid var(--color-ink, #14181d); align-items: center;">
+    <div class="row" style="gap: var(--space-xs);">
+      <a href="/admin/lessons" class="btn btn--ghost">Cancel</a>
+      @if (!isNew)
+      {
+        <button type="button" class="btn btn--danger" onclick="confirmDeleteLesson()">Delete Lesson</button>
+      }
+    </div>
+    <div class="row" style="gap: var(--space-xs);">
+      @if (!isNew)
+      {
+        <a href="/admin/lessons/@Model.LessonId/preview" target="_blank" class="btn btn--secondary">Preview Deck ↗</a>
+      }
+      <button type="submit" class="btn btn--primary" style="font-size: 1rem; padding: var(--space-xs) var(--space-lg);">Save Lesson Deck</button>
+    </div>
+  </div>

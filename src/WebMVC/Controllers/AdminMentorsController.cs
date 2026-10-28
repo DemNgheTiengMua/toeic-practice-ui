@@ -12,6 +12,9 @@ public sealed class AdminMentorsController(
     CurrentUser currentUser,
     ILogger<AdminMentorsController> logger) : AdminControllerBase(currentUser, logger)
 {
+    private DateTimeFormatter Dates => HttpContext.RequestServices?.GetService(typeof(DateTimeFormatter)) as DateTimeFormatter
+        ?? new(new HttpContextAccessor { HttpContext = HttpContext });
+
 
     [HttpGet("")]
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
@@ -203,7 +206,7 @@ public sealed class AdminMentorsController(
                 },
             };
 
-            return View("~/Views/Admin/MentorSlots.cshtml", model);
+            return View("~/Views/Admin/MentorSlots.cshtml", model.PrepareDates(Dates));
         }
         catch (ApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
         {

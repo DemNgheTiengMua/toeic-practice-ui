@@ -31,7 +31,7 @@ public sealed class PricingController(
         try
         {
             var packages = await api.GetPublicPackagesAsync(cancellationToken);
-            return View(packages);
+            return View(new WebMVC.Models.PricingViewModel(packages, currentUser.IsAdmin, LearnerShell.Get(HttpContext) is not null, LearnerShell.Get(HttpContext)?.CreditBalance ?? 0));
         }
         catch (HttpRequestException ex)
         {

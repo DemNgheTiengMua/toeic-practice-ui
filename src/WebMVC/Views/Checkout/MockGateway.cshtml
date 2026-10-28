@@ -36,7 +36,7 @@
     <div class="card__body stack">
       <div class="row row--between"><span class="text-muted">Order code:</span><strong>@Model.OrderCode</strong></div>
       <div class="row row--between"><span class="text-muted">Package:</span><span>@Model.PackageName (@Model.Credits credits)</span></div>
-      <div class="row row--between"><span class="text-muted">Amount:</span><strong>@CurrencyFormatter.FormatVnd(Model.Amount)</strong></div>
+      <div class="row row--between"><span class="text-muted">Amount:</span><strong>@Model.AmountDisplay</strong></div>
       <div class="field mt-2">
         <label class="field__label" for="card-number">Simulated Card / Account</label>
         <input class="field__input" id="card-number" value="9704 xxxx xxxx 1234" disabled>

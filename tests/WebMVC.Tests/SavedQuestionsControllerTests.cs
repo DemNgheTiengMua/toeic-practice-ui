@@ -288,7 +288,7 @@ public sealed class SavedQuestionsControllerTests
         httpContext.Request.Scheme = "https";
         var currentUser = new CurrentUser(new HttpContextAccessor { HttpContext = httpContext });
 
-        var controller = new SavedQuestionsController(api, currentUser, NullLogger<SavedQuestionsController>.Instance)
+        var controller = new SavedQuestionsController(api, currentUser, NullLogger<SavedQuestionsController>.Instance, new WebMVC.Formatters.DateTimeFormatter(new HttpContextAccessor()))
         {
             ControllerContext = new ControllerContext
             {

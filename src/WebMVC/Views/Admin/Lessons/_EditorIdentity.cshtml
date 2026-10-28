@@ -1,0 +1,85 @@
+@model AdminLessonEditViewModel
+@{ var isNew = Model.LessonId == 0; }
+  <!-- Section 1: Lesson Metadata -->
+  <div class="card" style="border: 2px solid var(--color-ink, #14181d);">
+    <div class="card__header" style="background: var(--color-surface, #f8f9fa); border-bottom: 2px solid var(--color-ink, #14181d);">
+      <h2 style="margin: 0; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 0.05em;">1. Lesson Metadata</h2>
+    </div>
+    <div class="card__body stack">
+      <div class="grid-2">
+        <div class="field">
+          <label class="field__label" for="CertId">Certificate <span class="text-danger">*</span></label>
+          @if (isNew)
+          {
+            <select class="field__input" id="CertId" name="CertId" required onchange="onCertChanged(this.value)">
+              @foreach (var cert in Model.Certificates)
+              {
+                <option value="@cert.CertId" selected="@(cert.CertId == Model.CertId)">@cert.Code.ToUpper() — @cert.Name</option>
+              }
+            </select>
+            <div class="field__hint">Certificate cannot be modified after creation (Certificate Isolation).</div>
+          }
+          else
+          {
+            <input type="hidden" id="CertId" name="CertId" value="@Model.CertId" />
+            <input class="field__input" type="text" value="@(Model.CertCode?.ToUpper() ?? Model.CertId.ToString())" readonly disabled />
+            <div class="field__hint">Certificate cannot be modified after creation (Certificate Isolation).</div>
+          }
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="SkillId">Skill <span class="text-danger">*</span></label>
+          <select class="field__input" id="SkillId" name="SkillId" required>
+            @foreach (var skill in Model.Skills)
+            {
+              var isSelected = skill.SkillId == Model.SkillId;
+              <option value="@skill.SkillId" data-cert="@skill.CertId" selected="@isSelected">
+                @skill.Name (@skill.Modality.ToUpperInvariant())
+              </option>
+            }
+          </select>
+          <div class="field__hint">Target skill modality (Listening, Reading, Speaking, or Writing).</div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="field">
+          <label class="field__label" for="CategoryId">Question Category (Optional)</label>
+          <select class="field__input" id="CategoryId" name="CategoryId">
+            <option value="">-- None / General Lesson --</option>
+            @foreach (var cat in Model.Categories)
+            {
+              var isSelected = cat.CategoryId == Model.CategoryId;
+              <option value="@cat.CategoryId" data-cert="@cat.CertId" selected="@isSelected">
+                @cat.Code — @cat.Name
+              </option>
+            }
+          </select>
+          <div class="field__hint">Links this lesson to a diagnostic question category for AI mentor remediation.</div>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="EstimatedMinutes">Estimated Minutes <span class="text-danger">*</span></label>
+          <input class="field__input font-mono" id="EstimatedMinutes" name="EstimatedMinutes" type="number" min="1" max="180" value="@Model.EstimatedMinutes" required />
+          <div class="field__hint">Estimated learner reading &amp; quiz completion time.</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="Title">Lesson Title <span class="text-danger">*</span></label>
+        <input class="field__input" id="Title" name="Title" type="text" maxlength="160" value="@Model.Title" required placeholder="e.g. Present Simple vs Present Continuous" />
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="Summary">Curriculum Summary</label>
+        <textarea class="field__input" id="Summary" name="Summary" rows="2" maxlength="500" placeholder="Brief pedagogical summary of concepts covered in this deck...">@Model.Summary</textarea>
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="DisplayOrder">Display Order</label>
+        <input class="field__input font-mono" id="DisplayOrder" name="DisplayOrder" type="number" value="@Model.DisplayOrder" style="max-width: 140px;" />
+        <div class="field__hint">Curriculum sequencing order when displayed in learning path module steps (lower numbers appear first).</div>
+      </div>
+    </div>
+  </div>
+

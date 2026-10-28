@@ -111,7 +111,7 @@ public sealed class AdminImportsControllerTests
         var examsViewPath = Path.Combine(repoRoot, "src", "WebMVC", "Views", "Admin", "Exams.cshtml");
         Assert.True(File.Exists(examsViewPath), "Exams.cshtml must exist");
 
-        var content = File.ReadAllText(examsViewPath);
+        var content = AdminAuthoringPresentationTests.ReadComposedView("Exams");
         Assert.Contains("Import Exam (.zip / .json)", content);
         Assert.Contains("id=\"import-exam-dialog\"", content);
         Assert.Contains("class=\"modal-overlay\"", content);

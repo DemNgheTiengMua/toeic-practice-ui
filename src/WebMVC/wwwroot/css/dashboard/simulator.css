@@ -1,0 +1,313 @@
+.sim-placard {
+        border: var(--keyline, 2px) solid var(--ink, #14181d);
+        border-radius: 0;
+        box-shadow: none;
+        background: var(--color-surface, #ffffff);
+      }
+      .sim-placard__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: var(--space-3, 12px);
+        padding: var(--space-3, 12px) var(--space-4, 16px);
+        background: var(--ink, #14181d);
+        color: #ffffff;
+        border-bottom: var(--keyline, 2px) solid var(--ink, #14181d);
+      }
+      .sim-placard__title {
+        margin: 0;
+        font-family: var(--font-sign);
+        font-size: var(--text-base, 16px);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: var(--tracking-sign, .055em);
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        gap: var(--space-2, 8px);
+      }
+      .sim-placard__sub {
+        font-family: var(--font-mono);
+        font-size: var(--text-xs, 13px);
+        color: var(--color-on-ink-muted, #8f98a3);
+      }
+      .sim-placard__reset {
+        background: transparent;
+        color: #ffffff;
+        border: var(--keyline-soft, 1px) solid #ffffff;
+        border-radius: 0;
+        padding: 4px var(--space-3, 12px);
+        font-family: var(--font-sign);
+        font-size: var(--text-xs, 13px);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: var(--tracking-sign, .055em);
+        cursor: pointer;
+      }
+      .sim-placard__reset:hover,
+      .sim-placard__reset:focus-visible {
+        background: var(--sign-gold, #f2b705);
+        color: var(--ink, #14181d);
+        border-color: var(--sign-gold, #f2b705);
+      }
+      .sim-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 7fr) minmax(280px, 5fr);
+        border-bottom: var(--keyline-soft, 1px) solid var(--line-soft, #ccd2d6);
+      }
+      .sim-controls {
+        padding: var(--space-4, 16px);
+        border-right: var(--keyline-soft, 1px) solid var(--line-soft, #ccd2d6);
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-4, 16px);
+      }
+      .sim-skill-row {
+        padding-bottom: var(--space-3, 12px);
+        border-bottom: var(--keyline-soft, 1px) solid var(--line-soft, #ccd2d6);
+      }
+      .sim-skill-row:last-child {
+        padding-bottom: 0;
+        border-bottom: 0;
+      }
+      .sim-skill-row__head {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: var(--space-2, 8px);
+        margin-bottom: var(--space-2, 8px);
+      }
+      .sim-skill-row__name {
+        font-family: var(--font-sign);
+        font-size: var(--text-sm, 14px);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: var(--tracking-sign, .055em);
+        color: var(--ink, #14181d);
+        display: flex;
+        align-items: center;
+        gap: var(--space-2, 8px);
+      }
+      .sim-skill-row__readout {
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums;
+        font-size: var(--text-base, 16px);
+        font-weight: 700;
+        color: var(--ink, #14181d);
+        display: flex;
+        align-items: baseline;
+        gap: var(--space-2, 8px);
+      }
+      .sim-range {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 100%;
+        height: 12px;
+        background: var(--color-track, #dfe3e6);
+        border: var(--keyline-soft, 1px) solid var(--ink, #14181d);
+        border-radius: 0;
+        box-shadow: none;
+        margin: var(--space-1, 4px) 0;
+        cursor: pointer;
+      }
+      .sim-range::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 20px;
+        height: 24px;
+        background: var(--sign-blue, #0b4ea2);
+        border: var(--keyline, 2px) solid var(--ink, #14181d);
+        border-radius: 0;
+        box-shadow: none;
+        cursor: pointer;
+      }
+      .sim-range::-moz-range-thumb {
+        width: 20px;
+        height: 24px;
+        background: var(--sign-blue, #0b4ea2);
+        border: var(--keyline, 2px) solid var(--ink, #14181d);
+        border-radius: 0;
+        box-shadow: none;
+        cursor: pointer;
+      }
+      .sim-range:focus-visible {
+        outline: 3px solid var(--sign-blue, #0b4ea2);
+        outline-offset: 2px;
+      }
+      .sim-skill-row__ticks {
+        display: flex;
+        justify-content: space-between;
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums;
+        font-size: 12px;
+        color: var(--color-text-muted, #5c6570);
+      }
+      .sim-readout {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        background: var(--wall, #eef0f1);
+      }
+      .sim-score-plate {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        border-bottom: var(--keyline-soft, 1px) solid var(--line-soft, #ccd2d6);
+        background: var(--color-surface, #ffffff);
+      }
+      .sim-score-plate__cell {
+        padding: var(--space-4, 16px);
+        border-right: var(--keyline-soft, 1px) solid var(--line-soft, #ccd2d6);
+      }
+      .sim-score-plate__cell:last-child {
+        border-right: 0;
+      }
+      .sim-score-plate__label {
+        font-family: var(--font-sign);
+        font-size: var(--text-xs, 13px);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: var(--tracking-caps-sm, .08em);
+        color: var(--color-text-muted, #5c6570);
+        margin-bottom: var(--space-1, 4px);
+      }
+      .sim-score-plate__value {
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums;
+        font-size: var(--text-2xl, 32px);
+        font-weight: 700;
+        line-height: 1.1;
+        color: var(--ink, #14181d);
+      }
+      .sim-deficit-bar {
+        padding: var(--space-3, 12px) var(--space-4, 16px);
+        border-bottom: var(--keyline-soft, 1px) solid var(--line-soft, #ccd2d6);
+        background: var(--color-surface, #ffffff);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: var(--space-2, 8px);
+      }
+      .sim-leverage-box {
+        padding: var(--space-4, 16px);
+        background: var(--color-surface, #ffffff);
+        flex: 1 1 auto;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: var(--space-1, 4px);
+      }
+      .sim-leverage-box__eyebrow {
+        font-family: var(--font-sign);
+        font-size: var(--text-xs, 13px);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: var(--tracking-caps-sm, .08em);
+        color: var(--info-ink, #08407f);
+      }
+      .sim-spectrum {
+        padding: var(--space-4, 16px);
+        background: var(--color-surface, #ffffff);
+      }
+      .sim-spectrum__head {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: var(--space-2, 8px);
+        margin-bottom: var(--space-2, 8px);
+      }
+      .sim-spectrum__label {
+        font-family: var(--font-sign);
+        font-size: var(--text-xs, 13px);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: var(--tracking-caps-sm, .08em);
+        color: var(--color-text-muted, #5c6570);
+      }
+      .sim-spectrum__track {
+        display: grid;
+        grid-template-columns: repeat(@sim.Bands.Count, minmax(0, 1fr));
+        border: var(--keyline, 2px) solid var(--ink, #14181d);
+        border-radius: 0;
+        background: var(--color-track, #dfe3e6);
+      }
+      .sim-band-cell {
+        padding: var(--space-2, 8px) var(--space-3, 12px);
+        border-right: var(--keyline-soft, 1px) solid var(--ink, #14181d);
+        background: var(--color-surface, #ffffff);
+        color: var(--ink, #14181d);
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+      }
+      .sim-band-cell:last-child {
+        border-right: 0;
+      }
+      .sim-band-cell.is-reached {
+        background: var(--color-primary-soft, #e8eef7);
+        color: var(--info-ink, #08407f);
+      }
+      .sim-band-cell.is-current {
+        background: #14181d;
+        color: #ffffff;
+      }
+      .sim-band-cell__top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-1, 4px);
+      }
+      .sim-band-cell__code {
+        font-family: var(--font-sign);
+        font-size: var(--text-sm, 14px);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: var(--tracking-sign, .055em);
+      }
+      .sim-band-cell__range {
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums;
+        font-size: 12px;
+        color: var(--color-text-muted, #5c6570);
+      }
+      .sim-band-cell.is-current .sim-band-cell__range,
+      .sim-band-cell.is-current .sim-band-cell__name {
+        color: #ffffff;
+      }
+      .sim-band-cell__name {
+        font-size: 12px;
+        color: var(--color-text-muted, #5c6570);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .sim-band-cell__tag {
+        font-family: var(--font-sign);
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        padding: 0 4px;
+        border: 1px solid currentColor;
+      }
+      @media (max-width: 900px) {
+        .sim-grid {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .sim-controls {
+          border-right: 0;
+          border-bottom: var(--keyline-soft, 1px) solid var(--line-soft, #ccd2d6);
+        }
+      }
+      @media (max-width: 640px) {
+        .sim-spectrum__track {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .sim-band-cell {
+          border-bottom: var(--keyline-soft, 1px) solid var(--ink, #14181d);
+        }
+      }

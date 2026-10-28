@@ -1,5 +1,4 @@
 @model WebMVC.Models.WeaknessAnalysisViewModel
-@inject WebMVC.DateTimeFormatter Dates
 @{
     Layout = "_LearnerLayout";
     ViewData["Title"] = "Weakness analysis";
@@ -35,9 +34,9 @@
 
 @if (!data.HasData)
 {
-  @if (ViewBag.Insight != null)
+  @if (Model.InsightPanel.Insight != null)
   {
-    <partial name="_AiInsightPanel" model='new AiInsightPanelViewModel("dashboard", (ViewBag.Insight as AiInsightDto)?.CertId ?? 0, ViewBag.Insight as AiInsightDto)' />
+    <partial name="_AiInsightPanel" model='Model.InsightPanel' />
   }
   <!-- Empty state: not enough data to analyse -->
   <div class="card mt-4">
@@ -62,7 +61,7 @@ else
     This is a study tool, not an exam result. The figures come from every question you have answered, including practice sessions.
   </div>
 
-  <partial name="_AiInsightPanel" model='new AiInsightPanelViewModel("dashboard", (ViewBag.Insight as AiInsightDto)?.CertId ?? 0, ViewBag.Insight as AiInsightDto)' />
+  <partial name="_AiInsightPanel" model='Model.InsightPanel' />
 
   <div class="card mt-4">
     <div class="card__header"><strong>Accuracy by section</strong></div>
@@ -98,16 +97,7 @@ else
             </span>
           </div>
           <div class="progress mt-1">
-            @{
-              var barClass = s.Answered == 0
-                ? ""
-                : s.AccuracyPercentage < 70
-                  ? "progress__bar--danger"
-                  : s.AccuracyPercentage < 80
-                    ? "progress__bar--warning"
-                    : "progress__bar--success";
-            }
-            <div class="progress__bar @barClass" style="width: @(s.Answered > 0 ? s.AccuracyPercentage : 0)%" role="progressbar" aria-valuenow="@s.AccuracyPercentage" aria-valuemin="0" aria-valuemax="100"></div>
+            <div class="progress__bar @Model.SectionBarClasses[s.SectionId]" style="width: @(s.Answered > 0 ? s.AccuracyPercentage : 0)%" role="progressbar" aria-valuenow="@s.AccuracyPercentage" aria-valuemin="0" aria-valuemax="100"></div>
           </div>
         </div>
       }
@@ -223,52 +213,4 @@ else
     </div>
   </div>
 
-<script>
-  document.addEventListener('DOMContentLoaded', function () {
-    const forms = document.querySelectorAll('.js-resolve-form');
-    forms.forEach(function (form) {
-      form.addEventListener('submit', async function (e) {
-        e.preventDefault();
-        const recoId = form.getAttribute('data-reco-id');
-        const tokenInput = form.querySelector('input[name="__RequestVerificationToken"]');
-        const token = tokenInput ? tokenInput.value : '';
-
-        try {
-          const res = await fetch(form.action, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/x-www-form-urlencoded',
-              'X-Requested-With': 'XMLHttpRequest',
-              'Accept': 'application/json'
-            },
-            body: new URLSearchParams({
-              '__RequestVerificationToken': token
-            })
-          });
-
-          if (res.ok) {
-            const row = document.getElementById('reco-' + recoId);
-            if (row) {
-              row.remove();
-            }
-            const remaining = document.querySelectorAll('.reco-item');
-            if (remaining.length === 0) {
-              const list = document.getElementById('recommendations-list');
-              if (list && !document.getElementById('no-recos-message')) {
-                const emptyMsg = document.createElement('div');
-                emptyMsg.id = 'no-recos-message';
-                emptyMsg.className = 'p-4 text-center text-muted border';
-                emptyMsg.textContent = 'All recommendations resolved. Great work!';
-                list.appendChild(emptyMsg);
-              }
-            }
-          } else {
-            form.submit();
-          }
-        } catch (err) {
-          form.submit();
-        }
-      });
-    });
-  });
-</script>
+<script src="~/js/weakness-analysis/index.js" asp-append-version="true"></script>

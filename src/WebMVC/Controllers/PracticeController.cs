@@ -7,7 +7,8 @@ namespace WebMVC.Controllers;
 public sealed class PracticeController(
     IPracticeClient api,
     CurrentUser currentUser,
-    ILogger<PracticeController> logger)
+    ILogger<PracticeController> logger,
+    WebMVC.Formatters.DateTimeFormatter dates)
     : LearnerControllerBase(currentUser, logger)
 {
     [HttpGet("/practice")]
@@ -17,7 +18,10 @@ public sealed class PracticeController(
         try
         {
             var catalog = await api.GetPracticeCatalogAsync(cancellationToken);
-            return View(new PracticeCatalogViewModel(catalog, TempData["ErrorMessage"] as string));
+            return View(new PracticeCatalogViewModel(catalog, TempData["ErrorMessage"] as string)
+            {
+                UnfinishedStartedAtDisplay = catalog.UnfinishedSession is { } unfinished ? dates.FormatDate(unfinished.StartedAt) : ""
+            });
         }
         catch (ApiException ex)
         {
@@ -219,9 +223,10 @@ public sealed class PracticeController(
             {
                 logger.LogWarning(ex, "Could not pre-fetch AI insight for practice session {SessionId}", sessionId);
             }
-            ViewBag.Insight = insight;
-
-            return View(summary);
+            return View(new PracticeSummaryViewModel(summary, dates.Format(summary.StartedAt))
+            {
+                InsightPanel = new("practice_session", summary.SessionId, insight)
+            });
         }
         catch (ApiException ex) when (ex.Status == 404 || ex.Code == ApiError.Codes.PracticeSessionNotFound)
         {
