@@ -8,6 +8,11 @@ public sealed class CertificateWizardPageViewModel
     public IReadOnlyList<int> SkillPreviewSamples { get; }
     public IReadOnlyList<IReadOnlyList<int>> SectionPreviewSamples { get; }
 
+    /// <summary>Set when an existing certificate's blueprint failed to load. The page then offers
+    /// this retry link instead of the form, which would otherwise fall back to the default preset
+    /// with no CertId, so saving it would create a new certificate.</summary>
+    public string? BlueprintRetryUrl { get; init; }
+
     public CertificateWizardPageViewModel(CertificateWizardViewModel form)
     {
         Form = form;

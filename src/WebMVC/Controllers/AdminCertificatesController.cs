@@ -70,8 +70,18 @@ public sealed class AdminCertificatesController(
             }
             catch (HttpRequestException ex) when (ex is not ApiException { Code: ApiError.Codes.Locked or ApiError.Codes.Unauthenticated })
             {
+                // Without the saved blueprint the form would fall back to the default preset with
+                // no CertId, and saving it would create a new certificate. Offer a retry instead.
                 logger.LogError(ex, "Could not load certificate blueprint {CertId} for editing", certId.Value);
-                vm.ErrorMessage = "Could not load this certificate's blueprint. Its saved settings may not be shown — reload before saving.";
+                return View("~/Views/Admin/CertificateWizard.cshtml", new CertificateWizardPageViewModel(
+                    new CertificateWizardViewModel
+                    {
+                        Step = Math.Clamp(step, 1, 4),
+                        ErrorMessage = "Could not load this certificate's blueprint, so it cannot be edited right now. Nothing was changed.",
+                    })
+                {
+                    BlueprintRetryUrl = $"/admin/certificates/wizard?certId={certId.Value}",
+                });
             }
 
             if (detail is not null)

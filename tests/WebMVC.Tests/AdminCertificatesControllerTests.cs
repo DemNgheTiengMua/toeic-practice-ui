@@ -146,22 +146,31 @@ public sealed class AdminCertificatesControllerTests
         Assert.False(string.IsNullOrWhiteSpace(page.Form.ErrorMessage));
     }
 
-    [Fact]
-    public async Task Wizard_when_blueprint_fails_keeps_presets_and_surfaces_error()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Wizard_when_blueprint_fails_offers_a_retry_instead_of_a_create_form(bool unreachable)
     {
-        // Only the blueprint-for-edit lookup fails; the preset catalogue loads normally.
-        var controller = CreateController(new BlueprintFailingClient(new TestAdminCertificatesClient()));
+        // Only the blueprint-for-edit lookup fails; the preset catalogue loads normally. Falling
+        // through to the form would pre-fill the default preset with no CertId, so saving it would
+        // create a new certificate instead of editing certificate 7.
+        HttpRequestException failure = unreachable
+            ? ApiUnreachable()
+            : new ApiException("exam_not_found", "Certificate not found", 404);
+        var controller = CreateController(new BlueprintFailingClient(new TestAdminCertificatesClient(), failure));
 
         var result = await controller.Wizard(null, 7, 1, CancellationToken.None);
 
-        var viewResult = Assert.IsType<ViewResult>(result);
-        var page = Assert.IsType<CertificateWizardPageViewModel>(viewResult.Model);
-        Assert.NotEmpty(page.Form.Presets);
+        var page = Assert.IsType<CertificateWizardPageViewModel>(Assert.IsType<ViewResult>(result).Model);
+        Assert.Equal("/admin/certificates/wizard?certId=7", page.BlueprintRetryUrl);
         Assert.False(string.IsNullOrWhiteSpace(page.Form.ErrorMessage));
+        Assert.Empty(page.Form.Presets);
+        Assert.Null(page.Form.CertId);
+        Assert.Equal(string.Empty, page.Form.Code);
     }
 
     /// <summary>Presets load normally; only the blueprint-for-edit lookup fails.</summary>
-    private sealed class BlueprintFailingClient(TestAdminCertificatesClient inner) : IAdminCertificatesClient
+    private sealed class BlueprintFailingClient(TestAdminCertificatesClient inner, HttpRequestException failure) : IAdminCertificatesClient
     {
         public Task<IReadOnlyList<AdminCertificateSummaryDto>> GetAdminCertificatesAsync(CancellationToken cancellationToken = default) =>
             inner.GetAdminCertificatesAsync(cancellationToken);
@@ -170,7 +179,7 @@ public sealed class AdminCertificatesControllerTests
             inner.GetPresetsAsync(cancellationToken);
 
         public Task<CertificateBlueprintDetailDto?> GetCertificateBlueprintAsync(int certId, CancellationToken cancellationToken = default) =>
-            Task.FromException<CertificateBlueprintDetailDto?>(new ApiException("exam_not_found", "Certificate not found", 404));
+            Task.FromException<CertificateBlueprintDetailDto?>(failure);
 
         public Task<CertificateBlueprintDetailDto?> GetCertificateBlueprintByCodeAsync(string code, CancellationToken cancellationToken = default) =>
             inner.GetCertificateBlueprintByCodeAsync(code, cancellationToken);
