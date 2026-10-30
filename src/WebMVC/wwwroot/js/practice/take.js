@@ -231,6 +231,10 @@
 
         // 1. Meta row
         if (qNumberDisplay) qNumberDisplay.textContent = "Question " + q.displayOrder;
+        // The tab title and the answer group's accessible name are server-rendered for the first
+        // question; keep them on the question now on screen, as the exam sitting does.
+        document.title = document.title.replace(/Question \d+/, "Question " + q.displayOrder);
+        if (optionList) optionList.setAttribute("aria-label", "Answer for question " + q.displayOrder);
         if (qCategoryDisplay) {
           if (q.categoryName) {
             qCategoryDisplay.textContent = q.categoryName;
