@@ -44,6 +44,9 @@ public sealed partial class AdminExamService
                 .ThenInclude(q => q.QuestionOptionQuestionNavigations)
             .Where(g => g.ExamId == examId)
             .OrderBy(g => g.DisplayOrder)
+            // Two collection navigations in one query is a Cartesian product: warn 20504, and the
+            // row count multiplies with every option added. Split keeps each level linear (F5).
+            .AsSplitQuery()
             .ToListAsync(cancellationToken);
 
         var sectionIds = sections.Select(s => s.SectionId).ToHashSet();

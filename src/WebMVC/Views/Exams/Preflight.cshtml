@@ -10,7 +10,9 @@
 <partial name="_PreflightHeader" model="Model" />
 @if (Model.HasError)
 {
-  <div class="alert alert--danger mb-3" role="alert">@Model.ErrorMessage</div>
+  <div id="preflight-error" class="alert alert--danger mb-3" role="alert">
+    <strong>Could not enter the exam room:</strong> @Model.ErrorMessage
+  </div>
 }
 <div class="stack gap-4">
   <partial name="_PreflightAudioBuffer" model="Model" />

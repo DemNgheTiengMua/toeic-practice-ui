@@ -14,7 +14,8 @@ namespace WebMVC.Tests;
 
 public sealed class AdminCertificatesControllerTests
 {
-    private static AdminCertificatesController CreateController(IAdminCertificatesClient api, IAdminScoreConversionClient? scoreConversionClient = null)
+    private static AdminCertificatesController CreateController(IAdminCertificatesClient api, IAdminScoreConversionClient? scoreConversionClient = null,
+        Microsoft.Extensions.Logging.ILogger<AdminCertificatesController>? logger = null)
     {
         var identity = new ClaimsIdentity(AuthClaims.For(1, "admin@toeic.local", Roles.Admin, "Admin"), "Cookies");
         var principal = new ClaimsPrincipal(identity);
@@ -32,7 +33,7 @@ public sealed class AdminCertificatesControllerTests
         return new AdminCertificatesController(
             currentUser,
             api,
-            NullLogger<AdminCertificatesController>.Instance,
+            logger ?? NullLogger<AdminCertificatesController>.Instance,
             scoreConversionClient)
         {
             ControllerContext = new ControllerContext
@@ -79,15 +80,22 @@ public sealed class AdminCertificatesControllerTests
         public CertificateBlueprintDetailDto? BlueprintToReturn { get; set; }
         public SaveCertificateWizardRequest? LastSavedRequest { get; private set; }
         public bool ThrowOnSave { get; set; }
+        public Exception? LoadException { get; set; }
 
         public Task<IReadOnlyList<AdminCertificateSummaryDto>> GetAdminCertificatesAsync(CancellationToken cancellationToken = default) =>
-            Task.FromResult<IReadOnlyList<AdminCertificateSummaryDto>>(AdminCertificates);
+            LoadException is not null
+                ? Task.FromException<IReadOnlyList<AdminCertificateSummaryDto>>(LoadException)
+                : Task.FromResult<IReadOnlyList<AdminCertificateSummaryDto>>(AdminCertificates);
 
         public Task<IReadOnlyList<CertificateBlueprintPresetDto>> GetPresetsAsync(CancellationToken cancellationToken = default) =>
-            Task.FromResult<IReadOnlyList<CertificateBlueprintPresetDto>>(Presets);
+            LoadException is not null
+                ? Task.FromException<IReadOnlyList<CertificateBlueprintPresetDto>>(LoadException)
+                : Task.FromResult<IReadOnlyList<CertificateBlueprintPresetDto>>(Presets);
 
         public Task<CertificateBlueprintDetailDto?> GetCertificateBlueprintAsync(int certId, CancellationToken cancellationToken = default) =>
-            Task.FromResult(BlueprintToReturn);
+            LoadException is not null
+                ? Task.FromException<CertificateBlueprintDetailDto?>(LoadException)
+                : Task.FromResult(BlueprintToReturn);
 
         public Task<CertificateBlueprintDetailDto?> GetCertificateBlueprintByCodeAsync(string code, CancellationToken cancellationToken = default) =>
             Task.FromResult(BlueprintToReturn);
@@ -101,6 +109,186 @@ public sealed class AdminCertificatesControllerTests
             LastSavedRequest = request;
             return Task.FromResult(new SaveCertificateWizardResultDto(request.CertId ?? 99, request.Code, request.Name, request.Skills.Count, request.Skills.Sum(s => s.Sections.Count)));
         }
+    }
+
+    [Fact]
+    public async Task Index_when_api_throws_renders_error_banner_instead_of_crashing()
+    {
+        var api = new TestAdminCertificatesClient
+        {
+            LoadException = new ApiException("upstream_unavailable", "Service unavailable", 503),
+        };
+        var controller = CreateController(api);
+
+        var result = await controller.Index(CancellationToken.None);
+
+        var viewResult = Assert.IsType<ViewResult>(result);
+        Assert.Equal("~/Views/Admin/Certificates.cshtml", viewResult.ViewName);
+        var vm = Assert.IsType<AdminCertificateListViewModel>(viewResult.Model);
+        Assert.Empty(vm.Certificates);
+        Assert.False(string.IsNullOrWhiteSpace(vm.ErrorMessage));
+    }
+
+    [Fact]
+    public async Task Wizard_when_presets_fail_renders_degraded_page_with_error()
+    {
+        var api = new TestAdminCertificatesClient
+        {
+            LoadException = new ApiException("upstream_unavailable", "Service unavailable", 503),
+        };
+        var controller = CreateController(api);
+
+        var result = await controller.Wizard(null, null, 1, CancellationToken.None);
+
+        var viewResult = Assert.IsType<ViewResult>(result);
+        Assert.Equal("~/Views/Admin/CertificateWizard.cshtml", viewResult.ViewName);
+        var page = Assert.IsType<CertificateWizardPageViewModel>(viewResult.Model);
+        Assert.Empty(page.Form.Presets);
+        Assert.False(string.IsNullOrWhiteSpace(page.Form.ErrorMessage));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Wizard_when_blueprint_fails_offers_a_retry_instead_of_a_create_form(bool unreachable)
+    {
+        // Only the blueprint-for-edit lookup fails; the preset catalogue loads normally. Falling
+        // through to the form would pre-fill the default preset with no CertId, so saving it would
+        // create a new certificate instead of editing certificate 7.
+        HttpRequestException failure = unreachable
+            ? ApiUnreachable()
+            : new ApiException("exam_not_found", "Certificate not found", 404);
+        var controller = CreateController(new BlueprintFailingClient(new TestAdminCertificatesClient(), failure));
+
+        var result = await controller.Wizard(null, 7, 1, CancellationToken.None);
+
+        var page = Assert.IsType<CertificateWizardPageViewModel>(Assert.IsType<ViewResult>(result).Model);
+        Assert.Equal("/admin/certificates/wizard?certId=7", page.BlueprintRetryUrl);
+        Assert.False(string.IsNullOrWhiteSpace(page.Form.ErrorMessage));
+        Assert.Empty(page.Form.Presets);
+        Assert.Null(page.Form.CertId);
+        Assert.Equal(string.Empty, page.Form.Code);
+    }
+
+    [Theory]
+    [InlineData(404, Microsoft.Extensions.Logging.LogLevel.Warning)]
+    [InlineData(500, Microsoft.Extensions.Logging.LogLevel.Error)]
+    [InlineData(0, Microsoft.Extensions.Logging.LogLevel.Error)]
+    public async Task Wizard_logs_an_unknown_certificate_as_a_warning_and_real_faults_as_errors(
+        int status, Microsoft.Extensions.Logging.LogLevel expected)
+    {
+        // A stale or hand-edited ?certId= is not a server fault; it used to land as "fail:" in
+        // mvc.log next to genuine crashes.
+        HttpRequestException failure = status == 0
+            ? ApiUnreachable()
+            : new ApiException("NOT_FOUND", "Not Found", status);
+        var logger = new LevelCapturingLogger();
+        var controller = CreateController(new BlueprintFailingClient(new TestAdminCertificatesClient(), failure), logger: logger);
+
+        await controller.Wizard(null, 999999, 1, CancellationToken.None);
+
+        Assert.Equal(expected, Assert.Single(logger.Levels));
+    }
+
+    private sealed class LevelCapturingLogger : Microsoft.Extensions.Logging.ILogger<AdminCertificatesController>
+    {
+        public List<Microsoft.Extensions.Logging.LogLevel> Levels { get; } = [];
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+        public bool IsEnabled(Microsoft.Extensions.Logging.LogLevel logLevel) => true;
+        public void Log<TState>(Microsoft.Extensions.Logging.LogLevel logLevel, Microsoft.Extensions.Logging.EventId eventId,
+            TState state, Exception? exception, Func<TState, Exception?, string> formatter) => Levels.Add(logLevel);
+    }
+
+    /// <summary>Presets load normally; only the blueprint-for-edit lookup fails.</summary>
+    private sealed class BlueprintFailingClient(TestAdminCertificatesClient inner, HttpRequestException failure) : IAdminCertificatesClient
+    {
+        public Task<IReadOnlyList<AdminCertificateSummaryDto>> GetAdminCertificatesAsync(CancellationToken cancellationToken = default) =>
+            inner.GetAdminCertificatesAsync(cancellationToken);
+
+        public Task<IReadOnlyList<CertificateBlueprintPresetDto>> GetPresetsAsync(CancellationToken cancellationToken = default) =>
+            inner.GetPresetsAsync(cancellationToken);
+
+        public Task<CertificateBlueprintDetailDto?> GetCertificateBlueprintAsync(int certId, CancellationToken cancellationToken = default) =>
+            Task.FromException<CertificateBlueprintDetailDto?>(failure);
+
+        public Task<CertificateBlueprintDetailDto?> GetCertificateBlueprintByCodeAsync(string code, CancellationToken cancellationToken = default) =>
+            inner.GetCertificateBlueprintByCodeAsync(code, cancellationToken);
+
+        public Task<SaveCertificateWizardResultDto> SaveCertificateWizardAsync(SaveCertificateWizardRequest request, CancellationToken cancellationToken = default) =>
+            inner.SaveCertificateWizardAsync(request, cancellationToken);
+    }
+
+    [Fact]
+    public async Task SaveWizard_when_presets_fail_redisplays_with_error_and_does_not_save()
+    {
+        var api = new TestAdminCertificatesClient
+        {
+            LoadException = new ApiException("upstream_unavailable", "Service unavailable", 503),
+        };
+        var controller = CreateController(api);
+
+        var result = await controller.SaveWizard(new CertificateWizardViewModel { Code = "IELTS", Name = "IELTS" }, CancellationToken.None);
+
+        var viewResult = Assert.IsType<ViewResult>(result);
+        Assert.Equal("~/Views/Admin/CertificateWizard.cshtml", viewResult.ViewName);
+        var page = Assert.IsType<CertificateWizardPageViewModel>(viewResult.Model);
+        Assert.False(string.IsNullOrWhiteSpace(page.Form.ErrorMessage));
+        Assert.Null(api.LastSavedRequest);
+    }
+
+    /// <summary>What HttpClient throws when the API process is down: a transport fault, not an
+    /// ApiException, so a guard that catches only ApiException lets it through as a 500.</summary>
+    private static HttpRequestException ApiUnreachable() =>
+        new("No connection could be made because the target machine actively refused it. (localhost:5011)");
+
+    [Fact]
+    public async Task Index_when_api_is_unreachable_renders_error_banner_instead_of_crashing()
+    {
+        var controller = CreateController(new TestAdminCertificatesClient { LoadException = ApiUnreachable() });
+
+        var result = await controller.Index(CancellationToken.None);
+
+        var vm = Assert.IsType<AdminCertificateListViewModel>(Assert.IsType<ViewResult>(result).Model);
+        Assert.Empty(vm.Certificates);
+        Assert.False(string.IsNullOrWhiteSpace(vm.ErrorMessage));
+    }
+
+    [Fact]
+    public async Task Wizard_when_api_is_unreachable_renders_degraded_page_with_error()
+    {
+        var controller = CreateController(new TestAdminCertificatesClient { LoadException = ApiUnreachable() });
+
+        var result = await controller.Wizard(null, null, 1, CancellationToken.None);
+
+        var page = Assert.IsType<CertificateWizardPageViewModel>(Assert.IsType<ViewResult>(result).Model);
+        Assert.Empty(page.Form.Presets);
+        Assert.False(string.IsNullOrWhiteSpace(page.Form.ErrorMessage));
+    }
+
+    [Fact]
+    public async Task SaveWizard_when_api_is_unreachable_redisplays_with_error_and_does_not_save()
+    {
+        var api = new TestAdminCertificatesClient { LoadException = ApiUnreachable() };
+        var controller = CreateController(api);
+
+        var result = await controller.SaveWizard(new CertificateWizardViewModel { Code = "IELTS", Name = "IELTS" }, CancellationToken.None);
+
+        var page = Assert.IsType<CertificateWizardPageViewModel>(Assert.IsType<ViewResult>(result).Model);
+        Assert.False(string.IsNullOrWhiteSpace(page.Form.ErrorMessage));
+        Assert.Null(api.LastSavedRequest);
+    }
+
+    [Fact]
+    public async Task Index_lets_a_dead_session_reach_the_sign_out_middleware()
+    {
+        // AUTH_REQUIRED means the cookie's JWT is dead: Program.cs signs the admin out and
+        // redirects. Rendering the error banner instead would show a signed-in admin page.
+        var controller = CreateController(new TestAdminCertificatesClient
+        {
+            LoadException = new ApiException(ApiError.Codes.Unauthenticated, "Session ended", 401),
+        });
+
+        await Assert.ThrowsAsync<ApiException>(() => controller.Index(CancellationToken.None));
     }
 
     [Fact]

@@ -458,7 +458,7 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
     public async Task CreateAttempt_Seeds_The_Diagnostic_Benchmark_Hybrid_Question_Set()
     {
         var seedDemoPath = Path.Combine(DatabaseFixture.RepoRootPath, "docs", "seed-demo.sql");
-        await database.SqlCmdFileToDatabaseAsync("ExtraEfficiencyServicesTest", seedDemoPath);
+        await database.SqlCmdFileAsync(seedDemoPath);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
         var exam = await db.Exams.SingleAsync(e => e.Name == "Diagnostic Benchmark 45M");

@@ -76,7 +76,25 @@ public static class AuthenticationExtensions
                         }
 
                         var stamp = context.Principal?.FindFirst(IAccessTokenFactory.ClaimSessionStamp)?.Value;
-                        switch (await auth.CheckSessionAsync(userId, stamp, context.HttpContext.RequestAborted))
+                        SessionStatus status;
+                        try
+                        {
+                            status = await auth.CheckSessionAsync(userId, stamp, context.HttpContext.RequestAborted);
+                        }
+                        catch (Exception) when (context.HttpContext.RequestAborted.IsCancellationRequested)
+                        {
+                            // The client disconnected while the session query ran, so RequestAborted
+                            // cancelled it. SqlClient reports that as SqlException ("Operation
+                            // cancelled by user") as often as OperationCanceledException, hence the
+                            // broad filter. The session and lock checks never finished, so the token
+                            // must not authenticate. Fail rather than rethrow: JwtBearerHandler logs
+                            // "Exception occurred while processing message" only when this event
+                            // throws, and nobody is left to read the 401.
+                            context.Fail("Request aborted during the session check.");
+                            return;
+                        }
+
+                        switch (status)
                         {
                             case SessionStatus.Locked:
                                 context.Fail("Account is locked.");

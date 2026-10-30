@@ -16,14 +16,45 @@ public sealed class AdminCertificatesController(
     [HttpGet("/admin/certificates")]
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
-        var certificates = await api.GetAdminCertificatesAsync(await BearerAsync(), cancellationToken);
-        return View("~/Views/Admin/Certificates.cshtml", new AdminCertificateListViewModel { Certificates = certificates });
+        try
+        {
+            var certificates = await api.GetAdminCertificatesAsync(await BearerAsync(), cancellationToken);
+            return View("~/Views/Admin/Certificates.cshtml", new AdminCertificateListViewModel { Certificates = certificates });
+        }
+        // HttpRequestException, not ApiException alone: with the API down HttpClient throws a plain
+        // transport fault. A dead session (AUTH_LOCKED / AUTH_REQUIRED) still reaches the sign-out
+        // middleware in Program.cs, as in LearnerControllerBase. Same for the catches below.
+        catch (HttpRequestException ex) when (ex is not ApiException { Code: ApiError.Codes.Locked or ApiError.Codes.Unauthenticated })
+        {
+            logger.LogError(ex, "Could not load the admin certificate list");
+            return View("~/Views/Admin/Certificates.cshtml", new AdminCertificateListViewModel
+            {
+                ErrorMessage = "Could not reach the certificate service. The list below may be empty — reload in a moment.",
+            });
+        }
     }
 
     [HttpGet("/admin/certificates/wizard")]
     public async Task<IActionResult> Wizard(string? preset, int? certId, int step = 1, CancellationToken cancellationToken = default)
     {
-        var presets = await api.GetPresetsAsync(await BearerAsync(), cancellationToken);
+        IReadOnlyList<CertificateBlueprintPresetDto> presets;
+        try
+        {
+            presets = await api.GetPresetsAsync(await BearerAsync(), cancellationToken);
+        }
+        catch (HttpRequestException ex) when (ex is not ApiException { Code: ApiError.Codes.Locked or ApiError.Codes.Unauthenticated })
+        {
+            // Without the presets there is nothing to seed the wizard from, but the admin should
+            // see why rather than a blank step list.
+            logger.LogError(ex, "Could not load certificate presets for the wizard");
+            return View("~/Views/Admin/CertificateWizard.cshtml", new CertificateWizardPageViewModel(
+                new CertificateWizardViewModel
+                {
+                    Step = Math.Clamp(step, 1, 4),
+                    ErrorMessage = "The certificate service did not answer, so the blueprint presets could not be loaded. Reload the wizard to try again.",
+                }));
+        }
+
         var vm = new CertificateWizardViewModel
         {
             Presets = presets,
@@ -32,7 +63,30 @@ public sealed class AdminCertificatesController(
 
         if (certId.HasValue && certId.Value > 0)
         {
-            var detail = await api.GetCertificateBlueprintAsync(certId.Value, await BearerAsync(), cancellationToken);
+            CertificateBlueprintDetailDto? detail = null;
+            try
+            {
+                detail = await api.GetCertificateBlueprintAsync(certId.Value, await BearerAsync(), cancellationToken);
+            }
+            catch (HttpRequestException ex) when (ex is not ApiException { Code: ApiError.Codes.Locked or ApiError.Codes.Unauthenticated })
+            {
+                // Without the saved blueprint the form would fall back to the default preset with
+                // no CertId, and saving it would create a new certificate. Offer a retry instead.
+                // An unknown certId (a stale or hand-edited link) is the caller's mistake, not a
+                // fault: log it as a warning so it does not read as a server error in the logs.
+                logger.Log(ex is ApiException { Status: >= 400 and < 500 } ? LogLevel.Warning : LogLevel.Error,
+                    ex, "Could not load certificate blueprint {CertId} for editing", certId.Value);
+                return View("~/Views/Admin/CertificateWizard.cshtml", new CertificateWizardPageViewModel(
+                    new CertificateWizardViewModel
+                    {
+                        Step = Math.Clamp(step, 1, 4),
+                        ErrorMessage = "Could not load this certificate's blueprint, so it cannot be edited right now. Nothing was changed.",
+                    })
+                {
+                    BlueprintRetryUrl = $"/admin/certificates/wizard?certId={certId.Value}",
+                });
+            }
+
             if (detail is not null)
             {
                 vm.CertId = detail.CertId;
@@ -72,8 +126,18 @@ public sealed class AdminCertificatesController(
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> SaveWizard(CertificateWizardViewModel model, CancellationToken cancellationToken)
     {
-        var presets = await api.GetPresetsAsync(await BearerAsync(), cancellationToken);
-        model.Presets = presets;
+        try
+        {
+            model.Presets = await api.GetPresetsAsync(await BearerAsync(), cancellationToken);
+        }
+        catch (HttpRequestException ex) when (ex is not ApiException { Code: ApiError.Codes.Locked or ApiError.Codes.Unauthenticated })
+        {
+            // Without presets the step 1 grid would render empty on redisplay, so fail the whole
+            // save the same way the GET does rather than half-populating the form.
+            logger.LogError(ex, "Could not load certificate presets while saving the wizard");
+            model.ErrorMessage = "The certificate service did not answer, so nothing was saved. Reload the wizard and try again.";
+            return View("~/Views/Admin/CertificateWizard.cshtml", new CertificateWizardPageViewModel(model));
+        }
 
         try
         {

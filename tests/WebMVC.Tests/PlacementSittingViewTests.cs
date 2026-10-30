@@ -49,6 +49,123 @@ public sealed class PlacementSittingViewTests
     }
 
     [Theory]
+    [InlineData("AUDIO_DRIVEN", 2, false, true)]
+    [InlineData("AUDIO_DRIVEN", 1, false, true)]
+    [InlineData("SYSTEM_PACED_AUTO", 4, false, true)]
+    [InlineData("SYSTEM_PACED_AUTO", 1, false, true)]
+    [InlineData("FULL_SANDBOX", 2, true, false)]
+    [InlineData("UNIT_LOCKED_SANDBOX", 3, true, false)]
+    [InlineData("HYBRID_GROUP_LOCKED", 2, true, false)]
+    [InlineData(null, 2, true, false)]
+    public void Model_never_offers_previous_in_one_way_navigation_modes(
+        string? navigationMode, int order, bool canGoPrevious, bool hidePrevious)
+    {
+        // D3 invariant: placement sittings mirror ExamTakeQuestionPresentation — an AUDIO_DRIVEN or
+        // SYSTEM_PACED_AUTO question is one-way regardless of how far into the set it sits.
+        var take = Take(Question() with { DisplayOrder = order, NavigationMode = navigationMode },
+            totalQuestions: 10);
+        var model = new PlacementTakeViewModel(take);
+
+        Assert.Equal(canGoPrevious, model.CanGoPrevious);
+        Assert.Equal(hidePrevious, model.HidePrevious);
+        Assert.Equal(canGoPrevious ? $"/placement/take/42?q={order - 1}" : null, model.PreviousUrl);
+        Assert.Equal("/placement/take/42?q=" + (order + 1), model.NextUrl);
+    }
+
+    [Fact]
+    public void Model_does_not_offer_previous_into_a_skill_the_server_has_closed()
+    {
+        // The first Reading question follows the last Listening one, but the server locked
+        // Listening when Reading began: a Previous link there would only be refused.
+        var reading = Question() with
+        {
+            QuestionId = 20, DisplayOrder = 3, TotalQuestions = 4,
+            SkillCode = "reading", SkillName = "Reading", NavigationMode = "FULL_SANDBOX",
+        };
+        var take = Take(reading, totalQuestions: 4, navigator:
+        [
+            new(10, 1, 1, "L1", ModalityDto.Listening, true, false, false, IsLocked: true),
+            new(11, 2, 1, "L1", ModalityDto.Listening, true, false, false, IsLocked: true),
+            new(20, 3, 2, "R1", ModalityDto.Reading, false, false, true),
+            new(21, 4, 2, "R1", ModalityDto.Reading, false, false, false),
+        ]);
+
+        var model = new PlacementTakeViewModel(take);
+
+        Assert.False(model.HidePrevious);
+        Assert.False(model.CanGoPrevious);
+        Assert.Null(model.PreviousUrl);
+    }
+
+    [Fact]
+    public void Model_asks_for_confirmation_only_when_next_leaves_the_current_skill()
+    {
+        // Leaving a skill closes it for good, so the Next control confirms first, as the mock exam
+        // does before a skill advance; moving within a skill does not.
+        AttemptQuestionDto Q(int id, int order, string skill, string name) => Question() with
+        {
+            QuestionId = id, DisplayOrder = order, TotalQuestions = 4, SkillCode = skill, SkillName = name,
+        };
+        var questions = new[]
+        {
+            Q(10, 1, "listening", "Listening"), Q(11, 2, "listening", "Listening"),
+            Q(20, 3, "reading", "Reading"), Q(21, 4, "reading", "Reading"),
+        };
+        PlacementTakeViewModel At(int index) =>
+            new(Take(questions[index], totalQuestions: 4) with { Questions = questions });
+
+        Assert.Null(At(0).NextConfirm);
+        Assert.Equal(
+            "You are about to finish Listening and start Reading. You cannot return to Listening afterwards. Continue?",
+            At(1).NextConfirm);
+        Assert.Null(At(2).NextConfirm);
+        Assert.Null(At(3).NextConfirm);
+    }
+
+    [Fact]
+    public void Model_asks_for_confirmation_when_next_leaves_a_locked_question_group()
+    {
+        // The mock exam opens its group-lock confirmation before Next leaves a HYBRID_GROUP_LOCKED
+        // group, so the placement sitting does too; moving inside one group does not.
+        AttemptQuestionDto Writing(int id, int order, int group) => Question() with
+        {
+            QuestionId = id, DisplayOrder = order, TotalQuestions = 3, SkillCode = "writing",
+            SkillName = "Writing", NavigationMode = "HYBRID_GROUP_LOCKED", GroupId = group,
+        };
+        var questions = new[] { Writing(31, 1, 54), Writing(32, 2, 54), Writing(33, 3, 55) };
+        PlacementTakeViewModel At(int index) =>
+            new(Take(questions[index], totalQuestions: 3) with { Questions = questions });
+
+        Assert.Null(At(0).NextConfirm);
+        Assert.Equal(
+            "You are about to finish this question group. You cannot return to it or change its answers afterwards, and its remaining time does not carry over. Continue?",
+            At(1).NextConfirm);
+        Assert.Null(At(2).NextConfirm);
+    }
+
+    [Fact]
+    public void Leaving_a_skill_confirms_and_waits_for_in_flight_answers()
+    {
+        var root = TestPathHelper.FindRepoRoot();
+        var navigation = File.ReadAllText(Path.Combine(root, "src", "WebMVC", "Views", "Placement", "_TakeNavigation.cshtml"));
+        Assert.Contains("data-confirm-leave=\"@Model.NextConfirm\"", navigation);
+
+        var script = File.ReadAllText(Path.Combine(root, "src", "WebMVC", "wwwroot", "js", "placement", "take.js"));
+        Assert.Contains("link.dataset.confirmLeave", script);
+        Assert.Contains("window.confirm(", script);
+        // The API refuses an answer for a skill once the next one starts.
+        Assert.Contains("await settlePendingAnswers()", script);
+    }
+
+    [Fact]
+    public void Model_exposes_the_confirmed_display_order_for_client_history_reconciliation()
+    {
+        var model = new PlacementTakeViewModel(Take(Question() with { DisplayOrder = 4 }));
+        using var json = JsonDocument.Parse(model.PageDataJson);
+        Assert.Equal(4, json.RootElement.GetProperty("displayOrder").GetInt32());
+    }
+
+    [Theory]
     [InlineData(0, 0, 0)]
     [InlineData(1, 3, 33)]
     [InlineData(1, 8, 12)]
@@ -97,6 +214,38 @@ public sealed class PlacementSittingViewTests
         Assert.True(model.ShowPhases);
         Assert.Equal("step", model.Phases[0].AriaCurrent);
         Assert.Equal("false", model.Phases[1].AriaCurrent);
+    }
+
+    [Fact]
+    public void Phase_strip_shows_real_clocks_instead_of_placeholders()
+    {
+        // The strip used to render "--:--" for every skill for the whole sitting. A finished skill
+        // reads 00:00, the current one the sitting's remaining time, a later one its allowance.
+        AttemptQuestionDto Q(string skill, string name) => Question() with { SkillCode = skill, SkillName = name };
+        AttemptPhaseDto[] phases =
+        [
+            new(1, "LIST", "Listening", 1, 0, 2700),
+            new(2, "READ", "Reading", 2, 2700, 4500),
+            new(4, "WRIT", "Writing", 3, 7200, 600),
+        ];
+        PlacementTakeViewModel At(AttemptQuestionDto question, int remaining) =>
+            new(Take(question) with { Phases = phases, RemainingSeconds = remaining });
+
+        var reading = At(Q("READ", "Reading"), 2044);
+        Assert.Equal(["00:00", "34:04", "10:00"], reading.Phases.Select(p => p.TimerText));
+        Assert.Equal(["false", "step", "false"], reading.Phases.Select(p => p.AriaCurrent));
+
+        // A later skill never claims more time than the sitting has left.
+        var listening = At(Q("LIST", "Listening"), 300);
+        Assert.Equal(["05:00", "05:00", "05:00"], listening.Phases.Select(p => p.TimerText));
+        Assert.DoesNotContain(reading.Phases, p => p.TimerText.Contains('-'));
+
+        var root = TestPathHelper.FindRepoRoot();
+        var partial = File.ReadAllText(Path.Combine(root, "src", "WebMVC", "Views", "Placement", "_TakePhases.cshtml"));
+        Assert.Contains("@phase.TimerText", partial);
+        Assert.DoesNotContain("--:--", partial);
+        var script = File.ReadAllText(Path.Combine(root, "src", "WebMVC", "wwwroot", "js", "placement", "take.js"));
+        Assert.Contains("[data-phase-skill][aria-current='step'] [data-phase-timer]", script);
     }
 
     [Fact]
@@ -158,6 +307,10 @@ public sealed class PlacementSittingViewTests
         Assert.DoesNotContain("@q", script);
         Assert.Contains("/placement/take/${config.placementId}/fragment", script);
         Assert.Contains("history.pushState", script);
+        // History must follow the question the server confirmed, never the one the client asked for.
+        Assert.Contains("syncUrl(config.displayOrder", script);
+        Assert.DoesNotContain("?q=${targetQuestion}", script);
+        Assert.Contains("addEventListener(\"popstate\"", script);
         Assert.Contains("is-marked", script);
         var components = File.ReadAllText(Path.Combine(root, "src", "WebMVC", "wwwroot", "css", "components.css"));
         Assert.Contains(".navigator__cell.is-marked", components);

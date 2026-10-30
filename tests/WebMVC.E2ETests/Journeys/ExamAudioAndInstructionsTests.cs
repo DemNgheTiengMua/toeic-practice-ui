@@ -335,8 +335,10 @@ public class ExamAudioAndInstructionsTests : PlaywrightTestBase
     }
 
     [Test]
-    public async Task Should_Not_Lock_Replay_When_Navigating_Away_From_Unplayed_Question()
+    public async Task Should_Keep_Unplayed_Audio_Ready_And_Refuse_The_Rewind_Into_It()
     {
+        // D3: Exam 1's listening sections are AUDIO_DRIVEN, so a question is one-way. Leaving Q3 for
+        // Q4 commits the position server-side; asking for Q3 again must land back on Q4.
         var attemptId = await StartListeningAttemptAsync();
 
         await NavigateForwardToQuestionAsync(3);
@@ -345,21 +347,24 @@ public class ExamAudioAndInstructionsTests : PlaywrightTestBase
         var playerQ3 = Page.Locator("#main-exam-audio, .exam-audio[data-mode='exam']").First;
         await Expect(playerQ3).ToBeVisibleAsync();
         await Expect(playerQ3.Locator(".exam-audio__badge")).ToHaveTextAsync("READY");
+        await Expect(playerQ3.Locator(".exam-audio__btn-play")).ToBeEnabledAsync();
 
         await NavigateForwardToQuestionAsync(4);
 
-        await ReloadQuestionAsync(attemptId, 3);
-        await Expect(Page.Locator("#question-number-display")).ToContainTextAsync("Question 3");
+        // The unplayed audio is untouched by merely advancing past it.
+        var storedProgress = await Page.EvaluateAsync<string>(
+            "attemptId => localStorage.getItem('ee_exam_audio_' + attemptId) || '{}'", attemptId);
+        Assert.That(storedProgress, Does.Not.Contain("completed\":true"),
+            "Advancing past an unplayed question must not mark its audio complete.");
 
-        // Question 3 must remain playable and in READY state
-        await Expect(playerQ3).ToBeVisibleAsync();
-        await Expect(playerQ3.Locator(".exam-audio__badge")).ToHaveTextAsync("READY");
-        await Expect(playerQ3.Locator(".exam-audio__btn-play")).ToBeEnabledAsync();
+        await ExpectRewindRefusedAsync(attemptId, 3, expectedOrder: 4);
     }
 
     [Test]
-    public async Task Should_Resume_From_Last_Timestamp_And_Prevent_Rewind_When_Returning_To_Partial_Audio()
+    public async Task Should_Persist_And_Resume_Audio_Timestamp_And_Refuse_Rewind_After_Leaving_Partial_Audio()
     {
+        // D3 still lets a reload of the active question resume its audio from the saved offset; what
+        // it forbids is walking back into the half-played audio once the candidate has moved on.
         var attemptId = await StartListeningAttemptAsync();
 
         await NavigateForwardToQuestionAsync(3);
@@ -369,33 +374,73 @@ public class ExamAudioAndInstructionsTests : PlaywrightTestBase
         await Expect(playBtn).ToBeEnabledAsync();
         await playBtn.ClickAsync();
         await Expect(playerQ3.Locator(".exam-audio__badge")).ToHaveTextAsync("PLAYING");
+        var audioKey = await Page.EvaluateAsync<string>("() => window.ExamSitting.currentAudioKey");
 
-        // Wait until it has played at least 600ms
-        await Page.WaitForFunctionAsync("() => { const a = document.querySelector('#main-exam-audio audio'); return a && a.currentTime > 0.5; }");
-        var stoppedTime = await Page.EvaluateAsync<double>("() => document.querySelector('#main-exam-audio audio').currentTime");
-        Assert.That(stoppedTime, Is.GreaterThan(0.4));
+        // Progress is persisted while it plays, under this attempt's key.
+        await Page.WaitForFunctionAsync(
+            $"([attemptId, key]) => ({StoredOffsetScript})([attemptId, key]) > 0.5",
+            new object[] { attemptId, audioKey });
+        // The seeded clips are ~1.3 s: freeze this one the way leaving a question does, so it cannot
+        // run out while the reload is in flight and the resume point is the stored one.
+        await Page.EvaluateAsync("() => { window.stopExamAudio(document.querySelector('#main-exam-audio')); }");
+        var persistedTime = await StoredOffsetAsync(attemptId, audioKey);
 
-        await NavigateForwardToQuestionAsync(4);
-
-        // Audio must be stopped
-        var anyPlaying = await Page.EvaluateAsync<bool>("() => Array.from(document.querySelectorAll('audio')).some(a => !a.paused && a.currentTime > 0)");
-        Assert.That(anyPlaying, Is.False);
-
-        await ReloadQuestionAsync(attemptId, 3);
-
-        // Must restore at the last timestamp (not 0:00)
+        // Reloading the active question resumes from the stored offset instead of 0:00.
+        await Page.ReloadAsync();
+        await Expect(Page).ToHaveURLAsync(new Regex($@"/exams/take/{attemptId}\?q=3(&|$)"));
+        await Expect(Page.Locator("#question-number-display")).ToContainTextAsync("Question 3");
         var resumedPlayer = Page.Locator("#main-exam-audio, .exam-audio[data-mode='exam']").First;
         await Expect(resumedPlayer).ToBeVisibleAsync();
         var resumedTime = await resumedPlayer.EvaluateAsync<double>("el => parseFloat(el.dataset.currentTime || '0')");
-        Assert.That(resumedTime, Is.GreaterThanOrEqualTo(stoppedTime - 0.1), "Audio must resume from last timestamp, not from beginning");
+        Assert.That(resumedTime, Is.EqualTo(persistedTime).Within(0.001),
+            "Audio must resume from the last stored timestamp, not from the beginning.");
 
-        // Candidate can resume playback from this timestamp
         var resumedPlayButton = resumedPlayer.Locator(".exam-audio__btn-play");
         await Expect(resumedPlayButton).ToBeEnabledAsync();
         await resumedPlayButton.ClickAsync();
         await Expect(resumedPlayer.Locator(".exam-audio__badge")).ToHaveTextAsync("PLAYING");
-        var currentTimeAfterResume = await Page.EvaluateAsync<double>("() => document.querySelector('#main-exam-audio audio').currentTime");
-        Assert.That(currentTimeAfterResume, Is.GreaterThanOrEqualTo(resumedTime));
+        var stoppedTime = await Page.EvaluateAsync<double>("() => document.querySelector('#main-exam-audio audio').currentTime");
+        Assert.That(stoppedTime, Is.GreaterThanOrEqualTo(resumedTime - 0.001),
+            "Resumed playback must continue from the stored offset.");
+
+        await NavigateForwardToQuestionAsync(4);
+
+        // Audio must be stopped when the question changes
+        var anyPlaying = await Page.EvaluateAsync<bool>("() => Array.from(document.querySelectorAll('audio')).some(a => !a.paused && a.currentTime > 0)");
+        Assert.That(anyPlaying, Is.False);
+
+        // Leaving records where the abandoned question's audio stopped, even though it cannot be re-entered.
+        var storedAfterLeaving = await StoredOffsetAsync(attemptId, audioKey);
+        Assert.That(storedAfterLeaving, Is.GreaterThanOrEqualTo(stoppedTime - 0.1),
+            "The played offset must be persisted when leaving a partially played question.");
+
+        await ExpectRewindRefusedAsync(attemptId, 3, expectedOrder: 4);
+    }
+
+    /// <summary>Reads one clip's offset from the shell's persisted progress; 0 when nothing was stored.</summary>
+    private const string StoredOffsetScript =
+        "([attemptId, key]) => Number((JSON.parse(localStorage.getItem('ee_exam_audio_' + attemptId) || '{}')[key] || {}).currentTime) || 0";
+
+    private Task<double> StoredOffsetAsync(int attemptId, string audioKey) =>
+        Page.EvaluateAsync<double>(StoredOffsetScript, new object[] { attemptId, audioKey });
+
+    /// <summary>
+    /// Asserts the D3 one-way lock: requesting an earlier question in an AUDIO_DRIVEN section is
+    /// rejected and the candidate is redirected forward to their active question.
+    /// </summary>
+    private async Task ExpectRewindRefusedAsync(int attemptId, int blockedOrder, int expectedOrder)
+    {
+        // Next renders the new question at once (zero-reload shell) and reports the move in a
+        // background sync. The server only locks the earlier question once that sync lands, so wait
+        // for it; otherwise a fast rewind races the sync and is legitimately allowed.
+        await Page.WaitForFunctionAsync(
+            "() => { const s = window.ExamSitting; return !s || (!s.positionDirty && !s.isFlushing); }");
+        await Page.GotoAsync($"{BaseUrl}/exams/take/{attemptId}?q={blockedOrder}");
+        await Expect(Page).ToHaveURLAsync(new Regex($@"\?q={expectedOrder}(&|$)"));
+        await Expect(Page.Locator("#question-number-display")).ToContainTextAsync($"Question {expectedOrder}");
+
+        // The Previous control is not offered at all in a one-way section.
+        await Expect(Page.Locator("#btn-prev")).ToBeHiddenAsync();
     }
 
     [Test]
@@ -549,16 +594,6 @@ public class ExamAudioAndInstructionsTests : PlaywrightTestBase
         }
     }
 
-    private async Task ReloadQuestionAsync(int attemptId, int displayOrder)
-    {
-        await Page.EvaluateAsync(
-            "order => { const url = new URL(window.location.href); url.searchParams.set('q', String(order)); window.history.replaceState({ page: 'exam-shell', q: order }, '', url); }",
-            displayOrder);
-        await Page.ReloadAsync();
-        await Expect(Page).ToHaveURLAsync(new Regex($@"/exams/take/{attemptId}\?q={displayOrder}"));
-        await Expect(Page.Locator("#question-number-display"))
-            .ToContainTextAsync($"Question {displayOrder}");
-    }
 
     [Test]
     public async Task Should_Render_Study_Audio_In_Practice_Summary()

@@ -51,7 +51,38 @@
   </div>
 }
 
-<form id="wizardForm" method="post" action="/admin/certificates/wizard">
+@if (Model.BlueprintRetryUrl is not null)
+{
+  <div class="card" style="border: 2px solid var(--color-ink, #14181d); border-radius: 0; box-shadow: none; margin-bottom: 1.5rem;">
+    <div class="card__body">
+      <div class="state-block" role="alert" style="padding: 2rem 1rem;">
+        <div class="state-block__icon state-block__icon--danger" aria-hidden="true">FAILED</div>
+        <h2 class="state-block__title">Certificate could not be loaded</h2>
+        <p class="state-block__desc">The wizard needs the saved blueprint to edit this certificate.</p>
+        <div class="row" style="gap: 0.5rem; justify-content: center;">
+          <a class="btn btn--primary" href="@Model.BlueprintRetryUrl" style="border-radius: 0;">Try again</a>
+          <a class="btn btn--ghost" href="/admin/certificates" style="border-radius: 0;">Back to certificates</a>
+        </div>
+      </div>
+    </div>
+  </div>
+}
+else if (Model.Form.Presets.Count == 0)
+{
+  <div class="card" style="border: 2px solid var(--color-ink, #14181d); border-radius: 0; box-shadow: none; margin-bottom: 1.5rem;">
+    <div class="card__body">
+      <div class="state-block" role="alert" style="padding: 2rem 1rem;">
+        <div class="state-block__icon state-block__icon--danger" aria-hidden="true">FAILED</div>
+        <h2 class="state-block__title">No blueprint presets available</h2>
+        <p class="state-block__desc">The wizard needs the preset catalogue to configure a certificate. Nothing was saved.</p>
+        <a class="btn btn--primary" href="/admin/certificates/wizard" style="border-radius: 0;">Reload the wizard</a>
+      </div>
+    </div>
+  </div>
+}
+else
+{
+  <form id="wizardForm" method="post" action="/admin/certificates/wizard">
   @Html.AntiForgeryToken()
   <input type="hidden" id="certId" name="CertId" value="@Model.Form.CertId" />
   <input type="hidden" id="presetCode" name="PresetCode" value="@Model.Form.PresetCode" />
@@ -64,3 +95,4 @@
 </form>
 
 <script src="~/js/admin/certificate-wizard.js" asp-append-version="true"></script>
+}

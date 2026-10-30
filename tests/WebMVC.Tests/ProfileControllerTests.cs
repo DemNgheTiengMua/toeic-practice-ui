@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using WebMVC.Controllers;
 using WebMVC.Models;
 using Xunit;
@@ -41,7 +42,7 @@ public sealed class ProfileControllerTests
         var currentUser = new CurrentUser(new HttpContextAccessor { HttpContext = httpContext });
 
         var api = new TestProfileApiClient();
-        var controller = new ProfileController(api)
+        var controller = new ProfileController(api, NullLogger<ProfileController>.Instance)
         {
             ControllerContext = new ControllerContext
             {
@@ -155,6 +156,69 @@ public sealed class ProfileControllerTests
         Assert.Same(model, Assert.IsType<PasswordPageViewModel>(view.Model).Form);
     }
 
+    [Fact]
+    public async Task Index_when_api_throws_renders_degraded_view_instead_of_crashing()
+    {
+        var (controller, _, api) = CreateController();
+        api.GetProfileException = new ApiException("upstream_unavailable", "Service unavailable", StatusCodes.Status503ServiceUnavailable);
+
+        var result = await controller.Index(CancellationToken.None);
+
+        var view = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<ProfilePageViewModel>(view.Model);
+        Assert.NotNull(model.LoadError);
+        // The form must stay hidden behind the error placard: an empty form saved back would wipe
+        // the stored profile.
+        Assert.Equal("", model.Form.FullName);
+    }
+
+    /// <summary>What HttpClient throws when the API process is down: a transport fault, not an
+    /// ApiException, so a guard that catches only ApiException lets it through as a 500.</summary>
+    private static HttpRequestException ApiUnreachable() =>
+        new("No connection could be made because the target machine actively refused it. (localhost:5011)");
+
+    [Fact]
+    public async Task Index_when_api_is_unreachable_renders_degraded_view_instead_of_crashing()
+    {
+        var (controller, _, api) = CreateController();
+        api.GetProfileException = ApiUnreachable();
+
+        var result = await controller.Index(CancellationToken.None);
+
+        var model = Assert.IsType<ProfilePageViewModel>(Assert.IsType<ViewResult>(result).Model);
+        Assert.NotNull(model.LoadError);
+        Assert.Equal("", model.Form.FullName);
+    }
+
+    [Theory]
+    [InlineData(ApiError.Codes.Locked)]
+    [InlineData(ApiError.Codes.Unauthenticated)]
+    public async Task Index_lets_a_dead_session_reach_the_sign_out_middleware(string code)
+    {
+        // AUTH_LOCKED / AUTH_REQUIRED mean the cookie's JWT is dead: Program.cs signs the user out
+        // and redirects. Rendering the load-error placard instead would show a signed-in page.
+        var (controller, _, api) = CreateController();
+        api.GetProfileException = new ApiException(code, "Session ended", StatusCodes.Status401Unauthorized);
+
+        await Assert.ThrowsAsync<ApiException>(() => controller.Index(CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Saving_when_api_is_unreachable_keeps_the_typed_form_and_shows_an_error()
+    {
+        var (controller, _, api) = CreateController();
+        api.UpdateProfileException = ApiUnreachable();
+        var form = new ProfileViewModel { FullName = "Nguyen Van A", TimeZoneId = Contracts.TimeZones.DefaultId };
+
+        var result = await controller.Index(form, CancellationToken.None);
+
+        var model = Assert.IsType<ProfilePageViewModel>(Assert.IsType<ViewResult>(result).Model);
+        Assert.Same(form, model.Form);
+        Assert.Equal("Nguyen Van A", model.Form.FullName);
+        Assert.False(string.IsNullOrWhiteSpace(model.Form.FormError));
+        Assert.Null(model.Form.SuccessMessage);
+    }
+
     private sealed class EmptyTempDataProvider : ITempDataProvider
     {
         public IDictionary<string, object> LoadTempData(HttpContext context) => new Dictionary<string, object>();
@@ -184,13 +248,19 @@ public sealed class ProfileControllerTests
     private sealed class TestProfileApiClient : IProfileClient
     {
         public ApiException? ChangePasswordException { get; set; }
+        public Exception? GetProfileException { get; set; }
+        public Exception? UpdateProfileException { get; set; }
         public ChangePasswordRequest? LastChangePasswordRequest { get; private set; }
 
         public Task<ProfileDto> GetProfileAsync(CancellationToken cancellationToken = default) =>
-            Task.FromResult<ProfileDto>(null!);
+            GetProfileException is not null
+                ? Task.FromException<ProfileDto>(GetProfileException)
+                : Task.FromResult<ProfileDto>(null!);
 
         public Task<ProfileDto> UpdateProfileAsync(UpdateProfileRequest request, CancellationToken cancellationToken = default) =>
-            Task.FromResult<ProfileDto>(null!);
+            UpdateProfileException is not null
+                ? Task.FromException<ProfileDto>(UpdateProfileException)
+                : Task.FromResult<ProfileDto>(null!);
 
         public Task ChangePasswordAsync(ChangePasswordRequest request, CancellationToken cancellationToken = default)
         {

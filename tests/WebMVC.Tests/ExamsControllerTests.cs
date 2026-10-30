@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Routing;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using WebMVC.Controllers;
 using WebMVC.Models;
@@ -478,7 +479,7 @@ public sealed class ExamsControllerTests
         Assert.Equal("Pre-fetched exam insight", model.Insight.Narrative);
     }
 
-    private static ExamsController CreateController(TestApiClient api, ISpeakingClient? speakingApi = null)
+    private static ExamsController CreateController(TestApiClient api, ISpeakingClient? speakingApi = null, ILogger<ExamsController>? logger = null)
     {
         var identity = new ClaimsIdentity(AuthClaims.For(7, "learner@test.local", Roles.Learner, "Learner"), "Cookies");
         var principal = new ClaimsPrincipal(identity);
@@ -493,7 +494,7 @@ public sealed class ExamsControllerTests
         var httpContext = new DefaultHttpContext { User = principal, RequestServices = serviceProvider };
         var currentUser = new CurrentUser(new HttpContextAccessor { HttpContext = httpContext });
 
-        var controller = new ExamsController(api, currentUser, NullLogger<ExamsController>.Instance, new WebMVC.Formatters.DateTimeFormatter(new HttpContextAccessor { HttpContext = httpContext }), speakingApi)
+        var controller = new ExamsController(api, currentUser, logger ?? NullLogger<ExamsController>.Instance, new WebMVC.Formatters.DateTimeFormatter(new HttpContextAccessor { HttpContext = httpContext }), speakingApi)
         {
             ControllerContext = new ControllerContext
             {
@@ -918,6 +919,45 @@ public sealed class ExamsControllerTests
         Assert.Equal(nameof(ExamsController.Preflight), redirect.ActionName);
         Assert.Equal(100, redirect.RouteValues?["attemptId"]);
         Assert.Equal(42, redirect.RouteValues?["placementId"]);
+    }
+
+    [Fact]
+    public async Task VerifyPreflight_refusal_is_logged_with_context_and_its_reason_survives_the_redirect()
+    {
+        var api = new TestApiClient
+        {
+            ExceptionToThrow = new ApiException(ApiError.Codes.AttemptNotActive, "Attempt not active", 400, "Exam attempt is not in progress."),
+        };
+        var logger = new CapturingLogger();
+        var controller = CreateController(api, logger: logger);
+
+        var result = await controller.VerifyPreflight(1, 100, null, CancellationToken.None);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(ExamsController.Preflight), redirect.ActionName);
+        Assert.Equal("Exam attempt is not in progress.", controller.TempData["ErrorMessage"]);
+
+        var entry = Assert.Single(logger.Entries);
+        Assert.Equal(LogLevel.Warning, entry.Level);
+        Assert.IsType<ApiException>(entry.Exception);
+        Assert.Equal(100, entry.State["AttemptId"]);
+        Assert.Equal(1, entry.State["ExamId"]);
+        Assert.Equal(400, entry.State["Status"]);
+        Assert.Equal(ApiError.Codes.AttemptNotActive, entry.State["ErrorCode"]);
+        Assert.Equal("Exam attempt is not in progress.", entry.State["ErrorDetail"]);
+    }
+
+    private sealed class CapturingLogger : ILogger<ExamsController>
+    {
+        public List<(LogLevel Level, Exception? Exception, IReadOnlyDictionary<string, object?> State)> Entries { get; } = [];
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) =>
+            Entries.Add((logLevel, exception, state is IEnumerable<KeyValuePair<string, object?>> pairs
+                ? pairs.ToDictionary(p => p.Key, p => p.Value)
+                : new Dictionary<string, object?>()));
     }
 
     [Fact]

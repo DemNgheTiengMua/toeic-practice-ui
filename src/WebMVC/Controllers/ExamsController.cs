@@ -143,7 +143,9 @@ public sealed class ExamsController(
         }
         catch (ApiException ex)
         {
-            logger.LogError(ex, "Failed to verify preflight for attempt {AttemptId}", effectiveAttemptId.Value);
+            logger.LogWarning(ex,
+                "Preflight verification refused for attempt {AttemptId} (exam {ExamId}, placement {PlacementId}): {Status} {ErrorCode} {ErrorDetail}",
+                effectiveAttemptId.Value, id, placementId, ex.Status, ex.Code, ex.Detail ?? ex.Title);
             TempData["ErrorMessage"] = ex.Detail ?? "Failed to verify preflight checks. Please try again.";
             return RedirectToAction(nameof(Preflight), new { id, attemptId = effectiveAttemptId.Value, placementId });
         }

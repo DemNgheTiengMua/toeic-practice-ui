@@ -69,7 +69,11 @@ public static partial class PlacementEndpoints
             take.CurrentQuestion.ResponseDurationMs,
             take.CurrentQuestion.DraftSavedAt,
             take.CurrentQuestion.SkillDurationMinutes,
-            take.CurrentQuestion.SkillDisplayOrder);
+            take.CurrentQuestion.SkillDisplayOrder,
+            NavigationMode: take.CurrentQuestion.NavigationMode,
+            ToolsConfigJson: take.CurrentQuestion.ToolsConfigJson,
+            UnitNumber: take.CurrentQuestion.UnitNumber,
+            GroupId: take.CurrentQuestion.GroupId);
 
         var navigator = take.Navigator.Select(n => new NavigatorItemDto(
             n.QuestionId,
@@ -113,7 +117,12 @@ public static partial class PlacementEndpoints
             q.ResponseDurationMs,
             q.DraftSavedAt,
             q.SkillDurationMinutes,
-            q.SkillDisplayOrder)).ToList();
+            q.SkillDisplayOrder,
+            // The sitting finds where a locked part ends from each question's mode and group.
+            NavigationMode: q.NavigationMode,
+            ToolsConfigJson: q.ToolsConfigJson,
+            UnitNumber: q.UnitNumber,
+            GroupId: q.GroupId)).ToList();
 
         var phaseDtos = take.Phases?.Select(p => new AttemptPhaseDto(
             p.SkillId,

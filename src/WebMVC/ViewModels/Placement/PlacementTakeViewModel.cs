@@ -17,16 +17,22 @@ public sealed record PlacementTakeViewModel(
     public string FlagButtonClass { get; } = Take.CurrentQuestion.IsFlagged ? "btn--primary" : "";
     public string FlagPressed { get; } = Take.CurrentQuestion.IsFlagged ? "true" : "false";
     public string FlagLabel { get; } = Take.CurrentQuestion.IsFlagged ? "Flagged for review" : "Flag for review";
-    public string? PreviousUrl { get; } = Take.CurrentQuestion.DisplayOrder > 1
+    // One-way sections block rewinding the server-side position (D3). Mirror ExamTakeQuestionPresentation
+    // so the placement sitting never offers a control the API would refuse.
+    public bool HidePrevious { get; } = IsOneWayNavigation(Take.CurrentQuestion);
+    public bool CanGoPrevious { get; } = CanGoBack(Take);
+    public string? PreviousUrl { get; } = CanGoBack(Take)
         ? $"/placement/take/{Take.PlacementId}?q={Take.CurrentQuestion.DisplayOrder - 1}" : null;
     public string? NextUrl { get; } = Take.CurrentQuestion.DisplayOrder < Take.TotalQuestions
         ? $"/placement/take/{Take.PlacementId}?q={Take.CurrentQuestion.DisplayOrder + 1}" : null;
+    // Moving past the last question of a skill, or of a locked question group, closes it for good,
+    // so the Next control confirms first, as the mock exam does before a skill advance and before
+    // leaving a HYBRID_GROUP_LOCKED group.
+    public string? NextConfirm { get; } = LeavingLockedPartConfirmation(Take);
     public string SubmitUrl { get; } = $"/placement/take/{Take.PlacementId}/submit";
     public int ProgressPercent { get; } = GetProgressPercent(Take);
     public bool ShowPhases { get; } = Take.Phases?.Count > 1;
-    public IReadOnlyList<PhaseDisplay> Phases { get; } = (Take.Phases ?? [])
-        .Select(phase => new PhaseDisplay(phase.SkillCode, phase.SkillName,
-            Take.CurrentQuestion.SkillCode == phase.SkillCode ? "step" : "false")).ToArray();
+    public IReadOnlyList<PhaseDisplay> Phases { get; } = BuildPhases(Take);
     public IReadOnlyList<OptionDisplay> Options { get; } = Take.CurrentQuestion.Options
         .Select(option => new OptionDisplay(option.OptionId, option.Label, option.Text,
             option.OptionId == Take.CurrentQuestion.SelectedOptionId,
@@ -37,6 +43,56 @@ public sealed record PlacementTakeViewModel(
 
     private static int GetProgressPercent(PlacementTakeViewDto take) =>
         (int)Math.Round((double)take.AnsweredCount / Math.Max(1, take.TotalQuestions) * 100);
+
+    private static bool IsOneWayNavigation(AttemptQuestionDto question) =>
+        question.NavigationMode is "AUDIO_DRIVEN" or "SYSTEM_PACED_AUTO";
+
+    // ...and never into a question the server has locked, such as the end of a finished skill.
+    private static bool CanGoBack(PlacementTakeViewDto take) =>
+        take.CurrentQuestion.DisplayOrder > 1
+        && !IsOneWayNavigation(take.CurrentQuestion)
+        && take.Navigator.FirstOrDefault(n => n.DisplayOrder == take.CurrentQuestion.DisplayOrder - 1)?.IsLocked != true;
+
+    private static string? LeavingLockedPartConfirmation(PlacementTakeViewDto take)
+    {
+        var current = take.CurrentQuestion;
+        var next = take.Questions?.FirstOrDefault(q => q.DisplayOrder == current.DisplayOrder + 1);
+        if (next is null)
+        {
+            return null;
+        }
+
+        if (next.SkillCode != current.SkillCode)
+        {
+            return $"You are about to finish {current.SkillName} and start {next.SkillName}. "
+                   + $"You cannot return to {current.SkillName} afterwards. Continue?";
+        }
+
+        return current.NavigationMode == "HYBRID_GROUP_LOCKED" && next.GroupId != current.GroupId
+            ? "You are about to finish this question group. You cannot return to it or change its answers "
+              + "afterwards, and its remaining time does not carry over. Continue?"
+            : null;
+    }
+
+    // The phase strip shows each skill's clock, as the mock exam's does: a finished skill reads
+    // 00:00, the current one counts down from the sitting's remaining time (take.js keeps it
+    // ticking), and a later one shows its allowance, never more than the sitting has left.
+    private static IReadOnlyList<PhaseDisplay> BuildPhases(PlacementTakeViewDto take)
+    {
+        var phases = take.Phases ?? [];
+        var active = phases.ToList().FindIndex(phase => phase.SkillCode == take.CurrentQuestion.SkillCode);
+        var remaining = Math.Max(0, take.RemainingSeconds);
+        return phases.Select((phase, index) => new PhaseDisplay(
+            phase.SkillCode,
+            phase.SkillName,
+            index == active ? "step" : "false",
+            FormatClock(index < active ? 0
+                : index == active ? remaining
+                : Math.Min(Math.Max(0, phase.DurationSeconds), remaining)))).ToArray();
+    }
+
+    // Same mm:ss shape as formatTime in placement/take.js, so the first tick does not jump.
+    private static string FormatClock(int seconds) => $"{seconds / 60:00}:{seconds % 60:00}";
 
     private static ExamAudioPlayerModel? BuildAudioPlayer(AttemptQuestionDto question) =>
         string.IsNullOrEmpty(question.AudioPath) ? null : new ExamAudioPlayerModel(
@@ -84,6 +140,7 @@ public sealed record PlacementTakeViewModel(
         {
             placementId = take.PlacementId,
             questionId = question.QuestionId,
+            displayOrder = question.DisplayOrder,
             remainingSeconds = take.RemainingSeconds,
             isFlagged = question.IsFlagged,
             totalQuestions = take.TotalQuestions,
@@ -93,7 +150,7 @@ public sealed record PlacementTakeViewModel(
         });
     }
 
-    public sealed record PhaseDisplay(string SkillCode, string SkillName, string AriaCurrent);
+    public sealed record PhaseDisplay(string SkillCode, string SkillName, string AriaCurrent, string TimerText);
     public sealed record OptionDisplay(int OptionId, string Label, string Text, bool IsSelected, string CssClass);
     public sealed record NavigatorGroupDisplay(
         string Title, string RangeLabel, string AriaLabel, IReadOnlyList<NavigatorCellDisplay> Items);

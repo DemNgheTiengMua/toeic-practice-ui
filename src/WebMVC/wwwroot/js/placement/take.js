@@ -10,6 +10,8 @@
   let draftDirty = false;
   let draftSaveTimeout = null;
   let draftRequest = null;
+  // Answer saves still in flight; leaving a locked part waits for them (see leaveLockedPart).
+  const pendingAnswers = new Set();
 
   const token = document.querySelector("#anti-forgery-holder input[name='__RequestVerificationToken']")?.value || "";
   const q = selector => document.querySelector(selector);
@@ -26,6 +28,9 @@
   function updateTimer() {
     const display = q("#timer-display");
     if (display) display.textContent = formatTime(remainingSeconds);
+    // The current skill's clock in the phase strip counts down with the sitting's own clock.
+    const phaseTimer = q("[data-phase-skill][aria-current='step'] [data-phase-timer]");
+    if (phaseTimer) phaseTimer.textContent = formatTime(remainingSeconds);
     const box = q("#timer-box");
     if (box) {
       box.classList.toggle("timer--warning", remainingSeconds <= 300 && remainingSeconds > 120);
@@ -63,7 +68,7 @@
     if (!editor) return true;
     if (draftSaveTimeout) clearTimeout(draftSaveTimeout);
     const text = editor.value;
-    setStatus("Saving draft…", "save-status");
+    setStatus("Saving draftâ€¦", "save-status");
     draftRequest = fetch(`/placement/take/${config.placementId}/draft`, {
       method: "POST",
       headers: { "Content-Type": "application/json", RequestVerificationToken: token },
@@ -120,38 +125,82 @@
     } catch (_) { }
   });
 
-  async function navigate(href) {
+  function syncUrl(displayOrder, replace) {
+    const target = `/placement/take/${config.placementId}?q=${displayOrder}`;
+    if (replace) window.history.replaceState({ q: displayOrder }, "", target);
+    else window.history.pushState({ q: displayOrder }, "", target);
+    document.title = `Placement Test - Question ${displayOrder} - extra efficient`;
+  }
+
+  async function navigate(href, replaceHistory) {
     const target = new URL(href, window.location.origin);
     const targetQuestion = target.searchParams.get("q");
-    if (!targetQuestion || draftDirty && !(await saveDraftNow())) return;
-    const response = await fetch(`/placement/take/${config.placementId}/fragment?q=${encodeURIComponent(targetQuestion)}`, {
-      headers: { Accept: "text/html" }
-    });
-    if (!response.ok) {
-      const body = await response.json().catch(() => ({}));
-      if (body.redirectUrl) window.location.href = body.redirectUrl;
-      setStatus("Save error", "save-status save-status--error");
+    if (!targetQuestion) {
+      // Browser restored a bare sitting URL: mirror the question currently on screen.
+      syncUrl(config.displayOrder, true);
       return;
     }
-    dynamic.innerHTML = await response.text();
-    config = JSON.parse(dataIsland().textContent);
+    // A move that does not happen leaves the question on screen. On Back/forward the browser has
+    // already changed the address bar, so put it back on that question.
+    const stay = () => syncUrl(config.displayOrder, true);
+    if (draftDirty && !(await saveDraftNow())) { stay(); return; }
+    let response;
+    try {
+      response = await fetch(`/placement/take/${config.placementId}/fragment?q=${encodeURIComponent(targetQuestion)}`, {
+        headers: { Accept: "text/html" }
+      });
+    } catch (error) {
+      console.error(error);
+      setStatus("Save error", "save-status save-status--error");
+      stay();
+      return;
+    }
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      if (body.redirectUrl) { window.location.href = body.redirectUrl; return; }
+      setStatus("Save error", "save-status save-status--error");
+      stay();
+      return;
+    }
+    const fragment = document.createElement("template");
+    fragment.innerHTML = await response.text();
+    const confirmed = JSON.parse(fragment.content.getElementById("placement-take-data").textContent);
+    if (confirmed.displayOrder === config.displayOrder) {
+      // A refused rewind (Back into a one-way section) returns the question already on screen.
+      // Re-rendering it would tear out the live single-play player and hand back a fresh,
+      // playable one, so only the address bar is corrected.
+      syncUrl(config.displayOrder, true);
+      return;
+    }
+    dynamic.replaceChildren(fragment.content);
+    config = confirmed;
     remainingSeconds = config.remainingSeconds;
     isFlagged = config.isFlagged;
     answeredCount = config.answeredCount;
     draftDirty = false;
     updateTimer();
     updateWritingCounts();
-    window.history.pushState({}, "", `/placement/take/${config.placementId}?q=${targetQuestion}`);
-    document.title = `Placement Test - Question ${targetQuestion} - extra efficient`;
-    window.initExamAudio?.();
+    updateProgress();
+    // The server owns the position: a refused jump comes back as a different question, and the
+    // address bar must follow the confirmed one rather than the requested one.
+    syncUrl(config.displayOrder, replaceHistory || String(config.displayOrder) !== targetQuestion);
+    // exam-audio.js reads data-completed/data-current-time once, when it initialises a player,
+    // so the stored progress has to be on the element first.
     restorePlacementAudio();
+    window.initExamAudio?.();
   }
+
+  window.addEventListener("popstate", () => {
+    // Back/forward can target a question the server locked; re-ask the server and replace the entry.
+    navigate(window.location.href, true);
+  });
 
   document.addEventListener("click", event => {
     const link = event.target.closest("a[href^='/placement/take/']");
     if (link && link.closest("#placement-take-dynamic")) {
       event.preventDefault();
-      navigate(link.href);
+      if (link.dataset.confirmLeave) leaveLockedPart(link);
+      else navigate(link.href);
       return;
     }
     const flag = event.target.closest("#flag-btn");
@@ -190,8 +239,18 @@
     sendAnswer(event.target.value, isFlagged);
   });
 
-  async function sendAnswer(selectedOptionId, flagged) {
-    setStatus("Saving…", "save-status");
+  function sendAnswer(selectedOptionId, flagged) {
+    // Tracked so leaving a skill or locked group can wait for it: the API refuses an answer for a
+    // part once the next one has started.
+    const request = postAnswer(selectedOptionId, flagged);
+    pendingAnswers.add(request);
+    const settled = () => pendingAnswers.delete(request);
+    request.then(settled, settled);
+    return request;
+  }
+
+  async function postAnswer(selectedOptionId, flagged) {
+    setStatus("Savingâ€¦", "save-status");
     const body = new URLSearchParams();
     if (selectedOptionId != null) body.append("selectedOptionId", selectedOptionId);
     body.append("isFlagged", flagged ? "true" : "false");
@@ -213,6 +272,29 @@
       console.error(error);
       setStatus("Save error", "save-status save-status--error");
     }
+  }
+
+  // Capped, so a hung save never traps the candidate on the last question of a locked part.
+  function settlePendingAnswers() {
+    const inFlight = Array.from(pendingAnswers);
+    if (draftRequest) inFlight.push(draftRequest);
+    if (inFlight.length === 0) return Promise.resolve();
+    return Promise.race([
+      Promise.allSettled(inFlight),
+      new Promise(resolve => setTimeout(resolve, 5000))
+    ]);
+  }
+
+  // The Next control on the last question of a skill or of a locked question group. Leaving closes
+  // that part for good, so confirm first, as the mock exam does. Saves in flight land first, then
+  // the writing draft is saved as it stands: an autosave that finished while the candidate kept
+  // typing leaves the newest text marked as saved. The server opens the next part when asked for
+  // its first question, so the sitting then moves there like any other question, without a reload.
+  async function leaveLockedPart(link) {
+    if (!window.confirm(link.dataset.confirmLeave)) return;
+    await settlePendingAnswers();
+    if (writingEditor()?.value.trim() && !(await saveDraftNow())) return;
+    navigate(link.href);
   }
 
   setInterval(async () => {

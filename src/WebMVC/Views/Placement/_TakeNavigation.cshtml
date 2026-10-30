@@ -2,7 +2,11 @@
 <!-- Navigation Row -->
 <div class="row row--between row--middle mt-4">
   <div>
-    @if (Model.PreviousUrl is not null)
+    @if (Model.HidePrevious)
+    {
+      @* One-way section: the server refuses a rewind, so no control is offered at all. *@
+    }
+    else if (Model.CanGoPrevious && Model.PreviousUrl is not null)
     {
       <a class="btn" href="@Model.PreviousUrl">Previous</a>
     }
@@ -15,7 +19,8 @@
   <div class="row take-gap-3">
     @if (Model.NextUrl is not null)
     {
-      <a class="btn btn--primary" href="@Model.NextUrl">Next question</a>
+      @* data-confirm-leave holds the leave confirmation on the last question of a skill or locked question group (leaving is final); elsewhere it renders empty. *@
+      <a class="btn btn--primary" href="@Model.NextUrl" data-confirm-leave="@Model.NextConfirm">Next question</a>
     }
     else
     {
