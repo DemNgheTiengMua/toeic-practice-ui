@@ -76,7 +76,24 @@ public static class AuthenticationExtensions
                         }
 
                         var stamp = context.Principal?.FindFirst(IAccessTokenFactory.ClaimSessionStamp)?.Value;
-                        switch (await auth.CheckSessionAsync(userId, stamp, context.HttpContext.RequestAborted))
+                        SessionStatus status;
+                        try
+                        {
+                            status = await auth.CheckSessionAsync(userId, stamp, context.HttpContext.RequestAborted);
+                        }
+                        catch (OperationCanceledException) when (context.HttpContext.RequestAborted.IsCancellationRequested)
+                        {
+                            // The browser navigated away or stopped buffering mid-request, so
+                            // RequestAborted fired the session query's token. That is a normal
+                            // disconnect, not a token rejection: let validation pass and leave
+                            // the status to the exception handler, which already answers 499 for
+                            // aborted requests. Failing here instead would raise a challenge that
+                            // JwtBearerHandler logs as "Exception occurred while processing
+                            // message" — the fail: noise of F4.
+                            return;
+                        }
+
+                        switch (status)
                         {
                             case SessionStatus.Locked:
                                 context.Fail("Account is locked.");

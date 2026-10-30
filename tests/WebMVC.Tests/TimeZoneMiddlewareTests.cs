@@ -55,6 +55,37 @@ public sealed class TimeZoneMiddlewareTests
         Assert.True(reachedPage);
     }
 
+    /// <summary>F4: the learner navigated away while the zone lookup ran. The request unwinds in
+    /// the default zone instead of throwing a 500 out of the middleware.</summary>
+    [Fact]
+    public async Task A_client_abort_during_the_lookup_renders_in_the_default_zone()
+    {
+        var (context, user) = SignedInRequest();
+        using var aborted = new CancellationTokenSource();
+        context.RequestAborted = aborted.Token;
+        var api = Stub(new OperationCanceledException(aborted.Token));
+        var reachedPage = false;
+        var middleware = new TimeZoneMiddleware(_ => { reachedPage = true; return Task.CompletedTask; });
+
+        aborted.Cancel();
+        await middleware.InvokeAsync(context, user, api);
+
+        Assert.True(reachedPage);
+        Assert.False(context.Items.ContainsKey(DateTimeFormatter.ZoneItemKey));
+    }
+
+    /// <summary>A timeout that is not the client's doing must still surface: swallowing every
+    /// cancellation would hide a genuinely sick API behind silent default-zone rendering.</summary>
+    [Fact]
+    public async Task A_cancellation_the_client_did_not_request_still_surfaces()
+    {
+        var (context, user) = SignedInRequest();
+        var api = Stub(new TaskCanceledException("transport timeout"));
+        var middleware = new TimeZoneMiddleware(_ => Task.CompletedTask);
+
+        await Assert.ThrowsAsync<TaskCanceledException>(() => middleware.InvokeAsync(context, user, api));
+    }
+
     /// <summary>A signed-in principal whose cookie ticket carries a JWT, as AuthController issues it.</summary>
     private static (HttpContext Context, CurrentUser User) SignedInRequest()
     {
