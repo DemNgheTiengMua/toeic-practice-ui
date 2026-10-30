@@ -137,14 +137,26 @@
       syncUrl(config.displayOrder, true);
       return;
     }
-    if (draftDirty && !(await saveDraftNow())) return;
-    const response = await fetch(`/placement/take/${config.placementId}/fragment?q=${encodeURIComponent(targetQuestion)}`, {
-      headers: { Accept: "text/html" }
-    });
+    // A move that does not happen leaves the question on screen. On Back/forward the browser has
+    // already changed the address bar, so put it back on that question.
+    const stay = () => syncUrl(config.displayOrder, true);
+    if (draftDirty && !(await saveDraftNow())) { stay(); return; }
+    let response;
+    try {
+      response = await fetch(`/placement/take/${config.placementId}/fragment?q=${encodeURIComponent(targetQuestion)}`, {
+        headers: { Accept: "text/html" }
+      });
+    } catch (error) {
+      console.error(error);
+      setStatus("Save error", "save-status save-status--error");
+      stay();
+      return;
+    }
     if (!response.ok) {
       const body = await response.json().catch(() => ({}));
-      if (body.redirectUrl) window.location.href = body.redirectUrl;
+      if (body.redirectUrl) { window.location.href = body.redirectUrl; return; }
       setStatus("Save error", "save-status save-status--error");
+      stay();
       return;
     }
     const fragment = document.createElement("template");

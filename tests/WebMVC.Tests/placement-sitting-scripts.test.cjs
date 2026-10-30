@@ -7,8 +7,9 @@ const vm = require('node:vm');
 const source = fs.readFileSync(path.resolve(__dirname, '../../src/WebMVC/wwwroot/js/placement/take.js'), 'utf8');
 
 // A placement sitting as take.js sees it: #placement-take-dynamic holds one exam-mode player and
-// the page-data island. `served` is the question the fragment endpoint answers with.
-function sitting({ current, served, stored = {} }) {
+// the page-data island. `served` is the question the fragment endpoint answers with; `fragment`
+// is how that call goes: 'ok', 'refused' (non-2xx, no redirect) or 'offline' (fetch rejects).
+function sitting({ current, served, stored = {}, fragment = 'ok' }) {
   const log = [];
   const handlers = {};
   const island = page => JSON.stringify({ placementId: 9, questionId: 100 + page.order, displayOrder: page.order,
@@ -43,10 +44,13 @@ function sitting({ current, served, stored = {} }) {
     initExamAudio: () => log.push(`init completed=${shown.player.dataset.completed ?? 'unset'}`)
   };
   vm.runInNewContext(source, {
-    document, window, URL, console, setInterval() {}, setTimeout, clearTimeout,
+    // take.js logs the failures these tests provoke; keep the test output quiet.
+    document, window, URL, console: { ...console, error() {} }, setInterval() {}, setTimeout, clearTimeout,
     localStorage: { getItem: key => key === 'ee_placement_audio_9' ? JSON.stringify(stored) : null, setItem() {}, removeItem() {} },
     fetch: url => {
       log.push(`fetch ${url}`);
+      if (fragment === 'offline') return Promise.reject(new TypeError('Failed to fetch'));
+      if (fragment === 'refused') return Promise.resolve({ ok: false, json: () => Promise.resolve({}) });
       return Promise.resolve({ ok: true, text: () => Promise.resolve(markup(served)) });
     }
   });
@@ -88,4 +92,22 @@ test('a confirmed move restores stored progress before exam-audio initialises th
 
   assert.deepEqual(page.log, ['fetch /placement/take/9/fragment?q=6', 'swap',
     'push /placement/take/9?q=6', 'init completed=true']);
+});
+
+test('a fragment refused on Back puts the address bar back on the question still on screen', async () => {
+  // Back from Q3 asks for Q2 and the server refuses without a redirect (for example the placement
+  // expired). The browser already shows ?q=2 while Q3 stays on screen.
+  const page = sitting({ current: { order: 3, audioKey: 'p3' }, served: { order: 3, audioKey: 'p3' }, fragment: 'refused' });
+
+  await page.back(2);
+
+  assert.deepEqual(page.log, ['fetch /placement/take/9/fragment?q=2', 'replace /placement/take/9?q=3']);
+});
+
+test('a dropped connection on Back puts the address bar back on the question still on screen', async () => {
+  const page = sitting({ current: { order: 3, audioKey: 'p3' }, served: { order: 3, audioKey: 'p3' }, fragment: 'offline' });
+
+  await page.back(2);
+
+  assert.deepEqual(page.log, ['fetch /placement/take/9/fragment?q=2', 'replace /placement/take/9?q=3']);
 });
