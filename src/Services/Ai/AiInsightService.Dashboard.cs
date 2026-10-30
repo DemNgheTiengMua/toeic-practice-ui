@@ -19,6 +19,10 @@ namespace Services;
 
 public sealed partial class AiInsightService
 {
+    /// <summary>One gate per stripe of learners, fixed in size so it never grows with the user
+    /// table; only learners loading a dashboard at the same moment can wait on each other.</summary>
+    private static readonly SemaphoreSlim[] DashboardInsightGates =
+        Enumerable.Range(0, 64).Select(_ => new SemaphoreSlim(1, 1)).ToArray();
 
     public async Task<AiInsightView> GetOrCreateDashboardInsightAsync(int userId, int? certId = null, CancellationToken cancellationToken = default)
     {
@@ -88,6 +92,25 @@ public sealed partial class AiInsightService
             totalAnswered,
             totalCorrect);
 
+        // Serialise the lookup-then-insert per learner. Concurrent first loads (two tabs, a
+        // double-clicked sign-in) otherwise all miss the lookup and all insert; every loser hits
+        // UX_AiInsights_Fingerprint, which EF logs as a failed save even though the catch in
+        // FindOrCreateDashboardInsightAsync recovers. That catch stays for a second API process.
+        var gate = DashboardInsightGates[(int)((uint)userId % (uint)DashboardInsightGates.Length)];
+        await gate.WaitAsync(cancellationToken);
+        try
+        {
+            return await FindOrCreateDashboardInsightAsync(userId, targetCertId, fingerprint, cancellationToken);
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
+
+    private async Task<AiInsightView> FindOrCreateDashboardInsightAsync(
+        int userId, int targetCertId, string fingerprint, CancellationToken cancellationToken)
+    {
         // Check if an insight with this fingerprint exists for this user and scope
         var existingFingerprint = await db.AiInsights
             .FirstOrDefaultAsync(i => i.UserId == userId
