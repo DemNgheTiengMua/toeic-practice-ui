@@ -361,10 +361,10 @@ public class ExamAudioAndInstructionsTests : PlaywrightTestBase
     }
 
     [Test]
-    public async Task Should_Persist_Audio_Timestamp_And_Refuse_Rewind_After_Leaving_Partial_Audio()
+    public async Task Should_Persist_And_Resume_Audio_Timestamp_And_Refuse_Rewind_After_Leaving_Partial_Audio()
     {
-        // D3: playback progress survives leaving the question, but the candidate cannot walk back into
-        // the half-played audio — the server keeps them on the active question.
+        // D3 still lets a reload of the active question resume its audio from the saved offset; what
+        // it forbids is walking back into the half-played audio once the candidate has moved on.
         var attemptId = await StartListeningAttemptAsync();
 
         await NavigateForwardToQuestionAsync(3);
@@ -374,11 +374,34 @@ public class ExamAudioAndInstructionsTests : PlaywrightTestBase
         await Expect(playBtn).ToBeEnabledAsync();
         await playBtn.ClickAsync();
         await Expect(playerQ3.Locator(".exam-audio__badge")).ToHaveTextAsync("PLAYING");
+        var audioKey = await Page.EvaluateAsync<string>("() => window.ExamSitting.currentAudioKey");
 
-        // Wait until it has played at least 600ms
-        await Page.WaitForFunctionAsync("() => { const a = document.querySelector('#main-exam-audio audio'); return a && a.currentTime > 0.5; }");
+        // Progress is persisted while it plays, under this attempt's key.
+        await Page.WaitForFunctionAsync(
+            $"([attemptId, key]) => ({StoredOffsetScript})([attemptId, key]) > 0.5",
+            new object[] { attemptId, audioKey });
+        // The seeded clips are ~1.3 s: freeze this one the way leaving a question does, so it cannot
+        // run out while the reload is in flight and the resume point is the stored one.
+        await Page.EvaluateAsync("() => { window.stopExamAudio(document.querySelector('#main-exam-audio')); }");
+        var persistedTime = await StoredOffsetAsync(attemptId, audioKey);
+
+        // Reloading the active question resumes from the stored offset instead of 0:00.
+        await Page.ReloadAsync();
+        await Expect(Page).ToHaveURLAsync(new Regex($@"/exams/take/{attemptId}\?q=3(&|$)"));
+        await Expect(Page.Locator("#question-number-display")).ToContainTextAsync("Question 3");
+        var resumedPlayer = Page.Locator("#main-exam-audio, .exam-audio[data-mode='exam']").First;
+        await Expect(resumedPlayer).ToBeVisibleAsync();
+        var resumedTime = await resumedPlayer.EvaluateAsync<double>("el => parseFloat(el.dataset.currentTime || '0')");
+        Assert.That(resumedTime, Is.EqualTo(persistedTime).Within(0.001),
+            "Audio must resume from the last stored timestamp, not from the beginning.");
+
+        var resumedPlayButton = resumedPlayer.Locator(".exam-audio__btn-play");
+        await Expect(resumedPlayButton).ToBeEnabledAsync();
+        await resumedPlayButton.ClickAsync();
+        await Expect(resumedPlayer.Locator(".exam-audio__badge")).ToHaveTextAsync("PLAYING");
         var stoppedTime = await Page.EvaluateAsync<double>("() => document.querySelector('#main-exam-audio audio').currentTime");
-        Assert.That(stoppedTime, Is.GreaterThan(0.4));
+        Assert.That(stoppedTime, Is.GreaterThanOrEqualTo(resumedTime - 0.001),
+            "Resumed playback must continue from the stored offset.");
 
         await NavigateForwardToQuestionAsync(4);
 
@@ -386,14 +409,20 @@ public class ExamAudioAndInstructionsTests : PlaywrightTestBase
         var anyPlaying = await Page.EvaluateAsync<bool>("() => Array.from(document.querySelectorAll('audio')).some(a => !a.paused && a.currentTime > 0)");
         Assert.That(anyPlaying, Is.False);
 
-        // The timestamp is still recorded for the abandoned question, even though it cannot be re-entered.
-        var storedProgress = await Page.EvaluateAsync<string>(
-            "attemptId => localStorage.getItem('ee_exam_audio_' + attemptId) || '{}'", attemptId);
-        Assert.That(storedProgress, Does.Not.Contain("\"currentTime\":0}"),
+        // Leaving records where the abandoned question's audio stopped, even though it cannot be re-entered.
+        var storedAfterLeaving = await StoredOffsetAsync(attemptId, audioKey);
+        Assert.That(storedAfterLeaving, Is.GreaterThanOrEqualTo(stoppedTime - 0.1),
             "The played offset must be persisted when leaving a partially played question.");
 
         await ExpectRewindRefusedAsync(attemptId, 3, expectedOrder: 4);
     }
+
+    /// <summary>Reads one clip's offset from the shell's persisted progress; 0 when nothing was stored.</summary>
+    private const string StoredOffsetScript =
+        "([attemptId, key]) => Number((JSON.parse(localStorage.getItem('ee_exam_audio_' + attemptId) || '{}')[key] || {}).currentTime) || 0";
+
+    private Task<double> StoredOffsetAsync(int attemptId, string audioKey) =>
+        Page.EvaluateAsync<double>(StoredOffsetScript, new object[] { attemptId, audioKey });
 
     /// <summary>
     /// Asserts the D3 one-way lock: requesting an earlier question in an AUDIO_DRIVEN section is
