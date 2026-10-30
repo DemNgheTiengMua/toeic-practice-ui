@@ -1,9 +1,11 @@
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Security.Claims;
 using Contracts;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -14,25 +16,35 @@ using Xunit;
 namespace WebAPI.Tests;
 
 /// <summary>
-/// F4: a browser that disconnects mid-request makes RequestAborted fire the session query's
-/// token. That is a disconnect, not a rejected token — failing validation there raises a
-/// challenge that JwtBearerHandler logs as "Exception occurred while processing message", which
-/// is the fail: noise the crawl reported. These tests drive the real OnTokenValidated event.
+/// F4: a browser that disconnects mid-request makes RequestAborted cancel the session query.
+/// The "Exception occurred while processing message" fail: noise came from that exception
+/// escaping OnTokenValidated (JwtBearerHandler logs only when the event throws), so the event
+/// must absorb it — but by failing validation, never by letting an unchecked token through.
+/// These tests drive the real OnTokenValidated event.
 /// </summary>
 public sealed class TokenValidationCancellationTests
 {
     [Fact]
-    public async Task A_client_abort_during_session_check_does_not_fail_validation()
+    public Task A_client_abort_reported_as_OperationCanceledException_fails_validation_without_throwing() =>
+        AssertAbortFailsClosed(new OperationCanceledException());
+
+    [Fact]
+    public Task A_client_abort_reported_as_SqlException_fails_validation_without_throwing() =>
+        // SqlClient surfaces a query cancelled mid-flight as SqlException "Operation cancelled by
+        // user"; it has no public constructor, and only its type matters here.
+        AssertAbortFailsClosed((Exception)RuntimeHelpers.GetUninitializedObject(typeof(SqlException)));
+
+    private static async Task AssertAbortFailsClosed(Exception failure)
     {
         using var aborted = new CancellationTokenSource();
         aborted.Cancel();
-        var (handler, context) = Build(aborted.Token, Auth.Throwing(new OperationCanceledException(aborted.Token)));
+        var (handler, context) = Build(aborted.Token, Auth.Throwing(failure));
 
         await handler(context);
 
-        // Failing would raise OnChallenge and the fail: log; the request must pass through so
-        // the aborted response unwinds.
-        Assert.Null(context.Result);
+        // The session and lock checks never finished, so the token must not authenticate.
+        Assert.NotNull(context.Result);
+        Assert.False(context.Result.Succeeded);
     }
 
     [Fact]

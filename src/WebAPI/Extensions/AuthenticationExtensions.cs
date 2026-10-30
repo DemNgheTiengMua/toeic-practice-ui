@@ -81,15 +81,16 @@ public static class AuthenticationExtensions
                         {
                             status = await auth.CheckSessionAsync(userId, stamp, context.HttpContext.RequestAborted);
                         }
-                        catch (OperationCanceledException) when (context.HttpContext.RequestAborted.IsCancellationRequested)
+                        catch (Exception) when (context.HttpContext.RequestAborted.IsCancellationRequested)
                         {
-                            // The browser navigated away or stopped buffering mid-request, so
-                            // RequestAborted fired the session query's token. That is a normal
-                            // disconnect, not a token rejection: let validation pass and leave
-                            // the status to the exception handler, which already answers 499 for
-                            // aborted requests. Failing here instead would raise a challenge that
-                            // JwtBearerHandler logs as "Exception occurred while processing
-                            // message" — the fail: noise of F4.
+                            // The client disconnected while the session query ran, so RequestAborted
+                            // cancelled it. SqlClient reports that as SqlException ("Operation
+                            // cancelled by user") as often as OperationCanceledException, hence the
+                            // broad filter. The session and lock checks never finished, so the token
+                            // must not authenticate. Fail rather than rethrow: JwtBearerHandler logs
+                            // "Exception occurred while processing message" only when this event
+                            // throws, and nobody is left to read the 401.
+                            context.Fail("Request aborted during the session check.");
                             return;
                         }
 
