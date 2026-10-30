@@ -32,9 +32,7 @@ public sealed record PlacementTakeViewModel(
     public string SubmitUrl { get; } = $"/placement/take/{Take.PlacementId}/submit";
     public int ProgressPercent { get; } = GetProgressPercent(Take);
     public bool ShowPhases { get; } = Take.Phases?.Count > 1;
-    public IReadOnlyList<PhaseDisplay> Phases { get; } = (Take.Phases ?? [])
-        .Select(phase => new PhaseDisplay(phase.SkillCode, phase.SkillName,
-            Take.CurrentQuestion.SkillCode == phase.SkillCode ? "step" : "false")).ToArray();
+    public IReadOnlyList<PhaseDisplay> Phases { get; } = BuildPhases(Take);
     public IReadOnlyList<OptionDisplay> Options { get; } = Take.CurrentQuestion.Options
         .Select(option => new OptionDisplay(option.OptionId, option.Label, option.Text,
             option.OptionId == Take.CurrentQuestion.SelectedOptionId,
@@ -75,6 +73,26 @@ public sealed record PlacementTakeViewModel(
               + "afterwards, and its remaining time does not carry over. Continue?"
             : null;
     }
+
+    // The phase strip shows each skill's clock, as the mock exam's does: a finished skill reads
+    // 00:00, the current one counts down from the sitting's remaining time (take.js keeps it
+    // ticking), and a later one shows its allowance, never more than the sitting has left.
+    private static IReadOnlyList<PhaseDisplay> BuildPhases(PlacementTakeViewDto take)
+    {
+        var phases = take.Phases ?? [];
+        var active = phases.ToList().FindIndex(phase => phase.SkillCode == take.CurrentQuestion.SkillCode);
+        var remaining = Math.Max(0, take.RemainingSeconds);
+        return phases.Select((phase, index) => new PhaseDisplay(
+            phase.SkillCode,
+            phase.SkillName,
+            index == active ? "step" : "false",
+            FormatClock(index < active ? 0
+                : index == active ? remaining
+                : Math.Min(Math.Max(0, phase.DurationSeconds), remaining)))).ToArray();
+    }
+
+    // Same mm:ss shape as formatTime in placement/take.js, so the first tick does not jump.
+    private static string FormatClock(int seconds) => $"{seconds / 60:00}:{seconds % 60:00}";
 
     private static ExamAudioPlayerModel? BuildAudioPlayer(AttemptQuestionDto question) =>
         string.IsNullOrEmpty(question.AudioPath) ? null : new ExamAudioPlayerModel(
@@ -132,7 +150,7 @@ public sealed record PlacementTakeViewModel(
         });
     }
 
-    public sealed record PhaseDisplay(string SkillCode, string SkillName, string AriaCurrent);
+    public sealed record PhaseDisplay(string SkillCode, string SkillName, string AriaCurrent, string TimerText);
     public sealed record OptionDisplay(int OptionId, string Label, string Text, bool IsSelected, string CssClass);
     public sealed record NavigatorGroupDisplay(
         string Title, string RangeLabel, string AriaLabel, IReadOnlyList<NavigatorCellDisplay> Items);

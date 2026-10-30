@@ -69,7 +69,7 @@
     </div>
     <div class="modal__footer">
       <button type="button" class="btn js-close-exit-modal">Stay on test</button>
-      <a class="btn" href="/exams">Exit (resume later)</a>
+      <a class="btn" href="/exams" id="btn-exit-resume-later">Exit (resume later)</a>
       <form method="post" action="/exams/take/@take.AttemptId/cancel" id="cancel-exam-form" style="display:inline;">
         @Html.AntiForgeryToken()
         <button type="submit" class="btn btn--danger">Cancel & abandon (lose credit)</button>

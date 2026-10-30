@@ -14,7 +14,8 @@ namespace WebMVC.Tests;
 
 public sealed class AdminCertificatesControllerTests
 {
-    private static AdminCertificatesController CreateController(IAdminCertificatesClient api, IAdminScoreConversionClient? scoreConversionClient = null)
+    private static AdminCertificatesController CreateController(IAdminCertificatesClient api, IAdminScoreConversionClient? scoreConversionClient = null,
+        Microsoft.Extensions.Logging.ILogger<AdminCertificatesController>? logger = null)
     {
         var identity = new ClaimsIdentity(AuthClaims.For(1, "admin@toeic.local", Roles.Admin, "Admin"), "Cookies");
         var principal = new ClaimsPrincipal(identity);
@@ -32,7 +33,7 @@ public sealed class AdminCertificatesControllerTests
         return new AdminCertificatesController(
             currentUser,
             api,
-            NullLogger<AdminCertificatesController>.Instance,
+            logger ?? NullLogger<AdminCertificatesController>.Instance,
             scoreConversionClient)
         {
             ControllerContext = new ControllerContext
@@ -167,6 +168,35 @@ public sealed class AdminCertificatesControllerTests
         Assert.Empty(page.Form.Presets);
         Assert.Null(page.Form.CertId);
         Assert.Equal(string.Empty, page.Form.Code);
+    }
+
+    [Theory]
+    [InlineData(404, Microsoft.Extensions.Logging.LogLevel.Warning)]
+    [InlineData(500, Microsoft.Extensions.Logging.LogLevel.Error)]
+    [InlineData(0, Microsoft.Extensions.Logging.LogLevel.Error)]
+    public async Task Wizard_logs_an_unknown_certificate_as_a_warning_and_real_faults_as_errors(
+        int status, Microsoft.Extensions.Logging.LogLevel expected)
+    {
+        // A stale or hand-edited ?certId= is not a server fault; it used to land as "fail:" in
+        // mvc.log next to genuine crashes.
+        HttpRequestException failure = status == 0
+            ? ApiUnreachable()
+            : new ApiException("NOT_FOUND", "Not Found", status);
+        var logger = new LevelCapturingLogger();
+        var controller = CreateController(new BlueprintFailingClient(new TestAdminCertificatesClient(), failure), logger: logger);
+
+        await controller.Wizard(null, 999999, 1, CancellationToken.None);
+
+        Assert.Equal(expected, Assert.Single(logger.Levels));
+    }
+
+    private sealed class LevelCapturingLogger : Microsoft.Extensions.Logging.ILogger<AdminCertificatesController>
+    {
+        public List<Microsoft.Extensions.Logging.LogLevel> Levels { get; } = [];
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+        public bool IsEnabled(Microsoft.Extensions.Logging.LogLevel logLevel) => true;
+        public void Log<TState>(Microsoft.Extensions.Logging.LogLevel logLevel, Microsoft.Extensions.Logging.EventId eventId,
+            TState state, Exception? exception, Func<TState, Exception?, string> formatter) => Levels.Add(logLevel);
     }
 
     /// <summary>Presets load normally; only the blueprint-for-edit lookup fails.</summary>

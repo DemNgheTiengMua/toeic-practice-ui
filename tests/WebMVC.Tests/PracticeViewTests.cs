@@ -56,7 +56,23 @@ public sealed class PracticeViewTests
         Assert.DoesNotContain("Plays once only", html);
         Assert.DoesNotContain("Replay permitted", html);
     }
-[Fact]
+    [Fact]
+    public void Moving_between_questions_keeps_title_and_answer_group_name_on_the_question_shown()
+    {
+        // Both are rendered for the first question; the zero-reload swap left them on "Question 1"
+        // while the drill showed question 4.
+        var repoRoot = TestPathHelper.FindRepoRoot();
+        var script = File.ReadAllText(Path.Combine(repoRoot, "src", "WebMVC", "wwwroot", "js", "practice", "take.js"));
+        var render = Regex.Match(script, @"function renderQuestion\(order\)\s*\{(?<body>[\s\S]*?)\n      function ").Groups["body"].Value;
+        Assert.NotEmpty(render);
+        Assert.Contains("document.title = document.title.replace(/Question \\d+/, \"Question \" + q.displayOrder)", render);
+        Assert.Contains("optionList.setAttribute(\"aria-label\", \"Answer for question \" + q.displayOrder)", render);
+
+        var view = File.ReadAllText(Path.Combine(repoRoot, "src", "WebMVC", "Views", "Practice", "Take.cshtml"));
+        Assert.Contains("— Question @q.DisplayOrder —", view);
+    }
+
+    [Fact]
     public void Take_View_Contains_Practice_QoL_Audio_Rewind_Transcript_And_Explanation_Accordion()
     {
         var repoRoot = TestPathHelper.FindRepoRoot();

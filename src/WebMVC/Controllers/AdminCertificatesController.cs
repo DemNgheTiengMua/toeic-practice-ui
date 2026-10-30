@@ -72,7 +72,10 @@ public sealed class AdminCertificatesController(
             {
                 // Without the saved blueprint the form would fall back to the default preset with
                 // no CertId, and saving it would create a new certificate. Offer a retry instead.
-                logger.LogError(ex, "Could not load certificate blueprint {CertId} for editing", certId.Value);
+                // An unknown certId (a stale or hand-edited link) is the caller's mistake, not a
+                // fault: log it as a warning so it does not read as a server error in the logs.
+                logger.Log(ex is ApiException { Status: >= 400 and < 500 } ? LogLevel.Warning : LogLevel.Error,
+                    ex, "Could not load certificate blueprint {CertId} for editing", certId.Value);
                 return View("~/Views/Admin/CertificateWizard.cshtml", new CertificateWizardPageViewModel(
                     new CertificateWizardViewModel
                     {

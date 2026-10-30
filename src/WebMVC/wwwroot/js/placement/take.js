@@ -28,6 +28,9 @@
   function updateTimer() {
     const display = q("#timer-display");
     if (display) display.textContent = formatTime(remainingSeconds);
+    // The current skill's clock in the phase strip counts down with the sitting's own clock.
+    const phaseTimer = q("[data-phase-skill][aria-current='step'] [data-phase-timer]");
+    if (phaseTimer) phaseTimer.textContent = formatTime(remainingSeconds);
     const box = q("#timer-box");
     if (box) {
       box.classList.toggle("timer--warning", remainingSeconds <= 300 && remainingSeconds > 120);

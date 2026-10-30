@@ -62,6 +62,28 @@ public sealed class ExamsViewTests
     }
 
     [Fact]
+    public void Exit_resume_later_leaves_without_the_accidental_close_prompt()
+    {
+        // The exit modal's "Exit (resume later)" is a deliberate leave; it used to be a bare link,
+        // so the beforeunload guard stacked a browser "Leave site?" prompt on top of it.
+        var repoRoot = TestPathHelper.FindRepoRoot();
+        var html = ReadTakeSource(repoRoot);
+        Assert.Matches(@"<a\s[^>]*href=""/exams""[^>]*id=""btn-exit-resume-later""[^>]*>Exit \(resume later\)</a>", html);
+
+        var script = File.ReadAllText(Path.Combine(repoRoot, "src", "WebMVC", "wwwroot", "js", "exams", "submission.js"));
+        var handler = Regex.Match(script,
+            @"getElementById\('btn-exit-resume-later'\)[\s\S]*?addEventListener\('click'(?<body>[\s\S]*?)\}\)\(\);");
+        Assert.True(handler.Success, "Exit (resume later) must have its own click handler.");
+        var body = handler.Groups["body"].Value;
+        Assert.Contains("e.preventDefault()", body);
+        Assert.Contains("sitting.triggerFlush()", body);
+        // isSubmitting is what the beforeunload guard checks; it must be set before navigating.
+        Assert.True(body.IndexOf("sitting.isSubmitting = true", StringComparison.Ordinal)
+            < body.IndexOf("window.location.href = href", StringComparison.Ordinal));
+        Assert.Contains("sitting.isSubmitting = true", body);
+    }
+
+    [Fact]
     public void Take_View_Contains_SplitScreen_TopControlBar_Palette_Highlighter_And_ComponentWidgets_Invariants()
     {
         var repoRoot = TestPathHelper.FindRepoRoot();
