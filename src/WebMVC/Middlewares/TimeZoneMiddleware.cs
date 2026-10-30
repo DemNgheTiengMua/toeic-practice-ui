@@ -31,9 +31,10 @@ public sealed class TimeZoneMiddleware(RequestDelegate next)
             {
                 // API unreachable or any other refusal: render in the default zone.
             }
-            // The learner navigated away mid-lookup. Render in the default zone and let the
-            // pipeline unwind — a disconnect is not a page failure worth a 500 (F4).
-            catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
+            // The lookup timed out, or the learner navigated away mid-lookup: either way render in
+            // the default zone. On a disconnect the page's own cancelled calls still end the
+            // request as 499 in Program.cs (F4).
+            catch (OperationCanceledException)
             {
             }
         }

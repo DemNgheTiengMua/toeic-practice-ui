@@ -108,11 +108,11 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
                     // tradeoff; the API still enforces the lock on every forwarded call, so a
                     // locked user can browse static pages but gets nothing from the API.
                 }
-                catch (OperationCanceledException) when (context.HttpContext.RequestAborted.IsCancellationRequested)
+                catch (OperationCanceledException) when (!context.HttpContext.RequestAborted.IsCancellationRequested)
                 {
-                    // The browser went away mid-validation. Keep the principal and let the
-                    // aborted request unwind; challenging a client that is no longer there only
-                    // logs a failure that never happened (F4).
+                    // Transport timeout, not a client abort: same deliberate fail-open as above.
+                    // A real client abort propagates to the RequestAborted catch in the pipeline
+                    // middleware below, which ends the request as 499 without logging a failure (F4).
                 }
             },
         };

@@ -74,16 +74,21 @@ public sealed class TimeZoneMiddlewareTests
         Assert.False(context.Items.ContainsKey(DateTimeFormatter.ZoneItemKey));
     }
 
-    /// <summary>A timeout that is not the client's doing must still surface: swallowing every
-    /// cancellation would hide a genuinely sick API behind silent default-zone rendering.</summary>
+    /// <summary>A lookup that timed out (HttpClient's TaskCanceledException, with no client abort)
+    /// is a failed lookup like any other, so the page renders in the default zone, as the class
+    /// promises. The page's own API calls still surface a sick API.</summary>
     [Fact]
-    public async Task A_cancellation_the_client_did_not_request_still_surfaces()
+    public async Task A_timed_out_lookup_renders_in_the_default_zone()
     {
         var (context, user) = SignedInRequest();
-        var api = Stub(new TaskCanceledException("transport timeout"));
-        var middleware = new TimeZoneMiddleware(_ => Task.CompletedTask);
+        var api = Stub(new TaskCanceledException("transport timeout", new TimeoutException()));
+        var reachedPage = false;
+        var middleware = new TimeZoneMiddleware(_ => { reachedPage = true; return Task.CompletedTask; });
 
-        await Assert.ThrowsAsync<TaskCanceledException>(() => middleware.InvokeAsync(context, user, api));
+        await middleware.InvokeAsync(context, user, api);
+
+        Assert.True(reachedPage);
+        Assert.False(context.Items.ContainsKey(DateTimeFormatter.ZoneItemKey));
     }
 
     /// <summary>A signed-in principal whose cookie ticket carries a JWT, as AuthController issues it.</summary>
