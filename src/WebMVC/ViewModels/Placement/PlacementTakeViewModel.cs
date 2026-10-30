@@ -25,9 +25,10 @@ public sealed record PlacementTakeViewModel(
         ? $"/placement/take/{Take.PlacementId}?q={Take.CurrentQuestion.DisplayOrder - 1}" : null;
     public string? NextUrl { get; } = Take.CurrentQuestion.DisplayOrder < Take.TotalQuestions
         ? $"/placement/take/{Take.PlacementId}?q={Take.CurrentQuestion.DisplayOrder + 1}" : null;
-    // Moving past the last question of a skill closes that skill for good, so the Next control
-    // confirms first, as the mock exam does before a skill advance.
-    public string? NextConfirm { get; } = LeavingSkillConfirmation(Take);
+    // Moving past the last question of a skill, or of a locked question group, closes it for good,
+    // so the Next control confirms first, as the mock exam does before a skill advance and before
+    // leaving a HYBRID_GROUP_LOCKED group.
+    public string? NextConfirm { get; } = LeavingLockedPartConfirmation(Take);
     public string SubmitUrl { get; } = $"/placement/take/{Take.PlacementId}/submit";
     public int ProgressPercent { get; } = GetProgressPercent(Take);
     public bool ShowPhases { get; } = Take.Phases?.Count > 1;
@@ -54,13 +55,25 @@ public sealed record PlacementTakeViewModel(
         && !IsOneWayNavigation(take.CurrentQuestion)
         && take.Navigator.FirstOrDefault(n => n.DisplayOrder == take.CurrentQuestion.DisplayOrder - 1)?.IsLocked != true;
 
-    private static string? LeavingSkillConfirmation(PlacementTakeViewDto take)
+    private static string? LeavingLockedPartConfirmation(PlacementTakeViewDto take)
     {
-        var next = take.Questions?.FirstOrDefault(q => q.DisplayOrder == take.CurrentQuestion.DisplayOrder + 1);
-        return next is null || next.SkillCode == take.CurrentQuestion.SkillCode
-            ? null
-            : $"You are about to finish {take.CurrentQuestion.SkillName} and start {next.SkillName}. "
-              + $"You cannot return to {take.CurrentQuestion.SkillName} afterwards. Continue?";
+        var current = take.CurrentQuestion;
+        var next = take.Questions?.FirstOrDefault(q => q.DisplayOrder == current.DisplayOrder + 1);
+        if (next is null)
+        {
+            return null;
+        }
+
+        if (next.SkillCode != current.SkillCode)
+        {
+            return $"You are about to finish {current.SkillName} and start {next.SkillName}. "
+                   + $"You cannot return to {current.SkillName} afterwards. Continue?";
+        }
+
+        return current.NavigationMode == "HYBRID_GROUP_LOCKED" && next.GroupId != current.GroupId
+            ? "You are about to finish this question group. You cannot return to it or change its answers "
+              + "afterwards, and its remaining time does not carry over. Continue?"
+            : null;
     }
 
     private static ExamAudioPlayerModel? BuildAudioPlayer(AttemptQuestionDto question) =>

@@ -10,7 +10,7 @@
   let draftDirty = false;
   let draftSaveTimeout = null;
   let draftRequest = null;
-  // Answer saves still in flight; leaving a skill waits for them (see leaveSkill).
+  // Answer saves still in flight; leaving a locked part waits for them (see leaveLockedPart).
   const pendingAnswers = new Set();
 
   const token = document.querySelector("#anti-forgery-holder input[name='__RequestVerificationToken']")?.value || "";
@@ -196,7 +196,7 @@
     const link = event.target.closest("a[href^='/placement/take/']");
     if (link && link.closest("#placement-take-dynamic")) {
       event.preventDefault();
-      if (link.dataset.confirmLeave) leaveSkill(link);
+      if (link.dataset.confirmLeave) leaveLockedPart(link);
       else navigate(link.href);
       return;
     }
@@ -237,8 +237,8 @@
   });
 
   function sendAnswer(selectedOptionId, flagged) {
-    // Tracked so leaving a skill can wait for it: the API refuses an answer for a skill once the
-    // next skill has started.
+    // Tracked so leaving a skill or locked group can wait for it: the API refuses an answer for a
+    // part once the next one has started.
     const request = postAnswer(selectedOptionId, flagged);
     pendingAnswers.add(request);
     const settled = () => pendingAnswers.delete(request);
@@ -271,21 +271,26 @@
     }
   }
 
-  // Capped, so a hung save never traps the candidate on the last question of a skill.
+  // Capped, so a hung save never traps the candidate on the last question of a locked part.
   function settlePendingAnswers() {
-    if (pendingAnswers.size === 0) return Promise.resolve();
+    const inFlight = Array.from(pendingAnswers);
+    if (draftRequest) inFlight.push(draftRequest);
+    if (inFlight.length === 0) return Promise.resolve();
     return Promise.race([
-      Promise.allSettled(Array.from(pendingAnswers)),
+      Promise.allSettled(inFlight),
       new Promise(resolve => setTimeout(resolve, 5000))
     ]);
   }
 
-  // The Next control on the last question of a skill. Leaving closes that skill for good, so
-  // confirm first, as the mock exam does. The server opens the next skill when asked for its first
-  // question, so the sitting then moves there like any other question, without a reload.
-  async function leaveSkill(link) {
+  // The Next control on the last question of a skill or of a locked question group. Leaving closes
+  // that part for good, so confirm first, as the mock exam does. Saves in flight land first, then
+  // the writing draft is saved as it stands: an autosave that finished while the candidate kept
+  // typing leaves the newest text marked as saved. The server opens the next part when asked for
+  // its first question, so the sitting then moves there like any other question, without a reload.
+  async function leaveLockedPart(link) {
     if (!window.confirm(link.dataset.confirmLeave)) return;
     await settlePendingAnswers();
+    if (writingEditor()?.value.trim() && !(await saveDraftNow())) return;
     navigate(link.href);
   }
 

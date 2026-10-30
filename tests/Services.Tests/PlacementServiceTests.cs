@@ -634,6 +634,109 @@ public sealed class PlacementServiceTests(DatabaseFixture database)
         Assert.Equal(q1Id, take.CurrentQuestion.QuestionId);
     }
 
+    [Fact]
+    public async Task GetPlacementTake_moving_on_from_a_locked_question_group_opens_the_next_group()
+    {
+        // Each writing task is its own locked group (HYBRID_GROUP_LOCKED). Asking for the next
+        // task's first question was refused like a rewind, and placement has no group transition,
+        // so the candidate could never reach the second task (#134, exam 14 W2 -> W3).
+        var certCode = Unique("GL");
+        var (examId, w1Id, w2Id, _) = await SeedLockedGroupPlacementFixtureAsync(certCode);
+        var userId = await SeedLearnerAsync(certCode);
+        var (service, _) = CreateServices();
+        var info = await service.StartPlacementTestAsync(userId, examId);
+        await service.SaveDraftAsync(userId, info.PlacementId, w1Id, "First task draft");
+
+        var second = await service.GetPlacementTakeAsync(userId, info.PlacementId, questionDisplayOrder: 2);
+
+        Assert.Equal(w2Id, second.CurrentQuestion.QuestionId);
+        Assert.True(second.Navigator.Single(n => n.QuestionId == w1Id).IsLocked);
+        // Accepted only because the attempt really moved on to the second group.
+        await service.SaveDraftAsync(userId, info.PlacementId, w2Id, "Second task draft");
+
+        // The first task stays closed: a rewind is refused.
+        var (fresh, _) = CreateServices();
+        var rewind = await fresh.GetPlacementTakeAsync(userId, info.PlacementId, questionDisplayOrder: 1);
+        Assert.Equal(w2Id, rewind.CurrentQuestion.QuestionId);
+    }
+
+    [Fact]
+    public async Task GetPlacementTake_a_jump_to_the_next_skill_does_not_skip_a_locked_group()
+    {
+        // From the first writing task the next skill's first question lies beyond the second task:
+        // that jump is refused, and the next skill opens only from the last locked group.
+        var certCode = Unique("GS");
+        var (examId, w1Id, w2Id, r1Id) = await SeedLockedGroupPlacementFixtureAsync(certCode);
+        var userId = await SeedLearnerAsync(certCode);
+        var (service, _) = CreateServices();
+        var info = await service.StartPlacementTestAsync(userId, examId);
+
+        var skipped = await service.GetPlacementTakeAsync(userId, info.PlacementId, questionDisplayOrder: 3);
+        Assert.Equal(w1Id, skipped.CurrentQuestion.QuestionId);
+
+        var (second, _) = CreateServices();
+        Assert.Equal(w2Id, (await second.GetPlacementTakeAsync(userId, info.PlacementId, questionDisplayOrder: 2)).CurrentQuestion.QuestionId);
+
+        var (third, _) = CreateServices();
+        var reading = await third.GetPlacementTakeAsync(userId, info.PlacementId, questionDisplayOrder: 3);
+        Assert.Equal(r1Id, reading.CurrentQuestion.QuestionId);
+        Assert.True(reading.Navigator.Single(n => n.QuestionId == w2Id).IsLocked);
+    }
+
+    /// <summary>A Writing skill made of two locked question groups (W1, W2), then a Reading skill.</summary>
+    private async Task<(int examId, int w1Id, int w2Id, int r1Id)> SeedLockedGroupPlacementFixtureAsync(string certCode)
+    {
+        await database.SqlAsync($"""
+            INSERT INTO Certificates (Code, Name, IsActive) VALUES ('{certCode}', N'Cert {certCode}', 1);
+            DECLARE @cert INT = SCOPE_IDENTITY();
+
+            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder) VALUES
+              (@cert, 'WRIT', N'Writing', 'writing', 1),
+              (@cert, 'READ', N'Reading', 'reading', 2);
+            DECLARE @sW INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'WRIT');
+            DECLARE @sR INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'READ');
+
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder, NavigationMode) VALUES
+              (@sW, @cert, 'writing', 'W1', N'Writing tasks', 1, 'HYBRID_GROUP_LOCKED');
+            DECLARE @secW INT = SCOPE_IDENTITY();
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder) VALUES
+              (@sR, @cert, 'reading', 'R1', N'Reading', 2);
+            DECLARE @secR INT = SCOPE_IDENTITY();
+
+            INSERT INTO ScoreBands (CertId, Code, Name, MinTotal, MaxTotal, DisplayOrder) VALUES
+              (@cert, 'A1', N'Beginner', 0, 200, 1),
+              (@cert, 'B2', N'Upper intermediate', 201, 990, 2);
+
+            INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose, Description, QuestionCount) VALUES
+              (@cert, N'Locked Group Placement', 'published', 60, 'placement', N'Two locked writing tasks, then reading.', 3);
+            DECLARE @exam INT = SCOPE_IDENTITY();
+
+            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, ResponseSeconds) VALUES (@exam, @cert, @secW, 1, 600);
+            DECLARE @gW1 INT = SCOPE_IDENTITY();
+            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, ResponseSeconds) VALUES (@exam, @cert, @secW, 2, 1200);
+            DECLARE @gW2 INT = SCOPE_IDENTITY();
+            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @secR, 3);
+            DECLARE @gR INT = SCOPE_IDENTITY();
+
+            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder)
+            VALUES (@gW1, @exam, @secW, @sW, N'Writing task 1', 1, 'free_response', 1);
+            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder)
+            VALUES (@gW2, @exam, @secW, @sW, N'Writing task 2', 1, 'free_response', 2);
+            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder)
+            VALUES (@gR, @exam, @secR, @sR, N'Reading question', 1, 'mcq', 3);
+            DECLARE @r1 INT = SCOPE_IDENTITY();
+            INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
+              (@r1, 'mcq', 'A', N'Opt A', 1),
+              (@r1, 'mcq', 'B', N'Opt B', 0);
+            """);
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var cert = await db.Certificates.SingleAsync(c => c.Code == certCode);
+        var exam = await db.Exams.SingleAsync(e => e.CertId == cert.CertId);
+        var ids = await db.Questions.Where(q => q.ExamId == exam.ExamId).OrderBy(q => q.DisplayOrder).Select(q => q.QuestionId).ToListAsync();
+        return (exam.ExamId, ids[0], ids[1], ids[2]);
+    }
+
     private async Task<(int certId, int examId, int writingQId)> SeedHybridPlacementFixtureAsync(string certCode)
     {
         await database.SqlAsync($"""

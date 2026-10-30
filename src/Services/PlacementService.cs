@@ -238,7 +238,7 @@ public sealed class PlacementService(
         try
         {
             take = await _attemptEngine.GetAttemptTakeAsync(attempt.AttemptId, userId, questionDisplayOrder, cancellationToken);
-            if (await AdvanceAtSkillBoundaryAsync(take, userId, questionDisplayOrder, cancellationToken))
+            if (await AdvanceAtLockBoundaryAsync(take, userId, questionDisplayOrder, cancellationToken))
             {
                 take = await _attemptEngine.GetAttemptTakeAsync(attempt.AttemptId, userId, questionDisplayOrder, cancellationToken);
             }
@@ -270,13 +270,14 @@ public sealed class PlacementService(
 
     /// <summary>
     /// A placement sitting has no separate "next section" step: its Next control asks for the
-    /// following question, and on the last question of a skill that is the first question of the
-    /// next skill, which the engine refuses while the attempt is still on the earlier skill. That
-    /// request, and only that one, advances the attempt into the next skill (what the mock exam's
-    /// explicit skill transition does), so the candidate can leave Listening. A rewind into a
-    /// finished skill, or a jump past the next skill's first question, stays refused.
+    /// following question. On the last question of a locked part (a skill, or a HYBRID_GROUP_LOCKED
+    /// question group inside one) that is the first question of the next locked part, which the
+    /// engine refuses while the attempt is still on the earlier one. That request, and only that
+    /// one, moves the attempt forward (what the mock exam's explicit skill and group transitions
+    /// do), so the candidate can leave Listening, or the first writing task. A rewind into a
+    /// finished part, or a jump past the next part's first question, stays refused.
     /// </summary>
-    private async Task<bool> AdvanceAtSkillBoundaryAsync(
+    private async Task<bool> AdvanceAtLockBoundaryAsync(
         AttemptTakeView take, int userId, int? requestedDisplayOrder, CancellationToken cancellationToken)
     {
         if (requestedDisplayOrder is not int requested
@@ -284,14 +285,44 @@ public sealed class PlacementService(
             || take.Status != AttemptStatus.InProgress
             || take.ActiveSkillId is not int activeSkillId
             || take.Questions is not { Count: > 0 } questions
-            || take.Phases is not { Count: > 1 } phases)
+            || take.Phases is not { Count: > 0 } phases)
         {
             return false;
         }
 
         var ordered = phases.OrderBy(p => p.SkillDisplayOrder).ToList();
         var activeIndex = ordered.FindIndex(p => p.SkillId == activeSkillId);
-        if (activeIndex < 0 || activeIndex + 1 >= ordered.Count)
+        if (activeIndex < 0)
+        {
+            return false;
+        }
+
+        // Inside the active skill the next locked group comes first; the next skill opens only from
+        // the last one, so a jump to it cannot skip a group.
+        if (take.ActiveGroupId is int activeGroupId)
+        {
+            var skillQuestions = questions.Where(q => q.SkillCode == ordered[activeIndex].SkillCode).ToList();
+            var endOfActiveGroup = skillQuestions.Where(q => q.GroupId == activeGroupId)
+                .Select(q => q.DisplayOrder).DefaultIfEmpty(0).Max();
+            var nextGroup = skillQuestions
+                .Where(q => q.DisplayOrder > endOfActiveGroup && q.GroupId is not null
+                    && string.Equals(q.NavigationMode, "HYBRID_GROUP_LOCKED", StringComparison.OrdinalIgnoreCase))
+                .OrderBy(q => q.DisplayOrder)
+                .FirstOrDefault();
+            if (nextGroup is { GroupId: int nextGroupId })
+            {
+                if (nextGroup.DisplayOrder != requested)
+                {
+                    return false;
+                }
+
+                // The target group is absolute, so a racing duplicate request repeats this move.
+                await _attemptEngine.TransitionGroupAsync(take.AttemptId, nextGroupId, userId, cancellationToken);
+                return true;
+            }
+        }
+
+        if (activeIndex + 1 >= ordered.Count)
         {
             return false;
         }
