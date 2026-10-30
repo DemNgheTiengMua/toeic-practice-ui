@@ -43,11 +43,14 @@ provision_signing_key() {
   local current retired_sha
   current="$(dotnet user-secrets list --project "$ROOT/src/WebAPI" 2>/dev/null \
     | awk -F' = ' '/^Jwt:SigningKey /{ print $2; exit }')"
-  retired_sha='e2505202aac5125ee8c1a719c135178ee44a73c7ff033bfc83763b790c2ba8dd'
+  # SHA-256 of the retired key's DECODED bytes — the material the API actually signs with. Hashing
+  # the base64 text instead would miss a re-wrapped copy that decodes to the same 32 bytes.
+  retired_sha='5a386fb1fdc2021174643b350731b460018fa920182ee7bae19658ee1a42dc5a'
 
   if [[ -n "$current" ]]; then
     local digest
-    digest="$(printf '%s' "$current" | openssl dgst -sha256 -r | cut -d' ' -f1)"
+    digest="$(printf '%s' "$current" | tr -d '[:space:]' | base64 -d 2>/dev/null \
+      | openssl dgst -sha256 -r | cut -d' ' -f1)"
     if [[ "$digest" != "$retired_sha" ]]; then
       return 0
     fi

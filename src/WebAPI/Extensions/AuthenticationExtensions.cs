@@ -39,7 +39,7 @@ public static class AuthenticationExtensions
         // The key below was committed to this public repository in 7aad51e and is public forever.
         // Rotation is only a fix if every instance actually stops accepting it, so refuse to boot
         // rather than run with a key anyone can read on GitHub.
-        if (IsRetiredKey(jwtOptions.SigningKey))
+        if (IsRetiredKey(signingKeyBytes))
         {
             throw new InvalidOperationException(
                 "Jwt:SigningKey is the key that leaked into the public repository history and is no longer accepted. " +
@@ -137,20 +137,16 @@ public static class AuthenticationExtensions
     }
 
     /// <summary>
-    /// The HMAC key that was committed to this repository, hashed as the base64 text it was written
-    /// as so this file is not itself a copy of the secret. Any instance still configured with it
-    /// signs tokens anyone can forge.
+    /// The HMAC key material that was committed to this repository, hashed after base64 decoding so
+    /// this file is not itself a copy of the secret. The guard hashes the <em>decoded</em> bytes, the
+    /// same material <c>Convert.FromBase64String</c> hands the token validator: base64 tolerates
+    /// whitespace and line breaks, so hashing the configured text would let a re-wrapped copy of the
+    /// retired key through while still decoding to the same bytes.
     /// </summary>
-    private static bool IsRetiredKey(string? candidate)
+    private static bool IsRetiredKey(byte[] candidateBytes)
     {
-        if (string.IsNullOrEmpty(candidate))
-        {
-            return false;
-        }
-
-        const string retiredSha256 = "e2505202aac5125ee8c1a719c135178ee44a73c7ff033bfc83763b790c2ba8dd";
-        var digest = Convert.ToHexString(
-            System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(candidate)))
+        const string retiredSha256 = "5a386fb1fdc2021174643b350731b460018fa920182ee7bae19658ee1a42dc5a";
+        var digest = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(candidateBytes))
             .ToLowerInvariant();
         return string.Equals(digest, retiredSha256, StringComparison.Ordinal);
     }

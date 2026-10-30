@@ -19,6 +19,16 @@ public sealed class RetiredSigningKeyTests
     private const string RetiredKey = "DuFiytO9xnewMYC1REpIt5xQIfqc7k2Ybv9JxKcUDTk=";
 
     [Fact]
+    public void A_re_wrapped_copy_of_the_retired_key_is_also_refused()
+    {
+        // Base64 tolerates whitespace. A copy of the leaked key pasted with a line break decodes to
+        // the same 32 bytes and signs the same tokens, so the guard must hash the bytes, not the text.
+        const string wrapped = "DuFiytO9xnewMYC1RE\npIt5xQIfqc7k2Ybv9JxKcUDTk=";
+
+        Assert.Throws<InvalidOperationException>(() => BuildServices(wrapped));
+    }
+
+    [Fact]
     public void Booting_with_the_retired_key_is_refused_with_a_message_that_names_the_fix()
     {
         var exception = Assert.Throws<InvalidOperationException>(

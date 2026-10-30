@@ -81,10 +81,10 @@ public sealed class SecretScanTests
     [Fact]
     public void The_leaked_signing_key_value_is_not_reintroduced_anywhere_under_src_or_github()
     {
-        // The value that shipped in 7aad51e, stored as a hash so this guard never becomes a copy of
-        // the secret it is guarding against. Rotation made the original useless, but a paste from an
-        // old clone would silently restore an already-public key.
-        const string leakedSha256 = "e2505202aac5125ee8c1a719c135178ee44a73c7ff033bfc83763b790c2ba8dd";
+        // The value that shipped in 7aad51e, stored as a hash of its DECODED bytes so this guard
+        // never becomes a copy of the secret it is guarding against, and so a re-wrapped base64 copy
+        // that decodes to the same 32 bytes is still caught.
+        const string leakedSha256 = "5a386fb1fdc2021174643b350731b460018fa920182ee7bae19658ee1a42dc5a";
         var root = TestPathHelper.FindRepoRoot();
         var hits = new List<string>();
 
@@ -103,10 +103,10 @@ public sealed class SecretScanTests
                     continue;
                 }
 
-                // A base64 signing key is what we look for: 44 characters ending in '='.
+                // A 32-byte HMAC key is 44 base64 characters ending in '='.
                 foreach (Match candidate in Base64Key.Matches(File.ReadAllText(path, Encoding.UTF8)))
                 {
-                    if (Sha256Hex(candidate.Value) == leakedSha256)
+                    if (Sha256OfDecodedKey(candidate.Value) == leakedSha256)
                     {
                         hits.Add(Path.GetRelativePath(root, path).Replace('\\', '/'));
                     }
@@ -121,6 +121,15 @@ public sealed class SecretScanTests
         @"[A-Za-z0-9+/]{43}=",
         RegexOptions.CultureInvariant);
 
-    private static string Sha256Hex(string value) =>
-        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value))).ToLowerInvariant();
+    private static string Sha256OfDecodedKey(string base64)
+    {
+        try
+        {
+            return Convert.ToHexString(SHA256.HashData(Convert.FromBase64String(base64))).ToLowerInvariant();
+        }
+        catch (FormatException)
+        {
+            return string.Empty;
+        }
+    }
 }
