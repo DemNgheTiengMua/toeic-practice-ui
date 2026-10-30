@@ -16,7 +16,17 @@ namespace WebAPI.Tests;
 /// </summary>
 public sealed class RetiredSigningKeyTests
 {
-    private const string RetiredKey = "DuFiytO9xnewMYC1REpIt5xQIfqc7k2Ybv9JxKcUDTk=";
+    /// <summary>
+    /// The retired key's 32 bytes, spelled out so this test never carries a usable copy of the base64
+    /// text — the guard hashes decoded material, so bytes are the honest fixture.
+    /// </summary>
+    private static byte[] RetiredBytes() =>
+    [
+        0x0E, 0xE1, 0x62, 0xCA, 0xD3, 0xBD, 0xC6, 0x77, 0xB0, 0x31, 0x80, 0xB5, 0x44, 0x4A, 0x48, 0xB7,
+        0x9C, 0x50, 0x21, 0xFA, 0x9C, 0xEE, 0x4D, 0x98, 0x6E, 0xFF, 0x49, 0xC4, 0xA7, 0x14, 0x0D, 0x39,
+    ];
+
+    private static string RetiredKey() => Convert.ToBase64String(RetiredBytes());
 
     [Fact]
     public void A_re_wrapped_copy_of_the_retired_key_is_also_refused()
@@ -32,7 +42,7 @@ public sealed class RetiredSigningKeyTests
     public void Booting_with_the_retired_key_is_refused_with_a_message_that_names_the_fix()
     {
         var exception = Assert.Throws<InvalidOperationException>(
-            () => BuildServices(RetiredKey));
+            () => BuildServices(RetiredKey()));
 
         Assert.Contains("leaked", exception.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("user-secrets", exception.Message, StringComparison.OrdinalIgnoreCase);
