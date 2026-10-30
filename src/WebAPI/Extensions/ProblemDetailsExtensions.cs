@@ -23,9 +23,21 @@ public static class ProblemDetailsExtensions
 
     public static IApplicationBuilder UseApiProblemDetails(this IApplicationBuilder app)
     {
-        app.UseExceptionHandler(errorApp =>
-            errorApp.Run(async context =>
+        // The middleware only recognises a disconnect when the exception is OperationCanceledException
+        // or IOException. A query cancelled by RequestAborted surfaces from SqlClient as SqlException
+        // ("Operation cancelled by user"), which would otherwise be logged as an unhandled error and
+        // answered 500 to a client that has already gone.
+        app.UseExceptionHandler(new ExceptionHandlerOptions
+        {
+            SuppressDiagnosticsCallback = context => context.HttpContext.RequestAborted.IsCancellationRequested,
+            ExceptionHandler = async context =>
             {
+                if (context.RequestAborted.IsCancellationRequested)
+                {
+                    context.Response.StatusCode = StatusCodes.Status499ClientClosedRequest;
+                    return;
+                }
+
                 context.Response.StatusCode = StatusCodes.Status500InternalServerError;
                 var problem = new ProblemDetails
                 {
@@ -34,7 +46,8 @@ public static class ProblemDetailsExtensions
                 };
                 problem.Extensions["code"] = ApiError.Codes.Unexpected;
                 await context.Response.WriteAsJsonAsync(problem);
-            }));
+            },
+        });
 
         app.UseStatusCodePages(async context =>
         {
