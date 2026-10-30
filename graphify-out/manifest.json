@@ -348,9 +348,9 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Controllers/ProfileController.cs": {
-    "mtime": 1793336482.1044924,
-    "seen": 1793336817.8734581,
-    "ast_hash": "af4c2ffda55ce66ee6aa2bfbb0b02458",
+    "mtime": 1793346326.6461985,
+    "seen": 1793347594.7128453,
+    "ast_hash": "6be2364453a82a9d6cfc0d65c46f319c",
     "semantic_hash": ""
   },
   "src/WebMVC/Models/AuthViewModels.cs": {
@@ -2376,9 +2376,9 @@
     "semantic_hash": ""
   },
   "tests/WebMVC.Tests/ProfileControllerTests.cs": {
-    "mtime": 1793336482.109007,
-    "seen": 1793336817.907063,
-    "ast_hash": "fc68970e8bb7acea88734080e635a1ff",
+    "mtime": 1793345842.4543,
+    "seen": 1793347594.7754018,
+    "ast_hash": "1a6826ebc549eeee2e238ae73e59c63f",
     "semantic_hash": ""
   },
   "scripts/build_seed.py": {
@@ -3024,9 +3024,9 @@
     "semantic_hash": ""
   },
   "tests/WebMVC.E2ETests/Journeys/PlacementToLearningPathTests.cs": {
-    "mtime": 1793007187.6788306,
-    "seen": 1793020915.952868,
-    "ast_hash": "c062a6c98aa8ad42c17aac058348f024",
+    "mtime": 1793346675.7757096,
+    "seen": 1793347594.7689848,
+    "ast_hash": "e7159d3d232059dfc70ed322d04dc0ba",
     "semantic_hash": ""
   },
   "tests/WebMVC.E2ETests/Pages/BasePage.cs": {
@@ -3156,9 +3156,9 @@
     "semantic_hash": ""
   },
   "tests/WebMVC.E2ETests/Journeys/ExamAudioAndInstructionsTests.cs": {
-    "mtime": 1793336481.897098,
-    "seen": 1793336817.902142,
-    "ast_hash": "90314839b11c5c59e542248a7180ec9c",
+    "mtime": 1793346550.841184,
+    "seen": 1793347594.7686727,
+    "ast_hash": "a0e21b6619e9b3d1922df5ad3586d305",
     "semantic_hash": ""
   },
   "docs/adr/0010-exam-shell-and-client-side-question-swapping.md": {
@@ -3310,9 +3310,9 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Controllers/AdminCertificatesController.cs": {
-    "mtime": 1793336482.1044924,
-    "seen": 1793336817.871345,
-    "ast_hash": "1eaca0377fa6ac58f2f4d51f672fd651",
+    "mtime": 1793346326.694069,
+    "seen": 1793347594.7097414,
+    "ast_hash": "0684b9f75f7ceda799dd554567bfcdf9",
     "semantic_hash": ""
   },
   "src/WebMVC/Models/AdminCertificateViewModels.cs": {
@@ -3346,9 +3346,9 @@
     "semantic_hash": ""
   },
   "tests/WebMVC.Tests/AdminCertificatesControllerTests.cs": {
-    "mtime": 1793336482.108002,
-    "seen": 1793336817.9036841,
-    "ast_hash": "3bffadf6c0a9bf08242a5a43b422e242",
+    "mtime": 1793345946.5695286,
+    "seen": 1793347594.7702212,
+    "ast_hash": "1ca2996c4f663f4f1408bf6f1b8751a2",
     "semantic_hash": ""
   },
   "tests/WebMVC.Tests/PracticeViewTests.cs": {
@@ -4744,9 +4744,9 @@
     "semantic_hash": ""
   },
   "src/WebAPI/Extensions/AuthenticationExtensions.cs": {
-    "mtime": 1793336462.5441084,
-    "seen": 1793336817.8690243,
-    "ast_hash": "92db73f641d07f330acea47e4613e003",
+    "mtime": 1793346326.5970492,
+    "seen": 1793347594.7083755,
+    "ast_hash": "6649efb433bd425317f7613c5464fb6a",
     "semantic_hash": ""
   },
   "src/WebAPI/Extensions/EndpointRouteBuilderExtensions.cs": {
@@ -4756,9 +4756,9 @@
     "semantic_hash": ""
   },
   "src/WebAPI/Extensions/ProblemDetailsExtensions.cs": {
-    "mtime": 1793000065.9847636,
-    "seen": 1793005255.0226882,
-    "ast_hash": "b07ece7ade1c66c59e522e5f1e12dde9",
+    "mtime": 1793346326.5466096,
+    "seen": 1793347594.7085059,
+    "ast_hash": "c18457426425d9301285ec4f86d7d243",
     "semantic_hash": ""
   },
   "src/WebAPI/Extensions/RateLimiterExtensions.cs": {
@@ -5260,9 +5260,9 @@
     "semantic_hash": ""
   },
   "src/WebMVC/wwwroot/js/placement/take.js": {
-    "mtime": 1793336482.1064985,
-    "seen": 1793336817.892884,
-    "ast_hash": "f1b0fb1d4e8ec9aea81c094d31bb3546",
+    "mtime": 1793346781.3796353,
+    "seen": 1793347594.759005,
+    "ast_hash": "3bcdb70ae3d7cb9dd1a56eda5831086d",
     "semantic_hash": ""
   },
   "src/WebMVC/wwwroot/js/placement/target-band.js": {
@@ -10648,9 +10648,9 @@
     "semantic_hash": ""
   },
   "tests/WebAPI.Tests/TokenValidationCancellationTests.cs": {
-    "mtime": 1793336462.5461,
-    "seen": 1793336817.9014027,
-    "ast_hash": "6c7f221e47049f93b23bf2dc61a8052f",
+    "mtime": 1793345980.1124597,
+    "seen": 1793347594.7679265,
+    "ast_hash": "6328b99b94e941873506bac6d143a346",
     "semantic_hash": ""
   },
   "tests/WebAPI.Tests/WebAPI.Tests.csproj": {
@@ -10759,6 +10759,18 @@
     "mtime": 1793185981.5607672,
     "seen": 1793336817.9244647,
     "ast_hash": "78f7987f3d2959e6134e1f1a2d457565",
+    "semantic_hash": ""
+  },
+  "tests/WebAPI.Tests/ProblemDetailsClientAbortTests.cs": {
+    "mtime": 1793346262.7690854,
+    "seen": 1793347594.7679226,
+    "ast_hash": "1b9dfcbff051282a75de0e3b5145b1d3",
+    "semantic_hash": ""
+  },
+  "tests/WebMVC.Tests/placement-sitting-scripts.test.cjs": {
+    "mtime": 1793346767.1421561,
+    "seen": 1793347594.7776296,
+    "ast_hash": "0f733832e8d5cf6df123aadff3cfc301",
     "semantic_hash": ""
   }
 }
