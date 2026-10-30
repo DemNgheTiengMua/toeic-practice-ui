@@ -50,16 +50,17 @@ jobs:
 
       - name: Seed Database & Start Web Services
         run: |
-          # 1. Create ExtraEfficiency database and load schema & demo seed
-          sqlcmd -S localhost,1433 -U sa -P Str0ng!Passw0rd -C -I -b -Q "CREATE DATABASE ExtraEfficiency;"
-          sqlcmd -S localhost,1433 -U sa -P Str0ng!Passw0rd -C -I -b -d ExtraEfficiency -i docs/database-schema.sql
-          sqlcmd -S localhost,1433 -U sa -P Str0ng!Passw0rd -C -I -b -d ExtraEfficiency -i docs/seed-demo.sql
+          # 1. Create the app database and load schema & demo seed. Named ExtraEfficiencyCrawl because
+          #    the E2E helpers default to that catalog (#135); Services.Tests uses its own database.
+          sqlcmd -S localhost,1433 -U sa -P Str0ng!Passw0rd -C -I -b -Q "CREATE DATABASE ExtraEfficiencyCrawl;"
+          sqlcmd -S localhost,1433 -U sa -P Str0ng!Passw0rd -C -I -b -d ExtraEfficiencyCrawl -i docs/database-schema.sql
+          sqlcmd -S localhost,1433 -U sa -P Str0ng!Passw0rd -C -I -b -d ExtraEfficiencyCrawl -i docs/seed-demo.sql
 
           # 2. Start WebAPI on port 5001
           env \
             ASPNETCORE_ENVIRONMENT=Development \
             ASPNETCORE_URLS="http://localhost:5001" \
-            ConnectionStrings__CompanionDb="Server=localhost,1433;Database=ExtraEfficiency;User ID=sa;Password=Str0ng!Passw0rd;TrustServerCertificate=True" \
+            ConnectionStrings__CompanionDb="Server=localhost,1433;Database=ExtraEfficiencyCrawl;User ID=sa;Password=Str0ng!Passw0rd;TrustServerCertificate=True" \
             Jwt__SigningKey="DuFiytO9xnewMYC1REpIt5xQIfqc7k2Ybv9JxKcUDTk=" \
             Jwt__Issuer="extra-efficient" \
             Jwt__Audience="extra-efficient" \
