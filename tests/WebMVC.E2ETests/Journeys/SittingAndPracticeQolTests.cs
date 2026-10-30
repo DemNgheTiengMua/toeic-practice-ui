@@ -259,20 +259,32 @@ public class SittingAndPracticeQolTests : PlaywrightTestBase
         await Expect(startButton).ToBeEnabledAsync(new() { Timeout = 15000 });
         await startButton.ClickAsync();
 
-        await Expect(Page).ToHaveURLAsync(new Regex(@"/exams/(take|preflight)/"), new() { Timeout = 20000 });
-
-        // The pre-flight gate leads to the sitting room. Its start button is only enabled once the
-        // audio checks have been satisfied, and it is a submit inside a form — so wait for the
-        // sitting room URL instead of racing the click.
+        // Start lands on the pre-flight gate or, for an exam without audio, straight in the sitting
+        // room. Wait for one of them to render: the URL commits before the body is parsed, so a
+        // non-waiting CountAsync() here used to see no button on a cold first run, skip the click
+        // and time out below waiting for /exams/take (F2).
         var enterTest = Page.Locator("#start-test-btn");
-        if (await enterTest.CountAsync() > 0)
+        var questionNumber = Page.Locator("#question-number-display");
+        await Expect(enterTest.Or(questionNumber).First).ToBeVisibleAsync(new() { Timeout = 20000 });
+
+        if (await enterTest.IsVisibleAsync())
         {
+            // Enabled once the audio tracks have pre-buffered.
             await Expect(enterTest).ToBeEnabledAsync(new() { Timeout = 30000 });
             await enterTest.ClickAsync();
+
+            // A refused verification redirects back to the gate with its reason on a placard;
+            // fail with that reason instead of a bare navigation timeout.
+            var refusal = Page.Locator("#preflight-error");
+            await Expect(questionNumber.Or(refusal).First).ToBeVisibleAsync(new() { Timeout = 30000 });
+            if (await refusal.IsVisibleAsync())
+            {
+                Assert.Fail($"Pre-flight verification was refused: {await refusal.InnerTextAsync()}");
+            }
         }
 
-        await Expect(Page).ToHaveURLAsync(new Regex(@"/exams/take/(?<id>\d+)"), new() { Timeout = 30000 });
-        await Expect(Page.Locator("#question-number-display")).ToContainTextAsync("Question 1");
+        await Expect(Page).ToHaveURLAsync(new Regex(@"/exams/take/(?<id>\d+)"));
+        await Expect(questionNumber).ToContainTextAsync("Question 1");
 
         var match = Regex.Match(Page.Url, @"/exams/take/(?<id>\d+)");
         Assert.That(match.Success, Is.True, "The sitting room URL must carry the attempt id");

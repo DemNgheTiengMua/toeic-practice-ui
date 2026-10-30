@@ -52,21 +52,38 @@ public abstract class PlaywrightTestBase : PageTest
         await Expect(Page).ToHaveURLAsync(new Regex(@"(dashboard|admin|certificates)", RegexOptions.IgnoreCase));
     }
 
+    /// <summary>The database scripts/crawl-env.sh runs the apps against.</summary>
+    public const string DefaultAppDatabase = "ExtraEfficiencyCrawl";
+
     /// <summary>
-    /// Opens the database the running app uses (TEST_DB_CONNECTION, catalog defaulting to
-    /// ExtraEfficiency), for tests that arrange or check rows directly.
+    /// Connection string for the database the running app uses: TEST_DB_CONNECTION (server and
+    /// credentials, optionally a catalog), with TEST_DB_NAME overriding the catalog. With neither,
+    /// it is LocalDB's ExtraEfficiencyCrawl, so an E2E run never mutates the everyday
+    /// ExtraEfficiency database unless asked to by name (TEST_DB_NAME=ExtraEfficiency).
     /// </summary>
-    protected static async Task<Microsoft.Data.SqlClient.SqlConnection> OpenAppDatabaseAsync()
+    public static string AppDatabaseConnectionString()
     {
-        var rawConn = Environment.GetEnvironmentVariable("TEST_DB_CONNECTION")
-            ?? @"Server=(localdb)\MSSQLLocalDB;Database=ExtraEfficiency;Trusted_Connection=True;TrustServerCertificate=True";
-        var builder = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(rawConn);
-        if (string.IsNullOrEmpty(builder.InitialCatalog))
+        var builder = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(
+            Environment.GetEnvironmentVariable("TEST_DB_CONNECTION")
+            ?? @"Server=(localdb)\MSSQLLocalDB;Trusted_Connection=True;TrustServerCertificate=True");
+
+        var name = Environment.GetEnvironmentVariable("TEST_DB_NAME");
+        if (!string.IsNullOrWhiteSpace(name))
         {
-            builder.InitialCatalog = "ExtraEfficiency";
+            builder.InitialCatalog = name;
+        }
+        else if (string.IsNullOrEmpty(builder.InitialCatalog))
+        {
+            builder.InitialCatalog = DefaultAppDatabase;
         }
 
-        var conn = new Microsoft.Data.SqlClient.SqlConnection(builder.ConnectionString);
+        return builder.ConnectionString;
+    }
+
+    /// <summary>Opens <see cref="AppDatabaseConnectionString"/> for tests that arrange or check rows directly.</summary>
+    protected static async Task<Microsoft.Data.SqlClient.SqlConnection> OpenAppDatabaseAsync()
+    {
+        var conn = new Microsoft.Data.SqlClient.SqlConnection(AppDatabaseConnectionString());
         await conn.OpenAsync();
         return conn;
     }
