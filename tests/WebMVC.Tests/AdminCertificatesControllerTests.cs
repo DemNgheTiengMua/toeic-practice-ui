@@ -79,15 +79,22 @@ public sealed class AdminCertificatesControllerTests
         public CertificateBlueprintDetailDto? BlueprintToReturn { get; set; }
         public SaveCertificateWizardRequest? LastSavedRequest { get; private set; }
         public bool ThrowOnSave { get; set; }
+        public ApiException? LoadException { get; set; }
 
         public Task<IReadOnlyList<AdminCertificateSummaryDto>> GetAdminCertificatesAsync(CancellationToken cancellationToken = default) =>
-            Task.FromResult<IReadOnlyList<AdminCertificateSummaryDto>>(AdminCertificates);
+            LoadException is not null
+                ? Task.FromException<IReadOnlyList<AdminCertificateSummaryDto>>(LoadException)
+                : Task.FromResult<IReadOnlyList<AdminCertificateSummaryDto>>(AdminCertificates);
 
         public Task<IReadOnlyList<CertificateBlueprintPresetDto>> GetPresetsAsync(CancellationToken cancellationToken = default) =>
-            Task.FromResult<IReadOnlyList<CertificateBlueprintPresetDto>>(Presets);
+            LoadException is not null
+                ? Task.FromException<IReadOnlyList<CertificateBlueprintPresetDto>>(LoadException)
+                : Task.FromResult<IReadOnlyList<CertificateBlueprintPresetDto>>(Presets);
 
         public Task<CertificateBlueprintDetailDto?> GetCertificateBlueprintAsync(int certId, CancellationToken cancellationToken = default) =>
-            Task.FromResult(BlueprintToReturn);
+            LoadException is not null
+                ? Task.FromException<CertificateBlueprintDetailDto?>(LoadException)
+                : Task.FromResult(BlueprintToReturn);
 
         public Task<CertificateBlueprintDetailDto?> GetCertificateBlueprintByCodeAsync(string code, CancellationToken cancellationToken = default) =>
             Task.FromResult(BlueprintToReturn);
@@ -101,6 +108,93 @@ public sealed class AdminCertificatesControllerTests
             LastSavedRequest = request;
             return Task.FromResult(new SaveCertificateWizardResultDto(request.CertId ?? 99, request.Code, request.Name, request.Skills.Count, request.Skills.Sum(s => s.Sections.Count)));
         }
+    }
+
+    [Fact]
+    public async Task Index_when_api_throws_renders_error_banner_instead_of_crashing()
+    {
+        var api = new TestAdminCertificatesClient
+        {
+            LoadException = new ApiException("upstream_unavailable", "Service unavailable", 503),
+        };
+        var controller = CreateController(api);
+
+        var result = await controller.Index(CancellationToken.None);
+
+        var viewResult = Assert.IsType<ViewResult>(result);
+        Assert.Equal("~/Views/Admin/Certificates.cshtml", viewResult.ViewName);
+        var vm = Assert.IsType<AdminCertificateListViewModel>(viewResult.Model);
+        Assert.Empty(vm.Certificates);
+        Assert.False(string.IsNullOrWhiteSpace(vm.ErrorMessage));
+    }
+
+    [Fact]
+    public async Task Wizard_when_presets_fail_renders_degraded_page_with_error()
+    {
+        var api = new TestAdminCertificatesClient
+        {
+            LoadException = new ApiException("upstream_unavailable", "Service unavailable", 503),
+        };
+        var controller = CreateController(api);
+
+        var result = await controller.Wizard(null, null, 1, CancellationToken.None);
+
+        var viewResult = Assert.IsType<ViewResult>(result);
+        Assert.Equal("~/Views/Admin/CertificateWizard.cshtml", viewResult.ViewName);
+        var page = Assert.IsType<CertificateWizardPageViewModel>(viewResult.Model);
+        Assert.Empty(page.Form.Presets);
+        Assert.False(string.IsNullOrWhiteSpace(page.Form.ErrorMessage));
+    }
+
+    [Fact]
+    public async Task Wizard_when_blueprint_fails_keeps_presets_and_surfaces_error()
+    {
+        // Only the blueprint-for-edit lookup fails; the preset catalogue loads normally.
+        var controller = CreateController(new BlueprintFailingClient(new TestAdminCertificatesClient()));
+
+        var result = await controller.Wizard(null, 7, 1, CancellationToken.None);
+
+        var viewResult = Assert.IsType<ViewResult>(result);
+        var page = Assert.IsType<CertificateWizardPageViewModel>(viewResult.Model);
+        Assert.NotEmpty(page.Form.Presets);
+        Assert.False(string.IsNullOrWhiteSpace(page.Form.ErrorMessage));
+    }
+
+    /// <summary>Presets load normally; only the blueprint-for-edit lookup fails.</summary>
+    private sealed class BlueprintFailingClient(TestAdminCertificatesClient inner) : IAdminCertificatesClient
+    {
+        public Task<IReadOnlyList<AdminCertificateSummaryDto>> GetAdminCertificatesAsync(CancellationToken cancellationToken = default) =>
+            inner.GetAdminCertificatesAsync(cancellationToken);
+
+        public Task<IReadOnlyList<CertificateBlueprintPresetDto>> GetPresetsAsync(CancellationToken cancellationToken = default) =>
+            inner.GetPresetsAsync(cancellationToken);
+
+        public Task<CertificateBlueprintDetailDto?> GetCertificateBlueprintAsync(int certId, CancellationToken cancellationToken = default) =>
+            Task.FromException<CertificateBlueprintDetailDto?>(new ApiException("exam_not_found", "Certificate not found", 404));
+
+        public Task<CertificateBlueprintDetailDto?> GetCertificateBlueprintByCodeAsync(string code, CancellationToken cancellationToken = default) =>
+            inner.GetCertificateBlueprintByCodeAsync(code, cancellationToken);
+
+        public Task<SaveCertificateWizardResultDto> SaveCertificateWizardAsync(SaveCertificateWizardRequest request, CancellationToken cancellationToken = default) =>
+            inner.SaveCertificateWizardAsync(request, cancellationToken);
+    }
+
+    [Fact]
+    public async Task SaveWizard_when_presets_fail_redisplays_with_error_and_does_not_save()
+    {
+        var api = new TestAdminCertificatesClient
+        {
+            LoadException = new ApiException("upstream_unavailable", "Service unavailable", 503),
+        };
+        var controller = CreateController(api);
+
+        var result = await controller.SaveWizard(new CertificateWizardViewModel { Code = "IELTS", Name = "IELTS" }, CancellationToken.None);
+
+        var viewResult = Assert.IsType<ViewResult>(result);
+        Assert.Equal("~/Views/Admin/CertificateWizard.cshtml", viewResult.ViewName);
+        var page = Assert.IsType<CertificateWizardPageViewModel>(viewResult.Model);
+        Assert.False(string.IsNullOrWhiteSpace(page.Form.ErrorMessage));
+        Assert.Null(api.LastSavedRequest);
     }
 
     [Fact]

@@ -22,8 +22,17 @@
   </div>
 </div>
 
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+  <div class="alert alert--danger" role="alert" style="border: 2px solid #b31217; border-radius: 0; box-shadow: none; margin-bottom: 1.5rem; background: #fff; color: #b31217; font-weight: 600;">
+    @Model.ErrorMessage
+  </div>
+}
+
 @if (Model.Certificates.Count == 0)
 {
+  if (string.IsNullOrEmpty(Model.ErrorMessage))
+  {
   <div class="card" style="border: 2px solid var(--color-ink, #14181d); border-radius: 0; box-shadow: none;">
     <div class="card__body">
       <div class="state-block" style="text-align: center; padding: 3rem 1rem;">
@@ -33,6 +42,7 @@
       </div>
     </div>
   </div>
+  }
 }
 else
 {

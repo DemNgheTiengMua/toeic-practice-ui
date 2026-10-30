@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using WebMVC.Controllers;
 using WebMVC.Models;
 using Xunit;
@@ -41,7 +42,7 @@ public sealed class ProfileControllerTests
         var currentUser = new CurrentUser(new HttpContextAccessor { HttpContext = httpContext });
 
         var api = new TestProfileApiClient();
-        var controller = new ProfileController(api)
+        var controller = new ProfileController(api, NullLogger<ProfileController>.Instance)
         {
             ControllerContext = new ControllerContext
             {
@@ -155,6 +156,22 @@ public sealed class ProfileControllerTests
         Assert.Same(model, Assert.IsType<PasswordPageViewModel>(view.Model).Form);
     }
 
+    [Fact]
+    public async Task Index_when_api_throws_renders_degraded_view_instead_of_crashing()
+    {
+        var (controller, _, api) = CreateController();
+        api.GetProfileException = new ApiException("upstream_unavailable", "Service unavailable", StatusCodes.Status503ServiceUnavailable);
+
+        var result = await controller.Index(CancellationToken.None);
+
+        var view = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<ProfilePageViewModel>(view.Model);
+        Assert.NotNull(model.LoadError);
+        // The form must stay hidden behind the error placard: an empty form saved back would wipe
+        // the stored profile.
+        Assert.Equal("", model.Form.FullName);
+    }
+
     private sealed class EmptyTempDataProvider : ITempDataProvider
     {
         public IDictionary<string, object> LoadTempData(HttpContext context) => new Dictionary<string, object>();
@@ -184,10 +201,13 @@ public sealed class ProfileControllerTests
     private sealed class TestProfileApiClient : IProfileClient
     {
         public ApiException? ChangePasswordException { get; set; }
+        public ApiException? GetProfileException { get; set; }
         public ChangePasswordRequest? LastChangePasswordRequest { get; private set; }
 
         public Task<ProfileDto> GetProfileAsync(CancellationToken cancellationToken = default) =>
-            Task.FromResult<ProfileDto>(null!);
+            GetProfileException is not null
+                ? Task.FromException<ProfileDto>(GetProfileException)
+                : Task.FromResult<ProfileDto>(null!);
 
         public Task<ProfileDto> UpdateProfileAsync(UpdateProfileRequest request, CancellationToken cancellationToken = default) =>
             Task.FromResult<ProfileDto>(null!);

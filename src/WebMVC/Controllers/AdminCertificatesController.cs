@@ -16,14 +16,42 @@ public sealed class AdminCertificatesController(
     [HttpGet("/admin/certificates")]
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
-        var certificates = await api.GetAdminCertificatesAsync(await BearerAsync(), cancellationToken);
-        return View("~/Views/Admin/Certificates.cshtml", new AdminCertificateListViewModel { Certificates = certificates });
+        try
+        {
+            var certificates = await api.GetAdminCertificatesAsync(await BearerAsync(), cancellationToken);
+            return View("~/Views/Admin/Certificates.cshtml", new AdminCertificateListViewModel { Certificates = certificates });
+        }
+        catch (ApiException ex)
+        {
+            logger.LogError(ex, "Could not load the admin certificate list");
+            return View("~/Views/Admin/Certificates.cshtml", new AdminCertificateListViewModel
+            {
+                ErrorMessage = "Could not reach the certificate service. The list below may be empty — reload in a moment.",
+            });
+        }
     }
 
     [HttpGet("/admin/certificates/wizard")]
     public async Task<IActionResult> Wizard(string? preset, int? certId, int step = 1, CancellationToken cancellationToken = default)
     {
-        var presets = await api.GetPresetsAsync(await BearerAsync(), cancellationToken);
+        IReadOnlyList<CertificateBlueprintPresetDto> presets;
+        try
+        {
+            presets = await api.GetPresetsAsync(await BearerAsync(), cancellationToken);
+        }
+        catch (ApiException ex)
+        {
+            // Without the presets there is nothing to seed the wizard from, but the admin should
+            // see why rather than a blank step list.
+            logger.LogError(ex, "Could not load certificate presets for the wizard");
+            return View("~/Views/Admin/CertificateWizard.cshtml", new CertificateWizardPageViewModel(
+                new CertificateWizardViewModel
+                {
+                    Step = Math.Clamp(step, 1, 4),
+                    ErrorMessage = "The certificate service did not answer, so the blueprint presets could not be loaded. Reload the wizard to try again.",
+                }));
+        }
+
         var vm = new CertificateWizardViewModel
         {
             Presets = presets,
@@ -32,7 +60,17 @@ public sealed class AdminCertificatesController(
 
         if (certId.HasValue && certId.Value > 0)
         {
-            var detail = await api.GetCertificateBlueprintAsync(certId.Value, await BearerAsync(), cancellationToken);
+            CertificateBlueprintDetailDto? detail = null;
+            try
+            {
+                detail = await api.GetCertificateBlueprintAsync(certId.Value, await BearerAsync(), cancellationToken);
+            }
+            catch (ApiException ex)
+            {
+                logger.LogError(ex, "Could not load certificate blueprint {CertId} for editing", certId.Value);
+                vm.ErrorMessage = "Could not load this certificate's blueprint. Its saved settings may not be shown — reload before saving.";
+            }
+
             if (detail is not null)
             {
                 vm.CertId = detail.CertId;
@@ -72,8 +110,18 @@ public sealed class AdminCertificatesController(
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> SaveWizard(CertificateWizardViewModel model, CancellationToken cancellationToken)
     {
-        var presets = await api.GetPresetsAsync(await BearerAsync(), cancellationToken);
-        model.Presets = presets;
+        try
+        {
+            model.Presets = await api.GetPresetsAsync(await BearerAsync(), cancellationToken);
+        }
+        catch (ApiException ex)
+        {
+            // Without presets the step 1 grid would render empty on redisplay, so fail the whole
+            // save the same way the GET does rather than half-populating the form.
+            logger.LogError(ex, "Could not load certificate presets while saving the wizard");
+            model.ErrorMessage = "The certificate service did not answer, so nothing was saved. Reload the wizard and try again.";
+            return View("~/Views/Admin/CertificateWizard.cshtml", new CertificateWizardPageViewModel(model));
+        }
 
         try
         {

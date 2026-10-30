@@ -10,21 +10,34 @@ namespace WebMVC.Controllers;
 /// <summary>The learner's profile: name, phone, time zone (UI-52) and password change. Both POSTs
 /// are forwarding endpoints and carry an anti-forgery token (ADR-0002).</summary>
 [Authorize]
-public sealed class ProfileController(IProfileClient api) : Controller
+public sealed class ProfileController(IProfileClient api, ILogger<ProfileController> logger) : Controller
 {
     private bool IsAdmin => new CurrentUser(new HttpContextAccessor { HttpContext = HttpContext }).IsAdmin;
 
     [HttpGet("/profile")]
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
-        var profile = await api.GetProfileAsync(cancellationToken);
-        return View(new ProfilePageViewModel(new ProfileViewModel
+        try
         {
-            FullName = profile.FullName,
-            Phone = profile.Phone,
-            TimeZoneId = profile.TimeZoneId,
-            TimeZoneOptions = OptionsIncluding(profile.TimeZoneId),
-        }, IsAdmin));
+            var profile = await api.GetProfileAsync(cancellationToken);
+            return View(new ProfilePageViewModel(new ProfileViewModel
+            {
+                FullName = profile.FullName,
+                Phone = profile.Phone,
+                TimeZoneId = profile.TimeZoneId,
+                TimeZoneOptions = OptionsIncluding(profile.TimeZoneId),
+            }, IsAdmin));
+        }
+        catch (ApiException ex)
+        {
+            // A failed load must not render an empty form: saving it would overwrite the learner's
+            // real name and zone with blanks. Show the failure and a retry instead.
+            logger.LogError(ex, "Could not load the profile for the signed-in learner");
+            return View(new ProfilePageViewModel(new ProfileViewModel(), IsAdmin)
+            {
+                LoadError = "We couldn't load your profile just now. Nothing was changed — try again in a moment.",
+            });
+        }
     }
 
     [HttpPost("/profile")]

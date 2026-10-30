@@ -63,7 +63,7 @@
     if (!editor) return true;
     if (draftSaveTimeout) clearTimeout(draftSaveTimeout);
     const text = editor.value;
-    setStatus("Saving draft…", "save-status");
+    setStatus("Saving draftâ€¦", "save-status");
     draftRequest = fetch(`/placement/take/${config.placementId}/draft`, {
       method: "POST",
       headers: { "Content-Type": "application/json", RequestVerificationToken: token },
@@ -210,7 +210,7 @@
   });
 
   async function sendAnswer(selectedOptionId, flagged) {
-    setStatus("Saving…", "save-status");
+    setStatus("Savingâ€¦", "save-status");
     const body = new URLSearchParams();
     if (selectedOptionId != null) body.append("selectedOptionId", selectedOptionId);
     body.append("isFlagged", flagged ? "true" : "false");

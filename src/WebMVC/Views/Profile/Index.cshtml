@@ -30,6 +30,19 @@
     <div class="alert alert--danger" role="alert">@Model.Form.FormError</div>
   }
 
+  @if (!string.IsNullOrEmpty(Model.LoadError))
+  {
+    <div class="card"><div class="card__body">
+      <div class="state-block" role="alert">
+        <div class="state-block__icon state-block__icon--danger" aria-hidden="true">FAILED</div>
+        <h2 class="state-block__title">We couldn't load your profile</h2>
+        <p class="state-block__desc">@Model.LoadError</p>
+        <a class="btn btn--primary" href="/profile">Try again</a>
+      </div>
+    </div></div>
+  }
+  else
+  {
   <div class="grid-2">
     @await Html.PartialAsync("_IndexForm", Model.Form)
 
@@ -64,4 +77,5 @@
       </div>
     </div>
   </div>
+  }
 </div>
