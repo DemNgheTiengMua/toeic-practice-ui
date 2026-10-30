@@ -74,7 +74,7 @@ LEARNER (learner@demo.local) ◀────────────────
   │                      └─▶ [submit] ─▶ /exams/result/{attemptId}
   │                            ├─▶ /exams/review/{attemptId}
   │                            └─▶ /exams/insight/{attemptId}   (AI insight, async)
-  │                └─▶ /exams/resume (recover by EX-XXXXXX)
+  │                └─▶ /exams (card "In progress" ─▶ nút `Continue` để vào lại sitting)
   ├─ PLACEMENT (free): /placement ─▶ /placement/start ─▶ /exams/preflight/{aid}?placementId=
   │                └─▶ /placement/result/{placementId}
   ├─ PRACTICE (free):  /practice ─▶ [POST /practice/start] ─▶ /practice/{sessionId}
@@ -222,7 +222,7 @@ practice bank, learning path, placement, weakness đều theo cert đang active.
    - Đủ 2 bước thì notice xanh `All Pre-flight Requirements Satisfied` và `Start Test →` mở.
      Thiếu 1 bước → `Start Test →` **disabled**.
 4. Vào `/exams/take/{attemptId}`. Kiểm tra:
-   - Topbar có placard `MÃ DỰ THI: EX-XXXXXX` → **ghi lại mã này**.
+   - Topbar không còn placard mã dự thi — mã `EX-` đã bỏ (D4); resume chỉ qua nút `Continue`.
    - Modal `Aa Cỡ chữ & Tương phản`: 3 mức cỡ chữ + 3 chế độ tương phản đổi được.
    - Volume slider đổi % và **persist qua F5** (localStorage).
 5. Trả lời và kiểm tra mechanics đặc thù:
@@ -237,9 +237,14 @@ practice bank, learning path, placement, weakness đều theo cert đang active.
 | Q8 | P6 | text completion | đáp án A = "have received" |
 | Q9 | P7 | reading | đáp án B = "To notify employees of maintenance work" |
 
-6. **Resume bằng mã dự thi:** `Exit` → `Exit (resume later)` → `/exams` → `Khôi phục phiên thi`
-   → nhập `EX-XXXXXX` → phải về đúng câu và đúng số giây còn lại.
-7. Submit → `/exams/result/{attemptId}`. Result page hiển thị total scaled, điểm từng skill,
+6. **Resume bằng nút `Tiếp tục`:** trong sitting bấm `Exit` → `Exit (resume later)` → về `/exams`.
+   Card exam đang làm hiện badge `In progress` và **một nút `Continue` duy nhất** — bấm vào phải
+   về đúng câu đang dở và đúng số giây còn lại. Không còn placard mã dự thi, không còn form
+   `Khôi phục phiên thi`.
+7. **Navigation lock (một chiều):** P1–P4 là `AUDIO_DRIVEN` nên không có nút `Previous`; sửa URL
+   thành `?q=` của câu trước (hoặc bấm Back) phải bị đẩy về câu đang active, **không** được nhảy lùi.
+   Q5–Q7 (`FULL_SANDBOX`) thì đi lại tự do.
+8. Submit → `/exams/result/{attemptId}`. Result page hiển thị total scaled, điểm từng skill,
    band CEFR, và so sánh với attempt trước.
 
 **Kiểm tra credit invariant:** mỗi lần `start` mock exam trừ đúng **1 credit**, hiển thị ngay
@@ -281,6 +286,9 @@ với `InsufficientCredits`, **không** tạo attempt.
   `ai_grading` hay `mock_exam_start` nào. Đã verify ledger không tăng.
 - Exam `purpose=placement` **không** xuất hiện ở `/exams` và `/exams/{id}/instructions`
   trả 302 → đúng thiết kế (placement có luồng riêng), không phải lỗi.
+- **Navigation lock giống hệt mock exam:** section `AUDIO_DRIVEN` / `SYSTEM_PACED_AUTO` không
+  render nút `Previous`; gõ URL `?q=` của câu trước hoặc bấm Back phải bị đẩy về câu đang active
+  và thanh địa chỉ phải hiện đúng số câu server trả về (không lệch với nội dung đang render).
 
 ---
 
@@ -457,7 +465,8 @@ Chạy hết bảng này là phủ đủ các invariant kiến trúc trong `AGEN
 [ ] Phase 3: cert switch đổi phạm vi exam (cert khác = 302)
 [ ] Phase 3: preflight chặn Start khi thiếu bước
 [ ] Phase 3: P1/P2 masked options đúng số lượng, cluster P3 render
-[ ] Phase 3: resume bằng EX-code về đúng câu + đúng timer
+[ ] Phase 3: resume bằng nút `Continue` trên card đang làm về đúng câu + đúng timer
+[ ] Phase 3: AUDIO_DRIVEN không có `Previous`, sửa URL `?q=` cũ vẫn bị đẩy về câu active
 [ ] Phase 3: CAT unit lock không thể quay lại
 [ ] Phase 3: annotation persist qua F5
 [ ] Phase 3: placement free, ledger không đổi

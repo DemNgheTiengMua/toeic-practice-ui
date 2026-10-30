@@ -335,8 +335,10 @@ public class ExamAudioAndInstructionsTests : PlaywrightTestBase
     }
 
     [Test]
-    public async Task Should_Not_Lock_Replay_When_Navigating_Away_From_Unplayed_Question()
+    public async Task Should_Keep_Unplayed_Audio_Ready_And_Refuse_The_Rewind_Into_It()
     {
+        // D3: Exam 1's listening sections are AUDIO_DRIVEN, so a question is one-way. Leaving Q3 for
+        // Q4 commits the position server-side; asking for Q3 again must land back on Q4.
         var attemptId = await StartListeningAttemptAsync();
 
         await NavigateForwardToQuestionAsync(3);
@@ -345,21 +347,24 @@ public class ExamAudioAndInstructionsTests : PlaywrightTestBase
         var playerQ3 = Page.Locator("#main-exam-audio, .exam-audio[data-mode='exam']").First;
         await Expect(playerQ3).ToBeVisibleAsync();
         await Expect(playerQ3.Locator(".exam-audio__badge")).ToHaveTextAsync("READY");
+        await Expect(playerQ3.Locator(".exam-audio__btn-play")).ToBeEnabledAsync();
 
         await NavigateForwardToQuestionAsync(4);
 
-        await ReloadQuestionAsync(attemptId, 3);
-        await Expect(Page.Locator("#question-number-display")).ToContainTextAsync("Question 3");
+        // The unplayed audio is untouched by merely advancing past it.
+        var storedProgress = await Page.EvaluateAsync<string>(
+            "attemptId => localStorage.getItem('ee_exam_audio_' + attemptId) || '{}'", attemptId);
+        Assert.That(storedProgress, Does.Not.Contain("completed\":true"),
+            "Advancing past an unplayed question must not mark its audio complete.");
 
-        // Question 3 must remain playable and in READY state
-        await Expect(playerQ3).ToBeVisibleAsync();
-        await Expect(playerQ3.Locator(".exam-audio__badge")).ToHaveTextAsync("READY");
-        await Expect(playerQ3.Locator(".exam-audio__btn-play")).ToBeEnabledAsync();
+        await ExpectRewindRefusedAsync(attemptId, 3, expectedOrder: 4);
     }
 
     [Test]
-    public async Task Should_Resume_From_Last_Timestamp_And_Prevent_Rewind_When_Returning_To_Partial_Audio()
+    public async Task Should_Persist_Audio_Timestamp_And_Refuse_Rewind_After_Leaving_Partial_Audio()
     {
+        // D3: playback progress survives leaving the question, but the candidate cannot walk back into
+        // the half-played audio — the server keeps them on the active question.
         var attemptId = await StartListeningAttemptAsync();
 
         await NavigateForwardToQuestionAsync(3);
@@ -377,25 +382,31 @@ public class ExamAudioAndInstructionsTests : PlaywrightTestBase
 
         await NavigateForwardToQuestionAsync(4);
 
-        // Audio must be stopped
+        // Audio must be stopped when the question changes
         var anyPlaying = await Page.EvaluateAsync<bool>("() => Array.from(document.querySelectorAll('audio')).some(a => !a.paused && a.currentTime > 0)");
         Assert.That(anyPlaying, Is.False);
 
-        await ReloadQuestionAsync(attemptId, 3);
+        // The timestamp is still recorded for the abandoned question, even though it cannot be re-entered.
+        var storedProgress = await Page.EvaluateAsync<string>(
+            "attemptId => localStorage.getItem('ee_exam_audio_' + attemptId) || '{}'", attemptId);
+        Assert.That(storedProgress, Does.Not.Contain("\"currentTime\":0}"),
+            "The played offset must be persisted when leaving a partially played question.");
 
-        // Must restore at the last timestamp (not 0:00)
-        var resumedPlayer = Page.Locator("#main-exam-audio, .exam-audio[data-mode='exam']").First;
-        await Expect(resumedPlayer).ToBeVisibleAsync();
-        var resumedTime = await resumedPlayer.EvaluateAsync<double>("el => parseFloat(el.dataset.currentTime || '0')");
-        Assert.That(resumedTime, Is.GreaterThanOrEqualTo(stoppedTime - 0.1), "Audio must resume from last timestamp, not from beginning");
+        await ExpectRewindRefusedAsync(attemptId, 3, expectedOrder: 4);
+    }
 
-        // Candidate can resume playback from this timestamp
-        var resumedPlayButton = resumedPlayer.Locator(".exam-audio__btn-play");
-        await Expect(resumedPlayButton).ToBeEnabledAsync();
-        await resumedPlayButton.ClickAsync();
-        await Expect(resumedPlayer.Locator(".exam-audio__badge")).ToHaveTextAsync("PLAYING");
-        var currentTimeAfterResume = await Page.EvaluateAsync<double>("() => document.querySelector('#main-exam-audio audio').currentTime");
-        Assert.That(currentTimeAfterResume, Is.GreaterThanOrEqualTo(resumedTime));
+    /// <summary>
+    /// Asserts the D3 one-way lock: requesting an earlier question in an AUDIO_DRIVEN section is
+    /// rejected and the candidate is redirected forward to their active question.
+    /// </summary>
+    private async Task ExpectRewindRefusedAsync(int attemptId, int blockedOrder, int expectedOrder)
+    {
+        await Page.GotoAsync($"{BaseUrl}/exams/take/{attemptId}?q={blockedOrder}");
+        await Expect(Page).ToHaveURLAsync(new Regex($@"\?q={expectedOrder}(&|$)"));
+        await Expect(Page.Locator("#question-number-display")).ToContainTextAsync($"Question {expectedOrder}");
+
+        // The Previous control is not offered at all in a one-way section.
+        await Expect(Page.Locator("#btn-prev")).ToBeHiddenAsync();
     }
 
     [Test]
@@ -549,16 +560,6 @@ public class ExamAudioAndInstructionsTests : PlaywrightTestBase
         }
     }
 
-    private async Task ReloadQuestionAsync(int attemptId, int displayOrder)
-    {
-        await Page.EvaluateAsync(
-            "order => { const url = new URL(window.location.href); url.searchParams.set('q', String(order)); window.history.replaceState({ page: 'exam-shell', q: order }, '', url); }",
-            displayOrder);
-        await Page.ReloadAsync();
-        await Expect(Page).ToHaveURLAsync(new Regex($@"/exams/take/{attemptId}\?q={displayOrder}"));
-        await Expect(Page.Locator("#question-number-display"))
-            .ToContainTextAsync($"Question {displayOrder}");
-    }
 
     [Test]
     public async Task Should_Render_Study_Audio_In_Practice_Summary()
