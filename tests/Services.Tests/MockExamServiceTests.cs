@@ -234,10 +234,11 @@ public sealed class MockExamServiceTests(DatabaseFixture database)
         var resumed = await service.StartAttemptAsync(userId, fixture.examId);
         Assert.Equal(attempt.AttemptId, resumed.AttemptId);
 
-        var take = await service.GetAttemptTakeAsync(userId, attempt.AttemptId, questionDisplayOrder: 2);
-        Assert.Equal("free_response", take.CurrentQuestion.QuestionType);
-        Assert.Equal(3, take.CurrentQuestion.MinWords);
-        Assert.Equal(string.Empty, take.CurrentQuestion.ResponseText);
+        // Writing is the next phase: while Listening is active, asking for its question returns the
+        // active Listening question instead (the one-way phase lock, f029d82).
+        var locked = await service.GetAttemptTakeAsync(userId, attempt.AttemptId, questionDisplayOrder: 2);
+        Assert.Equal("mcq", locked.CurrentQuestion.QuestionType);
+        Assert.Equal(1, locked.CurrentQuestion.DisplayOrder);
 
         await service.SaveAnswerAsync(
             userId,
@@ -247,6 +248,12 @@ public sealed class MockExamServiceTests(DatabaseFixture database)
             isFlagged: false);
         await AdvanceAttemptToSecondPhaseAsync(attempt.AttemptId);
         (service, _) = CreateServices();
+
+        var take = await service.GetAttemptTakeAsync(userId, attempt.AttemptId, questionDisplayOrder: 2);
+        Assert.Equal("free_response", take.CurrentQuestion.QuestionType);
+        Assert.Equal(3, take.CurrentQuestion.MinWords);
+        Assert.Equal(string.Empty, take.CurrentQuestion.ResponseText);
+
         const string responseText = "A clear response with enough detail.";
         await service.SaveAnswerAsync(
             userId,
