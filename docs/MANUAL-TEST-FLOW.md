@@ -237,10 +237,10 @@ practice bank, learning path, placement, weakness đều theo cert đang active.
 | Q8 | P6 | text completion | đáp án A = "have received" |
 | Q9 | P7 | reading | đáp án B = "To notify employees of maintenance work" |
 
-6. **Resume bằng nút `Tiếp tục`:** trong sitting bấm `Exit` → `Exit (resume later)` → về `/exams`.
+6. **Resume bằng nút `Continue`:** trong sitting bấm `Exit` → `Exit (resume later)` → về `/exams`.
    Card exam đang làm hiện badge `In progress` và **một nút `Continue` duy nhất** — bấm vào phải
-   về đúng câu đang dở và đúng số giây còn lại. Không còn placard mã dự thi, không còn form
-   `Khôi phục phiên thi`.
+   về đúng câu đang dở và đúng số giây còn lại. Không còn placard mã dự thi; sitting room và card
+   không còn dẫn tới form `Khôi phục phiên thi` (trang `/exams/resume` vẫn còn nếu gõ thẳng URL).
 7. **Navigation lock (một chiều):** P1–P4 là `AUDIO_DRIVEN` nên không có nút `Previous`; sửa URL
    thành `?q=` của câu trước (hoặc bấm Back) phải bị đẩy về câu đang active, **không** được nhảy lùi.
    Q5–Q7 (`FULL_SANDBOX`) thì đi lại tự do.
