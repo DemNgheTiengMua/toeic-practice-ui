@@ -38,7 +38,7 @@ Additional manual checks covered instructions/preflight, same-document question 
 
 Public API and implementation comparisons against the pre-task snapshot found unchanged engine members, DTO/client declarations and route behavior. Standards and specification reviews found no remaining introduced findings. Task source/test changes relative to the initial dirty-worktree snapshot are recorded in `logs/issue126-changes.json`; comparing solely against Git HEAD would also include Milestone 1.
 
-### Placement-start defect — resolved after the refactor
+### Placement-start defect â€” resolved after the refactor
 
 Before the follow-up fix, a fresh placement attempt whose exam required preflight redirected directly to its placement sitting. `AttemptEngine` rejects the unverified attempt with `preflight_required`; the placement sitting endpoint does not handle this code and the request returns HTTP 500. MVC redirects to the placement catalog with an error.
 
@@ -61,7 +61,7 @@ The graph was refreshed after the refactor: 12,337 nodes and 37,055 edges, with 
 
 The disposable `ExtraEfficiencyCrawl` environment uses fake AI/mock payment. After the placement fix, its API and MVC are left running so the user can inspect the visible browser. The everyday `ExtraEfficiency` database was not modified by browser verification.
 
-## Publishing verification — 2026-10-26
+## Publishing verification â€” 2026-10-26
 
 The user approved publishing two scoped commits on `main`: the #124/#125 prerequisites, followed by #126 and the placement preflight fix. The prerequisite commit was checked in a temporary copy containing only staged files: solution build passed with zero warnings/errors and 454 MVC tests passed.
 
