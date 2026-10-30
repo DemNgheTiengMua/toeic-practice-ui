@@ -430,6 +430,11 @@ public class ExamAudioAndInstructionsTests : PlaywrightTestBase
     /// </summary>
     private async Task ExpectRewindRefusedAsync(int attemptId, int blockedOrder, int expectedOrder)
     {
+        // Next renders the new question at once (zero-reload shell) and reports the move in a
+        // background sync. The server only locks the earlier question once that sync lands, so wait
+        // for it; otherwise a fast rewind races the sync and is legitimately allowed.
+        await Page.WaitForFunctionAsync(
+            "() => { const s = window.ExamSitting; return !s || (!s.positionDirty && !s.isFlushing); }");
         await Page.GotoAsync($"{BaseUrl}/exams/take/{attemptId}?q={blockedOrder}");
         await Expect(Page).ToHaveURLAsync(new Regex($@"\?q={expectedOrder}(&|$)"));
         await Expect(Page.Locator("#question-number-display")).ToContainTextAsync($"Question {expectedOrder}");
