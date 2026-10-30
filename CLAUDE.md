@@ -18,7 +18,9 @@ dotnet test                                    # Services tests against LocalDB,
 sqlcmd -S "(localdb)\MSSQLLocalDB" -I -b -Q "IF DB_ID('ExtraEfficiency') IS NOT NULL DROP DATABASE [ExtraEfficiency]; CREATE DATABASE [ExtraEfficiency];"
 sqlcmd -S "(localdb)\MSSQLLocalDB" -d ExtraEfficiency -I -b -f 65001 -i docs/database-schema.sql
 sqlcmd -S "(localdb)\MSSQLLocalDB" -d ExtraEfficiency -I -b -f 65001 -i docs/seed-demo.sql
-# First time only: the API refuses to boot without a JWT signing key.
+# First time only. `scripts/crawl-env.sh start` also does this for you, and leaves an
+# existing key alone. The API refuses to boot without a signing key and no key is
+# committed to this repository — that is deliberate (this repo is public).
 dotnet user-secrets set "Jwt:SigningKey" "$(openssl rand -base64 32)" --project src/WebAPI
 dotnet user-secrets set "Jwt:Issuer" "extra-efficient" --project src/WebAPI
 dotnet user-secrets set "Jwt:Audience" "extra-efficient" --project src/WebAPI

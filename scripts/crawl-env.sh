@@ -36,6 +36,20 @@ die() { printf '\033[1;31m[crawl]\033[0m %s\n' "$*" >&2; exit 1; }
 # -f 65001: the .sql files are BOM-less UTF-8; without it every non-ASCII char is mangled.
 sql() { sqlcmd -S "$SERVER" -I -b -f 65001 "$@"; }
 
+# The API refuses to boot without a JWT signing key, and no key is committed to the
+# repository. Generate one into user-secrets the first time only; never overwrite an
+# existing value, so sign-ins survive a restart.
+provision_signing_key() {
+  local current
+  current="$(dotnet user-secrets list --project "$ROOT/src/WebAPI" 2>/dev/null \
+    | awk -F' = ' '/^Jwt:SigningKey /{ print $2; exit }')"
+  if [[ -n "$current" ]]; then
+    return 0
+  fi
+  say "No JWT signing key in user-secrets — generating one"
+  dotnet user-secrets set "Jwt:SigningKey" "$(openssl rand -base64 32)" --project "$ROOT/src/WebAPI" > /dev/null
+}
+
 # Windows PIDs listening on a TCP port (Git Bash has no lsof).
 port_pids() {
   netstat -ano -p tcp 2>/dev/null \
@@ -85,6 +99,8 @@ cmd_start() {
   for port in 5000 5001; do
     [[ -z "$(port_pids "$port")" ]] || die "port $port is busy — run '$0 stop' first"
   done
+
+  provision_signing_key
 
   say "Building solution"
   dotnet build "$ROOT/ExtraEfficiency.slnx" -c "$CONFIG" -v q -nologo > "$LOG_DIR/build.log" \

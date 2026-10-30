@@ -61,7 +61,7 @@ jobs:
             ASPNETCORE_ENVIRONMENT=Development \
             ASPNETCORE_URLS="http://localhost:5001" \
             ConnectionStrings__CompanionDb="Server=localhost,1433;Database=ExtraEfficiencyCrawl;User ID=sa;Password=Str0ng!Passw0rd;TrustServerCertificate=True" \
-            Jwt__SigningKey="DuFiytO9xnewMYC1REpIt5xQIfqc7k2Ybv9JxKcUDTk=" \
+            Jwt__SigningKey="$(openssl rand -base64 32)" \
             Jwt__Issuer="extra-efficient" \
             Jwt__Audience="extra-efficient" \
             Payment__Gateway=mock \
