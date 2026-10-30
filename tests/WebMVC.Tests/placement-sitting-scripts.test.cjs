@@ -60,7 +60,7 @@ function sitting({ current, served, stored = {} }) {
       await settle();
     },
     async next(order) {
-      const link = { href: `http://ee.test/placement/take/9?q=${order}`, closest: () => dynamic };
+      const link = { href: `http://ee.test/placement/take/9?q=${order}`, dataset: {}, closest: () => dynamic };
       handlers.click({ target: { closest: selector => selector.startsWith('a[href') ? link : null }, preventDefault() {} });
       await settle();
     }

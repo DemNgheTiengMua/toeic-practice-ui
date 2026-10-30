@@ -34,6 +34,9 @@ public sealed partial class AdminExamService
                 .ThenInclude(q => q.Category)
             .Where(g => g.ExamId == examId)
             .OrderBy(g => g.DisplayOrder)
+            // Two collection levels (questions, then options): split, or EF warns 20504 and the
+            // rows multiply (see the readiness audit). Children are re-ordered in memory below.
+            .AsSplitQuery()
             .ToListAsync(cancellationToken);
 
         var isZip = string.Equals(format, "zip", StringComparison.OrdinalIgnoreCase);

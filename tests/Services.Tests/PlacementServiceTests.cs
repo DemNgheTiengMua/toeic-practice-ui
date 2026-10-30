@@ -580,6 +580,60 @@ public sealed class PlacementServiceTests(DatabaseFixture database)
             service.GetPlacementResultAsync(userId, info.PlacementId));
         Assert.Equal(PlacementException.PlacementNotFinished, ex.Code);
     }
+    [Fact]
+    public async Task GetPlacementTake_moving_on_from_the_last_listening_question_starts_reading()
+    {
+        // The sitting's Next control asks for the first Reading question. The engine refused it
+        // while the attempt was still on Listening, and placement has no separate "next section"
+        // step, so the candidate could never leave Listening (#134).
+        var certCode = Unique("SB");
+        var (_, examId, _, q1Id, q2Id, opt1CorrectId, opt2CorrectId) = await SeedPlacementFixtureAsync(certCode);
+        var userId = await SeedLearnerAsync(certCode);
+        var (service, _) = CreateServices();
+        var info = await service.StartPlacementTestAsync(userId, examId);
+        await service.SaveAnswerAsync(userId, info.PlacementId, q1Id, opt1CorrectId, isFlagged: false);
+
+        var reading = await service.GetPlacementTakeAsync(userId, info.PlacementId, questionDisplayOrder: 2);
+
+        Assert.Equal(q2Id, reading.CurrentQuestion.QuestionId);
+        Assert.True(reading.Navigator.Single(n => n.QuestionId == q1Id).IsLocked);
+        // Accepted only because the attempt really moved on to the Reading skill.
+        await service.SaveAnswerAsync(userId, info.PlacementId, q2Id, opt2CorrectId, isFlagged: false);
+
+        // Listening stays closed: a rewind is refused and the candidate stays on Reading.
+        var (fresh, _) = CreateServices();
+        var rewind = await fresh.GetPlacementTakeAsync(userId, info.PlacementId, questionDisplayOrder: 1);
+        Assert.Equal(q2Id, rewind.CurrentQuestion.QuestionId);
+    }
+
+    [Fact]
+    public async Task GetPlacementTake_a_jump_past_the_first_question_of_the_next_skill_does_not_open_it()
+    {
+        // Only the move the Next control makes (into the next skill's first question) opens that
+        // skill; a hand-edited jump deeper into it is refused like any other locked question.
+        var certCode = Unique("SJ");
+        var (_, examId, _, q1Id, _, _, _) = await SeedPlacementFixtureAsync(certCode);
+        await database.SqlAsync($"""
+            DECLARE @grp INT = (SELECT TOP 1 g.GroupId FROM QuestionGroups g JOIN Sections s ON s.SectionId = g.SectionId
+                                WHERE g.ExamId = {examId} AND s.Code = 'P5');
+            DECLARE @sec INT = (SELECT SectionId FROM QuestionGroups WHERE GroupId = @grp);
+            DECLARE @skill INT = (SELECT SkillId FROM Sections WHERE SectionId = @sec);
+            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder)
+            VALUES (@grp, {examId}, @sec, @skill, N'Standard Q3', 1, 'mcq', 3);
+            DECLARE @q3 INT = SCOPE_IDENTITY();
+            INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
+              (@q3, 'mcq', 'A', N'Opt A', 1),
+              (@q3, 'mcq', 'B', N'Opt B', 0);
+            """);
+        var userId = await SeedLearnerAsync(certCode);
+        var (service, _) = CreateServices();
+        var info = await service.StartPlacementTestAsync(userId, examId);
+
+        var take = await service.GetPlacementTakeAsync(userId, info.PlacementId, questionDisplayOrder: 3);
+
+        Assert.Equal(q1Id, take.CurrentQuestion.QuestionId);
+    }
+
     private async Task<(int certId, int examId, int writingQId)> SeedHybridPlacementFixtureAsync(string certCode)
     {
         await database.SqlAsync($"""

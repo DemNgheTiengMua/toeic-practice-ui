@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Linq;
 using System.Threading.Tasks;
 using BusinessObjects;
@@ -8,6 +9,7 @@ using DataAccess;
 using BusinessObjects.Entities;
 using BusinessObjects.Views;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging.Abstractions;
 using Services;
 using Xunit;
@@ -445,6 +447,98 @@ public sealed class AiInsightServiceTests(DatabaseFixture database)
         var reloaded = await service.GetOrCreateDashboardInsightAsync(userId, certId);
         Assert.Equal(initial.InsightId, reloaded.InsightId);
         Assert.Equal(initial.SourceFingerprint, reloaded.SourceFingerprint);
+    }
+
+    [Fact]
+    public async Task GetOrCreateDashboardInsightAsync_concurrent_first_loads_create_one_row_without_a_failed_save()
+    {
+        // Several dashboard loads for one learner at once (two tabs, a double-clicked sign-in,
+        // parallel E2E fixtures) used to race: every lookup found nothing, every caller inserted,
+        // and all but one hit UX_AiInsights_Fingerprint. The catch re-read the winner, but EF had
+        // already logged each loser as "fail: Microsoft.EntityFrameworkCore.Update[10000]".
+        var userId = await SeedLearnerAsync();
+        var (certId, _, _) = await SeedPracticeSessionFixtureAsync(userId, Unique("RC"));
+
+        const int callers = 4;
+        var lookups = new FingerprintLookupLatch(callers);
+        var failedSaves = new FailedSaveCounter();
+        var options = new DbContextOptionsBuilder<CompanionDbContext>()
+            .UseSqlServer(database.ConnectionString)
+            .AddInterceptors(lookups, failedSaves)
+            .Options;
+
+        // Warm the model and query cache first, so the racing calls reach their lookup together.
+        var warmUpLearner = await SeedLearnerAsync();
+        await using (var warm = new CompanionDbContext(options))
+        {
+            await new AiInsightService(warm, new FakeAiInsightGenerator(), NullLogger<AiInsightService>.Instance)
+                .GetOrCreateDashboardInsightAsync(warmUpLearner, certId);
+        }
+
+        lookups.Arm();
+        var contexts = Enumerable.Range(0, callers).Select(_ => new CompanionDbContext(options)).ToList();
+        try
+        {
+            var results = await Task.WhenAll(contexts.Select(db => Task.Run(() =>
+                new AiInsightService(db, new FakeAiInsightGenerator(), NullLogger<AiInsightService>.Instance)
+                    .GetOrCreateDashboardInsightAsync(userId, certId))));
+
+            Assert.Single(results.Select(r => r.InsightId).Distinct());
+            Assert.Equal(0, failedSaves.Count);
+        }
+        finally
+        {
+            foreach (var db in contexts)
+            {
+                await db.DisposeAsync();
+            }
+        }
+
+        await using var verify = DbContextFactory.Create(database.ConnectionString);
+        Assert.Equal(1, await verify.AiInsights.CountAsync(i => i.UserId == userId && i.Scope == AiInsightScope.Dashboard.ToCode()));
+    }
+
+    /// <summary>Holds each dashboard fingerprint lookup until every racing caller has made its own
+    /// (or a second passes), so unserialised callers all reach the insert having seen no row.</summary>
+    private sealed class FingerprintLookupLatch(int callers) : DbCommandInterceptor
+    {
+        private readonly TaskCompletionSource allArrived = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private int armed;
+        private int arrived;
+
+        public void Arm() => Volatile.Write(ref armed, 1);
+
+        public override async ValueTask<DbDataReader> ReaderExecutedAsync(
+            DbCommand command, CommandExecutedEventData eventData, DbDataReader result, CancellationToken cancellationToken = default)
+        {
+            if (Volatile.Read(ref armed) == 1
+                && command.CommandText.Contains("[AiInsights]", StringComparison.Ordinal)
+                && command.CommandText.Contains("[SourceFingerprint] =", StringComparison.Ordinal))
+            {
+                if (Interlocked.Increment(ref arrived) >= callers)
+                {
+                    allArrived.TrySetResult();
+                }
+
+                await Task.WhenAny(allArrived.Task, Task.Delay(TimeSpan.FromSeconds(1), cancellationToken));
+            }
+
+            return result;
+        }
+    }
+
+    /// <summary>Counts SaveChanges failures: the event EF logs as Update[10000].</summary>
+    private sealed class FailedSaveCounter : SaveChangesInterceptor
+    {
+        private int count;
+
+        public int Count => Volatile.Read(ref count);
+
+        public override Task SaveChangesFailedAsync(DbContextErrorEventData eventData, CancellationToken cancellationToken = default)
+        {
+            Interlocked.Increment(ref count);
+            return Task.CompletedTask;
+        }
     }
 
     [Fact]

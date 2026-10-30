@@ -10,6 +10,8 @@
   let draftDirty = false;
   let draftSaveTimeout = null;
   let draftRequest = null;
+  // Answer saves still in flight; leaving a skill waits for them (see leaveSkill).
+  const pendingAnswers = new Set();
 
   const token = document.querySelector("#anti-forgery-holder input[name='__RequestVerificationToken']")?.value || "";
   const q = selector => document.querySelector(selector);
@@ -182,7 +184,8 @@
     const link = event.target.closest("a[href^='/placement/take/']");
     if (link && link.closest("#placement-take-dynamic")) {
       event.preventDefault();
-      navigate(link.href);
+      if (link.dataset.confirmLeave) leaveSkill(link);
+      else navigate(link.href);
       return;
     }
     const flag = event.target.closest("#flag-btn");
@@ -221,7 +224,17 @@
     sendAnswer(event.target.value, isFlagged);
   });
 
-  async function sendAnswer(selectedOptionId, flagged) {
+  function sendAnswer(selectedOptionId, flagged) {
+    // Tracked so leaving a skill can wait for it: the API refuses an answer for a skill once the
+    // next skill has started.
+    const request = postAnswer(selectedOptionId, flagged);
+    pendingAnswers.add(request);
+    const settled = () => pendingAnswers.delete(request);
+    request.then(settled, settled);
+    return request;
+  }
+
+  async function postAnswer(selectedOptionId, flagged) {
     setStatus("Saving…", "save-status");
     const body = new URLSearchParams();
     if (selectedOptionId != null) body.append("selectedOptionId", selectedOptionId);
@@ -244,6 +257,24 @@
       console.error(error);
       setStatus("Save error", "save-status save-status--error");
     }
+  }
+
+  // Capped, so a hung save never traps the candidate on the last question of a skill.
+  function settlePendingAnswers() {
+    if (pendingAnswers.size === 0) return Promise.resolve();
+    return Promise.race([
+      Promise.allSettled(Array.from(pendingAnswers)),
+      new Promise(resolve => setTimeout(resolve, 5000))
+    ]);
+  }
+
+  // The Next control on the last question of a skill. Leaving closes that skill for good, so
+  // confirm first, as the mock exam does. The server opens the next skill when asked for its first
+  // question, so the sitting then moves there like any other question, without a reload.
+  async function leaveSkill(link) {
+    if (!window.confirm(link.dataset.confirmLeave)) return;
+    await settlePendingAnswers();
+    navigate(link.href);
   }
 
   setInterval(async () => {

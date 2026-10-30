@@ -1,3 +1,4 @@
+using System.Text;
 using Contracts;
 using DataAccess;
 using Microsoft.EntityFrameworkCore;
@@ -12,6 +13,8 @@ namespace Services.Tests;
 /// navigations). Unsplitting that is a Cartesian product, which EF warns about (20504) and which
 /// multiplies rows by every option added. The guard below turns that warning into a failure, so
 /// dropping .AsSplitQuery() breaks a test instead of quietly reintroducing the latency.
+/// The studio, question list and both exports load the same groups → questions → options graph
+/// (plus categories) and are guarded the same way.
 /// </summary>
 [Collection(DatabaseCollection.Name)]
 public sealed class AdminExamServiceSplitQueryTests(DatabaseFixture database)
@@ -29,8 +32,67 @@ public sealed class AdminExamServiceSplitQueryTests(DatabaseFixture database)
     [Fact]
     public async Task The_readiness_audit_splits_its_collection_includes()
     {
+        var examId = await SeedExamWithTwoGroupsAsync();
+
+        await using var db = CreateStrictDb();
+        var audit = new AdminExamService(db, TimeProvider.System);
+
+        // Throws InvalidOperationException citing 20504 if the split-query call is ever removed.
+        var result = await audit.AuditExamPublishReadinessAsync(examId);
+
+        Assert.NotNull(result);
+    }
+
+    [Fact]
+    public async Task The_exam_studio_splits_its_collection_includes_and_keeps_every_question_and_option()
+    {
+        var examId = await SeedExamWithTwoGroupsAsync();
+
+        await using var db = CreateStrictDb();
+        var studio = await new AdminExamService(db, TimeProvider.System).GetExamStudioAsync(examId);
+
+        var groups = studio.Sections.SelectMany(s => s.Groups).ToList();
+        Assert.Equal(2, groups.Count);
+        Assert.All(groups, g => Assert.Equal(new[] { "A", "B" }, Assert.Single(g.Questions).Options.Select(o => o.Label)));
+    }
+
+    [Fact]
+    public async Task The_question_list_splits_its_collection_includes_and_keeps_every_question_and_option()
+    {
+        var examId = await SeedExamWithTwoGroupsAsync();
+
+        await using var db = CreateStrictDb();
+        var list = await new AdminExamService(db, TimeProvider.System).GetExamQuestionsAsync(examId);
+
+        Assert.Equal(2, list.Groups.Count);
+        Assert.All(list.Groups, g => Assert.Equal(new[] { "A", "B" }, Assert.Single(g.Questions).Options.Select(o => o.Label)));
+    }
+
+    [Fact]
+    public async Task Both_exam_exports_split_their_collection_includes()
+    {
+        var examId = await SeedExamWithTwoGroupsAsync();
+
+        await using var db = CreateStrictDb();
+        var fromStudio = await new AdminExamService(db, TimeProvider.System).ExportExamPackageAsync(examId, "json");
+        var fromImports = await new QuestionImportService(db, new RecordingFileStore(), TimeProvider.System).ExportExamPackageAsync(examId, "json");
+
+        foreach (var (stream, _, _) in new[] { fromStudio, fromImports })
+        {
+            using var reader = new StreamReader(stream, Encoding.UTF8);
+            var manifest = await reader.ReadToEndAsync();
+            Assert.Contains("first", manifest);
+            Assert.Contains("second", manifest);
+        }
+    }
+
+    /// <summary>
+    /// Two groups, each with a question carrying two options: the shape that used to explode into
+    /// groups x questions x options rows.
+    /// </summary>
+    private async Task<int> SeedExamWithTwoGroupsAsync()
+    {
         var certCode = $"SPLIT_{Guid.NewGuid():N}"[..18];
-        int examId;
 
         await database.SqlAsync($"""
             INSERT INTO Certificates (Code, Name, IsActive) VALUES ('{certCode}', N'Cert {certCode}', 1);
@@ -46,38 +108,27 @@ public sealed class AdminExamServiceSplitQueryTests(DatabaseFixture database)
               (@sL, @cert, 'listening', 'SL_' + @certStr, N'Listening Part 1', 1);
             """);
 
-        await using (var seed = DbContextFactory.Create(database.ConnectionString))
+        await using var seed = DbContextFactory.Create(database.ConnectionString);
+        var service = new AdminExamService(seed, TimeProvider.System);
+        var cert = await seed.Certificates.SingleAsync(c => c.Code == certCode);
+        var sectionId = (await seed.Sections.SingleAsync(s => s.CertId == cert.CertId)).SectionId;
+
+        var exam = await service.CreateExamAsync(new CreateAdminExamRequest(
+            cert.CertId, $"Split {Guid.NewGuid():N}"[..25], 40, ExamPurposeDto.Mock));
+
+        var g1 = await service.CreateQuestionGroupAsync(exam.ExamId, new CreateQuestionGroupRequest(sectionId));
+        var g2 = await service.CreateQuestionGroupAsync(exam.ExamId, new CreateQuestionGroupRequest(sectionId, DisplayOrder: 2));
+        foreach (var group in new[] { g1, g2 })
         {
-            var service = new AdminExamService(seed, TimeProvider.System);
-            var cert = await seed.Certificates.SingleAsync(c => c.Code == certCode);
-            var sectionId = (await seed.Sections.SingleAsync(s => s.CertId == cert.CertId)).SectionId;
-
-            var exam = await service.CreateExamAsync(new CreateAdminExamRequest(
-                cert.CertId, $"Split {Guid.NewGuid():N}"[..25], 40, ExamPurposeDto.Mock));
-            examId = exam.ExamId;
-
-            // Two groups, each with a question carrying two options: the shape that used to
-            // explode into groups x questions x options rows.
-            var g1 = await service.CreateQuestionGroupAsync(examId, new CreateQuestionGroupRequest(sectionId));
-            var g2 = await service.CreateQuestionGroupAsync(examId, new CreateQuestionGroupRequest(sectionId, DisplayOrder: 2));
-            foreach (var group in new[] { g1, g2 })
-            {
-                await service.CreateQuestionAsync(examId, new CreateQuestionRequest(
-                    group.GroupId, "Pick one", 1, QuestionTypeDto.Mcq,
-                    Options:
-                    [
-                        new AdminQuestionOptionInput(null, "A", "first", IsCorrect: true, null),
-                        new AdminQuestionOptionInput(null, "B", "second", IsCorrect: false, null),
-                    ]));
-            }
+            await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
+                group.GroupId, "Pick one", 1, QuestionTypeDto.Mcq,
+                Options:
+                [
+                    new AdminQuestionOptionInput(null, "A", "first", IsCorrect: true, null),
+                    new AdminQuestionOptionInput(null, "B", "second", IsCorrect: false, null),
+                ]));
         }
 
-        await using var db = CreateStrictDb();
-        var audit = new AdminExamService(db, TimeProvider.System);
-
-        // Throws InvalidOperationException citing 20504 if the split-query call is ever removed.
-        var result = await audit.AuditExamPublishReadinessAsync(examId);
-
-        Assert.NotNull(result);
+        return exam.ExamId;
     }
 }
