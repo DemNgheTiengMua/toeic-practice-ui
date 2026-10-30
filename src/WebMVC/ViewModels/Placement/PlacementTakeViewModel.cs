@@ -17,7 +17,11 @@ public sealed record PlacementTakeViewModel(
     public string FlagButtonClass { get; } = Take.CurrentQuestion.IsFlagged ? "btn--primary" : "";
     public string FlagPressed { get; } = Take.CurrentQuestion.IsFlagged ? "true" : "false";
     public string FlagLabel { get; } = Take.CurrentQuestion.IsFlagged ? "Flagged for review" : "Flag for review";
-    public string? PreviousUrl { get; } = Take.CurrentQuestion.DisplayOrder > 1
+    // One-way sections block rewinding the server-side position (D3). Mirror ExamTakeQuestionPresentation
+    // so the placement sitting never offers a control the API would refuse.
+    public bool HidePrevious { get; } = IsOneWayNavigation(Take.CurrentQuestion);
+    public bool CanGoPrevious { get; } = CanGoBack(Take.CurrentQuestion);
+    public string? PreviousUrl { get; } = CanGoBack(Take.CurrentQuestion)
         ? $"/placement/take/{Take.PlacementId}?q={Take.CurrentQuestion.DisplayOrder - 1}" : null;
     public string? NextUrl { get; } = Take.CurrentQuestion.DisplayOrder < Take.TotalQuestions
         ? $"/placement/take/{Take.PlacementId}?q={Take.CurrentQuestion.DisplayOrder + 1}" : null;
@@ -37,6 +41,12 @@ public sealed record PlacementTakeViewModel(
 
     private static int GetProgressPercent(PlacementTakeViewDto take) =>
         (int)Math.Round((double)take.AnsweredCount / Math.Max(1, take.TotalQuestions) * 100);
+
+    private static bool IsOneWayNavigation(AttemptQuestionDto question) =>
+        question.NavigationMode is "AUDIO_DRIVEN" or "SYSTEM_PACED_AUTO";
+
+    private static bool CanGoBack(AttemptQuestionDto question) =>
+        question.DisplayOrder > 1 && !IsOneWayNavigation(question);
 
     private static ExamAudioPlayerModel? BuildAudioPlayer(AttemptQuestionDto question) =>
         string.IsNullOrEmpty(question.AudioPath) ? null : new ExamAudioPlayerModel(
@@ -84,6 +94,7 @@ public sealed record PlacementTakeViewModel(
         {
             placementId = take.PlacementId,
             questionId = question.QuestionId,
+            displayOrder = question.DisplayOrder,
             remainingSeconds = take.RemainingSeconds,
             isFlagged = question.IsFlagged,
             totalQuestions = take.TotalQuestions,

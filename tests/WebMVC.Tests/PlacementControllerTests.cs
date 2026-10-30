@@ -109,6 +109,33 @@ public sealed class PlacementControllerTests
         Assert.Equal("Something broke", controller.TempData["ErrorMessage"]);
     }
 
+    [Fact]
+    public async Task TakeFragment_when_preflight_required_returns_conflict_carrying_attemptId()
+    {
+        // F7: the fragment redirect used to drop attemptId, so Preflight 404'd and the browser was
+        // bounced out to /exams. The 409 body must name an attempt the Preflight action can resolve.
+        var api = new TestApiClient
+        {
+            Preflight = new PreflightStatusDto(100, 1, "Placement", "TOEIC", "TOEIC", 45,
+                true, true, false, false, null, []),
+            PlacementTake = new PlacementTakeViewDto(42, 100, 1, "Placement", "TOEIC", PlacementStatusDto.InProgress,
+                DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddMinutes(45), 2700, 1, 0, 1,
+                new AttemptQuestionDto(10, 1, 20, 1, "P1", "Part 1", "listening", "Listening", ModalityDto.Listening,
+                    "Stem", null, null, null, null, null, null, null, [], null, false), [], false)
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.TakeFragment(42, 2, CancellationToken.None);
+
+        var status = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(409, status.StatusCode);
+        var redirectUrl = status.Value?.GetType().GetProperty("redirectUrl")?.GetValue(status.Value) as string;
+        Assert.NotNull(redirectUrl);
+        Assert.Contains("attemptId=100", redirectUrl);
+        Assert.Contains("placementId=42", redirectUrl);
+        Assert.True(api.PreflightRequested);
+    }
+
     [Theory]
     [InlineData(true, false)]
     [InlineData(false, true)]
@@ -577,7 +604,14 @@ public sealed class PlacementControllerTests
     private sealed class TestUrlHelper : IUrlHelper
     {
         public ActionContext ActionContext => throw new NotImplementedException();
-        public string? Action(UrlActionContext actionContext) => $"/placement/{actionContext.Action?.ToLower()}/{actionContext.Values?.GetType().GetProperty("placementId")?.GetValue(actionContext.Values)}";
+        public string? Action(UrlActionContext actionContext)
+        {
+            var values = actionContext.Values;
+            if (values is null) return $"/{actionContext.Action?.ToLower()}";
+            var query = string.Join("&", values.GetType().GetProperties()
+                .Select(property => $"{property.Name}={property.GetValue(values)}"));
+            return $"/{actionContext.Action?.ToLower()}?{query}";
+        }
         public string? Content(string? contentPath) => contentPath;
         public bool IsLocalUrl(string? url) => true;
         public string? Link(string? routeName, object? values) => null;
