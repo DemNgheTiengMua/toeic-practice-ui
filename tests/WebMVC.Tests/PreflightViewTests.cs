@@ -30,6 +30,14 @@ public sealed class PreflightViewTests
         }
     }
 
+    [Fact]
+    public void View_renders_a_refused_verification_as_a_danger_placard()
+    {
+        var view = File.ReadAllText(Path.Combine(TestPathHelper.FindRepoRoot(), "src", "WebMVC", "Views", "Exams", "Preflight.cshtml"));
+
+        Assert.Matches(@"@if \(Model\.HasError\)\s*\{\s*<div id=""preflight-error"" class=""alert alert--danger[^""]*"" role=""alert"">[\s\S]*?@Model\.ErrorMessage", view);
+    }
+
     [Theory]
     [InlineData(false, "badge--warning", "CHECKS PENDING", "CHECK REQUIRED")]
     [InlineData(true, "badge--success", "VERIFIED & READY", "MIC VERIFIED")]
