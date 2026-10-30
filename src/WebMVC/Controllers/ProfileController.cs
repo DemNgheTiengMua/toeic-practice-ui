@@ -28,7 +28,10 @@ public sealed class ProfileController(IProfileClient api, ILogger<ProfileControl
                 TimeZoneOptions = OptionsIncluding(profile.TimeZoneId),
             }, IsAdmin));
         }
-        catch (ApiException ex)
+        // HttpRequestException, not ApiException alone: with the API down HttpClient throws a plain
+        // transport fault. A dead session (AUTH_LOCKED / AUTH_REQUIRED) still reaches the sign-out
+        // middleware in Program.cs, as in LearnerControllerBase.
+        catch (HttpRequestException ex) when (ex is not ApiException { Code: ApiError.Codes.Locked or ApiError.Codes.Unauthenticated })
         {
             // A failed load must not render an empty form: saving it would overwrite the learner's
             // real name and zone with blanks. Show the failure and a retry instead.
@@ -66,6 +69,13 @@ public sealed class ProfileController(IProfileClient api, ILogger<ProfileControl
         catch (ApiException ex) when (ex.Code is ApiError.Codes.Validation)
         {
             model.FormError = ex.Title;
+            return View(new ProfilePageViewModel(model, IsAdmin));
+        }
+        catch (HttpRequestException ex) when (ex is not ApiException { Code: ApiError.Codes.Locked or ApiError.Codes.Unauthenticated })
+        {
+            // API down or another refusal: keep what the learner typed rather than a raw 500.
+            logger.LogError(ex, "Could not save the profile for the signed-in learner");
+            model.FormError = "We couldn't save your profile just now. Try again in a moment.";
             return View(new ProfilePageViewModel(model, IsAdmin));
         }
     }

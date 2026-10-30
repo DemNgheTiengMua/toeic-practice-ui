@@ -21,7 +21,10 @@ public sealed class AdminCertificatesController(
             var certificates = await api.GetAdminCertificatesAsync(await BearerAsync(), cancellationToken);
             return View("~/Views/Admin/Certificates.cshtml", new AdminCertificateListViewModel { Certificates = certificates });
         }
-        catch (ApiException ex)
+        // HttpRequestException, not ApiException alone: with the API down HttpClient throws a plain
+        // transport fault. A dead session (AUTH_LOCKED / AUTH_REQUIRED) still reaches the sign-out
+        // middleware in Program.cs, as in LearnerControllerBase. Same for the catches below.
+        catch (HttpRequestException ex) when (ex is not ApiException { Code: ApiError.Codes.Locked or ApiError.Codes.Unauthenticated })
         {
             logger.LogError(ex, "Could not load the admin certificate list");
             return View("~/Views/Admin/Certificates.cshtml", new AdminCertificateListViewModel
@@ -39,7 +42,7 @@ public sealed class AdminCertificatesController(
         {
             presets = await api.GetPresetsAsync(await BearerAsync(), cancellationToken);
         }
-        catch (ApiException ex)
+        catch (HttpRequestException ex) when (ex is not ApiException { Code: ApiError.Codes.Locked or ApiError.Codes.Unauthenticated })
         {
             // Without the presets there is nothing to seed the wizard from, but the admin should
             // see why rather than a blank step list.
@@ -65,7 +68,7 @@ public sealed class AdminCertificatesController(
             {
                 detail = await api.GetCertificateBlueprintAsync(certId.Value, await BearerAsync(), cancellationToken);
             }
-            catch (ApiException ex)
+            catch (HttpRequestException ex) when (ex is not ApiException { Code: ApiError.Codes.Locked or ApiError.Codes.Unauthenticated })
             {
                 logger.LogError(ex, "Could not load certificate blueprint {CertId} for editing", certId.Value);
                 vm.ErrorMessage = "Could not load this certificate's blueprint. Its saved settings may not be shown — reload before saving.";
@@ -114,7 +117,7 @@ public sealed class AdminCertificatesController(
         {
             model.Presets = await api.GetPresetsAsync(await BearerAsync(), cancellationToken);
         }
-        catch (ApiException ex)
+        catch (HttpRequestException ex) when (ex is not ApiException { Code: ApiError.Codes.Locked or ApiError.Codes.Unauthenticated })
         {
             // Without presets the step 1 grid would render empty on redisplay, so fail the whole
             // save the same way the GET does rather than half-populating the form.
