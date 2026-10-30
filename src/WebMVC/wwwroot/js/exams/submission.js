@@ -62,6 +62,28 @@
         sitting.exitModal.style.display = 'flex';
       });
     }
+    // "Exit (resume later)" is a deliberate leave, so the accidental-close guard must not ask
+    // "Leave site?" on top of it. Give queued answers a moment to reach the server first; any
+    // that do not stay in localStorage and are replayed when the candidate presses Continue.
+    sitting.exitResumeLaterLink = document.getElementById('btn-exit-resume-later');
+    if (sitting.exitResumeLaterLink) {
+      sitting.exitResumeLaterLink.addEventListener('click', function (e) {
+        e.preventDefault();
+        var href = sitting.exitResumeLaterLink.getAttribute('href');
+        var giveUpAt = Date.now() + 3000;
+        (function leaveWhenSynced() {
+          var synced = sitting.pendingQueue.length === 0 && !sitting.notesDirty && !sitting.isFlushing;
+          if (synced || Date.now() >= giveUpAt) {
+            if (window.stopExamAudio) window.stopExamAudio();
+            sitting.isSubmitting = true;
+            window.location.href = href;
+            return;
+          }
+          sitting.triggerFlush();
+          setTimeout(leaveWhenSynced, 100);
+        })();
+      });
+    }
     sitting.closeExitBtns.forEach(function (btn) {
       btn.addEventListener('click', function () {
         sitting.exitModal.style.display = 'none';
