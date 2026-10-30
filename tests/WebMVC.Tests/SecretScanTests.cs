@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using Xunit;
 
@@ -80,9 +81,10 @@ public sealed class SecretScanTests
     [Fact]
     public void The_leaked_signing_key_value_is_not_reintroduced_anywhere_under_src_or_github()
     {
-        // The exact value that shipped in 7aad51e. Rotation made it useless, but a copy-paste from
-        // an old clone would silently restore an already-public key.
-        const string leaked = "DuFiytO9xnewMYC1REpIt5xQIfqc7k2Ybv9JxKcUDTk=";
+        // The value that shipped in 7aad51e, stored as a hash so this guard never becomes a copy of
+        // the secret it is guarding against. Rotation made the original useless, but a paste from an
+        // old clone would silently restore an already-public key.
+        const string leakedSha256 = "e2505202aac5125ee8c1a719c135178ee44a73c7ff033bfc83763b790c2ba8dd";
         var root = TestPathHelper.FindRepoRoot();
         var hits = new List<string>();
 
@@ -101,13 +103,24 @@ public sealed class SecretScanTests
                     continue;
                 }
 
-                if (File.ReadAllText(path, Encoding.UTF8).Contains(leaked, StringComparison.Ordinal))
+                // A base64 signing key is what we look for: 44 characters ending in '='.
+                foreach (Match candidate in Base64Key.Matches(File.ReadAllText(path, Encoding.UTF8)))
                 {
-                    hits.Add(Path.GetRelativePath(root, path).Replace('\\', '/'));
+                    if (Sha256Hex(candidate.Value) == leakedSha256)
+                    {
+                        hits.Add(Path.GetRelativePath(root, path).Replace('\\', '/'));
+                    }
                 }
             }
         }
 
         Assert.True(hits.Count == 0, "Leaked signing key found in: " + string.Join(", ", hits));
     }
+
+    private static readonly Regex Base64Key = new(
+        @"[A-Za-z0-9+/]{43}=",
+        RegexOptions.CultureInvariant);
+
+    private static string Sha256Hex(string value) =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value))).ToLowerInvariant();
 }

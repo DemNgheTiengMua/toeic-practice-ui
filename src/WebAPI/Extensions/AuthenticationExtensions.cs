@@ -36,9 +36,19 @@ public static class AuthenticationExtensions
             throw new InvalidOperationException("Jwt:SigningKey must decode to at least 32 bytes (256 bits) for HS256. " + jwtConfigHelp);
         }
 
+        // The key below was committed to this public repository in 7aad51e and is public forever.
+        // Rotation is only a fix if every instance actually stops accepting it, so refuse to boot
+        // rather than run with a key anyone can read on GitHub.
+        if (IsRetiredKey(jwtOptions.SigningKey))
+        {
+            throw new InvalidOperationException(
+                "Jwt:SigningKey is the key that leaked into the public repository history and is no longer accepted. " +
+                "Generate a new one: dotnet user-secrets set \"Jwt:SigningKey\" \"$(openssl rand -base64 32)\" --project src/WebAPI " +
+                "then restart. Signed-in users are signed out once and can sign straight back in.");
+        }
+
         services.AddSingleton(Options.Create(jwtOptions));
         services.AddSingleton<IAccessTokenFactory, JwtAccessTokenFactory>();
-
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
             {
@@ -124,5 +134,24 @@ public static class AuthenticationExtensions
             .AddPolicy(Roles.Learner, policy => policy.RequireRole(Roles.Learner));
 
         return services;
+    }
+
+    /// <summary>
+    /// The HMAC key that was committed to this repository, hashed as the base64 text it was written
+    /// as so this file is not itself a copy of the secret. Any instance still configured with it
+    /// signs tokens anyone can forge.
+    /// </summary>
+    private static bool IsRetiredKey(string? candidate)
+    {
+        if (string.IsNullOrEmpty(candidate))
+        {
+            return false;
+        }
+
+        const string retiredSha256 = "e2505202aac5125ee8c1a719c135178ee44a73c7ff033bfc83763b790c2ba8dd";
+        var digest = Convert.ToHexString(
+            System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(candidate)))
+            .ToLowerInvariant();
+        return string.Equals(digest, retiredSha256, StringComparison.Ordinal);
     }
 }
