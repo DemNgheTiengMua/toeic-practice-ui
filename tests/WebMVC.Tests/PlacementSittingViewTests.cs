@@ -196,6 +196,38 @@ public sealed class PlacementSittingViewTests
     }
 
     [Fact]
+    public void Phase_strip_shows_real_clocks_instead_of_placeholders()
+    {
+        // The strip used to render "--:--" for every skill for the whole sitting. A finished skill
+        // reads 00:00, the current one the sitting's remaining time, a later one its allowance.
+        AttemptQuestionDto Q(string skill, string name) => Question() with { SkillCode = skill, SkillName = name };
+        AttemptPhaseDto[] phases =
+        [
+            new(1, "LIST", "Listening", 1, 0, 2700),
+            new(2, "READ", "Reading", 2, 2700, 4500),
+            new(4, "WRIT", "Writing", 3, 7200, 600),
+        ];
+        PlacementTakeViewModel At(AttemptQuestionDto question, int remaining) =>
+            new(Take(question) with { Phases = phases, RemainingSeconds = remaining });
+
+        var reading = At(Q("READ", "Reading"), 2044);
+        Assert.Equal(["00:00", "34:04", "10:00"], reading.Phases.Select(p => p.TimerText));
+        Assert.Equal(["false", "step", "false"], reading.Phases.Select(p => p.AriaCurrent));
+
+        // A later skill never claims more time than the sitting has left.
+        var listening = At(Q("LIST", "Listening"), 300);
+        Assert.Equal(["05:00", "05:00", "05:00"], listening.Phases.Select(p => p.TimerText));
+        Assert.DoesNotContain(reading.Phases, p => p.TimerText.Contains('-'));
+
+        var root = TestPathHelper.FindRepoRoot();
+        var partial = File.ReadAllText(Path.Combine(root, "src", "WebMVC", "Views", "Placement", "_TakePhases.cshtml"));
+        Assert.Contains("@phase.TimerText", partial);
+        Assert.DoesNotContain("--:--", partial);
+        var script = File.ReadAllText(Path.Combine(root, "src", "WebMVC", "wwwroot", "js", "placement", "take.js"));
+        Assert.Contains("[data-phase-skill][aria-current='step'] [data-phase-timer]", script);
+    }
+
+    [Fact]
     public void Page_data_round_trips_hostile_audio_paths_without_closing_the_json_island()
     {
         const string path = "/audio/quote'\"</script><script>alert('x')</script>&.mp3";
