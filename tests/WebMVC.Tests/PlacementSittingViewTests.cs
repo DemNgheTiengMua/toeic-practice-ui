@@ -49,6 +49,38 @@ public sealed class PlacementSittingViewTests
     }
 
     [Theory]
+    [InlineData("AUDIO_DRIVEN", 2, false, true)]
+    [InlineData("AUDIO_DRIVEN", 1, false, true)]
+    [InlineData("SYSTEM_PACED_AUTO", 4, false, true)]
+    [InlineData("SYSTEM_PACED_AUTO", 1, false, true)]
+    [InlineData("FULL_SANDBOX", 2, true, false)]
+    [InlineData("UNIT_LOCKED_SANDBOX", 3, true, false)]
+    [InlineData("HYBRID_GROUP_LOCKED", 2, true, false)]
+    [InlineData(null, 2, true, false)]
+    public void Model_never_offers_previous_in_one_way_navigation_modes(
+        string? navigationMode, int order, bool canGoPrevious, bool hidePrevious)
+    {
+        // D3 invariant: placement sittings mirror ExamTakeQuestionPresentation — an AUDIO_DRIVEN or
+        // SYSTEM_PACED_AUTO question is one-way regardless of how far into the set it sits.
+        var take = Take(Question() with { DisplayOrder = order, NavigationMode = navigationMode },
+            totalQuestions: 10);
+        var model = new PlacementTakeViewModel(take);
+
+        Assert.Equal(canGoPrevious, model.CanGoPrevious);
+        Assert.Equal(hidePrevious, model.HidePrevious);
+        Assert.Equal(canGoPrevious ? $"/placement/take/42?q={order - 1}" : null, model.PreviousUrl);
+        Assert.Equal("/placement/take/42?q=" + (order + 1), model.NextUrl);
+    }
+
+    [Fact]
+    public void Model_exposes_the_confirmed_display_order_for_client_history_reconciliation()
+    {
+        var model = new PlacementTakeViewModel(Take(Question() with { DisplayOrder = 4 }));
+        using var json = JsonDocument.Parse(model.PageDataJson);
+        Assert.Equal(4, json.RootElement.GetProperty("displayOrder").GetInt32());
+    }
+
+    [Theory]
     [InlineData(0, 0, 0)]
     [InlineData(1, 3, 33)]
     [InlineData(1, 8, 12)]
@@ -158,6 +190,10 @@ public sealed class PlacementSittingViewTests
         Assert.DoesNotContain("@q", script);
         Assert.Contains("/placement/take/${config.placementId}/fragment", script);
         Assert.Contains("history.pushState", script);
+        // History must follow the question the server confirmed, never the one the client asked for.
+        Assert.Contains("syncUrl(config.displayOrder", script);
+        Assert.DoesNotContain("?q=${targetQuestion}", script);
+        Assert.Contains("addEventListener(\"popstate\"", script);
         Assert.Contains("is-marked", script);
         var components = File.ReadAllText(Path.Combine(root, "src", "WebMVC", "wwwroot", "css", "components.css"));
         Assert.Contains(".navigator__cell.is-marked", components);

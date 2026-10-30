@@ -69,7 +69,8 @@ public static partial class PlacementEndpoints
             take.CurrentQuestion.ResponseDurationMs,
             take.CurrentQuestion.DraftSavedAt,
             take.CurrentQuestion.SkillDurationMinutes,
-            take.CurrentQuestion.SkillDisplayOrder);
+            take.CurrentQuestion.SkillDisplayOrder,
+            NavigationMode: take.CurrentQuestion.NavigationMode);
 
         var navigator = take.Navigator.Select(n => new NavigatorItemDto(
             n.QuestionId,

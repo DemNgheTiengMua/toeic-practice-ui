@@ -120,10 +120,22 @@
     } catch (_) { }
   });
 
-  async function navigate(href) {
+  function syncUrl(displayOrder, replace) {
+    const target = `/placement/take/${config.placementId}?q=${displayOrder}`;
+    if (replace) window.history.replaceState({ q: displayOrder }, "", target);
+    else window.history.pushState({ q: displayOrder }, "", target);
+    document.title = `Placement Test - Question ${displayOrder} - extra efficient`;
+  }
+
+  async function navigate(href, replaceHistory) {
     const target = new URL(href, window.location.origin);
     const targetQuestion = target.searchParams.get("q");
-    if (!targetQuestion || draftDirty && !(await saveDraftNow())) return;
+    if (!targetQuestion) {
+      // Browser restored a bare sitting URL: mirror the question currently on screen.
+      syncUrl(config.displayOrder, true);
+      return;
+    }
+    if (draftDirty && !(await saveDraftNow())) return;
     const response = await fetch(`/placement/take/${config.placementId}/fragment?q=${encodeURIComponent(targetQuestion)}`, {
       headers: { Accept: "text/html" }
     });
@@ -141,11 +153,18 @@
     draftDirty = false;
     updateTimer();
     updateWritingCounts();
-    window.history.pushState({}, "", `/placement/take/${config.placementId}?q=${targetQuestion}`);
-    document.title = `Placement Test - Question ${targetQuestion} - extra efficient`;
+    updateProgress();
+    // The server owns the position: a refused jump comes back as a different question, and the
+    // address bar must follow the confirmed one rather than the requested one.
+    syncUrl(config.displayOrder, replaceHistory || String(config.displayOrder) !== targetQuestion);
     window.initExamAudio?.();
     restorePlacementAudio();
   }
+
+  window.addEventListener("popstate", () => {
+    // Back/forward can target a question the server locked; re-ask the server and replace the entry.
+    navigate(window.location.href, true);
+  });
 
   document.addEventListener("click", event => {
     const link = event.target.closest("a[href^='/placement/take/']");

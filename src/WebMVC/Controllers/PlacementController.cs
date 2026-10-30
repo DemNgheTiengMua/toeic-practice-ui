@@ -124,7 +124,11 @@ public sealed class PlacementController(
         }
         catch (ApiException ex) when (ex.Code == ApiError.Codes.PreflightRequired)
         {
-            return StatusCode(StatusCodes.Status409Conflict, new { redirectUrl = Url.Action(nameof(ExamsController.Preflight), "Exams", new { placementId }) });
+            // Preflight resolves its attempt from attemptId; sending only placementId 404s and
+            // bounces the candidate out to /exams.
+            var preflight = await api.GetPlacementPreflightStatusAsync(placementId, cancellationToken);
+            return StatusCode(StatusCodes.Status409Conflict,
+                new { redirectUrl = Url.Action(nameof(ExamsController.Preflight), "Exams", new { attemptId = preflight.AttemptId, placementId }) });
         }
         catch (ApiException ex)
         {
