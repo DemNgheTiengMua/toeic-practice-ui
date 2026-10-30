@@ -108,9 +108,11 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
                     // tradeoff; the API still enforces the lock on every forwarded call, so a
                     // locked user can browse static pages but gets nothing from the API.
                 }
-                catch (OperationCanceledException) when (!context.HttpContext.RequestAborted.IsCancellationRequested)
+                catch (OperationCanceledException) when (context.HttpContext.RequestAborted.IsCancellationRequested)
                 {
-                    // Transport timeout, not a client abort: same deliberate fail-open as above.
+                    // The browser went away mid-validation. Keep the principal and let the
+                    // aborted request unwind; challenging a client that is no longer there only
+                    // logs a failure that never happened (F4).
                 }
             },
         };
@@ -148,9 +150,27 @@ app.Use(async (context, next) =>
         await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
         context.Response.Redirect(ex.Code == ApiError.Codes.Locked ? "/auth/sign-in?locked=1" : "/auth/sign-in");
     }
+    catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
+    {
+        // The learner closed the tab or navigated away while a forwarded API call was in flight.
+        // There is no client left to read a status, and letting this reach the exception handler
+        // would log a 500 for a request that succeeded in doing exactly what was asked (F4).
+        if (!context.Response.HasStarted)
+        {
+            context.Response.StatusCode = StatusCodes.Status499ClientClosedRequest;
+        }
+    }
 });
 
 app.UseRouting();
+
+// Static assets are anonymous by construction: no authorization metadata, nothing in them to
+// personalise. ShortCircuit makes routing run the matched asset endpoint inside UseRouting and
+// end the request there, so a css/js/mp3/woff2 request never reaches cookie re-validation
+// (GET /api/auth/me), TimeZoneMiddleware (GET /api/profile) or the controller pipeline. Without
+// it, MapStaticAssets merely registers endpoints that execute at the far end of the pipeline,
+// after every middleware — which is the flood of per-asset API calls this guards against (F3).
+app.MapStaticAssets().ShortCircuit();
 
 app.UseAuthentication();
 app.UseAuthorization();
@@ -159,11 +179,12 @@ app.UseAuthorization();
 // stored UTC instant in it (UI-52).
 app.UseMiddleware<TimeZoneMiddleware>();
 
-app.MapStaticAssets();
-
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}")
     .WithStaticAssets();
 
 app.Run();
+
+// For WebApplicationFactory-based tests
+public partial class Program;
