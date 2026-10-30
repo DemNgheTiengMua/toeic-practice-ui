@@ -21,8 +21,10 @@ public sealed class AdminCertificatesController(
             var certificates = await api.GetAdminCertificatesAsync(await BearerAsync(), cancellationToken);
             return View("~/Views/Admin/Certificates.cshtml", new AdminCertificateListViewModel { Certificates = certificates });
         }
-        catch (ApiException ex)
+        catch (HttpRequestException ex)
         {
+            // HttpRequestException covers both an error status (ApiException) and an API that
+            // could not be reached at all.
             logger.LogError(ex, "Could not load the admin certificate list");
             return View("~/Views/Admin/Certificates.cshtml", new AdminCertificateListViewModel
             {
@@ -39,7 +41,7 @@ public sealed class AdminCertificatesController(
         {
             presets = await api.GetPresetsAsync(await BearerAsync(), cancellationToken);
         }
-        catch (ApiException ex)
+        catch (HttpRequestException ex)
         {
             // Without the presets there is nothing to seed the wizard from, but the admin should
             // see why rather than a blank step list.
@@ -65,7 +67,7 @@ public sealed class AdminCertificatesController(
             {
                 detail = await api.GetCertificateBlueprintAsync(certId.Value, await BearerAsync(), cancellationToken);
             }
-            catch (ApiException ex)
+            catch (HttpRequestException ex)
             {
                 logger.LogError(ex, "Could not load certificate blueprint {CertId} for editing", certId.Value);
                 vm.ErrorMessage = "Could not load this certificate's blueprint. Its saved settings may not be shown — reload before saving.";
@@ -114,7 +116,7 @@ public sealed class AdminCertificatesController(
         {
             model.Presets = await api.GetPresetsAsync(await BearerAsync(), cancellationToken);
         }
-        catch (ApiException ex)
+        catch (HttpRequestException ex)
         {
             // Without presets the step 1 grid would render empty on redisplay, so fail the whole
             // save the same way the GET does rather than half-populating the form.

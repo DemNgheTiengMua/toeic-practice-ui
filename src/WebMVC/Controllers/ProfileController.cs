@@ -28,10 +28,11 @@ public sealed class ProfileController(IProfileClient api, ILogger<ProfileControl
                 TimeZoneOptions = OptionsIncluding(profile.TimeZoneId),
             }, IsAdmin));
         }
-        catch (ApiException ex)
+        catch (HttpRequestException ex)
         {
-            // A failed load must not render an empty form: saving it would overwrite the learner's
-            // real name and zone with blanks. Show the failure and a retry instead.
+            // An error status (ApiException) or an unreachable API alike: a failed load must not
+            // render an empty form, since saving it would overwrite the learner's real name and zone
+            // with blanks. Show the failure and a retry instead.
             logger.LogError(ex, "Could not load the profile for the signed-in learner");
             return View(new ProfilePageViewModel(new ProfileViewModel(), IsAdmin)
             {

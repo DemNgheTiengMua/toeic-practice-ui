@@ -156,11 +156,16 @@ public sealed class ProfileControllerTests
         Assert.Same(model, Assert.IsType<PasswordPageViewModel>(view.Model).Form);
     }
 
-    [Fact]
-    public async Task Index_when_api_throws_renders_degraded_view_instead_of_crashing()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Index_when_api_throws_renders_degraded_view_instead_of_crashing(bool unreachable)
     {
         var (controller, _, api) = CreateController();
-        api.GetProfileException = new ApiException("upstream_unavailable", "Service unavailable", StatusCodes.Status503ServiceUnavailable);
+        // An error status arrives as ApiException; a dropped connection as a bare HttpRequestException.
+        api.GetProfileException = unreachable
+            ? new HttpRequestException("No connection could be made because the target machine actively refused it.")
+            : new ApiException("upstream_unavailable", "Service unavailable", StatusCodes.Status503ServiceUnavailable);
 
         var result = await controller.Index(CancellationToken.None);
 
@@ -201,7 +206,7 @@ public sealed class ProfileControllerTests
     private sealed class TestProfileApiClient : IProfileClient
     {
         public ApiException? ChangePasswordException { get; set; }
-        public ApiException? GetProfileException { get; set; }
+        public HttpRequestException? GetProfileException { get; set; }
         public ChangePasswordRequest? LastChangePasswordRequest { get; private set; }
 
         public Task<ProfileDto> GetProfileAsync(CancellationToken cancellationToken = default) =>

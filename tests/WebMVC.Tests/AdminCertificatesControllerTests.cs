@@ -79,7 +79,7 @@ public sealed class AdminCertificatesControllerTests
         public CertificateBlueprintDetailDto? BlueprintToReturn { get; set; }
         public SaveCertificateWizardRequest? LastSavedRequest { get; private set; }
         public bool ThrowOnSave { get; set; }
-        public ApiException? LoadException { get; set; }
+        public HttpRequestException? LoadException { get; set; }
 
         public Task<IReadOnlyList<AdminCertificateSummaryDto>> GetAdminCertificatesAsync(CancellationToken cancellationToken = default) =>
             LoadException is not null
@@ -110,12 +110,20 @@ public sealed class AdminCertificatesControllerTests
         }
     }
 
-    [Fact]
-    public async Task Index_when_api_throws_renders_error_banner_instead_of_crashing()
+    /// <summary>The two ways a load fails (#136): the API answers with an error status
+    /// (ApiException), or it cannot be reached at all (a bare HttpRequestException).</summary>
+    private static HttpRequestException LoadFailure(bool unreachable) => unreachable
+        ? new HttpRequestException("No connection could be made because the target machine actively refused it.")
+        : new ApiException("upstream_unavailable", "Service unavailable", 503);
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Index_when_api_throws_renders_error_banner_instead_of_crashing(bool unreachable)
     {
         var api = new TestAdminCertificatesClient
         {
-            LoadException = new ApiException("upstream_unavailable", "Service unavailable", 503),
+            LoadException = LoadFailure(unreachable),
         };
         var controller = CreateController(api);
 
@@ -128,12 +136,14 @@ public sealed class AdminCertificatesControllerTests
         Assert.False(string.IsNullOrWhiteSpace(vm.ErrorMessage));
     }
 
-    [Fact]
-    public async Task Wizard_when_presets_fail_renders_degraded_page_with_error()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Wizard_when_presets_fail_renders_degraded_page_with_error(bool unreachable)
     {
         var api = new TestAdminCertificatesClient
         {
-            LoadException = new ApiException("upstream_unavailable", "Service unavailable", 503),
+            LoadException = LoadFailure(unreachable),
         };
         var controller = CreateController(api);
 
@@ -146,11 +156,16 @@ public sealed class AdminCertificatesControllerTests
         Assert.False(string.IsNullOrWhiteSpace(page.Form.ErrorMessage));
     }
 
-    [Fact]
-    public async Task Wizard_when_blueprint_fails_keeps_presets_and_surfaces_error()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Wizard_when_blueprint_fails_keeps_presets_and_surfaces_error(bool unreachable)
     {
         // Only the blueprint-for-edit lookup fails; the preset catalogue loads normally.
-        var controller = CreateController(new BlueprintFailingClient(new TestAdminCertificatesClient()));
+        var failure = unreachable
+            ? LoadFailure(unreachable)
+            : new ApiException("exam_not_found", "Certificate not found", 404);
+        var controller = CreateController(new BlueprintFailingClient(new TestAdminCertificatesClient(), failure));
 
         var result = await controller.Wizard(null, 7, 1, CancellationToken.None);
 
@@ -161,7 +176,7 @@ public sealed class AdminCertificatesControllerTests
     }
 
     /// <summary>Presets load normally; only the blueprint-for-edit lookup fails.</summary>
-    private sealed class BlueprintFailingClient(TestAdminCertificatesClient inner) : IAdminCertificatesClient
+    private sealed class BlueprintFailingClient(TestAdminCertificatesClient inner, HttpRequestException failure) : IAdminCertificatesClient
     {
         public Task<IReadOnlyList<AdminCertificateSummaryDto>> GetAdminCertificatesAsync(CancellationToken cancellationToken = default) =>
             inner.GetAdminCertificatesAsync(cancellationToken);
@@ -170,7 +185,7 @@ public sealed class AdminCertificatesControllerTests
             inner.GetPresetsAsync(cancellationToken);
 
         public Task<CertificateBlueprintDetailDto?> GetCertificateBlueprintAsync(int certId, CancellationToken cancellationToken = default) =>
-            Task.FromException<CertificateBlueprintDetailDto?>(new ApiException("exam_not_found", "Certificate not found", 404));
+            Task.FromException<CertificateBlueprintDetailDto?>(failure);
 
         public Task<CertificateBlueprintDetailDto?> GetCertificateBlueprintByCodeAsync(string code, CancellationToken cancellationToken = default) =>
             inner.GetCertificateBlueprintByCodeAsync(code, cancellationToken);
@@ -179,12 +194,14 @@ public sealed class AdminCertificatesControllerTests
             inner.SaveCertificateWizardAsync(request, cancellationToken);
     }
 
-    [Fact]
-    public async Task SaveWizard_when_presets_fail_redisplays_with_error_and_does_not_save()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task SaveWizard_when_presets_fail_redisplays_with_error_and_does_not_save(bool unreachable)
     {
         var api = new TestAdminCertificatesClient
         {
-            LoadException = new ApiException("upstream_unavailable", "Service unavailable", 503),
+            LoadException = LoadFailure(unreachable),
         };
         var controller = CreateController(api);
 
