@@ -89,6 +89,9 @@ public sealed class DatabaseFixture : IAsyncLifetime
         Assert.True(result.ExitCode == 0, $"sqlcmd failed ({result.ExitCode}): {result.Output}");
     }
 
+    /// <summary>Run a .sql file against the test database (TEST_DB_NAME when set).</summary>
+    public Task SqlCmdFileAsync(string scriptPath) => SqlCmdFileAsync(Database, scriptPath);
+
     public Task SqlCmdFileToDatabaseAsync(string database, string scriptPath) => SqlCmdFileAsync(database, scriptPath);
 
     private static async Task SqlCmdFileAsync(string database, string scriptPath)
