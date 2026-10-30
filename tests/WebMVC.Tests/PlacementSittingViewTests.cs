@@ -73,6 +73,70 @@ public sealed class PlacementSittingViewTests
     }
 
     [Fact]
+    public void Model_does_not_offer_previous_into_a_skill_the_server_has_closed()
+    {
+        // The first Reading question follows the last Listening one, but the server locked
+        // Listening when Reading began: a Previous link there would only be refused.
+        var reading = Question() with
+        {
+            QuestionId = 20, DisplayOrder = 3, TotalQuestions = 4,
+            SkillCode = "reading", SkillName = "Reading", NavigationMode = "FULL_SANDBOX",
+        };
+        var take = Take(reading, totalQuestions: 4, navigator:
+        [
+            new(10, 1, 1, "L1", ModalityDto.Listening, true, false, false, IsLocked: true),
+            new(11, 2, 1, "L1", ModalityDto.Listening, true, false, false, IsLocked: true),
+            new(20, 3, 2, "R1", ModalityDto.Reading, false, false, true),
+            new(21, 4, 2, "R1", ModalityDto.Reading, false, false, false),
+        ]);
+
+        var model = new PlacementTakeViewModel(take);
+
+        Assert.False(model.HidePrevious);
+        Assert.False(model.CanGoPrevious);
+        Assert.Null(model.PreviousUrl);
+    }
+
+    [Fact]
+    public void Model_asks_for_confirmation_only_when_next_leaves_the_current_skill()
+    {
+        // Leaving a skill closes it for good, so the Next control confirms first, as the mock exam
+        // does before a skill advance; moving within a skill does not.
+        AttemptQuestionDto Q(int id, int order, string skill, string name) => Question() with
+        {
+            QuestionId = id, DisplayOrder = order, TotalQuestions = 4, SkillCode = skill, SkillName = name,
+        };
+        var questions = new[]
+        {
+            Q(10, 1, "listening", "Listening"), Q(11, 2, "listening", "Listening"),
+            Q(20, 3, "reading", "Reading"), Q(21, 4, "reading", "Reading"),
+        };
+        PlacementTakeViewModel At(int index) =>
+            new(Take(questions[index], totalQuestions: 4) with { Questions = questions });
+
+        Assert.Null(At(0).NextConfirm);
+        Assert.Equal(
+            "You are about to finish Listening and start Reading. You cannot return to Listening afterwards. Continue?",
+            At(1).NextConfirm);
+        Assert.Null(At(2).NextConfirm);
+        Assert.Null(At(3).NextConfirm);
+    }
+
+    [Fact]
+    public void Leaving_a_skill_confirms_and_waits_for_in_flight_answers()
+    {
+        var root = TestPathHelper.FindRepoRoot();
+        var navigation = File.ReadAllText(Path.Combine(root, "src", "WebMVC", "Views", "Placement", "_TakeNavigation.cshtml"));
+        Assert.Contains("data-confirm-leave=\"@Model.NextConfirm\"", navigation);
+
+        var script = File.ReadAllText(Path.Combine(root, "src", "WebMVC", "wwwroot", "js", "placement", "take.js"));
+        Assert.Contains("link.dataset.confirmLeave", script);
+        Assert.Contains("window.confirm(", script);
+        // The API refuses an answer for a skill once the next one starts.
+        Assert.Contains("await settlePendingAnswers()", script);
+    }
+
+    [Fact]
     public void Model_exposes_the_confirmed_display_order_for_client_history_reconciliation()
     {
         var model = new PlacementTakeViewModel(Take(Question() with { DisplayOrder = 4 }));

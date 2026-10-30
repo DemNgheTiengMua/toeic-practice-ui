@@ -19,7 +19,8 @@
   <div class="row take-gap-3">
     @if (Model.NextUrl is not null)
     {
-      <a class="btn btn--primary" href="@Model.NextUrl">Next question</a>
+      @* data-confirm-leave renders only on the last question of a skill (null drops it): leaving is final. *@
+      <a class="btn btn--primary" href="@Model.NextUrl" data-confirm-leave="@Model.NextConfirm">Next question</a>
     }
     else
     {

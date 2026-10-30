@@ -238,6 +238,10 @@ public sealed class PlacementService(
         try
         {
             take = await _attemptEngine.GetAttemptTakeAsync(attempt.AttemptId, userId, questionDisplayOrder, cancellationToken);
+            if (await AdvanceAtSkillBoundaryAsync(take, userId, questionDisplayOrder, cancellationToken))
+            {
+                take = await _attemptEngine.GetAttemptTakeAsync(attempt.AttemptId, userId, questionDisplayOrder, cancellationToken);
+            }
         }
         catch (AttemptEngineException ex)
         {
@@ -262,6 +266,51 @@ public sealed class PlacementService(
             take.IsAutoSubmitted,
             take.Questions,
             take.Phases);
+    }
+
+    /// <summary>
+    /// A placement sitting has no separate "next section" step: its Next control asks for the
+    /// following question, and on the last question of a skill that is the first question of the
+    /// next skill, which the engine refuses while the attempt is still on the earlier skill. That
+    /// request, and only that one, advances the attempt into the next skill (what the mock exam's
+    /// explicit skill transition does), so the candidate can leave Listening. A rewind into a
+    /// finished skill, or a jump past the next skill's first question, stays refused.
+    /// </summary>
+    private async Task<bool> AdvanceAtSkillBoundaryAsync(
+        AttemptTakeView take, int userId, int? requestedDisplayOrder, CancellationToken cancellationToken)
+    {
+        if (requestedDisplayOrder is not int requested
+            || requested == take.CurrentQuestion.DisplayOrder
+            || take.Status != AttemptStatus.InProgress
+            || take.ActiveSkillId is not int activeSkillId
+            || take.Questions is not { Count: > 0 } questions
+            || take.Phases is not { Count: > 1 } phases)
+        {
+            return false;
+        }
+
+        var ordered = phases.OrderBy(p => p.SkillDisplayOrder).ToList();
+        var activeIndex = ordered.FindIndex(p => p.SkillId == activeSkillId);
+        if (activeIndex < 0 || activeIndex + 1 >= ordered.Count)
+        {
+            return false;
+        }
+
+        var nextSkill = ordered[activeIndex + 1].SkillCode;
+        var firstOfNextSkill = questions
+            .Where(q => q.SkillCode == nextSkill)
+            .OrderBy(q => q.DisplayOrder)
+            .FirstOrDefault();
+        if (firstOfNextSkill?.DisplayOrder != requested)
+        {
+            return false;
+        }
+
+        // Safe under a duplicate request: the engine derives the next skill from the attempt's
+        // active one, so a racing second advance repeats this one instead of skipping a skill, and
+        // it is never reached with the last skill active, so it never submits the attempt.
+        await _attemptEngine.TransitionToNextSkillAsync(take.AttemptId, userId, cancellationToken);
+        return true;
     }
 
     public async Task<SaveAttemptAnswerResult> SaveAnswerAsync(

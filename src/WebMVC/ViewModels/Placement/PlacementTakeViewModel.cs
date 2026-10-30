@@ -20,11 +20,14 @@ public sealed record PlacementTakeViewModel(
     // One-way sections block rewinding the server-side position (D3). Mirror ExamTakeQuestionPresentation
     // so the placement sitting never offers a control the API would refuse.
     public bool HidePrevious { get; } = IsOneWayNavigation(Take.CurrentQuestion);
-    public bool CanGoPrevious { get; } = CanGoBack(Take.CurrentQuestion);
-    public string? PreviousUrl { get; } = CanGoBack(Take.CurrentQuestion)
+    public bool CanGoPrevious { get; } = CanGoBack(Take);
+    public string? PreviousUrl { get; } = CanGoBack(Take)
         ? $"/placement/take/{Take.PlacementId}?q={Take.CurrentQuestion.DisplayOrder - 1}" : null;
     public string? NextUrl { get; } = Take.CurrentQuestion.DisplayOrder < Take.TotalQuestions
         ? $"/placement/take/{Take.PlacementId}?q={Take.CurrentQuestion.DisplayOrder + 1}" : null;
+    // Moving past the last question of a skill closes that skill for good, so the Next control
+    // confirms first, as the mock exam does before a skill advance.
+    public string? NextConfirm { get; } = LeavingSkillConfirmation(Take);
     public string SubmitUrl { get; } = $"/placement/take/{Take.PlacementId}/submit";
     public int ProgressPercent { get; } = GetProgressPercent(Take);
     public bool ShowPhases { get; } = Take.Phases?.Count > 1;
@@ -45,8 +48,20 @@ public sealed record PlacementTakeViewModel(
     private static bool IsOneWayNavigation(AttemptQuestionDto question) =>
         question.NavigationMode is "AUDIO_DRIVEN" or "SYSTEM_PACED_AUTO";
 
-    private static bool CanGoBack(AttemptQuestionDto question) =>
-        question.DisplayOrder > 1 && !IsOneWayNavigation(question);
+    // ...and never into a question the server has locked, such as the end of a finished skill.
+    private static bool CanGoBack(PlacementTakeViewDto take) =>
+        take.CurrentQuestion.DisplayOrder > 1
+        && !IsOneWayNavigation(take.CurrentQuestion)
+        && take.Navigator.FirstOrDefault(n => n.DisplayOrder == take.CurrentQuestion.DisplayOrder - 1)?.IsLocked != true;
+
+    private static string? LeavingSkillConfirmation(PlacementTakeViewDto take)
+    {
+        var next = take.Questions?.FirstOrDefault(q => q.DisplayOrder == take.CurrentQuestion.DisplayOrder + 1);
+        return next is null || next.SkillCode == take.CurrentQuestion.SkillCode
+            ? null
+            : $"You are about to finish {take.CurrentQuestion.SkillName} and start {next.SkillName}. "
+              + $"You cannot return to {take.CurrentQuestion.SkillName} afterwards. Continue?";
+    }
 
     private static ExamAudioPlayerModel? BuildAudioPlayer(AttemptQuestionDto question) =>
         string.IsNullOrEmpty(question.AudioPath) ? null : new ExamAudioPlayerModel(
