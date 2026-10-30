@@ -123,6 +123,27 @@ public sealed class PlacementSittingViewTests
     }
 
     [Fact]
+    public void Model_asks_for_confirmation_when_next_leaves_a_locked_question_group()
+    {
+        // The mock exam opens its group-lock confirmation before Next leaves a HYBRID_GROUP_LOCKED
+        // group, so the placement sitting does too; moving inside one group does not.
+        AttemptQuestionDto Writing(int id, int order, int group) => Question() with
+        {
+            QuestionId = id, DisplayOrder = order, TotalQuestions = 3, SkillCode = "writing",
+            SkillName = "Writing", NavigationMode = "HYBRID_GROUP_LOCKED", GroupId = group,
+        };
+        var questions = new[] { Writing(31, 1, 54), Writing(32, 2, 54), Writing(33, 3, 55) };
+        PlacementTakeViewModel At(int index) =>
+            new(Take(questions[index], totalQuestions: 3) with { Questions = questions });
+
+        Assert.Null(At(0).NextConfirm);
+        Assert.Equal(
+            "You are about to finish this question group. You cannot return to it or change its answers afterwards, and its remaining time does not carry over. Continue?",
+            At(1).NextConfirm);
+        Assert.Null(At(2).NextConfirm);
+    }
+
+    [Fact]
     public void Leaving_a_skill_confirms_and_waits_for_in_flight_answers()
     {
         var root = TestPathHelper.FindRepoRoot();
