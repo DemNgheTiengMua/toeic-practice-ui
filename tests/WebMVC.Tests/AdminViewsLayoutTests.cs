@@ -170,4 +170,17 @@ public sealed class AdminViewsLayoutTests
         Assert.Matches(@"Layout\s*=\s*""_AdminLayout"";?", certsContent);
         Assert.Matches(@"Layout\s*=\s*""_AdminLayout"";?", wizardContent);
     }
+
+    [Fact]
+    public void Certificate_list_scrolls_instead_of_clipping_the_edit_column()
+    {
+        // The eight-column table is wider than the content area at 1280px. Its card clipped the
+        // overflow, so Exams, Status and the only "Edit Blueprint" link were cut off and unreachable.
+        var repoRoot = TestPathHelper.FindRepoRoot();
+        var view = File.ReadAllText(Path.Combine(repoRoot, "src", "WebMVC", "Views", "Admin", "Certificates.cshtml"));
+        var wrapper = Regex.Match(view, @"<div class=""card""[^>]*>\s*<table").Value;
+        Assert.NotEmpty(wrapper);
+        Assert.Contains("overflow-x: auto", wrapper);
+        Assert.DoesNotContain("overflow: hidden", wrapper);
+    }
 }
