@@ -145,8 +145,18 @@
       setStatus("Save error", "save-status save-status--error");
       return;
     }
-    dynamic.innerHTML = await response.text();
-    config = JSON.parse(dataIsland().textContent);
+    const fragment = document.createElement("template");
+    fragment.innerHTML = await response.text();
+    const confirmed = JSON.parse(fragment.content.getElementById("placement-take-data").textContent);
+    if (confirmed.displayOrder === config.displayOrder) {
+      // A refused rewind (Back into a one-way section) returns the question already on screen.
+      // Re-rendering it would tear out the live single-play player and hand back a fresh,
+      // playable one, so only the address bar is corrected.
+      syncUrl(config.displayOrder, true);
+      return;
+    }
+    dynamic.replaceChildren(fragment.content);
+    config = confirmed;
     remainingSeconds = config.remainingSeconds;
     isFlagged = config.isFlagged;
     answeredCount = config.answeredCount;
@@ -157,8 +167,10 @@
     // The server owns the position: a refused jump comes back as a different question, and the
     // address bar must follow the confirmed one rather than the requested one.
     syncUrl(config.displayOrder, replaceHistory || String(config.displayOrder) !== targetQuestion);
-    window.initExamAudio?.();
+    // exam-audio.js reads data-completed/data-current-time once, when it initialises a player,
+    // so the stored progress has to be on the element first.
     restorePlacementAudio();
+    window.initExamAudio?.();
   }
 
   window.addEventListener("popstate", () => {
