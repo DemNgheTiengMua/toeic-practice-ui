@@ -49,7 +49,10 @@ public static class CertificateConfigurationValidator
         }
     }
 
-    /// <summary>Bands must tile [min, max] exactly: no gap, no overlap, and both ends covered.</summary>
+    /// <summary>Bands must tile the certificate's total range exactly: no gap, no overlap, and both
+    /// ends covered. The total range depends on the aggregation rule — <c>sum</c> adds the skill
+    /// scores, so two 0–50 skills produce a 0–100 total and bands stopping at 50 would never match
+    /// the upper half of real attempts.</summary>
     private static void ValidateBands(SaveCertificateWizardRequest request)
     {
         var bands = request.Bands;
@@ -60,8 +63,9 @@ public static class CertificateConfigurationValidator
                 "The certificate must define at least one score band, or every placement and mock exam submission for it will be rejected.");
         }
 
-        var min = request.MinScaledScore!.Value;
-        var max = request.MaxScaledScore!.Value;
+        var skillMin = request.MinScaledScore!.Value;
+        var skillMax = request.MaxScaledScore!.Value;
+        var (min, max) = TotalRange(request.ScoreAggregationRule, skillMin, skillMax, request.Skills.Count);
 
         foreach (var band in bands)
         {
@@ -115,6 +119,19 @@ public static class CertificateConfigurationValidator
                     $"The bands leave a gap between '{current.Name}' and '{next.Name}': nothing covers {current.MaxTotal + 1}-{next.MinTotal - 1}.");
             }
         }
+    }
+
+    /// <summary>
+    /// The range a total can actually land in, given the aggregation rule. <c>sum</c> adds the skill
+    /// scores; the average rules keep the skill range; <c>independent</c> never produces a total and
+    /// is validated against the skill range so a certificate can still be saved.
+    /// </summary>
+    private static (int Min, int Max) TotalRange(
+        string? aggregationRule, int skillMin, int skillMax, int skillCount)
+    {
+        var rule = aggregationRule?.Trim().ToLowerInvariant() ?? "sum";
+        var skills = Math.Max(skillCount, 1);
+        return rule == "sum" ? (skillMin * skills, skillMax * skills) : (skillMin, skillMax);
     }
 
     /// <summary>Every rubric criterion must carry the description the grader is told to follow.</summary>

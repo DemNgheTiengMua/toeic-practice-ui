@@ -92,12 +92,69 @@ public sealed class CertificateConfigurationValidatorTests
     private static SaveCertificateWizardRequest Request(
         int min, int max, int step,
         IReadOnlyList<SaveScoreBandWizardDto> bands,
-        IReadOnlyList<SaveGradingCriterionWizardDto>? criteria = null) =>
+        IReadOnlyList<SaveGradingCriterionWizardDto>? criteria = null,
+        string rule = "sum",
+        IReadOnlyList<SaveSkillWizardDto>? skills = null) =>
         new(
             CertId: null, Code: "T", Name: "T", Description: null,
-            ScoreAggregationRule: "sum", PresetCode: "custom", IsActive: true,
-            Skills: [], MinScaledScore: min, MaxScaledScore: max, ScoreStep: step,
+            ScoreAggregationRule: rule, PresetCode: "custom", IsActive: true,
+            Skills: skills ?? [], MinScaledScore: min, MaxScaledScore: max, ScoreStep: step,
             Bands: bands, Criteria: criteria);
+
+    [Fact]
+    public void Under_the_sum_rule_two_skills_make_the_total_range_twice_the_skill_range()
+    {
+        // sum adds the skill scores, so two 0-50 skills produce a 0-100 total. Bands that stop at
+        // 50 leave half of every real attempt unbanded.
+        var skills = new List<SaveSkillWizardDto>
+        {
+            Skill("A"), Skill("B"),
+        };
+
+        var error = Assert.Throws<ScoreConversionException>(() =>
+            CertificateConfigurationValidator.Validate(Request(0, 50, 1,
+                [Band("FAIL", 0, 24, 1), Band("PASS", 25, 50, 2)],
+                rule: "sum", skills: skills)));
+
+        Assert.Contains("100", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Under_the_sum_rule_bands_covering_the_doubled_range_are_accepted()
+    {
+        var skills = new List<SaveSkillWizardDto> { Skill("A"), Skill("B") };
+
+        CertificateConfigurationValidator.Validate(Request(0, 50, 1,
+            [Band("FAIL", 0, 49, 1), Band("PASS", 50, 100, 2)],
+            rule: "sum", skills: skills));
+    }
+
+    [Fact]
+    public void Under_an_average_rule_the_total_range_is_the_skill_range()
+    {
+        // The average rules never exceed one skill's range, so a single-skill-shaped band table is
+        // correct here and must not be refused.
+        var skills = new List<SaveSkillWizardDto> { Skill("A"), Skill("B") };
+
+        CertificateConfigurationValidator.Validate(Request(0, 50, 1,
+            [Band("FAIL", 0, 24, 1), Band("PASS", 25, 50, 2)],
+            rule: "avg_half_step", skills: skills));
+    }
+
+    private static SaveSkillWizardDto Skill(string code) => new(
+        SkillId: null, Code: code, Name: code,
+        Modality: Contracts.ModalityDto.Writing, DisplayOrder: 1, DurationMinutes: 30,
+        Sections:
+        [
+            new SaveSectionWizardDto(
+                SectionId: null, Code: code + "1", Name: code + " 1", DisplayOrder: 1,
+                ScoreWeight: 1m, NavigationMode: Contracts.NavigationModeDto.FullSandbox,
+                TimerPolicyJson: null, LayoutType: Contracts.LayoutTypeDto.StandardVertical,
+                OptionCount: 4, ClusterSize: 1, UnitCount: 1, HideOptionText: false,
+                RequirePassage: false, RequireAudio: false, RequireImage: false,
+                RequiredKeywordCount: 0, ExpectedQuestionCount: 10,
+                AllowedComponentTypesJson: null, ToolsConfigJson: null)
+        ]);
 
     private static SaveScoreBandWizardDto Band(string code, int min, int max, int order) =>
         new(null, code, code, min, max, order);

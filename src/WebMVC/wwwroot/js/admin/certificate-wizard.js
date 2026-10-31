@@ -255,6 +255,11 @@ function goToStep(step) {
             if (inp.name) {
               inp.name = inp.name.replace(/Skills\[\d+\]\.Sections\[\d+\]/, `Skills[${sIdx}].Sections[${secIdx}]`);
             }
+
+    // E1.2 (#147): bands and rubric rows post as indexed names too, so removing a middle row must
+    // close the hole or the server sees Bands[0] and Bands[2] with no Bands[1].
+    reindexGroup("#wizardBandsContainer", ".band-row", "Bands");
+    reindexGroup("#wizardCriteriaContainer", ".criterion-row", "Criteria");
           });
         });
       }
@@ -592,16 +597,10 @@ function goToStep(step) {
         var maxQ = singleInput ? parseFloat(singleInput.getAttribute('data-max-q')) || 40 : 40;
         rawDisplay = val;
 
-        if (rule === 'avg_half_step') {
-          // Proportional to 9.0 (stored as 10-90)
-          var bandVal = (val / maxQ) * 9.0;
-          scaled = roundHalfStepIelts(bandVal);
-        } else if (rule === 'avg_whole') {
-          scaled = Math.round((val / maxQ) * 100);
-        } else {
-          // TOEIC sum: ~495 per skill
-          scaled = Math.round((val / maxQ) * 495 / 5) * 5;
-        }
+        // E1.2 (#147): the scale is the admin's, read from the fields on this form. The three
+        // hardcoded ceilings that used to live here (IELTS 9.0, a bare 100, TOEIC 495) meant the
+        // preview showed a different number than the engine would award for every other certificate.
+        scaled = projectOntoScale(val, maxQ);
       }
 
       skillScaledScores.push(scaled);
@@ -744,3 +743,29 @@ function goToStep(step) {
       removeCriterion.closest('.criterion-row')?.remove();
     }
   });
+
+  function reindexGroup(containerSelector, rowSelector, prefix) {
+    var rows = document.querySelectorAll(containerSelector + " " + rowSelector);
+    rows.forEach(function(row, idx) {
+      row.querySelectorAll("input, select, textarea").forEach(function(inp) {
+        if (inp.name) inp.name = inp.name.replace(prefix + "\\[\\d+\\]", prefix + "[" + idx + "]");
+      });
+    });
+  }
+
+  // E1.2 (#147): replicate the server's one conversion - fraction of the raw range, spread across
+  // the admin's own [min, max], snapped to their step. Reading the three inputs keeps the preview
+  // and the engine on the same numbers for any certificate, not only TOEIC.
+  function projectOntoScale(rawValue, maxRaw) {
+    var min = parseFloat(document.getElementById('minScaledScore') && document.getElementById('minScaledScore').value);
+    var max = parseFloat(document.getElementById('maxScaledScore') && document.getElementById('maxScaledScore').value);
+    var step = parseFloat(document.getElementById('scoreStep') && document.getElementById('scoreStep').value);
+    if (isNaN(min)) min = 0;
+    if (isNaN(max)) max = 100;
+    if (isNaN(step) || step <= 0) step = 1;
+
+    var fraction = maxRaw > 0 ? Math.min(Math.max(rawValue / maxRaw, 0), 1) : 0;
+    var scaled = min + fraction * (max - min);
+    var snapped = Math.round(scaled / step) * step;
+    return Math.min(Math.max(snapped, min), max);
+  }

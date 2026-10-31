@@ -255,24 +255,28 @@ public sealed partial class CertificateService
     }
 
     /// <summary>
-    /// The raw→scaled rows the engine reads. Generated from the skill's own range and step: the
-    /// wizard's contract is the three numbers, not a hand-maintained table.
+    /// The raw→scaled rows the engine reads. Generated per skill from that skill's own question
+    /// count and range: a 10-question skill and a 40-question skill must not share one raw axis,
+    /// or the short skill's top raw score maps to a fraction of its own ceiling.
     /// </summary>
     private async Task PersistScalesAsync(
         int certId, SaveCertificateWizardRequest request, CancellationToken cancellationToken)
     {
-        var maxRaw = request.Skills
-            .SelectMany(s => s.Sections ?? [])
-            .Where(s => s.ExpectedQuestionCount is > 0)
-            .Sum(s => s.ExpectedQuestionCount!.Value);
-        if (maxRaw <= 0)
-        {
-            maxRaw = request.MaxScaledScore!.Value;
-        }
-
         var skills = await db.Skills
             .Where(s => s.CertId == certId)
             .ToListAsync(cancellationToken);
+
+        // Question count per skill, from the sections the request declared.
+        var rawPerSkill = request.Skills
+            .Where(s => !string.IsNullOrWhiteSpace(s.Code))
+            .Select(s => new
+            {
+                Code = s.Code.Trim().ToUpperInvariant(),
+                Raw = (s.Sections ?? [])
+                    .Where(sec => sec.ExpectedQuestionCount is > 0)
+                    .Sum(sec => sec.ExpectedQuestionCount!.Value),
+            })
+            .ToDictionary(x => x.Code, x => x.Raw, StringComparer.OrdinalIgnoreCase);
 
         var existing = await db.ScoreScales
             .Where(s => s.CertId == certId && s.ExamId == null && s.SkillId != null)
@@ -289,9 +293,14 @@ public sealed partial class CertificateService
 
         foreach (var skill in skills)
         {
-            for (var raw = 0; raw <= maxRaw; raw++)
+            // Each skill maps its own raw axis onto the certificate's scale.
+            var maxRaw = rawPerSkill.TryGetValue(skill.Code, out var raw) && raw > 0
+                ? raw
+                : max - min;
+
+            for (var rawScore = 0; rawScore <= maxRaw; rawScore++)
             {
-                var fraction = maxRaw == 0 ? 0d : (double)raw / maxRaw;
+                var fraction = maxRaw == 0 ? 0d : (double)rawScore / maxRaw;
                 var scaled = min + fraction * (max - min);
 
                 // Snap to the skill's grid. Every raw score maps, so the engine interpolates
@@ -303,7 +312,7 @@ public sealed partial class CertificateService
                     CertId = certId,
                     SkillId = skill.SkillId,
                     ExamId = null,
-                    RawScore = raw,
+                    RawScore = rawScore,
                     ScaledScore = Math.Clamp(snapped, min, max)
                 });
             }
@@ -312,6 +321,12 @@ public sealed partial class CertificateService
         await db.SaveChangesAsync(cancellationToken);
     }
 
+    /// <summary>
+    /// Writes the certificate's bands. Bands are referenced by code from TargetBands,
+    /// Recommendations and both ends of PathTemplates, so a band that is still referenced cannot be
+    /// deleted — the four FKs would refuse it. Rows are updated in place by code where possible and
+    /// only removed when nothing points at them.
+    /// </summary>
     private async Task PersistBandsAsync(
         int certId, IReadOnlyList<SaveScoreBandWizardDto> bands, CancellationToken cancellationToken)
     {
@@ -319,29 +334,53 @@ public sealed partial class CertificateService
             .Where(b => b.CertId == certId)
             .ToListAsync(cancellationToken);
 
-        // trg_ScoreBands_NoOverlap fires per statement, so an edit that shifts a boundary trips it
-        // while both the old and new row exist. Clear the certificate's bands, then write the new
-        // set inside one transaction: the trigger only ever sees a consistent final state.
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
 
-        if (existing.Count > 0)
+        var incoming = bands.OrderBy(b => b.MinTotal).ToList();
+        var incomingCodes = incoming.Select(b => b.Code.Trim()).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        // Bands that disappeared from the form. Deleting one still referenced by a learner's target
+        // band or a path template would violate FK_TargetBands_Band and its siblings.
+        var removals = existing
+            .Where(b => !incomingCodes.Contains(b.Code))
+            .ToList();
+        if (removals.Count > 0)
         {
-            db.ScoreBands.RemoveRange(existing);
-            // The following INSERT runs as raw SQL, so the deletes must be flushed first or the
-            // trigger still sees the old rows and reports an overlap against the new set.
+            var referencedCodes = (await db.TargetBands
+                    .Where(t => t.CertId == certId)
+                    .Select(t => t.TargetBandCode)
+                    .ToListAsync(cancellationToken))
+                .Concat(await db.PathTemplates
+                    .Where(p => p.CertId == certId)
+                    .SelectMany(p => new[] { p.FromBandCode, p.ToBandCode })
+                    .ToListAsync(cancellationToken))
+                .Where(code => code is not null)
+                .Select(code => code!)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            var blocked = removals.Where(b => referencedCodes.Contains(b.Code)).ToList();
+            if (blocked.Count > 0)
+            {
+                throw new ScoreConversionException(
+                    ScoreConversionException.InvalidData,
+                    "Cannot remove " + string.Join(", ", blocked.Select(b => $"'{b.Code}'")) +
+                    " — a learner target band or learning-path template still uses it.");
+            }
+
+            db.ScoreBands.RemoveRange(removals);
             await db.SaveChangesAsync(cancellationToken);
         }
 
-        // One INSERT ... SELECT: trg_ScoreBands_NoOverlap is AFTER INSERT and validates the table as
-        // a whole, so EF's row-at-a-time statements trip it on the first half-written pair. A single
-        // set-based insert presents the trigger with the finished set.
-        if (bands.Count > 0)
+        // trg_ScoreBands_NoOverlap is AFTER INSERT/UPDATE and validates the table as a whole, so
+        // shifting a boundary row by row trips it on the half-written pair. One set-based write
+        // presents the trigger with the finished set.
+        if (incoming.Count > 0)
         {
             var parameters = new List<object> { certId };
             var selects = new List<string>();
-            for (var i = 0; i < bands.Count; i++)
+            for (var i = 0; i < incoming.Count; i++)
             {
-                var b = bands[i];
+                var b = incoming[i];
                 var p = i * 5 + 1;
                 selects.Add($"SELECT {{{p}}} AS Code, {{{p + 1}}} AS Name, {{{p + 2}}} AS MinTotal, {{{p + 3}}} AS MaxTotal, {{{p + 4}}} AS DisplayOrder");
                 parameters.Add(b.Code.Trim());
@@ -351,16 +390,24 @@ public sealed partial class CertificateService
                 parameters.Add(b.DisplayOrder);
             }
 
-            var sql =
+            // UPDATE first (rows that already exist, matched by code), then INSERT the genuinely new
+            // ones, so no band is ever duplicated and the trigger sees one coherent statement each.
+            var updateSql =
+                "UPDATE b SET b.Name = v.Name, b.MinTotal = v.MinTotal, b.MaxTotal = v.MaxTotal, b.DisplayOrder = v.DisplayOrder " +
+                "FROM ScoreBands b JOIN (" + string.Join(" UNION ALL ", selects) + ") v ON b.CertId = {0} AND b.Code = v.Code";
+            await db.Database.ExecuteSqlRawAsync(updateSql, parameters.ToArray(), cancellationToken);
+
+            var insertSql =
                 "INSERT INTO ScoreBands (CertId, Code, Name, MinTotal, MaxTotal, DisplayOrder) " +
                 "SELECT {0}, v.Code, v.Name, v.MinTotal, v.MaxTotal, v.DisplayOrder " +
-                "FROM (" + string.Join(" UNION ALL ", selects) + ") v";
-
-            await db.Database.ExecuteSqlRawAsync(sql, parameters.ToArray(), cancellationToken);
+                "FROM (" + string.Join(" UNION ALL ", selects) + ") v " +
+                "WHERE NOT EXISTS (SELECT 1 FROM ScoreBands b WHERE b.CertId = {0} AND b.Code = v.Code)";
+            await db.Database.ExecuteSqlRawAsync(insertSql, parameters.ToArray(), cancellationToken);
         }
 
         await tx.CommitAsync(cancellationToken);
     }
+
 
     private async Task PersistCriteriaAsync(
         int certId, IReadOnlyList<SaveGradingCriterionWizardDto>? criteria, CancellationToken cancellationToken)
