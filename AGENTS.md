@@ -137,3 +137,81 @@ carry exact reproduction steps against `scripts/crawl-env.sh`. Whatever tool you
 2. **Green.** That test and the whole `dotnet test` pass.
 3. **Re-walk.** `scripts/crawl-env.sh fresh`, then follow the issue's reproduction steps in the browser; `scripts/crawl-env.sh errors` shows no new `fail:` entries.
 4. **Root cause in the PR.** The PR says `Fixes #N` and explains why it broke, not only what changed. Do not weaken a trigger, constraint or test to make the symptom go away; if the invariant itself is wrong, stop and ask on the issue.
+
+---
+
+## 8. Toolbelt — what to reach for, what will hurt you
+
+Read this before your first tool call. Everything below was verified on 2026-10-31, not assumed.
+
+### Use
+
+| Tool | Reach for it when | Why it earns its place |
+|---|---|---|
+| **graphify** | Every question about structure: "what calls this", "what breaks if I delete it", "how does X reach the DB". | Returns `file:line`, unlike grep. `affected` is the only thing between a deletion ticket and a self-inflicted outage. |
+| **context7** (MCP) | Before writing any library API: EF Core, ASP.NET Core, SpeechSuper, Anthropic SDK. | §3 requires it. Training data is stale on `HasTrigger`, structured outputs, speech payloads. |
+| **playwright** (MCP) | When a ticket says "manual test", or when a fix must be seen to be believed. | Caught a 500 that unit tests called a 400 (#146), and proved 12 s → 2.1 s (#140). |
+| **tdd** | Before touching behaviour. | Names the seam first, so the test can actually fail. |
+| **code-review** | Before every push. | An independent read of the diff. |
+| **diagnosing-bugs** | When something is broken and the cause is not obvious. | Stops the guess-and-patch loop. |
+| **impeccable** | Any Razor view or CSS change. | Knows the "Bảng hiệu phòng thi" system. Use it for #159, #147. |
+| **ui-ux-pro-max** | Choosing hierarchy, palette, or font pairing. | Reference data only. Never copy its suggestions wholesale — the repo owns its tokens. |
+| **domain-modeling** | Adding an entity or a domain term. | Keeps `GLOSSARY.md` and the ADRs in step. |
+| **writing-for-agents** | Editing this file, or writing a skill. | |
+
+**ponytail** needs no invocation: the plugin injects it into every session, sub-agents included (verified).
+
+### graphify — four commands, and the one to avoid
+
+```sh
+graphify explain "<Symbol>"              # best first move: neighbours + file:line
+graphify affected "<Symbol>" --depth 2   # reverse traversal: what breaks if this changes
+graphify path "<A>" "<B>"                # shortest path between two nodes
+graphify god-nodes --top 10              # the architectural hubs
+```
+
+`graphify query "<question>"` is keyword BFS, not semantic. It dumps 600–950 loosely related nodes
+and truncates at a 2 000-token budget, so the answer is often in the cut. Use it only with
+`--seed "<KnownNode>"`, or not at all.
+
+**Graph maintenance.** Git hooks are installed (`graphify hook status`), so `post-commit` keeps the
+graph current. If you commit somewhere hooks are skipped, run:
+
+```sh
+python -m graphify update .
+```
+
+Use `python -m`, not bare `graphify`: the `graphify` shim runs an MSYS Python without
+`tree_sitter_sql`, so 20 `.sql` files are silently dropped and the schema never enters the graph.
+The difference is roughly 1 700 nodes.
+
+Run `/graphify --update` after large documentation or semantic changes.
+
+### Do not use
+
+These are installed and look plausible. They fight this repo.
+
+| Skill | Why not |
+|---|---|
+| `ui-styling`, `design`, `design-system` | Assume Tailwind + shadcn (there is no `package.json`) and emit rounded corners and shadows. This system sets `--radius-*: 0` and `--shadow-*: none` deliberately. Use `impeccable`. |
+| `banner-design`, `brand`, `slides` | Unrelated to this project. |
+| `migrate-to-shoehorn`, `setup-pre-commit`, `setup-ts-deep-modules` | TypeScript and npm tooling. This is .NET. |
+| `git-guardrails-claude-code` | A Claude Code hook. OpenCode does not read it. |
+| `scaffold-exercises`, `find-skills`, `ask-matt`, `teach`, `to-questionnaire`, `loop-me` | The human's tools, not yours. |
+
+`implement`, `to-spec`, `to-tickets`, `triage`, `wayfinder`, `handoff`, `retro` carry
+`disable-model-invocation` — the human invokes them. Do not self-start them.
+
+### Four traps this repo has already sprung
+
+1. **Do not trust a sub-agent's numbers.** One reported "6 schema tests fail on main". True — but
+   only after checking in a separate worktree. `scripts/schema-tests-baseline.sh <dir>` confirms
+   whether a failure predates your branch before you claim it.
+2. **A grep with the wrong scope reports zero hits and looks like proof.** A filtered grep said
+   `manual-test-plan.md` had 0 references; a correct one found 5, including a spec calling it "a
+   valid regression script". Re-run against the paths you actually mean before deleting anything.
+3. **A test that reimplements the code under test always passes.** The first draft of the #146
+   regression test copied the endpoint's `catch` into the test body. It now drives the real
+   endpoint group, and was checked to fail when the `catch` is removed.
+4. **Never `git stash push <file>` in a repo that already holds a stash.** It merged into the old
+   entry and left conflict markers in an unrelated file. Commit, or use a worktree.
