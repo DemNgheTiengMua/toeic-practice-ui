@@ -21,10 +21,10 @@ Research ước lượng **14 ngày người**, 4 giai đoạn. Đã xong **~1.5
 
 ## 2. Việc tiếp theo
 
-**#147 — Wizard tạo cert phải ghi được thang điểm.** #149 xong, mở khoá 4 ticket (#150, #157, #159, #161).
+**#148** (kỹ năng sản phẩm có band) hoặc **#153** (goal có thời hạn) — cả hai đã mở khoá.
+Giai đoạn 1 chỉ còn #148 và #150, cả hai đều không bị chặn nữa.
 
-Đã xong #149: mapper render mọi `Cert.Skills`, điều hướng khoá một chiều theo `Skills.LockNavigationOneWay`,
-practice empty-state theo "có section nào không". Còn lại của Giai đoạn 1 là #147 và #150.
+Sau đó: #153 → (#154/#155/#156) → #157 → #159 → #160–#162.
 
 ## 3. Đã xong (đã push lên `origin/main`)
 
@@ -33,9 +33,13 @@ practice empty-state theo "có section nào không". Còn lại của Giai đo�
 | #139 — khoá JWT bị commit | `6929a3a` | Key cũ bị từ chối lúc boot, script tự thay |
 | #140 — trang degraded chậm 12s | `37fc74e` | **12s → 2.1s**, breaker mở thì **0.07s**, tự hồi phục |
 | #146 — thang điểm theo skill | `d1d222a` + `ac27350` | 3 cert chấm 3 thang riêng; `GetFallbackScale` đã xoá |
-| #149 — render động theo `Cert.Skills` | _(commit này)_ | cert kỹ năng tên khác LIST/READ hiện đúng số thẻ; 1 flag cho điều hướng một chiều |
+| #149 — render động theo `Cert.Skills` | `94428a2` + `5be51e3` | cert kỹ năng tên khác LIST/READ hiện đúng số thẻ |
+| #147 — wizard ghi scale + band + rubric | `6a407ab` + `3baa688` | cert tạo xong chấm được ngay; `/admin/score-conversion` đã xoá |
 
-`dotnet test`: **1357 pass, 0 fail, 47 skip**.
+`dotnet test`: **1368 pass, 0 fail**. E2E: 47 skip khi không có app chạy.
+
+**Nợ kỹ thuật đã biết:** 13 test trong `WebMVC.E2ETests` fail khi có app chạy, **giống hệt trên
+`a3acc06`** — hỏng sẵn, không phải do #147. Trước giờ ẩn vì thiếu `E2E_BASE_URL`. Cần ticket riêng.
 
 ## 4. Quyết định mới chốt sau STATE.md
 
