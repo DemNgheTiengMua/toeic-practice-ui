@@ -60,8 +60,18 @@ public static partial class AdminEndpoints
             CancellationToken cancellationToken) =>
         {
             var request = ToScorePreviewRequest(requestDto);
-            var result = await scoreConversionService.CalculateScorePreviewAsync(request, cancellationToken);
-            return Results.Ok(ToScorePreviewResultDto(result));
+            try
+            {
+                var result = await scoreConversionService.CalculateScorePreviewAsync(request, cancellationToken);
+                return Results.Ok(ToScorePreviewResultDto(result));
+            }
+            // E1.1 (#146): a skill with no scale is an authoring mistake the admin can fix, so it
+            // comes back as a 400 naming the skill. Letting it escape made the preview answer an
+            // opaque 500 that said nothing about which skill or which columns were missing.
+            catch (ScoreConversionException ex)
+            {
+                return Problem(StatusCodes.Status400BadRequest, "Score conversion invalid", ApiError.Codes.ScoreConversionInvalid, ex.Message);
+            }
         });
     }
 }
