@@ -13,13 +13,26 @@ builder.Services.AddAntiforgery(options =>
 
 
 builder.Services.AddTransient<CookieBearerHandler>();
+builder.Services.AddTransient<ApiResilienceHandler>();
+builder.Services.AddSingleton(sp => ApiResilienceOptions.FromConfiguration(builder.Configuration));
+builder.Services.AddSingleton(sp => new ApiCircuitBreaker(
+    sp.GetRequiredService<ApiResilienceOptions>(),
+    // Real time in production; tests swap in a manual clock so outage timing is deterministic.
+    sp.GetService<TimeProvider>() ?? TimeProvider.System));
 
 // The MVC site is the only caller of the API (ADR-0002); the JWT travels in an HttpOnly cookie
-// and is forwarded as a bearer token on each API call via CookieBearerHandler.
+// and is forwarded as a bearer token on each API call via CookieBearerHandler. ApiResilienceHandler
+// sits outermost so its per-request fault marker short-circuits the cheapest possible place, and
+// the connect budget lives on the primary handler, where the socket is actually opened (#140).
 builder.Services.AddHttpClient<ICompanionApiClient, CompanionApiClient>(client =>
     client.BaseAddress = new Uri(builder.Configuration["ApiBaseUrl"]
         ?? throw new InvalidOperationException("ApiBaseUrl is not configured.")))
-    .AddHttpMessageHandler<CookieBearerHandler>();
+    .AddHttpMessageHandler<ApiResilienceHandler>()
+    .AddHttpMessageHandler<CookieBearerHandler>()
+    .ConfigurePrimaryHttpMessageHandler(sp => new SocketsHttpHandler
+    {
+        ConnectTimeout = sp.GetRequiredService<ApiResilienceOptions>().ConnectTimeout,
+    });
 
 builder.Services.AddScoped<ICertificatesClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
 builder.Services.AddScoped<IAuthClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
