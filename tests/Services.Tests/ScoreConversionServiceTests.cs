@@ -28,8 +28,8 @@ public sealed class ScoreConversionServiceTests(DatabaseFixture database)
         await database.SqlAsync($"""
             INSERT INTO Certificates (Code, Name, IsActive) VALUES ('{certCode}', N'Cert {certCode}', 1);
             DECLARE @cId INT = SCOPE_IDENTITY();
-            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder) VALUES
-              (@cId, 'LIST', N'Listening', 'listening', 1);
+            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder, MinScaledScore, MaxScaledScore, ScoreStep) VALUES
+              (@cId, 'LIST', N'Listening', 'listening', 1, 100, 200, 100);
             INSERT INTO ScoreBands (CertId, Code, Name, MinTotal, MaxTotal, DisplayOrder) VALUES
               (@cId, 'LOW', N'Low Band', 0, 499, 1),
               (@cId, 'HIGH', N'High Band', 500, 990, 2);
@@ -192,9 +192,9 @@ public sealed class ScoreConversionServiceTests(DatabaseFixture database)
             INSERT INTO Certificates (Code, Name, IsActive) VALUES ('{certCode}', N'Cert {certCode}', 1);
             DECLARE @cert INT = SCOPE_IDENTITY();
 
-            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder) VALUES
-              (@cert, 'LIST', N'Listening', 'listening', 1),
-              (@cert, 'READ', N'Reading', 'reading', 2);
+            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder, MinScaledScore, MaxScaledScore, ScoreStep) VALUES
+              (@cert, 'LIST', N'Listening', 'listening', 1, 100, 400, 100),
+              (@cert, 'READ', N'Reading', 'reading', 2, 100, 400, 100);
             DECLARE @sL INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'LIST');
             DECLARE @sR INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'READ');
 

@@ -18,6 +18,7 @@ public class ScoreConversionException(string code, string message) : Exception(m
     public const string NonMonotonicScales = "non_monotonic_scales";
     public const string OverlappingBands = "overlapping_bands";
     public const string InvalidBandRange = "invalid_band_range";
+    public const string SkillScaleNotConfigured = "skill_scale_not_configured";
 
     public string Code { get; } = code;
 }

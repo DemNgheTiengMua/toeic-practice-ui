@@ -44,9 +44,9 @@ public sealed class SittingStateMachineTests(DatabaseFixture database)
             INSERT INTO Certificates (Code, Name, IsActive) VALUES ('{certCode}', N'Cert {certCode}', 1);
             DECLARE @cert INT = SCOPE_IDENTITY();
 
-            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder, DurationMinutes) VALUES
-              (@cert, 'LIST', N'Listening', 'listening', 1, 30),
-              (@cert, 'READ', N'Reading', 'reading', 2, 45);
+            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder, DurationMinutes, MinScaledScore, MaxScaledScore, ScoreStep) VALUES
+              (@cert, 'LIST', N'Listening', 'listening', 1, 30, 0, 100, 5),
+              (@cert, 'READ', N'Reading', 'reading', 2, 45, 0, 100, 5);
             DECLARE @sL INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'LIST');
             DECLARE @sR INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'READ');
 
@@ -126,8 +126,8 @@ public sealed class SittingStateMachineTests(DatabaseFixture database)
             INSERT INTO Certificates (Code, Name, IsActive) VALUES ('{certCode}', N'Cert {certCode}', 1);
             DECLARE @cert INT = SCOPE_IDENTITY();
 
-            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder, DurationMinutes) VALUES
-              (@cert, 'READ', N'Reading', 'reading', 1, 60);
+            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder, DurationMinutes, MinScaledScore, MaxScaledScore, ScoreStep) VALUES
+              (@cert, 'READ', N'Reading', 'reading', 1, 60, 0, 100, 5);
             DECLARE @skill INT = SCOPE_IDENTITY();
 
             INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder, NavigationMode, UnitCount) VALUES
@@ -204,8 +204,8 @@ public sealed class SittingStateMachineTests(DatabaseFixture database)
             INSERT INTO Certificates (Code, Name, IsActive) VALUES ('{certCode}', N'Cert {certCode}', 1);
             DECLARE @cert INT = SCOPE_IDENTITY();
 
-            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder, DurationMinutes) VALUES
-              (@cert, 'WRIT', N'Writing', 'writing', 1, 60);
+            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder, DurationMinutes, MinScaledScore, MaxScaledScore, ScoreStep) VALUES
+              (@cert, 'WRIT', N'Writing', 'writing', 1, 60, 0, 100, 5);
             DECLARE @skill INT = SCOPE_IDENTITY();
 
             INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder, NavigationMode) VALUES
@@ -318,8 +318,8 @@ public sealed class SittingStateMachineTests(DatabaseFixture database)
             INSERT INTO Certificates (Code, Name, IsActive) VALUES ('{certCode}', N'Cert {certCode}', 1);
             DECLARE @cert INT = SCOPE_IDENTITY();
 
-            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder, DurationMinutes) VALUES
-              (@cert, 'LIST', N'Listening', 'listening', 1, 30);
+            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder, DurationMinutes, MinScaledScore, MaxScaledScore, ScoreStep) VALUES
+              (@cert, 'LIST', N'Listening', 'listening', 1, 30, 0, 100, 5);
             DECLARE @skill INT = SCOPE_IDENTITY();
 
             INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder, NavigationMode) VALUES

@@ -2,6 +2,40 @@
 SET QUOTED_IDENTIFIER ON;
 SET ANSI_NULLS ON;
 
+-- E1.1 (#146): the scale belongs to the skill. NULL is allowed until configured (backfilled in
+-- seed-demo.sql), but a configured scale must be coherent: 0 <= min < max and step > 0.
+INSERT INTO Certificates (Code, Name, IsActive) VALUES ('SCALE', N'SCALE', 1);
+DECLARE @scaleCert INT = SCOPE_IDENTITY();
+INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder) VALUES (@scaleCert, 'LIST', N'L', 'listening', 1);
+DECLARE @scaleSkill INT = SCOPE_IDENTITY();
+PRINT 'accepted a skill whose scale is not configured yet';
+BEGIN TRY
+  UPDATE Skills SET MinScaledScore = 50, MaxScaledScore = 10, ScoreStep = 1 WHERE SkillId = @scaleSkill;
+  THROW 50000, 'EXPECT_REJECT FAILED: inverted skill scale accepted', 1;
+END TRY
+BEGIN CATCH
+  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
+  PRINT 'rejected a skill scale whose minimum is not below its maximum';
+END CATCH
+BEGIN TRY
+  UPDATE Skills SET MinScaledScore = 0, MaxScaledScore = 100, ScoreStep = 0 WHERE SkillId = @scaleSkill;
+  THROW 50000, 'EXPECT_REJECT FAILED: zero skill score step accepted', 1;
+END TRY
+BEGIN CATCH
+  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
+  PRINT 'rejected a zero skill score step';
+END CATCH
+BEGIN TRY
+  UPDATE Skills SET MinScaledScore = -1, MaxScaledScore = 100, ScoreStep = 1 WHERE SkillId = @scaleSkill;
+  THROW 50000, 'EXPECT_REJECT FAILED: negative skill scale accepted', 1;
+END TRY
+BEGIN CATCH
+  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
+  PRINT 'rejected a negative skill scale';
+END CATCH
+UPDATE Skills SET MinScaledScore = 10, MaxScaledScore = 100, ScoreStep = 1 WHERE SkillId = @scaleSkill;
+PRINT 'accepted a coherent skill scale';
+
 INSERT INTO Roles (Code, Name) VALUES ('learner', N'Learner');
 DECLARE @role INT = SCOPE_IDENTITY();
 INSERT INTO Users (RoleId, Email, PasswordHash, FullName)

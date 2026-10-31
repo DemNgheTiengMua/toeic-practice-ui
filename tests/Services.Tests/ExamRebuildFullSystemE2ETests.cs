@@ -221,6 +221,11 @@ public sealed class ExamRebuildFullSystemE2ETests(DatabaseFixture database)
             skillReadId = skills["READ"].SkillId;
             skillWritId = skills["WRIT"].SkillId;
 
+            // E1.1 (#146): the wizard does not author scales yet, so declare one here before scoring.
+            await database.SqlAsync($"""
+                UPDATE Skills SET MinScaledScore = 0, MaxScaledScore = 100, ScoreStep = 5 WHERE CertId = {certId};
+                """);
+
             var sections = await dbSetup.Sections.Where(s => s.CertId == certId).ToDictionaryAsync(s => s.Code);
             secL1Id = sections["SEC_L1"].SectionId;
             secR1Id = sections["SEC_R1"].SectionId;

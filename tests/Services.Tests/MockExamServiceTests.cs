@@ -78,9 +78,9 @@ public sealed class MockExamServiceTests(DatabaseFixture database)
             INSERT INTO Certificates (Code, Name, IsActive) VALUES ('{certCode}', N'Cert {certCode}', 1);
             DECLARE @cert INT = SCOPE_IDENTITY();
 
-            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder) VALUES
-              (@cert, 'LIST', N'Listening', 'listening', 1),
-              (@cert, 'READ', N'Reading', 'reading', 2);
+            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder, MinScaledScore, MaxScaledScore, ScoreStep) VALUES
+              (@cert, 'LIST', N'Listening', 'listening', 1, 100, 400, 50),
+              (@cert, 'READ', N'Reading', 'reading', 2, 100, 400, 50);
             DECLARE @sL INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'LIST');
             DECLARE @sR INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'READ');
 
@@ -146,9 +146,9 @@ public sealed class MockExamServiceTests(DatabaseFixture database)
         await database.SqlAsync($"""
             INSERT INTO Certificates (Code, Name, IsActive) VALUES ('{certCode}', N'Cert {certCode}', 1);
             DECLARE @cert INT = SCOPE_IDENTITY();
-            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder) VALUES
-              (@cert, 'LIST', N'Listening', 'listening', 1),
-              (@cert, 'WRITE', N'Writing', 'writing', 2);
+            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder, MinScaledScore, MaxScaledScore, ScoreStep) VALUES
+              (@cert, 'LIST', N'Listening', 'listening', 1, 20, 80, 20),
+              (@cert, 'WRITE', N'Writing', 'writing', 2, 60, 100, 20);
             DECLARE @listeningSkill INT = (SELECT SkillId FROM Skills WHERE CertId=@cert AND Code='LIST');
             DECLARE @writingSkill INT = (SELECT SkillId FROM Skills WHERE CertId=@cert AND Code='WRITE');
             INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder) VALUES

@@ -69,8 +69,8 @@ public sealed class GenerativeExamServiceTests(DatabaseFixture database)
             DECLARE @c2 INT = SCOPE_IDENTITY();
 
             -- c1 (TOEIC): READ -> P5, P6
-            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder) VALUES
-              (@c1, 'READ', N'Reading', 'reading', 1);
+            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder, MinScaledScore, MaxScaledScore, ScoreStep) VALUES
+              (@c1, 'READ', N'Reading', 'reading', 1, 5, 495, 5);
             DECLARE @s1 INT = (SELECT SkillId FROM Skills WHERE CertId = @c1 AND Code = 'READ');
 
             INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, DisplayOrder) VALUES

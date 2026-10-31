@@ -22,5 +22,6 @@ public interface IScoreConversionService
     ScorePreviewResult CalculateScorePreview(
         ScorePreviewRequest request,
         IReadOnlyList<ScoreScaleRowItem>? scales = null,
-        IReadOnlyList<ScoreBandConfigItem>? bands = null);
+        IReadOnlyList<ScoreBandConfigItem>? bands = null,
+        IReadOnlyDictionary<int, (int Min, int Max, int Step)>? skillRanges = null);
 }

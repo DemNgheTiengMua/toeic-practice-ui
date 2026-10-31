@@ -44,9 +44,9 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
             INSERT INTO Certificates (Code, Name, IsActive) VALUES ('{certCode}', N'Cert {certCode}', 1);
             DECLARE @cert INT = SCOPE_IDENTITY();
 
-            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder) VALUES
-              (@cert, 'LIST', N'Listening', 'listening', 1),
-              (@cert, 'READ', N'Reading', 'reading', 2);
+            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder, MinScaledScore, MaxScaledScore, ScoreStep) VALUES
+              (@cert, 'LIST', N'Listening', 'listening', 1, 100, 450, 50),
+              (@cert, 'READ', N'Reading', 'reading', 2, 100, 450, 50);
             DECLARE @sL INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'LIST');
             DECLARE @sR INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'READ');
 
@@ -110,8 +110,8 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
         await database.SqlAsync($"""
             DECLARE @cert INT = {certId};
             DECLARE @exam INT = {examId};
-            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder, DurationMinutes)
-            VALUES (@cert, 'SPEA', N'Speaking', 'speaking', 4, 20);
+            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder, MinScaledScore, MaxScaledScore, ScoreStep)
+            VALUES (@cert, 'SPEA', N'Speaking', 'speaking', 4, 0, 10, 1);
             DECLARE @skill INT = SCOPE_IDENTITY();
 
             INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder, NavigationMode)
@@ -141,8 +141,8 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
         await database.SqlAsync($"""
             DECLARE @cert INT = {certId};
             DECLARE @exam INT = {examId};
-            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder, DurationMinutes)
-            VALUES (@cert, 'WRIT', N'Writing', 'writing', 3, 30);
+            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder, MinScaledScore, MaxScaledScore, ScoreStep)
+            VALUES (@cert, 'WRIT', N'Writing', 'writing', 3, 0, 10, 1);
             DECLARE @skill INT = SCOPE_IDENTITY();
 
             INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder)
@@ -664,7 +664,7 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
     }
 
     [Fact]
-    public async Task ComputeScaledScore_Falls_Back_Through_Hierarchy()
+    public async Task ComputeScaledScore_Uses_Skill_Scale_And_Interpolates()
     {
         var certCode = Unique("ATTE");
         var (certId, examId, _, _, _, _) = await SeedExamFixtureAsync(certCode);
@@ -672,23 +672,44 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
         var skill = await db.Skills.FirstAsync(s => s.CertId == certId);
+        Assert.Equal(100, skill.MinScaledScore);
+        Assert.Equal(450, skill.MaxScaledScore);
+        Assert.Equal(50, skill.ScoreStep);
 
         // 1. Exam-specific scale exists for raw score 1 -> returns 450
-        var score1 = await engine.ComputeScaledScoreAsync(certId, skill.SkillId, examId, 1, 1);
-        Assert.Equal(450, score1);
+        Assert.Equal(450, await engine.ComputeScaledScoreAsync(certId, skill.SkillId, examId, 1, 1));
 
-        // 2. Default scale (ExamId == null): seed a default cert scale for another raw score
+        // 2. Default scale (ExamId == null) is used when the exam has no row for that raw score.
         await database.SqlAsync($"""
             INSERT INTO ScoreScales (CertId, SkillId, ExamId, RawScore, ScaledScore)
             VALUES ({certId}, {skill.SkillId}, NULL, 5, 300);
             """);
 
-        var scoreDefault = await engine.ComputeScaledScoreAsync(certId, skill.SkillId, 99999, 5, 10);
-        Assert.Equal(300, scoreDefault);
+        Assert.Equal(300, await engine.ComputeScaledScoreAsync(certId, skill.SkillId, 99999, 5, 10));
 
-        // 3. Proportional fallback when no scale matches: 0/10 -> 5
-        var scoreFallback = await engine.ComputeScaledScoreAsync(99999, 99999, 99999, 0, 10);
-        Assert.Equal(5, scoreFallback);
+        // 3. No scale row at all: spreads the raw score across the skill's own range, not a guessed one.
+        Assert.Equal(100, await engine.ComputeScaledScoreAsync(certId, skill.SkillId, examId, 0, 10));
+    }
+
+    [Fact]
+    public async Task ComputeScaledScore_Throws_When_Skill_Has_No_Scale_Configured()
+    {
+        var certCode = Unique("ATTE");
+        var (certId, examId, _, _, _, _) = await SeedExamFixtureAsync(certCode);
+        var engine = CreateEngine();
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var skill = await db.Skills.FirstAsync(s => s.CertId == certId && s.Code == "READ");
+        await database.SqlAsync($"""
+            UPDATE Skills SET MinScaledScore = NULL, MaxScaledScore = NULL, ScoreStep = NULL
+            WHERE SkillId = {skill.SkillId};
+            """);
+
+        var ex = await Assert.ThrowsAsync<ScoreConversionException>(
+            () => engine.ComputeScaledScoreAsync(certId, skill.SkillId, examId, 1, 1));
+
+        Assert.Equal(ScoreConversionException.SkillScaleNotConfigured, ex.Code);
+        Assert.Contains("READ", ex.Message);
     }
 
     [Fact]

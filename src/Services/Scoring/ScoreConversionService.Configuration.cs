@@ -220,6 +220,45 @@ public sealed partial class ScoreConversionService
                     });
                 }
 
+                // E1.1 (#146): only the default scale defines the skill's range - an exam-specific
+                // override must not narrow it. Zeros are omitted from the gaps so the step stays the
+                // spacing between real thresholds rather than splitting into meaningless points.
+                if (command.ExamId is null)
+                {
+                    var touchedSkillIds = command.Scales.Select(s => s.SkillId).Distinct().ToList();
+                    var skills = await db.Skills
+                        .Where(s => s.CertId == certId && touchedSkillIds.Contains(s.SkillId))
+                        .ToListAsync(cancellationToken);
+
+                    foreach (var skill in skills)
+                    {
+                        var scaledScores = command.Scales
+                            .Where(s => s.SkillId == skill.SkillId)
+                            .OrderBy(s => s.RawScore)
+                            .Select(s => s.ScaledScore)
+                            .ToList();
+
+                        if (scaledScores.Count == 0) continue;
+
+                        var gaps = scaledScores.Zip(scaledScores.Skip(1), (prev, next) => next - prev)
+                            .Where(gap => gap > 0)
+                            .ToList();
+
+                        var minScaled = scaledScores[0];
+                        skill.MinScaledScore = minScaled;
+                        skill.MaxScaledScore = scaledScores[^1];
+                        // The step must divide the minimum too, otherwise exact rows would be snapped off the grid.
+                        skill.ScoreStep = gaps.Count > 0
+                            ? gaps.Append(minScaled).Aggregate(GreatestCommonDivisor)
+                            : 1;
+
+                        if (minScaled >= skill.MaxScaledScore)
+                        {
+                            skill.MaxScaledScore = minScaled + skill.ScoreStep;
+                        }
+                    }
+                }
+
                 await db.SaveChangesAsync(cancellationToken);
             }
 
@@ -315,5 +354,11 @@ public sealed partial class ScoreConversionService
         }
 
         return await GetScoreConversionAsync(cert.Code, command.ExamId, cancellationToken);
+    }
+
+    private static int GreatestCommonDivisor(int a, int b)
+    {
+        while (b != 0) (a, b) = (b, a % b);
+        return Math.Abs(a);
     }
 }

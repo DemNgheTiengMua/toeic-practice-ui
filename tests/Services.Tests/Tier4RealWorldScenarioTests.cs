@@ -65,9 +65,9 @@ public sealed class Tier4RealWorldScenarioTests(DatabaseFixture database)
             INSERT INTO Certificates (Code, Name, IsActive) VALUES ('{certCode}', N'Cert {certCode}', 1);
             DECLARE @cert INT = SCOPE_IDENTITY();
 
-            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder, DurationMinutes) VALUES
-              (@cert, 'L_' + CAST(@cert AS VARCHAR(10)), N'Listening', 'listening', 1, 45),
-              (@cert, 'R_' + CAST(@cert AS VARCHAR(10)), N'Reading', 'reading', 2, 75);
+            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder, DurationMinutes, MinScaledScore, MaxScaledScore, ScoreStep) VALUES
+              (@cert, 'L_' + CAST(@cert AS VARCHAR(10)), N'Listening', 'listening', 1, 45, 5, 495, 5),
+              (@cert, 'R_' + CAST(@cert AS VARCHAR(10)), N'Reading', 'reading', 2, 75, 5, 495, 5);
             DECLARE @sL INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Modality = 'listening');
             DECLARE @sR INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Modality = 'reading');
 
@@ -254,8 +254,8 @@ public sealed class Tier4RealWorldScenarioTests(DatabaseFixture database)
             DECLARE @cert INT = SCOPE_IDENTITY();
             DECLARE @certStr VARCHAR(10) = CAST(@cert AS VARCHAR(10));
 
-            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder, DurationMinutes) VALUES
-              (@cert, 'R_' + @certStr, N'Reading', 'reading', 1, 30);
+            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder, DurationMinutes, MinScaledScore, MaxScaledScore, ScoreStep) VALUES
+              (@cert, 'R_' + @certStr, N'Reading', 'reading', 1, 30, 0, 100, 5);
             DECLARE @sR INT = (SELECT SkillId FROM Skills WHERE CertId = @cert);
 
             INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder) VALUES

@@ -31,6 +31,14 @@ public partial class Skill
 
     public int? DurationMinutes { get; set; }
 
+    // E1.1 (#146): the skill's own scaled-score range and rounding grid. NULL means unconfigured -
+    // scoring such a skill raises a configuration error instead of guessing a range.
+    public int? MinScaledScore { get; set; }
+
+    public int? MaxScaledScore { get; set; }
+
+    public int? ScoreStep { get; set; }
+
     [InverseProperty("SkillNavigation")]
     public virtual ICollection<AttemptSkillScore> AttemptSkillScoreSkillNavigations { get; set; } = new List<AttemptSkillScore>();
 

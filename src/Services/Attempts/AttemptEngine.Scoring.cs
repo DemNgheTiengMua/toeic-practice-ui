@@ -11,63 +11,15 @@ namespace Services;
 
 public sealed partial class AttemptEngine
 {
-    public async Task<int> ComputeScaledScoreAsync(
+    public Task<int> ComputeScaledScoreAsync(
         int certId,
         int skillId,
         int examId,
         int rawScore,
         int totalQuestionsInSkill,
-        CancellationToken cancellationToken = default)
-    {
-        // 1. Try exam-specific exact match
-        var scale = await db.ScoreScales
-            .Where(s => s.CertId == certId && s.SkillId == skillId && s.ExamId == examId && s.RawScore == rawScore)
-            .Select(s => (int?)s.ScaledScore)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        if (scale.HasValue) return scale.Value;
-
-        // 2. Try default scale (ExamId == null) exact match
-        scale = await db.ScoreScales
-            .Where(s => s.CertId == certId && s.SkillId == skillId && s.ExamId == null && s.RawScore == rawScore)
-            .Select(s => (int?)s.ScaledScore)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        if (scale.HasValue) return scale.Value;
-
-        // 3. Fallback to closest available score scale row for this skill
-        var allRows = await db.ScoreScales
-            .Where(s => s.CertId == certId && s.SkillId == skillId && (s.ExamId == examId || s.ExamId == null))
-            .OrderByDescending(s => s.ExamId)
-            .ThenBy(s => s.RawScore)
-            .ToListAsync(cancellationToken);
-
-        if (allRows.Count > 0)
-        {
-            var closest = allRows.OrderBy(r => Math.Abs(r.RawScore - rawScore)).First();
-            return closest.ScaledScore;
-        }
-
-        // 4. Default proportional fallback if no score scales seeded
-        var certCode = await db.Certificates
-            .Where(c => c.CertId == certId)
-            .Select(c => c.Code)
-            .FirstOrDefaultAsync(cancellationToken);
-        var (minimum, maximum, step) = GetFallbackScale(certCode);
-        if (totalQuestionsInSkill <= 0) return minimum;
-        double fraction = Math.Clamp((double)rawScore / totalQuestionsInSkill, 0.0, 1.0);
-        return minimum + (int)Math.Round(
-            (fraction * (maximum - minimum)) / step,
-            MidpointRounding.AwayFromZero) * step;
-    }
-
-    private static (int Minimum, int Maximum, int Step) GetFallbackScale(string? certCode) =>
-        certCode?.ToUpperInvariant() switch
-        {
-            "IELTS" => (10, 90, 5),
-            "VSTEP" => (10, 100, 1),
-            _ => (5, 495, 5)
-        };
+        CancellationToken cancellationToken = default) =>
+        // Both entry points share one behaviour: interpolate between the surrounding rows, round by the skill's step.
+        ComputeScaledScoreAsync(certId, skillId, examId, (decimal)rawScore, totalQuestionsInSkill, cancellationToken);
 
     public static int RoundHalfStep(double average)
     {
@@ -114,56 +66,90 @@ public sealed partial class AttemptEngine
         int totalQuestionsInSkill,
         CancellationToken cancellationToken)
     {
-        if (rawScore == decimal.Truncate(rawScore))
+        // The scale belongs to the skill; a skill without one is a configuration error, never a guess.
+        var skill = await db.Skills
+            .AsNoTracking()
+            .Where(s => s.SkillId == skillId && s.CertId == certId)
+            .Select(s => new { s.Code, s.MinScaledScore, s.MaxScaledScore, s.ScoreStep })
+            .FirstOrDefaultAsync(cancellationToken)
+            ?? throw new ScoreConversionException(
+                ScoreConversionException.SkillScaleNotConfigured,
+                $"Skill {skillId} of certificate {certId} does not exist, so it has no score scale.");
+
+        if (skill.MinScaledScore is not int minimum
+            || skill.MaxScaledScore is not int maximum
+            || skill.ScoreStep is not int step)
         {
-            return await ComputeScaledScoreAsync(
-                certId,
-                skillId,
-                examId,
-                (int)rawScore,
-                totalQuestionsInSkill,
-                cancellationToken);
+            throw new ScoreConversionException(
+                ScoreConversionException.SkillScaleNotConfigured,
+                $"Skill '{skill.Code}' has no score scale configured (MinScaledScore, MaxScaledScore and ScoreStep must all be set).");
         }
 
         var scaleRows = await db.ScoreScales
+            .AsNoTracking()
             .Where(s => s.CertId == certId && s.SkillId == skillId && s.ExamId == examId)
             .OrderBy(s => s.RawScore)
             .ToListAsync(cancellationToken);
         if (scaleRows.Count == 0)
         {
             scaleRows = await db.ScoreScales
+                .AsNoTracking()
                 .Where(s => s.CertId == certId && s.SkillId == skillId && s.ExamId == null)
                 .OrderBy(s => s.RawScore)
                 .ToListAsync(cancellationToken);
         }
 
-        var certCode = await db.Certificates
-            .Where(c => c.CertId == certId)
-            .Select(c => c.Code)
-            .SingleAsync(cancellationToken);
-        var step = GetFallbackScale(certCode).Step;
-        if (scaleRows.Count == 0)
-        {
-            var (minimum, maximum, fallbackStep) = GetFallbackScale(certCode);
-            if (totalQuestionsInSkill <= 0) return minimum;
-            var fraction = Math.Clamp((double)rawScore / totalQuestionsInSkill, 0.0, 1.0);
-            return minimum + (int)Math.Round(
-                (fraction * (maximum - minimum)) / fallbackStep,
-                MidpointRounding.AwayFromZero) * fallbackStep;
-        }
+        var (lower, upper) = (scaleRows.LastOrDefault(row => row.RawScore <= rawScore),
+                              scaleRows.FirstOrDefault(row => row.RawScore >= rawScore));
+        return ProjectOntoScale(
+            rawScore,
+            lower?.RawScore,
+            lower?.ScaledScore,
+            upper?.RawScore,
+            upper?.ScaledScore,
+            minimum,
+            maximum,
+            step,
+            totalQuestionsInSkill);
+    }
 
-        var lower = scaleRows.LastOrDefault(row => row.RawScore <= rawScore);
-        var upper = scaleRows.FirstOrDefault(row => row.RawScore >= rawScore);
-        var scaled = lower is null
-            ? scaleRows[0].ScaledScore
-            : upper is null
-                ? scaleRows[^1].ScaledScore
-                : lower.RawScore == upper.RawScore
-                    ? lower.ScaledScore
-                    : lower.ScaledScore
-                        + (rawScore - lower.RawScore)
-                        * (upper.ScaledScore - lower.ScaledScore)
-                        / (upper.RawScore - lower.RawScore);
+    /// <summary>
+    /// E1.1 (#146): the one score-conversion behaviour. Interpolate linearly between the two rows that
+    /// bracket the raw score, then round onto the skill's own grid. With no rows at all, spread the raw
+    /// score proportionally across the skill's range instead. <paramref name="minimum"/> is 0..n and
+    /// <paramref name="step"/> &gt; 0, so callers must have already rejected an unconfigured skill.
+    /// </summary>
+    public static int ProjectOntoScale(
+        decimal rawScore,
+        int? lowerRaw,
+        int? lowerScaled,
+        int? upperRaw,
+        int? upperScaled,
+        int minimum,
+        int maximum,
+        int step,
+        int totalQuestionsInSkill = 0)
+    {
+        if (step <= 0) throw new ArgumentOutOfRangeException(nameof(step), step, "ScoreStep must be positive.");
+
+        decimal scaled;
+        if (lowerScaled is not int low)
+        {
+            // No lower row: below the bottom of the table (or no table at all).
+            scaled = upperScaled is int top
+                ? top
+                : totalQuestionsInSkill > 0
+                    ? minimum + Math.Clamp(rawScore / totalQuestionsInSkill, 0m, 1m) * (maximum - minimum)
+                    : minimum;
+        }
+        else if (upperScaled is not int high || upperRaw is not int upperRawScore || upperRawScore == lowerRaw)
+        {
+            scaled = low;
+        }
+        else
+        {
+            scaled = low + (rawScore - lowerRaw!.Value) * (high - low) / (upperRawScore - lowerRaw!.Value);
+        }
 
         return (int)Math.Round(scaled / step, MidpointRounding.AwayFromZero) * step;
     }

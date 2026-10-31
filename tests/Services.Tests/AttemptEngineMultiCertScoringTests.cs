@@ -49,6 +49,14 @@ public sealed class AttemptEngineMultiCertScoringTests(DatabaseFixture database)
 
     private async Task<ScoringFixture> SeedFixtureAsync(string connectionString, string certCode)
     {
+        // E1.1 (#146): the scale is the skill's own data now, so the fixture declares it explicitly.
+        var scale = certCode switch
+        {
+            "TOEIC" => (Min: 5, Max: 495, Step: 5),
+            "IELTS" => (Min: 10, Max: 90, Step: 5),
+            _ => (Min: 10, Max: 100, Step: 1)
+        };
+
         await RunSqlAsync(connectionString, $"""
             IF NOT EXISTS (SELECT 1 FROM Roles WHERE Code = 'learner')
               INSERT INTO Roles (Code, Name) VALUES ('learner', N'Learner');
@@ -58,9 +66,9 @@ public sealed class AttemptEngineMultiCertScoringTests(DatabaseFixture database)
               CASE '{certCode}' WHEN 'IELTS' THEN 'avg_half_step' WHEN 'VSTEP' THEN 'avg_whole' ELSE 'sum' END);
             DECLARE @cert INT = SCOPE_IDENTITY();
 
-            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder) VALUES
-              (@cert, 'LIST', N'Listening', 'listening', 1),
-              (@cert, 'READ', N'Reading', 'reading', 2);
+            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder, MinScaledScore, MaxScaledScore, ScoreStep) VALUES
+              (@cert, 'LIST', N'Listening', 'listening', 1, {scale.Min}, {scale.Max}, {scale.Step}),
+              (@cert, 'READ', N'Reading', 'reading', 2, {scale.Min}, {scale.Max}, {scale.Step});
             DECLARE @listening INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'LIST');
             DECLARE @reading INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'READ');
 
@@ -184,6 +192,65 @@ public sealed class AttemptEngineMultiCertScoringTests(DatabaseFixture database)
                 Assert.Equal(expectedScore.Band, result.BandCode);
                 Assert.Equal(2, result.SkillScores.Count);
             }
+        }
+        finally
+        {
+            await database.DropDatabaseAsync(databaseName);
+        }
+    }
+
+    [Fact]
+    public async Task Scales_Follow_Each_Skills_Own_Step_And_Interpolate_Between_Rows()
+    {
+        var databaseName = $"AttemptScoringStep_{Guid.NewGuid():N}";
+        var connectionString = await database.CreateFreshDatabaseAsync(databaseName);
+        try
+        {
+            // Two skills on the same certificate, different scales: 0-50 step 1 and 0-200 step 10.
+            await RunSqlAsync(connectionString, """
+                INSERT INTO Certificates (Code, Name, IsActive, ScoreAggregationRule)
+                VALUES ('STEP', N'STEP', 1, 'sum');
+                DECLARE @cert INT = SCOPE_IDENTITY();
+                INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder, MinScaledScore, MaxScaledScore, ScoreStep) VALUES
+                  (@cert, 'FIFTY', N'Fifty', 'listening', 1, 0, 50, 1),
+                  (@cert, 'TWOHT', N'Two hundred', 'reading', 2, 0, 200, 10);
+                DECLARE @fifty INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'FIFTY');
+                DECLARE @twoht INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'TWOHT');
+                -- Rows bracket the midpoint at 22.5 (FIFTY) and 90 (TWOHT), so raw 5 of 10 interpolates to 25 and 100.
+                INSERT INTO ScoreScales (CertId, SkillId, ExamId, RawScore, ScaledScore) VALUES
+                  (@cert, @fifty, NULL, 0, 0), (@cert, @fifty, NULL, 10, 50),
+                  (@cert, @twoht, NULL, 0, 0), (@cert, @twoht, NULL, 10, 200);
+                """);
+
+            int certId, fiftyId, twohtId;
+            await using (var db = DbContextFactory.Create(connectionString))
+            {
+                certId = await db.Certificates.Where(c => c.Code == "STEP").Select(c => c.CertId).SingleAsync();
+                fiftyId = await db.Skills.Where(s => s.CertId == certId && s.Code == "FIFTY").Select(s => s.SkillId).SingleAsync();
+                twohtId = await db.Skills.Where(s => s.CertId == certId && s.Code == "TWOHT").Select(s => s.SkillId).SingleAsync();
+            }
+
+            await using var engineDb = DbContextFactory.Create(connectionString);
+            var engine = new AttemptEngine(engineDb);
+
+            // 50% raw -> inside 20-30, a multiple of 1
+            var fifty = await engine.ComputeScaledScoreAsync(certId, fiftyId, 0, 5, 10);
+            Assert.InRange(fifty, 20, 30);
+            Assert.Equal(25, fifty);
+
+            // Same 50% raw on 0-200 step 10 -> a multiple of 10 around 100
+            var twoht = await engine.ComputeScaledScoreAsync(certId, twohtId, 0, 5, 10);
+            Assert.Equal(0, twoht % 10);
+            Assert.InRange(twoht, 95, 105);
+            Assert.Equal(100, twoht);
+
+            // Interpolation, not nearest row: raw 3 of 10 gives 15 and 60, which is not a seeded row.
+            Assert.Equal(15, await engine.ComputeScaledScoreAsync(certId, fiftyId, 0, 3, 10));
+            Assert.Equal(60, await engine.ComputeScaledScoreAsync(certId, twohtId, 0, 3, 10));
+
+            // 7 of 10 on the step-10 skill is 140 exactly; on step 1 it is 35.
+            Assert.Equal(35, await engine.ComputeScaledScoreAsync(certId, fiftyId, 0, 7, 10));
+            Assert.Equal(140, await engine.ComputeScaledScoreAsync(certId, twohtId, 0, 7, 10));
         }
         finally
         {

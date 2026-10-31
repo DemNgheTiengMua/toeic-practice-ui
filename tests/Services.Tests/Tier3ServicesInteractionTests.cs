@@ -138,7 +138,7 @@ public sealed class Tier3ServicesInteractionTests(DatabaseFixture database)
         await database.SqlAsync($"""
             INSERT INTO Certificates (Code, Name, IsActive) VALUES ('{certCode}', N'Cert {certCode}', 1);
             DECLARE @cert INT = SCOPE_IDENTITY();
-            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder) VALUES (@cert, 'READ', N'Reading', 'reading', 1);
+            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder, MinScaledScore, MaxScaledScore, ScoreStep) VALUES (@cert, 'READ', N'Reading', 'reading', 1, 0, 100, 5);
             DECLARE @skill INT = SCOPE_IDENTITY();
             INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder) VALUES (@skill, @cert, 'reading', 'P5', N'Sentences', 1);
             DECLARE @sec INT = SCOPE_IDENTITY();
@@ -213,7 +213,7 @@ public sealed class Tier3ServicesInteractionTests(DatabaseFixture database)
         await database.SqlAsync($"""
             INSERT INTO Certificates (Code, Name, IsActive) VALUES ('{certCode}', N'Cert {certCode}', 1);
             DECLARE @cert INT = SCOPE_IDENTITY();
-            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder, DurationMinutes) VALUES (@cert, 'WRIT', N'Writing', 'writing', 1, 30);
+            INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder, DurationMinutes, MinScaledScore, MaxScaledScore, ScoreStep) VALUES (@cert, 'WRIT', N'Writing', 'writing', 1, 30, 0, 100, 5);
             DECLARE @skill INT = SCOPE_IDENTITY();
             INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder) VALUES (@skill, @cert, 'writing', 'WR', N'Writing Section', 1);
             DECLARE @sec INT = SCOPE_IDENTITY();

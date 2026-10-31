@@ -277,7 +277,15 @@ public sealed class ElevenComponentEvaluatorTests
                 new UpdateScoreBandEntry(3, "BAND_7", "Good User", 70, 74, 3)
             ]);
 
-        var result = service.CalculateScorePreview(request);
+        // E1.1 (#146): the scale is the skill's data, so the caller supplies it like the DB would.
+        var result = service.CalculateScorePreview(
+            request,
+            bands: null,
+            skillRanges: new Dictionary<int, (int Min, int Max, int Step)>
+            {
+                [1] = (10, 90, 5),
+                [2] = (10, 90, 5)
+            });
 
         // Writing skill: 65
         Assert.Equal(65, result.SkillScores.Single(s => s.SkillCode == "WRIT").ScaledScore);

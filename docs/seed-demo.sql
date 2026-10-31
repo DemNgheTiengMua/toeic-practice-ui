@@ -4403,4 +4403,49 @@ IF NOT EXISTS (SELECT 1 FROM GradingCriteria WHERE CertId = @toeicSw AND SkillId
     (@toeicSw, @swWrit, 'ORG', N'Organization & Development', 5.0, 1.0, 2);
 
 PRINT '19. Representative 11-Component Question Catalog & Official Multi-Stage Blueprint Seeds';
+
+-- ============================================================================
+-- 20. E1.1 (#146): backfill each skill's own scaled-score scale from its ScoreScales rows.
+-- Derived, not invented: min/max are the seeded scaled-score extremes and step is the largest of
+-- 10/5/2/1 that divides every gap between consecutive rows (5-point tables get 5, IELTS tables
+-- stored in tenths of a band get 10, uneven tables get 1). Skills with no ScoreScales rows stay
+-- NULL: scoring them raises a configuration error instead of guessing a range.
+-- ============================================================================
+WITH Ordered AS (
+  SELECT SkillId, RawScore, ScaledScore,
+         LAG(ScaledScore) OVER (PARTITION BY SkillId, ExamId ORDER BY RawScore) AS PrevScaled
+  FROM ScoreScales
+  WHERE SkillId IS NOT NULL
+), Gaps AS (
+  SELECT SkillId, ScaledScore - PrevScaled AS Gap
+  FROM Ordered
+  WHERE PrevScaled IS NOT NULL AND ScaledScore > PrevScaled
+), Ranges AS (
+  SELECT SkillId, MIN(ScaledScore) AS MinScaled, MAX(ScaledScore) AS MaxScaled
+  FROM ScoreScales
+  WHERE SkillId IS NOT NULL
+  GROUP BY SkillId
+), Steps AS (
+  SELECT r.SkillId, r.MinScaled, r.MaxScaled,
+         CASE
+           WHEN r.MinScaled % 10 = 0
+            AND NOT EXISTS (SELECT 1 FROM Gaps g WHERE g.SkillId = r.SkillId AND g.Gap % 10 <> 0) THEN 10
+           WHEN r.MinScaled % 5 = 0
+            AND NOT EXISTS (SELECT 1 FROM Gaps g WHERE g.SkillId = r.SkillId AND g.Gap % 5 <> 0) THEN 5
+           WHEN r.MinScaled % 2 = 0
+            AND NOT EXISTS (SELECT 1 FROM Gaps g WHERE g.SkillId = r.SkillId AND g.Gap % 2 <> 0) THEN 2
+           ELSE 1
+         END AS Step
+  FROM Ranges r
+)
+UPDATE s
+SET s.MinScaledScore = st.MinScaled,
+    s.MaxScaledScore = st.MaxScaled,
+    s.ScoreStep = st.Step
+FROM Skills s
+JOIN Steps st ON st.SkillId = s.SkillId
+WHERE s.MinScaledScore IS NULL;
+GO
+
+PRINT '20. Skill score scales backfilled from ScoreScales';
 GO

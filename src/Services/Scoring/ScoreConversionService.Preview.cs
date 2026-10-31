@@ -18,6 +18,7 @@ public sealed partial class ScoreConversionService
     {
         List<ScoreScaleRowItem>? dbScales = null;
         List<ScoreBandConfigItem>? dbBands = null;
+        Dictionary<int, (int Min, int Max, int Step)>? skillRanges = null;
 
         if (request.CustomScales == null || request.CustomScales.Count == 0)
         {
@@ -43,6 +44,13 @@ public sealed partial class ScoreConversionService
                 .ToListAsync(cancellationToken);
         }
 
+        // E1.1 (#146): the scale is the skill's own data, never a guess from the certificate code.
+        skillRanges = await db.Skills
+            .AsNoTracking()
+            .Where(s => s.MinScaledScore != null && s.MaxScaledScore != null && s.ScoreStep != null)
+            .Select(s => new { s.SkillId, s.MinScaledScore, s.MaxScaledScore, s.ScoreStep })
+            .ToDictionaryAsync(s => s.SkillId, s => (s.MinScaledScore!.Value, s.MaxScaledScore!.Value, s.ScoreStep!.Value), cancellationToken);
+
         if (request.CustomBands == null || request.CustomBands.Count == 0)
         {
             var q = db.ScoreBands.AsNoTracking();
@@ -67,13 +75,14 @@ public sealed partial class ScoreConversionService
                 .ToListAsync(cancellationToken);
         }
 
-        return CalculateScorePreview(request, dbScales, dbBands);
+        return CalculateScorePreview(request, dbScales, dbBands, skillRanges);
     }
 
     public ScorePreviewResult CalculateScorePreview(
         ScorePreviewRequest request,
         IReadOnlyList<ScoreScaleRowItem>? scales = null,
-        IReadOnlyList<ScoreBandConfigItem>? bands = null)
+        IReadOnlyList<ScoreBandConfigItem>? bands = null,
+        IReadOnlyDictionary<int, (int Min, int Max, int Step)>? skillRanges = null)
     {
         var scaleEntries = new List<ScoreScaleRowItem>();
         if (request.CustomScales != null && request.CustomScales.Count > 0)
@@ -125,24 +134,38 @@ public sealed partial class ScoreConversionService
             }
 
             int scaledScore;
-            var skillScales = scaleEntries.Where(s => skillInput.SkillId.HasValue && s.SkillId == skillInput.SkillId.Value).ToList();
+            var skillScales = scaleEntries.Where(s => skillInput.SkillId.HasValue && s.SkillId == skillInput.SkillId.Value)
+                .OrderBy(s => s.RawScore)
+                .ToList();
+
+            // E1.1 (#146): one behaviour for every caller - interpolate between the rows and round on the
+            // skill's own grid. A skill without a configured scale is a configuration error, not a guess.
+            if (skillInput.SkillId is not int previewSkillId
+                || skillRanges is null
+                || !skillRanges.TryGetValue(previewSkillId, out var range))
+            {
+                throw new ScoreConversionException(
+                    ScoreConversionException.SkillScaleNotConfigured,
+                    $"Skill '{skillInput.SkillCode ?? skillInput.SkillId?.ToString() ?? "?"}' has no score scale configured (MinScaledScore, MaxScaledScore and ScoreStep must all be set).");
+            }
+
             if (skillScales.Count > 0)
             {
-                int targetRaw = (int)Math.Round(computedSkillRawScore, MidpointRounding.AwayFromZero);
-                var exact = skillScales.FirstOrDefault(s => s.RawScore == targetRaw);
-                if (exact != null)
-                {
-                    scaledScore = exact.ScaledScore;
-                }
-                else
-                {
-                    var closest = skillScales.OrderBy(s => Math.Abs(s.RawScore - targetRaw)).First();
-                    scaledScore = closest.ScaledScore;
-                }
+                var lower = skillScales.LastOrDefault(s => s.RawScore <= computedSkillRawScore);
+                var upper = skillScales.FirstOrDefault(s => s.RawScore >= computedSkillRawScore);
+                scaledScore = AttemptEngine.ProjectOntoScale(
+                    computedSkillRawScore,
+                    lower?.RawScore,
+                    lower?.ScaledScore,
+                    upper?.RawScore,
+                    upper?.ScaledScore,
+                    range.Min,
+                    range.Max,
+                    range.Step);
             }
             else
             {
-                // Fallback scaling based on ScoreAggregationRule
+                // No rows at all: spread the raw score across the skill's own range.
                 var rule = request.ScoreAggregationRule?.ToLowerInvariant() ?? "sum";
                 if (rule == "avg_half_step")
                 {
@@ -154,15 +177,14 @@ public sealed partial class ScoreConversionService
                 }
                 else
                 {
-                    // Default proportional fallback
-                    var (min, max, step) = (5, 495, 5);
-                    if (string.Equals(request.CertCode, "IELTS", StringComparison.OrdinalIgnoreCase)) (min, max, step) = (10, 90, 5);
-                    else if (string.Equals(request.CertCode, "VSTEP", StringComparison.OrdinalIgnoreCase)) (min, max, step) = (10, 100, 1);
-
                     int maxQ = skillInput.Sections?.Sum(s => s.MaxQuestions ?? 0) ?? 0;
-                    if (maxQ <= 0) maxQ = 100;
-                    double fraction = Math.Clamp((double)computedSkillRawScore / maxQ, 0.0, 1.0);
-                    scaledScore = min + (int)Math.Round((fraction * (max - min)) / step, MidpointRounding.AwayFromZero) * step;
+                    scaledScore = AttemptEngine.ProjectOntoScale(
+                        computedSkillRawScore,
+                        null, null, null, null,
+                        range.Min,
+                        range.Max,
+                        range.Step,
+                        maxQ > 0 ? maxQ : 100);
                 }
             }
 

@@ -27,6 +27,14 @@ CREATE TABLE Skills (
   DisplayOrder INT NOT NULL DEFAULT 0,
   -- UI-18: "Listening 45 minutes, Reading 75 minutes" on exam instructions / exam editor
   DurationMinutes INT NULL CONSTRAINT CK_Skills_Duration CHECK (DurationMinutes IS NULL OR DurationMinutes > 0),
+  -- E1.1 (#146): the skill's own scaled-score range and rounding grid - the scale is data, not a guess
+  -- from the certificate's name. NULL until configured; scoring a skill with NULL parameters is a
+  -- configuration error (never a guessed range). Backfilled from ScoreScales by docs/seed-demo.sql.
+  MinScaledScore INT NULL CONSTRAINT CK_Skills_MinScaledScore CHECK (MinScaledScore IS NULL OR MinScaledScore >= 0),
+  MaxScaledScore INT NULL CONSTRAINT CK_Skills_MaxScaledScore CHECK (MaxScaledScore IS NULL OR MaxScaledScore >= 0),
+  ScoreStep      INT NULL CONSTRAINT CK_Skills_ScoreStep CHECK (ScoreStep IS NULL OR ScoreStep > 0),
+  CONSTRAINT CK_Skills_ScaleRange CHECK (
+    MinScaledScore IS NULL OR MaxScaledScore IS NULL OR MinScaledScore < MaxScaledScore),
   CONSTRAINT UQ_Skills_Cert_Code UNIQUE (CertId, Code),
   -- composite target so Content can carry CertId down and pin isolation:
   CONSTRAINT UQ_Skills_Id_Cert UNIQUE (SkillId, CertId),
