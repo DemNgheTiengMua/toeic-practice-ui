@@ -3,8 +3,6 @@
     Layout = "_LearnerLayout";
     ViewData["Title"] = "Placement Result";
     var result = Model.Result;
-    var listSkill = Model.Listening;
-    var readSkill = Model.Reading;
 }
 
 <div class="context-bar">
@@ -104,16 +102,15 @@
       <div class="stat__value font-mono">@Model.TotalScoreDisplay</div>
       <div class="stat__hint font-mono text-muted">out of @Model.MaximumScore</div>
     </div>
-    <div class="stat">
-      <div class="stat__label">Listening</div>
-      <div class="stat__value font-mono">@(listSkill?.ScaledScore ?? 0)</div>
-      <div class="stat__hint font-mono text-muted">@(listSkill?.RawScore ?? 0) of @(listSkill?.TotalQuestions ?? 0) correct</div>
-    </div>
-    <div class="stat">
-      <div class="stat__label">Reading</div>
-      <div class="stat__value font-mono">@(readSkill?.ScaledScore ?? 0)</div>
-      <div class="stat__hint font-mono text-muted">@(readSkill?.RawScore ?? 0) of @(readSkill?.TotalQuestions ?? 0) correct</div>
-    </div>
+    @* #149: one card per skill of the certificate, named by the skill itself. *@
+    @foreach (var skill in Model.Skills)
+    {
+      <div class="stat">
+        <div class="stat__label">@skill.SkillName</div>
+        <div class="stat__value font-mono">@skill.ScaledScore</div>
+        <div class="stat__hint font-mono text-muted">@skill.RawScore of @skill.TotalQuestions correct</div>
+      </div>
+    }
   </div>
 
   @if (result.IsGraded && !string.IsNullOrEmpty(result.WeakerSkillName))

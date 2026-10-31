@@ -16,7 +16,8 @@ public sealed partial class AttemptEngine
         string Code,
         string Name,
         int DisplayOrder,
-        int? DurationMinutes);
+        int? DurationMinutes,
+        bool LockNavigationOneWay);
 
     /// <summary>Studio-uploaded master track per section of the exam (ExamSectionAudio).</summary>
     private Task<Dictionary<int, string>> LoadSectionMasterAudioAsync(int examId, CancellationToken cancellationToken) =>
@@ -250,7 +251,8 @@ public sealed partial class AttemptEngine
                 group.First().Section.Skill.Code,
                 group.First().Section.Skill.Name,
                 group.First().Section.Skill.DisplayOrder,
-                group.First().Section.Skill.DurationMinutes))
+                group.First().Section.Skill.DurationMinutes,
+                group.First().Section.Skill.LockNavigationOneWay))
             .OrderBy(skill => skill.DisplayOrder)
             .ToList();
         var phases = BuildAttemptPhases(
@@ -344,7 +346,8 @@ public sealed partial class AttemptEngine
                 skill.Name,
                 skill.DisplayOrder,
                 allocatedSeconds,
-                durationSeconds));
+                durationSeconds,
+                skill.LockNavigationOneWay));
             allocatedSeconds += durationSeconds;
         }
 

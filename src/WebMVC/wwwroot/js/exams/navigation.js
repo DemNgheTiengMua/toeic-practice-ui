@@ -2,8 +2,9 @@
   "use strict";
   sitting.updateNavigationForPhase = function () {
     var phase = sitting.phases[sitting.activePhaseIndex];
-    var isListening = phase && phase.skillCode === 'LIST';
-    var isReading = phase && phase.skillCode === 'READ';
+    // #149: one-way sitting is a property of the skill (Skills.LockNavigationOneWay), not of a code
+    // named after listening. A skill that allows review says so in data too.
+    var lockOneWay = !!(phase && phase.lockNavigationOneWay);
     var currentQuestion = sitting.questionMap[sitting.currentDisplayOrder];
     var currentPhaseQuestions = phase ? phase.questions : [];
     var currentPhaseQuestionIndex = currentPhaseQuestions.findIndex(function (question) {
@@ -23,7 +24,7 @@
       var isBackInAudio = isAudioDriven && question && question.displayOrder < sitting.currentDisplayOrder;
 
       cell.hidden = !!(sitting.flaggedOnly && (!answer || !answer.isFlagged)) || isFutureUnit;
-      cell.disabled = !samePhase || (isListening && question.displayOrder !== sitting.currentDisplayOrder) || isBackInAudio || isUnitLocked;
+      cell.disabled = !samePhase || (lockOneWay && question.displayOrder !== sitting.currentDisplayOrder) || isBackInAudio || isUnitLocked;
       if (isUnitLocked) {
         cell.classList.add('is-locked');
       } else {
@@ -55,17 +56,17 @@
     });
 
     if (sitting.flaggedFilterButton) {
-      sitting.flaggedFilterButton.disabled = !isReading && !isUnitLockedSandbox;
+      sitting.flaggedFilterButton.disabled = lockOneWay && !isUnitLockedSandbox;
       sitting.flaggedFilterButton.textContent = sitting.flaggedOnly ? 'Show all questions' : 'Show flagged';
       sitting.flaggedFilterButton.setAttribute('aria-pressed', sitting.flaggedOnly ? 'true' : 'false');
     }
 
     if (sitting.btnOpenReviewScreen) {
-      sitting.btnOpenReviewScreen.style.display = (isReading || isUnitLockedSandbox) ? 'inline-block' : 'none';
+      sitting.btnOpenReviewScreen.style.display = (!lockOneWay || isUnitLockedSandbox) ? 'inline-block' : 'none';
     }
 
     if (sitting.btnPrev) {
-      var isOneWay = isAudioDriven || isListening;
+      var isOneWay = isAudioDriven || lockOneWay;
       var prevQ = currentPhaseQuestionIndex > 0 ? currentPhaseQuestions[currentPhaseQuestionIndex - 1] : null;
       var isGroupLockedPrev = currentQuestion && currentQuestion.navigationMode === 'HYBRID_GROUP_LOCKED' && prevQ && prevQ.groupId !== currentQuestion.groupId;
       sitting.btnPrev.disabled = !phase
@@ -441,7 +442,7 @@
     if (currentQuestion && currentQuestion.navigationMode === 'HYBRID_GROUP_LOCKED') {
       if (sitting.activeGroupId && targetQuestion.groupId !== sitting.activeGroupId) return;
     }
-    if (isOneWay && phase.skillCode === 'LIST' && targetOrder < sitting.currentDisplayOrder) return;
+    if (isOneWay && lockOneWay && targetOrder < sitting.currentDisplayOrder) return;
 
     // Strict Unit Locked Sandbox routing
     if (targetQuestion.navigationMode === 'UNIT_LOCKED_SANDBOX') {

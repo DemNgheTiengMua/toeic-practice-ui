@@ -168,21 +168,15 @@ public sealed class AdminExamsController(
                     return RedirectToAction(nameof(Index), new { certId });
                 }
 
-                var defaultSectionCode = certCode.Trim().ToUpperInvariant() switch
-                {
-                    "IELTS" => "PAS",
-                    "VSTEP" => "R4",
-                    _ => "P5"
-                };
-
+                // #149: no invented section code. A blueprint without sections lets the service use the
+                // certificate's own first section, and refuse with a named error when it has none.
                 blueprint = new ExamBlueprintDto(
                     CertCode: certCode,
                     Title: title,
                     Purpose: purpose ?? "mock",
                     Status: status ?? "draft",
                     TargetBand: targetBand,
-                    DifficultyLevel: difficultyLevel ?? 3,
-                    Sections: [new ExamBlueprintSectionDto(defaultSectionCode, 2)]);
+                    DifficultyLevel: difficultyLevel ?? 3);
             }
 
             var result = await api.GenerateAdminExamAsync(blueprint, cancellationToken);
@@ -640,25 +634,10 @@ public sealed class AdminExamsController(
 
     private async Task<IReadOnlyList<AdminCertificateOptionDto>> LoadCertificatesAsync(CancellationToken cancellationToken)
     {
-        try
-        {
-            var exams = await api.GetAdminExamsAsync(null, null, null, 1, 1, cancellationToken);
-            if (exams.Certificates.Count > 0)
-            {
-                return exams.Certificates;
-            }
-        }
-        catch
-        {
-            // fallback
-        }
-
-        return
-        [
-            new AdminCertificateOptionDto(1, "toeic", "TOEIC"),
-            new AdminCertificateOptionDto(2, "ielts", "IELTS"),
-            new AdminCertificateOptionDto(3, "vstep", "VSTEP")
-        ];
+        // #149: the exam list already carries the real certificates. An empty list is surfaced, never
+        // replaced with a made-up TOEIC/IELTS/VSTEP trio that points at certificate ids nobody created.
+        var page = await api.GetAdminExamsAsync(null, null, null, 1, 20, cancellationToken);
+        return page.Certificates;
     }
 
     [HttpPost("{id:int}/quick-ingest/parse")]

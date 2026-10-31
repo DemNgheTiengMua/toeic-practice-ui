@@ -39,7 +39,7 @@
   </div>
 }
 
-@if (catalog.ListeningSections.Count == 0 && catalog.ReadingSections.Count == 0)
+@if (!Model.HasAnySections)
 {
   <div class="card"><div class="card__body">
     <div class="state-block">
@@ -64,6 +64,8 @@ else
     </div>
   }
 
+  @if (Model.HasDrillableSections)
+  {
   <form method="post" action="/practice/start" id="practice-form">
     @Html.AntiForgeryToken()
     <div class="card">
@@ -151,6 +153,7 @@ else
       </section>
     }
   </form>
+  }
 
   @if (catalog.OtherSections.Count > 0)
   {

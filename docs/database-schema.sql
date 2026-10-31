@@ -33,6 +33,10 @@ CREATE TABLE Skills (
   MinScaledScore INT NULL CONSTRAINT CK_Skills_MinScaledScore CHECK (MinScaledScore IS NULL OR MinScaledScore >= 0),
   MaxScaledScore INT NULL CONSTRAINT CK_Skills_MaxScaledScore CHECK (MaxScaledScore IS NULL OR MaxScaledScore >= 0),
   ScoreStep      INT NULL CONSTRAINT CK_Skills_ScoreStep CHECK (ScoreStep IS NULL OR ScoreStep > 0),
+  -- E1.4 (#149): a skill that can only be answered forwards (one listening pass, no rewinding) and
+  -- therefore offers no review screen. Was `skillCode === 'LIST'` in navigation.js; the behaviour is
+  -- now a property of the skill. Backfilled for the seeded listening skills in docs/seed-demo.sql.
+  LockNavigationOneWay BIT NOT NULL CONSTRAINT DF_Skills_LockNavigationOneWay DEFAULT 0,
   CONSTRAINT CK_Skills_ScaleRange CHECK (
     MinScaledScore IS NULL OR MaxScaledScore IS NULL OR MinScaledScore < MaxScaledScore),
   CONSTRAINT UQ_Skills_Cert_Code UNIQUE (CertId, Code),

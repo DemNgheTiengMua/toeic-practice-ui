@@ -179,6 +179,7 @@
         skillDisplayOrder: phase.skillDisplayOrder,
         startOffsetSeconds: phase.startOffsetSeconds,
         durationSeconds: phase.durationSeconds,
+        lockNavigationOneWay: !!phase.lockNavigationOneWay,
         questions: sitting.questions.filter(function (question) { return question.skillCode === phase.skillCode; })
       };
     });

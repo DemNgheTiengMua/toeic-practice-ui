@@ -39,6 +39,10 @@ public partial class Skill
 
     public int? ScoreStep { get; set; }
 
+    // E1.4 (#149): the skill is answered forwards only and offers no review screen. This used to be
+    // `skillCode === 'LIST'` in navigation.js; the behaviour is a property of the skill now.
+    public bool LockNavigationOneWay { get; set; }
+
     [InverseProperty("SkillNavigation")]
     public virtual ICollection<AttemptSkillScore> AttemptSkillScoreSkillNavigations { get; set; } = new List<AttemptSkillScore>();
 

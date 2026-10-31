@@ -21,12 +21,10 @@ Research ước lượng **14 ngày người**, 4 giai đoạn. Đã xong **~1.5
 
 ## 2. Việc tiếp theo
 
-**#149 — Render động theo `Cert.Skills`.** Không chờ ai, mở khoá 4 ticket (#150, #157, #159, #161).
+**#147 — Wizard tạo cert phải ghi được thang điểm.** #149 xong, mở khoá 4 ticket (#150, #157, #159, #161).
 
-Sửa lỗi giảng viên sẽ thấy đầu tiên khi bấm thử: `AttemptViewModelMapper.cs:72` vẫn tìm kỹ năng bằng
-`SkillCode == "LIST"`, nên cert đặt mã khác hiện **0 thẻ**.
-
-Sau đó: **#147** → **#153** → (#154/#155/#156) → #157 → #159 → #160–#162.
+Đã xong #149: mapper render mọi `Cert.Skills`, điều hướng khoá một chiều theo `Skills.LockNavigationOneWay`,
+practice empty-state theo "có section nào không". Còn lại của Giai đoạn 1 là #147 và #150.
 
 ## 3. Đã xong (đã push lên `origin/main`)
 
@@ -35,8 +33,9 @@ Sau đó: **#147** → **#153** → (#154/#155/#156) → #157 → #159 → #160�
 | #139 — khoá JWT bị commit | `6929a3a` | Key cũ bị từ chối lúc boot, script tự thay |
 | #140 — trang degraded chậm 12s | `37fc74e` | **12s → 2.1s**, breaker mở thì **0.07s**, tự hồi phục |
 | #146 — thang điểm theo skill | `d1d222a` + `ac27350` | 3 cert chấm 3 thang riêng; `GetFallbackScale` đã xoá |
+| #149 — render động theo `Cert.Skills` | _(commit này)_ | cert kỹ năng tên khác LIST/READ hiện đúng số thẻ; 1 flag cho điều hướng một chiều |
 
-`dotnet test`: **1351 pass, 0 fail**.
+`dotnet test`: **1357 pass, 0 fail, 47 skip**.
 
 ## 4. Quyết định mới chốt sau STATE.md
 

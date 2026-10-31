@@ -6,4 +6,5 @@ public sealed record AttemptPhaseInfo(
     string SkillName,
     int SkillDisplayOrder,
     int StartOffsetSeconds,
-    int DurationSeconds);
+    int DurationSeconds,
+    bool LockNavigationOneWay = false);

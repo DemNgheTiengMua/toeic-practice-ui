@@ -503,6 +503,26 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
     }
 
     [Fact]
+    public async Task GetAttemptTake_Carries_Each_Skills_One_Way_Navigation_Flag()
+    {
+        // #149: the browser used to decide one-way navigation from the skill CODE. The phase the API
+        // sends now carries the skill's own flag, so a certificate can name and configure its skills
+        // however it likes.
+        var certCode = Unique("ATTE");
+        var (certId, examId, _, _, _, _) = await SeedExamFixtureAsync(certCode);
+        await database.SqlAsync($"""
+            UPDATE Skills SET LockNavigationOneWay = 1 WHERE CertId = {certId} AND Modality = 'listening';
+            """);
+        var userId = await SeedLearnerAsync(certCode);
+        var attempt = await CreateEngine().CreateAttemptAsync(userId, certId, examId, 120);
+
+        var take = await CreateEngine().GetAttemptTakeAsync(attempt.AttemptId, userId, null);
+
+        Assert.True(take.Phases!.Single(p => p.SkillCode == "LIST").LockNavigationOneWay);
+        Assert.False(take.Phases!.Single(p => p.SkillCode == "READ").LockNavigationOneWay);
+    }
+
+    [Fact]
     public async Task SaveAnswer_Rejects_Invalid_Option()
     {
         var certCode = Unique("ATTE");

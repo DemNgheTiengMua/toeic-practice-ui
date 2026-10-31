@@ -4449,3 +4449,15 @@ GO
 
 PRINT '20. Skill score scales backfilled from ScoreScales';
 GO
+
+-- ============================================================================
+-- 21. Skills.LockNavigationOneWay backfill (#149)
+-- ============================================================================
+-- Until #149, navigation.js locked one-way by skill CODE ('LIST'). Every seeded certificate names
+-- its listening skill LIST, so marking the seeded listening skills one-way reproduces today's
+-- behaviour exactly, while a certificate with any other code no longer inherits it by accident.
+UPDATE Skills SET LockNavigationOneWay = 1 WHERE Modality = 'listening';
+GO
+
+PRINT '21. One-way navigation backfilled for seeded listening skills';
+GO

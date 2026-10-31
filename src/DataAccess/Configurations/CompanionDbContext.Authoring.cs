@@ -25,6 +25,8 @@ public partial class CompanionDbContext
         {
             entity.HasKey(e => e.SkillId).HasName("PK__Skills__DFA09187AB75DC71");
 
+            entity.Property(e => e.LockNavigationOneWay).HasDefaultValue(false);
+
             entity.HasOne(d => d.Cert).WithMany(p => p.Skills)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__Skills__CertId__6383C8BA");

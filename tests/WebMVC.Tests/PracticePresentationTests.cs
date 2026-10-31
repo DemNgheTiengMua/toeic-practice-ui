@@ -6,6 +6,31 @@ namespace WebMVC.Tests;
 
 public sealed class PracticePresentationTests
 {
+    // #149: a certificate whose only skill is Writing must see its practice content, not the
+    // "No questions to practice yet" empty state that was keyed on Listening/Reading sections.
+    [Fact]
+    public void A_writing_only_certificate_does_not_show_the_empty_state()
+    {
+        var model = new PracticeCatalogViewModel(new PracticeCatalogDto(
+            new CertificateOptionDto("DEMO", "DEMO"),
+            [], [],
+            [new PracticeSectionDto(3, "WRIT", "Writing", ModalityDto.Writing, "T1", "Task 1", 4, 1, 0, null, 0, 1)],
+            null));
+
+        Assert.True(model.HasAnySections);
+        Assert.False(model.HasDrillableSections);
+        Assert.Single(model.OtherSectionGroups);
+    }
+
+    [Fact]
+    public void A_certificate_with_no_sections_at_all_shows_the_empty_state()
+    {
+        var model = new PracticeCatalogViewModel(new PracticeCatalogDto(
+            new CertificateOptionDto("DEMO", "DEMO"), [], [], [], null));
+
+        Assert.False(model.HasAnySections);
+    }
+
     private static PracticeSessionDto Session(PracticeStatusDto status = PracticeStatusDto.InProgress) =>
         new(42, 5, "P5", "Reading", ModalityDto.Reading, 3, status, 1,
             QuestionSourceDto.All, FeedbackModeDto.Immediate, DateTimeOffset.UtcNow, null);

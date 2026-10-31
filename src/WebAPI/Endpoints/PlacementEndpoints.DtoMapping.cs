@@ -130,7 +130,8 @@ public static partial class PlacementEndpoints
             p.SkillName,
             p.SkillDisplayOrder,
             p.StartOffsetSeconds,
-            p.DurationSeconds)).ToList();
+            p.DurationSeconds,
+            p.LockNavigationOneWay)).ToList();
 
         return new PlacementTakeViewDto(
             take.PlacementId,

@@ -69,8 +69,7 @@ internal static class AttemptViewModelMapper
         TotalScoreDisplay = result.IsGraded ? result.TotalScore.ToString() : "—",
         ScoreSummary = result.IsGraded ? $"{result.TotalScore} points · {result.ResultBandName} level" : "Composite score pending AI grading",
         MaximumScore = result.CefrBands.Count > 0 ? result.CefrBands.Max(b => b.MaxTotal) : 990,
-        Listening = result.SkillScores.FirstOrDefault(s => s.SkillCode == "LIST" || s.SkillName.Contains("Listening", StringComparison.OrdinalIgnoreCase)),
-        Reading = result.SkillScores.FirstOrDefault(s => s.SkillCode == "READ" || s.SkillName.Contains("Reading", StringComparison.OrdinalIgnoreCase)),
+        Skills = result.SkillScores,
         Bands = result.CefrBands.Select(b => Band(b, result.IsGraded)).ToList()
     };
 

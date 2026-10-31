@@ -425,9 +425,63 @@ public sealed class PlacementControllerTests
         Assert.Equal("Reading", model.Result.WeakerSkillName);
         Assert.Equal("26 October 2026", model.TakenAtDisplay);
         Assert.Equal(940, model.MaximumScore);
-        Assert.Equal(380, model.Listening?.ScaledScore);
-        Assert.Equal(370, model.Reading?.ScaledScore);
+        Assert.Equal(380, model.Skills[0].ScaledScore);
+        Assert.Equal(370, model.Skills[1].ScaledScore);
         Assert.Equal("cefr__band is-current", model.Bands[1].CssClass);
+    }
+
+    // #149: the result page rendered two stat cards found by SkillCode == "LIST" / "READ". A cert whose
+    // skills are named anything else showed both cards with zeros, and its own skill names never appeared.
+    [Fact]
+    public async Task Result_renders_one_card_per_skill_for_a_certificate_whose_codes_are_not_LIST_READ()
+    {
+        var api = new TestApiClient
+        {
+            PlacementResult = new PlacementResultViewDto(
+                42, 100, 1, "DEMO", "DEMO Placement Test", new DateTimeOffset(2026, 10, 25, 23, 30, 0, TimeSpan.Zero),
+                30, 40, 750, "B1", "Intermediate",
+                [new CefrBandInfoDto("B1", "Intermediate", 550, 780, true, true, false)],
+                [
+                    new PlacementSkillScoreInfoDto(1, "COMP", "Comprehension", 16, 20, 380, "B1"),
+                    new PlacementSkillScoreInfoDto(2, "EXPR", "Expression", 14, 20, 370, "B1")
+                ],
+                "Expression",
+                null)
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.Result(42, CancellationToken.None);
+
+        var model = Assert.IsType<PlacementResultViewModel>(Assert.IsType<ViewResult>(result).Model);
+        Assert.Equal(["Comprehension", "Expression"], model.Skills.Select(s => s.SkillName));
+        Assert.Equal([380, 370], model.Skills.Select(s => s.ScaledScore));
+    }
+
+    [Fact]
+    public async Task Result_renders_every_skill_of_a_certificate_that_has_more_than_two()
+    {
+        var api = new TestApiClient
+        {
+            PlacementResult = new PlacementResultViewDto(
+                42, 100, 1, "DEMO", "DEMO Placement Test", new DateTimeOffset(2026, 10, 25, 23, 30, 0, TimeSpan.Zero),
+                30, 40, 750, "B1", "Intermediate",
+                [new CefrBandInfoDto("B1", "Intermediate", 550, 780, true, true, false)],
+                [
+                    new PlacementSkillScoreInfoDto(1, "A", "Alpha", 1, 2, 10, "B1"),
+                    new PlacementSkillScoreInfoDto(2, "B", "Beta", 2, 2, 20, "B1"),
+                    new PlacementSkillScoreInfoDto(3, "C", "Gamma", 0, 2, 30, "B1"),
+                    new PlacementSkillScoreInfoDto(4, "D", "Delta", 2, 2, 40, "B1"),
+                    new PlacementSkillScoreInfoDto(5, "E", "Epsilon", 1, 2, 50, "B1")
+                ],
+                null,
+                null)
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.Result(42, CancellationToken.None);
+
+        var model = Assert.IsType<PlacementResultViewModel>(Assert.IsType<ViewResult>(result).Model);
+        Assert.Equal(5, model.Skills.Count);
     }
 
     [Fact]

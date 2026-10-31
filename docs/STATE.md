@@ -20,6 +20,7 @@
 | D8 | **Xoá trang `/admin/score-conversion`** — cấu hình điểm thuộc về định nghĩa cert | 10-30 | Đã cho tạo cert thì không cần màn hình convert riêng | ⚠️ Trang này là nơi DUY NHẤT ghi `ScoreScale`/`ScoreBand` → phải chuyển logic sang wizard, nếu không mọi cert mới vỡ |
 | D9 | Quy trình làm việc: **làm xong từng mục, manual test thấy đúng mới sang mục tiếp** | 10-30 | Tránh bloat, tránh bug dồn | Mỗi mục phải có khối "Done khi" trước khi bắt đầu |
 | D10 | **Cột thang điểm trên `Skills` là NULLable**, backfill từ `ScoreScales`, chưa ép NOT NULL | 10-31 | NOT NULL làm vỡ 12 file schema-test + 16 seed insert trong một commit | "Thiếu cấu hình = lỗi" ép lúc **gọi** (ném `ScoreConversionException` nêu tên skill), không phải lúc **lưu** |
+| D11 | **`Skills.LockNavigationOneWay` là BIT NOT NULL DEFAULT 0**, seed backfill `1` cho mọi skill `Modality = 'listening'` | 11-01 | Phải giữ nguyên hành vi cert đã seed: TOEIC Listening khoá một chiều hôm nay | Cert mới mặc định 0 = đi lại tự do, đúng như trước #149 khi mã không phải `'LIST'`. Đảo lại thì mọi cert tự tạo lập tức mất điều hướng tự do |
 
 ## 2. Quyết định còn treo
 

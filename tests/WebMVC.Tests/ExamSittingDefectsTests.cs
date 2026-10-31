@@ -43,7 +43,7 @@ public sealed class ExamSittingDefectsTests
             Questions: [listening, reading],
             Phases:
             [
-                new AttemptPhaseDto(1, "LIST", "Listening", 1, 0, 2700),
+                new AttemptPhaseDto(1, "LIST", "Listening", 1, 0, 2700, LockNavigationOneWay: true),
                 new AttemptPhaseDto(2, "READ", "Reading", 2, 2700, 4500)
             ],
             ActiveSkillId: 9,
@@ -106,5 +106,22 @@ public sealed class ExamSittingDefectsTests
         // Exactly one phase is marked current, and it is the one the server reports as active.
         Assert.Equal("step", display.Phases[0].CurrentStep);
         Assert.Equal("false", display.Phases[1].CurrentStep);
+    }
+
+    /// <summary>
+    /// #149: one-way navigation and the review screen used to be decided by the skill CODE ('LIST' /
+    /// 'READ'). The browser must receive the skill's own flag instead, so a certificate naming its
+    /// skills anything else keeps the behaviour it configured.
+    /// </summary>
+    [Fact]
+    public void Phases_Carry_Each_Skills_One_Way_Flag_Not_Just_Its_Code()
+    {
+        var display = new ExamTakeViewModel(TwoSkillTake()).Display;
+
+        using var payload = JsonDocument.Parse(display.PhasesJson);
+        var phases = payload.RootElement.EnumerateArray().ToList();
+
+        Assert.True(phases[0].GetProperty("lockNavigationOneWay").GetBoolean());
+        Assert.False(phases[1].GetProperty("lockNavigationOneWay").GetBoolean());
     }
 }
