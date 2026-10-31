@@ -51,6 +51,16 @@ public static partial class AdminEndpoints
             {
                 return Problem(StatusCodes.Status400BadRequest, "Validation error", ApiError.Codes.Validation, ex.Message);
             }
+            // E1.2 (#147): the certificate configuration rules are the admin's to fix, so they come
+            // back as a 400 carrying the message that names the gap, band or missing rubric.
+            // Results.Json rather than Problem(): AddApiProblemDetails rewrites every non-404/429
+            // code extension to UNEXPECTED, which would erase the code the admin client switches on.
+            catch (ScoreConversionException ex)
+            {
+                return Results.Json(
+                    new { code = ApiError.Codes.ScoreConversionInvalid, title = "Certificate configuration invalid", status = 400, detail = ex.Message },
+                    statusCode: StatusCodes.Status400BadRequest);
+            }
         });
     }
 }

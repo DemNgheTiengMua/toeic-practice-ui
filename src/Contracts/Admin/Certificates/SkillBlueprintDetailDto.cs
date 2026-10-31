@@ -9,4 +9,7 @@ public sealed record SkillBlueprintDetailDto(
     ModalityDto Modality,
     int DisplayOrder,
     int? DurationMinutes,
-    IReadOnlyList<SectionBlueprintDetailDto> Sections);
+    IReadOnlyList<SectionBlueprintDetailDto> Sections,
+    int? MinScaledScore = null,
+    int? MaxScaledScore = null,
+    int? ScoreStep = null);

@@ -55,6 +55,16 @@ public sealed partial class CertificateService
             .OrderBy(b => b.DisplayOrder)
             .ToListAsync(cancellationToken);
 
+        // E1.2 (#147): the rubric travels with the blueprint so the wizard can show what the grader
+        // is told to score against.
+        var criteria = await db.GradingCriteria
+            .AsNoTracking()
+            .Where(c => c.CertId == cert.CertId)
+            .OrderBy(c => c.DisplayOrder)
+            .ToListAsync(cancellationToken);
+
+        var skillCodesById = skills.ToDictionary(s => s.SkillId, s => s.Code);
+
         return new CertificateBlueprintDetailDto(
             cert.CertId,
             cert.Code,
@@ -92,7 +102,19 @@ public sealed partial class CertificateService
                     sec.RequiredKeywordCount,
                     sec.ExpectedQuestionCount,
                     sec.AllowedComponentTypesJson,
-                    sec.ToolsConfigJson)).ToList())).ToList(),
-            bands.Select(b => new BandDto(b.Code, b.Name, b.MinTotal, b.MaxTotal)).ToList());
+                    sec.ToolsConfigJson)).ToList(),
+                s.MinScaledScore,
+                s.MaxScaledScore,
+                s.ScoreStep)).ToList(),
+            bands.Select(b => new BandDto(b.Code, b.Name, b.MinTotal, b.MaxTotal)).ToList(),
+            criteria.Select(c => new GradingCriterionDto(
+                c.CriterionId,
+                skillCodesById.TryGetValue(c.SkillId, out var code) ? code : string.Empty,
+                c.Code,
+                c.Name,
+                c.MaxScore,
+                c.Weight,
+                c.DisplayOrder,
+                c.RubricDescription)).ToList());
     }
 }

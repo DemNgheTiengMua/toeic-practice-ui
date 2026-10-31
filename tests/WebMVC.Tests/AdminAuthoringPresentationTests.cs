@@ -13,7 +13,6 @@ public sealed class AdminAuthoringPresentationTests
     [InlineData("_QuickIngestModal")]
     [InlineData("Exams")]
     [InlineData("ExamEditor")]
-    [InlineData("ScoreConversion")]
     public void AuthoringViews_UseExternalAssets(string view)
     {
         var text = ReadComposedView(view);

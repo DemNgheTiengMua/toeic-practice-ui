@@ -54,7 +54,6 @@ builder.Services.AddScoped<ISupportClient>(sp => sp.GetRequiredService<ICompanio
 builder.Services.AddScoped<IAiInsightsClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
 builder.Services.AddScoped<IMediaClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
 builder.Services.AddScoped<IAdminPackagesClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
-builder.Services.AddScoped<IAdminScoreConversionClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
 builder.Services.AddScoped<IAdminOrdersClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
 builder.Services.AddScoped<IAdminUsersClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
 builder.Services.AddScoped<IAdminDashboardClient>(sp => sp.GetRequiredService<ICompanionApiClient>());

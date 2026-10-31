@@ -32,6 +32,11 @@ public sealed partial class CertificateService
         if (request.Skills is null || request.Skills.Count == 0)
             throw new ArgumentException("Certificate must define at least one skill.", nameof(request));
 
+        // E1.2 (#147): the wizard is the only place a certificate's scoring is configured, so the
+        // invariants are checked here, before anything is written. A certificate that reaches the
+        // database with no bands cannot be scored and fails every placement submission.
+        CertificateConfigurationValidator.Validate(request);
+
         Certificate cert;
         if (request.CertId.HasValue && request.CertId.Value > 0)
         {
@@ -90,6 +95,9 @@ public sealed partial class CertificateService
                 skill.Modality = modalityStr;
                 skill.DisplayOrder = skillDto.DisplayOrder;
                 skill.DurationMinutes = skillDto.DurationMinutes;
+                skill.MinScaledScore = request.MinScaledScore;
+                skill.MaxScaledScore = request.MaxScaledScore;
+                skill.ScoreStep = request.ScoreStep;
             }
             else
             {
@@ -103,6 +111,9 @@ public sealed partial class CertificateService
                     skill.Modality = modalityStr;
                     skill.DisplayOrder = skillDto.DisplayOrder;
                     skill.DurationMinutes = skillDto.DurationMinutes;
+                    skill.MinScaledScore = request.MinScaledScore;
+                    skill.MaxScaledScore = request.MaxScaledScore;
+                    skill.ScoreStep = request.ScoreStep;
                 }
                 else
                 {
@@ -113,7 +124,10 @@ public sealed partial class CertificateService
                         Name = skillDto.Name.Trim(),
                         Modality = modalityStr,
                         DisplayOrder = skillDto.DisplayOrder,
-                        DurationMinutes = skillDto.DurationMinutes
+                        DurationMinutes = skillDto.DurationMinutes,
+                        MinScaledScore = request.MinScaledScore,
+                        MaxScaledScore = request.MaxScaledScore,
+                        ScoreStep = request.ScoreStep
                     };
                     db.Skills.Add(skill);
                     await db.SaveChangesAsync(cancellationToken);
@@ -225,12 +239,186 @@ public sealed partial class CertificateService
 
         await db.SaveChangesAsync(cancellationToken);
 
+        // E1.2 (#147): bands and rubric, written in the same save as the certificate that owns
+        // them. Before this they lived only behind /admin/score-conversion, so a certificate
+        // created here had zero bands and could never produce a BandCode.
+        await PersistScalesAsync(cert.CertId, request, cancellationToken);
+        await PersistBandsAsync(cert.CertId, request.Bands!, cancellationToken);
+        await PersistCriteriaAsync(cert.CertId, request.Criteria, cancellationToken);
+
         return new SaveCertificateWizardResultDto(
             cert.CertId,
             cert.Code,
             cert.Name,
             totalSkills,
             totalSections);
+    }
+
+    /// <summary>
+    /// The raw→scaled rows the engine reads. Generated from the skill's own range and step: the
+    /// wizard's contract is the three numbers, not a hand-maintained table.
+    /// </summary>
+    private async Task PersistScalesAsync(
+        int certId, SaveCertificateWizardRequest request, CancellationToken cancellationToken)
+    {
+        var maxRaw = request.Skills
+            .SelectMany(s => s.Sections ?? [])
+            .Where(s => s.ExpectedQuestionCount is > 0)
+            .Sum(s => s.ExpectedQuestionCount!.Value);
+        if (maxRaw <= 0)
+        {
+            maxRaw = request.MaxScaledScore!.Value;
+        }
+
+        var skills = await db.Skills
+            .Where(s => s.CertId == certId)
+            .ToListAsync(cancellationToken);
+
+        var existing = await db.ScoreScales
+            .Where(s => s.CertId == certId && s.ExamId == null && s.SkillId != null)
+            .ToListAsync(cancellationToken);
+        if (existing.Count > 0)
+        {
+            db.ScoreScales.RemoveRange(existing);
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
+        var min = request.MinScaledScore!.Value;
+        var max = request.MaxScaledScore!.Value;
+        var step = request.ScoreStep!.Value;
+
+        foreach (var skill in skills)
+        {
+            for (var raw = 0; raw <= maxRaw; raw++)
+            {
+                var fraction = maxRaw == 0 ? 0d : (double)raw / maxRaw;
+                var scaled = min + fraction * (max - min);
+
+                // Snap to the skill's grid. Every raw score maps, so the engine interpolates
+                // between rows rather than falling back to a guessed range.
+                var snapped = (int)Math.Round(scaled / step, MidpointRounding.AwayFromZero) * step;
+
+                db.ScoreScales.Add(new ScoreScale
+                {
+                    CertId = certId,
+                    SkillId = skill.SkillId,
+                    ExamId = null,
+                    RawScore = raw,
+                    ScaledScore = Math.Clamp(snapped, min, max)
+                });
+            }
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task PersistBandsAsync(
+        int certId, IReadOnlyList<SaveScoreBandWizardDto> bands, CancellationToken cancellationToken)
+    {
+        var existing = await db.ScoreBands
+            .Where(b => b.CertId == certId)
+            .ToListAsync(cancellationToken);
+
+        // trg_ScoreBands_NoOverlap fires per statement, so an edit that shifts a boundary trips it
+        // while both the old and new row exist. Clear the certificate's bands, then write the new
+        // set inside one transaction: the trigger only ever sees a consistent final state.
+        await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
+
+        if (existing.Count > 0)
+        {
+            db.ScoreBands.RemoveRange(existing);
+            // The following INSERT runs as raw SQL, so the deletes must be flushed first or the
+            // trigger still sees the old rows and reports an overlap against the new set.
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
+        // One INSERT ... SELECT: trg_ScoreBands_NoOverlap is AFTER INSERT and validates the table as
+        // a whole, so EF's row-at-a-time statements trip it on the first half-written pair. A single
+        // set-based insert presents the trigger with the finished set.
+        if (bands.Count > 0)
+        {
+            var parameters = new List<object> { certId };
+            var selects = new List<string>();
+            for (var i = 0; i < bands.Count; i++)
+            {
+                var b = bands[i];
+                var p = i * 5 + 1;
+                selects.Add($"SELECT {{{p}}} AS Code, {{{p + 1}}} AS Name, {{{p + 2}}} AS MinTotal, {{{p + 3}}} AS MaxTotal, {{{p + 4}}} AS DisplayOrder");
+                parameters.Add(b.Code.Trim());
+                parameters.Add(b.Name.Trim());
+                parameters.Add(b.MinTotal);
+                parameters.Add(b.MaxTotal);
+                parameters.Add(b.DisplayOrder);
+            }
+
+            var sql =
+                "INSERT INTO ScoreBands (CertId, Code, Name, MinTotal, MaxTotal, DisplayOrder) " +
+                "SELECT {0}, v.Code, v.Name, v.MinTotal, v.MaxTotal, v.DisplayOrder " +
+                "FROM (" + string.Join(" UNION ALL ", selects) + ") v";
+
+            await db.Database.ExecuteSqlRawAsync(sql, parameters.ToArray(), cancellationToken);
+        }
+
+        await tx.CommitAsync(cancellationToken);
+    }
+
+    private async Task PersistCriteriaAsync(
+        int certId, IReadOnlyList<SaveGradingCriterionWizardDto>? criteria, CancellationToken cancellationToken)
+    {
+        if (criteria is null || criteria.Count == 0)
+        {
+            return;
+        }
+
+        var skills = await db.Skills
+            .Where(s => s.CertId == certId)
+            .ToListAsync(cancellationToken);
+        var skillIdsByCode = skills.ToDictionary(s => s.Code, s => s.SkillId, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var dto in criteria)
+        {
+            if (!skillIdsByCode.TryGetValue(dto.SkillCode.Trim(), out var skillId))
+            {
+                throw new ArgumentException(
+                    $"Criterion '{dto.Code}' refers to skill '{dto.SkillCode}', which this certificate does not define.",
+                    nameof(criteria));
+            }
+
+            var existing = await db.GradingCriteria
+                .FirstOrDefaultAsync(
+                    c => c.CertId == certId
+                         && c.SkillId == skillId
+                         && (dto.CriterionId.HasValue
+                             ? c.CriterionId == dto.CriterionId.Value
+                             : c.Code == dto.Code),
+                    cancellationToken);
+
+            if (existing is null)
+            {
+                db.GradingCriteria.Add(new GradingCriterion
+                {
+                    CertId = certId,
+                    SkillId = skillId,
+                    Code = dto.Code.Trim(),
+                    Name = dto.Name.Trim(),
+                    MaxScore = dto.MaxScore,
+                    Weight = dto.Weight > 0 ? dto.Weight : 1.0m,
+                    DisplayOrder = dto.DisplayOrder,
+                    RubricDescription = dto.RubricDescription?.Trim()
+                });
+            }
+            else
+            {
+                existing.Code = dto.Code.Trim();
+                existing.Name = dto.Name.Trim();
+                existing.MaxScore = dto.MaxScore;
+                existing.Weight = dto.Weight > 0 ? dto.Weight : 1.0m;
+                existing.DisplayOrder = dto.DisplayOrder;
+                existing.RubricDescription = dto.RubricDescription?.Trim();
+            }
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
     }
 
     private static string FormatUpperSnakeCase(string input)

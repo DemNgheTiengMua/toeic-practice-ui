@@ -728,6 +728,9 @@ CREATE TABLE GradingCriteria (
   SkillId      INT NOT NULL,
   Code         VARCHAR(20) NOT NULL,
   Name         NVARCHAR(120) NOT NULL,
+  -- E1.2 (#147): the visible description of each score level. Without it the grader was told to
+  -- "score according to the rubric" while no rubric text existed anywhere in the system.
+  RubricDescription NVARCHAR(MAX) NULL,
   MaxScore     DECIMAL(5,2) NOT NULL CONSTRAINT CK_Criteria_MaxScore CHECK (MaxScore > 0),
   Weight       DECIMAL(5,2) NOT NULL DEFAULT 1.0,
   DisplayOrder INT NOT NULL DEFAULT 0,

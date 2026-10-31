@@ -47,7 +47,92 @@
           </div>
         </div>
 
-        <!-- Section Weights Configurator -->
+        <!-- E1.2 (#147): the certificate's own scale and bands. This is the only place they are
+             configured; the certificate is unusable until both are complete, which is why the
+             validator rejects a save that leaves them out. -->
+        <div style="background: #fff; border: 2px solid var(--color-ink, #14181d); padding: 1.25rem; margin-bottom: 1.5rem;">
+          <h3 style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; margin-top: 0; margin-bottom: 0.5rem; letter-spacing: 0.05em;">
+            Score Scale &amp; Bands
+          </h3>
+          <p class="text-xs text-muted" style="margin-top: 0; margin-bottom: 1rem;">
+            The range every skill is scored on, and the bands a total falls into. Bands must cover the
+            range with no gap and no overlap, or the save is refused.
+          </p>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.75rem; margin-bottom: 1.25rem;">
+            <label class="field">
+              <span class="field__label">Minimum score</span>
+              <input name="MinScaledScore" id="minScaledScore" type="number" min="0" class="field__input band-scale" value="@(Model.Form.MinScaledScore ?? 0)" />
+            </label>
+            <label class="field">
+              <span class="field__label">Maximum score</span>
+              <input name="MaxScaledScore" id="maxScaledScore" type="number" min="1" class="field__input band-scale" value="@(Model.Form.MaxScaledScore ?? 100)" />
+            </label>
+            <label class="field">
+              <span class="field__label">Score step</span>
+              <input name="ScoreStep" id="scoreStep" type="number" min="1" class="field__input band-scale" value="@(Model.Form.ScoreStep ?? 1)" />
+            </label>
+          </div>
+
+          <div style="border-top: 1px solid var(--color-border, #ccd2d6); padding-top: 1rem;">
+            <strong style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 0.9rem; display: block; margin-bottom: 0.5rem;">
+              Bands
+            </strong>
+            <div id="wizardBandsContainer">
+              @for (int bIdx = 0; bIdx < (Model.Form.Bands?.Count ?? 0); bIdx++)
+              {
+                var b = Model.Form.Bands![bIdx];
+                <div class="band-row" style="display: grid; grid-template-columns: 1fr 1fr 90px 90px 40px; gap: 0.5rem; margin-bottom: 0.5rem;">
+                  <input name="Bands[@bIdx].Code" class="field__input band-code" placeholder="Code (A1)" value="@b.Code" />
+                  <input name="Bands[@bIdx].Name" class="field__input" placeholder="Name" value="@b.Name" />
+                  <input name="Bands[@bIdx].MinTotal" class="field__input band-min" type="number" placeholder="From" value="@b.MinTotal" />
+                  <input name="Bands[@bIdx].MaxTotal" class="field__input band-max" type="number" placeholder="To" value="@b.MaxTotal" />
+                  <input name="Bands[@bIdx].DisplayOrder" type="hidden" value="@b.DisplayOrder" />
+                  <button type="button" class="btn btn--ghost btn--sm js-remove-band" aria-label="Remove band">&times;</button>
+                </div>
+              }
+            </div>
+            <button type="button" class="btn btn--ghost btn--sm" id="addBandButton">+ Add band</button>
+          </div>
+        </div>
+
+        <!-- E1.2 (#147): the rubric the grader is told to follow. Without a description the
+             grader was asked to score "according to the rubric" with no rubric text anywhere. -->
+        <div style="background: #fff; border: 2px solid var(--color-ink, #14181d); padding: 1.25rem; margin-bottom: 1.5rem;">
+          <h3 style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; margin-top: 0; margin-bottom: 0.5rem; letter-spacing: 0.05em;">
+            Grading Rubric
+          </h3>
+          <p class="text-xs text-muted" style="margin-top: 0; margin-bottom: 1rem;">
+            One row per criterion. The description is what the grader scores against, so it must say
+            what each score level looks like.
+          </p>
+
+          <div id="wizardCriteriaContainer">
+            @for (int cIdx = 0; cIdx < (Model.Form.Criteria?.Count ?? 0); cIdx++)
+            {
+              var c = Model.Form.Criteria![cIdx];
+              <div class="criterion-row" style="display: grid; grid-template-columns: 100px 1fr 90px 90px 40px; gap: 0.5rem; margin-bottom: 0.5rem; align-items: start;">
+                <select name="Criteria[@cIdx].SkillCode" class="field__input criterion-skill">
+                  @foreach (var sk in Model.Form.Skills)
+                  {
+                    <option value="@sk.Code" selected="@(sk.Code == c.SkillCode)">@sk.Code</option>
+                  }
+                </select>
+                <input name="Criteria[@cIdx].Code" class="field__input" placeholder="Criterion code" value="@c.Code" />
+                <input name="Criteria[@cIdx].MaxScore" class="field__input" type="number" step="0.5" placeholder="Max" value="@c.MaxScore" />
+                <input name="Criteria[@cIdx].Weight" class="field__input" type="number" step="0.5" placeholder="Weight" value="@c.Weight" />
+                <input name="Criteria[@cIdx].DisplayOrder" type="hidden" value="@c.DisplayOrder" />
+                <input name="Criteria[@cIdx].CriterionId" type="hidden" value="@c.CriterionId" />
+                <input name="Criteria[@cIdx].Name" type="hidden" value="@c.Name" />
+                <textarea name="Criteria[@cIdx].RubricDescription" class="field__input criterion-rubric" rows="2" placeholder="Describe each score level">@c.RubricDescription</textarea>
+                <button type="button" class="btn btn--ghost btn--sm js-remove-criterion" aria-label="Remove criterion">&times;</button>
+              </div>
+            }
+          </div>
+          <button type="button" class="btn btn--ghost btn--sm" id="addCriterionButton">+ Add criterion</button>
+        </div>
+
+
         <div style="background: #fff; border: 2px solid var(--color-ink, #14181d); padding: 1.25rem; margin-bottom: 1.5rem;">
           <h3 style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; margin-top: 0; margin-bottom: 0.5rem; letter-spacing: 0.05em;">
             Relative Section Multipliers &amp; Weights

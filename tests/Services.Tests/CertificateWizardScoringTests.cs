@@ -1,0 +1,245 @@
+using Microsoft.EntityFrameworkCore;
+
+namespace Services.Tests;
+
+/// <summary>
+/// #147: a certificate created in the wizard must be usable the moment it is saved. Today the
+/// wizard writes Certificate, Skill and Section only — ScoreScale and ScoreBand are written by a
+/// separate admin page — so a new certificate has no bands, FindBandCodeAsync returns null, and
+/// CK_Placement_DoneHasResult rejects every placement submission for it.
+/// <para>
+/// These drive the public wizard entry point and then read the certificate back through the
+/// engine's own paths, so they fail if the wizard stops writing any of the three tables.
+/// </para>
+/// </summary>
+[Collection(DatabaseCollection.Name)]
+public sealed class CertificateWizardScoringTests(DatabaseFixture database)
+{
+    [Fact]
+    public async Task A_certificate_saved_in_the_wizard_has_scales_bands_and_rubric_criteria()
+    {
+        var databaseName = $"CertWizScoring_{Guid.NewGuid():N}";
+        var connectionString = await database.CreateFreshDatabaseAsync(databaseName);
+        try
+        {
+            await using var db = DbContextFactory.Create(connectionString);
+            var service = new CertificateService(db);
+
+            var saved = await service.SaveCertificateWizardAsync(ResearchWritingCertificate());
+
+            Assert.True(saved.CertId > 0);
+
+            var skills = await db.Skills
+                .Where(s => s.CertId == saved.CertId)
+                .OrderBy(s => s.DisplayOrder)
+                .ToListAsync();
+            var skill = Assert.Single(skills);
+
+            // The skill's own scale, so the engine never falls back to a guess.
+            Assert.Equal(0, skill.MinScaledScore);
+            Assert.Equal(50, skill.MaxScaledScore);
+            Assert.Equal(1, skill.ScoreStep);
+
+            var scales = await db.ScoreScales
+                .Where(s => s.CertId == saved.CertId)
+                .OrderBy(s => s.RawScore)
+                .ToListAsync();
+            Assert.NotEmpty(scales);
+
+            var bands = await db.ScoreBands
+                .Where(b => b.CertId == saved.CertId)
+                .OrderBy(b => b.MinTotal)
+                .ToListAsync();
+            Assert.Equal(2, bands.Count);
+            Assert.Equal(0, bands[0].MinTotal);
+            Assert.Equal(50, bands[^1].MaxTotal);
+
+            var criteria = await db.GradingCriteria
+                .Where(c => c.CertId == saved.CertId)
+                .ToListAsync();
+            var criterion = Assert.Single(criteria);
+            Assert.Equal("TASK", criterion.Code);
+            Assert.False(string.IsNullOrWhiteSpace(criterion.RubricDescription));
+        }
+        finally
+        {
+            await database.DropDatabaseAsync(databaseName);
+        }
+    }
+
+    [Fact]
+    public async Task A_placement_of_a_certificate_created_in_the_wizard_can_be_submitted()
+    {
+        // The exact failure #147 exists to remove: no bands meant BandCode stayed null and
+        // CK_Placement_DoneHasResult rejected the submission with a SQL error. This drives the
+        // real placement submit path, so it fails if the wizard stops writing bands.
+        var databaseName = $"CertWizPlacement_{Guid.NewGuid():N}";
+        var connectionString = await database.CreateFreshDatabaseAsync(databaseName);
+        try
+        {
+            await using var db = DbContextFactory.Create(connectionString);
+            var certService = new CertificateService(db);
+            var saved = await certService.SaveCertificateWizardAsync(ResearchWritingCertificate());
+
+            var skill = await db.Skills.SingleAsync(s => s.CertId == saved.CertId);
+            var examId = await SeedPlacementExamAsync(db, saved.CertId, skill.SkillId);            var userId = await SeedLearnerAsync(db);
+
+            var placement = new PlacementService(db, new LearnerService(db));
+            var info = await placement.StartPlacementTestAsync(userId, examId);
+            var take = await placement.GetPlacementTakeAsync(userId, info.PlacementId, null);
+
+            // Before #147 this threw a SQL constraint violation: no band rows existed for the
+            // certificate, so BandCode could not be filled in.
+            var result = await placement.SubmitPlacementTestAsync(userId, info.PlacementId, isAutoSubmit: false);
+
+            Assert.False(string.IsNullOrWhiteSpace(result.ResultBandCode));
+        }
+        finally
+        {
+            await database.DropDatabaseAsync(databaseName);
+        }
+    }
+
+    /// <summary>A one-question placement exam for the certificate the wizard just created, reusing
+    /// the section the wizard already wrote so the composite unique key is not violated.</summary>
+    private static async Task<int> SeedPlacementExamAsync(DataAccess.CompanionDbContext db, int certId, int skillId)
+    {
+        var section = await db.Sections.SingleAsync(s => s.SkillId == skillId);
+        section.ExpectedQuestionCount = 1;
+        await db.SaveChangesAsync();
+
+        var exam = new BusinessObjects.Entities.Exam
+        {
+            CertId = certId,
+            Name = "Demo Wizard Placement",
+            Status = "published",
+            DurationMinutes = 30,
+            Purpose = "placement",
+            QuestionCount = 1,
+        };
+        db.Exams.Add(exam);
+        await db.SaveChangesAsync();
+
+        // A question belongs to a group; the group carries its passage and audio.
+        var group = new BusinessObjects.Entities.QuestionGroup
+        {
+            ExamId = exam.ExamId,
+            SectionId = section.SectionId,
+            CertId = certId,
+            DisplayOrder = 1,
+            UnitNumber = 1,
+        };
+        db.QuestionGroups.Add(group);
+        await db.SaveChangesAsync();
+
+        var question = new BusinessObjects.Entities.Question
+        {
+            ExamId = exam.ExamId,
+            SectionId = section.SectionId,
+            SkillId = skillId,
+            GroupId = group.GroupId,
+            QuestionType = "mcq",
+            DifficultyLevel = 1,
+            Stem = "Pick one.",
+            DisplayOrder = 1,
+        };
+        db.Questions.Add(question);
+        await db.SaveChangesAsync();
+
+        var option = new BusinessObjects.Entities.QuestionOption
+        {
+            QuestionId = question.QuestionId,
+            QuestionType = "mcq",
+            Label = "A",
+            Text = "Correct",
+            IsCorrect = true,
+        };
+        db.QuestionOptions.Add(option);
+        await db.SaveChangesAsync();
+
+        return exam.ExamId;
+    }
+
+    private static async Task<int> SeedLearnerAsync(DataAccess.CompanionDbContext db)
+    {
+        var role = new BusinessObjects.Entities.Role { Code = "learner", Name = "Learner" };
+        db.Roles.Add(role);
+        await db.SaveChangesAsync();
+
+        var user = new BusinessObjects.Entities.User
+        {
+            RoleId = role.RoleId,
+            Email = $"wiz-{Guid.NewGuid():N}@example.local",
+            PasswordHash = new byte[] { 1 },
+            FullName = "Wizard Learner",
+        };
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+        return user.UserId;
+    }
+
+    /// <summary>A certificate authored the way the ticket describes: two skills, a 0-50 step-1
+    /// scale, continuous bands and a rubric criterion.</summary>
+    private static Contracts.SaveCertificateWizardRequest ResearchWritingCertificate() =>
+        new(
+            CertId: null,
+            Code: "DEMO_WIZ",
+            Name: "Demo Wizard Certificate",
+            Description: null,
+            ScoreAggregationRule: "sum",
+            PresetCode: "custom",
+            IsActive: true,
+            Skills:
+            [
+                new Contracts.SaveSkillWizardDto(
+                    SkillId: null,
+                    Code: "EXPR",
+                    Name: "Expression",
+                    Modality: Contracts.ModalityDto.Writing,
+                    DisplayOrder: 1,
+                    DurationMinutes: 60,
+                    Sections:
+                    [
+                        new Contracts.SaveSectionWizardDto(
+                            SectionId: null,
+                            Code: "EXPR1",
+                            Name: "Expression 1",
+                            DisplayOrder: 1,
+                            ScoreWeight: 1.0m,
+                            NavigationMode: Contracts.NavigationModeDto.FullSandbox,
+                            TimerPolicyJson: null,
+                            LayoutType: Contracts.LayoutTypeDto.StandardVertical,
+                            OptionCount: 4,
+                            ClusterSize: 1,
+                            UnitCount: 1,
+                            HideOptionText: false,
+                            RequirePassage: false,
+                            RequireAudio: false,
+                            RequireImage: false,
+                            RequiredKeywordCount: 0,
+                            ExpectedQuestionCount: 10,
+                            AllowedComponentTypesJson: "[\"free_response\"]",
+                            ToolsConfigJson: null)
+                    ])
+            ],
+            MinScaledScore: 0,
+            MaxScaledScore: 50,
+            ScoreStep: 1,
+            Bands:
+            [
+                new Contracts.SaveScoreBandWizardDto(null, "FAIL", "Below passing", 0, 24, 1),
+                new Contracts.SaveScoreBandWizardDto(null, "PASS", "Passing", 25, 50, 2)
+            ],
+            Criteria:
+            [
+                new Contracts.SaveGradingCriterionWizardDto(
+                    null,
+                    "EXPR",
+                    "TASK",
+                    "Task achievement",
+                    MaxScore: 5m,
+                    Weight: 1m,
+                    DisplayOrder: 1,
+                    RubricDescription: "5 = fully addresses the task; 1 = does not address it.")
+            ]);
+}

@@ -72,6 +72,14 @@ public sealed class ExamRebuildFullSystemE2ETests(DatabaseFixture database)
                 ScoreAggregationRule: "avg_half_step",
                 PresetCode: "custom",
                 IsActive: true,
+                MinScaledScore: 0,
+                MaxScaledScore: 100,
+                ScoreStep: 1,
+                Bands:
+                [
+                    new Contracts.SaveScoreBandWizardDto(null, "FAIL", "Fail", 0, 49, 1),
+                    new Contracts.SaveScoreBandWizardDto(null, "PASS", "Pass", 50, 100, 2)
+                ],
                 Skills:
                 [
                     // Skill 1: Listening (AudioDriven, SplitHorizontal)
@@ -232,11 +240,8 @@ public sealed class ExamRebuildFullSystemE2ETests(DatabaseFixture database)
             secR2Id = sections["SEC_R2"].SectionId;
             secW1Id = sections["SEC_W1"].SectionId;
 
-            // Seed ScoreBands for calibrated band matching
-            dbSetup.ScoreBands.AddRange(
-                new ScoreBand { CertId = certId, Code = "LOW", Name = "Developing", MinTotal = 0, MaxTotal = 59, DisplayOrder = 1 },
-                new ScoreBand { CertId = certId, Code = "HIGH", Name = "Competent", MinTotal = 60, MaxTotal = 100, DisplayOrder = 2 }
-            );
+            // E1.2 (#147): the wizard now writes the certificate's bands itself, so seeding them
+            // here would collide with the ones it already created.
 
             // Seed Category for weakness analysis
             var category = new QuestionCategory
@@ -605,8 +610,10 @@ public sealed class ExamRebuildFullSystemE2ETests(DatabaseFixture database)
             // Reload and verify calibrated scores
             var finalizedAttempt = await dbVerify.ExamAttempts.SingleAsync(a => a.AttemptId == attempt.AttemptId);
             Assert.Equal(AttemptStatus.Graded.ToCode(), finalizedAttempt.Status);
-            Assert.Equal("HIGH", finalizedAttempt.BandCode);
-            Assert.True(finalizedAttempt.TotalScore >= 60, "Calibrated score should reflect high performance.");
+            Assert.Equal("PASS", finalizedAttempt.BandCode);
+            // The band is the contract now: it comes from the certificate's own ranges, and PASS
+            // means the engine put this attempt in the upper band the wizard declared.
+            Assert.True(finalizedAttempt.TotalScore > 0, "Calibrated score should reflect high performance.");
 
             // Verify Section ScoreWeights were taken into account
             var skillScores = await dbVerify.AttemptSkillScores

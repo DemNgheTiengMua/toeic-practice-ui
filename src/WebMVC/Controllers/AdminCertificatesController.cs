@@ -9,8 +9,7 @@ namespace WebMVC.Controllers;
 public sealed class AdminCertificatesController(
     CurrentUser currentUser,
     IAdminCertificatesClient api,
-    ILogger<AdminCertificatesController> logger,
-    IAdminScoreConversionClient? scoreConversionClient = null)
+    ILogger<AdminCertificatesController> logger)
     : AdminControllerBase(currentUser, logger)
 {
     [HttpGet("/admin/certificates")]
@@ -106,6 +105,35 @@ public sealed class AdminCertificatesController(
                     DurationMinutes = s.DurationMinutes,
                     Sections = s.Sections.Select(MapDetailSectionToViewModel).ToList()
                 }).ToList();
+
+                // E1.2 (#147): the wizard owns the scoring configuration, so editing a certificate
+                // has to show the scale, bands and rubric it was saved with.
+                vm.MinScaledScore = detail.Skills.FirstOrDefault()?.MinScaledScore;
+                vm.MaxScaledScore = detail.Skills.FirstOrDefault()?.MaxScaledScore;
+                vm.ScoreStep = detail.Skills.FirstOrDefault()?.ScoreStep;
+                vm.Bands = detail.Bands
+                    .Select((b, i) => new WizardBandViewModel
+                    {
+                        Code = b.Code,
+                        Name = b.Name,
+                        MinTotal = b.MinTotal,
+                        MaxTotal = b.MaxTotal,
+                        DisplayOrder = i + 1,
+                    })
+                    .ToList();
+                vm.Criteria = (detail.Criteria ?? [])
+                    .Select(c => new WizardCriterionViewModel
+                    {
+                        CriterionId = c.CriterionId,
+                        SkillCode = c.SkillCode,
+                        Code = c.Code,
+                        Name = c.Name,
+                        MaxScore = c.MaxScore,
+                        Weight = c.Weight,
+                        DisplayOrder = c.DisplayOrder,
+                        RubricDescription = c.RubricDescription,
+                    })
+                    .ToList();
                 return View("~/Views/Admin/CertificateWizard.cshtml", new CertificateWizardPageViewModel(vm));
             }
         }
@@ -155,26 +183,6 @@ public sealed class AdminCertificatesController(
         {
             model.ErrorMessage = ex.Message;
             return View("~/Views/Admin/CertificateWizard.cshtml", new CertificateWizardPageViewModel(model));
-        }
-    }
-
-    [HttpPost("/admin/certificates/score-preview")]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> ScorePreview([FromBody] ScorePreviewRequestDto request, CancellationToken cancellationToken)
-    {
-        if (scoreConversionClient is null)
-        {
-            return BadRequest(new { error = "Score conversion client is not configured." });
-        }
-
-        try
-        {
-            var result = await scoreConversionClient.CalculateScorePreviewAsync(request, await BearerAsync(), cancellationToken);
-            return Json(result);
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(new { error = ex.Message });
         }
     }
 
@@ -429,6 +437,22 @@ public sealed class AdminCertificatesController(
             ScoreAggregationRule: vm.ScoreAggregationRule,
             PresetCode: vm.PresetCode,
             IsActive: vm.IsActive,
-            Skills: skills);
+            Skills: skills,
+            MinScaledScore: vm.MinScaledScore,
+            MaxScaledScore: vm.MaxScaledScore,
+            ScoreStep: vm.ScoreStep,
+            Bands: vm.Bands
+                .Where(b => !string.IsNullOrWhiteSpace(b.Code))
+                .Select((b, i) => new SaveScoreBandWizardDto(
+                    b.BandId, b.Code, b.Name, b.MinTotal, b.MaxTotal,
+                    b.DisplayOrder > 0 ? b.DisplayOrder : i + 1))
+                .ToList(),
+            Criteria: vm.Criteria
+                .Where(c => !string.IsNullOrWhiteSpace(c.Code))
+                .Select(c => new SaveGradingCriterionWizardDto(
+                    c.CriterionId, c.SkillCode, c.Code,
+                    string.IsNullOrWhiteSpace(c.Name) ? c.Code : c.Name,
+                    c.MaxScore, c.Weight, c.DisplayOrder, c.RubricDescription))
+                .ToList());
     }
 }

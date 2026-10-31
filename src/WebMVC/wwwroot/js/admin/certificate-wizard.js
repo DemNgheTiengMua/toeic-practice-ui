@@ -651,60 +651,30 @@ function goToStep(step) {
       }
     }
 
-    // Band matching
+    // E1.2 (#147): the band comes from the ranges the admin typed into this form, not from a table
+    // baked into this file. The three tables that used to live here disagreed with the seeded
+    // ScoreBands, so the preview showed one band and the engine awarded another.
     var bandEl = document.getElementById('liveBandBadgeDisplay');
     if (bandEl) {
-      if (rule === 'avg_half_step') {
-        var bandNum = (total / 10).toFixed(1);
-        if (total >= 85) bandEl.textContent = 'C2 • BAND ' + bandNum;
-        else if (total >= 70) bandEl.textContent = 'C1 • BAND ' + bandNum;
-        else if (total >= 55) bandEl.textContent = 'B2 • BAND ' + bandNum;
-        else if (total >= 40) bandEl.textContent = 'B1 • BAND ' + bandNum;
-        else bandEl.textContent = 'A2 • BAND ' + bandNum;
-      } else if (rule === 'sum') {
-        if (total >= 905) bandEl.textContent = 'GOLD • 905–990';
-        else if (total >= 785) bandEl.textContent = 'BLUE • 785–900';
-        else if (total >= 605) bandEl.textContent = 'GREEN • 605–780';
-        else if (total >= 405) bandEl.textContent = 'BROWN • 405–600';
-        else bandEl.textContent = 'ORANGE • 10–400';
-      } else if (rule === 'avg_whole') {
-        if (total >= 85) bandEl.textContent = 'C1 • ADVANCED';
-        else if (total >= 60) bandEl.textContent = 'B2 • VANTAGE';
-        else if (total >= 40) bandEl.textContent = 'B1 • THRESHOLD';
-        else bandEl.textContent = 'A2 • ELEMENTARY';
-      } else {
-        bandEl.textContent = 'INDEPENDENT SKILLS';
+      bandEl.textContent = bandForTotal(total);
+    }
+  }
+
+  function bandForTotal(total) {
+    if (total === 0) return 'INDEPENDENT SKILLS';
+    var rows = document.querySelectorAll('.band-row');
+    var match = null;
+    rows.forEach(function(row) {
+      var min = parseInt(row.querySelector('.band-min')?.value, 10);
+      var max = parseInt(row.querySelector('.band-max')?.value, 10);
+      var name = row.querySelector('.band-code')?.value;
+      if (!isNaN(min) && !isNaN(max) && total >= min && total <= max) {
+        match = (name || 'BAND') + ' [' + min + '-' + max + ']';
       }
-    }
-    var csrfToken = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
-    if (csrfToken && skillScaledScores.length > 0) {
-      clearTimeout(window.__scorePreviewTimeout);
-      window.__scorePreviewTimeout = setTimeout(function() {
-        var certIdVal = parseInt(document.getElementById('certId')?.value, 10) || null;
-        var codeVal = document.querySelector('input[name="Code"]')?.value || null;
-        var skillsPayload = [];
-        skillRows.forEach(function(row) {
-          var sIdx = row.getAttribute('data-calc-skill-idx');
-          var skillCode = document.querySelector('input[name="Skills[' + sIdx + '].Code"]')?.value || ('SKILL_' + sIdx);
-          var singleInput = row.querySelector('.calc-skill-single-input');
-          var rawVal = singleInput ? parseFloat(singleInput.value) || 0 : 0;
-          skillsPayload.push({ skillId: 0, skillCode: skillCode, rawScore: rawVal });
-        });
-        fetch('/admin/certificates/score-preview', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'RequestVerificationToken': csrfToken
-          },
-          body: JSON.stringify({
-            certId: certIdVal,
-            certCode: codeVal,
-            scoreAggregationRule: rule,
-            skills: skillsPayload
-          })
-        }).catch(function() {});
-      }, 300);
-    }
+    });
+    // Bands must tile the range and the validator rejects gaps, so a miss here means the table
+    // has not been filled in yet rather than that the score is unbanded.
+    return match || 'No band covers ' + total;
   }
 
   // Form submission: ensure sequential field indexing
@@ -719,5 +689,58 @@ function goToStep(step) {
       syncStep4FromSections();
     } else {
       updateLiveScorePreview();
+    }
+  });
+
+  // E1.2 (#147): bands and rubric rows are edited in place. The server re-indexes on submit, so a
+  // removed row never leaves a hole in the posted names.
+  document.getElementById('addBandButton')?.addEventListener('click', function() {
+    var container = document.getElementById('wizardBandsContainer');
+    if (!container) return;
+    var idx = container.querySelectorAll('.band-row').length;
+    var row = document.createElement('div');
+    row.className = 'band-row';
+    row.style.cssText = 'display: grid; grid-template-columns: 1fr 1fr 90px 90px 40px; gap: 0.5rem; margin-bottom: 0.5rem;';
+    row.innerHTML = '<input name="Bands[' + idx + '].Code" class="field__input band-code" placeholder="Code (A1)" />'
+      + '<input name="Bands[' + idx + '].Name" class="field__input" placeholder="Name" />'
+      + '<input name="Bands[' + idx + '].MinTotal" class="field__input band-min" type="number" placeholder="From" />'
+      + '<input name="Bands[' + idx + '].MaxTotal" class="field__input band-max" type="number" placeholder="To" />'
+      + '<input name="Bands[' + idx + '].DisplayOrder" type="hidden" value="' + (idx + 1) + '" />'
+      + '<button type="button" class="btn btn--ghost btn--sm js-remove-band" aria-label="Remove band">&times;</button>';
+    container.appendChild(row);
+    updateLiveScorePreview();
+  });
+
+  document.getElementById('addCriterionButton')?.addEventListener('click', function() {
+    var container = document.getElementById('wizardCriteriaContainer');
+    if (!container) return;
+    var idx = container.querySelectorAll('.criterion-row').length;
+    var skills = Array.prototype.map.call(
+      document.querySelectorAll('input[name$=".Code"]'),
+      function() { return ''; });
+    var row = document.createElement('div');
+    row.className = 'criterion-row';
+    row.style.cssText = 'display: grid; grid-template-columns: 100px 1fr 90px 90px 40px; gap: 0.5rem; margin-bottom: 0.5rem; align-items: start;';
+    row.innerHTML = '<input name="Criteria[' + idx + '].SkillCode" class="field__input criterion-skill" placeholder="Skill code" />'
+      + '<input name="Criteria[' + idx + '].Code" class="field__input" placeholder="Criterion code" />'
+      + '<input name="Criteria[' + idx + '].MaxScore" class="field__input" type="number" step="0.5" placeholder="Max" value="5" />'
+      + '<input name="Criteria[' + idx + '].Weight" class="field__input" type="number" step="0.5" placeholder="Weight" value="1" />'
+      + '<input name="Criteria[' + idx + '].DisplayOrder" type="hidden" value="' + (idx + 1) + '" />'
+      + '<input name="Criteria[' + idx + '].Name" type="hidden" value="" />'
+      + '<textarea name="Criteria[' + idx + '].RubricDescription" class="field__input criterion-rubric" rows="2" placeholder="Describe each score level"></textarea>'
+      + '<button type="button" class="btn btn--ghost btn--sm js-remove-criterion" aria-label="Remove criterion">&times;</button>';
+    container.appendChild(row);
+  });
+
+  document.addEventListener('click', function(e) {
+    var removeBand = e.target.closest && e.target.closest('.js-remove-band');
+    if (removeBand) {
+      removeBand.closest('.band-row')?.remove();
+      updateLiveScorePreview();
+      return;
+    }
+    var removeCriterion = e.target.closest && e.target.closest('.js-remove-criterion');
+    if (removeCriterion) {
+      removeCriterion.closest('.criterion-row')?.remove();
     }
   });

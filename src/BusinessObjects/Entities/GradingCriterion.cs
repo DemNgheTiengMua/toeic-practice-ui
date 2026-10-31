@@ -24,6 +24,9 @@ public partial class GradingCriterion
     [StringLength(120)]
     public string Name { get; set; } = null!;
 
+    /// <summary>E1.2 (#147): the visible description of each score level, passed to the grader.</summary>
+    public string? RubricDescription { get; set; }
+
     [Column(TypeName = "decimal(5, 2)")]
     public decimal MaxScore { get; set; }
 

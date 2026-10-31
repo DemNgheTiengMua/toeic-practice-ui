@@ -96,6 +96,14 @@ public sealed class CertificateWizardServiceTests(DatabaseFixture database)
                 ScoreAggregationRule: "avg_whole",
                 PresetCode: "custom",
                 IsActive: true,
+                MinScaledScore: 0,
+                MaxScaledScore: 100,
+                ScoreStep: 1,
+                Bands:
+                [
+                    new SaveScoreBandWizardDto(null, "FAIL", "Fail", 0, 49, 1),
+                    new SaveScoreBandWizardDto(null, "PASS", "Pass", 50, 100, 2)
+                ],
                 Skills:
                 [
                     new SaveSkillWizardDto(
@@ -199,6 +207,14 @@ public sealed class CertificateWizardServiceTests(DatabaseFixture database)
                 ScoreAggregationRule: "sum",
                 PresetCode: "custom",
                 IsActive: true,
+                MinScaledScore: 0,
+                MaxScaledScore: 100,
+                ScoreStep: 1,
+                Bands:
+                [
+                    new SaveScoreBandWizardDto(null, "FAIL", "Fail", 0, 49, 1),
+                    new SaveScoreBandWizardDto(null, "PASS", "Pass", 50, 100, 2)
+                ],
                 Skills:
                 [
                     new SaveSkillWizardDto(
@@ -249,6 +265,14 @@ public sealed class CertificateWizardServiceTests(DatabaseFixture database)
                 ScoreAggregationRule: "avg_half_step",
                 PresetCode: "ielts_academic",
                 IsActive: false,
+                MinScaledScore: 0,
+                MaxScaledScore: 100,
+                ScoreStep: 1,
+                Bands:
+                [
+                    new SaveScoreBandWizardDto(null, "FAIL", "Fail", 0, 49, 1),
+                    new SaveScoreBandWizardDto(null, "PASS", "Pass", 50, 100, 2)
+                ],
                 Skills:
                 [
                     new SaveSkillWizardDto(

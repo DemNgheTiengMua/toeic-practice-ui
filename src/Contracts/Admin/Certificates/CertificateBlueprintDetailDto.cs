@@ -11,4 +11,5 @@ public sealed record CertificateBlueprintDetailDto(
     string? PresetCode,
     bool IsActive,
     IReadOnlyList<SkillBlueprintDetailDto> Skills,
-    IReadOnlyList<BandDto> Bands);
+    IReadOnlyList<BandDto> Bands,
+    IReadOnlyList<GradingCriterionDto>? Criteria = null);
