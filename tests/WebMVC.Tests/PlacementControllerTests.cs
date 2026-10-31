@@ -626,6 +626,101 @@ public sealed class PlacementControllerTests
         Assert.Equal("Target band code is invalid", controller.TempData["ErrorMessage"]);
     }
 
+    // ---- #153: the one-step goal form ----
+
+    [Fact]
+    public async Task Goal_GET_renders_the_four_fields_and_the_saved_goal()
+    {
+        var api = new TestApiClient
+        {
+            TargetBandView = new TargetBandViewDto(
+                new CertificateOptionDto("TOEIC", "TOEIC Listening & Reading"),
+                "B1", 650, "Intermediate", "B2",
+                [
+                    new CefrBandInfoDto("B1", "Intermediate", 550, 780, true, true, false),
+                    new CefrBandInfoDto("B2", "Upper Intermediate", 785, 940, false, false, true)
+                ],
+                [
+                    new TargetBandOptionDto("B1", "Intermediate", 550, 780, "Threshold", true, false),
+                    new TargetBandOptionDto("B2", "Upper Intermediate", 785, 940, "Vantage", false, true)
+                ],
+                new GoalStatusDto("B1", "B2", new DateOnly(2026, 12, 1), 6m, 300, 30m,
+                    FeasibilityStatusDto.Unrealistic, 60, new DateOnly(2027, 1, 1)))
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.TargetBand(CancellationToken.None);
+
+        var viewResult = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<TargetBandViewModel>(viewResult.Model);
+        Assert.Equal(FeasibilityStatusDto.Unrealistic, model.Status);
+        Assert.Contains("300", model.RequiredHoursDisplay);    // hours needed
+        Assert.Contains("30", model.AvailableHoursDisplay);     // hours available
+        Assert.Equal("2026-12-01", model.TargetDateValue);
+        Assert.Equal("6", model.WeeklyHoursValue);
+    }
+
+    [Fact]
+    public async Task Goal_POST_saves_the_four_fields_and_does_not_ask_for_a_path_when_unrealistic()
+    {
+        var api = new TestApiClient
+        {
+            SetGoalResult = new SetGoalResultDto(7, 1, "C1", DateTimeOffset.UtcNow,
+                new GoalStatusDto("B1", "C1", new DateOnly(2026, 11, 15), 6m, 650, 12m,
+                    FeasibilityStatusDto.Unrealistic, 325, new DateOnly(2028, 1, 1)))
+        };
+
+        var controller = CreateController(api);
+        var form = new SetGoalFormModel
+        {
+            CurrentBandCode = "B1",
+            TargetBandCode = "C1",
+            TargetDate = new DateOnly(2026, 11, 15),
+            WeeklyStudyHours = 6m,
+        };
+
+        var result = await controller.Goal(form, CancellationToken.None);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(PlacementController.TargetBand), redirect.ActionName);
+        Assert.NotNull(api.LastGoalRequest);
+        Assert.Equal("B1", api.LastGoalRequest!.CurrentBandCode);
+        Assert.Equal(new DateOnly(2026, 11, 15), api.LastGoalRequest.TargetDate);
+        Assert.Equal(6m, api.LastGoalRequest.WeeklyStudyHours);
+        Assert.Contains("does not fit", controller.TempData["SuccessMessage"] as string);
+    }
+
+    [Fact]
+    public async Task Goal_POST_when_the_pace_breaks_the_ceiling_shows_the_service_message()
+    {
+        var api = new TestApiClient
+        {
+            ExceptionToThrow = new ApiException(ApiError.Codes.WeeklyHoursTooHigh, "Too many hours", 400,
+                "A week has to hold between 0 and 25 hours of study; 20 is not a pace anyone can keep.")
+        };
+
+        var controller = CreateController(api);
+        var form = new SetGoalFormModel { TargetBandCode = "B2", TargetDate = new DateOnly(2026, 12, 1), WeeklyStudyHours = 26m };
+        var result = await controller.Goal(form, CancellationToken.None);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(PlacementController.TargetBand), redirect.ActionName);
+        Assert.Contains("25 hours", controller.TempData["ErrorMessage"] as string);
+    }
+
+    [Fact]
+    public async Task Goal_POST_without_a_target_band_redirects_with_an_error()
+    {
+        var api = new TestApiClient();
+        var controller = CreateController(api);
+
+        var result = await controller.Goal(new SetGoalFormModel { TargetBandCode = "" }, CancellationToken.None);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(PlacementController.TargetBand), redirect.ActionName);
+        Assert.Equal("Please select a target level.", controller.TempData["ErrorMessage"]);
+    }
+
     private static PlacementController CreateController(TestApiClient api)
     {
         var identity = new ClaimsIdentity(AuthClaims.For(7, "learner@test.local", Roles.Learner, "Learner"), "Cookies");
@@ -738,5 +833,14 @@ public sealed class PlacementControllerTests
 
         public Task<SetTargetBandResultDto> SetTargetBandAsync(SetTargetBandRequest request, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<SetTargetBandResultDto>(ExceptionToThrow) : Task.FromResult(SetTargetBandResult!);
+
+        public SetGoalResultDto? SetGoalResult { get; set; }
+        public SetGoalRequest? LastGoalRequest { get; set; }
+
+        public Task<SetGoalResultDto> SetGoalAsync(SetGoalRequest request, CancellationToken cancellationToken = default)
+        {
+            LastGoalRequest = request;
+            return ExceptionToThrow != null ? Task.FromException<SetGoalResultDto>(ExceptionToThrow) : Task.FromResult(SetGoalResult!);
+        }
     }
 }

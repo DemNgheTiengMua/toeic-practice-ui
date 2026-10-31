@@ -149,6 +149,11 @@ CREATE TABLE ScoreBands (
   MinTotal     INT NOT NULL,
   MaxTotal     INT NOT NULL,
   DisplayOrder INT NOT NULL DEFAULT 0,
+  -- #153: hours of study it takes to reach this band, measured from zero. The goal formula subtracts
+  -- two of these. NULL for certificates whose bands are not CEFR levels (CAT_B1, SW_B2, ...): the
+  -- feasibility of a goal on such a certificate cannot be judged, and must not be invented.
+  CumulativeStudyHours INT NULL
+    CONSTRAINT CK_ScoreBands_StudyHours CHECK (CumulativeStudyHours IS NULL OR CumulativeStudyHours >= 0),
   CONSTRAINT CK_ScoreBands_Range CHECK (MaxTotal >= MinTotal),
   CONSTRAINT UQ_ScoreBands_Cert_Code UNIQUE (CertId, Code)
 );
@@ -1018,8 +1023,26 @@ CREATE TABLE TargetBands (
   CertId         INT NOT NULL REFERENCES Certificates(CertId),
   TargetBandCode VARCHAR(20) NOT NULL,
   SetAt          DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
+  -- #153: a goal with a deadline. Every column below is NULLable: the placement flow creates a row
+  -- with only a band code, and a goal with no deadline legitimately has no feasibility answer.
+  CurrentBandCode   VARCHAR(20) NULL,     -- snapshot of the band the learner starts from
+  TargetDate        DATE NULL,            -- the exam date the learner is working towards
+  WeeklyStudyHours  DECIMAL(4,1) NULL,    -- hours per week the learner can actually spend
+  RequiredTotalHours INT NULL,            -- ΔH, computed by code; NULL when the bands carry no hours
+  FeasibilityStatus VARCHAR(12) NULL,     -- computed by code, never by the LLM
   CONSTRAINT PK_TargetBands PRIMARY KEY (UserId, CertId),
-  CONSTRAINT FK_TargetBands_Band FOREIGN KEY (CertId, TargetBandCode) REFERENCES ScoreBands(CertId, Code)
+  CONSTRAINT FK_TargetBands_Band FOREIGN KEY (CertId, TargetBandCode) REFERENCES ScoreBands(CertId, Code),
+  -- #153: the starting band must be a real band of this same certificate (NULL stays legal)
+  CONSTRAINT FK_TargetBands_CurrentBand FOREIGN KEY (CertId, CurrentBandCode) REFERENCES ScoreBands(CertId, Code),
+  -- 25 h/week is the ceiling the spec puts on any study plan, declared or required
+  CONSTRAINT CK_TargetBands_WeeklyHours CHECK (WeeklyStudyHours IS NULL OR (WeeklyStudyHours > 0 AND WeeklyStudyHours <= 25)),
+  CONSTRAINT CK_TargetBands_RequiredHours CHECK (RequiredTotalHours IS NULL OR RequiredTotalHours > 0),
+  CONSTRAINT CK_TargetBands_Feasibility CHECK (FeasibilityStatus IS NULL OR FeasibilityStatus IN ('feasible','stretch','unrealistic')),
+  -- a deadline is a date plus a pace: half a goal cannot be judged
+  CONSTRAINT CK_TargetBands_DeadlinePair CHECK ((TargetDate IS NULL AND WeeklyStudyHours IS NULL)
+                                             OR (TargetDate IS NOT NULL AND WeeklyStudyHours IS NOT NULL)),
+  -- no deadline means no answer, and an answer without a deadline would be a lie
+  CONSTRAINT CK_TargetBands_AnswerNeedsDeadline CHECK (FeasibilityStatus IS NULL OR TargetDate IS NOT NULL)
 );
 GO
 CREATE TABLE PathTemplates (

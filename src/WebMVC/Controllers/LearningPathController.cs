@@ -65,6 +65,14 @@ public sealed class LearningPathController(
             logger.LogWarning(ex, "Learning path is already active");
             return RedirectToAction(nameof(Index));
         }
+        catch (ApiException ex) when (ex.Code is ApiError.Codes.LearningPathGoalUnrealistic or ApiError.Codes.LearningPathBandUnknown)
+        {
+            // #153: a refusal the learner can act on. The service's message carries the two numbers,
+            // so it is shown verbatim instead of the generic "try again".
+            logger.LogInformation(ex, "Path generation refused: {Code}", ex.Code);
+            TempData["ErrorMessage"] = ex.Detail ?? ex.Message;
+            return RedirectToAction(nameof(Index));
+        }
         catch (ApiException ex)
         {
             logger.LogError(ex, "Failed to generate learning path");

@@ -24,4 +24,8 @@ public interface IPlacementClient
     Task<TargetBandViewDto> GetTargetBandViewAsync(string bearerToken, CancellationToken cancellationToken = default) => GetTargetBandViewAsync(cancellationToken);
     Task<SetTargetBandResultDto> SetTargetBandAsync(SetTargetBandRequest request, CancellationToken cancellationToken = default);
     Task<SetTargetBandResultDto> SetTargetBandAsync(SetTargetBandRequest request, string bearerToken, CancellationToken cancellationToken = default) => SetTargetBandAsync(request, cancellationToken);
+
+    /// <summary>#153: save the whole goal — current band, target band, exam date and weekly pace.</summary>
+    Task<SetGoalResultDto> SetGoalAsync(SetGoalRequest request, CancellationToken cancellationToken = default);
+    Task<SetGoalResultDto> SetGoalAsync(SetGoalRequest request, string bearerToken, CancellationToken cancellationToken = default) => SetGoalAsync(request, cancellationToken);
 }

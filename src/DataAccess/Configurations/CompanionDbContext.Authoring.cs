@@ -119,6 +119,13 @@ public partial class CompanionDbContext
                 .HasForeignKey(d => new { d.CertId, d.TargetBandCode })
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_TargetBands_Band");
+
+            // #153: the starting band is a band of the same certificate, or NULL when the goal
+            // predates the rule. Optional relationship — MATCH SIMPLE keeps the NULL legal.
+            entity.HasOne(d => d.CurrentScoreBand).WithMany(p => p.CurrentBandTargetBands)
+                .HasPrincipalKey(p => new { p.CertId, p.Code })
+                .HasForeignKey(d => new { d.CertId, d.CurrentBandCode })
+                .HasConstraintName("FK_TargetBands_CurrentBand");
         });
 
 

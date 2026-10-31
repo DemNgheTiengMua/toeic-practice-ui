@@ -23,5 +23,17 @@ public class LearningPathException(string code, string message) : Exception(mess
     public const string NoQuestionsAvailable = "no_questions_available";
     public const string InsufficientCredits = "insufficient_credits";
 
+    /// <summary>#153: the learner's goal is Unrealistic, so no path is generated for it. The message
+    /// names the hours required and the hours available — the two numbers the refusal rests on.</summary>
+    public const string GoalUnrealistic = "goal_unrealistic";
+
+    /// <summary>#153: nothing says which band the learner starts from — the old code answered "A1",
+    /// which matches no certificate's bands. The learner has to take the placement or set a goal.</summary>
+    public const string StartingBandUnknown = "starting_band_unknown";
+
+    /// <summary>#153: no target band anywhere — the old code answered "B2", silently aiming every
+    /// learner at a band nobody chose.</summary>
+    public const string TargetBandMissing = "target_band_missing";
+
     public string Code { get; } = code;
 }

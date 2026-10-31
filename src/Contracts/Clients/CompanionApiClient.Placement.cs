@@ -43,6 +43,12 @@ public sealed partial class CompanionApiClient
     public Task<SetTargetBandResultDto> SetTargetBandAsync(SetTargetBandRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
         PostAuthorizedAsync<SetTargetBandRequest, SetTargetBandResultDto>("api/learner/target-band", request, bearerToken, cancellationToken);
 
+    public Task<SetGoalResultDto> SetGoalAsync(SetGoalRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
+        PostAuthorizedAsync<SetGoalRequest, SetGoalResultDto>("api/learner/goal", request, bearerToken, cancellationToken);
+
+    public Task<SetGoalResultDto> SetGoalAsync(SetGoalRequest request, CancellationToken cancellationToken = default) =>
+        SetGoalAsync(request, string.Empty, cancellationToken);
+
     public Task<PlacementCatalogViewDto> GetPlacementCatalogAsync(CancellationToken cancellationToken = default) =>
         GetPlacementCatalogAsync(string.Empty, cancellationToken);
 

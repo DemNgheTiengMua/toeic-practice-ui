@@ -331,4 +331,58 @@ public sealed class PlacementController(
             return RedirectToAction(nameof(TargetBand));
         }
     }
+
+    /// <summary>
+    /// #153: the one-step goal form. An Unrealistic goal is stored and shown, not bounced back as an
+    /// error: the screen has to render the two numbers and the two escape hatches, and only path
+    /// generation is refused (the service does that, so no caller can skip it).
+    /// </summary>
+    [HttpPost("/placement/goal")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Goal([FromForm] SetGoalFormModel form, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(form.TargetBandCode))
+        {
+            TempData["ErrorMessage"] = "Please select a target level.";
+            return RedirectToAction(nameof(TargetBand));
+        }
+
+        try
+        {
+            var saved = await api.SetGoalAsync(
+                new SetGoalRequest(form.CurrentBandCode, form.TargetBandCode, form.TargetDate, form.WeeklyStudyHours),
+                cancellationToken);
+
+            TempData["SuccessMessage"] = saved.Goal.Status switch
+            {
+                FeasibilityStatusDto.Feasible => "Your goal is saved, and it fits the time you have. Your learning path is ready.",
+                FeasibilityStatusDto.Stretch => $"Your goal is saved. It is a stretch: {saved.Goal.SuggestedWeeklyHours} h/week would make it comfortable.",
+                FeasibilityStatusDto.Unrealistic => "Your goal is saved, but it does not fit the time you have. Your path stays on hold until it does.",
+                _ => "Your goal is saved.",
+            };
+
+            // Only a goal that fits produces a path. The service refuses the rest; asking anyway would
+            // turn a deliberate refusal into a logged warning nobody reads.
+            if (learningPathClient != null && saved.Goal.Status != FeasibilityStatusDto.Unrealistic)
+            {
+                try
+                {
+                    await learningPathClient.GenerateLearningPathAsync(
+                        new GenerateLearningPathRequest(form.TargetBandCode, ArchiveExisting: true), cancellationToken);
+                }
+                catch (ApiException ex)
+                {
+                    logger.LogWarning(ex, "Could not auto-generate learning path after saving the goal");
+                }
+            }
+
+            return RedirectToAction(nameof(TargetBand));
+        }
+        catch (ApiException ex)
+        {
+            logger.LogWarning(ex, "Goal rejected: {Code}", ex.Code);
+            TempData["ErrorMessage"] = ex.Detail ?? "Could not save your goal. Please try again.";
+            return RedirectToAction(nameof(TargetBand));
+        }
+    }
 }

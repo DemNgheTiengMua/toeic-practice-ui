@@ -4461,3 +4461,49 @@ GO
 
 PRINT '21. One-way navigation backfilled for seeded listening skills';
 GO
+
+-- ============================================================================
+-- 22. ScoreBands.CumulativeStudyHours backfill (#153)
+-- ============================================================================
+-- Hours of study measured from zero, so a goal's cost is the difference between two bands. Only
+-- CEFR-coded bands get a number: a certificate with its own band vocabulary (CAT_B1, SW_B2) has no
+-- defensible hours figure, and guessing one would turn an unknown into an authoritative-looking
+-- refusal. Those rows stay NULL and feasibility answers "cannot judge".
+UPDATE ScoreBands SET CumulativeStudyHours = CASE Code
+    WHEN 'below_A1' THEN 0
+    WHEN 'A1'       THEN 100
+    WHEN 'A2'       THEN 250
+    WHEN 'B1'       THEN 500
+    WHEN 'B2'       THEN 800
+    WHEN 'C1'       THEN 1150
+    WHEN 'C2'       THEN 1550
+  END
+WHERE CumulativeStudyHours IS NULL
+  AND Code IN ('below_A1','A1','A2','B1','B2','C1','C2');
+GO
+
+PRINT '22. Cumulative study hours backfilled for CEFR bands';
+GO
+
+-- ============================================================================
+-- 23. Demo learner's goal has a deadline (#153)
+-- ============================================================================
+-- The seeded account already aims at B2 from B1. Give it a date and a pace so the onboarding screen
+-- and the dashboard goal strip have something real to render. The numbers must agree with the
+-- formula in GoalFeasibilityCalculator: 800 h (B2) - 500 h (B1) = 300 h required, 30 weeks × 10 h/week
+-- = 300 h available, R = 1.00 → feasible. A 30-day deadline at 6 h/week would be R = 0.10, and the
+-- screen would rightly refuse it; the demo account should open on a goal that works.
+DECLARE @learner INT = (SELECT UserId FROM Users WHERE Email = 'learner@demo.local');
+UPDATE TargetBands
+SET CurrentBandCode    = 'B1',
+    TargetDate         = DATEADD(day, 210, CAST(SYSDATETIMEOFFSET() AS DATE)),
+    WeeklyStudyHours   = 10.0,
+    RequiredTotalHours = 300,
+    FeasibilityStatus  = 'feasible'
+WHERE UserId = @learner
+  AND CertId = (SELECT CertId FROM Certificates WHERE Code = 'TOEIC')
+  AND TargetDate IS NULL;
+GO
+
+PRINT '23. Demo learner goal dated: B1 to B2 in 30 weeks at 10 h/week';
+GO

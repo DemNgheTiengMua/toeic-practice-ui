@@ -80,12 +80,24 @@ public sealed record ApiError(string Code, string Title, int Status, string? Det
         public const string PlacementNotFinished = "placement_not_finished";
         public const string TargetBandInvalid = "target_band_invalid";
 
+        /// <summary>#153: a declared pace above the 25 h/week ceiling.</summary>
+        public const string WeeklyHoursTooHigh = "weekly_hours_too_high";
+
+        /// <summary>#153: an exam date that has already passed.</summary>
+        public const string TargetDateInvalid = "target_date_invalid";
+
         public const string LearningPathNotFound = "LEARNING_PATH_NOT_FOUND";
         public const string LearningPathAlreadyActive = "LEARNING_PATH_ALREADY_ACTIVE";
         public const string LearningPathTemplateNotFound = "LEARNING_PATH_TEMPLATE_NOT_FOUND";
         public const string LearningPathModuleNotFound = "LEARNING_PATH_MODULE_NOT_FOUND";
         public const string LearningPathStepNotFound = "LEARNING_PATH_STEP_NOT_FOUND";
         public const string LearningPathStepLocked = "LEARNING_PATH_STEP_LOCKED";
+
+        /// <summary>#153: the goal is Unrealistic. The detail carries hours needed and hours available.</summary>
+        public const string LearningPathGoalUnrealistic = "LEARNING_PATH_GOAL_UNREALISTIC";
+
+        /// <summary>#153: no starting band and no target band were ever established for this learner.</summary>
+        public const string LearningPathBandUnknown = "LEARNING_PATH_BAND_UNKNOWN";
         public const string LessonNotFound = "LESSON_NOT_FOUND";
 
         public const string SlotNotAvailable = "slot_not_available";

@@ -29,4 +29,19 @@ public interface IPlacementService
     Task<TargetBandView> GetTargetBandViewAsync(int userId, CancellationToken cancellationToken = default);
 
     Task<SaveTargetBandResult> SetTargetBandAsync(int userId, string targetBandCode, CancellationToken cancellationToken = default);
+
+    /// <summary>#153: a goal with a deadline. <paramref name="currentBandCode"/> null means "use the
+    /// band the learner was last assessed at"; <paramref name="targetDate"/> null means "no deadline",
+    /// which stores no verdict at all.</summary>
+    Task<SaveGoalResult> SetGoalAsync(
+        int userId,
+        string? currentBandCode,
+        string targetBandCode,
+        DateOnly? targetDate,
+        decimal? weeklyStudyHours,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>#153: the stored goal and its verdict, re-derived from the bands so a re-bandered
+    /// certificate never shows a stale total.</summary>
+    Task<GoalStatus> GetGoalStatusAsync(int userId, CancellationToken cancellationToken = default);
 }

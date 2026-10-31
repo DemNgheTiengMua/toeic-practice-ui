@@ -25,15 +25,29 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
         return (service, learners, practice, db);
     }
 
-    private async Task<int> SeedLearnerAsync(string? activeCertCode = null)
+    /// <summary>
+    /// #153: a learner here has a goal, because path generation no longer invents one. The old fixture
+    /// depended on the generator aiming at the certificate's lowest band and highest band; those
+    /// fallbacks are gone, so the written goal is what the path is built between.
+    /// </summary>
+    private async Task<int> SeedLearnerAsync(string? activeCertCode = null, string? currentBand = "A2", string? targetBand = "B2")
     {
         var email = $"{Guid.NewGuid():N}@test.local";
+        var goal = activeCertCode is not null && currentBand is not null && targetBand is not null
+            ? $"""
+              INSERT INTO TargetBands (UserId, CertId, TargetBandCode, CurrentBandCode)
+              VALUES (@u, (SELECT CertId FROM Certificates WHERE Code = '{activeCertCode}'), '{targetBand}', '{currentBand}');
+              """
+            : "";
+
         await database.SqlAsync($"""
             IF NOT EXISTS (SELECT 1 FROM Roles WHERE Code = 'learner')
               INSERT INTO Roles (Code, Name) VALUES ('learner', N'Learner');
             INSERT INTO Users (RoleId, Email, PasswordHash, FullName, ActiveCertId)
             VALUES ((SELECT RoleId FROM Roles WHERE Code = 'learner'), '{email}', 0x01, N'Test Learner',
                     (SELECT CertId FROM Certificates WHERE Code = {(activeCertCode is null ? "NULL" : $"'{activeCertCode}'")}));
+            DECLARE @u INT = SCOPE_IDENTITY();
+            {goal}
             """);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);

@@ -31,6 +31,16 @@ public static partial class LearningPathEndpoints
             {
                 return Problem(StatusCodes.Status404NotFound, "Path template not found", ApiError.Codes.LearningPathTemplateNotFound, ex.Message);
             }
+            // #153: an Unrealistic goal is a refusal with reasons, not a server fault. 422 carries the
+            // service's message — which names the hours needed and the hours available — to the screen.
+            catch (LearningPathException ex) when (ex.Code == LearningPathException.GoalUnrealistic)
+            {
+                return Problem(StatusCodes.Status422UnprocessableEntity, "Goal does not fit the time available", ApiError.Codes.LearningPathGoalUnrealistic, ex.Message);
+            }
+            catch (LearningPathException ex) when (ex.Code is LearningPathException.StartingBandUnknown or LearningPathException.TargetBandMissing)
+            {
+                return Problem(StatusCodes.Status422UnprocessableEntity, "No goal to build a path from", ApiError.Codes.LearningPathBandUnknown, ex.Message);
+            }
         });
     }
 }

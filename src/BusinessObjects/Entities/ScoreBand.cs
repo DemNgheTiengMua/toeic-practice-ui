@@ -27,6 +27,10 @@ public partial class ScoreBand
 
     public int DisplayOrder { get; set; }
 
+    /// <summary>#153: hours of study from zero to reach this band. NULL for band codes that are not
+    /// CEFR levels — a goal on such a certificate is "cannot judge", never an invented number.</summary>
+    public int? CumulativeStudyHours { get; set; }
+
     [ForeignKey("CertId")]
     [InverseProperty("ScoreBands")]
     public virtual Certificate Cert { get; set; } = null!;
@@ -42,4 +46,8 @@ public partial class ScoreBand
 
     [InverseProperty("ScoreBand")]
     public virtual ICollection<TargetBand> TargetBands { get; set; } = new List<TargetBand>();
+
+    /// <summary>#153: target-band rows that name this band as the learner's starting point.</summary>
+    [InverseProperty("CurrentScoreBand")]
+    public virtual ICollection<TargetBand> CurrentBandTargetBands { get; set; } = new List<TargetBand>();
 }

@@ -197,7 +197,38 @@ public static partial class PlacementEndpoints
             view.CurrentBandName,
             view.TargetBandCode,
             view.CefrBands.Select(b => new CefrBandInfoDto(b.Code, b.Name, b.MinTotal, b.MaxTotal, b.IsReached, b.IsCurrent, b.IsTarget)).ToList(),
-            view.AvailableBands.Select(b => new TargetBandOptionDto(b.Code, b.Name, b.MinTotal, b.MaxTotal, b.Description, b.IsCurrent, b.IsTarget)).ToList());
+            view.AvailableBands.Select(b => new TargetBandOptionDto(b.Code, b.Name, b.MinTotal, b.MaxTotal, b.Description, b.IsCurrent, b.IsTarget)).ToList(),
+            ToGoalStatusDto(view.Goal));
+
+    // #153: null in means null out, so a learner with no goal gets no invented one.
+    private static GoalStatusDto? ToGoalStatusDto(GoalStatus? goal) =>
+        goal is null
+            ? null
+            : new GoalStatusDto(
+                goal.CurrentBandCode,
+                goal.TargetBandCode,
+                goal.TargetDate,
+                goal.WeeklyStudyHours,
+                goal.RequiredHours,
+                goal.AvailableHours,
+                goal.Status switch
+                {
+                    FeasibilityStatus.Feasible => FeasibilityStatusDto.Feasible,
+                    FeasibilityStatus.Stretch => FeasibilityStatusDto.Stretch,
+                    FeasibilityStatus.Unrealistic => FeasibilityStatusDto.Unrealistic,
+                    _ => FeasibilityStatusDto.Unknown,
+                },
+                goal.SuggestedWeeklyHours,
+                goal.EarliestFeasibleDate);
+
+    private static SetGoalResultDto ToSetGoalResultDto(SaveGoalResult result) =>
+        new SetGoalResultDto(
+            result.UserId,
+            result.CertId,
+            result.TargetBandCode,
+            result.SetAt,
+            ToGoalStatusDto(result.Feasibility) ?? new GoalStatusDto(
+                null, result.TargetBandCode, null, null, null, null, FeasibilityStatusDto.Unknown, null, null));
 
     private static SetTargetBandResultDto ToSetTargetBandResultDto(SaveTargetBandResult result) =>
         new SetTargetBandResultDto(result.UserId, result.CertId, result.TargetBandCode, result.SetAt);

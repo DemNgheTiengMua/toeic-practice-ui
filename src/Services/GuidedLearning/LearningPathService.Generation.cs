@@ -34,6 +34,10 @@ public sealed partial class LearningPathService
             }
         }
 
+        var savedTarget = await db.TargetBands
+            .AsNoTracking()
+            .FirstOrDefaultAsync(tb => tb.UserId == userId && tb.CertId == activeCertId, cancellationToken);
+
         var latestPlacement = await db.PlacementTests
             .AsNoTracking()
             .Where(p => p.UserId == userId && p.CertId == activeCertId && p.Status == PlacementStatus.Done.ToCode())
@@ -51,6 +55,10 @@ public sealed partial class LearningPathService
             startingBand = latestMock?.BandCode;
         }
 
+        // #153: the band the goal recorded is the fallback — never a hardcoded band code that matches no
+        // certificate's rows. With neither, the certificate cannot say where the learner starts.
+        startingBand ??= savedTarget?.CurrentBandCode;
+
         var scoreBands = await db.ScoreBands
             .AsNoTracking()
             .Where(b => b.CertId == activeCertId)
@@ -60,22 +68,25 @@ public sealed partial class LearningPathService
 
         if (string.IsNullOrEmpty(startingBand))
         {
-            startingBand = scoreBands.FirstOrDefault()?.Code ?? "A1";
+            throw new LearningPathException(
+                LearningPathException.StartingBandUnknown,
+                "This certificate cannot say which band you start from. Take the free placement test first, or set your current band in your goal.");
         }
 
-        string toBand = targetBandCode ?? "";
+        var toBand = targetBandCode ?? "";
         if (string.IsNullOrEmpty(toBand))
         {
-            var savedTarget = await db.TargetBands
-                .AsNoTracking()
-                .FirstOrDefaultAsync(tb => tb.UserId == userId && tb.CertId == activeCertId, cancellationToken);
             toBand = savedTarget?.TargetBandCode ?? "";
         }
 
         if (string.IsNullOrEmpty(toBand))
         {
-            toBand = scoreBands.LastOrDefault()?.Code ?? "B2";
+            throw new LearningPathException(
+                LearningPathException.TargetBandMissing,
+                "No target band is set for this certificate. Set your goal first — a path aimed at an invented band would not be your path.");
         }
+
+        RefuseUnrealisticGoal(savedTarget, startingBand, toBand, scoreBands);
 
         // Match template: exact (from, to) -> closest from -> any for cert
         var template = await db.PathTemplates
@@ -198,5 +209,40 @@ public sealed partial class LearningPathService
         await db.SaveChangesAsync(cancellationToken);
 
         return await GetActivePathAsync(userId, cancellationToken);
+    }
+
+    /// <summary>
+    /// #153: an Unrealistic goal blocks path generation at the service layer, not just in the screen —
+    /// a caller that skips the onboarding form still cannot get a path built on a goal the learner has
+    /// no hours for. The verdict is recomputed here rather than read from the stored column, so a goal
+    /// whose date has since passed is judged on today's runway. The message carries the two numbers
+    /// (hours needed, hours available) because a refusal without them is indistinguishable from a bug.
+    /// </summary>
+    private static void RefuseUnrealisticGoal(
+        TargetBand? goal,
+        string startingBandCode,
+        string targetBandCode,
+        IReadOnlyList<ScoreBand> scoreBands)
+    {
+        if (goal?.TargetDate is not { } targetDate || goal.WeeklyStudyHours is not { } weeklyHours)
+        {
+            return;   // no deadline: nothing to refuse
+        }
+
+        var fromHours = scoreBands.FirstOrDefault(b => b.Code == startingBandCode)?.CumulativeStudyHours;
+        var toHours = scoreBands.FirstOrDefault(b => b.Code == targetBandCode)?.CumulativeStudyHours;
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        var feasibility = GoalFeasibilityCalculator.Evaluate(fromHours, toHours, targetDate, weeklyHours, today);
+        if (feasibility?.Status != FeasibilityStatus.Unrealistic)
+        {
+            return;
+        }
+
+        throw new LearningPathException(
+            LearningPathException.GoalUnrealistic,
+            $"This goal does not fit the time you have: it needs {feasibility.RequiredHours} hours of study, " +
+            $"and {feasibility.WeeksAvailable} weeks at {weeklyHours:0.#} h/week gives you {feasibility.AvailableHours:0.#} hours. " +
+            "Move the exam date back, lower the target band, or raise your weekly pace — then your path can be built.");
     }
 }

@@ -1,9 +1,18 @@
 @model TargetBandViewModel
 @{
     Layout = "_LearnerLayout";
-    ViewData["Title"] = "Set Target Level";
+    ViewData["Title"] = "Your goal";
     var view = Model.View;
-
+    var goal = Model.Goal;
+    var bands = view.AvailableBands;
+    var status = Model.Status;
+    var statusClass = status switch
+    {
+        FeasibilityStatusDto.Feasible => "alert--success",
+        FeasibilityStatusDto.Stretch => "alert--warning",
+        FeasibilityStatusDto.Unrealistic => "alert--danger",
+        _ => "alert--info"
+    };
 }
 
 <div class="context-bar">
@@ -27,7 +36,7 @@
     <span class="breadcrumbs__separator" aria-hidden="true">›</span>
     <a href="/placement" class="breadcrumbs__item">Placement test</a>
     <span class="breadcrumbs__separator" aria-hidden="true">›</span>
-    <span class="breadcrumbs__item" aria-current="page">Target level</span>
+    <span class="breadcrumbs__item" aria-current="page">Your goal</span>
   </nav>
 
   @if (!string.IsNullOrEmpty(Model.ErrorMessage))
@@ -40,60 +49,101 @@
   }
 
   <div>
-    <h1 class="m-0 mb-1">Set your target level</h1>
+    <h1 class="m-0 mb-1">Your goal</h1>
     <p class="text-muted no-margin">
-      @if (view.CurrentBandCode != null)
-      {
-        <span>You are at <strong>@view.CurrentBandCode</strong>. Pick the band you are aiming for and your path is built between the two.</span>
-      }
-      else
-      {
-        <span>Pick the score band you are aiming for to track your preparation.</span>
-      }
+      Pick the band you are aiming for, the date of your exam, and how many hours a week you can study.
+      The numbers below say whether that goal fits the time you have — before a path is built on it.
     </p>
   </div>
 
-  <div class="card">
-    <div class="card__body">
-      <div class="cefr">
-        <div class="cefr__head">
-          <span class="cefr__current font-mono">@(view.CurrentBandCode ?? "Start") to <span id="cefr-target-display">@Model.TargetCode</span></span>
-          <span>@(Model.CurrentScore > 0 ? $"{Model.CurrentScore} points now · " : "")<span id="cefr-needed-display">@Model.NeededDisplay</span></span>
-        </div>
-        <div class="cefr__track" role="img" aria-label="Target level tracking">
-          @foreach (var band in Model.Bands)
-          {
-            <span class="@band.CssClass font-mono" id="cefr-band-@band.Code">@band.Label</span>
-          }
-        </div>
-        <div class="cefr__scale" aria-hidden="true">
-          @foreach (var band in view.CefrBands)
-          {
-            <span class="cefr__tick font-mono">@band.MinTotal</span>
-          }
-        </div>
-        <p class="cefr__note" id="cefr-note-display">
-          @if (Model.PointsNeeded > 0)
-          {
-            <span>Points to target: @Model.PointsNeeded points gap from your starting placement score.</span>
-          }
-          else
-          {
-            <span>Choose the certificate band that matches your goal.</span>
-          }
-        </p>
-      </div>
+  @* #153: the verdict, with the two numbers it was computed from. A refusal without the arithmetic
+     is indistinguishable from a bug, so both hours are always lettered. *@
+  @if (status == FeasibilityStatusDto.Unrealistic)
+  {
+    <div class="alert alert--danger" role="alert" id="goal-unrealistic">
+      <strong class="font-mono">This goal does not fit the time you have.</strong>
+      <p class="m-0 mt-1">
+        It needs <span class="font-mono" id="goal-required">@Model.RequiredHoursDisplay</span> of study,
+        and @(goal?.TargetDate is { } d ? $"{d:yyyy-MM-dd}" : "your date") at
+        <span class="font-mono">@(goal?.WeeklyStudyHours is { } h ? $"{h:0.#} h/week" : "your pace")</span>
+        gives you <span class="font-mono" id="goal-available">@Model.AvailableHoursDisplay</span>.
+      </p>
+      <p class="m-0 mt-1">Two ways to make it reachable:</p>
+      <ul class="m-0">
+        <li>
+          Move the exam date to <strong class="font-mono">@(goal?.EarliestFeasibleDate is { } e ? $"{e:yyyy-MM-dd}" : "a later date")</strong>
+          and keep your pace, or
+        </li>
+        <li>Lower the target band to one with fewer hours between it and where you are.</li>
+      </ul>
+      <p class="m-0 mt-1 text-sm">Your learning path stays on hold until the goal fits.</p>
     </div>
-  </div>
+  }
+  else if (status == FeasibilityStatusDto.Stretch)
+  {
+    <div class="alert alert--warning" role="alert" id="goal-stretch">
+      <strong class="font-mono">This goal is a stretch.</strong>
+      <p class="m-0 mt-1">
+        It needs <span class="font-mono" id="goal-required">@Model.RequiredHoursDisplay</span> and you have
+        <span class="font-mono" id="goal-available">@Model.AvailableHoursDisplay</span>.
+        At <span class="font-mono">@(goal?.SuggestedWeeklyHours ?? 0) h/week</span> it would be comfortable.
+      </p>
+    </div>
+  }
+  else if (status == FeasibilityStatusDto.Feasible)
+  {
+    <div class="alert alert--success" role="alert" id="goal-feasible">
+      <strong class="font-mono">This goal fits the time you have.</strong>
+      <p class="m-0 mt-1">
+        It needs <span class="font-mono" id="goal-required">@Model.RequiredHoursDisplay</span> and you have
+        <span class="font-mono" id="goal-available">@Model.AvailableHoursDisplay</span>.
+      </p>
+    </div>
+  }
+  else if (Model.HasDeadline)
+  {
+    @* The certificate's bands carry no study hours, so there is nothing to compute. Saying so is the
+       honest answer; inventing a number would turn an unknown into a confident refusal. *@
+    <div class="alert alert--info" role="alert" id="goal-unknown">
+      <strong class="font-mono">We cannot judge this goal.</strong>
+      <p class="m-0 mt-1">
+        This certificate's bands do not carry study-hour estimates, so there is nothing to compare your
+        @(goal?.WeeklyStudyHours is { } h ? $"{h:0.#} h/week" : "pace") against. Your path will be built;
+        we just cannot promise it is enough.
+      </p>
+    </div>
+  }
 
-  <form method="post" action="/placement/target-band" class="stack">
+  <form method="post" action="/placement/goal" class="stack" id="goal-form">
     @Html.AntiForgeryToken()
+
     <section>
-      <h2 class="section-group__title">Choose your target</h2>
-      <div class="option-list" role="radiogroup" aria-label="Target level">
-        @foreach (var opt in view.AvailableBands)
+      <h2 class="section-group__title">Where you are</h2>
+      <div class="option-list" role="radiogroup" aria-label="Current level">
+        @foreach (var opt in bands)
         {
-          var isChecked = opt.Code == Model.TargetCode;
+          <label class="option @(opt.IsCurrent ? "is-selected" : "")">
+            <input class="option__input js-current-radio" type="radio" name="CurrentBandCode"
+                   value="@opt.Code" @(opt.IsCurrent ? "checked" : "")>
+            <span class="option__marker font-mono">@opt.Code</span>
+            <span class="option__text">
+              <strong>@opt.Name</strong>
+              @if (opt.IsCurrent)
+              {
+                <span class="text-sm text-muted"> · your assessed level</span>
+              }
+            </span>
+          </label>
+        }
+      </div>
+    </section>
+
+    <section>
+      <h2 class="section-group__title">Where you are going</h2>
+      <div class="option-list" role="radiogroup" aria-label="Target level">
+        @foreach (var opt in bands)
+        {
+          var isChecked = opt.Code == view.TargetBandCode;
           <label class="option @(isChecked ? "is-selected" : "")">
             <input class="option__input js-target-radio" type="radio" name="TargetBandCode"
                    value="@opt.Code" @(isChecked ? "checked" : "")
@@ -109,16 +159,33 @@
     </section>
 
     <div class="card">
+      <div class="card__body stack">
+        <h2 class="section-group__title m-0">When, and how much</h2>
+        <div class="row" style="gap: var(--space-4); align-items: flex-start;">
+          <label class="field">
+            <span class="field__label">Exam date</span>
+            <input class="field__input font-mono" type="date" name="TargetDate" id="goal-date"
+                   value="@Model.TargetDateValue" min="@DateOnly.FromDateTime(DateTime.UtcNow).ToString("yyyy-MM-dd")">
+            <span class="field__hint">Leave both blank if you have no deadline yet.</span>
+          </label>
+          <label class="field">
+            <span class="field__label">Hours per week</span>
+            <input class="field__input font-mono" type="number" name="WeeklyStudyHours" id="goal-hours"
+                   value="@Model.WeeklyHoursValue" min="0.5" max="25" step="0.5">
+            <span class="field__hint">A week holds at most 25 study hours.</span>
+          </label>
+        </div>
+      </div>
       <div class="card__footer">
         <div class="row" style="gap: var(--space-3);">
-          <button type="submit" class="btn btn--primary">Save target level</button>
+          <button type="submit" class="btn btn--primary">Save goal</button>
           <a href="/placement" class="btn">Back to tests</a>
         </div>
       </div>
     </div>
 
     <p class="text-xs text-muted no-margin">
-      You can change your target level at any time. Saving a target level is free and deducts 0 credits.
+      Saving a goal is free and deducts 0 credits. You can change it at any time.
     </p>
   </form>
 </div>

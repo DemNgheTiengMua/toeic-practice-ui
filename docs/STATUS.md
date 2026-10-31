@@ -15,16 +15,16 @@ Research ước lượng **14 ngày người**, 4 giai đoạn. Đã xong **~1.5
 |---|---|---|
 | 1. Nền móng đa chứng chỉ & engine điểm | #146–#150 | 🟡 **đang làm** — #146 xong |
 | 2. Chấm Writing & Speaking | #151–#152 | ⬜ chưa |
-| 3. Mastery, lộ trình có hạn, hiệu chuẩn | #153–#156 | ⬜ chưa |
+| 3. Mastery, lộ trình có hạn, hiệu chuẩn | #153–#156 | 🟡 **đang làm** — #153 xong |
 | 4. Studio, preview, dashboard | #157–#159 | ⬜ chưa |
 | 5. Dọn dẹp | #160–#162 | ⬜ chưa |
 
 ## 2. Việc tiếp theo
 
-**#148** (kỹ năng sản phẩm có band) hoặc **#153** (goal có thời hạn) — cả hai đã mở khoá.
-Giai đoạn 1 chỉ còn #148 và #150, cả hai đều không bị chặn nữa.
+**#148** (kỹ năng sản phẩm có band) hoặc **#154** (mastery theo chủ đề) — #153 đã mở khoá #154/#155/#156.
+Giai đoạn 1 chỉ còn #148 và #150.
 
-Sau đó: #153 → (#154/#155/#156) → #157 → #159 → #160–#162.
+Sau đó: #154/#155/#156 → #157 → #159 → #160–#162.
 
 ## 3. Đã xong (đã push lên `origin/main`)
 
@@ -36,7 +36,7 @@ Sau đó: #153 → (#154/#155/#156) → #157 → #159 → #160–#162.
 | #149 — render động theo `Cert.Skills` | `94428a2` + `5be51e3` | cert kỹ năng tên khác LIST/READ hiện đúng số thẻ |
 | #147 — wizard ghi scale + band + rubric | `6a407ab` + `3baa688` | cert tạo xong chấm được ngay; `/admin/score-conversion` đã xoá |
 
-`dotnet test`: **1368 pass, 0 fail**. E2E: 47 skip khi không có app chạy.
+`dotnet test`: **1398 pass, 0 fail**. E2E: 47 skip khi không có app chạy.
 
 **Nợ kỹ thuật đã biết:** 13 test trong `WebMVC.E2ETests` fail khi có app chạy, **giống hệt trên
 `a3acc06`** — hỏng sẵn, không phải do #147. Trước giờ ẩn vì thiếu `E2E_BASE_URL`. Cần ticket riêng.

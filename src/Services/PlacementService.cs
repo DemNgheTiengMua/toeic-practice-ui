@@ -604,18 +604,85 @@ public sealed class PlacementService(
             currentBandName,
             targetBandCode,
             cefrBands,
-            targetOptions);
+            targetOptions,
+            await GetGoalStatusAsync(userId, cancellationToken));
     }
 
     public async Task<SaveTargetBandResult> SetTargetBandAsync(int userId, string targetBandCode, CancellationToken cancellationToken = default)
     {
-        var certId = await learners.GetActiveCertIdAsync(userId, cancellationToken);
-        var validBand = await db.ScoreBands
-            .AnyAsync(b => b.CertId == certId && b.Code == targetBandCode, cancellationToken);
+        // #153: the goal is now five columns, so the old band-only writer delegates rather than
+        // keeping a second, unvalidated way to write the row. A goal set this way has no deadline,
+        // and therefore no verdict — which is legal and is not "unrealistic".
+        var saved = await SetGoalAsync(userId, currentBandCode: null, targetBandCode, targetDate: null, weeklyStudyHours: null, cancellationToken);
+        return new SaveTargetBandResult(saved.UserId, saved.CertId, saved.TargetBandCode, saved.SetAt);
+    }
 
-        if (!validBand)
+    public async Task<SaveGoalResult> SetGoalAsync(
+        int userId,
+        string? currentBandCode,
+        string targetBandCode,
+        DateOnly? targetDate,
+        decimal? weeklyStudyHours,
+        CancellationToken cancellationToken = default)
+    {
+        var certId = await learners.GetActiveCertIdAsync(userId, cancellationToken);
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        var bands = await db.ScoreBands
+            .AsNoTracking()
+            .Where(b => b.CertId == certId)
+            .ToDictionaryAsync(b => b.Code, StringComparer.OrdinalIgnoreCase, cancellationToken);
+
+        if (!bands.ContainsKey(targetBandCode))
         {
             throw new PlacementException(PlacementException.TargetBandInvalid, $"Band code '{targetBandCode}' is not valid for this certificate.");
+        }
+
+        // The starting band falls back to the learner's own assessed band, so the onboarding screen
+        // does not have to know it, but an explicit band must still be a band of this certificate.
+        var fromBandCode = currentBandCode;
+        if (!string.IsNullOrWhiteSpace(fromBandCode) && !bands.ContainsKey(fromBandCode))
+        {
+            throw new PlacementException(PlacementException.TargetBandInvalid, $"Band code '{fromBandCode}' is not valid for this certificate.");
+        }
+        fromBandCode ??= await LatestAssessedBandCodeAsync(userId, certId, cancellationToken);
+
+        // Half a goal cannot be judged: a date without a pace has no availability to compare with.
+        if (targetDate.HasValue != weeklyStudyHours.HasValue)
+        {
+            throw new PlacementException(
+                PlacementException.TargetDateInvalid,
+                "A goal needs both an exam date and a weekly study pace, or neither.");
+        }
+
+        if (targetDate.HasValue && targetDate.Value < today)
+        {
+            throw new PlacementException(
+                PlacementException.TargetDateInvalid,
+                $"The exam date {targetDate.Value:yyyy-MM-dd} has already passed. Pick a date from today onwards.");
+        }
+
+        if (weeklyStudyHours is { } pace && (pace <= 0 || pace > GoalFeasibilityCalculator.MaxWeeklyHours))
+        {
+            throw new PlacementException(
+                PlacementException.WeeklyHoursTooHigh,
+                $"A week has to hold between 0 and {GoalFeasibilityCalculator.MaxWeeklyHours:0} hours of study; {pace:0.#} is not a pace anyone can keep.");
+        }
+
+        int? requiredHours = null;
+        string? status = null;
+        GoalFeasibility? feasibility = null;
+        if (targetDate is { } date && weeklyStudyHours is { } hours)
+        {
+            var currentHours = fromBandCode is not null && bands.TryGetValue(fromBandCode, out var fromBand)
+                ? fromBand.CumulativeStudyHours
+                : null;
+
+            feasibility = GoalFeasibilityCalculator.Evaluate(
+                currentHours, bands[targetBandCode].CumulativeStudyHours, date, hours, today);
+
+            requiredHours = feasibility?.RequiredHours;
+            status = feasibility?.Status.ToCode();
         }
 
         var now = DateTimeOffset.UtcNow;
@@ -625,6 +692,11 @@ public sealed class PlacementService(
         if (existing is not null)
         {
             existing.TargetBandCode = targetBandCode;
+            existing.CurrentBandCode = fromBandCode;
+            existing.TargetDate = targetDate;
+            existing.WeeklyStudyHours = weeklyStudyHours;
+            existing.RequiredTotalHours = requiredHours;
+            existing.FeasibilityStatus = status;      // NULL clears a stale verdict
             existing.SetAt = now;
         }
         else
@@ -634,6 +706,11 @@ public sealed class PlacementService(
                 UserId = userId,
                 CertId = certId,
                 TargetBandCode = targetBandCode,
+                CurrentBandCode = fromBandCode,
+                TargetDate = targetDate,
+                WeeklyStudyHours = weeklyStudyHours,
+                RequiredTotalHours = requiredHours,
+                FeasibilityStatus = status,
                 SetAt = now,
             });
         }
@@ -646,20 +723,130 @@ public sealed class PlacementService(
         {
             var concurrent = await db.TargetBands
                 .FirstOrDefaultAsync(t => t.UserId == userId && t.CertId == certId, cancellationToken);
-            if (concurrent is not null)
-            {
-                concurrent.TargetBandCode = targetBandCode;
-                concurrent.SetAt = now;
-                await db.SaveChangesAsync(cancellationToken);
-            }
-            else
+            if (concurrent is null)
             {
                 throw;
             }
+
+            concurrent.TargetBandCode = targetBandCode;
+            concurrent.CurrentBandCode = fromBandCode;
+            concurrent.TargetDate = targetDate;
+            concurrent.WeeklyStudyHours = weeklyStudyHours;
+            concurrent.RequiredTotalHours = requiredHours;
+            concurrent.FeasibilityStatus = status;
+            concurrent.SetAt = now;
+            await db.SaveChangesAsync(cancellationToken);
         }
 
-        return new SaveTargetBandResult(userId, certId, targetBandCode, now);
+        var goalStatus = BuildGoalStatus(
+            fromBandCode, targetBandCode, targetDate, weeklyStudyHours, requiredHours, feasibility);
+
+        return new SaveGoalResult(userId, certId, targetBandCode, now, goalStatus);
     }
+
+    public async Task<GoalStatus> GetGoalStatusAsync(int userId, CancellationToken cancellationToken = default)
+    {
+        var certId = await learners.GetActiveCertIdAsync(userId, cancellationToken);
+
+        var saved = await db.TargetBands
+            .AsNoTracking()
+            .FirstOrDefaultAsync(t => t.UserId == userId && t.CertId == certId, cancellationToken);
+
+        if (saved is null)
+        {
+            return new GoalStatus(null, "", null, null, null, null,
+                FeasibilityStatus.Unknown, null, null);
+        }
+
+        FeasibilityStatus status = FeasibilityStatus.Unknown;
+        int? suggested = null;
+        DateOnly? earliest = null;
+        decimal? available = null;
+        if (saved.FeasibilityStatus is not null)
+        {
+            // Re-read the verdict from the stored code; the two numbers are re-derived so the screen
+            // never shows a total that no longer matches the bands (an admin may have re-bandered).
+            var bands = await db.ScoreBands
+                .AsNoTracking()
+                .Where(b => b.CertId == certId)
+                .ToDictionaryAsync(b => b.Code, StringComparer.OrdinalIgnoreCase, cancellationToken);
+
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            var fromHours = saved.CurrentBandCode is not null && bands.TryGetValue(saved.CurrentBandCode, out var fromBand)
+                ? fromBand.CumulativeStudyHours
+                : null;
+            var toHours = bands.TryGetValue(saved.TargetBandCode, out var toBand) ? toBand.CumulativeStudyHours : null;
+
+            if (saved.TargetDate is { } date && saved.WeeklyStudyHours is { } hours)
+            {
+                var feasibility = GoalFeasibilityCalculator.Evaluate(fromHours, toHours, date, hours, today);
+                if (feasibility is not null)
+                {
+                    status = feasibility.Status;
+                    suggested = feasibility.SuggestedWeeklyHours;
+                    earliest = feasibility.EarliestFeasibleDate;
+                    available = feasibility.AvailableHours;
+                }
+            }
+        }
+
+        return new GoalStatus(
+            saved.CurrentBandCode,
+            saved.TargetBandCode,
+            saved.TargetDate,
+            saved.WeeklyStudyHours,
+            saved.RequiredTotalHours,
+            available,
+            status,
+            suggested,
+            earliest);
+    }
+
+    /// <summary>#153: the band the learner was last assessed at — the placement result, or failing
+    /// that a graded mock. Null when they have never been assessed, which is not an error: the goal
+    /// simply cannot be priced from a starting band the system does not know.</summary>
+    private async Task<string?> LatestAssessedBandCodeAsync(int userId, int certId, CancellationToken cancellationToken)
+    {
+        var placementBand = await db.PlacementTests
+            .AsNoTracking()
+            .Where(p => p.UserId == userId && p.CertId == certId && p.Status == PlacementStatus.Done.ToCode())
+            .OrderByDescending(p => p.TakenAt)
+            .Select(p => p.ResultBandCode)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (!string.IsNullOrEmpty(placementBand))
+        {
+            return placementBand;
+        }
+
+        return await db.ExamAttempts
+            .AsNoTracking()
+            .Where(a => a.UserId == userId && a.CertId == certId
+                && a.Status == AttemptStatus.Graded.ToCode()
+                && a.Exam.Purpose == ExamPurpose.Mock.ToCode()
+                && a.BandCode != null)
+            .OrderByDescending(a => a.SubmittedAt ?? a.StartedAt)
+            .Select(a => a.BandCode)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    private static GoalStatus BuildGoalStatus(
+        string? currentBandCode,
+        string targetBandCode,
+        DateOnly? targetDate,
+        decimal? weeklyStudyHours,
+        int? requiredHours,
+        GoalFeasibility? feasibility) =>
+        new(
+            currentBandCode,
+            targetBandCode,
+            targetDate,
+            weeklyStudyHours,
+            requiredHours,
+            feasibility?.AvailableHours,
+            feasibility?.Status ?? FeasibilityStatus.Unknown,
+            feasibility?.SuggestedWeeklyHours,
+            feasibility?.EarliestFeasibleDate);
 
     private async Task<PlacementResultView> SubmitPlacementInternalAsync(
         int placementId,
