@@ -1,8 +1,8 @@
-# STATE — dự án ExtraEfficiency (spec & cleanup)
+# STATE — quyết định đã chốt
 
-> File sống. Cập nhật mỗi khi có quyết định mới. Đây là nguồn sự thật duy nhất về
-> "đã chốt cái gì"; không phụ thuộc vào việc còn nhớ hay không.
-> Cập nhật lần cuối: 2026-10-30
+> Nguồn sự thật **duy nhất về "đã chốt cái gì"**. Không chép trạng thái công việc vào đây —
+> cái đó ở `docs/STATUS.md`. File này chỉ trả lời một câu: quyết định nào không được đảo?
+> Cập nhật lần cuối: 2026-10-31
 
 ---
 
@@ -19,6 +19,7 @@
 | D7 | **Phát hiện lệch trình độ thì nói rõ với người học** (không âm thầm hạ) | 10-30 | Chọn phương án minh bạch | Cần câu chữ không gây mất mặt + cơ chế điều chỉnh |
 | D8 | **Xoá trang `/admin/score-conversion`** — cấu hình điểm thuộc về định nghĩa cert | 10-30 | Đã cho tạo cert thì không cần màn hình convert riêng | ⚠️ Trang này là nơi DUY NHẤT ghi `ScoreScale`/`ScoreBand` → phải chuyển logic sang wizard, nếu không mọi cert mới vỡ |
 | D9 | Quy trình làm việc: **làm xong từng mục, manual test thấy đúng mới sang mục tiếp** | 10-30 | Tránh bloat, tránh bug dồn | Mỗi mục phải có khối "Done khi" trước khi bắt đầu |
+| D10 | **Cột thang điểm trên `Skills` là NULLable**, backfill từ `ScoreScales`, chưa ép NOT NULL | 10-31 | NOT NULL làm vỡ 12 file schema-test + 16 seed insert trong một commit | "Thiếu cấu hình = lỗi" ép lúc **gọi** (ném `ScoreConversionException` nêu tên skill), không phải lúc **lưu** |
 
 ## 2. Quyết định còn treo
 
@@ -30,13 +31,7 @@
 
 ## 3. Artifact đang có
 
-| File | Nội dung | Trạng thái |
-|---|---|---|
-| `docs/research-brief.md` | Brief cho agent deep-research, 8 câu hỏi | **Sẵn sàng gửi** |
-| `docs/audit/hardcode-views-js.md` | Scan hardcode: views, JS, CSS, ViewModels, mappers, templates | **xong — 84 dòng** (B 5 · W 30 · C 49) |
-| `docs/audit/hardcode-services.md` | Scan hardcode: services, API, contracts, data, enum đóng | **xong — 82 dòng** (B 11 · W 52 · C 19) |
-| `docs/MASTER-SPEC.md` | Spec chủ | chưa viết — chờ research |
-| GitHub issues | Ticket thi hành | chưa tạo — chờ spec |
+Trạng thái công việc và artifact: xem `docs/STATUS.md`. File này không chép lại.
 
 ## 4. Bug đã xác nhận (từ đọc code)
 
@@ -99,4 +94,5 @@ Dưới đây là **16 BLOCKER**, xếp theo độ chết người. Đây là nh
 
 - Trước khi làm bất cứ việc gì: đọc §1 để biết cái gì đã chốt.
 - Sau mỗi quyết định mới: thêm một dòng vào §1 hoặc §2, kèm ngày và lý do.
-- Khi paste kết quả research về: đối chiếu từng kết luận với §1. Kết luận nào đòi đảo D1–D9 thì bỏ, không implement.
+- Đối chiếu mọi đề xuất (research, agent, người) với §1. Đề xuất nào đòi đảo D1–D10 thì bỏ, không implement.
+- Muốn biết ticket nào đang làm: đọc `docs/STATUS.md`, không phải file này.
