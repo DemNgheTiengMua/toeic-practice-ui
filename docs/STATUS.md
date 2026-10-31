@@ -78,3 +78,28 @@ Xoá 2 file đã bị thay thế hoàn toàn và không ai tham chiếu:
 - Mở file này là biết đang ở đâu. Không cần đọc 22 issue.
 - Xong một ticket: cập nhật §2 và §3, rồi `gh issue close`.
 - Quyết định mới: thêm một dòng vào §4, đừng viết file mới.
+
+## 8. Bảo trì graphify
+
+Git hook `post-commit` đã cài, tự rebuild sau mỗi commit (đã kiểm chứng: commit `da6c835`
+→ `built_at_commit` khớp). Kiểm tra bằng `graphify hook status`.
+
+Sau **mỗi đợt commit** (nhiều commit, hoặc commit từ môi trường bỏ qua hook), chạy tay:
+
+```sh
+python -m graphify update .
+```
+
+Phải dùng `python -m`, **không** dùng `graphify` trần: shim `graphify` chạy MSYS Python
+thiếu `tree_sitter_sql`, nên 20 file `.sql` bị bỏ im lặng và schema không vào graph.
+Chênh lệch ~1700 node.
+
+Sau khi sửa nhiều tài liệu (docs/*.md, ADR, spec), chạy thêm `/graphify --update` trong
+agent để trích xuất lại phần ngữ nghĩa.
+
+Kiểm tra graph có khớp code không:
+
+```sh
+python -c "import json;print(json.load(open('graphify-out/graph.json'))['built_at_commit'])"
+git rev-parse HEAD
+```
