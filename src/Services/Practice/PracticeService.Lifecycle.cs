@@ -21,14 +21,18 @@ public sealed partial class PracticeService
             .SingleOrDefaultAsync(cancellationToken)
             ?? throw new PracticeException(PracticeException.SectionUnavailable, $"Section {input.SectionId} is not available for active certificate.");
 
-        if (EnumCodes.Parse<Modality>(section.Modality) is not (Modality.Listening or Modality.Reading))
-        {
-            throw new PracticeException(PracticeException.ModalityNotAllowed, "Free practice is only available for listening and reading sections.");
-        }
+        // #150: every modality drills. A certificate whose only skill is Speaking or Writing used to
+        // have no route to a practice session at all; the section's own modality comes from the row and
+        // FK_Practice_SectionModality still pins the session to it.
+        var isFreeResponse = string.Equals(section.Modality, Modality.Speaking.ToCode(), StringComparison.Ordinal)
+            || string.Equals(section.Modality, Modality.Writing.ToCode(), StringComparison.Ordinal);
 
-        var query = db.Questions
-            .AsNoTracking()
-            .Where(q => q.SectionId == section.SectionId && q.QuestionType != QuestionType.FreeResponse.ToCode() && q.QuestionType != "writing" && q.QuestionType != "speaking" && (q.AcceptedAnswersJson != null || db.QuestionOptions.Any(o => o.QuestionId == q.QuestionId)));
+        // Speaking and writing sections hold free_response questions only, so the drill serves those
+        // and checks the answer against the question's own limits. Listening and reading drill the
+        // objective components, which is what the immediate-feedback grader can score.
+        var query = isFreeResponse
+            ? db.Questions.AsNoTracking().Where(q => q.SectionId == section.SectionId && q.QuestionType == QuestionType.FreeResponse.ToCode())
+            : db.Questions.AsNoTracking().Where(q => q.SectionId == section.SectionId && q.QuestionType != QuestionType.FreeResponse.ToCode() && (q.AcceptedAnswersJson != null || db.QuestionOptions.Any(o => o.QuestionId == q.QuestionId)));
 
         if (input.QuestionSource == QuestionSource.WrongBefore)
         {

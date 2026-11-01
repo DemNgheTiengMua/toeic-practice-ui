@@ -44,10 +44,6 @@ public static partial class PracticeEndpoints
             {
                 return ValidationProblem(ex);
             }
-            catch (PracticeException ex) when (ex.Code == PracticeException.ModalityNotAllowed)
-            {
-                return Problem(StatusCodes.Status400BadRequest, "Modality not allowed for free practice", ApiError.Codes.PracticeModalityNotAllowed, ex.Message);
-            }
             catch (PracticeException ex) when (ex.Code == PracticeException.SectionUnavailable)
             {
                 return Problem(StatusCodes.Status404NotFound, "Section unavailable", ApiError.Codes.PracticeSectionUnavailable, ex.Message);

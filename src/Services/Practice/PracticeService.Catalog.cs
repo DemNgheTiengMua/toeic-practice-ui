@@ -29,7 +29,8 @@ public sealed partial class PracticeService
 
         var questionCounts = await db.Questions
             .AsNoTracking()
-            .Where(q => q.Section.CertId == activeCertId && q.QuestionType != QuestionType.FreeResponse.ToCode() && q.QuestionType != "writing" && q.QuestionType != "speaking")
+            .Where(q => q.Section.CertId == activeCertId
+                && (q.QuestionType == QuestionType.FreeResponse.ToCode() || (q.QuestionType != QuestionType.FreeResponse.ToCode() && (q.AcceptedAnswersJson != null || db.QuestionOptions.Any(o => o.QuestionId == q.QuestionId)))))
             .GroupBy(q => q.SectionId)
             .Select(g => new { SectionId = g.Key, Count = g.Count() })
             .ToDictionaryAsync(g => g.SectionId, g => g.Count, cancellationToken);
@@ -67,6 +68,7 @@ public sealed partial class PracticeService
 
         var listening = items.Where(i => i.Modality == Modality.Listening).ToList();
         var reading = items.Where(i => i.Modality == Modality.Reading).ToList();
+        // #150: speaking and writing sections drill too, so they are no longer a dead bucket.
         var other = items.Where(i => i.Modality is not (Modality.Listening or Modality.Reading)).ToList();
 
         // Weakest part: listening/reading section with lowest accuracy among those with at least 1 answer

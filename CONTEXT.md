@@ -29,7 +29,11 @@ _Avoid_: Clip (for a slice), part audio
 ### Learning activity
 
 **Practice session**:
-A free, MCQ-only drill over one listening or reading section, graded immediately. Never charges credits. Bounded to a FIFO retention window (default: 20 sessions per certificate) so storage stays predictable while preserving enough historical question data for weakness analysis and AI mentor insights.
+A free drill over one section of any skill, graded immediately. A listening or reading session is
+marked by its correct option; a speaking or writing session is marked against the question's own word
+floor and required keywords, never by AI, and so never charges credits. Bounded to a FIFO retention
+window (default: 20 sessions per certificate) so storage stays predictable while preserving enough
+historical question data for weakness analysis and AI mentor insights.
 _Avoid_: Practice (unqualified), quiz
 
 **Attempt**:

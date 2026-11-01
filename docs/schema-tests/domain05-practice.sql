@@ -8,7 +8,7 @@ INSERT INTO Sections (SkillId,CertId,Modality,Code,Name,OptionCount,ExpectedQues
 DECLARE @sec INT=SCOPE_IDENTITY();
 INSERT INTO Skills (CertId,Code,Name,Modality,DisplayOrder) VALUES (@c,'SPK',N'Spk','speaking',2);
 DECLARE @skSpk INT=SCOPE_IDENTITY();
-INSERT INTO Sections (SkillId,CertId,Modality,Code,Name,OptionCount,ExpectedQuestionCount,DisplayOrder) VALUES (@skSpk,@c,'speaking','S1',N'Interview',NULL,3,2);
+INSERT INTO Sections (SkillId,CertId,Modality,Code,Name,OptionCount,ExpectedQuestionCount,DisplayOrder) VALUES (@skSpk,@c,'speaking','S1',N'Interview',4,3,2);
 DECLARE @secSpk INT=SCOPE_IDENTITY();
 INSERT INTO Users (RoleId,Email,PasswordHash) VALUES (@r,'u@x.com',0x00); DECLARE @u INT=SCOPE_IDENTITY();
 INSERT INTO PracticeSessions (UserId,SectionId,Modality,QuestionCount,Status,CorrectCount)
@@ -23,13 +23,16 @@ END TRY BEGIN CATCH
   IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
   PRINT 'rejected bad status as expected';
 END CATCH
--- M-18: reject free practice on a speaking section
+-- #150: a speaking or writing section drills now (the CHECK widened from listening/reading to all four)
+INSERT INTO PracticeSessions (UserId,SectionId,Modality,QuestionCount,Status) VALUES (@u,@secSpk,'speaking',1,'in_progress');
+PRINT 'speaking practice session accepted';
+-- M-18: the composite FK still refuses a session whose modality is not its section's own
 BEGIN TRY
-  INSERT INTO PracticeSessions (UserId,SectionId,Modality,QuestionCount,Status) VALUES (@u,@secSpk,'speaking',1,'in_progress');
-  THROW 50000,'EXPECT_REJECT FAILED: speaking practice session accepted',1;
+  INSERT INTO PracticeSessions (UserId,SectionId,Modality,QuestionCount,Status) VALUES (@u,@sec,'speaking',1,'in_progress');
+  THROW 50000,'EXPECT_REJECT FAILED: mismatched modality accepted',1;
 END TRY BEGIN CATCH
   IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
-  PRINT 'rejected speaking practice session as expected';
+  PRINT 'rejected a session whose modality is not its section''s own';
 END CATCH
 -- Content fixtures for PracticeAnswers containment + H-6 tests
 INSERT INTO Exams (CertId,Name,Status,DurationMinutes) VALUES (@c,N'Practice Src','published',60);

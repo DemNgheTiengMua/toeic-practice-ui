@@ -51,7 +51,11 @@ public static partial class PracticeEndpoints
                         q.AudioPath,
                         q.AudioStartMs,
                         q.AudioEndMs,
-                        q.Transcript)).ToList()));
+                        q.Transcript,
+                        q.QuestionType,
+                        q.ResponseText,
+                        q.SelectedOptionIdsJson,
+                        q.AcceptedAnswersJson)).ToList()));
             }
             catch (PracticeException ex) when (ex.Code == PracticeException.SessionNotFound)
             {

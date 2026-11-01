@@ -622,6 +622,42 @@
               updateSubmitButtonState();
             });
           }
+        } else if (type === "free_response") {
+          // #150: a speaking or writing drill. The response is checked against the question's own
+          // word floor and required keywords when it is submitted, so this widget only captures text.
+          var minWords = s.minWords;
+          var maxWords = s.maxWords;
+          var requiredKeywords = s.requiredKeywords || '';
+          var curText = s.responseText || '';
+
+          var html = '<div class="free-response-widget stack" style="gap: var(--space-2);">';
+          html += '<div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">';
+          if (minWords) {
+            html += '<span class="badge badge--neutral" style="font-family: \'IBM Plex Mono\', monospace;">TỐI THIỂU ' + minWords + ' TỪ</span>';
+          }
+          if (maxWords) {
+            html += '<span class="badge badge--neutral" style="font-family: \'IBM Plex Mono\', monospace;">TỐI ĐA ' + maxWords + ' TỪ</span>';
+          }
+          if (requiredKeywords) {
+            html += '<span class="badge badge--warning" style="font-family: \'IBM Plex Mono\', monospace;">TỪ KHOÁ: ' + escapeHtml(requiredKeywords) + '</span>';
+          }
+          html += '</div>';
+          html += '<textarea class="completion-input js-completion-input" rows="8" placeholder="Viết câu trả lời của bạn..." ' + (isAnswered ? 'disabled' : '') + '>' + escapeHtml(curText) + '</textarea>';
+          html += '<div class="text-xs text-muted">Số từ: <strong class="js-comp-word-count">' + (curText.trim() ? curText.trim().split(/\s+/).length : 0) + '</strong></div>';
+          html += '</div>';
+          componentContainer.innerHTML = html;
+
+          var inputEl = componentContainer.querySelector('.js-completion-input');
+          var wordCountEl = componentContainer.querySelector('.js-comp-word-count');
+
+          if (!isAnswered && inputEl) {
+            inputEl.addEventListener('input', function () {
+              s.responseText = inputEl.value;
+              var words = inputEl.value.trim() ? inputEl.value.trim().split(/\s+/).length : 0;
+              if (wordCountEl) wordCountEl.textContent = words;
+              updateSubmitButtonState();
+            });
+          }
         } else if (type === "dropdown") {
           var selectedOptId = s.selectedOptionId;
           var html = '<div class="dropdown-widget stack" style="gap: var(--space-2);">';
@@ -850,7 +886,7 @@
             hasInput = s.selectedOptionId != null;
           } else if (type === "multi_select") {
             hasInput = s.selectedOptionIds && s.selectedOptionIds.length > 0;
-          } else if (type === "inline_completion") {
+          } else if (type === "inline_completion" || type === "free_response") {
             hasInput = s.responseText && s.responseText.trim().length > 0;
           }
           submitBtn.disabled = !hasInput;

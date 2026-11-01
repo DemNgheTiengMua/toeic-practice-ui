@@ -167,8 +167,8 @@ counts (TOEIC 2, IELTS 4), and scales all come from catalog rows. Per-skill
 scores are rows (`AttemptSkillScores`), not fixed columns; the total must
 always equal the SUM of scaled skill scores (trigger-enforced).
 
-**Free:** practice by section (MCQ only — immediate grading structurally
-requires a correct option, so speaking/writing practice routes through paid AI
+**Free:** practice by section (any skill — a listening/reading drill is marked by its correct option,
+a speaking/writing drill by the question's word floor and required keywords, so neither needs paid AI
 grading), with a question source (all / previously wrong / unseen) and a
 feedback mode (after each question / at the end); a rationale for why the
 learner's *chosen* option is wrong, beside the general explanation; a saved
@@ -188,6 +188,8 @@ from `SectionCriteria`. It costs one `ai_grading` charge and never
 `mock_exam_start`; a failed grading is retried on the same row at no charge.
 It scores one skill of a summed scale, so it **never carries a certificate
 band** (trigger-enforced). Writing is allowed by the schema but has no screens.
+A speaking or writing **practice session** is a different, free thing: a drill that checks the
+answer's word floor and required keywords, not a rubric.
 
 **Speaking backend contract** (no backend code exists yet; this is what the
 schema expects): the browser records per question and uploads the audio file;

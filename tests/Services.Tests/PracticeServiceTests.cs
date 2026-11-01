@@ -101,18 +101,125 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         Assert.Single(view.OtherSections);
     }
 
-    [Fact]
-    public async Task StartSession_refuses_speaking_section()
+    // #150: a certificate whose only skill is Writing or Speaking had no route to a practice session
+    // at all - CK_Practice_Modality allowed listening/reading only and PracticeService refused the rest.
+    [Theory]
+    [InlineData("writing")]
+    [InlineData("speaking")]
+    public async Task StartSession_drills_a_free_response_section_and_grades_the_answer(string modality)
     {
-        var certCode = Unique("SP");
-        var (_, _, spkSecId, _, _, _) = await SeedCertificateWithQuestionsAsync(certCode);
+        var certCode = Unique("FR");
+        var (sectionId, questionId) = await SeedFreeResponseCertificateAsync(certCode, modality);
         var userId = await SeedLearnerAsync(certCode);
         var (practice, _) = CreateServices();
 
-        var ex = await Assert.ThrowsAsync<PracticeException>(() =>
-            practice.StartSessionAsync(userId, new StartPracticeSessionInput(spkSecId, 10)));
+        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(sectionId, 10));
+        Assert.Equal(EnumCodes.Parse<Modality>(modality), session.Modality);
 
-        Assert.Equal(PracticeException.ModalityNotAllowed, ex.Code);
+        var question = await practice.GetQuestionAsync(userId, session.SessionId, 1);
+        Assert.Equal(questionId, question.QuestionId);
+        Assert.Equal("free_response", question.QuestionType);
+
+        // Too short and missing the required keyword: immediate feedback says both.
+        var tooShort = await practice.SubmitAnswerAsync(
+            userId, session.SessionId, questionId, new SubmitPracticeAnswerInput(ResponseText: "Too short."));
+        Assert.False(tooShort.IsCorrect);
+        Assert.Contains("at least 5 words", tooShort.Explanation);
+        Assert.Contains("Missing required keywords", tooShort.Explanation);
+        Assert.True(tooShort.IsSessionFinished);
+    }
+
+    [Theory]
+    [InlineData("writing")]
+    [InlineData("speaking")]
+    public async Task StartSession_grades_a_free_response_answer_that_meets_the_question_requirements(string modality)
+    {
+        var certCode = Unique("FR");
+        var (sectionId, questionId) = await SeedFreeResponseCertificateAsync(certCode, modality);
+        var userId = await SeedLearnerAsync(certCode);
+        var (practice, _) = CreateServices();
+
+        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(sectionId, 10));
+        var result = await practice.SubmitAnswerAsync(
+            userId, session.SessionId, questionId,
+            new SubmitPracticeAnswerInput(ResponseText: "The team discussed the proposal yesterday."));
+
+        Assert.True(result.IsCorrect);
+        Assert.Equal("The team discussed the proposal yesterday.", result.ResponseText);
+    }
+
+    // The composite FK still owns the pin: a session's modality is its section's, and no widening of
+    // the CHECK may create a way to make a listening session on a writing section.
+    [Fact]
+    public async Task A_practice_session_cannot_carry_a_modality_other_than_its_sections()
+    {
+        var certCode = Unique("PIN");
+        var (sectionId, _) = await SeedFreeResponseCertificateAsync(certCode, "writing");
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var user = new User
+        {
+            RoleId = await db.Roles.Where(r => r.Code == "learner").Select(r => r.RoleId).FirstAsync(),
+            Email = $"{Guid.NewGuid():N}@test.local",
+            PasswordHash = new byte[] { 1 },
+            FullName = "Pin Test",
+        };
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+
+        db.PracticeSessions.Add(new PracticeSession
+        {
+            UserId = user.UserId, SectionId = sectionId, Modality = "listening",
+            QuestionCount = 1, Status = "in_progress", CorrectCount = 0,
+        });
+
+        await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
+    }
+
+    private async Task<(int SectionId, int QuestionId)> SeedFreeResponseCertificateAsync(string certCode, string modality)
+    {
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+
+        var cert = new Certificate { Code = certCode, Name = $"Cert {certCode}", IsActive = true };
+        db.Certificates.Add(cert);
+        await db.SaveChangesAsync();
+
+        var code = modality == "writing" ? "WRIT" : "SPEA";
+        var skill = new Skill { CertId = cert.CertId, Code = code, Name = modality, Modality = modality, DisplayOrder = 1 };
+        db.Skills.Add(skill);
+        await db.SaveChangesAsync();
+
+        var section = new Section
+        {
+            CertId = cert.CertId, SkillId = skill.SkillId, Modality = modality, Code = "T1",
+            Name = "Free response task", DisplayOrder = 1, OptionCount = 4, ExpectedQuestionCount = 1,
+        };
+        db.Sections.Add(section);
+        await db.SaveChangesAsync();
+
+        var exam = new Exam
+        {
+            CertId = cert.CertId, Name = $"Exam {certCode}", Status = "published", DurationMinutes = 30,
+            Purpose = modality == "writing" ? "writing_practice" : "speaking_practice",
+        };
+        db.Exams.Add(exam);
+        await db.SaveChangesAsync();
+
+        var group = new QuestionGroup { ExamId = exam.ExamId, CertId = cert.CertId, SectionId = section.SectionId, DisplayOrder = 1 };
+        db.QuestionGroups.Add(group);
+        await db.SaveChangesAsync();
+
+        var question = new Question
+        {
+            GroupId = group.GroupId, ExamId = exam.ExamId, SectionId = section.SectionId, SkillId = skill.SkillId,
+            Stem = "Write about the meeting.", DifficultyLevel = 2, QuestionType = "free_response",
+            MinWords = 5, MaxWords = 40, RequiredKeywords = "proposal", Explanation = "Use the past simple.",
+            DisplayOrder = 1,
+        };
+        db.Questions.Add(question);
+        await db.SaveChangesAsync();
+
+        return (section.SectionId, question.QuestionId);
     }
 
     [Fact]

@@ -8,8 +8,9 @@ public sealed class PracticePresentationTests
 {
     // #149: a certificate whose only skill is Writing must see its practice content, not the
     // "No questions to practice yet" empty state that was keyed on Listening/Reading sections.
+    // #150: and that content is drillable now, so the start form appears too.
     [Fact]
-    public void A_writing_only_certificate_does_not_show_the_empty_state()
+    public void A_writing_only_certificate_can_start_a_drill()
     {
         var model = new PracticeCatalogViewModel(new PracticeCatalogDto(
             new CertificateOptionDto("DEMO", "DEMO"),
@@ -18,7 +19,6 @@ public sealed class PracticePresentationTests
             null));
 
         Assert.True(model.HasAnySections);
-        Assert.False(model.HasDrillableSections);
         Assert.Single(model.OtherSectionGroups);
     }
 

@@ -418,9 +418,11 @@ CREATE TABLE PracticeSessions (
   SessionId    INT IDENTITY(1,1) PRIMARY KEY,
   UserId       INT NOT NULL REFERENCES Users(UserId),
   SectionId    INT NOT NULL REFERENCES Sections(SectionId),
-  -- M-18: carried down from the section so free practice can be pinned to listening/reading only
+  -- M-18: carried down from the section so a session is pinned to its section's own skill.
+  -- #150: all four modalities drill. Before it, a certificate with only Speaking or only Writing had
+  -- no route to a practice session at all - a hard block, not a display bug.
   Modality     VARCHAR(10) NOT NULL
-    CONSTRAINT CK_Practice_Modality CHECK (Modality IN ('listening','reading')),
+    CONSTRAINT CK_Practice_Modality CHECK (Modality IN ('listening','reading','speaking','writing')),
   QuestionCount INT NOT NULL CONSTRAINT CK_Practice_Count CHECK (QuestionCount > 0),
   Status       VARCHAR(12) NOT NULL DEFAULT 'in_progress'
     CONSTRAINT CK_Practice_Status CHECK (Status IN ('in_progress','finished','abandoned')),
@@ -435,7 +437,8 @@ CREATE TABLE PracticeSessions (
   LearnerPathStepId INT NULL,
   StartedAt    DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
   FinishedAt   DATETIMEOFFSET NULL,
-  -- M-18: Modality must be the section's own (pins the literal via the FK) and excludes speaking/writing
+  -- M-18: Modality must be the section's own (pins the literal via the FK). This is the guard #150
+  -- kept: widening the CHECK must not create a way to make a listening session on a writing section.
   CONSTRAINT FK_Practice_SectionModality FOREIGN KEY (SectionId, Modality) REFERENCES Sections(SectionId, Modality),
   -- Low: composite target so PracticeAnswers can require QuestionId's SectionId = the session's own
   CONSTRAINT UQ_PracticeSessions_Id_Section UNIQUE (SessionId, SectionId),

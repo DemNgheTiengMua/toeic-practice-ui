@@ -58,6 +58,8 @@ public sealed partial class PracticeService
             .ToListAsync(cancellationToken);
 
         int? correctOptionId = allOptions.FirstOrDefault(o => o.IsCorrect)?.OptionId;
+        var isFreeResponse = q.QuestionType == QuestionType.FreeResponse.ToCode();
+        var explanation = q.Explanation;
 
         var optionIdsJson = input.SelectedOptionIdsJson;
         if (string.IsNullOrWhiteSpace(optionIdsJson) && input.SelectedOptionIds is { Count: > 0 })
@@ -65,7 +67,26 @@ public sealed partial class PracticeService
             optionIdsJson = System.Text.Json.JsonSerializer.Serialize(input.SelectedOptionIds);
         }
 
-        if (input.SelectedOptionId is { } optionId)
+        if (isFreeResponse)
+        {
+            // #150: a speaking or writing drill checks the response against the question's declared
+            // requirements - the one thing that can be judged without the AI grading queue. A blank
+            // response stays a skip, exactly as an unanswered objective question does.
+            answer.SelectedOptionId = null;
+            answer.SelectedOptionIdsJson = null;
+            answer.ResponseText = string.IsNullOrWhiteSpace(input.ResponseText) ? null : input.ResponseText;
+            if (answer.ResponseText is null)
+            {
+                answer.IsCorrect = null;
+            }
+            else
+            {
+                var eval = AttemptEngine.EvaluateWritingResponse(q, answer.ResponseText);
+                answer.IsCorrect = !eval.IsUnderLength && eval.HasRequiredKeywords;
+                explanation = FreeResponseFeedback(eval, q.Explanation);
+            }
+        }
+        else if (input.SelectedOptionId is { } optionId)
         {
             var option = allOptions.FirstOrDefault(o => o.OptionId == optionId)
                 ?? throw new PracticeException(PracticeException.InvalidOption, $"Option {optionId} does not belong to question {questionId}.");
@@ -227,7 +248,7 @@ public sealed partial class PracticeService
             answer.IsCorrect,
             answer.SelectedOptionId,
             correctOptionId,
-            q.Explanation,
+            explanation,
             q.Group.Transcript,
             isLast,
             nextDisplayOrder,
@@ -236,5 +257,25 @@ public sealed partial class PracticeService
             allOptions.Where(o => o.IsCorrect).Select(o => o.OptionId).ToList(),
             answer.ResponseText,
             answer.SelectedOptionIdsJson);
+    }
+
+    /// <summary>The immediate feedback a speaking or writing drill can give without the AI queue: how
+    /// long the answer was against the question's floor, and which required keywords it missed.</summary>
+    private static string? FreeResponseFeedback(WritingEvaluationResult eval, string? questionExplanation)
+    {
+        var parts = new List<string>();
+        if (eval.IsUnderLength)
+        {
+            parts.Add($"Answer too short: {eval.WordCount} of at least {eval.MinWords} words.");
+        }
+        if (!eval.HasRequiredKeywords)
+        {
+            parts.Add($"Missing required keywords: {string.Join(", ", eval.MissingKeywords)}.");
+        }
+        if (!string.IsNullOrWhiteSpace(questionExplanation))
+        {
+            parts.Add(questionExplanation);
+        }
+        return parts.Count > 0 ? string.Join(" ", parts) : null;
     }
 }

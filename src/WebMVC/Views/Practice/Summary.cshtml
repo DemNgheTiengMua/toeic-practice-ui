@@ -135,7 +135,21 @@
               }
             </td>
             <td>
-              @if (q.IsCorrect == true)
+              @if (q.QuestionType == "free_response")
+              {
+                <div class="stack" style="gap: var(--space-1);">
+                  @if (!string.IsNullOrWhiteSpace(q.ResponseText))
+                  {
+                    <div class="text-xs uppercase text-muted font-bold" style="letter-spacing: 0.04em;">Your response:</div>
+                    <div class="text-sm" style="white-space: pre-wrap;">@q.ResponseText</div>
+                  }
+                  else
+                  {
+                    <span class="badge badge--muted">Left blank</span>
+                  }
+                </div>
+              }
+              else if (q.IsCorrect == true)
               {
                 <div class="stack" style="gap: var(--space-1);">
                   <div>
@@ -175,10 +189,10 @@
               {
                 <details>
                   <summary class="text-sm font-semibold text-primary" style="cursor: pointer;">
-                    Why @q.CorrectOptionLabel is correct
+                    @(q.QuestionType == "free_response" ? "Feedback" : $"Why {q.CorrectOptionLabel} is correct")
                   </summary>
                   <div class="explain mt-2">
-                    <div class="explain__title">Why @q.CorrectOptionLabel is correct</div>
+                    <div class="explain__title">@(q.QuestionType == "free_response" ? "Feedback" : $"Why {q.CorrectOptionLabel} is correct")</div>
                     <p class="no-margin">@q.Explanation</p>
                   </div>
                 </details>

@@ -13,7 +13,7 @@ Research ước lượng **14 ngày người**, 4 giai đoạn. Đã xong **~1.5
 
 | Giai đoạn | Nội dung | Trạng thái |
 |---|---|---|
-| 1. Nền móng đa chứng chỉ & engine điểm | #146–#150 | 🟡 **đang làm** — #146, #148 xong |
+| 1. Nền móng đa chứng chỉ & engine điểm | #146–#150 | ✅ **xong** — #146, #148, #149, #150 |
 | 2. Chấm Writing & Speaking | #151–#152 | ⬜ chưa |
 | 3. Mastery, lộ trình có hạn, hiệu chuẩn | #153–#156 | 🟡 **đang làm** — #153 xong |
 | 4. Studio, preview, dashboard | #157–#159 | 🟡 **đang làm** — #157 xong |
@@ -22,9 +22,9 @@ Research ước lượng **14 ngày người**, 4 giai đoạn. Đã xong **~1.5
 ## 2. Việc tiếp theo
 
 **#159** (dashboard 3 khối) hoặc **#158** (preview kiểu thi thật) — cả hai đã mở khoá.
-Giai đoạn 1 chỉ còn #150.
+Giai đoạn 1 đã xong.
 
-Sau đó: #150 → #154/#155/#156 → #158/#159 → #160–#162.
+Sau đó: #154/#155/#156 → #158/#159 → #160–#162.
 
 ## 3. Đã xong (đã push lên `origin/main`)
 
@@ -37,6 +37,7 @@ Sau đó: #150 → #154/#155/#156 → #158/#159 → #160–#162.
 | #147 — wizard ghi scale + band + rubric | `6a407ab` + `3baa688` | cert tạo xong chấm được ngay; `/admin/score-conversion` đã xoá |
 | #148 — kỹ năng sản phẩm có band | `e786295` | Claude thật: `AiGradings.BandCode` `NULL` → `A2` (TOEIC) / `B2` (IELTS); trigger band đã gỡ |
 | #157 — đóng cổng publish | (commit này) | 2 đường vòng audit bị bịt; `ExpectedQuestionCount` NOT NULL; 2 lối ghi cấu trúc khác (quick ingest, AI generate) cũng khoá; `hidden` có đường ghi riêng (withdraw) |
+| #150 — practice cho cert chỉ có Speaking/Writing | (commit này) | `CK_Practice_Modality` mở cho cả 4 modality; `PracticeService` nhận cả 4; phiên vẫn bị composite FK khoá đúng modality của section; drill free-response chấm theo `MinWords` + `RequiredKeywords`, không chạm credit/AI |
 
 `dotnet test`: **1417 pass, 0 fail** (47 E2E skip khi không có app chạy). Schema-test:
 **6 fail, y hệt `e517572`** — cùng tên file *và* cùng mã lỗi (`Msg 515`/`547`/`50011`).
