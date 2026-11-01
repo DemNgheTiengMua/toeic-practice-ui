@@ -47,6 +47,9 @@ public sealed class EnumCodesTests
         { typeof(CardType), typeof(CardTypeDto), "CK_LessonCards_CardType" },
         { typeof(ScoreAggregationRule), typeof(ScoreAggregationRuleDto), "CK_Certificates_ScoreAggregationRule" },
         { typeof(DeliveryMode), typeof(DeliveryModeDto), "CK_Exams_DeliveryMode" },
+        // #153: the domain enum has three members and the CHECK accepts exactly those three. There is
+        // no Unknown member on purpose — an undecidable goal stores NULL, not a fourth code.
+        { typeof(FeasibilityStatus), typeof(FeasibilityStatusDto), "CK_TargetBands_Feasibility" },
     };
 
 
@@ -56,7 +59,8 @@ public sealed class EnumCodesTests
     {
         _ = wire;
         var schema = File.ReadAllText(Path.Combine(RepoRoot(), "docs", "database-schema.sql"));
-        var match = Regex.Match(schema, $@"CONSTRAINT {constraint} CHECK \(\w+ IN\s*\((?<codes>[^)]*)\)");
+        // The CHECK may be written as `x IN (...)` or, where NULL is legal, `x IS NULL OR x IN (...)`.
+        var match = Regex.Match(schema, $@"CONSTRAINT {constraint} CHECK \([^)]*?(?:IS NULL OR )?\w+ IN\s*\((?<codes>[^)]*)\)");
         Assert.True(match.Success, $"{constraint} not found in docs/database-schema.sql");
         var schemaCodes = Regex.Matches(match.Groups["codes"].Value, "'([a-z0-9_]+)'").Select(m => m.Groups[1].Value).Order();
 

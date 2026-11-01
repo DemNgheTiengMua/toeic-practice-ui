@@ -211,13 +211,9 @@ public static partial class PlacementEndpoints
                 goal.WeeklyStudyHours,
                 goal.RequiredHours,
                 goal.AvailableHours,
-                goal.Status switch
-                {
-                    FeasibilityStatus.Feasible => FeasibilityStatusDto.Feasible,
-                    FeasibilityStatus.Stretch => FeasibilityStatusDto.Stretch,
-                    FeasibilityStatus.Unrealistic => FeasibilityStatusDto.Unrealistic,
-                    _ => FeasibilityStatusDto.Unknown,
-                },
+                // ADR-0006 §2: the mapping is by member name, so the status codes stay in step with
+                // the enum instead of being re-listed by hand.
+                goal.Status.MapTo<FeasibilityStatusDto>(),
                 goal.SuggestedWeeklyHours,
                 goal.EarliestFeasibleDate);
 
@@ -228,7 +224,7 @@ public static partial class PlacementEndpoints
             result.TargetBandCode,
             result.SetAt,
             ToGoalStatusDto(result.Feasibility) ?? new GoalStatusDto(
-                null, result.TargetBandCode, null, null, null, null, FeasibilityStatusDto.Unknown, null, null));
+                null, result.TargetBandCode, null, null, null, null, null, null, null));
 
     private static SetTargetBandResultDto ToSetTargetBandResultDto(SaveTargetBandResult result) =>
         new SetTargetBandResultDto(result.UserId, result.CertId, result.TargetBandCode, result.SetAt);

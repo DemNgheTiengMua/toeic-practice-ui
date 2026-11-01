@@ -16,8 +16,9 @@ public sealed record TargetBandViewModel(
     /// <summary>#153: the goal already saved, or null when the learner has never set one.</summary>
     public GoalStatusDto? Goal => View.Goal;
 
-    /// <summary>#153: the verdict, flattened for the view's single switch.</summary>
-    public FeasibilityStatusDto Status => View.Goal?.Status ?? FeasibilityStatusDto.Unknown;
+    /// <summary>#153: the verdict, flattened for the view's single switch. Null when the goal cannot
+    /// be judged — no deadline, or bands that carry no study hours.</summary>
+    public FeasibilityStatusDto? Status => View.Goal?.Status;
 
     public bool HasDeadline => View.Goal?.TargetDate is not null;
 

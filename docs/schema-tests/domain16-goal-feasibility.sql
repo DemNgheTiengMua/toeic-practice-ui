@@ -11,7 +11,7 @@ INSERT INTO ScoreBands (CertId,Code,Name,MinTotal,MaxTotal,DisplayOrder,Cumulati
 
 -- accept: a goal with a deadline, its two numbers and its verdict
 INSERT INTO TargetBands (UserId,CertId,TargetBandCode,CurrentBandCode,TargetDate,WeeklyStudyHours,RequiredTotalHours,FeasibilityStatus)
-  VALUES (@u,@c,'B2','B1',DATEADD(day,30,CAST(SYSDATETIMEOFFSET() AS DATE)),6.0,300,'feasible');
+  VALUES (@u,@c,'B2','B1',DATEADD(day,210,CAST(SYSDATETIMEOFFSET() AS DATE)),10.0,300,'feasible');
 PRINT 'goal with a deadline accepted';
 
 -- accept: a goal with no deadline — the placement flow writes exactly this row, and "no answer" is legal

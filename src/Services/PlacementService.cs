@@ -755,10 +755,10 @@ public sealed class PlacementService(
         if (saved is null)
         {
             return new GoalStatus(null, "", null, null, null, null,
-                FeasibilityStatus.Unknown, null, null);
+                null, null, null);
         }
 
-        FeasibilityStatus status = FeasibilityStatus.Unknown;
+        FeasibilityStatus? status = null;
         int? suggested = null;
         DateOnly? earliest = null;
         decimal? available = null;
@@ -844,7 +844,7 @@ public sealed class PlacementService(
             weeklyStudyHours,
             requiredHours,
             feasibility?.AvailableHours,
-            feasibility?.Status ?? FeasibilityStatus.Unknown,
+            feasibility?.Status,
             feasibility?.SuggestedWeeklyHours,
             feasibility?.EarliestFeasibleDate);
 

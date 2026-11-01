@@ -135,7 +135,7 @@ public sealed class GoalFeasibilityServiceTests(DatabaseFixture database)
         var result = await placement.SetGoalAsync(
             userId, currentBandCode: "B1", targetBandCode: "B2", targetDate: null, weeklyStudyHours: null);
 
-        Assert.Equal(FeasibilityStatus.Unknown, result.Feasibility.Status);
+        Assert.Equal(null, result.Feasibility.Status);
 
         var saved = await db.TargetBands.AsNoTracking().SingleAsync(t => t.UserId == userId);
         Assert.Equal("B2", saved.TargetBandCode);
@@ -163,7 +163,7 @@ public sealed class GoalFeasibilityServiceTests(DatabaseFixture database)
         var result = await placement.SetGoalAsync(
             userId, currentBandCode: "CAT_B1", targetBandCode: "CAT_B2", targetDate: Today.AddDays(30), weeklyStudyHours: 6m);
 
-        Assert.Equal(FeasibilityStatus.Unknown, result.Feasibility.Status);
+        Assert.Equal(null, result.Feasibility.Status);
 
         var saved = await db.TargetBands.AsNoTracking().SingleAsync(t => t.UserId == userId);
         Assert.Equal("CAT_B2", saved.TargetBandCode);

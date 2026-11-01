@@ -6,13 +6,6 @@
     var goal = Model.Goal;
     var bands = view.AvailableBands;
     var status = Model.Status;
-    var statusClass = status switch
-    {
-        FeasibilityStatusDto.Feasible => "alert--success",
-        FeasibilityStatusDto.Stretch => "alert--warning",
-        FeasibilityStatusDto.Unrealistic => "alert--danger",
-        _ => "alert--info"
-    };
 }
 
 <div class="context-bar">

@@ -224,7 +224,41 @@ public sealed partial class LearningPathService
         string targetBandCode,
         IReadOnlyList<ScoreBand> scoreBands)
     {
-        if (goal?.TargetDate is not { } targetDate || goal.WeeklyStudyHours is not { } weeklyHours)
+        if (goal is null)
+        {
+            return;
+        }
+
+        // AC4: the stored verdict is the contract. A goal an admin or a learner has already been
+        // told is Unrealistic must not quietly become buildable because a band's study hours moved.
+        if (goal.FeasibilityStatus is { } stored)
+        {
+            if (!string.Equals(stored, FeasibilityStatus.Unrealistic.ToCode(), StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            // Both numbers, recomputed from the stored date and pace, so the refusal is never a
+            // claim the learner has to take on trust.
+            var weeksAvailable = goal.TargetDate is { } date
+                ? Math.Max(1, (int)Math.Ceiling((date.DayNumber - DateOnly.FromDateTime(DateTime.UtcNow).DayNumber) / 7.0))
+                : 0;
+            var hoursAvailable = weeksAvailable * (goal.WeeklyStudyHours ?? 0m);
+            var hoursNeeded = goal.RequiredTotalHours
+                ?? scoreBands.FirstOrDefault(b => b.Code == targetBandCode)?.CumulativeStudyHours
+                - scoreBands.FirstOrDefault(b => b.Code == startingBandCode)?.CumulativeStudyHours
+                ?? 0;
+
+            throw new LearningPathException(
+                LearningPathException.GoalUnrealistic,
+                $"This goal is marked unrealistic: it needs {hoursNeeded} hours of study, and you have " +
+                $"{hoursAvailable:0.#} hours ({weeksAvailable} weeks at {goal.WeeklyStudyHours:0.#} h/week). " +
+                "Move the exam date back, lower the target band, or raise your weekly pace — then your path can be built.");
+        }
+
+        // No stored verdict (an older row, or bands re-bandered since): judge it now rather than
+        // assuming it is fine.
+        if (goal.TargetDate is not { } targetDate || goal.WeeklyStudyHours is not { } weeklyHours)
         {
             return;   // no deadline: nothing to refuse
         }
