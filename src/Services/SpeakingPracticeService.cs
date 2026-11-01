@@ -642,8 +642,26 @@ public sealed class SpeakingPracticeService(
             scaledScore = (int)Math.Round((overallTotalScore / overallMaxScore) * 200m, MidpointRounding.AwayFromZero);
         }
 
-        var estimatedBand = await AttemptEngine.EstimateBandForRubricAsync(
-            db, attempt.CertId, overallTotalScore, overallMaxScore, cancellationToken);
+        // E1.3 (#148): display the snapshot the grading worker stored, not a live recomputation — the
+        // column and the page must be the same number. The worker stamps every grading of the attempt
+        // with the attempt-level estimate, so any one of them carries it. A row graded before this
+        // existed has no snapshot and nothing else is authoritative, so only then compute it.
+        var estimatedCode = freeResponses
+            .Select(fr => fr.AiGradingFreeResponse?.BandCode)
+            .FirstOrDefault(code => !string.IsNullOrEmpty(code));
+        if (estimatedCode is null)
+        {
+            estimatedCode = (await AttemptEngine.EstimateBandForAttemptAsync(
+                db, attempt.AttemptId, attempt.CertId, cancellationToken))?.Code;
+        }
+
+        var estimatedName = estimatedCode is null
+            ? null
+            : await db.ScoreBands
+                .AsNoTracking()
+                .Where(b => b.CertId == attempt.CertId && b.Code == estimatedCode)
+                .Select(b => b.Name)
+                .FirstOrDefaultAsync(cancellationToken);
 
         return new SpeakingReviewView(
             attempt.AttemptId,
@@ -658,8 +676,8 @@ public sealed class SpeakingPracticeService(
             scaledScore,
             questionItems,
             lowest,
-            estimatedBand?.Code,
-            estimatedBand?.Name);
+            estimatedCode,
+            estimatedName);
     }
 
     public async Task<FileStreamResultInfo?> GetAudioFileAsync(int userId, int attemptId, int questionId, CancellationToken cancellationToken = default)

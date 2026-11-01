@@ -56,11 +56,13 @@ INSERT INTO ExamAttempts (UserId,ExamId,CertId,ExpiresAt) VALUES (@u,@pl,@c,SYSD
 INSERT INTO PlacementTests (UserId,CertId,ExamId,AttemptId) VALUES (@u,@c,@pl,@pa);
 PRINT 'accepted placement linked to its attempt';
 
--- E1.3 (#148): a speaking-practice attempt carries no certificate band of its own (the estimate lives
--- on AiGradings.BandCode), but it is no longer refused either. Only TotalScore stays forbidden.
+-- E1.3 (#148): the band arm of this trigger is gone, so a speaking-practice attempt's BandCode is no
+-- longer constrained here. That is deliberate, not an oversight: the estimate belongs on
+-- AiGradings.BandCode and the app leaves ExamAttempts.BandCode NULL, but the schema does not police
+-- which of the two a future caller writes. TotalScore stays forbidden - one rubric is not "out of 990".
 INSERT INTO ScoreBands (CertId,Code,Name,MinTotal,MaxTotal) VALUES (@c,'A1',N'A1',120,224);
 INSERT INTO ExamAttempts (UserId,ExamId,CertId,ExpiresAt,BandCode) VALUES (@u,@spx,@c,SYSDATETIMEOFFSET(),'A1'); DECLARE @spa INT=SCOPE_IDENTITY();
-PRINT 'accepted a band on a speaking-practice attempt';
+PRINT 'accepted a band on a speaking-practice attempt: the ban was dropped in #148';
 BEGIN TRY
   UPDATE ExamAttempts SET TotalScore=180 WHERE AttemptId=@spa;
   THROW 50000,'EXPECT_REJECT FAILED: total score on speaking practice accepted',1;

@@ -240,6 +240,16 @@
       </p>
     </div>
   }
+  else if (r.AnsweredQuestions == 0 || r.TotalScore <= 0)
+  {
+    <div class="alert alert--warning">
+      <strong>No estimated band: nothing was scored.</strong>
+      <p class="text-sm no-margin mt-1">
+        An empty rubric earns no band. Record an answer, or answer more of the questions, to get an
+        estimate on @r.CertCode's band scale.
+      </p>
+    </div>
+  }
   else
   {
     <div class="alert alert--warning">

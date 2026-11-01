@@ -37,10 +37,11 @@ Sau đó: #154/#155/#156 → #157 → #159 → #160–#162.
 | #147 — wizard ghi scale + band + rubric | `6a407ab` + `3baa688` | cert tạo xong chấm được ngay; `/admin/score-conversion` đã xoá |
 | #148 — kỹ năng sản phẩm có band | `e786295` | Claude thật: `AiGradings.BandCode` `NULL` → `A2` (TOEIC) / `B2` (IELTS); trigger band đã gỡ |
 
-`dotnet test`: **1398 pass, 0 fail**. E2E: 47 skip khi không có app chạy.
+`dotnet test`: **1404 pass, 0 fail**. E2E: 47 skip khi không có app chạy; khi chạy trên
+`scripts/crawl-env.sh fresh` thì **43 pass / 8 fail**, đúng bằng 8 fail trên `1106103`.
 
-**Nợ kỹ thuật đã biết:** 13 test trong `WebMVC.E2ETests` fail khi có app chạy, **giống hệt trên
-`a3acc06`** — hỏng sẵn, không phải do #147. Trước giờ ẩn vì thiếu `E2E_BASE_URL`. Cần ticket riêng.
+**Nợ kỹ thuật đã biết:** 8 test trong `WebMVC.E2ETests` fail khi có app chạy, **giống hệt trên
+`1106103`** — hỏng sẵn, không phải do #148. Trước giờ ẩn vì thiếu `E2E_BASE_URL`. Cần ticket riêng.
 
 ## 4. Quyết định mới chốt sau STATE.md
 

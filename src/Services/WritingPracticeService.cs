@@ -592,11 +592,26 @@ public sealed class WritingPracticeService(
             overallMaxScore += qMax;
         }
 
-        // E1.3 (#148): the estimate covers the whole practice, so an unanswered task lowers it — the
-        // same rubric total on a fully answered practice lands higher. This is deliberately the
-        // attempt-level number; AiGradings.BandCode keeps the per-task snapshot.
-        var estimatedBand = await AttemptEngine.EstimateBandForRubricAsync(
-            db, attempt.CertId, overallTotalScore, overallMaxScore, cancellationToken);
+        // E1.3 (#148): display the snapshot the grading worker stored, not a live recomputation — the
+        // column and the page must be the same number. The worker stamps every grading of the attempt
+        // with the attempt-level estimate, so any one of them carries it. A row graded before this
+        // existed has no snapshot and nothing else is authoritative, so only then compute it.
+        var estimatedCode = freeResponses
+            .Select(fr => fr.AiGradingFreeResponse?.BandCode)
+            .FirstOrDefault(code => !string.IsNullOrEmpty(code));
+        if (estimatedCode is null)
+        {
+            estimatedCode = (await AttemptEngine.EstimateBandForAttemptAsync(
+                db, attempt.AttemptId, attempt.CertId, cancellationToken))?.Code;
+        }
+
+        var estimatedName = estimatedCode is null
+            ? null
+            : await db.ScoreBands
+                .AsNoTracking()
+                .Where(b => b.CertId == attempt.CertId && b.Code == estimatedCode)
+                .Select(b => b.Name)
+                .FirstOrDefaultAsync(cancellationToken);
 
         return new WritingReviewView(
             attempt.AttemptId,
@@ -609,7 +624,7 @@ public sealed class WritingPracticeService(
             overallTotalScore,
             overallMaxScore,
             questionItems,
-            estimatedBand?.Code,
-            estimatedBand?.Name);
+            estimatedCode,
+            estimatedName);
     }
 }

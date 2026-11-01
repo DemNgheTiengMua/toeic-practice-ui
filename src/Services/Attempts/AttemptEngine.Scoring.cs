@@ -167,22 +167,29 @@ public sealed partial class AttemptEngine
 
     /// <summary>
     /// The one band rule: the band whose range holds the score, else the nearest one below, else the
-    /// lowest band (a score under the table is not a refusal).
+    /// lowest band (a score under the table is not a refusal). <paramref name="bands"/> must be ordered
+    /// by lower bound. Every caller in the solution — the attempt engine, the review pages and the
+    /// certificate wizard's preview — matches through here.
     /// </summary>
-    public static string? MatchBandCode(int score, IReadOnlyList<ScoreBand> bands)
+    internal static T? MatchBand<T>(
+        int score, IReadOnlyList<T> bands, Func<T, int> minTotal, Func<T, int> maxTotal)
+        where T : class
     {
         if (bands.Count == 0) return null;
 
-        var matchingBand = bands.FirstOrDefault(b => score >= b.MinTotal && score <= b.MaxTotal);
+        var matchingBand = bands.FirstOrDefault(b => score >= minTotal(b) && score <= maxTotal(b));
         if (matchingBand is null)
         {
-            matchingBand = score < bands[0].MinTotal
+            matchingBand = score < minTotal(bands[0])
                 ? bands[0]
-                : bands.LastOrDefault(b => score >= b.MinTotal) ?? bands[^1];
+                : bands.LastOrDefault(b => score >= minTotal(b)) ?? bands[^1];
         }
 
-        return matchingBand?.Code;
+        return matchingBand;
     }
+
+    public static string? MatchBandCode(int score, IReadOnlyList<ScoreBand> bands) =>
+        MatchBand(score, bands, b => b.MinTotal, b => b.MaxTotal)?.Code;
 
     /// <summary>
     /// E1.3 (#148): the band a single AI-graded skill's rubric total belongs to, on the certificate's
@@ -192,10 +199,15 @@ public sealed partial class AttemptEngine
     /// score scale is not used here: it is absent for the writing and speaking skills (#146 left them
     /// unconfigured), and a band is defined over the certificate's total, not over one skill's range.
     /// </summary>
+    /// <remarks>
+    /// Zero scores no band. The table's lowest band is a floor, not evidence: a learner who wrote
+    /// nothing would otherwise be told they are B1 on a certificate whose lowest band starts at 40.
+    /// </remarks>
     public static async Task<ScoreBand?> EstimateBandForRubricAsync(
         CompanionDbContext db, int certId, decimal rubricTotal, decimal rubricMax, CancellationToken cancellationToken = default)
     {
-        if (rubricMax <= 0m) return null;
+        // No rubric, or nothing earned on it: no band at all.
+        if (rubricMax <= 0m || rubricTotal <= 0m) return null;
 
         var bands = await db.ScoreBands
             .AsNoTracking()
@@ -205,9 +217,61 @@ public sealed partial class AttemptEngine
         if (bands.Count == 0) return null;
 
         var fraction = Math.Clamp(rubricTotal / rubricMax, 0m, 1m);
+        // totalQuestionsInSkill = 1 is the honest value: the numerator is already a fraction of the
+        // rubric, so "out of 1" is exactly the proportional spread this call asks for.
         var score = ProjectOntoScale(fraction, null, null, null, null, bands[0].MinTotal, bands[^1].MaxTotal, 1, 1);
 
-        var code = MatchBandCode(score, bands);
-        return bands.FirstOrDefault(b => b.Code == code);
+        return MatchBand(score, bands, b => b.MinTotal, b => b.MaxTotal);
+    }
+
+    /// <summary>
+    /// E1.3 (#148): the band of a skill-practice attempt, decided once from every graded response.
+    /// Both the grading worker (which stamps it on the attempt's <c>AiGradings</c> rows) and the two
+    /// review pages call this, so the stored column and the page cannot disagree, and an attempt with
+    /// nothing scored gets no band rather than the certificate's floor.
+    /// </summary>
+    public static async Task<ScoreBand?> EstimateBandForAttemptAsync(
+        CompanionDbContext db, int attemptId, int certId, CancellationToken cancellationToken = default)
+    {
+        var (total, max) = await RubricTotalsAsync(db, attemptId, cancellationToken);
+        return await EstimateBandForRubricAsync(db, certId, total, max, cancellationToken);
+    }
+
+    /// <summary>
+    /// E1.3 (#148): the rubric aggregate the attempt-level band is stored from — every AI-graded
+    /// response's score over every applicable criterion maximum (section override when there is one,
+    /// else the criterion's). One definition, used by the grading worker so the stored band and the
+    /// review page cannot drift apart.
+    /// </summary>
+    public static async Task<(decimal Total, decimal Max)> RubricTotalsAsync(
+        CompanionDbContext db, int attemptId, CancellationToken cancellationToken = default)
+    {
+        var scores = await db.AiGradingScores
+            .AsNoTracking()
+            .Where(s => s.AiGrading.FreeResponse.AttemptId == attemptId
+                && s.AiGrading.Status == AiGradingStatus.Done.ToCode())
+            .Include(s => s.GradingCriterion)
+            .Include(s => s.AiGrading).ThenInclude(g => g.FreeResponse).ThenInclude(fr => fr.Question)
+            .ToListAsync(cancellationToken);
+
+        if (scores.Count == 0) return (0m, 0m);
+
+        var sectionIds = scores.Select(s => s.AiGrading.FreeResponse.Question.SectionId).Distinct().ToList();
+        var overrides = await db.SectionCriteria
+            .AsNoTracking()
+            .Where(sc => sectionIds.Contains(sc.SectionId))
+            .ToListAsync(cancellationToken);
+
+        decimal total = 0m, max = 0m;
+        foreach (var score in scores)
+        {
+            var sectionId = score.AiGrading.FreeResponse.Question.SectionId;
+            total += score.Score;
+            max += overrides
+                .FirstOrDefault(sc => sc.SectionId == sectionId && sc.CriterionId == score.CriterionId)
+                ?.MaxScore ?? score.GradingCriterion.MaxScore;
+        }
+
+        return (total, max);
     }
 }

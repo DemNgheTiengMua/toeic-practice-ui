@@ -72,6 +72,16 @@
       </p>
     </div>
   }
+  else if (rev.AnsweredQuestions == 0 || rev.TotalScore <= 0)
+  {
+    <div class="alert alert--warning">
+      <strong>No estimated band: nothing was scored.</strong>
+      <p class="text-sm no-margin mt-1">
+        An empty rubric earns no band. Write an answer, or answer more of the tasks, to get an
+        estimate on @rev.CertCode's band scale.
+      </p>
+    </div>
+  }
   else
   {
     <div class="alert alert--warning">

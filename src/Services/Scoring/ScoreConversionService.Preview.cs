@@ -204,22 +204,12 @@ public sealed partial class ScoreConversionService
 
         int totalScore = AttemptEngine.AggregateTotalScore(request.ScoreAggregationRule, simulatedSkillScores);
 
-        // Match band
-        string? matchedBandCode = null;
-        string? matchedBandName = null;
-        if (bandEntries.Count > 0)
-        {
-            var orderedBands = bandEntries.OrderBy(b => b.MinTotal).ToList();
-            var matchingBand = orderedBands.FirstOrDefault(b => totalScore >= b.MinTotal && totalScore <= b.MaxTotal);
-            if (matchingBand == null)
-            {
-                matchingBand = totalScore < orderedBands[0].MinTotal
-                    ? orderedBands[0]
-                    : orderedBands.LastOrDefault(b => totalScore >= b.MinTotal) ?? orderedBands[^1];
-            }
-            matchedBandCode = matchingBand.Code;
-            matchedBandName = matchingBand.Name;
-        }
+        // The band rule is AttemptEngine's, not a copy: a certificate preview and a real submission
+        // must never disagree about which band a score falls in.
+        var matchingBand = AttemptEngine.MatchBand(
+            totalScore, bandEntries.OrderBy(b => b.MinTotal).ToList(), b => b.MinTotal, b => b.MaxTotal);
+        var matchedBandCode = matchingBand?.Code;
+        var matchedBandName = matchingBand?.Name;
 
         return new ScorePreviewResult(
             request.ScoreAggregationRule ?? "sum",

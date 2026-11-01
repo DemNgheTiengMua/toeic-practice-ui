@@ -235,7 +235,9 @@ public sealed class AiGradingProcessorTests(DatabaseFixture database)
     /// <summary>Starts a writing attempt on the exam, submits it, grades it and returns the bands the
     /// gradings carry. <paramref name="grader"/> decides the rubric scores.</summary>
     private async Task<(int attemptId, List<string?> gradingBands)> GradeWritingPracticeAsync(
-        string certCode, int examId, int q1Id, int q2Id, IAiGrader grader)
+        string certCode, int examId, int q1Id, int q2Id, IAiGrader grader,
+        string q1Answer = "A woman is reading a book on a train.",
+        string q2Answer = "Working from home provides flexibility to many employees.")
     {
         var userId = await SeedLearnerAsync(certCode, startingCredits: 3);
 
@@ -243,8 +245,8 @@ public sealed class AiGradingProcessorTests(DatabaseFixture database)
         var writingService = new WritingPracticeService(db, new LearnerService(db));
 
         var info = await writingService.StartAttemptAsync(userId, examId);
-        await writingService.SaveDraftAsync(userId, info.AttemptId, q1Id, "A woman is reading a book on a train.");
-        await writingService.SaveDraftAsync(userId, info.AttemptId, q2Id, "Working from home provides flexibility to many employees.");
+        await writingService.SaveDraftAsync(userId, info.AttemptId, q1Id, q1Answer);
+        await writingService.SaveDraftAsync(userId, info.AttemptId, q2Id, q2Answer);
         await writingService.SubmitAttemptAsync(userId, info.AttemptId);
 
         await new AiGradingProcessor(db, grader).ProcessPendingGradingsAsync(10);
@@ -283,11 +285,12 @@ public sealed class AiGradingProcessorTests(DatabaseFixture database)
         Assert.Null(attempt.BandCode);
         Assert.Null(attempt.TotalScore);
 
-        // The review page has something to render under "estimated band".
+        // The review page renders the stored column, so the two cannot disagree.
         var review = await new WritingPracticeService(db, new LearnerService(db))
             .GetAttemptReviewAsync(attempt.UserId, attemptId);
         Assert.False(string.IsNullOrEmpty(review.EstimatedBandCode));
         Assert.Contains(review.EstimatedBandCode!, ownCodes);
+        Assert.All(gradingBands, band => Assert.Equal(review.EstimatedBandCode, band));
     }
 
     [Fact]
@@ -311,6 +314,49 @@ public sealed class AiGradingProcessorTests(DatabaseFixture database)
         Assert.All(wideBands, band => Assert.Equal("C1", band));
         // "C2" exists only on the 0-9 certificate: the lookup used that certificate's own table.
         Assert.All(nineBands, band => Assert.Equal("C2", band));
+    }
+
+    [Fact]
+    public async Task A_zero_rubric_gets_no_band_at_all_rather_than_the_certificates_floor()
+    {
+        // The proof case from the live run: IELTS seeds no band below B1 (B1 starts at 40), so a
+        // learner who wrote nothing was told they were B1. A floor is not evidence.
+        var certCode = Unique("GB04");
+        var (certId, examId, q1Id, q2Id) = await SeedWritingExamFixtureAsync(certCode);
+        await SeedBandsAsync(certId, ("B1", 40, 50), ("B2", 55, 65), ("C1", 70, 80), ("C2", 85, 90));
+
+        var (attemptId, gradingBands) = await GradeWritingPracticeAsync(
+            certCode, examId, q1Id, q2Id, new FakeAiGrader(), q1Answer: "", q2Answer: "");
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        Assert.Equal(2, gradingBands.Count);
+        Assert.All(gradingBands, Assert.Null);
+
+        var review = await new WritingPracticeService(db, new LearnerService(db))
+            .GetAttemptReviewAsync(
+                (await db.ExamAttempts.SingleAsync(a => a.AttemptId == attemptId)).UserId, attemptId);
+        Assert.Null(review.EstimatedBandCode);
+    }
+
+    [Fact]
+    public async Task A_substantive_rubric_still_gets_its_band_when_another_task_is_blank()
+    {
+        // The fix must not turn "no band" into the universal answer: one answered task out of two is
+        // still evidence, and the attempt-level estimate must survive it.
+        var certCode = Unique("GB05");
+        var (certId, examId, q1Id, q2Id) = await SeedWritingExamFixtureAsync(certCode);
+        await SeedBandsAsync(certId, ("B1", 40, 50), ("B2", 55, 65), ("C1", 70, 80), ("C2", 85, 90));
+
+        var (attemptId, gradingBands) = await GradeWritingPracticeAsync(
+            certCode, examId, q1Id, q2Id, new FakeAiGrader(), q2Answer: "");
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        Assert.Contains(gradingBands, band => !string.IsNullOrEmpty(band));
+
+        var review = await new WritingPracticeService(db, new LearnerService(db))
+            .GetAttemptReviewAsync(
+                (await db.ExamAttempts.SingleAsync(a => a.AttemptId == attemptId)).UserId, attemptId);
+        Assert.False(string.IsNullOrEmpty(review.EstimatedBandCode));
     }
 
     private sealed class CustomScoreGrader(decimal fixedScore) : IAiGrader

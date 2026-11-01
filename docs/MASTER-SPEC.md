@@ -45,7 +45,7 @@
 
 ### Xoá
 
-`PathModuleItems.IsPremiumOnly` · trigger `trg_Attempts_NoBandForSpeakingPractice` · bộ lọc `all/wrong_before/unseen` + ô chọn số lượng câu · micro-check chấm client · `PracticeSessions.FeedbackMode` · `_DashboardSimulator` (widget + CSS + ViewModel) · `SaveGroup`/`SaveQuestion` form-post · `CompleteStepAsync` · `/admin/imports` + `/admin/exams/{id}/questions` shim · trang `/admin/score-conversion` · 2 đề Placement "Quick"/"Standard" + chữ "Adaptive" · dropdown Status ở Exam Editor step 1 · ô text `AudioPath`/`ImagePath` · 3 bảng band JS · `GetFallbackScale` cả 2 bản · fallback `MaximumScore=990` · nhãn "0–200 scale" · "No band is shown for writing alone" · `if (!fBands.Any()) … ` nhánh `independent → TotalScore=0`.
+`PathModuleItems.IsPremiumOnly` · nhánh band của trigger `trg_Attempts_NoBandForSpeakingPractice` (đổi tên thành `trg_Attempts_NoTotalScoreForSkillPractice`, nhánh `TotalScore` giữ lại) · bộ lọc `all/wrong_before/unseen` + ô chọn số lượng câu · micro-check chấm client · `PracticeSessions.FeedbackMode` · `_DashboardSimulator` (widget + CSS + ViewModel) · `SaveGroup`/`SaveQuestion` form-post · `CompleteStepAsync` · `/admin/imports` + `/admin/exams/{id}/questions` shim · trang `/admin/score-conversion` · 2 đề Placement "Quick"/"Standard" + chữ "Adaptive" · dropdown Status ở Exam Editor step 1 · ô text `AudioPath`/`ImagePath` · 3 bảng band JS · `GetFallbackScale` cả 2 bản · fallback `MaximumScore=990` · nhãn "0–200 scale" · "No band is shown for writing alone" · `if (!fBands.Any()) … ` nhánh `independent → TotalScore=0`.
 
 ---
 
