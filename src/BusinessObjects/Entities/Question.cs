@@ -56,6 +56,14 @@ public partial class Question
     [StringLength(1000)]
     public string? Hint { get; set; }
 
+    /// <summary>
+    /// #152: what a spoken answer is judged against - the words to read for a Read Aloud question,
+    /// the description of the picture for a Describe a Picture one. NULL means no reference exists,
+    /// and the question is graded as unscripted with no relevance score. Never backfilled.
+    /// </summary>
+    [StringLength(1000)]
+    public string? SampleAnswerOrImageDesc { get; set; }
+
     public int DisplayOrder { get; set; }
 
     public DateTimeOffset? UpdatedAt { get; set; }

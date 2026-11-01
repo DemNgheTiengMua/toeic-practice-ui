@@ -106,6 +106,17 @@ public sealed class AiGradingProcessor(
                     c.Weight)).ToList();
             }
 
+            // #152: a spoken answer is graded against the reference its own question declares - the
+            // words to read aloud, or the description of the picture. NULL means there is none. The
+            // group is the only place a picture is declared, so it is the only thing that says a
+            // description describes a picture.
+            var groupHasImage = await db.QuestionGroups
+                .AsNoTracking()
+                .Where(g => g.GroupId == question.GroupId && g.ImagePath != null)
+                .AnyAsync(cancellationToken);
+            var (referenceText, describesImage) = SpeakingTask.ResolveReference(
+                question.SampleAnswerOrImageDesc, groupHasImage);
+
             var request = new AiGradingRequest(
                 fr.FreeResponseId,
                 grading.SkillId,
@@ -117,7 +128,10 @@ public sealed class AiGradingProcessor(
                 criteriaDetails,
                 grading.AttemptCount,
                 fr.AudioPath,
-                fr.DurationMs);
+                fr.DurationMs,
+                referenceText,
+                describesImage);
+
 
             var result = await aiGrader.GradeAsync(request, cancellationToken);
 

@@ -313,6 +313,10 @@ CREATE TABLE Questions (
   RequiredKeywords    NVARCHAR(MAX) NULL,
   -- UI-42: practice-take "Show hint" (a nudge, not the answer; Explanation stays the after-answer why)
   Hint            NVARCHAR(1000) NULL,
+  -- #152: the reference a spoken answer is judged against - the words to read for a Read Aloud
+  -- question, the description of the picture for a Describe a Picture one. NULL is "no reference
+  -- exists" (nothing is invented): the question is graded as unscripted and carries no relevance.
+  SampleAnswerOrImageDesc NVARCHAR(1000) NULL,
   DisplayOrder    INT NOT NULL DEFAULT 0,
   UpdatedAt       DATETIMEOFFSET NULL,    -- UI-4: question editor "Last saved: 19:42"
   CONSTRAINT CK_Questions_Words CHECK (

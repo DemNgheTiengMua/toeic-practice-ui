@@ -88,6 +88,12 @@ public sealed class SpeakingPracticeServiceTests(DatabaseFixture database)
               (@cert, N'Speaking Practice {certCode}', 'published', 20, 'speaking_practice', 2);
             DECLARE @exam INT = SCOPE_IDENTITY();
 
+            -- #152: a speaking rubric is reported on this certificate's own axis, so the fixture
+            -- declares one - the same way #147 makes every seeded certificate declare its bands.
+            INSERT INTO ScoreBands (CertId, Code, Name, MinTotal, MaxTotal, DisplayOrder) VALUES
+              (@cert, 'B1', N'Intermediate', 0, 30, 1),
+              (@cert, 'B2', N'Upper intermediate', 31, 50, 2);
+
             -- Question 1: Read aloud
             INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @sec1, 1);
             DECLARE @grp1 INT = SCOPE_IDENTITY();

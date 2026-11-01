@@ -53,7 +53,9 @@
   <div class="score-hero">
     <div class="score-hero__total">
       <div class="score-hero__total-value">@(r.ScaledScore?.ToString() ?? r.TotalScore.ToString("0.#"))</div>
-      <div class="score-hero__total-label">Speaking score · 0–200 scale</div>
+      <div class="score-hero__total-label">
+        Speaking score@(r.ScaledScoreMax.HasValue ? $" · out of {r.ScaledScoreMax}" : "") · @r.CertCode scale
+      </div>
     </div>
     <div class="score-hero__section">
       <div class="score-hero__section-value">@r.TotalScore.ToString("0.#")</div>

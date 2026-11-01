@@ -232,6 +232,14 @@ public sealed class SpeakingPracticeService(
         var currentFr = freeResponses.FirstOrDefault(r => r.QuestionId == targetQuestion.QuestionId);
         var savedCount = freeResponses.Count(r => !string.IsNullOrEmpty(r.AudioPath));
 
+        // #152: a Read Aloud question shows the words it wants read. There is no reference for a
+        // free-speech or picture question, so those carry none and are graded without one.
+        var (referenceText, describesImage) = SpeakingTask.ResolveReference(
+            targetQuestion.SampleAnswerOrImageDesc, targetQuestion.Group?.ImagePath is not null);
+        var readAloudText = SpeakingTask.IsScripted(referenceText, describesImage)
+            ? SpeakingTask.PronunciationReference(referenceText, describesImage)
+            : null;
+
         var qView = new SpeakingQuestionView(
             targetQuestion.QuestionId,
             targetQuestion.DisplayOrder,
@@ -248,7 +256,8 @@ public sealed class SpeakingPracticeService(
             currentFr?.DurationMs,
             currentFr?.ResponseText,
             currentFr?.DraftSavedAt,
-            currentFr != null ? EnumCodes.Parse<FreeResponseStatus>(currentFr.Status) : FreeResponseStatus.Draft);
+            currentFr != null ? EnumCodes.Parse<FreeResponseStatus>(currentFr.Status) : FreeResponseStatus.Draft,
+            readAloudText);
 
         var remainingSeconds = Math.Max(0, (int)(attempt.ExpiresAt - now).TotalSeconds);
         var targetIndex = questions.FindIndex(q => q.QuestionId == targetQuestion.QuestionId) + 1;
@@ -635,11 +644,28 @@ public sealed class SpeakingPracticeService(
                 .FirstOrDefault();
         }
 
-        // TOEIC Speaking scale (0-200) or raw score
+        // #152: the rubric fraction is placed on this certificate's own axis through the same
+        // ProjectOntoScale the engine uses for objective skills. No 0-200 constant: a 0-50
+        // certificate stays inside 0-50, and a certificate whose grid is a half band (IELTS stores
+        // its axis in tenths, so step 5 is 0.5) keeps that grid.
         int? scaledScore = null;
+        int? scaledScoreMax = null;
         if (overallMaxScore > 0)
         {
-            scaledScore = (int)Math.Round((overallTotalScore / overallMaxScore) * 200m, MidpointRounding.AwayFromZero);
+            var skillIds = freeResponses.Select(fr => fr.SkillId).Distinct().ToList();
+            var axis = await RubricAxisAsync(
+                attempt.CertId, skillIds.Count == 1 ? skillIds[0] : null, cancellationToken);
+            if (axis is (int min, int max, int step))
+            {
+                scaledScore = AttemptEngine.ProjectOntoScale(
+                    overallTotalScore / overallMaxScore,
+                    null, null, null, null,
+                    min,
+                    max,
+                    step,
+                    totalQuestionsInSkill: 1);
+                scaledScoreMax = max;
+            }
         }
 
         // E1.3 (#148): display the snapshot the grading worker stored, not a live recomputation — the
@@ -677,7 +703,65 @@ public sealed class SpeakingPracticeService(
             questionItems,
             lowest,
             estimatedCode,
-            estimatedName);
+            estimatedName,
+            scaledScoreMax);
+    }
+
+    /// <summary>
+    /// #152: the axis a speaking rubric score is reported on, or null when the certificate declares
+    /// none.
+    /// <para>
+    /// The skill's own configured scale wins where it exists (#147 writes those, and TOEIC_SW's
+    /// genuinely starts at 50 - that floor is data, not an invention). Otherwise the span is the
+    /// certificate's own <c>ScoreBands</c>, read from zero to the top band: a rubric score of nothing
+    /// is zero, so the axis cannot start above it the way <see cref="AttemptEngine.EstimateBandForRubricAsync"/>
+    /// starts a *band* search at the lowest band's floor. The step is the coarsest grid the bands
+    /// themselves sit on - IELTS stores tenths and its bounds are multiples of 5, so the reported score
+    /// is a multiple of 0.5 - unless that grid is too coarse to distinguish anything, in which case the
+    /// smallest unit is honest.
+    /// </para>
+    /// </summary>
+    private async Task<(int Min, int Max, int Step)?> RubricAxisAsync(
+        int certId, int? skillId, CancellationToken cancellationToken)
+    {
+        if (skillId is int id)
+        {
+            var skill = await db.Skills
+                .AsNoTracking()
+                .Where(s => s.SkillId == id && s.CertId == certId)
+                .Select(s => new { s.MinScaledScore, s.MaxScaledScore, s.ScoreStep })
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (skill?.MinScaledScore is int min
+                && skill.MaxScaledScore is int max
+                && skill.ScoreStep is int step
+                && max > min)
+            {
+                return (min, max, step);
+            }
+        }
+
+        var bandBounds = await db.ScoreBands
+            .AsNoTracking()
+            .Where(b => b.CertId == certId)
+            .Select(b => new { b.MinTotal, b.MaxTotal })
+            .ToListAsync(cancellationToken);
+
+        // No bands, no axis: a score would be a number with nothing behind it.
+        if (bandBounds.Count == 0) return null;
+
+        var bounds = bandBounds.SelectMany(b => new[] { b.MinTotal, b.MaxTotal }).ToList();
+        var top = bounds.Max();
+        var grid = bounds.Aggregate(0, (a, b) => GreatestCommonDivisor(a, b));
+        // A grid that puts the whole axis on a handful of marks says nothing about the learner.
+        var bandStep = grid >= 2 && top / grid >= 10 ? grid : 1;
+        return (0, top, bandStep);
+    }
+
+    private static int GreatestCommonDivisor(int a, int b)
+    {
+        while (b != 0) (a, b) = (b, a % b);
+        return Math.Abs(a);
     }
 
     public async Task<FileStreamResultInfo?> GetAudioFileAsync(int userId, int attemptId, int questionId, CancellationToken cancellationToken = default)

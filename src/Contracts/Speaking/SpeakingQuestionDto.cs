@@ -19,6 +19,7 @@ public record SpeakingQuestionDto(
     int? DurationMs,
     string? ResponseText,
     DateTimeOffset? DraftSavedAt,
-    FreeResponseStatusDto Status
+    FreeResponseStatusDto Status,
+    // #152: the words a Read Aloud learner is asked to read. NULL on a free-speech question.
+    string? ReadAloudText = null
 );
-

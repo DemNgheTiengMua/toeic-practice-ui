@@ -61,7 +61,8 @@ public static partial class SpeakingEndpoints
                 q.DurationMs,
                 q.ResponseText,
                 q.DraftSavedAt,
-                q.Status.MapTo<FreeResponseStatusDto>()),
+                q.Status.MapTo<FreeResponseStatusDto>(),
+                q.ReadAloudText),
             take.Questions.Select(nav => new SpeakingQuestionNavDto(
                 nav.QuestionId,
                 nav.DisplayOrder,
@@ -149,6 +150,7 @@ public static partial class SpeakingEndpoints
                     c.Comment)).ToList())).ToList(),
             lowestDto,
             review.EstimatedBandCode,
-            review.EstimatedBandName);
+            review.EstimatedBandName,
+            review.ScaledScoreMax);
     }
 }

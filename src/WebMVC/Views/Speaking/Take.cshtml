@@ -74,6 +74,14 @@
               @q.Stem
             </p>
 
+            @if (!string.IsNullOrEmpty(q.ReadAloudText))
+            {
+              <div class="explain explain--neutral my-3">
+                <div class="explain__title">Read this aloud</div>
+                <p class="no-margin text-base">@q.ReadAloudText</p>
+              </div>
+            }
+
             @if (!string.IsNullOrEmpty(q.GroupImagePath))
             {
               <div class="question__image-wrapper my-3">

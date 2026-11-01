@@ -17,6 +17,6 @@ public record SpeakingReviewDto(
     IReadOnlyList<SpeakingQuestionReviewItemDto> Questions,
     SpeakingQuestionReviewItemDto? LowestScoredQuestion,
     string? EstimatedBandCode = null,
-    string? EstimatedBandName = null
+    string? EstimatedBandName = null,
+    int? ScaledScoreMax = null
 );
-

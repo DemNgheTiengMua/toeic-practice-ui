@@ -18,5 +18,8 @@ public record SpeakingReviewView(
     SpeakingQuestionReviewItem? LowestScoredQuestion,
     // E1.3 (#148): the band this speaking rubric lands in, on this certificate's own bands.
     string? EstimatedBandCode = null,
-    string? EstimatedBandName = null
+    string? EstimatedBandName = null,
+    // #152: the top of the axis ScaledScore is reported on, so the page can say "43 of 50" instead
+    // of implying one certificate's range for every certificate.
+    int? ScaledScoreMax = null
 );

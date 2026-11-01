@@ -19,5 +19,8 @@ public record SpeakingQuestionView(
     int? DurationMs,
     string? ResponseText,
     DateTimeOffset? DraftSavedAt,
-    FreeResponseStatus Status
+    FreeResponseStatus Status,
+    // #152: the words a Read Aloud learner is asked to read. NULL for a free-speech question, which
+    // has nothing to read and is graded without a reference.
+    string? ReadAloudText = null
 );

@@ -104,10 +104,13 @@ public sealed class SpeechSuperClient : ISpeechSuperClient
                     {
                         ["tokenId"] = tokenId,
                         ["coreType"] = _options.CoreType,
+                        // #152: the prompt travels as topic context only. It is never the reference.
                         ["question_prompt"] = questionPrompt ?? "",
-                        ["test_type"] = "ielts",
-                        ["task_type"] = "ielts_part1",
-                        ["refText"] = refText ?? questionPrompt ?? ""
+                        // #152: empty when the question declares no script, so the provider judges free
+                        // speech instead of comparing the learner to words nobody was asked to read.
+                        // test_type/task_type are not sent: they named IELTS for every certificate.
+                        ["refText"] = refText ?? "",
+                        ["model"] = "non_native"
                     }
                 }
             }

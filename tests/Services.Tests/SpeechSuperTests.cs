@@ -263,7 +263,10 @@ public sealed class SpeechSuperTests
         Assert.True(result.Success);
         Assert.Equal("speechsuper-speak.eval.pro", result.Model);
         Assert.Equal("I enjoy playing tennis on weekends.", result.Transcript);
-        Assert.Equal(4, result.Scores.Count);
+        // #152: the request declares no reference, so relevance has nothing to be judged against and
+        // is left out rather than scored. The remaining three criteria are scored.
+        Assert.Equal(3, result.Scores.Count);
+        Assert.DoesNotContain(result.Scores, s => s.CriterionId == 104);
 
         // Verify criteria scaling (scores should be clamped and bounded)
         foreach (var score in result.Scores)
