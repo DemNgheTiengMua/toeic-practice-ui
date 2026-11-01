@@ -186,38 +186,18 @@ public sealed partial class LearningPathService
                     return false;
                 }
                 step.StartedAt ??= progress.FirstOpenedAt;
-                step.CompletedAt = progress.CompletedAt ?? DateTimeOffset.UtcNow;
-                step.Score = null;
             }
         }
-        else
-        {
-            step.CompletedAt = DateTimeOffset.UtcNow;
-            step.Score = score ?? step.Score ?? 100m;
-        }
 
-        step.Status = "done";
+        // #154: one closer for every activity type. The manual "mark done" route now unlocks the next
+        // step and completes the path by the same rule as the practice, mock and lesson writers.
+        var measuredScore = itemType == PathModuleItemType.Lesson
+            ? (decimal?)null
+            : score ?? step.Score ?? 100m;
 
-        var allSteps = await db.LearnerPathSteps
-            .Include(s => s.PathModuleItem)
-                .ThenInclude(pmi => pmi.PathModule)
-            .Where(s => s.LearnerPathId == step.LearnerPathId)
-            .OrderBy(s => s.PathModuleItem.PathModule.DisplayOrder)
-            .ThenBy(s => s.PathModuleItem.DisplayOrder)
-            .ToListAsync(cancellationToken);
+        await PathStepCompletion.CloseStepAsync(
+            db, step, measuredScore, accuracyPct: measuredScore, cancellationToken);
 
-        var nextLocked = allSteps.FirstOrDefault(s => s.Status == "locked");
-        if (nextLocked != null)
-        {
-            nextLocked.Status = "available";
-        }
-
-        if (allSteps.All(s => s.Status == "done"))
-        {
-            step.LearnerPath.Status = "completed";
-        }
-
-        await db.SaveChangesAsync(cancellationToken);
         return true;
     }
 }

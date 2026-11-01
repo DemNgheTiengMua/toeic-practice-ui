@@ -24,4 +24,5 @@ public sealed record LearningPathSummaryDto(
     int RemainingMinutes,
     List<CefrBandInfoDto> CefrBands,
     List<LearningPathModuleSummaryDto> Modules,
-    int? NextModuleId);
+    int? NextModuleId,
+    List<LearningPathWeekSummaryDto>? Weeks = null);

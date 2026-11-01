@@ -26,17 +26,20 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
     }
 
     /// <summary>
-    /// #153: a learner here has a goal, because path generation no longer invents one. The old fixture
-    /// depended on the generator aiming at the certificate's lowest band and highest band; those
-    /// fallbacks are gone, so the written goal is what the path is built between.
+    /// #153/#154: a learner here has a goal with a deadline and a pace, because path generation no
+    /// longer invents one — #153 refuses a goal it cannot judge, and #154 plans the volume from
+    /// <c>WeeklyStudyHours</c>. The old fixture depended on the generator aiming at the certificate's
+    /// lowest and highest band; both those fallbacks are gone.
     /// </summary>
     private async Task<int> SeedLearnerAsync(string? activeCertCode = null, string? currentBand = "A2", string? targetBand = "B2")
     {
         var email = $"{Guid.NewGuid():N}@test.local";
         var goal = activeCertCode is not null && currentBand is not null && targetBand is not null
             ? $"""
-              INSERT INTO TargetBands (UserId, CertId, TargetBandCode, CurrentBandCode)
-              VALUES (@u, (SELECT CertId FROM Certificates WHERE Code = '{activeCertCode}'), '{targetBand}', '{currentBand}');
+              INSERT INTO TargetBands (UserId, CertId, TargetBandCode, CurrentBandCode, TargetDate, WeeklyStudyHours)
+              VALUES (@u, (SELECT CertId FROM Certificates WHERE Code = '{activeCertCode}'),
+                      '{targetBand}', '{currentBand}',
+                      DATEADD(DAY, 210, CAST(SYSDATETIMEOFFSET() AS DATE)), 6);
               """
             : "";
 
@@ -162,19 +165,27 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
         Assert.NotNull(summary.LearnerPathId);
         Assert.Equal("A2", summary.FromBandCode);
         Assert.Equal("B2", summary.ToBandCode);
-        Assert.Equal(2, summary.TotalModules);
         Assert.Equal(0, summary.CompletedModules);
-        Assert.Equal(2, summary.Modules.Count);
 
-        // Verify steps in database: step 1 is available, step 2 is locked
+        // #154: the steps are a plan, not a walk over the template's items. Four weeks of 3-5 steps,
+        // and the first one is open while the rest wait.
         var steps = await db.LearnerPathSteps
             .Where(s => s.LearnerPathId == summary.LearnerPathId)
             .OrderBy(s => s.StepId)
             .ToListAsync();
 
-        Assert.Equal(2, steps.Count);
+        Assert.InRange(
+            steps.Count,
+            LearningPathPlanner.MinimumStepsPerWeek * LearningPathPlanner.WindowWeeks,
+            LearningPathPlanner.MaximumStepsPerWeek * LearningPathPlanner.WindowWeeks);
         Assert.Equal("available", steps[0].Status);
-        Assert.Equal("locked", steps[1].Status);
+        Assert.All(steps.Skip(1), s => Assert.Equal("locked", s.Status));
+
+        // #154: the four-week window is persisted, and the summary reports it week by week (AC5).
+        Assert.Equal(
+            Enumerable.Range(1, LearningPathPlanner.WindowWeeks).ToList(),
+            steps.Select(s => s.WeekNumber!.Value).Distinct().OrderBy(w => w).ToList());
+        Assert.Equal(LearningPathPlanner.WindowWeeks, summary.Weeks.Count);
     }
 
     [Fact]
@@ -201,16 +212,14 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
 
         await service.GeneratePathAsync(userId);
 
-        var detail = await service.GetModuleDetailAsync(userId, m1Id);
+        // #154: generated steps point at the certificate's own section items, so they land in the
+        // module those items belong to. The module opens and holds steps; the plan just does not walk
+        // the template's item order.
+        var summary = await service.GetActivePathAsync(userId);
+        var detail = await service.GetModuleDetailAsync(userId, summary.Modules[0].ModuleId);
 
-        Assert.Equal(m1Id, detail.ModuleId);
-        Assert.Equal("Module 1: Grammar", detail.Title);
-        Assert.Equal("not_started", detail.Status);
         Assert.False(detail.IsLocked);
-        Assert.Single(detail.Topics);
-        Assert.Equal("Topic 1: Present Tense", detail.Topics[0].Title);
-        Assert.Single(detail.Steps);
-        Assert.Equal(PathModuleItemType.PracticeSection, detail.Steps[0].ItemType);
+        Assert.NotEmpty(detail.Steps);
         Assert.NotNull(detail.ActiveStepId);
     }
 
@@ -303,7 +312,7 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
     public async Task CompleteStepAsync_WhenAllStepsDone_MarksPathCompleted()
     {
         var certCode = Unique("C");
-        await SeedPathFixtureAsync(certCode);
+        var (certId, _, _, _, _, _, _, _) = await SeedPathFixtureAsync(certCode);
         var userId = await SeedLearnerAsync(certCode);
         var (service, _, _, db) = CreateServices();
 
@@ -313,8 +322,32 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
             .OrderBy(s => s.StepId)
             .ToListAsync();
 
-        await service.CompleteStepAsync(userId, steps[0].StepId, 100m);
-        await service.CompleteStepAsync(userId, steps[1].StepId, 100m);
+        // #154: the plan is longer than two steps, so the path completes only when the last one does.
+        // Lesson steps refuse to close without a finished lesson, so only the practice steps here.
+        var practiceSteps = steps.Where(s => s.PathModuleItemId != 0).ToList();
+        foreach (var step in practiceSteps)
+        {
+            var item = await db.PathModuleItems.FindAsync(step.PathModuleItemId);
+            if (item!.ItemType == "lesson")
+            {
+                var progress = new LearnerLessonProgress
+                {
+                    UserId = userId,
+                    LessonId = item.RefLessonId!.Value,
+                    CertId = certId,
+                    CardsCompleted = 1,
+                    TotalCards = 1,
+                    IsCompleted = true,
+                    FirstOpenedAt = DateTimeOffset.UtcNow.AddMinutes(-5),
+                    CompletedAt = DateTimeOffset.UtcNow,
+                    UpdatedAt = DateTimeOffset.UtcNow
+                };
+                db.LearnerLessonProgresses.Add(progress);
+                await db.SaveChangesAsync();
+            }
+
+            await service.CompleteStepAsync(userId, step.StepId, 100m);
+        }
 
         var path = await db.LearnerPaths.FindAsync(summary.LearnerPathId);
         Assert.Equal("completed", path!.Status);
@@ -379,9 +412,10 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
 
         // Second step should now be available
         var secondStep = await db.LearnerPathSteps
-            .Where(s => s.LearnerPathId == summary.LearnerPathId && s.StepId != firstStep.StepId)
-            .SingleAsync();
-        Assert.Equal("available", secondStep.Status);
+            .Where(s => s.LearnerPathId == summary.LearnerPathId && s.Status == "available")
+            .OrderBy(s => s.StepId)
+            .FirstAsync();
+        Assert.NotEqual(firstStep.StepId, secondStep.StepId);
     }
 
     [Fact]
@@ -398,14 +432,22 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
             .OrderBy(s => s.StepId)
             .ToListAsync();
 
-        // Mark step 1 (in module 1) done. Step 2 (in module 2) unlocks, keeping path active.
+        // #154: read the module the step actually lives in.
+        var moduleOfStep = await db.PathModuleItems
+            .Where(i => i.ItemId == steps[0].PathModuleItemId)
+            .Select(i => i.ModuleId)
+            .SingleAsync();
+
         await service.CompleteStepAsync(userId, steps[0].StepId, 100m);
 
-        var detail = await service.GetModuleDetailAsync(userId, m1Id);
+        var detail = await service.GetModuleDetailAsync(userId, moduleOfStep);
 
-        Assert.Equal("done", detail.Status);
+        // #154: a module can hold several planned steps, so the active one is the next open step —
+        // not necessarily the one just finished. Both must be in this module.
         Assert.NotNull(detail.ActiveStepId);
-        Assert.Equal(steps[0].StepId, detail.ActiveStepId);
+        Assert.Contains(detail.Steps, s => s.StepId == detail.ActiveStepId);
+        Assert.Contains(detail.Steps, s => s.StepId == steps[0].StepId);
+        Assert.Equal(LearnerPathStepStatus.Done, detail.Steps.Single(s => s.StepId == steps[0].StepId).Status);
     }
 
     [Fact]
@@ -416,15 +458,29 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
         var userId = await SeedLearnerAsync(certCode);
         var (service, _, _, db) = CreateServices();
 
-        // Update Topic 1 question count to 1 and add Topic 2 with 5 questions
+        var summary = await service.GeneratePathAsync(userId);
+        var moduleOfFirstStep = await db.PathModuleItems
+            .Where(i => i.ItemId == (db.LearnerPathSteps
+                .Where(s => s.LearnerPathId == summary.LearnerPathId)
+                .OrderBy(s => s.StepId)
+                .Select(s => s.PathModuleItemId)
+                .First()))
+            .Select(i => i.ModuleId)
+            .SingleAsync();
+
+        // The fixture's module already carries Topic 1; reshape it and add a second topic, because
+        // this is the module the learner's practice steps now live in.
         await database.SqlAsync($"""
-            UPDATE PathModuleTopics SET QuestionCount = 1 WHERE ModuleId = {m1Id};
+            DELETE FROM PathModuleTopics WHERE ModuleId = {moduleOfFirstStep};
             INSERT INTO PathModuleTopics (ModuleId, Title, QuestionCount, DisplayOrder)
-            VALUES ({m1Id}, N'Topic 2: Additional Practice', 5, 2);
+            VALUES ({moduleOfFirstStep}, N'Topic 1: First question', 1, 1),
+                   ({moduleOfFirstStep}, N'Topic 2: Additional Practice', 5, 2);
             """);
 
-        var summary = await service.GeneratePathAsync(userId);
-        var step = await db.LearnerPathSteps.FirstAsync(s => s.LearnerPathId == summary.LearnerPathId);
+        var step = await db.LearnerPathSteps
+            .Include(s => s.PathModuleItem)
+            .FirstAsync(s => s.LearnerPathId == summary.LearnerPathId
+                && s.PathModuleItem.RefSectionId == secId);
 
         // Start step (which creates PracticeSession and 1 PracticeAnswer for q1Id)
         var startResult = await service.StartStepAsync(userId, step.StepId);
@@ -437,7 +493,7 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
         answer.IsCorrect = true;
         await db.SaveChangesAsync();
 
-        var detail = await service.GetModuleDetailAsync(userId, m1Id);
+        var detail = await service.GetModuleDetailAsync(userId, moduleOfFirstStep);
 
         Assert.Equal(2, detail.Topics.Count);
         // Topic 1 had 1 question, 1 answered -> done
@@ -645,19 +701,17 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
         var userId = await SeedLearnerAsync(certCode);
         await GrantCreditsAsync(userId, 10);
 
-        await database.SqlAsync($"""
-            INSERT INTO PathModuleItems (ModuleId, CertId, TemplateId, ItemType, RefSectionId, QuestionCount, IsPremiumOnly, DisplayOrder)
-            VALUES ({m1Id}, {certId}, {templateId}, 'practice_section', {secId}, 5, 1, 99);
-            """);
-
         var (service, _, _, db) = CreateServices();
         var summary = await service.GeneratePathAsync(userId);
 
+        // #154: mark a step's own item premium-only. The plan picks items, so the flag has to be on
+        // the item the step actually points at.
         var premiumStep = await db.LearnerPathSteps
             .Include(s => s.PathModuleItem)
-            .FirstAsync(s => s.LearnerPathId == summary.LearnerPathId && s.PathModuleItem.IsPremiumOnly);
+            .FirstAsync(s => s.LearnerPathId == summary.LearnerPathId
+                && s.PathModuleItem.ItemType == "practice_section");
 
-        // Make the step available
+        premiumStep.PathModuleItem.IsPremiumOnly = true;
         premiumStep.Status = "available";
         await db.SaveChangesAsync();
 
@@ -682,16 +736,27 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
         var userId = await SeedLearnerAsync(certCode);
         await GrantCreditsAsync(userId, 10);
 
-        await database.SqlAsync($"""
-            INSERT INTO PathModuleTopics (ModuleId, Title, QuestionCount, VideoPath, DisplayOrder)
-            VALUES ({m1Id}, N'Topic with Video', 5, N'/videos/module1.mp4', 2);
-            """);
-
         var (service, _, _, db) = CreateServices();
         await service.GeneratePathAsync(userId);
 
+        // #154: the video topics belong to the module the learner's steps are actually in.
+        var pathId = (await service.GetActivePathAsync(userId)).LearnerPathId!.Value;
+        var firstStep = await db.LearnerPathSteps
+            .Where(s => s.LearnerPathId == pathId)
+            .OrderBy(s => s.StepId)
+            .FirstAsync();
+        var planModuleId = await db.PathModuleItems
+            .Where(i => i.ItemId == firstStep.PathModuleItemId)
+            .Select(i => i.ModuleId)
+            .SingleAsync();
+
+        await database.SqlAsync($"""
+            INSERT INTO PathModuleTopics (ModuleId, Title, QuestionCount, VideoPath, DisplayOrder)
+            VALUES ({planModuleId}, N'Topic with Video', 5, N'/videos/module1.mp4', 2);
+            """);
+
         // Free path: CanAccessVideo is false, VideoPath is null
-        var freeDetail = await service.GetModuleDetailAsync(userId, m1Id);
+        var freeDetail = await service.GetModuleDetailAsync(userId, planModuleId);
         Assert.False(freeDetail.IsPremium);
         var topicFree = freeDetail.Topics.First(t => t.Title == "Topic with Video");
         Assert.False(topicFree.CanAccessVideo);
@@ -701,7 +766,7 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
         await service.UpgradePathAsync(userId);
 
         // Upgraded path: CanAccessVideo is true, VideoPath is populated
-        var premiumDetail = await service.GetModuleDetailAsync(userId, m1Id);
+        var premiumDetail = await service.GetModuleDetailAsync(userId, planModuleId);
         Assert.True(premiumDetail.IsPremium);
         var topicPremium = premiumDetail.Topics.First(t => t.Title == "Topic with Video");
         Assert.True(topicPremium.CanAccessVideo);
@@ -749,14 +814,10 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
         var (certId, templateId, m1Id, _, _, _, secId, qId) = await SeedPathFixtureAsync(certCode);
         var userId = await SeedLearnerAsync(certCode);
 
-        // Add a lesson to cert and a lesson item to m1
+        // Add a lesson to the certificate; the planner will place it in the plan's own module.
         await database.SqlAsync($"""
             INSERT INTO Lessons (CertId, SkillId, Title, EstimatedMinutes, DisplayOrder)
             VALUES ({certId}, (SELECT SkillId FROM Skills WHERE CertId = {certId} AND Code = 'READ'), N'Grammar Lesson', 5, 2);
-            DECLARE @lessonId INT = SCOPE_IDENTITY();
-
-            INSERT INTO PathModuleItems (ModuleId, CertId, TemplateId, ItemType, RefLessonId, DisplayOrder)
-            VALUES ({m1Id}, {certId}, {templateId}, 'lesson', @lessonId, 2);
             """);
 
         var (service, _, _, db) = CreateServices();
@@ -764,10 +825,23 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
 
         var lesson = await db.Lessons.FirstAsync(l => l.CertId == certId);
 
-        // Before any lesson progress
-        var detailBefore = await service.GetModuleDetailAsync(userId, m1Id);
-        var lessonStepBefore = detailBefore.Steps.First(s => s.ItemType == PathModuleItemType.Lesson);
-        Assert.Equal(LearnerPathStepStatus.Locked, lessonStepBefore.Status);
+        // The lesson step exists in the plan (a 6 h/week goal plans five steps, one of them a lesson).
+        // Read it from the database first, so the module looked at is the one it is really in.
+        var lessonStepId = await db.LearnerPathSteps
+            .Where(s => s.LearnerPathId == summary.LearnerPathId && s.PathModuleItem.RefLessonId == lesson.LessonId)
+            .OrderBy(s => s.StepId)
+            .Select(s => (int?)s.StepId)
+            .FirstAsync();
+
+        Assert.NotNull(lessonStepId);
+
+        var moduleId = await db.LearnerPathSteps
+            .Where(s => s.StepId == lessonStepId)
+            .Select(s => s.PathModuleItem.ModuleId)
+            .SingleAsync();
+
+        var detailBefore = await service.GetModuleDetailAsync(userId, moduleId);
+        var lessonStepBefore = detailBefore.Steps.First(s => s.StepId == lessonStepId);
         Assert.Equal("Grammar Lesson", lessonStepBefore.Title);
 
         // Create in-progress lesson progress
@@ -785,12 +859,19 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
         });
         await db.SaveChangesAsync();
 
-        // Unlock step by completing first step
-        var step1 = detailBefore.Steps.First(s => s.ItemType == PathModuleItemType.PracticeSection);
-        await service.CompleteStepAsync(userId, step1.StepId, 100m);
+        // Walk the practice step before the lesson, so the lesson is open and in progress.
+        var stepBefore = await db.LearnerPathSteps
+            .Where(s => s.LearnerPathId == summary.LearnerPathId && s.StepId < lessonStepBefore.StepId)
+            .OrderBy(s => s.StepId)
+            .ToListAsync();
 
-        var detailAfter = await service.GetModuleDetailAsync(userId, m1Id);
-        var lessonStepAfter = detailAfter.Steps.First(s => s.ItemType == PathModuleItemType.Lesson);
+        foreach (var prior in stepBefore)
+        {
+            await service.CompleteStepAsync(userId, prior.StepId, 100m);
+        }
+
+        var detailAfter = await service.GetModuleDetailAsync(userId, moduleId);
+        var lessonStepAfter = detailAfter.Steps.First(s => s.StepId == lessonStepId);
         Assert.Equal(LearnerPathStepStatus.InProgress, lessonStepAfter.Status);
         Assert.Equal(now, lessonStepAfter.StartedAt);
     }
@@ -805,10 +886,6 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
         await database.SqlAsync($"""
             INSERT INTO Lessons (CertId, SkillId, Title, EstimatedMinutes, DisplayOrder)
             VALUES ({certId}, (SELECT SkillId FROM Skills WHERE CertId = {certId} AND Code = 'READ'), N'Test Lesson', 5, 2);
-            DECLARE @lessonId INT = SCOPE_IDENTITY();
-
-            INSERT INTO PathModuleItems (ModuleId, CertId, TemplateId, ItemType, RefLessonId, DisplayOrder)
-            VALUES ({m1Id}, {certId}, {templateId}, 'lesson', @lessonId, 2);
             """);
 
         var (service, _, _, db) = CreateServices();
@@ -818,11 +895,15 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
         var steps = await db.LearnerPathSteps
             .Include(s => s.PathModuleItem)
             .Where(s => s.LearnerPathId == summary.LearnerPathId)
+            .OrderBy(s => s.StepId)
             .ToListAsync();
-        var step1 = steps.First(s => s.PathModuleItem.ItemType == "practice_section");
         var lessonStep = steps.First(s => s.PathModuleItem.ItemType == "lesson");
 
-        await service.CompleteStepAsync(userId, step1.StepId, 100m);
+        // Walk every step before the lesson so it is the one open.
+        foreach (var prior in steps.Where(s => s.StepId < lessonStep.StepId))
+        {
+            await service.CompleteStepAsync(userId, prior.StepId, 100m);
+        }
 
         // Attempting to complete lesson step before lesson is completed in LearnerLessonProgress should return false
         var completedWithoutProgress = await service.CompleteStepAsync(userId, lessonStep.StepId);

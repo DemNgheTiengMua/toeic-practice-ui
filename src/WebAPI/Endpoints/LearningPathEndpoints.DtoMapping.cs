@@ -48,7 +48,30 @@ public static partial class LearningPathEndpoints
                 m.TotalItems,
                 m.CompletedItems,
                 m.ActiveStepId)).ToList(),
-            view.NextModuleId);
+            view.NextModuleId,
+            view.Weeks.Select(w => new LearningPathWeekSummaryDto(
+                w.WeekNumber,
+                w.PlannedSteps,
+                w.CompletedSteps,
+                w.PlannedMinutes,
+                w.CompletedMinutes,
+                w.IsOnTrack,
+                w.TargetAccuracyPct,
+                w.ActualAccuracyPct,
+                w.Steps.Select(s => new PathWeekStepDto(
+                    s.StepId,
+                    s.ItemType.MapTo<PathModuleItemTypeDto>(),
+                    s.Title,
+                    s.Status.MapTo<LearnerPathStepStatusDto>(),
+                    s.EstimatedMinutes,
+                    s.Score,
+                    s.ActualAccuracyPct,
+                    s.TargetAccuracyPct,
+                    s.CanStart,
+                    s.CompletedAt,
+                    s.RefSectionId,
+                    s.RefExamId,
+                    s.RefLessonId)).ToList())).ToList());
 
     private static LearningPathModuleDetailDto ToDetailDto(LearningPathModuleDetailView detail) =>
         new(

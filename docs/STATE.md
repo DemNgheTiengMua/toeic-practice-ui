@@ -28,6 +28,8 @@
 | D13 | **`ScoreBands.CumulativeStudyHours` NULLable, và công thức là code, không phải LLM** | 11-01 | Band không phải CEFR (`CAT_B1`, `SW_B2`) không có con số giờ nào bảo vệ được; bịa ra là biến "chưa biết" thành lời từ chối đầy tự tin | `GoalFeasibilityCalculator.Evaluate` trả `null` cho những cert đó; AI chỉ được diễn đạt các con số, không được tự tính lại |
 | D14 | **Band của một rubric kỹ năng là ước lượng, và được phép chạm band cao nhất** — không cắt trần, không có band riêng cho từng kỹ năng | 11-01 | Trần là một con số bịa: không `ScoreBands` của cert nào định nghĩa "trần cho một kỹ năng", nên cắt xuống là đảo D2/D13 (band phải tra từ bảng của chính cert). Bài viết hoàn hảo được C2 là đúng nghĩa đen của "rubric này nằm ở dải C2" | `AiGradings.BandCode` giữ ước lượng; `ExamAttempts.BandCode`/`TotalScore` vẫn NULL cho skill practice; câu chữ trên trang Review nói rõ đây là ước lượng từ một kỹ năng và band chứng chỉ do mock exam đầy đủ quyết định. **Điểm 0 thì không có band** — band thấp nhất của bảng không phải bằng chứng |
 | D18 | **Câu Read Aloud vẫn đi `speak.eval.pro` (unscripted), chưa chuyển sang `sent.eval.promax`/`para.eval`** — hoãn có chủ đích, không phải bỏ sót | 11-02 | Bảng tính năng của chính SpeechSuper nói scripted trả word/sentence/fluency nhưng **không** trả điểm IELTS Speaking; chỉ unscripted trả `overall`/`pronunciation`/`fluency_coherence`/`grammar`/`lexical_resource` — đúng các field mà rubric chứng chỉ đang đọc. Đổi endpoint cho câu scripted là biến mọi tiêu chí thành "không đo được", và #152 vừa biến trường hợp đó thành grading **Failed** | `SpeechSuperOptions.CoreType` giữ `speak.eval.pro`, lý do ghi ngay tại đó. Cái scripted thêm được là độ chính xác từng từ so với bài đọc — tín hiệu phát âm tốt hơn cho Read Aloud — nhưng cần bảng map thứ hai (word/completeness → rubric), một shape response thứ hai, và rubric chứng chỉ có tiêu chí tương ứng: việc của ticket riêng |
+| D19 | **`PathTemplates` là thùng chứa, không phải kế hoạch** (#154) | 11-02 | Bước lộ trình trỏ vào `PathModuleItem`, mà item phải thuộc một template. Giữ bảng lại (việc xoá là #162), nhưng cặp band không còn quyết định nội dung: mọi thứ đọc từ `LearnerPathSteps` do `LearningPathPlanner` sinh | Cặp (from,to) không có template thì **tạo mới**, không mượn template khác của cert (nhánh "không khớp cặp thì lấy template bất kỳ" đã xoá — AC7). Hai người cùng cặp band nhận lộ trình khác nhau vì `vw_UserSectionAccuracyAll` xếp hạng section riêng cho từng người |
+| D20 | **`WeeklyStudyHours` là khối lượng, nhưng trần 3–5 bước × 25–45 phút = 3.75 h/tuần** (#154) | 11-02 | Ticket chốt cả hai con số: 3–5 bước/tuần và 25–45 phút/bước. Một tuần chỉ chứa được 225 phút theo đúng hai trần đó, nên nhịp 10 h/tuần không tiêu hết được — phần dư là của người học, không phải lý do kéo dài một buổi học | `LearningPathPlanner.Plan` tính số bước từ nhịp rồi kẹp `[3,5]`, và chia phút trong tuần cho số bước rồi kẹp `[25,45]`. Goal 3 h/tuần ra đúng 180 phút; goal 10 h/tuần cũng ra 225. Ai muốn dùng hết 10 h phải nâng trần phút/bước — đó là đổi luật của ticket |
 
 ## 2. Quyết định còn treo
 
@@ -95,8 +97,8 @@ Dưới đây là **16 BLOCKER**, xếp theo độ chết người. Đây là nh
 - Placement **không adaptive** dù copy UI ghi "Adaptive".
 - Placement **không bảo đảm 4 kỹ năng** — phụ thuộc đề admin soạn.
 - **Không có per-question telemetry** (không timestamp, không đếm đổi đáp án). D7 phụ thuộc vào việc thêm gì.
-- Lộ trình **không do LLM sinh** — template tra bảng + LLM chỉ viết lời bình.
-- Step `mock_exam` trong lộ trình **không bao giờ** set done.
+- Lộ trình **không do LLM sinh** — từ #154 bước được sinh bằng số học (`LearningPathPlanner`), LLM chỉ viết lời bình.
+- Step `mock_exam` / `lesson` trong lộ trình **đóng được** từ #154: cả ba loại hoạt động đi qua `PathStepCompletion` và ghi thẳng vào `LearnerPathSteps`.
 
 ## 6. Cách dùng file này
 

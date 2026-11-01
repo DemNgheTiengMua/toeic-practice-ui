@@ -69,15 +69,12 @@ public sealed partial class LearningPathService
 
             foreach (var s in steps)
             {
+                // #154: a finished lesson is persisted as `done` by LessonService. What is left here is
+                // the in-progress hint only — showing a not-yet-closed step as done would hide the
+                // bug the persistence fixed.
                 if (s.PathModuleItem.RefLessonId is { } lid && lessonProgresses.TryGetValue(lid, out var prog))
                 {
-                    if (prog.IsCompleted)
-                    {
-                        s.Status = "done";
-                        s.CompletedAt ??= prog.CompletedAt;
-                        s.Score = null;
-                    }
-                    else if (prog.CardsCompleted > 0 && s.Status != "locked")
+                    if (!prog.IsCompleted && prog.CardsCompleted > 0 && s.Status != "locked")
                     {
                         s.Status = "in_progress";
                         s.StartedAt ??= prog.FirstOpenedAt;

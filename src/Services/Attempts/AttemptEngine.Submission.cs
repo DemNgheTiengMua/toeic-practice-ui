@@ -267,6 +267,24 @@ public sealed partial class AttemptEngine
             }
 
             await db.SaveChangesAsync(cancellationToken);
+
+            // #154: a finished mock exam closes the path step that planned it. This is the writer that
+            // did not exist — sitting the exam left the step available forever. Inside the same
+            // transaction as the grading, so a step is never ticked for an attempt that failed to save.
+            if (!hasPendingMockResponses
+                && attempt.Exam.Purpose == ExamPurpose.Mock.ToCode()
+                && attempt.BandCode is not null)
+            {
+                await PathStepCompletion.CloseAsync(
+                    db,
+                    attempt.UserId,
+                    PathStepCompletion.Activity.MockExam,
+                    attempt.ExamId,
+                    score: attempt.TotalScore,
+                    accuracyPct: null,
+                    cancellationToken);
+            }
+
             if (tx is not null) await tx.CommitAsync(cancellationToken);
 
             return new AttemptGradingResult(
@@ -482,6 +500,22 @@ public sealed partial class AttemptEngine
             attempt.BandCode = await FindBandCodeAsync(attempt.CertId, totalScore, cancellationToken);
             attempt.Status = AttemptStatus.Graded.ToCode();
             await db.SaveChangesAsync(cancellationToken);
+
+            // #154: this is the second way a mock reaches `graded` (a mock with free responses is
+            // finalized here after AI grading). Both writers close the step; leaving this one out
+            // would keep the gap open for exactly the exams that take longest to finish.
+            if (attempt.Exam.Purpose == ExamPurpose.Mock.ToCode())
+            {
+                await PathStepCompletion.CloseAsync(
+                    db,
+                    attempt.UserId,
+                    PathStepCompletion.Activity.MockExam,
+                    attempt.ExamId,
+                    score: attempt.TotalScore,
+                    accuracyPct: null,
+                    cancellationToken);
+            }
+
             if (tx is not null) await tx.CommitAsync(cancellationToken);
         }
         finally
