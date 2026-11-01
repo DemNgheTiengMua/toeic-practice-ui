@@ -21,8 +21,6 @@ public sealed class ExamFormViewModel
 
     public ExamPurposeDto Purpose { get; set; } = ExamPurposeDto.Mock;
 
-    public ExamStatusDto Status { get; set; } = ExamStatusDto.Draft;
-
     [StringLength(500, ErrorMessage = "Description cannot exceed 500 characters.")]
     public string? Description { get; set; }
 

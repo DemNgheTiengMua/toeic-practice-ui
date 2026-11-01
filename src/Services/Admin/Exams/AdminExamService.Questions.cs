@@ -507,7 +507,7 @@ public sealed partial class AdminExamService
         // hear about that question's answers first.
         if (hasAnswers)
         {
-            throw new AdminExamException(ApiError.Codes.QuestionHasAttemptAnswers, "Cannot delete a question with recorded learner answers in attempts.", 400);
+            throw new AdminExamException(ApiError.Codes.QuestionHasAttemptAnswers, "Cannot delete a question that has recorded learner answers in attempts.", 400);
         }
 
         // #157: deleting a question shrinks the section a finished attempt was scored on.

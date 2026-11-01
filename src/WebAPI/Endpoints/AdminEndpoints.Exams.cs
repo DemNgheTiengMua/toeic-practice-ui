@@ -108,6 +108,22 @@ public static partial class AdminEndpoints
             }
         });
 
+        admin.MapPost("/exams/{examId:int}/withdraw", async (
+            int examId,
+            IAdminExamService exams,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var result = await exams.WithdrawExamAsync(examId, cancellationToken);
+                return Results.Ok(result);
+            }
+            catch (AdminExamException ex)
+            {
+                return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
+            }
+        });
+
         admin.MapDelete("/exams/{examId:int}", async (
             int examId,
             IAdminExamService exams,

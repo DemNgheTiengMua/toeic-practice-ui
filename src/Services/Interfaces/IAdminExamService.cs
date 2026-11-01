@@ -24,6 +24,7 @@ public interface IAdminExamService
     Task<AdminExamDetailDto> CreateExamAsync(CreateAdminExamRequest request, CancellationToken cancellationToken = default);
     Task<AdminExamDetailDto> UpdateExamAsync(int examId, UpdateAdminExamRequest request, CancellationToken cancellationToken = default);
     Task<AdminPublishExamResultDto> PublishExamAsync(int examId, CancellationToken cancellationToken = default);
+    Task<AdminPublishExamResultDto> WithdrawExamAsync(int examId, CancellationToken cancellationToken = default);
     Task DeleteExamAsync(int examId, CancellationToken cancellationToken = default);
 
     Task<AdminExamQuestionsDto> GetExamQuestionsAsync(int examId, CancellationToken cancellationToken = default);

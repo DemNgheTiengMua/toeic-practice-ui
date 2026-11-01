@@ -1,4 +1,5 @@
 @model WebMVC.Models.AdminExamListViewModel
+@using Contracts
 @{
     Layout = "_AdminLayout";
     ViewData["Title"] = "Exams";
@@ -130,6 +131,14 @@ else
                 <div class="row" style="gap: 0.25rem;">
                   <a class="btn btn--sm btn--primary" href="/admin/exams/@exam.ExamId/studio">Studio</a>
                   <a class="btn btn--sm" href="/admin/exams/@exam.ExamId/edit">Edit Info</a>
+                  @if (exam.Status == ExamStatusDto.Published)
+                  {
+                    @* #157: 'hidden' is the deliberate way off the catalog, and it is not a publish door *@
+                    <form method="post" action="/admin/exams/@exam.ExamId/withdraw" onsubmit="return confirm('Withdraw this exam from the catalog? Learners keep their attempts.');" style="display:inline; margin:0;">
+                      @Html.AntiForgeryToken()
+                      <button type="submit" class="btn btn--sm">Withdraw</button>
+                    </form>
+                  }
                   @if (exam.FinishedAttemptCount == 0)
                   {
                     <form method="post" action="/admin/exams/@exam.ExamId/delete" onsubmit="return confirm('Delete this exam?');" style="display:inline; margin:0;">

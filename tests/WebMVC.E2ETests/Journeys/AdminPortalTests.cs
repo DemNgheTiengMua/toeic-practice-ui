@@ -87,7 +87,9 @@ public class AdminPortalTests : PlaywrightTestBase
         // Verify form fields inside modal
         await Expect(dialog.Locator("#gen-certCode")).ToBeVisibleAsync();
         await Expect(dialog.Locator("#gen-title")).ToBeVisibleAsync();
-        await Expect(dialog.Locator("#gen-status")).ToBeVisibleAsync();
+        // #157: no initial-status control - a generated exam is always a draft, published only
+        // through the audited POST /{id}/publish.
+        await Expect(dialog.Locator("#gen-status")).ToHaveCountAsync(0);
         await Expect(dialog.Locator("#gen-targetBand")).ToBeVisibleAsync();
         await Expect(dialog.Locator("#gen-difficulty")).ToBeVisibleAsync();
         await Expect(dialog.Locator("#gen-blueprintJson")).ToBeVisibleAsync();

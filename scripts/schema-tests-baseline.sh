@@ -16,10 +16,12 @@ DB='CompanionSchemaTest'
 fail=0
 for t in docs/schema-tests/domain*.sql; do
   bash docs/schema-tests/reset-and-load.sh >/dev/null 2>&1
-  if sqlcmd -S "$S" -d "$DB" -I -b -f 65001 -i "$(cygpath -w "$t")" >/dev/null 2>&1; then
+  if out=$(sqlcmd -S "$S" -d "$DB" -I -b -f 65001 -i "$(cygpath -w "$t")" 2>&1); then
     echo "PASS $(basename "$t")"
   else
-    echo "FAIL $(basename "$t")"
+    # The error numbers, not only the filename: "the same six files fail" is not the same claim
+    # as "for the same six reasons", and a branch can change a failure's cause without adding one.
+    echo "FAIL $(basename "$t") $(echo "$out" | grep -oE 'Msg [0-9]+' | sort -u | tr '\n' ' ')"
     fail=$((fail + 1))
   fi
 done

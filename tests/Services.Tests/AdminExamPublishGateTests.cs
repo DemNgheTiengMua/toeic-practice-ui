@@ -71,6 +71,22 @@ public sealed class AdminExamPublishGateTests(DatabaseFixture database)
             new AdminQuestionOptionInput(null, "B", "Wrong", false, null),
         ]);
 
+    private static QuickIngestParsedQuestionDto ParsedQuestion() => new(
+        Index: 1,
+        StartLineNumber: 1,
+        EndLineNumber: 2,
+        Stem: "Added through quick ingest",
+        DifficultyLevel: 3,
+        Explanation: null,
+        CategoryCode: null,
+        Options:
+        [
+            new QuickIngestParsedOptionDto("A", "Yes", true),
+            new QuickIngestParsedOptionDto("B", "No", false),
+        ],
+        Issues: [],
+        IsValid: true);
+
     /// <summary>An exam holding one section's worth of answerable questions.</summary>
     private async Task<int> SeedCompleteExamAsync(AdminExamService service, int certId, int sectionId, string name)
     {
@@ -217,7 +233,9 @@ public sealed class AdminExamPublishGateTests(DatabaseFixture database)
         var addQuestion = await Assert.ThrowsAsync<AdminExamException>(() =>
             service.CreateQuestionAsync(examId, ReadableQuestion(group.GroupId)));
         Assert.Equal(ApiError.Codes.ExamHasFinishedAttempts, addQuestion.Code);
-        Assert.Contains("1", addQuestion.Message, StringComparison.Ordinal);
+        // The count in context, not any "1" in the message: an admin has to read how many learners
+        // this affects before deciding what to do.
+        Assert.Contains("1 learner attempt has already finished it", addQuestion.Message, StringComparison.Ordinal);
 
         // b. adding a group is the same structural change one level up
         var addGroup = await Assert.ThrowsAsync<AdminExamException>(() =>
@@ -247,6 +265,141 @@ public sealed class AdminExamPublishGateTests(DatabaseFixture database)
         var deleteGroup = await Assert.ThrowsAsync<AdminExamException>(() =>
             service.DeleteQuestionGroupAsync(examId, group.GroupId));
         Assert.Equal(ApiError.Codes.ExamHasFinishedAttempts, deleteGroup.Code);
+    }
+
+    [Fact]
+    public async Task Quick_ingest_cannot_add_questions_to_an_exam_with_a_finished_attempt()
+    {
+        var (certId, sectionId) = await SeedCertificateAsync();
+        var service = CreateService();
+
+        var examId = await SeedCompleteExamAsync(service, certId, sectionId, $"QI Locked {Guid.NewGuid():N}"[..30]);
+        await RecordFinishedAttemptAsync(examId, certId);
+        // A second attempt, so the message's plural branch is the one on the wire here and the
+        // singular form is covered by the admin-service test above.
+        await RecordFinishedAttemptAsync(examId, certId);
+
+        // Through the quick-ingest service itself, not AdminExamService: commits used to insert
+        // groups and questions straight into the DbContext, so the lock in the admin service never
+        // saw them. This is the entry point the admin endpoint resolves.
+        var quickIngest = new ExamQuickIngestService(
+            DbContextFactory.Create(database.ConnectionString), TimeProvider.System);
+
+        var ex = await Assert.ThrowsAsync<AdminExamException>(() =>
+            quickIngest.CommitStagedAsync(examId, new QuickIngestCommitRequest(
+                SectionId: sectionId,
+                Mode: "append",
+                Questions: [ParsedQuestion()])));
+
+        Assert.Equal(ApiError.Codes.ExamHasFinishedAttempts, ex.Code);
+        Assert.Contains("2 learner attempts have already finished it", ex.Message, StringComparison.Ordinal);
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        Assert.Equal(2, await db.Questions.CountAsync(q => q.ExamId == examId));
+    }
+
+    [Fact]
+    public async Task Ai_generate_cannot_add_questions_to_an_exam_with_a_finished_attempt()
+    {
+        var (certId, sectionId) = await SeedCertificateAsync();
+        var service = CreateService();
+
+        var examId = await SeedCompleteExamAsync(service, certId, sectionId, $"Gen Locked {Guid.NewGuid():N}"[..30]);
+        await RecordFinishedAttemptAsync(examId, certId);
+
+        // The service is called with a claude client that must never be reached: the lock has to
+        // be checked before the prompt is built, or a refused generate still costs a model call.
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var generator = new ExamGeneratorService(
+            db,
+            new QuestionImportService(db, new RecordingFileStore(), TimeProvider.System),
+            new UnreachableClaudeClient());
+
+        var ex = await Assert.ThrowsAsync<AdminExamException>(() =>
+            generator.GenerateSectionQuestionsAsync(examId, sectionId, adminUserId: 1, questionCount: 1));
+
+        Assert.Equal(ApiError.Codes.ExamHasFinishedAttempts, ex.Code);
+        Assert.Contains("1 learner attempt has", ex.Message, StringComparison.Ordinal);
+        Assert.Equal(2, await db.Questions.CountAsync(q => q.ExamId == examId));
+    }
+
+    /// <summary>Any call is a failure: a refused generation must not reach the model.</summary>
+    private sealed class UnreachableClaudeClient : IClaudeClient
+    {
+        public Task<string> CreateMessageAsync(
+            string userPrompt,
+            string? systemPrompt = null,
+            int maxTokens = 1500,
+            CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("The structure lock must be checked before the prompt is sent.");
+    }
+
+    [Fact]
+    public async Task Editing_the_answer_key_of_an_inline_completion_question_is_a_structural_edit()
+    {
+        var (certId, sectionId) = await SeedCertificateAsync();
+        var service = CreateService();
+
+        var exam = await service.CreateExamAsync(new CreateAdminExamRequest(
+            certId, $"Key Locked {Guid.NewGuid():N}"[..30], 60, ExamPurposeDto.Mock));
+        var group = await service.CreateQuestionGroupAsync(exam.ExamId, new CreateQuestionGroupRequest(sectionId));
+
+        // An inline-completion question is graded against AcceptedAnswersJson, not against an option
+        // set, so this is the answer key the lock has to cover.
+        var question = await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
+            group.GroupId,
+            "The report was filed _____ Friday.",
+            3,
+            QuestionTypeDto.InlineCompletion,
+            AcceptedAnswersJson: """["before"]"""));
+        await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
+            group.GroupId,
+            "Second gap _____ the deadline.",
+            3,
+            QuestionTypeDto.InlineCompletion,
+            AcceptedAnswersJson: """["before"]"""));
+
+        await RecordFinishedAttemptAsync(exam.ExamId, certId);
+
+        var ex = await Assert.ThrowsAsync<AdminExamException>(() => service.UpdateQuestionAsync(
+            question.QuestionId,
+            new UpdateQuestionRequest(
+                group.GroupId, question.Stem, question.DifficultyLevel, question.QuestionType,
+                AcceptedAnswersJson: """["after"]""")));
+
+        Assert.Equal(ApiError.Codes.ExamHasFinishedAttempts, ex.Code);
+
+        // The stem alone is cosmetic and still saves, which is what keeps the rule structural
+        // rather than a blanket freeze.
+        var renamed = await service.UpdateQuestionAsync(question.QuestionId, new UpdateQuestionRequest(
+            group.GroupId, "Reworded gap.", question.DifficultyLevel, question.QuestionType,
+            AcceptedAnswersJson: """["before"]"""));
+        Assert.Equal("Reworded gap.", renamed.Stem);
+    }
+
+    [Fact]
+    public async Task A_sat_exam_can_be_withdrawn_and_leaves_the_learner_catalog()
+    {
+        var (certId, sectionId) = await SeedCertificateAsync();
+        var service = CreateService();
+
+        var examId = await SeedCompleteExamAsync(service, certId, sectionId, $"Withdrawn {Guid.NewGuid():N}"[..30]);
+        await RecordFinishedAttemptAsync(examId, certId);
+
+        // #157 removed the only writer of 'hidden', which left a retired exam with no state to
+        // reach: it cannot be deleted once it has been sat. Withdraw is that deliberate route,
+        // and it is not a publish door - it only ever removes the exam from the catalog.
+        await service.WithdrawExamAsync(examId);
+
+        var detail = await service.GetExamByIdAsync(examId);
+        Assert.Equal(ExamStatusDto.Hidden, detail.Status);
+
+        // Every learner-facing catalog filters on 'published', and the attempt trigger admits only
+        // published exams, so hidden really is out of reach for a learner.
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var reachable = await db.Exams.CountAsync(e =>
+            e.ExamId == examId && e.Status == ExamStatus.Published.ToCode() && !e.IsDeleted);
+        Assert.Equal(0, reachable);
     }
 
     [Fact]

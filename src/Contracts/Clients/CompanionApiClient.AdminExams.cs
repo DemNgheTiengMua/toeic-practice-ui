@@ -34,6 +34,9 @@ public sealed partial class CompanionApiClient
     public Task<AdminPublishExamResultDto> PublishAdminExamAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) =>
         PostAuthorizedAsync<object, AdminPublishExamResultDto>($"api/admin/exams/{examId}/publish", new { }, bearerToken, cancellationToken);
 
+    public Task<AdminPublishExamResultDto> WithdrawAdminExamAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) =>
+        PostAuthorizedAsync<object, AdminPublishExamResultDto>($"api/admin/exams/{examId}/withdraw", new { }, bearerToken, cancellationToken);
+
     public Task DeleteAdminExamAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) =>
         DeleteAuthorizedAsync($"api/admin/exams/{examId}", bearerToken, cancellationToken);
 
@@ -183,6 +186,9 @@ public sealed partial class CompanionApiClient
 
     public Task<AdminPublishExamResultDto> PublishAdminExamAsync(int examId, CancellationToken cancellationToken = default) =>
         PublishAdminExamAsync(examId, string.Empty, cancellationToken);
+
+    public Task<AdminPublishExamResultDto> WithdrawAdminExamAsync(int examId, CancellationToken cancellationToken = default) =>
+        WithdrawAdminExamAsync(examId, string.Empty, cancellationToken);
 
     public Task DeleteAdminExamAsync(int examId, CancellationToken cancellationToken = default) =>
         DeleteAdminExamAsync(examId, string.Empty, cancellationToken);

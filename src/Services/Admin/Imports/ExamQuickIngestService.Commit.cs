@@ -35,6 +35,11 @@ public sealed partial class ExamQuickIngestService
         var exam = await db.Exams.Include(e => e.Cert).FirstOrDefaultAsync(e => e.ExamId == examId && !e.IsDeleted, cancellationToken)
             ?? throw new ExamNotFoundException(examId);
 
+        // #157: this service inserts groups and questions itself, so the admin service's lock never
+        // saw it. Both modes change what a finished attempt was scored against: append adds rows,
+        // replace deletes them.
+        await ExamStructureLock.RequireEditableAsync(db, examId, cancellationToken);
+
         var section = await db.Sections.FirstOrDefaultAsync(s => s.SectionId == request.SectionId && s.CertId == exam.CertId, cancellationToken)
             ?? throw new AdminExamException("SectionNotFound", $"Section with id {request.SectionId} not found for certificate '{exam.Cert.Name}'.", 404);
 

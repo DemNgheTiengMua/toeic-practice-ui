@@ -206,7 +206,6 @@ public sealed class AdminExamsController(
             CertId = selectedCert,
             DurationMinutes = 120,
             Purpose = ExamPurposeDto.Mock,
-            Status = ExamStatusDto.Draft,
             Step = 1,
             Certificates = certs,
             ErrorMessage = TempData["Error"] as string,
@@ -267,7 +266,6 @@ public sealed class AdminExamsController(
                 Name = detail.Name,
                 DurationMinutes = detail.DurationMinutes,
                 Purpose = detail.Purpose,
-                Status = detail.Status,
                 Description = detail.Description,
                 SourceName = detail.SourceName,
                 InternalNote = detail.InternalNote,
@@ -357,6 +355,24 @@ public sealed class AdminExamsController(
             TempData["Error"] = errorMsg;
             return RedirectToAction(nameof(Edit), new { id, step = 3 });
         }
+    }
+
+    [HttpPost("{id:int}/withdraw")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Withdraw(int id, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var result = await api.WithdrawAdminExamAsync(id, cancellationToken);
+            TempData["Success"] = result.Message;
+        }
+        catch (ApiException ex)
+        {
+            logger.LogWarning(ex, "Failed to withdraw exam {ExamId}", id);
+            TempData["Error"] = ex.Detail ?? ex.Message;
+        }
+
+        return RedirectToAction(nameof(Index));
     }
 
     [HttpPost("{id:int}/delete")]

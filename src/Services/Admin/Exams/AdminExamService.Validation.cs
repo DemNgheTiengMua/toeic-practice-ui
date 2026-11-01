@@ -35,6 +35,16 @@ public sealed partial class AdminExamService
             return true;
         }
 
+        // The answer key of a non-MCQ question is as structural as an option's IsCorrect: an
+        // inline-completion or free-response question is graded against exactly these strings, so
+        // rewriting them re-marks a finished attempt. No request field means the caller left it
+        // alone; UpdateQuestionAsync then stores null, which is itself a change.
+        if (Normalize(request.AcceptedAnswersJson) != Normalize(question.AcceptedAnswersJson)
+            || Normalize(request.RequiredKeywords) != Normalize(question.RequiredKeywords))
+        {
+            return true;
+        }
+
         // The stored set is what the finished attempt was scored against; an incoming set that
         // differs in labels, correctness or text changes that. No options in the request means the
         // caller left the set alone.
@@ -57,28 +67,13 @@ public sealed partial class AdminExamService
 
     /// <summary>
     /// #157: once an exam has a finished attempt, its structure is what that attempt was scored
-    /// against, so it may not change. "Structure" here means anything that changes which questions
-    /// exist, which section they belong to, or what the right answer is — adding or deleting a
-    /// section's questions or groups, moving a question, and editing an option set. Cosmetic fields
-    /// (names, stems, explanations, hints, notes, audio/passage stimuli) stay editable: they cannot
-    /// change a recorded score. Create/delete entry points call this; they used to check only that
-    /// the individual question had answers, which let the section's shape drift.
+    /// against, so it may not change. See <see cref="ExamStructureLock"/> for what counts as
+    /// structure; it lives there because quick ingest and generation write from their own services.
+    /// Create/delete entry points call this; they used to check only that the individual question
+    /// had answers, which let the section's shape drift.
     /// </summary>
-    private async Task RequireStructureEditableAsync(int examId, CancellationToken cancellationToken)
-    {
-        var finishedAttemptCount = await db.ExamAttempts.AsNoTracking()
-            .CountAsync(a => a.ExamId == examId && (a.Status == "submitted" || a.Status == "graded"), cancellationToken);
-
-        if (finishedAttemptCount > 0)
-        {
-            throw new AdminExamException(
-                ApiError.Codes.ExamHasFinishedAttempts,
-                $"This exam's structure is locked: {finishedAttemptCount} learner {(finishedAttemptCount == 1 ? "attempt has" : "attempts have")} already finished it. " +
-                "Adding, removing or moving questions, and changing answer options, would change the score those attempts were given. " +
-                "Name, description, internal note, stem, explanation and hint remain editable.",
-                400);
-        }
-    }
+    private Task RequireStructureEditableAsync(int examId, CancellationToken cancellationToken) =>
+        ExamStructureLock.RequireEditableAsync(db, examId, cancellationToken);
 
     private static void ValidateQuestionGroup(string examPurpose, string sectionModality, string? imagePath, string? imageAlt, int? audioStartMs, int? audioEndMs, int? prepSeconds, int? responseSeconds)
     {

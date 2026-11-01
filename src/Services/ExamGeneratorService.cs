@@ -140,6 +140,10 @@ public sealed partial class ExamGeneratorService(
             .SingleOrDefaultAsync(s => s.SectionId == sectionId && s.CertId == exam.CertId, cancellationToken)
             ?? throw new AdminExamException(ApiError.Codes.Validation, $"Section with ID {sectionId} not found for certificate '{exam.Cert.Name}'.", 404);
 
+        // #157: this service inserts groups and questions itself, so the admin service's lock never
+        // saw it. Checked before the prompt is built: a refused generate must not cost a model call.
+        await ExamStructureLock.RequireEditableAsync(db, examId, cancellationToken);
+
         var existingCount = await db.Questions
             .CountAsync(q => q.ExamId == examId && q.SectionId == sectionId, cancellationToken);
 

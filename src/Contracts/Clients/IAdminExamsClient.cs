@@ -16,6 +16,9 @@ public interface IAdminExamsClient
     Task<AdminExamDetailDto> UpdateAdminExamAsync(int examId, UpdateAdminExamRequest request, string bearerToken, CancellationToken cancellationToken = default) => UpdateAdminExamAsync(examId, request, cancellationToken);
     Task<AdminPublishExamResultDto> PublishAdminExamAsync(int examId, CancellationToken cancellationToken = default);
     Task<AdminPublishExamResultDto> PublishAdminExamAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) => PublishAdminExamAsync(examId, cancellationToken);
+    Task<AdminPublishExamResultDto> WithdrawAdminExamAsync(int examId, CancellationToken cancellationToken = default) =>
+        Task.FromResult(new AdminPublishExamResultDto(false, string.Empty, []));
+    Task<AdminPublishExamResultDto> WithdrawAdminExamAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) => WithdrawAdminExamAsync(examId, cancellationToken);
     Task DeleteAdminExamAsync(int examId, CancellationToken cancellationToken = default);
     Task DeleteAdminExamAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) => DeleteAdminExamAsync(examId, cancellationToken);
     Task<AdminExamQuestionsDto> GetAdminExamQuestionsAsync(int examId, CancellationToken cancellationToken = default);

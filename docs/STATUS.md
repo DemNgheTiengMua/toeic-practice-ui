@@ -36,13 +36,14 @@ Sau đó: #150 → #154/#155/#156 → #158/#159 → #160–#162.
 | #149 — render động theo `Cert.Skills` | `94428a2` + `5be51e3` | cert kỹ năng tên khác LIST/READ hiện đúng số thẻ |
 | #147 — wizard ghi scale + band + rubric | `6a407ab` + `3baa688` | cert tạo xong chấm được ngay; `/admin/score-conversion` đã xoá |
 | #148 — kỹ năng sản phẩm có band | `e786295` | Claude thật: `AiGradings.BandCode` `NULL` → `A2` (TOEIC) / `B2` (IELTS); trigger band đã gỡ |
-| #157 — đóng cổng publish | (commit này) | 2 đường vòng audit bị bịt; `ExpectedQuestionCount` NOT NULL |
+| #157 — đóng cổng publish | (commit này) | 2 đường vòng audit bị bịt; `ExpectedQuestionCount` NOT NULL; 2 lối ghi cấu trúc khác (quick ingest, AI generate) cũng khoá; `hidden` có đường ghi riêng (withdraw) |
 
-`dotnet test`: **1414 pass, 0 fail** (47 E2E skip khi không có app chạy). Schema-test:
+`dotnet test`: **1417 pass, 0 fail** (47 E2E skip khi không có app chạy). Schema-test:
 **6 fail, y hệt `e517572`** — cùng tên file *và* cùng mã lỗi (`Msg 515`/`547`/`50011`).
 
-**Nợ kỹ thuật đã biết:** 8 test trong `WebMVC.E2ETests` fail khi có app chạy, **giống hệt trên
-`1106103`** — hỏng sẵn, không phải do #148. Trước giờ ẩn vì thiếu `E2E_BASE_URL`. Cần ticket riêng.
+**Nợ kỹ thuật đã biết:** 14 test trong `WebMVC.E2ETests` fail khi có app chạy, **giống hệt trên
+`edb1e0e`** (chỉ nhiều hơn một test đã sửa: `#gen-status` mà `8b2a47b` xoá nhưng test vẫn đòi).
+Hỏng sẵn, không phải do #148/#157. Trước giờ ẩn vì thiếu `E2E_BASE_URL`. Cần ticket riêng.
 
 ## 4. Quyết định mới chốt sau STATE.md
 

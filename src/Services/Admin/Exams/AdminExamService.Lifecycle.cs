@@ -181,6 +181,27 @@ public sealed partial class AdminExamService
         return await GetExamByIdAsync(exam.ExamId, cancellationToken);
     }
 
+    /// <summary>
+    /// #157: 'hidden' is the deliberate way off the learner-facing catalog. An exam that has been
+    /// sat can no longer be deleted, so withdrawing it has to exist, or the only state an
+    /// audited-but-retired exam can reach is 'published'. Withdrawing does not need the readiness
+    /// audit: it only ever removes the exam from the catalog.
+    /// </summary>
+    public async Task<AdminPublishExamResultDto> WithdrawExamAsync(int examId, CancellationToken cancellationToken = default)
+    {
+        var exam = await db.Exams.FirstOrDefaultAsync(e => e.ExamId == examId && !e.IsDeleted, cancellationToken);
+        if (exam == null)
+        {
+            throw new ExamNotFoundException(examId);
+        }
+
+        exam.Status = ExamStatus.Hidden.ToCode();
+        exam.UpdatedAt = clock.GetUtcNow();
+        await db.SaveChangesAsync(cancellationToken);
+
+        return new AdminPublishExamResultDto(true, "Exam withdrawn from the catalog.", Array.Empty<string>());
+    }
+
     public async Task<AdminPublishExamResultDto> PublishExamAsync(int examId, CancellationToken cancellationToken = default)
     {
         var exam = await db.Exams.FirstOrDefaultAsync(e => e.ExamId == examId && !e.IsDeleted, cancellationToken);

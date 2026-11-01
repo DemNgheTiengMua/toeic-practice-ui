@@ -290,7 +290,6 @@ public sealed class AdminExamsControllerTests
             Name = "New Practice Exam",
             DurationMinutes = 120,
             Purpose = ExamPurposeDto.Mock,
-            Status = ExamStatusDto.Draft,
             QuestionCount = 200,
             SourceName = "ETS 2024"
         };
@@ -359,7 +358,6 @@ public sealed class AdminExamsControllerTests
             Name = "Updated Name",
             DurationMinutes = 120,
             Purpose = ExamPurposeDto.Mock,
-            Status = ExamStatusDto.Draft,
             Step = 1
         };
 
