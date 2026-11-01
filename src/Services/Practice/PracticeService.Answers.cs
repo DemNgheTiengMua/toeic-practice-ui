@@ -203,7 +203,9 @@ public sealed partial class PracticeService
         }
 
         bool isSaved = false;
-        if (answer.IsCorrect == false)
+        // #150: only an objective answer has options, so only it can be reviewed as a saved question.
+        // Filing a failed free response there put a question with "0 options" in the bank.
+        if (!isFreeResponse && answer.IsCorrect == false)
         {
             var existingSq = await db.SavedQuestions
                 .FirstOrDefaultAsync(sq => sq.UserId == userId && sq.QuestionId == questionId, cancellationToken);
@@ -257,6 +259,20 @@ public sealed partial class PracticeService
             allOptions.Where(o => o.IsCorrect).Select(o => o.OptionId).ToList(),
             answer.ResponseText,
             answer.SelectedOptionIdsJson);
+    }
+
+    /// <summary>#150: the explanation a learner sees for a free-response answer - evaluated from the
+    /// stored response against the question's own floor and keywords, so re-reading question or summary
+    /// shows the same sentence the submit reply did.</summary>
+    private static string? FreeResponseExplanation(Question question, string? responseText)
+    {
+        if (string.IsNullOrWhiteSpace(responseText))
+        {
+            return question.Explanation;
+        }
+
+        var eval = AttemptEngine.EvaluateWritingResponse(question, responseText);
+        return FreeResponseFeedback(eval, question.Explanation);
     }
 
     /// <summary>The immediate feedback a speaking or writing drill can give without the AI queue: how

@@ -20,6 +20,25 @@ public sealed class PracticePresentationTests
 
         Assert.True(model.HasAnySections);
         Assert.Single(model.OtherSectionGroups);
+        Assert.Empty(model.SpeakingSections);
+    }
+
+    // #150 round 2: a spoken answer cannot be typed. A Speaking-only certificate still sees its
+    // section, but as a link to the recorded, AI-graded practice - never as a drill button.
+    [Fact]
+    public void A_speaking_only_certificate_gets_no_typed_drill_and_links_to_recorded_practice()
+    {
+        var model = new PracticeCatalogViewModel(new PracticeCatalogDto(
+            new CertificateOptionDto("DEMO", "DEMO"),
+            [], [], [],
+            null,
+            SpeakingSections: [new PracticeSectionDto(9, "SPEA", "Speaking", ModalityDto.Speaking, "S1", "Interview", 4, 1, 0, null, 0, 1)],
+            SpeakingPracticeExamId: 77));
+
+        Assert.True(model.HasAnySections);
+        Assert.Empty(model.OtherSectionGroups);
+        Assert.Single(model.SpeakingSections);
+        Assert.Equal(77, model.SpeakingPracticeExamId);
     }
 
     [Fact]

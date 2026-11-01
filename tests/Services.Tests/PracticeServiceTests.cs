@@ -98,14 +98,17 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         Assert.Single(view.ReadingSections);
         Assert.Equal(3, view.ReadingSections[0].AvailableQuestionCount);
         Assert.Equal("Incomplete Sentences", view.ReadingSections[0].Name);
-        Assert.Single(view.OtherSections);
+        // #150: a speaking section has no typed drill, so it is listed apart from the drillable groups.
+        Assert.Empty(view.OtherSections);
+        Assert.Single(view.Speaking);
+        Assert.Equal(0, view.Speaking[0].AvailableQuestionCount);
     }
 
-    // #150: a certificate whose only skill is Writing or Speaking had no route to a practice session
-    // at all - CK_Practice_Modality allowed listening/reading only and PracticeService refused the rest.
+    // #150: a certificate whose only skill is Writing had no route to a practice session at all -
+    // CK_Practice_Modality allowed listening/reading only and PracticeService refused the rest.
+    // Speaking is deliberately excluded (round 2): a spoken answer cannot be typed.
     [Theory]
     [InlineData("writing")]
-    [InlineData("speaking")]
     public async Task StartSession_drills_a_free_response_section_and_grades_the_answer(string modality)
     {
         var certCode = Unique("FR");
@@ -131,7 +134,6 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
 
     [Theory]
     [InlineData("writing")]
-    [InlineData("speaking")]
     public async Task StartSession_grades_a_free_response_answer_that_meets_the_question_requirements(string modality)
     {
         var certCode = Unique("FR");
@@ -146,6 +148,216 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
 
         Assert.True(result.IsCorrect);
         Assert.Equal("The team discussed the proposal yesterday.", result.ResponseText);
+    }
+
+    // #150 round 2: a spoken answer cannot be typed. A speaking section is refused by the free drill
+    // and pointed at the recorded, AI-graded speaking practice instead of being served a textarea.
+    [Fact]
+    public async Task StartSession_refuses_a_speaking_section_and_names_the_recorded_practice()
+    {
+        var certCode = Unique("SPK");
+        var (sectionId, _) = await SeedFreeResponseCertificateAsync(certCode, "speaking");
+        var userId = await SeedLearnerAsync(certCode);
+        var (practice, _) = CreateServices();
+
+        var ex = await Assert.ThrowsAsync<PracticeException>(() =>
+            practice.StartSessionAsync(userId, new StartPracticeSessionInput(sectionId, 10)));
+
+        Assert.Equal(PracticeException.ModalityNotAllowed, ex.Code);
+        Assert.Contains("record", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    // #150 round 2: the evaluated feedback is the whole point of a drill. It has to survive a
+    // refresh, not only the one AJAX reply that first produced it.
+    [Theory]
+    [InlineData("writing")]
+    public async Task Free_response_feedback_survives_a_reload_of_the_question_and_the_summary(string modality)
+    {
+        var certCode = Unique("FB");
+        var (sectionId, questionId) = await SeedFreeResponseCertificateAsync(certCode, modality);
+        var userId = await SeedLearnerAsync(certCode);
+        var (practice, _) = CreateServices();
+
+        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(sectionId, 10));
+        await practice.SubmitAnswerAsync(
+            userId, session.SessionId, questionId, new SubmitPracticeAnswerInput(ResponseText: "Too short."));
+
+        var reread = await practice.GetQuestionAsync(userId, session.SessionId, 1);
+        Assert.Contains("at least 5 words", reread.Explanation);
+        Assert.Contains("Missing required keywords", reread.Explanation);
+
+        var summary = await practice.GetSummaryAsync(userId, session.SessionId);
+        var outcome = Assert.Single(summary.Questions);
+        Assert.Contains("at least 5 words", outcome.Explanation);
+        Assert.Contains("Missing required keywords", outcome.Explanation);
+    }
+
+    // #150 round 2: a free-response answer has no options, so an "incorrect" row for it renders in
+    // the saved bank as a question with no choices. Only objective answers feed that bank.
+    [Theory]
+    [InlineData("writing")]
+    public async Task A_wrong_free_response_answer_is_not_filed_in_the_incorrect_answer_bank(string modality)
+    {
+        var certCode = Unique("SQ");
+        var (sectionId, questionId) = await SeedFreeResponseCertificateAsync(certCode, modality);
+        var userId = await SeedLearnerAsync(certCode);
+        var (practice, _) = CreateServices();
+
+        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(sectionId, 10));
+        await practice.SubmitAnswerAsync(
+            userId, session.SessionId, questionId, new SubmitPracticeAnswerInput(ResponseText: "Too short."));
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        Assert.False(await db.SavedQuestions.AnyAsync(sq => sq.UserId == userId && sq.QuestionId == questionId));
+    }
+
+    // Finding 4, the divergence itself: a writing section holding only keyed questions was counted by
+    // the catalog (it has options) and then refused by the session builder (it serves free responses
+    // only). One predicate now answers both questions, so the count is never a broken promise.
+    [Fact]
+    public async Task A_section_the_catalog_counts_can_always_be_started()
+    {
+        var certCode = Unique("DIV");
+        var (writingSectionId, _) = await SeedFreeResponseCertificateAsync(certCode, "writing");
+        var userId = await SeedLearnerAsync(certCode);
+        var (practice, _) = CreateServices();
+
+        // The same writing section, now also holding one keyed question - the shape the two filters split on.
+        await using (var db = DbContextFactory.Create(database.ConnectionString))
+        {
+            var group = new QuestionGroup
+            {
+                ExamId = await db.Questions.Where(q => q.SectionId == writingSectionId).Select(q => q.ExamId).FirstAsync(),
+                CertId = await db.Sections.Where(s => s.SectionId == writingSectionId).Select(s => s.CertId).FirstAsync(),
+                SectionId = writingSectionId,
+                DisplayOrder = 2,
+            };
+            db.QuestionGroups.Add(group);
+            await db.SaveChangesAsync();
+
+            var keyed = new Question
+            {
+                GroupId = group.GroupId, ExamId = group.ExamId, SectionId = writingSectionId,
+                SkillId = await db.Sections.Where(s => s.SectionId == writingSectionId).Select(s => s.SkillId).FirstAsync(),
+                Stem = "Keyed question", DifficultyLevel = 2, QuestionType = "mcq", DisplayOrder = 2,
+            };
+            db.Questions.Add(keyed);
+            await db.SaveChangesAsync();
+
+            db.QuestionOptions.Add(new QuestionOption
+            {
+                QuestionId = keyed.QuestionId, QuestionType = "mcq", Label = "A", Text = "Only option", IsCorrect = true,
+            });
+            await db.SaveChangesAsync();
+        }
+
+        var catalog = await practice.GetPracticeSectionsAsync(userId);
+        var section = catalog.OtherSections.Single(s => s.SectionId == writingSectionId);
+        Assert.Equal(2, section.AvailableQuestionCount);
+
+        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(writingSectionId, 10));
+        Assert.Equal(section.AvailableQuestionCount, session.QuestionCount);
+    }
+
+    // Finding 4: one predicate decides what a section can drill, shared by the catalog count and the
+    // session builder. Two hand-written filters let a section advertise a drill it then refuses to
+    // serve. This walks the real catalog and the real start call over the same sections.
+    [Fact]
+    public async Task Catalog_and_session_builder_agree_on_what_a_section_can_drill()
+    {
+        var certCode = Unique("AG");
+        await SeedMixedModalityCertificateAsync(certCode);
+        var userId = await SeedLearnerAsync(certCode);
+        var (practice, _) = CreateServices();
+
+        var catalog = await practice.GetPracticeSectionsAsync(userId);
+        var sections = catalog.ListeningSections.Concat(catalog.ReadingSections).Concat(catalog.OtherSections).ToList();
+        Assert.Equal(3, sections.Count);
+
+        foreach (var section in sections)
+        {
+            PracticeSessionInfo? session = null;
+            PracticeException? refusal = null;
+            try
+            {
+                session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(section.SectionId, 10));
+            }
+            catch (PracticeException ex)
+            {
+                refusal = ex;
+            }
+
+            // The catalog count is the promise; the session delivers it or refuses for lack of questions.
+            if (section.AvailableQuestionCount == 0)
+            {
+                Assert.Equal(PracticeException.NoQuestionsAvailable, refusal?.Code);
+                continue;
+            }
+
+            Assert.Null(refusal);
+            Assert.Equal(section.AvailableQuestionCount, session!.QuestionCount);
+        }
+    }
+
+    // A certificate with one section of each shape, including the two the old split filters disagreed
+    // on: a writing section holding only keyed questions (counted by the catalog, served by nothing)
+    // and a section with no questions at all.
+    private async Task SeedMixedModalityCertificateAsync(string certCode)
+    {
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+
+        var cert = new Certificate { Code = certCode, Name = $"Cert {certCode}", IsActive = true };
+        db.Certificates.Add(cert);
+        await db.SaveChangesAsync();
+
+        var reading = new Skill { CertId = cert.CertId, Code = "READ", Name = "Reading", Modality = "reading", DisplayOrder = 1 };
+        var writing = new Skill { CertId = cert.CertId, Code = "WRIT", Name = "Writing", Modality = "writing", DisplayOrder = 2 };
+        db.Skills.AddRange(reading, writing);
+        await db.SaveChangesAsync();
+
+        var keyedReading = new Section { CertId = cert.CertId, SkillId = reading.SkillId, Modality = "reading", Code = "P5", Name = "Keyed reading", DisplayOrder = 1, OptionCount = 4, ExpectedQuestionCount = 1 };
+        var bareReading = new Section { CertId = cert.CertId, SkillId = reading.SkillId, Modality = "reading", Code = "P6", Name = "Empty reading", DisplayOrder = 2, OptionCount = 4, ExpectedQuestionCount = 1 };
+        var writingSection = new Section { CertId = cert.CertId, SkillId = writing.SkillId, Modality = "writing", Code = "W1", Name = "Writing task", DisplayOrder = 1, OptionCount = 4, ExpectedQuestionCount = 1 };
+        db.Sections.AddRange(keyedReading, bareReading, writingSection);
+        await db.SaveChangesAsync();
+
+        var exam = new Exam { CertId = cert.CertId, Name = $"Exam {certCode}", Status = "published", DurationMinutes = 30, Purpose = "mock" };
+        db.Exams.Add(exam);
+        await db.SaveChangesAsync();
+
+        await AddQuestionAsync(db, exam, keyedReading, reading, "mcq", hasAnswerKey: true);
+        await AddQuestionAsync(db, exam, writingSection, writing, "free_response", hasAnswerKey: false);
+    }
+
+    private static async Task AddQuestionAsync(
+        DataAccess.CompanionDbContext db, Exam exam, Section section, Skill skill, string type, bool hasAnswerKey)
+    {
+        var group = new QuestionGroup
+        {
+            ExamId = exam.ExamId, CertId = exam.CertId, SectionId = section.SectionId,
+            DisplayOrder = section.DisplayOrder,
+        };
+        db.QuestionGroups.Add(group);
+        await db.SaveChangesAsync();
+
+        var question = new Question
+        {
+            GroupId = group.GroupId, ExamId = exam.ExamId, SectionId = section.SectionId, SkillId = skill.SkillId,
+            Stem = $"{section.Code} question", DifficultyLevel = 2, QuestionType = type,
+            MinWords = type == "free_response" ? 5 : null, RequiredKeywords = type == "free_response" ? "proposal" : null,
+            DisplayOrder = 1,
+        };
+        db.Questions.Add(question);
+        await db.SaveChangesAsync();
+
+        if (hasAnswerKey)
+        {
+            db.QuestionOptions.Add(new QuestionOption
+            {
+                QuestionId = question.QuestionId, QuestionType = type, Label = "A", Text = "Only option", IsCorrect = true,
+            });
+            await db.SaveChangesAsync();
+        }
     }
 
     // The composite FK still owns the pin: a session's modality is its section's, and no widening of

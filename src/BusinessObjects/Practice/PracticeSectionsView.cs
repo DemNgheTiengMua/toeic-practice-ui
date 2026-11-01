@@ -9,4 +9,11 @@ public sealed record PracticeSectionsView(
     IReadOnlyList<PracticeSectionItem> ReadingSections,
     IReadOnlyList<PracticeSectionItem> OtherSections,
     PracticeSectionItem? WeakestSection,
-    PracticeSessionInfo? UnfinishedSession = null);
+    PracticeSessionInfo? UnfinishedSession = null,
+    IReadOnlyList<PracticeSectionItem>? SpeakingSections = null,
+    int? SpeakingPracticeExamId = null)
+{
+    /// <summary>#150: speaking has no typed drill, so the page sends it to its recorded, AI-graded
+    /// practice. An empty list keeps the old construction sites source-compatible.</summary>
+    public IReadOnlyList<PracticeSectionItem> Speaking => SpeakingSections ?? [];
+}

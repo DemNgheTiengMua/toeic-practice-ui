@@ -37,10 +37,10 @@ Sau đó: #154/#155/#156 → #158/#159 → #160–#162.
 | #147 — wizard ghi scale + band + rubric | `6a407ab` + `3baa688` | cert tạo xong chấm được ngay; `/admin/score-conversion` đã xoá |
 | #148 — kỹ năng sản phẩm có band | `e786295` | Claude thật: `AiGradings.BandCode` `NULL` → `A2` (TOEIC) / `B2` (IELTS); trigger band đã gỡ |
 | #157 — đóng cổng publish | (commit này) | 2 đường vòng audit bị bịt; `ExpectedQuestionCount` NOT NULL; 2 lối ghi cấu trúc khác (quick ingest, AI generate) cũng khoá; `hidden` có đường ghi riêng (withdraw) |
-| #150 — practice cho cert chỉ có Speaking/Writing | (commit này) | `CK_Practice_Modality` mở cho cả 4 modality; `PracticeService` nhận cả 4; phiên vẫn bị composite FK khoá đúng modality của section; drill free-response chấm theo `MinWords` + `RequiredKeywords`, không chạm credit/AI |
+| #150 - practice for a Speaking-only or Writing-only cert | `4d2b9b3` + round 2 | `CK_Practice_Modality` widened to all 4 (the schema no longer blocks); a Writing-only cert drills and is marked by `MinWords` + `RequiredKeywords`, free, no credit or AI; **Speaking is not drilled** - a spoken answer cannot be typed, so the page links it to the recorded, AI-graded speaking practice. Free-response feedback is re-evaluated on read so it survives a refresh; a wrong written answer is no longer filed in the saved-question bank (it has no options); one shared predicate decides drillability for both the catalog count and the session builder |
 
-`dotnet test`: **1417 pass, 0 fail** (47 E2E skip khi không có app chạy). Schema-test:
-**6 fail, y hệt `e517572`** — cùng tên file *và* cùng mã lỗi (`Msg 515`/`547`/`50011`).
+`dotnet test`: **1430 pass, 0 fail** (47 E2E skip when the apps are not running). Schema-test:
+**5 fail, the same 5 files and message numbers as the parent `4d2b9b3`** (`Msg 515`/`547`/`50011`/`50000`).
 
 **Nợ kỹ thuật đã biết:** 14 test trong `WebMVC.E2ETests` fail khi có app chạy, **giống hệt trên
 `edb1e0e`** (chỉ nhiều hơn một test đã sửa: `#gen-status` mà `8b2a47b` xoá nhưng test vẫn đòi).

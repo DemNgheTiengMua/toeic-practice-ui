@@ -9,6 +9,20 @@ namespace Services;
 
 public sealed partial class PracticeService
 {
+    /// <summary>#150: the single rule for "can this section be answered in the drill?", used by both the
+    /// catalog count and the session builder so the page can never advertise a drill the service refuses.
+    /// Speaking is excluded because a spoken answer cannot be typed and its recorded, AI-graded attempt is
+    /// a different flow (#151); every other modality drills either its free-response or its keyed questions.</summary>
+    private IQueryable<Question> DrillableQuestions(int certId) =>
+        db.Questions.AsNoTracking().Where(q => q.Section.CertId == certId
+            && q.Section.Modality != SpeakingCode
+            && (q.QuestionType == FreeResponseCode
+                || (q.QuestionType != FreeResponseCode
+                    && (q.AcceptedAnswersJson != null || db.QuestionOptions.Any(o => o.QuestionId == q.QuestionId)))));
+
+    private static readonly string SpeakingCode = Modality.Speaking.ToCode();
+
+    private static readonly string FreeResponseCode = QuestionType.FreeResponse.ToCode();
 
     public async Task<PracticeSectionsView> GetPracticeSectionsAsync(int userId, CancellationToken cancellationToken = default)
     {
@@ -27,10 +41,7 @@ public sealed partial class PracticeService
             .ThenBy(s => s.DisplayOrder)
             .ToListAsync(cancellationToken);
 
-        var questionCounts = await db.Questions
-            .AsNoTracking()
-            .Where(q => q.Section.CertId == activeCertId
-                && (q.QuestionType == QuestionType.FreeResponse.ToCode() || (q.QuestionType != QuestionType.FreeResponse.ToCode() && (q.AcceptedAnswersJson != null || db.QuestionOptions.Any(o => o.QuestionId == q.QuestionId)))))
+        var questionCounts = await DrillableQuestions(activeCertId)
             .GroupBy(q => q.SectionId)
             .Select(g => new { SectionId = g.Key, Count = g.Count() })
             .ToDictionaryAsync(g => g.SectionId, g => g.Count, cancellationToken);
@@ -68,8 +79,10 @@ public sealed partial class PracticeService
 
         var listening = items.Where(i => i.Modality == Modality.Listening).ToList();
         var reading = items.Where(i => i.Modality == Modality.Reading).ToList();
-        // #150: speaking and writing sections drill too, so they are no longer a dead bucket.
-        var other = items.Where(i => i.Modality is not (Modality.Listening or Modality.Reading)).ToList();
+        // #150: writing sections drill; speaking does not (a spoken answer cannot be typed), so the page
+        // links speaking to its recorded, AI-graded practice instead of offering a drill that refuses.
+        var other = items.Where(i => i.Modality == Modality.Writing).ToList();
+        var speaking = items.Where(i => i.Modality == Modality.Speaking).ToList();
 
         // Weakest part: listening/reading section with lowest accuracy among those with at least 1 answer
         var weakest = items
@@ -101,6 +114,18 @@ public sealed partial class PracticeService
                 ps.FinishedAt))
             .FirstOrDefaultAsync(cancellationToken);
 
-        return new PracticeSectionsView(cert, listening, reading, other, weakest, unfinishedSession);
+        // #150: speaking has no typed drill. Point at its recorded, AI-graded practice when the
+        // certificate has one published, so the card is a real link rather than a refusal.
+        var speakingPracticeExamId = await db.Exams
+            .AsNoTracking()
+            .Where(e => e.CertId == activeCertId
+                && e.Purpose == ExamPurpose.SpeakingPractice.ToCode()
+                && e.Status == ExamStatus.Published.ToCode()
+                && !e.IsDeleted)
+            .OrderBy(e => e.ExamId)
+            .Select(e => (int?)e.ExamId)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return new PracticeSectionsView(cert, listening, reading, other, weakest, unfinishedSession, speaking, speakingPracticeExamId);
     }
 }

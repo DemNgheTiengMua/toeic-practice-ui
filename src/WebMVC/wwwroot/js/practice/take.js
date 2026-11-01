@@ -587,8 +587,8 @@
 
           var html = '<div class="inline-completion-widget stack" style="gap: var(--space-2);">';
           html += '<div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">';
-          html += '<span class="badge badge--neutral" style="font-family: \'IBM Plex Mono\', monospace; border-radius: 0; box-shadow: none;">' + (maxWords ? 'TỐI ĐA ' + maxWords + ' TỪ' : 'ĐIỀN TỪ') + '</span>';
-          html += '<span class="badge badge--neutral" style="font-family: \'IBM Plex Mono\', monospace; border-radius: 0; box-shadow: none;">' + (allowNumber ? 'CHỮ VÀ SỐ' : 'CHỈ CHỮ (NO NUMBERS)') + '</span>';
+          html += '<span class="badge badge--muted" style="font-family: \'IBM Plex Mono\', monospace; border-radius: 0; box-shadow: none;">' + (maxWords ? 'TỐI ĐA ' + maxWords + ' TỪ' : 'ĐIỀN TỪ') + '</span>';
+          html += '<span class="badge badge--muted" style="font-family: \'IBM Plex Mono\', monospace; border-radius: 0; box-shadow: none;">' + (allowNumber ? 'CHỮ VÀ SỐ' : 'CHỈ CHỮ (NO NUMBERS)') + '</span>';
           html += '</div>';
           html += '<div class="mt-2">';
           html += '<input type="text" class="completion-input js-completion-input" value="' + escapeHtml(curText) + '" placeholder="Nhập câu trả lời..." autocomplete="off" spellcheck="false" ' + (isAnswered ? 'disabled' : '') + '>';
@@ -623,8 +623,9 @@
             });
           }
         } else if (type === "free_response") {
-          // #150: a speaking or writing drill. The response is checked against the question's own
-          // word floor and required keywords when it is submitted, so this widget only captures text.
+          // #150: a writing drill. A spoken answer cannot be typed, so a speaking section never starts
+          // this session at all - the service refuses it and the practice page links to the recorded,
+          // AI-graded speaking practice instead.
           var minWords = s.minWords;
           var maxWords = s.maxWords;
           var requiredKeywords = s.requiredKeywords || '';
@@ -633,10 +634,10 @@
           var html = '<div class="free-response-widget stack" style="gap: var(--space-2);">';
           html += '<div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">';
           if (minWords) {
-            html += '<span class="badge badge--neutral" style="font-family: \'IBM Plex Mono\', monospace;">TỐI THIỂU ' + minWords + ' TỪ</span>';
+            html += '<span class="badge badge--muted" style="font-family: \'IBM Plex Mono\', monospace;">TỐI THIỂU ' + minWords + ' TỪ</span>';
           }
           if (maxWords) {
-            html += '<span class="badge badge--neutral" style="font-family: \'IBM Plex Mono\', monospace;">TỐI ĐA ' + maxWords + ' TỪ</span>';
+            html += '<span class="badge badge--muted" style="font-family: \'IBM Plex Mono\', monospace;">TỐI ĐA ' + maxWords + ' TỪ</span>';
           }
           if (requiredKeywords) {
             html += '<span class="badge badge--warning" style="font-family: \'IBM Plex Mono\', monospace;">TỪ KHOÁ: ' + escapeHtml(requiredKeywords) + '</span>';

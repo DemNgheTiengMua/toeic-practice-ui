@@ -62,7 +62,9 @@ public sealed partial class PracticeService
                 correctOpt?.Text,
                 a.IsCorrect,
                 a.HintUsed,
-                q.Explanation,
+                q.QuestionType == QuestionType.FreeResponse.ToCode()
+                    ? FreeResponseExplanation(q, a.ResponseText)
+                    : q.Explanation,
                 q.Group.AudioPath,
                 q.Group.AudioStartMs,
                 q.Group.AudioEndMs,

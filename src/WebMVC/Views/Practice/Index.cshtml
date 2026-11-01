@@ -10,9 +10,9 @@
   <div>
     <h1 class="m-0 mb-1">Practice by section</h1>
     <p class="text-muted no-margin">
-      Every section of your certificate drills here, with no time limit: you see the answer and explanation right after each question.
-      <strong>Free, no credit deducted.</strong> A speaking or writing answer is checked against the question's word limit and required keywords.
-      Full AI rubric grading is its own practice attempt and uses 1 credit each.
+      Every section of your certificate that can be checked instantly drills here, with no time limit: you see the answer and explanation right after each question.
+      <strong>Free, no credit deducted.</strong> A writing answer is checked against the question's word limit and required keywords.
+      Speaking is answered by voice, so it has its own recorded practice, graded by AI for 1 credit.
     </p>
   </div>
 </div>
@@ -29,7 +29,7 @@
       <strong>Unfinished practice:</strong> You have an in-progress session in <strong>@unfinished.SectionName</strong> started @Model.UnfinishedStartedAtDisplay.
       <div class="text-sm text-muted">@unfinished.CorrectCount of @unfinished.QuestionCount questions answered so far.</div>
     </div>
-    <a class="btn btn--primary btn--sm" href="/practice/@unfinished.SessionId">Resume drill →</a>
+    <a class="btn btn--primary btn--sm" href="/practice/@unfinished.SessionId">Resume drill <span aria-hidden="true">&rarr;</span></a>
   </div>
 }
 
@@ -65,6 +65,10 @@ else
     </div>
   }
 
+  @* #150: the form is only meaningful when a section button is inside it. A Speaking-only
+     certificate has none - it links to its recorded practice below instead. *@
+  @if (Model.HasDrillableSections)
+  {
   <form method="post" action="/practice/start" id="practice-form">
     @Html.AntiForgeryToken()
     <div class="card">
@@ -180,4 +184,45 @@ else
       </section>
     }
   </form>
+  }
+
+  @if (Model.SpeakingSections.Count > 0)
+  {
+    <section class="mt-4">
+      <h2 class="section-group__title">Speaking</h2>
+      <div class="grid-2">
+        @foreach (var sec in Model.SpeakingSections)
+        {
+          @* #150: a spoken answer cannot be typed, so this is not a drill button. It links to the
+             recorded, AI-graded speaking practice whose exam the catalog named. *@
+          <div class="part-card">
+            <div class="part-card__header">
+              <strong>@sec.Code</strong>
+              @if (Model.SpeakingPracticeExamId.HasValue)
+              {
+                <span class="badge badge--muted">Recorded + AI</span>
+              }
+              else
+              {
+                <span class="badge badge--warning">No practice exam yet</span>
+              }
+            </div>
+            <p class="part-card__desc">@sec.Name</p>
+            <div class="part-card__meta">
+              @if (Model.SpeakingPracticeExamId.HasValue)
+              {
+                <a class="btn btn--primary btn--sm" href="/speaking/@Model.SpeakingPracticeExamId/instructions">
+                  Practise speaking <span aria-hidden="true">&rarr;</span>
+                </a>
+              }
+              else
+              {
+                <span>Answered by voice. Practice opens once a speaking practice exam is published.</span>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    </section>
+  }
 }

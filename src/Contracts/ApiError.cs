@@ -42,6 +42,7 @@ public sealed record ApiError(string Code, string Title, int Status, string? Det
         public const string CertificateUnavailable = "CERT_UNAVAILABLE";
 
         public const string PracticeSectionUnavailable = "PRACTICE_SECTION_UNAVAILABLE";
+        public const string PracticeModalityNotAllowed = "PRACTICE_MODALITY_NOT_ALLOWED";
         public const string PracticeNoQuestionsAvailable = "PRACTICE_NO_QUESTIONS_AVAILABLE";
         public const string PracticeSessionNotFound = "PRACTICE_SESSION_NOT_FOUND";
         public const string PracticeQuestionNotFound = "PRACTICE_QUESTION_NOT_FOUND";

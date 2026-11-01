@@ -21,18 +21,19 @@ public sealed partial class PracticeService
             .SingleOrDefaultAsync(cancellationToken)
             ?? throw new PracticeException(PracticeException.SectionUnavailable, $"Section {input.SectionId} is not available for active certificate.");
 
-        // #150: every modality drills. A certificate whose only skill is Speaking or Writing used to
-        // have no route to a practice session at all; the section's own modality comes from the row and
-        // FK_Practice_SectionModality still pins the session to it.
-        var isFreeResponse = string.Equals(section.Modality, Modality.Speaking.ToCode(), StringComparison.Ordinal)
-            || string.Equals(section.Modality, Modality.Writing.ToCode(), StringComparison.Ordinal);
+        // #150: a spoken answer cannot be typed, and its recorded, AI-graded practice is a different
+        // attempt (#151), so speaking is the one modality the free drill does not serve. Say where the
+        // recorded practice lives rather than serving a textarea, and keep the refusal here and in
+        // DrillableQuestions so the catalog never advertises a drill this method will not start.
+        if (string.Equals(section.Modality, Modality.Speaking.ToCode(), StringComparison.Ordinal))
+        {
+            throw new PracticeException(
+                PracticeException.ModalityNotAllowed,
+                "Speaking is answered by voice, so it has no typed drill: open the recorded speaking practice, which is graded by AI.");
+        }
 
-        // Speaking and writing sections hold free_response questions only, so the drill serves those
-        // and checks the answer against the question's own limits. Listening and reading drill the
-        // objective components, which is what the immediate-feedback grader can score.
-        var query = isFreeResponse
-            ? db.Questions.AsNoTracking().Where(q => q.SectionId == section.SectionId && q.QuestionType == QuestionType.FreeResponse.ToCode())
-            : db.Questions.AsNoTracking().Where(q => q.SectionId == section.SectionId && q.QuestionType != QuestionType.FreeResponse.ToCode() && (q.AcceptedAnswersJson != null || db.QuestionOptions.Any(o => o.QuestionId == q.QuestionId)));
+        var query = DrillableQuestions(activeCertId)
+            .Where(q => q.SectionId == section.SectionId);
 
         if (input.QuestionSource == QuestionSource.WrongBefore)
         {

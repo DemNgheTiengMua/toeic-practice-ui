@@ -45,7 +45,16 @@
     <div class="stat__hint">
       @if (Model.Summary.IncorrectCount > 0)
       {
-        <span>saved to your <a href="/saved-questions" class="font-semibold text-primary">saved questions bank</a></span>
+        @* #150: only a multiple-choice answer is filed in the bank; a written one has no options to
+           compare, so claiming it was saved would send the learner to an empty page. *@
+        @if (Model.Summary.Modality == Contracts.ModalityDto.Writing)
+        {
+          <span>reviewed below with the question's own word limit and keywords</span>
+        }
+        else
+        {
+          <span>saved to your <a href="/saved-questions" class="font-semibold text-primary">saved questions bank</a></span>
+        }
       }
       else
       {

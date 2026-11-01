@@ -72,6 +72,29 @@ public sealed class PracticeViewTests
         Assert.Contains("— Question @q.DisplayOrder —", view);
     }
 
+    // #150 round 2: the drill widget must not silently stand in for a microphone. The free-response
+    // branch is writing-only, and the practice page sends speaking to the recorded speaking practice.
+    [Fact]
+    public void Speaking_never_reaches_the_typed_free_response_widget()
+    {
+        var repoRoot = TestPathHelper.FindRepoRoot();
+        var script = File.ReadAllText(Path.Combine(repoRoot, "src", "WebMVC", "wwwroot", "js", "practice", "take.js"));
+        var render = Regex.Match(script, @"function renderComponentWidget\(q, s\)\s*\{(?<body>[\s\S]*?)\n      function ").Groups["body"].Value;
+        Assert.NotEmpty(render);
+
+        // Badge classes must exist in the design system; badge--neutral never did.
+        Assert.DoesNotContain("badge--neutral", script);
+        Assert.Contains("badge--muted", render);
+
+        var view = File.ReadAllText(Path.Combine(repoRoot, "src", "WebMVC", "Views", "Practice", "Index.cshtml"));
+        Assert.Contains("Model.SpeakingSections", view);
+        Assert.Contains("/speaking/", view);
+        // Speaking sections are not start buttons.
+        var speakingBlock = Regex.Match(view, @"@if \(Model\.SpeakingSections\.Count > 0\)(?<body>[\s\S]*?)\n  \}").Groups["body"].Value;
+        Assert.NotEmpty(speakingBlock);
+        Assert.DoesNotContain("name=\"SectionId\"", speakingBlock);
+    }
+
     [Fact]
     public void Take_View_Contains_Practice_QoL_Audio_Rewind_Transcript_And_Explanation_Accordion()
     {

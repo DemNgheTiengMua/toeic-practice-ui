@@ -23,16 +23,20 @@ END TRY BEGIN CATCH
   IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
   PRINT 'rejected bad status as expected';
 END CATCH
--- #150: a speaking or writing section drills now (the CHECK widened from listening/reading to all four)
+-- #150: the CHECK now admits all four modalities, so the schema cannot be what blocks a Speaking-only
+-- certificate. The row is legal at this level; whether the free drill builds one is a service rule.
 INSERT INTO PracticeSessions (UserId,SectionId,Modality,QuestionCount,Status) VALUES (@u,@secSpk,'speaking',1,'in_progress');
 PRINT 'speaking practice session accepted';
--- M-18: the composite FK still refuses a session whose modality is not its section's own
+-- M-18: the composite FK still refuses a session whose modality is not its section's own.
+-- Assert the constraint by name: any other error must not satisfy this test.
 BEGIN TRY
   INSERT INTO PracticeSessions (UserId,SectionId,Modality,QuestionCount,Status) VALUES (@u,@sec,'speaking',1,'in_progress');
   THROW 50000,'EXPECT_REJECT FAILED: mismatched modality accepted',1;
 END TRY BEGIN CATCH
   IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
-  PRINT 'rejected a session whose modality is not its section''s own';
+  IF ERROR_MESSAGE() NOT LIKE '%FK_Practice_SectionModality%'
+    THROW 50000,'EXPECT_REJECT FAILED: refused by something other than FK_Practice_SectionModality',1;
+  PRINT 'rejected a session whose modality is not its section''s own (FK_Practice_SectionModality)';
 END CATCH
 -- Content fixtures for PracticeAnswers containment + H-6 tests
 INSERT INTO Exams (CertId,Name,Status,DurationMinutes) VALUES (@c,N'Practice Src','published',60);

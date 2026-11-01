@@ -419,8 +419,10 @@ CREATE TABLE PracticeSessions (
   UserId       INT NOT NULL REFERENCES Users(UserId),
   SectionId    INT NOT NULL REFERENCES Sections(SectionId),
   -- M-18: carried down from the section so a session is pinned to its section's own skill.
-  -- #150: all four modalities drill. Before it, a certificate with only Speaking or only Writing had
-  -- no route to a practice session at all - a hard block, not a display bug.
+  -- #150: the CHECK admits all four so the column cannot be the thing that blocks a certificate
+  -- whose only skill is Speaking or Writing. The free drill builds sessions for listening, reading
+  -- and writing; speaking has no typed drill and links to its recorded, AI-graded practice instead,
+  -- which is a service rule, not a schema one - the FK below is what pins the pair.
   Modality     VARCHAR(10) NOT NULL
     CONSTRAINT CK_Practice_Modality CHECK (Modality IN ('listening','reading','speaking','writing')),
   QuestionCount INT NOT NULL CONSTRAINT CK_Practice_Count CHECK (QuestionCount > 0),

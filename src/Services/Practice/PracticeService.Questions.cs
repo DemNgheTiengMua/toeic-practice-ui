@@ -59,7 +59,9 @@ public sealed partial class PracticeService
             if (isAnswered || isFinished)
             {
                 correctOptionId = q.QuestionOptionQuestionNavigations.FirstOrDefault(o => o.IsCorrect)?.OptionId;
-                explanation = q.Explanation;
+                explanation = q.QuestionType == QuestionType.FreeResponse.ToCode()
+                    ? FreeResponseExplanation(q, answer.ResponseText)
+                    : q.Explanation;
                 transcript = group.Transcript;
             }
 
@@ -162,7 +164,9 @@ public sealed partial class PracticeService
         if (isAnswered || isFinished)
         {
             correctOptionId = allOptions.FirstOrDefault(o => o.IsCorrect)?.OptionId;
-            explanation = q.Explanation;
+            explanation = q.QuestionType == QuestionType.FreeResponse.ToCode()
+                ? FreeResponseExplanation(q, answer.ResponseText)
+                : q.Explanation;
             transcript = group.Transcript;
         }
 
