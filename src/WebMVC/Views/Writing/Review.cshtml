@@ -179,6 +179,56 @@
             </table>
           </div>
         }
+
+        @* E2.1 (#151): what makes the feedback usable is a located error plus a rewrite, not a
+           paragraph of praise. Each block is conditional on the grader having stored it, so an
+           older grading shows nothing rather than an empty heading. *@
+        @if (q.ErrorSpans is { Count: > 0 })
+        {
+          <div class="card__footer">
+            <h3 class="section-group__title">Errors to fix</h3>
+            <table class="table">
+              <caption class="visually-hidden">Located errors and their corrections for question @q.DisplayOrder</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Category</th>
+                  <th scope="col">Your text</th>
+                  <th scope="col">Correction</th>
+                  <th scope="col">Why</th>
+                </tr>
+              </thead>
+              <tbody>
+                @foreach (var span in q.ErrorSpans)
+                {
+                  <tr>
+                    <td class="font-mono text-xs">@span.Category</td>
+                    <td><del>@span.OriginalSnippet</del></td>
+                    <td><ins>@span.CorrectedSnippet</ins></td>
+                    <td class="text-sm">@span.ExplanationVi</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(q.PriorityFix))
+        {
+          <div class="card__footer">
+            <div class="alert alert--warning">
+              <strong>Fix this first</strong>
+              <p class="text-sm no-margin mt-1">@q.PriorityFix</p>
+            </div>
+          </div>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(q.ModelRewrite))
+        {
+          <div class="card__footer">
+            <h3 class="section-group__title">A stronger version of your weakest sentence</h3>
+            <div class="graded-text">@q.ModelRewrite</div>
+          </div>
+        }
       </div>
     }
   </section>

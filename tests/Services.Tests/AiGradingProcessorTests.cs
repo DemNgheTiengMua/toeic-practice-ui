@@ -65,9 +65,9 @@ public sealed class AiGradingProcessorTests(DatabaseFixture database)
             DECLARE @sec2 INT = (SELECT SectionId FROM Sections WHERE CertId = @cert AND Code = 'W2');
 
             -- Criteria
-            INSERT INTO GradingCriteria (CertId, SkillId, Code, Name, MaxScore, Weight, DisplayOrder) VALUES
-              (@cert, @sW, 'GRAM', N'Grammar', 5.0, 1.0, 1),
-              (@cert, @sW, 'VOCAB', N'Vocabulary', 5.0, 1.0, 2);
+            INSERT INTO GradingCriteria (CertId, SkillId, Code, Name, RubricDescription, MaxScore, Weight, DisplayOrder) VALUES
+              (@cert, @sW, 'GRAM', N'Grammar', N'Band 5: accurate simple sentences. Band 3: frequent errors obscure meaning.', 5.0, 1.0, 1),
+              (@cert, @sW, 'VOCAB', N'Vocabulary', N'Band 5: adequate range. Band 3: limited range, repetition.', 5.0, 1.0, 2);
             DECLARE @crit1 INT = (SELECT CriterionId FROM GradingCriteria WHERE CertId = @cert AND Code = 'GRAM');
             DECLARE @crit2 INT = (SELECT CriterionId FROM GradingCriteria WHERE CertId = @cert AND Code = 'VOCAB');
 
@@ -219,6 +219,174 @@ public sealed class AiGradingProcessorTests(DatabaseFixture database)
         Assert.Equal("failed", g1.Status);
         Assert.NotNull(g1.FailureReason);
         Assert.Equal("done", g2.Status);
+    }
+
+    [Fact]
+    public async Task A_weighted_criterion_moves_the_total_and_the_page_shows_the_same_number()
+    {
+        // E2.1 (#151): Weight used to be sent to the model and then ignored when summing, so a rubric
+        // that marked grammar 0/5 and vocabulary 5/5 produced 5 whether grammar counted once or three
+        // times. Grammar here counts three times: (0/5 x 3 + 5/5 x 1) / 4 x 10 = 2.5, not 5.
+        var certCode = Unique("GW01");
+        var (certId, examId, q1Id, q2Id) = await SeedWritingExamFixtureAsync(certCode);
+        await database.SqlAsync($"""
+            UPDATE GradingCriteria SET Weight = 3.0
+            WHERE CertId = {certId} AND Code = 'GRAM';
+            """);
+
+        var grader = new PerCriterionGrader(new Dictionary<string, decimal> { ["GRAM"] = 0m, ["VOCAB"] = 5m });
+        var userId = await SeedLearnerAsync(certCode, startingCredits: 3);
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var writing = new WritingPracticeService(db, new LearnerService(db));
+        var info = await writing.StartAttemptAsync(userId, examId);
+        await writing.SaveDraftAsync(userId, info.AttemptId, q1Id, "A woman is reading a book on a train.");
+        await writing.SaveDraftAsync(userId, info.AttemptId, q2Id, "Working from home provides flexibility to many employees.");
+        await writing.SubmitAttemptAsync(userId, info.AttemptId);
+
+        await new AiGradingProcessor(db, grader).ProcessPendingGradingsAsync(10);
+
+        var graded = await db.AiGradings
+            .Include(g => g.FreeResponse)
+            .Where(g => g.FreeResponse.AttemptId == info.AttemptId && g.FreeResponse.QuestionId == q2Id)
+            .SingleAsync();
+        Assert.Equal(2.5m, graded.OverallScaled);
+
+        // The review page reports the same weighted total, so the column and the page cannot disagree.
+        var review = await writing.GetAttemptReviewAsync(userId, info.AttemptId);
+        Assert.Equal(2.5m, review.Questions.Single(q => q.QuestionId == q2Id).TotalScore);
+    }
+
+    [Fact]
+    public async Task Weight_changes_the_total_for_the_same_raw_marks()
+    {
+        // The rule stated as an equation, on the shared scorer both the worker and the review page use.
+        var equal = AttemptEngine.WeightedRubricTotal([
+            new AttemptEngine.RubricMark(Score: 5m, MaxScore: 10m, Weight: 1m),
+            new AttemptEngine.RubricMark(Score: 10m, MaxScore: 10m, Weight: 1m)
+        ]);
+        var grammarHeavier = AttemptEngine.WeightedRubricTotal([
+            new AttemptEngine.RubricMark(Score: 5m, MaxScore: 10m, Weight: 3m),
+            new AttemptEngine.RubricMark(Score: 10m, MaxScore: 10m, Weight: 1m)
+        ]);
+
+        Assert.Equal(15m, equal.Total);          // (0.5 + 1.0) / 2 x 20
+        Assert.Equal(12.5m, grammarHeavier.Total); // (0.5x3 + 1.0x1) / 4 x 20
+        Assert.Equal(20m, equal.Max);
+        Assert.Equal(20m, grammarHeavier.Max);
+    }
+
+    [Fact]
+    public async Task A_grading_that_omits_a_criterion_is_failed_and_holds_no_feedback()
+    {
+        // The ticket's acceptance case: a model that drops a criterion must not leave a
+        // MaxScore x 0.7 row behind it.
+        var certCode = Unique("GW02");
+        var (_, examId, q1Id, q2Id) = await SeedWritingExamFixtureAsync(certCode);
+        var userId = await SeedLearnerAsync(certCode, startingCredits: 3);
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var writing = new WritingPracticeService(db, new LearnerService(db));
+        var info = await writing.StartAttemptAsync(userId, examId);
+        await writing.SaveDraftAsync(userId, info.AttemptId, q1Id, "dog run fast");
+        await writing.SaveDraftAsync(userId, info.AttemptId, q2Id, "dog run fast");
+        await writing.SubmitAttemptAsync(userId, info.AttemptId);
+
+        await new AiGradingProcessor(db, new DropsOneCriterionGrader()).ProcessPendingGradingsAsync(10);
+
+        var gradings = await db.AiGradings
+            .Include(g => g.FreeResponse)
+            .Where(g => g.FreeResponse.AttemptId == info.AttemptId)
+            .ToListAsync();
+        Assert.All(gradings, g =>
+        {
+            Assert.Equal("failed", g.Status);
+            Assert.False(string.IsNullOrWhiteSpace(g.FailureReason));
+            Assert.Null(g.OverallScaled);
+            Assert.Null(g.BandCode);
+            Assert.Null(g.PriorityFix);
+            Assert.Null(g.ModelRewrite);
+            Assert.Null(g.ErrorSpansJson);
+        });
+
+        // No score row survives at all: nothing was marked, so nothing may look marked.
+        var scoreRows = await db.AiGradingScores
+            .Where(s => s.AiGrading.FreeResponse.AttemptId == info.AttemptId)
+            .ToListAsync();
+        Assert.Empty(scoreRows);
+
+        // And the page tells the learner to grade again rather than printing a number.
+        var pending = await writing.GetGradingPendingAsync(userId, info.AttemptId);
+        Assert.True(pending.CanRetry);
+        Assert.Equal(2, pending.FailedResponses);
+    }
+
+    [Fact]
+    public async Task The_review_page_carries_the_located_errors_the_priority_fix_and_the_rewrite()
+    {
+        var certCode = Unique("GW03");
+        var (_, examId, q1Id, q2Id) = await SeedWritingExamFixtureAsync(certCode);
+        var userId = await SeedLearnerAsync(certCode, startingCredits: 3);
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var writing = new WritingPracticeService(db, new LearnerService(db));
+        var info = await writing.StartAttemptAsync(userId, examId);
+        await writing.SaveDraftAsync(userId, info.AttemptId, q1Id, "A woman read a book.");
+        await writing.SaveDraftAsync(userId, info.AttemptId, q2Id, "I think remote work is good.");
+        await writing.SubmitAttemptAsync(userId, info.AttemptId);
+        await new AiGradingProcessor(db, new FeedbackGrader()).ProcessPendingGradingsAsync(10);
+
+        var review = await writing.GetAttemptReviewAsync(userId, info.AttemptId);
+        var q1 = review.Questions.Single(q => q.QuestionId == q1Id);
+
+        var span = Assert.Single(q1.ErrorSpans!);
+        Assert.Equal("A woman read a book.", span.OriginalSnippet);
+        Assert.Equal("A woman is reading a book.", span.CorrectedSnippet);
+        Assert.Equal("grammar", span.Category);
+        Assert.Equal("Thiếu trợ động từ.", span.ExplanationVi);
+        Assert.Equal("Use the present continuous.", q1.PriorityFix);
+        Assert.Equal("A woman is reading a book.", q1.ModelRewrite);
+    }
+
+    private sealed class PerCriterionGrader(IReadOnlyDictionary<string, decimal> scoresByCode) : IAiGrader
+    {
+        public Task<AiGradingResult> GradeAsync(AiGradingRequest request, CancellationToken cancellationToken = default)
+        {
+            var scores = request.Criteria
+                .Select(c => new AiCriterionScoreResult(c.CriterionId, scoresByCode.GetValueOrDefault(c.Code, 0m), "noted"))
+                .ToList();
+            return Task.FromResult(new AiGradingResult(true, null, "test-grader", scores));
+        }
+    }
+
+    private sealed class DropsOneCriterionGrader : IAiGrader
+    {
+        public Task<AiGradingResult> GradeAsync(AiGradingRequest request, CancellationToken cancellationToken = default)
+        {
+            var scores = request.Criteria
+                .Take(1)
+                .Select(c => new AiCriterionScoreResult(c.CriterionId, c.MaxScore, "noted"))
+                .ToList();
+            return Task.FromResult(new AiGradingResult(true, null, "test-grader", scores));
+        }
+    }
+
+    private sealed class FeedbackGrader : IAiGrader
+    {
+        public Task<AiGradingResult> GradeAsync(AiGradingRequest request, CancellationToken cancellationToken = default)
+        {
+            var scores = request.Criteria
+                .Select(c => new AiCriterionScoreResult(c.CriterionId, 1m, "noted"))
+                .ToList();
+            return Task.FromResult(new AiGradingResult(
+                Success: true,
+                FailureReason: null,
+                Model: "test-grader",
+                Scores: scores,
+                Transcript: null,
+                ErrorSpans: [new AiErrorSpan("A woman read a book.", "A woman is reading a book.", "grammar", "Thiếu trợ động từ.")],
+                PriorityFix: "Use the present continuous.",
+                ModelRewrite: "A woman is reading a book."));
+        }
     }
 
     private async Task SeedBandsAsync(int certId, params (string Code, int Min, int Max)[] bands)

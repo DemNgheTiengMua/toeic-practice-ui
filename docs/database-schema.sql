@@ -789,12 +789,22 @@ CREATE TABLE AiGradings (
   -- UI-35: speaking-review "Grading did not finish · Retry grading" (retry is free: one ai_grading
   -- charge per attempt). A retry reuses this row: Status back to 'pending', AttemptCount + 1.
   FailureReason  NVARCHAR(400) NULL,
+  -- E2.1 (#151): the feedback a learner can act on. An error span quotes the candidate's own text,
+  -- so the page can show original -> corrected; all three stay NULL when the grader has nothing to
+  -- fix, and a failed grading never carries any (Status = 'failed' means "not scored", not "bad").
+  PriorityFix    NVARCHAR(400) NULL,
+  ModelRewrite   NVARCHAR(MAX) NULL,
+  ErrorSpansJson NVARCHAR(MAX) NULL,          -- <=5 {originalSnippet, correctedSnippet, category, explanationVi}
   AttemptCount   INT NOT NULL CONSTRAINT DF_AiGradings_AttemptCount DEFAULT 1
     CONSTRAINT CK_AiGradings_AttemptCount CHECK (AttemptCount BETWEEN 1 AND 5),
   RequestedAt    DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
   CompletedAt    DATETIMEOFFSET NULL,
   CONSTRAINT UQ_AiGradings_FreeResponse UNIQUE (FreeResponseId),
   CONSTRAINT CK_AiGradings_FailureReason CHECK (FailureReason IS NULL OR Status = 'failed'),
+  -- E2.1 (#151): feedback belongs to a finished grading only. A pending row has not been read, and a
+  -- failed one was never scored - writing actionable notes onto it would claim work that did not happen.
+  CONSTRAINT CK_AiGradings_FeedbackOnlyWhenDone
+    CHECK (Status = 'done' OR (PriorityFix IS NULL AND ModelRewrite IS NULL AND ErrorSpansJson IS NULL)),
   CONSTRAINT CK_AiGradings_CompletedAt CHECK (CompletedAt IS NULL OR Status IN ('done','failed')),
   -- composite target so AiGradingScores can require the criterion's skill = the grading's own skill
   CONSTRAINT UQ_AiGradings_Id_Skill UNIQUE (GradingId, SkillId),
@@ -1183,6 +1193,17 @@ CREATE TABLE LearnerPathSteps (
   Score           DECIMAL(6,2) NULL,
   StartedAt       DATETIMEOFFSET NULL,
   CompletedAt     DATETIMEOFFSET NULL,
+  -- #154: the path is planned week by week inside a four-week window. Nullable because rows written
+  -- before #154 (and rows created by hand/seed) have no plan behind them; a generated step always
+  -- carries both numbers, and the week it belongs to is what the path screen groups by.
+  WeekNumber       INT NULL CONSTRAINT CK_Steps_Week CHECK (WeekNumber IS NULL OR WeekNumber BETWEEN 1 AND 4),
+  EstimatedMinutes INT NULL CONSTRAINT CK_Steps_EstMinutes CHECK (EstimatedMinutes IS NULL OR EstimatedMinutes > 0),
+  -- #154: what "this week is on track" is measured against, per step
+  TargetAccuracyPct INT NOT NULL CONSTRAINT DF_Steps_TargetAccuracy DEFAULT 70
+    CONSTRAINT CK_Steps_TargetAccuracy CHECK (TargetAccuracyPct BETWEEN 0 AND 100),
+  -- #154: measured, never guessed: correct/answered for a drill or a mock, NULL for a lesson
+  ActualAccuracyPct DECIMAL(5,2) NULL
+    CONSTRAINT CK_Steps_ActualAccuracy CHECK (ActualAccuracyPct IS NULL OR ActualAccuracyPct BETWEEN 0 AND 100),
   -- M-1: TemplateId must be the learner path's own
   CONSTRAINT FK_Steps_PathTemplate FOREIGN KEY (LearnerPathId, TemplateId) REFERENCES LearnerPaths(LearnerPathId, TemplateId),
   -- M-1: the module item must belong to that same template
@@ -1884,6 +1905,8 @@ CREATE INDEX IX_PMI_Module               ON PathModuleItems(ModuleId, DisplayOrd
 CREATE INDEX IX_PMT_Module               ON PathModuleTopics(ModuleId, DisplayOrder);
 CREATE INDEX IX_LearnerPaths_User        ON LearnerPaths(UserId, CertId);
 CREATE INDEX IX_Steps_LearnerPath        ON LearnerPathSteps(LearnerPathId);
+-- #154: the path screen reads its steps week by week, so the plan order is the index order
+CREATE INDEX IX_Steps_LearnerPath_Week   ON LearnerPathSteps(LearnerPathId, WeekNumber, StepId);
 -- Mentor
 CREATE INDEX IX_Mentors_Cert             ON MentorProfiles(CertId) WHERE IsActive = 1;
 CREATE INDEX IX_MentorSlots_Mentor       ON MentorSlots(MentorId, StartAt);

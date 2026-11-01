@@ -22,6 +22,7 @@ Extract a dedicated, deep AI grading module in `src/Services/AiGradingProcessor.
   - Dispatches requests to `IAiGrader` for both text (writing) and audio (speaking).
   - Handles audio transcript back-fill into `FreeResponses.ResponseText`.
   - Populates `AiGradingScores` and marks `AiGradings` status as `done` (or `failed` with failure reason).
+  - Since E2.1 (#151) it also refuses a writing answer that does not cover every criterion: an incomplete answer is `failed` with the missing criteria named, never padded with a plausible score. It stores the weight-aware rubric total in `OverallScaled`, and the actionable feedback (`PriorityFix`, `ModelRewrite`, `ErrorSpansJson`) beside it.
   - Finalizes `ExamAttempt` records to `graded` once all free responses are scored, keeping `TotalScore` and `BandCode` `NULL` on the attempt itself for practice attempts (trigger `50041`: one skill's rubric is not a certificate total). Since #148 it also writes the rubric's band, looked up in the certificate's own `ScoreBands`, onto `AiGradings.BandCode`.
 
 ## Consequences

@@ -12,5 +12,9 @@ public record WritingQuestionReviewItem(
     int WordCount,
     decimal TotalScore,
     decimal MaxScore,
-    IReadOnlyList<WritingCriterionScoreItem> Criteria
+    IReadOnlyList<WritingCriterionScoreItem> Criteria,
+    // E2.1 (#151): what the learner can act on. Empty when the grading stored nothing to fix.
+    IReadOnlyList<AiErrorSpan>? ErrorSpans = null,
+    string? PriorityFix = null,
+    string? ModelRewrite = null
 );

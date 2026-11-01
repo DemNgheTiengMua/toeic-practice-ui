@@ -497,20 +497,38 @@ IF NOT EXISTS (SELECT 1 FROM GradingCriteria WHERE CertId = @toeicCert AND Skill
     (@toeicCert, @toeicSpea, 'REL',  N'Relevance and completeness', 3.0, 1.0, 4);
 
 -- TOEIC Writing Rubric (MaxScore 5.0)
+-- E2.1 (#151): every writing criterion carries its band descriptors, because the grader is now given
+-- them; a criterion with none is left out of the prompt and cannot be scored.
 IF NOT EXISTS (SELECT 1 FROM GradingCriteria WHERE CertId = @toeicCert AND SkillId = @toeicWrit AND Code = 'GRAM')
-  INSERT INTO GradingCriteria (CertId, SkillId, Code, Name, MaxScore, Weight, DisplayOrder) VALUES
-    (@toeicCert, @toeicWrit, 'GRAM',  N'Grammar & sentence structure', 5.0, 1.0, 1),
-    (@toeicCert, @toeicWrit, 'VOCAB', N'Vocabulary and word choice', 5.0, 1.0, 2),
-    (@toeicCert, @toeicWrit, 'ORG',   N'Organization and coherence', 5.0, 1.0, 3),
-    (@toeicCert, @toeicWrit, 'REL',   N'Relevance to the prompt', 5.0, 1.0, 4);
+  INSERT INTO GradingCriteria (CertId, SkillId, Code, Name, RubricDescription, MaxScore, Weight, DisplayOrder) VALUES
+    (@toeicCert, @toeicWrit, 'GRAM',  N'Grammar & sentence structure',
+     N'5: consistently accurate complex sentences, errors do not impede meaning. 4: good control with occasional slips. 3: simple structures accurate, complex ones faulty. 2: frequent errors that sometimes obscure meaning. 1: errors make the sentence unreadable. 0: no assessable language.',
+     5.0, 1.0, 1),
+    (@toeicCert, @toeicWrit, 'VOCAB', N'Vocabulary and word choice',
+     N'5: precise, varied and task-appropriate word choice. 4: generally appropriate with some imprecision. 3: adequate but repetitive; wrong word forms appear. 2: limited range, frequent wrong collocations. 1: vocabulary too limited to convey the idea. 0: no assessable language.',
+     5.0, 1.0, 2),
+    (@toeicCert, @toeicWrit, 'ORG',   N'Organization and coherence',
+     N'5: ideas ordered logically, clear links throughout. 4: generally well organised, links mostly clear. 3: some organisation but progression is uneven. 2: ideas scattered, cohesion largely absent. 1: no discernible organisation. 0: no assessable text.',
+     5.0, 1.0, 3),
+    (@toeicCert, @toeicWrit, 'REL',   N'Relevance to the prompt',
+     N'5: fully addresses every part of the task with sufficient detail. 4: addresses the task, some parts underdeveloped. 3: addresses the task only partially; one requirement ignored. 2: barely addresses the task, largely off-topic. 1: does not address the task. 0: no response to the task.',
+     5.0, 1.0, 4);
 
 -- IELTS Writing Rubric (MaxScore 9.0)
 IF NOT EXISTS (SELECT 1 FROM GradingCriteria WHERE CertId = @ieltsCert AND SkillId = @ieltsWrit AND Code = 'TR')
-  INSERT INTO GradingCriteria (CertId, SkillId, Code, Name, MaxScore, Weight, DisplayOrder) VALUES
-    (@ieltsCert, @ieltsWrit, 'TR',  N'Task Response', 9.0, 1.0, 1),
-    (@ieltsCert, @ieltsWrit, 'CC',  N'Coherence & Cohesion', 9.0, 1.0, 2),
-    (@ieltsCert, @ieltsWrit, 'LR',  N'Lexical Resource', 9.0, 1.0, 3),
-    (@ieltsCert, @ieltsWrit, 'GRA', N'Grammatical Range & Accuracy', 9.0, 1.0, 4);
+  INSERT INTO GradingCriteria (CertId, SkillId, Code, Name, RubricDescription, MaxScore, Weight, DisplayOrder) VALUES
+    (@ieltsCert, @ieltsWrit, 'TR',  N'Task Response',
+     N'9: fully addresses all parts of the task, fully developed position. 8: sufficiently addresses all parts, well-developed position. 7: addresses all parts, clear position throughout. 6: addresses all parts though some more fully than others, position relevant. 5: addresses the task only partially, format may be inappropriate. 4: responds to the task only in a minimal way, position unclear. 3: does not adequately address the task, may be unrelated. 2: barely responds to the task. 1: answer is completely unrelated. 0: does not attempt the task.',
+     9.0, 1.0, 1),
+    (@ieltsCert, @ieltsWrit, 'CC',  N'Coherence & Cohesion',
+     N'9: cohesion attracts no attention, skilful paragraphing. 8: sequences information logically, manages cohesion well. 7: logically organises information, clear progression, range of cohesion. 6: arranges information coherently, cohesive devices used but sometimes faulty. 5: some organisation but lack of overall progression, inadequate or mechanical cohesion. 4: information not arranged coherently, cohesion faulty or missing. 3: does not organise ideas logically. 2: little or no use of cohesive features. 1: no discernible organisation. 0: no assessable text.',
+     9.0, 1.0, 2),
+    (@ieltsCert, @ieltsWrit, 'LR',  N'Lexical Resource',
+     N'9: full flexibility and precise use, rare minor slips. 8: wide resource used fluently and flexibly. 7: sufficient range to allow some flexibility and precision. 6: adequate range, some inappropriate choices that do not impede communication. 5: limited range, noticeable errors in word choice and spelling. 4: basic vocabulary, frequent errors that may distort the message. 3: inadequate range, errors may severely distort meaning. 2: very limited range. 1: only isolated words. 0: no assessable language.',
+     9.0, 1.0, 3),
+    (@ieltsCert, @ieltsWrit, 'GRA', N'Grammatical Range & Accuracy',
+     N'9: wide range of structures, rare minor errors. 8: wide range, majority of sentences error-free. 7: variety of complex structures, frequent error-free sentences, few errors. 6: mix of simple and complex forms, some errors that rarely impede communication. 5: limited range, complex sentences noticeably faulty. 4: very limited range, frequent grammatical errors that can seriously impede communication. 3: range of structures very limited, errors predominate. 2: little control of sentence forms. 1: cannot produce a sentence. 0: no assessable language.',
+     9.0, 1.0, 4);
 
 -- IELTS Speaking Rubric (MaxScore 9.0)
 IF NOT EXISTS (SELECT 1 FROM GradingCriteria WHERE CertId = @ieltsCert AND SkillId = @ieltsSpea AND Code = 'FC')
@@ -522,11 +540,19 @@ IF NOT EXISTS (SELECT 1 FROM GradingCriteria WHERE CertId = @ieltsCert AND Skill
 
 -- VSTEP Writing Rubric (MaxScore 10.0)
 IF NOT EXISTS (SELECT 1 FROM GradingCriteria WHERE CertId = @vstepCert AND SkillId = @vstepWrit AND Code = 'TASK')
-  INSERT INTO GradingCriteria (CertId, SkillId, Code, Name, MaxScore, Weight, DisplayOrder) VALUES
-    (@vstepCert, @vstepWrit, 'TASK',  N'Task Fulfillment', 10.0, 1.0, 1),
-    (@vstepCert, @vstepWrit, 'ORG',   N'Organization', 10.0, 1.0, 2),
-    (@vstepCert, @vstepWrit, 'VOCAB', N'Vocabulary', 10.0, 1.0, 3),
-    (@vstepCert, @vstepWrit, 'GRAM',  N'Grammar & Structures', 10.0, 1.0, 4);
+  INSERT INTO GradingCriteria (CertId, SkillId, Code, Name, RubricDescription, MaxScore, Weight, DisplayOrder) VALUES
+    (@vstepCert, @vstepWrit, 'TASK',  N'Task Fulfillment',
+     N'9-10: fulfils every communicative purpose fully, well developed. 7-8: fulfils the purposes, development mostly adequate. 5-6: fulfils the purposes only partially, some parts missing. 3-4: addresses the task minimally, several requirements ignored. 1-2: barely related to the task. 0: no response to the task.',
+     10.0, 1.0, 1),
+    (@vstepCert, @vstepWrit, 'ORG',   N'Organization',
+     N'9-10: clear paragraphs, logical progression, effective linking. 7-8: generally well organised with clear links. 5-6: some organisation, progression uneven, linking mechanical. 3-4: ideas scattered, little cohesion. 1-2: no discernible organisation. 0: no assessable text.',
+     10.0, 1.0, 2),
+    (@vstepCert, @vstepWrit, 'VOCAB', N'Vocabulary',
+     N'9-10: wide, precise and natural range for the register. 7-8: adequate range with occasional imprecision. 5-6: limited range, noticeable errors in word choice. 3-4: basic vocabulary, frequent errors that may distort the message. 1-2: very limited range. 0: no assessable language.',
+     10.0, 1.0, 3),
+    (@vstepCert, @vstepWrit, 'GRAM',  N'Grammar & Structures',
+     N'9-10: wide range of structures, almost always accurate. 7-8: variety of structures, occasional errors that do not impede meaning. 5-6: simple structures accurate, complex ones faulty. 3-4: very limited range, frequent errors that can impede communication. 1-2: little control of sentence forms. 0: no assessable language.',
+     10.0, 1.0, 4);
 
 -- VSTEP Speaking Rubric (MaxScore 10.0)
 IF NOT EXISTS (SELECT 1 FROM GradingCriteria WHERE CertId = @vstepCert AND SkillId = @vstepSpea AND Code = 'PRON')
@@ -4402,9 +4428,13 @@ IF NOT EXISTS (SELECT 1 FROM GradingCriteria WHERE CertId = @toeicSw AND SkillId
     (@toeicSw, @swSpea, 'FLU', N'Fluency & Delivery', 5.0, 1.0, 2);
 
 IF NOT EXISTS (SELECT 1 FROM GradingCriteria WHERE CertId = @toeicSw AND SkillId = @swWrit AND Code = 'GRAM')
-  INSERT INTO GradingCriteria (CertId, SkillId, Code, Name, MaxScore, Weight, DisplayOrder) VALUES
-    (@toeicSw, @swWrit, 'GRAM', N'Grammar & Keyword Usage', 5.0, 1.0, 1),
-    (@toeicSw, @swWrit, 'ORG', N'Organization & Development', 5.0, 1.0, 2);
+  INSERT INTO GradingCriteria (CertId, SkillId, Code, Name, RubricDescription, MaxScore, Weight, DisplayOrder) VALUES
+    (@toeicSw, @swWrit, 'GRAM', N'Grammar & Keyword Usage',
+     N'5: accurate complex sentences and every required keyword used naturally. 4: good control, keywords present with minor slips. 3: simple sentences accurate, one keyword missing. 2: frequent errors, several keywords missing. 1: errors obscure meaning. 0: no assessable language.',
+     5.0, 1.0, 1),
+    (@toeicSw, @swWrit, 'ORG', N'Organization & Development',
+     N'5: ideas ordered logically with a clear link between them. 4: generally clear progression. 3: some organisation, links mechanical. 2: ideas scattered, little cohesion. 1: no discernible organisation. 0: no assessable text.',
+     5.0, 1.0, 2);
 
 PRINT '19. Representative 11-Component Question Catalog & Official Multi-Stage Blueprint Seeds';
 

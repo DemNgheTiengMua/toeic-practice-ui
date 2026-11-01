@@ -343,15 +343,52 @@ public sealed partial class AttemptEngine
             .ToListAsync(cancellationToken);
 
         decimal total = 0m, max = 0m;
+        var marks = new List<RubricMark>(scores.Count);
         foreach (var score in scores)
         {
             var sectionId = score.AiGrading.FreeResponse.Question.SectionId;
-            total += score.Score;
-            max += overrides
+            var markMax = overrides
                 .FirstOrDefault(sc => sc.SectionId == sectionId && sc.CriterionId == score.CriterionId)
                 ?.MaxScore ?? score.GradingCriterion.MaxScore;
+            marks.Add(new RubricMark(score.Score, markMax, score.GradingCriterion.Weight));
         }
 
+        // E2.1 (#151): the same weighting the grading worker used to store OverallScaled, because the
+        // band has to be the band of the score the page prints.
+        (total, max) = WeightedRubricTotal(marks);
         return (total, max);
+    }
+
+    /// <summary>
+    /// E2.1 (#151): one criterion's mark, the ceiling it was marked against, and how much it counts.
+    /// </summary>
+    public readonly record struct RubricMark(decimal Score, decimal MaxScore, decimal Weight);
+
+    /// <summary>
+    /// E2.1 (#151): the rubric total, with each criterion counting for its own <c>Weight</c>:
+    /// <c>S = Σ(Score_i / MaxScore_i × Weight_i) / Σ Weight_i × Σ MaxScore_i</c>.
+    /// </summary>
+    /// <remarks>
+    /// The fraction in the middle is the documented rule; multiplying it back out by the sum of the
+    /// ceilings keeps the number on the same "x out of Σ MaxScore" scale the review page already
+    /// prints, so the column, the page and the band all read one figure. With every weight at 1 this
+    /// is exactly the plain sum it replaces, which is why no stored score moves.
+    /// </remarks>
+    public static (decimal Total, decimal Max) WeightedRubricTotal(IEnumerable<RubricMark> marks)
+    {
+        decimal max = 0m, weight = 0m, weightedFraction = 0m;
+        foreach (var mark in marks)
+        {
+            max += mark.MaxScore;
+            if (mark.MaxScore <= 0m || mark.Weight <= 0m) continue;
+            weight += mark.Weight;
+            weightedFraction += mark.Score / mark.MaxScore * mark.Weight;
+        }
+
+        if (max <= 0m || weight <= 0m) return (0m, max);
+        // Four decimals then round: the column is DECIMAL(6,2), and rounding a weighted fraction to two
+        // places before it is scaled would throw away the difference the weights just made.
+        var fraction = Math.Clamp(weightedFraction / weight, 0m, 1m);
+        return (Math.Round(fraction * max, 2, MidpointRounding.AwayFromZero), max);
     }
 }

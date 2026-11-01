@@ -554,7 +554,7 @@ public sealed class WritingPracticeService(
             if (words > 0) answeredCount++;
 
             var criteriaScores = new List<WritingCriterionScoreItem>();
-            decimal qScore = 0m;
+            var marks = new List<AttemptEngine.RubricMark>();
             decimal qMax = 0m;
 
             if (fr.AiGradingFreeResponse?.AiGradingScores is { Count: > 0 } scores)
@@ -572,10 +572,15 @@ public sealed class WritingPracticeService(
                         criterionMax,
                         critScore.Comment));
 
-                    qScore += critScore.Score;
+                    marks.Add(new AttemptEngine.RubricMark(
+                        critScore.Score, criterionMax, critScore.GradingCriterion.Weight));
                     qMax += criterionMax;
                 }
             }
+
+            // E2.1 (#151): the per-question total is the weighted one the worker stored and the band
+            // was decided from, not a plain sum that would disagree with both.
+            var (qScore, _) = AttemptEngine.WeightedRubricTotal(marks);
 
             questionItems.Add(new WritingQuestionReviewItem(
                 fr.QuestionId,
@@ -586,7 +591,10 @@ public sealed class WritingPracticeService(
                 words,
                 qScore,
                 qMax,
-                criteriaScores));
+                criteriaScores,
+                AiErrorSpan.Deserialize(fr.AiGradingFreeResponse?.ErrorSpansJson),
+                fr.AiGradingFreeResponse?.PriorityFix,
+                fr.AiGradingFreeResponse?.ModelRewrite));
 
             overallTotalScore += qScore;
             overallMaxScore += qMax;

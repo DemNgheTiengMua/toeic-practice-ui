@@ -34,6 +34,17 @@ public partial class AiGrading
     [StringLength(400)]
     public string? FailureReason { get; set; }
 
+    /// <summary>E2.1 (#151): the one change that would improve this text most, in the grader's own words.</summary>
+    [StringLength(400)]
+    public string? PriorityFix { get; set; }
+
+    /// <summary>E2.1 (#151): the grader's rewrite of the weakest part of the answer.</summary>
+    public string? ModelRewrite { get; set; }
+
+    /// <summary>E2.1 (#151): up to five located errors as JSON — original snippet, correction, category and a
+    /// one-line explanation. Kept as the grader's raw list so the page and any later consumer read one shape.</summary>
+    public string? ErrorSpansJson { get; set; }
+
     public int AttemptCount { get; set; }
 
     public DateTimeOffset RequestedAt { get; set; }

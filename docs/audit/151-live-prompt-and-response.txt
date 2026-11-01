@@ -1,0 +1,100 @@
+========== PROMPT SENT ==========
+Grade the candidate's English response against the rubric below.
+
+[TASK PROMPT]
+Some people believe that universities should focus on practical job skills, while others think academic knowledge is more important. Discuss both views and give your own opinion.
+
+[CHECKLIST - already computed from the text. Do not recompute it, and do not award a score that contradicts it.]
+- wordCount: 201
+- meetsLength: false (minimum 250, maximum 350)
+- usesAllKeywords: true
+- addressesPrompt: answer this one yourself in the JSON below.
+
+[CANDIDATE RESPONSE]
+Some people think that universities should prepare students for work, while others believe academic knowledge matters more. In my opinion, both aims belong in a university, but they should be pursued in a different order.
+
+First, a degree that teaches only job skills ages quickly. Office software changes, and so do the tools of almost every trade. What survives is the habit of reading carefully, testing an argument and asking why a claim is true. A student who leaves university with those habits can learn the next tool in a week; a student who leaves with only the current tool has nothing to fall back on.
+
+Second, academic knowledge without contact with work is also incomplete. A graduate who has never written a report for a real reader, or defended a decision to a client, tends to mistake complexity for quality. Work placements and applied projects give students that reader, and they are the cheapest way to find out which parts of the theory actually carry weight.
+
+In conclusion, universities should not choose between employability and scholarship. They should teach the durable skills first and then test them against real work, because that is the order in which both are learned.
+
+[CRITERIA TO EVALUATE]
+- ID: 1, Code: TR, Name: Task Response, MaxScore: 9, Weight: 1
+  Rubric: 9: fully addresses all parts, fully developed position. 7: addresses all parts, clear position. 5: addresses the task only partially. 3: does not adequately address the task. 0: does not attempt the task.
+- ID: 2, Code: CC, Name: Coherence & Cohesion, MaxScore: 9, Weight: 1
+  Rubric: 9: cohesion attracts no attention. 7: logical progression, clear paragraphs. 5: some organisation but no overall progression. 3: does not organise ideas logically. 0: no assessable text.
+- ID: 3, Code: LR, Name: Lexical Resource, MaxScore: 9, Weight: 1
+  Rubric: 9: full flexibility and precise use. 7: sufficient range for some flexibility and precision. 5: limited range, noticeable word-choice errors. 3: inadequate range, errors distort meaning. 0: no assessable language.
+- ID: 4, Code: GRA, Name: Grammatical Range & Accuracy, MaxScore: 9, Weight: 1
+  Rubric: 9: wide range, rare minor errors. 7: variety of complex structures, few errors. 5: limited range, complex sentences faulty. 3: errors predominate. 0: no assessable language.
+
+Return a strictly valid JSON object with exactly this shape:
+{
+  "checklist": { "addressesPrompt": <true|false> },
+  "scores": [
+    { "criterionId": <int>, "score": <decimal>, "comment": "<specific note on this criterion>" }
+  ],
+  "errorSpans": [
+    { "originalSnippet": "<exact fragment copied from the candidate response>",
+      "correctedSnippet": "<the same fragment, corrected>",
+      "category": "<grammar|vocabulary|spelling|punctuation|cohesion|task>",
+      "explanationVi": "<one sentence, in Vietnamese, on why this is wrong>" }
+  ],
+  "priorityFix": "<the single change that would improve this text most, one sentence>",
+  "modelRewrite": "<your rewrite of the weakest sentence>"
+}
+Rules:
+- Return one entry in "scores" for every criterion listed above, and only those (IDs: 1, 2, 3, 4).
+- Score must be between 0.0 and MaxScore for that criterion.
+- Report at most 5 error spans. Every originalSnippet must appear in the candidate response exactly as written; if you cannot quote it, do not report it.
+- If the response does not answer the task at all, return "scores": [] and explain in priorityFix. Do not guess a mark.
+- Output JSON only, no markdown wrapping.
+
+========== RAW MODEL RESPONSE ==========
+{
+  "checklist": { "addressesPrompt": true },
+  "scores": [
+    { "criterionId": 1, "score": 7.0, "comment": "Both views are discussed and a clear personal position is stated ('both aims belong in a university, but they should be pursued in a different order'). The position is developed across two body paragraphs, though the response falls well short of the 250-word minimum (201 words), so coverage is thin relative to the demand of the task." },
+    { "criterionId": 2, "score": 7.0, "comment": "Logical progression is clear: introduction with thesis, one paragraph per view reordered into a sequence argument, and a conclusion that restates the ordering. Paragraphing is clear and cohesive devices ('First', 'Second', 'In conclusion', 'What survives is') work well, though some linking is slightly formulaic." },
+    { "criterionId": 3, "score": 7.0, "comment": "Good range and precision in places: 'ages quickly', 'the tools of almost every trade', 'mistake complexity for quality', 'the cheapest way to find out which parts of the theory actually carry weight'. Minor issues like 'contact with work' are slightly imprecise, but overall flexible and accurate." },
+    { "criterionId": 4, "score": 7.0, "comment": "Variety of complex structures with few errors: relative clauses ('that teaches only job skills'), conditionals via semicolons, and parallel noun phrases. A couple of minor slips ('the order in which both are learned' is fine, but 'they should be pursued in a different order' is slightly awkward); error density is low." }
+  ],
+  "errorSpans": [
+    { "originalSnippet": "both aims belong in a university, but they should be pursued in a different order", "correctedSnippet": "both aims belong in a university, but they should be pursued in a particular order", "category": "vocabulary", "explanationVi": "'A different order' không rõ nghĩa vì chưa có thứ tự nào được nêu trước đó; 'a particular order' diễn đạt đúng ý người viết." },
+    { "originalSnippet": "academic knowledge without contact with work is also incomplete", "correctedSnippet": "academic knowledge without contact with the world of work is also incomplete", "category": "vocabulary", "explanationVi": "Cụm 'contact with work' không tự nhiên trong tiếng Anh học thuật; nên dùng 'contact with the world of work'." },
+    { "originalSnippet": "What survives is the habit of reading carefully, testing an argument and asking why a claim is true.", "correctedSnippet": "What survives is the habit of reading carefully, testing an argument, and asking why a claim is true.", "category": "punctuation", "explanationVi": "Trong danh sách ba thành phần song song, cần dấu phẩy Oxford trước 'and' để tránh nhập nhằng." }
+  ],
+  "priorityFix": "Expand the response to at least 250 words by adding concrete examples or consequences for each view, since the current length is well below the required minimum.",
+  "modelRewrite": "In my opinion, both aims belong in a university, but they should be pursued in a particular order."
+}
+========== PARSED ==========
+success=True model=claude-sonnet-3.7 reason=
+  criterion 1: 7.0 — Both views are discussed and a clear personal position is stated ('both aims belong in a university, but they should be pursued in a different order'). The position is developed across two body paragraphs, though the response falls well short of the 250-word minimum (201 words), so coverage is thin relative to the demand of the task.
+  criterion 2: 7.0 — Logical progression is clear: introduction with thesis, one paragraph per view reordered into a sequence argument, and a conclusion that restates the ordering. Paragraphing is clear and cohesive devices ('First', 'Second', 'In conclusion', 'What survives is') work well, though some linking is slightly formulaic.
+  criterion 3: 7.0 — Good range and precision in places: 'ages quickly', 'the tools of almost every trade', 'mistake complexity for quality', 'the cheapest way to find out which parts of the theory actually carry weight'. Minor issues like 'contact with work' are slightly imprecise, but overall flexible and accurate.
+  criterion 4: 7.0 — Variety of complex structures with few errors: relative clauses ('that teaches only job skills'), conditionals via semicolons, and parallel noun phrases. A couple of minor slips ('the order in which both are learned' is fine, but 'they should be pursued in a different order' is slightly awkward); error density is low.
+priorityFix: Expand the response to at least 250 words by adding concrete examples or consequences for each view, since the current length is well below the required minimum.
+modelRewrite: In my opinion, both aims belong in a university, but they should be pursued in a particular order.
+  span [vocabulary] both aims belong in a university, but they should be pursued in a different order -> both aims belong in a university, but they should be pursued in a particular order :: 'A different order' không rõ nghĩa vì chưa có thứ tự nào được nêu trước đó; 'a particular order' diễn đạt đúng ý người viết.
+  span [vocabulary] academic knowledge without contact with work is also incomplete -> academic knowledge without contact with the world of work is also incomplete :: Cụm 'contact with work' không tự nhiên trong tiếng Anh học thuật; nên dùng 'contact with the world of work'.
+  span [punctuation] What survives is the habit of reading carefully, testing an argument and asking why a claim is true. -> What survives is the habit of reading carefully, testing an argument, and asking why a claim is true. :: Trong danh sách ba thành phần song song, cần dấu phẩy Oxford trước 'and' để tránh nhập nhằng.
+
+========== THREE NONSENSE WORDS: RAW MODEL RESPONSE ==========
+{
+  "checklist": { "addressesPrompt": false },
+  "scores": [
+    { "criterionId": 1, "score": 0.0, "comment": "The entire response, 'dog run fast', does not address the prompt about practical job skills versus academic knowledge; no position is stated and no part of the task is attempted." },
+    { "criterionId": 2, "score": 0.0, "comment": "There is no assessable text connected to the task; 'dog run fast' offers no logical organisation, paragraphing, or progression of ideas." },
+    { "criterionId": 3, "score": 0.0, "comment": "No assessable language relevant to the task; the three-word fragment 'dog run fast' provides no vocabulary range on the topic." },
+    { "criterionId": 4, "score": 0.0, "comment": "No assessable range or accuracy; even the fragment 'dog run fast' lacks subject-verb agreement ('dog runs fast') and shows no complex structures." }
+  ],
+  "errorSpans": [
+    { "originalSnippet": "dog run fast", "correctedSnippet": "The dog runs fast.", "category": "grammar", "explanationVi": "Thiếu mạo từ và động từ không chia theo chủ ngữ số ít ngôi thứ ba, đồng thời câu không liên quan đến đề bài." }
+  ],
+  "priorityFix": "Rewrite the response entirely to address the prompt, presenting both views on practical job skills versus academic knowledge and stating a clear personal opinion in at least 250 words.",
+  "modelRewrite": "While some argue that universities should prioritise practical job skills, others maintain that academic knowledge is more important; in my view, a balanced curriculum that combines both is essential."
+}
+========== THREE NONSENSE WORDS: PARSED ==========
+success=True reason=
+scores returned: 4 (a failed grading stores none)

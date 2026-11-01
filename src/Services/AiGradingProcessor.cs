@@ -88,7 +88,8 @@ public sealed class AiGradingProcessor(
                     sc.GradingCriterion.Code,
                     sc.GradingCriterion.Name,
                     sc.MaxScore ?? sc.GradingCriterion.MaxScore,
-                    sc.GradingCriterion.Weight)).ToList();
+                    sc.GradingCriterion.Weight,
+                    sc.GradingCriterion.RubricDescription)).ToList();
             }
             else
             {
@@ -103,7 +104,8 @@ public sealed class AiGradingProcessor(
                     c.Code,
                     c.Name,
                     c.MaxScore,
-                    c.Weight)).ToList();
+                    c.Weight,
+                    c.RubricDescription)).ToList();
             }
 
             // #152: a spoken answer is graded against the reference its own question declares. The
@@ -125,10 +127,32 @@ public sealed class AiGradingProcessor(
                 fr.AudioPath,
                 fr.DurationMs,
                 referenceText,
-                describesImage);
+                describesImage,
+                question.RequiredKeywords);
 
 
             var result = await aiGrader.GradeAsync(request, cancellationToken);
+
+            // E2.1 (#151): a writing rubric must come back whole. The grader refuses to fill a hole
+            // itself, and this is the second guard: a grader that answers "success" with fewer marks
+            // than were asked for cannot leave a silently averaged row behind. Speaking is exempt on
+            // purpose - SpeechSuper drops a criterion its provider did not measure (#152) and says so
+            // in the reason.
+            if (result.Success && question.Section.Modality == Modality.Writing.ToCode())
+            {
+                var missing = criteriaDetails
+                    .Where(c => c.IsGradeable && result.Scores.All(s => s.CriterionId != c.CriterionId))
+                    .ToList();
+                if (missing.Count > 0)
+                {
+                    result = new AiGradingResult(
+                        Success: false,
+                        FailureReason: $"The grader returned no score for {string.Join(", ", missing.Select(c => $"{c.Code} ({c.CriterionId})"))}. "
+                            + "Nothing was scored; grade again.",
+                        Model: result.Model,
+                        Scores: Array.Empty<AiCriterionScoreResult>());
+                }
+            }
 
             if (result.Success)
             {
@@ -144,6 +168,8 @@ public sealed class AiGradingProcessor(
                 db.AiGradingScores.RemoveRange(existingScores);
 
                 decimal totalScore = 0m;
+                decimal rubricMax = 0m;
+                var marks = new List<AttemptEngine.RubricMark>(result.Scores.Count);
                 foreach (var s in result.Scores)
                 {
                     var detail = criteriaDetails.FirstOrDefault(c => c.CriterionId == s.CriterionId);
@@ -158,8 +184,13 @@ public sealed class AiGradingProcessor(
                         Score = clampedScore,
                         Comment = s.Comment
                     });
-                    totalScore += clampedScore;
+                    marks.Add(new AttemptEngine.RubricMark(clampedScore, max, detail?.Weight ?? 1m));
                 }
+
+                // E2.1 (#151): Weight is what decides how much a criterion is worth. Until now it was
+                // sent to the model and then ignored, so a rubric that called grammar twice as
+                // important as spelling produced the same total either way.
+                (totalScore, rubricMax) = AttemptEngine.WeightedRubricTotal(marks);
 
                 fr.Status = FreeResponseStatus.Graded.ToCode();
                 grading.Status = AiGradingStatus.Done.ToCode();
@@ -167,6 +198,10 @@ public sealed class AiGradingProcessor(
                 grading.Model = result.Model ?? FakeAiGrader.DefaultModel;
                 grading.FailureReason = null;
                 grading.OverallScaled = totalScore;
+                // E2.1 (#151): the feedback the learner acts on, stored beside the marks it explains.
+                grading.PriorityFix = result.PriorityFix;
+                grading.ModelRewrite = result.ModelRewrite;
+                grading.ErrorSpansJson = AiErrorSpan.Serialize(result.ErrorSpans ?? []);
 
                 await db.SaveChangesAsync(cancellationToken);
 
@@ -229,6 +264,9 @@ public sealed class AiGradingProcessor(
                 grading.Status = AiGradingStatus.Failed.ToCode();
                 grading.FailureReason = result.FailureReason ?? "Grading failed.";
                 grading.CompletedAt = DateTimeOffset.UtcNow;
+                // E2.1 (#151): a failed grading carries no marks and no notes. Clearing them here is what
+                // CK_AiGradings_FeedbackOnlyWhenDone enforces: the row must not read as "scored badly".
+                ClearFeedback(grading);
                 await db.SaveChangesAsync(cancellationToken);
                 return false;
             }
@@ -239,6 +277,7 @@ public sealed class AiGradingProcessor(
             grading.Status = AiGradingStatus.Failed.ToCode();
             grading.FailureReason = (ex.InnerException?.Message ?? ex.Message);
             grading.CompletedAt = DateTimeOffset.UtcNow;
+            ClearFeedback(grading);
             try
             {
                 await db.SaveChangesAsync(cancellationToken);
@@ -249,5 +288,15 @@ public sealed class AiGradingProcessor(
             }
             return false;
         }
+    }
+
+    /// <summary>E2.1 (#151): a row that is not 'done' holds no marks and no notes.</summary>
+    private static void ClearFeedback(AiGrading grading)
+    {
+        grading.OverallScaled = null;
+        grading.BandCode = null;
+        grading.PriorityFix = null;
+        grading.ModelRewrite = null;
+        grading.ErrorSpansJson = null;
     }
 }

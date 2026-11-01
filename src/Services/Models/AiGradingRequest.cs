@@ -22,5 +22,9 @@ public record AiGradingRequest(
     // description of the picture. NULL means the question declares none, so nothing is scored
     // against one.
     string? ReferenceText = null,
-    bool ReferenceDescribesImage = false
+    bool ReferenceDescribesImage = false,
+    // E2.1 (#151): the binary checklist the writing task already knows how to compute. It runs
+    // before any score is chosen, so a text that ignores the prompt or misses every keyword is
+    // judged on that fact rather than on how fluent it looks.
+    string? RequiredKeywords = null
 );

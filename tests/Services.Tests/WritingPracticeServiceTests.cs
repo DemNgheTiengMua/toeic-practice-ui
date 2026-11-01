@@ -73,9 +73,9 @@ public sealed class WritingPracticeServiceTests(DatabaseFixture database)
             DECLARE @sec2 INT = (SELECT SectionId FROM Sections WHERE CertId = @cert AND Code = 'W2');
 
             -- Criteria
-            INSERT INTO GradingCriteria (CertId, SkillId, Code, Name, MaxScore, Weight, DisplayOrder) VALUES
-              (@cert, @sW, 'GRAM', N'Grammar', 5.0, 1.0, 1),
-              (@cert, @sW, 'VOCAB', N'Vocabulary', 5.0, 1.0, 2);
+            INSERT INTO GradingCriteria (CertId, SkillId, Code, Name, RubricDescription, MaxScore, Weight, DisplayOrder) VALUES
+              (@cert, @sW, 'GRAM', N'Grammar', N'Band 5: accurate simple sentences. Band 3: frequent errors obscure meaning.', 5.0, 1.0, 1),
+              (@cert, @sW, 'VOCAB', N'Vocabulary', N'Band 5: adequate range. Band 3: limited range, repetition.', 5.0, 1.0, 2);
             DECLARE @crit1 INT = (SELECT CriterionId FROM GradingCriteria WHERE CertId = @cert AND Code = 'GRAM');
             DECLARE @crit2 INT = (SELECT CriterionId FROM GradingCriteria WHERE CertId = @cert AND Code = 'VOCAB');
 

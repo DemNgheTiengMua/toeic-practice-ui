@@ -117,7 +117,14 @@ public static partial class WritingEndpoints
                     c.Name,
                     c.Score,
                     c.MaxScore,
-                    c.Comment)).ToList())).ToList(),
+                    c.Comment)).ToList(),
+                q.ErrorSpans?.Select(s => new WritingErrorSpanDto(
+                    s.OriginalSnippet,
+                    s.CorrectedSnippet,
+                    s.Category,
+                    s.ExplanationVi)).ToList(),
+                q.PriorityFix,
+                q.ModelRewrite)).ToList(),
             review.EstimatedBandCode,
             review.EstimatedBandName);
     }

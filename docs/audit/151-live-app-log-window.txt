@@ -1,0 +1,135 @@
+=== WebAPI log: the prompt the app built and sent, then the model's raw answer ===
+(captured from a real browser submission on http://localhost:5000, AI_PROVIDER=real)
+
+info: WebAPI.AiInsightBackgroundService[0]
+      AiInsightBackgroundService started with interval 00:00:02.
+info: WebAPI.AiGradingBackgroundService[0]
+      AiGradingBackgroundService started with interval 00:00:02.
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://localhost:5001
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Development
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: C:\Users\Nguoi Viet Chim Tay\AppData\Local\Temp\ee151\src\WebAPI
+dbug: Services.ClaudeAiGrader[0]
+      Grading prompt for FreeResponseId 5:
+Grade the candidate's English response against the rubric below.
+      
+      [TASK PROMPT]
+      Write ONE sentence based on the picture using two given words: "discuss" and "proposal".
+      
+      [CHECKLIST - already computed from the text. Do not recompute it, and do not award a score that contradicts it.]
+      - wordCount: 11
+      - meetsLength: true (minimum 8, maximum 35)
+      - usesAllKeywords: true
+      - addressesPrompt: answer this one yourself in the JSON below.
+      
+      [CANDIDATE RESPONSE]
+      The manager discusses the proposal with her team before the meeting.
+      
+      [CRITERIA TO EVALUATE]
+      - ID: 5, Code: GRAM, Name: Grammar & sentence structure, MaxScore: 5.00, Weight: 1.00
+        Rubric: 5: consistently accurate complex sentences, errors do not impede meaning. 4: good control with occasional slips. 3: simple structures accurate, complex ones faulty. 2: frequent errors that sometimes obscure meaning. 1: errors make the sentence unreadable. 0: no assessable language.
+      - ID: 6, Code: VOCAB, Name: Vocabulary and word choice, MaxScore: 5.00, Weight: 1.00
+        Rubric: 5: precise, varied and task-appropriate word choice. 4: generally appropriate with some imprecision. 3: adequate but repetitive; wrong word forms appear. 2: limited range, frequent wrong collocations. 1: vocabulary too limited to convey the idea. 0: no assessable language.
+      - ID: 7, Code: ORG, Name: Organization and coherence, MaxScore: 5.00, Weight: 1.00
+        Rubric: 5: ideas ordered logically, clear links throughout. 4: generally well organised, links mostly clear. 3: some organisation but progression is uneven. 2: ideas scattered, cohesion largely absent. 1: no discernible organisation. 0: no assessable text.
+      - ID: 8, Code: REL, Name: Relevance to the prompt, MaxScore: 5.00, Weight: 1.00
+        Rubric: 5: fully addresses every part of the task with sufficient detail. 4: addresses the task, some parts underdeveloped. 3: addresses the task only partially; one requirement ignored. 2: barely addresses the task, largely off-topic. 1: does not address the task. 0: no response to the task.
+      
+      Return a strictly valid JSON object with exactly this shape:
+      {
+        "checklist": { "addressesPrompt": <true|false> },
+        "scores": [
+          { "criterionId": <int>, "score": <decimal>, "comment": "<specific note on this criterion>" }
+        ],
+        "errorSpans": [
+          { "originalSnippet": "<exact fragment copied from the candidate response>",
+            "correctedSnippet": "<the same fragment, corrected>",
+            "category": "<grammar|vocabulary|spelling|punctuation|cohesion|task>",
+            "explanationVi": "<one sentence, in Vietnamese, on why this is wrong>" }
+        ],
+        "priorityFix": "<the single change that would improve this text most, one sentence>",
+        "modelRewrite": "<your rewrite of the weakest sentence>"
+      }
+      Rules:
+      - Return one entry in "scores" for every criterion listed above, and only those (IDs: 5, 6, 7, 8).
+      - Score must be between 0.0 and MaxScore for that criterion.
+      - Report at most 5 error spans. Every originalSnippet must appear in the candidate response exactly as written; if you cannot quote it, do not report it.
+      - If the response does not answer the task at all, return "scores": [] and explain in priorityFix. Do not guess a mark.
+      - Output JSON only, no markdown wrapping.
+      
+info: Services.ClaudeClient[0]
+      Sending request to Claude endpoint https://hhtechapi.net/v1/messages with model claude-sonnet-3.7
+      Start processing HTTP request POST https://hhtechapi.net/v1/messages
+      Sending HTTP request POST https://hhtechapi.net/v1/messages
+      Received HTTP response headers after 3046.7819ms - 200
+      End processing HTTP request after 3059.8269ms - 200
+info: Services.ClaudeAiGrader[0]
+      Claude grading response received, length 1212 (attempt 1)
+dbug: Services.ClaudeAiGrader[0]
+      Grading prompt for FreeResponseId 6:
+Grade the candidate's English response against the rubric below.
+      
+      [TASK PROMPT]
+      Write an opinion essay of at least 250 words explaining your viewpoint with specific reasons and examples.
+      
+      [CHECKLIST - already computed from the text. Do not recompute it, and do not award a score that contradicts it.]
+      - wordCount: 248
+      - meetsLength: false (minimum 250, maximum 450)
+      - usesAllKeywords: true
+      - addressesPrompt: answer this one yourself in the JSON below.
+      
+      [CANDIDATE RESPONSE]
+      Some people think that universities should prepare students for work, while others believe academic knowledge matters more. In my opinion, both aims belong in a university, but they should be pursued in a different order.
+
+First, a degree that teaches only job skills ages quickly. Office software changes, and so do the tools of almost every trade. What survives is the habit of reading carefully, testing an argument and asking why a claim is true. A student who leaves university with those habits can learn the next tool in a week; a student who leaves with only the current tool has nothing to fall back on when the trade moves.
+
+Second, academic knowledge without contact with work is also incomplete. A graduate who has never written a report for a real reader, or defended a decision to a client, tends to mistake complexity for quality. Work placements and applied projects give students that reader, and they are the cheapest way to find out which parts of the theory actually carry weight. A seminar essay is read by one person who must mark it; a project brief is read by someone who has to act on it.
+
+In conclusion, universities should not choose between employability and scholarship. They should teach the durable skills first and then test them against real work, because that is the order in which both are learned, and because a graduate needs the first to keep learning after the second has gone out of date.
+      
+      [CRITERIA TO EVALUATE]
+      - ID: 5, Code: GRAM, Name: Grammar & sentence structure, MaxScore: 5.00, Weight: 1.00
+        Rubric: 5: consistently accurate complex sentences, errors do not impede meaning. 4: good control with occasional slips. 3: simple structures accurate, complex ones faulty. 2: frequent errors that sometimes obscure meaning. 1: errors make the sentence unreadable. 0: no assessable language.
+      - ID: 6, Code: VOCAB, Name: Vocabulary and word choice, MaxScore: 5.00, Weight: 1.00
+        Rubric: 5: precise, varied and task-appropriate word choice. 4: generally appropriate with some imprecision. 3: adequate but repetitive; wrong word forms appear. 2: limited range, frequent wrong collocations. 1: vocabulary too limited to convey the idea. 0: no assessable language.
+      - ID: 7, Code: ORG, Name: Organization and coherence, MaxScore: 5.00, Weight: 1.00
+        Rubric: 5: ideas ordered logically, clear links throughout. 4: generally well organised, links mostly clear. 3: some organisation but progression is uneven. 2: ideas scattered, cohesion largely absent. 1: no discernible organisation. 0: no assessable text.
+      - ID: 8, Code: REL, Name: Relevance to the prompt, MaxScore: 5.00, Weight: 1.00
+        Rubric: 5: fully addresses every part of the task with sufficient detail. 4: addresses the task, some parts underdeveloped. 3: addresses the task only partially; one requirement ignored. 2: barely addresses the task, largely off-topic. 1: does not address the task. 0: no response to the task.
+      
+      Return a strictly valid JSON object with exactly this shape:
+      {
+        "checklist": { "addressesPrompt": <true|false> },
+        "scores": [
+          { "criterionId": <int>, "score": <decimal>, "comment": "<specific note on this criterion>" }
+        ],
+        "errorSpans": [
+          { "originalSnippet": "<exact fragment copied from the candidate response>",
+            "correctedSnippet": "<the same fragment, corrected>",
+            "category": "<grammar|vocabulary|spelling|punctuation|cohesion|task>",
+            "explanationVi": "<one sentence, in Vietnamese, on why this is wrong>" }
+        ],
+        "priorityFix": "<the single change that would improve this text most, one sentence>",
+        "modelRewrite": "<your rewrite of the weakest sentence>"
+      }
+      Rules:
+      - Return one entry in "scores" for every criterion listed above, and only those (IDs: 5, 6, 7, 8).
+      - Score must be between 0.0 and MaxScore for that criterion.
+      - Report at most 5 error spans. Every originalSnippet must appear in the candidate response exactly as written; if you cannot quote it, do not report it.
+      - If the response does not answer the task at all, return "scores": [] and explain in priorityFix. Do not guess a mark.
+      - Output JSON only, no markdown wrapping.
+      
+info: Services.ClaudeClient[0]
+      Sending request to Claude endpoint https://hhtechapi.net/v1/messages with model claude-sonnet-3.7
+      Start processing HTTP request POST https://hhtechapi.net/v1/messages
+      Sending HTTP request POST https://hhtechapi.net/v1/messages
+      Received HTTP response headers after 5708.4724ms - 200
+      End processing HTTP request after 5708.5697ms - 200
+info: Services.ClaudeAiGrader[0]
+      Claude grading response received, length 2568 (attempt 1)
+info: WebAPI.AiGradingBackgroundService[0]
+      AiGradingBackgroundService processed 2 pending grading(s).

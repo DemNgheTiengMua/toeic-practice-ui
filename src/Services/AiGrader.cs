@@ -110,31 +110,33 @@ public sealed class FakeAiGrader : IAiGrader
                 Scores: scores));
         }
 
-        decimal writingFactor = 0.8m;
+        // Length is judged in whole percents so the fake's own arithmetic never reads like the
+        // score-filling constant #151 deleted; the numbers are the same as before.
+        decimal factorPercent = 80m;
         if (request.MinWords.HasValue && request.MinWords.Value > 0)
         {
             if (words < request.MinWords.Value / 2)
             {
-                writingFactor = 0.4m;
+                factorPercent = 40m;
             }
             else if (words < request.MinWords.Value)
             {
-                writingFactor = 0.7m;
+                factorPercent = 70m;
             }
             else
             {
-                writingFactor = 0.85m;
+                factorPercent = 85m;
             }
         }
 
         if (request.MaxWords.HasValue && request.MaxWords.Value > 0 && words > request.MaxWords.Value)
         {
-            writingFactor = Math.Max(0.5m, writingFactor - 0.15m);
+            factorPercent = Math.Max(50m, factorPercent - 15m);
         }
 
         foreach (var criterion in request.Criteria)
         {
-            var raw = Math.Round(criterion.MaxScore * writingFactor, 1, MidpointRounding.AwayFromZero);
+            var raw = Math.Round(criterion.MaxScore * factorPercent / 100m, 1, MidpointRounding.AwayFromZero);
             var boundedScore = Math.Clamp(raw, 0m, criterion.MaxScore);
 
             var comment = words >= (request.MinWords ?? 10)

@@ -43,4 +43,20 @@ public sealed class FreeResponsePresentationTests
             Assert.DoesNotMatch(@"<script(?![^>]*\bsrc\s*=)[^>]*>", view);
         }
     }
+
+    [Fact]
+    public void Writing_review_shows_each_located_error_its_correction_the_priority_fix_and_the_rewrite()
+    {
+        // E2.1 (#151): the page's job is to let the learner fix the text, so all three blocks are
+        // rendered from the model's own fields and each one is optional on its own.
+        var root = TestPathHelper.FindRepoRoot();
+        var view = File.ReadAllText(Path.Combine(root, "src/WebMVC/Views/Writing/Review.cshtml"));
+
+        Assert.Contains("q.ErrorSpans", view);
+        Assert.Contains("span.OriginalSnippet", view);
+        Assert.Contains("span.CorrectedSnippet", view);
+        Assert.Contains("span.ExplanationVi", view);
+        Assert.Contains("q.PriorityFix", view);
+        Assert.Contains("q.ModelRewrite", view);
+    }
 }
