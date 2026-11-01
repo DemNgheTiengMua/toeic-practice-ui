@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace BusinessObjects.Entities;
 
 [Index("CertId", "Code", Name = "UQ_QuestionCategories_Cert_Code", IsUnique = true)]
+[Index("CategoryId", "CertId", Name = "UQ_QuestionCategories_Id_Cert", IsUnique = true)]
 public partial class QuestionCategory
 {
     [Key]
@@ -33,4 +34,8 @@ public partial class QuestionCategory
 
     [InverseProperty("Category")]
     public virtual ICollection<Question> Questions { get; set; } = new List<Question>();
+
+    /// <summary>#155: the mastery rows that point at this category, one per learner.</summary>
+    [InverseProperty("Category")]
+    public virtual ICollection<UserCategoryMastery> UserCategoryMasteries { get; set; } = new List<UserCategoryMastery>();
 }

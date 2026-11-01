@@ -12,7 +12,6 @@
          id="card-@cardIndex"
          data-card-id="@card.CardId"
          data-card-type="@card.CardType"
-         data-correct="@card.CorrectOption"
          style="@(isInitial ? "" : "display: none;")">
 
       @if (card.CardType == "rule")
@@ -88,8 +87,12 @@
           <button type="button" class="btn btn--primary" id="btnCheckAnswer">Check answer</button>
         </div>
 
+        @* #155: the correct option is not in this markup any more - it used to be a data-correct
+           attribute the browser graded against, which meant the answer never counted. The reply to
+           /lessons/{id}/cards/{cardId}/micro-check is what reveals it now, and what records mastery. *@
         <div class="micro-check-explanation" id="microCheckExplanation" style="display: none;">
-          <strong>Correct answer: (@card.CorrectOption)</strong>
+          <strong id="microCheckVerdict"></strong>
+          <p class="text-sm mt-1 mb-0" id="microCheckCorrectAnswer"></p>
           @if (!string.IsNullOrWhiteSpace(card.Explanation))
           {
             <p class="text-sm mt-1 mb-0">

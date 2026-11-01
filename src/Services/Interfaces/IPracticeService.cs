@@ -13,6 +13,10 @@ public interface IPracticeService
 
     Task<PracticeSessionInfo> StartSessionAsync(int userId, StartPracticeSessionInput input, CancellationToken cancellationToken = default);
 
+    /// <summary>#155: a lesson's micro-check is graded on the server and writes the same mastery row a
+    /// drill answer does, so a lesson is no longer a place where answers go unrecorded.</summary>
+    Task<LessonMicroCheckAnswer> SubmitLessonMicroCheckAsync(int userId, int lessonId, int cardId, string selectedOption, CancellationToken cancellationToken = default);
+
     Task<PracticeSessionInfo> GetSessionInfoAsync(int userId, int sessionId, CancellationToken cancellationToken = default);
 
     Task<PracticeQuestionView> GetQuestionAsync(int userId, int sessionId, int displayOrder, CancellationToken cancellationToken = default);

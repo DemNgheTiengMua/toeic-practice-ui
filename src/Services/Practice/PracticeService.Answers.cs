@@ -57,6 +57,12 @@ public sealed partial class PracticeService
             .Where(o => o.QuestionId == questionId)
             .ToListAsync(cancellationToken);
 
+        // #155: mastery and the cooldown move on the first grade only. Re-submitting the same answer
+        // used to be harmless because it was just a column; now it would count one miss twice and push
+        // the category a day further out, which is the exact "keep clicking until it is green" the
+        // ticket is closing.
+        var alreadyGraded = answer.IsCorrect.HasValue;
+
         int? correctOptionId = allOptions.FirstOrDefault(o => o.IsCorrect)?.OptionId;
         var isFreeResponse = q.QuestionType == QuestionType.FreeResponse.ToCode();
         var explanation = q.Explanation;
@@ -142,6 +148,14 @@ public sealed partial class PracticeService
         }
 
         await db.SaveChangesAsync(cancellationToken);
+
+        // #155: every graded answer feeds the category's mastery and starts or clears the question's own
+        // cooldown. It is written here, where the grade is known, so the lesson micro-check (which also
+        // grades) goes through the same two writers and cannot drift.
+        if (!alreadyGraded)
+        {
+            await RecordAnswerAsync(userId, q, answer.Session.Section.CertId, answer.IsCorrect, cancellationToken);
+        }
 
         // Update correct count on session
         var correctCount = await db.PracticeAnswers

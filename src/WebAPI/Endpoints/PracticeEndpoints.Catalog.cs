@@ -16,7 +16,8 @@ public static partial class PracticeEndpoints
             var view = await practiceService.GetPracticeSectionsAsync(CurrentUserId(http), cancellationToken);
             static PracticeSectionDto ToSectionDto(PracticeSectionItem s) => new(
                 s.SectionId, s.SkillCode, s.SkillName, s.Modality.MapTo<ModalityDto>(), s.Code, s.Name, s.OptionCount,
-                s.ExpectedQuestionCount, s.AvailableQuestionCount, s.AccuracyPercentage, s.AnsweredCount, s.DisplayOrder);
+                s.ExpectedQuestionCount, s.AvailableQuestionCount, s.AccuracyPercentage, s.AnsweredCount, s.DisplayOrder,
+                s.TotalCategoryCount, s.CategoriesInCooldown, s.NextReviewDueAt);
 
             return Results.Ok(new PracticeCatalogDto(
                 ToCertificateDto(view.Certificate),

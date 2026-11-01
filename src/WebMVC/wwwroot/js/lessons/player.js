@@ -74,6 +74,8 @@
     // Micro-check interactions
     var btnCheckAnswer = document.getElementById("btnCheckAnswer");
     var explanation = document.getElementById("microCheckExplanation");
+    var verdict = document.getElementById("microCheckVerdict");
+    var correctAnswerLine = document.getElementById("microCheckCorrectAnswer");
     var options = document.querySelectorAll(".micro-check-option");
 
     options.forEach(function (opt) {
@@ -95,25 +97,53 @@
         }
 
         var microCheckCard = document.querySelector('[data-card-type="micro_check"]');
-        var correctOption = microCheckCard ? microCheckCard.getAttribute("data-correct") : "B";
+        var cardId = microCheckCard ? microCheckCard.getAttribute("data-card-id") : null;
 
-        microCheckAnswered = true;
-        document.querySelectorAll('input[name="microCheck"]').forEach(function (input) {
-          input.disabled = true;
-        });
         btnCheckAnswer.disabled = true;
 
-        options.forEach(function (opt) {
-          var val = opt.getAttribute("data-opt");
-          if (val === correctOption) {
-            opt.classList.add("is-correct");
-          } else if (opt.classList.contains("is-selected")) {
-            opt.classList.add("is-wrong");
-          }
-        });
+        // #155: graded by the server, so the answer counts toward mastery and the correct option is
+        // not readable from the page before answering.
+        var body = new URLSearchParams();
+        body.set('selectedOption', selected.value);
 
-        if (explanation) explanation.style.display = "block";
-        if (btnFinish) btnFinish.style.display = "inline-block";
+        fetch('/lessons/' + lessonId + '/cards/' + cardId + '/micro-check', {
+          method: 'POST',
+          headers: {
+            'RequestVerificationToken': antiForgeryToken,
+            'Content-Type': 'application/x-www-form-urlencoded'
+          },
+          body: body.toString()
+        }).then(function (response) {
+          if (!response.ok) throw new Error('micro-check failed');
+          return response.json();
+        }).then(function (result) {
+          microCheckAnswered = true;
+          document.querySelectorAll('input[name="microCheck"]').forEach(function (input) {
+            input.disabled = true;
+          });
+
+          options.forEach(function (opt) {
+            var val = opt.getAttribute("data-opt");
+            if (val === result.correctOption) {
+              opt.classList.add("is-correct");
+            } else if (opt.classList.contains("is-selected")) {
+              opt.classList.add("is-wrong");
+            }
+          });
+
+          if (verdict) {
+            verdict.textContent = result.isCorrect ? "Correct." : "Not quite.";
+          }
+          if (correctAnswerLine) {
+            correctAnswerLine.textContent = "Correct answer: (" + result.correctOption + ")";
+          }
+          if (explanation) explanation.style.display = "block";
+          if (btnFinish) btnFinish.style.display = "inline-block";
+        }).catch(function (err) {
+          // Leave the button live so the learner can try again rather than being stuck mid-lesson.
+          btnCheckAnswer.disabled = false;
+          console.warn('Failed to grade the micro-check', err);
+        });
       });
     }
 

@@ -120,4 +120,12 @@ public partial class User
 
     [InverseProperty("User")]
     public virtual ICollection<TargetBand> TargetBands { get; set; } = new List<TargetBand>();
+
+    /// <summary>#155: one row per category this learner has ever answered.</summary>
+    [InverseProperty("User")]
+    public virtual ICollection<UserCategoryMastery> UserCategoryMasteries { get; set; } = new List<UserCategoryMastery>();
+
+    /// <summary>#155: one row per question this learner has ever answered.</summary>
+    [InverseProperty("User")]
+    public virtual ICollection<UserQuestionHistory> UserQuestionHistories { get; set; } = new List<UserQuestionHistory>();
 }

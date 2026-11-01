@@ -37,7 +37,7 @@ public sealed class PracticeController(
     {
         try
         {
-            var request = new StartPracticeRequest(form.SectionId, form.QuestionCount, form.QuestionSource, form.FeedbackMode);
+            var request = new StartPracticeRequest(form.SectionId, form.FeedbackMode);
             var session = await api.StartPracticeSessionAsync(request, cancellationToken);
             return RedirectToAction(nameof(Take), new { sessionId = session.SessionId });
         }

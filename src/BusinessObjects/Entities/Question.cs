@@ -132,4 +132,8 @@ public partial class Question
     [ForeignKey("SectionId, SkillId")]
     [InverseProperty("Questions")]
     public virtual Section Section { get; set; } = null!;
+
+    /// <summary>#155: learners who have met this question, with their per-question cooldown.</summary>
+    [InverseProperty("Question")]
+    public virtual ICollection<UserQuestionHistory> UserQuestionHistories { get; set; } = new List<UserQuestionHistory>();
 }

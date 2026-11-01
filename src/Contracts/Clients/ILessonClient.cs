@@ -12,6 +12,12 @@ public interface ILessonClient
     Task RecordCardViewAsync(int lessonId, int cardId, CancellationToken cancellationToken = default);
     Task RecordCardViewAsync(int lessonId, int cardId, string bearerToken, CancellationToken cancellationToken = default) => RecordCardViewAsync(lessonId, cardId, cancellationToken);
 
+    /// <summary>#155: graded on the server, so the answer reaches the mastery machine and the correct
+    /// option is not sitting in the page for the browser to read.</summary>
+    Task<MicroCheckResultDto> SubmitMicroCheckAsync(int lessonId, int cardId, string selectedOption, CancellationToken cancellationToken = default);
+    Task<MicroCheckResultDto> SubmitMicroCheckAsync(int lessonId, int cardId, string selectedOption, string bearerToken, CancellationToken cancellationToken = default) =>
+        SubmitMicroCheckAsync(lessonId, cardId, selectedOption, cancellationToken);
+
     Task<LessonDetailDto?> GetLessonByCategoryAsync(int categoryId, CancellationToken cancellationToken = default);
     Task<LessonDetailDto?> GetLessonByCategoryAsync(int categoryId, string bearerToken, CancellationToken cancellationToken = default) => GetLessonByCategoryAsync(categoryId, cancellationToken);
 

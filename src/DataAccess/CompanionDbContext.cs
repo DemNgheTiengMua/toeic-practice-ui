@@ -169,6 +169,12 @@ public partial class CompanionDbContext : DbContext
     public virtual DbSet<User> Users { get; set; }
 
 
+    public virtual DbSet<UserCategoryMastery> UserCategoryMasteries { get; set; }
+
+
+    public virtual DbSet<UserQuestionHistory> UserQuestionHistories { get; set; }
+
+
     public virtual DbSet<vw_LearnerPathIsPremium> vw_LearnerPathIsPremia { get; set; }
 
 

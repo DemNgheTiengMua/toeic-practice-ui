@@ -19,6 +19,9 @@ public static partial class LessonEndpoints
         // POST /api/learner/lessons/{id:int}/cards/{cardId:int}/view
         learner.MapPost("/lessons/{id:int}/cards/{cardId:int}/view", RecordCardViewAsync);
 
+        // POST /api/learner/lessons/{id:int}/cards/{cardId:int}/micro-check
+        learner.MapPost("/lessons/{id:int}/cards/{cardId:int}/micro-check", SubmitMicroCheckAsync);
+
         // GET /api/learner/lessons/by-category/{categoryId:int}
         learner.MapGet("/lessons/by-category/{categoryId:int}", GetLessonByCategoryAsync);
 
@@ -30,6 +33,7 @@ public static partial class LessonEndpoints
         direct.MapGet("/lessons/{id:int}", GetLessonAsync);
         direct.MapGet("/lessons/{id:int}/progress", GetLessonProgressAsync);
         direct.MapPost("/lessons/{id:int}/cards/{cardId:int}/view", RecordCardViewAsync);
+        direct.MapPost("/lessons/{id:int}/cards/{cardId:int}/micro-check", SubmitMicroCheckAsync);
         direct.MapGet("/lessons/by-category/{categoryId:int}", GetLessonByCategoryAsync);
         direct.MapPost("/learning-path/{pathId:int}/unlock", UnlockPathAsync);
     }
