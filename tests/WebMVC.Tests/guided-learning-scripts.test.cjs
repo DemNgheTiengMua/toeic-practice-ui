@@ -23,12 +23,14 @@ function player(preview = false, initial = 1, completed = false) {
   const deck = element();
   deck.dataset = { lessonId: '7', initialIndex: String(initial), totalCards: '2', completed: String(completed) };
   const nodes = Object.fromEntries(['btnPrev', 'btnNext', 'btnFinish', 'cardTypeBadge', 'cardCounter',
-    'deckProgressLabel', 'btnCheckAnswer', 'microCheckExplanation'].map(id => [id, element()]));
+    'deckProgressLabel', 'btnCheckAnswer', 'microCheckExplanation', 'microCheckVerdict',
+    'microCheckCorrectAnswer'].map(id => [id, element()]));
   nodes['card-1'] = element({ 'data-card-id': '11', 'data-card-type': 'rule' });
-  nodes['card-2'] = element({ 'data-card-id': '22', 'data-card-type': 'micro_check', 'data-correct': 'B' });
+  // #155: no data-correct any more - the page must not be able to grade itself.
+  nodes['card-2'] = element({ 'data-card-id': '22', 'data-card-type': 'micro_check' });
   const options = ['A', 'B'].map(value => {
     const option = element({ 'data-opt': value });
-    option.radio = { checked: false };
+    option.radio = { checked: false, disabled: false, value };
     option.querySelector = () => option.radio;
     return option;
   });
@@ -46,11 +48,18 @@ function player(preview = false, initial = 1, completed = false) {
     querySelectorAll: selector => selector === '.micro-check-option' ? options : options.map(o => o.radio)
   };
   vm.runInNewContext(script(preview ? 'admin/lessons/preview.js' : 'lessons/player.js'), {
-    document, fetch: (...args) => { calls.push(args); return Promise.resolve({ ok: true }); },
+    document,
+    fetch: (...args) => {
+      calls.push(args);
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ isCorrect: true, correctOption: 'B' }) });
+    },
+    URLSearchParams,
     console, alert: message => alerts.push(message)
   });
   return { nodes, options, calls, alerts };
 }
+
+const flush = () => new Promise(resolve => setImmediate(resolve));
 
 test('all extracted scripts parse without Razor tokens', () => {
   for (const name of ['lessons/player.js', 'admin/lessons/preview.js', 'admin/lessons/edit.js',
@@ -79,14 +88,32 @@ test('navigation records the next card through MVC with anti-forgery', () => {
   assert.equal(nodes.btnFinish.style.display, 'none');
   nodes.btnCheckAnswer.handlers.click();
   assert.equal(alerts.length, 1);
-  options[1].handlers.click();
-  nodes.btnCheckAnswer.handlers.click();
-  assert.equal(nodes.btnFinish.style.display, 'inline-block');
-  assert.equal(nodes.btnCheckAnswer.disabled, true);
-  assert.equal(options[1].classList.contains('is-correct'), true);
-  assert.equal(options[0].radio.disabled, true);
   nodes.btnPrev.handlers.click();
   assert.equal(nodes['card-1'].style.display, 'block');
+});
+
+// #155: grading moved to the server, so the page posts the chosen option and paints the reply. What
+// must never come back is the page deciding right from wrong itself - there is no correct option in
+// the markup for it to read.
+test('the micro-check is posted to the server and the reply decides the colours', async () => {
+  const page = player(false, 2);
+  page.options[1].radio.checked = true;
+
+  assert.equal(page.nodes['card-2'].attributes['data-correct'], undefined,
+    'the card must not carry data-correct: the page cannot grade itself');
+
+  page.nodes.btnCheckAnswer.handlers.click();
+  const call = page.calls.find(c => String(c[0]).includes('/micro-check'));
+  assert.ok(call, 'the check must reach /lessons/{id}/cards/{cardId}/micro-check');
+  assert.equal(call[1].method, 'POST');
+  assert.equal(call[1].headers.RequestVerificationToken, 'csrf-token');
+  assert.match(String(call[1].body), /selectedOption=B/);
+
+  await flush();
+  assert.equal(page.nodes.btnCheckAnswer.disabled, true);
+  assert.equal(page.options[1].classList.contains('is-correct'), true);
+  assert.equal(page.nodes.btnFinish.style.display, 'inline-block');
+  assert.equal(page.nodes.microCheckExplanation.style.display, 'block');
 });
 
 test('completed learner lesson and admin preview keep their distinct finish behavior', () => {

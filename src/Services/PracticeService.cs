@@ -10,9 +10,14 @@ namespace Services;
 public sealed partial class PracticeService(
     CompanionDbContext db,
     ILearnerService learners,
-    Microsoft.Extensions.Configuration.IConfiguration? config = null) : IPracticeService
+    Microsoft.Extensions.Configuration.IConfiguration? config = null,
+    TimeProvider? clock = null) : IPracticeService
 {
     public const int DefaultMaxSavedSessionsPerCertificate = 20;
+
+    // #155: the mastery scheduler spaces a category by days, so "now" has to be injectable or every
+    // cooldown test would have to sleep for a day.
+    private readonly TimeProvider _clock = clock ?? TimeProvider.System;
 
     /// <summary>The maximum number of recent standalone practice sessions (and their associated answer logs)
     /// retained per learner per certificate. Older sessions exceeding this limit are pruned to keep storage

@@ -81,6 +81,16 @@ public sealed class LessonsControllerTests
         public Task<LessonDetailDto?> GetLessonByCategoryAsync(int categoryId, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<LessonDetailDto?>(ExceptionToThrow) : Task.FromResult(Lesson);
 
+        public MicroCheckResultDto? MicroCheckResult { get; set; }
+        public string? LastSelectedOption { get; set; }
+
+        public Task<MicroCheckResultDto> SubmitMicroCheckAsync(int lessonId, int cardId, string selectedOption, CancellationToken cancellationToken = default)
+        {
+            if (ExceptionToThrow != null) return Task.FromException<MicroCheckResultDto>(ExceptionToThrow);
+            LastSelectedOption = selectedOption;
+            return Task.FromResult(MicroCheckResult!);
+        }
+
         public Task UnlockPathAsync(int learnerPathId, CancellationToken cancellationToken = default)
         {
             if (ExceptionToThrow != null) return Task.FromException(ExceptionToThrow);
@@ -202,6 +212,23 @@ public sealed class LessonsControllerTests
         Assert.IsType<JsonResult>(result);
         Assert.Equal(10, api.LastRecordedLessonId);
         Assert.Equal(2, api.LastRecordedCardId);
+    }
+
+    // #155: the micro-check goes to the API through MVC - never graded in the browser - and the reply
+    // is what tells the page the right answer.
+    [Fact]
+    public async Task SubmitMicroCheck_ForwardsTheSelectedOptionAndReturnsTheGrade()
+    {
+        var api = new TestApiClient { MicroCheckResult = new MicroCheckResultDto(true, "B", "Because.", 5) };
+        var controller = CreateController(api);
+
+        var result = await controller.SubmitMicroCheck(10, 22, "B", CancellationToken.None);
+
+        var json = Assert.IsType<JsonResult>(result);
+        Assert.Equal("B", api.LastSelectedOption);
+        var payload = json.Value!;
+        Assert.True((bool)payload.GetType().GetProperty("isCorrect")!.GetValue(payload)!);
+        Assert.Equal("B", payload.GetType().GetProperty("correctOption")!.GetValue(payload));
     }
 
     [Fact]

@@ -109,6 +109,35 @@ public sealed class LessonsController(
         }
     }
 
+    /// <summary>#155: grades the micro-check on the server. The page no longer carries the right answer,
+    /// so this is the only way to find out - and the answer therefore reaches the mastery machine.</summary>
+    [HttpPost("/lessons/{id:int}/cards/{cardId:int}/micro-check")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SubmitMicroCheck(
+        int id, int cardId, [FromForm] string selectedOption, CancellationToken cancellationToken)
+    {
+        if (User.IsInRole(Roles.Admin))
+        {
+            return BadRequest(new { error = "A lesson preview does not grade." });
+        }
+
+        try
+        {
+            var result = await api.SubmitMicroCheckAsync(id, cardId, selectedOption, cancellationToken);
+            return Json(new
+            {
+                isCorrect = result.IsCorrect,
+                correctOption = result.CorrectOption,
+                explanation = result.Explanation,
+            });
+        }
+        catch (ApiException ex)
+        {
+            logger.LogWarning(ex, "Failed to grade micro-check card {CardId} in lesson {LessonId}", cardId, id);
+            return StatusCode(ex.Status, new { error = ex.Message, code = ex.Code });
+        }
+    }
+
     [HttpPost("/learning-path/{pathId:int}/unlock")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> UnlockPath(int pathId, CancellationToken cancellationToken)

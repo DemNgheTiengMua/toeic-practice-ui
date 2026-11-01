@@ -45,7 +45,7 @@ public sealed class PracticeControllerTests
         };
 
         var controller = CreateController(api);
-        var result = await controller.Start(new StartPracticeFormModel { SectionId = 5, QuestionCount = 20 }, CancellationToken.None);
+        var result = await controller.Start(new StartPracticeFormModel { SectionId = 5 }, CancellationToken.None);
 
         var redirect = Assert.IsType<RedirectToActionResult>(result);
         Assert.Equal(nameof(PracticeController.Take), redirect.ActionName);

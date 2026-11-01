@@ -7,6 +7,36 @@ namespace WebMVC.Tests;
 public sealed class PracticeViewTests
 {
     [Fact]
+    public void Practice_index_offers_one_smart_button_and_no_drill_recipe()
+    {
+        // #155: the count and source dropdowns are gone. What must not come back is the pair of selects
+        // the learner used to steer the queue with - the ten questions and their source are the
+        // mastery planner's decision, and the page cannot offer what the service no longer accepts.
+        var repoRoot = TestPathHelper.FindRepoRoot();
+        var index = File.ReadAllText(Path.Combine(repoRoot, "src", "WebMVC", "Views", "Practice", "Index.cshtml"));
+
+        Assert.DoesNotContain("name=\"QuestionCount\"", index);
+        Assert.DoesNotContain("name=\"QuestionSource\"", index);
+        Assert.DoesNotContain("pr-count", index);
+        Assert.DoesNotContain("pr-source", index);
+        Assert.Contains("Smart Practice", index);
+        Assert.Contains("_PracticeSectionCard", index);
+    }
+
+    // #155: a section cannot say "all topics resting" without saying when they come back - the learner
+    // would otherwise meet an empty session and have no idea why.
+    [Fact]
+    public void A_resting_section_says_when_its_next_review_is_due()
+    {
+        var repoRoot = TestPathHelper.FindRepoRoot();
+        var card = File.ReadAllText(Path.Combine(repoRoot, "src", "WebMVC", "Views", "Practice", "_PracticeSectionCard.cshtml"));
+
+        Assert.Contains("CategoriesInCooldown", card);
+        Assert.Contains("NextReviewDueAt", card);
+        Assert.Contains("resting", card);
+    }
+
+    [Fact]
     public void Take_View_Contains_PracticeExamShell_And_ZeroReload_Invariants()
     {
         var repoRoot = TestPathHelper.FindRepoRoot();

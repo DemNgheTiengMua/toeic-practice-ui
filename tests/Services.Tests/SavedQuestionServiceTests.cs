@@ -276,7 +276,7 @@ public sealed class SavedQuestionServiceTests(DatabaseFixture database)
         var userId = await SeedLearnerAsync(certCode);
         var (savedQuestions, practice, _) = CreateServices();
 
-        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId, 1));
+        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId));
         var qId = qIds[0];
 
         // Submit wrong answer
@@ -302,7 +302,7 @@ public sealed class SavedQuestionServiceTests(DatabaseFixture database)
         // Manually save first
         await savedQuestions.SaveQuestionAsync(userId, qId, SavedQuestionSource.Manual);
 
-        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId, 1));
+        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId));
 
         // Submit wrong answer
         var result = await practice.SubmitAnswerAsync(userId, session.SessionId, qId, new SubmitPracticeAnswerInput(wrongOpts[0]));

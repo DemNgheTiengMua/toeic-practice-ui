@@ -249,7 +249,10 @@ CREATE TABLE QuestionCategories (
   CertId     INT NOT NULL REFERENCES Certificates(CertId),
   Code       VARCHAR(40) NOT NULL,
   Name       NVARCHAR(120) NOT NULL,
-  CONSTRAINT UQ_QuestionCategories_Cert_Code UNIQUE (CertId, Code)
+  CONSTRAINT UQ_QuestionCategories_Cert_Code UNIQUE (CertId, Code),
+  -- #155: composite target so UserCategoryMasteries can pin a learner's mastery of a category to
+  -- that category's own certificate (no mastery row can straddle two certificates).
+  CONSTRAINT UQ_QuestionCategories_Id_Cert UNIQUE (CategoryId, CertId)
 );
 GO
 CREATE TABLE QuestionGroups (
@@ -444,6 +447,8 @@ CREATE TABLE PracticeSessions (
     CONSTRAINT CK_Practice_Status CHECK (Status IN ('in_progress','finished','abandoned')),
   CorrectCount INT NOT NULL DEFAULT 0,
   -- UI-11: practice-select options "Question source" and "Feedback type"
+  -- #155: no longer a learner choice - a standalone session is drawn by mastery state and written as
+  -- 'all'. The old codes stay because existing rows hold them; #162 removes them, not this ticket.
   QuestionSource VARCHAR(12) NOT NULL CONSTRAINT DF_Practice_Source DEFAULT 'all'
     CONSTRAINT CK_Practice_Source CHECK (QuestionSource IN ('all','wrong_before','unseen')),
   FeedbackMode   VARCHAR(10) NOT NULL CONSTRAINT DF_Practice_Feedback DEFAULT 'immediate'
@@ -491,6 +496,65 @@ CREATE TABLE SavedQuestions (
   SavedAt    DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
   CONSTRAINT PK_SavedQuestions PRIMARY KEY (UserId, QuestionId)
 );
+GO
+
+-- #155: mastery is a fact about a Category, never about a single Question. Spaced repetition over
+-- one question teaches that question's answer, not the grammar behind it, so one row per
+-- (learner, category) is the unit the scheduler moves through the four states.
+CREATE TABLE UserCategoryMasteries (
+  UserId         INT NOT NULL REFERENCES Users(UserId),
+  CategoryId     INT NOT NULL,
+  -- carried down so a mastery row can never straddle two certificates (CRITICAL invariant #4)
+  CertId         INT NOT NULL,
+  State          VARCHAR(12) NOT NULL CONSTRAINT DF_UCM_State DEFAULT 'untested'
+    CONSTRAINT CK_UCM_State CHECK (State IN ('untested','learning','reviewing','mastered')),
+  -- the same numbers vw_UserCategoryAccuracy would give, kept here so the scheduler needs no join
+  -- and so a pruned practice session cannot silently rewind a state the learner already earned
+  AnsweredCount  INT NOT NULL CONSTRAINT DF_UCM_Answered DEFAULT 0 CONSTRAINT CK_UCM_Answered CHECK (AnsweredCount >= 0),
+  CorrectCount   INT NOT NULL CONSTRAINT DF_UCM_Correct DEFAULT 0,
+  -- consecutive correct answers within the category; any wrong answer resets it to 0
+  Streak         INT NOT NULL CONSTRAINT DF_UCM_Streak DEFAULT 0 CONSTRAINT CK_UCM_Streak CHECK (Streak >= 0),
+  -- 1 while the most recent answers are wrong: two in a row while Mastered is a lapse
+  ConsecutiveWrong INT NOT NULL CONSTRAINT DF_UCM_ConsecutiveWrong DEFAULT 0
+    CONSTRAINT CK_UCM_ConsecutiveWrong CHECK (ConsecutiveWrong >= 0),
+  -- when this category may next be offered. A wrong answer sets now + 24h; a right one spaces by state.
+  NextReviewDueAt DATETIMEOFFSET NULL,
+  LastAnsweredAt  DATETIMEOFFSET NULL,
+  -- how many distinct days have touched this category. Mastered needs ">= 2 sessions on different
+  -- days"; one column counts them, the other remembers today so it is counted only once per day.
+  SessionDays    INT NOT NULL CONSTRAINT DF_UCM_SessionDays DEFAULT 0
+    CONSTRAINT CK_UCM_SessionDays CHECK (SessionDays >= 0),
+  LastSessionDay DATE NULL,
+  -- ">= 85% over >= 10 answers across >= 2 sessions on different days" -> Mastered. Kept explicitly
+  -- so a later wrong answer cannot retroactively claim the learner never qualified.
+  MasteredAt     DATETIMEOFFSET NULL,
+  UpdatedAt      DATETIMEOFFSET NOT NULL CONSTRAINT DF_UCM_Updated DEFAULT SYSDATETIMEOFFSET(),
+  CONSTRAINT PK_UserCategoryMasteries PRIMARY KEY (UserId, CategoryId),
+  -- the counters must agree: a category cannot have more correct answers than answers
+  CONSTRAINT CK_UCM_CorrectLeAnswered CHECK (CorrectCount <= AnsweredCount),
+  CONSTRAINT FK_UCM_CategoryCert FOREIGN KEY (CategoryId, CertId) REFERENCES QuestionCategories(CategoryId, CertId)
+);
+GO
+-- The scheduler asks "which due-or-unseen categories belong to this certificate" on every start.
+CREATE INDEX IX_UCM_User_Due ON UserCategoryMasteries(UserId, CertId, NextReviewDueAt);
+GO
+
+-- #155: one row per (learner, question) so a question just answered wrongly does not reappear in the
+-- next session, and so "unseen" is a cheap lookup rather than a UNION over two answer tables.
+CREATE TABLE UserQuestionHistories (
+  UserId       INT NOT NULL REFERENCES Users(UserId),
+  QuestionId   INT NOT NULL REFERENCES Questions(QuestionId),
+  LastAnsweredAt DATETIMEOFFSET NOT NULL CONSTRAINT DF_UQH_Last DEFAULT SYSDATETIMEOFFSET(),
+  LastIsCorrect  BIT NULL,       -- NULL for a skipped question: neither right nor wrong
+  -- set to now + 24h on a wrong answer and cleared on a right one; the selection filter is
+  -- `CooldownUntil IS NULL OR CooldownUntil <= now`, so an expired cooldown needs no write to expire
+  CooldownUntil  DATETIMEOFFSET NULL,
+  CONSTRAINT PK_UserQuestionHistories PRIMARY KEY (UserId, QuestionId)
+);
+GO
+-- "the questions this learner may be served now, oldest first" - the hot path of Smart Practice.
+-- Certificate scoping comes from the join to Questions/Sections, so it stays out of this index.
+CREATE INDEX IX_UQH_User_Cooldown ON UserQuestionHistories(UserId, CooldownUntil);
 GO
 
 -- ============ Domain 7: MockExam ============

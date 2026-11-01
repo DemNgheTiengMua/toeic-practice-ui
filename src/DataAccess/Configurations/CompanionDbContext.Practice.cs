@@ -75,9 +75,47 @@ public partial class CompanionDbContext
 
 
 
-        modelBuilder.Entity<SavedQuestion>(entity =>
+        modelBuilder.Entity<UserCategoryMastery>(entity =>
         {
-            entity.Property(e => e.SavedAt).HasDefaultValueSql("(sysdatetimeoffset())");
+            entity.HasKey(e => new { e.UserId, e.CategoryId }).HasName("PK_UserCategoryMasteries");
+
+            entity.HasIndex(e => new { e.UserId, e.CertId, e.NextReviewDueAt }, "IX_UCM_User_Due");
+
+            entity.Property(e => e.State).HasDefaultValue("untested", "DF_UCM_State");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("(sysdatetimeoffset())", "DF_UCM_Updated");
+
+            entity.HasOne(d => d.Category).WithMany(p => p.UserCategoryMasteries)
+                .HasPrincipalKey(p => new { p.CategoryId, p.CertId })
+                .HasForeignKey(d => new { d.CategoryId, d.CertId })
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_UCM_CategoryCert");
+
+            entity.HasOne(d => d.User).WithMany(p => p.UserCategoryMasteries)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_UCM_User");
+        });
+
+        modelBuilder.Entity<UserQuestionHistory>(entity =>
+        {
+            entity.HasKey(e => new { e.UserId, e.QuestionId }).HasName("PK_UserQuestionHistories");
+
+            entity.HasIndex(e => new { e.UserId, e.CooldownUntil }, "IX_UQH_User_Cooldown");
+
+            entity.Property(e => e.LastAnsweredAt).HasDefaultValueSql("(sysdatetimeoffset())", "DF_UQH_Last");
+
+            entity.HasOne(d => d.Question).WithMany(p => p.UserQuestionHistories)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_UQH_Question");
+
+            entity.HasOne(d => d.User).WithMany(p => p.UserQuestionHistories)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_UQH_User");
+        });
+
+
+
+        modelBuilder.Entity<SavedQuestion>(entity =>
+        {            entity.Property(e => e.SavedAt).HasDefaultValueSql("(sysdatetimeoffset())");
 
             entity.HasOne(d => d.Question).WithMany(p => p.SavedQuestions)
                 .OnDelete(DeleteBehavior.ClientSetNull)

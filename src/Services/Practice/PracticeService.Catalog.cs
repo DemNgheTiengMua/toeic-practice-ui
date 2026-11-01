@@ -51,6 +51,32 @@ public sealed partial class PracticeService
             .Where(v => v.UserId == userId)
             .ToDictionaryAsync(v => v.SectionId, cancellationToken);
 
+        // #155: which categories are resting, per section. A section with every category in cooldown is
+        // what "you may come back in 6 hours" has to be measured against, so the count and the soonest
+        // due date are computed here rather than guessed by the page.
+        var now = _clock.GetUtcNow();
+        var sectionCategories = await db.Questions
+            .AsNoTracking()
+            .Where(q => q.Section.CertId == activeCertId && q.CategoryId != null)
+            .Select(q => new { q.SectionId, CategoryId = q.CategoryId!.Value })
+            .Distinct()
+            .ToListAsync(cancellationToken);
+
+        var mastery = await LoadMasteryAsync(userId, cancellationToken);
+        var rests = sectionCategories
+            .GroupBy(c => c.SectionId)
+            .ToDictionary(
+                g => g.Key,
+                g =>
+                {
+                    var due = g
+                        .Select(c => mastery.TryGetValue(c.CategoryId, out var m) ? m.NextReviewDueAt : null)
+                        .OfType<DateTimeOffset>()
+                        .Where(d => d > now)
+                        .ToList();
+                    return (Total: g.Count(), Resting: due.Count, Next: due.Count > 0 ? (DateTimeOffset?)due.Min() : null);
+                });
+
         var items = sections.Select(s =>
         {
             int answered = 0;
@@ -62,6 +88,7 @@ public sealed partial class PracticeService
             }
 
             questionCounts.TryGetValue(s.SectionId, out var available);
+            rests.TryGetValue(s.SectionId, out var rest);
             return new PracticeSectionItem(
                 s.SectionId,
                 s.Skill.Code,
@@ -74,7 +101,10 @@ public sealed partial class PracticeService
                 available,
                 accuracy,
                 answered,
-                s.DisplayOrder);
+                s.DisplayOrder,
+                rest.Total,
+                rest.Resting,
+                rest.Next);
         }).ToList();
 
         var listening = items.Where(i => i.Modality == Modality.Listening).ToList();

@@ -15,7 +15,7 @@ Research ước lượng **14 ngày người**, 4 giai đoạn. Đã xong **~1.5
 |---|---|---|
 | 1. Nền móng đa chứng chỉ & engine điểm | #146–#150 | ✅ **xong** — #146, #148, #149, #150 |
 | 2. Chấm Writing & Speaking | #151–#152 | ⬜ chưa |
-| 3. Mastery, lộ trình có hạn, hiệu chuẩn | #153–#156 | 🟡 **đang làm** — #153 xong |
+| 3. Mastery, lộ trình có hạn, hiệu chuẩn | #153–#156 | 🟡 **đang làm** — #153, #155 xong |
 | 4. Studio, preview, dashboard | #157–#159 | 🟡 **đang làm** — #157 xong |
 | 5. Dọn dẹp | #160–#162 | ⬜ chưa |
 
@@ -24,7 +24,12 @@ Research ước lượng **14 ngày người**, 4 giai đoạn. Đã xong **~1.5
 **#159** (dashboard 3 khối) hoặc **#158** (preview kiểu thi thật) — cả hai đã mở khoá.
 Giai đoạn 1 đã xong.
 
-Sau đó: #154/#155/#156 → #158/#159 → #160–#162.
+Sau đó: #154/#156 → #158/#159 → #160–#162.
+
+**Nợ mới từ #155:** `wrong_before`/`unseen` vẫn là giá trị hợp lệ trong `CK_Practice_Source` (row cũ
+còn giữ), nhưng không còn ai ghi chúng — #162 xoá cột cùng bộ chọn. `PathModuleTopics` vẫn chưa nối
+vào mastery: bước luyện tập theo lộ trình dùng `LearnerPathStepId` và chọn câu theo `DisplayOrder`
+(`LearningPathService.Steps.cs`), không qua `SmartPracticePlanner`.
 
 ## 3. Đã xong (đã push lên `origin/main`)
 
@@ -39,6 +44,7 @@ Sau đó: #154/#155/#156 → #158/#159 → #160–#162.
 | #157 — đóng cổng publish | (commit này) | 2 đường vòng audit bị bịt; `ExpectedQuestionCount` NOT NULL; 2 lối ghi cấu trúc khác (quick ingest, AI generate) cũng khoá; `hidden` có đường ghi riêng (withdraw) |
 | #150 - practice for a Speaking-only or Writing-only cert | `4d2b9b3` + round 2 | `CK_Practice_Modality` widened to all 4 (the schema no longer blocks); a Writing-only cert drills and is marked by `MinWords` + `RequiredKeywords`, free, no credit or AI; **Speaking is not drilled** - a spoken answer cannot be typed, so the page links it to the recorded, AI-graded speaking practice. Free-response feedback is re-evaluated on read so it survives a refresh; a wrong written answer is no longer filed in the saved-question bank (it has no options); one shared predicate decides drillability for both the catalog count and the session builder |
 | #151 — Writing chấm theo rubric thật, phản hồi sửa được bài | (commit này) | Prompt mang band descriptor từng tiêu chí; checklist (wordCount/meetsLength/usesAllKeywords/addressesPrompt) chốt **trước** khi cho điểm; `Weight` nay có tác dụng khi cộng; criterion model bỏ sót → retry 1 lần → `Failed`, không còn `MaxScore × 0.7`; `errorSpans` ≤5 + `priorityFix` + `modelRewrite` lưu vào `AiGradings` và hiện trên trang Review. Claude thật: bài 201 từ → `done`, 4 điểm + 2 lỗi có vị trí + 1 rewrite, band `B2`; "dog run fast" → `Failed`, 0 điểm, nút "Retry grading" |
+| #155 — Luyện tập thành ôn tập thật | (commit này) | `UserCategoryMasteries` (4 bậc Untested→Learning→Reviewing→Mastered) + `UserQuestionHistories.CooldownUntil`. Sai 1 câu → category sang `learning`, hạn ôn +24h; câu đó không xuất hiện lại trong 24h; hết hạn thì quay lại (đúng câu đã sai, ở vị trí câu cũ lâu nhất). Đúng 5/5 → `reviewing` +3 ngày, lần ôn sau +7; 85% trên ≥10 câu qua ≥2 ngày → `mastered` +14 ngày; 2 câu sai liên tiếp khi `mastered` → `reviewing` +24h. Phiên **cố định 10 câu** (≤4 câu cũ đến hạn + ≥6 câu mới), bỏ `all/wrong_before/unseen` và ô số lượng. Micro-check trong Lesson chấm ở server (`POST /lessons/{id}/cards/{cardId}/micro-check`), ghi cùng mastery row |
 
 `dotnet test`: **768 Services + 690 WebMVC + 16 WebAPI pass, 0 fail** (47 E2E skip when the apps are
 not running; with both apps up, the same **14** E2E journeys fail on this branch and on its parent —

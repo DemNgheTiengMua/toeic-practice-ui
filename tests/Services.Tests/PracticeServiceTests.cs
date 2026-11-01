@@ -116,7 +116,7 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         var userId = await SeedLearnerAsync(certCode);
         var (practice, _) = CreateServices();
 
-        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(sectionId, 10));
+        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(sectionId));
         Assert.Equal(EnumCodes.Parse<Modality>(modality), session.Modality);
 
         var question = await practice.GetQuestionAsync(userId, session.SessionId, 1);
@@ -141,7 +141,7 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         var userId = await SeedLearnerAsync(certCode);
         var (practice, _) = CreateServices();
 
-        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(sectionId, 10));
+        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(sectionId));
         var result = await practice.SubmitAnswerAsync(
             userId, session.SessionId, questionId,
             new SubmitPracticeAnswerInput(ResponseText: "The team discussed the proposal yesterday."));
@@ -161,7 +161,7 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         var (practice, _) = CreateServices();
 
         var ex = await Assert.ThrowsAsync<PracticeException>(() =>
-            practice.StartSessionAsync(userId, new StartPracticeSessionInput(sectionId, 10)));
+            practice.StartSessionAsync(userId, new StartPracticeSessionInput(sectionId)));
 
         Assert.Equal(PracticeException.ModalityNotAllowed, ex.Code);
         Assert.Contains("record", ex.Message, StringComparison.OrdinalIgnoreCase);
@@ -178,7 +178,7 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         var userId = await SeedLearnerAsync(certCode);
         var (practice, _) = CreateServices();
 
-        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(sectionId, 10));
+        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(sectionId));
         await practice.SubmitAnswerAsync(
             userId, session.SessionId, questionId, new SubmitPracticeAnswerInput(ResponseText: "Too short."));
 
@@ -203,7 +203,7 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         var userId = await SeedLearnerAsync(certCode);
         var (practice, _) = CreateServices();
 
-        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(sectionId, 10));
+        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(sectionId));
         await practice.SubmitAnswerAsync(
             userId, session.SessionId, questionId, new SubmitPracticeAnswerInput(ResponseText: "Too short."));
 
@@ -255,7 +255,7 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         var section = catalog.OtherSections.Single(s => s.SectionId == writingSectionId);
         Assert.Equal(2, section.AvailableQuestionCount);
 
-        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(writingSectionId, 10));
+        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(writingSectionId));
         Assert.Equal(section.AvailableQuestionCount, session.QuestionCount);
     }
 
@@ -280,7 +280,7 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
             PracticeException? refusal = null;
             try
             {
-                session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(section.SectionId, 10));
+                session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(section.SectionId));
             }
             catch (PracticeException ex)
             {
@@ -445,7 +445,7 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         var (practice, _) = CreateServices();
 
         var ex = await Assert.ThrowsAsync<PracticeException>(() =>
-            practice.StartSessionAsync(userId, new StartPracticeSessionInput(sec1Id, 10)));
+            practice.StartSessionAsync(userId, new StartPracticeSessionInput(sec1Id)));
 
         Assert.Equal(PracticeException.SectionUnavailable, ex.Code);
     }
@@ -458,16 +458,18 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         var userId = await SeedLearnerAsync(certCode);
         var (practice, _) = CreateServices();
 
-        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId, 2));
+        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId));
 
+        // #155: the session is the whole bank when the bank is smaller than ten - three here - rather
+        // than the learner's chosen two.
         Assert.Equal(PracticeStatus.InProgress, session.Status);
-        Assert.Equal(2, session.QuestionCount);
+        Assert.Equal(3, session.QuestionCount);
         Assert.Equal(0, session.CorrectCount);
 
         var q1 = await practice.GetQuestionAsync(userId, session.SessionId, 1);
         Assert.Equal(qIds[0], q1.QuestionId);
         Assert.Equal(1, q1.DisplayOrder);
-        Assert.Equal(2, q1.TotalQuestions);
+        Assert.Equal(3, q1.TotalQuestions);
         Assert.False(q1.HintUsed);
         Assert.Null(q1.Hint); // Not revealed yet
         Assert.Null(q1.IsCorrect); // Not answered yet
@@ -482,7 +484,7 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         var userId = await SeedLearnerAsync(certCode);
         var (practice, _) = CreateServices();
 
-        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId, 1));
+        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId));
         var hint = await practice.RevealHintAsync(userId, session.SessionId, qIds[0]);
 
         Assert.Equal("Hint 1", hint);
@@ -500,7 +502,7 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         var userId = await SeedLearnerAsync(certCode);
         var (practice, _) = CreateServices();
 
-        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId, 2));
+        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId));
 
         // Submit correct answer to Q1
         var result1 = await practice.SubmitAnswerAsync(
@@ -512,7 +514,8 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         Assert.False(result1.IsSessionFinished);
         Assert.Equal(2, result1.NextQuestionDisplayOrder);
 
-        // Submit wrong answer to Q2
+        // Submit wrong answer to Q2. The session is three questions (the whole bank), so answering two
+        // of them does not finish it - #155 made the count the planner's, not the learner's.
         var result2 = await practice.SubmitAnswerAsync(
             userId, session.SessionId, qIds[1], new SubmitPracticeAnswerInput(wrongOpts[1]));
 
@@ -520,12 +523,17 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         Assert.Equal(wrongOpts[1], result2.SelectedOptionId);
         Assert.Equal(correctOpts[1], result2.CorrectOptionId);
         Assert.Equal("Explanation 2", result2.Explanation);
-        Assert.True(result2.IsSessionFinished);
-        Assert.Null(result2.NextQuestionDisplayOrder);
+        Assert.False(result2.IsSessionFinished);
+        Assert.Equal(3, result2.NextQuestionDisplayOrder);
+
+        // Q3 finishes it.
+        var result3 = await practice.SubmitAnswerAsync(
+            userId, session.SessionId, qIds[2], new SubmitPracticeAnswerInput(correctOpts[2]));
+        Assert.True(result3.IsSessionFinished);
 
         var info = await practice.GetSessionInfoAsync(userId, session.SessionId);
         Assert.Equal(PracticeStatus.Finished, info.Status);
-        Assert.Equal(1, info.CorrectCount);
+        Assert.Equal(2, info.CorrectCount);
     }
 
     [Fact]
@@ -536,7 +544,7 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         var userId = await SeedLearnerAsync(certCode);
         var (practice, _) = CreateServices();
 
-        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId, 2));
+        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId));
 
         // Try submitting Q2's option for Q1
         var ex = await Assert.ThrowsAsync<PracticeException>(() =>
@@ -553,7 +561,7 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         var userId = await SeedLearnerAsync(certCode);
         var (practice, _) = CreateServices();
 
-        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId, 3));
+        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId));
 
         // Q1: reveal hint and answer correctly
         await practice.RevealHintAsync(userId, session.SessionId, qIds[0]);
@@ -603,31 +611,28 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         Assert.Null(summary.Questions[2].IsCorrect); // Skipped
     }
 
+    // #155: the all/wrong_before/unseen selector is gone. What replaced it is mastery state, so the
+    // same scenario now reads: a wrong answer holds its question back and the next session is made of
+    // what is still due.
     [Fact]
-    public async Task StartSession_respects_wrong_before_and_unseen_question_sources()
+    public async Task A_session_is_drawn_from_what_is_due_not_from_a_learner_picked_source()
     {
         var certCode = Unique("QS");
-        var (_, secId, _, qIds, correctOpts, wrongOpts) = await SeedCertificateWithQuestionsAsync(certCode);
+        var (_, secId, _, qIds, _, wrongOpts) = await SeedCertificateWithQuestionsAsync(certCode);
         var userId = await SeedLearnerAsync(certCode);
         var (practice, _) = CreateServices();
 
-        // Initial session: answer Q1 wrongly
-        var session1 = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId, 1));
+        var session1 = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId));
+        Assert.Equal(3, session1.QuestionCount); // the whole bank: one short session, honestly short
         await practice.SubmitAnswerAsync(userId, session1.SessionId, qIds[0], new SubmitPracticeAnswerInput(wrongOpts[0]));
 
-        // Session with wrong_before: only Q1 should be selected
-        var sessionWrong = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId, 10, questionSource: QuestionSource.WrongBefore));
-        Assert.Equal(1, sessionWrong.QuestionCount);
-        var wrongQ = await practice.GetQuestionAsync(userId, sessionWrong.SessionId, 1);
-        Assert.Equal(qIds[0], wrongQ.QuestionId);
+        // The next session is not "wrong_before" - it is everything still due, which excludes exactly
+        // the question just missed and its whole category.
+        var session2 = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId));
+        var session2Questions = await practice.GetSessionQuestionsAsync(userId, session2.SessionId);
 
-        // Session with unseen: only Q2 and Q3 should be selected
-        var sessionUnseen = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId, 10, questionSource: QuestionSource.Unseen));
-        Assert.Equal(2, sessionUnseen.QuestionCount);
-        var unseenQ1 = await practice.GetQuestionAsync(userId, sessionUnseen.SessionId, 1);
-        var unseenQ2 = await practice.GetQuestionAsync(userId, sessionUnseen.SessionId, 2);
-        Assert.Equal(qIds[1], unseenQ1.QuestionId);
-        Assert.Equal(qIds[2], unseenQ2.QuestionId);
+        Assert.DoesNotContain(qIds[0], session2Questions.Select(q => q.QuestionId));
+        Assert.Equal(2, session2.QuestionCount);
     }
 
     [Fact]
@@ -640,15 +645,15 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         practice.MaxSavedSessionsPerCertificate = 2; // Test limit of 2
 
         // Session 1: complete it
-        var s1 = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId, 1));
+        var s1 = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId));
         await practice.SubmitAnswerAsync(userId, s1.SessionId, qIds[0], new SubmitPracticeAnswerInput(correctOpts[0]));
 
         // Session 2: complete it
-        var s2 = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId, 1));
+        var s2 = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId));
         await practice.SubmitAnswerAsync(userId, s2.SessionId, qIds[0], new SubmitPracticeAnswerInput(correctOpts[0]));
 
         // Session 3: start it -> exceeds limit of 2, so s1 and its answers should be pruned
-        var s3 = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId, 1));
+        var s3 = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId));
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
         var remainingSessions = await db.PracticeSessions
@@ -680,10 +685,10 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         var (practice, _) = CreateServices();
 
         // Start session 1 but do not answer any questions
-        var s1 = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId, 2));
+        var s1 = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId));
 
         // Start session 2 -> s1 was empty, so it should be cleaned up immediately
-        var s2 = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId, 2));
+        var s2 = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId));
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
         var sessions = await db.PracticeSessions.Where(s => s.UserId == userId).ToListAsync();
@@ -704,11 +709,11 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         var (practice, _) = CreateServices();
 
         // Start session 1 and answer question 1
-        var s1 = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId, 2));
+        var s1 = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId));
         await practice.SubmitAnswerAsync(userId, s1.SessionId, qIds[0], new SubmitPracticeAnswerInput(correctOpts[0]));
 
         // Start session 2 -> s1 had an answer, so it should be preserved as "abandoned"
-        var s2 = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId, 2));
+        var s2 = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId));
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
         var session1InDb = await db.PracticeSessions.SingleOrDefaultAsync(s => s.SessionId == s1.SessionId);
@@ -726,7 +731,7 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         var userId = await SeedLearnerAsync(certCode);
         var (practice, _) = CreateServices();
 
-        var s1 = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId, 2));
+        var s1 = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId));
 
         var catalog = await practice.GetPracticeSectionsAsync(userId);
 
@@ -744,7 +749,7 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         var userId = await SeedLearnerAsync(certCode);
         var (practice, _) = CreateServices();
 
-        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId, 3));
+        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId));
 
         // Answer question 1
         await practice.SubmitAnswerAsync(userId, session.SessionId, qIds[0], new SubmitPracticeAnswerInput(correctOpts[0]));
@@ -796,7 +801,7 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         var userId = await SeedLearnerAsync(certCode);
         var (practice, _) = CreateServices();
 
-        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId, 3));
+        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId));
 
         // Jump directly to Question 3 (the last question) and answer it
         var resultQ3 = await practice.SubmitAnswerAsync(userId, session.SessionId, qIds[2], new SubmitPracticeAnswerInput(correctOpts[2]));
@@ -903,7 +908,7 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         var userId = await SeedLearnerAsync(certCode);
         var (practice, _) = CreateServices();
 
-        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId, 2));
+        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId));
 
         // Question 1: Submit incomplete (only opt1AId) -> IsCorrect = false
         var partialResult = await practice.SubmitAnswerAsync(userId, session.SessionId, q1Id,
@@ -995,7 +1000,7 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         var userId = await SeedLearnerAsync(certCode);
         var (practice, _) = CreateServices();
 
-        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId, 2));
+        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId));
 
         // Q1: Whitespace & case insensitive match -> IsCorrect = true
         var res1 = await practice.SubmitAnswerAsync(userId, session.SessionId, q1Id,
@@ -1066,7 +1071,7 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         var userId = await SeedLearnerAsync(certCode);
         var (practice, _) = CreateServices();
 
-        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId, 1));
+        var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(secId));
         var take = await practice.GetSessionTakeAsync(userId, session.SessionId);
 
         Assert.NotNull(take);

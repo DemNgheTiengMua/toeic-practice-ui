@@ -31,6 +31,21 @@ public sealed partial class CompanionApiClient
     public Task RecordCardViewAsync(int lessonId, int cardId, CancellationToken cancellationToken = default) =>
         RecordCardViewAsync(lessonId, cardId, string.Empty, cancellationToken);
 
+    public async Task<MicroCheckResultDto> SubmitMicroCheckAsync(int lessonId, int cardId, string selectedOption, string bearerToken, CancellationToken cancellationToken = default)
+    {
+        using var message = new HttpRequestMessage(HttpMethod.Post, $"api/learner/lessons/{lessonId}/cards/{cardId}/micro-check")
+        {
+            Content = JsonContent.Create(new MicroCheckRequest(selectedOption), options: Json),
+        };
+        AttachBearer(message, bearerToken);
+        using var response = await http.SendAsync(message, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+        return (await response.Content.ReadFromJsonAsync<MicroCheckResultDto>(Json, cancellationToken))!;
+    }
+
+    public Task<MicroCheckResultDto> SubmitMicroCheckAsync(int lessonId, int cardId, string selectedOption, CancellationToken cancellationToken = default) =>
+        SubmitMicroCheckAsync(lessonId, cardId, selectedOption, string.Empty, cancellationToken);
+
     public Task<LessonDetailDto?> GetLessonByCategoryAsync(int categoryId, string bearerToken, CancellationToken cancellationToken = default) =>
         GetAuthorizedAsync<LessonDetailDto?>($"api/learner/lessons/by-category/{categoryId}", bearerToken, cancellationToken);
 

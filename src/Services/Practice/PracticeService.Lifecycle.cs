@@ -9,7 +9,6 @@ namespace Services;
 
 public sealed partial class PracticeService
 {
-
     public async Task<PracticeSessionInfo> StartSessionAsync(int userId, StartPracticeSessionInput input, CancellationToken cancellationToken = default)
     {
         Validator.ValidateObject(input, new ValidationContext(input), validateAllProperties: true);
@@ -32,45 +31,12 @@ public sealed partial class PracticeService
                 "Speaking is answered by voice, so it has no typed drill: open the recorded speaking practice, which is graded by AI.");
         }
 
-        var query = DrillableQuestions(activeCertId)
-            .Where(q => q.SectionId == section.SectionId);
+        var selectedIds = await PlanSmartPracticeAsync(userId, activeCertId, section.SectionId, cancellationToken);
 
-        if (input.QuestionSource == QuestionSource.WrongBefore)
-        {
-            var wrongFromPractice = db.PracticeAnswers
-                .Where(pa => pa.Session.UserId == userId && pa.SectionId == section.SectionId && pa.IsCorrect == false)
-                .Select(pa => pa.QuestionId);
-            var wrongFromAttempts = db.AttemptAnswers
-                .Where(aa => aa.Attempt.UserId == userId && aa.Question.SectionId == section.SectionId && aa.IsCorrect == false)
-                .Select(aa => aa.QuestionId);
-            var wrongIds = wrongFromPractice.Union(wrongFromAttempts);
-            query = query.Where(q => wrongIds.Contains(q.QuestionId));
-        }
-        else if (input.QuestionSource == QuestionSource.Unseen)
-        {
-            var seenFromPractice = db.PracticeAnswers
-                .Where(pa => pa.Session.UserId == userId && pa.SectionId == section.SectionId)
-                .Select(pa => pa.QuestionId);
-            var seenFromAttempts = db.AttemptAnswers
-                .Where(aa => aa.Attempt.UserId == userId && aa.Question.SectionId == section.SectionId)
-                .Select(aa => aa.QuestionId);
-            var seenIds = seenFromPractice.Union(seenFromAttempts);
-            query = query.Where(q => !seenIds.Contains(q.QuestionId));
-        }
-
-        var candidateQuestionIds = await query
-            .OrderBy(q => q.DisplayOrder)
-            .ThenBy(q => q.QuestionId)
-            .Select(q => q.QuestionId)
-            .ToListAsync(cancellationToken);
-
-        if (candidateQuestionIds.Count == 0)
+        if (selectedIds.Count == 0)
         {
             throw new PracticeException(PracticeException.NoQuestionsAvailable, "No questions match the selected criteria for this section.");
         }
-
-        var takeCount = Math.Min(candidateQuestionIds.Count, input.QuestionCount);
-        var selectedIds = candidateQuestionIds.Take(takeCount).ToList();
 
         // Clean up or abandon any existing standalone in-progress sessions for this user and certificate
         var existingInProgress = await db.PracticeSessions
@@ -105,9 +71,9 @@ public sealed partial class PracticeService
             QuestionCount = selectedIds.Count,
             Status = PracticeStatus.InProgress.ToCode(),
             CorrectCount = 0,
-            QuestionSource = input.QuestionSource.ToCode(),
+            QuestionSource = QuestionSource.All.ToCode(),
             FeedbackMode = input.FeedbackMode.ToCode(),
-            StartedAt = DateTimeOffset.UtcNow,
+            StartedAt = _clock.GetUtcNow(),
         };
 
         db.PracticeSessions.Add(session);
@@ -143,6 +109,44 @@ public sealed partial class PracticeService
             EnumCodes.Parse<FeedbackMode>(session.FeedbackMode),
             session.StartedAt,
             session.FinishedAt);
+    }
+
+    /// <summary>
+    /// #155: the questions a session contains, decided by mastery state and the cooldown - never by a
+    /// learner-picked source. The mix itself is <see cref="SmartPracticePlanner"/>, a pure function; this
+    /// only loads what it needs.
+    /// </summary>
+    private async Task<IReadOnlyList<int>> PlanSmartPracticeAsync(
+        int userId, int certId, int sectionId, CancellationToken cancellationToken)
+    {
+        var now = _clock.GetUtcNow();
+
+        var candidates = await DrillableQuestions(certId)
+            .Where(q => q.SectionId == sectionId)
+            .Select(q => new
+            {
+                q.QuestionId,
+                q.CategoryId,
+                History = db.UserQuestionHistories
+                    .Where(h => h.UserId == userId && h.QuestionId == q.QuestionId)
+                    .Select(h => new { h.LastAnsweredAt, h.CooldownUntil })
+                    .FirstOrDefault(),
+            })
+            .ToListAsync(cancellationToken);
+
+        // Projected as an anonymous type first and narrowed here: a nullable DateTimeOffset selected
+        // through FirstOrDefault comes back as default(DateTimeOffset) in SQL, not null, which would
+        // read every unseen question as "answered in year 1".
+        var plan = candidates
+            .Select(c => new PracticeCandidate(
+                c.QuestionId,
+                c.CategoryId,
+                c.History?.LastAnsweredAt,
+                c.History?.CooldownUntil))
+            .ToList();
+
+        var mastery = await LoadMasteryAsync(userId, cancellationToken);
+        return SmartPracticePlanner.Plan(plan, mastery, now);
     }
 
     public async Task<PracticeSessionInfo> GetSessionInfoAsync(int userId, int sessionId, CancellationToken cancellationToken = default)

@@ -637,7 +637,7 @@ public sealed class ExamRebuildFullSystemE2ETests(DatabaseFixture database)
             var weaknessService = new WeaknessAnalysisService(dbPractice, learnerService);
 
             // Drill questions including non-MCQ item (Q2: inline_completion) in Listening section
-            var pSession = await practiceService.StartSessionAsync(learnerId, new StartPracticeSessionInput(secL1Id, 2));
+            var pSession = await practiceService.StartSessionAsync(learnerId, new StartPracticeSessionInput(secL1Id));
             var pAns1 = await practiceService.SubmitAnswerAsync(learnerId, pSession.SessionId, q1Id,
                 new SubmitPracticeAnswerInput(SelectedOptionId: optQ1AId));
             Assert.True(pAns1.IsCorrect);

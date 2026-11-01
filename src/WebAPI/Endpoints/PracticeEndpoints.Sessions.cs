@@ -21,8 +21,6 @@ public static partial class PracticeEndpoints
             {
                 var input = StartPracticeSessionInput.FromCodes(
                     request.SectionId,
-                    request.QuestionCount,
-                    request.QuestionSource,
                     request.FeedbackMode);
 
                 var session = await practiceService.StartSessionAsync(CurrentUserId(http), input, cancellationToken);
