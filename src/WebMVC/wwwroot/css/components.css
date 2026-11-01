@@ -206,13 +206,18 @@
 /* Square marker: a sign has corners. */
 .option__marker {
   flex: 0 0 auto;
-  width: 26px; height: 26px;
+  /* A band code is data, and "below_A1" does not fit a fixed 26px square — the label used to
+     overflow onto the band name behind it. The marker keeps the square shape for short codes
+     and grows sideways for longer ones. */
+  min-width: 26px; height: 26px;
+  padding: 0 4px;
   display: grid; place-items: center;
   border: var(--keyline-soft) solid var(--ink);
   border-radius: 0;
   font-family: var(--font-sign);
   font-size: var(--text-sm); font-weight: 700;
   line-height: 1;
+  white-space: nowrap;
   pointer-events: none;
 }
 .option__text {
