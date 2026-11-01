@@ -22,7 +22,7 @@ Extract a dedicated, deep AI grading module in `src/Services/AiGradingProcessor.
   - Dispatches requests to `IAiGrader` for both text (writing) and audio (speaking).
   - Handles audio transcript back-fill into `FreeResponses.ResponseText`.
   - Populates `AiGradingScores` and marks `AiGradings` status as `done` (or `failed` with failure reason).
-  - Finalizes `ExamAttempt` records to `graded` once all free responses are scored, ensuring `TotalScore` and `BandCode` remain `NULL` for practice attempts to satisfy SQL triggers `50032` and `50041`.
+  - Finalizes `ExamAttempt` records to `graded` once all free responses are scored, keeping `TotalScore` and `BandCode` `NULL` on the attempt itself for practice attempts (trigger `50041`: one skill's rubric is not a certificate total). Since #148 it also writes the rubric's band, looked up in the certificate's own `ScoreBands`, onto `AiGradings.BandCode`.
 
 ## Consequences
 - **Decoupled Practice Services**: `SpeakingPracticeService` no longer depends on `IWritingPracticeService`. Both services focus strictly on learner attempt flows (starting attempts, saving drafts/audio, submitting, and rendering reviews).

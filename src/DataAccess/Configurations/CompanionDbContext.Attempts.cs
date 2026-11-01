@@ -16,9 +16,9 @@ public partial class CompanionDbContext
 
             entity.ToTable(tb =>
                 {
-                    tb.HasTrigger("trg_Attempts_NoBandForSpeakingPractice");
                     tb.HasTrigger("trg_Attempts_NoDraftsAfterSubmit");
                     tb.HasTrigger("trg_Attempts_NoGradedWithPendingFreeResponses");
+                    tb.HasTrigger("trg_Attempts_NoTotalScoreForSkillPractice");
                     tb.HasTrigger("trg_Attempts_TotalMatchesSkills_OnAttempt");
                     tb.HasTrigger("trg_ExamAttempts_PublishedExamOnly");
                 });

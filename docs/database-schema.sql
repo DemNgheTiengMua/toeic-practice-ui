@@ -597,19 +597,14 @@ BEGIN
   END
 END;
 GO
--- UI-19 (speaking gap 6): a speaking-practice attempt covers one skill of a summed scale, so a
--- certificate band computed from it is meaningless. BandCode stays NULL for those attempts.
--- UI-45: the same holds for the total score — speaking-review and writing-review show rubric
--- scores only, never "out of 990". TotalScore stays NULL on skill-practice attempts.
-CREATE TRIGGER trg_Attempts_NoBandForSpeakingPractice
+-- UI-45: a speaking- or writing-practice attempt scores one rubric against one skill, so the attempt
+-- itself never claims a certificate total ("out of 990"). TotalScore stays NULL for those attempts.
+-- E1.3 (#148): the band arm is gone. One skill's rubric, converted over the certificate's own bands,
+-- is a legitimate estimate, and it is written to AiGradings.BandCode as a snapshot.
+CREATE TRIGGER trg_Attempts_NoTotalScoreForSkillPractice
 ON ExamAttempts AFTER INSERT, UPDATE AS
 BEGIN
   SET NOCOUNT ON;
-  IF EXISTS (
-    SELECT 1 FROM inserted i JOIN Exams e ON e.ExamId = i.ExamId
-    WHERE e.Purpose IN ('speaking_practice','writing_practice') AND i.BandCode IS NOT NULL  -- UI-38
-  )
-    THROW 50032, 'A speaking- or writing-practice attempt cannot carry a certificate band.', 1;
   IF EXISTS (
     SELECT 1 FROM inserted i JOIN Exams e ON e.ExamId = i.ExamId
     WHERE e.Purpose IN ('speaking_practice','writing_practice') AND i.TotalScore IS NOT NULL  -- UI-45

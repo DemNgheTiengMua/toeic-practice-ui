@@ -135,6 +135,7 @@ public sealed class AiGradingProcessor(
                 db.AiGradingScores.RemoveRange(existingScores);
 
                 decimal totalScore = 0m;
+                decimal rubricMax = 0m;
                 foreach (var s in result.Scores)
                 {
                     var detail = criteriaDetails.FirstOrDefault(c => c.CriterionId == s.CriterionId);
@@ -150,6 +151,7 @@ public sealed class AiGradingProcessor(
                         Comment = s.Comment
                     });
                     totalScore += clampedScore;
+                    rubricMax += max;
                 }
 
                 fr.Status = FreeResponseStatus.Graded.ToCode();
@@ -158,6 +160,10 @@ public sealed class AiGradingProcessor(
                 grading.Model = result.Model ?? FakeAiGrader.DefaultModel;
                 grading.FailureReason = null;
                 grading.OverallScaled = totalScore;
+                // E1.3 (#148): the band this rubric belongs to on the certificate's own axis. A
+                // snapshot, so a later band edit does not rewrite history.
+                grading.BandCode = (await AttemptEngine.EstimateBandForRubricAsync(
+                    db, fr.Attempt.CertId, totalScore, rubricMax, cancellationToken))?.Code;
 
                 await db.SaveChangesAsync(cancellationToken);
 
@@ -195,8 +201,9 @@ public sealed class AiGradingProcessor(
                             if (purpose == ExamPurpose.SpeakingPractice.ToCode()
                                 || purpose == ExamPurpose.WritingPractice.ToCode())
                             {
+                                // A skill practice scores one rubric; the attempt itself claims no
+                                // certificate total or band. The estimate is on AiGradings.BandCode.
                                 attempt.TotalScore = null;
-                                attempt.BandCode = null;
                             }
 
                             await db.SaveChangesAsync(cancellationToken);

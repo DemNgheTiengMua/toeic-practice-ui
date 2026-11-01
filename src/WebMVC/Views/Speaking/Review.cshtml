@@ -230,11 +230,25 @@
     </div>
   </section>
 
-  <div class="alert alert--info">
-    <strong>No certificate band is shown for speaking practice alone.</strong>
-    Certificate bands are determined from a complete mock exam spanning all required skills.
-    See <a href="/exams">full mock exams</a> to take a full mock exam.
-  </div>
+  @if (!string.IsNullOrEmpty(Model.Review.EstimatedBandCode))
+  {
+    <div class="alert alert--info">
+      <strong>Estimated band: <span class="font-mono">@Model.Review.EstimatedBandCode</span>@(string.IsNullOrEmpty(Model.Review.EstimatedBandName) ? "" : $" — {Model.Review.EstimatedBandName}")</strong>
+      <p class="text-sm no-margin mt-1">
+        An estimate from this speaking rubric alone, placed on @Model.Review.CertCode's band scale. Your
+        certificate band is set by a full mock exam that covers every skill.
+      </p>
+    </div>
+  }
+  else
+  {
+    <div class="alert alert--warning">
+      <strong>@Model.Review.CertCode has no bands configured.</strong>
+      <p class="text-sm no-margin mt-1">
+        Your rubric scores above are complete, but there is no band scale to place them on yet.
+      </p>
+    </div>
+  }
 </div>
 
 <script src="~/js/speaking/review.js" asp-append-version="true"></script>

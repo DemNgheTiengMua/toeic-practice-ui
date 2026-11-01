@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BusinessObjects;
 using BusinessObjects.Entities;
+using DataAccess;
 using Microsoft.EntityFrameworkCore;
 
 namespace Services;
@@ -161,14 +162,52 @@ public sealed partial class AttemptEngine
             .OrderBy(b => b.MinTotal)
             .ToListAsync(cancellationToken);
 
-        var matchingBand = bands.FirstOrDefault(b => totalScore >= b.MinTotal && totalScore <= b.MaxTotal);
-        if (matchingBand is null && bands.Count > 0)
+        return MatchBandCode(totalScore, bands);
+    }
+
+    /// <summary>
+    /// The one band rule: the band whose range holds the score, else the nearest one below, else the
+    /// lowest band (a score under the table is not a refusal).
+    /// </summary>
+    public static string? MatchBandCode(int score, IReadOnlyList<ScoreBand> bands)
+    {
+        if (bands.Count == 0) return null;
+
+        var matchingBand = bands.FirstOrDefault(b => score >= b.MinTotal && score <= b.MaxTotal);
+        if (matchingBand is null)
         {
-            matchingBand = totalScore < bands[0].MinTotal
+            matchingBand = score < bands[0].MinTotal
                 ? bands[0]
-                : bands.LastOrDefault(b => totalScore >= b.MinTotal) ?? bands[^1];
+                : bands.LastOrDefault(b => score >= b.MinTotal) ?? bands[^1];
         }
 
         return matchingBand?.Code;
+    }
+
+    /// <summary>
+    /// E1.3 (#148): the band a single AI-graded skill's rubric total belongs to, on the certificate's
+    /// own band axis. The rubric fraction is converted with the same <see cref="ProjectOntoScale"/>
+    /// the engine uses, over the span of that certificate's own <c>ScoreBands</c> — a 10–990
+    /// certificate and a 0–9 one therefore place the same answer in different bands. The skill's own
+    /// score scale is not used here: it is absent for the writing and speaking skills (#146 left them
+    /// unconfigured), and a band is defined over the certificate's total, not over one skill's range.
+    /// </summary>
+    public static async Task<ScoreBand?> EstimateBandForRubricAsync(
+        CompanionDbContext db, int certId, decimal rubricTotal, decimal rubricMax, CancellationToken cancellationToken = default)
+    {
+        if (rubricMax <= 0m) return null;
+
+        var bands = await db.ScoreBands
+            .AsNoTracking()
+            .Where(b => b.CertId == certId)
+            .OrderBy(b => b.MinTotal)
+            .ToListAsync(cancellationToken);
+        if (bands.Count == 0) return null;
+
+        var fraction = Math.Clamp(rubricTotal / rubricMax, 0m, 1m);
+        var score = ProjectOntoScale(fraction, null, null, null, null, bands[0].MinTotal, bands[^1].MaxTotal, 1, 1);
+
+        var code = MatchBandCode(score, bands);
+        return bands.FirstOrDefault(b => b.Code == code);
     }
 }

@@ -43,7 +43,7 @@ An attempt at a mock exam; starting it costs credits and it ends with a scaled s
 A free attempt at a placement exam whose result seeds a learning path.
 
 **Skill practice attempt**:
-A paid speaking-practice or writing-practice attempt, AI-graded against a rubric, scored on that skill alone and never given a band.
+A paid speaking-practice or writing-practice attempt, AI-graded against a rubric, scored on that skill alone. The attempt claims no certificate total; the band its rubric lands in on that certificate's own bands is kept as an estimate on the grading.
 _Avoid_: Speaking practice session, writing practice session
 
 **Free response**:

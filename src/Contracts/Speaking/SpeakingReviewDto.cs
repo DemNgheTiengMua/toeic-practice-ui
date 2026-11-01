@@ -15,6 +15,8 @@ public record SpeakingReviewDto(
     decimal MaxScore,
     int? ScaledScore,
     IReadOnlyList<SpeakingQuestionReviewItemDto> Questions,
-    SpeakingQuestionReviewItemDto? LowestScoredQuestion
+    SpeakingQuestionReviewItemDto? LowestScoredQuestion,
+    string? EstimatedBandCode = null,
+    string? EstimatedBandName = null
 );
 

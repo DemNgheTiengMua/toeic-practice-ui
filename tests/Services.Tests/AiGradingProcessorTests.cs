@@ -221,6 +221,98 @@ public sealed class AiGradingProcessorTests(DatabaseFixture database)
         Assert.Equal("done", g2.Status);
     }
 
+    private async Task SeedBandsAsync(int certId, params (string Code, int Min, int Max)[] bands)
+    {
+        foreach (var (code, min, max) in bands)
+        {
+            await database.SqlAsync($"""
+                INSERT INTO ScoreBands (CertId, Code, Name, MinTotal, MaxTotal, DisplayOrder)
+                VALUES ({certId}, '{code}', N'{code}', {min}, {max}, 0);
+                """);
+        }
+    }
+
+    /// <summary>Starts a writing attempt on the exam, submits it, grades it and returns the bands the
+    /// gradings carry. <paramref name="grader"/> decides the rubric scores.</summary>
+    private async Task<(int attemptId, List<string?> gradingBands)> GradeWritingPracticeAsync(
+        string certCode, int examId, int q1Id, int q2Id, IAiGrader grader)
+    {
+        var userId = await SeedLearnerAsync(certCode, startingCredits: 3);
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var writingService = new WritingPracticeService(db, new LearnerService(db));
+
+        var info = await writingService.StartAttemptAsync(userId, examId);
+        await writingService.SaveDraftAsync(userId, info.AttemptId, q1Id, "A woman is reading a book on a train.");
+        await writingService.SaveDraftAsync(userId, info.AttemptId, q2Id, "Working from home provides flexibility to many employees.");
+        await writingService.SubmitAttemptAsync(userId, info.AttemptId);
+
+        await new AiGradingProcessor(db, grader).ProcessPendingGradingsAsync(10);
+
+        await using var dbCheck = DbContextFactory.Create(database.ConnectionString);
+        var bands = await dbCheck.AiGradings
+            .Where(g => g.FreeResponse.AttemptId == info.AttemptId)
+            .OrderBy(g => g.GradingId)
+            .Select(g => g.BandCode)
+            .ToListAsync();
+
+        return (info.AttemptId, bands);
+    }
+
+    [Fact]
+    public async Task ProcessPendingGradings_writes_the_certificates_own_band_for_a_writing_practice()
+    {
+        var certCode = Unique("GB01");
+        var (certId, examId, q1Id, q2Id) = await SeedWritingExamFixtureAsync(certCode);
+        await SeedBandsAsync(certId, ("A2", 225, 545), ("B1", 550, 780), ("B2", 785, 940));
+
+        var (attemptId, gradingBands) = await GradeWritingPracticeAsync(certCode, examId, q1Id, q2Id, new FakeAiGrader());
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var ownCodes = await db.ScoreBands.Where(b => b.CertId == certId).Select(b => b.Code).ToListAsync();
+
+        Assert.Equal(2, gradingBands.Count);
+        Assert.All(gradingBands, band =>
+        {
+            Assert.False(string.IsNullOrEmpty(band));
+            Assert.Contains(band!, ownCodes);
+        });
+
+        // The attempt still claims no certificate score: one skill's rubric is not "out of 990".
+        var attempt = await db.ExamAttempts.SingleAsync(a => a.AttemptId == attemptId);
+        Assert.Null(attempt.BandCode);
+        Assert.Null(attempt.TotalScore);
+
+        // The review page has something to render under "estimated band".
+        var review = await new WritingPracticeService(db, new LearnerService(db))
+            .GetAttemptReviewAsync(attempt.UserId, attemptId);
+        Assert.False(string.IsNullOrEmpty(review.EstimatedBandCode));
+        Assert.Contains(review.EstimatedBandCode!, ownCodes);
+    }
+
+    [Fact]
+    public async Task The_same_rubric_score_finds_its_band_in_each_certificates_own_table()
+    {
+        // Two certificates, the same 100% rubric result, two different band axes.
+        var wideCertCode = Unique("GB02");
+        var nineCertCode = Unique("GB03");
+        var (wideCertId, wideExamId, wideQ1, wideQ2) = await SeedWritingExamFixtureAsync(wideCertCode);
+        var (nineCertId, nineExamId, nineQ1, nineQ2) = await SeedWritingExamFixtureAsync(nineCertCode);
+
+        // A 10-990 axis, as a summed certificate stores it.
+        await SeedBandsAsync(wideCertId, ("A2", 225, 545), ("B1", 550, 780), ("B2", 785, 940), ("C1", 945, 990));
+        // A 0-9 axis, stored x10 as IELTS does: 40-50 is 4.0-5.0.
+        await SeedBandsAsync(nineCertId, ("B1", 40, 50), ("B2", 55, 65), ("C1", 70, 80), ("C2", 85, 90));
+
+        // 10.0 on every criterion is clamped to each section's 3.0 ceiling, i.e. a full rubric.
+        var (_, wideBands) = await GradeWritingPracticeAsync(wideCertCode, wideExamId, wideQ1, wideQ2, new CustomScoreGrader(10.0m));
+        var (_, nineBands) = await GradeWritingPracticeAsync(nineCertCode, nineExamId, nineQ1, nineQ2, new CustomScoreGrader(10.0m));
+
+        Assert.All(wideBands, band => Assert.Equal("C1", band));
+        // "C2" exists only on the 0-9 certificate: the lookup used that certificate's own table.
+        Assert.All(nineBands, band => Assert.Equal("C2", band));
+    }
+
     private sealed class CustomScoreGrader(decimal fixedScore) : IAiGrader
     {
         public Task<AiGradingResult> GradeAsync(AiGradingRequest request, CancellationToken cancellationToken = default)

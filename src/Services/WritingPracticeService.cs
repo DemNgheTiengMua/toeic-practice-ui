@@ -127,7 +127,7 @@ public sealed class WritingPracticeService(
             ExpiresAt = expiresAt,
             IsAutoSubmitted = false,
             TotalScore = null,
-            BandCode = null
+            BandCode = null   // E1.3 (#148): the estimate is per grading, on AiGradings.BandCode
         };
 
         db.ExamAttempts.Add(attempt);
@@ -372,7 +372,7 @@ public sealed class WritingPracticeService(
         attempt.Status = AttemptStatus.Submitted.ToCode();
         attempt.SubmittedAt = now;
         attempt.TotalScore = null;
-        attempt.BandCode = null;
+        attempt.BandCode = null;   // E1.3 (#148): the estimate is per grading, on AiGradings.BandCode
 
         await db.SaveChangesAsync(cancellationToken);
 
@@ -592,6 +592,12 @@ public sealed class WritingPracticeService(
             overallMaxScore += qMax;
         }
 
+        // E1.3 (#148): the estimate covers the whole practice, so an unanswered task lowers it — the
+        // same rubric total on a fully answered practice lands higher. This is deliberately the
+        // attempt-level number; AiGradings.BandCode keeps the per-task snapshot.
+        var estimatedBand = await AttemptEngine.EstimateBandForRubricAsync(
+            db, attempt.CertId, overallTotalScore, overallMaxScore, cancellationToken);
+
         return new WritingReviewView(
             attempt.AttemptId,
             attempt.ExamId,
@@ -602,6 +608,8 @@ public sealed class WritingPracticeService(
             answeredCount,
             overallTotalScore,
             overallMaxScore,
-            questionItems);
+            questionItems,
+            estimatedBand?.Code,
+            estimatedBand?.Name);
     }
 }

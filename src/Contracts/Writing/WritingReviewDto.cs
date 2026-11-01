@@ -13,6 +13,8 @@ public record WritingReviewDto(
     int AnsweredQuestions,
     decimal TotalScore,
     decimal MaxScore,
-    IReadOnlyList<WritingQuestionReviewItemDto> Questions
+    IReadOnlyList<WritingQuestionReviewItemDto> Questions,
+    string? EstimatedBandCode = null,
+    string? EstimatedBandName = null
 );
 

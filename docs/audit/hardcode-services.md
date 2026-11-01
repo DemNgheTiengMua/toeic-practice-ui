@@ -87,7 +87,7 @@ Total rows: 82 · BLOCKER 11 · WRONG_DISPLAY 52 · COSMETIC 19 · CLOSED_ENUM 1
 | docs/database-schema.sql:404 | CLOSED_ENUM | `PracticeSessions.Modality` permits only `listening, reading` (CK_Practice_Modality) plus a composite FK pinning it to the section's modality | free practice is impossible for speaking- or writing-only certificates | BLOCKER |
 | docs/database-schema.sql:369 | CLOSED_ENUM | trigger `trg_QGroups_SkillPracticeOneModality`: `speaking_practice` exams may hold only speaking sections, `writing_practice` only writing | any new single-skill purpose has no trigger arm and is unconstrained | WRONG_DISPLAY |
 | docs/database-schema.sql:1651 | CLOSED_ENUM | trigger `trg_CreditTransactions_ChargeMatchesExamPurpose` hardcodes `mock` / `placement` purpose names in the billing rule | a new purpose gets no defined charge behaviour | COSMETIC |
-| docs/database-schema.sql:587 | CLOSED_ENUM | trigger `trg_Attempts_NoBandForSpeakingPractice` forbids BandCode/TotalScore for purposes `speaking_practice, writing_practice` | a new free-response purpose would be allowed to carry a certificate band | WRONG_DISPLAY |
+| docs/database-schema.sql:587 | CLOSED_ENUM | trigger `trg_Attempts_NoTotalScoreForSkillPractice` forbids TotalScore for purposes `speaking_practice, writing_practice` (the band arm was dropped by #148) | a new free-response purpose would be allowed to carry a certificate total | WRONG_DISPLAY |
 
 ## Closed vocabularies (cannot be changed by data)
 
@@ -104,7 +104,7 @@ Total rows: 82 · BLOCKER 11 · WRONG_DISPLAY 52 · COSMETIC 19 · CLOSED_ENUM 1
 | Sections.LayoutType | `STANDARD_VERTICAL`, `SPLIT_HORIZONTAL`, `MEDIA_CARD`, `CLUSTER3` | **C# enum only** — schema:50 declares a default but **no CHECK constraint**, so the DB accepts any string |
 | Sections.OptionCount | 2–6 | DB CHECK `CK_Sections_OptionCount` (schema:52); every code path that reads it (Groups.cs:279, Prompts.cs:164, Ingest.cs:189, Questions.cs:369, Templates.cs:100/112) assumes only 3 or 4 |
 | Single-skill exam binding | `speaking_practice` ⇒ speaking sections only; `writing_practice` ⇒ writing only | trigger `trg_QGroups_SkillPracticeOneModality` (schema:369-394) **and** C# re-implementations at AdminExamService.Validation.cs:23/28 and QuestionImportService.BlueprintValidation.cs:60-68 |
-| Free-response attempt shape | attempts with purpose `speaking_practice`/`writing_practice` may carry neither `BandCode` nor `TotalScore` | trigger `trg_Attempts_NoBandForSpeakingPractice` (schema:587-601) |
+| Free-response attempt shape | attempts with purpose `speaking_practice`/`writing_practice` may carry no `TotalScore`; their band is an estimate on `AiGradings.BandCode` | trigger `trg_Attempts_NoTotalScoreForSkillPractice` (schema:600-612) |
 | TotalScore derivation | `sum` / `avg_half_step` / `avg_whole` / `independent` | trigger `trg_Attempts_TotalMatchesSkills` (schema:604-659) + re-derived in C# at AttemptEngine.Submission.cs:442 |
 | PathModuleItems.ItemType | `practice_section`, `mock_exam`, `ai_task`, `mentor`, `lesson` | DB CHECK `CK_PMI_ItemType` (schema:1217) + ref-matches-type CHECK (schema:1222) + trigger `trg_PMI_AiTaskRefsSkillPracticeExam` (schema:1143) |
 | PracticeSource / FeedbackMode | `all`, `wrong_before`, `unseen` / `immediate`, `end` | DB CHECK (schema:411, 413) + C# enums |

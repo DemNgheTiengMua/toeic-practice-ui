@@ -79,10 +79,14 @@ END TRY BEGIN CATCH IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW; PRINT
 INSERT INTO CreditTransactions (UserId,Reason,Delta,AttemptId) VALUES (@u,'ai_grading',-1,@a);
 PRINT 'accepted ai_grading charge on writing practice';
 INSERT INTO ScoreBands (CertId,Code,Name,MinTotal,MaxTotal) VALUES (@c,'A1',N'A1',120,224);
+-- E1.3 (#148): a writing-practice attempt may carry a band (the estimate is on AiGradings.BandCode),
+-- but never a certificate total.
+UPDATE ExamAttempts SET BandCode='A1' WHERE AttemptId=@a;
+PRINT 'accepted a band on writing practice';
 BEGIN TRY
-  UPDATE ExamAttempts SET BandCode='A1' WHERE AttemptId=@a;
-  THROW 50000,'EXPECT_REJECT FAILED: band on writing practice accepted',1;
-END TRY BEGIN CATCH IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW; PRINT 'rejected band on writing practice'; END CATCH
+  UPDATE ExamAttempts SET TotalScore=180 WHERE AttemptId=@a;
+  THROW 50000,'EXPECT_REJECT FAILED: total score on writing practice accepted',1;
+END TRY BEGIN CATCH IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW; PRINT 'rejected total score on writing practice'; END CATCH
 -- UI-42: hint on a practice question, and whether it was used
 INSERT INTO QuestionGroups (ExamId,CertId,SectionId) VALUES (@ex,@c,@p5); DECLARE @gp INT=SCOPE_IDENTITY();
 INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,DifficultyLevel,QuestionType,Hint)

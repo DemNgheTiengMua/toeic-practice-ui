@@ -56,12 +56,15 @@ INSERT INTO ExamAttempts (UserId,ExamId,CertId,ExpiresAt) VALUES (@u,@pl,@c,SYSD
 INSERT INTO PlacementTests (UserId,CertId,ExamId,AttemptId) VALUES (@u,@c,@pl,@pa);
 PRINT 'accepted placement linked to its attempt';
 
--- UI-19: no band on a speaking-practice attempt
+-- E1.3 (#148): a speaking-practice attempt carries no certificate band of its own (the estimate lives
+-- on AiGradings.BandCode), but it is no longer refused either. Only TotalScore stays forbidden.
 INSERT INTO ScoreBands (CertId,Code,Name,MinTotal,MaxTotal) VALUES (@c,'A1',N'A1',120,224);
+INSERT INTO ExamAttempts (UserId,ExamId,CertId,ExpiresAt,BandCode) VALUES (@u,@spx,@c,SYSDATETIMEOFFSET(),'A1'); DECLARE @spa INT=SCOPE_IDENTITY();
+PRINT 'accepted a band on a speaking-practice attempt';
 BEGIN TRY
-  INSERT INTO ExamAttempts (UserId,ExamId,CertId,ExpiresAt,BandCode) VALUES (@u,@spx,@c,SYSDATETIMEOFFSET(),'A1');
-  THROW 50000,'EXPECT_REJECT FAILED: band on speaking practice accepted',1;
-END TRY BEGIN CATCH IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW; PRINT 'rejected band on speaking practice'; END CATCH
+  UPDATE ExamAttempts SET TotalScore=180 WHERE AttemptId=@spa;
+  THROW 50000,'EXPECT_REJECT FAILED: total score on speaking practice accepted',1;
+END TRY BEGIN CATCH IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW; PRINT 'rejected total score on speaking practice'; END CATCH
 
 -- UI-20: section criteria + per-section ceiling
 INSERT INTO GradingCriteria (CertId,SkillId,Code,Name,MaxScore) VALUES (@c,@spk,'PRON',N'Pronunciation',5); DECLARE @pron INT=SCOPE_IDENTITY();

@@ -147,6 +147,8 @@ public static partial class SpeakingEndpoints
                     c.Score,
                     c.MaxScore,
                     c.Comment)).ToList())).ToList(),
-            lowestDto);
+            lowestDto,
+            review.EstimatedBandCode,
+            review.EstimatedBandName);
     }
 }

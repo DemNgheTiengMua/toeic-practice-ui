@@ -121,8 +121,8 @@ public sealed class SpeakingPracticeService(
             StartedAt = now,
             ExpiresAt = expiresAt,
             IsAutoSubmitted = false,
-            TotalScore = null, // UI-45 / trg_Attempts_NoBandForSpeakingPractice
-            BandCode = null    // UI-38 / trg_Attempts_NoBandForSpeakingPractice
+            TotalScore = null, // UI-45 / trg_Attempts_NoTotalScoreForSkillPractice
+            BandCode = null    // E1.3 (#148): the estimate is per grading, on AiGradings.BandCode
         };
 
         db.ExamAttempts.Add(attempt);
@@ -419,8 +419,8 @@ public sealed class SpeakingPracticeService(
 
         attempt.Status = AttemptStatus.Submitted.ToCode();
         attempt.SubmittedAt = now;
-        attempt.TotalScore = null; // trg_Attempts_NoBandForSpeakingPractice (50041)
-        attempt.BandCode = null;   // trg_Attempts_NoBandForSpeakingPractice (50032)
+        attempt.TotalScore = null; // trg_Attempts_NoTotalScoreForSkillPractice (50041)
+        attempt.BandCode = null;   // E1.3 (#148): the estimate is per grading, on AiGradings.BandCode
 
         await db.SaveChangesAsync(cancellationToken);
 
@@ -642,6 +642,9 @@ public sealed class SpeakingPracticeService(
             scaledScore = (int)Math.Round((overallTotalScore / overallMaxScore) * 200m, MidpointRounding.AwayFromZero);
         }
 
+        var estimatedBand = await AttemptEngine.EstimateBandForRubricAsync(
+            db, attempt.CertId, overallTotalScore, overallMaxScore, cancellationToken);
+
         return new SpeakingReviewView(
             attempt.AttemptId,
             attempt.ExamId,
@@ -654,7 +657,9 @@ public sealed class SpeakingPracticeService(
             overallMaxScore,
             scaledScore,
             questionItems,
-            lowest);
+            lowest,
+            estimatedBand?.Code,
+            estimatedBand?.Name);
     }
 
     public async Task<FileStreamResultInfo?> GetAudioFileAsync(int userId, int attemptId, int questionId, CancellationToken cancellationToken = default)
