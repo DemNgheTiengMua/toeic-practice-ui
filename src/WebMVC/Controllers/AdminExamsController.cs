@@ -143,7 +143,6 @@ public sealed class AdminExamsController(
         [FromForm] string? certCode,
         [FromForm] string? title,
         [FromForm] string? purpose,
-        [FromForm] string? status,
         [FromForm] string? targetBand,
         [FromForm] int? difficultyLevel,
         [FromForm] string? blueprintJson,
@@ -174,7 +173,6 @@ public sealed class AdminExamsController(
                     CertCode: certCode,
                     Title: title,
                     Purpose: purpose ?? "mock",
-                    Status: status ?? "draft",
                     TargetBand: targetBand,
                     DifficultyLevel: difficultyLevel ?? 3);
             }
@@ -235,7 +233,6 @@ public sealed class AdminExamsController(
                 model.Name,
                 model.DurationMinutes,
                 model.Purpose,
-                model.Status,
                 model.Description,
                 model.SourceName,
                 model.InternalNote,
@@ -313,7 +310,6 @@ public sealed class AdminExamsController(
                 model.Name,
                 model.DurationMinutes,
                 model.Purpose,
-                model.Status,
                 model.Description,
                 model.SourceName,
                 model.InternalNote,

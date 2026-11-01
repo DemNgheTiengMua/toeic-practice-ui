@@ -84,9 +84,9 @@ public sealed class MockExamServiceTests(DatabaseFixture database)
             DECLARE @sL INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'LIST');
             DECLARE @sR INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'READ');
 
-            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder) VALUES
-              (@sL, @cert, 'listening', 'P1', N'Photos', 1),
-              (@sR, @cert, 'reading', 'P5', N'Sentences', 2);
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, ExpectedQuestionCount, DisplayOrder) VALUES
+              (@sL, @cert, 'listening', 'P1', N'Photos', 1, 1),
+              (@sR, @cert, 'reading', 'P5', N'Sentences', 1, 2);
             DECLARE @secL INT = (SELECT SectionId FROM Sections WHERE CertId = @cert AND Code = 'P1');
             DECLARE @secR INT = (SELECT SectionId FROM Sections WHERE CertId = @cert AND Code = 'P5');
 
@@ -151,9 +151,9 @@ public sealed class MockExamServiceTests(DatabaseFixture database)
               (@cert, 'WRITE', N'Writing', 'writing', 2, 60, 100, 20);
             DECLARE @listeningSkill INT = (SELECT SkillId FROM Skills WHERE CertId=@cert AND Code='LIST');
             DECLARE @writingSkill INT = (SELECT SkillId FROM Skills WHERE CertId=@cert AND Code='WRITE');
-            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder) VALUES
-              (@listeningSkill, @cert, 'listening', 'L1', N'Listening', 1),
-              (@writingSkill, @cert, 'writing', 'W1', N'Writing', 1);
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, ExpectedQuestionCount, DisplayOrder) VALUES
+              (@listeningSkill, @cert, 'listening', 'L1', N'Listening', 1, 1),
+              (@writingSkill, @cert, 'writing', 'W1', N'Writing', 1, 1);
             DECLARE @listeningSection INT = (SELECT SectionId FROM Sections WHERE CertId=@cert AND Code='L1');
             DECLARE @writingSection INT = (SELECT SectionId FROM Sections WHERE CertId=@cert AND Code='W1');
             INSERT INTO ScoreBands (CertId, Code, Name, MinTotal, MaxTotal, DisplayOrder) VALUES
@@ -614,8 +614,8 @@ public sealed class MockExamServiceTests(DatabaseFixture database)
         await database.SqlAsync($"""
             INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder, DurationMinutes)
             VALUES ({certId}, 'SPK', N'Speaking', 'speaking', 3, 20);
-            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder)
-            VALUES ((SELECT SkillId FROM Skills WHERE CertId = {certId} AND Code = 'SPK'), {certId}, 'speaking', 'S1', N'Read aloud', 3);
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, ExpectedQuestionCount, DisplayOrder)
+            VALUES ((SELECT SkillId FROM Skills WHERE CertId = {certId} AND Code = 'SPK'), {certId}, 'speaking', 'S1', N'Read aloud', 1, 3);
             UPDATE Sections SET ExpectedQuestionCount = 6 WHERE CertId = {certId} AND Code = 'P1';
             """);
         var userId = await SeedLearnerAsync(certCode);

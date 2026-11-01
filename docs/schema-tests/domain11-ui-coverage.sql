@@ -7,8 +7,8 @@ INSERT INTO Certificates (Code,Name,IsActive) VALUES ('TOEIC',N'T',1); DECLARE @
 INSERT INTO Skills (CertId,Code,Name,Modality,DisplayOrder,DurationMinutes) VALUES (@c,'RD',N'Reading','reading',1,75); DECLARE @rd INT=SCOPE_IDENTITY();
 INSERT INTO Skills (CertId,Code,Name,Modality,DisplayOrder) VALUES (@c,'SPK',N'Speaking','speaking',2); DECLARE @spk INT=SCOPE_IDENTITY();
 INSERT INTO Sections (SkillId,CertId,Modality,Code,Name,OptionCount,ExpectedQuestionCount) VALUES (@rd,@c,'reading','P5',N'Part 5',4,30); DECLARE @p5 INT=SCOPE_IDENTITY();
-INSERT INTO Sections (SkillId,CertId,Modality,Code,Name) VALUES (@spk,@c,'speaking','S1',N'Q1-10'); DECLARE @s1 INT=SCOPE_IDENTITY();
-INSERT INTO Sections (SkillId,CertId,Modality,Code,Name) VALUES (@spk,@c,'speaking','S11',N'Q11'); DECLARE @s11 INT=SCOPE_IDENTITY();
+INSERT INTO Sections (SkillId,CertId,Modality,Code,Name,ExpectedQuestionCount) VALUES (@spk,@c,'speaking','S1',N'Q1-10',10); DECLARE @s1 INT=SCOPE_IDENTITY();
+INSERT INTO Sections (SkillId,CertId,Modality,Code,Name,ExpectedQuestionCount) VALUES (@spk,@c,'speaking','S11',N'Q11',1); DECLARE @s11 INT=SCOPE_IDENTITY();
 INSERT INTO Exams (CertId,Name,Status,DurationMinutes) VALUES (@c,N'ETS 1','published',120); DECLARE @ex INT=SCOPE_IDENTITY();
 INSERT INTO Exams (CertId,Name,Status,DurationMinutes,Purpose) VALUES (@c,N'Placement Std','published',30,'placement'); DECLARE @pl INT=SCOPE_IDENTITY();
 INSERT INTO Exams (CertId,Name,Status,DurationMinutes,Purpose) VALUES (@c,N'Speaking 1','published',20,'speaking_practice'); DECLARE @spx INT=SCOPE_IDENTITY();

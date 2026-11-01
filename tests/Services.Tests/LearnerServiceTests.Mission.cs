@@ -16,9 +16,9 @@ public sealed partial class LearnerServiceTests
             DECLARE @listSkill INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'LIST');
             DECLARE @readSkill INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'READ');
 
-            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder) VALUES
-              (@listSkill, @cert, 'listening', 'P1', N'Photographs {code}', 1),
-              (@readSkill, @cert, 'reading', 'P5', N'Incomplete Sentences {code}', 2);
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, ExpectedQuestionCount, DisplayOrder) VALUES
+              (@listSkill, @cert, 'listening', 'P1', N'Photographs {code}', 1, 1),
+              (@readSkill, @cert, 'reading', 'P5', N'Incomplete Sentences {code}', 1, 2);
 
             INSERT INTO ScoreBands (CertId, Code, Name, MinTotal, MaxTotal, DisplayOrder) VALUES
               (@cert, 'LOW', N'Low band', 0, 499, 1),

@@ -59,7 +59,9 @@ public sealed partial class AdminExamService
             Name = trimmedName,
             DurationMinutes = request.DurationMinutes,
             Purpose = request.Purpose.ToCode(),
-            Status = request.Status.ToCode(),
+            // #157: always a draft. Publishing has one door, POST /{id}/publish, which runs the
+            // full audit; a client-supplied status here used to skip it entirely.
+            Status = ExamStatus.Draft.ToCode(),
             Description = Normalize(request.Description),
             SourceName = Normalize(request.SourceName),
             InternalNote = Normalize(request.InternalNote),
@@ -166,7 +168,8 @@ public sealed partial class AdminExamService
         exam.Name = trimmedName;
         exam.DurationMinutes = request.DurationMinutes;
         exam.Purpose = request.Purpose.ToCode();
-        exam.Status = request.Status.ToCode();
+        // #157: Status is deliberately not assigned. It reaches 'published' only through
+        // PublishExamAsync, which runs the readiness audit first.
         exam.Description = Normalize(request.Description);
         exam.SourceName = Normalize(request.SourceName);
         exam.InternalNote = Normalize(request.InternalNote);
@@ -189,9 +192,11 @@ public sealed partial class AdminExamService
         var audit = await AuditExamPublishReadinessAsync(examId, cancellationToken);
         if (!audit.CanPublish || audit.BlockingErrorCount > 0)
         {
+            // #157: the admin has to fix it from this text, so every blocking issue arrives with its
+            // audit code. "Exam is incomplete" alone says nothing about which of the ~26 checks failed.
             var errs = audit.Issues
                 .Where(i => i.Severity == "error")
-                .Select(i => i.Message)
+                .Select(i => $"{i.Code}: {i.Message}")
                 .Concat(audit.MissingItems)
                 .Distinct()
                 .ToList();

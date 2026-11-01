@@ -84,9 +84,9 @@ public sealed class SchemaAndSixAxisModelTests(DatabaseFixture database)
                 DECLARE @skill1 INT = (SELECT SkillId FROM Skills WHERE CertId = @certHalf AND Code = 'S1');
                 DECLARE @skill2 INT = (SELECT SkillId FROM Skills WHERE CertId = @certHalf AND Code = 'S2');
 
-                INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder) VALUES
-                  (@skill1, @certHalf, 'listening', 'SEC1', N'Section 1', 1),
-                  (@skill2, @certHalf, 'reading', 'SEC2', N'Section 2', 2);
+                INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, ExpectedQuestionCount, DisplayOrder) VALUES
+                  (@skill1, @certHalf, 'listening', 'SEC1', N'Section 1', 1, 1),
+                  (@skill2, @certHalf, 'reading', 'SEC2', N'Section 2', 1, 2);
 
                 INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose)
                 VALUES (@certHalf, N'Exam 1', 'published', 60, 'mock');
@@ -132,8 +132,8 @@ public sealed class SchemaAndSixAxisModelTests(DatabaseFixture database)
                   (@certIndep, 'S1', N'Skill 1', 'speaking', 1);
                 DECLARE @skillIndep INT = SCOPE_IDENTITY();
 
-                INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder) VALUES
-                  (@skillIndep, @certIndep, 'speaking', 'SEC1', N'Section 1', 1);
+                INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, ExpectedQuestionCount, DisplayOrder) VALUES
+                  (@skillIndep, @certIndep, 'speaking', 'SEC1', N'Section 1', 1, 1);
 
                 INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose)
                 VALUES (@certIndep, N'Indep Exam', 'published', 20, 'mock');
@@ -212,8 +212,7 @@ public sealed class SchemaAndSixAxisModelTests(DatabaseFixture database)
             db.Skills.Add(skill);
             await db.SaveChangesAsync();
 
-            var section = new Section
-            {
+            var section = new Section {
                 CertId = cert.CertId,
                 SkillId = skill.SkillId,
                 Modality = "writing",
@@ -232,6 +231,7 @@ public sealed class SchemaAndSixAxisModelTests(DatabaseFixture database)
                 RequireImage = false,
                 RequiredKeywordCount = 0,
                 AllowedComponentTypesJson = "[\"free_response\"]",
+                ExpectedQuestionCount = 1,
                 ToolsConfigJson = "{\"allowHighlight\":true,\"allowNotes\":true,\"showWordCount\":true}"
             };
             db.Sections.Add(section);
@@ -250,8 +250,8 @@ public sealed class SchemaAndSixAxisModelTests(DatabaseFixture database)
             await Assert.ThrowsAsync<SqlException>(async () =>
             {
                 await RunSqlAsync(connectionString, $"""
-                    INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, NavigationMode)
-                    VALUES ({skill.SkillId}, {cert.CertId}, 'writing', 'BAD_NAV', N'Bad Nav', 'INVALID_NAV');
+                    INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, ExpectedQuestionCount, NavigationMode)
+                    VALUES ({skill.SkillId}, {cert.CertId}, 'writing', 'BAD_NAV', N'Bad Nav', 1, 'INVALID_NAV');
                     """);
             });
         }
@@ -277,7 +277,7 @@ public sealed class SchemaAndSixAxisModelTests(DatabaseFixture database)
             db.Skills.Add(skill);
             await db.SaveChangesAsync();
 
-            var section = new Section { CertId = cert.CertId, SkillId = skill.SkillId, Modality = "reading", Code = "P5", Name = "Part 5" };
+            var section = new Section { CertId = cert.CertId, SkillId = skill.SkillId, Modality = "reading", Code = "P5", Name = "Part 5", ExpectedQuestionCount = 1 };
             db.Sections.Add(section);
             await db.SaveChangesAsync();
 
@@ -357,7 +357,7 @@ public sealed class SchemaAndSixAxisModelTests(DatabaseFixture database)
             db.Skills.Add(skill);
             await db.SaveChangesAsync();
 
-            var section = new Section { CertId = cert.CertId, SkillId = skill.SkillId, Modality = "listening", Code = "P1", Name = "Part 1" };
+            var section = new Section { CertId = cert.CertId, SkillId = skill.SkillId, Modality = "listening", Code = "P1", Name = "Part 1", ExpectedQuestionCount = 1 };
             db.Sections.Add(section);
             await db.SaveChangesAsync();
 
@@ -428,7 +428,7 @@ public sealed class SchemaAndSixAxisModelTests(DatabaseFixture database)
             db.Skills.Add(skill);
             await db.SaveChangesAsync();
 
-            var section = new Section { CertId = cert.CertId, SkillId = skill.SkillId, Modality = "reading", Code = "SEC", Name = "Section" };
+            var section = new Section { CertId = cert.CertId, SkillId = skill.SkillId, Modality = "reading", Code = "SEC", Name = "Section", ExpectedQuestionCount = 1 };
             db.Sections.Add(section);
             await db.SaveChangesAsync();
 

@@ -8,5 +8,5 @@ public sealed record AdminSectionOptionDto(
     string Code,
     string Name,
     ModalityDto Modality,
-    int? ExpectedQuestionCount,
+    int ExpectedQuestionCount,
     int DisplayOrder);

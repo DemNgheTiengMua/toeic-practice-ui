@@ -11,7 +11,7 @@ PRINT 'valid rubric criterion accepted';
 -- content chain to get real FreeResponses rows for AiGradings FKs
 INSERT INTO Roles (Code,Name) VALUES ('student',N'S'); DECLARE @role0 INT=SCOPE_IDENTITY();
 INSERT INTO Users (RoleId,Email,PasswordHash) VALUES (@role0,'m9@x.com',0x00); DECLARE @usr0 INT=SCOPE_IDENTITY();
-INSERT INTO Sections (SkillId,CertId,Modality,Code,Name,OptionCount,DisplayOrder) VALUES (@sk,@c,'speaking','S0',N'Warmup',NULL,1);
+INSERT INTO Sections (SkillId,CertId,Modality,Code,Name,OptionCount,ExpectedQuestionCount,DisplayOrder) VALUES (@sk,@c,'speaking','S0',N'Warmup',NULL,2,1);
 DECLARE @sec0 INT=SCOPE_IDENTITY();
 INSERT INTO Exams (CertId,Name,Status,DurationMinutes) VALUES (@c,N'M9 Exam','published',60);
 DECLARE @exam0 INT=SCOPE_IDENTITY();
@@ -52,7 +52,7 @@ INSERT INTO AiGradingScores (GradingId,CriterionId,SkillId,Score) VALUES (@gradi
 PRINT 'valid rubric score accepted';
 -- M-6: attempt cannot reach graded while a free response is still pending_ai
 INSERT INTO Users (RoleId,Email,PasswordHash) VALUES (@role0,'m6@x.com',0x00); DECLARE @usr INT=SCOPE_IDENTITY();
-INSERT INTO Sections (SkillId,CertId,Modality,Code,Name,OptionCount,DisplayOrder) VALUES (@sk,@c,'speaking','S1',N'Interview',NULL,1);
+INSERT INTO Sections (SkillId,CertId,Modality,Code,Name,OptionCount,ExpectedQuestionCount,DisplayOrder) VALUES (@sk,@c,'speaking','S1',N'Interview',NULL,3,1);
 DECLARE @sec INT=SCOPE_IDENTITY();
 INSERT INTO Exams (CertId,Name,Status,DurationMinutes) VALUES (@c,N'M6 Exam','published',60);
 DECLARE @exam INT=SCOPE_IDENTITY();

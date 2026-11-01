@@ -54,11 +54,8 @@
                     @foreach (var sec in skill.Sections)
                     {
                       <li>
-                        @sec.Code — @sec.Name
-                        @if (sec.ExpectedQuestionCount is not null)
-                        {
-                          <text>(@sec.ExpectedQuestionCount)</text>
-                        }
+                        @sec.Code › @sec.Name
+                        <text>(@sec.ExpectedQuestionCount)</text>
                       </li>
                     }
                   </ul>

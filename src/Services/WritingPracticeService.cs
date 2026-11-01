@@ -54,7 +54,7 @@ public sealed class WritingPracticeService(
                 s.SectionId,
                 s.Code,
                 s.Name,
-                s.ExpectedQuestionCount ?? 0,
+                s.ExpectedQuestionCount,
                 null,
                 s.DisplayOrder))
             .ToListAsync(cancellationToken);

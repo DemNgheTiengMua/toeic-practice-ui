@@ -126,9 +126,9 @@ public sealed class PlacementServiceTests(DatabaseFixture database)
             DECLARE @sL INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'LIST');
             DECLARE @sR INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'READ');
 
-            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder) VALUES
-              (@sL, @cert, 'listening', 'P1', N'Photos', 1),
-              (@sR, @cert, 'reading', 'P5', N'Sentences', 2);
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, ExpectedQuestionCount, DisplayOrder) VALUES
+              (@sL, @cert, 'listening', 'P1', N'Photos', 1, 1),
+              (@sR, @cert, 'reading', 'P5', N'Sentences', 1, 2);
             DECLARE @secL INT = (SELECT SectionId FROM Sections WHERE CertId = @cert AND Code = 'P1');
             DECLARE @secR INT = (SELECT SectionId FROM Sections WHERE CertId = @cert AND Code = 'P5');
 
@@ -696,11 +696,11 @@ public sealed class PlacementServiceTests(DatabaseFixture database)
             DECLARE @sW INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'WRIT');
             DECLARE @sR INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'READ');
 
-            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder, NavigationMode) VALUES
-              (@sW, @cert, 'writing', 'W1', N'Writing tasks', 1, 'HYBRID_GROUP_LOCKED');
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder, ExpectedQuestionCount, NavigationMode) VALUES
+              (@sW, @cert, 'writing', 'W1', N'Writing tasks', 1, 1, 'HYBRID_GROUP_LOCKED');
             DECLARE @secW INT = SCOPE_IDENTITY();
-            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder) VALUES
-              (@sR, @cert, 'reading', 'R1', N'Reading', 2);
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, ExpectedQuestionCount, DisplayOrder) VALUES
+              (@sR, @cert, 'reading', 'R1', N'Reading', 1, 2);
             DECLARE @secR INT = SCOPE_IDENTITY();
 
             INSERT INTO ScoreBands (CertId, Code, Name, MinTotal, MaxTotal, DisplayOrder) VALUES
@@ -747,8 +747,8 @@ public sealed class PlacementServiceTests(DatabaseFixture database)
               (@cert, 'WRIT', N'Writing', 'writing', 1, 100, 200, 100);
             DECLARE @sW INT = SCOPE_IDENTITY();
 
-            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder) VALUES
-              (@sW, @cert, 'writing', 'W1', N'Writing Section', 1);
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, ExpectedQuestionCount, DisplayOrder) VALUES
+              (@sW, @cert, 'writing', 'W1', N'Writing Section', 1, 1);
             DECLARE @secW INT = SCOPE_IDENTITY();
 
             INSERT INTO ScoreBands (CertId, Code, Name, MinTotal, MaxTotal, DisplayOrder) VALUES

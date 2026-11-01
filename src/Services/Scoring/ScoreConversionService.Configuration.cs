@@ -79,8 +79,8 @@ public sealed partial class ScoreConversionService
                 .ToList();
 
             int expectedQuestions = sections
-                .Where(s => s.SkillId == skill.SkillId && s.ExpectedQuestionCount.HasValue)
-                .Sum(s => s.ExpectedQuestionCount!.Value);
+                .Where(s => s.SkillId == skill.SkillId)
+                .Sum(s => s.ExpectedQuestionCount);
 
             int maxQuestions = expectedQuestions > 0
                 ? expectedQuestions

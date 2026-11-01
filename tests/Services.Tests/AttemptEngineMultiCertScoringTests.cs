@@ -72,9 +72,9 @@ public sealed class AttemptEngineMultiCertScoringTests(DatabaseFixture database)
             DECLARE @listening INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'LIST');
             DECLARE @reading INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'READ');
 
-            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder) VALUES
-              (@listening, @cert, 'listening', 'L1', N'Listening', 1),
-              (@reading, @cert, 'reading', 'R1', N'Reading', 2);
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, ExpectedQuestionCount, DisplayOrder) VALUES
+              (@listening, @cert, 'listening', 'L1', N'Listening', 1, 1),
+              (@reading, @cert, 'reading', 'R1', N'Reading', 1, 2);
             DECLARE @listeningSection INT = (SELECT SectionId FROM Sections WHERE CertId = @cert AND Code = 'L1');
             DECLARE @readingSection INT = (SELECT SectionId FROM Sections WHERE CertId = @cert AND Code = 'R1');
 

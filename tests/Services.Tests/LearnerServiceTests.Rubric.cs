@@ -19,8 +19,8 @@ public sealed partial class LearnerServiceTests
             VALUES (@cert, 'WRIT', N'Writing', 'writing', 2);
             DECLARE @skill INT = SCOPE_IDENTITY();
 
-            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder)
-            VALUES (@skill, @cert, 'writing', 'W1', N'Essay {certCode}', 2);
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, ExpectedQuestionCount, DisplayOrder)
+            VALUES (@skill, @cert, 'writing', 'W1', N'Essay {certCode}', 1, 2);
             DECLARE @sec INT = SCOPE_IDENTITY();
 
             INSERT INTO GradingCriteria (CertId, SkillId, Code, Name, MaxScore, Weight, DisplayOrder) VALUES
@@ -86,7 +86,7 @@ public sealed partial class LearnerServiceTests
             -- Seed speaking rubric for learner2 on certA, and for learner1 on certB
             INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder) VALUES (@certA, 'SPK', N'Speaking', 'speaking', 2);
             DECLARE @skillA INT = SCOPE_IDENTITY();
-            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder) VALUES (@skillA, @certA, 'speaking', 'S1', N'Read Aloud', 2);
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, ExpectedQuestionCount, DisplayOrder) VALUES (@skillA, @certA, 'speaking', 'S1', N'Read Aloud', 1, 2);
             DECLARE @secA INT = SCOPE_IDENTITY();
             INSERT INTO GradingCriteria (CertId, SkillId, Code, Name, MaxScore, Weight, DisplayOrder) VALUES (@certA, @skillA, 'PRON', N'Pronunciation', 5.00, 1.00, 1);
             DECLARE @critA INT = SCOPE_IDENTITY();
@@ -112,7 +112,7 @@ public sealed partial class LearnerServiceTests
             -- Cert B for learner1
             INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder) VALUES (@certB, 'SPK', N'Speaking', 'speaking', 2);
             DECLARE @skillB INT = SCOPE_IDENTITY();
-            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder) VALUES (@skillB, @certB, 'speaking', 'S1', N'Read Aloud', 2);
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, ExpectedQuestionCount, DisplayOrder) VALUES (@skillB, @certB, 'speaking', 'S1', N'Read Aloud', 1, 2);
             DECLARE @secB INT = SCOPE_IDENTITY();
             INSERT INTO GradingCriteria (CertId, SkillId, Code, Name, MaxScore, Weight, DisplayOrder) VALUES (@certB, @skillB, 'FLUE', N'Fluency', 5.00, 1.00, 1);
             DECLARE @critB INT = SCOPE_IDENTITY();

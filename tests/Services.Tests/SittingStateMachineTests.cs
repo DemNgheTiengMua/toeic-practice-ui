@@ -50,9 +50,9 @@ public sealed class SittingStateMachineTests(DatabaseFixture database)
             DECLARE @sL INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'LIST');
             DECLARE @sR INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'READ');
 
-            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder, NavigationMode) VALUES
-              (@sL, @cert, 'listening', 'P1', N'Photos', 1, 'FULL_SANDBOX'),
-              (@sR, @cert, 'reading', 'P5', N'Sentences', 2, 'FULL_SANDBOX');
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder, ExpectedQuestionCount, NavigationMode) VALUES
+              (@sL, @cert, 'listening', 'P1', N'Photos', 1, 1, 'FULL_SANDBOX'),
+              (@sR, @cert, 'reading', 'P5', N'Sentences', 2, 1, 'FULL_SANDBOX');
             DECLARE @secL INT = (SELECT SectionId FROM Sections WHERE CertId = @cert AND Code = 'P1');
             DECLARE @secR INT = (SELECT SectionId FROM Sections WHERE CertId = @cert AND Code = 'P5');
 
@@ -130,8 +130,8 @@ public sealed class SittingStateMachineTests(DatabaseFixture database)
               (@cert, 'READ', N'Reading', 'reading', 1, 60, 0, 100, 5);
             DECLARE @skill INT = SCOPE_IDENTITY();
 
-            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder, NavigationMode, UnitCount) VALUES
-              (@skill, @cert, 'reading', 'ADAPT_R', N'Adaptive Reading', 1, 'UNIT_LOCKED_SANDBOX', 2);
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder, NavigationMode, ExpectedQuestionCount, UnitCount) VALUES
+              (@skill, @cert, 'reading', 'ADAPT_R', N'Adaptive Reading', 1, 'UNIT_LOCKED_SANDBOX', 1, 2);
             DECLARE @sec INT = SCOPE_IDENTITY();
 
             INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose) VALUES
@@ -208,8 +208,8 @@ public sealed class SittingStateMachineTests(DatabaseFixture database)
               (@cert, 'WRIT', N'Writing', 'writing', 1, 60, 0, 100, 5);
             DECLARE @skill INT = SCOPE_IDENTITY();
 
-            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder, NavigationMode) VALUES
-              (@skill, @cert, 'writing', 'W_HYB', N'Hybrid Writing', 1, 'HYBRID_GROUP_LOCKED');
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder, ExpectedQuestionCount, NavigationMode) VALUES
+              (@skill, @cert, 'writing', 'W_HYB', N'Hybrid Writing', 1, 1, 'HYBRID_GROUP_LOCKED');
             DECLARE @sec INT = SCOPE_IDENTITY();
 
             INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose) VALUES
@@ -322,8 +322,8 @@ public sealed class SittingStateMachineTests(DatabaseFixture database)
               (@cert, 'LIST', N'Listening', 'listening', 1, 30, 0, 100, 5);
             DECLARE @skill INT = SCOPE_IDENTITY();
 
-            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder, NavigationMode) VALUES
-              (@skill, @cert, 'listening', 'L_REV', N'IELTS Listening', 1, 'AUDIO_DRIVEN');
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder, ExpectedQuestionCount, NavigationMode) VALUES
+              (@skill, @cert, 'listening', 'L_REV', N'IELTS Listening', 1, 1, 'AUDIO_DRIVEN');
             DECLARE @sec INT = SCOPE_IDENTITY();
 
             INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose) VALUES

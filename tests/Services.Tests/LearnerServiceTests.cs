@@ -34,8 +34,8 @@ public sealed partial class LearnerServiceTests(DatabaseFixture database)
             INSERT INTO Certificates (Code, Name, IsActive) VALUES ('{code}', N'Cert {code}', {(isActive ? 1 : 0)});
             DECLARE @cert INT = SCOPE_IDENTITY();
             INSERT INTO Skills (CertId, Code, Name, Modality) VALUES (@cert, 'LIST', N'Listening', 'listening');
-            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name)
-              VALUES (SCOPE_IDENTITY(), @cert, 'listening', 'P1', N'Photographs {code}');
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, ExpectedQuestionCount, Name)
+              VALUES (SCOPE_IDENTITY(), @cert, 'listening', 'P1', 1, N'Photographs {code}');
             INSERT INTO ScoreBands (CertId, Code, Name, MinTotal, MaxTotal, DisplayOrder) VALUES
               (@cert, 'LOW', N'Low band', 0, 499, 1),
               (@cert, 'HIGH', N'High band', 500, 990, 2);

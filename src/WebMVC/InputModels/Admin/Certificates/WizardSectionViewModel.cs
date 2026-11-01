@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using Contracts;
 
 namespace WebMVC.Models;
@@ -21,7 +22,9 @@ public sealed class WizardSectionViewModel
     public bool RequireAudio { get; set; }
     public bool RequireImage { get; set; }
     public int RequiredKeywordCount { get; set; }
-    public int? ExpectedQuestionCount { get; set; }
+    // #157: required. A section that does not say how many questions it holds cannot be audited.
+    [Range(1, 1000, ErrorMessage = "A section must declare at least one expected question.")]
+    public int ExpectedQuestionCount { get; set; } = 1;
     public string? AllowedComponentTypesJson { get; set; }
     public string? ToolsConfigJson { get; set; }
 

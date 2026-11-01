@@ -17,6 +17,6 @@ public sealed record SectionBlueprintPresetDto(
     bool RequireAudio,
     bool RequireImage,
     int RequiredKeywordCount,
-    int? ExpectedQuestionCount,
+    int ExpectedQuestionCount,
     string? AllowedComponentTypesJson,
     string? ToolsConfigJson);

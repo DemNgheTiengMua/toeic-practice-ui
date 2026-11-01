@@ -10,7 +10,7 @@ public sealed record ExamBlueprintDto(
     string CertCode,
     string? Title = null,
     string? Purpose = "mock",
-    string? Status = "draft",
+    // #157: no Status. A generated package is always a draft; publishing is POST /{id}/publish.
     int? DurationMinutes = null,
     string? Skill = null,
     string? TargetBand = null,

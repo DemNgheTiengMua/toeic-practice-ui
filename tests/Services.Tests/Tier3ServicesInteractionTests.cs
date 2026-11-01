@@ -140,7 +140,7 @@ public sealed class Tier3ServicesInteractionTests(DatabaseFixture database)
             DECLARE @cert INT = SCOPE_IDENTITY();
             INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder, MinScaledScore, MaxScaledScore, ScoreStep) VALUES (@cert, 'READ', N'Reading', 'reading', 1, 0, 100, 5);
             DECLARE @skill INT = SCOPE_IDENTITY();
-            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder) VALUES (@skill, @cert, 'reading', 'P5', N'Sentences', 1);
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, ExpectedQuestionCount, DisplayOrder) VALUES (@skill, @cert, 'reading', 'P5', N'Sentences', 1, 1);
             DECLARE @sec INT = SCOPE_IDENTITY();
 
             INSERT INTO Exams (CertId, Purpose, Name, DurationMinutes, Status, IsDeleted)
@@ -215,7 +215,7 @@ public sealed class Tier3ServicesInteractionTests(DatabaseFixture database)
             DECLARE @cert INT = SCOPE_IDENTITY();
             INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder, DurationMinutes, MinScaledScore, MaxScaledScore, ScoreStep) VALUES (@cert, 'WRIT', N'Writing', 'writing', 1, 30, 0, 100, 5);
             DECLARE @skill INT = SCOPE_IDENTITY();
-            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder) VALUES (@skill, @cert, 'writing', 'WR', N'Writing Section', 1);
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, ExpectedQuestionCount, DisplayOrder) VALUES (@skill, @cert, 'writing', 'WR', N'Writing Section', 1, 1);
             DECLARE @sec INT = SCOPE_IDENTITY();
             INSERT INTO GradingCriteria (CertId, SkillId, Code, Name, MaxScore, Weight, DisplayOrder) VALUES (@cert, @skill, 'TASK', N'Task Response', 9.0, 1.0, 1);
             INSERT INTO Exams (CertId, Purpose, Name, DurationMinutes, Status, IsDeleted) VALUES (@cert, 'writing_practice', N'Writing Practice', 30, 'published', 0);

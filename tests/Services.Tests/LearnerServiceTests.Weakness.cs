@@ -9,8 +9,8 @@ public sealed partial class LearnerServiceTests
             DECLARE @cert INT = (SELECT CertId FROM Certificates WHERE Code = '{certCode}');
             DECLARE @skill INT = (SELECT TOP 1 SkillId FROM Skills WHERE CertId = @cert);
             UPDATE Sections SET DisplayOrder = 1 WHERE CertId = @cert AND Code = 'P1';
-            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder)
-            VALUES (@skill, @cert, 'listening', '{sectionCode}', N'{sectionName}', {displayOrder});
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, ExpectedQuestionCount, DisplayOrder)
+            VALUES (@skill, @cert, 'listening', '{sectionCode}', N'{sectionName}', 1, {displayOrder});
             """);
 
     private Task SeedCategorizedPracticeAnswersAsync(

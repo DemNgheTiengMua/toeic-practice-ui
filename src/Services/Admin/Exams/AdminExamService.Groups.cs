@@ -26,6 +26,9 @@ public sealed partial class AdminExamService
             throw new ExamNotFoundException(examId);
         }
 
+        // #157: a group brings questions with it, so it changes the section's shape.
+        await RequireStructureEditableAsync(examId, cancellationToken);
+
         var section = await db.Sections.FirstOrDefaultAsync(s => s.SectionId == request.SectionId && s.CertId == exam.CertId, cancellationToken);
         if (section == null)
         {
@@ -100,6 +103,13 @@ public sealed partial class AdminExamService
             throw new AdminExamException(ApiError.Codes.Validation, $"Section with id {request.SectionId} not found for certificate {exam.CertId}.");
         }
 
+        // #157: moving a group between sections changes which section a finished attempt was scored
+        // over. Content edits inside the same section stay allowed.
+        if (group.SectionId != request.SectionId)
+        {
+            await RequireStructureEditableAsync(examId, cancellationToken);
+        }
+
         ValidateQuestionGroup(exam.Purpose, section.Modality, request.ImagePath, request.ImageAlt, request.AudioStartMs, request.AudioEndMs, request.PrepSeconds, request.ResponseSeconds);
 
         group.SectionId = request.SectionId;
@@ -155,6 +165,10 @@ public sealed partial class AdminExamService
             throw new QuestionGroupNotFoundException(groupId);
         }
 
+        // #157: deleting the group removes its questions, shrinking a section a finished attempt was
+        // scored over. The per-question answer check below only sees the questions that have answers.
+        await RequireStructureEditableAsync(examId, cancellationToken);
+
         var qIds = await db.Questions.Where(q => q.GroupId == groupId).Select(q => q.QuestionId).ToListAsync(cancellationToken);
         var hasAnswers = await db.AttemptAnswers.AnyAsync(a => qIds.Contains(a.QuestionId), cancellationToken)
             || await db.FreeResponses.AnyAsync(r => qIds.Contains(r.QuestionId), cancellationToken);
@@ -184,6 +198,9 @@ public sealed partial class AdminExamService
     {
         var exam = await db.Exams.FirstOrDefaultAsync(e => e.ExamId == examId && !e.IsDeleted, cancellationToken);
         if (exam == null) throw new ExamNotFoundException(examId);
+
+        // #157: a cluster adds a group plus its questions in one call.
+        await RequireStructureEditableAsync(examId, cancellationToken);
 
         var section = await db.Sections.Include(s => s.Skill).FirstOrDefaultAsync(s => s.SectionId == request.SectionId && s.CertId == exam.CertId, cancellationToken);
         if (section == null)

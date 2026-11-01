@@ -25,6 +25,14 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         return new AdminExamService(db, TimeProvider.System);
     }
 
+    /// <summary>
+    /// #157: an exam can no longer be created already-published. These fixtures need a published
+    /// exam only because trg_ExamAttempts_PublishedExamOnly requires one before an attempt may be
+    /// recorded, so they promote it in SQL instead of walking the whole publish audit.
+    /// </summary>
+    private Task PublishForFixtureAsync(int examId) =>
+        database.SqlAsync($"UPDATE Exams SET Status = 'published' WHERE ExamId = {examId};");
+
     private async Task<(int certId, int secListeningId, int secReadingId, int secSpeakingId, int secWritingId)> SeedCertificateWithSectionsAsync(string certCode)
     {
         await database.SqlAsync($"""
@@ -43,11 +51,11 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
             DECLARE @sS INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'S_' + @certStr);
             DECLARE @sW INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'W_' + @certStr);
 
-            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder) VALUES
-              (@sL, @cert, 'listening', 'SL_' + @certStr, N'Listening Part 1', 1),
-              (@sR, @cert, 'reading', 'SR_' + @certStr, N'Reading Part 5', 2),
-              (@sS, @cert, 'speaking', 'SS_' + @certStr, N'Speaking Part 1', 3),
-              (@sW, @cert, 'writing', 'SW_' + @certStr, N'Writing Part 1', 4);
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, ExpectedQuestionCount, DisplayOrder) VALUES
+              (@sL, @cert, 'listening', 'SL_' + @certStr, N'Listening Part 1', 1, 1),
+              (@sR, @cert, 'reading', 'SR_' + @certStr, N'Reading Part 5', 1, 2),
+              (@sS, @cert, 'speaking', 'SS_' + @certStr, N'Speaking Part 1', 1, 3),
+              (@sW, @cert, 'writing', 'SW_' + @certStr, N'Writing Part 1', 1, 4);
             """);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
@@ -276,7 +284,7 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
     [Fact]
     public async Task PublishExam_IncompleteExam_FailsWithDetails_CompleteExam_Succeeds()
     {
-        var (certId, secL, secR, _, _) = await SeedCertificateWithSectionsAsync($"PUB_{Guid.NewGuid():N}"[..18]);
+        var (certId, secL, secR, secS, secW) = await SeedCertificateWithSectionsAsync($"PUB_{Guid.NewGuid():N}"[..18]);
         var service = CreateService();
 
         var exam = await service.CreateExamAsync(new CreateAdminExamRequest(
@@ -332,7 +340,26 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
             180,
             2048576));
 
-        // 4. Now exam is complete -> publish succeeds!
+        // #157: every section now declares a question count, so the audit checks all four the
+        // fixture creates, not just the two this test filled. A mock exam covering its
+        // certificate's sections must answer them; an empty speaking/writing part is a real
+        // deficiency, so fill them rather than exempt them.
+        foreach (var sectionId in new[] { secS, secW })
+        {
+            var group = await service.CreateQuestionGroupAsync(exam.ExamId, new CreateQuestionGroupRequest(sectionId));
+            await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
+                group.GroupId,
+                "Question for the remaining section",
+                2,
+                QuestionTypeDto.Mcq,
+                Options:
+                [
+                    new AdminQuestionOptionInput(null, "A", "Correct", true, null),
+                    new AdminQuestionOptionInput(null, "B", "Wrong", false, null)
+                ]));
+        }
+
+        // 5. Now exam is complete -> publish succeeds!
         var publishResult = await service.PublishExamAsync(exam.ExamId);
         Assert.True(publishResult.Success);
 
@@ -350,8 +377,9 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
             certId,
             $"Attempted Test {Guid.NewGuid():N}"[..25],
             60,
-            ExamPurposeDto.Mock,
-            Status: ExamStatusDto.Published));
+            ExamPurposeDto.Mock));
+
+        await PublishForFixtureAsync(exam.ExamId);
 
         var grp = await service.CreateQuestionGroupAsync(exam.ExamId, new CreateQuestionGroupRequest(secR));
         var q1 = await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
@@ -397,12 +425,42 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         var ex = await Assert.ThrowsAsync<AdminExamException>(() => service.DeleteQuestionAsync(q1.QuestionId));
         Assert.Equal(ApiError.Codes.QuestionHasAttemptAnswers, ex.Code);
 
-        // 2. Deleting q2 (unattempted) succeeds
-        await service.DeleteQuestionAsync(q2.QuestionId);
+        // 2. Deleting q2 is now blocked too. #157 locks the whole structure of an exam with a
+        // finished attempt, because removing any question shrinks a section a learner's score was
+        // computed over — even a question that learner happened not to answer.
+        var ex2 = await Assert.ThrowsAsync<AdminExamException>(() => service.DeleteQuestionAsync(q2.QuestionId));
+        Assert.Equal(ApiError.Codes.ExamHasFinishedAttempts, ex2.Code);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
         var q2Exists = await db.Questions.AnyAsync(q => q.QuestionId == q2.QuestionId);
-        Assert.False(q2Exists);
+        Assert.True(q2Exists);
+    }
+
+    [Fact]
+    public async Task DeleteQuestion_UnattemptedExam_StillDeletes()
+    {
+        var (certId, _, secR, _, _) = await SeedCertificateWithSectionsAsync($"DEL_OK_{Guid.NewGuid():N}"[..18]);
+        var service = CreateService();
+
+        var exam = await service.CreateExamAsync(new CreateAdminExamRequest(
+            certId, $"Delete Fixture {Guid.NewGuid():N}"[..25], 60, ExamPurposeDto.Mock));
+
+        var grp = await service.CreateQuestionGroupAsync(exam.ExamId, new CreateQuestionGroupRequest(secR));
+        var q = await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
+            grp.GroupId,
+            "Question (never sat)",
+            2,
+            QuestionTypeDto.Mcq,
+            Options:
+            [
+                new AdminQuestionOptionInput(null, "A", "Correct", true, null),
+                new AdminQuestionOptionInput(null, "B", "Wrong", false, null)
+            ]));
+
+        await service.DeleteQuestionAsync(q.QuestionId);
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        Assert.False(await db.Questions.AnyAsync(x => x.QuestionId == q.QuestionId));
     }
 
     [Fact]
@@ -415,8 +473,8 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
             certId,
             $"Finished Attempt Exam {Guid.NewGuid():N}"[..25],
             60,
-            ExamPurposeDto.Mock,
-            Status: ExamStatusDto.Published));
+            ExamPurposeDto.Mock));
+        await PublishForFixtureAsync(exam.ExamId);
 
         var unattemptedExam = await service.CreateExamAsync(new CreateAdminExamRequest(
             certId,
@@ -446,8 +504,7 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
             certId,
             exam.Name,
             exam.DurationMinutes,
-            ExamPurposeDto.Placement,
-            ExamStatusDto.Published)));
+            ExamPurposeDto.Placement)));
         Assert.Equal(ApiError.Codes.ExamHasFinishedAttempts, ex2.Code);
 
         // 3. Deleting unattempted exam succeeds
@@ -586,8 +643,7 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
             cert2Id,
             exam.Name,
             exam.DurationMinutes,
-            ExamPurposeDto.Mock,
-            ExamStatusDto.Draft)));
+            ExamPurposeDto.Mock)));
 
         Assert.Equal(ApiError.Codes.Validation, ex.Code);
         Assert.Contains("Cannot change certificate", ex.Message, StringComparison.OrdinalIgnoreCase);
@@ -603,8 +659,8 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
             certId,
             $"In-Progress Exam {Guid.NewGuid():N}"[..25],
             60,
-            ExamPurposeDto.Mock,
-            Status: ExamStatusDto.Published));
+            ExamPurposeDto.Mock));
+        await PublishForFixtureAsync(exam.ExamId);
 
         var userEmail = $"{Guid.NewGuid():N}@inprogress.local";
         await database.SqlAsync($"""

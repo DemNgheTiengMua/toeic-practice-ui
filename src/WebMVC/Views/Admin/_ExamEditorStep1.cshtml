@@ -37,14 +37,6 @@
             <label class="field__label" for="SourceName">Exam set / source</label>
             <input class="field__input" id="SourceName" name="SourceName" value="@Model.Form.SourceName" placeholder="ETS 2024">
           </div>
-          <div class="field">
-            <label class="field__label" for="Status">Status</label>
-            <select class="field__input" id="Status" name="Status">
-              <option value="Draft" selected="@(Model.Form.Status == Contracts.ExamStatusDto.Draft)">Draft</option>
-              <option value="Published" selected="@(Model.Form.Status == Contracts.ExamStatusDto.Published)">Published</option>
-              <option value="Hidden" selected="@(Model.Form.Status == Contracts.ExamStatusDto.Hidden)">Hidden</option>
-            </select>
-          </div>
         </div>
 
         <div class="grid-3">

@@ -18,6 +18,6 @@ public sealed record SaveSectionWizardDto(
     bool RequireAudio,
     bool RequireImage,
     int RequiredKeywordCount,
-    int? ExpectedQuestionCount,
+    int ExpectedQuestionCount,
     string? AllowedComponentTypesJson,
     string? ToolsConfigJson);

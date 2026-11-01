@@ -78,7 +78,9 @@ public sealed partial class AdminExamService
         var relevantGroups = groups.Where(g => relevantSectionIds.Contains(g.SectionId)).ToList();
         var totalQuestions = relevantGroups.Sum(g => g.QuestionGroups.Count);
 
-        var sectionExpectedSum = relevantSections.Where(s => s.ExpectedQuestionCount.HasValue).Sum(s => s.ExpectedQuestionCount!.Value);
+        // #157: ExpectedQuestionCount is NOT NULL, so every section now contributes. A section whose
+        // count is missing can no longer make this sum silently low.
+        var sectionExpectedSum = relevantSections.Sum(s => s.ExpectedQuestionCount);
         var expectedTotal = sectionExpectedSum > 0 ? sectionExpectedSum : (exam.QuestionCount ?? 0);
 
         if (groups.Count == 0 || totalQuestions == 0)
@@ -107,21 +109,20 @@ public sealed partial class AdminExamService
             var secGroups = groups.Where(g => g.SectionId == sec.SectionId).ToList();
             var secQuestions = secGroups.SelectMany(g => g.QuestionGroups).ToList();
 
-            if (sec.ExpectedQuestionCount.HasValue && sec.ExpectedQuestionCount.Value > 0)
+            // #157: ExpectedQuestionCount is NOT NULL, so this check can no longer be skipped by
+            // leaving the count blank. It is the check that stopped an empty part from publishing.
+            if (secQuestions.Count < sec.ExpectedQuestionCount)
             {
-                if (secQuestions.Count < sec.ExpectedQuestionCount.Value)
-                {
-                    var diff = sec.ExpectedQuestionCount.Value - secQuestions.Count;
-                    var msg = $"Section [{sec.Code}] '{sec.Name}' requires {sec.ExpectedQuestionCount.Value} questions, but only has {secQuestions.Count} ({diff} missing).";
-                    issues.Add(new ExamAuditIssueDto(
-                        Code: "SEC_QUESTION_COUNT_LOW",
-                        Severity: "error",
-                        Message: msg,
-                        SectionId: sec.SectionId,
-                        SectionCode: sec.Code,
-                        ElementTarget: $"section-link-{sec.SectionId}"));
-                    missingItems.Add(msg);
-                }
+                var diff = sec.ExpectedQuestionCount - secQuestions.Count;
+                var msg = $"Section [{sec.Code}] '{sec.Name}' requires {sec.ExpectedQuestionCount} questions, but only has {secQuestions.Count} ({diff} missing).";
+                issues.Add(new ExamAuditIssueDto(
+                    Code: "SEC_QUESTION_COUNT_LOW",
+                    Severity: "error",
+                    Message: msg,
+                    SectionId: sec.SectionId,
+                    SectionCode: sec.Code,
+                    ElementTarget: $"section-link-{sec.SectionId}"));
+                missingItems.Add(msg);
             }
 
             if (sec.ClusterSize > 1 && secGroups.Count > 0)
@@ -184,7 +185,7 @@ public sealed partial class AdminExamService
                 }
             }
 
-            if (sec.RequireAudio || (sec.Modality == "listening" && (secGroups.Count > 0 || (sec.ExpectedQuestionCount.HasValue && sec.ExpectedQuestionCount.Value > 0))))
+            if (sec.RequireAudio || (sec.Modality == "listening" && (secGroups.Count > 0 || sec.ExpectedQuestionCount > 0)))
             {
                 var hasSecAudio = sectionAudios.Any(a => a.SectionId == sec.SectionId && !string.IsNullOrWhiteSpace(a.AudioPath));
                 var allGroupsAudio = secGroups.Count > 0 && secGroups.All(g => !string.IsNullOrWhiteSpace(g.AudioPath));

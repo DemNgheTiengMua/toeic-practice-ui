@@ -50,9 +50,9 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
             DECLARE @sL INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'LIST');
             DECLARE @sR INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'READ');
 
-            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder) VALUES
-              (@sL, @cert, 'listening', 'P1', N'Photos', 1),
-              (@sR, @cert, 'reading', 'P5', N'Sentences', 2);
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, ExpectedQuestionCount, DisplayOrder) VALUES
+              (@sL, @cert, 'listening', 'P1', N'Photos', 1, 1),
+              (@sR, @cert, 'reading', 'P5', N'Sentences', 1, 2);
             DECLARE @secL INT = (SELECT SectionId FROM Sections WHERE CertId = @cert AND Code = 'P1');
             DECLARE @secR INT = (SELECT SectionId FROM Sections WHERE CertId = @cert AND Code = 'P5');
 
@@ -114,8 +114,8 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
             VALUES (@cert, 'SPEA', N'Speaking', 'speaking', 4, 0, 10, 1);
             DECLARE @skill INT = SCOPE_IDENTITY();
 
-            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder, NavigationMode)
-            VALUES (@skill, @cert, 'speaking', 'SPK', N'Speaking Pacer Section', 1, 'SYSTEM_PACED_AUTO');
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder, ExpectedQuestionCount, NavigationMode)
+            VALUES (@skill, @cert, 'speaking', 'SPK', N'Speaking Pacer Section', 1, 1, 'SYSTEM_PACED_AUTO');
             DECLARE @section INT = SCOPE_IDENTITY();
 
             INSERT INTO GradingCriteria (CertId, SkillId, Code, Name, MaxScore, Weight, DisplayOrder)
@@ -145,8 +145,8 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
             VALUES (@cert, 'WRIT', N'Writing', 'writing', 3, 0, 10, 1);
             DECLARE @skill INT = SCOPE_IDENTITY();
 
-            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder)
-            VALUES (@skill, @cert, 'writing', 'WR', N'Writing', 1);
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, ExpectedQuestionCount, DisplayOrder)
+            VALUES (@skill, @cert, 'writing', 'WR', N'Writing', 1, 1);
             DECLARE @section INT = SCOPE_IDENTITY();
 
             INSERT INTO GradingCriteria (CertId, SkillId, Code, Name, MaxScore, Weight, DisplayOrder)

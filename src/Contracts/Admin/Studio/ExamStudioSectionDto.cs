@@ -9,7 +9,7 @@ public sealed record ExamStudioSectionDto(
     string Code,
     string Name,
     ModalityDto Modality,
-    int? ExpectedQuestionCount,
+    int ExpectedQuestionCount,
     int DisplayOrder,
     int CurrentQuestionCount,
     bool HasAudio,

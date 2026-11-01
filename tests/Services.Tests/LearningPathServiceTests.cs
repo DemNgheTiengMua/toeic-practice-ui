@@ -66,9 +66,9 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
             DECLARE @sR INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'READ');
             DECLARE @sL INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'LIST');
 
-            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder) VALUES
-              (@sR, @cert, 'reading', 'P5', N'Sentences', 1),
-              (@sL, @cert, 'listening', 'P1', N'Photos', 2);
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, ExpectedQuestionCount, DisplayOrder) VALUES
+              (@sR, @cert, 'reading', 'P5', N'Sentences', 1, 1),
+              (@sL, @cert, 'listening', 'P1', N'Photos', 1, 2);
             DECLARE @secR INT = (SELECT SectionId FROM Sections WHERE CertId = @cert AND Code = 'P5');
 
             INSERT INTO ScoreBands (CertId, Code, Name, MinTotal, MaxTotal, DisplayOrder) VALUES

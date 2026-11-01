@@ -61,7 +61,8 @@ public partial class Section
 
     public string? ToolsConfigJson { get; set; }
 
-    public int? ExpectedQuestionCount { get; set; }
+    // #157: required - a section always declares how many questions it holds
+    public int ExpectedQuestionCount { get; set; }
 
     public int DisplayOrder { get; set; }
 

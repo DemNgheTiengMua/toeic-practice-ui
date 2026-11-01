@@ -22,13 +22,6 @@ public sealed partial class ExamGeneratorService(
     IClaudeClient claudeClient,
     ILogger<ExamGeneratorService>? logger = null) : IExamGeneratorService
 {
-    private static readonly HashSet<string> ValidStatuses = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ExamStatus.Draft.ToCode(),
-        ExamStatus.Published.ToCode(),
-        ExamStatus.Hidden.ToCode()
-    };
-
     private static readonly HashSet<string> ValidPurposes = new(StringComparer.OrdinalIgnoreCase)
     {
         ExamPurpose.Mock.ToCode(),
@@ -54,11 +47,9 @@ public sealed partial class ExamGeneratorService(
             .SingleOrDefaultAsync(c => c.Code == blueprint.CertCode.Trim(), cancellationToken)
             ?? throw new AdminExamException(ApiError.Codes.CertificateUnavailable, $"Certificate with code '{blueprint.CertCode}' not found.", 404);
 
-        var status = string.IsNullOrWhiteSpace(blueprint.Status) ? ExamStatus.Draft.ToCode() : blueprint.Status.Trim().ToLowerInvariant();
-        if (!ValidStatuses.Contains(status))
-        {
-            throw new AdminExamException(ApiError.Codes.Validation, $"Invalid exam status '{blueprint.Status}'. Allowed: draft, published, hidden.", 400);
-        }
+        // #157: the blueprint's status is ignored. A generated or imported package is always a
+        // draft; publishing goes through PublishExamAsync, which runs the readiness audit.
+        var status = ExamStatus.Draft.ToCode();
 
         var purpose = string.IsNullOrWhiteSpace(blueprint.Purpose) ? ExamPurpose.Mock.ToCode() : blueprint.Purpose.Trim().ToLowerInvariant();
         if (!ValidPurposes.Contains(purpose))
@@ -155,7 +146,7 @@ public sealed partial class ExamGeneratorService(
         var countToGenerate = questionCount.GetValueOrDefault();
         if (countToGenerate <= 0)
         {
-            countToGenerate = Math.Max(1, (section.ExpectedQuestionCount ?? 5) - existingCount);
+            countToGenerate = Math.Max(1, section.ExpectedQuestionCount - existingCount);
         }
 
         var certCategories = await db.QuestionCategories

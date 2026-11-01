@@ -2,7 +2,7 @@ SET QUOTED_IDENTIFIER ON; SET ANSI_NULLS ON;
 INSERT INTO Roles (Code,Name) VALUES ('student',N'S'); DECLARE @r INT=SCOPE_IDENTITY();
 INSERT INTO Certificates (Code,Name,IsActive) VALUES ('TOEIC',N'T',1); DECLARE @c INT=SCOPE_IDENTITY();
 INSERT INTO Skills (CertId,Code,Name,Modality,DisplayOrder) VALUES (@c,'R',N'R','reading',1); DECLARE @sk INT=SCOPE_IDENTITY();
-INSERT INTO Sections (SkillId,CertId,Modality,Code,Name,OptionCount,DisplayOrder) VALUES (@sk,@c,'reading','P5',N'IC',4,1); DECLARE @sec INT=SCOPE_IDENTITY();
+INSERT INTO Sections (SkillId,CertId,Modality,Code,Name,OptionCount,ExpectedQuestionCount,DisplayOrder) VALUES (@sk,@c,'reading','P5',N'IC',4,30,1); DECLARE @sec INT=SCOPE_IDENTITY();
 INSERT INTO Users (RoleId,Email,PasswordHash,ActiveCertId) VALUES (@r,'u@x.com',0x00,@c); DECLARE @u INT=SCOPE_IDENTITY();
 INSERT INTO ScoreBands (CertId,Code,Name,MinTotal,MaxTotal,DisplayOrder) VALUES (@c,'below_A1',N'Below A1',10,119,1), (@c,'A2',N'A2',225,549,3);
 INSERT INTO PathTemplates (CertId,FromBandCode,ToBandCode,Name) VALUES (@c,'below_A1','A2',N'Starter'); DECLARE @tpl INT=SCOPE_IDENTITY();
@@ -42,7 +42,7 @@ END CATCH
 -- cross-cert fixtures (IELTS) for M-1/M-2 leakage checks
 INSERT INTO Certificates (Code,Name,IsActive) VALUES ('IELTS',N'I',1); DECLARE @c2 INT=SCOPE_IDENTITY();
 INSERT INTO Skills (CertId,Code,Name,Modality,DisplayOrder) VALUES (@c2,'SPK',N'Speaking','speaking',1); DECLARE @sk2 INT=SCOPE_IDENTITY();
-INSERT INTO Sections (SkillId,CertId,Modality,Code,Name,OptionCount,DisplayOrder) VALUES (@sk2,@c2,'speaking','S1',N'Interview',NULL,1); DECLARE @sec2 INT=SCOPE_IDENTITY();
+INSERT INTO Sections (SkillId,CertId,Modality,Code,Name,OptionCount,ExpectedQuestionCount,DisplayOrder) VALUES (@sk2,@c2,'speaking','S1',N'Interview',NULL,3,1); DECLARE @sec2 INT=SCOPE_IDENTITY();
 INSERT INTO Exams (CertId,Name,Status,DurationMinutes) VALUES (@c2,N'IELTS Exam','published',60); DECLARE @exam2 INT=SCOPE_IDENTITY();
 INSERT INTO ScoreBands (CertId,Code,Name,MinTotal,MaxTotal,DisplayOrder) VALUES (@c2,'below_A1',N'Below A1',10,119,1), (@c2,'A2',N'A2',225,549,3);
 INSERT INTO PathTemplates (CertId,FromBandCode,ToBandCode,Name) VALUES (@c2,'below_A1','A2',N'IELTS Starter'); DECLARE @tpl2 INT=SCOPE_IDENTITY();

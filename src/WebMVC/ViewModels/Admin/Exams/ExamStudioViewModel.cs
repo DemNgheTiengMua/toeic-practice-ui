@@ -25,9 +25,9 @@ public sealed class ExamStudioViewModel
         FirstSection = detail.Sections.FirstOrDefault();
         Skills = detail.Sections.GroupBy(s => s.SkillId > 0 ? s.SkillId.ToString() : s.Modality.ToString())
             .Select(g => new StudioSkillViewModel(g.Key, g.First().SkillName ?? g.First().Modality.ToString(),
-                g.ToArray(), g.Sum(s => s.CurrentQuestionCount), g.Sum(s => s.ExpectedQuestionCount ?? 0))).ToArray();
+                g.ToArray(), g.Sum(s => s.CurrentQuestionCount), g.Sum(s => s.ExpectedQuestionCount))).ToArray();
         FirstSkillKey = Skills.FirstOrDefault()?.Key ?? "";
-        RequiredQuestions = detail.QuestionCount ?? detail.Sections.Sum(s => s.ExpectedQuestionCount ?? 0);
+        RequiredQuestions = detail.QuestionCount ?? detail.Sections.Sum(s => s.ExpectedQuestionCount);
         SectionStates = detail.Sections.ToDictionary(s => s.SectionId, s => new StudioSectionViewModel(s));
         Questions = detail.Sections.SelectMany(s => s.Groups.SelectMany(g => g.Questions.Select(q =>
             new StudioQuestionViewModel(q, s, detail.AvailableCategories, detail.AvailableCriteria))))

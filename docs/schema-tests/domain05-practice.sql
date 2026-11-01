@@ -4,11 +4,11 @@ INSERT INTO Roles (Code,Name) VALUES ('student',N'S'); DECLARE @r INT=SCOPE_IDEN
 INSERT INTO Certificates (Code,Name,IsActive) VALUES ('TOEIC',N'T',1); DECLARE @c INT=SCOPE_IDENTITY();
 INSERT INTO Skills (CertId,Code,Name,Modality,DisplayOrder) VALUES (@c,'READ',N'R','reading',1);
 DECLARE @sk INT=SCOPE_IDENTITY();
-INSERT INTO Sections (SkillId,CertId,Modality,Code,Name,OptionCount,DisplayOrder) VALUES (@sk,@c,'reading','P5',N'IC',4,1);
+INSERT INTO Sections (SkillId,CertId,Modality,Code,Name,OptionCount,ExpectedQuestionCount,DisplayOrder) VALUES (@sk,@c,'reading','P5',N'IC',4,30,1);
 DECLARE @sec INT=SCOPE_IDENTITY();
 INSERT INTO Skills (CertId,Code,Name,Modality,DisplayOrder) VALUES (@c,'SPK',N'Spk','speaking',2);
 DECLARE @skSpk INT=SCOPE_IDENTITY();
-INSERT INTO Sections (SkillId,CertId,Modality,Code,Name,OptionCount,DisplayOrder) VALUES (@skSpk,@c,'speaking','S1',N'Interview',NULL,2);
+INSERT INTO Sections (SkillId,CertId,Modality,Code,Name,OptionCount,ExpectedQuestionCount,DisplayOrder) VALUES (@skSpk,@c,'speaking','S1',N'Interview',NULL,3,2);
 DECLARE @secSpk INT=SCOPE_IDENTITY();
 INSERT INTO Users (RoleId,Email,PasswordHash) VALUES (@r,'u@x.com',0x00); DECLARE @u INT=SCOPE_IDENTITY();
 INSERT INTO PracticeSessions (UserId,SectionId,Modality,QuestionCount,Status,CorrectCount)
@@ -59,7 +59,7 @@ END TRY BEGIN CATCH
   PRINT 'rejected cross-question option as expected';
 END CATCH
 -- Low: reject a question that doesn't belong to the session's own section
-INSERT INTO Sections (SkillId,CertId,Modality,Code,Name,OptionCount,DisplayOrder) VALUES (@sk,@c,'reading','P6',N'Other',4,2);
+INSERT INTO Sections (SkillId,CertId,Modality,Code,Name,OptionCount,ExpectedQuestionCount,DisplayOrder) VALUES (@sk,@c,'reading','P6',N'Other',4,10,2);
 DECLARE @secOther INT=SCOPE_IDENTITY();
 INSERT INTO QuestionGroups (ExamId,CertId,SectionId,DisplayOrder) VALUES (@ex,@c,@secOther,2);
 DECLARE @grpOther INT=SCOPE_IDENTITY();

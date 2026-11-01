@@ -7,7 +7,7 @@ public sealed record MockExamSectionInfoDto(
     ModalityDto Modality,
     string SectionCode,
     string SectionName,
-    int? ExpectedQuestionCount,
+    int ExpectedQuestionCount,
     int QuestionCount,
     int? DurationMinutes,
     int DisplayOrder);

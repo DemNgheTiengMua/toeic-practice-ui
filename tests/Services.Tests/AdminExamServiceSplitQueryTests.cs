@@ -104,8 +104,8 @@ public sealed class AdminExamServiceSplitQueryTests(DatabaseFixture database)
 
             DECLARE @sL INT = (SELECT SkillId FROM Skills WHERE CertId = @cert);
 
-            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder) VALUES
-              (@sL, @cert, 'listening', 'SL_' + @certStr, N'Listening Part 1', 1);
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, ExpectedQuestionCount, DisplayOrder) VALUES
+              (@sL, @cert, 'listening', 'SL_' + @certStr, N'Listening Part 1', 1, 1);
             """);
 
         await using var seed = DbContextFactory.Create(database.ConnectionString);

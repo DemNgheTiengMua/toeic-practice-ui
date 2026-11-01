@@ -58,7 +58,7 @@ public sealed partial class PracticeService
                 s.Code,
                 s.Name,
                 s.OptionCount,
-                s.ExpectedQuestionCount ?? 0,
+                s.ExpectedQuestionCount,
                 available,
                 accuracy,
                 answered,

@@ -56,7 +56,7 @@ public sealed class AiInsightServiceTests(DatabaseFixture database)
         db.Skills.Add(skill);
         await db.SaveChangesAsync();
 
-        var section = new Section { CertId = cert.CertId, SkillId = skill.SkillId, Modality = "reading", Code = "P5", Name = "Incomplete Sentences", DisplayOrder = 1, OptionCount = 4 };
+        var section = new Section { CertId = cert.CertId, SkillId = skill.SkillId, Modality = "reading", Code = "P5", Name = "Incomplete Sentences", DisplayOrder = 1, OptionCount = 4, ExpectedQuestionCount = 1 };
         db.Sections.Add(section);
         await db.SaveChangesAsync();
 
@@ -138,7 +138,7 @@ public sealed class AiInsightServiceTests(DatabaseFixture database)
         db.Skills.Add(skill);
         await db.SaveChangesAsync();
 
-        var section = new Section { CertId = cert.CertId, SkillId = skill.SkillId, Modality = "reading", Code = "P5", Name = "Incomplete Sentences", DisplayOrder = 1, OptionCount = 4 };
+        var section = new Section { CertId = cert.CertId, SkillId = skill.SkillId, Modality = "reading", Code = "P5", Name = "Incomplete Sentences", DisplayOrder = 1, OptionCount = 4, ExpectedQuestionCount = 1 };
         db.Sections.Add(section);
         await db.SaveChangesAsync();
 
@@ -807,7 +807,7 @@ public sealed class AiInsightServiceTests(DatabaseFixture database)
         db.Skills.Add(skill);
         await db.SaveChangesAsync();
 
-        var section = new Section { CertId = cert.CertId, SkillId = skill.SkillId, Modality = "reading", Code = "P5", Name = "Incomplete Sentences", DisplayOrder = 1, OptionCount = 4 };
+        var section = new Section { CertId = cert.CertId, SkillId = skill.SkillId, Modality = "reading", Code = "P5", Name = "Incomplete Sentences", DisplayOrder = 1, OptionCount = 4, ExpectedQuestionCount = 1 };
         db.Sections.Add(section);
 
         var bandA = new ScoreBand { CertId = cert.CertId, Code = "A2", Name = "Elementary", MinTotal = 200, MaxTotal = 400, DisplayOrder = 1 };

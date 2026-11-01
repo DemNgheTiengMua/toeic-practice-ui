@@ -46,8 +46,8 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
         db.Skills.AddRange(skill, spkSkill);
         await db.SaveChangesAsync();
 
-        var readSec = new Section { CertId = cert.CertId, SkillId = skill.SkillId, Modality = "reading", Code = "P5", Name = "Incomplete Sentences", DisplayOrder = 1, OptionCount = 4 };
-        var spkSec = new Section { CertId = cert.CertId, SkillId = spkSkill.SkillId, Modality = "speaking", Code = "S1", Name = "Speaking Part 1", DisplayOrder = 1 };
+        var readSec = new Section { CertId = cert.CertId, SkillId = skill.SkillId, Modality = "reading", Code = "P5", Name = "Incomplete Sentences", DisplayOrder = 1, OptionCount = 4, ExpectedQuestionCount = 1 };
+        var spkSec = new Section { CertId = cert.CertId, SkillId = spkSkill.SkillId, Modality = "speaking", Code = "S1", Name = "Speaking Part 1", DisplayOrder = 1, ExpectedQuestionCount = 1 };
         db.Sections.AddRange(readSec, spkSec);
         await db.SaveChangesAsync();
 
@@ -518,7 +518,7 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
             db.Skills.Add(skill);
             await db.SaveChangesAsync();
 
-            var sec = new Section { CertId = cert.CertId, SkillId = skill.SkillId, Modality = "reading", Code = "P7", Name = "Multi Select Section", DisplayOrder = 1, OptionCount = 4 };
+            var sec = new Section { CertId = cert.CertId, SkillId = skill.SkillId, Modality = "reading", Code = "P7", Name = "Multi Select Section", DisplayOrder = 1, OptionCount = 4, ExpectedQuestionCount = 1 };
             db.Sections.Add(sec);
             await db.SaveChangesAsync();
             secId = sec.SectionId;
@@ -622,7 +622,7 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
             db.Skills.Add(skill);
             await db.SaveChangesAsync();
 
-            var sec = new Section { CertId = cert.CertId, SkillId = skill.SkillId, Modality = "reading", Code = "P6", Name = "Completion Section", DisplayOrder = 1 };
+            var sec = new Section { CertId = cert.CertId, SkillId = skill.SkillId, Modality = "reading", Code = "P6", Name = "Completion Section", DisplayOrder = 1, ExpectedQuestionCount = 1 };
             db.Sections.Add(sec);
             await db.SaveChangesAsync();
             secId = sec.SectionId;
@@ -710,7 +710,7 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
             db.Skills.Add(skill);
             await db.SaveChangesAsync();
 
-            var sec = new Section { CertId = cert.CertId, SkillId = skill.SkillId, Modality = "reading", Code = "P6", Name = "Take Section", DisplayOrder = 1 };
+            var sec = new Section { CertId = cert.CertId, SkillId = skill.SkillId, Modality = "reading", Code = "P6", Name = "Take Section", DisplayOrder = 1, ExpectedQuestionCount = 1 };
             db.Sections.Add(sec);
             await db.SaveChangesAsync();
             secId = sec.SectionId;

@@ -56,8 +56,8 @@ public sealed class WeaknessAnalysisServiceTests(DatabaseFixture database)
         db.Skills.Add(skill);
         await db.SaveChangesAsync();
 
-        var sec1 = new Section { CertId = cert.CertId, SkillId = skill.SkillId, Modality = "reading", Code = "P5", Name = "Incomplete Sentences", DisplayOrder = 1, OptionCount = 4 };
-        var sec2 = new Section { CertId = cert.CertId, SkillId = skill.SkillId, Modality = "reading", Code = "P6", Name = "Text Completion", DisplayOrder = 2, OptionCount = 4 };
+        var sec1 = new Section { CertId = cert.CertId, SkillId = skill.SkillId, Modality = "reading", Code = "P5", Name = "Incomplete Sentences", DisplayOrder = 1, OptionCount = 4, ExpectedQuestionCount = 1 };
+        var sec2 = new Section { CertId = cert.CertId, SkillId = skill.SkillId, Modality = "reading", Code = "P6", Name = "Text Completion", DisplayOrder = 2, OptionCount = 4, ExpectedQuestionCount = 1 };
         db.Sections.AddRange(sec1, sec2);
         await db.SaveChangesAsync();
 
@@ -420,7 +420,7 @@ public sealed class WeaknessAnalysisServiceTests(DatabaseFixture database)
             db.Skills.Add(skill);
             await db.SaveChangesAsync();
 
-            var sec = new Section { CertId = cert.CertId, SkillId = skill.SkillId, Modality = "reading", Code = "P6", Name = "Mixed Sec", DisplayOrder = 1, OptionCount = 4 };
+            var sec = new Section { CertId = cert.CertId, SkillId = skill.SkillId, Modality = "reading", Code = "P6", Name = "Mixed Sec", DisplayOrder = 1, OptionCount = 4, ExpectedQuestionCount = 1 };
             db.Sections.Add(sec);
             await db.SaveChangesAsync();
             secId = sec.SectionId;

@@ -42,8 +42,8 @@ public sealed class GoalFeasibilityServiceTests(DatabaseFixture database)
             VALUES (@cert, 'READ', N'Reading', 'reading', 1);
             DECLARE @sR INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'READ');
 
-            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder)
-            VALUES (@sR, @cert, 'reading', 'P5', N'Sentences', 1);
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, ExpectedQuestionCount, DisplayOrder)
+            VALUES (@sR, @cert, 'reading', 'P5', N'Sentences', 1, 1);
             DECLARE @secR INT = (SELECT SectionId FROM Sections WHERE CertId = @cert AND Code = 'P5');
 
             -- the seeded hours: B1 = 500, B2 = 800, C1 = 1150

@@ -41,10 +41,10 @@ public sealed class QuestionImportServiceTests(DatabaseFixture database)
             DECLARE @r INT = (SELECT SkillId FROM Skills WHERE CertId = @c AND Code = 'READ');
             DECLARE @s INT = (SELECT SkillId FROM Skills WHERE CertId = @c AND Code = 'SPEA');
             DECLARE @w INT = (SELECT SkillId FROM Skills WHERE CertId = @c AND Code = 'WRIT');
-            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, DisplayOrder) VALUES
-              (@l, @c, 'listening', 'P1', N'Photographs', 4, 1), (@l, @c, 'listening', 'P2', N'Question-Response', 3, 2),
-              (@r, @c, 'reading', 'P5', N'Incomplete Sentences', 4, 1), (@r, @c, 'reading', 'P7', N'Reading Comprehension', 4, 2),
-              (@s, @c, 'speaking', 'S3', N'Respond to questions', 4, 1), (@w, @c, 'writing', 'W2', N'Respond to a written request', 4, 1);
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder) VALUES
+              (@l, @c, 'listening', 'P1', N'Photographs', 4, 1, 1), (@l, @c, 'listening', 'P2', N'Question-Response', 3, 1, 2),
+              (@r, @c, 'reading', 'P5', N'Incomplete Sentences', 4, 1, 1), (@r, @c, 'reading', 'P7', N'Reading Comprehension', 4, 1, 2),
+              (@s, @c, 'speaking', 'S3', N'Respond to questions', 4, 1, 1), (@w, @c, 'writing', 'W2', N'Respond to a written request', 4, 1, 1);
             INSERT INTO QuestionCategories (CertId, Code, Name) VALUES
               (@c, 'grammar_prep', N'Preposition'), (@c, 'reading_inference', N'Inference'),
               (@c, 'listening_photo', N'Photographs'), (@c, 'listening_detail', N'Detail');
@@ -277,7 +277,7 @@ public sealed class QuestionImportServiceTests(DatabaseFixture database)
         var (otherCertId, _) = await SeedAsync();
         await database.SqlAsync($"""
             DECLARE @r INT = (SELECT SkillId FROM Skills WHERE CertId = {otherCertId} AND Code = 'READ');
-            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder) VALUES (@r, {otherCertId}, 'reading', 'P6', N'Only elsewhere', 3);
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, ExpectedQuestionCount, DisplayOrder) VALUES (@r, {otherCertId}, 'reading', 'P6', N'Only elsewhere', 1, 3);
             """);
         var manifest = Sample("sample-reading-mcq.json");
         manifest["sections"]![1]!["sectionCode"] = "P6";

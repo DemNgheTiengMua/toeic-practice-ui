@@ -7,9 +7,9 @@ INSERT INTO Users (RoleId,Email,PasswordHash) VALUES (@r,'other@x.com',0x00); DE
 INSERT INTO Certificates (Code,Name,IsActive) VALUES ('TOEIC',N'T',1); DECLARE @c INT=SCOPE_IDENTITY();
 INSERT INTO Skills (CertId,Code,Name,Modality,DisplayOrder) VALUES (@c,'RD',N'Reading','reading',1); DECLARE @rd INT=SCOPE_IDENTITY();
 INSERT INTO Skills (CertId,Code,Name,Modality,DisplayOrder) VALUES (@c,'WR',N'Writing','writing',2); DECLARE @wr INT=SCOPE_IDENTITY();
-INSERT INTO Sections (SkillId,CertId,Modality,Code,Name,OptionCount) VALUES (@rd,@c,'reading','P5',N'Part 5',4); DECLARE @p5 INT=SCOPE_IDENTITY();
-INSERT INTO Sections (SkillId,CertId,Modality,Code,Name) VALUES (@wr,@c,'writing','W1',N'Q1-5 picture'); DECLARE @w1 INT=SCOPE_IDENTITY();
-INSERT INTO Sections (SkillId,CertId,Modality,Code,Name) VALUES (@wr,@c,'writing','W8',N'Q8 essay'); DECLARE @w8 INT=SCOPE_IDENTITY();
+INSERT INTO Sections (SkillId,CertId,Modality,Code,Name,OptionCount,ExpectedQuestionCount) VALUES (@rd,@c,'reading','P5',N'Part 5',4,30); DECLARE @p5 INT=SCOPE_IDENTITY();
+INSERT INTO Sections (SkillId,CertId,Modality,Code,Name,ExpectedQuestionCount) VALUES (@wr,@c,'writing','W1',N'Q1-5 picture',5); DECLARE @w1 INT=SCOPE_IDENTITY();
+INSERT INTO Sections (SkillId,CertId,Modality,Code,Name,ExpectedQuestionCount) VALUES (@wr,@c,'writing','W8',N'Q8 essay',1); DECLARE @w8 INT=SCOPE_IDENTITY();
 INSERT INTO Exams (CertId,Name,Status,DurationMinutes) VALUES (@c,N'ETS 1','published',120); DECLARE @ex INT=SCOPE_IDENTITY();
 INSERT INTO Exams (CertId,Name,Status,DurationMinutes,Purpose) VALUES (@c,N'Writing 1','published',60,'writing_practice'); DECLARE @wx INT=SCOPE_IDENTITY();
 PRINT 'accepted writing_practice purpose';

@@ -175,7 +175,7 @@
                                style="width: 90px; border: 2px solid var(--color-ink, #14181d); border-radius: 0; font-family: var(--font-mono, monospace); font-weight: 700; text-align: center;">
                       </div>
                       <div style="font-size: 0.7rem; color: #666; margin-top: 0.25rem;">
-                        Expected items: <strong>@(sec.ExpectedQuestionCount ?? 10)</strong>
+                        Expected items: <strong>@sec.ExpectedQuestionCount</strong>
                       </div>
                     </div>
                   }
@@ -225,9 +225,9 @@
                           <div style="background: #fff; border: 1px solid var(--color-ink, #14181d); padding: 0.5rem;">
                             <div style="display: flex; justify-content: space-between; font-size: 0.7rem; margin-bottom: 0.25rem;">
                               <span>@sec.Code (w: <span class="calc-sec-weight-label" data-skill-idx="@sIdx" data-sec-idx="@secIdx">@sec.ScoreWeight</span>)</span>
-                              <span class="text-muted">max: @(sec.ExpectedQuestionCount ?? 10)</span>
+                              <span class="text-muted">max: @sec.ExpectedQuestionCount</span>
                             </div>
-                            <input type="number" min="0" max="@(sec.ExpectedQuestionCount ?? 100)"
+                            <input type="number" min="0" max="@sec.ExpectedQuestionCount"
                                    class="field__input calc-sec-input"
                                    data-calc-skill="@sIdx"
                                    data-calc-sec="@secIdx"

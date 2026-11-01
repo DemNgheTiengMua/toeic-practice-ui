@@ -50,9 +50,9 @@ public sealed class SittingPersistenceAndCrashRecoveryTests(DatabaseFixture data
             DECLARE @sL INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'LIST');
             DECLARE @sR INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'READ');
 
-            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder, NavigationMode) VALUES
-              (@sL, @cert, 'listening', 'P1', N'Photos', 1, 'FULL_SANDBOX'),
-              (@sR, @cert, 'reading', 'P5', N'Sentences', 2, 'FULL_SANDBOX');
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder, ExpectedQuestionCount, NavigationMode) VALUES
+              (@sL, @cert, 'listening', 'P1', N'Photos', 1, 1, 'FULL_SANDBOX'),
+              (@sR, @cert, 'reading', 'P5', N'Sentences', 2, 1, 'FULL_SANDBOX');
             DECLARE @secL INT = (SELECT SectionId FROM Sections WHERE CertId = @cert AND Code = 'P1');
             DECLARE @secR INT = (SELECT SectionId FROM Sections WHERE CertId = @cert AND Code = 'P5');
 

@@ -72,7 +72,9 @@ CREATE TABLE Sections (
   AllowedComponentTypesJson NVARCHAR(MAX) NULL,
   ToolsConfigJson           NVARCHAR(MAX) NULL,
   -- UI-18: fixed per-Part question count ("Part 3 — 39 questions", editor progress "25 / 39")
-  ExpectedQuestionCount     INT NULL CONSTRAINT CK_Sections_ExpectedCount CHECK (ExpectedQuestionCount IS NULL OR ExpectedQuestionCount > 0),
+  -- #157: NOT NULL, because a blank count made the publish audit skip SEC_QUESTION_COUNT_LOW and an
+  -- empty part could go live. A section always knows how many questions it holds.
+  ExpectedQuestionCount     INT NOT NULL CONSTRAINT CK_Sections_ExpectedCount CHECK (ExpectedQuestionCount > 0),
   DisplayOrder              INT NOT NULL DEFAULT 0,
   CONSTRAINT UQ_Sections_Skill_Code UNIQUE (SkillId, Code),
   -- composite FK pins the section's cert to its skill's cert (isolation, enforced because CertId is NOT NULL):

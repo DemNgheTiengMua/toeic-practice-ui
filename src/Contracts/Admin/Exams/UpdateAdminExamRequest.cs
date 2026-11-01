@@ -8,7 +8,7 @@ public sealed record UpdateAdminExamRequest(
     string Name,
     int DurationMinutes,
     ExamPurposeDto Purpose,
-    ExamStatusDto Status,
+    // #157: no Status. A metadata update cannot publish, hide or unpublish; that is POST /{id}/publish.
     string? Description = null,
     string? SourceName = null,
     string? InternalNote = null,

@@ -145,6 +145,10 @@ public sealed partial class CertificateService
                     throw new ArgumentException($"Section code is required for skill '{skillCode}'.", nameof(request));
                 if (string.IsNullOrWhiteSpace(secDto.Name))
                     throw new ArgumentException($"Section name is required for section '{secDto.Code}'.", nameof(request));
+                // #157: the column is NOT NULL CHECK (> 0). Say so here rather than letting the
+                // constraint surface as a 500 from deep inside the save.
+                if (secDto.ExpectedQuestionCount <= 0)
+                    throw new ArgumentException($"Section '{secDto.Code}' must declare how many questions it holds (ExpectedQuestionCount > 0).", nameof(request));
 
                 var secCode = secDto.Code.Trim().ToUpperInvariant();
                 var navModeStr = FormatUpperSnakeCase(secDto.NavigationMode.ToString());
@@ -273,8 +277,7 @@ public sealed partial class CertificateService
             {
                 Code = s.Code.Trim().ToUpperInvariant(),
                 Raw = (s.Sections ?? [])
-                    .Where(sec => sec.ExpectedQuestionCount is > 0)
-                    .Sum(sec => sec.ExpectedQuestionCount!.Value),
+                    .Sum(sec => sec.ExpectedQuestionCount),
             })
             .ToDictionary(x => x.Code, x => x.Raw, StringComparer.OrdinalIgnoreCase);
 

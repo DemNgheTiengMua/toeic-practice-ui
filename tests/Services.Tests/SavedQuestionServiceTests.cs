@@ -50,7 +50,7 @@ public sealed class SavedQuestionServiceTests(DatabaseFixture database)
         db.Skills.Add(skill);
         await db.SaveChangesAsync();
 
-        var readSec = new Section { CertId = cert.CertId, SkillId = skill.SkillId, Modality = "reading", Code = "P5", Name = "Incomplete Sentences", DisplayOrder = 1, OptionCount = 4 };
+        var readSec = new Section { CertId = cert.CertId, SkillId = skill.SkillId, Modality = "reading", Code = "P5", Name = "Incomplete Sentences", DisplayOrder = 1, OptionCount = 4, ExpectedQuestionCount = 1 };
         db.Sections.Add(readSec);
         await db.SaveChangesAsync();
 

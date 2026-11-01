@@ -957,7 +957,6 @@ public sealed class AdminExamsControllerTests
             certCode: null,
             title: null,
             purpose: null,
-            status: null,
             targetBand: null,
             difficultyLevel: null,
             blueprintJson: json,
@@ -977,11 +976,12 @@ public sealed class AdminExamsControllerTests
         var api = new TestApiClient();
         var controller = CreateController(api);
 
+        // #157: the form no longer offers an initial status; the blueprint carries none, so a
+        // generated exam is always created as a draft and published through POST /publish.
         var result = await controller.Generate(
             certCode: "TOEIC",
             title: "Quick Form",
             purpose: "mock",
-            status: "published",
             targetBand: "B2",
             difficultyLevel: 3,
             blueprintJson: null,
@@ -990,7 +990,7 @@ public sealed class AdminExamsControllerTests
         var redirect = Assert.IsType<RedirectToActionResult>(result);
         Assert.Equal(nameof(AdminExamsController.Studio), redirect.ActionName);
         Assert.Equal(99, redirect.RouteValues?["id"]);
-        Assert.Equal("published", api.LastGeneratedBlueprint?.Status);
+        Assert.Equal("TOEIC", api.LastGeneratedBlueprint?.CertCode);
     }
 
     [Fact]
@@ -1003,7 +1003,6 @@ public sealed class AdminExamsControllerTests
             certCode: null,
             title: "Form",
             purpose: "mock",
-            status: "draft",
             targetBand: null,
             difficultyLevel: null,
             blueprintJson: null,
@@ -1342,7 +1341,7 @@ public sealed class AdminExamsControllerTests
                 CertId: 1,
                 CertCode: blueprint.CertCode,
                 ExamName: blueprint.Title ?? "Generated Test",
-                Status: blueprint.Status ?? "draft",
+                Status: "draft",
                 Purpose: blueprint.Purpose ?? "mock",
                 QuestionCount: 4));
         }

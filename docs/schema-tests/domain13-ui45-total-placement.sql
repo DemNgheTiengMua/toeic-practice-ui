@@ -7,7 +7,7 @@ INSERT INTO Certificates (Code,Name,IsActive) VALUES ('TOEIC',N'T',1); DECLARE @
 INSERT INTO Skills (CertId,Code,Name,Modality) VALUES (@c,'LS',N'Listening','listening'); DECLARE @ls INT=SCOPE_IDENTITY();
 INSERT INTO Skills (CertId,Code,Name,Modality) VALUES (@c,'RD',N'Reading','reading'); DECLARE @rd INT=SCOPE_IDENTITY();
 INSERT INTO Skills (CertId,Code,Name,Modality) VALUES (@c,'WR',N'Writing','writing'); DECLARE @wr INT=SCOPE_IDENTITY();
-INSERT INTO Sections (SkillId,CertId,Modality,Code,Name) VALUES (@wr,@c,'writing','W8',N'Q8 essay'); DECLARE @w8 INT=SCOPE_IDENTITY();
+INSERT INTO Sections (SkillId,CertId,Modality,Code,Name,ExpectedQuestionCount) VALUES (@wr,@c,'writing','W8',N'Q8 essay',1); DECLARE @w8 INT=SCOPE_IDENTITY();
 INSERT INTO ScoreBands (CertId,Code,Name,MinTotal,MaxTotal) VALUES (@c,'A2',N'A2',225,549);
 INSERT INTO Exams (CertId,Name,Status,DurationMinutes,Purpose) VALUES (@c,N'Writing 1','published',60,'writing_practice'); DECLARE @wx INT=SCOPE_IDENTITY();
 INSERT INTO ExamAttempts (UserId,ExamId,CertId,ExpiresAt) VALUES (@u,@wx,@c,DATEADD(HOUR,1,SYSDATETIMEOFFSET())); DECLARE @a INT=SCOPE_IDENTITY();

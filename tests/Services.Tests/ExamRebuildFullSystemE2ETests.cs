@@ -790,8 +790,8 @@ public sealed class ExamRebuildFullSystemE2ETests(DatabaseFixture database)
             VALUES (@cert, 'READ', N'Reading CAT', 'reading', 1, 60);
             DECLARE @skill INT = SCOPE_IDENTITY();
 
-            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder, NavigationMode, UnitCount)
-            VALUES (@skill, @cert, 'reading', 'P7_CAT', N'Adaptive Reading', 1, 'UNIT_LOCKED_SANDBOX', 2);
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder, NavigationMode, ExpectedQuestionCount, UnitCount)
+            VALUES (@skill, @cert, 'reading', 'P7_CAT', N'Adaptive Reading', 1, 'UNIT_LOCKED_SANDBOX', 1, 2);
             DECLARE @sec INT = SCOPE_IDENTITY();
 
             INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose)
@@ -856,7 +856,7 @@ public sealed class ExamRebuildFullSystemE2ETests(DatabaseFixture database)
         Assert.Equal(2, toeicSw.Skills.Count);
 
         var spea = toeicSw.Skills.Single(s => s.Code == "SPEA");
-        Assert.Equal(11, spea.Sections.Sum(s => s.ExpectedQuestionCount ?? 0));
+        Assert.Equal(11, spea.Sections.Sum(s => s.ExpectedQuestionCount));
 
         var writ = toeicSw.Skills.Single(s => s.Code == "WRIT");
         var w1 = writ.Sections.Single(s => s.Code == "W1");

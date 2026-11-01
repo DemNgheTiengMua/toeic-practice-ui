@@ -73,9 +73,9 @@ public sealed class GenerativeExamServiceTests(DatabaseFixture database)
               (@c1, 'READ', N'Reading', 'reading', 1, 5, 495, 5);
             DECLARE @s1 INT = (SELECT SkillId FROM Skills WHERE CertId = @c1 AND Code = 'READ');
 
-            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, DisplayOrder) VALUES
-              (@s1, @c1, 'reading', 'P5', N'Incomplete Sentences', 4, 1),
-              (@s1, @c1, 'reading', 'P6', N'Text Completion', 4, 2);
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder) VALUES
+              (@s1, @c1, 'reading', 'P5', N'Incomplete Sentences', 4, 1, 1),
+              (@s1, @c1, 'reading', 'P6', N'Text Completion', 4, 1, 2);
 
             INSERT INTO QuestionCategories (CertId, Code, Name) VALUES
               (@c1, 'grammar_prep', N'Prepositions'),
@@ -91,8 +91,8 @@ public sealed class GenerativeExamServiceTests(DatabaseFixture database)
               (@c2, 'WRIT', N'Writing', 'writing', 1);
             DECLARE @s2 INT = (SELECT SkillId FROM Skills WHERE CertId = @c2 AND Code = 'WRIT');
 
-            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, DisplayOrder) VALUES
-              (@s2, @c2, 'writing', 'T1', N'Task 1 Writing', 4, 1);
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, OptionCount, ExpectedQuestionCount, DisplayOrder) VALUES
+              (@s2, @c2, 'writing', 'T1', N'Task 1 Writing', 4, 1, 1);
             """);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
@@ -173,7 +173,6 @@ public sealed class GenerativeExamServiceTests(DatabaseFixture database)
             CertCode: env.CertCode,
             Title: "Generative Reading Form 1",
             Purpose: "mock",
-            Status: "draft",
             TargetBand: "B2",
             DifficultyLevel: 3,
             Sections:
@@ -209,7 +208,7 @@ public sealed class GenerativeExamServiceTests(DatabaseFixture database)
     }
 
     [Fact]
-    public async Task GenerateAndIngestExamAsync_WithPublishedStatus_SetsPublishedStatus()
+    public async Task GenerateAndIngestExamAsync_NeverPublishes_EvenWhenTheCallerAsked()
     {
         var env = await SeedEnvironmentAsync();
         var claude = new TestClaudeClient();
@@ -219,18 +218,25 @@ public sealed class GenerativeExamServiceTests(DatabaseFixture database)
         var importService = new QuestionImportService(db, new RecordingFileStore(), TimeProvider.System);
         var generator = new ExamGeneratorService(db, importService, claude);
 
+        // #157: the blueprint no longer carries a status at all. A package generated here is a
+        // draft; the only transition to published is POST /{id}/publish, which runs the audit.
         var blueprint = new ExamBlueprintDto(
             CertCode: env.CertCode,
             Title: "Published Form A",
             Purpose: "mock",
-            Status: "published",
             Sections: [new ExamBlueprintSectionDto("P5", 2)]);
 
         var result = await generator.GenerateAndIngestExamAsync(blueprint, env.AdminId);
 
-        Assert.Equal("published", result.Status);
+        Assert.Equal("draft", result.Status);
         var savedExam = await db.Exams.SingleAsync(e => e.ExamId == result.ExamId);
-        Assert.Equal("published", savedExam.Status);
+        Assert.Equal("draft", savedExam.Status);
+
+        // The status override on the ingest seam is ignored too, so a caller cannot route around
+        // the generator either.
+        var withOverride = await generator.IngestManifestAsync(
+            env.CertId, SampleValidManifest("Published Form B"), env.AdminId, targetStatus: "published");
+        Assert.Equal("draft", withOverride.Status);
     }
 
     [Fact]
@@ -338,14 +344,16 @@ public sealed class GenerativeExamServiceTests(DatabaseFixture database)
         var importService = new QuestionImportService(db, new RecordingFileStore(), TimeProvider.System);
         var generator = new ExamGeneratorService(db, importService, claude);
 
+        // #157: a generated exam starts as a draft, so the fixture promotes it in SQL. The trigger
+        // trg_ExamAttempts_PublishedExamOnly only needs it published, not audited.
         var blueprint = new ExamBlueprintDto(
             CertCode: env.CertCode,
             Title: "Sat Engine Form",
             Purpose: "mock",
-            Status: "published",
             Sections: [new ExamBlueprintSectionDto("P5", 2)]);
 
         var genResult = await generator.GenerateAndIngestExamAsync(blueprint, env.AdminId);
+        await database.SqlAsync($"UPDATE Exams SET Status = 'published' WHERE ExamId = {genResult.ExamId};");
 
         // Arrange a learner
         var learnerEmail = $"learner-{Guid.NewGuid():N}@test.local";
@@ -409,7 +417,6 @@ public sealed class GenerativeExamServiceTests(DatabaseFixture database)
             CertCode: env.CertCode,
             Title: "Distribution Exam",
             Purpose: "mock",
-            Status: "hidden",
             Skill: "reading",
             TargetBandDistribution: new Dictionary<string, double> { ["B1"] = 0.3, ["B2"] = 0.7 },
             Sections: null);
@@ -417,7 +424,8 @@ public sealed class GenerativeExamServiceTests(DatabaseFixture database)
         var result = await generator.GenerateAndIngestExamAsync(blueprint, env.AdminId);
 
         Assert.NotNull(result);
-        Assert.Equal("hidden", result.Status);
+        // #157: no status on the blueprint, so this is a draft regardless of what the caller wanted.
+        Assert.Equal("draft", result.Status);
         Assert.Equal(2, result.QuestionCount);
     }
 

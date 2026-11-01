@@ -20,6 +20,6 @@ public sealed record SectionBlueprintDetailDto(
     bool RequireAudio,
     bool RequireImage,
     int RequiredKeywordCount,
-    int? ExpectedQuestionCount,
+    int ExpectedQuestionCount,
     string? AllowedComponentTypesJson,
     string? ToolsConfigJson);

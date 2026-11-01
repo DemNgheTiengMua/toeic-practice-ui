@@ -393,15 +393,13 @@ public sealed class ExamQuickIngestServiceTests
     public void BlueprintValidation_RejectsOptionBeyondOptionCount()
     {
         // TOEIC Part 2 Section has OptionCount = 3 (A, B, C)
-        var section = new Section
-        {
+        var section = new Section {
             SectionId = 10,
             Name = "Question-Response",
             Code = "P2",
             Modality = "listening",
             OptionCount = 3,
-            AllowedComponentTypesJson = "[\"mcq_3\",\"mcq\"]"
-        };
+            AllowedComponentTypesJson = "[\"mcq_3\",\"mcq\"]", ExpectedQuestionCount = 1 };
 
         var raw = """
             1. Where is the meeting?
@@ -426,15 +424,13 @@ public sealed class ExamQuickIngestServiceTests
     public void BlueprintValidation_RejectsUnallowedComponentType()
     {
         // Section allows only MCQ
-        var section = new Section
-        {
+        var section = new Section {
             SectionId = 20,
             Name = "Incomplete Sentences",
             Code = "P5",
             Modality = "reading",
             OptionCount = 4,
-            AllowedComponentTypesJson = "[\"mcq\"]"
-        };
+            AllowedComponentTypesJson = "[\"mcq\"]", ExpectedQuestionCount = 1 };
 
         var raw = """
             PROMPT: Write an essay about global warming.
@@ -455,15 +451,13 @@ public sealed class ExamQuickIngestServiceTests
     public void BlueprintValidation_RejectsKeywordCountMismatch()
     {
         // Section requires exactly 2 keywords (e.g. TOEIC Writing Q1-5)
-        var section = new Section
-        {
+        var section = new Section {
             SectionId = 30,
             Name = "Write a Sentence",
             Code = "W1",
             Modality = "writing",
             RequiredKeywordCount = 2,
-            AllowedComponentTypesJson = "[\"free_response\"]"
-        };
+            AllowedComponentTypesJson = "[\"free_response\"]", ExpectedQuestionCount = 1 };
 
         var raw = """
             PROMPT: Write a sentence based on the picture.
@@ -483,15 +477,13 @@ public sealed class ExamQuickIngestServiceTests
     [Fact]
     public void BlueprintValidation_RejectsMissingPassageWhenRequired()
     {
-        var section = new Section
-        {
+        var section = new Section {
             SectionId = 40,
             Name = "Reading Passage",
             Code = "P7",
             Modality = "reading",
             RequirePassage = true,
-            AllowedComponentTypesJson = "[\"mcq\"]"
-        };
+            AllowedComponentTypesJson = "[\"mcq\"]", ExpectedQuestionCount = 1 };
 
         var raw = """
             1. What is the topic?
@@ -512,26 +504,26 @@ public sealed class ExamQuickIngestServiceTests
     public void SampleTemplateGenerator_ReturnsAppropriateBlueprintSyntax()
     {
         // 1. Keyword mode
-        var secKeywords = new Section { RequiredKeywordCount = 2, Modality = "writing" };
+        var secKeywords = new Section { RequiredKeywordCount = 2, Modality = "writing", ExpectedQuestionCount = 1 };
         var t1 = ExamQuickIngestService.GenerateSectionSampleTemplate(secKeywords);
         Assert.Contains("KEYWORDS:", t1);
         Assert.Contains("PROMPT:", t1);
 
         // 2. Inline completion mode
-        var secCompletion = new Section { AllowedComponentTypesJson = "[\"inline_completion\"]", Modality = "reading" };
+        var secCompletion = new Section { AllowedComponentTypesJson = "[\"inline_completion\"]", Modality = "reading", ExpectedQuestionCount = 1 };
         var t2 = ExamQuickIngestService.GenerateSectionSampleTemplate(secCompletion);
         Assert.Contains("MAX_WORDS:", t2);
         Assert.Contains("ANSWER:", t2);
         Assert.Contains("|", t2);
 
         // 3. 3-option audio mode
-        var secAudio3 = new Section { OptionCount = 3, Modality = "listening" };
+        var secAudio3 = new Section { OptionCount = 3, Modality = "listening", ExpectedQuestionCount = 1 };
         var t3 = ExamQuickIngestService.GenerateSectionSampleTemplate(secAudio3);
         Assert.Contains("1. A", t3);
         Assert.Contains("TRANSCRIPT:", t3);
 
         // 4. Passage mode
-        var secPassage = new Section { RequirePassage = true, OptionCount = 4, Modality = "reading" };
+        var secPassage = new Section { RequirePassage = true, OptionCount = 4, Modality = "reading", ExpectedQuestionCount = 1 };
         var t4 = ExamQuickIngestService.GenerateSectionSampleTemplate(secPassage);
         Assert.Contains("PASSAGE:", t4);
     }

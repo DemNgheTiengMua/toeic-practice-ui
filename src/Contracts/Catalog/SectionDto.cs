@@ -4,7 +4,7 @@ namespace Contracts;
 public sealed record SectionDto(
     string Code,
     string Name,
-    int? ExpectedQuestionCount,
+    int ExpectedQuestionCount,
     int SectionId = 0,
     NavigationModeDto NavigationMode = NavigationModeDto.FullSandbox,
     decimal ScoreWeight = 1.0m,

@@ -4,7 +4,7 @@ namespace BusinessObjects;
 public sealed record SectionCatalog(
     string Code,
     string Name,
-    int? ExpectedQuestionCount,
+    int ExpectedQuestionCount,
     int SectionId = 0,
     string NavigationMode = "FULL_SANDBOX",
     decimal ScoreWeight = 1.0m,

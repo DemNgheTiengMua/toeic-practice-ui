@@ -53,15 +53,9 @@ public sealed partial class ExamGeneratorService
         var examId = importResult.ExamId.Value;
         var exam = await db.Exams.SingleAsync(e => e.ExamId == examId, cancellationToken);
 
-        if (!string.IsNullOrWhiteSpace(targetStatus))
-        {
-            var normalizedStatus = targetStatus.Trim().ToLowerInvariant();
-            if (normalizedStatus == ExamStatus.Published.ToCode() || normalizedStatus == ExamStatus.Hidden.ToCode())
-            {
-                exam.Status = normalizedStatus;
-                await db.SaveChangesAsync(cancellationToken);
-            }
-        }
+        // #157: targetStatus is deliberately ignored. Importing a manifest used to be a second door
+        // to 'published' that never ran the readiness audit; publishing is POST /{id}/publish.
+        _ = targetStatus;
 
         return new ExamGenerationResultDto(
             ExamId: exam.ExamId,

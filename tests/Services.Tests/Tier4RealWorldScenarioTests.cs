@@ -71,9 +71,9 @@ public sealed class Tier4RealWorldScenarioTests(DatabaseFixture database)
             DECLARE @sL INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Modality = 'listening');
             DECLARE @sR INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Modality = 'reading');
 
-            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder) VALUES
-              (@sL, @cert, 'listening', 'SEC_L_' + CAST(@cert AS VARCHAR(10)), N'Listening Part 1', 1),
-              (@sR, @cert, 'reading', 'SEC_R_' + CAST(@cert AS VARCHAR(10)), N'Reading Part 5', 2);
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, ExpectedQuestionCount, DisplayOrder) VALUES
+              (@sL, @cert, 'listening', 'SEC_L_' + CAST(@cert AS VARCHAR(10)), N'Listening Part 1', 1, 1),
+              (@sR, @cert, 'reading', 'SEC_R_' + CAST(@cert AS VARCHAR(10)), N'Reading Part 5', 1, 2);
             DECLARE @secL INT = (SELECT SectionId FROM Sections WHERE CertId = @cert AND Modality = 'listening');
             DECLARE @secR INT = (SELECT SectionId FROM Sections WHERE CertId = @cert AND Modality = 'reading');
 
@@ -192,8 +192,8 @@ public sealed class Tier4RealWorldScenarioTests(DatabaseFixture database)
               (@cert, 'R_' + @certStr, N'Reading', 'reading', 1);
             DECLARE @sR INT = (SELECT SkillId FROM Skills WHERE CertId = @cert);
 
-            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder) VALUES
-              (@sR, @cert, 'reading', 'SR_' + @certStr, N'Reading Part 5', 1);
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, ExpectedQuestionCount, DisplayOrder) VALUES
+              (@sR, @cert, 'reading', 'SR_' + @certStr, N'Reading Part 5', 1, 1);
             """);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
@@ -258,8 +258,8 @@ public sealed class Tier4RealWorldScenarioTests(DatabaseFixture database)
               (@cert, 'R_' + @certStr, N'Reading', 'reading', 1, 30, 0, 100, 5);
             DECLARE @sR INT = (SELECT SkillId FROM Skills WHERE CertId = @cert);
 
-            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder) VALUES
-              (@sR, @cert, 'reading', 'SR_' + @certStr, N'Reading Diagnostic', 1);
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, ExpectedQuestionCount, DisplayOrder) VALUES
+              (@sR, @cert, 'reading', 'SR_' + @certStr, N'Reading Diagnostic', 1, 1);
             DECLARE @secR INT = (SELECT SectionId FROM Sections WHERE CertId = @cert);
 
             INSERT INTO ScoreBands (CertId, Code, Name, MinTotal, MaxTotal, DisplayOrder) VALUES

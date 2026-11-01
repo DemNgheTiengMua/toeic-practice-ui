@@ -9,7 +9,7 @@ public sealed record AdminExamSectionProgressDto(
     string SectionName,
     ModalityDto Modality,
     int QuestionCount,
-    int? ExpectedQuestionCount,
+    int ExpectedQuestionCount,
     bool HasAudio,
     bool IsComplete,
     string StatusText);

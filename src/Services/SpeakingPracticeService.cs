@@ -51,7 +51,7 @@ public sealed class SpeakingPracticeService(
                 s.SectionId,
                 s.Code,
                 s.Name,
-                s.ExpectedQuestionCount ?? 0,
+                s.ExpectedQuestionCount,
                 null,
                 null,
                 s.DisplayOrder))

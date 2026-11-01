@@ -144,6 +144,9 @@ public sealed partial class AdminExamService
             throw new QuestionGroupNotFoundException(request.GroupId);
         }
 
+        // #157: adding a question changes the section total a finished attempt was scored against.
+        await RequireStructureEditableAsync(examId, cancellationToken);
+
         if (!string.IsNullOrWhiteSpace(group.Section.AllowedComponentTypesJson))
         {
             try
@@ -292,6 +295,15 @@ public sealed partial class AdminExamService
         if (hasAnswers && question.QuestionType != request.QuestionType.ToCode())
         {
             throw new AdminExamException(ApiError.Codes.QuestionHasAttemptAnswers, "Cannot change question type of a question with recorded attempt answers.");
+        }
+
+        // #157: on an exam with finished attempts, only cosmetic fields may change. Comparing the
+        // incoming values against what is stored keeps the rule structural rather than blanket:
+        // a stem or explanation edit passes, an answer-key or option-set edit does not.
+        // RequireStructureEditableAsync is a no-op when nothing has been sat, so it is the only query.
+        if (ChangesStructure(question, request))
+        {
+            await RequireStructureEditableAsync(question.ExamId, cancellationToken);
         }
 
         if (request.CategoryId.HasValue)
@@ -490,10 +502,16 @@ public sealed partial class AdminExamService
         var hasAnswers = await db.AttemptAnswers.AnyAsync(a => a.QuestionId == questionId, cancellationToken)
             || await db.FreeResponses.AnyAsync(r => r.QuestionId == questionId, cancellationToken);
 
+        // The question-level refusal is more specific than the exam-wide lock, and it was the one
+        // reported before #157, so it keeps precedence: an admin looking at one question wants to
+        // hear about that question's answers first.
         if (hasAnswers)
         {
-            throw new AdminExamException(ApiError.Codes.QuestionHasAttemptAnswers, "Cannot delete a question that has recorded learner answers in attempts.", 400);
+            throw new AdminExamException(ApiError.Codes.QuestionHasAttemptAnswers, "Cannot delete a question with recorded learner answers in attempts.", 400);
         }
+
+        // #157: deleting a question shrinks the section a finished attempt was scored on.
+        await RequireStructureEditableAsync(question.ExamId, cancellationToken);
 
         var saved = await db.SavedQuestions.Where(s => s.QuestionId == questionId).ToListAsync(cancellationToken);
         if (saved.Count > 0) db.SavedQuestions.RemoveRange(saved);
@@ -519,6 +537,20 @@ public sealed partial class AdminExamService
 
         var exam = await db.Exams.FirstOrDefaultAsync(e => e.ExamId == examId && !e.IsDeleted, cancellationToken);
         if (exam == null) throw new ExamNotFoundException(examId);
+
+        // #157: reordering within a section is presentational, but an entry naming an item that does
+        // not belong to this section is a move. Check before any write so nothing half-applies.
+        var groupIds = request.Items.Where(i => i.GroupId.HasValue).Select(i => i.GroupId!.Value).ToList();
+        var questionIds = request.Items.Where(i => i.QuestionId.HasValue).Select(i => i.QuestionId!.Value).ToList();
+
+        var everyItemInSection =
+            await db.QuestionGroups.AsNoTracking().CountAsync(g => groupIds.Contains(g.GroupId) && g.ExamId == examId && g.SectionId == request.SectionId, cancellationToken) == groupIds.Count
+            && await db.Questions.AsNoTracking().CountAsync(q => questionIds.Contains(q.QuestionId) && q.ExamId == examId && q.SectionId == request.SectionId, cancellationToken) == questionIds.Count;
+
+        if (!everyItemInSection)
+        {
+            await RequireStructureEditableAsync(examId, cancellationToken);
+        }
 
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
 

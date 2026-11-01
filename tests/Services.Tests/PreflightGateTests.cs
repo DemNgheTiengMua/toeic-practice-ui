@@ -51,9 +51,9 @@ public sealed class PreflightGateTests(DatabaseFixture database)
             DECLARE @sL INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'LIST');
             DECLARE @sR INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'READ');
 
-            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder, RequireAudio) VALUES
-              (@sL, @cert, 'listening', 'P1', N'Photos', 1, 1),
-              (@sR, @cert, 'reading', 'P5', N'Sentences', 2, 0);
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder, ExpectedQuestionCount, RequireAudio) VALUES
+              (@sL, @cert, 'listening', 'P1', N'Photos', 1, 1, 1),
+              (@sR, @cert, 'reading', 'P5', N'Sentences', 2, 1, 0);
             DECLARE @secL INT = (SELECT SectionId FROM Sections WHERE CertId = @cert AND Code = 'P1');
             DECLARE @secR INT = (SELECT SectionId FROM Sections WHERE CertId = @cert AND Code = 'P5');
 
@@ -102,8 +102,8 @@ public sealed class PreflightGateTests(DatabaseFixture database)
               (@cert, 'speaking', N'Speaking', 'speaking', 1);
             DECLARE @sS INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'speaking');
 
-            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder, RequireAudio) VALUES
-              (@sS, @cert, 'speaking', 'S1', N'Speaking Part 1', 1, 0);
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder, ExpectedQuestionCount, RequireAudio) VALUES
+              (@sS, @cert, 'speaking', 'S1', N'Speaking Part 1', 1, 1, 0);
             DECLARE @secS INT = (SELECT SectionId FROM Sections WHERE CertId = @cert AND Code = 'S1');
 
             INSERT INTO ScoreBands (CertId, Code, Name, MinTotal, MaxTotal, DisplayOrder) VALUES
@@ -138,8 +138,8 @@ public sealed class PreflightGateTests(DatabaseFixture database)
               (@cert, 'READ', N'Reading', 'reading', 1);
             DECLARE @sR INT = (SELECT SkillId FROM Skills WHERE CertId = @cert AND Code = 'READ');
 
-            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder, RequireAudio) VALUES
-              (@sR, @cert, 'reading', 'P5', N'Sentences', 1, 0);
+            INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, DisplayOrder, ExpectedQuestionCount, RequireAudio) VALUES
+              (@sR, @cert, 'reading', 'P5', N'Sentences', 1, 1, 0);
             DECLARE @secR INT = (SELECT SectionId FROM Sections WHERE CertId = @cert AND Code = 'P5');
 
             INSERT INTO ScoreBands (CertId, Code, Name, MinTotal, MaxTotal, DisplayOrder) VALUES

@@ -192,15 +192,15 @@ public sealed partial class AdminExamService
         {
             var qCount = questionsBySection.GetValueOrDefault(s.SectionId, 0);
             var hasAudio = exam.ExamSectionAudios.Any(a => a.SectionId == s.SectionId && !string.IsNullOrWhiteSpace(a.AudioPath)) || s.Modality != "listening";
-            var isComplete = (s.ExpectedQuestionCount == null || qCount >= s.ExpectedQuestionCount) && hasAudio;
+            var isComplete = qCount >= s.ExpectedQuestionCount && hasAudio;
             string statusText;
             if (isComplete)
             {
                 statusText = "Complete";
             }
-            else if (s.ExpectedQuestionCount.HasValue && qCount < s.ExpectedQuestionCount.Value)
+            else if (qCount < s.ExpectedQuestionCount)
             {
-                statusText = $"{s.ExpectedQuestionCount.Value - qCount} questions missing";
+                statusText = $"{s.ExpectedQuestionCount - qCount} questions missing";
             }
             else if (!hasAudio)
             {

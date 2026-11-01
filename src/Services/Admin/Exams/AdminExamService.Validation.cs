@@ -18,6 +18,68 @@ namespace Services;
 public sealed partial class AdminExamService
 {
 
+    /// <summary>
+    /// #157: the answer key and the option set are what a finished attempt was graded against.
+    /// Changing type or moving the question to another group/section re-files it under a different
+    /// section total. Everything else on this request is cosmetic.
+    /// </summary>
+    private static bool ChangesStructure(Question question, UpdateQuestionRequest request)
+    {
+        if (request.GroupId.HasValue && request.GroupId.Value != question.GroupId)
+        {
+            return true;
+        }
+
+        if (question.QuestionType != request.QuestionType.ToCode())
+        {
+            return true;
+        }
+
+        // The stored set is what the finished attempt was scored against; an incoming set that
+        // differs in labels, correctness or text changes that. No options in the request means the
+        // caller left the set alone.
+        if (request.Options is not { Count: > 0 })
+        {
+            return false;
+        }
+
+        var stored = question.QuestionOptionQuestionNavigations
+            .Select(o => (o.Label.Trim().ToUpperInvariant(), o.IsCorrect))
+            .OrderBy(o => o.Item1)
+            .ToList();
+        var incoming = request.Options
+            .Select(o => (o.Label.Trim().ToUpperInvariant(), o.IsCorrect))
+            .OrderBy(o => o.Item1)
+            .ToList();
+
+        return !stored.SequenceEqual(incoming);
+    }
+
+    /// <summary>
+    /// #157: once an exam has a finished attempt, its structure is what that attempt was scored
+    /// against, so it may not change. "Structure" here means anything that changes which questions
+    /// exist, which section they belong to, or what the right answer is — adding or deleting a
+    /// section's questions or groups, moving a question, and editing an option set. Cosmetic fields
+    /// (names, stems, explanations, hints, notes, audio/passage stimuli) stay editable: they cannot
+    /// change a recorded score. Create/delete entry points call this; they used to check only that
+    /// the individual question had answers, which let the section's shape drift.
+    /// </summary>
+    private async Task RequireStructureEditableAsync(int examId, CancellationToken cancellationToken)
+    {
+        var finishedAttemptCount = await db.ExamAttempts.AsNoTracking()
+            .CountAsync(a => a.ExamId == examId && (a.Status == "submitted" || a.Status == "graded"), cancellationToken);
+
+        if (finishedAttemptCount > 0)
+        {
+            throw new AdminExamException(
+                ApiError.Codes.ExamHasFinishedAttempts,
+                $"This exam's structure is locked: {finishedAttemptCount} learner {(finishedAttemptCount == 1 ? "attempt has" : "attempts have")} already finished it. " +
+                "Adding, removing or moving questions, and changing answer options, would change the score those attempts were given. " +
+                "Name, description, internal note, stem, explanation and hint remain editable.",
+                400);
+        }
+    }
+
     private static void ValidateQuestionGroup(string examPurpose, string sectionModality, string? imagePath, string? imageAlt, int? audioStartMs, int? audioEndMs, int? prepSeconds, int? responseSeconds)
     {
         if (examPurpose == ExamPurpose.SpeakingPractice.ToCode() && sectionModality != "speaking")

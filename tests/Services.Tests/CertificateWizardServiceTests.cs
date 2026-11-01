@@ -65,7 +65,7 @@ public sealed class CertificateWizardServiceTests(DatabaseFixture database)
         // Verify TOEIC S&W preset
         var toeicSw = presets.Single(p => p.PresetCode == "toeic_sw");
         var spea = toeicSw.Skills.Single(s => s.Code == "SPEA");
-        Assert.Equal(11, spea.Sections.Sum(s => s.ExpectedQuestionCount ?? 0));
+        Assert.Equal(11, spea.Sections.Sum(s => s.ExpectedQuestionCount));
         var writ = toeicSw.Skills.Single(s => s.Code == "WRIT");
         var w1 = writ.Sections.Single(s => s.Code == "W1");
         Assert.Equal(NavigationModeDto.HybridGroupLocked, w1.NavigationMode);
