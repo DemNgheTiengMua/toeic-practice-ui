@@ -141,6 +141,7 @@ public sealed partial class PracticeService
             answer.IsCorrect = null;
         }
 
+        answer.AnsweredAt = DateTime.UtcNow;
         await db.SaveChangesAsync(cancellationToken);
 
         // Update correct count on session

@@ -59,8 +59,8 @@ Password hash is PBKDF2-SHA256 (`v1` format), identical on every seed re-run by 
 | ExamId | Cert | Name | Purpose | Questions |
 | ---: | :--- | :--- | :--- | ---: |
 | 1 | TOEIC | ETS 2024 — Test 1 | mock | 9 |
-| 2 | TOEIC | TOEIC Placement Test — Standard | placement | 4 |
-| 3 | TOEIC | TOEIC Placement Test — Quick | placement | 2 |
+| 2 | TOEIC | TOEIC Placement Test — Diagnostic | placement | 24 |
+| 3 | TOEIC | *(removed in #156 — the 2-question Quick exam)* | — | — |
 | 4 | TOEIC | ETS TOEIC Speaking Practice Exam 1 | speaking_practice | 3 |
 | 5 | TOEIC | ETS TOEIC Writing Practice Test 1 | writing_practice | 2 |
 | 6 | IELTS | Cambridge IELTS 18 — Academic Test 1 | mock | 2 |

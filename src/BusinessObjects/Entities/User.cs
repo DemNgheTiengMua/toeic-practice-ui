@@ -120,4 +120,8 @@ public partial class User
 
     [InverseProperty("User")]
     public virtual ICollection<TargetBand> TargetBands { get; set; } = new List<TargetBand>();
+
+    /// <summary>#156: the learner's answers to calibration proposals.</summary>
+    [InverseProperty("User")]
+    public virtual ICollection<CalibrationDecision> CalibrationDecisions { get; set; } = new List<CalibrationDecision>();
 }

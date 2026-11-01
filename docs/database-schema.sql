@@ -207,7 +207,7 @@ CREATE TABLE Exams (
   DeliveryMode    NVARCHAR(30) NOT NULL CONSTRAINT DF_Exams_DeliveryMode DEFAULT 'strict_exam'
     CONSTRAINT CK_Exams_DeliveryMode CHECK (DeliveryMode IN ('strict_exam', 'practice')),
   ExamFamily      NVARCHAR(50) NULL,
-  Description     NVARCHAR(500) NULL,     -- UI-3: placement card copy ("Adaptive across both sections…")
+  Description     NVARCHAR(500) NULL,     -- UI-3: placement card copy (see the seeded exam's description)
   SourceName      NVARCHAR(120) NULL,     -- UI-4: exam editor "Test set / source" (e.g. ETS 2024)
   InternalNote    NVARCHAR(1000) NULL,    -- UI-4: exam editor note, admin only
   -- UI-45: placement-select card meta "40 questions · 30 minutes"; kept on the exam because the
@@ -474,6 +474,11 @@ CREATE TABLE PracticeAnswers (
   IsCorrect             BIT NULL,
   HintUsed         BIT NOT NULL CONSTRAINT DF_PracticeAnswers_HintUsed DEFAULT 0,  -- UI-42: summary "2 with a hint"
   DisplayOrder     INT NOT NULL DEFAULT 0,
+  -- #156: when this answer was last written, so the gap to the previous answer is the response
+  -- time and a rushed answer can be excluded from the calibration sample. NULL, never backfilled:
+  -- a row from before this column has no response time, and inventing one would make the filter
+  -- meaningless.
+  AnsweredAt       DATETIME2(3) NULL,
   CONSTRAINT UQ_PracticeAnswers UNIQUE (SessionId, QuestionId),
   -- Low: SectionId must be the session's own
   CONSTRAINT FK_PracticeAnswers_SessionSection FOREIGN KEY (SessionId, SectionId) REFERENCES PracticeSessions(SessionId, SectionId),
@@ -559,6 +564,10 @@ CREATE TABLE AttemptAnswers (
   IsCorrect             BIT NULL,
   -- UI-16: "Flag for review", "Flag 7", review filter "Only flagged questions"
   IsFlagged        BIT NOT NULL CONSTRAINT DF_AttemptAnswers_IsFlagged DEFAULT 0,
+  -- #156: when this answer was last written, so the gap to the previous answer is the response
+  -- time. NULL, never backfilled: a row from before this column has no response time, and
+  -- inventing one (SYSDATETIME() on every old row) would make every rushing signal meaningless.
+  AnsweredAt       DATETIME2(3) NULL,
   CONSTRAINT UQ_AttemptAnswers UNIQUE (AttemptId, QuestionId),
   -- H-5: ExamId must be the attempt's own
   CONSTRAINT FK_AttemptAnswers_AttemptExam FOREIGN KEY (AttemptId, ExamId) REFERENCES ExamAttempts(AttemptId, ExamId),
@@ -1043,6 +1052,35 @@ BEGIN
 END;
 GO
 CREATE UNIQUE INDEX UX_PlacementTests_Attempt ON PlacementTests(AttemptId) WHERE AttemptId IS NOT NULL;
+GO
+-- #156: the learner's answer to a calibration proposal. A row here is a *record of a decision the
+-- learner made*, not an automatic correction, so the path is only rewritten by the 'adjusted' branch
+-- and a 'deferred' row leaves it exactly as it was. The numbers are stored, not re-derived: after
+-- twenty more answers the recomputed figures would differ, and a reason that changes is not a record.
+CREATE TABLE CalibrationDecisions (
+  DecisionId       INT IDENTITY(1,1) PRIMARY KEY,
+  UserId           INT NOT NULL REFERENCES Users(UserId),
+  CertId           INT NOT NULL REFERENCES Certificates(CertId),
+  -- the band the placement (or last graded mock) put the learner in, and the band the evidence supports
+  PlacedBandCode   VARCHAR(20) NOT NULL,
+  ProposedBandCode VARCHAR(20) NOT NULL,
+  -- AC5: never conclude on fewer valid answers than this. The floor is the schema's, so no code path
+  -- can file a decision on thinner evidence than the threshold states.
+  SampleSize       INT NOT NULL CONSTRAINT CK_Calibration_Sample CHECK (SampleSize >= 20),
+  ObservedAccuracyPct DECIMAL(5,2) NOT NULL
+    CONSTRAINT CK_Calibration_Accuracy CHECK (ObservedAccuracyPct BETWEEN 0 AND 100),
+  -- 'deferred' = "later", path untouched. 'adjusted' = the path was lowered to ProposedBandCode.
+  Decision         VARCHAR(10) NOT NULL
+    CONSTRAINT CK_Calibration_Decision CHECK (Decision IN ('deferred','adjusted')),
+  DecidedAt        DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
+  -- both bands must be this certificate's own; no cross-certificate leak
+  CONSTRAINT FK_Calibration_PlacedBand FOREIGN KEY (CertId, PlacedBandCode) REFERENCES ScoreBands(CertId, Code),
+  CONSTRAINT FK_Calibration_ProposedBand FOREIGN KEY (CertId, ProposedBandCode) REFERENCES ScoreBands(CertId, Code),
+  -- the proposal is downward: an accuracy shortfall never raises a band
+  CONSTRAINT CK_Calibration_Downward CHECK (ProposedBandCode <> PlacedBandCode)
+);
+GO
+CREATE INDEX IX_Calibration_User ON CalibrationDecisions(UserId, CertId, DecidedAt);
 GO
 CREATE TABLE TargetBands (
   UserId         INT NOT NULL REFERENCES Users(UserId),

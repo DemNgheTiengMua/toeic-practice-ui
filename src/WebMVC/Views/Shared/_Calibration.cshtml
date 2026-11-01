@@ -1,0 +1,71 @@
+@model Contracts.CalibrationViewDto
+@{
+  // #156: the calibration proposal. It is a proposal, so it is framed as one: the numbers, both
+  // bands, and two equal-weight choices. Nothing here says or implies why the accuracy is low.
+  var proposal = Model.Proposal!;
+}
+
+@if (Model.Reason == "diverged")
+{
+  <section class="card" aria-labelledby="calibration-title">
+    <div class="card__header">
+      <strong id="calibration-title">Your practice does not match your placement band</strong>
+    </div>
+    <div class="card__body stack">
+      <p class="no-margin">@proposal.Evidence</p>
+
+      <dl class="facts">
+        <div class="facts__row">
+          <dt>Valid answers counted</dt>
+          <dd class="font-mono">@proposal.ValidAnswerCount</dd>
+        </div>
+        <div class="facts__row">
+          <dt>Correct</dt>
+          <dd class="font-mono">@proposal.ObservedAccuracyPct.ToString("0.#")%</dd>
+        </div>
+        <div class="facts__row">
+          <dt>Placement band</dt>
+          <dd class="font-mono">@Model.PlacedBandCode</dd>
+        </div>
+        <div class="facts__row">
+          <dt>Proposed starting band</dt>
+          <dd class="font-mono">@proposal.ProposedBandCode</dd>
+        </div>
+      </dl>
+
+      @if (Model.ExcludedRushedCount > 0)
+      {
+        <p class="text-sm text-muted no-margin">
+          @Model.ExcludedRushedCount answer@(Model.ExcludedRushedCount == 1 ? "" : "s") under three seconds
+          @(Model.ExcludedRushedCount == 1 ? "was" : "were") left out: a guess is not evidence about your level.
+        </p>
+      }
+
+      <p class="text-sm text-muted no-margin">
+        Nothing changes until you choose. "Later" keeps your path exactly as it is; you will be asked
+        again once you have answered more questions.
+      </p>
+
+      <div class="row" style="gap: var(--space-2);">
+        <form method="post" action="/learning-path/calibration" class="no-margin">
+          @Html.AntiForgeryToken()
+          <input type="hidden" name="adjust" value="true" />
+          <button type="submit" class="btn btn--primary">Lower my starting band to @proposal.ProposedBandCode</button>
+        </form>
+        <form method="post" action="/learning-path/calibration" class="no-margin">
+          @Html.AntiForgeryToken()
+          <input type="hidden" name="adjust" value="false" />
+          <button type="submit" class="btn">Keep my path for now</button>
+        </form>
+      </div>
+    </div>
+  </section>
+}
+else if (Model.Reason == "deferred")
+{
+  <div class="alert alert--info">
+    <strong>Estimate still unconfirmed.</strong>
+    You chose to keep your current path. You will be asked again once you have answered more practice
+    questions; nothing about your level has been changed.
+  </div>
+}

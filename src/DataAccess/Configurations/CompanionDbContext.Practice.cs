@@ -46,6 +46,8 @@ public partial class CompanionDbContext
 
             entity.Property(e => e.ResponseText);
             entity.Property(e => e.SelectedOptionIdsJson);
+            // #156: response time per practice answer, same measurement as the exam sitting.
+            entity.Property(e => e.AnsweredAt).HasPrecision(3);
 
             entity.HasOne(d => d.Question).WithMany(p => p.PracticeAnswerQuestions)
                 .OnDelete(DeleteBehavior.ClientSetNull)

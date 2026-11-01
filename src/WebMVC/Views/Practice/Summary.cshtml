@@ -27,6 +27,11 @@
   </div>
 </div>
 
+@if (Model.Calibration is { } calibration)
+{
+  @await Html.PartialAsync("_Calibration", calibration)
+}
+
 <div class="grid-3 mt-4">
   <div class="stat">
     <div class="stat__label">Correct</div>

@@ -140,7 +140,7 @@ public sealed class PlacementServiceTests(DatabaseFixture database)
 
             -- Placement exams
             INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose, Description, QuestionCount) VALUES
-              (@cert, N'Standard Placement Test', 'published', 30, 'placement', N'Adaptive across both sections.', 2);
+              (@cert, N'Standard Placement Test', 'published', 30, 'placement', N'A full-length diagnostic across both sections.', 2);
             DECLARE @standard INT = SCOPE_IDENTITY();
 
             INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose, Description, QuestionCount) VALUES

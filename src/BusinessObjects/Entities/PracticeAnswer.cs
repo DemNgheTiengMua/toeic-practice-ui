@@ -31,6 +31,10 @@ public partial class PracticeAnswer
 
     public int DisplayOrder { get; set; }
 
+    /// <summary>#156: when this answer was last written. Null for rows written before the column
+    /// existed — the system then genuinely does not know how long that answer took.</summary>
+    public DateTime? AnsweredAt { get; set; }
+
     [ForeignKey("SessionId, SectionId")]
     [InverseProperty("PracticeAnswerPracticeSessions")]
     public virtual PracticeSession PracticeSession { get; set; } = null!;

@@ -842,5 +842,22 @@ public sealed class PlacementControllerTests
             LastGoalRequest = request;
             return ExceptionToThrow != null ? Task.FromException<SetGoalResultDto>(ExceptionToThrow) : Task.FromResult(SetGoalResult!);
         }
+
+        public CalibrationViewDto? CalibrationView { get; set; }
+        public CalibrationDecisionRequest? LastCalibrationRequest { get; set; }
+        public CalibrationDecisionResultDto? CalibrationDecision { get; set; }
+
+        public Task<CalibrationViewDto> GetCalibrationAsync(CancellationToken cancellationToken = default) =>
+            ExceptionToThrow != null
+                ? Task.FromException<CalibrationViewDto>(ExceptionToThrow)
+                : Task.FromResult(CalibrationView ?? new CalibrationViewDto("B2", "Upper intermediate", 0, 20, 0, null, "below_threshold", null));
+
+        public Task<CalibrationDecisionResultDto> DecideCalibrationAsync(CalibrationDecisionRequest request, CancellationToken cancellationToken = default)
+        {
+            LastCalibrationRequest = request;
+            return ExceptionToThrow != null
+                ? Task.FromException<CalibrationDecisionResultDto>(ExceptionToThrow)
+                : Task.FromResult(CalibrationDecision ?? new CalibrationDecisionResultDto("adjusted", "B2", "B1", request.Adjust));
+        }
     }
 }

@@ -81,9 +81,9 @@ public class PlacementToLearningPathTests : PlaywrightTestBase
         seed.Parameters.AddWithValue("@email", email);
         await seed.ExecuteNonQueryAsync();
         await using var lookup = connection.CreateCommand();
-        lookup.CommandText = "SELECT ExamId FROM Exams WHERE Purpose = 'placement' AND Name LIKE N'TOEIC Placement Test%Standard';";
+        lookup.CommandText = "SELECT ExamId FROM Exams WHERE Purpose = 'placement' AND Name LIKE N'TOEIC Placement Test%Diagnostic';";
         var examId = Convert.ToInt32(await lookup.ExecuteScalarAsync());
-        Assert.That(examId, Is.GreaterThan(0), "The demo seed must contain the Standard TOEIC placement exam.");
+        Assert.That(examId, Is.GreaterThan(0), "The demo seed must contain the Diagnostic TOEIC placement exam.");
 
         await SignInAsync(email);
         await Page.GotoAsync($"{BaseUrl}/placement");

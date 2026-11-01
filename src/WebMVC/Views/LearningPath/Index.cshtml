@@ -97,6 +97,16 @@ else
       </div>
     }
 
+    @if (Model.CalibrationStatus is { } calibrationStatus)
+    {
+      <p class="text-sm text-muted no-margin" data-calibration-status>@calibrationStatus</p>
+    }
+
+    @if (Model.Calibration is { } calibration)
+    {
+      @await Html.PartialAsync("_Calibration", calibration)
+    }
+
     @if (Model.InsightPanel != null)
     {
       @await Html.PartialAsync("_AiInsightPanel", Model.InsightPanel)

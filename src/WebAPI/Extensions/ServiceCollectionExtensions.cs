@@ -55,6 +55,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAdminDashboardService, AdminDashboardService>();
         services.AddScoped<IExamGeneratorService, ExamGeneratorService>();
         services.AddScoped<IPlacementService, PlacementService>();
+        services.AddScoped<ICalibrationService, CalibrationService>();
         services.AddScoped<ILearningPathService, LearningPathService>();
         services.AddScoped<ILessonService, LessonService>();
         services.AddScoped<IAdminLessonService, AdminLessonService>();

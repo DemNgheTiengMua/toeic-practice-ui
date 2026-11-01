@@ -212,8 +212,10 @@ public static partial class PlacementEndpoints
                 goal.RequiredHours,
                 goal.AvailableHours,
                 // ADR-0006 §2: the mapping is by member name, so the status codes stay in step with
-                // the enum instead of being re-listed by hand.
-                goal.Status.MapTo<FeasibilityStatusDto>(),
+                // the enum instead of being re-listed by hand. #156: the missing null branch threw
+                // here — Status is null for every goal with no deadline, so /placement/target-band
+                // answered 500 for any learner who had set a band without a date.
+                goal.Status is { } status ? status.MapTo<FeasibilityStatusDto>() : null,
                 goal.SuggestedWeeklyHours,
                 goal.EarliestFeasibleDate);
 

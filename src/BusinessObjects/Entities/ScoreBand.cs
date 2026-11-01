@@ -50,4 +50,12 @@ public partial class ScoreBand
     /// <summary>#153: target-band rows that name this band as the learner's starting point.</summary>
     [InverseProperty("CurrentScoreBand")]
     public virtual ICollection<TargetBand> CurrentBandTargetBands { get; set; } = new List<TargetBand>();
+
+    /// <summary>#156: calibration proposals that started from this band.</summary>
+    [InverseProperty("PlacedBand")]
+    public virtual ICollection<CalibrationDecision> CalibrationPlacedDecisions { get; set; } = new List<CalibrationDecision>();
+
+    /// <summary>#156: calibration proposals that pointed at this band.</summary>
+    [InverseProperty("ProposedBand")]
+    public virtual ICollection<CalibrationDecision> CalibrationProposedDecisions { get; set; } = new List<CalibrationDecision>();
 }
