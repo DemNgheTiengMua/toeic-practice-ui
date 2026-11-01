@@ -1,0 +1,10 @@
+Code cần refactor lại, không biết giải thích ra sao, nhưng lão thầy kêu là hiện tại MVC đang bị quá gộp (trang razor page gì mà có cả model/service ở trỏng). Không có ai dám nhận việc tụi bây, gen AI. (Gen ai cũng được nhưng chưa đúng tiêu chuẩn ở ngoài), cũng k rõ lão cụ thể muốn gì?
+
+Làm docker để máy khác cũng chạy theo được.
+
+
+đầu vào 4 kỹ năng, phải fake proof được (đéo biết tại sao nhưng lỡ có thằng kêu bạn nó thi dùm placement test cho cao, rồi lúc nó học hệ thống phải phát hiện được trình độ that của thằng này, nếu nó quá gà).
+
+goal ngoài target band ra phải có cả thời gian (trong bao lâu đạt được, để gợi ý lộ trình).
+
+Tao cần phải học codebase này, tới mức độ lão sẽ hỏi 1 nút trong front-end ở đâu, nhấn thì gọi gì, api ở đâu, chung quy là phải làm chủ codebase

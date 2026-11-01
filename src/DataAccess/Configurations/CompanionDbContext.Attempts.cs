@@ -74,6 +74,9 @@ public partial class CompanionDbContext
 
             entity.Property(e => e.ResponseText);
             entity.Property(e => e.SelectedOptionIdsJson);
+            // #156: response time is a measurement, not a guess; milliseconds are precision enough
+            // for a three-second floor and datetime2(3) is what the schema declares.
+            entity.Property(e => e.AnsweredAt).HasPrecision(3);
 
             entity.HasOne(d => d.Attempt).WithMany(p => p.AttemptAnswerAttempts)
                 .OnDelete(DeleteBehavior.ClientSetNull)

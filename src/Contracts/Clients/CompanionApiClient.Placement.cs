@@ -78,4 +78,17 @@ public sealed partial class CompanionApiClient
 
     public Task<SetTargetBandResultDto> SetTargetBandAsync(SetTargetBandRequest request, CancellationToken cancellationToken = default) =>
         SetTargetBandAsync(request, string.Empty, cancellationToken);
+
+    public Task<CalibrationViewDto> GetCalibrationAsync(string bearerToken, CancellationToken cancellationToken = default) =>
+        GetAuthorizedAsync<CalibrationViewDto>("api/learner/calibration", bearerToken, cancellationToken);
+
+    public Task<CalibrationViewDto> GetCalibrationAsync(CancellationToken cancellationToken = default) =>
+        GetCalibrationAsync(string.Empty, cancellationToken);
+
+    public Task<CalibrationDecisionResultDto> DecideCalibrationAsync(CalibrationDecisionRequest request, string bearerToken, CancellationToken cancellationToken = default) =>
+        PostAuthorizedAsync<CalibrationDecisionRequest, CalibrationDecisionResultDto>(
+            "api/learner/calibration/decision", request, bearerToken, cancellationToken);
+
+    public Task<CalibrationDecisionResultDto> DecideCalibrationAsync(CalibrationDecisionRequest request, CancellationToken cancellationToken = default) =>
+        DecideCalibrationAsync(request, string.Empty, cancellationToken);
 }

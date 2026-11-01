@@ -278,7 +278,7 @@ với `InsufficientCredits`, **không** tạo attempt.
 ### 4.5 Placement test (miễn phí)
 
 - `/placement` → nút `Start` (`POST /placement/start`). `examId` phụ thuộc cert đang active:
-  **TOEIC → `examId=2`** (TOEIC Placement Test — Standard), **IELTS → `examId=7`** (IELTS-DIAG-01).
+  **TOEIC → `examId=2`** (TOEIC Placement Test — Diagnostic, 24 questions), **IELTS → `examId=7`** (IELTS-DIAG-01).
 - 302 → `/placement/take/{id}` → tiếp tục 302 sang `/exams/preflight/{aid}?placementId={id}`
   → take như exam thường (cùng AttemptEngine, chỉ khác là không trừ credit).
 - `/placement/result/{placementId}` hiển thị band + total + thang CEFR + khoảng cách tới band kế.

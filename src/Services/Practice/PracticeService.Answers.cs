@@ -147,6 +147,7 @@ public sealed partial class PracticeService
             answer.IsCorrect = null;
         }
 
+        answer.AnsweredAt = DateTime.UtcNow;
         await db.SaveChangesAsync(cancellationToken);
 
         // #155: every graded answer feeds the category's mastery and starts or clears the question's own

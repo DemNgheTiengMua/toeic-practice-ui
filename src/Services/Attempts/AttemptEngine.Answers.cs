@@ -98,6 +98,7 @@ public sealed partial class AttemptEngine
         }
 
         answer.IsFlagged = isFlagged;
+        answer.AnsweredAt = DateTime.UtcNow;
         attempt.LastQuestionId = questionId;
 
         await db.SaveChangesAsync(cancellationToken);
@@ -202,7 +203,8 @@ public sealed partial class AttemptEngine
                 AttemptId = attemptId,
                 QuestionId = questionId,
                 ExamId = attempt.ExamId,
-                IsFlagged = isFlagged
+                IsFlagged = isFlagged,
+                AnsweredAt = DateTime.UtcNow
             };
             db.AttemptAnswers.Add(answer);
         }
@@ -214,6 +216,7 @@ public sealed partial class AttemptEngine
         {
             answer.SelectedOptionId = null;
             answer.IsFlagged = isFlagged;
+            answer.AnsweredAt = DateTime.UtcNow;
         }
 
         attempt.LastQuestionId = questionId;

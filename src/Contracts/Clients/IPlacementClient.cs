@@ -28,4 +28,12 @@ public interface IPlacementClient
     /// <summary>#153: save the whole goal — current band, target band, exam date and weekly pace.</summary>
     Task<SetGoalResultDto> SetGoalAsync(SetGoalRequest request, CancellationToken cancellationToken = default);
     Task<SetGoalResultDto> SetGoalAsync(SetGoalRequest request, string bearerToken, CancellationToken cancellationToken = default) => SetGoalAsync(request, cancellationToken);
+
+    /// <summary>#156: whether practice has diverged from the placement band, and the proposal if so.</summary>
+    Task<CalibrationViewDto> GetCalibrationAsync(CancellationToken cancellationToken = default);
+    Task<CalibrationViewDto> GetCalibrationAsync(string bearerToken, CancellationToken cancellationToken = default) => GetCalibrationAsync(cancellationToken);
+
+    /// <summary>#156: the learner's answer. True lowers the path's starting band; false keeps it.</summary>
+    Task<CalibrationDecisionResultDto> DecideCalibrationAsync(CalibrationDecisionRequest request, CancellationToken cancellationToken = default);
+    Task<CalibrationDecisionResultDto> DecideCalibrationAsync(CalibrationDecisionRequest request, string bearerToken, CancellationToken cancellationToken = default) => DecideCalibrationAsync(request, cancellationToken);
 }

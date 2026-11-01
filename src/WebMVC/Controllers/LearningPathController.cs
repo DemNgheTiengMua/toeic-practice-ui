@@ -14,7 +14,8 @@ public sealed class LearningPathController(
     ILearningPathClient api,
     IWalletClient wallet,
     CurrentUser currentUser,
-    ILogger<LearningPathController> logger)
+    ILogger<LearningPathController> logger,
+    IPlacementClient? placementClient = null)
     : LearnerControllerBase(currentUser, logger)
 {
     [HttpGet("/learning-path")]
@@ -41,7 +42,21 @@ public sealed class LearningPathController(
                 ? new AiInsightPanelViewModel("path", pId, insight)
                 : null;
 
-            return View(new LearningPathIndexViewModel(summary!, TempData["ErrorMessage"] as string, insightPanel, TempData["SuccessMessage"] as string));
+            // #156: the calibration check rides along with the path screen. A failure here must not
+            // hide the path itself — the detector is an addition, not a precondition.
+            CalibrationViewDto? calibration = null;
+            try
+            {
+                calibration = await placementClient.GetCalibrationAsync(cancellationToken);
+            }
+            catch (ApiException ex)
+            {
+                logger.LogWarning(ex, "Failed to load calibration state");
+            }
+
+            return View(new LearningPathIndexViewModel(
+                summary!, TempData["ErrorMessage"] as string, insightPanel, TempData["SuccessMessage"] as string,
+                calibration));
         }
         catch (ApiException ex)
         {
@@ -124,6 +139,41 @@ public sealed class LearningPathController(
             TempData["ErrorMessage"] = ex.Detail ?? "Could not start the step. Please try again.";
             return RedirectToAction(nameof(Index));
         }
+    }
+
+    /// <summary>
+    /// #156: the learner's answer to a calibration proposal. It runs through the API so the same
+    /// rule (recompute at click time, refuse a stale proposal) applies no matter who calls it.
+    /// </summary>
+    [HttpPost("/learning-path/calibration")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Calibration([FromForm] bool adjust, CancellationToken cancellationToken)
+    {
+        if (placementClient is null)
+        {
+            return RedirectToAction(nameof(Index));
+        }
+
+        try
+        {
+            var result = await placementClient.DecideCalibrationAsync(new CalibrationDecisionRequest(adjust), cancellationToken);
+            TempData["SuccessMessage"] = result.PathAdjusted
+                ? $"Your starting band is now {result.ProposedBandCode}. Your path keeps your completed steps."
+                : "Your path is unchanged. You will be asked again after more practice.";
+        }
+        catch (ApiException ex) when (ex.Code == ApiError.Codes.Validation)
+        {
+            TempData["ErrorMessage"] = ex.Detail ?? "That choice could not be recorded.";
+        }
+        catch (ApiException ex)
+        {
+            // A stale proposal is the ordinary case here, not a fault: the evidence moved on since
+            // the page was rendered. Say that, and reload the page it came from.
+            logger.LogInformation(ex, "Calibration decision refused: {Code}", ex.Code);
+            TempData["ErrorMessage"] = "That proposal is out of date. The current evidence is shown below.";
+        }
+
+        return RedirectToAction(nameof(Index));
     }
 
     [HttpPost("/learning-path/reset")]

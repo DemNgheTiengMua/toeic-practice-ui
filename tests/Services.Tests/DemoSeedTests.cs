@@ -38,6 +38,40 @@ public sealed class DemoSeedTests(DatabaseFixture fixture)
                 WHERE (Name='IELTS-DIAG-01' AND Purpose='placement' AND DurationMinutes=60 AND QuestionCount=10)
                    OR (Name='VSTEP-DIAG-01' AND Purpose='placement' AND DurationMinutes=45 AND QuestionCount=10)
                 """));
+
+            // #156: the two toy TOEIC placement exams (4 and 2 questions) are gone, and the one that
+            // replaced them is long enough for a band to mean something: at least 20 real items,
+            // across every Listening and Reading part, at more than one difficulty.
+            Assert.Equal(1, await CountAsync("""
+                SELECT COUNT(*) FROM Exams
+                WHERE Name = 'TOEIC Placement Test — Diagnostic'
+                  AND Purpose='placement' AND Status='published' AND QuestionCount >= 20
+                """));
+            Assert.Equal(24, await CountAsync("""
+                SELECT COUNT(*) FROM Questions q
+                JOIN Exams e ON e.ExamId=q.ExamId
+                WHERE e.Name='TOEIC Placement Test — Diagnostic'
+                """));
+            Assert.Equal(7, await CountAsync("""
+                SELECT COUNT(DISTINCT q.SectionId) FROM Questions q
+                JOIN Exams e ON e.ExamId=q.ExamId
+                WHERE e.Name='TOEIC Placement Test — Diagnostic'
+                """));
+            Assert.True(await CountAsync("""
+                SELECT COUNT(DISTINCT q.DifficultyLevel) FROM Questions q
+                JOIN Exams e ON e.ExamId=q.ExamId
+                WHERE e.Name='TOEIC Placement Test — Diagnostic'
+                """) >= 3, "the diagnostic must carry more than one difficulty level");
+            Assert.Equal(0, await CountAsync("""
+                SELECT COUNT(*) FROM Exams
+                WHERE Purpose='placement' AND CertId=(SELECT CertId FROM Certificates WHERE Code='TOEIC')
+                  AND QuestionCount < 20
+                """));
+            // The card copy must not claim the exam is adaptive: it is not. (TOEIC_CAT genuinely is
+            // a different, adaptive certificate, so the assertion is scoped to placement exams.)
+            Assert.Equal(0, await CountAsync("""
+                SELECT COUNT(*) FROM Exams WHERE Purpose='placement' AND Description LIKE '%daptive%'
+                """));
             Assert.Equal(20, await CountAsync("""
                 SELECT COUNT(*) FROM Questions q
                 JOIN Exams e ON e.ExamId=q.ExamId

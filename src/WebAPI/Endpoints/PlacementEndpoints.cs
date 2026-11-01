@@ -14,5 +14,6 @@ public static partial class PlacementEndpoints
         MapPlacementSubmissionEndpoints(learner);
         MapPlacementResultsEndpoints(learner);
         MapPlacementTargetBandEndpoints(learner);
+        MapCalibrationEndpoints(learner);
     }
 }

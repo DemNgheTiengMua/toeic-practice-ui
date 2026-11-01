@@ -8,7 +8,8 @@ public sealed class PracticeController(
     IPracticeClient api,
     CurrentUser currentUser,
     ILogger<PracticeController> logger,
-    WebMVC.Formatters.DateTimeFormatter dates)
+    WebMVC.Formatters.DateTimeFormatter dates,
+    IPlacementClient? placementClient = null)
     : LearnerControllerBase(currentUser, logger)
 {
     [HttpGet("/practice")]
@@ -207,6 +208,26 @@ public sealed class PracticeController(
         Request.Headers.Accept.ToString().Contains("application/json")
         || string.Equals(Request.Headers["X-Requested-With"], "XMLHttpRequest", StringComparison.OrdinalIgnoreCase);
 
+    /// <summary>#156: the calibration view is an addition to a page, never a precondition: a failure
+    /// to read it must not hide the summary the learner just earned.</summary>
+    private async Task<CalibrationViewDto?> TryGetCalibrationAsync(CancellationToken cancellationToken)
+    {
+        if (placementClient is null)
+        {
+            return null;
+        }
+
+        try
+        {
+            return await placementClient.GetCalibrationAsync(cancellationToken);
+        }
+        catch (ApiException ex)
+        {
+            logger.LogWarning(ex, "Could not read calibration state for the practice summary");
+            return null;
+        }
+    }
+
     [HttpGet("/practice/{sessionId:int}/summary")]
     public async Task<IActionResult> Summary(int sessionId, CancellationToken cancellationToken)
     {
@@ -225,7 +246,10 @@ public sealed class PracticeController(
             }
             return View(new PracticeSummaryViewModel(summary, dates.Format(summary.StartedAt))
             {
-                InsightPanel = new("practice_session", summary.SessionId, insight)
+                InsightPanel = new("practice_session", summary.SessionId, insight),
+                // #156: the drill is exactly where the divergence becomes visible, so the proposal
+                // is shown here too rather than only on the path screen the learner may never open.
+                Calibration = await TryGetCalibrationAsync(cancellationToken)
             });
         }
         catch (ApiException ex) when (ex.Status == 404 || ex.Code == ApiError.Codes.PracticeSessionNotFound)

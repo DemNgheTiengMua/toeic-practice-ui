@@ -29,6 +29,10 @@ public partial class AttemptAnswer
 
     public bool IsFlagged { get; set; }
 
+    /// <summary>#156: when this answer was last written. Null for rows written before the column
+    /// existed — the system then genuinely does not know how long that answer took.</summary>
+    public DateTime? AnsweredAt { get; set; }
+
     [ForeignKey("AttemptId")]
     [InverseProperty("AttemptAnswerAttempts")]
     public virtual ExamAttempt Attempt { get; set; } = null!;

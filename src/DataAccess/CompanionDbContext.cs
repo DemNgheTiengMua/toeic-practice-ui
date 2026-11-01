@@ -31,6 +31,10 @@ public partial class CompanionDbContext : DbContext
     public virtual DbSet<Booking> Bookings { get; set; }
 
 
+    /// <summary>#156: the learner's answers to a calibration proposal.</summary>
+    public virtual DbSet<CalibrationDecision> CalibrationDecisions { get; set; }
+
+
     public virtual DbSet<Certificate> Certificates { get; set; }
 
 
@@ -206,6 +210,7 @@ public partial class CompanionDbContext : DbContext
         ConfigureAuth(modelBuilder);
         ConfigureAuthoring(modelBuilder);
         ConfigureAttempts(modelBuilder);
+        ConfigureCalibration(modelBuilder);
         ConfigurePractice(modelBuilder);
         ConfigureFreeResponse(modelBuilder);
         ConfigureGuidedLearning(modelBuilder);

@@ -287,6 +287,24 @@ public sealed class LearningPathControllerTests
         Assert.Equal(nameof(LearningPathController.Index), redirect.ActionName);
     }
 
+    /// <summary>
+    /// #156: "Later" must reach the API as adjust = false. The whole point of the proposal is that
+    /// declining it changes nothing, so the flag is what the test watches.
+    /// </summary>
+    [Fact]
+    public async Task Calibration_PassesTheLearnersChoiceToTheApi()
+    {
+        var api = new TestApiClient();
+
+        var controller = CreateController(api);
+        var result = await controller.Calibration(adjust: false, CancellationToken.None);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(LearningPathController.Index), redirect.ActionName);
+        Assert.False(api.LastCalibrationRequest!.Adjust);
+        Assert.Contains("unchanged", (string)controller.TempData["SuccessMessage"]!, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static LearningPathController CreateController(TestApiClient api)
     {
         var identity = new ClaimsIdentity(AuthClaims.For(7, "learner@test.local", Roles.Learner, "Learner"), "Cookies");
@@ -302,7 +320,7 @@ public sealed class LearningPathControllerTests
         var httpContext = new DefaultHttpContext { User = principal, RequestServices = serviceProvider };
         var currentUser = new CurrentUser(new HttpContextAccessor { HttpContext = httpContext });
 
-        return new LearningPathController(api, api, currentUser, NullLogger<LearningPathController>.Instance)
+        return new LearningPathController(api, api, currentUser, NullLogger<LearningPathController>.Instance, api)
         {
             ControllerContext = new ControllerContext
             {
@@ -319,7 +337,7 @@ public sealed class LearningPathControllerTests
         public void SaveTempData(HttpContext context, IDictionary<string, object> values) { }
     }
 
-    private sealed class TestApiClient : ILearningPathClient, IWalletClient
+    private sealed class TestApiClient : ILearningPathClient, IWalletClient, IPlacementClient
     {
         public Exception? ExceptionToThrow { get; set; }
         public LearningPathSummaryDto? LearningPathSummary { get; set; }
@@ -385,6 +403,34 @@ public sealed class LearningPathControllerTests
             RetryPathInsightCalled = true;
             return ExceptionToThrow != null ? Task.FromException(ExceptionToThrow) : Task.CompletedTask;
         }
+
+        // #156: the calibration check rides on the path screen. Everything below is unreachable in
+        // these tests except the two the calibration route calls.
+        public CalibrationViewDto? Calibration { get; set; }
+        public CalibrationDecisionRequest? LastCalibrationRequest { get; private set; }
+
+        public Task<CalibrationViewDto> GetCalibrationAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult(Calibration ?? new CalibrationViewDto("B2", "Upper intermediate", 0, 20, 0, null, "below_threshold", null));
+
+        public Task<CalibrationDecisionResultDto> DecideCalibrationAsync(CalibrationDecisionRequest request, CancellationToken cancellationToken = default)
+        {
+            LastCalibrationRequest = request;
+            return Task.FromResult(new CalibrationDecisionResultDto(
+                request.Adjust ? "adjusted" : "deferred", "B2", "B1", request.Adjust));
+        }
+
+        Task<PlacementCatalogViewDto> IPlacementClient.GetPlacementCatalogAsync(CancellationToken cancellationToken) => throw new NotSupportedException();
+        Task<PlacementTestInfoDto> IPlacementClient.StartPlacementTestAsync(StartPlacementTestRequest request, CancellationToken cancellationToken) => throw new NotSupportedException();
+        Task<PreflightStatusDto> IPlacementClient.GetPlacementPreflightStatusAsync(int placementId, CancellationToken cancellationToken) => throw new NotSupportedException();
+        Task<PlacementTakeViewDto> IPlacementClient.GetPlacementTakeAsync(int placementId, int? questionDisplayOrder, CancellationToken cancellationToken) => throw new NotSupportedException();
+        Task<SaveAnswerResultDto> IPlacementClient.SavePlacementAnswerAsync(int placementId, int questionId, SaveAnswerRequest request, CancellationToken cancellationToken) => throw new NotSupportedException();
+        Task<SavePlacementDraftResponseDto> IPlacementClient.SavePlacementDraftAsync(int placementId, SavePlacementDraftRequestDto request, CancellationToken cancellationToken) => throw new NotSupportedException();
+        Task<PlacementGradingStatusDto> IPlacementClient.GetPlacementGradingStatusAsync(int placementId, CancellationToken cancellationToken) => throw new NotSupportedException();
+        Task<PlacementResultViewDto> IPlacementClient.SubmitPlacementTestAsync(int placementId, SubmitPlacementTestRequest request, CancellationToken cancellationToken) => throw new NotSupportedException();
+        Task<PlacementResultViewDto> IPlacementClient.GetPlacementResultAsync(int placementId, CancellationToken cancellationToken) => throw new NotSupportedException();
+        Task<TargetBandViewDto> IPlacementClient.GetTargetBandViewAsync(CancellationToken cancellationToken) => throw new NotSupportedException();
+        Task<SetTargetBandResultDto> IPlacementClient.SetTargetBandAsync(SetTargetBandRequest request, CancellationToken cancellationToken) => throw new NotSupportedException();
+        Task<SetGoalResultDto> IPlacementClient.SetGoalAsync(SetGoalRequest request, CancellationToken cancellationToken) => throw new NotSupportedException();
     }
 
     [Fact]

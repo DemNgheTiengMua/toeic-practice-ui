@@ -815,126 +815,679 @@ BEGIN
     (@toeicCert, @toeicRead, @toeicMock, 3, 495);
 END;
 
--- 2. TOEIC Placement: Standard (45 min) and Quick (20 min)
-IF NOT EXISTS (SELECT 1 FROM Exams WHERE CertId = @toeicCert AND Name = N'TOEIC Placement Test — Standard')
+-- 2. TOEIC Placement: one published diagnostic, 24 questions (#156)
+--
+-- Until #156 this certificate shipped a "Standard" exam of four questions and a "Quick" exam
+-- of two. A four-item estimate has a standard error wider than the whole band scale, so the
+-- band it produced was noise dressed as a measurement. Both are removed and replaced by one
+-- exam of 24 real items across all seven Listening and Reading parts, stratified easy/medium/
+-- hard, which is the smallest form this ticket allows the calibration detector to reason from.
+-- The card copy no longer claims the exam is adaptive: it is not, and nothing here makes it so.
+DELETE FROM Exams WHERE CertId = @toeicCert AND Name IN (N'TOEIC Placement Test — Standard', N'TOEIC Placement Test — Quick');
+
+IF NOT EXISTS (SELECT 1 FROM Exams WHERE CertId = @toeicCert AND Name = N'TOEIC Placement Test — Diagnostic')
   INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose, Description, SourceName, QuestionCount)
-  VALUES (@toeicCert, N'TOEIC Placement Test — Standard', 'published', 45, 'placement',
-          N'Comprehensive diagnostic covering Listening and Reading. Calibrates your starting CEFR band and personalizes your study plan.',
-          N'ETS Diagnostic 2024', 4);
+  VALUES (@toeicCert, N'TOEIC Placement Test — Diagnostic', 'published', 45, 'placement',
+          N'A 24-question diagnostic across all seven Listening and Reading parts. It sets your starting CEFR band, and your practice answers keep checking that band afterwards.',
+          N'ETS Diagnostic 2024', 24);
 
-DECLARE @toeicStdPlace INT = (SELECT ExamId FROM Exams WHERE CertId = @toeicCert AND Name = N'TOEIC Placement Test — Standard');
+DECLARE @toeicDiagPlace INT = (SELECT ExamId FROM Exams WHERE CertId = @toeicCert AND Name = N'TOEIC Placement Test — Diagnostic');
 
-IF NOT EXISTS (SELECT 1 FROM ExamSectionAudio WHERE ExamId = @toeicStdPlace AND SectionId = @secP1)
+IF NOT EXISTS (SELECT 1 FROM ExamSectionAudio WHERE ExamId = @toeicDiagPlace AND SectionId = @secP1)
   INSERT INTO ExamSectionAudio (ExamId, SectionId, CertId, AudioPath, DurationSec, SizeBytes)
-  VALUES (@toeicStdPlace, @secP1, @toeicCert, '/audio/toeic/placement-p1.mp3', 120, 1920000);
-IF NOT EXISTS (SELECT 1 FROM ExamSectionAudio WHERE ExamId = @toeicStdPlace AND SectionId = @secP2)
+  VALUES (@toeicDiagPlace, @secP1, @toeicCert, '/audio/toeic/placement-p1.mp3', 120, 1920000);
+IF NOT EXISTS (SELECT 1 FROM ExamSectionAudio WHERE ExamId = @toeicDiagPlace AND SectionId = @secP2)
   INSERT INTO ExamSectionAudio (ExamId, SectionId, CertId, AudioPath, DurationSec, SizeBytes)
-  VALUES (@toeicStdPlace, @secP2, @toeicCert, '/audio/toeic/placement-p2.mp3', 180, 2880000);
+  VALUES (@toeicDiagPlace, @secP2, @toeicCert, '/audio/toeic/placement-p2.mp3', 180, 2880000);
 
-IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @toeicStdPlace AND SectionId = @secP1)
+-- Every item below is its own question group: a placement item is answered on its own, so no
+-- shared passage or audio slice has to be inferred from a neighbour.
+DECLARE @plSection INT, @plSkill INT, @plGroup INT, @plQuestion INT;
+DECLARE @plOptions TABLE (Label CHAR(1) NOT NULL, Text NVARCHAR(300) NOT NULL, IsCorrect BIT NOT NULL);
+
+-- Q1: P1 (difficulty 1)
+SET @plSection = @secP1;
+SET @plSkill = @toeicList;
+IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 1)
 BEGIN
   INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, AudioPath, ImagePath, ImageAlt)
-  VALUES (@toeicStdPlace, @toeicCert, @secP1, 1, '/audio/toeic/placement-p1.mp3', '/img/part1-sample.svg', N'Office workers in meeting');
-  DECLARE @gStd1 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Hint, Explanation, DisplayOrder)
-  VALUES (@gStd1, @toeicStdPlace, @secP1, @toeicList, N'Look at the picture and select the best statement describing what you see.',
-          2, 'mcq', N'Notice the people sitting around the table.', N'Option A correctly describes people seated around a conference table.', 1);
-  DECLARE @qStd1 INT = SCOPE_IDENTITY();
-  INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
-    (@qStd1, 'mcq', 'A', N'People are seated around a conference table.', 1),
-    (@qStd1, 'mcq', 'B', N'They are unpacking boxes in a warehouse.', 0),
-    (@qStd1, 'mcq', 'C', N'A presenter is leaving the room.', 0),
-    (@qStd1, 'mcq', 'D', N'All the chairs are unoccupied.', 0);
+  VALUES (@toeicDiagPlace, @toeicCert, @plSection, 1, '/audio/toeic/placement-p1.mp3', '/img/part1-sample.svg', N'Office workers in a meeting room');
+END
+SELECT @plGroup = GroupId FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 1;
 
-  INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, AudioPath)
-  VALUES (@toeicStdPlace, @toeicCert, @secP2, 2, '/audio/toeic/placement-p2.mp3');
-  DECLARE @gStd2 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
-  VALUES (@gStd2, @toeicStdPlace, @secP2, @toeicList, N'Where is the quarterly performance report?', 2, 'mcq',
-          N'Option B directly answers the question about the report location.', 2);
-  DECLARE @qStd2 INT = SCOPE_IDENTITY();
-  INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
-    (@qStd2, 'mcq', 'A', N'Yes, every three months.', 0),
-    (@qStd2, 'mcq', 'B', N'It is on Ms. Chen''s desk.', 1),
-    (@qStd2, 'mcq', 'C', N'No, I haven''t seen him.', 0);
-
-  INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder)
-  VALUES (@toeicStdPlace, @toeicCert, @secP5, 3);
-  DECLARE @gStd3 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
-  VALUES (@gStd3, @toeicStdPlace, @secP5, @toeicRead,
-          N'Customer satisfaction surveys must be submitted ------- Friday afternoon to be included in the quarterly review.',
-          2, 'mcq', N'Preposition of time "before" indicates the deadline.', 3);
-  DECLARE @qStd3 INT = SCOPE_IDENTITY();
-  INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
-    (@qStd3, 'mcq', 'A', N'before', 1),
-    (@qStd3, 'mcq', 'B', N'during', 0),
-    (@qStd3, 'mcq', 'C', N'between', 0),
-    (@qStd3, 'mcq', 'D', N'among', 0);
-
-  INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, Passage)
-  VALUES (@toeicStdPlace, @toeicCert, @secP6, 4,
-          N'Thank you for contacting Apex Support. We have received your inquiry regarding account renewal. A representative will review your request and ------- within 24 business hours.');
-  DECLARE @gStd4 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
-  VALUES (@gStd4, @toeicStdPlace, @secP6, @toeicRead, N'Choose the correct verb form to complete the sentence.',
-          2, 'mcq', N'The modal auxiliary "will" requires the base form of the verb "respond".', 4);
-  DECLARE @qStd4 INT = SCOPE_IDENTITY();
-  INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
-    (@qStd4, 'mcq', 'A', N'respond', 1),
-    (@qStd4, 'mcq', 'B', N'response', 0),
-    (@qStd4, 'mcq', 'C', N'responded', 0),
-    (@qStd4, 'mcq', 'D', N'responding', 0);
-
-  INSERT INTO ScoreScales (CertId, SkillId, ExamId, RawScore, ScaledScore) VALUES
-    (@toeicCert, @toeicList, @toeicStdPlace, 0, 100),
-    (@toeicCert, @toeicList, @toeicStdPlace, 1, 250),
-    (@toeicCert, @toeicList, @toeicStdPlace, 2, 450),
-    (@toeicCert, @toeicRead, @toeicStdPlace, 0, 100),
-    (@toeicCert, @toeicRead, @toeicStdPlace, 1, 200),
-    (@toeicCert, @toeicRead, @toeicStdPlace, 2, 440);
-END;
-
--- Quick placement
-IF NOT EXISTS (SELECT 1 FROM Exams WHERE CertId = @toeicCert AND Name = N'TOEIC Placement Test — Quick')
+IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 1)
 BEGIN
-  INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose, Description, SourceName, QuestionCount)
-  VALUES (@toeicCert, N'TOEIC Placement Test — Quick', 'published', 20, 'placement',
-          N'Fast 20-minute diagnostic to quickly estimate your starting level across core listening and reading skills.',
-          N'ETS Diagnostic 2024', 2);
-  DECLARE @qExam INT = SCOPE_IDENTITY();
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  VALUES (@plGroup, @toeicDiagPlace, @plSection, @plSkill,
+          N'Look at the photograph and choose the statement that best describes what you see.', 1, 'mcq', N'Only option A describes what the photograph shows.', 1);
+  SET @plQuestion = SCOPE_IDENTITY();
+  DELETE FROM @plOptions;
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('A', N'A woman is writing on a whiteboard.', 1);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('B', N'Some chairs are stacked against the wall.', 0);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('C', N'A laptop is being repaired on the desk.', 0);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('D', N'The room has been emptied for cleaning.', 0);
+  INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect)
+  SELECT @plQuestion, 'mcq', Label, Text, IsCorrect FROM @plOptions;
+END
 
+-- Q2: P1 (difficulty 2)
+SET @plSection = @secP1;
+SET @plSkill = @toeicList;
+IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 2)
+BEGIN
+  INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, AudioPath, ImagePath, ImageAlt)
+  VALUES (@toeicDiagPlace, @toeicCert, @plSection, 2, '/audio/toeic/placement-p1.mp3', '/img/part1-sample.svg', N'Office workers in a meeting room');
+END
+SELECT @plGroup = GroupId FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 2;
+
+IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 2)
+BEGIN
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  VALUES (@plGroup, @toeicDiagPlace, @plSection, @plSkill,
+          N'Look at the photograph and choose the statement that best describes what you see.', 2, 'mcq', N'The photograph shows luggage beside the counter; the other options describe actions that are not visible.', 2);
+  SET @plQuestion = SCOPE_IDENTITY();
+  DELETE FROM @plOptions;
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('A', N'Passengers are waiting on a platform.', 0);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('B', N'A train is leaving the station.', 0);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('C', N'Two people are buying tickets.', 0);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('D', N'Luggage is lined up beside the counter.', 1);
+  INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect)
+  SELECT @plQuestion, 'mcq', Label, Text, IsCorrect FROM @plOptions;
+END
+
+-- Q3: P2 (difficulty 1)
+SET @plSection = @secP2;
+SET @plSkill = @toeicList;
+IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 3)
+BEGIN
   INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, AudioPath)
-  VALUES (@qExam, @toeicCert, @secP2, 1, '/audio/toeic/placement-quick.mp3');
-  DECLARE @gQ1 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
-  VALUES (@gQ1, @qExam, @secP2, @toeicList, N'Who is responsible for booking the meeting room?', 1, 'mcq',
-          N'Option C identifies the person responsible.', 1);
-  DECLARE @qQ1 INT = SCOPE_IDENTITY();
-  INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
-    (@qQ1, 'mcq', 'A', N'At 2:00 PM.', 0),
-    (@qQ1, 'mcq', 'B', N'In Conference Room B.', 0),
-    (@qQ1, 'mcq', 'C', N'Ms. Tanaka from HR.', 1);
+  VALUES (@toeicDiagPlace, @toeicCert, @plSection, 3, '/audio/toeic/placement-p2.mp3');
+END
+SELECT @plGroup = GroupId FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 3;
 
+IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 3)
+BEGIN
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  VALUES (@plGroup, @toeicDiagPlace, @plSection, @plSkill,
+          N'Where did you leave the project folders?', 1, 'mcq', N'The question asks for a place, and only B names one.', 3);
+  SET @plQuestion = SCOPE_IDENTITY();
+  DELETE FROM @plOptions;
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('A', N'Yes, I folded them neatly.', 0);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('B', N'On the conference room table.', 1);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('C', N'No later than five o''clock.', 0);
+  INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect)
+  SELECT @plQuestion, 'mcq', Label, Text, IsCorrect FROM @plOptions;
+END
+
+-- Q4: P2 (difficulty 2)
+SET @plSection = @secP2;
+SET @plSkill = @toeicList;
+IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 4)
+BEGIN
+  INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, AudioPath)
+  VALUES (@toeicDiagPlace, @toeicCert, @plSection, 4, '/audio/toeic/placement-p2.mp3');
+END
+SELECT @plGroup = GroupId FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 4;
+
+IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 4)
+BEGIN
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  VALUES (@plGroup, @toeicDiagPlace, @plSection, @plSkill,
+          N'Why was the shipment delayed?', 2, 'mcq', N'The question asks for a reason; only C gives one.', 4);
+  SET @plQuestion = SCOPE_IDENTITY();
+  DELETE FROM @plOptions;
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('A', N'In the loading bay.', 0);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('B', N'It arrived on Tuesday.', 0);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('C', N'Because the courier misread the postcode.', 1);
+  INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect)
+  SELECT @plQuestion, 'mcq', Label, Text, IsCorrect FROM @plOptions;
+END
+
+-- Q5: P2 (difficulty 2)
+SET @plSection = @secP2;
+SET @plSkill = @toeicList;
+IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 5)
+BEGIN
+  INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, AudioPath)
+  VALUES (@toeicDiagPlace, @toeicCert, @plSection, 5, '/audio/toeic/placement-p2.mp3');
+END
+SELECT @plGroup = GroupId FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 5;
+
+IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 5)
+BEGIN
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  VALUES (@plGroup, @toeicDiagPlace, @plSection, @plSkill,
+          N'Should we book the larger room for the workshop?', 2, 'mcq', N'The question asks for a recommendation, and A answers it.', 5);
+  SET @plQuestion = SCOPE_IDENTITY();
+  DELETE FROM @plOptions;
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('A', N'That would be a good idea.', 1);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('B', N'About twenty people.', 0);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('C', N'It finished early.', 0);
+  INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect)
+  SELECT @plQuestion, 'mcq', Label, Text, IsCorrect FROM @plOptions;
+END
+
+-- Q6: P2 (difficulty 3)
+SET @plSection = @secP2;
+SET @plSkill = @toeicList;
+IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 6)
+BEGIN
+  INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, AudioPath)
+  VALUES (@toeicDiagPlace, @toeicCert, @plSection, 6, '/audio/toeic/placement-p2.mp3');
+END
+SELECT @plGroup = GroupId FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 6;
+
+IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 6)
+BEGIN
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  VALUES (@plGroup, @toeicDiagPlace, @plSection, @plSkill,
+          N'How long has the client been with the firm?', 3, 'mcq', N'The question asks for a duration, and only B provides one.', 6);
+  SET @plQuestion = SCOPE_IDENTITY();
+  DELETE FROM @plOptions;
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('A', N'At the downtown office.', 0);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('B', N'Since 2019.', 1);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('C', N'Yes, she renewed last month.', 0);
+  INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect)
+  SELECT @plQuestion, 'mcq', Label, Text, IsCorrect FROM @plOptions;
+END
+
+-- Q7: P3 (difficulty 2)
+SET @plSection = @secP3;
+SET @plSkill = @toeicList;
+IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 7)
+BEGIN
+  INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, AudioPath)
+  VALUES (@toeicDiagPlace, @toeicCert, @plSection, 7, '/audio/toeic/test1-p3.mp3');
+END
+SELECT @plGroup = GroupId FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 7;
+
+IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 7)
+BEGIN
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  VALUES (@plGroup, @toeicDiagPlace, @plSection, @plSkill,
+          N'Woman: Did the catering team confirm the order for Friday''s banquet? Man: Yes, but they need our final head count by tomorrow noon. Woman: I will email the department heads right away.
+
+What deadline does the catering team have?', 2, 'mcq', N'The man states the head count is needed by tomorrow noon.', 7);
+  SET @plQuestion = SCOPE_IDENTITY();
+  DELETE FROM @plOptions;
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('A', N'By the end of today.', 0);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('B', N'By tomorrow noon.', 1);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('C', N'On Friday morning.', 0);
+  INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect)
+  SELECT @plQuestion, 'mcq', Label, Text, IsCorrect FROM @plOptions;
+END
+
+-- Q8: P3 (difficulty 3)
+SET @plSection = @secP3;
+SET @plSkill = @toeicList;
+IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 8)
+BEGIN
+  INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, AudioPath)
+  VALUES (@toeicDiagPlace, @toeicCert, @plSection, 8, '/audio/toeic/test1-p3.mp3');
+END
+SELECT @plGroup = GroupId FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 8;
+
+IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 8)
+BEGIN
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  VALUES (@plGroup, @toeicDiagPlace, @plSection, @plSkill,
+          N'Man: I''m afraid the 3 p.m. train has been cancelled. Woman: Then I''ll take the 3:40 instead. Can I change my ticket at the counter? Man: Yes, at no extra charge.
+
+What will the woman do?', 3, 'mcq', N'She asks whether she can change the ticket at the counter and the man confirms it is free.', 8);
+  SET @plQuestion = SCOPE_IDENTITY();
+  DELETE FROM @plOptions;
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('A', N'Ask for a refund.', 0);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('B', N'Wait for the 3 p.m. train.', 0);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('C', N'Change her ticket at the counter.', 1);
+  INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect)
+  SELECT @plQuestion, 'mcq', Label, Text, IsCorrect FROM @plOptions;
+END
+
+-- Q9: P4 (difficulty 2)
+SET @plSection = @secP4;
+SET @plSkill = @toeicList;
+IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 9)
+BEGIN
+  INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, AudioPath)
+  VALUES (@toeicDiagPlace, @toeicCert, @plSection, 9, '/audio/toeic/test1-p4.mp3');
+END
+SELECT @plGroup = GroupId FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 9;
+
+IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 9)
+BEGIN
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  VALUES (@plGroup, @toeicDiagPlace, @plSection, @plSkill,
+          N'Attention, passengers. The north gallery is closed for lighting work this morning. The sculpture collection has moved upstairs, beside the reading room. The café is unaffected.
+
+Where can visitors find the sculpture collection?', 2, 'mcq', N'The announcement says the collection has moved upstairs beside the reading room.', 9);
+  SET @plQuestion = SCOPE_IDENTITY();
+  DELETE FROM @plOptions;
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('A', N'Upstairs beside the reading room.', 1);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('B', N'In the closed north gallery.', 0);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('C', N'Behind the café counter.', 0);
+  INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect)
+  SELECT @plQuestion, 'mcq', Label, Text, IsCorrect FROM @plOptions;
+END
+
+-- Q10: P4 (difficulty 3)
+SET @plSection = @secP4;
+SET @plSkill = @toeicList;
+IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 10)
+BEGIN
+  INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, AudioPath)
+  VALUES (@toeicDiagPlace, @toeicCert, @plSection, 10, '/audio/toeic/test1-p4.mp3');
+END
+SELECT @plGroup = GroupId FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 10;
+
+IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 10)
+BEGIN
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  VALUES (@plGroup, @toeicDiagPlace, @plSection, @plSkill,
+          N'A memorandum to all staff: from next month, expense claims must be submitted through the finance portal rather than by email. Claims received by the tenth of the month will be processed in that month''s payroll.
+
+How should staff submit expense claims from next month?', 3, 'mcq', N'The memorandum replaces email with the finance portal from next month.', 10);
+  SET @plQuestion = SCOPE_IDENTITY();
+  DELETE FROM @plOptions;
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('A', N'By email to their manager.', 0);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('B', N'Through the finance portal.', 1);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('C', N'In person at payroll.', 0);
+  INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect)
+  SELECT @plQuestion, 'mcq', Label, Text, IsCorrect FROM @plOptions;
+END
+
+-- Q11: P5 (difficulty 1)
+SET @plSection = @secP5;
+SET @plSkill = @toeicRead;
+IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 11)
+BEGIN
   INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder)
-  VALUES (@qExam, @toeicCert, @secP5, 2);
-  DECLARE @gQ2 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
-  VALUES (@gQ2, @qExam, @secP5, @toeicRead,
-          N'The new software update will ------- improve database query performance across all branch offices.',
-          2, 'mcq', N'Adverb "significantly" modifies the verb "improve".', 2);
-  DECLARE @qQ2 INT = SCOPE_IDENTITY();
-  INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
-    (@qQ2, 'mcq', 'A', N'significant', 0),
-    (@qQ2, 'mcq', 'B', N'significantly', 1),
-    (@qQ2, 'mcq', 'C', N'significance', 0),
-    (@qQ2, 'mcq', 'D', N'signified', 0);
+  VALUES (@toeicDiagPlace, @toeicCert, @plSection, 11);
+END
+SELECT @plGroup = GroupId FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 11;
 
-  INSERT INTO ScoreScales (CertId, SkillId, ExamId, RawScore, ScaledScore) VALUES
-    (@toeicCert, @toeicList, @qExam, 0, 150),
-    (@toeicCert, @toeicList, @qExam, 1, 350),
-    (@toeicCert, @toeicRead, @qExam, 0, 150),
-    (@toeicCert, @toeicRead, @qExam, 1, 350);
+IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 11)
+BEGIN
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  VALUES (@plGroup, @toeicDiagPlace, @plSection, @plSkill,
+          N'Customer satisfaction surveys must be submitted ------- Friday afternoon to be included in the quarterly review.', 1, 'mcq', N'Only ''before'' marks a deadline relative to a point in time.', 11);
+  SET @plQuestion = SCOPE_IDENTITY();
+  DELETE FROM @plOptions;
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('A', N'before', 1);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('B', N'during', 0);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('C', N'between', 0);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('D', N'among', 0);
+  INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect)
+  SELECT @plQuestion, 'mcq', Label, Text, IsCorrect FROM @plOptions;
+END
+
+-- Q12: P5 (difficulty 1)
+SET @plSection = @secP5;
+SET @plSkill = @toeicRead;
+IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 12)
+BEGIN
+  INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder)
+  VALUES (@toeicDiagPlace, @toeicCert, @plSection, 12);
+END
+SELECT @plGroup = GroupId FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 12;
+
+IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 12)
+BEGIN
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  VALUES (@plGroup, @toeicDiagPlace, @plSection, @plSkill,
+          N'All employees are required to wear their identification badges ------- visiting the research floor.', 1, 'mcq', N'The badge is worn during the visit, so ''while'' fits.', 12);
+  SET @plQuestion = SCOPE_IDENTITY();
+  DELETE FROM @plOptions;
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('A', N'despite', 0);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('B', N'although', 0);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('C', N'while', 1);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('D', N'unless', 0);
+  INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect)
+  SELECT @plQuestion, 'mcq', Label, Text, IsCorrect FROM @plOptions;
+END
+
+-- Q13: P5 (difficulty 2)
+SET @plSection = @secP5;
+SET @plSkill = @toeicRead;
+IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 13)
+BEGIN
+  INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder)
+  VALUES (@toeicDiagPlace, @toeicCert, @plSection, 13);
+END
+SELECT @plGroup = GroupId FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 13;
+
+IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 13)
+BEGIN
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  VALUES (@plGroup, @toeicDiagPlace, @plSection, @plSkill,
+          N'The marketing team will ------- the campaign results at Thursday''s meeting.', 2, 'mcq', N'After the modal ''will'', the base form of the verb is required.', 13);
+  SET @plQuestion = SCOPE_IDENTITY();
+  DELETE FROM @plOptions;
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('A', N'presentation', 0);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('B', N'present', 1);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('C', N'presented', 0);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('D', N'presenting', 0);
+  INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect)
+  SELECT @plQuestion, 'mcq', Label, Text, IsCorrect FROM @plOptions;
+END
+
+-- Q14: P5 (difficulty 2)
+SET @plSection = @secP5;
+SET @plSkill = @toeicRead;
+IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 14)
+BEGIN
+  INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder)
+  VALUES (@toeicDiagPlace, @toeicCert, @plSection, 14);
+END
+SELECT @plGroup = GroupId FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 14;
+
+IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 14)
+BEGIN
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  VALUES (@plGroup, @toeicDiagPlace, @plSection, @plSkill,
+          N'Ms. Alvarez has asked that the revised budget ------- to her by the end of the week.', 2, 'mcq', N'''Ask that'' takes the subjunctive, so the base form ''be sent'' is correct.', 14);
+  SET @plQuestion = SCOPE_IDENTITY();
+  DELETE FROM @plOptions;
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('A', N'be sent', 1);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('B', N'sends', 0);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('C', N'sending', 0);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('D', N'will send', 0);
+  INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect)
+  SELECT @plQuestion, 'mcq', Label, Text, IsCorrect FROM @plOptions;
+END
+
+-- Q15: P5 (difficulty 3)
+SET @plSection = @secP5;
+SET @plSkill = @toeicRead;
+IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 15)
+BEGIN
+  INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder)
+  VALUES (@toeicDiagPlace, @toeicCert, @plSection, 15);
+END
+SELECT @plGroup = GroupId FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 15;
+
+IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 15)
+BEGIN
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  VALUES (@plGroup, @toeicDiagPlace, @plSection, @plSkill,
+          N'The delay was caused not by the supplier ------- by the customs inspection.', 3, 'mcq', N'''Not by ... but by ...'' is the parallel construction the sentence needs.', 15);
+  SET @plQuestion = SCOPE_IDENTITY();
+  DELETE FROM @plOptions;
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('A', N'and', 0);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('B', N'or', 0);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('C', N'but', 1);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('D', N'so', 0);
+  INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect)
+  SELECT @plQuestion, 'mcq', Label, Text, IsCorrect FROM @plOptions;
+END
+
+-- Q16: P5 (difficulty 3)
+SET @plSection = @secP5;
+SET @plSkill = @toeicRead;
+IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 16)
+BEGIN
+  INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder)
+  VALUES (@toeicDiagPlace, @toeicCert, @plSection, 16);
+END
+SELECT @plGroup = GroupId FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 16;
+
+IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 16)
+BEGIN
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  VALUES (@plGroup, @toeicDiagPlace, @plSection, @plSkill,
+          N'------- the branch had reported record sales, the regional office remained cautious about the next quarter.', 3, 'mcq', N'The two clauses contrast, which is what ''Although'' signals.', 16);
+  SET @plQuestion = SCOPE_IDENTITY();
+  DELETE FROM @plOptions;
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('A', N'Because', 0);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('B', N'Since', 0);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('C', N'Unless', 0);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('D', N'Although', 1);
+  INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect)
+  SELECT @plQuestion, 'mcq', Label, Text, IsCorrect FROM @plOptions;
+END
+
+-- Q17: P6 (difficulty 2)
+SET @plSection = @secP6;
+SET @plSkill = @toeicRead;
+IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 17)
+BEGIN
+  INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder)
+  VALUES (@toeicDiagPlace, @toeicCert, @plSection, 17);
+END
+SELECT @plGroup = GroupId FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 17;
+
+IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 17)
+BEGIN
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  VALUES (@plGroup, @toeicDiagPlace, @plSection, @plSkill,
+          N'Thank you for contacting Apex Support. We have received your inquiry regarding account renewal. A representative will review your request and ------- within 24 business hours.', 2, 'mcq', N'The modal ''will'' requires the base verb.', 17);
+  SET @plQuestion = SCOPE_IDENTITY();
+  DELETE FROM @plOptions;
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('A', N'respond', 1);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('B', N'response', 0);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('C', N'responded', 0);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('D', N'responding', 0);
+  INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect)
+  SELECT @plQuestion, 'mcq', Label, Text, IsCorrect FROM @plOptions;
+END
+
+-- Q18: P6 (difficulty 2)
+SET @plSection = @secP6;
+SET @plSkill = @toeicRead;
+IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 18)
+BEGIN
+  INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder)
+  VALUES (@toeicDiagPlace, @toeicCert, @plSection, 18);
+END
+SELECT @plGroup = GroupId FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 18;
+
+IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 18)
+BEGIN
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  VALUES (@plGroup, @toeicDiagPlace, @plSection, @plSkill,
+          N'Please note that the service centre closes at 5 p.m. on weekdays, ------- it remains open until 7 p.m. on Saturdays.', 2, 'mcq', N'The two clauses contrast weekdays with Saturdays.', 18);
+  SET @plQuestion = SCOPE_IDENTITY();
+  DELETE FROM @plOptions;
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('A', N'so', 0);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('B', N'but', 1);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('C', N'unless', 0);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('D', N'because', 0);
+  INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect)
+  SELECT @plQuestion, 'mcq', Label, Text, IsCorrect FROM @plOptions;
+END
+
+-- Q19: P6 (difficulty 3)
+SET @plSection = @secP6;
+SET @plSkill = @toeicRead;
+IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 19)
+BEGIN
+  INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder)
+  VALUES (@toeicDiagPlace, @toeicCert, @plSection, 19);
+END
+SELECT @plGroup = GroupId FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 19;
+
+IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 19)
+BEGIN
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  VALUES (@plGroup, @toeicDiagPlace, @plSection, @plSkill,
+          N'Customers who ------- their invoices before the due date are eligible for a two per cent discount.', 3, 'mcq', N'The relative clause needs a finite verb, ''pay'', agreeing with ''Customers''.', 19);
+  SET @plQuestion = SCOPE_IDENTITY();
+  DELETE FROM @plOptions;
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('A', N'paying', 0);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('B', N'are paid', 0);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('C', N'pay', 1);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('D', N'have paid for', 0);
+  INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect)
+  SELECT @plQuestion, 'mcq', Label, Text, IsCorrect FROM @plOptions;
+END
+
+-- Q20: P6 (difficulty 3)
+SET @plSection = @secP6;
+SET @plSkill = @toeicRead;
+IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 20)
+BEGIN
+  INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder)
+  VALUES (@toeicDiagPlace, @toeicCert, @plSection, 20);
+END
+SELECT @plGroup = GroupId FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 20;
+
+IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 20)
+BEGIN
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  VALUES (@plGroup, @toeicDiagPlace, @plSection, @plSkill,
+          N'The new policy applies to all contractors ------- their length of service.', 3, 'mcq', N'The policy covers everyone, so ''regardless of'' is the only fit.', 20);
+  SET @plQuestion = SCOPE_IDENTITY();
+  DELETE FROM @plOptions;
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('A', N'instead of', 0);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('B', N'in place of', 0);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('C', N'except for', 0);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('D', N'regardless of', 1);
+  INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect)
+  SELECT @plQuestion, 'mcq', Label, Text, IsCorrect FROM @plOptions;
+END
+
+-- Q21: P7 (difficulty 2)
+SET @plSection = @secP7;
+SET @plSkill = @toeicRead;
+IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 21)
+BEGIN
+  INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder)
+  VALUES (@toeicDiagPlace, @toeicCert, @plSection, 21);
+END
+SELECT @plGroup = GroupId FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 21;
+
+IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 21)
+BEGIN
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  VALUES (@plGroup, @toeicDiagPlace, @plSection, @plSkill,
+          N'Notice: The staff car park will be resurfaced from Monday to Wednesday. Employees are asked to use the visitor car park on those days and to display a temporary permit.
+
+What are employees asked to do?', 2, 'mcq', N'The notice redirects staff to the visitor car park and requires a temporary permit.', 21);
+  SET @plQuestion = SCOPE_IDENTITY();
+  DELETE FROM @plOptions;
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('A', N'Resurface the car park themselves.', 0);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('B', N'Use the visitor car park with a permit.', 1);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('C', N'Work from home for three days.', 0);
+  INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect)
+  SELECT @plQuestion, 'mcq', Label, Text, IsCorrect FROM @plOptions;
+END
+
+-- Q22: P7 (difficulty 2)
+SET @plSection = @secP7;
+SET @plSkill = @toeicRead;
+IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 22)
+BEGIN
+  INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder)
+  VALUES (@toeicDiagPlace, @toeicCert, @plSection, 22);
+END
+SELECT @plGroup = GroupId FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 22;
+
+IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 22)
+BEGIN
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  VALUES (@plGroup, @toeicDiagPlace, @plSection, @plSkill,
+          N'Email: I have reviewed the draft proposal and have two comments. First, the timeline should include the client review week. Second, the budget table needs the contingency line. Otherwise the structure is strong.
+
+What does the writer want added to the timeline?', 2, 'mcq', N'The contingency line belongs to the budget table; the client review week is the timeline comment.', 22);
+  SET @plQuestion = SCOPE_IDENTITY();
+  DELETE FROM @plOptions;
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('A', N'The client review week.', 1);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('B', N'A contingency line.', 0);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('C', N'A stronger structure.', 0);
+  INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect)
+  SELECT @plQuestion, 'mcq', Label, Text, IsCorrect FROM @plOptions;
+END
+
+-- Q23: P7 (difficulty 3)
+SET @plSection = @secP7;
+SET @plSkill = @toeicRead;
+IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 23)
+BEGIN
+  INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder)
+  VALUES (@toeicDiagPlace, @toeicCert, @plSection, 23);
+END
+SELECT @plGroup = GroupId FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 23;
+
+IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 23)
+BEGIN
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  VALUES (@plGroup, @toeicDiagPlace, @plSection, @plSkill,
+          N'An article reports that a city''s bicycle-sharing scheme grew from 400 to 5,000 bicycles in four years, and that journeys rose from 900 to 41,000 a day. The operator attributes the growth to docking stations near rail terminals.
+
+What does the operator say caused the growth?', 3, 'mcq', N'The article attributes growth to the placement of docking stations near rail terminals.', 23);
+  SET @plQuestion = SCOPE_IDENTITY();
+  DELETE FROM @plOptions;
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('A', N'A fall in the price of bicycles.', 0);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('B', N'A reduction in rail services.', 0);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('C', N'Docking stations near rail terminals.', 1);
+  INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect)
+  SELECT @plQuestion, 'mcq', Label, Text, IsCorrect FROM @plOptions;
+END
+
+-- Q24: P7 (difficulty 3)
+SET @plSection = @secP7;
+SET @plSkill = @toeicRead;
+IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 24)
+BEGIN
+  INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder)
+  VALUES (@toeicDiagPlace, @toeicCert, @plSection, 24);
+END
+SELECT @plGroup = GroupId FROM QuestionGroups WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 24;
+
+IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @toeicDiagPlace AND DisplayOrder = 24)
+BEGIN
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
+  VALUES (@plGroup, @toeicDiagPlace, @plSection, @plSkill,
+          N'Memo: Because the audit will occupy the fifth floor all week, the finance team will work from the second-floor meeting rooms. Printers on the fifth floor will be unavailable; please use the shared printer on the second floor.
+
+Why is the finance team moving?', 3, 'mcq', N'The audit occupies the fifth floor, which is why the team moves.', 24);
+  SET @plQuestion = SCOPE_IDENTITY();
+  DELETE FROM @plOptions;
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('A', N'Their printers have been removed.', 0);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('B', N'The second floor is being renovated.', 0);
+  INSERT INTO @plOptions (Label, Text, IsCorrect) VALUES ('C', N'They need to meet clients.', 0);
+  INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect)
+  SELECT @plQuestion, 'mcq', Label, Text, IsCorrect FROM @plOptions;
+END
+
+-- Raw-to-scaled rows for the new form. 12 Listening and 12 Reading items, so the skill scale
+-- covers 0..12; built from the same linear map the engine interpolates, rounded to the 5-point
+-- grid arithmetic this certificate's skills are declared on.
+IF NOT EXISTS (SELECT 1 FROM ScoreScales WHERE CertId = @toeicCert AND ExamId = @toeicDiagPlace)
+BEGIN
+  INSERT INTO ScoreScales (CertId, SkillId, ExamId, RawScore, ScaledScore)
+  SELECT @toeicCert, @toeicList, @toeicDiagPlace, r.RawScore, r.ScaledScore
+  FROM (VALUES
+    (0, 5),
+    (1, 45),
+    (2, 85),
+    (3, 130),
+    (4, 170),
+    (5, 210),
+    (6, 250),
+    (7, 290),
+    (8, 330),
+    (9, 370),
+    (10, 415),
+    (11, 455),
+    (12, 495)
+  ) r(RawScore, ScaledScore);
+  INSERT INTO ScoreScales (CertId, SkillId, ExamId, RawScore, ScaledScore)
+  SELECT @toeicCert, @toeicRead, @toeicDiagPlace, r.RawScore, r.ScaledScore
+  FROM (VALUES
+    (0, 5),
+    (1, 45),
+    (2, 85),
+    (3, 130),
+    (4, 170),
+    (5, 210),
+    (6, 250),
+    (7, 290),
+    (8, 330),
+    (9, 370),
+    (10, 415),
+    (11, 455),
+    (12, 495)
+  ) r(RawScore, ScaledScore);
 END;
 
 -- 3. TOEIC Speaking Practice: ETS TOEIC Speaking Practice Exam 1
@@ -1335,7 +1888,7 @@ GO
 -- ============================================================================
 DECLARE @learner INT = (SELECT UserId FROM Users WHERE Email = 'learner@demo.local');
 DECLARE @toeicCert INT = (SELECT CertId FROM Certificates WHERE Code = 'TOEIC');
-DECLARE @stdExam INT = (SELECT ExamId FROM Exams WHERE CertId = @toeicCert AND Name = N'TOEIC Placement Test — Standard');
+DECLARE @stdExam INT = (SELECT ExamId FROM Exams WHERE CertId = @toeicCert AND Name = N'TOEIC Placement Test — Diagnostic');
 
 -- Target band B2 (785)
 IF NOT EXISTS (SELECT 1 FROM TargetBands WHERE UserId = @learner AND CertId = @toeicCert)
