@@ -250,5 +250,6 @@ public static partial class PlacementEndpoints
             result.FreeResponseCount,
             result.GradedFreeResponseCount,
             result.FailedFreeResponseCount,
+            result.ScoreDisplayFactor,
             result.IsGraded);
 }

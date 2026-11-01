@@ -83,12 +83,12 @@
     }
   </div>
 
-  @foreach (var skill in res.SkillScores)
+  @foreach (var item in Model.Skills)
   {
     <div class="score-hero__section">
-      <div class="score-hero__section-value">@skill.ScaledScore</div>
-      <div class="text-sm text-muted">@skill.SkillName</div>
-      <p class="text-xs text-muted m-0 mt-1">@skill.RawScore / @skill.TotalQuestions</p>
+      <div class="score-hero__section-value">@item.ScaledScoreDisplay</div>
+      <div class="text-sm text-muted">@item.Score.SkillName</div>
+      <p class="text-xs text-muted m-0 mt-1">@item.Score.RawScore / @item.Score.TotalQuestions</p>
     </div>
   }
 </div>
@@ -136,7 +136,7 @@
             <td><strong>@skill.SkillName</strong></td>
             <td>@skill.RawScore</td>
             <td>@skill.TotalQuestions</td>
-            <td><strong>@skill.ScaledScore</strong></td>
+            <td><strong>@item.ScaledScoreDisplay</strong></td>
             <td>@item.AccuracyPercent%</td>
           </tr>
         }
@@ -146,7 +146,7 @@
           <th>Total</th>
           <th>@Model.TotalRawScore</th>
           <th>@Model.TotalQuestions</th>
-          <th><strong>@res.TotalScore</strong></th>
+          <th><strong>@Model.TotalScoreDisplay</strong></th>
           <th>
             @Model.AccuracyPercent%
           </th>

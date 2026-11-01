@@ -59,6 +59,8 @@ public sealed partial class ExamQuickIngestService
             var transcript = item.TryGetProperty("transcript", out var trProp) ? trProp.GetString() : null;
             var requiredKeywords = item.TryGetProperty("requiredKeywords", out var rkProp) ? rkProp.GetString() : null;
             var hint = item.TryGetProperty("hint", out var hProp) ? hProp.GetString() : null;
+            var reference = item.TryGetProperty("sampleAnswerOrImageDesc", out var refProp) ? refProp.GetString() : null;
+            var referenceKind = item.TryGetProperty("referenceKind", out var rk2Prop) ? rk2Prop.GetString()?.ToLowerInvariant() : null;
             var maxWords = item.TryGetProperty("maxWords", out var mwProp) && mwProp.TryGetInt32(out var mwVal) ? (int?)mwVal : null;
             var minWords = item.TryGetProperty("minWords", out var minwProp) && minwProp.TryGetInt32(out var minwVal) ? (int?)minwVal : null;
             var maxSelections = item.TryGetProperty("maxSelections", out var msProp) && msProp.TryGetInt32(out var msVal) ? (int?)msVal : null;
@@ -164,7 +166,9 @@ public sealed partial class ExamQuickIngestService
                 RequiredKeywords: requiredKeywords,
                 Hint: hint,
                 PrepSeconds: prepSec,
-                ResponseSeconds: respSec));
+                ResponseSeconds: respSec,
+                SampleAnswerOrImageDesc: reference,
+                ReferenceKind: referenceKind is null ? null : EnumCodes.Parse<ReferenceKindDto>(referenceKind)));
 
             qIdx++;
         }

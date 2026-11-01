@@ -192,6 +192,8 @@
     var minW = card.querySelector('[data-field="MinWords"]')?.value;
     var maxW = card.querySelector('[data-field="MaxWords"]')?.value;
     var hint = card.querySelector('[data-field="Hint"]')?.value;
+    var referenceText = card.querySelector('[data-field="SampleAnswerOrImageDesc"]')?.value;
+    var referenceKind = card.querySelector('[data-field="ReferenceKind"]')?.value;
     var maxSel = card.querySelector('[data-field="MaxSelections"]')?.value;
     var allowNumCheck = card.querySelector('[data-field="AllowNumber"]');
     var allowNumber = allowNumCheck ? allowNumCheck.checked : true;
@@ -281,6 +283,8 @@
       minWords: isFreeResponse && minW ? parseInt(minW, 10) : null,
       maxWords: isFreeResponse && maxW ? parseInt(maxW, 10) : (isInline && maxW ? parseInt(maxW, 10) : null),
       hint: isFreeResponse ? hint : null,
+      sampleAnswerOrImageDesc: isFreeResponse && referenceText ? referenceText : null,
+      referenceKind: isFreeResponse && referenceKind ? referenceKind : null,
       maxSelections: questionTypeStr === 'multi_select' && maxSel ? parseInt(maxSel, 10) : null,
       allowNumber: allowNumber,
       acceptedAnswersJson: isInline ? acceptedAns : null,

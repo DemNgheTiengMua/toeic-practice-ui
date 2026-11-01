@@ -30,4 +30,6 @@ public sealed record AdminQuestionDto(
     int? MaxSelections = null,
     bool AllowNumber = true,
     string? AcceptedAnswersJson = null,
-    string? RequiredKeywords = null);
+    string? RequiredKeywords = null,
+    string? SampleAnswerOrImageDesc = null,
+    ReferenceKindDto? ReferenceKind = null);

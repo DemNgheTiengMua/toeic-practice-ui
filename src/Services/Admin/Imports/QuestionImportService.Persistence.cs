@@ -129,6 +129,8 @@ public sealed partial class QuestionImportService
             AcceptedAnswersJson = question.AcceptedAnswersJson,
             RequiredKeywords = question.RequiredKeywords,
             Hint = Normalise(question.Source.Hint),
+            SampleAnswerOrImageDesc = Normalise(question.Source.SampleAnswerOrImageDesc),
+            ReferenceKind = Normalise(question.Source.ReferenceKind),
             DisplayOrder = question.DisplayOrder,
             UpdatedAt = now,
         }))).ToList();

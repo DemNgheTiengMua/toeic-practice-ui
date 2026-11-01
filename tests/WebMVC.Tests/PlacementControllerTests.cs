@@ -424,7 +424,7 @@ public sealed class PlacementControllerTests
         Assert.Equal("B1", model.Result.ResultBandCode);
         Assert.Equal("Reading", model.Result.WeakerSkillName);
         Assert.Equal("26 October 2026", model.TakenAtDisplay);
-        Assert.Equal(940, model.MaximumScore);
+        Assert.Equal("940", model.MaximumScore);
         Assert.Equal(380, model.Skills[0].ScaledScore);
         Assert.Equal(370, model.Skills[1].ScaledScore);
         Assert.Equal("cefr__band is-current", model.Bands[1].CssClass);

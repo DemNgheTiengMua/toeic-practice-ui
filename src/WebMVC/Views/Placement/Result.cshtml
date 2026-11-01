@@ -102,12 +102,12 @@
       <div class="stat__value font-mono">@Model.TotalScoreDisplay</div>
       <div class="stat__hint font-mono text-muted">out of @Model.MaximumScore</div>
     </div>
-    @* #149: one card per skill of the certificate, named by the skill itself. *@
+    @* #152: one card per skill of the certificate, named by the skill itself. *@
     @foreach (var skill in Model.Skills)
     {
       <div class="stat">
         <div class="stat__label">@skill.SkillName</div>
-        <div class="stat__value font-mono">@skill.ScaledScore</div>
+        <div class="stat__value font-mono">@Model.SkillScoreDisplay(skill)</div>
         <div class="stat__hint font-mono text-muted">@skill.RawScore of @skill.TotalQuestions correct</div>
       </div>
     }
@@ -158,7 +158,7 @@
             <tr>
               <th scope="row">@s.SkillName</th>
               <td class="font-mono">@s.RawScore / @s.TotalQuestions</td>
-              <td class="font-mono">@s.ScaledScore</td>
+              <td class="font-mono">@Model.SkillScoreDisplay(s)</td>
               <td><span class="badge badge--muted font-mono">@(s.BandCode ?? (result.IsGraded ? result.ResultBandCode : "Pending"))</span></td>
             </tr>
           }

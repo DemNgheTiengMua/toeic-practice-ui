@@ -53,11 +53,11 @@ public sealed class SpeechSuperGradingRuleTests
     {
         "result": {
             "transcription": "I enjoy playing tennis on weekends.",
-            "overall": 7.2,
-            "pronunciation": 7.5,
-            "fluency_coherence": 7.0,
-            "grammar": 6.8,
-            "lexical_resource": 7.5,
+            "overall": 78,
+            "pronunciation": 83,
+            "fluency": 78,
+            "grammar": 76,
+            "vocabulary": 83,
             "relevance": 95
         }
     }
@@ -160,7 +160,7 @@ public sealed class SpeechSuperGradingRuleTests
         {
             "result": {
                 "transcription": "I enjoy playing tennis on weekends.",
-                "pronunciation": 7.5
+                "pronunciation": 83
             }
         }
         """;
@@ -171,7 +171,7 @@ public sealed class SpeechSuperGradingRuleTests
         Assert.True(result.Success);
         var score = Assert.Single(result.Scores);
         Assert.Equal(1, score.CriterionId);
-        // 7.5 of 9.0 is 83% of a 3.0 criterion. The old code would have invented 2.0 for the rest.
+        // 83% of a 3.0 criterion. The old code would have invented 2.0 for the rest.
         Assert.Equal(2.5m, score.Score);
         Assert.DoesNotContain(result.Scores, s => s.CriterionId is 2 or 3 or 4);
     }
@@ -228,7 +228,8 @@ public sealed class SpeechSuperGradingRuleTests
 
         var result = await grader.GradeAsync(Request(referenceText: "Read this aloud."));
 
-        // pron 7.5/9 -> 2.5, int 7.0/9 -> 2.3, gram 6.8/9 -> 2.3, rel 95/100 -> 2.9 (of 3.0 each).
+        // Every field is a percentage: pron 83 -> 2.5, int 78 -> 2.3, gram 76 -> 2.3,
+        // rel 95 -> 2.9 (of 3.0 each).
         var byId = result.Scores.ToDictionary(s => s.CriterionId, s => s.Score);
         Assert.Equal(2.5m, byId[1]);
         Assert.Equal(2.3m, byId[2]);
@@ -236,16 +237,54 @@ public sealed class SpeechSuperGradingRuleTests
         Assert.Equal(2.9m, byId[4]);
     }
 
+    /// <summary>
+    /// #152, found on a live 200 and not by any test shaped from a guessed body: `speak.eval.pro`
+    /// returns `fluency` and `vocabulary`, not `fluency_coherence` and `lexical_resource`. Reading the
+    /// wrong name made the provider's own figure look absent, which silently dropped those criteria
+    /// from every grading and left only relevance scored.
+    /// </summary>
+    [Fact]
+    public async Task The_grader_reads_the_field_names_the_provider_actually_returns()
+    {
+        // The exact result block from the live run (values abridged, names untouched).
+        const string liveBody = """
+        {
+            "result": {
+                "transcription": "Attention all shoppers.",
+                "overall": 98,
+                "pronunciation": 96,
+                "fluency": 88,
+                "grammar": 39,
+                "vocabulary": 41,
+                "relevance": 100,
+                "topic_development": 98
+            }
+        }
+        """;
+        var (grader, _) = Build(liveBody);
+
+        var result = await grader.GradeAsync(Request(referenceText: "Attention all shoppers."));
+
+        Assert.True(result.Success);
+        var byId = result.Scores.ToDictionary(s => s.CriterionId, s => s.Score);
+        Assert.Equal(4, result.Scores.Count);
+        // 96% , 88%, 39%, 100% of three points each.
+        Assert.Equal(2.9m, byId[1]);
+        Assert.Equal(2.6m, byId[2]);
+        Assert.Equal(1.2m, byId[3]);
+        Assert.Equal(3.0m, byId[4]);
+    }
+
     [Fact]
     public async Task A_score_outside_the_fields_documented_scale_is_treated_as_missing_not_as_a_top_mark()
     {
-        // 82 would be a percentage leaked into a 0..9 field; clamped it would read as a perfect band.
+        // 182 would be a percentage of a percentage; clamped it would read as a perfect mark.
         const string wrongScale = """
         {
             "result": {
                 "transcription": "I enjoy playing tennis on weekends.",
-                "pronunciation": 82,
-                "fluency_coherence": 7.0
+                "pronunciation": 182,
+                "fluency": 78
             }
         }
         """;
@@ -257,4 +296,42 @@ public sealed class SpeechSuperGradingRuleTests
         Assert.DoesNotContain(result.Scores, s => s.CriterionId == 1);
         Assert.Contains(result.Scores, s => s.CriterionId == 2);
     }
+
+    /// <summary>
+    /// #152 finding 7: when nothing is usable <em>because the provider answered in a scale it does not
+    /// document</em>, the learner's Retry button burns two more paid calls and cannot possibly help.
+    /// The reason has to say "unexpected scale" rather than read like a transient fault.
+    /// </summary>
+    [Fact]
+    public async Task An_out_of_scale_answer_is_reported_as_a_scale_mismatch_not_as_a_transient_fault()
+    {
+        // Every field outside 0-100: nothing gradable comes back at all.
+        const string allWrongScale = """
+        {
+            "result": {
+                "transcription": "I enjoy playing tennis on weekends.",
+                "pronunciation": 820,
+                "fluency": 710,
+                "grammar": 680,
+                "vocabulary": 750,
+                "relevance": 9500
+            }
+        }
+        """;
+        var (grader, _) = Build(allWrongScale);
+
+        var result = await grader.GradeAsync(Request(referenceText: "Read this aloud."));
+
+        Assert.False(result.Success);
+        Assert.Empty(result.Scores);
+        Assert.NotNull(result.FailureReason);
+        Assert.Contains("outside the scale", result.FailureReason, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Retrying will not change this", result.FailureReason, StringComparison.OrdinalIgnoreCase);
+        // It names the measurement and the scale it should have been on, so the cause is diagnosable.
+        Assert.Contains("820", result.FailureReason);
+        Assert.Contains("0-100", result.FailureReason);
+        // And it is distinguishable from the "no speech" reason, which IS worth retrying.
+        Assert.DoesNotContain("no speech", result.FailureReason, StringComparison.OrdinalIgnoreCase);
+    }
 }
+

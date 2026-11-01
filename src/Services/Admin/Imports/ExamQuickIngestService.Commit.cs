@@ -222,6 +222,8 @@ public sealed partial class ExamQuickIngestService
                 AcceptedAnswersJson = q.AcceptedAnswersJson,
                 RequiredKeywords = q.RequiredKeywords?.Trim(),
                 Hint = q.Hint?.Trim(),
+                SampleAnswerOrImageDesc = q.SampleAnswerOrImageDesc?.Trim(),
+                ReferenceKind = q.ReferenceKind?.ToCode(),
                 DisplayOrder = currentDisplayOrder
             };
 

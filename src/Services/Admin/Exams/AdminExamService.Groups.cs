@@ -338,7 +338,9 @@ public sealed partial class AdminExamService
                 MaxSelections: q.MaxSelections,
                 AllowNumber: q.AllowNumber,
                 AcceptedAnswersJson: q.AcceptedAnswersJson,
-                RequiredKeywords: q.RequiredKeywords));
+                RequiredKeywords: q.RequiredKeywords,
+                SampleAnswerOrImageDesc: q.SampleAnswerOrImageDesc,
+                ReferenceKind: ParseReferenceKind(q.ReferenceKind)));
         }
 
         exam.UpdatedAt = clock.GetUtcNow();

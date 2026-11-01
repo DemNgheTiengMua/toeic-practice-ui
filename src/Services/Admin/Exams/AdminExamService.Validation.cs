@@ -326,4 +326,38 @@ public sealed partial class AdminExamService
             throw new AdminExamException(ApiError.Codes.Validation, "Option labels must be unique.");
         }
     }
+
+    /// <summary>
+    /// #152: a reference is only usable when both halves are present and they describe a spoken
+    /// question. Text with no declared kind cannot be classified (a logo would decide it), and a
+    /// script on an exact-match question is a rubric that will never be read.
+    /// </summary>
+    private static void ValidateReference(
+        QuestionTypeDto type, string? sampleAnswerOrImageDesc, ReferenceKindDto? referenceKind)
+    {
+        var hasText = !string.IsNullOrWhiteSpace(sampleAnswerOrImageDesc);
+
+        if (hasText != referenceKind.HasValue)
+        {
+            throw new AdminExamException(
+                ApiError.Codes.Validation,
+                "A reference needs both the text and what it is ('script' for words to read aloud, 'image_desc' for a picture description). Supply both or neither.");
+        }
+
+        if (hasText && type != QuestionTypeDto.FreeResponse)
+        {
+            throw new AdminExamException(
+                ApiError.Codes.Validation,
+                "Only a free-response question can carry a reference; a " + type.ToCode() + " question is not spoken.");
+        }
+
+        if (sampleAnswerOrImageDesc is { Length: > 1000 })
+        {
+            throw new AdminExamException(ApiError.Codes.Validation, "The reference must not exceed 1000 characters.");
+        }
+    }
+
+    /// <summary>Stored code back to wire enum; an unknown code is surfaced rather than silently dropped.</summary>
+    private static ReferenceKindDto? ParseReferenceKind(string? code) =>
+        string.IsNullOrWhiteSpace(code) ? null : EnumCodes.Parse<ReferenceKindDto>(code);
 }

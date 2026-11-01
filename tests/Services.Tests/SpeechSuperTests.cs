@@ -75,15 +75,16 @@ public sealed class SpeechSuperTests
     [Fact]
     public async Task AssessAsync_parses_successful_result_correctly()
     {
+        // The field names and scale of a live speak.eval.pro 200: every figure is a percentage.
         const string mockResponse = """
         {
             "result": {
                 "transcription": "I want to be in art because I am a creative person.",
-                "overall": 6.5,
-                "pronunciation": 6.0,
-                "fluency_coherence": 7.0,
-                "grammar": 6.5,
-                "lexical_resource": 7.0,
+                "overall": 65,
+                "pronunciation": 60,
+                "fluency": 70,
+                "grammar": 65,
+                "vocabulary": 70,
                 "relevance": 90,
                 "sentences": [
                     {
@@ -122,11 +123,11 @@ public sealed class SpeechSuperTests
 
         Assert.True(result.Success);
         Assert.Equal("I want to be in art because I am a creative person.", result.Transcription);
-        Assert.Equal(6.5m, result.OverallScore);
-        Assert.Equal(6.0m, result.PronunciationScore);
-        Assert.Equal(7.0m, result.FluencyScore);
-        Assert.Equal(6.5m, result.GrammarScore);
-        Assert.Equal(7.0m, result.VocabularyScore);
+        Assert.Equal(65m, result.OverallScore);
+        Assert.Equal(60m, result.PronunciationScore);
+        Assert.Equal(70m, result.FluencyScore);
+        Assert.Equal(65m, result.GrammarScore);
+        Assert.Equal(70m, result.VocabularyScore);
         Assert.Equal(90m, result.RelevanceScore);
         Assert.NotNull(result.Sentences);
         Assert.Single(result.Sentences);
@@ -205,11 +206,11 @@ public sealed class SpeechSuperTests
         {
             "result": {
                 "transcription": "I enjoy playing tennis on weekends.",
-                "overall": 7.2,
-                "pronunciation": 7.5,
-                "fluency_coherence": 7.0,
-                "grammar": 6.8,
-                "lexical_resource": 7.5,
+                "overall": 78,
+                "pronunciation": 83,
+                "fluency": 78,
+                "grammar": 76,
+                "vocabulary": 83,
                 "relevance": 95
             }
         }

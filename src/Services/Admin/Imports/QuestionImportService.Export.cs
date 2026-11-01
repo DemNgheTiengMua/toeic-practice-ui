@@ -109,6 +109,8 @@ public sealed partial class QuestionImportService
                                     CategoryCode = q.Category?.Code,
                                     Explanation = q.Explanation,
                                     Hint = q.Hint,
+                                    SampleAnswerOrImageDesc = q.SampleAnswerOrImageDesc,
+                                    ReferenceKind = q.ReferenceKind,
                                     PrepSeconds = q.PrepSeconds,
                                     ResponseSeconds = q.ResponseSeconds,
                                     MinWords = q.MinWords,

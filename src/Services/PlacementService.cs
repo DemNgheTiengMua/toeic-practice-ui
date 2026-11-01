@@ -947,6 +947,14 @@ public sealed class PlacementService(
             .ThenBy(b => b.MinTotal)
             .ToListAsync(cancellationToken);
 
+        // #152: how many stored units make one reported point on this certificate. The page divides
+        // every score by it, so an IELTS placement reads 6.5 where the column holds 65.
+        var scoreDisplayFactor = AttemptEngine.DisplayFactor(
+            await db.Certificates
+                .Where(c => c.CertId == attempt.CertId)
+                .Select(c => c.ScoreAggregationRule)
+                .SingleAsync(cancellationToken));
+
         int totalScore = placement.TotalScore ?? attempt.TotalScore ?? 0;
         string resultBandCode = placement.ResultBandCode ?? attempt.BandCode ?? "";
         string resultBandName = bands.FirstOrDefault(b => b.Code == resultBandCode)?.Name ?? resultBandCode;
@@ -1034,6 +1042,7 @@ public sealed class PlacementService(
             freeResponseCount,
             gradedFreeResponseCount,
             failedFreeResponseCount,
+            scoreDisplayFactor,
             isGraded);
     }
     private async Task<(int Total, int Graded, int Failed, bool IsGraded)> GetAttemptGradingCountsAsync(

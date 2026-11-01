@@ -21,5 +21,8 @@ public record SpeakingReviewView(
     string? EstimatedBandName = null,
     // #152: the top of the axis ScaledScore is reported on, so the page can say "43 of 50" instead
     // of implying one certificate's range for every certificate.
-    int? ScaledScoreMax = null
+    int? ScaledScoreMax = null,
+    // #152: stored units per reported point. 10 on a certificate whose scale is in tenths, so a
+    // stored 75 is shown as 7.5 and never as 75. Every rendered score divides by this.
+    int ScoreDisplayFactor = 1
 );

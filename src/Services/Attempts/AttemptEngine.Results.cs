@@ -101,7 +101,8 @@ public sealed partial class AttemptEngine
             scoreDelta,
             freeResponseCount,
             gradingStates.Count(status => status == AiGradingStatus.Done.ToCode()),
-            gradingStates.Count(status => status == AiGradingStatus.Failed.ToCode()));
+            gradingStates.Count(status => status == AiGradingStatus.Failed.ToCode()),
+            DisplayFactor(attempt.Cert.ScoreAggregationRule));
     }
 
     public async Task<AttemptReviewView> GetAttemptReviewAsync(

@@ -64,6 +64,15 @@ public partial class Question
     [StringLength(1000)]
     public string? SampleAnswerOrImageDesc { get; set; }
 
+    /// <summary>
+    /// #152: what <see cref="SampleAnswerOrImageDesc"/> is (CK_Questions_ReferenceKind). Null with a
+    /// text is not a reference this system knows how to use. It is a question-level fact on purpose:
+    /// the group's picture cannot say what a question's own text means.
+    /// </summary>
+    [StringLength(12)]
+    [Unicode(false)]
+    public string? ReferenceKind { get; set; }
+
     public int DisplayOrder { get; set; }
 
     public DateTimeOffset? UpdatedAt { get; set; }

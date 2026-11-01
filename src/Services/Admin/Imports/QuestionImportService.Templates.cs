@@ -131,6 +131,10 @@ public sealed partial class QuestionImportService
                 DisplayOrder = displayOrder,
                 Explanation = "Detailed scoring rationale and rubric expectations.",
                 Hint = "Organize thoughts clearly before responding.",
+                SampleAnswerOrImageDesc = sec.Modality == "speaking"
+                    ? "The passage the learner reads aloud, or describe the picture here."
+                    : null,
+                ReferenceKind = sec.Modality == "speaking" ? "script" : null,
             },
 
             "multi_select" => new ImportManifestQuestion

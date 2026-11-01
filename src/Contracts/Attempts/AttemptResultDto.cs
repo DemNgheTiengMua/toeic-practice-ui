@@ -23,4 +23,6 @@ public sealed record AttemptResultDto(
     int? ScoreDelta,
     int FreeResponseCount = 0,
     int GradedFreeResponseCount = 0,
-    int FailedFreeResponseCount = 0);
+    int FailedFreeResponseCount = 0,
+    // #152: stored units per reported point; the page divides by it before printing a score.
+    int ScoreDisplayFactor = 1);

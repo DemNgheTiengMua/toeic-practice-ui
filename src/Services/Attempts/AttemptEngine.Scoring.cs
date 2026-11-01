@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BusinessObjects;
 using BusinessObjects.Entities;
+using Contracts;
 using DataAccess;
 using Microsoft.EntityFrameworkCore;
 
@@ -191,38 +192,110 @@ public sealed partial class AttemptEngine
     public static string? MatchBandCode(int score, IReadOnlyList<ScoreBand> bands) =>
         MatchBand(score, bands, b => b.MinTotal, b => b.MaxTotal)?.Code;
 
-    /// <summary>
-    /// E1.3 (#148): the band a single AI-graded skill's rubric total belongs to, on the certificate's
-    /// own band axis. The rubric fraction is converted with the same <see cref="ProjectOntoScale"/>
-    /// the engine uses, over the span of that certificate's own <c>ScoreBands</c> — a 10–990
-    /// certificate and a 0–9 one therefore place the same answer in different bands. The skill's own
-    /// score scale is not used here: it is absent for the writing and speaking skills (#146 left them
-    /// unconfigured), and a band is defined over the certificate's total, not over one skill's range.
-    /// </summary>
-    /// <remarks>
-    /// Zero scores no band. The table's lowest band is a floor, not evidence: a learner who wrote
-    /// nothing would otherwise be told they are B1 on a certificate whose lowest band starts at 40.
-    /// </remarks>
-    public static async Task<ScoreBand?> EstimateBandForRubricAsync(
-        CompanionDbContext db, int certId, decimal rubricTotal, decimal rubricMax, CancellationToken cancellationToken = default)
+    /// <summary>The one copy: the band grid (here) and the skill-step derivation both reduce with it.</summary>
+    internal static int GreatestCommonDivisor(int a, int b)
     {
-        // No rubric, or nothing earned on it: no band at all.
-        if (rubricMax <= 0m || rubricTotal <= 0m) return null;
+        while (b != 0) (a, b) = (b, a % b);
+        return Math.Abs(a);
+    }
 
+    /// <summary>
+    /// #152: how many stored units make one reported point. IELTS and VSTEP keep their marks in
+    /// tenths — their <c>ScoreBands</c> read 40–90 for 4.0–9.0, their <c>ScoreScales</c> store 65 for
+    /// 6.5, and <see cref="RoundHalfStep"/> works in tenths too — so a stored 75 is 7.5. Every
+    /// certificate that does not say otherwise stores the number it reports.
+    /// </summary>
+    public static int DisplayFactor(string? scoreAggregationRule) => ScoreDisplay.FactorFor(scoreAggregationRule);
+
+    /// <summary>
+    /// #152: a stored integer as the learner reads it. A page that prints the stored value is wrong
+    /// by this factor on every certificate whose scale is in tenths, which is how "75 out of 90"
+    /// appeared for a 7.5.
+    /// </summary>
+    public static decimal ReportedScore(int stored, int displayFactor) => (decimal)stored / displayFactor;
+
+    /// <summary>
+    /// #152: the axis a rubric score is reported on. The skill's own configured scale wins where it
+    /// exists — the ticket asks for exactly that, and it is data, not a guess (TOEIC S&amp;W's
+    /// speaking scale genuinely starts at 50). Where the skill has none (#148 found them NULL for
+    /// every seeded writing and speaking skill) the axis runs from zero to the top of the
+    /// certificate's own highest band, on whatever grid those band bounds sit on: IELTS stores tenths
+    /// and its bounds are multiples of 5, so the grid is half a band. A grid too coarse to tell two
+    /// learners apart falls back to 1. Zero is the fallback floor because a rubric of nothing is zero
+    /// — the lowest band's bound is a floor for a *band*, not for a score.
+    /// </summary>
+    public static async Task<(int Min, int Top, int Step, IReadOnlyList<ScoreBand> Bands)?> RubricAxisAsync(
+        CompanionDbContext db, int certId, int? skillId, CancellationToken cancellationToken = default)
+    {
         var bands = await db.ScoreBands
             .AsNoTracking()
             .Where(b => b.CertId == certId)
             .OrderBy(b => b.MinTotal)
             .ToListAsync(cancellationToken);
+
+        if (skillId is int id)
+        {
+            var skill = await db.Skills
+                .AsNoTracking()
+                .Where(s => s.SkillId == id && s.CertId == certId)
+                .Select(s => new { s.MinScaledScore, s.MaxScaledScore, s.ScoreStep })
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (skill?.MinScaledScore is int min
+                && skill.MaxScaledScore is int max
+                && skill.ScoreStep is int step
+                && max > min)
+            {
+                return (min, max, step, bands);
+            }
+        }
+
+        // No bands, no axis: a score would be a number with nothing behind it.
         if (bands.Count == 0) return null;
+
+        var top = bands.Max(b => b.MaxTotal);
+        var grid = bands.SelectMany(b => new[] { b.MinTotal, b.MaxTotal })
+            .Aggregate(0, (a, b) => GreatestCommonDivisor(a, b));
+
+        return (0, top, grid >= 2 && top / grid >= 10 ? grid : 1, bands);
+    }
+
+    /// <summary>
+    /// #152: where a rubric fraction is reported: the score, the band, and the axis both came from.
+    /// One placement, one number — the band is the band whose range holds the score this call
+    /// returned, so a page cannot print a score beside a band that score cannot reach. Before this the
+    /// score was placed on a 0–top axis and the band on a lowest-band-to-highest-band one, and the
+    /// same attempt could show C1 beside a score that no C1 range contains.
+    /// </summary>
+    /// <remarks>
+    /// Zero, or a certificate that declares no axis, reports nothing: the page then says so rather
+    /// than printing a number with no table behind it (D14, #148).
+    /// </remarks>
+    public static async Task<(int Score, int Top, int Step, ScoreBand? Band)?> PlaceRubricAsync(
+        CompanionDbContext db, int certId, int? skillId, decimal rubricTotal, decimal rubricMax,
+        CancellationToken cancellationToken = default)
+    {
+        if (rubricMax <= 0m || rubricTotal <= 0m) return null;
+
+        var axis = await RubricAxisAsync(db, certId, skillId, cancellationToken);
+        if (axis is not (var min, var top, var step, var bands)) return null;
 
         var fraction = Math.Clamp(rubricTotal / rubricMax, 0m, 1m);
         // totalQuestionsInSkill = 1 is the honest value: the numerator is already a fraction of the
         // rubric, so "out of 1" is exactly the proportional spread this call asks for.
-        var score = ProjectOntoScale(fraction, null, null, null, null, bands[0].MinTotal, bands[^1].MaxTotal, 1, 1);
+        var score = ProjectOntoScale(fraction, null, null, null, null, min, top, step, 1);
 
-        return MatchBand(score, bands, b => b.MinTotal, b => b.MaxTotal);
+        return (score, top, step, bands.Count == 0 ? null : MatchBand(score, bands, b => b.MinTotal, b => b.MaxTotal));
     }
+
+    /// <summary>
+    /// E1.3 (#148): the band a single AI-graded skill's rubric total belongs to — the same placement
+    /// <see cref="PlaceRubricAsync"/> reports, so the stored column and the page cannot disagree.
+    /// </summary>
+    public static async Task<ScoreBand?> EstimateBandForRubricAsync(
+        CompanionDbContext db, int certId, decimal rubricTotal, decimal rubricMax,
+        int? skillId = null, CancellationToken cancellationToken = default) =>
+        (await PlaceRubricAsync(db, certId, skillId, rubricTotal, rubricMax, cancellationToken))?.Band;
 
     /// <summary>
     /// E1.3 (#148): the band of a skill-practice attempt, decided once from every graded response.
@@ -234,7 +307,14 @@ public sealed partial class AttemptEngine
         CompanionDbContext db, int attemptId, int certId, CancellationToken cancellationToken = default)
     {
         var (total, max) = await RubricTotalsAsync(db, attemptId, cancellationToken);
-        return await EstimateBandForRubricAsync(db, certId, total, max, cancellationToken);
+        // The attempt's own skill is the one a scale would be configured on (#152). One rubric level,
+        // one skill: a skill-practice attempt grades a single skill.
+        var skillId = await db.FreeResponses
+            .AsNoTracking()
+            .Where(fr => fr.AttemptId == attemptId)
+            .Select(fr => (int?)fr.SkillId)
+            .FirstOrDefaultAsync(cancellationToken);
+        return await EstimateBandForRubricAsync(db, certId, total, max, skillId, cancellationToken);
     }
 
     /// <summary>

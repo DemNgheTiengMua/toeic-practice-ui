@@ -16,9 +16,17 @@ internal static class AttemptViewModelMapper
         return new(result, error, insight)
         {
             SubmittedAtDisplay = dates.Format(result.SubmittedAt),
-            TotalScoreDisplay = result.Status == AttemptStatusDto.Graded ? result.TotalScore.ToString() : "—",
-            TotalScoreLabel = result.Status == AttemptStatusDto.Graded ? $"Total scaled score · {result.CertCode}" : "Composite score pending AI grading",
-            ScoreDeltaDisplay = result.ScoreDelta >= 0 ? $"+{result.ScoreDelta}" : result.ScoreDelta?.ToString() ?? "",
+            // #152: the stored total is in the certificate's own units — tenths on IELTS, so 65 is
+            // 6.5. Dividing at the edge is what stops the learner reading "65 out of 9".
+            TotalScoreDisplay = result.Status == AttemptStatusDto.Graded
+                ? ScoreDisplay.Format(result.TotalScore, result.ScoreDisplayFactor)
+                : "—",
+            TotalScoreLabel = result.Status == AttemptStatusDto.Graded
+                ? $"Total scaled score · {result.CertCode}"
+                : "Composite score pending AI grading",
+            ScoreDeltaDisplay = result.ScoreDelta is int delta
+                ? (delta >= 0 ? "+" : "") + ScoreDisplay.Format(delta, result.ScoreDisplayFactor)
+                : "",
             DurationDisplay = hours > 0 ? $"{hours}h {minutes}m {seconds}s" : $"{minutes}m {seconds}s",
             IsGraded = result.Status == AttemptStatusDto.Graded,
             IsAwaitingGrading = result.Status == AttemptStatusDto.Submitted,
@@ -26,7 +34,7 @@ internal static class AttemptViewModelMapper
             TotalRawScore = raw,
             TotalQuestions = count,
             AccuracyPercent = Percent(raw, count),
-            Skills = result.SkillScores.Select(s => new ExamSkillScoreViewModel(s, Percent(s.RawScore, s.TotalQuestions))).ToList()
+            Skills = result.SkillScores.Select(s => new ExamSkillScoreViewModel(s, Percent(s.RawScore, s.TotalQuestions), result.ScoreDisplayFactor)).ToList()
         };
     }
 
@@ -66,9 +74,14 @@ internal static class AttemptViewModelMapper
     {
         TakenAtDisplay = dates.FormatCustom(result.TakenAt, "d MMMM yyyy"),
         IsAwaitingGrading = !result.IsGraded,
-        TotalScoreDisplay = result.IsGraded ? result.TotalScore.ToString() : "—",
-        ScoreSummary = result.IsGraded ? $"{result.TotalScore} points · {result.ResultBandName} level" : "Composite score pending AI grading",
-        MaximumScore = result.CefrBands.Count > 0 ? result.CefrBands.Max(b => b.MaxTotal) : 990,
+        // #152: same rule as the mock result — stored tenths are divided at the edge.
+        TotalScoreDisplay = result.IsGraded ? ScoreDisplay.Format(result.TotalScore, result.ScoreDisplayFactor) : "—",
+        ScoreSummary = result.IsGraded
+            ? $"{ScoreDisplay.Format(result.TotalScore, result.ScoreDisplayFactor)} points · {result.ResultBandName} level"
+            : "Composite score pending AI grading",
+        MaximumScore = result.CefrBands.Count > 0
+            ? ScoreDisplay.Format(result.CefrBands.Max(b => b.MaxTotal), result.ScoreDisplayFactor)
+            : ScoreDisplay.Format(result.ScoreDisplayFactor == 1 ? 990 : 9, 1),
         Skills = result.SkillScores,
         Bands = result.CefrBands.Select(b => Band(b, result.IsGraded)).ToList()
     };

@@ -118,6 +118,7 @@ public sealed class SpeechSuperAiGrader : IAiGrader
     {
         var scores = new List<AiCriterionScoreResult>();
         var missing = new List<string>();
+        var outOfScale = new List<string>();
 
         if (string.IsNullOrWhiteSpace(assessment.Transcription))
         {
@@ -139,9 +140,10 @@ public sealed class SpeechSuperAiGrader : IAiGrader
 
             if (measurement < 0m || measurement > nativeMax)
             {
-                // Outside the scale the provider documents for that field: that is a scale mismatch,
-                // not a top mark, so it is not usable.
-                missing.Add(criterion.Name);
+                // Outside the scale the provider documents for that field: a scale mismatch, not a top
+                // mark, so it is not usable - and it is named separately, because retrying a scale
+                // mismatch burns quota and cannot change the answer.
+                outOfScale.Add(string.Create(CultureInfo.InvariantCulture, $"{criterion.Name} ({measurement.Value:0.##} on a 0-{nativeMax:0.##} scale)"));
                 continue;
             }
 
@@ -153,23 +155,29 @@ public sealed class SpeechSuperAiGrader : IAiGrader
                 Comment(ratio, measurement.Value, nativeMax)));
         }
 
-        reason = scores.Count == 0
-            ? $"SpeechSuper returned no score for {string.Join(", ", missing)}."
-            : null;
+        // #152 finding 7: an out-of-scale answer and a transient fault look the same to the learner
+        // (Failed, Retry) unless the reason says which it was. A scale mismatch is not retried blindly:
+        // it says so, and says it will keep saying so.
+        reason = scores.Count > 0
+            ? null
+            : outOfScale.Count > 0
+                ? "SpeechSuper answered outside the scale it documents for " + string.Join(", ", outOfScale)
+                  + ". Retrying will not change this until the provider or the certificate's rubric is fixed."
+                : $"SpeechSuper returned no score for {string.Join(", ", missing)}.";
         return scores;
     }
 
     /// <summary>
-    /// Which provider field answers this criterion, and the scale that field is documented on. The
-    /// named scores (overall, pronunciation, fluency, grammar, vocabulary) come from the IELTS-scale
-    /// block of <c>speak.eval.pro</c>; relevance is a percentage. Null means the provider did not
-    /// measure it for this response.
+    /// Which provider field answers this criterion, and the scale that field is reported on. Read off a
+    /// live <c>speak.eval.pro</c> 200: every result figure — overall, pronunciation, fluency, grammar,
+    /// vocabulary, relevance, topic_development — is a percentage. There is no 0–9 block on this
+    /// endpoint, which is why the whole mapping is one scale now instead of a guessed band scale plus
+    /// a percentage. Null means the provider did not measure it for this response.
     /// </summary>
     private static (decimal? Value, decimal NativeMax) Classify(
         string code, string name, SpeechSuperAssessmentResult a, AiGradingRequest request)
     {
-        const decimal Band = 9.0m;      // named scores: 0..9
-        const decimal Percent = 100m;   // relevance: 0..100
+        const decimal Percent = 100m;
 
         // The code is the certificate's own vocabulary (PRON, INT, GRAM, FLU, LR, FC, GRA, VOCAB,
         // REL, DEV); the name is only a fallback when the code says nothing. A name alone is
@@ -184,10 +192,10 @@ public sealed class SpeechSuperAiGrader : IAiGrader
         var isRelevance = code.Contains("REL") || code == "DEV"
             || (code.Length == 0 && (name.Contains("relevance") || name.Contains("content") || name.Contains("completeness") || name.Contains("development")));
 
-        if (isPronunciation) return (a.PronunciationScore, Band);
-        if (isFluency) return (a.FluencyScore, Band);
-        if (isGrammar) return (a.GrammarScore, Band);
-        if (isVocabulary) return (a.VocabularyScore, Band);
+        if (isPronunciation) return (a.PronunciationScore, Percent);
+        if (isFluency) return (a.FluencyScore, Percent);
+        if (isGrammar) return (a.GrammarScore, Percent);
+        if (isVocabulary) return (a.VocabularyScore, Percent);
 
         if (isRelevance)
         {
@@ -198,7 +206,7 @@ public sealed class SpeechSuperAiGrader : IAiGrader
                 : (null, Percent);
         }
 
-        return (a.OverallScore, Band);
+        return (a.OverallScore, Percent);
     }
 
     private static string Comment(decimal ratio, decimal value, decimal nativeMax) =>

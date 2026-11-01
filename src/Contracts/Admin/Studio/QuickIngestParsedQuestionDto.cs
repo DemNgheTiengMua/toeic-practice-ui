@@ -26,4 +26,6 @@ public sealed record QuickIngestParsedQuestionDto(
     int? PrepSeconds = null,
     int? ResponseSeconds = null,
     int? MinWords = null,
-    bool AllowNumber = true);
+    bool AllowNumber = true,
+    string? SampleAnswerOrImageDesc = null,
+    ReferenceKindDto? ReferenceKind = null);

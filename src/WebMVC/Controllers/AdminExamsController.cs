@@ -585,7 +585,9 @@ public sealed class AdminExamsController(
                     model.MaxSelections,
                     model.AllowNumber,
                     model.AcceptedAnswersJson,
-                    model.RequiredKeywords);
+                    model.RequiredKeywords,
+                    model.SampleAnswerOrImageDesc,
+                    model.ReferenceKind);
 
                 await api.UpdateAdminQuestionAsync(model.QuestionId.Value, updateReq, cancellationToken);
                 TempData["Success"] = $"Question {model.DisplayOrder} saved successfully.";
@@ -611,7 +613,9 @@ public sealed class AdminExamsController(
                     model.MaxSelections,
                     model.AllowNumber,
                     model.AcceptedAnswersJson,
-                    model.RequiredKeywords);
+                    model.RequiredKeywords,
+                    model.SampleAnswerOrImageDesc,
+                    model.ReferenceKind);
 
                 var created = await api.CreateAdminQuestionAsync(id, createReq, cancellationToken);
                 TempData["Success"] = $"Question {created.DisplayOrder} created successfully.";

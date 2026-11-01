@@ -205,6 +205,21 @@
                               <textarea id="hint-@q.QuestionId" rows="2" class="field__input studio-autosave" data-type="question" data-id="@q.QuestionId" data-field="Hint" placeholder="Instructions or guidance for the learner..." style="width: 100%; border-radius: 0; font-size: 0.8rem;">@q.Hint</textarea>
                             </div>
 
+                            @* #152: what a spoken answer is judged against. A Read Aloud question's script
+                               travels to SpeechSuper as refText; a picture description only feeds relevance.
+                               Both empty means free speech, which is graded without a reference. *@
+                            <div class="mt-2" style="background: #ffffff; border: 1px solid #ccd2d6; padding: 0.5rem;">
+                              <label class="text-xs" for="reference-kind-@q.QuestionId" style="font-weight: bold; text-transform: uppercase; font-family: var(--font-condensed, sans-serif);">
+                                Spoken reference
+                              </label>
+                              <select id="reference-kind-@q.QuestionId" class="field__input studio-autosave" data-type="question" data-id="@q.QuestionId" data-field="ReferenceKind" style="font-size: 0.75rem; padding: 0.2rem 0.4rem; border-radius: 0; margin: 0.35rem 0;">
+                                <option value="" selected="@(q.ReferenceKind is null)">None — free speech, no reference</option>
+                                <option value="script" selected="@(q.ReferenceKind == Contracts.ReferenceKindDto.Script)">Script — the words to read aloud</option>
+                                <option value="image_desc" selected="@(q.ReferenceKind == Contracts.ReferenceKindDto.ImageDesc)">Picture description — context for relevance</option>
+                              </select>
+                              <textarea id="reference-@q.QuestionId" rows="2" class="field__input studio-autosave" data-type="question" data-id="@q.QuestionId" data-field="SampleAnswerOrImageDesc" placeholder="The script to read, or the description of the picture..." style="width: 100%; border-radius: 0; font-size: 0.8rem;">@q.SampleAnswerOrImageDesc</textarea>
+                            </div>
+
                             <!-- Rubric Criteria Checklist -->
                             <div class="mt-2">
                               <label class="text-xs" style="font-weight: bold; text-transform: uppercase; font-family: var(--font-condensed, sans-serif);">

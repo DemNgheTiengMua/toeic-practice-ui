@@ -127,7 +127,8 @@ public static partial class ExamEndpoints
             r.ScoreDelta,
             r.FreeResponseCount,
             r.GradedFreeResponseCount,
-            r.FailedFreeResponseCount);
+            r.FailedFreeResponseCount,
+            r.ScoreDisplayFactor);
 
     private static ExamHistoryDto ToExamHistoryDto(ExamHistoryView history) =>
         new ExamHistoryDto(

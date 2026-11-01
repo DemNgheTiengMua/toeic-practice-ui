@@ -23,4 +23,7 @@ public sealed record AttemptResultView(
     int? ScoreDelta,
     int FreeResponseCount = 0,
     int GradedFreeResponseCount = 0,
-    int FailedFreeResponseCount = 0);
+    int FailedFreeResponseCount = 0,
+    // #152: stored units per reported point - 10 on a certificate kept in tenths. Every rendered
+    // score divides by this, or an IELTS 6.5 reaches the page as "65".
+    int ScoreDisplayFactor = 1);

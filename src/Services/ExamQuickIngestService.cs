@@ -63,6 +63,14 @@ public sealed partial class ExamQuickIngestService(
     [GeneratedRegex(@"^\s*(?:HINT|GỢI Ý|GOI Y)\s*[:=\-]\s*(.*)$", RegexOptions.IgnoreCase)]
     private static partial Regex HintRegex();
 
+    // #152: a Read Aloud question states the passage it wants read. Without one the importer
+    // produced a free-speech question, and the learner's pronunciation was judged against nothing.
+    [GeneratedRegex(@"^\s*(?:SCRIPT|READ_ALOUD)\s*[:=\-]\s*(.*)$", RegexOptions.IgnoreCase)]
+    private static partial Regex ScriptRegex();
+
+    [GeneratedRegex(@"^\s*(?:IMAGE_DESC|PICTURE_DESC)\s*[:=\-]\s*(.*)$", RegexOptions.IgnoreCase)]
+    private static partial Regex ImageDescRegex();
+
     [GeneratedRegex(@"^\s*(?:TYPE|LOẠI CÂU HỎI)\s*[:=\-]\s*([a-zA-Z0-9_\-]+)", RegexOptions.IgnoreCase)]
     private static partial Regex QuestionTypeRegex();
 

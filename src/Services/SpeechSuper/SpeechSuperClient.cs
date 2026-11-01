@@ -31,6 +31,18 @@ public sealed class SpeechSuperClient : ISpeechSuperClient
         return Convert.ToHexString(hash).ToLowerInvariant();
     }
 
+    /// <summary>
+    /// A numeric provider field, or null when it is absent. Read through <see cref="JsonElement.TryGetDecimal"/>
+    /// so an integer-valued field (39) and a fractional one (7.5) both work — <c>ValueKind</c>-blind
+    /// access throws on the other shape.
+    /// </summary>
+    private static decimal? ReadNumber(JsonElement element, string name) =>
+        element.TryGetProperty(name, out var prop)
+        && prop.ValueKind == JsonValueKind.Number
+        && prop.TryGetDecimal(out var value)
+            ? value
+            : null;
+
     public async Task<SpeechSuperAssessmentResult> AssessAsync(
         Stream audioStream,
         string audioType,
@@ -221,12 +233,16 @@ public sealed class SpeechSuperClient : ISpeechSuperClient
             if (root.TryGetProperty("result", out var resultElement))
             {
                 var transcription = resultElement.TryGetProperty("transcription", out var tProp) ? tProp.GetString() : null;
-                var overall = resultElement.TryGetProperty("overall", out var oProp) ? (decimal?)oProp.GetDecimal() : null;
-                var pronunciation = resultElement.TryGetProperty("pronunciation", out var pProp) ? (decimal?)pProp.GetDecimal() : null;
-                var fluency = resultElement.TryGetProperty("fluency_coherence", out var fProp) ? (decimal?)fProp.GetDecimal() : null;
-                var grammar = resultElement.TryGetProperty("grammar", out var gProp) ? (decimal?)gProp.GetDecimal() : null;
-                var vocab = resultElement.TryGetProperty("lexical_resource", out var vProp) ? (decimal?)vProp.GetDecimal() : null;
-                var relevance = resultElement.TryGetProperty("relevance", out var rProp) ? (decimal?)rProp.GetDecimal() : null;
+                // #152: the field names here are the ones `speak.eval.pro` actually returns, read off a
+                // live 200. `fluency_coherence` and `lexical_resource` are not in the body at all — the
+                // real names are `fluency` and `vocabulary` — and a field that never arrives was being
+                // treated as "not measured", which silently dropped those criteria from every grading.
+                var overall = ReadNumber(resultElement, "overall");
+                var pronunciation = ReadNumber(resultElement, "pronunciation");
+                var fluency = ReadNumber(resultElement, "fluency");
+                var grammar = ReadNumber(resultElement, "grammar");
+                var vocab = ReadNumber(resultElement, "vocabulary");
+                var relevance = ReadNumber(resultElement, "relevance");
 
                 var sentences = new List<SpeechSuperSentence>();
                 if (resultElement.TryGetProperty("sentences", out var sList) && sList.ValueKind == JsonValueKind.Array)

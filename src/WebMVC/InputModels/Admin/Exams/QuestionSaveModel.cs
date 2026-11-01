@@ -48,6 +48,15 @@ public sealed class QuestionSaveModel
 
     public string? RequiredKeywords { get; set; }
 
+    /// <summary>
+    /// #152: the words a Read Aloud question asks the learner to say, or a description of the
+    /// picture. <see cref="ReferenceKind"/> says which of the two it is.
+    /// </summary>
+    [StringLength(1000, ErrorMessage = "The reference cannot exceed 1000 characters.")]
+    public string? SampleAnswerOrImageDesc { get; set; }
+
+    public ReferenceKindDto? ReferenceKind { get; set; }
+
     // MCQ Options
     public List<QuestionOptionInputModel> Options { get; set; } = [];
 

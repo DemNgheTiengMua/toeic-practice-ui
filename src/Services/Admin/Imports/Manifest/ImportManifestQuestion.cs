@@ -11,6 +11,16 @@ public sealed class ImportManifestQuestion
     public string? CategoryCode { get; set; }
     public string? Explanation { get; set; }
     public string? Hint { get; set; }
+
+    /// <summary>
+    /// #152: the words a Read Aloud question asks the learner to say, or a description of the picture
+    /// a Describe-a-Picture question shows. <see cref="ReferenceKind"/> says which.
+    /// </summary>
+    public string? SampleAnswerOrImageDesc { get; set; }
+
+    /// <summary>"script" or "image_desc"; absent means the question is graded as free speech.</summary>
+    public string? ReferenceKind { get; set; }
+
     public int? PrepSeconds { get; set; }
     public int? ResponseSeconds { get; set; }
     public int? MinWords { get; set; }

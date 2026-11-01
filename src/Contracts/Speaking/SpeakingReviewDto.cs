@@ -18,5 +18,7 @@ public record SpeakingReviewDto(
     SpeakingQuestionReviewItemDto? LowestScoredQuestion,
     string? EstimatedBandCode = null,
     string? EstimatedBandName = null,
-    int? ScaledScoreMax = null
+    int? ScaledScoreMax = null,
+    // #152: stored units per reported point; the page divides by it before printing a score.
+    int ScoreDisplayFactor = 1
 );

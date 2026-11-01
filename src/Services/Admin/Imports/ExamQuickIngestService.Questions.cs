@@ -33,6 +33,8 @@ public sealed partial class ExamQuickIngestService
         string? explicitType = null;
         string? requiredKeywords = null;
         string? hint = null;
+        string? reference = null;
+        string? referenceKind = null;
         int? maxWords = null;
         int? minWords = null;
         int? maxSelections = null;
@@ -120,6 +122,24 @@ public sealed partial class ExamQuickIngestService
             if (hintMatch.Success)
             {
                 hint = hintMatch.Groups[1].Value.Trim();
+                inExplanation = false;
+                continue;
+            }
+
+            var scriptMatch = ScriptRegex().Match(line);
+            if (scriptMatch.Success)
+            {
+                reference = scriptMatch.Groups[1].Value.Trim();
+                referenceKind = "script";
+                inExplanation = false;
+                continue;
+            }
+
+            var imageDescMatch = ImageDescRegex().Match(line);
+            if (imageDescMatch.Success)
+            {
+                reference = imageDescMatch.Groups[1].Value.Trim();
+                referenceKind = "image_desc";
                 inExplanation = false;
                 continue;
             }
@@ -349,7 +369,9 @@ public sealed partial class ExamQuickIngestService
             GroupNumber: groupIndex,
             PrepSeconds: prepSeconds,
             ResponseSeconds: responseSeconds,
-            MinWords: minWords);
+            MinWords: minWords,
+            SampleAnswerOrImageDesc: reference,
+            ReferenceKind: referenceKind is null ? null : EnumCodes.Parse<ReferenceKindDto>(referenceKind));
     }
 
     private static string DetermineQuestionType(

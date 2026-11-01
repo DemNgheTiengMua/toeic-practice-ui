@@ -249,7 +249,7 @@ public sealed partial class ScoreConversionService
                         skill.MaxScaledScore = scaledScores[^1];
                         // The step must divide the minimum too, otherwise exact rows would be snapped off the grid.
                         skill.ScoreStep = gaps.Count > 0
-                            ? gaps.Append(minScaled).Aggregate(GreatestCommonDivisor)
+                            ? gaps.Append(minScaled).Aggregate(AttemptEngine.GreatestCommonDivisor)
                             : 1;
 
                         if (minScaled >= skill.MaxScaledScore)
@@ -354,11 +354,5 @@ public sealed partial class ScoreConversionService
         }
 
         return await GetScoreConversionAsync(cert.Code, command.ExamId, cancellationToken);
-    }
-
-    private static int GreatestCommonDivisor(int a, int b)
-    {
-        while (b != 0) (a, b) = (b, a % b);
-        return Math.Abs(a);
     }
 }

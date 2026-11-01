@@ -317,6 +317,16 @@ CREATE TABLE Questions (
   -- question, the description of the picture for a Describe a Picture one. NULL is "no reference
   -- exists" (nothing is invented): the question is graded as unscripted and carries no relevance.
   SampleAnswerOrImageDesc NVARCHAR(1000) NULL,
+  -- #152: WHAT that text is - 'script' (read aloud) or 'image_desc' (describes the picture). A
+  -- question-level fact, so a scripted question keeps its script even when its group shows a chart.
+  -- The text and the kind are declared together: text with no kind is not a reference this system
+  -- knows how to use, and both NULL is free speech.
+  ReferenceKind   VARCHAR(12) NULL
+    CONSTRAINT CK_Questions_ReferenceKind CHECK (ReferenceKind IN ('script', 'image_desc')),
+  CONSTRAINT CK_Questions_ReferencePair CHECK (
+       (SampleAnswerOrImageDesc IS NULL AND ReferenceKind IS NULL)
+    OR (SampleAnswerOrImageDesc IS NOT NULL AND ReferenceKind IS NOT NULL)
+  ),
   DisplayOrder    INT NOT NULL DEFAULT 0,
   UpdatedAt       DATETIMEOFFSET NULL,    -- UI-4: question editor "Last saved: 19:42"
   CONSTRAINT CK_Questions_Words CHECK (

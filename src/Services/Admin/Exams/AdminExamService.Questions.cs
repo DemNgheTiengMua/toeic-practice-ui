@@ -100,7 +100,9 @@ public sealed partial class AdminExamService
                 MaxSelections: q.MaxSelections,
                 AllowNumber: q.AllowNumber,
                 AcceptedAnswersJson: q.AcceptedAnswersJson,
-                RequiredKeywords: q.RequiredKeywords)).ToList(),
+                RequiredKeywords: q.RequiredKeywords,
+                SampleAnswerOrImageDesc: q.SampleAnswerOrImageDesc,
+                ReferenceKind: ParseReferenceKind(q.ReferenceKind))).ToList(),
             UnitNumber: g.UnitNumber
         )).ToList();
 
@@ -161,6 +163,7 @@ public sealed partial class AdminExamService
         }
 
         ValidateQuestionInputs(request.Stem, request.DifficultyLevel, request.QuestionType, request.PrepSeconds, request.ResponseSeconds, request.MinWords, request.MaxWords, request.Hint, request.Options, request.MaxSelections, request.AllowNumber, request.AcceptedAnswersJson, request.RequiredKeywords);
+        ValidateReference(request.QuestionType, request.SampleAnswerOrImageDesc, request.ReferenceKind);
 
         if (request.CategoryId.HasValue)
         {
@@ -191,6 +194,8 @@ public sealed partial class AdminExamService
             AcceptedAnswersJson = Normalize(request.AcceptedAnswersJson),
             RequiredKeywords = Normalize(request.RequiredKeywords),
             Hint = Normalize(request.Hint),
+            SampleAnswerOrImageDesc = Normalize(request.SampleAnswerOrImageDesc),
+            ReferenceKind = request.ReferenceKind?.ToCode(),
             DisplayOrder = request.DisplayOrder,
             UpdatedAt = clock.GetUtcNow()
         };
@@ -258,7 +263,9 @@ public sealed partial class AdminExamService
             MaxSelections: question.MaxSelections,
             AllowNumber: question.AllowNumber,
             AcceptedAnswersJson: question.AcceptedAnswersJson,
-            RequiredKeywords: question.RequiredKeywords);
+            RequiredKeywords: question.RequiredKeywords,
+            SampleAnswerOrImageDesc: question.SampleAnswerOrImageDesc,
+            ReferenceKind: ParseReferenceKind(question.ReferenceKind));
     }
 
     public async Task<AdminQuestionDto> UpdateQuestionAsync(int questionId, UpdateQuestionRequest request, CancellationToken cancellationToken = default)
@@ -288,6 +295,7 @@ public sealed partial class AdminExamService
         }
 
         ValidateQuestionInputs(request.Stem, request.DifficultyLevel, request.QuestionType, request.PrepSeconds, request.ResponseSeconds, request.MinWords, request.MaxWords, request.Hint, request.Options, request.MaxSelections, request.AllowNumber, request.AcceptedAnswersJson, request.RequiredKeywords);
+        ValidateReference(request.QuestionType, request.SampleAnswerOrImageDesc, request.ReferenceKind);
 
         var hasAnswers = await db.AttemptAnswers.AnyAsync(a => a.QuestionId == questionId, cancellationToken)
             || await db.FreeResponses.AnyAsync(r => r.QuestionId == questionId, cancellationToken);
@@ -359,6 +367,8 @@ public sealed partial class AdminExamService
         question.AcceptedAnswersJson = Normalize(request.AcceptedAnswersJson);
         question.RequiredKeywords = Normalize(request.RequiredKeywords);
         question.Hint = Normalize(request.Hint);
+        question.SampleAnswerOrImageDesc = Normalize(request.SampleAnswerOrImageDesc);
+        question.ReferenceKind = request.ReferenceKind?.ToCode();
         if (request.DisplayOrder > 0)
         {
             question.DisplayOrder = request.DisplayOrder;
@@ -485,7 +495,9 @@ public sealed partial class AdminExamService
             MaxSelections: question.MaxSelections,
             AllowNumber: question.AllowNumber,
             AcceptedAnswersJson: question.AcceptedAnswersJson,
-            RequiredKeywords: question.RequiredKeywords);
+            RequiredKeywords: question.RequiredKeywords,
+            SampleAnswerOrImageDesc: question.SampleAnswerOrImageDesc,
+            ReferenceKind: ParseReferenceKind(question.ReferenceKind));
     }
 
     public async Task DeleteQuestionAsync(int questionId, CancellationToken cancellationToken = default)

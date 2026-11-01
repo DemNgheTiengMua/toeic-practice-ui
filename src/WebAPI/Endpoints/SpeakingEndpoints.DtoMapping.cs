@@ -151,6 +151,7 @@ public static partial class SpeakingEndpoints
             lowestDto,
             review.EstimatedBandCode,
             review.EstimatedBandName,
-            review.ScaledScoreMax);
+            review.ScaledScoreMax,
+            review.ScoreDisplayFactor);
     }
 }

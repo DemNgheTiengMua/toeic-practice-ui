@@ -127,7 +127,11 @@ public sealed partial class AdminExamService
                         MaxSelections: q.MaxSelections,
                         AllowNumber: q.AllowNumber,
                         AcceptedAnswersJson: q.AcceptedAnswersJson,
-                        RequiredKeywords: q.RequiredKeywords));
+                        RequiredKeywords: q.RequiredKeywords,
+                        SampleAnswerOrImageDesc: q.SampleAnswerOrImageDesc,
+                        ReferenceKind: q.ReferenceKind is null
+                            ? null
+                            : EnumCodes.Parse<ReferenceKindDto>(q.ReferenceKind)));
                 }
 
                 groupDtos.Add(new ExamStudioGroupDto(

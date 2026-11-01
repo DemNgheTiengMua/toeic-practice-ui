@@ -21,4 +21,8 @@ public sealed record CreateQuestionRequest(
     int? MaxSelections = null,
     bool AllowNumber = true,
     string? AcceptedAnswersJson = null,
-    string? RequiredKeywords = null);
+    string? RequiredKeywords = null,
+    // #152: what a spoken answer is judged against - the words to read aloud, or a description of
+    // the picture - and which of the two it is. Both null is a free-speech question.
+    string? SampleAnswerOrImageDesc = null,
+    ReferenceKindDto? ReferenceKind = null);

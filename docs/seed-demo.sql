@@ -924,9 +924,10 @@ BEGIN
   VALUES (@speaExam, @toeicCert, @secS1, 1,
           N'Attention all shoppers. The annual summer clearance sale will end today at 9:00 PM. Please bring all selected items to the front registers.');
   DECLARE @gS1 INT = SCOPE_IDENTITY();
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, PrepSeconds, ResponseSeconds, DisplayOrder, SampleAnswerOrImageDesc)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, PrepSeconds, ResponseSeconds, DisplayOrder, SampleAnswerOrImageDesc, ReferenceKind)
   VALUES (@gS1, @speaExam, @secS1, @toeicSpea, N'Read the announcement aloud as clearly and naturally as possible.', 2, 'free_response', 45, 45, 1,
-          N'Attention all shoppers. The annual summer clearance sale will end today at 9:00 PM. Please bring all selected items to the front registers.');
+          N'Attention all shoppers. The annual summer clearance sale will end today at 9:00 PM. Please bring all selected items to the front registers.',
+          'script');
 
   INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder, ImagePath, ImageAlt)
   VALUES (@speaExam, @toeicCert, @secS2, 2, '/img/part1-sample.svg', N'Office workers in a team meeting');
@@ -4360,9 +4361,10 @@ IF NOT EXISTS (SELECT 1 FROM QuestionGroups WHERE ExamId = @swExam AND SectionId
 DECLARE @grpSwW3 INT = (SELECT GroupId FROM QuestionGroups WHERE ExamId = @swExam AND SectionId = @secSwW3 AND DisplayOrder = 3);
 
 IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @swExam AND DisplayOrder = 1)
-  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, PrepSeconds, ResponseSeconds, DisplayOrder, SampleAnswerOrImageDesc)
+  INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, PrepSeconds, ResponseSeconds, DisplayOrder, SampleAnswerOrImageDesc, ReferenceKind)
   VALUES (@grpSwS1, @swExam, @secSwS1, @swSpea, N'Read the announcement aloud: Welcome to the annual Global Tech Conference. Please pick up your registration badge at the front desk.', 2, 'free_response', 5, 5, 1,
-          N'Welcome to the annual Global Tech Conference. Please pick up your registration badge at the front desk.');
+          N'Welcome to the annual Global Tech Conference. Please pick up your registration badge at the front desk.',
+          'script');
 
 IF NOT EXISTS (SELECT 1 FROM Questions WHERE ExamId = @swExam AND DisplayOrder = 2)
   INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, RequiredKeywords, MinWords, MaxWords, ResponseSeconds, DisplayOrder)
