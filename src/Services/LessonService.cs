@@ -127,10 +127,24 @@ public sealed class LessonService(CompanionDbContext db) : ILessonService
         if (progress.CardsCompleted >= totalCards)
         {
             progress.IsCompleted = true;
-            progress.CompletedAt = now;
+            progress.CompletedAt ??= now;
         }
 
         await db.SaveChangesAsync();
+
+        // #154: finishing a lesson closes its path step and persists it. Before this, a lesson step
+        // was only *rendered* as done by the read paths, so a reload of a path screen would show it
+        // done but the row said `available` — and the next step never unlocked from it.
+        if (progress.IsCompleted)
+        {
+            await PathStepCompletion.CloseAsync(
+                db,
+                userId,
+                PathStepCompletion.Activity.Lesson,
+                lessonId,
+                score: null,
+                accuracyPct: null);
+        }
     }
 
     public async Task<LessonDetailDto?> GetLessonByCategoryAsync(int categoryId, int certId)

@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace BusinessObjects.Entities;
 
 [Index("LearnerPathId", Name = "IX_Steps_LearnerPath")]
+[Index("LearnerPathId", "WeekNumber", "StepId", Name = "IX_Steps_LearnerPath_Week")]
 public partial class LearnerPathStep
 {
     [Key]
@@ -28,6 +29,22 @@ public partial class LearnerPathStep
     public DateTimeOffset? StartedAt { get; set; }
 
     public DateTimeOffset? CompletedAt { get; set; }
+
+    /// <summary>#154: the planning week (1–4) this step belongs to. NULL on steps written before
+    /// #154 or by seed/manual scripts, which have no plan behind them.</summary>
+    public int? WeekNumber { get; set; }
+
+    /// <summary>#154: how long the step is planned to take. The week's total is what
+    /// <c>TargetBands.WeeklyStudyHours</c> is spent on.</summary>
+    public int? EstimatedMinutes { get; set; }
+
+    /// <summary>#154: the accuracy this step has to reach for its week to count as on track.</summary>
+    public int TargetAccuracyPct { get; set; } = 70;
+
+    /// <summary>#154: measured accuracy (correct/answered), never guessed. NULL for a lesson, which
+    /// has nothing to score.</summary>
+    [Column(TypeName = "decimal(5, 2)")]
+    public decimal? ActualAccuracyPct { get; set; }
 
     [ForeignKey("LearnerPathId, TemplateId")]
     [InverseProperty("LearnerPathSteps")]

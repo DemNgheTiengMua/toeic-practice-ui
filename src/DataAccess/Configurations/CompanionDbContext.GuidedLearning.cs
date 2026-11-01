@@ -48,6 +48,7 @@ public partial class CompanionDbContext
             entity.HasKey(e => e.StepId).HasName("PK__LearnerP__24343357410D371C");
 
             entity.Property(e => e.Status).HasDefaultValue("locked");
+            entity.Property(e => e.TargetAccuracyPct).HasDefaultValue(70);
 
             entity.HasOne(d => d.LearnerPath).WithMany(p => p.LearnerPathSteps)
                 .HasPrincipalKey(p => new { p.LearnerPathId, p.TemplateId })

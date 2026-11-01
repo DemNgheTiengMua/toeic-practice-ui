@@ -33,6 +33,15 @@ public sealed partial class LearningPathService
                 .ThenInclude(s => s.PathModuleItem)
                     .ThenInclude(pmi => pmi.PathModule)
                         .ThenInclude(m => m.Skill)
+            .Include(p => p.LearnerPathSteps)
+                .ThenInclude(s => s.PathModuleItem)
+                    .ThenInclude(pmi => pmi.Lesson)
+            .Include(p => p.LearnerPathSteps)
+                .ThenInclude(s => s.PathModuleItem)
+                    .ThenInclude(pmi => pmi.Exam)
+            .Include(p => p.LearnerPathSteps)
+                .ThenInclude(s => s.PathModuleItem)
+                    .ThenInclude(pmi => pmi.Section)
             .Where(p => p.UserId == userId && p.CertId == activeCertId && p.Status == "active")
             .FirstOrDefaultAsync(cancellationToken);
 
@@ -98,32 +107,35 @@ public sealed partial class LearningPathService
             .OrderBy(m => m.DisplayOrder)
             .ToListAsync(cancellationToken);
 
-        var stepItemOrder = activePath.LearnerPathSteps
-            .OrderBy(s => s.StepId)
+        // #154: the path's steps are what the learner works through. A module the plan put no step in
+        // is not part of their path, and listing it made the screen show empty modules beside the real
+        // ones. Filter first, then order by the order the plan actually visits the modules.
+        var steppedItemIds = activePath.LearnerPathSteps
             .Select(s => s.PathModuleItemId)
+            .ToHashSet();
+
+        var itemToModuleMap = templateModules
+            .SelectMany(m => m.PathModuleItemPathModules.Select(i => new { i.ItemId, m.ModuleId }))
+            .ToDictionary(x => x.ItemId, x => x.ModuleId);
+
+        var modulesWithSteps = templateModules
+            .Where(m => m.PathModuleItemPathModules.Any(i => steppedItemIds.Contains(i.ItemId)))
             .ToList();
 
-        if (stepItemOrder.Count > 0)
+        var moduleOrder = new Dictionary<int, int>();
+        var orderIndex = 0;
+        foreach (var itemId in activePath.LearnerPathSteps.OrderBy(s => s.StepId).Select(s => s.PathModuleItemId))
         {
-            var itemToModuleMap = templateModules
-                .SelectMany(m => m.PathModuleItemPathModules.Select(i => new { i.ItemId, m.ModuleId }))
-                .ToDictionary(x => x.ItemId, x => x.ModuleId);
-
-            var moduleOrder = new Dictionary<int, int>();
-            int orderIndex = 0;
-            foreach (var itemId in stepItemOrder)
+            if (itemToModuleMap.TryGetValue(itemId, out var modId) && !moduleOrder.ContainsKey(modId))
             {
-                if (itemToModuleMap.TryGetValue(itemId, out var modId) && !moduleOrder.ContainsKey(modId))
-                {
-                    moduleOrder[modId] = orderIndex++;
-                }
+                moduleOrder[modId] = orderIndex++;
             }
-
-            templateModules = templateModules
-                .OrderBy(m => moduleOrder.TryGetValue(m.ModuleId, out var ord) ? ord : m.DisplayOrder)
-                .ThenBy(m => m.DisplayOrder)
-                .ToList();
         }
+
+        templateModules = modulesWithSteps
+            .OrderBy(m => moduleOrder.TryGetValue(m.ModuleId, out var ord) ? ord : m.DisplayOrder)
+            .ThenBy(m => m.DisplayOrder)
+            .ToList();
 
         var activePathLessonSteps = activePath.LearnerPathSteps
             .Where(s => s.PathModuleItem?.ItemType == "lesson" && s.PathModuleItem.RefLessonId.HasValue)
@@ -138,19 +150,13 @@ public sealed partial class LearningPathService
 
             foreach (var step in activePathLessonSteps)
             {
-                if (progresses.TryGetValue(step.PathModuleItem.RefLessonId!.Value, out var prog))
+                // #154: `done` is persisted by LessonService now. Only the in-progress hint is
+                // derived here; see the note in GetModuleDetailAsync.
+                if (progresses.TryGetValue(step.PathModuleItem.RefLessonId!.Value, out var prog)
+                    && !prog.IsCompleted && prog.CardsCompleted > 0 && step.Status != "locked")
                 {
-                    if (prog.IsCompleted)
-                    {
-                        step.Status = "done";
-                        step.CompletedAt ??= prog.CompletedAt;
-                        step.Score = null;
-                    }
-                    else if (prog.CardsCompleted > 0 && step.Status != "locked")
-                    {
-                        step.Status = "in_progress";
-                        step.StartedAt ??= prog.FirstOpenedAt;
-                    }
+                    step.Status = "in_progress";
+                    step.StartedAt ??= prog.FirstOpenedAt;
                 }
             }
         }
@@ -225,6 +231,50 @@ public sealed partial class LearningPathService
 
         var statusEnum = EnumCodes.Parse<LearnerPathStatus>(activePath.Status);
 
+        // #154: the path is planned week by week. Grouping and the On Track verdict are computed here
+        // from the stored rows — the view only draws what the planner decided.
+        var weeks = activePath.LearnerPathSteps
+            .Where(s => s.WeekNumber.HasValue)
+            .GroupBy(s => s.WeekNumber!.Value)
+            .OrderBy(g => g.Key)
+            .Select(g =>
+            {
+                var weekSteps = g
+                    .OrderBy(s => s.StepId)
+                    .Select(s => new PathWeekStepInfo(
+                        s.StepId,
+                        EnumCodes.Parse<PathModuleItemType>(s.PathModuleItem.ItemType),
+                        StepTitle(s),
+                        EnumCodes.Parse<LearnerPathStepStatus>(s.Status),
+                        s.EstimatedMinutes,
+                        s.Score,
+                        s.ActualAccuracyPct,
+                        s.TargetAccuracyPct,
+                        CanStart: s.Status is "available" or "in_progress" or "done",
+                        s.CompletedAt,
+                        s.PathModuleItem.RefSectionId,
+                        s.PathModuleItem.RefExamId,
+                        s.PathModuleItem.RefLessonId))
+                    .ToList();
+
+                var scored = weekSteps.Where(s => s.ActualAccuracyPct.HasValue).ToList();
+                decimal? accuracy = scored.Count > 0 ? scored.Average(s => s.ActualAccuracyPct!.Value) : null;
+                var target = weekSteps.Count > 0 ? weekSteps.Max(s => s.TargetAccuracyPct) : 70;
+                var completed = weekSteps.Count(s => s.Status == LearnerPathStepStatus.Done);
+
+                return new LearningPathWeekSummary(
+                    g.Key,
+                    weekSteps.Count,
+                    completed,
+                    weekSteps.Sum(s => s.EstimatedMinutes ?? 0),
+                    weekSteps.Where(s => s.Status == LearnerPathStepStatus.Done).Sum(s => s.EstimatedMinutes ?? 0),
+                    LearningPathPlanner.IsWeekOnTrack(weekSteps.Count, completed, accuracy, target),
+                    target,
+                    accuracy,
+                    weekSteps);
+            })
+            .ToList();
+
         return new LearningPathSummaryView(
             HasActivePath: true,
             ActiveCert: cert,
@@ -246,6 +296,19 @@ public sealed partial class LearningPathService
             RemainingMinutes: remainingMins,
             CefrBands: cefrBands,
             Modules: moduleSummaries,
-            NextModuleId: nextModuleId);
+            NextModuleId: nextModuleId)
+        {
+            Weeks = weeks
+        };
     }
+
+    /// <summary>The one-line name a step is shown under. Read off what the step actually points at, so
+    /// a step's title cannot drift from its activity.</summary>
+    private static string StepTitle(LearnerPathStep step) => step.PathModuleItem.ItemType switch
+    {
+        "lesson" => step.PathModuleItem.Lesson?.Title ?? "Lesson",
+        "mock_exam" => step.PathModuleItem.Exam?.Name ?? "Mock exam",
+        "practice_section" => step.PathModuleItem.Section?.Name ?? "Practice",
+        _ => step.PathModuleItem.PathModule?.Title ?? "Step",
+    };
 }

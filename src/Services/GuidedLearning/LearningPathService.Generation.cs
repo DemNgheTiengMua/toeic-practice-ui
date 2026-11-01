@@ -14,6 +14,14 @@ namespace Services;
 
 public sealed partial class LearningPathService
 {
+    /// <summary>#154: the module a generated path's catalogue items live in, inside the
+    /// certificate's own template. One per template, reused by every learner — the *steps* are what
+    /// differ, and they point at different items.</summary>
+    private const string CatalogueModuleTitle = "Path drills";
+
+    /// <summary>#154: questions in one practice step. Ten is a sitting, and the step's plan length
+    /// is stated in minutes beside it.</summary>
+    private const int PracticeQuestionsPerStep = 10;
 
     public async Task<LearningPathSummaryView> GeneratePathAsync(int userId, string? targetBandCode = null, CancellationToken cancellationToken = default, bool archiveExisting = false)
     {
@@ -88,24 +96,50 @@ public sealed partial class LearningPathService
 
         RefuseUnrealisticGoal(savedTarget, startingBand, toBand, scoreBands);
 
-        // Match template: exact (from, to) -> closest from -> any for cert
+        // #154: the template is a container, not the plan. A path row and its steps carry its id, so a
+        // row has to exist for this exact band pair — but nothing is read off its items to decide what
+        // the learner does. AC7: the "no matching pair, so take any template for this certificate"
+        // branch is gone; that branch silently attached learners to a plan nobody wrote for them.
         var template = await db.PathTemplates
-            .Where(t => t.CertId == activeCertId && t.FromBandCode == startingBand && t.ToBandCode == toBand)
-            .FirstOrDefaultAsync(cancellationToken);
+            .FirstOrDefaultAsync(t => t.CertId == activeCertId && t.FromBandCode == startingBand && t.ToBandCode == toBand, cancellationToken);
 
-        template ??= await db.PathTemplates
-            .Where(t => t.CertId == activeCertId && t.FromBandCode == startingBand)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        template ??= await db.PathTemplates
-            .Where(t => t.CertId == activeCertId)
-            .OrderBy(t => t.TemplateId)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        if (template == null)
+        if (template is null)
         {
-            throw new LearningPathException(LearningPathException.TemplateNotFound, "No learning path template found for this certificate.");
+            template = new PathTemplate
+            {
+                CertId = activeCertId,
+                FromBandCode = startingBand,
+                ToBandCode = toBand,
+                Name = $"{startingBand} to {toBand} learning path"
+            };
+            db.PathTemplates.Add(template);
+            await db.SaveChangesAsync(cancellationToken);
         }
+
+        var catalogue = await EnsureCatalogueAsync(template.TemplateId, activeCertId, userId, cancellationToken);
+
+        if (catalogue.DrillableSectionCount == 0)
+        {
+            throw new LearningPathException(
+                LearningPathException.NoQuestionsAvailable,
+                "This certificate has no section with questions to practise yet, so a path would have no steps. Add questions first.");
+        }
+
+        var targetBand = scoreBands.FirstOrDefault(b => b.Code == toBand);
+        var targetAccuracy = LearningPathPlanner.TargetAccuracyFor(
+            isTopBand: targetBand is not null && targetBand.DisplayOrder >= scoreBands.Max(b => b.DisplayOrder));
+
+        // #154: the plan is arithmetic. WeeklyStudyHours is the volume; the weakness order is what
+        // makes two learners with the same band pair differ. A goal written before #153 (or by the
+        // placement flow, which sets a band pair) carries no pace — the plan then uses the smallest
+        // week the ticket allows rather than refusing to build anything, and says so on the screen.
+        var weeklyHours = savedTarget?.WeeklyStudyHours ?? LearningPathPlanner.DefaultWeeklyHours;
+
+        var plan = LearningPathPlanner.Plan(
+            weeklyStudyHours: weeklyHours,
+            weakSectionCount: catalogue.WeakSectionCount,
+            lessonCount: catalogue.LessonCount,
+            mockExamCount: catalogue.MockExamCount);
 
         var learnerPath = new LearnerPath
         {
@@ -135,71 +169,22 @@ public sealed partial class LearningPathService
             throw;
         }
 
-        var modules = await db.PathModules
-            .Include(m => m.PathModuleItemPathModules)
-            .Where(m => m.TemplateId == template.TemplateId)
-            .OrderBy(m => m.DisplayOrder)
-            .ToListAsync(cancellationToken);
-
-        var certSectionIds = await db.Sections
-            .AsNoTracking()
-            .Where(s => s.CertId == activeCertId)
-            .Select(s => s.SectionId)
-            .ToListAsync(cancellationToken);
-
-        var weakSectionRows = await db.vw_UserSectionAccuracyAlls
-            .AsNoTracking()
-            .Where(w => w.UserId == userId && certSectionIds.Contains(w.SectionId))
-            .ToListAsync(cancellationToken);
-
-        var weakSections = weakSectionRows
-            .OrderBy(w => (double)(w.Correct ?? 0) / Math.Max(1, w.Answered ?? 1))
-            .Select(w => w.SectionId)
-            .ToList();
-
-        if (weakSections.Count > 0)
+        var isFirst = true;
+        foreach (var planned in plan)
         {
-            var moduleItemSectionIds = await db.PathModuleItems
-                .AsNoTracking()
-                .Where(pmi => pmi.TemplateId == template.TemplateId && pmi.RefSectionId.HasValue)
-                .Select(pmi => new { pmi.ItemId, SectionId = pmi.RefSectionId!.Value })
-                .ToListAsync(cancellationToken);
+            var itemId = catalogue.ResolveItemId(planned);
 
-            var itemSectionMap = moduleItemSectionIds.ToDictionary(x => x.ItemId, x => x.SectionId);
-
-            modules = modules
-                .OrderBy(m =>
-                {
-                    var itemIds = m.PathModuleItemPathModules.Select(i => i.ItemId).ToList();
-                    var minRank = 999;
-                    foreach (var id in itemIds)
-                    {
-                        if (itemSectionMap.TryGetValue(id, out var secId))
-                        {
-                            var rank = weakSections.IndexOf(secId);
-                            if (rank >= 0 && rank < minRank) minRank = rank;
-                        }
-                    }
-                    return minRank;
-                })
-                .ThenBy(m => m.DisplayOrder)
-                .ToList();
-        }
-
-        var allItems = modules
-            .SelectMany(m => m.PathModuleItemPathModules.OrderBy(i => i.DisplayOrder))
-            .ToList();
-
-        bool isFirst = true;
-        foreach (var item in allItems)
-        {
             db.LearnerPathSteps.Add(new LearnerPathStep
             {
                 LearnerPathId = learnerPath.LearnerPathId,
-                PathModuleItemId = item.ItemId,
+                PathModuleItemId = itemId,
                 TemplateId = template.TemplateId,
                 Status = isFirst ? "available" : "locked",
                 Score = null,
+                WeekNumber = planned.WeekNumber,
+                EstimatedMinutes = planned.EstimatedMinutes,
+                TargetAccuracyPct = targetAccuracy,
+                ActualAccuracyPct = null,
                 StartedAt = null,
                 CompletedAt = null
             });
@@ -209,6 +194,241 @@ public sealed partial class LearningPathService
         await db.SaveChangesAsync(cancellationToken);
 
         return await GetActivePathAsync(userId, cancellationToken);
+    }
+
+    /// <summary>
+    /// #154: the items a plan can point at, ordered by this learner's own weakness. A step has to
+    /// reference a real <c>PathModuleItem</c>, so the certificate's template gets one module holding
+    /// one item per drillable section, per lesson and per published mock exam — created once and
+    /// reused. The items are the same for every learner; which of them a learner's steps point at is
+    /// the personal part, and it is decided here from <c>vw_UserSectionAccuracyAll</c>.
+    /// </summary>
+    /// <param name="WeakSectionCount">How many distinct sections the plan may drill, weakest first.</param>
+    /// <param name="LessonCount">Lessons available to plan.</param>
+    /// <param name="MockExamCount">Published mock exams available to plan.</param>
+    /// <param name="ResolveItemId">Maps a planned step to the item id it should reference.</param>
+    private sealed record PathCatalogue(
+        int WeakSectionCount,
+        int LessonCount,
+        int MockExamCount,
+        int DrillableSectionCount,
+        Func<PlannedPathStep, int> ResolveItemId);
+
+    private async Task<PathCatalogue> EnsureCatalogueAsync(
+        int templateId, int certId, int userId, CancellationToken cancellationToken)
+    {
+        var sectionRows = await db.Sections
+            .AsNoTracking()
+            .Where(s => s.CertId == certId)
+            .OrderBy(s => s.Skill.DisplayOrder)
+            .ThenBy(s => s.DisplayOrder)
+            .Select(s => s.SectionId)
+            .ToListAsync(cancellationToken);
+
+        // Only a section with questions can be drilled: a step pointing at an empty section would
+        // throw "no questions available" the moment the learner opened it.
+        var drillableSectionIds = await db.Questions
+            .AsNoTracking()
+            .Where(q => q.Section.CertId == certId && q.QuestionType == QuestionType.Mcq.ToCode())
+            .Select(q => q.SectionId)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+
+        var drillable = sectionRows.Where(drillableSectionIds.Contains).ToList();
+
+        // #154: the sections in *this* learner's weakness order — worst accuracy first. A learner with
+        // no history has no weaknesses to rank, so the certificate's own section order stands in, and
+        // the handoff's "say so rather than inventing weaknesses" holds.
+        var accuracy = await db.vw_UserSectionAccuracyAlls
+            .AsNoTracking()
+            .Where(w => w.UserId == userId && drillable.Contains(w.SectionId))
+            .ToDictionaryAsync(w => w.SectionId, w => (double)(w.Correct ?? 0) / Math.Max(1, w.Answered ?? 1), cancellationToken);
+
+        var ranked = drillable
+            .OrderBy(s => accuracy.TryGetValue(s, out var pct) ? pct : 1d)
+            .ThenBy(s => drillable.IndexOf(s))
+            .ToList();
+
+        var lessons = await db.Lessons
+            .AsNoTracking()
+            .Where(l => l.CertId == certId)
+            .OrderBy(l => l.DisplayOrder)
+            .ThenBy(l => l.LessonId)
+            .Select(l => l.LessonId)
+            .ToListAsync(cancellationToken);
+
+        var mockExams = await db.Exams
+            .AsNoTracking()
+            .Where(e => e.CertId == certId
+                && e.Purpose == ExamPurpose.Mock.ToCode()
+                && e.Status == ExamStatus.Published.ToCode()
+                && !e.IsDeleted)
+            .OrderBy(e => e.ExamId)
+            .Select(e => e.ExamId)
+            .ToListAsync(cancellationToken);
+
+        if (ranked.Count == 0)
+        {
+            return new PathCatalogue(0, lessons.Count, mockExams.Count, 0, _ => 0);
+        }
+
+        var module = await db.PathModules
+            .FirstOrDefaultAsync(m => m.TemplateId == templateId && m.Title == CatalogueModuleTitle, cancellationToken);
+
+        if (module is null)
+        {
+            module = new PathModule
+            {
+                TemplateId = templateId,
+                CertId = certId,
+                SkillId = await db.Skills
+                    .Where(s => s.CertId == certId)
+                    .OrderBy(s => s.DisplayOrder)
+                    .Select(s => s.SkillId)
+                    .FirstAsync(cancellationToken),
+                DisplayOrder = 900,
+                Title = CatalogueModuleTitle,
+                GroupName = "Drills",
+                Description = "Practice, lesson and mock-exam steps the planner picks from.",
+                EstimatedMinutes = 30
+            };
+            db.PathModules.Add(module);
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
+        var sectionItemIds = await EnsureSectionItemsAsync(module.ModuleId, templateId, certId, ranked, cancellationToken);
+        var lessonItemIds = await EnsureLessonItemsAsync(module.ModuleId, templateId, certId, lessons, cancellationToken);
+        var examItemIds = await EnsureExamItemsAsync(module.ModuleId, templateId, certId, mockExams, cancellationToken);
+
+        var rankCount = Math.Min(LearningPathPlanner.DrilledSectionCount, sectionItemIds.Count);
+
+        int Resolve(PlannedPathStep step)
+        {
+            return step.Kind switch
+            {
+                PathStepKind.Lesson when lessonItemIds.Count > 0
+                    => lessonItemIds[Math.Min(step.WeekNumber - 1, lessonItemIds.Count - 1)],
+                PathStepKind.MockExam when examItemIds.Count > 0
+                    => examItemIds[Math.Min(Math.Max(0, (step.WeekNumber / 2) - 1), examItemIds.Count - 1)],
+                _ => sectionItemIds[Math.Min(step.SectionRank, sectionItemIds.Count - 1)],
+            };
+        }
+
+        return new PathCatalogue(rankCount, lessonItemIds.Count, examItemIds.Count, ranked.Count, Resolve);
+    }
+
+    private async Task<List<int>> EnsureSectionItemsAsync(
+        int moduleId, int templateId, int certId, IReadOnlyList<int> sectionIds, CancellationToken cancellationToken)
+    {
+        var existing = await db.PathModuleItems
+            .Where(i => i.TemplateId == templateId
+                && i.ItemType == PathModuleItemType.PracticeSection.ToCode()
+                && i.RefSectionId != null)
+            .GroupBy(i => i.RefSectionId!.Value)
+            .Select(g => new { SectionId = g.Key, ItemId = g.Min(i => i.ItemId) })
+            .ToDictionaryAsync(x => x.SectionId, x => x.ItemId, cancellationToken);
+
+        var order = 1;
+        foreach (var sectionId in sectionIds)
+        {
+            if (existing.ContainsKey(sectionId))
+            {
+                order++;
+                continue;
+            }
+
+            var item = new PathModuleItem
+            {
+                ModuleId = moduleId,
+                CertId = certId,
+                TemplateId = templateId,
+                ItemType = PathModuleItemType.PracticeSection.ToCode(),
+                RefSectionId = sectionId,
+                QuestionCount = PracticeQuestionsPerStep,
+                IsPremiumOnly = false,
+                DisplayOrder = order++
+            };
+
+            db.PathModuleItems.Add(item);
+            await db.SaveChangesAsync(cancellationToken);
+            existing[sectionId] = item.ItemId;
+        }
+
+        return sectionIds.Select(id => existing[id]).ToList();
+    }
+
+    private async Task<List<int>> EnsureLessonItemsAsync(
+        int moduleId, int templateId, int certId, IReadOnlyList<int> lessonIds, CancellationToken cancellationToken)
+    {
+        var existing = await db.PathModuleItems
+            .Where(i => i.TemplateId == templateId
+                && i.ItemType == PathModuleItemType.Lesson.ToCode()
+                && i.RefLessonId != null)
+            .GroupBy(i => i.RefLessonId!.Value)
+            .Select(g => new { LessonId = g.Key, ItemId = g.Min(i => i.ItemId) })
+            .ToDictionaryAsync(x => x.LessonId, x => x.ItemId, cancellationToken);
+
+        for (var i = 0; i < lessonIds.Count; i++)
+        {
+            if (existing.ContainsKey(lessonIds[i]))
+            {
+                continue;
+            }
+
+            var item = new PathModuleItem
+            {
+                ModuleId = moduleId,
+                CertId = certId,
+                TemplateId = templateId,
+                ItemType = PathModuleItemType.Lesson.ToCode(),
+                RefLessonId = lessonIds[i],
+                IsPremiumOnly = false,
+                DisplayOrder = 100 + i
+            };
+
+            db.PathModuleItems.Add(item);
+            await db.SaveChangesAsync(cancellationToken);
+            existing[lessonIds[i]] = item.ItemId;
+        }
+
+        return lessonIds.Select(id => existing[id]).ToList();
+    }
+
+    private async Task<List<int>> EnsureExamItemsAsync(
+        int moduleId, int templateId, int certId, IReadOnlyList<int> examIds, CancellationToken cancellationToken)
+    {
+        var existing = await db.PathModuleItems
+            .Where(i => i.TemplateId == templateId
+                && i.ItemType == PathModuleItemType.MockExam.ToCode()
+                && i.RefExamId != null)
+            .GroupBy(i => i.RefExamId!.Value)
+            .Select(g => new { ExamId = g.Key, ItemId = g.Min(i => i.ItemId) })
+            .ToDictionaryAsync(x => x.ExamId, x => x.ItemId, cancellationToken);
+
+        for (var i = 0; i < examIds.Count; i++)
+        {
+            if (existing.ContainsKey(examIds[i]))
+            {
+                continue;
+            }
+
+            var item = new PathModuleItem
+            {
+                ModuleId = moduleId,
+                CertId = certId,
+                TemplateId = templateId,
+                ItemType = PathModuleItemType.MockExam.ToCode(),
+                RefExamId = examIds[i],
+                IsPremiumOnly = false,
+                DisplayOrder = 200 + i
+            };
+
+            db.PathModuleItems.Add(item);
+            await db.SaveChangesAsync(cancellationToken);
+            existing[examIds[i]] = item.ItemId;
+        }
+
+        return examIds.Select(id => existing[id]).ToList();
     }
 
     /// <summary>

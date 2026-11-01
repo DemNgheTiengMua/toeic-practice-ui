@@ -63,6 +63,25 @@ public sealed class GoalFeasibilityServiceTests(DatabaseFixture database)
 
             INSERT INTO PathModuleItems (ModuleId, CertId, TemplateId, ItemType, RefSectionId, QuestionCount, DisplayOrder)
             VALUES (@m1, @cert, @tpl, 'practice_section', @secR, 5, 1);
+
+            -- #154: a path needs a section it can actually drill, so the fixture carries one question.
+            -- It needs an exam to hang on: QuestionGroups.ExamId is NOT NULL, and drilling reads
+            -- Questions by section, never by exam.
+            INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose)
+            VALUES (@cert, N'Subject bank', 'published', 30, 'mock');
+            DECLARE @drillExam INT = SCOPE_IDENTITY();
+
+            INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder)
+            VALUES (@drillExam, @cert, @secR, 1);
+            DECLARE @drillGroup INT = SCOPE_IDENTITY();
+
+            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder)
+            VALUES (@drillGroup, @drillExam, @secR, @sR, N'Drill question', 2, 'mcq', 1);
+            DECLARE @drillQ INT = SCOPE_IDENTITY();
+
+            INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
+              (@drillQ, 'mcq', 'A', N'Right', 1),
+              (@drillQ, 'mcq', 'B', N'Wrong', 0);
             """);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
