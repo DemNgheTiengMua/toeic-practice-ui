@@ -281,4 +281,28 @@ public sealed partial class LearnerServiceTests
         // No deadline means no verdict - which is not the same as "unrealistic".
         Assert.Null(dashboard.Goal.Status);
     }
+
+    // ---- Goal Standing: the goal's own starting band is a statement, not a blank (#159) ----
+
+    [Fact]
+    public async Task Goal_standing_reads_the_starting_band_from_the_goal_when_there_is_no_placement_or_mock()
+    {
+        // Found in the browser: with no attempt history the dashboard said "Not placed yet" beside a
+        // goal row that said B1, while the path had been built from that B1. The goal is the only
+        // thing that knows where the learner starts, so it has to be read.
+        var code = Unique("F");
+        var (certId, _, _) = await SeedCertWithNamedSkillsAsync(code, ("LIST", "Listening", "listening"));
+        var userId = await SeedLearnerAsync(code);
+
+        await database.SqlAsync($"""
+            INSERT INTO TargetBands (UserId, CertId, CurrentBandCode, TargetBandCode, TargetDate, WeeklyStudyHours, FeasibilityStatus)
+              VALUES ({userId}, {certId}, 'LOW', 'HIGH',
+                      DATEADD(day, 210, CAST(SYSDATETIMEOFFSET() AS DATE)), 10.0, 'feasible');
+            """);
+
+        var dashboard = await CreateService().GetDashboardAsync(userId);
+
+        Assert.Equal("LOW", dashboard.Goal!.CurrentBandCode);
+        Assert.Equal("goal", dashboard.Goal.CurrentSource);
+    }
 }

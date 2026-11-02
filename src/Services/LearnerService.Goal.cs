@@ -54,6 +54,8 @@ public sealed partial class LearnerService
         }
         else
         {
+            // #159: a goal can itself name the starting band (#153 added the column). Filled in
+            // below once the goal row is loaded - see the `target` query.
             currentBandCode = null;
             currentScore = null;
             currentSource = null;
@@ -65,6 +67,7 @@ public sealed partial class LearnerService
             .Select(t => new
             {
                 t.TargetBandCode,
+                t.CurrentBandCode,
                 BandName = t.ScoreBand.Name,
                 MinScore = (int?)t.ScoreBand.MinTotal,
                 t.TargetDate,
@@ -72,6 +75,15 @@ public sealed partial class LearnerService
                 t.FeasibilityStatus,
             })
             .FirstOrDefaultAsync(cancellationToken);
+
+        // #159: with no mock and no placement, the goal's own starting band is the only statement of
+        // where the learner is. Reading it here keeps the dashboard from saying "Not placed yet"
+        // beside a goal row that says B1 - and the path is built from that B1.
+        if (currentBandCode is null && target?.CurrentBandCode is { } goalBand)
+        {
+            currentBandCode = goalBand;
+            currentSource = "goal";
+        }
 
         // Band names live in one table for the whole certificate, so the current band's name is read
         // there rather than from whichever attempt happened to carry it.
