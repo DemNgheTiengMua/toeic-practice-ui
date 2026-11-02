@@ -49,6 +49,9 @@ public sealed record ApiError(string Code, string Title, int Status, string? Det
         public const string PracticeInvalidOption = "PRACTICE_INVALID_OPTION";
         public const string PracticeSessionAlreadyFinished = "PRACTICE_SESSION_FINISHED";
 
+        /// <summary>#166: one question is answered once; a second submission is refused.</summary>
+        public const string PracticeAlreadyAnswered = "PRACTICE_ALREADY_ANSWERED";
+
         public const string SavedQuestionNotFound = "SAVED_QUESTION_NOT_FOUND";
         public const string QuestionNotFound = "QUESTION_NOT_FOUND";
         public const string RecommendationNotFound = "RECOMMENDATION_NOT_FOUND";

@@ -434,10 +434,10 @@ public sealed class PracticeMasteryTests(DatabaseFixture database)
         Assert.Empty(await db.CreditTransactions.Where(c => c.UserId == userId).ToListAsync());
     }
 
-    // ---- Rule 12: re-submitting the same answer does not count twice ----
+    // ---- Rule 12: an answered question cannot be answered again ----
 
     [Fact]
-    public async Task Re_submitting_an_answer_does_not_count_a_second_miss()
+    public async Task Re_submitting_an_answer_is_refused_and_changes_neither_the_recorded_answer_nor_mastery()
     {
         var certCode = Unique("RS");
         var seeded = await SeedCategoryAsync(certCode, questionCount: 3);
@@ -447,15 +447,35 @@ public sealed class PracticeMasteryTests(DatabaseFixture database)
         var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(seeded.SectionId));
         var questions = await practice.GetSessionQuestionsAsync(userId, session.SessionId);
         var question = questions[0];
+        var wrongOption = Wrong(question).SelectedOptionId;
+        var rightOption = Right(question).SelectedOptionId;
 
         await practice.SubmitAnswerAsync(userId, session.SessionId, question.QuestionId, Wrong(question));
         var once = await ReadMasteryAsync(userId, seeded.CategoryId);
 
-        // #155: the old flow let a learner re-answer the same question in place. That must not add a
-        // second miss - it is the "click it again until it goes green" move the ticket closes.
-        await practice.SubmitAnswerAsync(userId, session.SessionId, question.QuestionId, Right(question));
-        var twice = await ReadMasteryAsync(userId, seeded.CategoryId);
+        // #166: #155 made the second grade skip mastery, so the re-submit rewrote the recorded answer
+        // and the correct count while the mastery row kept describing the first answer. Posting a
+        // wrong answer again as right also raised the accuracy a path step records. The question is
+        // graded once, so the second submission is refused outright - not applied in part.
+        var ex = await Assert.ThrowsAsync<PracticeException>(() =>
+            practice.SubmitAnswerAsync(userId, session.SessionId, question.QuestionId, Right(question)));
 
+        Assert.Equal(PracticeException.AlreadyAnswered, ex.Code);
+        // The message tells the learner what to do next, not what the server did.
+        Assert.Contains("already been answered", ex.Message);
+        Assert.Contains("next question", ex.Message);
+
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+        var stored = await db.PracticeAnswers.AsNoTracking()
+            .SingleAsync(a => a.SessionId == session.SessionId && a.QuestionId == question.QuestionId);
+        Assert.Equal(wrongOption, stored.SelectedOptionId);
+        Assert.NotEqual(rightOption, stored.SelectedOptionId);
+        Assert.False(stored.IsCorrect);
+
+        var sessionRow = await db.PracticeSessions.AsNoTracking().SingleAsync(s => s.SessionId == session.SessionId);
+        Assert.Equal(0, sessionRow.CorrectCount);
+
+        var twice = await ReadMasteryAsync(userId, seeded.CategoryId);
         Assert.Equal(1, once!.AnsweredCount);
         Assert.Equal(once.AnsweredCount, twice!.AnsweredCount);
         Assert.Equal(once.NextReviewDueAt, twice.NextReviewDueAt);

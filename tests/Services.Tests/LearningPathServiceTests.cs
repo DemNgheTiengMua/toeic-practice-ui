@@ -344,6 +344,86 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
     }
 
     [Fact]
+    public async Task A_refused_re_submission_leaves_the_path_steps_recorded_accuracy_at_the_first_answer()
+    {
+        // #166: re-submitting the last-but-one question as right used to rewrite the session's correct
+        // count, and the step that closes on the session's final answer then recorded the rewritten
+        // number. The step's audit trail has to be the accuracy the learner actually achieved.
+        var certCode = Unique("C");
+        var (_, _, _, _, _, _, secId, qId) = await SeedPathFixtureAsync(certCode);
+        var userId = await SeedLearnerAsync(certCode);
+        var (service, _, practice, db) = CreateServices();
+
+        // A second question, so the session can still be in progress when the re-submission is tried.
+        int secondQId;
+        int secondRightOption;
+        await using (var seed = DbContextFactory.Create(database.ConnectionString))
+        {
+            var section = await seed.Sections.SingleAsync(s => s.SectionId == secId);
+            seed.Questions.Add(new Question
+            {
+                GroupId = await seed.Questions.Where(q => q.QuestionId == qId).Select(q => q.GroupId).SingleAsync(),
+                ExamId = await seed.Questions.Where(q => q.QuestionId == qId).Select(q => q.ExamId).SingleAsync(),
+                SectionId = secId, SkillId = section.SkillId, Stem = "Question 2 stem",
+                DifficultyLevel = 2, QuestionType = "mcq", DisplayOrder = 2,
+            });
+            await seed.SaveChangesAsync();
+
+            secondQId = await seed.Questions.Where(q => q.SectionId == secId && q.QuestionId != qId)
+                .Select(q => q.QuestionId).SingleAsync();
+            var option = new QuestionOption
+            {
+                QuestionId = secondQId, QuestionType = "mcq", Label = "A", Text = "Right 2", IsCorrect = true,
+            };
+            seed.QuestionOptions.Add(option);
+            seed.QuestionOptions.Add(new QuestionOption
+            {
+                QuestionId = secondQId, QuestionType = "mcq", Label = "B", Text = "Wrong 2", IsCorrect = false,
+            });
+            await seed.SaveChangesAsync();
+            secondRightOption = option.OptionId;
+        }
+
+        var summary = await service.GeneratePathAsync(userId);
+        var step = await db.LearnerPathSteps
+            .Include(s => s.PathModuleItem)
+            .FirstAsync(s => s.LearnerPathId == summary.LearnerPathId && s.PathModuleItem.RefSectionId == secId);
+
+        var start = await service.StartStepAsync(userId, step.StepId);
+        var sessionId = start.SessionId!.Value;
+        Assert.Equal(2, (await db.PracticeAnswers.CountAsync(a => a.SessionId == sessionId)));
+
+        var wrongOption = await db.QuestionOptions
+            .Where(o => o.QuestionId == qId && !o.IsCorrect).Select(o => o.OptionId).SingleAsync();
+        var rightOption = await db.QuestionOptions
+            .Where(o => o.QuestionId == qId && o.IsCorrect).Select(o => o.OptionId).SingleAsync();
+
+        await practice.SubmitAnswerAsync(userId, sessionId, qId, new SubmitPracticeAnswerInput(wrongOption));
+
+        var ex = await Assert.ThrowsAsync<PracticeException>(() =>
+            practice.SubmitAnswerAsync(userId, sessionId, qId, new SubmitPracticeAnswerInput(rightOption)));
+        Assert.Equal(PracticeException.AlreadyAnswered, ex.Code);
+
+        await db.Entry(step).ReloadAsync();
+        Assert.Equal("in_progress", step.Status);
+        Assert.Null(step.ActualAccuracyPct);
+
+        // The remaining question finishes the session, which closes the step.
+        await practice.SubmitAnswerAsync(userId, sessionId, secondQId, new SubmitPracticeAnswerInput(secondRightOption));
+
+        await using var verifyDb = DbContextFactory.Create(database.ConnectionString);
+        var closed = await verifyDb.LearnerPathSteps.AsNoTracking().SingleAsync(s => s.StepId == step.StepId);
+        Assert.Equal("done", closed.Status);
+        Assert.Equal(50m, closed.ActualAccuracyPct);
+        Assert.Equal(50m, closed.Score);
+
+        var firstAnswer = await verifyDb.PracticeAnswers.AsNoTracking()
+            .SingleAsync(a => a.SessionId == sessionId && a.QuestionId == qId);
+        Assert.Equal(wrongOption, firstAnswer.SelectedOptionId);
+        Assert.False(firstAnswer.IsCorrect);
+    }
+
+    [Fact]
     public async Task GetModuleDetailAsync_WhenAllStepsDone_KeepsActiveStepIdForReview()
     {
         var certCode = Unique("C");
