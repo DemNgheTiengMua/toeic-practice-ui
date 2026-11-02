@@ -61,7 +61,10 @@ INSERT INTO AttemptSkillScores (AttemptId, SkillId, CertId, RawScore, ScaledScor
 UPDATE ExamAttempts SET TotalScore = 500 WHERE AttemptId = @toeicAttempt;
 PRINT 'accepted TOEIC skill-score sum';
 
-INSERT INTO Certificates (Code, Name, IsActive) VALUES ('IELTS', N'IELTS', 1);
+-- The rule is declared, not inherited from DF_Certificates_ScoreAggregationRule ('sum'): this block
+-- asserts half-band averaging, so the certificate must actually carry avg_half_step.
+INSERT INTO Certificates (Code, Name, IsActive, ScoreAggregationRule)
+VALUES ('IELTS', N'IELTS', 1, 'avg_half_step');
 DECLARE @ielts INT = SCOPE_IDENTITY();
 INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder) VALUES
   (@ielts, 'LIST', N'Listening', 'listening', 1),
@@ -97,7 +100,9 @@ BEGIN CATCH
   PRINT 'rejected an IELTS skill-score change that invalidated its total';
 END CATCH
 
-INSERT INTO Certificates (Code, Name, IsActive) VALUES ('VSTEP', N'VSTEP', 1);
+-- Same as IELTS above: the block asserts whole-number averaging, so say so.
+INSERT INTO Certificates (Code, Name, IsActive, ScoreAggregationRule)
+VALUES ('VSTEP', N'VSTEP', 1, 'avg_whole');
 DECLARE @vstep INT = SCOPE_IDENTITY();
 INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder) VALUES
   (@vstep, 'LIST', N'Listening', 'listening', 1),

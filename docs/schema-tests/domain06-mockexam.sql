@@ -47,7 +47,8 @@ END CATCH
 INSERT INTO Certificates (Code,Name,IsActive) VALUES ('IELTS',N'I',1); DECLARE @c2 INT=SCOPE_IDENTITY();
 INSERT INTO Skills (CertId,Code,Name,Modality,DisplayOrder) VALUES (@c2,'SPK',N'Spk','speaking',1);
 DECLARE @s2 INT=SCOPE_IDENTITY();
-INSERT INTO Sections (SkillId,CertId,Modality,Code,Name,OptionCount,ExpectedQuestionCount,DisplayOrder) VALUES (@s2,@c2,'speaking','S1',N'Interview',NULL,3,1);
+-- OptionCount is NOT NULL (2026-10-26), 2..6; 4 is what the certificate wizard supplies.
+INSERT INTO Sections (SkillId,CertId,Modality,Code,Name,OptionCount,ExpectedQuestionCount,DisplayOrder) VALUES (@s2,@c2,'speaking','S1',N'Interview',4,3,1);
 DECLARE @sec2 INT=SCOPE_IDENTITY();
 INSERT INTO Exams (CertId,Name,Status,DurationMinutes) VALUES (@c2,N'IELTS Exam','published',60);
 DECLARE @exam2 INT=SCOPE_IDENTITY();

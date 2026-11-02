@@ -7,8 +7,10 @@ INSERT INTO Skills (CertId,Code,Name,Modality,DisplayOrder) VALUES
   (@toeic,'READ',N'Reading','reading',1),(@ielts,'SPK',N'Speaking','speaking',1);
 DECLARE @tRead INT=(SELECT SkillId FROM Skills WHERE CertId=@toeic AND Code='READ');
 DECLARE @iSpk  INT=(SELECT SkillId FROM Skills WHERE CertId=@ielts AND Code='SPK');
+-- Sections.OptionCount is NOT NULL (2026-10-26) and 2..6; a speaking section still declares one,
+-- and the certificate wizard's answer for a missing count is 4. NULL here cascades into NULL ids.
 INSERT INTO Sections (SkillId,CertId,Modality,Code,Name,OptionCount,ExpectedQuestionCount,DisplayOrder) VALUES
-  (@tRead,@toeic,'reading','P7',N'Reading Comp',4,54,1),(@iSpk,@ielts,'speaking','S1',N'Interview',NULL,3,1);
+  (@tRead,@toeic,'reading','P7',N'Reading Comp',4,54,1),(@iSpk,@ielts,'speaking','S1',N'Interview',4,3,1);
 DECLARE @tSec INT=(SELECT SectionId FROM Sections WHERE Code='P7');
 DECLARE @iSec INT=(SELECT SectionId FROM Sections WHERE Code='S1');
 -- valid TOEIC exam + group on TOEIC section
