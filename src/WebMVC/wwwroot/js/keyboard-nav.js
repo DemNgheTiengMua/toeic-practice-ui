@@ -1,5 +1,5 @@
 /**
- * Keyboard navigation enhancements for TOEIC Practice exam interface.
+ * Keyboard navigation enhancements for the exam interface.
  * Handles modal focus traps, Escape key, initial focus, and focus return.
  */
 (function () {

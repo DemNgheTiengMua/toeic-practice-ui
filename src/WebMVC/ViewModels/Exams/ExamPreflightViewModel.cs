@@ -22,7 +22,7 @@ public sealed record ExamPreflightViewModel(
     public string BufferProgressClass { get; } = Preflight.AudioUrls.Count > 0 ? "" : "preflight-buffer-complete";
     public string BufferDetails { get; } = Preflight.AudioUrls.Count > 0
         ? $"0 of {Preflight.AudioUrls.Count} audio tracks pre-buffered"
-        : "No listening audio tracks in this exam blueprint";
+        : "No audio tracks in this exam blueprint";
     // Keep the default HTML-safe encoder: this JSON is rendered as raw script data, never executable code.
     public string PageDataJson { get; } = JsonSerializer.Serialize(new
     {

@@ -59,8 +59,10 @@ public sealed record ExamTakePresentation
             Phases = phases.Select(phase => new ExamTakePhasePresentation(phase.SkillCode, phase.SkillName,
                 q.SkillCode == phase.SkillCode ? "step" : "false")).ToArray(),
             AudioEquipment = hasListening || hasSpeaking ? new AudioEquipmentCheckModel(ShowInput: hasSpeaking, ShowOutput: hasListening) : null,
+            // #161: the player is titled with the section the question belongs to, not the literal
+            // "Listening Audio" - audio is not the exclusive property of a listening section.
             InitialAudio = !string.IsNullOrEmpty(q.AudioPath) ? new ExamAudioPlayerModel(
-                AudioPath: q.AudioPath, AllowReplay: false, SectionTitle: "Listening Audio", BadgeText: "READY",
+                AudioPath: q.AudioPath, AllowReplay: false, SectionTitle: $"{q.SkillName} audio", BadgeText: "READY",
                 StartMs: q.AudioStartMs, EndMs: q.AudioEndMs, PlayerId: "main-exam-audio", Mode: "exam") : null,
             QuestionsJson = JsonSerializer.Serialize(questions, jsonOptions),
             PhasesJson = JsonSerializer.Serialize(phases, jsonOptions),

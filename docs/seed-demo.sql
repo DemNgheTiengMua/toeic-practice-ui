@@ -5094,3 +5094,16 @@ GO
 
 PRINT '23. Demo learner goal dated: B1 to B2 in 30 weeks at 10 h/week';
 GO
+
+-- ============================================================================
+-- 24. Certificates.SectionNoun backfill (#161)
+-- ============================================================================
+-- The noun a certificate puts in front of a section code is now a column, because the weakness page
+-- used to derive it from `Code == "TOEIC"`. TOEIC numbers its sections "Part"; every other seeded
+-- certificate numbers them "Section", which is the column default. Set by preset rather than by code
+-- so a renamed TOEIC copy keeps the word it was authored with.
+UPDATE Certificates SET SectionNoun = N'Part' WHERE PresetCode IN ('toeic_lr_std', 'toeic_lr_cat', 'toeic_sw');
+GO
+
+PRINT '24. Section noun backfilled: TOEIC calls its sections Parts';
+GO

@@ -161,12 +161,13 @@
   </div>
 </div>
 
-<!-- Reading Review Screen Modal (#review-screen-modal) -->
+<!-- Review Screen Modal (#review-screen-modal): the title is the phase's own skill name, set by
+     review.js from the phase it is reviewing. It used to say "READING REVIEW SCREEN" for every skill. -->
 <div id="review-screen-modal" class="modal-overlay" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="review-screen-title">
   <div class="modal" style="max-width: 800px; width: 90%; border: 2px solid #14181d; border-radius: 0; box-shadow: none;">
     <div class="modal__header" style="border-bottom: 2px solid #14181d; display: flex; justify-content: space-between; align-items: center; background: #fafbfc; padding: 0.75rem 1rem;">
       <h2 id="review-screen-title" class="no-margin" style="font-family: 'IBM Plex Sans Condensed', sans-serif; text-transform: uppercase; font-size: 1.25rem;">
-        READING REVIEW SCREEN
+        <span id="review-screen-skill">REVIEW SCREEN</span>
       </h2>
       <button type="button" class="btn btn--ghost btn--sm js-close-review-modal" aria-label="Close review screen">[X]</button>
     </div>

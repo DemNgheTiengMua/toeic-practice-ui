@@ -842,21 +842,24 @@
     saveSingleQuestion(qid);
   };
 
-  window.insertP6Blank = function(groupId, blankNum) {
-    var ta = document.getElementById('p6-passage-' + groupId);
+  // #161: these helpers are named after what they do, not after TOEIC Part 6. The passage-blank editor
+  // is offered by any section that shows a stimulus, so an id like "p6-passage-3" bound the markup to one
+  // certificate's part numbering and read as a bug on every other one.
+  window.insertPassageBlank = function(groupId, blankNum) {
+    var ta = document.getElementById('passage-editor-' + groupId);
     if (!ta) return;
     var token = '[' + blankNum + ']';
     var start = ta.selectionStart || ta.value.length;
     var val = ta.value;
     ta.value = val.substring(0, start) + ' ' + token + ' ' + val.substring(start);
     ta.focus();
-    renderP6Preview(groupId);
+    renderPassagePreview(groupId);
     saveSingleGroup(groupId);
   };
 
-  window.renderP6Preview = function(groupId) {
-    var ta = document.getElementById('p6-passage-' + groupId);
-    var preview = document.getElementById('p6-preview-' + groupId);
+  window.renderPassagePreview = function(groupId) {
+    var ta = document.getElementById('passage-editor-' + groupId);
+    var preview = document.getElementById('passage-preview-' + groupId);
     if (!ta || !preview) return;
 
     var text = ta.value || '';
@@ -866,14 +869,14 @@
       .replace(/>/g, '&gt;')
       .replace(/\n/g, '<br/>');
 
-    var rendered = escaped.replace(/\[([1-9])\]/g, function(match, p1) {
-      return '<span class="blank-badge" onclick="focusP6Question(' + groupId + ', ' + p1 + ')">[' + p1 + ']</span>';
+    var rendered = escaped.replace(/\[([1-9][0-9]*)\]/g, function(match, p1) {
+      return '<span class="blank-badge" onclick="focusPassageQuestion(' + groupId + ', ' + p1 + ')">[' + p1 + ']</span>';
     });
 
     preview.innerHTML = rendered || '<span class="text-muted italic">Type passage text above to preview blanks...</span>';
   };
 
-  window.focusP6Question = function(groupId, blankNum) {
+  window.focusPassageQuestion = function(groupId, blankNum) {
     var grpCard = document.getElementById('group-card-' + groupId);
     if (!grpCard) return;
     var qCards = grpCard.querySelectorAll('.question-card');
@@ -884,10 +887,10 @@
     }
   };
 
-  // Initial render of P6 previews
-  document.querySelectorAll('.p6-passage-input').forEach(function(ta) {
+  // Initial render of passage previews
+  document.querySelectorAll('.passage-editor-input').forEach(function(ta) {
     var gId = parseInt(ta.getAttribute('data-id'), 10);
-    if (gId) renderP6Preview(gId);
+    if (gId) renderPassagePreview(gId);
   });
 
   window.switchDocTab = function(groupId, tabIndex) {

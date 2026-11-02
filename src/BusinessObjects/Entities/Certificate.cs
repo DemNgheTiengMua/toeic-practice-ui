@@ -30,6 +30,11 @@ public partial class Certificate
     [StringLength(50)]
     public string? PresetCode { get; set; }
 
+    // #161: the noun before a section code ("Part 3" vs "Section 3"). A label, so it is data: the
+    // weakness page used to switch on Code == "TOEIC", which no fourth certificate could satisfy.
+    [StringLength(30)]
+    public string SectionNoun { get; set; } = "Section";
+
     [InverseProperty("Cert")]
     public virtual ICollection<AiInsight> AiInsights { get; set; } = new List<AiInsight>();
 

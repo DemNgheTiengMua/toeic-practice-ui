@@ -8,10 +8,28 @@ public sealed record TargetBandViewModel(
     string? SuccessMessage = null)
 {
     public int CurrentScore { get; } = View.CurrentTotalScore ?? 0;
-    public string TargetCode { get; } = View.TargetBandCode ?? View.AvailableBands.FirstOrDefault(b => !b.IsCurrent)?.Code ?? "B2";
+
+    /// <summary>#161: the band the learner chose, or null when they have never chosen one. It used to
+    /// fall back to the literal "B2" and to the first band that is not their current one, which put a
+    /// band in the form that the learner never picked — and on a certificate with no B2, a band that is
+    /// not even in the list. Null is the honest answer, and the page offers the choice.</summary>
+    public string? TargetCode { get; } = View.TargetBandCode;
+
+    public bool HasTargetBand => TargetCode is not null;
+
     public int PointsNeeded { get; init; }
     public string NeededDisplay { get; init; } = string.Empty;
     public IReadOnlyList<AttemptBandViewModel> Bands { get; init; } = [];
+
+    /// <summary>#161: the strip is drawn from the certificate's bands, in score order.</summary>
+    public BandStripViewModel BandStrip => new(
+        View.CefrBands.OrderBy(b => b.MinTotal)
+            .Select(b => new BandStripItemViewModel(b.Code, b.MinTotal, b.MaxTotal,
+                "cefr__band" + (b.IsCurrent ? " is-current" : b.IsReached ? " is-reached" : "")))
+            .ToList(),
+        View.CurrentBandCode is null
+            ? "No level assessed yet"
+            : $"Current band {View.CurrentBandCode}, score {View.CurrentTotalScore}");
 
     /// <summary>#153: the goal already saved, or null when the learner has never set one.</summary>
     public GoalStatusDto? Goal => View.Goal;

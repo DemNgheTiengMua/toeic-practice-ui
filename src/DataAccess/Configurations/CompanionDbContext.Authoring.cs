@@ -17,6 +17,7 @@ public partial class CompanionDbContext
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.ScoreAggregationRule).HasMaxLength(30).HasDefaultValue("sum");
             entity.Property(e => e.PresetCode).HasMaxLength(50);
+            entity.Property(e => e.SectionNoun).HasMaxLength(30).HasDefaultValue("Section");
         });
 
 

@@ -1,7 +1,7 @@
 @model WebMVC.Models.CertificateCatalogViewModel
 @{
     ViewData["Title"] = "Certificates";
-    ViewData["Description"] = "TOEIC, IELTS and VSTEP on extra efficient — test structure, score bands and what you can practice for each certificate.";
+    ViewData["Description"] = Model.Description;
 }
 
 <div class="container stack" style="padding-top: var(--space-6); padding-bottom: var(--space-8)">
@@ -12,7 +12,7 @@
   </nav>
 
   <div style="max-width: 640px">
-    <h1 class="m-0 mb-1">Three certificates, one account</h1>
+    <h1 class="m-0 mb-1">@Model.Heading</h1>
     <p class="text-muted no-margin">
       Pick the certificate you are working toward. Your placement exam, learning path, practice bank and
       mock exams all follow that certificate's real structure and scoring — and you can switch at any time.
@@ -65,25 +65,15 @@
           </div>
           @if (cert.Bands.Count > 0)
           {
-            var lowest = cert.Bands.Min(b => b.MinTotal);
-            var highest = cert.Bands.Max(b => b.MaxTotal);
+            @* #161: the strip draws the bands this certificate has, in score order, each column as wide as
+               the range that band covers. The note carries the range, so the scale is stated rather than
+               assumed — `First()`/`Last()` on an unordered list printed the wrong one when rows arrived out
+               of order. *@
             <div>
               <strong class="text-sm">Score bands</strong>
               <div class="cefr mt-2">
-                <div class="cefr__track" role="img"
-                     aria-label="@cert.Code score bands from @cert.Bands.First().Code at @lowest to @cert.Bands.Last().Code at @highest">
-                  @foreach (var band in cert.Bands)
-                  {
-                    <span class="cefr__band">@band.Code</span>
-                  }
-                </div>
-                <div class="cefr__scale" aria-hidden="true">
-                  @foreach (var band in cert.Bands)
-                  {
-                    <span class="cefr__tick">@band.MinTotal</span>
-                  }
-                </div>
-                <p class="cefr__note">@lowest–@highest scale. Bands follow the certificate's standard level mapping.</p>
+                <partial name="_BandStrip" model="Model.BandStrips[cert.Code]" />
+                <p class="cefr__note">@Model.BandStrips[cert.Code].Note</p>
               </div>
             </div>
           }

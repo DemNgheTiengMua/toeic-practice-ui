@@ -14,6 +14,11 @@ CREATE TABLE Certificates (
   ScoreAggregationRule NVARCHAR(30) NOT NULL CONSTRAINT DF_Certificates_ScoreAggregationRule DEFAULT 'sum'
     CONSTRAINT CK_Certificates_ScoreAggregationRule CHECK (ScoreAggregationRule IN ('sum', 'avg_half_step', 'avg_whole', 'independent')),
   PresetCode           NVARCHAR(50) NULL,
+  -- #161: the noun this certificate puts in front of a section code ("Part 3" on TOEIC, "Section 3" on
+  -- anything else). A label, so it is data - the views used to switch on the certificate's code. The
+  -- default is the domain's neutral word (CONTEXT.md: Section), so a new certificate reads correctly
+  -- before anyone edits it.
+  SectionNoun          NVARCHAR(30) NOT NULL CONSTRAINT DF_Certificates_SectionNoun DEFAULT 'Section',
   CONSTRAINT UQ_Certificates_Code UNIQUE (Code)
 );
 GO

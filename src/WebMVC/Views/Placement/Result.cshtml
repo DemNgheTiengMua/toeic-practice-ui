@@ -74,18 +74,7 @@
           <span class="cefr__current font-mono">@(result.IsGraded ? result.ResultBandCode : "—")</span>
           <span>@Model.ScoreSummary</span>
         </div>
-        <div class="cefr__track" role="img" aria-label="Current band @result.ResultBandCode, score @result.TotalScore">
-          @foreach (var band in Model.Bands)
-          {
-            <span class="@band.CssClass font-mono">@band.Label</span>
-          }
-        </div>
-        <div class="cefr__scale" aria-hidden="true">
-          @foreach (var band in result.CefrBands)
-          {
-            <span class="cefr__tick font-mono">@band.MinTotal</span>
-          }
-        </div>
+        <partial name="_BandStrip" model="Model.BandStrip" />
         @if (result.IsGraded && !string.IsNullOrEmpty(result.BandNote))
         {
           <p class="cefr__note">
@@ -100,7 +89,7 @@
     <div class="stat">
       <div class="stat__label">Total score</div>
       <div class="stat__value font-mono">@Model.TotalScoreDisplay</div>
-      <div class="stat__hint font-mono text-muted">out of @Model.MaximumScore</div>
+      <div class="stat__hint font-mono text-muted">@(string.IsNullOrEmpty(Model.MaximumScore) ? "no scale configured" : $"out of {Model.MaximumScore}")</div>
     </div>
     @* #152: one card per skill of the certificate, named by the skill itself. *@
     @foreach (var skill in Model.Skills)

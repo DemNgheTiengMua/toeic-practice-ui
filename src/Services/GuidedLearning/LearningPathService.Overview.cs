@@ -20,7 +20,7 @@ public sealed partial class LearningPathService
         var cert = await db.Certificates
             .AsNoTracking()
             .Where(c => c.CertId == activeCertId)
-            .Select(c => new CertificateOption(c.Code, c.Name))
+            .Select(c => new CertificateOption(c.Code, c.Name, c.SectionNoun))
             .SingleAsync(cancellationToken);
 
         var activePath = await db.LearnerPaths

@@ -102,7 +102,7 @@ public sealed partial class LearnerService(CompanionDbContext db, ICreditLedger?
             .AsNoTracking()
             .Where(c => c.IsActive)
             .OrderBy(c => c.CertId)
-            .Select(c => new ActiveCertificate(c.CertId, new CertificateOption(c.Code, c.Name)))
+            .Select(c => new ActiveCertificate(c.CertId, new CertificateOption(c.Code, c.Name, c.SectionNoun)))
             .ToListAsync(cancellationToken);
         if (certificates.Count == 0)
         {

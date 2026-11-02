@@ -31,7 +31,7 @@ public sealed class MockExamService(
         var cert = await db.Certificates
             .AsNoTracking()
             .Where(c => c.CertId == certId)
-            .Select(c => new CertificateOption(c.Code, c.Name))
+            .Select(c => new CertificateOption(c.Code, c.Name, c.SectionNoun))
             .SingleAsync(cancellationToken);
 
         var balance = await _creditLedger.GetBalanceAsync(userId, cancellationToken);
@@ -320,7 +320,7 @@ public sealed class MockExamService(
         var cert = await db.Certificates
             .AsNoTracking()
             .Where(c => c.CertId == certId)
-            .Select(c => new CertificateOption(c.Code, c.Name))
+            .Select(c => new CertificateOption(c.Code, c.Name, c.SectionNoun))
             .SingleAsync(cancellationToken);
 
         // Auto-submit any expired in-progress attempts first
