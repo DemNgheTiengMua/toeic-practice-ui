@@ -485,6 +485,33 @@ public sealed class PracticeMasteryTests(DatabaseFixture database)
         Assert.Equal(clock.GetUtcNow().AddHours(24), mastery.NextReviewDueAt);
     }
 
+    [Fact]
+    public async Task Answering_the_same_micro_check_again_does_not_move_mastery_a_second_time()
+    {
+        // Found by review: unlike the drill, the micro-check had no "already graded" guard, so every
+        // POST of the same card incremented AnsweredCount/Streak. A learner who learned the answer
+        // could post it in a loop and farm the category to Mastered from one question.
+        var certCode = Unique("LM2");
+        var seeded = await SeedCategoryAsync(certCode, questionCount: 2);
+        var userId = await SeedLearnerAsync(certCode);
+        var (practice, _) = CreateServices();
+
+        var lesson = await SeedLessonWithMicroCheckAsync(seeded.CertId, seeded.CategoryId);
+
+        for (var i = 0; i < 5; i++)
+        {
+            await practice.SubmitLessonMicroCheckAsync(
+                userId, lesson.LessonId, lesson.MicroCheckCardId, lesson.RightOption, default);
+        }
+
+        var mastery = await ReadMasteryAsync(userId, seeded.CategoryId);
+        Assert.NotNull(mastery);
+        // Five posts, one recorded answer.
+        Assert.Equal(1, mastery.AnsweredCount);
+        Assert.Equal(1, mastery.CorrectCount);
+        Assert.Equal(MasteryState.Learning.ToCode(), mastery.State);
+    }
+
     private async Task<(int LessonId, int MicroCheckCardId, string RightOption, string WrongOption)> SeedLessonWithMicroCheckAsync(int certId, int categoryId)
     {
         await using var db = DbContextFactory.Create(database.ConnectionString);

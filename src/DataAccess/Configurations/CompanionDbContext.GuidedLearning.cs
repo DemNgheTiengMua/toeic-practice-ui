@@ -85,6 +85,20 @@ public partial class CompanionDbContext
                 .HasConstraintName("FK_LLP_LessonCert");
         });
 
+        modelBuilder.Entity<LearnerLessonMicroCheck>(entity =>
+        {
+            entity.HasKey(e => new { e.UserId, e.CardId })
+                .HasName("PK_LearnerLessonMicroChecks");
+
+            entity.HasOne(d => d.Card).WithMany(p => p.LearnerLessonMicroChecks)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_LLMC_Card");
+
+            entity.HasOne(d => d.User).WithMany(p => p.LearnerLessonMicroChecks)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_LLMC_User");
+        });
+
 
 
         modelBuilder.Entity<PathTemplate>(entity =>

@@ -55,4 +55,8 @@ public partial class LessonCard
     [ForeignKey("LessonId, CertId")]
     [InverseProperty("LessonCards")]
     public virtual Lesson Lesson { get; set; } = null!;
+
+    /// <summary>#159 review: which learners have had this micro-check graded.</summary>
+    [InverseProperty("Card")]
+    public virtual ICollection<LearnerLessonMicroCheck> LearnerLessonMicroChecks { get; set; } = new List<LearnerLessonMicroCheck>();
 }

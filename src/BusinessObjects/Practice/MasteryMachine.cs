@@ -50,6 +50,15 @@ public static class MasteryMachine
         var lapsed = current.State == MasteryState.Mastered
             && consecutiveWrong >= MasterySchedule.WrongInARowToLapse;
 
+        // A lapse starts the spaced review again: ">= 2 days" counts from now, not from the first
+        // answer ever given. Without this the lifetime percentage (which a lapse never resets) would
+        // re-master the category on the very next correct answer, making the demotion a one-answer
+        // detour instead of the durable step the transition table describes (#159 review).
+        if (lapsed)
+        {
+            sessionDays = 1;
+        }
+
         var (state, due) = current.State switch
         {
             // Earned state. One miss is not enough to lose it, but it does pull the next review back to
@@ -68,6 +77,15 @@ public static class MasteryMachine
 
             _ when MasteryMachine.MeetsMastered(correct, answered, sessionDays) =>
                 (MasteryState.Mastered, at + MasterySchedule.MasteredInterval),
+
+            // Already in the spaced review and still short of the Mastered proof: stay there. The
+            // transition table says Reviewing + a correct answer = Reviewing +7d; the fall-through to
+            // Learning below sent it back to daily review, so a category reached by a 3-streak then
+            // answered correctly (3 of 7) silently lost the interval it had earned (#159 review).
+            _ when current.State == MasteryState.Reviewing && isCorrect =>
+                (MasteryState.Reviewing, at + (current.NextReviewDueAt is { } previousDue && at >= previousDue
+                    ? MasterySchedule.ReviewingSecondInterval
+                    : MasterySchedule.ReviewingInterval)),
 
             _ when MasteryMachine.MeetsReviewing(streak, correct, answered) =>
                 (MasteryState.Reviewing, at + (current.State == MasteryState.Reviewing

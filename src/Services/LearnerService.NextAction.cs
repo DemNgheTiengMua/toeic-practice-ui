@@ -27,28 +27,37 @@ public sealed partial class LearnerService
     {
         if (unfinishedAttempt is not null)
         {
-            var prefix = unfinishedAttempt.Purpose switch
+            // A placement is reached by /placement/take/{placementId}; every other purpose by the
+            // attempt id. Using the attempt id for a placement 404'd the "Resume" button (#159 review).
+            var id = unfinishedAttempt.Purpose == ExamPurpose.Placement
+                ? unfinishedAttempt.PlacementId
+                : unfinishedAttempt.AttemptId;
+
+            if (id is not null)
             {
-                ExamPurpose.Placement => "/placement",
-                ExamPurpose.SpeakingPractice => "/speaking",
-                ExamPurpose.WritingPractice => "/writing",
-                _ => "/exams",
-            };
-            var label = unfinishedAttempt.Purpose switch
-            {
-                ExamPurpose.Mock => "mock exam",
-                ExamPurpose.Placement => "placement test",
-                ExamPurpose.SpeakingPractice => "speaking practice",
-                _ => "writing practice",
-            };
-            return new NextAction(
-                "PICK UP WHERE YOU LEFT OFF",
-                $"Finish {unfinishedAttempt.ExamName}",
-                $"An unfinished {label} on {cert.Code} is still open. Its answers are kept, so continuing costs nothing.",
-                "Resume",
-                $"{prefix}/take/{unfinishedAttempt.AttemptId}",
-                "warning",
-                "IN PROGRESS");
+                var prefix = unfinishedAttempt.Purpose switch
+                {
+                    ExamPurpose.Placement => "/placement",
+                    ExamPurpose.SpeakingPractice => "/speaking",
+                    ExamPurpose.WritingPractice => "/writing",
+                    _ => "/exams",
+                };
+                var label = unfinishedAttempt.Purpose switch
+                {
+                    ExamPurpose.Mock => "mock exam",
+                    ExamPurpose.Placement => "placement test",
+                    ExamPurpose.SpeakingPractice => "speaking practice",
+                    _ => "writing practice",
+                };
+                return new NextAction(
+                    "PICK UP WHERE YOU LEFT OFF",
+                    $"Finish {unfinishedAttempt.ExamName}",
+                    $"An unfinished {label} on {cert.Code} is still open. Its answers are kept, so continuing costs nothing.",
+                    "Resume",
+                    $"{prefix}/take/{id}",
+                    "warning",
+                    "IN PROGRESS");
+            }
         }
 
         if (unfinishedPractice is not null)

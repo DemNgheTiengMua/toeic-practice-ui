@@ -70,6 +70,9 @@ public partial class CompanionDbContext : DbContext
 
     public virtual DbSet<LearnerLessonProgress> LearnerLessonProgresses { get; set; }
 
+    /// <summary>#159 review: micro-checks already graded, so one card cannot move mastery twice.</summary>
+    public virtual DbSet<LearnerLessonMicroCheck> LearnerLessonMicroChecks { get; set; }
+
 
     public virtual DbSet<LearnerPath> LearnerPaths { get; set; }
 

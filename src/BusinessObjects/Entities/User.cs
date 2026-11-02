@@ -132,4 +132,8 @@ public partial class User
     /// <summary>#156: the learner's answers to calibration proposals.</summary>
     [InverseProperty("User")]
     public virtual ICollection<CalibrationDecision> CalibrationDecisions { get; set; } = new List<CalibrationDecision>();
+
+    /// <summary>#159 review: micro-checks this learner has already had graded.</summary>
+    [InverseProperty("User")]
+    public virtual ICollection<LearnerLessonMicroCheck> LearnerLessonMicroChecks { get; set; } = new List<LearnerLessonMicroCheck>();
 }

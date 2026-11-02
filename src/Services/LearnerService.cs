@@ -60,7 +60,9 @@ public sealed partial class LearnerService(CompanionDbContext db, ICreditLedger?
             .Where(a => a.Status == AttemptStatus.InProgress.ToCode())
             .OrderByDescending(a => a.StartedAt)
             .Select(a => new RecentAttempt(
-                a.AttemptId, a.Exam.Name, EnumCodes.Parse<ExamPurpose>(a.Exam.Purpose), EnumCodes.Parse<AttemptStatus>(a.Status), a.StartedAt, a.TotalScore, a.BandCode))
+                a.AttemptId, a.Exam.Name, EnumCodes.Parse<ExamPurpose>(a.Exam.Purpose), EnumCodes.Parse<AttemptStatus>(a.Status), a.StartedAt, a.TotalScore, a.BandCode,
+                // A placement is reached by its own id, not the attempt's (#159 review).
+                a.PlacementTests.Select(p => (int?)p.PlacementId).FirstOrDefault()))
             .FirstOrDefaultAsync(cancellationToken);
 
         var unfinishedPractice = await practice

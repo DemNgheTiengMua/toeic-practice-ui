@@ -186,4 +186,41 @@ public sealed class MasteryMachineTests
         Assert.True(MasteryMachine.IsDue(
             new MasteryMachine.Snapshot(MasteryState.Learning, 1, 0, 0, 1, 1, At, null), At));
     }
+
+    // ---- The two defects the #159 review found in the machine itself ----
+
+    [Fact]
+    public void A_correct_answer_while_reviewing_stays_reviewing_rather_than_dropping_to_daily()
+    {
+        // A category reached by a 3-streak sits in Reviewing with 3 of 7. A correct answer that clears
+        // neither proof used to fall through to the default arm and land in Learning (+24h), so the
+        // spaced interval it had earned was lost on the first right answer.
+        var reviewing = new MasteryMachine.Snapshot(
+            MasteryState.Reviewing, AnsweredCount: 7, CorrectCount: 3, Streak: 0, ConsecutiveWrong: 0,
+            SessionDays: 3, NextReviewDueAt: At.AddDays(-1), MasteredAt: null);
+
+        var step = MasteryMachine.Apply(reviewing, isCorrect: true, At, firstAnswerOfDay: true);
+
+        Assert.Equal(MasteryState.Reviewing, step.Next.State);
+        Assert.NotEqual(At.AddHours(24), step.NextReviewDueAt);
+    }
+
+    [Fact]
+    public void A_lapse_cannot_be_undone_by_a_single_correct_answer()
+    {
+        // MeetsMastered tests the lifetime percentage, and a lapse never reset it. At 90/100, two wrong
+        // answers leave 90/102 = 88%, so the next correct answer re-mastered the category at +14d - the
+        // "two wrong in a row is a lapse" rule was a one-answer detour. The lapse now restarts the
+        // spaced review, so ">= 2 days in session" cannot be satisfied immediately.
+        var mastered = new MasteryMachine.Snapshot(
+            MasteryState.Mastered, AnsweredCount: 100, CorrectCount: 90, Streak: 5, ConsecutiveWrong: 0,
+            SessionDays: 8, NextReviewDueAt: At, MasteredAt: At.AddDays(-30));
+
+        var firstWrong = MasteryMachine.Apply(mastered, isCorrect: false, At, firstAnswerOfDay: true);
+        var secondWrong = MasteryMachine.Apply(firstWrong.Next, isCorrect: false, At, firstAnswerOfDay: false);
+        Assert.Equal(MasteryState.Reviewing, secondWrong.Next.State);
+
+        var rightAfterLapse = MasteryMachine.Apply(secondWrong.Next, isCorrect: true, At, firstAnswerOfDay: false);
+        Assert.NotEqual(MasteryState.Mastered, rightAfterLapse.Next.State);
+    }
 }

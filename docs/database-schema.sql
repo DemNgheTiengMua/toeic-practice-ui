@@ -1386,6 +1386,17 @@ CREATE TABLE LearnerLessonProgress (
   CONSTRAINT UQ_LLP_UserLesson UNIQUE (UserId, LessonId)
 );
 GO
+-- #159 review: a micro-check is graded once per learner. Without this row every POST of the same card
+-- moved mastery again, so one known answer posted repeatedly farmed a category to Mastered - the exact
+-- "click until green" the drill half closed in #155.
+CREATE TABLE LearnerLessonMicroChecks (
+  UserId          INT NOT NULL REFERENCES Users(UserId),
+  CardId          INT NOT NULL REFERENCES LessonCards(CardId),
+  IsCorrect       BIT NOT NULL,
+  AnsweredAt      DATETIMEOFFSET NULL,
+  CONSTRAINT PK_LearnerLessonMicroChecks PRIMARY KEY (UserId, CardId)
+);
+GO
 -- Extend PathModuleItems to support lesson references
 ALTER TABLE PathModuleItems ADD RefLessonId INT NULL;
 GO

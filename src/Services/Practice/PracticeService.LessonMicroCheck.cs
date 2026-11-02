@@ -35,11 +35,29 @@ public sealed partial class PracticeService
         var selected = selectedOption.Trim().ToUpperInvariant();
         var isCorrect = string.Equals(selected, card.CorrectOption, StringComparison.Ordinal);
 
+        // A card is graded once per learner. Re-posting the same (now known) answer used to move
+        // mastery again every time, so one micro-check answered correctly in a loop farmed a category
+        // to Mastered without a second question - the "click until green" #155 closed in the drill.
+        var alreadyGraded = db.LearnerLessonMicroChecks.Local.Any(m => m.UserId == userId && m.CardId == cardId)
+            || await db.LearnerLessonMicroChecks
+                .AsNoTracking()
+                .AnyAsync(m => m.UserId == userId && m.CardId == cardId, cancellationToken);
+
         // A lesson carries its category already. A lesson authored without one has nothing to record
         // mastery against, so the answer is graded and returned but no mastery row is invented.
-        if (card.Lesson.CategoryId is { } categoryId)
+        if (card.Lesson.CategoryId is { } categoryId && !alreadyGraded)
         {
-            await ApplyMasteryAsync(userId, categoryId, certId, isCorrect, _clock.GetUtcNow(), cancellationToken);
+            var now = _clock.GetUtcNow();
+            await ApplyMasteryAsync(userId, categoryId, certId, isCorrect, now, cancellationToken);
+
+            db.LearnerLessonMicroChecks.Add(new LearnerLessonMicroCheck
+            {
+                UserId = userId,
+                CardId = cardId,
+                IsCorrect = isCorrect,
+                AnsweredAt = now,
+            });
+            await db.SaveChangesAsync(cancellationToken);
         }
 
         return new LessonMicroCheckAnswer(isCorrect, card.CorrectOption, card.Explanation, card.Lesson.CategoryId);
