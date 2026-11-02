@@ -30,15 +30,98 @@ public class AdminExamStudioTests : PlaywrightTestBase
         await _studioPage.GotoAsync(1);
         await Expect(Page).ToHaveURLAsync(new Regex(@"/admin/exams/\d+/studio", RegexOptions.IgnoreCase));
 
-        // Verify the 3-panel layout: Left Rail, Center Workstation, Right Audit
+        // #159: two panes. The rail and the workstation; the audit is docked inside the
+        // workstation so the publish gate stays visible without costing a third of the screen.
         await Expect(_studioPage.LeftRail).ToBeVisibleAsync();
         await Expect(_studioPage.CenterWorkstation).ToBeVisibleAsync();
         await Expect(_studioPage.RightAudit).ToBeVisibleAsync();
+        Assert.That(await Page.Locator("#studio-workstation #studio-right-audit").CountAsync(), Is.EqualTo(1),
+            "the publish audit belongs inside the workstation now");
 
         // Verify rail items and question counters
         await Expect(_studioPage.RailTotalCount).ToBeVisibleAsync();
         var sectionCount = await _studioPage.RailSections.CountAsync();
         Assert.That(sectionCount, Is.GreaterThan(0), "Exam Studio should render at least one section in the curriculum rail.");
+    }
+
+    [Test]
+    public async Task Should_Show_One_Category_Dropdown_And_Fourteen_Controls_Per_Mcq()
+    {
+        await _loginPage.GotoAsync();
+        await _loginPage.LoginAsync("admin@demo.local", "Demo1234!");
+        await _studioPage.GotoAsync(1);
+
+        var card = Page.Locator(".question-card[data-question-type='mcq']").First;
+        await Expect(card).ToBeVisibleAsync();
+
+        Assert.That(await card.Locator("[data-field='CategoryId']").CountAsync(), Is.EqualTo(1),
+            "one Category dropdown per question is the ticket's rule");
+
+        // Chromium keeps layout boxes for the children of a closed <details>, so a bare
+        // offsetParent check would still count the collapsed rationale block. Excluding them is
+        // what "the author sees" means.
+        var visible = await card.EvaluateAsync<int>(@"el => Array.from(el.querySelectorAll('input,select,textarea,button'))
+            .filter(c => c.offsetParent !== null && !c.closest('details:not([open])')).length");
+        Assert.That(visible, Is.LessThanOrEqualTo(14),
+            "a 4-option MCQ used to show 18 controls; it must not exceed 14");
+    }
+
+    [Test]
+    public async Task Should_Refuse_A_New_Cluster_On_A_Locked_Exam_And_Say_Why()
+    {
+        // #159 must not regress the structural lock (#157). Exam 1 has a finished attempt in the
+        // demo seed, so adding questions is refused with the #157 message that names the count.
+        await _loginPage.GotoAsync();
+        await _loginPage.LoginAsync("admin@demo.local", "Demo1234!");
+        await _studioPage.GotoAsync(1);
+
+        var sectionId = await Page.Locator(".studio-section-tab").First.GetAttributeAsync("data-section-id");
+        Assert.That(sectionId, Is.Not.Null);
+
+        var response = await Page.EvaluateAsync<System.Text.Json.JsonElement>(@"async (sid) => {
+            const token = document.querySelector('#studio-csrf-holder input[name=""__RequestVerificationToken""]').value;
+            const res = await fetch('/admin/exams/1/clusters', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+              body: JSON.stringify({ sectionId: Number(sid), questionCount: 1, unitNumber: 1 })
+            });
+            return { status: res.status, body: await res.json() };
+        }", sectionId);
+
+        Assert.That(response.GetProperty("status").GetInt32(), Is.EqualTo(400));
+        var message = response.GetProperty("body").GetProperty("message").GetString();
+        Assert.That(message, Does.Contain("structure is locked"));
+        Assert.That(message, Does.Contain("learner attempt has already finished it"));
+    }
+
+    [Test]
+    public async Task Should_Pick_Audio_With_A_File_Picker_And_Show_The_Rejection_For_A_Wrong_Type()
+    {
+        // #159: a typed path failed silently. The picker must answer: either the asset appears, or
+        // the API's refusal is shown in place.
+        await _loginPage.GotoAsync();
+        await _loginPage.LoginAsync("admin@demo.local", "Demo1234!");
+        await _studioPage.GotoAsync(1);
+
+        var fileInput = Page.Locator("input[type='file'][accept='audio/*'][onchange*='uploadGroupAudioFile']").First;
+        Assert.That(await fileInput.CountAsync(), Is.GreaterThan(0), "each audio group needs a real audio picker");
+
+        var groupId = await fileInput.EvaluateAsync<string>(@"el => el.getAttribute('onchange').replace(/[^0-9]/g, '')");
+        var status = Page.Locator($"#slice-status-{groupId}");
+        var path = Page.Locator($"#audio-path-{groupId}");
+        var before = await path.InputValueAsync();
+
+        await fileInput.SetInputFilesAsync(new FilePayload
+        {
+            Name = "not-audio.pdf",
+            MimeType = "application/pdf",
+            Buffer = "not an audio file"u8.ToArray()
+        });
+
+        await Expect(status).ToContainTextAsync("not supported");
+        await Expect(status).ToHaveAttributeAsync("data-state", "error");
+        Assert.That(await path.InputValueAsync(), Is.EqualTo(before),
+            "a rejected file must not overwrite the stored path");
     }
 
     [Test]

@@ -2,15 +2,13 @@
   var config = JSON.parse(document.getElementById("studio-csrf-holder").dataset.configuration);
   var examId = config.ExamId;
   var currentSectionId = config.CurrentSectionId;
-  var activeSlicerGroupId = null;
-  var activeSlicerSectionId = null;
-  var stagedSlicerStarts = Object.create(null);
+  var stagedSliceStarts = Object.create(null);
   var isSaving = false;
   var saveDebounceTimer = null;
   var statusIndicator = document.getElementById('autosave-status');
 
-  function setSlicerStatus(sectionId, message, state) {
-    var status = document.getElementById('slicer-status-' + sectionId);
+  function setSliceStatus(groupId, message, state) {
+    var status = document.getElementById('slice-status-' + groupId);
     if (!status) return;
 
     status.textContent = message;
@@ -37,14 +35,20 @@
     }
   }, true);
 
+  // Selecting a question pauses playback — but not the two buttons that read the player's
+  // position, and not the player itself: pausing there would erase the position being marked.
+  function isPlaybackControl(target) {
+    return !!(target.closest && target.closest('.audio-slicer, .studio-audio-slot, [data-slice], audio'));
+  }
+
   document.getElementById('studio-workstation')?.addEventListener('click', function(event) {
-    if (event.target.closest('.question-card, .card-editor')) {
+    if (!isPlaybackControl(event.target) && event.target.closest('.question-card, .card-editor')) {
       pauseStudioAudio(null);
     }
   });
 
   document.getElementById('studio-workstation')?.addEventListener('focusin', function(event) {
-    if (event.target.closest('.question-card, .card-editor')) {
+    if (!isPlaybackControl(event.target) && event.target.closest('.question-card, .card-editor')) {
       pauseStudioAudio(null);
     }
   });
@@ -53,6 +57,21 @@
     var input = document.querySelector('#studio-csrf-holder input[name="__RequestVerificationToken"]')
       || document.querySelector('input[name="__RequestVerificationToken"]');
     return input ? input.value : '';
+  }
+
+  /**
+   * A refused request carries its reason in the ProblemDetails body — the structural lock (#157)
+   * names the finished attempts, a rejected upload names the format. A bare "HTTP 400" hides it.
+   */
+  async function apiErrorMessage(res) {
+    var message = 'HTTP ' + res.status;
+    try {
+      var data = await res.json();
+      if (data && (data.message || data.title || data.detail)) {
+        message = data.message || data.title || data.detail;
+      }
+    } catch (_) {}
+    return message;
   }
 
   function normalizeMediaUrl(url) {
@@ -302,16 +321,7 @@
       body: JSON.stringify(payload)
     })
     .then(async function(res) {
-      if (!res.ok) {
-        var errDetail = 'HTTP ' + res.status;
-        try {
-          var data = await res.json();
-          if (data && (data.message || data.title || data.detail)) {
-            errDetail = data.message || data.title || data.detail;
-          }
-        } catch (_) {}
-        throw new Error(errDetail);
-      }
+      if (!res.ok) throw new Error(await apiErrorMessage(res));
       return res.json();
     })
     .then(function() {
@@ -371,7 +381,7 @@
       });
   }
 
-  window.saveSingleGroup = function(groupId, slicerSectionId) {
+  window.saveSingleGroup = function(groupId, fromSliceMark) {
     var card = document.getElementById('group-card-' + groupId);
     if (!card) return;
 
@@ -383,8 +393,8 @@
     var endInput = card.querySelector('[data-field="AudioEndMs"]');
     var startMs = startInput?.value;
     var endMs = endInput?.value;
-    var sliceWasStaged = Object.prototype.hasOwnProperty.call(stagedSlicerStarts, groupId);
-    if (slicerSectionId === undefined && sliceWasStaged) {
+    var sliceWasStaged = Object.prototype.hasOwnProperty.call(stagedSliceStarts, groupId);
+    if (!fromSliceMark && sliceWasStaged) {
       startMs = startInput?.getAttribute('data-saved-value');
       endMs = endInput?.getAttribute('data-saved-value');
     }
@@ -418,38 +428,29 @@
       body: JSON.stringify(payload)
     })
     .then(async function(res) {
-      if (!res.ok) {
-        var errDetail = 'HTTP ' + res.status;
-        try {
-          var data = await res.json();
-          if (data && (data.message || data.title || data.detail)) {
-            errDetail = data.message || data.title || data.detail;
-          }
-        } catch (_) {}
-        throw new Error(errDetail);
-      }
+      if (!res.ok) throw new Error(await apiErrorMessage(res));
       return res.json();
     })
     .then(function() {
       markSaved();
       card.setAttribute('data-unit-number', unitNumber);
-      if (slicerSectionId !== undefined) {
-        delete stagedSlicerStarts[groupId];
+      if (fromSliceMark) {
+        delete stagedSliceStarts[groupId];
         if (startInput) startInput.setAttribute('data-saved-value', startInput.value);
         if (endInput) endInput.setAttribute('data-saved-value', endInput.value);
-        setSlicerStatus(slicerSectionId, 'Saved', 'success');
+        setSliceStatus(groupId, 'Saved', 'success');
       }
       refreshAudit();
     })
     .catch(function(err) {
       markSaveFailed(err.message);
-      if (slicerSectionId !== undefined) {
-        setSlicerStatus(slicerSectionId, 'Save failed: ' + err.message, 'error');
+      if (fromSliceMark) {
+        setSliceStatus(groupId, 'Save failed: ' + err.message, 'error');
       }
     });
   };
 
-  // --- Visual Audio Slicer Widget Mechanics ---
+  // --- Audio slice from the section player ---
   function formatTime(sec) {
     if (isNaN(sec) || sec < 0) sec = 0;
     var m = Math.floor(sec / 60);
@@ -468,36 +469,31 @@
     return Number.isInteger(milliseconds) && milliseconds >= 0 ? milliseconds : null;
   }
 
-  function getTargetGroupId(sectionId) {
-    if (activeSlicerGroupId && String(activeSlicerSectionId) === String(sectionId)) {
-      return activeSlicerGroupId;
-    }
-
-    return document.querySelector('#ws-sec-' + sectionId + ' .card-editor')?.getAttribute('data-group-id');
+  function groupSectionId(groupId) {
+    var card = document.getElementById('group-card-' + groupId);
+    return card ? card.getAttribute('data-section-id') : null;
   }
 
-  window.setActiveSlicerGroup = function(groupId, sectionId) {
-    activeSlicerGroupId = groupId;
-    activeSlicerSectionId = sectionId;
-    var grpCard = document.getElementById('group-card-' + groupId);
-    if (!grpCard) return;
+  function groupPlayer(groupId) {
+    var secId = groupSectionId(groupId);
+    return secId ? document.getElementById('slicer-audio-' + secId) : null;
+  }
 
-    var audio = document.getElementById('slicer-audio-' + sectionId);
-    var grpAudioPath = grpCard.querySelector('[data-field="AudioPath"]')?.value;
-    if (audio && grpAudioPath) {
-      var normPath = normalizeMediaUrl(grpAudioPath);
-      if (audio.getAttribute('src') !== normPath) {
-        audio.src = normPath;
-        var label = document.getElementById('slicer-track-label-' + sectionId);
-        if (label) label.textContent = normPath;
-      }
-    }
+  function readSlice(groupId) {
+    return {
+      start: readMilliseconds(document.getElementById('start-ms-' + groupId)),
+      end: readMilliseconds(document.getElementById('end-ms-' + groupId))
+    };
+  }
 
-    var startVal = grpCard.querySelector('[data-field="AudioStartMs"]')?.value;
-    var endVal = grpCard.querySelector('[data-field="AudioEndMs"]')?.value;
-    updateSlicerRegion(sectionId, readMilliseconds({ value: startVal || '' }), readMilliseconds({ value: endVal || '' }));
-    setSlicerStatus(sectionId, '', 'info');
-  };
+  function renderSlice(groupId) {
+    var readout = document.getElementById('slice-readout-' + groupId);
+    if (!readout) return;
+    var slice = readSlice(groupId);
+    readout.textContent = slice.start !== null && slice.end !== null && slice.end > slice.start
+      ? formatTime(slice.start / 1000) + ' → ' + formatTime(slice.end / 1000)
+      : 'No slice — the whole track plays';
+  }
 
   function updateSlicerRegion(secId, startMs, endMs) {
     var region = document.getElementById('slicer-region-' + secId);
@@ -533,7 +529,12 @@
 
     if (audio.paused) {
       audio.play().catch(function() {
-        setSlicerStatus(secId, 'Audio playback could not be started.', 'error');
+        var status = document.getElementById('slicer-status-' + secId);
+        if (status) {
+          status.textContent = 'Audio playback could not be started.';
+          status.hidden = false;
+          status.setAttribute('data-state', 'error');
+        }
       });
     } else {
       audio.pause();
@@ -551,7 +552,7 @@
     audio.currentTime = pct * audio.duration;
   };
 
-  // Attach timeupdate to slicer audio
+  // Attach timeupdate to the section players
   document.querySelectorAll('[id^="slicer-audio-"]').forEach(function(audio) {
     var secId = audio.id.replace('slicer-audio-', '');
     var syncPlayButton = function() {
@@ -562,13 +563,7 @@
     audio.addEventListener('play', syncPlayButton);
     audio.addEventListener('pause', syncPlayButton);
     audio.addEventListener('loadedmetadata', function() {
-      var groupId = getTargetGroupId(secId);
-      var group = groupId ? document.getElementById('group-card-' + groupId) : null;
-      updateSlicerRegion(
-        secId,
-        readMilliseconds(group?.querySelector('[data-field="AudioStartMs"]')),
-        readMilliseconds(group?.querySelector('[data-field="AudioEndMs"]'))
-      );
+      updateSlicerRegion(secId, null, null);
     });
 
     audio.addEventListener('timeupdate', function() {
@@ -591,85 +586,46 @@
     });
   });
 
-  window.markCurrentStart = function(secId) {
-    var audio = document.getElementById('slicer-audio-' + secId);
+  /**
+   * #159: the two buttons that replace typing milliseconds. Each takes the section player's
+   * current position — floor, not round, so a marked start can never land after the audio the
+   * author was listening to — and writes half the slice. The end button saves both halves, because
+   * CK_QGroups_AudioSlice rejects a start without an end.
+   */
+  window.markGroupSliceStart = function(groupId) {
+    var audio = groupPlayer(groupId);
     if (!audio) return;
     var ms = Math.floor(audio.currentTime * 1000);
     if (!isFinite(ms) || ms < 0) return;
-    var targetGroupId = getTargetGroupId(secId);
-    if (!targetGroupId) return;
 
-    var input = document.getElementById('start-ms-' + targetGroupId);
+    var input = document.getElementById('start-ms-' + groupId);
     if (!input) return;
 
-    input.value = ms;
-    stagedSlicerStarts[targetGroupId] = ms;
-    var endMs = readMilliseconds(document.getElementById('end-ms-' + targetGroupId));
-    updateSlicerRegion(secId, ms, endMs);
-    setSlicerStatus(secId, 'Start marked: ' + formatClock(ms) + ' — click Mark End to save', 'info');
+    input.value = String(ms);
+    stagedSliceStarts[groupId] = ms;
+    var slice = readSlice(groupId);
+    updateSlicerRegion(groupSectionId(groupId), ms, slice.end);
+    renderSlice(groupId);
+    setSliceStatus(groupId, 'Start ' + formatClock(ms) + ' — play on, then Mark end', 'info');
   };
 
-  window.markCurrentEnd = function(secId) {
-    var audio = document.getElementById('slicer-audio-' + secId);
+  window.markGroupSliceEnd = function(groupId) {
+    var audio = groupPlayer(groupId);
     if (!audio) return;
     var endMs = Math.floor(audio.currentTime * 1000);
-    var targetGroupId = getTargetGroupId(secId);
-    if (!targetGroupId) {
-      setSlicerStatus(secId, 'End time must be after Start time (00:00)', 'error');
-      return;
-    }
-
-    var startInput = document.getElementById('start-ms-' + targetGroupId);
-    var endInput = document.getElementById('end-ms-' + targetGroupId);
+    var startInput = document.getElementById('start-ms-' + groupId);
+    var endInput = document.getElementById('end-ms-' + groupId);
     var startMs = readMilliseconds(startInput);
     if (!startInput || !endInput || startMs === null || !isFinite(endMs) || endMs <= startMs) {
-      setSlicerStatus(secId, 'End time must be after Start time (' + formatClock(startMs === null ? 0 : startMs) + ')', 'error');
+      setSliceStatus(groupId, 'End must come after start (' + formatClock(startMs === null ? 0 : startMs) + ')', 'error');
       return;
     }
 
-    endInput.value = endMs;
-    updateSlicerRegion(secId, startMs, endMs);
-    setSlicerStatus(secId, 'Saving...', 'info');
-    saveSingleGroup(parseInt(targetGroupId, 10), secId);
-  };
-
-  window.previewCurrentSlice = function(secId) {
-    var targetGroupId = getTargetGroupId(secId);
-    if (!targetGroupId) return;
-
-    var startMs = readMilliseconds(document.getElementById('start-ms-' + targetGroupId));
-    var endMs = readMilliseconds(document.getElementById('end-ms-' + targetGroupId));
-    var audio = document.getElementById('slicer-audio-' + secId);
-    if (!audio || startMs === null || endMs === null || endMs <= startMs) {
-      setSlicerStatus(secId, 'Set valid Start and End times before previewing the slice.', 'error');
-      return;
-    }
-
-    audio.currentTime = startMs / 1000;
-    audio.play().catch(function() {
-      setSlicerStatus(secId, 'Audio playback could not be started.', 'error');
-    });
-
-    var checkSliceEnd = function() {
-      if (audio.currentTime >= endMs / 1000) {
-        audio.pause();
-        audio.removeEventListener('timeupdate', checkSliceEnd);
-      }
-    };
-    audio.addEventListener('timeupdate', checkSliceEnd);
-  };
-
-  window.clearCurrentSlice = function(secId) {
-    var targetGroupId = getTargetGroupId(secId);
-    if (!targetGroupId) return;
-
-    var sInput = document.getElementById('start-ms-' + targetGroupId);
-    var eInput = document.getElementById('end-ms-' + targetGroupId);
-    if (sInput) sInput.value = '';
-    if (eInput) eInput.value = '';
-    updateSlicerRegion(secId, null, null);
-    setSlicerStatus(secId, 'Saving...', 'info');
-    saveSingleGroup(parseInt(targetGroupId, 10), secId);
+    endInput.value = String(endMs);
+    updateSlicerRegion(groupSectionId(groupId), startMs, endMs);
+    renderSlice(groupId);
+    setSliceStatus(groupId, 'Saving...', 'info');
+    saveSingleGroup(parseInt(groupId, 10), true);
   };
 
   // --- Upload Audio / Media Handling ---
@@ -719,8 +675,8 @@
       },
       body: formData
     })
-    .then(function(res) {
-      if (!res.ok) throw new Error('Upload failed');
+    .then(async function(res) {
+      if (!res.ok) throw new Error(await apiErrorMessage(res));
       return Promise.all([res.json(), durationProbe]);
     })
     .then(function(uploaded) {
@@ -750,11 +706,60 @@
         body: audioFormData
       });
     })
-    .then(function() {
+    .then(async function(res) {
+      if (!res.ok) throw new Error(await apiErrorMessage(res));
       markSaved();
     })
     .catch(function(err) {
       markSaveFailed('Audio upload failed: ' + err.message);
+    });
+  };
+
+  /**
+   * #159: a group's own track, chosen with a file picker. The uploaded file replaces whatever
+   * AudioPath held, the label shows the file without the author typing a path, and the group is
+   * saved at once so the audit's SEC_AUDIO_MISSING check sees it. A rejected file type comes back
+   * as the API's 400 message and is shown in place, not swallowed.
+   */
+  window.uploadGroupAudioFile = function(inputEl, groupId) {
+    if (!inputEl.files || inputEl.files.length === 0) return;
+    var file = inputEl.files[0];
+
+    var formData = new FormData();
+    formData.append('file', file);
+
+    markSaving();
+    setSliceStatus(groupId, 'Uploading ' + file.name + '...', 'info');
+    fetch('/admin/exams/' + examId + '/media', {
+      method: 'POST',
+      headers: {
+        'RequestVerificationToken': getCsrfToken()
+      },
+      body: formData
+    })
+    .then(async function(res) {
+      if (!res.ok) throw new Error(await apiErrorMessage(res));
+      return res.json();
+    })
+    .then(function(result) {
+      var mediaUrl = normalizeMediaUrl(result.url || result.path);
+      var pathInput = document.getElementById('audio-path-' + groupId);
+      if (pathInput) pathInput.value = mediaUrl;
+
+      var name = document.getElementById('audio-name-' + groupId);
+      if (name) name.textContent = mediaUrl;
+
+      var audio = groupPlayer(groupId);
+      if (audio) audio.src = mediaUrl;
+
+      markSaved();
+      setSliceStatus(groupId, 'Saved ' + (result.fileName || file.name), 'success');
+      saveSingleGroup(groupId);
+    })
+    .catch(function(err) {
+      markSaveFailed('Audio upload failed: ' + err.message);
+      setSliceStatus(groupId, 'Audio upload failed: ' + err.message, 'error');
+      inputEl.value = '';
     });
   };
 
@@ -772,6 +777,7 @@
     formData.append('file', file);
 
     markSaving();
+    setSliceStatus(groupId, 'Uploading ' + file.name + '...', 'info');
     fetch('/admin/exams/' + examId + '/media', {
       method: 'POST',
       headers: {
@@ -779,8 +785,8 @@
       },
       body: formData
     })
-    .then(function(res) {
-      if (!res.ok) throw new Error('Upload failed');
+    .then(async function(res) {
+      if (!res.ok) throw new Error(await apiErrorMessage(res));
       return res.json();
     })
     .then(function(result) {
@@ -791,16 +797,20 @@
 
       var preview = document.getElementById('preview-img-' + groupId);
       var placeholder = document.getElementById('dropzone-placeholder-' + groupId);
+      var name = document.getElementById('img-name-' + groupId);
       if (preview) {
         preview.src = mediaUrl;
         preview.style.display = 'block';
       }
       if (placeholder) placeholder.style.display = 'none';
+      if (name) name.textContent = 'Replace photo';
 
+      setSliceStatus(groupId, 'Saved ' + (result.fileName || file.name), 'success');
       saveSingleGroup(groupId);
     })
     .catch(function(err) {
       markSaveFailed('Image upload failed: ' + err.message);
+      setSliceStatus(groupId, 'Image upload failed: ' + err.message, 'error');
     });
   }
 
@@ -1005,8 +1015,8 @@
         unitNumber: unitNum
       })
     })
-    .then(function(res) {
-      if (!res.ok) throw new Error('HTTP ' + res.status);
+    .then(async function(res) {
+      if (!res.ok) throw new Error(await apiErrorMessage(res));
       return res.json();
     })
     .then(function() {
@@ -1029,8 +1039,8 @@
         'RequestVerificationToken': getCsrfToken()
       }
     })
-    .then(function(res) {
-      if (!res.ok) throw new Error('HTTP ' + res.status);
+    .then(async function(res) {
+      if (!res.ok) throw new Error(await apiErrorMessage(res));
       return res.json();
     })
     .then(function() {
@@ -1056,8 +1066,8 @@
         'RequestVerificationToken': getCsrfToken()
       }
     })
-    .then(function(res) {
-      if (!res.ok) throw new Error('HTTP ' + res.status);
+    .then(async function(res) {
+      if (!res.ok) throw new Error(await apiErrorMessage(res));
       return res.json();
     })
     .then(function() {
@@ -1244,14 +1254,15 @@
         if (issuesList) {
           issuesList.innerHTML = '';
           if (audit.issues.length === 0 && audit.canPublish) {
-            issuesList.innerHTML = '<li class="audit-item audit-item--success"><span>&#10004;</span><div>All certificate invariants satisfied. Ready to publish!</div></li>';
+            issuesList.innerHTML = '<li class="audit-item audit-item--success"><span class="audit-item__mark">PASSED</span><div>All certificate invariants satisfied. Ready to publish!</div></li>';
           } else {
             audit.issues.forEach(function(iss) {
               var li = document.createElement('li');
               li.className = 'audit-item ' + (iss.severity === 'error' ? 'audit-item--error' : 'audit-item--warning');
               li.id = 'audit-issue-' + iss.code;
               var jumpHtml = iss.elementTarget ? '<span class="audit-jump-link" onclick="jumpToAuditElement(\'' + iss.elementTarget + '\')">Jump to issue &rarr;</span>' : '';
-              li.innerHTML = '<span>' + (iss.severity === 'error' ? '&#10008;' : '&#9888;') + '</span><div><div>' + iss.message + '</div>' + jumpHtml + '</div>';
+              // #159: a word, not a raw glyph (AGENTS.md §5 bans unicode marks).
+              li.innerHTML = '<span class="audit-item__mark">' + (iss.severity === 'error' ? 'BLOCK' : 'WARN') + '</span><div><div>' + iss.message + '</div>' + jumpHtml + '</div>';
               issuesList.appendChild(li);
             });
           }

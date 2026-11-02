@@ -31,7 +31,8 @@ function page(asset, options = {}) {
     location: { search: '', reload() { this.reloaded = true; } },
     setTimeout() { return 1; }, clearTimeout() {}, alert() {}, confirm: () => true,
     addEventListener() {}, scrollTo() {},
-    fetch: async (url, init) => { requests.push({ url, init }); return { ok: true, json: async () => ({ success: true, questions: [{ index: 1, isValid: true, stem: "Prompt", options: [], issues: [] }], globalIssues: [] }) }; },
+    FormData: class { append() {} },
+    fetch: async (url, init) => { requests.push({ url, init }); return { ok: true, json: async () => ({ success: true, questions: [{ index: 1, isValid: true, stem: "Prompt", options: [], issues: [] }], globalIssues: [], canPublish: false, totalQuestions: 0, expectedQuestions: 0, blockingErrorCount: 1, warningCount: 0, issues: [] }) }; },
     ...options
   };
   context.window = context;
@@ -94,4 +95,96 @@ test('wizard step navigation still changes the bound step and visible panel', ()
   p.context.goToStep(2);
   assert.equal(p.get('currentStep').value, 2);
   assert.equal(p.get('step-2').style.display, 'block');
+});
+test('the two slice buttons store the player position as whole milliseconds', async () => {
+  // #159: the author marks the slice on the player instead of typing milliseconds. The stored
+  // value must be the position they heard, floored — a rounded-up start would begin after it.
+  const p = page('exam-studio');
+  const card = p.get('group-card-42');
+  card.setAttribute('data-section-id', '7');
+  const byField = { AudioStartMs: p.get('start-ms-42'), AudioEndMs: p.get('end-ms-42') };
+  card.querySelector = selector => byField[(/data-field="([^"]+)"/.exec(selector) || [])[1]] || null;
+
+  const audio = p.get('slicer-audio-7');
+  audio.duration = 300;
+  audio.currentTime = 12.3456;
+
+  p.context.markGroupSliceStart(42);
+  assert.equal(p.get('start-ms-42').value, '12345');
+
+  audio.currentTime = 47.9;
+  p.context.markGroupSliceEnd(42);
+  await flush();
+  assert.equal(p.get('end-ms-42').value, '47900');
+
+  const saved = p.requests.find(r => r.url === '/admin/exams/42/studio/group/42');
+  assert.equal(saved.init.method, 'PUT');
+  const payload = JSON.parse(saved.init.body);
+  assert.equal(payload.audioStartMs, 12345);
+  assert.equal(payload.audioEndMs, 47900);
+  assert.equal(saved.init.headers.RequestVerificationToken, 'csrf');
+});
+test('an end marked before the start is refused and nothing is saved', async () => {
+  // CK_QGroups_AudioSlice rejects start >= end, so the button refuses in place instead of
+  // letting the group save fail on a constraint.
+  const p = page('exam-studio');
+  const card = p.get('group-card-42');
+  card.setAttribute('data-section-id', '7');
+  const audio = p.get('slicer-audio-7');
+  audio.duration = 300;
+
+  audio.currentTime = 30;
+  p.context.markGroupSliceStart(42);
+  audio.currentTime = 12;
+  p.context.markGroupSliceEnd(42);
+  await flush();
+
+  assert.equal(p.requests.filter(r => r.url.includes('/studio/group/')).length, 0);
+  assert.match(p.get('slice-status-42').textContent, /End must come after start/);
+  assert.equal(p.get('slice-status-42').hidden, false);
+});
+test('a structurally locked exam shows the #157 refusal message, not a bare HTTP 400', async () => {
+  // #159 rebuilt the studio's add-question path. The structural lock still refuses — but the
+  // author must be told why, with the message that names the finished attempts (#157).
+  const p = page('exam-studio', {
+    fetch: async (url) => {
+      if (url.endsWith('/clusters')) {
+        return {
+          ok: false, status: 400,
+          json: async () => ({
+            message: "This exam's structure is locked: 1 learner attempt has already finished it.",
+            code: 'EXAM_HAS_FINISHED_ATTEMPTS'
+          })
+        };
+      }
+      return { ok: true, json: async () => ({ success: true }) };
+    }
+  });
+
+  p.context.createInitialCluster(7, 'single', 1);
+  await flush();
+
+  assert.equal(p.requests.filter(r => r.url === '/admin/exams/42/reorder').length, 0);
+  assert.match(p.get('autosave-status').textContent, /structure is locked/);
+  assert.match(p.get('autosave-status').textContent, /learner attempt has already finished it/);
+});
+test('a rejected upload shows the API message instead of failing silently', async () => {
+  // #159: a wrong file type used to leave the old path in place with no sign of the refusal.
+  const p = page('exam-studio', {
+    fetch: async (url) => {
+      if (url.endsWith('/media')) {
+        return { ok: false, status: 400, json: async () => ({ message: "File format '.pdf' is not supported." }) };
+      }
+      return { ok: true, json: async () => ({ success: true }) };
+    }
+  });
+  const input = Object.assign(element(), { files: [{ name: 'notes.pdf', size: 10 }] });
+
+  p.context.uploadGroupAudioFile(input, 42);
+  await flush();
+
+  const status = p.get('slice-status-42');
+  assert.match(status.textContent, /File format '\.pdf' is not supported/);
+  assert.equal(status.getAttribute('data-state'), 'error');
+  assert.equal(p.get('audio-path-42').value, '', 'a rejected file must not overwrite the stored path');
 });
