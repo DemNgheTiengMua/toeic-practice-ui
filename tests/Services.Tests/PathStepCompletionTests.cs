@@ -374,4 +374,61 @@ public sealed class PathStepCompletionTests(DatabaseFixture database)
         Assert.NotNull(first.CompletedAt);
         Assert.Equal("available", second.Status);
     }
+
+    [Fact]
+    public async Task A_step_on_a_reset_path_is_not_reopened_by_a_late_activity()
+    {
+        // Found by review: CloseStepAsync took a bare step and wrote "done" without reading the path.
+        // PracticeService calls it from a session that can still be open when the learner resets the
+        // path, so a late answer marked the reset path's step done and UnlockNextAsync could then
+        // flip the whole path to "completed" - a path the learner never walked.
+        var certCode = Unique("RST");
+        var (certId, _, _, _, _, _) = await SeedCertAsync(certCode);
+        var userId = await SeedLearnerAsync(certId);
+        await GrantCreditsAsync(userId, 20);
+
+        var (paths, _, _, _, db) = CreateServices();
+        var summary = await paths.GeneratePathAsync(userId);
+        var steps = await StepsAsync(db, summary.LearnerPathId!.Value);
+
+        // The learner abandons this path; its steps stay exactly where they are.
+        await database.SqlAsync($"""
+            UPDATE LearnerPaths SET Status = 'reset' WHERE LearnerPathId = {summary.LearnerPathId};
+            """);
+
+        var first = steps[0];
+        await PathStepCompletion.CloseStepAsync(db, first, score: 90m, accuracyPct: 90m);
+
+        await db.Entry(first).ReloadAsync();
+        Assert.NotEqual("done", first.Status);
+        Assert.Null(first.Score);
+
+        await using var reread = DbContextFactory.Create(database.ConnectionString);
+        var path = await reread.LearnerPaths.AsNoTracking()
+            .SingleAsync(p => p.LearnerPathId == summary.LearnerPathId);
+        Assert.Equal("reset", path.Status);
+    }
+
+    [Fact]
+    public async Task Closing_a_step_twice_keeps_the_first_score()
+    {
+        // Idempotence: two activities can finish close together. The second close must not overwrite
+        // the score the first one recorded, nor run the unlock a second time.
+        var certCode = Unique("IDEM");
+        var (certId, _, _, _, _, _) = await SeedCertAsync(certCode);
+        var userId = await SeedLearnerAsync(certId);
+        await GrantCreditsAsync(userId, 20);
+
+        var (paths, _, _, _, db) = CreateServices();
+        var summary = await paths.GeneratePathAsync(userId);
+        var steps = await StepsAsync(db, summary.LearnerPathId!.Value);
+
+        var first = steps[0];
+        await PathStepCompletion.CloseStepAsync(db, first, score: 80m, accuracyPct: 80m);
+        await PathStepCompletion.CloseStepAsync(db, first, score: 20m, accuracyPct: 20m);
+
+        await db.Entry(first).ReloadAsync();
+        Assert.Equal("done", first.Status);
+        Assert.Equal(80m, first.Score);
+    }
 }

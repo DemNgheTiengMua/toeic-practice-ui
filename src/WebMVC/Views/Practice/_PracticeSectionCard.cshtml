@@ -8,6 +8,14 @@
 *@
 @{
     var allResting = Model.TotalCategoryCount > 0 && Model.CategoriesInCooldown >= Model.TotalCategoryCount;
+
+    // The controller formats every cooldown instant in the learner's zone; this only reads it.
+    // Falling back keeps a card rendered without that dictionary readable rather than blank.
+    string NextReviewDue(int sectionId, DateTimeOffset instant) =>
+        ViewData["NextReviewDue"] is IReadOnlyDictionary<int, string> formatted
+            && formatted.TryGetValue(sectionId, out var text)
+                ? text
+                : instant.UtcDateTime.ToString("HH:mm 'UTC' dd MMM");
     var badgeClass = Model.AccuracyPercentage is < 60 ? "badge--danger" : "badge--muted";
 }
 <button type="submit" name="SectionId" value="@Model.SectionId" class="part-card text-left w-100">
@@ -31,12 +39,13 @@
     @if (allResting && Model.NextReviewDueAt is { } due)
     {
       @* Cooldown is the point of the ticket, so the learner is told the moment it lifts rather than
-         finding an empty session. *@
-      <span>All topics resting &mdash; next due @due.UtcDateTime.ToString("HH:mm 'UTC' dd MMM")</span>
+         finding an empty session. The instant is formatted in the learner's own zone by the controller
+         - printing it as UTC told a UTC+7 learner a time seven hours in the past. *@
+      <span>All topics resting &mdash; next due @(NextReviewDue(Model.SectionId, due))</span>
     }
     else if (Model.CategoriesInCooldown > 0 && Model.NextReviewDueAt is { } next)
     {
-      <span>@Model.CategoriesInCooldown of @Model.TotalCategoryCount topics resting &mdash; next due @next.UtcDateTime.ToString("HH:mm 'UTC' dd MMM")</span>
+      <span>@Model.CategoriesInCooldown of @Model.TotalCategoryCount topics resting &mdash; next due @(NextReviewDue(Model.SectionId, next))</span>
     }
     else
     {

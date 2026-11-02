@@ -106,6 +106,7 @@ else
         <div class="grid-2">
           @foreach (var sec in group.Sections)
           {
+            ViewData["NextReviewDue"] = Model.NextReviewDueDisplay;
             <partial name="_PracticeSectionCard" model="sec" />
           }
         </div>

@@ -34,10 +34,11 @@
           <div class="dashboard-skill__score">
             @if (skill.LatestScaledScore.HasValue)
             {
-              <span class="dashboard-skill__figure font-mono">@skill.LatestScaledScore</span>
+              @* Divide by the certificate's display factor - see _DashboardGoal.cshtml. *@
+              <span class="dashboard-skill__figure font-mono">@ScoreDisplay.Format(skill.LatestScaledScore.Value, skill.ScoreDisplayFactor)</span>
               @if (skill.MaxScaledScore.HasValue)
               {
-                <span class="dashboard-skill__ceiling font-mono">/ @skill.MaxScaledScore</span>
+                <span class="dashboard-skill__ceiling font-mono">/ @ScoreDisplay.Format(skill.MaxScaledScore.Value, skill.ScoreDisplayFactor)</span>
               }
               <span class="dashboard-skill__label">latest graded</span>
             }

@@ -1,4 +1,5 @@
 using BusinessObjects;
+using Contracts;
 using Microsoft.EntityFrameworkCore;
 
 namespace Services;
@@ -28,6 +29,11 @@ public sealed partial class LearnerService
             .ThenBy(s => s.SkillId)
             .Select(s => new { s.SkillId, s.Code, s.Name, s.Modality, s.MaxScaledScore })
             .ToListAsync(cancellationToken);
+
+        // #159 review: a stored score is not the number the learner reads. A certificate that averages
+        // to a half step keeps marks in tenths (IELTS 8.5 stores 85), so the card has to say "85 / 90"
+        // only after dividing - which is what ScoreDisplay.Format does everywhere else.
+        var factor = await ScoreDisplayFactorAsync(certId, cancellationToken);
 
         if (skills.Count == 0)
         {
@@ -112,7 +118,21 @@ public sealed partial class LearnerService
                         .ThenBy(c => c.Name, StringComparer.Ordinal)
                         .Take(WeakestCategoriesPerSkill)
                         .ToList()
-                    : []))
+                    : [],
+                factor))
             .ToList();
+    }
+
+    /// <summary>#159: how many stored units make one reported point for this certificate. One query,
+    /// shared by the goal block and the skill cards, so neither can print a tenths score whole.</summary>
+    private async Task<int> ScoreDisplayFactorAsync(int certId, CancellationToken cancellationToken)
+    {
+        var rule = await db.Certificates
+            .AsNoTracking()
+            .Where(c => c.CertId == certId)
+            .Select(c => c.ScoreAggregationRule)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return ScoreDisplay.FactorFor(rule);
     }
 }

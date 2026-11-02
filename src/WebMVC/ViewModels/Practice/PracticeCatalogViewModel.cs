@@ -11,6 +11,13 @@ public sealed record PracticeCatalogViewModel(PracticeCatalogDto Catalog, string
 
     public string UnfinishedStartedAtDisplay { get; init; } = "";
 
+    /// <summary>#159 review: the cooldown card told a UTC+7 learner "next due 02:00 UTC" when their
+    /// clock said 09:00. Instants are stored UTC and only <see cref="WebMVC.Formatters.DateTimeFormatter"/>
+    /// converts them for display, so the controller formats them here and the view prints a string.
+    /// Keyed by section id because that is what the card renders one at a time.</summary>
+    public IReadOnlyDictionary<int, string> NextReviewDueDisplay { get; init; } =
+        new Dictionary<int, string>();
+
     // #149: the empty state asks whether the certificate has any sections at all, not whether it has
     // Listening or Reading ones - a certificate with a single Writing skill used to read "No questions".
     public bool HasAnySections => Catalog.ListeningSections.Count + Catalog.ReadingSections.Count

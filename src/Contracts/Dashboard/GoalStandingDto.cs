@@ -19,4 +19,5 @@ public sealed record GoalStandingDto(
     int TotalPathSteps,
     int? CurrentWeekNumber,
     int WeekPlannedMinutes,
-    int WeekCompletedMinutes);
+    int WeekCompletedMinutes,
+    int ScoreDisplayFactor = 1);

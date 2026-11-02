@@ -13,6 +13,10 @@ public sealed class DashboardPresentation
     public string TargetDateDisplay { get; }
     public string WeekPaceText { get; }
     public string WeekProgressPercent { get; }
+
+    /// <summary>The same figure as a bare number, for <c>aria-valuenow</c>. A percent string is not
+    /// valid there: ARIA requires a number, and a screen reader can announce nothing at all.</summary>
+    public int WeekProgressValue { get; }
     public string GoalStatusLabel { get; }
     public string GoalStatusBadge { get; }
 
@@ -35,6 +39,12 @@ public sealed class DashboardPresentation
         WeekProgressPercent = goal.WeekPlannedMinutes > 0
             ? $"{Math.Min(100, (int)Math.Round((double)goal.WeekCompletedMinutes / goal.WeekPlannedMinutes * 100))}%"
             : "0%";
+
+        // aria-valuenow must be a bare number; "73%" is invalid ARIA and screen readers announce
+        // nothing or the minimum. Same figure as the string above, computed once.
+        WeekProgressValue = goal.WeekPlannedMinutes > 0
+            ? Math.Min(100, (int)Math.Round((double)goal.WeekCompletedMinutes / goal.WeekPlannedMinutes * 100))
+            : 0;
 
         // The verdict is the stored one, worded for a learner. A goal with no answer is not a
         // refusal: it means the certificate's bands carry no study hours, or there is no deadline.

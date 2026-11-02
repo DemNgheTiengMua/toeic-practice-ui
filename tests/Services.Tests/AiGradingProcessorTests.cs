@@ -276,6 +276,36 @@ public sealed class AiGradingProcessorTests(DatabaseFixture database)
     }
 
     [Fact]
+    public void A_zero_weight_criterion_neither_counts_nor_caps_the_total()
+    {
+        // Found by review: the ceiling was summed before the weight was checked, so a criterion the
+        // admin weighted 0 still widened the denominator. A perfect answer reported 5 out of 10 -
+        // a whitespace criterion silently halving the score. GradingCriteria.Weight has no CHECK
+        // constraint, so only CertificateService clamps it, and that runs on the wizard path alone.
+        var (total, max) = AttemptEngine.WeightedRubricTotal([
+            new AttemptEngine.RubricMark(Score: 0m, MaxScore: 5m, Weight: 0m),
+            new AttemptEngine.RubricMark(Score: 5m, MaxScore: 5m, Weight: 1m)
+        ]);
+
+        Assert.Equal(5m, total);
+        Assert.Equal(5m, max);
+    }
+
+    [Fact]
+    public void A_rubric_whose_every_weight_is_zero_scores_nothing_rather_than_dividing_by_zero()
+    {
+        var (total, max) = AttemptEngine.WeightedRubricTotal([
+            new AttemptEngine.RubricMark(Score: 4m, MaxScore: 5m, Weight: 0m),
+            new AttemptEngine.RubricMark(Score: 5m, MaxScore: 5m, Weight: 0m)
+        ]);
+
+        // No criterion can be weighted, so there is no ratio to report and no ceiling to report it
+        // against. Zero is the honest answer; the caller then places no band (D14).
+        Assert.Equal(0m, total);
+        Assert.Equal(0m, max);
+    }
+
+    [Fact]
     public async Task A_grading_that_omits_a_criterion_is_failed_and_holds_no_feedback()
     {
         // The ticket's acceptance case: a model that drops a criterion must not leave a

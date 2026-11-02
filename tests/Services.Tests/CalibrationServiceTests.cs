@@ -405,4 +405,26 @@ public sealed class CalibrationServiceTests(DatabaseFixture database)
         Assert.NotNull(answer.AnsweredAt);
         Assert.InRange(answer.AnsweredAt!.Value, before, after);
     }
+
+    [Fact]
+    public async Task A_learner_who_improves_stops_being_told_they_diverge()
+    {
+        // Found by review: the evidence query counted every valid answer since the placement with no
+        // window, while EvidenceText promised "on your last {count} practice answers". One bad week
+        // then anchored the percentage forever - the learner improved, the page kept saying otherwise,
+        // and because the proposal is recomputed on every load it was re-proposed indefinitely.
+        var certCode = Unique("CALW");
+        var (userId, _, sectionId) = await SeedPlacedLearnerAsync(certCode);
+
+        // 20 wrong first, then 25 right - a learner who fixed exactly what the proposal described.
+        await SeedPracticeAsync(userId, sectionId, 20, 0, secondsApart: 30);
+        await SeedPracticeAsync(userId, sectionId, 25, 25, secondsApart: 30);
+
+        var (service, _) = CreateServices();
+        var view = await service.GetCalibrationAsync(userId);
+
+        // The last 20 answers are all correct, so there is nothing to calibrate against any more.
+        Assert.Equal(20, view.ValidAnswerCount);
+        Assert.NotEqual(CalibrationReason.Diverged, view.Reason);
+    }
 }

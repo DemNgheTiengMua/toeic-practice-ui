@@ -92,6 +92,28 @@ public static class PathStepCompletion
         decimal? accuracyPct,
         CancellationToken cancellationToken = default)
     {
+        // Idempotent: a step already done is left as it is. Two callers finishing close together
+        // (a mock submission and the last practice answer) otherwise overwrite each other's score and
+        // run the unlock twice.
+        if (step.Status == "done")
+        {
+            return step.StepId;
+        }
+
+        // A step on a path that was reset or already completed must not be reopened by a late
+        // activity. PracticeService calls this by bare step id from a session that can still be open
+        // when the learner resets the path; without this the reset path's step goes done and
+        // UnlockNextAsync can flip the whole path to "completed" - a path the learner never finished.
+        var pathStatus = await db.LearnerPaths
+            .Where(p => p.LearnerPathId == step.LearnerPathId)
+            .Select(p => p.Status)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (pathStatus != LearnerPathStatus.Active.ToCode())
+        {
+            return step.StepId;
+        }
+
         var now = DateTimeOffset.UtcNow;
 
         step.Status = "done";

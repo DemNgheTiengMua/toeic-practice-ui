@@ -9,4 +9,5 @@ public sealed record SkillCardDto(
     ModalityDto Modality,
     int? LatestScaledScore,
     int? MaxScaledScore,
-    IReadOnlyList<SkillCategoryDto> WeakestCategories);
+    IReadOnlyList<SkillCategoryDto> WeakestCategories,
+    int ScoreDisplayFactor = 1);

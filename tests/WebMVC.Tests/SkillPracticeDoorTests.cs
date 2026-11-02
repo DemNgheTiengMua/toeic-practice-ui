@@ -46,6 +46,13 @@ public sealed class SkillPracticeDoorTests : IClassFixture<SkillPracticeDoorTest
         Assert.Equal(1, CountOccurrences(body, "<!DOCTYPE html"));
         Assert.Equal(1, CountOccurrences(body, "class=\"app-topbar\""));
         Assert.Equal(1, CountOccurrences(body, "Sign out"));
+
+        // ...and the door must render the LEARNER shell, not the public marketing one. Both layouts
+        // have one <html>, one topbar and one "Sign out", so the assertions above pass for either -
+        // which is how /writing and /speaking shipped without the five-item sidebar. The sidebar and
+        // the credit badge exist only in _LearnerLayout.
+        Assert.Contains("app-sidebar", body);
+        Assert.Contains("cert-switcher", body);
     }
 
     [Theory]

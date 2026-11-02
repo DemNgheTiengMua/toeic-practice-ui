@@ -314,11 +314,21 @@ public sealed class CalibrationService(
             }
         }
 
-        decimal? accuracy = valid.Count == 0
-            ? null
-            : Math.Round(valid.Count(v => v) * 100m / valid.Count, 2);
+        // EvidenceText promises "on your last N practice answers", and a learner who improves should
+        // stop being told they diverge. Counting every answer since the placement makes one bad week
+        // permanent: 20 wrong then 90 right still reads 90/110 = 82%... but 20 wrong then 20 right
+        // reads 50% and keeps re-proposing. Keep the most recent MinimumValidAnswers instead, so the
+        // window slides with the learner. The rows come from one session-grouped list, so the newest
+        // are the tail of the flattened sequence by timestamp.
+        var recent = valid.Count > MinimumValidAnswers
+            ? valid.Skip(valid.Count - MinimumValidAnswers).ToList()
+            : valid;
 
-        return new Snapshot(placedBand, bands, valid.Count, excluded, accuracy, pathBandCode);
+        decimal? accuracy = recent.Count == 0
+            ? null
+            : Math.Round(recent.Count(v => v) * 100m / recent.Count, 2);
+
+        return new Snapshot(placedBand, bands, recent.Count, excluded, accuracy, pathBandCode);
     }
 
     /// <summary>

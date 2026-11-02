@@ -38,7 +38,8 @@ public static partial class LearnerEndpoints
                     dashboard.Goal.TotalPathSteps,
                     dashboard.Goal.CurrentWeekNumber,
                     dashboard.Goal.WeekPlannedMinutes,
-                    dashboard.Goal.WeekCompletedMinutes),
+                    dashboard.Goal.WeekCompletedMinutes,
+                    dashboard.Goal.ScoreDisplayFactor),
                 dashboard.Skills.Select(s => new SkillCardDto(
                     s.SkillId,
                     s.Code,
@@ -47,7 +48,8 @@ public static partial class LearnerEndpoints
                     s.LatestScaledScore,
                     s.MaxScaledScore,
                     s.WeakestCategories.Select(c => new SkillCategoryDto(
-                        c.Code, c.Name, c.AccuracyPercent, c.Answered)).ToList())).ToList(),
+                        c.Code, c.Name, c.AccuracyPercent, c.Answered)).ToList(),
+                    s.ScoreDisplayFactor)).ToList(),
                 dashboard.AttemptCount,
                 dashboard.PracticeCount,
                 dashboard.UnfinishedAttempt is { } ua

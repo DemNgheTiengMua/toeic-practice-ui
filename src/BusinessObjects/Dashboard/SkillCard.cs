@@ -9,7 +9,8 @@ public sealed record SkillCard(
     Modality Modality,
     int? LatestScaledScore,
     int? MaxScaledScore,
-    IReadOnlyList<SkillCategoryAccuracy> WeakestCategories);
+    IReadOnlyList<SkillCategoryAccuracy> WeakestCategories,
+    int ScoreDisplayFactor = 1);
 
 /// <summary>#159: a category inside a skill card, measured by the same view the weakness analysis
 /// page reads, so the two screens cannot disagree.</summary>

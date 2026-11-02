@@ -379,8 +379,11 @@ public sealed partial class AttemptEngine
         decimal max = 0m, weight = 0m, weightedFraction = 0m;
         foreach (var mark in marks)
         {
-            max += mark.MaxScore;
+            // Skip before counting the ceiling: a criterion with no weight contributes nothing to the
+            // numerator, so counting its MaxScore in the denominator would cap a perfect answer below
+            // full marks (weight 0/1 over max 5/5 used to report 5 out of 10).
             if (mark.MaxScore <= 0m || mark.Weight <= 0m) continue;
+            max += mark.MaxScore;
             weight += mark.Weight;
             weightedFraction += mark.Score / mark.MaxScore * mark.Weight;
         }

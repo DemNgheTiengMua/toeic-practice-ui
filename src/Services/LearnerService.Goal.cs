@@ -139,6 +139,7 @@ public sealed partial class LearnerService
             TotalPathSteps: pathSteps.Count,
             CurrentWeekNumber: currentWeek,
             WeekPlannedMinutes: thisWeek.Sum(s => s.Minutes),
-            WeekCompletedMinutes: thisWeek.Where(s => s.IsDone).Sum(s => s.Minutes));
+            WeekCompletedMinutes: thisWeek.Where(s => s.IsDone).Sum(s => s.Minutes),
+            ScoreDisplayFactor: await ScoreDisplayFactorAsync(certId, cancellationToken));
     }
 }

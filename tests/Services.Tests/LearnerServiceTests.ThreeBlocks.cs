@@ -305,4 +305,43 @@ public sealed partial class LearnerServiceTests
         Assert.Equal("LOW", dashboard.Goal!.CurrentBandCode);
         Assert.Equal("goal", dashboard.Goal.CurrentSource);
     }
+
+    // ---- A stored score is not the number the learner reads (#159 review) ----
+
+    [Fact]
+    public async Task A_half_step_certificate_carries_its_display_factor_so_the_dashboard_can_divide()
+    {
+        // IELTS keeps marks in tenths: 8.5 is stored 85. The block used to print the stored integer,
+        // so the dashboard said "85 pts" and "85 / 90 latest graded" while the exam result page for
+        // the same attempt correctly said 8.5. ScoreDisplay is the one place the division happens;
+        // the factor has to reach it from the certificate, not from the page.
+        var code = Unique("G");
+        var (certId, _, _) = await SeedCertWithNamedSkillsAsync(code, ("LIST", "Listening", "listening"));
+        await database.SqlAsync($"""
+            UPDATE Certificates SET ScoreAggregationRule = 'avg_half_step' WHERE CertId = {certId};
+            """);
+        var userId = await SeedLearnerAsync(code);
+        await database.SqlAsync($"""
+            INSERT INTO TargetBands (UserId, CertId, CurrentBandCode, TargetBandCode)
+              VALUES ({userId}, {certId}, 'LOW', 'HIGH');
+            """);
+
+        var dashboard = await CreateService().GetDashboardAsync(userId);
+
+        Assert.Equal(10, dashboard.Goal!.ScoreDisplayFactor);
+        Assert.All(dashboard.Skills, s => Assert.Equal(10, s.ScoreDisplayFactor));
+    }
+
+    [Fact]
+    public async Task A_sum_certificate_keeps_factor_one()
+    {
+        var code = Unique("H");
+        await SeedCertWithNamedSkillsAsync(code, ("LIST", "Listening", "listening"));
+        var userId = await SeedLearnerAsync(code);
+
+        var dashboard = await CreateService().GetDashboardAsync(userId);
+
+        // The default is the ordinary case; only a half-step certificate divides by ten.
+        Assert.All(dashboard.Skills, s => Assert.Equal(1, s.ScoreDisplayFactor));
+    }
 }

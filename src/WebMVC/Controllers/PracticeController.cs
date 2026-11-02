@@ -21,7 +21,14 @@ public sealed class PracticeController(
             var catalog = await api.GetPracticeCatalogAsync(cancellationToken);
             return View(new PracticeCatalogViewModel(catalog, TempData["ErrorMessage"] as string)
             {
-                UnfinishedStartedAtDisplay = catalog.UnfinishedSession is { } unfinished ? dates.FormatDate(unfinished.StartedAt) : ""
+                UnfinishedStartedAtDisplay = catalog.UnfinishedSession is { } unfinished ? dates.FormatDate(unfinished.StartedAt) : "",
+                // Every card that shows a cooldown needs its instant in the learner's own zone. The
+                // view used to print it as UTC, which is 7 hours wrong for a Vietnamese learner.
+                NextReviewDueDisplay = catalog.ListeningSections
+                    .Concat(catalog.ReadingSections)
+                    .Concat(catalog.OtherSections)
+                    .Where(s => s.NextReviewDueAt is not null)
+                    .ToDictionary(s => s.SectionId, s => dates.FormatCustom(s.NextReviewDueAt!.Value, "HH:mm dd MMM"))
             });
         }
         catch (ApiException ex)

@@ -26,7 +26,9 @@
           <span class="dashboard-goal__figure">@(goal.CurrentBandCode ?? "—")</span>
           @if (goal.CurrentScore.HasValue)
           {
-            <span class="dashboard-goal__sub font-mono">@goal.CurrentScore pts</span>
+            @* The stored integer is not the number the learner reads: a half-step certificate keeps
+               its marks in tenths, so IELTS 8.5 is stored 85. #159 review. *@
+            <span class="dashboard-goal__sub font-mono">@ScoreDisplay.Format(goal.CurrentScore.Value, goal.ScoreDisplayFactor) pts</span>
           }
           @if (!string.IsNullOrEmpty(goal.CurrentBandName))
           {
@@ -95,7 +97,7 @@
         @if (goal.WeekPlannedMinutes > 0)
         {
           <div class="progress dashboard-goal__progress" role="progressbar"
-               aria-label="Minutes done this week" aria-valuenow="@Model.WeekProgressPercent"
+               aria-label="Minutes done this week" aria-valuenow="@Model.WeekProgressValue"
                aria-valuemin="0" aria-valuemax="100">
             <div class="progress__bar" style="width: @Model.WeekProgressPercent;"></div>
           </div>

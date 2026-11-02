@@ -6,6 +6,7 @@
    RenderBody, so anything the partial assigns to ViewData arrives after the title tag has already
    been written. That is exactly the empty-title defect this arrangement used to have. *@
 @{
+    Layout = "_LearnerLayout";
     ViewData["Title"] = "Writing practice";
     ViewData["Description"] = "Write an answer and have it graded against your certificate's writing rubric.";
 }
