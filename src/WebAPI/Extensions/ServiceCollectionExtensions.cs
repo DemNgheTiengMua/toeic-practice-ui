@@ -53,13 +53,11 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IExamQuickIngestService, ExamQuickIngestService>();
         services.AddScoped<IQuestionImportService, QuestionImportService>();
         services.AddScoped<IAdminDashboardService, AdminDashboardService>();
-        services.AddScoped<IExamGeneratorService, ExamGeneratorService>();
         services.AddScoped<IPlacementService, PlacementService>();
         services.AddScoped<ICalibrationService, CalibrationService>();
         services.AddScoped<ILearningPathService, LearningPathService>();
         services.AddScoped<ILessonService, LessonService>();
         services.AddScoped<IAdminLessonService, AdminLessonService>();
-        services.AddScoped<IPremiumPathService, PremiumPathService>();
         services.AddScoped<IMentorService, MentorService>();
         services.AddScoped<IComplaintService, ComplaintService>();
 

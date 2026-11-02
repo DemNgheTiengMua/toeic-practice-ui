@@ -299,42 +299,6 @@ public sealed class AdminExamPublishGateTests(DatabaseFixture database)
     }
 
     [Fact]
-    public async Task Ai_generate_cannot_add_questions_to_an_exam_with_a_finished_attempt()
-    {
-        var (certId, sectionId) = await SeedCertificateAsync();
-        var service = CreateService();
-
-        var examId = await SeedCompleteExamAsync(service, certId, sectionId, $"Gen Locked {Guid.NewGuid():N}"[..30]);
-        await RecordFinishedAttemptAsync(examId, certId);
-
-        // The service is called with a claude client that must never be reached: the lock has to
-        // be checked before the prompt is built, or a refused generate still costs a model call.
-        await using var db = DbContextFactory.Create(database.ConnectionString);
-        var generator = new ExamGeneratorService(
-            db,
-            new QuestionImportService(db, new RecordingFileStore(), TimeProvider.System),
-            new UnreachableClaudeClient());
-
-        var ex = await Assert.ThrowsAsync<AdminExamException>(() =>
-            generator.GenerateSectionQuestionsAsync(examId, sectionId, adminUserId: 1, questionCount: 1));
-
-        Assert.Equal(ApiError.Codes.ExamHasFinishedAttempts, ex.Code);
-        Assert.Contains("1 learner attempt has", ex.Message, StringComparison.Ordinal);
-        Assert.Equal(2, await db.Questions.CountAsync(q => q.ExamId == examId));
-    }
-
-    /// <summary>Any call is a failure: a refused generation must not reach the model.</summary>
-    private sealed class UnreachableClaudeClient : IClaudeClient
-    {
-        public Task<string> CreateMessageAsync(
-            string userPrompt,
-            string? systemPrompt = null,
-            int maxTokens = 1500,
-            CancellationToken cancellationToken = default) =>
-            throw new InvalidOperationException("The structure lock must be checked before the prompt is sent.");
-    }
-
-    [Fact]
     public async Task Editing_the_answer_key_of_an_inline_completion_question_is_a_structural_edit()
     {
         var (certId, sectionId) = await SeedCertificateAsync();

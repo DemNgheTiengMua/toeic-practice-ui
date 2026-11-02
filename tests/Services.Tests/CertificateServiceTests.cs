@@ -88,6 +88,7 @@ public sealed class CertificateServiceTests(DatabaseFixture database)
         var viewCount = await db.Database
             .SqlQuery<int>($"SELECT COUNT(*) AS Value FROM sys.views")
             .SingleAsync();
-        Assert.Equal(9, viewCount);
+        // #162: vw_LearnerPathIsPremium went with the premium-path feature, leaving eight views.
+        Assert.Equal(8, viewCount);
     }
 }

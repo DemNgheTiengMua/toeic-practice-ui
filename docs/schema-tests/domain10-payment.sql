@@ -140,3 +140,16 @@ PRINT 'accepted expiring an uncredited pending order';
 -- and the ledger triggers are set-based (multi-row insert must work)
 INSERT INTO CreditTransactions (UserId,Reason,Delta,AdminUserId,Note) VALUES (@u,'admin_grant',1,@u2,N'a'),(@u,'admin_grant',2,@u2,N'b');
 PRINT 'accepted multi-row all-NULL-source admin grants';
+
+-- #162: the premium-path feature is gone, so vw_LearnerPathIsPremium went with it, but the reason
+-- code must stay legal. The ledger is append-only: real databases already hold rows written with
+-- 'premium_path', and stripping the value from CK_CreditTxn_Reason would make them unreadable.
+INSERT INTO Certificates (Code,Name,IsActive) VALUES ('PREM162',N'P',1); DECLARE @pc INT=SCOPE_IDENTITY();
+INSERT INTO ScoreBands (CertId,Code,Name,MinTotal,MaxTotal,DisplayOrder) VALUES (@pc,'A1',N'A1',0,100,1),(@pc,'B2',N'B2',101,900,2);
+INSERT INTO PathTemplates (CertId,FromBandCode,ToBandCode,Name) VALUES (@pc,'A1','B2',N'Historical');
+DECLARE @pt INT=SCOPE_IDENTITY();
+INSERT INTO LearnerPaths (UserId,CertId,TemplateId,Status) VALUES (@u,@pc,@pt,'reset');
+DECLARE @plp INT=SCOPE_IDENTITY();
+INSERT INTO CreditTransactions (UserId,Reason,Delta,AdminUserId,Note) VALUES (@u,'admin_grant',5,@u2,N'funds the charge below');
+INSERT INTO CreditTransactions (UserId,Reason,Delta,LearnerPathId) VALUES (@u,'premium_path',-5,@plp);
+PRINT 'accepted a historical premium_path row: the ledger vocabulary is not deletable';

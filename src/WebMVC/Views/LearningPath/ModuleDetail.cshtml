@@ -121,13 +121,9 @@ else
                     <th scope="row">@topic.Title</th>
                     <td>@(topic.QuestionCount?.ToString() ?? "—")</td>
                     <td>
-                      @if (topic.CanAccessVideo && !string.IsNullOrEmpty(topic.VideoPath))
+                      @if (!string.IsNullOrEmpty(topic.VideoPath))
                       {
                         <a href="@topic.VideoPath" class="btn btn--sm" target="_blank" rel="noopener">Video lesson</a>
-                      }
-                      else if (!detail.IsPremium)
-                      {
-                        <a href="/learning-path/upgrade" class="badge badge--muted">Premium video</a>
                       }
                       else
                       {
@@ -173,10 +169,6 @@ else
                 </p>
               </div>
               <div class="row row--tight" style="align-items: center; gap: var(--space-2);">
-                @if (step.IsPremiumOnly)
-                {
-                  <span class="badge badge--muted">Premium</span>
-                }
                 @if (step.CanStart)
                 {
                   <form method="post" action="/learning-path/steps/@step.StepId/start" class="no-margin">
@@ -193,14 +185,6 @@ else
           </div></div>
         </section>
       }
-    }
-
-    @if (!detail.IsPremium)
-    {
-      <div class="alert alert--info">
-        <strong>This module is on the free path.</strong>
-        <a href="/learning-path/upgrade">Premium</a> adds a video lesson per topic, an explanation on every question, and AI-graded writing.
-      </div>
     }
   </div>
 }

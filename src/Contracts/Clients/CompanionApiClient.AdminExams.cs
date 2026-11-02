@@ -73,9 +73,6 @@ public sealed partial class CompanionApiClient
     public Task<QuickIngestSampleTemplateDto> GetQuickIngestSampleTemplateAsync(int sectionId, string bearerToken, CancellationToken cancellationToken = default) =>
         GetAuthorizedAsync<QuickIngestSampleTemplateDto>($"api/admin/sections/{sectionId}/quick-ingest/sample", bearerToken, cancellationToken);
 
-    public Task<SectionGenerationResultDto> GenerateSectionQuestionsAsync(int examId, int sectionId, SectionGenerateRequest? request, string bearerToken, CancellationToken cancellationToken = default) =>
-        PostAuthorizedAsync<SectionGenerateRequest?, SectionGenerationResultDto>($"api/admin/exams/{examId}/sections/{sectionId}/ai-generate", request ?? new SectionGenerateRequest(), bearerToken, cancellationToken);
-
     public Task<ExamStudioDetailDto> GetAdminExamStudioAsync(int examId, string bearerToken, CancellationToken cancellationToken = default) =>
         GetAuthorizedAsync<ExamStudioDetailDto>($"api/admin/exams/{examId}/studio", bearerToken, cancellationToken);
 
@@ -166,9 +163,6 @@ public sealed partial class CompanionApiClient
         return (stream, contentType, fileName);
     }
 
-    public Task<ExamGenerationResultDto> GenerateAdminExamAsync(ExamBlueprintDto blueprint, string bearerToken, CancellationToken cancellationToken = default) =>
-        PostAuthorizedAsync<ExamBlueprintDto, ExamGenerationResultDto>("api/admin/exams/generate", blueprint, bearerToken, cancellationToken);
-
     public Task<ExamPreviewTakeDto> GetAdminExamPreviewAsync(int examId, int? q, string bearerToken, CancellationToken cancellationToken = default) =>
         GetAuthorizedAsync<ExamPreviewTakeDto>(
             q.HasValue ? $"api/admin/exams/{examId}/preview?q={q.Value}" : $"api/admin/exams/{examId}/preview",
@@ -233,9 +227,6 @@ public sealed partial class CompanionApiClient
     public Task<QuickIngestSampleTemplateDto> GetQuickIngestSampleTemplateAsync(int sectionId, CancellationToken cancellationToken = default) =>
         GetQuickIngestSampleTemplateAsync(sectionId, string.Empty, cancellationToken);
 
-    public Task<SectionGenerationResultDto> GenerateSectionQuestionsAsync(int examId, int sectionId, SectionGenerateRequest? request, CancellationToken cancellationToken = default) =>
-        GenerateSectionQuestionsAsync(examId, sectionId, request, string.Empty, cancellationToken);
-
     public Task<ExamStudioDetailDto> GetAdminExamStudioAsync(int examId, CancellationToken cancellationToken = default) =>
         GetAdminExamStudioAsync(examId, string.Empty, cancellationToken);
 
@@ -256,7 +247,4 @@ public sealed partial class CompanionApiClient
 
     public Task<(Stream Stream, string ContentType, string FileName)> GetManifestTemplateAsync(int certId, CancellationToken cancellationToken = default) =>
         GetManifestTemplateAsync(certId, string.Empty, cancellationToken);
-
-    public Task<ExamGenerationResultDto> GenerateAdminExamAsync(ExamBlueprintDto blueprint, CancellationToken cancellationToken = default) =>
-        GenerateAdminExamAsync(blueprint, string.Empty, cancellationToken);
 }

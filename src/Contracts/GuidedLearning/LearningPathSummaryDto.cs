@@ -17,7 +17,6 @@ public sealed record LearningPathSummaryDto(
     int? TargetScore,
     LearnerPathStatusDto? Status,
     DateTimeOffset? StartedAt,
-    bool IsPremium,
     int TotalModules,
     int CompletedModules,
     int TotalEstimatedMinutes,

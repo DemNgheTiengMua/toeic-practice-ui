@@ -17,7 +17,6 @@
   <h1>Exams</h1>
   <div class="row" style="gap: var(--space-xs);">
     <button type="button" class="btn btn--secondary" onclick="openImportExamDialog()">Import Exam (.zip / .json)</button>
-    <button type="button" class="btn btn--secondary" onclick="openGenerateExamDialog()">Generate Exam (AI)</button>
     <a class="btn btn--primary" href="/admin/exams/create">Create new exam</a>
   </div>
 </div>
@@ -74,7 +73,6 @@
         <p class="state-block__desc">Create your first exam, then enter questions part by part.</p>
         <div class="row" style="gap: var(--space-xs); justify-content: center;">
           <button type="button" class="btn btn--secondary" onclick="openImportExamDialog()">Import Exam (.zip / .json)</button>
-    <button type="button" class="btn btn--secondary" onclick="openGenerateExamDialog()">Generate Exam (AI)</button>
           <a class="btn btn--primary" href="/admin/exams/create">Create new exam</a>
         </div>
       </div>
@@ -200,8 +198,6 @@ else
 <!-- Import Exam Modal Dialog -->
 @await Html.PartialAsync("~/Views/Admin/_ExamImportDialog.cshtml", Model)
 
-<!-- Generate Exam Modal Dialog -->
-@await Html.PartialAsync("~/Views/Admin/_ExamGenerateDialog.cshtml", Model)
 
 @section Scripts {
 <script src="~/js/admin/exams.js" asp-append-version="true"></script>

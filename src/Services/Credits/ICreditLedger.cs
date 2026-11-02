@@ -30,11 +30,6 @@ public interface ICreditLedger
     Task<CreditReceipt> ChargeMentorBookingAsync(int userId, int bookingId, int priceCredits, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Debits credits for upgrading an active learning path to premium.
-    /// </summary>
-    Task<CreditReceipt> ChargePremiumPathAsync(int userId, int learnerPathId, int amount = 5, CancellationToken cancellationToken = default);
-
-    /// <summary>
     /// Credits a refund for a cancelled mentor booking.
     /// </summary>
     Task<CreditReceipt> RefundBookingAsync(int userId, int bookingId, int amount, CancellationToken cancellationToken = default);

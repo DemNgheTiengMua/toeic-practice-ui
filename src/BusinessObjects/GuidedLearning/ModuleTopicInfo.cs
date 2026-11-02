@@ -8,5 +8,4 @@ public sealed record ModuleTopicInfo(
     string Title,
     int? QuestionCount,
     string Status,
-    string? VideoPath = null,
-    bool CanAccessVideo = false);
+    string? VideoPath = null);

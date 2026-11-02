@@ -2,11 +2,13 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using BusinessObjects;
+using Contracts;
 using DataAccess;
 using BusinessObjects.Entities;
 using BusinessObjects.Views;
 using Microsoft.EntityFrameworkCore;
 using Services;
+using Services.Credits;
 using Xunit;
 
 namespace Services.Tests;
@@ -525,207 +527,86 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
             """);
     }
 
+    /// <summary>#162: the premium path mechanism is gone, so nothing on a path costs credits and
+    /// nothing can be blocked for want of them. This learner has never held a credit; every step
+    /// the path contains must start anyway. Before, a step whose item was IsPremiumOnly refused
+    /// with StepLocked unless a premium_path charge existed — a payable gate that #162 removed
+    /// along with the column.</summary>
     [Fact]
-    public async Task UpgradePathAsync_Succeeds_WhenBalanceSufficient_DebitsCredits_SetsIsPremiumTrue()
+    public async Task StartStepAsync_LetsAZeroCreditLearnerStartEveryStep()
     {
-        var certCode = Unique("UP");
-        var (certId, templateId, m1Id, _, _, _, secId, qId) = await SeedPathFixtureAsync(certCode);
+        var certCode = Unique("ZERO");
+        await SeedPathFixtureAsync(certCode);
         var userId = await SeedLearnerAsync(certCode);
-        await GrantCreditsAsync(userId, 10);
 
         var (service, _, _, db) = CreateServices();
-        var initial = await service.GeneratePathAsync(userId);
-        Assert.False(initial.IsPremium);
-
-        var upgraded = await service.UpgradePathAsync(userId);
-        Assert.True(upgraded.IsPremium);
-
-        // Verify credit transaction row in ledger
-        var txn = await db.CreditTransactions
-            .FirstOrDefaultAsync(t => t.LearnerPathId == initial.LearnerPathId && t.Reason == "premium_path");
-        Assert.NotNull(txn);
-        Assert.Equal(-5, txn.Delta);
-        Assert.Equal(userId, txn.UserId);
-
-        // Verify balance decreased from 10 to 5
-        var balance = await db.CreditTransactions.Where(t => t.UserId == userId).SumAsync(t => (int?)t.Delta) ?? 0;
-        Assert.Equal(5, balance);
-
-        // Verify GetActivePathAsync returns IsPremium = true
-        var active = await service.GetActivePathAsync(userId);
-        Assert.True(active.IsPremium);
-    }
-
-    [Fact]
-    public async Task UpgradePathAsync_ThrowsInsufficientCredits_WhenBalanceLessThanFive()
-    {
-        var certCode = Unique("IC");
-        var (certId, templateId, m1Id, _, _, _, secId, qId) = await SeedPathFixtureAsync(certCode);
-        var userId = await SeedLearnerAsync(certCode);
-        await GrantCreditsAsync(userId, 3); // Short by 2
-
-        var (service, _, _, db) = CreateServices();
-        var initial = await service.GeneratePathAsync(userId);
-        Assert.False(initial.IsPremium);
-
-        var ex = await Assert.ThrowsAsync<LearningPathException>(() => service.UpgradePathAsync(userId));
-        Assert.Equal(LearningPathException.InsufficientCredits, ex.Code);
-
-        // Verify no premium_path debit was written
-        var txnExists = await db.CreditTransactions
-            .AnyAsync(t => t.LearnerPathId == initial.LearnerPathId && t.Reason == "premium_path");
-        Assert.False(txnExists);
-
-        // Balance untouched
-        var balance = await db.CreditTransactions.Where(t => t.UserId == userId).SumAsync(t => (int?)t.Delta) ?? 0;
-        Assert.Equal(3, balance);
-
-        // Still free
-        var active = await service.GetActivePathAsync(userId);
-        Assert.False(active.IsPremium);
-    }
-
-    [Fact]
-    public async Task UpgradePathAsync_IsIdempotent_WhenCalledMultipleTimes()
-    {
-        var certCode = Unique("IDEM");
-        var (certId, templateId, m1Id, _, _, _, secId, qId) = await SeedPathFixtureAsync(certCode);
-        var userId = await SeedLearnerAsync(certCode);
-        await GrantCreditsAsync(userId, 10);
-
-        var (service, _, _, db) = CreateServices();
-        var initial = await service.GeneratePathAsync(userId);
-
-        // First call charges 5 credits
-        var firstUpgrade = await service.UpgradePathAsync(userId);
-        Assert.True(firstUpgrade.IsPremium);
-
-        var txnCount1 = await db.CreditTransactions.CountAsync(t => t.LearnerPathId == initial.LearnerPathId && t.Reason == "premium_path");
-        Assert.Equal(1, txnCount1);
-
-        // Second call is idempotent: does not charge again
-        var secondUpgrade = await service.UpgradePathAsync(userId);
-        Assert.True(secondUpgrade.IsPremium);
-
-        var txnCount2 = await db.CreditTransactions.CountAsync(t => t.LearnerPathId == initial.LearnerPathId && t.Reason == "premium_path");
-        Assert.Equal(1, txnCount2);
+        var summary = await service.GeneratePathAsync(userId);
+        var pathId = summary.LearnerPathId!.Value;
 
         var balance = await db.CreditTransactions.Where(t => t.UserId == userId).SumAsync(t => (int?)t.Delta) ?? 0;
-        Assert.Equal(5, balance);
+        Assert.Equal(0, balance);
+
+        var stepIds = await db.LearnerPathSteps
+            .Where(s => s.LearnerPathId == pathId)
+            .OrderBy(s => s.StepId)
+            .Select(s => s.StepId)
+            .ToListAsync();
+        Assert.NotEmpty(stepIds);
+
+        foreach (var stepId in stepIds)
+        {
+            // Sequential unlock is a separate rule (#154's plan); this test asks only whether the
+            // deleted credit gate still refuses a step that is otherwise open. A fresh context sees
+            // the status written by raw SQL, which the generator's tracked entities would mask.
+            await database.SqlAsync($"UPDATE LearnerPathSteps SET Status = 'available' WHERE StepId = {stepId};");
+            var (freshService, _, _, _) = CreateServices();
+            var started = await freshService.StartStepAsync(userId, stepId);
+            Assert.Equal(stepId, started.StepId);
+        }
     }
 
+    /// <summary>#162: the ledger is append-only, so 'premium_path' stays a legal reason whose past
+    /// rows must still read back. Deleting the vocabulary would have thrown on every old row.</summary>
     [Fact]
-    public async Task StartStepAsync_BlocksPremiumOnlyStep_WhenPathIsNotPremium()
+    public async Task GetLedgerHistoryAsync_StillReadsHistoricalPremiumPathRows()
     {
-        var certCode = Unique("PREM");
-        var (certId, templateId, m1Id, _, _, _, secId, qId) = await SeedPathFixtureAsync(certCode);
+        var certCode = Unique("HIST");
+        await SeedPathFixtureAsync(certCode);
         var userId = await SeedLearnerAsync(certCode);
-        await GrantCreditsAsync(userId, 10);
+        await GrantCreditsAsync(userId, 5);
 
         var (service, _, _, db) = CreateServices();
         var summary = await service.GeneratePathAsync(userId);
 
-        // #154: mark a step's own item premium-only. The plan picks items, so the flag has to be on
-        // the item the step actually points at.
-        var premiumStep = await db.LearnerPathSteps
-            .Include(s => s.PathModuleItem)
-            .FirstAsync(s => s.LearnerPathId == summary.LearnerPathId
-                && s.PathModuleItem.ItemType == "practice_section");
-
-        premiumStep.PathModuleItem.IsPremiumOnly = true;
-        premiumStep.Status = "available";
-        await db.SaveChangesAsync();
-
-        // While path is free, StartStepAsync throws StepLocked
-        var ex = await Assert.ThrowsAsync<LearningPathException>(() => service.StartStepAsync(userId, premiumStep.StepId));
-        Assert.Equal(LearningPathException.StepLocked, ex.Code);
-
-        // Upgrade path to premium
-        await service.UpgradePathAsync(userId);
-
-        // Now StartStepAsync succeeds
-        var result = await service.StartStepAsync(userId, premiumStep.StepId);
-        Assert.NotNull(result);
-        Assert.Equal(premiumStep.StepId, result.StepId);
-    }
-
-    [Fact]
-    public async Task GetModuleDetailAsync_ReflectsIsPremium_AndProvidesVideoAccess()
-    {
-        var certCode = Unique("VID");
-        var (certId, templateId, m1Id, _, _, _, secId, qId) = await SeedPathFixtureAsync(certCode);
-        var userId = await SeedLearnerAsync(certCode);
-        await GrantCreditsAsync(userId, 10);
-
-        var (service, _, _, db) = CreateServices();
-        await service.GeneratePathAsync(userId);
-
-        // #154: the video topics belong to the module the learner's steps are actually in.
-        var pathId = (await service.GetActivePathAsync(userId)).LearnerPathId!.Value;
-        var firstStep = await db.LearnerPathSteps
-            .Where(s => s.LearnerPathId == pathId)
-            .OrderBy(s => s.StepId)
-            .FirstAsync();
-        var planModuleId = await db.PathModuleItems
-            .Where(i => i.ItemId == firstStep.PathModuleItemId)
-            .Select(i => i.ModuleId)
-            .SingleAsync();
-
         await database.SqlAsync($"""
-            INSERT INTO PathModuleTopics (ModuleId, Title, QuestionCount, VideoPath, DisplayOrder)
-            VALUES ({planModuleId}, N'Topic with Video', 5, N'/videos/module1.mp4', 2);
+            INSERT INTO CreditTransactions (UserId, Reason, Delta, LearnerPathId)
+            VALUES ({userId}, 'premium_path', -5, {summary.LearnerPathId});
             """);
 
-        // Free path: CanAccessVideo is false, VideoPath is null
-        var freeDetail = await service.GetModuleDetailAsync(userId, planModuleId);
-        Assert.False(freeDetail.IsPremium);
-        var topicFree = freeDetail.Topics.First(t => t.Title == "Topic with Video");
-        Assert.False(topicFree.CanAccessVideo);
-        Assert.Null(topicFree.VideoPath);
+        var ledger = new CreditLedger(db, TimeProvider.System);
+        var history = await ledger.GetLedgerHistoryAsync(userId);
 
-        // Upgrade path
-        await service.UpgradePathAsync(userId);
-
-        // Upgraded path: CanAccessVideo is true, VideoPath is populated
-        var premiumDetail = await service.GetModuleDetailAsync(userId, planModuleId);
-        Assert.True(premiumDetail.IsPremium);
-        var topicPremium = premiumDetail.Topics.First(t => t.Title == "Topic with Video");
-        Assert.True(topicPremium.CanAccessVideo);
-        Assert.Equal("/videos/module1.mp4", topicPremium.VideoPath);
+        var charge = Assert.Single(history, h => h.Reason == CreditReasonDto.PremiumPath);
+        Assert.Equal(-5, charge.Delta);
     }
 
     [Fact]
-    public async Task UpgradePathAsync_ThrowsPathNotFound_WhenNoActivePathExists()
+    public async Task ResetActivePathAsync_ThenGenerateNewPath_StartsFresh()
     {
-        var certCode = Unique("NP");
+        var certCode = Unique("RESET");
         await SeedPathFixtureAsync(certCode);
         var userId = await SeedLearnerAsync(certCode);
 
         var (service, _, _, _) = CreateServices();
-        var ex = await Assert.ThrowsAsync<LearningPathException>(() => service.UpgradePathAsync(userId));
-        Assert.Equal(LearningPathException.PathNotFound, ex.Code);
-    }
-
-    [Fact]
-    public async Task ResetActivePathAsync_ThenGenerateNewPath_StartsAsFreePath()
-    {
-        var certCode = Unique("RESET");
-        var (certId, templateId, m1Id, _, _, _, secId, qId) = await SeedPathFixtureAsync(certCode);
-        var userId = await SeedLearnerAsync(certCode);
-        await GrantCreditsAsync(userId, 10);
-
-        var (service, _, _, db) = CreateServices();
         var initial = await service.GeneratePathAsync(userId);
-        var upgraded = await service.UpgradePathAsync(userId);
-        Assert.True(upgraded.IsPremium);
+        Assert.True(initial.HasActivePath);
 
-        // Reset path
         var reset = await service.ResetActivePathAsync(userId);
         Assert.True(reset);
 
-        // Generate new path
         var newPath = await service.GeneratePathAsync(userId);
-        Assert.False(newPath.IsPremium);
+        Assert.True(newPath.HasActivePath);
+        Assert.NotEqual(initial.LearnerPathId, newPath.LearnerPathId);
     }
 
     [Fact]

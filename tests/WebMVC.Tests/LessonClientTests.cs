@@ -166,26 +166,6 @@ public sealed class LessonClientTests
     }
 
     [Fact]
-    public async Task UnlockPathAsync_SendsPostToUnlock()
-    {
-        var (client, getLastRequest) = CreateClient(req =>
-        {
-            Assert.Equal(HttpMethod.Post, req.Method);
-            Assert.Equal("/api/learner/learning-path/7/unlock", req.RequestUri!.AbsolutePath);
-            return new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = JsonContent.Create(new { success = true })
-            };
-        });
-
-        await client.UnlockPathAsync(7, "tok-123");
-
-        var req = getLastRequest();
-        Assert.NotNull(req);
-        Assert.Equal("tok-123", req.Headers.Authorization!.Parameter);
-    }
-
-    [Fact]
     public async Task GetLessonAsync_WhenNotFound_ThrowsApiExceptionWithCorrectCode()
     {
         var problem = new
@@ -206,27 +186,5 @@ public sealed class LessonClientTests
         Assert.Equal(404, ex.Status);
         Assert.Equal(ApiError.Codes.LessonNotFound, ex.Code);
         Assert.Equal("Lesson 999 not found", ex.Detail);
-    }
-
-    [Fact]
-    public async Task UnlockPathAsync_WhenInsufficientCredits_ThrowsApiException()
-    {
-        var problem = new
-        {
-            title = "Insufficient credits",
-            status = 400,
-            code = ApiError.Codes.InsufficientCredits,
-            detail = "Insufficient credits to unlock path."
-        };
-
-        var (client, _) = CreateClient(_ => new HttpResponseMessage(HttpStatusCode.BadRequest)
-        {
-            Content = JsonContent.Create(problem)
-        });
-
-        var ex = await Assert.ThrowsAsync<ApiException>(() => client.UnlockPathAsync(7));
-
-        Assert.Equal(400, ex.Status);
-        Assert.Equal(ApiError.Codes.InsufficientCredits, ex.Code);
     }
 }

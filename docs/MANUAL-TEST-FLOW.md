@@ -83,7 +83,6 @@ LEARNER (learner@demo.local) ◀────────────────
   │                 └─▶ /writing/review/{aid}      (−1 credit at submit)
   │                  /speaking/{id}/instructions ─▶ /speaking/take/{aid} ─▶ /speaking/review/{aid}
   ├─ LEARNING:  /placement/target-band ─▶ /learning-path ─▶ /learning-path/modules/{id}
-  │             └─▶ /learning-path/upgrade (−5 credits)
   ├─ INSIGHTS:  /weakness-analysis · /learner/insights/dashboard · /learner/insights/path
   ├─ MENTORS:   /mentors ─▶ /mentors/{id} ─▶ /mentors/{id}/confirm ─▶ /mentors/bookings (−1 credit)
   ├─ COMMERCE:  /pricing ─▶ /checkout?packageId=N ─▶ /checkout/mock-gateway ─▶ /payment/result
@@ -387,10 +386,10 @@ Luồng chuẩn (dùng `learner.fresh@demo.local`, 0 credit):
   Xác nhận: `/wallet` hiển thị `N purchased − M used = remaining`, khớp từng dòng ledger.
 - "Block before you charge": mọi precondition check xong mới ghi debit. Ví dụ hết credit →
   chặn ở start, **không** tạo bảng ghi debit rồi mới rollback.
-- Các reason debit: `mock_exam_start` (−1), `ai_grading` (−1), `mentor_booking` (−1),
-  `premium_path` (−5). Reason credit vào: `purchase`, `admin_grant`, `booking_cancel`,
-  `admin_revoke` (−, dùng cho revoke). Danh sách đầy đủ nằm ở CK constraint
-  `CK_CreditTxn_Reason`.
+- Các reason debit: `mock_exam_start` (−1), `ai_grading` (−1), `mentor_booking` (−1).
+  Reason credit vào: `purchase`, `admin_grant`, `booking_cancel`, `admin_revoke` (−, dùng cho
+  revoke). Danh sách đầy đủ nằm ở CK constraint `CK_CreditTxn_Reason`, trong đó `premium_path`
+  chỉ còn để đọc row lịch sử — #162 xoá tính năng, ledger thì append-only.
 
 ---
 

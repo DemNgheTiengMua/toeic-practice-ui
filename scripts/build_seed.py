@@ -1359,8 +1359,8 @@ BEGIN
   VALUES (@m2, @toeicCert, @tplId, 'practice_section', @secP5, 25, 1);
   IF @speaExam IS NOT NULL
   BEGIN
-    INSERT INTO PathModuleItems (ModuleId, CertId, TemplateId, ItemType, RefExamId, QuestionCount, IsPremiumOnly, DisplayOrder)
-    VALUES (@m2, @toeicCert, @tplId, 'ai_task', @speaExam, 3, 1, 2);
+    INSERT INTO PathModuleItems (ModuleId, CertId, TemplateId, ItemType, RefExamId, QuestionCount, DisplayOrder)
+    VALUES (@m2, @toeicCert, @tplId, 'ai_task', @speaExam, 3, 2);
   END;
 
   -- Module 3: Workplace Reading & Text Completion
@@ -1427,7 +1427,8 @@ BEGIN
   FROM NumberedItems
   ORDER BY StepOrder;
 
-  -- Premium Path unlock transaction (-5 credits)
+  -- Historical premium-path charge (-5 credits). #162 deleted the feature, not the ledger: real
+  -- databases already hold rows with this reason, and the wallet page still has to render them.
   INSERT INTO CreditTransactions (UserId, Reason, Delta, LearnerPathId, CreatedAt)
   VALUES (@learner, 'premium_path', -5, @lpId, DATEADD(DAY, -14, SYSDATETIMEOFFSET()));
 END;

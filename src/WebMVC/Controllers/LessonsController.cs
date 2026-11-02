@@ -137,25 +137,4 @@ public sealed class LessonsController(
             return StatusCode(ex.Status, new { error = ex.Message, code = ex.Code });
         }
     }
-
-    [HttpPost("/learning-path/{pathId:int}/unlock")]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> UnlockPath(int pathId, CancellationToken cancellationToken)
-    {
-        try
-        {
-            await api.UnlockPathAsync(pathId, cancellationToken);
-            return Json(new { success = true });
-        }
-        catch (ApiException ex) when (ex.Code == ApiError.Codes.InsufficientCredits)
-        {
-            logger.LogWarning(ex, "Insufficient credits to unlock path {PathId}", pathId);
-            return StatusCode(StatusCodes.Status400BadRequest, new { error = "Insufficient credits to unlock path.", code = ApiError.Codes.InsufficientCredits });
-        }
-        catch (ApiException ex)
-        {
-            logger.LogError(ex, "Failed to unlock path {PathId}", pathId);
-            return StatusCode(ex.Status, new { error = ex.Message, code = ex.Code });
-        }
-    }
 }

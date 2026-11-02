@@ -2005,8 +2005,8 @@ BEGIN
   VALUES (@m2, @toeicCert, @tplId, 'practice_section', @secP5, 25, 1);
   IF @speaExam IS NOT NULL
   BEGIN
-    INSERT INTO PathModuleItems (ModuleId, CertId, TemplateId, ItemType, RefExamId, QuestionCount, IsPremiumOnly, DisplayOrder)
-    VALUES (@m2, @toeicCert, @tplId, 'ai_task', @speaExam, 3, 1, 2);
+    INSERT INTO PathModuleItems (ModuleId, CertId, TemplateId, ItemType, RefExamId, QuestionCount, DisplayOrder)
+    VALUES (@m2, @toeicCert, @tplId, 'ai_task', @speaExam, 3, 2);
   END;
 
   -- Module 3: Workplace Reading & Text Completion
@@ -2085,7 +2085,8 @@ BEGIN
     VALUES (@learner, @demoLesson, @toeicCert, @lastCard, 4, 4, 1, DATEADD(DAY, -12, SYSDATETIMEOFFSET()), DATEADD(DAY, -11, SYSDATETIMEOFFSET()), DATEADD(DAY, -11, SYSDATETIMEOFFSET()));
   END;
 
-  -- Premium Path unlock transaction (-5 credits)
+  -- Historical premium-path charge (-5 credits). #162 deleted the feature, not the ledger: real
+  -- databases already hold rows with this reason, and the wallet page still has to render them.
   INSERT INTO CreditTransactions (UserId, Reason, Delta, LearnerPathId, CreatedAt)
   VALUES (@learner, 'premium_path', -5, @lpId, DATEADD(DAY, -14, SYSDATETIMEOFFSET()));
 END;
@@ -4678,8 +4679,8 @@ BEGIN
     VALUES (@diagModuleId,@diagLessonCert,@diagTemplateId,'practice_section',@diagPracticeSection,5,2);
   IF @diagLessonSkill=@diagIeltsWrit OR @diagLessonSkill=@diagVstepWrit
     IF NOT EXISTS (SELECT 1 FROM PathModuleItems WHERE ModuleId=@diagModuleId AND ItemType='ai_task' AND DisplayOrder=3)
-      INSERT INTO PathModuleItems (ModuleId,CertId,TemplateId,ItemType,RefExamId,IsPremiumOnly,DisplayOrder)
-      VALUES (@diagModuleId,@diagLessonCert,@diagTemplateId,'ai_task',@diagWritingExam,0,3);
+      INSERT INTO PathModuleItems (ModuleId,CertId,TemplateId,ItemType,RefExamId,DisplayOrder)
+      VALUES (@diagModuleId,@diagLessonCert,@diagTemplateId,'ai_task',@diagWritingExam,3);
 
   SET @diagLessonIndex+=1;
 END;

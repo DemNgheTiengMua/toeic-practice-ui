@@ -179,9 +179,6 @@ public partial class CompanionDbContext : DbContext
     public virtual DbSet<UserQuestionHistory> UserQuestionHistories { get; set; }
 
 
-    public virtual DbSet<vw_LearnerPathIsPremium> vw_LearnerPathIsPremia { get; set; }
-
-
     public virtual DbSet<vw_MentorAvgRating> vw_MentorAvgRatings { get; set; }
 
 

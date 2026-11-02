@@ -2,7 +2,8 @@ using System.Text.Json.Serialization;
 
 namespace Contracts;
 
-/// <summary>CK_CreditTxn_Reason: purchase, admin_grant, mock_exam_start, ai_grading, mentor_booking, premium_path, admin_revoke, booking_cancel.</summary>
+/// <summary>CK_CreditTxn_Reason. <see cref="PremiumPath"/> stays after #162 removed the feature: past ledger
+/// rows carry it, and this enum mirrors the CHECK constraint (STATE.md D27).</summary>
 [JsonConverter(typeof(JsonStringEnumConverter<CreditReasonDto>))]
 public enum CreditReasonDto
 {

@@ -66,41 +66,6 @@ public class AdminPortalTests : PlaywrightTestBase
     }
 
     [Test]
-    public async Task Should_Show_Generate_Exam_Modal_On_Admin_Exams_Page()
-    {
-        await SignInAsync("admin@demo.local", "Demo1234!");
-
-        await Page.GotoAsync($"{BaseUrl}/admin/exams");
-        await Expect(Page).ToHaveURLAsync(new Regex(@"/admin/exams", RegexOptions.IgnoreCase));
-
-        // Verify Generate Exam button exists in header action area
-        var genBtn = Page.Locator("button:has-text('Generate Exam (AI)')");
-        await Expect(genBtn.First).ToBeVisibleAsync();
-
-        var dialog = Page.Locator("#generate-exam-dialog");
-        await Expect(dialog).ToBeHiddenAsync();
-
-        // Click to open modal
-        await genBtn.First.ClickAsync();
-        await Expect(dialog).ToBeVisibleAsync();
-
-        // Verify form fields inside modal
-        await Expect(dialog.Locator("#gen-certCode")).ToBeVisibleAsync();
-        await Expect(dialog.Locator("#gen-title")).ToBeVisibleAsync();
-        // #157: no initial-status control - a generated exam is always a draft, published only
-        // through the audited POST /{id}/publish.
-        await Expect(dialog.Locator("#gen-status")).ToHaveCountAsync(0);
-        await Expect(dialog.Locator("#gen-targetBand")).ToBeVisibleAsync();
-        await Expect(dialog.Locator("#gen-difficulty")).ToBeVisibleAsync();
-        await Expect(dialog.Locator("#gen-blueprintJson")).ToBeVisibleAsync();
-        await Expect(dialog.Locator("#btn-submit-generate")).ToBeVisibleAsync();
-
-        // Close via close button
-        await dialog.Locator(".modal__close").ClickAsync();
-        await Expect(dialog).ToBeHiddenAsync();
-    }
-
-    [Test]
     public async Task Should_Not_Show_Learner_Only_Actions_To_Admin_On_Public_Pages()
     {
         // Issue #82: learner-only targets (checkout, learner dashboard, active-certificate

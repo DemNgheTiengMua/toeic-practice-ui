@@ -137,64 +137,6 @@ public sealed class AdminExamsController(
         }
     }
 
-    [HttpPost("generate")]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Generate(
-        [FromForm] string? certCode,
-        [FromForm] string? title,
-        [FromForm] string? purpose,
-        [FromForm] string? targetBand,
-        [FromForm] int? difficultyLevel,
-        [FromForm] string? blueprintJson,
-        [FromForm] int? certId,
-        CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            ExamBlueprintDto blueprint;
-            if (!string.IsNullOrWhiteSpace(blueprintJson))
-            {
-                blueprint = System.Text.Json.JsonSerializer.Deserialize<ExamBlueprintDto>(
-                    blueprintJson,
-                    new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true })
-                    ?? throw new InvalidOperationException("Invalid blueprint JSON format.");
-            }
-            else
-            {
-                if (string.IsNullOrWhiteSpace(certCode))
-                {
-                    TempData["Error"] = "Choose the target certificate.";
-                    return RedirectToAction(nameof(Index), new { certId });
-                }
-
-                // #149: no invented section code. A blueprint without sections lets the service use the
-                // certificate's own first section, and refuse with a named error when it has none.
-                blueprint = new ExamBlueprintDto(
-                    CertCode: certCode,
-                    Title: title,
-                    Purpose: purpose ?? "mock",
-                    TargetBand: targetBand,
-                    DifficultyLevel: difficultyLevel ?? 3);
-            }
-
-            var result = await api.GenerateAdminExamAsync(blueprint, cancellationToken);
-            TempData["Success"] = $"Generated exam '{result.ExamName}' with {result.QuestionCount} questions (Status: {result.Status}).";
-            return RedirectToAction(nameof(Studio), new { id = result.ExamId });
-        }
-        catch (ApiException ex)
-        {
-            logger.LogWarning(ex, "Generative exam authoring refused");
-            TempData["Error"] = ex.Detail ?? ex.Title ?? "Exam generation refused.";
-            return RedirectToAction(nameof(Index), new { certId });
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error during generative exam authoring");
-            TempData["Error"] = $"Generation failed: {ex.Message}";
-            return RedirectToAction(nameof(Index), new { certId });
-        }
-    }
-
     [HttpGet("create")]
     public async Task<IActionResult> Create([FromQuery] int? certId, CancellationToken cancellationToken = default)
     {
@@ -547,26 +489,6 @@ public sealed class AdminExamsController(
         catch (ApiException ex)
         {
             logger.LogWarning(ex, "Failed to get quick ingest sample template for section {SectionId}", sectionId);
-            return StatusCode(ex.Status, new { message = ex.Detail ?? ex.Message, code = ex.Code });
-        }
-    }
-
-    [HttpPost("{id:int}/sections/{sectionId:int}/ai-generate")]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> GenerateSectionQuestions(
-        int id,
-        int sectionId,
-        [FromBody] SectionGenerateRequest? request,
-        CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            var result = await api.GenerateSectionQuestionsAsync(id, sectionId, request, cancellationToken);
-            return Json(result);
-        }
-        catch (ApiException ex)
-        {
-            logger.LogWarning(ex, "Failed to generate AI questions for exam {ExamId} section {SectionId}", id, sectionId);
             return StatusCode(ex.Status, new { message = ex.Detail ?? ex.Message, code = ex.Code });
         }
     }

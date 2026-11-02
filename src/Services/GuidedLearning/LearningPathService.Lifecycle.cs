@@ -30,23 +30,4 @@ public sealed partial class LearningPathService
 
         return false;
     }
-
-    public async Task<LearningPathSummaryView> UpgradePathAsync(int userId, CancellationToken cancellationToken = default)
-    {
-        var activeCertId = await learners.GetActiveCertIdAsync(userId, cancellationToken);
-        var activePath = await db.LearnerPaths
-            .FirstOrDefaultAsync(p => p.UserId == userId && p.CertId == activeCertId && p.Status == "active", cancellationToken)
-            ?? throw new LearningPathException(LearningPathException.PathNotFound, "No active learning path found.");
-
-        try
-        {
-            await _creditLedger.ChargePremiumPathAsync(userId, activePath.LearnerPathId, 5, cancellationToken);
-        }
-        catch (CreditLedgerException ex) when (ex.Code == CreditLedgerException.InsufficientCredits)
-        {
-            throw new LearningPathException(LearningPathException.InsufficientCredits, "You do not have enough credits to upgrade to premium (5 credits required).");
-        }
-
-        return await GetActivePathAsync(userId, cancellationToken);
-    }
 }

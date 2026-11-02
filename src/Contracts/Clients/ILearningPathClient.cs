@@ -13,8 +13,6 @@ public interface ILearningPathClient
     Task<StartStepResultDto> StartLearningPathStepAsync(int stepId, string bearerToken, CancellationToken cancellationToken = default) => StartLearningPathStepAsync(stepId, cancellationToken);
     Task<ResetLearningPathResultDto> ResetLearningPathAsync(CancellationToken cancellationToken = default);
     Task<ResetLearningPathResultDto> ResetLearningPathAsync(string bearerToken, CancellationToken cancellationToken = default) => ResetLearningPathAsync(cancellationToken);
-    Task<LearningPathSummaryDto> UpgradeLearningPathAsync(CancellationToken cancellationToken = default);
-    Task<LearningPathSummaryDto> UpgradeLearningPathAsync(string bearerToken, CancellationToken cancellationToken = default) => UpgradeLearningPathAsync(cancellationToken);
     Task<AiInsightDto> GetPathInsightAsync(CancellationToken cancellationToken = default);
     Task<AiInsightDto> GetPathInsightAsync(string bearerToken, CancellationToken cancellationToken = default) => GetPathInsightAsync(cancellationToken);
     Task RetryPathInsightAsync(CancellationToken cancellationToken = default);

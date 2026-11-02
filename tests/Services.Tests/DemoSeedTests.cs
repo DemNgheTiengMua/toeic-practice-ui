@@ -165,7 +165,7 @@ public sealed class DemoSeedTests(DatabaseFixture fixture)
                 JOIN PathModules m ON m.ModuleId=i.ModuleId
                 JOIN PathTemplates t ON t.TemplateId=m.TemplateId AND t.CertId=m.CertId
                 WHERE t.Name IN ('IELTS Diagnostic Remedial Sprint','VSTEP Diagnostic Remedial Sprint')
-                  AND i.ItemType='ai_task' AND i.IsPremiumOnly=0
+                  AND i.ItemType='ai_task'
                 """));
 
             // 1. Verify demo accounts

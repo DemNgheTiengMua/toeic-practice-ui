@@ -20,7 +20,4 @@ public interface ILessonClient
 
     Task<LessonDetailDto?> GetLessonByCategoryAsync(int categoryId, CancellationToken cancellationToken = default);
     Task<LessonDetailDto?> GetLessonByCategoryAsync(int categoryId, string bearerToken, CancellationToken cancellationToken = default) => GetLessonByCategoryAsync(categoryId, cancellationToken);
-
-    Task UnlockPathAsync(int learnerPathId, CancellationToken cancellationToken = default);
-    Task UnlockPathAsync(int learnerPathId, string bearerToken, CancellationToken cancellationToken = default) => UnlockPathAsync(learnerPathId, cancellationToken);
 }

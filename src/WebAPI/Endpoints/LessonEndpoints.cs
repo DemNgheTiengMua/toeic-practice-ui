@@ -25,9 +25,6 @@ public static partial class LessonEndpoints
         // GET /api/learner/lessons/by-category/{categoryId:int}
         learner.MapGet("/lessons/by-category/{categoryId:int}", GetLessonByCategoryAsync);
 
-        // POST /api/learner/learning-path/{pathId:int}/unlock
-        learner.MapPost("/learning-path/{pathId:int}/unlock", UnlockPathAsync);
-
         // Direct aliases without /api/learner prefix
         var direct = app.MapGroup("").RequireAuthorization(Roles.Learner);
         direct.MapGet("/lessons/{id:int}", GetLessonAsync);
@@ -35,6 +32,5 @@ public static partial class LessonEndpoints
         direct.MapPost("/lessons/{id:int}/cards/{cardId:int}/view", RecordCardViewAsync);
         direct.MapPost("/lessons/{id:int}/cards/{cardId:int}/micro-check", SubmitMicroCheckAsync);
         direct.MapGet("/lessons/by-category/{categoryId:int}", GetLessonByCategoryAsync);
-        direct.MapPost("/learning-path/{pathId:int}/unlock", UnlockPathAsync);
     }
 }

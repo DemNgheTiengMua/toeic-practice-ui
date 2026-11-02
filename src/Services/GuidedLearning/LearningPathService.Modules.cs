@@ -83,9 +83,6 @@ public sealed partial class LearningPathService
             }
         }
 
-        bool isPremium = await db.CreditTransactions
-            .AnyAsync(t => t.LearnerPathId == activePath.LearnerPathId && t.Reason == CreditReason.PremiumPath.ToCode(), cancellationToken);
-
         string moduleStatus = "not_started";
         if (steps.Count > 0 && steps.All(s => s.Status == "done"))
         {
@@ -159,7 +156,7 @@ public sealed partial class LearningPathService
                     topicStatus = "not_started";
                 }
             }
-            topics.Add(new ModuleTopicInfo(t.TopicId, t.Title, t.QuestionCount, topicStatus, isPremium ? t.VideoPath : null, isPremium && !string.IsNullOrEmpty(t.VideoPath)));
+            topics.Add(new ModuleTopicInfo(t.TopicId, t.Title, t.QuestionCount, topicStatus, t.VideoPath));
         }
 
         var stepInfos = steps.Select(s =>
@@ -183,8 +180,7 @@ public sealed partial class LearningPathService
                 stepStatus,
                 s.Score,
                 s.PathModuleItem.QuestionCount,
-                s.PathModuleItem.IsPremiumOnly,
-                CanStart: stepStatus != LearnerPathStepStatus.Locked && (!s.PathModuleItem.IsPremiumOnly || isPremium),
+                CanStart: stepStatus != LearnerPathStepStatus.Locked,
                 s.StartedAt,
                 s.CompletedAt,
                 s.PathModuleItem.RefSectionId,
@@ -192,9 +188,7 @@ public sealed partial class LearningPathService
                 s.PathModuleItem.RefLessonId);
         }).ToList();
 
-        var activeStep = steps.FirstOrDefault(s => s.Status == "in_progress" && (!s.PathModuleItem.IsPremiumOnly || isPremium))
-            ?? steps.FirstOrDefault(s => s.Status == "available" && (!s.PathModuleItem.IsPremiumOnly || isPremium))
-            ?? steps.FirstOrDefault(s => s.Status == "in_progress")
+        var activeStep = steps.FirstOrDefault(s => s.Status == "in_progress")
             ?? steps.FirstOrDefault(s => s.Status == "available")
             ?? steps.FirstOrDefault();
 
@@ -222,7 +216,6 @@ public sealed partial class LearningPathService
             answeredCount,
             timeSpentMinutes,
             estRemaining,
-            isPremium,
             topics,
             stepInfos,
             activeStep?.StepId);

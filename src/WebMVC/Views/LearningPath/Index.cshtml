@@ -47,14 +47,6 @@ else
         <h1 class="m-0 mb-1">@summary.FromBandCode → @summary.ToBandCode learning path</h1>
         <p class="text-muted no-margin">From <strong>@summary.FromBandName</strong> to <strong>@summary.ToBandName</strong>. Modules unlock in order.</p>
       </div>
-      @if (summary.IsPremium)
-      {
-        <span class="badge badge--success">Premium tier</span>
-      }
-      else
-      {
-        <span class="badge badge--muted">Free tier</span>
-      }
     </div>
 
     <div class="card"><div class="card__body stack">
@@ -88,14 +80,6 @@ else
         </div>
       </div>
     </div></div>
-
-    @if (!summary.IsPremium)
-    {
-      <div class="alert alert--info">
-        <strong>You are on the free path.</strong>
-        It covers practice modules. <a href="/learning-path/upgrade">Upgrade to premium</a> for AI-graded writing, video lessons, and detailed explanations.
-      </div>
-    }
 
     @if (Model.CalibrationStatus is { } calibrationStatus)
     {

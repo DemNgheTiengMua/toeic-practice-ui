@@ -1,7 +1,8 @@
 
 namespace BusinessObjects;
 
-/// <summary>CK_CreditTxn_Reason: purchase, admin_grant, mock_exam_start, ai_grading, mentor_booking, premium_path, admin_revoke, booking_cancel.</summary>
+/// <summary>CK_CreditTxn_Reason. <see cref="PremiumPath"/> is retained after #162 deleted the feature:
+/// the ledger is append-only and rows already carry it (see STATE.md D27).</summary>
 public enum CreditReason
 {
     Purchase,

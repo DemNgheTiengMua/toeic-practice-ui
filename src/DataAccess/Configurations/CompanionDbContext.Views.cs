@@ -8,17 +8,6 @@ public partial class CompanionDbContext
 {
     private static void ConfigureViews(ModelBuilder modelBuilder)
     {
-
-
-        modelBuilder.Entity<vw_LearnerPathIsPremium>(entity =>
-        {
-            entity.ToView("vw_LearnerPathIsPremium");
-
-            entity.Property(e => e.LearnerPathId).ValueGeneratedOnAdd();
-        });
-
-
-
         modelBuilder.Entity<vw_MentorAvgRating>(entity =>
         {
             entity.ToView("vw_MentorAvgRating");

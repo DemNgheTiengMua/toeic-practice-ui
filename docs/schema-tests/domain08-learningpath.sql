@@ -99,8 +99,3 @@ END TRY BEGIN CATCH
   IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
   PRINT 'rejected cross-cert PlacementTests exam as expected';
 END CATCH
--- Low: IsPremium is derived from a premium_path ledger charge via vw_LearnerPathIsPremium,
--- not a free-standing column (the column was removed).
-IF EXISTS (SELECT 1 FROM vw_LearnerPathIsPremium WHERE LearnerPathId=@lp AND IsPremium=1)
-  THROW 50000,'EXPECT_REJECT FAILED: path shows premium without a premium_path charge',1;
-PRINT 'IsPremium view reports false without a premium_path charge, as expected';

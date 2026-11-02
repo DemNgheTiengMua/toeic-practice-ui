@@ -479,22 +479,6 @@ public sealed class AdminExamsControllerTests
     }
 
     [Fact]
-    public async Task GenerateSectionQuestions_CallsApi_ReturnsJsonResult()
-    {
-        var api = new TestApiClient();
-        var controller = CreateController(api);
-
-        var result = await controller.GenerateSectionQuestions(5, 10, new SectionGenerateRequest(2), CancellationToken.None);
-
-        var json = Assert.IsType<JsonResult>(result);
-        var gen = Assert.IsType<SectionGenerationResultDto>(json.Value);
-        Assert.NotNull(gen);
-        Assert.Equal(5, gen.ExamId);
-        Assert.Equal(10, gen.SectionId);
-        Assert.Equal(2, gen.QuestionsGenerated);
-    }
-
-    [Fact]
     public async Task Studio_ReturnsViewResult_WithStudioModel()
     {
         var api = new TestApiClient();
@@ -850,73 +834,6 @@ public sealed class AdminExamsControllerTests
     }
 
     [Fact]
-    public async Task Generate_WithBlueprintJson_RedirectsToStudioWithSuccessMessage()
-    {
-        var api = new TestApiClient();
-        var controller = CreateController(api);
-        var json = """{ "certCode": "TOEIC", "title": "AI Mock Form", "sections": [{ "sectionCode": "P5", "questionCount": 2 }] }""";
-
-        var result = await controller.Generate(
-            certCode: null,
-            title: null,
-            purpose: null,
-            targetBand: null,
-            difficultyLevel: null,
-            blueprintJson: json,
-            certId: 1);
-
-        var redirect = Assert.IsType<RedirectToActionResult>(result);
-        Assert.Equal(nameof(AdminExamsController.Studio), redirect.ActionName);
-        Assert.Equal(99, redirect.RouteValues?["id"]);
-        Assert.Contains("Generated exam", controller.TempData["Success"]?.ToString());
-        Assert.NotNull(api.LastGeneratedBlueprint);
-        Assert.Equal("TOEIC", api.LastGeneratedBlueprint.CertCode);
-    }
-
-    [Fact]
-    public async Task Generate_WithFormFields_ConstructsBlueprintAndRedirectsToStudio()
-    {
-        var api = new TestApiClient();
-        var controller = CreateController(api);
-
-        // #157: the form no longer offers an initial status; the blueprint carries none, so a
-        // generated exam is always created as a draft and published through POST /publish.
-        var result = await controller.Generate(
-            certCode: "TOEIC",
-            title: "Quick Form",
-            purpose: "mock",
-            targetBand: "B2",
-            difficultyLevel: 3,
-            blueprintJson: null,
-            certId: 1);
-
-        var redirect = Assert.IsType<RedirectToActionResult>(result);
-        Assert.Equal(nameof(AdminExamsController.Studio), redirect.ActionName);
-        Assert.Equal(99, redirect.RouteValues?["id"]);
-        Assert.Equal("TOEIC", api.LastGeneratedBlueprint?.CertCode);
-    }
-
-    [Fact]
-    public async Task Generate_WhenMissingCertCode_RedirectsToIndexWithError()
-    {
-        var api = new TestApiClient();
-        var controller = CreateController(api);
-
-        var result = await controller.Generate(
-            certCode: null,
-            title: "Form",
-            purpose: "mock",
-            targetBand: null,
-            difficultyLevel: null,
-            blueprintJson: null,
-            certId: 1);
-
-        var redirect = Assert.IsType<RedirectToActionResult>(result);
-        Assert.Equal(nameof(AdminExamsController.Index), redirect.ActionName);
-        Assert.Contains("target certificate", controller.TempData["Error"]?.ToString());
-    }
-
-    [Fact]
     public async Task AutosaveQuestion_WhenSuccessful_ReturnsJsonUpdatedDto()
     {
         var api = new TestApiClient();
@@ -1212,9 +1129,6 @@ public sealed class AdminExamsControllerTests
         public Task<QuickIngestSampleTemplateDto> GetQuickIngestSampleTemplateAsync(int sectionId, CancellationToken cancellationToken = default) =>
             Task.FromResult(new QuickIngestSampleTemplateDto("1. A", "Blueprint Template"));
 
-        public Task<SectionGenerationResultDto> GenerateSectionQuestionsAsync(int examId, int sectionId, SectionGenerateRequest? request, CancellationToken cancellationToken = default) =>
-            Task.FromResult(new SectionGenerationResultDto(examId, sectionId, request?.QuestionCount ?? 2, 1, "Generated"));
-
         public Task<ExamStudioDetailDto> GetAdminExamStudioAsync(int examId, CancellationToken cancellationToken = default) =>
             Task.FromResult(SampleStudioDetail(examId));
 
@@ -1248,22 +1162,7 @@ public sealed class AdminExamsControllerTests
             return Task.FromResult(new AdminExamMediaUploadResultDto($"/media/exams/{examId}/{fileName}", $"exams/{examId}/{fileName}", fileName));
         }
 
-        public ExamBlueprintDto? LastGeneratedBlueprint { get; private set; }
-        public Exception? GenerateException { get; set; }
         public Exception? PreviewException { get; set; }
-        public Task<ExamGenerationResultDto> GenerateAdminExamAsync(ExamBlueprintDto blueprint, CancellationToken cancellationToken = default)
-        {
-            if (GenerateException != null) throw GenerateException;
-            LastGeneratedBlueprint = blueprint;
-            return Task.FromResult(new ExamGenerationResultDto(
-                ExamId: 99,
-                CertId: 1,
-                CertCode: blueprint.CertCode,
-                ExamName: blueprint.Title ?? "Generated Test",
-                Status: "draft",
-                Purpose: blueprint.Purpose ?? "mock",
-                QuestionCount: 4));
-        }
 
         public Task<(Stream Stream, string ContentType, string FileName)> ExportAdminExamAsync(int examId, string? format = "zip", CancellationToken cancellationToken = default)
         {

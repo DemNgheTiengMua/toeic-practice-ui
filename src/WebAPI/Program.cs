@@ -30,12 +30,6 @@ app.UseAuthorization();
 // 6. Endpoint routing
 app.MapApiEndpoints();
 
-// 7. CLI tool entry point
-if (await ExamCliHandler.TryHandleAsync(app, args))
-{
-    return;
-}
-
 app.Run();
 
 // For WebApplicationFactory-based tests

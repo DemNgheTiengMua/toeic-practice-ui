@@ -1326,44 +1326,6 @@
     });
   };
 
-  window.aiFillSection = function(secId) {
-    var btn = document.getElementById('btn-ai-fill-' + secId) || document.getElementById('btn-ai-fill-empty-' + secId);
-    var ok = confirm('Generate questions for missing slots in this section using Claude AI based on section blueprint?');
-    if (!ok) return;
-
-    if (btn) {
-      btn.disabled = true;
-      btn.textContent = 'Generating with AI...';
-    }
-
-    fetch('/admin/exams/' + examId + '/sections/' + secId + '/ai-generate', {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'RequestVerificationToken': getCsrfToken()
-      },
-      body: JSON.stringify({})
-    })
-    .then(function(res) {
-      return res.json().then(function(data) {
-        if (!res.ok) throw new Error(data.message || ('HTTP ' + res.status));
-        return data;
-      });
-    })
-    .then(function(data) {
-      alert(data.message || 'Questions generated successfully!');
-      window.location.reload();
-    })
-    .catch(function(err) {
-      alert('AI generation failed: ' + err.message);
-      if (btn) {
-        btn.disabled = false;
-        btn.textContent = 'AI Fill Missing Slots';
-      }
-    });
-  };
-
   // Auto-select section and focus question if passed in URL query
   try {
     var urlParams = new URLSearchParams(window.location.search);
