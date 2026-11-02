@@ -32,6 +32,12 @@
 
         <div id="ajax-error-alert" class="alert alert--danger mb-4" style="display: none;" role="alert"></div>
 
+        @* #166: the refusal sentence, for a learner whose browser did not run the AJAX handler. *@
+        @if (Model.HasErrorMessage)
+        {
+          <div class="alert alert--danger mb-4" role="alert">@Model.ErrorMessage</div>
+        }
+
         <div class="exam-layout">
 @await Html.PartialAsync("_TakeQuestion", Model)
 @await Html.PartialAsync("_TakeSidebar", Model)

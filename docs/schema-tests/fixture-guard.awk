@@ -10,8 +10,12 @@
 # reason — it is how domain04 claimed "difficulty 9 accepted" while CK_Questions_Difficulty was in
 # fact rejecting 9. ExpectFixtureRows (lib.sql) is what the injected EXEC calls.
 #
-# A deliberately empty fixture (WHERE 1=0) is left alone: that is how harness-guard-selftest.sql
-# proves the guard fires.
+# An `INSERT ... SELECT` that matches nothing is exactly what this guard exists to catch, so it is
+# never exempt. `harness-guard-selftest.sql` proves the guard fires by running one such statement
+# through the guard and expecting the abort; a `WHERE 1=0` clause is not a special case here.
+#
+# Two known limits: the statement must begin a line (a fixture written mid-line is not guarded), and
+# `INSERT ... VALUES` is not guarded, because a VALUES clause always supplies its rows.
 
 # Offset of the ';' that ends this line's statement, or 0. Tracks string literals so a ';' inside a
 # literal does not end it, and stops at a -- comment.
@@ -36,18 +40,17 @@ BEGIN { q = 0; n = 0; in_stmt = 0 }
 {
   if (!in_stmt) {
     if ($0 !~ /^[ \t]*INSERT[ \t]+INTO[ \t]/) { print; next }
-    in_stmt = 1; q = 0; n = 0; start = NR; empty = 0; stmt = ""
+    in_stmt = 1; q = 0; n = 0; start = NR; stmt = ""
     target = $0
     sub(/^[ \t]*INSERT[ \t]+INTO[ \t]+/, "", target)     # table name, for the message
     sub(/[ \t(].*$/, "", target)
   }
   buf[++n] = $0
   stmt = stmt " " $0
-  if ($0 ~ /WHERE 1=0/) empty = 1
   at = stmt_end($0)
   if (at == 0) next
   for (i = 1; i < n; i++) print buf[i]
-  guard = (stmt ~ /SELECT/ && !empty) ? \
+  guard = (stmt ~ /SELECT/) ? \
     " EXEC ExpectFixtureRows N'" LABEL ":" start ": " target "';" : ""
   print substr($0, 1, at) guard substr($0, at + 1)
   in_stmt = 0; q = 0

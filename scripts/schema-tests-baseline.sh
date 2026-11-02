@@ -28,7 +28,13 @@ for t in "$DIR"/domain*.sql; do
   fi
   # Same fixture guard run-all.sh uses: without it, a fixture INSERT ... SELECT matching zero rows
   # reports the test's own EXPECT_REJECT instead of the row-count failure that actually happened.
-  awk -v LABEL="$(basename "$t")" -f "$DIR/fixture-guard.awk" "$t" > "$TMP/guarded.sql"
+  # A failed awk leaves an empty guarded file, and sqlcmd exits 0 on an empty file — which would
+  # report PASS for a file that never ran. Check the guard before trusting its output.
+  if ! awk -v LABEL="$(basename "$t")" -f "$DIR/fixture-guard.awk" "$t" > "$TMP/guarded.sql" \
+     || [ ! -s "$TMP/guarded.sql" ]; then
+    echo "FAIL $(basename "$t") (fixture guard produced no output; the file would have run as empty and passed)"
+    fail=$((fail + 1)); continue
+  fi
   if out=$(sqlcmd -S "$S" -d "$DB" -I -b -f 65001 -i "$(cygpath -w "$TMP/guarded.sql")" 2>&1); then
     echo "PASS $(basename "$t")"
   else

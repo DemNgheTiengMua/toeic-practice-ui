@@ -16,7 +16,7 @@ The backend is a .NET 10 solution (`ExtraEfficiency.slnx`) structured in six str
    - `docs/database-schema.sql` is the single source of truth for the database schema.
    - Any schema changes must be edited in `docs/database-schema.sql` first, validated with `docs/schema-tests/run-all.sh`, and re-scaffolded.
    - `run-all.sh` runs **every** test on its own fresh database and reports one verdict per file; it does not stop at the first failure, and exits non-zero if any check failed. Read the summary at the end for the failing set.
-   - A fixture `INSERT ... SELECT` must match a row. The harness injects `ExpectFixtureRows` after every such statement (`docs/schema-tests/fixture-guard.awk`), so a fixture matching zero rows aborts naming the file and line instead of letting a test's own `THROW 'EXPECT_REJECT FAILED'` report a constraint defect that never happened.
+   - A fixture `INSERT ... SELECT` must match a row. The harness injects `ExpectFixtureRows` after every line-leading such statement in every domain file (`docs/schema-tests/fixture-guard.awk`), so a fixture matching zero rows aborts naming the file and line instead of letting a test's own `THROW 'EXPECT_REJECT FAILED'` report a constraint defect that never happened. `INSERT ... VALUES` needs no guard, and `docs/seed-demo.sql` runs unguarded by design.
    - Every table with an SQL trigger **must** declare `HasTrigger(...)` in EF Core model configuration to prevent `OUTPUT`-clause save failures.
    - Views are mapped as keyless, read-only entities. Derived values (balances, ratings, aggregates) are never stored or computed by application code.
 2. **MVC Proxies API (`docs/adr/0002-mvc-proxies-api-with-cookie-token.md`)**:

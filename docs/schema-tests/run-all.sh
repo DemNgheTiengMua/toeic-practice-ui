@@ -31,7 +31,20 @@ run_one () {  # $1 = label, $2 = .sql file, $3 = 1 to inject the fixture guard, 
   if [ "${3:-0}" = 1 ]; then
     # fixture-guard.awk asserts @@ROWCOUNT after every INSERT ... SELECT, so a fixture that matched
     # nothing aborts naming itself instead of letting the test's own THROW report the wrong reason.
-    awk -v LABEL="$label" -f "$DIR/fixture-guard.awk" "$sql" > "$TMP/guarded.sql"
+    #
+    # If awk itself fails, `sql` would point at an empty file and sqlcmd would exit 0 on it — every
+    # domain file would report PASS while running nothing. So awk's status is checked, and the
+    # guarded file is required to be non-empty, before sqlcmd is allowed near it.
+    if ! awk -v LABEL="$label" -f "$DIR/fixture-guard.awk" "$sql" > "$TMP/guarded.sql"; then
+      echo "FAIL $label"
+      echo "    could not apply the fixture guard to $label; refusing to report a verdict on a file that never ran"
+      fails=$((fails + 1)); results+=("FAIL $label"); return 1
+    fi
+    if [ ! -s "$TMP/guarded.sql" ]; then
+      echo "FAIL $label"
+      echo "    the fixture guard produced no output for $label; the file would have run as empty and passed"
+      fails=$((fails + 1)); results+=("FAIL $label"); return 1
+    fi
     sql="$TMP/guarded.sql"
   fi
   if out=$(sqlcmd -S "$S" -d "$DB" -I -b -f 65001 -i "$(cygpath -w "$sql")" 2>&1); then
