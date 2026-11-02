@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading;
@@ -39,7 +39,7 @@ public sealed class WritingControllerTests
     }
 
     [Fact]
-    public async Task Instructions_when_not_found_redirects_to_Practice_Index()
+    public async Task Instructions_when_not_found_returns_to_the_writing_door()
     {
         var api = new TestApiClient
         {
@@ -49,9 +49,11 @@ public sealed class WritingControllerTests
         var controller = CreateController(api);
         var result = await controller.Instructions(999, CancellationToken.None);
 
+        // #159: the sidebar's Writing entry landed here, so a dead exam returns to that list rather
+        // than dropping the learner into the practice catalog they did not come from.
         var redirect = Assert.IsType<RedirectToActionResult>(result);
         Assert.Equal("Index", redirect.ActionName);
-        Assert.Equal("Practice", redirect.ControllerName);
+        Assert.Null(redirect.ControllerName);
         Assert.NotNull(controller.TempData["ShellError"]);
     }
 
@@ -110,7 +112,7 @@ public sealed class WritingControllerTests
     }
 
     [Fact]
-    public async Task Take_when_attempt_expired_redirects_to_Practice_Index()
+    public async Task Take_when_attempt_expired_returns_to_the_writing_door()
     {
         var api = new TestApiClient
         {
@@ -122,7 +124,7 @@ public sealed class WritingControllerTests
 
         var redirect = Assert.IsType<RedirectToActionResult>(result);
         Assert.Equal("Index", redirect.ActionName);
-        Assert.Equal("Practice", redirect.ControllerName);
+        Assert.Null(redirect.ControllerName);
         Assert.NotNull(controller.TempData["ShellError"]);
     }
 
@@ -283,7 +285,7 @@ public sealed class WritingControllerTests
         var httpContext = new DefaultHttpContext { User = principal, RequestServices = serviceProvider };
         var currentUser = new CurrentUser(new HttpContextAccessor { HttpContext = httpContext });
 
-        var controller = new WritingController(api, currentUser, NullLogger<WritingController>.Instance)
+        var controller = new WritingController(api, new SkillPracticeStub(), currentUser, NullLogger<WritingController>.Instance)
         {
             ControllerContext = new ControllerContext
             {

@@ -2,86 +2,16 @@
 @{
     Layout = "_LearnerLayout";
     ViewData["Title"] = "Dashboard";
-    ViewData["Description"] = "Your learning dashboard.";
+    ViewData["Description"] = "What to do next, where you stand, and how each skill is going.";
+    var presentation = Model.Presentation;
     var dashboard = Model.Dashboard;
     var cert = dashboard.Certificate;
-
 }
 
-@if (Model.Activation == "sent")
-{
-  <div class="alert alert--success" role="status">A new activation link is on its way to @Model.User.Email. It expires in 24 hours.</div>
-}
-else if (Model.Activation == "failed")
-{
-  <div class="alert alert--danger" role="alert">Could not send the activation email. Try again in a few minutes.</div>
-}
+<link rel="stylesheet" href="~/css/dashboard/dashboard.css" asp-append-version="true" />
 
-@if (Model.ShowVerificationReminder)
-{
-  @* Users.EmailVerifiedAt IS NULL: practice stays open, buying credits needs a verified email. *@
-  <div class="alert alert--warning row row--between row--wrap" role="status" id="verify-reminder">
-    <span><strong>Verify your email</strong> to unlock buying credits. We sent a link to @Model.User.Email.</span>
-    <span class="row">
-      <form method="post" action="/auth/resend-activation" class="no-margin">
-        @Html.AntiForgeryToken()
-        <button type="submit" class="btn btn--sm">Resend email</button>
-      </form>
-      @* Dismiss hides it for this page view only; it returns on the next visit until verified. *@
-      <button type="button" class="btn btn--ghost btn--sm" aria-label="Dismiss"
-              onclick="document.getElementById('verify-reminder').hidden = true">Dismiss</button>
-    </span>
-  </div>
-}
+<partial name="_DashboardHero" model="Model" />
 
-<h1 class="no-margin">Hello, @(Model.User.FullName ?? Model.User.Email)</h1>
+<partial name="_DashboardGoal" model="presentation" />
 
-@if (dashboard.UnfinishedPractice is { } unfinishedPractice)
-{
-  <div class="alert alert--info row row--between row--middle row--wrap mt-3" role="status">
-    <div>
-      <strong>Unfinished practice:</strong> You have an in-progress session in <strong>@unfinishedPractice.SectionName</strong> started @Model.Presentation.Dates[unfinishedPractice.StartedAt].Date.
-      <div class="text-sm text-muted">@unfinishedPractice.CorrectCount of @unfinishedPractice.QuestionCount questions answered so far. Finish to update your accuracy and weak points.</div>
-    </div>
-    <a class="btn btn--primary btn--sm" href="/practice/@unfinishedPractice.SessionId">Resume practice</a>
-  </div>
-}
-
-@if (dashboard.UnfinishedAttempt is { } unfinishedAttempt)
-{
-  var resumeUrl = Model.Presentation.AttemptLinks[unfinishedAttempt.AttemptId].Resume;
-
-  <div class="alert alert--warning row row--between row--middle row--wrap mt-3" role="status">
-    <div>
-      <strong>Unfinished exam:</strong> You have an in-progress @Model.Presentation.PurposeLabels[unfinishedAttempt.Purpose] (<strong>@unfinishedAttempt.ExamName</strong>) started @Model.Presentation.Dates[unfinishedAttempt.StartedAt].Date.
-      <div class="text-sm text-muted">Complete your exam to receive your scaled score and band.</div>
-    </div>
-    <div class="row row--tight" style="gap: var(--space-2); align-items: center;">
-      <span class="badge badge--warning">In progress</span>
-      <a class="btn btn--primary btn--sm" href="@resumeUrl">Resume exam ›</a>
-    </div>
-  </div>
-}
-
-@await Html.PartialAsync("_DashboardReadiness", Model)
-
-<div class="dashboard-bento">
-  <div class="dashboard-guidance-grid mt-4">
-    <div class="dashboard-guidance__mentor">
-      <partial name="_AiInsightPanel" model="Model.Presentation.InsightPanel" />
-    </div>
-    <div class="dashboard-guidance__directive">
-      <partial name="_DashboardMission" model="Model.Presentation" />
-    </div>
-  </div>
-
-  <partial name="_DashboardWeaknessRadar" model="Model.Presentation" />
-
-  <div class="dashboard-bento__ledger-row mt-4">
-    @await Html.PartialAsync("_DashboardActivity", Model)
-
-    <div class="dashboard-bento__mentor">
-      <partial name="_DashboardMentorPass" model="Model.Presentation" />
-    </div>
-  </div>
-</div>
+<partial name="_DashboardSkills" model="presentation" />

@@ -1,0 +1,97 @@
+@model DashboardPresentation
+@{
+    var cards = Model.Dashboard.Skills;
+    var cert = Model.Dashboard.Certificate;
+}
+
+@* #159: block 3 of 3. One card per skill of the certificate, in its own order (#149's rule). A
+   certificate that names its skills Comprehension and Expression gets those two cards - never a
+   fixed Listening/Reading pair under headings it does not use. *@
+<section class="dashboard-skills" aria-labelledby="dashboard-skills-title">
+  <header class="dashboard-skills__header">
+    <h2 class="dashboard-skills__title" id="dashboard-skills-title">Skill Cards · @cert.Code</h2>
+    <span class="badge badge--muted font-mono">@cards.Count @(cards.Count == 1 ? "SKILL" : "SKILLS")</span>
+  </header>
+
+  @if (cards.Count == 0)
+  {
+    <p class="text-muted no-margin dashboard-skills__empty">
+      @cert.Name has no skills configured yet, so there is nothing to show here.
+      <a href="@Model.CertificateUrl">See what @cert.Code tests</a>
+    </p>
+  }
+  else
+  {
+    <div class="dashboard-skills__grid">
+      @foreach (var skill in cards)
+      {
+        <article class="dashboard-skill" aria-labelledby="skill-@skill.SkillId">
+          <header class="dashboard-skill__header">
+            <h3 class="dashboard-skill__name" id="skill-@skill.SkillId">@skill.Name</h3>
+            <span class="badge badge--muted font-mono">@skill.Code</span>
+          </header>
+
+          <div class="dashboard-skill__score">
+            @if (skill.LatestScaledScore.HasValue)
+            {
+              <span class="dashboard-skill__figure font-mono">@skill.LatestScaledScore</span>
+              @if (skill.MaxScaledScore.HasValue)
+              {
+                <span class="dashboard-skill__ceiling font-mono">/ @skill.MaxScaledScore</span>
+              }
+              <span class="dashboard-skill__label">latest graded</span>
+            }
+            else
+            {
+              <span class="dashboard-skill__figure dashboard-skill__figure--empty">—</span>
+              <span class="dashboard-skill__label">No graded exam on this skill yet</span>
+            }
+          </div>
+
+          <div class="dashboard-skill__categories">
+            <div class="dashboard-skill__eyebrow">Weakest topics</div>
+            @if (skill.WeakestCategories.Count == 0)
+            {
+              <p class="text-sm text-muted no-margin">
+                No answers yet, so no weak topic can be named. Any practice session on @skill.Name starts the record.
+              </p>
+            }
+            else
+            {
+              <ul class="dashboard-skill__list">
+                @foreach (var category in skill.WeakestCategories)
+                {
+                  var tier = category.AccuracyPercent < 50 ? "badge--danger"
+                      : category.AccuracyPercent < 65 ? "badge--warning"
+                      : category.AccuracyPercent < 80 ? "badge--info" : "badge--success";
+                  <li class="dashboard-skill__row">
+                    <span class="dashboard-skill__category">@category.Name</span>
+                    <span class="badge @tier font-mono text-xs">@category.AccuracyPercent%</span>
+                    <span class="dashboard-skill__count font-mono">@category.Answered answered</span>
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+
+          <footer class="dashboard-skill__footer">
+            @* #159: the card is the door. A spoken answer cannot be typed, so Speaking opens the
+               recorded flow; Writing opens its own; every other skill opens the free drill. *@
+            @switch (skill.Modality)
+            {
+              case ModalityDto.Speaking:
+                <a class="btn btn--primary btn--sm" href="/speaking">Practise speaking</a>
+                break;
+              case ModalityDto.Writing:
+                <a class="btn btn--primary btn--sm" href="/writing">Practise writing</a>
+                break;
+              default:
+                <a class="btn btn--primary btn--sm" href="/practice">Practice @skill.Name</a>
+                break;
+            }
+          </footer>
+        </article>
+      }
+    </div>
+  }
+</section>

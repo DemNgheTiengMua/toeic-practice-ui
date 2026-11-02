@@ -22,6 +22,7 @@ public interface ICompanionApiClient :
     IMockExamsClient,
     IWritingClient,
     ISpeakingClient,
+    ISkillPracticeClient,
     IPlacementClient,
     ILearningPathClient,
     ILessonClient,

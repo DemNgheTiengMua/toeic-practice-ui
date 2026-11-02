@@ -1,0 +1,315 @@
+/* ============================================================================
+   Dashboard - three blocks (#159)
+   ----------------------------------------------------------------------------
+   Hero Next Action, Goal Standing, Skill Cards. Flat painted fields with ink
+   keylines, no radius, no shadow, no gradient - the "Bảng hiệu phòng thi" rules.
+   Everything below is layout only: colour comes from the token layer.
+   ============================================================================ */
+
+/* ===== Block 1: Hero Next Action ===== */
+.dashboard-hero {
+  border: var(--keyline) solid var(--ink);
+  border-left-width: 8px;
+  background: var(--color-surface);
+}
+
+/* The left edge is the only verdict colour. A whole tinted panel would read as a state of
+   the app rather than a statement about what to do next. */
+.dashboard-hero--info    { border-left-color: var(--sign-blue); }
+.dashboard-hero--warning { border-left-color: var(--sign-gold); }
+.dashboard-hero--danger  { border-left-color: var(--sign-red); }
+.dashboard-hero--success { border-left-color: var(--sign-green); }
+
+.dashboard-hero__main {
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.dashboard-hero__eyebrow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  font-family: var(--font-sign);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps-sm);
+  color: var(--color-text-muted);
+}
+
+.dashboard-hero__title {
+  margin: 0;
+  font-family: var(--font-sign);
+  font-size: clamp(1.5rem, 3vw, 2.25rem);
+  font-weight: 700;
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-sign);
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.dashboard-hero__desc {
+  margin: 0;
+  max-width: 62ch;
+  font-size: var(--text-base);
+  line-height: var(--leading-body);
+  color: var(--color-text);
+}
+
+/* ===== Block 2: Goal Standing ===== */
+.dashboard-goal {
+  border: var(--keyline) solid var(--ink);
+  background: var(--color-surface);
+}
+
+.dashboard-goal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: var(--ink);
+  color: #ffffff;
+}
+
+.dashboard-goal__title {
+  margin: 0;
+  font-family: var(--font-sign);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-sign);
+  color: #ffffff;
+}
+
+/* Four ruled cells, not four floating tiles: the Rules are the structure. */
+.dashboard-goal__facts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0;
+}
+
+.dashboard-goal__fact {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-4);
+  border-right: var(--keyline-soft) solid var(--line-soft);
+}
+
+.dashboard-goal__fact:last-child { border-right: 0; }
+
+.dashboard-goal__fact dt {
+  font-family: var(--font-sign);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps-sm);
+  color: var(--color-text-muted);
+}
+
+.dashboard-goal__fact dd {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.dashboard-goal__figure {
+  font-family: var(--font-mono);
+  font-size: var(--text-xl);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.dashboard-goal__sub {
+  font-size: var(--text-xs);
+  line-height: var(--leading-snug);
+  color: var(--color-text-muted);
+}
+
+.dashboard-goal__link {
+  font-family: var(--font-sign);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps-sm);
+  color: var(--sign-blue);
+  align-self: flex-start;
+}
+
+.dashboard-goal__progress { margin-top: var(--space-1); }
+
+/* ===== Block 3: Skill Cards ===== */
+.dashboard-skills {
+  border: var(--keyline) solid var(--ink);
+  background: var(--color-surface);
+}
+
+.dashboard-skills__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: var(--ink);
+  color: #ffffff;
+}
+
+.dashboard-skills__title {
+  margin: 0;
+  font-family: var(--font-sign);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-sign);
+  color: #ffffff;
+}
+
+.dashboard-skills__empty { padding: var(--space-5); }
+
+/* The card count is the certificate's own: two skills means two columns, five means five. */
+.dashboard-skills__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.dashboard-skill {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-right: var(--keyline-soft) solid var(--line-soft);
+  border-bottom: var(--keyline-soft) solid var(--line-soft);
+  min-width: 0;
+}
+
+.dashboard-skill__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.dashboard-skill__name {
+  margin: 0;
+  font-family: var(--font-sign);
+  font-size: var(--text-lg);
+  font-weight: 700;
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-sign);
+  text-transform: uppercase;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.dashboard-skill__score {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding-bottom: var(--space-3);
+  border-bottom: var(--keyline-soft) solid var(--line-soft);
+}
+
+.dashboard-skill__figure {
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: var(--ink);
+}
+
+/* No graded exam is a dash, not a zero: the skill has no score, it did not score badly. */
+.dashboard-skill__figure--empty { color: var(--color-text-muted); }
+
+.dashboard-skill__ceiling {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.dashboard-skill__label {
+  font-family: var(--font-sign);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps-sm);
+  color: var(--color-text-muted);
+}
+
+.dashboard-skill__eyebrow {
+  font-family: var(--font-sign);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps-sm);
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-2);
+}
+
+.dashboard-skill__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-skill__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+  border-bottom: var(--keyline-soft) solid var(--line-soft);
+  min-width: 0;
+}
+
+.dashboard-skill__row:last-child { border-bottom: 0; }
+
+.dashboard-skill__category {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--text-sm);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.dashboard-skill__count {
+  flex: none;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.dashboard-skill__footer {
+  margin-top: auto;
+  padding-top: var(--space-2);
+}
+
+/* ===== Adaptation ===== */
+@media (max-width: 1024px) {
+  .dashboard-goal__facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dashboard-goal__fact:nth-child(2) { border-right: 0; }
+  .dashboard-goal__fact:nth-child(1),
+  .dashboard-goal__fact:nth-child(2) { border-bottom: var(--keyline-soft) solid var(--line-soft); }
+}
+
+@media (max-width: 640px) {
+  .dashboard-goal__facts { grid-template-columns: minmax(0, 1fr); }
+  .dashboard-goal__fact {
+    border-right: 0;
+    border-bottom: var(--keyline-soft) solid var(--line-soft);
+  }
+  .dashboard-goal__fact:last-child { border-bottom: 0; }
+  .dashboard-skills__grid { grid-template-columns: minmax(0, 1fr); }
+  .dashboard-skill { border-right: 0; }
+}

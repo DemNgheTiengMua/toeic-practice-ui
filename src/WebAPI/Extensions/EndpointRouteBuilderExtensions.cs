@@ -19,6 +19,7 @@ public static class EndpointRouteBuilderExtensions
         app.MapCheckoutEndpoints();
         app.MapWritingEndpoints();
         app.MapSpeakingEndpoints();
+        app.MapSkillPracticeEndpoints();
         app.MapInsightEndpoints();
         app.MapPlacementEndpoints();
         app.MapLearningPathEndpoints();

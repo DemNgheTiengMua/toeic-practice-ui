@@ -1,27 +1,18 @@
 
 namespace Contracts;
 
-/// <summary><paramref name="IsNew"/> is decided by the service (LearnerDashboard.IsNew) and sent
-/// as data, so the rule for "show the getting-started state" lives in one place.</summary>
+/// <summary>#159: the learner's dashboard is three blocks. Every other block the ticket names was
+/// deleted rather than hidden, so this DTO carries only what those three render.
+/// <para>
+/// <see cref="Skills"/> is the active certificate's own skill list (#149's rule): a certificate that
+/// names its skills Comprehension and Expression gets those two cards, never a Listening/Reading pair.
+/// </para></summary>
 public sealed record LearnerDashboardDto(
     CertificateOptionDto Certificate,
-    LatestResultDto? LatestResult,
-    bool IsNew,
+    NextActionDto NextAction,
+    GoalStandingDto Goal,
+    IReadOnlyList<SkillCardDto> Skills,
     int AttemptCount,
     int PracticeCount,
-    IReadOnlyList<RecentAttemptDto> RecentAttempts,
-    IReadOnlyList<RecentPracticeDto> RecentPractice,
     RecentAttemptDto? UnfinishedAttempt = null,
-    RecentPracticeDto? UnfinishedPractice = null,
-    TargetReadinessDto? TargetReadiness = null,
-    IReadOnlyList<MissionStepDto>? MissionSteps = null,
-    SimulatorConfigDto? SimulatorConfig = null,
-    IReadOnlyList<WeaknessStripDto>? WeaknessStrips = null,
-    UpcomingBookingCardDto? UpcomingBooking = null,
-    RubricHighlightDto? LatestRubricHighlight = null,
-    int? OverallAccuracyPercent = null)
-{
-    public IReadOnlyList<MissionStepDto> MissionSteps { get; init; } = MissionSteps ?? [];
-
-    public IReadOnlyList<WeaknessStripDto> WeaknessStrips { get; init; } = WeaknessStrips ?? [];
-}
+    RecentPracticeDto? UnfinishedPractice = null);

@@ -12,9 +12,29 @@ namespace WebMVC.Controllers;
 
 public sealed class SpeakingController(
     ISpeakingClient api,
+    ISkillPracticeClient catalog,
     CurrentUser currentUser,
     ILogger<SpeakingController> logger) : LearnerControllerBase(currentUser, logger)
 {
+    /// <summary>#159: the door. A spoken answer cannot be typed, so speaking is not part of the drill;
+    /// its sidebar entry lands on the list of recorded practice exams instead. This is what the
+    /// "Available in full mock exams" grey card should always have been.</summary>
+    [HttpGet("/speaking")]
+    public async Task<IActionResult> Index(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var list = await catalog.GetSpeakingExamsAsync(cancellationToken);
+            return View(new SkillPracticeIndexViewModel("Speaking", "/speaking", list, TempData["ErrorMessage"] as string));
+        }
+        catch (ApiException ex)
+        {
+            logger.LogError(ex, "Failed to load the speaking practice list");
+            TempData["ShellError"] = "Could not load speaking practice. Please try again.";
+            return RedirectToAction("Index", "Dashboard");
+        }
+    }
+
     [HttpGet("/speaking/{id:int}/instructions")]
     public async Task<IActionResult> Instructions(int id, CancellationToken cancellationToken)
     {
@@ -27,13 +47,13 @@ public sealed class SpeakingController(
         {
             logger.LogWarning(ex, "Speaking exam {ExamId} not found", id);
             TempData["ShellError"] = "Speaking practice exam not found.";
-            return RedirectToAction("Index", "Practice");
+            return RedirectToAction(nameof(Index));
         }
         catch (ApiException ex)
         {
             logger.LogError(ex, "Failed to load instructions for speaking exam {ExamId}", id);
             TempData["ShellError"] = "Could not load instructions.";
-            return RedirectToAction("Index", "Practice");
+            return RedirectToAction(nameof(Index));
         }
     }
 
@@ -83,7 +103,7 @@ public sealed class SpeakingController(
         {
             logger.LogInformation("Speaking attempt {AttemptId} has expired", attemptId);
             TempData["ShellError"] = "This speaking practice attempt has expired.";
-            return RedirectToAction("Index", "Practice");
+            return RedirectToAction(nameof(Index));
         }
         catch (ApiException ex) when (ex.Status == 404 || ex.Code == ApiError.Codes.AttemptNotFound)
         {
@@ -95,7 +115,7 @@ public sealed class SpeakingController(
         {
             logger.LogError(ex, "Failed to load speaking attempt {AttemptId}", attemptId);
             TempData["ShellError"] = "Could not load speaking practice attempt.";
-            return RedirectToAction("Index", "Practice");
+            return RedirectToAction(nameof(Index));
         }
     }
 
@@ -181,7 +201,7 @@ public sealed class SpeakingController(
         {
             logger.LogError(ex, "Failed to load pending grading for attempt {AttemptId}", attemptId);
             TempData["ShellError"] = "Could not load grading status.";
-            return RedirectToAction("Index", "Practice");
+            return RedirectToAction(nameof(Index));
         }
     }
 
@@ -238,7 +258,7 @@ public sealed class SpeakingController(
         {
             logger.LogError(ex, "Failed to load speaking review for attempt {AttemptId}", attemptId);
             TempData["ShellError"] = "Could not load speaking review.";
-            return RedirectToAction("Index", "Practice");
+            return RedirectToAction(nameof(Index));
         }
     }
 

@@ -8,16 +8,28 @@
 
 <div class="row row--between">
   <div>
-    <h1 class="m-0 mb-1">Practice by section</h1>
+    <h1 class="m-0 mb-1">Practice</h1>
     <p class="text-muted no-margin">
       Smart Practice gives you <strong>ten questions</strong>, drawn from the topics you have not mastered yet.
       You never pick the count or the source: a topic you just answered wrongly rests for <strong>24 hours</strong>,
       so you cannot make a miss disappear by clicking it again.
       <strong>Free, no credit deducted.</strong> A writing answer is checked against the question's word limit and required keywords.
-      Speaking is answered by voice, so it has its own recorded practice, graded by AI for 1 credit.
+      Speaking is answered by voice, so it has <a href="/speaking">its own recorded practice</a>, graded by AI for 1 credit.
     </p>
   </div>
 </div>
+
+@* #159: five sidebar items means this page has to be the way on to the rest, not a leaf. Every
+   door the old seventeen-item rail carried is still one click from here. *@
+<nav class="row row--wrap" aria-label="More practice tools">
+  <a class="btn btn--sm" href="/weakness-analysis">Weakness analysis</a>
+  <a class="btn btn--sm" href="/saved-questions">Saved questions</a>
+  <a class="btn btn--sm" href="/exams/history">Exam history</a>
+  <a class="btn btn--sm" href="/learning-path">My learning path</a>
+  <a class="btn btn--sm" href="/placement">Placement test</a>
+  <a class="btn btn--sm" href="/mentors">Find a mentor</a>
+  <a class="btn btn--sm" href="/certificates">Certificates</a>
+</nav>
 
 @if (!string.IsNullOrEmpty(Model.ErrorMessage))
 {

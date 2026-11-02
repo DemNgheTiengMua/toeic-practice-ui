@@ -7,6 +7,9 @@ using Xunit;
 
 namespace WebMVC.Tests;
 
+/// <summary>The guided-learning and mentor screens: card order, resume point, and dates that render in
+/// the learner's own zone. #159 deleted the dashboard pieces that lived here (the mentor countdown, the
+/// recent-attempt links and the simulator) along with the blocks that used them.</summary>
 public sealed class GuidedLearningDisplayTests
 {
     private static LessonCardDto Card(int id, int order, string type, string markdown) =>
@@ -30,32 +33,6 @@ public sealed class GuidedLearningDisplayTests
         Assert.Equal(1, new LessonViewModel(lesson, progress with { LastViewedCardId = 999 }).InitialIndex);
     }
 
-    [Theory]
-    [InlineData(-1, "STARTING NOW")]
-    [InlineData(30, "IN 30M")]
-    [InlineData(95, "IN 1H 35M")]
-    [InlineData(1500, "IN 1D 1H")]
-    public void Mentor_countdown_preserves_boundary_labels(int minutes, string expected)
-    {
-        var now = DateTimeOffset.Parse("2026-10-26T00:00:00Z");
-        Assert.Equal(expected, DashboardPresentation.FormatCountdown(now.AddMinutes(minutes), now));
-    }
-
-    [Theory]
-    [InlineData(ExamPurposeDto.Mock, "/exams/take/7", "/exams/result/7")]
-    [InlineData(ExamPurposeDto.Placement, "/placement/take/7", "/placement/result/7")]
-    [InlineData(ExamPurposeDto.SpeakingPractice, "/speaking/take/7", "/speaking/review/7")]
-    [InlineData(ExamPurposeDto.WritingPractice, "/writing/take/7", "/writing/review/7")]
-    public void Dashboard_attempt_links_preserve_each_sitting_destination(ExamPurposeDto purpose, string resume, string result)
-    {
-        var links = new DashboardAttemptLinks(new RecentAttemptDto(7, "Exam", purpose,
-            AttemptStatusDto.Graded, DateTimeOffset.UtcNow, 100, null));
-        Assert.Equal(resume, links.Resume);
-        Assert.Equal(result, links.Result);
-        Assert.Equal("Cancelled", DashboardPresentation.AttemptStatusLabel(AttemptStatusDto.Abandoned));
-        Assert.Equal("Cancelled", DashboardPresentation.PracticeStatusLabel(PracticeStatusDto.Abandoned));
-    }
-
     [Fact]
     public void Mentor_slot_dates_use_the_request_timezone_and_remain_display_ready()
     {
@@ -69,26 +46,5 @@ public sealed class GuidedLearningDisplayTests
         Assert.Equal("26 Oct 2026, 01:00", model.Dates[start].Full);
         Assert.Equal("01:00", model.Dates[start].Time);
         Assert.Empty(new LearnerBookingsViewModel([]).PrepareDates(formatter).Dates);
-    }
-
-    [Fact]
-    public void Simulator_prepares_band_target_tick_and_headroom_for_rendering()
-    {
-        var dashboard = new LearnerDashboardDto(new("TOEIC", "TOEIC"), null, true, 0, 0, [], []);
-        var config = new SimulatorConfigDto(100, null, null, "b2", null,
-            [new SimulatorSkillDto(1, "R", "Reading", "reading", 25, 0, 50, 5),
-             new SimulatorSkillDto(2, "L", "Listening", "listening", 10, 0, 50, 5)],
-            [new ScoreBandThresholdDto("B1", "Threshold", 0, 49), new ScoreBandThresholdDto("B2", "Vantage", 50, 100)]);
-        var model = new DashboardSimulatorViewModel(dashboard, config);
-        Assert.Equal(35, model.InitialTotal);
-        Assert.Equal("B1", model.InitialBand.Code);
-        Assert.Equal(15, model.InitialDeficit);
-        Assert.Equal("Vantage", model.TargetName);
-        Assert.Equal(2, model.TopLeverageSkill.SkillId);
-        Assert.Equal(40, model.TopHeadroom);
-        Assert.Equal(25, model.Skills[1].MidTick);
-        Assert.True(model.Bands["B1"].IsCurrent);
-        Assert.True(model.Bands["B2"].IsTarget);
-        Assert.Contains("\"minTotal\":50", model.BandsJson);
     }
 }

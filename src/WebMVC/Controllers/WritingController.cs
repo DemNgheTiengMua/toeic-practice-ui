@@ -10,9 +10,28 @@ namespace WebMVC.Controllers;
 
 public sealed class WritingController(
     IWritingClient api,
+    ISkillPracticeClient catalog,
     CurrentUser currentUser,
     ILogger<WritingController> logger) : LearnerControllerBase(currentUser, logger)
 {
+    /// <summary>#159: the door. Writing is not part of the typed drill, so the sidebar's entry has to
+    /// land on a real list of published writing exams rather than a dead end.</summary>
+    [HttpGet("/writing")]
+    public async Task<IActionResult> Index(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var list = await catalog.GetWritingExamsAsync(cancellationToken);
+            return View(new SkillPracticeIndexViewModel("Writing", "/writing", list, TempData["ErrorMessage"] as string));
+        }
+        catch (ApiException ex)
+        {
+            logger.LogError(ex, "Failed to load the writing practice list");
+            TempData["ShellError"] = "Could not load writing practice. Please try again.";
+            return RedirectToAction("Index", "Dashboard");
+        }
+    }
+
     [HttpGet("/writing/{id:int}/instructions")]
     public async Task<IActionResult> Instructions(int id, CancellationToken cancellationToken)
     {
@@ -25,13 +44,13 @@ public sealed class WritingController(
         {
             logger.LogWarning(ex, "Writing exam {ExamId} not found", id);
             TempData["ShellError"] = "Writing practice exam not found.";
-            return RedirectToAction("Index", "Practice");
+            return RedirectToAction(nameof(Index));
         }
         catch (ApiException ex)
         {
             logger.LogError(ex, "Failed to load instructions for writing exam {ExamId}", id);
             TempData["ShellError"] = "Could not load instructions.";
-            return RedirectToAction("Index", "Practice");
+            return RedirectToAction(nameof(Index));
         }
     }
 
@@ -81,7 +100,7 @@ public sealed class WritingController(
         {
             logger.LogInformation("Writing attempt {AttemptId} has expired", attemptId);
             TempData["ShellError"] = "This writing practice attempt has expired.";
-            return RedirectToAction("Index", "Practice");
+            return RedirectToAction(nameof(Index));
         }
         catch (ApiException ex) when (ex.Status == 404 || ex.Code == ApiError.Codes.AttemptNotFound)
         {
@@ -93,7 +112,7 @@ public sealed class WritingController(
         {
             logger.LogError(ex, "Failed to load writing attempt {AttemptId}", attemptId);
             TempData["ShellError"] = "Could not load writing practice attempt.";
-            return RedirectToAction("Index", "Practice");
+            return RedirectToAction(nameof(Index));
         }
     }
 
@@ -161,7 +180,7 @@ public sealed class WritingController(
         {
             logger.LogError(ex, "Failed to load pending grading for attempt {AttemptId}", attemptId);
             TempData["ShellError"] = "Could not load grading status.";
-            return RedirectToAction("Index", "Practice");
+            return RedirectToAction(nameof(Index));
         }
     }
 
@@ -218,7 +237,7 @@ public sealed class WritingController(
         {
             logger.LogError(ex, "Failed to load writing review for attempt {AttemptId}", attemptId);
             TempData["ShellError"] = "Could not load writing review.";
-            return RedirectToAction("Index", "Practice");
+            return RedirectToAction(nameof(Index));
         }
     }
 }

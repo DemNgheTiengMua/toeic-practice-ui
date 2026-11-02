@@ -1,0 +1,13 @@
+@model SkillPracticeIndexViewModel
+@* #159: Writing and Speaking share one door page; only the words differ. Two copies of the same
+   list would drift apart the first time one of them changed.
+
+   The title and description are set HERE, not in the partial: a layout renders <head> before
+   RenderBody, so anything the partial assigns to ViewData arrives after the title tag has already
+   been written. That is exactly the empty-title defect this arrangement used to have. *@
+@{
+    ViewData["Title"] = "Writing practice";
+    ViewData["Description"] = "Write an answer and have it graded against your certificate's writing rubric.";
+}
+
+<partial name="SkillPracticeIndex" model="Model" />

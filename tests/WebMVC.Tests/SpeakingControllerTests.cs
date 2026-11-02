@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Security.Claims;
@@ -41,7 +41,7 @@ public sealed class SpeakingControllerTests
     }
 
     [Fact]
-    public async Task Instructions_when_not_found_redirects_to_Practice_Index()
+    public async Task Instructions_when_not_found_returns_to_the_speaking_door()
     {
         var api = new TestApiClient
         {
@@ -51,9 +51,10 @@ public sealed class SpeakingControllerTests
         var controller = CreateController(api);
         var result = await controller.Instructions(999, CancellationToken.None);
 
+        // #159: the sidebar's Speaking entry landed here, so a dead exam returns to that list.
         var redirect = Assert.IsType<RedirectToActionResult>(result);
         Assert.Equal("Index", redirect.ActionName);
-        Assert.Equal("Practice", redirect.ControllerName);
+        Assert.Null(redirect.ControllerName);
         Assert.NotNull(controller.TempData["ShellError"]);
     }
 
@@ -296,7 +297,7 @@ public sealed class SpeakingControllerTests
 
         var httpContext = new DefaultHttpContext { User = principal, RequestServices = serviceProvider };
         var currentUser = new CurrentUser(new HttpContextAccessor { HttpContext = httpContext });
-        var controller = new SpeakingController(api, currentUser, NullLogger<SpeakingController>.Instance)
+        var controller = new SpeakingController(api, new SkillPracticeStub(), currentUser, NullLogger<SpeakingController>.Instance)
         {
             ControllerContext = new ControllerContext
             {
