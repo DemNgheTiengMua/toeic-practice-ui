@@ -631,10 +631,8 @@ CREATE TABLE AttemptAnswers (
   IsCorrect             BIT NULL,
   -- UI-16: "Flag for review", "Flag 7", review filter "Only flagged questions"
   IsFlagged        BIT NOT NULL CONSTRAINT DF_AttemptAnswers_IsFlagged DEFAULT 0,
-  -- #156: when this answer was last written, so the gap to the previous answer is the response
-  -- time. NULL, never backfilled: a row from before this column has no response time, and
-  -- inventing one (SYSDATETIME() on every old row) would make every rushing signal meaningless.
-  AnsweredAt       DATETIME2(3) NULL,
+  -- #167: no AnsweredAt here. Sitting timing is not measured for regular attempts and nothing
+  -- reads it; only PracticeAnswers.AnsweredAt feeds the calibration rushed-answer filter.
   CONSTRAINT UQ_AttemptAnswers UNIQUE (AttemptId, QuestionId),
   -- H-5: ExamId must be the attempt's own
   CONSTRAINT FK_AttemptAnswers_AttemptExam FOREIGN KEY (AttemptId, ExamId) REFERENCES ExamAttempts(AttemptId, ExamId),

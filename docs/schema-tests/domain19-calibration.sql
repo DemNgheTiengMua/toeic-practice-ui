@@ -27,12 +27,13 @@ INSERT INTO ExamAttempts (UserId,ExamId,CertId,Status,StartedAt,ExpiresAt)
   VALUES (@u,@e,@c,'in_progress',SYSDATETIMEOFFSET(),DATEADD(hour,1,SYSDATETIMEOFFSET()));
 DECLARE @a INT=SCOPE_IDENTITY();
 
--- accept: an answer with a response time, and one from before the column with none
-INSERT INTO AttemptAnswers (AttemptId,QuestionId,ExamId,IsCorrect,AnsweredAt)
-  VALUES (@a,@q,@e,1,SYSDATETIMEOFFSET());
+-- #167: AttemptAnswers carries no AnsweredAt any more — nothing read it. The row inserts below stay
+-- so the answer table is still exercised; only PracticeAnswers has a response time.
+INSERT INTO AttemptAnswers (AttemptId,QuestionId,ExamId,IsCorrect)
+  VALUES (@a,@q,@e,1);
 INSERT INTO AttemptAnswers (AttemptId,QuestionId,ExamId,IsCorrect)
   VALUES (@a,@q2,@e,0);
-PRINT 'answer timestamps accepted, NULL allowed for rows that predate the column';
+PRINT 'attempt answers store without a response time';
 
 -- accept: a decision the learner made, with the numbers behind it
 INSERT INTO CalibrationDecisions (UserId,CertId,PlacedBandCode,ProposedBandCode,SampleSize,ObservedAccuracyPct,Decision)
