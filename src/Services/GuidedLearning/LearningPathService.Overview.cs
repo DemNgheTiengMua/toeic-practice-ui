@@ -68,7 +68,6 @@ public sealed partial class LearningPathService
                 TargetScore: null,
                 Status: null,
                 StartedAt: null,
-                IsPremium: false,
                 TotalModules: 0,
                 CompletedModules: 0,
                 TotalEstimatedMinutes: 0,
@@ -95,9 +94,6 @@ public sealed partial class LearningPathService
             currentScore.HasValue && currentScore.Value >= b.MinTotal,
             b.Code == activePath.CurrentBandCode,
             b.Code == activePath.PathTemplate.ToBandCode)).ToList();
-
-        bool isPremium = await db.CreditTransactions
-            .AnyAsync(t => t.LearnerPathId == activePath.LearnerPathId && t.Reason == CreditReason.PremiumPath.ToCode(), cancellationToken);
 
         var templateModules = await db.PathModules
             .AsNoTracking()
@@ -289,7 +285,6 @@ public sealed partial class LearningPathService
             TargetScore: targetScore,
             Status: statusEnum,
             StartedAt: activePath.StartedAt,
-            IsPremium: isPremium,
             TotalModules: templateModules.Count,
             CompletedModules: completedModulesCount,
             TotalEstimatedMinutes: totalEstimatedMins,

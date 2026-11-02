@@ -34,16 +34,6 @@ public sealed partial class LearningPathService
             throw new LearningPathException(LearningPathException.StepLocked, "This step is locked.");
         }
 
-        if (step.PathModuleItem.IsPremiumOnly)
-        {
-            bool isPremium = await db.CreditTransactions
-                .AnyAsync(t => t.LearnerPathId == step.LearnerPathId && t.Reason == CreditReason.PremiumPath.ToCode(), cancellationToken);
-            if (!isPremium)
-            {
-                throw new LearningPathException(LearningPathException.StepLocked, "This step requires a premium learning path.");
-            }
-        }
-
         if (step.Status == "available")
         {
             step.Status = "in_progress";

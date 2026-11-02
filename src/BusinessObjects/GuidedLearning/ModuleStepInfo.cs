@@ -11,7 +11,6 @@ public sealed record ModuleStepInfo(
     LearnerPathStepStatus Status,
     decimal? Score,
     int? QuestionCount,
-    bool IsPremiumOnly,
     bool CanStart,
     DateTimeOffset? StartedAt,
     DateTimeOffset? CompletedAt,

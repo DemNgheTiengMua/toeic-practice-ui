@@ -31,8 +31,6 @@ public partial class PathModuleItem
 
     public int? QuestionCount { get; set; }
 
-    public bool IsPremiumOnly { get; set; }
-
     public int DisplayOrder { get; set; }
 
     public int? RefLessonId { get; set; }

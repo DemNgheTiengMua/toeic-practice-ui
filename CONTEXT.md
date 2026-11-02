@@ -1,7 +1,8 @@
 # extra efficient
 
 A multi-certificate English practice-and-mock-exam companion: learners diagnose themselves for free
-and spend credits on mock exams, AI grading, mentor sessions, and premium learning paths.
+and spend credits on mock exams, AI grading, and mentor sessions. Practice, placement, the weakness
+report, and the learning path are free.
 
 ## Language
 

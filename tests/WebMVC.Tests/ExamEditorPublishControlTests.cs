@@ -82,7 +82,6 @@ public sealed class ExamEditorPublishControlTests : IClassFixture<ExamEditorPubl
                      typeof(ExamFormViewModel),
                      typeof(CreateAdminExamRequest),
                      typeof(UpdateAdminExamRequest),
-                     typeof(ExamBlueprintDto),
                  })
         {
             Assert.Null(model.GetProperty("Status", BindingFlags.Public | BindingFlags.Instance));

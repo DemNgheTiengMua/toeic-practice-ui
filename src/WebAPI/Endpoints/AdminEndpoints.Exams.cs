@@ -43,23 +43,6 @@ public static partial class AdminEndpoints
             }
         });
 
-        admin.MapPost("/exams/generate", async (
-            ExamBlueprintDto request,
-            HttpContext http,
-            IExamGeneratorService generator,
-            CancellationToken cancellationToken) =>
-        {
-            try
-            {
-                var result = await generator.GenerateAndIngestExamAsync(request, CurrentUserId(http), cancellationToken);
-                return Results.Ok(result);
-            }
-            catch (AdminExamException ex)
-            {
-                return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
-            }
-        });
-
         admin.MapGet("/exams/{examId:int}", async (
             int examId,
             IAdminExamService exams,
@@ -151,26 +134,6 @@ public static partial class AdminEndpoints
             {
                 var audio = await exams.SaveSectionAudioAsync(examId, request, cancellationToken);
                 return Results.Ok(audio);
-            }
-            catch (AdminExamException ex)
-            {
-                return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
-            }
-        });
-
-        admin.MapPost("/exams/{examId:int}/sections/{sectionId:int}/ai-generate", async (
-            int examId,
-            int sectionId,
-            SectionGenerateRequest? request,
-            IExamGeneratorService generator,
-            HttpContext http,
-            CancellationToken cancellationToken) =>
-        {
-            try
-            {
-                var adminUserId = CurrentUserId(http);
-                var result = await generator.GenerateSectionQuestionsAsync(examId, sectionId, adminUserId, request?.QuestionCount, cancellationToken);
-                return Results.Ok(result);
             }
             catch (AdminExamException ex)
             {

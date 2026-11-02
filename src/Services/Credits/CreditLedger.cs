@@ -184,50 +184,6 @@ public sealed class CreditLedger : ICreditLedger
         return await SaveTransactionAsync(txn, reason, -priceCredits, balance - priceCredits, now, cancellationToken);
     }
 
-    public async Task<CreditReceipt> ChargePremiumPathAsync(int userId, int learnerPathId, int amount = 5, CancellationToken cancellationToken = default)
-    {
-        if (amount <= 0)
-        {
-            throw new CreditLedgerException(CreditLedgerException.InvalidCharge, "Upgrade amount must be positive.");
-        }
-
-        var path = await _db.LearnerPaths
-            .AsNoTracking()
-            .FirstOrDefaultAsync(p => p.LearnerPathId == learnerPathId, cancellationToken);
-
-        if (path is null || path.UserId != userId)
-        {
-            throw new CreditLedgerException(CreditLedgerException.TargetOwnerMismatch, $"Learner path {learnerPathId} was not found or does not belong to user {userId}.", 404);
-        }
-
-        var reason = CreditReason.PremiumPath;
-        var existing = await _db.CreditTransactions
-            .FirstOrDefaultAsync(t => t.LearnerPathId == learnerPathId && t.Reason == reason.ToCode(), cancellationToken);
-        if (existing is not null)
-        {
-            var curBalance = await GetBalanceAsync(userId, cancellationToken);
-            return new CreditReceipt(existing.TxnId, existing.UserId, reason, existing.Delta, curBalance, existing.CreatedAt);
-        }
-
-        var balance = await GetBalanceAsync(userId, cancellationToken);
-        if (balance < amount)
-        {
-            throw new CreditLedgerException(CreditLedgerException.InsufficientCredits, $"You do not have enough credits to upgrade to premium ({amount} credits required).", 400);
-        }
-
-        var now = _clock.GetUtcNow();
-        var txn = new CreditTransaction
-        {
-            UserId = userId,
-            Reason = reason.ToCode(),
-            Delta = -amount,
-            LearnerPathId = learnerPathId,
-            CreatedAt = now
-        };
-
-        return await SaveTransactionAsync(txn, reason, -amount, balance - amount, now, cancellationToken);
-    }
-
     public async Task<CreditReceipt> RefundBookingAsync(int userId, int bookingId, int amount, CancellationToken cancellationToken = default)
     {
         if (amount <= 0)

@@ -72,7 +72,7 @@ public partial class FakeAiInsightGenerator
                 TargetBandCode: request.TargetBandCode));
         }
 
-        var narrative = $"{trendNarrative}\n\nSteps are sequenced by template order to systematically build proficiency.";
+        var narrative = $"{trendNarrative}\n\nSteps are sequenced by the four-week plan in order of your weakest sections, so each week builds on the one before it.";
 
         return Task.FromResult(new AiInsightResult(
             Success: true,

@@ -27,7 +27,6 @@ public sealed record LearningPathModuleDetailView(
     int TotalAnswered,
     int TimeSpentMinutes,
     int EstimatedMinutesRemaining,
-    bool IsPremium,
     List<ModuleTopicInfo> Topics,
     List<ModuleStepInfo> Steps,
     int? ActiveStepId);

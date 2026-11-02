@@ -62,7 +62,6 @@ public sealed class LessonsControllerTests
         public LessonProgressDto? Progress { get; set; }
         public int? LastRecordedLessonId { get; set; }
         public int? LastRecordedCardId { get; set; }
-        public int? LastUnlockedPathId { get; set; }
 
         public Task<LessonDetailDto> GetLessonAsync(int lessonId, CancellationToken cancellationToken = default) =>
             ExceptionToThrow != null ? Task.FromException<LessonDetailDto>(ExceptionToThrow) : Task.FromResult(Lesson!);
@@ -89,13 +88,6 @@ public sealed class LessonsControllerTests
             if (ExceptionToThrow != null) return Task.FromException<MicroCheckResultDto>(ExceptionToThrow);
             LastSelectedOption = selectedOption;
             return Task.FromResult(MicroCheckResult!);
-        }
-
-        public Task UnlockPathAsync(int learnerPathId, CancellationToken cancellationToken = default)
-        {
-            if (ExceptionToThrow != null) return Task.FromException(ExceptionToThrow);
-            LastUnlockedPathId = learnerPathId;
-            return Task.CompletedTask;
         }
 
         public Task<LearnerContextDto> GetLearnerContextAsync(CancellationToken cancellationToken = default) =>
@@ -229,32 +221,5 @@ public sealed class LessonsControllerTests
         var payload = json.Value!;
         Assert.True((bool)payload.GetType().GetProperty("isCorrect")!.GetValue(payload)!);
         Assert.Equal("B", payload.GetType().GetProperty("correctOption")!.GetValue(payload));
-    }
-
-    [Fact]
-    public async Task UnlockPath_WhenSuccessful_ReturnsJsonSuccess()
-    {
-        var api = new TestApiClient();
-        var controller = CreateController(api);
-
-        var result = await controller.UnlockPath(5, CancellationToken.None);
-
-        Assert.IsType<JsonResult>(result);
-        Assert.Equal(5, api.LastUnlockedPathId);
-    }
-
-    [Fact]
-    public async Task UnlockPath_WhenInsufficientCredits_ReturnsBadRequest()
-    {
-        var api = new TestApiClient
-        {
-            ExceptionToThrow = new ApiException(ApiError.Codes.InsufficientCredits, "Insufficient credits", 400)
-        };
-        var controller = CreateController(api);
-
-        var result = await controller.UnlockPath(5, CancellationToken.None);
-
-        var statusResult = Assert.IsType<ObjectResult>(result);
-        Assert.Equal(400, statusResult.StatusCode);
     }
 }

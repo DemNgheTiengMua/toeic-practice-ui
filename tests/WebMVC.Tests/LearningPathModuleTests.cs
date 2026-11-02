@@ -46,7 +46,6 @@ public sealed class LearningPathModuleTests
             TotalAnswered: 15,
             TimeSpentMinutes: 12,
             EstimatedMinutesRemaining: 8,
-            IsPremium: false,
             Topics: [],
             Steps: [],
             ActiveStepId: 101);

@@ -21,7 +21,6 @@ public class LearningPathException(string code, string message) : Exception(mess
     public const string StepNotFound = "step_not_found";
     public const string StepLocked = "step_locked";
     public const string NoQuestionsAvailable = "no_questions_available";
-    public const string InsufficientCredits = "insufficient_credits";
 
     /// <summary>#153: the learner's goal is Unrealistic, so no path is generated for it. The message
     /// names the hours required and the hours available — the two numbers the refusal rests on.</summary>

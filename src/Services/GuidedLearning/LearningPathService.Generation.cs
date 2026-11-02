@@ -345,7 +345,6 @@ public sealed partial class LearningPathService
                 ItemType = PathModuleItemType.PracticeSection.ToCode(),
                 RefSectionId = sectionId,
                 QuestionCount = PracticeQuestionsPerStep,
-                IsPremiumOnly = false,
                 DisplayOrder = order++
             };
 
@@ -382,7 +381,6 @@ public sealed partial class LearningPathService
                 TemplateId = templateId,
                 ItemType = PathModuleItemType.Lesson.ToCode(),
                 RefLessonId = lessonIds[i],
-                IsPremiumOnly = false,
                 DisplayOrder = 100 + i
             };
 
@@ -419,7 +417,6 @@ public sealed partial class LearningPathService
                 TemplateId = templateId,
                 ItemType = PathModuleItemType.MockExam.ToCode(),
                 RefExamId = examIds[i],
-                IsPremiumOnly = false,
                 DisplayOrder = 200 + i
             };
 

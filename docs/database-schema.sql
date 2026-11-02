@@ -1223,7 +1223,6 @@ CREATE TABLE PathModuleItems (
   RefExamId       INT NULL,
   DifficultyLevel INT NULL CONSTRAINT CK_PMI_Difficulty CHECK (DifficultyLevel IS NULL OR DifficultyLevel BETWEEN 1 AND 5),
   QuestionCount   INT NULL CONSTRAINT CK_PMI_QCount CHECK (QuestionCount IS NULL OR QuestionCount > 0), -- UI-23: "20 questions"
-  IsPremiumOnly   BIT NOT NULL CONSTRAINT DF_PMI_IsPremiumOnly DEFAULT 0, -- UI-23: AI-graded writing is premium-only
   DisplayOrder    INT NOT NULL DEFAULT 0,
   -- Review Focus #3: the ref column must match ItemType
   CONSTRAINT CK_PMI_RefMatchesType CHECK (
@@ -1244,7 +1243,7 @@ CREATE TABLE PathModuleItems (
   CONSTRAINT UQ_PMI_Id_Template UNIQUE (ItemId, TemplateId)
 );
 GO
--- UI-23: path-detail "Topics covered in this module"; premium adds a video lesson per topic.
+-- UI-23: path-detail "Topics covered in this module".
 -- Topic status (Done / In progress) derives from the module's practice answers in CategoryId.
 CREATE TABLE PathModuleTopics (
   TopicId      INT IDENTITY(1,1) PRIMARY KEY,
@@ -1252,7 +1251,7 @@ CREATE TABLE PathModuleTopics (
   Title        NVARCHAR(160) NOT NULL,
   CategoryId   INT NULL REFERENCES QuestionCategories(CategoryId),
   QuestionCount INT NULL CONSTRAINT CK_PMT_QCount CHECK (QuestionCount IS NULL OR QuestionCount > 0),
-  VideoPath    NVARCHAR(400) NULL,      -- premium only
+  VideoPath    NVARCHAR(400) NULL,
   DisplayOrder INT NOT NULL DEFAULT 0
 );
 GO
@@ -1741,15 +1740,8 @@ CREATE VIEW vw_UserCreditBalance AS
   SELECT UserId, SUM(Delta) AS Balance
   FROM CreditTransactions GROUP BY UserId;
 GO
--- Low: IsPremium is derived from a 'premium_path' ledger charge, never a free-standing flag.
-CREATE VIEW vw_LearnerPathIsPremium AS
-  SELECT lp.LearnerPathId,
-         CAST(CASE WHEN EXISTS (
-           SELECT 1 FROM CreditTransactions t
-           WHERE t.LearnerPathId = lp.LearnerPathId AND t.Reason = 'premium_path'
-         ) THEN 1 ELSE 0 END AS BIT) AS IsPremium
-  FROM LearnerPaths lp;
-GO
+-- #162: the vw_LearnerPathIsPremium view is gone with the premium-path feature. The reason code
+-- 'premium_path' stays in CK_CreditTxn_Reason: the ledger is append-only and rows already carry it.
 -- Review Focus #4 / C-1: no debit may drive the running balance below zero.
 -- Must also cover DELETE so a removed credit row can't leave a wallet negative unnoticed.
 CREATE TRIGGER trg_CreditTransactions_NoNegativeBalance
