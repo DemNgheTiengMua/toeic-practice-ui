@@ -117,6 +117,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAiGradingProcessor, AiGradingProcessor>();
         services.AddScoped<IWritingPracticeService, WritingPracticeService>();
         services.AddScoped<ISpeakingPracticeService, SpeakingPracticeService>();
+        services.AddScoped<ISkillPracticeCatalogService, SkillPracticeCatalogService>();
         services.AddHostedService<AiGradingBackgroundService>();
 
         services.AddScoped<IAiInsightService, AiInsightService>();

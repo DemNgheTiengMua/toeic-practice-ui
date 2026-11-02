@@ -1,0 +1,57 @@
+@model DashboardViewModel
+@{
+    var presentation = Model.Presentation;
+    var hero = Model.Dashboard.NextAction;
+    var cert = Model.Dashboard.Certificate;
+}
+
+@* #159: block 1 of 3. The hero carries exactly one action. It is a painted placard, not a greeting:
+   the learner's question is "what do I do now", and the page answers it once. *@
+<section class="dashboard-hero @DashboardPresentation.SeverityBadge(hero.Severity)" aria-labelledby="dashboard-hero-title">
+  <div class="dashboard-hero__main">
+    <div class="dashboard-hero__eyebrow">
+      <span>@hero.Eyebrow</span>
+      <span class="badge badge--muted font-mono">@cert.Code</span>
+      @if (!string.IsNullOrEmpty(hero.MetaLabel))
+      {
+        <span class="badge badge--muted font-mono">@hero.MetaLabel</span>
+      }
+    </div>
+
+    <h1 class="dashboard-hero__title" id="dashboard-hero-title">@hero.Title</h1>
+    <p class="dashboard-hero__desc">@hero.Description</p>
+
+    <div class="row row--wrap">
+      <a class="btn btn--primary btn--lg" href="@hero.ActionUrl">
+        @hero.ActionLabel <span aria-hidden="true">&rarr;</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+@if (Model.Activation == "sent")
+{
+  <div class="alert alert--success" role="status">A new activation link is on its way to @Model.User.Email. It expires in 24 hours.</div>
+}
+else if (Model.Activation == "failed")
+{
+  <div class="alert alert--danger" role="alert">Could not send the activation email. Try again in a few minutes.</div>
+}
+
+@if (Model.ShowVerificationReminder)
+{
+  @* #159: this is not one of the eleven dashboard blocks - it is the one notice that has to stay,
+     because buying credits silently fails until the address is confirmed and nothing else says so.
+     It is a dismissible alert on the page, not a block with a heading of its own. *@
+  <div class="alert alert--warning row row--between row--wrap" role="status" id="verify-reminder">
+    <span><strong>Verify your email</strong> to unlock buying credits. We sent a link to @Model.User.Email.</span>
+    <span class="row">
+      <form method="post" action="/auth/resend-activation" class="no-margin">
+        @Html.AntiForgeryToken()
+        <button type="submit" class="btn btn--sm">Resend email</button>
+      </form>
+      <button type="button" class="btn btn--ghost btn--sm" aria-label="Dismiss"
+              onclick="document.getElementById('verify-reminder').hidden = true">Dismiss</button>
+    </span>
+  </div>
+}

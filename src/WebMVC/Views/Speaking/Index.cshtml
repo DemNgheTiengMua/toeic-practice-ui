@@ -1,0 +1,9 @@
+@model SkillPracticeIndexViewModel
+@* #159: the Speaking half of the shared door. See Writing/Index.cshtml for why the title lives
+   here rather than in the partial. *@
+@{
+    ViewData["Title"] = "Speaking practice";
+    ViewData["Description"] = "Answer by voice, recorded and graded against your certificate's speaking rubric.";
+}
+
+<partial name="SkillPracticeIndex" model="Model" />

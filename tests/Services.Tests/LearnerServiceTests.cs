@@ -207,9 +207,13 @@ public sealed partial class LearnerServiceTests(DatabaseFixture database)
         var dashboard = await CreateService().GetDashboardAsync(userId);
 
         Assert.True(dashboard.IsNew);
-        Assert.Null(dashboard.LatestResult);
-        Assert.Empty(dashboard.RecentAttempts);
-        Assert.Empty(dashboard.RecentPractice);
+        Assert.Null(dashboard.UnfinishedAttempt);
+        Assert.Null(dashboard.UnfinishedPractice);
+        // #159: a cold start has no graded score and no weak topic, so the cards say so instead of
+        // inventing zeros.
+        Assert.All(dashboard.Skills, s => Assert.Null(s.LatestScaledScore));
+        Assert.All(dashboard.Skills, s => Assert.Empty(s.WeakestCategories));
+        Assert.Equal("/placement", dashboard.NextAction.ActionUrl);
     }
 
     [Fact]
@@ -231,22 +235,19 @@ public sealed partial class LearnerServiceTests(DatabaseFixture database)
         Assert.False(dashboard.IsNew);
         Assert.Equal(2, dashboard.AttemptCount);
         Assert.Equal(1, dashboard.PracticeCount);
-        // Newest first, and the IELTS attempt (the newest overall) never appears.
-        Assert.Equal(new[] { 620, 450 }, dashboard.RecentAttempts.Select(a => a.TotalScore!.Value));
-        Assert.All(dashboard.RecentAttempts, a => Assert.Equal($"Mock {toeic}", a.ExamName));
-        Assert.Equal($"Photographs {toeic}", Assert.Single(dashboard.RecentPractice).SectionName);
-
-        var latest = dashboard.LatestResult!;
-        Assert.Equal(620, latest.TotalScore);
-        Assert.Equal("HIGH", latest.BandCode);
-        Assert.Equal("High band", latest.BandName);
+        // The newest graded mock on this certificate is the standing; the IELTS attempt (newest
+        // overall) never appears.
+        Assert.Equal(620, dashboard.Goal.CurrentScore);
+        Assert.Equal("HIGH", dashboard.Goal.CurrentBandCode);
+        Assert.Equal("High band", dashboard.Goal.CurrentBandName);
 
         await CreateService().SwitchCertificateAsync(userId, ielts);
         var switched = await CreateService().GetDashboardAsync(userId);
 
-        Assert.Equal(300, Assert.Single(switched.RecentAttempts).TotalScore);
-        Assert.Empty(switched.RecentPractice);
-        Assert.Equal(300, switched.LatestResult!.TotalScore);
+        Assert.Equal(1, switched.AttemptCount);
+        // IELTS seeded the same two bands as TOEIC, so the standing moves to the IELTS attempt.
+        Assert.Equal(300, switched.Goal.CurrentScore);
+        Assert.Equal("LOW", switched.Goal.CurrentBandCode);
     }
 
     [Fact]

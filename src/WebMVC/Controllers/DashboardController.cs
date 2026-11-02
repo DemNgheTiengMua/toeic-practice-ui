@@ -33,25 +33,9 @@ public sealed class DashboardController(
             logger.LogWarning(ex, "Could not read verification status for the dashboard");
         }
 
-        AiInsightDto? insight = null;
-        try
-        {
-            insight = await api.GetDashboardInsightAsync(cancellationToken: cancellationToken);
-            if (insight is not null)
-            {
-                insight = insight with { FormattedNarrative = AiNarrativeFormatter.ToSafeHtml(insight.Narrative) };
-            }
-        }
-        catch (Exception ex)
-        {
-            // Failure to generate or fetch never blocks the dashboard
-            logger.LogWarning(ex, "Could not pre-fetch AI insight for dashboard");
-        }
-        ViewBag.Insight = insight;
-
         return View(new DashboardViewModel(CurrentUser, dashboard, emailVerified, activation)
         {
-            Presentation = new DashboardPresentation(dashboard, Dates, insight, DateTimeOffset.UtcNow)
+            Presentation = new DashboardPresentation(dashboard, Dates)
         });
     }
 

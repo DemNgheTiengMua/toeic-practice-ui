@@ -39,6 +39,19 @@
         {
           <span class="badge badge--info">@shell.CreditBalance @(shell.CreditBalance == 1 ? "credit" : "credits") left</span>
         }
+        @* #159: the sidebar is five items, so the account pages live here, behind one disclosure.
+           Not a sixth rail item: buying credits, the wallet, support and the profile are not
+           learning, and a learner looking for "what do I practise" should not wade past them. *@
+        <details class="cert-menu account-menu">
+          <summary class="btn btn--ghost btn--sm" aria-label="Account">Account</summary>
+          <div class="cert-dropdown account-menu__list">
+            <a class="cert-dropdown__item" href="/profile">Profile</a>
+            <a class="cert-dropdown__item" href="/wallet">Credit wallet</a>
+            <a class="cert-dropdown__item" href="/pricing">Buy credits</a>
+            <a class="cert-dropdown__item" href="/support/history">Support reports</a>
+            <a class="cert-dropdown__item" href="/mentors/bookings">My bookings</a>
+          </div>
+        </details>
         <form method="post" action="/auth/sign-out" class="no-margin">
           @Html.AntiForgeryToken()
           <button type="submit" class="btn btn--ghost btn--sm">Sign out (@(User.GetDisplayName()))</button>
@@ -47,28 +60,15 @@
     </header>
     <div class="app-body">
       <aside class="app-sidebar">
+        @* #159: five items. Seventeen items in six groups was what hid the learning features: Writing
+           and Speaking existed but had no door, so the learner never found them. Each of these five
+           opens a page that leads on to the rest - the rail is a map, not an index. *@
         <nav class="nav-list" aria-label="Main navigation">
           <a class="@NavClass("/dashboard")" href="/dashboard" aria-current="@(path.StartsWith("/dashboard", StringComparison.OrdinalIgnoreCase) ? "page" : null)">Home</a>
-          <div class="nav-list__group">Mock exams</div>
-          <a class="@NavClass("/exams")" href="/exams" aria-current="@(path.Equals("/exams", StringComparison.OrdinalIgnoreCase) ? "page" : null)">Exams</a>
-          <a class="@NavClass("/exams/history")" href="/exams/history" aria-current="@(path.StartsWith("/exams/history", StringComparison.OrdinalIgnoreCase) ? "page" : null)">Exam history</a>
-          <div class="nav-list__group">Practice sessions</div>
-          <a class="@NavClass("/practice")" href="/practice" aria-current="@(path.StartsWith("/practice", StringComparison.OrdinalIgnoreCase) ? "page" : null)">Practice by section</a>
-          <a class="@NavClass("/weakness-analysis")" href="/weakness-analysis" aria-current="@(path.StartsWith("/weakness-analysis", StringComparison.OrdinalIgnoreCase) ? "page" : null)">Weakness analysis</a>
-          <a class="@NavClass("/saved-questions")" href="/saved-questions" aria-current="@(path.StartsWith("/saved-questions", StringComparison.OrdinalIgnoreCase) ? "page" : null)">Saved questions</a>
-          <div class="nav-list__group">Learning</div>
-          <a class="@NavClass("/placement")" href="/placement" aria-current="@(path.StartsWith("/placement", StringComparison.OrdinalIgnoreCase) ? "page" : null)">Placement test</a>
-          <a class="@NavClass("/learning-path")" href="/learning-path" aria-current="@(path.StartsWith("/learning-path", StringComparison.OrdinalIgnoreCase) ? "page" : null)">My learning path</a>
-          <a class="@NavClass("/mentors")" href="/mentors" aria-current="@(path.Equals("/mentors", StringComparison.OrdinalIgnoreCase) || path.StartsWith("/mentors/", StringComparison.OrdinalIgnoreCase) && !path.StartsWith("/mentors/bookings", StringComparison.OrdinalIgnoreCase) ? "page" : null)">Find a mentor</a>
-          <a class="@NavClass("/mentors/bookings")" href="/mentors/bookings" aria-current="@(path.StartsWith("/mentors/bookings", StringComparison.OrdinalIgnoreCase) ? "page" : null)">My bookings</a>
-          <div class="nav-list__group">Catalogue</div>
-
-          <a class="@NavClass("/certificates")" href="/certificates" aria-current="@(path.StartsWith("/certificates", StringComparison.OrdinalIgnoreCase) ? "page" : null)">Certificates</a>
-          <div class="nav-list__group">Account</div>
-          <a class="@NavClass("/pricing")" href="/pricing" aria-current="@(path.StartsWith("/pricing", StringComparison.OrdinalIgnoreCase) ? "page" : null)">Buy credits</a>
-          <a class="@NavClass("/wallet")" href="/wallet" aria-current="@(path.StartsWith("/wallet", StringComparison.OrdinalIgnoreCase) ? "page" : null)">Credit wallet</a>
-          <a class="@NavClass("/support")" href="/support/history" aria-current="@(path.StartsWith("/support", StringComparison.OrdinalIgnoreCase) ? "page" : null)">Support reports</a>
-          <a class="@NavClass("/profile")" href="/profile">Profile</a>
+          <a class="@NavClass("/exams")" href="/exams" aria-current="@(path.Equals("/exams", StringComparison.OrdinalIgnoreCase) || path.StartsWith("/exams/", StringComparison.OrdinalIgnoreCase) ? "page" : null)">Exams</a>
+          <a class="@NavClass("/practice")" href="/practice" aria-current="@(path.StartsWith("/practice", StringComparison.OrdinalIgnoreCase) ? "page" : null)">Practice</a>
+          <a class="@NavClass("/writing")" href="/writing" aria-current="@(path.StartsWith("/writing", StringComparison.OrdinalIgnoreCase) ? "page" : null)">Writing</a>
+          <a class="@NavClass("/speaking")" href="/speaking" aria-current="@(path.StartsWith("/speaking", StringComparison.OrdinalIgnoreCase) ? "page" : null)">Speaking</a>
         </nav>
       </aside>
       <main class="app-main" id="main">

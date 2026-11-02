@@ -56,36 +56,6 @@ public sealed partial class LearnerService(CompanionDbContext db, ICreditLedger?
         // Practice sessions carry no CertId of their own; their section's does.
         var practice = db.PracticeSessions.AsNoTracking().Where(p => p.UserId == userId && p.Section.CertId == certId);
 
-        var recentAttempts = await attempts
-            .OrderByDescending(a => a.StartedAt)
-            .Take(RecentCount)
-            .Select(a => new RecentAttempt(
-                a.AttemptId, a.Exam.Name, EnumCodes.Parse<ExamPurpose>(a.Exam.Purpose), EnumCodes.Parse<AttemptStatus>(a.Status), a.StartedAt, a.TotalScore, a.BandCode))
-            .ToListAsync(cancellationToken);
-
-        var recentPractice = await practice
-            .OrderByDescending(p => p.StartedAt)
-            .Take(RecentCount)
-            .Select(p => new RecentPractice(
-                p.SessionId, p.Section.Name, EnumCodes.Parse<PracticeStatus>(p.Status), p.CorrectCount, p.QuestionCount, p.StartedAt))
-            .ToListAsync(cancellationToken);
-
-        // The current level is the latest graded mock: placement and skill practice don't score the whole test.
-        var latest = await attempts
-            .Where(a => a.Status == AttemptStatus.Graded.ToCode() && a.Exam.Purpose == ExamPurpose.Mock.ToCode() && a.TotalScore != null)
-            .OrderByDescending(a => a.SubmittedAt ?? a.StartedAt)
-            .Select(a => new
-            {
-                Total = a.TotalScore!.Value,
-                a.BandCode,
-                BandName = db.ScoreBands
-                    .Where(b => b.CertId == certId && b.Code == a.BandCode)
-                    .Select(b => b.Name)
-                    .FirstOrDefault(),
-                TakenAt = a.SubmittedAt ?? a.StartedAt,
-            })
-            .FirstOrDefaultAsync(cancellationToken);
-
         var unfinishedAttempt = await attempts
             .Where(a => a.Status == AttemptStatus.InProgress.ToCode())
             .OrderByDescending(a => a.StartedAt)
@@ -100,113 +70,26 @@ public sealed partial class LearnerService(CompanionDbContext db, ICreditLedger?
                 p.SessionId, p.Section.Name, EnumCodes.Parse<PracticeStatus>(p.Status), p.CorrectCount, p.QuestionCount, p.StartedAt))
             .FirstOrDefaultAsync(cancellationToken);
 
-        var latestPlacement = await db.PlacementTests
-            .AsNoTracking()
-            .Where(p => p.UserId == userId && p.CertId == certId && p.Status == PlacementStatus.Done.ToCode() && p.TotalScore != null)
-            .OrderByDescending(p => p.TakenAt)
-            .Select(p => new
-            {
-                Total = p.TotalScore!.Value,
-                BandCode = p.ResultBandCode,
-                BandName = db.ScoreBands
-                    .Where(b => b.CertId == certId && b.Code == p.ResultBandCode)
-                    .Select(b => b.Name)
-                    .FirstOrDefault(),
-                p.TakenAt,
-            })
-            .FirstOrDefaultAsync(cancellationToken);
+        var attemptCount = await attempts.CountAsync(cancellationToken);
+        var practiceCount = await practice.CountAsync(cancellationToken);
 
-        string? currentBandCode = null;
-        string? currentBandName = null;
-        int? currentTotalScore = null;
-        string? currentSource = null;
-
-        if (latest is not null && (latestPlacement is null || latest.TakenAt >= latestPlacement.TakenAt))
-        {
-            currentBandCode = latest.BandCode;
-            currentBandName = latest.BandName;
-            currentTotalScore = latest.Total;
-            currentSource = "mock";
-        }
-        else if (latestPlacement is not null)
-        {
-            currentBandCode = latestPlacement.BandCode;
-            currentBandName = latestPlacement.BandName;
-            currentTotalScore = latestPlacement.Total;
-            currentSource = "placement";
-        }
-
-        var targetBand = await db.TargetBands
-            .AsNoTracking()
-            .Where(t => t.UserId == userId && t.CertId == certId)
-            .Select(t => new
-            {
-                t.TargetBandCode,
-                BandName = t.ScoreBand.Name,
-                MinScore = (int?)t.ScoreBand.MinTotal,
-            })
-            .FirstOrDefaultAsync(cancellationToken);
-
-        var activePathSteps = await db.LearnerPaths
-            .AsNoTracking()
-            .Where(p => p.UserId == userId && p.CertId == certId && p.Status == LearnerPathStatus.Active.ToCode())
-            .Select(p => new
-            {
-                Completed = p.LearnerPathSteps.Count(s => s.Status == LearnerPathStepStatus.Done.ToCode()),
-                Total = p.LearnerPathSteps.Count,
-            })
-            .FirstOrDefaultAsync(cancellationToken);
-
-        var targetReadiness = new TargetReadiness(
-            CurrentBandCode: currentBandCode,
-            CurrentBandName: currentBandName,
-            CurrentTotalScore: currentTotalScore,
-            CurrentSource: currentSource,
-            TargetBandCode: targetBand?.TargetBandCode,
-            TargetBandName: targetBand?.BandName,
-            TargetMinScore: targetBand?.MinScore,
-            CompletedPathSteps: activePathSteps?.Completed ?? 0,
-            TotalPathSteps: activePathSteps?.Total ?? 0);
-
-        var sectionIds = await db.Sections
-            .AsNoTracking()
-            .Where(s => s.CertId == certId)
-            .Select(s => s.SectionId)
-            .ToListAsync(cancellationToken);
-
-        var sectionViewRows = await db.vw_UserSectionAccuracyAlls
-            .AsNoTracking()
-            .Where(v => v.UserId == userId && sectionIds.Contains(v.SectionId))
-            .ToListAsync(cancellationToken);
-
-        var totalAnswered = sectionViewRows.Sum(r => r.Answered ?? 0);
-        var totalCorrect = sectionViewRows.Sum(r => r.Correct ?? 0);
-        int? overallAccuracyPercent = totalAnswered > 0
-            ? (int)Math.Round((double)totalCorrect / totalAnswered * 100)
-            : null;
-
-        var missionSteps = await BuildMissionStepsAsync(userId, certId, cancellationToken);
-        var simulatorConfig = await BuildSimulatorConfigAsync(userId, certId, targetReadiness, cancellationToken);
-        var weaknessStrips = await BuildWeaknessStripsAsync(userId, certId, cancellationToken);
-        var upcomingBooking = await BuildUpcomingBookingAsync(userId, certId, cancellationToken);
-        var latestRubricHighlight = await BuildRubricHighlightAsync(userId, certId, cancellationToken);
+        // #159: each number the three blocks print is measured once here. The blocks never derive a
+        // second opinion - a hero that guesses its own "next" is how the page grew two of them.
+        var skills = await BuildSkillCardsAsync(userId, certId, cancellationToken);
+        var goal = await BuildGoalStandingAsync(userId, certId, cancellationToken);
+        var nextAction = await BuildNextActionAsync(
+            userId, certId, certificates.Single(c => c.CertId == certId).Option,
+            attemptCount + practiceCount == 0, skills, goal, unfinishedAttempt, unfinishedPractice, cancellationToken);
 
         return new LearnerDashboard(
             certificates.Single(c => c.CertId == certId).Option,
-            latest is null ? null : new LatestResult(latest.Total, latest.BandCode, latest.BandName, latest.TakenAt),
-            await attempts.CountAsync(cancellationToken),
-            await practice.CountAsync(cancellationToken),
-            recentAttempts,
-            recentPractice,
+            nextAction,
+            goal,
+            skills,
+            attemptCount,
+            practiceCount,
             unfinishedAttempt,
-            unfinishedPractice,
-            targetReadiness,
-            missionSteps,
-            simulatorConfig,
-            weaknessStrips,
-            upcomingBooking,
-            latestRubricHighlight,
-            overallAccuracyPercent);
+            unfinishedPractice);
     }
 
     public async Task<int> GetActiveCertIdAsync(int userId, CancellationToken cancellationToken = default) =>

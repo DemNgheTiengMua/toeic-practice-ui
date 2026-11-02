@@ -20,15 +20,38 @@ public sealed class DashboardControllerTests
 {
     private static LearnerDashboardDto SampleDashboard() => new(
         new CertificateOptionDto("TOEIC", "TOEIC Listening & Reading"),
-        LatestResult: new LatestResultDto(750, "B2", "Vantage", DateTimeOffset.UtcNow),
-        IsNew: false,
+        new NextActionDto(
+            "WEAKEST TOPIC",
+            "Drill Incomplete Sentences",
+            "58% accuracy over 12 answers in Reading.",
+            "Start practice",
+            "/practice",
+            "warning",
+            "READ · 58%"),
+        new GoalStandingDto(
+            CurrentBandCode: "B1",
+            CurrentBandName: "Intermediate",
+            CurrentScore: 750,
+            CurrentSource: "mock",
+            TargetBandCode: "B2",
+            TargetBandName: "Vantage",
+            TargetMinScore: 785,
+            TargetDate: new DateOnly(2026, 12, 20),
+            WeeklyStudyHours: 6m,
+            Status: "stretch",
+            CompletedPathSteps: 2,
+            TotalPathSteps: 5,
+            CurrentWeekNumber: 2,
+            WeekPlannedMinutes: 120,
+            WeekCompletedMinutes: 45),
+        Skills:
+        [
+            new SkillCardDto(1, "LIST", "Listening", ModalityDto.Listening, 380, 495, []),
+            new SkillCardDto(2, "READ", "Reading", ModalityDto.Reading, 370, 495,
+                [new SkillCategoryDto("P5", "Incomplete Sentences", 58, 12)])
+        ],
         AttemptCount: 3,
-        PracticeCount: 5,
-        RecentAttempts: [],
-        RecentPractice: [],
-        UnfinishedAttempt: null,
-        UnfinishedPractice: null
-    );
+        PracticeCount: 5);
 
     private static AiInsightDto SampleInsight() => new(
         InsightId: 10,
@@ -54,15 +77,11 @@ public sealed class DashboardControllerTests
     );
 
     [Fact]
-    public async Task Index_prefetches_insight_into_viewbag()
+    public async Task Index_returns_the_three_blocks_to_the_view()
     {
-        var sampleDashboard = SampleDashboard();
-        var sampleInsight = SampleInsight();
-
         var api = new TestApiClient
         {
-            DashboardData = sampleDashboard,
-            InsightData = sampleInsight,
+            DashboardData = SampleDashboard(),
             MeData = new AuthUserDto(7, "learner@test.local", "Learner", Roles.Learner, true)
         };
 
@@ -73,33 +92,31 @@ public sealed class DashboardControllerTests
         var model = Assert.IsType<DashboardViewModel>(viewResult.Model);
         Assert.Equal("TOEIC", model.Dashboard.Certificate.Code);
 
-        var insightInViewBag = Assert.IsType<AiInsightDto>(viewResult.ViewData["Insight"]);
-        Assert.Equal(10, insightInViewBag.InsightId);
-        Assert.Equal(AiInsightScopeDto.Dashboard, insightInViewBag.Scope);
-        Assert.Equal("Performance Summary: Great overall accuracy.", insightInViewBag.Narrative);
-        Assert.Equal("<p>Performance Summary: Great overall accuracy.</p>", insightInViewBag.FormattedNarrative);
-        Assert.Equal(AiInsightTrendDto.Improving, insightInViewBag.Trend);
+        // #159: the hero carries one action, the goal block carries the standing, and one card per
+        // skill. Nothing else reaches the page.
+        Assert.Equal("/practice", model.Dashboard.NextAction.ActionUrl);
+        Assert.Equal("B1", model.Dashboard.Goal.CurrentBandCode);
+        Assert.Equal(2, model.Dashboard.Skills.Count);
+        Assert.False(model.ShowVerificationReminder);
     }
 
     [Fact]
-    public async Task Index_succeeds_even_when_insight_prefetch_fails()
+    public async Task Index_still_renders_when_the_verification_status_cannot_be_read()
     {
-        var sampleDashboard = SampleDashboard();
-
         var api = new TestApiClient
         {
-            DashboardData = sampleDashboard,
-            InsightExceptionToThrow = new ApiException("insight_error", "Insight server error", 500, null),
-            MeData = new AuthUserDto(7, "learner@test.local", "Learner", Roles.Learner, true)
+            DashboardData = SampleDashboard(),
+            MeExceptionToThrow = new HttpRequestException("API unreachable")
         };
 
         var controller = CreateController(api);
         var result = await controller.Index(null, CancellationToken.None);
 
-        var viewResult = Assert.IsType<ViewResult>(result);
-        var model = Assert.IsType<DashboardViewModel>(viewResult.Model);
+        var model = Assert.IsType<DashboardViewModel>(Assert.IsType<ViewResult>(result).Model);
         Assert.Equal("TOEIC", model.Dashboard.Certificate.Code);
-        Assert.Null(viewResult.ViewData["Insight"]);
+        // Unknown, not "unverified": a failed read must not tell the learner to verify an address
+        // that may already be confirmed.
+        Assert.False(model.ShowVerificationReminder);
     }
 
     [Fact]
@@ -211,6 +228,7 @@ public sealed class DashboardControllerTests
     {
         public LearnerDashboardDto? DashboardData { get; set; }
         public AuthUserDto? MeData { get; set; }
+        public Exception? MeExceptionToThrow { get; set; }
         public AiInsightDto? InsightData { get; set; }
         public Exception? InsightExceptionToThrow { get; set; }
         public Exception? RetryExceptionToThrow { get; set; }
@@ -221,7 +239,7 @@ public sealed class DashboardControllerTests
             Task.FromResult(DashboardData!);
 
         public Task<AuthUserDto> GetMeAsync(CancellationToken cancellationToken = default) =>
-            Task.FromResult(MeData!);
+            MeExceptionToThrow != null ? Task.FromException<AuthUserDto>(MeExceptionToThrow) : Task.FromResult(MeData!);
 
         public Task<AiInsightDto> GetDashboardInsightAsync(int? certId = null, CancellationToken cancellationToken = default) =>
             InsightExceptionToThrow != null ? Task.FromException<AiInsightDto>(InsightExceptionToThrow) : Task.FromResult(InsightData!);

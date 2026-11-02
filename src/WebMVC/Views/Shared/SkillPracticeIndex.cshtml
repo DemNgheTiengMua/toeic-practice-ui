@@ -1,0 +1,122 @@
+@model SkillPracticeIndexViewModel
+@using Contracts
+@{
+    // No Layout here: the parent view (Writing/Index.cshtml or Speaking/Index.cshtml) sets it, and
+    // setting it here would nest a whole page inside the parent's layout.
+    var isWriting = Model.SkillPath == "/writing";
+    var cert = Model.List.Certificate;
+}
+
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+  <a href="/dashboard" class="breadcrumbs__item">Home</a>
+  <span class="breadcrumbs__separator" aria-hidden="true">›</span>
+  <span class="breadcrumbs__item" aria-current="page">@Model.SkillLabel practice</span>
+</nav>
+
+<div class="row row--between">
+  <div>
+    <h1 class="m-0 mb-1">@Model.SkillLabel practice</h1>
+    <p class="text-muted no-margin">
+      @if (isWriting)
+      {
+        <text>Write your answer, submit it, and the certificate's own writing rubric grades it.
+        You get a score per criterion, the errors located in your text, and the one fix that matters most.</text>
+      }
+      else
+      {
+        <text>Answer by voice. The recording is transcribed and graded against the certificate's speaking
+        rubric, with pronunciation and fluency measured from the audio itself.</text>
+      }
+      <strong>@Model.List.CreditBalance @(Model.List.CreditBalance == 1 ? "credit" : "credits")</strong> left.
+    </p>
+  </div>
+  <div>
+    <span class="badge badge--muted">@cert.Code</span>
+  </div>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+  <div class="alert alert--danger" role="alert">@Model.ErrorMessage</div>
+}
+
+@if (!Model.HasExams)
+{
+  <div class="card mt-4"><div class="card__body">
+    <div class="state-block">
+      <div class="state-block__icon" aria-hidden="true">EMPTY</div>
+      <h2 class="state-block__title">No @Model.SkillLabel.ToLowerInvariant() practice exam yet</h2>
+      <p class="state-block__desc">
+        @cert.Name does not have a published @Model.SkillLabel.ToLowerInvariant() practice exam.
+        Once one is published it appears here and opens the same flow a full mock exam uses.
+      </p>
+      <div class="row row--center row--wrap">
+        <a class="btn btn--primary" href="/practice">Practice the other skills</a>
+        <a class="btn" href="/certificates">See what @cert.Code tests</a>
+      </div>
+    </div>
+  </div></div>
+}
+else
+{
+  <div class="stack mt-4">
+    @foreach (var exam in Model.Exams)
+    {
+      <div class="card">
+        <div class="card__header">
+          <div class="row row--between row--middle row--wrap">
+            <strong>@exam.Name</strong>
+            <div class="row row--tight">
+              @if (exam.ActiveAttemptId.HasValue)
+              {
+                <span class="badge badge--warning">In progress</span>
+              }
+              @if (exam.LatestGradedAttemptId.HasValue)
+              {
+                <span class="badge badge--success">Graded</span>
+              }
+              <span class="badge badge--muted font-mono">@exam.DurationMinutes MIN</span>
+            </div>
+          </div>
+        </div>
+        <div class="card__body stack">
+          @if (!string.IsNullOrWhiteSpace(exam.Description))
+          {
+            <p class="text-sm no-margin">@exam.Description</p>
+          }
+
+          <p class="text-sm text-muted no-margin">
+            The AI grading costs <strong>@exam.CreditCost credit</strong>, taken when you submit, not when you start.
+          </p>
+
+          <div class="row row--wrap">
+            @if (exam.ActiveAttemptId.HasValue)
+            {
+              <a class="btn btn--primary" href="@Model.SkillPath/take/@exam.ActiveAttemptId">
+                Continue <span aria-hidden="true">&rarr;</span>
+              </a>
+            }
+            else if (!Model.HasCredits)
+            {
+              <a class="btn btn--primary" href="/pricing">Buy a credit to start</a>
+            }
+            else
+            {
+              @* #159: a real link into the flow that already exists - instructions, then start. *@
+              <a class="btn btn--primary" href="@Model.SkillPath/@exam.ExamId/instructions">
+                Start <span aria-hidden="true">&rarr;</span>
+              </a>
+            }
+
+            @if (exam.LatestGradedAttemptId.HasValue)
+            {
+              <a class="btn btn--sm btn--ghost" href="@Model.SkillPath/review/@exam.LatestGradedAttemptId">
+                Read the last feedback
+              </a>
+            }
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+}

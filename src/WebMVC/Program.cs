@@ -55,6 +55,7 @@ builder.Services.AddScoped<IWalletClient>(sp => sp.GetRequiredService<ICompanion
 builder.Services.AddScoped<IMockExamsClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
 builder.Services.AddScoped<IWritingClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
 builder.Services.AddScoped<ISpeakingClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
+builder.Services.AddScoped<ISkillPracticeClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
 builder.Services.AddScoped<IPlacementClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
 builder.Services.AddScoped<ILearningPathClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
 builder.Services.AddScoped<ILessonClient>(sp => sp.GetRequiredService<ICompanionApiClient>());
