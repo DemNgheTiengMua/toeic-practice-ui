@@ -51,17 +51,23 @@ public sealed partial class PracticeService
             throw new PracticeException(PracticeException.SessionAlreadyFinished, "Answers cannot be submitted to a finished session.");
         }
 
+        // #166: one question, one grade. A re-submission used to overwrite the recorded answer and the
+        // session's correct count, rewrite a path step's accuracy when it was the last question, and
+        // skip mastery - so the session and the mastery row described two different answers, and a
+        // miss could be turned into a hit after the fact. The interface already disables an answered
+        // question; this is the server saying the same thing.
+        if (answer.IsCorrect.HasValue)
+        {
+            throw new PracticeException(
+                PracticeException.AlreadyAnswered,
+                $"Question {questionId} has already been answered in this session. Continue with the next question.");
+        }
+
         var q = answer.Question;
         var allOptions = await db.QuestionOptions
             .AsNoTracking()
             .Where(o => o.QuestionId == questionId)
             .ToListAsync(cancellationToken);
-
-        // #155: mastery and the cooldown move on the first grade only. Re-submitting the same answer
-        // used to be harmless because it was just a column; now it would count one miss twice and push
-        // the category a day further out, which is the exact "keep clicking until it is green" the
-        // ticket is closing.
-        var alreadyGraded = answer.IsCorrect.HasValue;
 
         int? correctOptionId = allOptions.FirstOrDefault(o => o.IsCorrect)?.OptionId;
         var isFreeResponse = q.QuestionType == QuestionType.FreeResponse.ToCode();
@@ -152,11 +158,9 @@ public sealed partial class PracticeService
 
         // #155: every graded answer feeds the category's mastery and starts or clears the question's own
         // cooldown. It is written here, where the grade is known, so the lesson micro-check (which also
-        // grades) goes through the same two writers and cannot drift.
-        if (!alreadyGraded)
-        {
-            await RecordAnswerAsync(userId, q, answer.Session.Section.CertId, answer.IsCorrect, cancellationToken);
-        }
+        // grades) goes through the same two writers and cannot drift. #166: the call is refused above
+        // when the answer was already graded, so this runs once per question.
+        await RecordAnswerAsync(userId, q, answer.Session.Section.CertId, answer.IsCorrect, cancellationToken);
 
         // Update correct count on session
         var correctCount = await db.PracticeAnswers

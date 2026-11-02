@@ -83,6 +83,10 @@ public static partial class PracticeEndpoints
             {
                 return Problem(StatusCodes.Status400BadRequest, "Session already finished", ApiError.Codes.PracticeSessionAlreadyFinished, ex.Message);
             }
+            catch (PracticeException ex) when (ex.Code == PracticeException.AlreadyAnswered)
+            {
+                return Problem(StatusCodes.Status409Conflict, "Question already answered", ApiError.Codes.PracticeAlreadyAnswered, ex.Message);
+            }
         });
     }
 }

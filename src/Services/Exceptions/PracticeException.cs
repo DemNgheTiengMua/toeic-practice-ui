@@ -16,6 +16,7 @@ public class PracticeException(string code, string message) : Exception(message)
     public const string QuestionNotFound = "question_not_found";
     public const string InvalidOption = "invalid_option";
     public const string SessionAlreadyFinished = "session_already_finished";
+    public const string AlreadyAnswered = "already_answered";
 
     public string Code { get; } = code;
 }
