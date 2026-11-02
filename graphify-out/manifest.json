@@ -12,9 +12,9 @@
     "semantic_hash": ""
   },
   "docs/database-schema.sql": {
-    "mtime": 1793610988.1431146,
-    "seen": 1793611596.8531463,
-    "ast_hash": "70167d4725c726987f80774ba6b40993",
+    "mtime": 1793618060.968857,
+    "seen": 1793619003.3745716,
+    "ast_hash": "75868a8d4401de08beac5af69a5881ca",
     "semantic_hash": ""
   },
   "docs/erd/export-meta.sql": {
@@ -252,9 +252,9 @@
     "semantic_hash": ""
   },
   "src/DataAccess/CompanionDbContext.cs": {
-    "mtime": 1793610988.1526315,
-    "seen": 1793611596.8544614,
-    "ast_hash": "582ebb7a6fa287e94e7bf8b65e471028",
+    "mtime": 1793618126.478436,
+    "seen": 1793618757.7682123,
+    "ast_hash": "6f2fa4eca1ed7c1f363b57f1b6055d14",
     "semantic_hash": ""
   },
   "src/DataAccess/DataAccess.csproj": {
@@ -282,9 +282,9 @@
     "semantic_hash": ""
   },
   "src/Services/LearnerService.cs": {
-    "mtime": 1793605541.8271525,
-    "seen": 1793611596.8548057,
-    "ast_hash": "70b94d75470b8bd3ff24514b536ad4a5",
+    "mtime": 1793617276.8312562,
+    "seen": 1793618757.7903638,
+    "ast_hash": "9ff606cd84a22f6590ec7f13c4f1eb91",
     "semantic_hash": ""
   },
   "src/Services/Services.csproj": {
@@ -1116,9 +1116,9 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Controllers/PracticeController.cs": {
-    "mtime": 1793599944.7760787,
-    "seen": 1793611596.855233,
-    "ast_hash": "257544e7399ccacd7d4234804fe8be80",
+    "mtime": 1793616700.0520842,
+    "seen": 1793617065.9038126,
+    "ast_hash": "76c0168df7c5922f52fa083dfe834440",
     "semantic_hash": ""
   },
   "src/WebMVC/Models/PracticeViewModels.cs": {
@@ -1128,9 +1128,9 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Practice/Index.cshtml": {
-    "mtime": 1793605541.8449745,
-    "seen": 1793611596.855743,
-    "ast_hash": "9681e686d7e40dfbe38d9fbcf08376e7",
+    "mtime": 1793616715.4092195,
+    "seen": 1793617065.9042714,
+    "ast_hash": "c3c8c71aa7904ccc429cf56f47581189",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Practice/Summary.cshtml": {
@@ -2496,9 +2496,9 @@
     "semantic_hash": ""
   },
   "tests/Services.Tests/AiGradingProcessorTests.cs": {
-    "mtime": 1793562011.4232304,
-    "seen": 1793611596.85597,
-    "ast_hash": "839d032f4bc7e8b9893fef10f5375e3c",
+    "mtime": 1793616102.1537457,
+    "seen": 1793617065.9044757,
+    "ast_hash": "027658b7eddcbdd19370d4a48ecda643",
     "semantic_hash": ""
   },
   "docs/adr/0008-ai-grading-processor-seam.md": {
@@ -3666,9 +3666,9 @@
     "semantic_hash": ""
   },
   "src/BusinessObjects/Entities/LessonCard.cs": {
-    "mtime": 1792999134.39265,
-    "seen": 1793611596.8534172,
-    "ast_hash": "2247541047ec0f75aee257d7ccfdcb24",
+    "mtime": 1793618115.6621628,
+    "seen": 1793618757.6969733,
+    "ast_hash": "badba1b0ae86369bb2c33649fddaecb2",
     "semantic_hash": ""
   },
   "src/BusinessObjects/Entities/MentorPayout.cs": {
@@ -3852,9 +3852,9 @@
     "semantic_hash": ""
   },
   "src/BusinessObjects/Entities/User.cs": {
-    "mtime": 1793574973.0707028,
-    "seen": 1793611596.8534677,
-    "ast_hash": "5523c32afd3252b0dac9b899588031ee",
+    "mtime": 1793618109.2981958,
+    "seen": 1793618757.7006855,
+    "ast_hash": "b95be8c14815e16270339c9b839469af",
     "semantic_hash": ""
   },
   "src/BusinessObjects/Placement/CefrBandInfo.cs": {
@@ -4332,9 +4332,9 @@
     "semantic_hash": ""
   },
   "src/DataAccess/Configurations/CompanionDbContext.GuidedLearning.cs": {
-    "mtime": 1793574314.254508,
-    "seen": 1793611596.8544738,
-    "ast_hash": "2f02b26985537ed3091bac17222b2c13",
+    "mtime": 1793618142.5424528,
+    "seen": 1793618757.7689471,
+    "ast_hash": "28cba5a743830fa24c9900411fb534cc",
     "semantic_hash": ""
   },
   "src/DataAccess/Configurations/CompanionDbContext.Practice.cs": {
@@ -4386,9 +4386,9 @@
     "semantic_hash": ""
   },
   "src/Services/Attempts/AttemptEngine.Scoring.cs": {
-    "mtime": 1793561475.0890462,
-    "seen": 1793611596.8546033,
-    "ast_hash": "099cbf9f3a2ffd3e7b5197d693804016",
+    "mtime": 1793616084.5317402,
+    "seen": 1793617065.9032345,
+    "ast_hash": "1e18ff11804e36f97be34dbe4c065f4d",
     "semantic_hash": ""
   },
   "src/Services/Attempts/AttemptEngine.Sitting.cs": {
@@ -5382,9 +5382,9 @@
     "semantic_hash": ""
   },
   "src/BusinessObjects/Dashboard/RecentAttempt.cs": {
-    "mtime": 1793185980.4064379,
-    "seen": 1793611596.8533728,
-    "ast_hash": "ce0c23729c099ca0f7297e8c78a09feb",
+    "mtime": 1793617269.693951,
+    "seen": 1793618757.693949,
+    "ast_hash": "839a66db7320b10a641f406eca2f5ed0",
     "semantic_hash": ""
   },
   "src/BusinessObjects/Dashboard/RecentPractice.cs": {
@@ -8328,9 +8328,9 @@
     "semantic_hash": ""
   },
   "src/Services/GuidedLearning/LearningPathService.Generation.cs": {
-    "mtime": 1793610988.154638,
-    "seen": 1793611596.8547285,
-    "ast_hash": "e5a3cea0149eba58a0998ee6a3ace1e5",
+    "mtime": 1793617353.5242097,
+    "seen": 1793618757.7854583,
+    "ast_hash": "74563e032191f2cac9df7e839ca207f8",
     "semantic_hash": ""
   },
   "src/Services/GuidedLearning/LearningPathService.Lifecycle.cs": {
@@ -9006,9 +9006,9 @@
     "semantic_hash": ""
   },
   "src/WebAPI/Endpoints/LearnerEndpoints.Dashboard.cs": {
-    "mtime": 1793595662.0428064,
-    "seen": 1793611596.8550577,
-    "ast_hash": "15bbafb93603b071d41cf13ee8df16bf",
+    "mtime": 1793616545.2153242,
+    "seen": 1793617065.9036572,
+    "ast_hash": "5b8d610acce180d188480be7702f86a4",
     "semantic_hash": ""
   },
   "src/WebAPI/Endpoints/LearningPathEndpoints.DtoMapping.cs": {
@@ -9486,9 +9486,9 @@
     "semantic_hash": ""
   },
   "src/WebMVC/ViewModels/Dashboard/DashboardPresentation.cs": {
-    "mtime": 1793595662.0460413,
-    "seen": 1793611596.855416,
-    "ast_hash": "83d4202e9949a097a33a1809fdaf1eb5",
+    "mtime": 1793616617.769429,
+    "seen": 1793617065.90398,
+    "ast_hash": "701e0a6461e7bb2066432fa3a6185b3c",
     "semantic_hash": ""
   },
   "src/WebMVC/ViewModels/Dashboard/DashboardViewModel.cs": {
@@ -9606,9 +9606,9 @@
     "semantic_hash": ""
   },
   "src/WebMVC/ViewModels/Practice/PracticeCatalogViewModel.cs": {
-    "mtime": 1793605541.836467,
-    "seen": 1793611596.8554957,
-    "ast_hash": "c9af61ff87e5fd2ec0bdf484bdcd5783",
+    "mtime": 1793616694.6884322,
+    "seen": 1793617065.904055,
+    "ast_hash": "605d85dc6fc74e168e7dc7f056d83e65",
     "semantic_hash": ""
   },
   "src/WebMVC/ViewModels/Practice/PracticeNavigatorCellViewModel.cs": {
@@ -10416,9 +10416,9 @@
     "semantic_hash": ""
   },
   "src/BusinessObjects/Practice/MasteryMachine.cs": {
-    "mtime": 1793574654.216416,
-    "seen": 1793611596.8535547,
-    "ast_hash": "de956f376e27d34a757649dba34e080a",
+    "mtime": 1793617413.3122241,
+    "seen": 1793618757.7062776,
+    "ast_hash": "d2b208099bec4c02865ac5bcb6f1a0a5",
     "semantic_hash": ""
   },
   "src/BusinessObjects/Practice/MasteryState.cs": {
@@ -10506,9 +10506,9 @@
     "semantic_hash": ""
   },
   "src/Services/Practice/PracticeService.LessonMicroCheck.cs": {
-    "mtime": 1793574654.2225564,
-    "seen": 1793611596.8548956,
-    "ast_hash": "0bbabb70aaa4b586f92df4898c9158a2",
+    "mtime": 1793618435.329692,
+    "seen": 1793618757.7957911,
+    "ast_hash": "cba7dd95d4b2ae4d9b14b489e25e4df6",
     "semantic_hash": ""
   },
   "src/Services/Practice/PracticeService.Mastery.cs": {
@@ -10554,9 +10554,9 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Practice/_PracticeSectionCard.cshtml": {
-    "mtime": 1793574654.2275517,
-    "seen": 1793611596.8557513,
-    "ast_hash": "7f6db7f63990033d57c34d32de64e7a2",
+    "mtime": 1793616731.8527105,
+    "seen": 1793617065.9042785,
+    "ast_hash": "ca9253df5eecba154d9c7e02a72cc67b",
     "semantic_hash": ""
   },
   "tests/Services.Tests/AdminExamPublishGateTests.cs": {
@@ -10590,15 +10590,15 @@
     "semantic_hash": ""
   },
   "tests/Services.Tests/MasteryMachineTests.cs": {
-    "mtime": 1793574654.2285516,
-    "seen": 1793611596.8560307,
-    "ast_hash": "7af5f5b331453940ab45484c58749459",
+    "mtime": 1793617483.5433316,
+    "seen": 1793618757.869159,
+    "ast_hash": "c9a100c2efc8b05b2f4d1668a55f1712",
     "semantic_hash": ""
   },
   "tests/Services.Tests/PracticeMasteryTests.cs": {
-    "mtime": 1793574654.229553,
-    "seen": 1793611596.8560464,
-    "ast_hash": "029787a3402f28bde55de7a76a570e0b",
+    "mtime": 1793618177.4232464,
+    "seen": 1793618757.8699846,
+    "ast_hash": "63c430ae639e10663bdb7a8ce92691ec",
     "semantic_hash": ""
   },
   "tests/Services.Tests/SmartPracticePlannerTests.cs": {
@@ -10698,9 +10698,9 @@
     "semantic_hash": ""
   },
   "docs/STATUS.md": {
-    "mtime": 1793611545.1179688,
-    "seen": 1793611596.8564322,
-    "ast_hash": "9b0c200ae76c17bc65d41dc4b9d0a623",
+    "mtime": 1793618966.3700454,
+    "seen": 1793619003.378017,
+    "ast_hash": "a83f3d2bc19d0374bb5aaf6f0c264cb6",
     "semantic_hash": ""
   },
   "docs/research-brief.md": {
@@ -10950,9 +10950,9 @@
     "semantic_hash": ""
   },
   "src/BusinessObjects/Dashboard/GoalStanding.cs": {
-    "mtime": 1793595662.0363698,
-    "seen": 1793611596.8533618,
-    "ast_hash": "0206d7b7454db8b56cc2d14bcdcb5176",
+    "mtime": 1793616377.6226614,
+    "seen": 1793617065.9020705,
+    "ast_hash": "d6cf14aa3360bbeeae83508f9d0d8978",
     "semantic_hash": ""
   },
   "src/BusinessObjects/Dashboard/NextAction.cs": {
@@ -10962,9 +10962,9 @@
     "semantic_hash": ""
   },
   "src/BusinessObjects/Dashboard/SkillCard.cs": {
-    "mtime": 1793595662.0378764,
-    "seen": 1793611596.853378,
-    "ast_hash": "51c6e097d10ff35fae913976a0c73a87",
+    "mtime": 1793616372.7672665,
+    "seen": 1793617065.9020867,
+    "ast_hash": "832a71040684db25bb50c9dd3ba0356f",
     "semantic_hash": ""
   },
   "src/BusinessObjects/Entities/CalibrationDecision.cs": {
@@ -11016,9 +11016,9 @@
     "semantic_hash": ""
   },
   "src/Contracts/Dashboard/GoalStandingDto.cs": {
-    "mtime": 1793595662.0387695,
-    "seen": 1793611596.854118,
-    "ast_hash": "712ac431eace1f628896cf500c033659",
+    "mtime": 1793616506.7494457,
+    "seen": 1793617065.9027765,
+    "ast_hash": "157cb1f7f8c759b0b630698c61d219cd",
     "semantic_hash": ""
   },
   "src/Contracts/Dashboard/NextActionDto.cs": {
@@ -11028,9 +11028,9 @@
     "semantic_hash": ""
   },
   "src/Contracts/Dashboard/SkillCardDto.cs": {
-    "mtime": 1793595662.0400257,
-    "seen": 1793611596.8541343,
-    "ast_hash": "f82505d42cb77ea990f6cef478578420",
+    "mtime": 1793616516.729668,
+    "seen": 1793617065.9027922,
+    "ast_hash": "7bfed43770c3785bb9f2dd42bbea3c7a",
     "semantic_hash": ""
   },
   "src/Contracts/Dashboard/SkillCategoryDto.cs": {
@@ -11070,15 +11070,15 @@
     "semantic_hash": ""
   },
   "src/Services/CalibrationService.cs": {
-    "mtime": 1793574942.1169007,
-    "seen": 1793611596.8546317,
-    "ast_hash": "9caa6273bb28979dbbc8cc533d06b53b",
+    "mtime": 1793616135.9879262,
+    "seen": 1793617065.9032617,
+    "ast_hash": "fc4c2b75f8140e5f4901737ba11cf5bd",
     "semantic_hash": ""
   },
   "src/Services/GuidedLearning/PathStepCompletion.cs": {
-    "mtime": 1793574314.2570128,
-    "seen": 1793611596.8547368,
-    "ast_hash": "481265c8c538d01237ec6d5442c4a106",
+    "mtime": 1793616247.6014037,
+    "seen": 1793617065.90336,
+    "ast_hash": "a3782ce4662d37358e76b6b3286c03e6",
     "semantic_hash": ""
   },
   "src/Services/Interfaces/ICalibrationService.cs": {
@@ -11088,21 +11088,21 @@
     "semantic_hash": ""
   },
   "src/Services/LearnerService.Goal.cs": {
-    "mtime": 1793597309.2892718,
-    "seen": 1793611596.8548005,
-    "ast_hash": "496fbbb34dc7246b07d856b7b186dd53",
+    "mtime": 1793616440.2280855,
+    "seen": 1793617065.9034235,
+    "ast_hash": "2e9a347c6a41549b8485624a84ca6f58",
     "semantic_hash": ""
   },
   "src/Services/LearnerService.NextAction.cs": {
-    "mtime": 1793595662.0415902,
-    "seen": 1793611596.854802,
-    "ast_hash": "f0458f60ba46c4d6a6db3077fcaebd5a",
+    "mtime": 1793617291.810436,
+    "seen": 1793618757.790245,
+    "ast_hash": "cdec09f9c4bf6b3e3b4eb2e1aa48df45",
     "semantic_hash": ""
   },
   "src/Services/LearnerService.Skills.cs": {
-    "mtime": 1793595662.0415902,
-    "seen": 1793611596.854804,
-    "ast_hash": "61e2bdbbf617ee57c1dedff80ba5a4cc",
+    "mtime": 1793616426.7088952,
+    "seen": 1793617065.9034276,
+    "ast_hash": "477683376e13f2488be9fd916acff13b",
     "semantic_hash": ""
   },
   "src/Services/SkillPracticeCatalogService.cs": {
@@ -11136,9 +11136,9 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Dashboard/_DashboardGoal.cshtml": {
-    "mtime": 1793595662.0472949,
-    "seen": 1793611596.855644,
-    "ast_hash": "7adbfa071ae9966b949cf28d67ebbbbe",
+    "mtime": 1793616628.803282,
+    "seen": 1793617065.9041874,
+    "ast_hash": "d2662737c35d59923a6441b37f9264dd",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Dashboard/_DashboardHero.cshtml": {
@@ -11148,9 +11148,9 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Dashboard/_DashboardSkills.cshtml": {
-    "mtime": 1793595662.0477977,
-    "seen": 1793611596.855648,
-    "ast_hash": "a459adafd245d590fa8f16fc1420a67a",
+    "mtime": 1793616468.4036767,
+    "seen": 1793617065.9041903,
+    "ast_hash": "0a61308364d7e4a034db0ee42cd95d4b",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Exams/_TakePreviewBar.cshtml": {
@@ -11178,15 +11178,15 @@
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Speaking/Index.cshtml": {
-    "mtime": 1793595662.0490558,
-    "seen": 1793611596.8558064,
-    "ast_hash": "53f744c108125f4865b6bcb49ce50b64",
+    "mtime": 1793616028.3184474,
+    "seen": 1793617065.9043293,
+    "ast_hash": "819143151cbaf52cca1e9a9127db1922",
     "semantic_hash": ""
   },
   "src/WebMVC/Views/Writing/Index.cshtml": {
-    "mtime": 1793595662.0495675,
-    "seen": 1793611596.855827,
-    "ast_hash": "c5e296f65796dccf98bc5f953f9394be",
+    "mtime": 1793616016.9862008,
+    "seen": 1793617065.904349,
+    "ast_hash": "44d46d61d7d60c00a9062a5f9d49bd4d",
     "semantic_hash": ""
   },
   "src/WebMVC/wwwroot/js/exams/preview.js": {
@@ -11202,9 +11202,9 @@
     "semantic_hash": ""
   },
   "tests/Services.Tests/CalibrationServiceTests.cs": {
-    "mtime": 1793575019.9419289,
-    "seen": 1793611596.8559783,
-    "ast_hash": "c3d09dcc08a0418f61584f8c24ddd287",
+    "mtime": 1793616205.9851482,
+    "seen": 1793617065.9044838,
+    "ast_hash": "d4dac3e88f65b05a0a2118a5fce0bdcb",
     "semantic_hash": ""
   },
   "tests/Services.Tests/DynamicPathGenerationTests.cs": {
@@ -11220,9 +11220,9 @@
     "semantic_hash": ""
   },
   "tests/Services.Tests/LearnerServiceTests.ThreeBlocks.cs": {
-    "mtime": 1793597316.0297458,
-    "seen": 1793611596.8560202,
-    "ast_hash": "4b7cef77ad29a68a7abc28700b81e72c",
+    "mtime": 1793616585.4457803,
+    "seen": 1793617065.904522,
+    "ast_hash": "e6cd750fd4743b12cff7697be395815b",
     "semantic_hash": ""
   },
   "tests/Services.Tests/LearningPathPlannerTests.cs": {
@@ -11232,9 +11232,9 @@
     "semantic_hash": ""
   },
   "tests/Services.Tests/PathStepCompletionTests.cs": {
-    "mtime": 1793599944.7816434,
-    "seen": 1793611596.8560383,
-    "ast_hash": "044ef117d2fd918f7d1e74f35af7ea2f",
+    "mtime": 1793616310.3500333,
+    "seen": 1793617065.9045382,
+    "ast_hash": "ab55836d9a3620c451a7c3a1d4860158",
     "semantic_hash": ""
   },
   "tests/WebAPI.Tests/GoalStatusMappingTests.cs": {
@@ -11268,9 +11268,9 @@
     "semantic_hash": ""
   },
   "tests/WebMVC.Tests/SkillPracticeDoorTests.cs": {
-    "mtime": 1793595662.0538564,
-    "seen": 1793611596.8562365,
-    "ast_hash": "45a261387f2cac18bf5d080a257bf872",
+    "mtime": 1793616038.8948708,
+    "seen": 1793617065.9047258,
+    "ast_hash": "6e60576ca8b665d8bd8eb85ca97d3e08",
     "semantic_hash": ""
   },
   "tests/WebMVC.Tests/SkillPracticeStub.cs": {
@@ -11484,9 +11484,9 @@
     "semantic_hash": ""
   },
   ".scratch/msg-review-fixes.txt": {
-    "mtime": 1793476449.4408998,
-    "seen": 1793611596.8563433,
-    "ast_hash": "1afaa843b91aa282d4ed5d8b27dda17e",
+    "mtime": 1793617030.6484098,
+    "seen": 1793617065.9048367,
+    "ast_hash": "286784d4a5c29370e71f96f2691f0004",
     "semantic_hash": ""
   },
   ".scratch/night-plan.md": {
@@ -11694,9 +11694,9 @@
     "semantic_hash": ""
   },
   "docs/HANDOFF-2026-11-02.md": {
-    "mtime": 1793611569.7927158,
-    "seen": 1793611596.856422,
-    "ast_hash": "2a7467fa8923441feed7d9e22ea7a7fe",
+    "mtime": 1793618949.0150757,
+    "seen": 1793619003.3780057,
+    "ast_hash": "9e3d79642db57981759db4b4210e7cb7",
     "semantic_hash": ""
   },
   "docs/adr/0009-admin-exam-studio-and-authoring-wizard.md": {
@@ -11721,6 +11721,18 @@
     "mtime": 1793460339.298191,
     "seen": 1793611596.8564723,
     "ast_hash": "eeffaaed24ad11c6ad67c20962c03eb9",
+    "semantic_hash": ""
+  },
+  "src/BusinessObjects/Entities/LearnerLessonMicroCheck.cs": {
+    "mtime": 1793618096.4818823,
+    "seen": 1793618757.6964939,
+    "ast_hash": "18203b3a258c6b0893824f16456fd6ac",
+    "semantic_hash": ""
+  },
+  ".scratch/msg-review-round2.txt": {
+    "mtime": 1793618719.3526921,
+    "seen": 1793618757.8901875,
+    "ast_hash": "e4dbe2955d32b23034dfee49feb28b49",
     "semantic_hash": ""
   }
 }
