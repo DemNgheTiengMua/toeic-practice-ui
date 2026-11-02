@@ -169,10 +169,17 @@ public sealed partial class CompanionApiClient
     public Task<ExamGenerationResultDto> GenerateAdminExamAsync(ExamBlueprintDto blueprint, string bearerToken, CancellationToken cancellationToken = default) =>
         PostAuthorizedAsync<ExamBlueprintDto, ExamGenerationResultDto>("api/admin/exams/generate", blueprint, bearerToken, cancellationToken);
 
-    public Task<AdminExamListSummaryDto> GetAdminExamsAsync(string? q, string? status, int? certId, string? purpose, int page, int pageSize, CancellationToken cancellationToken = default) =>
-        GetAdminExamsAsync(q, status, certId, purpose, page, pageSize, string.Empty, cancellationToken);
+    public Task<ExamPreviewTakeDto> GetAdminExamPreviewAsync(int examId, int? q, string bearerToken, CancellationToken cancellationToken = default) =>
+        GetAuthorizedAsync<ExamPreviewTakeDto>(
+            q.HasValue ? $"api/admin/exams/{examId}/preview?q={q.Value}" : $"api/admin/exams/{examId}/preview",
+            bearerToken,
+            cancellationToken);
 
-    public Task<AdminExamListSummaryDto> GetAdminExamsAsync(string? q, string? status, int? certId, int page, int pageSize, CancellationToken cancellationToken = default) =>
+    public Task<ExamPreviewTakeDto> GetAdminExamPreviewAsync(int examId, int? q, CancellationToken cancellationToken = default) =>
+        GetAdminExamPreviewAsync(examId, q, string.Empty, cancellationToken);
+
+    public Task<AdminExamListSummaryDto> GetAdminExamsAsync(string? q, string? status, int? certId, string? purpose, int page, int pageSize, CancellationToken cancellationToken = default) =>
+        GetAdminExamsAsync(q, status, certId, purpose, page, pageSize, string.Empty, cancellationToken);    public Task<AdminExamListSummaryDto> GetAdminExamsAsync(string? q, string? status, int? certId, int page, int pageSize, CancellationToken cancellationToken = default) =>
         GetAdminExamsAsync(q, status, certId, null, page, pageSize, string.Empty, cancellationToken);
 
     public Task<AdminExamDetailDto> GetAdminExamByIdAsync(int examId, CancellationToken cancellationToken = default) =>

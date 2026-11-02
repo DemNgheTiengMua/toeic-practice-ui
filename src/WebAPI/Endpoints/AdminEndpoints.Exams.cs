@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using BusinessObjects;
 using Contracts;
+using Microsoft.AspNetCore.Mvc;
 using Services;
 using static WebAPI.Endpoints.EndpointHelpers;
 
@@ -227,6 +228,28 @@ public static partial class AdminEndpoints
             catch (AdminExamException ex)
             {
                 return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
+            }
+        });
+
+        // #158: admin preview of the real sitting view. Reads only — no attempt, no answers, no score.
+        admin.MapGet("/exams/{examId:int}/preview", async Task<IResult> (
+            int examId,
+            [FromQuery] int? q,
+            IAdminExamService exams,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var preview = await exams.GetExamPreviewTakeAsync(examId, q, cancellationToken);
+                return Results.Ok(ExamEndpoints.ToExamPreviewTakeDto(preview));
+            }
+            catch (AdminExamException ex)
+            {
+                return Problem(ex.Status, ex.Message, ex.Code, ex.Message);
+            }
+            catch (AttemptEngineException ex) when (ex.Code == AttemptEngineException.ExamNotFound)
+            {
+                return Problem(StatusCodes.Status404NotFound, "Exam not found", ApiError.Codes.ExamNotFound, ex.Message);
             }
         });
 

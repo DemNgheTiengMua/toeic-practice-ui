@@ -43,4 +43,7 @@ public interface IAdminExamService
     Task ReorderSectionItemsAsync(int examId, ReorderSectionItemsRequest request, CancellationToken cancellationToken = default);
     Task<AdminQuestionGroupDto> CreateExamClusterAsync(int examId, CreateExamClusterRequest request, CancellationToken cancellationToken = default);
     Task<(Stream Stream, string ContentType, string FileName)> ExportExamPackageAsync(int examId, string? format = "zip", CancellationToken cancellationToken = default);
+
+    /// <summary>#158: the exam as a learner would sit it, with the answer key, without an attempt.</summary>
+    Task<ExamPreviewTakeView> GetExamPreviewTakeAsync(int examId, int? questionDisplayOrder, CancellationToken cancellationToken = default);
 }

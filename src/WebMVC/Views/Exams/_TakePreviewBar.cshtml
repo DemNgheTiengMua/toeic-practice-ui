@@ -1,0 +1,33 @@
+@model ExamTakeViewModel
+@{
+    var take = Model.Display;
+}
+<!-- #158: admin preview bar. Read-only, blue signage frame so it never reads as the exam itself. -->
+<nav class="preview-bar" id="preview-bar" aria-label="Exam preview controls">
+  <div class="preview-bar__group">
+    <span class="preview-bar__stamp">PREVIEW</span>
+    <span class="preview-bar__status @(Model.ExamStatus == "DRAFT" ? "preview-bar__status--draft" : "")">@Model.ExamStatus</span>
+    <span class="preview-bar__meta">@Model.DurationMinutes min · @take.TotalQuestions questions</span>
+  </div>
+
+  <div class="preview-bar__group">
+    <label class="preview-bar__label" for="preview-jump-input">Go to question</label>
+    <input class="preview-bar__jump" id="preview-jump-input" type="number" min="1" max="@take.TotalQuestions"
+           inputmode="numeric" placeholder="1–@take.TotalQuestions" aria-label="Go to question number">
+    <button type="button" class="btn btn--sm" data-preview-step="-1" aria-label="Previous question">Prev</button>
+    <button type="button" class="btn btn--sm" data-preview-step="1" aria-label="Next question">Next</button>
+    <span class="preview-bar__hint">j / k</span>
+  </div>
+
+  <div class="preview-bar__group">
+    <label class="preview-bar__label" for="preview-section-select">Section</label>
+    <select class="preview-bar__select" id="preview-section-select">
+      @foreach (var jumpTarget in Model.SectionChoices)
+      {
+        <option value="@jumpTarget.DisplayOrder" data-section-id="@jumpTarget.SectionId">@jumpTarget.Label</option>
+      }
+    </select>
+    <button type="button" class="btn btn--sm" id="preview-answer-toggle" aria-pressed="false">Show answers</button>
+    <a class="btn btn--sm" href="/admin/exams/@Model.ExamId/studio">Back to studio</a>
+  </div>
+</nav>

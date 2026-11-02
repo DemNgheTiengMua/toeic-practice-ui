@@ -1113,6 +1113,64 @@ public sealed class AdminExamsControllerTests
     }
 
     [Fact]
+    public async Task Preview_renders_the_real_sitting_view_with_the_answer_key_and_no_attempt()
+    {
+        var api = new TestApiClient();
+        var controller = CreateController(api);
+
+        var result = await controller.Preview(17, 2, CancellationToken.None);
+
+        var viewResult = Assert.IsType<ViewResult>(result);
+        // The learner's own sitting markup, not a second viewer: a second view would drift.
+        Assert.Equal("~/Views/Exams/Take.cshtml", viewResult.ViewName);
+        var model = Assert.IsType<ExamTakeViewModel>(viewResult.Model);
+        Assert.True(model.IsPreview);
+        Assert.Equal(17, model.ExamId);
+        Assert.Equal(17, api.LastPreviewExamId);
+        Assert.Equal(2, api.LastPreviewQuestionOrder);
+        Assert.Equal("DRAFT", model.ExamStatus);
+        Assert.Equal(120, model.DurationMinutes);
+        Assert.Single(model.SectionChoices);
+        Assert.Contains("Because A is right.", model.PreviewAnswersJson);
+    }
+
+    [Fact]
+    public async Task Preview_refuses_a_learner_because_the_action_lives_on_the_admin_controller()
+    {
+        // AC: a learner without the admin role cannot reach a draft through the same URL. The
+        // guarantee is the class-level [Authorize(Policy = Roles.Admin)], declared once for the
+        // whole controller — assert it is still there rather than trusting the convention.
+        var authorize = typeof(AdminExamsController)
+            .GetCustomAttributes(typeof(Microsoft.AspNetCore.Authorization.AuthorizeAttribute), inherit: true)
+            .Cast<Microsoft.AspNetCore.Authorization.AuthorizeAttribute>()
+            .ToList();
+
+        Assert.Contains(authorize, attribute => attribute.Policy == Roles.Admin);
+        // And the learner's sitting action has no preview branch at all: a query string cannot
+        // open a draft on /exams/take/{attemptId}, because that path needs an attempt id.
+        var learnerAction = typeof(ExamsController).GetMethod(nameof(ExamsController.Take))!;
+        Assert.DoesNotContain(
+            learnerAction.GetParameters(),
+            parameter => parameter.Name is "preview" or "previewExamId" or "examId");
+    }
+
+    [Fact]
+    public async Task Preview_redirects_to_the_list_with_the_reason_when_the_exam_is_missing()
+    {
+        var api = new TestApiClient
+        {
+            PreviewException = new ApiException(ApiError.Codes.ExamNotFound, "Exam not found", 404, "Exam 999 not found."),
+        };
+        var controller = CreateController(api);
+
+        var result = await controller.Preview(999, null, CancellationToken.None);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(AdminExamsController.Index), redirect.ActionName);
+        Assert.Equal("Exam 999 not found.", controller.TempData["Error"]);
+    }
+
+    [Fact]
     public async Task AutosaveGroup_WhenSuccessful_ReturnsJsonUpdatedDto()
     {
         var api = new TestApiClient();
@@ -1309,9 +1367,20 @@ public sealed class AdminExamsControllerTests
         public Task<ExamStudioDetailDto> GetAdminExamStudioAsync(int examId, CancellationToken cancellationToken = default) =>
             Task.FromResult(SampleStudioDetail(examId));
 
+        public ExamPreviewTakeDto? PreviewToReturn { get; set; }
+        public int? LastPreviewExamId { get; private set; }
+        public int? LastPreviewQuestionOrder { get; private set; }
+
+        public Task<ExamPreviewTakeDto> GetAdminExamPreviewAsync(int examId, int? q, CancellationToken cancellationToken = default)
+        {
+            if (PreviewException != null) throw PreviewException;
+            LastPreviewExamId = examId;
+            LastPreviewQuestionOrder = q;
+            return Task.FromResult(PreviewToReturn ?? SamplePreview(examId, q));
+        }
+
         public Task<ExamAuditResultDto> GetAdminExamAuditAsync(int examId, CancellationToken cancellationToken = default) =>
             Task.FromResult(new ExamAuditResultDto(true, 1, 1, 0, 0, [], []));
-
         public Task ReorderAdminSectionItemsAsync(int examId, ReorderSectionItemsRequest request, CancellationToken cancellationToken = default) =>
             Task.CompletedTask;
 
@@ -1330,6 +1399,7 @@ public sealed class AdminExamsControllerTests
 
         public ExamBlueprintDto? LastGeneratedBlueprint { get; private set; }
         public Exception? GenerateException { get; set; }
+        public Exception? PreviewException { get; set; }
         public Task<ExamGenerationResultDto> GenerateAdminExamAsync(ExamBlueprintDto blueprint, CancellationToken cancellationToken = default)
         {
             if (GenerateException != null) throw GenerateException;
@@ -1354,6 +1424,35 @@ public sealed class AdminExamsControllerTests
         public Task<(Stream Stream, string ContentType, string FileName)> GetManifestTemplateAsync(int certId, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(((Stream)new MemoryStream(System.Text.Encoding.UTF8.GetBytes("{}")), "application/json", $"manifest_template_{certId}.json"));
+        }
+
+        private static ExamPreviewTakeDto SamplePreview(int examId, int? q)
+        {
+            var order = q ?? 1;
+            var current = new AttemptQuestionDto(
+                100 + order, order, 2, 1, "P1", "Photographs", "LIST", "Listening", ModalityDto.Listening,
+                $"Stem {order}", null, null, null, null, null, null, null,
+                [new AttemptOptionDto(1, "A", "First"), new AttemptOptionDto(2, "B", "Second")],
+                null, false);
+            var take = new AttemptTakeDto(
+                AttemptId: 0, examId, "Draft Exam", "TOEIC", AttemptStatusDto.InProgress,
+                DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddHours(2), 7200,
+                2, 0, 0, current,
+                [
+                    new NavigatorItemDto(101, 1, 1, "P1", ModalityDto.Listening, false, false, order == 1, IsLocked: false),
+                    new NavigatorItemDto(102, 2, 1, "P1", ModalityDto.Listening, false, false, order == 2, IsLocked: false)
+                ],
+                false,
+                Questions: [current],
+                Phases: [new AttemptPhaseDto(1, "LIST", "Listening", 1, 0, 7200)],
+                ActiveSkillId: 1);
+
+            return new ExamPreviewTakeDto(
+                take,
+                [new ExamPreviewAnswerDto(100 + order, [1], "Because A is right.")],
+                [new ExamPreviewSectionDto(1, "P1", "Photographs", 1, 2, 2)],
+                120,
+                "draft");
         }
 
         private static ExamStudioDetailDto SampleStudioDetail(int examId) =>

@@ -22,6 +22,12 @@ public interface IAttemptEngine
         int? questionDisplayOrder,
         CancellationToken cancellationToken = default);
 
+    /// <summary>#158: the sitting projection for an exam with no attempt behind it. Writes nothing.</summary>
+    Task<AttemptTakeView> GetExamPreviewTakeAsync(
+        int examId,
+        int? questionDisplayOrder,
+        CancellationToken cancellationToken = default);
+
     Task<SaveAttemptAnswerResult> SaveAnswerAsync(
         int attemptId,
         int userId,

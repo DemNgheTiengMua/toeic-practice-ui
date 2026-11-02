@@ -15,10 +15,17 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Services;
 
-public sealed partial class AdminExamService(CompanionDbContext db, TimeProvider clock, IFileStore? fileStore = null) : IAdminExamService
+public sealed partial class AdminExamService(
+    CompanionDbContext db,
+    TimeProvider clock,
+    IFileStore? fileStore = null,
+    IAttemptEngine? attemptEngine = null) : IAdminExamService
 {
 
     private static string? Normalize(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    // #158: preview renders the real sitting projection; sharing the engine keeps the two in step.
+    private readonly IAttemptEngine _attemptEngine = attemptEngine ?? new AttemptEngine(db);
 
     public Task<QuickIngestCommitResultDto> CommitQuickIngestAsync(int examId, QuickIngestCommitRequest request, CancellationToken cancellationToken = default)
     {

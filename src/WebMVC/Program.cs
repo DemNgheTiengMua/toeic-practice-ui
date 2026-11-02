@@ -1,11 +1,20 @@
 using Contracts;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Mvc.Razor;
 using WebMVC;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllersWithViews();
+// #158: the admin preview renders the learner's own sitting view (Views/Exams/Take.cshtml) from
+// AdminExamsController, so its partials and layout must resolve outside the Exams folder too.
+// That is the whole point of the ticket — one view, not a second viewer that drifts.
+builder.Services.Configure<RazorViewEngineOptions>(options =>
+{
+    options.ViewLocationFormats.Add("/Views/Exams/{0}.cshtml");
+    options.PageViewLocationFormats.Add("/Views/Exams/{0}.cshtml");
+});
 builder.Services.AddAntiforgery(options =>
 {
     options.HeaderName = "RequestVerificationToken";

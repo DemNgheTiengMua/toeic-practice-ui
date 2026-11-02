@@ -42,6 +42,9 @@
     }
 
     sitting.attemptId = sitting.sittingData.attemptId;
+    // #158: an admin preview of an exam — read-only, no attempt, navigation unlocked.
+    sitting.isPreview = !!sitting.sittingData.previewMode;
+    sitting.previewExamId = sitting.sittingData.examId;
     sitting.totalQuestions = sitting.questions.length || sitting.sittingData.totalQuestions;
     sitting.currentDisplayOrder = sitting.sittingData.displayOrder;
     sitting.activeUnitNumber = sitting.sittingData.activeUnitNumber;
@@ -85,11 +88,14 @@
       }
     });
 
-    // Restore uncommitted answers from localStorage backup if present
-    sitting.storageKey = 'ee_exam_pending_' + sitting.attemptId;
+    // Restore uncommitted answers from localStorage backup if present. A preview has attempt id 0
+    // and must never share that key with a real sitting, nor replay another page's queue.
+    sitting.storageKey = sitting.isPreview
+      ? 'ee_exam_preview_' + sitting.previewExamId
+      : 'ee_exam_pending_' + sitting.attemptId;
     sitting.pendingQueue = [];
     try {
-      sitting.rawStored = localStorage.getItem(sitting.storageKey);
+      sitting.rawStored = sitting.isPreview ? null : localStorage.getItem(sitting.storageKey);
       if (sitting.rawStored) {
         sitting.parsed = JSON.parse(sitting.rawStored);
         if (Array.isArray(sitting.parsed) && sitting.parsed.length > 0) {

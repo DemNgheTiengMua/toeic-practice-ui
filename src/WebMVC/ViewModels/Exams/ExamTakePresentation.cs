@@ -26,7 +26,7 @@ public sealed record ExamTakePresentation
     public required string PhasesJson { get; init; }
     public required string SittingJson { get; init; }
 
-    internal static ExamTakePresentation Create(AttemptTakeDto take)
+    internal static ExamTakePresentation Create(AttemptTakeDto take, bool previewMode = false)
     {
         var q = take.CurrentQuestion;
         var questions = take.Questions ?? [q];
@@ -68,6 +68,7 @@ public sealed record ExamTakePresentation
             {
                 take.AttemptId,
                 take.ExamName,
+                ExamId = take.ExamId,
                 take.TotalQuestions,
                 q.DisplayOrder,
                 take.ActiveSkillId,
@@ -78,6 +79,8 @@ public sealed record ExamTakePresentation
                 AttemptStartedAt = take.StartedAt.ToUnixTimeMilliseconds(),
                 take.LastAudioOffsetMs,
                 CandidateNotesJson = take.CandidateNotesJson ?? "",
+                // #158: the shell reads this to stay read-only and to unlock navigation.
+                PreviewMode = previewMode,
                 CurrentQuestion = q
             }, jsonOptions)
         };

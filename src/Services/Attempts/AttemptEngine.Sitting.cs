@@ -33,6 +33,19 @@ public sealed partial class AttemptEngine
             group.AudioEndMs,
             sectionMasters.GetValueOrDefault(group.SectionId));
 
+    /// <summary>The exam's questions in sitting order, with everything the sitting projection reads.</summary>
+    private Task<List<Question>> LoadExamQuestionsAsync(int examId, CancellationToken cancellationToken) =>
+        db.Questions
+            .Where(q => q.ExamId == examId)
+            .Include(q => q.Group)
+            .Include(q => q.Section).ThenInclude(s => s.Skill)
+            .Include(q => q.QuestionOptionQuestionNavigations)
+            .OrderBy(q => q.Section.Skill.DisplayOrder)
+            .ThenBy(q => q.Section.DisplayOrder)
+            .ThenBy(q => q.Group.DisplayOrder)
+            .ThenBy(q => q.DisplayOrder)
+            .ToListAsync(cancellationToken);
+
     public async Task<AttemptTakeView> GetAttemptTakeAsync(
         int attemptId,
         int userId,
@@ -72,32 +85,87 @@ public sealed partial class AttemptEngine
             await db.SaveChangesAsync(cancellationToken);
         }
 
-        var questions = await db.Questions
-            .Where(q => q.ExamId == attempt.ExamId)
-            .Include(q => q.Group)
-            .Include(q => q.Section).ThenInclude(s => s.Skill)
-            .Include(q => q.QuestionOptionQuestionNavigations)
-            .OrderBy(q => q.Section.Skill.DisplayOrder)
-            .ThenBy(q => q.Section.DisplayOrder)
-            .ThenBy(q => q.Group.DisplayOrder)
-            .ThenBy(q => q.DisplayOrder)
-            .ToListAsync(cancellationToken);
+        return await BuildAttemptTakeViewAsync(
+            attempt,
+            questionDisplayOrder,
+            persistPosition: true,
+            unlockNavigation: false,
+            cancellationToken);
+    }
 
-        var answers = await db.AttemptAnswers
-            .Where(a => a.AttemptId == attemptId)
-            .ToListAsync(cancellationToken);
-        var answersByQuestion = answers.ToDictionary(a => a.QuestionId);
+    /// <summary>
+    /// #158: an exam as a learner would sit it, with no attempt behind it. Nothing here writes: no
+    /// attempt, no answer, no ledger row. Navigation is unlocked so an admin can jump to any
+    /// question, and a draft exam is readable — the caller is what decides who may ask.
+    /// </summary>
+    public async Task<AttemptTakeView> GetExamPreviewTakeAsync(
+        int examId,
+        int? questionDisplayOrder,
+        CancellationToken cancellationToken = default)
+    {
+        var exam = await db.Exams
+            .AsNoTracking()
+            .Include(e => e.Cert)
+            .SingleOrDefaultAsync(e => e.ExamId == examId && !e.IsDeleted, cancellationToken)
+            ?? throw new AttemptEngineException(AttemptEngineException.ExamNotFound, $"Exam {examId} not found.");
+
+        var now = DateTimeOffset.UtcNow;
+        var preview = new ExamAttempt
+        {
+            AttemptId = 0,
+            UserId = 0,
+            ExamId = exam.ExamId,
+            CertId = exam.CertId,
+            Exam = exam,
+            Cert = exam.Cert,
+            Status = AttemptStatus.InProgress.ToCode(),
+            StartedAt = now,
+            ExpiresAt = now.AddMinutes(exam.DurationMinutes),
+            ActiveUnitNumber = 1,
+            PreflightVerifiedAt = now,
+        };
+
+        return await BuildAttemptTakeViewAsync(
+            preview,
+            questionDisplayOrder,
+            persistPosition: false,
+            unlockNavigation: true,
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// The sitting projection shared by a real attempt and #158's preview. One owner means the
+    /// admin approves exactly the view the learner gets; the two parameters are the only
+    /// difference: an attempt may persist the audio-driven position, a preview may not write and
+    /// does not gate navigation.
+    /// </summary>
+    private async Task<AttemptTakeView> BuildAttemptTakeViewAsync(
+        ExamAttempt attempt,
+        int? questionDisplayOrder,
+        bool persistPosition,
+        bool unlockNavigation,
+        CancellationToken cancellationToken)
+    {
+        var questions = await LoadExamQuestionsAsync(attempt.ExamId, cancellationToken);
+        int totalQuestions = questions.Count;
+        if (totalQuestions == 0)
+        {
+            throw new AttemptEngineException(AttemptEngineException.AttemptNotFound, $"Exam {attempt.ExamId} has no questions.");
+        }
+
+        var answersByQuestion = await db.AttemptAnswers
+            .Where(a => a.AttemptId == attempt.AttemptId)
+            .ToDictionaryAsync(a => a.QuestionId, cancellationToken);
         var freeResponses = await db.FreeResponses
             .AsNoTracking()
-            .Where(r => r.AttemptId == attemptId)
+            .Where(r => r.AttemptId == attempt.AttemptId)
             .ToDictionaryAsync(r => r.QuestionId, cancellationToken);
 
-        int totalQuestions = questions.Count;
         int answeredCount = questions.Count(q =>
             q.QuestionType == QuestionType.FreeResponse.ToCode()
                 ? freeResponses.TryGetValue(q.QuestionId, out var response) && (!string.IsNullOrWhiteSpace(response.ResponseText) || !string.IsNullOrWhiteSpace(response.AudioPath))
                 : answersByQuestion.TryGetValue(q.QuestionId, out var answer) && (answer.SelectedOptionId.HasValue || !string.IsNullOrWhiteSpace(answer.ResponseText) || !string.IsNullOrWhiteSpace(answer.SelectedOptionIdsJson)));
-        int flaggedCount = answers.Count(a => a.IsFlagged);
+        int flaggedCount = answersByQuestion.Values.Count(a => a.IsFlagged);
 
         // Determine authoritative saved question index within the active phase/unit/group
         int savedIndex = -1;
@@ -123,16 +191,19 @@ public sealed partial class AttemptEngine
             var requestedQuestion = questions[requestedIndex];
             var currentSavedQuestion = savedIndex >= 0 && savedIndex < totalQuestions ? questions[savedIndex] : requestedQuestion;
 
-            bool phaseOrGroupLocked = IsPhaseOrUnitOrGroupLocked(attempt, requestedQuestion);
-            bool blockedBySystemPaced = string.Equals(currentSavedQuestion.Section.NavigationMode, "SYSTEM_PACED_AUTO", StringComparison.OrdinalIgnoreCase)
+            bool phaseOrGroupLocked = !unlockNavigation && IsPhaseOrUnitOrGroupLocked(attempt, requestedQuestion);
+            bool blockedBySystemPaced = !unlockNavigation
+                && string.Equals(currentSavedQuestion.Section.NavigationMode, "SYSTEM_PACED_AUTO", StringComparison.OrdinalIgnoreCase)
                 && requestedIndex != savedIndex;
-            bool blockedByOneWayAudio = string.Equals(currentSavedQuestion.Section.NavigationMode, "AUDIO_DRIVEN", StringComparison.OrdinalIgnoreCase)
+            bool blockedByOneWayAudio = !unlockNavigation
+                && string.Equals(currentSavedQuestion.Section.NavigationMode, "AUDIO_DRIVEN", StringComparison.OrdinalIgnoreCase)
                 && requestedIndex < minAllowedAudioIndex;
 
             if (!phaseOrGroupLocked && !blockedBySystemPaced && !blockedByOneWayAudio)
             {
                 targetIndex = requestedIndex;
-                if (attempt.Status == AttemptStatus.InProgress.ToCode()
+                if (persistPosition
+                    && attempt.Status == AttemptStatus.InProgress.ToCode()
                     && targetIndex > savedIndex
                     && string.Equals(requestedQuestion.Section.NavigationMode, "AUDIO_DRIVEN", StringComparison.OrdinalIgnoreCase))
                 {
@@ -211,24 +282,23 @@ public sealed partial class AttemptEngine
                 q.Section.TimerPolicyJson));
         }
 
-        var currentQuestionInfo = totalQuestions > 0 ? allQuestions[targetIndex] : new AttemptQuestionInfo(
-            0, 0, 0, 0, "", "", "", "", Modality.Reading, "", null, null, null, null, null, null, null, [], null, false);
+        var currentQuestionInfo = allQuestions[targetIndex];
 
         var effectiveDeadline = ResolveEffectiveDeadline(attempt);
         var remainingSeconds = Math.Max(0, (int)(effectiveDeadline - DateTimeOffset.UtcNow).TotalSeconds);
         var phaseDeadline = ToUtcOffset(attempt.PhaseDeadlineAt);
-        var isPhaseExpired = phaseDeadline.HasValue && DateTimeOffset.UtcNow >= phaseDeadline.Value;
+        var isPhaseExpired = !unlockNavigation && phaseDeadline.HasValue && DateTimeOffset.UtcNow >= phaseDeadline.Value;
 
         var navigator = questions.Select((q, idx) =>
         {
             answersByQuestion.TryGetValue(q.QuestionId, out var answer);
             freeResponses.TryGetValue(q.QuestionId, out var response);
-            var isLocked = isPhaseExpired
+            var isLocked = !unlockNavigation && (isPhaseExpired
                 || IsPhaseOrUnitOrGroupLocked(attempt, q)
                 || (string.Equals(q.Section.NavigationMode, "SYSTEM_PACED_AUTO", StringComparison.OrdinalIgnoreCase)
                     && idx != targetIndex)
                 || (string.Equals(q.Section.NavigationMode, "AUDIO_DRIVEN", StringComparison.OrdinalIgnoreCase)
-                    && idx < GetFirstClusterIndex(questions, targetIndex));
+                    && idx < GetFirstClusterIndex(questions, targetIndex)));
 
             return new NavigatorItem(
                 q.QuestionId,

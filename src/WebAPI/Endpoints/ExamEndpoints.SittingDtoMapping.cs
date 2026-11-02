@@ -5,7 +5,7 @@ namespace WebAPI.Endpoints;
 
 public static partial class ExamEndpoints
 {
-    private static AttemptTakeDto ToAttemptTakeDto(AttemptTakeView take)
+    internal static AttemptTakeDto ToAttemptTakeDto(AttemptTakeView take)
     {
         var qInfo = take.CurrentQuestion;
         var currentQDto = new AttemptQuestionDto(
@@ -140,6 +140,16 @@ public static partial class ExamEndpoints
             take.LastAudioOffsetMs,
             take.CandidateNotesJson);
     }
+
+    /// <summary>#158: the preview adds the answer key and the exam's status to the real sitting DTO.</summary>
+    internal static ExamPreviewTakeDto ToExamPreviewTakeDto(ExamPreviewTakeView preview) =>
+        new(
+            ToAttemptTakeDto(preview.Take),
+            preview.Answers.Select(a => new ExamPreviewAnswerDto(a.QuestionId, a.CorrectOptionIds, a.Explanation)).ToList(),
+            preview.Sections.Select(s => new ExamPreviewSectionDto(
+                s.SectionId, s.SectionCode, s.SectionName, s.FirstDisplayOrder, s.LastDisplayOrder, s.QuestionCount)).ToList(),
+            preview.DurationMinutes,
+            preview.ExamStatus);
 
     private static SittingSyncDto ToSittingSyncDto(SittingSyncResult result) =>
         new SittingSyncDto(

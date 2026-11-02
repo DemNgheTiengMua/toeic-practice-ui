@@ -12,6 +12,9 @@
     });
     var isAudioDriven = currentQuestion && (currentQuestion.navigationMode === 'AUDIO_DRIVEN');
     var isUnitLockedSandbox = currentQuestion && (currentQuestion.navigationMode === 'UNIT_LOCKED_SANDBOX');
+    // #158: an admin preview is read-only, so nothing is "locked" to protect — the admin must
+    // reach question 200 and any other skill. A real sitting is unaffected: this is false there.
+    var unlock = !!sitting.isPreview;
 
     document.querySelectorAll('#navigator-grid .navigator__cell[data-question-id]').forEach(function (cell) {
       var question = sitting.questions.find(function (item) {
@@ -24,7 +27,7 @@
       var isBackInAudio = isAudioDriven && question && question.displayOrder < sitting.currentDisplayOrder;
 
       cell.hidden = !!(sitting.flaggedOnly && (!answer || !answer.isFlagged)) || isFutureUnit;
-      cell.disabled = !samePhase || (lockOneWay && question.displayOrder !== sitting.currentDisplayOrder) || isBackInAudio || isUnitLocked;
+      cell.disabled = !unlock && (!samePhase || (lockOneWay && question.displayOrder !== sitting.currentDisplayOrder) || isBackInAudio || isUnitLocked);
       if (isUnitLocked) {
         cell.classList.add('is-locked');
       } else {
@@ -41,8 +44,8 @@
       var isFutureUnit = isUnitLockedSandbox && question && (question.unitNumber || 1) > sitting.activeUnitNumber;
       var isBackInAudio = isAudioDriven && order < sitting.currentDisplayOrder;
 
-      chip.hidden = isFutureUnit;
-      chip.disabled = !samePhase || isBackInAudio || isUnitLocked;
+      chip.hidden = !unlock && isFutureUnit;
+      chip.disabled = !unlock && (!samePhase || isBackInAudio || isUnitLocked);
       if (isBackInAudio || isUnitLocked) {
         chip.classList.add('palette-chip--disabled');
       } else {
@@ -137,7 +140,12 @@
     document.title = sitting.sittingData.examName + ' — Question ' + q.displayOrder + ' — extra efficient';
 
     // URL synchronization without history pollution
-    window.history.replaceState({ page: 'exam-shell', q: displayOrder }, '', '/exams/take/' + sitting.attemptId + '?q=' + displayOrder);
+    if (sitting.isPreview) {
+      window.history.replaceState({ page: 'exam-preview', q: displayOrder }, '',
+        '/admin/exams/' + sitting.previewExamId + '/preview?q=' + displayOrder);
+    } else {
+      window.history.replaceState({ page: 'exam-shell', q: displayOrder }, '', '/exams/take/' + sitting.attemptId + '?q=' + displayOrder);
+    }
 
     // Audio continuity & isolation
     var newAudioKey = sitting.getQuestionAudioKey(q);
@@ -432,20 +440,26 @@
     var targetQuestion = sitting.questionMap[targetOrder];
     var phase = sitting.phases[sitting.activePhaseIndex];
     var currentQuestion = sitting.questionMap[sitting.currentDisplayOrder];
-    if (sitting.isSystemPacedAuto(currentQuestion)) {
+    var unlock = !!sitting.isPreview;
+    if (sitting.isSystemPacedAuto(currentQuestion) && !unlock) {
       // Manual navigation disabled during automated speaking flow
       return;
     }
-    if (!targetQuestion || !phase || targetQuestion.skillCode !== phase.skillCode) return;
+    if (!targetQuestion || (!unlock && !phase)) return;
+    if (!unlock && targetQuestion.skillCode !== phase.skillCode) return;
     var isOneWay = currentQuestion && (currentQuestion.navigationMode === 'AUDIO_DRIVEN');
-    if (isOneWay && targetOrder < sitting.currentDisplayOrder) return;
-    if (currentQuestion && currentQuestion.navigationMode === 'HYBRID_GROUP_LOCKED') {
+    if (!unlock && isOneWay && targetOrder < sitting.currentDisplayOrder) return;
+    if (!unlock && currentQuestion && currentQuestion.navigationMode === 'HYBRID_GROUP_LOCKED') {
       if (sitting.activeGroupId && targetQuestion.groupId !== sitting.activeGroupId) return;
     }
-    if (isOneWay && lockOneWay && targetOrder < sitting.currentDisplayOrder) return;
+    // The skill's one-way flag lives on the phase, exactly as updateNavigationForPhase reads it.
+    // Reading it here as a free variable threw ReferenceError on every forward jump from an
+    // AUDIO_DRIVEN question — including the Next button.
+    var lockOneWay = !!(phase && phase.lockNavigationOneWay);
+    if (!unlock && isOneWay && lockOneWay && targetOrder < sitting.currentDisplayOrder) return;
 
     // Strict Unit Locked Sandbox routing
-    if (targetQuestion.navigationMode === 'UNIT_LOCKED_SANDBOX') {
+    if (!unlock && targetQuestion.navigationMode === 'UNIT_LOCKED_SANDBOX') {
       var targetUnit = targetQuestion.unitNumber || 1;
       if (targetUnit !== sitting.activeUnitNumber) return;
     }

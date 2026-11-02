@@ -15,6 +15,10 @@
   <link rel="stylesheet" href="~/css/base.css">
   <link rel="stylesheet" href="~/css/components.css">
   <link rel="stylesheet" href="~/css/exams/take.css" asp-append-version="true">
+  @if (Model.IsPreview)
+  {
+    <link rel="stylesheet" href="~/css/exams/preview.css" asp-append-version="true">
+  }
 </head>
 <body class="exam-body-protected">
   <div class="app-shell">
@@ -27,6 +31,15 @@
         <script id="exam-data" type="application/json">@Html.Raw(take.QuestionsJson)</script>
         <script id="phase-data" type="application/json">@Html.Raw(take.PhasesJson)</script>
         <script id="sitting-data" type="application/json">@Html.Raw(take.SittingJson)</script>
+        @if (Model.IsPreview)
+        {
+          <script id="preview-answers" type="application/json">@Html.Raw(Model.PreviewAnswersJson)</script>
+        }
+
+        @if (Model.IsPreview)
+        {
+          <partial name="_TakePreviewBar" model="Model" />
+        }
 
         @if (Model.HasErrorMessage)
         {
@@ -81,5 +94,9 @@
   <script src="~/js/exams/review.js" asp-append-version="true"></script>
   <script src="~/js/exams/submission.js" asp-append-version="true"></script>
   <script src="~/js/exams/shell.js" asp-append-version="true"></script>
+  @if (Model.IsPreview)
+  {
+    <script src="~/js/exams/preview.js" asp-append-version="true"></script>
+  }
 </body>
 </html>

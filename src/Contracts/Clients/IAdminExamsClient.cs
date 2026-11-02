@@ -64,4 +64,8 @@ public interface IAdminExamsClient
     Task<(Stream Stream, string ContentType, string FileName)> GetManifestTemplateAsync(int certId, string bearerToken, CancellationToken cancellationToken = default) => GetManifestTemplateAsync(certId, cancellationToken);
     Task<ExamGenerationResultDto> GenerateAdminExamAsync(ExamBlueprintDto blueprint, CancellationToken cancellationToken = default);
     Task<ExamGenerationResultDto> GenerateAdminExamAsync(ExamBlueprintDto blueprint, string bearerToken, CancellationToken cancellationToken = default) => GenerateAdminExamAsync(blueprint, cancellationToken);
+
+    /// <summary>#158: the real sitting view plus the answer key, for a draft or published exam.</summary>
+    Task<ExamPreviewTakeDto> GetAdminExamPreviewAsync(int examId, int? q, CancellationToken cancellationToken = default);
+    Task<ExamPreviewTakeDto> GetAdminExamPreviewAsync(int examId, int? q, string bearerToken, CancellationToken cancellationToken = default) => GetAdminExamPreviewAsync(examId, q, cancellationToken);
 }

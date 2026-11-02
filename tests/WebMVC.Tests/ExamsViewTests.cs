@@ -513,7 +513,10 @@ public sealed class ExamsViewTests
         var scripts = assets.Where(asset => asset.EndsWith(".js")).ToArray();
         Assert.True(scripts.Length > 1, "Sitting behavior must load its cohesive modules.");
         Assert.Equal("js/exams/context.js", scripts[0]);
-        Assert.Equal("js/exams/shell.js", scripts[^1]);
+        // #158: preview.js is the one appendage loaded after the shell has initialised, and only on
+        // the admin preview page. Everything before it is the sitting itself, ending at shell.js.
+        Assert.Equal("js/exams/shell.js", scripts[^2]);
+        Assert.Equal("js/exams/preview.js", scripts[^1]);
         Assert.Equal(scripts.Length, scripts.Distinct().Count());
         foreach (var asset in assets)
         {

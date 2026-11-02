@@ -105,7 +105,9 @@
 
   sitting.initializeAudio = function () {
     sitting.currentAudioKey = sitting.getQuestionAudioKey(sitting.questionMap[sitting.currentDisplayOrder]);
-    sitting.audioStorageKey = 'ee_exam_audio_' + sitting.attemptId;
+    sitting.audioStorageKey = sitting.isPreview
+      ? 'ee_exam_preview_audio_' + sitting.previewExamId
+      : 'ee_exam_audio_' + sitting.attemptId;
     sitting.playedAudios = {};
     try {
       sitting.rawStoredAudios = localStorage.getItem(sitting.audioStorageKey);

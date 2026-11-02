@@ -55,6 +55,10 @@
     <partial name="_TakeSpeaking" model="Model" />
     <partial name="_TakeWriting" model="Model" />
     <div id="free-response-container" class="stack" style="display:none; margin-top: 1rem;"></div>
+    @if (Model.IsPreview)
+    {
+      <div class="preview-answer-key" id="preview-answer-key" role="status" aria-live="polite"></div>
+    }
   </div>
 
   <!-- Bottom Question Navigation Row -->

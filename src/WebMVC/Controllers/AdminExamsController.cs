@@ -731,6 +731,28 @@ public sealed class AdminExamsController(
         }
     }
 
+    /// <summary>
+    /// #158: the exam as a learner sits it, in the real sitting view, for a draft or published exam.
+    /// Admin-only by the controller's policy, so the same URL a learner can type reaches nothing:
+    /// this action lives on the admin controller and the learner's sitting action never reads a
+    /// preview flag. Nothing is written — no attempt, no answer, no ledger row.
+    /// </summary>
+    [HttpGet("{id:int}/preview")]
+    public async Task<IActionResult> Preview(int id, [FromQuery] int? q, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var preview = await api.GetAdminExamPreviewAsync(id, q, cancellationToken);
+            return View("~/Views/Exams/Take.cshtml", new ExamTakeViewModel(preview.Take, Preview: preview));
+        }
+        catch (ApiException ex)
+        {
+            logger.LogError(ex, "Could not load preview for exam {ExamId}", id);
+            TempData["Error"] = ex.Detail ?? ex.Message;
+            return RedirectToAction(nameof(Index));
+        }
+    }
+
     [HttpGet("{id:int}/studio")]
     public async Task<IActionResult> Studio(int id, CancellationToken cancellationToken = default)
     {

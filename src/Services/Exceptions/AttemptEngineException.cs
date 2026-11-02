@@ -12,6 +12,7 @@ public class AttemptEngineException(string code, string message) : Exception(mes
     public const string AttemptNotFinished = "attempt_not_finished";
     public const string WrongPhase = "wrong_phase";
     public const string PreflightRequired = "preflight_required";
+    public const string ExamNotFound = "exam_not_found";
 
     public string Code { get; } = code;
 }

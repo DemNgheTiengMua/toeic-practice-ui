@@ -130,6 +130,8 @@ else
               <td>
                 <div class="row" style="gap: 0.25rem;">
                   <a class="btn btn--sm btn--primary" href="/admin/exams/@exam.ExamId/studio">Studio</a>
+                  @* #158: review the exam in the learner's own sitting view, draft or published *@
+                  <a class="btn btn--sm" href="/admin/exams/@exam.ExamId/preview">Preview</a>
                   <a class="btn btn--sm" href="/admin/exams/@exam.ExamId/edit">Edit Info</a>
                   @if (exam.Status == ExamStatusDto.Published)
                   {
