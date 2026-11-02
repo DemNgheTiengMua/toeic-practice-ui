@@ -12,6 +12,5 @@ public sealed record PracticeSessionInfo(
     PracticeStatus Status,
     int CorrectCount,
     QuestionSource QuestionSource,
-    FeedbackMode FeedbackMode,
     DateTimeOffset StartedAt,
     DateTimeOffset? FinishedAt);

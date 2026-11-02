@@ -93,7 +93,6 @@ public sealed class AiInsightServiceTests(DatabaseFixture database)
             Status = PracticeStatus.Finished.ToCode(),
             CorrectCount = 2,
             QuestionSource = QuestionSource.All.ToCode(),
-            FeedbackMode = FeedbackMode.End.ToCode(),
             StartedAt = DateTimeOffset.UtcNow.AddMinutes(-10),
             FinishedAt = DateTimeOffset.UtcNow
         };
@@ -568,7 +567,6 @@ public sealed class AiInsightServiceTests(DatabaseFixture database)
                 Status = PracticeStatus.Finished.ToCode(),
                 CorrectCount = 1,
                 QuestionSource = QuestionSource.All.ToCode(),
-                FeedbackMode = FeedbackMode.End.ToCode(),
                 StartedAt = DateTimeOffset.UtcNow.AddMinutes(-5),
                 FinishedAt = DateTimeOffset.UtcNow
             };
@@ -670,7 +668,6 @@ public sealed class AiInsightServiceTests(DatabaseFixture database)
                 Status = PracticeStatus.Finished.ToCode(),
                 CorrectCount = 1,
                 QuestionSource = QuestionSource.All.ToCode(),
-                FeedbackMode = FeedbackMode.End.ToCode(),
                 StartedAt = DateTimeOffset.UtcNow,
                 FinishedAt = DateTimeOffset.UtcNow
             };

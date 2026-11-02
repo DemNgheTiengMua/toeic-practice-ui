@@ -28,7 +28,7 @@ public static partial class PracticeEndpoints
                 view.UnfinishedSession is { } ufs
                     ? new PracticeSessionDto(
                         ufs.SessionId, ufs.SectionId, ufs.SectionCode, ufs.SectionName, ufs.Modality.MapTo<ModalityDto>(),
-                        ufs.QuestionCount, ufs.Status.MapTo<PracticeStatusDto>(), ufs.CorrectCount, ufs.QuestionSource.MapTo<QuestionSourceDto>(), ufs.FeedbackMode.MapTo<FeedbackModeDto>(),
+                        ufs.QuestionCount, ufs.Status.MapTo<PracticeStatusDto>(), ufs.CorrectCount, ufs.QuestionSource.MapTo<QuestionSourceDto>(),
                         ufs.StartedAt, ufs.FinishedAt)
                     : null,
                 (view.Speaking ?? []).Select(ToSectionDto).ToList(),

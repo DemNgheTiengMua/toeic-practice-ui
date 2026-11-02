@@ -155,10 +155,11 @@ public sealed partial class AttemptEngine
             || await db.QuestionGroups.AnyAsync(g => g.ExamId == examId && !string.IsNullOrWhiteSpace(g.AudioPath), cancellationToken);
         var requiresAudio = hasSectionAudioFlag || hasUploadedAudio;
 
+        // #160: the old third clause compared Skill.Code against "speaking" - a name, not a code - so it
+        // could never match. The second one is redundant as well: FK_Sections_SkillModality already pins
+        // a section's modality to its skill's. The section's own modality is the whole rule.
         var requiresMicrophone = sections.Any(s =>
-            string.Equals(s.Modality, "speaking", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(s.Skill?.Modality, "speaking", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(s.Skill?.Code, "speaking", StringComparison.OrdinalIgnoreCase));
+            string.Equals(s.Modality, Modality.Speaking.ToCode(), StringComparison.OrdinalIgnoreCase));
 
         return (requiresAudio, requiresMicrophone);
     }

@@ -446,13 +446,11 @@ CREATE TABLE PracticeSessions (
   Status       VARCHAR(12) NOT NULL DEFAULT 'in_progress'
     CONSTRAINT CK_Practice_Status CHECK (Status IN ('in_progress','finished','abandoned')),
   CorrectCount INT NOT NULL DEFAULT 0,
-  -- UI-11: practice-select options "Question source" and "Feedback type"
+  -- UI-11: practice-select option "Question source"
   -- #155: no longer a learner choice - a standalone session is drawn by mastery state and written as
   -- 'all'. The old codes stay because existing rows hold them; #162 removes them, not this ticket.
   QuestionSource VARCHAR(12) NOT NULL CONSTRAINT DF_Practice_Source DEFAULT 'all'
     CONSTRAINT CK_Practice_Source CHECK (QuestionSource IN ('all','wrong_before','unseen')),
-  FeedbackMode   VARCHAR(10) NOT NULL CONSTRAINT DF_Practice_Feedback DEFAULT 'immediate'
-    CONSTRAINT CK_Practice_Feedback CHECK (FeedbackMode IN ('immediate','end')),
   -- UI-12: a learning-path module runs as practice sessions; module progress/accuracy/time derive from them.
   -- FK added after LearnerPathSteps exists.
   LearnerPathStepId INT NULL,

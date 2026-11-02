@@ -52,7 +52,7 @@ public sealed class PracticePresentationTests
 
     private static PracticeSessionDto Session(PracticeStatusDto status = PracticeStatusDto.InProgress) =>
         new(42, 5, "P5", "Reading", ModalityDto.Reading, 3, status, 1,
-            QuestionSourceDto.All, FeedbackModeDto.Immediate, DateTimeOffset.UtcNow, null);
+            QuestionSourceDto.All, DateTimeOffset.UtcNow, null);
 
     private static PracticeQuestionDto Question(int id, int? selected = null, bool? correct = null) =>
         new(42, "Reading", id, id, 3, "Question </script><script>alert(1)</script>", null, null, false,
@@ -82,10 +82,10 @@ public sealed class PracticePresentationTests
     }
 
     [Fact]
-    public void Deferred_feedback_counts_selected_answers_without_revealing_correctness()
+    public void A_selected_answer_that_is_not_graded_yet_is_counted_without_revealing_correctness()
     {
         var question = Question(1, 11);
-        var model = new PracticeTakePresentation(Session() with { FeedbackMode = FeedbackModeDto.End },
+        var model = new PracticeTakePresentation(Session(),
             question, [question, Question(2), Question(3)], null);
 
         Assert.Equal(1, model.AnsweredCount);

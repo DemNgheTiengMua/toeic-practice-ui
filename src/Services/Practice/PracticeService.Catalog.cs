@@ -139,7 +139,6 @@ public sealed partial class PracticeService
                 EnumCodes.Parse<PracticeStatus>(ps.Status),
                 ps.CorrectCount,
                 EnumCodes.Parse<QuestionSource>(ps.QuestionSource),
-                EnumCodes.Parse<FeedbackMode>(ps.FeedbackMode),
                 ps.StartedAt,
                 ps.FinishedAt))
             .FirstOrDefaultAsync(cancellationToken);

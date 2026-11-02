@@ -72,7 +72,6 @@ public sealed partial class PracticeService
             Status = PracticeStatus.InProgress.ToCode(),
             CorrectCount = 0,
             QuestionSource = QuestionSource.All.ToCode(),
-            FeedbackMode = input.FeedbackMode.ToCode(),
             StartedAt = _clock.GetUtcNow(),
         };
 
@@ -106,7 +105,6 @@ public sealed partial class PracticeService
             EnumCodes.Parse<PracticeStatus>(session.Status),
             session.CorrectCount,
             EnumCodes.Parse<QuestionSource>(session.QuestionSource),
-            EnumCodes.Parse<FeedbackMode>(session.FeedbackMode),
             session.StartedAt,
             session.FinishedAt);
     }
@@ -168,7 +166,6 @@ public sealed partial class PracticeService
             EnumCodes.Parse<PracticeStatus>(session.Status),
             session.CorrectCount,
             EnumCodes.Parse<QuestionSource>(session.QuestionSource),
-            EnumCodes.Parse<FeedbackMode>(session.FeedbackMode),
             session.StartedAt,
             session.FinishedAt);
     }

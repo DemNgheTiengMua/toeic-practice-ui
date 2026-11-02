@@ -140,7 +140,7 @@ Three modifications in `prototype/student/`:
 **LearningPathService** (extend existing): Add lesson step progression.
 
 - Existing `GetPathProgressAsync` should recognize ItemType='lesson' and join to LearnerLessonProgress to derive step status (locked/available/in_progress/done based on IsCompleted and prior step state).
-- Existing `CompleteStepAsync` should handle lesson completion: when a lesson step is completed (IsCompleted=1 in LearnerLessonProgress), mark LearnerPathSteps.Status='done', set CompletedAt, unlock next step.
+- `PathStepCompletion` (was `CompleteStepAsync`, removed in #160) handles lesson completion: a finished lesson closes its step through `PathStepCompletion.CloseAsync`, which marks `LearnerPathSteps.Status='done'`, sets `CompletedAt`, and unlocks the next step.
 
 ## Testing Decisions
 
@@ -169,7 +169,7 @@ Three modifications in `prototype/student/`:
 
 3. **LearningPathService** (extend existing tests):
    - `GetPathProgressAsync` correctly derives lesson step status from LearnerLessonProgress
-   - `CompleteStepAsync` marks lesson step done when IsCompleted=1 in progress
+   - `PathStepCompletionTests` proves a lesson step is done only once the lesson is finished
 
 ### Prior Art
 

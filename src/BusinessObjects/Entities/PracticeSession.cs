@@ -34,10 +34,6 @@ public partial class PracticeSession
     [Unicode(false)]
     public string QuestionSource { get; set; } = null!;
 
-    [StringLength(10)]
-    [Unicode(false)]
-    public string FeedbackMode { get; set; } = null!;
-
     public int? LearnerPathStepId { get; set; }
 
     public DateTimeOffset StartedAt { get; set; }

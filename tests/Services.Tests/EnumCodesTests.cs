@@ -26,7 +26,6 @@ public sealed class EnumCodesTests
         { typeof(AiInsightTrend), typeof(AiInsightTrendDto), "CK_AiInsights_Trend" },
         { typeof(PracticeStatus), typeof(PracticeStatusDto), "CK_Practice_Status" },
         { typeof(QuestionSource), typeof(QuestionSourceDto), "CK_Practice_Source" },
-        { typeof(FeedbackMode), typeof(FeedbackModeDto), "CK_Practice_Feedback" },
         { typeof(SavedQuestionSource), typeof(SavedQuestionSourceDto), "CK_SavedQ_Source" },
         { typeof(RecommendationSeverity), typeof(RecommendationSeverityDto), "CK_Reco_Severity" },
         { typeof(OrderStatus), typeof(OrderStatusDto), "CK_Orders_Status" },

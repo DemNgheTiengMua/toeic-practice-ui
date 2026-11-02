@@ -63,7 +63,7 @@ const flush = () => new Promise(resolve => setImmediate(resolve));
 
 test('all extracted scripts parse without Razor tokens', () => {
   for (const name of ['lessons/player.js', 'admin/lessons/preview.js', 'admin/lessons/edit.js',
-    'admin/lessons/index.js', 'dashboard/simulator.js']) {
+    'admin/lessons/index.js']) {
     assert.doesNotThrow(() => new vm.Script(script(name)));
     assert.doesNotMatch(script(name), /@(?:Model|Json|initialIndex|totalCards)/);
   }
@@ -141,27 +141,3 @@ test('lesson delete confirmation reads the encoded attribute and submits only af
   assert.equal(submitted, 1);
 });
 
-test('simulator recalculates scores and band classes then resets to baseline', () => {
-  const slider = element({ 'data-skill-id': '1', 'data-skill-name': 'Reading', 'data-max-score': '100', 'data-base-score': '20' });
-  slider.value = '20';
-  const bands = [{ code: 'B1', name: 'Threshold', minTotal: 0, maxTotal: 49 },
-    { code: 'B2', name: 'Vantage', minTotal: 50, maxTotal: 100 }];
-  const cells = bands.map(b => element({ 'data-band-code': b.code, 'data-max-total': String(b.maxTotal) }));
-  const simulator = element({ 'data-target-code': 'B2', 'data-target-min': '50', 'data-bands': JSON.stringify(bands) });
-  simulator.querySelectorAll = selector => selector === '[data-sim-slider]' ? [slider] : cells;
-  const nodes = Object.fromEntries(['sim-total-score', 'sim-matched-band-code', 'sim-matched-band-name',
-    'sim-deficit-badge', 'sim-reset-btn'].map(id => [id, element()]));
-  nodes['dashboard-simulator'] = simulator;
-  vm.runInNewContext(script('dashboard/simulator.js'), { document: { getElementById: id => nodes[id] ?? null } });
-  slider.value = '70';
-  slider.handlers.input();
-  assert.equal(nodes['sim-total-score'].textContent, '70');
-  assert.equal(nodes['sim-matched-band-code'].textContent, 'B2');
-  assert.equal(cells[1].classList.contains('is-current'), true);
-  assert.equal(cells[0].classList.contains('is-reached'), true);
-  assert.equal(nodes['sim-deficit-badge'].getAttribute('data-deficit'), '0');
-  nodes['sim-reset-btn'].handlers.click();
-  assert.equal(slider.value, '20');
-  assert.equal(nodes['sim-matched-band-code'].textContent, 'B1');
-  assert.equal(nodes['sim-deficit-badge'].textContent, '-30 pts to B2');
-});

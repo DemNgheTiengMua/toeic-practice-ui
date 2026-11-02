@@ -5,6 +5,4 @@ namespace WebMVC.Models;
 public sealed class StartPracticeFormModel
 {
     public int SectionId { get; set; }
-
-    public string FeedbackMode { get; set; } = "immediate";
 }

@@ -85,10 +85,7 @@ else
   {
   <form method="post" action="/practice/start" id="practice-form">
     @Html.AntiForgeryToken()
-    @* #155: one button, no count, no source. The ten questions are the mastery planner's decision,
-       and feedback is always immediate - end-of-session feedback was a third thing to choose that
-       taught nothing. *@
-    <input type="hidden" name="FeedbackMode" value="immediate" />
+    @* #155: one button, no count, no source. The ten questions are the mastery planner's decision. *@
     <div class="card">
       <div class="card__body">
         <h2 class="h4 m-0 mb-1">Smart Practice &mdash; 10 questions</h2>
