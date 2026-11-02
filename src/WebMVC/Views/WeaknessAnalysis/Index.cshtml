@@ -75,7 +75,7 @@ else
         <div>
           <div class="row row--between text-sm">
             <span>
-              <strong>@(data.Certificate.Code == "TOEIC" ? "Part " : "Section ")@s.Code — @s.Name</strong>
+              <strong>@data.Certificate.SectionNoun @s.Code — @s.Name</strong>
               @if (s.IsWeakest)
               {
                 <span class="badge badge--danger ml-1">Weakest</span>
@@ -111,11 +111,11 @@ else
         @if (data.PriorityPracticeSection is not null)
         {
           <p class="text-sm text-muted no-margin">
-            @(data.Certificate.Code == "TOEIC" ? "Part " : "Section ")@data.PriorityPracticeSection.Code sits at your lowest accuracy level (@data.PriorityPracticeSection.AccuracyPercentage%). This is where you can improve your score fastest.
+            @data.Certificate.SectionNoun @data.PriorityPracticeSection.Code sits at your lowest accuracy level (@data.PriorityPracticeSection.AccuracyPercentage%). This is where you can improve your score fastest.
           </p>
           <div class="row mt-2">
-            <a class="btn btn--primary" href="/practice">Practice @(data.Certificate.Code == "TOEIC" ? "Part " : "Section ")@data.PriorityPracticeSection.Code now</a>
-            <a class="btn btn--sm" href="/saved-questions?sectionId=@data.PriorityPracticeSection.SectionId">View saved questions in @(data.Certificate.Code == "TOEIC" ? "Part " : "Section ")@data.PriorityPracticeSection.Code</a>
+            <a class="btn btn--primary" href="/practice">Practice @data.Certificate.SectionNoun @data.PriorityPracticeSection.Code now</a>
+            <a class="btn btn--sm" href="/saved-questions?sectionId=@data.PriorityPracticeSection.SectionId">View saved questions in @data.Certificate.SectionNoun @data.PriorityPracticeSection.Code</a>
           </div>
         }
         else

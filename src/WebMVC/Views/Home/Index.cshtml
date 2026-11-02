@@ -2,7 +2,7 @@
 @{
     Layout = null;
     ViewData["Title"] = "extra efficient — Practice your way";
-    ViewData["Description"] = "Practice for TOEIC, IELTS and VSTEP with a free placement exam, a personalized learning path, and skill-based exercises.";
+    ViewData["Description"] = Model.Description;
 }
 <!DOCTYPE html>
 <html lang="en">
@@ -61,18 +61,24 @@
             <a class="btn btn--primary btn--lg" href="/auth/register">Start for free <span aria-hidden="true">→</span></a>
             <a class="landing-text-link" href="#method">Explore how it works</a>
           </div>
-          <div class="landing-hero__note">
-            <span class="landing-hero__note-label">START WITH</span>
-            <a class="landing-hero__note-chip" href="/certificates#cert-toeic">TOEIC</a>
-            <a class="landing-hero__note-chip" href="/certificates#cert-ielts">IELTS</a>
-            <a class="landing-hero__note-chip" href="/certificates#cert-vstep">VSTEP</a>
-          </div>
+          @if (Model.Certificates.Count > 0)
+          {
+            <div class="landing-hero__note">
+              <span class="landing-hero__note-label">START WITH</span>
+              @foreach (var cert in Model.Certificates)
+              {
+                <a class="landing-hero__note-chip" href="/certificates#cert-@cert.Code.ToLowerInvariant()">@cert.Code</a>
+              }
+            </div>
+          }
         </div>
 
+        @if (Model.Preview is { } preview)
+        {
         <div class="landing-preview" aria-label="Sample illustration: a learner's dashboard">
           <div class="landing-preview__top">
             <span class="landing-preview__brand">LEARNING PATH</span>
-            <span class="landing-preview__live"><span aria-hidden="true"></span> TOEIC · SAMPLE</span>
+            <span class="landing-preview__live"><span aria-hidden="true"></span> @preview.CertificateName · SAMPLE</span>
           </div>
           <div class="landing-preview__body">
             <div class="landing-preview__welcome">
@@ -81,9 +87,9 @@
                 <h2>Step by step<br>to your target.</h2>
               </div>
               <div class="landing-preview__score">
-                <span class="landing-preview__score-label">TARGET</span>
-                <strong>750</strong>
-                <span>TOEIC</span>
+                <span class="landing-preview__score-label">RANGE</span>
+                <strong>@preview.TargetScore</strong>
+                <span>@preview.CertificateName</span>
               </div>
             </div>
             <div class="landing-preview__progress">
@@ -98,8 +104,8 @@
             <div class="landing-preview__next">
               <span class="landing-preview__next-index">NEXT STEP <strong>03</strong></span>
               <div>
-                <strong>Listening practice — Part 3</strong>
-                <span>12 questions · about 15 min</span>
+                <strong>@preview.NextStepTitle</strong>
+                <span>@preview.NextStepMeta</span>
               </div>
               <span class="landing-preview__arrow" aria-hidden="true">→</span>
             </div>
@@ -109,32 +115,32 @@
             <span class="landing-preview__footer-status">1 TASK PENDING</span>
           </div>
         </div>
+        }
       </div>
       <div class="landing-hero__bottom-rule" aria-hidden="true"></div>
     </section>
 
+    @if (Model.Certificates.Count > 0)
+    {
     <section class="landing-certificates" id="certificates" aria-labelledby="certificates-title">
       <div class="landing-container landing-certificates__inner">
         <div class="landing-certificates__intro">
           <h2 id="certificates-title">Pick a certificate.<br>Start your journey.</h2>
         </div>
-        <a class="landing-certificate" href="/certificates#cert-toeic">
-          <span class="landing-certificate__code">01 / TOEIC</span>
-          <span class="landing-certificate__name">Listening · Reading</span>
-          <span class="landing-certificate__action">See test details <span aria-hidden="true">→</span></span>
-        </a>
-        <a class="landing-certificate" href="/certificates#cert-ielts">
-          <span class="landing-certificate__code">02 / IELTS</span>
-          <span class="landing-certificate__name">Listening · Speaking · Reading · Writing</span>
-          <span class="landing-certificate__action">See test details <span aria-hidden="true">→</span></span>
-        </a>
-        <a class="landing-certificate" href="/certificates#cert-vstep">
-          <span class="landing-certificate__code">03 / VSTEP</span>
-          <span class="landing-certificate__name">All four skills</span>
-          <span class="landing-certificate__action">See test details <span aria-hidden="true">→</span></span>
-        </a>
+        @for (var i = 0; i < Model.Certificates.Count; i++)
+        {
+          var cert = Model.Certificates[i];
+          <a class="landing-certificate" href="/certificates#cert-@cert.Code.ToLowerInvariant()">
+            <span class="landing-certificate__code">@(i + 1 < 10 ? $"0{i + 1}" : $"{i + 1}") / @cert.Code</span>
+            <span class="landing-certificate__name">@cert.SkillsSummary</span>
+            <span class="landing-certificate__action">
+              See test details <span aria-hidden="true">→</span>
+            </span>
+          </a>
+        }
       </div>
     </section>
+    }
 
     <section class="landing-method landing-section" id="method" aria-labelledby="method-title">
       <div class="landing-container">

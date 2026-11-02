@@ -33,7 +33,7 @@ public sealed class PlacementService(
         var cert = await db.Certificates
             .AsNoTracking()
             .Where(c => c.CertId == certId)
-            .Select(c => new CertificateOption(c.Code, c.Name))
+            .Select(c => new CertificateOption(c.Code, c.Name, c.SectionNoun))
             .SingleAsync(cancellationToken);
 
         // Auto-submit any expired in-progress placement tests
@@ -526,7 +526,7 @@ public sealed class PlacementService(
         var cert = await db.Certificates
             .AsNoTracking()
             .Where(c => c.CertId == certId)
-            .Select(c => new CertificateOption(c.Code, c.Name))
+            .Select(c => new CertificateOption(c.Code, c.Name, c.SectionNoun))
             .SingleAsync(cancellationToken);
 
         var latestPlacement = await db.PlacementTests

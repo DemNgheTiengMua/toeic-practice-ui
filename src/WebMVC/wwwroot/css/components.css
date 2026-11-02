@@ -1265,14 +1265,13 @@ button.nav-list__group.has-current[aria-expanded="false"] .nav-list__count {
   color: #ffffff;
 }
 
-/* ===== CEFR level bar =====
-   The CEFR thresholds are fixed by the standard, not numbers an admin can edit:
-   A1 120 Â· A2 225 Â· B1 550 Â· B2 785 Â· C1 945 (on the 10â€“990 total scale).
-   Six bands in exact order: <A1 Â· A1 Â· A2 Â· B1 Â· B2 Â· C1.
-   The first band is "below A1" (10â€“119), NOT A1 â€” off by one band and the
-   student is shown the wrong level.
-   Each band's width is proportional to its real score range, so the marker
-   position is readable. */
+/* ===== Band strip =====
+   #161: the columns are the certificate's own bands, so neither their count nor their width can live
+   here. `_BandStrip.cshtml` writes `--band-count` and `--band-columns` from the rows it was given, and
+   this block only says to use them. The old version hardcoded six CEFR bands over the TOEIC 10-990
+   range — the note about A1 120 · A2 225 · B1 550 · B2 785 · C1 945 was that assumption written out.
+   Each column is one unit per score point the band covers, so the edge of every band sits where the
+   number says it does. */
 .cefr { display: block; }
 .cefr__head {
   display: flex; align-items: baseline; justify-content: space-between;
@@ -1285,8 +1284,7 @@ button.nav-list__group.has-current[aria-expanded="false"] .nav-list__count {
 .cefr__track {
   position: relative;
   display: grid;
-  /* 10-120 / 120-225 / 225-550 / 550-785 / 785-945 / 945-990 */
-  grid-template-columns: 110fr 105fr 325fr 235fr 160fr 45fr;
+  grid-template-columns: var(--band-columns, repeat(var(--band-count, 1), minmax(0, 1fr)));
   height: 34px;
   border: var(--keyline) solid var(--ink);
   border-radius: 0;
@@ -1306,7 +1304,7 @@ button.nav-list__group.has-current[aria-expanded="false"] .nav-list__count {
 .cefr__band.is-current { background: var(--ink); color: #ffffff; }
 .cefr__scale {
   display: grid;
-  grid-template-columns: 110fr 105fr 325fr 235fr 160fr 45fr;
+  grid-template-columns: var(--band-columns, repeat(var(--band-count, 1), minmax(0, 1fr)));
   margin-top: var(--space-1);
   font-family: var(--font-mono); font-size: var(--text-xs);
   font-variant-numeric: tabular-nums;
@@ -1471,16 +1469,9 @@ button.nav-list__group.has-current[aria-expanded="false"] .nav-list__count {
   .score-hero__section { flex-direction: column; align-items: flex-start; gap: var(--space-1); }
   .score-hero__section-value { text-align: left; }
   .catalog__row { grid-template-columns: minmax(0, 1fr); }
-  /* The track divides by real score range, so C1 (945-990) gets 45/980 of the
-     width â€” 12px on a 360px phone, which cannot hold a two-character label. The
-     labels used to be shrunk to 10px to compensate: below the 11px floor, and C1
-     still clipped. At this width the bands go equal instead, so every label has
-     room at its normal size. The proportional reading is not lost â€” the head line
-     above the track names the score and the next threshold in words, and
-     `.is-current` still marks the band. The tick row follows the same grid; it
-     has to, or the numbers stop lining up with the band edges they mark. */
+  /* #161: the bands go equal at this width, whatever count the certificate has. */
   .cefr__track, .cefr__scale {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-columns: repeat(var(--band-count, 1), minmax(0, 1fr));
     min-width: 0;
   }
 

@@ -7,7 +7,7 @@
       </div>
       <div class="card__body" style="padding: 1.25rem;">
         <p class="text-sm text-muted" style="margin-top: 0; margin-bottom: 1.5rem;">
-          Configure how scores aggregate across skills, calibrate section multipliers (e.g. IELTS Writing Task 2 weight = 2.0), and test your scoring model in real-time.
+          Configure how scores aggregate across skills, calibrate section multipliers, and test your scoring model in real-time.
         </p>
 
         <!-- Scoring Aggregation Rule Dropdown -->
@@ -21,10 +21,10 @@
 
           <div style="max-width: 600px;">
             <select class="field__input" id="step4ScoreRuleSelect" onchange="syncStep4ScoreRule(this.value)" style="border: 2px solid var(--color-ink, #14181d); border-radius: 0; font-family: var(--font-mono, monospace); font-weight: 700; width: 100%; padding: 0.6rem;">
-              <option value="sum" selected="@(Model.Form.ScoreAggregationRule == "sum")">Sum of skill scores — e.g. TOEIC 10–990</option>
-              <option value="avg_half_step" selected="@(Model.Form.ScoreAggregationRule == "avg_half_step")">Average rounded to nearest 0.5 band — e.g. IELTS 0–9.0 / VSTEP 0–10.0</option>
-              <option value="avg_whole" selected="@(Model.Form.ScoreAggregationRule == "avg_whole")">Average rounded to nearest whole number — e.g. VSTEP 0–10</option>
-              <option value="independent" selected="@(Model.Form.ScoreAggregationRule == "independent")">Report each skill independently — e.g. TOEIC S&amp;W 0–200</option>
+              <option value="sum" selected="@(Model.Form.ScoreAggregationRule == "sum")">Sum of skill scores</option>
+              <option value="avg_half_step" selected="@(Model.Form.ScoreAggregationRule == "avg_half_step")">Average rounded to the nearest 0.5</option>
+              <option value="avg_whole" selected="@(Model.Form.ScoreAggregationRule == "avg_whole")">Average rounded to the nearest whole number</option>
+              <option value="independent" selected="@(Model.Form.ScoreAggregationRule == "independent")">Report each skill independently</option>
             </select>
             <div id="step4ScoreRuleHelp" style="font-size: 0.8rem; margin-top: 0.5rem; color: var(--color-ink, #14181d); font-family: var(--font-mono, monospace);">
               @if (Model.Form.ScoreAggregationRule == "avg_half_step")

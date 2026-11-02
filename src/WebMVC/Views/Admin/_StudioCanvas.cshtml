@@ -170,10 +170,16 @@
                           Passage / Stimulus Editor
                         </label>
                         <div class="row" style="gap: 0.25rem;">
-                          <button type="button" class="btn btn--ghost btn--sm" onclick="insertP6Blank(@g.GroupId, 1)" style="border-radius: 0; font-size: 0.7rem; padding: 0.1rem 0.3rem;">+ [1]</button>
-                          <button type="button" class="btn btn--ghost btn--sm" onclick="insertP6Blank(@g.GroupId, 2)" style="border-radius: 0; font-size: 0.7rem; padding: 0.1rem 0.3rem;">+ [2]</button>
-                          <button type="button" class="btn btn--ghost btn--sm" onclick="insertP6Blank(@g.GroupId, 3)" style="border-radius: 0; font-size: 0.7rem; padding: 0.1rem 0.3rem;">+ [3]</button>
-                          <button type="button" class="btn btn--ghost btn--sm" onclick="insertP6Blank(@g.GroupId, 4)" style="border-radius: 0; font-size: 0.7rem; padding: 0.1rem 0.3rem;">+ [4]</button>
+                          @* #161: the blank buttons are the group's own question count, not a fixed
+                             [1]..[4]. A passage with three blanks showed a fourth button, and one with
+                             six showed four. A group with no questions yet keeps the single [1]. *@
+                          @{
+                            var blankCount = g.Questions.Count > 0 ? g.Questions.Count : 1;
+                          }
+                          @for (var b = 1; b <= blankCount; b++)
+                          {
+                            <button type="button" class="btn btn--ghost btn--sm" onclick="insertPassageBlank(@g.GroupId, @b)" style="border-radius: 0; font-size: 0.7rem; padding: 0.1rem 0.3rem;">+ [@b]</button>
+                          }
                         </div>
                       </div>
 
@@ -183,13 +189,13 @@
                         <button type="button" class="doc-tab" id="tab-btn-@g.GroupId-3" onclick="switchDocTab(@g.GroupId, 3)">Document 3</button>
                       </div>
 
-                      <textarea rows="9" class="field__input studio-autosave p6-passage-input" id="p6-passage-@g.GroupId" data-type="group" data-id="@g.GroupId" data-field="Passage" oninput="renderP6Preview(@g.GroupId)" placeholder="Passage content here... (Use '---' on a new line to separate multi-documents, or [1], [2], [3] for inline blanks)" style="width: 100%; font-size: 0.82rem; border-radius: 0; font-family: var(--font-mono, monospace);">@g.Passage</textarea>
+                      <textarea rows="9" class="field__input studio-autosave passage-editor-input" id="passage-editor-@g.GroupId" data-type="group" data-id="@g.GroupId" data-field="Passage" oninput="renderPassagePreview(@g.GroupId)" placeholder="Passage content here... (Use '---' on a new line to separate multi-documents, or [1], [2], [3] for inline blanks)" style="width: 100%; font-size: 0.82rem; border-radius: 0; font-family: var(--font-mono, monospace);">@g.Passage</textarea>
 
                       <!-- Live Inline Blank Preview -->
                       <div class="mt-2">
                         <span class="text-xs text-muted uppercase font-bold" style="letter-spacing: 0.05em;">Stimulus Live Preview:</span>
-                        <div class="p-2 mt-1" id="p6-preview-@g.GroupId" style="background: #ffffff; border: 1px solid #ccd2d6; font-size: 0.8rem; min-height: 48px; line-height: 1.6;">
-                          <!-- Rendered by renderP6Preview -->
+                        <div class="p-2 mt-1" id="passage-preview-@g.GroupId" style="background: #ffffff; border: 1px solid #ccd2d6; font-size: 0.8rem; min-height: 48px; line-height: 1.6;">
+                          <!-- Rendered by renderPassagePreview -->
                         </div>
                       </div>
                     </div>

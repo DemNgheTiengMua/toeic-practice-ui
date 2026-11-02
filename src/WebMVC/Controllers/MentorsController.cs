@@ -16,8 +16,14 @@ public sealed class MentorsController(
     [HttpGet("/mentors")]
     public async Task<IActionResult> Index([FromQuery] string? skill, CancellationToken cancellationToken)
     {
+        // #161: the active certificate is loaded before any action runs, so a missing shell is a broken
+        // request, not a licence to query the mentor list as though the learner were on TOEIC.
         var shell = LearnerShell.Get(HttpContext);
-        var activeCertCode = shell?.Active?.Code ?? "TOEIC";
+        var activeCertCode = shell?.Active?.Code;
+        if (activeCertCode is null)
+        {
+            return View(new MentorListViewModel([], skill, "", "Could not tell which certificate you are working on. Please sign in again."));
+        }
 
         try
         {

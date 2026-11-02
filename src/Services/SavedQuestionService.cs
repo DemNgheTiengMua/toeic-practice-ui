@@ -42,7 +42,7 @@ public sealed class SavedQuestionService(
         var cert = await db.Certificates
             .AsNoTracking()
             .Where(c => c.CertId == activeCertId)
-            .Select(c => new CertificateOption(c.Code, c.Name))
+            .Select(c => new CertificateOption(c.Code, c.Name, c.SectionNoun))
             .SingleAsync(cancellationToken);
 
         // Strict isolation: only this user's items for this certificate

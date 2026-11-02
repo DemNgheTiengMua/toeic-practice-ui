@@ -8,7 +8,8 @@ namespace WebAPI.Endpoints;
 /// <summary>Shared result and mapping helpers for the endpoint files.</summary>
 public static class EndpointHelpers
 {
-    public static CertificateOptionDto ToCertificateDto(CertificateOption option) => new(option.Code, option.Name);
+    public static CertificateOptionDto ToCertificateDto(CertificateOption option) =>
+        new(option.Code, option.Name, option.SectionNoun);
 
     public static AdminScoreConversionDto ToAdminScoreConversionDto(AdminScoreConversionView view) =>
         new(

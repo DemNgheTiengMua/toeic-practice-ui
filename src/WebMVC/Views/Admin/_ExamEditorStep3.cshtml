@@ -17,7 +17,7 @@
       <table class="table table--striped">
         <thead>
           <tr>
-            <th scope="col">Part</th>
+            <th scope="col">Section</th>
             <th scope="col">Modality</th>
             <th scope="col">Entered</th>
             <th scope="col">Target</th>
@@ -50,7 +50,7 @@
         <div class="alert alert--warning">
           @if (listeningMissing > 0)
           {
-            <span>Missing audio for @listeningMissing listening parts. </span>
+            <span>Missing audio for @listeningMissing listening sections. </span>
           }
           @if (detail.QuestionCount.HasValue && totalEntered < detail.QuestionCount.Value)
           {

@@ -18,8 +18,9 @@
     <span class="context-bar__value">@(view.CurrentBandCode != null ? $"{view.CurrentBandCode} · {view.CurrentTotalScore} points" : "Not yet assessed")</span>
   </div>
   <div class="context-bar__item">
-    <span class="context-bar__label">Cost:</span>
-    <span class="context-bar__value">Free · 0 credits</span>
+    <span class="context-bar__label">Target level:</span>
+    @* #161: "not chosen yet" is a fact about the learner, not a band the page may supply. *@
+    <span class="context-bar__value">@(Model.TargetCode ?? "no target band yet")</span>
   </div>
 </div>
 
@@ -107,6 +108,20 @@
     </div>
   }
 
+  @* #161: nothing chosen is a real answer, and the page says so. The old code invented a target band
+     ("B2", or the first band that was not the current one) and rendered it preselected, so a learner
+     who had never opened this page was shown a goal they never set - on a DEMO certificate, a band that
+     is not in the list at all. *@
+  @if (!Model.HasTargetBand)
+  {
+    <div class="alert alert--info" role="status" id="goal-no-target">
+      <strong>You have no target band yet.</strong>
+      <p class="m-0 mt-1 text-sm">
+        Pick one below, then save. Until you do, there is no goal to judge and no path is built on it.
+      </p>
+    </div>
+  }
+
   <form method="post" action="/placement/goal" class="stack" id="goal-form">
     @Html.AntiForgeryToken()
 
@@ -133,6 +148,12 @@
 
     <section>
       <h2 class="section-group__title">Where you are going</h2>
+      @if (bands.Count == 0)
+      {
+        <p class="text-sm text-muted">This certificate has no bands configured yet, so there is nothing to aim at. Ask an administrator to add them.</p>
+      }
+      else
+      {
       <div class="option-list" role="radiogroup" aria-label="Target level">
         @foreach (var opt in bands)
         {
@@ -149,6 +170,8 @@
           </label>
         }
       </div>
+      <partial name="_BandStrip" model="Model.BandStrip" />
+      }
     </section>
 
     <div class="card">

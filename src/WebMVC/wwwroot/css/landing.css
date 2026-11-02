@@ -83,7 +83,11 @@
 .landing-preview__footer-status { color: var(--color-success); }
 
 .landing-certificates { padding: 16px 0; background: var(--painted); border-bottom: var(--keyline) solid var(--ink); }
-.landing-certificates__inner { display: grid; grid-template-columns: 1.1fr repeat(3, 1fr); align-items: stretch; }
+/* #161: the intro plus one column per certificate, however many the catalogue holds. Flex sizes
+   whatever arrives, so the count is not a constant in this file. */
+.landing-certificates__inner { display: flex; flex-wrap: wrap; align-items: stretch; }
+.landing-certificates__intro { flex: 1.1 1 200px; }
+.landing-certificate { flex: 1 1 0; }
 .landing-certificates__intro { display: flex; flex-direction: column; justify-content: center; padding: 28px 26px 28px 0; }
 .landing-certificates__intro h2, .landing-section h2 {
   margin: 0; font-family: var(--font-sign); font-size: 24px; line-height: 1.2; letter-spacing: .025em; text-transform: uppercase;
@@ -134,8 +138,8 @@
 @media (max-width: 900px) {
   .landing-hero { padding: 58px 0; }
   .landing-hero__grid { grid-template-columns: minmax(0, 1fr) minmax(340px, .9fr); gap: 32px; }
-  .landing-certificates__inner { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .landing-certificates__intro { grid-column: 1 / -1; padding: 24px 0 18px; }
+  .landing-certificates__inner { flex-wrap: wrap; }
+  .landing-certificates__intro { flex-basis: 100%; padding: 24px 0 18px; }
   .landing-certificates__intro h2 br { display: none; }
   .landing-certificate { min-height: 118px; padding: 15px; }
   .landing-features__grid { gap: 40px; }
@@ -160,7 +164,7 @@
   .landing-preview__body { padding: 20px 17px; }
   .landing-preview__top, .landing-preview__footer { padding-inline: 12px; }
   .landing-preview__next { grid-template-columns: 79px minmax(0, 1fr) 18px; gap: 8px; }
-  .landing-certificates__inner { grid-template-columns: minmax(0, 1fr); padding-block: 10px; }
+  .landing-certificates__inner { display: block; padding-block: 10px; }
   .landing-certificates__intro { padding: 18px 0 14px; }
   .landing-certificate, .landing-certificate:last-child { min-height: 0; padding: 15px 0; border: 0; border-top: 1px solid var(--line-soft); }
   .landing-certificate__action { margin-top: 7px; }

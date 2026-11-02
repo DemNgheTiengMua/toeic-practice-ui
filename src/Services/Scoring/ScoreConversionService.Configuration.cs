@@ -19,7 +19,7 @@ public sealed partial class ScoreConversionService
             .AsNoTracking()
             .Where(c => c.IsActive)
             .OrderBy(c => c.Code)
-            .Select(c => new CertificateOption(c.Code, c.Name))
+            .Select(c => new CertificateOption(c.Code, c.Name, c.SectionNoun))
             .ToListAsync(cancellationToken);
 
         Certificate? cert = null;

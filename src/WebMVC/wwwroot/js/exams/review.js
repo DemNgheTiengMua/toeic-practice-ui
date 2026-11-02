@@ -1,9 +1,16 @@
 (function (sitting) {
   "use strict";
 
-  // 7. Reading Review Screen Modal & Multi-Stage Adaptive CAT Routing
+  // 7. Review Screen Modal & Multi-Stage Adaptive CAT Routing
   sitting.openReviewScreenModal = function () {
     if (!sitting.reviewScreenModal) return;
+    // #161: the modal's title names the skill being reviewed, so a listening phase does not open a
+    // screen headed "READING REVIEW SCREEN". The phase carries its own name; nothing here knows one.
+    var phase = sitting.phases[sitting.activePhaseIndex];
+    var title = document.getElementById('review-screen-skill');
+    if (title) {
+      title.textContent = ((phase && phase.skillName) || 'Review') + ' review screen';
+    }
     sitting.updateReviewScreenStats();
     sitting.renderReviewQuestions('all');
     if (sitting.reviewUnitTransitionContainer) {

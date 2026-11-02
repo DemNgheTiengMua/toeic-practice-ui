@@ -98,7 +98,7 @@ public sealed record PlacementTakeViewModel(
         string.IsNullOrEmpty(question.AudioPath) ? null : new ExamAudioPlayerModel(
             AudioPath: question.AudioPath,
             AllowReplay: false,
-            SectionTitle: "Diagnostic Listening Audio",
+            SectionTitle: $"{question.SkillName} audio",
             BadgeText: "READY",
             StartMs: question.AudioStartMs,
             EndMs: question.AudioEndMs,

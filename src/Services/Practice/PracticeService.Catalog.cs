@@ -30,7 +30,7 @@ public sealed partial class PracticeService
         var cert = await db.Certificates
             .AsNoTracking()
             .Where(c => c.CertId == activeCertId)
-            .Select(c => new CertificateOption(c.Code, c.Name))
+            .Select(c => new CertificateOption(c.Code, c.Name, c.SectionNoun))
             .SingleAsync(cancellationToken);
 
         var sections = await db.Sections

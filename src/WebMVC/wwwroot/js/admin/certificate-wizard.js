@@ -536,7 +536,7 @@ function goToStep(step) {
     if (label) label.textContent = val;
   }
 
-  function roundHalfStepIelts(val) {
+  function roundHalfStepBand(val) {
     if (val > 10.0) {
       var band = val / 10.0;
       var floor = Math.floor(band);
@@ -584,7 +584,7 @@ function goToStep(step) {
         rawDisplay = weightedRaw;
 
         if (rule === 'avg_half_step') {
-          scaled = roundHalfStepIelts(weightedRaw);
+          scaled = roundHalfStepBand(weightedRaw);
         } else if (rule === 'avg_whole') {
           scaled = Math.round(weightedRaw);
         } else {
@@ -630,7 +630,7 @@ function goToStep(step) {
         total = skillScaledScores.reduce(function(a, b) { return a + b; }, 0);
       } else if (rule === 'avg_half_step') {
         var avg = skillScaledScores.reduce(function(a, b) { return a + b; }, 0) / skillScaledScores.length;
-        total = roundHalfStepIelts(avg);
+        total = roundHalfStepBand(avg);
       } else if (rule === 'avg_whole') {
         var avg = skillScaledScores.reduce(function(a, b) { return a + b; }, 0) / skillScaledScores.length;
         total = Math.round(avg);

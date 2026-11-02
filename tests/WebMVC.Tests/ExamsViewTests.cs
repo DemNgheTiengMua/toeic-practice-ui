@@ -462,7 +462,7 @@ public sealed class ExamsViewTests
 
         // Clean Vietnamese placarding
         Assert.Contains("Font & Contrast", html);
-        Assert.Contains("READING PASSAGE & STIMULUS", html);
+        Assert.Contains("PASSAGE &amp; STIMULUS", html);
         Assert.Contains("QUESTION PALETTE", html);
         Assert.Contains("Unanswered", html);
         Assert.Contains("Answered", html);

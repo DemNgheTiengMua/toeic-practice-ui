@@ -33,7 +33,7 @@
         <div class="state-block__icon" aria-hidden="true">EMPTY</div>
         <h2 class="state-block__title">No exams yet</h2>
         <p class="state-block__desc">
-          Take your first mock exam to start tracking your score progression and CEFR proficiency.
+          Take your first mock exam to start tracking your score progression and your band on @h.Certificate.Name's scale.
         </p>
         <a class="btn btn--primary" href="/exams">Start exam</a>
       </div>
@@ -60,27 +60,18 @@ else
   @if (!string.IsNullOrEmpty(h.BestScoreBandCode) && h.CefrBands.Count > 0)
   {
     <div class="card">
-      <div class="card__header"><strong>Equivalent CEFR Level</strong></div>
+      @* #161: the card is named after the certificate's own band, not "Equivalent CEFR Level" - a
+         TOEIC score band or a VSTEP band is not a CEFR level, and the certificate decides what it is. *@
+      <div class="card__header"><strong>Band on @h.Certificate.Name's scale</strong></div>
       <div class="card__body">
         <div class="cefr">
           <div class="cefr__head">
             <span class="cefr__current">@h.BestScoreBandCode</span>
             <span class="text-sm text-muted">@h.BestScoreBandName · @(h.BestScore) best score</span>
           </div>
-          <div class="cefr__track" role="img" aria-label="Current CEFR level: @h.BestScoreBandCode">
-            @foreach (var band in Model.Bands)
-            {
-              <span class="@band.CssClass">@band.Label</span>
-            }
-          </div>
-          <div class="cefr__scale" aria-hidden="true">
-            @foreach (var band in h.CefrBands)
-            {
-              <span class="cefr__tick">@band.MinTotal</span>
-            }
-          </div>
+          <partial name="_BandStrip" model="Model.BandStrip" />
           <p class="cefr__note">
-            Referenced from your best score. CEFR thresholds are fixed by the certification standard.
+            Referenced from your best score against this certificate's own band table.
           </p>
         </div>
       </div>

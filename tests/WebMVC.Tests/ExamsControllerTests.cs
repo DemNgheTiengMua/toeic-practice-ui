@@ -717,7 +717,7 @@ public sealed class ExamsControllerTests
         Assert.Equal(750, model.History.BestScore);
         Assert.Equal(135, Assert.Single(model.ChartPoints).Height);
         Assert.True(Assert.Single(model.ChartPoints).IsBest);
-        Assert.Equal("cefr__band is-current", Assert.Single(model.Bands).CssClass);
+        Assert.Equal("cefr__band is-current", Assert.Single(model.BandStrip.Bands).CssClass);
         Assert.NotEmpty(Assert.Single(model.Attempts).SubmittedAtDisplay);
     }
 

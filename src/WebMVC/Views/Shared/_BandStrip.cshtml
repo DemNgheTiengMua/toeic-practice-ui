@@ -1,0 +1,20 @@
+@model WebMVC.Models.BandStripViewModel
+@*
+  #161: one column per band the certificate has, each as wide as the score range it covers. Both numbers
+  are data, so they travel as custom properties and the stylesheet only says "use them": a four-band
+  certificate used to be drawn across six CEFR columns sized for the TOEIC 10-990 range.
+*@
+<div class="cefr__track" role="img" aria-label="@Model.AriaLabel"
+     style="--band-count: @Model.Bands.Count; --band-columns: @Model.ColumnTemplate;">
+  @foreach (var band in Model.Bands)
+  {
+    <span class="@band.CssClass font-mono">@band.Label</span>
+  }
+</div>
+<div class="cefr__scale" aria-hidden="true"
+     style="--band-count: @Model.Bands.Count; --band-columns: @Model.ColumnTemplate;">
+  @foreach (var band in Model.Bands)
+  {
+    <span class="cefr__tick font-mono">@band.MinTotal</span>
+  }
+</div>

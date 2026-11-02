@@ -15,9 +15,11 @@
       <div class="row row--middle gap-2 mb-1">
         <span class="badge badge--info font-sign">@Model.Preflight.CertCode</span>
         <span class="badge font-sign">ATTEMPT #@Model.Preflight.AttemptId</span>
+        @* #161: a microphone is required by the exam's own sections, not by a certificate that happens
+           to be called a speaking one. *@
         @if (Model.Preflight.RequiresMicrophone)
         {
-          <span class="badge badge--warning font-sign">SPEAKING EXAM</span>
+          <span class="badge badge--warning font-sign">MICROPHONE REQUIRED</span>
         }
       </div>
       <h1 class="preflight-title m-0 mb-1">

@@ -427,7 +427,7 @@ public sealed class PlacementControllerTests
         Assert.Equal("940", model.MaximumScore);
         Assert.Equal(380, model.Skills[0].ScaledScore);
         Assert.Equal(370, model.Skills[1].ScaledScore);
-        Assert.Equal("cefr__band is-current", model.Bands[1].CssClass);
+        Assert.Equal("cefr__band is-current", model.BandStrip.Bands[1].CssClass);
     }
 
     // #149: the result page rendered two stat cards found by SkillCode == "LIST" / "READ". A cert whose

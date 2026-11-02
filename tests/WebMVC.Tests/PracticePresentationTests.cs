@@ -19,7 +19,7 @@ public sealed class PracticePresentationTests
             null));
 
         Assert.True(model.HasAnySections);
-        Assert.Single(model.OtherSectionGroups);
+        Assert.Single(model.DrillableSectionGroups);
         Assert.Empty(model.SpeakingSections);
     }
 
@@ -36,7 +36,7 @@ public sealed class PracticePresentationTests
             SpeakingPracticeExamId: 77));
 
         Assert.True(model.HasAnySections);
-        Assert.Empty(model.OtherSectionGroups);
+        Assert.Empty(model.DrillableSectionGroups);
         Assert.Single(model.SpeakingSections);
         Assert.Equal(77, model.SpeakingPracticeExamId);
     }

@@ -25,7 +25,7 @@
 
         <div class="field">
           <label class="field__label" for="gen-title">Exam Title (Optional)</label>
-          <input class="field__input" id="gen-title" name="title" type="text" placeholder="e.g. TOEIC Reading Form B (Generated)" />
+          <input class="field__input" id="gen-title" name="title" type="text" placeholder="e.g. a title you would recognise in the exam list" />
         </div>
 
         <div class="row" style="gap: var(--space-sm);">
@@ -51,7 +51,7 @@
 
         <div class="field">
           <label class="field__label" for="gen-blueprintJson">Custom Blueprint JSON (Optional override)</label>
-          <textarea class="field__input" id="gen-blueprintJson" name="blueprintJson" rows="4" style="font-family: var(--font-mono, 'IBM Plex Mono', Consolas, monospace); font-size: var(--text-sm, 13px);" placeholder='{ "certCode": "TOEIC", "sections": [{ "sectionCode": "P5", "questionCount": 5 }] }'></textarea>
+          <textarea class="field__input" id="gen-blueprintJson" name="blueprintJson" rows="4" style="font-family: var(--font-mono, 'IBM Plex Mono', Consolas, monospace); font-size: var(--text-sm, 13px);" placeholder='{ "sections": [{ "sectionCode": "PASTE_A_SECTION_CODE", "questionCount": 5 }] }'></textarea>
           <div class="field__hint">If provided, this JSON blueprint overrides the simple controls above.</div>
         </div>
 

@@ -13,8 +13,9 @@
       Smart Practice gives you <strong>ten questions</strong>, drawn from the topics you have not mastered yet.
       You never pick the count or the source: a topic you just answered wrongly rests for <strong>24 hours</strong>,
       so you cannot make a miss disappear by clicking it again.
-      <strong>Free, no credit deducted.</strong> A writing answer is checked against the question's word limit and required keywords.
-      Speaking is answered by voice, so it has <a href="/speaking">its own recorded practice</a>, graded by AI for 1 credit.
+      <strong>Free, no credit deducted.</strong> A written answer is checked against the question's word limit
+      and required keywords. A spoken answer is given by voice, so those sections link to their own recorded
+      practice, graded by AI for 1 credit.
     </p>
   </div>
 </div>
@@ -95,33 +96,10 @@ else
       </div>
     </div>
 
-    @if (catalog.ListeningSections.Count > 0)
-    {
-      <section class="mt-4">
-        <h2 class="section-group__title">Listening</h2>
-        <div class="grid-4">
-          @foreach (var sec in catalog.ListeningSections)
-          {
-            <partial name="_PracticeSectionCard" model="sec" />
-          }
-        </div>
-      </section>
-    }
-
-    @if (catalog.ReadingSections.Count > 0)
-    {
-      <section class="mt-4">
-        <h2 class="section-group__title">Reading</h2>
-        <div class="grid-3">
-          @foreach (var sec in catalog.ReadingSections)
-          {
-            <partial name="_PracticeSectionCard" model="sec" />
-          }
-        </div>
-      </section>
-    }
-
-    @foreach (var group in Model.OtherSectionGroups)
+    @* #161: one group per skill the certificate actually has, named by the skill. The page used to
+       carry a literal "Listening" heading and a literal "Reading" one, so a certificate whose skills
+       are Comprehension and Expression rendered two headings that named neither. *@
+    @foreach (var group in Model.DrillableSectionGroups)
     {
       <section class="mt-4">
         <h2 class="section-group__title">@group.Name</h2>
@@ -139,7 +117,7 @@ else
   @if (Model.SpeakingSections.Count > 0)
   {
     <section class="mt-4">
-      <h2 class="section-group__title">Speaking</h2>
+      <h2 class="section-group__title">@Model.SpeakingSectionName</h2>
       <div class="grid-2">
         @foreach (var sec in Model.SpeakingSections)
         {

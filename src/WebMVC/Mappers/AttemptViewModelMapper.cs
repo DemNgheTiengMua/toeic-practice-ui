@@ -46,9 +46,7 @@ internal static class AttemptViewModelMapper
             Attempts = history.Attempts.Select(a => new ExamHistoryAttemptViewModel(a, dates.Format(a.SubmittedAt), SkillScores(a.SkillScores))).ToList(),
             ChartPoints = history.Attempts.OrderBy(a => a.SubmittedAt).TakeLast(10)
                 .Select(a => new ExamHistoryChartPointViewModel(a.ExamName, a.TotalScore,
-                    Math.Max(20, (int)Math.Round((double)a.TotalScore / ceiling * 140)), a.TotalScore == history.BestScore)).ToList(),
-            Bands = history.CefrBands.Select(b => new AttemptBandViewModel(b.Code, b.Code, b.MinTotal,
-                "cefr__band " + (b.Code == history.BestScoreBandCode ? "is-current" : history.BestScore >= b.MinTotal ? "is-reached" : ""))).ToList()
+                    Math.Max(20, (int)Math.Round((double)a.TotalScore / ceiling * 140)), a.TotalScore == history.BestScore)).ToList()
         };
     }
 
@@ -81,9 +79,10 @@ internal static class AttemptViewModelMapper
             : "Composite score pending AI grading",
         MaximumScore = result.CefrBands.Count > 0
             ? ScoreDisplay.Format(result.CefrBands.Max(b => b.MaxTotal), result.ScoreDisplayFactor)
-            : ScoreDisplay.Format(result.ScoreDisplayFactor == 1 ? 990 : 9, 1),
-        Skills = result.SkillScores,
-        Bands = result.CefrBands.Select(b => Band(b, result.IsGraded)).ToList()
+            // #161: no bands means no declared ceiling. The page says so; inventing 990 made every
+            // certificate without band data look like a TOEIC paper scored out of 990.
+            : "",
+        Skills = result.SkillScores
     };
 
     public static TargetBandViewModel TargetBand(TargetBandViewDto view, string? error, string? success)
@@ -97,8 +96,10 @@ internal static class AttemptViewModelMapper
             Bands = view.CefrBands.Select(b => Band(b, true)).ToList()
         };
     }
-
     private static AttemptBandViewModel Band(CefrBandInfoDto band, bool showState) => new(band.Code,
+        // #161: a band the certificate named is printed as it named it. The "<A1" rewrite stays for the
+        // one code the seed uses to mean "below the lowest band", because that code describes a gap in
+        // the scale rather than a level; every other code is data and is shown verbatim.
         band.Code == "below_A1" ? "<A1" : band.Code, band.MinTotal,
         "cefr__band" + (showState && band.IsCurrent ? " is-current" : showState && band.IsReached ? " is-reached" : ""));
 

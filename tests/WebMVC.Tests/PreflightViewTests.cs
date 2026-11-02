@@ -65,7 +65,7 @@ public sealed class PreflightViewTests
         Assert.Equal("100%", model.BufferPercentageLabel);
         Assert.Equal("preflight-buffer-complete", model.BufferProgressClass);
         Assert.Equal("NO AUDIO REQUIRED", model.BufferStatusLabel);
-        Assert.Equal("No listening audio tracks in this exam blueprint", model.BufferDetails);
+        Assert.Equal("No audio tracks in this exam blueprint", model.BufferDetails);
         using var json = JsonDocument.Parse(model.PageDataJson);
         Assert.Empty(json.RootElement.GetProperty("audioUrls").EnumerateArray());
         Assert.True(json.RootElement.GetProperty("requiresMic").GetBoolean());
