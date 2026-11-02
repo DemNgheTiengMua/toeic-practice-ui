@@ -10,6 +10,5 @@ public sealed record PracticeSessionDto(
     PracticeStatusDto Status,
     int CorrectCount,
     QuestionSourceDto QuestionSource,
-    FeedbackModeDto FeedbackMode,
     DateTimeOffset StartedAt,
     DateTimeOffset? FinishedAt);

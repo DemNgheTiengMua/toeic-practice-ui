@@ -18,7 +18,7 @@ using Xunit;
 
 namespace WebMVC.Tests;
 
-public sealed class AdminImportsControllerTests
+public sealed class AdminImportTests
 {
     private static AdminExamsController CreateExamsController(
         AdminExamsControllerTests.TestApiClient examsApi,
@@ -58,40 +58,6 @@ public sealed class AdminImportsControllerTests
         };
     }
 
-    private static AdminImportsController CreateImportsController()
-    {
-        var services = new ServiceCollection();
-        services.AddRouting();
-        services.AddMvcCore();
-        var claims = new List<Claim>
-        {
-            new(IAccessTokenFactory.ClaimUserId, "1"),
-            new(IAccessTokenFactory.ClaimEmail, "admin@toeic.local"),
-            new(IAccessTokenFactory.ClaimRole, Roles.Admin),
-        };
-
-        var identity = new ClaimsIdentity(claims, "Cookies");
-        var principal = new ClaimsPrincipal(identity);
-        var authProperties = new AuthenticationProperties();
-        authProperties.StoreTokens([new AuthenticationToken { Name = "jwt", Value = "admin-token" }]);
-
-        services.AddSingleton<IAuthenticationService>(new FixedAuthentication(principal, authProperties));
-        var serviceProvider = services.BuildServiceProvider();
-
-        var httpContext = new DefaultHttpContext { User = principal, RequestServices = serviceProvider };
-        var currentUser = new CurrentUser(new HttpContextAccessor { HttpContext = httpContext });
-
-        return new AdminImportsController(currentUser, NullLogger<AdminImportsController>.Instance)
-        {
-            ControllerContext = new ControllerContext
-            {
-                HttpContext = httpContext,
-                RouteData = new Microsoft.AspNetCore.Routing.RouteData(),
-            },
-            TempData = new TempDataDictionary(httpContext, new AdminExamsControllerTests.EmptyTempDataProvider()),
-        };
-    }
-
     [Fact]
     public void AdminLayout_Sidebar_MustNotContain_QuestionImportNavigation()
     {
@@ -119,20 +85,6 @@ public sealed class AdminImportsControllerTests
         Assert.Contains("name=\"certId\"", content);
         Assert.Contains("accept=\".json,.zip,application/json,application/zip\"", content);
         Assert.Contains("class=\"modal__close\"", content);
-    }
-
-    [Fact]
-    public void AdminImportsController_Index_RedirectsToAdminExams()
-    {
-        var controller = CreateImportsController();
-
-        var result = controller.Index(certId: 2);
-
-        var redirect = Assert.IsType<RedirectToActionResult>(result);
-        Assert.Equal("Index", redirect.ActionName);
-        Assert.Equal("AdminExams", redirect.ControllerName);
-        Assert.Equal(2, redirect.RouteValues?["certId"]);
-        Assert.Equal(true, redirect.RouteValues?["import"]);
     }
 
     [Fact]

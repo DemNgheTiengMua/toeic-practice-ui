@@ -296,9 +296,9 @@ với `InsufficientCredits`, **không** tạo attempt.
 
 ### 5.1 Practice (miễn phí)
 
-`/practice` → form gồm `QuestionCount` (10/20/40/100), `QuestionSource`
-(`all` / `wrong_before` / `unseen`), `FeedbackMode` (`immediate` / `end`), và các nút
-`SectionId` (mỗi section 1 nút). Bấm section → `POST /practice/start` → `/practice/{sessionId}`.
+`/practice` → form chỉ có các nút `SectionId` (mỗi section 1 nút). Số câu (10) và nguồn câu
+do `SmartPracticePlanner` quyết định theo mastery state và cooldown (#155); không còn ô chọn số
+câu, nguồn hay kiểu feedback. Bấm section → `POST /practice/start` → `/practice/{sessionId}`.
 
 Trong phiên practice, verify:
 
@@ -313,9 +313,8 @@ Trong phiên practice, verify:
 | Explanation accordion | mở/đóng được |
 | Sidebar filter | `All` / `Incorrect` / `Saved` |
 
-Form `/practice` thực tế dùng `name="SectionId"` (PascalCase) trên từng nút section, và các
-select `QuestionCount` / `QuestionSource` / `FeedbackMode`. Đã verify: `POST /practice/start`
-với `SectionId=16, QuestionCount=10, QuestionSource=all, FeedbackMode=immediate`
+Form `/practice` thực tế dùng `name="SectionId"` (PascalCase) trên từng nút section, không còn
+select nào. Đã verify: `POST /practice/start` với `SectionId=16`
 → 302 `/practice/{sessionId}` và tạo row `in_progress` trong `PracticeSessions`.
 
 Kết thúc → `/practice/{id}/summary` (Correct/Incorrect/Skipped, accuracy, hint usage)

@@ -277,83 +277,6 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
     }
 
     [Fact]
-    public async Task CompleteStepAsync_MarksStepDone_AndUnlocksNextStep()
-    {
-        var certCode = Unique("C");
-        await SeedPathFixtureAsync(certCode);
-        var userId = await SeedLearnerAsync(certCode);
-        var (service, _, _, db) = CreateServices();
-
-        var summary = await service.GeneratePathAsync(userId);
-        var steps = await db.LearnerPathSteps
-            .Where(s => s.LearnerPathId == summary.LearnerPathId)
-            .OrderBy(s => s.StepId)
-            .ToListAsync();
-
-        var step1 = steps[0];
-        var step2 = steps[1];
-
-        Assert.Equal("available", step1.Status);
-        Assert.Equal("locked", step2.Status);
-
-        var completed = await service.CompleteStepAsync(userId, step1.StepId, 90.00m);
-        Assert.True(completed);
-
-        await db.Entry(step1).ReloadAsync();
-        await db.Entry(step2).ReloadAsync();
-
-        Assert.Equal("done", step1.Status);
-        Assert.Equal(90.00m, step1.Score);
-        Assert.NotNull(step1.CompletedAt);
-        Assert.Equal("available", step2.Status);
-    }
-
-    [Fact]
-    public async Task CompleteStepAsync_WhenAllStepsDone_MarksPathCompleted()
-    {
-        var certCode = Unique("C");
-        var (certId, _, _, _, _, _, _, _) = await SeedPathFixtureAsync(certCode);
-        var userId = await SeedLearnerAsync(certCode);
-        var (service, _, _, db) = CreateServices();
-
-        var summary = await service.GeneratePathAsync(userId);
-        var steps = await db.LearnerPathSteps
-            .Where(s => s.LearnerPathId == summary.LearnerPathId)
-            .OrderBy(s => s.StepId)
-            .ToListAsync();
-
-        // #154: the plan is longer than two steps, so the path completes only when the last one does.
-        // Lesson steps refuse to close without a finished lesson, so only the practice steps here.
-        var practiceSteps = steps.Where(s => s.PathModuleItemId != 0).ToList();
-        foreach (var step in practiceSteps)
-        {
-            var item = await db.PathModuleItems.FindAsync(step.PathModuleItemId);
-            if (item!.ItemType == "lesson")
-            {
-                var progress = new LearnerLessonProgress
-                {
-                    UserId = userId,
-                    LessonId = item.RefLessonId!.Value,
-                    CertId = certId,
-                    CardsCompleted = 1,
-                    TotalCards = 1,
-                    IsCompleted = true,
-                    FirstOpenedAt = DateTimeOffset.UtcNow.AddMinutes(-5),
-                    CompletedAt = DateTimeOffset.UtcNow,
-                    UpdatedAt = DateTimeOffset.UtcNow
-                };
-                db.LearnerLessonProgresses.Add(progress);
-                await db.SaveChangesAsync();
-            }
-
-            await service.CompleteStepAsync(userId, step.StepId, 100m);
-        }
-
-        var path = await db.LearnerPaths.FindAsync(summary.LearnerPathId);
-        Assert.Equal("completed", path!.Status);
-    }
-
-    [Fact]
     public async Task ResetActivePathAsync_SetsStatusReset_AndAllowsGeneratingNewPath()
     {
         var certCode = Unique("C");
@@ -438,7 +361,7 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
             .Select(i => i.ModuleId)
             .SingleAsync();
 
-        await service.CompleteStepAsync(userId, steps[0].StepId, 100m);
+        await PathStepCompletion.CloseStepAsync(db, steps[0], score: 100m, accuracyPct: 100m);
 
         var detail = await service.GetModuleDetailAsync(userId, moduleOfStep);
 
@@ -547,7 +470,6 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
             Status = PracticeStatus.Finished.ToCode(),
             CorrectCount = 5,
             QuestionSource = QuestionSource.All.ToCode(),
-            FeedbackMode = FeedbackMode.Immediate.ToCode(),
             LearnerPathStepId = step.StepId,
             StartedAt = DateTimeOffset.UtcNow.AddHours(-10),
             FinishedAt = DateTimeOffset.UtcNow.AddHours(-9)
@@ -567,7 +489,6 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
                 Status = PracticeStatus.Finished.ToCode(),
                 CorrectCount = 3,
                 QuestionSource = QuestionSource.All.ToCode(),
-                FeedbackMode = FeedbackMode.Immediate.ToCode(),
                 LearnerPathStepId = null,
                 StartedAt = DateTimeOffset.UtcNow.AddMinutes(-i * 5),
                 FinishedAt = DateTimeOffset.UtcNow.AddMinutes(-i * 5 + 2)
@@ -867,7 +788,7 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
 
         foreach (var prior in stepBefore)
         {
-            await service.CompleteStepAsync(userId, prior.StepId, 100m);
+            await PathStepCompletion.CloseStepAsync(db, prior, score: 100m, accuracyPct: 100m);
         }
 
         var detailAfter = await service.GetModuleDetailAsync(userId, moduleId);
@@ -876,64 +797,6 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
         Assert.Equal(now, lessonStepAfter.StartedAt);
     }
 
-    [Fact]
-    public async Task CompleteStepAsync_ForLessonStep_SucceedsOnlyWhenLessonIsCompleted()
-    {
-        var certCode = Unique("LC");
-        var (certId, templateId, m1Id, _, _, _, secId, qId) = await SeedPathFixtureAsync(certCode);
-        var userId = await SeedLearnerAsync(certCode);
-
-        await database.SqlAsync($"""
-            INSERT INTO Lessons (CertId, SkillId, Title, EstimatedMinutes, DisplayOrder)
-            VALUES ({certId}, (SELECT SkillId FROM Skills WHERE CertId = {certId} AND Code = 'READ'), N'Test Lesson', 5, 2);
-            """);
-
-        var (service, _, _, db) = CreateServices();
-        var summary = await service.GeneratePathAsync(userId);
-        var lesson = await db.Lessons.FirstAsync(l => l.CertId == certId);
-
-        var steps = await db.LearnerPathSteps
-            .Include(s => s.PathModuleItem)
-            .Where(s => s.LearnerPathId == summary.LearnerPathId)
-            .OrderBy(s => s.StepId)
-            .ToListAsync();
-        var lessonStep = steps.First(s => s.PathModuleItem.ItemType == "lesson");
-
-        // Walk every step before the lesson so it is the one open.
-        foreach (var prior in steps.Where(s => s.StepId < lessonStep.StepId))
-        {
-            await service.CompleteStepAsync(userId, prior.StepId, 100m);
-        }
-
-        // Attempting to complete lesson step before lesson is completed in LearnerLessonProgress should return false
-        var completedWithoutProgress = await service.CompleteStepAsync(userId, lessonStep.StepId);
-        Assert.False(completedWithoutProgress);
-
-        // Mark lesson completed in LearnerLessonProgress
-        var now = DateTimeOffset.UtcNow;
-        var progress = new LearnerLessonProgress
-        {
-            UserId = userId,
-            LessonId = lesson.LessonId,
-            CertId = certId,
-            CardsCompleted = 4,
-            TotalCards = 4,
-            IsCompleted = true,
-            FirstOpenedAt = now.AddMinutes(-5),
-            CompletedAt = now,
-            UpdatedAt = now
-        };
-        db.LearnerLessonProgresses.Add(progress);
-        await db.SaveChangesAsync();
-
-        var completedWithProgress = await service.CompleteStepAsync(userId, lessonStep.StepId);
-        Assert.True(completedWithProgress);
-
-        await db.Entry(lessonStep).ReloadAsync();
-        Assert.Equal("done", lessonStep.Status);
-        Assert.Null(lessonStep.Score);
-        Assert.NotNull(lessonStep.CompletedAt);
-    }
     [Fact]
     public async Task GeneratePathAsync_WithArchiveExisting_ResetsPreviousActivePath()
     {

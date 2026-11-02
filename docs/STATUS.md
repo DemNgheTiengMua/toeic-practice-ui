@@ -17,7 +17,7 @@ Research ước lượng **14 ngày người**, 4 giai đoạn. Đã xong **~1.5
 | 2. Chấm Writing & Speaking | #151–#152 | ⬜ chưa |
 | 3. Mastery, lộ trình có hạn, hiệu chuẩn | #153–#156 | 🟡 **đang làm** — #153, #155 xong |
 | 4. Studio, preview, dashboard | #157–#159 | 🟡 **đang làm** — #157 xong |
-| 5. Dọn dẹp | #160–#162 | ⬜ chưa |
+| 5. Dọn dẹp | #160–#162 | 🟡 **đang làm** — #160 xong |
 
 ## 2. Việc tiếp theo
 

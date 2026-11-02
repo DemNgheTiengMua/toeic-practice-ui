@@ -163,7 +163,9 @@ public sealed class PathStepCompletionTests(DatabaseFixture database)
                 await lessons.RecordCardViewAsync(userId, lessonId, cardId);
                 break;
             default:
-                await paths.CompleteStepAsync(userId, step.StepId, 90m);
+                // #160: the manual "mark done" route is gone with CompleteStepAsync; a practice step is
+                // closed by answering its session, which is what the real learner does.
+                await PathStepCompletion.CloseStepAsync(db, step, score: 90m, accuracyPct: 90m);
                 break;
         }
     }
@@ -239,12 +241,7 @@ public sealed class PathStepCompletionTests(DatabaseFixture database)
         foreach (var earlier in steps.Where(s => s.StepId < lessonStep.StepId))
         {
             await db.Entry(earlier).ReloadAsync();
-            if (earlier.Status == "locked")
-            {
-                earlier.Status = "available";
-                await db.SaveChangesAsync();
-            }
-            await paths.CompleteStepAsync(userId, earlier.StepId, 90m);
+            await PathStepCompletion.CloseStepAsync(db, earlier, score: 90m, accuracyPct: 90m);
         }
 
         // Read the only card — that is what completes the lesson.
@@ -270,7 +267,8 @@ public sealed class PathStepCompletionTests(DatabaseFixture database)
         var steps = await StepsAsync(db, summary.LearnerPathId!.Value);
         var lessonStep = steps.First(s => s.PathModuleItem.RefLessonId == lessonId);
 
-        await paths.CompleteStepAsync(userId, steps.First(s => s.StepId < lessonStep.StepId).StepId, 90m);
+        await PathStepCompletion.CloseStepAsync(
+            db, steps.First(s => s.StepId < lessonStep.StepId), score: 90m, accuracyPct: 90m);
 
         // Force the lesson step open, then finish the lesson.
         var step = await db.LearnerPathSteps.SingleAsync(s => s.StepId == lessonStep.StepId);
@@ -349,5 +347,31 @@ public sealed class PathStepCompletionTests(DatabaseFixture database)
         Assert.Equal("done", closed.Status);
         Assert.Equal(100m, closed.ActualAccuracyPct);
         Assert.Equal(100m, closed.Score);
+    }
+
+    [Fact]
+    public async Task Closing_a_planned_step_marks_it_done_with_its_score_and_unlocks_the_next()
+    {
+        var certCode = Unique("CLOSE");
+        var (certId, _, _, _, _, _) = await SeedCertAsync(certCode);
+        var userId = await SeedLearnerAsync(certId);
+
+        var (paths, _, _, _, db) = CreateServices();
+        var summary = await paths.GeneratePathAsync(userId);
+        var steps = await StepsAsync(db, summary.LearnerPathId!.Value);
+
+        var first = steps[0];
+        var second = steps[1];
+        Assert.Equal("available", first.Status);
+        Assert.Equal("locked", second.Status);
+
+        await PathStepCompletion.CloseStepAsync(db, first, score: 90m, accuracyPct: 90m);
+
+        await db.Entry(first).ReloadAsync();
+        await db.Entry(second).ReloadAsync();
+        Assert.Equal("done", first.Status);
+        Assert.Equal(90m, first.Score);
+        Assert.NotNull(first.CompletedAt);
+        Assert.Equal("available", second.Status);
     }
 }

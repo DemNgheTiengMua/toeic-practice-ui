@@ -98,7 +98,6 @@ public sealed partial class LearningPathService
                     Status = PracticeStatus.InProgress.ToCode(),
                     CorrectCount = 0,
                     QuestionSource = QuestionSource.All.ToCode(),
-                    FeedbackMode = FeedbackMode.Immediate.ToCode(),
                     LearnerPathStepId = step.StepId,
                     StartedAt = DateTimeOffset.UtcNow
                 };
@@ -160,44 +159,5 @@ public sealed partial class LearningPathService
             default:
                 return new StartStepResult(stepId, itemType, "/mentors", null, null);
         }
-    }
-
-    public async Task<bool> CompleteStepAsync(int userId, int stepId, decimal? score = null, CancellationToken cancellationToken = default)
-    {
-        var step = await db.LearnerPathSteps
-            .Include(s => s.LearnerPath)
-            .Include(s => s.PathModuleItem)
-            .FirstOrDefaultAsync(s => s.StepId == stepId && s.LearnerPath.UserId == userId, cancellationToken);
-
-        if (step == null) return false;
-
-        if (step.Status == "done") return true;
-
-        var itemType = EnumCodes.Parse<PathModuleItemType>(step.PathModuleItem.ItemType);
-        if (itemType == PathModuleItemType.Lesson)
-        {
-            var lessonId = step.PathModuleItem.RefLessonId;
-            if (lessonId.HasValue)
-            {
-                var progress = await db.LearnerLessonProgresses
-                    .FirstOrDefaultAsync(p => p.UserId == userId && p.LessonId == lessonId.Value, cancellationToken);
-                if (progress == null || !progress.IsCompleted)
-                {
-                    return false;
-                }
-                step.StartedAt ??= progress.FirstOpenedAt;
-            }
-        }
-
-        // #154: one closer for every activity type. The manual "mark done" route now unlocks the next
-        // step and completes the path by the same rule as the practice, mock and lesson writers.
-        var measuredScore = itemType == PathModuleItemType.Lesson
-            ? (decimal?)null
-            : score ?? step.Score ?? 100m;
-
-        await PathStepCompletion.CloseStepAsync(
-            db, step, measuredScore, accuracyPct: measuredScore, cancellationToken);
-
-        return true;
     }
 }

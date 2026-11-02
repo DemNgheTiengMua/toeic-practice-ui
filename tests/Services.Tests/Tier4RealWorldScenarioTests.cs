@@ -352,9 +352,9 @@ public sealed class Tier4RealWorldScenarioTests(DatabaseFixture database)
         Assert.NotNull(startStepResult);
         Assert.NotNull(startStepResult.SessionId);
 
-        // 7. Complete the step with a passing score
-        var completed = await pathService.CompleteStepAsync(learnerId, stepId, score: 90.0m);
-        Assert.True(completed);
+        // 7. Complete the step: #160 removed the manual "mark done" route with CompleteStepAsync, so
+        // the step is closed by the one closer the three activity writers use.
+        await PathStepCompletion.CloseStepAsync(db, await db.LearnerPathSteps.SingleAsync(s => s.StepId == stepId), score: 90m, accuracyPct: 90m);
 
         // 8. Verify the step's practice session has LearnerPathStepId set and is protected from pruning
         await using var dbVerify = DbContextFactory.Create(database.ConnectionString);

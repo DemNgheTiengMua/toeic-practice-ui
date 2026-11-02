@@ -19,9 +19,7 @@ public static partial class PracticeEndpoints
         {
             try
             {
-                var input = StartPracticeSessionInput.FromCodes(
-                    request.SectionId,
-                    request.FeedbackMode);
+                var input = new StartPracticeSessionInput(request.SectionId);
 
                 var session = await practiceService.StartSessionAsync(CurrentUserId(http), input, cancellationToken);
                 return Results.Ok(new PracticeSessionDto(
@@ -34,7 +32,6 @@ public static partial class PracticeEndpoints
                     session.Status.MapTo<PracticeStatusDto>(),
                     session.CorrectCount,
                     session.QuestionSource.MapTo<QuestionSourceDto>(),
-                    session.FeedbackMode.MapTo<FeedbackModeDto>(),
                     session.StartedAt,
                     session.FinishedAt));
             }
@@ -75,7 +72,6 @@ public static partial class PracticeEndpoints
                     session.Status.MapTo<PracticeStatusDto>(),
                     session.CorrectCount,
                     session.QuestionSource.MapTo<QuestionSourceDto>(),
-                    session.FeedbackMode.MapTo<FeedbackModeDto>(),
                     session.StartedAt,
                     session.FinishedAt));
             }

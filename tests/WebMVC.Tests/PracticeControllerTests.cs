@@ -41,7 +41,7 @@ public sealed class PracticeControllerTests
         var api = new TestApiClient
         {
             Session = new PracticeSessionDto(
-                42, 5, "P5", "Part 5", ModalityDto.Reading, 20, PracticeStatusDto.InProgress, 0, QuestionSourceDto.All, FeedbackModeDto.Immediate, DateTimeOffset.UtcNow, null),
+                42, 5, "P5", "Part 5", ModalityDto.Reading, 20, PracticeStatusDto.InProgress, 0, QuestionSourceDto.All, DateTimeOffset.UtcNow, null),
         };
 
         var controller = CreateController(api);
@@ -58,7 +58,7 @@ public sealed class PracticeControllerTests
         var api = new TestApiClient
         {
             Session = new PracticeSessionDto(
-                42, 5, "P5", "Part 5", ModalityDto.Reading, 20, PracticeStatusDto.Finished, 15, QuestionSourceDto.All, FeedbackModeDto.Immediate, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow),
+                42, 5, "P5", "Part 5", ModalityDto.Reading, 20, PracticeStatusDto.Finished, 15, QuestionSourceDto.All, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow),
         };
 
         var controller = CreateController(api);
@@ -84,7 +84,7 @@ public sealed class PracticeControllerTests
         var api = new TestApiClient
         {
             Session = new PracticeSessionDto(
-                42, 5, "P5", "Part 5", ModalityDto.Reading, 2, PracticeStatusDto.InProgress, 1, QuestionSourceDto.All, FeedbackModeDto.Immediate, DateTimeOffset.UtcNow, null),
+                42, 5, "P5", "Part 5", ModalityDto.Reading, 2, PracticeStatusDto.InProgress, 1, QuestionSourceDto.All, DateTimeOffset.UtcNow, null),
             SessionQuestions = [q1, q2],
         };
 
@@ -116,7 +116,7 @@ public sealed class PracticeControllerTests
         var api = new TestApiClient
         {
             Session = new PracticeSessionDto(
-                42, 5, "P5", "Part 5", ModalityDto.Reading, 20, PracticeStatusDto.InProgress, 0, QuestionSourceDto.All, FeedbackModeDto.Immediate, DateTimeOffset.UtcNow, null),
+                42, 5, "P5", "Part 5", ModalityDto.Reading, 20, PracticeStatusDto.InProgress, 0, QuestionSourceDto.All, DateTimeOffset.UtcNow, null),
             Question = new PracticeQuestionDto(
                 42, "Part 5", 101, 1, 20, "Choose the correct word.", "Grammar", "Think about tense.", false,
                 [new PracticeOptionDto(1, "A", "run"), new PracticeOptionDto(2, "B", "ran")],

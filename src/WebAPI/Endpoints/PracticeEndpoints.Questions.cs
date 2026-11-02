@@ -34,7 +34,7 @@ public static partial class PracticeEndpoints
                     new PracticeSessionDto(
                         take.Session.SessionId, take.Session.SectionId, take.Session.SectionCode, take.Session.SectionName,
                         take.Session.Modality.MapTo<ModalityDto>(), take.Session.QuestionCount, take.Session.Status.MapTo<PracticeStatusDto>(),
-                        take.Session.CorrectCount, take.Session.QuestionSource.MapTo<QuestionSourceDto>(), take.Session.FeedbackMode.MapTo<FeedbackModeDto>(),
+                        take.Session.CorrectCount, take.Session.QuestionSource.MapTo<QuestionSourceDto>(),
                         take.Session.StartedAt, take.Session.FinishedAt),
                     ToQuestionDto(take.Question),
                     take.Questions.Select(ToQuestionDto).ToList(),

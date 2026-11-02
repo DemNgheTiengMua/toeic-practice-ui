@@ -168,7 +168,6 @@ public sealed class Tier3ServicesInteractionTests(DatabaseFixture database)
             QuestionCount = 2,
             Status = "finished",
             QuestionSource = "all",
-            FeedbackMode = "immediate",
             StartedAt = DateTimeOffset.UtcNow.AddMinutes(-10),
             FinishedAt = DateTimeOffset.UtcNow
         };

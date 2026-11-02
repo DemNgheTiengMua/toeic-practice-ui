@@ -16,7 +16,6 @@ public partial class CompanionDbContext
 
             entity.HasIndex(e => e.LearnerPathStepId, "IX_Practice_PathStep").HasFilter("([LearnerPathStepId] IS NOT NULL)");
 
-            entity.Property(e => e.FeedbackMode).HasDefaultValue("immediate", "DF_Practice_Feedback");
             entity.Property(e => e.QuestionSource).HasDefaultValue("all", "DF_Practice_Source");
             entity.Property(e => e.StartedAt).HasDefaultValueSql("(sysdatetimeoffset())");
             entity.Property(e => e.Status).HasDefaultValue("in_progress");

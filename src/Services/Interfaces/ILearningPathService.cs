@@ -22,8 +22,6 @@ public interface ILearningPathService
 
     Task<StartStepResult> StartStepAsync(int userId, int stepId, CancellationToken cancellationToken = default);
 
-    Task<bool> CompleteStepAsync(int userId, int stepId, decimal? score = null, CancellationToken cancellationToken = default);
-
     Task<bool> ResetActivePathAsync(int userId, CancellationToken cancellationToken = default);
 
     Task<LearningPathSummaryView> UpgradePathAsync(int userId, CancellationToken cancellationToken = default);

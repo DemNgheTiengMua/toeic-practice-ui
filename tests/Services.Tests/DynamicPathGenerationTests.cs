@@ -163,7 +163,6 @@ public sealed class DynamicPathGenerationTests(DatabaseFixture database)
             Status = PracticeStatus.Finished.ToCode(),
             CorrectCount = 0,
             QuestionSource = QuestionSource.All.ToCode(),
-            FeedbackMode = FeedbackMode.Immediate.ToCode(),
             StartedAt = DateTimeOffset.UtcNow.AddHours(-1),
             FinishedAt = DateTimeOffset.UtcNow
         };

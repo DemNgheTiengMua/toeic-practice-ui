@@ -101,19 +101,6 @@ public class AdminPortalTests : PlaywrightTestBase
     }
 
     [Test]
-    public async Task Should_Redirect_Legacy_Imports_Route_To_Admin_Exams()
-    {
-        await SignInAsync("admin@demo.local", "Demo1234!");
-
-        await Page.GotoAsync($"{BaseUrl}/admin/imports");
-        await Expect(Page).ToHaveURLAsync(new Regex(@"/admin/exams\?import=true", RegexOptions.IgnoreCase));
-
-        // Modal should automatically be open
-        var dialog = Page.Locator("#import-exam-dialog");
-        await Expect(dialog).ToBeVisibleAsync();
-    }
-
-    [Test]
     public async Task Should_Not_Show_Learner_Only_Actions_To_Admin_On_Public_Pages()
     {
         // Issue #82: learner-only targets (checkout, learner dashboard, active-certificate

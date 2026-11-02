@@ -196,7 +196,7 @@ INSERT INTO PathModuleTopics (ModuleId,Title,CategoryId,QuestionCount) VALUES (@
 DECLARE @plc INT=(SELECT PlacementId FROM PlacementTests WHERE AttemptId=@pa);
 INSERT INTO LearnerPaths (UserId,CertId,TemplateId,PlacementId) VALUES (@u,@c,@tpl,@plc); DECLARE @lp INT=SCOPE_IDENTITY();
 INSERT INTO LearnerPathSteps (LearnerPathId,PathModuleItemId,TemplateId,Status,StartedAt) VALUES (@lp,@it,@tpl,'in_progress',SYSDATETIMEOFFSET()); DECLARE @st INT=SCOPE_IDENTITY();
-INSERT INTO PracticeSessions (UserId,SectionId,Modality,QuestionCount,QuestionSource,FeedbackMode,LearnerPathStepId) VALUES (@u,@p5,'reading',25,'wrong_before','end',@st);
+INSERT INTO PracticeSessions (UserId,SectionId,Modality,QuestionCount,QuestionSource,LearnerPathStepId) VALUES (@u,@p5,'reading',25,'wrong_before',@st);
 INSERT INTO SavedQuestions (UserId,QuestionId,Source) VALUES (@u,@q,'incorrect');
 PRINT 'accepted in-progress module step with linked practice session';
 PRINT 'DOMAIN 11 OK';
