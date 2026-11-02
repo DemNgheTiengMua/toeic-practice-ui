@@ -19,7 +19,7 @@
 | 4. Studio, preview, dashboard | #157–#159 | ✅ **xong** |
 | 5. Dọn dẹp | #160–#162 | ✅ **xong** |
 
-`dotnet test` trên `main` sau khi merge #162: **815 Services + 717 WebMVC + 19 WebAPI = 1551 pass, 0 fail**.
+`dotnet test` trên `main` sau các vòng code review: **825 Services + 717 WebMVC + 19 WebAPI = 1561 pass, 0 fail**.
 Schema-test: **5 fail**, đúng 5 file và đúng message number như trước đợt này
 (`domain04, 06, 07, 08, 15`) — không hồi quy.
 
@@ -60,7 +60,7 @@ không còn ai ghi — #162 xoá cột `FeedbackMode` chứ không xoá giá tr�
 | #152 — SpeechSuper de-IELTS-ified | `9b1d90a`, `10ac945`, `bf3f0d0` | Chấm thật bằng audio thật: **13.40/36 → band B1** trên IELTS, provider trả 10 485 byte; clip im lặng → 0.00 và **không có band**. Báo cáo + file mẫu ở `docs/audit/152-speechsuper-live-scores.md` |
 | #162 — xoá feature bị thay thế | `16a3362` → `b9bf579` | −3142 dòng / 93 file: premium path (IsPremiumOnly, `PremiumPathService`, khoản trừ 5 credit, `/learning-path/upgrade`) và AI sinh đề (3 file service, dialog, endpoint, CLI + 2 script gọi nó). Học viên **0 credit** nay mở được mọi bước — có test và có ảnh browser. `CreditReason.PremiumPath` **giữ lại** vì ledger append-only (D25) |
 
-`dotnet test`: **1551 pass, 0 fail** (Services 815 + WebMVC 717 + WebAPI 19) trên `main` sau #162.
+`dotnet test`: **1561 pass, 0 fail** (Services 825 + WebMVC 717 + WebAPI 19) trên `main` sau hai vòng review.
 47 E2E skip khi không có app chạy; với cả hai app chạy, **4** journey fail và **đúng 4 đó cũng fail
 trên parent** — hỏng sẵn. Schema-test: **5 fail, đúng 5 file và message number như parent**
 (`domain04, 06, 07, 08, 15`).
