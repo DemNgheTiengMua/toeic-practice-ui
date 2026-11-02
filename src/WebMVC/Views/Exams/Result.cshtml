@@ -76,7 +76,14 @@
     </div>
     @if (Model.IsGraded && res.ScoreDelta.HasValue)
     {
-      <p class="score-hero__delta" role="status">
+      @* The colour is the verdict, so it has to follow the sign. This block was always green, so a
+         learner who dropped 710 points was shown the drop on a success-coloured placard.
+         The class is computed into a variable first: a nested ternary inside the attribute value is
+         not parsed by Razor and renders as literal source. *@
+      var deltaClass = res.ScoreDelta.Value < 0 ? "score-hero__delta--down"
+          : res.ScoreDelta.Value > 0 ? "score-hero__delta--up"
+          : "score-hero__delta--flat";
+      <p class="score-hero__delta @deltaClass" role="status">
         <span class="score-hero__delta-value">@Model.ScoreDeltaDisplay</span>
         <span class="score-hero__delta-label">vs. previous attempt</span>
       </p>
@@ -100,8 +107,10 @@
     <div class="card__body">
       <div class="cefr">
         <div class="cefr__head">
-          <span class="cefr__current">@res.BandCode</span>
-          <span class="text-sm text-muted">@res.BandName · @res.CertName</span>
+          @* The band's own name, never its code: "below_A1" is a database key, and printing it put
+             an underscore in front of a learner. The band table already carries the readable name. *@
+          <span class="cefr__current">@(string.IsNullOrWhiteSpace(res.BandName) ? res.BandCode : res.BandName)</span>
+          <span class="text-sm text-muted">@res.CertName</span>
         </div>
       </div>
     </div>

@@ -1254,6 +1254,10 @@ button.nav-list__group.has-current[aria-expanded="false"] .nav-list__count {
   border-radius: 0;
   color: #ffffff;
 }
+/* The placard colour is the verdict, so it follows the sign: a fall is not a success. */
+.score-hero__delta--down { background: var(--sign-red); }
+.score-hero__delta--up   { background: var(--sign-green); }
+.score-hero__delta--flat { background: var(--ink); }
 .score-hero__delta-value {
   font-family: var(--font-mono); font-size: var(--text-3xl); font-weight: 700;
   line-height: 1; font-variant-numeric: tabular-nums;
