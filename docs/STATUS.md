@@ -35,7 +35,7 @@ Không còn ticket. Ba việc con người nên quyết, ghi ở `docs/HANDOFF-2
    (`LearningPathService.Steps.cs`), không qua `SmartPracticePlanner`. Hai bộ chọn câu cùng tồn tại.
 
 `wrong_before`/`unseen` vẫn là giá trị hợp lệ trong `CK_Practice_Source` để row cũ đọc được, nhưng
-không còn ai ghi — #162 xoá cột `FeedbackMode` chứ không xoá giá trị này (xem quyết định D25).
+không còn ai ghi — #162 xoá cột `FeedbackMode` chứ không xoá giá trị này (xem quyết định D27).
 
 ## 3. Đã xong (đã push lên `origin/main`)
 
@@ -74,9 +74,10 @@ cần ticket riêng để làm nó tất định.
 | # | Quyết định | Lý do |
 |---|---|---|
 | D10 | **Cột thang điểm trên `Skills` là NULLable**, backfill từ `ScoreScales`, chưa ép NOT NULL | NOT NULL làm vỡ 12 file schema-test + 16 seed. "Thiếu cấu hình = lỗi" ép lúc **gọi**, không phải lúc **lưu** |
-| D25 | **Giữ `CreditReason.PremiumPath` và giá trị `'premium_path'` trong `CK_CreditTxn_Reason`, dù tính năng premium path đã bị xoá (#162)** | `CreditTransactions` là append-only — `trg_CreditTransactions_AppendOnly` ném lỗi khi DELETE. Row `premium_path` đã tồn tại trong DB thật và trong seed demo. Xoá giá trị khỏi CHECK không xoá row, nhưng làm `EnumMapping.ParseWireCode<CreditReasonDto>` ném lỗi trên mọi row cũ → trang ví của học viên đó hỏng. Xoá từ vựng của dữ liệu quá khứ là migration dữ liệu, không phải dọn code. Có test `GetLedgerHistoryAsync_StillReadsHistoricalPremiumPathRows` và `domain10-payment.sql` canh giữ |
+| D27 | **Giữ `CreditReason.PremiumPath` và giá trị `'premium_path'` trong `CK_CreditTxn_Reason`, dù tính năng premium path đã bị xoá (#162)** | `CreditTransactions` là append-only — `trg_CreditTransactions_AppendOnly` ném lỗi khi DELETE. Row `premium_path` đã tồn tại trong DB thật và trong seed demo. Xoá giá trị khỏi CHECK không xoá row, nhưng làm `EnumMapping.ParseWireCode<CreditReasonDto>` ném lỗi trên mọi row cũ → trang ví của học viên đó hỏng. Xoá từ vựng của dữ liệu quá khứ là migration dữ liệu, không phải dọn code. Có test `GetLedgerHistoryAsync_StillReadsHistoricalPremiumPathRows` và `domain10-payment.sql` canh giữ |
 
-D1–D24 giữ nguyên, xem `docs/STATE.md` §1. Quy tắc cũ vẫn hiệu lực: kết luận nào đòi đảo D1–D24 thì bỏ.
+D1–D26 giữ nguyên, xem `docs/STATE.md` §1 (đợt này thêm D19–D27 ở đó; D25–D27 là của #160 và #162).
+Quy tắc cũ vẫn hiệu lực: kết luận nào đòi đảo D1–D27 thì bỏ.
 
 ## 5. Lỗ hổng còn lại trong hệ ticket
 
