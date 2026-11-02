@@ -15,6 +15,7 @@ public sealed class ExamStudioViewModel
     public string ConfigurationJson { get; }
     public string CertificateCode => Detail.CertCode.ToUpperInvariant();
     public IReadOnlyDictionary<int, string?> GroupImageUrls { get; }
+    public IReadOnlyDictionary<int, string> GroupSliceReadouts { get; }
     public IReadOnlyList<StudioAuditIssueViewModel> AuditIssues { get; }
     public string AuditStatusText => Detail.Audit.CanPublish ? "PASSED" : $"{Detail.Audit.BlockingErrorCount} BLOCKS";
     public string AuditBadgeStyle => Detail.Audit.CanPublish ? "background: #e6f1ea; color: #0a6b3c;" : "background: #fbe9e9; color: #b31217;";
@@ -32,7 +33,9 @@ public sealed class ExamStudioViewModel
         Questions = detail.Sections.SelectMany(s => s.Groups.SelectMany(g => g.Questions.Select(q =>
             new StudioQuestionViewModel(q, s, detail.AvailableCategories, detail.AvailableCriteria))))
             .ToDictionary(q => q.Question.QuestionId);
-        GroupImageUrls = detail.Sections.SelectMany(s => s.Groups).ToDictionary(g => g.GroupId, g => MediaUrlHelper.NormalizeMediaUrl(g.ImagePath));
+        var groups = detail.Sections.SelectMany(s => s.Groups).ToArray();
+        GroupImageUrls = groups.ToDictionary(g => g.GroupId, g => MediaUrlHelper.NormalizeMediaUrl(g.ImagePath));
+        GroupSliceReadouts = groups.ToDictionary(g => g.GroupId, g => SliceReadout(g.AudioStartMs, g.AudioEndMs));
         AuditIssues = detail.Audit.Issues.Select(i => new StudioAuditIssueViewModel(i)).ToArray();
         ConfigurationJson = JsonSerializer.Serialize(new {
             detail.ExamId, CurrentSectionId = FirstSection?.SectionId ?? 0,
@@ -42,4 +45,9 @@ public sealed class ExamStudioViewModel
                 s.ExpectedQuestionCount, s.CurrentQuestionCount, s.HideOptionText })
         });
     }
+
+    private static string SliceReadout(int? startMs, int? endMs) =>
+        startMs is >= 0 && endMs > startMs
+            ? $"{TimeSpan.FromMilliseconds(startMs.Value):mm\\:ss\\.fff} → {TimeSpan.FromMilliseconds(endMs!.Value):mm\\:ss\\.fff}"
+            : "No slice — the whole track plays";
 }

@@ -1,14 +1,16 @@
 /* Exam Studio "Bảng hiệu phòng thi" Layout */
+  /* #159: two panes. The publish audit is not a third column any more; it docks at the top of the
+     workstation, where the author is already looking (see .studio-audit-dock). */
   .studio-container {
     display: grid;
-    grid-template-columns: 290px 1fr 310px;
+    grid-template-columns: 290px 1fr;
     gap: 1rem;
     align-items: start;
     margin-top: 0.75rem;
   }
   @media (max-width: 1200px) {
     .studio-container {
-      grid-template-columns: 250px 1fr 270px;
+      grid-template-columns: 250px 1fr;
     }
   }
   @media (max-width: 992px) {
@@ -368,7 +370,83 @@
     background: #eef4fc;
   }
 
+  /* #159: one audio slot per group — picker, two mark buttons, a status line. */
+  .studio-audio-slot {
+    background: #fafafa;
+    border: 1px solid #ccd2d6;
+    padding: 0.75rem;
+  }
+  .studio-audio-slot__status {
+    margin-top: 0.4rem;
+    padding: 0.3rem 0.5rem;
+    border: 1px solid #ccd2d6;
+    background: #ffffff;
+    font-size: 0.75rem;
+    font-family: var(--font-mono, monospace);
+  }
+  .studio-audio-slot__status[data-state="success"] {
+    border-color: var(--color-success, #0a6b3c);
+    color: var(--color-success, #0a6b3c);
+  }
+  .studio-audio-slot__status[data-state="error"] {
+    border-color: var(--color-danger, #b31217);
+    color: var(--color-danger, #b31217);
+    background: #fff5f5;
+  }
+
+  /* #159: the collapsed rationale block that took four lines per question. */
+  .studio-opt-rationales {
+    margin-top: 0.4rem;
+    border-top: 1px solid #ccd2d6;
+    padding-top: 0.3rem;
+  }
+  .studio-opt-rationales > summary {
+    cursor: pointer;
+    font-family: var(--font-condensed, sans-serif);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #4a545e;
+  }
+
   /* Right Audit Placard */
+  /* #159: no longer a column — a dock across the top of the workstation. */
+  .studio-audit-dock {
+    border-bottom: 2px solid var(--color-ink, #14181d);
+    background: #ffffff;
+  }
+  .studio-audit-dock__summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 1rem;
+    background: #f8f9fa;
+  }
+  .studio-audit-dock__summary h2 {
+    margin: 0;
+    font-family: var(--font-condensed, sans-serif);
+    text-transform: uppercase;
+    font-size: 0.9rem;
+    letter-spacing: 0.05em;
+  }
+  .studio-audit-dock__issues {
+    list-style: none;
+    margin: 0;
+    padding: 0.5rem 1rem;
+    max-height: 12rem;
+    overflow-y: auto;
+  }
+  .studio-audit-dock__issues:empty {
+    display: none;
+  }
+  .audit-item__mark {
+    font-family: var(--font-condensed, sans-serif);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    flex: none;
+  }
   .audit-item {
     padding: 0.5rem;
     border-left: 4px solid #ccd2d6;

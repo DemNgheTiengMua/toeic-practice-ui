@@ -626,7 +626,7 @@ public class ExamAudioAndInstructionsTests : PlaywrightTestBase
     [Test]
     public async Task Should_Show_Section_Master_Audio_In_Exam_Studio_Visual_Slicer()
     {
-        // Admin Exam Studio: Section audio uploaded as master audio is displayed in the Visual Audio Slicer
+        // Admin Exam Studio: Section audio uploaded as master audio is displayed in the audio slicer
         await _loginPage.GotoAsync();
         await _loginPage.LoginAsync("admin@demo.local", "Demo1234!");
         await Expect(Page).ToHaveURLAsync(new Regex(@"(Dashboard|admin|certificates)", RegexOptions.IgnoreCase));
@@ -634,15 +634,15 @@ public class ExamAudioAndInstructionsTests : PlaywrightTestBase
         await Page.GotoAsync($"{BaseUrl}/admin/exams/1/studio");
         await Expect(Page).ToHaveURLAsync(new Regex(@"/admin/exams/1/studio", RegexOptions.IgnoreCase));
 
-        // Visual Audio Slicer header with master audio file
-        var visualSlicer = Page.Locator(":text('Visual Audio Slicer')").First;
-        await Expect(visualSlicer).ToBeVisibleAsync();
+        // The section's master audio is on the page, and the slicer is labelled as such
+        await Expect(Page.Locator(".audio-slicer").First).ToBeVisibleAsync();
         await Expect(Page.Locator("body")).ToContainTextAsync("/audio/toeic/test1-p1.mp3");
 
-        // Slicer controls: Mark Start, Mark End, Preview Slice
-        await Expect(Page.Locator("button:has-text('Mark Start')").First).ToBeVisibleAsync();
-        await Expect(Page.Locator("button:has-text('Mark End')").First).ToBeVisibleAsync();
-        await Expect(Page.Locator("button:has-text('Preview Slice')").First).ToBeVisibleAsync();
+        // #159: the two buttons live on the group card and mark that group's slice against the
+        // section player. Typing milliseconds by hand is gone.
+        await Expect(Page.Locator("button:has-text('Mark start here')").First).ToBeVisibleAsync();
+        await Expect(Page.Locator("button:has-text('Mark end here')").First).ToBeVisibleAsync();
+        await Expect(Page.Locator("label:has-text('Choose audio file')").First).ToBeVisibleAsync();
     }
 
     [Test]
@@ -664,15 +664,15 @@ public class ExamAudioAndInstructionsTests : PlaywrightTestBase
             await Page.Locator($"#btn-slicer-play-{studio.SectionId}").ClickAsync();
             await Page.WaitForTimeoutAsync(250);
             await audio.EvaluateAsync("el => el.currentTime = Math.max(el.currentTime, 0.25)");
-            await Page.Locator($"button[onclick='markCurrentStart({studio.SectionId})']").ClickAsync();
+            await Page.Locator($"button[onclick='markGroupSliceStart({studio.GroupId})']").ClickAsync();
             await Page.WaitForTimeoutAsync(250);
 
-            var status = Page.Locator($"#slicer-status-{studio.SectionId}");
-            await Expect(status).ToContainTextAsync("Start marked:");
-            await Expect(status).ToContainTextAsync("click Mark End to save");
+            var status = Page.Locator($"#slice-status-{studio.GroupId}");
+            await Expect(status).ToContainTextAsync("Start 00:00");
+            await Expect(status).ToContainTextAsync("then Mark end");
             await Expect(Page.Locator($"#slicer-start-marker-{studio.SectionId}")).ToHaveCSSAsync("display", "block");
             Assert.That(await Page.Locator($"#start-ms-{studio.GroupId}").InputValueAsync(), Is.Not.Empty);
-            Assert.That(saveRequests, Is.Empty, "Mark Start must not send a group save request.");
+            Assert.That(saveRequests, Is.Empty, "Mark start must not send a group save request.");
 
             var topStatus = await Page.Locator("#autosave-status").InnerTextAsync();
             Assert.That(topStatus, Does.Not.Contain("Save failed"));
@@ -685,7 +685,7 @@ public class ExamAudioAndInstructionsTests : PlaywrightTestBase
     }
 
     [Test]
-    public async Task Should_Save_Both_Slice_Bounds_When_End_Is_Marked_And_Clear_Them()
+    public async Task Should_Save_Both_Slice_Bounds_When_End_Is_Marked()
     {
         var studio = await OpenExamStudioWithAudioAsync();
         try
@@ -694,33 +694,25 @@ public class ExamAudioAndInstructionsTests : PlaywrightTestBase
             await Page.Locator($"#btn-slicer-play-{studio.SectionId}").ClickAsync();
             await Page.WaitForTimeoutAsync(250);
             await audio.EvaluateAsync("el => el.currentTime = Math.max(el.currentTime, 0.25)");
-            await Page.Locator($"button[onclick='markCurrentStart({studio.SectionId})']").ClickAsync();
+            await Page.Locator($"button[onclick='markGroupSliceStart({studio.GroupId})']").ClickAsync();
 
             var startMs = int.Parse(await Page.Locator($"#start-ms-{studio.GroupId}").InputValueAsync());
             await audio.EvaluateAsync("(el, start) => { el.pause(); el.currentTime = Math.max(el.currentTime, start / 1000 + 0.5); }", startMs);
             var saveResponseTask = Page.WaitForResponseAsync(response =>
                 response.Request.Method == "PUT" &&
                 response.Url.Contains($"/studio/group/{studio.GroupId}", StringComparison.Ordinal));
-            await Page.Locator($"button[onclick='markCurrentEnd({studio.SectionId})']").ClickAsync();
+            await Page.Locator($"button[onclick='markGroupSliceEnd({studio.GroupId})']").ClickAsync();
             var response = await saveResponseTask;
 
             Assert.That(response.Status, Is.EqualTo(200));
             Assert.That(response.Request.PostData, Does.Contain("\"audioStartMs\""));
             Assert.That(response.Request.PostData, Does.Contain("\"audioEndMs\""));
-            await Expect(Page.Locator($"#slicer-status-{studio.SectionId}")).ToHaveTextAsync("Saved");
+            await Expect(Page.Locator($"#slice-status-{studio.GroupId}")).ToHaveTextAsync("Saved");
 
-            var clearResponseTask = Page.WaitForResponseAsync(clearResponse =>
-                clearResponse.Request.Method == "PUT" &&
-                clearResponse.Url.Contains($"/studio/group/{studio.GroupId}", StringComparison.Ordinal));
-            await Page.Locator($"button[onclick='clearCurrentSlice({studio.SectionId})']").ClickAsync();
-            var clearResponse = await clearResponseTask;
-
-            Assert.That(clearResponse.Status, Is.EqualTo(200));
-            Assert.That(clearResponse.Request.PostData, Does.Contain("\"audioStartMs\":null"));
-            Assert.That(clearResponse.Request.PostData, Does.Contain("\"audioEndMs\":null"));
-            await Expect(Page.Locator($"#start-ms-{studio.GroupId}")).ToHaveValueAsync(string.Empty);
-            await Expect(Page.Locator($"#end-ms-{studio.GroupId}")).ToHaveValueAsync(string.Empty);
-            await Expect(Page.Locator($"#slicer-status-{studio.SectionId}")).ToHaveTextAsync("Saved");
+            // The milliseconds that reached the database are the two the player showed.
+            var stored = await ReadGroupSliceAsync(studio.GroupId);
+            var endMs = int.Parse(await Page.Locator($"#end-ms-{studio.GroupId}").InputValueAsync());
+            Assert.That(stored, Is.EqualTo((startMs, endMs)));
         }
         finally
         {
@@ -745,15 +737,18 @@ public class ExamAudioAndInstructionsTests : PlaywrightTestBase
 
             var audio = Page.Locator($"#slicer-audio-{studio.SectionId}");
             await audio.EvaluateAsync("el => { el.pause(); el.currentTime = 0; }");
-            var markEnd = Page.Locator($"button[onclick='markCurrentEnd({studio.SectionId})']");
-            var status = Page.Locator($"#slicer-status-{studio.SectionId}");
+            var markEnd = Page.Locator($"button[onclick='markGroupSliceEnd({studio.GroupId})']");
+            var status = Page.Locator($"#slice-status-{studio.GroupId}");
 
+            // No start marked yet: the end has nothing to be after.
             await markEnd.ClickAsync();
-            await Expect(status).ToHaveTextAsync("End time must be after Start time (00:00)");
+            await Expect(status).ToContainTextAsync("End must come after start");
 
-            await Page.Locator($"#start-ms-{studio.GroupId}").FillAsync("1500");
+            // Start marked later than the end position.
+            await Page.Locator($"button[onclick='markGroupSliceStart({studio.GroupId})']").ClickAsync();
+            await audio.EvaluateAsync("el => { el.pause(); el.currentTime = 0; }");
             await markEnd.ClickAsync();
-            await Expect(status).ToHaveTextAsync("End time must be after Start time (00:01)");
+            await Expect(status).ToContainTextAsync("End must come after start");
             Assert.That(saveRequests, Is.Empty, "Invalid slice bounds must not send a group save request.");
         }
         finally
@@ -806,5 +801,19 @@ public class ExamAudioAndInstructionsTests : PlaywrightTestBase
         var groupCard = Page.Locator($"#ws-sec-{sectionId} .card-editor").First;
         var groupId = int.Parse((await groupCard.GetAttributeAsync("data-group-id"))!);
         return (sectionId, groupId);
+    }
+
+    /// <summary>The slice as stored, so a test can compare the milliseconds the author saw with the
+    /// milliseconds the database holds (#159).</summary>
+    private async Task<(int? Start, int? End)> ReadGroupSliceAsync(int groupId)
+    {
+        await using var db = await OpenAppDatabaseAsync();
+        await using var cmd = new Microsoft.Data.SqlClient.SqlCommand(
+            "SELECT AudioStartMs, AudioEndMs FROM QuestionGroups WHERE GroupId = @id", db);
+        cmd.Parameters.AddWithValue("@id", groupId);
+        await using var reader = await cmd.ExecuteReaderAsync();
+        return await reader.ReadAsync()
+            ? (reader.IsDBNull(0) ? null : reader.GetInt32(0), reader.IsDBNull(1) ? null : reader.GetInt32(1))
+            : (null, null);
     }
 }

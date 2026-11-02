@@ -4,6 +4,8 @@
 }
   <!-- ================= 2. CENTER WORKSTATION ================= -->
   <main class="studio-panel" id="studio-workstation" aria-label="Question Workstation">
+    @* #159: the audit docks at the top of the workstation instead of claiming a third column. *@
+    @await Html.PartialAsync("~/Views/Admin/_StudioAudit.cshtml", Model)
     <div class="workstation-toolbar">
       <div class="row" style="gap: 0.5rem; align-items: center;">
         <span style="font-weight: bold; font-family: var(--font-condensed, sans-serif); text-transform: uppercase;" id="ws-section-name">
@@ -63,13 +65,14 @@
             }
           </div>
 
-          <!-- VISUAL AUDIO SLICER FOR AUDIO SECTIONS -->
+          @* #159: one player per section. The group cards' two buttons read this player's position
+             and write that group's slice, so a section with 40 groups still loads one track. *@
           @if (hasAudioStimulus)
           {
             <div class="audio-slicer" id="audio-slicer-sec-@sec.SectionId">
               <div class="row row--between mb-1" style="align-items: center;">
                 <div class="row" style="gap: 0.5rem; align-items: center;">
-                  <strong style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 0.85rem;">Visual Audio Slicer</strong>
+                  <strong style="font-family: var(--font-condensed, sans-serif); text-transform: uppercase; font-size: 0.85rem;">Section audio</strong>
                   <span class="text-xs text-muted" id="slicer-track-label-@sec.SectionId">
                     @(string.IsNullOrWhiteSpace(sec.MasterAudioPath) ? "No master audio loaded" : Model.SectionStates[sec.SectionId].MasterAudioUrl)
                   </span>
@@ -81,7 +84,7 @@
 
               <audio id="slicer-audio-@sec.SectionId" src="@Model.SectionStates[sec.SectionId].MasterAudioUrl" preload="metadata"></audio>
 
-              <!-- Waveform / scrubber representation with tick marks -->
+              <!-- Waveform / scrubber with the marked slice drawn on it -->
               <div class="audio-slicer__scrubber" id="slicer-scrubber-@sec.SectionId" onclick="onScrubberClick(event, @sec.SectionId)">
                 <div class="audio-slicer__progress" id="slicer-progress-@sec.SectionId"></div>
                 <div class="audio-slicer__slice-region" id="slicer-region-@sec.SectionId" style="display: none;"></div>
@@ -89,29 +92,17 @@
                 <div class="audio-slicer__cursor" id="slicer-cursor-@sec.SectionId"></div>
               </div>
 
-              <!-- Slicer Action Buttons -->
               <div class="row row--between row--wrap" style="align-items: center; gap: 0.5rem;">
                 <div class="row" style="gap: 0.35rem; align-items: center;">
                   <button type="button" class="btn btn--secondary btn--sm" onclick="toggleSlicerPlay(@sec.SectionId)" id="btn-slicer-play-@sec.SectionId" style="border-radius: 0; font-size: 0.75rem;">
                     Play
                   </button>
-                  <button type="button" class="btn btn--secondary btn--sm" onclick="markCurrentStart(@sec.SectionId)" style="border-radius: 0; font-size: 0.75rem; background: #eef4fc;">
-                    Mark Start
-                  </button>
-                  <button type="button" class="btn btn--secondary btn--sm" onclick="markCurrentEnd(@sec.SectionId)" style="border-radius: 0; font-size: 0.75rem; background: #eef4fc;">
-                    Mark End
-                  </button>
-                  <button type="button" class="btn btn--ghost btn--sm" onclick="previewCurrentSlice(@sec.SectionId)" style="border-radius: 0; font-size: 0.75rem;">
-                    Preview Slice
-                  </button>
-                  <button type="button" class="btn btn--ghost btn--sm" onclick="clearCurrentSlice(@sec.SectionId)" style="border-radius: 0; font-size: 0.75rem; color: #777;">
-                    Clear
-                  </button>
+                  <span class="text-xs text-muted">Mark a group's start and end on its card below.</span>
                 </div>
 
                 <div class="row" style="gap: 0.35rem; align-items: center;">
                   <label class="btn btn--ghost btn--sm" style="border-radius: 0; font-size: 0.75rem; cursor: pointer; margin: 0;">
-                    Upload Audio
+                    Upload section audio
                     <input type="file" accept="audio/*" style="display: none;" onchange="uploadAudioFile(this, @sec.SectionId)" />
                   </label>
                 </div>
@@ -215,34 +206,30 @@
                               @if (!string.IsNullOrWhiteSpace(g.ImagePath))
                               {
                                 <img src="@Model.GroupImageUrls[g.GroupId]" alt="@g.ImageAlt" id="preview-img-@g.GroupId" style="width: 100%; max-height: 110px; object-fit: contain; border: 2px solid #14181d;" />
-                                <div class="text-xs text-muted mt-1">Replace photo</div>
                               }
                               else
                               {
-                                <div id="dropzone-placeholder-@g.GroupId">
-                                  <span style="font-size: 1.4rem; display: block;">&#128247;</span>
-                                  <span class="text-xs font-bold">Photo Stimulus</span>
-                                  <span class="text-xs text-muted block">browse or drop</span>
-                                </div>
                                 <img id="preview-img-@g.GroupId" style="width: 100%; max-height: 110px; object-fit: contain; border: 2px solid #14181d; display: none;" />
                               }
-                              <input type="file" id="img-input-@g.GroupId" accept="image/*" style="display: none;" onchange="uploadImageInput(this, @g.GroupId)" />
+                              <div id="dropzone-placeholder-@g.GroupId" style="display: @(string.IsNullOrWhiteSpace(g.ImagePath) ? "block" : "none");">
+                                <span class="text-xs font-bold" style="display: block;">Photo stimulus</span>
+                                <span class="text-xs text-muted">Choose a file or drop one here</span>
+                              </div>
+                              <div class="text-xs text-muted mt-1" id="img-name-@g.GroupId">@(string.IsNullOrWhiteSpace(g.ImagePath) ? "" : "Replace photo")</div>
                             </div>
+                            <input type="file" id="img-input-@g.GroupId" accept="image/*" style="display: none;" onchange="uploadImageInput(this, @g.GroupId)" />
                           </div>
 
-                          <div style="flex: 1;" class="stack" style="gap: 0.4rem;">
-                            <div>
-                              <label class="text-xs" style="font-weight: bold;">Photo File Path:</label>
-                              <input type="text" class="field__input studio-autosave" data-type="group" data-id="@g.GroupId" data-field="ImagePath" id="img-path-@g.GroupId" value="@g.ImagePath" placeholder="/media/photo.jpg" style="width: 100%; font-size: 0.78rem; border-radius: 0;" />
-                            </div>
-
+                          <div style="flex: 1;" class="stack">
                             <div>
                               <label class="text-xs" style="font-weight: bold;">
-                                Accessibility Alt Text
-                                <span class="badge text-xs" style="background: #fbe9e9; color: #b31217; border-radius: 0;">* REQUIRED (CK_QGroups_ImageAlt)</span>:
+                                Accessibility alt text
+                                <span class="badge text-xs" style="background: #fbe9e9; color: #b31217; border-radius: 0;">required</span>:
                               </label>
-                              <input type="text" class="field__input studio-autosave @(string.IsNullOrWhiteSpace(g.ImageAlt) && !string.IsNullOrWhiteSpace(g.ImagePath) ? "border-danger" : "")" data-type="group" data-id="@g.GroupId" data-field="ImageAlt" id="img-alt-@g.GroupId" value="@g.ImageAlt" placeholder="Description of image for accessibility..." style="width: 100%; font-size: 0.78rem; border-radius: 0;" />
+                              <input type="text" class="field__input studio-autosave @(string.IsNullOrWhiteSpace(g.ImageAlt) && !string.IsNullOrWhiteSpace(g.ImagePath) ? "border-danger" : "")" data-type="group" data-id="@g.GroupId" data-field="ImageAlt" id="img-alt-@g.GroupId" value="@g.ImageAlt" placeholder="Describe the picture for a learner who cannot see it..." style="width: 100%; font-size: 0.78rem; border-radius: 0;" />
                             </div>
+                            @* #159: the path is no longer typed. The picker above writes it. *@
+                            <input type="hidden" data-type="group" data-id="@g.GroupId" data-field="ImagePath" id="img-path-@g.GroupId" value="@g.ImagePath" />
                           </div>
                         </div>
                       </div>
@@ -250,28 +237,40 @@
 
                     @if (hasAudioStimulus)
                     {
-                      <div style="background: #fafafa; border: 1px solid #ccd2d6; padding: 0.75rem;">
-                        <div class="row row--wrap" style="gap: 0.5rem; align-items: center;">
-                          <div style="flex: 2;">
-                            <label class="text-xs font-bold">Audio Clip Track:</label>
-                            <input type="text" class="field__input studio-autosave" data-type="group" data-id="@g.GroupId" data-field="AudioPath" value="@g.AudioPath" placeholder="/audio/cluster.mp3" style="width: 100%; font-size: 0.78rem; border-radius: 0;" />
-                          </div>
-                          <div style="width: 85px;">
-                            <label class="text-xs">Start (ms):</label>
-                            <input type="number" class="field__input" data-type="group" data-id="@g.GroupId" data-field="AudioStartMs" data-saved-value="@g.AudioStartMs" id="start-ms-@g.GroupId" value="@g.AudioStartMs" min="0" style="width: 100%; font-size: 0.75rem; border-radius: 0;" />
-                          </div>
-                          <div style="width: 85px;">
-                            <label class="text-xs">End (ms):</label>
-                            <input type="number" class="field__input" data-type="group" data-id="@g.GroupId" data-field="AudioEndMs" data-saved-value="@g.AudioEndMs" id="end-ms-@g.GroupId" value="@g.AudioEndMs" min="0" style="width: 100%; font-size: 0.75rem; border-radius: 0;" />
-                          </div>
-                          <button type="button" class="btn btn--secondary btn--sm" onclick="setActiveSlicerGroup(@g.GroupId, @sec.SectionId)" style="border-radius: 0; font-size: 0.75rem; margin-top: 1.1rem;">
-                            Sync Slicer
-                          </button>
+                      <div class="studio-audio-slot" id="audio-slot-@g.GroupId">
+                        <div class="row row--between row--wrap" style="gap: 0.5rem; align-items: center;">
+                          <span class="text-xs font-bold">Group audio</span>
+                          @* #159: a real picker. A mistyped path failed silently at publish time. *@
+                          <label class="btn btn--secondary btn--sm" style="border-radius: 0; cursor: pointer; margin: 0;">
+                            Choose audio file
+                            <input type="file" accept="audio/*" style="display: none;" onchange="uploadGroupAudioFile(this, @g.GroupId)" />
+                          </label>
                         </div>
 
+                        <div class="text-xs text-muted" id="audio-name-@g.GroupId">
+                          @(string.IsNullOrWhiteSpace(g.AudioPath) ? "No group track — the section's master audio plays." : g.AudioPath)
+                        </div>
+
+                        @*
+                          #159: two buttons take the position of the player above and write AudioStartMs /
+                          AudioEndMs. Typing milliseconds by hand is the defect this replaces. The buttons
+                          drive the section's single audio element rather than opening a second player, so a
+                          section with 40 groups still loads one track.
+                        *@
+                        <div class="row row--wrap" style="gap: 0.35rem; align-items: center; margin-top: 0.35rem;">
+                          <button type="button" class="btn btn--secondary btn--sm" data-slice="start" onclick="markGroupSliceStart(@g.GroupId)" style="border-radius: 0;">Mark start here</button>
+                          <button type="button" class="btn btn--secondary btn--sm" data-slice="end" onclick="markGroupSliceEnd(@g.GroupId)" style="border-radius: 0;">Mark end here</button>
+                          <span class="text-xs" style="font-family: var(--font-mono, monospace);" id="slice-readout-@g.GroupId">@Model.GroupSliceReadouts[g.GroupId]</span>
+                        </div>
+                        <div class="studio-audio-slot__status" id="slice-status-@g.GroupId" role="status" aria-live="polite" hidden></div>
+
+                        <input type="hidden" data-type="group" data-id="@g.GroupId" data-field="AudioPath" id="audio-path-@g.GroupId" value="@g.AudioPath" />
+                        <input type="hidden" data-type="group" data-id="@g.GroupId" data-field="AudioStartMs" data-saved-value="@g.AudioStartMs" id="start-ms-@g.GroupId" value="@g.AudioStartMs" />
+                        <input type="hidden" data-type="group" data-id="@g.GroupId" data-field="AudioEndMs" data-saved-value="@g.AudioEndMs" id="end-ms-@g.GroupId" value="@g.AudioEndMs" />
+
                         <div class="mt-2">
-                          <label class="text-xs font-bold">Audio Dialogue / Spoken Transcript:</label>
-                          <textarea rows="2" class="field__input studio-autosave" data-type="group" data-id="@g.GroupId" data-field="Transcript" placeholder="Spoken dialogue or audio script..." style="width: 100%; font-size: 0.78rem; border-radius: 0;">@g.Transcript</textarea>
+                          <label class="text-xs font-bold" for="transcript-@g.GroupId">Audio transcript:</label>
+                          <textarea rows="2" id="transcript-@g.GroupId" class="field__input studio-autosave" data-type="group" data-id="@g.GroupId" data-field="Transcript" placeholder="Spoken dialogue or audio script..." style="width: 100%; font-size: 0.78rem; border-radius: 0;">@g.Transcript</textarea>
                         </div>
                       </div>
                     }
