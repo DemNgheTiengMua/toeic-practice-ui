@@ -38,7 +38,7 @@
 | `GradingCriteria.RubricDescription` | nvarchar(1000) NOT NULL | Band descriptors vào prompt |
 | `AiGradings.BandCode` (bắt buộc ghi), `PriorityFix`, `ModelRewrite`, `ErrorSpansJson`, `TranscriptText` | — | Output hành động được |
 | `Questions.SampleAnswerOrImageDesc`, `RequiredKeywordsJson` | nvarchar | Ngữ cảnh cho Speaking/Writing |
-| `AttemptAnswers.AnsweredAt` | datetime2 | Phát hiện bấm lướt |
+| `PracticeAnswers.AnsweredAt` | datetime2 | Phát hiện bấm lướt |
 | `UserCategoryMasteries` | UserId, CategoryId, MasteryState 0..3, RollingAccuracy, ConsecutiveCorrect, LastPracticedAt, NextReviewDueAt | Mastery theo chủ đề |
 | `UserQuestionHistories` | UserId, QuestionId, TotalAttempts, CorrectStreak, LastIsCorrect, LastAnsweredAt, CooldownUntil | Cooldown 24h |
 | `LearnerPathSteps.WeekNumber, EstimatedMinutes, TargetAccuracyPct, ActualAccuracyPct` | int/int/int/decimal | Tiến độ theo tuần |
