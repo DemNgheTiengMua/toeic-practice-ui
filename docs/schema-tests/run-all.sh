@@ -11,7 +11,7 @@
 set -uo pipefail
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$DIR/../.." && pwd)"
-S='(localdb)\MSSQLLocalDB'; DB='CompanionSchemaTest'
+. "$DIR/sqlcmd-env.sh"   # SQL_SERVER, SQL_DB, SQLCMD_ARGS, sqlcmd_path
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
@@ -47,7 +47,7 @@ run_one () {  # $1 = label, $2 = .sql file, $3 = 1 to inject the fixture guard, 
     fi
     sql="$TMP/guarded.sql"
   fi
-  if out=$(sqlcmd -S "$S" -d "$DB" -I -b -f 65001 -i "$(cygpath -w "$sql")" 2>&1); then
+  if out=$(sqlcmd -S "$SQL_SERVER" "${SQLCMD_ARGS[@]}" -d "$SQL_DB" -I -b -f 65001 -i "$(sqlcmd_path "$sql")" 2>&1); then
     echo "PASS $label"; results+=("PASS $label"); return 0
   fi
   echo "FAIL $label"

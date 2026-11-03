@@ -103,6 +103,21 @@ jobs:
             sleep 1
           done
 
+      - name: Schema Harness
+        # docs/schema-tests/run-all.sh is the documented way to validate a schema change (AGENTS.md
+        # §1.1), and the only thing that runs the domain files, the fixture-guard self-test, the seed
+        # load and its idempotency re-run. It runs unmodified, with the same TEST_DB_CONNECTION the
+        # Test step uses, so a developer and CI run one command rather than two that can drift.
+        #
+        # Its catalog is CompanionSchemaTest, not ExtraEfficiencyCrawl (see sqlcmd-env.sh): the
+        # harness drops and recreates its database per check, so it must not touch the seeded one.
+        #
+        # Only sqlcmd is needed, so it could run before Build; it stays after the seed step because
+        # that step is the one that proves the SQL Server service is reachable at all.
+        run: bash docs/schema-tests/run-all.sh
+        env:
+          TEST_DB_CONNECTION: "Server=localhost,1433;User ID=sa;Password=Str0ng!Passw0rd;TrustServerCertificate=True"
+
       - name: Test
         run: dotnet test --configuration Release --no-build
         env:
