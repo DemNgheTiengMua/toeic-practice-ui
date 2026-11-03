@@ -516,12 +516,10 @@ function goToStep(step) {
     if (help) {
       if (rule === 'avg_half_step') {
         help.textContent = 'Official rounding: decimal < 0.25 ➔ .0; >= 0.25 & < 0.75 ➔ .5; >= 0.75 ➔ next whole band.';
-      } else if (rule === 'sum') {
-        help.textContent = 'Sum rule: all skill scaled scores add up directly (e.g. Listening + Reading).';
       } else if (rule === 'avg_whole') {
         help.textContent = 'Whole rounding: average of skill scores rounded to nearest whole integer.';
       } else {
-        help.textContent = 'Independent rule: each skill is evaluated and displayed separately.';
+        help.textContent = 'Sum rule: all skill scaled scores add up directly (e.g. Listening + Reading).';
       }
     }
     updateLiveScorePreview();
@@ -623,19 +621,18 @@ function goToStep(step) {
     var summaryEl = document.getElementById('liveSkillsSummaryTable');
     if (summaryEl) summaryEl.innerHTML = summaryHtml;
 
-    // Aggregate total
+    // Aggregate total. #171: sum is the default arm, as in AttemptEngine.AggregateTotalScore —
+    // the fourth rule used to be an arm here that reported 0 for every attempt.
     var total = 0;
     if (skillScaledScores.length > 0) {
-      if (rule === 'sum') {
-        total = skillScaledScores.reduce(function(a, b) { return a + b; }, 0);
-      } else if (rule === 'avg_half_step') {
+      if (rule === 'avg_half_step') {
         var avg = skillScaledScores.reduce(function(a, b) { return a + b; }, 0) / skillScaledScores.length;
         total = roundHalfStepBand(avg);
       } else if (rule === 'avg_whole') {
         var avg = skillScaledScores.reduce(function(a, b) { return a + b; }, 0) / skillScaledScores.length;
         total = Math.round(avg);
       } else {
-        total = 0;
+        total = skillScaledScores.reduce(function(a, b) { return a + b; }, 0);
       }
     }
 
@@ -643,8 +640,6 @@ function goToStep(step) {
     if (totalEl) {
       if (rule === 'avg_half_step') {
         totalEl.textContent = (total / 10).toFixed(1);
-      } else if (rule === 'independent') {
-        totalEl.textContent = 'SEPARATE';
       } else {
         totalEl.textContent = total;
       }
@@ -660,7 +655,6 @@ function goToStep(step) {
   }
 
   function bandForTotal(total) {
-    if (total === 0) return 'INDEPENDENT SKILLS';
     var rows = document.querySelectorAll('.band-row');
     var match = null;
     rows.forEach(function(row) {

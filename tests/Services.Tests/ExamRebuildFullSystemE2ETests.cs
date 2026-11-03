@@ -28,7 +28,7 @@ namespace Services.Tests;
 /// - IELTS (Academic/GT): 0–9.0 band scale with half-step rounding (avg_half_step) and 2:1 Task 2 weighting
 /// - TOEIC Standard CBT: 10–990 scale with sum aggregation
 /// - TOEIC Adaptive CAT: 2-stage unit locking and scoring
-/// - TOEIC S&W: Independent skill scoring (0–200 each)
+/// - TOEIC S&W: two 0–200 skill scales, summed
 /// - VSTEP: 0–10 scale with avg_whole rounding
 /// </summary>
 [Collection(DatabaseCollection.Name)]
@@ -852,7 +852,9 @@ public sealed class ExamRebuildFullSystemE2ETests(DatabaseFixture database)
 
         // 1. Preset Blueprint Rules Check
         var toeicSw = presets.Single(p => p.PresetCode == "toeic_sw");
-        Assert.Equal("independent", toeicSw.ScoreAggregationRule);
+        // #171: this preset used to declare the removed `independent` rule. It now sums like the
+        // seeded TOEIC_SW certificate, whose ScoreScales run 0-200 per skill.
+        Assert.Equal("sum", toeicSw.ScoreAggregationRule);
         Assert.Equal(2, toeicSw.Skills.Count);
 
         var spea = toeicSw.Skills.Single(s => s.Code == "SPEA");
@@ -863,14 +865,14 @@ public sealed class ExamRebuildFullSystemE2ETests(DatabaseFixture database)
         Assert.Equal(NavigationModeDto.HybridGroupLocked, w1.NavigationMode);
         Assert.Equal(2, w1.RequiredKeywordCount);
 
-        // 2. Independent skill scoring rule: composite total score is 0 / independent
+        // 2. The TOEIC S&W shape scores: two 0-200 skill scores sum, exactly as the preset now says.
         var skillScores = new List<AttemptSkillScore>
         {
             new() { ScaledScore = 160 }, // Speaking 0–200
             new() { ScaledScore = 170 }  // Writing 0–200
         };
-        var total = AttemptEngine.AggregateTotalScore("independent", skillScores);
-        Assert.Equal(0, total);
+        var total = AttemptEngine.AggregateTotalScore(toeicSw.ScoreAggregationRule, skillScores);
+        Assert.Equal(330, total);
     }
 
     [Fact]

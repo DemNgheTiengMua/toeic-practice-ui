@@ -60,6 +60,17 @@ INSERT INTO AttemptSkillScores (AttemptId, SkillId, CertId, RawScore, ScaledScor
   (@toeicAttempt, @toeicReading, @toeic, 1, 300);
 UPDATE ExamAttempts SET TotalScore = 500 WHERE AttemptId = @toeicAttempt;
 PRINT 'accepted TOEIC skill-score sum';
+-- #171: `sum` is still checked. The trigger used to carry `AND c.ScoreAggregationRule <>
+-- 'independent'`; with that rule gone the predicate is gone too, so this asserts the sum arm of the
+-- same trigger still fires rather than having been loosened along with it.
+BEGIN TRY
+  UPDATE ExamAttempts SET TotalScore = 499 WHERE AttemptId = @toeicAttempt;
+  THROW 50000, 'EXPECT_REJECT FAILED: a TOEIC total that is not the sum of its skill scores was accepted', 1;
+END TRY
+BEGIN CATCH
+  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
+  PRINT 'rejected a TOEIC total that is not the sum of its skill scores';
+END CATCH
 
 -- The rule is declared, not inherited from DF_Certificates_ScoreAggregationRule ('sum'): this block
 -- asserts half-band averaging, so the certificate must actually carry avg_half_step.

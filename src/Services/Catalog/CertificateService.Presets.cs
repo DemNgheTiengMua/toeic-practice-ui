@@ -226,7 +226,7 @@ public sealed partial class CertificateService
                 PresetCode: "toeic_sw",
                 Name: "TOEIC Speaking & Writing",
                 Description: "Speaking consists of 11 auto-paced questions. Writing operates in hybrid group-locked mode with 5 picture-based sentence questions requiring 2 keywords, 2 written requests, and 1 opinion essay with on-screen cut/paste tools.",
-                ScoreAggregationRule: "independent",
+                ScoreAggregationRule: "sum",
                 Skills:
                 [
                     new SkillBlueprintPresetDto(

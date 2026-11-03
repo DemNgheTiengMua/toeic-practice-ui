@@ -44,6 +44,15 @@ public sealed partial class AttemptEngine
         }
     }
 
+    /// <summary>
+    /// The one aggregation rule, for a winner-takes-nothing set of three. <paramref name="scoreAggregationRule"/>
+    /// is a certificate column bounded by <c>CK_Certificates_ScoreAggregationRule</c>; a value outside
+    /// that set means the database predates the constraint or was edited around it, and is a
+    /// configuration error rather than a fourth behaviour to guess at. #171 removed the
+    /// <c>independent</c> rule, which returned a total of 0 for every attempt while the trigger that
+    /// checks a total against its skills exempted it: a certificate could be authored whose learners
+    /// could never be scored, and nothing reported it.
+    /// </summary>
     public static int AggregateTotalScore(
         string? scoreAggregationRule,
         IReadOnlyCollection<AttemptSkillScore> skillScores)
@@ -51,12 +60,15 @@ public sealed partial class AttemptEngine
         if (skillScores.Count == 0) return 0;
 
         var average = skillScores.Average(score => (double)score.ScaledScore);
-        return scoreAggregationRule?.ToLowerInvariant() switch
+        return scoreAggregationRule?.Trim().ToLowerInvariant() switch
         {
+            null or "" or "sum" => skillScores.Sum(score => score.ScaledScore),
             "avg_half_step" => RoundHalfStep(average),
             "avg_whole" => (int)Math.Round(average, MidpointRounding.AwayFromZero),
-            "independent" => 0,
-            _ => skillScores.Sum(score => score.ScaledScore)
+            // Never a silent zero and never a silent sum: the certificate has to be fixed.
+            _ => throw new ScoreConversionException(
+                ScoreConversionException.AggregationRuleUnknown,
+                $"Certificate aggregation rule '{scoreAggregationRule}' is not one of sum, avg_half_step or avg_whole, so this attempt has no defensible total score."),
         };
     }
 

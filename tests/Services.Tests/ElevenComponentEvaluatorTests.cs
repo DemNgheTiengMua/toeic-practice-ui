@@ -236,8 +236,30 @@ public sealed class ElevenComponentEvaluatorTests
         // avg_whole: average = 62.5 -> 63
         Assert.Equal(63, AttemptEngine.AggregateTotalScore("avg_whole", scores));
 
-        // independent: 0
-        Assert.Equal(0, AttemptEngine.AggregateTotalScore("independent", scores));
+        // #171: `independent` is gone. It returned 0 for every attempt while the trigger that
+        // checks a total against its skills exempted it, so a certificate could be authored whose
+        // learners could never be scored. A stored value that predates the CHECK must fail loudly
+        // rather than be scored as zero: 0 is a real score, and a learner cannot tell them apart.
+        var removed = Assert.Throws<ScoreConversionException>(
+            () => AttemptEngine.AggregateTotalScore("independent", scores));
+        Assert.Equal(ScoreConversionException.AggregationRuleUnknown, removed.Code);
+        Assert.Contains("independent", removed.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void An_unknown_aggregation_rule_throws_instead_of_falling_back_to_a_sum()
+    {
+        // Before #171 the switch's default arm was "sum", so any unrecognised value silently scored
+        // as a sum. Naming the three rules explicitly means a fourth value can only be a bug.
+        var scores = new List<AttemptSkillScore> { new() { SkillId = 1, ScaledScore = 60 } };
+
+        var unknown = Assert.Throws<ScoreConversionException>(
+            () => AttemptEngine.AggregateTotalScore("weighted_geometric", scores));
+        Assert.Equal(ScoreConversionException.AggregationRuleUnknown, unknown.Code);
+
+        // An absent rule is still the schema default, which is `sum`.
+        Assert.Equal(60, AttemptEngine.AggregateTotalScore(null, scores));
+        Assert.Equal(60, AttemptEngine.AggregateTotalScore("", scores));
     }
 
     [Fact]

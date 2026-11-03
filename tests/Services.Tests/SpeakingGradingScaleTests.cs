@@ -244,7 +244,10 @@ public sealed class SpeakingGradingScaleTests(DatabaseFixture database)
             ("HALF", "avg_half_step", null, [("B1", 30, 50), ("B2", 55, 65), ("C1", 70, 80), ("C2", 85, 90)], 80, 90, 10,
                 "90% of 0-9 expressed in tenths, snapped to 0.5"),
             // The TOEIC_SW shape: 50 is where that scale genuinely starts, and 90% of it is 190.
-            ("SW", "independent", (50, 200, 10), [("SW_B1", 160, 250), ("SW_B2", 260, 400)], 190, 200, 1,
+            // #171: this certificate used to declare the removed `independent` rule; the scale, the
+            // bands and the reported score are the same under `sum` because a skill-practice attempt
+            // scores one skill and never carries a certificate total.
+            ("SW", "sum", (50, 200, 10), [("SW_B1", 160, 250), ("SW_B2", 260, 400)], 190, 200, 1,
                 "90% across a configured 50-200 scale, snapped to 10")
         };
 

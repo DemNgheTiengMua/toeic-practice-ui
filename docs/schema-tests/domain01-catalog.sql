@@ -36,3 +36,20 @@ END TRY BEGIN CATCH
   IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
   PRINT 'rejected bad modality as expected';
 END CATCH
+-- #171: the aggregation rule set is the three rules that produce a total. `independent` was
+-- removed because it produced TotalScore = 0 for every attempt and the total-vs-skills trigger
+-- skipped checking it, so a certificate could be created whose learners never score.
+BEGIN TRY
+  INSERT INTO Certificates (Code, Name, ScoreAggregationRule) VALUES ('INDEP', N'Independent', 'independent');
+  THROW 50000,'EXPECT_REJECT FAILED: the removed independent aggregation rule was accepted',1;
+END TRY BEGIN CATCH
+  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
+  PRINT 'rejected the removed independent aggregation rule as expected';
+END CATCH
+-- accept: exactly the three rules that remain, so the rejection above cannot be a constraint that
+-- rejects everything.
+INSERT INTO Certificates (Code, Name, ScoreAggregationRule) VALUES
+  ('RULE_SUM', N'Sum', 'sum'),
+  ('RULE_HALF', N'Half band', 'avg_half_step'),
+  ('RULE_WHOLE', N'Whole number', 'avg_whole');
+PRINT 'accepted sum, avg_half_step and avg_whole';

@@ -121,31 +121,18 @@ public sealed class SchemaAndSixAxisModelTests(DatabaseFixture database)
             });
             Assert.Equal(50011, ex.Number);
 
-            // Test independent aggregation rule: TotalScore can be anything or NULL without error
-            await RunSqlAsync(connectionString, """
-                DECLARE @userId INT = (SELECT TOP 1 UserId FROM Users);
-                INSERT INTO Certificates (Code, Name, ScoreAggregationRule)
-                VALUES ('INDEP_CERT', N'Independent Cert', 'independent');
-                DECLARE @certIndep INT = SCOPE_IDENTITY();
-
-                INSERT INTO Skills (CertId, Code, Name, Modality, DisplayOrder) VALUES
-                  (@certIndep, 'S1', N'Skill 1', 'speaking', 1);
-                DECLARE @skillIndep INT = SCOPE_IDENTITY();
-
-                INSERT INTO Sections (SkillId, CertId, Modality, Code, Name, ExpectedQuestionCount, DisplayOrder) VALUES
-                  (@skillIndep, @certIndep, 'speaking', 'SEC1', N'Section 1', 1, 1);
-
-                INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose)
-                VALUES (@certIndep, N'Indep Exam', 'published', 20, 'mock');
-                DECLARE @examIndep INT = SCOPE_IDENTITY();
-
-                INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, ExpiresAt, TotalScore)
-                VALUES (@userId, @examIndep, @certIndep, 'in_progress', DATEADD(hour, 1, SYSDATETIMEOFFSET()), 999);
-                DECLARE @attemptIndep INT = SCOPE_IDENTITY();
-
-                INSERT INTO AttemptSkillScores (AttemptId, SkillId, CertId, RawScore, ScaledScore)
-                VALUES (@attemptIndep, @skillIndep, @certIndep, 10, 50);
-                """);
+            // #171: `independent` was removed from CK_Certificates_ScoreAggregationRule. It returned
+            // a total of 0 for every attempt and the trigger that checks a total against its skills
+            // exempted it, so a certificate could be created whose learners could never score.
+            // The value is now unstorable, which is what makes that state unrepresentable.
+            var independent = await Assert.ThrowsAsync<SqlException>(async () =>
+            {
+                await RunSqlAsync(connectionString, """
+                    INSERT INTO Certificates (Code, Name, ScoreAggregationRule)
+                    VALUES ('INDEP_CERT', N'Independent Cert', 'independent');
+                    """);
+            });
+            Assert.Contains("CK_Certificates_ScoreAggregationRule", independent.Message, StringComparison.Ordinal);
         }
         finally
         {

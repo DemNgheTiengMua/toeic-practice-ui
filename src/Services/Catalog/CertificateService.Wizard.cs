@@ -26,8 +26,8 @@ public sealed partial class CertificateService
             ? "sum"
             : request.ScoreAggregationRule.Trim().ToLowerInvariant();
 
-        if (scoreRule is not ("sum" or "avg_half_step" or "avg_whole" or "independent"))
-            throw new ArgumentException($"Invalid ScoreAggregationRule '{request.ScoreAggregationRule}'. Must be sum, avg_half_step, avg_whole, or independent.", nameof(request));
+        if (scoreRule is not ("sum" or "avg_half_step" or "avg_whole"))
+            throw new ArgumentException($"Invalid ScoreAggregationRule '{request.ScoreAggregationRule}'. Must be sum, avg_half_step, or avg_whole.", nameof(request));
 
         if (request.Skills is null || request.Skills.Count == 0)
             throw new ArgumentException("Certificate must define at least one skill.", nameof(request));
