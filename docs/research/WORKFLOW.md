@@ -9,17 +9,20 @@ phải cho agent ngoài.
 
 ## Bước 0 — Lưu 6 file, chưa mở
 
-```
-docs/research/srs/content-srs.md
-docs/research/srs/placement-srs.md
-docs/research/srs/path-srs.md
-docs/research/srs/ui-srs.md
-docs/research/srs/admin-srs.md
-docs/research/srs/transition-srs.md
-```
+Sáu SRS đã nằm trong `docs/research/output/`:
+
+| File | Là gì |
+|---|---|
+| `1.md` | Content blueprint |
+| `2.md` | Placement |
+| `3.md` | Learning path |
+| `4.md` | Learner interface |
+| `5.md` | Admin & authoring |
+| `6.md` | Transition |
 
 **Giữ nguyên văn.** Không sửa, không tóm tắt, không format lại. Đây là bản gốc để đối chiếu khi hai SRS
-mâu thuẫn — và để biết agent nói gì so với bạn nhớ là nó nói gì.
+mâu thuẫn — và để biết agent nói gì so với bạn nhớ là nó nói gì. Một lần sửa file đã làm mất `6.md`
+trước khi nó được commit; đừng lặp lại.
 
 ---
 
@@ -28,7 +31,7 @@ mâu thuẫn — và để biết agent nói gì so với bạn nhớ là nó n�
 Mở session mới, paste:
 
 ```
-Đọc 6 file trong docs/research/srs/ và docs/research/README.md.
+Đọc 6 file trong docs/research/output/ và docs/research/README.md.
 
 Chưa viết spec, chưa cắt ticket. Chỉ làm ba việc:
 
@@ -73,7 +76,8 @@ content ở đợt 1 trong khi placement còn đang nghiên cứu.
 Với mỗi đợt:
 
 ```
-Đọc docs/research/srs/<tên>-srs.md và AGENTS.md.
+Đọc docs/research/output/<số>.md cho vùng đó (1=content, 2=placement, 3=path,
+4=ui, 5=admin, 6=transition) và AGENTS.md.
 
 Ra spec cho <vùng> theo to-spec. Spec phải tính đến:
 - repo dùng database-first EF, schema ở docs/database-schema.sql
