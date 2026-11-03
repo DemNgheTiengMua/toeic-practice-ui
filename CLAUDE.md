@@ -76,7 +76,7 @@ check, then write.
 
 ## Knowledge Graph (graphify)
 
-Before debugging, tracing dependencies, or implementing new features across layers, query the persistent codebase knowledge graph in `graphify-out/`:
+Before debugging, tracing dependencies, or implementing new features across layers, query the codebase knowledge graph in `graphify-out/`. It is a local cache over this source tree and is **not tracked**; a fresh clone must build it once with `python -m graphify update .` (AST-only, no API cost):
 - **Query concepts & data flow**: `graphify query "<question>"` (or NetworkX traversal over `graphify-out/graph.json`)
 - **Trace relationship between components**: `graphify path "<SourceNode>" "<TargetNode>"`
 - **Explain specific abstractions**: `graphify explain "<NodeId>"`
@@ -85,7 +85,7 @@ Before debugging, tracing dependencies, or implementing new features across laye
 
 ## graphify
 
-This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships. It is ignored by git and rebuilt locally with `python -m graphify update .`; it does not arrive with a clone.
 
 Rules:
 - For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.

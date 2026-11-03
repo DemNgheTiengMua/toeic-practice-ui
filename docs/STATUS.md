@@ -142,3 +142,6 @@ Kiểm tra graph có khớp code không:
 python -c "import json;print(json.load(open('graphify-out/graph.json'))['built_at_commit'])"
 git rev-parse HEAD
 ```
+
+`graphify-out/` bị gitignore toàn phần: graph là cache cục bộ, clone mới không có sẵn.
+Sau khi clone, chạy `python -m graphify update .` một lần trước khi dùng.
