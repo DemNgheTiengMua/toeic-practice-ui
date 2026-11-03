@@ -17,10 +17,17 @@ public abstract class PlaywrightTestBase : PageTest
     public async Task BaseSetupAsync()
     {
         var configuredUrl = Environment.GetEnvironmentVariable("E2E_BASE_URL");
-        if (!string.IsNullOrWhiteSpace(configuredUrl))
+        if (string.IsNullOrWhiteSpace(configuredUrl))
         {
-            BaseUrl = configuredUrl.TrimEnd('/');
+            // #169: a bare "51 skipped" on a laptop reads exactly like "51 passed". Name the missing
+            // variable so the reason is in the summary line, not only in the test's own output.
+            Assert.Ignore(
+                "E2E_BASE_URL is not set, so there is no running app to drive. These journeys test the "
+                + "product through a browser: start both apps (scripts/seed-manual-test.sh fresh) and set "
+                + "E2E_BASE_URL=http://localhost:5000 to run them.");
         }
+
+        BaseUrl = configuredUrl.TrimEnd('/');
 
         using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
         try
@@ -29,7 +36,9 @@ public abstract class PlaywrightTestBase : PageTest
         }
         catch (Exception ex)
         {
-            Assert.Ignore($"E2E server not reachable at {BaseUrl} ({ex.Message}). Start server to run E2E tests.");
+            Assert.Ignore(
+                $"E2E_BASE_URL is '{BaseUrl}' but no app answered there ({ex.Message}). Start both apps "
+                + "(scripts/seed-manual-test.sh fresh) or point E2E_BASE_URL at the running WebMVC.");
         }
 
         await Page.SetViewportSizeAsync(1440, 900);

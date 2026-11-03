@@ -595,6 +595,11 @@ public class ExamAudioAndInstructionsTests : PlaywrightTestBase
     }
 
 
+    /// <summary>
+    /// #169: a finished practice session shows the study audio player on its summary. The session is
+    /// started the way the product starts it now (#155): one Smart Practice button per section, no
+    /// question-count selector. The audio assertions are unchanged - the player is still the point.
+    /// </summary>
     [Test]
     public async Task Should_Render_Study_Audio_In_Practice_Summary()
     {
@@ -602,9 +607,17 @@ public class ExamAudioAndInstructionsTests : PlaywrightTestBase
         await _loginPage.LoginAsync("learner.fresh@demo.local", "Demo1234!");
         await Page.GotoAsync($"{BaseUrl}/practice");
 
-        await Page.Locator("#pr-count").SelectOptionAsync("10");
-        var firstListeningSection = Page.Locator("form#practice-form section").First
-            .Locator("button[name='SectionId']").First;
+        // #155: Smart Practice fixes the session at ten questions; the learner chooses a section and
+        // nothing else. A Listening section is the one with per-question audio, which the summary
+        // renders as a study player.
+        var practiceForm = Page.Locator("form#practice-form");
+        await Expect(practiceForm).ToBeVisibleAsync();
+        await Expect(practiceForm).ToContainTextAsync("Smart Practice");
+        await Expect(Page.Locator("#pr-count")).ToHaveCountAsync(0,
+            new() { Timeout = 2000 });
+
+        var listeningGroup = practiceForm.Locator("section").Filter(new() { Has = Page.Locator("h2:has-text('Listening')") }).First;
+        var firstListeningSection = listeningGroup.Locator("button[name='SectionId']").First;
         await Expect(firstListeningSection).ToBeVisibleAsync();
         await firstListeningSection.ClickAsync();
         await Expect(Page).ToHaveURLAsync(new Regex(@"/practice/\d+", RegexOptions.IgnoreCase));
