@@ -1,8 +1,13 @@
 # Research brief: rebuild Placement and Practice, all four skills
 
-> **Self-contained.** Everything an external agent needs is in this one file: the product description,
-> the measured state of the current system, the settled constraints, and the four data tables the
-> numbers come from (section 7). No repository access is required or assumed.
+> **SUPERSEDED for placement, 2026-11-03.** The placement half of this brief is replaced by
+> placement-rebuild-brief.md, which carries the decisions taken since (CEFR as the scoring axis, two-stage
+> adaptive, per-skill results, engine reuse). This brief remains the reference for the **practice** half,
+> and its measurement of the content model is still the evidence for why both halves are being rebuilt.
+>
+> **Self-contained for practice.** Everything an external agent needs is in this one file: the product
+> description, the measured state, the settled constraints, and the four data tables the numbers come
+> from (section 7). No repository access is required or assumed.
 
 **For an external deep-research agent with no access to this repository.** Everything you need to know
 about the current system is in this document; you cannot read the code, so treat the numbers and the
