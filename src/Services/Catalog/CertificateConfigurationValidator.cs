@@ -123,8 +123,7 @@ public static class CertificateConfigurationValidator
 
     /// <summary>
     /// The range a total can actually land in, given the aggregation rule. <c>sum</c> adds the skill
-    /// scores; the average rules keep the skill range; <c>independent</c> never produces a total and
-    /// is validated against the skill range so a certificate can still be saved.
+    /// scores; the average rules keep the skill range.
     /// </summary>
     private static (int Min, int Max) TotalRange(
         string? aggregationRule, int skillMin, int skillMax, int skillCount)

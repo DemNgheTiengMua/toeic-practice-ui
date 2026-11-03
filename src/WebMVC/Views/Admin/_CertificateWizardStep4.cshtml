@@ -24,16 +24,11 @@
               <option value="sum" selected="@(Model.Form.ScoreAggregationRule == "sum")">Sum of skill scores</option>
               <option value="avg_half_step" selected="@(Model.Form.ScoreAggregationRule == "avg_half_step")">Average rounded to the nearest 0.5</option>
               <option value="avg_whole" selected="@(Model.Form.ScoreAggregationRule == "avg_whole")">Average rounded to the nearest whole number</option>
-              <option value="independent" selected="@(Model.Form.ScoreAggregationRule == "independent")">Report each skill independently</option>
             </select>
             <div id="step4ScoreRuleHelp" style="font-size: 0.8rem; margin-top: 0.5rem; color: var(--color-ink, #14181d); font-family: var(--font-mono, monospace);">
               @if (Model.Form.ScoreAggregationRule == "avg_half_step")
               {
                 <span>Official rounding: decimal &lt; 0.25 ➔ .0; &gt;= 0.25 &amp; &lt; 0.75 ➔ .5; &gt;= 0.75 ➔ next whole band.</span>
-              }
-              else if (Model.Form.ScoreAggregationRule == "sum")
-              {
-                <span>Sum rule: all skill scaled scores add up directly (e.g. Listening + Reading).</span>
               }
               else if (Model.Form.ScoreAggregationRule == "avg_whole")
               {
@@ -41,7 +36,7 @@
               }
               else
               {
-                <span>Independent rule: each skill is evaluated and displayed separately.</span>
+                <span>Sum rule: all skill scaled scores add up directly (e.g. Listening + Reading).</span>
               }
             </div>
           </div>

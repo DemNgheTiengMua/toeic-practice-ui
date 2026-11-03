@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.IO;
 using Contracts;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
@@ -67,7 +68,7 @@ public sealed class AdminCertificatesControllerTests
                     new("REC", "Recordings", 1, 1.0m, NavigationModeDto.AudioDriven, "{\"timerMode\":\"AUDIO_PLUS_CHECK\"}", LayoutTypeDto.SplitHorizontal, 4, 1, 1, false, false, true, false, 0, 40, null, "{\"highlighter\":true}")
                 ])
             ]),
-            new("toeic_sw", "TOEIC Speaking & Writing", "TOEIC SW preset", "independent",
+            new("toeic_sw", "TOEIC Speaking & Writing", "TOEIC SW preset", "sum",
             [
                 new("SPEA", "Speaking", ModalityDto.Speaking, 1, 20,
                 [
@@ -335,7 +336,7 @@ public sealed class AdminCertificatesControllerTests
         var vm = Assert.IsType<CertificateWizardPageViewModel>(viewResult.Model).Form;
         Assert.Equal("TOEIC_SW", vm.Code);
         Assert.Equal("toeic_sw", vm.PresetCode);
-        Assert.Equal("independent", vm.ScoreAggregationRule);
+        Assert.Equal("sum", vm.ScoreAggregationRule);
         Assert.Single(vm.Skills);
         Assert.Equal("SPEA", vm.Skills[0].Code);
     }
@@ -485,6 +486,52 @@ public sealed class AdminCertificatesControllerTests
                 65,
                 "BAND_6.5",
                 "Competent User Plus"));
+    }
+
+    /// <summary>
+    /// #171: the wizard offers only the rules that produce a total. `independent` was reachable here,
+    /// so an administrator could create a certificate whose learners always scored zero. The rule
+    /// list lives in two selects (step 1 and step 4) plus a JS help branch; this asserts the rendered
+    /// markup, so a value added back to either select fails the test.
+    /// </summary>
+    [Fact]
+    public void Wizard_Offers_Only_The_Three_Aggregation_Rules_That_Produce_A_Total()
+    {
+        var repoRoot = TestPathHelper.FindRepoRoot();
+        var viewsDir = Path.Combine(repoRoot, "src", "WebMVC", "Views", "Admin");
+
+        foreach (var view in new[] { "_CertificateWizardStep1.cshtml", "_CertificateWizardStep4.cshtml" })
+        {
+            var html = File.ReadAllText(Path.Combine(viewsDir, view));
+
+            // The three surviving values are each still offered...
+            foreach (var rule in new[] { "sum", "avg_half_step", "avg_whole" })
+            {
+                Assert.Contains($"value=\"{rule}\"", html, StringComparison.Ordinal);
+            }
+
+            // ...and the removed one is not an option, a help branch, or a label.
+            Assert.DoesNotContain("independent", html, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotMatch(@"value=""independent""", html);
+        }
+
+        // The preview calculator's live switch had a fourth arm that printed "SEPARATE" and a band
+        // fallback that printed "INDEPENDENT SKILLS"; both would be unreachable now, so they are gone.
+        var js = File.ReadAllText(Path.Combine(repoRoot, "src", "WebMVC", "wwwroot", "js", "admin", "certificate-wizard.js"));
+        Assert.DoesNotContain("independent", js, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("SEPARATE", js, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Wizard_Save_Rejects_The_Removed_Independent_Rule_By_Name()
+    {
+        // The wizard's own allowlist is the second line of defence: even a hand-posted form cannot
+        // store the value, and the refusal names the three rules that work.
+        var source = File.ReadAllText(Path.Combine(
+            TestPathHelper.FindRepoRoot(), "src", "Services", "Catalog", "CertificateService.Wizard.cs"));
+
+        Assert.DoesNotContain("or \"independent\"", source, StringComparison.Ordinal);
+        Assert.Contains("\"avg_whole\"", source, StringComparison.Ordinal);
     }
 
     [Fact]

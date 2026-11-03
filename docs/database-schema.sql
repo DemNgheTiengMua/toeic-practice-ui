@@ -11,8 +11,11 @@ CREATE TABLE Certificates (
   Name                 NVARCHAR(120) NOT NULL,
   Description          NVARCHAR(500) NULL,
   IsActive             BIT NOT NULL DEFAULT 1,
+  -- #171: three rules, each of which produces a total. `independent` was removed: it returned a
+  -- total of 0 for every attempt and the trigger that checks a total against its skills exempted it,
+  -- so a certificate could be authored whose learners could never receive a score.
   ScoreAggregationRule NVARCHAR(30) NOT NULL CONSTRAINT DF_Certificates_ScoreAggregationRule DEFAULT 'sum'
-    CONSTRAINT CK_Certificates_ScoreAggregationRule CHECK (ScoreAggregationRule IN ('sum', 'avg_half_step', 'avg_whole', 'independent')),
+    CONSTRAINT CK_Certificates_ScoreAggregationRule CHECK (ScoreAggregationRule IN ('sum', 'avg_half_step', 'avg_whole')),
   PresetCode           NVARCHAR(50) NULL,
   -- #161: the noun this certificate puts in front of a section code ("Part 3" on TOEIC, "Section 3" on
   -- anything else). A label, so it is data - the views used to switch on the certificate's code. The
@@ -725,7 +728,6 @@ BEGIN
     ) scores
     WHERE a.TotalScore IS NOT NULL
       AND a.AttemptId IN (SELECT AttemptId FROM inserted UNION SELECT AttemptId FROM deleted)
-      AND c.ScoreAggregationRule <> 'independent'
       AND a.TotalScore <> CASE c.ScoreAggregationRule
         WHEN 'avg_half_step' THEN CONVERT(INT, FLOOR((COALESCE(scores.AverageScore, 0) + 2.5) / 5.0) * 5)
         WHEN 'avg_whole' THEN CONVERT(INT, ROUND(COALESCE(scores.AverageScore, 0), 0))
@@ -753,7 +755,6 @@ BEGIN
     ) scores
     WHERE i.TotalScore IS NOT NULL
       AND EXISTS (SELECT 1 FROM AttemptSkillScores s WHERE s.AttemptId=i.AttemptId)
-      AND c.ScoreAggregationRule <> 'independent'
       AND i.TotalScore <> CASE c.ScoreAggregationRule
         WHEN 'avg_half_step' THEN CONVERT(INT, FLOOR((COALESCE(scores.AverageScore, 0) + 2.5) / 5.0) * 5)
         WHEN 'avg_whole' THEN CONVERT(INT, ROUND(COALESCE(scores.AverageScore, 0), 0))
