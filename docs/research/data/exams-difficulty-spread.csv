@@ -1,0 +1,19 @@
+﻿ExamId,Certificate,Purpose,Name,DurationMinutes,Declares,Has,D1,D2,D3,D4,D5
+------,-----------,-------,----,---------------,--------,---,--,--,--,--,--
+1,TOEIC,mock,ETS 2024 - Test 1,120,200,9,0,6,3,0,0
+2,TOEIC,placement,TOEIC Placement Test - Diagnostic,45,24,24,4,11,9,0,0
+3,TOEIC,speaking_practice,ETS TOEIC Speaking Practice Exam 1,20,3,3,0,2,1,0,0
+4,TOEIC,writing_practice,ETS TOEIC Writing Practice Test 1,60,2,2,0,1,0,1,0
+5,IELTS,mock,Cambridge IELTS 18 - Academic Test 1,170,40,2,0,1,1,0,0
+6,IELTS,placement,IELTS-DIAG-01,60,10,10,0,2,8,0,0
+7,IELTS,speaking_practice,Cambridge IELTS 18 - Speaking Practice Test 1,15,2,2,0,1,0,1,0
+8,IELTS,writing_practice,Cambridge IELTS 18 - Writing Practice Test 1,60,2,2,0,0,1,1,0
+9,VSTEP,mock,VSTEP Sample Test 1,180,75,2,0,2,0,0,0
+10,VSTEP,placement,VSTEP-DIAG-01,45,10,10,0,2,8,0,0
+11,VSTEP,speaking_practice,VSTEP Speaking Practice Test 1,15,2,2,0,1,1,0,0
+12,VSTEP,writing_practice,VSTEP Writing Practice Test 1,60,2,2,0,0,1,1,0
+13,TOEIC,placement,Diagnostic Benchmark 45M,45,32,32,0,28,3,1,0
+14,IELTS,writing_practice,IELTS-DIAG-01 Writing Extension,60,2,2,0,0,1,1,0
+15,VSTEP,writing_practice,VSTEP-DIAG-01 Writing Extension,45,2,2,0,0,1,1,0
+16,TOEIC_CAT,mock,TOEIC CAT Benchmark Test 1,90,11,7,0,3,4,0,0
+17,TOEIC_SW,mock,TOEIC Speaking & Writing Mock Test 1,80,3,3,0,2,1,0,0

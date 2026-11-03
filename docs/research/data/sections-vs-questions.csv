@@ -1,0 +1,35 @@
+﻿Certificate,Skill,Section,SectionName,Declares,Has
+-----------,-----,-------,-----------,--------,---
+IELTS,listening,REC,Four recordings: everyday conversation to academic lecture,40,6
+IELTS,reading,PAS,Three long passages with a mix of question types,40,6
+IELTS,speaking,INT,Interview, cue-card talk and discussion,3,2
+IELTS,writing,T1,Task 1 - describe a chart (150 words),1,2
+IELTS,writing,T2,Task 2 - write an essay (250 words),1,2
+TOEIC,listening,P1,Photographs,6,5
+TOEIC,listening,P2,Question-Response,25,9
+TOEIC,listening,P3,Conversations,39,6
+TOEIC,listening,P4,Talks,30,6
+TOEIC,reading,P5,Incomplete Sentences,30,17
+TOEIC,reading,P6,Text Completion,16,9
+TOEIC,reading,P7,Reading Comprehension,54,11
+TOEIC,speaking,S1,Read a text aloud,2,1
+TOEIC,speaking,S2,Describe a picture,2,1
+TOEIC,speaking,S3,Respond to questions,3,1
+TOEIC,speaking,S4,Respond using information provided,3,0
+TOEIC,speaking,S5,Express an opinion,1,0
+TOEIC,writing,W1,Write a sentence based on a picture,5,1
+TOEIC,writing,W2,Respond to a written request,2,2
+TOEIC,writing,W3,Write an opinion essay,1,1
+TOEIC_CAT,listening,P1_CAT,Photographs (Adaptive),6,0
+TOEIC_CAT,listening,P2_CAT,Question-Response (Adaptive),25,0
+TOEIC_CAT,reading,P5_CAT,Incomplete Sentences (Stage 1 & 2),20,6
+TOEIC_CAT,reading,P7_CAT,Reading Comprehension (Adaptive),25,1
+TOEIC_SW,speaking,SW_S1,Read Aloud,2,1
+TOEIC_SW,speaking,SW_S2,Describe a Picture,2,0
+TOEIC_SW,writing,SW_W1,Write a sentence based on a picture,5,1
+TOEIC_SW,writing,SW_W3,Write an opinion essay,1,1
+VSTEP,listening,L3,Three parts, played once, with conversations and talks,35,6
+VSTEP,reading,R4,Four passages, 40 multiple-choice questions,40,6
+VSTEP,speaking,S3,Social interaction, description and discussion,3,2
+VSTEP,writing,W1,A letter or email,1,2
+VSTEP,writing,W2,An essay,1,2

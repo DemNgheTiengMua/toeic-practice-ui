@@ -25,13 +25,25 @@ Schema-test: **5 fail**, đúng 5 file và đúng message number như trước �
 
 ## 2. Việc tiếp theo
 
-Không còn ticket. Ba việc con người nên quyết, ghi ở `docs/HANDOFF-2026-11-02.md`:
+**Đợt A (epic #168) — làm CI xanh.** Đang thực hiện. Bốn ticket:
+#169 sửa 4 E2E test đỏ (xong, 51/51 pass), #170 đưa schema harness vào CI, #171 xoá luật
+`independent`, #172 dọn thư mục gốc.
 
-1. **5 file schema-test hỏng sẵn** (`domain04, 06, 07, 08, 15`). Đây là lỗi test fixture, không phải
-   lỗi schema — nhưng chúng che mất hồi quy thật trong 5 miền đó. Cần một ticket riêng.
-2. **14 E2E journey fail khi có app chạy**, giống hệt trên parent của mọi ticket trong đợt này.
-   Bộ E2E phụ thuộc trạng thái (cần seed mới + host yên tĩnh), nên nó không phải lưới an toàn đáng tin.
-3. **`PathModuleTopics` chưa nối vào mastery**: bước luyện tập theo lộ trình chọn câu theo `DisplayOrder`
+**Đợt B — xây lại Placement + Practice, cả 4 kỹ năng.** Cần nghiên cứu trước khi code.
+Brief cho agent deep research (không truy cập được code) ở
+`docs/research/placement-practice-rebuild-brief.md`, kèm số liệu thô trong `docs/research/data/`.
+
+Lý do phải xây lại, đo được: 116 câu cho 5 chứng chỉ × 4 kỹ năng; **0 câu ở difficulty 5**;
+đề placement TOEIC 24 câu nhưng không có câu nào trên difficulty 3 nên không phân biệt được B1/B2;
+15 category thì **12 category không có câu nào**; 5 section có **0 câu** trong khi khai 30+; 13 bài học
+**không có cột trình độ**; IELTS mock khai 40 câu nhưng có 2.
+
+**Ba việc con người nên quyết** (ghi ở `docs/HANDOFF-2026-11-02.md`):
+
+1. **E2E đỏ đã xử lý xong ở #169** — 51/51 pass khi chạy đúng `crawl-env.sh`. Ghi chú cũ nói "14 journey
+   fail, hỏng sẵn" là sai: chúng fail vì test trỏ vào DB `ExtraEfficiencyCrawl` trong khi app chạy trên
+   `ExtraEfficiency`. Đó là lỗi môi trường, không phải code.
+2. **`PathModuleTopics` chưa nối vào mastery**: bước luyện tập theo lộ trình chọn câu theo `DisplayOrder`
    (`LearningPathService.Steps.cs`), không qua `SmartPracticePlanner`. Hai bộ chọn câu cùng tồn tại.
 
 `wrong_before`/`unseen` vẫn là giá trị hợp lệ trong `CK_Practice_Source` để row cũ đọc được, nhưng
