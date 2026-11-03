@@ -224,3 +224,31 @@ These are installed and look plausible. They fight this repo.
    endpoint group, and was checked to fail when the `catch` is removed.
 4. **Never `git stash push <file>` in a repo that already holds a stash.** It merged into the old
    entry and left conflict markers in an unrelated file. Commit, or use a worktree.
+
+---
+
+## 9. The rebuild briefs (`docs/research/`)
+
+The placement test, the learning path, the admin tooling and the learner interface are being **deleted
+and rebuilt**, not patched. Six research briefs define that work; each is self-contained and is sent to
+a separate deep-research session that cannot read this repository.
+
+**Start at `docs/research/README.md`.** It carries the six-file map, the send order, a ready prompt per
+session, and the rule for which brief owns a disputed area when two SRS documents disagree.
+
+| Brief | Owns |
+|---|---|
+| `content-brief.md` | Item levels, topics, formats, rubric descriptors, **every volume number** |
+| `placement-brief.md` | How items are used in a sitting, and what a result contains |
+| `path-brief.md` | Plan generation, step lifecycle, practice selection, mastery |
+| `ui-brief.md` | Every learner screen, bound by the design system in §5 |
+| `admin-brief.md` | Staff roles, upload and review, rubric authoring, the publish gate |
+| `transition-brief.md` | What survives, what a band means outside the rebuild, and the order of operations |
+
+Two rules from that work apply to any change here:
+
+- **A band is not a CEFR level.** This product labels TOEIC 785–940 as "B2" internally; it is not CEFR
+  B2. Placement scores on the CEFR axis. Never add a crosswalk without arguing for it.
+- **One writer per fact.** A snapshot derived from an attempt is written by exactly one place. Two
+  writers disagreeing about one row is a confirmed defect here
+  (`docs/research/placement-free-response-defect.md`), not a hypothetical.

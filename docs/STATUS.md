@@ -29,9 +29,21 @@ Schema-test: **5 fail**, đúng 5 file và đúng message number như trước �
 #169 sửa 4 E2E test đỏ (xong, 51/51 pass), #170 đưa schema harness vào CI, #171 xoá luật
 `independent`, #172 dọn thư mục gốc.
 
-**Đợt B — xây lại Placement + Practice, cả 4 kỹ năng.** Cần nghiên cứu trước khi code.
-Brief cho agent deep research (không truy cập được code) ở
-`docs/research/placement-practice-rebuild-brief.md`, kèm số liệu thô trong `docs/research/data/`.
+**Đợt B — xây lại Placement + Path + Admin + UI.** Cần nghiên cứu trước khi code.
+
+**Sáu brief cho agent deep research (không truy cập được code), trong `docs/research/`:**
+
+| File | Session |
+|---|---|
+| `content-brief.md` | Nội dung: level model, topic, format, rubric, bảng số lượng |
+| `placement-brief.md` | Placement: 23 quyết định + dùng lại engine thi |
+| `path-brief.md` | Learning path: 18 quyết định, gồm cả practice |
+| `ui-brief.md` | Giao diện learner: 23 quyết định + design system |
+| `admin-brief.md` | Admin & authoring: role, upload, rubric, publish gate |
+| `transition-brief.md` | Cái gì giữ lại + thứ tự triển khai |
+
+Cửa vào: **`docs/research/README.md`** — có prompt sẵn cho từng session, thứ tự gửi, và bảng phân xử
+khi hai SRS mâu thuẫn. Số liệu thô trong `docs/research/data/`.
 
 Lý do phải xây lại, đo được: 116 câu cho 5 chứng chỉ × 4 kỹ năng; **0 câu ở difficulty 5**;
 đề placement TOEIC 24 câu nhưng không có câu nào trên difficulty 3 nên không phân biệt được B1/B2;

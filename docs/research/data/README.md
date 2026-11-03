@@ -1,6 +1,7 @@
 # Data appendix — the current content model, measured
 
-Every number in `placement-practice-rebuild-brief.md` comes from here. An agent with no repository access
+Every number in the six briefs under `docs/research/` comes from here (the content brief, placement,
+path, ui, admin, transition). An agent with no repository access
 can use these CSV files to check the claims without trusting the prose.
 
 Captured 2026-11-03 from the seeded demo database (`docs/seed-demo.sql` applied to a fresh schema).
@@ -33,4 +34,5 @@ topics out of fifteen.
 ## What these files do *not* contain
 
 They describe shape, not pedagogy. They cannot tell you whether a level-3 TOEIC item is genuinely B1 —
-nothing in the schema records a CEFR mapping, which is precisely the gap the brief asks you to close.
+nothing in the schema records a CEFR mapping, which is precisely the gap the content brief asks you to
+close.
