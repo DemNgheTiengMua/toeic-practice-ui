@@ -1,5 +1,10 @@
 # Audit: is the learning-path brief still complete and consistent?
 
+> **Answered 2026-11-03.** This audit asked whether the path half was ready and found one real
+> conflict. The owner chose to resolve it by specifying **both branches**, so the deliverable is now
+> path-rebuild-brief.md - which asks the agent to state which branch it assumed rather than waiting
+> for the choice. This file is kept as the evidence behind that brief.
+
 Checked against `docs/research/placement-practice-rebuild-brief.md` (written 2026-11-03) and the
 decisions taken since, before writing the placement brief. This is the check that the two do not
 contradict each other.
