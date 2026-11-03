@@ -14,6 +14,12 @@ the **file contents**, never a path — the agent cannot read your filesystem.
 
 ---
 
+## When the SRS documents come back
+
+See **`WORKFLOW.md`** in this directory: save the six files, run the six checks before writing any spec,
+resolve contradictions with the ownership table, then spec → ticket → build one wave at a time, ending with
+one integration ticket that blocks on everything.
+
 ## Order
 
 **1 → (2, 3, 5) → (4, 6)**
