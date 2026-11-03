@@ -1,5 +1,9 @@
 # Research brief: rebuild Placement and Practice, all four skills
 
+> **Self-contained.** Everything an external agent needs is in this one file: the product description,
+> the measured state of the current system, the settled constraints, and the four data tables the
+> numbers come from (section 7). No repository access is required or assumed.
+
 **For an external deep-research agent with no access to this repository.** Everything you need to know
 about the current system is in this document; you cannot read the code, so treat the numbers and the
 described behaviour as your only source of truth about the "as-is" state.
@@ -239,3 +243,122 @@ asking you questions.
 - **Speaking and Writing are the hard half.** Listening and Reading practice is a question bank with
   levels. Speaking and Writing practice is task design, rubric design, and AI reliability. Do not let
   them be an afterthought — the current system barely has them, and the owner wants all four skills.
+
+---
+
+## 7. The measured data
+
+> Start by reading section 2 and section 7 together: the claims are numbered, and the tables are the
+> evidence. Section 4 is what we are asking you to decide. Section 5 is the shape of the answer we
+> need back.
+
+Every number in section 2 comes from these four tables, captured from the seeded demo database on 2026-11-03. They are reproduced in full so the claims can be checked without the repository.
+
+### 7.1 Band tables (the level scales that already exist)
+
+```csv
+Certificate,Band,Name,MinTotal,MaxTotal,CumulativeHours,DisplayOrder
+IELTS,B1,Intermediate (4.0-5.0),40,50,500,1
+IELTS,B2,Upper intermediate (5.5-6.5),55,65,800,2
+IELTS,C1,Advanced (7.0-8.0),70,80,1150,3
+IELTS,C2,Expert (8.5-9.0),85,90,1550,4
+TOEIC,below_A1,Below A1,10,119,0,0
+TOEIC,A1,Beginner,120,220,100,1
+TOEIC,A2,Elementary,225,545,250,2
+TOEIC,B1,Intermediate,550,780,500,3
+TOEIC,B2,Upper intermediate,785,940,800,4
+TOEIC,C1,Advanced,945,990,1150,5
+TOEIC_CAT,CAT_B1,Intermediate,400,695,NULL,1
+TOEIC_CAT,CAT_B2,Professional,700,990,NULL,2
+TOEIC_SW,SW_B1,Basic Working,160,250,NULL,1
+TOEIC_SW,SW_B2,Advanced Working,260,400,NULL,2
+VSTEP,A2,A2 (4.0),40,45,250,1
+VSTEP,B1,B1 (5.5-6.0),50,60,500,2
+VSTEP,B2,B2 (6.5-7.5),65,75,800,3
+VSTEP,C1,C1 (8.5+),80,100,1150,4
+```
+
+### 7.2 Exams: declared vs actual questions, and difficulty spread
+
+D1..D5 are counts of questions at each difficulty level. Note the D5 column.
+
+```csv
+ExamId,Certificate,Purpose,Name,DurationMinutes,Declares,Has,D1,D2,D3,D4,D5
+1,TOEIC,mock,ETS 2024 - Test 1,120,200,9,0,6,3,0,0
+2,TOEIC,placement,TOEIC Placement Test - Diagnostic,45,24,24,4,11,9,0,0
+3,TOEIC,speaking_practice,ETS TOEIC Speaking Practice Exam 1,20,3,3,0,2,1,0,0
+4,TOEIC,writing_practice,ETS TOEIC Writing Practice Test 1,60,2,2,0,1,0,1,0
+5,IELTS,mock,Cambridge IELTS 18 - Academic Test 1,170,40,2,0,1,1,0,0
+6,IELTS,placement,IELTS-DIAG-01,60,10,10,0,2,8,0,0
+7,IELTS,speaking_practice,Cambridge IELTS 18 - Speaking Practice Test 1,15,2,2,0,1,0,1,0
+8,IELTS,writing_practice,Cambridge IELTS 18 - Writing Practice Test 1,60,2,2,0,0,1,1,0
+9,VSTEP,mock,VSTEP Sample Test 1,180,75,2,0,2,0,0,0
+10,VSTEP,placement,VSTEP-DIAG-01,45,10,10,0,2,8,0,0
+11,VSTEP,speaking_practice,VSTEP Speaking Practice Test 1,15,2,2,0,1,1,0,0
+12,VSTEP,writing_practice,VSTEP Writing Practice Test 1,60,2,2,0,0,1,1,0
+13,TOEIC,placement,Diagnostic Benchmark 45M,45,32,32,0,28,3,1,0
+14,IELTS,writing_practice,IELTS-DIAG-01 Writing Extension,60,2,2,0,0,1,1,0
+15,VSTEP,writing_practice,VSTEP-DIAG-01 Writing Extension,45,2,2,0,0,1,1,0
+16,TOEIC_CAT,mock,TOEIC CAT Benchmark Test 1,90,11,7,0,3,4,0,0
+17,TOEIC_SW,mock,TOEIC Speaking & Writing Mock Test 1,80,3,3,0,2,1,0,0
+```
+
+### 7.3 Sections: what each declares vs what it holds
+
+```csv
+Certificate,Skill,Section,SectionName,Declares,Has
+IELTS,listening,REC,Four recordings: everyday conversation to academic lecture,40,6
+IELTS,reading,PAS,Three long passages with a mix of question types,40,6
+IELTS,speaking,INT,Interview, cue-card talk and discussion,3,2
+IELTS,writing,T1,Task 1 - describe a chart (150 words),1,2
+IELTS,writing,T2,Task 2 - write an essay (250 words),1,2
+TOEIC,listening,P1,Photographs,6,5
+TOEIC,listening,P2,Question-Response,25,9
+TOEIC,listening,P3,Conversations,39,6
+TOEIC,listening,P4,Talks,30,6
+TOEIC,reading,P5,Incomplete Sentences,30,17
+TOEIC,reading,P6,Text Completion,16,9
+TOEIC,reading,P7,Reading Comprehension,54,11
+TOEIC,speaking,S1,Read a text aloud,2,1
+TOEIC,speaking,S2,Describe a picture,2,1
+TOEIC,speaking,S3,Respond to questions,3,1
+TOEIC,speaking,S4,Respond using information provided,3,0
+TOEIC,speaking,S5,Express an opinion,1,0
+TOEIC,writing,W1,Write a sentence based on a picture,5,1
+TOEIC,writing,W2,Respond to a written request,2,2
+TOEIC,writing,W3,Write an opinion essay,1,1
+TOEIC_CAT,listening,P1_CAT,Photographs (Adaptive),6,0
+TOEIC_CAT,listening,P2_CAT,Question-Response (Adaptive),25,0
+TOEIC_CAT,reading,P5_CAT,Incomplete Sentences (Stage 1 & 2),20,6
+TOEIC_CAT,reading,P7_CAT,Reading Comprehension (Adaptive),25,1
+TOEIC_SW,speaking,SW_S1,Read Aloud,2,1
+TOEIC_SW,speaking,SW_S2,Describe a Picture,2,0
+TOEIC_SW,writing,SW_W1,Write a sentence based on a picture,5,1
+TOEIC_SW,writing,SW_W3,Write an opinion essay,1,1
+VSTEP,listening,L3,Three parts, played once, with conversations and talks,35,6
+VSTEP,reading,R4,Four passages, 40 multiple-choice questions,40,6
+VSTEP,speaking,S3,Social interaction, description and discussion,3,2
+VSTEP,writing,W1,A letter or email,1,2
+VSTEP,writing,W2,An essay,1,2
+```
+
+### 7.4 Topic categories and how many questions point at each
+
+```csv
+CategoryId,Code,Name,Certificate,Questions
+1,grammar_tense,Verb tense,TOEIC,2
+2,grammar_prep,Preposition,TOEIC,1
+3,grammar_pos,Part of speech,TOEIC,1
+4,grammar_rel,Relative pronoun,TOEIC,0
+5,grammar_conj,Conjunction,TOEIC,0
+6,listening_photo,Photographs,TOEIC,0
+7,listening_detail,Detail & facts,TOEIC,0
+8,reading_vocab,Vocabulary,TOEIC,0
+9,reading_inference,Inference,TOEIC,0
+10,ielts_detail,Factual detail,IELTS,0
+11,ielts_inference,Inference,IELTS,0
+12,ielts_main_idea,Main idea,IELTS,0
+13,vstep_detail,Factual detail,VSTEP,0
+14,vstep_grammar,Grammar & structure,VSTEP,0
+15,vstep_vocab,Vocabulary,VSTEP,0
+```
