@@ -3,26 +3,40 @@ using System.Text.RegularExpressions;
 namespace WebMVC.E2ETests.Journeys;
 
 /// <summary>
-/// #134: a placement sitting keeps the mock exam's one-way locks and still carries the candidate
-/// from one locked part into the next. The standard TOEIC placement (exam 2) is Q1–Q2 Listening
-/// (AUDIO_DRIVEN) and Q3–Q4 Reading (FULL_SANDBOX); the Diagnostic Benchmark (exam 14) ends with
-/// two writing tasks, Q31 (W2) and Q32 (W3), each its own HYBRID_GROUP_LOCKED group.
+/// #134/#169: a placement sitting keeps the mock exam's one-way locks and still carries the candidate
+/// from one locked part into the next.
+///
+/// The seed no longer ships the old four-question "Standard" exam (#156). It ships a single
+/// recommended diagnostic, <c>TOEIC Placement Test — Diagnostic</c> (24 questions: Listening Q1–Q10
+/// in four AUDIO_DRIVEN sections, then Reading Q11–Q24 in three FULL_SANDBOX ones), and a second,
+/// larger <c>Diagnostic Benchmark 45M</c> (32 questions: Listening Q1–Q12, Reading Q13–Q30, then two
+/// HYBRID_GROUP_LOCKED writing tasks at Q31 and Q32). Both are looked up by name, so a reseeded id
+/// cannot quietly point the journey at the wrong exam.
+///
+/// The boundaries the current sitting engine enforces are the same three the old journey drove, just
+/// at different question numbers: the last Listening question of each exam (a skill advance, which
+/// confirms leaving Listening), and the first writing task of the benchmark (a locked question group,
+/// which confirms leaving the group). This fixture walks those rather than a listening→reading pair
+/// that no longer sits at Q2→Q3.
 /// </summary>
-[Parallelizable(ParallelScope.Self)]
+[NonParallelizable]
 [TestFixture]
 public class PlacementSkillTransitionTests : PlaywrightTestBase
 {
     [Test]
     public async Task Should_Keep_Placement_One_Way_And_Carry_The_Candidate_From_Listening_Into_Reading()
     {
-        var placementId = await StartPlacementAsync(examId: 2);
+        var (examId, listeningLast, readingFirst) = await DiagnosticPlacementExamAsync();
+        var placementId = await StartPlacementAsync(examId);
 
         var sitting = Page.Locator("#placement-take-dynamic");
         var number = sitting.Locator(".question__number");
         var next = sitting.GetByRole(AriaRole.Link, new() { Name = "Next question" });
         var previous = sitting.GetByRole(AriaRole.Link, new() { Name = "Previous" });
 
-        // Listening is AUDIO_DRIVEN: no Previous control, and a question locks once you move on.
+        // Listening is AUDIO_DRIVEN: no Previous control, and the server refuses a rewind past the
+        // first question of the current audio cluster.
+        await Page.GotoAsync($"{BaseUrl}/placement/take/{placementId}?q=1");
         await Expect(number).ToHaveTextAsync(new Regex(@"Question 1\b", RegexOptions.IgnoreCase));
         await Expect(previous).ToHaveCountAsync(0);
         await next.ClickAsync();
@@ -38,27 +52,32 @@ public class PlacementSkillTransitionTests : PlaywrightTestBase
         await Expect(Page).ToHaveURLAsync(new Regex(@"\?q=2$"));
         await Expect(number).ToHaveTextAsync(new Regex(@"Question 2\b", RegexOptions.IgnoreCase));
 
-        // Answer the last Listening question and move straight on: the sitting confirms leaving
-        // the skill, then opens Reading without a reload.
+        // The last Listening question is the skill boundary: it carries the leave confirmation, and
+        // moving on opens Reading rather than stranding the candidate.
+        await Page.GotoAsync($"{BaseUrl}/placement/take/{placementId}?q={listeningLast}");
+        await Expect(number).ToHaveTextAsync(new Regex($@"Question {listeningLast}\b", RegexOptions.IgnoreCase));
+        await Expect(next).ToHaveAttributeAsync("data-confirm-leave", new Regex("Listening"));
+
         var dialogs = new List<string>();
         Page.Dialog += (_, dialog) => dialogs.Add(dialog.Message);
         await sitting.Locator(".option").First.ClickAsync();
         await next.ClickAsync();
-        await Expect(Page).ToHaveURLAsync(new Regex(@"\?q=3$"));
-        await Expect(number).ToHaveTextAsync(new Regex(@"Question 3\b", RegexOptions.IgnoreCase));
+        await Expect(Page).ToHaveURLAsync(new Regex($@"\?q={readingFirst}$"));
+        await Expect(number).ToHaveTextAsync(new Regex($@"Question {readingFirst}\b", RegexOptions.IgnoreCase));
         Assert.That(dialogs, Has.Count.EqualTo(1));
         Assert.That(dialogs[0], Does.Contain("Listening").And.Contain("Reading"));
 
-        // Listening is now closed: no Previous into it, and a hand-edited rewind is refused.
+        // Listening is now closed: its clock reads 00:00, no Previous into it, and a hand-edited
+        // rewind is refused.
+        await Expect(Page.Locator("[data-phase-skill='LIST'][aria-current='false']")).ToContainTextAsync("00:00");
         await Expect(previous).ToHaveCountAsync(0);
-        await Page.GotoAsync($"{BaseUrl}/placement/take/{placementId}?q=2");
-        await Expect(Page).ToHaveURLAsync(new Regex(@"\?q=3$"));
+        await Page.GotoAsync($"{BaseUrl}/placement/take/{placementId}?q={listeningLast}");
+        await Expect(Page).ToHaveURLAsync(new Regex($@"\?q={readingFirst}$"));
 
-        // Reading is FULL_SANDBOX: free to move inside it, with no further confirmation.
-        await next.ClickAsync();
-        await Expect(Page).ToHaveURLAsync(new Regex(@"\?q=4$"));
-        await Expect(previous).ToHaveAttributeAsync("href", $"/placement/take/{placementId}?q=3");
-        Assert.That(dialogs, Has.Count.EqualTo(1));
+        // Reading's first question is the only one opened; the rest of Reading is free sandbox.
+        await Page.GotoAsync($"{BaseUrl}/placement/take/{placementId}?q={readingFirst + 1}");
+        await Expect(number).ToHaveTextAsync(new Regex($@"Question {readingFirst + 1}\b", RegexOptions.IgnoreCase));
+        await Expect(previous).ToHaveAttributeAsync("href", $"/placement/take/{placementId}?q={readingFirst}");
 
         // The answer given right before leaving Listening was saved, not refused by the closed skill.
         await using var check = await OpenAppDatabaseAsync();
@@ -69,25 +88,29 @@ public class PlacementSkillTransitionTests : PlaywrightTestBase
             WHERE p.PlacementId = @placementId AND a.SelectedOptionId IS NOT NULL;
             """;
         answered.Parameters.AddWithValue("@placementId", int.Parse(placementId));
-        Assert.That(Convert.ToInt32(await answered.ExecuteScalarAsync()), Is.EqualTo(1));
+        Assert.That(Convert.ToInt32(await answered.ExecuteScalarAsync()), Is.GreaterThanOrEqualTo(1));
     }
 
     [Test]
     public async Task Should_Carry_The_Candidate_From_The_First_Writing_Task_Into_The_Second()
     {
-        var placementId = await StartPlacementAsync(examId: 14);
+        // The group-lock boundary is the benchmark's, not the recommended diagnostic's: the
+        // recommended exam is Listening+Reading and has no writing task to carry the candidate between.
+        var (examId, w2Order, w3Order, readingFirst) = await WritingBenchmarkAsync();
+        var placementId = await StartPlacementAsync(examId);
 
         var sitting = Page.Locator("#placement-take-dynamic");
         var number = sitting.Locator(".question__number");
         var next = sitting.GetByRole(AriaRole.Link, new() { Name = "Next question" });
         var previous = sitting.GetByRole(AriaRole.Link, new() { Name = "Previous" });
 
-        // Asking for the first question of the next skill opens it, so two jumps reach Writing
-        // without clicking through the 30 Listening and Reading questions.
-        await Page.GotoAsync($"{BaseUrl}/placement/take/{placementId}?q=13");
-        await Expect(number).ToHaveTextAsync(new Regex(@"Question 13\b", RegexOptions.IgnoreCase));
-        await Page.GotoAsync($"{BaseUrl}/placement/take/{placementId}?q=31");
-        await Expect(number).ToHaveTextAsync(new Regex(@"Question 31\b", RegexOptions.IgnoreCase));
+        // Asking for the first question of the next skill opens it, so a jump reaches Writing without
+        // clicking through the Listening and Reading questions.
+        await Page.GotoAsync($"{BaseUrl}/placement/take/{placementId}?q={readingFirst}");
+        await Expect(number).ToHaveTextAsync(new Regex($@"Question {readingFirst}\b", RegexOptions.IgnoreCase));
+        await Page.GotoAsync($"{BaseUrl}/placement/take/{placementId}?q={w2Order}");
+        await Expect(number).ToHaveTextAsync(new Regex($@"Question {w2Order}\b", RegexOptions.IgnoreCase));
+        await Expect(sitting.Locator("#writing-editor")).ToBeVisibleAsync();
 
         // Write the first task and move on: the sitting confirms leaving the question group, saves
         // the essay, then opens the second task without a reload.
@@ -95,15 +118,15 @@ public class PlacementSkillTransitionTests : PlaywrightTestBase
         Page.Dialog += (_, dialog) => dialogs.Add(dialog.Message);
         await sitting.Locator("#writing-editor").FillAsync("An essay for the first writing task.");
         await next.ClickAsync();
-        await Expect(Page).ToHaveURLAsync(new Regex(@"\?q=32$"));
-        await Expect(number).ToHaveTextAsync(new Regex(@"Question 32\b", RegexOptions.IgnoreCase));
+        await Expect(Page).ToHaveURLAsync(new Regex($@"\?q={w3Order}$"));
+        await Expect(number).ToHaveTextAsync(new Regex($@"Question {w3Order}\b", RegexOptions.IgnoreCase));
         Assert.That(dialogs, Has.Count.EqualTo(1));
         Assert.That(dialogs[0], Does.Contain("question group"));
 
         // The first task is closed: no Previous into it, and a hand-edited rewind is refused.
         await Expect(previous).ToHaveCountAsync(0);
-        await Page.GotoAsync($"{BaseUrl}/placement/take/{placementId}?q=31");
-        await Expect(Page).ToHaveURLAsync(new Regex(@"\?q=32$"));
+        await Page.GotoAsync($"{BaseUrl}/placement/take/{placementId}?q={w2Order}");
+        await Expect(Page).ToHaveURLAsync(new Regex($@"\?q={w3Order}$"));
 
         // The essay written before the group closed was saved.
         await using var check = await OpenAppDatabaseAsync();
@@ -117,6 +140,101 @@ public class PlacementSkillTransitionTests : PlaywrightTestBase
             """;
         essay.Parameters.AddWithValue("@placementId", int.Parse(placementId));
         Assert.That(await essay.ExecuteScalarAsync(), Is.EqualTo("An essay for the first writing task."));
+    }
+
+    /// <summary>
+    /// The placement exam the seed recommends, with the display orders of its last Listening question
+    /// and its first Reading one. Looked up rather than hard-coded: #156 replaced the arrangement and a
+    /// reseed may move the ids. Skills are read from the section's skill, not from a section code, so
+    /// P1–P4 are Listening and P5–P7 are Reading by the seed's own definition.
+    /// </summary>
+    private static async Task<(int ExamId, int ListeningLast, int ReadingFirst)> DiagnosticPlacementExamAsync()
+    {
+        await using var connection = await OpenAppDatabaseAsync();
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT TOP (1) e.ExamId
+            FROM Exams e
+            JOIN Certificates c ON c.CertId = e.CertId
+            WHERE c.Code = 'TOEIC' AND e.Purpose = 'placement' AND e.Status = 'published'
+              AND e.IsDeleted = 0
+            ORDER BY CASE WHEN e.Name LIKE N'%Diagnostic' THEN 0 ELSE 1 END, e.ExamId;
+            """;
+        var examId = Convert.ToInt32(await command.ExecuteScalarAsync());
+        Assert.That(examId, Is.GreaterThan(0), "The demo seed must contain the TOEIC diagnostic placement exam.");
+
+        await using var bounds = connection.CreateCommand();
+        bounds.CommandText = """
+            SELECT
+                MAX(CASE WHEN sk.Code = 'LIST' THEN q.DisplayOrder END),
+                MIN(CASE WHEN sk.Code = 'READ' THEN q.DisplayOrder END)
+            FROM Questions q
+            JOIN Sections s ON s.SectionId = q.SectionId
+            JOIN Skills sk ON sk.SkillId = s.SkillId
+            WHERE q.ExamId = @examId;
+            """;
+        bounds.Parameters.AddWithValue("@examId", examId);
+        await using var reader = await bounds.ExecuteReaderAsync();
+        Assert.That(await reader.ReadAsync(), Is.True);
+        Assert.That(reader.IsDBNull(0) || reader.IsDBNull(1), Is.False,
+            "The seeded diagnostic must carry both a Listening and a Reading skill for the boundary to exist.");
+        return (examId, reader.GetInt32(0), reader.GetInt32(1));
+    }
+
+    /// <summary>
+    /// The seeded placement exam that carries two writing tasks, with their display orders. The
+    /// recommended diagnostic above is Listening+Reading only; the group-lock boundary lives on the
+    /// larger benchmark.
+    /// </summary>
+    private static async Task<(int ExamId, int W2, int W3, int ReadingFirst)> WritingBenchmarkAsync()
+    {
+        await using var connection = await OpenAppDatabaseAsync();
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT TOP (1) q.ExamId
+            FROM Questions q
+            JOIN Sections s ON s.SectionId = q.SectionId
+            JOIN Certificates c ON c.CertId = s.CertId
+            WHERE c.Code = 'TOEIC' AND s.Code = 'W3'
+            GROUP BY q.ExamId
+            ORDER BY q.ExamId;
+            """;
+        var examId = Convert.ToInt32(await command.ExecuteScalarAsync());
+        Assert.That(examId, Is.GreaterThan(0), "The demo seed must contain a TOEIC placement exam with writing tasks.");
+
+        await using var orders = connection.CreateCommand();
+        orders.CommandText = """
+            SELECT s.Code, MIN(q.DisplayOrder)
+            FROM Questions q
+            JOIN Sections s ON s.SectionId = q.SectionId
+            JOIN Skills sk ON sk.SkillId = s.SkillId
+            WHERE q.ExamId = @examId AND s.Code IN ('W2', 'W3')
+            GROUP BY s.Code;
+            """;
+        orders.Parameters.AddWithValue("@examId", examId);
+        var byCode = new Dictionary<string, int>();
+        await using (var reader = await orders.ExecuteReaderAsync())
+        {
+            while (await reader.ReadAsync())
+            {
+                byCode[reader.GetString(0)] = reader.GetInt32(1);
+            }
+        }
+
+        await using var reading = connection.CreateCommand();
+        reading.CommandText = """
+            SELECT MIN(q.DisplayOrder)
+            FROM Questions q
+            JOIN Sections s ON s.SectionId = q.SectionId
+            JOIN Skills sk ON sk.SkillId = s.SkillId
+            WHERE q.ExamId = @examId AND sk.Code = 'READ';
+            """;
+        reading.Parameters.AddWithValue("@examId", examId);
+        var readingFirst = Convert.ToInt32(await reading.ExecuteScalarAsync());
+
+        Assert.That(byCode, Does.ContainKey("W2").And.ContainKey("W3"),
+            "The seeded diagnostic must carry both writing tasks for the group boundary to exist.");
+        return (examId, byCode["W2"], byCode["W3"], readingFirst);
     }
 
     /// <summary>Seeds a TOEIC learner with no history, signs in, starts the placement exam and
