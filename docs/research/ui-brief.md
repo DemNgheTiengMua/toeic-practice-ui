@@ -138,9 +138,59 @@ system, say so explicitly and argue it — that is a real finding, not a workaro
 
 ---
 
-## 5. What the SRS must answer
+## 5. Decisions already taken
 
-### 5.1 The placement result screen — the hardest screen in the product
+Settled with the owner. The SRS builds on these; it does not relitigate them. Each is a screen-level
+consequence of the placement and path rebuilds, not a preference.
+
+### 5.1 Streaming and AI text
+
+| # | Decision | Reason |
+|---|---|---|
+| U1 | **Token streaming applies to AI insight text only.** Grading output (score, comment, errors, rewrite) is structured JSON and cannot be streamed token-by-token; it reveals progressively once parsed. | Streaming into a half-built object has no meaningful UI. Insight is prose; grading is a record. |
+| U3 | **Streamed text reveals a blinking block cursor in the ink colour, terminal-style.** No chat bubbles, no gradients. | The design system is signage, not a chat product. A solid cursor is the system's own idiom. |
+| U4 | **A broken stream keeps what was already shown**, labelled incomplete, with a retry. It never clears the screen. | Discarding text the learner has already read is worse than showing a partial answer. |
+| U9 | **The cursor disappears when the text finishes**, and a small line records when it was generated. | A learner who practises again must not mistake an old insight for a new one. |
+| U12 | **It is stated that a score is AI-estimated**, as a short label beside the number — not a paragraph repeated everywhere. | The learner sets goals and spends credits on these numbers. Hiding their provenance is dishonest; repeating the explanation is noise. |
+
+### 5.2 Navigation and shell
+
+| # | Decision | Reason |
+|---|---|---|
+| U7 | **Six sidebar items: Path, Exams, Practice, Writing, Speaking, and Home.** | Writing and Speaking were split out deliberately because learners could not find them; merging them back would repeat that fault. Path is a new concept and needs its own door to exist in a learner's head. |
+| U23 | **Certificate switching moves from the topbar dropdown into profile settings.** | Changing certificate changes the path, the placement and the practice pool. A one-click switch invites an accidental change that looks like data loss. |
+
+### 5.3 Placement
+
+| # | Decision | Reason |
+|---|---|---|
+| U8 | **Placement is two screens**: the objective half, then the productive half. Partial results appear between them. | Matches progressive results (placement D5). One long page has no natural point to show the objective result; a page per section makes a long sitting feel longer. |
+| U11 | **An unmeasured skill shows a gold-bordered panel**, the words "Chưa đo được", a short reason, and a retry control. Never a low band. | Grey reads as the learner's fault; showing the bottom band is a fabricated number. Gold is attention, not refusal — the system failed, it did not reject. |
+| U13 | **With no placement, the dashboard is one block with one action** and a sentence saying what placement is and how long it takes. No ghost blocks, no "—". | A new learner seeing a grid of empty figures reads a broken product. This is the only moment they have no reason to trust it. |
+| U14 | **An abandoned placement keeps its progress for 24 hours**, then is discarded with an explanation on return. **Abandoning does not trigger the 24-hour retake cooldown.** | A 60-minute four-skill sitting loses too much to a closed tab; keeping it forever leaves a meaningless half-sitting. Abandonment already costs the learner the attempt — charging the cooldown too punishes one mishap twice. |
+
+### 5.4 Path and practice
+
+| # | Decision | Reason |
+|---|---|---|
+| U18 | **An item's CEFR level is not shown while the learner is answering.** | Showing it invites avoiding hard items, which corrupts the measurement: a learner who skips B2 items is measured as A2. The level may be revealed after answering, once it cannot affect behaviour. |
+| U19 | **A resting topic is shown, dimmed, with the local time it reopens** — e.g. "nghỉ tới 09:00 mai". | Hiding it makes the topic look deleted; revealing it only on click is a dead end. The time must be the learner's local time, not UTC. |
+| U20 | **A repeated step carries a "ôn lại" label and the numbers**: what was scored last time and what is needed. Provisional threshold: accuracy improves by ≥10 points, or reaches ≥70%. | "Repeat" without a target reads as punishment. The threshold is marked provisional because no evidence supports it yet. |
+| U16 | **Offline outside a sitting shows a banner only** — no answer buffering. | A lost practice answer is not a lost 120-minute sitting. But the current silence (press submit, nothing happens) is the worst possible state. |
+
+### 5.5 Results and dashboard
+
+| # | Decision | Reason |
+|---|---|---|
+| U5 | **The dashboard stays at three blocks.** This is stated as a constraint, not an open question: the new data must fit inside hero / goal standing / skill cards. | The dashboard went from eleven blocks to three because eleven hid the one action that mattered. A rebuild that grows it back is a regression regardless of what the blocks contain. |
+| U21 | **The mock-exam result page keeps its shape; only the band presentation changes** to the CEFR vocabulary. | A mock exam is a different measurement — one paper, one scaled score — from a placement. Merging the two screens would leave the learner unable to tell which number is "my level". |
+| U22 | **The exam date is shown as a date normally, and switches to a countdown in gold when 14 days or fewer remain.** | A perpetual countdown is noise on a twelve-month goal ("365 days left") and pressure with no use. Inside two weeks the pressure is real and actionable. |
+
+---
+
+## 6. What the SRS must answer
+
+### 6.1 The placement result screen — the hardest screen in the product
 
 1. **How do you show four CEFR levels plus an overall without it reading as four unrelated numbers?**
    The learner's question is "how good am I", and the truthful answer is "different in different
@@ -154,67 +204,59 @@ system, say so explicitly and argue it — that is a real finding, not a workaro
 5. **What is the call to action** at the end of placement — set a goal, see a plan, start practising?
    One action or several?
 
-### 5.2 The dashboard
+### 6.2 The dashboard
 
-6. **What are the blocks?** The current three (next action, goal standing, skill cards) were a
-   deliberate reduction from eleven. Does the new behaviour fit three, or does it need a fourth — and if
-   so, what is removed to pay for it?
-7. **How does the dashboard express "this week" and "distance to target" side by side** (see §2.2)
-   without becoming two competing progress bars?
-8. **What is the single next action**, and how is it chosen when there are four skill levels, a weekly
+1. **How do "this week" and "distance to target" coexist inside three blocks** (§2.2) without becoming
+   two competing progress bars? The block count is fixed at three (U5) — this is about fitting, not
+   about adding.
+2. **What is the single next action**, and how is it chosen when there are four skill levels, a weekly
    plan and a gated free-drilling mode?
-9. **How does the dashboard change for a certificate that examines two skills?** No empty cards, no
+3. **How does the dashboard change for a certificate that examines two skills?** No empty cards, no
    "not applicable".
 
-### 5.3 The learning path
+### 6.3 The learning path
 
-10. **How do you show a plan with no end?** A sliding four-week window has no "9 of 20". What
-    communicates "you are on track" instead?
-11. **How is a step presented so its size is understood** — five items versus twenty — before the
-    learner starts it?
-12. **How does a repeated step feel?** A step that showed no improvement repeats once. It must not read
-    as failure.
-13. **What does a re-plan look like** when it happens, so the learner understands what changed?
-14. **How are steps assigned to skills shown**, given the plan skews toward weak skills? Does the
-    learner see "this week: 3 Reading, 1 Listening, 1 Writing"?
-15. **What does the learning path show for a certificate with two skills?**
+4. **How do you show a plan with no end?** A sliding four-week window has no "9 of 20". What
+   communicates "you are on track" instead?
+5. **How is a step presented so its size is understood** — five items versus twenty — before the
+   learner starts it?
+6. **How does a re-plan look** when it happens, so the learner understands what changed? (The trigger
+   and the once-only repeat are settled; this is the presentation.)
+7. **How are steps assigned to skills shown**, given the plan skews toward weak skills? Does the
+   learner see "this week: 3 Reading, 1 Listening, 1 Writing"?
+8. **What does the learning path show for a certificate with two skills?**
 
-### 5.4 Practice and free drilling
+### 6.4 Practice and free drilling
 
-16. **How do you present two entry points** — a step from the plan, and free drilling — so the learner
-    knows which to use and why one may be locked?
-17. **What does a locked free-drilling mode show**, and does it motivate or annoy?
-18. **How does a practice session look different per skill?** Typed MCQ, a recorded speaking task, a
+9. **How do you present two entry points** — a step from the plan, and free drilling — so the learner
+   knows which to use and why one may be locked?
+10. **What does a locked free-drilling mode show**, and does it motivate or annoy?
+11. **How does a practice session look different per skill?** Typed MCQ, a recorded speaking task, a
     typed writing task. Three different interaction models under one word.
-19. **What does the learner see during and after AI grading** for a productive-skill session, including
-    when grading fails?
-20. **How much of a session is visible at once** — one item, a scrolling set, or a grid?
+12. **How much of a session is visible at once** — one item, a scrolling set, or a grid?
 
-### 5.5 Cross-cutting
+### 6.5 Cross-cutting
 
-21. **How does the learner switch certificate**, and what happens to the screens when they do (plan,
-    results, practice all change)?
-22. **What shows the learner that a result is old** — a placement result reused for up to 90 days?
-23. **What are the empty, loading, error and offline states** for each of the screens above? The product
-    already handles offline in a sitting; the rest of the interface has no such story.
-24. **What is the navigation model?** The current sidebar has five items. With placement, path,
-    practice, exams, writing and speaking, five may not be enough — or the answer is that some are
-    reached from the path rather than from the nav.
+13. **What shows the learner that a result is old** — a placement result reused for up to 90 days?
+14. **What are the empty, loading and error states** for each of the screens above? Offline outside a
+    sitting is settled as banner-only (U16); the rest has no story.
+15. **What happens to the screens when the certificate changes**, given the switch now lives in profile
+    settings (U23) and the path is per-certificate?
 
-### 5.6 Interaction patterns worth defining once
+### 6.6 Interaction patterns worth defining once
 
-25. **Progress display**: when is a bar the right thing, when a number, when a step list? The product
+16. **Progress display**: when is a bar the right thing, when a number, when a step list? The product
     shows band progress, weekly completion, session progress and step completion — four kinds of
     "progress" currently rendered four different ways.
-26. **State language**: how does the interface say "you have not done this", "you are doing this",
+17. **State language**: how does the interface say "you have not done this", "you are doing this",
     "this is done", "this failed to grade", "this is not available on your certificate"? Define the
     vocabulary once so it is consistent everywhere.
-27. **The one-action rule**: the dashboard reduction from eleven blocks to three was driven by "one
+18. **The one-action rule**: the dashboard reduction from eleven blocks to three was driven by "one
     screen, one action". Does that rule generalise to every screen in the rebuild?
 
 ---
 
-## 6. Deliverable format
+## 7. Deliverable format
 
 An SRS with:
 
@@ -222,18 +264,45 @@ An SRS with:
 2. **Screen inventory** — every learner-facing screen after the rebuild, what it is for, and its states.
 3. **Per-screen specification**: purpose, the question it answers for the learner, layout in words,
    which of the design system's rules carry the meaning, and its empty/loading/error/offline states.
-4. **Interaction patterns** (§5.6) defined once and referenced by the screens.
+4. **Interaction patterns** (§6.6) defined once and referenced by the screens.
 5. **Content and copy rules** — how bands, levels, failures and "not measured" are worded. The product
    has been bitten by raw database keys reaching a learner's eyes (a band printed as `below_A1`), so
-   state the rule that prevents it.
-6. **What is deliberately not shown** — the interface says less than the system knows, on purpose.
+   state the rule that prevents it. Carry these constraints:
+   - **No praise.** No "chúc mừng", "tuyệt vời", "you did great". This product is a signboard, not a
+     coach.
+   - **No promises.** Never "you will reach B2 in three months".
+   - **Every state says what happened and what to do next.** Never how to feel about it.
+   - **No emoji, no raw glyphs** — the drawn icon set only, always beside a word.
+   - **Every number carries its unit and its meaning.** A number whose unit the learner must guess is a
+     defect.
+6. **What is deliberately not shown** — the interface says less than the system knows, on purpose. This
+   includes an item's CEFR level while answering (U18) and the internal reasons a skill is unmeasured.
 7. **Open questions** with options and your recommendation.
 8. **References** to real sources on assessment feedback, progress visualisation, and measurement
    communication — particularly on how to present a multi-dimensional result without misleading.
 
 ---
 
-## 7. Known gaps, deliberately not solved here
+## 7.1 On using design-reference tools
+
+If you consult a UI pattern library or design-system generator, treat its output as **reference, not
+instruction**. This product owns a design system (§4) that deliberately rejects the default modern SaaS
+look: no rounded corners, no shadows, no gradients, no chat bubbles, no soft card grids.
+
+A generated suggestion that proposes any of those is answering a different product. You may take its
+structural or accessibility reasoning; do not take its palette, its corner radii, or its typography.
+
+One concrete example found while writing this brief: a design-system generator asked about "language
+learning assessment dashboard" returned *Claymorphism — soft 3D, double shadows, 16–24px rounded
+corners* with an indigo palette. Every one of those properties is forbidden here. Its UX guidance, on
+the other hand, was sound: stream long AI text instead of showing a spinner, keep tab order aligned with
+visual order, give icon-only controls an accessible name.
+
+Take the second, refuse the first, and say which you did.
+
+---
+
+## 8. Known gaps, deliberately not solved here
 
 - **Accessibility.** Out of scope for v1 by the owner's decision. Note in open questions what a future
   version must change — a deaf learner and a Listening section is the obvious case.
@@ -244,7 +313,7 @@ An SRS with:
 
 ---
 
-## 8. What to be careful about
+## 9. What to be careful about
 
 - **Do not redesign the design system.** "Bảng hiệu phòng thi" is deliberate and strict. Work inside it
   or argue specifically against a rule; do not quietly propose a modern SaaS alternative.
