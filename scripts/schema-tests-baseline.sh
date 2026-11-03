@@ -16,7 +16,8 @@ set -uo pipefail
 ROOT="${1:-.}"
 cd "$ROOT" || exit 1
 DIR=docs/schema-tests
-S='(localdb)\MSSQLLocalDB'; DB='CompanionSchemaTest'
+# Same server/credentials as reset-and-load.sh: the reset and the test must hit one database.
+. "$DIR/sqlcmd-env.sh"   # SQL_SERVER, SQL_DB, SQLCMD_ARGS, sqlcmd_path
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 fail=0
@@ -35,7 +36,7 @@ for t in "$DIR"/domain*.sql; do
     echo "FAIL $(basename "$t") (fixture guard produced no output; the file would have run as empty and passed)"
     fail=$((fail + 1)); continue
   fi
-  if out=$(sqlcmd -S "$S" -d "$DB" -I -b -f 65001 -i "$(cygpath -w "$TMP/guarded.sql")" 2>&1); then
+  if out=$(sqlcmd -S "$SQL_SERVER" "${SQLCMD_ARGS[@]}" -d "$SQL_DB" -I -b -f 65001 -i "$(sqlcmd_path "$TMP/guarded.sql")" 2>&1); then
     echo "PASS $(basename "$t")"
   else
     # The error numbers, not only the filename: "the same six files fail" is not the same claim
