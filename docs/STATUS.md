@@ -1,6 +1,6 @@
 # Trạng thái dự án — đọc file này trước
 
-> Cập nhật 2026-11-02, sau khi **toàn bộ #141–#162 đóng**.
+> Cập nhật 2026-11-04, sau khi **toàn bộ #141–#162 đóng** và sáu brief xây lại đã viết xong.
 > Mọi thứ khác (STATE.md, MASTER-SPEC.md, docs/audit/) là tài liệu tham chiếu. **File này là nơi duy nhất
 > nói "đang ở đâu".** GitHub issues đã đóng hết; việc còn lại nằm ở §2 và ở
 > `docs/HANDOFF-2026-11-02.md` (quyết định cần người, cải tiến về sau).
@@ -25,11 +25,18 @@ Schema-test: **5 fail**, đúng 5 file và đúng message number như trước �
 
 ## 2. Việc tiếp theo
 
-**Đợt A (epic #168) — làm CI xanh.** Đang thực hiện. Bốn ticket:
-#169 sửa 4 E2E test đỏ (xong, 51/51 pass), #170 đưa schema harness vào CI, #171 xoá luật
-`independent`, #172 dọn thư mục gốc.
+**Đợt A (epic #168) — làm CI xanh. Đã xong.** Cả bốn ticket đóng: #169 sửa 4 E2E test đỏ (51/51 pass),
+#170 đưa schema harness vào CI (CI xanh từ `eac0e20`), #171 xoá luật `independent`, #172 dọn thư mục gốc.
 
 **Đợt B — xây lại Placement + Path + Admin + UI.** Cần nghiên cứu trước khi code.
+
+**Xoá luồng cũ là một bước *trong* đợt B, không phải việc dọn dẹp riêng.** Quy mô: ~2.800 dòng code
+lõi (placement + path), 21 file gọi tới, 14 view, 10 bảng. **Không xoá trước khi có thứ thay thế** —
+hiện chưa có SRS nào, nên xoá bây giờ là sản phẩm mất lộ trình và mất placement mà không có gì thay vào.
+
+Thứ tự xoá do `transition-brief.md` trả lời (câu hỏi 14: *"what is the last thing switched off, and what
+must be true before the old path is deleted?"*). Thực tế sẽ là **xoá từng phần khi phần mới xanh** —
+mỗi lần thay một mảnh (ví dụ placement), xoá mảnh cũ ngay khi mảnh mới pass, để repo luôn chạy được.
 
 **Sáu brief cho agent deep research (không truy cập được code), trong `docs/research/`:**
 
