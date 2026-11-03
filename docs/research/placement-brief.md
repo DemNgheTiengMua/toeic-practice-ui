@@ -164,23 +164,38 @@ State the **behaviour**, not the implementation:
 
 ## 5. What the SRS must answer
 
-1. **Item counts, with arithmetic.** How many items in stage 1 and stage 2, per skill, to separate
-   adjacent bands at a stated error rate. **Hard limit: 60 minutes total.** Do not allocate stage 1 and
-   stage 2 by feel — derive both from the same budget and show that they fit together.
+### 5.1 Sizing the paper
+
+1. **Stage 1 and stage 2 allocation, with arithmetic.** How many items in each stage, per skill, to
+   separate adjacent bands at a stated error rate. **Hard limit: 60 minutes total.** Do not allocate
+   stage 1 and stage 2 by feel — derive both from the same budget and show that they fit together.
 2. **Stage 2 selection and stopping.** Given a stage-1 estimate, which items does stage 2 serve, and
    when does it stop?
 3. **Task design for Speaking and Writing.** Two tasks per skill (D6), chosen to fit the estimated
    level. What task types, what prompts, what rubrics, and what reliability does one task have? State
    the confidence you claim for a two-task skill estimate.
-4. **Content blueprint.** Items per band per skill, tasks per band per skill, and the total. Derive from
-   the 60-minute limit and D10's five-item minimum rather than choosing numbers.
-5. **Migration.** What happens to existing mastery records, existing placement results, existing paths
+
+**The pool's size is not yours to decide.** How many items exist at each band, per skill, is fixed by
+the content brief — a sibling document owned by a different session. Take its volume table as given.
+What you decide here is **how many of those items a placement uses**, not how many there are.
+
+If the content brief's table cannot support the paper you want, say so explicitly and name the gap:
+"this design needs 8 items per band per skill and the pool specifies 5" is a finding. Inventing a second
+table is not.
+
+### 5.2 Migration
+
+4. **Migration.** What happens to existing mastery records, existing placement results, existing paths
    and the seeded demo content when the level model changes from 1–5 to CEFR. The product has no
    migrations and is not in production, so "start clean" is available — say what you would preserve
    and why.
-6. **Cross-brief consequence.** The learning path currently reads a *single* band. Placement will
-   produce four. **State whether a path should follow the overall CEFR or become per-skill**, and what
-   that changes for the path's schema. This is the one thing the path brief cannot settle alone.
+
+### 5.3 Cross-brief consequence
+
+5. **What a result must contain for a path to consume it.** Placement produces four CEFR values and one
+   overall. A sibling brief rebuilds the learning path and needs to read that result. State: what is
+   stored, at what grain, and which of the four values a path is meant to use. Do not design the path —
+   design the shape of the output it will read.
 
 ---
 
@@ -205,9 +220,11 @@ An SRS with:
    answering, the two-stage transition, submitting, grading, reporting a result.
 4. **Business rules** that are not obvious from the requirements: the monotonicity rule, the guessing
    floor, partial results, cooldown, reuse window, what happens when the pool lacks an item.
-5. **Content blueprint** with the arithmetic behind it.
-6. **Open questions**, each with options and your recommendation.
-7. **References** to real standards — CEFR descriptors, adaptive/multistage testing, item calibration.
+5. **The item budget this paper consumes** — how many items it draws from the pool, per stage, per
+   band, per skill — reconciled against the content brief's volume table, not replacing it.
+6. **The result contract**: what a placement writes, at what grain, for a learning path to read.
+7. **Open questions**, each with options and your recommendation.
+8. **References** to real standards — CEFR descriptors, adaptive/multistage testing, item calibration.
    Cite specific sources; the implementing agent will check them.
 
 ---
@@ -216,6 +233,10 @@ An SRS with:
 
 - **Do not design for one certificate.** Four of five have four skills; two examine only two. A rule
   naming a certificate is a red flag — that exact mistake caused a defect here before.
+- **The pool's size is not yours.** You decide how many items a placement *uses*; how many *exist* is
+  fixed by the content brief. If the pool cannot support your design, name the gap rather than
+  inventing a second table — two documents promising different pools is the failure this arrangement
+  exists to prevent.
 - **Do not invent numbers.** Where you cannot justify an item count or a reliability figure, say so in
   open questions. The current placement is what happens when plausible numbers are chosen: 24 items over
   three difficulty levels that cannot measure what they claim.

@@ -236,20 +236,27 @@ lose.
 17. **What does the learner see** when a re-plan happens? A silent change of plan is the fastest way to
     lose trust.
 
-### 5.6 Content requirement
+### 5.6 Consuming content, not specifying it
 
-18. **How many items, at what levels, per topic, per skill**, for the mastery model to mean anything?
-    Derive it. This is the number that decides whether the rebuild is feasible.
-19. **How many lessons, at which levels, covering which topics?**
-20. **What item formats are needed per skill**, including the two hard shapes: one audio serving several
-    items, and one passage serving several items.
-21. **What rubric criteria and band descriptors** must exist for Speaking and Writing practice to be
-    gradeable — most of the current criteria have no descriptors written at all.
+18. **What does the path require of the content?** Not how many items exist — that is fixed by the content
+    brief, a sibling document owned by another session. State what the path needs *from* it: how many
+    items a topic must have before mastery can be judged, what item format a step needs, what a
+    productive-skill step requires. Name the minimum; do not invent a volume table.
+19. **What happens when the content brief cannot supply that minimum** for a given topic or skill? The
+    path must still generate (P6). Say how the substitution is chosen and what the learner is told.
+20. **How does a path step express what content it needs** — by topic, by skill and level, by section —
+    in a way an authoring system can answer? This is the interface between your design and the content
+    brief.
+
+**If your design needs more content than the content brief specifies, say so explicitly and name the
+gap.** "This mastery model needs 12 items per topic and the pool specifies 6" is a finding worth having.
+Producing your own volume table is not — two documents promising different pools is the failure this
+arrangement exists to prevent.
 
 ### 5.7 Ending
 
-22. **What are the four end states** (P7) and what does the learner see in each?
-23. **What is the readiness verdict** at the exam date (E3), and what does it do if the learner is not
+21. **What are the four end states** (P7) and what does the learner see in each?
+22. **What is the readiness verdict** at the exam date (E3), and what does it do if the learner is not
     ready?
 
 ---
@@ -275,7 +282,7 @@ An SRS with:
 4. **Business rules** not obvious from the requirements: cooldown, lapse, decay, eligibility, what
    happens when the pool is short, what happens when AI grading fails, who wins between plan and
    cooldown.
-5. **Content requirement** with the arithmetic that produced it.
+5. **What the path requires of the content** - the minimum per topic, per skill, per step type - reconciled against the content brief rather than replacing it.
 6. **Open questions** with options and your recommendation.
 7. **References** to real sources on spaced repetition, interleaving, retrieval practice, adaptive
    sequencing and curriculum scheduling. Cite specific work; the implementing agent will check it.
