@@ -11,9 +11,12 @@ Architecture Review*
 stitch_*
 
 # Agent scratch. .claude/ also holds a nested git worktree, so committing it
-# would nest a duplicate of the repo inside itself.
+# would nest a duplicate of the repo inside itself. .agents/ itself is tracked
+# (the skills); only the teamwork run folders are throwaway.
 .claude/
 *-agy-*.txt
+.agents/teamwork/
+.scratch/
 
 
 # The impeccable skill's working directory. The text record — the surface
@@ -35,12 +38,12 @@ obj/
 src/WebMVC/WebMVC.csproj.user
 *.user
 
-# Graphify intermediate cache and backups
-graphify-out/cache/
-graphify-out/202*/
-
-# Generated graph visualisations (graph.json, the source of truth, stays tracked)
-graphify-out/*.html
+# Graphify output. Ignored whole, not partly: it is a local cache rebuilt from
+# this source tree by `python -m graphify update .` (AST-only, zero API cost),
+# and it is 23 MB of single-line JSON plus ~230 MB of dated 2026-* snapshots and
+# 7 MB of cache. Tracking it produced 79 "chore(graph): rebuild" commits and the
+# merge conflicts in its history. A fresh clone rebuilds it in one command.
+graphify-out/
 
 # Local secrets & environment configuration
 .env

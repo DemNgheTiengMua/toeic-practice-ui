@@ -50,7 +50,10 @@ The backend is a .NET 10 solution (`ExtraEfficiency.slnx`) structured in six str
 
 ## 2. Knowledge Graph (graphify)
 
-A pre-built persistent knowledge graph exists in `graphify-out/` (2,053 nodes, 3,702 edges across code, database schema, design specifications, and prototype views).
+A persistent knowledge graph lives in `graphify-out/`. It is **not tracked** — it is a local
+cache over this source tree, rebuilt in one command with no API cost:
+`python -m graphify update .` (use `python -m`, see §8). A fresh clone starts with no
+graph, so build it once before relying on the commands below.
 
 **Before debugging, tracing data flow, or implementing new features**:
 - **Query the graph**: Run `graphify query "<question>"` (or BFS traversal over `graphify-out/graph.json`) to understand cross-layer relationships and avoid breaking invariants.
@@ -58,6 +61,8 @@ A pre-built persistent knowledge graph exists in `graphify-out/` (2,053 nodes, 3
 - **Inspect nodes**: Run `graphify explain "<NodeId>"` to get plain-language summaries of symbols, tables, or concepts.
 - **Visual map**: Open `graphify-out/graph.html` in a browser or review `graphify-out/GRAPH_REPORT.md`.
 - **Rebuild after major changes**: Run `/graphify --update` to re-extract modified files incrementally.
+
+If the graph claims a `built_at_commit` other than `git rev-parse HEAD`, it is stale — rebuild before trusting it.
 
 ---
 
@@ -177,7 +182,9 @@ and truncates at a 2 000-token budget, so the answer is often in the cut. Use it
 `--seed "<KnownNode>"`, or not at all.
 
 **Graph maintenance.** Git hooks are installed (`graphify hook status`), so `post-commit` keeps the
-graph current. If you commit somewhere hooks are skipped, run:
+local graph current. Because `graphify-out/` is ignored, those rebuilds no longer create
+"chore(graph): rebuild" commits or `graph.json` merge conflicts. If you commit somewhere hooks are
+skipped, run:
 
 ```sh
 python -m graphify update .
