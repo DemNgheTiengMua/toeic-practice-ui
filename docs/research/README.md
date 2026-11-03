@@ -1,58 +1,68 @@
-# Four research briefs, four sessions
+# Two briefs, two sessions
 
-Each brief is self-contained: an agent with no repository access can produce a full SRS from it. They
-are deliberately separate so each session can go deep on one area without carrying the others.
+The product's placement test and learning path are being deleted and rebuilt. Each gets one brief,
+self-contained, for one deep-research session that has **no repository access**.
 
-## What to give each session
+## What to hand over
 
-| Give this file | For | The SRS it should return |
+| File | Session | The SRS it should return |
 |---|---|---|
-| `placement-rebuild-brief.md` | Placement test as a system | Placement SRS: level model, two-stage adaptive, per-skill results, engine reuse, edge cases |
-| `practice-rebuild-brief.md` | Practice subsystem as a system | Practice SRS: selection, mastery, spacing, per-skill drills, intensity |
-| `path-rebuild-brief.md` | Learning path | Path SRS: step shape, level attachment, scheduling, adaptation, end states |
-| `content-blueprint-brief.md` | The content itself | Content spec: level definitions, topic taxonomy, item formats, rubrics, volume tables, acceptance rules |
+| `placement-brief.md` | Placement test | How the item pool is produced and stored, how a sitting runs, how it is scored, what result it returns |
+| `path-brief.md` | Learning path | How a plan is produced, what its steps contain, how practice content is selected and generated, how progress is measured, how the plan ends |
 
-## Order matters
+Each brief is self-contained: product description, measured state of what is being replaced, every
+decision already taken, the questions the SRS must answer, the deliverable format, the traps, and the
+data appendix.
 
-**Content first, or at least in parallel with placement.** The placement brief asks for item counts
-"derived, not asserted" — and the derivation depends on the level definitions and item format that the
-content brief produces. Give both to their sessions at the same time; if the placement session finishes
-first, its item-count section will be provisional until the content spec lands.
+## What is inside which
 
-**Placement before path.** The path brief specifies both branches (a path follows the overall CEFR, or
-it carries a per-skill strand) precisely because this is not settled until placement answers it. The
-path session should read the placement SRS if it exists.
+**Placement** covers: creating the item pool, uploading it, taking a placement, scoring it, the result.
+It reuses the existing sitting engine rather than building a second one, and says exactly what that
+engine already provides and what placement must add.
 
-**Practice can run independently.** It references both, but its questions stand on their own.
+**Path** covers everything between "the learner knows where they are" and "the learner sits the exam":
+generating a plan, a step's lifecycle, what study material a step points at, how practice items are
+selected, free drilling outside the plan, mastery and spacing, per-skill practice (including Speaking
+and Writing), re-planning, progress reporting, and the four ways a plan ends. It also carries the
+content requirement — how many items at what levels — because the path is what decides what content is
+needed.
 
-## What is deliberately not in any brief
+## Order
 
-- **Pricing and credit economics.** The owner's instruction: redesign later.
-- **The demo content set.** Each brief asks how a demo set should differ; none specifies its contents.
-- **The 51 stale documents under `docs/`.** Real maintenance, unrelated to the rebuild.
+**Placement first, or both in parallel.** The path brief asks what a path should do when four skills
+have four levels, and states that this is the one thing it cannot settle alone. If the placement SRS
+exists when the path session starts, hand it over too.
 
-## What the briefs agree on, so the four SRS documents do not contradict each other
+**Nothing else blocks.** They are independent documents; neither needs the other's output to begin.
 
-| Shared decision | Where it appears |
+## The decisions the two briefs share
+
+Both carry these, so the two SRS documents cannot contradict each other:
+
+| Shared decision | Why it matters |
 |---|---|
-| One shared content pool for all certificates | All four |
-| CEFR is the scoring axis (not each certificate's own scale) | Placement, path, content |
-| A band is not a CEFR level | Placement, path, content |
-| Practice and placement are free | Placement, practice |
-| The AI grades and narrates; it never chooses content or scores | All four |
-| Do not invent numbers; derive or mark provisional | All four |
-| Speaking and Writing are the hard half | All four |
-| One writer per fact (the two-writer defect) | Placement, practice, path |
+| One shared content pool serving all certificates | Two of five certificates examine only two skills |
+| CEFR is the scoring axis, not each certificate's own scale | Two certificates have no CEFR-named band at all |
+| A band is not a CEFR level | TOEIC 785–940 is labelled "B2" internally and is not CEFR B2 |
+| Practice and placement are free | No credit ledger row, ever |
+| The AI grades and narrates; it never chooses content or scores | |
+| Do not invent numbers; derive or mark provisional | The current system is what invented numbers produce |
+| Speaking and Writing are the hard half | The current product barely has them |
+| One writer per fact | Two writers disagreeing about one answer is a confirmed defect |
 
 If an SRS contradicts one of these, that is the first thing to challenge in it.
 
-## Known defects to hand over as evidence
+## Evidence kept alongside
 
 `placement-free-response-defect.md` — a placement carrying free responses cannot be completed, confirmed
-by execution. It is the concrete example of why "one writer per fact" is in three of the briefs.
+by execution. It is the concrete case behind "one writer per fact", which appears in both briefs.
 
-`path-brief-audit.md` — the evidence behind the path brief's two-branch structure.
+`data/` — the four measured tables (band tables, exam difficulty spreads, section declared-vs-actual
+counts, topic question counts). Every number in the briefs comes from here.
 
-`placement-practice-rebuild-brief.md` — the earlier combined brief. Superseded for placement; its
-practice material and its content measurements are folded into the two documents above. Keep it only as
-the record of what was measured before the rebuild.
+## What is deliberately not in either brief
+
+- **Pricing and credit economics.** To be redesigned separately.
+- **Accessibility.** Out of scope for v1 by the owner's decision; both briefs note it as a known gap.
+- **The demo content set's contents.** Both briefs say how a demo should differ from real content, not
+  what it should hold.
