@@ -28,6 +28,7 @@ namespace WebMVC.Tests;
 /// carries a status. The last is the cheap AC5 grep, kept because AC5 is stated as a grep.
 /// </para>
 /// </summary>
+[Collection(AppHostCollection.Name)]
 public sealed class ExamEditorPublishControlTests : IClassFixture<ExamEditorPublishControlTests.Site>
 {
     private readonly Site site;

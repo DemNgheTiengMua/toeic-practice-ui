@@ -21,6 +21,7 @@ namespace WebMVC.Tests;
 /// Drives the real host, so it fails if the controller comes back for any reason.
 /// </para>
 /// </summary>
+[Collection(AppHostCollection.Name)]
 public sealed class RemovedScoreConversionRouteTests : IClassFixture<RemovedScoreConversionRouteTests.Site>
 {
     private readonly Site site;

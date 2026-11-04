@@ -69,3 +69,27 @@ A grant of one permission namespace to one role, carried by `RolePermissions(Rol
 _Avoid_: Role assignment, capability flag
 
 
+**Exam Studio**:
+The unified single-page admin workspace for authoring, editing, slicing audio, and auditing complete certification exams.
+_Avoid_: Exam editor, question manager, test builder
+
+**Authoring Wizard**:
+The step-by-step guided workflow that adapts form structures and question grouping presets to the specific section and question type being authored.
+_Avoid_: Exam wizard, question creator, test uploader
+
+**Quick Ingest**:
+The interactive text/JSON staging interface where exam content is parsed, validated, and reviewed prior to database persistence.
+_Avoid_: Manual import, bulk paste, raw uploader
+
+**Publish Readiness Audit**:
+The pre-flight inspection checklist that validates question counts, answer keys, media assets, and rubric associations before an exam can transition from draft to published status.
+_Avoid_: Pre-publish check, exam validation, publish verification
+
+**Question Cluster**:
+A pedagogical unit consisting of a shared asset (reading passage, image, or audio recording) paired with one or more dependent questions.
+_Avoid_: Question group, item set, composite question
+
+**Audio Slicing**:
+The specification of millisecond offsets (`AudioStartMs`, `AudioEndMs`) against an exam section's master audio track to isolate playback for a specific question cluster.
+_Avoid_: Audio clipping, audio trimming, time stamping
+

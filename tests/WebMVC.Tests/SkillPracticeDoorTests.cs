@@ -20,6 +20,7 @@ namespace WebMVC.Tests;
 /// <c>_Layout</c>. Reading the markup would not have shown it — the pages were green in every test
 /// and had a duplicate top bar in the browser.
 /// </summary>
+[Collection(AppHostCollection.Name)]
 public sealed class SkillPracticeDoorTests : IClassFixture<SkillPracticeDoorTests.Site>
 {
     private static readonly string[] Doors = ["/writing", "/speaking"];

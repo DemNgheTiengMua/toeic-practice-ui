@@ -18,6 +18,7 @@ namespace WebMVC.Tests;
 /// The defect this catches is a gate that looks right in metadata but is decided from the role name
 /// at request time — the shape the whole ticket exists to remove.
 /// </summary>
+[Collection(AppHostCollection.Name)]
 public sealed class StaffRouteCapabilityEndToEndTests : IClassFixture<StaffRouteCapabilityEndToEndTests.Site>
 {
     private readonly Site site;

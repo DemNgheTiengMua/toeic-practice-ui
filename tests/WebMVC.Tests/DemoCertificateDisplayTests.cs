@@ -28,6 +28,7 @@ namespace WebMVC.Tests;
 /// not written against, so that is the shape the fixture takes.
 /// </para>
 /// </summary>
+[Collection(AppHostCollection.Name)]
 public sealed class DemoCertificateDisplayTests : IClassFixture<DemoCertificateDisplayTests.Site>
 {
     /// <summary>Every certificate name the app used to bake into a template.</summary>

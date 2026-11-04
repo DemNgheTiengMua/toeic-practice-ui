@@ -17,6 +17,7 @@ namespace WebMVC.Tests;
 /// forget �� and drives the real authorization service with the real policies, so a route that
 /// quietly keeps <c>Roles.Admin</c> fails here rather than in production.
 /// </summary>
+[Collection(AppHostCollection.Name)]
 public sealed class StaffGatesUseCapabilitiesTests : IClassFixture<StaffGatesUseCapabilitiesTests.Site>
 {
     private readonly Site site;

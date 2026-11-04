@@ -21,6 +21,7 @@ namespace WebMVC.Tests;
 /// so routing dispatches the asset inside UseRouting instead; these tests prove the bytes still
 /// come back and that the upstream client is never touched.
 /// </summary>
+[Collection(AppHostCollection.Name)]
 public sealed class StaticAssetPipelineTests : IClassFixture<StaticAssetPipelineTests.Site>
 {
     private readonly Site site;

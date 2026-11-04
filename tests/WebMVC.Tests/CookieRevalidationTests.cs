@@ -19,6 +19,7 @@ namespace WebMVC.Tests;
 /// as 499. These run the real cookie handler and its events from Program.cs; only the outbound API
 /// is replaced.
 /// </summary>
+[Collection(AppHostCollection.Name)]
 public sealed class CookieRevalidationTests : IClassFixture<CookieRevalidationTests.Site>
 {
     private readonly Site site;

@@ -20,6 +20,7 @@ namespace WebMVC.Tests;
 /// middleware, real cookie scheme, real typed API client and its resilience pipeline — with only
 /// the socket under the client replaced, so they assert what a user gets rather than handler state.
 /// </summary>
+[Collection(AppHostCollection.Name)]
 public sealed class ApiResilienceTests : IClassFixture<ApiResilienceTests.Site>
 {
     private readonly Site site;
