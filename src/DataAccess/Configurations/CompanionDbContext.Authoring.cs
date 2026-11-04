@@ -184,6 +184,16 @@ public partial class CompanionDbContext
                 .HasConstraintName("FK__QuestionC__CertI__29221CFB");
         });
 
+        // #183: the topic axis. No CertId, so no navigation - a topic belongs to the language.
+        // HasTrigger: trg_Topics_ClosedVocabulary refuses a twenty-first topic, and without this
+        // declaration EF's OUTPUT clause fails on every save to this table.
+        modelBuilder.Entity<Topic>(entity =>
+        {
+            entity.HasKey(e => e.TopicId).HasName("PK_Topics");
+
+            entity.ToTable(tb => tb.HasTrigger("trg_Topics_ClosedVocabulary"));
+        });
+
 
 
         modelBuilder.Entity<QuestionGroup>(entity =>

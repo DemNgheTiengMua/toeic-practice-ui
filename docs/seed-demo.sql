@@ -475,6 +475,39 @@ PRINT '6. Question categories seeded';
 GO
 
 -- ============================================================================
+-- 6b. Topics (#183) - the shared, certificate-agnostic axis. Exactly twenty:
+--     six listening, six reading, four speaking, four writing.
+--     No CertId: one topic serves every certificate that examines its modality.
+--     trg_Topics_ClosedVocabulary refuses a twenty-first, so this is a closed set.
+-- ============================================================================
+IF NOT EXISTS (SELECT 1 FROM Topics)
+  INSERT INTO Topics (Modality, Code, Name) VALUES
+    ('listening','L-GIST',N'Global gist, purpose, macro-topic'),
+    ('listening','L-DET', N'Explicit factual detail and extraction'),
+    ('listening','L-INF', N'Pragmatic implication and logical inference'),
+    ('listening','L-ATT', N'Speaker stance, attitude, prosodic emotion'),
+    ('listening','L-FUNC',N'Communicative function and speech acts'),
+    ('listening','L-ORG', N'Discourse structure, signposting, synthesis'),
+    ('reading',  'R-GIST',N'Global thesis, purpose, paragraph main idea'),
+    ('reading',  'R-DET', N'Local factual retrieval and paraphrase matching'),
+    ('reading',  'R-INF', N'Bridging inference and logical deduction'),
+    ('reading',  'R-ATT', N'Authorial stance, rhetorical purpose, tone'),
+    ('reading',  'R-COH', N'Discourse cohesion, reference, text insertion'),
+    ('reading',  'R-GRAM',N'Morphosyntactic structure and lexical precision'),
+    ('speaking', 'S-DESC',N'Informational description and personal framing'),
+    ('speaking', 'S-INT', N'Transactional interaction and option negotiation'),
+    ('speaking', 'S-ARG', N'Sustained monologic argumentation and justification'),
+    ('speaking', 'S-SYN', N'Integrated summary and visual/data interpretation'),
+    ('writing',  'W-CORR',N'Transactional correspondence and register control'),
+    ('writing',  'W-DATA',N'Visual data, process, and informational synthesis'),
+    ('writing',  'W-ARG', N'Thesis-driven persuasive and opinion argumentation'),
+    ('writing',  'W-DISC',N'Multi-perspective problem-solution and evaluation');
+GO
+
+PRINT '6b. Topics seeded (20)';
+GO
+
+-- ============================================================================
 -- 7. Grading Rubrics (GradingCriteria)
 -- ============================================================================
 DECLARE @toeicCert INT = (SELECT CertId FROM Certificates WHERE Code = 'TOEIC');

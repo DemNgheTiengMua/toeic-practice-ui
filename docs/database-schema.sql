@@ -251,7 +251,46 @@ CREATE TABLE ExamSectionAudio (
   CONSTRAINT FK_ExamSectionAudio_SectionCert FOREIGN KEY (SectionId, CertId) REFERENCES Sections(SectionId, CertId)
 );
 GO
--- UI-8: question-type labels ("Verb tense", "Part 7 — inference") per certificate
+-- #183: the topic axis of the warehouse. A topic is a communicative micro-skill within a skill -
+-- six listening, six reading, four speaking, four writing - and it belongs to the language, not to
+-- a certificate. Domain flavour (workplace, academic, general) is carried per stimulus instead, so
+-- one topic serves every certificate that examines its skill.
+--
+-- No CertId: QuestionCategories below is per-certificate and unlevelled, which is why twelve of its
+-- fifteen buckets held no items and "your weakest topic" was a claim about an empty set.
+--
+-- The vocabulary is a closed set. A twenty-first topic is a defect rather than a feature: coverage
+-- scales by depth (how much content a cell holds), never by breadth, and every mastery figure
+-- divides by the number of topics, so growing the set silently changes the denominator.
+CREATE TABLE Topics (
+  TopicId  INT IDENTITY(1,1) PRIMARY KEY,
+  Modality VARCHAR(10) NOT NULL
+    CONSTRAINT CK_Topics_Modality CHECK (Modality IN ('listening','reading','speaking','writing')),
+  Code     VARCHAR(20) NOT NULL,
+  Name     NVARCHAR(160) NOT NULL,
+  -- one code per modality: 'L-GIST' and 'R-GIST' are different topics, and neither may repeat
+  CONSTRAINT UQ_Topics_Modality_Code UNIQUE (Modality, Code)
+);
+GO
+-- exactly twenty, six listening / six reading / four speaking / four writing. Sequential rather than
+-- a CHECK so the guard is one place: a twenty-first row is refused by the same statement that
+-- refuses a wrong per-modality count.
+CREATE TRIGGER trg_Topics_ClosedVocabulary
+ON Topics AFTER INSERT, UPDATE, DELETE AS
+BEGIN
+  SET NOCOUNT ON;
+  IF (SELECT COUNT(*) FROM Topics) > 20
+    THROW 50030, 'The topic vocabulary is a closed set of twenty; a twenty-first topic is refused.', 1;
+  IF EXISTS (
+    SELECT Modality, COUNT(*) AS n FROM Topics GROUP BY Modality HAVING COUNT(*) > 6
+  )
+    THROW 50031, 'A modality may hold at most six topics.', 1;
+END;
+GO
+-- UI-8: question-type labels ("Verb tense", "Part 7 — inference") per certificate.
+-- #183: retained while items/lessons still read it; the topic axis above replaces it once every
+-- reader has moved. It is not deleted here, because deleting it now would break the readers the
+-- next ticket rewrites.
 CREATE TABLE QuestionCategories (
   CategoryId INT IDENTITY(1,1) PRIMARY KEY,
   CertId     INT NOT NULL REFERENCES Certificates(CertId),
