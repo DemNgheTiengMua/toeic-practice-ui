@@ -176,6 +176,45 @@ public sealed class PermissionNamespacesTests(DatabaseFixture database)
         }
     }
 
+    /// <summary>
+    /// The old rule refused to lock "an administrator", keyed on the role name. Under D16 that has
+    /// to mean an account holding <c>system.governance.admin</c> — the namespace that can grant
+    /// namespaces — and nothing wider: a governor must still be able to disable a rogue content
+    /// author or support triager, which is what the screen is for.
+    /// </summary>
+    [Fact]
+    public async Task Locking_is_refused_for_a_system_governor_and_allowed_for_other_staff()
+    {
+        await SeedPermissionsAsync();
+        var suffix = Guid.NewGuid().ToString("N")[..8];
+
+        async Task<int> SeedAccountAsync(string capability)
+        {
+            var role = $"staff-{suffix}-{Guid.NewGuid().ToString("N")[..4]}";
+            var email = $"{role}@test.local";
+            await RunSqlAsync(database.ConnectionString, $"""
+                INSERT INTO Roles (Code, Name) VALUES ('{role}', N'Staff');
+                DECLARE @r INT = (SELECT RoleId FROM Roles WHERE Code = '{role}');
+                INSERT INTO RolePermissions (RoleId, PermissionCode) VALUES (@r, '{capability}');
+                INSERT INTO Users (RoleId, Email, PasswordHash) VALUES (@r, '{email}', 0x01);
+                """);
+            return await UserIdAsync(email);
+        }
+
+        var governor = await SeedAccountAsync(Permissions.SystemAdmin);
+        var author = await SeedAccountAsync(Permissions.ContentAuthor);
+        var service = new AdminUserService(
+            DbContextFactory.Create(database.ConnectionString), CreateAuthService(), TimeProvider.System);
+
+        var refused = await Assert.ThrowsAsync<AdminUserException>(
+            () => service.SetLockAsync(adminUserId: author, targetUserId: governor, isLocked: true));
+        Assert.Equal(ApiError.Codes.Forbidden, refused.Code);
+
+        // A non-governor staff account can be locked; the screen would be useless otherwise.
+        var allowed = await service.SetLockAsync(adminUserId: governor, targetUserId: author, isLocked: true);
+        Assert.True(allowed.IsLocked);
+    }
+
     private AuthService CreateAuthService() => new(
         DbContextFactory.Create(database.ConnectionString),
         new RecordingEmailSender(),

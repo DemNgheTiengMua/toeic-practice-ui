@@ -119,7 +119,7 @@ public sealed class StaffGatesUseCapabilitiesTests : IClassFixture<StaffGatesUse
     /// on purpose — there is no learner namespace, and the five namespaces are staff authority.
     /// </summary>
     [Fact]
-    public void No_controller_anywhere_is_gated_on_the_admin_role_name()
+    public async Task No_controller_anywhere_is_gated_on_the_admin_role_name()
     {
         var offenders = new List<string>();
 
@@ -150,7 +150,7 @@ public sealed class StaffGatesUseCapabilitiesTests : IClassFixture<StaffGatesUse
 
         // And the policy itself is gone, so no future attribute can quietly reintroduce it.
         var provider = site.Services.GetRequiredService<IAuthorizationPolicyProvider>();
-        Assert.Null(provider.GetPolicyAsync(Roles.Admin).GetAwaiter().GetResult());
+        Assert.Null(await provider.GetPolicyAsync(Roles.Admin));
     }
 
     [Fact]

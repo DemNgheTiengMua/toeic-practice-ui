@@ -93,7 +93,7 @@ public sealed class AuthController(IAuthClient api) : Controller
 
         // Staff land on their portal; everyone else lands on the learner dashboard. Whether an
         // account is staff is a capability question (D16), not a role-name comparison.
-        return result.User.Permissions.Count > 0
+        return result.User.Held.Count > 0
             ? RedirectToAction("Index", "Admin")
             : RedirectToAction("Index", "Dashboard");
     }

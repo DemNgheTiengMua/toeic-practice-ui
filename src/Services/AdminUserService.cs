@@ -111,11 +111,12 @@ public sealed class AdminUserService(
             throw new UserNotFoundException(targetUserId);
         }
 
-        // D16: staff authority is a capability, so "is an administrator" means "holds any namespace".
-        // A support triager is as un-lockable through this screen as a system governor.
-        if (user.Role.RolePermissions.Count > 0)
+        // D16: "cannot lock an administrator" is "cannot lock an account that governs the system".
+        // Only system.governance.admin is protected — a governor must still be able to disable a
+        // rogue content author or support triager, which is the whole point of the screen.
+        if (user.Role.RolePermissions.Any(rp => rp.PermissionCode == Permissions.SystemAdmin))
         {
-            throw new AdminUserException(ApiError.Codes.Forbidden, "Cannot modify lock status of a staff account.", 403);
+            throw new AdminUserException(ApiError.Codes.Forbidden, "Cannot modify lock status of a system administrator.", 403);
         }
 
         user.IsLocked = isLocked;
