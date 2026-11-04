@@ -28,6 +28,14 @@ _Avoid_: Transaction record, receipt entity
 The deep module that encapsulates the exam sitting lifecycle: countdown timers, expiration auto-submit, answer validation and persistence, question navigation, two-step score scaling, and CEFR band scale matching.
 _Avoid_: Exam engine, test runner, attempt manager
 
+**CEFR Level**:
+A measured ability on the A1-C2 scale, carried by `BusinessObjects.CefrLevel`. Pre-A1 is a reportable floor (a result below A1), never a level content is authored at.
+_Avoid_: Band, difficulty, level 1-5, grade
+
+**Certificate Band**:
+A scored range the certificate defines and names (TOEIC 785-940, VSTEP 6.0-6.5). It is a score range, not a CEFR level, and there is no conversion between the two.
+_Avoid_: Level, CEFR band, grade
+
 **Audio Equipment Check**:
 The diagnostic routine verifying microphone input level and speaker/headphone playback before sitting an attempt or practice session involving listening or speaking skills.
 _Avoid_: Sound settings, mic wizard, audio test screen
