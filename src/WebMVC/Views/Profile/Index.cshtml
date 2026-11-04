@@ -1,6 +1,6 @@
 @model ProfilePageViewModel
 @{
-    var isLearner = !Model.IsAdmin;
+    var isLearner = !Model.IsStaff;
     Layout = isLearner ? "_LearnerLayout" : "_AdminLayout";
     ViewData["Title"] = "My profile";
     ViewData["Description"] = "Your profile and time zone.";

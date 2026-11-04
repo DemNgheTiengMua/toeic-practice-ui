@@ -25,7 +25,7 @@ public class HomeController(ICertificatesClient certificates, ILogger<HomeContro
             logger.LogWarning(ex, "Landing page could not load the certificate catalogue");
         }
 
-        return View(new HomeViewModel(user.IsSignedIn, user.IsAdmin, catalog));
+        return View(new HomeViewModel(user.IsSignedIn, user.IsStaff, catalog));
     }
 
     [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]

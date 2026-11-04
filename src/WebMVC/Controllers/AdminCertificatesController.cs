@@ -1,11 +1,14 @@
 using System.Text.Json;
 using Contracts;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using WebMVC.Models;
 
 namespace WebMVC.Controllers;
 
+/// <summary>D16: certificate blueprints and their scoring are assessment.blueprint.design.</summary>
+[Authorize(Policy = Permissions.BlueprintDesign)]
 public sealed class AdminCertificatesController(
     CurrentUser currentUser,
     IAdminCertificatesClient api,

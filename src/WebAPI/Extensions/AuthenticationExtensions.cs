@@ -129,9 +129,18 @@ public static class AuthenticationExtensions
                 };
             });
 
-        services.AddAuthorizationBuilder()
-            .AddPolicy(Roles.Admin, policy => policy.RequireRole(Roles.Admin))
+        // D16: staff authority is a capability, never a role name. Each of the five namespaces is a
+        // policy requiring the `perm` claim its holder carries, so a staff route names a namespace
+        // and an account's role is irrelevant to the gate.
+        var authorization = services.AddAuthorizationBuilder()
             .AddPolicy(Roles.Learner, policy => policy.RequireRole(Roles.Learner));
+
+        foreach (var permission in Permissions.All)
+        {
+            authorization.AddPolicy(
+                permission,
+                policy => policy.RequireClaim(IAccessTokenFactory.ClaimPermission, permission));
+        }
 
         return services;
     }

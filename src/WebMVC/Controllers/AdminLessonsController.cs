@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Contracts;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -14,6 +15,8 @@ using WebMVC.Models;
 
 namespace WebMVC.Controllers;
 
+/// <summary>D16: authoring lessons is pool.content.author.</summary>
+[Authorize(Policy = Permissions.ContentAuthor)]
 [Route("admin/lessons")]
 public sealed class AdminLessonsController(
     IAdminLessonsClient api,

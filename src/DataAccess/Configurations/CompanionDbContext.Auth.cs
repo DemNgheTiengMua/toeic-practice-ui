@@ -15,6 +15,23 @@ public partial class CompanionDbContext
             entity.HasKey(e => e.RoleId).HasName("PK__Roles__8AFACE1AE028D7CB");
         });
 
+        // D16: the five namespaces are data, so a check reads a grant rather than a role string.
+        modelBuilder.Entity<Permission>(entity =>
+        {
+            entity.HasKey(e => e.Code).HasName("PK_Permissions");
+        });
+
+        modelBuilder.Entity<RolePermission>(entity =>
+        {
+            entity.HasKey(e => new { e.RoleId, e.PermissionCode }).HasName("PK_RolePermissions");
+
+            entity.HasOne(d => d.Role).WithMany(p => p.RolePermissions)
+                .HasConstraintName("FK_RolePermissions_Role");
+
+            entity.HasOne(d => d.Permission).WithMany(p => p.RolePermissions)
+                .HasConstraintName("FK_RolePermissions_Permission");
+        });
+
 
 
         modelBuilder.Entity<User>(entity =>

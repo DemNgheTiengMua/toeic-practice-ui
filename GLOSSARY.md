@@ -60,4 +60,12 @@ _Avoid_: Test audio, exam media player
 The interactive audio playback control used in practice sessions and post-attempt reviews, providing interactive scrubbing, jump buttons (±5s), and unlimited replays.
 _Avoid_: Practice audio, media widget
 
+**Permission Namespace**:
+One of the five composable capabilities that constitute staff authority: `pool.content.author`, `pool.content.review`, `assessment.blueprint.design`, `operations.support.triage`, `system.governance.admin`. A role holds any combination of them, and a staff route names the namespace it needs rather than a job title.
+_Avoid_: Admin role, staff role, permission level, user type
+
+**Role Permission**:
+A grant of one permission namespace to one role, carried by `RolePermissions(RoleId, PermissionCode)`. Read live on each sign-in and re-validation, so a revoked grant takes effect on the next request.
+_Avoid_: Role assignment, capability flag
+
 

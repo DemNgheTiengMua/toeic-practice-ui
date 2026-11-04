@@ -1,5 +1,5 @@
 namespace WebMVC.Models;
 
-public sealed record PasswordPageViewModel(ChangePasswordViewModel Form, bool IsAdmin)
+public sealed record PasswordPageViewModel(ChangePasswordViewModel Form, bool IsStaff)
 {
 }

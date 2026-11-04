@@ -14,10 +14,15 @@ public interface IAccessTokenFactory
     public const string ClaimRole = "role";
     public const string ClaimName = "name";
 
+    /// <summary>D16: one claim per staff namespace the account holds. Never a role code.</summary>
+    public const string ClaimPermission = "perm";
+
     /// <summary>Changes when the password does; the API refuses a token whose stamp is stale.</summary>
     public const string ClaimSessionStamp = "sst";
 
-    AccessToken Create(int userId, string email, string role, string? fullName, string sessionStamp);
+    AccessToken Create(
+        int userId, string email, string role, string? fullName, string sessionStamp,
+        IReadOnlyList<string>? permissions = null);
 }
 
 public sealed record AccessToken(string Token, DateTimeOffset ExpiresAt);

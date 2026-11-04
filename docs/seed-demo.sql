@@ -15,6 +15,26 @@ IF NOT EXISTS (SELECT 1 FROM Roles WHERE Code = 'admin')
   INSERT INTO Roles (Code, Name) VALUES ('admin', N'Administrator');
 GO
 
+-- D16 / ADM-01: five permission namespaces, and the demo administrator holds every one so the
+-- seeded staff screens stay reachable. A learner role holds none, which is what makes every staff
+-- route refuse a learner account.
+INSERT INTO Permissions (Code)
+SELECT v.Code
+FROM (VALUES
+  ('pool.content.author'),
+  ('pool.content.review'),
+  ('assessment.blueprint.design'),
+  ('operations.support.triage'),
+  ('system.governance.admin')) AS v(Code)
+WHERE NOT EXISTS (SELECT 1 FROM Permissions p WHERE p.Code = v.Code);
+GO
+INSERT INTO RolePermissions (RoleId, PermissionCode)
+SELECT r.RoleId, p.Code
+FROM Roles r CROSS JOIN Permissions p
+WHERE r.Code = 'admin'
+  AND NOT EXISTS (SELECT 1 FROM RolePermissions rp WHERE rp.RoleId = r.RoleId AND rp.PermissionCode = p.Code);
+GO
+
 PRINT '1. Identity roles seeded';
 GO
 

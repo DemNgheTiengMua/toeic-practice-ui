@@ -103,7 +103,7 @@ public sealed class AdminUserService(
         CancellationToken cancellationToken = default)
     {
         var user = await db.Users
-            .Include(u => u.Role)
+            .Include(u => u.Role).ThenInclude(r => r.RolePermissions)
             .SingleOrDefaultAsync(u => u.UserId == targetUserId && !u.IsDeleted, cancellationToken);
 
         if (user is null)
@@ -111,9 +111,12 @@ public sealed class AdminUserService(
             throw new UserNotFoundException(targetUserId);
         }
 
-        if (user.Role.Code == Roles.Admin)
+        // D16: "cannot lock an administrator" is "cannot lock an account that governs the system".
+        // Only system.governance.admin is protected — a governor must still be able to disable a
+        // rogue content author or support triager, which is the whole point of the screen.
+        if (user.Role.RolePermissions.Any(rp => rp.PermissionCode == Permissions.SystemAdmin))
         {
-            throw new AdminUserException(ApiError.Codes.Forbidden, "Cannot modify lock status of an administrator.", 403);
+            throw new AdminUserException(ApiError.Codes.Forbidden, "Cannot modify lock status of a system administrator.", 403);
         }
 
         user.IsLocked = isLocked;

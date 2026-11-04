@@ -12,7 +12,7 @@ namespace WebMVC.Controllers;
 [Authorize]
 public sealed class ProfileController(IProfileClient api, ILogger<ProfileController> logger) : Controller
 {
-    private bool IsAdmin => new CurrentUser(new HttpContextAccessor { HttpContext = HttpContext }).IsAdmin;
+    private bool IsStaff => new CurrentUser(new HttpContextAccessor { HttpContext = HttpContext }).IsStaff;
 
     [HttpGet("/profile")]
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
@@ -26,7 +26,7 @@ public sealed class ProfileController(IProfileClient api, ILogger<ProfileControl
                 Phone = profile.Phone,
                 TimeZoneId = profile.TimeZoneId,
                 TimeZoneOptions = OptionsIncluding(profile.TimeZoneId),
-            }, IsAdmin));
+            }, IsStaff));
         }
         // HttpRequestException, not ApiException alone: with the API down HttpClient throws a plain
         // transport fault. A dead session (AUTH_LOCKED / AUTH_REQUIRED) still reaches the sign-out
@@ -36,7 +36,7 @@ public sealed class ProfileController(IProfileClient api, ILogger<ProfileControl
             // A failed load must not render an empty form: saving it would overwrite the learner's
             // real name and zone with blanks. Show the failure and a retry instead.
             logger.LogError(ex, "Could not load the profile for the signed-in learner");
-            return View(new ProfilePageViewModel(new ProfileViewModel(), IsAdmin)
+            return View(new ProfilePageViewModel(new ProfileViewModel(), IsStaff)
             {
                 LoadError = "We couldn't load your profile just now. Nothing was changed — try again in a moment.",
             });
@@ -55,7 +55,7 @@ public sealed class ProfileController(IProfileClient api, ILogger<ProfileControl
 
         if (!ModelState.IsValid)
         {
-            return View(new ProfilePageViewModel(model, IsAdmin));
+            return View(new ProfilePageViewModel(model, IsStaff));
         }
 
         try
@@ -64,24 +64,24 @@ public sealed class ProfileController(IProfileClient api, ILogger<ProfileControl
                 new UpdateProfileRequest(model.FullName, model.Phone, model.TimeZoneId),
                 cancellationToken);
             model.SuccessMessage = "Profile saved.";
-            return View(new ProfilePageViewModel(model, IsAdmin));
+            return View(new ProfilePageViewModel(model, IsStaff));
         }
         catch (ApiException ex) when (ex.Code is ApiError.Codes.Validation)
         {
             model.FormError = ex.Title;
-            return View(new ProfilePageViewModel(model, IsAdmin));
+            return View(new ProfilePageViewModel(model, IsStaff));
         }
         catch (HttpRequestException ex) when (ex is not ApiException { Code: ApiError.Codes.Locked or ApiError.Codes.Unauthenticated })
         {
             // API down or another refusal: keep what the learner typed rather than a raw 500.
             logger.LogError(ex, "Could not save the profile for the signed-in learner");
             model.FormError = "We couldn't save your profile just now. Try again in a moment.";
-            return View(new ProfilePageViewModel(model, IsAdmin));
+            return View(new ProfilePageViewModel(model, IsStaff));
         }
     }
 
     [HttpGet("/profile/password")]
-    public IActionResult Password() => View(new PasswordPageViewModel(new ChangePasswordViewModel(), IsAdmin));
+    public IActionResult Password() => View(new PasswordPageViewModel(new ChangePasswordViewModel(), IsStaff));
 
     [HttpPost("/profile/password")]
     [ValidateAntiForgeryToken]
@@ -89,7 +89,7 @@ public sealed class ProfileController(IProfileClient api, ILogger<ProfileControl
     {
         if (!ModelState.IsValid)
         {
-            return View(new PasswordPageViewModel(model, IsAdmin));
+            return View(new PasswordPageViewModel(model, IsStaff));
         }
 
         try
@@ -101,12 +101,12 @@ public sealed class ProfileController(IProfileClient api, ILogger<ProfileControl
         catch (ApiException ex) when (ex.Code is ApiError.Codes.InvalidCredentials or ApiError.Codes.Validation or ApiError.Codes.Locked)
         {
             model.FormError = ex.Title;
-            return View(new PasswordPageViewModel(model, IsAdmin));
+            return View(new PasswordPageViewModel(model, IsStaff));
         }
         catch (ApiException ex) when (ex.Code is ApiError.Codes.TooManyRequests)
         {
             model.FormError = "Too many attempts. Please wait a moment before trying again.";
-            return View(new PasswordPageViewModel(model, IsAdmin));
+            return View(new PasswordPageViewModel(model, IsStaff));
         }
 
         // A password change ends every session issued under the old password, this one included

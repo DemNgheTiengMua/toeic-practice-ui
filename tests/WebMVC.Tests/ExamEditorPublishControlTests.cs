@@ -135,8 +135,9 @@ public sealed class ExamEditorPublishControlTests : IClassFixture<ExamEditorPubl
         {
             var options = Services.GetRequiredService<IOptionsMonitor<CookieAuthenticationOptions>>()
                 .Get(CookieAuthenticationDefaults.AuthenticationScheme);
+            // #200: staff authority is the capability claim, not the role name.
             var principal = new ClaimsPrincipal(new ClaimsIdentity(
-                AuthClaims.For(1, "admin@test.local", Roles.Admin, "Admin"),
+                AuthClaims.For(1, "admin@test.local", Roles.Admin, "Admin", Permissions.All),
                 CookieAuthenticationDefaults.AuthenticationScheme,
                 nameType: IAccessTokenFactory.ClaimEmail,
                 roleType: IAccessTokenFactory.ClaimRole));
@@ -180,7 +181,8 @@ public sealed class ExamEditorPublishControlTests : IClassFixture<ExamEditorPubl
 
             return targetMethod?.Name switch
             {
-                nameof(IAuthClient.GetMeAsync) => Task.FromResult(new AuthUserDto(1, "admin@test.local", "Admin", Roles.Admin, true)),
+                nameof(IAuthClient.GetMeAsync) => Task.FromResult(
+                    new AuthUserDto(1, "admin@test.local", "Admin", Roles.Admin, true, Permissions.All)),
                 nameof(IProfileClient.GetProfileAsync) => Task.FromResult(new ProfileDto("Admin", null, "Asia/Ho_Chi_Minh")),
                 nameof(IAdminExamsClient.GetAdminExamByIdAsync) => Task.FromResult(detail),
                 nameof(IAdminExamsClient.GetAdminExamsAsync) =>

@@ -10,7 +10,8 @@ public static partial class AdminImportEndpoints
 {
     public static void MapAdminImportEndpoints(this IEndpointRouteBuilder app)
     {
-        var admin = app.MapGroup("/api/admin/imports").RequireAuthorization(Roles.Admin);
+        // D16: importing is authoring, so it is gated by pool.content.author.
+        var admin = app.MapGroup("/api/admin/imports").RequireAuthorization(Permissions.ContentAuthor);
         MapBatches(admin);
         MapUpload(admin);
         MapMedia(app);

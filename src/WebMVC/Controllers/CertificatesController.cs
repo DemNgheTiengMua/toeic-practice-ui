@@ -14,7 +14,7 @@ public sealed class CertificatesController(ILogger<CertificatesController> logge
         {
             var certificates = await api.GetCertificatesAsync(cancellationToken: cancellationToken);
             var user = new CurrentUser(new HttpContextAccessor { HttpContext = HttpContext });
-            return View(new WebMVC.Models.CertificateCatalogViewModel(certificates, user.IsSignedIn, user.IsAdmin));
+            return View(new WebMVC.Models.CertificateCatalogViewModel(certificates, user.IsSignedIn, user.IsStaff));
         }
         catch (ApiException ex)
         {

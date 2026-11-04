@@ -21,4 +21,8 @@ public partial class Role
 
     [InverseProperty("Role")]
     public virtual ICollection<User> Users { get; set; } = new List<User>();
+
+    /// <summary>D16: the namespaces this role holds. Read live, never snapshotted onto the user.</summary>
+    [InverseProperty("Role")]
+    public virtual ICollection<RolePermission> RolePermissions { get; set; } = new List<RolePermission>();
 }

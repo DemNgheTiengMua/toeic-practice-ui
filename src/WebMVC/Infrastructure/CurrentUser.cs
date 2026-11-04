@@ -21,7 +21,13 @@ public sealed class CurrentUser(IHttpContextAccessor accessor)
 
     public string? Role => Principal?.FindFirst(IAccessTokenFactory.ClaimRole)?.Value;
 
-    public bool IsAdmin => Role == Roles.Admin;
+    /// <summary>D16: the staff namespaces this account holds. There is no <c>IsAdmin</c> any more —
+    /// authority is the capability, and holding none is what makes an account a learner.</summary>
+    public IReadOnlyList<string> Permissions => Principal.GetPermissions();
+
+    public bool HasPermission(string permission) => Principal.HasPermission(permission);
+
+    public bool IsStaff => Principal.IsStaff();
 
     public async Task<string?> GetBearerTokenAsync()
     {

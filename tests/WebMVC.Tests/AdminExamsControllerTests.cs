@@ -905,15 +905,16 @@ public sealed class AdminExamsControllerTests
     [Fact]
     public async Task Preview_refuses_a_learner_because_the_action_lives_on_the_admin_controller()
     {
-        // AC: a learner without the admin role cannot reach a draft through the same URL. The
-        // guarantee is the class-level [Authorize(Policy = Roles.Admin)], declared once for the
-        // whole controller — assert it is still there rather than trusting the convention.
+        // AC: a learner without the capability cannot reach a draft through the same URL. The
+        // guarantee is the class-level [Authorize(Policy = Permissions.ContentAuthor)], declared once
+        // for the whole controller — assert it is still there rather than trusting the convention.
+        // #200: the gate is the capability now, not the role name.
         var authorize = typeof(AdminExamsController)
             .GetCustomAttributes(typeof(Microsoft.AspNetCore.Authorization.AuthorizeAttribute), inherit: true)
             .Cast<Microsoft.AspNetCore.Authorization.AuthorizeAttribute>()
             .ToList();
 
-        Assert.Contains(authorize, attribute => attribute.Policy == Roles.Admin);
+        Assert.Contains(authorize, attribute => attribute.Policy == Permissions.ContentAuthor);
         // And the learner's sitting action has no preview branch at all: a query string cannot
         // open a draft on /exams/take/{attemptId}, because that path needs an attempt id.
         var learnerAction = typeof(ExamsController).GetMethod(nameof(ExamsController.Take))!;

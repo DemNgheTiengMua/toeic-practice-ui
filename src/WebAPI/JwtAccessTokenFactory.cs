@@ -22,14 +22,16 @@ public sealed class JwtAccessTokenFactory(IOptions<JwtOptions> options) : IAcces
 {
     private readonly JwtOptions _options = options.Value;
 
-    public AccessToken Create(int userId, string email, string role, string? fullName, string sessionStamp)
+    public AccessToken Create(
+        int userId, string email, string role, string? fullName, string sessionStamp,
+        IReadOnlyList<string>? permissions = null)
     {
         var key = new SymmetricSecurityKey(Convert.FromBase64String(_options.SigningKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
         var expires = DateTimeOffset.UtcNow.AddHours(IAccessTokenFactory.LifetimeHours);
 
         // The session stamp rides only in the JWT; the MVC cookie identity never needs it.
-        var claims = AuthClaims.For(userId, email, role, fullName);
+        var claims = AuthClaims.For(userId, email, role, fullName, permissions);
         claims.Add(new System.Security.Claims.Claim(IAccessTokenFactory.ClaimSessionStamp, sessionStamp));
 
         var token = new JwtSecurityToken(

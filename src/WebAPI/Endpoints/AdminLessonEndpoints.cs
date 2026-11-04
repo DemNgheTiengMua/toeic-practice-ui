@@ -9,7 +9,8 @@ public static partial class AdminLessonEndpoints
 {
     public static void MapAdminLessonEndpoints(this IEndpointRouteBuilder app)
     {
-        var admin = app.MapGroup("/api/admin/lessons").RequireAuthorization(Roles.Admin);
+        // D16: authoring lessons is content authoring.
+        var admin = app.MapGroup("/api/admin/lessons").RequireAuthorization(Permissions.ContentAuthor);
         MapCatalog(admin);
         MapAuthoring(admin);
         MapPackages(admin);

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using WebMVC.Infrastructure;
 using WebMVC.Models;
 
 namespace WebMVC.Controllers;
@@ -23,7 +24,7 @@ public sealed class LessonsController(
     [HttpGet("/lessons/{id:int}")]
     public async Task<IActionResult> Index(int id, [FromQuery] int? moduleId, CancellationToken cancellationToken)
     {
-        if (User.IsInRole(Roles.Admin))
+        if (User.IsStaff())
         {
             return Redirect($"/admin/lessons/{id}/preview");
         }
@@ -65,7 +66,7 @@ public sealed class LessonsController(
     [HttpGet("/lessons/by-category/{categoryId:int}")]
     public async Task<IActionResult> ByCategory(int categoryId, [FromQuery] int? moduleId, CancellationToken cancellationToken)
     {
-        if (User.IsInRole(Roles.Admin))
+        if (User.IsStaff())
         {
             return Redirect("/admin/lessons");
         }
@@ -92,7 +93,7 @@ public sealed class LessonsController(
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> RecordCardView(int id, int cardId, CancellationToken cancellationToken)
     {
-        if (User.IsInRole(Roles.Admin))
+        if (User.IsStaff())
         {
             return Json(new { success = true, preview = true });
         }
@@ -116,7 +117,7 @@ public sealed class LessonsController(
     public async Task<IActionResult> SubmitMicroCheck(
         int id, int cardId, [FromForm] string selectedOption, CancellationToken cancellationToken)
     {
-        if (User.IsInRole(Roles.Admin))
+        if (User.IsStaff())
         {
             return BadRequest(new { error = "A lesson preview does not grade." });
         }

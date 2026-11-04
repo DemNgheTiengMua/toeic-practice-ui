@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc.Razor;
 using WebMVC;
+using WebMVC.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -109,10 +110,13 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
                 {
                     var me = await api.GetMeAsync(token, context.HttpContext.RequestAborted);
                     var cookieRole = context.Principal?.FindFirst(IAccessTokenFactory.ClaimRole)?.Value;
-                    if (me.Role != cookieRole)
+                    var cookiePermissions = context.Principal?.GetPermissions() ?? [];
+                    if (me.Role != cookieRole
+                        || !me.Held.OrderBy(p => p, StringComparer.Ordinal)
+                            .SequenceEqual(cookiePermissions.OrderBy(p => p, StringComparer.Ordinal)))
                     {
-                        // Role changed server-side (e.g. promoted or demoted); refuse rather than
-                        // serve pages under the stale role.
+                        // Role or capability changed server-side (promoted, demoted, granted,
+                        // revoked); refuse rather than serve pages under the stale authority.
                         context.RejectPrincipal();
                         await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
                     }
@@ -139,9 +143,18 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
             },
         };
     });
-builder.Services.AddAuthorizationBuilder()
-    .AddPolicy(Roles.Admin, policy => policy.RequireRole(Roles.Admin))
+// D16: staff authority is a capability, never a role name. Each of the five namespaces is a policy
+// requiring the `perm` claim its holder carries, so a staff controller names a namespace and an
+// account's role is irrelevant to the gate.
+var authorizationBuilder = builder.Services.AddAuthorizationBuilder()
     .AddPolicy(Roles.Learner, policy => policy.RequireRole(Roles.Learner));
+
+foreach (var permission in Permissions.All)
+{
+    authorizationBuilder.AddPolicy(
+        permission,
+        policy => policy.RequireClaim(IAccessTokenFactory.ClaimPermission, permission));
+}
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<CurrentUser>();
 builder.Services.AddScoped<WebMVC.Formatters.DateTimeFormatter>();

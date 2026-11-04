@@ -11,7 +11,7 @@ using WebMVC.Models;
 
 namespace WebMVC.Controllers;
 
-[Authorize(Policy = Roles.Admin)]
+[Authorize(Policy = Permissions.ContentAuthor)]
 [Route("admin/exams")]
 public sealed class AdminExamsController(
     IAdminExamsClient api,

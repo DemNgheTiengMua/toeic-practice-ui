@@ -3,7 +3,7 @@ using Contracts;
 namespace WebMVC.Models;
 
 /// <summary>The public certificate catalogue, prepared for rendering.</summary>
-public sealed record CertificateCatalogViewModel(IReadOnlyList<CertificateDto> Certificates, bool IsSignedIn, bool IsAdmin)
+public sealed record CertificateCatalogViewModel(IReadOnlyList<CertificateDto> Certificates, bool IsSignedIn, bool IsStaff)
 {
     public IReadOnlyDictionary<(string Certificate, string Skill), int> QuestionCounts { get; } =
         Certificates.SelectMany(c => c.Skills.Select(s => new { Certificate = c.Code, Skill = s }))
