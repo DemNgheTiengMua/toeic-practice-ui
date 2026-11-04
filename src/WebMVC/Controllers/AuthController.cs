@@ -91,8 +91,9 @@ public sealed class AuthController(IAuthClient api) : Controller
             return Redirect(model.ReturnUrl);
         }
 
-        // Learners and admins land on their own dashboards.
-        return result.User.Role == Roles.Admin
+        // Staff land on their portal; everyone else lands on the learner dashboard. Whether an
+        // account is staff is a capability question (D16), not a role-name comparison.
+        return result.User.Permissions.Count > 0
             ? RedirectToAction("Index", "Admin")
             : RedirectToAction("Index", "Dashboard");
     }
@@ -226,10 +227,12 @@ public sealed class AuthController(IAuthClient api) : Controller
 
     private async Task SignInCookieAsync(AuthTokenResponse result)
     {
-        var claims = AuthClaims.For(result.User.UserId, result.User.Email, result.User.Role, result.User.FullName);
+        var claims = AuthClaims.For(
+            result.User.UserId, result.User.Email, result.User.Role, result.User.FullName,
+            result.User.Permissions);
 
         // The identity must declare the compact claim types as its name/role claim types, or
-        // RequireRole and User.Identity.Name fall back to the long XML-namespace defaults.
+        // User.Identity.Name falls back to the long XML-namespace defaults.
         var identity = new ClaimsIdentity(
             claims,
             CookieAuthenticationDefaults.AuthenticationScheme,

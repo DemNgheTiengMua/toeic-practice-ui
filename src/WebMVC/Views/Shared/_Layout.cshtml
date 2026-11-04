@@ -20,7 +20,7 @@
         <a href="/pricing">Pricing</a>
         @if (User.IsSignedIn())
         {
-          <a href="@(User.IsAdmin() ? "/admin" : "/dashboard")">Dashboard</a>
+          <a href="@(User.IsStaff() ? "/admin" : "/dashboard")">Dashboard</a>
           <a href="/profile">Profile</a>
           <form method="post" action="/auth/sign-out" class="no-margin">
             @Html.AntiForgeryToken()

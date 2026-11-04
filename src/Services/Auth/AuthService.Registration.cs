@@ -67,7 +67,8 @@ public sealed partial class AuthService
         }
 
         return new AuthUser(
-            user.UserId, user.Email, user.FullName, Roles.Learner, EmailVerified: false, user.SecurityStamp);
+            user.UserId, user.Email, user.FullName, Roles.Learner, EmailVerified: false, user.SecurityStamp,
+            Permissions: []);
     }
 
     private async Task SendActivationAsync(User user, CancellationToken cancellationToken)

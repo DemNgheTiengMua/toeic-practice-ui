@@ -34,7 +34,7 @@
       <div class="landing-nav__actions">
         @if (Model.IsSignedIn)
         {
-          <a class="landing-login" href="@(Model.IsAdmin ? "/admin" : "/dashboard")">Dashboard</a>
+          <a class="landing-login" href="@(Model.IsStaff ? "/admin" : "/dashboard")">Dashboard</a>
           <form method="post" action="/auth/sign-out" class="no-margin" style="display:inline">
             @Html.AntiForgeryToken()
             <button type="submit" class="btn btn--plate btn--sm">Sign out</button>
@@ -229,7 +229,7 @@
       <p>Focus on what matters. Reach your target with confidence.</p>
       @if (Model.IsSignedIn)
       {
-        <a href="@(Model.IsAdmin ? "/admin" : "/dashboard")">Dashboard</a>
+        <a href="@(Model.IsStaff ? "/admin" : "/dashboard")">Dashboard</a>
       }
       else
       {

@@ -6,7 +6,7 @@ namespace WebMVC.Controllers;
 
 /// <summary>Admin-only pages. The policy refuses a learner before any action runs; the API
 /// enforces the same rule on its own endpoints, so a forged or replayed cookie gets nothing.</summary>
-[Authorize(Policy = Roles.Admin)]
+[Authorize(Policy = Permissions.SystemAdmin)]
 public sealed class AdminController(
     IAdminDashboardClient api,
     CurrentUser currentUser,

@@ -103,7 +103,7 @@ public sealed class AdminUserService(
         CancellationToken cancellationToken = default)
     {
         var user = await db.Users
-            .Include(u => u.Role)
+            .Include(u => u.Role).ThenInclude(r => r.RolePermissions)
             .SingleOrDefaultAsync(u => u.UserId == targetUserId && !u.IsDeleted, cancellationToken);
 
         if (user is null)
@@ -111,9 +111,11 @@ public sealed class AdminUserService(
             throw new UserNotFoundException(targetUserId);
         }
 
-        if (user.Role.Code == Roles.Admin)
+        // D16: staff authority is a capability, so "is an administrator" means "holds any namespace".
+        // A support triager is as un-lockable through this screen as a system governor.
+        if (user.Role.RolePermissions.Count > 0)
         {
-            throw new AdminUserException(ApiError.Codes.Forbidden, "Cannot modify lock status of an administrator.", 403);
+            throw new AdminUserException(ApiError.Codes.Forbidden, "Cannot modify lock status of a staff account.", 403);
         }
 
         user.IsLocked = isLocked;

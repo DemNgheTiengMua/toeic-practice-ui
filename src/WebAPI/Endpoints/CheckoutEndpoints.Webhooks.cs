@@ -33,6 +33,6 @@ public static partial class CheckoutEndpoints
         {
             var confirmedUrl = await payos.ConfirmWebhookUrlAsync(cancellationToken: cancellationToken);
             return Results.Ok(new { webhookUrl = confirmedUrl });
-        }).RequireAuthorization(Roles.Admin);
+        }).RequireAuthorization(Permissions.SystemAdmin);
     }
 }

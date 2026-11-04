@@ -23,6 +23,15 @@ public static class ClaimsPrincipalExtensions
     public static string? GetRole(this ClaimsPrincipal? principal) =>
         principal?.FindFirst(IAccessTokenFactory.ClaimRole)?.Value;
 
-    public static bool IsAdmin(this ClaimsPrincipal? principal) =>
-        principal?.GetRole() == Roles.Admin;
+    /// <summary>D16: the staff namespaces this principal holds, read from its <c>perm</c> claims.</summary>
+    public static IReadOnlyList<string> GetPermissions(this ClaimsPrincipal? principal) =>
+        principal?.FindAll(IAccessTokenFactory.ClaimPermission).Select(c => c.Value).ToList() ?? [];
+
+    public static bool HasPermission(this ClaimsPrincipal? principal, string permission) =>
+        principal?.HasClaim(IAccessTokenFactory.ClaimPermission, permission) == true;
+
+    /// <summary>Whether this account does any staff work at all. Replaces the old "is the role named
+    /// admin" test: a small team may hold one namespace and still needs the staff chrome, and a
+    /// learner holds none.</summary>
+    public static bool IsStaff(this ClaimsPrincipal? principal) => principal.GetPermissions().Count > 0;
 }

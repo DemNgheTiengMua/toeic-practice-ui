@@ -55,7 +55,8 @@ public static class EndpointHelpers
 
     public static IResult ToTokenResponse(AuthUser user, IAccessTokenFactory tokens)
     {
-        var token = tokens.Create(user.UserId, user.Email, user.Role, user.FullName, user.SessionStamp);
+        var token = tokens.Create(
+            user.UserId, user.Email, user.Role, user.FullName, user.SessionStamp, user.Permissions);
         return Results.Ok(new AuthTokenResponse(token.Token, token.ExpiresAt, ToDto(user)));
     }
 
@@ -97,7 +98,7 @@ public static class EndpointHelpers
             result.BandName);
 
     public static AuthUserDto ToDto(AuthUser user) =>
-        new(user.UserId, user.Email, user.FullName, user.Role, user.EmailVerified);
+        new(user.UserId, user.Email, user.FullName, user.Role, user.EmailVerified, user.Permissions);
 
     public static IResult Problem(int status, string title, string code, string? detail = null)
     {

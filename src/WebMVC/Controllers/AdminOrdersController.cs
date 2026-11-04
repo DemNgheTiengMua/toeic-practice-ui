@@ -5,7 +5,7 @@ using WebMVC.Models;
 
 namespace WebMVC.Controllers;
 
-[Authorize(Policy = Roles.Admin)]
+[Authorize(Policy = Permissions.SystemAdmin)]
 [Route("admin/orders")]
 public sealed class AdminOrdersController(
     IAdminOrdersClient api,

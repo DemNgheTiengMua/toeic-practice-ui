@@ -23,6 +23,7 @@ public sealed partial class AuthService
         var email = input.Email.Trim().ToLowerInvariant();
         var user = await db.Users
             .Include(u => u.Role)
+            .ThenInclude(r => r.RolePermissions)
             .SingleOrDefaultAsync(u => !u.IsDeleted && u.Email.ToLower() == email, cancellationToken);
 
         if (user is null)
@@ -65,7 +66,8 @@ public sealed partial class AuthService
         await db.SaveChangesAsync(cancellationToken);
 
         return new AuthUser(
-            user.UserId, user.Email, user.FullName, user.Role.Code, user.EmailVerifiedAt != null, user.SecurityStamp);
+            user.UserId, user.Email, user.FullName, user.Role.Code, user.EmailVerifiedAt != null, user.SecurityStamp,
+            user.Role.RolePermissions.Select(rp => rp.PermissionCode).OrderBy(c => c, StringComparer.Ordinal).ToList());
     }
 
     public async Task<SessionStatus> CheckSessionAsync(int userId, string? sessionStamp, CancellationToken cancellationToken = default)
@@ -112,10 +114,21 @@ public sealed partial class AuthService
         var row = await db.Users
             .AsNoTracking()
             .Where(u => u.UserId == userId && !u.IsDeleted)
-            .Select(u => new { u.UserId, u.Email, u.FullName, Role = u.Role.Code, Verified = u.EmailVerifiedAt != null, u.SecurityStamp })
+            .Select(u => new
+            {
+                u.UserId,
+                u.Email,
+                u.FullName,
+                Role = u.Role.Code,
+                Verified = u.EmailVerifiedAt != null,
+                u.SecurityStamp,
+                Permissions = u.Role.RolePermissions.Select(rp => rp.PermissionCode).ToList(),
+            })
             .SingleOrDefaultAsync(cancellationToken);
         return row is null
             ? null
-            : new AuthUser(row.UserId, row.Email, row.FullName, row.Role, row.Verified, row.SecurityStamp);
+            : new AuthUser(
+                row.UserId, row.Email, row.FullName, row.Role, row.Verified, row.SecurityStamp,
+                row.Permissions.OrderBy(c => c, StringComparer.Ordinal).ToList());
     }
 }

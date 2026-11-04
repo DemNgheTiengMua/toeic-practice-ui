@@ -152,7 +152,13 @@ public partial class CompanionDbContext : DbContext
     public virtual DbSet<Review> Reviews { get; set; }
 
 
+    public virtual DbSet<Permission> Permissions { get; set; }
+
+
     public virtual DbSet<Role> Roles { get; set; }
+
+
+    public virtual DbSet<RolePermission> RolePermissions { get; set; }
 
 
     public virtual DbSet<SavedQuestion> SavedQuestions { get; set; }

@@ -1,6 +1,6 @@
 namespace WebMVC.Models;
 
-public sealed record ProfilePageViewModel(ProfileViewModel Form, bool IsAdmin)
+public sealed record ProfilePageViewModel(ProfileViewModel Form, bool IsStaff)
 {
     public AudioEquipmentCheckModel Equipment { get; } = new(Title: "Audio & Equipment");
 

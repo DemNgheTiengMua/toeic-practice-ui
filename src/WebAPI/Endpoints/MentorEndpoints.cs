@@ -15,7 +15,8 @@ public static partial class MentorEndpoints
         var learnerMentors = app.MapGroup("/api/mentors").RequireAuthorization(Roles.Learner);
 
         // Admin endpoints
-        var admin = app.MapGroup("/api/admin/mentors").RequireAuthorization(Roles.Admin);
+        // D16: managing mentors is support triage, not authoring.
+        var admin = app.MapGroup("/api/admin/mentors").RequireAuthorization(Permissions.SupportTriage);
         MapCatalog(app);
         MapBookings(learnerMentors);
         MapAdministration(admin);

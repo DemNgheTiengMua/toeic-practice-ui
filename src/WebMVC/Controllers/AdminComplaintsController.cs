@@ -5,7 +5,7 @@ using WebMVC.Models;
 
 namespace WebMVC.Controllers;
 
-[Authorize(Policy = Roles.Admin)]
+[Authorize(Policy = Permissions.SupportTriage)]
 [Route("admin/complaints")]
 public sealed class AdminComplaintsController(
     IAdminComplaintsClient api,

@@ -104,6 +104,22 @@ CREATE TABLE Roles (
   Name   NVARCHAR(60) NOT NULL
 );
 GO
+-- D16 / ADM-01: staff authority is five composable namespaces, not job titles. The list is closed:
+-- a sixth code would be a namespace nobody designed, and a typo in a policy name would otherwise
+-- look exactly like "no account holds this". A role holds any combination of the five.
+CREATE TABLE Permissions (
+  Code VARCHAR(40) NOT NULL PRIMARY KEY
+    CONSTRAINT CK_Permissions_Code CHECK (Code IN (
+      'pool.content.author', 'pool.content.review', 'assessment.blueprint.design',
+      'operations.support.triage', 'system.governance.admin'))
+);
+GO
+CREATE TABLE RolePermissions (
+  RoleId         INT NOT NULL CONSTRAINT FK_RolePermissions_Role REFERENCES Roles(RoleId),
+  PermissionCode VARCHAR(40) NOT NULL CONSTRAINT FK_RolePermissions_Permission REFERENCES Permissions(Code),
+  CONSTRAINT PK_RolePermissions PRIMARY KEY (RoleId, PermissionCode)
+);
+GO
 CREATE TABLE Users (
   UserId       INT IDENTITY(1,1) PRIMARY KEY,
   RoleId       INT NOT NULL CONSTRAINT FK_Users_Role REFERENCES Roles(RoleId),

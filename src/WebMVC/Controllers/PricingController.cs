@@ -15,7 +15,7 @@ public sealed class PricingController(
     [HttpGet("")]
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
-        if (currentUser.IsSignedIn && currentUser.Role == Roles.Learner && learnerContext is not null)
+        if (currentUser.IsSignedIn && !currentUser.IsStaff && learnerContext is not null)
         {
             try
             {
@@ -31,7 +31,7 @@ public sealed class PricingController(
         try
         {
             var packages = await api.GetPublicPackagesAsync(cancellationToken);
-            return View(new WebMVC.Models.PricingViewModel(packages, currentUser.IsAdmin, LearnerShell.Get(HttpContext) is not null, LearnerShell.Get(HttpContext)?.CreditBalance ?? 0));
+            return View(new WebMVC.Models.PricingViewModel(packages, currentUser.IsStaff, LearnerShell.Get(HttpContext) is not null, LearnerShell.Get(HttpContext)?.CreditBalance ?? 0));
         }
         catch (HttpRequestException ex)
         {

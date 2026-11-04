@@ -5,7 +5,7 @@ namespace WebMVC.Models;
 /// <summary>#161: the landing page used to name TOEIC, IELTS and VSTEP in its copy, its chips and its
 /// three cards. It renders whatever the catalogue holds now, so a fourth certificate appears without a
 /// template edit and a renamed one is never called by its old name.</summary>
-public sealed record HomeViewModel(bool IsSignedIn, bool IsAdmin, IReadOnlyList<CertificateDto> Catalog)
+public sealed record HomeViewModel(bool IsSignedIn, bool IsStaff, IReadOnlyList<CertificateDto> Catalog)
 {
     public IReadOnlyList<HomeCertificateCard> Certificates { get; } = Catalog.Select(HomeCertificateCard.From).ToList();
 

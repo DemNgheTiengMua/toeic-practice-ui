@@ -5,7 +5,7 @@ using WebMVC.Models;
 
 namespace WebMVC.Controllers;
 
-[Authorize(Policy = Roles.Admin)]
+[Authorize(Policy = Permissions.SupportTriage)]
 [Route("admin/mentors")]
 public sealed class AdminMentorsController(
     IAdminMentorsClient api,
