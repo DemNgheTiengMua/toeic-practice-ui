@@ -137,6 +137,65 @@ public sealed class AiGradingProcessor(
                 .Select(c => c with { Descriptors = gridByCriterion.GetValueOrDefault(c.CriterionId) })
                 .ToList();
 
+            // #193: the three calibrated anchors, read in one grouped query for the same reason as the
+            // grid - a rubric is at most four criteria, and the loop version would become N+1.
+            var anchorByCriterion = appliedIds.Length == 0
+                ? new Dictionary<int, IReadOnlyList<GradingCriterionBandAnchor>>()
+                : await db.GradingCriterionAnchors
+                    .AsNoTracking()
+                    .Where(a => appliedIds.Contains(a.CriterionId))
+                    .GroupBy(a => a.CriterionId)
+                    .Select(g => new
+                    {
+                        CriterionId = g.Key,
+                        Anchors = g.OrderBy(a => a.Band)
+                                   .Select(a => new GradingCriterionBandAnchor(a.Band, a.ResponseText))
+                                   .ToList(),
+                    })
+                    .ToDictionaryAsync(
+                        x => x.CriterionId,
+                        x => (IReadOnlyList<GradingCriterionBandAnchor>)x.Anchors,
+                        cancellationToken);
+
+            criteriaDetails = criteriaDetails
+                .Select(c => c with { Anchors = anchorByCriterion.GetValueOrDefault(c.CriterionId) })
+                .ToList();
+
+            // #193: a locked rubric was calibrated against all three anchors, so grading it without one
+            // moves the standard under the mark. The lock is what makes this a refusal rather than an
+            // authoring wish: an unlocked rubric is still being written, and every rubric that predates
+            // the anchors carries none, so only a locked one is refused. Unweighted here on purpose -
+            // the guard is the lock, and a skill modality check would be a second rule to keep in step.
+            var rubricLocked = await db.GradingRubricLocks
+                .AsNoTracking()
+                .AnyAsync(l => l.SkillId == grading.SkillId, cancellationToken);
+
+            if (rubricLocked)
+            {
+                var unanchored = criteriaDetails.Where(c => !c.IsAnchored).ToList();
+                if (unanchored.Count > 0)
+                {
+                    // The band is named as well as the criterion: "W_TR has no anchors" and "W_TR has no
+                    // band-3 anchor" are different rows for the author to write.
+                    var named = string.Join(", ", unanchored.Select(c =>
+                        $"{c.Code} ({c.CriterionId})"
+                        + (c.MissingAnchorBands.Count > 0
+                            ? $" is missing its anchor for band {string.Join(", band ", c.MissingAnchorBands)}"
+                            : " has no anchor response")));
+                    logger?.LogWarning(
+                        "GradingId {GradingId} for FreeResponseId {FreeResponseId} failed: {Criteria}",
+                        grading.GradingId, fr.FreeResponseId, named);
+
+                    grading.Status = AiGradingStatus.Failed.ToCode();
+                    grading.FailureReason = $"Nothing was scored: {named}. A locked rubric is graded against three benchmark anchors at bands 2, 3 and 4; author the missing ones, then grade again.";
+                    if (grading.FailureReason.Length > 400) grading.FailureReason = grading.FailureReason[..399] + "…";
+                    grading.CompletedAt = DateTimeOffset.UtcNow;
+                    ClearFeedback(grading);
+                    await db.SaveChangesAsync(cancellationToken);
+                    return false;
+                }
+            }
+
             // #192: a written answer is scored against a written standard. A criterion with no
             // descriptor text cannot be scored against anything, and a rubric that silently scores
             // three of four criteria reports a composite that is not the one its authors wrote

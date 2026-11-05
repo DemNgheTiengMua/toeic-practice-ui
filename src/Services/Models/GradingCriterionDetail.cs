@@ -11,6 +11,12 @@ namespace Services;
 public record GradingCriterionBandDescriptor(byte Band, string Descriptor, string BinaryGates);
 
 /// <summary>
+/// #193: a calibrated benchmark response at band 2, 3 or 4, injected into the grading call so the
+/// model measures the answer against a written one instead of an impression (D0.6 mechanism 5).
+/// </summary>
+public record GradingCriterionBandAnchor(byte Band, string ResponseText);
+
+/// <summary>
 /// One criterion as the grader is asked to score it.
 /// </summary>
 /// <param name="RubricDescription">
@@ -25,6 +31,11 @@ public record GradingCriterionBandDescriptor(byte Band, string Descriptor, strin
 /// hole the grader would fill by inference, so <see cref="IsGradeable"/> is false for it too - see
 /// <see cref="MissingBands"/>.
 /// </param>
+/// <param name="Anchors">
+/// #193: the calibrated benchmark responses at bands 2, 3 and 4. Null means "this rubric carries none",
+/// which is every rubric authored before the ticket; a locked rubric must carry all three - see
+/// <see cref="IsAnchored"/>.
+/// </param>
 public record GradingCriterionDetail(
     int CriterionId,
     string Code,
@@ -32,7 +43,8 @@ public record GradingCriterionDetail(
     decimal MaxScore,
     decimal Weight,
     string? RubricDescription = null,
-    IReadOnlyList<GradingCriterionBandDescriptor>? Descriptors = null
+    IReadOnlyList<GradingCriterionBandDescriptor>? Descriptors = null,
+    IReadOnlyList<GradingCriterionBandAnchor>? Anchors = null
 )
 {
     /// <summary>
@@ -42,6 +54,21 @@ public record GradingCriterionDetail(
     public IReadOnlyList<byte> MissingBands => Descriptors is not { Count: > 0 }
         ? Array.Empty<byte>()
         : CanonicalRubric.Bands.Where(b => Descriptors.All(d => d.Band != b)).ToArray();
+
+    /// <summary>
+    /// #193: bands 2, 3 or 4 that carry no anchor. Empty when there are none at all (an unlocked
+    /// rubric, or one authored before the ticket), or when all three are present.
+    /// </summary>
+    public IReadOnlyList<byte> MissingAnchorBands => Anchors is not { Count: > 0 }
+        ? Array.Empty<byte>()
+        : CanonicalRubric.AnchorBands.Where(b => Anchors.All(a => a.Band != b)).ToArray();
+
+    /// <summary>
+    /// #193: true when this criterion carries a benchmark at every anchor band. A count of three rows
+    /// is not this - three rows at band 2 leave bands 3 and 4 unanchored, which is the compression the
+    /// anchors exist to prevent - so the three bands are checked by name.
+    /// </summary>
+    public bool IsAnchored => Anchors is { Count: > 0 } && MissingAnchorBands.Count == 0;
     /// <summary>
     /// A criterion is gradable when it has standard text to score against: a complete grid, or prose
     /// when no grid was authored at all. A grid that has started and stopped short is NOT gradable,

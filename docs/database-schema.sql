@@ -1644,6 +1644,44 @@ BEGIN
     THROW 50047, 'This rubric is locked, so its descriptors cannot be changed. Unlock it first.', 1;
 END;
 GO
+-- #193: the three calibrated benchmark responses at bands 2, 3 and 4 (D0.6 mechanism 5). They are a
+-- table rather than three columns on GradingCriteria because "three anchors at 2, 3 and 4" is then a
+-- count the lock can refuse, and because a fourth anchor is a row the PK refuses rather than a column
+-- nobody reads.
+--
+-- The response text is a whole written answer, so it is NVARCHAR(MAX): a 280-word benchmark does not
+-- fit anything shorter, and a truncated anchor is a different band from the one it was calibrated at.
+CREATE TABLE GradingCriterionAnchors (
+  CriterionId  INT NOT NULL,
+  -- Only the three calibrated bands carry an anchor. Band 0 has no benchmark worth writing and bands
+  -- 5-6 are the ladder's job, not a per-call prompt's.
+  Band         TINYINT NOT NULL CONSTRAINT CK_GCA_Band CHECK (Band IN (2, 3, 4)),
+  ResponseText NVARCHAR(MAX) NOT NULL CONSTRAINT CK_GCA_ResponseText CHECK (LEN(LTRIM(RTRIM(ResponseText))) > 0),
+  CONSTRAINT PK_GradingCriterionAnchors PRIMARY KEY (CriterionId, Band),
+  CONSTRAINT FK_GCA_Criterion FOREIGN KEY (CriterionId) REFERENCES GradingCriteria(CriterionId)
+);
+GO
+-- An anchor is part of the standard, so a locked rubric's anchors are frozen from every side, for the
+-- same reason its descriptors are: editing one after a learner was scored moves the benchmark the mark
+-- was measured against. Authoring happens before the lock, which is the only window there is.
+CREATE TRIGGER trg_GradingCriterionAnchors_FrozenWhenLocked
+ON GradingCriterionAnchors AFTER INSERT, UPDATE, DELETE AS
+BEGIN
+  SET NOCOUNT ON;
+  -- The DELETE arm needs `deleted`: a guard against `inserted` alone is silent on removal, and removing
+  -- one anchor is the quietest way to leave a rubric with two.
+  IF EXISTS (
+    SELECT 1 FROM inserted i
+    JOIN GradingCriteria c ON c.CriterionId = i.CriterionId
+    JOIN GradingRubricLocks l ON l.SkillId = c.SkillId
+  ) OR EXISTS (
+    SELECT 1 FROM deleted d
+    JOIN GradingCriteria c ON c.CriterionId = d.CriterionId
+    JOIN GradingRubricLocks l ON l.SkillId = c.SkillId
+  )
+    THROW 50065, 'This rubric is locked, so its anchor responses cannot be changed. Author them before the lock.', 1;
+END;
+GO
 -- A locked rubric's criterion list is frozen too, and for the same reason: adding a fifth criterion,
 -- renaming one, or removing one changes which standard a stored score was measured against.
 CREATE TRIGGER trg_GradingCriteria_FrozenWhenLocked

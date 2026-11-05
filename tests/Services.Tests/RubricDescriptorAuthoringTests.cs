@@ -63,6 +63,12 @@ public sealed class RubricDescriptorAuthoringTests(DatabaseFixture database)
         IReadOnlyList<Contracts.SaveGradingCriterionBandDto>? bands) =>
         new(null, skillCode, code, code, 6m, 1m, order, "Prose for " + code, bands);
 
+    private static IReadOnlyList<Contracts.SaveGradingCriterionAnchorDto> Anchors() =>
+        CanonicalRubric.AnchorBands
+            .Select(b => new Contracts.SaveGradingCriterionAnchorDto(
+                b, $"A whole band {b} answer, written by hand so the model has a benchmark and not an impression."))
+            .ToList();
+
     private static readonly string[] CanonicalWriting = ["W_TR", "W_CC", "W_LR", "W_GR"];
 
     [Fact]
@@ -195,5 +201,148 @@ public sealed class RubricDescriptorAuthoringTests(DatabaseFixture database)
         var parts = new List<string>();
         for (var x = e; x is not null; x = x.InnerException) parts.Add(x.Message);
         return string.Join(" | ", parts);
+    }
+
+    // ---- #193: anchors ----
+
+    [Fact]
+    public async Task An_anchor_set_round_trips_through_the_wizard_and_travels_into_the_grading_detail()
+    {
+        // The accept direction: three anchors authored through the wizard are stored, and the criterion
+        // reads back as anchored. Without this, "authorable before the lock" would mean "possible via
+        // direct SQL", which is not authorable at all.
+        var certCode = Unique("AW06");
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+
+        await new CertificateService(db).SaveCertificateWizardAsync(
+            Request(certCode, "WRIT",
+            [
+                new Contracts.SaveGradingCriterionWizardDto(
+                    null, "WRIT", "W_TR", "W_TR", 6m, 1m, 1, "Prose for W_TR", Grid(), Anchors())
+            ]));
+
+        await using var check = DbContextFactory.Create(database.ConnectionString);
+        var criterionId = await check.GradingCriteria
+            .Where(c => c.Cert.Code == certCode).Select(c => c.CriterionId).SingleAsync();
+        var stored = await check.GradingCriterionAnchors
+            .Where(a => a.CriterionId == criterionId).OrderBy(a => a.Band).ToListAsync();
+
+        Assert.Equal([2, 3, 4], stored.Select(a => a.Band));
+        Assert.All(stored, a => Assert.Contains($"band {a.Band} answer", a.ResponseText, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void An_anchor_set_missing_a_calibrated_band_is_refused_before_anything_is_written_and_names_the_band()
+    {
+        // The mutation first: bands 2 and 4 authored, band 3 absent. A guard written as "has anchors"
+        // passes it, and the rubric is graded with a floor and a ceiling and no middle - which is where
+        // a fluent but empty answer sits, so the compression the anchors exist to stop is exactly the
+        // gap left open.
+        var certCode = Unique("AW07");
+        var partial = Anchors().Where(a => a.Band != 3).ToList();
+
+        var error = Assert.Throws<ScoreConversionException>(() =>
+            CertificateConfigurationValidator.Validate(
+                Request(certCode, "WRIT",
+                [
+                    new Contracts.SaveGradingCriterionWizardDto(
+                        null, "WRIT", "W_TR", "W_TR", 6m, 1m, 1, "Prose for W_TR", Grid(), partial)
+                ])));
+
+        Assert.Contains("W_TR", error.Message, StringComparison.Ordinal);
+        Assert.Contains("band(s) 3", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void An_anchor_at_a_band_outside_two_to_four_is_refused_by_the_validator_too()
+    {
+        // The schema CHECK refuses band 5. The validator refuses it first so the author gets a reason
+        // naming the rule rather than a constraint name from a save.
+        var certCode = Unique("AW08");
+        var invalid = Anchors()
+            .Append(new Contracts.SaveGradingCriterionAnchorDto(5, "A band five anchor that no call will ever send."))
+            .ToList();
+
+        var error = Assert.Throws<ScoreConversionException>(() =>
+            CertificateConfigurationValidator.Validate(
+                Request(certCode, "WRIT",
+                [
+                    new Contracts.SaveGradingCriterionWizardDto(
+                        null, "WRIT", "W_TR", "W_TR", 6m, 1m, 1, "Prose for W_TR", Grid(), invalid)
+                ])));
+
+        Assert.Contains("outside 2-4", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task A_second_save_that_omits_anchors_leaves_the_stored_anchors_alone()
+    {
+        // The same rule as the grid: a form that posts criteria without anchors must not silently
+        // unanchor a rubric, which would leave a locked-or-lockable rubric with no benchmark. Both an
+        // absent collection AND an empty one mean "not authored here" - an empty one is the shape a form
+        // actually posts, and a guard written as `Anchors is not null` passes it and deletes all three.
+        var certCode = Unique("AW09");
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+
+        await new CertificateService(db).SaveCertificateWizardAsync(
+            Request(certCode, "WRIT",
+            [
+                new Contracts.SaveGradingCriterionWizardDto(
+                    null, "WRIT", "W_TR", "W_TR", 6m, 1m, 1, "Prose for W_TR", Grid(), Anchors())
+            ]));
+
+        var certId = await db.Certificates.Where(c => c.Code == certCode).Select(c => c.CertId).SingleAsync();
+        var criterionId = await db.GradingCriteria
+            .Where(c => c.Cert.Code == certCode).Select(c => c.CriterionId).SingleAsync();
+
+        // null: the JSON body omits the field entirely
+        await new CertificateService(db).SaveCertificateWizardAsync(
+            Request(certCode, "WRIT", [Criterion("WRIT", "W_TR", 1, null)]) with { CertId = certId });
+
+        await using (var check = DbContextFactory.Create(database.ConnectionString))
+        {
+            Assert.Equal(3, await check.GradingCriterionAnchors.CountAsync(a => a.CriterionId == criterionId));
+        }
+
+        // []: the body carries an empty array, which is what an unmodified form posts
+        await new CertificateService(db).SaveCertificateWizardAsync(
+            Request(certCode, "WRIT",
+            [
+                new Contracts.SaveGradingCriterionWizardDto(
+                    criterionId, "WRIT", "W_TR", "W_TR", 6m, 1m, 1, "Prose for W_TR", null, [])
+            ]) with { CertId = certId });
+
+        await using var final = DbContextFactory.Create(database.ConnectionString);
+        Assert.Equal(3, await final.GradingCriterionAnchors.CountAsync(a => a.CriterionId == criterionId));
+    }
+
+    [Fact]
+    public async Task An_anchor_cannot_be_written_after_the_rubric_is_locked_which_is_why_it_is_authored_before()
+    {
+        // The order the ticket names: anchors are authorable BEFORE the lock, not after. The schema is
+        // where that is enforced; this asserts it from the application side so a save that reorders the
+        // two steps fails loudly rather than silently dropping the anchors.
+        var certCode = Unique("AW10");
+        await using var db = DbContextFactory.Create(database.ConnectionString);
+
+        var saved = await new CertificateService(db).SaveCertificateWizardAsync(
+            Request(certCode, "WRIT",
+                CanonicalWriting.Select((c, i) => Criterion("WRIT", c, i + 1, Grid())).ToList()));
+
+        var skillId = await db.Skills.Where(s => s.Cert.Code == certCode).Select(s => s.SkillId).SingleAsync();
+        db.GradingRubricLocks.Add(new GradingRubricLock { SkillId = skillId, CertId = saved.CertId });
+        await db.SaveChangesAsync();
+
+        var criterionId = await db.GradingCriteria
+            .Where(c => c.Cert.Code == certCode).Select(c => c.CriterionId).FirstAsync();
+        db.GradingCriterionAnchors.Add(new GradingCriterionAnchor
+        {
+            CriterionId = criterionId,
+            Band = 2,
+            ResponseText = "A band two anchor written after the lock.",
+        });
+
+        var error = await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
+        Assert.Contains("locked", Flatten(error), StringComparison.OrdinalIgnoreCase);
     }
 }
