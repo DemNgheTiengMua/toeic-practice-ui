@@ -59,6 +59,16 @@ public partial class ExamAttempt
     [Unicode(false)]
     public string? BandCode { get; set; }
 
+    /// <summary>#191: which service declared this scoring write. Required by the trigger whenever
+    /// TotalScore or BandCode moves; a sitting-state write leaves it NULL.</summary>
+    [StringLength(64)]
+    [Unicode(false)]
+    public string? WrittenByService { get; set; }
+
+    /// <summary>#191: monotonic ordering token, so an older out-of-order callback cannot overwrite a
+    /// newer result.</summary>
+    public int ProjectionVersion { get; set; }
+
     [InverseProperty("ExamAttempt")]
     public virtual ICollection<AiInsight> AiInsights { get; set; } = new List<AiInsight>();
 

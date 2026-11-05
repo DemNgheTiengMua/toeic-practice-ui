@@ -207,6 +207,12 @@ public sealed partial class AttemptEngine
                 .SingleAsync(cancellationToken);
             var totalScore = AggregateTotalScore(cert.ScoreAggregationRule, newSkillScores);
             attempt.TotalScore = totalScore;
+            // #191: the derived fact on this table is TotalScore + BandCode, and this is its one
+            // writer. The version moves forward on every scoring pass, so a stale out-of-order
+            // callback (a duplicate submit racing this one) cannot overwrite the result it is behind.
+            attempt.WrittenByService = DerivedFactWriters.AttemptScoreAndBand;
+            attempt.ProjectionVersion++;
+            db.Entry(attempt).Property(a => a.WrittenByService).IsModified = true;
             string? matchingBandCode = null;
             if (!hasPendingMockResponses)
             {
@@ -231,6 +237,12 @@ public sealed partial class AttemptEngine
                     placement.TotalScore = totalScore;
                     placement.ResultBandCode = attempt.BandCode;
                     placement.TakenAt = now;
+                    // #191: this is the placement snapshot's one writer. PlacementService used to
+                    // write the same row again unconditionally - the confirmed defect in
+                    // docs/research/placement-free-response-defect.md - and the trigger now refuses it.
+                    placement.WrittenByService = DerivedFactWriters.PlacementResult;
+                    placement.ProjectionVersion++;
+                    db.Entry(placement).Property(p => p.WrittenByService).IsModified = true;
                 }
             }
 
@@ -338,7 +350,17 @@ public sealed partial class AttemptEngine
                 .Include(a => a.Question).ThenInclude(q => q.QuestionOptionQuestionNavigations)
                 .ToListAsync(cancellationToken);
 
+            // #191: clearing the score is a write of the same derived fact, so it declares the same
+            // writer. This runs before the rescore below and is what makes a resubmit start from a
+            // known state rather than from the previous total.
+            //
+            // `Property(...).IsModified` is needed because EF omits a column whose value did not
+            // change: on a second pass the stamp already holds this name, so without it the UPDATE
+            // would carry no declaration and the trigger would - correctly - refuse it.
             attempt.TotalScore = null;
+            attempt.WrittenByService = DerivedFactWriters.AttemptScoreAndBand;
+            attempt.ProjectionVersion++;
+            db.Entry(attempt).Property(a => a.WrittenByService).IsModified = true;
             await db.SaveChangesAsync(cancellationToken);
 
             var existingScores = await db.AttemptSkillScores
@@ -495,7 +517,33 @@ public sealed partial class AttemptEngine
             var totalScore = AggregateTotalScore(cert.ScoreAggregationRule, newSkillScores);
             attempt.TotalScore = totalScore;
             attempt.BandCode = await FindBandCodeAsync(attempt.CertId, totalScore, cancellationToken);
+            attempt.WrittenByService = DerivedFactWriters.AttemptScoreAndBand;
+            attempt.ProjectionVersion++;
+            db.Entry(attempt).Property(a => a.WrittenByService).IsModified = true;
             attempt.Status = AttemptStatus.Graded.ToCode();
+
+            // #191 / D14: the placement snapshot is derived from the attempt, and this is the only
+            // place that may write it. Before #191 the AI-grading path stopped at the attempt and
+            // left the placement on the earlier null-band value, while `AiGradingProcessor` patched
+            // the snapshot from the outside - a second writer on the row the confirmed defect is
+            // about. When a placement carries a free response, this is the moment its result exists.
+            if (attempt.Exam.Purpose == ExamPurpose.Placement.ToCode())
+            {
+                var placement = await db.PlacementTests
+                    .FirstOrDefaultAsync(p => p.AttemptId == attempt.AttemptId, cancellationToken);
+
+                if (placement is not null)
+                {
+                    placement.Status = PlacementStatus.Done.ToCode();
+                    placement.TotalScore = totalScore;
+                    placement.ResultBandCode = attempt.BandCode;
+                    placement.TakenAt = DateTimeOffset.UtcNow;
+                    placement.WrittenByService = DerivedFactWriters.PlacementResult;
+                    placement.ProjectionVersion++;
+                    db.Entry(placement).Property(p => p.WrittenByService).IsModified = true;
+                }
+            }
+
             await db.SaveChangesAsync(cancellationToken);
 
             // #154: this is the second way a mock reaches `graded` (a mock with free responses is

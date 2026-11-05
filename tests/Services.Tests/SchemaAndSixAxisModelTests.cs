@@ -93,8 +93,8 @@ public sealed class SchemaAndSixAxisModelTests(DatabaseFixture database)
                 DECLARE @examId INT = SCOPE_IDENTITY();
 
                 -- Attempt with scaled scores: 60 and 65 -> Average = 62.5 -> IELTS half-step rounding = 65
-                INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, ExpiresAt, TotalScore)
-                VALUES (@userId, @examId, @certHalf, 'in_progress', DATEADD(hour, 1, SYSDATETIMEOFFSET()), 65);
+                INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, ExpiresAt, TotalScore, WrittenByService, ProjectionVersion)
+                VALUES (@userId, @examId, @certHalf, 'in_progress', DATEADD(hour, 1, SYSDATETIMEOFFSET()), 65, 'AttemptEngine', 1);
                 DECLARE @attemptId INT = SCOPE_IDENTITY();
 
                 INSERT INTO AttemptSkillScores (AttemptId, SkillId, CertId, RawScore, ScaledScore) VALUES
@@ -111,8 +111,8 @@ public sealed class SchemaAndSixAxisModelTests(DatabaseFixture database)
                     DECLARE @certHalf INT = (SELECT TOP 1 CertId FROM Certificates WHERE Code = 'CUSTOM_HALF');
                     DECLARE @skill1 INT = (SELECT SkillId FROM Skills WHERE CertId = @certHalf AND Code = 'S1');
 
-                    INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, ExpiresAt, TotalScore)
-                    VALUES (@userId, @examId, @certHalf, 'in_progress', DATEADD(hour, 1, SYSDATETIMEOFFSET()), 125);
+                    INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, ExpiresAt, TotalScore, WrittenByService, ProjectionVersion)
+                    VALUES (@userId, @examId, @certHalf, 'in_progress', DATEADD(hour, 1, SYSDATETIMEOFFSET()), 125, 'AttemptEngine', 1);
                     DECLARE @badAttempt INT = SCOPE_IDENTITY();
 
                     INSERT INTO AttemptSkillScores (AttemptId, SkillId, CertId, RawScore, ScaledScore)

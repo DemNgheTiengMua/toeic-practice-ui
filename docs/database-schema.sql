@@ -4,6 +4,53 @@
 SET QUOTED_IDENTIFIER ON;
 SET ANSI_NULLS ON;
 GO
+-- ============ Domain 0: Single-writer registry ============
+-- #191 / D14 / TRN-06, TRN-07: seven derived facts, seven owners, declared here rather than agreed by
+-- convention. Each covered table carries a `WrittenByService` foreign key to this registry and a
+-- trigger comparing it against the fact's owner, so an invented or mistyped service name is
+-- unstorable and a real second writer is refused at write time.
+--
+-- This is a table rather than a comment because the coverage is the thing that must not drift. Three
+-- of the seven have a table today; three are waiting on a table another ticket creates; one is
+-- exempt because its table already carries the guarantee and the SRS decision log D-09 forbids a
+-- second one. `Coverage` says which, and a CHECK makes "claims coverage but names no table"
+-- unrepresentable - a mechanism that silently covers two and claims seven is this ticket's worst
+-- failure mode.
+--
+-- PRN-01: the writer identity is a parameter on the write, never `sp_set_session_context`. Session
+-- context survives commit and rollback, so a writer name left in it would be read by the next
+-- transaction on that pooled connection and would vouch for code that never declared itself.
+CREATE TABLE DerivedFactOwners (
+  FactCode      VARCHAR(32) NOT NULL PRIMARY KEY,
+  OwningService VARCHAR(64) NOT NULL,
+  Coverage      VARCHAR(16) NOT NULL
+    CONSTRAINT CK_DerivedFactOwners_Coverage CHECK (Coverage IN ('covered','awaiting_table','exempt')),
+  CoveredTable  SYSNAME NULL,
+  Note          NVARCHAR(400) NULL,
+  -- No unique key on OwningService: AttemptEngine owns two of the seven facts, and that is the point
+  -- of naming the fact separately from the service. A mistyped service name is refused by the trigger
+  -- comparing it against this row, so no foreign key is needed to make a typo unstorable.
+  CONSTRAINT CK_DerivedFactOwners_CoveredNamesTable CHECK (
+       (Coverage =  'covered' AND CoveredTable IS NOT NULL)
+    OR (Coverage <> 'covered' AND CoveredTable IS NULL))
+);
+GO
+INSERT INTO DerivedFactOwners (FactCode, OwningService, Coverage, CoveredTable, Note) VALUES
+  ('placement_result',       'AttemptEngine',      'covered',        'PlacementTests',
+   N'The snapshot is derived from the attempt, never written beside it (the confirmed defect).'),
+  ('learner_skill_state',    'SkillStateWriter',   'awaiting_table', NULL,
+   N'#210 creates LearnerSkillStates; the guard lands with the table.'),
+  ('attempt_score_and_band', 'AttemptEngine',      'covered',        'ExamAttempts',
+   N'TotalScore and BandCode, the two values the snapshot is copied from.'),
+  ('topic_capability',       'CapabilityWriter',   'awaiting_table', NULL,
+   N'#232 replaces UserCategoryMasteries with per-cell mastery; guarding the table it deletes is waste.'),
+  ('step_closure',           'PathStepCompletion', 'covered',        'LearnerPathSteps',
+   N'One place closes a step, so the unlock rule cannot drift from the closure.'),
+  ('window_synthesis',       'PathWindowSynthesizer', 'awaiting_table', NULL,
+   N'#212 creates the window rows; a synthesised week has no table yet.'),
+  ('credit_movement',        'CreditLedger',       'exempt',         NULL,
+   N'CreditTransactions is append-only and immutable already (trg_*_AppendOnly, trg_*_NoRewrite); SRS D-09 refuses a second mutation guard.');
+GO
 -- ============ Domain 2: Catalog ============
 CREATE TABLE Certificates (
   CertId               INT IDENTITY(1,1) PRIMARY KEY,
@@ -1039,6 +1086,10 @@ CREATE TABLE ExamAttempts (
   LastQuestionId  INT NULL,
   TotalScore      INT NULL,
   BandCode        VARCHAR(20) NULL,                 -- snapshot at grading
+  -- #191 / D14: the writer identity and the ordering token. Both are required by the trigger below
+  -- whenever TotalScore or BandCode is written; a sitting-state write declares neither.
+  WrittenByService VARCHAR(64) NULL,
+  ProjectionVersion INT NOT NULL CONSTRAINT DF_Attempts_ProjectionVersion DEFAULT 0,
   -- H-5: ExamId's CertId must be the attempt's own (pins the carried-down value)
   CONSTRAINT FK_Attempts_ExamCert FOREIGN KEY (ExamId, CertId) REFERENCES Exams(ExamId, CertId),
   CONSTRAINT FK_Attempts_ActiveSkill FOREIGN KEY (ActiveSkillId, CertId) REFERENCES Skills(SkillId, CertId),
@@ -1338,6 +1389,66 @@ BEGIN
     THROW 50039, 'A draft can only belong to an attempt in progress.', 1;
 END;
 GO
+-- #191 / D14: one writer per derived fact, enforced in the database rather than agreed by
+-- convention. The derived fact on this table is TotalScore + BandCode; a sitting-state write
+-- (Status, ExpiresAt, LastQuestionId, ...) derives nothing and stays legal with no declaration, so
+-- this is not a blanket refusal on the busiest table in the schema.
+--
+-- PRN-01: the writer is a column on the write, not `sp_set_session_context`. Session context survives
+-- commit and rollback, so a name left in it would be read by the next transaction on that pooled
+-- connection and would vouch for code that never declared itself.
+--
+-- The predicate looks at what CHANGED, not at what the row now holds. An attempt that is already
+-- graded has a non-null TotalScore; checking "is it non-null" would make every later status write
+-- look like a scoring write and refuse it.
+CREATE TRIGGER trg_Attempts_SingleWriter
+ON ExamAttempts AFTER INSERT, UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+  DECLARE @owner VARCHAR(64) =
+    (SELECT OwningService FROM DerivedFactOwners WHERE FactCode = 'attempt_score_and_band');
+
+  -- One list of "the rows in this write that move the derived fact", built once. Three separate
+  -- copies of this predicate is how one of them ends up subtly different from the others.
+  DECLARE @touched TABLE (AttemptId INT NOT NULL PRIMARY KEY, WasVersion INT NOT NULL);
+  INSERT INTO @touched (AttemptId, WasVersion)
+    SELECT i.AttemptId, ISNULL(d.ProjectionVersion, 0)
+    FROM inserted i
+    LEFT JOIN deleted d ON d.AttemptId = i.AttemptId
+    WHERE (d.AttemptId IS NULL
+             AND (i.TotalScore IS NOT NULL OR i.BandCode IS NOT NULL OR i.ProjectionVersion <> 0))
+       OR (d.AttemptId IS NOT NULL
+             AND (ISNULL(i.TotalScore, -2147483648) <> ISNULL(d.TotalScore, -2147483648)
+               OR ISNULL(i.BandCode, '') <> ISNULL(d.BandCode, '')
+               OR i.ProjectionVersion <> d.ProjectionVersion));
+
+  IF NOT EXISTS (SELECT 1 FROM @touched)
+    RETURN;
+
+  -- The declaration must be IN THIS STATEMENT, not inherited from whatever wrote the row last. A
+  -- column that already holds the owner's name vouches for nobody: a second writer that changes only
+  -- TotalScore leaves that value untouched, so a value-only check would pass it. `UPDATE()` is the
+  -- statement-level "this write assigned the column" test, which is exactly the missing half.
+  IF EXISTS (
+    SELECT 1
+    FROM inserted i
+    JOIN @touched t ON t.AttemptId = i.AttemptId
+    WHERE ISNULL(i.WrittenByService, '') <> @owner
+       OR (EXISTS (SELECT 1 FROM deleted d WHERE d.AttemptId = i.AttemptId) AND NOT UPDATE(WrittenByService))
+  )
+    THROW 50070, 'The attempt score and band has exactly one writer, AttemptEngine. A write declaring another writer (or none) is refused.', 1;
+
+  -- Monotonic: an older out-of-order callback must not overwrite a newer result. `<=` is the point -
+  -- an equal version is a replay, not progress, and a lower one is a callback that arrived late.
+  IF EXISTS (
+    SELECT 1 FROM inserted i
+    JOIN @touched t ON t.AttemptId = i.AttemptId
+    WHERE i.ProjectionVersion <= t.WasVersion
+  )
+    THROW 50071, 'The attempt score and band projection version must be newer than the stored one; an older callback cannot overwrite a newer result.', 1;
+END;
+GO
+
 -- ============ Domain 8: AI Grading ============
 CREATE TABLE GradingCriteria (
   CriterionId  INT IDENTITY(1,1) PRIMARY KEY,
@@ -1785,6 +1896,10 @@ CREATE TABLE PlacementTests (
     CONSTRAINT CK_Placement_ExamPurpose CHECK (ExamPurpose = 'placement'),
   TotalScore     INT NULL,                -- snapshot of the attempt total ("385 out of 990")
   TakenAt        DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
+  -- #191 / D14: required by trg_PlacementTests_SingleWriter on any write of the snapshot. An
+  -- in-progress placement derives nothing yet and declares neither.
+  WrittenByService VARCHAR(64) NULL,
+  ProjectionVersion INT NOT NULL CONSTRAINT DF_Placement_ProjectionVersion DEFAULT 0,
   -- M-2: the placement exam must belong to the same certificate (NULL stays legal, MATCH SIMPLE)
   CONSTRAINT FK_Placement_ExamCert FOREIGN KEY (ExamId, CertId) REFERENCES Exams(ExamId, CertId),
   -- UI-3: and must be a placement exam, not a mock
@@ -1811,6 +1926,60 @@ BEGIN
 END;
 GO
 CREATE UNIQUE INDEX UX_PlacementTests_Attempt ON PlacementTests(AttemptId) WHERE AttemptId IS NOT NULL;
+GO
+-- #191 / D14: the placement snapshot has exactly one writer, AttemptEngine. This is the confirmed
+-- defect's table (docs/research/placement-free-response-defect.md): AttemptEngine wrote the snapshot
+-- and PlacementService wrote it again unconditionally, producing a `done` row with a null band. The
+-- wrong-writer case below is the real second writer, not an invented name.
+--
+-- The derived fact is the snapshot (Status/ResultBandCode/TotalScore/TakenAt) - not AttemptId, which
+-- is set when the placement starts and derives nothing.
+CREATE TRIGGER trg_PlacementTests_SingleWriter
+ON PlacementTests AFTER INSERT, UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+  DECLARE @owner VARCHAR(64) =
+    (SELECT OwningService FROM DerivedFactOwners WHERE FactCode = 'placement_result');
+
+  DECLARE @touched TABLE (PlacementId INT NOT NULL PRIMARY KEY, WasVersion INT NOT NULL);
+  INSERT INTO @touched (PlacementId, WasVersion)
+    SELECT i.PlacementId, ISNULL(d.ProjectionVersion, 0)
+    FROM inserted i
+    LEFT JOIN deleted d ON d.PlacementId = i.PlacementId
+    -- The derived fact is the RESULT: the band, the total, the moment it was taken, and the move to
+    -- 'done'. Abandoning or starting a placement is a lifecycle act that derives nothing, so it needs
+    -- no declaration - refusing it would make the guard look right and break the product.
+    WHERE (d.PlacementId IS NULL
+             AND (i.ResultBandCode IS NOT NULL OR i.TotalScore IS NOT NULL
+                  OR i.Status = 'done' OR i.ProjectionVersion <> 0))
+       OR (d.PlacementId IS NOT NULL
+             AND (ISNULL(i.ResultBandCode, '') <> ISNULL(d.ResultBandCode, '')
+               OR ISNULL(i.TotalScore, -2147483648) <> ISNULL(d.TotalScore, -2147483648)
+               OR i.TakenAt <> d.TakenAt
+               OR (i.Status = 'done' AND d.Status <> 'done')
+               OR i.ProjectionVersion <> d.ProjectionVersion));
+
+  IF NOT EXISTS (SELECT 1 FROM @touched)
+    RETURN;
+
+  IF EXISTS (
+    SELECT 1
+    FROM inserted i
+    JOIN @touched t ON t.PlacementId = i.PlacementId
+    WHERE ISNULL(i.WrittenByService, '') <> @owner
+       OR (EXISTS (SELECT 1 FROM deleted d WHERE d.PlacementId = i.PlacementId) AND NOT UPDATE(WrittenByService))
+  )
+    THROW 50072, 'The placement snapshot has exactly one writer, AttemptEngine. A write declaring another writer (or none) is refused.', 1;
+
+  -- A version may only move forward, and a bare bump counts as a projection write: otherwise
+  -- "bump to the stored value, then write the result at that version" is a two-step bypass.
+  IF EXISTS (
+    SELECT 1 FROM inserted i
+    JOIN @touched t ON t.PlacementId = i.PlacementId
+    WHERE i.ProjectionVersion <= t.WasVersion
+  )
+    THROW 50073, 'The placement snapshot projection version must be newer than the stored one; an older callback cannot overwrite a newer result.', 1;
+END;
 GO
 -- #156: the learner's answer to a calibration proposal. A row here is a *record of a decision the
 -- learner made*, not an automatic correction, so the path is only rewritten by the 'adjusted' branch
@@ -2000,6 +2169,10 @@ CREATE TABLE LearnerPathSteps (
   -- #154: measured, never guessed: correct/answered for a drill or a mock, NULL for a lesson
   ActualAccuracyPct DECIMAL(5,2) NULL
     CONSTRAINT CK_Steps_ActualAccuracy CHECK (ActualAccuracyPct IS NULL OR ActualAccuracyPct BETWEEN 0 AND 100),
+  -- #191 / D14: required by trg_LearnerPathSteps_SingleWriter when the step is CLOSED. A step moving
+  -- between open states (locked -> available -> in_progress) derives nothing and declares nothing.
+  WrittenByService VARCHAR(64) NULL,
+  ProjectionVersion INT NOT NULL CONSTRAINT DF_Steps_ProjectionVersion DEFAULT 0,
   -- M-1: TemplateId must be the learner path's own
   CONSTRAINT FK_Steps_PathTemplate FOREIGN KEY (LearnerPathId, TemplateId) REFERENCES LearnerPaths(LearnerPathId, TemplateId),
   -- M-1: the module item must belong to that same template
@@ -2008,6 +2181,66 @@ CREATE TABLE LearnerPathSteps (
 GO
 -- UI-12: now that LearnerPathSteps exists, link a practice session to the module step it serves
 ALTER TABLE PracticeSessions ADD CONSTRAINT FK_Practice_PathStep FOREIGN KEY (LearnerPathStepId) REFERENCES LearnerPathSteps(StepId);
+GO
+-- #191 / D14: step closure has exactly one writer, PathStepCompletion. Before #154 three callers
+-- closed a step inline and the unlock rule drifted; #154 put them behind one class and this makes
+-- the arrangement structural. `LearningPathService` also writes this row - it moves a step to
+-- in_progress - which is why the derived fact is the CLOSURE (Status moving to done, plus the score
+-- and the completion time) and not the row.
+--
+-- A closed step is also terminal: reopening it would let a second writer reach the same row through
+-- the open-state door. PathStepCompletion is idempotent on an already-done step and the reset-path
+-- case is handled by LearnerPaths.Status, not by reopening the step.
+CREATE TRIGGER trg_LearnerPathSteps_SingleWriter
+ON LearnerPathSteps AFTER INSERT, UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+  DECLARE @owner VARCHAR(64) =
+    (SELECT OwningService FROM DerivedFactOwners WHERE FactCode = 'step_closure');
+
+  DECLARE @touched TABLE (StepId INT NOT NULL PRIMARY KEY, WasVersion INT NOT NULL, WasDone BIT NOT NULL);
+  INSERT INTO @touched (StepId, WasVersion, WasDone)
+    SELECT i.StepId, ISNULL(d.ProjectionVersion, 0),
+           CASE WHEN ISNULL(d.Status, '') = 'done' THEN 1 ELSE 0 END
+    FROM inserted i
+    LEFT JOIN deleted d ON d.StepId = i.StepId
+    WHERE (d.StepId IS NULL
+             AND (i.Status = 'done' OR i.Score IS NOT NULL
+                  OR i.ActualAccuracyPct IS NOT NULL OR i.ProjectionVersion <> 0))
+       OR (d.StepId IS NOT NULL
+             AND (i.Status = 'done' OR d.Status = 'done'
+               OR ISNULL(i.Score, -1) <> ISNULL(d.Score, -1)
+               OR ISNULL(i.ActualAccuracyPct, -1) <> ISNULL(d.ActualAccuracyPct, -1)
+               OR i.ProjectionVersion <> d.ProjectionVersion));
+
+  IF NOT EXISTS (SELECT 1 FROM @touched)
+    RETURN;
+
+  -- reopening a closed step is a closure write in reverse, so it is refused before the ownership
+  -- check rather than being counted as an ordinary state move
+  IF EXISTS (
+    SELECT 1 FROM inserted i
+    JOIN @touched t ON t.StepId = i.StepId
+    WHERE t.WasDone = 1 AND i.Status <> 'done'
+  )
+    THROW 50074, 'A closed step cannot be reopened; the step closure has exactly one writer.', 1;
+
+  IF EXISTS (
+    SELECT 1
+    FROM inserted i
+    JOIN @touched t ON t.StepId = i.StepId
+    WHERE ISNULL(i.WrittenByService, '') <> @owner
+       OR (EXISTS (SELECT 1 FROM deleted d WHERE d.StepId = i.StepId) AND NOT UPDATE(WrittenByService))
+  )
+    THROW 50075, 'The step closure has exactly one writer, PathStepCompletion. A write declaring another writer (or none) is refused.', 1;
+
+  IF EXISTS (
+    SELECT 1 FROM inserted i
+    JOIN @touched t ON t.StepId = i.StepId
+    WHERE i.ProjectionVersion <= t.WasVersion
+  )
+    THROW 50076, 'The step closure projection version must be newer than the stored one; an older callback cannot overwrite a newer result.', 1;
+END;
 GO
 -- UI-44: an ai_task item may name the practice exam it opens, and only a skill-practice exam —
 -- never a mock (which would charge mock_exam_start) or a placement (which must stay free).

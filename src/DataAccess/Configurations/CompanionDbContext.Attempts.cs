@@ -21,6 +21,8 @@ public partial class CompanionDbContext
                     tb.HasTrigger("trg_Attempts_NoTotalScoreForSkillPractice");
                     tb.HasTrigger("trg_Attempts_TotalMatchesSkills_OnAttempt");
                     tb.HasTrigger("trg_ExamAttempts_PublishedExamOnly");
+                    // #191: the single-writer guard, which reads WrittenByService and ProjectionVersion
+                    tb.HasTrigger("trg_Attempts_SingleWriter");
                 });
 
             entity.Property(e => e.StartedAt).HasDefaultValueSql("(sysdatetimeoffset())");
@@ -144,6 +146,8 @@ public partial class CompanionDbContext
             entity.HasKey(e => e.PlacementId).HasName("PK__Placemen__2E328C652BD86022");
 
             entity.ToTable(tb => tb.HasTrigger("trg_PlacementTests_SnapshotMatchesAttempt"));
+
+            entity.ToTable(tb => tb.HasTrigger("trg_PlacementTests_SingleWriter"));
 
             entity.HasIndex(e => e.AttemptId, "UX_PlacementTests_Attempt")
                 .IsUnique()
