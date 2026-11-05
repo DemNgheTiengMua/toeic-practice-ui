@@ -82,6 +82,7 @@ public sealed partial class LearningPathService
                 var session = new PracticeSession
                 {
                     UserId = userId,
+                    CertId = section.CertId,
                     SectionId = sectionId,
                     Modality = section.Modality,
                     QuestionCount = Math.Max(1, qCount),

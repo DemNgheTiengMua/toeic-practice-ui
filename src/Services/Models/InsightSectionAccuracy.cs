@@ -8,7 +8,7 @@ using BusinessObjects;
 namespace Services;
 
 public record InsightSectionAccuracy(
-    int SectionId,
+    int? SectionId,
     string SectionCode,
     string SectionName,
     int Answered,

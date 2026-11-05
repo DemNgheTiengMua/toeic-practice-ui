@@ -8,9 +8,9 @@ using BusinessObjects;
 namespace Services;
 
 public record InsightQuestionDetail(
-    int QuestionId,
+    int? QuestionId,
     string Stem,
-    int SectionId,
+    int? SectionId,
     string SectionName,
     int? CategoryId,
     string? CategoryName,
@@ -19,5 +19,6 @@ public record InsightQuestionDetail(
     string? CorrectOptionLabel,
     bool? IsCorrect,
     bool HintUsed,
-    string? Explanation
+    string? Explanation,
+    int? ItemVersionId = null
 );

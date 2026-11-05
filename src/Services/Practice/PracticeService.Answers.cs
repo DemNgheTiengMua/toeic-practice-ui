@@ -30,19 +30,25 @@ public sealed partial class PracticeService
             await db.SaveChangesAsync(cancellationToken);
         }
 
-        return answer.Question.Hint;
+        // A pool item has no hint: it is authored on the legacy question row, which #231 deletes.
+        return answer.Question?.Hint;
     }
 
     public async Task<GradedPracticeAnswerResult> SubmitAnswerAsync(int userId, int sessionId, int questionId, SubmitPracticeAnswerInput input, CancellationToken cancellationToken = default)
     {
+        // #187: the address is the answer, not the question. A pool item has no QuestionId, so the
+        // service resolves the answer by whichever identity exists and the caller keeps passing the
+        // id it was handed — a question id for a legacy drill, a version id for a pool drill.
         var answer = await db.PracticeAnswers
             .Include(pa => pa.Session)
                 .ThenInclude(s => s.Section)
             .Include(pa => pa.Question)
-                .ThenInclude(q => q.Group)
+                .ThenInclude(q => q!.Group)
             .Include(pa => pa.Question)
-                .ThenInclude(q => q.QuestionOptionQuestionNavigations)
-            .Where(pa => pa.SessionId == sessionId && pa.Session.UserId == userId && pa.QuestionId == questionId)
+                .ThenInclude(q => q!.QuestionOptionQuestionNavigations)
+            .Where(pa => pa.SessionId == sessionId
+                && pa.Session.UserId == userId
+                && (pa.QuestionId == questionId || (pa.QuestionId == null && pa.ItemVersionId == questionId)))
             .SingleOrDefaultAsync(cancellationToken)
             ?? throw new PracticeException(PracticeException.QuestionNotFound, $"Question {questionId} was not found in session {sessionId}.");
 
@@ -63,15 +69,27 @@ public sealed partial class PracticeService
                 $"Question {questionId} has already been answered in this session. Continue with the next question.");
         }
 
-        var q = answer.Question;
-        var allOptions = await db.QuestionOptions
-            .AsNoTracking()
-            .Where(o => o.QuestionId == questionId)
-            .ToListAsync(cancellationToken);
+        // #187: the pinned version decides the grade, exactly as it decides the render. A legacy
+        // answer is graded from its question row and options, as it always was.
+        var pinned = answer.ItemVersionId is { } versionId
+            ? await db.ItemVersions.AsNoTracking().SingleAsync(v => v.ItemVersionId == versionId, cancellationToken)
+            : null;
 
-        int? correctOptionId = allOptions.FirstOrDefault(o => o.IsCorrect)?.OptionId;
-        var isFreeResponse = q.QuestionType == QuestionType.FreeResponse.ToCode();
-        var explanation = q.Explanation;
+        var q = answer.Question;
+        var allOptions = q is null
+            ? []
+            : await db.QuestionOptions
+                .AsNoTracking()
+                .Where(o => o.QuestionId == q.QuestionId)
+                .ToListAsync(cancellationToken);
+
+        int? correctOptionId = pinned is not null
+            ? PinnedCorrectOptionId(pinned.ItemVersionId, pinned)
+            : allOptions.FirstOrDefault(o => o.IsCorrect)?.OptionId;
+        var isFreeResponse = pinned is not null
+            ? AttemptEngine.IsProductive(pinned)
+            : q!.QuestionType == QuestionType.FreeResponse.ToCode();
+        var explanation = pinned?.Explanation ?? q?.Explanation;
 
         var optionIdsJson = input.SelectedOptionIdsJson;
         if (string.IsNullOrWhiteSpace(optionIdsJson) && input.SelectedOptionIds is { Count: > 0 })
@@ -79,7 +97,43 @@ public sealed partial class PracticeService
             optionIdsJson = System.Text.Json.JsonSerializer.Serialize(input.SelectedOptionIds);
         }
 
-        if (isFreeResponse)
+        if (pinned is not null && !AttemptEngine.IsProductive(pinned))
+        {
+            // #187: the four options carry derived ids, so the chosen one is a label on the pinned
+            // version. An id that names no option of THIS version is refused: the legacy question's
+            // own option ids are not a way in, because they do not decode against the version.
+            answer.SelectedLabel = null;
+            answer.SelectedOptionId = null;
+            answer.ResponseText = input.ResponseText;
+            answer.SelectedOptionIdsJson = optionIdsJson;
+
+            if (input.SelectedOptionId is { } optionId)
+            {
+                var index = AttemptEngine.PoolOptionIndex(optionId, pinned.ItemVersionId);
+                if (index < 0)
+                {
+                    throw new PracticeException(PracticeException.InvalidOption, $"Option {optionId} does not belong to item version {pinned.ItemVersionId}.");
+                }
+
+                answer.SelectedLabel = AttemptEngine.OptionLabel(index);
+                answer.IsCorrect = EvaluatePinnedAnswer(pinned, answer.SelectedLabel);
+            }
+            else
+            {
+                answer.IsCorrect = null;
+            }
+        }
+        else if (pinned is not null)
+        {
+            // A productive task has no key: a non-blank response is recorded and left ungraded, the
+            // same way the legacy path treats a free response it cannot judge without the AI queue.
+            answer.SelectedOptionId = null;
+            answer.SelectedLabel = null;
+            answer.SelectedOptionIdsJson = null;
+            answer.ResponseText = string.IsNullOrWhiteSpace(input.ResponseText) ? null : input.ResponseText;
+            answer.IsCorrect = answer.ResponseText is null ? null : true;
+        }
+        else if (isFreeResponse)
         {
             // #150: a speaking or writing drill checks the response against the question's declared
             // requirements - the one thing that can be judged without the AI grading queue. A blank
@@ -93,9 +147,9 @@ public sealed partial class PracticeService
             }
             else
             {
-                var eval = AttemptEngine.EvaluateWritingResponse(q, answer.ResponseText);
+                var eval = AttemptEngine.EvaluateWritingResponse(q!, answer.ResponseText);
                 answer.IsCorrect = !eval.IsUnderLength && eval.HasRequiredKeywords;
-                explanation = FreeResponseFeedback(eval, q.Explanation);
+                explanation = FreeResponseFeedback(eval, q!.Explanation);
             }
         }
         else if (input.SelectedOptionId is { } optionId)
@@ -117,7 +171,7 @@ public sealed partial class PracticeService
             answer.ResponseText = input.ResponseText;
             answer.SelectedOptionIdsJson = optionIdsJson;
             answer.IsCorrect = AttemptEngine.EvaluateObjectiveAnswer(
-                q,
+                q!,
                 allOptions,
                 optionId,
                 optionIdsJson,
@@ -139,7 +193,7 @@ public sealed partial class PracticeService
             answer.ResponseText = input.ResponseText;
             answer.SelectedOptionIdsJson = optionIdsJson;
             answer.IsCorrect = AttemptEngine.EvaluateObjectiveAnswer(
-                q,
+                q!,
                 allOptions,
                 null,
                 optionIdsJson,
@@ -160,7 +214,8 @@ public sealed partial class PracticeService
         // cooldown. It is written here, where the grade is known, so the lesson micro-check (which also
         // grades) goes through the same two writers and cannot drift. #166: the call is refused above
         // when the answer was already graded, so this runs once per question.
-        await RecordAnswerAsync(userId, q, answer.Session.Section.CertId, answer.IsCorrect, cancellationToken);
+        // #187: a pool item's topic is the mastery unit; it has no legacy category.
+        await RecordPracticeAnswerAsync(userId, q, answer, pinned, cancellationToken);
 
         // Update correct count on session
         var correctCount = await db.PracticeAnswers
@@ -169,7 +224,7 @@ public sealed partial class PracticeService
 
         // Check if all questions in the session have been evaluated
         var hasRemaining = await db.PracticeAnswers
-            .AnyAsync(pa => pa.SessionId == sessionId && pa.AnswerId != answer.AnswerId && pa.SelectedOptionId == null && pa.IsCorrect == null, cancellationToken);
+            .AnyAsync(pa => pa.SessionId == sessionId && pa.AnswerId != answer.AnswerId && pa.SelectedOptionId == null && pa.SelectedLabel == null && pa.IsCorrect == null, cancellationToken);
         var isLast = !hasRemaining;
         if (isLast)
         {
@@ -194,8 +249,7 @@ public sealed partial class PracticeService
                 }
             }
 
-            var certId = answer.Session.Section.CertId;
-            await PruneOldSessionsAsync(userId, certId, cancellationToken);
+            await PruneOldSessionsAsync(userId, answer.Session.CertId, cancellationToken);
         }
         else
         {
@@ -205,16 +259,17 @@ public sealed partial class PracticeService
         bool isSaved = false;
         // #150: only an objective answer has options, so only it can be reviewed as a saved question.
         // Filing a failed free response there put a question with "0 options" in the bank.
-        if (!isFreeResponse && answer.IsCorrect == false)
+        // #187: a pool item has no Questions row to file, so it is not offered to the bank yet.
+        if (!isFreeResponse && answer.IsCorrect == false && answer.QuestionId is { } savedQuestionId)
         {
             var existingSq = await db.SavedQuestions
-                .FirstOrDefaultAsync(sq => sq.UserId == userId && sq.QuestionId == questionId, cancellationToken);
+                .FirstOrDefaultAsync(sq => sq.UserId == userId && sq.QuestionId == savedQuestionId, cancellationToken);
             if (existingSq == null)
             {
                 db.SavedQuestions.Add(new SavedQuestion
                 {
                     UserId = userId,
-                    QuestionId = questionId,
+                    QuestionId = savedQuestionId,
                     Source = SavedQuestionSource.Incorrect.ToCode(),
                     SavedAt = DateTimeOffset.UtcNow
                 });
@@ -222,23 +277,23 @@ public sealed partial class PracticeService
             }
             isSaved = true;
         }
-        else
+        else if (answer.QuestionId is { } existingQuestionId)
         {
             isSaved = await db.SavedQuestions
-                .AnyAsync(sq => sq.UserId == userId && sq.QuestionId == questionId, cancellationToken);
+                .AnyAsync(sq => sq.UserId == userId && sq.QuestionId == existingQuestionId, cancellationToken);
         }
 
         int? nextDisplayOrder = null;
         if (!isLast)
         {
             var nextUnanswered = await db.PracticeAnswers
-                .Where(pa => pa.SessionId == sessionId && pa.AnswerId != answer.AnswerId && pa.DisplayOrder > answer.DisplayOrder && pa.SelectedOptionId == null && pa.IsCorrect == null)
+                .Where(pa => pa.SessionId == sessionId && pa.AnswerId != answer.AnswerId && pa.DisplayOrder > answer.DisplayOrder && pa.SelectedOptionId == null && pa.SelectedLabel == null && pa.IsCorrect == null)
                 .OrderBy(pa => pa.DisplayOrder)
                 .Select(pa => (int?)pa.DisplayOrder)
                 .FirstOrDefaultAsync(cancellationToken);
 
             nextDisplayOrder = nextUnanswered ?? await db.PracticeAnswers
-                .Where(pa => pa.SessionId == sessionId && pa.AnswerId != answer.AnswerId && pa.SelectedOptionId == null && pa.IsCorrect == null)
+                .Where(pa => pa.SessionId == sessionId && pa.AnswerId != answer.AnswerId && pa.SelectedOptionId == null && pa.SelectedLabel == null && pa.IsCorrect == null)
                 .OrderBy(pa => pa.DisplayOrder)
                 .Select(pa => (int?)pa.DisplayOrder)
                 .FirstOrDefaultAsync(cancellationToken);
@@ -248,18 +303,41 @@ public sealed partial class PracticeService
 
         return new GradedPracticeAnswerResult(
             answer.IsCorrect,
-            answer.SelectedOptionId,
+            pinned is not null
+                ? PinnedSelectedOptionId(pinned.ItemVersionId, answer.SelectedLabel)
+                : answer.SelectedOptionId,
             correctOptionId,
             explanation,
-            q.Group.Transcript,
+            q?.Group?.Transcript,
             isLast,
             nextDisplayOrder,
             isSaved,
-            q.AcceptedAnswersJson,
-            allOptions.Where(o => o.IsCorrect).Select(o => o.OptionId).ToList(),
+            q?.AcceptedAnswersJson,
+            pinned is not null
+                ? correctOptionId is { } key ? [key] : []
+                : allOptions.Where(o => o.IsCorrect).Select(o => o.OptionId).ToList(),
             answer.ResponseText,
             answer.SelectedOptionIdsJson);
     }
+
+    /// <summary>
+    /// #187: one graded answer, one mastery writer. A legacy answer moves its question's history and
+    /// its category's mastery, exactly as before.
+    /// <para>
+    /// A pool answer moves neither yet: <c>UserCategoryMasteries</c> is keyed by a legacy
+    /// <c>QuestionCategories</c> id that a topic is not, and writing a topic id into that column
+    /// would be a second meaning for one key. #237 re-keys mastery to the cell (topic, level); until
+    /// it lands a pool answer is recorded, graded and counted, and the scheduler does not see it.
+    /// </para>
+    /// <para>
+    /// shortcut: a pool drill does not move mastery until #237. Upgrade when UserCellMasteries exists.
+    /// </para>
+    /// </summary>
+    private Task RecordPracticeAnswerAsync(
+        int userId, Question? question, PracticeAnswer answer, ItemVersion? pinned, CancellationToken cancellationToken) =>
+        answer.IsCorrect is { } correct && pinned is null
+            ? RecordAnswerAsync(userId, question!, answer.Session.CertId, correct, cancellationToken)
+            : Task.CompletedTask;
 
     /// <summary>#150: the explanation a learner sees for a free-response answer - evaluated from the
     /// stored response against the question's own floor and keywords, so re-reading question or summary

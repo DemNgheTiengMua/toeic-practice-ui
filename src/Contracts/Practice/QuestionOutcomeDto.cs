@@ -1,8 +1,10 @@
 namespace Contracts;
 
+/// <summary>#187: <paramref name="QuestionId"/> is NULL for a pool item, which has no question row;
+/// the pinned <paramref name="ItemVersionId"/> is what a re-read addresses.</summary>
 public sealed record QuestionOutcomeDto(
     int DisplayOrder,
-    int QuestionId,
+    int? QuestionId,
     string? CategoryName,
     string Stem,
     string? SelectedOptionLabel,
@@ -19,4 +21,5 @@ public sealed record QuestionOutcomeDto(
     string QuestionType = "mcq",
     string? ResponseText = null,
     string? SelectedOptionIdsJson = null,
-    string? AcceptedAnswersJson = null);
+    string? AcceptedAnswersJson = null,
+    int? ItemVersionId = null);

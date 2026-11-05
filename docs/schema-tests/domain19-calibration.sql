@@ -98,8 +98,8 @@ END TRY BEGIN CATCH
 END CATCH
 
 -- accept: a practice answer carries its own response time too
-INSERT INTO PracticeSessions (UserId,SectionId,Modality,QuestionCount,Status)
-  VALUES (@u,@sec,'listening',1,'in_progress');
+INSERT INTO PracticeSessions (UserId,CertId,SectionId,Modality,QuestionCount,Status)
+  VALUES (@u,@c,@sec,'listening',1,'in_progress');
 DECLARE @ps INT=SCOPE_IDENTITY();
 INSERT INTO PracticeAnswers (SessionId,QuestionId,SectionId,IsCorrect,DisplayOrder,AnsweredAt)
   VALUES (@ps,@q,@sec,1,1,SYSDATETIMEOFFSET());

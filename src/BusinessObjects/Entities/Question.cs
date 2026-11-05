@@ -106,9 +106,6 @@ public partial class Question
     [InverseProperty("QuestionGroups")]
     public virtual QuestionGroup Group { get; set; } = null!;
 
-    [InverseProperty("QuestionNavigation")]
-    public virtual ICollection<PracticeAnswer> PracticeAnswerQuestionNavigations { get; set; } = new List<PracticeAnswer>();
-
     [InverseProperty("Question")]
     public virtual ICollection<PracticeAnswer> PracticeAnswerQuestions { get; set; } = new List<PracticeAnswer>();
 

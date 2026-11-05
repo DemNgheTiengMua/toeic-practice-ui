@@ -15,14 +15,29 @@ public partial class CompanionDbContext
             entity.HasKey(e => e.SessionId).HasName("PK__Practice__C9F4929081A3986C");
 
             entity.HasIndex(e => e.LearnerPathStepId, "IX_Practice_PathStep").HasFilter("([LearnerPathStepId] IS NOT NULL)");
+            // #187: a pool drill is resumed and ceiling-checked by its cell, not by a section.
+            entity.HasIndex(e => new { e.UserId, e.TopicId, e.CefrLevel, e.StartedAt }, "IX_Practice_Cell")
+                .HasFilter("([TopicId] IS NOT NULL)");
 
             entity.Property(e => e.QuestionSource).HasDefaultValue("all", "DF_Practice_Source");
             entity.Property(e => e.StartedAt).HasDefaultValueSql("(sysdatetimeoffset())");
             entity.Property(e => e.Status).HasDefaultValue("in_progress");
+            // #187: a CefrLevel is stored by its code, never as an integer - the second scale #182
+            // exists to prevent.
+            entity.Property(e => e.CefrLevel)
+                .HasConversion(v => v!.Value.Code, v => ParseAuthoredLevel(v))
+                .HasMaxLength(10)
+                .IsUnicode(false);
 
             entity.HasOne(d => d.LearnerPathStep).WithMany(p => p.PracticeSessions).HasConstraintName("FK_Practice_PathStep");
 
+            entity.HasOne(d => d.Cert).WithMany(p => p.PracticeSessions)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Practice_Cert");
+
             entity.HasOne(d => d.Section).WithMany(p => p.PracticeSessionSections)
+                .HasForeignKey(d => d.SectionId)
+                .IsRequired(false)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__PracticeS__Secti__5D95E53A");
 
@@ -30,11 +45,13 @@ public partial class CompanionDbContext
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__PracticeS__UserI__5CA1C101");
 
-            entity.HasOne(d => d.SectionNavigation).WithMany(p => p.PracticeSessionSectionNavigations)
-                .HasPrincipalKey(p => new { p.SectionId, p.Modality })
-                .HasForeignKey(d => new { d.SectionId, d.Modality })
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_Practice_SectionModality");
+            // #187: FK_Practice_SectionModality, FK_Practice_TopicModality and FK_Practice_SectionCert
+            // are database guards, not EF navigations. Each composes a nullable column with a
+            // non-nullable one (Modality, CertId), and EF reads a partly-nullable composite key as
+            // required - so a pool session (no section) fails the save with "the value of SectionId is
+            // unknown". The constraints still hold: MATCH SIMPLE skips one exactly when its nullable
+            // column is null, which is the pool shape. Section and Topic above are the plain single
+            // column navigations, which EF can model.
         });
 
 
@@ -42,6 +59,11 @@ public partial class CompanionDbContext
         modelBuilder.Entity<PracticeAnswer>(entity =>
         {
             entity.HasKey(e => e.AnswerId).HasName("PK__Practice__D48250043F262F2D");
+
+            // #187: the unique keys are filtered indexes, because a pool answer has no QuestionId and
+            // a legacy answer has no ItemVersionId. EF cannot express a filtered unique index from
+            // conventions, so the names are declared here and dropped from the model as keys.
+            entity.HasIndex(e => e.QuestionId, "IX_PracticeAnswers_Question").HasFilter("([QuestionId] IS NOT NULL)");
 
             entity.Property(e => e.ResponseText);
             entity.Property(e => e.SelectedOptionIdsJson);
@@ -56,22 +78,23 @@ public partial class CompanionDbContext
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__PracticeA__Sessi__6BE40491");
 
-            entity.HasOne(d => d.QuestionNavigation).WithMany(p => p.PracticeAnswerQuestionNavigations)
-                .HasPrincipalKey(p => new { p.QuestionId, p.SectionId })
-                .HasForeignKey(d => new { d.QuestionId, d.SectionId })
+            // #187: FK_PracticeAnswers_QuestionSection (the question must be the session's section)
+            // and FK_PracticeAnswers_SessionSection (the answer's section must be the session's) are
+            // database guards, not EF navigations: SectionId and QuestionId are now nullable, and EF
+            // reads a partly-nullable composite key as required, refusing a pool answer's save with
+            // "the value of QuestionId is unknown". MATCH SIMPLE skips each exactly when its nullable
+            // column is null, which is the pool shape.
+            entity.HasOne(d => d.Session).WithMany(p => p.PracticeAnswerSessions)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_PracticeAnswers_QuestionSection");
+                .HasConstraintName("FK__PracticeA__Sessi__6BE40491");
 
-            entity.HasOne(d => d.QuestionOption).WithMany(p => p.PracticeAnswers)
-                .HasPrincipalKey(p => new { p.OptionId, p.QuestionId })
-                .HasForeignKey(d => new { d.SelectedOptionId, d.QuestionId })
-                .HasConstraintName("FK_PracticeAnswers_OptionQuestion");
-
-            entity.HasOne(d => d.PracticeSession).WithMany(p => p.PracticeAnswerPracticeSessions)
-                .HasPrincipalKey(p => new { p.SessionId, p.SectionId })
-                .HasForeignKey(d => new { d.SessionId, d.SectionId })
+            // #187: the answered version must be a version of the answered item - the same composite
+            // idiom ExamItems and AttemptAnswers use.
+            entity.HasOne(d => d.ItemVersion).WithMany(p => p.PracticeAnswers)
+                .HasPrincipalKey(p => new { p.ItemVersionId, p.ItemId })
+                .HasForeignKey(d => new { d.ItemVersionId, d.ItemId })
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_PracticeAnswers_SessionSection");
+                .HasConstraintName("FK_PracticeAnswers_VersionItem");
         });
 
 

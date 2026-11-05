@@ -11,13 +11,13 @@ DECLARE @skSpk INT=SCOPE_IDENTITY();
 INSERT INTO Sections (SkillId,CertId,Modality,Code,Name,OptionCount,ExpectedQuestionCount,DisplayOrder) VALUES (@skSpk,@c,'speaking','S1',N'Interview',4,3,2);
 DECLARE @secSpk INT=SCOPE_IDENTITY();
 INSERT INTO Users (RoleId,Email,PasswordHash) VALUES (@r,'u@x.com',0x00); DECLARE @u INT=SCOPE_IDENTITY();
-INSERT INTO PracticeSessions (UserId,SectionId,Modality,QuestionCount,Status,CorrectCount)
-  VALUES (@u,@sec,'reading',10,'in_progress',0);
+INSERT INTO PracticeSessions (UserId,CertId,SectionId,Modality,QuestionCount,Status,CorrectCount)
+  VALUES (@u,@c,@sec,'reading',10,'in_progress',0);
 DECLARE @sess INT=SCOPE_IDENTITY();
 PRINT 'valid practice session accepted';
 -- reject: bad status
 BEGIN TRY
-  INSERT INTO PracticeSessions (UserId,SectionId,Modality,QuestionCount,Status) VALUES (@u,@sec,'reading',1,'exploding');
+  INSERT INTO PracticeSessions (UserId,CertId,SectionId,Modality,QuestionCount,Status) VALUES (@u,@c,@sec,'reading',1,'exploding');
   THROW 50000,'EXPECT_REJECT FAILED: bad status accepted',1;
 END TRY BEGIN CATCH
   IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
@@ -25,12 +25,12 @@ END TRY BEGIN CATCH
 END CATCH
 -- #150: the CHECK now admits all four modalities, so the schema cannot be what blocks a Speaking-only
 -- certificate. The row is legal at this level; whether the free drill builds one is a service rule.
-INSERT INTO PracticeSessions (UserId,SectionId,Modality,QuestionCount,Status) VALUES (@u,@secSpk,'speaking',1,'in_progress');
+INSERT INTO PracticeSessions (UserId,CertId,SectionId,Modality,QuestionCount,Status) VALUES (@u,@c,@secSpk,'speaking',1,'in_progress');
 PRINT 'speaking practice session accepted';
 -- M-18: the composite FK still refuses a session whose modality is not its section's own.
 -- Assert the constraint by name: any other error must not satisfy this test.
 BEGIN TRY
-  INSERT INTO PracticeSessions (UserId,SectionId,Modality,QuestionCount,Status) VALUES (@u,@sec,'speaking',1,'in_progress');
+  INSERT INTO PracticeSessions (UserId,CertId,SectionId,Modality,QuestionCount,Status) VALUES (@u,@c,@sec,'speaking',1,'in_progress');
   THROW 50000,'EXPECT_REJECT FAILED: mismatched modality accepted',1;
 END TRY BEGIN CATCH
   IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;

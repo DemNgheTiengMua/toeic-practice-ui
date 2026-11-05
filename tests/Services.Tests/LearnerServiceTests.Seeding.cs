@@ -111,8 +111,8 @@ public sealed partial class LearnerServiceTests
             VALUES (@exam, @cert, {sectionId}, 1);
             DECLARE @grp INT = SCOPE_IDENTITY();
 
-            INSERT INTO PracticeSessions (UserId, SectionId, Modality, QuestionCount, Status, CorrectCount, StartedAt, FinishedAt)
-            VALUES ({userId}, {sectionId}, @mod, {totalCount}, 'finished', {correctCount},
+            INSERT INTO PracticeSessions (UserId, CertId, SectionId, Modality, QuestionCount, Status, CorrectCount, StartedAt, FinishedAt)
+            VALUES ({userId}, @cert, {sectionId}, @mod, {totalCount}, 'finished', {correctCount},
                     DATEADD(MINUTE, -15, SYSDATETIMEOFFSET()), SYSDATETIMEOFFSET());
             DECLARE @sess INT = SCOPE_IDENTITY();
 

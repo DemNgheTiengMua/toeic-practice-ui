@@ -55,7 +55,8 @@ public static partial class PracticeEndpoints
                         q.QuestionType,
                         q.ResponseText,
                         q.SelectedOptionIdsJson,
-                        q.AcceptedAnswersJson)).ToList()));
+                        q.AcceptedAnswersJson,
+                        q.ItemVersionId)).ToList()));
             }
             catch (PracticeException ex) when (ex.Code == PracticeException.SessionNotFound)
             {

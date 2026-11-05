@@ -87,6 +87,7 @@ public sealed class AiInsightServiceTests(DatabaseFixture database)
         var session = new PracticeSession
         {
             UserId = userId,
+            CertId = cert.CertId,
             SectionId = section.SectionId,
             Modality = "reading",
             QuestionCount = 2,
@@ -561,6 +562,7 @@ public sealed class AiInsightServiceTests(DatabaseFixture database)
             var session2 = new PracticeSession
             {
                 UserId = userId,
+                CertId = (await db.Sections.Where(s => s.SectionId == sectionId).Select(s => s.CertId).SingleAsync()),
                 SectionId = sectionId,
                 Modality = "reading",
                 QuestionCount = 1,
@@ -662,6 +664,7 @@ public sealed class AiInsightServiceTests(DatabaseFixture database)
             var session2 = new PracticeSession
             {
                 UserId = userId,
+                CertId = (await db.Sections.Where(s => s.SectionId == sectionId).Select(s => s.CertId).SingleAsync()),
                 SectionId = sectionId,
                 Modality = "reading",
                 QuestionCount = 1,

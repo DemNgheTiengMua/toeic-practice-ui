@@ -30,7 +30,7 @@ public sealed class WeaknessAnalysisService(
 
         var completedPracticeCount = await db.PracticeSessions
             .AsNoTracking()
-            .CountAsync(p => p.UserId == userId && p.Section.CertId == activeCertId && p.Status == PracticeStatus.Finished.ToCode(), cancellationToken);
+            .CountAsync(p => p.UserId == userId && p.CertId == activeCertId && p.Status == PracticeStatus.Finished.ToCode(), cancellationToken);
 
         var sections = await db.Sections
             .AsNoTracking()

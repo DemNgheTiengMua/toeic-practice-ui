@@ -112,8 +112,8 @@ public sealed class CalibrationServiceTests(DatabaseFixture database)
         await database.SqlAsync($"""
             DECLARE @sec INT = {sectionId};
             DECLARE @cert INT = (SELECT CertId FROM Sections WHERE SectionId = @sec);
-            INSERT INTO PracticeSessions (UserId, SectionId, Modality, QuestionCount, Status, CorrectCount, StartedAt, FinishedAt)
-              VALUES ({userId}, @sec, 'reading', {total}, 'finished', {correct},
+            INSERT INTO PracticeSessions (UserId, CertId, SectionId, Modality, QuestionCount, Status, CorrectCount, StartedAt, FinishedAt)
+              VALUES ({userId}, @cert, @sec, 'reading', {total}, 'finished', {correct},
                       DATEADD(DAY, -1, SYSDATETIMEOFFSET()), DATEADD(DAY, -1, SYSDATETIMEOFFSET()));
             DECLARE @session INT = SCOPE_IDENTITY();
             """);

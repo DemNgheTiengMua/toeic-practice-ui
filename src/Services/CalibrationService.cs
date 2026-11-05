@@ -278,7 +278,7 @@ public sealed class CalibrationService(
         var rows = await db.PracticeAnswers
             .AsNoTracking()
             .Where(a => a.Session.UserId == userId
-                && a.Session.Section.CertId == certId
+                && a.Session.CertId == certId
                 && a.IsCorrect != null
                 && a.Session.StartedAt >= since)
             .Select(a => new AnswerRow(a.SessionId, a.AnsweredAt, a.IsCorrect!.Value))

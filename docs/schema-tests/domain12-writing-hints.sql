@@ -92,7 +92,7 @@ INSERT INTO QuestionGroups (ExamId,CertId,SectionId) VALUES (@ex,@c,@p5); DECLAR
 INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,DifficultyLevel,QuestionType,Hint)
   VALUES (@gp,@ex,@p5,@rd,N'The report ___ by Friday.',2,'mcq',N'Look for the time marker: is the action finished or ongoing?'); DECLARE @qh INT=SCOPE_IDENTITY();
 INSERT INTO QuestionOptions (QuestionId,QuestionType,Label,Text,IsCorrect) VALUES (@qh,'mcq','A',N'will be finished',1); DECLARE @oa INT=SCOPE_IDENTITY();
-INSERT INTO PracticeSessions (UserId,SectionId,Modality,QuestionCount) VALUES (@u,@p5,'reading',1); DECLARE @ps INT=SCOPE_IDENTITY();
+INSERT INTO PracticeSessions (UserId,CertId,SectionId,Modality,QuestionCount) VALUES (@u,@c,@p5,'reading',1); DECLARE @ps INT=SCOPE_IDENTITY();
 INSERT INTO PracticeAnswers (SessionId,QuestionId,SectionId,SelectedOptionId,IsCorrect,HintUsed)
   VALUES (@ps,@qh,@p5,@oa,1,1);
 IF (SELECT HintUsed FROM PracticeAnswers WHERE SessionId=@ps AND QuestionId=@qh) <> 1 THROW 50000,'hint flag not stored',1;

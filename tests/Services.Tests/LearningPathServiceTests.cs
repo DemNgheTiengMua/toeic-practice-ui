@@ -546,6 +546,7 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
         var pathSession = new PracticeSession
         {
             UserId = userId,
+            CertId = certId,
             SectionId = secId,
             Modality = "reading",
             QuestionCount = 5,
@@ -565,6 +566,7 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
             db.PracticeSessions.Add(new PracticeSession
             {
                 UserId = userId,
+                CertId = certId,
                 SectionId = secId,
                 Modality = "reading",
                 QuestionCount = 5,

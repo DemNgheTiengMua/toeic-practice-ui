@@ -381,7 +381,7 @@ public sealed class PracticeServiceTests(DatabaseFixture database)
 
         db.PracticeSessions.Add(new PracticeSession
         {
-            UserId = user.UserId, SectionId = sectionId, Modality = "listening",
+            UserId = user.UserId, CertId = (await db.Certificates.SingleAsync(c => c.Code == certCode)).CertId, SectionId = sectionId, Modality = "listening",
             QuestionCount = 1, Status = "in_progress", CorrectCount = 0,
         });
 

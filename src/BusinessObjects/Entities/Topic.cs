@@ -34,5 +34,9 @@ public partial class Topic
     /// <summary>#184: the items authored against this topic. A topic holds many cells, one per level.</summary>
     [InverseProperty("Topic")]
     public virtual ICollection<Item> Items { get; set; } = new List<Item>();
+
+    /// <summary>#187: the practice sessions drawn from this topic's cells.</summary>
+    [InverseProperty("Topic")]
+    public virtual ICollection<PracticeSession> PracticeSessions { get; set; } = new List<PracticeSession>();
 }
 

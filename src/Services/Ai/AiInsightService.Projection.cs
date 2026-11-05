@@ -64,9 +64,13 @@ public sealed partial class AiInsightService
         );
     }
 
-    public static string ComputePracticeFingerprint(int userId, int sessionId, int certId, int sectionId, IReadOnlyList<PracticeAnswer> answers)
+    public static string ComputePracticeFingerprint(int userId, int sessionId, int certId, int? sectionId, IReadOnlyList<PracticeAnswer> answers)
     {
-        var answerPart = string.Join(";", answers.Select(a => $"{a.QuestionId}:{a.SelectedOptionId}:{a.IsCorrect}:{a.HintUsed}"));
+        // #187: a pool answer records a version and a label rather than a question and an option id,
+        // so both join the hash. Without them two different answers to one pool item hash identically
+        // and a cached insight is served for a session whose answers have changed.
+        var answerPart = string.Join(";", answers.Select(a =>
+            $"{a.QuestionId}:{a.ItemVersionId}:{a.SelectedOptionId}:{a.SelectedLabel}:{a.IsCorrect}:{a.HintUsed}"));
         var raw = $"practice_session:{userId}:{sessionId}:{certId}:{sectionId}:{answerPart}";
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(raw))).ToLowerInvariant();
     }

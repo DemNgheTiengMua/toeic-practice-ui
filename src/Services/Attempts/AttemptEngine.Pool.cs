@@ -112,16 +112,16 @@ public sealed partial class AttemptEngine
     /// derived from (version, index) rather than stored: stable for the life of the version, and
     /// impossible to collide with a legacy <c>QuestionOptions</c> id because the version is part of it.
     /// </summary>
-    private static int PoolOptionId(int itemVersionId, int index) => itemVersionId * 10 + index + 1;
+    internal static int PoolOptionId(int itemVersionId, int index) => itemVersionId * 10 + index + 1;
 
     /// <summary>The index of a pool option id, or -1 when it names no option of this version.</summary>
-    private static int PoolOptionIndex(int optionId, int itemVersionId)
+    internal static int PoolOptionIndex(int optionId, int itemVersionId)
     {
         var index = optionId - itemVersionId * 10 - 1;
         return index is >= 0 and <= 3 ? index : -1;
     }
 
-    private static string OptionLabel(int index) => ((char)('A' + index)).ToString();
+    internal static string OptionLabel(int index) => ((char)('A' + index)).ToString();
 
     /// <summary>The label of a decoded pool option id, or null when it names no option of the version.</summary>
     private static string? OptionLabelOrNull(int optionId, int itemVersionId)
@@ -130,7 +130,7 @@ public sealed partial class AttemptEngine
         return index < 0 ? null : OptionLabel(index);
     }
 
-    private static int LabelIndex(string? label) => label?.Trim().ToUpperInvariant() switch
+    internal static int LabelIndex(string? label) => label?.Trim().ToUpperInvariant() switch
     {
         "A" => 0,
         "B" => 1,
@@ -140,9 +140,9 @@ public sealed partial class AttemptEngine
     };
 
     /// <summary>CNT-06: a version is either four options with a key, or a productive task with none.</summary>
-    private static bool IsProductive(ItemVersion version) => version.OptionA is null;
+    internal static bool IsProductive(ItemVersion version) => version.OptionA is null;
 
-    private static IReadOnlyList<string?> OptionTexts(ItemVersion version) =>
+    internal static IReadOnlyList<string?> OptionTexts(ItemVersion version) =>
         [version.OptionA, version.OptionB, version.OptionC, version.OptionD];
 
     private static IReadOnlyList<AttemptOption> PoolOptions(int itemVersionId, ItemVersion version) =>

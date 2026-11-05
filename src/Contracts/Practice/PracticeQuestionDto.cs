@@ -1,9 +1,11 @@
 namespace Contracts;
 
+/// <summary>#187: <paramref name="QuestionId"/> is NULL for a pool item, which is addressed by
+/// <paramref name="ItemVersionId"/> instead.</summary>
 public sealed record PracticeQuestionDto(
     int SessionId,
     string SectionName,
-    int QuestionId,
+    int? QuestionId,
     int DisplayOrder,
     int TotalQuestions,
     string Stem,
@@ -33,4 +35,5 @@ public sealed record PracticeQuestionDto(
     string? ResponseText = null,
     IReadOnlyList<int>? SelectedOptionIds = null,
     string? SelectedOptionIdsJson = null,
-    IReadOnlyList<int>? CorrectOptionIds = null);
+    IReadOnlyList<int>? CorrectOptionIds = null,
+    int? ItemVersionId = null);
