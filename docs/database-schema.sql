@@ -409,6 +409,64 @@ CREATE TABLE Items (
   )
 );
 GO
+-- CNT-42: the six states, and the transitions the specification names. Nothing else is reachable.
+--
+--   draft     -> validated                        the automated gates promoted it
+--   draft     -> retired                          it can no longer be deleted (a paper or a learner
+--                                                  reached it) so retirement is its only disposal
+--   validated -> active                           the 10% audit cleared the stratum
+--   validated -> quarantined                      the zero-tolerance key rule quarantined the
+--                                                  stratum awaiting audit (W-01), which is validated
+--   validated -> retired                          not promoted, and no longer deletable
+--   active    -> quarantined                      telemetry (CNT-44) or a reviewer's key error
+--   active    -> retired                          ordinary pool rotation
+--   quarantined -> active                         re-verification cleared it
+--   quarantined -> retired                        withdrawn rather than fixed
+--   quarantined -> retired_defective              confirmed defective (CNT-45)
+--
+-- retired and retired_defective are terminal. Three of these edges are load-bearing and each was
+-- nearly missed:
+--   * validated -> quarantined, because the stratum W-01 quarantines is the validated one, not the
+--     live one.
+--   * draft -> retired, because CNT-43 makes a draft item with a reference undeletable, and an item
+--     with no way out is a row nobody can dispose of.
+--   * quarantined -> active, because "before any item in it can become active" is the sentence that
+--     says re-verification returns an item to service.
+--
+-- The pair table is written out rather than derived from a rank. A rank accepts draft -> quarantined
+-- and validated -> retired_defective, which nothing names.
+--
+-- A write that leaves the state where it was is not a transition, so CNT-46's bulk demo
+-- decommission (one UPDATE over many rows, re-runnable) is accepted. Every row of a multi-row
+-- update is judged, not the first: a trigger reading one row would part-apply a mixed batch.
+CREATE TRIGGER trg_Items_LifecycleTransitions
+ON Items AFTER UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+  IF EXISTS (
+    SELECT 1
+    FROM inserted i
+    JOIN deleted d ON d.ItemId = i.ItemId
+    WHERE i.LifecycleStatus <> d.LifecycleStatus
+      AND NOT EXISTS (
+        SELECT 1 FROM (VALUES
+          ('draft',       'validated'),
+          ('draft',       'retired'),
+          ('validated',   'active'),
+          ('validated',   'quarantined'),
+          ('validated',   'retired'),
+          ('active',      'quarantined'),
+          ('active',      'retired'),
+          ('quarantined', 'active'),
+          ('quarantined', 'retired'),
+          ('quarantined', 'retired_defective')
+        ) AS allowed(FromState, ToState)
+        WHERE allowed.FromState = d.LifecycleStatus AND allowed.ToState = i.LifecycleStatus
+      )
+  )
+    THROW 50060, 'CNT-42: that item lifecycle transition is not one the specification names. Named: draft->validated, draft->retired, validated->active, validated->quarantined, validated->retired, active->quarantined, active->retired, quarantined->active, quarantined->retired, quarantined->retired_defective. retired and retired_defective are terminal.', 1;
+END;
+GO
 -- Everything that can be scored. Copy-on-write (CNT-43): a new row per change, so an attempt that
 -- pinned version 3 renders version 3 forever. Only a cosmetic explanation fix may be edited in place,
 -- and trg_ItemVersions_ScoredFieldsImmutable is what refuses the rest - a convention in a service
@@ -1054,6 +1112,59 @@ CREATE TABLE AttemptAnswers (
     OR (ItemId IS NOT NULL AND ItemVersionId IS NOT NULL)
   )
 );
+GO
+-- CNT-43: no hard delete. An item that has left draft, or that any learner has answered, is retired
+-- instead; retirement removes it from future assembly and leaves every past attempt renderable.
+--
+-- It is created here rather than beside Items with its sibling above, because it names ItemVersions,
+-- AttemptAnswers and PracticeAnswers by name. SQL Server defers name resolution inside a trigger body,
+-- so it would create successfully wherever it was written and fail only when someone first deleted an
+-- item; creating it where all three exist makes a missing table a load-time failure instead of a
+-- discovery in production.
+--
+-- The boundary is the whole point, so both halves are named. A trigger that refused every DELETE
+-- would be trivially simple and wrong: a draft item nothing points at is exactly what an author is
+-- allowed to throw away.
+--
+-- INSTEAD OF, not AFTER, and that is not a style choice. Every answer pins an item version, and
+-- FK_ItemVersions_Item refuses to orphan a version, so the foreign key raises its own error before
+-- an AFTER trigger ever runs. An AFTER clause naming the learner reference would then be dead code:
+-- the statement is already refused, by a message that says nothing about CNT-43. As INSTEAD OF this
+-- trigger is the first thing to see the intent, so the caller is told which rule they hit.
+--
+-- Because it is INSTEAD OF it must perform the delete. That is also where "a draft item must be
+-- deletable" becomes true: deleting a draft item means deleting its versions first, which the version
+-- foreign key otherwise makes impossible - and every authored item has a version (#188 writes item
+-- and version in one save). A draft item bound to a paper is still refused, by the binding's own
+-- foreign keys; that is not a learner reference and CNT-43 does not name it.
+--
+-- The two clauses carry different messages on purpose. A caller told only "CNT-43 refused this" cannot
+-- tell "it left draft" from "a learner touched it", and a test that matched only the code could not
+-- tell a working first clause from one that fired on every draft.
+CREATE TRIGGER trg_Items_NoHardDelete
+ON Items INSTEAD OF DELETE AS
+BEGIN
+  SET NOCOUNT ON;
+  IF EXISTS (SELECT 1 FROM deleted d WHERE d.LifecycleStatus <> 'draft')
+    THROW 50061, 'CNT-43: an item that has left draft cannot be deleted; retire it instead.', 1;
+  IF EXISTS (
+    SELECT 1
+    FROM deleted d
+    WHERE EXISTS (SELECT 1 FROM ItemVersions v
+                  JOIN AttemptAnswers aa ON aa.ItemVersionId = v.ItemVersionId
+                  WHERE v.ItemId = d.ItemId)
+       OR EXISTS (SELECT 1 FROM ItemVersions v
+                  JOIN PracticeAnswers pa ON pa.ItemVersionId = v.ItemVersionId
+                  WHERE v.ItemId = d.ItemId)
+  )
+    THROW 50062, 'CNT-43: an item a learner has answered cannot be deleted; retire it instead.', 1;
+
+  -- Draft, and no learner has touched it. The versions go with it; anything else still pointing at
+  -- either row - a paper binding, a saved question - is refused by that table's own foreign key, so
+  -- this cascade cannot reach a reference this trigger does not name.
+  DELETE v FROM ItemVersions v JOIN deleted d ON d.ItemId = v.ItemId;
+  DELETE i FROM Items i JOIN deleted d ON d.ItemId = i.ItemId;
+END;
 GO
 CREATE TABLE FreeResponses (
   FreeResponseId INT IDENTITY(1,1) PRIMARY KEY,

@@ -14,16 +14,28 @@ namespace Services;
 public sealed partial class PracticeService
 {
     /// <summary>
+    /// #190: the one state selection reads. The other five are excluded by name rather than by "not
+    /// this", so a state added to <c>CK_Items_Lifecycle</c> cannot start being served by default.
+    /// </summary>
+    private const string ActiveLifecycle = "active";
+
+    /// <summary>
     /// #187: the latest version of every active item in one cell, so a drill serves what the pool
     /// currently says. Ordered least-recently-answered first, then by item, so a repeated draw is a
     /// reproducible choice rather than whatever the storage engine returns.
+    /// <para>
+    /// #190: selection filters on lifecycle <b>and</b> tier (CNT-42). The tier is not decoration: the
+    /// two tiers share every cell by construction, so a selector that omitted it would serve demo
+    /// stock into a production drill. Quarantined, retired and validated items are excluded by the
+    /// lifecycle column — the six states are the database's, and this is the one query that reads them.
+    /// </para>
     /// <para>
     /// #235 replaces this with the one selector shared by path and free drilling; until then the
     /// ordering here is deliberately the minimum that never serves the same item twice in a row.
     /// </para>
     /// </summary>
     private async Task<IReadOnlyList<(int ItemId, int ItemVersionId)>> PlanPoolItemsAsync(
-        int userId, string modality, int topicId, CefrLevel level, CancellationToken cancellationToken)
+        int userId, string modality, int topicId, CefrLevel level, string contentTier, CancellationToken cancellationToken)
     {
         var now = _clock.GetUtcNow();
         var items = await db.Items
@@ -31,7 +43,8 @@ public sealed partial class PracticeService
             .Where(i => i.TopicId == topicId
                 && i.Modality == modality
                 && i.CefrLevel == level
-                && i.LifecycleStatus == "active")
+                && i.LifecycleStatus == ActiveLifecycle
+                && i.ContentTier == contentTier)
             .Select(i => new
             {
                 i.ItemId,

@@ -30,6 +30,9 @@ public static partial class PracticeEndpoints
 
         return CefrLevel.TryParseAuthored(request.CefrLevelCode, out var level)
             ? new StartPracticeSessionInput(request.TopicId!.Value, level)
+            {
+                ContentTier = request.ContentTier ?? ContentTiers.Production,
+            }
             : null;
     }
 
