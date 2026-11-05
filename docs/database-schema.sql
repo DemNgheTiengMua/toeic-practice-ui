@@ -940,6 +940,19 @@ CREATE TABLE AttemptAnswers (
   QuestionId       INT NOT NULL REFERENCES Questions(QuestionId),
   -- H-5: carried down from the attempt so the question must belong to the attempt's own exam
   ExamId           INT NOT NULL,
+  -- #186: which version of which item the learner answered. Copy-on-write (CNT-43) means this pair,
+  -- not the item row, is what the review renders: re-versioning or retiring the item afterwards
+  -- cannot change what the attempt shows. Both columns are NULL for an answer recorded before the
+  -- pool existed (the legacy reader is what #231 deletes), and the CHECK below refuses half a pair,
+  -- so an answer can never name an item without naming its version or the reverse.
+  ItemId           INT NULL,
+  ItemVersionId    INT NULL,
+  -- #186: which of the pinned version's four options was picked. An ItemVersion stores labels A-D,
+  -- not option rows, so there is no OptionId to point at; SelectedOptionId keeps its meaning (and its
+  -- FK) for a legacy answer and stays NULL whenever this is set. The pair is the answer's whole
+  -- record of what was chosen, which is what makes a re-versioned item unable to change it.
+  SelectedLabel    VARCHAR(1) NULL
+    CONSTRAINT CK_AttemptAnswers_SelectedLabel CHECK (SelectedLabel IN ('A','B','C','D')),
   SelectedOptionId      INT NULL,
   ResponseText          NVARCHAR(MAX) NULL,
   SelectedOptionIdsJson NVARCHAR(MAX) NULL,
@@ -954,7 +967,17 @@ CREATE TABLE AttemptAnswers (
   -- H-5: the question must belong to that same exam
   CONSTRAINT FK_AttemptAnswers_QuestionExam FOREIGN KEY (QuestionId, ExamId) REFERENCES Questions(QuestionId, ExamId),
   -- H-6: SelectedOptionId must belong to this same question (NULL stays legal, MATCH SIMPLE)
-  CONSTRAINT FK_AttemptAnswers_OptionQuestion FOREIGN KEY (SelectedOptionId, QuestionId) REFERENCES QuestionOptions(OptionId, QuestionId)
+  CONSTRAINT FK_AttemptAnswers_OptionQuestion FOREIGN KEY (SelectedOptionId, QuestionId) REFERENCES QuestionOptions(OptionId, QuestionId),
+  -- #186: the answered version must be a version of the answered item - the same composite idiom
+  -- ExamItems uses, so one row cannot name one item and another item's version.
+  CONSTRAINT FK_AttemptAnswers_VersionItem FOREIGN KEY (ItemVersionId, ItemId) REFERENCES ItemVersions(ItemVersionId, ItemId),
+  -- #186: the pool pin is optional (an answer recorded before #184 has no item to name), but an
+  -- answer that names a version must name its item too. A CHECK, because MATCH SIMPLE would let a
+  -- half-filled row through the composite foreign key above.
+  CONSTRAINT CK_AttemptAnswers_ItemPair CHECK (
+       (ItemId IS NULL AND ItemVersionId IS NULL)
+    OR (ItemId IS NOT NULL AND ItemVersionId IS NOT NULL)
+  )
 );
 GO
 CREATE TABLE FreeResponses (

@@ -52,16 +52,23 @@ public sealed partial class AiInsightService
         {
             var q = ans.Question;
             var qOpts = allOptions.Where(o => o.QuestionId == q.QuestionId).ToList();
-            var chosen = ans.SelectedOptionId.HasValue
-                ? qOpts.FirstOrDefault(o => o.OptionId == ans.SelectedOptionId.Value)?.Text
-                : null;
-            var correct = qOpts.FirstOrDefault(o => o.IsCorrect)?.Text;
+            // #186: a pinned answer names a label on its version; the legacy row has no option to look
+            // up. The fingerprint describes what the learner saw, so the version supplies it.
+            var pinned = ans.ItemVersion;
+            var chosen = pinned is not null
+                ? PinnedOptionText(pinned, ans.SelectedLabel)
+                : ans.SelectedOptionId.HasValue
+                    ? qOpts.FirstOrDefault(o => o.OptionId == ans.SelectedOptionId.Value)?.Text
+                    : null;
+            var correct = pinned is not null
+                ? PinnedOptionText(pinned, pinned.KeyLabel)
+                : qOpts.FirstOrDefault(o => o.IsCorrect)?.Text;
 
             result.Add(new ErrorFingerprint(
-                q.Stem,
+                pinned?.Stem ?? q.Stem,
                 chosen,
                 correct,
-                q.Explanation,
+                pinned?.Explanation ?? q.Explanation,
                 ans.IsFlagged,
                 q.Category?.Name));
         }

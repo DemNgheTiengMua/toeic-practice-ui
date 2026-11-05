@@ -19,6 +19,23 @@ public partial class AttemptAnswer
 
     public int ExamId { get; set; }
 
+    /// <summary>
+    /// #186: the pool item and the exact version the learner answered, so a re-versioned or retired
+    /// item cannot change what this attempt renders. Both are NULL for an answer recorded against a
+    /// paper that the pool has not assembled; the database refuses a half-filled pair.
+    /// </summary>
+    public int? ItemId { get; set; }
+
+    public int? ItemVersionId { get; set; }
+
+    /// <summary>
+    /// #186: which of the pinned version's four options was picked. An <see cref="ItemVersion"/>
+    /// stores labels A–D rather than option rows, so there is no id to point at;
+    /// <see cref="SelectedOptionId"/> keeps its meaning (and its foreign key) for a legacy answer and
+    /// is NULL whenever this is set.
+    /// </summary>
+    public string? SelectedLabel { get; set; }
+
     public int? SelectedOptionId { get; set; }
 
     public string? ResponseText { get; set; }
@@ -48,4 +65,9 @@ public partial class AttemptAnswer
     [ForeignKey("SelectedOptionId, QuestionId")]
     [InverseProperty("AttemptAnswers")]
     public virtual QuestionOption? QuestionOption { get; set; }
+
+    /// <summary>#186: the version this answer pinned (NULL for an answer with no pool pin).</summary>
+    [ForeignKey("ItemVersionId, ItemId")]
+    [InverseProperty("AttemptAnswers")]
+    public virtual ItemVersion? ItemVersion { get; set; }
 }

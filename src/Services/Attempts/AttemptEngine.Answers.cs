@@ -72,29 +72,57 @@ public sealed partial class AttemptEngine
                 throw new AttemptEngineException(AttemptEngineException.InvalidOption, "Multiple-choice questions do not accept free-response text.");
             }
 
-            if (selectedOptionId.HasValue)
+            // #186: an answer that pinned a version chooses among that version's four options, not
+            // among legacy QuestionOptions rows. The option id the projection rendered is decoded
+            // back to its label and stored, so the key it is judged against is the pinned version's.
+            if (answer.ItemVersionId is int pinnedVersionId)
             {
-                var valid = await db.QuestionOptions
-                    .AnyAsync(o => o.OptionId == selectedOptionId.Value && o.QuestionId == questionId, cancellationToken);
-                if (!valid)
+                var pinnedVersion = await db.ItemVersions
+                    .AsNoTracking()
+                    .SingleOrDefaultAsync(v => v.ItemVersionId == pinnedVersionId, cancellationToken)
+                    ?? throw new AttemptEngineException(
+                        AttemptEngineException.PaperNotAssembled,
+                        $"Item version {pinnedVersionId} pinned by this answer no longer exists.");
+
+                var label = selectedOptionId.HasValue ? OptionLabelOrNull(selectedOptionId.Value, pinnedVersionId) : null;
+                if (selectedOptionId.HasValue && label is null)
                 {
                     throw new AttemptEngineException(AttemptEngineException.InvalidOption, "Invalid option for this question.");
                 }
+
+                answer.SelectedLabel = label;
+                answer.SelectedOptionId = null;
+                answer.SelectedOptionIdsJson = selectedOptionIdsJson;
+                answer.ResponseText = responseText;
+                answer.IsCorrect = label is not null
+                    && string.Equals(label, pinnedVersion.KeyLabel, StringComparison.OrdinalIgnoreCase);
             }
+            else
+            {
+                if (selectedOptionId.HasValue)
+                {
+                    var valid = await db.QuestionOptions
+                        .AnyAsync(o => o.OptionId == selectedOptionId.Value && o.QuestionId == questionId, cancellationToken);
+                    if (!valid)
+                    {
+                        throw new AttemptEngineException(AttemptEngineException.InvalidOption, "Invalid option for this question.");
+                    }
+                }
 
-            answer.SelectedOptionId = selectedOptionId;
-            answer.SelectedOptionIdsJson = selectedOptionIdsJson;
-            answer.ResponseText = responseText;
+                answer.SelectedOptionId = selectedOptionId;
+                answer.SelectedOptionIdsJson = selectedOptionIdsJson;
+                answer.ResponseText = responseText;
 
-            var options = await db.QuestionOptions
-                .Where(o => o.QuestionId == questionId)
-                .ToListAsync(cancellationToken);
-            answer.IsCorrect = EvaluateObjectiveAnswer(
-                answer.Question,
-                options,
-                selectedOptionId,
-                selectedOptionIdsJson,
-                responseText);
+                var options = await db.QuestionOptions
+                    .Where(o => o.QuestionId == questionId)
+                    .ToListAsync(cancellationToken);
+                answer.IsCorrect = EvaluateObjectiveAnswer(
+                    answer.Question,
+                    options,
+                    selectedOptionId,
+                    selectedOptionIdsJson,
+                    responseText);
+            }
         }
 
         answer.IsFlagged = isFlagged;
@@ -197,11 +225,15 @@ public sealed partial class AttemptEngine
 
         if (answer is null)
         {
+            // #186: a lazily created row pins the same version attempt creation would have pinned.
+            var bound = await FindBoundPositionAsync(attempt.ExamId, questionId, cancellationToken);
             answer = new AttemptAnswer
             {
                 AttemptId = attemptId,
                 QuestionId = questionId,
                 ExamId = attempt.ExamId,
+                ItemId = bound?.ItemId,
+                ItemVersionId = bound?.ItemVersionId,
                 IsFlagged = isFlagged
             };
             db.AttemptAnswers.Add(answer);
@@ -212,7 +244,10 @@ public sealed partial class AttemptEngine
         response.DraftSavedAt = DateTimeOffset.UtcNow;
         if (answer is not null)
         {
+            // a productive version has no options at all, so neither the legacy option id nor the
+            // pinned label can hold a choice for a free response
             answer.SelectedOptionId = null;
+            answer.SelectedLabel = null;
             answer.IsFlagged = isFlagged;
         }
 

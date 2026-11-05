@@ -153,6 +153,11 @@ public sealed partial class AttemptEngine
             throw new AttemptEngineException(AttemptEngineException.AttemptNotFound, $"Exam {attempt.ExamId} has no questions.");
         }
 
+        // #186: where the pool has assembled this paper, the scored content comes from the version
+        // the binding pinned. A paper #231 has not reached binds nothing and reads exactly as before.
+        var bindings = await LoadPaperBindingsAsync(attempt.ExamId, cancellationToken);
+        var boundByQuestion = PlaceBindings(questions, bindings);
+
         var answersByQuestion = await db.AttemptAnswers
             .Where(a => a.AttemptId == attempt.AttemptId)
             .ToDictionaryAsync(a => a.QuestionId, cancellationToken);
@@ -164,7 +169,7 @@ public sealed partial class AttemptEngine
         int answeredCount = questions.Count(q =>
             q.QuestionType == QuestionType.FreeResponse.ToCode()
                 ? freeResponses.TryGetValue(q.QuestionId, out var response) && (!string.IsNullOrWhiteSpace(response.ResponseText) || !string.IsNullOrWhiteSpace(response.AudioPath))
-                : answersByQuestion.TryGetValue(q.QuestionId, out var answer) && (answer.SelectedOptionId.HasValue || !string.IsNullOrWhiteSpace(answer.ResponseText) || !string.IsNullOrWhiteSpace(answer.SelectedOptionIdsJson)));
+                : answersByQuestion.TryGetValue(q.QuestionId, out var answer) && IsAnswered(answer));
         int flaggedCount = answersByQuestion.Values.Count(a => a.IsFlagged);
 
         // Determine authoritative saved question index within the active phase/unit/group
@@ -226,10 +231,19 @@ public sealed partial class AttemptEngine
             var q = questions[i];
             answersByQuestion.TryGetValue(q.QuestionId, out var ans);
             freeResponses.TryGetValue(q.QuestionId, out var response);
-            var opts = q.QuestionOptionQuestionNavigations
-                .OrderBy(o => o.Label)
-                .Select(o => new AttemptOption(o.OptionId, o.Label, o.Text))
-                .ToList();
+            boundByQuestion.TryGetValue(q.QuestionId, out var bound);
+
+            // #186: the pinned version's stem and options are the scored content; everything else —
+            // type, word limits, timers, the section's chrome — is the paper's, not the item's, so it
+            // still comes from the question row.
+            var opts = bound is null
+                ? q.QuestionOptionQuestionNavigations
+                    .OrderBy(o => o.Label)
+                    .Select(o => new AttemptOption(o.OptionId, o.Label, o.Text))
+                    .ToList()
+                : PoolOptions(bound.ItemVersionId, bound.Version);
+            var stem = bound?.Version.Stem ?? q.Stem;
+            var selectedOptionId = bound is null ? ans?.SelectedOptionId : SelectedPoolOptionId(bound.ItemVersionId, ans);
             var audio = ResolveGroupAudio(q.Group, sectionMasterAudio);
 
             allQuestions.Add(new AttemptQuestionInfo(
@@ -242,7 +256,7 @@ public sealed partial class AttemptEngine
                 q.Section.Skill.Code,
                 q.Section.Skill.Name,
                 EnumCodes.Parse<Modality>(q.Section.Modality),
-                q.Stem,
+                stem,
                 q.Group.ImagePath,
                 q.Group.ImageAlt,
                 audio?.Path,
@@ -251,7 +265,7 @@ public sealed partial class AttemptEngine
                 q.Group.Transcript,
                 q.Group.Passage,
                 opts,
-                ans?.SelectedOptionId,
+                selectedOptionId,
                 ans?.IsFlagged ?? false,
                 q.QuestionType,
                 q.MinWords,
@@ -308,7 +322,7 @@ public sealed partial class AttemptEngine
                 EnumCodes.Parse<Modality>(q.Section.Modality),
                 q.QuestionType == QuestionType.FreeResponse.ToCode()
                     ? (!string.IsNullOrWhiteSpace(response?.ResponseText) || !string.IsNullOrWhiteSpace(response?.AudioPath))
-                    : (answer?.SelectedOptionId != null || !string.IsNullOrWhiteSpace(answer?.ResponseText) || !string.IsNullOrWhiteSpace(answer?.SelectedOptionIdsJson)),
+                    : IsAnswered(answer),
                 answer?.IsFlagged ?? false,
                 idx == targetIndex,
                 IsLocked: isLocked);
