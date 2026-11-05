@@ -12,8 +12,26 @@ namespace Services.Tests;
 /// </summary>
 public sealed class DatabaseFixture : IAsyncLifetime
 {
+    // Default is per-worktree, not one shared name. Two tickets running in parallel in two worktrees
+    // otherwise drop and recreate each other's test database mid-run, and the symptom is not a
+    // failure: the losing run reports fewer tests than exist, because its fixture died while
+    // building. Measured 2026-11-06: 933, 705, 933 on the same commit, from nothing but overlap.
     private static readonly string Database =
-        Environment.GetEnvironmentVariable("TEST_DB_NAME") ?? "ExtraEfficiencyServicesTest";
+        Environment.GetEnvironmentVariable("TEST_DB_NAME") ?? DefaultDatabaseName();
+
+    /// <summary>A catalog name derived from this checkout's path, so two worktrees cannot collide
+    /// while a single worktree stays stable across runs.</summary>
+    private static string DefaultDatabaseName()
+    {
+        var root = FindRepoRoot();
+        var hash = 0;
+        foreach (var c in root)
+        {
+            hash = unchecked((hash * 31) + c);
+        }
+
+        return $"EE_ServicesTest_{Math.Abs(hash) % 100000}";
+    }
 
     private static readonly string BaseConnectionString =
         Environment.GetEnvironmentVariable("TEST_DB_CONNECTION")
