@@ -351,9 +351,63 @@ public sealed class AttemptVersionPinTests(DatabaseFixture database)
     }
 
     /// <summary>
-    /// The other half of the same rule, at the level the sitting projection can see: a paper that binds
-    /// nothing still renders exactly as it did before #186, with no pool content and no error. This is
-    /// the state of every paper #231 has not reached, so it must keep working until those rows go.
+    /// The review counterpart of the test above: an answer recorded before the paper was assembled
+    /// has no pin, so it renders from the question row it was answered from — even once the paper gains
+    /// bindings. Rendering today's binding would show options the learner was never offered and lose
+    /// the one they picked.
+    /// </summary>
+    [Fact]
+    public async Task A_review_of_an_answer_with_no_pin_keeps_the_question_it_was_answered_from()
+    {
+        var certCode = Unique("PIN");
+        var paper = await SeedBoundPaperAsync(certCode);
+        var userId = await SeedLearnerAsync(certCode);
+
+        // Answer the legacy paper first: no bindings, so no pin.
+        await database.SqlAsync($"DELETE FROM ExamItems WHERE ExamId = {paper.ExamId};");
+
+        var engine = CreateEngine();
+        var legacyAttempt = await engine.CreateAttemptAsync(userId, paper.CertId, paper.ExamId, 60);
+        await using (var legacyDb = DbContextFactory.Create(database.ConnectionString))
+        {
+            var legacyOptionId = await legacyDb.QuestionOptions
+                .Where(o => o.QuestionId == paper.LegacyQuestionId && o.IsCorrect)
+                .Select(o => o.OptionId)
+                .SingleAsync();
+            await engine.SaveAnswerAsync(legacyAttempt.AttemptId, userId, paper.LegacyQuestionId, legacyOptionId, isFlagged: false);
+        }
+        await engine.SubmitAttemptAsync(legacyAttempt.AttemptId, userId, isAutoSubmit: false);
+
+        // Now the paper is assembled. The finished attempt must not move.
+        await database.SqlAsync($"""
+            DECLARE @sec INT = (SELECT SectionId FROM Sections WHERE CertId = {paper.CertId});
+            INSERT INTO ExamItems (ExamId, SectionId, CertId, ItemVersionId, ItemId, Modality, DisplayOrder)
+            SELECT {paper.ExamId}, @sec, {paper.CertId}, v.ItemVersionId, v.ItemId, i.Modality,
+                   ROW_NUMBER() OVER (ORDER BY v.ItemVersionId)
+            FROM ItemVersions v
+            JOIN Items i ON i.ItemId = v.ItemId
+            WHERE i.BatchTag = '{certCode}';
+            IF @@ROWCOUNT <> 2
+              THROW 50000, 'fixture: the paper was not re-assembled, so this test would prove nothing', 1;
+            """);
+
+        var review = await CreateEngine().GetAttemptReviewAsync(legacyAttempt.AttemptId, userId);
+        var question = review.Questions.Single(q => q.QuestionId == paper.LegacyQuestionId);
+
+        Assert.Equal("Legacy stem one.", question.Stem);
+        Assert.Equal(
+            new[] { "legacy-one-a", "legacy-one-b", "legacy-one-c", "legacy-one-d" },
+            question.Options.Select(o => o.Text));
+        // the B option the legacy key marks correct is still the selected one, so the review shows it
+        var selected = question.Options.Single(o => o.OptionId == question.SelectedOptionId);
+        Assert.Equal("B", selected.Label);
+        Assert.True(question.IsCorrect);
+    }
+
+    /// <summary>
+    /// A paper that binds nothing still renders exactly as it did before #186, with no pool content and
+    /// no error. This is the state of every paper #231 has not reached, so it must keep working until
+    /// those rows go.
     /// </summary>
     [Fact]
     public async Task An_unbound_paper_still_renders_its_legacy_question_rows()
