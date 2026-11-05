@@ -68,7 +68,7 @@
                 </div>
                 <div>
                   <button type="button" class="btn btn--ghost btn--sm @(q.IsSaved ? "btn--primary" : "")" id="save-toggle-btn"
-                          data-question-id="@q.QuestionId"
+                          data-question-id="@q.Address"
                           data-is-saved="@(q.IsSaved ? "true" : "false")"
                           aria-pressed="@(q.IsSaved ? "true" : "false")"
                           title="@(q.IsSaved ? "Question saved to bank. Click to remove." : "Save this question to your bank.")">

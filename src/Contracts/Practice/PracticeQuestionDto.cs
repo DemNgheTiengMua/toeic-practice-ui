@@ -36,4 +36,13 @@ public sealed record PracticeQuestionDto(
     IReadOnlyList<int>? SelectedOptionIds = null,
     string? SelectedOptionIdsJson = null,
     IReadOnlyList<int>? CorrectOptionIds = null,
-    int? ItemVersionId = null);
+    int? ItemVersionId = null)
+{
+    /// <summary>
+    /// #187: the id the browser addresses this question by. A section drill addresses its question
+    /// row; a pool item has none, so its pinned version is the address instead. One opaque handle per
+    /// question keeps the navigator, the answer POST and the hint POST from each inventing a second
+    /// identity — and the service resolves either one.
+    /// </summary>
+    public int Address => QuestionId ?? ItemVersionId ?? 0;
+}

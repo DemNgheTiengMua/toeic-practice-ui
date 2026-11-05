@@ -19,7 +19,13 @@
           .replace(/'/g, "&#039;");
       }
 
-      // In-memory state dictionary keyed by questionId
+      // #187: how the browser addresses one question. A section drill addresses its question row; a
+      // pool item has none, so its pinned version is the address instead. The server resolves either.
+      function questionAddress(q) {
+        return q.questionId != null ? q.questionId : q.itemVersionId;
+      }
+
+      // In-memory state dictionary keyed by question address
       var localState = {};
       localQuestions.forEach(function (q) {
         var isAns = q.selectedOptionId != null || q.isCorrect != null;
@@ -31,8 +37,8 @@
           try { selectedIds = JSON.parse(q.selectedOptionIdsJson); } catch (e) { selectedIds = []; }
         }
 
-        localState[q.questionId] = {
-          questionId: q.questionId,
+        localState[questionAddress(q)] = {
+          address: questionAddress(q),
           displayOrder: q.displayOrder,
           questionType: qType,
           maxSelections: q.maxSelections,
@@ -158,7 +164,7 @@
         var saved = 0;
 
         localQuestions.forEach(function (q) {
-          var s = localState[q.questionId];
+          var s = localState[questionAddress(q)];
           if (s) {
             if (s.isAnswered) answered++;
             if (s.isCorrect === true) correct++;
@@ -226,7 +232,7 @@
         if (!q) return;
 
         currentOrder = order;
-        var s = localState[q.questionId] || {};
+        var s = localState[questionAddress(q)] || {};
         var type = (s.questionType || 'mcq').toLowerCase();
 
         // 1. Meta row
@@ -269,7 +275,7 @@
 
         // Save button
         if (saveToggleBtn) {
-          saveToggleBtn.setAttribute("data-question-id", String(q.questionId));
+          saveToggleBtn.setAttribute("data-question-id", String(questionAddress(q)));
           saveToggleBtn.setAttribute("data-is-saved", s.isSaved ? "true" : "false");
           saveToggleBtn.setAttribute("aria-pressed", s.isSaved ? "true" : "false");
           saveToggleBtn.textContent = s.isSaved ? "Saved" : "Save question";
@@ -497,7 +503,7 @@
 
           var html = '<div class="multi-select-widget stack" style="gap: var(--space-2);">';
           html += '<div class="alert alert--info py-1 px-2" style="font-size: 0.85rem; font-weight: 600; border-radius: 0; box-shadow: none;">';
-          html += 'CHỌN TỐI ĐA ' + maxSel + ' ĐÁP ÁN (SELECT UP TO ' + maxSel + ' ANSWERS): Đã chọn <span id="ms-count-' + q.questionId + '">' + selectedIds.length + '</span>/' + maxSel;
+          html += 'CHỌN TỐI ĐA ' + maxSel + ' ĐÁP ÁN (SELECT UP TO ' + maxSel + ' ANSWERS): Đã chọn <span id="ms-count-' + questionAddress(q) + '">' + selectedIds.length + '</span>/' + maxSel;
           html += '</div>';
           html += '<div class="option-list" role="group" aria-label="Multiple choice options for question ' + q.displayOrder + '">';
 
@@ -561,7 +567,7 @@
                 s.selectedOptionId = selectedIds[0] || null;
                 s.selectedOptionIdsJson = JSON.stringify(selectedIds);
 
-                var countEl = document.getElementById('ms-count-' + q.questionId);
+                var countEl = document.getElementById('ms-count-' + questionAddress(q));
                 if (countEl) countEl.textContent = selectedIds.length;
 
                 checkboxes.forEach(function (otherCb) {
@@ -866,7 +872,7 @@
       function updateSubmitButtonState() {
         if (!submitBtn) return;
         var q = getCurrentQuestion();
-        var s = localState[q.questionId] || {};
+        var s = localState[questionAddress(q)] || {};
         var type = (s.questionType || 'mcq').toLowerCase();
 
         if (s.isAnswered) {
@@ -896,8 +902,8 @@
 
       function updateNavigatorCells() {
         localQuestions.forEach(function (q) {
-          var s = localState[q.questionId] || {};
-          var cell = document.getElementById("nav-cell-" + q.questionId);
+          var s = localState[questionAddress(q)] || {};
+          var cell = document.getElementById("nav-cell-" + questionAddress(q));
           if (!cell) return;
 
           cell.classList.remove("is-current", "is-correct", "is-incorrect", "is-unanswered", "is-skipped", "is-marked");
@@ -924,8 +930,8 @@
 
         var visibleCount = 0;
         localQuestions.forEach(function (q) {
-          var s = localState[q.questionId] || {};
-          var cell = document.getElementById("nav-cell-" + q.questionId);
+          var s = localState[questionAddress(q)] || {};
+          var cell = document.getElementById("nav-cell-" + questionAddress(q));
           if (!cell) return;
 
           var match = true;
@@ -950,7 +956,7 @@
 
       function checkAnswer() {
         var q = getCurrentQuestion();
-        var s = localState[q.questionId];
+        var s = localState[questionAddress(q)];
         if (!s || s.isAnswered) return;
 
         clearError();
@@ -971,7 +977,7 @@
           });
         }
 
-        fetch("/practice/" + sessionId + "/questions/" + q.questionId + "/answer?displayOrder=" + q.displayOrder, {
+        fetch("/practice/" + sessionId + "/questions/" + questionAddress(q) + "/answer?displayOrder=" + q.displayOrder, {
           method: "POST",
           headers: {
             "Content-Type": "application/x-www-form-urlencoded",
@@ -1017,7 +1023,7 @@
 
       function skipQuestion() {
         var q = getCurrentQuestion();
-        var s = localState[q.questionId];
+        var s = localState[questionAddress(q)];
         if (!s || s.isAnswered) return;
 
         clearError();
@@ -1027,7 +1033,7 @@
         formData.append("__RequestVerificationToken", csrfToken);
         formData.append("Action", "skip");
 
-        fetch("/practice/" + sessionId + "/questions/" + q.questionId + "/answer?displayOrder=" + q.displayOrder, {
+        fetch("/practice/" + sessionId + "/questions/" + questionAddress(q) + "/answer?displayOrder=" + q.displayOrder, {
           method: "POST",
           headers: {
             "Content-Type": "application/x-www-form-urlencoded",
@@ -1066,13 +1072,13 @@
 
       function revealHint() {
         var q = getCurrentQuestion();
-        var s = localState[q.questionId];
+        var s = localState[questionAddress(q)];
         if (!s || s.hintUsed || s.isAnswered) return;
 
         clearError();
         if (showHintBtn) showHintBtn.disabled = true;
 
-        fetch("/practice/" + sessionId + "/questions/" + q.questionId + "/hint", {
+        fetch("/practice/" + sessionId + "/questions/" + questionAddress(q) + "/hint", {
           method: "POST",
           headers: {
             "Content-Type": "application/x-www-form-urlencoded",
@@ -1100,7 +1106,7 @@
 
       function toggleSaveQuestion() {
         var q = getCurrentQuestion();
-        var s = localState[q.questionId];
+        var s = localState[questionAddress(q)];
         if (!s) return;
 
         var isCurrentlySaved = s.isSaved;
@@ -1110,7 +1116,7 @@
         formData.append("__RequestVerificationToken", csrfToken);
         formData.append("currentlySaved", isCurrentlySaved ? "true" : "false");
 
-        fetch("/saved-questions/" + q.questionId + "/toggle", {
+        fetch("/saved-questions/" + questionAddress(q) + "/toggle", {
           method: "POST",
           headers: {
             "Content-Type": "application/x-www-form-urlencoded",
@@ -1147,7 +1153,7 @@
       if (submitBtn) {
         submitBtn.addEventListener("click", function () {
           var q = getCurrentQuestion();
-          var s = localState[q.questionId];
+          var s = localState[questionAddress(q)];
           if (s && s.isAnswered) {
             if (currentOrder < totalQuestions) {
               renderQuestion(currentOrder + 1);
@@ -1231,7 +1237,7 @@
         // Option selection: 1 - 4 for MCQ
         if (e.key === "1" || e.key === "2" || e.key === "3" || e.key === "4") {
           var q = getCurrentQuestion();
-          var s = localState[q.questionId];
+          var s = localState[questionAddress(q)];
           if (!s || s.isAnswered) return;
           var type = (s.questionType || 'mcq').toLowerCase();
           if (type !== 'mcq' && type !== 'mcq_3') return;
@@ -1255,7 +1261,7 @@
         // Enter or Space: Check Answer if unanswered, Next if answered
         if (e.key === "Enter" || e.key === " ") {
           var q = getCurrentQuestion();
-          var s = localState[q.questionId];
+          var s = localState[questionAddress(q)];
           if (!s) return;
 
           e.preventDefault();

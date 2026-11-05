@@ -111,6 +111,40 @@ public sealed class PracticeControllerTests
     }
 
     [Fact]
+    public async Task Take_with_a_pool_item_addresses_it_by_its_pinned_version()
+    {
+        // #187: a pool item has no question row, so every pool question would share QuestionId null.
+        // The take page must address each by its version instead, or the navigator collides and the
+        // answer POST goes to an empty id.
+        var first = new PracticeQuestionDto(
+            42, "R-GRAM", null, 1, 2, "Pool one", null, null, false,
+            [new PracticeOptionDto(11, "A", "a"), new PracticeOptionDto(12, "B", "b")],
+            null, null, null, null, null, null, null, null, null,
+            ItemVersionId: 71);
+        var second = new PracticeQuestionDto(
+            42, "R-GRAM", null, 2, 2, "Pool two", null, null, false,
+            [new PracticeOptionDto(21, "A", "a"), new PracticeOptionDto(22, "B", "b")],
+            null, null, null, null, null, null, null, null, null,
+            ItemVersionId: 72);
+
+        var api = new TestApiClient
+        {
+            Session = new PracticeSessionDto(
+                42, null, "R-GRAM", "Morphosyntactic structure", ModalityDto.Reading, 2,
+                PracticeStatusDto.InProgress, 0, QuestionSourceDto.All, DateTimeOffset.UtcNow, null, TopicId: 7, CefrLevelCode: "B1"),
+            SessionQuestions = [first, second],
+        };
+
+        var controller = CreateController(api);
+        var result = await controller.Take(42, 1, CancellationToken.None);
+
+        var model = Assert.IsType<PracticeTakeViewModel>(Assert.IsType<ViewResult>(result).Model);
+        Assert.Equal(71, model.Question.Address);
+        Assert.Equal(new[] { 71, 72 }, model.Navigator!.Select(n => n.Address));
+        Assert.DoesNotContain(0, model.Take.NavigatorCells.Select(c => c.Item.Address));
+    }
+
+    [Fact]
     public async Task Take_with_active_session_returns_question_view()
     {
         var api = new TestApiClient
