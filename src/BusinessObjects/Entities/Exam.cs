@@ -45,6 +45,15 @@ public partial class Exam
 
     public int? QuestionCount { get; set; }
 
+    /// <summary>
+    /// #185 / INV-6: which tier of stock this paper may draw from. Defaults to <c>demo</c> for the
+    /// same reason <see cref="Item.ContentTier"/> does ΓÇö an exam is not production until someone
+    /// promotes it, and the wrong default here is what lets an unreviewed paper go on sale.
+    /// </summary>
+    [StringLength(12)]
+    [Unicode(false)]
+    public string ContentTier { get; set; } = "demo";
+
     public bool IsDeleted { get; set; }
 
     public DateTimeOffset CreatedAt { get; set; }
@@ -63,6 +72,10 @@ public partial class Exam
 
     [InverseProperty("Exam")]
     public virtual ICollection<ExamSectionAudio> ExamSectionAudios { get; set; } = new List<ExamSectionAudio>();
+
+    /// <summary>#185: the versions this paper binds, one row per assembled item.</summary>
+    [InverseProperty("Exam")]
+    public virtual ICollection<ExamItem> ExamItems { get; set; } = new List<ExamItem>();
 
     [InverseProperty("Exam")]
     public virtual ICollection<PathModuleItem> PathModuleItems { get; set; } = new List<PathModuleItem>();

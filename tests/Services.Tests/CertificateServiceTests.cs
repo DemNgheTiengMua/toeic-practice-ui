@@ -85,7 +85,10 @@ public sealed class CertificateServiceTests(DatabaseFixture database)
             .SingleAsync();
         // #183: trg_Topics_ClosedVocabulary, which refuses a twenty-first topic.
         // #184: trg_ItemVersions_ScoredFieldsImmutable, which refuses an in-place scored-field edit.
-        Assert.Equal(29, triggerCount);
+        // #185: trg_ExamItems_ProductionBindsProduction and trg_Exams_TierKeepsContent, the two halves
+        // of INV-6. Two rather than one because a rule that fires only when a binding is written is
+        // bypassed by promoting the exam instead.
+        Assert.Equal(31, triggerCount);
 
         var viewCount = await db.Database
             .SqlQuery<int>($"SELECT COUNT(*) AS Value FROM sys.views")

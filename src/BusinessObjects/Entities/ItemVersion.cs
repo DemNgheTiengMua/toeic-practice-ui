@@ -71,4 +71,8 @@ public partial class ItemVersion
     [ForeignKey("ItemId")]
     [InverseProperty("ItemVersions")]
     public virtual Item Item { get; set; } = null!;
+
+    /// <summary>#185: the papers that pin this exact version.</summary>
+    [InverseProperty("ItemVersion")]
+    public virtual ICollection<ExamItem> ExamItems { get; set; } = new List<ExamItem>();
 }

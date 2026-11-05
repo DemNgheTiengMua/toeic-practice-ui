@@ -500,28 +500,44 @@ GO
 --     No CertId: one topic serves every certificate that examines its modality.
 --     trg_Topics_ClosedVocabulary refuses a twenty-first, so this is a closed set.
 -- ============================================================================
-IF NOT EXISTS (SELECT 1 FROM Topics)
-  INSERT INTO Topics (Modality, Code, Name) VALUES
-    ('listening','L-GIST',N'Global gist, purpose, macro-topic'),
-    ('listening','L-DET', N'Explicit factual detail and extraction'),
-    ('listening','L-INF', N'Pragmatic implication and logical inference'),
-    ('listening','L-ATT', N'Speaker stance, attitude, prosodic emotion'),
-    ('listening','L-FUNC',N'Communicative function and speech acts'),
-    ('listening','L-ORG', N'Discourse structure, signposting, synthesis'),
-    ('reading',  'R-GIST',N'Global thesis, purpose, paragraph main idea'),
-    ('reading',  'R-DET', N'Local factual retrieval and paraphrase matching'),
-    ('reading',  'R-INF', N'Bridging inference and logical deduction'),
-    ('reading',  'R-ATT', N'Authorial stance, rhetorical purpose, tone'),
-    ('reading',  'R-COH', N'Discourse cohesion, reference, text insertion'),
-    ('reading',  'R-GRAM',N'Morphosyntactic structure and lexical precision'),
-    ('speaking', 'S-DESC',N'Informational description and personal framing'),
-    ('speaking', 'S-INT', N'Transactional interaction and option negotiation'),
-    ('speaking', 'S-ARG', N'Sustained monologic argumentation and justification'),
-    ('speaking', 'S-SYN', N'Integrated summary and visual/data interpretation'),
-    ('writing',  'W-CORR',N'Transactional correspondence and register control'),
-    ('writing',  'W-DATA',N'Visual data, process, and informational synthesis'),
-    ('writing',  'W-ARG', N'Thesis-driven persuasive and opinion argumentation'),
-    ('writing',  'W-DISC',N'Multi-perspective problem-solution and evaluation');
+-- One row per topic, each guarded by its own existence check. A single
+-- `IF NOT EXISTS (SELECT 1 FROM Topics)` guard looks equivalent and is not: any test that inserts one
+-- topic before this seed ran would make the guard skip all twenty, and every later statement that
+-- looks up a topic by code would then throw.
+--
+-- The whole block is also skipped when the vocabulary already holds its full twenty. Topics is a
+-- closed set with a trigger refusing a twenty-first row, so seeding into a database that some other
+-- test has already grown past a canonical subset would throw instead of topping it up.
+IF (SELECT COUNT(*) FROM Topics) < 20
+BEGIN
+  INSERT INTO Topics (Modality, Code, Name)
+  SELECT v.Modality, v.Code, v.Name
+  FROM (VALUES
+      ('listening','L-GIST',N'Global gist, purpose, macro-topic'),
+      ('listening','L-DET', N'Explicit factual detail and extraction'),
+      ('listening','L-INF', N'Pragmatic implication and logical inference'),
+      ('listening','L-ATT', N'Speaker stance, attitude, prosodic emotion'),
+      ('listening','L-FUNC',N'Communicative function and speech acts'),
+      ('listening','L-ORG', N'Discourse structure, signposting, synthesis'),
+      ('reading',  'R-GIST',N'Global thesis, purpose, paragraph main idea'),
+      ('reading',  'R-DET', N'Local factual retrieval and paraphrase matching'),
+      ('reading',  'R-INF', N'Bridging inference and logical deduction'),
+      ('reading',  'R-ATT', N'Authorial stance, rhetorical purpose, tone'),
+      ('reading',  'R-COH', N'Discourse cohesion, reference, text insertion'),
+      ('reading',  'R-GRAM',N'Morphosyntactic structure and lexical precision'),
+      ('speaking', 'S-DESC',N'Informational description and personal framing'),
+      ('speaking', 'S-INT', N'Transactional interaction and option negotiation'),
+      ('speaking', 'S-ARG', N'Sustained monologic argumentation and justification'),
+      ('speaking', 'S-SYN', N'Integrated summary and visual/data interpretation'),
+      ('writing',  'W-CORR',N'Transactional correspondence and register control'),
+      ('writing',  'W-DATA',N'Visual data, process, and informational synthesis'),
+      ('writing',  'W-ARG', N'Thesis-driven persuasive and opinion argumentation'),
+      ('writing',  'W-DISC',N'Multi-perspective problem-solution and evaluation')
+  ) AS v(Modality, Code, Name)
+  WHERE NOT EXISTS (
+    SELECT 1 FROM Topics t WHERE t.Modality = v.Modality AND t.Code = v.Code
+  );
+END
 GO
 
 PRINT '6b. Topics seeded (20)';
@@ -5044,6 +5060,91 @@ IF NOT EXISTS (SELECT 1 FROM GradingCriteria WHERE CertId = @toeicSw AND SkillId
      5.0, 1.0, 2);
 
 PRINT '19. Representative 11-Component Question Catalog & Official Multi-Stage Blueprint Seeds';
+GO
+
+-- ============================================================================
+-- 19b. #185: a seeded exam assembled from the pool.
+--      The VSTEP mock is a two-item paper whose every question is a four-option MCQ, so it is the
+--      one seeded exam whose visible shape the pool can reproduce exactly. This block adds the
+--      pool rows it draws from and the bindings that reproduce it: the legacy Questions rows are
+--      left untouched (#231 deletes those; this ticket only makes the new assembly path exist), and
+--      the preview renders the same stems, options and keys either way.
+--
+--      A demo exam binds demo stock: the exam keeps its 'demo' default tier and every item is demo,
+--      so INV-6 is satisfied rather than bypassed. The binding carries the display order and unit
+--      the paper already had, so the rendered paper is unchanged.
+--
+--      The topic is resolved by canonical code and falls back to any topic of the same modality. The
+--      canonical-twenty insert at step 6b is guarded by "Topics is empty", so on a database where a
+--      test has already created a topic the twenty are absent - and this block must not be the thing
+--      that discovers it. Falling back keeps the seed re-runnable in either state.
+-- ============================================================================
+DECLARE @poolVstep INT = (SELECT CertId FROM Certificates WHERE Code = 'VSTEP');
+DECLARE @poolVstepMock INT = (SELECT ExamId FROM Exams WHERE CertId = @poolVstep AND Name = N'VSTEP Sample Test 1');
+DECLARE @poolSecL3 INT = (SELECT SectionId FROM Sections WHERE CertId = @poolVstep AND Code = 'L3');
+DECLARE @poolSecR4 INT = (SELECT SectionId FROM Sections WHERE CertId = @poolVstep AND Code = 'R4');
+DECLARE @poolLDet INT = COALESCE(
+  (SELECT TopicId FROM Topics WHERE Code = 'L-DET' AND Modality = 'listening'),
+  (SELECT TOP 1 TopicId FROM Topics WHERE Modality = 'listening' ORDER BY TopicId));
+DECLARE @poolRDet INT = COALESCE(
+  (SELECT TopicId FROM Topics WHERE Code = 'R-DET' AND Modality = 'reading'),
+  (SELECT TOP 1 TopicId FROM Topics WHERE Modality = 'reading' ORDER BY TopicId));
+DECLARE @poolItemL INT, @poolItemR INT;
+
+IF @poolLDet IS NULL OR @poolRDet IS NULL
+  THROW 50052, 'Seed 19b needs one listening and one reading topic in the pool.', 1;
+
+IF NOT EXISTS (SELECT 1 FROM Items WHERE BatchTag = 'seed-vstep-sample-1')
+BEGIN
+  -- The listening item. A2: a single-exchange listening item whose answer is a stated date.
+  INSERT INTO Stimuli (CefrLevel, AudioPath, Transcript, DomainContext)
+  VALUES ('A2', '/audio/vstep/sample1-listening.mp3',
+          N'Speaker: Good afternoon listeners. The annual Da Nang International Fireworks Festival will open next month on June 8th along the Han River.',
+          'general');
+
+  INSERT INTO Items (StimulusId, Modality, TopicId, CefrLevel, ItemType, ContentTier, LifecycleStatus, BatchTag)
+  VALUES (SCOPE_IDENTITY(), 'listening', @poolLDet, 'A2', 'short_exchange', 'demo', 'active', 'seed-vstep-sample-1');
+  SET @poolItemL = SCOPE_IDENTITY();
+  INSERT INTO ItemVersions (ItemId, VersionNumber, Stem, OptionA, OptionB, OptionC, OptionD, KeyLabel, Explanation)
+  VALUES (@poolItemL, 1, N'On what date will the festival open?',
+          N'June 1st', N'June 8th', N'June 15th', N'July 8th', 'B',
+          N'The speaker explicitly states June 8th.');
+
+  -- The reading item. B1: one passage, one stated benefit.
+  INSERT INTO Stimuli (CefrLevel, Passage, DomainContext)
+  VALUES ('B1', N'Community-based tourism has expanded significantly in the northern mountainous provinces of Vietnam. Local homestays in Ha Giang and Yen Bai allow visitors to experience ethnic cultural traditions while generating sustainable income for rural families.',
+          'general');
+
+  INSERT INTO Items (StimulusId, Modality, TopicId, CefrLevel, ItemType, ContentTier, LifecycleStatus, BatchTag)
+  VALUES (SCOPE_IDENTITY(), 'reading', @poolRDet, 'B1', 'passage_comprehension', 'demo', 'active', 'seed-vstep-sample-1');
+  SET @poolItemR = SCOPE_IDENTITY();
+  INSERT INTO ItemVersions (ItemId, VersionNumber, Stem, OptionA, OptionB, OptionC, OptionD, KeyLabel, Explanation)
+  VALUES (@poolItemR, 1, N'What is a primary benefit of community-based tourism described in the text?',
+          N'Rapid industrialization of rural areas', N'Sustainable income for local families',
+          N'Construction of new international airports', N'Government subsidies for tour operators', 'B',
+          N'The passage notes it provides sustainable income for local families while sharing cultural traditions.');
+END;
+
+-- The bindings. Written from the pool rows by tag rather than by a captured identity, so a re-run of
+-- this script on an already-seeded database finds the same rows instead of inserting a second copy.
+INSERT INTO ExamItems (ExamId, SectionId, CertId, ItemVersionId, ItemId, Modality, DisplayOrder, UnitNumber)
+SELECT @poolVstepMock, @poolSecL3, @poolVstep, v.ItemVersionId, i.ItemId, i.Modality, 1, 1
+FROM Items i
+JOIN ItemVersions v ON v.ItemId = i.ItemId AND v.VersionNumber = 1
+WHERE i.BatchTag = 'seed-vstep-sample-1' AND i.Modality = 'listening'
+  AND NOT EXISTS (SELECT 1 FROM ExamItems b
+                  WHERE b.ExamId = @poolVstepMock AND b.SectionId = @poolSecL3 AND b.DisplayOrder = 1);
+
+INSERT INTO ExamItems (ExamId, SectionId, CertId, ItemVersionId, ItemId, Modality, DisplayOrder, UnitNumber)
+SELECT @poolVstepMock, @poolSecR4, @poolVstep, v.ItemVersionId, i.ItemId, i.Modality, 1, 1
+FROM Items i
+JOIN ItemVersions v ON v.ItemId = i.ItemId AND v.VersionNumber = 1
+WHERE i.BatchTag = 'seed-vstep-sample-1' AND i.Modality = 'reading'
+  AND NOT EXISTS (SELECT 1 FROM ExamItems b
+                  WHERE b.ExamId = @poolVstepMock AND b.SectionId = @poolSecR4 AND b.DisplayOrder = 1);
+
+PRINT '19b. VSTEP Sample Test 1 assembled from the pool: two versions bound, position and unit carried';
+GO
 
 -- ============================================================================
 -- 20. E1.1 (#146): backfill each skill's own scaled-score scale from its ScoreScales rows.

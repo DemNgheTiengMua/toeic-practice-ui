@@ -149,7 +149,14 @@ public partial class CompanionDbContext
         {
             entity.HasKey(e => e.ExamId).HasName("PK__Exams__297521C7A4367810");
 
-            entity.ToTable(tb => tb.HasTrigger("trg_Exams_PurposeKeepsContent"));
+            // #185: the second trigger on this table. INV-6 must fire when an exam is promoted too,
+            // not only when a binding is written - a rule that fires on the child alone is bypassed by
+            // editing the parent.
+            entity.ToTable(tb =>
+            {
+                tb.HasTrigger("trg_Exams_PurposeKeepsContent");
+                tb.HasTrigger("trg_Exams_TierKeepsContent");
+            });
 
             entity.HasIndex(e => new { e.CertId, e.Purpose, e.Status }, "IX_Exams_Cert_Status").HasFilter("([IsDeleted]=(0))");
 
@@ -162,6 +169,8 @@ public partial class CompanionDbContext
             entity.Property(e => e.DeliveryMode).HasMaxLength(30).HasDefaultValue("strict_exam");
             entity.Property(e => e.ExamFamily).HasMaxLength(50);
             entity.Property(e => e.Status).HasDefaultValue("draft");
+            // #185: a new exam is demo-tier until someone promotes it - the same default as Items.
+            entity.Property(e => e.ContentTier).HasMaxLength(12).IsUnicode(false).HasDefaultValue("demo");
 
             entity.HasOne(d => d.Cert).WithMany(p => p.Exams)
                 .OnDelete(DeleteBehavior.ClientSetNull)
@@ -246,6 +255,10 @@ public partial class CompanionDbContext
             entity.HasIndex(e => new { e.TopicId, e.CefrLevel }, "IX_Items_Cell");
             entity.HasIndex(e => new { e.LifecycleStatus, e.ContentTier }, "IX_Items_Selection");
             entity.HasIndex(e => e.StimulusId, "IX_Items_Stimulus").HasFilter("([StimulusId] IS NOT NULL)");
+            // #185: composite target FK_ExamItems_ItemSkill needs. ItemId is already the primary key,
+            // so this adds no uniqueness - it exists only so a bound item's skill is pinned to its
+            // section's own by foreign key rather than by a trigger.
+            entity.HasIndex(e => new { e.ItemId, e.Modality }, "UQ_Items_Id_Modality").IsUnique();
 
             entity.HasOne(d => d.Stimulus).WithMany(p => p.Items)
                 .HasForeignKey(d => d.StimulusId)
@@ -272,6 +285,9 @@ public partial class CompanionDbContext
 
             entity.HasIndex(e => new { e.ItemId, e.VersionNumber }, "UQ_ItemVersions_Item_Number").IsUnique();
             entity.HasIndex(e => new { e.ItemId, e.VersionNumber }, "IX_ItemVersions_Item");
+            // #185: composite target FK_ExamItems_VersionItem needs - (version, item) is the pair a
+            // binding pins, so a version can only be bound to the item it belongs to.
+            entity.HasIndex(e => new { e.ItemVersionId, e.ItemId }, "UQ_ItemVersions_Id_Item").IsUnique();
 
             entity.HasOne(d => d.Item).WithMany(p => p.ItemVersions)
                 .HasForeignKey(d => d.ItemId)
@@ -279,6 +295,57 @@ public partial class CompanionDbContext
                 .HasConstraintName("FK_ItemVersions_Item");
         });
 
+
+
+        // #185: the assembly binding. HasTrigger: trg_ExamItems_ProductionBindsProduction refuses a
+        // production exam binding demo-tier stock. Without the declaration every save to this table
+        // fails on the OUTPUT clause, which is the defect this repo has shipped once already.
+        //
+        // The three composite FKs are declared by hand because two of them share a column: CertId is
+        // read by both the exam and the section FK, Modality by both the section and the item FK.
+        // EF cannot infer those from conventions, and inferring them wrongly would make certificate
+        // isolation a convention instead of a constraint.
+        modelBuilder.Entity<ExamItem>(entity =>
+        {
+            entity.HasKey(e => e.ExamItemId).HasName("PK_ExamItems");
+
+            entity.ToTable(tb => tb.HasTrigger("trg_ExamItems_ProductionBindsProduction"));
+
+            entity.Property(e => e.Modality).HasMaxLength(10).IsUnicode(false);
+            entity.Property(e => e.UnitNumber).HasDefaultValue(1);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysdatetimeoffset())");
+
+            entity.HasIndex(e => new { e.ExamId, e.SectionId, e.DisplayOrder }, "UQ_ExamItems_Exam_Section_Order").IsUnique();
+            entity.HasIndex(e => e.ItemId, "IX_ExamItems_Item");
+            entity.HasIndex(e => e.ItemVersionId, "IX_ExamItems_Version");
+
+            entity.HasOne(d => d.Exam).WithMany(p => p.ExamItems)
+                .HasPrincipalKey(p => new { p.ExamId, p.CertId })
+                .HasForeignKey(d => new { d.ExamId, d.CertId })
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ExamItems_ExamCert");
+
+            entity.HasOne(d => d.Section).WithMany(p => p.ExamItems)
+                .HasPrincipalKey(p => new { p.SectionId, p.CertId })
+                .HasForeignKey(d => new { d.SectionId, d.CertId })
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ExamItems_SectionCert");
+
+            // The section's skill and the item's skill are pinned to the one Modality column, so a
+            // listening section cannot bind a reading item's version - the pair has no target row.
+            entity.HasOne(d => d.Item).WithMany(p => p.ExamItems)
+                .HasPrincipalKey(p => new { p.ItemId, p.Modality })
+                .HasForeignKey(d => new { d.ItemId, d.Modality })
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ExamItems_ItemSkill");
+
+            // The pinned version must belong to the item the binding names.
+            entity.HasOne(d => d.ItemVersion).WithMany(p => p.ExamItems)
+                .HasPrincipalKey(p => new { p.ItemVersionId, p.ItemId })
+                .HasForeignKey(d => new { d.ItemVersionId, d.ItemId })
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ExamItems_VersionItem");
+        });
 
 
         modelBuilder.Entity<QuestionGroup>(entity =>

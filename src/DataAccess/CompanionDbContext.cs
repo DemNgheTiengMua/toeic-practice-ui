@@ -152,6 +152,10 @@ public partial class CompanionDbContext : DbContext
     public virtual DbSet<ItemVersion> ItemVersions { get; set; }
 
 
+    /// <summary>#185: the assembly binding - which pinned version each exam puts on its paper.</summary>
+    public virtual DbSet<ExamItem> ExamItems { get; set; }
+
+
     public virtual DbSet<QuestionGroup> QuestionGroups { get; set; }
 
 
