@@ -29,6 +29,7 @@ public static partial class AdminEndpoints
         MapScoreConversion(Capability(app, Permissions.BlueprintDesign));
         MapExams(Capability(app, Permissions.ContentAuthor));
         MapQuestions(Capability(app, Permissions.ContentAuthor));
+        MapItems(Capability(app, Permissions.ContentAuthor));
         MapQuickIngest(Capability(app, Permissions.ContentAuthor));
         MapStudio(Capability(app, Permissions.ContentAuthor));
         MapCertificates(Capability(app, Permissions.BlueprintDesign));

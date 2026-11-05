@@ -46,4 +46,10 @@ public interface IAdminExamService
 
     /// <summary>#158: the exam as a learner would sit it, with the answer key, without an attempt.</summary>
     Task<ExamPreviewTakeView> GetExamPreviewTakeAsync(int examId, int? questionDisplayOrder, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// #188: puts an authored item's version on this paper. The item names no exam, so this is the
+    /// only way one reaches a sitting, and it is where #157's structure lock and INV-6 apply.
+    /// </summary>
+    Task<ExamItemBindingDto> BindItemAsync(int examId, BindPoolItemRequest request, CancellationToken cancellationToken = default);
 }
