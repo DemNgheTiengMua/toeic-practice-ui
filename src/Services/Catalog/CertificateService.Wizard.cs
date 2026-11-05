@@ -428,6 +428,8 @@ public sealed partial class CertificateService
         // #192: criteria created in this save have no identity yet, so their grids are written after
         // the first SaveChanges assigns one.
         var pendingBands = new List<(GradingCriterion Criterion, IReadOnlyList<SaveGradingCriterionBandDto> Bands)>();
+        // #193: the same for anchors, for the same reason.
+        var pendingAnchors = new List<(GradingCriterion Criterion, IReadOnlyList<SaveGradingCriterionAnchorDto> Anchors)>();
 
         foreach (var dto in criteria)
         {
@@ -490,6 +492,20 @@ public sealed partial class CertificateService
                     pendingBands.Add((criterion, bands));
                 }
             }
+
+            // #193: the anchors, on the same "empty means not authored here" rule as the grid. They are
+            // authored before the lock; the schema trigger refuses them after it.
+            if (dto.Anchors is { Count: > 0 } anchors)
+            {
+                if (criterion.CriterionId > 0)
+                {
+                    await ReplaceAnchorsAsync(criterion.CriterionId, anchors, cancellationToken);
+                }
+                else
+                {
+                    pendingAnchors.Add((criterion, anchors));
+                }
+            }
         }
 
         await db.SaveChangesAsync(cancellationToken);
@@ -500,9 +516,50 @@ public sealed partial class CertificateService
         {
             await ReplaceBandsAsync(criterion.CriterionId, bands, cancellationToken);
         }
-        if (pendingBands.Count > 0)
+        foreach (var (criterion, anchors) in pendingAnchors)
+        {
+            await ReplaceAnchorsAsync(criterion.CriterionId, anchors, cancellationToken);
+        }
+        if (pendingBands.Count > 0 || pendingAnchors.Count > 0)
         {
             await db.SaveChangesAsync(cancellationToken);
+        }
+    }
+
+    /// <summary>
+    /// #193: the anchors as posted are the anchors stored, on the same rule as the grid - bands the
+    /// request omits are deleted, not merged. The trigger refuses this outright once the rubric is
+    /// locked, which is why authoring happens before the lock.
+    /// </summary>
+    private async Task ReplaceAnchorsAsync(
+        int criterionId, IReadOnlyList<SaveGradingCriterionAnchorDto> anchors, CancellationToken cancellationToken)
+    {
+        var existing = await db.GradingCriterionAnchors
+            .Where(a => a.CriterionId == criterionId)
+            .ToListAsync(cancellationToken);
+
+        var incoming = anchors
+            .GroupBy(a => a.Band)
+            .Select(g => g.First())
+            .ToDictionary(a => a.Band);
+
+        db.GradingCriterionAnchors.RemoveRange(existing.Where(a => !incoming.ContainsKey(a.Band)));
+        foreach (var band in incoming.Values.OrderBy(a => a.Band))
+        {
+            var row = existing.FirstOrDefault(a => a.Band == band.Band);
+            if (row is null)
+            {
+                db.GradingCriterionAnchors.Add(new GradingCriterionAnchor
+                {
+                    CriterionId = criterionId,
+                    Band = band.Band,
+                    ResponseText = band.ResponseText.Trim()
+                });
+            }
+            else
+            {
+                row.ResponseText = band.ResponseText.Trim();
+            }
         }
     }
 

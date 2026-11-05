@@ -187,6 +187,45 @@ public static class CertificateConfigurationValidator
                         + $"{string.Join(", ", missing)}. Every criterion needs one descriptor at every band 0-6, or the bands it omits have to be invented.");
                 }
             }
+
+            // #193: anchors are optional here for the same reason the grid is - every rubric authored
+            // before the ticket has none - but a set that was started must be the three calibrated bands.
+            // Two anchors is worse than none: the rubric is graded against a floor and a ceiling and no
+            // middle, which is exactly where a fluent-but-empty answer sits.
+            if (criterion.Anchors is { Count: > 0 } anchors)
+            {
+                var anchorBands = anchors.Select(a => a.Band).ToList();
+                if (anchorBands.Count != anchorBands.Distinct().Count())
+                {
+                    throw new ScoreConversionException(
+                        ScoreConversionException.InvalidData,
+                        $"Criterion '{criterion.Code}' names the same anchor band twice. A criterion carries one anchor at each of bands 2, 3 and 4.");
+                }
+
+                var outOfRange = anchorBands.Except(CanonicalRubric.AnchorBands).ToList();
+                if (outOfRange.Count > 0)
+                {
+                    throw new ScoreConversionException(
+                        ScoreConversionException.InvalidData,
+                        $"Criterion '{criterion.Code}' has anchor band(s) {string.Join(", ", outOfRange)} outside 2-4. The anchors are the calibrated benchmarks at bands 2, 3 and 4.");
+                }
+
+                var missingAnchors = CanonicalRubric.AnchorBands.Where(b => !anchorBands.Contains(b)).ToList();
+                if (missingAnchors.Count > 0)
+                {
+                    throw new ScoreConversionException(
+                        ScoreConversionException.InvalidData,
+                        $"Criterion '{criterion.Code}' on skill '{criterion.SkillCode}' is missing an anchor response for band(s) "
+                        + $"{string.Join(", ", missingAnchors)}. A criterion is anchored at bands 2, 3 and 4, or it is not anchored at all.");
+                }
+
+                if (anchors.Any(a => string.IsNullOrWhiteSpace(a.ResponseText)))
+                {
+                    throw new ScoreConversionException(
+                        ScoreConversionException.InvalidData,
+                        $"Criterion '{criterion.Code}' has an anchor response that is empty. An empty anchor is not a benchmark: it anchors nothing and still counts as written.");
+                }
+            }
         }
     }
 }
