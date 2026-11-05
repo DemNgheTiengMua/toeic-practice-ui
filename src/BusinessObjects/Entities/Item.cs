@@ -74,4 +74,8 @@ public partial class Item
 
     [InverseProperty("Item")]
     public virtual ICollection<ItemVersion> ItemVersions { get; set; } = new List<ItemVersion>();
+
+    /// <summary>#185: the papers that bind this item. A binding pins a version, not the item.</summary>
+    [InverseProperty("Item")]
+    public virtual ICollection<ExamItem> ExamItems { get; set; } = new List<ExamItem>();
 }

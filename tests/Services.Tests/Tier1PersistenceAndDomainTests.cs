@@ -38,7 +38,10 @@ public sealed class Tier1PersistenceAndDomainTests(DatabaseFixture database)
             "Orders",
             // #184: the copy-on-write guard. Also exercised through a real save in PoolPersistenceTests,
             // because a model-only assertion cannot see the OUTPUT clause actually failing.
-            "ItemVersions"
+            "ItemVersions",
+            // #185: the binding's INV-6 guard, exercised through a real save in ExamItemBindingTests
+            // for the same reason. Exams is already in this list; #185 added a second trigger to it.
+            "ExamItems"
         ];
 
         foreach (var tableName in auditedTables)
@@ -104,6 +107,23 @@ public sealed class Tier1PersistenceAndDomainTests(DatabaseFixture database)
         Assert.Contains("trg_CreditTransactions_AppendOnly", triggers);
         Assert.Contains("trg_CreditTransactions_NoNegativeBalance", triggers);
         Assert.Contains("trg_CreditTransactions_NoRewrite", triggers);
+    }
+
+    /// <summary>
+    /// #185: Exams carries a second trigger now. A table with any trigger and no declaration fails
+    /// every save on the OUTPUT clause, so this names both rather than only the first.
+    /// </summary>
+    [Fact]
+    public void Exams_Declares_Every_Trigger_It_Carries()
+    {
+        using var db = DbContextFactory.Create(database.ConnectionString);
+        var entity = db.Model.FindEntityType(typeof(Exam));
+
+        Assert.NotNull(entity);
+        var triggers = entity.GetDeclaredTriggers().Select(t => t.ModelName).ToList();
+
+        Assert.Contains("trg_Exams_PurposeKeepsContent", triggers);
+        Assert.Contains("trg_Exams_TierKeepsContent", triggers);
     }
 
     [Fact]

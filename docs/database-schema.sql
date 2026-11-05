@@ -237,6 +237,11 @@ CREATE TABLE Exams (
   -- UI-45: placement-select card meta "40 questions · 30 minutes"; kept on the exam because the
   -- question bank can grow past the fixed count (an adaptive form draws a subset)
   QuestionCount   INT NULL CONSTRAINT CK_Exams_QuestionCount CHECK (QuestionCount IS NULL OR QuestionCount > 0),
+  -- #185 / INV-6: which tier of stock this paper may draw from. Defaults to 'demo' for the same
+  -- reason Items.ContentTier does: an exam is not production until someone promotes it, and the
+  -- wrong default here is what lets an unreviewed paper go on sale.
+  ContentTier     VARCHAR(12) NOT NULL CONSTRAINT DF_Exams_ContentTier DEFAULT 'demo'
+    CONSTRAINT CK_Exams_ContentTier CHECK (ContentTier IN ('production','demo')),
   IsDeleted       BIT NOT NULL DEFAULT 0,
   CreatedAt       DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
   UpdatedAt       DATETIMEOFFSET NULL,    -- UI-4: admin exam list "Update" column
@@ -377,6 +382,9 @@ CREATE TABLE Items (
   CreatedAt        DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
   -- the item's skill must be its topic's skill: a listening item on a reading topic is the defect
   CONSTRAINT FK_Items_TopicModality FOREIGN KEY (TopicId, Modality) REFERENCES Topics(TopicId, Modality),
+  -- #185: composite target so ExamItems can pin a bound item's skill to its section's own. ItemId is
+  -- already the primary key, so this adds no uniqueness - it exists only as an FK target.
+  CONSTRAINT UQ_Items_Id_Modality UNIQUE (ItemId, Modality),
   CONSTRAINT CK_Items_Modality_Type CHECK (
        (Modality = 'listening' AND ItemType IN ('short_exchange','extended_dialogue','monologue_talk'))
     OR (Modality = 'reading'   AND ItemType IN ('sentence_cloze','passage_comprehension','text_insertion_cohesion'))
@@ -418,6 +426,9 @@ CREATE TABLE ItemVersions (
     CONSTRAINT CK_ItemVersions_ReferenceKind CHECK (ReferenceKind IN ('script','image_desc')),
   CreatedAt      DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
   CONSTRAINT UQ_ItemVersions_Item_Number UNIQUE (ItemId, VersionNumber),
+  -- #185: composite target so a version's identity is (version, item). A binding carries both, so
+  -- the version it pins cannot be a version of some other item than the one it names.
+  CONSTRAINT UQ_ItemVersions_Id_Item UNIQUE (ItemVersionId, ItemId),
   CONSTRAINT CK_ItemVersions_OptionsComplete CHECK (
        (OptionA IS NULL AND OptionB IS NULL AND OptionC IS NULL AND OptionD IS NULL AND KeyLabel IS NULL)
     OR (OptionA IS NOT NULL AND OptionB IS NOT NULL AND OptionC IS NOT NULL AND OptionD IS NOT NULL
@@ -460,6 +471,93 @@ BEGIN
        OR ISNULL(i.ReferenceKind, '')  <> ISNULL(d.ReferenceKind, '')
   )
     THROW 50048, 'An ItemVersions scored field is immutable; a scored change requires a new version row (copy-on-write, CNT-43).', 1;
+END;
+GO
+-- ============ #185: the assembly binding ============
+-- Assembly is a query over the pool, not an ownership relation. One row per item an exam puts on a
+-- paper: which version, in which section, at which position, in which unit. This is the ONLY
+-- relationship between a paper and the warehouse - and it is the first place INV-6 ("a production
+-- exam binds no demo item") can actually be enforced, because it is the first place an exam and an
+-- item meet.
+--
+-- CertId and Modality are carried here for the reason ExamSectionAudio carries CertId: both
+-- composite foreign keys on each read the same column, so an exam's certificate and its section's
+-- must agree, and an item's skill and its section's must agree, on every row. Isolation therefore
+-- costs no trigger and cannot drift.
+--
+-- The binding points at ItemVersionId, not at the stem. CNT-43 copy-on-write means a re-versioned
+-- item leaves this row - and therefore a published paper's rendering - untouched.
+CREATE TABLE ExamItems (
+  ExamItemId    INT IDENTITY(1,1) PRIMARY KEY,
+  ExamId        INT NOT NULL,
+  SectionId     INT NOT NULL,
+  CertId        INT NOT NULL,
+  ItemVersionId INT NOT NULL,
+  -- Carried down so the pinned version can be tied to this item by a composite key: a binding
+  -- cannot name an item's version and a different item in one row.
+  ItemId        INT NOT NULL,
+  -- Carried down from the section, exactly as CertId is, so the item's skill is pinned to the
+  -- section's by a foreign key rather than by a trigger. A listening section therefore cannot bind
+  -- a reading item's version: the pair has no target row.
+  Modality      VARCHAR(10) NOT NULL
+    CONSTRAINT CK_ExamItems_Modality CHECK (Modality IN ('listening','reading','speaking','writing')),
+  -- The paper's position, 1-based within its section. It belongs to the binding, not the item: the
+  -- same item on two papers, or twice on one paper, gets two positions.
+  DisplayOrder  INT NOT NULL CONSTRAINT CK_ExamItems_DisplayOrder CHECK (DisplayOrder > 0),
+  -- D9: a multistage sitting addresses a unit. Same meaning as QuestionGroups.UnitNumber.
+  UnitNumber    INT NOT NULL CONSTRAINT DF_ExamItems_UnitNumber DEFAULT 1
+    CONSTRAINT CK_ExamItems_UnitNumber CHECK (UnitNumber > 0),
+  CreatedAt     DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
+  -- the exam and the section must share one certificate (the ExamSectionAudio idiom)
+  CONSTRAINT FK_ExamItems_ExamCert     FOREIGN KEY (ExamId, CertId)    REFERENCES Exams(ExamId, CertId),
+  CONSTRAINT FK_ExamItems_SectionCert  FOREIGN KEY (SectionId, CertId) REFERENCES Sections(SectionId, CertId),
+  -- the bound item must be of the section's own skill (both FKs read the one Modality column)
+  CONSTRAINT FK_ExamItems_SectionSkill FOREIGN KEY (SectionId, Modality) REFERENCES Sections(SectionId, Modality),
+  CONSTRAINT FK_ExamItems_ItemSkill    FOREIGN KEY (ItemId, Modality)    REFERENCES Items(ItemId, Modality),
+  -- the pinned version must belong to the item the binding names
+  CONSTRAINT FK_ExamItems_VersionItem  FOREIGN KEY (ItemVersionId, ItemId)
+    REFERENCES ItemVersions(ItemVersionId, ItemId),
+  -- one position per paper per section: two items cannot both be "question 7" of one section
+  CONSTRAINT UQ_ExamItems_Exam_Section_Order UNIQUE (ExamId, SectionId, DisplayOrder)
+);
+GO
+-- INV-6 is the one rule no foreign key can express: "this paper may draw this tier of stock" relates
+-- two rows on opposite sides, so no single column can pin it - which is why the tier vocabulary #184
+-- closed had no enforcement anywhere until this table existed. The binding is the first place an
+-- exam and an item meet, so it is the first place the rule can be checked.
+--
+-- A demo exam may bind either tier: demo stock is what a demo exam is for, and promoting stock must
+-- not strand a working paper. Only production drawing demo stock is refused.
+CREATE TRIGGER trg_ExamItems_ProductionBindsProduction
+ON ExamItems AFTER INSERT, UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+  IF EXISTS (
+    SELECT 1
+    FROM inserted b
+    JOIN Exams e ON e.ExamId = b.ExamId
+    JOIN Items i ON i.ItemId = b.ItemId
+    WHERE e.ContentTier = 'production' AND i.ContentTier = 'demo'
+  )
+    THROW 50049, 'INV-6: a production exam cannot bind a demo-tier item.', 1;
+END;
+GO
+-- The same rule from the other side, for the reason trg_Exams_PurposeKeepsContent exists: a rule that
+-- only fires on the child table is bypassed by editing the parent. Promoting an exam to production
+-- while its paper still binds demo stock is exactly the edit that would slip INV-6 through, so it is
+-- refused at the moment of promotion rather than left to a later read.
+CREATE TRIGGER trg_Exams_TierKeepsContent
+ON Exams AFTER UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+  IF EXISTS (
+    SELECT 1
+    FROM inserted e
+    JOIN ExamItems b ON b.ExamId = e.ExamId
+    JOIN Items i ON i.ItemId = b.ItemId
+    WHERE e.ContentTier = 'production' AND i.ContentTier = 'demo'
+  )
+    THROW 50049, 'INV-6: a production exam cannot bind a demo-tier item.', 1;
 END;
 GO
 -- UI-8: question-type labels ("Verb tense", "Part 7 — inference") per certificate.

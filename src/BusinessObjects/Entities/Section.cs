@@ -69,6 +69,10 @@ public partial class Section
     [InverseProperty("Section")]
     public virtual ICollection<ExamSectionAudio> ExamSectionAudios { get; set; } = new List<ExamSectionAudio>();
 
+    /// <summary>#185: the pool versions this section binds, one row per assembled item.</summary>
+    [InverseProperty("Section")]
+    public virtual ICollection<ExamItem> ExamItems { get; set; } = new List<ExamItem>();
+
     [InverseProperty("Section")]
     public virtual ICollection<PathModuleItem> PathModuleItems { get; set; } = new List<PathModuleItem>();
 

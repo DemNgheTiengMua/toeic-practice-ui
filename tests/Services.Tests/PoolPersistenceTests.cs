@@ -24,17 +24,22 @@ public sealed class PoolPersistenceTests(DatabaseFixture database)
     {
         // A database whose pool tables are empty and whose certificate catalogue is untouched by this
         // test. The point of #184 is that a pool row needs none of the exam-owned shape.
-        var suffix = Guid.NewGuid().ToString("N")[..8];
+        //
+        // The topic is a canonical one rather than a generated code. A synthetic topic accumulates a
+        // row per run against the shared fixture database, and since the vocabulary is a closed set of
+        // twenty, those rows eventually push the reloading seed over the ceiling and it throws. Using
+        // a topic the vocabulary already owns keeps the fixture database at twenty however many times
+        // this runs.
         await using var db = DbContextFactory.Create(database.ConnectionString);
 
-        var topic = new Topic
+        var topic = await db.Topics.FirstOrDefaultAsync(t => t.Modality == "reading" && t.Code == "R-DET");
+        if (topic is null)
         {
-            Modality = "reading",
-            Code = $"R-{suffix}",
-            Name = "A topic on a pool item",
-        };
-        db.Topics.Add(topic);
-        await db.SaveChangesAsync();
+            // The fixture database starts empty: this test may be the first to want a topic.
+            topic = new Topic { Modality = "reading", Code = "R-DET", Name = "Local factual retrieval" };
+            db.Topics.Add(topic);
+            await db.SaveChangesAsync();
+        }
 
         var stim = new Stimulus
         {
@@ -58,7 +63,7 @@ public sealed class PoolPersistenceTests(DatabaseFixture database)
             PlacementEligible = true,
             ContentTier = "demo",
             LifecycleStatus = "draft",
-            BatchTag = suffix,
+            BatchTag = "pool-persistence-a",
         };
         db.Items.Add(item);
         await db.SaveChangesAsync();
@@ -103,9 +108,15 @@ public sealed class PoolPersistenceTests(DatabaseFixture database)
         var suffix = Guid.NewGuid().ToString("N")[..8];
         await using var db = DbContextFactory.Create(database.ConnectionString);
 
-        var topic = new Topic { Modality = "reading", Code = $"R-{suffix}", Name = "A topic" };
-        db.Topics.Add(topic);
-        await db.SaveChangesAsync();
+        // A canonical topic, not a generated one: see the note in the first test.
+        var topic = await db.Topics.FirstOrDefaultAsync(t => t.Modality == "reading" && t.Code == "R-DET");
+        if (topic is null)
+        {
+            // The fixture database starts empty: this test may be the first to want a topic.
+            topic = new Topic { Modality = "reading", Code = "R-DET", Name = "Local factual retrieval" };
+            db.Topics.Add(topic);
+            await db.SaveChangesAsync();
+        }
 
         var item = new Item
         {
