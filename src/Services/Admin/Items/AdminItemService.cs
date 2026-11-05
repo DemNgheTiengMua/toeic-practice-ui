@@ -113,6 +113,10 @@ public sealed class AdminItemService(CompanionDbContext db, TimeProvider clock) 
             OptionD = Normalize(request.OptionD),
             KeyLabel = NormalizeKey(request.KeyLabel),
             Explanation = Normalize(request.Explanation),
+            RationaleA = Normalize(request.RationaleA),
+            RationaleB = Normalize(request.RationaleB),
+            RationaleC = Normalize(request.RationaleC),
+            RationaleD = Normalize(request.RationaleD),
             EvidenceStart = request.EvidenceStart,
             EvidenceEnd = request.EvidenceEnd,
             EvidenceUnit = Normalize(request.EvidenceUnit),
@@ -166,6 +170,10 @@ public sealed class AdminItemService(CompanionDbContext db, TimeProvider clock) 
                 OptionD = Normalize(request.OptionD),
                 KeyLabel = NormalizeKey(request.KeyLabel),
                 Explanation = Normalize(request.Explanation),
+                RationaleA = Normalize(request.RationaleA),
+                RationaleB = Normalize(request.RationaleB),
+                RationaleC = Normalize(request.RationaleC),
+                RationaleD = Normalize(request.RationaleD),
                 EvidenceStart = request.EvidenceStart,
                 EvidenceEnd = request.EvidenceEnd,
                 EvidenceUnit = Normalize(request.EvidenceUnit),
@@ -216,6 +224,7 @@ public sealed class AdminItemService(CompanionDbContext db, TimeProvider clock) 
 
     /// <summary>
     /// True when any scored column differs. Explanation is excluded here and written by the caller,
+    /// and #194's rationales are scored with the option they explain - see <see cref="ItemVersion"/>.
     /// because it is the column whose change must <em>not</em> fork a version.
     /// </summary>
     private static bool ChangesScoredContent(ItemVersion current, UpdatePoolItemRequest request) =>
@@ -224,6 +233,10 @@ public sealed class AdminItemService(CompanionDbContext db, TimeProvider clock) 
         || !Same(current.OptionB, request.OptionB)
         || !Same(current.OptionC, request.OptionC)
         || !Same(current.OptionD, request.OptionD)
+        || !Same(current.RationaleA, request.RationaleA)
+        || !Same(current.RationaleB, request.RationaleB)
+        || !Same(current.RationaleC, request.RationaleC)
+        || !Same(current.RationaleD, request.RationaleD)
         || !Same(current.KeyLabel, NormalizeKey(request.KeyLabel))
         || current.EvidenceStart != request.EvidenceStart
         || current.EvidenceEnd != request.EvidenceEnd
@@ -349,5 +362,9 @@ public sealed class AdminItemService(CompanionDbContext db, TimeProvider clock) 
             version.EvidenceQuote,
             version.ReferenceText,
             version.ReferenceKind is null ? null : EnumCodes.Parse<ReferenceKindDto>(version.ReferenceKind),
-            version.CreatedAt);
+            version.CreatedAt,
+            version.RationaleA,
+            version.RationaleB,
+            version.RationaleC,
+            version.RationaleD);
 }

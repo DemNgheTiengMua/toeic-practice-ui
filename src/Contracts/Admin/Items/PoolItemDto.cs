@@ -34,4 +34,10 @@ public sealed record PoolItemDto(
     string? EvidenceQuote,
     string? ReferenceText,
     ReferenceKindDto? ReferenceKind,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt,
+    // #194: why each option is what it is. Gate one refuses an item without these, so authoring
+    // reads them back rather than making the author retype them.
+    string? RationaleA = null,
+    string? RationaleB = null,
+    string? RationaleC = null,
+    string? RationaleD = null);

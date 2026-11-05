@@ -46,6 +46,25 @@ public partial class ItemVersion
     /// <summary>The one field a typo fix may change in place.</summary>
     public string? Explanation { get; set; }
 
+    /// <summary>
+    /// #194: why each option is what it is - the copy gate one requires before an item may be
+    /// validated. Beside the option rather than in a separate table because CNT-06 fixes the count at
+    /// four: a child table would buy nothing a fifth column does not, and would make "four options,
+    /// four rationales" a join instead of a CHECK.
+    /// <para>
+    /// Scored, like the option text: the review screen shows a learner the rationale for the option
+    /// they chose, so rewriting one rewrites what a past attempt renders.
+    /// <c>trg_ItemVersions_ScoredFieldsImmutable</c> therefore compares them.
+    /// </para>
+    /// </summary>
+    public string? RationaleA { get; set; }
+
+    public string? RationaleB { get; set; }
+
+    public string? RationaleC { get; set; }
+
+    public string? RationaleD { get; set; }
+
     public int? EvidenceStart { get; set; }
 
     public int? EvidenceEnd { get; set; }

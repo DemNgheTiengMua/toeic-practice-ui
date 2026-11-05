@@ -21,4 +21,10 @@ public sealed record UpdatePoolItemRequest(
     string? EvidenceUnit = null,
     string? EvidenceQuote = null,
     string? ReferenceText = null,
-    ReferenceKindDto? ReferenceKind = null);
+    ReferenceKindDto? ReferenceKind = null,
+    // #194: a per-option rationale. Scored like the option text, because it is rendered beside the
+    // option a past attempt chose - a versioned change, not an in-place one.
+    string? RationaleA = null,
+    string? RationaleB = null,
+    string? RationaleC = null,
+    string? RationaleD = null);
