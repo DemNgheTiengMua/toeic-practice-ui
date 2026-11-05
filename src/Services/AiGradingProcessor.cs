@@ -80,6 +80,9 @@ public sealed class AiGradingProcessor(
                 .OrderBy(sc => sc.GradingCriterion.DisplayOrder)
                 .ToListAsync(cancellationToken);
 
+            // #192: the seven-band grid travels with each criterion, read in one query for the whole
+            // rubric. A criterion with no grid keeps its prose, so every rubric authored before this
+            // ticket grades exactly as it did.
             List<GradingCriterionDetail> criteriaDetails;
             if (sectionCriteria.Count > 0)
             {
@@ -106,6 +109,66 @@ public sealed class AiGradingProcessor(
                     c.MaxScore,
                     c.Weight,
                     c.RubricDescription)).ToList();
+            }
+
+            // The grid is per criterion. One grouped read, not a query per criterion: a rubric is at
+            // most four of them, but the loop version reads as N+1 and becomes N+1 the moment a
+            // section grows.
+            var appliedIds = criteriaDetails.Select(c => c.CriterionId).ToArray();
+            var gridByCriterion = appliedIds.Length == 0
+                ? new Dictionary<int, IReadOnlyList<GradingCriterionBandDescriptor>>()
+                : await db.GradingCriterionDescriptors
+                    .AsNoTracking()
+                    .Where(d => appliedIds.Contains(d.CriterionId))
+                    .GroupBy(d => d.CriterionId)
+                    .Select(g => new
+                    {
+                        CriterionId = g.Key,
+                        Bands = g.OrderBy(d => d.Band)
+                                 .Select(d => new GradingCriterionBandDescriptor(d.Band, d.Descriptor, d.BinaryGates))
+                                 .ToList(),
+                    })
+                    .ToDictionaryAsync(
+                        x => x.CriterionId,
+                        x => (IReadOnlyList<GradingCriterionBandDescriptor>)x.Bands,
+                        cancellationToken);
+
+            criteriaDetails = criteriaDetails
+                .Select(c => c with { Descriptors = gridByCriterion.GetValueOrDefault(c.CriterionId) })
+                .ToList();
+
+            // #192: a written answer is scored against a written standard. A criterion with no
+            // descriptor text cannot be scored against anything, and a rubric that silently scores
+            // three of four criteria reports a composite that is not the one its authors wrote
+            // (D0.6: M_t = 1/4 * sum c_j). So the whole grading is Failed, and the reason names the
+            // codes - never a filled-in score, never an inferred descriptor.
+            //
+            // Speaking is exempt on purpose: SpeechSuper measures pronunciation and fluency itself
+            // (#152) and drops a criterion its provider did not measure with its own stated reason.
+            // Its completeness is enforced at the lock door instead, where every skill modality is
+            // required to carry seven bands before it can be published against.
+            if (question.Section.Modality == Modality.Writing.ToCode())
+            {
+                var ungradable = criteriaDetails.Where(c => !c.IsGradeable).ToList();
+                if (ungradable.Count > 0)
+                {
+                    var named = string.Join(", ", ungradable.Select(c =>
+                        $"{c.Code} ({c.CriterionId})"
+                        + (c.MissingBands.Count > 0
+                            ? $" is missing band(s) {string.Join(",", c.MissingBands)}"
+                            : " has no descriptor text")));
+                    logger?.LogWarning(
+                        "GradingId {GradingId} for FreeResponseId {FreeResponseId} failed: {Criteria}",
+                        grading.GradingId, fr.FreeResponseId, named);
+
+                    grading.Status = AiGradingStatus.Failed.ToCode();
+                    grading.FailureReason = $"Nothing was scored: {named}. An administrator has to write a descriptor for every band, then grade again.";
+                    if (grading.FailureReason.Length > 400) grading.FailureReason = grading.FailureReason[..399] + "…";
+                    grading.CompletedAt = DateTimeOffset.UtcNow;
+                    ClearFeedback(grading);
+                    await db.SaveChangesAsync(cancellationToken);
+                    return false;
+                }
             }
 
             // #152: a spoken answer is graded against the reference its own question declares. The

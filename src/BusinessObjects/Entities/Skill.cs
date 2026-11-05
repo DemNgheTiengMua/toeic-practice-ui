@@ -56,6 +56,10 @@ public partial class Skill
     [InverseProperty("Skill")]
     public virtual ICollection<GradingCriterion> GradingCriteria { get; set; } = new List<GradingCriterion>();
 
+    /// <summary>#192: at most one lock per skill; present means this skill's rubric is locked.</summary>
+    [InverseProperty("Skill")]
+    public virtual GradingRubricLock? RubricLock { get; set; }
+
     [InverseProperty("Skill")]
     public virtual ICollection<Lesson> Lessons { get; set; } = new List<Lesson>();
 

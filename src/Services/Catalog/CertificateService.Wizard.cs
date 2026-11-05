@@ -425,6 +425,10 @@ public sealed partial class CertificateService
             .ToListAsync(cancellationToken);
         var skillIdsByCode = skills.ToDictionary(s => s.Code, s => s.SkillId, StringComparer.OrdinalIgnoreCase);
 
+        // #192: criteria created in this save have no identity yet, so their grids are written after
+        // the first SaveChanges assigns one.
+        var pendingBands = new List<(GradingCriterion Criterion, IReadOnlyList<SaveGradingCriterionBandDto> Bands)>();
+
         foreach (var dto in criteria)
         {
             if (!skillIdsByCode.TryGetValue(dto.SkillCode.Trim(), out var skillId))
@@ -443,9 +447,10 @@ public sealed partial class CertificateService
                              : c.Code == dto.Code),
                     cancellationToken);
 
+            GradingCriterion criterion;
             if (existing is null)
             {
-                db.GradingCriteria.Add(new GradingCriterion
+                criterion = new GradingCriterion
                 {
                     CertId = certId,
                     SkillId = skillId,
@@ -455,10 +460,12 @@ public sealed partial class CertificateService
                     Weight = dto.Weight > 0 ? dto.Weight : 1.0m,
                     DisplayOrder = dto.DisplayOrder,
                     RubricDescription = dto.RubricDescription?.Trim()
-                });
+                };
+                db.GradingCriteria.Add(criterion);
             }
             else
             {
+                criterion = existing;
                 existing.Code = dto.Code.Trim();
                 existing.Name = dto.Name.Trim();
                 existing.MaxScore = dto.MaxScore;
@@ -466,9 +473,76 @@ public sealed partial class CertificateService
                 existing.DisplayOrder = dto.DisplayOrder;
                 existing.RubricDescription = dto.RubricDescription?.Trim();
             }
+
+            // #192: the seven-band grid, written in the same save as the criterion that owns it, so a
+            // criterion and its descriptors cannot half-exist. Empty means "this request does not
+            // author a grid", which leaves any grid already stored alone: removing seven rows because
+            // a form did not post them would silently un-grade a rubric.
+            if (dto.Bands is { Count: > 0 } bands)
+            {
+                // A new criterion has no id until the save below, so its grid is written after it.
+                if (criterion.CriterionId > 0)
+                {
+                    await ReplaceBandsAsync(criterion.CriterionId, bands, cancellationToken);
+                }
+                else
+                {
+                    pendingBands.Add((criterion, bands));
+                }
+            }
         }
 
         await db.SaveChangesAsync(cancellationToken);
+
+        // Second pass for criteria that did not exist a moment ago: the grid needs the identity the
+        // first save produced.
+        foreach (var (criterion, bands) in pendingBands)
+        {
+            await ReplaceBandsAsync(criterion.CriterionId, bands, cancellationToken);
+        }
+        if (pendingBands.Count > 0)
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
+    }
+
+    /// <summary>
+    /// #192: the grid as posted is the grid stored - bands the request omits are deleted, not merged.
+    /// A merge would let a seven-band grid keep an eighth row from an earlier save, which the lock
+    /// counts as a defect. The trigger refuses this outright once the rubric is locked.
+    /// </summary>
+    private async Task ReplaceBandsAsync(
+        int criterionId, IReadOnlyList<SaveGradingCriterionBandDto> bands, CancellationToken cancellationToken)
+    {
+        var existing = await db.GradingCriterionDescriptors
+            .Where(d => d.CriterionId == criterionId)
+            .ToListAsync(cancellationToken);
+
+        var incoming = bands
+            .GroupBy(b => b.Band)
+            .Select(g => g.First())
+            .ToDictionary(b => b.Band);
+
+        db.GradingCriterionDescriptors.RemoveRange(existing.Where(d => !incoming.ContainsKey(d.Band)));
+        foreach (var band in incoming.Values.OrderBy(b => b.Band))
+        {
+            var row = existing.FirstOrDefault(d => d.Band == band.Band);
+            if (row is null)
+            {
+                db.GradingCriterionDescriptors.Add(new GradingCriterionDescriptor
+                {
+                    CriterionId = criterionId,
+                    Band = band.Band,
+                    Descriptor = band.Descriptor.Trim(),
+                    BinaryGates = band.BinaryGates.Trim()
+                });
+            }
+            else
+            {
+                row.Descriptor = band.Descriptor.Trim();
+                row.BinaryGates = band.BinaryGates.Trim();
+            }
+        }
     }
 
     private static string FormatUpperSnakeCase(string input)

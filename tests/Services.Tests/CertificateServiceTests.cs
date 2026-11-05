@@ -90,10 +90,33 @@ public sealed class CertificateServiceTests(DatabaseFixture database)
         // bypassed by promoting the exam instead.
         // #190: trg_Items_LifecycleTransitions and trg_Items_NoHardDelete, the six states and the
         // no-delete rule.
-        // #191: trg_Attempts_SingleWriter, trg_PlacementTests_SingleWriter and
+// #191: trg_Attempts_SingleWriter, trg_PlacementTests_SingleWriter and
         // trg_LearnerPathSteps_SingleWriter - one per covered derived fact. The registry names seven;
         // the other four have no table yet or are exempt, which domain27 asserts rather than assumes.
-        Assert.Equal(36, triggerCount);
+        // #192: trg_GradingCriteria_FrozenWhenLocked,
+        // trg_GradingCriterionDescriptors_FrozenWhenLocked,
+        // trg_GradingRubricLocks_CompleteCanonicalRubric and
+        // trg_GradingRubricLocks_IrreversibleOnceGraded - the seven-band grid and the lock.
+        Assert.Equal(40, triggerCount);
+
+        // Named as well as counted, because a count alone cannot tell a rename from a removal.
+        foreach (var name in new[]
+                 {
+                     "trg_GradingCriteria_FrozenWhenLocked",
+                     "trg_GradingCriterionDescriptors_FrozenWhenLocked",
+                     "trg_GradingRubricLocks_CompleteCanonicalRubric",
+                     "trg_GradingRubricLocks_IrreversibleOnceGraded",
+                     "trg_Attempts_SingleWriter",
+                     "trg_PlacementTests_SingleWriter",
+                     "trg_LearnerPathSteps_SingleWriter",
+                 })
+        {
+            var present = await db.Database
+                .SqlQuery<int>($"SELECT COUNT(*) AS Value FROM sys.triggers WHERE name = {name}")
+                .SingleAsync();
+            Assert.Equal(1, present);
+        }
+
 
         var viewCount = await db.Database
             .SqlQuery<int>($"SELECT COUNT(*) AS Value FROM sys.views")

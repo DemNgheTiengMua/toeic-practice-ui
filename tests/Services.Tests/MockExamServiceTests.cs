@@ -183,8 +183,8 @@ public sealed class MockExamServiceTests(DatabaseFixture database)
             INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, MinWords, MaxWords, DisplayOrder)
             VALUES (@writingGroup, @exam, @writingSection, @writingSkill, N'Write a short response.', 1, 'free_response', 3, 100, 2);
             DECLARE @writingQuestion INT = SCOPE_IDENTITY();
-            INSERT INTO GradingCriteria (CertId, SkillId, Code, Name, MaxScore, Weight, DisplayOrder)
-            VALUES (@cert, @writingSkill, 'CONTENT', N'Content', 10, 1, 1);
+            INSERT INTO GradingCriteria (CertId, SkillId, Code, Name, RubricDescription, MaxScore, Weight, DisplayOrder)
+            VALUES (@cert, @writingSkill, 'CONTENT', N'Content', N'Band 6: fully addresses the task. Band 3: only partly addresses it. Band 0: no response.', 10, 1, 1);
             DECLARE @criterion INT = SCOPE_IDENTITY();
             INSERT INTO SectionCriteria (SectionId, CriterionId, SkillId, MaxScore)
             VALUES (@writingSection, @criterion, @writingSkill, 10);

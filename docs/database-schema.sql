@@ -1483,6 +1483,178 @@ CREATE TABLE SectionCriteria (
   CONSTRAINT FK_SectionCriteria_CriterionSkill FOREIGN KEY (CriterionId, SkillId) REFERENCES GradingCriteria(CriterionId, SkillId)
 );
 GO
+-- #192: the rubric's shape is four criteria per productive skill, seven bands each, and a descriptor
+-- at every band that states an observable threshold. The grid is a table rather than one long column
+-- so "a descriptor at every band" is countable, and so a missing band is a missing row that the lock
+-- can refuse - a paragraph with seven numbered lines cannot be checked for a hole in the middle.
+--
+-- What the CHECKs below can prove is that a cell holds text and that the band number is in range.
+-- They cannot prove the text states a threshold: "Band 4: writes clearly" passes every check here
+-- and still grades nothing. That is the calibration ladder's job (#193); no constraint can read.
+CREATE TABLE GradingCriterionDescriptors (
+  CriterionId INT NOT NULL,
+  -- the integer IS the CEFR band: 0 = Pre-A1/non-scorable, 1 = A1 ... 6 = C2 (D0.6)
+  Band        TINYINT NOT NULL CONSTRAINT CK_GCD_Band CHECK (Band BETWEEN 0 AND 6),
+  -- WHEREFORE the band looks like this, in observable terms - wpm, pause length, error-free T-unit
+  -- share, subordination variety, repetition. Not adjectives (D0.6).
+  Descriptor  NVARCHAR(MAX) NOT NULL CONSTRAINT CK_GCD_Descriptor CHECK (LEN(LTRIM(RTRIM(Descriptor))) > 0),
+  -- WHAT must be true before the band is reached at all. Every band transition is a set of binary
+  -- gate conditions, not a scalar impression (D0.6 mechanism 1).
+  BinaryGates NVARCHAR(MAX) NOT NULL CONSTRAINT CK_GCD_BinaryGates CHECK (LEN(LTRIM(RTRIM(BinaryGates))) > 0),
+  CONSTRAINT PK_GradingCriterionDescriptors PRIMARY KEY (CriterionId, Band),
+  CONSTRAINT FK_GCD_Criterion FOREIGN KEY (CriterionId) REFERENCES GradingCriteria(CriterionId)
+);
+GO
+-- #192: a rubric is locked once it is calibrated, and a locked rubric is what a grading call is
+-- allowed to score against. The row's existence IS the lock; there is no IsLocked flag to forget to
+-- flip, and no third state to reason about.
+--
+-- The canonical four criteria, per D0.6 and CNT-29. Keyed by modality, not by skill code, because a
+-- certificate names its skills freely (SPEA, WRIT, SPK, LIST...) and the rubric belongs to the skill's
+-- modality. That is what reconciles "one canonical four" with certificate-scoped Skills: the FK keeps
+-- each criterion inside its own certificate, and the lock compares that certificate's own four codes
+-- against the set its modality prescribes. No certificate can borrow another's criteria.
+CREATE TABLE GradingRubricLocks (
+  SkillId     INT NOT NULL,
+  CertId      INT NOT NULL,
+  LockedAt    DATETIMEOFFSET NOT NULL CONSTRAINT DF_GradingRubricLocks_LockedAt DEFAULT SYSDATETIMEOFFSET(),
+  CONSTRAINT PK_GradingRubricLocks PRIMARY KEY (SkillId),
+  CONSTRAINT FK_GradingRubricLocks_SkillCert FOREIGN KEY (SkillId, CertId) REFERENCES Skills(SkillId, CertId)
+);
+GO
+-- A locked rubric must be exactly the canonical four criteria, all present, all at bands 0..6, and
+-- every one of them carrying seven non-blank descriptors with gates. An AFTER INSERT trigger with no
+-- WHEN clause is the only shape that can check a set - a row trigger on the criteria table could
+-- never see the sixth row arriving, because a row cannot know about its siblings.
+CREATE TRIGGER trg_GradingRubricLocks_CompleteCanonicalRubric
+ON GradingRubricLocks AFTER INSERT AS
+BEGIN
+  SET NOCOUNT ON;
+  -- the codes each modality's rubric is made of. A skill whose modality is not productive
+  -- (listening, reading) has no analytic rubric at all, so it has no canonical set and cannot lock.
+  IF EXISTS (
+    SELECT 1
+    FROM inserted i
+    JOIN Skills s ON s.SkillId = i.SkillId
+    WHERE s.Modality NOT IN ('speaking','writing')
+  )
+    THROW 50044, 'Only a speaking or writing rubric can be locked; an objective skill is scored by its key, not by descriptors.', 1;
+
+  -- exactly four criteria, and the SET of their codes is exactly the canonical four for this
+  -- modality. Both directions are checked: a rubric with four rows named PRON, INT, GRAM, REL is the
+  -- legacy TOEIC rubric and passes the count alone, so a count is not the rule.
+  IF EXISTS (
+    SELECT 1
+    FROM inserted i
+    JOIN Skills s ON s.SkillId = i.SkillId
+    WHERE (SELECT COUNT(*) FROM GradingCriteria c WHERE c.SkillId = i.SkillId) <> 4
+       OR EXISTS (
+            SELECT c.Code FROM GradingCriteria c WHERE c.SkillId = i.SkillId
+            EXCEPT
+            SELECT e.Code FROM (VALUES
+              ('speaking','S_FC'),('speaking','S_PR'),('speaking','S_LR'),('speaking','S_GR'),
+              ('writing','W_TR'),('writing','W_CC'),('writing','W_LR'),('writing','W_GR')
+            ) AS e(Modality, Code) WHERE e.Modality = s.Modality)
+       OR EXISTS (
+            SELECT e.Code FROM (VALUES
+              ('speaking','S_FC'),('speaking','S_PR'),('speaking','S_LR'),('speaking','S_GR'),
+              ('writing','W_TR'),('writing','W_CC'),('writing','W_LR'),('writing','W_GR')
+            ) AS e(Modality, Code) WHERE e.Modality = s.Modality
+            EXCEPT
+            SELECT c.Code FROM GradingCriteria c WHERE c.SkillId = i.SkillId)
+  )
+    THROW 50045, 'A locked rubric is exactly the canonical four criteria for its skill''s modality: S_FC, S_PR, S_LR, S_GR for speaking, W_TR, W_CC, W_LR, W_GR for writing.', 1;
+
+  -- 28 cells, and every one of them carries text. The count is per criterion so the message can name
+  -- the criterion and the bands it is missing, which is the difference between a refusal an author
+  -- can act on and one they cannot.
+  IF EXISTS (
+    SELECT 1
+    FROM inserted i
+    JOIN GradingCriteria c ON c.SkillId = i.SkillId
+    WHERE (SELECT COUNT(*) FROM GradingCriterionDescriptors d WHERE d.CriterionId = c.CriterionId) <> 7
+       OR EXISTS (
+            SELECT b.Band FROM (VALUES (0),(1),(2),(3),(4),(5),(6)) AS b(Band)
+            EXCEPT
+            SELECT d.Band FROM GradingCriterionDescriptors d WHERE d.CriterionId = c.CriterionId)
+  )
+  BEGIN
+    DECLARE @code VARCHAR(20), @missing NVARCHAR(100);
+    SELECT TOP 1
+           @code = c.Code,
+           @missing = ISNULL((
+             SELECT STRING_AGG(CAST(b.Band AS NVARCHAR(2)), N',')
+               FROM (VALUES (0),(1),(2),(3),(4),(5),(6)) AS b(Band)
+              WHERE NOT EXISTS (SELECT 1 FROM GradingCriterionDescriptors d
+                                 WHERE d.CriterionId = c.CriterionId AND d.Band = b.Band)), N'none')
+      FROM inserted i
+      JOIN GradingCriteria c ON c.SkillId = i.SkillId
+     WHERE (SELECT COUNT(*) FROM GradingCriterionDescriptors d WHERE d.CriterionId = c.CriterionId) <> 7
+        OR EXISTS (
+             SELECT b.Band FROM (VALUES (0),(1),(2),(3),(4),(5),(6)) AS b(Band)
+             EXCEPT
+             SELECT d.Band FROM GradingCriterionDescriptors d WHERE d.CriterionId = c.CriterionId)
+     ORDER BY c.DisplayOrder;
+    DECLARE @msg NVARCHAR(400) = N'A rubric cannot be locked while criterion ' + @code
+      + N' is missing a descriptor. Missing bands (0-6): ' + @missing + N'.';
+    THROW 50046, @msg, 1;
+  END
+END;
+GO
+-- A descriptor belongs to a rubric that is still being written. Once the rubric is locked the grid is
+-- frozen from every side: an UPDATE after a learner's work was scored would move the standard under a
+-- mark that already exists, which is the defect the whole table is here to prevent.
+CREATE TRIGGER trg_GradingCriterionDescriptors_FrozenWhenLocked
+ON GradingCriterionDescriptors AFTER INSERT, UPDATE, DELETE AS
+BEGIN
+  SET NOCOUNT ON;
+  -- `deleted` is what makes the DELETE arm reachable: a guard written only against `inserted` would
+  -- be silent on removal, and removal is the quietest way to shrink a band grid.
+  IF EXISTS (
+    SELECT 1 FROM inserted i
+    JOIN GradingCriteria c ON c.CriterionId = i.CriterionId
+    JOIN GradingRubricLocks l ON l.SkillId = c.SkillId
+  ) OR EXISTS (
+    SELECT 1 FROM deleted d
+    JOIN GradingCriteria c ON c.CriterionId = d.CriterionId
+    JOIN GradingRubricLocks l ON l.SkillId = c.SkillId
+  )
+    THROW 50047, 'This rubric is locked, so its descriptors cannot be changed. Unlock it first.', 1;
+END;
+GO
+-- A locked rubric's criterion list is frozen too, and for the same reason: adding a fifth criterion,
+-- renaming one, or removing one changes which standard a stored score was measured against.
+CREATE TRIGGER trg_GradingCriteria_FrozenWhenLocked
+ON GradingCriteria AFTER INSERT, UPDATE, DELETE AS
+BEGIN
+  SET NOCOUNT ON;
+  -- On INSERT the lock already exists for a *different* criterion set; the rubric trigger above is
+  -- the one that refuses the fifth at lock time. Here the three statement kinds are all covered so a
+  -- locked rubric cannot grow (insert), be renamed (update) or shrink (delete) afterwards.
+  IF EXISTS (
+    SELECT 1 FROM inserted i JOIN GradingRubricLocks l ON l.SkillId = i.SkillId
+  ) OR EXISTS (
+    SELECT 1 FROM deleted d JOIN GradingRubricLocks l ON l.SkillId = d.SkillId
+  )
+    THROW 50063, 'This rubric is locked, so its criteria cannot be added, renamed or removed.', 1;
+END;
+GO
+-- A rubric that has already scored something never unlocks: its scores were measured against those
+-- descriptors, and a later edit would reinterpret them. A rubric that has graded nothing may be
+-- unlocked, because nothing was measured yet.
+CREATE TRIGGER trg_GradingRubricLocks_IrreversibleOnceGraded
+ON GradingRubricLocks AFTER DELETE AS
+BEGIN
+  SET NOCOUNT ON;
+  IF EXISTS (
+    SELECT 1
+    FROM deleted d
+    JOIN GradingCriteria c ON c.SkillId = d.SkillId
+    JOIN AiGradingScores s ON s.CriterionId = c.CriterionId
+  )
+    THROW 50064, 'This rubric has already graded a response, so it cannot be unlocked. Author a new rubric instead.', 1;
+END;
+GO
 CREATE TABLE AiGradings (
   GradingId      INT IDENTITY(1,1) PRIMARY KEY,
   FreeResponseId INT NOT NULL REFERENCES FreeResponses(FreeResponseId),

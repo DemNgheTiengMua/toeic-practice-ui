@@ -149,8 +149,8 @@ public sealed class AttemptEngineTests(DatabaseFixture database)
             VALUES (@skill, @cert, 'writing', 'WR', N'Writing', 1, 1);
             DECLARE @section INT = SCOPE_IDENTITY();
 
-            INSERT INTO GradingCriteria (CertId, SkillId, Code, Name, MaxScore, Weight, DisplayOrder)
-            VALUES (@cert, @skill, 'TASK', N'Task Achievement', 9.0, 1.0, 1);
+            INSERT INTO GradingCriteria (CertId, SkillId, Code, Name, RubricDescription, MaxScore, Weight, DisplayOrder)
+            VALUES (@cert, @skill, 'TASK', N'Task Achievement', N'Band 6: fully addresses the task. Band 3: only partly addresses it. Band 0: no response.', 9.0, 1.0, 1);
 
             INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder)
             VALUES (@exam, @cert, @section, 3);
