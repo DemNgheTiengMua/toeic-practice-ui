@@ -140,6 +140,18 @@ public partial class CompanionDbContext : DbContext
     public virtual DbSet<Topic> Topics { get; set; }
 
 
+    /// <summary>#184: the pool. A stimulus carries no exam, section or certificate.</summary>
+    public virtual DbSet<Stimulus> Stimuli { get; set; }
+
+
+    /// <summary>#184: a pool item, addressed by skill, level and topic - never by exam.</summary>
+    public virtual DbSet<Item> Items { get; set; }
+
+
+    /// <summary>#184: everything scorable, copy-on-write.</summary>
+    public virtual DbSet<ItemVersion> ItemVersions { get; set; }
+
+
     public virtual DbSet<QuestionGroup> QuestionGroups { get; set; }
 
 

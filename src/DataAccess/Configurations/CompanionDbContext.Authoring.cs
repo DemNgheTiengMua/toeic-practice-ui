@@ -1,3 +1,4 @@
+using BusinessObjects;
 using BusinessObjects.Entities;
 using BusinessObjects.Views;
 using Microsoft.EntityFrameworkCore;
@@ -6,6 +7,19 @@ namespace DataAccess;
 
 public partial class CompanionDbContext
 {
+    /// <summary>
+    /// #184: reads a stored level code back into a <see cref="CefrLevel"/>. Authored, so the reportable
+    /// floor is refused: a row carrying <c>pre_a1</c> is a content defect, and CK_Stimuli_Level /
+    /// CK_Items_Level refuse it at the database too. The schema CHECK means this throw is unreachable
+    /// while the schema holds; it is here so a value that slipped past would fail loudly and not
+    /// silently materialise as A1.
+    /// </summary>
+    private static CefrLevel ParseAuthoredLevel(string code) =>
+        CefrLevel.TryParseAuthored(code, out var level)
+            ? level
+            : throw new InvalidOperationException(
+                $"'{code}' is not an authored CEFR level. Content is authored at A1-C2; the pre-A1 floor is reportable only.");
+
     private static void ConfigureAuthoring(ModelBuilder modelBuilder)
     {
 
@@ -192,6 +206,77 @@ public partial class CompanionDbContext
             entity.HasKey(e => e.TopicId).HasName("PK_Topics");
 
             entity.ToTable(tb => tb.HasTrigger("trg_Topics_ClosedVocabulary"));
+
+            // #184: the composite target FK_Items_TopicModality needs. TopicId is already the primary
+            // key, so this adds no uniqueness - it exists only so an item's modality can be pinned to
+            // its topic's own.
+            entity.HasIndex(e => new { e.TopicId, e.Modality }, "UQ_Topics_Id_Modality").IsUnique();
+        });
+
+        // #184: the pool. A CefrLevel is stored by its code, never as an integer: an integer scale
+        // beside the level codes is the second scale #182 exists to prevent. TryParseAuthored is what
+        // reads it back, so the reportable floor cannot be authored by accident.
+        modelBuilder.Entity<Stimulus>(entity =>
+        {
+            entity.HasKey(e => e.StimulusId).HasName("PK_Stimuli");
+
+            entity.Property(e => e.CefrLevel)
+                .HasConversion(v => v.Code, v => ParseAuthoredLevel(v))
+                .HasMaxLength(10)
+                .IsUnicode(false);
+
+            entity.Property(e => e.DomainContext).HasDefaultValue("general");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysdatetimeoffset())");
+        });
+
+        modelBuilder.Entity<Item>(entity =>
+        {
+            entity.HasKey(e => e.ItemId).HasName("PK_Items");
+
+            entity.Property(e => e.CefrLevel)
+                .HasConversion(v => v.Code, v => ParseAuthoredLevel(v))
+                .HasMaxLength(10)
+                .IsUnicode(false);
+
+            entity.Property(e => e.PlacementEligible).HasDefaultValue(false);
+            entity.Property(e => e.ContentTier).HasDefaultValue("demo");
+            entity.Property(e => e.LifecycleStatus).HasDefaultValue("draft");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysdatetimeoffset())");
+
+            entity.HasIndex(e => new { e.TopicId, e.CefrLevel }, "IX_Items_Cell");
+            entity.HasIndex(e => new { e.LifecycleStatus, e.ContentTier }, "IX_Items_Selection");
+            entity.HasIndex(e => e.StimulusId, "IX_Items_Stimulus").HasFilter("([StimulusId] IS NOT NULL)");
+
+            entity.HasOne(d => d.Stimulus).WithMany(p => p.Items)
+                .HasForeignKey(d => d.StimulusId)
+                .HasConstraintName("FK_Items_Stimulus");
+
+            // pins the item's skill to its topic's own (the idiom Sections already uses)
+            entity.HasOne(d => d.Topic).WithMany(p => p.Items)
+                .HasPrincipalKey(p => new { p.TopicId, p.Modality })
+                .HasForeignKey(d => new { d.TopicId, d.Modality })
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Items_TopicModality");
+        });
+
+        // HasTrigger: trg_ItemVersions_ScoredFieldsImmutable refuses an in-place change to a scored
+        // field. Without this declaration every save to this table fails on the OUTPUT clause - the
+        // exact defect ADR-0001 and Tier1PersistenceAndDomainTests exist to catch.
+        modelBuilder.Entity<ItemVersion>(entity =>
+        {
+            entity.HasKey(e => e.ItemVersionId).HasName("PK_ItemVersions");
+
+            entity.ToTable(tb => tb.HasTrigger("trg_ItemVersions_ScoredFieldsImmutable"));
+
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysdatetimeoffset())");
+
+            entity.HasIndex(e => new { e.ItemId, e.VersionNumber }, "UQ_ItemVersions_Item_Number").IsUnique();
+            entity.HasIndex(e => new { e.ItemId, e.VersionNumber }, "IX_ItemVersions_Item");
+
+            entity.HasOne(d => d.Item).WithMany(p => p.ItemVersions)
+                .HasForeignKey(d => d.ItemId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ItemVersions_Item");
         });
 
 

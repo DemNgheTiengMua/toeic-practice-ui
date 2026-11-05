@@ -303,6 +303,165 @@ BEGIN
     THROW 50031, 'A modality may hold at most six topics.', 1;
 END;
 GO
+-- ============ #184: The pool - stimulus, item, item version ============
+-- The warehouse stops being an exam's property. These three tables carry no ExamId, no SectionId and
+-- no CertId, and a schema test inserts all three with zero certificates, skills, sections and exams in
+-- the database - because PRN-05 ("content is certificate-agnostic") is a foreign-key fact, not a
+-- service-layer one. QuestionGroups/Questions/QuestionOptions below are NOT deleted here: 20 tables
+-- and 171 src files still read them, and #231 is where they go.
+--
+-- The skill axis is `Modality`. CONTEXT.md defines a Skill as exactly one modality
+-- (listening/reading/speaking/writing), and the certificate-scoped Skills table cannot be referenced
+-- from a table that must exist with no certificate. Items therefore carry the modality directly and
+-- pin it to the topic's own modality by composite foreign key, the same idiom Sections already uses
+-- (FK_Sections_SkillModality).
+CREATE TABLE Stimuli (
+  StimulusId   INT IDENTITY(1,1) PRIMARY KEY,
+  -- The stimulus's own level (L_s). Authored, so the reportable floor 'pre_a1' is refused here; a
+  -- result may report the floor, content may not be written at it (BusinessObjects.CefrLevel).
+  CefrLevel    VARCHAR(10) NOT NULL
+    CONSTRAINT CK_Stimuli_Level CHECK (CefrLevel IN ('A1','A2','B1','B2','C1','C2')),
+  Passage      NVARCHAR(MAX) NULL,       -- a reading stimulus
+  AudioPath    NVARCHAR(400) NULL,       -- a listening stimulus
+  Transcript   NVARCHAR(MAX) NULL,       -- the audio script, shown after the sitting
+  -- PRN: workplace / academic / general. Orthogonal to the construct: it varies register, never what
+  -- the item measures (LVL-09), so it lives on the stimulus rather than on the item.
+  DomainContext VARCHAR(20) NOT NULL CONSTRAINT DF_Stimuli_Domain DEFAULT 'general'
+    CONSTRAINT CK_Stimuli_Domain CHECK (DomainContext IN ('workplace','academic','general')),
+  -- A productive task's instruction copy. Speaking/writing stimuli have no passage and no audio.
+  PromptCopy   NVARCHAR(MAX) NULL,
+  ImagePath    NVARCHAR(400) NULL,
+  -- UI-5: alt text is required wherever an image is, in this table as in QuestionGroups
+  ImageAlt     NVARCHAR(400) NULL,
+  PrepSeconds  INT NULL CONSTRAINT CK_Stimuli_Prep CHECK (PrepSeconds IS NULL OR PrepSeconds >= 0),
+  ResponseSeconds INT NULL CONSTRAINT CK_Stimuli_Response CHECK (ResponseSeconds IS NULL OR ResponseSeconds > 0),
+  DisplayOrder INT NOT NULL DEFAULT 0,
+  CreatedAt    DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
+  CONSTRAINT CK_Stimuli_ImageAlt CHECK (ImagePath IS NULL OR ImageAlt IS NOT NULL)
+);
+GO
+-- A topic is addressed by (TopicId, Modality): TopicId is already the primary key, so this constraint
+-- adds no uniqueness, it exists so Items' composite foreign key has a target. It is declared before
+-- Items for that reason.
+ALTER TABLE Topics ADD CONSTRAINT UQ_Topics_Id_Modality UNIQUE (TopicId, Modality);
+GO
+CREATE TABLE Items (
+  ItemId           INT IDENTITY(1,1) PRIMARY KEY,
+  -- NULL is "authored before its stimulus is attached". Every one of the fourteen types in D0.4 has a
+  -- stimulus in practice; requiring it here would only couple the order of two inserts.
+  StimulusId       INT NULL REFERENCES Stimuli(StimulusId),
+  -- The skill axis. CONTEXT.md: a Skill is one modality.
+  Modality         VARCHAR(10) NOT NULL
+    CONSTRAINT CK_Items_Modality CHECK (Modality IN ('listening','reading','speaking','writing')),
+  -- #183: the canonical twenty. No twenty-first topic exists, so an item cannot invent one.
+  TopicId          INT NOT NULL REFERENCES Topics(TopicId),
+  CefrLevel        VARCHAR(10) NOT NULL
+    CONSTRAINT CK_Items_Level CHECK (CefrLevel IN ('A1','A2','B1','B2','C1','C2')),
+  -- D0.4: fourteen authored types across four skills. 'visual_data_synthesis' deliberately appears
+  -- twice - spoken synthesis and written synthesis are different tasks with different rubrics - so
+  -- the vocabulary is 13 codes and 14 (modality, type) rows. A CHECK on ItemType alone could not say
+  -- that, and would let a reading item be authored as a persuasive essay.
+  ItemType         VARCHAR(40) NOT NULL,
+  PlacementEligible BIT NOT NULL CONSTRAINT DF_Items_PlacementEligible DEFAULT 0,
+  -- D0.5/CNT-03. Defaults to 'demo' because a new item is not production until it passes its gates:
+  -- the wrong default here lets an unreviewed item into a paid paper (INV-6).
+  ContentTier      VARCHAR(12) NOT NULL CONSTRAINT DF_Items_ContentTier DEFAULT 'demo'
+    CONSTRAINT CK_Items_ContentTier CHECK (ContentTier IN ('production','demo')),
+  -- CNT-42: draft -> validated -> active, plus quarantined, retired, retired_defective. Selection
+  -- filters on 'active'; review does not filter at all, so a past attempt renders what was sat.
+  LifecycleStatus  VARCHAR(20) NOT NULL CONSTRAINT DF_Items_Lifecycle DEFAULT 'draft'
+    CONSTRAINT CK_Items_Lifecycle CHECK (LifecycleStatus IN
+      ('draft','validated','active','quarantined','retired','retired_defective')),
+  -- CNT-03: the upload batch this item arrived in. NULL for hand-authored items.
+  BatchTag         NVARCHAR(60) NULL,
+  CreatedAt        DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
+  -- the item's skill must be its topic's skill: a listening item on a reading topic is the defect
+  CONSTRAINT FK_Items_TopicModality FOREIGN KEY (TopicId, Modality) REFERENCES Topics(TopicId, Modality),
+  CONSTRAINT CK_Items_Modality_Type CHECK (
+       (Modality = 'listening' AND ItemType IN ('short_exchange','extended_dialogue','monologue_talk'))
+    OR (Modality = 'reading'   AND ItemType IN ('sentence_cloze','passage_comprehension','text_insertion_cohesion'))
+    OR (Modality = 'speaking'  AND ItemType IN ('descriptive_monologue','situational_negotiation','argumentative_monologue','visual_data_synthesis'))
+    OR (Modality = 'writing'   AND ItemType IN ('transactional_correspondence','visual_data_synthesis','persuasive_essay','analytical_evaluation_essay'))
+  )
+);
+GO
+-- Everything that can be scored. Copy-on-write (CNT-43): a new row per change, so an attempt that
+-- pinned version 3 renders version 3 forever. Only a cosmetic explanation fix may be edited in place,
+-- and trg_ItemVersions_ScoredFieldsImmutable is what refuses the rest - a convention in a service
+-- would not survive the second caller.
+CREATE TABLE ItemVersions (
+  ItemVersionId  INT IDENTITY(1,1) PRIMARY KEY,
+  ItemId         INT NOT NULL CONSTRAINT FK_ItemVersions_Item REFERENCES Items(ItemId),
+  VersionNumber  INT NOT NULL CONSTRAINT CK_ItemVersions_Number CHECK (VersionNumber > 0),
+  Stem           NVARCHAR(MAX) NOT NULL,
+  -- CNT-06: four options, one key, a 25% guessing floor. A productive task is the other legal shape
+  -- (all four NULL, no key), and CK_ItemVersions_OptionsComplete refuses the half-filled middle.
+  OptionA        NVARCHAR(MAX) NULL,
+  OptionB        NVARCHAR(MAX) NULL,
+  OptionC        NVARCHAR(MAX) NULL,
+  OptionD        NVARCHAR(MAX) NULL,
+  KeyLabel       VARCHAR(1) NULL
+    CONSTRAINT CK_ItemVersions_KeyLabel CHECK (KeyLabel IN ('A','B','C','D')),
+  -- CNT-43: the one editable field
+  Explanation    NVARCHAR(MAX) NULL,
+  -- CNT-11: (start, end, verbatim quote) - seconds for audio, characters for text. The stem may not
+  -- depend on a timestamp during the sitting, but the review screen and the explanation do.
+  EvidenceStart  INT NULL,
+  EvidenceEnd    INT NULL,
+  EvidenceUnit   VARCHAR(8) NULL
+    CONSTRAINT CK_ItemVersions_EvidenceUnit CHECK (EvidenceUnit IN ('char','sec')),
+  EvidenceQuote  NVARCHAR(MAX) NULL,
+  -- #152: the text a spoken answer is judged against (a Read Aloud script, a picture description) and
+  -- what that text is. Text with no kind is not a reference this system knows how to use.
+  ReferenceText  NVARCHAR(1000) NULL,
+  ReferenceKind  VARCHAR(12) NULL
+    CONSTRAINT CK_ItemVersions_ReferenceKind CHECK (ReferenceKind IN ('script','image_desc')),
+  CreatedAt      DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
+  CONSTRAINT UQ_ItemVersions_Item_Number UNIQUE (ItemId, VersionNumber),
+  CONSTRAINT CK_ItemVersions_OptionsComplete CHECK (
+       (OptionA IS NULL AND OptionB IS NULL AND OptionC IS NULL AND OptionD IS NULL AND KeyLabel IS NULL)
+    OR (OptionA IS NOT NULL AND OptionB IS NOT NULL AND OptionC IS NOT NULL AND OptionD IS NOT NULL
+        AND KeyLabel IS NOT NULL)
+  ),
+  CONSTRAINT CK_ItemVersions_ReferencePair CHECK (
+       (ReferenceText IS NULL AND ReferenceKind IS NULL)
+    OR (ReferenceText IS NOT NULL AND ReferenceKind IS NOT NULL)
+  ),
+  CONSTRAINT CK_ItemVersions_EvidenceSpan CHECK (
+       (EvidenceStart IS NULL AND EvidenceEnd IS NULL AND EvidenceUnit IS NULL)
+    OR (EvidenceStart >= 0 AND EvidenceEnd > EvidenceStart AND EvidenceUnit IS NOT NULL)
+  )
+);
+GO
+-- CNT-43: copy-on-write. INSERT is untouched - a new version row is the approved way to change
+-- anything scored. An UPDATE that moves a scored column is refused by name, so the caller is told
+-- which field brought it here. Explanation is not compared: a typo in it is the one in-place edit.
+CREATE TRIGGER trg_ItemVersions_ScoredFieldsImmutable
+ON ItemVersions AFTER UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+  IF EXISTS (
+    SELECT 1
+    FROM inserted i
+    JOIN deleted d ON d.ItemVersionId = i.ItemVersionId
+    WHERE i.ItemId        <> d.ItemId
+       OR i.VersionNumber <> d.VersionNumber
+       OR i.Stem          <> d.Stem
+       OR ISNULL(i.OptionA,   N'') <> ISNULL(d.OptionA,   N'')
+       OR ISNULL(i.OptionB,   N'') <> ISNULL(d.OptionB,   N'')
+       OR ISNULL(i.OptionC,   N'') <> ISNULL(d.OptionC,   N'')
+       OR ISNULL(i.OptionD,   N'') <> ISNULL(d.OptionD,   N'')
+       OR ISNULL(i.KeyLabel,  '') <> ISNULL(d.KeyLabel,  '')
+       OR ISNULL(i.EvidenceStart, -1) <> ISNULL(d.EvidenceStart, -1)
+       OR ISNULL(i.EvidenceEnd,   -1) <> ISNULL(d.EvidenceEnd,   -1)
+       OR ISNULL(i.EvidenceUnit, '')  <> ISNULL(d.EvidenceUnit, '')
+       OR ISNULL(i.EvidenceQuote, N'') <> ISNULL(d.EvidenceQuote, N'')
+       OR ISNULL(i.ReferenceText, N'') <> ISNULL(d.ReferenceText, N'')
+       OR ISNULL(i.ReferenceKind, '')  <> ISNULL(d.ReferenceKind, '')
+  )
+    THROW 50048, 'An ItemVersions scored field is immutable; a scored change requires a new version row (copy-on-write, CNT-43).', 1;
+END;
+GO
 -- UI-8: question-type labels ("Verb tense", "Part 7 — inference") per certificate.
 -- #183: retained while items/lessons still read it; the topic axis above replaces it once every
 -- reader has moved. It is not deleted here, because deleting it now would break the readers the
@@ -2044,6 +2203,12 @@ CREATE INDEX IX_QGroups_Section          ON QuestionGroups(SectionId);
 CREATE INDEX IX_Questions_Group          ON Questions(GroupId, DisplayOrder);
 CREATE INDEX IX_Questions_Section        ON Questions(SectionId);
 CREATE INDEX IX_Questions_Category       ON Questions(CategoryId) WHERE CategoryId IS NOT NULL;
+-- #184: the pool. Cell lookup is (topic, level) - the coordinate a practice drill and a path step
+-- both ask for; the selection index is the two columns every item-selection query filters on.
+CREATE INDEX IX_Items_Cell               ON Items(TopicId, CefrLevel) INCLUDE (Modality, ItemType);
+CREATE INDEX IX_Items_Selection          ON Items(LifecycleStatus, ContentTier) INCLUDE (CefrLevel, PlacementEligible);
+CREATE INDEX IX_Items_Stimulus           ON Items(StimulusId) WHERE StimulusId IS NOT NULL;
+CREATE INDEX IX_ItemVersions_Item        ON ItemVersions(ItemId, VersionNumber);
 CREATE INDEX IX_ImportLog_Batch          ON ImportLog(BatchId);
 -- Practice (history, weakness views, path module progress)
 CREATE INDEX IX_Practice_User            ON PracticeSessions(UserId, StartedAt);
