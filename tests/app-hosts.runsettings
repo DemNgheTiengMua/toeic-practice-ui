@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Two test assemblies boot the real application through WebApplicationFactory<Program>:
+  tests/WebMVC.Tests and tests/WebAPI.Tests. Program reads process-wide configuration, so when
+  `dotnet test` runs the four assemblies in parallel, those two hosts can observe each other's
+  settings. The symptom is rare and misleading: DemoCertificateDisplayTests occasionally renders a
+  target band it should not, roughly one full-solution run in eight, while passing 8/8 when the
+  assembly runs alone.
+
+  Serialising the ten app-host classes inside WebMVC.Tests (AppHostCollection) was not enough,
+  because the contention is between assemblies, not within one.
+
+  MaxCpuCount=1 makes the runner use one worker per assembly run, which removes the overlap. It
+  costs a few seconds and buys a suite that either passes or fails for a real reason.
+-->
+<RunSettings>
+  <RunConfiguration>
+    <MaxCpuCount>1</MaxCpuCount>
+  </RunConfiguration>
+</RunSettings>
