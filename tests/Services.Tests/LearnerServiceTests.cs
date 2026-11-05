@@ -55,8 +55,8 @@ public sealed partial class LearnerServiceTests(DatabaseFixture database)
 
     private Task SeedPracticeAsync(int userId, string certCode, int correct, int count) =>
         database.SqlAsync($"""
-            INSERT INTO PracticeSessions (UserId, SectionId, Modality, QuestionCount, Status, CorrectCount, FinishedAt)
-            VALUES ({userId}, (SELECT TOP 1 SectionId FROM Sections WHERE CertId = (SELECT CertId FROM Certificates WHERE Code = '{certCode}')),
+            INSERT INTO PracticeSessions (UserId, CertId, SectionId, Modality, QuestionCount, Status, CorrectCount, FinishedAt)
+            VALUES ({userId}, (SELECT CertId FROM Certificates WHERE Code = '{certCode}'), (SELECT TOP 1 SectionId FROM Sections WHERE CertId = (SELECT CertId FROM Certificates WHERE Code = '{certCode}')),
                     'listening', {count}, 'finished', {correct}, SYSDATETIMEOFFSET());
             """);
 
@@ -70,8 +70,8 @@ public sealed partial class LearnerServiceTests(DatabaseFixture database)
 
     private Task SeedInProgressPracticeAsync(int userId, string certCode, int count) =>
         database.SqlAsync($"""
-            INSERT INTO PracticeSessions (UserId, SectionId, Modality, QuestionCount, Status, CorrectCount, StartedAt)
-            VALUES ({userId}, (SELECT SectionId FROM Sections WHERE CertId = (SELECT CertId FROM Certificates WHERE Code = '{certCode}')),
+            INSERT INTO PracticeSessions (UserId, CertId, SectionId, Modality, QuestionCount, Status, CorrectCount, StartedAt)
+            VALUES ({userId}, (SELECT CertId FROM Certificates WHERE Code = '{certCode}'), (SELECT SectionId FROM Sections WHERE CertId = (SELECT CertId FROM Certificates WHERE Code = '{certCode}')),
                     'listening', {count}, 'in_progress', 0, SYSDATETIMEOFFSET());
             """);
 

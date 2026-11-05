@@ -754,7 +754,20 @@ GO
 CREATE TABLE PracticeSessions (
   SessionId    INT IDENTITY(1,1) PRIMARY KEY,
   UserId       INT NOT NULL REFERENCES Users(UserId),
-  SectionId    INT NOT NULL REFERENCES Sections(SectionId),
+  -- #187: the certificate is the session's own fact, not something read back through a section.
+  -- A pool drill has no section to derive it from, and a session that cannot name its certificate
+  -- cannot be pruned, counted or resumed. Pinned to the section's own when there is a section, so
+  -- the two can never disagree.
+  CertId       INT NOT NULL,
+  -- #187: NULL for a pool drill. An item is certificate-agnostic and section-free; the drill is a
+  -- cell (topic, level), so a session drawn from the pool has no section to point at. Every section
+  -- drill still names one, and CK_PracticeSessions_Cell keeps the two shapes from mixing.
+  SectionId    INT NULL REFERENCES Sections(SectionId),
+  -- #187: the cell a pool session drilled. NULL for a section session, which takes its cell from
+  -- the section. The pair is what a daily ceiling and a resume both need.
+  TopicId      INT NULL,
+  CefrLevel    VARCHAR(10) NULL
+    CONSTRAINT CK_Practice_Level CHECK (CefrLevel IN ('A1','A2','B1','B2','C1','C2')),
   -- M-18: carried down from the section so a session is pinned to its section's own skill.
   -- #150: the CHECK admits all four so the column cannot be the thing that blocks a certificate
   -- whose only skill is Speaking or Writing. The free drill builds sessions for listening, reading
@@ -778,7 +791,22 @@ CREATE TABLE PracticeSessions (
   FinishedAt   DATETIMEOFFSET NULL,
   -- M-18: Modality must be the section's own (pins the literal via the FK). This is the guard #150
   -- kept: widening the CHECK must not create a way to make a listening session on a writing section.
+  -- #187: MATCH SIMPLE means both foreign keys below are skipped when SectionId is NULL, which is
+  -- exactly a pool session - it is pinned to a topic's modality instead.
   CONSTRAINT FK_Practice_SectionModality FOREIGN KEY (SectionId, Modality) REFERENCES Sections(SectionId, Modality),
+  CONSTRAINT FK_Practice_Cert FOREIGN KEY (CertId) REFERENCES Certificates(CertId),
+  -- #187: a section session's certificate must be that section's own, the same containment
+  -- Sections already uses. MATCH SIMPLE skips it for a pool session.
+  CONSTRAINT FK_Practice_SectionCert FOREIGN KEY (SectionId, CertId) REFERENCES Sections(SectionId, CertId),
+  -- #187: a pool session's topic must be its own modality's, the same idiom Items uses.
+  CONSTRAINT FK_Practice_TopicModality FOREIGN KEY (TopicId, Modality) REFERENCES Topics(TopicId, Modality),
+  -- #187: a session is one shape or the other. A section session has no cell; a pool session has a
+  -- cell and no section. Without this, an id, a section and a cell could all disagree in one row and
+  -- "which store does this session read?" would have no single answer.
+  CONSTRAINT CK_PracticeSessions_Shape CHECK (
+       (SectionId IS NOT NULL AND TopicId IS NULL AND CefrLevel IS NULL)
+    OR (SectionId IS NULL AND TopicId IS NOT NULL AND CefrLevel IS NOT NULL)
+  ),
   -- Low: composite target so PracticeAnswers can require QuestionId's SectionId = the session's own
   CONSTRAINT UQ_PracticeSessions_Id_Section UNIQUE (SessionId, SectionId),
   -- UI-43: composite target so a recommendation can name the learner's own session
@@ -788,9 +816,22 @@ GO
 CREATE TABLE PracticeAnswers (
   AnswerId         INT IDENTITY(1,1) PRIMARY KEY,
   SessionId        INT NOT NULL REFERENCES PracticeSessions(SessionId),
-  QuestionId       INT NOT NULL REFERENCES Questions(QuestionId),
-  -- Low: carried down so a question must belong to the session's own section
-  SectionId        INT NOT NULL,
+  -- #187: NULL for a pool answer. A pool item has no Questions row, so the legacy containment key
+  -- is absent rather than invented; the pool shape names the item and version instead, exactly as
+  -- AttemptAnswers does. #231 drops the legacy half.
+  QuestionId       INT NULL REFERENCES Questions(QuestionId),
+  -- Low: carried down so a question must belong to the session's own section. NULL for a pool
+  -- answer, which has no section: MATCH SIMPLE then skips both containing foreign keys below,
+  -- which is the point - a pool answer is contained by its cell, not by a section.
+  SectionId        INT NULL,
+  -- #187: the pool item and the exact version answered, so a re-versioned or retired item cannot
+  -- change what a finished session's summary shows. Both NULL for a legacy answer.
+  ItemId           INT NULL,
+  ItemVersionId    INT NULL,
+  -- #186's idiom at practice: an ItemVersion stores labels A-D rather than option rows, so a pool
+  -- answer records the label it chose and leaves SelectedOptionId NULL.
+  SelectedLabel    VARCHAR(1) NULL
+    CONSTRAINT CK_PracticeAnswers_SelectedLabel CHECK (SelectedLabel IN ('A','B','C','D')),
   SelectedOptionId      INT NULL,
   ResponseText          NVARCHAR(MAX) NULL,
   SelectedOptionIdsJson NVARCHAR(MAX) NULL,
@@ -802,14 +843,32 @@ CREATE TABLE PracticeAnswers (
   -- a row from before this column has no response time, and inventing one would make the filter
   -- meaningless.
   AnsweredAt       DATETIME2(3) NULL,
-  CONSTRAINT UQ_PracticeAnswers UNIQUE (SessionId, QuestionId),
-  -- Low: SectionId must be the session's own
+  -- #187: filtered, because a pool answer has no QuestionId and a plain UNIQUE would let a session
+  -- hold at most one of them. The legacy rule (one answer per question per session) is unchanged
+  -- where QuestionId is present, and a version may likewise be answered once per session.
   CONSTRAINT FK_PracticeAnswers_SessionSection FOREIGN KEY (SessionId, SectionId) REFERENCES PracticeSessions(SessionId, SectionId),
   -- Low: QuestionId must belong to the same section (containment)
   CONSTRAINT FK_PracticeAnswers_QuestionSection FOREIGN KEY (QuestionId, SectionId) REFERENCES Questions(QuestionId, SectionId),
   -- H-6: SelectedOptionId must belong to this same question (NULL stays legal, MATCH SIMPLE)
-  CONSTRAINT FK_PracticeAnswers_OptionQuestion FOREIGN KEY (SelectedOptionId, QuestionId) REFERENCES QuestionOptions(OptionId, QuestionId)
+  CONSTRAINT FK_PracticeAnswers_OptionQuestion FOREIGN KEY (SelectedOptionId, QuestionId) REFERENCES QuestionOptions(OptionId, QuestionId),
+  -- #187: the answered version must be a version of the answered item - the same composite idiom
+  -- ExamItems and AttemptAnswers use.
+  CONSTRAINT FK_PracticeAnswers_VersionItem FOREIGN KEY (ItemVersionId, ItemId) REFERENCES ItemVersions(ItemVersionId, ItemId),
+  -- #187: an answer is one shape or the other, never half of each. A pool answer names item and
+  -- version and no question/section; a legacy answer names question and section and neither pool
+  -- column.
+  CONSTRAINT CK_PracticeAnswers_Shape CHECK (
+       (QuestionId IS NOT NULL AND SectionId IS NOT NULL AND ItemId IS NULL AND ItemVersionId IS NULL)
+    OR (QuestionId IS NULL AND SectionId IS NULL AND ItemId IS NOT NULL AND ItemVersionId IS NOT NULL)
+  )
 );
+GO
+CREATE UNIQUE INDEX UQ_PracticeAnswers_Question ON PracticeAnswers(SessionId, QuestionId)
+  WHERE QuestionId IS NOT NULL;
+GO
+-- #187: one answer per item version per session, the pool half of "one question, one grade".
+CREATE UNIQUE INDEX UQ_PracticeAnswers_Version ON PracticeAnswers(SessionId, ItemVersionId)
+  WHERE ItemVersionId IS NOT NULL;
 GO
 -- UI-13: "Save this question for review" / "saved to your incorrect-answer bank"
 CREATE TABLE SavedQuestions (
@@ -2271,12 +2330,15 @@ CREATE VIEW vw_UserPurchaseTotals AS
   GROUP BY o.UserId;
 GO
 -- UI-34: weakness analysis combines exams AND practice ("45/78 questions" across both)
+-- #187: a pool answer has no section, so it contributes no row here; the section axis stays exactly
+-- what it names. Weakness by topic is #236's `vw_UserTopicAccuracy`, not this view.
 CREATE VIEW vw_UserSectionAccuracyAll AS
   SELECT x.UserId, x.SectionId, COUNT(x.IsCorrect) AS Answered,
          SUM(CASE WHEN x.IsCorrect = 1 THEN 1 ELSE 0 END) AS Correct
   FROM (
     SELECT ps.UserId, pa.SectionId, pa.IsCorrect
     FROM PracticeAnswers pa JOIN PracticeSessions ps ON ps.SessionId = pa.SessionId
+    WHERE pa.SectionId IS NOT NULL
     UNION ALL
     SELECT a.UserId, q.SectionId, aa.IsCorrect
     FROM AttemptAnswers aa
@@ -2334,7 +2396,9 @@ CREATE INDEX IX_ImportLog_Batch          ON ImportLog(BatchId);
 -- Practice (history, weakness views, path module progress)
 CREATE INDEX IX_Practice_User            ON PracticeSessions(UserId, StartedAt);
 CREATE INDEX IX_Practice_PathStep        ON PracticeSessions(LearnerPathStepId) WHERE LearnerPathStepId IS NOT NULL;
-CREATE INDEX IX_PracticeAnswers_Question ON PracticeAnswers(QuestionId);
+CREATE INDEX IX_PracticeAnswers_Question ON PracticeAnswers(QuestionId) WHERE QuestionId IS NOT NULL;
+-- #187: a pool session is resumed and ceiling-checked by its cell, not by a section.
+CREATE INDEX IX_Practice_Cell           ON PracticeSessions(UserId, TopicId, CefrLevel, StartedAt) WHERE TopicId IS NOT NULL;
 -- Mock exam (exam history, review, grading triggers)
 CREATE INDEX IX_Attempts_User            ON ExamAttempts(UserId, StartedAt) INCLUDE (ExamId, Status, TotalScore);
 CREATE INDEX IX_Attempts_Exam            ON ExamAttempts(ExamId);

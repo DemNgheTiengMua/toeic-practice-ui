@@ -2196,8 +2196,8 @@ DECLARE @optP5_3_A INT = (SELECT TOP 1 OptionId FROM QuestionOptions WHERE Quest
 -- Session 1: Section P1
 IF NOT EXISTS (SELECT 1 FROM PracticeSessions WHERE UserId = @learner AND SectionId = @secP1)
 BEGIN
-  INSERT INTO PracticeSessions (UserId, SectionId, Modality, QuestionCount, Status, CorrectCount, StartedAt, FinishedAt)
-  VALUES (@learner, @secP1, 'listening', 1, 'finished', 1,
+  INSERT INTO PracticeSessions (UserId, CertId, SectionId, Modality, QuestionCount, Status, CorrectCount, StartedAt, FinishedAt)
+  VALUES (@learner, @toeicCert, @secP1, 'listening', 1, 'finished', 1,
           DATEADD(DAY, -8, SYSDATETIMEOFFSET()), DATEADD(DAY, -8, DATEADD(MINUTE, 5, SYSDATETIMEOFFSET())));
   DECLARE @s1 INT = SCOPE_IDENTITY();
   IF @qP1 IS NOT NULL
@@ -2208,8 +2208,8 @@ END;
 -- Session 2: Section P2
 IF NOT EXISTS (SELECT 1 FROM PracticeSessions WHERE UserId = @learner AND SectionId = @secP2)
 BEGIN
-  INSERT INTO PracticeSessions (UserId, SectionId, Modality, QuestionCount, Status, CorrectCount, StartedAt, FinishedAt)
-  VALUES (@learner, @secP2, 'listening', 1, 'finished', 1,
+  INSERT INTO PracticeSessions (UserId, CertId, SectionId, Modality, QuestionCount, Status, CorrectCount, StartedAt, FinishedAt)
+  VALUES (@learner, @toeicCert, @secP2, 'listening', 1, 'finished', 1,
           DATEADD(DAY, -6, SYSDATETIMEOFFSET()), DATEADD(DAY, -6, DATEADD(MINUTE, 6, SYSDATETIMEOFFSET())));
   DECLARE @s2 INT = SCOPE_IDENTITY();
   IF @qP2 IS NOT NULL
@@ -2220,8 +2220,8 @@ END;
 -- Session 3: Section P5 (3 questions: 2 correct, 1 incorrect)
 IF NOT EXISTS (SELECT 1 FROM PracticeSessions WHERE UserId = @learner AND SectionId = @secP5)
 BEGIN
-  INSERT INTO PracticeSessions (UserId, SectionId, Modality, QuestionCount, Status, CorrectCount, StartedAt, FinishedAt)
-  VALUES (@learner, @secP5, 'reading', 3, 'finished', 2,
+  INSERT INTO PracticeSessions (UserId, CertId, SectionId, Modality, QuestionCount, Status, CorrectCount, StartedAt, FinishedAt)
+  VALUES (@learner, @toeicCert, @secP5, 'reading', 3, 'finished', 2,
           DATEADD(DAY, -4, SYSDATETIMEOFFSET()), DATEADD(DAY, -4, DATEADD(MINUTE, 12, SYSDATETIMEOFFSET())));
   DECLARE @s3 INT = SCOPE_IDENTITY();
   IF @qP5_1 IS NOT NULL

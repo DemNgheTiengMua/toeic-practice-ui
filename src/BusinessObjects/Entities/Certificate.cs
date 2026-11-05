@@ -65,6 +65,10 @@ public partial class Certificate
     [InverseProperty("Cert")]
     public virtual ICollection<PlacementTest> PlacementTests { get; set; } = new List<PlacementTest>();
 
+    /// <summary>#187: drills carry their certificate directly, so a pool drill needs no section.</summary>
+    [InverseProperty("Cert")]
+    public virtual ICollection<PracticeSession> PracticeSessions { get; set; } = new List<PracticeSession>();
+
     [InverseProperty("Cert")]
     public virtual ICollection<QuestionCategory> QuestionCategories { get; set; } = new List<QuestionCategory>();
 

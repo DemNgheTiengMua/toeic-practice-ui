@@ -1,8 +1,12 @@
 namespace Contracts;
 
+/// <summary>
+/// #187: <paramref name="SectionId"/> is NULL for a pool drill, which is drawn from a cell instead;
+/// <paramref name="SectionCode"/> and <paramref name="SectionName"/> label the scope either way.
+/// </summary>
 public sealed record PracticeSessionDto(
     int SessionId,
-    int SectionId,
+    int? SectionId,
     string SectionCode,
     string SectionName,
     ModalityDto Modality,
@@ -11,4 +15,6 @@ public sealed record PracticeSessionDto(
     int CorrectCount,
     QuestionSourceDto QuestionSource,
     DateTimeOffset StartedAt,
-    DateTimeOffset? FinishedAt);
+    DateTimeOffset? FinishedAt,
+    int? TopicId = null,
+    string? CefrLevelCode = null);

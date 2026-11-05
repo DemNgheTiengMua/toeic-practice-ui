@@ -56,14 +56,14 @@ public sealed partial class AiInsightService
         // Query latest finished practice session
         var latestPractice = await db.PracticeSessions
             .AsNoTracking()
-            .Where(p => p.UserId == userId && p.Section.CertId == targetCertId && p.Status == PracticeStatus.Finished.ToCode())
+            .Where(p => p.UserId == userId && p.CertId == targetCertId && p.Status == PracticeStatus.Finished.ToCode())
             .OrderByDescending(p => p.FinishedAt ?? p.StartedAt)
             .Select(p => new { p.SessionId, FinishedAt = p.FinishedAt ?? p.StartedAt })
             .FirstOrDefaultAsync(cancellationToken);
 
         var finishedPracticeCount = await db.PracticeSessions
             .AsNoTracking()
-            .CountAsync(p => p.UserId == userId && p.Section.CertId == targetCertId && p.Status == PracticeStatus.Finished.ToCode(), cancellationToken);
+            .CountAsync(p => p.UserId == userId && p.CertId == targetCertId && p.Status == PracticeStatus.Finished.ToCode(), cancellationToken);
 
         // Query section accuracies for accuracy summary numbers
         var sectionIds = await db.Sections

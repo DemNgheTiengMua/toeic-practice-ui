@@ -32,9 +32,6 @@ public partial class QuestionOption
     [InverseProperty("QuestionOption")]
     public virtual ICollection<AttemptAnswer> AttemptAnswers { get; set; } = new List<AttemptAnswer>();
 
-    [InverseProperty("QuestionOption")]
-    public virtual ICollection<PracticeAnswer> PracticeAnswers { get; set; } = new List<PracticeAnswer>();
-
     [ForeignKey("QuestionId")]
     [InverseProperty("QuestionOptionQuestion")]
     public virtual Question Question { get; set; } = null!;

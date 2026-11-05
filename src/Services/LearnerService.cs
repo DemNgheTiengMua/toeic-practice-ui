@@ -53,8 +53,9 @@ public sealed partial class LearnerService(CompanionDbContext db, ICreditLedger?
         var certId = await ResolveActiveCertIdAsync(userId, certificates, cancellationToken);
 
         var attempts = db.ExamAttempts.AsNoTracking().Where(a => a.UserId == userId && a.CertId == certId);
-        // Practice sessions carry no CertId of their own; their section's does.
-        var practice = db.PracticeSessions.AsNoTracking().Where(p => p.UserId == userId && p.Section.CertId == certId);
+        // #187: a session names its certificate directly, so a pool drill appears here too. Its label
+        // is the section's for a section drill and the topic's for a pool drill.
+        var practice = db.PracticeSessions.AsNoTracking().Where(p => p.UserId == userId && p.CertId == certId);
 
         var unfinishedAttempt = await attempts
             .Where(a => a.Status == AttemptStatus.InProgress.ToCode())
@@ -69,7 +70,7 @@ public sealed partial class LearnerService(CompanionDbContext db, ICreditLedger?
             .Where(p => p.Status == PracticeStatus.InProgress.ToCode())
             .OrderByDescending(p => p.StartedAt)
             .Select(p => new RecentPractice(
-                p.SessionId, p.Section.Name, EnumCodes.Parse<PracticeStatus>(p.Status), p.CorrectCount, p.QuestionCount, p.StartedAt))
+                p.SessionId, p.Section != null ? p.Section.Name : p.Topic != null ? p.Topic.Name : "", EnumCodes.Parse<PracticeStatus>(p.Status), p.CorrectCount, p.QuestionCount, p.StartedAt))
             .FirstOrDefaultAsync(cancellationToken);
 
         var attemptCount = await attempts.CountAsync(cancellationToken);

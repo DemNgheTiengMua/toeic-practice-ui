@@ -14,11 +14,93 @@ public sealed partial class PracticeService
         Validator.ValidateObject(input, new ValidationContext(input), validateAllProperties: true);
 
         var activeCertId = await learners.GetActiveCertIdAsync(userId, cancellationToken);
+
+        return input.TopicId is { } topicId
+            ? await StartPoolSessionAsync(userId, activeCertId, topicId, input.CefrLevel!.Value, cancellationToken)
+            : await StartSectionSessionAsync(userId, activeCertId, input.SectionId!.Value, cancellationToken);
+    }
+
+    /// <summary>
+    /// #187: a drill against a cell. There is no exam and no section behind it: the items come from
+    /// the pool at (topic, level) and the session records which version of each item was answered.
+    /// </summary>
+    private async Task<PracticeSessionInfo> StartPoolSessionAsync(
+        int userId, int certId, int topicId, CefrLevel level, CancellationToken cancellationToken)
+    {
+        var topic = await db.Topics
+            .AsNoTracking()
+            .SingleOrDefaultAsync(t => t.TopicId == topicId, cancellationToken)
+            ?? throw new PracticeException(PracticeException.SectionUnavailable, $"Topic {topicId} does not exist.");
+
+        // #150's rule reaches the pool too: speaking is answered by voice, and its recorded, AI-graded
+        // practice is a different attempt. Say where it lives rather than serving a textarea.
+        if (string.Equals(topic.Modality, Modality.Speaking.ToCode(), StringComparison.Ordinal))
+        {
+            throw new PracticeException(
+                PracticeException.ModalityNotAllowed,
+                "Speaking is answered by voice, so it has no typed drill: open the recorded speaking practice, which is graded by AI.");
+        }
+
+        var selected = await PlanPoolItemsAsync(userId, topic.Modality, topicId, level, cancellationToken);
+
+        if (selected.Count == 0)
+        {
+            throw new PracticeException(
+                PracticeException.NoQuestionsAvailable,
+                $"No active items are authored at {topic.Code} {level.Code}.");
+        }
+
+        await AbandonInProgressAsync(userId, certId, cancellationToken);
+
+        var session = new PracticeSession
+        {
+            UserId = userId,
+            CertId = certId,
+            SectionId = null,
+            TopicId = topicId,
+            CefrLevel = level,
+            Modality = topic.Modality,
+            QuestionCount = selected.Count,
+            Status = PracticeStatus.InProgress.ToCode(),
+            CorrectCount = 0,
+            QuestionSource = QuestionSource.All.ToCode(),
+            StartedAt = _clock.GetUtcNow(),
+        };
+
+        db.PracticeSessions.Add(session);
+        await db.SaveChangesAsync(cancellationToken);
+
+        for (var i = 0; i < selected.Count; i++)
+        {
+            db.PracticeAnswers.Add(new PracticeAnswer
+            {
+                SessionId = session.SessionId,
+                QuestionId = null,
+                SectionId = null,
+                ItemId = selected[i].ItemId,
+                ItemVersionId = selected[i].ItemVersionId,
+                SelectedLabel = null,
+                SelectedOptionId = null,
+                IsCorrect = null,
+                HintUsed = false,
+                DisplayOrder = i + 1,
+            });
+        }
+        await db.SaveChangesAsync(cancellationToken);
+
+        await PruneOldSessionsAsync(userId, certId, cancellationToken);
+
+        return ToSessionInfo(session, topic.Code, topic.Name);
+    }
+
+    private async Task<PracticeSessionInfo> StartSectionSessionAsync(
+        int userId, int certId, int sectionId, CancellationToken cancellationToken)
+    {
         var section = await db.Sections
             .AsNoTracking()
-            .Where(s => s.SectionId == input.SectionId && s.CertId == activeCertId)
+            .Where(s => s.SectionId == sectionId && s.CertId == certId)
             .SingleOrDefaultAsync(cancellationToken)
-            ?? throw new PracticeException(PracticeException.SectionUnavailable, $"Section {input.SectionId} is not available for active certificate.");
+            ?? throw new PracticeException(PracticeException.SectionUnavailable, $"Section {sectionId} is not available for active certificate.");
 
         // #150: a spoken answer cannot be typed, and its recorded, AI-graded practice is a different
         // attempt (#151), so speaking is the one modality the free drill does not serve. Say where the
@@ -31,41 +113,19 @@ public sealed partial class PracticeService
                 "Speaking is answered by voice, so it has no typed drill: open the recorded speaking practice, which is graded by AI.");
         }
 
-        var selectedIds = await PlanSmartPracticeAsync(userId, activeCertId, section.SectionId, cancellationToken);
+        var selectedIds = await PlanSmartPracticeAsync(userId, certId, section.SectionId, cancellationToken);
 
         if (selectedIds.Count == 0)
         {
             throw new PracticeException(PracticeException.NoQuestionsAvailable, "No questions match the selected criteria for this section.");
         }
 
-        // Clean up or abandon any existing standalone in-progress sessions for this user and certificate
-        var existingInProgress = await db.PracticeSessions
-            .Where(s => s.UserId == userId && s.Section.CertId == activeCertId && s.Status == PracticeStatus.InProgress.ToCode() && s.LearnerPathStepId == null)
-            .ToListAsync(cancellationToken);
-
-        foreach (var inProg in existingInProgress)
-        {
-            var hasAnswers = await db.PracticeAnswers
-                .AnyAsync(pa => pa.SessionId == inProg.SessionId && (pa.SelectedOptionId != null || pa.IsCorrect != null), cancellationToken);
-
-            if (!hasAnswers)
-            {
-                var emptyAnswers = await db.PracticeAnswers
-                    .Where(pa => pa.SessionId == inProg.SessionId)
-                    .ToListAsync(cancellationToken);
-                db.PracticeAnswers.RemoveRange(emptyAnswers);
-                db.PracticeSessions.Remove(inProg);
-            }
-            else
-            {
-                inProg.Status = PracticeStatus.Abandoned.ToCode();
-                inProg.FinishedAt = DateTimeOffset.UtcNow;
-            }
-        }
+        await AbandonInProgressAsync(userId, certId, cancellationToken);
 
         var session = new PracticeSession
         {
             UserId = userId,
+            CertId = certId,
             SectionId = section.SectionId,
             Modality = section.Modality,
             QuestionCount = selectedIds.Count,
@@ -93,20 +153,42 @@ public sealed partial class PracticeService
         }
         await db.SaveChangesAsync(cancellationToken);
 
-        await PruneOldSessionsAsync(userId, activeCertId, cancellationToken);
+        await PruneOldSessionsAsync(userId, certId, cancellationToken);
 
-        return new PracticeSessionInfo(
-            session.SessionId,
-            session.SectionId,
-            section.Code,
-            section.Name,
-            EnumCodes.Parse<Modality>(session.Modality),
-            session.QuestionCount,
-            EnumCodes.Parse<PracticeStatus>(session.Status),
-            session.CorrectCount,
-            EnumCodes.Parse<QuestionSource>(session.QuestionSource),
-            session.StartedAt,
-            session.FinishedAt);
+        return ToSessionInfo(session, section.Code, section.Name);
+    }
+
+    /// <summary>
+    /// Clean up or abandon any existing standalone in-progress sessions for this user and certificate.
+    /// Shared by both shapes: starting a second drill is one event whether the first was a section or
+    /// a cell, so the two must not implement it differently.
+    /// </summary>
+    private async Task AbandonInProgressAsync(int userId, int certId, CancellationToken cancellationToken)
+    {
+        var existingInProgress = await db.PracticeSessions
+            .Where(s => s.UserId == userId && s.CertId == certId && s.Status == PracticeStatus.InProgress.ToCode() && s.LearnerPathStepId == null)
+            .ToListAsync(cancellationToken);
+
+        foreach (var inProg in existingInProgress)
+        {
+            // #187: a pool answer records a label rather than an option id, so both count as an answer.
+            var hasAnswers = await db.PracticeAnswers
+                .AnyAsync(pa => pa.SessionId == inProg.SessionId && (pa.SelectedOptionId != null || pa.SelectedLabel != null || pa.IsCorrect != null), cancellationToken);
+
+            if (!hasAnswers)
+            {
+                var emptyAnswers = await db.PracticeAnswers
+                    .Where(pa => pa.SessionId == inProg.SessionId)
+                    .ToListAsync(cancellationToken);
+                db.PracticeAnswers.RemoveRange(emptyAnswers);
+                db.PracticeSessions.Remove(inProg);
+            }
+            else
+            {
+                inProg.Status = PracticeStatus.Abandoned.ToCode();
+                inProg.FinishedAt = DateTimeOffset.UtcNow;
+            }
+        }
     }
 
     /// <summary>
@@ -152,28 +234,18 @@ public sealed partial class PracticeService
         var session = await db.PracticeSessions
             .AsNoTracking()
             .Include(s => s.Section)
+            .Include(s => s.Topic)
             .Where(s => s.SessionId == sessionId && s.UserId == userId)
             .SingleOrDefaultAsync(cancellationToken)
             ?? throw new PracticeException(PracticeException.SessionNotFound, $"Practice session {sessionId} was not found.");
 
-        return new PracticeSessionInfo(
-            session.SessionId,
-            session.SectionId,
-            session.Section.Code,
-            session.Section.Name,
-            EnumCodes.Parse<Modality>(session.Modality),
-            session.QuestionCount,
-            EnumCodes.Parse<PracticeStatus>(session.Status),
-            session.CorrectCount,
-            EnumCodes.Parse<QuestionSource>(session.QuestionSource),
-            session.StartedAt,
-            session.FinishedAt);
+        return ToSessionInfo(session);
     }
 
     private async Task PruneOldSessionsAsync(int userId, int certId, CancellationToken cancellationToken)
     {
         var sessions = await db.PracticeSessions
-            .Where(s => s.UserId == userId && s.Section.CertId == certId && s.LearnerPathStepId == null)
+            .Where(s => s.UserId == userId && s.CertId == certId && s.LearnerPathStepId == null)
             .OrderByDescending(s => s.StartedAt)
             .ThenByDescending(s => s.SessionId)
             .Select(s => s.SessionId)

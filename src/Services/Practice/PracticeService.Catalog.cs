@@ -124,24 +124,13 @@ public sealed partial class PracticeService
         var unfinishedSession = await db.PracticeSessions
             .AsNoTracking()
             .Include(ps => ps.Section)
+            .Include(ps => ps.Topic)
             .Where(ps => ps.UserId == userId
-                && ps.Section.CertId == activeCertId
+                && ps.CertId == activeCertId
                 && ps.Status == PracticeStatus.InProgress.ToCode()
                 && ps.LearnerPathStepId == null)
             .OrderByDescending(ps => ps.StartedAt)
-            .Select(ps => new PracticeSessionInfo(
-                ps.SessionId,
-                ps.SectionId,
-                ps.Section.Code,
-                ps.Section.Name,
-                EnumCodes.Parse<Modality>(ps.Section.Modality),
-                ps.QuestionCount,
-                EnumCodes.Parse<PracticeStatus>(ps.Status),
-                ps.CorrectCount,
-                EnumCodes.Parse<QuestionSource>(ps.QuestionSource),
-                ps.StartedAt,
-                ps.FinishedAt))
-            .FirstOrDefaultAsync(cancellationToken);
+            .ToListAsync(cancellationToken);
 
         // #150: speaking has no typed drill. Point at its recorded, AI-graded practice when the
         // certificate has one published, so the card is a real link rather than a refusal.
@@ -155,6 +144,7 @@ public sealed partial class PracticeService
             .Select(e => (int?)e.ExamId)
             .FirstOrDefaultAsync(cancellationToken);
 
-        return new PracticeSectionsView(cert, listening, reading, other, weakest, unfinishedSession, speaking, speakingPracticeExamId);
+        return new PracticeSectionsView(cert, listening, reading, other, weakest,
+            unfinishedSession.Count == 0 ? null : ToSessionInfo(unfinishedSession[0]), speaking, speakingPracticeExamId);
     }
 }

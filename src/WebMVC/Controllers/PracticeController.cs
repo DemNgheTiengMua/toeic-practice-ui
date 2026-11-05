@@ -99,7 +99,8 @@ public sealed class PracticeController(
                 item.SelectedOptionId.HasValue || item.IsCorrect.HasValue,
                 item.IsCorrect,
                 item.IsSaved,
-                item.DisplayOrder == question.DisplayOrder
+                item.DisplayOrder == question.DisplayOrder,
+                item.ItemVersionId
             )).ToList();
 
             return View(new PracticeTakeViewModel(

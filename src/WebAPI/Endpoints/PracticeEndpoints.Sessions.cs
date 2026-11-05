@@ -8,6 +8,31 @@ namespace WebAPI.Endpoints;
 
 public static partial class PracticeEndpoints
 {
+    /// <summary>
+    /// #187: the request is one shape or the other. Building the input here keeps the refusal in the
+    /// endpoint, where it can be a 400 with a reason, rather than in the service, where it would be an
+    /// exception on a request that never had a chance.
+    /// </summary>
+    private static StartPracticeSessionInput? BuildStartInput(StartPracticeRequest request)
+    {
+        var hasCell = request.TopicId is not null && request.CefrLevelCode is not null;
+        var hasSection = request.SectionId is not null;
+
+        if (hasSection == hasCell)
+        {
+            return null;
+        }
+
+        if (hasSection)
+        {
+            return new StartPracticeSessionInput(request.SectionId!.Value);
+        }
+
+        return CefrLevel.TryParseAuthored(request.CefrLevelCode, out var level)
+            ? new StartPracticeSessionInput(request.TopicId!.Value, level)
+            : null;
+    }
+
     private static void MapSessions(RouteGroupBuilder practice)
     {
 
@@ -19,7 +44,12 @@ public static partial class PracticeEndpoints
         {
             try
             {
-                var input = new StartPracticeSessionInput(request.SectionId);
+                var input = BuildStartInput(request);
+                if (input is null)
+                {
+                    return ValidationProblem(new ValidationException(
+                        "A drill is started against either a section or a cell (topic and level), not both and not neither."));
+                }
 
                 var session = await practiceService.StartSessionAsync(CurrentUserId(http), input, cancellationToken);
                 return Results.Ok(new PracticeSessionDto(
@@ -33,7 +63,9 @@ public static partial class PracticeEndpoints
                     session.CorrectCount,
                     session.QuestionSource.MapTo<QuestionSourceDto>(),
                     session.StartedAt,
-                    session.FinishedAt));
+                    session.FinishedAt,
+                    session.TopicId,
+                    session.CefrLevel?.Code));
             }
             catch (ValidationException ex)
             {
@@ -73,7 +105,9 @@ public static partial class PracticeEndpoints
                     session.CorrectCount,
                     session.QuestionSource.MapTo<QuestionSourceDto>(),
                     session.StartedAt,
-                    session.FinishedAt));
+                    session.FinishedAt,
+                    session.TopicId,
+                    session.CefrLevel?.Code));
             }
             catch (PracticeException ex) when (ex.Code == PracticeException.SessionNotFound)
             {

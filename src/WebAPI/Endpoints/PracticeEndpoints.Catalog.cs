@@ -29,7 +29,7 @@ public static partial class PracticeEndpoints
                     ? new PracticeSessionDto(
                         ufs.SessionId, ufs.SectionId, ufs.SectionCode, ufs.SectionName, ufs.Modality.MapTo<ModalityDto>(),
                         ufs.QuestionCount, ufs.Status.MapTo<PracticeStatusDto>(), ufs.CorrectCount, ufs.QuestionSource.MapTo<QuestionSourceDto>(),
-                        ufs.StartedAt, ufs.FinishedAt)
+                        ufs.StartedAt, ufs.FinishedAt, ufs.TopicId, ufs.CefrLevel?.Code)
                     : null,
                 (view.Speaking ?? []).Select(ToSectionDto).ToList(),
                 view.SpeakingPracticeExamId));

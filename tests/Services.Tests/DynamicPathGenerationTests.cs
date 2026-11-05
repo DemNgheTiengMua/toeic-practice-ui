@@ -157,6 +157,7 @@ public sealed class DynamicPathGenerationTests(DatabaseFixture database)
         var session = new PracticeSession
         {
             UserId = userId,
+            CertId = (await db.Sections.Where(s => s.SectionId == sectionId).Select(s => s.CertId).SingleAsync()),
             SectionId = sectionId,
             Modality = "reading",
             QuestionCount = questions.Count,

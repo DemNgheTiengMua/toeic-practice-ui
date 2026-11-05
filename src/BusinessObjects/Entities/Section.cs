@@ -76,9 +76,6 @@ public partial class Section
     [InverseProperty("Section")]
     public virtual ICollection<PathModuleItem> PathModuleItems { get; set; } = new List<PathModuleItem>();
 
-    [InverseProperty("SectionNavigation")]
-    public virtual ICollection<PracticeSession> PracticeSessionSectionNavigations { get; set; } = new List<PracticeSession>();
-
     [InverseProperty("Section")]
     public virtual ICollection<PracticeSession> PracticeSessionSections { get; set; } = new List<PracticeSession>();
 

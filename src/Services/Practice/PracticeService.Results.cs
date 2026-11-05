@@ -14,6 +14,7 @@ public sealed partial class PracticeService
     {
         var session = await db.PracticeSessions
             .Include(s => s.Section)
+            .Include(s => s.Topic)
             .Where(s => s.SessionId == sessionId && s.UserId == userId)
             .SingleOrDefaultAsync(cancellationToken)
             ?? throw new PracticeException(PracticeException.SessionNotFound, $"Practice session {sessionId} was not found.");
@@ -23,29 +24,69 @@ public sealed partial class PracticeService
             session.Status = PracticeStatus.Finished.ToCode();
             session.FinishedAt = DateTimeOffset.UtcNow;
             await db.SaveChangesAsync(cancellationToken);
-            await PruneOldSessionsAsync(userId, session.Section.CertId, cancellationToken);
+            await PruneOldSessionsAsync(userId, session.CertId, cancellationToken);
         }
 
         var answers = await db.PracticeAnswers
             .AsNoTracking()
             .Include(pa => pa.Question)
-                .ThenInclude(q => q.Category)
+                .ThenInclude(q => q!.Category)
             .Include(pa => pa.Question)
-                .ThenInclude(q => q.Group)
+                .ThenInclude(q => q!.Group)
             .Where(pa => pa.SessionId == sessionId)
             .OrderBy(pa => pa.DisplayOrder)
             .ToListAsync(cancellationToken);
 
-        var questionIds = answers.Select(a => a.QuestionId).ToList();
-        var allOptions = await db.QuestionOptions
-            .AsNoTracking()
-            .Where(o => questionIds.Contains(o.QuestionId))
-            .ToListAsync(cancellationToken);
+        var questionIds = answers.Where(a => a.QuestionId.HasValue).Select(a => a.QuestionId!.Value).ToList();
+        var allOptions = questionIds.Count == 0
+            ? []
+            : await db.QuestionOptions
+                .AsNoTracking()
+                .Where(o => questionIds.Contains(o.QuestionId))
+                .ToListAsync(cancellationToken);
+
+        // #187: this is the criterion that has to be observed. Each answer renders the version it
+        // pinned — not the item's current version, and not whatever the item says today. A correction
+        // after the sitting creates version 2; this read does not look at it.
+        var pinned = PlacePinnedVersions(answers, await LoadPinnedVersionsAsync(answers, cancellationToken));
+        var stimuli = await LoadStimuliAsync(pinned.Values, cancellationToken);
 
         var outcomes = answers.Select(a =>
         {
             var q = a.Question;
-            var qOptions = allOptions.Where(o => o.QuestionId == q.QuestionId).ToList();
+            var version = pinned.GetValueOrDefault(a.AnswerId);
+
+            if (version is not null)
+            {
+                // A version stores labels A-D with no option rows, so the chosen and the key texts
+                // are read from its four columns. An answer with no label chose nothing.
+                var chosenLabel = AttemptEngine.LabelIndex(a.SelectedLabel) >= 0 ? a.SelectedLabel : null;
+                var stimulus = stimuli.GetValueOrDefault(version.ItemId);
+
+                return new QuestionOutcome(
+                    a.DisplayOrder,
+                    null,
+                    null,
+                    version.Stem,
+                    chosenLabel,
+                    PinnedOptionText(version, chosenLabel),
+                    version.KeyLabel,
+                    PinnedOptionText(version, version.KeyLabel),
+                    a.IsCorrect,
+                    a.HintUsed,
+                    version.Explanation,
+                    stimulus?.AudioPath,
+                    AudioStartMs: null,
+                    AudioEndMs: null,
+                    stimulus?.Transcript,
+                    AttemptEngine.IsProductive(version) ? QuestionType.FreeResponse.ToCode() : QuestionType.Mcq.ToCode(),
+                    a.ResponseText,
+                    a.SelectedOptionIdsJson,
+                    AcceptedAnswersJson: null,
+                    version.ItemVersionId);
+            }
+
+            var qOptions = allOptions.Where(o => o.QuestionId == q!.QuestionId).ToList();
             var selectedOpt = a.SelectedOptionId.HasValue
                 ? qOptions.FirstOrDefault(o => o.OptionId == a.SelectedOptionId.Value)
                 : null;
@@ -53,7 +94,7 @@ public sealed partial class PracticeService
 
             return new QuestionOutcome(
                 a.DisplayOrder,
-                q.QuestionId,
+                q!.QuestionId,
                 q.Category?.Name,
                 q.Stem,
                 selectedOpt?.Label,
@@ -72,11 +113,13 @@ public sealed partial class PracticeService
                 q.QuestionType ?? "mcq",
                 a.ResponseText,
                 a.SelectedOptionIdsJson,
-                q.AcceptedAnswersJson);
+                q.AcceptedAnswersJson,
+                null);
         }).ToList();
 
+        var (code, name) = ScopeLabels(session);
         var total = answers.Count;
-        var answered = answers.Count(a => a.SelectedOptionId.HasValue || a.IsCorrect.HasValue);
+        var answered = answers.Count(a => a.SelectedOptionId.HasValue || a.SelectedLabel is not null || a.IsCorrect.HasValue);
         var correct = answers.Count(a => a.IsCorrect == true);
         var incorrect = answered - correct;
         var skipped = total - answered;
@@ -87,8 +130,8 @@ public sealed partial class PracticeService
 
         return new PracticeSummary(
             session.SessionId,
-            session.Section.Code,
-            session.Section.Name,
+            code,
+            name,
             EnumCodes.Parse<Modality>(session.Modality),
             session.StartedAt,
             session.FinishedAt,

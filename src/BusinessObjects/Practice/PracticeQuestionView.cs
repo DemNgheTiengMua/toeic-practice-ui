@@ -2,10 +2,15 @@ using System.ComponentModel.DataAnnotations;
 
 namespace BusinessObjects;
 
+/// <summary>
+/// #187: one question of a drill. <see cref="QuestionId"/> is NULL for a pool item, which has no
+/// <c>Questions</c> row; <see cref="ItemVersionId"/> is then the thing the answer is addressed by, the
+/// same identity <c>AttemptAnswers</c> pins.
+/// </summary>
 public sealed record PracticeQuestionView(
     int SessionId,
     string SectionName,
-    int QuestionId,
+    int? QuestionId,
     int DisplayOrder,
     int TotalQuestions,
     string Stem,
@@ -35,4 +40,5 @@ public sealed record PracticeQuestionView(
     string? ResponseText = null,
     IReadOnlyList<int>? SelectedOptionIds = null,
     string? SelectedOptionIdsJson = null,
-    IReadOnlyList<int>? CorrectOptionIds = null);
+    IReadOnlyList<int>? CorrectOptionIds = null,
+    int? ItemVersionId = null);

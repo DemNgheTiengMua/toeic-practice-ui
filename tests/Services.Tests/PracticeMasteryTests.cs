@@ -153,7 +153,7 @@ public sealed class PracticeMasteryTests(DatabaseFixture database)
         var questions = await practice.GetSessionQuestionsAsync(userId, session.SessionId);
         foreach (var question in questions)
         {
-            await practice.SubmitAnswerAsync(userId, session.SessionId, question.QuestionId, Right(question));
+            await practice.SubmitAnswerAsync(userId, session.SessionId, question.QuestionId!.Value, Right(question));
         }
 
         return questions.Count;
@@ -174,7 +174,7 @@ public sealed class PracticeMasteryTests(DatabaseFixture database)
 
         var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(seeded.SectionId));
         var questions = await practice.GetSessionQuestionsAsync(userId, session.SessionId);
-        await practice.SubmitAnswerAsync(userId, session.SessionId, questions[0].QuestionId, Wrong(questions[0]));
+        await practice.SubmitAnswerAsync(userId, session.SessionId, questions[0].QuestionId!.Value, Wrong(questions[0]));
 
         var mastery = await ReadMasteryAsync(userId, seeded.CategoryId);
         Assert.NotNull(mastery);
@@ -199,7 +199,7 @@ public sealed class PracticeMasteryTests(DatabaseFixture database)
         var first = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(seeded.SectionId));
         var questions = await practice.GetSessionQuestionsAsync(userId, first.SessionId);
         var missed = questions[0];
-        await practice.SubmitAnswerAsync(userId, first.SessionId, missed.QuestionId, Wrong(missed));
+        await practice.SubmitAnswerAsync(userId, first.SessionId, missed.QuestionId!.Value, Wrong(missed));
 
         // Started straight away, so nothing has had time to become due again.
         var second = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(seeded.SectionId));
@@ -207,7 +207,7 @@ public sealed class PracticeMasteryTests(DatabaseFixture database)
         Assert.DoesNotContain(missed.QuestionId, secondQuestions.Select(q => q.QuestionId));
 
         // Read the row too: a short session could pass the assertion above for the wrong reason.
-        var history = await ReadHistoryAsync(userId, missed.QuestionId);
+        var history = await ReadHistoryAsync(userId, missed.QuestionId!.Value);
         Assert.NotNull(history);
         Assert.False(history.LastIsCorrect);
         Assert.Equal(seeded.CertId, await CertIdOfAsync(seeded.SectionId));
@@ -232,7 +232,7 @@ public sealed class PracticeMasteryTests(DatabaseFixture database)
         var first = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(seeded.SectionId));
         var questions = await practice.GetSessionQuestionsAsync(userId, first.SessionId);
         var missed = questions[0];
-        await practice.SubmitAnswerAsync(userId, first.SessionId, missed.QuestionId, Wrong(missed));
+        await practice.SubmitAnswerAsync(userId, first.SessionId, missed.QuestionId!.Value, Wrong(missed));
 
         var during = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(seeded.SectionId));
         Assert.DoesNotContain(missed.QuestionId,
@@ -260,8 +260,8 @@ public sealed class PracticeMasteryTests(DatabaseFixture database)
         // Put "Verb tense" into cooldown and leave "Preposition" untouched.
         var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(seeded.SectionId));
         var questions = await practice.GetSessionQuestionsAsync(userId, session.SessionId);
-        var tenseQuestion = questions.First(q => seeded.QuestionIds.Contains(q.QuestionId));
-        await practice.SubmitAnswerAsync(userId, session.SessionId, tenseQuestion.QuestionId, Wrong(tenseQuestion));
+        var tenseQuestion = questions.First(q => seeded.QuestionIds.Contains(q.QuestionId!.Value));
+        await practice.SubmitAnswerAsync(userId, session.SessionId, tenseQuestion.QuestionId!.Value, Wrong(tenseQuestion));
 
         var cooling = (await practice.GetPracticeSectionsAsync(userId)).ReadingSections.Single(s => s.SectionId == seeded.SectionId);
         Assert.Equal(1, cooling.CategoriesInCooldown);
@@ -291,7 +291,7 @@ public sealed class PracticeMasteryTests(DatabaseFixture database)
 
         var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(seeded.SectionId));
         var questions = await practice.GetSessionQuestionsAsync(userId, session.SessionId);
-        await practice.SubmitAnswerAsync(userId, session.SessionId, questions[0].QuestionId, Wrong(questions[0]));
+        await practice.SubmitAnswerAsync(userId, session.SessionId, questions[0].QuestionId!.Value, Wrong(questions[0]));
         Assert.Equal(MasteryState.Learning.ToCode(), (await ReadMasteryAsync(userId, seeded.CategoryId))!.State);
 
         // The category is in a 24-hour cooldown, so the clock has to reach the next day - which is also
@@ -328,8 +328,8 @@ public sealed class PracticeMasteryTests(DatabaseFixture database)
 
         var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(seeded.SectionId));
         var questions = await practice.GetSessionQuestionsAsync(userId, session.SessionId);
-        await practice.SubmitAnswerAsync(userId, session.SessionId, questions[0].QuestionId, Wrong(questions[0]));
-        await practice.SubmitAnswerAsync(userId, session.SessionId, questions[1].QuestionId, Wrong(questions[1]));
+        await practice.SubmitAnswerAsync(userId, session.SessionId, questions[0].QuestionId!.Value, Wrong(questions[0]));
+        await practice.SubmitAnswerAsync(userId, session.SessionId, questions[1].QuestionId!.Value, Wrong(questions[1]));
 
         var lapsed = await ReadMasteryAsync(userId, seeded.CategoryId);
         Assert.Equal(MasteryState.Reviewing.ToCode(), lapsed!.State);
@@ -425,7 +425,7 @@ public sealed class PracticeMasteryTests(DatabaseFixture database)
         var session = await practice.StartSessionAsync(userId, new StartPracticeSessionInput(seeded.SectionId));
         foreach (var question in await practice.GetSessionQuestionsAsync(userId, session.SessionId))
         {
-            await practice.SubmitAnswerAsync(userId, session.SessionId, question.QuestionId, Right(question));
+            await practice.SubmitAnswerAsync(userId, session.SessionId, question.QuestionId!.Value, Right(question));
         }
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
@@ -450,7 +450,7 @@ public sealed class PracticeMasteryTests(DatabaseFixture database)
         var wrongOption = Wrong(question).SelectedOptionId;
         var rightOption = Right(question).SelectedOptionId;
 
-        await practice.SubmitAnswerAsync(userId, session.SessionId, question.QuestionId, Wrong(question));
+        await practice.SubmitAnswerAsync(userId, session.SessionId, question.QuestionId!.Value, Wrong(question));
         var once = await ReadMasteryAsync(userId, seeded.CategoryId);
 
         // #166: #155 made the second grade skip mastery, so the re-submit rewrote the recorded answer
@@ -458,7 +458,7 @@ public sealed class PracticeMasteryTests(DatabaseFixture database)
         // wrong answer again as right also raised the accuracy a path step records. The question is
         // graded once, so the second submission is refused outright - not applied in part.
         var ex = await Assert.ThrowsAsync<PracticeException>(() =>
-            practice.SubmitAnswerAsync(userId, session.SessionId, question.QuestionId, Right(question)));
+            practice.SubmitAnswerAsync(userId, session.SessionId, question.QuestionId!.Value, Right(question)));
 
         Assert.Equal(PracticeException.AlreadyAnswered, ex.Code);
         // The message tells the learner what to do next, not what the server did.

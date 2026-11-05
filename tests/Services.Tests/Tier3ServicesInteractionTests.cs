@@ -163,6 +163,7 @@ public sealed class Tier3ServicesInteractionTests(DatabaseFixture database)
         var session = new PracticeSession
         {
             UserId = learnerId,
+            CertId = cert.CertId,
             SectionId = section.SectionId,
             Modality = "reading",
             QuestionCount = 2,

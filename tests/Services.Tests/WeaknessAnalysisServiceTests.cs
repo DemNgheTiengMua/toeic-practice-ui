@@ -129,6 +129,7 @@ public sealed class WeaknessAnalysisServiceTests(DatabaseFixture database)
             var session = new PracticeSession
             {
                 UserId = userId,
+                CertId = certId,
                 SectionId = sec1Id,
                 Modality = "reading",
                 QuestionSource = "all",
@@ -471,6 +472,7 @@ public sealed class WeaknessAnalysisServiceTests(DatabaseFixture database)
             var session = new PracticeSession
             {
                 UserId = userId,
+                CertId = (await db.Sections.Where(s => s.SectionId == secId).Select(s => s.CertId).SingleAsync()),
                 SectionId = secId,
                 Modality = "reading",
                 QuestionSource = "all",
