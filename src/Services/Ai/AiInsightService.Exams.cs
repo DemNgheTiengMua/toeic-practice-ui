@@ -102,6 +102,19 @@ public sealed partial class AiInsightService
         }
     }
 
+    /// <summary>
+    /// #186: the text of the option a pinned answer named. A version stores labels A–D with no option
+    /// rows, so the label selects one of its four columns; anything else is no choice at all.
+    /// </summary>
+    private static string? PinnedOptionText(ItemVersion version, string? label) => label switch
+    {
+        "A" => version.OptionA,
+        "B" => version.OptionB,
+        "C" => version.OptionC,
+        "D" => version.OptionD,
+        _ => null,
+    };
+
     private async Task<AiInsightGenerationRequest?> BuildExamAttemptRequestAsync(AiInsight insight, int attemptCount, CancellationToken cancellationToken)
     {
         var attempt = await db.ExamAttempts
@@ -114,6 +127,7 @@ public sealed partial class AiInsightService
 
         var answers = await db.AttemptAnswers
             .AsNoTracking()
+            .Include(a => a.ItemVersion)
             .Include(a => a.Question)
                 .ThenInclude(q => q.Category)
             .Include(a => a.Question)
@@ -132,24 +146,33 @@ public sealed partial class AiInsightService
         {
             var q = a.Question;
             var qOptions = allOptions.Where(o => o.QuestionId == q.QuestionId).ToList();
-            var selectedOpt = a.SelectedOptionId.HasValue
-                ? qOptions.FirstOrDefault(o => o.OptionId == a.SelectedOptionId.Value)
-                : null;
-            var correctOpt = qOptions.FirstOrDefault(o => o.IsCorrect);
+            // #186: a pinned answer names a label on its version, not a legacy option row. The AI
+            // payload is built from what the learner actually saw, so the pinned stem, chosen text and
+            // key text are read from the version; only an unpinned answer falls back to the question.
+            var pinned = a.ItemVersion;
+            var selectedText = pinned is not null
+                ? PinnedOptionText(pinned, a.SelectedLabel)
+                : qOptions.FirstOrDefault(o => o.OptionId == a.SelectedOptionId)?.Text;
+            var selectedLabel = pinned is not null
+                ? a.SelectedLabel
+                : qOptions.FirstOrDefault(o => o.OptionId == a.SelectedOptionId)?.Label;
+            var correctLabel = pinned is not null
+                ? pinned.KeyLabel
+                : qOptions.FirstOrDefault(o => o.IsCorrect)?.Label;
 
             return new InsightQuestionDetail(
                 q.QuestionId,
-                q.Stem,
+                pinned?.Stem ?? q.Stem,
                 q.SectionId,
                 q.Section.Name,
                 q.CategoryId,
                 q.Category?.Name,
                 a.SelectedOptionId,
-                selectedOpt?.Label,
-                correctOpt?.Label,
+                selectedLabel,
+                correctLabel,
                 a.IsCorrect,
                 false,
-                q.Explanation);
+                pinned?.Explanation ?? q.Explanation);
         }).ToList();
 
         var sectionIds = answers.Select(a => a.Question.SectionId).Distinct().ToList();

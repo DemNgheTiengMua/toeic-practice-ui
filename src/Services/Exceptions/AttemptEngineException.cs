@@ -13,6 +13,11 @@ public class AttemptEngineException(string code, string message) : Exception(mes
     public const string WrongPhase = "wrong_phase";
     public const string PreflightRequired = "preflight_required";
     public const string ExamNotFound = "exam_not_found";
+    /// <summary>
+    /// #186: the paper's binding points at a position that holds no question. The attempt is refused
+    /// before anything is written rather than created with a hole in it.
+    /// </summary>
+    public const string PaperNotAssembled = "paper_not_assembled";
 
     public string Code { get; } = code;
 }

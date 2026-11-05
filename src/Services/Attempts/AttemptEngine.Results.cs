@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BusinessObjects;
+using BusinessObjects.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace Services;
@@ -144,6 +145,28 @@ public sealed partial class AttemptEngine
             .Where(a => a.AttemptId == attemptId)
             .ToDictionaryAsync(a => a.QuestionId, cancellationToken);
 
+        // #186: the version each answer pinned is what review renders. Not the item's current version,
+        // and not the paper's binding as it stands today: a later correction creates version 2 and a
+        // later assembly edit can re-point the binding, and neither may move a finished attempt. The
+        // binding is only the fallback for an answer recorded before the pool existed.
+        var pinnedVersionIds = answers.Values
+            .Where(a => a.ItemVersionId.HasValue)
+            .Select(a => a.ItemVersionId!.Value)
+            .Distinct()
+            .ToList();
+        var pinnedVersions = pinnedVersionIds.Count == 0
+            ? new Dictionary<int, BoundPaperPosition>()
+            : (await db.ItemVersions.AsNoTracking()
+                .Where(v => pinnedVersionIds.Contains(v.ItemVersionId))
+                .ToListAsync(cancellationToken))
+                .ToDictionary(
+                    v => v.ItemVersionId,
+                    v => new BoundPaperPosition(v.ItemId, v.ItemVersionId, v));
+
+        var fallbackBindings = PlaceBindings(
+            questions,
+            await LoadPaperBindingsAsync(attempt.ExamId, cancellationToken));
+
         var skillScores = await db.AttemptSkillScores
             .AsNoTracking()
             .Where(s => s.AttemptId == attemptId)
@@ -180,13 +203,28 @@ public sealed partial class AttemptEngine
             var q = questions[idx];
             int displayOrder = idx + 1;
 
-            var options = q.QuestionOptionQuestionNavigations
-                .OrderBy(o => o.Label)
-                .Select(o => new AttemptReviewOption(o.OptionId, o.Label, o.Text, o.IsCorrect, o.Rationale))
-                .ToList();
-
             bool hasAnswer = answers.TryGetValue(q.QuestionId, out var ans);
-            int? selectedOptionId = ans?.SelectedOptionId;
+
+            // #186: the pinned version wins. A reviewed attempt renders the stem, options and
+            // explanation the learner actually sat; the binding is only consulted for an answer with
+            // no pool pin, and the legacy question row for one with neither.
+            var pinnedVersion = ans?.ItemVersionId is int pinnedVersionId
+                && pinnedVersions.TryGetValue(pinnedVersionId, out var answeredVersion)
+                    ? answeredVersion
+                    : fallbackBindings.GetValueOrDefault(q.QuestionId);
+
+            var options = pinnedVersion is null
+                ? q.QuestionOptionQuestionNavigations
+                    .OrderBy(o => o.Label)
+                    .Select(o => new AttemptReviewOption(o.OptionId, o.Label, o.Text, o.IsCorrect, o.Rationale))
+                    .ToList()
+                : PoolReviewOptions(pinnedVersion.ItemVersionId, pinnedVersion.Version);
+
+            var stem = pinnedVersion?.Version.Stem ?? q.Stem;
+            var explanation = pinnedVersion?.Version.Explanation ?? q.Explanation;
+            int? selectedOptionId = pinnedVersion is null
+                ? ans?.SelectedOptionId
+                : SelectedPoolOptionId(pinnedVersion.ItemVersionId, ans);
             bool isFlagged = ans?.IsFlagged ?? false;
             bool isAnswered = selectedOptionId.HasValue;
             bool? isCorrect = isAnswered ? ans?.IsCorrect : null;
@@ -202,7 +240,7 @@ public sealed partial class AttemptEngine
                 q.Section.Skill.Code,
                 q.Section.Skill.Name,
                 EnumCodes.Parse<Modality>(q.Section.Modality),
-                q.Stem,
+                stem,
                 q.Group.ImagePath,
                 q.Group.ImageAlt,
                 audio?.Path,
@@ -210,7 +248,7 @@ public sealed partial class AttemptEngine
                 audio?.EndMs,
                 q.Group.Transcript,
                 q.Group.Passage,
-                q.Explanation,
+                explanation,
                 options,
                 selectedOptionId,
                 isCorrect,
@@ -228,9 +266,9 @@ public sealed partial class AttemptEngine
         }
 
         int totalQuestions = questions.Count;
-        int answeredCount = questions.Count(q => answers.TryGetValue(q.QuestionId, out var a) && a.SelectedOptionId.HasValue);
+        int answeredCount = questions.Count(q => answers.TryGetValue(q.QuestionId, out var a) && IsAnswered(a));
         int correctCount = questions.Count(q => answers.TryGetValue(q.QuestionId, out var a) && a.IsCorrect == true);
-        int incorrectCount = questions.Count(q => answers.TryGetValue(q.QuestionId, out var a) && a.SelectedOptionId.HasValue && a.IsCorrect == false);
+        int incorrectCount = questions.Count(q => answers.TryGetValue(q.QuestionId, out var a) && IsAnswered(a) && a.IsCorrect == false);
         int blankCount = totalQuestions - answeredCount;
         int flaggedCount = questions.Count(q => answers.TryGetValue(q.QuestionId, out var a) && a.IsFlagged);
         int durationSeconds = (int)Math.Max(0, ((attempt.SubmittedAt ?? DateTimeOffset.UtcNow) - attempt.StartedAt).TotalSeconds);

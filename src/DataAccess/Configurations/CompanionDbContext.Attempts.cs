@@ -74,6 +74,7 @@ public partial class CompanionDbContext
 
             entity.Property(e => e.ResponseText);
             entity.Property(e => e.SelectedOptionIdsJson);
+            entity.Property(e => e.SelectedLabel).HasMaxLength(1).IsUnicode(false);
 
             entity.HasOne(d => d.Attempt).WithMany(p => p.AttemptAnswerAttempts)
                 .OnDelete(DeleteBehavior.ClientSetNull)
@@ -99,6 +100,14 @@ public partial class CompanionDbContext
                 .HasPrincipalKey(p => new { p.OptionId, p.QuestionId })
                 .HasForeignKey(d => new { d.SelectedOptionId, d.QuestionId })
                 .HasConstraintName("FK_AttemptAnswers_OptionQuestion");
+
+            // #186: the answered version is pinned by (version, item), the same composite pair
+            // ExamItems uses, so one row cannot name one item and another item's version.
+            entity.HasOne(d => d.ItemVersion).WithMany(p => p.AttemptAnswers)
+                .HasPrincipalKey(p => new { p.ItemVersionId, p.ItemId })
+                .HasForeignKey(d => new { d.ItemVersionId, d.ItemId })
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_AttemptAnswers_VersionItem");
         });
 
 

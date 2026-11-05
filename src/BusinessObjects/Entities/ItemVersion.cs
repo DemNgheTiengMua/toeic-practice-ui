@@ -75,4 +75,8 @@ public partial class ItemVersion
     /// <summary>#185: the papers that pin this exact version.</summary>
     [InverseProperty("ItemVersion")]
     public virtual ICollection<ExamItem> ExamItems { get; set; } = new List<ExamItem>();
+
+    /// <summary>#186: the answers that pinned this exact version.</summary>
+    [InverseProperty("ItemVersion")]
+    public virtual ICollection<AttemptAnswer> AttemptAnswers { get; set; } = new List<AttemptAnswer>();
 }

@@ -73,7 +73,10 @@ public sealed partial class AiInsightService
 
     public static string ComputeExamFingerprint(int userId, int attemptId, int certId, int examId, int? totalScore, IReadOnlyList<AttemptAnswer> answers)
     {
-        var answerPart = string.Join(";", answers.Select(a => $"{a.QuestionId}:{a.SelectedOptionId}:{a.IsCorrect}"));
+        // #186: a pinned answer records a version and a label rather than an option id, so the label
+        // joins the hash. Without it two different answers to one item hash identically and a cached
+        // insight is served for an attempt whose answer has changed.
+        var answerPart = string.Join(";", answers.Select(a => $"{a.QuestionId}:{a.SelectedOptionId}:{a.SelectedLabel}:{a.IsCorrect}"));
         var raw = $"attempt:{userId}:{attemptId}:{certId}:{examId}:{totalScore}:{answerPart}";
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(raw))).ToLowerInvariant();
     }

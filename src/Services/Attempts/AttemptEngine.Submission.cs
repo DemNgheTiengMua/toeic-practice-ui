@@ -140,16 +140,13 @@ public sealed partial class AttemptEngine
                 .ToListAsync(cancellationToken))
                 .ToLookup(option => option.QuestionId);
 
+            // #186: a pinned answer is scored against the version it pinned, not the question row.
+            var pinnedVersions = await LoadPinnedVersionsAsync(answers, cancellationToken);
+
             // Score each objective answer
             foreach (var ans in answers.Where(a => a.Question.QuestionType != QuestionType.FreeResponse.ToCode()))
             {
-                var opts = optionsByQuestion[ans.QuestionId];
-                ans.IsCorrect = EvaluateObjectiveAnswer(
-                    ans.Question,
-                    opts,
-                    ans.SelectedOptionId,
-                    ans.SelectedOptionIdsJson,
-                    ans.ResponseText);
+                ans.IsCorrect = EvaluateAnswer(ans, pinnedVersions, optionsByQuestion);
             }
 
             // Clean any existing skill scores for idempotent resubmits
@@ -405,15 +402,15 @@ public sealed partial class AttemptEngine
                 responsePointsBySkill[response.SkillId] = responsePointsBySkill.GetValueOrDefault(response.SkillId) + fraction;
             }
 
+            // #186: the same pinned-version rule as the other scoring pass, so an attempt finalized
+            // after AI grading cannot score against a question row the learner never saw.
+            var pinnedVersions = await LoadPinnedVersionsAsync(answers, cancellationToken);
             foreach (var answer in answers.Where(a => a.Question.QuestionType != QuestionType.FreeResponse.ToCode()))
             {
-                var opts = answer.Question.QuestionOptionQuestionNavigations;
-                answer.IsCorrect = EvaluateObjectiveAnswer(
-                    answer.Question,
-                    opts,
-                    answer.SelectedOptionId,
-                    answer.SelectedOptionIdsJson,
-                    answer.ResponseText);
+                answer.IsCorrect = EvaluateAnswer(
+                    answer,
+                    pinnedVersions,
+                    answer.Question.QuestionOptionQuestionNavigations.ToLookup(o => o.QuestionId));
             }
 
             var skills = answers.Select(a => a.Question.Section.Skill)

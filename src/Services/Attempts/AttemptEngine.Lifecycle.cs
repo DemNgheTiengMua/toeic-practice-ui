@@ -39,6 +39,14 @@ public sealed partial class AttemptEngine
                 .ThenBy(q => q.DisplayOrder)
                 .ToListAsync(cancellationToken);
 
+            // #186: resolve the paper's bindings before anything is written. A binding whose position
+            // holds no question is refused here rather than creating an attempt the learner cannot sit
+            // to completion — and because this runs before the transaction's first insert, a refusal
+            // leaves no attempt, no answer and no free-response draft behind.
+            var bindings = await LoadPaperBindingsAsync(examId, cancellationToken);
+            EnsureBindingsRender(questions, bindings);
+            var boundByQuestion = PlaceBindings(questions, bindings);
+
             var firstSkill = questions
                 .Select(q => q.Section.Skill)
                 .OrderBy(s => s.DisplayOrder)
@@ -100,6 +108,7 @@ public sealed partial class AttemptEngine
                 attempt.LastQuestionId = questions[0].QuestionId;
                 foreach (var q in questions)
                 {
+                    boundByQuestion.TryGetValue(q.QuestionId, out var bound);
                     if (q.QuestionType != QuestionType.FreeResponse.ToCode())
                     {
                         db.AttemptAnswers.Add(new AttemptAnswer
@@ -107,7 +116,12 @@ public sealed partial class AttemptEngine
                             AttemptId = attempt.AttemptId,
                             QuestionId = q.QuestionId,
                             ExamId = examId,
+                            // #186: the row records the version, so a re-versioned or retired item
+                            // cannot change what this attempt renders later.
+                            ItemId = bound?.ItemId,
+                            ItemVersionId = bound?.ItemVersionId,
                             SelectedOptionId = null,
+                            SelectedLabel = null,
                             IsCorrect = null,
                             IsFlagged = false
                         });
@@ -346,7 +360,7 @@ public sealed partial class AttemptEngine
             freeResponses.TryGetValue(qId, out var fr);
             return new AttemptAnswerSheetItem(
                 qId,
-                ans?.SelectedOptionId,
+                ProjectedOptionId(ans),
                 ans?.SelectedOptionIdsJson,
                 fr?.ResponseText ?? ans?.ResponseText,
                 ans?.IsFlagged ?? false);
