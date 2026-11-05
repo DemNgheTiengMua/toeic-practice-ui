@@ -231,7 +231,7 @@ public static class GateOne
         var keyedIndex = Array.IndexOf(Labels, key);
         CheckKeyLength(options, keyedIndex, refusals);
         CheckParallelism(options, refusals, notices);
-        CheckStemKeyLemma(item, options, keyedIndex, refusals);
+        CheckStemKeyLemma(item, options, keyedIndex, refusals, notices);
         CheckCellBalance(cell, key[0], refusals, notices);
         CheckRationales(item, refusals);
 
@@ -389,7 +389,8 @@ public static class GateOne
         GateOneItem item,
         List<LabelledOption> options,
         int keyedIndex,
-        List<GateOneRefusal> refusals)
+        List<GateOneRefusal> refusals,
+        List<GateOneNotice> notices)
     {
         var stemContent = ContentLemmas(item.Stem);
         if (stemContent.Count == 0)
@@ -401,6 +402,18 @@ public static class GateOne
         var shared = stemContent.Keys.Where(keyContent.ContainsKey).ToList();
         if (shared.Count == 0)
         {
+            return;
+        }
+
+        // With no stimulus text the rule cannot distinguish "the stem and key repeat a word the
+        // passage also uses" from "they repeat a word nothing else uses": silence is not evidence, and
+        // refusing on it would refuse every standalone cloze and every audio item whose transcript is
+        // not carried. Reported instead, so the gap is visible rather than waived.
+        if (IsBlank(item.Stimulus))
+        {
+            notices.Add(new GateOneNotice(
+                GateOneRules.UniqueStemKeyLemma,
+                "the item carries no stimulus text, so the shared-word rule was not judged: a stem and key that repeat a word cannot be told from a legitimate one without the passage or transcript to compare against."));
             return;
         }
 

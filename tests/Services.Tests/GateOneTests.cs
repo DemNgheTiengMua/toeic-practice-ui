@@ -557,6 +557,28 @@ public sealed class GateOneTests
         Assert.Null(Refusal(verdict, GateOneRules.UniqueStemKeyLemma));
     }
 
+    /// <summary>
+    /// The gap that must be admitted rather than waived: an item with no stimulus text - a standalone
+    /// cloze, or an audio item whose transcript is not carried - cannot be judged by this rule at all.
+    /// Silence is not evidence, so it is reported and the item is still accepted.
+    /// </summary>
+    [Fact]
+    public void An_item_with_no_stimulus_text_is_reported_not_refused()
+    {
+        var verdict = GateOne.Review(
+            Legal(
+                stem: "Contractors must renew their permit before Friday.",
+                stimulus: null,
+                a: "The safety permit.",
+                b: "The depot closes.",
+                c: "The shift ends.",
+                d: "The office moves."),
+            Empty);
+
+        Assert.Null(Refusal(verdict, GateOneRules.UniqueStemKeyLemma));
+        Assert.Contains(verdict.Notices, n => n.Rule == GateOneRules.UniqueStemKeyLemma);
+    }
+
     // -----------------------------------------------------------------------------------------
     // a non-empty explanation and a rationale per option
     // -----------------------------------------------------------------------------------------
