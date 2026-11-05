@@ -30,13 +30,15 @@ _Avoid_: Clip (for a slice), part audio
 ### Learning activity
 
 **Practice session**:
-A free drill over one section, graded immediately. A listening or reading session is marked by its
-correct option; a writing session is marked against the question's own word floor and required
-keywords, never by AI, and so never charges credits. Speaking has no typed drill — a spoken answer
-cannot be typed — so a speaking section links to its recorded, AI-graded speaking practice instead.
-Bounded to a FIFO retention window (default: 20 sessions per certificate) so storage stays
-predictable while preserving enough historical question data for weakness analysis and AI mentor
-insights.
+A free drill addressed either by a section (the legacy shape) or by a cell - one topic at one CEFR
+level - which is the shape the content pool uses and the one a learning-path step points at. Graded
+immediately for an objective item: a listening or reading answer is marked by its correct option, and
+a writing answer against the question's own word floor and required keywords, never by AI, so a drill
+never charges credits. A pool productive task has no key at all, so it is recorded ungraded rather
+than scored. Speaking has no typed drill - a spoken answer cannot be typed - so a speaking section
+links to its recorded, AI-graded speaking practice instead. Bounded to a FIFO retention window
+(default: 20 sessions per certificate) so storage stays predictable while preserving enough
+historical question data for weakness analysis and AI mentor insights.
 _Avoid_: Practice (unqualified), quiz
 
 **Attempt**:
