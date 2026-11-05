@@ -63,3 +63,8 @@ __pycache__/
 *.pyc
 
 
+
+# .NET test output (trx logs, not source)
+test-results/
+*.trx
+TestResults/
