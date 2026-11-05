@@ -90,3 +90,16 @@ END TRY BEGIN CATCH
   IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
   PRINT 'rejected a duplicate (modality, code) as expected';
 END CATCH
+
+-- 7. an invented code inside the right modality is refused.
+--    Counting alone let six made-up listening codes through, which would have made "every
+--    (modality, code) pair matches the canonical list" false while the guard looked satisfied.
+DECLARE @victim INT = (SELECT TopicId FROM Topics WHERE Modality='listening' AND Code='L-ORG');
+DELETE FROM Topics WHERE TopicId = @victim;
+BEGIN TRY
+  INSERT INTO Topics (Modality, Code, Name) VALUES ('listening','L-INVENTED',N'A topic nobody specified');
+  THROW 50000, 'EXPECT_REJECT FAILED: an invented topic code was accepted', 1;
+END TRY BEGIN CATCH
+  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
+  PRINT 'rejected an invented topic code as expected';
+END CATCH

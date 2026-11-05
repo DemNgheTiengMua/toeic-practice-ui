@@ -125,13 +125,15 @@ public sealed partial class PracticeService
         }
         else if (pinned is not null)
         {
-            // A productive task has no key: a non-blank response is recorded and left ungraded, the
-            // same way the legacy path treats a free response it cannot judge without the AI queue.
+            // A productive task has no key. A response is recorded and left UNGRADED (IsCorrect null),
+            // never true: a version cannot evaluate word count or required keywords without the AI
+            // queue, and marking any non-blank text correct made a writing drill report 100% accuracy
+            // in the session summary. null means "not judged", which is what this is.
             answer.SelectedOptionId = null;
             answer.SelectedLabel = null;
             answer.SelectedOptionIdsJson = null;
             answer.ResponseText = string.IsNullOrWhiteSpace(input.ResponseText) ? null : input.ResponseText;
-            answer.IsCorrect = answer.ResponseText is null ? null : true;
+            answer.IsCorrect = null;
         }
         else if (isFreeResponse)
         {

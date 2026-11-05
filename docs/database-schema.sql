@@ -293,15 +293,31 @@ CREATE TABLE Topics (
   CONSTRAINT UQ_Topics_Modality_Code UNIQUE (Modality, Code)
 );
 GO
--- exactly twenty, six listening / six reading / four speaking / four writing. Sequential rather than
--- a CHECK so the guard is one place: a twenty-first row is refused by the same statement that
--- refuses a wrong per-modality count.
+-- exactly twenty, six listening / six reading / four speaking / four writing, and each one named:
+-- 'R-DET' is a topic, 'R-ANYTHING' is not. Counting alone was not enough - six invented listening
+-- codes passed every count check and would have made "every (modality, code) pair matches the
+-- canonical list" false while the guard looked satisfied.
 CREATE TRIGGER trg_Topics_ClosedVocabulary
 ON Topics AFTER INSERT, UPDATE, DELETE AS
 BEGIN
   SET NOCOUNT ON;
   IF (SELECT COUNT(*) FROM Topics) > 20
     THROW 50030, 'The topic vocabulary is a closed set of twenty; a twenty-first topic is refused.', 1;
+  IF EXISTS (
+    SELECT 1 FROM Topics t
+    WHERE NOT EXISTS (
+      SELECT 1 FROM (VALUES
+        ('listening','L-GIST'),('listening','L-DET'),('listening','L-INF'),
+        ('listening','L-ATT'),('listening','L-FUNC'),('listening','L-ORG'),
+        ('reading','R-GIST'),('reading','R-DET'),('reading','R-INF'),
+        ('reading','R-ATT'),('reading','R-COH'),('reading','R-GRAM'),
+        ('speaking','S-DESC'),('speaking','S-INT'),('speaking','S-ARG'),('speaking','S-SYN'),
+        ('writing','W-CORR'),('writing','W-DATA'),('writing','W-ARG'),('writing','W-DISC')
+      ) AS canonical(Modality, Code)
+      WHERE canonical.Modality = t.Modality AND canonical.Code = t.Code
+    )
+  )
+    THROW 50032, 'A topic must be one of the canonical twenty; an invented code is refused.', 1;
   IF EXISTS (
     SELECT Modality, COUNT(*) AS n FROM Topics GROUP BY Modality HAVING COUNT(*) > 6
   )
