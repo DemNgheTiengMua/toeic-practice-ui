@@ -71,6 +71,51 @@ public sealed class PracticeStartRequestTests
             Assert.Null(input.SectionId);
             Assert.Equal(7, input.TopicId);
             Assert.Equal(CefrLevel.B1, input.CefrLevel);
+            // #190: selection filters on tier, so the default must be a real tier rather than "".
+            // A request that names none draws production stock.
+            Assert.Equal(ContentTiers.Production, input.ContentTier);
+        }
+    }
+
+    /// <summary>
+    /// #190: the tier travels from the wire into the selector. Without this the service would filter
+    /// on a tier the caller never chose, and every drill would silently draw production.
+    /// </summary>
+    [Fact]
+    public async Task A_cell_request_carries_the_tier_it_names()
+    {
+        var service = new RecordingService();
+        var (client, app) = await PracticeAppAsync(service);
+        using (app)
+        {
+            var response = await client.PostAsJsonAsync(
+                "/api/learner/practice/sessions",
+                new StartPracticeRequest(TopicId: 7, CefrLevelCode: "B1", ContentTier: ContentTiers.Demo));
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            var input = Assert.IsType<StartPracticeSessionInput>(service.StartedInput);
+            Assert.Equal(ContentTiers.Demo, input.ContentTier);
+        }
+    }
+
+    /// <summary>
+    /// #190: a tier that is not one of the two is a 400 with a reason, not a 500 and not a silent
+    /// fallback to production. The schema's CHECK would refuse it, but by then the request is already
+    /// in the service and the caller gets a database error for a field they typed.
+    /// </summary>
+    [Fact]
+    public async Task A_tier_outside_the_two_is_refused_before_the_service_runs()
+    {
+        var service = new RecordingService();
+        var (client, app) = await PracticeAppAsync(service);
+        using (app)
+        {
+            var response = await client.PostAsJsonAsync(
+                "/api/learner/practice/sessions",
+                new StartPracticeRequest(TopicId: 7, CefrLevelCode: "B1", ContentTier: "pilot"));
+
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            Assert.Null(service.StartedInput);
         }
     }
 
