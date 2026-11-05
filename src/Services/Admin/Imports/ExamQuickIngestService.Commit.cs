@@ -17,6 +17,20 @@ namespace Services;
 public sealed partial class ExamQuickIngestService
 {
 
+    /// <summary>
+    /// #189: writes the pasted questions, then the pool stock they become.
+    /// <para>
+    /// The legacy rows come first because they are what a paper renders until #231, and because the
+    /// pool binding is placed by the position those rows give a question. Each paste group - a
+    /// passage plus its children - becomes <em>one</em> stimulus row shared by all of its children,
+    /// which is the difference between a shared passage and a copy per question.
+    /// </para>
+    /// <para>
+    /// A question the pool cannot hold (three options, a multi-select, a typed answer) is still
+    /// written in the legacy shape and named in the message. This is the expand half: a commit must
+    /// not fail because the pool is narrower than the old formats.
+    /// </para>
+    /// </summary>
     public async Task<QuickIngestCommitResultDto> CommitStagedAsync(
         int examId,
         QuickIngestCommitRequest request,
@@ -100,6 +114,8 @@ public sealed partial class ExamQuickIngestService
             }
         }
 
+        var topics = await TopicCatalog.LoadAsync(db, cancellationToken);
+
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
 
         var isReplace = string.Equals(request.Mode, "replace", StringComparison.OrdinalIgnoreCase);
@@ -121,6 +137,17 @@ public sealed partial class ExamQuickIngestService
             if (hasAnswers)
             {
                 throw new AdminExamException(ApiError.Codes.QuestionHasAttemptAnswers, "Cannot replace section content because completed or active learner attempts exist.", 400);
+            }
+
+            // #189: a re-paste of a section replaces what the paper shows, so its bindings go with the
+            // rows they were placed on. Leaving them would bind a version to a position that no longer
+            // exists, which is a paper with a hole in it.
+            var existingBindings = await db.ExamItems
+                .Where(b => b.ExamId == examId && b.SectionId == request.SectionId)
+                .ToListAsync(cancellationToken);
+            if (existingBindings.Count > 0)
+            {
+                db.ExamItems.RemoveRange(existingBindings);
             }
 
             foreach (var g in existingGroups)
@@ -164,6 +191,10 @@ public sealed partial class ExamQuickIngestService
         var groupsCreated = 0;
         var questionsCreated = 0;
 
+        var poolNotes = new List<string>();
+        var groupStimuli = new Dictionary<int, PoolImport.StimulusInput>();
+        var writtenQuestions = new List<(int QuestionId, int GroupId, PoolContent Content, string Stem, QuickIngestParsedQuestionDto Source)>();
+
         QuestionGroup? activeGroup = null;
         string? activePassage = null;
         int? activeGroupNum = null;
@@ -192,6 +223,12 @@ public sealed partial class ExamQuickIngestService
 
                 activePassage = q.Passage;
                 activeGroupNum = q.GroupNumber;
+
+                // One stimulus per paste group, not one per child: that is what a shared passage is.
+                groupStimuli[activeGroup.GroupId] = new PoolImport.StimulusInput(
+                    PoolImport.Normalise(q.CefrLevel),
+                    Passage: q.Passage,
+                    Transcript: q.Transcript);
             }
 
             int? categoryId = null;
@@ -248,7 +285,48 @@ public sealed partial class ExamQuickIngestService
                 }
             }
 
+            // Resolved after the legacy row exists: the pool write binds by the position the paper
+            // renders, and a position is a rank among rows, so it cannot be known before them.
+            if (TryBuildPoolContent(topics, section.Modality, q, request, out var content, out var reason))
+            {
+                writtenQuestions.Add((question.QuestionId, activeGroup.GroupId, content!, q.Stem.Trim(), q));
+            }
+            else
+            {
+                poolNotes.Add($"Question {q.Index} (\"{Truncate(q.Stem)}\") not written to the pool - {reason}");
+            }
+
             currentDisplayOrder++;
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+
+        var poolWritten = 0;
+        var poolStimuli = 0;
+        var poolBound = 0;
+        foreach (var groupId in writtenQuestions.Select(w => w.GroupId).Distinct())
+        {
+            var requests = writtenQuestions
+                .Where(w => w.GroupId == groupId)
+                .Select(w => new PoolImportWriter.Request(
+                    w.QuestionId,
+                    $"{request.SectionId}:{groupId}",
+                    w.Content,
+                    w.Stem,
+                    w.Source.Explanation,
+                    w.Source.SampleAnswerOrImageDesc,
+                    w.Source.ReferenceKind?.ToCode(),
+                    groupStimuli.TryGetValue(groupId, out var stimulus)
+                        ? stimulus
+                        : new PoolImport.StimulusInput(request.CefrLevel)))
+                .ToList();
+
+            var outcome = await PoolImportWriter.WriteAsync(
+                db, exam, request.SectionId, section.Modality, requests, null, clock?.GetUtcNow() ?? DateTimeOffset.UtcNow, cancellationToken);
+            poolWritten += outcome.ItemsWritten;
+            poolStimuli += outcome.StimuliWritten;
+            poolBound += outcome.Bound;
+            poolNotes.AddRange(outcome.Notes);
         }
 
         exam.UpdatedAt = clock?.GetUtcNow() ?? DateTimeOffset.UtcNow;
@@ -256,10 +334,57 @@ public sealed partial class ExamQuickIngestService
 
         await tx.CommitAsync(cancellationToken);
 
+        var message = $"Successfully committed {questionsCreated} questions to section '{section.Name}'.";
+        if (poolWritten > 0)
+        {
+            message += $" Wrote {poolWritten} pool items and {poolStimuli} shared stimuli, {poolBound} bound to this paper.";
+        }
+
         return new QuickIngestCommitResultDto(
             Success: true,
             QuestionsCommitted: questionsCreated,
             GroupsCreated: groupsCreated,
-            Message: $"Successfully committed {questionsCreated} questions to section '{section.Name}'.");
+            Message: poolNotes.Count == 0 ? message : $"{message} {string.Join(" ", poolNotes)}",
+            PoolItemsWritten: poolWritten,
+            PoolStimuliWritten: poolStimuli,
+            PoolItemsBound: poolBound);
     }
+
+    /// <summary>
+    /// #189: the pool content for one pasted question, or the reason it cannot become pool stock.
+    /// The level and topic are asked for once per commit and may be overridden per question, because
+    /// the parser reads text, not a level - D1 forbids inventing one from the difficulty number.
+    /// </summary>
+    private static bool TryBuildPoolContent(
+        TopicCatalog topics,
+        string modality,
+        QuickIngestParsedQuestionDto question,
+        QuickIngestCommitRequest request,
+        out PoolContent? content,
+        out string reason)
+    {
+        var options = (question.Options ?? [])
+            .Select(o => ((string?)o.Label, (string?)o.Text, o.IsCorrect))
+            .ToList();
+
+        return PoolImport.TryBuildContent(
+            topics,
+            modality,
+            question.ItemType,
+            hasPassage: !string.IsNullOrWhiteSpace(question.Passage),
+            question.TopicCode ?? request.TopicCode,
+            question.CategoryCode,
+            question.CefrLevel ?? request.CefrLevel,
+            question.PlacementEligible,
+            options,
+            question.EvidenceStart,
+            question.EvidenceEnd,
+            question.EvidenceUnit,
+            question.EvidenceQuote,
+            out content,
+            out reason);
+    }
+
+    private static string Truncate(string? stem) =>
+        stem is null ? "(no stem)" : stem.Length > 60 ? stem[..57] + "..." : stem;
 }

@@ -48,6 +48,27 @@ public sealed class QuestionImportServiceTests(DatabaseFixture database)
             INSERT INTO QuestionCategories (CertId, Code, Name) VALUES
               (@c, 'grammar_prep', N'Preposition'), (@c, 'reading_inference', N'Inference'),
               (@c, 'listening_photo', N'Photographs'), (@c, 'listening_detail', N'Detail');
+
+            -- #189: the pool axis. A database without the canonical topics cannot hold pool stock, so
+            -- these tests assert the pool write against a vocabulary that exists. Each row is guarded
+            -- on its own: the set is closed at twenty, and a table-wide guard would skip the rest
+            -- whenever another fixture had already inserted one.
+            IF NOT EXISTS (SELECT 1 FROM Topics WHERE Modality = 'reading' AND Code = 'R-DET')
+              INSERT INTO Topics (Modality, Code, Name) VALUES ('reading', 'R-DET', N'Local factual retrieval and paraphrase matching');
+            IF NOT EXISTS (SELECT 1 FROM Topics WHERE Modality = 'reading' AND Code = 'R-INF')
+              INSERT INTO Topics (Modality, Code, Name) VALUES ('reading', 'R-INF', N'Bridging inference and logical deduction');
+            IF NOT EXISTS (SELECT 1 FROM Topics WHERE Modality = 'reading' AND Code = 'R-GRAM')
+              INSERT INTO Topics (Modality, Code, Name) VALUES ('reading', 'R-GRAM', N'Morphosyntactic structure and lexical precision');
+            IF NOT EXISTS (SELECT 1 FROM Topics WHERE Modality = 'reading' AND Code = 'R-GIST')
+              INSERT INTO Topics (Modality, Code, Name) VALUES ('reading', 'R-GIST', N'Global thesis, purpose, paragraph main idea');
+            IF NOT EXISTS (SELECT 1 FROM Topics WHERE Modality = 'listening' AND Code = 'L-DET')
+              INSERT INTO Topics (Modality, Code, Name) VALUES ('listening', 'L-DET', N'Explicit factual detail and extraction');
+            IF NOT EXISTS (SELECT 1 FROM Topics WHERE Modality = 'listening' AND Code = 'L-FUNC')
+              INSERT INTO Topics (Modality, Code, Name) VALUES ('listening', 'L-FUNC', N'Communicative function and speech acts');
+            IF NOT EXISTS (SELECT 1 FROM Topics WHERE Modality = 'speaking' AND Code = 'S-DESC')
+              INSERT INTO Topics (Modality, Code, Name) VALUES ('speaking', 'S-DESC', N'Informational description and personal framing');
+            IF NOT EXISTS (SELECT 1 FROM Topics WHERE Modality = 'writing' AND Code = 'W-CORR')
+              INSERT INTO Topics (Modality, Code, Name) VALUES ('writing', 'W-CORR', N'Transactional correspondence and register control');
             INSERT INTO GradingCriteria (CertId, SkillId, Code, Name, MaxScore, Weight, DisplayOrder) VALUES
               (@c, @s, 'PRON', N'Pronunciation', 3, 1, 1), (@c, @s, 'INT', N'Intonation', 3, 1, 2),
               (@c, @s, 'GRAM', N'Grammar', 3, 1, 3), (@c, @s, 'REL', N'Relevance', 3, 1, 4),
@@ -132,6 +153,24 @@ public sealed class QuestionImportServiceTests(DatabaseFixture database)
 
         var passage = await db.QuestionGroups.Where(g => g.ExamId == exam.ExamId && g.Passage != null).SingleAsync();
         Assert.StartsWith("Notice to all building tenants", passage.Passage);
+
+        // #189: the same file also writes the pool. Both questions are pool items with a version
+        // each, bound to the paper rather than owned by it; the sample's own levels and types decide
+        // where they land, and the legacy rows above are still what the paper renders until #231.
+        var bindings = await db.ExamItems.AsNoTracking().Where(b => b.ExamId == exam.ExamId).ToListAsync();
+        Assert.Equal(2, bindings.Count);
+        Assert.Equal(2, bindings.Select(b => b.ItemId).Distinct().Count());
+        Assert.Equal(2, await db.ItemVersions.CountAsync(v => bindings.Select(b => b.ItemVersionId).Contains(v.ItemVersionId)));
+
+        var poolItems = await db.Items.AsNoTracking()
+            .Where(i => bindings.Select(b => b.ItemId).Contains(i.ItemId))
+            .ToListAsync();
+        Assert.Equal(2, poolItems.Count);
+        Assert.All(poolItems, i => Assert.Equal("demo", i.ContentTier));
+        Assert.All(poolItems, i => Assert.Equal("reading", i.Modality));
+        // The item types the sample states, not something inferred from the section.
+        Assert.Contains(poolItems, i => i.ItemType == "sentence_cloze");
+        Assert.Contains(poolItems, i => i.ItemType == "passage_comprehension");
     }
 
     [Fact]

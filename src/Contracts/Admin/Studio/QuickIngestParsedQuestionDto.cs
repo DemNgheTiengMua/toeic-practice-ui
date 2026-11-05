@@ -3,6 +3,12 @@ using System.Collections.Generic;
 
 namespace Contracts;
 
+/// <summary>
+/// #189: one parsed question. The pool fields are what the commit needs in order to write an item:
+/// a level, a topic and one of D0.4's fourteen types. They are nullable because the parse is also
+/// used for a paper that only ever reaches the legacy shape, and because a parser can read a level
+/// only when the pasted text states one.
+/// </summary>
 public sealed record QuickIngestParsedQuestionDto(
     int Index,
     int StartLineNumber,
@@ -28,4 +34,12 @@ public sealed record QuickIngestParsedQuestionDto(
     int? MinWords = null,
     bool AllowNumber = true,
     string? SampleAnswerOrImageDesc = null,
-    ReferenceKindDto? ReferenceKind = null);
+    ReferenceKindDto? ReferenceKind = null,
+    string? CefrLevel = null,
+    string? TopicCode = null,
+    string? ItemType = null,
+    bool PlacementEligible = false,
+    int? EvidenceStart = null,
+    int? EvidenceEnd = null,
+    string? EvidenceUnit = null,
+    string? EvidenceQuote = null);

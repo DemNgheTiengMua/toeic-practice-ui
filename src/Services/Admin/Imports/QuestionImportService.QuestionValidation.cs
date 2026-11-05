@@ -22,6 +22,7 @@ public sealed partial class QuestionImportService
         Section? section,
         Dictionary<string, int> categories,
         ILookup<int, string> criteria,
+        TopicCatalog topics,
         ImportReport report)
     {
         var errorsBefore = report.ErrorCount;
@@ -35,6 +36,23 @@ public sealed partial class QuestionImportService
         if (question.DifficultyLevel is not (>= 1 and <= 5))
         {
             Fail("difficultyLevel must be between 1 and 5.");
+        }
+
+        // #189: the pool's own coordinates. Both are optional - a file that predates the pool has
+        // neither and still imports into the legacy shape - but when either is given it must be
+        // real: an invented topic and a level that is not on the authored ladder are typos the
+        // author can only see if the file is refused.
+        if (!string.IsNullOrWhiteSpace(question.CefrLevel)
+            && !CefrLevel.TryParseAuthored(question.CefrLevel.Trim(), out _))
+        {
+            Fail($"cefrLevel '{question.CefrLevel}' is not an authored level. Content is authored at A1-C2; there is no difficulty-to-level mapping (D1).");
+        }
+
+        var modality = section?.Modality ?? "reading";
+        if (!string.IsNullOrWhiteSpace(question.TopicCode)
+            && !topics.TryFind(modality, question.TopicCode.Trim(), out _))
+        {
+            Fail($"topicCode '{question.TopicCode}' is not a {modality} topic. The vocabulary is a closed set of twenty: {topics.Canonical(modality)}.");
         }
 
         if (question.Hint?.Length > 1000)

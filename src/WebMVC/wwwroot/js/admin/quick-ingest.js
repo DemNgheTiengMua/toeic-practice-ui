@@ -14,6 +14,19 @@
   var bpTitle = document.getElementById('qi-bp-title');
   var bpBadges = document.getElementById('qi-bp-badges');
   var bpGuide = document.getElementById('qi-bp-guide');
+  // #189: the pool coordinates of the paste. Optional - an unstated level means the legacy shape
+  // only, with the reason shown back in the commit message.
+  var cefrLevelSelect = document.getElementById('qi-cefr-level');
+  var topicCodeSelect = document.getElementById('qi-topic-code');
+
+  // The canonical reading/listening topics, per the closed vocabulary. Populated from the selected
+  // section's modality so an author cannot pick a listening topic for a reading paste.
+  var topicsByModality = {
+    reading: ['R-GIST', 'R-DET', 'R-INF', 'R-ATT', 'R-COH', 'R-GRAM'],
+    listening: ['L-GIST', 'L-DET', 'L-INF', 'L-ATT', 'L-FUNC', 'L-ORG'],
+    speaking: ['S-DESC', 'S-INT', 'S-ARG', 'S-SYN'],
+    writing: ['W-CORR', 'W-DATA', 'W-ARG', 'W-DISC']
+  };
 
   var currentExamId = null;
   var currentSections = [];
@@ -40,6 +53,8 @@
 
     rawText.value = '';
     currentParsedResult = null;
+    if (cefrLevelSelect) cefrLevelSelect.value = '';
+    if (topicCodeSelect) topicCodeSelect.value = '';
     previewContainer.style.display = 'none';
     previewBody.innerHTML = '';
     summaryBadge.textContent = '';
@@ -73,6 +88,7 @@
 
     var code = sec.code || sec.Code || '';
     var name = sec.name || sec.Name || '';
+    var modality = sec.modality || sec.Modality || 'reading';
     var optCount = sec.optionCount || sec.OptionCount || 4;
     var clusterSize = sec.clusterSize || sec.ClusterSize || 1;
     var requirePassage = sec.requirePassage ?? sec.RequirePassage ?? false;
@@ -112,6 +128,23 @@
     } else {
       bpGuide.innerHTML = '<strong>Standard MCQ Mode:</strong> Paste questions with <code>*A. Correct</code> or trailing <code>ANSWER: B</code>. Enforces ' + optCount + ' options (A-' + String.fromCharCode(64 + optCount) + ').';
     }
+
+    // #189: the topic list follows the section's skill, so a listening paste cannot be filed under a
+    // reading topic. The level is free of the section: one paper can hold several levels.
+    refreshTopicOptions(modality);
+  }
+
+  function refreshTopicOptions(modality) {
+    if (!topicCodeSelect) return;
+    var previous = topicCodeSelect.value;
+    topicCodeSelect.innerHTML = '<option value="">Not stated</option>';
+    (topicsByModality[modality] || []).forEach(function(code) {
+      var opt = document.createElement('option');
+      opt.value = code;
+      opt.textContent = code;
+      topicCodeSelect.appendChild(opt);
+    });
+    if (previous) topicCodeSelect.value = previous;
   }
 
   sectionSelect.addEventListener('change', function() {
@@ -363,7 +396,11 @@
     var commitPayload = {
       sectionId: secId,
       mode: selectedMode,
-      questions: currentParsedResult.questions
+      questions: currentParsedResult.questions,
+      // #189: the pool coordinates, stated once for the batch. Absent means the questions are
+      // written in the legacy shape only, and the commit message says what to add.
+      cefrLevel: cefrLevelSelect ? (cefrLevelSelect.value || null) : null,
+      topicCode: topicCodeSelect ? (topicCodeSelect.value || null) : null
     };
 
     fetch('/admin/exams/' + currentExamId + '/quick-ingest/commit', {

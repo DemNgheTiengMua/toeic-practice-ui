@@ -13,6 +13,41 @@ public sealed class ImportManifestQuestion
     public string? Hint { get; set; }
 
     /// <summary>
+    /// #189: the level the item is authored at, and the reason a manifest can now write the pool at
+    /// all. It is required for a pool write and has no default: D1 forbids mapping the five-point
+    /// difficulty onto a CEFR level, so a file that names only <see cref="DifficultyLevel"/> still
+    /// imports into the legacy shape and is told, per question, what to add.
+    /// </summary>
+    public string? CefrLevel { get; set; }
+
+    /// <summary>
+    /// #189: a canonical topic code (R-DET, L-GIST, …). When absent the legacy
+    /// <see cref="CategoryCode"/> is mapped, and when that is absent either, the item type's own
+    /// topic is used. An invented code is refused rather than clamped.
+    /// </summary>
+    public string? TopicCode { get; set; }
+
+    /// <summary>
+    /// #189: one of D0.4's fourteen types. Derived for a reading question (a passage means
+    /// <c>passage_comprehension</c>, its absence <c>sentence_cloze</c>); required for the other three
+    /// skills, whose types the text alone cannot determine.
+    /// </summary>
+    public string? ItemType { get; set; }
+
+    /// <summary>#189: whether placement may draw this item. Absent means no.</summary>
+    public bool? PlacementEligible { get; set; }
+
+    /// <summary>#189: CNT-11's evidence span - seconds for audio, characters for text.</summary>
+    public int? EvidenceStart { get; set; }
+
+    public int? EvidenceEnd { get; set; }
+
+    /// <summary><c>char</c> or <c>sec</c>.</summary>
+    public string? EvidenceUnit { get; set; }
+
+    public string? EvidenceQuote { get; set; }
+
+    /// <summary>
     /// #152: the words a Read Aloud question asks the learner to say, or a description of the picture
     /// a Describe-a-Picture question shows. <see cref="ReferenceKind"/> says which.
     /// </summary>

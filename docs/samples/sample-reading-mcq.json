@@ -13,6 +13,7 @@
       "groups": [
         {
           "passage": null,
+          "cefrLevel": "B1",
           "audioFile": null,
           "audioStartMs": null,
           "audioEndMs": null,
@@ -24,6 +25,8 @@
             {
               "stem": "The annual sales report will be released to shareholders _____ the end of the current fiscal year.",
               "difficultyLevel": 2,
+              "cefrLevel": "B1",
+              "itemType": "sentence_cloze",
               "questionType": "mcq",
               "categoryCode": "grammar_prep",
               "explanation": "The preposition 'at' or 'by' denotes a deadline or specific point in time; 'at the end of' is the standard idiomatic phrase.",
@@ -65,6 +68,7 @@
       "groups": [
         {
           "passage": "Notice to all building tenants:\nThe main elevators in the North Tower will be undergoing scheduled maintenance this Saturday, October 20, between 8:00 AM and 2:00 PM. During this period, please use the service elevator located near the rear entrance. We apologize for any inconvenience.",
+          "cefrLevel": "B1",
           "audioFile": null,
           "audioStartMs": null,
           "audioEndMs": null,
@@ -76,6 +80,8 @@
             {
               "stem": "What is the purpose of the notice?",
               "difficultyLevel": 3,
+              "cefrLevel": "B1",
+              "itemType": "passage_comprehension",
               "questionType": "mcq",
               "categoryCode": "reading_inference",
               "explanation": "The notice informs tenants about elevator maintenance and alternative access.",
