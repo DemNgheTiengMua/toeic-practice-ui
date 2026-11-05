@@ -84,7 +84,8 @@ public sealed class CertificateServiceTests(DatabaseFixture database)
             .SqlQuery<int>($"SELECT COUNT(*) AS Value FROM sys.triggers")
             .SingleAsync();
         // #183: trg_Topics_ClosedVocabulary, which refuses a twenty-first topic.
-        Assert.Equal(28, triggerCount);
+        // #184: trg_ItemVersions_ScoredFieldsImmutable, which refuses an in-place scored-field edit.
+        Assert.Equal(29, triggerCount);
 
         var viewCount = await db.Database
             .SqlQuery<int>($"SELECT COUNT(*) AS Value FROM sys.views")

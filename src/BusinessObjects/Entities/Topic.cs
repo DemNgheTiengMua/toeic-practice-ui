@@ -14,6 +14,7 @@ namespace BusinessObjects.Entities;
 /// per-certificate and unlevelled, which is why twelve of its fifteen buckets held no items.
 /// </summary>
 [Index("Modality", "Code", Name = "UQ_Topics_Modality_Code", IsUnique = true)]
+[Index("TopicId", "Modality", Name = "UQ_Topics_Id_Modality", IsUnique = true)]
 public partial class Topic
 {
     [Key]
@@ -29,4 +30,9 @@ public partial class Topic
 
     [StringLength(160)]
     public string Name { get; set; } = null!;
+
+    /// <summary>#184: the items authored against this topic. A topic holds many cells, one per level.</summary>
+    [InverseProperty("Topic")]
+    public virtual ICollection<Item> Items { get; set; } = new List<Item>();
 }
+

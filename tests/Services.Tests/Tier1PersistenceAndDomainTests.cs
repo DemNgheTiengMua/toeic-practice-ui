@@ -35,7 +35,10 @@ public sealed class Tier1PersistenceAndDomainTests(DatabaseFixture database)
             "Exams",
             "FreeResponses",
             "GradingCriteria",
-            "Orders"
+            "Orders",
+            // #184: the copy-on-write guard. Also exercised through a real save in PoolPersistenceTests,
+            // because a model-only assertion cannot see the OUTPUT clause actually failing.
+            "ItemVersions"
         ];
 
         foreach (var tableName in auditedTables)
