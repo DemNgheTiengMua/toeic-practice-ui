@@ -33,6 +33,7 @@ public sealed partial class QuestionImportService
         var criteria = (await db.GradingCriteria.AsNoTracking().Where(c => c.CertId == certId)
                 .Select(c => new { c.SkillId, c.Code }).ToListAsync(cancellationToken))
             .ToLookup(c => c.SkillId, c => c.Code);
+        var topics = await TopicCatalog.LoadAsync(db, cancellationToken);
 
         if (manifest.Sections is not { Count: > 0 })
         {
@@ -102,7 +103,7 @@ public sealed partial class QuestionImportService
                 foreach (var (questionSource, questionIndex) in groupSource.Questions.Select((q, i) => (q, i + 1)))
                 {
                     row++;
-                    var planned = ValidateQuestion(questionSource, $"{groupWhere}, question {questionIndex}", row, questionIndex, section, categories, criteria, report);
+                    var planned = ValidateQuestion(questionSource, $"{groupWhere}, question {questionIndex}", row, questionIndex, section, categories, criteria, topics, report);
                     if (planned is not null)
                     {
                         questions.Add(planned);

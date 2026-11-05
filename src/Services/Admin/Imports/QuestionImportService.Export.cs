@@ -1,21 +1,24 @@
+using System.IO;
 using System.IO.Compression;
-using System.Text;
 using System.Text.Json;
-using BusinessObjects;
-using Contracts;
+using System.Threading;
+using System.Threading.Tasks;
 using DataAccess;
-using BusinessObjects.Entities;
-using BusinessObjects.Views;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 namespace Services;
 
 public sealed partial class QuestionImportService
 {
 
-    // ---- Lossless Exam Export ----
+    // ---- Lossless exam export ----
 
+    /// <summary>
+    /// #189: the manifest is built by <see cref="QuestionExportManifest"/>, which both exporters
+    /// share. Where the pool has assembled a paper position the export writes the pool's own version,
+    /// so exporting what was imported and importing it again reproduces it rather than the legacy
+    /// skeleton it was also written into.
+    /// </summary>
     public async Task<(Stream Stream, string ContentType, string FileName)> ExportExamPackageAsync(int examId, string? format = "zip", CancellationToken cancellationToken = default)
     {
         var exam = await db.Exams.AsNoTracking()
@@ -27,140 +30,49 @@ public sealed partial class QuestionImportService
             throw new ExamNotFoundException(examId);
         }
 
-        var groups = await db.QuestionGroups.AsNoTracking()
-            .Include(g => g.Section)
-            .Include(g => g.QuestionGroups)
-                .ThenInclude(q => q.QuestionOptionQuestionNavigations)
-            .Include(g => g.QuestionGroups)
-                .ThenInclude(q => q.Category)
-            .Where(g => g.ExamId == examId)
-            .OrderBy(g => g.DisplayOrder)
-            // Two collection levels (questions, then options): split, or EF warns 20504 and the
-            // rows multiply (see the readiness audit). Children are re-ordered in memory below.
-            .AsSplitQuery()
-            .ToListAsync(cancellationToken);
+        var manifest = await QuestionExportManifest.BuildAsync(db, exam, format, cancellationToken);
+        return await WritePackageAsync(manifest, exam.Name, format, fileStore, cancellationToken);
+    }
 
+    /// <summary>
+    /// Serialises a built manifest, picking up the media a package needs. Shared with
+    /// <see cref="AdminExamService"/> so the zip's entry names and the manifest's references cannot
+    /// disagree - the one thing a re-import depends on.
+    /// </summary>
+    internal static async Task<(Stream Stream, string ContentType, string FileName)> WritePackageAsync(
+        ImportManifest manifest,
+        string examName,
+        string? format,
+        IFileStore? fileStore,
+        CancellationToken cancellationToken)
+    {
+        var safeTitle = string.Join("_", examName.Split(Path.GetInvalidFileNameChars())).Replace(" ", "_");
         var isZip = string.Equals(format, "zip", StringComparison.OrdinalIgnoreCase);
-
-        var manifest = new ImportManifest
-        {
-            Version = "1.0",
-            Exam = new ImportManifestExam
-            {
-                Title = exam.Name,
-                Purpose = exam.Purpose,
-                DeliveryMode = exam.DeliveryMode,
-                DurationMinutes = exam.DurationMinutes,
-                SourceName = exam.SourceName,
-                Description = exam.Description,
-                QuestionCount = exam.QuestionCount,
-            },
-            Sections = groups
-                .GroupBy(g => g.Section)
-                .OrderBy(sg => sg.Key.DisplayOrder)
-                .Select(sg => new ImportManifestSection
-                {
-                    SectionCode = sg.Key.Code,
-                    Groups = sg.OrderBy(g => g.DisplayOrder).Select(g =>
-                    {
-                        string? audioRel = null;
-                        string? imageRel = null;
-                        if (!string.IsNullOrWhiteSpace(g.AudioPath))
-                        {
-                            audioRel = $"media/{Path.GetFileName(g.AudioPath)}";
-                        }
-                        if (!string.IsNullOrWhiteSpace(g.ImagePath))
-                        {
-                            imageRel = $"media/{Path.GetFileName(g.ImagePath)}";
-                        }
-
-                        return new ImportManifestGroup
-                        {
-                            UnitNumber = g.UnitNumber,
-                            Passage = g.Passage,
-                            AudioFile = isZip ? audioRel : null,
-                            AudioStartMs = g.AudioStartMs,
-                            AudioEndMs = g.AudioEndMs,
-                            ImageFile = isZip ? imageRel : null,
-                            ImageAlt = g.ImageAlt,
-                            Transcript = g.Transcript,
-                            PrepSeconds = g.PrepSeconds,
-                            ResponseSeconds = g.ResponseSeconds,
-                            DisplayOrder = g.DisplayOrder,
-                            Questions = g.QuestionGroups.OrderBy(q => q.DisplayOrder).Select(q =>
-                            {
-                                List<string>? acceptedAnswers = null;
-                                if (!string.IsNullOrWhiteSpace(q.AcceptedAnswersJson))
-                                {
-                                    acceptedAnswers = AttemptEngine.ParseAcceptedAnswers(q.AcceptedAnswersJson);
-                                }
-
-                                List<string>? requiredKeywords = null;
-                                if (!string.IsNullOrWhiteSpace(q.RequiredKeywords))
-                                {
-                                    requiredKeywords = AttemptEngine.ParseKeywords(q.RequiredKeywords);
-                                }
-
-                                return new ImportManifestQuestion
-                                {
-                                    Stem = q.Stem,
-                                    DifficultyLevel = q.DifficultyLevel,
-                                    QuestionType = q.QuestionType,
-                                    CategoryCode = q.Category?.Code,
-                                    Explanation = q.Explanation,
-                                    Hint = q.Hint,
-                                    SampleAnswerOrImageDesc = q.SampleAnswerOrImageDesc,
-                                    ReferenceKind = q.ReferenceKind,
-                                    PrepSeconds = q.PrepSeconds,
-                                    ResponseSeconds = q.ResponseSeconds,
-                                    MinWords = q.MinWords,
-                                    MaxWords = q.MaxWords,
-                                    DisplayOrder = q.DisplayOrder,
-                                    MaxSelections = q.MaxSelections,
-                                    AllowNumber = q.AllowNumber,
-                                    AcceptedAnswers = acceptedAnswers,
-                                    RequiredKeywords = requiredKeywords,
-                                    Options = q.QuestionOptionQuestionNavigations.Count == 0
-                                        ? null
-                                        : q.QuestionOptionQuestionNavigations.OrderBy(o => o.Label).Select(o => new ImportManifestOption
-                                        {
-                                            Label = o.Label,
-                                            Text = o.Text,
-                                            IsCorrect = o.IsCorrect,
-                                            Rationale = o.Rationale,
-                                        }).ToList(),
-                                };
-                            }).ToList(),
-                        };
-                    }).ToList(),
-                }).ToList(),
-        };
-
-        var safeTitle = string.Join("_", exam.Name.Split(Path.GetInvalidFileNameChars())).Replace(" ", "_");
 
         if (!isZip)
         {
             var jsonBytes = JsonSerializer.SerializeToUtf8Bytes(manifest, ImportManifest.Json);
-            var ms = new MemoryStream(jsonBytes);
-            return (ms, "application/json", $"{safeTitle}_manifest.json");
+            return (new MemoryStream(jsonBytes), "application/json", $"{safeTitle}_manifest.json");
         }
 
         var zipMs = new MemoryStream();
         using (var archive = new ZipArchive(zipMs, ZipArchiveMode.Create, leaveOpen: true))
         {
             var manifestEntry = archive.CreateEntry("manifest.json");
-            using (var entryStream = manifestEntry.Open())
+            await using (var entryStream = manifestEntry.Open())
             {
                 await JsonSerializer.SerializeAsync(entryStream, manifest, ImportManifest.Json, cancellationToken);
             }
 
-            if (fileStore != null)
-            {
-                var mediaPaths = groups
-                    .SelectMany(g => new[] { g.AudioPath, g.ImagePath })
-                    .Where(p => !string.IsNullOrWhiteSpace(p))
-                    .Distinct();
+            var mediaPaths = manifest.Sections?
+                .SelectMany(s => s.Groups ?? [])
+                .SelectMany(g => new[] { g.AudioFile, g.ImageFile })
+                .Where(p => !string.IsNullOrWhiteSpace(p))
+                .Distinct()
+                .ToList() ?? [];
 
+            if (fileStore is not null)
+            {
                 foreach (var path in mediaPaths)
                 {
                     var cleanPath = path!.TrimStart('/');
@@ -170,13 +82,14 @@ public sealed partial class QuestionImportService
                     }
 
                     var media = await fileStore.GetMediaAsync(cleanPath, cancellationToken);
-                    if (media != null)
+                    if (media is null)
                     {
-                        var entryName = Path.GetFileName(cleanPath);
-                        var mediaEntry = archive.CreateEntry($"media/{entryName}");
-                        using var mediaStream = mediaEntry.Open();
-                        await media.Stream.CopyToAsync(mediaStream, cancellationToken);
+                        continue;
                     }
+
+                    var mediaEntry = archive.CreateEntry($"media/{Path.GetFileName(cleanPath)}");
+                    await using var mediaStream = mediaEntry.Open();
+                    await media.Stream.CopyToAsync(mediaStream, cancellationToken);
                 }
             }
         }
