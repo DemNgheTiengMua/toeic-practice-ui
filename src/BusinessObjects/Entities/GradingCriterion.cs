@@ -45,6 +45,11 @@ public partial class GradingCriterion
     [InverseProperty("GradingCriterion")]
     public virtual ICollection<SectionCriterion> SectionCriteria { get; set; } = new List<SectionCriterion>();
 
+    /// <summary>#192: the seven-band grid. Seven rows is the authored shape; the lock refuses fewer.</summary>
+    [InverseProperty("Criterion")]
+    public virtual ICollection<GradingCriterionDescriptor> Descriptors { get; set; } = new List<GradingCriterionDescriptor>();
+
+
     [ForeignKey("SkillId, CertId")]
     [InverseProperty("GradingCriteria")]
     public virtual Skill Skill { get; set; } = null!;

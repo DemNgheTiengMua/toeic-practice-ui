@@ -60,18 +60,26 @@ public sealed class ClaudeAiGrader : IAiGrader
         var ungradeable = request.Criteria.Where(c => !c.IsGradeable).ToList();
         if (ungradeable.Count > 0)
         {
+            // #192: the code is what the author needs in the log to find the row. The criterion id is
+            // there too, because a code can be renamed and an id cannot.
             _logger?.LogWarning(
-                "Criteria without a RubricDescription were not graded for FreeResponseId {FreeResponseId}: {Criteria}",
+                "Criteria without a rubric were not graded for FreeResponseId {FreeResponseId}: {Criteria}",
                 request.FreeResponseId,
-                string.Join(", ", ungradeable.Select(c => $"{c.Code} ({c.CriterionId})")));
+                string.Join(", ", ungradeable.Select(c =>
+                    $"{c.Code} ({c.CriterionId})"
+                    + (c.MissingBands.Count > 0 ? $" missing band(s) {string.Join(",", c.MissingBands)}" : " no text"))));
         }
 
         if (gradeable.Count == 0)
         {
-            return Fail(request.Criteria.Count == 0
-                ? "This task has no grading criteria, so there is nothing to score."
-                : "None of this task's grading criteria has a rubric description, so nothing can be scored. "
-                  + "An administrator has to describe each criterion's score levels.");
+            // #192: the codes are in the reason because the reason is what an administrator reads to
+            // find the criterion they have not written. "None of this task's criteria" is true and
+            // useless; "W_TR (12), W_CC (13)" points at the rows.
+            var named = request.Criteria.Count == 0
+                ? "this task has no grading criteria at all"
+                : "no criterion can be scored because none carries a rubric description: "
+                  + string.Join(", ", request.Criteria.Select(c => $"{c.Code} ({c.CriterionId})"));
+            return Fail($"Nothing was scored: {named}. An administrator has to write one for every band.");
         }
 
         var checklist = ChecklistResult.For(request);
@@ -165,7 +173,26 @@ public sealed class ClaudeAiGrader : IAiGrader
         foreach (var c in gradeable)
         {
             prompt.AppendLine($"- ID: {c.CriterionId}, Code: {c.Code}, Name: {c.Name}, MaxScore: {c.MaxScore}, Weight: {c.Weight}");
-            prompt.AppendLine($"  Rubric: {c.RubricDescription}");
+            // #192: a complete grid is the standard. Each band is listed with its gates, so the model
+            // is asked which band's gates the response clears rather than where it "feels" on a scale.
+            // The prose is kept alongside because it often carries the task-specific reading.
+            if (c.Descriptors is { Count: > 0 })
+            {
+                prompt.AppendLine("  Bands (0 = Pre-A1, 6 = C2). Award the highest band whose gates ALL hold:");
+                foreach (var d in c.Descriptors.OrderBy(d => d.Band))
+                {
+                    prompt.AppendLine($"    Band {d.Band} - {d.Descriptor}");
+                    prompt.AppendLine($"      gates: {d.BinaryGates}");
+                }
+                if (!string.IsNullOrWhiteSpace(c.RubricDescription))
+                {
+                    prompt.AppendLine($"  Rubric notes: {c.RubricDescription}");
+                }
+            }
+            else
+            {
+                prompt.AppendLine($"  Rubric: {c.RubricDescription}");
+            }
         }
         prompt.AppendLine();
         prompt.AppendLine("Return a strictly valid JSON object with exactly this shape:");

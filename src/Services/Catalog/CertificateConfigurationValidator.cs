@@ -156,6 +156,37 @@ public static class CertificateConfigurationValidator
                     ScoreConversionException.InvalidData,
                     $"Criterion '{criterion.Code}' on skill '{criterion.SkillCode}' has no rubric description. The grader cannot score against a rubric nobody wrote down.");
             }
+
+            // #192: a grid is optional here (the prose above is the legacy standard), but a grid that
+            // was started must be finished. Six bands is worse than none: the grader would invent the
+            // seventh, which is the inference the descriptor table exists to stop.
+            if (criterion.Bands is { Count: > 0 } bands)
+            {
+                var codes = bands.Select(b => b.Band).ToList();
+                // Duplicates first: with a repeat present, the "missing" message would name whichever
+                // band the repeat displaced, which points at the wrong problem.
+                if (codes.Count != codes.Distinct().Count())
+                {
+                    throw new ScoreConversionException(
+                        ScoreConversionException.InvalidData,
+                        $"Criterion '{criterion.Code}' names the same descriptor band twice. A criterion is seven rows, one per band 0-6.");
+                }
+                var outOfRange = codes.Where(b => b > CanonicalRubric.HighestBand).ToList();
+                if (outOfRange.Count > 0)
+                {
+                    throw new ScoreConversionException(
+                        ScoreConversionException.InvalidData,
+                        $"Criterion '{criterion.Code}' has descriptor band(s) {string.Join(", ", outOfRange)} outside 0-6. The scale is integers 0-6: 0 is Pre-A1, 6 is C2.");
+                }
+                var missing = CanonicalRubric.Bands.Where(b => !codes.Contains(b)).ToList();
+                if (missing.Count > 0)
+                {
+                    throw new ScoreConversionException(
+                        ScoreConversionException.InvalidData,
+                        $"Criterion '{criterion.Code}' on skill '{criterion.SkillCode}' is missing a descriptor for band(s) "
+                        + $"{string.Join(", ", missing)}. Every criterion needs one descriptor at every band 0-6, or the bands it omits have to be invented.");
+                }
+            }
         }
     }
 }

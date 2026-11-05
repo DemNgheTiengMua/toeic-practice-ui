@@ -90,7 +90,27 @@ public sealed class CertificateServiceTests(DatabaseFixture database)
         // bypassed by promoting the exam instead.
         // #190: trg_Items_LifecycleTransitions and trg_Items_NoHardDelete, the six states and the
         // no-delete rule.
-        Assert.Equal(33, triggerCount);
+        // #192: trg_GradingCriteria_FrozenWhenLocked,
+        // trg_GradingCriterionDescriptors_FrozenWhenLocked,
+        // trg_GradingRubricLocks_CompleteCanonicalRubric and
+        // trg_GradingRubricLocks_IrreversibleOnceGraded - the seven-band grid and the lock.
+        Assert.Equal(37, triggerCount);
+
+        // #192: the four new triggers by name, because a count alone cannot tell a rename from a
+        // removal, and the EF model declares these names.
+        foreach (var name in new[]
+                 {
+                     "trg_GradingCriteria_FrozenWhenLocked",
+                     "trg_GradingCriterionDescriptors_FrozenWhenLocked",
+                     "trg_GradingRubricLocks_CompleteCanonicalRubric",
+                     "trg_GradingRubricLocks_IrreversibleOnceGraded",
+                 })
+        {
+            var present = await db.Database
+                .SqlQuery<int>($"SELECT COUNT(*) AS Value FROM sys.triggers WHERE name = {name}")
+                .SingleAsync();
+            Assert.Equal(1, present);
+        }
 
         var viewCount = await db.Database
             .SqlQuery<int>($"SELECT COUNT(*) AS Value FROM sys.views")

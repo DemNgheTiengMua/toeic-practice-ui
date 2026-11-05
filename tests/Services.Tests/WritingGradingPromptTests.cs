@@ -242,6 +242,60 @@ public sealed class WritingGradingPromptTests
         Assert.Equal(2, client.Prompts.Count);
     }
 
+    [Fact]
+    public async Task The_prompt_lists_each_band_with_its_gates_so_the_grader_scores_against_them()
+    {
+        // The schema can prove seven rows exist. It cannot prove the grader reads them, and a grid that
+        // is stored but never sent is exactly the "grades nothing" defect. This asserts the text the
+        // model would receive.
+        var client = new ScriptedClaudeClient(_ => FullAnswer(1));
+        var grader = new ClaudeAiGrader(client);
+
+        var grid = Enumerable.Range(0, 7)
+            .Select(b => new GradingCriterionBandDescriptor(
+                (byte)b,
+                $"Band {b}: speech rate at least {60 + b * 20} wpm.",
+                $"Error-free T-units at least {10 + b * 12}%."))
+            .ToList();
+
+        var result = await grader.GradeAsync(Request([
+            new GradingCriterionDetail(1, "W_TR", "Task Response", 6m, 1m, "Prose notes.", grid)
+        ]));
+
+        Assert.True(result.Success);
+        Assert.Contains("Award the highest band whose gates ALL hold", client.LastPrompt);
+        for (var b = 0; b <= 6; b++)
+        {
+            Assert.Contains($"Band {b} - Band {b}: speech rate at least", client.LastPrompt);
+            Assert.Contains($"gates: Error-free T-units at least {10 + b * 12}%", client.LastPrompt);
+        }
+        // The prose is kept alongside the grid, not replaced by it.
+        Assert.Contains("Rubric notes: Prose notes.", client.LastPrompt);
+    }
+
+    [Fact]
+    public async Task A_grid_short_of_seven_bands_is_not_graded_even_though_it_has_seven_lines_of_text()
+    {
+        // The input that would pass a "does it have text" check: six rows of real thresholds plus a
+        // prose description. The prose would happily be scored; the missing band would be inferred.
+        var client = new ScriptedClaudeClient(_ => FullAnswer(1));
+        var grader = new ClaudeAiGrader(client);
+
+        var grid = Enumerable.Range(0, 6)
+            .Select(b => new GradingCriterionBandDescriptor(
+                (byte)b, $"Band {b}: speech rate at least {60 + b * 20} wpm.", $"Gates {b}."))
+            .ToList();
+
+        var result = await grader.GradeAsync(Request([
+            new GradingCriterionDetail(1, "W_TR", "Task Response", 6m, 1m, "Prose that looks complete.", grid)
+        ]));
+
+        Assert.False(result.Success);
+        Assert.Contains("W_TR", result.FailureReason!, StringComparison.Ordinal);
+        Assert.Empty(result.Scores);
+        Assert.Empty(client.Prompts);
+    }
+
     private static string FullAnswer(params int[] criterionIds) => $$"""
     {
       "checklist": { "addressesPrompt": true },

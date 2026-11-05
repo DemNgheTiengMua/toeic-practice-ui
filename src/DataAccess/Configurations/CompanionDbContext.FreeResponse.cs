@@ -109,11 +109,18 @@ public partial class CompanionDbContext
 
 
 
+        // #192: the criteria table gains a second trigger (a locked rubric's criterion list is
+        // frozen), so both are declared. A missing HasTrigger turns every criterion save into an
+        // OUTPUT-clause failure.
         modelBuilder.Entity<GradingCriterion>(entity =>
         {
             entity.HasKey(e => e.CriterionId).HasName("PK__GradingC__647C3BB12364CBC3");
 
-            entity.ToTable(tb => tb.HasTrigger("trg_GradingCriteria_MaxScoreNotBelowStored"));
+            entity.ToTable(tb =>
+                {
+                    tb.HasTrigger("trg_GradingCriteria_MaxScoreNotBelowStored");
+                    tb.HasTrigger("trg_GradingCriteria_FrozenWhenLocked");
+                });
 
             entity.Property(e => e.Weight).HasDefaultValue(1.0m);
 
@@ -145,6 +152,48 @@ public partial class CompanionDbContext
                 .HasForeignKey(d => new { d.SectionId, d.SkillId })
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_SectionCriteria_SectionSkill");
+        });
+
+        // #192: a descriptor is frozen while its rubric is locked, so the table is triggered and
+        // needs HasTrigger or every save against it fails on the OUTPUT clause.
+        modelBuilder.Entity<GradingCriterionDescriptor>(entity =>
+        {
+            entity.HasKey(e => new { e.CriterionId, e.Band });
+
+            entity.ToTable(tb => tb.HasTrigger("trg_GradingCriterionDescriptors_FrozenWhenLocked"));
+
+            entity.Property(e => e.CriterionId).ValueGeneratedNever();
+
+            // TINYINT in the schema; kept as byte so a band value outside 0..6 is a range error and
+            // not a silent narrowing.
+            entity.Property(e => e.Band).HasColumnType("tinyint");
+
+            entity.HasOne(d => d.Criterion).WithMany(p => p.Descriptors)
+                .HasForeignKey(d => d.CriterionId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_GCD_Criterion");
+        });
+
+        // #192: the lock is itself guarded by a trigger on delete, and by the completeness trigger
+        // on insert.
+        modelBuilder.Entity<GradingRubricLock>(entity =>
+        {
+            entity.HasKey(e => e.SkillId);
+
+            entity.ToTable(tb =>
+                {
+                    tb.HasTrigger("trg_GradingRubricLocks_CompleteCanonicalRubric");
+                    tb.HasTrigger("trg_GradingRubricLocks_IrreversibleOnceGraded");
+                });
+
+            entity.Property(e => e.SkillId).ValueGeneratedNever();
+            entity.Property(e => e.LockedAt).HasDefaultValueSql("(sysdatetimeoffset())");
+
+            entity.HasOne(d => d.Skill).WithOne(p => p.RubricLock)
+                .HasPrincipalKey<Skill>(p => new { p.SkillId, p.CertId })
+                .HasForeignKey<GradingRubricLock>(d => new { d.SkillId, d.CertId })
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_GradingRubricLocks_SkillCert");
         });
     }
 }

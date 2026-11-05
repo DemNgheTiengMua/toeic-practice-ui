@@ -62,6 +62,13 @@ public partial class CompanionDbContext : DbContext
     public virtual DbSet<GradingCriterion> GradingCriteria { get; set; }
 
 
+    // #192: the seven-band grid and the rubric lock.
+    public virtual DbSet<GradingCriterionDescriptor> GradingCriterionDescriptors { get; set; }
+
+
+    public virtual DbSet<GradingRubricLock> GradingRubricLocks { get; set; }
+
+
     public virtual DbSet<ImportBatch> ImportBatches { get; set; }
 
 
