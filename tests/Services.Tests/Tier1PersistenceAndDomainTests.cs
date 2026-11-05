@@ -39,6 +39,9 @@ public sealed class Tier1PersistenceAndDomainTests(DatabaseFixture database)
             // #184: the copy-on-write guard. Also exercised through a real save in PoolPersistenceTests,
             // because a model-only assertion cannot see the OUTPUT clause actually failing.
             "ItemVersions",
+            // #190: the lifecycle transition guard and the no-delete guard. Also exercised through
+            // real saves in ItemLifecycleTests for the same reason.
+            "Items",
             // #185: the binding's INV-6 guard, exercised through a real save in ExamItemBindingTests
             // for the same reason. Exams is already in this list; #185 added a second trigger to it.
             "ExamItems"

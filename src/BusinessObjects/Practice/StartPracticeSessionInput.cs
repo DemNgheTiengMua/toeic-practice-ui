@@ -35,6 +35,19 @@ public sealed record StartPracticeSessionInput : IValidatableObject
     /// <summary>#187: the level of the cell drilled. NULL for a section drill.</summary>
     public CefrLevel? CefrLevel { get; init; }
 
+    /// <summary>
+    /// #190: which tier of stock this drill may draw. Selection filters on lifecycle <em>and</em> tier
+    /// (CNT-42), so a request that named only the cell would draw demo stock into a production drill
+    /// the moment the two tiers share a cell - and they do share every cell, by construction.
+    /// <para>
+    /// Defaults to <c>production</c> because that is the wrong-value-safe direction: a caller that
+    /// forgets it draws reviewed stock, and the demo tier is the one that decommissions in a single
+    /// bulk state change (CNT-46). #245's account-level flag is what will set it for a demo learner;
+    /// until then nothing but a test asks for demo.
+    /// </para>
+    /// </summary>
+    public string ContentTier { get; init; } = ContentTiers.Production;
+
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         var hasSection = SectionId is not null;
@@ -56,6 +69,13 @@ public sealed record StartPracticeSessionInput : IValidatableObject
         if (TopicId < 1)
         {
             yield return new ValidationResult("A valid topic must be chosen.", [nameof(TopicId)]);
+        }
+
+        if (!ContentTiers.IsKnown(ContentTier))
+        {
+            yield return new ValidationResult(
+                $"'{ContentTier}' is not a content tier. An item is either {ContentTiers.Production} or {ContentTiers.Demo}.",
+                [nameof(ContentTier)]);
         }
     }
 }

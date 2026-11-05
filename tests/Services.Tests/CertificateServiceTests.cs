@@ -88,7 +88,9 @@ public sealed class CertificateServiceTests(DatabaseFixture database)
         // #185: trg_ExamItems_ProductionBindsProduction and trg_Exams_TierKeepsContent, the two halves
         // of INV-6. Two rather than one because a rule that fires only when a binding is written is
         // bypassed by promoting the exam instead.
-        Assert.Equal(31, triggerCount);
+        // #190: trg_Items_LifecycleTransitions and trg_Items_NoHardDelete, the six states and the
+        // no-delete rule.
+        Assert.Equal(33, triggerCount);
 
         var viewCount = await db.Database
             .SqlQuery<int>($"SELECT COUNT(*) AS Value FROM sys.views")

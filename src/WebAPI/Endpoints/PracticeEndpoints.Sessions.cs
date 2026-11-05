@@ -12,6 +12,11 @@ public static partial class PracticeEndpoints
     /// #187: the request is one shape or the other. Building the input here keeps the refusal in the
     /// endpoint, where it can be a 400 with a reason, rather than in the service, where it would be an
     /// exception on a request that never had a chance.
+    /// <para>
+    /// #190: the tier is checked here too, for the same reason. The service validates it as well,
+    /// because <see cref="StartPracticeSessionInput"/> must be safe however it is built; a bad tier
+    /// reaching this endpoint is a caller's mistake, so it is answered before a query runs.
+    /// </para>
     /// </summary>
     private static StartPracticeSessionInput? BuildStartInput(StartPracticeRequest request)
     {
@@ -28,8 +33,16 @@ public static partial class PracticeEndpoints
             return new StartPracticeSessionInput(request.SectionId!.Value);
         }
 
+        if (request.ContentTier is not null && !ContentTiers.IsKnown(request.ContentTier))
+        {
+            return null;
+        }
+
         return CefrLevel.TryParseAuthored(request.CefrLevelCode, out var level)
             ? new StartPracticeSessionInput(request.TopicId!.Value, level)
+            {
+                ContentTier = request.ContentTier ?? ContentTiers.Production,
+            }
             : null;
     }
 
@@ -47,8 +60,13 @@ public static partial class PracticeEndpoints
                 var input = BuildStartInput(request);
                 if (input is null)
                 {
-                    return ValidationProblem(new ValidationException(
-                        "A drill is started against either a section or a cell (topic and level), not both and not neither."));
+                    // #190: a bad tier is not a bad shape, and saying "either a section or a cell"
+                    // would send the caller looking at the wrong field.
+                    return request.ContentTier is not null && !ContentTiers.IsKnown(request.ContentTier)
+                        ? ValidationProblem(new ValidationException(
+                            $"'{request.ContentTier}' is not a content tier. An item is either {ContentTiers.Production} or {ContentTiers.Demo}."))
+                        : ValidationProblem(new ValidationException(
+                            "A drill is started against either a section or a cell (topic and level), not both and not neither."));
                 }
 
                 var session = await practiceService.StartSessionAsync(CurrentUserId(http), input, cancellationToken);

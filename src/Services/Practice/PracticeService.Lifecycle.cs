@@ -16,7 +16,7 @@ public sealed partial class PracticeService
         var activeCertId = await learners.GetActiveCertIdAsync(userId, cancellationToken);
 
         return input.TopicId is { } topicId
-            ? await StartPoolSessionAsync(userId, activeCertId, topicId, input.CefrLevel!.Value, cancellationToken)
+            ? await StartPoolSessionAsync(userId, activeCertId, topicId, input.CefrLevel!.Value, input.ContentTier, cancellationToken)
             : await StartSectionSessionAsync(userId, activeCertId, input.SectionId!.Value, cancellationToken);
     }
 
@@ -25,7 +25,7 @@ public sealed partial class PracticeService
     /// the pool at (topic, level) and the session records which version of each item was answered.
     /// </summary>
     private async Task<PracticeSessionInfo> StartPoolSessionAsync(
-        int userId, int certId, int topicId, CefrLevel level, CancellationToken cancellationToken)
+        int userId, int certId, int topicId, CefrLevel level, string contentTier, CancellationToken cancellationToken)
     {
         var topic = await db.Topics
             .AsNoTracking()
@@ -41,13 +41,16 @@ public sealed partial class PracticeService
                 "Speaking is answered by voice, so it has no typed drill: open the recorded speaking practice, which is graded by AI.");
         }
 
-        var selected = await PlanPoolItemsAsync(userId, topic.Modality, topicId, level, cancellationToken);
+        var selected = await PlanPoolItemsAsync(userId, topic.Modality, topicId, level, contentTier, cancellationToken);
 
         if (selected.Count == 0)
         {
+            // #190: name the tier. "No active items at R-COH B2" is now an incomplete sentence: the
+            // cell may be full of the other tier, and a message that omitted it would send an author
+            // looking for a problem in the wrong one.
             throw new PracticeException(
                 PracticeException.NoQuestionsAvailable,
-                $"No active items are authored at {topic.Code} {level.Code}.");
+                $"No {contentTier} items are active at {topic.Code} {level.Code}.");
         }
 
         await AbandonInProgressAsync(userId, certId, cancellationToken);

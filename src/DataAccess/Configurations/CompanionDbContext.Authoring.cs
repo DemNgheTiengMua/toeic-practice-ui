@@ -242,6 +242,23 @@ public partial class CompanionDbContext
         {
             entity.HasKey(e => e.ItemId).HasName("PK_Items");
 
+            // HasTrigger: trg_Items_LifecycleTransitions refuses a state move the specification does
+            // not name, and trg_Items_NoHardDelete refuses the delete of anything that has left draft
+            // or that a learner answered. Without a declaration every save to this table fails on the
+            // OUTPUT clause - the defect this repo has shipped once already.
+            //
+            // Only one of the two is strictly needed for that: EF emits one OUTPUT clause per table,
+            // and any declared trigger switches it off. Both are named anyway, and
+            // Tier1PersistenceAndDomainTests asserts the pair, because the declaration that "works"
+            // is the one that happens to be there - so a reader deleting the redundant-looking second
+            // line removes the guard's documentation, and the next person to drop the first one
+            // breaks every save to Items. The removal is proved in prove-guard-lifecycle.sh's control.
+            entity.ToTable(tb =>
+            {
+                tb.HasTrigger("trg_Items_LifecycleTransitions");
+                tb.HasTrigger("trg_Items_NoHardDelete");
+            });
+
             entity.Property(e => e.CefrLevel)
                 .HasConversion(v => v.Code, v => ParseAuthoredLevel(v))
                 .HasMaxLength(10)
