@@ -25,6 +25,13 @@ public static class CanonicalRubric
     /// <summary>Bands 0..6 - the seven a criterion must describe before its rubric can lock.</summary>
     public static readonly IReadOnlyList<byte> Bands = Enumerable.Range(0, HighestBand + 1).Select(b => (byte)b).ToArray();
 
+    /// <summary>
+    /// #193: the three bands that carry a calibrated benchmark response (D0.6 mechanism 5). Three,
+    /// because an anchor at every band is a second rubric: what a grader needs is a floor, a middle and
+    /// a ceiling to interpolate between, and the ladder is what proves the three are far apart.
+    /// </summary>
+    public static readonly IReadOnlyList<byte> AnchorBands = [2, 3, 4];
+
     private static readonly IReadOnlyDictionary<string, string[]> ByModality =
         new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
         {

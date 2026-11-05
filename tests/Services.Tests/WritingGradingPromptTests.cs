@@ -274,6 +274,52 @@ public sealed class WritingGradingPromptTests
     }
 
     [Fact]
+    public async Task The_prompt_carries_each_anchor_at_its_band_so_the_model_compares_against_written_answers()
+    {
+        // #193: D0.6 mechanism 5. With no anchor in the prompt the model has only a ladder of adjectives
+        // to interpolate over, which is the compression the mechanism exists to stop.
+        var client = new ScriptedClaudeClient(_ => FullAnswer(1));
+        var grader = new ClaudeAiGrader(client);
+
+        var grid = Enumerable.Range(0, 7)
+            .Select(b => new GradingCriterionBandDescriptor(
+                (byte)b, $"Band {b}: speech rate at least {60 + b * 20} wpm.", $"Gates {b}."))
+            .ToList();
+
+        var anchors = new[]
+        {
+            new GradingCriterionBandAnchor(2, "The band two answer, written by hand."),
+            new GradingCriterionBandAnchor(3, "The band three answer, written by hand."),
+            new GradingCriterionBandAnchor(4, "The band four answer, written by hand."),
+        };
+
+        var result = await grader.GradeAsync(Request([
+            new GradingCriterionDetail(1, "W_TR", "Task Response", 6m, 1m, "Prose notes.", grid, anchors)
+        ]));
+
+        Assert.True(result.Success);
+        foreach (var anchor in anchors)
+        {
+            Assert.Contains($"Band {anchor.Band} anchor:", client.LastPrompt);
+            Assert.Contains(anchor.ResponseText, client.LastPrompt);
+        }
+    }
+
+    [Fact]
+    public async Task A_rubric_with_no_anchors_sends_a_prompt_identical_to_todays()
+    {
+        // The guard direction: every rubric authored before #193 has no anchors, and the prompt must not
+        // grow a section that says so. Nothing is added for an absent anchor.
+        var client = new ScriptedClaudeClient(_ => FullAnswer(1));
+        var grader = new ClaudeAiGrader(client);
+
+        var result = await grader.GradeAsync(Request([Criterion(1, "W_TR")]));
+
+        Assert.True(result.Success);
+        Assert.DoesNotContain("anchor", client.LastPrompt, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task A_grid_short_of_seven_bands_is_not_graded_even_though_it_has_seven_lines_of_text()
     {
         // The input that would pass a "does it have text" check: six rows of real thresholds plus a

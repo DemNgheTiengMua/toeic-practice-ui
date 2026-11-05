@@ -66,6 +66,10 @@ public partial class CompanionDbContext : DbContext
     public virtual DbSet<GradingCriterionDescriptor> GradingCriterionDescriptors { get; set; }
 
 
+    // #193: the calibrated benchmark responses injected into every grading call.
+    public virtual DbSet<GradingCriterionAnchor> GradingCriterionAnchors { get; set; }
+
+
     public virtual DbSet<GradingRubricLock> GradingRubricLocks { get; set; }
 
 
