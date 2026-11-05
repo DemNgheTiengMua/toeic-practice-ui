@@ -45,6 +45,11 @@ The backend is a .NET 10 solution (`ExtraEfficiency.slnx`) structured in six str
 7. **Exam Sitting Lifecycle & Score Scaling Seam (`AttemptEngine`)**:
    - `IAttemptEngine` is the sole owner of exam attempt sitting mechanics: countdown timer expiration, auto-submission, answer option validation, two-step score scaling (`ScoreScales`), and CEFR band matching (`ScoreBands`).
    - `MockExamService` and `PlacementService` act as thin domain adapters over `IAttemptEngine`, maintaining domain-specific rules (e.g., mock exam credit deduction via `ICreditLedger` vs free diagnostic placement tests, and placement target band tracking) without duplicating sitting state machines.
+8. **One Writer Per Derived Fact (`docs/adr/0012-single-writer-derived-facts.md`)**:
+   - Seven derived facts are registered in `DerivedFactOwners` with their owning service. Three are enforced today (placement result, attempt score and band, step closure); three await a table (#210, #212, #232); one (credit movement) is exempt because the ledger already carries the guarantee and SRS D-09 refuses a second guard.
+   - Every covered derived-fact table carries `WrittenByService` and `ProjectionVersion`. A trigger refuses a write that declares a writer other than the fact's owner, or a projection version that is not newer than the stored one.
+   - The writer is a column on the write, **never `sp_set_session_context`** (PRN-01: it survives commit and rollback). The declaration must be in the statement — the trigger checks `UPDATE(WrittenByService)`, because a second writer that changes only the value inherits the previous name.
+   - The derived fact is a column set, not a row: `ExamAttempts` sitting-state writes and `LearnerPathSteps` open-state moves derive nothing and declare nothing.
 
 ---
 

@@ -58,13 +58,13 @@ DECLARE @toeicAttempt INT = SCOPE_IDENTITY();
 INSERT INTO AttemptSkillScores (AttemptId, SkillId, CertId, RawScore, ScaledScore) VALUES
   (@toeicAttempt, @toeicListening, @toeic, 1, 200),
   (@toeicAttempt, @toeicReading, @toeic, 1, 300);
-UPDATE ExamAttempts SET TotalScore = 500 WHERE AttemptId = @toeicAttempt;
+UPDATE ExamAttempts SET TotalScore = 500, WrittenByService='AttemptEngine', ProjectionVersion=2 WHERE AttemptId = @toeicAttempt;
 PRINT 'accepted TOEIC skill-score sum';
 -- #171: `sum` is still checked. The trigger used to carry `AND c.ScoreAggregationRule <>
 -- 'independent'`; with that rule gone the predicate is gone too, so this asserts the sum arm of the
 -- same trigger still fires rather than having been loosened along with it.
 BEGIN TRY
-  UPDATE ExamAttempts SET TotalScore = 499 WHERE AttemptId = @toeicAttempt;
+  UPDATE ExamAttempts SET TotalScore = 499, WrittenByService='AttemptEngine', ProjectionVersion=3 WHERE AttemptId = @toeicAttempt;
   THROW 50000, 'EXPECT_REJECT FAILED: a TOEIC total that is not the sum of its skill scores was accepted', 1;
 END TRY
 BEGIN CATCH
@@ -91,10 +91,10 @@ DECLARE @ieltsAttempt INT = SCOPE_IDENTITY();
 INSERT INTO AttemptSkillScores (AttemptId, SkillId, CertId, RawScore, ScaledScore) VALUES
   (@ieltsAttempt, @ieltsListening, @ielts, 1, 60),
   (@ieltsAttempt, @ieltsReading, @ielts, 1, 65);
-UPDATE ExamAttempts SET TotalScore = 65 WHERE AttemptId = @ieltsAttempt;
+UPDATE ExamAttempts SET TotalScore = 65, WrittenByService='AttemptEngine', ProjectionVersion=2 WHERE AttemptId = @ieltsAttempt;
 PRINT 'accepted IELTS average rounded to nearest half band';
 BEGIN TRY
-  UPDATE ExamAttempts SET TotalScore = 62 WHERE AttemptId = @ieltsAttempt;
+  UPDATE ExamAttempts SET TotalScore = 62, WrittenByService='AttemptEngine', ProjectionVersion=3 WHERE AttemptId = @ieltsAttempt;
   THROW 50000, 'EXPECT_REJECT FAILED: invalid IELTS total accepted', 1;
 END TRY
 BEGIN CATCH
@@ -129,10 +129,10 @@ DECLARE @vstepAttempt INT = SCOPE_IDENTITY();
 INSERT INTO AttemptSkillScores (AttemptId, SkillId, CertId, RawScore, ScaledScore) VALUES
   (@vstepAttempt, @vstepListening, @vstep, 1, 50),
   (@vstepAttempt, @vstepReading, @vstep, 1, 61);
-UPDATE ExamAttempts SET TotalScore = 56 WHERE AttemptId = @vstepAttempt;
+UPDATE ExamAttempts SET TotalScore = 56, WrittenByService='AttemptEngine', ProjectionVersion=2 WHERE AttemptId = @vstepAttempt;
 PRINT 'accepted VSTEP average rounded to the nearest tenth-point representation';
 BEGIN TRY
-  UPDATE ExamAttempts SET TotalScore = 55 WHERE AttemptId = @vstepAttempt;
+  UPDATE ExamAttempts SET TotalScore = 55, WrittenByService='AttemptEngine', ProjectionVersion=3 WHERE AttemptId = @vstepAttempt;
   THROW 50000, 'EXPECT_REJECT FAILED: invalid VSTEP total accepted', 1;
 END TRY
 BEGIN CATCH

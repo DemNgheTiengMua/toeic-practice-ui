@@ -35,6 +35,16 @@ public partial class PlacementTest
 
     public int? TotalScore { get; set; }
 
+    /// <summary>#191: which service declared this write. Required by the trigger on any write of the
+    /// snapshot; NULL while the placement is still in progress.</summary>
+    [StringLength(64)]
+    [Unicode(false)]
+    public string? WrittenByService { get; set; }
+
+    /// <summary>#191: monotonic ordering token, so an older out-of-order callback cannot overwrite a
+    /// newer result.</summary>
+    public int ProjectionVersion { get; set; }
+
     public DateTimeOffset TakenAt { get; set; }
 
     [ForeignKey("CertId")]

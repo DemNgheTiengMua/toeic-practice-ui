@@ -409,10 +409,10 @@ public sealed class GoalFeasibilityServiceTests(DatabaseFixture database)
             INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose)
             VALUES (@cert, N'Diag', 'published', 30, 'placement');
             DECLARE @exam INT = SCOPE_IDENTITY();
-            INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt, SubmittedAt, TotalScore, BandCode)
-            VALUES ({userId}, @exam, @cert, 'graded', SYSDATETIMEOFFSET(), SYSDATETIMEOFFSET(), SYSDATETIMEOFFSET(), 400, 'B1');
-            INSERT INTO PlacementTests (UserId, CertId, ExamId, Status, ResultBandCode, AttemptId, TotalScore)
-            VALUES ({userId}, @cert, @exam, 'done', 'B1', SCOPE_IDENTITY(), 400);
+            INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt, SubmittedAt, TotalScore, BandCode, WrittenByService, ProjectionVersion)
+            VALUES ({userId}, @exam, @cert, 'graded', SYSDATETIMEOFFSET(), SYSDATETIMEOFFSET(), SYSDATETIMEOFFSET(), 400, 'B1', 'AttemptEngine', 1);
+            INSERT INTO PlacementTests (UserId, CertId, ExamId, Status, ResultBandCode, AttemptId, TotalScore, WrittenByService, ProjectionVersion)
+            VALUES ({userId}, @cert, @exam, 'done', 'B1', SCOPE_IDENTITY(), 400, 'AttemptEngine', 1);
             """);
 
         var (_, paths, db) = CreateServices();

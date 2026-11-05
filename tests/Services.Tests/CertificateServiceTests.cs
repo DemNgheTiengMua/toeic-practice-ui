@@ -90,7 +90,10 @@ public sealed class CertificateServiceTests(DatabaseFixture database)
         // bypassed by promoting the exam instead.
         // #190: trg_Items_LifecycleTransitions and trg_Items_NoHardDelete, the six states and the
         // no-delete rule.
-        Assert.Equal(33, triggerCount);
+        // #191: trg_Attempts_SingleWriter, trg_PlacementTests_SingleWriter and
+        // trg_LearnerPathSteps_SingleWriter - one per covered derived fact. The registry names seven;
+        // the other four have no table yet or are exempt, which domain27 asserts rather than assumes.
+        Assert.Equal(36, triggerCount);
 
         var viewCount = await db.Database
             .SqlQuery<int>($"SELECT COUNT(*) AS Value FROM sys.views")
