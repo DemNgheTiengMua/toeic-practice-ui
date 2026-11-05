@@ -97,13 +97,15 @@ public sealed class CertificateServiceTests(DatabaseFixture database)
         // trg_GradingCriterionDescriptors_FrozenWhenLocked,
         // trg_GradingRubricLocks_CompleteCanonicalRubric and
         // trg_GradingRubricLocks_IrreversibleOnceGraded - the seven-band grid and the lock.
-        Assert.Equal(40, triggerCount);
+        // #193: trg_GradingCriterionAnchors_FrozenWhenLocked - the three calibrated anchors.
+        Assert.Equal(41, triggerCount);
 
         // Named as well as counted, because a count alone cannot tell a rename from a removal.
         foreach (var name in new[]
                  {
                      "trg_GradingCriteria_FrozenWhenLocked",
                      "trg_GradingCriterionDescriptors_FrozenWhenLocked",
+                     "trg_GradingCriterionAnchors_FrozenWhenLocked",
                      "trg_GradingRubricLocks_CompleteCanonicalRubric",
                      "trg_GradingRubricLocks_IrreversibleOnceGraded",
                      "trg_Attempts_SingleWriter",

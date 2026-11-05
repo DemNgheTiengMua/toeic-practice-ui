@@ -193,6 +193,19 @@ public sealed class ClaudeAiGrader : IAiGrader
             {
                 prompt.AppendLine($"  Rubric: {c.RubricDescription}");
             }
+
+            // #193: the calibrated anchors go after the grid, so the model has the abstract ladder and
+            // then three worked answers to compare the candidate against. Quoted with the band each was
+            // written at, because an anchor without its band is just another response.
+            if (c.Anchors is { Count: > 0 })
+            {
+                prompt.AppendLine("  Benchmark responses already scored at these bands (D0.6 anchors). Compare the candidate to these, not to an impression:");
+                foreach (var a in c.Anchors.OrderBy(a => a.Band))
+                {
+                    prompt.AppendLine($"    Band {a.Band} anchor:");
+                    prompt.AppendLine(a.ResponseText.Trim());
+                }
+            }
         }
         prompt.AppendLine();
         prompt.AppendLine("Return a strictly valid JSON object with exactly this shape:");

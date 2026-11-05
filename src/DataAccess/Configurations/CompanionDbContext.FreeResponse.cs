@@ -174,6 +174,25 @@ public partial class CompanionDbContext
                 .HasConstraintName("FK_GCD_Criterion");
         });
 
+        // #193: an anchor is frozen while its rubric is locked, so the table is triggered and needs
+        // HasTrigger: without it every anchor save fails on the OUTPUT clause.
+        modelBuilder.Entity<GradingCriterionAnchor>(entity =>
+        {
+            entity.HasKey(e => new { e.CriterionId, e.Band });
+
+            entity.ToTable(tb => tb.HasTrigger("trg_GradingCriterionAnchors_FrozenWhenLocked"));
+
+            entity.Property(e => e.CriterionId).ValueGeneratedNever();
+
+            // TINYINT in the schema, so a band outside 2..4 is a range error and not a silent narrowing.
+            entity.Property(e => e.Band).HasColumnType("tinyint");
+
+            entity.HasOne(d => d.Criterion).WithMany(p => p.Anchors)
+                .HasForeignKey(d => d.CriterionId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_GCA_Criterion");
+        });
+
         // #192: the lock is itself guarded by a trigger on delete, and by the completeness trigger
         // on insert.
         modelBuilder.Entity<GradingRubricLock>(entity =>
