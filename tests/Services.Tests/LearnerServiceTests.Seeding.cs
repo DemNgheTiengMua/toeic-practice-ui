@@ -15,14 +15,14 @@ public sealed partial class LearnerServiceTests
               INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose)
               VALUES (@cert, N'Placement {certCode}', 'published', 30, 'placement');
             DECLARE @exam INT = (SELECT TOP 1 ExamId FROM Exams WHERE CertId = @cert AND Purpose = 'placement');
-            INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt, SubmittedAt, TotalScore, BandCode)
+            INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt, SubmittedAt, TotalScore, BandCode, WrittenByService, ProjectionVersion)
             VALUES ({userId}, @exam, @cert, 'graded',
                     DATEADD(MINUTE, -30, CAST('{takenAt}' AS DATETIMEOFFSET)),
                     DATEADD(MINUTE, 30, CAST('{takenAt}' AS DATETIMEOFFSET)),
-                    '{takenAt}', {total}, '{band}');
+                    '{takenAt}', {total}, '{band}', 'AttemptEngine', 1);
             DECLARE @attempt INT = SCOPE_IDENTITY();
-            INSERT INTO PlacementTests (UserId, CertId, ExamId, Status, ResultBandCode, AttemptId, TotalScore, TakenAt)
-            VALUES ({userId}, @cert, @exam, 'done', '{band}', @attempt, {total}, '{takenAt}');
+            INSERT INTO PlacementTests (UserId, CertId, ExamId, Status, ResultBandCode, AttemptId, TotalScore, TakenAt, WrittenByService, ProjectionVersion)
+            VALUES ({userId}, @cert, @exam, 'done', '{band}', @attempt, {total}, '{takenAt}', 'AttemptEngine', 1);
             """);
 
     private Task SeedSetTargetBandAsync(int userId, string certCode, string targetBandCode) =>
@@ -78,9 +78,11 @@ public sealed partial class LearnerServiceTests
             INSERT INTO PathModuleItems (ModuleId, CertId, TemplateId, ItemType, RefSectionId, QuestionCount, DisplayOrder)
             VALUES (@mod, @cert, @tpl, 'practice_section', @sec, 5, {i + 1});
             DECLARE @item{i} INT = SCOPE_IDENTITY();
-            INSERT INTO LearnerPathSteps (LearnerPathId, PathModuleItemId, TemplateId, Status, WeekNumber, EstimatedMinutes)
+            INSERT INTO LearnerPathSteps (LearnerPathId, PathModuleItemId, TemplateId, Status, WeekNumber, EstimatedMinutes,
+                                          WrittenByService, ProjectionVersion)
             VALUES (@path, @item{i}, @tpl, '{(s.Done ? "done" : "available")}',
-                    {(s.Week is null ? "NULL" : s.Week.Value.ToString())}, {s.Minutes});
+                    {(s.Week is null ? "NULL" : s.Week.Value.ToString())}, {s.Minutes},
+                    {(s.Done ? "'PathStepCompletion'" : "NULL")}, {(s.Done ? 1 : 0)});
             """)));
 
     /// <summary>A practice session whose answers carry a category, so the category accuracy view has

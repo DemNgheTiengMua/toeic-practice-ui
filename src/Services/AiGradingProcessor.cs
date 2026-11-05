@@ -214,21 +214,11 @@ public sealed class AiGradingProcessor(
                     var purpose = fr.Attempt.Exam.Purpose;
                     if (purpose == ExamPurpose.Mock.ToCode() || purpose == ExamPurpose.Placement.ToCode())
                     {
+                        // #191: `FinalizeAiGradedAttemptAsync` owns the whole result, including the
+                        // placement snapshot. This used to patch the snapshot from here as well, which
+                        // made the processor a second writer of the row the confirmed placement defect
+                        // is about.
                         await _attemptEngine.FinalizeAiGradedAttemptAsync(fr.AttemptId, cancellationToken);
-                        if (purpose == ExamPurpose.Placement.ToCode())
-                        {
-                            var placement = await db.PlacementTests.FirstOrDefaultAsync(p => p.AttemptId == fr.AttemptId, cancellationToken);
-                            if (placement != null)
-                            {
-                                var finalizedAttempt = await db.ExamAttempts.FindAsync(new object[] { fr.AttemptId }, cancellationToken);
-                                if (finalizedAttempt != null)
-                                {
-                                    placement.TotalScore = finalizedAttempt.TotalScore;
-                                    placement.ResultBandCode = finalizedAttempt.BandCode;
-                                    await db.SaveChangesAsync(cancellationToken);
-                                }
-                            }
-                        }
                     }
                     else
                     {

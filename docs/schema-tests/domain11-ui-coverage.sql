@@ -61,12 +61,17 @@ PRINT 'accepted placement linked to its attempt';
 -- AiGradings.BandCode and the app leaves ExamAttempts.BandCode NULL, but the schema does not police
 -- which of the two a future caller writes. TotalScore stays forbidden - one rubric is not "out of 990".
 INSERT INTO ScoreBands (CertId,Code,Name,MinTotal,MaxTotal) VALUES (@c,'A1',N'A1',120,224);
-INSERT INTO ExamAttempts (UserId,ExamId,CertId,ExpiresAt,BandCode) VALUES (@u,@spx,@c,SYSDATETIMEOFFSET(),'A1'); DECLARE @spa INT=SCOPE_IDENTITY();
+INSERT INTO ExamAttempts (UserId,ExamId,CertId,ExpiresAt,BandCode,WrittenByService,ProjectionVersion)
+  VALUES (@u,@spx,@c,SYSDATETIMEOFFSET(),'A1','AttemptEngine',1); DECLARE @spa INT=SCOPE_IDENTITY();
 PRINT 'accepted a band on a speaking-practice attempt: the ban was dropped in #148';
 BEGIN TRY
-  UPDATE ExamAttempts SET TotalScore=180 WHERE AttemptId=@spa;
+  UPDATE ExamAttempts SET TotalScore=180, WrittenByService='AttemptEngine', ProjectionVersion=2 WHERE AttemptId=@spa;
   THROW 50000,'EXPECT_REJECT FAILED: total score on speaking practice accepted',1;
-END TRY BEGIN CATCH IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW; PRINT 'rejected total score on speaking practice'; END CATCH
+END TRY BEGIN CATCH IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
+  -- #191: this table now has a single-writer guard as well, so the refusal must be the total-score
+  -- ban and not the writer guard standing in for it.
+  IF ERROR_MESSAGE() NOT LIKE '%cannot carry a total score%' THROW;
+  PRINT 'rejected total score on speaking practice'; END CATCH
 
 -- UI-20: section criteria + per-section ceiling
 INSERT INTO GradingCriteria (CertId,SkillId,Code,Name,MaxScore) VALUES (@c,@spk,'PRON',N'Pronunciation',5); DECLARE @pron INT=SCOPE_IDENTITY();

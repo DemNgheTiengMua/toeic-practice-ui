@@ -375,10 +375,10 @@ public sealed class PlacementService(
                 questionId,
                 selectedOptionId,
                 isFlagged,
-                onAutoSubmitted: async (attId, uId) =>
-                {
-                    await SyncPlacementAfterAttemptSubmissionAsync(placement.PlacementId, cancellationToken);
-                },
+                // #191: no onAutoSubmitted callback. The engine closes the linked placement when it
+                // scores the attempt, and this callback used to write that same snapshot a second
+                // time. A no-op callback that still exists reads as "there is something to sync".
+                onAutoSubmitted: null,
                 cancellationToken,
                 responseText,
                 selectedOptionIdsJson);
@@ -891,10 +891,16 @@ public sealed class PlacementService(
             }
 
             // Snapshot matching invariant: PlacementTests.TotalScore must match ExamAttempts.TotalScore
-            placement.Status = PlacementStatus.Done.ToCode();
-            placement.TotalScore = grading.TotalScore;
-            placement.ResultBandCode = grading.BandCode;
-            placement.TakenAt = grading.SubmittedAt;
+            // #191 / D14: and the snapshot has exactly one writer. This method used to write it a
+            // second time, unconditionally, after `AttemptEngine.SubmitAttemptAsync` had already done
+            // so - which is the confirmed defect in docs/research/placement-free-response-defect.md:
+            // a placement carrying a free response got `done` with a null band because the band was
+            // not there yet. The snapshot is derived from the attempt, so the attempt's writer is the
+            // only one that may produce it.
+            //
+            // Nothing to write here. The attempt engine closed the linked placement when it scored the
+            // attempt; if the attempt is still `submitted` because a free response is being graded, the
+            // placement correctly stays `in_progress` and the screen says "still grading".
 
             await db.SaveChangesAsync(cancellationToken);
             if (tx is not null) await tx.CommitAsync(cancellationToken);
@@ -904,22 +910,6 @@ public sealed class PlacementService(
         finally
         {
             if (tx is not null) await tx.DisposeAsync();
-        }
-    }
-
-    private async Task SyncPlacementAfterAttemptSubmissionAsync(int placementId, CancellationToken cancellationToken)
-    {
-        var placement = await db.PlacementTests
-            .Include(p => p.ExamAttempt)
-            .SingleOrDefaultAsync(p => p.PlacementId == placementId, cancellationToken);
-
-        if (placement is not null && placement.ExamAttempt is not null)
-        {
-            placement.Status = PlacementStatus.Done.ToCode();
-            placement.TotalScore = placement.ExamAttempt.TotalScore;
-            placement.ResultBandCode = placement.ExamAttempt.BandCode;
-            placement.TakenAt = placement.ExamAttempt.SubmittedAt ?? DateTimeOffset.UtcNow;
-            await db.SaveChangesAsync(cancellationToken);
         }
     }
 

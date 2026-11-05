@@ -63,14 +63,14 @@ public sealed class CalibrationServiceTests(DatabaseFixture database)
               VALUES (@cert, N'Placement {certCode}', 'published', 20, 'placement', 1);
             DECLARE @exam INT = SCOPE_IDENTITY();
 
-            INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt, SubmittedAt, TotalScore, BandCode)
+            INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt, SubmittedAt, TotalScore, BandCode, WrittenByService, ProjectionVersion)
               VALUES (@user, @exam, @cert, 'graded',
                       DATEADD(DAY, -10, SYSDATETIMEOFFSET()), DATEADD(DAY, -10, DATEADD(HOUR, 1, SYSDATETIMEOFFSET())),
-                      DATEADD(DAY, -10, SYSDATETIMEOFFSET()), 70, '{placedBand}');
+                      DATEADD(DAY, -10, SYSDATETIMEOFFSET()), 70, '{placedBand}', 'AttemptEngine', 1);
             DECLARE @attempt INT = SCOPE_IDENTITY();
 
-            INSERT INTO PlacementTests (UserId, CertId, ExamId, Status, ResultBandCode, AttemptId, TotalScore, TakenAt)
-              VALUES (@user, @cert, @exam, 'done', '{placedBand}', @attempt, 70, DATEADD(DAY, -10, SYSDATETIMEOFFSET()));
+            INSERT INTO PlacementTests (UserId, CertId, ExamId, Status, ResultBandCode, AttemptId, TotalScore, TakenAt, WrittenByService, ProjectionVersion)
+              VALUES (@user, @cert, @exam, 'done', '{placedBand}', @attempt, 70, DATEADD(DAY, -10, SYSDATETIMEOFFSET()), 'AttemptEngine', 1);
 
             INSERT INTO PathTemplates (CertId, FromBandCode, ToBandCode, Name)
               VALUES (@cert, 'B1', 'B2', N'Template {certCode}');

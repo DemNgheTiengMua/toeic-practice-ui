@@ -47,10 +47,10 @@ public sealed partial class LearnerServiceTests(DatabaseFixture database)
     private Task SeedGradedAttemptAsync(int userId, string certCode, int total, string band, string startedAt) =>
         database.SqlAsync($"""
             DECLARE @cert INT = (SELECT CertId FROM Certificates WHERE Code = '{certCode}');
-            INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt, SubmittedAt, TotalScore, BandCode)
+            INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt, SubmittedAt, TotalScore, BandCode, WrittenByService, ProjectionVersion)
             VALUES ({userId}, (SELECT TOP 1 ExamId FROM Exams WHERE CertId = @cert AND Purpose = 'mock'), @cert, 'graded',
                     '{startedAt}', DATEADD(HOUR, 2, CAST('{startedAt}' AS DATETIMEOFFSET)),
-                    DATEADD(HOUR, 1, CAST('{startedAt}' AS DATETIMEOFFSET)), {total}, '{band}');
+                    DATEADD(HOUR, 1, CAST('{startedAt}' AS DATETIMEOFFSET)), {total}, '{band}', 'AttemptEngine', 1);
             """);
 
     private Task SeedPracticeAsync(int userId, string certCode, int correct, int count) =>

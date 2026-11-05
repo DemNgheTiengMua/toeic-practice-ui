@@ -47,6 +47,9 @@ public partial class CompanionDbContext
         {
             entity.HasKey(e => e.StepId).HasName("PK__LearnerP__24343357410D371C");
 
+            // #191: the step-closure single-writer guard
+            entity.ToTable(tb => tb.HasTrigger("trg_LearnerPathSteps_SingleWriter"));
+
             entity.Property(e => e.Status).HasDefaultValue("locked");
             entity.Property(e => e.TargetAccuracyPct).HasDefaultValue(70);
 

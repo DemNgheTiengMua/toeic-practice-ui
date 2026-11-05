@@ -1967,14 +1967,19 @@ IF NOT EXISTS (SELECT 1 FROM TargetBands WHERE UserId = @learner AND CertId = @t
 -- Completed Placement Test (Total score 650, Band B1)
 IF NOT EXISTS (SELECT 1 FROM PlacementTests WHERE UserId = @learner AND CertId = @toeicCert AND Status = 'done')
 BEGIN
-  INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt, SubmittedAt, TotalScore, BandCode)
+  -- #191: each row that writes a derived fact declares its writer. The demo data stands in for the
+  -- service that would have produced it, so the registry owner is the honest declaration.
+  INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt, SubmittedAt, TotalScore, BandCode,
+                            WrittenByService, ProjectionVersion)
   VALUES (@learner, @stdExam, @toeicCert, 'graded',
           DATEADD(DAY, -22, SYSDATETIMEOFFSET()), DATEADD(DAY, -22, DATEADD(HOUR, 1, SYSDATETIMEOFFSET())),
-          DATEADD(DAY, -22, DATEADD(MINUTE, 38, SYSDATETIMEOFFSET())), 650, 'B1');
+          DATEADD(DAY, -22, DATEADD(MINUTE, 38, SYSDATETIMEOFFSET())), 650, 'B1', 'AttemptEngine', 1);
   DECLARE @attPlace INT = SCOPE_IDENTITY();
 
-  INSERT INTO PlacementTests (UserId, CertId, ExamId, Status, ResultBandCode, AttemptId, TotalScore, TakenAt)
-  VALUES (@learner, @toeicCert, @stdExam, 'done', 'B1', @attPlace, 650, DATEADD(DAY, -22, SYSDATETIMEOFFSET()));
+  INSERT INTO PlacementTests (UserId, CertId, ExamId, Status, ResultBandCode, AttemptId, TotalScore, TakenAt,
+                              WrittenByService, ProjectionVersion)
+  VALUES (@learner, @toeicCert, @stdExam, 'done', 'B1', @attPlace, 650, DATEADD(DAY, -22, SYSDATETIMEOFFSET()),
+          'AttemptEngine', 1);
 END;
 GO
 
@@ -2119,7 +2124,8 @@ BEGIN
     JOIN PathModules m ON m.ModuleId = i.ModuleId
     WHERE i.TemplateId = @tplB1B2
   )
-  INSERT INTO LearnerPathSteps (LearnerPathId, PathModuleItemId, TemplateId, Status, Score, StartedAt, CompletedAt)
+  INSERT INTO LearnerPathSteps (LearnerPathId, PathModuleItemId, TemplateId, Status, Score, StartedAt, CompletedAt,
+                                WrittenByService, ProjectionVersion)
   SELECT @lpId, ItemId, TemplateId,
          CASE StepOrder
            WHEN 1 THEN 'done'
@@ -2141,7 +2147,10 @@ BEGIN
            WHEN StepOrder = 2 THEN DATEADD(DAY, -10, SYSDATETIMEOFFSET())
            WHEN StepOrder = 3 THEN DATEADD(DAY, -5, SYSDATETIMEOFFSET())
            ELSE NULL
-         END
+         END,
+         -- #191: a closed step names its writer; an open one derives nothing and declares none
+         CASE WHEN StepOrder <= 3 THEN 'PathStepCompletion' ELSE NULL END,
+         CASE WHEN StepOrder <= 3 THEN 1 ELSE 0 END
   FROM NumberedItems
   ORDER BY StepOrder;
 
@@ -2250,10 +2259,11 @@ DECLARE @toeicRead INT = (SELECT SkillId FROM Skills WHERE CertId = @toeicCert A
 
 IF NOT EXISTS (SELECT 1 FROM ExamAttempts WHERE UserId = @learner AND ExamId = @toeicMock AND TotalScore = 720)
 BEGIN
-  INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt, SubmittedAt, TotalScore, BandCode)
+  INSERT INTO ExamAttempts (UserId, ExamId, CertId, Status, StartedAt, ExpiresAt, SubmittedAt, TotalScore, BandCode,
+                            WrittenByService, ProjectionVersion)
   VALUES (@learner, @toeicMock, @toeicCert, 'graded',
           DATEADD(DAY, -3, SYSDATETIMEOFFSET()), DATEADD(DAY, -3, DATEADD(HOUR, 2, SYSDATETIMEOFFSET())),
-          DATEADD(DAY, -3, DATEADD(MINUTE, 105, SYSDATETIMEOFFSET())), 720, 'B1');
+          DATEADD(DAY, -3, DATEADD(MINUTE, 105, SYSDATETIMEOFFSET())), 720, 'B1', 'AttemptEngine', 1);
   DECLARE @mockAtt INT = SCOPE_IDENTITY();
 
   -- Charge 1 credit for mock exam start

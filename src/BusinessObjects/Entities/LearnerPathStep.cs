@@ -46,6 +46,16 @@ public partial class LearnerPathStep
     [Column(TypeName = "decimal(5, 2)")]
     public decimal? ActualAccuracyPct { get; set; }
 
+    /// <summary>#191: which service declared this closure. Required by the trigger when the step is
+    /// closed; NULL while the step moves between open states.</summary>
+    [StringLength(64)]
+    [Unicode(false)]
+    public string? WrittenByService { get; set; }
+
+    /// <summary>#191: monotonic ordering token, so an older out-of-order callback cannot overwrite a
+    /// newer result.</summary>
+    public int ProjectionVersion { get; set; }
+
     [ForeignKey("LearnerPathId, TemplateId")]
     [InverseProperty("LearnerPathSteps")]
     public virtual LearnerPath LearnerPath { get; set; } = null!;
