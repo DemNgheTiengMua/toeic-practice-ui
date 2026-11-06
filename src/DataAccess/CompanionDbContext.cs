@@ -204,6 +204,11 @@ public partial class CompanionDbContext : DbContext
 
     public virtual DbSet<ScoreScale> ScoreScales { get; set; }
 
+    /// <summary>#210: the versioned per-skill CEFR cut-score table and its version headers.</summary>
+    public virtual DbSet<CefrCutScore> CefrCutScores { get; set; }
+
+    public virtual DbSet<CefrCutScoreVersion> CefrCutScoreVersions { get; set; }
+
 
     public virtual DbSet<Section> Sections { get; set; }
 

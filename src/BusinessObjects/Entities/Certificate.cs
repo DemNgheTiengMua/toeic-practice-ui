@@ -82,6 +82,10 @@ public partial class Certificate
     [InverseProperty("Cert")]
     public virtual ICollection<ScoreBand> ScoreBands { get; set; } = new List<ScoreBand>();
 
+    /// <summary>#210: the per-skill CEFR cut-score table versions this certificate publishes.</summary>
+    [InverseProperty("Cert")]
+    public virtual ICollection<CefrCutScoreVersion> CutScoreVersions { get; set; } = new List<CefrCutScoreVersion>();
+
     [InverseProperty("Cert")]
     public virtual ICollection<ScoreScale> ScoreScales { get; set; } = new List<ScoreScale>();
 

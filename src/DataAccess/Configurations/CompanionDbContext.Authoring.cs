@@ -115,6 +115,47 @@ public partial class CompanionDbContext
                 .HasConstraintName("FK__ScoreBand__CertI__09A971A2");
         });
 
+        // #210: the per-skill cut-score table. HasTrigger is required: trg_CefrCutScores_NoOverlap
+        // refuses an overlapping range, and without the declaration every EF save fails on the
+        // OUTPUT clause instead of on the rule.
+        modelBuilder.Entity<CefrCutScoreVersion>(entity =>
+        {
+            entity.HasKey(e => new { e.CertId, e.TableVersion }).HasName("PK_CefrCutScoreVersions");
+
+            entity.Property(e => e.Source).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.PublishedAt).HasColumnType("date");
+
+            entity.HasOne(d => d.Cert).WithMany(p => p.CutScoreVersions)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_CefrCutScoreVersions_Cert");
+        });
+
+        modelBuilder.Entity<CefrCutScore>(entity =>
+        {
+            entity.HasKey(e => e.CutScoreId).HasName("PK_CefrCutScores");
+
+            entity.ToTable(tb => tb.HasTrigger("trg_CefrCutScores_NoOverlap"));
+
+            entity.HasIndex(e => new { e.CertId, e.TableVersion, e.SkillId, e.CefrLevel },
+                    "UQ_CefrCutScores_Version_Skill_Level")
+                .IsUnique();
+
+            entity.Property(e => e.CefrLevel).HasMaxLength(10).IsUnicode(false).IsRequired();
+            entity.Property(e => e.RowKind).HasMaxLength(20).IsUnicode(false).IsRequired();
+
+            entity.HasOne(d => d.Version).WithMany(p => p.CutScores)
+                .HasPrincipalKey(p => new { p.CertId, p.TableVersion })
+                .HasForeignKey(d => new { d.CertId, d.TableVersion })
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_CefrCutScores_Version");
+
+            entity.HasOne(d => d.SkillNavigation).WithMany(p => p.CutScores)
+                .HasPrincipalKey(p => new { p.SkillId, p.CertId })
+                .HasForeignKey(d => new { d.SkillId, d.CertId })
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_CefrCutScores_SkillCert");
+        });
+
 
 
         modelBuilder.Entity<TargetBand>(entity =>

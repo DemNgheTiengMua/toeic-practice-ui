@@ -78,6 +78,10 @@ public partial class Skill
     [InverseProperty("Skill")]
     public virtual ICollection<ScoreScale> ScoreScales { get; set; } = new List<ScoreScale>();
 
+    /// <summary>#210: this skill's rows in every published cut-score version.</summary>
+    [InverseProperty("SkillNavigation")]
+    public virtual ICollection<CefrCutScore> CutScores { get; set; } = new List<CefrCutScore>();
+
     [InverseProperty("SkillNavigation")]
     public virtual ICollection<Section> SectionSkillNavigations { get; set; } = new List<Section>();
 
