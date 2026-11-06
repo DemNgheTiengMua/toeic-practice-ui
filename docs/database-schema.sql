@@ -2381,104 +2381,31 @@ CREATE TABLE TargetBands (
   CONSTRAINT CK_TargetBands_AnswerNeedsDeadline CHECK (FeasibilityStatus IS NULL OR TargetDate IS NOT NULL)
 );
 GO
-CREATE TABLE PathTemplates (
-  TemplateId   INT IDENTITY(1,1) PRIMARY KEY,
-  CertId       INT NOT NULL REFERENCES Certificates(CertId),
-  FromBandCode VARCHAR(20) NOT NULL,
-  ToBandCode   VARCHAR(20) NOT NULL,
-  Name         NVARCHAR(120) NOT NULL,
-  CONSTRAINT FK_PathTpl_FromBand FOREIGN KEY (CertId, FromBandCode) REFERENCES ScoreBands(CertId, Code),
-  CONSTRAINT FK_PathTpl_ToBand   FOREIGN KEY (CertId, ToBandCode)   REFERENCES ScoreBands(CertId, Code),
-  -- M-1: composite target so LearnerPaths can pin CertId to the template's own certificate
-  CONSTRAINT UQ_PathTemplates_Id_Cert UNIQUE (TemplateId, CertId)
-);
-GO
-CREATE TABLE PathModules (
-  ModuleId     INT IDENTITY(1,1) PRIMARY KEY,
-  TemplateId   INT NOT NULL,
-  SkillId      INT NOT NULL,
-  -- M-1: carried down from the owning template so the skill must belong to the same certificate
-  CertId       INT NOT NULL,
-  DisplayOrder INT NOT NULL DEFAULT 0,
-  Title        NVARCHAR(120) NOT NULL,
-  -- UI-23: learning-path / path-detail module copy
-  GroupName        NVARCHAR(120) NULL,   -- "Grammar foundations · modules 1–3"
-  Description      NVARCHAR(1000) NULL,  -- "What this module covers"
-  EstimatedMinutes INT NULL CONSTRAINT CK_PathModules_Est CHECK (EstimatedMinutes IS NULL OR EstimatedMinutes > 0),
-  -- M-1: CertId must be the template's own
-  CONSTRAINT FK_PathModules_TemplateCert FOREIGN KEY (TemplateId, CertId) REFERENCES PathTemplates(TemplateId, CertId),
-  -- M-1: the skill must belong to that same certificate
-  CONSTRAINT FK_PathModules_SkillCert FOREIGN KEY (SkillId, CertId) REFERENCES Skills(SkillId, CertId),
-  -- composite target so PathModuleItems can carry CertId down from its module
-  CONSTRAINT UQ_PathModules_Id_Cert UNIQUE (ModuleId, CertId),
-  -- M-1: composite target so PathModuleItems/LearnerPathSteps can carry TemplateId down from this module
-  CONSTRAINT UQ_PathModules_Id_Template UNIQUE (ModuleId, TemplateId)
-);
-GO
-CREATE TABLE PathModuleItems (
-  ItemId          INT IDENTITY(1,1) PRIMARY KEY,
-  ModuleId        INT NOT NULL,
-  -- M-1: carried down from the owning module so refs must belong to the same certificate
-  CertId          INT NOT NULL,
-  -- M-1: carried down from the owning module so LearnerPathSteps can pin the item to its own template
-  TemplateId      INT NOT NULL,
-  ItemType        VARCHAR(16) NOT NULL
-    CONSTRAINT CK_PMI_Type CHECK (ItemType IN ('practice_section','mock_exam','ai_task','mentor','lesson')),
-  RefSectionId    INT NULL,
-  RefExamId       INT NULL,
-  -- #231: DifficultyLevel and CK_PMI_Difficulty are gone. The level a step is prescribed at is not
-  -- expressed on this table at all; the path rebuild (#232) carries it on LearnerPathSteps, and this
-  -- table is dropped with the rest of the template scaffolding there.
-  QuestionCount   INT NULL CONSTRAINT CK_PMI_QCount CHECK (QuestionCount IS NULL OR QuestionCount > 0), -- UI-23: "20 questions"
-  DisplayOrder    INT NOT NULL DEFAULT 0,
-  -- Review Focus #3: the ref column must match ItemType
-  CONSTRAINT CK_PMI_RefMatchesType CHECK (
-       (ItemType='practice_section' AND RefSectionId IS NOT NULL AND RefExamId IS NULL)
-    OR (ItemType='mock_exam'        AND RefExamId    IS NOT NULL AND RefSectionId IS NULL)
-    OR (ItemType='ai_task'          AND RefSectionId IS NULL)   -- UI-44: may carry RefExamId (a writing/speaking practice exam)
-    OR (ItemType='mentor'           AND RefSectionId IS NULL AND RefExamId IS NULL)
-  ),
-  -- M-1: CertId must be the module's own
-  CONSTRAINT FK_PMI_ModuleCert FOREIGN KEY (ModuleId, CertId) REFERENCES PathModules(ModuleId, CertId),
-  -- M-1: TemplateId must be the module's own
-  CONSTRAINT FK_PMI_ModuleTemplate FOREIGN KEY (ModuleId, TemplateId) REFERENCES PathModules(ModuleId, TemplateId),
-  -- M-1: a practice_section ref must be a section from that same certificate (NULL stays legal, MATCH SIMPLE)
-  CONSTRAINT FK_PMI_SectionCert FOREIGN KEY (RefSectionId, CertId) REFERENCES Sections(SectionId, CertId),
-  -- M-1: a mock_exam ref must be an exam from that same certificate (NULL stays legal, MATCH SIMPLE)
-  CONSTRAINT FK_PMI_ExamCert FOREIGN KEY (RefExamId, CertId) REFERENCES Exams(ExamId, CertId),
-  -- M-1: composite target so LearnerPathSteps can pin the item to its own template
-  CONSTRAINT UQ_PMI_Id_Template UNIQUE (ItemId, TemplateId)
-);
-GO
--- UI-23: path-detail "Topics covered in this module".
--- Topic status (Done / In progress) derives from the module's practice answers in CategoryId.
-CREATE TABLE PathModuleTopics (
-  TopicId      INT IDENTITY(1,1) PRIMARY KEY,
-  ModuleId     INT NOT NULL REFERENCES PathModules(ModuleId),
-  Title        NVARCHAR(160) NOT NULL,
-  CategoryId   INT NULL REFERENCES QuestionCategories(CategoryId),
-  QuestionCount INT NULL CONSTRAINT CK_PMT_QCount CHECK (QuestionCount IS NULL OR QuestionCount > 0),
-  VideoPath    NVARCHAR(400) NULL,
-  DisplayOrder INT NOT NULL DEFAULT 0
-);
-GO
+-- #232 / D10: PathTemplates, PathModules, PathModuleItems and PathModuleTopics are dropped, and with
+-- them LearnerPaths.TemplateId. A step is a coordinate - (skill, topic, target level, step type, sizing
+-- tier) - synthesised by LearningPathPlanner from current capability. A step that needs a template row
+-- to say what it is cannot be re-planned, and re-planning is the whole point of the path.
+--
+-- Dropping the four tables removes the triple of composite keys that existed only to pin a step to a
+-- template (UQ_PathTemplates_Id_Cert, UQ_PathModules_Id_Template, UQ_PMI_Id_Template, and
+-- UQ_LearnerPaths_Id_Template below). #231 measured the wall this was blocked on: LearnerPathSteps
+-- carried PathModuleItemId NOT NULL with a composite FK to PathModuleItems, so the step had to be
+-- repointed at its own coordinate before the scaffolding could go. That repoint is this table.
 CREATE TABLE LearnerPaths (
   LearnerPathId   INT IDENTITY(1,1) PRIMARY KEY,
   UserId          INT NOT NULL REFERENCES Users(UserId),
   CertId          INT NOT NULL REFERENCES Certificates(CertId),
-  TemplateId      INT NOT NULL,
   CurrentBandCode VARCHAR(20) NULL,
   -- UI-24: path-generated "Built from your placement result on 15 August 2026"
   PlacementId     INT NULL,
   Status          VARCHAR(10) NOT NULL DEFAULT 'active'
     CONSTRAINT CK_LearnerPaths_Status CHECK (Status IN ('active','completed','reset')),
   StartedAt       DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
-  -- M-1: TemplateId's own CertId must equal the path's own (pins the carried-down value)
-  CONSTRAINT FK_LearnerPaths_TemplateCert FOREIGN KEY (TemplateId, CertId) REFERENCES PathTemplates(TemplateId, CertId),
   -- composite target so CreditTransactions can prove the charged user owns the path (H-1):
   CONSTRAINT UQ_LearnerPaths_Id_User UNIQUE (LearnerPathId, UserId),
-  -- M-1: composite target so LearnerPathSteps can require the item's module belong to the same template
-  CONSTRAINT UQ_LearnerPaths_Id_Template UNIQUE (LearnerPathId, TemplateId),
+  -- #232: composite target so every step's carried-down CertId is this path's own, and the step's
+  -- skill, topic and resource can be pinned to that same certificate.
+  CONSTRAINT UQ_LearnerPaths_Id_Cert UNIQUE (LearnerPathId, CertId),
   -- UI-24: the placement must be this user's own
   CONSTRAINT FK_LearnerPaths_PlacementUser FOREIGN KEY (PlacementId, UserId) REFERENCES PlacementTests(PlacementId, UserId)
 );
@@ -2492,22 +2419,66 @@ GO
 CREATE UNIQUE INDEX UX_LearnerPaths_OneActive
   ON LearnerPaths(UserId, CertId) WHERE Status = 'active';
 GO
+-- #232 / D10: THE STEP IS A COORDINATE.
+--
+-- StepCoordinate = (SkillId, TopicId, TargetCefr, StepType, SizingTier). Those five columns say what a
+-- step is; nothing outside them does. PathModuleItemId is gone, and with it the requirement that a
+-- step belong to a module of a template - which is what makes a step re-plannable at all.
+--
+-- TargetCefr is the level of THIS skill, never the certificate's target band. Those are different
+-- quantities (D1/D6): a band is a scored interval the certificate defines, a level is a position on
+-- the CEFR ladder. Reading a band code as a level is the defect class this column exists to prevent.
+--
+-- The (SkillId, Modality) and (TopicId, Modality) composite keys are the idiom Sections and Items
+-- already use: a listening step on a reading topic is a defect, and a comment cannot enforce it.
 CREATE TABLE LearnerPathSteps (
   StepId          INT IDENTITY(1,1) PRIMARY KEY,
   LearnerPathId   INT NOT NULL,
-  PathModuleItemId INT NOT NULL,
-  -- M-1: carried down from the owning path so the item's own template must match the path's template
-  TemplateId      INT NOT NULL,
+  -- carried down from the owning path so every coordinate below is pinned to the path's certificate
+  CertId          INT NOT NULL,
+  -- the skill axis. CONTEXT.md: a Skill is exactly one modality, and Skills is certificate-scoped.
+  SkillId         INT NOT NULL,
+  Modality        VARCHAR(10) NOT NULL
+    CONSTRAINT CK_Steps_Modality CHECK (Modality IN ('listening','reading','speaking','writing')),
+  -- #183: the canonical twenty. No twenty-first topic exists, so a step cannot invent one.
+  TopicId         INT NOT NULL,
+  -- the level this skill is practised at, A1-C2. Never 'pre_a1': the floor is reportable, not
+  -- authored, and BusinessObjects.CefrLevel.TryParseAuthored refuses it for the same reason.
+  TargetCefr      VARCHAR(10) NOT NULL
+    CONSTRAINT CK_Steps_TargetCefr CHECK (TargetCefr IN ('A1','A2','B1','B2','C1','C2')),
+  -- D10's three execution paths, not a label:
+  --   diagnostic_drill / focus_practice / review_spaced -> the unified item selector (#235)
+  --   concept_lesson / expanded_remedial                -> the lesson reader
+  --   mock_section                                      -> IAttemptEngine
+  StepType        VARCHAR(20) NOT NULL
+    CONSTRAINT CK_Steps_StepType CHECK (StepType IN
+      ('diagnostic_drill','focus_practice','review_spaced',
+       'concept_lesson','expanded_remedial','mock_section')),
+  -- D10's sizing table holds exactly these three values and no others. A fourth tier would be a size
+  -- nobody measured the minutes for.
+  SizingTier      VARCHAR(12) NOT NULL
+    CONSTRAINT CK_Steps_SizingTier CHECK (SizingTier IN ('mastered','developing','low')),
+  -- What the step actually opens. A drill names no resource: the selector decides which items at run
+  -- time, which is what lets a drill substitute a sibling topic when its own cell is cooling down.
+  RefLessonId     INT NULL,
+  RefExamId       INT NULL,
   Status          VARCHAR(12) NOT NULL DEFAULT 'locked'
     -- UI-25: learning-path shows Not started / In progress / Done / Locked
     CONSTRAINT CK_Steps_Status CHECK (Status IN ('locked','available','in_progress','done')),
   Score           DECIMAL(6,2) NULL,
   StartedAt       DATETIMEOFFSET NULL,
   CompletedAt     DATETIMEOFFSET NULL,
-  -- #154: the path is planned week by week inside a four-week window. Nullable because rows written
-  -- before #154 (and rows created by hand/seed) have no plan behind them; a generated step always
-  -- carries both numbers, and the week it belongs to is what the path screen groups by.
+  -- #154: the planning week (1-4) this step belongs to. Nullable because rows written by hand or by
+  -- seed have no plan behind them; a generated step always carries both numbers.
   WeekNumber       INT NULL CONSTRAINT CK_Steps_Week CHECK (WeekNumber IS NULL OR WeekNumber BETWEEN 1 AND 4),
+  -- #232 / D10: absolute ordering inside the week. Ordering is pedagogical (lesson -> blocked
+  -- practice -> interleaved review, alternating skills across the timeline), so it is a field the
+  -- planner sets, never the row's insertion order. #233 packs weeks to a budget; it orders by this.
+  WeekSequence     INT NOT NULL CONSTRAINT DF_Steps_WeekSequence DEFAULT 0,
+  -- #232: the size the learner is shown before starting ("8 items, ~12 min"). SizingTier is the band
+  -- the planner chose; this is the count it actually resolved, so a short cell says so honestly
+  -- instead of claiming a count it cannot fill. NULL for a lesson, which is sized in minutes alone.
+  PlannedItemCount INT NULL CONSTRAINT CK_Steps_PlannedItemCount CHECK (PlannedItemCount IS NULL OR PlannedItemCount > 0),
   EstimatedMinutes INT NULL CONSTRAINT CK_Steps_EstMinutes CHECK (EstimatedMinutes IS NULL OR EstimatedMinutes > 0),
   -- #154: what "this week is on track" is measured against, per step
   TargetAccuracyPct INT NOT NULL CONSTRAINT DF_Steps_TargetAccuracy DEFAULT 70
@@ -2519,12 +2490,33 @@ CREATE TABLE LearnerPathSteps (
   -- between open states (locked -> available -> in_progress) derives nothing and declares nothing.
   WrittenByService VARCHAR(64) NULL,
   ProjectionVersion INT NOT NULL CONSTRAINT DF_Steps_ProjectionVersion DEFAULT 0,
-  -- M-1: TemplateId must be the learner path's own
-  CONSTRAINT FK_Steps_PathTemplate FOREIGN KEY (LearnerPathId, TemplateId) REFERENCES LearnerPaths(LearnerPathId, TemplateId),
-  -- M-1: the module item must belong to that same template
-  CONSTRAINT FK_Steps_ItemTemplate FOREIGN KEY (PathModuleItemId, TemplateId) REFERENCES PathModuleItems(ItemId, TemplateId)
+  -- M-1: CertId must be the learner path's own
+  CONSTRAINT FK_Steps_PathCert FOREIGN KEY (LearnerPathId, CertId) REFERENCES LearnerPaths(LearnerPathId, CertId),
+  -- the skill must belong to that same certificate
+  CONSTRAINT FK_Steps_SkillCert FOREIGN KEY (SkillId, CertId) REFERENCES Skills(SkillId, CertId),
+  -- and the modality must be the skill's own (a listening step cannot name a reading skill)
+  CONSTRAINT FK_Steps_SkillModality FOREIGN KEY (SkillId, Modality) REFERENCES Skills(SkillId, Modality),
+  -- a lesson must be a lesson of the same certificate (NULL stays legal, MATCH SIMPLE).
+  -- Declared as an ALTER after Domain 9.5 creates Lessons, because LearnerPathSteps is created first.
+  -- the topic must exist and carry that same modality
+  CONSTRAINT FK_Steps_TopicModality FOREIGN KEY (TopicId, Modality) REFERENCES Topics(TopicId, Modality),
+  -- a mock section must be an exam of the same certificate (NULL stays legal, MATCH SIMPLE)
+  CONSTRAINT FK_Steps_ExamCert FOREIGN KEY (RefExamId, CertId) REFERENCES Exams(ExamId, CertId),
+  -- Review Focus #3, restated for the coordinate: the step type and the resource must agree. A drill
+  -- names neither, because the selector picks its items; a lesson names only its lesson; a mock
+  -- section names only its exam. Without this, a concept_lesson with no lesson would open an empty
+  -- reader and a mock_section with no exam would open nothing at all.
+  CONSTRAINT CK_Steps_ResourceMatchesType CHECK (
+       (StepType IN ('diagnostic_drill','focus_practice','review_spaced')
+          AND RefLessonId IS NULL AND RefExamId IS NULL)
+    OR (StepType IN ('concept_lesson','expanded_remedial')
+          AND RefLessonId IS NOT NULL AND RefExamId IS NULL)
+    OR (StepType = 'mock_section'
+          AND RefExamId IS NOT NULL AND RefLessonId IS NULL)
+  )
 );
 GO
+
 -- UI-12: now that LearnerPathSteps exists, link a practice session to the module step it serves
 ALTER TABLE PracticeSessions ADD CONSTRAINT FK_Practice_PathStep FOREIGN KEY (LearnerPathStepId) REFERENCES LearnerPathSteps(StepId);
 GO
@@ -2586,22 +2578,6 @@ BEGIN
     WHERE i.ProjectionVersion <= t.WasVersion
   )
     THROW 50076, 'The step closure projection version must be newer than the stored one; an older callback cannot overwrite a newer result.', 1;
-END;
-GO
--- UI-44: an ai_task item may name the practice exam it opens, and only a skill-practice exam —
--- never a mock (which would charge mock_exam_start) or a placement (which must stay free).
-CREATE TRIGGER trg_PMI_AiTaskRefsSkillPracticeExam
-ON PathModuleItems AFTER INSERT, UPDATE AS
-BEGIN
-  SET NOCOUNT ON;
-  IF EXISTS (
-    SELECT 1 FROM inserted i
-    JOIN Exams e ON e.ExamId = i.RefExamId
-    WHERE i.ItemType = 'ai_task'
-      AND i.RefExamId IS NOT NULL
-      AND e.Purpose NOT IN ('writing_practice','speaking_practice')
-  )
-    THROW 50043, 'An ai_task item may only reference a writing- or speaking-practice exam.', 1;
 END;
 GO
 -- ============ Domain 9.5: Guided Learning (Lessons) ============
@@ -2668,29 +2644,33 @@ CREATE TABLE LearnerLessonMicroChecks (
   CONSTRAINT PK_LearnerLessonMicroChecks PRIMARY KEY (UserId, CardId)
 );
 GO
--- Extend PathModuleItems to support lesson references
-ALTER TABLE PathModuleItems ADD RefLessonId INT NULL;
-GO
--- Drop and recreate the ItemType check to include 'lesson'
-ALTER TABLE PathModuleItems DROP CONSTRAINT CK_PMI_Type;
-GO
-ALTER TABLE PathModuleItems ADD CONSTRAINT CK_PMI_Type
-  CHECK (ItemType IN ('practice_section','mock_exam','ai_task','mentor','lesson'));
-GO
--- Drop and recreate the RefMatchesType check to include lesson case
-ALTER TABLE PathModuleItems DROP CONSTRAINT CK_PMI_RefMatchesType;
-GO
-ALTER TABLE PathModuleItems ADD CONSTRAINT CK_PMI_RefMatchesType CHECK (
-     (ItemType='practice_section' AND RefSectionId IS NOT NULL AND RefExamId IS NULL AND RefLessonId IS NULL)
-  OR (ItemType='mock_exam'        AND RefExamId    IS NOT NULL AND RefSectionId IS NULL AND RefLessonId IS NULL)
-  OR (ItemType='ai_task'          AND RefSectionId IS NULL AND RefLessonId IS NULL)
-  OR (ItemType='mentor'           AND RefSectionId IS NULL AND RefExamId IS NULL AND RefLessonId IS NULL)
-  OR (ItemType='lesson'           AND RefLessonId  IS NOT NULL AND RefSectionId IS NULL AND RefExamId IS NULL)
-);
-GO
--- Add composite FK for lesson references (certificate isolation)
-ALTER TABLE PathModuleItems ADD CONSTRAINT FK_PMI_LessonCert
+-- #232: Domain 9.5 creates Lessons after LearnerPathSteps, so the step's lesson reference is pinned
+-- here instead. Certificate isolation uses the same (Id, CertId) composite Lessons already publishes
+-- for LessonCards and LearnerLessonProgress.
+ALTER TABLE LearnerPathSteps ADD CONSTRAINT FK_Steps_LessonCert
   FOREIGN KEY (RefLessonId, CertId) REFERENCES Lessons(LessonId, CertId);
+GO
+-- UI-44, moved onto the step by #232. The rule was trg_PMI_AiTaskRefsSkillPracticeExam on
+-- PathModuleItems: a path activity may open a sittable paper, never a mock-that-is-really-a-placement
+-- or a placement sitting, which must stay free. PathModuleItems is dropped, so the rule lands on the
+-- one column that can still open a paper - a mock_section step's RefExamId.
+--
+-- A CHECK cannot read Exams.Purpose, so this stays a trigger. It refuses a mock_section pointing at
+-- any purpose other than 'mock': a path step that opened a placement would make a free diagnostic
+-- chargeable, and one that opened a skill-practice paper would bill a sitting the learner did not ask
+-- for. Drills and lessons name no exam, which CK_Steps_ResourceMatchesType already guarantees.
+CREATE TRIGGER trg_LearnerPathSteps_MockSectionIsSittableExam
+ON LearnerPathSteps AFTER INSERT, UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+  IF EXISTS (
+    SELECT 1 FROM inserted i
+    JOIN Exams e ON e.ExamId = i.RefExamId
+    WHERE i.StepType = 'mock_section'
+      AND e.Purpose <> 'mock'
+  )
+    THROW 50044, 'A mock_section step may only open a mock exam. A placement or skill-practice paper is not a path mock section.', 1;
+END;
 GO
 -- ============ Domain 10: Mentor ============
 CREATE TABLE MentorProfiles (
@@ -3424,13 +3404,16 @@ CREATE INDEX IX_Recommendations_Attempt  ON Recommendations(AttemptId) WHERE Att
 CREATE INDEX IX_Recommendations_Session  ON Recommendations(PracticeSessionId) WHERE PracticeSessionId IS NOT NULL;
 -- Learning path
 CREATE INDEX IX_Placement_User           ON PlacementTests(UserId, CertId);
-CREATE INDEX IX_PathModules_Template     ON PathModules(TemplateId, DisplayOrder);
-CREATE INDEX IX_PMI_Module               ON PathModuleItems(ModuleId, DisplayOrder);
-CREATE INDEX IX_PMT_Module               ON PathModuleTopics(ModuleId, DisplayOrder);
 CREATE INDEX IX_LearnerPaths_User        ON LearnerPaths(UserId, CertId);
 CREATE INDEX IX_Steps_LearnerPath        ON LearnerPathSteps(LearnerPathId);
 -- #154: the path screen reads its steps week by week, so the plan order is the index order
 CREATE INDEX IX_Steps_LearnerPath_Week   ON LearnerPathSteps(LearnerPathId, WeekNumber, StepId);
+-- #232: #233 packs a week to a minute budget and orders it by WeekSequence, so the plan's own
+-- ordering is the index rather than the identity column that happens to match it today.
+CREATE INDEX IX_Steps_LearnerPath_Sequence ON LearnerPathSteps(LearnerPathId, WeekNumber, WeekSequence);
+-- #232: "which steps are at this coordinate" is what a re-plan asks, and what a mastery change
+-- invalidates. Keyed without CertId because the coordinate is certificate-agnostic (D4).
+CREATE INDEX IX_Steps_Coordinate         ON LearnerPathSteps(TopicId, TargetCefr, StepType);
 -- Mentor
 CREATE INDEX IX_Mentors_Cert             ON MentorProfiles(CertId) WHERE IsActive = 1;
 CREATE INDEX IX_MentorSlots_Mentor       ON MentorSlots(MentorId, StartAt);

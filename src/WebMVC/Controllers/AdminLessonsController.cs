@@ -206,7 +206,7 @@ public sealed class AdminLessonsController(
                 UpdatedAt: null);
 
             ViewData["AdminLessonId"] = id;
-            var model = new LessonViewModel(lessonDetail, progress, null);
+            var model = new LessonViewModel(lessonDetail, progress);
             return View("~/Views/Admin/Lessons/Preview.cshtml", model);
         }
         catch (Exception ex)

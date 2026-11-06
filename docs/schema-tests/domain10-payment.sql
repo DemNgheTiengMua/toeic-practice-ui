@@ -146,9 +146,8 @@ PRINT 'accepted multi-row all-NULL-source admin grants';
 -- 'premium_path', and stripping the value from CK_CreditTxn_Reason would make them unreadable.
 INSERT INTO Certificates (Code,Name,IsActive) VALUES ('PREM162',N'P',1); DECLARE @pc INT=SCOPE_IDENTITY();
 INSERT INTO ScoreBands (CertId,Code,Name,MinTotal,MaxTotal,DisplayOrder) VALUES (@pc,'A1',N'A1',0,100,1),(@pc,'B2',N'B2',101,900,2);
-INSERT INTO PathTemplates (CertId,FromBandCode,ToBandCode,Name) VALUES (@pc,'A1','B2',N'Historical');
-DECLARE @pt INT=SCOPE_IDENTITY();
-INSERT INTO LearnerPaths (UserId,CertId,TemplateId,Status) VALUES (@u,@pc,@pt,'reset');
+-- #232: a path carries no TemplateId; the ledger row is the only thing this fixture needs.
+INSERT INTO LearnerPaths (UserId,CertId,Status) VALUES (@u,@pc,'reset');
 DECLARE @plp INT=SCOPE_IDENTITY();
 INSERT INTO CreditTransactions (UserId,Reason,Delta,AdminUserId,Note) VALUES (@u,'admin_grant',5,@u2,N'funds the charge below');
 INSERT INTO CreditTransactions (UserId,Reason,Delta,LearnerPathId) VALUES (@u,'premium_path',-5,@plp);

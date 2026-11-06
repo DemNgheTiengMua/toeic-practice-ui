@@ -30,9 +30,6 @@ public partial class QuestionCategory
     public virtual ICollection<Lesson> Lessons { get; set; } = new List<Lesson>();
 
     [InverseProperty("Category")]
-    public virtual ICollection<PathModuleTopic> PathModuleTopics { get; set; } = new List<PathModuleTopic>();
-
-    [InverseProperty("Category")]
     public virtual ICollection<Question> Questions { get; set; } = new List<Question>();
 
     /// <summary>#155: the mastery rows that point at this category, one per learner.</summary>

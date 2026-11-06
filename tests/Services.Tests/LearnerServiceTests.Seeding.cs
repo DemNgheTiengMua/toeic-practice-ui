@@ -47,7 +47,10 @@ public sealed partial class LearnerServiceTests
         database.SqlAsync($"""
             DECLARE @cert INT = (SELECT CertId FROM Certificates WHERE Code = '{certCode}');
             DECLARE @skill INT = (SELECT TOP 1 SkillId FROM Skills WHERE CertId = @cert);
-            DECLARE @sec INT = (SELECT TOP 1 SectionId FROM Sections WHERE CertId = @cert);
+            -- #232: the step's topic coordinate. A test fixture may create the topic it needs, because
+            -- the canonical twenty are a closed set the shared database already holds only in the seed.
+            IF NOT EXISTS (SELECT 1 FROM Topics WHERE Modality = 'reading')
+              INSERT INTO Topics (Modality, Code, Name) VALUES ('reading', 'R-DET', N'Detail');
 
             MERGE TargetBands AS tgt
             USING (SELECT {userId} AS UserId, @cert AS CertId) AS src
@@ -62,26 +65,20 @@ public sealed partial class LearnerServiceTests
                         {(weeklyHours is null ? "NULL" : weeklyHours.Value.ToString(System.Globalization.CultureInfo.InvariantCulture))},
                         {(feasibility is null ? "NULL" : $"'{feasibility}'")});
 
-            INSERT INTO PathTemplates (CertId, FromBandCode, ToBandCode, Name)
-            VALUES (@cert, 'LOW', '{targetBandCode}', N'Path {certCode}');
-            DECLARE @tpl INT = SCOPE_IDENTITY();
-
-            INSERT INTO PathModules (TemplateId, SkillId, CertId, DisplayOrder, Title)
-            VALUES (@tpl, @skill, @cert, 1, N'Module 1');
-            DECLARE @mod INT = SCOPE_IDENTITY();
-
-            INSERT INTO LearnerPaths (UserId, CertId, TemplateId, CurrentBandCode, Status)
-            VALUES ({userId}, @cert, @tpl, 'LOW', 'active');
+            -- #232: a path is a coordinate set, not a template. No template, module or module item.
+            INSERT INTO LearnerPaths (UserId, CertId, CurrentBandCode, Status)
+            VALUES ({userId}, @cert, 'LOW', 'active');
             DECLARE @path INT = SCOPE_IDENTITY();
 
             """ + string.Concat(weekSteps.Select((s, i) => $"""
-            INSERT INTO PathModuleItems (ModuleId, CertId, TemplateId, ItemType, RefSectionId, QuestionCount, DisplayOrder)
-            VALUES (@mod, @cert, @tpl, 'practice_section', @sec, 5, {i + 1});
-            DECLARE @item{i} INT = SCOPE_IDENTITY();
-            INSERT INTO LearnerPathSteps (LearnerPathId, PathModuleItemId, TemplateId, Status, WeekNumber, EstimatedMinutes,
+            INSERT INTO LearnerPathSteps (LearnerPathId, CertId, SkillId, Modality, TopicId, TargetCefr, StepType, SizingTier,
+                                          Status, WeekNumber, WeekSequence, EstimatedMinutes,
                                           WrittenByService, ProjectionVersion)
-            VALUES (@path, @item{i}, @tpl, '{(s.Done ? "done" : "available")}',
-                    {(s.Week is null ? "NULL" : s.Week.Value.ToString())}, {s.Minutes},
+            VALUES (@path, @cert, @skill, 'reading',
+                    (SELECT TOP 1 TopicId FROM Topics WHERE Modality = 'reading'),
+                    'B1', 'focus_practice', 'developing',
+                    '{(s.Done ? "done" : "available")}',
+                    {(s.Week is null ? "NULL" : s.Week.Value.ToString())}, {i + 1}, {s.Minutes},
                     {(s.Done ? "'PathStepCompletion'" : "NULL")}, {(s.Done ? 1 : 0)});
             """)));
 

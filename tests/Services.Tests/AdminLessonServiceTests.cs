@@ -342,7 +342,7 @@ public sealed class AdminLessonServiceTests(DatabaseFixture database)
     }
 
     [Fact]
-    public async Task DeleteLessonAsync_BlockedWhenReferencedByPathModuleItem()
+    public async Task DeleteLessonAsync_BlockedWhenReferencedByAnActivePathStep()
     {
         var (certId, skillId, categoryId) = await SeedCertAndSkillAsync();
         var service = CreateService();
@@ -361,20 +361,28 @@ public sealed class AdminLessonServiceTests(DatabaseFixture database)
             }
         ));
 
-        // Create ScoreBands, PathTemplate, PathModule, and PathModuleItem referencing RefLessonId
+        // #232: the reader reference lives on the step's coordinate, so an active path step is what
+        // blocks the delete now.
         await database.SqlAsync($"""
+            IF NOT EXISTS (SELECT 1 FROM Topics WHERE Modality = 'reading')
+              INSERT INTO Topics (Modality, Code, Name) VALUES ('reading', 'R-DET', N'Detail');
+
             INSERT INTO ScoreBands (CertId, Code, Name, MinTotal, MaxTotal, DisplayOrder) VALUES
-            ({certId}, 'B1', 'Band 1', 0, 500, 1),
-            ({certId}, 'B2', 'Band 2', 501, 990, 2);
+            ({certId}, 'B1', 'Band 1', 0, 500, 1);
 
-            INSERT INTO PathTemplates (CertId, FromBandCode, ToBandCode, Name) VALUES ({certId}, 'B1', 'B2', N'Path Temp');
-            DECLARE @pt INT = SCOPE_IDENTITY();
+            INSERT INTO Roles (Code, Name) SELECT 'learner', N'Learner'
+              WHERE NOT EXISTS (SELECT 1 FROM Roles WHERE Code = 'learner');
+            INSERT INTO Users (RoleId, Email, PasswordHash, FullName, ActiveCertId)
+            VALUES ((SELECT RoleId FROM Roles WHERE Code = 'learner'), '{Guid.NewGuid():N}@test.local', 0x01, N'L', {certId});
+            DECLARE @u INT = SCOPE_IDENTITY();
 
-            INSERT INTO PathModules (TemplateId, SkillId, CertId, Title, DisplayOrder) VALUES (@pt, {skillId}, {certId}, N'Mod 1', 1);
-            DECLARE @pm INT = SCOPE_IDENTITY();
+            INSERT INTO LearnerPaths (UserId, CertId, Status) VALUES (@u, {certId}, 'active');
+            DECLARE @lp INT = SCOPE_IDENTITY();
 
-            INSERT INTO PathModuleItems (ModuleId, CertId, TemplateId, ItemType, RefLessonId, DisplayOrder)
-            VALUES (@pm, {certId}, @pt, 'lesson', {created.LessonId}, 1);
+            INSERT INTO LearnerPathSteps (LearnerPathId, CertId, SkillId, Modality, TopicId, TargetCefr, StepType, SizingTier, RefLessonId)
+            VALUES (@lp, {certId}, {skillId}, 'reading',
+                    (SELECT TOP 1 TopicId FROM Topics WHERE Modality = 'reading'),
+                    'B1', 'concept_lesson', 'developing', {created.LessonId});
             """);
 
         var ex = await Assert.ThrowsAsync<AdminLessonException>(() => service.DeleteLessonAsync(created.LessonId));

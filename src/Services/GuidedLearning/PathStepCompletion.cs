@@ -1,36 +1,47 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BusinessObjects;
 using DataAccess;
+using BusinessObjects.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace Services;
 
 /// <summary>
-/// #154: one owner for "an activity finished, so its path step is done". Before this, only a practice
-/// session could close a step (<c>PracticeService</c> did it inline), a finished mock exam touched
-/// nothing, and a finished lesson was only *displayed* as done at read time. Three writers now call
-/// one place, so the unlock rule and the path-completed rule cannot drift apart again.
+/// #154 / #232: one owner for "an activity finished, so its path step is done". Three writers call one
+/// place, so the unlock rule and the path-completed rule cannot drift apart again.
+/// <para>
+/// #232 changes what a step is matched by. There is no module item to compare: a lesson step names its
+/// lesson and a mock step names its exam, and a drill step names neither because the selector decides
+/// its items. So the match is the step's <b>route</b> plus its resource, not an item type.
+/// </para>
+/// <para>
+/// <b>A step closes by being done, not by improving.</b> Nothing here reads the score or the accuracy
+/// against a threshold: a learner who sits the activity and finishes it closes the step, and the measured
+/// number is recorded beside it. Requiring an accuracy here would make a step silently unfinishable for
+/// a learner who is bad at the topic, which is exactly the learner the step exists for.
+/// </para>
 /// </summary>
 public static class PathStepCompletion
 {
-    /// <summary>The activity kinds that can close a step, and the item type each one satisfies.</summary>
+    /// <summary>The activity kinds that can close a step.</summary>
     public enum Activity
     {
-        PracticeSection,
-        MockExam,
+        Drill,
         Lesson,
+        MockSection,
     }
 
     /// <summary>
     /// Closes the learner's open step for this activity, and unlocks whatever comes next. Returns the
     /// step id, or null when the learner has no path or the activity is not part of it.
     /// </summary>
-    /// <param name="referenceId">The section, exam or lesson the activity was about. A step is only
-    /// closed by an activity over the same reference — sitting Mock Exam 2 does not tick off Mock
-    /// Exam 1.</param>
+    /// <param name="referenceId">The lesson or exam the activity was about, ignored for a drill (which
+    /// has no resource). A step is only closed by an activity over the same reference — sitting Mock
+    /// Exam 2 does not tick off Mock Exam 1.</param>
     /// <param name="score">The measured score, or null for a lesson.</param>
     /// <param name="accuracyPct">Measured accuracy, or null when the activity produces no score.</param>
     public static async Task<int?> CloseAsync(
@@ -42,38 +53,40 @@ public static class PathStepCompletion
         decimal? accuracyPct,
         CancellationToken cancellationToken = default)
     {
-        var itemType = activity switch
+        // The step types a route owns, taken from the planner so the two cannot disagree about which
+        // type belongs to which surface. A lesson closes a lesson step; a mock closes a mock step; a
+        // drill closes any of the selector-driven types.
+        var route = activity switch
         {
-            Activity.PracticeSection => PathModuleItemType.PracticeSection.ToCode(),
-            Activity.MockExam => PathModuleItemType.MockExam.ToCode(),
-            _ => PathModuleItemType.Lesson.ToCode(),
+            Activity.Drill => StepRoute.ItemSelector,
+            Activity.Lesson => StepRoute.LessonReader,
+            _ => StepRoute.AttemptEngine,
         };
 
-        // The item column that has to match, chosen with the type so the two cannot disagree. A plan
-        // may reuse one exam or section in more than one step; one sitting closes the earliest open
-        // one, because sitting Mock Exam 1 twice is not two sittings of it. A step that is still
+        var stepTypes = LearningPathPlanner.StepTypesFor(route).Select(t => t.ToCode()).ToList();
+
+        // A plan may reuse one exam or lesson in more than one step; one sitting closes the earliest
+        // open one, because sitting Mock Exam 1 twice is not two sittings of it. A step that is still
         // `locked` is closeable too: a learner who sits the exam from the catalog before its week
         // arrives has done the work, and refusing to record it would leave a step only a second paid
         // sitting could close.
-        var steps = await db.LearnerPathSteps
+        var candidates = await db.LearnerPathSteps
             .Include(s => s.LearnerPath)
-            .Include(s => s.PathModuleItem)
             .Where(s => s.LearnerPath.UserId == userId
                 && s.LearnerPath.Status == "active"
-                && s.PathModuleItem.ItemType == itemType
+                && stepTypes.Contains(s.StepType)
                 && s.Status != "done")
             .OrderBy(s => s.WeekNumber ?? 0)
+            .ThenBy(s => s.WeekSequence)
             .ThenBy(s => s.StepId)
             .ToListAsync(cancellationToken);
 
-        var step = steps
-            .Where(s => activity switch
-            {
-                Activity.PracticeSection => s.PathModuleItem.RefSectionId == referenceId,
-                Activity.MockExam => s.PathModuleItem.RefExamId == referenceId,
-                _ => s.PathModuleItem.RefLessonId == referenceId,
-            })
-            .FirstOrDefault();
+        var step = activity switch
+        {
+            Activity.Lesson => candidates.FirstOrDefault(s => s.RefLessonId == referenceId),
+            Activity.MockSection => candidates.FirstOrDefault(s => s.RefExamId == referenceId),
+            _ => candidates.FirstOrDefault(),
+        };
 
         if (step is null)
         {
@@ -145,6 +158,7 @@ public static class PathStepCompletion
         var next = await db.LearnerPathSteps
             .Where(s => s.LearnerPathId == learnerPathId && s.Status == "locked")
             .OrderBy(s => s.WeekNumber ?? 0)
+            .ThenBy(s => s.WeekSequence)
             .ThenBy(s => s.StepId)
             .FirstOrDefaultAsync(cancellationToken);
 

@@ -53,20 +53,12 @@ public sealed class GoalFeasibilityServiceTests(DatabaseFixture database)
               (@cert, 'B2', N'Upper inter.',    501,   800, 3, 800),
               (@cert, 'C1', N'Advanced',        801,   990, 4, 1150);
 
-            INSERT INTO PathTemplates (CertId, FromBandCode, ToBandCode, Name)
-            VALUES (@cert, 'B1', 'B2', N'B1 to B2');
-            DECLARE @tpl INT = SCOPE_IDENTITY();
+            -- #232: a path is a coordinate set, not a template. This fixture seeds a certificate only, so
+            -- no path row is planted here - the services create it.
 
-            INSERT INTO PathModules (TemplateId, SkillId, CertId, DisplayOrder, Title, EstimatedMinutes)
-            VALUES (@tpl, @sR, @cert, 1, N'Module 1', 20);
-            DECLARE @m1 INT = SCOPE_IDENTITY();
-
-            INSERT INTO PathModuleItems (ModuleId, CertId, TemplateId, ItemType, RefSectionId, QuestionCount, DisplayOrder)
-            VALUES (@m1, @cert, @tpl, 'practice_section', @secR, 5, 1);
-
-            -- #154: a path needs a section it can actually drill, so the fixture carries one question.
-            -- It needs an exam to hang on: QuestionGroups.ExamId is NOT NULL, and drilling reads
-            -- Questions by section, never by exam.
+            -- #154: a path needs a topic with stock it can actually drill, so the fixture carries one
+            -- canonical reading topic. It needs an exam to hang on: QuestionGroups.ExamId is NOT NULL,
+            -- and drilling reads Questions by section, never by exam.
             INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose)
             VALUES (@cert, N'Subject bank', 'published', 30, 'mock');
             DECLARE @drillExam INT = SCOPE_IDENTITY();
@@ -82,6 +74,16 @@ public sealed class GoalFeasibilityServiceTests(DatabaseFixture database)
             INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
               (@drillQ, 'mcq', 'A', N'Right', 1),
               (@drillQ, 'mcq', 'B', N'Wrong', 0);
+
+            -- #232: the step coordinate's topic and the skill's own level from its cut-score table.
+            IF NOT EXISTS (SELECT 1 FROM Topics WHERE Modality = 'reading')
+              INSERT INTO Topics (Modality, Code, Name) VALUES ('reading', 'R-DET', N'Detail');
+            INSERT INTO CefrCutScoreVersions (CertId, TableVersion, ReportsSkillsSeparately, Source, PublishedAt)
+            VALUES (@cert, 1, 0, N'Feasibility standard-setting', '2024-01-01');
+            INSERT INTO CefrCutScores (CertId, TableVersion, SkillId, CefrLevel, RowKind, MinScaled, MaxScaled) VALUES
+              (@cert, 1, @sR, 'A2', 'cut', 0, 100),
+              (@cert, 1, @sR, 'B1', 'cut', 101, 500),
+              (@cert, 1, @sR, 'B2', 'cut', 501, 990);
             """);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);

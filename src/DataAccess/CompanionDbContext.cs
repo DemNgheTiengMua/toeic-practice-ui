@@ -118,18 +118,6 @@ public partial class CompanionDbContext : DbContext
     public virtual DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
 
 
-    public virtual DbSet<PathModule> PathModules { get; set; }
-
-
-    public virtual DbSet<PathModuleItem> PathModuleItems { get; set; }
-
-
-    public virtual DbSet<PathModuleTopic> PathModuleTopics { get; set; }
-
-
-    public virtual DbSet<PathTemplate> PathTemplates { get; set; }
-
-
     public virtual DbSet<PaymentEvent> PaymentEvents { get; set; }
 
 

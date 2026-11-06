@@ -37,11 +37,6 @@
   <a href="/dashboard" class="breadcrumbs__item">Home</a>
   <span class="breadcrumbs__separator" aria-hidden="true">›</span>
   <a href="/learning-path" class="breadcrumbs__item">My learning path</a>
-  @if (Model.ModuleId.HasValue)
-  {
-    <span class="breadcrumbs__separator" aria-hidden="true">›</span>
-    <a href="/learning-path/modules/@Model.ModuleId.Value" class="breadcrumbs__item">Module</a>
-  }
   <span class="breadcrumbs__separator" aria-hidden="true">›</span>
   <span class="breadcrumbs__item" aria-current="page">@Model.Lesson.Title</span>
 </nav>

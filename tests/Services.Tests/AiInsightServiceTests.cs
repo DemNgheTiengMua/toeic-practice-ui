@@ -798,8 +798,29 @@ public sealed class AiInsightServiceTests(DatabaseFixture database)
         Assert.Equal(AiInsightScope.Dashboard, insight.Scope);
     }
 
-    private async Task<(int certId, int templateId, int pathId, int step1Id, int step2Id)> SeedLearningPathFixtureAsync(int userId, string certCode)
+    private async Task<(int certId, int topicId, int pathId, int step1Id, int step2Id)> SeedLearningPathFixtureAsync(int userId, string certCode)
     {
+        // #232: the canonical twenty topics are the step coordinate's topic axis, and the schema holds
+        // the closed-set trigger but no rows. Seeded individually - a table-wide guard is the #184/#185
+        // seed defect.
+        await database.SqlAsync("""
+            INSERT INTO Topics (Modality, Code, Name)
+            SELECT v.Modality, v.Code, v.Name
+            FROM (VALUES
+              ('listening','L-GIST',N'Global gist'), ('listening','L-DET',N'Detail'),
+              ('listening','L-INF',N'Inference'), ('listening','L-ATT',N'Attitude'),
+              ('listening','L-FUNC',N'Function'), ('listening','L-ORG',N'Organisation'),
+              ('reading','R-GIST',N'Global thesis'), ('reading','R-DET',N'Local detail'),
+              ('reading','R-INF',N'Bridging inference'), ('reading','R-ATT',N'Authorial stance'),
+              ('reading','R-COH',N'Cohesion'), ('reading','R-GRAM',N'Grammar'),
+              ('speaking','S-DESC',N'Description'), ('speaking','S-INT',N'Interaction'),
+              ('speaking','S-ARG',N'Argument'), ('speaking','S-SYN',N'Synthesis'),
+              ('writing','W-CORR',N'Correspondence'), ('writing','W-DATA',N'Data'),
+              ('writing','W-ARG',N'Argument'), ('writing','W-DISC',N'Discourse')
+            ) v(Modality, Code, Name)
+            WHERE NOT EXISTS (SELECT 1 FROM Topics t WHERE t.Modality = v.Modality AND t.Code = v.Code);
+            """);
+
         await using var db = DbContextFactory.Create(database.ConnectionString);
 
         var cert = new Certificate { Code = certCode, Name = $"Cert {certCode}", IsActive = true };
@@ -818,25 +839,34 @@ public sealed class AiInsightServiceTests(DatabaseFixture database)
         db.ScoreBands.AddRange(bandA, bandB);
         await db.SaveChangesAsync();
 
-        var template = new PathTemplate { CertId = cert.CertId, FromBandCode = "A2", ToBandCode = "B2", Name = "A2 to B2" };
-        db.PathTemplates.Add(template);
-        await db.SaveChangesAsync();
+        // #232: a step is a coordinate. The fixture names a canonical topic and a real level instead of
+        // pointing at a template's module item, and no template row exists to point at. Topics are a
+        // closed set of twenty, so the fixture uses one of the canonical rows rather than inventing a
+        // code the trigger would refuse.
+        var topicId = await db.Topics
+            .Where(t => t.Modality == "reading")
+            .OrderBy(t => t.TopicId)
+            .Select(t => t.TopicId)
+            .FirstAsync();
 
-        var module = new PathModule { TemplateId = template.TemplateId, SkillId = skill.SkillId, CertId = cert.CertId, DisplayOrder = 1, Title = "Grammar" };
-        db.PathModules.Add(module);
-        await db.SaveChangesAsync();
-
-        var item1 = new PathModuleItem { ModuleId = module.ModuleId, CertId = cert.CertId, TemplateId = template.TemplateId, ItemType = "practice_section", RefSectionId = section.SectionId, DisplayOrder = 1 };
-        var item2 = new PathModuleItem { ModuleId = module.ModuleId, CertId = cert.CertId, TemplateId = template.TemplateId, ItemType = "practice_section", RefSectionId = section.SectionId, DisplayOrder = 2 };
-        db.PathModuleItems.AddRange(item1, item2);
-        await db.SaveChangesAsync();
-
-        var path = new LearnerPath { UserId = userId, CertId = cert.CertId, TemplateId = template.TemplateId, CurrentBandCode = "A2", Status = "active", StartedAt = DateTimeOffset.UtcNow };
+        var path = new LearnerPath { UserId = userId, CertId = cert.CertId, CurrentBandCode = "A2", Status = "active", StartedAt = DateTimeOffset.UtcNow };
         db.LearnerPaths.Add(path);
         await db.SaveChangesAsync();
 
-        var step1 = new LearnerPathStep { LearnerPathId = path.LearnerPathId, PathModuleItemId = item1.ItemId, TemplateId = template.TemplateId, Status = "available" };
-        var step2 = new LearnerPathStep { LearnerPathId = path.LearnerPathId, PathModuleItemId = item2.ItemId, TemplateId = template.TemplateId, Status = "locked" };
+        var step1 = new LearnerPathStep
+        {
+            LearnerPathId = path.LearnerPathId, CertId = cert.CertId, SkillId = skill.SkillId,
+            Modality = "reading", TopicId = topicId, TargetCefr = "B1",
+            StepType = "focus_practice", SizingTier = "developing", Status = "available",
+            WeekNumber = 1, WeekSequence = 1,
+        };
+        var step2 = new LearnerPathStep
+        {
+            LearnerPathId = path.LearnerPathId, CertId = cert.CertId, SkillId = skill.SkillId,
+            Modality = "reading", TopicId = topicId, TargetCefr = "B1",
+            StepType = "focus_practice", SizingTier = "developing", Status = "locked",
+            WeekNumber = 1, WeekSequence = 2,
+        };
         db.LearnerPathSteps.AddRange(step1, step2);
         await db.SaveChangesAsync();
 
@@ -844,7 +874,7 @@ public sealed class AiInsightServiceTests(DatabaseFixture database)
         user!.ActiveCertId = cert.CertId;
         await db.SaveChangesAsync();
 
-        return (cert.CertId, template.TemplateId, path.LearnerPathId, step1.StepId, step2.StepId);
+        return (cert.CertId, topicId, path.LearnerPathId, step1.StepId, step2.StepId);
     }
 
     [Fact]
@@ -852,7 +882,7 @@ public sealed class AiInsightServiceTests(DatabaseFixture database)
     {
         var certCode = Unique("PI");
         var userId = await SeedLearnerAsync();
-        var (certId, templateId, pathId, step1Id, step2Id) = await SeedLearningPathFixtureAsync(userId, certCode);
+        var (certId, topicId, pathId, step1Id, step2Id) = await SeedLearningPathFixtureAsync(userId, certCode);
         var (service, _) = CreateService();
 
         var insight = await service.GetOrCreatePathInsightAsync(userId);
@@ -873,7 +903,7 @@ public sealed class AiInsightServiceTests(DatabaseFixture database)
     {
         var certCode = Unique("PR");
         var userId = await SeedLearnerAsync();
-        var (certId, templateId, pathId, step1Id, step2Id) = await SeedLearningPathFixtureAsync(userId, certCode);
+        var (certId, topicId, pathId, step1Id, step2Id) = await SeedLearningPathFixtureAsync(userId, certCode);
         var (service, _) = CreateService();
 
         var initial = await service.GetOrCreatePathInsightAsync(userId);
@@ -890,7 +920,7 @@ public sealed class AiInsightServiceTests(DatabaseFixture database)
     {
         var certCode = Unique("PG");
         var userId = await SeedLearnerAsync();
-        var (certId, templateId, pathId, step1Id, step2Id) = await SeedLearningPathFixtureAsync(userId, certCode);
+        var (certId, topicId, pathId, step1Id, step2Id) = await SeedLearningPathFixtureAsync(userId, certCode);
         var (service, _) = CreateService();
 
         var initial = await service.GetOrCreatePathInsightAsync(userId);
@@ -922,7 +952,7 @@ public sealed class AiInsightServiceTests(DatabaseFixture database)
     {
         var certCode = Unique("PN");
         var userId = await SeedLearnerAsync();
-        var (certId, templateId, pathId, step1Id, step2Id) = await SeedLearningPathFixtureAsync(userId, certCode);
+        var (certId, topicId, pathId, step1Id, step2Id) = await SeedLearningPathFixtureAsync(userId, certCode);
         var (service, _) = CreateService();
 
         await service.GetOrCreatePathInsightAsync(userId);
@@ -943,7 +973,7 @@ public sealed class AiInsightServiceTests(DatabaseFixture database)
     {
         var certCode = Unique("PFAIL");
         var userId = await SeedLearnerAsync();
-        var (certId, templateId, pathId, step1Id, step2Id) = await SeedLearningPathFixtureAsync(userId, certCode);
+        var (certId, topicId, pathId, step1Id, step2Id) = await SeedLearningPathFixtureAsync(userId, certCode);
 
         var generator = new FakeAiInsightGenerator { ShouldSimulateFailure = true };
         var (service, _) = CreateService(generator);

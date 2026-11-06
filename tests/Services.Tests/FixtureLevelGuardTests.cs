@@ -36,7 +36,8 @@ public sealed class FixtureLevelGuardTests
         ["tests/Services.Tests/AuthoringLevelTests.cs"] =
             "#231: asserts the exported manifest names no difficulty field at all.",
         ["docs/schema-tests/domain33-contract-retirement.sql"] =
-            "#231: asserts the column and its 1-5 CHECK are gone from Questions and PathModuleItems.",
+            "#231: asserts the column and its 1-5 CHECK are gone from Questions and from the dropped "
+            + "PathModuleItems table.",
     };
 
     [Fact]

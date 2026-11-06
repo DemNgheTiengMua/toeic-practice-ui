@@ -113,13 +113,23 @@ BEGIN TRY
   THROW 50000,'EXPECT_REJECT FAILED: recommendation with two sources accepted',1;
 END TRY BEGIN CATCH IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW; PRINT 'rejected recommendation with two sources'; END CATCH
 
--- UI-44: an AI task on the path may open a writing-practice exam; a mentor item still may not
+-- UI-44, carried across #232: a path activity may open a sittable paper, never a placement or a
+-- skill-practice sitting. The rule moved from PathModuleItems (dropped by D10) to the one column that
+-- can still open a paper - a mock_section step's RefExamId - and is guarded by
+-- trg_LearnerPathSteps_MockSectionIsSittableExam.
 INSERT INTO ScoreBands (CertId,Code,Name,MinTotal,MaxTotal) VALUES (@c,'A2',N'A2',225,549);
-INSERT INTO PathTemplates (CertId,FromBandCode,ToBandCode,Name) VALUES (@c,'A1','A2',N'Starter'); DECLARE @tpl INT=SCOPE_IDENTITY();
-INSERT INTO PathModules (TemplateId,SkillId,CertId,DisplayOrder,Title) VALUES (@tpl,@wr,@c,1,N'Writing'); DECLARE @mod INT=SCOPE_IDENTITY();
-INSERT INTO PathModuleItems (ModuleId,CertId,TemplateId,ItemType,RefExamId,DisplayOrder) VALUES (@mod,@c,@tpl,'ai_task',@wx,1);
-PRINT 'accepted ai_task item opening a writing-practice exam';
+INSERT INTO Topics (Modality,Code,Name) VALUES ('writing','W-CORR',N'Correspondence');
+DECLARE @tWr INT=(SELECT TopicId FROM Topics WHERE Modality='writing' AND Code='W-CORR');
+INSERT INTO Exams (CertId,Name,Status,DurationMinutes,Purpose) VALUES (@c,N'Writing mock',N'published',60,'mock');
+DECLARE @wxMock INT=SCOPE_IDENTITY();
+INSERT INTO Exams (CertId,Name,Status,DurationMinutes,Purpose) VALUES (@c,N'Writing placement',N'published',60,'placement');
+DECLARE @wxPlacement INT=SCOPE_IDENTITY();
+INSERT INTO LearnerPaths (UserId,CertId,Status) VALUES (@u2,@c,'active'); DECLARE @u44lp INT=SCOPE_IDENTITY();
+INSERT INTO LearnerPathSteps (LearnerPathId,CertId,SkillId,Modality,TopicId,TargetCefr,StepType,SizingTier,RefExamId)
+  VALUES (@u44lp,@c,@wr,'writing',@tWr,'B1','mock_section','developing',@wxMock);
+PRINT 'accepted mock_section pointing at a mock exam';
 BEGIN TRY
-  INSERT INTO PathModuleItems (ModuleId,CertId,TemplateId,ItemType,RefExamId,DisplayOrder) VALUES (@mod,@c,@tpl,'mentor',@wx,2);
-  THROW 50000,'EXPECT_REJECT FAILED: mentor item with exam accepted',1;
-END TRY BEGIN CATCH IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW; PRINT 'rejected mentor item pointing at an exam'; END CATCH
+  INSERT INTO LearnerPathSteps (LearnerPathId,CertId,SkillId,Modality,TopicId,TargetCefr,StepType,SizingTier,RefExamId)
+    VALUES (@u44lp,@c,@wr,'writing',@tWr,'B1','mock_section','developing',@wxPlacement);
+  THROW 50000,'EXPECT_REJECT FAILED: mock_section opening a placement exam accepted',1;
+END TRY BEGIN CATCH IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW; PRINT 'rejected mock_section opening a non-mock exam'; END CATCH
