@@ -87,6 +87,17 @@ public partial class ItemVersion
 
     public DateTimeOffset CreatedAt { get; set; }
 
+    /// <summary>
+    /// #201 / ADM-02: who wrote this version - the author on INSERT, the editor on the one in-place
+    /// edit (a cosmetic <see cref="Explanation"/> fix, CNT-43). NULL means "written by a seed, a
+    /// fixture or a migration", which names no account and is not a claim.
+    /// <para>
+    /// It is also the triage guard's declaration (ADM-03) and the "or last modified" half of the
+    /// no-self-approval rule: the reviewer is barred from the newest version's value.
+    /// </para>
+    /// </summary>
+    public int? LastWrittenBy { get; set; }
+
     [ForeignKey("ItemId")]
     [InverseProperty("ItemVersions")]
     public virtual Item Item { get; set; } = null!;
