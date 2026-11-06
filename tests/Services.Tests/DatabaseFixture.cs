@@ -77,6 +77,7 @@ public sealed class DatabaseFixture : IAsyncLifetime
             $"ALTER DATABASE [{Database}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE [{Database}]; END; " +
             $"CREATE DATABASE [{Database}];");
         await SqlCmdFileAsync(Database, Path.Combine(RepoRoot, "docs", "database-schema.sql"));
+        await MarkFixtureCatalogAsync(Database);
     }
 
     public Task DisposeAsync() => Task.CompletedTask;
@@ -88,8 +89,17 @@ public sealed class DatabaseFixture : IAsyncLifetime
             $"ALTER DATABASE [{databaseName}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE [{databaseName}]; END; " +
             $"CREATE DATABASE [{databaseName}];");
         await SqlCmdFileAsync(databaseName, Path.Combine(RepoRoot, "docs", "database-schema.sql"));
+        await MarkFixtureCatalogAsync(databaseName);
         return $"{BaseConnectionString};Database={databaseName}";
     }
+
+    /// <summary>
+    /// #201: this catalog holds disposable test data, so the schema's five write guards do not demand
+    /// an author on an unattributed fixture write. The triage rule itself is untouched: a write that
+    /// declares a triage-only account is still refused here, and <c>domain35</c> proves both halves.
+    /// </summary>
+    private static Task MarkFixtureCatalogAsync(string database) =>
+        SqlAsync(database, "INSERT INTO CatalogMode (ModeId, IsFixtureCatalog) VALUES (1, 1);");
 
     public async Task DropDatabaseAsync(string databaseName)
     {

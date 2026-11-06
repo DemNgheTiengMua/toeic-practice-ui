@@ -109,60 +109,109 @@ run_patch "the DELETE refusal on ReviewSampleDecisions" \
 
 # 6-10. Each of the five tables. Removing one guard must fail on that table's own test, so the five
 #       are proved separately rather than by removing a shared helper - a shared helper is what the
-#       function is, and it is proved once below. Each patch is anchored on that trigger's own THROW
-#       message, which is the only text in the schema that names one table's refusal.
+#       function is, and it is proved once below. Each patch is anchored on that table's own columns.
+# Removing the whole ItemVersions guard means the FIRST refusal in the file to stop firing is review
+# hole 1 (the undeclared-row UPDATE), not the later declared-triage insert. Either is a valid RED; the
+# earlier one is what the run reports, so it is what is expected.
 run_patch "trg_ItemVersions_TriageCannotWrite (removed)" \
-  "triage wrote a new item version" \
-  "  IF EXISTS (
-    SELECT 1 FROM inserted i
-    LEFT JOIN deleted d ON d.ItemVersionId = i.ItemVersionId
-    WHERE dbo.fn_IsTriageOnly(i.LastWrittenBy) = 1
-       OR (d.ItemVersionId IS NOT NULL AND d.LastWrittenBy IS NOT NULL AND NOT UPDATE(LastWrittenBy)))" \
-  "  IF 1 = 0"
+  "triage edited item text on a row that names no author" \
+  "    LEFT JOIN deleted d ON d.ItemVersionId = i.ItemVersionId
+    WHERE (dbo.fn_IsFixtureCatalog() = 0
+             AND (i.LastWrittenBy IS NULL
+                  OR (d.ItemVersionId IS NOT NULL AND NOT UPDATE(LastWrittenBy))))
+       OR dbo.fn_IsTriageOnly(i.LastWrittenBy) = 1)" \
+  "    LEFT JOIN deleted d ON d.ItemVersionId = i.ItemVersionId
+    WHERE 1 = 0 AND dbo.fn_IsTriageOnly(i.LastWrittenBy) = 0)"
 
 run_patch "trg_ExamItems_TriageCannotWrite (removed)" \
   "triage bound an item into a paper" \
-  "  IF EXISTS (
-    SELECT 1 FROM inserted i
-    LEFT JOIN deleted d ON d.ExamItemId = i.ExamItemId
-    WHERE dbo.fn_IsTriageOnly(i.LastWrittenBy) = 1
-       OR (d.ExamItemId IS NOT NULL AND d.LastWrittenBy IS NOT NULL AND NOT UPDATE(LastWrittenBy)))" \
-  "  IF 1 = 0"
+  "    LEFT JOIN deleted d ON d.ExamItemId = i.ExamItemId
+    WHERE (dbo.fn_IsFixtureCatalog() = 0
+             AND (i.LastWrittenBy IS NULL
+                  OR (d.ExamItemId IS NOT NULL AND NOT UPDATE(LastWrittenBy))))
+       OR dbo.fn_IsTriageOnly(i.LastWrittenBy) = 1)" \
+  "    LEFT JOIN deleted d ON d.ExamItemId = i.ExamItemId
+    WHERE 1 = 0 AND dbo.fn_IsTriageOnly(i.LastWrittenBy) = 0)"
 
 run_patch "trg_Sections_TriageCannotWrite (removed)" \
   "triage added a section" \
-  "  IF EXISTS (
-    SELECT 1 FROM inserted i
-    LEFT JOIN deleted d ON d.SectionId = i.SectionId
-    WHERE dbo.fn_IsTriageOnly(i.LastWrittenBy) = 1
-       OR (d.SectionId IS NOT NULL AND d.LastWrittenBy IS NOT NULL AND NOT UPDATE(LastWrittenBy)))" \
-  "  IF 1 = 0"
+  "    LEFT JOIN deleted d ON d.SectionId = i.SectionId
+    WHERE (dbo.fn_IsFixtureCatalog() = 0
+             AND (i.LastWrittenBy IS NULL
+                  OR (d.SectionId IS NOT NULL AND NOT UPDATE(LastWrittenBy))))
+       OR dbo.fn_IsTriageOnly(i.LastWrittenBy) = 1)" \
+  "    LEFT JOIN deleted d ON d.SectionId = i.SectionId
+    WHERE 1 = 0 AND dbo.fn_IsTriageOnly(i.LastWrittenBy) = 0)"
 
 run_patch "trg_GradingCriteria_TriageCannotWrite (removed)" \
   "triage added a rubric criterion" \
-  "  IF EXISTS (
-    SELECT 1 FROM inserted i
-    LEFT JOIN deleted d ON d.CriterionId = i.CriterionId
-    WHERE dbo.fn_IsTriageOnly(i.LastWrittenBy) = 1
-       OR (d.CriterionId IS NOT NULL AND d.LastWrittenBy IS NOT NULL AND NOT UPDATE(LastWrittenBy)))" \
-  "  IF 1 = 0"
+  "    LEFT JOIN deleted d ON d.CriterionId = i.CriterionId
+    WHERE (dbo.fn_IsFixtureCatalog() = 0
+             AND (i.LastWrittenBy IS NULL
+                  OR (d.CriterionId IS NOT NULL AND NOT UPDATE(LastWrittenBy))))
+       OR dbo.fn_IsTriageOnly(i.LastWrittenBy) = 1)" \
+  "    LEFT JOIN deleted d ON d.CriterionId = i.CriterionId
+    WHERE 1 = 0 AND dbo.fn_IsTriageOnly(i.LastWrittenBy) = 0)"
 
 run_patch "trg_GradingCriterionDescriptors_TriageCannotWrite (removed)" \
   "triage added a rubric descriptor" \
-  "  IF EXISTS (
-    SELECT 1 FROM inserted i
-    LEFT JOIN deleted d ON d.CriterionId = i.CriterionId AND d.Band = i.Band
-    WHERE dbo.fn_IsTriageOnly(i.LastWrittenBy) = 1
-       OR (d.CriterionId IS NOT NULL AND d.LastWrittenBy IS NOT NULL AND NOT UPDATE(LastWrittenBy)))" \
-  "  IF 1 = 0"
+  "    LEFT JOIN deleted d ON d.CriterionId = i.CriterionId AND d.Band = i.Band
+    WHERE (dbo.fn_IsFixtureCatalog() = 0
+             AND (i.LastWrittenBy IS NULL
+                  OR (d.CriterionId IS NOT NULL AND NOT UPDATE(LastWrittenBy))))
+       OR dbo.fn_IsTriageOnly(i.LastWrittenBy) = 1)" \
+  "    LEFT JOIN deleted d ON d.CriterionId = i.CriterionId AND d.Band = i.Band
+    WHERE 1 = 0 AND dbo.fn_IsTriageOnly(i.LastWrittenBy) = 0)"
+
+# 10a. THE DECLARATION REQUIREMENT ITSELF (review hole 1). Weakened to the first draft's rule: only
+#      refuse an undeclared row when the stored row already named an author. A triage UPDATE of
+#      Explanation on a seeded row then passes, which is exactly what the review reproduced.
+run_patch "the undeclared-row refusal (weakened to 'only when the stored row names an author')" \
+  "triage edited item text on a row that names no author" \
+  "    LEFT JOIN deleted d ON d.ItemVersionId = i.ItemVersionId
+    WHERE (dbo.fn_IsFixtureCatalog() = 0
+             AND (i.LastWrittenBy IS NULL
+                  OR (d.ItemVersionId IS NOT NULL AND NOT UPDATE(LastWrittenBy))))
+       OR dbo.fn_IsTriageOnly(i.LastWrittenBy) = 1)" \
+  "    LEFT JOIN deleted d ON d.ItemVersionId = i.ItemVersionId
+    WHERE (dbo.fn_IsFixtureCatalog() = 0
+             AND (d.ItemVersionId IS NOT NULL AND d.LastWrittenBy IS NOT NULL AND NOT UPDATE(LastWrittenBy)))
+       OR dbo.fn_IsTriageOnly(i.LastWrittenBy) = 1)"
+
+# 10b. THE INSERT HALF (review hole 2). The undeclared arm stops firing for an INSERT, so a triage
+#      account can author a new version with no declaration. The UPDATE half is untouched, which is
+#      why the expected failure is hole 2's own message and not hole 1's.
+run_patch "the undeclared-INSERT arm (removed)" \
+  "triage authored a new item version with no declaration" \
+  "    LEFT JOIN deleted d ON d.ItemVersionId = i.ItemVersionId
+    WHERE (dbo.fn_IsFixtureCatalog() = 0
+             AND (i.LastWrittenBy IS NULL
+                  OR (d.ItemVersionId IS NOT NULL AND NOT UPDATE(LastWrittenBy))))
+       OR dbo.fn_IsTriageOnly(i.LastWrittenBy) = 1)" \
+  "    LEFT JOIN deleted d ON d.ItemVersionId = i.ItemVersionId
+    WHERE (dbo.fn_IsFixtureCatalog() = 0
+             AND (d.ItemVersionId IS NOT NULL AND NOT UPDATE(LastWrittenBy)))
+       OR dbo.fn_IsTriageOnly(i.LastWrittenBy) = 1)"
+
+# 10c. THE EXEMPTION'S BOUNDARY. Widened so the fixture flag also skips the triage arm, which is what
+#      the review's requirement 4 forbids ("cannot be reached by a triage account"). Strict-mode tests
+#      still pass, so the failure is the fixture-boundary case itself - not a coincidence.
+run_patch "the fixture exemption (widened to admit a triage account)" \
+  "the fixture flag let a triage account author a version" \
+  "       OR dbo.fn_IsTriageOnly(i.LastWrittenBy) = 1)
+    THROW 50081, 'ADM-03: support triage may inspect item text" \
+  "       OR (dbo.fn_IsFixtureCatalog() = 0 AND dbo.fn_IsTriageOnly(i.LastWrittenBy) = 1))
+    THROW 50081, 'ADM-03: support triage may inspect item text"
 
 # 11. the UPDATE(LastWrittenBy) half, on one table. This is the check a value-only guard omits: a
 #     triage UPDATE that sets only Explanation inherits the previous author's name and passes. The
 #     test it breaks is the in-place edit, not the insert.
 run_patch "the UPDATE(LastWrittenBy) re-declaration half (item text)" \
   "triage edited an existing item version" \
-  "       OR (d.ItemVersionId IS NOT NULL AND d.LastWrittenBy IS NOT NULL AND NOT UPDATE(LastWrittenBy)))" \
-  "       OR (d.ItemVersionId IS NOT NULL AND 1 = 0))"
+  "                  OR (d.ItemVersionId IS NOT NULL AND NOT UPDATE(LastWrittenBy))))
+       OR dbo.fn_IsTriageOnly(i.LastWrittenBy) = 1)" \
+  "                  OR (d.ItemVersionId IS NOT NULL AND 1 = 0)))
+       OR dbo.fn_IsTriageOnly(i.LastWrittenBy) = 1)"
 
 # 12. the helper itself, weakened to "anybody who holds triage". This is the reading D16 forbids in
 #     the other direction: it would stop an account holding all five from authoring. The first write

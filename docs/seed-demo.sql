@@ -10,6 +10,25 @@
 -- conversion table (D1 forbids one); it is the level each item actually asks the learner to read,
 -- hear or produce at, and the spread above is what keeps the diagnostic from stratifying one band.
 SET QUOTED_IDENTIFIER ON; SET ANSI_NULLS ON; SET NOCOUNT ON;
+
+-- #201 / ADM-03: this seed writes Sections, ItemVersions, ExamItems and GradingCriteria with no
+-- account attached, and the five write guards demand one in any catalog not marked as fixture data.
+-- The seed is not an authored act by anybody, so it marks the catalog as a fixture catalog for its
+-- own duration and RESTORES the prior value at the end (`#ee201_prior_fixture` survives GO within
+-- this session). A catalog that loads the demo seed therefore ends exactly as strict as it began.
+-- The triage rule is untouched: it applies to every declared account whether this flag is on or off.
+IF OBJECT_ID('tempdb..#ee201_prior_fixture') IS NOT NULL DROP TABLE #ee201_prior_fixture;
+CREATE TABLE #ee201_prior_fixture (Was BIT NOT NULL);
+INSERT INTO #ee201_prior_fixture (Was)
+  SELECT CASE WHEN OBJECT_ID('CatalogMode', 'U') IS NULL THEN 0 ELSE dbo.fn_IsFixtureCatalog() END;
+IF OBJECT_ID('CatalogMode', 'U') IS NOT NULL
+BEGIN
+  IF EXISTS (SELECT 1 FROM CatalogMode WHERE ModeId = 1)
+    UPDATE CatalogMode SET IsFixtureCatalog = 1 WHERE ModeId = 1;
+  ELSE
+    INSERT INTO CatalogMode (ModeId, IsFixtureCatalog) VALUES (1, 1);
+END;
+GO
 GO
 
 -- ============================================================================
@@ -5247,4 +5266,16 @@ WHERE NOT EXISTS (
 GO
 
 PRINT '25. Per-skill CEFR cut scores seeded (version 1)';
+GO
+
+-- #201: put the catalog back the way it was found. The temp table set at the top survives GO within
+-- this session, so the prior value is genuinely restored rather than guessed: a catalog the harness
+-- had already marked as fixture data stays one, and a strict catalog (production-like, or a
+-- manual-test run) is strict again. A catalog this seed created the row in did not have one, so it
+-- becomes strict.
+IF OBJECT_ID('CatalogMode', 'U') IS NOT NULL AND OBJECT_ID('tempdb..#ee201_prior_fixture') IS NOT NULL
+  UPDATE CatalogMode
+     SET IsFixtureCatalog = (SELECT Was FROM #ee201_prior_fixture)
+   WHERE ModeId = 1;
+IF OBJECT_ID('tempdb..#ee201_prior_fixture') IS NOT NULL DROP TABLE #ee201_prior_fixture;
 GO

@@ -3502,23 +3502,74 @@ BEGIN
 END;
 GO
 
+-- ---- the fixture-catalog flag, and why it exists ----
+--
+-- A raw fixture INSERT and a raw triage INSERT are INDISTINGUISHABLE: both are SQL that declares no
+-- account. No trigger can separate them without an identity channel, and SQL Server has none that
+-- survives connection pooling (see PRN-01 below). So "fixtures need not declare" and "triage cannot
+-- write undeclared" cannot both be true in the same catalog.
+--
+-- The honest split is by CATALOG, not by statement: a catalog that holds only disposable test data
+-- may relax the declaration requirement, and a catalog that holds anything real may not. This table
+-- is that switch. It carries no identity - it cannot name an account - and it does not relax the
+-- triage rule itself, which applies to every declared id in every catalog.
+--
+-- Set by `docs/schema-tests/reset-and-load.sh` and `tests/Services.Tests/DatabaseFixture.cs`, which
+-- create throwaway catalogs. `docs/seed-demo.sql` saves the prior value, turns it on for its own
+-- writes, and restores it, so a catalog that loads the demo seed ends exactly as strict as it began.
+-- Production never sets it, so an undeclared write there is refused.
+CREATE TABLE CatalogMode (
+  -- One row, pinned by the CHECK. A second row would be a second answer to one question.
+  ModeId           TINYINT NOT NULL PRIMARY KEY CONSTRAINT CK_CatalogMode_SingleRow CHECK (ModeId = 1),
+  IsFixtureCatalog BIT NOT NULL CONSTRAINT DF_CatalogMode_Fixture DEFAULT 0
+);
+GO
+CREATE FUNCTION dbo.fn_IsFixtureCatalog() RETURNS BIT AS
+BEGIN
+  -- A missing row is "not a fixture catalog": strict is the default, so forgetting to provision the
+  -- row can never silently relax a guard.
+  RETURN ISNULL((SELECT IsFixtureCatalog FROM CatalogMode WHERE ModeId = 1), 0);
+END;
+GO
+
 -- ---- invariant 2: triage cannot write ----
 --
--- Each trigger is REFUSED on INSERT and on UPDATE, and each names its own table so the refusal says
--- which write was attempted. A guard covering only INSERT would let triage edit existing text, which
--- is the quieter and more damaging half.
+-- THE GUARD'S QUESTION IS "WHO IS WRITING". The first draft got this wrong in a way the review
+-- reproduced on a real database: it asked `fn_IsTriageOnly(i.LastWrittenBy)` and required
+-- re-declaration only when the STORED row already named an author. So an undeclared row was a free
+-- pass - a triage UPDATE of `Explanation` on any seeded row was ACCEPTED, and a raw INSERT of a whole
+-- new version with no declaration was ACCEPTED. Both are the criterion's own words ("a write to item
+-- text"), and both came from confusing the DECLARED AUTHOR with the WRITER.
 --
--- THE DECLARATION MUST BE IN THE STATEMENT (ADR-0012, and this is the half that was nearly missed).
--- The first draft read `inserted.LastWrittenBy` alone, and domain35 refused it: a triage UPDATE that
--- sets only `Explanation` leaves the previous author's name in the column, so a value-only check
--- passes the most likely edit of all. `UPDATE(LastWrittenBy)` is the statement-level "this write
--- assigned the column" test.
+-- Three rules, on INSERT and on UPDATE, on all five tables:
+--   1. a write must DECLARE its actor - `LastWrittenBy IS NULL` is refused, so no row is a free pass;
+--   2. the DECLARED actor must not be triage-only - this holds in EVERY catalog, fixture or not, so
+--      the exemption below never lets a triage account through;
+--   3. an UPDATE must RE-DECLARE the column. Without this, a write that sets only `Explanation`
+--      inherits the previous author's name and the check would be answering about nobody.
 --
--- The re-declaration is required only when the stored row ALREADY names an actor. That is the exact
--- scope of the hole - inheriting a name can only mislead the check when there is a name to inherit -
--- and it is what keeps this affordable: a fixture or a seed row declares nothing (NULL), so its
--- UPDATEs inherit NULL, which names no actor and is not a claim. A row that does name an author must
--- be re-declared by every later write, so nobody rides on an author who did not make the edit.
+-- WHY A COLUMN AND NOT SESSION CONTEXT (PRN-01). PRN-01 forbids `sp_set_session_context` because it
+-- survives commit and rollback on a pooled connection and would vouch for code that never declared
+-- itself. That reasoning stands here, and this guard identifies NOBODY from session state: rules 1-3
+-- read only the column the write assigns. SQL Server has no transaction-local identity channel at all
+-- - session context and `CONTEXT_INFO` are both per-session and survive pooling, and a temp table is
+-- pooled the same way - so the column is the only honest channel. ADR-0012 reached the same
+-- conclusion for the writer column.
+--
+-- THE EXEMPTION, AND ITS EXACT SHAPE. Rules 1 and 3 are relaxed by exactly one boolean,
+-- `dbo.fn_IsFixtureCatalog()`, which is true only in a catalog that holds nothing but disposable test
+-- data (see CatalogMode). Rule 2 is never relaxed. The shape of the exemption is therefore:
+--
+--   fixture catalog : an UNDECLARED write is allowed; a write declaring a triage account is REFUSED.
+--   any other       : an undeclared write is refused; a write declaring triage is refused.
+--
+-- It exists because a raw fixture INSERT and a raw triage INSERT are indistinguishable - both are SQL
+-- that declares no account - and SQL Server has no channel that would separate them. A catalog-scoped
+-- flag is the only split that is honest about that. It carries no identity: it cannot name an account,
+-- so it cannot be used to impersonate one, and rule 2 still refuses every triage id inside a fixture
+-- catalog (domain35 proves both halves). Production never sets it, so an undeclared write there is
+-- refused. A caller who can write the flag can equally run `ALTER TABLE ... DISABLE TRIGGER`; that is
+-- the raw-database trust boundary, stated rather than hidden.
 CREATE TRIGGER trg_ItemVersions_TriageCannotWrite
 ON ItemVersions AFTER INSERT, UPDATE AS
 BEGIN
@@ -3526,9 +3577,11 @@ BEGIN
   IF EXISTS (
     SELECT 1 FROM inserted i
     LEFT JOIN deleted d ON d.ItemVersionId = i.ItemVersionId
-    WHERE dbo.fn_IsTriageOnly(i.LastWrittenBy) = 1
-       OR (d.ItemVersionId IS NOT NULL AND d.LastWrittenBy IS NOT NULL AND NOT UPDATE(LastWrittenBy)))
-    THROW 50081, 'ADM-03: support triage may inspect item text and keys but cannot write them, and an update to a row that names an author must declare who made it (LastWrittenBy).', 1;
+    WHERE (dbo.fn_IsFixtureCatalog() = 0
+             AND (i.LastWrittenBy IS NULL
+                  OR (d.ItemVersionId IS NOT NULL AND NOT UPDATE(LastWrittenBy))))
+       OR dbo.fn_IsTriageOnly(i.LastWrittenBy) = 1)
+    THROW 50081, 'ADM-03: support triage may inspect item text and keys but cannot write them. A write to ItemVersions must declare who made it (LastWrittenBy), and an update must re-declare it.', 1;
 END;
 GO
 CREATE TRIGGER trg_ExamItems_TriageCannotWrite
@@ -3538,9 +3591,11 @@ BEGIN
   IF EXISTS (
     SELECT 1 FROM inserted i
     LEFT JOIN deleted d ON d.ExamItemId = i.ExamItemId
-    WHERE dbo.fn_IsTriageOnly(i.LastWrittenBy) = 1
-       OR (d.ExamItemId IS NOT NULL AND d.LastWrittenBy IS NOT NULL AND NOT UPDATE(LastWrittenBy)))
-    THROW 50081, 'ADM-03: support triage cannot change exam assembly, and an update to a row that names an author must declare who made it (LastWrittenBy).', 1;
+    WHERE (dbo.fn_IsFixtureCatalog() = 0
+             AND (i.LastWrittenBy IS NULL
+                  OR (d.ExamItemId IS NOT NULL AND NOT UPDATE(LastWrittenBy))))
+       OR dbo.fn_IsTriageOnly(i.LastWrittenBy) = 1)
+    THROW 50081, 'ADM-03: support triage cannot change exam assembly. A write to ExamItems must declare who made it (LastWrittenBy), and an update must re-declare it.', 1;
 END;
 GO
 CREATE TRIGGER trg_Sections_TriageCannotWrite
@@ -3550,9 +3605,11 @@ BEGIN
   IF EXISTS (
     SELECT 1 FROM inserted i
     LEFT JOIN deleted d ON d.SectionId = i.SectionId
-    WHERE dbo.fn_IsTriageOnly(i.LastWrittenBy) = 1
-       OR (d.SectionId IS NOT NULL AND d.LastWrittenBy IS NOT NULL AND NOT UPDATE(LastWrittenBy)))
-    THROW 50081, 'ADM-03: support triage cannot change exam structure, and an update to a row that names an author must declare who made it (LastWrittenBy).', 1;
+    WHERE (dbo.fn_IsFixtureCatalog() = 0
+             AND (i.LastWrittenBy IS NULL
+                  OR (d.SectionId IS NOT NULL AND NOT UPDATE(LastWrittenBy))))
+       OR dbo.fn_IsTriageOnly(i.LastWrittenBy) = 1)
+    THROW 50081, 'ADM-03: support triage cannot change exam structure. A write to Sections must declare who made it (LastWrittenBy), and an update must re-declare it.', 1;
 END;
 GO
 CREATE TRIGGER trg_GradingCriteria_TriageCannotWrite
@@ -3562,9 +3619,11 @@ BEGIN
   IF EXISTS (
     SELECT 1 FROM inserted i
     LEFT JOIN deleted d ON d.CriterionId = i.CriterionId
-    WHERE dbo.fn_IsTriageOnly(i.LastWrittenBy) = 1
-       OR (d.CriterionId IS NOT NULL AND d.LastWrittenBy IS NOT NULL AND NOT UPDATE(LastWrittenBy)))
-    THROW 50081, 'ADM-03: support triage cannot write a rubric criterion, and an update to a row that names an author must declare who made it (LastWrittenBy).', 1;
+    WHERE (dbo.fn_IsFixtureCatalog() = 0
+             AND (i.LastWrittenBy IS NULL
+                  OR (d.CriterionId IS NOT NULL AND NOT UPDATE(LastWrittenBy))))
+       OR dbo.fn_IsTriageOnly(i.LastWrittenBy) = 1)
+    THROW 50081, 'ADM-03: support triage cannot write a rubric. A write to GradingCriteria must declare who made it (LastWrittenBy), and an update must re-declare it.', 1;
 END;
 GO
 CREATE TRIGGER trg_GradingCriterionDescriptors_TriageCannotWrite
@@ -3574,9 +3633,11 @@ BEGIN
   IF EXISTS (
     SELECT 1 FROM inserted i
     LEFT JOIN deleted d ON d.CriterionId = i.CriterionId AND d.Band = i.Band
-    WHERE dbo.fn_IsTriageOnly(i.LastWrittenBy) = 1
-       OR (d.CriterionId IS NOT NULL AND d.LastWrittenBy IS NOT NULL AND NOT UPDATE(LastWrittenBy)))
-    THROW 50081, 'ADM-03: support triage cannot write a rubric descriptor, and an update to a row that names an author must declare who made it (LastWrittenBy).', 1;
+    WHERE (dbo.fn_IsFixtureCatalog() = 0
+             AND (i.LastWrittenBy IS NULL
+                  OR (d.CriterionId IS NOT NULL AND NOT UPDATE(LastWrittenBy))))
+       OR dbo.fn_IsTriageOnly(i.LastWrittenBy) = 1)
+    THROW 50081, 'ADM-03: support triage cannot write a rubric descriptor. A write to GradingCriterionDescriptors must declare who made it (LastWrittenBy), and an update must re-declare it.', 1;
 END;
 GO
 

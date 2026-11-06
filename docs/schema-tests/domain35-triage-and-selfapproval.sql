@@ -341,6 +341,64 @@ UPDATE ImportBatches SET LastModifiedBy = NULL WHERE BatchId = @batch2;
 -- ================================================================================================
 -- Each block below is a direct write to the table a prohibited edit reaches. The accepting control
 -- beside it uses the uploader, so the difference is the acting account and nothing else.
+--
+-- This section runs in a STRICT catalog, which is what production is: the fixture flag is turned off
+-- here and restored at the end. The harness owns this catalog and set the flag on so that ~300
+-- unattributed fixture statements keep working; the behaviour under test is the production one, so
+-- the test states that explicitly rather than inheriting the harness's convenience.
+--
+-- The undeclared probe row is created FIRST, while the fixture flag is still on, because creating it
+-- in strict mode would itself be the refusal under test.
+DECLARE @undeclared INT = (SELECT TOP 1 ItemVersionId FROM ItemVersions WHERE LastWrittenBy IS NULL);
+IF @undeclared IS NULL
+BEGIN
+  INSERT INTO ItemVersions (ItemId, VersionNumber, Stem, OptionA, OptionB, OptionC, OptionD, KeyLabel, LastWrittenBy)
+    VALUES (@item2, 90, N'Undeclared probe.', N'a', N'b', N'c', N'd', 'A', NULL);
+  SET @undeclared = SCOPE_IDENTITY();
+END
+
+DECLARE @d35_prior_fixture BIT = dbo.fn_IsFixtureCatalog();
+IF EXISTS (SELECT 1 FROM CatalogMode WHERE ModeId = 1)
+  UPDATE CatalogMode SET IsFixtureCatalog = 0 WHERE ModeId = 1;
+ELSE
+  INSERT INTO CatalogMode (ModeId, IsFixtureCatalog) VALUES (1, 0);
+IF dbo.fn_IsFixtureCatalog() <> 0
+  THROW 50000, 'EXPECT_REJECT FAILED: could not put the catalog into strict mode', 1;
+
+-- ---- THE REVIEW''S TWO HOLES, exactly as reproduced ----
+--
+-- Hole 1: an UPDATE of Explanation on a row that names NO author. The first draft allowed this
+-- because its second clause only fired when the stored row already named one, so an undeclared row
+-- was a free pass. A triage-only account could edit item text.
+BEGIN TRY
+  UPDATE ItemVersions SET Explanation = N'TRIAGE EDITED THIS' WHERE ItemVersionId = @undeclared;
+  THROW 50000,'EXPECT_REJECT FAILED: triage edited item text on a row that names no author',1;
+END TRY BEGIN CATCH
+  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
+  IF ERROR_NUMBER() <> 50081 THROW;
+  PRINT 'reject: triage cannot edit an item version that names no author (hole 1, closed)';
+END CATCH
+
+-- Hole 2: an INSERT of a whole new version with no declaration. The INSERT half has no `deleted` row,
+-- so on the first draft only the declared-author arm could fire and it cannot fire on a NULL.
+BEGIN TRY
+  INSERT INTO ItemVersions (ItemId, VersionNumber, Stem, OptionA, OptionB, OptionC, OptionD, KeyLabel)
+    VALUES (@item2, 91, N'TRIAGE AUTHORED THIS ITEM', N'a', N'b', N'c', N'd', 'A');
+  THROW 50000,'EXPECT_REJECT FAILED: triage authored a new item version with no declaration',1;
+END TRY BEGIN CATCH
+  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
+  IF ERROR_NUMBER() <> 50081 THROW;
+  PRINT 'reject: triage cannot insert an item version (hole 2, closed)';
+END CATCH
+
+-- The accepting controls for the two holes, so a guard that refused every undeclared write could not
+-- pass this section: an AUTHOR may do both, declaring itself.
+UPDATE ItemVersions SET Explanation = N'fixed by its author', LastWrittenBy = @uploader
+  WHERE ItemVersionId = @undeclared;
+PRINT 'accept: an author may edit that same undeclared row';
+INSERT INTO ItemVersions (ItemId, VersionNumber, Stem, OptionA, OptionB, OptionC, OptionD, KeyLabel, LastWrittenBy)
+  VALUES (@item2, 92, N'Author authored this.', N'a', N'b', N'c', N'd', 'A', @uploader);
+PRINT 'accept: an author may insert an item version';
 
 -- ---- item text and keys: ItemVersions ----
 -- accept: an author writes a version. If this were refused, the guard would be "nobody may author".
@@ -553,5 +611,36 @@ IF dbo.fn_IsTriageOnly(@triage) <> 1
 IF dbo.fn_IsTriageOnly(@uploader) <> 0
   THROW 50000, 'EXPECT_REJECT FAILED: an author was classed as triage-only', 1;
 PRINT 'accept: triage-only is a data classification, and all five namespaces is not it';
+
+-- ---- the fixture exemption's exact boundary ----
+-- The harness catalog carries the fixture flag so ~300 unattributed fixture statements keep working.
+-- The exemption must not be a way for a TRIAGE ACCOUNT to write: with the flag on, an account that
+-- declares itself triage is still refused. That is the difference between "unattributed fixture data
+-- is tolerated" and "a triage account may write", and only the former is the exemption.
+IF EXISTS (SELECT 1 FROM CatalogMode WHERE ModeId = 1)
+  UPDATE CatalogMode SET IsFixtureCatalog = 1 WHERE ModeId = 1;
+ELSE
+  INSERT INTO CatalogMode (ModeId, IsFixtureCatalog) VALUES (1, 1);
+
+BEGIN TRY
+  INSERT INTO ItemVersions (ItemId, VersionNumber, Stem, OptionA, OptionB, OptionC, OptionD, KeyLabel, LastWrittenBy)
+    VALUES (@item2, 94, N'Triage in a fixture catalog?', N'a', N'b', N'c', N'd', 'A', @triage);
+  THROW 50000,'EXPECT_REJECT FAILED: the fixture flag let a triage account author a version',1;
+END TRY BEGIN CATCH
+  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
+  IF ERROR_NUMBER() <> 50081 THROW;
+  PRINT 'reject: the fixture exemption does not admit a triage account';
+END CATCH
+
+-- With the flag on, an UNATTRIBUTED write is tolerated - that is what the exemption is FOR, and it is
+-- how ~300 existing fixture statements keep working. Stating it here means the next reader sees the
+-- exact scope rather than discovering it from a passing test.
+INSERT INTO ItemVersions (ItemId, VersionNumber, Stem, OptionA, OptionB, OptionC, OptionD, KeyLabel)
+  VALUES (@item2, 95, N'Unattributed fixture row.', N'a', N'b', N'c', N'd', 'A');
+PRINT 'accept: the fixture catalog tolerates an unattributed row';
+
+-- Restore the harness's flag exactly as it was found, so the file leaves no trace for the next test.
+IF @d35_prior_fixture = 0
+  UPDATE CatalogMode SET IsFixtureCatalog = 0 WHERE ModeId = 1;
 
 PRINT 'domain35: both invariants hold through direct table writes';

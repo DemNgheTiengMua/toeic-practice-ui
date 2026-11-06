@@ -144,6 +144,45 @@ public sealed class StaffSeparationOfDutyTests(DatabaseFixture database)
     }
 
     /// <summary>
+    /// The interceptor OVERWRITES a name the caller supplied. This is what closes impersonation on the
+    /// mediated path: the declaration comes from the JWT, so a service cannot vouch for somebody else,
+    /// and a triage account cannot declare an author to slip past the trigger.
+    ///
+    /// <para>
+    /// Without this property the column would be a suggestion, and a caller that set it to an author's
+    /// id would be accepted - the "declare somebody else" hole the schema comment states a trigger
+    /// cannot close on its own.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public async Task The_interceptor_overwrites_a_name_the_caller_supplied()
+    {
+        var seed = await SeedAsync();
+
+        await using (var db = CreateDb(seed.Triage))
+        {
+            db.ItemVersions.Add(new ItemVersion
+            {
+                ItemId = seed.ItemId,
+                VersionNumber = 2,
+                Stem = "A stem?",
+                OptionA = "a", OptionB = "b", OptionC = "c", OptionD = "d",
+                KeyLabel = "A",
+                // The caller claims to be the author. Triage is who is actually writing.
+                LastWrittenBy = seed.Author,
+            });
+
+            // The trigger sees the OVERWRITTEN value - triage - and refuses. Had the interceptor
+            // trusted the caller, this row would have been accepted as the author's work.
+            var refused = await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
+            Assert.Contains("ADM-03", refused.InnerException?.Message ?? refused.Message);
+        }
+
+        Assert.Equal(0, await ScalarAsync(
+            $"SELECT COUNT(*) FROM ItemVersions WHERE ItemId = {seed.ItemId} AND VersionNumber = 2"));
+    }
+
+    /// <summary>
     /// ADM-03 through the application: a triage-only account saving a section is refused by the
     /// database, not by a controller. The service layer has no check for this at all, which is the
     /// point - the same write succeeds for an author immediately after.
