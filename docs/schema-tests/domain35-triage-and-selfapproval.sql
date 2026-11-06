@@ -111,6 +111,17 @@ IF NOT EXISTS (SELECT 1 FROM Topics WHERE Modality = 'reading' AND Code = 'R-GIS
 DECLARE @listeningTopic INT = (SELECT TopicId FROM Topics WHERE Modality = 'listening' AND Code = 'L-GIST');
 DECLARE @readingTopic INT = (SELECT TopicId FROM Topics WHERE Modality = 'reading' AND Code = 'R-GIST');
 DECLARE @stim INT = (SELECT TOP 1 StimulusId FROM Stimuli);
+
+-- Fixture data below is written with no acting account, which a strict catalog refuses (that is the
+-- point of the declaration rule). This fixture is disposable, so it flags itself until the refusal
+-- section, which flips the catalog back to strict and then proves every refusal by direct write.
+DECLARE @d35_prior_fixture BIT = dbo.fn_IsFixtureCatalog();
+IF EXISTS (SELECT 1 FROM CatalogMode WHERE ModeId = 1)
+  UPDATE CatalogMode SET IsFixtureCatalog = 1 WHERE ModeId = 1;
+ELSE
+  INSERT INTO CatalogMode (ModeId, IsFixtureCatalog) VALUES (1, 1);
+IF dbo.fn_IsFixtureCatalog() <> 1
+  THROW 50000, 'EXPECT_REJECT FAILED: could not put the catalog into fixture mode for its own fixtures', 1;
 IF @stim IS NULL
 BEGIN
   INSERT INTO Stimuli (CefrLevel, Passage, DomainContext) VALUES ('B1', N'A d35 passage.', 'general');
@@ -357,7 +368,7 @@ BEGIN
   SET @undeclared = SCOPE_IDENTITY();
 END
 
-DECLARE @d35_prior_fixture BIT = dbo.fn_IsFixtureCatalog();
+-- From here the catalog must be strict: a refusal proved in fixture mode would prove nothing.
 IF EXISTS (SELECT 1 FROM CatalogMode WHERE ModeId = 1)
   UPDATE CatalogMode SET IsFixtureCatalog = 0 WHERE ModeId = 1;
 ELSE
@@ -476,8 +487,10 @@ PRINT 'accept: an author may change a section';
 DECLARE @exam INT = (SELECT TOP 1 ExamId FROM Exams WHERE CertId = @cert AND Purpose = 'mock');
 IF @exam IS NULL
 BEGIN
-  INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose)
-    VALUES (@cert, N'D35 paper', 'draft', 30, 'mock');
+  -- Declared, because by this point the catalog is strict: an exam inserted with no author is
+  -- precisely what trg_Exams_TriageCannotWrite refuses, and a fixture is not an exception to it.
+  INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose, LastWrittenBy)
+    VALUES (@cert, N'D35 paper', 'draft', 30, 'mock', @uploader);
   SET @exam = SCOPE_IDENTITY();
 END;
 DECLARE @version INT = (SELECT TOP 1 ItemVersionId FROM ItemVersions WHERE ItemId = @item2 ORDER BY VersionNumber DESC);
@@ -589,6 +602,46 @@ END TRY BEGIN CATCH
   IF ERROR_NUMBER() <> 50081 THROW;
   PRINT 'reject: triage cannot update a rubric descriptor';
 END CATCH
+
+-- ---- the EXAM and ITEM guards: the two ADM-03 names that were missing ----
+-- Review finding, proved by direct write on a strict catalog before the triggers existed: a
+-- triage-only account could publish an exam (`Exams.Status`) and activate an item
+-- (`Items.LifecycleStatus`). Those are "exam structure" and "item text" in ADM-03's own sentence.
+BEGIN TRY
+  UPDATE Exams SET Status = 'hidden', LastWrittenBy = @triage
+    WHERE ExamId = (SELECT MIN(ExamId) FROM Exams WHERE CertId = @cert);
+  THROW 50000,'EXPECT_REJECT FAILED: triage hid an exam',1;
+END TRY BEGIN CATCH
+  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
+  IF ERROR_NUMBER() <> 50081 THROW;
+  PRINT 'reject: triage cannot change an exam''s status';
+END CATCH
+
+BEGIN TRY
+  UPDATE Exams SET Status = 'hidden'
+    WHERE ExamId = (SELECT MIN(ExamId) FROM Exams WHERE CertId = @cert);
+  THROW 50000,'EXPECT_REJECT FAILED: triage hid an exam declaring nobody',1;
+END TRY BEGIN CATCH
+  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
+  IF ERROR_NUMBER() <> 50081 THROW;
+  PRINT 'reject: triage cannot change an exam''s status without declaring an author';
+END CATCH
+
+BEGIN TRY
+  UPDATE Items SET LifecycleStatus = 'active', LastWrittenBy = @triage WHERE ItemId = @item;
+  THROW 50000,'EXPECT_REJECT FAILED: triage activated an item',1;
+END TRY BEGIN CATCH
+  IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
+  IF ERROR_NUMBER() <> 50081 THROW;
+  PRINT 'reject: triage cannot change an item''s lifecycle';
+END CATCH
+
+-- The control: an author does the same two writes and succeeds. Without this, a trigger that
+-- refused everything would pass the three cases above.
+UPDATE Exams SET Status = 'hidden', LastWrittenBy = @uploader
+  WHERE ExamId = (SELECT MIN(ExamId) FROM Exams WHERE CertId = @cert);
+UPDATE Items SET LifecycleStatus = 'validated', LastWrittenBy = @uploader WHERE ItemId = @item;
+PRINT 'accept: an author may set an exam''s status and an item''s lifecycle';
 
 -- ---- triage may still LOOK ----
 -- ADM-03's whole point is that triage inspects items, versions, evidence spans and attempts. A guard

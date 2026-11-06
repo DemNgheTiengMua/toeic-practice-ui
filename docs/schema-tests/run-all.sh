@@ -71,6 +71,13 @@ run_one "docs/seed-demo.sql" "$ROOT/docs/seed-demo.sql" 0
 echo "=== docs/seed-demo.sql (idempotency re-run, same database)"
 run_one "docs/seed-demo.sql re-run" "$ROOT/docs/seed-demo.sql" 0 1
 
+# AGENTS.md §6 lists this seed as a command, and nothing here ran it: #232 dropped the four path
+# tables while this file still INSERTed into them, so the documented command aborted with
+# "Invalid object name 'dbo.PathTemplates'" and the harness still reported 41/41. A seed the
+# project tells people to run is part of the schema's contract.
+echo "=== docs/seed-diagnostic-benchmark.sql (after the demo seed, same database)"
+run_one "docs/seed-diagnostic-benchmark.sql" "$ROOT/docs/seed-diagnostic-benchmark.sql" 0 1
+
 echo
 echo "=== summary: ${#results[@]} checks, $(( ${#results[@]} - fails )) pass, $fails fail"
 printf '%s\n' "${results[@]}"

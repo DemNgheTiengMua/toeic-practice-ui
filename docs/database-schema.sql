@@ -898,7 +898,7 @@ GO
 -- A demo exam may bind either tier: demo stock is what a demo exam is for, and promoting stock must
 -- not strand a working paper. Only production drawing demo stock is refused.
 CREATE TRIGGER trg_ExamItems_ProductionBindsProduction
-ON ExamItems AFTER INSERT, UPDATE AS
+ON ExamItems AFTER INSERT, UPDATE, DELETE AS
 BEGIN
   SET NOCOUNT ON;
   IF EXISTS (
@@ -3473,6 +3473,14 @@ ALTER TABLE GradingCriteria           ADD LastWrittenBy INT NULL CONSTRAINT FK_G
 GO
 ALTER TABLE GradingCriterionDescriptors ADD LastWrittenBy INT NULL CONSTRAINT FK_GCD_LastWrittenBy REFERENCES Users(UserId);
 GO
+-- ADM-03 names "a write to item text, a key, a rubric or exam structure". The last two guards were
+-- missing: a triage-only account could publish an exam (`Exams.Status`) or flip an item to
+-- `active` (`Items.LifecycleStatus`), both of which are exactly the authority triage may not have.
+-- Proved by direct write on a strict catalog before these two were added.
+ALTER TABLE Exams                     ADD LastWrittenBy INT NULL CONSTRAINT FK_Exams_LastWrittenBy REFERENCES Users(UserId);
+GO
+ALTER TABLE Items                     ADD LastWrittenBy INT NULL CONSTRAINT FK_Items_LastWrittenBy REFERENCES Users(UserId);
+GO
 
 -- ---- is this account triage, and nothing that may author? ----
 --
@@ -3571,9 +3579,14 @@ GO
 -- refused. A caller who can write the flag can equally run `ALTER TABLE ... DISABLE TRIGGER`; that is
 -- the raw-database trust boundary, stated rather than hidden.
 CREATE TRIGGER trg_ItemVersions_TriageCannotWrite
-ON ItemVersions AFTER INSERT, UPDATE AS
+ON ItemVersions AFTER INSERT, UPDATE, DELETE AS
 BEGIN
   SET NOCOUNT ON;
+  -- A DELETE carries no `inserted` row, so the account to judge is the one recorded on the
+  -- row being removed. The invariant is about triage, not about denying deletion to an
+  -- author: a triage-only account may retire nothing, because retiring is a write.
+  IF EXISTS (SELECT 1 FROM deleted dd WHERE dbo.fn_IsTriageOnly(dd.LastWrittenBy) = 1)
+    THROW 50082, 'ADM-03: support triage cannot delete from ItemVersions; the account that wrote it cannot be a triage-only account.', 1;
   IF EXISTS (
     SELECT 1 FROM inserted i
     LEFT JOIN deleted d ON d.ItemVersionId = i.ItemVersionId
@@ -3588,6 +3601,11 @@ CREATE TRIGGER trg_ExamItems_TriageCannotWrite
 ON ExamItems AFTER INSERT, UPDATE AS
 BEGIN
   SET NOCOUNT ON;
+  -- A DELETE carries no `inserted` row, so the account to judge is the one recorded on the
+  -- row being removed. The invariant is about triage, not about denying deletion to an
+  -- author: a triage-only account may retire nothing, because retiring is a write.
+  IF EXISTS (SELECT 1 FROM deleted dd WHERE dbo.fn_IsTriageOnly(dd.LastWrittenBy) = 1)
+    THROW 50082, 'ADM-03: support triage cannot delete from ExamItems; the account that wrote it cannot be a triage-only account.', 1;
   IF EXISTS (
     SELECT 1 FROM inserted i
     LEFT JOIN deleted d ON d.ExamItemId = i.ExamItemId
@@ -3599,9 +3617,14 @@ BEGIN
 END;
 GO
 CREATE TRIGGER trg_Sections_TriageCannotWrite
-ON Sections AFTER INSERT, UPDATE AS
+ON Sections AFTER INSERT, UPDATE, DELETE AS
 BEGIN
   SET NOCOUNT ON;
+  -- A DELETE carries no `inserted` row, so the account to judge is the one recorded on the
+  -- row being removed. The invariant is about triage, not about denying deletion to an
+  -- author: a triage-only account may retire nothing, because retiring is a write.
+  IF EXISTS (SELECT 1 FROM deleted dd WHERE dbo.fn_IsTriageOnly(dd.LastWrittenBy) = 1)
+    THROW 50082, 'ADM-03: support triage cannot delete from Sections; the account that wrote it cannot be a triage-only account.', 1;
   IF EXISTS (
     SELECT 1 FROM inserted i
     LEFT JOIN deleted d ON d.SectionId = i.SectionId
@@ -3613,9 +3636,14 @@ BEGIN
 END;
 GO
 CREATE TRIGGER trg_GradingCriteria_TriageCannotWrite
-ON GradingCriteria AFTER INSERT, UPDATE AS
+ON GradingCriteria AFTER INSERT, UPDATE, DELETE AS
 BEGIN
   SET NOCOUNT ON;
+  -- A DELETE carries no `inserted` row, so the account to judge is the one recorded on the
+  -- row being removed. The invariant is about triage, not about denying deletion to an
+  -- author: a triage-only account may retire nothing, because retiring is a write.
+  IF EXISTS (SELECT 1 FROM deleted dd WHERE dbo.fn_IsTriageOnly(dd.LastWrittenBy) = 1)
+    THROW 50082, 'ADM-03: support triage cannot delete from GradingCriteria; the account that wrote it cannot be a triage-only account.', 1;
   IF EXISTS (
     SELECT 1 FROM inserted i
     LEFT JOIN deleted d ON d.CriterionId = i.CriterionId
@@ -3627,9 +3655,14 @@ BEGIN
 END;
 GO
 CREATE TRIGGER trg_GradingCriterionDescriptors_TriageCannotWrite
-ON GradingCriterionDescriptors AFTER INSERT, UPDATE AS
+ON GradingCriterionDescriptors AFTER INSERT, UPDATE, DELETE AS
 BEGIN
   SET NOCOUNT ON;
+  -- A DELETE carries no `inserted` row, so the account to judge is the one recorded on the
+  -- row being removed. The invariant is about triage, not about denying deletion to an
+  -- author: a triage-only account may retire nothing, because retiring is a write.
+  IF EXISTS (SELECT 1 FROM deleted dd WHERE dbo.fn_IsTriageOnly(dd.LastWrittenBy) = 1)
+    THROW 50082, 'ADM-03: support triage cannot delete from GradingCriterionDescriptors; the account that wrote it cannot be a triage-only account.', 1;
   IF EXISTS (
     SELECT 1 FROM inserted i
     LEFT JOIN deleted d ON d.CriterionId = i.CriterionId AND d.Band = i.Band
@@ -3638,6 +3671,44 @@ BEGIN
                   OR (d.CriterionId IS NOT NULL AND NOT UPDATE(LastWrittenBy))))
        OR dbo.fn_IsTriageOnly(i.LastWrittenBy) = 1)
     THROW 50081, 'ADM-03: support triage cannot write a rubric descriptor. A write to GradingCriterionDescriptors must declare who made it (LastWrittenBy), and an update must re-declare it.', 1;
+END;
+GO
+CREATE TRIGGER trg_Exams_TriageCannotWrite
+ON Exams AFTER INSERT, UPDATE, DELETE AS
+BEGIN
+  SET NOCOUNT ON;
+  -- A DELETE carries no `inserted` row, so the account to judge is the one recorded on the
+  -- row being removed. The invariant is about triage, not about denying deletion to an
+  -- author: a triage-only account may retire nothing, because retiring is a write.
+  IF EXISTS (SELECT 1 FROM deleted dd WHERE dbo.fn_IsTriageOnly(dd.LastWrittenBy) = 1)
+    THROW 50082, 'ADM-03: support triage cannot delete from Exams; the account that wrote it cannot be a triage-only account.', 1;
+  IF EXISTS (
+    SELECT 1 FROM inserted i
+    LEFT JOIN deleted d ON d.ExamId = i.ExamId
+    WHERE (dbo.fn_IsFixtureCatalog() = 0
+             AND (i.LastWrittenBy IS NULL
+                  OR (d.ExamId IS NOT NULL AND NOT UPDATE(LastWrittenBy))))
+       OR dbo.fn_IsTriageOnly(i.LastWrittenBy) = 1)
+    THROW 50081, 'ADM-03: support triage cannot publish or restructure an exam. A write to Exams must declare who made it (LastWrittenBy), and an update must re-declare it.', 1;
+END;
+GO
+CREATE TRIGGER trg_Items_TriageCannotWrite
+ON Items AFTER INSERT, UPDATE, DELETE AS
+BEGIN
+  SET NOCOUNT ON;
+  -- A DELETE carries no `inserted` row, so the account to judge is the one recorded on the
+  -- row being removed. The invariant is about triage, not about denying deletion to an
+  -- author: a triage-only account may retire nothing, because retiring is a write.
+  IF EXISTS (SELECT 1 FROM deleted dd WHERE dbo.fn_IsTriageOnly(dd.LastWrittenBy) = 1)
+    THROW 50082, 'ADM-03: support triage cannot delete from Items; the account that wrote it cannot be a triage-only account.', 1;
+  IF EXISTS (
+    SELECT 1 FROM inserted i
+    LEFT JOIN deleted d ON d.ItemId = i.ItemId
+    WHERE (dbo.fn_IsFixtureCatalog() = 0
+             AND (i.LastWrittenBy IS NULL
+                  OR (d.ItemId IS NOT NULL AND NOT UPDATE(LastWrittenBy))))
+       OR dbo.fn_IsTriageOnly(i.LastWrittenBy) = 1)
+    THROW 50081, 'ADM-03: support triage cannot set an item''s lifecycle or topic. A write to Items must declare who made it (LastWrittenBy), and an update must re-declare it.', 1;
 END;
 GO
 

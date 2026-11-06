@@ -63,6 +63,15 @@ public sealed class FixtureLevelGuardTests
 
             foreach (var (line, text) in File.ReadLines(path).Select((text, i) => (i + 1, text)))
             {
+                // A comment that explains what the scale used to be cannot reinstate it. The guard is
+                // about code, fixtures and seeds that would read or write the value; the retired
+                // behaviour is described in prose in more than one place and that prose is the
+                // record of why it went.
+                if (IsComment(text))
+                {
+                    continue;
+                }
+
                 if (Difficulty.IsMatch(text))
                 {
                     offenders.Add($"{relative}:{line}: {text.Trim()}");
@@ -94,7 +103,10 @@ public sealed class FixtureLevelGuardTests
         }
     }
 
-    /// <summary>The seeded and asserted content: schema fixtures, both seeds, the samples, the tests.</summary>
+    /// <summary>The seeded and asserted content: schema fixtures, both seeds, the samples, and every
+    /// source file. `src` is included because the guard's claim is that the 1-5 scale is gone, and a
+    /// new <c>DifficultyLevel</c> reference in production code would reinstate it just as surely as one
+    /// in a fixture -- the original scope left exactly that door open.</summary>
     private static IEnumerable<string> FixtureFiles(string root)
     {
         foreach (var path in Directory.EnumerateFiles(Path.Combine(root, "docs", "schema-tests"), "*.sql"))
@@ -112,17 +124,40 @@ public sealed class FixtureLevelGuardTests
             yield return Relative(root, path);
         }
 
-        foreach (var path in Directory.EnumerateFiles(Path.Combine(root, "tests"), "*.cs", SearchOption.AllDirectories))
+        foreach (var path in Directory.EnumerateFiles(Path.Combine(root, "src"), "*.cs", SearchOption.AllDirectories))
         {
-            // Build output is not a fixture, and an obj/ copy of a source file would double-report.
-            if (path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal)
-                || path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+            if (IsBuildOutput(path))
             {
                 continue;
             }
 
             yield return Relative(root, path);
         }
+
+        foreach (var path in Directory.EnumerateFiles(Path.Combine(root, "tests"), "*.cs", SearchOption.AllDirectories))
+        {
+            if (IsBuildOutput(path))
+            {
+                continue;
+            }
+
+            yield return Relative(root, path);
+        }
+    }
+
+    /// <summary>Build output is not a fixture, and an obj/ copy of a source file would double-report.</summary>
+    private static bool IsBuildOutput(string path) =>
+        path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal)
+        || path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal);
+
+    /// <summary>A line whose content is entirely comment: <c>//</c>, <c>///</c>, <c>--</c>, <c>/*</c> or <c>*</c>.</summary>
+    private static bool IsComment(string text)
+    {
+        var trimmed = text.TrimStart();
+        return trimmed.StartsWith("//", StringComparison.Ordinal)
+            || trimmed.StartsWith("--", StringComparison.Ordinal)
+            || trimmed.StartsWith("/*", StringComparison.Ordinal)
+            || trimmed.StartsWith("*", StringComparison.Ordinal);
     }
 
     private static string Relative(string root, string path) =>

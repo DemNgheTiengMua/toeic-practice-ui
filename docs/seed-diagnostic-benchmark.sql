@@ -1177,6 +1177,14 @@ Essay Guidelines:
     DECLARE @tplId INT;
     DECLARE @tplName NVARCHAR(200) = N'TOEIC Diagnostic Sprint (Target B1/B2)';
 
+    -- #232 dropped PathTemplates/PathModules/PathModuleItems/PathModuleTopics: a path step is now a
+    -- coordinate on LearnerPathSteps, not a template item. This block is kept only for the
+    -- Lessons/LessonCards it creates below, so the template half is skipped when the tables are gone
+    -- rather than aborting the whole seed. On a pre-#232 schema it still runs unchanged.
+    DECLARE @d232_hasPaths BIT = CASE WHEN OBJECT_ID('dbo.PathTemplates', 'U') IS NOT NULL THEN 1 ELSE 0 END;
+
+    IF @d232_hasPaths = 1
+    BEGIN
     -- 2.1. Tạo Master PathTemplate
     IF NOT EXISTS (SELECT 1 FROM dbo.PathTemplates WHERE CertId = @toeicCert AND Name = @tplName)
     BEGIN
@@ -1188,10 +1196,13 @@ Essay Guidelines:
         );
     END
     SELECT @tplId = TemplateId FROM dbo.PathTemplates WHERE CertId = @toeicCert AND Name = @tplName;
+    END
 
     -- 2.2. Tạo 4 PathModules tương ứng với 4 điểm yếu điển hình
     DECLARE @mod1 INT, @mod2 INT, @mod3 INT, @mod4 INT;
 
+    IF @d232_hasPaths = 1
+    BEGIN
     IF NOT EXISTS (SELECT 1 FROM dbo.PathModules WHERE CertId = @toeicCert AND TemplateId = @tplId AND DisplayOrder = 1)
     BEGIN
         INSERT INTO dbo.PathModules (TemplateId, SkillId, CertId, DisplayOrder, Title, Description, EstimatedMinutes)
@@ -1239,6 +1250,7 @@ Essay Guidelines:
         );
     END
     SELECT @mod4 = ModuleId FROM dbo.PathModules WHERE CertId = @toeicCert AND TemplateId = @tplId AND DisplayOrder = 4;
+    END
 
     /* --------------------------------------------------------------------------------------
        2.3. TẠO 4 GUIDED LESSONS & 16 LESSON CARDS
@@ -1563,6 +1575,8 @@ Essay Guidelines:
        2.4. LIÊN KẾT PATH MODULE ITEMS & TOPICS
        -------------------------------------------------------------------------------------- */
     -- Module 1 Items
+    IF @d232_hasPaths = 1
+    BEGIN
     IF NOT EXISTS (SELECT 1 FROM dbo.PathModuleItems WHERE CertId = @toeicCert AND ModuleId = @mod1 AND DisplayOrder = 1)
     BEGIN
         INSERT INTO dbo.PathModuleItems (ModuleId, CertId, TemplateId, ItemType, RefLessonId, DisplayOrder)
@@ -1636,6 +1650,7 @@ Essay Guidelines:
     BEGIN
         INSERT INTO dbo.PathModuleTopics (ModuleId, Title, QuestionCount, DisplayOrder)
         VALUES (@mod4, N'Double Passage Cross-Inference', 15, 1);
+    END
     END
 
     COMMIT TRANSACTION;

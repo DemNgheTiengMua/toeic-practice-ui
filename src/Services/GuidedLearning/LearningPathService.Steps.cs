@@ -172,14 +172,21 @@ public sealed partial class LearningPathService
                 LastSeenAt = db.PracticeAnswers
                     .Where(pa => pa.ItemId == i.ItemId && pa.Session.UserId == step.LearnerPath.UserId)
                     .Max(pa => (DateTimeOffset?)pa.AnsweredAt),
-                CoolingUntil = db.UserQuestionHistories
-                    .Where(h => h.UserId == step.LearnerPath.UserId && h.QuestionId == i.ItemId)
-                    .Max(h => (DateTimeOffset?)h.CooldownUntil),
+                // A pool item cools from its own answers, not from `UserQuestionHistories`: that table
+                // is keyed by the legacy `QuestionId`, so comparing one to an `ItemId` matched the
+                // wrong rows (item 12 inherited question 12's cooldown) and no pool answer ever wrote
+                // one, making the rule a no-op for every drill. Same 24-hour wrong-answer rule as
+                // `PracticeService.RecordQuestionHistoryAsync`, read from the pool's own ledger.
+                LastWrongAt = db.PracticeAnswers
+                    .Where(pa => pa.ItemId == i.ItemId
+                        && pa.Session.UserId == step.LearnerPath.UserId
+                        && pa.IsCorrect == false)
+                    .Max(pa => (DateTimeOffset?)pa.AnsweredAt),
             })
             .ToListAsync(cancellationToken);
 
         var eligible = items
-            .Where(i => i.CoolingUntil is null || i.CoolingUntil <= now)
+            .Where(i => i.LastWrongAt is null || i.LastWrongAt + MasterySchedule.WrongAnswerCooldown <= now)
             .Where(i => i.LastSeenAt is null || i.LastSeenAt <= now)
             .ToList();
 

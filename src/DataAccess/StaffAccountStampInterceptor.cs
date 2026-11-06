@@ -26,6 +26,12 @@ public sealed class StaffAccountStampInterceptor(IActingStaffAccount acting) : S
         typeof(Section),
         typeof(GradingCriterion),
         typeof(GradingCriterionDescriptor),
+        // Review finding: ADM-03's "exam structure" is not only the assembly rows. A triage-only
+        // account could publish an exam and activate an item, so `Exams.Status` and
+        // `Items.LifecycleStatus` are guarded too and must be stamped here, or every application
+        // write to them would be refused for declaring nobody.
+        typeof(Exam),
+        typeof(Item),
     ];
 
     public override InterceptionResult<int> SavingChanges(

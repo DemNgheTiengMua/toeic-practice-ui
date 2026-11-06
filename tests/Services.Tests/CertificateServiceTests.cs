@@ -105,7 +105,10 @@ public sealed class CertificateServiceTests(DatabaseFixture database)
         // #201: six more, moving 43 -> 49 - trg_ReviewSampleDecisions_NoSelfApproval (ADM-02) and one
         // trg_*_TriageCannotWrite on each of the five tables a prohibited edit reaches (ADM-03):
         // ItemVersions, ExamItems, Sections, GradingCriteria, GradingCriterionDescriptors.
-        Assert.Equal(49, triggerCount);
+        // Review finding: two more, 49 -> 51 - Exams and Items. A triage-only account could publish an
+        // exam and activate an item, which ADM-03's "exam structure" and "item text" both forbid; the
+        // five original guards covered assembly and rubric but neither of these two.
+        Assert.Equal(51, triggerCount);
 
         // Named as well as counted, because a count alone cannot tell a rename from a removal.
         foreach (var name in new[]
@@ -127,6 +130,10 @@ public sealed class CertificateServiceTests(DatabaseFixture database)
                      "trg_Sections_TriageCannotWrite",
                      "trg_GradingCriteria_TriageCannotWrite",
                      "trg_GradingCriterionDescriptors_TriageCannotWrite",
+                     // Review finding: the two that were missing. Triage could publish an exam and
+                     // activate an item before these existed.
+                     "trg_Exams_TriageCannotWrite",
+                     "trg_Items_TriageCannotWrite",
                  })
         {
             var present = await db.Database
