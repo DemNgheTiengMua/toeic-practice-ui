@@ -972,6 +972,52 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
         Assert.All(steps, s => Assert.Equal("B2", s.TargetCefr));
     }
 
+    /// <summary>
+    /// #232 + #211 / D15: the path reads <c>LearnerSkillStates</c>, the table every screen reads to
+    /// answer "what is my level". A path that recomputed its own answer here could disagree with the
+    /// dashboard on the same day — the six-identity rule this rebuild exists to keep.
+    /// <para>
+    /// Trap: the fallback path working fine and hiding a missing read. The measured row says C1 while the
+    /// certificate's cut rows and the stocked cell both say B2, so only an implementation that actually
+    /// reads the state table produces C1.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public async Task A_steps_level_is_read_from_learner_skill_state()
+    {
+        var certCode = Unique("LSS");
+        var (certId, skillId, _, _, _) = await SeedPathFixtureAsync(certCode);
+        var userId = await SeedLearnerAsync(certCode);
+
+        // Measured at C1 by #211's writer; the cut-score table still says B2 for that score, and the
+        // only stocked cell is B2. C1 can therefore come from exactly one place. A C1 cell is stocked
+        // first, because a drill whose cell is empty plans no step at all.
+        await database.SqlAsync($"""
+            DECLARE @t INT = (SELECT TOP 1 TopicId FROM Topics WHERE Modality = 'reading' ORDER BY TopicId);
+            INSERT INTO Stimuli (CefrLevel, Passage) VALUES ('C1', N'C1 passage');
+            INSERT INTO Items (StimulusId, Modality, TopicId, CefrLevel, ItemType, PlacementEligible, ContentTier, LifecycleStatus)
+            VALUES (SCOPE_IDENTITY(), 'reading', @t, 'C1', 'passage_comprehension', 0, 'demo', 'active');
+            DECLARE @i INT = SCOPE_IDENTITY();
+            INSERT INTO ItemVersions (ItemId, VersionNumber, Stem, OptionA, OptionB, OptionC, OptionD, KeyLabel)
+            VALUES (@i, 1, N'Stem', N'A', N'B', N'C', N'D', 'A');
+
+            INSERT INTO LearnerSkillStates (UserId, CertId, SkillId, CefrLevel, PositionInBand, ContinuousCoordinate,
+                                            Source, MeasuredAt, ExpiresAt, WrittenByService, ProjectionVersion)
+            VALUES ({userId}, {certId}, {skillId}, 'C1', 40, 5.40, 'mock_section',
+                    SYSDATETIMEOFFSET(), DATEADD(DAY, 90, SYSDATETIMEOFFSET()), 'SkillStateWriter', 1);
+            """);
+
+        var (service, _, _, db) = CreateServices();
+        var summary = await service.GeneratePathAsync(userId);
+
+        var steps = await db.LearnerPathSteps
+            .Where(s => s.LearnerPathId == summary.LearnerPathId)
+            .ToListAsync();
+
+        Assert.NotEmpty(steps);
+        Assert.All(steps, s => Assert.Equal("C1", s.TargetCefr));
+    }
+
     [Fact]
     public async Task GeneratePathAsync_WithArchiveExisting_ResetsPreviousActivePath()
     {

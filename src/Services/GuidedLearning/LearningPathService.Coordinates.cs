@@ -31,18 +31,19 @@ public sealed partial class LearningPathService
     private const bool DrillPlacementEligible = false;
 
     /// <summary>
-    /// Each examined skill's own level, keyed by <c>SkillId</c>, resolved from the certificate's
-    /// per-skill cut-score table against that skill's latest graded scaled score.
+    /// Each examined skill's own level, keyed by <c>SkillId</c>.
     /// <para>
-    /// A skill with no graded score still needs a level, because every step must name one. The
-    /// fallback is the lowest <c>cut</c> level the certificate publishes for that skill <b>at which the
-    /// skill actually has drillable stock</b>, and the certificate's own bottom row when the pool holds
-    /// nothing at any level. Both are this skill's own level from this skill's own table: never the
-    /// overall, never the target band.
+    /// <b>First read: <c>LearnerSkillStates</c>.</b> D15 makes that table the single answer to "what is
+    /// my level" — every screen reads it, so a path that computed its own answer here could disagree
+    /// with the dashboard on the same day. A skill with a row uses it verbatim, including its
+    /// pre-A1 floor: a learner measured below A1 gets a step at A1 only because no content is authored
+    /// at the floor, and that clamp is applied openly rather than by silently replacing the measurement.
     /// </para>
     /// <para>
-    /// Skipping straight to the bottom row would pitch a step at a level with no items, and a drill with
-    /// nothing to serve throws the moment the learner opens it.
+    /// Fallback, only for a skill #211 has not measured yet: this certificate's per-skill cut-score row
+    /// against the latest graded score, then the lowest level the skill has stock at, then the
+    /// certificate's own bottom row. Every one of those is still <b>this skill's</b> level from this
+    /// skill's own table — never the overall, never the target band.
     /// </para>
     /// </summary>
     private async Task<Dictionary<int, CefrLevel>> LoadSkillLevelsAsync(
@@ -59,6 +60,14 @@ public sealed partial class LearningPathService
             return [];
         }
 
+        var measured = await db.LearnerSkillStates
+            .AsNoTracking()
+            .Where(s => s.UserId == userId && s.CertId == certId)
+            .Select(s => new { s.SkillId, s.CefrLevel })
+            .ToListAsync(cancellationToken);
+
+        var levels = measured.ToDictionary(s => s.SkillId, s => ClampToAuthored(s.CefrLevel));
+
         var version = await db.CefrCutScoreVersions
             .AsNoTracking()
             .Where(v => v.CertId == certId)
@@ -68,7 +77,7 @@ public sealed partial class LearningPathService
 
         if (version is null)
         {
-            return [];
+            return levels;
         }
 
         var cuts = await db.CefrCutScores
@@ -98,9 +107,13 @@ public sealed partial class LearningPathService
                 .ToListAsync(cancellationToken))
             .ToLookup(i => i.Modality, i => i.CefrLevel);
 
-        var levels = new Dictionary<int, CefrLevel>();
         foreach (var skill in skills)
         {
+            if (levels.ContainsKey(skill.SkillId))
+            {
+                continue;
+            }
+
             var rows = cuts.Where(c => c.SkillId == skill.SkillId).ToList();
             if (rows.Count == 0)
             {
@@ -137,6 +150,15 @@ public sealed partial class LearningPathService
 
         return levels;
     }
+
+    /// <summary>
+    /// A measured level as an authorable one. The pre-A1 floor is reportable but no content may be
+    /// written at it (D1), so a step for a learner measured below A1 is pitched at A1 — the bottom rung
+    /// the pool actually holds. That is a clamp on the <b>step</b>, not on the measurement: the stored
+    /// state keeps saying "below A1", which is what the dashboard must show.
+    /// </summary>
+    private static CefrLevel ClampToAuthored(CefrLevel measured) =>
+        measured.IsReportableFloor ? CefrLevel.A1 : measured;
 
     /// <summary>
     /// The topics a skill may drill at one level, weakest first, from this learner's own pool answers.
