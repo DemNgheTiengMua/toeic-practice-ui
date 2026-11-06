@@ -83,6 +83,10 @@ public partial class Skill
     [InverseProperty("SkillNavigation")]
     public virtual ICollection<CefrCutScore> CutScores { get; set; } = new List<CefrCutScore>();
 
+    /// <summary>#211: this skill's stored state, one row per learner who has been measured in it.</summary>
+    [InverseProperty("SkillNavigation")]
+    public virtual ICollection<LearnerSkillState> LearnerSkillStates { get; set; } = new List<LearnerSkillState>();
+
     [InverseProperty("SkillNavigation")]
     public virtual ICollection<Section> SectionSkillNavigations { get; set; } = new List<Section>();
 

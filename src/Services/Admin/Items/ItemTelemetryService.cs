@@ -21,14 +21,16 @@ namespace Services;
 /// </para>
 /// <para>
 /// <b>What "target-band learner" means here.</b> The specification says "learners whose measured level
-/// equals the item's own level". The measured per-skill level lives in <c>LearnerSkillStates</c>, which
-/// does not exist yet (#210 is still open). Until it does, the closest stored fact is the level of the
-/// sitting the learner chose: a pool drill pins its cell's level on <c>PracticeSessions.CefrLevel</c>,
-/// and a paper's item level is the bound version's item. That is a <em>requested</em> level, not a
-/// measured one, so a learner who over-reaches is counted as target-band for a band they are not at.
+/// equals the item's own level". The measured per-skill level now lives in <c>LearnerSkillStates</c>
+/// (#211), but the reading below has not been moved onto it yet. Until it is, the closest stored fact
+/// is the level of the sitting the learner chose: a pool drill pins its cell's level on
+/// <c>PracticeSessions.CefrLevel</c>, and a paper's item level is the bound version's item. That is a
+/// <em>requested</em> level, not a measured one, so a learner who over-reaches is counted as
+/// target-band for a band they are not at.
 /// <para>
-/// shortcut: target band = the sitting's level until LearnerSkillStates (#210) lands. Upgrade when that
-/// table exists: swap <see cref="IsAtTargetBand"/> for a read of the learner's measured level.
+/// shortcut: target band = the sitting's level although <c>LearnerSkillStates</c> now exists (#211).
+/// Upgrade when telemetry is next touched: swap <see cref="IsAtTargetBand"/> for a read of the
+/// learner's measured level.
 /// </para>
 /// </para>
 /// </summary>

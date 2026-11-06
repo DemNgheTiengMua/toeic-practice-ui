@@ -197,6 +197,9 @@ public partial class CompanionDbContext : DbContext
 
     public virtual DbSet<CefrCutScoreVersion> CefrCutScoreVersions { get; set; }
 
+    /// <summary>#211: one row per learner per skill — the answer every "what is my level" screen reads.</summary>
+    public virtual DbSet<LearnerSkillState> LearnerSkillStates { get; set; }
+
 
     public virtual DbSet<Section> Sections { get; set; }
 
@@ -253,6 +256,7 @@ public partial class CompanionDbContext : DbContext
         ConfigureAttempts(modelBuilder);
         ConfigureCalibration(modelBuilder);
         ConfigurePractice(modelBuilder);
+        ConfigureSkillState(modelBuilder);
         ConfigureFreeResponse(modelBuilder);
         ConfigureGuidedLearning(modelBuilder);
         ConfigureFinance(modelBuilder);
