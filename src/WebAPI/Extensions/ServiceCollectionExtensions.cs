@@ -130,6 +130,13 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAiInsightService, AiInsightService>();
         services.AddHostedService<AiInsightBackgroundService>();
 
+        // #199 / D0.7: the telemetry schedule. Scoped like every other service (it owns a DbContext) and
+        // hosted so an item crossing 30, 50, 100 or 250 administrations quarantines itself without
+        // waiting for someone to notice. The service is idempotent by its primary key, so a second run
+        // at the same counts writes nothing.
+        services.AddScoped<ItemTelemetryService>();
+        services.AddHostedService<ItemTelemetryBackgroundService>();
+
         return services;
     }
 
