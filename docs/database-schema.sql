@@ -3039,6 +3039,66 @@ CREATE VIEW vw_CoverageMatrix AS
     GROUP BY TopicId, CefrLevel
   ) x ON x.TopicId = t.TopicId AND x.CefrLevel = q.CefrLevel;
 GO
+-- ============ #199: telemetry quarantine ============
+-- D0.7 / CNT-44: one row per (item, administration checkpoint) where an active item's stored answers
+-- were evaluated. Nothing here is a counter the platform maintains: AdministrationCount and every
+-- statistic beside it are derived from PracticeAnswers / AttemptAnswers / AiGradings at the moment the
+-- row is written, so a recount cannot disagree with the stored number (NFI-05). The row exists for two
+-- reasons only:
+--
+--   * idempotency. The primary key is (ItemId, CheckpointSize), so a schedule that runs twice at the
+--     same administration count cannot record the evaluation twice; the second run reads the row and
+--     stops.
+--   * evidence. A reviewer opening a quarantined item sees which condition fired and the four numbers
+--     behind it, rather than a state with no explanation.
+--
+-- CheckpointSize is the sample size the evaluation answers, not the count at the time of writing: D0.7
+-- names 30, 50, 100 and 250, and the CHECK is what makes a fifth checkpoint impossible to invent
+-- silently.
+CREATE TABLE ItemTelemetryEvaluations (
+  ItemId            INT NOT NULL REFERENCES Items(ItemId),
+  CheckpointSize    INT NOT NULL
+    CONSTRAINT CK_ItemTelemetry_Checkpoint CHECK (CheckpointSize IN (30, 50, 100, 250)),
+  -- the sample the row was computed over. It can exceed the checkpoint (an item that jumped from 40
+  -- to 120 administrations is first evaluated at 100); the checkpoint is what the row answers.
+  AdministrationCount INT NOT NULL
+    CONSTRAINT CK_ItemTelemetry_Administrations CHECK (AdministrationCount >= 30),
+  TargetBandCount   INT NOT NULL
+    CONSTRAINT CK_ItemTelemetry_TargetBandCount CHECK (TargetBandCount >= 0),
+  -- point-biserial r. NULL is "undefined", never zero: an item every learner answered correctly has no
+  -- variance in the item score, and a stored 0 would fire the r < 0.10 gate on a healthy item.
+  Discrimination    DECIMAL(9,6) NULL
+    CONSTRAINT CK_ItemTelemetry_Discrimination CHECK (Discrimination IS NULL OR Discrimination BETWEEN -1 AND 1),
+  -- target-band facility (p-value), and the mean rubric band of a productive task's AI gradings.
+  TargetFacility    DECIMAL(9,6) NULL
+    CONSTRAINT CK_ItemTelemetry_Facility CHECK (TargetFacility IS NULL OR TargetFacility BETWEEN 0 AND 1),
+  MeanResponseBand  DECIMAL(9,6) NULL
+    CONSTRAINT CK_ItemTelemetry_ResponseBand CHECK (MeanResponseBand IS NULL OR MeanResponseBand BETWEEN 0 AND 6),
+  -- D0.7's four conditions, one bit each, so "how many items breached facility this week" is a query
+  -- and not a string parse. A column rather than a breach-code row because the specification fixes the
+  -- count at four; a fifth condition ships with a schema change, which is what it should cost.
+  BreachDiscrimination       BIT NOT NULL CONSTRAINT DF_ItemTelemetry_BreachDiscrimination DEFAULT 0,
+  BreachFacility             BIT NOT NULL CONSTRAINT DF_ItemTelemetry_BreachFacility DEFAULT 0,
+  BreachDistractorDominance  BIT NOT NULL CONSTRAINT DF_ItemTelemetry_BreachDistractorDominance DEFAULT 0,
+  BreachProductiveDrift      BIT NOT NULL CONSTRAINT DF_ItemTelemetry_BreachProductiveDrift DEFAULT 0,
+  -- the verdict the service acted on. Redundant with the four bits by design: the row must not be able
+  -- to say "clean" while carrying a breach, and the CHECK below is what makes that impossible rather
+  -- than a service convention the next caller forgets.
+  Quarantined       BIT NOT NULL,
+  EvaluatedAt       DATETIMEOFFSET NOT NULL CONSTRAINT DF_ItemTelemetry_EvaluatedAt DEFAULT SYSDATETIMEOFFSET(),
+  CONSTRAINT PK_ItemTelemetryEvaluations PRIMARY KEY (ItemId, CheckpointSize),
+  CONSTRAINT CK_ItemTelemetry_Verdict CHECK (
+       Quarantined = CASE
+         WHEN BreachDiscrimination = 1 OR BreachFacility = 1
+           OR BreachDistractorDominance = 1 OR BreachProductiveDrift = 1 THEN 1
+         ELSE 0
+       END)
+);
+GO
+-- The console asks "which items are quarantined on telemetry, most recent first" (S-10). The
+-- primary key already serves the item's own history, so this covers only the other direction.
+CREATE INDEX IX_ItemTelemetry_Quarantined ON ItemTelemetryEvaluations(EvaluatedAt) WHERE Quarantined = 1;
+GO
 -- ============ Query indexes ============
 -- SQL Server does not index foreign keys. These cover the joins the triggers run on every write
 -- and the screens' hot reads. Uniqueness lives above; nothing here enforces a rule.

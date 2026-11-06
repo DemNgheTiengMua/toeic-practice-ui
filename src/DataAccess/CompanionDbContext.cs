@@ -171,6 +171,10 @@ public partial class CompanionDbContext : DbContext
     public virtual DbSet<ExamItem> ExamItems { get; set; }
 
 
+    /// <summary>#199 / D0.7: one item's stored-answer verdict at one administration checkpoint.</summary>
+    public virtual DbSet<ItemTelemetryEvaluation> ItemTelemetryEvaluations { get; set; }
+
+
     public virtual DbSet<QuestionGroup> QuestionGroups { get; set; }
 
 

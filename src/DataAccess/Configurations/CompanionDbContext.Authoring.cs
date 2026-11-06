@@ -365,6 +365,30 @@ public partial class CompanionDbContext
         });
 
 
+        // #199 / D0.7: one item's stored-answer verdict at one administration checkpoint. No trigger,
+        // so no HasTrigger - the row is written, never updated, and the primary key is what makes a
+        // second evaluation of the same checkpoint a refusal rather than a double count.
+        modelBuilder.Entity<ItemTelemetryEvaluation>(entity =>
+        {
+            entity.HasKey(e => new { e.ItemId, e.CheckpointSize }).HasName("PK_ItemTelemetryEvaluations");
+
+            entity.Property(e => e.Discrimination).HasColumnType("decimal(9,6)");
+            entity.Property(e => e.TargetFacility).HasColumnType("decimal(9,6)");
+            entity.Property(e => e.MeanResponseBand).HasColumnType("decimal(9,6)");
+            entity.Property(e => e.EvaluatedAt).HasDefaultValueSql("(sysdatetimeoffset())");
+
+            // The console's "what is quarantined, newest first" read. The primary key serves the other
+            // direction (one item's own history), so this covers only the filtered one.
+            entity.HasIndex(e => e.EvaluatedAt, "IX_ItemTelemetry_Quarantined")
+                .HasFilter("([Quarantined] = 1)");
+
+            entity.HasOne(d => d.Item).WithMany()
+                .HasForeignKey(d => d.ItemId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ItemTelemetryEvaluations_Item");
+        });
+
+
         modelBuilder.Entity<QuestionGroup>(entity =>
         {
             entity.HasKey(e => e.GroupId).HasName("PK__Question__149AF36A03E95EE7");
