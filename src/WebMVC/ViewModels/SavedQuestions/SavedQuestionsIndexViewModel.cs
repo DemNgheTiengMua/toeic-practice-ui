@@ -11,7 +11,7 @@ public sealed record SavedQuestionsIndexViewModel(
 {
     public bool HasActiveFilters { get; } = !string.IsNullOrEmpty(CurrentSource) || CurrentSectionId.HasValue || CurrentCategoryId.HasValue;
     public IReadOnlyDictionary<int, ExamAudioPlayerModel> QuestionAudio { get; } = Data.Questions.ToDictionary(
-        q => q.QuestionId, q => new ExamAudioPlayerModel(q.AudioPath ?? "", AllowReplay: true,
+        q => q.SavedQuestionId, q => new ExamAudioPlayerModel(q.AudioPath ?? "", AllowReplay: true,
             SectionTitle: "Saved Question Audio", BadgeText: "READY", Mode: "study"));
     public IReadOnlyDictionary<int, string> SavedAtDisplays { get; init; } = new Dictionary<int, string>();
 }

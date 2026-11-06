@@ -36,7 +36,8 @@ public sealed record PracticeQuestionDto(
     IReadOnlyList<int>? SelectedOptionIds = null,
     string? SelectedOptionIdsJson = null,
     IReadOnlyList<int>? CorrectOptionIds = null,
-    int? ItemVersionId = null)
+    int? ItemVersionId = null,
+    int? SavedQuestionId = null)
 {
     /// <summary>
     /// #187: the id the browser addresses this question by. A section drill addresses its question

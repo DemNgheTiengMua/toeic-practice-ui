@@ -238,6 +238,56 @@ public sealed class DemoSeedTests(DatabaseFixture fixture)
                 var rating = Convert.ToDecimal(await cmd.ExecuteScalarAsync());
                 Assert.Equal(5.00m, rating);
             }
+
+            // 7. #224: the demo learner's bank is two POOL links, each pinned to an item version, and
+            //    no legacy link survives (D23 drops them rather than re-pointing them). The count is
+            //    the one docs/MANUAL-TEST-CREDENTIALS.md advertises, and the pin is checked on the row
+            //    so a link that stored a version it does not read would still be caught here.
+            Assert.Equal(2, await CountAsync("""
+                SELECT COUNT(*) FROM SavedQuestions sq
+                JOIN ItemVersions v ON v.ItemVersionId = sq.ItemVersionId AND v.ItemId = sq.ItemId
+                WHERE sq.UserId = (SELECT UserId FROM Users WHERE Email = 'learner@demo.local')
+                  AND sq.QuestionId IS NULL
+                  AND sq.CertId = (SELECT ActiveCertId FROM Users WHERE Email = 'learner@demo.local')
+                """));
+            Assert.Equal(0, await CountAsync("""
+                SELECT COUNT(*) FROM SavedQuestions
+                WHERE UserId = (SELECT UserId FROM Users WHERE Email = 'learner@demo.local')
+                  AND QuestionId IS NOT NULL
+                """));
+
+            // 8. #224 / D23: a legacy link is DROPPED, not re-pointed. Planting one and re-running the
+            //    seed is the only way to prove the drop, because a fresh database never holds one -
+            //    which is exactly the argument that makes the statement look unnecessary.
+            await using (var cmd = conn.CreateCommand())
+            {
+                cmd.CommandText = """
+                    INSERT INTO SavedQuestions (UserId, QuestionId, Source, SavedAt)
+                    SELECT u.UserId, q.QuestionId, 'manual', SYSDATETIMEOFFSET()
+                    FROM Users u
+                    JOIN Questions q ON q.ExamId = (SELECT TOP 1 ExamId FROM Exams WHERE CertId = u.ActiveCertId)
+                    WHERE u.Email = 'learner@demo.local'
+                      AND NOT EXISTS (SELECT 1 FROM SavedQuestions s2 WHERE s2.UserId = u.UserId AND s2.QuestionId = q.QuestionId);
+                    """;
+                await cmd.ExecuteNonQueryAsync();
+            }
+            Assert.True(await CountAsync("""
+                SELECT COUNT(*) FROM SavedQuestions
+                WHERE UserId = (SELECT UserId FROM Users WHERE Email = 'learner@demo.local')
+                  AND QuestionId IS NOT NULL
+                """) >= 1, "the planted legacy link must exist before the re-run, or the drop is untested");
+
+            await fixture.SqlCmdFileToDatabaseAsync(dbName, seedPath);
+
+            Assert.Equal(0, await CountAsync("""
+                SELECT COUNT(*) FROM SavedQuestions
+                WHERE UserId = (SELECT UserId FROM Users WHERE Email = 'learner@demo.local')
+                  AND QuestionId IS NOT NULL
+                """));
+            Assert.Equal(2, await CountAsync("""
+                SELECT COUNT(*) FROM SavedQuestions
+                WHERE UserId = (SELECT UserId FROM Users WHERE Email = 'learner@demo.local')
+                """));
         }
         finally
         {
