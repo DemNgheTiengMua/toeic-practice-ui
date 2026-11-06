@@ -533,6 +533,15 @@ CREATE TABLE ItemVersions (
     CONSTRAINT CK_ItemVersions_KeyLabel CHECK (KeyLabel IN ('A','B','C','D')),
   -- CNT-43: the one editable field
   Explanation    NVARCHAR(MAX) NULL,
+  -- #194: gate one requires a rationale per option, so an objective item carries one beside each
+  -- option. They are versioned with the option they explain rather than being editable in place: the
+  -- review screen shows the learner the rationale for the option they picked, so rewriting one would
+  -- change what a past attempt renders - the same reason option text is immutable. A rationale with
+  -- no option to explain is a row no reader can render, hence the CHECK below.
+  RationaleA     NVARCHAR(MAX) NULL,
+  RationaleB     NVARCHAR(MAX) NULL,
+  RationaleC     NVARCHAR(MAX) NULL,
+  RationaleD     NVARCHAR(MAX) NULL,
   -- CNT-11: (start, end, verbatim quote) - seconds for audio, characters for text. The stem may not
   -- depend on a timestamp during the sitting, but the review screen and the explanation do.
   EvidenceStart  INT NULL,
@@ -554,6 +563,15 @@ CREATE TABLE ItemVersions (
        (OptionA IS NULL AND OptionB IS NULL AND OptionC IS NULL AND OptionD IS NULL AND KeyLabel IS NULL)
     OR (OptionA IS NOT NULL AND OptionB IS NOT NULL AND OptionC IS NOT NULL AND OptionD IS NOT NULL
         AND KeyLabel IS NOT NULL)
+  ),
+  -- #194: a rationale explains an option, so it may exist only where its option does. A distractor
+  -- rationale on a productive task has no option to render beside, and would reach review as copy
+  -- above nothing.
+  CONSTRAINT CK_ItemVersions_RationalesNeedOptions CHECK (
+       (RationaleA IS NULL OR OptionA IS NOT NULL)
+   AND (RationaleB IS NULL OR OptionB IS NOT NULL)
+   AND (RationaleC IS NULL OR OptionC IS NOT NULL)
+   AND (RationaleD IS NULL OR OptionD IS NOT NULL)
   ),
   CONSTRAINT CK_ItemVersions_ReferencePair CHECK (
        (ReferenceText IS NULL AND ReferenceKind IS NULL)
@@ -583,6 +601,10 @@ BEGIN
        OR ISNULL(i.OptionB,   N'') <> ISNULL(d.OptionB,   N'')
        OR ISNULL(i.OptionC,   N'') <> ISNULL(d.OptionC,   N'')
        OR ISNULL(i.OptionD,   N'') <> ISNULL(d.OptionD,   N'')
+       OR ISNULL(i.RationaleA, N'') <> ISNULL(d.RationaleA, N'')
+       OR ISNULL(i.RationaleB, N'') <> ISNULL(d.RationaleB, N'')
+       OR ISNULL(i.RationaleC, N'') <> ISNULL(d.RationaleC, N'')
+       OR ISNULL(i.RationaleD, N'') <> ISNULL(d.RationaleD, N'')
        OR ISNULL(i.KeyLabel,  '') <> ISNULL(d.KeyLabel,  '')
        OR ISNULL(i.EvidenceStart, -1) <> ISNULL(d.EvidenceStart, -1)
        OR ISNULL(i.EvidenceEnd,   -1) <> ISNULL(d.EvidenceEnd,   -1)

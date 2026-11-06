@@ -30,6 +30,12 @@ public sealed record CreatePoolItemRequest(
     string? EvidenceQuote = null,
     string? ReferenceText = null,
     ReferenceKindDto? ReferenceKind = null,
+    // #194: why each option is what it is. Optional at save time, because a draft may be written
+    // before its rationale is; gate one is what refuses an item that reaches validation without one.
+    string? RationaleA = null,
+    string? RationaleB = null,
+    string? RationaleC = null,
+    string? RationaleD = null,
     // "A stimulus and its children in one place": the passage or audio this item sits under is
     // created in the same call rather than in a second one nobody remembers to make.
     CreatePoolStimulusRequest? Stimulus = null,
