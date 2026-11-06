@@ -2,7 +2,6 @@
 @{
     Layout = "_AdminLayout";
     ViewData["Title"] = "Coverage matrix";
-    var isEmptyMatrix = Model.Skills.Count == 0;
 }
 
 @section Styles {
@@ -29,7 +28,7 @@
   <div class="alert alert--danger" role="alert">@Model.ErrorMessage</div>
 }
 
-@if (isEmptyMatrix)
+@if (Model.HasNoCells)
 {
   @if (Model.ErrorMessage is null)
   {
@@ -61,7 +60,6 @@ else
     <section class="coverage-skill" aria-labelledby="coverage-skill-@skill.Modality">
       <div class="coverage-skill__header">
         <h2 id="coverage-skill-@skill.Modality" class="coverage-skill__title">@skill.ModalityLabel</h2>
-        <span class="coverage-skill__count font-mono">@skill.Rows.Count topics × @skill.LevelLabels.Count levels</span>
       </div>
 
       <div class="coverage-grid-wrap">
@@ -88,7 +86,7 @@ else
                 {
                   @* The empty cell is the whole point of the screen: it keeps its plaque, its
                      target and its deficit, and only its paint changes. *@
-                  <td class="coverage-cell @(cell.IsEmpty ? "coverage-cell--empty" : cell.IsSatisfied ? "coverage-cell--met" : "coverage-cell--short")"
+                  <td class="coverage-cell @cell.StateClass"
                       title="@cell.CefrLevelLabel: @cell.Cell.ActiveItemCount of @cell.Cell.TargetItemCount active, @cell.Cell.PlacementEligibleItemCount placement-eligible">
                     <span class="coverage-cell__stock font-mono">@cell.Cell.ActiveItemCount<span class="coverage-cell__of">/</span>@cell.Cell.TargetItemCount</span>
                     <span class="coverage-cell__deficit font-mono">@cell.DeficitText</span>

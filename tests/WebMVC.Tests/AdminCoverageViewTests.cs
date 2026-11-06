@@ -2,8 +2,7 @@ using System.Net;
 using System.Reflection;
 using System.Security.Claims;
 using System.Text.RegularExpressions;
-using Contracts;
-using Microsoft.AspNetCore.Authentication;
+using Contracts;using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -73,6 +72,29 @@ public sealed class AdminCoverageViewTests : IClassFixture<AdminCoverageViewTest
         Assert.Contains("coverage-cell--met", filled);
         Assert.Contains("0 short", filled);
         Assert.DoesNotContain("30 short", filled);
+    }
+
+    /// <summary>
+    /// Criterion 3 at the source level, for the numbers the payload cannot catch: a total, a
+    /// percentage or a sum added beside the cells is still a figure the view did not report. The
+    /// guard is scoped to this one view — a `.Count` on a row list is exactly the shape that would
+    /// otherwise slip through — and it reads the markup without its comments, so the explanation of
+    /// why an aggregate is forbidden does not itself fail the test.
+    /// </summary>
+    [Fact]
+    public void The_view_computes_no_number_of_its_own()
+    {
+        var view = File.ReadAllText(Path.Combine(
+            TestPathHelper.FindRepoRoot(), "src", "WebMVC", "Views", "Admin", "Coverage.cshtml"));
+        var markup = Regex.Replace(view, @"@\*[\s\S]*?\*@", "");
+
+        foreach (var computation in new[] { ".Count", ".Sum(", ".Average(", ".Max(", ".Min(", ".GroupBy(" })
+        {
+            Assert.DoesNotContain(computation, markup);
+        }
+
+        // A bare arithmetic expression inside a Razor block is the same defect wearing a different hat.
+        Assert.DoesNotMatch(@"@\([^)]*[-+*/][^)]*\)", markup);
     }
 
     /// <summary>

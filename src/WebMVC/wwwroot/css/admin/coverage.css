@@ -60,11 +60,6 @@
   letter-spacing: var(--tracking-caps);
 }
 
-.coverage-skill__count {
-  font-size: var(--text-xs);
-  color: var(--color-text-muted);
-}
-
 /* The 1440x900 screen is the target: six bands by six topics must not wrap, so the wrapper scrolls
    rather than clipping the right-hand column out of reach. */
 .coverage-grid-wrap {

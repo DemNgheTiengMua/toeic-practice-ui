@@ -18,7 +18,14 @@ namespace WebMVC.Models;
 /// </summary>
 public sealed record AdminCoverageViewModel(
     IReadOnlyList<AdminCoverageSkillViewModel> Skills,
-    string? ErrorMessage = null);
+    string? ErrorMessage = null)
+{
+    /// <summary>
+    /// Set when the payload carried no skill at all. The view tests this rather than counting the
+    /// list, because a count in the markup is a number the view layer computed (criterion 3).
+    /// </summary>
+    public bool HasNoCells => Skills.Count == 0;
+}
 
 /// <summary>One skill's table: its topics down the side, the six levels across the top.</summary>
 public sealed record AdminCoverageSkillViewModel(
@@ -46,6 +53,15 @@ public sealed record AdminCoverageCellViewModel(AdminCoverageCellDto Cell, strin
     public bool IsSatisfied => Cell.Deficit == 0;
 
     public string DeficitText => Cell.Deficit == 0 ? "0 short" : $"{Cell.Deficit} short";
+
+    /// <summary>
+    /// The cell's paint. A state rather than an expression in the markup: the empty cell is the one
+    /// reading that must never be ambiguous, so the three cases are named here and the view only
+    /// prints the name.
+    /// </summary>
+    public string StateClass => IsEmpty ? "coverage-cell--empty"
+        : IsSatisfied ? "coverage-cell--met"
+        : "coverage-cell--short";
 }
 
 /// <summary>
