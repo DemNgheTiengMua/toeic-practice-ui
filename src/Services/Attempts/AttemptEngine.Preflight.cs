@@ -52,15 +52,8 @@ public sealed partial class AttemptEngine
         int userId,
         CancellationToken cancellationToken = default)
     {
-        var attempt = await db.ExamAttempts
-            .Include(a => a.Exam).ThenInclude(e => e.Cert)
-            .SingleOrDefaultAsync(a => a.AttemptId == attemptId && a.UserId == userId, cancellationToken)
-            ?? throw new AttemptEngineException(AttemptEngineException.AttemptNotFound, $"Attempt {attemptId} not found.");
-
-        if (attempt.Status != AttemptStatus.InProgress.ToCode())
-        {
-            throw new AttemptEngineException(AttemptEngineException.AttemptNotActive, "Exam attempt is not in progress.");
-        }
+        var attempt = await LoadSittingAttemptAsync(
+            db.ExamAttempts.Include(a => a.Exam).ThenInclude(e => e.Cert), attemptId, userId, cancellationToken);
 
         var now = DateTimeOffset.UtcNow;
         if (attempt.PreflightVerifiedAt == null)

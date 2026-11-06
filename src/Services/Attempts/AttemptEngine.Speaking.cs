@@ -25,14 +25,7 @@ public sealed partial class AttemptEngine
             throw new AttemptEngineException(AttemptEngineException.InvalidOption, error ?? "Invalid audio file.");
         }
 
-        var attempt = await db.ExamAttempts
-            .SingleOrDefaultAsync(a => a.AttemptId == attemptId && a.UserId == userId, cancellationToken)
-            ?? throw new AttemptEngineException(AttemptEngineException.AttemptNotFound, $"Attempt {attemptId} not found.");
-
-        if (attempt.Status != AttemptStatus.InProgress.ToCode())
-        {
-            throw new AttemptEngineException(AttemptEngineException.AttemptNotActive, "Exam attempt is not in progress.");
-        }
+        var attempt = await LoadSittingAttemptAsync(db.ExamAttempts, attemptId, userId, cancellationToken);
 
         var now = DateTimeOffset.UtcNow;
         var effectiveDeadline = ResolveEffectiveDeadline(attempt);
@@ -112,14 +105,7 @@ public sealed partial class AttemptEngine
         int? durationMs,
         CancellationToken cancellationToken = default)
     {
-        var attempt = await db.ExamAttempts
-            .SingleOrDefaultAsync(a => a.AttemptId == attemptId && a.UserId == userId, cancellationToken)
-            ?? throw new AttemptEngineException(AttemptEngineException.AttemptNotFound, $"Attempt {attemptId} not found.");
-
-        if (attempt.Status != AttemptStatus.InProgress.ToCode())
-        {
-            throw new AttemptEngineException(AttemptEngineException.AttemptNotActive, "Exam attempt is not in progress.");
-        }
+        var attempt = await LoadSittingAttemptAsync(db.ExamAttempts, attemptId, userId, cancellationToken);
 
         var now = DateTimeOffset.UtcNow;
         var effectiveDeadline = ResolveEffectiveDeadline(attempt);
