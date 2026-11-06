@@ -6,7 +6,8 @@ namespace Contracts;
 public sealed record UpdateQuestionRequest(
     int? GroupId,
     string Stem,
-    int DifficultyLevel,
+    // #229 / D1: dormant, exactly as on <see cref="CreateQuestionRequest"/>.
+    int? DifficultyLevel,
     QuestionTypeDto QuestionType,
     string? Explanation = null,
     int? CategoryId = null,
@@ -24,5 +25,7 @@ public sealed record UpdateQuestionRequest(
     string? RequiredKeywords = null,
     string? SampleAnswerOrImageDesc = null,
     ReferenceKindDto? ReferenceKind = null,
-    // #228 / D1: the level to author this question at, beside the five-point difficulty it replaces.
+    // #229 / D1: the level this question is authored at, required by the edit path. Read the same way
+    // the create path reads it, so a stored level cannot be dropped by an edit that omits it: an edit
+    // that states no level keeps the item's own (moving an item between cells is a different act).
     string? CefrLevelCode = null);

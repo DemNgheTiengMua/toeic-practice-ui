@@ -164,7 +164,10 @@ internal static class QuestionExportManifest
             return new ImportManifestQuestion
             {
                 Stem = q.Stem,
-                DifficultyLevel = q.DifficultyLevel,
+                // #229 / D1: the level the legacy row carries, and no difficulty. The number is
+                // dormant and NULL on anything written since #229, so emitting it would round-trip a
+                // hole; emitting the level is what makes the file re-importable.
+                CefrLevel = q.CefrLevel?.Code,
                 QuestionType = q.QuestionType,
                 CategoryCode = q.Category?.Code,
                 Explanation = q.Explanation,
@@ -201,7 +204,6 @@ internal static class QuestionExportManifest
             TopicCode = pool.TopicCode,
             ItemType = pool.ItemType,
             PlacementEligible = pool.PlacementEligible,
-            DifficultyLevel = q.DifficultyLevel,
             // The pool has no seven-way type: a productive version is the legacy free_response, and
             // an objective one is a four-option MCQ by construction.
             QuestionType = pool.IsProductive ? "free_response" : "mcq",

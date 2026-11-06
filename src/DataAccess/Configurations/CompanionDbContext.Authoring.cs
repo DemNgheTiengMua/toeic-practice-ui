@@ -418,6 +418,16 @@ public partial class CompanionDbContext
         {
             entity.HasKey(e => e.QuestionId).HasName("PK__Question__0DC06FACD56E3AE0");
 
+            // #229 / D1: the level is stored by its code, never as an integer - an integer scale
+            // beside the level codes is the second scale #182 exists to prevent. A NULL column stays a
+            // NULL level: EF never passes null through a value converter.
+            entity.Property(e => e.CefrLevel)
+                .HasConversion(
+                    v => v == null ? null : v.Value.Code,
+                    v => v == null ? null : (CefrLevel?)ParseAuthoredLevel(v))
+                .HasMaxLength(10)
+                .IsUnicode(false);
+
             entity.HasIndex(e => e.CategoryId, "IX_Questions_Category").HasFilter("([CategoryId] IS NOT NULL)");
 
             entity.Property(e => e.QuestionType).HasMaxLength(30);

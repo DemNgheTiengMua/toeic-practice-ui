@@ -1,10 +1,10 @@
-{
+﻿{
   "version": "1.0",
   "exam": {
     "title": "Speaking and Writing Free Response Sample",
     "purpose": "mock",
     "durationMinutes": 60,
-    "sourceName": "Sample pack — speaking and writing",
+    "sourceName": "Sample pack â€” speaking and writing",
     "description": null
   },
   "sections": [
@@ -23,7 +23,7 @@
           "questions": [
             {
               "stem": "Describe a memorable celebration or holiday you attended. Explain why it was important to you.",
-              "difficultyLevel": 3,
+              "cefrLevel": "B1",
               "questionType": "free_response",
               "categoryCode": null,
               "prepSeconds": 45,
@@ -67,7 +67,7 @@
           "questions": [
             {
               "stem": "Write an email responding to the client. In your email, summarize current progress, explain any pending items, and propose a date for the next status meeting.",
-              "difficultyLevel": 4,
+              "cefrLevel": "B2",
               "questionType": "free_response",
               "categoryCode": null,
               "prepSeconds": null,

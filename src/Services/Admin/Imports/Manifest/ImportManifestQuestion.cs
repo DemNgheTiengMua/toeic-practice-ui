@@ -6,6 +6,12 @@ namespace Services;
 public sealed class ImportManifestQuestion
 {
     public string? Stem { get; set; }
+
+    /// <summary>
+    /// #229 / D1: dormant. Every import path reads <see cref="CefrLevel"/> instead, and a file that
+    /// still carries this is accepted so a manifest written before #229 keeps importing - the number is
+    /// read, not interpreted, because there is no difficulty-to-level mapping.
+    /// </summary>
     public int? DifficultyLevel { get; set; }
     public string? QuestionType { get; set; }
     public string? CategoryCode { get; set; }
@@ -13,10 +19,9 @@ public sealed class ImportManifestQuestion
     public string? Hint { get; set; }
 
     /// <summary>
-    /// #189: the level the item is authored at, and the reason a manifest can now write the pool at
-    /// all. It is required for a pool write and has no default: D1 forbids mapping the five-point
-    /// difficulty onto a CEFR level, so a file that names only <see cref="DifficultyLevel"/> still
-    /// imports into the legacy shape and is told, per question, what to add.
+    /// #189 / #229: the level the item is authored at. Required: an item with no level is the defect
+    /// this ticket removes, and there is no default - D1 forbids mapping the five-point difficulty onto
+    /// a CEFR level, and a silent A1 is how 212 items ended up at the wrong band.
     /// </summary>
     public string? CefrLevel { get; set; }
 

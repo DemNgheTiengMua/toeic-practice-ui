@@ -31,6 +31,13 @@ public static class CefrLevelLabels
         ["C2"] = "C2",
     };
 
+    /// <summary>
+    /// #229: the six levels a picker may offer. WebMVC cannot see <c>BusinessObjects.CefrLevel</c>, so
+    /// this is the ladder's public shape in the layer a view can reach. The
+    /// <c>CefrLevelLabelDriftTests</c> guard holds it to the type.
+    /// </summary>
+    public static IReadOnlyList<string> AuthoredCodes { get; } = ["A1", "A2", "B1", "B2", "C1", "C2"];
+
     /// <summary>The codes this registry labels, in ladder order, for the drift test against the type.</summary>
     public static IReadOnlyCollection<string> KnownCodes => ByCode.Keys;
 

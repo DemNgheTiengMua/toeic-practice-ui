@@ -239,6 +239,10 @@ public sealed partial class AdminExamService
         await db.SaveChangesAsync(cancellationToken);
 
         var count = request.QuestionCount > 0 ? Math.Clamp(request.QuestionCount, 1, 10) : (section.ClusterSize > 0 ? section.ClusterSize : 3);
+        // #229 / D1: a cluster is content, so it states its level once and every child is authored at
+        // it. There is no default: the previous fixture wrote difficulty 2 for every cluster, which is
+        // exactly the silent choice this ticket removes.
+        var level = ParseAuthoredLevel(request.CefrLevelCode);
         var questions = new List<Question>();
 
         for (var i = 0; i < count; i++)
@@ -271,7 +275,7 @@ public sealed partial class AdminExamService
                 SectionId = request.SectionId,
                 SkillId = section.SkillId,
                 Stem = stem,
-                DifficultyLevel = 2,
+                CefrLevel = level,
                 QuestionType = qType.ToCode(),
                 Explanation = section.HideOptionText ? "Option A is the most appropriate response." : "Correct answer option A.",
                 PrepSeconds = isFreeResponse ? (section.Modality == "speaking" ? 15 : 60) : null,
@@ -340,7 +344,8 @@ public sealed partial class AdminExamService
                 AcceptedAnswersJson: q.AcceptedAnswersJson,
                 RequiredKeywords: q.RequiredKeywords,
                 SampleAnswerOrImageDesc: q.SampleAnswerOrImageDesc,
-                ReferenceKind: ParseReferenceKind(q.ReferenceKind)));
+                ReferenceKind: ParseReferenceKind(q.ReferenceKind),
+                CefrLevelCode: q.CefrLevel?.Code));
         }
 
         exam.UpdatedAt = clock.GetUtcNow();

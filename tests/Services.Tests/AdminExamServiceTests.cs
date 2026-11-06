@@ -88,7 +88,7 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
             "Stem 1",
             3,
             QuestionTypeDto.Mcq,
-            Options: [new AdminQuestionOptionInput(null, "A", "Opt A", true, null)])));
+            Options: [new AdminQuestionOptionInput(null, "A", "Opt A", true, null)], CefrLevelCode: "B1")));
         Assert.Equal(ApiError.Codes.Validation, ex1.Code);
 
         // 2. 0 correct options throws validation error
@@ -101,7 +101,7 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
             [
                 new AdminQuestionOptionInput(null, "A", "Opt A", false, null),
                 new AdminQuestionOptionInput(null, "B", "Opt B", false, null)
-            ])));
+            ], CefrLevelCode: "B1")));
         Assert.Equal(ApiError.Codes.Validation, ex2.Code);
 
         // 3. More than 1 correct option throws validation error
@@ -114,7 +114,7 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
             [
                 new AdminQuestionOptionInput(null, "A", "Opt A", true, null),
                 new AdminQuestionOptionInput(null, "B", "Opt B", true, null)
-            ])));
+            ], CefrLevelCode: "B1")));
         Assert.Equal(ApiError.Codes.Validation, ex3.Code);
 
         // 4. MCQ with PrepSeconds or ResponseSeconds throws validation error
@@ -128,7 +128,7 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
             [
                 new AdminQuestionOptionInput(null, "A", "Opt A", true, null),
                 new AdminQuestionOptionInput(null, "B", "Opt B", false, null)
-            ])));
+            ], CefrLevelCode: "B1")));
         Assert.Equal(ApiError.Codes.Validation, ex4.Code);
 
         // 5. MCQ with MinWords or MaxWords throws validation error
@@ -142,7 +142,7 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
             [
                 new AdminQuestionOptionInput(null, "A", "Opt A", true, null),
                 new AdminQuestionOptionInput(null, "B", "Opt B", false, null)
-            ])));
+            ], CefrLevelCode: "B1")));
         Assert.Equal(ApiError.Codes.Validation, ex5.Code);
 
         // 6. Valid MCQ succeeds
@@ -157,7 +157,7 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
                 new AdminQuestionOptionInput(null, "B", "Option B", false, "Rationale B"),
                 new AdminQuestionOptionInput(null, "C", "Option C", false, "Rationale C"),
                 new AdminQuestionOptionInput(null, "D", "Option D", false, "Rationale D")
-            ]));
+            ], CefrLevelCode: "B1"));
 
         Assert.NotNull(validMcq);
         Assert.Equal("Valid MCQ Stem", validMcq.Stem);
@@ -185,7 +185,7 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
             "FR Stem 1",
             3,
             QuestionTypeDto.FreeResponse,
-            Options: [new AdminQuestionOptionInput(null, "A", "Opt A", true, null)])));
+            Options: [new AdminQuestionOptionInput(null, "A", "Opt A", true, null)], CefrLevelCode: "B1")));
         Assert.Equal(ApiError.Codes.Validation, ex1.Code);
 
         // 2. ResponseSeconds must be > 0
@@ -194,7 +194,7 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
             "FR Stem 2",
             3,
             QuestionTypeDto.FreeResponse,
-            ResponseSeconds: 0)));
+            ResponseSeconds: 0, CefrLevelCode: "B1")));
         Assert.Equal(ApiError.Codes.Validation, ex2.Code);
 
         // 3. MaxWords < MinWords throws validation error
@@ -204,7 +204,7 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
             3,
             QuestionTypeDto.FreeResponse,
             MinWords: 150,
-            MaxWords: 100)));
+            MaxWords: 100, CefrLevelCode: "B1")));
         Assert.Equal(ApiError.Codes.Validation, ex3.Code);
 
         // 4. Valid Free Response succeeds
@@ -217,7 +217,7 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
             ResponseSeconds: 1800,
             MinWords: 150,
             MaxWords: 300,
-            Hint: "Consider advantages and disadvantages."));
+            Hint: "Consider advantages and disadvantages.", CefrLevelCode: "B1"));
 
         Assert.NotNull(validFr);
         Assert.Equal(QuestionTypeDto.FreeResponse, validFr.QuestionType);
@@ -309,7 +309,7 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
             [
                 new AdminQuestionOptionInput(null, "A", "Correct", true, null),
                 new AdminQuestionOptionInput(null, "B", "Wrong", false, null)
-            ]));
+            ], CefrLevelCode: "B1"));
 
         // 2. QuestionCount requirement is 2, but only 1 question present -> fails
         var ex2 = await Assert.ThrowsAsync<AdminExamException>(() => service.PublishExamAsync(exam.ExamId));
@@ -326,7 +326,7 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
             [
                 new AdminQuestionOptionInput(null, "A", "Opt A", true, null),
                 new AdminQuestionOptionInput(null, "B", "Opt B", false, null)
-            ]));
+            ], CefrLevelCode: "B1"));
 
         // 3. Listening section present, but audio is missing -> fails
         var ex3 = await Assert.ThrowsAsync<AdminExamException>(() => service.PublishExamAsync(exam.ExamId));
@@ -356,7 +356,7 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
                 [
                     new AdminQuestionOptionInput(null, "A", "Correct", true, null),
                     new AdminQuestionOptionInput(null, "B", "Wrong", false, null)
-                ]));
+                ], CefrLevelCode: "B1"));
         }
 
         // 5. Now exam is complete -> publish succeeds!
@@ -391,7 +391,7 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
             [
                 new AdminQuestionOptionInput(null, "A", "Correct", true, null),
                 new AdminQuestionOptionInput(null, "B", "Wrong", false, null)
-            ]));
+            ], CefrLevelCode: "B1"));
 
         var q2 = await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
             grp.GroupId,
@@ -402,7 +402,7 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
             [
                 new AdminQuestionOptionInput(null, "A", "Opt A", true, null),
                 new AdminQuestionOptionInput(null, "B", "Opt B", false, null)
-            ]));
+            ], CefrLevelCode: "B1"));
 
         // Record learner attempt and answer for q1
         var userEmail = $"{Guid.NewGuid():N}@deltest.local";
@@ -455,7 +455,7 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
             [
                 new AdminQuestionOptionInput(null, "A", "Correct", true, null),
                 new AdminQuestionOptionInput(null, "B", "Wrong", false, null)
-            ]));
+            ], CefrLevelCode: "B1"));
 
         await service.DeleteQuestionAsync(q.QuestionId);
 
@@ -559,7 +559,7 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
             [
                 new AdminQuestionOptionInput(null, "A", "Text A", true, null),
                 new AdminQuestionOptionInput(null, "B", "Text B", false, null)
-            ]));
+            ], CefrLevelCode: "B1"));
 
         // Switch correct option from A to B
         var updated = await service.UpdateQuestionAsync(q.QuestionId, new UpdateQuestionRequest(
@@ -571,7 +571,7 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
             [
                 new AdminQuestionOptionInput(null, "A", "Text A", false, null),
                 new AdminQuestionOptionInput(null, "B", "Text B", true, null)
-            ]));
+            ], CefrLevelCode: "B1"));
 
         Assert.Equal(2, updated.Options.Count);
         Assert.False(updated.Options.Single(o => o.Label == "A").IsCorrect);
@@ -600,7 +600,7 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
             [
                 new AdminQuestionOptionInput(null, "A", "Option A", true, null),
                 new AdminQuestionOptionInput(null, "B", "Option B", false, null)
-            ]));
+            ], CefrLevelCode: "B1"));
 
         Assert.Equal(5, q.DisplayOrder);
         Assert.Equal("Initial explanation", q.Explanation);
@@ -617,7 +617,7 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
             [
                 new AdminQuestionOptionInput(null, "A", "Option A", true, null),
                 new AdminQuestionOptionInput(null, "B", "Option B", false, null)
-            ]));
+            ], CefrLevelCode: "B1"));
 
         Assert.Equal(5, updated.DisplayOrder);
         Assert.Equal("Use 'before' directly in front of a day of the week to denote a deadline.", updated.Explanation);
@@ -732,7 +732,7 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         var commit1 = await service.CommitQuickIngestAsync(exam.ExamId, new QuickIngestCommitRequest(
             SectionId: secR,
             Mode: "append",
-            Questions: [q1]));
+            Questions: [q1], CefrLevel: "B1"));
 
         Assert.True(commit1.Success);
         Assert.Equal(1, commit1.QuestionsCommitted);
@@ -757,7 +757,7 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         var commit2 = await service.CommitQuickIngestAsync(exam.ExamId, new QuickIngestCommitRequest(
             SectionId: secR,
             Mode: "append",
-            Questions: [q2]));
+            Questions: [q2], CefrLevel: "B1"));
 
         Assert.True(commit2.Success);
         Assert.Equal(1, commit2.QuestionsCommitted);
@@ -802,7 +802,7 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         await service.CommitQuickIngestAsync(exam.ExamId, new QuickIngestCommitRequest(
             SectionId: secR,
             Mode: "append",
-            Questions: [qOld]));
+            Questions: [qOld], CefrLevel: "B1"));
 
         // Replace with new question
         var qNew = new QuickIngestParsedQuestionDto(
@@ -824,7 +824,7 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         var replaceCommit = await service.CommitQuickIngestAsync(exam.ExamId, new QuickIngestCommitRequest(
             SectionId: secR,
             Mode: "replace",
-            Questions: [qNew]));
+            Questions: [qNew], CefrLevel: "B1"));
 
         Assert.True(replaceCommit.Success);
 
@@ -857,7 +857,7 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
             [
                 new AdminQuestionOptionInput(null, "A", "Opt A", true, null),
                 new AdminQuestionOptionInput(null, "B", "Opt B", false, null)
-            ]));
+            ], CefrLevelCode: "B1"));
 
         var studio = await service.GetExamStudioAsync(exam.ExamId);
 
@@ -895,7 +895,7 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
             [
                 new AdminQuestionOptionInput(null, "A", "A", true, null),
                 new AdminQuestionOptionInput(null, "B", "B", false, null)
-            ]));
+            ], CefrLevelCode: "B1"));
 
         var q2 = await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
             grp.GroupId,
@@ -906,7 +906,7 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
             [
                 new AdminQuestionOptionInput(null, "A", "A", true, null),
                 new AdminQuestionOptionInput(null, "B", "B", false, null)
-            ]));
+            ], CefrLevelCode: "B1"));
 
         // Reorder q2 first, q1 second
         var reorderReq = new ReorderSectionItemsRequest(
@@ -946,7 +946,7 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
             AudioPath: "/audio/p3-test.mp3",
             AudioStartMs: 1000,
             AudioEndMs: 35000,
-            QuestionCount: 3));
+            QuestionCount: 3, CefrLevelCode: "B1"));
 
         Assert.NotNull(cluster);
         Assert.Equal("M: Hello Sarah\nW: Hi Bob", cluster.Transcript);
@@ -975,7 +975,7 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
 
         var cluster = await service.CreateExamClusterAsync(exam.ExamId, new CreateExamClusterRequest(
             SectionId: secS,
-            QuestionCount: 1));
+            QuestionCount: 1, CefrLevelCode: "B1"));
 
         Assert.NotNull(cluster);
         Assert.Single(cluster.Questions);
@@ -1001,7 +1001,7 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         await service.CreateExamClusterAsync(exam.ExamId, new CreateExamClusterRequest(
             SectionId: secL,
             Passage: "Export passage",
-            QuestionCount: 2));
+            QuestionCount: 2, CefrLevelCode: "B1"));
 
         var (stream, contentType, fileName) = await service.ExportExamPackageAsync(exam.ExamId, "json");
 
@@ -1036,7 +1036,7 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         await service.CreateExamClusterAsync(exam.ExamId, new CreateExamClusterRequest(
             SectionId: secL,
             Passage: "Zip passage",
-            QuestionCount: 1));
+            QuestionCount: 1, CefrLevelCode: "B1"));
 
         var (stream, contentType, fileName) = await service.ExportExamPackageAsync(exam.ExamId, "zip");
 
@@ -1175,7 +1175,7 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
             "Write a response to the prompt.",
             3,
             QuestionTypeDto.FreeResponse,
-            ResponseSeconds: 1200));
+            ResponseSeconds: 1200, CefrLevelCode: "B1"));
 
         var incompleteAudit = await service.AuditExamPublishReadinessAsync(exam.ExamId);
         Assert.Contains(incompleteAudit.Issues, i => i.Code == "Q_FR_CRITERIA_MISSING" && i.QuestionId == freeResponse.QuestionId);
@@ -1189,7 +1189,7 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
             ResponseSeconds: 1200,
             MinWords: 100,
             MaxWords: 250,
-            CriterionIds: [criterionId]));
+            CriterionIds: [criterionId], CefrLevelCode: "B1"));
 
         var studio = await service.GetExamStudioAsync(exam.ExamId);
         var studioQuestion = Assert.Single(studio.Sections
@@ -1213,7 +1213,7 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
             [
                 new AdminQuestionOptionInput(null, "A", "Correct", true, null),
                 new AdminQuestionOptionInput(null, "B", "Incorrect", false, null)
-            ]));
+            ], CefrLevelCode: "B1"));
         var afterMcqAudit = await service.AuditExamPublishReadinessAsync(mcqExam.ExamId);
         Assert.DoesNotContain(afterMcqAudit.Issues, i => i.Code == "Q_FR_CRITERIA_MISSING" && i.QuestionId == mcq.QuestionId);
     }
@@ -1311,7 +1311,7 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
                 new AdminQuestionOptionInput(null, "A", "Opt A", true, "Correct rationale"),
                 new AdminQuestionOptionInput(null, "B", "Opt B", false, "Distractor B"),
                 new AdminQuestionOptionInput(null, "C", "Opt C", false, "Distractor C")
-            ]));
+            ], CefrLevelCode: "B1"));
         Assert.Equal(QuestionTypeDto.Mcq_3, qMcq3.QuestionType);
         Assert.Equal(3, qMcq3.Options.Count);
 
@@ -1328,7 +1328,7 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
                 new AdminQuestionOptionInput(null, "B", "Opt B", true, null),
                 new AdminQuestionOptionInput(null, "C", "Opt C", false, null),
                 new AdminQuestionOptionInput(null, "D", "Opt D", false, null)
-            ]));
+            ], CefrLevelCode: "B1"));
         Assert.Equal(QuestionTypeDto.MultiSelect, qMulti.QuestionType);
         Assert.Equal(2, qMulti.MaxSelections);
         Assert.Equal(2, qMulti.Options.Count(o => o.IsCorrect));
@@ -1341,7 +1341,7 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
             QuestionTypeDto.InlineCompletion,
             AcceptedAnswersJson: @"[""center"",""centre""]",
             AllowNumber: false,
-            MaxWords: 2));
+            MaxWords: 2, CefrLevelCode: "B1"));
         Assert.Equal(QuestionTypeDto.InlineCompletion, qInline.QuestionType);
         Assert.Equal(@"[""center"",""centre""]", qInline.AcceptedAnswersJson);
         Assert.False(qInline.AllowNumber);
@@ -1358,7 +1358,7 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
             ResponseSeconds: 1200,
             MinWords: 150,
             MaxWords: 300,
-            RequiredKeywords: "climate, renewable, energy"));
+            RequiredKeywords: "climate, renewable, energy", CefrLevelCode: "B1"));
         Assert.Equal(QuestionTypeDto.FreeResponse, qFree.QuestionType);
         Assert.Equal("climate, renewable, energy", qFree.RequiredKeywords);
         Assert.Equal(150, qFree.MinWords);
@@ -1425,7 +1425,7 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
             [
                 new AdminQuestionOptionInput(null, "A", "Opt A", true, null),
                 new AdminQuestionOptionInput(null, "B", "Opt B", false, null)
-            ]));
+            ], CefrLevelCode: "B1"));
 
         var audit1 = await service.AuditExamPublishReadinessAsync(exam.ExamId);
         Assert.False(audit1.CanPublish);
@@ -1450,7 +1450,7 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
             [
                 new AdminQuestionOptionInput(null, "A", "Opt A", true, null),
                 new AdminQuestionOptionInput(null, "B", "Opt B", false, null)
-            ]));
+            ], CefrLevelCode: "B1"));
 
         var audit2 = await service.AuditExamPublishReadinessAsync(exam.ExamId);
         Assert.True(audit2.CanPublish, string.Join("; ", audit2.Issues.Select(i => i.Message)));

@@ -390,6 +390,16 @@
       if (!ok) return;
     }
 
+    var commitLevel = cefrLevelSelect ? cefrLevelSelect.value : '';
+    // #229 / D1: every committed item is authored at a level, so the batch states one. Refused here
+    // with the control to fix rather than as a 400 the author has to translate.
+    if (!commitLevel) {
+      commitStatus.textContent = 'Choose the Level above first: every question is authored at A1-C2.';
+      commitBtn.disabled = false;
+      cefrLevelSelect?.focus();
+      return;
+    }
+
     commitBtn.disabled = true;
     commitStatus.textContent = 'Committing questions to database...';
 
@@ -397,9 +407,8 @@
       sectionId: secId,
       mode: selectedMode,
       questions: currentParsedResult.questions,
-      // #189: the pool coordinates, stated once for the batch. Absent means the questions are
-      // written in the legacy shape only, and the commit message says what to add.
-      cefrLevel: cefrLevelSelect ? (cefrLevelSelect.value || null) : null,
+      // #189 / #229: the pool coordinates, stated once for the batch.
+      cefrLevel: commitLevel,
       topicCode: topicCodeSelect ? (topicCodeSelect.value || null) : null
     };
 

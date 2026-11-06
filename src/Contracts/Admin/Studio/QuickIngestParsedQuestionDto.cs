@@ -14,7 +14,10 @@ public sealed record QuickIngestParsedQuestionDto(
     int StartLineNumber,
     int EndLineNumber,
     string Stem,
-    int DifficultyLevel,
+    // #229 / D1: nullable, because a parser that cannot read a level must say so rather than invent
+    // one. It was an `int` filled with 3 at three call sites - the silent default this ticket removes.
+    // Dormant: nothing writes it, and #231 deletes it.
+    int? DifficultyLevel,
     string? Explanation,
     string? CategoryCode,
     IReadOnlyList<QuickIngestParsedOptionDto> Options,
@@ -35,6 +38,7 @@ public sealed record QuickIngestParsedQuestionDto(
     bool AllowNumber = true,
     string? SampleAnswerOrImageDesc = null,
     ReferenceKindDto? ReferenceKind = null,
+    /// <summary>#229: the authored level. Required for the pool write and never defaulted.</summary>
     string? CefrLevel = null,
     string? TopicCode = null,
     string? ItemType = null,

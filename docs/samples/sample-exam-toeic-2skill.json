@@ -1,4 +1,4 @@
-{
+﻿{
   "version": "1.0",
   "exam": {
     "title": "TOEIC Reading Mock Form A (Text Ingest)",
@@ -24,7 +24,7 @@
             {
               "displayOrder": 1,
               "stem": "The regional sales conference will commence promptly _____ 9:00 AM in the Grand Ballroom.",
-              "difficultyLevel": 2,
+              "cefrLevel": "B1",
               "questionType": "mcq",
               "categoryCode": "grammar_prep",
               "explanation": "The preposition 'at' is used before precise clock times.",
@@ -59,7 +59,7 @@
             {
               "displayOrder": 2,
               "stem": "Ms. Reynolds has _____ submitted her finalized quarterly expense report to accounting.",
-              "difficultyLevel": 2,
+              "cefrLevel": "B1",
               "questionType": "mcq",
               "categoryCode": "grammar_pos",
               "explanation": "An adverb is required between the auxiliary 'has' and past participle 'submitted'.",
@@ -111,7 +111,7 @@
             {
               "displayOrder": 1,
               "stem": "What action are employees required to take before Friday?",
-              "difficultyLevel": 3,
+              "cefrLevel": "B1",
               "questionType": "mcq",
               "categoryCode": "reading_vocab",
               "explanation": "The memo instructs all staff members to update their workstation passwords before Friday.",
@@ -163,7 +163,7 @@
             {
               "displayOrder": 1,
               "stem": "What is the primary benefit of the new Da Nang facility?",
-              "difficultyLevel": 3,
+              "cefrLevel": "B2",
               "questionType": "mcq",
               "categoryCode": "reading_inference",
               "explanation": "The announcement states delivery times across Central Vietnam will be reduced by up to 35%.",

@@ -76,7 +76,9 @@ public sealed class StudioAuthoringControlsTests
 
         // Was 18: type select, category select, remove, stem, Insert Blank, 4 radios, 4 option
         // texts, 4 per-option rationale boxes, explanation.
-        Assert.Equal(14, rendered);
+        // Was 14 after #159. #229 adds the level picker: an item is authored at a level, so the card
+        // that authors it has to offer one.
+        Assert.Equal(15, rendered);
 
         // Rationales are still editable, but they no longer occupy a line per option: one template
         // row inside a collapsed <details>, rendered by a loop.

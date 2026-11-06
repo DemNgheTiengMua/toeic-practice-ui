@@ -104,7 +104,10 @@ public sealed partial class QuestionImportService(
         int? CategoryId,
         int DisplayOrder,
         string? AcceptedAnswersJson,
-        string? RequiredKeywords);
+        string? RequiredKeywords,
+        // #229: the level, parsed once at validation so the write cannot parse a different value than
+        // the one the file was judged on. Non-null: a question without a level never becomes planned.
+        CefrLevel Level);
 
     private sealed record ImportPlan(PlannedExam Exam, IReadOnlyList<PlannedGroup> Groups, IReadOnlyList<string> MediaPaths)
     {

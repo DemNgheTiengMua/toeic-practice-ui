@@ -761,7 +761,16 @@ CREATE TABLE Questions (
   -- M-3: carried down from the section so AI grading can be pinned to the question's own skill
   SkillId         INT NOT NULL,
   Stem            NVARCHAR(MAX) NOT NULL,
-  DifficultyLevel INT NOT NULL CONSTRAINT CK_Questions_Difficulty CHECK (DifficultyLevel BETWEEN 1 AND 5),
+  -- #229 (D1): the level the item is authored at. This is the fact every authoring and import path
+  -- now writes; it is NULL only for a row written before the column existed. Authored, so the
+  -- reportable floor 'pre_a1' is refused here as well as in CefrLevel.TryParseAuthored.
+  CefrLevel       VARCHAR(10) NULL
+    CONSTRAINT CK_Questions_Level CHECK (CefrLevel IS NULL OR CefrLevel IN ('A1','A2','B1','B2','C1','C2')),
+  -- #231 drops this column and CK_Questions_Difficulty. Until then it is dormant: no authoring path
+  -- requires or validates it, so it is nullable - a path with no difficulty must write NULL rather
+  -- than invent a 3 (#229's review finding). The 1-5 check stays and still refuses an out-of-range
+  -- integer; NULL passes it, as a CHECK passes on UNKNOWN.
+  DifficultyLevel INT NULL CONSTRAINT CK_Questions_Difficulty CHECK (DifficultyLevel BETWEEN 1 AND 5),
   QuestionType    VARCHAR(30) NOT NULL
     CONSTRAINT CK_Questions_Type CHECK (QuestionType IN ('mcq', 'mcq_3', 'multi_select', 'inline_completion', 'dropdown', 'drag_drop', 'free_response')),
   Explanation     NVARCHAR(MAX) NULL,

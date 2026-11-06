@@ -454,7 +454,7 @@ public sealed class AdminExamsControllerTests
         var request = new QuickIngestCommitRequest(
             SectionId: 1,
             Mode: "append",
-            Questions: [new QuickIngestParsedQuestionDto(1, 1, 5, "Stem", 3, null, null, [new QuickIngestParsedOptionDto("A", "Yes", true), new QuickIngestParsedOptionDto("B", "No", false)], [], true)]);
+            Questions: [new QuickIngestParsedQuestionDto(1, 1, 5, "Stem", 3, null, null, [new QuickIngestParsedOptionDto("A", "Yes", true), new QuickIngestParsedOptionDto("B", "No", false)], [], true)], CefrLevel: "B1");
 
         var result = await controller.CommitQuickIngest(5, request, CancellationToken.None);
 
@@ -581,7 +581,7 @@ public sealed class AdminExamsControllerTests
         var api = new TestApiClient();
         var controller = CreateController(api);
 
-        var request = new CreateExamClusterRequest(1, QuestionCount: 3);
+        var request = new CreateExamClusterRequest(1, QuestionCount: 3, CefrLevelCode: "B1");
         var result = await controller.CreateCluster(5, request, CancellationToken.None);
 
         var json = Assert.IsType<JsonResult>(result);
@@ -847,7 +847,7 @@ public sealed class AdminExamsControllerTests
             Options: [
                 new AdminQuestionOptionInput(270, "A", "before", true, null),
                 new AdminQuestionOptionInput(271, "B", "prior", false, null)
-            ]);
+            ], CefrLevelCode: "B1");
 
         var result = await controller.AutosaveQuestion(17, 89, request, CancellationToken.None);
 
@@ -872,7 +872,7 @@ public sealed class AdminExamsControllerTests
             GroupId: 76,
             Stem: "Stem",
             DifficultyLevel: 2,
-            QuestionType: QuestionTypeDto.Mcq);
+            QuestionType: QuestionTypeDto.Mcq, CefrLevelCode: "B1");
 
         var result = await controller.AutosaveQuestion(17, 89, request, CancellationToken.None);
 

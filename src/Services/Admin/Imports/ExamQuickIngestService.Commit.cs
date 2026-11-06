@@ -78,6 +78,19 @@ public sealed partial class ExamQuickIngestService
             }
 
             var qType = q.QuestionType?.ToLowerInvariant() ?? "mcq";
+
+            // #229 / D1: a per-question level on a paste is a claim the author made, so a typo in it is
+            // refused here rather than silently replaced by the commit's own. Falling back on an
+            // unparseable value is the same class of defect as defaulting a missing one.
+            if (!string.IsNullOrWhiteSpace(q.CefrLevel)
+                && !CefrLevel.TryParseAuthored(q.CefrLevel.Trim(), out _))
+            {
+                throw new AdminExamException(
+                    ApiError.Codes.Validation,
+                    $"Question {i + 1} states cefrLevel '{q.CefrLevel}', which is not an authored level. Content is authored at A1-C2; the pre-A1 floor is reportable only (D1).",
+                    400);
+            }
+
             if (qType == "free_response")
             {
                 // Free response: options not required
@@ -115,6 +128,17 @@ public sealed partial class ExamQuickIngestService
         }
 
         var topics = await TopicCatalog.LoadAsync(db, cancellationToken);
+
+        // #229 / D1: the commit's level is required, and it is parsed once before the transaction so a
+        // bad value is a refusal rather than a row written with a NULL level. This is the door the
+        // ticket names: the old code wrote `q.DifficultyLevel is >= 1 and <= 5 ? ... : 3`, which is a
+        // silent default in both directions - a missing number became 3, and nothing levelled the row.
+        var commitLevel = CefrLevel.TryParseAuthored(request.CefrLevel?.Trim(), out var parsedCommitLevel)
+            ? parsedCommitLevel
+            : throw new AdminExamException(
+                ApiError.Codes.Validation,
+                $"cefrLevel '{request.CefrLevel}' is not an authored CEFR level. A commit authors content, so it states a level: A1, A2, B1, B2, C1, C2. The pre-A1 floor is reportable only, and there is no difficulty-to-level mapping (D1).",
+                400);
 
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
 
@@ -246,7 +270,10 @@ public sealed partial class ExamQuickIngestService
                 SkillId = section.SkillId,
                 GroupId = activeGroup!.GroupId,
                 Stem = q.Stem.Trim(),
-                DifficultyLevel = q.DifficultyLevel is >= 1 and <= 5 ? q.DifficultyLevel : 3,
+                // #229 / D1: the level is the commit's own unless the paste states one per question,
+                // and no difficulty is written beside it. Which of the two applies was decided and
+                // validated before the transaction opened, so this cannot fall back on a typo.
+                CefrLevel = string.IsNullOrWhiteSpace(q.CefrLevel) ? commitLevel : AuthoredLevelOrThrow(q.CefrLevel, q.Index),
                 QuestionType = qType,
                 Explanation = q.Explanation?.Trim(),
                 CategoryId = categoryId,
@@ -349,6 +376,18 @@ public sealed partial class ExamQuickIngestService
             PoolStimuliWritten: poolStimuli,
             PoolItemsBound: poolBound);
     }
+
+    /// <summary>
+    /// #229 / D1: a per-question level already proved authored by the pre-validation loop. It parses
+    /// with the same call, so the loop and the write cannot disagree about what "authored" means.
+    /// </summary>
+    private static CefrLevel AuthoredLevelOrThrow(string? code, int questionIndex) =>
+        CefrLevel.TryParseAuthored(code?.Trim(), out var level)
+            ? level
+            : throw new AdminExamException(
+                ApiError.Codes.Validation,
+                $"Question {questionIndex} states cefrLevel '{code}', which is not an authored level.",
+                400);
 
     /// <summary>
     /// #189: the pool content for one pasted question, or the reason it cannot become pool stock.

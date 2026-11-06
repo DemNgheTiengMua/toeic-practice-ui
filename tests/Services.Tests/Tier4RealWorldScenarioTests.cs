@@ -226,7 +226,7 @@ public sealed class Tier4RealWorldScenarioTests(DatabaseFixture database)
             [
                 new AdminQuestionOptionInput(null, "A", "Correct Option", true, null),
                 new AdminQuestionOptionInput(null, "B", "Distractor Option", false, null)
-            ]));
+            ], CefrLevelCode: "B1"));
         Assert.NotNull(question);
         Assert.Equal(2, question.Options.Count);
 

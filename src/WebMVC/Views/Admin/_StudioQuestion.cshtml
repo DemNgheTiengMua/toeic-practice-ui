@@ -5,7 +5,7 @@
     var currentTypeCode = Model.TypeCode;
     var allowedList = Model.AllowedTypes;
 }
-                        <div class="question-card p-3" id="question-card-@q.QuestionId" data-question-id="@q.QuestionId" data-section-id="@sec.SectionId" data-question-type="@currentTypeCode" data-difficulty="@q.DifficultyLevel" data-display-order="@q.DisplayOrder" style="border: 2px solid var(--color-ink, #14181d); background: #ffffff; border-radius: 0; box-shadow: none;">
+                        <div class="question-card p-3" id="question-card-@q.QuestionId" data-question-id="@q.QuestionId" data-section-id="@sec.SectionId" data-question-type="@currentTypeCode" data-cefr-level="@q.CefrLevelCode" data-display-order="@q.DisplayOrder" style="border: 2px solid var(--color-ink, #14181d); background: #ffffff; border-radius: 0; box-shadow: none;">
                           @*
                             #159: this card is what an author types 200 times. It shows the type, the one
                             category, the stem, the options and the explanation — 14 controls, down from 18.
@@ -22,6 +22,18 @@
                             </div>
 
                             <div class="row" style="gap: 0.5rem; align-items: center;">
+                              @* #229 / D1: the level an item is authored at. It sits beside the type
+                                 because both are coordinates of the item, not content, and it is the
+                                 one fact the pool cell is addressed by. There is no "not stated"
+                                 option: a saved item always carries a level, so an empty value would
+                                 be a request the service refuses. *@
+                              <label class="text-xs" for="question-cefr-@q.QuestionId">Level:</label>
+                              <select class="field__input studio-question-level" id="question-cefr-@q.QuestionId" data-qid="@q.QuestionId" style="font-size: 0.75rem; padding: 0.2rem 0.4rem; border-radius: 0; border: 1px solid var(--color-ink, #14181d);">
+                                @foreach (var level in CefrLevelLabels.AuthoredCodes)
+                                {
+                                  <option value="@level" selected="@(string.Equals(q.CefrLevelCode, level, StringComparison.OrdinalIgnoreCase))">@level</option>
+                                }
+                              </select>
                               <label class="text-xs" for="question-type-@q.QuestionId">Type:</label>
                               <select class="field__input studio-question-type" id="question-type-@q.QuestionId" data-qid="@q.QuestionId" data-saved-type="@currentTypeCode" style="font-size: 0.75rem; padding: 0.2rem 0.4rem; border-radius: 0; border: 1px solid var(--color-ink, #14181d);">
                                 @if (allowedList.Contains("mcq"))

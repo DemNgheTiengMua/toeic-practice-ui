@@ -263,7 +263,7 @@ public sealed class PoolImportTests(DatabaseFixture database)
 
         var result = await CreateQuickIngest().CommitStagedAsync(
             examId,
-            new QuickIngestCommitRequest(readingSectionId, "append", questions));
+            new QuickIngestCommitRequest(readingSectionId, "append", questions, CefrLevel: "B1"));
 
         Assert.True(result.Success);
         Assert.Equal(2, result.QuestionsCommitted);
@@ -288,26 +288,36 @@ public sealed class PoolImportTests(DatabaseFixture database)
     }
 
     /// <summary>
-    /// The quick-ingest commit with no level is not a silent guess: the questions are written in the
-    /// legacy shape (which is what the paper renders) and the message names what is missing. A commit
-    /// must not fail because the pool is narrower than the paste.
+    /// A commit that states no level is refused by name, before anything is written.
+    /// <para>
+    /// <b>Changed by #229.</b> This test used to assert the opposite: a commit with no level wrote the
+    /// legacy rows and warned. That was the right shape for #189's expand half, but #229 makes the
+    /// level the only levelling fact, and AC2 says an imported item lands <em>with a level</em>. An
+    /// unlevelled legacy row is what #231 cannot migrate, so the commit is now refused.
+    /// </para>
+    /// <para>
+    /// The input that would pass this while being wrong: falling back to the paste's own level, to the
+    /// section's, or to a constant - each produces a committed row and no error.
+    /// </para>
     /// </summary>
     [Fact]
-    public async Task Quick_ingest_without_a_level_warns_and_still_commits_the_legacy_rows()
+    public async Task Quick_ingest_without_a_level_is_refused_and_names_what_is_missing()
     {
         var (certId, _, readingSectionId, _, _) = await SeedAsync();
         await using var setup = Db();
         var exam = await new AdminExamService(setup, TimeProvider.System).CreateExamAsync(
             new CreateAdminExamRequest(certId, Unique("Quick no level "), 30, ExamPurposeDto.Mock));
 
-        var result = await CreateQuickIngest().CommitStagedAsync(
-            exam.ExamId,
-            new QuickIngestCommitRequest(readingSectionId, "append", [Question(1, null, "What time?", null, null)]));
+        var before = await CountLegacyQuestionsAsync();
 
-        Assert.True(result.Success);
-        Assert.Equal(1, result.QuestionsCommitted);
-        Assert.Equal(0, result.PoolItemsWritten);
-        Assert.Contains("cefrLevel", result.Message, StringComparison.Ordinal);
+        var refused = await Assert.ThrowsAsync<AdminExamException>(() => CreateQuickIngest().CommitStagedAsync(
+            exam.ExamId,
+            new QuickIngestCommitRequest(readingSectionId, "append", [Question(1, null, "What time?", null, null)])));
+
+        Assert.Equal(ApiError.Codes.Validation, refused.Code);
+        Assert.Contains("cefrLevel", refused.Message, StringComparison.Ordinal);
+        Assert.Contains("A1, A2, B1, B2, C1, C2", refused.Message, StringComparison.Ordinal);
+        Assert.Equal(before, await CountLegacyQuestionsAsync());
     }
 
     // ---- AC2: a stimulus and several children is one stimulus, not duplicated passages ----
@@ -412,6 +422,23 @@ public sealed class PoolImportTests(DatabaseFixture database)
             Assert.Equal(original[i].Version, reimported[i].Version);
             Assert.Equal(original[i].Stimulus, reimported[i].Stimulus);
         }
+
+        // #229: the level survives the round trip on both shapes - the pool item and the legacy paper
+        // row a re-import also writes. The observed file states B1 on both children of one group, so a
+        // writer that dropped the level on either side lands here rather than passing on a count.
+        Assert.All(reimported, slice => Assert.Contains("|B1|", slice.Content, StringComparison.Ordinal));
+        Assert.Equal(
+            original.Select(slice => slice.Content),
+            reimported.Select(slice => slice.Content));
+
+        // The legacy row, which is what #229 migrated and what #231 will read until it is dropped.
+        await using var db = Db();
+        var legacy = await db.Questions.AsNoTracking()
+            .Where(q => q.ExamId == second.ExamId)
+            .ToListAsync();
+        Assert.Equal(2, legacy.Count);
+        Assert.All(legacy, q => Assert.Equal(CefrLevel.B1, q.CefrLevel));
+        Assert.All(legacy, q => Assert.Null(q.DifficultyLevel));
     }
 
     /// <summary>
@@ -557,7 +584,7 @@ public sealed class PoolImportTests(DatabaseFixture database)
 
         var result = await CreateQuickIngest().CommitStagedAsync(
             exam.ExamId,
-            new QuickIngestCommitRequest(readingSectionId, "append", [Question(1, null, "What time?", "B1", "R-DET")]));
+            new QuickIngestCommitRequest(readingSectionId, "append", [Question(1, null, "What time?", "B1", "R-DET")], CefrLevel: "B1"));
 
         Assert.True(result.Success);
         Assert.Equal(1, result.PoolItemsWritten);
@@ -779,7 +806,7 @@ public sealed class PoolImportTests(DatabaseFixture database)
             StartLineNumber: index,
             EndLineNumber: index,
             Stem: stem,
-            DifficultyLevel: 3,
+            DifficultyLevel: null,
             Explanation: $"Explanation for {stem}",
             CategoryCode: null,
             Options:

@@ -352,7 +352,7 @@ public sealed partial class ExamQuickIngestService
             StartLineNumber: block.StartLineNumber,
             EndLineNumber: block.EndLineNumber,
             Stem: stem,
-            DifficultyLevel: 3,
+            DifficultyLevel: null,
             Explanation: explanation,
             CategoryCode: categoryCode,
             Options: options,

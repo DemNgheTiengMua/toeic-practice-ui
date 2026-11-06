@@ -24,7 +24,6 @@
           "questions": [
             {
               "stem": "The annual sales report will be released to shareholders _____ the end of the current fiscal year.",
-              "difficultyLevel": 2,
               "cefrLevel": "B1",
               "itemType": "sentence_cloze",
               "questionType": "mcq",
@@ -79,7 +78,6 @@
           "questions": [
             {
               "stem": "What is the purpose of the notice?",
-              "difficultyLevel": 3,
               "cefrLevel": "B1",
               "itemType": "passage_comprehension",
               "questionType": "mcq",

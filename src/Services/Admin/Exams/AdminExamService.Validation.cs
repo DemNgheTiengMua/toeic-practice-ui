@@ -173,7 +173,7 @@ public sealed partial class AdminExamService
 
     private static void ValidateQuestionInputs(
         string stem,
-        int difficulty,
+        string? cefrLevelCode,
         QuestionTypeDto type,
         int? prepSeconds,
         int? responseSeconds,
@@ -191,9 +191,13 @@ public sealed partial class AdminExamService
             throw new AdminExamException(ApiError.Codes.Validation, "Question stem is required.");
         }
 
-        if (difficulty < 1 || difficulty > 5)
+        // #229 / D1: the level replaces the difficulty. A value that is present must be on the authored
+        // ladder, or a sentence rather than a 500 from CK_Questions_Level. A missing one is refused at
+        // the assignment below (<see cref="ParseAuthoredLevel"/>), and on the edit door it means "keep
+        // the stored level" - so this validates presence and not absence.
+        if (!string.IsNullOrWhiteSpace(cefrLevelCode))
         {
-            throw new AdminExamException(ApiError.Codes.Validation, "Difficulty level must be between 1 and 5.");
+            ParseAuthoredLevel(cefrLevelCode);
         }
 
         if (hint != null && hint.Length > 1000)
@@ -360,4 +364,20 @@ public sealed partial class AdminExamService
     /// <summary>Stored code back to wire enum; an unknown code is surfaced rather than silently dropped.</summary>
     private static ReferenceKindDto? ParseReferenceKind(string? code) =>
         string.IsNullOrWhiteSpace(code) ? null : EnumCodes.Parse<ReferenceKindDto>(code);
+
+    /// <summary>
+    /// #229 / D1: an authored level, or a refusal that names the ladder. <c>TryParseAuthored</c> is what
+    /// refuses the reportable floor: <c>pre_a1</c> says "below A1" about a result, and content cannot be
+    /// authored there. A missing value is refused too - there is no default level, because a default is
+    /// how an item lands in a cell nobody chose. The edit door calls this only when a level was given,
+    /// since an edit that states none keeps the level it found.
+    /// </summary>
+    private static CefrLevel ParseAuthoredLevel(string? code) =>
+        CefrLevel.TryParseAuthored(code?.Trim(), out var level)
+            ? level
+            : throw new AdminExamException(
+                ApiError.Codes.Validation,
+                string.IsNullOrWhiteSpace(code)
+                    ? "cefrLevelCode is required. Content is authored at A1-C2 (A1, A2, B1, B2, C1, C2); there is no default and no difficulty-to-level mapping (D1)."
+                    : $"cefrLevelCode '{code}' is not an authored CEFR level. Content is authored at A1-C2 (A1, A2, B1, B2, C1, C2); the pre-A1 floor is reportable only, and there is no difficulty-to-level mapping (D1).");
 }

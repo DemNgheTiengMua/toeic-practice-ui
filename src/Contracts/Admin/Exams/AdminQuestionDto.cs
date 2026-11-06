@@ -13,7 +13,9 @@ public sealed record AdminQuestionDto(
     int SkillId,
     string SkillCode,
     string Stem,
-    int DifficultyLevel,
+    // #229 / D1: dormant; the level is what this DTO reports. Null on every row an authoring path
+    // writes today, because nothing sets it.
+    int? DifficultyLevel,
     QuestionTypeDto QuestionType,
     string? Explanation,
     int? CategoryId,
@@ -33,6 +35,6 @@ public sealed record AdminQuestionDto(
     string? RequiredKeywords = null,
     string? SampleAnswerOrImageDesc = null,
     ReferenceKindDto? ReferenceKind = null,
-    // #228 / D1: the level this question is authored at, beside the five-point difficulty it
-    // replaces. Null while the schema keeps only the difficulty.
+    // #229 / D1: the level this question is authored at. Written by the authoring paths and read back
+    // for an edit; the difficulty beside it is dormant until #231 deletes it.
     string? CefrLevelCode = null);

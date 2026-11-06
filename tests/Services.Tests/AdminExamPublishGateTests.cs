@@ -69,7 +69,8 @@ public sealed class AdminExamPublishGateTests(DatabaseFixture database)
         [
             new AdminQuestionOptionInput(null, "A", "Correct", true, null),
             new AdminQuestionOptionInput(null, "B", "Wrong", false, null),
-        ]);
+        ],
+        CefrLevelCode: "B1");
 
     private static QuickIngestParsedQuestionDto ParsedQuestion() => new(
         Index: 1,
@@ -253,7 +254,7 @@ public sealed class AdminExamPublishGateTests(DatabaseFixture database)
                 [
                     new AdminQuestionOptionInput(null, "A", "Correct", false, null),
                     new AdminQuestionOptionInput(null, "B", "Wrong", true, null),
-                ])));
+                ], CefrLevelCode: "B1")));
         Assert.Equal(ApiError.Codes.ExamHasFinishedAttempts, changeKey.Code);
 
         // d. deleting a question shrinks a section a finished attempt was scored on
@@ -289,7 +290,7 @@ public sealed class AdminExamPublishGateTests(DatabaseFixture database)
             quickIngest.CommitStagedAsync(examId, new QuickIngestCommitRequest(
                 SectionId: sectionId,
                 Mode: "append",
-                Questions: [ParsedQuestion()])));
+                Questions: [ParsedQuestion()], CefrLevel: "B1")));
 
         Assert.Equal(ApiError.Codes.ExamHasFinishedAttempts, ex.Code);
         Assert.Contains("2 learner attempts have already finished it", ex.Message, StringComparison.Ordinal);
@@ -315,13 +316,13 @@ public sealed class AdminExamPublishGateTests(DatabaseFixture database)
             "The report was filed _____ Friday.",
             3,
             QuestionTypeDto.InlineCompletion,
-            AcceptedAnswersJson: """["before"]"""));
+            AcceptedAnswersJson: """["before"]""", CefrLevelCode: "B1"));
         await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
             group.GroupId,
             "Second gap _____ the deadline.",
             3,
             QuestionTypeDto.InlineCompletion,
-            AcceptedAnswersJson: """["before"]"""));
+            AcceptedAnswersJson: """["before"]""", CefrLevelCode: "B1"));
 
         await RecordFinishedAttemptAsync(exam.ExamId, certId);
 
@@ -329,7 +330,7 @@ public sealed class AdminExamPublishGateTests(DatabaseFixture database)
             question.QuestionId,
             new UpdateQuestionRequest(
                 group.GroupId, question.Stem, question.DifficultyLevel, question.QuestionType,
-                AcceptedAnswersJson: """["after"]""")));
+                AcceptedAnswersJson: """["after"]""", CefrLevelCode: "B1")));
 
         Assert.Equal(ApiError.Codes.ExamHasFinishedAttempts, ex.Code);
 
@@ -337,7 +338,7 @@ public sealed class AdminExamPublishGateTests(DatabaseFixture database)
         // rather than a blanket freeze.
         var renamed = await service.UpdateQuestionAsync(question.QuestionId, new UpdateQuestionRequest(
             group.GroupId, "Reworded gap.", question.DifficultyLevel, question.QuestionType,
-            AcceptedAnswersJson: """["before"]"""));
+            AcceptedAnswersJson: """["before"]""", CefrLevelCode: "B1"));
         Assert.Equal("Reworded gap.", renamed.Stem);
     }
 
@@ -399,7 +400,7 @@ public sealed class AdminExamPublishGateTests(DatabaseFixture database)
             Hint: "Look at the verb",
             Options: question.Options
                 .Select(o => new AdminQuestionOptionInput(o.OptionId, o.Label, o.Text, o.IsCorrect, o.Rationale))
-                .ToList()));
+                .ToList(), CefrLevelCode: "B1"));
 
         Assert.Equal("Reworded stem.", edited.Stem);
         Assert.Equal("Clearer explanation", edited.Explanation);

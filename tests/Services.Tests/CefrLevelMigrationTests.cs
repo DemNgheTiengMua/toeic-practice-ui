@@ -215,11 +215,17 @@ public sealed class CefrLevelMigrationTests
     }
 
     /// <summary>
-    /// The schema keeps <c>Questions.DifficultyLevel</c> and gains no level column until the contract
-    /// ticket, so a mapped level member would make every save demand a column that is not there.
+    /// #228 added the level beside the difficulty and left it unmapped, because no column existed.
+    /// #229 adds the column, so the level is mapped and round-trips through it, while the difficulty
+    /// still compiles beside it for the contract ticket.
+    /// <para>
+    /// Changed by #229: this test asserted <c>FindProperty("CefrLevel")</c> was null. That was the
+    /// correct guard for batch one and is the wrong one now - the whole point of batch two is that the
+    /// level reaches a column.
+    /// </para>
     /// </summary>
     [Fact]
-    public void The_entity_level_member_is_not_mapped_to_a_column_that_does_not_exist()
+    public void The_question_level_is_mapped_and_the_difficulty_survives_beside_it()
     {
         var options = new DbContextOptionsBuilder<CompanionDbContext>()
             .UseSqlServer("Server=(localdb)\\MSSQLLocalDB;Database=ModelOnly;Trusted_Connection=True;")
@@ -227,12 +233,22 @@ public sealed class CefrLevelMigrationTests
 
         using var db = new CompanionDbContext(options);
 
-        foreach (var entity in new[] { typeof(Question), typeof(PathModuleItem) })
-        {
-            var model = db.Model.FindEntityType(entity);
-            Assert.NotNull(model);
-            Assert.NotNull(model.FindProperty("DifficultyLevel"));
-            Assert.Null(model.FindProperty("CefrLevel"));
-        }
+        var question = db.Model.FindEntityType(typeof(Question));
+        Assert.NotNull(question);
+        Assert.NotNull(question.FindProperty("DifficultyLevel"));
+        Assert.NotNull(question.FindProperty("CefrLevel"));
+
+        // A converted nullable struct: the column is a string code, not a second integer scale. Without
+        // this the mapping would compile and store a rank, which is the exact defect D1 forbids.
+        var mapped = question.FindProperty("CefrLevel")!;
+        Assert.Equal(typeof(CefrLevel?), mapped.ClrType);
+        Assert.Equal("varchar(10)", mapped.GetColumnType());
+        Assert.Equal(typeof(string), mapped.GetValueConverter()!.ProviderClrType);
+
+        // PathModuleItem has no column yet, so its member stays unmapped until that table's own ticket.
+        var pathItem = db.Model.FindEntityType(typeof(PathModuleItem));
+        Assert.NotNull(pathItem);
+        Assert.NotNull(pathItem.FindProperty("DifficultyLevel"));
+        Assert.Null(pathItem.FindProperty("CefrLevel"));
     }
 }
