@@ -26,4 +26,7 @@ public partial class GradingCriterionDescriptor
     [ForeignKey("CriterionId")]
     [InverseProperty("Descriptors")]
     public virtual GradingCriterion Criterion { get; set; } = null!;
+
+    /// <summary>#201 / ADM-03: triage cannot write a rubric descriptor. NULL = seed, fixture.</summary>
+    public int? LastWrittenBy { get; set; }
 }

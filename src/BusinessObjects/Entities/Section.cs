@@ -92,4 +92,10 @@ public partial class Section
     [ForeignKey("SkillId, Modality")]
     [InverseProperty("SectionSkillNavigations")]
     public virtual Skill SkillNavigation { get; set; } = null!;
+
+    /// <summary>
+    /// #201 / ADM-03: the account that wrote this row. Triage cannot write a section (exam structure),
+    /// and the column is what the trigger reads to know who is asking. NULL = seed, fixture, migration.
+    /// </summary>
+    public int? LastWrittenBy { get; set; }
 }

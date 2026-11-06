@@ -120,6 +120,8 @@ public partial class CompanionDbContext
                 {
                     tb.HasTrigger("trg_GradingCriteria_MaxScoreNotBelowStored");
                     tb.HasTrigger("trg_GradingCriteria_FrozenWhenLocked");
+                    // #201 / ADM-03: a rubric is not writable by support triage.
+                    tb.HasTrigger("trg_GradingCriteria_TriageCannotWrite");
                 });
 
             entity.Property(e => e.Weight).HasDefaultValue(1.0m);
@@ -160,7 +162,12 @@ public partial class CompanionDbContext
         {
             entity.HasKey(e => new { e.CriterionId, e.Band });
 
-            entity.ToTable(tb => tb.HasTrigger("trg_GradingCriterionDescriptors_FrozenWhenLocked"));
+            entity.ToTable(tb =>
+            {
+                tb.HasTrigger("trg_GradingCriterionDescriptors_FrozenWhenLocked");
+                // #201 / ADM-03: a rubric descriptor is not writable by support triage.
+                tb.HasTrigger("trg_GradingCriterionDescriptors_TriageCannotWrite");
+            });
 
             entity.Property(e => e.CriterionId).ValueGeneratedNever();
 

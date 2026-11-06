@@ -57,4 +57,7 @@ public partial class GradingCriterion
     [ForeignKey("SkillId, CertId")]
     [InverseProperty("GradingCriteria")]
     public virtual Skill Skill { get; set; } = null!;
+
+    /// <summary>#201 / ADM-03: triage cannot write a rubric criterion. NULL = seed, fixture.</summary>
+    public int? LastWrittenBy { get; set; }
 }

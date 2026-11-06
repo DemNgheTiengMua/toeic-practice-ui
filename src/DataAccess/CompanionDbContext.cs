@@ -249,6 +249,9 @@ public partial class CompanionDbContext : DbContext
     /// <summary>#202: one row per coverage cell, always all 120 of them.</summary>
     public virtual DbSet<vw_CoverageMatrix> vw_CoverageMatrices { get; set; }
 
+    /// <summary>#201 / ADM-02: who decided what about a review sample, which the trigger reads.</summary>
+    public virtual DbSet<ReviewSampleDecision> ReviewSampleDecisions { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         ConfigureAuth(modelBuilder);

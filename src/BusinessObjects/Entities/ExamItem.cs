@@ -73,4 +73,9 @@ public partial class ExamItem
     [ForeignKey("ItemVersionId, ItemId")]
     [InverseProperty("ExamItems")]
     public virtual ItemVersion ItemVersion { get; set; } = null!;
+
+    /// <summary>
+    /// #201 / ADM-03: exam assembly is structure, so triage cannot write it. NULL = seed, fixture.
+    /// </summary>
+    public int? LastWrittenBy { get; set; }
 }

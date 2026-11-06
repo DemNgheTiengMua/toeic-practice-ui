@@ -1,3 +1,4 @@
+using BusinessObjects;
 using Contracts;
 using DataAccess;
 using Microsoft.EntityFrameworkCore;
@@ -10,8 +11,17 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddCompanionDbContext(this IServiceCollection services, IConfiguration configuration)
     {
-        services.AddDbContext<CompanionDbContext>(options =>
-            options.UseSqlServer(configuration.GetConnectionString("CompanionDb")));
+        services.AddHttpContextAccessor();
+        services.AddScoped<IActingStaffAccount, WebAPI.Infrastructure.HttpContextActingStaffAccount>();
+
+        // #201: the interceptor stamps the acting account onto every write to a guarded table, so the
+        // no-self-approval and triage-cannot-write triggers have something true to read. Registered
+        // with the context rather than called from a service, so the next endpoint inherits it.
+        services.AddScoped<StaffAccountStampInterceptor>();
+
+        services.AddDbContext<CompanionDbContext>((sp, options) =>
+            options.UseSqlServer(configuration.GetConnectionString("CompanionDb"))
+                .AddInterceptors(sp.GetRequiredService<StaffAccountStampInterceptor>()));
 
         services.AddHealthChecks()
             .AddDbContextCheck<CompanionDbContext>();

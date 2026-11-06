@@ -102,7 +102,10 @@ public sealed class CertificateServiceTests(DatabaseFixture database)
         // #210: trg_CefrCutScores_NoOverlap - per-skill cut ranges may not overlap within one version.
         // #211: trg_LearnerSkillStates_SingleWriter - the fourth covered derived fact. The count moves
         // 42 -> 43 and the registry's split moves 3/3/1 -> 4/2/1; domain27 pins the split.
-        Assert.Equal(43, triggerCount);
+        // #201: six more, moving 43 -> 49 - trg_ReviewSampleDecisions_NoSelfApproval (ADM-02) and one
+        // trg_*_TriageCannotWrite on each of the five tables a prohibited edit reaches (ADM-03):
+        // ItemVersions, ExamItems, Sections, GradingCriteria, GradingCriterionDescriptors.
+        Assert.Equal(49, triggerCount);
 
         // Named as well as counted, because a count alone cannot tell a rename from a removal.
         foreach (var name in new[]
@@ -117,6 +120,13 @@ public sealed class CertificateServiceTests(DatabaseFixture database)
                      "trg_PlacementTests_SingleWriter",
                      "trg_LearnerPathSteps_SingleWriter",
                      "trg_LearnerSkillStates_SingleWriter",
+                     // #201: the two invariants, by name. A rename must not pass as a count.
+                     "trg_ReviewSampleDecisions_NoSelfApproval",
+                     "trg_ItemVersions_TriageCannotWrite",
+                     "trg_ExamItems_TriageCannotWrite",
+                     "trg_Sections_TriageCannotWrite",
+                     "trg_GradingCriteria_TriageCannotWrite",
+                     "trg_GradingCriterionDescriptors_TriageCannotWrite",
                  })
         {
             var present = await db.Database

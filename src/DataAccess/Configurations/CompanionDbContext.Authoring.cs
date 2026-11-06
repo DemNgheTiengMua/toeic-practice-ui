@@ -53,6 +53,11 @@ public partial class CompanionDbContext
         {
             entity.HasKey(e => e.SectionId).HasName("PK__Sections__80EF0872ACBB3BA8");
 
+            // HasTrigger: #201 / ADM-03 refuses a section written by support triage (exam structure).
+            // Without the declaration every section save fails on the OUTPUT clause - the defect
+            // ADR-0001 and Tier1PersistenceAndDomainTests exist to catch.
+            entity.ToTable(tb => tb.HasTrigger("trg_Sections_TriageCannotWrite"));
+
             entity.Property(e => e.ScoreWeight).HasPrecision(5, 2).HasDefaultValue(1.0m);
             entity.Property(e => e.NavigationMode).HasMaxLength(30).HasDefaultValue("FULL_SANDBOX");
             entity.Property(e => e.TimerPolicyJson);
@@ -331,13 +336,18 @@ public partial class CompanionDbContext
         });
 
         // HasTrigger: trg_ItemVersions_ScoredFieldsImmutable refuses an in-place change to a scored
-        // field. Without this declaration every save to this table fails on the OUTPUT clause - the
-        // exact defect ADR-0001 and Tier1PersistenceAndDomainTests exist to catch.
+        // field, and #201's trg_ItemVersions_TriageCannotWrite refuses item text and keys written by
+        // support triage. Without these declarations every save to this table fails on the OUTPUT
+        // clause - the exact defect ADR-0001 and Tier1PersistenceAndDomainTests exist to catch.
         modelBuilder.Entity<ItemVersion>(entity =>
         {
             entity.HasKey(e => e.ItemVersionId).HasName("PK_ItemVersions");
 
-            entity.ToTable(tb => tb.HasTrigger("trg_ItemVersions_ScoredFieldsImmutable"));
+            entity.ToTable(tb =>
+            {
+                tb.HasTrigger("trg_ItemVersions_ScoredFieldsImmutable");
+                tb.HasTrigger("trg_ItemVersions_TriageCannotWrite");
+            });
 
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysdatetimeoffset())");
 
@@ -367,7 +377,12 @@ public partial class CompanionDbContext
         {
             entity.HasKey(e => e.ExamItemId).HasName("PK_ExamItems");
 
-            entity.ToTable(tb => tb.HasTrigger("trg_ExamItems_ProductionBindsProduction"));
+            entity.ToTable(tb =>
+            {
+                tb.HasTrigger("trg_ExamItems_ProductionBindsProduction");
+                // #201 / ADM-03: exam assembly is structure, so triage cannot write it.
+                tb.HasTrigger("trg_ExamItems_TriageCannotWrite");
+            });
 
             entity.Property(e => e.Modality).HasMaxLength(10).IsUnicode(false);
             entity.Property(e => e.UnitNumber).HasDefaultValue(1);
@@ -531,6 +546,36 @@ public partial class CompanionDbContext
         });
 
 
+
+        modelBuilder.Entity<ReviewSampleDecision>(entity =>
+        {
+            entity.HasKey(e => e.DecisionId).HasName("PK_ReviewSampleDecisions");
+
+            // HasTrigger: #201 / ADM-02 refuses a self-approval and refuses DELETE outright. Without
+            // this declaration every decision save fails on the OUTPUT clause - the defect ADR-0001
+            // and Tier1PersistenceAndDomainTests exist to catch.
+            entity.ToTable(tb => tb.HasTrigger("trg_ReviewSampleDecisions_NoSelfApproval"));
+
+            entity.Property(e => e.Decision).HasMaxLength(12).IsUnicode(false);
+            entity.Property(e => e.DecidedAt).HasDefaultValueSql("(sysdatetimeoffset())");
+
+            entity.HasIndex(e => new { e.BatchId, e.ItemId }, "IX_RSD_Batch_Item");
+
+            entity.HasOne<ImportBatch>().WithMany()
+                .HasForeignKey(d => d.BatchId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_RSD_Batch");
+
+            entity.HasOne<Item>().WithMany()
+                .HasForeignKey(d => d.ItemId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_RSD_Item");
+
+            entity.HasOne<User>().WithMany()
+                .HasForeignKey(d => d.ActorUserId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_RSD_Actor");
+        });
 
         modelBuilder.Entity<ImportBatch>(entity =>
         {

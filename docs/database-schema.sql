@@ -3427,3 +3427,269 @@ CREATE INDEX IX_Orders_User              ON Orders(UserId, CreatedAt);
 CREATE INDEX IX_Orders_Open              ON Orders(CreatedAt) WHERE Status IN ('pending','reconciling');
 CREATE INDEX IX_CreditTxn_User           ON CreditTransactions(UserId, CreatedAt) INCLUDE (Reason, Delta);
 GO
+-- ============ #201 / D16: no self-approval, and triage that cannot write ============
+-- Two promises that must survive every combination of the five namespaces (ADM-02, ADM-03, ADM-04).
+-- Both are refused HERE, in the transaction, because a check that exists only in a controller is
+-- bypassed by the next endpoint someone writes.
+--
+-- The actor is a COLUMN ON THE WRITE, never `sp_set_session_context` (PRN-01): this product reaches
+-- one database principal, so the database cannot otherwise tell one staff account from another, and
+-- session context survives commit and rollback and would vouch for whatever ran next.
+--
+-- `LastWrittenBy` is NULL for a seed, a fixture or a migration. That is not a hole to be closed by
+-- refusing NULL: the guarded tables are written by ~60 C# sites and ~300 fixture statements that
+-- predate this rule, and a NOT NULL declaration would refuse the demo seed. The refusal below is a
+-- property of the DECLARED account, which is what makes it "a property of the data, not of the role".
+
+-- ---- the authorship the schema did not carry ----
+--
+-- Until #201 nothing recorded who wrote an item version: `ItemVersions` had `CreatedAt` and no
+-- author, and `Items` had neither. So "a batch it uploaded OR LAST MODIFIED" was inexpressible for
+-- the item half - an uploader whose colleague revised the items could still clear the review.
+--
+-- One column serves both readings of "last modified": on INSERT it is the author of that version; on
+-- the one in-place edit (a cosmetic `Explanation` fix, CNT-43) it is the account that made the edit.
+-- The approver is barred from the newest version's value, so a typo fix moves authorship exactly as
+-- ADM-02's "or last modified" clause says it should.
+ALTER TABLE ItemVersions ADD LastWrittenBy INT NULL
+  CONSTRAINT FK_ItemVersions_LastWrittenBy REFERENCES Users(UserId);
+GO
+-- The batch half of the same clause. #205 is the staging workbench that will edit a batch; no path
+-- writes this column today, so it is covered by a direct-write test rather than by a service. A batch
+-- row is NOT the item (revising an item does not touch its batch), which is why ItemVersions carries
+-- its own column above instead of borrowing this one.
+ALTER TABLE ImportBatches ADD LastModifiedBy INT NULL
+  CONSTRAINT FK_ImportBatches_LastModifiedBy REFERENCES Users(UserId);
+GO
+-- The triage guard reads the acting account on each table a prohibited write can reach. ADM-03 names
+-- item text and keys, rubrics, AND exam structure - a check on item edits alone leaves exam structure
+-- editable by triage, which D16 forbids in the same sentence. Sections and ExamItems are the assembly;
+-- GradingCriteria and its descriptors are the rubric. ItemVersions already carries the column above.
+ALTER TABLE ExamItems                 ADD LastWrittenBy INT NULL CONSTRAINT FK_ExamItems_LastWrittenBy REFERENCES Users(UserId);
+GO
+ALTER TABLE Sections                  ADD LastWrittenBy INT NULL CONSTRAINT FK_Sections_LastWrittenBy REFERENCES Users(UserId);
+GO
+ALTER TABLE GradingCriteria           ADD LastWrittenBy INT NULL CONSTRAINT FK_GradingCriteria_LastWrittenBy REFERENCES Users(UserId);
+GO
+ALTER TABLE GradingCriterionDescriptors ADD LastWrittenBy INT NULL CONSTRAINT FK_GCD_LastWrittenBy REFERENCES Users(UserId);
+GO
+
+-- ---- is this account triage, and nothing that may author? ----
+--
+-- `can_override` is empty: holding more namespaces does not WAIVE either invariant, and this function
+-- is where that is stated for triage. An account is triage-only when it holds
+-- `operations.support.triage` and holds neither namespace that authorizes the write it is attempting.
+-- An account that also holds `pool.content.author` or `assessment.blueprint.design` is an author, and
+-- its writes are reviewed by the no-self-approval rule below rather than refused here. Reading
+-- "triage may not write" as "any account holding triage may never author" would make content
+-- unauthorable by the only account that holds all five, which is not what ADM-03 is for.
+--
+-- One function rather than five copies of the join: five copies is how one of them ends up subtly
+-- different, and the difference would be a silently unguarded table.
+CREATE FUNCTION dbo.fn_IsTriageOnly (@UserId INT) RETURNS BIT AS
+BEGIN
+  IF @UserId IS NULL RETURN 0;
+  RETURN CASE WHEN EXISTS (
+    SELECT 1 FROM Users u
+    JOIN RolePermissions rp ON rp.RoleId = u.RoleId
+    WHERE u.UserId = @UserId AND rp.PermissionCode = 'operations.support.triage'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM Users u
+    JOIN RolePermissions rp ON rp.RoleId = u.RoleId
+    WHERE u.UserId = @UserId
+      AND rp.PermissionCode IN ('pool.content.author','assessment.blueprint.design')
+  ) THEN 1 ELSE 0 END;
+END;
+GO
+
+-- ---- the fixture-catalog flag, and why it exists ----
+--
+-- A raw fixture INSERT and a raw triage INSERT are INDISTINGUISHABLE: both are SQL that declares no
+-- account. No trigger can separate them without an identity channel, and SQL Server has none that
+-- survives connection pooling (see PRN-01 below). So "fixtures need not declare" and "triage cannot
+-- write undeclared" cannot both be true in the same catalog.
+--
+-- The honest split is by CATALOG, not by statement: a catalog that holds only disposable test data
+-- may relax the declaration requirement, and a catalog that holds anything real may not. This table
+-- is that switch. It carries no identity - it cannot name an account - and it does not relax the
+-- triage rule itself, which applies to every declared id in every catalog.
+--
+-- Set by `docs/schema-tests/reset-and-load.sh` and `tests/Services.Tests/DatabaseFixture.cs`, which
+-- create throwaway catalogs. `docs/seed-demo.sql` saves the prior value, turns it on for its own
+-- writes, and restores it, so a catalog that loads the demo seed ends exactly as strict as it began.
+-- Production never sets it, so an undeclared write there is refused.
+CREATE TABLE CatalogMode (
+  -- One row, pinned by the CHECK. A second row would be a second answer to one question.
+  ModeId           TINYINT NOT NULL PRIMARY KEY CONSTRAINT CK_CatalogMode_SingleRow CHECK (ModeId = 1),
+  IsFixtureCatalog BIT NOT NULL CONSTRAINT DF_CatalogMode_Fixture DEFAULT 0
+);
+GO
+CREATE FUNCTION dbo.fn_IsFixtureCatalog() RETURNS BIT AS
+BEGIN
+  -- A missing row is "not a fixture catalog": strict is the default, so forgetting to provision the
+  -- row can never silently relax a guard.
+  RETURN ISNULL((SELECT IsFixtureCatalog FROM CatalogMode WHERE ModeId = 1), 0);
+END;
+GO
+
+-- ---- invariant 2: triage cannot write ----
+--
+-- THE GUARD'S QUESTION IS "WHO IS WRITING". The first draft got this wrong in a way the review
+-- reproduced on a real database: it asked `fn_IsTriageOnly(i.LastWrittenBy)` and required
+-- re-declaration only when the STORED row already named an author. So an undeclared row was a free
+-- pass - a triage UPDATE of `Explanation` on any seeded row was ACCEPTED, and a raw INSERT of a whole
+-- new version with no declaration was ACCEPTED. Both are the criterion's own words ("a write to item
+-- text"), and both came from confusing the DECLARED AUTHOR with the WRITER.
+--
+-- Three rules, on INSERT and on UPDATE, on all five tables:
+--   1. a write must DECLARE its actor - `LastWrittenBy IS NULL` is refused, so no row is a free pass;
+--   2. the DECLARED actor must not be triage-only - this holds in EVERY catalog, fixture or not, so
+--      the exemption below never lets a triage account through;
+--   3. an UPDATE must RE-DECLARE the column. Without this, a write that sets only `Explanation`
+--      inherits the previous author's name and the check would be answering about nobody.
+--
+-- WHY A COLUMN AND NOT SESSION CONTEXT (PRN-01). PRN-01 forbids `sp_set_session_context` because it
+-- survives commit and rollback on a pooled connection and would vouch for code that never declared
+-- itself. That reasoning stands here, and this guard identifies NOBODY from session state: rules 1-3
+-- read only the column the write assigns. SQL Server has no transaction-local identity channel at all
+-- - session context and `CONTEXT_INFO` are both per-session and survive pooling, and a temp table is
+-- pooled the same way - so the column is the only honest channel. ADR-0012 reached the same
+-- conclusion for the writer column.
+--
+-- THE EXEMPTION, AND ITS EXACT SHAPE. Rules 1 and 3 are relaxed by exactly one boolean,
+-- `dbo.fn_IsFixtureCatalog()`, which is true only in a catalog that holds nothing but disposable test
+-- data (see CatalogMode). Rule 2 is never relaxed. The shape of the exemption is therefore:
+--
+--   fixture catalog : an UNDECLARED write is allowed; a write declaring a triage account is REFUSED.
+--   any other       : an undeclared write is refused; a write declaring triage is refused.
+--
+-- It exists because a raw fixture INSERT and a raw triage INSERT are indistinguishable - both are SQL
+-- that declares no account - and SQL Server has no channel that would separate them. A catalog-scoped
+-- flag is the only split that is honest about that. It carries no identity: it cannot name an account,
+-- so it cannot be used to impersonate one, and rule 2 still refuses every triage id inside a fixture
+-- catalog (domain35 proves both halves). Production never sets it, so an undeclared write there is
+-- refused. A caller who can write the flag can equally run `ALTER TABLE ... DISABLE TRIGGER`; that is
+-- the raw-database trust boundary, stated rather than hidden.
+CREATE TRIGGER trg_ItemVersions_TriageCannotWrite
+ON ItemVersions AFTER INSERT, UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+  IF EXISTS (
+    SELECT 1 FROM inserted i
+    LEFT JOIN deleted d ON d.ItemVersionId = i.ItemVersionId
+    WHERE (dbo.fn_IsFixtureCatalog() = 0
+             AND (i.LastWrittenBy IS NULL
+                  OR (d.ItemVersionId IS NOT NULL AND NOT UPDATE(LastWrittenBy))))
+       OR dbo.fn_IsTriageOnly(i.LastWrittenBy) = 1)
+    THROW 50081, 'ADM-03: support triage may inspect item text and keys but cannot write them. A write to ItemVersions must declare who made it (LastWrittenBy), and an update must re-declare it.', 1;
+END;
+GO
+CREATE TRIGGER trg_ExamItems_TriageCannotWrite
+ON ExamItems AFTER INSERT, UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+  IF EXISTS (
+    SELECT 1 FROM inserted i
+    LEFT JOIN deleted d ON d.ExamItemId = i.ExamItemId
+    WHERE (dbo.fn_IsFixtureCatalog() = 0
+             AND (i.LastWrittenBy IS NULL
+                  OR (d.ExamItemId IS NOT NULL AND NOT UPDATE(LastWrittenBy))))
+       OR dbo.fn_IsTriageOnly(i.LastWrittenBy) = 1)
+    THROW 50081, 'ADM-03: support triage cannot change exam assembly. A write to ExamItems must declare who made it (LastWrittenBy), and an update must re-declare it.', 1;
+END;
+GO
+CREATE TRIGGER trg_Sections_TriageCannotWrite
+ON Sections AFTER INSERT, UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+  IF EXISTS (
+    SELECT 1 FROM inserted i
+    LEFT JOIN deleted d ON d.SectionId = i.SectionId
+    WHERE (dbo.fn_IsFixtureCatalog() = 0
+             AND (i.LastWrittenBy IS NULL
+                  OR (d.SectionId IS NOT NULL AND NOT UPDATE(LastWrittenBy))))
+       OR dbo.fn_IsTriageOnly(i.LastWrittenBy) = 1)
+    THROW 50081, 'ADM-03: support triage cannot change exam structure. A write to Sections must declare who made it (LastWrittenBy), and an update must re-declare it.', 1;
+END;
+GO
+CREATE TRIGGER trg_GradingCriteria_TriageCannotWrite
+ON GradingCriteria AFTER INSERT, UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+  IF EXISTS (
+    SELECT 1 FROM inserted i
+    LEFT JOIN deleted d ON d.CriterionId = i.CriterionId
+    WHERE (dbo.fn_IsFixtureCatalog() = 0
+             AND (i.LastWrittenBy IS NULL
+                  OR (d.CriterionId IS NOT NULL AND NOT UPDATE(LastWrittenBy))))
+       OR dbo.fn_IsTriageOnly(i.LastWrittenBy) = 1)
+    THROW 50081, 'ADM-03: support triage cannot write a rubric. A write to GradingCriteria must declare who made it (LastWrittenBy), and an update must re-declare it.', 1;
+END;
+GO
+CREATE TRIGGER trg_GradingCriterionDescriptors_TriageCannotWrite
+ON GradingCriterionDescriptors AFTER INSERT, UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+  IF EXISTS (
+    SELECT 1 FROM inserted i
+    LEFT JOIN deleted d ON d.CriterionId = i.CriterionId AND d.Band = i.Band
+    WHERE (dbo.fn_IsFixtureCatalog() = 0
+             AND (i.LastWrittenBy IS NULL
+                  OR (d.CriterionId IS NOT NULL AND NOT UPDATE(LastWrittenBy))))
+       OR dbo.fn_IsTriageOnly(i.LastWrittenBy) = 1)
+    THROW 50081, 'ADM-03: support triage cannot write a rubric descriptor. A write to GradingCriterionDescriptors must declare who made it (LastWrittenBy), and an update must re-declare it.', 1;
+END;
+GO
+
+-- ---- invariant 1: no self-approval ----
+--
+-- The record the invariant lives on. #206 builds the stratified sample, the blind solve and the
+-- quarantine; this table is only the decision and WHO made it, because that is the fact the rule
+-- reads. The three verbs are ADM-02's own: claim, adjudicate, clear.
+CREATE TABLE ReviewSampleDecisions (
+  DecisionId    INT IDENTITY(1,1) PRIMARY KEY,
+  -- The batch the sample came from. No composite target: a decision is about a batch and the item in
+  -- it, and both foreign keys already prove each id is real.
+  BatchId       INT NOT NULL CONSTRAINT FK_RSD_Batch REFERENCES ImportBatches(BatchId),
+  ItemId        INT NOT NULL CONSTRAINT FK_RSD_Item REFERENCES Items(ItemId),
+  ActorUserId   INT NOT NULL CONSTRAINT FK_RSD_Actor REFERENCES Users(UserId),
+  Decision      VARCHAR(12) NOT NULL
+    CONSTRAINT CK_RSD_Decision CHECK (Decision IN ('claim','adjudicate','clear')),
+  DecidedAt     DATETIMEOFFSET NOT NULL CONSTRAINT DF_RSD_DecidedAt DEFAULT SYSDATETIMEOFFSET()
+);
+GO
+CREATE INDEX IX_RSD_Batch_Item ON ReviewSampleDecisions(BatchId, ItemId);
+GO
+-- ADM-02, once, for all three verbs, on INSERT and UPDATE and DELETE:
+--
+--   * the batch's uploader (ImportBatches.UploadedBy);
+--   * the batch's last modifier (ImportBatches.LastModifiedBy) - the "re-upload then approve" door;
+--   * the item's author-or-last-modifier, read from the NEWEST version (ItemVersions.LastWrittenBy) -
+--     the "have a colleague revise it, then approve it" door.
+--
+-- DELETE is refused outright rather than checked: a decision is the record that an approval happened,
+-- and the cheapest way to clear your own work is to delete the record and re-insert one made by
+-- nobody. An append-only decision table closes the delete-and-reinsert bypass instead of testing for
+-- it, and there is no legitimate edit of a decision that was already made.
+CREATE TRIGGER trg_ReviewSampleDecisions_NoSelfApproval
+ON ReviewSampleDecisions AFTER INSERT, UPDATE, DELETE AS
+BEGIN
+  SET NOCOUNT ON;
+  IF EXISTS (SELECT 1 FROM deleted)
+    THROW 50080, 'ADM-02: a review decision is a record of an approval that happened and cannot be deleted; deleting it would allow the decision to be re-made by another hand.', 1;
+
+  IF EXISTS (
+    SELECT 1
+    FROM inserted n
+    JOIN ImportBatches b ON b.BatchId = n.BatchId
+    WHERE n.ActorUserId = b.UploadedBy
+       OR n.ActorUserId = b.LastModifiedBy
+       OR n.ActorUserId = (
+            SELECT TOP 1 v.LastWrittenBy
+            FROM ItemVersions v
+            WHERE v.ItemId = n.ItemId
+            ORDER BY v.VersionNumber DESC)
+  )
+    THROW 50080, 'ADM-02: an account cannot claim, adjudicate or clear a review sample for a batch or item it uploaded or last modified. This refusal does not read permissions, so it holds for an account that holds all five namespaces.', 1;
+END;
+GO
