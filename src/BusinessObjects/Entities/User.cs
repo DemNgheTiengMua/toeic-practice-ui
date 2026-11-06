@@ -90,6 +90,10 @@ public partial class User
     [InverseProperty("User")]
     public virtual ICollection<LearnerPath> LearnerPaths { get; set; } = new List<LearnerPath>();
 
+    /// <summary>#211: one stored state per skill the learner has been measured in.</summary>
+    [InverseProperty("User")]
+    public virtual ICollection<LearnerSkillState> LearnerSkillStates { get; set; } = new List<LearnerSkillState>();
+
     [InverseProperty("User")]
     public virtual ICollection<MentorProfile> MentorProfiles { get; set; } = new List<MentorProfile>();
 
