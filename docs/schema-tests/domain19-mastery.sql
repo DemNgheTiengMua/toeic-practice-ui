@@ -17,10 +17,10 @@ INSERT INTO Exams (CertId,Name,Status,DurationMinutes) VALUES (@c,N'Mastery Src'
 DECLARE @ex INT=SCOPE_IDENTITY();
 INSERT INTO QuestionGroups (ExamId,CertId,SectionId,DisplayOrder) VALUES (@ex,@c,@sec,1);
 DECLARE @grp INT=SCOPE_IDENTITY();
-INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,CategoryId,Stem,DifficultyLevel,QuestionType,DisplayOrder)
-  VALUES (@grp,@ex,@sec,@sk,@cat,N'q1',3,'mcq',1); DECLARE @q1 INT=SCOPE_IDENTITY();
-INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,CategoryId,Stem,DifficultyLevel,QuestionType,DisplayOrder)
-  VALUES (@grp,@ex,@sec,@sk,@cat,N'q2',3,'mcq',2); DECLARE @q2 INT=SCOPE_IDENTITY();
+INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,CategoryId,Stem,CefrLevel,QuestionType,DisplayOrder)
+  VALUES (@grp,@ex,@sec,@sk,@cat,N'q1','B2','mcq',1); DECLARE @q1 INT=SCOPE_IDENTITY();
+INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,CategoryId,Stem,CefrLevel,QuestionType,DisplayOrder)
+  VALUES (@grp,@ex,@sec,@sk,@cat,N'q2','B2','mcq',2); DECLARE @q2 INT=SCOPE_IDENTITY();
 
 -- a valid mastery row is accepted, and starts Untested by default
 INSERT INTO UserCategoryMasteries (UserId,CategoryId,CertId) VALUES (@u,@cat,@c);

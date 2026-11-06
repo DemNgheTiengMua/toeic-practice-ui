@@ -57,11 +57,14 @@ public sealed class DemoSeedTests(DatabaseFixture fixture)
                 JOIN Exams e ON e.ExamId=q.ExamId
                 WHERE e.Name='TOEIC Placement Test — Diagnostic'
                 """));
+            // #230: the diagnostic must span more than one level, for the same reason it had to span
+            // more than one difficulty: a paper stratified on one band cannot separate the bands above
+            // it. The count reads the level, and the threshold is unchanged.
             Assert.True(await CountAsync("""
-                SELECT COUNT(DISTINCT q.DifficultyLevel) FROM Questions q
+                SELECT COUNT(DISTINCT q.CefrLevel) FROM Questions q
                 JOIN Exams e ON e.ExamId=q.ExamId
                 WHERE e.Name='TOEIC Placement Test — Diagnostic'
-                """) >= 3, "the diagnostic must carry more than one difficulty level");
+                """) >= 3, "the diagnostic must carry more than one level");
             Assert.Equal(0, await CountAsync("""
                 SELECT COUNT(*) FROM Exams
                 WHERE Purpose='placement' AND CertId=(SELECT CertId FROM Certificates WHERE Code='TOEIC')

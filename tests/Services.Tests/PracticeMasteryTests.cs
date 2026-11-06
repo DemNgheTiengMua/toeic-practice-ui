@@ -77,7 +77,7 @@ public sealed class PracticeMasteryTests(DatabaseFixture database)
             var question = new Question
             {
                 GroupId = group.GroupId, ExamId = exam.ExamId, SectionId = sec.SectionId, SkillId = skill.SkillId,
-                CategoryId = category.CategoryId, Stem = $"Stem {i + 1}", DifficultyLevel = 3,
+                CategoryId = category.CategoryId, Stem = $"Stem {i + 1}", CefrLevel = CefrLevel.B2,
                 QuestionType = "mcq", Explanation = $"Explanation {i + 1}", DisplayOrder = i + 1,
             };
             db.Questions.Add(question);
@@ -104,7 +104,7 @@ public sealed class PracticeMasteryTests(DatabaseFixture database)
                 var question = new Question
                 {
                     GroupId = group.GroupId, ExamId = exam.ExamId, SectionId = sec.SectionId, SkillId = skill.SkillId,
-                    CategoryId = extra.CategoryId, Stem = $"Extra stem {i + 1}", DifficultyLevel = 3,
+                    CategoryId = extra.CategoryId, Stem = $"Extra stem {i + 1}", CefrLevel = CefrLevel.B2,
                     QuestionType = "mcq", Explanation = "Extra", DisplayOrder = 100 + i,
                 };
                 db.Questions.Add(question);

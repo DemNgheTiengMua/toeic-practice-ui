@@ -1,7 +1,6 @@
 using System.IO.Compression;
 using System.Text;
 using System.Text.Json.Nodes;
-using BusinessObjects;
 using Contracts;
 using BusinessObjects.Entities;
 using BusinessObjects.Views;
@@ -244,12 +243,12 @@ public sealed class QuestionImportServiceTests(DatabaseFixture database)
     }
 
     /// <summary>
-    /// #229: the row that no longer carries a difficulty. A file whose question states neither a level
-    /// nor a difficulty used to be refused on the difficulty; it is now refused on the level, and the
+    /// #229: the row that no longer carries a five-point number. A file whose question states neither a
+    /// level nor a number used to be refused on the number; it is now refused on the level, and the
     /// error still names the question it is about - which is the whole point of the message.
     /// <para>
-    /// Changed by #229: this test set <c>difficultyLevel = 9</c> and asserted the 1-5 message. The
-    /// difficulty is dormant, so 9 is no longer a refusal; a level off the ladder is.
+    /// Changed by #229: this test set the old number to 9 and asserted the 1-5 message. The number is
+    /// dormant, so 9 is no longer a refusal; a level off the ladder is.
     /// </para>
     /// </summary>
     [Fact]

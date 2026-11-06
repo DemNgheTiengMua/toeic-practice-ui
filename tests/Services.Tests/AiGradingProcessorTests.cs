@@ -84,15 +84,15 @@ public sealed class AiGradingProcessorTests(DatabaseFixture database)
             -- Question 1: Sentence from picture
             INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @sec1, 1);
             DECLARE @grp1 INT = SCOPE_IDENTITY();
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, MinWords, MaxWords, DisplayOrder)
-            VALUES (@grp1, @exam, @sec1, @sW, N'Write a sentence describing the picture.', 1, 'free_response', 5, 25, 1);
+            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, MinWords, MaxWords, DisplayOrder)
+            VALUES (@grp1, @exam, @sec1, @sW, N'Write a sentence describing the picture.', 'A2', 'free_response', 5, 25, 1);
             DECLARE @q1 INT = SCOPE_IDENTITY();
 
             -- Question 2: Essay
             INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @sec2, 2);
             DECLARE @grp2 INT = SCOPE_IDENTITY();
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, MinWords, MaxWords, DisplayOrder)
-            VALUES (@grp2, @exam, @sec2, @sW, N'Write an essay giving your opinion on remote work.', 3, 'free_response', 30, 300, 2);
+            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, MinWords, MaxWords, DisplayOrder)
+            VALUES (@grp2, @exam, @sec2, @sW, N'Write an essay giving your opinion on remote work.', 'B2', 'free_response', 30, 300, 2);
             DECLARE @q2 INT = SCOPE_IDENTITY();
             """);
 

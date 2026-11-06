@@ -70,9 +70,9 @@ public sealed class AttemptVersionPinTests(DatabaseFixture database)
             DECLARE @grp INT = SCOPE_IDENTITY();
 
             -- the legacy shape, with its own stems, option text and key (B), none of which is the version's
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder)
-            VALUES (@grp, @exam, @sec, @skill, N'Legacy stem one.', 1, 'mcq', 1),
-                   (@grp, @exam, @sec, @skill, N'Legacy stem two.', 1, 'mcq', 2);
+            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
+            VALUES (@grp, @exam, @sec, @skill, N'Legacy stem one.', 'A2', 'mcq', 1),
+                   (@grp, @exam, @sec, @skill, N'Legacy stem two.', 'A2', 'mcq', 2);
             DECLARE @q1 INT = (SELECT QuestionId FROM Questions WHERE ExamId = @exam AND DisplayOrder = 1);
             DECLARE @q2 INT = (SELECT QuestionId FROM Questions WHERE ExamId = @exam AND DisplayOrder = 2);
 

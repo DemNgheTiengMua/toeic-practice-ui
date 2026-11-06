@@ -55,8 +55,8 @@ public sealed class ExamItemBindingTests(DatabaseFixture database)
             VALUES (@exam, @cert, @sec, 1);
             DECLARE @grp INT = SCOPE_IDENTITY();
 
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, Explanation, DisplayOrder)
-            VALUES (@grp, @exam, @sec, @skill, N'The regional manager ------- the figures.', 1, 'mcq',
+            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, Explanation, DisplayOrder)
+            VALUES (@grp, @exam, @sec, @skill, N'The regional manager ------- the figures.', 'A2', 'mcq',
                     N'Legacy explanation.', 1);
             DECLARE @q INT = SCOPE_IDENTITY();
 

@@ -66,9 +66,9 @@ public sealed class SittingPersistenceAndCrashRecoveryTests(DatabaseFixture data
             DECLARE @gL INT = (SELECT GroupId FROM QuestionGroups WHERE ExamId = @exam AND SectionId = @secL);
             DECLARE @gR INT = (SELECT GroupId FROM QuestionGroups WHERE ExamId = @exam AND SectionId = @secR);
 
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder) VALUES
-              (@gL, @exam, @secL, @sL, N'Listening Q1', 1, 'mcq', 1),
-              (@gR, @exam, @secR, @sR, N'Reading Q2', 1, 'mcq', 2);
+            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder) VALUES
+              (@gL, @exam, @secL, @sL, N'Listening Q1', 'A2', 'mcq', 1),
+              (@gR, @exam, @secR, @sR, N'Reading Q2', 'A2', 'mcq', 2);
             DECLARE @q1 INT = (SELECT QuestionId FROM Questions WHERE ExamId = @exam AND SectionId = @secL);
             DECLARE @q2 INT = (SELECT QuestionId FROM Questions WHERE ExamId = @exam AND SectionId = @secR);
 

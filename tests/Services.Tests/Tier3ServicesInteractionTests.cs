@@ -149,9 +149,9 @@ public sealed class Tier3ServicesInteractionTests(DatabaseFixture database)
 
             INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @sec, 1);
             DECLARE @grp INT = SCOPE_IDENTITY();
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder)
-            VALUES (@grp, @exam, @sec, @skill, N'Question 1', 1, 'mcq', 1),
-                   (@grp, @exam, @sec, @skill, N'Question 2', 1, 'mcq', 2);
+            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
+            VALUES (@grp, @exam, @sec, @skill, N'Question 1', 'A2', 'mcq', 1),
+                   (@grp, @exam, @sec, @skill, N'Question 2', 'A2', 'mcq', 2);
             """);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);
@@ -222,8 +222,8 @@ public sealed class Tier3ServicesInteractionTests(DatabaseFixture database)
             DECLARE @exam INT = SCOPE_IDENTITY();
             INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @sec, 1);
             DECLARE @grp INT = SCOPE_IDENTITY();
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, MinWords, MaxWords, DisplayOrder)
-            VALUES (@grp, @exam, @sec, @skill, N'Write an essay.', 1, 'free_response', 50, 300, 1);
+            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, MinWords, MaxWords, DisplayOrder)
+            VALUES (@grp, @exam, @sec, @skill, N'Write an essay.', 'A2', 'free_response', 50, 300, 1);
             """);
 
         var learnerId = await SeedLearnerWithCreditsAsync(3, certCode);

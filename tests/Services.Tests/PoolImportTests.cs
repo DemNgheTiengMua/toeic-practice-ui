@@ -129,7 +129,6 @@ public sealed class PoolImportTests(DatabaseFixture database)
                     {
                       "displayOrder": 1,
                       "stem": "What time does the depot open?",
-                      "difficultyLevel": 3,
                       "cefrLevel": "B1",
                       "topicCode": "R-DET",
                       "questionType": "mcq",
@@ -148,7 +147,6 @@ public sealed class PoolImportTests(DatabaseFixture database)
                     {
                       "displayOrder": 2,
                       "stem": "Who signs the night ledger?",
-                      "difficultyLevel": 3,
                       "cefrLevel": "B1",
                       "topicCode": "R-INF",
                       "questionType": "mcq",
@@ -654,7 +652,6 @@ public sealed class PoolImportTests(DatabaseFixture database)
                       "questions": [
                         {
                           "stem": "Write a reply to the customer.",
-                          "difficultyLevel": 3,
                           "cefrLevel": "B2",
                           "topicCode": "W-CORR",
                           "itemType": "transactional_correspondence",
@@ -705,7 +702,6 @@ public sealed class PoolImportTests(DatabaseFixture database)
             new JsonObject
             {
                 ["stem"] = "What are the speakers discussing?",
-                ["difficultyLevel"] = 3,
                 ["cefrLevel"] = "B1",
                 ["topicCode"] = "L-GIST",
                 ["questionType"] = "mcq",
@@ -806,7 +802,6 @@ public sealed class PoolImportTests(DatabaseFixture database)
             StartLineNumber: index,
             EndLineNumber: index,
             Stem: stem,
-            DifficultyLevel: null,
             Explanation: $"Explanation for {stem}",
             CategoryCode: null,
             Options:

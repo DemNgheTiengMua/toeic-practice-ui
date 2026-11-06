@@ -72,8 +72,8 @@ public sealed class AiInsightServiceTests(DatabaseFixture database)
         db.QuestionCategories.Add(category);
         await db.SaveChangesAsync();
 
-        var q1 = new Question { GroupId = grp.GroupId, ExamId = exam.ExamId, SectionId = section.SectionId, SkillId = skill.SkillId, CategoryId = category.CategoryId, Stem = "Fill preposition: We arrived ___ noon.", DifficultyLevel = 3, QuestionType = "mcq", DisplayOrder = 1 };
-        var q2 = new Question { GroupId = grp.GroupId, ExamId = exam.ExamId, SectionId = section.SectionId, SkillId = skill.SkillId, CategoryId = category.CategoryId, Stem = "Fill preposition: She sat ___ the table.", DifficultyLevel = 3, QuestionType = "mcq", DisplayOrder = 2 };
+        var q1 = new Question { GroupId = grp.GroupId, ExamId = exam.ExamId, SectionId = section.SectionId, SkillId = skill.SkillId, CategoryId = category.CategoryId, Stem = "Fill preposition: We arrived ___ noon.", CefrLevel = CefrLevel.B2, QuestionType = "mcq", DisplayOrder = 1 };
+        var q2 = new Question { GroupId = grp.GroupId, ExamId = exam.ExamId, SectionId = section.SectionId, SkillId = skill.SkillId, CategoryId = category.CategoryId, Stem = "Fill preposition: She sat ___ the table.", CefrLevel = CefrLevel.B2, QuestionType = "mcq", DisplayOrder = 2 };
         db.Questions.AddRange(q1, q2);
         await db.SaveChangesAsync();
 
@@ -154,7 +154,7 @@ public sealed class AiInsightServiceTests(DatabaseFixture database)
         db.QuestionGroups.Add(grp);
         await db.SaveChangesAsync();
 
-        var q = new Question { GroupId = grp.GroupId, ExamId = exam.ExamId, SectionId = section.SectionId, SkillId = skill.SkillId, Stem = "Exam question stem", DifficultyLevel = 3, QuestionType = "mcq", DisplayOrder = 1 };
+        var q = new Question { GroupId = grp.GroupId, ExamId = exam.ExamId, SectionId = section.SectionId, SkillId = skill.SkillId, Stem = "Exam question stem", CefrLevel = CefrLevel.B2, QuestionType = "mcq", DisplayOrder = 1 };
         db.Questions.Add(q);
         await db.SaveChangesAsync();
 

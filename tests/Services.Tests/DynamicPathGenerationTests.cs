@@ -87,8 +87,8 @@ public sealed class DynamicPathGenerationTests(DatabaseFixture database)
               DECLARE @i INT = 1;
               WHILE @i <= 3
               BEGIN
-                INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder)
-                VALUES (@grp, @exam, @sec, @sR, CONCAT(N'Section ', @d, N' question ', @i), 2, 'mcq', @i);
+                INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
+                VALUES (@grp, @exam, @sec, @sR, CONCAT(N'Section ', @d, N' question ', @i), 'B1', 'mcq', @i);
                 SET @q = SCOPE_IDENTITY();
                 INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
                   (@q, 'mcq', 'A', N'Right', 1),

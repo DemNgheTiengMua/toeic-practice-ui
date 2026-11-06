@@ -326,7 +326,6 @@ public sealed class ExamRebuildFullSystemE2ETests(DatabaseFixture database)
             var q1 = await adminExamService.CreateQuestionAsync(examId, new CreateQuestionRequest(
                 grpL1Id,
                 "What is the scheduled arrival time of the conference speaker?",
-                DifficultyLevel: 2,
                 QuestionType: QuestionTypeDto.Mcq,
                 CategoryId: catId,
                 Options:
@@ -343,7 +342,6 @@ public sealed class ExamRebuildFullSystemE2ETests(DatabaseFixture database)
             var q2 = await adminExamService.CreateQuestionAsync(examId, new CreateQuestionRequest(
                 grpL1Id,
                 "The corporate network is managed by the [blank] department.",
-                DifficultyLevel: 3,
                 QuestionType: QuestionTypeDto.InlineCompletion,
                 CategoryId: catId,
                 AcceptedAnswersJson: "[\"telecommunications\",\"telecom\"]",
@@ -355,7 +353,6 @@ public sealed class ExamRebuildFullSystemE2ETests(DatabaseFixture database)
             var q3 = await adminExamService.CreateQuestionAsync(examId, new CreateQuestionRequest(
                 grpR1_U1Id,
                 "Which executive approved the expenditure?",
-                DifficultyLevel: 2,
                 QuestionType: QuestionTypeDto.Mcq,
                 CategoryId: catId,
                 Options:
@@ -372,7 +369,6 @@ public sealed class ExamRebuildFullSystemE2ETests(DatabaseFixture database)
             var q4 = await adminExamService.CreateQuestionAsync(examId, new CreateQuestionRequest(
                 grpR1_U1Id,
                 "Where is the regional branch office located?",
-                DifficultyLevel: 2,
                 QuestionType: QuestionTypeDto.Mcq_3,
                 CategoryId: catId,
                 Options:
@@ -388,7 +384,6 @@ public sealed class ExamRebuildFullSystemE2ETests(DatabaseFixture database)
             var q5 = await adminExamService.CreateQuestionAsync(examId, new CreateQuestionRequest(
                 grpR1_U2Id,
                 "Select TWO primary factors driving quarterly growth:",
-                DifficultyLevel: 3,
                 QuestionType: QuestionTypeDto.MultiSelect,
                 CategoryId: catId,
                 MaxSelections: 2,
@@ -407,7 +402,6 @@ public sealed class ExamRebuildFullSystemE2ETests(DatabaseFixture database)
             var q6 = await adminExamService.CreateQuestionAsync(examId, new CreateQuestionRequest(
                 grpR2Id,
                 "Select the appropriate linking conjunction for paragraph 2.",
-                DifficultyLevel: 2,
                 QuestionType: QuestionTypeDto.Dropdown,
                 CategoryId: catId,
                 Options:
@@ -423,7 +417,6 @@ public sealed class ExamRebuildFullSystemE2ETests(DatabaseFixture database)
             var q7 = await adminExamService.CreateQuestionAsync(examId, new CreateQuestionRequest(
                 grpR2Id,
                 "Match the project phase label to the milestone schedule.",
-                DifficultyLevel: 3,
                 QuestionType: QuestionTypeDto.DragDrop,
                 CategoryId: catId,
                 Options:
@@ -439,7 +432,6 @@ public sealed class ExamRebuildFullSystemE2ETests(DatabaseFixture database)
             var q8 = await adminExamService.CreateQuestionAsync(examId, new CreateQuestionRequest(
                 grpW1Id,
                 "Compose a concise proposal outlining environmental initiatives using the required keywords.",
-                DifficultyLevel: 3,
                 QuestionType: QuestionTypeDto.FreeResponse,
                 ResponseSeconds: 600,
                 MinWords: 5,
@@ -803,9 +795,9 @@ public sealed class ExamRebuildFullSystemE2ETests(DatabaseFixture database)
             DECLARE @g1 INT = (SELECT GroupId FROM QuestionGroups WHERE ExamId = @exam AND UnitNumber = 1);
             DECLARE @g2 INT = (SELECT GroupId FROM QuestionGroups WHERE ExamId = @exam AND UnitNumber = 2);
 
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder)
-            VALUES (@g1, @exam, @sec, @skill, N'Stage 1 Q', 1, 'mcq', 1),
-                   (@g2, @exam, @sec, @skill, N'Stage 2 Adaptive Q', 2, 'mcq', 2);
+            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
+            VALUES (@g1, @exam, @sec, @skill, N'Stage 1 Q', 'A2', 'mcq', 1),
+                   (@g2, @exam, @sec, @skill, N'Stage 2 Adaptive Q', 'B1', 'mcq', 2);
 
             INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect)
             SELECT QuestionId, 'mcq', 'A', 'Correct', 1 FROM Questions WHERE ExamId = @exam;

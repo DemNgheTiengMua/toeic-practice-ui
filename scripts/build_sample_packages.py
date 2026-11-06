@@ -64,7 +64,7 @@ toeic_text_manifest = {
             {
               "displayOrder": 1,
               "stem": "The regional sales conference will commence promptly _____ 9:00 AM in the Grand Ballroom.",
-              "difficultyLevel": 2,
+              "cefrLevel": "B1",
               "questionType": "mcq",
               "categoryCode": "grammar_prep",
               "explanation": "The preposition 'at' is used before precise clock times.",
@@ -79,7 +79,7 @@ toeic_text_manifest = {
             {
               "displayOrder": 2,
               "stem": "Ms. Reynolds has _____ submitted her finalized quarterly expense report to accounting.",
-              "difficultyLevel": 2,
+              "cefrLevel": "B1",
               "questionType": "mcq",
               "categoryCode": "grammar_pos",
               "explanation": "An adverb is required between the auxiliary 'has' and past participle 'submitted'.",
@@ -111,7 +111,7 @@ toeic_text_manifest = {
             {
               "displayOrder": 1,
               "stem": "What action are employees required to take before Friday?",
-              "difficultyLevel": 3,
+              "cefrLevel": "B2",
               "questionType": "mcq",
               "categoryCode": "reading_vocab",
               "explanation": "The memo instructs all staff members to update their workstation passwords before Friday.",
@@ -143,7 +143,7 @@ toeic_text_manifest = {
             {
               "displayOrder": 1,
               "stem": "What is the primary benefit of the new Da Nang facility?",
-              "difficultyLevel": 3,
+              "cefrLevel": "B2",
               "questionType": "mcq",
               "categoryCode": "reading_inference",
               "explanation": "The announcement states delivery times across Central Vietnam will be reduced by up to 35%.",
@@ -193,7 +193,7 @@ toeic_full_manifest = {
             {
               "displayOrder": 1,
               "stem": "Look at the photograph and choose the statement that best describes what you see.",
-              "difficultyLevel": 1,
+              "cefrLevel": "A2",
               "questionType": "mcq",
               "categoryCode": "listening_photo",
               "explanation": "Statement (B) accurately portrays the engineer examining blueprints.",
@@ -225,7 +225,7 @@ toeic_full_manifest = {
             {
               "displayOrder": 1,
               "stem": "Where did you file the Henderson contract?",
-              "difficultyLevel": 2,
+              "cefrLevel": "B1",
               "questionType": "mcq",
               "categoryCode": "listening_detail",
               "explanation": "Question starts with 'Where', requiring a location response.",
@@ -256,7 +256,7 @@ toeic_full_manifest = {
             {
               "displayOrder": 1,
               "stem": "When will the buffet be set up?",
-              "difficultyLevel": 2,
+              "cefrLevel": "B1",
               "questionType": "mcq",
               "categoryCode": "listening_detail",
               "explanation": "The speaker confirms the buffet will be set up by 11:30 AM.",
@@ -288,7 +288,7 @@ toeic_full_manifest = {
             {
               "displayOrder": 1,
               "stem": "The revised marketing strategy was praised for its _____ approach to customer engagement.",
-              "difficultyLevel": 3,
+              "cefrLevel": "B2",
               "questionType": "mcq",
               "categoryCode": "grammar_pos",
               "explanation": "An adjective is needed before the noun 'approach'.",
@@ -320,7 +320,7 @@ toeic_full_manifest = {
             {
               "displayOrder": 1,
               "stem": "Which area will remain open during the modernization?",
-              "difficultyLevel": 2,
+              "cefrLevel": "B1",
               "questionType": "mcq",
               "categoryCode": "reading_inference",
               "explanation": "The notice states cardio equipment on Level 1 will remain accessible.",
@@ -375,7 +375,7 @@ ielts_text_manifest = {
             {
               "displayOrder": 1,
               "stem": "What temperature reduction was achieved with 40 percent urban canopy coverage?",
-              "difficultyLevel": 3,
+              "cefrLevel": "B2",
               "questionType": "mcq",
               "categoryCode": "ielts_detail",
               "explanation": "The text states an average reduction of 3.2 degrees Celsius.",
@@ -407,7 +407,7 @@ ielts_text_manifest = {
             {
               "displayOrder": 1,
               "stem": "Summarise the information by selecting and reporting the main features, and make comparisons where relevant.",
-              "difficultyLevel": 4,
+              "cefrLevel": "C1",
               "questionType": "free_response",
               "categoryCode": None,
               "prepSeconds": None,
@@ -443,7 +443,7 @@ ielts_text_manifest = {
             {
               "displayOrder": 1,
               "stem": "In many countries, an increasing number of young people choose to study abroad rather than attending domestic universities. Do the advantages of this trend outweigh the disadvantages?",
-              "difficultyLevel": 4,
+              "cefrLevel": "C1",
               "questionType": "free_response",
               "categoryCode": None,
               "prepSeconds": None,
@@ -479,7 +479,7 @@ ielts_text_manifest = {
             {
               "displayOrder": 1,
               "stem": "Part 1 (Interview): Let's talk about daily routines. What time do you usually wake up, and how do you like to start your morning?",
-              "difficultyLevel": 3,
+              "cefrLevel": "B2",
               "questionType": "free_response",
               "categoryCode": None,
               "prepSeconds": 15,
@@ -498,7 +498,7 @@ ielts_text_manifest = {
             {
               "displayOrder": 2,
               "stem": "Part 2 (Cue Card): Describe an invention that has significantly changed people's daily lives. You should say: what the invention is, when you first used it, how it benefits society, and explain whether all changes brought by it are positive.",
-              "difficultyLevel": 4,
+              "cefrLevel": "C1",
               "questionType": "free_response",
               "categoryCode": None,
               "prepSeconds": 60,
@@ -552,7 +552,7 @@ ielts_full_manifest = {
             {
               "displayOrder": 1,
               "stem": "What is the caller interested in registering for?",
-              "difficultyLevel": 2,
+              "cefrLevel": "B1",
               "questionType": "mcq",
               "categoryCode": "ielts_detail",
               "explanation": "The caller asks about registering for the weekend language exchange workshop.",
@@ -584,7 +584,7 @@ ielts_full_manifest = {
             {
               "displayOrder": 1,
               "stem": "Why are modern acoustic telemetry techniques considered superior to traditional trawling?",
-              "difficultyLevel": 3,
+              "cefrLevel": "B2",
               "questionType": "mcq",
               "categoryCode": "ielts_inference",
               "explanation": "The passage notes they allow non-invasive continuous tracking compared to limited sampling.",
@@ -616,7 +616,7 @@ ielts_full_manifest = {
             {
               "displayOrder": 1,
               "stem": "Summarise the information by selecting and reporting the main features, and make comparisons where relevant.",
-              "difficultyLevel": 4,
+              "cefrLevel": "C1",
               "questionType": "free_response",
               "categoryCode": None,
               "prepSeconds": None,
@@ -652,7 +652,7 @@ ielts_full_manifest = {
             {
               "displayOrder": 1,
               "stem": "Some governments are investing heavily in public transport infrastructure, while others argue that funding should prioritize highway networks for private vehicles. Discuss both views and give your opinion.",
-              "difficultyLevel": 4,
+              "cefrLevel": "C1",
               "questionType": "free_response",
               "categoryCode": None,
               "prepSeconds": None,
@@ -688,7 +688,7 @@ ielts_full_manifest = {
             {
               "displayOrder": 1,
               "stem": "Part 1: Do you prefer reading physical books or electronic books? Why?",
-              "difficultyLevel": 3,
+              "cefrLevel": "B2",
               "questionType": "free_response",
               "categoryCode": None,
               "prepSeconds": 15,
@@ -707,7 +707,7 @@ ielts_full_manifest = {
             {
               "displayOrder": 2,
               "stem": "Part 2 (Cue Card): Describe a memorable journey you took by public transport. You should say: where you went, what kind of transport you used, who you were with, and explain why this journey was memorable to you.",
-              "difficultyLevel": 4,
+              "cefrLevel": "C1",
               "questionType": "free_response",
               "categoryCode": None,
               "prepSeconds": 60,

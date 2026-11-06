@@ -27,17 +27,17 @@ PRINT 'accepted shared 8-minute block on a group';
 -- UI-39: word limits are free response only, and ordered
 BEGIN TRY
   INSERT INTO QuestionGroups (ExamId,CertId,SectionId) VALUES (@ex,@c,@p5);
-  INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,DifficultyLevel,QuestionType,MinWords)
-    VALUES (SCOPE_IDENTITY(),@ex,@p5,@rd,N'x',2,'mcq',10);
+  INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,CefrLevel,QuestionType,MinWords)
+    VALUES (SCOPE_IDENTITY(),@ex,@p5,@rd,N'x','B1','mcq',10);
   THROW 50000,'EXPECT_REJECT FAILED: MCQ with word limit accepted',1;
 END TRY BEGIN CATCH IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW; PRINT 'rejected MCQ with word limit'; END CATCH
 BEGIN TRY
-  INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,DifficultyLevel,QuestionType,MinWords,MaxWords)
-    VALUES (@g8,@wx,@w8,@wr,N'essay',3,'free_response',300,150);
+  INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,CefrLevel,QuestionType,MinWords,MaxWords)
+    VALUES (@g8,@wx,@w8,@wr,N'essay','B2','free_response',300,150);
   THROW 50000,'EXPECT_REJECT FAILED: max below min accepted',1;
 END TRY BEGIN CATCH IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW; PRINT 'rejected MaxWords below MinWords'; END CATCH
-INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,DifficultyLevel,QuestionType,MinWords,ResponseSeconds)
-  VALUES (@g8,@wx,@w8,@wr,N'Do you agree…?',3,'free_response',300,1800); DECLARE @q8 INT=SCOPE_IDENTITY();
+INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,CefrLevel,QuestionType,MinWords,ResponseSeconds)
+  VALUES (@g8,@wx,@w8,@wr,N'Do you agree…?','B2','free_response',300,1800); DECLARE @q8 INT=SCOPE_IDENTITY();
 PRINT 'accepted essay with 300-word minimum';
 -- UI-40: drafts
 INSERT INTO ExamAttempts (UserId,ExamId,CertId,ExpiresAt) VALUES (@u,@wx,@c,DATEADD(HOUR,1,SYSDATETIMEOFFSET())); DECLARE @a INT=SCOPE_IDENTITY();
@@ -92,8 +92,8 @@ END TRY BEGIN CATCH IF ERROR_MESSAGE() LIKE 'EXPECT_REJECT FAILED%' THROW;
   PRINT 'rejected total score on writing practice'; END CATCH
 -- UI-42: hint on a practice question, and whether it was used
 INSERT INTO QuestionGroups (ExamId,CertId,SectionId) VALUES (@ex,@c,@p5); DECLARE @gp INT=SCOPE_IDENTITY();
-INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,DifficultyLevel,QuestionType,Hint)
-  VALUES (@gp,@ex,@p5,@rd,N'The report ___ by Friday.',2,'mcq',N'Look for the time marker: is the action finished or ongoing?'); DECLARE @qh INT=SCOPE_IDENTITY();
+INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,CefrLevel,QuestionType,Hint)
+  VALUES (@gp,@ex,@p5,@rd,N'The report ___ by Friday.','B1','mcq',N'Look for the time marker: is the action finished or ongoing?'); DECLARE @qh INT=SCOPE_IDENTITY();
 INSERT INTO QuestionOptions (QuestionId,QuestionType,Label,Text,IsCorrect) VALUES (@qh,'mcq','A',N'will be finished',1); DECLARE @oa INT=SCOPE_IDENTITY();
 INSERT INTO PracticeSessions (UserId,CertId,SectionId,Modality,QuestionCount) VALUES (@u,@c,@p5,'reading',1); DECLARE @ps INT=SCOPE_IDENTITY();
 INSERT INTO PracticeAnswers (SessionId,QuestionId,SectionId,SelectedOptionId,IsCorrect,HintUsed)

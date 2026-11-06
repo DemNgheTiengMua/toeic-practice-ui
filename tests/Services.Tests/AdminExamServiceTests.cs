@@ -86,7 +86,6 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         var ex1 = await Assert.ThrowsAsync<AdminExamException>(() => service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
             group.GroupId,
             "Stem 1",
-            3,
             QuestionTypeDto.Mcq,
             Options: [new AdminQuestionOptionInput(null, "A", "Opt A", true, null)], CefrLevelCode: "B1")));
         Assert.Equal(ApiError.Codes.Validation, ex1.Code);
@@ -95,7 +94,6 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         var ex2 = await Assert.ThrowsAsync<AdminExamException>(() => service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
             group.GroupId,
             "Stem 2",
-            3,
             QuestionTypeDto.Mcq,
             Options:
             [
@@ -108,7 +106,6 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         var ex3 = await Assert.ThrowsAsync<AdminExamException>(() => service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
             group.GroupId,
             "Stem 3",
-            3,
             QuestionTypeDto.Mcq,
             Options:
             [
@@ -121,7 +118,6 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         var ex4 = await Assert.ThrowsAsync<AdminExamException>(() => service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
             group.GroupId,
             "Stem 4",
-            3,
             QuestionTypeDto.Mcq,
             PrepSeconds: 15,
             Options:
@@ -135,7 +131,6 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         var ex5 = await Assert.ThrowsAsync<AdminExamException>(() => service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
             group.GroupId,
             "Stem 5",
-            3,
             QuestionTypeDto.Mcq,
             MinWords: 50,
             Options:
@@ -149,7 +144,6 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         var validMcq = await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
             group.GroupId,
             "Valid MCQ Stem",
-            3,
             QuestionTypeDto.Mcq,
             Options:
             [
@@ -183,7 +177,6 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         var ex1 = await Assert.ThrowsAsync<AdminExamException>(() => service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
             group.GroupId,
             "FR Stem 1",
-            3,
             QuestionTypeDto.FreeResponse,
             Options: [new AdminQuestionOptionInput(null, "A", "Opt A", true, null)], CefrLevelCode: "B1")));
         Assert.Equal(ApiError.Codes.Validation, ex1.Code);
@@ -192,7 +185,6 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         var ex2 = await Assert.ThrowsAsync<AdminExamException>(() => service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
             group.GroupId,
             "FR Stem 2",
-            3,
             QuestionTypeDto.FreeResponse,
             ResponseSeconds: 0, CefrLevelCode: "B1")));
         Assert.Equal(ApiError.Codes.Validation, ex2.Code);
@@ -201,7 +193,6 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         var ex3 = await Assert.ThrowsAsync<AdminExamException>(() => service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
             group.GroupId,
             "FR Stem 3",
-            3,
             QuestionTypeDto.FreeResponse,
             MinWords: 150,
             MaxWords: 100, CefrLevelCode: "B1")));
@@ -211,7 +202,6 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         var validFr = await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
             group.GroupId,
             "Write an essay about technology.",
-            4,
             QuestionTypeDto.FreeResponse,
             PrepSeconds: 60,
             ResponseSeconds: 1800,
@@ -303,7 +293,6 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
             grpR.GroupId,
             "Question 1 Stem",
-            2,
             QuestionTypeDto.Mcq,
             Options:
             [
@@ -320,7 +309,6 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
             grpL.GroupId,
             "Question 2 Listening Stem",
-            3,
             QuestionTypeDto.Mcq,
             Options:
             [
@@ -350,7 +338,6 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
             await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
                 group.GroupId,
                 "Question for the remaining section",
-                2,
                 QuestionTypeDto.Mcq,
                 Options:
                 [
@@ -385,7 +372,6 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         var q1 = await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
             grp.GroupId,
             "Question 1 (will be answered)",
-            2,
             QuestionTypeDto.Mcq,
             Options:
             [
@@ -396,7 +382,6 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         var q2 = await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
             grp.GroupId,
             "Question 2 (unattempted)",
-            2,
             QuestionTypeDto.Mcq,
             Options:
             [
@@ -449,7 +434,6 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         var q = await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
             grp.GroupId,
             "Question (never sat)",
-            2,
             QuestionTypeDto.Mcq,
             Options:
             [
@@ -553,7 +537,6 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         var q = await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
             grp.GroupId,
             "MCQ to switch correct option",
-            3,
             QuestionTypeDto.Mcq,
             Options:
             [
@@ -565,7 +548,6 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         var updated = await service.UpdateQuestionAsync(q.QuestionId, new UpdateQuestionRequest(
             grp.GroupId,
             "MCQ with switched correct option",
-            3,
             QuestionTypeDto.Mcq,
             Options:
             [
@@ -592,7 +574,6 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         var q = await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
             grp.GroupId,
             "Initial stem",
-            2,
             QuestionTypeDto.Mcq,
             Explanation: "Initial explanation",
             DisplayOrder: 5,
@@ -609,7 +590,6 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         var updated = await service.UpdateQuestionAsync(q.QuestionId, new UpdateQuestionRequest(
             grp.GroupId,
             "Initial stem",
-            2,
             QuestionTypeDto.Mcq,
             Explanation: "Use 'before' directly in front of a day of the week to denote a deadline.",
             DisplayOrder: 0,
@@ -718,7 +698,6 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
             StartLineNumber: 1,
             EndLineNumber: 5,
             Stem: "Initial question stem",
-            DifficultyLevel: 3,
             Explanation: "Initial explanation",
             CategoryCode: null,
             Options:
@@ -743,7 +722,6 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
             StartLineNumber: 6,
             EndLineNumber: 10,
             Stem: "Second question stem",
-            DifficultyLevel: 4,
             Explanation: "Second explanation",
             CategoryCode: null,
             Options:
@@ -788,7 +766,6 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
             StartLineNumber: 1,
             EndLineNumber: 5,
             Stem: "Old question to be replaced",
-            DifficultyLevel: 2,
             Explanation: null,
             CategoryCode: null,
             Options:
@@ -810,7 +787,6 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
             StartLineNumber: 1,
             EndLineNumber: 5,
             Stem: "Brand new replacement question",
-            DifficultyLevel: 3,
             Explanation: "New explanation",
             CategoryCode: null,
             Options:
@@ -851,7 +827,6 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
             grp.GroupId,
             "Studio Question 1",
-            2,
             QuestionTypeDto.Mcq,
             Options:
             [
@@ -889,7 +864,6 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         var q1 = await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
             grp.GroupId,
             "Question 1",
-            1,
             QuestionTypeDto.Mcq,
             Options:
             [
@@ -900,7 +874,6 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         var q2 = await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
             grp.GroupId,
             "Question 2",
-            1,
             QuestionTypeDto.Mcq,
             Options:
             [
@@ -1173,7 +1146,6 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         var freeResponse = await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
             writingGroup.GroupId,
             "Write a response to the prompt.",
-            3,
             QuestionTypeDto.FreeResponse,
             ResponseSeconds: 1200, CefrLevelCode: "B1"));
 
@@ -1184,7 +1156,6 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         await service.UpdateQuestionAsync(freeResponse.QuestionId, new UpdateQuestionRequest(
             GroupId: null,
             Stem: freeResponse.Stem,
-            DifficultyLevel: freeResponse.DifficultyLevel,
             QuestionType: QuestionTypeDto.FreeResponse,
             ResponseSeconds: 1200,
             MinWords: 100,
@@ -1207,7 +1178,6 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         var mcq = await service.CreateQuestionAsync(mcqExam.ExamId, new CreateQuestionRequest(
             readingGroup.GroupId,
             "Choose the correct answer.",
-            2,
             QuestionTypeDto.Mcq,
             Options:
             [
@@ -1304,7 +1274,6 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         var qMcq3 = await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
             grp.GroupId,
             "MCQ 3 Stem",
-            2,
             QuestionTypeDto.Mcq_3,
             Options:
             [
@@ -1319,7 +1288,6 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         var qMulti = await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
             grp.GroupId,
             "MultiSelect Stem",
-            3,
             QuestionTypeDto.MultiSelect,
             MaxSelections: 2,
             Options:
@@ -1337,7 +1305,6 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         var qInline = await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
             grp.GroupId,
             "Inline Stem",
-            3,
             QuestionTypeDto.InlineCompletion,
             AcceptedAnswersJson: @"[""center"",""centre""]",
             AllowNumber: false,
@@ -1352,7 +1319,6 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         var qFree = await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
             grpW.GroupId,
             "Free Response Essay",
-            3,
             QuestionTypeDto.FreeResponse,
             PrepSeconds: 30,
             ResponseSeconds: 1200,
@@ -1419,7 +1385,6 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
             grp.GroupId,
             "Question 1",
-            2,
             QuestionTypeDto.Mcq,
             Options:
             [
@@ -1444,7 +1409,6 @@ public sealed class AdminExamServiceTests(DatabaseFixture database)
         await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
             grp.GroupId,
             "Question 2",
-            2,
             QuestionTypeDto.Mcq,
             Options:
             [

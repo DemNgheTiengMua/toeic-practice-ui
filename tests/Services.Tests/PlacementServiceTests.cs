@@ -165,8 +165,8 @@ public sealed class PlacementServiceTests(DatabaseFixture database)
             -- Q1 for Standard (Listening)
             INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@standard, @cert, @secL, 1);
             DECLARE @grp1 INT = SCOPE_IDENTITY();
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder)
-            VALUES (@grp1, @standard, @secL, @sL, N'Standard Q1', 1, 'mcq', 1);
+            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
+            VALUES (@grp1, @standard, @secL, @sL, N'Standard Q1', 'A2', 'mcq', 1);
             DECLARE @q1 INT = SCOPE_IDENTITY();
             INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
               (@q1, 'mcq', 'A', N'Opt A', 1),
@@ -175,8 +175,8 @@ public sealed class PlacementServiceTests(DatabaseFixture database)
             -- Q2 for Standard (Reading)
             INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@standard, @cert, @secR, 2);
             DECLARE @grp2 INT = SCOPE_IDENTITY();
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder)
-            VALUES (@grp2, @standard, @secR, @sR, N'Standard Q2', 1, 'mcq', 2);
+            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
+            VALUES (@grp2, @standard, @secR, @sR, N'Standard Q2', 'A2', 'mcq', 2);
             DECLARE @q2 INT = SCOPE_IDENTITY();
             INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
               (@q2, 'mcq', 'A', N'Opt A', 0),
@@ -618,8 +618,8 @@ public sealed class PlacementServiceTests(DatabaseFixture database)
                                 WHERE g.ExamId = {examId} AND s.Code = 'P5');
             DECLARE @sec INT = (SELECT SectionId FROM QuestionGroups WHERE GroupId = @grp);
             DECLARE @skill INT = (SELECT SkillId FROM Sections WHERE SectionId = @sec);
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder)
-            VALUES (@grp, {examId}, @sec, @skill, N'Standard Q3', 1, 'mcq', 3);
+            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
+            VALUES (@grp, {examId}, @sec, @skill, N'Standard Q3', 'A2', 'mcq', 3);
             DECLARE @q3 INT = SCOPE_IDENTITY();
             INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
               (@q3, 'mcq', 'A', N'Opt A', 1),
@@ -718,12 +718,12 @@ public sealed class PlacementServiceTests(DatabaseFixture database)
             INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @secR, 3);
             DECLARE @gR INT = SCOPE_IDENTITY();
 
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder)
-            VALUES (@gW1, @exam, @secW, @sW, N'Writing task 1', 1, 'free_response', 1);
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder)
-            VALUES (@gW2, @exam, @secW, @sW, N'Writing task 2', 1, 'free_response', 2);
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder)
-            VALUES (@gR, @exam, @secR, @sR, N'Reading question', 1, 'mcq', 3);
+            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
+            VALUES (@gW1, @exam, @secW, @sW, N'Writing task 1', 'A2', 'free_response', 1);
+            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
+            VALUES (@gW2, @exam, @secW, @sW, N'Writing task 2', 'A2', 'free_response', 2);
+            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
+            VALUES (@gR, @exam, @secR, @sR, N'Reading question', 'A2', 'mcq', 3);
             DECLARE @r1 INT = SCOPE_IDENTITY();
             INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
               (@r1, 'mcq', 'A', N'Opt A', 1),
@@ -766,8 +766,8 @@ public sealed class PlacementServiceTests(DatabaseFixture database)
             INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @secW, 1);
             DECLARE @grp INT = SCOPE_IDENTITY();
 
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder)
-            VALUES (@grp, @exam, @secW, @sW, N'Diagnostic writing prompt', 1, 'free_response', 1);
+            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
+            VALUES (@grp, @exam, @secW, @sW, N'Diagnostic writing prompt', 'A2', 'free_response', 1);
             """);
 
         await using var db = DbContextFactory.Create(database.ConnectionString);

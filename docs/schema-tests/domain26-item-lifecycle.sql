@@ -322,8 +322,8 @@ INSERT INTO Exams (CertId, Name, Status, DurationMinutes, Purpose) VALUES (@cert
 DECLARE @exam INT = SCOPE_IDENTITY();
 INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @sec, 1);
 DECLARE @grp INT = SCOPE_IDENTITY();
-INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder)
-VALUES (@grp, @exam, @sec, @skill, N'Lifecycle legacy stem.', 1, 'mcq', 1);
+INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
+VALUES (@grp, @exam, @sec, @skill, N'Lifecycle legacy stem.', 'A2', 'mcq', 1);
 DECLARE @q INT = SCOPE_IDENTITY();
 INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES (@q, 'mcq', 'A', N'a', 1);
 DECLARE @opt INT = SCOPE_IDENTITY();

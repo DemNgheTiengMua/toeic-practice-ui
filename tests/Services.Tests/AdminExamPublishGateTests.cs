@@ -63,7 +63,6 @@ public sealed class AdminExamPublishGateTests(DatabaseFixture database)
     private static CreateQuestionRequest ReadableQuestion(int groupId) => new(
         groupId,
         "Choose the correct word.",
-        2,
         QuestionTypeDto.Mcq,
         Options:
         [
@@ -77,7 +76,6 @@ public sealed class AdminExamPublishGateTests(DatabaseFixture database)
         StartLineNumber: 1,
         EndLineNumber: 2,
         Stem: "Added through quick ingest",
-        DifficultyLevel: 3,
         Explanation: null,
         CategoryCode: null,
         Options:
@@ -248,7 +246,6 @@ public sealed class AdminExamPublishGateTests(DatabaseFixture database)
             service.UpdateQuestionAsync(question.QuestionId, new UpdateQuestionRequest(
                 group.GroupId,
                 question.Stem,
-                question.DifficultyLevel,
                 question.QuestionType,
                 Options:
                 [
@@ -314,13 +311,11 @@ public sealed class AdminExamPublishGateTests(DatabaseFixture database)
         var question = await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
             group.GroupId,
             "The report was filed _____ Friday.",
-            3,
             QuestionTypeDto.InlineCompletion,
             AcceptedAnswersJson: """["before"]""", CefrLevelCode: "B1"));
         await service.CreateQuestionAsync(exam.ExamId, new CreateQuestionRequest(
             group.GroupId,
             "Second gap _____ the deadline.",
-            3,
             QuestionTypeDto.InlineCompletion,
             AcceptedAnswersJson: """["before"]""", CefrLevelCode: "B1"));
 
@@ -329,7 +324,7 @@ public sealed class AdminExamPublishGateTests(DatabaseFixture database)
         var ex = await Assert.ThrowsAsync<AdminExamException>(() => service.UpdateQuestionAsync(
             question.QuestionId,
             new UpdateQuestionRequest(
-                group.GroupId, question.Stem, question.DifficultyLevel, question.QuestionType,
+                group.GroupId, question.Stem, question.QuestionType,
                 AcceptedAnswersJson: """["after"]""", CefrLevelCode: "B1")));
 
         Assert.Equal(ApiError.Codes.ExamHasFinishedAttempts, ex.Code);
@@ -337,7 +332,7 @@ public sealed class AdminExamPublishGateTests(DatabaseFixture database)
         // The stem alone is cosmetic and still saves, which is what keeps the rule structural
         // rather than a blanket freeze.
         var renamed = await service.UpdateQuestionAsync(question.QuestionId, new UpdateQuestionRequest(
-            group.GroupId, "Reworded gap.", question.DifficultyLevel, question.QuestionType,
+            group.GroupId, "Reworded gap.", question.QuestionType,
             AcceptedAnswersJson: """["before"]""", CefrLevelCode: "B1"));
         Assert.Equal("Reworded gap.", renamed.Stem);
     }
@@ -394,7 +389,6 @@ public sealed class AdminExamPublishGateTests(DatabaseFixture database)
         var edited = await service.UpdateQuestionAsync(question.QuestionId, new UpdateQuestionRequest(
             group.GroupId,
             "Reworded stem.",
-            question.DifficultyLevel,
             question.QuestionType,
             Explanation: "Clearer explanation",
             Hint: "Look at the verb",

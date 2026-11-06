@@ -32,8 +32,8 @@ public sealed partial class LearnerServiceTests
             INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder)
               VALUES (@exam, {certId}, @sec, 1);
             DECLARE @grp INT = SCOPE_IDENTITY();
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder)
-              VALUES (@grp, @exam, @sec, @skill, N'Pick one.', 2, '{questionType}', 1);
+            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
+              VALUES (@grp, @exam, @sec, @skill, N'Pick one.', 'B1', '{questionType}', 1);
             DECLARE @q INT = SCOPE_IDENTITY();
             -- FK_Options_QuestionType: only an mcq question may carry answer options
             IF '{questionType}' = 'mcq'

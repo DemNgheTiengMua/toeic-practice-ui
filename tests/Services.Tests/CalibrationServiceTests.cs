@@ -180,7 +180,7 @@ public sealed class CalibrationServiceTests(DatabaseFixture database)
                 SectionId = sectionId,
                 SkillId = section.SkillId,
                 Stem = $"Question {i + 1}",
-                DifficultyLevel = 2,
+                CefrLevel = CefrLevel.B1,
                 QuestionType = QuestionType.Mcq.ToCode(),
                 DisplayOrder = 100 + i,
             });

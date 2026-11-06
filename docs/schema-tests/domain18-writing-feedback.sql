@@ -11,8 +11,8 @@ INSERT INTO GradingCriteria (CertId,SkillId,Code,Name,RubricDescription,MaxScore
   VALUES (@c,@wr,'GRAM',N'Grammar',N'5: accurate. 3: frequent errors.',5,1,1); DECLARE @crit INT=SCOPE_IDENTITY();
 INSERT INTO Exams (CertId,Name,Status,DurationMinutes,Purpose) VALUES (@c,N'W151','published',60,'writing_practice'); DECLARE @ex INT=SCOPE_IDENTITY();
 INSERT INTO QuestionGroups (ExamId,CertId,SectionId) VALUES (@ex,@c,@sec); DECLARE @g INT=SCOPE_IDENTITY();
-INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,DifficultyLevel,QuestionType,MinWords,DisplayOrder)
-  VALUES (@g,@ex,@sec,@wr,N'Essay',3,'free_response',250,1); DECLARE @q INT=SCOPE_IDENTITY();
+INSERT INTO Questions (GroupId,ExamId,SectionId,SkillId,Stem,CefrLevel,QuestionType,MinWords,DisplayOrder)
+  VALUES (@g,@ex,@sec,@wr,N'Essay','B2','free_response',250,1); DECLARE @q INT=SCOPE_IDENTITY();
 INSERT INTO ExamAttempts (UserId,ExamId,CertId,ExpiresAt) VALUES (@u,@ex,@c,DATEADD(HOUR,1,SYSDATETIMEOFFSET())); DECLARE @a INT=SCOPE_IDENTITY();
 INSERT INTO FreeResponses (AttemptId,QuestionId,ExamId,SkillId,QuestionType,ResponseText,Status,SubmittedAt)
   VALUES (@a,@q,@ex,@wr,'free_response',N'Dog run fast.','pending_ai',SYSDATETIMEOFFSET()); DECLARE @fr INT=SCOPE_IDENTITY();

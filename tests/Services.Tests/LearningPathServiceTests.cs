@@ -91,8 +91,8 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
             VALUES (@exam, @cert, @secR, 1);
             DECLARE @grp INT = SCOPE_IDENTITY();
 
-            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder)
-            VALUES (@grp, @exam, @secR, @sR, N'Question 1 stem', 2, 'mcq', 1);
+            INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
+            VALUES (@grp, @exam, @secR, @sR, N'Question 1 stem', 'B1', 'mcq', 1);
             DECLARE @q1 INT = SCOPE_IDENTITY();
 
             INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES
@@ -365,7 +365,7 @@ public sealed class LearningPathServiceTests(DatabaseFixture database)
                 GroupId = await seed.Questions.Where(q => q.QuestionId == qId).Select(q => q.GroupId).SingleAsync(),
                 ExamId = await seed.Questions.Where(q => q.QuestionId == qId).Select(q => q.ExamId).SingleAsync(),
                 SectionId = secId, SkillId = section.SkillId, Stem = "Question 2 stem",
-                DifficultyLevel = 2, QuestionType = "mcq", DisplayOrder = 2,
+                CefrLevel = CefrLevel.B1, QuestionType = "mcq", DisplayOrder = 2,
             });
             await seed.SaveChangesAsync();
 

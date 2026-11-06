@@ -182,8 +182,8 @@ VALUES (@cert, N'Legacy paper', 'draft', 60, 'mock', 1);
 DECLARE @exam INT = SCOPE_IDENTITY();
 INSERT INTO QuestionGroups (ExamId, CertId, SectionId, DisplayOrder) VALUES (@exam, @cert, @sec, 1);
 DECLARE @grp INT = SCOPE_IDENTITY();
-INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder)
-VALUES (@grp, @exam, @sec, @skill, N'Legacy stem.', 1, 'mcq', 1);
+INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
+VALUES (@grp, @exam, @sec, @skill, N'Legacy stem.', 'A2', 'mcq', 1);
 DECLARE @q INT = SCOPE_IDENTITY();
 INSERT INTO QuestionOptions (QuestionId, QuestionType, Label, Text, IsCorrect) VALUES (@q, 'mcq', 'A', N'a', 1);
 DECLARE @opt INT = SCOPE_IDENTITY();
@@ -196,8 +196,8 @@ PRINT 'accepted a legacy practice answer, unchanged';
 INSERT INTO PracticeSessions (UserId, CertId, SectionId, Modality, QuestionCount, Status)
 VALUES (@user, @cert, @sec, 'reading', 1, 'in_progress');
 DECLARE @bothSess INT = SCOPE_IDENTITY();
-INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, DifficultyLevel, QuestionType, DisplayOrder)
-VALUES (@grp, @exam, @sec, @skill, N'Legacy stem two.', 1, 'mcq', 2);
+INSERT INTO Questions (GroupId, ExamId, SectionId, SkillId, Stem, CefrLevel, QuestionType, DisplayOrder)
+VALUES (@grp, @exam, @sec, @skill, N'Legacy stem two.', 'A2', 'mcq', 2);
 DECLARE @q2 INT = SCOPE_IDENTITY();
 
 BEGIN TRY

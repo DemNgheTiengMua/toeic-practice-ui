@@ -70,10 +70,10 @@ public sealed class WeaknessAnalysisServiceTests(DatabaseFixture database)
         db.QuestionGroups.AddRange(grp1, grp2);
         await db.SaveChangesAsync();
 
-        var q1 = new Question { GroupId = grp1.GroupId, ExamId = exam.ExamId, SectionId = sec1.SectionId, SkillId = skill.SkillId, CategoryId = cat1.CategoryId, Stem = "Q1 in P5", DifficultyLevel = 2, QuestionType = "mcq", DisplayOrder = 1 };
-        var q2 = new Question { GroupId = grp1.GroupId, ExamId = exam.ExamId, SectionId = sec1.SectionId, SkillId = skill.SkillId, CategoryId = cat1.CategoryId, Stem = "Q2 in P5", DifficultyLevel = 2, QuestionType = "mcq", DisplayOrder = 2 };
-        var q3 = new Question { GroupId = grp2.GroupId, ExamId = exam.ExamId, SectionId = sec2.SectionId, SkillId = skill.SkillId, CategoryId = cat2.CategoryId, Stem = "Q3 in P6", DifficultyLevel = 3, QuestionType = "mcq", DisplayOrder = 1 };
-        var q4 = new Question { GroupId = grp2.GroupId, ExamId = exam.ExamId, SectionId = sec2.SectionId, SkillId = skill.SkillId, CategoryId = cat2.CategoryId, Stem = "Q4 in P6", DifficultyLevel = 3, QuestionType = "mcq", DisplayOrder = 2 };
+        var q1 = new Question { GroupId = grp1.GroupId, ExamId = exam.ExamId, SectionId = sec1.SectionId, SkillId = skill.SkillId, CategoryId = cat1.CategoryId, Stem = "Q1 in P5", CefrLevel = CefrLevel.B1, QuestionType = "mcq", DisplayOrder = 1 };
+        var q2 = new Question { GroupId = grp1.GroupId, ExamId = exam.ExamId, SectionId = sec1.SectionId, SkillId = skill.SkillId, CategoryId = cat1.CategoryId, Stem = "Q2 in P5", CefrLevel = CefrLevel.B1, QuestionType = "mcq", DisplayOrder = 2 };
+        var q3 = new Question { GroupId = grp2.GroupId, ExamId = exam.ExamId, SectionId = sec2.SectionId, SkillId = skill.SkillId, CategoryId = cat2.CategoryId, Stem = "Q3 in P6", CefrLevel = CefrLevel.B2, QuestionType = "mcq", DisplayOrder = 1 };
+        var q4 = new Question { GroupId = grp2.GroupId, ExamId = exam.ExamId, SectionId = sec2.SectionId, SkillId = skill.SkillId, CategoryId = cat2.CategoryId, Stem = "Q4 in P6", CefrLevel = CefrLevel.B2, QuestionType = "mcq", DisplayOrder = 2 };
         db.Questions.AddRange(q1, q2, q3, q4);
         await db.SaveChangesAsync();
 
@@ -444,7 +444,7 @@ public sealed class WeaknessAnalysisServiceTests(DatabaseFixture database)
                 SkillId = skill.SkillId,
                 CategoryId = cat.CategoryId,
                 Stem = "Multi select q1",
-                DifficultyLevel = 2,
+                CefrLevel = CefrLevel.B1,
                 QuestionType = "multi_select",
                 DisplayOrder = 1
             };
@@ -456,7 +456,7 @@ public sealed class WeaknessAnalysisServiceTests(DatabaseFixture database)
                 SkillId = skill.SkillId,
                 CategoryId = cat.CategoryId,
                 Stem = "Inline completion q2",
-                DifficultyLevel = 3,
+                CefrLevel = CefrLevel.B2,
                 QuestionType = "inline_completion",
                 DisplayOrder = 2
             };
