@@ -29,6 +29,15 @@ public partial class Question
 
     public int DifficultyLevel { get; set; }
 
+    /// <summary>
+    /// #228 / D1: the level the item is authored at, beside the five-point difficulty it replaces.
+    /// Not mapped: the schema keeps <c>DifficultyLevel</c> and gains its level column when the
+    /// difficulty is deleted, not before. Never derived from <see cref="DifficultyLevel"/> - there is
+    /// no 1-5 to A1-C2 mapping, and inventing one is the defect D1 exists to prevent.
+    /// </summary>
+    [NotMapped]
+    public CefrLevel? CefrLevel { get; set; }
+
     [StringLength(30)]
     [Unicode(false)]
     public string QuestionType { get; set; } = null!;

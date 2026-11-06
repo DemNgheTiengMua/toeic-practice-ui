@@ -25,4 +25,8 @@ public sealed record CreateQuestionRequest(
     // #152: what a spoken answer is judged against - the words to read aloud, or a description of
     // the picture - and which of the two it is. Both null is a free-speech question.
     string? SampleAnswerOrImageDesc = null,
-    ReferenceKindDto? ReferenceKind = null);
+    ReferenceKindDto? ReferenceKind = null,
+    // #228 / D1: the level this question is authored at, beside the five-point difficulty it
+    // replaces. A code, not an enum: the column is a string and a bad value must be a 400 with a
+    // sentence, not a deserialisation failure. Optional, so every existing call site still compiles.
+    string? CefrLevelCode = null);

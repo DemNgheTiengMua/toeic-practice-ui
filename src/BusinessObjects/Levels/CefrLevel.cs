@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace BusinessObjects;
 
@@ -15,6 +16,7 @@ namespace BusinessObjects;
 /// a different quantity from an ability level; there is no conversion, and none may be added.
 /// </para>
 /// </summary>
+[JsonConverter(typeof(CefrLevelJsonConverter))]
 public readonly record struct CefrLevel : IComparable<CefrLevel>
 {
     // Stored codes, by rank. The floor is rank 0 so the struct's default value IS the floor: an
