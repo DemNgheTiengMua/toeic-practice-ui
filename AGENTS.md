@@ -61,11 +61,13 @@ cache over this source tree, rebuilt in one command with no API cost:
 graph, so build it once before relying on the commands below.
 
 **Before debugging, tracing data flow, or implementing new features**:
-- **Query the graph**: Run `graphify query "<question>"` (or BFS traversal over `graphify-out/graph.json`) to understand cross-layer relationships and avoid breaking invariants.
+- **Inspect nodes first**: `graphify explain "<Symbol>"` is the best first move — it returns neighbours, degree, community and `file:line`, which grep cannot.
+- **Check what a change breaks**: `graphify affected "<Symbol>" --depth 2` before deleting or renaming anything.
 - **Trace connections**: Run `graphify path "<Source>" "<Target>"` to inspect dependencies between layers (e.g. from a UI view to a DB trigger).
-- **Inspect nodes**: Run `graphify explain "<NodeId>"` to get plain-language summaries of symbols, tables, or concepts.
 - **Visual map**: Open `graphify-out/graph.html` in a browser or review `graphify-out/GRAPH_REPORT.md`.
 - **Rebuild after major changes**: Run `/graphify --update` to re-extract modified files incrementally.
+
+**Do not lead with `graphify query "<question>"`** — see §8 for why: it is keyword BFS with a token budget, so the answer is often among the truncated nodes. Use it only with `--seed`, or not at all.
 
 If the graph claims a `built_at_commit` other than `git rev-parse HEAD`, it is stale — rebuild before trusting it.
 
@@ -195,9 +197,11 @@ skipped, run:
 python -m graphify update .
 ```
 
-Use `python -m`, not bare `graphify`: the `graphify` shim runs an MSYS Python without
-`tree_sitter_sql`, so 20 `.sql` files are silently dropped and the schema never enters the graph.
-The difference is roughly 1 700 nodes.
+`python -m graphify update .` and bare `graphify update .` are equivalent on this machine:
+verified 2026-11-07 that **both** the `python` on PATH and the uv-tool interpreter import
+`tree_sitter_sql`, so no `.sql` file is dropped. If a rebuild ever reports far fewer than
+~14.5k nodes, re-check with `python -c "import tree_sitter_sql"` — an interpreter missing it
+silently drops the 20 `.sql` files and the schema never enters the graph (≈1 700 nodes).
 
 Run `/graphify --update` after large documentation or semantic changes.
 
