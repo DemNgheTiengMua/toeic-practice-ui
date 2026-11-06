@@ -110,6 +110,10 @@ public sealed class CefrLevelMigrationTests
             .SelectMany(Bridges)
             .ToList();
 
+        // A scan that found no CefrLevel mention at all proves nothing; the type is used in all four.
+        Assert.Contains(assemblies, assembly =>
+            assembly.GetTypes().Any(type => type.GetProperties(BindingFlags.Public | BindingFlags.NonPublic
+                | BindingFlags.Static | BindingFlags.Instance).Any(p => Includes(p.PropertyType, typeof(CefrLevel)))));
         Assert.Empty(offenders);
 
         static IEnumerable<string> Bridges(Type type)
@@ -194,9 +198,15 @@ public sealed class CefrLevelMigrationTests
         // A level typed int or an enum with an underlying number is a second 1-6 scale wearing the
         // level's name. This is the check that would pass a "mechanical retype" that only renamed the
         // member.
-        var offenders = typeof(CreateQuestionRequest).Assembly.GetTypes()
+        var levelled = typeof(CreateQuestionRequest).Assembly.GetTypes()
             .SelectMany(type => type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
             .Where(property => property.Name.Contains("CefrLevel", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        // Without this, an empty match set would make the assertion below vacuously true.
+        Assert.True(levelled.Count > 0, "no wire property carries a level; the scan found the wrong assembly");
+
+        var offenders = levelled
             .Where(property => property.PropertyType != typeof(string))
             .Select(property => $"{property.DeclaringType!.Name}.{property.Name}:{property.PropertyType.Name}")
             .ToList();
